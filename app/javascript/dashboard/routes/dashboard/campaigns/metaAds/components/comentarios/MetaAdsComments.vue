@@ -215,6 +215,11 @@ const acoes = {
       adaptador => adaptador.privado(props.adId, comment.id, texto),
       'PRIVATE_DONE'
     ),
+  liberar: comment =>
+    act(
+      adaptador => adaptador.liberar(props.adId, comment.id),
+      'PRIVATE_RELEASED'
+    ),
   ocultar: (comment, hidden) =>
     act(
       adaptador => adaptador.ocultar(props.adId, comment.id, hidden),

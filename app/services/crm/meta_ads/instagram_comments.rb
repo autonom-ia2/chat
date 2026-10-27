@@ -87,6 +87,17 @@ class Crm::MetaAds::InstagramComments
     { sent_at: Time.current.iso8601, conversation_path: conversation_path(sent[:conversation]) }
   end
 
+  # "Não foi enviado": quem gere os anúncios conferiu no Direct que o privado sem confirmação não chegou e libera o
+  # botão. Só a linha sem confirmação deste anúncio, nesta conta; não chama a Meta.
+  def release_private_reply!(ad_id, comment_id)
+    action = Crm::MetaAdsCommentAction.find_by(account_id: @connection.account_id, network: 'instagram', action: 'private_reply',
+                                               comment_id: comment_id.to_s, ad_id: ad_id.to_s, confirmed_at: nil)
+    raise Error, 'private_reply_not_pending' if action&.attempted_at.nil?
+
+    action.destroy!
+    { id: comment_id.to_s }
+  end
+
   private
 
   def target(ad_id)
@@ -141,7 +152,7 @@ class Crm::MetaAds::InstagramComments
   def present(rows, channel)
     actions = Crm::MetaAdsCommentAction.where(account_id: @connection.account_id, network: 'instagram', action: 'private_reply',
                                               comment_id: rows.flat_map { |item| [item['id'], *replies(item).pluck('id')] })
-                                       .includes(:conversation).index_by(&:comment_id)
+                                       .includes(:conversation).reject(&:abandoned?).index_by(&:comment_id)
     rows.map do |item|
       row(item, channel, actions: actions).merge(replies: replies(item).map { |reply| row(reply, channel, actions: actions, nested: true) })
     end
@@ -183,7 +194,8 @@ class Crm::MetaAds::InstagramComments
   def private_reply(action)
     return if action.nil?
 
-    { sent_at: action.at.iso8601, confirmed: action.confirmed_at.present?, conversation_path: conversation_path(action.conversation) }
+    { sent_at: action.at.iso8601, confirmed: action.confirmed_at.present?, conversation_path: conversation_path(action.conversation),
+      can_release: @can_manage && action.attempted_at.present? && action.confirmed_at.nil? }
   end
 
   def expired?(item)

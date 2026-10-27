@@ -1,7 +1,8 @@
 // Anúncios da Meta (#2196): comentários do anúncio no Instagram. Adaptador da aba Instagram da casca comum
 // (MetaAdsComments.vue), na forma combinada com a aba Facebook (#2197), sempre com o anúncio primeiro:
 //   listar(adId) -> { status, account, permalink_url, comments, total, next_cursor }, mais(adId, cursor),
-//   responder(adId, id, texto), ocultar(adId, id, bool), apagar(adId, id), privado(adId, id, texto) e entrar(status, adId).
+//   responder(adId, id, texto), ocultar(adId, id, bool), apagar(adId, id), privado(adId, id, texto), liberar(adId, id)
+//   e entrar(status, adId).
 // `status`: `ready`; `needs_login` (o Instagram está conectado sem a permissão de comentários); `not_connected` (o
 // anúncio sai num Instagram que não está conectado ao Chat2You); `no_post` (o anúncio não aparece no Instagram).
 //
@@ -41,6 +42,10 @@ export const apagar = (adId, id) =>
 export const privado = (adId, id, texto) =>
   corpo(CrmMetaAdsConnectionAPI.privateReplyInstagramComment(adId, id, texto));
 
+// "Não foi enviado": a pessoa conferiu no Direct que o privado sem confirmação não chegou; o botão volta.
+export const liberar = (adId, id) =>
+  corpo(CrmMetaAdsConnectionAPI.releaseInstagramPrivateReply(adId, id));
+
 const contaAtual = () => window.location.pathname.split('/campaigns')[0];
 
 // Sem a permissão de comentários: refazer o login da caixa do Instagram que já existe, pedindo também
@@ -60,4 +65,13 @@ export const entrar = async (status, adId) => {
   window.location.assign(data.url);
 };
 
-export default { listar, mais, responder, ocultar, apagar, privado, entrar };
+export default {
+  listar,
+  mais,
+  responder,
+  ocultar,
+  apagar,
+  privado,
+  liberar,
+  entrar,
+};

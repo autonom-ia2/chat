@@ -146,6 +146,21 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
     expect(meta_call(/graph\.instagram\.com/)).not_to have_been_made
   end
 
+  it '"Não foi enviado" libera o privado sem confirmação e fica na Auditoria; agente comum, não' do
+    Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: '18000000000000001', ad_id: ad_id,
+                                      action: 'private_reply', actor: 'user', at: 1.hour.ago, attempted_at: 1.hour.ago)
+    release = "#{path}/18000000000000001/private_reply/release"
+
+    post release, headers: agent.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:forbidden)
+
+    post release, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentAction.count).to eq(0)
+    audit = Audited.audit_class.where(auditable: account, action: 'meta_ads_comment').last
+    expect(audit.audited_changes).to include('action' => 'private_reply_release', 'comment_id' => '18000000000000001')
+  end
+
   it 'erro de regra vira 422 com o código' do
     post "#{path}/18000000000000001/reply", params: { text: ' ' }, headers: admin.create_new_auth_token, as: :json
 

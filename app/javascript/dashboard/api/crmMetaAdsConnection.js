@@ -217,6 +217,12 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     );
   }
 
+  releaseInstagramPrivateReply(adId, commentId) {
+    return axios.post(
+      `${this.instagramCommentsUrl(adId, commentId)}/private_reply/release`
+    );
+  }
+
   instagramCommentsUrl(adId, commentId) {
     const base = `${this.url}/ads/${encodeURIComponent(adId)}/instagram_comments`;
     return commentId ? `${base}/${encodeURIComponent(commentId)}` : base;

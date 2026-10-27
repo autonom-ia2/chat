@@ -26,6 +26,15 @@ RSpec.describe Crm::MetaAdsCommentAction do
     expect { record('hide', actor: 'robo') }.to raise_error(ActiveRecord::RecordInvalid)
   end
 
+  it 'reserva sem chamada vence em RESERVED_TTL; depois de attempt!, nunca' do
+    action = described_class.record!(account: create(:account), network: 'instagram', comment_id: 'c2', action: 'private_reply',
+                                     actor: 'ai')
+    travel(described_class::RESERVED_TTL + 1.minute) { expect(action.abandoned?).to be(true) }
+
+    action.attempt!
+    travel(30.days) { expect(action.abandoned?).to be(false) }
+  end
+
   it 'confirm! marca quando a Meta aceitou o privado' do
     action = described_class.record!(account: create(:account), network: 'instagram', comment_id: 'c1', action: 'private_reply',
                                      actor: 'ai')

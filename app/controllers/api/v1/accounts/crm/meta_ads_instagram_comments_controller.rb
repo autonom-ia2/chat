@@ -6,6 +6,8 @@
 # POST   .../instagram_comments/:comment_id/reply          text=           → responder em público.
 # POST   .../instagram_comments/:comment_id/hide           hidden=         → ocultar ou mostrar de novo.
 # POST   .../instagram_comments/:comment_id/private_reply  text=           → responder no privado (Private Reply).
+# POST   .../instagram_comments/:comment_id/private_reply/release          → "Não foi enviado": libera o privado sem
+#        confirmação da Meta (Crm::MetaAdsCommentAction), depois de a pessoa conferir no Direct.
 # DELETE .../instagram_comments/:comment_id                                → apagar (a tela confirma antes).
 #        Agir: administrador ou `meta_ads_manage`. O privado pede também ser da caixa do Instagram (InboxPolicy#show?):
 #        cria conversa nela em nome de quem clicou. Sem ser: 403 `not_inbox_member`, antes de chamar o Instagram.
@@ -56,6 +58,12 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   def private_reply
     result = comments.private_reply!(ad_id, comment_id, params[:text].to_s, user: Current.user)
     audit!('private_reply')
+    render json: result
+  end
+
+  def release_private_reply
+    result = comments.release_private_reply!(ad_id, comment_id)
+    audit!('private_reply_release')
     render json: result
   end
 

@@ -74,7 +74,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       stub_comments
       conversation = create(:conversation, account: account, inbox: channel.inbox)
       Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: 'c1', action: 'private_reply',
-                                        conversation: conversation, actor: 'user', user: user, at: 2.minutes.ago)
+                                        conversation: conversation, actor: 'user', user: user, at: 2.minutes.ago,
+                                        attempted_at: 2.minutes.ago, confirmed_at: 2.minutes.ago)
 
       first = service.payload(ad_id)[:comments].first
 
@@ -220,16 +221,50 @@ RSpec.describe Crm::MetaAds::InstagramComments do
         expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1')).to have_attributes(confirmed_at: nil)
       end
 
-      it 'sem confirmação, a lista diz "sem confirmação" e o privado nunca sai de novo, nem dias depois' do
-        stub_comments
+      def private_row(**attributes)
         Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: 'c1', action: 'private_reply',
-                                          actor: 'user', at: 3.days.ago)
+                                          actor: 'user', ad_id: ad_id, **attributes)
+      end
+
+      it 'sem confirmação (a chamada saiu), fica travado, nem dias depois, até alguém dizer "Não foi enviado"' do
+        stub_comments
+        private_row(at: 3.days.ago, attempted_at: 3.days.ago)
 
         expect(service.payload(ad_id)[:comments].first).to include(can_reply_private: false,
-                                                                   private_reply: include(confirmed: false))
+                                                                   private_reply: include(confirmed: false, can_release: true))
         expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
           .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_done') }
         expect(a_request(:post, %r{/messages})).not_to have_been_made
+
+        service.release_private_reply!(ad_id, 'c1')
+        expect(service.payload(ad_id)[:comments].first).to include(can_reply_private: true, private_reply: nil)
+      end
+
+      it 'reserva cujo envio nunca saiu (processo morreu antes da chamada) vence e o privado sai' do
+        stub_comments
+        private_row(at: (Crm::MetaAdsCommentAction::RESERVED_TTL + 1.minute).ago)
+
+        expect(service.payload(ad_id)[:comments].first).to include(can_reply_private: true, private_reply: nil)
+        service.private_reply!(ad_id, 'c1', 'Oi!', user: user)
+        expect(Crm::MetaAdsCommentAction.where(comment_id: 'c1').sole).to have_attributes(attempted_at: be_present, confirmed_at: be_present)
+      end
+
+      it 'reserva recente (envio em andamento) ainda vale e não pode ser liberada' do
+        private_row(at: 10.seconds.ago)
+
+        expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_done') }
+        expect { service.release_private_reply!(ad_id, 'c1') }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_not_pending') }
+      end
+
+      it '"Não foi enviado" não mexe em privado confirmado nem em outro anúncio' do
+        private_row(at: 1.hour.ago, attempted_at: 1.hour.ago, confirmed_at: 1.hour.ago)
+
+        expect { service.release_private_reply!(ad_id, 'c1') }
+          .to raise_error(described_class::Error) { |e| expect(e.code).to eq('private_reply_not_pending') }
+        expect { service.release_private_reply!('999', 'c1') }.to raise_error(described_class::Error)
+        expect(Crm::MetaAdsCommentAction.count).to eq(1)
       end
 
       it 'aceito pela Meta, fica confirmado' do

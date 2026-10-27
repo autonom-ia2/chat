@@ -120,19 +120,28 @@ describe('MetaAdsComments (#2196)', () => {
     );
   });
 
-  it('says when Instagram did not confirm the private reply yet', async () => {
+  it('says when Instagram did not confirm the private reply and lets the manager release it', async () => {
     const pending = {
       ...comment('1'),
       can_reply_private: false,
-      private_reply: { sent_at: new Date().toISOString(), confirmed: false },
+      private_reply: {
+        sent_at: new Date().toISOString(),
+        confirmed: false,
+        can_release: true,
+      },
     };
-    const shell = await mountShell([
-      { key: 'INSTAGRAM', adaptador: adaptador(ready([pending])) },
-    ]);
+    const ig = adaptador(ready([pending]));
+    ig.liberar = vi.fn().mockResolvedValue({ id: '1' });
+    const shell = await mountShell([{ key: 'INSTAGRAM', adaptador: ig }]);
 
     expect(shell.find('[data-ad-comment-private-sent]').text()).toContain(
       said('PRIVATE_UNCONFIRMED')
     );
+    await shell.find('[data-ad-comment-private-release]').trigger('click');
+    await flushPromises();
+
+    expect(ig.liberar).toHaveBeenCalledWith('120', '1');
+    expect(useAlert).toHaveBeenCalledWith(said('PRIVATE_RELEASED'));
   });
 
   it('keeps the next page in the tab that asked for it when the tab changes meanwhile', async () => {

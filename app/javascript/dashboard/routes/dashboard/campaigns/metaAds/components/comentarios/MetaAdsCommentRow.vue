@@ -8,7 +8,8 @@ import { relativeTime } from '../../metaAdsHelpers';
 // vêm dos dados (`can_reply`, `can_hide`, `can_delete`, `can_reply_private`), nunca da plataforma: a linha não sabe
 // se é Instagram ou Facebook. Só aparecem para quem pode gerir (`canManage`). Apagar pede confirmação na casca.
 // Privado enviado sem a Meta confirmar (rede caiu no meio): `private_reply.confirmed` false, e a linha diz isso. O
-// botão não volta: a Meta pode ter entregado.
+// botão não volta sozinho, porque a Meta pode ter entregado: quem gere confere no Direct e usa "Não foi enviado"
+// (`private_reply.can_release`).
 // Sem o privado, a linha diz o motivo: passou de 7 dias (`private_reply_expired`) ou quem vê não é da caixa que
 // receberia a conversa (`private_reply_not_member`).
 //
@@ -300,6 +301,15 @@ const DANGER =
           >
             {{ $t(`${KEY}.OPEN_CONVERSATION`) }}
           </router-link>
+          <button
+            v-if="canManage && privateSent.can_release"
+            type="button"
+            data-ad-comment-private-release
+            class="-my-3 inline-flex min-h-11 items-center border-0 bg-transparent p-0 font-medium text-n-blue-11 hover:underline"
+            @click="acoes.liberar(comment)"
+          >
+            {{ $t(`${KEY}.PRIVATE_NOT_SENT`) }}
+          </button>
         </p>
         <p
           v-else-if="canManage && comment.private_reply_expired"

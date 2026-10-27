@@ -1,57 +1,69 @@
 # Comentário novo no Instagram (#2196): o campo `comments` do webhook do login do Instagram, que o roteador do webhook
-# (Webhooks::InstagramEventsJob, infra #2200) manda para cá.
+# (Webhooks::InstagramEventsJob#enqueue_comment, infra #2200) manda para cá.
 #
-# Contrato: só ids, `perform(instagram_id, comment_id, time, ad_id = nil)` (o `entry.id`, o `value.id`, o `entry.time` e
-# o `value.media.ad_id`). O texto e o username de quem comentou são lidos na Graph aqui, com o token da caixa, para não
-# ficarem nos argumentos do job (fila, retry e dead set do Sidekiq guardam os argumentos em claro no Redis).
-# O formato antigo `(instagram_id, field, value, time)`, com o `value` do webhook, ainda é aceito e SAI quando o
-# roteador do #2200 passar ao contrato novo.
+# Contrato único: `perform(instagram_id, field, value_ids, time)`, com o `entry.id`, o campo, os ids do `value` (`id`,
+# `parent_id`, `from.id`, `media.id`, `media.ad_id`) e o `entry.time`. O texto e o username de quem comentou são lidos
+# na Graph aqui, com o token da caixa, para não ficarem nos argumentos do job (fila, retry e dead set do Sidekiq guardam
+# os argumentos em claro no Redis).
+# TRANSIÇÃO (#2291, prazo 15/11/2026): o `value` completo do webhook, com texto, de antes do deploy do #2287, ainda é
+# aceito; daqui só os ids são usados.
 #
-# Vira o evento comum `meta_ads.comment_received` para quem cuida dos comentários (#2212). Ficam de fora: o eco das
-# respostas da própria conta, Instagram sem caixa na plataforma (o relay entre stacks entrega o mesmo corpo às duas;
-# cada uma só publica o que é dela), conta sem a flag `meta_ads_comentarios_instagram` (sem ela a caixa não tem a
-# permissão de ler comentários) e o mesmo comentário de novo em DEDUP (webhook reenviado). Nada do comentário é
-# gravado aqui. Ids fora do formato são descartados em silêncio; Graph fora do ar sobe o erro para o retry.
+# Vira o evento comum `meta_ads.comment_received` para quem cuida dos comentários (#2212). Ficam de fora: outros
+# campos (`mentions`), o eco das respostas da própria conta, Instagram sem caixa na plataforma (o relay entre stacks
+# entrega o mesmo corpo às duas; cada uma só publica o que é dela), conta sem a flag `meta_ads_comentarios_instagram`
+# (sem ela a caixa não tem a permissão de ler comentários) e o mesmo comentário de novo em DEDUP (webhook reenviado).
+# O dedupe só fica depois de publicar: qualquer falha antes solta a chave, e o retry ou o reenvio leem de novo. Nada do
+# comentário é gravado aqui. Ids fora do formato são descartados em silêncio; Graph fora do ar sobe para o retry.
 class Webhooks::InstagramCommentJob < ApplicationJob
   queue_as :default
   self.log_arguments = false
 
   DEDUP = 10.minutes
 
-  def perform(instagram_id, *args)
-    comment_id, time, ad_id = args.second.is_a?(Hash) ? legacy(*args) : args
-    return unless valid_ids?(comment_id, time)
+  def perform(instagram_id, field, value, time)
+    return unless field == 'comments' && value.is_a?(Hash)
+
+    ids = ids(value)
+    return unless valid?(ids, time) && ids[:from_id] != instagram_id.to_s
 
     channel = channel_for(instagram_id)
-    return if channel.nil? || !first_time?(instagram_id, comment_id)
+    return if channel.nil? || !first_time?(instagram_id, ids[:comment_id])
 
-    comment = read_comment(channel, instagram_id, comment_id.to_s)
-    return if comment.nil? || comment.dig('from', 'id').to_s == instagram_id.to_s
-
-    Rails.configuration.dispatcher.dispatch(Events::Types::META_ADS_COMMENT_RECEIVED, Time.zone.now,
-                                            payload(channel, comment, time, ad_id))
+    publish(channel, instagram_id, ids, time)
   end
 
   private
 
-  # (field, value, time) do roteador antigo: só `comments`, e do `value` só os ids.
-  def legacy(field, value, time)
-    return [] unless field == 'comments'
-
-    [value['id'], time, value.dig('media', 'ad_id')]
+  def ids(value)
+    value = value.with_indifferent_access
+    media = value[:media].is_a?(Hash) ? value[:media] : {}
+    from = value[:from].is_a?(Hash) ? value[:from] : {}
+    { comment_id: value[:id]&.to_s, ad_id: media[:ad_id].presence&.to_s, from_id: from[:id]&.to_s }
   end
 
-  def valid_ids?(comment_id, time)
-    digits?(comment_id) && Integer(time.to_s, exception: false).present?
+  def valid?(ids, time)
+    digits?(ids[:comment_id]) && (ids[:ad_id].nil? || digits?(ids[:ad_id])) && Integer(time.to_s, exception: false).present?
   end
 
   def digits?(value)
-    value.present? && value.to_s.each_char.all? { |char| char.between?('0', '9') }
+    value.present? && value.each_char.all? { |char| char.between?('0', '9') }
   end
 
   def channel_for(instagram_id)
     channel = Channel::Instagram.find_by(instagram_id: instagram_id.to_s)
     channel if channel&.inbox.present? && channel.account.feature_enabled?('meta_ads_comentarios_instagram')
+  end
+
+  def publish(channel, instagram_id, ids, time)
+    comment = read_comment(channel, ids[:comment_id])
+    return release(instagram_id, ids[:comment_id]) if comment.nil?
+    return if comment.dig('from', 'id').to_s == instagram_id.to_s
+
+    Rails.configuration.dispatcher.dispatch(Events::Types::META_ADS_COMMENT_RECEIVED, Time.zone.now,
+                                            payload(channel, comment, time, ids[:ad_id]))
+  rescue StandardError
+    release(instagram_id, ids[:comment_id])
+    raise
   end
 
   def dedup_key(instagram_id, comment_id)
@@ -62,20 +74,23 @@ class Webhooks::InstagramCommentJob < ApplicationJob
     Redis::Alfred.set(dedup_key(instagram_id, comment_id), 1, nx: true, ex: DEDUP.to_i) ? true : false
   end
 
-  # Graph fora do ar: solta o dedupe antes de subir, para o retry ler de novo.
-  def read_comment(channel, instagram_id, comment_id)
+  def release(instagram_id, comment_id)
+    Redis::Alfred.delete(dedup_key(instagram_id, comment_id))
+    nil
+  end
+
+  def read_comment(channel, comment_id)
     result = Instagram::CommentsClient.new(channel).comment(comment_id)
     return result.data if result.ok
-    return unless result.transient?
+    raise Instagram::CommentsClient::Unavailable, comment_id if result.transient?
 
-    Redis::Alfred.delete(dedup_key(instagram_id, comment_id))
-    raise Instagram::CommentsClient::Unavailable, comment_id
+    nil
   end
 
   def payload(channel, comment, time, ad_id)
     {
       network: 'instagram', account_id: channel.account_id, inbox_id: channel.inbox.id, instagram_id: channel.instagram_id,
-      media_id: comment.dig('media', 'id')&.to_s, ad_id: ad_id.presence&.to_s, comment_id: comment['id'].to_s,
+      media_id: comment.dig('media', 'id')&.to_s, ad_id: ad_id, comment_id: comment['id'].to_s,
       parent_id: comment['parent_id']&.to_s, from_id: comment.dig('from', 'id')&.to_s, from_name: comment.dig('from', 'username'),
       text: comment['text'], created_time: Time.zone.at(Integer(time.to_s))
     }

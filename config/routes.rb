@@ -409,6 +409,8 @@ Rails.application.routes.draw do
               post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'
               post 'ads/:ad_id/instagram_comments/:comment_id/hide', to: 'meta_ads_instagram_comments#hide'
               post 'ads/:ad_id/instagram_comments/:comment_id/private_reply', to: 'meta_ads_instagram_comments#private_reply'
+              post 'ads/:ad_id/instagram_comments/:comment_id/private_reply/release',
+                   to: 'meta_ads_instagram_comments#release_private_reply'
               delete 'ads/:ad_id/instagram_comments/:comment_id', to: 'meta_ads_instagram_comments#destroy'
               # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'

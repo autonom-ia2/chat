@@ -1,25 +1,31 @@
 require 'rails_helper'
 
 # Comentário novo no Instagram (#2196, campo `comments` do webhook, roteado pela infra #2200): vira o evento comum
-# `meta_ads.comment_received` para quem cuida dos comentários (#2212). O job recebe só ids
-# (instagram_id, comment_id, time, ad_id); o texto e o autor vêm da Graph. O eco da própria conta, Instagram sem caixa,
-# conta sem a flag e o mesmo comentário repetido ficam de fora. Nada do comentário é gravado.
+# `meta_ads.comment_received` para quem cuida dos comentários (#2212). Contrato único: (instagram_id, field, value_ids,
+# time), com o hash que o enqueue_comment do #2287 monta; o texto e o autor vêm da Graph. O eco da própria conta,
+# Instagram sem caixa, conta sem a flag e o mesmo comentário repetido ficam de fora. Nada do comentário é gravado.
 RSpec.describe Webhooks::InstagramCommentJob do
   let(:account) { create(:account) }
-  let!(:channel) { create(:channel_instagram, account: account, instagram_id: '17841400000000001') }
-  let(:ig_id) { '17841400000000001' }
-  let(:comment_id) { '18000000000000001' }
-  let(:time) { 1_761_600_000 }
+  let!(:channel) { create(:channel_instagram, account: account, instagram_id: ig_id) }
+  let(:ig_id) { '17841400000000000' }
+  let(:comment_id) { '17865799348089039' }
+  let(:time) { 1_761_000_000 }
+  # Exatamente o que Webhooks::InstagramEventsJob#enqueue_comment (#2287) manda.
+  let(:value_ids) do
+    { 'id' => comment_id, 'parent_id' => '17800000000000001', 'from' => { 'id' => '232323' },
+      'media' => { 'id' => '123123', 'ad_id' => '999' } }
+  end
   let(:graph) { %r{graph\.instagram\.com/v22\.0/#{comment_id}\?} }
+  let(:json) { { 'Content-Type' => 'application/json' } }
   let(:graph_comment) do
-    { id: comment_id, text: 'Tem M?', timestamp: '2026-10-27T12:00:00+0000', parent_id: '18000000000000000',
-      from: { id: '501', username: 'carla.dias' }, media: { id: '17900000000000001' } }
+    { id: comment_id, text: 'Tem M?', timestamp: '2026-10-27T12:00:00+0000', parent_id: '17800000000000001',
+      from: { id: '232323', username: 'carla.dias' }, media: { id: '123123' } }
   end
 
   before do
     account.enable_features!('meta_ads_comentarios_instagram')
     allow(Rails.configuration.dispatcher).to receive(:dispatch)
-    stub_request(:get, graph).to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: graph_comment.to_json)
+    stub_request(:get, graph).to_return(status: 200, headers: json, body: graph_comment.to_json)
   end
 
   after { Redis::Alfred.delete("instagram:comment_received:#{ig_id}:#{comment_id}") }
@@ -28,70 +34,79 @@ RSpec.describe Webhooks::InstagramCommentJob do
     expect(described_class.log_arguments?).to be(false)
   end
 
-  it 'contrato: só ids; lê texto e autor na Graph e publica com a caixa e o anúncio' do
-    described_class.perform_now(ig_id, comment_id, time, '120254710382770416')
+  it 'contrato do #2287: lê texto e autor na Graph e publica com a caixa e o anúncio' do
+    described_class.perform_now(ig_id, 'comments', value_ids, time)
 
     expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
       Events::Types::META_ADS_COMMENT_RECEIVED, kind_of(Time),
       {
         network: 'instagram', account_id: account.id, inbox_id: channel.inbox.id, instagram_id: ig_id,
-        media_id: '17900000000000001', ad_id: '120254710382770416', comment_id: comment_id, parent_id: '18000000000000000',
-        from_id: '501', from_name: 'carla.dias', text: 'Tem M?', created_time: Time.zone.at(time)
+        media_id: '123123', ad_id: '999', comment_id: comment_id, parent_id: '17800000000000001',
+        from_id: '232323', from_name: 'carla.dias', text: 'Tem M?', created_time: Time.zone.at(time)
       }
     )
   end
 
-  it 'formato antigo do roteador (field, value, time) ainda vale, só com os ids do value' do
-    value = { 'id' => comment_id, 'text' => 'ignorado', 'media' => { 'id' => '1', 'ad_id' => '120254710382770416' } }
-    described_class.perform_now(ig_id, 'comments', value, time.to_s)
-    described_class.perform_now(ig_id, 'mentions', value, time)
+  it 'transição (#2291): o value completo antigo ainda vale, só pelos ids' do
+    described_class.perform_now(ig_id, 'comments', value_ids.merge('text' => 'ignorado', 'from' => { 'id' => '232323', 'username' => 'x' }),
+                                time.to_s)
 
-    expected = hash_including(text: 'Tem M?', ad_id: '120254710382770416')
+    expected = hash_including(text: 'Tem M?', ad_id: '999')
     expect(Rails.configuration.dispatcher).to have_received(:dispatch).once.with(anything, anything, expected)
   end
 
   it 'o mesmo comentário repetido (webhook reenviado) lê a Graph e publica uma vez só' do
-    2.times { described_class.perform_now(ig_id, comment_id, time) }
+    2.times { described_class.perform_now(ig_id, 'comments', value_ids, time) }
 
     expect(a_request(:get, graph)).to have_been_made.once
     expect(Rails.configuration.dispatcher).to have_received(:dispatch).once
   end
 
-  it 'ignora o eco da própria conta' do
-    stub_request(:get, graph).to_return(status: 200, headers: { 'Content-Type' => 'application/json' },
-                                        body: graph_comment.merge(from: { id: ig_id, username: 'loja' }).to_json)
+  it 'falha depois do dedupe solta a chave: o retry lê e publica' do
+    allow(Rails.configuration.dispatcher).to receive(:dispatch).and_raise(RuntimeError).once
+    expect { described_class.new.perform(ig_id, 'comments', value_ids, time) }.to raise_error(RuntimeError)
 
-    described_class.perform_now(ig_id, comment_id, time)
-
-    expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
+    allow(Rails.configuration.dispatcher).to receive(:dispatch)
+    described_class.new.perform(ig_id, 'comments', value_ids, time)
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).twice
   end
 
-  it 'ignora Instagram sem caixa e conta sem a flag, sem ler a Graph' do
-    described_class.perform_now('17841499999999999', comment_id, time)
-    account.disable_features!('meta_ads_comentarios_instagram')
-    described_class.perform_now(ig_id, comment_id, time)
+  it 'Graph fora do ar sobe para o retry; sem permissão ou comentário apagado não publica e não prende a chave' do
+    stub_request(:get, graph).to_return(status: 503, body: '{}').then
+                             .to_return(status: 400, body: { error: { code: 190 } }.to_json).then
+                             .to_return(status: 200, headers: json, body: graph_comment.to_json)
+
+    expect { described_class.new.perform(ig_id, 'comments', value_ids, time) }.to raise_error(Instagram::CommentsClient::Unavailable)
+    described_class.new.perform(ig_id, 'comments', value_ids, time)
+    expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
+
+    described_class.new.perform(ig_id, 'comments', value_ids, time)
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch).once
+  end
+
+  it 'ignora o eco da própria conta sem ler a Graph' do
+    described_class.perform_now(ig_id, 'comments', value_ids.merge('from' => { 'id' => ig_id }), time)
 
     expect(a_request(:get, graph)).not_to have_been_made
     expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
   end
 
-  it 'descarta ids fora do formato sem quebrar' do
-    [['c1?x=1', time], [comment_id, 'ontem'], [nil, time]].each { |id, at| described_class.perform_now(ig_id, id, at) }
+  it 'ignora mentions, Instagram sem caixa e conta sem a flag, sem ler a Graph' do
+    described_class.perform_now(ig_id, 'mentions', { 'comment_id' => '1', 'media_id' => '2' }, time)
+    described_class.perform_now('17841499999999999', 'comments', value_ids, time)
+    account.disable_features!('meta_ads_comentarios_instagram')
+    described_class.perform_now(ig_id, 'comments', value_ids, time)
 
-    expect(a_request(:get, /graph\.instagram\.com/).with { |r| !r.uri.path.end_with?('subscribed_apps') }).not_to have_been_made
+    expect(a_request(:get, graph)).not_to have_been_made
+    expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
   end
 
-  it 'comentário apagado não publica; Graph fora do ar sobe para o retry e o retry lê de novo' do
-    stub_request(:get, graph).to_return(status: 503, body: '{}').then
-                             .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: graph_comment.to_json)
+  it 'descarta ids fora do formato (comentário ou anúncio que não é só dígitos, tempo que não é número)' do
+    [value_ids.merge('id' => 'c1?x=1'), value_ids.merge('media' => { 'ad_id' => '9?x' }), 'texto'].each do |body|
+      described_class.perform_now(ig_id, 'comments', body, time)
+    end
+    described_class.perform_now(ig_id, 'comments', value_ids, 'ontem')
 
-    expect { described_class.new.perform(ig_id, comment_id, time) }.to raise_error(Instagram::CommentsClient::Unavailable)
-    described_class.new.perform(ig_id, comment_id, time)
-    expect(Rails.configuration.dispatcher).to have_received(:dispatch).once
-
-    Redis::Alfred.delete("instagram:comment_received:#{ig_id}:#{comment_id}")
-    stub_request(:get, graph).to_return(status: 400, body: { error: { code: 100 } }.to_json)
-    described_class.new.perform(ig_id, comment_id, time)
-    expect(Rails.configuration.dispatcher).to have_received(:dispatch).once
+    expect(a_request(:get, /graph\.instagram\.com/).with { |r| !r.uri.path.end_with?('subscribed_apps') }).not_to have_been_made
   end
 end
