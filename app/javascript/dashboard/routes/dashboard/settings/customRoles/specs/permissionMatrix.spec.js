@@ -486,6 +486,7 @@ describe('permissionMatrix', () => {
     'knowledge_base_view',
     'autonomia_view',
     'autonomia_manage',
+    'desempenho_view',
     'campaign_view',
     'campaign_manage',
     'campaign_send',
@@ -525,8 +526,8 @@ describe('permissionMatrix', () => {
     ...(module.type === 'conversations' ? ['conversation_manage'] : []),
   ]);
 
-  it('covers exactly the 56 server keys in the matrix', () => {
-    expect(SERVER_KEYS).toHaveLength(56);
+  it('covers exactly the 57 server keys in the matrix', () => {
+    expect(SERVER_KEYS).toHaveLength(57);
     expect([...new Set(known)].sort()).toEqual([...SERVER_KEYS].sort());
   });
 

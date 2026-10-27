@@ -596,6 +596,10 @@ Rails.application.routes.draw do
                    to: 'agents/instruction_versions#restore'
               # Tema 14 (#1434) — quem o ajudante ajuda e quando chamar (atrás da chave da Fase 2).
               resource :ajuda, only: [:show, :update], controller: 'agents/ajuda'
+              # #2251 — painel de desempenho (agente nosso ou, com ?origem=webhook, o robô de outro sistema) e a
+              # exportação em PDF e planilha. Chave própria desempenho_view, atrás da flag agentes_painel_desempenho.
+              get 'desempenho', to: 'agents/desempenho#show'
+              get 'desempenho/exportar', to: 'agents/desempenho#exportar'
             end
             resources :build_threads, only: [:create, :show], controller: 'agents/build_threads' do
               member do
