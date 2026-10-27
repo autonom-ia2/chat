@@ -29,16 +29,26 @@ module Crm::Cards::ActionGroups
   def apply_action_groups(cards)
     return cards unless action_groups_needed?
 
+    # Condição e ordem em texto ou nó Arel, nunca hash com "acao.grupo": a chave com ponto põe `acao` em references_values
+    # e liga o eager_load do includes da base (JOIN das conversas vinculadas, linhas repetidas, select descartado).
     cards = cards.joins(action_conversation_join).joins(action_group_lateral)
-    cards = cards.where(GROUP_SQL => 1) if boolean_param(:waiting)
+    cards = cards.where("#{GROUP_SQL} = 1") if boolean_param(:waiting)
     cards = cards.where('acao.retorno_em <= ?', end_of_today) if @params[:follow_up_status].to_s == FOLLOW_UP_DUE
-    cards = cards.where(GROUP_SQL => action_group_param) if action_group_param
+    cards = apply_action_group_filter(cards)
     boolean_param(:mine) ? apply_mine(cards) : cards
+  end
+
+  # Grupo que não existe mostra a lista vazia, nunca a lista inteira (como o link de Origens com mês inválido).
+  def apply_action_group_filter(cards)
+    return cards if @params[:action_group].blank?
+    return cards.none if action_group_param.nil?
+
+    cards.where("#{GROUP_SQL} = ?", action_group_param)
   end
 
   def action_groups_needed?
     Crm::Cards::ActionGroups.sort?(@params) || @params[:group_by].to_s == SORT || boolean_param(:waiting) ||
-      boolean_param(:mine) || @params[:follow_up_status].to_s == FOLLOW_UP_DUE || action_group_param.present?
+      boolean_param(:mine) || @params[:follow_up_status].to_s == FOLLOW_UP_DUE || @params[:action_group].present?
   end
 
   # "Só meus" (#2283, decisão 6): o card é meu (dono) ou, sem dono, a conversa visível é minha; a conversa minha que
@@ -57,18 +67,22 @@ module Crm::Cards::ActionGroups
   end
 
   # Dentro do grupo: 1 SLA mais perto, depois quem espera há mais tempo · 2 retorno mais antigo · 3 quem entrou primeiro ·
-  # 4 parado há mais tempo · 5 próximo retorno, sem retorno no fim. Desempate: score desc, id desc (paginação estável).
+  # 4 parado há mais tempo · 5 próximo retorno da pessoa, sem retorno no fim. Desempate: score desc, id desc (paginação
+  # estável). Nós Arel, não texto: texto que começa com "acao." viraria references_values (ver apply_action_groups).
   def apply_action_sort(cards)
-    cards.reorder(Arel.sql(<<~SQL.squish))
-      acao.grupo ASC,
-      #{sla_order_sql}
-      CASE WHEN acao.grupo = 1 THEN #{CONVERSATION}.waiting_since END ASC,
-      CASE WHEN acao.grupo = 2 THEN acao.retorno_em END ASC,
-      CASE WHEN acao.grupo = 3 THEN crm_cards.created_at END ASC,
-      CASE WHEN acao.grupo = 4 THEN #{Crm::Cards::SharedFilters::STALE_SQL} END ASC NULLS FIRST,
-      CASE WHEN acao.grupo = 5 THEN crm_cards.next_follow_up_at END ASC NULLS LAST,
-      crm_cards.score DESC, crm_cards.id DESC
-    SQL
+    terms = [asc('acao.grupo')]
+    terms << asc(sla_order_sql).nulls_last if sla_order?
+    terms.push(asc("CASE WHEN acao.grupo = 1 THEN #{CONVERSATION}.waiting_since END"),
+               asc('CASE WHEN acao.grupo = 2 THEN acao.retorno_em END'),
+               asc('CASE WHEN acao.grupo = 3 THEN crm_cards.created_at END'),
+               asc("CASE WHEN acao.grupo = 4 THEN #{Crm::Cards::SharedFilters::STALE_SQL} END").nulls_first,
+               asc('CASE WHEN acao.grupo = 5 THEN acao.retorno_em END').nulls_last,
+               Arel::Nodes::Descending.new(Arel.sql('crm_cards.score')), Arel::Nodes::Descending.new(Arel.sql('crm_cards.id')))
+    cards.reorder(*terms)
+  end
+
+  def asc(sql)
+    Arel::Nodes::Ascending.new(Arel.sql(sql))
   end
 
   def action_conversation_join
@@ -96,8 +110,10 @@ module Crm::Cards::ActionGroups
     SQL
   end
 
+  # Só o retorno sem conversa ou de conversa que a pessoa vê (Crm::FollowUp.retorno_visivel): o grupo, o filtro, a ordem e
+  # o next_follow_up_id nunca revelam lembrete de conversa oculta.
   def next_person_follow_up_sql
-    Crm::FollowUp.unscoped.retorno_da_pessoa
+    Crm::FollowUp.unscoped.retorno_visivel(visible_conversation_ids_sql)
                  .where('crm_follow_ups.account_id = crm_cards.account_id AND crm_follow_ups.card_id = crm_cards.id')
                  .select('MIN(crm_follow_ups.due_at) AS em').to_sql
   end
@@ -115,9 +131,11 @@ module Crm::Cards::ActionGroups
   end
 
   # Prazo de SLA no relógio corrido (o selo do card usa o calendário de expediente): só ordena dentro de "esperando".
-  def sla_order_sql
-    return '' unless @account&.feature_enabled?('sla')
+  def sla_order?
+    @account&.feature_enabled?('sla')
+  end
 
+  def sla_order_sql
     # AppliedSla.sla_statuses: active 0, active_with_misses 3 (o modelo mora no enterprise/).
     active = '0, 3'
     <<~SQL.squish
@@ -128,7 +146,7 @@ module Crm::Cards::ActionGroups
           #{CONVERSATION}.waiting_since + sla_policies.next_response_time_threshold * INTERVAL '1 second'))
         FROM applied_slas INNER JOIN sla_policies ON sla_policies.id = applied_slas.sla_policy_id
         WHERE applied_slas.conversation_id = #{CONVERSATION}.id AND applied_slas.sla_status IN (#{active})
-      ) END ASC NULLS LAST,
+      ) END
     SQL
   end
 

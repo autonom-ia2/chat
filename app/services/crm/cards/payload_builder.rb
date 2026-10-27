@@ -54,8 +54,11 @@ class Crm::Cards::PayloadBuilder
 
   UNRESOLVED_COMPANY = Object.new.freeze
   UNRESOLVED_FOLLOW_UP = Object.new.freeze
+  # Lista legada e planilha não usam o next_follow_up_id: o campo não vai e a consulta não roda.
+  SKIP_FOLLOW_UP = Object.new.freeze
 
-  # next_follow_up_id: a página da Lista manda o de todos os cards de uma vez (Crm::FollowUp.proximos_retornos_da_pessoa).
+  # next_follow_up_id: a página da Lista nova manda o de todos os cards de uma vez
+  # (Crm::FollowUp.proximos_retornos_da_pessoa); sem ele, um card só (detalhe e tempo real) faz a consulta.
   def initialize(card, user: nil, account_user: nil, conversation_visibility: nil, company: UNRESOLVED_COMPANY, # rubocop:disable Metrics/ParameterLists
                  next_follow_up_id: UNRESOLVED_FOLLOW_UP)
     @card = card
@@ -82,17 +85,21 @@ class Crm::Cards::PayloadBuilder
     Crm::ValorDeVenda.ve_o_card?(@account_user, @card)
   end
 
-  # Conversa que a pessoa não vê (#2283, item 7): nem o nome de quem conversa nem de quem cuida ("Outra pessoa está
-  # conversando"). Card sem conversa segue com o dono como responsável.
+  # Conversa que a pessoa não vê (#2283, item 7): o nome de quem atende essa conversa não vai, nem como responsável nem
+  # como quem cuida. O dono do card e o robô continuam (não vêm da conversa oculta).
   def sanitize_hidden_conversation!(payload)
     return if primary_conversation_visible?
 
     payload[:conversation_id] = nil
     payload[:metadata] = sanitized_metadata(payload[:metadata])
-    return if primary_conversation.blank?
+    return unless hidden_conversation_assignee?
 
     payload.delete(:responsible)
-    payload[:current_responsible] = nil
+    payload[:current_responsible] = nil if @card.owner.blank?
+  end
+
+  def hidden_conversation_assignee?
+    primary_conversation.present? && primary_conversation.assignee_id.present?
   end
 
   def append_nested_payloads(payload)
@@ -115,14 +122,14 @@ class Crm::Cards::PayloadBuilder
   # pessoa mais perto (o "Feito" usa o id) e, com sort=acao, o grupo do card (Crm::Cards::ActionGroups).
   def append_action_list_payload(payload)
     payload[:current_responsible] = @card.current_responsible
-    payload[:next_follow_up_id] = next_follow_up_id
+    payload[:next_follow_up_id] = next_follow_up_id unless @next_follow_up_id.equal?(SKIP_FOLLOW_UP)
     payload[:action_group] = Crm::Cards::ActionGroups::KEYS[@card[:acao_grupo]] if @card.has_attribute?(:acao_grupo)
   end
 
   def next_follow_up_id
     return @next_follow_up_id unless @next_follow_up_id.equal?(UNRESOLVED_FOLLOW_UP)
 
-    Crm::FollowUp.proximos_retornos_da_pessoa([@card.id])[@card.id]
+    Crm::FollowUp.proximos_retornos_da_pessoa([@card.id], conversation_visibility: visibility)[@card.id]
   end
 
   # Label titles (strings) of the PRIMARY conversation only, in cached_label_list

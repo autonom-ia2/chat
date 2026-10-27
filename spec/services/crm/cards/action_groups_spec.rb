@@ -141,7 +141,7 @@ RSpec.describe Crm::Cards::ActionGroups do
       stale!(card('Parado há 9 dias', owner: colleague, conversation: conversation(assignee: colleague)), days: 9)
       stale!(card('Parado há 14 dias', owner: colleague, conversation: conversation(assignee: colleague)), days: 14)
       card('Demais sem retorno', owner: colleague, score: 90)
-      card('Demais com retorno', owner: colleague, next_follow_up_at: 2.days.from_now)
+      follow_up(card('Demais com retorno', owner: colleague), due_at: 2.days.from_now)
       tie_a = card('Empate A', owner: colleague, score: 10)
       tie_b = card('Empate B', owner: colleague, score: 10)
 
@@ -163,6 +163,15 @@ RSpec.describe Crm::Cards::ActionGroups do
 
       expect(query(sort: 'acao').map(&:title)).to eq(['Espera há 1 hora com SLA', 'Espera há 5 horas sem SLA'])
     end
+
+    it 'ordena "os demais" pelo retorno da pessoa, não pelo toque da IA que está mais perto' do
+      ai_only = card('Só toque da IA amanhã', owner: colleague, next_follow_up_at: 1.day.from_now)
+      follow_up(ai_only, due_at: 1.day.from_now, source: Crm::FollowUp::AI_FOLLOWUP_SOURCE)
+      person = card('Retorno da pessoa em 3 dias', owner: colleague, next_follow_up_at: 3.days.from_now)
+      follow_up(person, due_at: 3.days.from_now)
+
+      expect(query(sort: 'acao').map(&:title)).to eq(['Retorno da pessoa em 3 dias', 'Só toque da IA amanhã'])
+    end
   end
 
   describe 'filtros e contagem' do
@@ -182,6 +191,25 @@ RSpec.describe Crm::Cards::ActionGroups do
       expect(query(follow_up_status: 'due').map(&:title)).to eq(['Retorno'])
       expect(query(action_group: 'ninguem').map(&:title)).to eq(['Ninguém'])
       expect(query(sort: 'acao').count).to eq(counts.values.sum)
+    end
+
+    it 'mostra lista vazia, e não a lista inteira, quando o grupo pedido não existe' do
+      expect(query(action_group: 'qualquer')).to be_empty
+      expect(query(action_group: 'retorno').map(&:title)).to eq(['Retorno'])
+    end
+
+    it 'conta uma vez o card com várias conversas, sem eager_load, com o grupo na linha' do
+      many = card('Várias conversas', owner: colleague, conversation: conversation(assignee: colleague, waiting: true))
+      2.times { many.card_conversations.create!(account: account, conversation: conversation(assignee: colleague), linked_by: admin) }
+      relation = query(sort: 'acao', waiting: 'true')
+
+      expect(relation.eager_loading?).to be(false)
+      expect(relation.references_values).to be_empty
+      expect(relation.count).to eq(2)
+      expect(relation.select('crm_cards.*', described_class::SELECT).map { |row| [row.title, row[:acao_grupo]] })
+        .to contain_exactly(['Esperando', 1], ['Várias conversas', 1])
+      expect(summary).to include('esperando' => 2)
+      expect(summary.values.sum).to eq(query(sort: 'acao').count)
     end
 
     it 'devolve os cinco grupos na ordem, com zero e com valor' do

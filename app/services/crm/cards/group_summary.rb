@@ -78,8 +78,10 @@ class Crm::Cards::GroupSummary
     end
   end
 
+  # Sem includes/preload: a contagem é só dos cards, uma linha por card (nada de JOIN de associação no meio).
   def build_action_groups
-    rows = filtered_scope.reorder(nil).group(Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL)).pluck(
+    scope = filtered_scope.except(:includes, :preload, :eager_load, :references).reorder(nil)
+    rows = scope.group(Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL)).pluck(
       Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL), Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(crm_cards.value_cents), 0)'),
       Arel.sql('MODE() WITHIN GROUP (ORDER BY crm_cards.currency)')
     ).index_by(&:first)

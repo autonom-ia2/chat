@@ -153,6 +153,86 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
     row = response.parsed_body['payload'].first
     expect(row).not_to have_key('action_group')
     expect(row['current_responsible']).to include('type' => 'agent', 'name' => 'Atendente Beto')
-    expect(row['next_follow_up_id']).to be_nil
+    expect(row).not_to have_key('next_follow_up_id')
+  end
+
+  it 'devolve lista vazia, e não a lista inteira, com grupo inválido' do
+    card('Qualquer', inbox: inbox, owner: agent)
+
+    body = list(agent, action_group: 'nao-existe')
+
+    expect(body['payload']).to eq([])
+    expect(body.dig('meta', 'count')).to eq(0)
+  end
+
+  it 'conta uma vez, na lista, no count e na contagem, o card com várias conversas' do
+    many = card('Várias conversas', inbox: inbox, owner: agent, conversation: conversation(inbox: inbox, assignee: agent, waiting: true))
+    2.times do
+      many.card_conversations.create!(account: account, conversation: conversation(inbox: inbox, assignee: agent), linked_by: admin)
+    end
+
+    body = list(agent)
+
+    expect(body['payload'].pluck('id')).to eq([many.id])
+    expect(body['payload'].first['action_group']).to eq('esperando')
+    expect(body.dig('meta', 'count')).to eq(1)
+    expect(counts(agent).values.sum).to eq(1)
+  end
+
+  describe 'retorno de conversa oculta' do
+    let(:hidden_conversation) { conversation(inbox: hidden_inbox, assignee: admin) }
+    let!(:shown_card) { card('Card visível, conversa oculta', inbox: inbox, owner: agent, conversation: hidden_conversation) }
+
+    it 'não conta nem manda o id do retorno ligado à conversa que a pessoa não vê' do
+      account.crm_follow_ups.create!(card: shown_card, conversation: hidden_conversation, created_by: admin, title: 'Retorno oculto',
+                                     due_at: 1.day.ago, timezone: 'America/Sao_Paulo', status: :overdue)
+
+      row = list(agent)['payload'].find { |item| item['id'] == shown_card.id }
+
+      expect(row).to include('action_group' => 'demais', 'next_follow_up_id' => nil)
+      expect(counts(agent)['retorno']).to eq(0)
+      expect(list(agent, follow_up_status: 'due')['payload']).to eq([])
+      get "#{api}/cards/#{shown_card.id}", headers: auth_headers(agent)
+      expect(response.parsed_body.dig('payload', 'next_follow_up_id')).to be_nil
+    end
+
+    it 'conta o retorno sem conversa do mesmo card, que o grupo calcula só com dado visível' do
+      visible = account.crm_follow_ups.create!(card: shown_card, created_by: agent, title: 'Ligar', due_at: 1.day.ago,
+                                               timezone: 'America/Sao_Paulo', status: :overdue)
+
+      row = list(agent)['payload'].find { |item| item['id'] == shown_card.id }
+
+      expect(row).to include('action_group' => 'retorno', 'next_follow_up_id' => visible.id, 'conversation_id' => nil)
+    end
+  end
+
+  describe 'quem cuida com a conversa oculta' do
+    def board_row(card)
+      get "#{api}/kanban", params: { pipeline_id: card.pipeline_id }, headers: auth_headers(agent)
+      response.parsed_body.dig('payload', 'stages').flat_map { |stage| stage['cards'] }.find { |item| item['id'] == card.id }
+    end
+
+    it 'mostra o dono do card e esconde só quem atende a conversa oculta' do
+      owned = card('Com dono', inbox: inbox, owner: agent, conversation: conversation(inbox: hidden_inbox, assignee: admin))
+
+      row = list(agent)['payload'].find { |item| item['id'] == owned.id }
+
+      expect(row['current_responsible']).to include('type' => 'agent', 'name' => 'Atendente Beto')
+      expect(row).not_to have_key('responsible')
+      expect(row.dig('owner', 'name')).to eq('Atendente Beto')
+      expect(board_row(owned)['responsible']).to be_nil
+      expect(response.body).not_to include('Gestora Ana')
+    end
+
+    it 'mostra o robô da caixa quando ninguém atende a conversa oculta' do
+      AgentBotInbox.create!(inbox: hidden_inbox, agent_bot: create(:agent_bot, account: account, name: 'Assistente Bia'), status: :active)
+      by_bot = card('Robô cuida', inbox: inbox, conversation: conversation(inbox: hidden_inbox))
+
+      row = list(agent)['payload'].find { |item| item['id'] == by_bot.id }
+
+      expect(row['current_responsible']).to include('type' => 'bot', 'name' => 'Assistente Bia')
+      expect(row['responsible']).to include('type' => 'bot', 'name' => 'Assistente Bia')
+      expect(board_row(by_bot)['responsible']).to include('type' => 'bot', 'name' => 'Assistente Bia')
+    end
   end
 end
