@@ -1,8 +1,8 @@
 require 'rails_helper'
 
-# Reautorização da caixa do Instagram a partir de um cartão de Anúncios (#2196): o escopo a mais sai do servidor pela
-# tela de volta (EXTRA_SCOPES, nunca do front), só com a flag dela ligada, e o state guarda para onde a pessoa volta.
-# Pela tela da caixa, o login continua pedindo só REQUIRED_SCOPES.
+# Reautorização da caixa do Instagram a partir dos comentários do anúncio (#2196): o escopo a mais sai do servidor pelo
+# `purpose` (REAUTH_PURPOSES, nunca do front), só com a flag dele ligada, e o state guarda o anúncio de volta (`ad_id`,
+# só dígitos). Pela tela da caixa, o login continua pedindo só REQUIRED_SCOPES.
 RSpec.describe 'Instagram reauthorization from Meta ads (#2196)', type: :request do
   let(:account) { create(:account) }
   let(:administrator) { create(:user, account: account, role: :administrator) }
@@ -31,12 +31,13 @@ RSpec.describe 'Instagram reauthorization from Meta ads (#2196)', type: :request
   end
 
   it 'pede a permissão de comentários e guarda a volta ao anúncio' do
-    authorize(inbox_id: inbox.id, return_to: 'comentarios_ig', ad_id: '120254710382770416')
+    authorize(inbox_id: inbox.id, return_to: 'meta_ads', purpose: 'meta_ads_comentarios_instagram', ad_id: '120254710382770416')
 
     expect(response).to have_http_status(:ok)
     scopes, state = url_parts
     expect(scopes).to eq(Instagram::IntegrationHelper::REQUIRED_SCOPES + %w[instagram_business_manage_comments])
-    expect(state).to include('inbox_id' => inbox.id, 'return_to' => 'comentarios_ig', 'ad_id' => '120254710382770416')
+    expect(state).to include('inbox_id' => inbox.id, 'return_to' => 'meta_ads', 'purpose' => 'meta_ads_comentarios_instagram',
+                             'ad_id' => '120254710382770416')
   end
 
   it 'reautorização pela caixa continua só com os escopos de sempre' do
@@ -47,16 +48,17 @@ RSpec.describe 'Instagram reauthorization from Meta ads (#2196)', type: :request
     expect(state).not_to have_key('ad_id')
   end
 
-  it 'recusa tela desconhecida, flag desligada, ad_id que não é número e volta a Anúncios sem caixa' do
+  it 'recusa tela desconhecida, flag desligada, ad_id que não é número e ad_id fora da volta a Anúncios' do
+    comments = { inbox_id: inbox.id, return_to: 'meta_ads', purpose: 'meta_ads_comentarios_instagram' }
     [{ inbox_id: inbox.id, return_to: 'outra_tela' },
-     { inbox_id: inbox.id, return_to: 'comentarios_ig', ad_id: '12?x=1' },
-     { return_to: 'comentarios_ig' }].each do |params|
+     comments.merge(ad_id: '12?x=1'),
+     { inbox_id: inbox.id, return_to: 'inbox', ad_id: '120254710382770416' }].each do |params|
       authorize(params)
       expect(response).to have_http_status(:unprocessable_entity)
     end
 
     account.disable_features!(:meta_ads_comentarios_instagram)
-    authorize(inbox_id: inbox.id, return_to: 'comentarios_ig')
+    authorize(comments)
     expect(response).to have_http_status(:unprocessable_entity)
   end
 end

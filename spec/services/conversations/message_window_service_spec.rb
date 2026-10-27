@@ -239,6 +239,16 @@ RSpec.describe Conversations::MessageWindowService do
         end
       end
 
+      it 'keeps the 24 hours window for automatic sends even with HUMAN_AGENT (#2259)' do
+        with_modified_env ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT: 'true' do
+          create(:message, account: conversation.account, inbox: instagram_inbox, conversation: conversation, created_at: 6.days.ago)
+
+          expect(described_class.new(conversation, automatic: true).can_reply?).to be false
+          expect(conversation.can_reply_automatically?).to be false
+          expect(conversation.can_reply?).to be true
+        end
+      end
+
       it 'return false if the last message is incoming and outside the messaging window (8 days ago)' do
         with_modified_env ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT: 'true' do
           create(

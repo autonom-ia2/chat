@@ -105,7 +105,10 @@ const aviso = computed(() => {
     :class="aviso ? 'border-n-amber-7' : 'border-n-weak'"
   >
     <header class="flex items-start gap-3">
-      <CaixaIcone :canal="caixa.inbox.channel_type" />
+      <CaixaIcone
+        :canal="caixa.inbox.channel_type"
+        :caixa-id="caixa.inbox.id"
+      />
       <div class="min-w-0 flex-1">
         <h2 class="mb-1 truncate text-lg font-semibold text-n-slate-12">
           {{ caixa.inbox.name }}

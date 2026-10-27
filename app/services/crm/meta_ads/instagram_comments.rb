@@ -7,7 +7,7 @@
 # - `ready`: a lista; `no_post`: o anúncio não aparece no Instagram;
 # - `not_connected`: o Instagram do anúncio não tem caixa nesta conta;
 # - `needs_login`: a caixa existe, mas sem a permissão de comentários (ou esperando nova autorização); vem com o
-#   `inbox_id`, que a tela usa para pedir o login de novo (Instagram::IntegrationHelper::EXTRA_SCOPES).
+#   `inbox_id`, que a tela usa para pedir o login de novo (Instagram::IntegrationHelper::REAUTH_PURPOSES).
 # nil quando o anúncio não é da conta de anúncios da conexão (a tela trata como inexistente).
 #
 # Cada ação confere antes que o comentário é da mídia do anúncio: sem isso, quem gere os anúncios agiria em qualquer

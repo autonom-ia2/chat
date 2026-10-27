@@ -2,8 +2,11 @@ class Conversations::MessageWindowService
   MESSAGING_WINDOW_24_HOURS = 24.hours
   MESSAGING_WINDOW_7_DAYS = 7.days
 
-  def initialize(conversation)
+  # automatic: envio que não é uma pessoa respondendo no painel (CSAT, resolução automática, Agendamento). Ele não usa
+  # a tag HUMAN_AGENT (#2259), então no Instagram e no Messenger fica nas 24 h mesmo com a flag ligada.
+  def initialize(conversation, automatic: false)
     @conversation = conversation
+    @automatic = automatic
   end
 
   def can_reply?
@@ -61,6 +64,8 @@ class Conversations::MessageWindowService
   end
 
   def meta_messaging_window(config_key)
+    return MESSAGING_WINDOW_24_HOURS if @automatic
+
     GlobalConfigService.load(config_key, nil) ? MESSAGING_WINDOW_7_DAYS : MESSAGING_WINDOW_24_HOURS
   end
 

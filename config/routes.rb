@@ -393,6 +393,8 @@ Rails.application.routes.draw do
             scope 'meta_ads_connection' do
               # Relatório baixado (#1960): PDF ou planilha do painel no período.
               get :report, to: 'meta_ads_reports#show'
+              # Seus posts (#2199): resultado orgânico da Página e do Instagram.
+              get :organico, to: 'meta_ads_organico#show'
               post :daily_action, to: 'meta_ads_ai#daily_action'
               post :quote_message, to: 'meta_ads_ai#quote_message'
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
@@ -600,6 +602,10 @@ Rails.application.routes.draw do
                    to: 'agents/instruction_versions#restore'
               # Tema 14 (#1434) — quem o ajudante ajuda e quando chamar (atrás da chave da Fase 2).
               resource :ajuda, only: [:show, :update], controller: 'agents/ajuda'
+              # #2251 — painel de desempenho (agente nosso ou, com ?origem=webhook, o robô de outro sistema) e a
+              # exportação em PDF e planilha. Chave própria desempenho_view, atrás da flag agentes_painel_desempenho.
+              get 'desempenho', to: 'agents/desempenho#show'
+              get 'desempenho/exportar', to: 'agents/desempenho#exportar'
             end
             resources :build_threads, only: [:create, :show], controller: 'agents/build_threads' do
               member do
@@ -1409,6 +1415,8 @@ Rails.application.routes.draw do
 
   # ----------------------------------------------------------------------
   # Routes for channel integrations
+  # #2200: o POST do webhook de Página passa pelo nosso controller (leadgen, feed, repasse); o GET de verificação fica na gem.
+  post 'bot', to: 'webhooks/facebook_page#events'
   mount Facebook::Messenger::Server, at: 'bot'
   get 'webhooks/twitter', to: 'api/v1/webhooks#twitter_crc'
   post 'webhooks/twitter', to: 'api/v1/webhooks#twitter_events'

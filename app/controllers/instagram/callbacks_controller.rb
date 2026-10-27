@@ -38,7 +38,7 @@ class Instagram::CallbacksController < ApplicationController
     inbox, already_exists = find_or_create_inbox
 
     return redirect_to app_onboarding_inbox_setup_url(account_id: account_id) if return_to == 'onboarding'
-    return redirect_to meta_ads_return_path if EXTRA_SCOPES.key?(return_to)
+    return redirect_to meta_ads_return_path if return_to == 'meta_ads'
 
     if already_exists
       redirect_to app_instagram_inbox_settings_url(account_id: account_id, inbox_id: inbox.id)
@@ -192,16 +192,16 @@ class Instagram::CallbacksController < ApplicationController
     @oauth_payload&.fetch('sub')
   end
 
-  def return_to
-    @oauth_payload['return_to']
+  # Reautorização que saiu de Anúncios da Meta (#2199/#2196): volta para a aba do purpose, da lista fixa, e ao anúncio
+  # quando houver (`ad_id`, só dígitos, conferido no state por Instagram::Testers::OauthBinding).
+  def meta_ads_return_path
+    query = REAUTH_PURPOSES.dig(@oauth_payload['purpose'], :return_query)
+    query = [query, "anuncio=#{@oauth_payload['ad_id']}"].compact.join('&') if @oauth_payload['ad_id']
+    ["/app/accounts/#{account_id}/campaigns/meta-ads", query].compact.join('?')
   end
 
-  # Reautorização vinda de um cartão de Anúncios (EXTRA_SCOPES, #2196): volta para a aba da tela, no anúncio quando
-  # houver. O return_to e o ad_id já foram conferidos no state (Instagram::Testers::OauthBinding).
-  def meta_ads_return_path
-    query = EXTRA_SCOPES.fetch(return_to)[:return_query]
-    query = query.merge('anuncio' => @oauth_payload['ad_id']) if @oauth_payload['ad_id']
-    "/app/accounts/#{account_id}/campaigns/meta-ads?#{query.to_query}"
+  def return_to
+    @oauth_payload['return_to']
   end
 
   def oauth_code

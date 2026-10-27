@@ -18,6 +18,7 @@ import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
 import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
 import { useInbox } from 'dashboard/composables/useInbox';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
@@ -86,6 +87,8 @@ const isHMACVerified = computed(() => {
 const currentContact = computed(() =>
   store.getters['contacts/getContact'](props.chat.meta.sender.id)
 );
+// Nome que é só telefone sai legível (#2255); só exibição.
+const nomeNaTela = computed(() => nomeDoContatoNaTela(currentContact.value));
 // #2079: o @usuário do Instagram ao lado do número da conversa.
 const usuarioDoInstagram = computed(
   () =>
@@ -160,7 +163,7 @@ const copyConversationId = async () => {
                 topoDoInstagram,
             }"
           >
-            {{ currentContact.name }}
+            {{ nomeNaTela }}
           </span>
           <CustomerBadge :contact="currentContact" show-since />
           <fluent-icon

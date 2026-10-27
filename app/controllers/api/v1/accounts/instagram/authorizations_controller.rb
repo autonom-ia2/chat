@@ -21,7 +21,7 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
     raise Instagram::Testers::Error, 'meta_unavailable' if oauth_state.blank?
 
     # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login#step-1--get-authorization
-    redirect_url = instagram_authorization_url(oauth_state, extra_scopes: extra_scopes_entry&.fetch(:scopes) || [])
+    redirect_url = instagram_authorization_url(oauth_state, extra_scopes: reauth_purpose&.dig(:scopes) || [])
     if redirect_url
       render json: { success: true, url: redirect_url }
     else
@@ -40,7 +40,7 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
   def browser_assisted_authorization?
     Instagram::Testers::BrowserOperationStore.runtime_enabled? &&
       Current.account.feature_enabled?('instagram_assisted_onboarding') &&
-      !params.key?(:inbox_id) && !reauthorization_return?
+      !params.key?(:inbox_id) && params[:return_to] != 'inbox'
   end
 
   def ensure_meta_available
@@ -49,23 +49,26 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
   end
 
   def authorization_state
-    inbox = reauthorization_inbox if params.key?(:inbox_id) || reauthorization_return?
-    return extra_scopes_state(inbox) if inbox && extra_scopes_entry
-
+    inbox = reauthorization_inbox if params.key?(:inbox_id) || reauthorization_return_to?
     selection = tester_selection if inbox.nil? && Current.account.feature_enabled?('instagram_assisted_onboarding')
     generate_instagram_token(Current.account.id, params.permit(:return_to)[:return_to],
-                             actor_id: current_user.id, tester_selection: selection, inbox: inbox)
+                             actor_id: current_user.id, tester_selection: selection, inbox: inbox,
+                             purpose: (params[:purpose] if reauth_purpose), ad_id: reauth_ad_id)
   end
 
-  # Reautorização pela tela da caixa (`inbox`) ou por um cartão de Anúncios (uma chave de EXTRA_SCOPES, #2196), que
-  # pede o escopo a mais da entrada e volta para a aba de Anúncios.
-  def reauthorization_return?
-    params[:return_to] == 'inbox' || EXTRA_SCOPES.key?(params[:return_to].to_s)
+  # O anúncio para onde a pessoa volta (#2196): só numa volta a Anúncios da Meta e só de dígitos, porque vira parte do
+  # endereço de volta.
+  def reauth_ad_id
+    ad_id = params[:ad_id]
+    return if ad_id.nil?
+    raise Instagram::Testers::Error, 'invalid_selection' unless reauth_purpose && Instagram::Testers::OauthBinding.ad_id?(ad_id)
+
+    ad_id
   end
 
   def reauthorization_inbox
     inbox_id = params[:inbox_id]
-    valid = inbox_id.is_a?(Integer) && inbox_id.positive? && valid_reauthorization_return? && !params.key?(:tester_selection_token)
+    valid = inbox_id.is_a?(Integer) && inbox_id.positive? && reauthorization_return_to? && !params.key?(:tester_selection_token)
     raise Instagram::Testers::Error, 'invalid_selection' unless valid
 
     inbox = Current.account.inboxes.find_by(id: inbox_id, channel_type: 'Channel::Instagram')
@@ -74,24 +77,17 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
     inbox
   end
 
-  def extra_scopes_state(inbox)
-    generate_extra_scopes_token(Current.account.id, params[:return_to], actor_id: current_user.id, inbox: inbox,
-                                                                        ad_id: params[:ad_id].presence)
+  # Reautorizar a caixa: pela própria caixa ('inbox') ou por Anúncios da Meta ('meta_ads') com um `purpose` da lista
+  # REAUTH_PURPOSES cuja flag está ligada na conta.
+  def reauthorization_return_to?
+    params[:return_to] == 'inbox' || reauth_purpose.present?
   end
 
-  def valid_reauthorization_return?
-    params[:return_to] == 'inbox' || extra_scopes_entry.present?
-  end
+  def reauth_purpose
+    return unless params[:return_to] == 'meta_ads'
 
-  # A entrada de EXTRA_SCOPES do `return_to`, só com a flag da tela ligada e `ad_id` só de dígitos (ele vira o caminho
-  # de volta).
-  def extra_scopes_entry
-    entry = EXTRA_SCOPES[params[:return_to].to_s]
-    ad_id = params[:ad_id]
-    return unless entry && Current.account.feature_enabled?(entry[:flag])
-    return unless ad_id.nil? || Instagram::Testers::OauthBinding.ad_id?(ad_id)
-
-    entry
+    purpose = REAUTH_PURPOSES[params[:purpose]]
+    purpose if purpose && Current.account.feature_enabled?(purpose[:flag])
   end
 
   def tester_selection

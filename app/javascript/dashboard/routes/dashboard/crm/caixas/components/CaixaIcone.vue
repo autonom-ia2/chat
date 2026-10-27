@@ -1,11 +1,18 @@
 <script setup>
 import { computed } from 'vue';
+import { useMapGetter } from 'dashboard/composables/store';
+import { tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 
 // #1149 — ícone do canal da caixa, num quadrado de cor neutra.
+// #2255 — com o id da caixa, o ícone sai da caixa inteira (store): o WhatsApp do celular
+// é uma caixa API e leva o ícone do WhatsApp.
 const props = defineProps({
   canal: { type: String, default: '' },
+  caixaId: { type: [Number, String], default: null },
   grande: { type: Boolean, default: false },
 });
+
+const caixaPorId = useMapGetter('inboxes/getInboxById');
 
 const ICONES = {
   'Channel::Whatsapp': 'i-ri-whatsapp-line',
@@ -19,7 +26,12 @@ const ICONES = {
   'Channel::Api': 'i-lucide-plug',
 };
 
-const icone = computed(() => ICONES[props.canal] || 'i-lucide-inbox');
+const tipo = computed(() => {
+  const caixa = props.caixaId ? caixaPorId.value(props.caixaId) : null;
+  return tipoDoIconeDaCaixa(caixa) || props.canal;
+});
+
+const icone = computed(() => ICONES[tipo.value] || 'i-lucide-inbox');
 </script>
 
 <template>

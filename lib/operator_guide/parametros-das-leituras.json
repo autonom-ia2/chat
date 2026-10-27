@@ -124,6 +124,21 @@
     "controller": "api/v1/accounts/autonomia/agents/channels#index",
     "parametros": []
   },
+  "autonomia/agents/:agent_id/desempenho": {
+    "controller": "api/v1/accounts/autonomia/agents/desempenho#show",
+    "parametros": [
+      "origem",
+      "periodo"
+    ]
+  },
+  "autonomia/agents/:agent_id/desempenho/exportar": {
+    "controller": "api/v1/accounts/autonomia/agents/desempenho#exportar",
+    "parametros": [
+      "formato",
+      "origem",
+      "periodo"
+    ]
+  },
   "autonomia/agents/:agent_id/faq_suggestions": {
     "controller": "api/v1/accounts/autonomia/agents/faq_suggestions#index",
     "parametros": [
@@ -1380,6 +1395,12 @@
   "crm/meta_ads_connection/funnels": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnels",
     "parametros": []
+  },
+  "crm/meta_ads_connection/organico": {
+    "controller": "api/v1/accounts/crm/meta_ads_organico#show",
+    "parametros": [
+      "days"
+    ]
   },
   "crm/meta_ads_connection/pages": {
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#pages",

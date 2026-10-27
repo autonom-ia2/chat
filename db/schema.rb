@@ -642,6 +642,91 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
     t.index ["account_id", "nome"], name: "index_autonomia_decisores_on_account_id_and_nome", unique: true
   end
 
+  create_table "autonomia_desempenho_fichas", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "sujeito_type", null: false
+    t.bigint "sujeito_id", null: false
+    t.integer "versao", null: false
+    t.json "catalogo", null: false
+    t.json "configuracao", null: false
+    t.json "referencias", null: false
+    t.text "chave_de_leitura"
+    t.string "instrucao_hash"
+    t.string "lote", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sujeito_type", "sujeito_id", "versao"], name: "idx_autonomia_desempenho_fichas_versao", unique: true
+    t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_fichas_sujeito"
+  end
+
+  create_table "autonomia_desempenho_leituras", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "sujeito_type", null: false
+    t.bigint "sujeito_id", null: false
+    t.bigint "conversation_id", null: false
+    t.datetime "lida_ate_em", null: false
+    t.integer "versao_ficha", null: false
+    t.string "status", null: false
+    t.string "lote", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sujeito_type", "sujeito_id", "conversation_id"], name: "idx_autonomia_desempenho_leituras_conversa", unique: true
+    t.index ["conversation_id"], name: "index_autonomia_desempenho_leituras_on_conversation_id"
+    t.check_constraint "status::text = ANY ('{lida,lida_em_parte,minima,nao_lida}'::text[])", name: "autonomia_desempenho_leituras_status"
+    t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_leituras_sujeito"
+  end
+
+  create_table "autonomia_desempenho_procuras", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "sujeito_type", null: false
+    t.bigint "sujeito_id", null: false
+    t.bigint "conversation_id", null: false
+    t.integer "ordem", null: false
+    t.datetime "inicio_em", null: false
+    t.datetime "fim_em", null: false
+    t.integer "versao_ficha", null: false
+    t.boolean "teste", default: false, null: false
+    t.string "pedido_id"
+    t.string "tema_id"
+    t.string "resultado_id"
+    t.string "qualidade_id"
+    t.string "origem_id"
+    t.string "quem_id"
+    t.string "anuncio_id"
+    t.string "marcos", default: [], null: false, array: true
+    t.string "motivo_ids", default: [], null: false, array: true
+    t.string "regra_ids", default: [], null: false, array: true
+    t.boolean "perda_evitavel", default: false, null: false
+    t.boolean "precisava_pessoa", default: false, null: false
+    t.boolean "teve_pessoa", default: false, null: false
+    t.jsonb "dados", default: {}, null: false
+    t.string "lote", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sujeito_id", "inicio_em"], name: "idx_autonomia_desempenho_procuras_inicio"
+    t.index ["account_id", "sujeito_type", "sujeito_id", "conversation_id", "ordem"], name: "idx_autonomia_desempenho_procuras_ordem", unique: true
+    t.index ["conversation_id"], name: "index_autonomia_desempenho_procuras_on_conversation_id"
+    t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_procuras_sujeito"
+  end
+
+  create_table "autonomia_desempenho_recomendacoes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "sujeito_type", null: false
+    t.bigint "sujeito_id", null: false
+    t.string "periodo", null: false
+    t.date "inicio", null: false
+    t.date "fim", null: false
+    t.integer "versao_ficha", null: false
+    t.jsonb "cartoes", default: [], null: false
+    t.datetime "gerada_em", null: false
+    t.string "lote", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sujeito_type", "sujeito_id", "periodo"], name: "idx_autonomia_desempenho_recomendacoes_periodo", unique: true
+    t.check_constraint "periodo::text = ANY ('{7,30,90,tudo}'::text[])", name: "autonomia_desempenho_recomendacoes_periodo"
+    t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_recomendacoes_sujeito"
+  end
+
   create_table "autonomia_guide_avisos", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "user_id", null: false
@@ -2704,6 +2789,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
     t.index ["ad_account_id"], name: "idx_crm_meta_ads_connections_partner_ad_account", unique: true, where: "((mode)::text = 'partner'::text)"
   end
 
+  create_table "crm_meta_ads_pages", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "page_id", null: false
+    t.string "name", limit: 255
+    t.boolean "leadgen_receiving", default: false, null: false
+    t.boolean "feed_receiving", default: false, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "page_id"], name: "index_crm_meta_ads_pages_on_account_id_and_page_id", unique: true
+    t.index ["page_id"], name: "index_crm_meta_ads_pages_on_page_id"
+  end
+
   create_table "crm_meta_advisor_actions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "run_id"
@@ -4310,6 +4407,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
   add_foreign_key "autonomia_decisor_decisoes", "messages", on_delete: :cascade
   add_foreign_key "autonomia_decisor_decisoes", "users", column: "resolvida_por_id", on_delete: :nullify
   add_foreign_key "autonomia_decisores", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_desempenho_fichas", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_desempenho_leituras", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_desempenho_leituras", "conversations", on_delete: :cascade
+  add_foreign_key "autonomia_desempenho_procuras", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_desempenho_procuras", "conversations", on_delete: :cascade
+  add_foreign_key "autonomia_desempenho_recomendacoes", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_avisos", "users", on_delete: :cascade
@@ -4483,6 +4586,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_550000) do
   add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_pages", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "last_run_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "run_id", on_delete: :nullify

@@ -44,7 +44,7 @@ export const privado = (adId, id, texto) =>
 const contaAtual = () => window.location.pathname.split('/campaigns')[0];
 
 // Sem a permissão de comentários: refazer o login da caixa do Instagram que já existe, pedindo também
-// instagram_business_manage_comments (o servidor decide o escopo pelo `return_to`), e voltar a este anúncio. Sem o
+// instagram_business_manage_comments (o servidor decide o escopo pelo `purpose`), e voltar a este anúncio. Sem o
 // Instagram conectado: a tela de conectar uma caixa do Instagram.
 export const entrar = async (status, adId) => {
   if (status !== 'needs_login' || !caixas[adId]) {
@@ -53,7 +53,8 @@ export const entrar = async (status, adId) => {
   }
   const { data } = await instagramClient.generateAuthorization({
     inbox_id: caixas[adId],
-    return_to: 'comentarios_ig',
+    return_to: 'meta_ads',
+    purpose: 'meta_ads_comentarios_instagram',
     ad_id: adId,
   });
   window.location.assign(data.url);

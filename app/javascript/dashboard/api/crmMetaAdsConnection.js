@@ -123,6 +123,13 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
+  // Your posts (#2199): organic results of the Facebook Page and Instagram.
+  // days: 7 | 30 | 90 → { days, from, to, page, instagram }; each place has
+  // status 'ok' | 'needs_permission' | 'not_connected'. 503 'meta_unavailable'.
+  organico(days) {
+    return axios.get(`${this.url}/organico`, { params: { days } });
+  }
+
   // AI reads the stages and answers { suggestions: [{ stage_id, type, reason }] }.
   suggestStages(pipelineId) {
     return pollAiRequest(

@@ -24,7 +24,9 @@
 # callback dela desliga a sessão no WAHA.
 # Reunião marcada no Google ou na Microsoft não é cancelada: a conta está saindo, e o evento continua no calendário de
 # quem a marcou.
-class Autonomia::ExclusaoDaConta
+# A classe passa do limite de linhas por causa de ETAPAS, que é dado: uma linha por tabela da conta, e cresce a cada
+# tabela nova (o exclusao_da_conta_spec cobra). A lógica continua curta.
+class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
   LOTE = 5_000
 
   # [modelo, como achar as linhas da conta]. A ordem é a das chaves estrangeiras: filho antes do pai.
@@ -83,6 +85,7 @@ class Autonomia::ExclusaoDaConta
     ['Crm::MetaAdLink', :por_conta],
     ['Crm::MetaAdObject', :por_conta],
     ['Crm::MetaAdsConnection', :por_conta],
+    ['Crm::MetaAdsPage', :por_conta],
     ['Ctwa::TrackedLinkClick', :por_conta],
     ['Ctwa::TrackedLink', :por_conta],
     # Integrações.
@@ -101,6 +104,9 @@ class Autonomia::ExclusaoDaConta
     ['Autonomia::Agents::BuildThread', :por_conta],
     ['Autonomia::Agents::AgentInbox', :por_conta],
     ['Autonomia::Agents::Agent', :por_conta],
+    # Painel de desempenho (#2251): a leitura guardada das conversas.
+    ['Autonomia::Desempenho::Procura', :por_conta], ['Autonomia::Desempenho::Leitura', :por_conta],
+    ['Autonomia::Desempenho::Recomendacao', :por_conta], ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
     # Guia da Plataforma.

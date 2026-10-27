@@ -19,7 +19,7 @@ describe('caixasDaConversaVazia (#2211)', () => {
     ).toEqual([1]);
   });
 
-  it('telefone novo: só as caixas que mandam para número (API só a do WAHA), WhatsApp primeiro', () => {
+  it('telefone novo: só as caixas que mandam para número (API só a do WAHA), WhatsApp e o do celular primeiro (#2255)', () => {
     const caixas = caixasParaTelefone(
       [
         { id: 1, name: 'B', channel_type: 'Channel::Api', waha_provider: true },
@@ -31,7 +31,7 @@ describe('caixasDaConversaVazia (#2211)', () => {
       ],
       ['1', '2', '3', '4', '5', '6']
     );
-    expect(caixas.map(caixa => caixa.id)).toEqual([3, 5, 1]);
+    expect(caixas.map(caixa => caixa.id)).toEqual([3, 1, 5]);
     expect(caixas[0].channelType).toBe('Channel::Whatsapp');
   });
 

@@ -11,7 +11,7 @@ import { useRoute } from 'vue-router';
 import { LocalStorage } from 'shared/helpers/localStorage';
 import { ACCOUNT_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import { LOCAL_STORAGE_KEYS } from 'dashboard/constants/localStorage';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import {
   MESSAGE_TYPES,
@@ -731,11 +731,15 @@ const avatarInfo = computed(() => {
     };
   }
   if (props.contentAttributes?.externalEcho) {
-    const { name, avatar_url, channel_type, medium, voice_enabled } =
-      inbox.value;
+    const { name, avatar_url, medium, voice_enabled } = inbox.value;
     const iconName = avatar_url
       ? null
-      : getInboxIconByType(channel_type, medium, 'fill', voice_enabled);
+      : getInboxIconByType(
+          tipoDoIconeDaCaixa(inbox.value),
+          medium,
+          'fill',
+          voice_enabled
+        );
     return {
       name: iconName ? '' : name || t('CONVERSATION.NATIVE_APP'),
       src: avatar_url || '',

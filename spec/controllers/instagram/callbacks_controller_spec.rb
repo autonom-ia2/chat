@@ -269,9 +269,20 @@ RSpec.describe Instagram::CallbacksController do
       expect(response).to redirect_to(app_instagram_inbox_settings_url(account_id: account.id, inbox_id: channel.inbox.id))
     end
 
-    it 'volta ao anúncio quando a reautorização veio do cartão dos comentários (#2196)' do
-      signed_state = controller.generate_extra_scopes_token(account.id, 'comentarios_ig', actor_id: actor.id, inbox: channel.inbox,
-                                                                                          ad_id: '120254710382770416')
+    it 'volta para Seus posts quando a reautorização saiu de lá (#2199)' do
+      signed_state = controller.generate_instagram_token(account.id, 'meta_ads', actor_id: actor.id, inbox: channel.inbox,
+                                                                                 purpose: 'meta_ads_organico')
+
+      get :show, params: { code: 'valid_code', state: signed_state }
+
+      expect(channel.reload.access_token).to eq('long_lived_test_token')
+      expect(response).to redirect_to("/app/accounts/#{account.id}/campaigns/meta-ads?aba=organico")
+    end
+
+    it 'volta ao anúncio quando a reautorização veio dos comentários (#2196)' do
+      signed_state = controller.generate_instagram_token(account.id, 'meta_ads', actor_id: actor.id, inbox: channel.inbox,
+                                                                                 purpose: 'meta_ads_comentarios_instagram',
+                                                                                 ad_id: '120254710382770416')
 
       get :show, params: { code: 'valid_code', state: signed_state }
 
@@ -279,20 +290,15 @@ RSpec.describe Instagram::CallbacksController do
       expect(response).to redirect_to("/app/accounts/#{account.id}/campaigns/meta-ads?aba=resultado&anuncio=120254710382770416")
     end
 
-    it 'recusa volta a Anúncios sem a caixa no state (#2196)' do
-      signed_state = controller.generate_instagram_token(account.id, 'comentarios_ig', actor_id: actor.id)
-
-      get :show, params: { code: 'valid_code', state: signed_state }
-
-      expect(response).to redirect_to('/app')
-    end
-
-    it 'recusa volta a uma tela desconhecida, sem trocar o token (#2196)' do
-      signed_state = controller.generate_extra_scopes_token(account.id, 'outra_tela', actor_id: actor.id, inbox: channel.inbox)
+    it 'recusa anúncio de volta que não é só dígitos, sem trocar o token (#2196)' do
+      signed_state = controller.generate_instagram_token(account.id, 'meta_ads', actor_id: actor.id, inbox: channel.inbox,
+                                                                                 purpose: 'meta_ads_comentarios_instagram',
+                                                                                 ad_id: '12?x=1')
 
       get :show, params: { code: 'valid_code', state: signed_state }
 
       expect(channel.reload.access_token).to eq('old_token')
+      expect(response).to redirect_to('/app')
     end
 
     it 'rejects a different returned Instagram profile without creating or updating a channel' do
