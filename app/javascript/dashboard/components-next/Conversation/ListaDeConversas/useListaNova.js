@@ -1,5 +1,5 @@
 // #2202 — a lista "Quem está esperando" fica atrás da chave lista_quem_espera da conta
-// (feature_flags_ext_2, posição provisória da Orquestração). Desligada, a lista de sempre.
+// (feature_flags_ext_2, posição pela ordem de chegada à main). Desligada, a lista de sempre.
 import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';

@@ -122,6 +122,7 @@ defineExpose({ voltarParaAbertas });
         :options="opcoesDeOrdem"
         :aria-label="t('LISTA_DE_CONVERSAS.CABECALHO.ORDEM')"
         compact
+        fit-selected
         class="flex-shrink-0"
         data-botao-ordem
         @update:model-value="mudarOrdem"
@@ -133,6 +134,7 @@ defineExpose({ voltarParaAbertas });
           :placeholder="t('LISTA_DE_CONVERSAS.CABECALHO.FILTRAR')"
           :aria-label="t('LISTA_DE_CONVERSAS.CABECALHO.FILTRAR_ARIA')"
           compact
+          fit-selected
           data-botao-filtrar
           @update:model-value="mudarStatus"
         />

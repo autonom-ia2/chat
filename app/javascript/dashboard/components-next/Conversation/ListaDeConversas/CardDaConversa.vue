@@ -13,7 +13,11 @@ import { useWindowSize } from '@vueuse/core';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { getLastMessage } from 'dashboard/helper/conversationHelper';
 import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import {
+  nomeEhTelefone,
+  nomeOuTelefone,
+} from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
+import { iconeDaCaixa } from './iconeDaCaixa';
 import { dataEHoraDaMensagem } from 'dashboard/components-next/conversa-canal/dataDaConversa';
 import { textoDaMensagem } from 'dashboard/components-next/conversa-canal/ecoDoCelular';
 import wootConstants from 'dashboard/constants/globals';
@@ -78,8 +82,16 @@ watch(
   }
 );
 
-const nome = computed(
-  () => props.currentContact.name || props.chat.meta?.sender?.name || ''
+// Contato que só tem o número aparece com o telefone legível ("+55 11 94444-3333"), e o avatar
+// fica com o ícone de pessoa em vez das iniciais ("+5").
+const nome = computed(() => {
+  const pessoa = props.currentContact.name
+    ? props.currentContact
+    : props.chat.meta?.sender;
+  return nomeOuTelefone(pessoa?.name || '', pessoa?.phone_number) || '';
+});
+const nomeNoAvatar = computed(() =>
+  nomeEhTelefone(nome.value) ? '' : nome.value
 );
 const ultima = computed(() => getLastMessage(props.chat));
 const prefixo = computed(() =>
@@ -199,7 +211,7 @@ const variosCanais = computed(
 );
 const iconeDoCanal = computed(() =>
   variosCanais.value && props.inbox?.channel_type
-    ? getInboxIconByType(props.inbox.channel_type, props.inbox.medium, 'line')
+    ? iconeDaCaixa(props.inbox)
     : ''
 );
 
@@ -281,7 +293,7 @@ const selecionada = computed({
       @mouseleave="hovered = false"
     >
       <Avatar
-        :name="nome"
+        :name="nomeNoAvatar"
         :src="currentContact.thumbnail"
         :size="noCelular ? 36 : 40"
         :status="currentContact.availability_status"

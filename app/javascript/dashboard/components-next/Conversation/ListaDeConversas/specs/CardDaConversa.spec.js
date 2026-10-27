@@ -101,6 +101,14 @@ describe('CardDaConversa (#2202)', () => {
     expect(sinal.classes()).toContain('text-n-ruby-11');
   });
 
+  it('contato que só tem o número: telefone legível no nome e ícone de pessoa no avatar', () => {
+    const wrapper = montar({
+      currentContact: { name: '5511955554444', phone_number: '+5511955554444' },
+    });
+    expect(wrapper.find('[data-nome]').text()).toBe('+55 11 95555-4444');
+    expect(wrapper.find('.i-lucide-user').exists()).toBe(true);
+  });
+
   it('raiz div.conversation e o mesmo contrato do card antigo (click e contextmenu)', async () => {
     const wrapper = montar({ isActiveChat: true });
     expect(wrapper.classes()).toEqual(

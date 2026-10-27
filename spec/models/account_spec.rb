@@ -285,8 +285,7 @@ RSpec.describe Account do
       expect(described_class.flag_mapping['feature_flags_ext_1'][:feature_whatsapp_embedded_signup_inbox_creation]).to eq(16)
       # #2084: primeira flag da feature_flags_ext_2 (posição provisória da Orquestração).
       # #2001: crm_numeros_origens, posição 2 (1 << 1), DEFINITIVA da Orquestração (26/10).
-      # #2202: lista_quem_espera, reserva PROVISÓRIA 7 (64) da Orquestração; na main de hoje cai na 3 (1 << 2 = 4),
-      # porque as reservas 3 a 6 ainda não chegaram. Ajustar quando elas entrarem antes.
+      # #2202: lista_quem_espera no fim da ext_2, posição pela ordem de chegada à main; hoje 3 (1 << 2 = 4).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4
       )

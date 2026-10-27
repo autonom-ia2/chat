@@ -567,4 +567,67 @@ describe('ChoiceSelect', () => {
       );
     });
   });
+
+  // #2202: fitSelected é opt-in. Sem a prop, a largura e a posição da lista são as de sempre.
+  describe('fitSelected (#2202)', () => {
+    const CANTO_DIREITO = {
+      top: 100,
+      bottom: 140,
+      left: 300,
+      right: 380,
+      width: 80,
+      height: 40,
+    };
+    const abrirNoCanto = async extra => {
+      wrapper = mountSelect('pt_BR', extra);
+      const trigger = wrapper.get('[role="combobox"]');
+      trigger.element.getBoundingClientRect = () => CANTO_DIREITO;
+      await trigger.trigger('click');
+      return wrapper.get('[role="listbox"]').element.style;
+    };
+    let larguraDaJanela;
+    beforeEach(() => {
+      larguraDaJanela = window.innerWidth;
+      window.innerWidth = 390;
+    });
+    afterEach(() => {
+      window.innerWidth = larguraDaJanela;
+    });
+
+    it('sem a prop: mede todas as opções e a lista sai pela esquerda do botão, como antes', async () => {
+      const style = await abrirNoCanto();
+      const medidas = wrapper.findAll('[data-medida]').map(m => m.text());
+      expect(medidas).toEqual(options.map(option => option.label));
+      expect(style.left).toBe('300px');
+      expect(style.right).toBe('');
+      expect(style.maxWidth).toBe('82px');
+    });
+
+    it('com a prop: mede só o texto escolhido', async () => {
+      await abrirNoCanto({ fitSelected: true });
+      const medidas = wrapper.findAll('[data-medida]').map(m => m.text());
+      expect(medidas).toEqual(['Português (Brasil)']);
+    });
+
+    it('com a prop, no canto direito: a lista se alinha pela direita do botão', async () => {
+      const style = await abrirNoCanto({ fitSelected: true });
+      expect(style.left).toBe('');
+      expect(style.right).toBe('10px');
+      expect(style.maxWidth).toBe('372px');
+    });
+
+    it('com a prop e espaço à direita: a lista sai pela esquerda do botão', async () => {
+      wrapper = mountSelect('pt_BR', { fitSelected: true });
+      const trigger = wrapper.get('[role="combobox"]');
+      trigger.element.getBoundingClientRect = () => ({
+        ...CANTO_DIREITO,
+        left: 20,
+        right: 100,
+      });
+      await trigger.trigger('click');
+      const { style } = wrapper.get('[role="listbox"]').element;
+      expect(style.left).toBe('20px');
+      expect(style.right).toBe('');
+    });
+  });
 });
