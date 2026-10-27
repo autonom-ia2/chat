@@ -104,7 +104,12 @@ const CRIADO = {
 };
 const montar = async (caixasLivres = []) => {
   const wrapper = mount(ConversaVazia, {
-    props: { telefone: TELEFONE, caixasLivres },
+    // A busca disse que dá para começar em todas as caixas da conta (caixas_para_comecar).
+    props: {
+      telefone: TELEFONE,
+      caixasLivres,
+      caixasPermitidas: estado.caixasDaConta.map(caixa => String(caixa.id)),
+    },
     global: {
       plugins: [criarI18n()],
       stubs: { RouterLink: { template: '<a><slot /></a>' } },

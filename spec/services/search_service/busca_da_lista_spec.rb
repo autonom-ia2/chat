@@ -51,7 +51,7 @@ RSpec.describe SearchService::BuscaDaLista do
 
   it 'não busca com texto vazio' do
     vazio = { conversations: [], messages: [], contacts: [], telefone_novo: nil, texto_livre_nas_caixas: [], email_novo: nil,
-              parcial: [] }
+              caixas_para_comecar: [], parcial: [] }
     expect(buscar('  ')).to eq(vazio)
   end
 
@@ -287,6 +287,44 @@ RSpec.describe SearchService::BuscaDaLista do
       expect(caixas).to eq([])
       expect(caixas('joao')).to eq([])
       expect(caixas('  ')).to eq([])
+    end
+  end
+
+  # A conversa vazia só oferece caixa em que o create da conversa deixa começar (InboxPolicy#show?). O inbox_view de
+  # função personalizada lista todas as caixas da conta, mas sem ser membro o create responde 403 depois de gravar o
+  # contato.
+  describe 'caixas para começar' do
+    before do
+      inbox
+      outra_caixa
+    end
+
+    def caixas(texto, quem: agente)
+      buscar(texto, quem: quem)[:caixas_para_comecar]
+    end
+
+    it 'o membro recebe só as caixas que atende, no telefone e no e-mail novos' do
+      expect(caixas('11 91234-5678')).to eq([inbox.id])
+      expect(caixas('novo@example.test')).to eq([inbox.id])
+    end
+
+    it 'com a função inbox_view, a caixa de que não é membro não vem' do
+      com_funcao(%w[conversation_manage contact_manage inbox_view])
+      expect(caixas('11 91234-5678')).to eq([inbox.id])
+      expect(caixas('novo@example.test')).to eq([inbox.id])
+    end
+
+    it 'o administrador recebe todas as caixas da conta, e só as desta conta' do
+      create_crm_inbox(account: create(:account), name: 'Caixa de outra conta')
+      expect(caixas('11 91234-5678', quem: admin)).to eq([inbox.id, outra_caixa.id])
+    end
+
+    it 'sem telefone nem e-mail novos, vem vazio' do
+      contato('João Prado', telefone: '+5511912345678')
+      expect(caixas('11 91234-5678')).to eq([])
+      expect(caixas('joao')).to eq([])
+      com_funcao(%w[conversation_manage contact_view])
+      expect(caixas('novo@example.test')).to eq([])
     end
   end
 

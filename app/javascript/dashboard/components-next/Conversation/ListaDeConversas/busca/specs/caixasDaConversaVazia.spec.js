@@ -20,16 +20,38 @@ describe('caixasDaConversaVazia (#2211)', () => {
   });
 
   it('telefone novo: só as caixas que mandam para número (API só a do WAHA), WhatsApp primeiro', () => {
-    const caixas = caixasParaTelefone([
-      { id: 1, name: 'B', channel_type: 'Channel::Api', waha_provider: true },
-      { id: 6, name: 'Webhook', channel_type: 'Channel::Api' },
-      { id: 2, name: 'E-mail', channel_type: 'Channel::Email' },
-      { id: 3, name: 'A', channel_type: 'Channel::Whatsapp' },
-      { id: 4, name: 'Insta', channel_type: 'Channel::Instagram' },
-      { id: 5, name: 'SMS', channel_type: 'Channel::Sms' },
-    ]);
+    const caixas = caixasParaTelefone(
+      [
+        { id: 1, name: 'B', channel_type: 'Channel::Api', waha_provider: true },
+        { id: 6, name: 'Webhook', channel_type: 'Channel::Api' },
+        { id: 2, name: 'E-mail', channel_type: 'Channel::Email' },
+        { id: 3, name: 'A', channel_type: 'Channel::Whatsapp' },
+        { id: 4, name: 'Insta', channel_type: 'Channel::Instagram' },
+        { id: 5, name: 'SMS', channel_type: 'Channel::Sms' },
+      ],
+      ['1', '2', '3', '4', '5', '6']
+    );
     expect(caixas.map(caixa => caixa.id)).toEqual([3, 5, 1]);
     expect(caixas[0].channelType).toBe('Channel::Whatsapp');
+  });
+
+  // inbox_view de função personalizada traz caixas de que a pessoa não é membro: o create da
+  // conversa responderia 403 depois de gravar o contato.
+  it('telefone e e-mail novos: a caixa fora da lista do servidor não é oferecida', () => {
+    const daConta = [
+      { id: 1, name: 'Minha', channel_type: 'Channel::Whatsapp' },
+      { id: 2, name: 'Alheia', channel_type: 'Channel::Whatsapp' },
+      { id: 3, name: 'Meu e-mail', channel_type: 'Channel::Email' },
+      { id: 4, name: 'E-mail alheio', channel_type: 'Channel::Email' },
+    ];
+    expect(
+      caixasParaTelefone(daConta, ['1', '3']).map(caixa => caixa.id)
+    ).toEqual([1]);
+    expect(caixasParaEmail(daConta, ['1', '3']).map(caixa => caixa.id)).toEqual(
+      [3]
+    );
+    expect(caixasParaTelefone(daConta)).toEqual([]);
+    expect(caixasParaEmail(daConta, [])).toEqual([]);
   });
 
   it('telefone novo: a caixa que o servidor disse livre começa no texto livre; as outras, no modelo (#2257)', () => {
@@ -38,6 +60,7 @@ describe('caixasDaConversaVazia (#2211)', () => {
         { id: 1, name: 'A', channel_type: 'Channel::Whatsapp' },
         { id: 2, name: 'B', channel_type: 'Channel::Whatsapp' },
       ],
+      ['1', '2'],
       ['2']
     );
     expect(
@@ -64,13 +87,23 @@ describe('caixasDaConversaVazia (#2211)', () => {
       telefone: '',
       email: '',
       caixasLivres: [],
+      caixasPermitidas: [],
     });
     expect(pedidoDeConversaVazia({ telefone: '+5511955554444' })).toEqual({
       contatoId: '',
       telefone: '+5511955554444',
       email: '',
       caixasLivres: [],
+      caixasPermitidas: [],
     });
+    expect(
+      pedidoDeConversaVazia({ telefone: '+5511955554444', caixas: '1,5' })
+        .caixasPermitidas
+    ).toEqual(['1', '5']);
+    // ?caixas= só vale com telefone ou e-mail novo.
+    expect(
+      pedidoDeConversaVazia({ comecar: '3', caixas: '1' }).caixasPermitidas
+    ).toEqual([]);
     expect(
       pedidoDeConversaVazia({ telefone: '+5511955554444', livre: '1,5' })
         .caixasLivres
@@ -79,11 +112,14 @@ describe('caixasDaConversaVazia (#2211)', () => {
     expect(
       pedidoDeConversaVazia({ comecar: '3', livre: '1' }).caixasLivres
     ).toEqual([]);
-    expect(pedidoDeConversaVazia({ email: 'nova@exemplo.test' })).toEqual({
+    expect(
+      pedidoDeConversaVazia({ email: 'nova@exemplo.test', caixas: '2' })
+    ).toEqual({
       contatoId: '',
       telefone: '',
       email: 'nova@exemplo.test',
       caixasLivres: [],
+      caixasPermitidas: ['2'],
     });
     // ?comecar= repetido: vale o primeiro.
     expect(pedidoDeConversaVazia({ comecar: ['3', '4'] }).contatoId).toBe('3');
@@ -95,16 +131,19 @@ describe('caixasDaConversaVazia (#2211)', () => {
 describe('e-mail e telefone novos (#2211)', () => {
   it('e-mail novo: só as caixas de e-mail', () => {
     expect(
-      caixasParaEmail([
-        { id: 1, name: 'W', channel_type: 'Channel::Whatsapp' },
-        { id: 2, name: 'E', channel_type: 'Channel::Email' },
-        {
-          id: 3,
-          name: 'API',
-          channel_type: 'Channel::Api',
-          waha_provider: true,
-        },
-      ]).map(caixa => caixa.id)
+      caixasParaEmail(
+        [
+          { id: 1, name: 'W', channel_type: 'Channel::Whatsapp' },
+          { id: 2, name: 'E', channel_type: 'Channel::Email' },
+          {
+            id: 3,
+            name: 'API',
+            channel_type: 'Channel::Api',
+            waha_provider: true,
+          },
+        ],
+        ['1', '2', '3']
+      ).map(caixa => caixa.id)
     ).toEqual([2]);
   });
 

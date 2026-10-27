@@ -240,6 +240,7 @@ export default {
       :telefone="conversaVazia.telefone"
       :email="conversaVazia.email"
       :caixas-livres="conversaVazia.caixasLivres"
+      :caixas-permitidas="conversaVazia.caixasPermitidas"
       @voltar="voltarDaConversaNova"
     />
     <ConversationBox

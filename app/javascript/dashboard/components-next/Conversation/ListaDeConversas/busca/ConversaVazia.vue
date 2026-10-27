@@ -69,6 +69,9 @@ const props = defineProps({
   email: { type: String, default: '' },
   // #2257: ids (texto) das caixas em que o telefone novo já pode receber texto livre.
   caixasLivres: { type: Array, default: () => [] },
+  // #2211: ids (texto) das caixas em que dá para começar conversa com o telefone ou o e-mail novo
+  // (caixas_para_comecar da busca). Fora deles, a caixa não é oferecida.
+  caixasPermitidas: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['voltar']);
 
@@ -99,8 +102,13 @@ const contato = computed(() =>
 const caixas = computed(() => {
   if (telefoneInvalido.value) return [];
   if (peloTelefone.value)
-    return caixasParaTelefone(caixasDaConta.value, props.caixasLivres);
-  if (peloEmail.value) return caixasParaEmail(caixasDaConta.value);
+    return caixasParaTelefone(
+      caixasDaConta.value,
+      props.caixasPermitidas,
+      props.caixasLivres
+    );
+  if (peloEmail.value)
+    return caixasParaEmail(caixasDaConta.value, props.caixasPermitidas);
   return semInstagram(doContato.canais.value);
 });
 const caixaId = ref(null);

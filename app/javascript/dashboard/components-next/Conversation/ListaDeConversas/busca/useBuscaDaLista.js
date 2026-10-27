@@ -17,6 +17,7 @@ const VAZIO = {
   telefoneNovo: null,
   emailNovo: null,
   textoLivreNasCaixas: [],
+  caixasParaComecar: [],
   parcial: false,
 };
 
@@ -57,6 +58,8 @@ export function useBuscaDaLista() {
         emailNovo: payload.email_novo || null,
         // #2257: caixas em que o telefone novo já pode receber texto livre (Híbrido).
         textoLivreNasCaixas: payload.texto_livre_nas_caixas || [],
+        // Caixas em que dá para começar conversa com o telefone ou o e-mail novo (InboxPolicy#show?).
+        caixasParaComecar: payload.caixas_para_comecar || [],
         // Seção que passou do tempo no servidor volta vazia: a tela avisa.
         parcial: Boolean(payload.parcial?.length),
       };

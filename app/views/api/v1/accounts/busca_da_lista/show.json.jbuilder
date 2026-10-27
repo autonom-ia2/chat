@@ -26,6 +26,8 @@ json.payload do
   json.texto_livre_nas_caixas @result[:texto_livre_nas_caixas]
   # E-mail que ninguém da conta tem, em minúsculas (nil quando não é e-mail, já existe ou falta poder criar contato).
   json.email_novo @result[:email_novo]
+  # Ids das caixas em que a pessoa pode começar conversa (InboxPolicy#show?), só com telefone ou e-mail novo; [] sem eles.
+  json.caixas_para_comecar @result[:caixas_para_comecar]
   # Seções que passaram do tempo e voltaram vazias.
   json.parcial @result[:parcial]
 end

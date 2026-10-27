@@ -118,7 +118,11 @@ const montar = (props, caixasDaConta = []) => {
     actions: { 'inboxes/get': vi.fn() },
   });
   return mount(ConversaVazia, {
-    props,
+    // Sem dizer, a busca disse que dá para começar em todas as caixas da conta (caixas_para_comecar).
+    props: {
+      caixasPermitidas: caixasDaConta.map(caixa => String(caixa.id)),
+      ...props,
+    },
     global: {
       plugins: [criarI18n(), store],
       stubs: { RouterLink: { template: '<a><slot /></a>' } },
@@ -389,6 +393,30 @@ describe('ConversaVazia', () => {
       expect(wrapper.find('[data-caixa-falsa]').exists()).toBe(false);
       expect(wrapper.find('[data-por-onde-mandar]').exists()).toBe(false);
     });
+  });
+
+  // inbox_view de função personalizada lista caixas de que a pessoa não é membro: o create da
+  // conversa responderia 403 depois de gravar o contato.
+  it('telefone novo: a caixa fora das que a busca permitiu não é oferecida; sem nenhuma, avisa', async () => {
+    const daConta = [
+      { id: 1, name: 'WhatsApp Vendas', channel_type: 'Channel::Whatsapp' },
+      { id: 2, name: 'WhatsApp Alheio', channel_type: 'Channel::Whatsapp' },
+    ];
+    const uma = montar(
+      { telefone: '+5511955554444', caixasPermitidas: ['1'] },
+      daConta
+    );
+    await flushPromises();
+    expect(uma.find('[data-caixa-falsa]').text()).toBe('WhatsApp Vendas');
+
+    const nenhuma = montar(
+      { telefone: '+5511955554444', caixasPermitidas: [] },
+      daConta
+    );
+    await flushPromises();
+    expect(nenhuma.find('[data-caixa-falsa]').exists()).toBe(false);
+    expect(nenhuma.find('[data-sem-caixa]').exists()).toBe(true);
+    expect(ContactAPI.create).not.toHaveBeenCalled();
   });
 
   describe('e-mail novo', () => {

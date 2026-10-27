@@ -37,13 +37,29 @@ const { conversas, mensagens, pessoas, telefoneNovo, emailNovo } =
     )
   );
 
+// As caixas em que dá para começar conversa com o telefone ou o e-mail novo (caixas_para_comecar,
+// o InboxPolicy#show? do servidor). Sem nenhuma, a oferta não aparece: o envio gravaria o contato e
+// falharia na conversa.
+const caixasParaComecar = computed(
+  () => props.resultado.caixasParaComecar || []
+);
+const podeOferecer = computed(
+  () => podeComecar.value && caixasParaComecar.value.length > 0
+);
+const ofereceTelefone = computed(() =>
+  Boolean(telefoneNovo.value && podeOferecer.value)
+);
+const ofereceEmail = computed(() =>
+  Boolean(emailNovo.value && podeOferecer.value)
+);
+
 const vazio = computed(
   () =>
     !conversas.value.length &&
     !mensagens.value.length &&
     !pessoas.value.length &&
-    !telefoneNovo.value &&
-    !emailNovo.value &&
+    !ofereceTelefone.value &&
+    !ofereceEmail.value &&
     !props.resultado.parcial
 );
 const respondeuAoTexto = computed(
@@ -57,16 +73,19 @@ const abrirConversaVazia = query => {
 const comecarCom = contatoId => abrirConversaVazia({ comecar: contatoId });
 // Telefone novo: o contato só nasce ao enviar, na conversa vazia.
 // As caixas em que o número já pode receber texto livre (#2257) vão junto: a conversa vazia começa no
-// tipo certo (texto livre ou modelo).
+// tipo certo (texto livre ou modelo). As caixas em que dá para começar vão junto (?caixas=).
+const caixas = () => caixasParaComecar.value.join(',');
 const comecarComTelefone = () => {
   const livres = props.resultado.textoLivreNasCaixas || [];
   abrirConversaVazia({
     telefone: telefoneNovo.value,
     ...(livres.length ? { livre: livres.join(',') } : {}),
+    caixas: caixas(),
   });
 };
 // E-mail novo (#2211): o servidor diz que é e-mail; o contato só nasce ao enviar.
-const comecarComEmail = () => abrirConversaVazia({ email: emailNovo.value });
+const comecarComEmail = () =>
+  abrirConversaVazia({ email: emailNovo.value, caixas: caixas() });
 
 // O que o leitor de tela ouve, numa região à parte: buscando, quantos achou ou nada.
 const total = computed(
@@ -74,8 +93,8 @@ const total = computed(
     conversas.value.length +
     mensagens.value.length +
     pessoas.value.length +
-    (telefoneNovo.value ? 1 : 0) +
-    (emailNovo.value ? 1 : 0)
+    (ofereceTelefone.value ? 1 : 0) +
+    (ofereceEmail.value ? 1 : 0)
 );
 const anuncio = computed(() => {
   if (props.erro) return t('LISTA_DE_CONVERSAS.BUSCA.ERRO');
@@ -134,7 +153,7 @@ const anuncio = computed(() => {
         {{ t('LISTA_DE_CONVERSAS.BUSCA.PARCIAL') }}
       </p>
       <button
-        v-if="telefoneNovo && podeComecar"
+        v-if="ofereceTelefone"
         type="button"
         data-comecar-com-telefone
         class="flex items-center w-full gap-3 px-4 py-3 bg-transparent border-0 border-b text-start border-n-weak hover:bg-n-alpha-1"
@@ -164,7 +183,7 @@ const anuncio = computed(() => {
         </span>
       </button>
       <button
-        v-if="emailNovo && podeComecar"
+        v-if="ofereceEmail"
         type="button"
         data-comecar-com-email
         class="flex items-center w-full gap-3 px-4 py-3 bg-transparent border-0 border-b text-start border-n-weak hover:bg-n-alpha-1"

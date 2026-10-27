@@ -165,14 +165,17 @@ describe('ResultadoDaBusca', () => {
     const wrapper = montarResultado({
       buscado: '11 91234-5678',
       texto: '11 91234-5678',
-      resultado: resultado({ telefoneNovo: '+5511912345678' }),
+      resultado: resultado({
+        telefoneNovo: '+5511912345678',
+        caixasParaComecar: [1, 5],
+      }),
     });
     expect(wrapper.text()).toContain('Começar conversa com +55 11 91234-5678');
     await wrapper.find('[data-comecar-com-telefone]').trigger('click');
     expect(push).toHaveBeenCalledWith({
       name: 'home',
       params: { accountId: 1 },
-      query: { telefone: '+5511912345678' },
+      query: { telefone: '+5511912345678', caixas: '1,5' },
     });
   });
 
@@ -181,13 +184,14 @@ describe('ResultadoDaBusca', () => {
       resultado: resultado({
         telefoneNovo: '+5511912345678',
         textoLivreNasCaixas: [1, 5],
+        caixasParaComecar: [1, 5, 7],
       }),
     });
     await wrapper.find('[data-comecar-com-telefone]').trigger('click');
     expect(push).toHaveBeenCalledWith({
       name: 'home',
       params: { accountId: 1 },
-      query: { telefone: '+5511912345678', livre: '1,5' },
+      query: { telefone: '+5511912345678', livre: '1,5', caixas: '1,5,7' },
     });
   });
 
@@ -197,12 +201,28 @@ describe('ResultadoDaBusca', () => {
       resultado: resultado({
         pessoas: [{ id: 3, name: 'Joaquim' }],
         telefoneNovo: '+5511912345678',
+        caixasParaComecar: [1],
       }),
     });
     expect(wrapper.find('[data-escrever]').exists()).toBe(false);
     expect(wrapper.find('[data-comecar-com-telefone]').exists()).toBe(false);
     await wrapper.find('[data-pessoa-achada]').trigger('click');
     expect(push).not.toHaveBeenCalled();
+  });
+
+  // inbox_view de função personalizada vê caixas de que não é membro; o servidor diz em quais dá
+  // para começar conversa. Sem nenhuma, oferecer gravaria o contato e falharia na conversa.
+  it('sem caixa em que dá para começar, não oferece o telefone nem o e-mail novos', () => {
+    const wrapper = montarResultado({
+      resultado: resultado({
+        telefoneNovo: '+5511912345678',
+        emailNovo: 'nova@exemplo.test',
+        caixasParaComecar: [],
+      }),
+    });
+    expect(wrapper.find('[data-comecar-com-telefone]').exists()).toBe(false);
+    expect(wrapper.find('[data-comecar-com-email]').exists()).toBe(false);
+    expect(wrapper.find('[data-nada-achado]').exists()).toBe(true);
   });
 
   it('mensagem abre a conversa já na mensagem (?messageId=)', async () => {
@@ -296,7 +316,10 @@ describe('ResultadoDaBusca', () => {
       const wrapper = montarResultado({
         buscado: 'nova@exemplo.test',
         texto: 'nova@exemplo.test',
-        resultado: resultado({ emailNovo: 'nova@exemplo.test' }),
+        resultado: resultado({
+          emailNovo: 'nova@exemplo.test',
+          caixasParaComecar: [2],
+        }),
       });
       const botao = wrapper.find('[data-comecar-com-email]');
       expect(botao.text()).toContain('Escrever para nova@exemplo.test');
@@ -304,14 +327,17 @@ describe('ResultadoDaBusca', () => {
       expect(push).toHaveBeenCalledWith({
         name: 'home',
         params: { accountId: 1 },
-        query: { email: 'nova@exemplo.test' },
+        query: { email: 'nova@exemplo.test', caixas: '2' },
       });
     });
 
     it('quem só lê conversas não vê', () => {
       podeComecar.ref.value = false;
       const wrapper = montarResultado({
-        resultado: resultado({ emailNovo: 'nova@exemplo.test' }),
+        resultado: resultado({
+          emailNovo: 'nova@exemplo.test',
+          caixasParaComecar: [2],
+        }),
       });
       expect(wrapper.find('[data-comecar-com-email]').exists()).toBe(false);
     });

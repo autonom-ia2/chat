@@ -43,6 +43,7 @@ describe('ConversationView: conversa vazia (#2211)', () => {
       telefone: '',
       email: '',
       caixasLivres: [],
+      caixasPermitidas: [],
     });
     expect(
       tela({ $route: { query: { telefone: '+5511955554444' } } }).conversaVazia
@@ -51,14 +52,17 @@ describe('ConversationView: conversa vazia (#2211)', () => {
       telefone: '+5511955554444',
       email: '',
       caixasLivres: [],
+      caixasPermitidas: [],
     });
     expect(
-      tela({ $route: { query: { email: 'nova@exemplo.test' } } }).conversaVazia
+      tela({ $route: { query: { email: 'nova@exemplo.test', caixas: '4' } } })
+        .conversaVazia
     ).toEqual({
       contatoId: '',
       telefone: '',
       email: 'nova@exemplo.test',
       caixasLivres: [],
+      caixasPermitidas: ['4'],
     });
   });
 
