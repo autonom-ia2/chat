@@ -168,17 +168,115 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.get(`${this.url}/ads/${encodeURIComponent(adId)}/management`);
   }
 
-  // status = 'ACTIVE' | 'PAUSED'. 422 cannot_change, meta_refused,
-  // meta_unavailable.
+  // status = 'ACTIVE' | 'PAUSED' → { status, held_by? }. With the flag
+  // meta_ads_criar and status ACTIVE, held_by is 'campaign' | 'adset' when a
+  // paused parent still keeps the ad from running, or null. 422
+  // cannot_change, meta_refused, meta_unavailable.
   setAdStatus(adId, status) {
     return axios.post(`${this.url}/ads/${encodeURIComponent(adId)}/status`, {
       status,
     });
   }
 
+  // Simple ads manager (#2198, flag meta_ads_criar; 404 without it).
+  // What the person can pick to create → { options: { needs_login,
+  // facebook_login, kinds, pages, instagram, whatsapp_numbers, posts, images,
+  // currency, min_daily, max_daily, destinations, placements_by_destination } }.
+  createOptions() {
+    return axios.get(`${this.url}/create_options`);
+  }
+
+  // Photo or video from the device (multipart, field `file`) →
+  // { media: { kind: 'image', hash, url, width, height } } or
+  // { media: { kind: 'video', video_id } }. 422 invalid_media,
+  // media_too_large, meta_unavailable, meta_refused.
+  uploadMedia(file) {
+    const form = new FormData();
+    form.append('file', file);
+    return axios.post(`${this.url}/media`, form);
+  }
+
+  // New ad, always created PAUSED → { ad_id, name, status, budget }. The same
+  // idempotency_key returns the same ad. 422 { error, nothing_created };
+  // 409 { error: 'in_progress' } while that key is still being created.
+  createAd(draft) {
+    return axios.post(`${this.url}/ads`, draft);
+  }
+
+  // Budget and dates of the ad (adset or campaign that holds the money) →
+  // { budget: { level, object_id, object_name, kind, amount, currency,
+  //   start_time, end_time, started, ads_count, active_ads_count, min_daily,
+  //   max_daily, can_change, adset_id } }. 404 ad_not_found /
+  // budget_not_found; 422 meta_unavailable.
+  adBudget(adId) {
+    return axios.get(`${this.url}/ads/${encodeURIComponent(adId)}/budget`);
+  }
+
+  // { amount, end_time } → { budget } (the new one). 422 invalid_amount,
+  // invalid_dates, cannot_change, meta_refused, meta_unavailable.
+  updateAdBudget(adId, { amount, end_time: endTime }) {
+    return axios.patch(`${this.url}/ads/${encodeURIComponent(adId)}/budget`, {
+      amount,
+      end_time: endTime,
+    });
+  }
+
+  // Ads created here that are still paused →
+  // { ads: [{ ad_id, name, created_at, budget }] }.
+  pausedAds() {
+    return axios.get(`${this.url}/paused_ads`);
+  }
+
   // Pages granted at Facebook login → { pages: [{ id, name }] }.
   pages() {
     return axios.get(`${this.url}/pages`);
+  }
+
+  // Instagram comments of the ad (#2196, flag meta_ads_comentarios_instagram),
+  // live from Meta → { status: ready | needs_login | not_connected | no_post,
+  //   account, permalink_url, comments, total, next_cursor }.
+  instagramComments(adId, after) {
+    return axios.get(this.instagramCommentsUrl(adId), {
+      params: after ? { after } : {},
+    });
+  }
+
+  // Each action answers 422 { error } (invalid_text, needs_login,
+  // meta_unavailable, meta_refused, private_reply_done,
+  // private_reply_expired) or 404 comment_not_found.
+  replyInstagramComment(adId, commentId, text) {
+    return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/reply`, {
+      text,
+    });
+  }
+
+  hideInstagramComment(adId, commentId, hidden) {
+    return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/hide`, {
+      hidden,
+    });
+  }
+
+  deleteInstagramComment(adId, commentId) {
+    return axios.delete(this.instagramCommentsUrl(adId, commentId));
+  }
+
+  // → { sent_at, conversation_path }
+  privateReplyInstagramComment(adId, commentId, text) {
+    return axios.post(
+      `${this.instagramCommentsUrl(adId, commentId)}/private_reply`,
+      { text }
+    );
+  }
+
+  releaseInstagramPrivateReply(adId, commentId) {
+    return axios.post(
+      `${this.instagramCommentsUrl(adId, commentId)}/private_reply/release`
+    );
+  }
+
+  instagramCommentsUrl(adId, commentId) {
+    const base = `${this.url}/ads/${encodeURIComponent(adId)}/instagram_comments`;
+    return commentId ? `${base}/${encodeURIComponent(commentId)}` : base;
   }
 
   // Suggested message to resume a stalled quote. Never sent by the server →

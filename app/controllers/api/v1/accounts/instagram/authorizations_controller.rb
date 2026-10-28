@@ -53,7 +53,17 @@ class Api::V1::Accounts::Instagram::AuthorizationsController < Api::V1::Accounts
     selection = tester_selection if inbox.nil? && Current.account.feature_enabled?('instagram_assisted_onboarding')
     generate_instagram_token(Current.account.id, params.permit(:return_to)[:return_to],
                              actor_id: current_user.id, tester_selection: selection, inbox: inbox,
-                             purpose: (params[:purpose] if reauth_purpose))
+                             purpose: (params[:purpose] if reauth_purpose), ad_id: reauth_ad_id)
+  end
+
+  # O anúncio para onde a pessoa volta (#2196): só num purpose que volta a um anúncio (`ad: true`) e só de dígitos,
+  # porque vira parte do endereço de volta.
+  def reauth_ad_id
+    ad_id = params[:ad_id]
+    return if ad_id.nil?
+    raise Instagram::Testers::Error, 'invalid_selection' unless reauth_purpose&.dig(:ad) && Instagram::Testers::OauthBinding.ad_id?(ad_id)
+
+    ad_id
   end
 
   def reauthorization_inbox

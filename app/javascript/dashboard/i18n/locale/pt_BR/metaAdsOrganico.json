@@ -11,11 +11,12 @@
     "LOADING": "Carregando seus posts",
     "RANGE": "{range} · números da Meta podem levar até 2 dias",
     "HEADLINE": {
-      "BOTH": "{page} pessoas viram seus posts no Facebook e {instagram} no Instagram.",
-      "PAGE": "{count} pessoas viram os posts da sua Página.",
-      "INSTAGRAM": "{count} pessoas viram os posts do seu Instagram.",
+      "BOTH": "Seus posts apareceram {page} vezes no Facebook e {instagram} no Instagram, sem contar anúncios.",
+      "PAGE": "Os posts da sua Página apareceram {count} vezes, sem contar anúncios.",
+      "INSTAGRAM": "Os posts do seu Instagram apareceram {count} vezes, sem contar anúncios.",
       "ZERO": "Você não postou nos últimos {days} dias. Um post novo traz as pessoas de volta.",
-      "NONE": "Libere o acesso para ver quantas pessoas sua Página e seu Instagram alcançam."
+      "NONE": "Libere o acesso para ver quantas pessoas sua Página e seu Instagram alcançam.",
+      "UNAVAILABLE": "Não deu para ler os números agora. Tente de novo."
     },
     "BEST_POST": "Seu post com mais curtidas foi no {place}. Faça mais posts como este: “{text}”",
     "STEP": "{step}. {text}",
@@ -35,7 +36,8 @@
           "TEXT": "Entre com o Facebook e escolha a Página em que você posta.",
           "BUTTON": "Entrar com Facebook"
         },
-        "SEE_CONVERSATIONS": "Ver conversas da Página"
+        "SEE_CONVERSATIONS": "Ver conversas da Página",
+        "UNAVAILABLE": "Não deu para ler sua Página agora"
       },
       "INSTAGRAM": {
         "NAME": "Instagram",
@@ -52,7 +54,8 @@
           "TEXT": "Entre com a sua conta comercial do Instagram para ver os resultados dela aqui.",
           "BUTTON": "Entrar com Instagram"
         },
-        "SEE_CONVERSATIONS": "Ver conversas do Instagram"
+        "SEE_CONVERSATIONS": "Ver conversas do Instagram",
+        "UNAVAILABLE": "Não deu para ler seu Instagram agora"
       }
     },
     "ASK_ADMIN": "Peça a um administrador desta conta para conectar.",
@@ -63,7 +66,8 @@
     "TILES": {
       "REACH": {
         "LABEL": "Pessoas que viram",
-        "HELP": "Cada pessoa conta uma vez."
+        "HELP": "Cada pessoa conta uma vez.",
+        "HELP_UP_TO": "A mesma pessoa pode contar mais de uma vez, se viu um post e um story."
       },
       "VIEWS": {
         "LABEL": "Vezes que apareceu",
@@ -82,7 +86,9 @@
       "MORE": "{count} a mais que nos {days} dias anteriores",
       "FEWER": "{count} a menos que nos {days} dias anteriores",
       "SAME": "Igual aos {days} dias anteriores",
-      "NO_COMPARE": "Sem comparação no Instagram: a Meta só guarda 90 dias."
+      "NO_COMPARE": "Sem comparação no Instagram: a Meta só guarda 90 dias.",
+      "FIRST_PERIOD": "Primeiro período com dado: nos {days} dias anteriores seus posts não apareceram sem anúncio.",
+      "UP_TO": "até {count}"
     },
     "ADS_SHARE": {
       "TEXT": "{first}% das vezes que sua Página apareceu foram sem pagar. {second}% vieram de anúncios.",
@@ -97,7 +103,7 @@
     "TOP_POSTS": {
       "TITLE": "Posts com mais curtidas e comentários",
       "EMPTY": "Nenhum post nos últimos {days} dias.",
-      "REACH": "{count} pessoas",
+      "REACH": "alcance {count}",
       "INTERACTIONS": "{count} curtidas e comentários"
     },
     "QUIET": {

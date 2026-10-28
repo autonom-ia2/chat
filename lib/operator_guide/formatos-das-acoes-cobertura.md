@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 647 |
-| Sem corpo | 189 |
-| Com corpo | 458 |
-| Com corpo e formato completo | 377 (82,3%) |
-| Com corpo e formato incompleto | 81 |
+| No catálogo | 660 |
+| Sem corpo | 194 |
+| Com corpo | 466 |
+| Com corpo e formato completo | 383 (82,2%) |
+| Com corpo e formato incompleto | 83 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 206 |
-| Leituras cruas tipadas | 175 de 264 |
+| Campos aninhados com vocabulário | 17 de 208 |
+| Leituras cruas tipadas | 180 de 272 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 67 |
+| leitura crua sem tipo | 69 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -35,6 +35,7 @@ Uma ação pode ter mais de um motivo.
 
 - `DELETE assignment_policies/:assignment_policy_id/inboxes/:id` — a rota não tem a action no controller: a chamada dá erro
 - `DELETE inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
+- `PATCH crm/meta_ads_connection/ads/:ad_id/budget` — leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)
 - `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
 - `PATCH crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
@@ -79,6 +80,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
 - `POST crm/memoria/cards/:card_id/fatos` — leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)
+- `POST crm/meta_ads_connection/media` — leitura crua sem tipo: file
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
 - `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
@@ -170,6 +172,9 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/memoria_fatos#create` chave — o código não converte nem compara o valor
 - `api/v1/accounts/crm/memoria_fatos#create` item_ref — repassada a ::Crm::Memoria::Correcao.corrigir!
 - `api/v1/accounts/crm/memoria_fatos#create` valor — repassada a ::Crm::Memoria::Correcao.corrigir!
+- `api/v1/accounts/crm/meta_ads_creation#media` file — o código não converte nem compara o valor
+- `api/v1/accounts/crm/meta_ads_creation#update_budget` amount — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
+- `api/v1/accounts/crm/meta_ads_creation#update_budget` end_time — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#create` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` goal — o código não converte nem compara o valor
@@ -213,8 +218,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 401 |
-| Com parâmetros conhecidos | 350 |
+| No catálogo | 406 |
+| Com parâmetros conhecidos | 355 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

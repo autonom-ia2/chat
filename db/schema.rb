@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_560000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2746,6 +2746,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_560000) do
     t.index ["account_id", "ad_account_id", "ad_id", "date", "publisher_platform", "platform_position"], name: "idx_crm_meta_ad_placements_daily_unique", unique: true
   end
 
+  create_table "crm_meta_ads_comment_actions", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "network", null: false
+    t.string "ad_id"
+    t.string "comment_id", null: false
+    t.string "action", null: false
+    t.bigint "conversation_id"
+    t.string "actor", null: false
+    t.bigint "user_id"
+    t.datetime "at", null: false
+    t.datetime "attempted_at"
+    t.datetime "failed_at"
+    t.datetime "confirmed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
+    t.index ["conversation_id"], name: "idx_crm_meta_ads_comment_actions_conversation"
+    t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY (ARRAY['private_reply'::text, 'ai_seen'::text]))"
+    t.index ["user_id"], name: "idx_crm_meta_ads_comment_actions_user"
+  end
+
   create_table "crm_meta_ads_connections", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.text "access_token"
@@ -2770,6 +2791,70 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_560000) do
     t.string "whatsapp_report_phone"
     t.index ["account_id"], name: "index_crm_meta_ads_connections_on_account_id", unique: true
     t.index ["ad_account_id"], name: "idx_crm_meta_ads_connections_partner_ad_account", unique: true, where: "((mode)::text = 'partner'::text)"
+  end
+
+  create_table "crm_meta_ads_created_objects", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.string "kind", default: "ad", null: false
+    t.string "idempotency_key", null: false
+    t.string "status", default: "creating", null: false
+    t.string "name", limit: 255
+    t.string "ad_account_id"
+    t.string "campaign_id"
+    t.string "adset_id"
+    t.string "creative_id"
+    t.string "ad_id"
+    t.jsonb "budget", default: {}, null: false
+    t.string "error_code"
+    t.datetime "activated_at"
+    t.datetime "switching_at"
+    t.string "request_digest", limit: 64
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "ad_account_id", "request_digest"], name: "idx_crm_meta_ads_created_objects_digest", unique: true, where: "((status)::text = ANY (ARRAY[('creating'::character varying)::text, ('unconfirmed'::character varying)::text, ('rollback_failed'::character varying)::text]))"
+    t.index ["account_id", "ad_id"], name: "idx_crm_meta_ads_created_objects_ad"
+    t.index ["account_id", "idempotency_key"], name: "idx_crm_meta_ads_created_objects_key", unique: true
+  end
+
+  create_table "crm_meta_ads_lead_forms", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "page_id", null: false
+    t.string "form_id", null: false
+    t.string "form_name", limit: 255
+    t.bigint "pipeline_id"
+    t.bigint "stage_id"
+    t.integer "brought_count"
+    t.bigint "brought_pipeline_id"
+    t.bigint "brought_stage_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "form_id"], name: "index_crm_meta_ads_lead_forms_on_account_id_and_form_id", unique: true
+    t.index ["brought_pipeline_id"], name: "index_crm_meta_ads_lead_forms_on_brought_pipeline_id"
+    t.index ["brought_stage_id"], name: "index_crm_meta_ads_lead_forms_on_brought_stage_id"
+    t.index ["pipeline_id"], name: "index_crm_meta_ads_lead_forms_on_pipeline_id"
+    t.index ["stage_id"], name: "index_crm_meta_ads_lead_forms_on_stage_id"
+  end
+
+  create_table "crm_meta_ads_leads", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "leadgen_id", null: false
+    t.string "page_id"
+    t.string "form_id"
+    t.string "ad_id"
+    t.string "ad_name", limit: 255
+    t.string "campaign_name", limit: 255
+    t.bigint "contact_id"
+    t.bigint "card_id"
+    t.boolean "new_contact", default: false, null: false
+    t.datetime "received_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "form_id", "received_at"], name: "idx_on_account_id_form_id_received_at_821e7bda5f"
+    t.index ["account_id", "leadgen_id"], name: "index_crm_meta_ads_leads_on_account_id_and_leadgen_id", unique: true
+    t.index ["account_id", "received_at"], name: "index_crm_meta_ads_leads_on_account_id_and_received_at"
+    t.index ["card_id"], name: "index_crm_meta_ads_leads_on_card_id"
+    t.index ["contact_id"], name: "index_crm_meta_ads_leads_on_contact_id"
   end
 
   create_table "crm_meta_ads_pages", force: :cascade do |t|
@@ -4568,7 +4653,19 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_560000) do
   add_foreign_key "crm_meta_ad_links", "conversations", on_delete: :cascade
   add_foreign_key "crm_meta_ad_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ad_placements_daily", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_comment_actions", "accounts"
+  add_foreign_key "crm_meta_ads_comment_actions", "conversations", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_comment_actions", "users", on_delete: :nullify
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_created_objects", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_lead_forms", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_lead_forms", "crm_pipeline_stages", column: "brought_stage_id", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_lead_forms", "crm_pipeline_stages", column: "stage_id", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_lead_forms", "crm_pipelines", column: "brought_pipeline_id", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_lead_forms", "crm_pipelines", column: "pipeline_id", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_leads", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_leads", "contacts", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_leads", "crm_cards", column: "card_id", on_delete: :nullify
   add_foreign_key "crm_meta_ads_pages", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "last_run_id", on_delete: :nullify

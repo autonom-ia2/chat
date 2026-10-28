@@ -192,8 +192,8 @@
         "META_ADS": {
           "NAME": "Meta ads",
           "HINT": "Facebook and Instagram ads panel",
-          "LEVEL_VIEW": "Sees the ads panel and its results. Connecting and configuring need Edit.",
-          "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, and acts on the advisor."
+          "LEVEL_VIEW": "Sees the ads panel, its results and each ad's budget and dates. Creating, connecting and configuring need Edit.",
+          "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, acts on the advisor, creates ads (always paused), activates them and changes their budget and dates."
         },
         "INBOXES": {
           "NAME": "Inboxes",
