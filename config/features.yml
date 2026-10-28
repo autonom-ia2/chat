@@ -982,11 +982,21 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
+# pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
+# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Migration 20261108600000
+# (conversation_audience_*). Fim da feature_flags_ext_2, depois de seus_posts (#2304): posição 11 (valor 1024,
+# 1 << 10), a confirmar pela Orquestração antes da fila.
+- name: campanhas_publico_por_conversa
+  display_name: Campanhas › Novo público pedindo em palavras
+  enabled: false
+  column: feature_flags_ext_2
+
 # Anúncios da Meta › comentários do anúncio no Facebook (#2197, épico #2194). Ligada: o detalhe do anúncio ganha a aba
 # Facebook dos comentários (ler, responder como a Página, ocultar e apagar, ao vivo na Meta) e a API responde; o
 # webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
-# feature_flags_ext_2, depois de seus_posts: posição pela ordem de chegada à main, hoje 11 (valor 1024,
-# 1 << 10). A Orquestração confere antes de enfileirar.
+# feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2303): posição 12 (valor 2048, 1 << 11), dada pela
+# Orquestração (28/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
 - name: meta_ads_comentarios_facebook
   display_name: Anúncios da Meta › comentários do anúncio no Facebook
   enabled: false

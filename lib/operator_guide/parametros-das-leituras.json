@@ -458,6 +458,22 @@
       "inbox_id"
     ]
   },
+  "campaign_journey/conversation_audiences/:id": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#show",
+    "parametros": [
+      "since"
+    ]
+  },
+  "campaign_journey/conversation_audiences/:id/conversation": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#conversation",
+    "parametros": [
+      "person_id"
+    ]
+  },
+  "campaign_journey/conversation_audiences/status": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#status",
+    "parametros": []
+  },
   "campaign_journey/drafts": {
     "controller": "api/v1/accounts/campaign_journey/drafts#index",
     "parametros": []
