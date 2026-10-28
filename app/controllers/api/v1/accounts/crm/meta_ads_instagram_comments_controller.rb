@@ -35,7 +35,7 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   end
 
   def reply
-    result = comments.reply!(ad_id, comment_id, params[:text].to_s)
+    result = comments.reply!(ad_id, comment_id, params[:text].to_s, user: Current.user)
     audit!('reply')
     render json: result
   end
