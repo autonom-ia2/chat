@@ -1,6 +1,8 @@
 # O que já foi feito num comentário de anúncio da Meta (#2196), nas duas redes. O comentário em si nunca é gravado.
 #
-# - `network`: `instagram` ou `facebook`; `comment_id` é o id da Meta; `ad_id` quando a ação veio do anúncio.
+# - `network`: `instagram` ou `facebook`; `comment_id` é o id da Meta; `ad_id` quando a ação veio do anúncio. Em
+#   `reply`, `comment_id` é a resposta que a conta publicou, não o comentário respondido: a Graph do Instagram a devolve
+#   sem `from`, e é esta linha que a mostra como da conta (#2313).
 # - `action`: o que a pessoa (#2196, #2197) ou a IA dos comentários (#2212) fez. `ai_seen`, `to_you` e
 #   `private_reply_failed` são só da IA: a leitura do comentário, a reclamação passada à pessoa e o privado recusado.
 # - `actor`: `user` (com `user_id`) ou `ai`.
@@ -44,6 +46,16 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   # ação ONCE já feita, levanta ActiveRecord::RecordNotUnique: quem chama decide (em geral, não age).
   def self.record!(**attributes)
     create!(attributes.merge(at: Time.current))
+  end
+
+  # A resposta pública que a conta publicou no Instagram pelo painel (#2313). Ela já está no Instagram: falha ao gravar
+  # não vira erro (a pessoa responderia de novo); sem a linha, a resposta só aparece sem o "Você" quando a Graph não
+  # traz o `from`.
+  def self.record_reply(account_id:, ad_id:, reply_id:, user:)
+    record!(account_id: account_id, network: 'instagram', ad_id: ad_id.to_s, comment_id: reply_id.to_s, action: 'reply',
+            actor: 'user', user: user)
+  rescue ActiveRecord::ActiveRecordError => e
+    Rails.logger.error("[MetaAdsCommentAction] resposta #{reply_id} sem registro: #{e.class.name}")
   end
 
   # A chamada à Meta vai sair agora: daqui em diante, sem confirmação a linha fica travada. Falso quando a reserva já

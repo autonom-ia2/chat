@@ -11,7 +11,7 @@
 class Instagram::CommentsClient
   TIMEOUT_SECONDS = 8
   PAGE_LIMIT = 25
-  FIELDS = 'id,text,timestamp,hidden,from{id,username}'.freeze
+  FIELDS = 'id,text,timestamp,hidden,parent_id,from{id,username}'.freeze
   COMMENT_FIELDS = "#{FIELDS},replies{#{FIELDS}}".freeze
   Result = Meta::AdsGraphClient::Result
   # A Graph não respondeu (rede, 5xx, limite): quem roda em job sobe para o retry.

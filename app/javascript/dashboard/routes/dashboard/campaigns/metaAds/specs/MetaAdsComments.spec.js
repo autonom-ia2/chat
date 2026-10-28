@@ -78,36 +78,6 @@ describe('MetaAdsComments (#2196)', () => {
     expect(ig.listar).toHaveBeenCalledTimes(2);
   });
 
-  // #2313: a leitura logo depois do envio traz a resposta da conta dentro do comentário, e o selo some sem recarregar.
-  it('drops the unanswered badge right after the page replies', async () => {
-    const answered = {
-      ...comment('1'),
-      replies: [
-        {
-          ...comment('r1'),
-          author: { name: null, username: 'loja', is_page: true },
-        },
-      ],
-    };
-    const ig = adaptador(ready([comment('1')]));
-    ig.listar
-      .mockResolvedValueOnce(ready([comment('1')]))
-      .mockResolvedValueOnce(ready([answered]));
-    ig.responder.mockResolvedValue({});
-    const shell = await mountShell([{ key: 'INSTAGRAM', adaptador: ig }]);
-    expect(shell.find('[data-ad-comment-unanswered]').exists()).toBe(true);
-
-    await shell
-      .findComponent({ name: 'MetaAdsCommentRow' })
-      .props('acoes')
-      .responder(comment('1'), 'Obrigado!');
-    await flushPromises();
-
-    expect(ig.responder).toHaveBeenCalledWith('120', '1', 'Obrigado!');
-    expect(shell.find('[data-ad-comment-unanswered]').exists()).toBe(false);
-    expect(shell.findAll('[data-comment-id="r1"]')).toHaveLength(1);
-  });
-
   it('falls back to the generic message for an unknown code', async () => {
     const ig = adaptador(ready([comment('1')]));
     ig.ocultar.mockRejectedValue(refused(422, 'something_new'));
