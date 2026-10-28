@@ -44,12 +44,13 @@ RSpec.describe 'Campaign import people sheet (#2332)', :aggregate_failures, type
 
   it 'gives the people of a spreadsheet audience as an Excel file, with the extra columns and nothing as a formula' do
     audience = create_audience_import(account: account, user: admin, content: "nome,telefone\nAna,11987654321\n")
-    audience.update!(name: 'Clientes Março', extra_columns: %w[Cidade])
+    audience.update!(name: 'Clientes Março', extra_columns: %w[Cidade name])
     bia = create(:contact, account: account, name: 'Bia Flávia', phone_number: '+5521987654321', email: 'bia@example.com')
     ana = create(:contact, account: account, name: '=HYPERLINK("x")', phone_number: '+5511987654321')
-    import_row(audience, bia, extra_values: { 'Cidade' => 'São Paulo' }, company_name: 'Alfa')
+    import_row(audience, bia, extra_values: { 'Cidade' => 'São Paulo', 'name' => 'Bia' }, company_name: 'Alfa')
     import_row(audience, ana)
     import_row(audience, bia)
+    import_row(audience, create(:contact, account: account, name: 'Apagado')).contact.destroy!
 
     get sheet_path(audience), headers: headers
 
@@ -57,10 +58,20 @@ RSpec.describe 'Campaign import people sheet (#2332)', :aggregate_failures, type
     expect(response.headers['Content-Type']).to include('spreadsheetml.sheet')
     expect(response.headers['Content-Disposition']).to include('attachment', 'clientes-marco.xlsx')
     expect(sheet_rows(response.body)).to eq([
-                                              ['Name', 'Phone', 'E-mail', 'Company', 'Cidade'],
-                                              ['=HYPERLINK("x")', '+5511987654321', nil, nil, nil],
-                                              ['Bia Flávia', '+5521987654321', 'bia@example.com', 'Alfa', 'São Paulo']
+                                              ['Name', 'Phone', 'E-mail', 'Company', 'Cidade', 'name (2)'],
+                                              ['=HYPERLINK("x")', '+5511987654321', nil, nil, nil, nil],
+                                              ['Bia Flávia', '+5521987654321', 'bia@example.com', 'Alfa', 'São Paulo', 'Bia']
                                             ])
+  end
+
+  it 'downloads the people of an old campaign base import too, as its panel lists them' do
+    old = create_campaign_import(account: account, user: admin, content: "nome,telefone\nAna,11987654321\n")
+    import_row(old, create(:contact, account: account, name: 'Ana', phone_number: '+5511987654321'))
+
+    get sheet_path(old), headers: headers
+
+    expect(response).to have_http_status(:ok)
+    expect(sheet_rows(response.body).drop(1)).to eq([['Ana', '+5511987654321', nil, nil]])
   end
 
   it 'refuses an agent without campaign_manage' do

@@ -41,8 +41,16 @@ class CampaignImports::AudiencePeopleSheet
     sheet.add_table("A1:#{Axlsx.col_ref(lines.first.size - 1)}#{last_row}", name: 'Publico', style_info: TABLE_STYLE)
   end
 
+  # Excel refuses a table with two columns of the same name (case aside): an extra column called "Nome" becomes "Nome (2)".
   def headers
-    %w[name phone email company].map { |key| I18n.t("campaign_import.people_sheet.#{key}") } + extra_columns
+    fixed = %w[name phone email company].map { |key| I18n.t("campaign_import.people_sheet.#{key}") }
+    extra_columns.each_with_object(fixed.dup) { |header, taken| taken << free_header(header, taken.map(&:downcase)) }
+  end
+
+  def free_header(header, taken)
+    return header if taken.exclude?(header.downcase)
+
+    (2..).lazy.map { |number| "#{header} (#{number})" }.find { |name| taken.exclude?(name.downcase) }
   end
 
   def extra_columns
@@ -61,7 +69,8 @@ class CampaignImports::AudiencePeopleSheet
   end
 
   def rows
-    scope = @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).includes(:contact)
+    # joins: a contact deleted after the import has no row to show (contact_id has no foreign key).
+    scope = @campaign_import.campaign_import_rows.status_imported.joins(:contact).includes(:contact)
     scope = scope.includes(contact: :company) if Contact.reflect_on_association(:company)
     scope = scope.where(contact_id: @contact_ids.to_a) if @contact_ids
     scope.sort_by { |row| [row.contact.name.to_s.downcase, row.contact_id] }.uniq(&:contact_id)

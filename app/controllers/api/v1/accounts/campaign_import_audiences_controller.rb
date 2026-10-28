@@ -137,8 +137,8 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   def fetch_campaign_import
     # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
     @campaign_import = Current.account.campaign_imports.campaign_flows.includes(:user, :campaign_import_labels).find(params[:id])
-    # Old imports (Base Campanha) also list their contacts in the side panel (F1).
-    return if @campaign_import.audience? || action_name == 'contacts'
+    # Old imports (Base Campanha) also list their contacts in the side panel (F1), and download them (#2332).
+    return if @campaign_import.audience? || %w[contacts people_sheet].include?(action_name)
 
     render_unprocessable('campaign_import.not_an_audience')
   end
