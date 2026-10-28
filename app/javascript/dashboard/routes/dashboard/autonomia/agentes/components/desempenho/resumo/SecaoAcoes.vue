@@ -57,6 +57,16 @@ const faltaDado = computed(() =>
   recomendacoes.value.filter(item => item.pronto === 'falta_dado')
 );
 
+// #2301 — sem as sugestões do período exato, vão as últimas do mesmo período, com as datas delas.
+const deOutrasDatas = computed(() => {
+  const datas = props.painel.meta?.recomendacoes_de;
+  if (!datas || !recomendacoes.value.length) return '';
+  return fmt.t(`${NS}.DE_OUTRAS_DATAS`, {
+    inicio: fmt.data(datas.inicio),
+    fim: fmt.data(datas.fim),
+  });
+});
+
 const ganhoDe = item => fmt.fraseDoGanho(item.ganho, props.painel);
 </script>
 
@@ -78,6 +88,13 @@ const ganhoDe = item => fmt.fraseDoGanho(item.ganho, props.painel);
       class="flex flex-wrap items-center gap-1.5 m-0 text-xs text-n-slate-11"
     >
       {{ baseDoTicket }}
+    </p>
+    <p
+      v-if="deOutrasDatas"
+      data-acoes-outras-datas
+      class="m-0 text-xs text-n-slate-11"
+    >
+      {{ deOutrasDatas }}
     </p>
     <p v-if="!recomendacoes.length" class="m-0 text-sm text-n-slate-11">
       {{ fmt.t(`${NS}.NENHUMA`) }}

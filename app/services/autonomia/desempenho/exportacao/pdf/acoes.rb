@@ -17,7 +17,7 @@ module Autonomia::Desempenho::Exportacao::Pdf::Acoes
   end
 
   def pagina_acoes(pagina)
-    cima = abrir_pagina(t('acoes.titulo'), t('acoes.subtitulo'), pagina)
+    cima = abrir_pagina(t('acoes.titulo'), subtitulo_das_acoes, pagina)
     return vazio(0, cima, largura) if recomendacoes.empty?
 
     fatia = fatias_de_acoes[pagina[:parte] - 1]
@@ -30,6 +30,14 @@ module Autonomia::Desempenho::Exportacao::Pdf::Acoes
 
   def recomendacoes
     Array(@painel['recomendacoes'])
+  end
+
+  # #2301: sugestões de outras datas (as últimas do mesmo período) dizem as datas delas, como na tela.
+  def subtitulo_das_acoes
+    datas = @painel.dig('meta', 'recomendacoes_de')
+    return t('acoes.subtitulo') if datas.blank? || recomendacoes.empty?
+
+    t('acoes.subtitulo_de_outras_datas', inicio: dia_mes(datas['inicio']), fim: data_longa(datas['fim']))
   end
 
   # Os cartões da página e, na última (quando cabem), as colunas de prontidão embaixo.

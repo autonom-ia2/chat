@@ -201,6 +201,13 @@ export const MODULE_GROUPS = [
           manage: META_ADS_MANAGE_PERMISSION,
         },
       },
+      {
+        // Seus posts (#2302): ver os posts e os números do Instagram e da Página das caixas; editar responde, esconde
+        // e manda no privado. Os comentários só aparecem para quem vê a caixa.
+        key: 'POSTS',
+        icon: 'i-lucide-layout-grid',
+        levels: { view: 'posts_view', manage: 'posts_manage' },
+      },
     ],
   },
   {

@@ -61,6 +61,13 @@ pt_BR:
           instrucao_mudou: "A instrução da IA mudou em %{data}. Antes e depois não se comparam direto."
           lido_por_amostra: Lemos as conversas por amostra neste período.
           sem_anuncio: Esta conta não tem anúncio ligado.
+          leitura_teto: A última leitura automática parou no limite diário de gasto com IA. O resto entra na próxima leitura.
+          leitura_sem_ia: A leitura automática não está funcionando nesta conta, porque falta conectar a chave de IA.
+          leitura_chave_recusada: A IA recusou a chave desta conta. A leitura automática só volta depois de conferir a chave.
+          leitura_erro: A última leitura automática parou por um erro. Os números mostram o que já foi lido.
+          leitura_pendentes: "Conversas esperando a próxima leitura da IA: %{n}. Os números param antes delas."
+          leitura_nao_lidas: "Conversas que a IA não conseguiu ler: %{n}. Se já tinham sido lidas antes, os números são dessa leitura; se nunca foram, ficam de fora."
+          leitura_instrucao: A instrução do agente mudou depois que a leitura foi preparada. A IA segue lendo com os critérios de antes até o suporte atualizar a leitura.
         kpi:
           procuras: Procuras
           conversas: Conversas
@@ -268,6 +275,7 @@ pt_BR:
         acoes:
           titulo: Do sinal à ação
           subtitulo: Cada sugestão traz o número e as conversas que a provam. O ganho é uma estimativa.
+          subtitulo_de_outras_datas: "Sugestões de %{inicio} a %{fim}. Cada uma traz o número e as conversas que a provam."
           a_prova: A prova
           o_que_mudar: O que mudar
           na_instrucao: "Na instrução: %{texto}"
@@ -365,6 +373,7 @@ pt_BR:
         planilha:
           contexto: "%{agente} · %{periodo} · dados até %{dados_ate}"
           resumo_titulo: "Painel de desempenho · %{agente}"
+          recomendacoes_de: "sugestões de %{inicio} a %{fim}"
           nota_grupo: "A coluna Grupo inclui fechamentos fora de %{compra}. Para bater com o resumo, filtre também %{compra} = sim."
           nota_fixos: Conversas, tempo de resposta e mensagens são valores do período (não são soma simples das linhas).
           taxa_fechou: "% que fechou"

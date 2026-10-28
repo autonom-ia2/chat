@@ -244,9 +244,10 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
   // Each action answers 422 { error } (invalid_text, needs_login,
   // meta_unavailable, meta_refused, private_reply_done,
   // private_reply_expired) or 404 comment_not_found.
-  replyInstagramComment(adId, commentId, text) {
+  // The text goes as `content`, which the Rails log filters (#2327).
+  replyInstagramComment(adId, commentId, content) {
     return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/reply`, {
-      text,
+      content,
     });
   }
 
@@ -261,10 +262,10 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
   }
 
   // → { sent_at, conversation_path }
-  privateReplyInstagramComment(adId, commentId, text) {
+  privateReplyInstagramComment(adId, commentId, content) {
     return axios.post(
       `${this.instagramCommentsUrl(adId, commentId)}/private_reply`,
-      { text }
+      { content }
     );
   }
 
@@ -277,6 +278,43 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
   instagramCommentsUrl(adId, commentId) {
     const base = `${this.url}/ads/${encodeURIComponent(adId)}/instagram_comments`;
     return commentId ? `${base}/${encodeURIComponent(commentId)}` : base;
+  }
+
+  // Facebook comments on the ad's Page post (#2197, flag
+  // meta_ads_comentarios_facebook), live from Meta → { comments: { status,
+  // permalink_url, comments, total, next_cursor } }; with `after`, the next
+  // page → { comments: { comments, next_cursor } }.
+  facebookComments(adId, after = null) {
+    return axios.get(this.facebookCommentsUrl(adId), {
+      params: after ? { after } : {},
+    });
+  }
+
+  // Replies as the Page → { id }.
+  // The text goes as `content`, which the Rails log filters.
+  replyFacebookComment(adId, commentId, content) {
+    return axios.post(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}/reply`,
+      { content }
+    );
+  }
+
+  hideFacebookComment(adId, commentId, hidden) {
+    return axios.patch(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}`,
+      { hidden }
+    );
+  }
+
+  // Irreversible: the screen confirms first.
+  deleteFacebookComment(adId, commentId) {
+    return axios.delete(
+      `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}`
+    );
+  }
+
+  facebookCommentsUrl(adId) {
+    return `${this.url}/ads/${encodeURIComponent(adId)}/facebook_comments`;
   }
 
   // Suggested message to resume a stalled quote. Never sent by the server →

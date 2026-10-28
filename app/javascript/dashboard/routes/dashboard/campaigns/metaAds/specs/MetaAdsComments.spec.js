@@ -78,6 +78,34 @@ describe('MetaAdsComments (#2196)', () => {
     expect(ig.listar).toHaveBeenCalledTimes(2);
   });
 
+  it('says the reason in the words of its own network on the Facebook tab (#2197)', async () => {
+    const fb = adaptador(ready([comment('1')]));
+    fb.ocultar.mockRejectedValue(refused(422, 'meta_unavailable'));
+    const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }]);
+
+    await shell
+      .findComponent({ name: 'MetaAdsCommentRow' })
+      .props('acoes')
+      .ocultar(comment('1'), true);
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      said('FACEBOOK.ERRORS.META_UNAVAILABLE')
+    );
+    expect(said('FACEBOOK.ERRORS.META_UNAVAILABLE')).toContain('Facebook');
+  });
+
+  it('shows a photo-only comment with the photo label, not as an empty line (#2197)', async () => {
+    const fb = adaptador(
+      ready([{ ...comment('1'), text: null, attachment: 'photo' }])
+    );
+    const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }]);
+
+    expect(shell.find('[data-ad-comment-attachment]').text()).toBe(
+      said('ATTACHMENT_PHOTO')
+    );
+  });
+
   it('falls back to the generic message for an unknown code', async () => {
     const ig = adaptador(ready([comment('1')]));
     ig.ocultar.mockRejectedValue(refused(422, 'something_new'));

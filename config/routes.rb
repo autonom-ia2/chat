@@ -191,6 +191,8 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Seus posts (#2302, F1 #2304): os números do perfil e os posts do Instagram e da Página das caixas.
+          get :seus_posts, to: 'seus_posts#index'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member
@@ -236,6 +238,18 @@ Rails.application.routes.draw do
           end
           namespace :campaign_journey do
             resources :campaigns, only: [:create]
+            # #2277: novo público pedindo em palavras (a IA da conta lê as conversas).
+            resources :conversation_audiences, only: [:create, :show] do
+              get :status, on: :collection
+              member do
+                post :answer
+                post :start
+                post :stop
+                post :resume
+                get :conversation
+                post :save
+              end
+            end
             resources :drafts, only: %i[index show create update destroy] # #1898
             resources :contact_origins, only: [:show]
             resources :campaign_names, only: [:index]
@@ -422,6 +436,11 @@ Rails.application.routes.draw do
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
               post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'
               post 'advisor_actions/:id/dismiss', to: 'meta_ads_advisor_actions#dismiss'
+              # Comentários do anúncio no Facebook (#2197): ler, responder como a Página, ocultar e apagar.
+              get 'ads/:ad_id/facebook_comments', to: 'meta_ads_facebook_comments#index'
+              post 'ads/:ad_id/facebook_comments/:comment_id/reply', to: 'meta_ads_facebook_comments#reply'
+              patch 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#update'
+              delete 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#destroy'
             end
             # Formulários dos anúncios (#2195): Páginas, formulários e para onde vai quem preenche.
             get 'meta_ads_lead_forms', to: 'meta_ads_lead_forms#index'
@@ -837,6 +856,7 @@ Rails.application.routes.draw do
               resources :assignments, only: [:create]
               resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
+              patch 'labels/alterar', to: 'alterar_etiquetas#update', as: :alterar_etiquetas # fork chat#2202: pôr/tirar uma a uma
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]

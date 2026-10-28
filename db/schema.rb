@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_610000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -725,6 +725,27 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
     t.index ["account_id", "sujeito_type", "sujeito_id", "periodo"], name: "idx_autonomia_desempenho_recomendacoes_periodo", unique: true
     t.check_constraint "periodo::text = ANY ('{7,30,90,tudo}'::text[])", name: "autonomia_desempenho_recomendacoes_periodo"
     t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_recomendacoes_sujeito"
+  end
+
+  create_table "autonomia_desempenho_rodadas", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "sujeito_type", null: false
+    t.bigint "sujeito_id", null: false
+    t.datetime "corte_em", null: false
+    t.datetime "piso_em", null: false
+    t.datetime "iniciada_em", null: false
+    t.datetime "terminada_em"
+    t.string "status", null: false
+    t.integer "conversas_lidas", default: 0, null: false
+    t.integer "conversas_pendentes", default: 0, null: false
+    t.datetime "pendente_desde"
+    t.decimal "custo_usd", precision: 12, scale: 6, default: "0.0", null: false
+    t.string "lote", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sujeito_id", "iniciada_em"], name: "idx_autonomia_desempenho_rodadas_inicio"
+    t.check_constraint "status::text = ANY ('{rodando,ok,teto,sem_ia,chave_recusada,erro}'::text[])", name: "autonomia_desempenho_rodadas_status"
+    t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_rodadas_sujeito"
   end
 
   create_table "autonomia_guide_avisos", force: :cascade do |t|
@@ -1935,6 +1956,65 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_conversa_canal_remetentes_no_spam_on_account_id"
     t.index ["inbox_id", "email"], name: "index_conversa_canal_remetentes_no_spam_on_inbox_id_and_email", unique: true
+  end
+
+  create_table "conversation_audience_batches", force: :cascade do |t|
+    t.bigint "search_id", null: false
+    t.integer "number", null: false
+    t.bigint "conversation_ids", default: [], null: false, array: true
+    t.integer "chars", default: 0, null: false
+    t.string "status", default: "pending", null: false
+    t.decimal "spent_usd", precision: 10, scale: 4, default: "0.0", null: false
+    t.integer "attempts", default: 0, null: false
+    t.string "error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["search_id", "number"], name: "index_conversation_audience_batches_on_search_id_and_number", unique: true
+    t.index ["search_id", "status"], name: "index_conversation_audience_batches_on_search_id_and_status"
+  end
+
+  create_table "conversation_audience_people", force: :cascade do |t|
+    t.bigint "search_id", null: false
+    t.bigint "contact_id", null: false
+    t.bigint "conversation_id", null: false
+    t.string "group", null: false
+    t.text "reason"
+    t.jsonb "proofs", default: [], null: false
+    t.string "contact_masked"
+    t.string "left_aside"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["contact_id"], name: "index_conversation_audience_people_on_contact_id"
+    t.index ["conversation_id"], name: "index_conversation_audience_people_on_conversation_id"
+    t.index ["search_id", "contact_id"], name: "index_conversation_audience_people_on_search_id_and_contact_id", unique: true
+  end
+
+  create_table "conversation_audience_searches", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "user_id"
+    t.text "request", null: false
+    t.string "period", null: false
+    t.text "answer"
+    t.jsonb "plan", default: {}, null: false
+    t.string "status", default: "planning", null: false
+    t.string "error"
+    t.integer "conversations_total", default: 0, null: false
+    t.integer "conversations_read", default: 0, null: false
+    t.decimal "estimate_usd", precision: 10, scale: 4
+    t.decimal "ceiling_usd", precision: 10, scale: 4
+    t.decimal "spent_usd", precision: 10, scale: 4, default: "0.0", null: false
+    t.decimal "usd_brl", precision: 10, scale: 4
+    t.bigint "campaign_import_id"
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "heartbeat_at"
+    t.string "run_token"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "status"], name: "index_conversation_audience_searches_on_account_id_and_status"
+    t.index ["account_id", "user_id", "created_at"], name: "idx_on_account_id_user_id_created_at_ccbd24423f"
+    t.index ["campaign_import_id"], name: "index_conversation_audience_searches_on_campaign_import_id"
+    t.index ["user_id"], name: "index_conversation_audience_searches_on_user_id"
   end
 
   create_table "conversation_outcomes", force: :cascade do |t|
@@ -4481,6 +4561,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
   add_foreign_key "autonomia_desempenho_procuras", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_procuras", "conversations", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_recomendacoes", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_desempenho_rodadas", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_avisos", "users", on_delete: :cascade
@@ -4557,6 +4638,13 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
   add_foreign_key "conversa_canal_pastas_do_email", "conversations", on_delete: :cascade
   add_foreign_key "conversa_canal_remetentes_no_spam", "accounts", on_delete: :cascade
   add_foreign_key "conversa_canal_remetentes_no_spam", "inboxes", on_delete: :cascade
+  add_foreign_key "conversation_audience_batches", "conversation_audience_searches", column: "search_id", on_delete: :cascade
+  add_foreign_key "conversation_audience_people", "contacts", on_delete: :cascade
+  add_foreign_key "conversation_audience_people", "conversation_audience_searches", column: "search_id", on_delete: :cascade
+  add_foreign_key "conversation_audience_people", "conversations", on_delete: :cascade
+  add_foreign_key "conversation_audience_searches", "accounts", on_delete: :cascade
+  add_foreign_key "conversation_audience_searches", "campaign_imports", on_delete: :nullify
+  add_foreign_key "conversation_audience_searches", "users", on_delete: :nullify
   add_foreign_key "crm_activities", "accounts"
   add_foreign_key "crm_activities", "conversations", on_delete: :cascade
   add_foreign_key "crm_activities", "crm_cards", column: "card_id", on_delete: :cascade

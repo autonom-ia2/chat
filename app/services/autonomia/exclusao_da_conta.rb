@@ -110,7 +110,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Agents::Agent', :por_conta],
     # Painel de desempenho (#2251): a leitura guardada das conversas.
     ['Autonomia::Desempenho::Procura', :por_conta], ['Autonomia::Desempenho::Leitura', :por_conta],
-    ['Autonomia::Desempenho::Recomendacao', :por_conta], ['Autonomia::Desempenho::Ficha', :por_conta],
+    ['Autonomia::Desempenho::Recomendacao', :por_conta], ['Autonomia::Desempenho::Rodada', :por_conta],
+    ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
     # Guia da Plataforma.
@@ -131,6 +132,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['CampaignAudienceLink', :por_conta],
     ['CampaignPause', :por_conta],
     ['CampaignReplyCode', :por_conta],
+    # Público pelas conversas (#2277): pessoas e lotes saem na cascata da busca.
+    ['ConversationAudienceSearch', :por_conta],
     # E-mail.
     ['ConversaCanal::EmailLido', :por_conta],
     ['ConversaCanal::EmailLidoCaixa', :por_conta],

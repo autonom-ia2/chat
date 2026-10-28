@@ -17,6 +17,8 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
 
   # Decisões que não leram nada ou não chegaram ao fim: não passam na frente de uma mais antiga.
   SEM_EFEITO = %w[failed no_content no_quota].freeze
+  # #2084: o contato saiu do funil enquanto a IA pensava; nada muda.
+  SAIU_DO_FUNIL = 'fora_do_funil'.freeze
 
   # anterior: o retrato da decisão reaberta pelo WhatsApp Híbrido (#1638), ou nil.
   def initialize(conversation:, question:, mode:, decisao:, anterior: nil)
@@ -124,6 +126,8 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
       resultado = if mensagem_mais_nova?
                     { state: 'superseded' }
+                  elsif saiu_do_funil?
+                    { state: 'kept', reason: SAIU_DO_FUNIL }
                   elsif modo_efetivo(action, atributos) == 'suggest'
                     sugerir
                   else
@@ -190,7 +194,10 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
 
   # #2162, dentro da trava: outra sugestão espera uma pessoa, ou ela ignorou há pouco a de criar card neste funil. Como
   # no #1260, só por RESPEITO_AO_FECHAMENTO: uma sugestão esquecida não prende a conversa para sempre.
+  # O contato que saiu do funil (#2084) também bloqueia: nenhuma sugestão fica esperando uma pessoa.
   def sugestao_bloqueada?(pipeline)
+    return true if saiu_do_funil?
+
     recentes = Crm::SubjectDecision.where(conversation_id: @conversation.id, updated_at: Crm::Subjects::RESPEITO_AO_FECHAMENTO.ago..)
                                    .where.not(id: @decisao.id)
     recentes.suggested.exists? || recentes.exists?(state: 'dismissed', action: %w[create rename], pipeline_id: pipeline.id)
@@ -201,6 +208,12 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
     Crm::SubjectDecision.suggested.where(conversation_id: @conversation.id).update_all(state: 'expired', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     @decisao.update!(state: 'suggested')
     { state: 'suggested' }
+  end
+
+  # #2084: a pessoa tirou o contato do funil enquanto a IA pensava (o Identifier conferiu antes de perguntar). O SyncLock
+  # trava a linha do contato, a mesma que o Crm::Relacao::Marcar grava: lida aqui dentro, a relação é a final.
+  def saiu_do_funil?
+    Crm::Relacao.fora_do_funil?(@account.contacts.find_by(id: @conversation.contact_id))
   end
 
   # Outra mensagem do cliente, mais nova, já entrou na fila de decisão (mesmo ainda pensando): ela lê a conversa mais

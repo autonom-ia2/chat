@@ -69,6 +69,104 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(second).to include(hidden: true, can_reply_private: false, private_reply_expired: true)
     end
 
+    # Formato visto em produção (#2313): a Graph devolve a resposta da conta em primeiro nível, com `from`, e dentro do
+    # comentário, sem `from`.
+    it 'resposta da própria conta aparece uma vez só, dentro do comentário, como da conta e só com apagar' do
+      stub_ad
+      stub_comments(body: {
+                      data: [
+                        { id: 'r1', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601, from: { id: ig_id, username: 'lojaexemplo' } },
+                        { id: 'c1', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+                          replies: { data: [{ id: 'r1', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601, parent_id: 'c1' }] } }
+                      ]
+                    })
+
+      comments = service.payload(ad_id)[:comments]
+
+      expect(comments.pluck(:id)).to eq(['c1'])
+      reply = comments.first[:replies].sole
+      expect(reply).to include(id: 'r1', can_reply: false, can_hide: false, can_delete: true, can_reply_private: false)
+      expect(reply[:author]).to eq(name: nil, username: 'lojaexemplo', is_page: true)
+    end
+
+    it 'resposta de outra pessoa sem from continua sem autor e com as ações' do
+      stub_ad
+      stub_comments(body: {
+                      data: [{ id: 'c1', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+                               replies: { data: [{ id: 'r2', text: 'Também achei', timestamp: 5.minutes.ago.iso8601 }] } }]
+                    })
+
+      reply = service.payload(ad_id)[:comments].sole[:replies].sole
+
+      expect(reply[:author]).to eq(name: nil, username: nil, is_page: false)
+      expect(reply).to include(can_reply: true, can_hide: true)
+    end
+
+    it 'cópia de cima com o comentário pai em outra página: fica em cima, como da conta; lá, a gravada pelo painel é da conta' do
+      stub_ad
+      stub_comments(body: { data: [{ id: 'r1', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601, parent_id: 'c9',
+                                     from: { id: ig_id, username: 'lojaexemplo' } }] })
+      alone = service.payload(ad_id)[:comments].sole
+      expect(alone).to include(id: 'r1', can_reply_private: false)
+      expect(alone[:author]).to include(username: 'lojaexemplo', is_page: true)
+
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', ad_id: ad_id, comment_id: 'r9', action: 'page_reply',
+                                        actor: 'user', user: user)
+      stub_comments(body: { data: [{ id: 'c9', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+                                     replies: { data: [{ id: 'r9', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601 }] } }] })
+
+      reply = service.payload(ad_id)[:comments].sole[:replies].sole
+      expect(reply[:author]).to eq(name: nil, username: 'lojaexemplo', is_page: true)
+      expect(reply).to include(can_reply: false, can_hide: false, can_delete: true)
+    end
+
+    it 'resposta da conta com from, feita pelo app do Instagram e sem page_reply, é da conta' do
+      stub_ad
+      stub_comments(body: {
+                      data: [{ id: 'c1', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+                               replies: { data: [{ id: 'r3', text: 'Valeu!', timestamp: 5.minutes.ago.iso8601,
+                                                   from: { id: ig_id, username: 'lojaexemplo' } }] } }]
+                    })
+
+      reply = service.payload(ad_id)[:comments].sole[:replies].sole
+
+      expect(Crm::MetaAdsCommentAction.count).to eq(0)
+      expect(reply[:author]).to eq(name: nil, username: 'lojaexemplo', is_page: true)
+      expect(reply).to include(can_reply: false, can_hide: false, can_delete: true)
+    end
+
+    it 'linha gravada para um comentário de primeiro nível não o faz da conta (a IA grava `reply` com o comentário do cliente)' do
+      stub_ad
+      stub_comments
+      %w[reply page_reply].each do |action|
+        Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', ad_id: ad_id, comment_id: 'c1', action: action,
+                                          actor: 'ai')
+      end
+
+      first = service.payload(ad_id)[:comments].first
+
+      expect(first[:author]).to include(username: 'carla.dias', is_page: false)
+      expect(first).to include(can_reply: true, can_reply_private: true)
+    end
+
+    it 'resposta de outra pessoa em dobro: fica a de dentro, com o autor da cópia de cima' do
+      stub_ad
+      stub_comments(body: {
+                      data: [
+                        { id: 'r2', text: 'Também achei', timestamp: 5.minutes.ago.iso8601, from: { id: '502', username: 'isa.lima' } },
+                        { id: 'c1', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+                          replies: { data: [{ id: 'r2', text: 'Também achei', timestamp: 5.minutes.ago.iso8601 }] } }
+                      ]
+                    })
+      stub_request(:get, %r{#{ig}/#{media_id}\?}).to_return(status: 500, headers: json, body: {}.to_json)
+
+      result = service.payload(ad_id)
+
+      reply = result[:comments].sole[:replies].sole
+      expect(reply[:author]).to eq(name: nil, username: 'isa.lima', is_page: false)
+      expect(result[:total]).to eq(2)
+    end
+
     it 'mostra a resposta no privado já enviada, com o caminho da conversa' do
       stub_ad
       stub_comments
@@ -136,17 +234,31 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       stub_comment('c1')
       stub_request(:post, %r{#{ig}/c1/replies}).to_return(status: 200, headers: json, body: { id: 'c9' }.to_json)
 
-      row = service.reply!(ad_id, 'c1', 'Temos sim')
+      row = service.reply!(ad_id, 'c1', 'Temos sim', user: user)
 
       expect(row).to include(id: 'c9', text: 'Temos sim', can_reply: false)
       expect(row[:author]).to include(username: 'lojaexemplo', is_page: true)
+      expect(Crm::MetaAdsCommentAction.sole).to have_attributes(account_id: account.id, network: 'instagram', ad_id: ad_id,
+                                                                comment_id: 'c9', action: 'page_reply', actor: 'user', user_id: user.id)
+    end
+
+    it 'resposta aceita pela Meta não vira erro quando gravar a linha falha' do
+      stub_comment('c1')
+      stub_request(:post, %r{#{ig}/c1/replies}).to_return(status: 200, headers: json, body: { id: 'c9' }.to_json)
+      allow(Crm::MetaAdsCommentAction).to receive(:record!).and_raise(NoMethodError, 'quebra fora do banco')
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+      expect(service.reply!(ad_id, 'c1', 'Temos sim', user: user)).to include(id: 'c9')
+      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(NoMethodError), account: account)
+      expect(tracker).to have_received(:capture_exception)
     end
 
     it 'resposta a uma resposta vai para o comentário de cima, como no app' do
       stub_comment('c1r', parent_id: 'c1')
       to_parent = stub_request(:post, %r{#{ig}/c1/replies}).to_return(status: 200, headers: json, body: { id: 'c9' }.to_json)
 
-      service.reply!(ad_id, 'c1r', 'Temos sim')
+      service.reply!(ad_id, 'c1r', 'Temos sim', user: user)
 
       expect(to_parent).to have_been_requested.once
     end
@@ -169,7 +281,7 @@ RSpec.describe Crm::MetaAds::InstagramComments do
     end
 
     it 'texto vazio ou longo demais: invalid_text, sem chamar a Meta' do
-      expect { service.reply!(ad_id, 'c1', '  ') }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('invalid_text') }
+      expect { service.reply!(ad_id, 'c1', '  ', user: user) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('invalid_text') }
       expect { service.private_reply!(ad_id, 'c1', 'a' * 1001, user: user) }
         .to raise_error(described_class::Error) { |e| expect(e.code).to eq('invalid_text') }
       expect(instagram_call).not_to have_been_made

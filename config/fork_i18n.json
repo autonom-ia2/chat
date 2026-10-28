@@ -85,6 +85,9 @@
       "file": "metaAdsOrganico.json"
     },
     {
+      "file": "seusPosts.json"
+    },
+    {
       "file": "funcoesDaEquipe.json"
     }
   ],

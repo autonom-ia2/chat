@@ -971,15 +971,46 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Seus posts (#2302, F1 #2304): página própria no grupo Crescer, com os números do perfil e todos os posts do Instagram
+# e da Página das caixas da conta (sem conexão de anúncios). Ligada: a API GET seus_posts responde (PR 1a); o item no
+# menu, a rota e os links antigos da aba "Seus posts" de Anúncios chegam no PR 1b. Desligada: a API responde 404. Sem
+# migration. Fim da feature_flags_ext_2 da main: posição 10 (valor 512, 1 << 9), válida contra a main de 27/10
+# (Orquestração). Se outra flag entrar antes, a Orquestração pede o ajuste antes da fila. Nasce ligada no piloto
+# (contas 1, 16 e 18).
+- name: seus_posts
+  display_name: Seus posts (Instagram e Página)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
+# pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
+# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Migration 20261108600000
+# (conversation_audience_*). Fim da feature_flags_ext_2, depois de seus_posts (#2304): posição 11 (valor 1024,
+# 1 << 10), a confirmar pela Orquestração antes da fila.
+- name: campanhas_publico_por_conversa
+  display_name: Campanhas › Novo público pedindo em palavras
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta › comentários do anúncio no Facebook (#2197, épico #2194). Ligada: o detalhe do anúncio ganha a aba
+# Facebook dos comentários (ler, responder como a Página, ocultar e apagar, ao vivo na Meta) e a API responde; o
+# webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
+# feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2303): posição 12 (valor 2048, 1 << 11), dada pela
+# Orquestração (28/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+- name: meta_ads_comentarios_facebook
+  display_name: Anúncios da Meta › comentários do anúncio no Facebook
+  enabled: false
+  column: feature_flags_ext_2
+
 # Funções da equipe guiadas (#2308, épico #1784). Ligada: Funções da equipe abre a tela nova inteira: a lista
 # (cartões com a frase do que cada função pode, quem está sem função e as duas fixas), a conversa guiada de criar,
 # alterar e duplicar (Escolha, Ajustes, perguntas, Confira e o aviso de perda de acesso), a gaveta de pôr e tirar
 # pessoas e o apagar com destino. Desligada: a tela de hoje, intacta. Rollback: desligar a flag na conta (a tela de
 # hoje volta na hora; as funções gravadas são as mesmas). Sem migration. O servidor muda para as duas telas, com a flag
 # ligada ou desligada: o 401 de /custom_roles diz o motivo no corpo (out_of_reach, own_role, feature_off), a autorização
-# vem antes da conferência do plano e o feature_off fica no log. Fim da feature_flags_ext_2: posição e valor
-# provisórios (hoje 13 pela Orquestração; na main de hoje cairia na 10, valor 512, 1 << 9, depois do meta_ads_criar),
-# confirmados pela Orquestração na hora da fila.
+# vem antes da conferência do plano e o feature_off fica no log. Fim da feature_flags_ext_2 da main de hoje: posição 13
+# (valor 4096, 1 << 12), depois de meta_ads_comentarios_facebook. A crm_lista_acao (#2324) reservou a 13: se entrar
+# antes, esta vai para a 14 (valor 8192, 1 << 13). A Orquestração confere antes da fila.
 - name: funcoes_guiadas
   display_name: Funções da equipe › lista e criação guiadas
   enabled: false
