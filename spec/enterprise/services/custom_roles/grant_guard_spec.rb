@@ -46,7 +46,7 @@ RSpec.describe CustomRoles::GrantGuard do
       expect { described_class::Denied.new('made_up') }.to raise_error(ArgumentError, /made_up/)
     end
 
-    it 'says own_role and out_of_reach, both from the list' do
+    it 'says own_role and out_of_reach' do
       role = give_giver(%w[contact_view custom_role_manage])
       guard = described_class.new(actor: membership.reload)
 
@@ -54,7 +54,6 @@ RSpec.describe CustomRoles::GrantGuard do
         .to raise_error(described_class::Denied) { |error| expect(error.code).to eq(described_class::OWN_ROLE) }
       expect { guard.write!(nil, %w[financial_view]) }
         .to raise_error(described_class::Denied) { |error| expect(error.code).to eq(described_class::OUT_OF_REACH) }
-      expect(described_class::CODES).to include(described_class::OWN_ROLE, described_class::OUT_OF_REACH)
     end
   end
 end

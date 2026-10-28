@@ -36,20 +36,21 @@ describe('useCartao › trava', () => {
     );
   });
 
-  // Rodada 5: a área vai com artigo, como numa frase ("Sem ver o Desempenho da equipe", "Sem mudar os Canais").
+  // Rodada 5: a área vai com artigo, como numa frase. Rodada 6: em minúscula, a mesma forma da Perda de acesso
+  // ("Sem ver o desempenho da equipe", "Sem mudar os canais").
   it('na reserva, ver ou mudar pelo nível da chave, com a área e o artigo', () => {
     const { trava } = comCartao();
     expect(trava({ motivo: 'MISSING', chaves: ['inbox_view'] })).toBe(
-      'Sem ver os Canais: você não tem isto.'
+      'Sem ver os canais: você não tem isto.'
     );
     expect(trava({ motivo: 'MISSING', chaves: ['inbox_manage'] })).toBe(
-      'Sem mudar os Canais: você não tem isto.'
+      'Sem mudar os canais: você não tem isto.'
     );
     expect(trava({ motivo: 'MISSING', chaves: ['desempenho_view'] })).toBe(
-      'Sem ver o Desempenho da equipe: você não tem isto.'
+      'Sem ver o desempenho da equipe: você não tem isto.'
     );
     expect(trava({ motivo: 'DELEGATION', chaves: ['label_manage'] })).toBe(
-      'Sem mudar as Etiquetas: só o administrador dá.'
+      'Sem mudar as etiquetas: só o administrador dá.'
     );
   });
 });

@@ -23,7 +23,7 @@ export const loja = ({
   caixas = [],
 } = {}) =>
   createStore({
-    // Quem monta como a store guarda: SET_CURRENT_USER (o mesmo commit do auth) troca, como o validityCheck faria.
+    // Quem monta como a store guarda: SET_CURRENT_USER (o mesmo commit do auth) troca, pela ação setCurrentUser.
     state: () => ({
       currentUser: {
         id: giver.userId,
@@ -51,6 +51,8 @@ export const loja = ({
       'customRole/getCustomRole': vi.fn(),
       'agents/get': vi.fn(),
       validityCheck: vi.fn(),
+      setCurrentUser: ({ commit }, usuario) =>
+        commit('SET_CURRENT_USER', usuario),
       ...actions,
     },
   });

@@ -13,7 +13,8 @@ import DiffDeAcesso from './DiffDeAcesso.vue';
 // e perdem. O servidor continua decidindo (destination_required, destination_invalid, changed_meanwhile). Enquanto as
 // pessoas carregam ou falharam, o diálogo diz isso e não deixa apagar: nunca "Ninguém usa" sem a contagem. Enquanto
 // apaga, fica aberto em "Apagando…", com tudo travado (o destino também); o foco cai no título da lista se o cartão
-// sumiu. Quando o servidor faz perguntar de novo com ele aberto, o motivo vai ao role=alert e o foco, ao destino.
+// sumiu. Quando o servidor faz perguntar de novo com ele aberto, o motivo vai ao role=alert e o foco, ao destino. Sem
+// a contagem, o motivo toma o lugar do "não deu para ver quem usa": um alerta só (rodada 6).
 const props = defineProps({
   pessoasDa: { type: Function, required: true },
   // 'pronto', 'carregando' ou 'erro': o estado das pessoas na lista.
@@ -108,8 +109,10 @@ const confirmar = async () => {
   if (minhaVez === vez) dialogo.value?.fechar();
 };
 
-// "Tentar de novo" some quando as pessoas voltam a carregar: o foco vai ao título do diálogo, que fica.
+// "Tentar de novo" some quando as pessoas voltam a carregar: o foco vai ao título do diálogo, que fica. O aviso de
+// antes sai junto: com as pessoas de volta, o destino não abre com um erro velho (rodada 6).
 const tentarPessoas = () => {
+  erro.value = '';
   emit('tentarPessoas');
   dialogo.value?.focarTitulo();
 };
@@ -131,7 +134,7 @@ defineExpose({ abrir });
     @acao="confirmar"
   >
     <p
-      v-if="erro && !comDestino"
+      v-if="erro && !comDestino && estadoDasPessoas !== 'erro'"
       data-erro-apagar
       role="alert"
       class="m-0 text-sm text-n-ruby-11"
@@ -152,7 +155,7 @@ defineExpose({ abrir });
       class="flex flex-wrap items-center gap-2"
     >
       <p role="alert" class="m-0 text-[0.9375rem] text-n-ruby-11">
-        {{ $t('FUNCOES_EQUIPE.APAGAR.SEM_PESSOAS') }}
+        {{ erro || $t('FUNCOES_EQUIPE.APAGAR.SEM_PESSOAS') }}
       </p>
       <button
         type="button"

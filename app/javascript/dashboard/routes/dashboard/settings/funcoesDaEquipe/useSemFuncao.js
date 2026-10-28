@@ -22,8 +22,9 @@ export function useSemFuncao() {
   const nomeDaArea = key => t(`FUNCOES_EQUIPE.AREAS.${key}.NOME`);
 
   // A área inteira vai com artigo e sem dois-pontos, na frase ("deixa de ver a Central de Ajuda") e na lista ("Ver os
-  // Relatórios"), como a Perda de acesso (revisão do #2308, rodada 4).
-  const areaNaFrase = key => t(`FUNCOES_EQUIPE.AREAS.${key}.COM_ARTIGO`);
+  // relatórios"), como a Perda de acesso (revisão do #2308, rodada 4); em minúscula, a forma única do meio da frase
+  // (AREAS.*.NA_FRASE, rodada 6).
+  const areaNaFrase = key => t(`FUNCOES_EQUIPE.AREAS.${key}.NA_FRASE`);
 
   const texto = (item, forma) => {
     if (item.tipo === 'area') {

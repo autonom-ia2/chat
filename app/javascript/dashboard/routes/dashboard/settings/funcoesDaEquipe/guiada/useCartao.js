@@ -27,13 +27,13 @@ export function useCartao() {
       : '';
 
   // Uma chave sem nome próprio cai na área, com "ver" ou "mudar" pelo nível dela: report_manage é o ver dos
-  // Relatórios, e "Sem mudar os Relatórios" contradiria o "Vê os relatórios" do cartão (revisão do #2308, rodada 4). A
-  // área vai com o artigo, como numa frase ("Sem ver o Desempenho da equipe", rodada 5).
+  // Relatórios, e "Sem mudar os relatórios" contradiria o "Vê os relatórios" do cartão (revisão do #2308, rodada 4). A
+  // área vai como no meio de uma frase, a mesma forma da Perda de acesso ("Sem ver o desempenho da equipe", rodada 6).
   const semArea = chave => {
     const module = modulesWithKeys([chave])[0];
     const forma = module?.levels?.view === chave ? 'SEM_AREA_VER' : 'SEM_AREA';
     return t(`FUNCOES_EQUIPE.TRAVA.${forma}`, {
-      area: t(`FUNCOES_EQUIPE.AREAS.${module?.key}.COM_ARTIGO`),
+      area: t(`FUNCOES_EQUIPE.AREAS.${module?.key}.NA_FRASE`),
     });
   };
   const semCoisa = chave =>

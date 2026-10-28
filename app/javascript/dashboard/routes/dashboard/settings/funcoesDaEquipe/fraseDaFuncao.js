@@ -102,10 +102,15 @@ const CHAVES_DA_RECOLHIDA = [
   'grant_above_own',
 ];
 
+// As da recolhida que só deixam ver.
+const CHAVES_SO_DE_VER = ['desempenho_view'];
+
 // `cobre`: as capacidades menores que esta já traz. Quem lê e atende todas as conversas também responde as entregues,
 // pega as novas, ajuda pelo link e lê as dos colegas; quem cria e move as vendas também as move; quem mexe no
 // financeiro também o vê (`_manage` traz `_view` no servidor). Ganhar a maior não é perder as menores (revisão do
 // #2308, rodada 4); o par mora no próprio item, para uma capacidade nova não esquecê-lo (rodada 5).
+// `soVe`: a capacidade só deixa ver, sem mudar nem levar nada. Uma área que desce de nível só "fica olhando" quando
+// tudo o que sobra nela é assim (rodada 6).
 const CAPACIDADES = [
   {
     id: 'LER_E_ATENDER_TODAS',
@@ -137,6 +142,7 @@ const CAPACIDADES = [
   {
     id: 'LER_COLEGAS',
     tem: tem(CONVERSATION_VIEW_PERMISSION),
+    soVe: true,
     naoPode: p => conversas(p) === CONVERSATION_LEVELS.LIMITED,
   },
   {
@@ -157,8 +163,8 @@ const CAPACIDADES = [
   { id: 'MOVER_VENDAS', tem: p => soOlhaEMove(p) },
   { id: 'ARQUIVAR_VENDAS', tem: tem('crm_delete_cards') },
   { id: 'MONTAR_COLUNAS', tem: tem('crm_manage_pipelines') },
-  { id: 'RELATORIOS_DAS_VENDAS', tem: tem('crm_view_reports') },
-  { id: 'VALORES_EM_RS', tem: tem(SALES_VALUE_VIEW_PERMISSION) },
+  { id: 'RELATORIOS_DAS_VENDAS', tem: tem('crm_view_reports'), soVe: true },
+  { id: 'VALORES_EM_RS', tem: tem(SALES_VALUE_VIEW_PERMISSION), soVe: true },
   // Metas sem R$ ficam inertes no servidor (MetasPolicy#manage?): a prévia não as promete (decisão 14A).
   {
     id: 'METAS_DO_MES',
@@ -169,7 +175,11 @@ const CAPACIDADES = [
   { id: 'EXPORTAR_VENDAS', tem: tem('crm_export') },
   { id: 'IA_NAS_VENDAS', tem: tem('crm_manage_ai') },
   { id: 'PROCURAR_CLIENTES', tem: tem('prospecting_manage') },
-  { id: 'BUSCAS_DE_TODOS', tem: tem('prospecting_view_all_searches') },
+  {
+    id: 'BUSCAS_DE_TODOS',
+    tem: tem('prospecting_view_all_searches'),
+    soVe: true,
+  },
   { id: 'AGENDA', tem: tem('agendamento_manage') },
   {
     id: 'MUDAR_CONTATOS',
@@ -186,8 +196,9 @@ const CAPACIDADES = [
   ...CHAVES_DA_RECOLHIDA.map(chave => ({
     id: chave.toUpperCase(),
     tem: tem(chave),
+    soVe: CHAVES_SO_DE_VER.includes(chave),
   })),
-  { id: 'FINANCIAL_VIEW', tem: tem('financial_view') },
+  { id: 'FINANCIAL_VIEW', tem: tem('financial_view'), soVe: true },
   {
     id: 'FINANCIAL_MANAGE',
     tem: tem('financial_manage'),
@@ -199,6 +210,12 @@ const CAPACIDADES = [
 export const contidasEm = ids =>
   CAPACIDADES.filter(item => ids.includes(item.id)).flatMap(
     item => item.cobre || []
+  );
+
+// As de `ids` que mudam ou levam algo (as que não são só de ver).
+export const queMudam = ids =>
+  CAPACIDADES.filter(item => ids.includes(item.id) && !item.soVe).map(
+    item => item.id
   );
 
 export const podeDaFuncao = permissions =>

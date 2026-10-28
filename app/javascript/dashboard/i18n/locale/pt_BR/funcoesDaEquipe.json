@@ -232,103 +232,103 @@
     "AREAS": {
       "CONVERSATIONS": {
         "NOME": "Conversas",
-        "COM_ARTIGO": "as conversas"
+        "NA_FRASE": "as conversas"
       },
       "CONTACTS": {
         "NOME": "Contatos",
-        "COM_ARTIGO": "os contatos",
-        "CURTO": "contatos"
+        "CURTO": "contatos",
+        "NA_FRASE": "os contatos"
       },
       "KNOWLEDGE_BASE": {
         "NOME": "Central de Ajuda (artigos para os clientes)",
-        "COM_ARTIGO": "a Central de Ajuda (artigos para os clientes)"
+        "NA_FRASE": "a Central de Ajuda (artigos para os clientes)"
       },
       "REPORTS": {
         "NOME": "Relatórios",
-        "COM_ARTIGO": "os Relatórios",
-        "CURTO": "relatórios"
+        "CURTO": "relatórios",
+        "NA_FRASE": "os relatórios"
       },
       "CANNED_RESPONSES": {
         "NOME": "Respostas prontas",
-        "COM_ARTIGO": "as Respostas prontas"
+        "NA_FRASE": "as respostas prontas"
       },
       "CRM": {
         "NOME": "Vendas",
-        "COM_ARTIGO": "as Vendas",
-        "CURTO": "vendas"
+        "CURTO": "vendas",
+        "NA_FRASE": "as vendas"
       },
       "AUTONOMIA": {
         "NOME": "Robôs de IA",
-        "COM_ARTIGO": "os Robôs de IA"
+        "NA_FRASE": "os robôs de IA"
       },
       "DESEMPENHO": {
         "NOME": "Desempenho da equipe",
-        "COM_ARTIGO": "o Desempenho da equipe"
+        "NA_FRASE": "o desempenho da equipe"
       },
       "PROSPECTING": {
         "NOME": "Procurar clientes novos",
-        "COM_ARTIGO": "a procura de clientes novos"
+        "NA_FRASE": "a procura de clientes novos"
       },
       "INSURANCE": {
         "NOME": "Cotações",
-        "COM_ARTIGO": "as Cotações"
+        "NA_FRASE": "as cotações"
       },
       "CAMPAIGNS": {
         "NOME": "Campanhas",
-        "COM_ARTIGO": "as Campanhas",
-        "CURTO": "campanhas"
+        "CURTO": "campanhas",
+        "NA_FRASE": "as campanhas"
       },
       "WHATSAPP_TEMPLATES": {
         "NOME": "Modelos do WhatsApp",
-        "COM_ARTIGO": "os Modelos do WhatsApp"
+        "NA_FRASE": "os modelos do WhatsApp"
       },
       "META_ADS": {
         "NOME": "Anúncios",
-        "COM_ARTIGO": "os Anúncios"
+        "NA_FRASE": "os anúncios"
       },
       "INBOXES": {
         "NOME": "Canais (números de WhatsApp, Instagram, e-mail)",
-        "COM_ARTIGO": "os Canais"
+        "NA_FRASE": "os canais"
       },
       "INTEGRATIONS": {
         "NOME": "Integrações",
-        "COM_ARTIGO": "as Integrações"
+        "NA_FRASE": "as integrações"
       },
       "AUTOMATIONS": {
         "NOME": "Regras automáticas",
-        "COM_ARTIGO": "as Regras automáticas"
+        "NA_FRASE": "as regras automáticas"
       },
       "SCHEDULING": {
         "NOME": "Agenda",
-        "COM_ARTIGO": "a Agenda"
+        "NA_FRASE": "a agenda"
       },
       "LABELS": {
         "NOME": "Etiquetas",
-        "COM_ARTIGO": "as Etiquetas"
+        "NA_FRASE": "as etiquetas"
       },
       "ATTRIBUTES": {
         "NOME": "Campos extras",
-        "COM_ARTIGO": "os Campos extras"
+        "NA_FRASE": "os campos extras"
       },
       "MACROS": {
         "NOME": "Atalhos de mensagens",
-        "COM_ARTIGO": "os Atalhos de mensagens"
+        "NA_FRASE": "os atalhos de mensagens"
       },
       "SLA": {
         "NOME": "Prazos de resposta",
-        "COM_ARTIGO": "os Prazos de resposta"
+        "NA_FRASE": "os prazos de resposta"
       },
       "ASSIGNMENT": {
         "NOME": "Quem recebe cada conversa nova",
-        "COM_ARTIGO": "quem recebe cada conversa nova"
+        "NA_FRASE": "quem recebe cada conversa nova"
       },
       "PEOPLE": {
         "NOME": "Equipe (quem entra e sai)",
-        "COM_ARTIGO": "a Equipe"
+        "NA_FRASE": "a equipe"
       },
       "FINANCE": {
         "NOME": "Financeiro",
-        "COM_ARTIGO": "o Financeiro"
+        "NA_FRASE": "os custos da conta"
       },
       "CUIDADO": {
         "NOME": "Ações que pedem cuidado"
@@ -844,8 +844,7 @@
       "FORA_DO_ALCANCE": "Não deu para mudar a função de {nomes}: está fora do que você pode dar.",
       "TRAVADA": {
         "ABOVE": "A função de {nomes} não mudou: só o administrador muda. | A função destas pessoas não mudou: {nomes}. Só o administrador muda.",
-        "ADMIN": "{nomes} já pode tudo: tem acesso de administrador. | {nomes} já podem tudo: têm acesso de administrador.",
-        "SELF": "Ninguém muda a própria função. | Ninguém muda a própria função."
+        "ADMIN": "A função de {nomes} não mudou: já pode tudo como administrador. | A função destas pessoas não mudou: {nomes}. Já podem tudo como administradores."
       },
       "SEM_ACESSO": "Você não pode mais pôr e tirar pessoas das funções. Fale com o administrador.",
       "NAO_MUDOU": "A função de {nomes} não mudou. Tente de novo; se continuar, fale com o administrador. | A função destas pessoas não mudou: {nomes}. Tente de novo; se continuar, fale com o administrador."
@@ -872,6 +871,7 @@
       "RECUSA": {
         "FORA_DO_ALCANCE": "Você não pode apagar esta função. Peça ao administrador.",
         "TEM_GENTE": "Esta função ainda tem pessoas. Escolha para onde vão.",
+        "TEM_GENTE_SEM_VER": "Esta função ainda tem pessoas, mas não deu para ver quem. Tente de novo.",
         "INDISPONIVEL": "Funções da equipe não estão disponíveis agora. Fale com o administrador.",
         "PROPRIA_FUNCAO": "Ninguém apaga a própria função.",
         "SEM_ACESSO": "Você não pode mais mudar as funções. Fale com o administrador.",
@@ -886,23 +886,7 @@
         "PROPRIAS": "A partir de agora, só vai atender as próprias conversas. | A partir de agora, só vão atender as próprias conversas.",
         "PROPRIAS_E_NOVAS": "A partir de agora, vai atender as próprias conversas e pegar as novas que estão sem ninguém. | A partir de agora, vão atender as próprias conversas e pegar as novas que estão sem ninguém.",
         "PROPRIAS_E_LINK": "A partir de agora, vai atender as próprias conversas e ajudar quando um colega manda o link da conversa. | A partir de agora, vão atender as próprias conversas e ajudar quando um colega manda o link da conversa.",
-        "PROPRIAS_NOVAS_E_LINK": "A partir de agora, vai atender as próprias conversas, pegar as novas que estão sem ninguém e ajudar quando um colega manda o link da conversa. | A partir de agora, vão atender as próprias conversas, pegar as novas que estão sem ninguém e ajudar quando um colega manda o link da conversa.",
-        "AREA": {
-          "CONVERSATIONS": "as conversas",
-          "CONTACTS": "os contatos",
-          "KNOWLEDGE_BASE": "a Central de Ajuda",
-          "CRM": "as vendas",
-          "AUTONOMIA": "os robôs de IA",
-          "PROSPECTING": "a procura de clientes novos",
-          "INSURANCE": "as cotações",
-          "CAMPAIGNS": "as campanhas",
-          "WHATSAPP_TEMPLATES": "os modelos do WhatsApp",
-          "META_ADS": "os anúncios",
-          "INBOXES": "os canais",
-          "AUTOMATIONS": "as regras automáticas",
-          "SCHEDULING": "a agenda",
-          "FINANCE": "os custos da conta"
-        }
+        "PROPRIAS_NOVAS_E_LINK": "A partir de agora, vai atender as próprias conversas, as novas sem ninguém e as que um colega mandar pelo link. | A partir de agora, vão atender as próprias conversas, as novas sem ninguém e as que um colega mandar pelo link."
       },
       "VOLTAR": "Voltar",
       "SALVAR": "Salvar mesmo assim",

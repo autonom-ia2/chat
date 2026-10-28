@@ -1,7 +1,6 @@
 import { ref } from 'vue';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
-import types from 'dashboard/store/mutation-types';
 import { useTextos } from '../guiada/useTextos';
 import { explicar401ComQuemMonta } from '../salvarFuncao';
 
@@ -57,10 +56,11 @@ export function useSalvarGaveta(mudancas, travaDe) {
     };
   };
 
-  // Sem código, o 401 pode ser de quem perdeu Pessoas: quem monta vem da própria conferência da sessão.
-  const perdeuPessoas = (motivo, quemMonta) => {
+  // Sem código, o 401 pode ser de quem perdeu Pessoas: quem monta vem da própria conferência da sessão, e entra na
+  // store pela mesma ação do validityCheck (avisa o widget e a análise também; rodada 6).
+  const perdeuPessoas = async (motivo, quemMonta) => {
     if (motivo !== 'SEM_ACESSO') return false;
-    if (quemMonta) store.commit(types.SET_CURRENT_USER, quemMonta);
+    if (quemMonta) await store.dispatch('setCurrentUser', quemMonta);
     return !canManagePeople.value;
   };
 
@@ -99,7 +99,9 @@ export function useSalvarGaveta(mudancas, travaDe) {
       .filter(Boolean)
       .join(' ');
 
-  // Devolve true quando tudo gravou; false deixa a gaveta aberta (com o erro, ou indo para o login).
+  // Devolve true só quando tudo o que estava pendente gravou; false deixa a gaveta aberta (com o erro, ou indo para o
+  // login). Quem ficou travado não gravou: sai do pendente, mas a gaveta fica aberta com a frase da trava, e o X fecha
+  // direto (revisão do #2308, rodada 6).
   const salvar = async () => {
     if (salvando.value) return false;
     salvando.value = true;
@@ -117,7 +119,7 @@ export function useSalvarGaveta(mudancas, travaDe) {
       return false;
     }
     const rede = motivo === 'REDE';
-    const semAcesso = perdeuPessoas(motivo, quemMonta);
+    const semAcesso = await perdeuPessoas(motivo, quemMonta);
     await Promise.all([
       store.dispatch('agents/get'),
       ...(recusados.length ? [store.dispatch('customRole/getCustomRole')] : []),
@@ -140,7 +142,7 @@ export function useSalvarGaveta(mudancas, travaDe) {
     mudancas.value = new Map(pendentes);
     erro.value = frases({ ...falhas, semAcesso, travados });
     salvando.value = false;
-    return !semAcesso && !pendentes.length;
+    return !semAcesso && !travados.length && !pendentes.length;
   };
 
   return { salvando, erro, salvar };

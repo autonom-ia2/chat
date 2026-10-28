@@ -52,7 +52,7 @@ describe('PerdaDeAcesso', () => {
     ],
     [
       'PROPRIAS_NOVAS_E_LINK',
-      'Essas pessoas têm a função Vendedor. A partir de agora, vão atender as próprias conversas, pegar as novas que estão sem ninguém e ajudar quando um colega manda o link da conversa.',
+      'Essas pessoas têm a função Vendedor. A partir de agora, vão atender as próprias conversas, as novas sem ninguém e as que um colega mandar pelo link.',
     ],
   ])('as próprias com mais (%s): sem "só"', (nivel, texto) => {
     const wrapper = montar({
@@ -73,6 +73,23 @@ describe('PerdaDeAcesso', () => {
       'Essas pessoas têm a função Vendedor. A partir de agora, só vão olhar as vendas.'
     );
     wrapper.unmount();
+  });
+
+  // Rodada 6: a área que some vem no título e na lista na mesma forma minúscula do texto ("ver os relatórios").
+  it('a área que some vem em minúscula no título e na lista', () => {
+    const umaSo = montar({ perdas: [{ area: 'REPORTS' }] });
+    expect(umaSo.find('h2').text()).toBe(
+      '2 pessoas vão deixar de ver os relatórios'
+    );
+    umaSo.unmount();
+
+    const varias = montar({
+      perdas: [{ area: 'REPORTS' }, { area: 'INBOXES' }],
+    });
+    expect(varias.findAll('[data-perdas] li').map(item => item.text())).toEqual(
+      ['Ver os relatórios', 'Ver os canais']
+    );
+    varias.unmount();
   });
 
   it('sem queda de nível, só quem tem a função', () => {

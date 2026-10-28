@@ -5,8 +5,9 @@ import {
   getLevel,
   hasAccess,
   keysOf,
+  setLevel,
 } from '../customRoles/permissionMatrix';
-import { contidasEm, podeDaFuncao } from './fraseDaFuncao';
+import { contidasEm, podeDaFuncao, queMudam } from './fraseDaFuncao';
 import { NIVEIS_DE_VENDAS, nivelDeVendas } from './nivelDeVendas';
 import { chavesEfetivas } from './semFuncao';
 
@@ -46,7 +47,8 @@ export const perdasDeAcesso = (gravadasAntes, gravadasDepois) => {
 // O que fica numa queda de nível (especificação 5.F: "A partir de agora, só vão olhar os contatos."): a área que
 // desceu sem sumir, com o nível de agora. `nivel` é 'OLHA' (ficou só vendo) ou, nas conversas que descem de todas para
 // as próprias, a frase do que ainda atende (fraseDasProprias); null quando nenhuma ou mais de uma área desceu assim, ou
-// quando o nível de agora não cabe numa frase (Vendas de "Cuida de tudo" para "Pode mexer").
+// quando o nível de agora não cabe numa frase (Vendas de "Cuida de tudo" para "Pode mexer", ou um "Só olha" que ainda
+// muda algo na área).
 const ORDEM_DAS_CONVERSAS = [
   CONVERSATION_LEVELS.NONE,
   CONVERSATION_LEVELS.VIEW,
@@ -71,8 +73,17 @@ const fraseDasProprias = permissions => {
   if (novas) return 'PROPRIAS_E_NOVAS';
   return link ? 'PROPRIAS_E_LINK' : 'PROPRIAS';
 };
+// "Só olha" só quando nada do que a função ainda pode nessa área muda ou leva algo: as capacidades da área são as que
+// somem quando ela fica sem acesso. Vendas em "Só olha" que ainda monta as colunas ou usa a IA não "só olha"; aí não
+// há frase do que fica (revisão do #2308, rodada 6).
+const soOlha = (permissions, module) => {
+  const efetivas = chavesEfetivas(permissions);
+  const semArea = podeDaFuncao(setLevel(module, LEVELS.NONE, efetivas));
+  const daArea = podeDaFuncao(efetivas).filter(id => !semArea.includes(id));
+  return queMudam(daArea).length ? null : 'OLHA';
+};
 const FRASE_DO_NIVEL = {
-  [LEVELS.VIEW]: () => 'OLHA',
+  [LEVELS.VIEW]: soOlha,
   [CONVERSATION_LEVELS.LIMITED]: fraseDasProprias,
 };
 
@@ -85,7 +96,10 @@ export const nivelQueFica = (gravadasAntes, gravadasDepois) => {
       depois !== LEVELS.NONE && ordem.indexOf(depois) < ordem.indexOf(antes);
     const frase = FRASE_DO_NIVEL[depois];
     return desceu
-      ? { area: module.key, nivel: frase ? frase(gravadasDepois) : null }
+      ? {
+          area: module.key,
+          nivel: frase ? frase(gravadasDepois, module) : null,
+        }
       : null;
   }).filter(Boolean);
   if (desceram.length !== 1 || !desceram[0].nivel) return null;

@@ -42,12 +42,12 @@ const PASSAM_DO_VENDEDOR = [
 const DEIXAM_DO_VENDEDOR = ['Procurar clientes novos'];
 const DEIXAM_DO_SUPERVISOR = [
   'Ver a Central de Ajuda (artigos para os clientes)',
-  'Ver os Relatórios',
-  'Ver os Robôs de IA',
-  'Ver os Canais',
-  'Ver as Regras automáticas',
-  'Mudar as Etiquetas',
-  'Mudar os Atalhos de mensagens',
+  'Ver os relatórios',
+  'Ver os robôs de IA',
+  'Ver os canais',
+  'Ver as regras automáticas',
+  'Mudar as etiquetas',
+  'Mudar os atalhos de mensagens',
 ];
 
 let espiao = null;
@@ -165,7 +165,10 @@ describe('Funções da equipe: apagar', () => {
   const recusa = (code, status) =>
     Object.assign(new Error('Has people'), { code, status });
 
-  it('destination_required: recarrega as pessoas e, achando gente, pergunta o destino', async () => {
+  // Rodada 6: a recarga mostra a função sem ninguém (esvaziou no meio). Nada de "ainda tem pessoas" com a lista em 0:
+  // o diálogo volta, sem destino, dizendo que a função mudou.
+  it('destination_required e a recarga mostra a função vazia: volta sem destino, dizendo que mudou', async () => {
+    espiar({ marcarAberto: true });
     const apagar = vi.fn().mockRejectedValue(recusa('destination_required'));
     const pessoasDaConta = vi.fn();
     const wrapper = await montar({ apagar, pessoasDaConta });
@@ -175,12 +178,17 @@ describe('Funções da equipe: apagar', () => {
     await dialogo(wrapper).find('[data-acao]').trigger('click');
     await flushPromises();
 
-    // A lista de agentes do teste não tem ninguém no Financeiro: o aviso é o da tela, nunca o texto cru do servidor.
     expect(pessoasDaConta).toHaveBeenCalledTimes(2);
-    expect(useAlert).toHaveBeenCalledWith(
-      'Esta função ainda tem pessoas. Escolha para onde vão.'
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(dialogo(wrapper).find('h2').text()).toBe(
+      'Apagar a função Financeiro?'
     );
-    expect(useAlert).not.toHaveBeenCalledWith('Has people');
+    expect(dialogo(wrapper).find('[data-destino]').exists()).toBe(false);
+    expect(dialogo(wrapper).find('[data-erro-apagar]').text()).toBe(
+      'Alguém mudou esta função agora. Confira de novo.'
+    );
+    expect(dialogo(wrapper).text()).not.toContain('ainda tem pessoas');
+    expect(dialogo(wrapper).text()).not.toContain('Has people');
   });
 
   // Rodada 4: com o diálogo aberto, a pergunta volta com o motivo (role=alert) e o foco no campo do destino, e não
@@ -235,9 +243,9 @@ describe('Funções da equipe: apagar', () => {
     expect(dialogo(wrapper).find('[data-apagar-erro]').exists()).toBe(true);
   });
 
-  // Rodada 5: a recusa volta com a recarga das pessoas falhando. O diálogo fica no "não deu para ver quem usa", e o
-  // motivo da volta (a função ainda tem gente) aparece ali também, num role=alert.
-  it('destination_required com a recarga falhando: o diálogo diz por que voltou, mesmo sem a contagem', async () => {
+  // Rodada 5: a recusa volta com a recarga das pessoas falhando, e o diálogo diz por que voltou. Rodada 6: num alerta
+  // só, que diz as duas coisas, sem mandar escolher um destino que não aparece; "Tentar de novo" continua ali.
+  it('destination_required com a recarga falhando: um alerta só, com o porquê e sem mandar escolher', async () => {
     const pessoasDaConta = vi
       .fn()
       .mockResolvedValueOnce(true)
@@ -250,12 +258,39 @@ describe('Funções da equipe: apagar', () => {
     await dialogo(wrapper).find('[data-acao]').trigger('click');
     await flushPromises();
 
-    expect(dialogo(wrapper).find('[data-apagar-erro]').exists()).toBe(true);
-    const motivo = dialogo(wrapper).find('[data-erro-apagar]');
-    expect(motivo.attributes('role')).toBe('alert');
-    expect(motivo.text()).toBe(
-      'Esta função ainda tem pessoas. Escolha para onde vão.'
+    const alertas = dialogo(wrapper).findAll('[role="alert"]');
+    expect(alertas).toHaveLength(1);
+    expect(alertas[0].text()).toBe(
+      'Esta função ainda tem pessoas, mas não deu para ver quem. Tente de novo.'
     );
+    expect(dialogo(wrapper).text()).not.toContain('Escolha para onde vão');
+    expect(dialogo(wrapper).find('[data-apagar-tentar]').exists()).toBe(true);
+  });
+
+  // Rodada 6: "Tentar de novo" que traz as pessoas tira o aviso de antes: o destino não abre com um erro velho.
+  it('destination_required com a recarga falhando e o "Tentar de novo" dando certo: o destino abre sem erro velho', async () => {
+    espiar({ marcarAberto: true });
+    const agentes = reactive(AGENTES.map(item => ({ ...item })));
+    const pessoasDaConta = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+      .mockImplementation(async () => {
+        agentes[1].custom_role_id = 2;
+        return true;
+      });
+    const apagar = vi.fn().mockRejectedValue(recusa('destination_required'));
+    const wrapper = await montar({ apagar, pessoasDaConta, agentes });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+    await dialogo(wrapper).find('[data-apagar-tentar]').trigger('click');
+    await flushPromises();
+
+    expect(dialogo(wrapper).find('[data-destino]').exists()).toBe(true);
+    expect(dialogo(wrapper).find('[data-erro-destino]').exists()).toBe(false);
   });
 
   // Rodada 5: depois de apagar com destino, a página recarrega as pessoas (quem tinha a função mudou). A recarga que

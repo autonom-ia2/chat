@@ -192,8 +192,56 @@ describe('nivelQueFica', () => {
     ).toBeNull();
   });
 
+  // Rodada 6 (M1): "só vão olhar" só quando a função, nessa área, não pode mudar mais nada. Vendas em "Só olha" que
+  // ainda monta as colunas e usa a IA não "só olha"; a perda continua, sem a frase do que fica.
+  it('Vendas para Só olha, ainda montando as colunas e usando a IA: sem "só vão olhar"', () => {
+    const extras = ['crm_manage_pipelines', 'crm_manage_ai'];
+    expect(
+      nivelQueFica(
+        ['crm_view', 'crm_manage_cards', ...extras],
+        ['crm_view', ...extras]
+      )
+    ).toBeNull();
+  });
+
+  it('Contatos para Ver, ainda exportando: sem "só vão olhar"; sem nada a mais, "só vão olhar"', () => {
+    expect(
+      nivelQueFica(
+        ['contact_manage', 'contact_export'],
+        ['contact_view', 'contact_export']
+      )
+    ).toBeNull();
+    expect(nivelQueFica(['contact_manage'], ['contact_view'])).toEqual({
+      area: 'CONTACTS',
+      nivel: 'OLHA',
+    });
+  });
+
+  // O que só deixa ver (relatórios e R$ das vendas) não tira o "só olhar".
+  it('Vendas para Só olha, ainda vendo os relatórios e os R$: só vão olhar', () => {
+    const veem = ['crm_view_reports', 'sales_value_view'];
+    expect(
+      nivelQueFica(
+        ['crm_view', 'crm_manage_cards', ...veem],
+        ['crm_view', ...veem]
+      )
+    ).toEqual({ area: 'CRM', nivel: 'OLHA' });
+  });
+
   // Rodada 5: toda área que pode descer para "só olha" tem a forma minúscula da frase ("só vão olhar as vendas"), nos
-  // dois idiomas; uma área nova sem ela mostraria a chave crua.
+  // dois idiomas; uma área nova sem ela mostraria a chave crua. Rodada 6: a forma mora em AREAS.*.NA_FRASE, a mesma da
+  // trava do cartão e do título da perda, e toda área a tem.
+  it('toda área tem a forma do meio da frase em pt_BR e en', () => {
+    [ptBR, en].forEach(idioma => {
+      MODULES.forEach(module => {
+        expect(
+          idioma.FUNCOES_EQUIPE.AREAS[module.key]?.NA_FRASE,
+          module.key
+        ).toBeTruthy();
+      });
+    });
+  });
+
   it('toda área que desce para "só olha" tem a forma da frase em pt_BR e en', () => {
     const topo = module => (module.type === 'conversations' ? 'all' : 'manage');
     const descem = MODULES.filter(
@@ -207,7 +255,7 @@ describe('nivelQueFica', () => {
     expect(descem).toContain('CONVERSATIONS');
     [ptBR, en].forEach(idioma => {
       descem.forEach(area => {
-        expect(idioma.FUNCOES_EQUIPE.PERDA.FICA.AREA[area], area).toBeTruthy();
+        expect(idioma.FUNCOES_EQUIPE.AREAS[area].NA_FRASE, area).toBeTruthy();
       });
     });
   });

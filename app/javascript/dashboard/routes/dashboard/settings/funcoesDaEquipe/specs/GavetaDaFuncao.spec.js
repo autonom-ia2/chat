@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import GavetaDaFuncao from '../pessoas/GavetaDaFuncao.vue';
@@ -56,6 +57,9 @@ const montar = ({
 } = {}) => {
   const funcoesDeNovo = vi.fn();
   const quemMontaPelaStore = vi.fn();
+  const porNaStore = vi.fn(({ commit }, usuario) =>
+    commit('SET_CURRENT_USER', usuario)
+  );
   const store = loja({
     giver,
     flags,
@@ -66,6 +70,7 @@ const montar = ({
       'agents/get': recarregar,
       'customRole/getCustomRole': funcoesDeNovo,
       validityCheck: quemMontaPelaStore,
+      setCurrentUser: porNaStore,
     },
   });
   const wrapper = mount(GavetaDaFuncao, {
@@ -76,7 +81,14 @@ const montar = ({
       stubs: { ...global(store).stubs, Avatar: true },
     },
   });
-  return { wrapper, atualizar, recarregar, funcoesDeNovo, quemMontaPelaStore };
+  return {
+    wrapper,
+    atualizar,
+    recarregar,
+    funcoesDeNovo,
+    quemMontaPelaStore,
+    porNaStore,
+  };
 };
 
 // A resposta do /auth/validate_token: quem monta como o servidor o vê agora.
@@ -107,6 +119,7 @@ afterEach(() => {
   document.body.innerHTML = '';
   validityCheck.mockReset();
   clearCookiesOnLogout.mockReset();
+  useAlert.mockReset();
 });
 
 const salvar = async wrapper => {
@@ -316,13 +329,18 @@ describe('GavetaDaFuncao', () => {
   it('401 sem código de quem perdeu Pessoas: a conferência da sessão diz que não pode mais', async () => {
     validityCheck.mockResolvedValue(sessaoDe(SEM_PESSOAS));
     const atualizar = vi.fn(() => Promise.reject(recusa(401, CORPO_DO_401)));
-    const { wrapper, quemMontaPelaStore } = montar({ atualizar });
+    const { wrapper, quemMontaPelaStore, porNaStore } = montar({ atualizar });
 
     await linha(wrapper, 21).find('[data-acao]').trigger('click');
     await salvar(wrapper);
 
     expect(validityCheck).toHaveBeenCalledTimes(1);
     expect(quemMontaPelaStore).not.toHaveBeenCalled();
+    // Rodada 6: quem monta entra na store pela ação do auth (com o setUser), não por um commit solto.
+    expect(porNaStore).toHaveBeenCalledWith(
+      expect.anything(),
+      sessaoDe(SEM_PESSOAS).data.payload.data
+    );
     const erro = wrapper.find('[data-erro-gaveta]');
     expect(erro.attributes('role')).toBe('alert');
     expect(erro.text()).toBe(
@@ -391,7 +409,7 @@ describe('GavetaDaFuncao', () => {
         pessoa.role = 'administrator';
         pessoa.custom_role_id = null;
       },
-      'Íris Lopes já pode tudo: tem acesso de administrador.',
+      'A função de Íris Lopes não mudou: já pode tudo como administrador.',
     ],
   ])(
     '401 sem código e a recarga traz a pessoa %s: sai do pendente, com a frase da trava',
@@ -415,8 +433,52 @@ describe('GavetaDaFuncao', () => {
       expect(
         wrapper.find('[data-salvar]').attributes('disabled')
       ).toBeDefined();
+      // Rodada 6: nada gravou, então a gaveta não diz "salvas" nem fecha; sem pendentes, o X fecha direto.
+      expect(useAlert).not.toHaveBeenCalled();
+      expect(wrapper.emitted('fechar')).toBeUndefined();
+      await wrapper.find('[data-fechar]').trigger('click');
+      expect(wrapper.emitted('fechar')).toHaveLength(1);
     }
   );
+
+  // Rodada 6: uma pessoa gravou e outra ficou travada. Nem tudo o que estava pendente gravou: a gaveta fica aberta,
+  // com a frase da trava, sem o "salvas".
+  it('uma pessoa gravada e outra travada: fica aberta com a frase da trava, sem dizer "salvas"', async () => {
+    const agentes = AGENTES.map(item => ({ ...item }));
+    const gravar = gravarNa(agentes);
+    const atualizar = vi.fn((contexto, dados) =>
+      dados.id === 23
+        ? Promise.reject(recusa(401, CORPO_DO_401))
+        : gravar(contexto, dados)
+    );
+    const recarregar = vi.fn(() => {
+      agentes.find(item => item.id === 23).custom_role_id = 3;
+    });
+    const { wrapper } = montar({ agentes, atualizar, recarregar });
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await linha(wrapper, 23).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
+      'A função de Íris Lopes não mudou: só o administrador muda.'
+    );
+    expect(useAlert).not.toHaveBeenCalled();
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+  });
+
+  // Rodada 6: o "salvas" só vem quando tudo gravou de fato.
+  it('tudo gravou: diz "salvas" e fecha', async () => {
+    const { wrapper } = montar();
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'Pronto. As funções das pessoas foram salvas.'
+    );
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+  });
 
   it('401 do agents/update com sessão boa e Pessoas ainda ali (corpo real, sem código): diz que está fora do alcance e recarrega pessoas e funções', async () => {
     const agentes = AGENTES.map(item => ({ ...item }));

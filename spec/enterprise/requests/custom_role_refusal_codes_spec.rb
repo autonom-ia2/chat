@@ -42,14 +42,42 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
     expect(response.parsed_body).to eq('error' => code, 'message' => messages.fetch(code))
   end
 
-  # Rodada 5: todo código de um 401 daqui está numa lista só (os do GrantGuard e o feature_off), e cada um tem
-  # mensagem. A tela lê a mesma lista (codigosDo401.spec.js).
-  it 'lists every 401 code once, frozen, each with its message' do
+  # Rodada 6: todo código da lista tem mensagem nos arquivos de verdade (en e pt_BR), lidos do disco: o I18n cairia no
+  # inglês e esconderia a falta do português.
+  it 'has a message for every 401 code in the real en and pt_BR files' do
     codes = Api::V1::Accounts::CustomRolesController::UNAUTHORIZED_CODES
 
-    expect(codes).to eq([*CustomRoles::GrantGuard::CODES, 'feature_off'])
     expect(codes).to be_frozen
-    expect(messages.keys).to match_array(codes)
+    %w[en pt_BR].each do |locale|
+      file = YAML.load_file(Rails.root.join("config/locales/#{locale}.yml"))
+      texts = file.dig(locale, 'errors', 'custom_role')
+      codes.each { |code| expect(texts[code]).to be_present, "#{locale}: #{code}" }
+    end
+  end
+
+  # Rodada 6: todo 401 que o controller manda leva um código da lista. Lê o próprio controller pelo parser do Ruby:
+  # cada refuse(..., :unauthorized) passa o código do GrantGuard (e.code, que só existe na lista dele) ou uma
+  # constante cujo valor está na lista.
+  it 'only sends listed codes in its 401 refusals' do
+    controller = Api::V1::Accounts::CustomRolesController
+    source = Rails.root.join('enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb')
+    refusals = []
+    collect = lambda do |node|
+      next unless node.is_a?(Prism::Node)
+
+      args = node.is_a?(Prism::CallNode) && node.name == :refuse ? node.arguments&.arguments.to_a : []
+      refusals << args.first.slice if args.last.is_a?(Prism::SymbolNode) && args.last.unescaped == 'unauthorized'
+      node.compact_child_nodes.each { |child| collect.call(child) }
+    end
+    collect.call(Prism.parse_file(source.to_s).value)
+
+    expect(refusals).not_to be_empty
+    expect(controller::UNAUTHORIZED_CODES).to include(*CustomRoles::GrantGuard::CODES)
+    refusals.each do |argument|
+      next if argument == 'e.code'
+
+      expect(controller::UNAUTHORIZED_CODES).to include(controller.const_get(argument)), argument
+    end
   end
 
   # Controle positivo: o GrantGuard não recusa tudo; dentro do alcance, quem monta cria.

@@ -232,103 +232,103 @@
     "AREAS": {
       "CONVERSATIONS": {
         "NOME": "Conversations",
-        "COM_ARTIGO": "conversations"
+        "NA_FRASE": "conversations"
       },
       "CONTACTS": {
         "NOME": "Contacts",
-        "COM_ARTIGO": "contacts",
-        "CURTO": "contacts"
+        "CURTO": "contacts",
+        "NA_FRASE": "contacts"
       },
       "KNOWLEDGE_BASE": {
         "NOME": "Help Center (articles for customers)",
-        "COM_ARTIGO": "the Help Center (articles for customers)"
+        "NA_FRASE": "the Help Center (articles for customers)"
       },
       "REPORTS": {
         "NOME": "Reports",
-        "COM_ARTIGO": "Reports",
-        "CURTO": "reports"
+        "CURTO": "reports",
+        "NA_FRASE": "reports"
       },
       "CANNED_RESPONSES": {
         "NOME": "Canned responses",
-        "COM_ARTIGO": "Canned responses"
+        "NA_FRASE": "canned responses"
       },
       "CRM": {
         "NOME": "Sales",
-        "COM_ARTIGO": "Sales",
-        "CURTO": "sales"
+        "CURTO": "sales",
+        "NA_FRASE": "sales"
       },
       "AUTONOMIA": {
         "NOME": "AI bots",
-        "COM_ARTIGO": "AI bots"
+        "NA_FRASE": "AI bots"
       },
       "DESEMPENHO": {
         "NOME": "Team performance",
-        "COM_ARTIGO": "Team performance"
+        "NA_FRASE": "team performance"
       },
       "PROSPECTING": {
         "NOME": "Look for new customers",
-        "COM_ARTIGO": "the new-customer search"
+        "NA_FRASE": "the new-customer search"
       },
       "INSURANCE": {
         "NOME": "Quotes",
-        "COM_ARTIGO": "Quotes"
+        "NA_FRASE": "quotes"
       },
       "CAMPAIGNS": {
         "NOME": "Campaigns",
-        "COM_ARTIGO": "Campaigns",
-        "CURTO": "campaigns"
+        "CURTO": "campaigns",
+        "NA_FRASE": "campaigns"
       },
       "WHATSAPP_TEMPLATES": {
         "NOME": "WhatsApp templates",
-        "COM_ARTIGO": "WhatsApp templates"
+        "NA_FRASE": "WhatsApp templates"
       },
       "META_ADS": {
         "NOME": "Ads",
-        "COM_ARTIGO": "Ads"
+        "NA_FRASE": "ads"
       },
       "INBOXES": {
         "NOME": "Channels (WhatsApp numbers, Instagram, email)",
-        "COM_ARTIGO": "Channels"
+        "NA_FRASE": "channels"
       },
       "INTEGRATIONS": {
         "NOME": "Integrations",
-        "COM_ARTIGO": "Integrations"
+        "NA_FRASE": "integrations"
       },
       "AUTOMATIONS": {
         "NOME": "Automatic rules",
-        "COM_ARTIGO": "Automatic rules"
+        "NA_FRASE": "automatic rules"
       },
       "SCHEDULING": {
         "NOME": "Booking",
-        "COM_ARTIGO": "Booking"
+        "NA_FRASE": "booking"
       },
       "LABELS": {
         "NOME": "Labels",
-        "COM_ARTIGO": "Labels"
+        "NA_FRASE": "labels"
       },
       "ATTRIBUTES": {
         "NOME": "Extra fields",
-        "COM_ARTIGO": "Extra fields"
+        "NA_FRASE": "extra fields"
       },
       "MACROS": {
         "NOME": "Message shortcuts",
-        "COM_ARTIGO": "Message shortcuts"
+        "NA_FRASE": "message shortcuts"
       },
       "SLA": {
         "NOME": "Response deadlines",
-        "COM_ARTIGO": "Response deadlines"
+        "NA_FRASE": "response deadlines"
       },
       "ASSIGNMENT": {
         "NOME": "Who gets each new conversation",
-        "COM_ARTIGO": "who gets each new conversation"
+        "NA_FRASE": "who gets each new conversation"
       },
       "PEOPLE": {
         "NOME": "Team (who joins and leaves)",
-        "COM_ARTIGO": "the Team"
+        "NA_FRASE": "the team"
       },
       "FINANCE": {
         "NOME": "Finance",
-        "COM_ARTIGO": "Finance"
+        "NA_FRASE": "the account costs"
       },
       "CUIDADO": {
         "NOME": "Actions that need care"
@@ -844,8 +844,7 @@
       "FORA_DO_ALCANCE": "Couldn't change the role of {nomes}: it's beyond what you can give.",
       "TRAVADA": {
         "ABOVE": "{nomes}'s role did not change: only the administrator changes it. | These people's roles did not change: {nomes}. Only the administrator changes them.",
-        "ADMIN": "{nomes} can already do everything: they have administrator access. | {nomes} can already do everything: they have administrator access.",
-        "SELF": "Nobody changes their own role. | Nobody changes their own role."
+        "ADMIN": "{nomes}'s role did not change: they can already do everything as administrator. | These people's roles did not change: {nomes}. They can already do everything as administrators."
       },
       "SEM_ACESSO": "You can no longer add or remove people from roles. Talk to the administrator.",
       "NAO_MUDOU": "The role of {nomes} didn't change. Try again; if it keeps happening, talk to the administrator. | The role of these people didn't change: {nomes}. Try again; if it keeps happening, talk to the administrator."
@@ -872,6 +871,7 @@
       "RECUSA": {
         "FORA_DO_ALCANCE": "You can't delete this role. Ask the administrator.",
         "TEM_GENTE": "This role still has people. Choose where they go.",
+        "TEM_GENTE_SEM_VER": "This role still has people, but we couldn't check who. Try again.",
         "INDISPONIVEL": "Team roles aren't available right now. Talk to the administrator.",
         "PROPRIA_FUNCAO": "No one deletes their own role.",
         "SEM_ACESSO": "You can no longer change roles. Talk to the administrator.",
@@ -886,23 +886,7 @@
         "PROPRIAS": "From now on, they will only handle their own conversations. | From now on, they will only handle their own conversations.",
         "PROPRIAS_E_NOVAS": "From now on, they will handle their own conversations and pick up new ones nobody has taken. | From now on, they will handle their own conversations and pick up new ones nobody has taken.",
         "PROPRIAS_E_LINK": "From now on, they will handle their own conversations and help when a colleague sends the conversation link. | From now on, they will handle their own conversations and help when a colleague sends the conversation link.",
-        "PROPRIAS_NOVAS_E_LINK": "From now on, they will handle their own conversations, pick up new ones nobody has taken and help when a colleague sends the conversation link. | From now on, they will handle their own conversations, pick up new ones nobody has taken and help when a colleague sends the conversation link.",
-        "AREA": {
-          "CONVERSATIONS": "conversations",
-          "CONTACTS": "contacts",
-          "KNOWLEDGE_BASE": "the Help Center",
-          "CRM": "sales",
-          "AUTONOMIA": "AI bots",
-          "PROSPECTING": "the new-customer search",
-          "INSURANCE": "quotes",
-          "CAMPAIGNS": "campaigns",
-          "WHATSAPP_TEMPLATES": "WhatsApp templates",
-          "META_ADS": "ads",
-          "INBOXES": "channels",
-          "AUTOMATIONS": "automatic rules",
-          "SCHEDULING": "booking",
-          "FINANCE": "the account costs"
-        }
+        "PROPRIAS_NOVAS_E_LINK": "From now on, they will handle their own conversations, new ones nobody took and those a colleague sends by link. | From now on, they will handle their own conversations, new ones nobody took and those a colleague sends by link."
       },
       "VOLTAR": "Back",
       "SALVAR": "Save anyway",

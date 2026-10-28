@@ -190,7 +190,7 @@ const contaDasAreas = () => {
   if (olha.length + mexe.length === 1)
     return olha.length
       ? t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.UMA_OLHA', {
-          area: t(`FUNCOES_EQUIPE.AREAS.${olha[0]}.COM_ARTIGO`),
+          area: t(`FUNCOES_EQUIPE.AREAS.${olha[0]}.NA_FRASE`),
         })
       : t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.UMA_MEXE', {
           area: nomes(mexe)[0],

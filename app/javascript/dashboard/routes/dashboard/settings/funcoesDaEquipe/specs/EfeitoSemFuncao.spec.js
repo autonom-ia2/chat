@@ -56,7 +56,7 @@ describe('EfeitoSemFuncao', () => {
     const texto = montar(['knowledge_base_view', 'report_manage'])
       .find('[data-efeito] p')
       .text();
-    expect(texto).toContain('Deixa de ver os Relatórios.');
+    expect(texto).toContain('Deixa de ver os relatórios.');
     expect(texto).not.toContain(':');
   });
 
@@ -72,10 +72,10 @@ describe('EfeitoSemFuncao', () => {
     };
     expect(await deixam(['knowledge_base_view', 'report_manage'])).toEqual([
       'Ver a Central de Ajuda (artigos para os clientes)',
-      'Ver os Relatórios',
+      'Ver os relatórios',
     ]);
     expect(await deixam(['label_manage', 'macro_manage'])).toContain(
-      'Mudar os Atalhos de mensagens'
+      'Mudar os atalhos de mensagens'
     );
     // Rodada 5: "Vão deixar de" fecha a frase ("fazer algumas coisas em Vendas").
     expect(await deixam(['crm_manage_pipelines'])).toEqual([

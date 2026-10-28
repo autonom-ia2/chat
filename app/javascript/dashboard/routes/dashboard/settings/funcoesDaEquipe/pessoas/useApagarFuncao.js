@@ -22,14 +22,20 @@ export function useApagarFuncao({
 
   // O servidor recusou: a lista de agentes estava velha (achou gente), a função de destino sumiu ou saiu do alcance,
   // ou alguém mudou a função no meio. A tela recarrega o que mudou e pergunta de novo, dizendo por quê. Se a recarga
-  // das pessoas falhou, pergunta também: o diálogo diz que não deu para ver quem usa e oferece tentar.
+  // das pessoas falhou, pergunta também: o diálogo diz, num alerta só, que ainda tem gente e não deu para ver quem, e
+  // oferece tentar. Se a recarga mostra a função vazia (esvaziou no meio), volta sem destino, dizendo que ela mudou
+  // (revisão do #2308, rodada 6).
+  const motivoDoDestino = (funcao, carregou) => {
+    if (!carregou) return 'RECUSA.TEM_GENTE_SEM_VER';
+    return pessoasDa(funcao).length ? 'RECUSA.TEM_GENTE' : 'MUDOU';
+  };
   const RECUSAS = {
     destination_required: async funcao => {
       const carregou = await carregarPessoas();
-      const temGente = t('FUNCOES_EQUIPE.APAGAR.RECUSA.TEM_GENTE');
-      if (!carregou || pessoasDa(funcao).length)
-        pedirParaApagar(funcao, temGente);
-      else useAlert(temGente);
+      pedirParaApagar(
+        funcao,
+        t(`FUNCOES_EQUIPE.APAGAR.${motivoDoDestino(funcao, carregou)}`)
+      );
     },
     destination_invalid: async funcao => {
       await store.dispatch('customRole/getCustomRole');

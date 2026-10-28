@@ -28,7 +28,7 @@ const itens = computed(() =>
   props.perdas.map(perda =>
     perda.area
       ? t('FUNCOES_EQUIPE.PERDA.VER_AREA', {
-          area: t(`FUNCOES_EQUIPE.AREAS.${perda.area}.COM_ARTIGO`),
+          area: t(`FUNCOES_EQUIPE.AREAS.${perda.area}.NA_FRASE`),
         })
       : t(`FUNCOES_EQUIPE.PODE.${perda.id}`)
   )
@@ -65,8 +65,8 @@ const texto = computed(() => {
     n.value
   );
   if (!umaSo.value || !props.fica) return quem;
-  // A área no meio da frase, em minúscula ("só vão olhar as vendas"), rodada 5.
-  const area = t(`FUNCOES_EQUIPE.PERDA.FICA.AREA.${props.fica.area}`);
+  // A área no meio da frase, em minúscula ("só vão olhar as vendas"), a mesma forma do título (rodada 6).
+  const area = t(`FUNCOES_EQUIPE.AREAS.${props.fica.area}.NA_FRASE`);
   const fica = t(
     `FUNCOES_EQUIPE.PERDA.FICA.${props.fica.nivel}`,
     { area },
