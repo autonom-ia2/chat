@@ -13,9 +13,9 @@ class SeusPosts::Posts < Crm::MetaAds::Organico::Lugar
   NORMAL_POSTS = 30
   VIDA_TODA = 'lifetime'.freeze
 
-  def self.para(canal, periodo:)
+  def self.para(canal, periodo:, prazo: nil)
     klass = canal.is_a?(Channel::Instagram) ? SeusPosts::PostsInstagram : SeusPosts::PostsPagina
-    klass.new(channel: canal, periodo: periodo)
+    klass.new(channel: canal, periodo: periodo, prazo: prazo)
   end
 
   private
