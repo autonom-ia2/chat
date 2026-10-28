@@ -124,4 +124,38 @@ describe('ConfiraFuncao', () => {
     });
     expect(wrapper.find('[data-ver-canais]').exists()).toBe(false);
   });
+
+  // Rodada 3: no celular o botão fica fixo embaixo; o erro não pode ficar fora da vista.
+  it('a cada erro ao salvar, rola até o aviso e põe o foco nele; erro do nome vai para o campo', async () => {
+    const rolar = vi.fn();
+    Element.prototype.scrollIntoView = rolar;
+    const wrapper = montar();
+
+    await wrapper.setProps({
+      erro: 'Não deu para salvar agora.',
+      vezDoErro: 1,
+    });
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+    const aviso = wrapper.find('[data-erro-salvar]').element;
+    expect(document.activeElement).toBe(aviso);
+    expect(rolar).toHaveBeenCalledWith({ block: 'center' });
+
+    // A mesma frase de novo: rola outra vez.
+    document.body.focus();
+    await wrapper.setProps({ vezDoErro: 2 });
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+    expect(document.activeElement).toBe(aviso);
+
+    await wrapper.setProps({
+      erro: '',
+      erroDoNome: 'Você já tem uma função Atendente. Dê outro nome.',
+      vezDoErro: 3,
+    });
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick();
+    expect(document.activeElement.id).toBe('funcao-guiada-nome');
+    delete Element.prototype.scrollIntoView;
+  });
 });

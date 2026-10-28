@@ -70,6 +70,7 @@ export function useSalvarGaveta(mudancas) {
 
   // Devolve true quando tudo gravou; false deixa a gaveta aberta (com o erro, ou indo para o login).
   const salvar = async () => {
+    if (salvando.value) return false;
     salvando.value = true;
     erro.value = '';
     const pedidos = [...mudancas.value];

@@ -109,7 +109,7 @@ describe('GavetaDaFuncao', () => {
     expect(nomes(wrapper.find('[data-ja-sao]'))[0]).toContain('Eduarda Pires');
     expect(
       linha(wrapper, 21).find('[data-acao]').attributes('aria-label')
-    ).toBe('Tirar Gabriel Souza desta função');
+    ).toBe('Tirar desta função: Gabriel Souza');
     expect(linha(wrapper, 25).text()).toContain(
       'Já pode tudo: tem acesso de administrador'
     );
@@ -120,7 +120,7 @@ describe('GavetaDaFuncao', () => {
     expect(linha(wrapper, 24).find('[data-estado]').text()).toBe('Sem função');
     expect(
       linha(wrapper, 24).find('[data-acao]').attributes('aria-label')
-    ).toBe('Pôr Kauã Moreira como Vendedor');
+    ).toBe('Pôr como Vendedor: Kauã Moreira');
   });
 
   it('tirar e pôr marcam a linha, e o rodapé diz a frase de cada pessoa', async () => {
@@ -371,6 +371,53 @@ describe('GavetaDaFuncao', () => {
     const limpo = montar().wrapper;
     await limpo.find('[data-fundo]').trigger('click');
     expect(limpo.emitted('fechar')).toHaveLength(1);
+  });
+
+  // Rodada 3: o X passa pela mesma guarda do Esc e do fundo (guardaNoX do AgenteGaveta).
+  it('o X com mudança pendente pergunta "Sair sem salvar?"; sem mudança, fecha', async () => {
+    const { mostrar, soltar } = espiarDialogo();
+    const { wrapper } = montar();
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+
+    await wrapper.find('[data-fechar]').trigger('click');
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    expect(mostrar).toHaveBeenCalledTimes(1);
+    soltar();
+
+    const limpo = montar().wrapper;
+    await limpo.find('[data-fechar]').trigger('click');
+    expect(limpo.emitted('fechar')).toHaveLength(1);
+  });
+
+  it('enquanto salva: "Salvando…", nada fecha (Cancelar, X, fundo) e o segundo clique não manda de novo', async () => {
+    const { mostrar, soltar } = espiarDialogo();
+    let soltarPedido;
+    const atualizar = vi.fn(
+      () =>
+        new Promise(resolve => {
+          soltarPedido = resolve;
+        })
+    );
+    const { wrapper } = montar({ atualizar });
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+
+    await wrapper.find('[data-salvar]').trigger('click');
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(atualizar).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-salvar]').text()).toBe('Salvando…');
+    expect(wrapper.find('[data-salvar]').attributes('disabled')).toBeDefined();
+    expect(
+      wrapper.find('[data-cancelar]').attributes('disabled')
+    ).toBeDefined();
+    await wrapper.find('[data-fechar]').trigger('click');
+    await wrapper.find('[data-fundo]').trigger('click');
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    expect(mostrar).not.toHaveBeenCalled();
+    soltar();
+
+    soltarPedido();
+    await flushPromises();
+    expect(wrapper.find('[data-salvar]').text()).toBe('Salvar');
   });
 
   it('quem está sem função: uma escolha por pessoa, só com as funções ao alcance', async () => {

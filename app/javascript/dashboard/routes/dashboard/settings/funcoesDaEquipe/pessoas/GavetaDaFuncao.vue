@@ -15,7 +15,8 @@ import { useSalvarGaveta } from './useSalvarGaveta';
 
 // Quem usa uma função, ou quem está sem função (#2308, especificação 5.D). Com `funcao`: "Quem vai ser …?", com quem
 // já é e as outras pessoas; sem ela: "Quem está sem função", uma escolha por pessoa. Nada grava até "Salvar";
-// "Cancelar" descarta; Esc e o clique no fundo, com mudança pendente, perguntam antes. O salvar e a conferência moram
+// "Cancelar" descarta; Esc, o X e o clique no fundo, com mudança pendente, perguntam antes. Enquanto salva, nada fecha
+// (Cancelar, Esc, X e fundo ficam travados) e o botão diz "Salvando…". O salvar e a conferência moram
 // em useSalvarGaveta; se algo falha, a gaveta fica aberta só com o que não gravou e diz de quem e por quê. Sem
 // Pessoas, numa função fora do alcance ou na própria função, a gaveta só mostra quem é, com o motivo certo.
 const props = defineProps({
@@ -126,6 +127,7 @@ const titulo = computed(() =>
 );
 
 const podeFechar = () => {
+  if (salvando.value) return false;
   if (!mudancas.value.size) return true;
   sairSemSalvar.value?.abrir();
   return false;
@@ -142,6 +144,7 @@ const salvar = async () => {
   <AgenteGaveta
     :titulo="titulo"
     :pode-fechar="podeFechar"
+    guarda-no-x
     @fechar="emit('fechar')"
   >
     <template v-if="!funcao">
@@ -249,13 +252,16 @@ const salvar = async () => {
           :label="$t('FUNCOES_EQUIPE.GAVETA.CANCELAR')"
           slate
           faded
+          :disabled="salvando"
           class="min-h-11 max-sm:w-full max-sm:!h-12"
           @click="emit('fechar')"
         />
         <Button
           data-salvar
-          :label="$t('FUNCOES_EQUIPE.GAVETA.SALVAR')"
-          :disabled="!mudancas.size"
+          :label="
+            $t(`FUNCOES_EQUIPE.GAVETA.${salvando ? 'SALVANDO' : 'SALVAR'}`)
+          "
+          :disabled="!mudancas.size || salvando"
           :is-loading="salvando"
           class="min-h-11 max-sm:w-full max-sm:!h-12"
           @click="salvar"

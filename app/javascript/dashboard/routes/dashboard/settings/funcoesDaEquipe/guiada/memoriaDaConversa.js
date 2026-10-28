@@ -1,35 +1,57 @@
 import { inject, provide } from 'vue';
+import { keysOf, visibleExtras } from '../../customRoles/permissionMatrix';
 
 const CHAVE = Symbol('memoriaDaConversa');
 
 // O que a conversa guiada lembra entre as telas (#2308). Mora no useFuncaoGuiada, não nos componentes: a pergunta é
 // desmontada no "Pronto", e a área que muda de lugar em Ajustes é montada de novo.
-// - antesDoTudo: a função quando entrou em "Cuida de tudo nas vendas"; sair dele devolve isso (decisão 5).
-// - entrouCom: o que entrou junto com uma chave (as metas trazem o R$); desligar a chave tira só isso (decisão 6).
-// - niveis: por área, as chaves dela em cada nível por onde a pessoa passou nesta visita à tela. Voltar a um nível
-//   devolve os ajustes de lá, e passar por "Não vê" com as setas não apaga nada (decisão 5). Esvazia a cada etapa.
-// As chaves de uma área, como o permissionMatrix as conta (níveis e ajustes).
-const chavesDaArea = module => [
-  ...Object.values(module.levels || {}),
-  ...(module.extras || []),
-];
-
+// - antesDoTudo: a função quando entrou em "Cuida de tudo nas vendas"; sair dele devolve isso (especificação 7.4).
+// - por área, o que uma troca de nível mexeu sem a pessoa poder mexer no nível de agora: `tiradas` (a área foi para
+//   "Não vê", ou o ajuste é só de quem mexe e foi para "Só olha") e `postas` (ir para "Atende todas" liga os dois
+//   alcances, que lá não aparecem). Voltar a um nível que aceita devolve as tiradas e tira as postas, só se continuam
+//   como a troca deixou. O que estava à vista no nível do meio fica como a pessoa deixou: o R$ desligado em "Só olha"
+//   continua desligado, os relatórios ligados em "Só olha" continuam ligados (revisão do #2308, rodada 3). Esvazia a
+//   cada etapa.
 export const criarMemoria = () => {
   let antesDoTudo = null;
-  let entrouCom = {};
-  let niveis = {};
+  let mexidas = {};
 
-  // `novas` é o que o nível escolhido grava sozinho; volta com os ajustes de lá, se a pessoa já passou por ele.
-  const trocarNivel = (module, { de, para, permissions, novas }) => {
-    const daArea = chavesDaArea(module);
-    const lembrados = {
-      ...(niveis[module.key] || {}),
-      [de]: permissions.filter(chave => daArea.includes(chave)),
+  // `nivelar` aplica o nível escolhido a uma lista de chaves (setLevel ou o equivalente de Vendas).
+  const trocarNivel = (module, { permissions, nivelar }) => {
+    const daArea = keysOf(module);
+    const novas = nivelar(permissions);
+    const { tiradas = [], postas = [] } = mexidas[module.key] || {};
+    const voltam = tiradas.filter(
+      chave =>
+        !novas.includes(chave) && nivelar([...novas, chave]).includes(chave)
+    );
+    const saem = postas.filter(
+      chave =>
+        novas.includes(chave) &&
+        !nivelar(novas.filter(outra => outra !== chave)).includes(chave)
+    );
+    const final = [...novas.filter(chave => !saem.includes(chave)), ...voltam];
+    const escondida = chave =>
+      daArea.includes(chave) && !visibleExtras(module, final).includes(chave);
+    const tirouAgora = permissions.filter(
+      chave =>
+        escondida(chave) && !novas.includes(chave) && !postas.includes(chave)
+    );
+    const pos = novas.filter(
+      chave => escondida(chave) && !permissions.includes(chave)
+    );
+    mexidas = {
+      ...mexidas,
+      [module.key]: {
+        tiradas: [...new Set([...tiradas, ...tirouAgora])].filter(
+          chave => !final.includes(chave)
+        ),
+        postas: [...new Set([...postas, ...pos])].filter(chave =>
+          final.includes(chave)
+        ),
+      },
     };
-    niveis = { ...niveis, [module.key]: lembrados };
-    const guardadas = lembrados[para];
-    if (!guardadas) return novas;
-    return [...novas.filter(chave => !daArea.includes(chave)), ...guardadas];
+    return final;
   };
 
   return {
@@ -37,18 +59,13 @@ export const criarMemoria = () => {
     guardarAntesDoTudo: permissions => {
       antesDoTudo = [...permissions];
     },
-    entrouCom: chave => entrouCom[chave] || [],
-    guardarEntrouCom: (chave, chaves) => {
-      entrouCom = { ...entrouCom, [chave]: [...chaves] };
-    },
     trocarNivel,
     novaVisita: () => {
-      niveis = {};
+      mexidas = {};
     },
     recomecar: () => {
       antesDoTudo = null;
-      entrouCom = {};
-      niveis = {};
+      mexidas = {};
     },
   };
 };

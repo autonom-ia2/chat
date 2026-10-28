@@ -3,10 +3,12 @@ import { computed, nextTick, ref, useId } from 'vue';
 
 // Uma escolha de nível (#2308, especificação 14 › Acessibilidade): radiogroup com tabindex móvel. Só a opção
 // escolhida entra no Tab; setas trocam a escolha (padrão WAI-ARIA radio group), Home e End vão às pontas. A opção
+// que pede confirmação (`confirma`, o "Cuida de tudo" de Vendas) só recebe o foco pela seta: o diálogo abre só no
+// clique, no Espaço ou no Enter, para quem percorre as opções não cair num aviso que não pediu (WCAG 3.2.2). A opção
 // travada fica tracejada, com cadeado e o motivo, e as setas a pulam. O slot "dentro" aparece na escolhida, mas fica
 // fora do grupo: o radiogroup é dono só dos botões (aria-owns), e os interruptores de dentro não contam como opção.
 const props = defineProps({
-  // { valor, titulo, dica?, trava? } — trava é o texto do motivo.
+  // { valor, titulo, dica?, trava?, confirma? } — trava é o texto do motivo.
   opcoes: { type: Array, required: true },
   rotulo: { type: String, required: true },
   compacto: { type: Boolean, default: false },
@@ -49,7 +51,7 @@ const mover = async (evento, opcao) => {
   const alvo = alvoDaTecla(evento.key, livres.value.indexOf(opcao));
   if (!alvo) return;
   evento.preventDefault();
-  escolher(alvo);
+  if (!alvo.confirma) escolher(alvo);
   await nextTick();
   botoes.value[props.opcoes.indexOf(alvo)]?.focus();
 };

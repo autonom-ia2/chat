@@ -20,9 +20,10 @@ const { capacidade, selo, trava, nome, descricao } = useCartao();
 const textoDoSelo = computed(() => selo(props.cartao.selo));
 const poe = computed(() => Boolean(props.existente) && props.podePorPessoa);
 
-// O nome tem a mesma letra nos dois tipos de cartão (anatomia única, especificação 9): o botão do navegador não
-// herda o tamanho e o peso do título, então a classe vai no próprio nome, botão ou não.
-const NOME = 'text-lg font-semibold leading-snug text-n-slate-12';
+// O nome tem a mesma letra e a mesma caixa nos dois tipos de cartão (anatomia única, especificação 9): o botão não
+// herda o tamanho e o peso do título, e o _base.scss dá a todo <button> py-1 px-2.5, que empurrava o nome 10 px para
+// a direita do ícone e mudava a altura da linha. A classe vai no próprio nome, botão ou não, com p-0 e m-0.
+const NOME = 'p-0 m-0 text-lg font-semibold leading-snug text-n-slate-12';
 const ESTICADO =
   'after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none';
 </script>
@@ -30,7 +31,7 @@ const ESTICADO =
 <template>
   <li
     :data-pronta="cartao.chave"
-    class="relative flex flex-col gap-3 p-5 transition border rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7 focus-within:ring-2 focus-within:ring-n-brand"
+    class="relative flex flex-col gap-3 p-5 transition border rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
   >
     <span
       class="grid place-items-center size-11 rounded-xl"
@@ -38,7 +39,7 @@ const ESTICADO =
     >
       <span class="size-5" :class="cartao.icone" aria-hidden="true" />
     </span>
-    <h3 class="flex items-center gap-2 m-0">
+    <h2 class="flex items-center gap-2 m-0">
       <button
         v-if="!existente"
         type="button"
@@ -61,7 +62,7 @@ const ESTICADO =
         class="i-lucide-chevron-right size-5 text-n-slate-11 rtl:rotate-180"
         aria-hidden="true"
       />
-    </h3>
+    </h2>
     <p class="m-0 text-[0.9375rem] leading-snug text-n-slate-11">
       {{ descricao(cartao.chave) }}
     </p>

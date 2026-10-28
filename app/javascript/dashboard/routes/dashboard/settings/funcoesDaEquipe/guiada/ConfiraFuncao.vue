@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import { CRM_METAS_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
@@ -20,7 +20,8 @@ import DialogoDaCasa from './DialogoDaCasa.vue';
 // coluna da direita (da página) e esta etapa mostra só o formulário. A nota dos canais só aparece para quem atende
 // conversas; "Ver os canais" abre uma folha com os canais que quem monta enxerga (todos, para o administrador; os
 // dele, para os outros). Sem nome ("Começar do zero"), nenhuma frase fica pela metade. O erro do nome é anunciado e
-// quebra linha no celular.
+// quebra linha no celular. A cada erro ao salvar, a tela rola até ele e põe o foco nele (o campo do nome ou o aviso):
+// no celular o botão fica fixo embaixo, e o erro ficaria fora da vista.
 const props = defineProps({
   modo: { type: String, required: true },
   permissions: { type: Array, required: true },
@@ -28,6 +29,7 @@ const props = defineProps({
   dicaDoNome: { type: String, default: '' },
   erroDoNome: { type: String, default: '' },
   erro: { type: String, default: '' },
+  vezDoErro: { type: Number, default: 0 },
   // Chaves que a cópia cortou porque quem monta não pode dar (especificação 5.C).
   deFora: { type: Array, default: () => [] },
   salvando: { type: Boolean, default: false },
@@ -81,13 +83,26 @@ const aviso = computed(() => {
   return t('FUNCOES_EQUIPE.CONFIRA.AVISO_COPIA', { coisas: lista(coisas) });
 });
 
+const avisoDoErro = ref(null);
+const levarAte = elemento => {
+  elemento?.scrollIntoView?.({ block: 'center' });
+  elemento?.focus();
+};
+
 // "Trocar" rola até o campo e põe o foco nele.
 const trocarNome = async () => {
   await nextTick();
-  const campo = document.getElementById(ID_DO_NOME);
-  campo?.scrollIntoView?.({ block: 'center' });
-  campo?.focus();
+  levarAte(document.getElementById(ID_DO_NOME));
 };
+
+watch(
+  () => props.vezDoErro,
+  async () => {
+    await nextTick();
+    if (props.erroDoNome) levarAte(document.getElementById(ID_DO_NOME));
+    else levarAte(avisoDoErro.value);
+  }
+);
 </script>
 
 <template>
@@ -121,7 +136,7 @@ const trocarNome = async () => {
     >
       <button
         type="button"
-        class="font-medium underline min-h-11 underline-offset-4 text-n-blue-11"
+        class="font-medium underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         @click="trocarNome"
       >
         {{ $t('FUNCOES_EQUIPE.CONFIRA.DAR_NOME') }}
@@ -134,9 +149,12 @@ const trocarNome = async () => {
     >
       {{ $t('FUNCOES_EQUIPE.CONFIRA.VAI_SE_CHAMAR') }}
       <strong class="font-semibold">{{ nome }}</strong>
+      <span aria-hidden="true" class="text-n-slate-11">
+        {{ $t('FUNCOES_EQUIPE.CONTAGEM.SEPARADOR') }}
+      </span>
       <button
         type="button"
-        class="font-medium underline min-h-11 underline-offset-4 text-n-blue-11"
+        class="font-medium underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         @click="trocarNome"
       >
         {{ $t('FUNCOES_EQUIPE.CONFIRA.TROCAR') }}
@@ -241,9 +259,11 @@ const trocarNome = async () => {
 
     <p
       v-if="erro"
+      ref="avisoDoErro"
       data-erro-salvar
       role="alert"
-      class="flex items-start gap-2 px-4 py-3 m-0 text-sm rounded-xl bg-n-ruby-2 ring-1 ring-n-ruby-6 text-n-slate-12"
+      tabindex="-1"
+      class="flex items-start gap-2 px-4 py-3 m-0 text-sm outline-none rounded-xl bg-n-ruby-2 ring-1 ring-n-ruby-6 text-n-slate-12"
     >
       <span
         class="i-lucide-circle-alert size-4 mt-0.5 shrink-0 text-n-ruby-11"

@@ -56,3 +56,17 @@ export const CARLA_SEM_DISPARO = {
   ...CARLA,
   permissions: CARLA.permissions.filter(chave => chave !== 'campaign_send'),
 };
+
+// Função antiga de quem monta: crm_admin e editar as vendas, sem crm_view (a conferência do #2124 só garante
+// "crm_view OU crm_admin"). O servidor não deixa ela dar chave de editar as vendas, que traz crm_view.
+export const SEM_VER_VENDAS = {
+  userId: 12,
+  isAdmin: false,
+  customRoleId: 11,
+  permissions: [
+    'custom_role_manage',
+    'crm_admin',
+    'crm_manage_cards',
+    'contact_manage',
+  ],
+};

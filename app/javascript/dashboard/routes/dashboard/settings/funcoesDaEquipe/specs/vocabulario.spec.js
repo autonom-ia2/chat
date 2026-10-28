@@ -1,6 +1,6 @@
 import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
 
-// #2308, especificação seção 3: uma palavra por coisa, e linguagem neutra (decisão 3: ninguém é "ele", "ela" nem
+// #2308, especificação seção 3: uma palavra por coisa, e linguagem neutra (revisão do #2308: ninguém é "ele", "ela" nem
 // "administradora"). Lê o catálogo pt_BR de verdade: um texto novo com palavra proibida faz este spec falhar.
 // ("entregue" só vale para conversa, e não casa com "entregar".)
 const TRECHOS = [

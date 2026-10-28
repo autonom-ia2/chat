@@ -1,3 +1,4 @@
+import { reactive } from 'vue';
 import { mount, flushPromises } from '@vue/test-utils';
 import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -465,9 +466,12 @@ describe('Funções da equipe: lista', () => {
     await dialogo(wrapper).find('[data-acao]').trigger('click');
     await flushPromises();
 
-    // A lista de agentes do teste não tem ninguém no Financeiro: o aviso do servidor aparece.
+    // A lista de agentes do teste não tem ninguém no Financeiro: o aviso é o da tela, nunca o texto cru do servidor.
     expect(pessoasDaConta).toHaveBeenCalledTimes(2);
-    expect(useAlert).toHaveBeenCalledWith('Has people');
+    expect(useAlert).toHaveBeenCalledWith(
+      'Esta função ainda tem pessoas. Escolha para onde vão.'
+    );
+    expect(useAlert).not.toHaveBeenCalledWith('Has people');
   });
 
   // A recusa sem código é o corpo real do check_authorization (request_exception_handler.rb).
@@ -576,6 +580,136 @@ describe('Funções da equipe: lista', () => {
     expect(pessoasDaConta).toHaveBeenCalledTimes(2);
     expect(wrapper.find('[data-contagem]').text()).toBe(
       '2 funções criadas · 1 pessoa com função'
+    );
+  });
+
+  // Rodada 3: o apagar nunca diz "Ninguém usa" sem a contagem das pessoas.
+  it('apagar enquanto as pessoas carregam: diz que está vendo e não deixa apagar', async () => {
+    const wrapper = await montar({
+      pessoasDaConta: vi.fn(() => new Promise(() => {})),
+    });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    expect(dialogo(wrapper).text()).not.toContain('Ninguém usa');
+    expect(dialogo(wrapper).find('[data-apagar-carregando]').text()).toBe(
+      'Vendo quem usa esta função…'
+    );
+    expect(
+      dialogo(wrapper).find('[data-acao]').attributes('disabled')
+    ).toBeDefined();
+  });
+
+  it('apagar com as pessoas em erro: diz que não deu, oferece tentar e não deixa apagar', async () => {
+    const pessoasDaConta = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    const wrapper = await montar({ pessoasDaConta });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    expect(dialogo(wrapper).text()).not.toContain('Ninguém usa');
+    expect(dialogo(wrapper).find('[data-apagar-erro]').text()).toContain(
+      'Não deu para ver quem usa esta função.'
+    );
+    expect(
+      dialogo(wrapper).find('[data-acao]').attributes('disabled')
+    ).toBeDefined();
+
+    await dialogo(wrapper).find('[data-apagar-tentar]').trigger('click');
+    await flushPromises();
+    expect(pessoasDaConta).toHaveBeenCalledTimes(2);
+    expect(dialogo(wrapper).text()).toContain('Ninguém usa esta função.');
+  });
+
+  it('apagando: o diálogo fica aberto em "Apagando…", com Manter, Esc e o segundo clique travados', async () => {
+    let terminar;
+    const apagar = vi.fn(
+      () =>
+        new Promise(resolve => {
+          terminar = resolve;
+        })
+    );
+    const fechar = vi.fn();
+    HTMLDialogElement.prototype.close = fechar;
+    const wrapper = await montar({ apagar });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    const acao = dialogo(wrapper).find('[data-acao]');
+    await acao.trigger('click');
+    await acao.trigger('click');
+    expect(apagar).toHaveBeenCalledTimes(1);
+    expect(acao.text()).toBe('Apagando…');
+    expect(
+      dialogo(wrapper).find('[data-seguro]').attributes('disabled')
+    ).toBeDefined();
+    await dialogo(wrapper).trigger('cancel');
+    expect(fechar).not.toHaveBeenCalled();
+
+    terminar();
+    await flushPromises();
+    expect(fechar).toHaveBeenCalledTimes(1);
+    delete HTMLDialogElement.prototype.close;
+  });
+
+  it('apagada a função, o foco cai no título da lista (o "Mais" do cartão sumiu)', async () => {
+    const lista = reactive([ATENDENTE, FINANCEIRO]);
+    const apagar = vi.fn(() => {
+      lista.splice(1, 1);
+    });
+    const wrapper = await montar({ apagar, funcoes: lista });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+    expect(wrapper.findAll('[data-cartao-funcao]')).toHaveLength(1);
+    expect(document.activeElement).toBe(
+      wrapper.find('[data-titulo-da-lista]').element
+    );
+  });
+
+  // Quem apaga sem ser administrador vê como destino só as funções que alcança (reachesRole, especificação 5.D/5.E);
+  // a própria função entra, como na gaveta: o servidor só pede o alcance (custom_roles_controller#destination_role_id).
+  it('apagar como não administrador: o destino lista só as funções ao alcance, inclusive a própria', async () => {
+    const minha = {
+      id: 99,
+      name: 'Gerente da loja',
+      permissions: ['contact_view'],
+    };
+    const alvo = { id: 3, name: 'Alvo', permissions: ['contact_view'] };
+    const wrapper = await montar({
+      admin: false,
+      funcoes: [ATENDENTE, FINANCEIRO, minha, alvo],
+      agentes: [{ id: 10, name: 'Ana', role: 'agent', custom_role_id: 3 }],
+    });
+    const cartoes = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(cartoes[3]);
+    expect(wrapper.findComponent(ChoiceSelect).props('options')).toEqual([
+      { value: 1, label: 'Atendente' },
+      { value: 99, label: 'Gerente da loja' },
+      { value: 'none', label: 'Sem função' },
+    ]);
+  });
+
+  it('fechada a gaveta, se "Ver quem são" sumiu (todos ganharam função), o foco cai no título da lista', async () => {
+    const agentes = reactive(AGENTES.map(item => ({ ...item })));
+    const wrapper = await montar({ pessoas: true, agentes });
+    await wrapper.find('[data-faixa-sem-funcao] button').trigger('click');
+    const gaveta = wrapper.findComponent({ name: 'GavetaDaFuncao' });
+    expect(gaveta.exists()).toBe(true);
+
+    agentes.forEach(item => {
+      item.custom_role_id = 1;
+    });
+    gaveta.vm.$emit('fechar');
+    await flushPromises();
+    expect(wrapper.find('[data-faixa-sem-funcao]').exists()).toBe(false);
+    expect(document.activeElement).toBe(
+      wrapper.find('[data-titulo-da-lista]').element
     );
   });
 });

@@ -6,7 +6,7 @@ import {
 import { perdasDeAcesso } from '../perdaDeAcesso';
 
 // #2308, especificação 5.F: o que quem já tem a função perde ao salvar uma alteração. Cada perda sai uma vez, na
-// ordem do Pode, e uma área só entra quando nenhuma capacidade já disse a mesma coisa.
+// ordem do Pode, e uma área só entra quando nenhuma capacidade dela já saiu (a mais específica vence, rodada 3).
 const semChave = (permissions, chave) =>
   permissions.filter(item => item !== chave);
 
@@ -29,7 +29,7 @@ describe('perdasDeAcesso', () => {
     const atendente = PRESETS.AGENT();
     expect(
       perdasDeAcesso(atendente, semChave(atendente, 'knowledge_base_view'))
-    ).toEqual([{ areas: ['KNOWLEDGE_BASE'] }]);
+    ).toEqual([{ area: 'KNOWLEDGE_BASE' }]);
   });
 
   it('Canais de Mexer para Ver: perde mexer nos canais, sem repetir a área', () => {
@@ -55,7 +55,25 @@ describe('perdasDeAcesso', () => {
       { id: 'RELATORIOS_DAS_VENDAS' },
       { id: 'EXPORTAR_VENDAS' },
       { id: 'IA_NAS_VENDAS' },
-      { areas: ['CRM'] },
+    ]);
+  });
+
+  // Rodada 3: Vendedor alterado para ficar como Atendente. Antes saíam "Procurar clientes novos" e "Ver: Clientes
+  // novos", a mesma coisa com dois nomes, e o título contava 3.
+  it('Vendedor para Atendente: procurar clientes novos sai uma vez, sem repetir a área', () => {
+    expect(perdasDeAcesso(PRESETS.SDR(), PRESETS.AGENT())).toEqual([
+      { id: 'PROCURAR_CLIENTES' },
+      { id: 'MUDAR_CONTATOS' },
+    ]);
+  });
+
+  it('cada área que some é um item', () => {
+    expect(
+      perdasDeAcesso(['contact_view', 'campaign_view', 'report_manage'], [])
+    ).toEqual([
+      { id: 'REPORT_MANAGE' },
+      { area: 'CONTACTS' },
+      { area: 'CAMPAIGNS' },
     ]);
   });
 

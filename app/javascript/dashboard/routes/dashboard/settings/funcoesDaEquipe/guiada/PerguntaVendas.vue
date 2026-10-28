@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { CRM_MOVE_CARDS_PERMISSION } from 'dashboard/constants/permissions';
 import {
   LEVELS,
   isExtraLocked,
@@ -8,6 +9,7 @@ import {
   visibleExtras,
 } from '../../customRoles/permissionMatrix';
 import { DONO_DAS_CHAVES, areasDentroDe } from '../areasDaFuncao';
+import { soOlhaEMove } from '../fraseDaFuncao';
 import { TEXTO_DA_TRAVA, motivoDaTrava } from '../motivoDaTrava';
 import { nivelDeVendas } from '../nivelDeVendas';
 import { useTextos } from './useTextos';
@@ -18,7 +20,8 @@ import NivelDeVendas from './NivelDeVendas.vue';
 import PerguntaDaFuncao from './PerguntaDaFuncao.vue';
 
 // Vendas (#2308, especificação 5.B3): os quatro níveis e o "Mais" — arquivar, montar as colunas, os relatórios, os
-// valores em R$ (de delegação), procurar clientes novos (PROSPECTING) e agenda (SCHEDULING).
+// valores em R$ (de delegação) e, num bloco à parte com título, as áreas que andam junto: procurar clientes novos
+// (PROSPECTING) e agenda (SCHEDULING).
 const props = defineProps({
   permissions: { type: Array, required: true },
   inicial: { type: Array, required: true },
@@ -36,10 +39,13 @@ const DO_MAIS = DONO_DAS_CHAVES.VENDAS_MAIS;
 const temVendas = computed(
   () => nivelDeVendas(props.permissions) !== LEVELS.NONE
 );
+// Função antiga "Só olha" que move as vendas (gravada pela tela de antes): a linha aparece ligada para dar para
+// desligar, e some quando desliga. Nada é gravado nem tirado sozinho.
+const doMais = chave =>
+  DO_MAIS.includes(chave) ||
+  (chave === CRM_MOVE_CARDS_PERMISSION && soOlhaEMove(props.permissions));
 const extras = computed(() =>
-  visibleExtras(vendas, props.permissions).filter(chave =>
-    DO_MAIS.includes(chave)
-  )
+  visibleExtras(vendas, props.permissions).filter(doMais)
 );
 
 // Vem com "Cuida de tudo": fica ligada e diz por quê, em vez de um interruptor apagado.
@@ -94,6 +100,14 @@ const alternar = chave =>
           :trava="travaDoExtra(chave)"
           @alternar="alternar(chave)"
         />
+      </div>
+      <p
+        data-mais-areas
+        class="px-4 pt-4 pb-1 m-0 text-sm font-semibold border-t text-n-slate-11 border-n-weak"
+      >
+        {{ $t('FUNCOES_EQUIPE.VENDAS.MAIS_AREAS') }}
+      </p>
+      <div class="flex flex-col divide-y divide-n-weak">
         <AreaEmLinha
           v-for="area in areasDoMais"
           :key="area.key"

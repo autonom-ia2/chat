@@ -12,6 +12,7 @@ import PaywallDasFuncoes from './components/PaywallDasFuncoes.vue';
 import VazioDasFuncoes from './components/VazioDasFuncoes.vue';
 import ApagarFuncao from './pessoas/ApagarFuncao.vue';
 import GavetaDaFuncao from './pessoas/GavetaDaFuncao.vue';
+import { devolverFoco } from './guiada/focoQueFica';
 import { ALTERAR_NOVA, CRIAR_NOVA, DUPLICAR_NOVA } from './listaPelaFlag';
 import { useApagarFuncao } from './pessoas/useApagarFuncao';
 
@@ -42,6 +43,9 @@ const carregou = ref(false);
 const pessoasCarregando = ref(true);
 const pessoasFalharam = ref(false);
 const apagarRef = ref(null);
+const raiz = ref(null);
+// Quando o gatilho some (o cartão apagado, "Escolher pessoas" que virou a pilha de rostos), o foco vem para cá.
+const TITULO = '[data-titulo-da-lista]';
 // A gaveta aberta: { funcao } de uma função, { funcao: null } para quem está sem função.
 const gaveta = ref(null);
 
@@ -98,6 +102,10 @@ const duplicar = funcao =>
 const abrirGaveta = funcao => {
   gaveta.value = { funcao };
 };
+const fecharGaveta = () => {
+  gaveta.value = null;
+  devolverFoco(raiz.value, [TITULO]);
+};
 
 // "Pôr uma pessoa nela" (especificação 7.8): precisa de Pessoas e de alcançar a função.
 const podeEscolherPessoas = funcao =>
@@ -108,11 +116,18 @@ const { pedirParaApagar, apagar } = useApagarFuncao({
   pessoasDa,
   carregar,
 });
+const estadoDasPessoas = computed(() => {
+  if (pessoasCarregando.value) return 'carregando';
+  return pessoasFalharam.value ? 'erro' : 'pronto';
+});
 </script>
 
 <template>
-  <section class="flex flex-col w-full h-full overflow-hidden bg-n-surface-1">
-    <main class="flex-1 overflow-y-auto">
+  <section
+    ref="raiz"
+    class="flex flex-col w-full h-full overflow-hidden bg-n-surface-1"
+  >
+    <div class="flex-1 overflow-y-auto">
       <div
         class="flex flex-col w-full gap-8 px-4 pt-8 mx-auto pb-28 max-w-6xl sm:px-8 sm:py-10"
       >
@@ -139,7 +154,9 @@ const { pedirParaApagar, apagar } = useApagarFuncao({
           <header class="flex flex-wrap items-end justify-between gap-5">
             <div class="min-w-0">
               <h1
-                class="m-0 text-3xl font-bold tracking-tight sm:text-4xl text-n-slate-12"
+                data-titulo-da-lista
+                tabindex="-1"
+                class="m-0 text-3xl font-bold tracking-tight outline-none sm:text-4xl text-n-slate-12"
               >
                 {{ $t('FUNCOES_EQUIPE.TITULO') }}
               </h1>
@@ -241,7 +258,7 @@ const { pedirParaApagar, apagar } = useApagarFuncao({
           </template>
         </template>
       </div>
-    </main>
+    </div>
 
     <div
       v-if="estado === 'lista'"
@@ -261,11 +278,18 @@ const { pedirParaApagar, apagar } = useApagarFuncao({
       />
     </div>
 
-    <ApagarFuncao ref="apagarRef" @apagar="apagar" />
+    <ApagarFuncao
+      ref="apagarRef"
+      :pessoas-da="pessoasDa"
+      :estado-das-pessoas="estadoDasPessoas"
+      :apagar="apagar"
+      :foco-de-reserva="TITULO"
+      @tentar-pessoas="carregarPessoas"
+    />
     <GavetaDaFuncao
       v-if="gaveta"
       :funcao="gaveta.funcao"
-      @fechar="gaveta = null"
+      @fechar="fecharGaveta"
     />
   </section>
 </template>

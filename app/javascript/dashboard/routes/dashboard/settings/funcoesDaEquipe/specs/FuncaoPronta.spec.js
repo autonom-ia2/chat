@@ -45,14 +45,40 @@ describe('FuncaoPronta', () => {
     expect(daLetra(cria.classes())).toEqual(daLetra(jaTem.classes()));
   });
 
+  // O _base.scss dá a todo <button> py-1 px-2.5: sem p-0, o nome do cartão que cria começa 10 px à direita do ícone
+  // e a linha fica mais alta que a do cartão que a conta já tem (visto no painel, 1440 px).
+  it('o nome e o título têm a mesma caixa (padding e margem) nos dois tipos de cartão', () => {
+    const cria = montar();
+    const jaTem = montar({ existente, podePorPessoa: true });
+    const daCaixa = elemento =>
+      elemento
+        .classes()
+        .filter(
+          classe =>
+            ['p-', 'px-', 'py-', 'ps-', 'pe-', 'm-', 'mx-', 'my-', 'ms-'].some(
+              prefixo => classe.startsWith(prefixo)
+            ) || classe.startsWith('gap-')
+        );
+    expect(daCaixa(cria.find('[data-nome]'))).toEqual(['p-0', 'm-0']);
+    expect(daCaixa(jaTem.find('[data-nome]'))).toEqual(['p-0', 'm-0']);
+    expect(cria.find('h2').classes()).toEqual(jaTem.find('h2').classes());
+  });
+
   it('as ações do rodapé dizem de qual função são', () => {
     const wrapper = montar({ existente, podePorPessoa: true });
     expect(wrapper.find('[data-principal]').attributes('aria-label')).toBe(
-      'Pôr uma pessoa na função Atendente'
+      'Pôr uma pessoa nela: Atendente'
     );
     expect(wrapper.find('[data-criar-a-partir]').attributes('aria-label')).toBe(
-      'Criar outra a partir de Atendente'
+      'Criar outra a partir da pronta: Atendente'
     );
+    // WCAG 2.5.3: o nome acessível começa pelo texto visível (comando de voz).
+    ['[data-principal]', '[data-criar-a-partir]'].forEach(seletor => {
+      const botao = wrapper.find(seletor);
+      expect(botao.attributes('aria-label').startsWith(botao.text())).toBe(
+        true
+      );
+    });
   });
 
   it('com Pessoas e alcance: "Pôr uma pessoa nela" e o link irmão', async () => {

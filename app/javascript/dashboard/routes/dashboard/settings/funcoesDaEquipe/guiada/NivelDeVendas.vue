@@ -57,6 +57,7 @@ const opcoes = computed(() =>
       titulo: t(`FUNCOES_EQUIPE.VENDAS.${OPCAO[valor]}.TITULO`),
       dica: t(`FUNCOES_EQUIPE.VENDAS.${OPCAO[valor]}.DICA`),
       trava: motivo ? t(`FUNCOES_EQUIPE.TRAVA.${TEXTO_DA_TRAVA[motivo]}`) : '',
+      confirma: valor === TUDO,
     };
   })
 );
@@ -66,22 +67,21 @@ const antes = () =>
   memoria.antesDoTudo() ||
   (props.inicial.includes(CRM_ADMIN) ? null : props.inicial);
 
-const comMemoria = (valor, novas) =>
-  [valor, nivel.value].includes(TUDO)
-    ? novas
-    : memoria.trocarNivel(vendas, {
-        de: nivel.value,
-        para: valor,
-        permissions: props.permissions,
-        novas,
-      });
+const nivelar = valor => chaves =>
+  escolherNivelDeVendas(valor, chaves, antes());
 
 const aplicar = valor => {
   if (valor === TUDO && nivel.value !== TUDO)
     memoria.guardarAntesDoTudo(props.permissions);
+  const comMemoria = ![valor, nivel.value].includes(TUDO);
   emit(
     'update:permissions',
-    comMemoria(valor, escolherNivelDeVendas(valor, props.permissions, antes()))
+    comMemoria
+      ? memoria.trocarNivel(vendas, {
+          permissions: props.permissions,
+          nivelar: nivelar(valor),
+        })
+      : nivelar(valor)(props.permissions)
   );
 };
 

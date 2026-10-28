@@ -75,10 +75,8 @@ const escolher = valor =>
   emit(
     'update:permissions',
     memoria.trocarNivel(props.module, {
-      de: nivel.value,
-      para: valor,
       permissions: props.permissions,
-      novas: setLevel(props.module, valor, props.permissions),
+      nivelar: chaves => setLevel(props.module, valor, chaves),
     })
   );
 const alternar = chave => {

@@ -160,6 +160,7 @@
       "APAGAR_MENSAGENS": "Apagar mensagens",
       "QUEM_RECEBE": "Escolher quem recebe cada conversa nova",
       "CRIAR_MOVER_VENDAS": "Criar e mover as vendas em andamento",
+      "MOVER_VENDAS": "Mover as vendas entre as colunas",
       "ARQUIVAR_VENDAS": "Arquivar vendas",
       "MONTAR_COLUNAS": "Montar as colunas das vendas",
       "RELATORIOS_DAS_VENDAS": "Ver os relatórios das vendas",
@@ -363,8 +364,8 @@
       "VER_MAIS": "Ver mais {n} funções prontas",
       "ZERO": "Começar do zero, com tudo desligado",
       "FORA": "Só o administrador cria a função {nome}.",
-      "POR_PESSOA_ROTULO": "Pôr uma pessoa na função {nome}",
-      "CRIAR_A_PARTIR_ROTULO": "Criar outra a partir de {nome}"
+      "POR_PESSOA_ROTULO": "Pôr uma pessoa nela: {nome}",
+      "CRIAR_A_PARTIR_ROTULO": "Criar outra a partir da pronta: {nome}"
     },
     "GUIADA": {
       "VOCE_MUDOU": "você mudou",
@@ -435,11 +436,26 @@
         "PROPRIAS_CURTO": "Só as próprias"
       },
       "CUIDADO_NENHUMA": "Nenhuma ligada · apagar, planilhas, campanhas e IA",
+      "ANTES": {
+        "CONVERSAS": {
+          "NENHUMA": "não atendia",
+          "SO_OLHA": "só olhava",
+          "TODAS": "atendia todas",
+          "PROPRIAS": "atendia só as próprias"
+        },
+        "VENDAS": {
+          "NAO_VE": "não via",
+          "SO_OLHA": "só olhava",
+          "PODE_MEXER": "criava e movia as vendas",
+          "TUDO": "cuidava de tudo nas vendas"
+        }
+      },
       "RECOLHIDA": {
         "TITULO": "{areas} e mais {n} área | {areas} e mais {n} áreas",
         "NADA": "Hoje estão todas desligadas.",
         "N_AREAS": "{n} área | {n} áreas",
         "MEXE_E_OLHA": "Mexe em {mexe} e só olha outra. | Mexe em {mexe} e só olha outras {olha}.",
+        "MEXE_E_OLHA_NOMES": "Mexe em {mexe} e só olha {olha}.",
         "SO_MEXE": "Mexe em {mexe}.",
         "SO_OLHA": "Só olha {olha}.",
         "UMA_OLHA": "Hoje só olha {area}.",
@@ -528,10 +544,12 @@
       },
       "MAIS": "Mais",
       "MAIS_NADA": "Nada a mais ligado",
+      "MAIS_AREAS": "Junto com as vendas",
       "VEM_COM_TUDO": "Vem com \"Cuida de tudo nas vendas\"."
     },
     "EXTRAS": {
       "crm_delete_cards": "Arquivar vendas",
+      "crm_move_cards": "Mover as vendas entre as colunas",
       "crm_manage_pipelines": "Montar as colunas das vendas",
       "crm_view_reports": "Ver os relatórios das vendas",
       "sales_value_view": "Ver os valores em R$",
@@ -732,16 +750,20 @@
       "AREA": {
         "MEXER": {
           "LISTA": "Mexer: {area}",
-          "CURTO": "mexer: {area}"
+          "CURTO": "mudar {area}"
         },
         "VER": {
           "LISTA": "Ver: {area}",
-          "CURTO": "ver: {area}"
+          "CURTO": "ver {area}"
         }
       },
       "OUTRA": {
-        "LISTA": "Usar uma parte: {area}",
-        "CURTO": "usar uma parte: {area}"
+        "LISTA": "Usar tudo em {area}",
+        "CURTO": "usar tudo em {area}"
+      },
+      "ALGO": {
+        "LISTA": "Fazer uma coisa em {area}",
+        "CURTO": "fazer uma coisa em {area}"
       },
       "OUTRA_SEM_AREA": {
         "LISTA": "Usar outra parte da plataforma",
@@ -772,13 +794,13 @@
     },
     "PESSOA": {
       "TIRAR": "Tirar desta função",
-      "TIRAR_ROTULO": "Tirar {pessoa} desta função",
+      "TIRAR_ROTULO": "Tirar desta função: {pessoa}",
       "POR_COMO": "Pôr como {funcao}",
-      "POR_COMO_ROTULO": "Pôr {pessoa} como {funcao}",
+      "POR_COMO_ROTULO": "Pôr como {funcao}: {pessoa}",
       "DESFAZER": "Desfazer",
       "DESFAZER_ROTULO": "Desfazer a mudança de {pessoa}",
       "OUTRA_FUNCAO": "Pôr em outra função",
-      "OUTRA_FUNCAO_ROTULO": "Pôr {pessoa} em outra função",
+      "OUTRA_FUNCAO_ROTULO": "Pôr em outra função: {pessoa}",
       "ESCOLHER_FUNCAO": "Escolher função",
       "ESCOLHER_FUNCAO_ROTULO": "Escolher a função de {pessoa}",
       "SEM_FUNCAO": "Sem função",
@@ -801,6 +823,7 @@
       "ESCONDIDAS": "A função {nomes} não aparece na escolha: só o administrador dá. | As funções {nomes} não aparecem na escolha: só o administrador dá.",
       "CANCELAR": "Cancelar",
       "SALVAR": "Salvar",
+      "SALVANDO": "Salvando…",
       "SALVO": "Pronto. As funções das pessoas foram salvas.",
       "ERRO_PARCIAL": "A função de {nomes} não foi salva. {motivo} | A função destas pessoas não foi salva: {nomes}. {motivo}",
       "RODAPE": {
@@ -828,12 +851,16 @@
       "SEM_FUNCAO": "Sem função",
       "MANTER_FUNCAO": "Manter a função",
       "MOVER": "Mover as pessoas e apagar",
+      "APAGANDO": "Apagando…",
+      "VENDO_QUEM": "Vendo quem usa esta função…",
+      "SEM_PESSOAS": "Não deu para ver quem usa esta função.",
       "APAGADA": "Função {nome} apagada.",
       "MUDOU": "Alguém mudou esta função agora. Confira de novo.",
       "INDISPONIVEL": "Essa função não está mais disponível. Escolha outra.",
       "ERRO": "Não deu para apagar agora. Confira a internet e tente de novo.",
       "RECUSA": {
         "FORA_DO_ALCANCE": "Você não pode apagar esta função. Peça ao administrador.",
+        "TEM_GENTE": "Esta função ainda tem pessoas. Escolha para onde vão.",
         "INDISPONIVEL": "Funções da equipe não estão disponíveis agora. Fale com o administrador.",
         "PROPRIA_FUNCAO": "Ninguém apaga a própria função.",
         "SEM_ACESSO": "Você não pode mais mudar as funções. Fale com o administrador.",
@@ -842,11 +869,12 @@
     },
     "PERDA": {
       "TEXTO": "Essa pessoa tem a função {nome}. A partir de agora, não vai mais poder: | Essas pessoas têm a função {nome}. A partir de agora, não vão mais poder:",
+      "TEXTO_UMA": "Essa pessoa tem a função {nome}. | Essas pessoas têm a função {nome}.",
       "VOLTAR": "Voltar",
       "SALVAR": "Salvar mesmo assim",
       "TITULO_UMA": "{n} pessoa vai deixar de {coisa} | {n} pessoas vão deixar de {coisa}",
       "TITULO_VARIAS": "{n} pessoa vai deixar de fazer {coisas} coisas | {n} pessoas vão deixar de fazer {coisas} coisas",
-      "VER_AREAS": "Ver: {areas}",
+      "VER_AREA": "Ver {area}",
       "NOMES_E_MAIS": "{nomes} e mais {n} pessoa | {nomes} e mais {n} pessoas"
     }
   }

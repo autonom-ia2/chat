@@ -3,6 +3,7 @@ import {
   CONVERSATION_UNASSIGNED_PERMISSIONS,
   CONVERSATION_VIEW_PERMISSION,
   CRM_METAS_MANAGE_PERMISSION,
+  CRM_MOVE_CARDS_PERMISSION,
   SALES_VALUE_VIEW_PERMISSION,
 } from 'dashboard/constants/permissions';
 import {
@@ -16,6 +17,7 @@ import {
 } from '../customRoles/permissionMatrix';
 import { valeNoServidor } from './chavesDaFuncao';
 import { CRM_ADMIN, TUDO, mexeNasVendas, nivelDeVendas } from './nivelDeVendas';
+import { chavesEfetivas } from './semFuncao';
 
 // Fonte única do que uma função pode (#2308, especificação 8): a frase da lista e da prévia, o Pode e o Não pode da
 // prévia, o menu e o selo de cuidado (as capacidades curtas dos cartões prontos moram em podeCurto.js). Devolve chaves
@@ -24,6 +26,9 @@ export const nivel = (area, permissions) =>
   getLevel(moduleByKey(area), permissions);
 const conversas = permissions => nivel('CONVERSATIONS', permissions);
 const tem = chave => permissions => permissions.includes(chave);
+export const soOlhaEMove = permissions =>
+  nivelDeVendas(permissions) === LEVELS.VIEW &&
+  permissions.includes(CRM_MOVE_CARDS_PERMISSION);
 
 // Frase -------------------------------------------------------------------------------------------------------
 const FRASE_DAS_CONVERSAS = {
@@ -130,8 +135,11 @@ const CAPACIDADES = [
   {
     id: 'CRIAR_MOVER_VENDAS',
     tem: mexeNasVendas,
-    naoPode: p => nivelDeVendas(p) === LEVELS.VIEW,
+    naoPode: p => nivelDeVendas(p) === LEVELS.VIEW && !soOlhaEMove(p),
   },
+  // Função antiga "Só olha" com mover as vendas (gravada pela tela de antes): o servidor deixa mover
+  // (CardPolicy#move?), e a prévia diz isso em vez de "Não pode criar e mover".
+  { id: 'MOVER_VENDAS', tem: p => soOlhaEMove(p) },
   { id: 'ARQUIVAR_VENDAS', tem: tem('crm_delete_cards') },
   { id: 'MONTAR_COLUNAS', tem: tem('crm_manage_pipelines') },
   { id: 'RELATORIOS_DAS_VENDAS', tem: tem('crm_view_reports') },
@@ -232,12 +240,17 @@ export const cuidadosDaFuncao = permissions => {
 };
 
 // Prévia estável -------------------------------------------------------------------------------------------------
-export const previaDaFuncao = permissions => ({
-  frase: fraseDaFuncao(permissions),
-  pode: podeDaFuncao(permissions),
-  naoPode: naoPodeDaFuncao(permissions),
-  menu: menuDaFuncao(permissions),
-});
+// O Pode e o Não pode contam o que a função dá de fato (chavesEfetivas), a mesma leitura do Cuidado e da Perda de
+// acesso: uma função antiga com crm_admin sem as seis gravadas mostra tudo o que o servidor dá.
+export const previaDaFuncao = permissions => {
+  const efetivas = chavesEfetivas(permissions);
+  return {
+    frase: fraseDaFuncao(permissions),
+    pode: podeDaFuncao(efetivas),
+    naoPode: naoPodeDaFuncao(efetivas),
+    menu: menuDaFuncao(permissions),
+  };
+};
 
 // Pode e Não pode fotografados ao abrir: o Pode mantém a ordem da foto e o novo entra no fim, marcado; o Não pode
 // só perde o que mudou de lado (ou deixou de valer) e só ganha o que saiu do Pode, sem marca.

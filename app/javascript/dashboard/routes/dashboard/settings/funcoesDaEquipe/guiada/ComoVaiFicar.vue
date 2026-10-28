@@ -63,9 +63,9 @@ const menu = computed(() =>
 
     <div data-ao-vivo aria-live="polite" class="flex flex-col gap-5">
       <div v-if="previa.pode.length" class="flex flex-col gap-2">
-        <h3 class="m-0 text-sm font-semibold text-n-slate-12">
+        <h2 class="m-0 text-sm font-semibold text-n-slate-12">
           {{ $t('FUNCOES_EQUIPE.PREVIA.PODE') }}
-        </h3>
+        </h2>
         <ul data-pode class="flex flex-col gap-1 p-0 m-0 list-none">
           <li
             v-for="item in previa.pode"
@@ -93,9 +93,9 @@ const menu = computed(() =>
       </div>
 
       <div v-if="previa.naoPode.length" class="flex flex-col gap-2">
-        <h3 class="m-0 text-sm font-semibold text-n-slate-12">
+        <h2 class="m-0 text-sm font-semibold text-n-slate-12">
           {{ $t('FUNCOES_EQUIPE.PREVIA.NAO_PODE') }}
-        </h3>
+        </h2>
         <ul data-nao-pode class="flex flex-col gap-1 p-0 m-0 list-none">
           <li
             v-for="id in previa.naoPode"

@@ -155,7 +155,7 @@ describe('PerguntaCuidado', () => {
     );
   });
 
-  it('metas sem R$ (administrador): pergunta pelo R$, liga os dois e, ao desligar as metas, o R$ sai junto', async () => {
+  it('metas sem R$ (administrador): pergunta pelo R$, liga os dois e, ao desligar as metas, o R$ fica', async () => {
     const semRs = PRESETS.SDR().filter(chave => chave !== 'sales_value_view');
     const wrapper = montar(ADMIN, semRs, semRs);
     const metas = () =>
@@ -174,6 +174,47 @@ describe('PerguntaCuidado', () => {
 
     await wrapper.setProps({ permissions: ligadas });
     await metas().trigger('click');
-    expect(ultimo(wrapper)).toEqual(semRs);
+    expect([...ultimo(wrapper)].sort()).toEqual(
+      [...semRs, 'sales_value_view'].sort()
+    );
+  });
+
+  // Rodada 3: desligar uma linha "liga junto" tem um comportamento só (tira só a chave da linha).
+  it('desligar "Disparar campanhas" tira só o disparo: campaign_manage fica e a faixa com "Desfazer" some', async () => {
+    const wrapper = montar();
+    await wrapper
+      .find('[data-cuidado="campaign_send"] [role="switch"]')
+      .trigger('click');
+    await wrapper.find('[data-acao]').trigger('click');
+    await wrapper.setProps({ permissions: ultimo(wrapper) });
+
+    await wrapper
+      .find('[data-cuidado="campaign_send"] [role="switch"]')
+      .trigger('click');
+    const depois = ultimo(wrapper);
+    expect(depois).toEqual([...ATENDENTE, 'campaign_manage']);
+    await wrapper.setProps({ permissions: depois });
+    expect(wrapper.find('[data-faixa-junto]').exists()).toBe(false);
+
+    // Religar não traz de volta o "Desfazer" velho.
+    await wrapper.setProps({ permissions: [...depois, 'campaign_send'] });
+    expect(wrapper.find('[data-faixa-junto]').exists()).toBe(false);
+  });
+
+  // Função antiga com crm_admin sem as seis gravadas: o servidor dá tudo (CrmPermissions#crm_permission?).
+  it('crm_admin sem as seis gravadas: IA e planilha das vendas aparecem ligadas e travadas, como na prévia', () => {
+    const legada = [...ATENDENTE, 'crm_view', 'crm_admin'];
+    const wrapper = montar(ADMIN, legada, legada);
+    ['crm_manage_ai', 'crm_export'].forEach(chave => {
+      const linha = wrapper.find(`[data-cuidado="${chave}"]`);
+      expect(linha.find('[role="switch"]').attributes('aria-checked')).toBe(
+        'true'
+      );
+      expect(linha.text()).toContain('Vem com "Cuida de tudo nas vendas".');
+      expect(linha.text()).not.toContain('você mudou');
+    });
+    expect(wrapper.find('[data-cuidado="crm_metas_manage"]').exists()).toBe(
+      false
+    );
   });
 });

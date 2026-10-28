@@ -321,7 +321,8 @@ export const MODULES = MODULE_GROUPS.flatMap(group => group.modules);
 
 export const moduleByKey = key => MODULES.find(module => module.key === key);
 
-const keysOf = module => [
+// As chaves de uma área: as dos níveis e os ajustes.
+export const keysOf = module => [
   ...Object.values(module.levels || {}),
   ...(module.extras || []),
 ];

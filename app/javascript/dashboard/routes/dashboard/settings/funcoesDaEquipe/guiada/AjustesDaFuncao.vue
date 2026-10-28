@@ -11,8 +11,9 @@ import {
   areasDaRecolhida,
   resumoDaRecolhida,
 } from '../areasDaFuncao';
-import { ALCANCES_DE_CONVERSA, valeNoServidor } from '../chavesDaFuncao';
+import { ALCANCES_DE_CONVERSA } from '../chavesDaFuncao';
 import { nivelDeVendas } from '../nivelDeVendas';
+import { chavesEfetivas } from '../semFuncao';
 import { devolverFoco } from './focoQueFica';
 import { useTextos } from './useTextos';
 import AreaEmLinha from './AreaEmLinha.vue';
@@ -33,7 +34,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:permissions', 'alterar', 'continuar']);
-const { t, lista, maiuscula, minuscula, rotuloDoNivel } = useTextos();
+const { t, lista, maiuscula, minuscula, rotuloDoNivel, antesDoNivel } =
+  useTextos();
 const raiz = ref(null);
 
 const [NOVAS, AJUDA] = ALCANCES_DE_CONVERSA;
@@ -54,30 +56,43 @@ const VENDAS = {
   tudo: 'TUDO',
 };
 
-// No "antes", as próprias viram uma forma curta ("só as próprias"), em vez de repetir a frase longa.
-const estadoDasConversas = (permissions, curto = false) => {
+// O "antes" fala sempre no passado e na forma curta ("antes: atendia só as próprias", "antes: só olhava"), como a
+// recolhida e a especificação 5.B2.
+const estadoDasConversas = (permissions, antes = false) => {
   const nivel = getLevel(moduleByKey('CONVERSATIONS'), permissions);
-  if (nivel !== CONVERSATION_LEVELS.LIMITED)
+  const limitado = nivel === CONVERSATION_LEVELS.LIMITED;
+  if (antes)
+    return t(
+      `FUNCOES_EQUIPE.AJUSTES.ANTES.CONVERSAS.${limitado ? 'PROPRIAS' : CONVERSAS[nivel]}`
+    );
+  if (!limitado)
     return t(`FUNCOES_EQUIPE.AJUSTES.CONVERSAS.${CONVERSAS[nivel]}`);
-  if (curto) return t('FUNCOES_EQUIPE.AJUSTES.CONVERSAS.PROPRIAS_CURTO');
   const escopo = ALCANCES_DE_CONVERSA.filter(chave =>
     permissions.includes(chave)
   ).join(' ');
   return t(`FUNCOES_EQUIPE.AJUSTES.CONVERSAS.${CONVERSAS_LIMITADAS[escopo]}`);
 };
 
-const estadoDosContatos = permissions => {
+const estadoDosContatos = (permissions, antes = false) => {
   const contatos = moduleByKey('CONTACTS');
-  return rotuloDoNivel(contatos, getLevel(contatos, permissions));
+  const nivel = getLevel(contatos, permissions);
+  return antes ? antesDoNivel(contatos, nivel) : rotuloDoNivel(contatos, nivel);
 };
 
-const estadoDasVendas = permissions =>
-  t(`FUNCOES_EQUIPE.VENDAS.${VENDAS[nivelDeVendas(permissions)]}.ESTADO`);
+const estadoDasVendas = (permissions, antes = false) => {
+  const nivel = VENDAS[nivelDeVendas(permissions)];
+  return antes
+    ? t(`FUNCOES_EQUIPE.AJUSTES.ANTES.VENDAS.${nivel}`)
+    : t(`FUNCOES_EQUIPE.VENDAS.${nivel}.ESTADO`);
+};
 
-// Metas sem R$ ficam inertes no servidor (decisão 14A): a linha não as promete. No "antes", a forma curta.
+// O que a função dá de fato (chavesEfetivas, a mesma leitura da prévia e do Cuidado): metas sem R$ ficam inertes no
+// servidor (especificação 7.5) e a linha não as promete; uma função antiga com crm_admin sem as seis gravadas mostra o
+// que ele dá. No "antes", a forma curta.
 const estadoDoCuidado = (permissions, curto = false) => {
-  const ligadas = DONO_DAS_CHAVES.CUIDADO.filter(
-    chave => permissions.includes(chave) && valeNoServidor(chave, permissions)
+  const efetivas = chavesEfetivas(permissions);
+  const ligadas = DONO_DAS_CHAVES.CUIDADO.filter(chave =>
+    efetivas.includes(chave)
   );
   if (!ligadas.length)
     return curto
@@ -164,11 +179,14 @@ const tituloDaRecolhida = computed(() => {
   );
 });
 
-// Estado curto: uma área só ganha o nome; mais de uma, a conta ("Mexe em 3 áreas e só olha outras 5."), sem o lado
-// que é zero.
+// Estado curto: uma área só ganha o nome; até duas de um lado, os nomes ("Mexe em Etiquetas e Canais"); mais, a conta
+// ("Mexe em 3 áreas e só olha outras 5."), sem o lado que é zero.
+const ATE_DUAS = 2;
 const contaDasAreas = () => {
   const { olha, mexe } = resumo.value;
   const nAreas = n => t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.N_AREAS', { n }, n);
+  const areasOuConta = keys =>
+    keys.length <= ATE_DUAS ? lista(nomes(keys)) : nAreas(keys.length);
   if (olha.length + mexe.length === 1)
     return olha.length
       ? t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.UMA_OLHA', {
@@ -179,15 +197,20 @@ const contaDasAreas = () => {
         });
   if (!olha.length)
     return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.SO_MEXE', {
-      mexe: nAreas(mexe.length),
+      mexe: areasOuConta(mexe),
     });
   if (!mexe.length)
     return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.SO_OLHA', {
-      olha: nAreas(olha.length),
+      olha: areasOuConta(olha),
+    });
+  if (olha.length <= ATE_DUAS)
+    return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.MEXE_E_OLHA_NOMES', {
+      mexe: areasOuConta(mexe),
+      olha: lista(nomes(olha)),
     });
   return t(
     'FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.MEXE_E_OLHA',
-    { mexe: nAreas(mexe.length), olha: olha.length },
+    { mexe: areasOuConta(mexe), olha: olha.length },
     olha.length
   );
 };

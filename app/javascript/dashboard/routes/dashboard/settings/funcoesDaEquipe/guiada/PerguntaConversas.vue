@@ -91,10 +91,8 @@ const atualizar = permissions => emit('update:permissions', permissions);
 const escolher = valor =>
   atualizar(
     memoria.trocarNivel(conversas, {
-      de: nivel.value,
-      para: valor,
       permissions: props.permissions,
-      novas: setLevel(conversas, valor, props.permissions),
+      nivelar: chaves => setLevel(conversas, valor, chaves),
     })
   );
 // "Também lê as dos colegas" some ao desligar: o foco volta ao nível escolhido.

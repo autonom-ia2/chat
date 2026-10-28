@@ -1,8 +1,9 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import FuncaoGuiadaPage from '../guiada/FuncaoGuiadaPage.vue';
 import { espiarDialogo, global, loja } from './montar';
-import { ADMIN, CARLA } from './quemMonta';
+import { ADMIN, CARLA, SEM_VER_VENDAS } from './quemMonta';
 
 // #2308, especificação 5.B, 5.C, 5.F e Guarda: a conversa guiada de ponta a ponta, com a Carla (e o administrador
 // para o aviso de perda de acesso).
@@ -183,7 +184,7 @@ describe('FuncaoGuiadaPage', () => {
     const contatos = wrapper.find('[data-linha="contatos"]');
     expect(contatos.text()).toContain('Pode mexer');
     expect(contatos.text()).toContain('você mudou');
-    expect(contatos.text()).toContain('· antes: só olha');
+    expect(contatos.text()).toContain('· antes: só olhava');
   });
 
   it('a guarda pergunta antes de sair com mudanças, e "Continuar ajustando" fica', async () => {
@@ -222,7 +223,7 @@ describe('FuncaoGuiadaPage', () => {
     expect(replace).toHaveBeenCalledWith({ name: 'funcoes_equipe_list' });
   });
 
-  // Decisão 2 da revisão: duplicar uma função acima do alcance abre a cópia cortada, com o aviso da 5.C.
+  // Revisão do #2308 (rodada 1): duplicar uma função acima do alcance abre a cópia cortada, com o aviso da 5.C.
   it('duplicar uma função acima do alcance abre a cópia sem o que a Carla não pode dar, e avisa', async () => {
     const { wrapper, criar } = await montar({
       name: 'funcoes_equipe_duplicate',
@@ -242,7 +243,25 @@ describe('FuncaoGuiadaPage', () => {
     ]);
   });
 
-  // Decisão 4: sem custom_roles na conta, a conversa mostra o paywall, nunca o erro de internet nem a busca.
+  // Rodada 3: sem crm_view, editar as vendas também fica de fora (traz crm_view), e a cópia salva sem trava.
+  it('duplicar com quem monta sem crm_view corta também a chave de editar as vendas', async () => {
+    const vendedor = {
+      id: 6,
+      name: 'Vendedor',
+      permissions: ['contact_view', 'crm_view', 'crm_manage_cards'],
+    };
+    const { wrapper, criar } = await montar({
+      name: 'funcoes_equipe_duplicate',
+      params: { roleId: '6' },
+      giver: SEM_VER_VENDAS,
+      funcoes: [ATENDENTE, vendedor],
+    });
+    expect(wrapper.find('h1').text()).toBe('Confira a cópia');
+    await clicar(wrapper, '[data-botao-grande]');
+    expect(criar.mock.calls[0][1].permissions).toEqual(['contact_view']);
+  });
+
+  // Revisão do #2308 (rodada 1): sem custom_roles na conta, a conversa mostra o paywall, nunca o erro de internet nem a busca.
   it('com custom_roles desligado, mostra o paywall e não busca as funções', async () => {
     const buscar = vi.fn();
     Object.assign(rota, { name: 'funcoes_equipe_new', params: {}, query: {} });
@@ -311,18 +330,15 @@ describe('FuncaoGuiadaPage', () => {
     const perda = wrapper
       .findAll('dialog')
       .find(item => item.find('[data-nomes]').exists());
-    // Texto da 5.F com a decisão de gênero: quantas coisas no título e a função sem artigo no texto.
+    // Texto da 5.F com a decisão de gênero: uma perda só vai no título e a lista não a repete (rodada 3); a área das
+    // vendas não se repete, porque a capacidade dela já saiu.
     expect(perda.find('h2').text()).toBe(
-      '1 pessoa vai deixar de fazer 2 coisas'
+      '1 pessoa vai deixar de criar e mover as vendas em andamento'
     );
     expect(perda.find('[data-nomes]').text()).toBe('Ana');
-    expect(perda.text()).toContain(
-      'Essa pessoa tem a função Atendente. A partir de agora, não vai mais poder:'
-    );
-    expect(perda.findAll('[data-perdas] li').map(li => li.text())).toEqual([
-      'Criar e mover as vendas em andamento',
-      'Ver: Vendas',
-    ]);
+    expect(perda.text()).toContain('Essa pessoa tem a função Atendente.');
+    expect(perda.text()).not.toContain('não vai mais poder');
+    expect(perda.find('[data-perdas]').exists()).toBe(false);
     expect(alterar).not.toHaveBeenCalled();
 
     await perda.find('[data-seguro]').trigger('click');
@@ -351,12 +367,10 @@ describe('FuncaoGuiadaPage', () => {
       .findAll('dialog')
       .find(item => item.find('[data-nomes]').exists());
     expect(perda.find('h2').text()).toBe(
-      '2 pessoas vão deixar de fazer 2 coisas'
+      '2 pessoas vão deixar de criar e mover as vendas em andamento'
     );
     expect(perda.find('[data-nomes]').text()).toBe('Ana e Beto');
-    expect(perda.text()).toContain(
-      'Essas pessoas têm a função Atendente. A partir de agora, não vão mais poder:'
-    );
+    expect(perda.text()).toContain('Essas pessoas têm a função Atendente.');
   });
 
   it('perda de acesso com uma coisa só: o título diz qual, e os nomes param em 3', async () => {
@@ -380,7 +394,7 @@ describe('FuncaoGuiadaPage', () => {
       .findAll('dialog')
       .find(item => item.find('[data-nomes]').exists());
     expect(perda.find('h2').text()).toBe(
-      '5 pessoas vão deixar de ver: Contatos'
+      '5 pessoas vão deixar de ver os contatos'
     );
     expect(perda.find('[data-nomes]').text()).toBe(
       'Ana, Beto, Caio e mais 2 pessoas'
@@ -427,6 +441,17 @@ describe('FuncaoGuiadaPage', () => {
     expect(wrapper.find('h1').text()).toBe('Está certo assim?');
     expect(wrapper.find('[data-sucesso]').exists()).toBe(false);
     if (frase) expect(wrapper.text()).toContain(frase);
+    else {
+      // Sessão vencida: nenhuma mensagem (especificação 14), nem no aviso nem no campo do nome.
+      expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+      expect(wrapper.find('[data-erro-salvar]').exists()).toBe(false);
+      expect(wrapper.find('[data-erro-nome]').exists()).toBe(false);
+      [
+        ptBR.FUNCOES_EQUIPE.SALVAR.PROPRIA_FUNCAO,
+        ptBR.FUNCOES_EQUIPE.SALVAR.SEM_ACESSO,
+        ptBR.FUNCOES_EQUIPE.SALVAR.REDE,
+      ].forEach(texto => expect(wrapper.text()).not.toContain(texto));
+    }
     expect(clearCookiesOnLogout).toHaveBeenCalledTimes(frase ? 0 : 1);
   });
 

@@ -10,8 +10,19 @@ import DiffDeAcesso from './DiffDeAcesso.vue';
 
 // Apagar uma função (#2308, especificação 5.E). Sem ninguém: diálogo destrutivo simples. Com gente: o destino é
 // obrigatório (outra função que quem apaga pode dar, ou "Sem função"), e "Sem função" mostra o que as pessoas ganham
-// e perdem. O servidor continua decidindo (destination_required, destination_invalid, changed_meanwhile).
-const emit = defineEmits(['apagar']);
+// e perdem. O servidor continua decidindo (destination_required, destination_invalid, changed_meanwhile). Enquanto as
+// pessoas carregam ou falharam, o diálogo diz isso e não deixa apagar: nunca "Ninguém usa" sem a contagem. Enquanto
+// apaga, fica aberto em "Apagando…", com tudo travado; o foco cai no título da lista se o cartão sumiu.
+const props = defineProps({
+  pessoasDa: { type: Function, required: true },
+  // 'pronto', 'carregando' ou 'erro': o estado das pessoas na lista.
+  estadoDasPessoas: { type: String, default: 'pronto' },
+  // Apaga e devolve quando acabou (useApagarFuncao.apagar).
+  apagar: { type: Function, required: true },
+  focoDeReserva: { type: String, default: '' },
+});
+
+const emit = defineEmits(['tentarPessoas']);
 
 const SEM_FUNCAO = 'none';
 
@@ -22,10 +33,17 @@ const funcoes = useMapGetter('customRole/getCustomRoles');
 
 const dialogo = ref(null);
 const funcao = ref(null);
-const quantas = ref(0);
 const destino = ref('');
 const erro = ref('');
+const apagando = ref(false);
 const campo = useId();
+// Cada abrir() conta: se o servidor recusou e a tela perguntou de novo, o diálogo continua aberto.
+let vez = 0;
+
+const quantas = computed(() =>
+  funcao.value ? props.pessoasDa(funcao.value).length : 0
+);
+const semContagem = computed(() => props.estadoDasPessoas !== 'pronto');
 
 const comGente = computed(() => quantas.value > 0);
 const nome = computed(() => funcao.value?.name || '');
@@ -57,26 +75,32 @@ const textos = computed(() =>
       }
     : {
         titulo: t('FUNCOES_EQUIPE.APAGAR.TITULO', { nome: nome.value }),
-        texto: t('FUNCOES_EQUIPE.APAGAR.TEXTO'),
+        texto: semContagem.value ? '' : t('FUNCOES_EQUIPE.APAGAR.TEXTO'),
         seguro: t('FUNCOES_EQUIPE.APAGAR.MANTER'),
         acao: t('FUNCOES_EQUIPE.APAGAR.APAGAR'),
       }
 );
 
 // `mensagem`: a recusa do servidor ao reabrir (a função escolhida sumiu ou saiu do alcance).
-const abrir = (funcaoParaApagar, pessoas, mensagem = '') => {
+const abrir = (funcaoParaApagar, mensagem = '') => {
+  vez += 1;
   funcao.value = funcaoParaApagar;
-  quantas.value = pessoas;
   destino.value = '';
   erro.value = mensagem;
   dialogo.value?.abrir();
 };
 
-const confirmar = () =>
-  emit('apagar', {
+const confirmar = async () => {
+  if (apagando.value) return;
+  const minhaVez = vez;
+  apagando.value = true;
+  await props.apagar({
     funcao: funcao.value,
     destino: comGente.value ? destino.value : undefined,
   });
+  apagando.value = false;
+  if (minhaVez === vez) dialogo.value?.fechar();
+};
 
 defineExpose({ abrir });
 </script>
@@ -86,10 +110,39 @@ defineExpose({ abrir });
     ref="dialogo"
     tipo="destrutivo"
     v-bind="textos"
-    :acao-desabilitada="comGente && destino === ''"
+    :acao-desabilitada="semContagem || (comGente && destino === '')"
+    :fecha-na-acao="false"
+    :ocupado="apagando"
+    :acao-ocupada="$t('FUNCOES_EQUIPE.APAGAR.APAGANDO')"
+    :foco-de-reserva="focoDeReserva"
     @acao="confirmar"
   >
-    <div v-if="comGente" data-destino class="flex flex-col gap-3 mt-1">
+    <p
+      v-if="estadoDasPessoas === 'carregando'"
+      data-apagar-carregando
+      role="status"
+      class="m-0 text-[0.9375rem] text-n-slate-11"
+    >
+      {{ $t('FUNCOES_EQUIPE.APAGAR.VENDO_QUEM') }}
+    </p>
+    <div
+      v-else-if="estadoDasPessoas === 'erro'"
+      data-apagar-erro
+      class="flex flex-wrap items-center gap-2"
+    >
+      <p role="alert" class="m-0 text-[0.9375rem] text-n-ruby-11">
+        {{ $t('FUNCOES_EQUIPE.APAGAR.SEM_PESSOAS') }}
+      </p>
+      <button
+        type="button"
+        data-apagar-tentar
+        class="px-1 font-semibold underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        @click="emit('tentarPessoas')"
+      >
+        {{ $t('FUNCOES_EQUIPE.ERRO.TENTAR') }}
+      </button>
+    </div>
+    <div v-else-if="comGente" data-destino class="flex flex-col gap-3 mt-1">
       <label :for="campo" class="text-sm font-semibold text-n-slate-12">
         {{ $t('FUNCOES_EQUIPE.APAGAR.NOVA_FUNCAO') }}
       </label>

@@ -48,6 +48,7 @@ const {
   salvando,
   erro,
   erroDoNome,
+  vezDoErro,
   dicaDoNome,
   mudou,
   nomeDaPronta,
@@ -142,7 +143,7 @@ onMounted(carregar);
 
 <template>
   <section class="flex flex-col w-full h-full overflow-hidden bg-n-surface-1">
-    <main ref="principal" class="flex-1 overflow-y-auto">
+    <div ref="principal" class="flex-1 overflow-y-auto">
       <div
         class="flex flex-col w-full gap-8 px-4 pt-6 mx-auto max-w-6xl pb-56 sm:px-8 sm:pt-8 md:pb-12"
       >
@@ -209,6 +210,7 @@ onMounted(carregar);
               :dica-do-nome="dicaDoNome"
               :erro-do-nome="erroDoNome"
               :erro="erro"
+              :vez-do-erro="vezDoErro"
               :salvando="salvando"
               :pode-escolher-pessoas="podeEscolherPessoas"
               @salvar="pedirSalvar"
@@ -231,7 +233,7 @@ onMounted(carregar);
           />
         </div>
       </div>
-    </main>
+    </div>
 
     <DialogoDaCasa
       ref="guarda"
@@ -247,7 +249,7 @@ onMounted(carregar);
     <DialogoDaCasa
       ref="trocar"
       tipo="destrutivo"
-      icone="i-lucide-undo-2"
+      icone="i-lucide-door-open"
       :titulo="$t('FUNCOES_EQUIPE.GUIADA.TROCAR.TITULO')"
       :texto="$t('FUNCOES_EQUIPE.GUIADA.TROCAR.TEXTO')"
       :seguro="$t('FUNCOES_EQUIPE.GUIADA.TROCAR.CONTINUAR')"

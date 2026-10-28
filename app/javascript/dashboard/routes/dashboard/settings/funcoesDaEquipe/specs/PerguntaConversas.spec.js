@@ -3,7 +3,7 @@ import PerguntaConversas from '../guiada/PerguntaConversas.vue';
 import { global } from './montar';
 import { CARLA } from './quemMonta';
 
-// #2308, especificação 5.B3 e decisão 10: em "Atende as próprias", o último alcance ligado diz por que não desliga.
+// #2308, especificação 5.B3 e revisão do #2308: em "Atende as próprias", o último alcance ligado diz por que não desliga.
 const PROPRIAS = [
   'conversation_participating_manage',
   'conversation_unassigned_manage',

@@ -1,10 +1,11 @@
 import { mount } from '@vue/test-utils';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import NivelDeVendas from '../guiada/NivelDeVendas.vue';
+import PerguntaVendas from '../guiada/PerguntaVendas.vue';
 import { espiarDialogo, global } from './montar';
 import { ADMIN, CARLA } from './quemMonta';
 
-// #2308, especificação 5.B3, 5.F e decisões 4 e 14A.
+// #2308, especificação 5.B3, 5.F e 7.4, decisão 14A da seção 12 e a revisão do #2308.
 const montar = (giver, permissions = PRESETS.AGENT(), inicial = permissions) =>
   mount(NivelDeVendas, {
     props: {
@@ -103,5 +104,81 @@ describe('NivelDeVendas', () => {
       'crm_view',
     ]);
     expect(ultimo(wrapper)).not.toContain('crm_move_cards');
+  });
+
+  // WCAG 3.2.2 (rodada 3): a seta só leva o foco ao 4º nível; o aviso abre só com clique, Espaço ou Enter.
+  it('a seta até "Cuida de tudo" não abre o aviso nem troca o nível; o clique abre', async () => {
+    const { mostrar, soltar } = espiarDialogo();
+    const mexendo = [...PRESETS.AGENT(), 'crm_manage_cards'];
+    const wrapper = mount(NivelDeVendas, {
+      attachTo: document.body,
+      props: {
+        permissions: mexendo,
+        inicial: mexendo,
+        giver: ADMIN,
+        nome: 'Atendente',
+        rotulo: 'Vendas',
+      },
+      global: global(),
+    });
+    await wrapper
+      .find('[data-nivel="manage"]')
+      .trigger('keydown', { key: 'ArrowDown' });
+    await wrapper.vm.$nextTick();
+    expect(document.activeElement.dataset.nivel).toBe('tudo');
+    expect(mostrar).not.toHaveBeenCalled();
+    expect(wrapper.emitted('update:permissions')).toBeUndefined();
+
+    await wrapper
+      .find('[data-nivel="tudo"]')
+      .trigger('keydown', { key: 'ArrowDown' });
+    expect(ultimo(wrapper)).not.toContain('crm_view');
+    expect(mostrar).not.toHaveBeenCalled();
+
+    await wrapper.find('[data-nivel="tudo"]').trigger('click');
+    expect(mostrar).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+    soltar();
+  });
+
+  it('função antiga "Só olha" que move as vendas: o Mais mostra a linha ligada, e desligar tira só ela', async () => {
+    const legada = [
+      ...PRESETS.AGENT().filter(c => !c.startsWith('crm_')),
+      'crm_view',
+      'crm_move_cards',
+    ];
+    const wrapper = mount(PerguntaVendas, {
+      props: {
+        permissions: legada,
+        inicial: legada,
+        giver: ADMIN,
+        nome: 'Atendente',
+      },
+      global: global(),
+    });
+    await wrapper.find('[data-recolhida]').trigger('click');
+    const linha = wrapper
+      .findAll('[role="switch"]')
+      .find(
+        item =>
+          item.attributes('aria-label') === 'Mover as vendas entre as colunas'
+      );
+    expect(linha.attributes('aria-checked')).toBe('true');
+    await linha.trigger('click');
+    expect(ultimo(wrapper)).toEqual(
+      legada.filter(chave => chave !== 'crm_move_cards')
+    );
+
+    const semMover = mount(PerguntaVendas, {
+      props: {
+        permissions: ['crm_view'],
+        inicial: ['crm_view'],
+        giver: ADMIN,
+        nome: 'Atendente',
+      },
+      global: global(),
+    });
+    await semMover.find('[data-recolhida]').trigger('click');
+    expect(semMover.text()).not.toContain('Mover as vendas entre as colunas');
   });
 });

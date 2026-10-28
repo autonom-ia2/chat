@@ -60,10 +60,8 @@ const atualizar = permissions => emit('update:permissions', permissions);
 const escolher = valor =>
   atualizar(
     memoria.trocarNivel(contatos, {
-      de: nivel.value,
-      para: valor,
       permissions: props.permissions,
-      novas: setLevel(contatos, valor, props.permissions),
+      nivelar: chaves => setLevel(contatos, valor, chaves),
     })
   );
 </script>

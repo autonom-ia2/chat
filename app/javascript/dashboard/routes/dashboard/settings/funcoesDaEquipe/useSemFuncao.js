@@ -20,18 +20,27 @@ export function useSemFuncao() {
 
   const nomeDaArea = key => t(`FUNCOES_EQUIPE.AREAS.${key}.NOME`);
 
+  // No meio de uma frase, a área inteira vai com artigo ("deixa de ver a Central de Ajuda"), sem dois-pontos.
+  const areaNaFrase = (key, forma) =>
+    forma === 'CURTO'
+      ? t(`FUNCOES_EQUIPE.AREAS.${key}.COM_ARTIGO`)
+      : nomeDaArea(key);
+
   const texto = (item, forma) => {
     if (item.tipo === 'area') {
-      const onde = item.jeito === 'PARTE' ? 'OUTRA' : `AREA.${item.jeito}`;
-      return t(`FUNCOES_EQUIPE.SEM_FUNCAO.${onde}.${forma}`, {
-        area: nomeDaArea(item.chave),
+      if (item.jeito === 'PARTE')
+        return t(`FUNCOES_EQUIPE.SEM_FUNCAO.OUTRA.${forma}`, {
+          area: nomeDaArea(item.chave),
+        });
+      return t(`FUNCOES_EQUIPE.SEM_FUNCAO.AREA.${item.jeito}.${forma}`, {
+        area: areaNaFrase(item.chave, forma),
       });
     }
     const chave = `FUNCOES_EQUIPE.SEM_FUNCAO.${item.chave}.${forma}`;
     if (te(chave)) return t(chave);
     const area = modulesWithKeys(item.chaves || [])[0];
     return area
-      ? t(`FUNCOES_EQUIPE.SEM_FUNCAO.OUTRA.${forma}`, {
+      ? t(`FUNCOES_EQUIPE.SEM_FUNCAO.ALGO.${forma}`, {
           area: nomeDaArea(area.key),
         })
       : t(`FUNCOES_EQUIPE.SEM_FUNCAO.OUTRA_SEM_AREA.${forma}`);

@@ -48,6 +48,8 @@ export function useFuncaoGuiada() {
   const salvando = ref(false);
   const erro = ref('');
   const erroDoNome = ref('');
+  // Conta cada erro mostrado: o Confira rola até ele e põe o foco nele, mesmo quando a frase se repete.
+  const vezDoErro = ref(0);
   // Nomes que o servidor recusou (de uma integração): a sugestão pula todos.
   const recusados = ref([]);
   const memoria = criarMemoria();
@@ -190,6 +192,7 @@ export function useFuncaoGuiada() {
     erro.value = resultado.erro
       ? t(`FUNCOES_EQUIPE.SALVAR.${resultado.erro}`)
       : '';
+    if (erroDoNome.value || erro.value) vezDoErro.value += 1;
   };
 
   const salvar = async () => {
@@ -237,6 +240,7 @@ export function useFuncaoGuiada() {
     salvando,
     erro,
     erroDoNome,
+    vezDoErro,
     dicaDoNome,
     mudou,
     nomeDaPronta,

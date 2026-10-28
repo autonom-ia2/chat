@@ -119,4 +119,31 @@ describe('selo de cuidado', () => {
       ])
     ).toEqual(['crm_admin', 'campaign_send', 'contact_export']);
   });
+
+  // Rodada 3: função antiga "Só olha" com mover as vendas (gravada pela tela de antes). O servidor deixa mover.
+  it('"Só olha" + crm_move_cards: a prévia diz que move as vendas, e não "Não pode criar e mover"', () => {
+    const previa = previaDaFuncao(['crm_view', 'crm_move_cards']);
+    expect(previa.pode).toContain('MOVER_VENDAS');
+    expect(previa.naoPode).not.toContain('CRIAR_MOVER_VENDAS');
+    expect(previaDaFuncao(['crm_view']).naoPode).toContain(
+      'CRIAR_MOVER_VENDAS'
+    );
+  });
+
+  // Rodada 3: crm_admin sem as seis gravadas lê como o servidor (CrmPermissions#crm_permission?), a mesma leitura
+  // da Perda de acesso; metas sem R$ continuam fora.
+  it('crm_admin sem as seis gravadas: a prévia mostra o que o servidor dá, sem metas sem R$', () => {
+    const { pode } = previaDaFuncao(['crm_view', 'crm_admin']);
+    expect(pode).toEqual(
+      expect.arrayContaining([
+        'CRIAR_MOVER_VENDAS',
+        'ARQUIVAR_VENDAS',
+        'MONTAR_COLUNAS',
+        'RELATORIOS_DAS_VENDAS',
+        'EXPORTAR_VENDAS',
+        'IA_NAS_VENDAS',
+      ])
+    );
+    expect(pode).not.toContain('METAS_DO_MES');
+  });
 });

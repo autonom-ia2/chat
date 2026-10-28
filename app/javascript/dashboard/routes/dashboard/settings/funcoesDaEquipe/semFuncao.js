@@ -53,12 +53,16 @@ export const premissasSemFuncao = (estaLigada, contrato = contratoGerado) =>
 // (espelho de CrmPermissions#crm_permission?). Chave que depende de outra (KEY_DEPENDENCIES) só vale com ela: metas do
 // mês pedem os valores em R$, que o crm_admin não liga (Enterprise::Crm::MetasPolicy#manage?). Sem R$, a função não
 // define metas, e ir para "Sem função" não as tira.
+// `chavesDoServidor` é a leitura antes da dependência (o Cuidado esconde a chave ligada que não vale); a prévia, o
+// Cuidado e a Perda de acesso partem dela.
 const comAdmin = chaves =>
   chaves.includes(CRM_ADMIN)
     ? [...new Set([...chaves, ...CHAVES_DE_VENDAS])]
     : chaves;
+export const chavesDoServidor = permissions =>
+  comAdmin(comImplicadas(permissions));
 export const chavesEfetivas = permissions => {
-  const chaves = comAdmin(comImplicadas(permissions));
+  const chaves = chavesDoServidor(permissions);
   return chaves.filter(chave => valeNoServidor(chave, chaves));
 };
 
@@ -134,16 +138,18 @@ export const diffEntre = (
   };
 };
 
-// Para a frase curta, a perda que mais importa primeiro: conversas, vendas, contatos e o resto, nessa ordem (a lista
-// completa do diff continua na ordem do contrato).
+// Para a frase curta, a perda que mais importa primeiro: conversas, vendas, contatos, relatórios e robôs, e o resto
+// (Central de Ajuda, etiquetas…), nessa ordem (a lista completa do diff continua na ordem do contrato).
 const PESO_DA_AREA = {
   CONVERSATIONS: 0,
   CRM: 1,
   PROSPECTING: 1,
   SCHEDULING: 1,
   CONTACTS: 2,
+  REPORTS: 3,
+  AUTONOMIA: 3,
 };
-const PESO_DO_RESTO = 3;
+const PESO_DO_RESTO = 4;
 const areaDo = item =>
   item.tipo === 'area'
     ? item.chave

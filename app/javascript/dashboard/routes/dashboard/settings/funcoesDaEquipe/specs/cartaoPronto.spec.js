@@ -1,7 +1,7 @@
 import { PRESETS, sensitiveExtrasOn } from '../../customRoles/permissionMatrix';
 import { cartoesProntos } from '../cartaoPronto';
 import { ICONE_DA_CAPACIDADE } from '../guiada/useCartao';
-import { ADMIN, CARLA } from './quemMonta';
+import { ADMIN, CARLA, SEM_VER_VENDAS } from './quemMonta';
 
 // #2308, especificação 7.6: selos, travas e capacidades dos cartões prontos, com os dois perfis fixos.
 const tabela = giver =>
@@ -131,5 +131,18 @@ describe('cartões prontos', () => {
     expect(ICONE_DA_CAPACIDADE.pode).toContain('i-lucide-check');
     expect(ICONE_DA_CAPACIDADE.soOlha).toContain('i-lucide-eye');
     expect(ICONE_DA_CAPACIDADE.naoFaz).toContain('i-lucide-x');
+  });
+
+  // Rodada 3: o corte conta as implicadas (crm_view), como o salvar e o GrantGuard#reach?.
+  it('quem monta sem crm_view não leva nenhuma chave das vendas na pronta, nem as de editar', () => {
+    const atendente = cartoesProntos(SEM_VER_VENDAS).find(
+      cartao => cartao.chave === 'AGENT'
+    );
+    expect(atendente.corte.filter(chave => chave.startsWith('crm_'))).toEqual(
+      []
+    );
+    expect(atendente.travas.flatMap(trava => trava.chaves)).toEqual(
+      expect.arrayContaining(['crm_view', 'crm_manage_cards'])
+    );
   });
 });

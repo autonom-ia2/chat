@@ -28,7 +28,8 @@ export const mexeNasVendas = permissions =>
   [LEVELS.MANAGE, TUDO].includes(nivelDeVendas(permissions));
 
 // "Só olha" não mexe: o setLevel compartilhado tira crm_manage_cards e o que é só de quem mexe, mas deixa mover as
-// vendas (crm_move_cards), que o servidor aceita sozinho (CardPolicy#move?) e esta tela não mostra em "Só olha".
+// vendas (crm_move_cards), que o servidor aceita sozinho (CardPolicy#move?). Só a função antiga que já a tem mostra
+// a linha ligada no "Mais", para dar para desligar.
 const soOlha = permissions =>
   setLevel(vendas(), LEVELS.VIEW, permissions).filter(
     chave => chave !== CRM_MOVE_CARDS_PERMISSION

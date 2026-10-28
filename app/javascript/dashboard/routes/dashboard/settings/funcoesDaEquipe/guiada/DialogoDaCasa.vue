@@ -7,7 +7,9 @@ import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirecti
 // explicação, risco opcional e o rodapé (à direita no computador; empilhado, na largura toda, no celular, com o
 // seguro em cima, como no mockup). Cuidado = âmbar com ação azul; destrutivo = ruby com ação vermelha; aviso = cinza,
 // só com o botão de fechar (a folha dos canais). O <dialog> modal deixa o resto inerte (foco preso); o botão seguro
-// tem o foco inicial e responde ao Esc; ao fechar, o foco volta a quem abriu.
+// tem o foco inicial e responde ao Esc; ao fechar, o foco volta a quem abriu ou, se ele sumiu (o cartão apagado), ao
+// `focoDeReserva`. Com `fechaNaAcao` desligado, a ação não fecha: quem usa grava, marca `ocupado` (o rótulo vira
+// `acaoOcupada`, e seguro, Esc e um segundo clique ficam travados) e chama fechar() no fim.
 const props = defineProps({
   tipo: {
     type: String,
@@ -22,6 +24,11 @@ const props = defineProps({
   acao: { type: String, default: '' },
   // Mesmo rótulo, só o estado muda (especificação 9): "Mover as pessoas e apagar" espera o destino.
   acaoDesabilitada: { type: Boolean, default: false },
+  fechaNaAcao: { type: Boolean, default: true },
+  ocupado: { type: Boolean, default: false },
+  acaoOcupada: { type: String, default: '' },
+  // Seletor de um alvo estável (o título da página) para quando quem abriu some.
+  focoDeReserva: { type: String, default: '' },
 });
 
 const emit = defineEmits(['seguro', 'acao']);
@@ -42,28 +49,44 @@ const ESTILO = {
 };
 const estilo = computed(() => ESTILO[props.tipo]);
 
+// Abrir de novo com ele aberto (o apagar que volta a perguntar) só troca o conteúdo.
 const abrir = async () => {
+  if (dialogo.value?.open) return;
   gatilho = document.activeElement;
   dialogo.value?.showModal?.();
   await nextTick();
   botaoSeguro.value?.$el?.focus();
 };
 
-const escolher = evento => {
+const fechar = async () => {
   dialogo.value?.close?.();
-  gatilho?.focus?.();
+  const quemAbriu = gatilho;
   gatilho = null;
-  if (evento === 'acao') emit('acao');
-  else emit('seguro');
+  quemAbriu?.focus?.();
+  if (!props.focoDeReserva) return;
+  await nextTick();
+  if (!quemAbriu?.isConnected)
+    document.querySelector(props.focoDeReserva)?.focus();
 };
 
-// O Esc dispara "cancel" no <dialog>: vira a ação segura.
+const escolher = evento => {
+  if (props.ocupado) return;
+  if (evento === 'acao') {
+    if (props.fechaNaAcao) fechar();
+    emit('acao');
+    return;
+  }
+  fechar();
+  emit('seguro');
+};
+
+// O Esc dispara "cancel" no <dialog>: vira a ação segura (e não faz nada enquanto grava).
 const aoCancelar = evento => {
   evento.preventDefault();
   escolher('seguro');
 };
 
-defineExpose({ abrir });
+defineExpose({ abrir, fechar });
 </script>
 
 <template>
@@ -117,6 +140,7 @@ defineExpose({ abrir });
             data-seguro
             type="button"
             :label="seguro"
+            :disabled="ocupado"
             slate
             faded
             class="max-sm:w-full max-sm:!h-12 min-h-11"
@@ -126,9 +150,10 @@ defineExpose({ abrir });
             v-if="acao"
             data-acao
             type="button"
-            :label="acao"
+            :label="ocupado && acaoOcupada ? acaoOcupada : acao"
             :color="destrutivo ? 'ruby' : 'blue'"
-            :disabled="acaoDesabilitada"
+            :disabled="acaoDesabilitada || ocupado"
+            :aria-busy="ocupado || undefined"
             class="max-sm:w-full max-sm:!h-12 min-h-11"
             @click="escolher('acao')"
           />
