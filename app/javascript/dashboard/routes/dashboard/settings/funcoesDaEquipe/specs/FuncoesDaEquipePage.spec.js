@@ -266,6 +266,10 @@ describe('Funções da equipe: lista', () => {
     expect(await itens(false)).toEqual([
       'Procurar clientes novos',
       'Levar a lista de clientes para uma planilha',
+      'Montar as colunas das vendas',
+      'Pedir ajuda à IA nas vendas',
+      'Cuidar de tudo nas vendas',
+      'Definir as metas do mês de cada pessoa',
     ]);
     expect(await itens(true)).toContain('Ver os relatórios das vendas');
   });

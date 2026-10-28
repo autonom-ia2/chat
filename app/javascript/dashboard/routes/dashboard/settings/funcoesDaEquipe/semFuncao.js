@@ -1,4 +1,7 @@
-import { DELEGATION_KEYS } from 'dashboard/constants/permissions';
+import {
+  DELEGATION_KEYS,
+  KEY_DEPENDENCIES,
+} from 'dashboard/constants/permissions';
 import { holdsKey } from 'dashboard/helper/peopleAccess';
 import { modulesWithKeys } from '../customRoles/permissionMatrix';
 import { DONO_DAS_CHAVES } from './areasDaFuncao';
@@ -52,11 +55,19 @@ export const premissasSemFuncao = (estaLigada, contrato = contratoGerado) =>
   })).filter(item => item.ids.length);
 
 // O que a função dá de fato: as implicadas que o servidor grava, e crm_admin vale como dona de toda chave das vendas
-// (espelho de CrmPermissions#crm_permission?).
+// (espelho de CrmPermissions#crm_permission?). Chave que depende de outra (KEY_DEPENDENCIES) só vale com ela: metas do
+// mês pedem os valores em R$, que o crm_admin não liga (Enterprise::Crm::MetasPolicy#manage?). Sem R$, a função não
+// define metas, e ir para "Sem função" não as tira.
+const comAdmin = chaves =>
+  chaves.includes('crm_admin')
+    ? [...new Set([...chaves, ...CHAVES_DE_VENDAS])]
+    : chaves;
 const efetivas = permissions => {
-  const chaves = comImplicadas(permissions);
-  if (!chaves.includes('crm_admin')) return chaves;
-  return [...new Set([...chaves, ...CHAVES_DE_VENDAS])];
+  const chaves = comAdmin(comImplicadas(permissions));
+  return chaves.filter(
+    chave =>
+      !KEY_DEPENDENCIES[chave] || chaves.includes(KEY_DEPENDENCIES[chave])
+  );
 };
 
 // O que quem está sem função tem: só as chaves das capacidades que ele pode, com as implicadas. Atender todas as

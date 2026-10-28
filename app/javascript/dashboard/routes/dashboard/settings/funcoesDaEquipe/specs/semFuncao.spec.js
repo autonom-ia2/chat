@@ -21,34 +21,18 @@ const diff = (permissions, flag = desligada, outro = contrato) => {
   return { ganha: nomes(ganha), perde: nomes(perde) };
 };
 
-// Um contrato como o que o PR do contrato vai gerar: as capacidades de vendas que o "Sem função" não tem, um id que
-// a tela ainda não conhece e um extra com chave.
-const capacidade = (id, chaves, pode = false) => ({
-  id,
-  chaves,
-  premissas: [],
-  pode,
-});
+// O contrato gerado com um id que a tela ainda não conhece.
 const FIXTURE = {
+  ...contrato,
   capacidades: [
     ...contrato.capacidades,
-    capacidade('valores_das_vendas', ['sales_value_view']),
-    capacidade('montar_colunas', ['crm_manage_pipelines']),
-    capacidade('ia_das_vendas', ['crm_manage_ai']),
-    capacidade('cuidar_de_tudo_nas_vendas', ['crm_admin']),
-    capacidade('metas_do_mes', ['crm_metas_manage']),
-    capacidade('coisa_que_a_tela_nao_conhece', ['label_manage']),
+    {
+      id: 'coisa_que_a_tela_nao_conhece',
+      chaves: ['label_manage'],
+      premissas: [],
+      pode: false,
+    },
   ],
-  extras: [
-    capacidade('anuncio_de_origem', ['meta_ads_view'], true),
-    capacidade('responsavel_de_agendamento', []),
-  ],
-};
-const COM_R$ = {
-  ...FIXTURE,
-  capacidades: FIXTURE.capacidades.map(item =>
-    item.id === 'valores_das_vendas' ? { ...item, pode: true } : item
-  ),
 };
 
 describe('semFuncao', () => {
@@ -60,6 +44,8 @@ describe('semFuncao', () => {
         'apagar_mensagens',
         'arquivar_vendas',
         'relatorios_das_vendas',
+        'valores_das_vendas',
+        'anuncio_de_origem',
       ],
       perde: ['procurar_clientes_novos'],
     });
@@ -72,6 +58,8 @@ describe('semFuncao', () => {
         'respostas_prontas',
         'apagar_mensagens',
         'arquivar_vendas',
+        'valores_das_vendas',
+        'anuncio_de_origem',
       ],
       perde: ['procurar_clientes_novos'],
     });
@@ -121,7 +109,7 @@ describe('semFuncao', () => {
     ).toEqual([]);
   });
 
-  it('"Cuida de tudo" no contrato de hoje: crm_admin vale como dona das chaves das vendas', () => {
+  it('"Cuida de tudo" sem R$: cada pedaço das vendas sai pelo nome, sem "Usar uma parte de Vendas", e ganha R$', () => {
     const tudo = escolherNivelDeVendas('tudo', PRESETS.AGENT());
     expect(diff(tudo)).toEqual({
       ganha: [
@@ -129,13 +117,25 @@ describe('semFuncao', () => {
         'contatos',
         'respostas_prontas',
         'apagar_mensagens',
+        'valores_das_vendas',
+        'anuncio_de_origem',
       ],
-      perde: ['planilha_de_clientes', 'KNOWLEDGE_BASE:VER', 'CRM:PARTE'],
+      perde: [
+        'planilha_de_clientes',
+        'montar_colunas',
+        'ia_das_vendas',
+        'cuidar_de_tudo_nas_vendas',
+        'KNOWLEDGE_BASE:VER',
+      ],
     });
   });
 
-  it('só crm_admin, com o contrato novo: cada pedaço das vendas sai pelo nome, sem "Mexer em Vendas"', () => {
-    expect(diff(['crm_admin'], desligada, FIXTURE)).toEqual({
+  it('"Cuida de tudo" com R$ não ganha R$ e perde as metas do mês', () => {
+    const tudo = [
+      ...escolherNivelDeVendas('tudo', PRESETS.AGENT()),
+      'sales_value_view',
+    ];
+    expect(diff(tudo)).toEqual({
       ganha: [
         'conversas_dos_colegas',
         'contatos',
@@ -149,29 +149,46 @@ describe('semFuncao', () => {
         'ia_das_vendas',
         'cuidar_de_tudo_nas_vendas',
         'metas_do_mes',
+        'KNOWLEDGE_BASE:VER',
       ],
     });
   });
 
-  it('Gerente de vendas perde os valores em R$ e as metas; o vendedor sem R$ não ganha nem perde R$', () => {
-    expect(diff(PRESETS.SALES_MANAGER(), desligada, FIXTURE).perde).toEqual([
+  it('metas sem R$ não valem no servidor: quem fica sem função não as perde', () => {
+    expect(diff(['crm_metas_manage']).perde).toEqual([]);
+    expect(diff(['crm_admin']).perde).toEqual([
+      'planilha_de_clientes',
+      'montar_colunas',
+      'ia_das_vendas',
+      'cuidar_de_tudo_nas_vendas',
+    ]);
+  });
+
+  it('Gerente de vendas tem R$ e não o perde, mas perde as metas; o vendedor sem R$ ganha R$', () => {
+    const gerente = diff(PRESETS.SALES_MANAGER());
+    expect(gerente.perde).toEqual([
       'procurar_clientes_novos',
       'planilha_de_clientes',
-      'valores_das_vendas',
       'montar_colunas',
       'metas_do_mes',
       'REPORTS:VER',
       'AUTONOMIA:VER',
       'CAMPAIGNS:VER',
     ]);
-    const vendedor = diff(PRESETS.AGENT(), desligada, FIXTURE);
-    expect([...vendedor.ganha, ...vendedor.perde]).not.toContain(
-      'valores_das_vendas'
-    );
+    expect(gerente.ganha).not.toContain('valores_das_vendas');
+    const vendedor = diff(PRESETS.AGENT());
+    expect(vendedor.ganha).toContain('valores_das_vendas');
+    expect(vendedor.perde).not.toContain('valores_das_vendas');
   });
 
-  it('se o "Sem função" passar a ver R$, o ganho vem marcado como delegação (a tela mostra, não trava)', () => {
-    const { ganha } = diffEntre(PRESETS.AGENT(), desligada, COM_R$);
+  it('quem já vê o anúncio de origem (meta_ads_view, ou meta_ads_manage que o implica) não o ganha', () => {
+    expect(diff(['meta_ads_view']).ganha).not.toContain('anuncio_de_origem');
+    expect(diff(['meta_ads_manage']).ganha).not.toContain('anuncio_de_origem');
+    expect(diff([]).ganha).toContain('anuncio_de_origem');
+  });
+
+  it('o ganho de R$ vem marcado como delegação (a tela mostra, não trava)', () => {
+    const { ganha } = diffEntre(PRESETS.AGENT(), desligada);
     const valores = ganha.find(item => item.chave === 'valores_das_vendas');
     expect(valores).toEqual({
       chave: 'valores_das_vendas',
@@ -193,9 +210,24 @@ describe('semFuncao', () => {
     ]);
   });
 
-  it('as capacidades seguem o contrato, na ordem dele, com a flag resolvida', () => {
-    const ids = contrato.capacidades.map(item => item.id);
-    expect(capacidadesSemFuncao(desligada).map(item => item.id)).toEqual(ids);
+  it('as capacidades seguem o contrato, na ordem dele, com o extra que tem chave e a flag resolvida', () => {
+    expect(capacidadesSemFuncao(desligada).map(item => item.id)).toEqual([
+      'conversas_dos_colegas',
+      'contatos',
+      'respostas_prontas',
+      'apagar_mensagens',
+      'vendas_das_colunas',
+      'arquivar_vendas',
+      'relatorios_das_vendas',
+      'procurar_clientes_novos',
+      'planilha_de_clientes',
+      'valores_das_vendas',
+      'montar_colunas',
+      'ia_das_vendas',
+      'cuidar_de_tudo_nas_vendas',
+      'metas_do_mes',
+      'anuncio_de_origem',
+    ]);
     const relatorios = flag =>
       capacidadesSemFuncao(flag).find(
         item => item.id === 'relatorios_das_vendas'
@@ -204,14 +236,9 @@ describe('semFuncao', () => {
     expect(relatorios(ligada).pode).toBe(false);
   });
 
-  it('cada capacidade do contrato e as cinco novas de vendas têm texto em en e pt_BR', () => {
+  it('cada capacidade do contrato e o extra com chave têm texto em en e pt_BR', () => {
     const ids = [
       ...contrato.capacidades.map(item => item.id),
-      'valores_das_vendas',
-      'montar_colunas',
-      'ia_das_vendas',
-      'cuidar_de_tudo_nas_vendas',
-      'metas_do_mes',
       'anuncio_de_origem',
     ];
     ids.forEach(id => {
