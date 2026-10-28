@@ -53,9 +53,12 @@ export const postParaTela = (post, rede, agora = Date.now()) => {
     pessoas: ouNulo(post.reach),
     curtidas: ouNulo(post.likes),
     comentarios: ouNulo(post.comments),
+    // boosted nil é "não se sabe" (Instagram): só o true vira "Teve anúncio".
     impulsionado: post.boosted === true,
     // Novo: a Meta ainda não mandou as vezes. Depois de 2 dias sem elas, o post fica só com curtidas e comentários.
-    novo: !vezes && novoNaMeta,
+    novo: vezes === null && novoNaMeta,
+    // Até 2 dias, um zero ainda não se compara com o normal (os números da Meta podem atrasar).
+    recente: novoNaMeta,
     semInsights: vezes === null && !novoNaMeta,
   };
 };
@@ -69,7 +72,9 @@ export const perfilParaTela = (perfil, nomeGuardado, agora = Date.now()) => {
     rede,
     nome: nomeGuardado || nomeLido || null,
     status: perfil.status,
-    inboxId: perfil.inbox_id ?? perfil.messages?.inbox_id ?? null,
+    inboxId: perfil.inbox_id ?? null,
+    // A Meta não respondeu agora: estes são os números da última leitura boa.
+    antigo: perfil.stale === true,
   };
   if (perfil.status !== 'ok') return base;
   // Números do perfil lidos, mas a leitura dos posts recusada: o mesmo "Libere o acesso".
@@ -82,6 +87,10 @@ export const perfilParaTela = (perfil, nomeGuardado, agora = Date.now()) => {
     link: perfil.link || null,
     resumo: resumoDe(perfil, rede),
     media: { apareceu: ouNulo(normal.views) },
+    // 'ok' ou 'unavailable' (a Meta falhou só nos posts: os números ficam).
+    postsStatus: perfil.posts_status,
+    // A lista parou no teto de posts lidos: em 90 dias, os mais velhos podem faltar.
+    postsCortados: perfil.posts_truncated === true,
     posts: (perfil.posts || []).map(post => postParaTela(post, rede, agora)),
   };
 };

@@ -109,6 +109,9 @@ const MIN_SEGUIDORES = 100;
 const num = valor => formatar(valor, locale.value);
 
 const manchete = computed(() => {
+  // Sem as vezes (a Meta não mandou) não é "não apareceram": isso só com zero de verdade.
+  if (resumo.value?.apareceu === null)
+    return t('SEUS_POSTS.HEADLINE.NO_NUMBER', { days: dias.value });
   if (!resumo.value?.apareceu)
     return t('SEUS_POSTS.HEADLINE.ZERO', { days: dias.value });
   return t(`SEUS_POSTS.HEADLINE.${perfil.value.rede}`, {
@@ -164,7 +167,7 @@ const quadros = computed(() => {
             texto: t('SEUS_POSTS.TILES.FOLLOWERS.NEW', {
               count: num(r.seguidoresNovos),
             }),
-            tom: 'sobe',
+            tom: r.seguidoresNovos > 0 ? 'sobe' : 'igual',
           },
       extra: poucosSeguidores
         ? t('SEUS_POSTS.TILES.FOLLOWERS.FEW', { min: MIN_SEGUIDORES })
@@ -457,9 +460,10 @@ const liberar = async () => {
           @acao="carregar"
         />
 
-        <!-- Nenhum post no período: sem números zerados, só a frase e o botão. -->
+        <!-- Nenhum post no período: sem números zerados, só a frase e o botão. Posts que a Meta não mandou agora não
+             são "você não postou": os números aparecem e a grade diz o que houve. -->
         <EstadoVazio
-          v-else-if="!posts.length"
+          v-else-if="!posts.length && perfil.postsStatus !== 'unavailable'"
           data-seus-posts-sem-post
           icon="i-lucide-image-off"
           :titulo="$t('SEUS_POSTS.POSTS.EMPTY_PERIOD', { days: dias })"
@@ -492,6 +496,17 @@ const liberar = async () => {
             />
             <p class="relative m-0 text-sm font-medium text-white/70">
               {{ $t('SEUS_POSTS.RANGE', { days: dias }) }}
+            </p>
+            <p
+              v-if="perfil.antigo"
+              data-seus-posts-antigo
+              class="relative m-0 flex items-center gap-1.5 text-sm text-white/80"
+            >
+              <span
+                class="i-lucide-history size-4 shrink-0"
+                aria-hidden="true"
+              />
+              {{ $t('SEUS_POSTS.STALE') }}
             </p>
             <div class="relative flex flex-col gap-2">
               <h2
@@ -605,10 +620,31 @@ const liberar = async () => {
             class="flex flex-col gap-5 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
             data-seus-posts-grade
           >
-            <h2 class="m-0 text-sm font-semibold text-n-slate-11">
-              {{ $t('SEUS_POSTS.POSTS.TITLE', { days: dias }) }}
-            </h2>
+            <div class="flex flex-col gap-1">
+              <h2 class="m-0 text-sm font-semibold text-n-slate-11">
+                {{ $t('SEUS_POSTS.POSTS.TITLE', { days: dias }) }}
+              </h2>
+              <p
+                v-if="perfil.postsCortados"
+                data-seus-posts-cortados
+                class="m-0 text-sm text-n-slate-11"
+              >
+                {{ $t('SEUS_POSTS.POSTS.TRUNCATED') }}
+              </p>
+            </div>
+            <EstadoVazio
+              v-if="perfil.postsStatus === 'unavailable'"
+              data-seus-posts-posts-indisponiveis
+              role="alert"
+              icon="i-lucide-cloud-off"
+              :titulo="$t('SEUS_POSTS.POSTS.UNAVAILABLE.TITLE')"
+              :texto="$t('SEUS_POSTS.POSTS.UNAVAILABLE.TEXT')"
+              :botao="$t('SEUS_POSTS.ERROR.RETRY')"
+              botao-icon="i-lucide-refresh-cw"
+              @acao="carregar"
+            />
             <ul
+              v-else
               class="m-0 grid list-none items-stretch gap-5 p-0 sm:grid-cols-2 xl:grid-cols-3"
             >
               <li v-for="post in posts" :key="post.id" class="flex">

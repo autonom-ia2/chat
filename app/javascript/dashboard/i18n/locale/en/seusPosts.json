@@ -22,7 +22,8 @@
       "ACCOUNT_NOTE": {
         "instagram": "Also counts stories and older posts seen in the period.",
         "facebook": "Also counts videos and older posts seen in the period."
-      }
+      },
+      "NO_NUMBER": "Meta has not sent the views for the last {days} days yet."
     },
     "CHANGE": {
       "MORE": "{count} more than the previous {days} days",
@@ -77,6 +78,11 @@
       "EMPTY_POST": {
         "instagram": "Post on Instagram and come back to see how it went.",
         "facebook": "Post on your Page and come back to see how it went."
+      },
+      "TRUNCATED": "You posted a lot in this period: showing the 300 most recent posts.",
+      "UNAVAILABLE": {
+        "TITLE": "Meta did not send your posts right now.",
+        "TEXT": "The numbers above still hold. Try again in a moment."
       }
     },
     "CARD": {
@@ -146,6 +152,7 @@
     "UNAVAILABLE": {
       "TITLE": "Meta did not answer right now.",
       "TEXT": "This profile's numbers come back as soon as Meta answers."
-    }
+    },
+    "STALE": "Meta did not answer right now: these are the numbers from the last reading."
   }
 }

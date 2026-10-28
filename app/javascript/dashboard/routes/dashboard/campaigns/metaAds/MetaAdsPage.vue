@@ -144,9 +144,10 @@ if (
     name: 'seus_posts_index',
     params: { accountId: route.params.accountId },
   });
+// A aba antiga só sai para quem abre a página nova: quem só tem Anúncios da Meta continua com ela.
 const organicOn = computed(
   () =>
-    !seusPostsOn.value &&
+    !(seusPostsOn.value && (canSeePosts.value || canManagePosts.value)) &&
     isFeatureEnabledonAccount.value(
       Number(route.params.accountId),
       FEATURE_FLAGS.META_ADS_ORGANICO

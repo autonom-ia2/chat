@@ -70,7 +70,8 @@ const instagram = (extra = {}) => ({
   interactions: 410,
   new_followers: 35,
   previous: { reach: 1500, views: 4000, interactions: 380, new_followers: 20 },
-  messages: { count: 12, previous: 9, inbox_id: 7 },
+  inbox_id: 7,
+  messages: { count: 12, previous: 9 },
   posts_status: 'ok',
   posts: [post('a', { views: 1200 }), post('b')],
   normal: { views: 400, likes: 20, comments: 3 },
@@ -152,9 +153,7 @@ describe('Seus posts (#2304)', () => {
   });
 
   it('sem ver a caixa, sem o quadro de mensagens nem "Ver conversas"', async () => {
-    responder(
-      instagram({ messages: { count: null, previous: null, inbox_id: null } })
-    );
+    responder(instagram({ messages: { count: null, previous: null } }));
     const wrapper = await montar();
 
     expect(wrapper.find('[data-seus-posts-quadro="messages"]').exists()).toBe(
@@ -317,6 +316,61 @@ describe('Seus posts (#2304)', () => {
 
     expect(wrapper.find('[data-seus-posts-sem-post]').exists()).toBe(true);
     expect(wrapper.find('[data-seus-posts-numeros]').exists()).toBe(false);
+  });
+
+  it('sem as vezes do período, não diz que os posts não apareceram', async () => {
+    responder(instagram({ views: null }));
+    const wrapper = await montar();
+
+    const heroi = wrapper.find('[data-seus-posts-heroi]').text();
+    expect(heroi).toContain('ainda não mandou as vezes');
+    expect(heroi).not.toContain('não apareceram');
+  });
+
+  it('post de hoje com 0 vezes mostra o zero, sem veredito', async () => {
+    responder(
+      instagram({
+        posts: [post('hoje', { views: 0, created_time: haDias(0.1) })],
+      })
+    );
+    const wrapper = await montar();
+
+    const cartao = wrapper.find('[data-seus-posts-card="hoje"]');
+    expect(cartao.find('[data-seus-posts-sem-numeros]').exists()).toBe(false);
+    expect(cartao.find('[data-seus-posts-veredito]').exists()).toBe(false);
+    expect(cartao.text()).toContain('0');
+  });
+
+  it('Meta fora só nos posts: os números ficam e a grade pede outra tentativa', async () => {
+    responder(
+      instagram({ posts: [], posts_status: 'unavailable', normal: null })
+    );
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-numeros]').exists()).toBe(true);
+    expect(wrapper.find('[data-seus-posts-sem-post]').exists()).toBe(false);
+    expect(wrapper.find('[data-seus-posts-posts-indisponiveis]').exists()).toBe(
+      true
+    );
+  });
+
+  it('leitura antiga e lista cortada aparecem escritas', async () => {
+    responder(instagram({ stale: true, posts_truncated: true }));
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-antigo]').exists()).toBe(true);
+    expect(wrapper.find('[data-seus-posts-cortados]').exists()).toBe(true);
+  });
+
+  it('nenhum seguidor novo não sai com seta para cima', async () => {
+    responder(instagram({ new_followers: 0 }));
+    const wrapper = await montar();
+
+    expect(
+      wrapper
+        .find('[data-seus-posts-quadro="followers"] .i-lucide-arrow-up-right')
+        .exists()
+    ).toBe(false);
   });
 
   it('primeiro período com números: diz que ainda não compara', async () => {

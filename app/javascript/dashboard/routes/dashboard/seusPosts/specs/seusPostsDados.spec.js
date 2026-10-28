@@ -67,7 +67,8 @@ describe('Seus posts: perfilParaTela', () => {
         followers: 50,
         new_followers: 3,
         previous: { views: 800 },
-        messages: { count: 4, previous: 6, inbox_id: 8 },
+        inbox_id: 8,
+        messages: { count: 4, previous: 6 },
         posts_status: 'ok',
         posts: [],
         normal: { views: 120 },
@@ -124,7 +125,7 @@ describe('Seus posts: perfilParaTela', () => {
           network: 'instagram',
           status: 'ok',
           posts_status: 'needs_permission',
-          messages: { inbox_id: 7 },
+          inbox_id: 7,
         },
         null,
         AGORA

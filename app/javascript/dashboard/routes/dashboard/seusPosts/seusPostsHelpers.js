@@ -89,7 +89,7 @@ export const nivelContraMedia = (valor, media) => {
 export const vereditoDoPost = (post, media) => {
   if (post.semInsights) return { nivel: 'NO_INSIGHTS' };
   if (post.impulsionado) return { nivel: 'BOOSTED' };
-  if (post.novo) return { nivel: 'NEW' };
+  if (post.novo || (post.recente && !post.apareceu)) return { nivel: 'NEW' };
   if (!media?.apareceu) return { nivel: 'NO_NORMAL' };
   return nivelContraMedia(post.apareceu, media.apareceu);
 };

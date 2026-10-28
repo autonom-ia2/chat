@@ -59,7 +59,7 @@ describe('MetaAdsPage · Seus posts em página própria (#2304)', () => {
     expect(abas(wrapper)).not.toContain('organico');
   });
 
-  it('sem posts_view, fica em Anúncios, sem a aba', async () => {
+  it('sem posts_view, fica em Anúncios com a aba de antes', async () => {
     flags.value = { meta_ads_organico: true, seus_posts: true };
     granted.value = ['meta_ads_view'];
     const wrapper = await mountPage();
@@ -67,7 +67,7 @@ describe('MetaAdsPage · Seus posts em página própria (#2304)', () => {
     expect(routing.replace).not.toHaveBeenCalledWith(
       expect.objectContaining({ name: 'seus_posts_index' })
     );
-    expect(abas(wrapper)).not.toContain('organico');
+    expect(abas(wrapper)).toContain('organico');
   });
 
   it('sem seus_posts, a aba de antes continua', async () => {

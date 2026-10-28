@@ -22,7 +22,8 @@
       "ACCOUNT_NOTE": {
         "instagram": "Conta também stories e posts antigos vistos no período.",
         "facebook": "Conta também vídeos e posts antigos vistos no período."
-      }
+      },
+      "NO_NUMBER": "A Meta ainda não mandou as vezes dos últimos {days} dias."
     },
     "CHANGE": {
       "MORE": "{count} a mais que nos {days} dias anteriores",
@@ -77,6 +78,11 @@
       "EMPTY_POST": {
         "instagram": "Poste no Instagram e volte aqui para ver como foi.",
         "facebook": "Publique na Página e volte aqui para ver como foi."
+      },
+      "TRUNCATED": "Você postou muito neste período: aparecem os 300 posts mais recentes.",
+      "UNAVAILABLE": {
+        "TITLE": "A Meta não mandou seus posts agora.",
+        "TEXT": "Os números de cima continuam valendo. Tente de novo daqui a pouco."
       }
     },
     "CARD": {
@@ -146,6 +152,7 @@
     "UNAVAILABLE": {
       "TITLE": "A Meta não respondeu agora.",
       "TEXT": "Os números deste perfil voltam assim que a Meta responder."
-    }
+    },
+    "STALE": "A Meta não respondeu agora: estes são os números da última leitura."
   }
 }
