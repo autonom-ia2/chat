@@ -3,6 +3,8 @@ import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
 import { longDate } from '../dinheiroDoAnuncio';
 
 // Anúncios da Meta (#2198 PR 2, #2339), impulsionar: qual post. Abas Instagram e Facebook (a do Instagram só com
@@ -26,6 +28,19 @@ const emit = defineEmits(['retry']);
 const draft = defineModel({ type: Object, required: true });
 
 const { t, locale } = useI18n();
+const { currentAccount } = useAccount();
+
+// O dia em que o post saiu, no fuso da conta: o horário da Meta vem em UTC, e um post das 22h não pode virar o dia seguinte.
+const postDate = iso => {
+  if (!iso) return null;
+  const day = new Intl.DateTimeFormat('en-CA', {
+    timeZone: fusoDaConta(currentAccount.value),
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(iso));
+  return longDate(day, locale.value);
+};
 const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR.POST';
 
 const SOURCES = computed(() =>
@@ -79,16 +94,19 @@ const eligible = computed(() => list.value.filter(post => post.eligible));
 const focusable = computed(
   () =>
     eligible.value.find(post => post.id === draft.value.post_id)?.id ||
-    eligible.value[0]?.id
+    eligible.value[0]?.id ||
+    list.value[0]?.id
 );
 const moveChoice = async (post, delta) => {
-  const options = eligible.value;
-  if (!options.length) return;
-  const index = Math.max(
-    options.findIndex(item => item.id === post.id),
-    0
-  );
-  const target = options[(index + delta + options.length) % options.length];
+  const cards = list.value;
+  if (!eligible.value.length) return;
+  // Anda a partir do cartão em foco (mesmo apagado), pulando os que não podem.
+  let index = cards.findIndex(item => item.id === post.id);
+  let target;
+  do {
+    index = (index + delta + cards.length) % cards.length;
+    target = cards[index];
+  } while (!target.eligible);
   choose(target);
   await nextTick();
   grid.value?.querySelector(`[data-create-post="${target.id}"]`)?.focus();
@@ -117,6 +135,8 @@ const move = async step => {
     <div
       v-if="loading"
       data-create-post-loading
+      role="status"
+      :aria-label="$t(`${KEY}.LOADING`)"
       class="flex justify-center p-8"
     >
       <Spinner />
@@ -237,7 +257,7 @@ const move = async step => {
             />
             <span class="flex flex-col gap-2 p-4">
               <span class="text-xs text-n-slate-10">
-                {{ longDate(post.date, locale) }}
+                {{ postDate(post.date) }}
               </span>
               <span class="line-clamp-3 text-sm text-n-slate-12">
                 {{ post.text }}

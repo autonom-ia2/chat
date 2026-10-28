@@ -479,7 +479,10 @@ const blockerAction = computed(() =>
     : t(`${KEY}.BLOCKERS.${blocker.value}.ACTION`)
 );
 
-// Sem post para impulsionar: segue com o anúncio novo.
+// Sem post para impulsionar: segue com o anúncio novo, quando a conta pode criar um (tem destino).
+const canSwitchToAd = computed(
+  () => kinds.value.includes('ad') && destinations.value.length > 0
+);
 const switchToAd = () => chooseKind('ad');
 
 const BLOCKERS = {
@@ -565,6 +568,7 @@ const BLOCKERS = {
         {{ $t(`${KEY}.BLOCKERS.${blocker}.TITLE`) }}
       </h2>
       <Button
+        v-if="blocker !== 'NO_POST' || canSwitchToAd"
         :data-create-blocker-action="blocker"
         :label="blockerAction"
         :is-loading="blocker === 'LOGIN' && isConnecting"

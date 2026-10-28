@@ -62,9 +62,9 @@ RSpec.describe Crm::MetaAds::Creation::Posts do
       stub_ig_media([ig_media('1790')])
 
       expect(list).to eq(
-        posts: [{ id: '110_901', message: 'Post 901', created_time: '2026-10-20T12:00:00+0000',
+        posts: [{ id: '110_901', message: 'Post 901', created_time: '2026-10-20T12:00:00Z',
                   image_url: 'https://scontent.example/901.jpg', reactions: 9, comments: 2, eligible: true, reason: nil }],
-        instagram_posts: [{ id: '1790', caption: 'Legenda 1790', timestamp: '2026-10-21T12:00:00+0000',
+        instagram_posts: [{ id: '1790', caption: 'Legenda 1790', timestamp: '2026-10-21T12:00:00Z',
                             image_url: 'https://cdn.example/1790.mp4', likes: 30, comments: 4, eligible: true, reason: nil }],
         posts_error: nil
       )

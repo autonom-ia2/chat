@@ -73,10 +73,15 @@ class Crm::MetaAds::Creation::Posts
   def page_post(post)
     profile_or_cover = Array(post.dig('attachments', 'data')).any? { |item| PROFILE_OR_COVER.include?(item.to_h['type']) }
     {
-      id: post['id'].to_s, message: post['message'].to_s, created_time: post['created_time'], image_url: post['full_picture'],
+      id: post['id'].to_s, message: post['message'].to_s, created_time: utc_time(post['created_time']), image_url: post['full_picture'],
       reactions: post.dig('reactions', 'summary', 'total_count').to_i, comments: post.dig('comments', 'summary', 'total_count').to_i,
       eligible: post['is_eligible_for_promotion'] == true && !profile_or_cover, reason: profile_or_cover ? 'profile_or_cover' : nil
     }
+  end
+
+  # A Meta manda "+0000", que nem todo navegador lê; a tela recebe ISO 8601 em UTC e mostra o dia no fuso da conta.
+  def utc_time(value)
+    Time.zone.parse(value.to_s)&.utc&.iso8601
   end
 
   # A imagem que representa a mídia: a capa do vídeo, ou a própria foto.
@@ -86,7 +91,7 @@ class Crm::MetaAds::Creation::Posts
 
   def instagram_post(media)
     {
-      id: media['id'].to_s, caption: media['caption'].to_s, timestamp: media['timestamp'],
+      id: media['id'].to_s, caption: media['caption'].to_s, timestamp: utc_time(media['timestamp']),
       image_url: cover_of(media) || cover_of(Array(media.dig('children', 'data')).first.to_h),
       likes: media['like_count'].to_i, comments: media['comments_count'].to_i,
       eligible: media.dig('boost_eligibility_info', 'eligible_to_boost') == true, reason: nil

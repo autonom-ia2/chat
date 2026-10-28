@@ -3742,6 +3742,7 @@
             "INSTAGRAM": "Instagram",
             "FACEBOOK": "Facebook"
           },
+          "LOADING": "Reading your posts…",
           "NOT_ELIGIBLE": "Meta doesn't allow boosting this post.",
           "NEED_POST": "Pick a post to continue.",
           "TAP_INSTAGRAM_WHATSAPP": "Instagram posts get the Send message button: people who tap start a chat with you on WhatsApp.",

@@ -14,6 +14,11 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    currentAccount: { value: { timezone: 'America/Sao_Paulo' } },
+  }),
+}));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '18' }, query: {} }),
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
@@ -236,6 +241,57 @@ describe('Anúncios da Meta · impulsionar post (#2339)', () => {
     await flushPromises();
 
     expect(step(wrapper)).toBe('CONTENT');
+  });
+
+  it('without any post and no way to make a new ad, does not offer the new ad', async () => {
+    const wrapper = await mountCreate({
+      options: { ...OPTIONS, destinations: [] },
+      boost: { posts: [], instagram_posts: [], posts_error: null },
+    });
+    await choosePost(wrapper);
+
+    expect(
+      wrapper.find('[data-create-blocker]').attributes('data-create-blocker')
+    ).toBe('NO_POST');
+    expect(
+      wrapper.find('[data-create-blocker-action="NO_POST"]').exists()
+    ).toBe(false);
+  });
+
+  it('shows the day the post went out in the account time zone, not in UTC', async () => {
+    const wrapper = await mountCreate({
+      boost: {
+        posts: [pagePost('904', { created_time: '2030-01-11T01:30:00Z' })],
+        instagram_posts: [],
+        posts_error: null,
+      },
+    });
+    await choosePost(wrapper);
+
+    const card = wrapper.find(`[data-create-post="${PAGE}_904"]`).text();
+    expect(card).toContain('10');
+    expect(card).not.toContain('11');
+  });
+
+  it('with every post greyed out, the first one still takes the Tab to read why', async () => {
+    const wrapper = await mountCreate({
+      boost: {
+        posts: [
+          pagePost('905', { eligible: false }),
+          pagePost('906', { eligible: false }),
+        ],
+        instagram_posts: [],
+        posts_error: null,
+      },
+    });
+    await choosePost(wrapper);
+
+    expect(
+      wrapper.find(`[data-create-post="${PAGE}_905"]`).attributes('tabindex')
+    ).toBe('0');
+    expect(
+      wrapper.find(`[data-create-post="${PAGE}_906"]`).attributes('tabindex')
+    ).toBe('-1');
   });
 
   it('Instagram post: creates paused with the post and the WhatsApp number', async () => {

@@ -3743,6 +3743,7 @@
             "INSTAGRAM": "Instagram",
             "FACEBOOK": "Facebook"
           },
+          "LOADING": "Lendo seus posts…",
           "NOT_ELIGIBLE": "A Meta não deixa impulsionar este post.",
           "NEED_POST": "Escolha um post para continuar.",
           "TAP_INSTAGRAM_WHATSAPP": "Post do Instagram leva o botão Enviar mensagem: quem toca começa uma conversa com você no WhatsApp.",
