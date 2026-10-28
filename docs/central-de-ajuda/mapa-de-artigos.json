@@ -894,6 +894,29 @@
      "fontes": [],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "04.08",
+     "titulo": "Dar, tirar e criar as funções da equipe",
+     "para_que_serve": "Ver o que cada função pode, dar e tirar função das pessoas e criar funções respondendo perguntas, na tela nova das funções.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "funcoes_equipe_list",
+      "funcoes_equipe_new",
+      "funcoes_equipe_edit",
+      "funcoes_equipe_duplicate"
+     ],
+     "me_leve_ate_la": {
+      "rota": "funcoes_equipe_list",
+      "destaque": null
+     },
+     "requer": "funcoes_guiadas",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Tela nova das funções (#2308), só com a flag funcoes_guiadas ligada; sem ela vale o 04.06."
     }
    ]
   },
