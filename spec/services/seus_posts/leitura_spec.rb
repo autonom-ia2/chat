@@ -247,6 +247,12 @@ RSpec.describe SeusPosts::Leitura do
       expect(perfil[:normal]).to eq(views: nil, reach: 3400, likes: 333, comments: 33, clicks: 117)
     end
 
+    it 'Página com Instagram ligado (instagram_id preenchido) continua na lista de perfis' do
+      canal.update!(instagram_id: '178400')
+
+      expect(leitura[:perfis].pluck(:id)).to eq(["facebook-#{canal.id}"])
+    end
+
     it 'o post impulsionado fica fora do normal' do
       perfil = leitura[:perfil]
 
