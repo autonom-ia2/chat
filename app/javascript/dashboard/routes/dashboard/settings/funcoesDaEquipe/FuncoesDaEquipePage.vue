@@ -13,9 +13,10 @@ import FaixaSemFuncao from './components/FaixaSemFuncao.vue';
 import FuncoesFixas from './components/FuncoesFixas.vue';
 import PaywallDasFuncoes from './components/PaywallDasFuncoes.vue';
 import VazioDasFuncoes from './components/VazioDasFuncoes.vue';
+import { ALTERAR_NOVA, CRIAR_NOVA, DUPLICAR_NOVA } from './listaPelaFlag';
 
 // Funções da equipe, a lista nova (#2308, épico #1784, especificação 5.A). Atrás da flag funcoes_guiadas
-// (listaPelaFlag.js). Até os PRs 3 e 4, criar, alterar e duplicar abrem o editor de hoje, e apagar e escolher
+// (listaPelaFlag.js). Criar, alterar e duplicar abrem a conversa guiada (PR 3); até o PR 4, apagar e escolher
 // pessoas usam os diálogos de hoje.
 const store = useStore();
 const router = useRouter();
@@ -78,11 +79,15 @@ onMounted(() => {
   store.dispatch('agents/get');
 });
 
-const criar = () => router.push({ name: 'custom_roles_new' });
+// Do vazio, a pronta escolhida já vem na rota e a conversa começa em Ajustes.
+const criar = pronta =>
+  router.push(
+    pronta ? { name: CRIAR_NOVA, query: { pronta } } : { name: CRIAR_NOVA }
+  );
 const alterar = funcao =>
-  router.push({ name: 'custom_roles_edit', params: { roleId: funcao.id } });
+  router.push({ name: ALTERAR_NOVA, params: { roleId: funcao.id } });
 const duplicar = funcao =>
-  router.push({ name: 'custom_roles_new', query: { duplicate: funcao.id } });
+  router.push({ name: DUPLICAR_NOVA, params: { roleId: funcao.id } });
 // Provisório até a gaveta "Quem está sem função" (PR 4): a tela de agentes.
 const verQuemSao = () => router.push({ name: 'agent_list' });
 
@@ -207,7 +212,7 @@ const nomeParaApagar = computed(() => funcaoParaApagar.value?.name || '');
               icon="i-lucide-plus"
               size="lg"
               class="hidden sm:inline-flex !min-h-12 !rounded-xl"
-              @click="criar"
+              @click="criar()"
             />
           </header>
 
@@ -286,7 +291,7 @@ const nomeParaApagar = computed(() => funcaoParaApagar.value?.name || '');
         icon="i-lucide-plus"
         size="lg"
         class="w-full !h-[3.25rem] !rounded-xl"
-        @click="criar"
+        @click="criar()"
       />
     </div>
 

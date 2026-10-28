@@ -151,8 +151,11 @@ describe('Funções da equipe: lista', () => {
     expect(wrapper.findAll('[data-pronta]')).toHaveLength(3);
     expect(wrapper.find('[data-erro]').exists()).toBe(false);
 
-    await wrapper.find('[data-pronta="ATENDENTE"]').trigger('click');
-    expect(routerPush).toHaveBeenCalledWith({ name: 'custom_roles_new' });
+    await wrapper.find('[data-pronta="AGENT"]').trigger('click');
+    expect(routerPush).toHaveBeenCalledWith({
+      name: 'funcoes_equipe_new',
+      query: { pronta: 'AGENT' },
+    });
   });
 
   it('função acima do alcance fica travada, sem Alterar nem Mais', async () => {
@@ -181,21 +184,24 @@ describe('Funções da equipe: lista', () => {
     expect(semPessoas.find('[data-escolher-pessoas]').exists()).toBe(false);
   });
 
-  it('Alterar e Duplicar abrem o editor de hoje', async () => {
+  it('Criar, Alterar e Duplicar abrem a conversa guiada (PR 3)', async () => {
     const wrapper = await montar();
     const [atendente] = wrapper.findAll('[data-cartao-funcao]');
 
+    await wrapper.find('[data-criar]').trigger('click');
+    expect(routerPush).toHaveBeenCalledWith({ name: 'funcoes_equipe_new' });
+
     await atendente.find('[data-alterar]').trigger('click');
     expect(routerPush).toHaveBeenCalledWith({
-      name: 'custom_roles_edit',
+      name: 'funcoes_equipe_edit',
       params: { roleId: 1 },
     });
 
     await atendente.find('[data-mais]').trigger('click');
     await atendente.find('[data-acao="duplicar"]').trigger('click');
     expect(routerPush).toHaveBeenCalledWith({
-      name: 'custom_roles_new',
-      query: { duplicate: 1 },
+      name: 'funcoes_equipe_duplicate',
+      params: { roleId: 1 },
     });
   });
 

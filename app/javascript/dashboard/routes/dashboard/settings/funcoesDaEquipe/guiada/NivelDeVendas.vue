@@ -1,0 +1,83 @@
+<script setup>
+import { computed, ref } from 'vue';
+import { moduleByKey } from '../../customRoles/permissionMatrix';
+import { travaDoNivel } from '../areasDaFuncao';
+import { TEXTO_DA_TRAVA } from '../motivoDaTrava';
+import {
+  NIVEIS_DE_VENDAS,
+  TUDO,
+  escolherNivelDeVendas,
+  nivelDeVendas,
+  travaDoTudo,
+} from '../nivelDeVendas';
+import { useTextos } from './useTextos';
+import DialogoDaCasa from './DialogoDaCasa.vue';
+import EscolhaDeNivel from './EscolhaDeNivel.vue';
+
+// Os quatro níveis de Vendas (#2308, especificação 5.B3 e 7.4). "Cuida de tudo" pede confirmação (5.F) e, para
+// quem não é administrador nem tem grant_above_own, fica tracejado com "Só o administrador dá isto.". O aviso não
+// fala em metas nem em R$ (decisão 14A).
+const props = defineProps({
+  permissions: { type: Array, required: true },
+  giver: { type: Object, required: true },
+  quem: { type: String, required: true },
+});
+
+const emit = defineEmits(['update:permissions']);
+const { t } = useTextos();
+
+const vendas = moduleByKey('CRM');
+const OPCAO = {
+  none: 'NAO_VE',
+  view: 'SO_OLHA',
+  manage: 'PODE_MEXER',
+  [TUDO]: 'TUDO',
+};
+const dialogo = ref(null);
+
+const nivel = computed(() => nivelDeVendas(props.permissions));
+const motivoDe = valor =>
+  valor === TUDO
+    ? travaDoTudo(props.giver)
+    : travaDoNivel(props.giver, vendas, valor);
+
+const opcoes = computed(() =>
+  NIVEIS_DE_VENDAS.map(valor => {
+    const motivo = valor === nivel.value ? null : motivoDe(valor);
+    return {
+      valor,
+      titulo: t(`FUNCOES_EQUIPE.VENDAS.${OPCAO[valor]}.TITULO`),
+      dica: t(`FUNCOES_EQUIPE.VENDAS.${OPCAO[valor]}.DICA`),
+      trava: motivo ? t(`FUNCOES_EQUIPE.TRAVA.${TEXTO_DA_TRAVA[motivo]}`) : '',
+    };
+  })
+);
+
+const aplicar = valor =>
+  emit('update:permissions', escolherNivelDeVendas(valor, props.permissions));
+
+const escolher = valor => {
+  if (valor === TUDO) dialogo.value?.abrir();
+  else aplicar(valor);
+};
+</script>
+
+<template>
+  <div>
+    <EscolhaDeNivel
+      :model-value="nivel"
+      :opcoes="opcoes"
+      :rotulo="$t('FUNCOES_EQUIPE.VENDAS.TITULO', { quem })"
+      @update:model-value="escolher"
+    />
+    <DialogoDaCasa
+      ref="dialogo"
+      :titulo="$t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.TITULO', { quem })"
+      :texto="$t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.TEXTO')"
+      :risco="$t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.RISCO')"
+      :seguro="$t('FUNCOES_EQUIPE.GUIADA.AGORA_NAO')"
+      :acao="$t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.LIGAR')"
+      @acao="aplicar(TUDO)"
+    />
+  </div>
+</template>

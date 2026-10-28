@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (240 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (241 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -276,8 +276,19 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gate: feature flag `custom_roles`; papel `administrator` ou `custom_role_manage`
 - pre_requisitos: Enterprise/Cloud habilitado; administrador ou funcao com Montar funcoes (custom_role_manage); flag funcoes_guiadas ligada na conta
 - passos: 1. Abra Configuracoes > Funcoes Personalizadas; 2. Leia em cada cartao a frase do que a funcao pode, o selo do que pede cuidado e quem usa; 3. Para mudar, toque em Alterar; para copiar ou apagar, em Mais; 4. Para por alguem numa funcao sem ninguem, toque em Escolher pessoas; 5. Para criar, toque em Criar funcao.
-- gotchas: quem esta sem funcao ve MAIS, nao menos: le e atende as conversas dos colegas nos canais em que esta e cria e muda contatos e respostas prontas; a faixa de quem esta sem funcao e Escolher pessoas so aparecem para quem tem Pessoas (people_manage); funcao acima do alcance de quem ve, ou a propria funcao, fica tracejada com So o administrador muda esta funcao, sem Alterar nem Mais; Administrador e Sem funcao vem com a conta e nao mudam; se a lista nao abrir, a tela diz Nao deu para abrir as funcoes agora e oferece Tentar de novo, e nunca mostra a lista vazia; criar, alterar, duplicar e apagar ainda abrem o editor e os dialogos de hoje (#2308, PR 1).
+- gotchas: quem esta sem funcao ve MAIS, nao menos: le e atende as conversas dos colegas nos canais em que esta e cria e muda contatos e respostas prontas; a faixa de quem esta sem funcao e Escolher pessoas so aparecem para quem tem Pessoas (people_manage); funcao acima do alcance de quem ve, ou a propria funcao, fica tracejada com So o administrador muda esta funcao, sem Alterar nem Mais; Administrador e Sem funcao vem com a conta e nao mudam; se a lista nao abrir, a tela diz Nao deu para abrir as funcoes agora e oferece Tentar de novo, e nunca mostra a lista vazia; criar, alterar e duplicar abrem a conversa guiada (fluxo criar_funcao_guiada); apagar ainda abre o dialogo de hoje (#2308).
 - nav_target: `funcoes_equipe_list`
+
+### Criar, alterar ou duplicar uma funcao na conversa guiada
+- intent: Como crio uma funcao para a equipe?; Como altero o que uma funcao pode?; Como copio uma funcao?; Qual funcao pronta uso para o atendente?; Por que nao consigo ligar uma opcao da funcao?
+- onde_fica: Configuracoes > Funcoes Personalizadas > Criar funcao (ou Alterar / Mais > Duplicar num cartao), quando a conta tem a flag funcoes_guiadas ligada
+- rota: `funcoes_equipe_new` - `/app/accounts/:accountId/settings/funcoes-da-equipe/nova`
+- gate: feature flag `custom_roles`; papel `administrator` ou `custom_role_manage`
+- cobre: funcoes_equipe_edit, funcoes_equipe_duplicate
+- pre_requisitos: Enterprise/Cloud habilitado; administrador ou funcao com Montar funcoes (custom_role_manage); flag funcoes_guiadas ligada na conta
+- passos: 1. Toque em Criar funcao; 2. Escolha uma funcao pronta (Atendente, Vendas...) ou Comecar do zero; 3. Responda as perguntas sobre conversas, contatos, vendas e o que pede cuidado, olhando ao lado Como vai ficar; 4. Em Confira, de o nome e toque em Criar funcao; 5. Na tela de sucesso, escolha as pessoas que vao usar a funcao. Para mudar uma funcao, toque em Alterar no cartao e ajuste so o que quer; para copiar, Mais > Duplicar abre direto em Confira com o nome livre seguinte.
+- gotchas: quem nao e administrador so liga o que ele mesmo pode: a opcao aparece com cadeado e o motivo (Voce nao tem isso ou So o administrador entrega isso); a propria funcao e uma funcao acima do alcance voltam para a lista sem abrir; ligar Exportar contatos ou Disparar campanhas pode ligar junto a edicao da area, e a tela avisa com Desfazer; sair com mudancas pede confirmacao; o nome e unico na conta e, se ja existir, a tela avisa e sugere outro; se a sessao caiu, a tela leva ao login; com a flag desligada o mesmo endereco abre o editor de sempre (fluxo criar_papeis_customizados).
+- nav_target: `funcoes_equipe_new`
 
 ### Montar as permissoes de uma funcao personalizada
 - intent: Crie uma funcao so leitura; Quero que o time de marketing veja tudo da caixa X; Crie uma funcao para quem so ve relatorios; Que permissoes uso para uma funcao?; Como dou acesso a uma caixa especifica?

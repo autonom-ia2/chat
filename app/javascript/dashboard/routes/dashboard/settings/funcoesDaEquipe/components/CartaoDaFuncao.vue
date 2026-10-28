@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import MaisDaFuncao from './MaisDaFuncao.vue';
-import { cuidadosDaFuncao, fraseDoCartao } from '../fraseDoCartao';
+import { cuidadosDaFuncao, fraseDaFuncao } from '../fraseDaFuncao';
 
 // Uma função da conta na lista (#2308, especificação 5.A): o que ela pode em uma frase, o selo do que pede
 // cuidado, quem usa e as ações. Travada (roleLockReason) fica tracejada, só com o motivo.
@@ -23,7 +23,7 @@ const { t, locale } = useI18n();
 
 const MAX_ROSTOS = 4;
 
-const frase = computed(() => fraseDoCartao(props.funcao.permissions || []));
+const frase = computed(() => fraseDaFuncao(props.funcao.permissions || []));
 const restoDaFrase = computed(() =>
   frase.value.resto.map(chave => t(`FUNCOES_EQUIPE.FRASE.${chave}`)).join(' ')
 );

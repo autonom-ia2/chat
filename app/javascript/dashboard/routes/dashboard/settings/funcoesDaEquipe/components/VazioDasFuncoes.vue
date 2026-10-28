@@ -1,45 +1,22 @@
 <script setup>
-// A conta sem nenhuma função (#2308): o herói e as 3 prontas em destaque, com o que cada uma faz. O herói usa
-// o botão branco sobre navy da casa (Automações), a única exceção registrada na especificação (seção 9).
+import { computed } from 'vue';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
+import { DESTAQUES, PRONTAS, cartaoPronto } from '../cartaoPronto';
+import { ICONE_DA_CAPACIDADE, useCartao } from '../guiada/useCartao';
+
+// A conta sem nenhuma função (#2308): o herói e as 3 prontas em destaque, com o que cada uma faz (as mesmas
+// capacidades da Escolha, do fraseDaFuncao). O herói usa o botão branco sobre navy da casa (Automações), a única
+// exceção registrada na especificação (seção 9). Tocar numa pronta abre a conversa guiada com ela escolhida.
 const emit = defineEmits(['criar']);
 
-const ICONE_DO_TIPO = {
-  pode: 'i-lucide-check text-n-teal-11',
-  soOlha: 'i-lucide-eye text-n-slate-11',
-};
+const { giver } = usePeopleAccess();
+const { capacidade, nome, descricao } = useCartao();
 
-const DESTAQUES = [
-  {
-    chave: 'ATENDENTE',
-    icone: 'i-lucide-headset',
-    tom: 'bg-n-blue-3 text-n-blue-11',
-    capacidades: [
-      { chave: 'CAP_1', tipo: 'pode' },
-      { chave: 'CAP_2', tipo: 'pode' },
-      { chave: 'CAP_3', tipo: 'soOlha' },
-    ],
-  },
-  {
-    chave: 'VENDEDOR',
-    icone: 'i-lucide-handshake',
-    tom: 'bg-n-teal-3 text-n-teal-11',
-    capacidades: [
-      { chave: 'CAP_1', tipo: 'pode' },
-      { chave: 'CAP_2', tipo: 'pode' },
-      { chave: 'CAP_3', tipo: 'pode' },
-    ],
-  },
-  {
-    chave: 'SUPERVISOR',
-    icone: 'i-lucide-eye',
-    tom: 'bg-n-amber-3 text-n-amber-11',
-    capacidades: [
-      { chave: 'CAP_1', tipo: 'pode' },
-      { chave: 'CAP_2', tipo: 'pode' },
-      { chave: 'CAP_3', tipo: 'pode' },
-    ],
-  },
-];
+const destaques = computed(() =>
+  PRONTAS.filter(pronta => DESTAQUES.includes(pronta.chave)).map(pronta =>
+    cartaoPronto(pronta, giver.value)
+  )
+);
 </script>
 
 <template>
@@ -86,17 +63,17 @@ const DESTAQUES = [
       {{ $t('FUNCOES_EQUIPE.VAZIO.DESTAQUE') }}
     </h2>
     <ul class="grid gap-4 p-0 m-0 list-none sm:grid-cols-3">
-      <li v-for="pronta in DESTAQUES" :key="pronta.chave" class="flex">
+      <li v-for="pronta in destaques" :key="pronta.chave" class="flex">
         <button
           type="button"
           :data-pronta="pronta.chave"
           class="flex flex-col w-full gap-3 p-5 transition border shadow-sm text-start rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           :aria-label="
             $t('FUNCOES_EQUIPE.VAZIO.CRIAR_PRONTA', {
-              nome: $t(`FUNCOES_EQUIPE.PRONTAS.${pronta.chave}.NOME`),
+              nome: nome(pronta.chave),
             })
           "
-          @click="emit('criar')"
+          @click="emit('criar', pronta.chave)"
         >
           <span
             class="grid place-items-center size-11 rounded-xl"
@@ -106,7 +83,7 @@ const DESTAQUES = [
           </span>
           <span class="flex items-center gap-2">
             <span class="flex-1 text-lg font-semibold text-n-slate-12">
-              {{ $t(`FUNCOES_EQUIPE.PRONTAS.${pronta.chave}.NOME`) }}
+              {{ nome(pronta.chave) }}
             </span>
             <span
               class="i-lucide-chevron-right size-5 text-n-slate-11 rtl:rotate-180"
@@ -114,23 +91,21 @@ const DESTAQUES = [
             />
           </span>
           <span class="text-[0.9375rem] leading-snug text-n-slate-11">
-            {{ $t(`FUNCOES_EQUIPE.PRONTAS.${pronta.chave}.DESCRICAO`) }}
+            {{ descricao(pronta.chave) }}
           </span>
           <span class="flex flex-col gap-1.5 text-[0.9375rem] text-n-slate-12">
             <span
-              v-for="capacidade in pronta.capacidades"
-              :key="capacidade.chave"
-              :data-tipo="capacidade.tipo"
+              v-for="item in pronta.capacidades"
+              :key="item.chave"
+              :data-tipo="item.tipo"
               class="flex items-start gap-2"
             >
               <span
                 class="size-4 mt-1 shrink-0"
-                :class="ICONE_DO_TIPO[capacidade.tipo]"
+                :class="ICONE_DA_CAPACIDADE[item.tipo]"
                 aria-hidden="true"
               />
-              {{
-                $t(`FUNCOES_EQUIPE.PRONTAS.${pronta.chave}.${capacidade.chave}`)
-              }}
+              {{ capacidade(item) }}
             </span>
           </span>
         </button>
