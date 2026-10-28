@@ -65,24 +65,69 @@ const checkOf = search => {
   return planOf(search);
 };
 
-const snapshot = search => ({
-  state: STATES[search.status] || 'lendo',
-  error: search.error,
-  read: search.read,
-  total: search.total,
-  people: search.people.map(person),
-  cost: search.cost,
-  leftAside: search.left_aside,
-});
+// Queued with nobody else reading: the readers start on the next job, so the screen already says it is reading.
+const stateOf = search => {
+  if (search.status === 'queued' && !search.ahead_minutes) return 'lendo';
+  return STATES[search.status] || 'lendo';
+};
+
+// Who was found, by id: a full answer replaces it, an answer with `since` brings only who changed (a person can move
+// from the list to "left aside" and back, so each id lives in one of the two).
+const createRoster = () => {
+  const people = new Map();
+  const aside = new Map();
+  return {
+    take(search, full) {
+      if (full) {
+        people.clear();
+        aside.clear();
+      }
+      search.people.forEach(item => {
+        aside.delete(item.id);
+        people.set(item.id, person(item));
+      });
+      search.left_aside.forEach(([name, reason, id]) => {
+        people.delete(id);
+        aside.set(id, [name, reason, id]);
+      });
+    },
+    people: () => [...people.values()].sort((a, b) => a.id - b.id),
+    aside: () => [...aside.values()],
+  };
+};
 
 export const createConversationAudienceApi = () => {
   let searchId = null;
   let timer = null;
+  let cursor = null;
+  const roster = createRoster();
   // Bumped when the screen leaves or starts over: a wait for the plan from before stops asking the server.
   let generation = 0;
 
   const fetchSearch = async () =>
     (await ConversationAudiencesAPI.show(searchId)).data;
+
+  // The progress of the search, people merged in the roster. `full` reads the whole list (opening, and the end,
+  // when a conversation the person can no longer open may have left it).
+  const snapshot = (search, full) => {
+    roster.take(search, full);
+    cursor = search.cursor;
+    return {
+      state: stateOf(search),
+      error: search.error,
+      read: search.read,
+      total: search.total,
+      people: roster.people(),
+      cost: search.cost,
+      leftAside: roster.aside(),
+      skipped: search.skipped || 0,
+      aheadMinutes: search.ahead_minutes,
+      finishing: Boolean(search.finishing),
+    };
+  };
+
+  const fetchSince = async () =>
+    (await ConversationAudiencesAPI.show(searchId, cursor)).data;
 
   const untilPlanned = async () => {
     const mine = generation;
@@ -140,21 +185,39 @@ export const createConversationAudienceApi = () => {
       }
       // Saved already, or never planned: the screen starts a new request.
       if (search.status === 'saved' || !search.plan?.cost) return null;
-      return { ...base, plan: planOf(search), progress: snapshot(search) };
+      return {
+        ...base,
+        plan: planOf(search),
+        progress: snapshot(search, true),
+      };
     },
 
+    // In line only when another search of the account is reading (the server says for about how long).
     async start() {
-      await ConversationAudiencesAPI.start(searchId);
-      return { queued: false, aheadMinutes: 1 };
+      const { data } = await ConversationAudiencesAPI.start(searchId);
+      cursor = null;
+      return {
+        queued: Boolean(data.ahead_minutes),
+        aheadMinutes: data.ahead_minutes,
+      };
     },
 
-    // Polls the search while the readers go; people appear as they are found.
+    // Polls the search while the readers go; people appear as they are found. After "Parar", it goes on until the
+    // wave in flight writes who it found; the last read is the whole list.
     watch(_plan, onChange) {
       stopPolling();
+      const mine = generation;
       const tick = async () => {
-        const search = await fetchSearch();
-        onChange(snapshot(search));
-        if (READING.includes(search.status)) timer = setTimeout(tick, POLL_MS);
+        const full = cursor === null;
+        const search = await fetchSince();
+        if (mine !== generation) return;
+        if (READING.includes(search.status) || search.finishing) {
+          onChange(snapshot(search, full));
+          timer = setTimeout(tick, POLL_MS);
+          return;
+        }
+        const last = await fetchSearch();
+        if (mine === generation) onChange(snapshot(last, true));
       };
       timer = setTimeout(tick, POLL_MS);
     },
@@ -165,10 +228,16 @@ export const createConversationAudienceApi = () => {
       this.watch(plan, onChange);
     },
 
-    // Stops the readers; who was found so far stays. The list keeps updating until the server confirms.
+    // Stops the readers; who was found so far stays. The list keeps updating (watch) until the wave in flight ends.
     async stop() {
       if (searchId) await ConversationAudiencesAPI.stop(searchId);
+    },
+
+    // Gives up while still in line: the plan comes back and nothing more is read.
+    async giveUp() {
+      generation += 1;
       stopPolling();
+      if (searchId) await ConversationAudiencesAPI.stop(searchId);
     },
 
     // Leaving the screen: the search keeps going on the server.
@@ -182,6 +251,7 @@ export const createConversationAudienceApi = () => {
       generation += 1;
       stopPolling();
       searchId = null;
+      cursor = null;
     },
 
     async conversation(personId) {

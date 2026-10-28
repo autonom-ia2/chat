@@ -1987,6 +1987,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_600000) do
     t.datetime "started_at"
     t.datetime "finished_at"
     t.datetime "heartbeat_at"
+    t.string "run_token"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "status"], name: "index_conversation_audience_searches_on_account_id_and_status"

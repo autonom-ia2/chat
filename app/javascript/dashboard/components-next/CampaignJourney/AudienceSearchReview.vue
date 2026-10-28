@@ -107,6 +107,17 @@ const nobodyText = computed(() =>
           {{ t(`${NS}.NOBODY_TITLE`) }}
         </h3>
         <p class="m-0 max-w-md text-base text-n-slate-11">{{ nobodyText }}</p>
+        <p
+          v-if="progress.skipped"
+          class="m-0 max-w-md text-sm text-n-amber-11"
+          data-test="nobody-skipped"
+        >
+          {{
+            t(`${NS}.SKIPPED_LINE`, {
+              count: formatNumber(progress.skipped, locale),
+            })
+          }}
+        </p>
         <Button
           :label="t(`${NS}.CHANGE_REQUEST`)"
           class="!min-h-12 !rounded-xl !px-6 !text-base"

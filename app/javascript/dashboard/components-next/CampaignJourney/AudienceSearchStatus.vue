@@ -204,6 +204,13 @@ const costText = computed(() =>
           }}
           {{ costText }}
         </p>
+        <p
+          v-if="progress.skipped"
+          class="m-0 text-sm leading-6 text-n-amber-11"
+          data-test="status-skipped"
+        >
+          {{ t(`${NS}.SKIPPED_LINE`, { count: n(progress.skipped) }) }}
+        </p>
       </div>
       <button
         type="button"

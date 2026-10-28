@@ -2,14 +2,20 @@
 # paying, it checks the ceiling: if this wave could go past it, nothing is read and the search asks first.
 #
 # What each batch found is written as soon as the wave ends, so the list on the screen fills up wave by wave and a
-# search stopped midway keeps who it found. A batch that failed stays pending and is read again in the next wave;
-# after MAX_ATTEMPTS, or when the failure will not pass by itself (key revoked, quota), the search stops as failed.
+# search stopped midway keeps who it found. A batch that failed stays pending and is read again after a pause
+# (RETRY). What happens after MAX_ATTEMPTS depends on what failed:
+# - the key (refused, no credit, no such model): the search stops as failed at once, every batch would fail too;
+# - the AI was out (429, 5xx, timeout, network): the search stops as failed; "Tentar de novo" picks up from there;
+# - the answer for those conversations (refused, empty or unreadable): the batch is skipped and the search goes on,
+#   so one bad batch never blocks the rest. The screen says how many conversations were left unread.
 class ConversationAudience::Wave
   CONTINUE = :continue
+  RETRY = :retry
   DONE = :done
   CEILING = :ceiling
   FAILED = :failed
   MAX_ATTEMPTS = 3
+  KEY_STATUSES = [401, 402, 403, 404].freeze
 
   def initialize(search, credential:)
     @search = search
@@ -24,7 +30,7 @@ class ConversationAudience::Wave
 
     results = ConversationAudience::Reader.new(@search, credential: @credential).call(with_texts(batches))
     results.each { |result| save(result) }
-    failed?(results) ? FAILED : CONTINUE
+    outcome(results.select(&:error))
   end
 
   private
@@ -45,34 +51,49 @@ class ConversationAudience::Wave
     cost = ConversationAudience::Cost.of(ConversationAudience::Reader::MODEL, result.usage)
     record_usage(result.usage) if result.usage.present?
     ConversationAudienceSearch.transaction do
-      result.error ? retry_later(result, cost) : done(result, cost)
-      @search.update!(spent_usd: @search.spent_usd + cost, heartbeat_at: Time.current)
+      read = result.error ? retry_later(result, cost) : done(result, cost)
+      # Added in the database, never from the value read before the wave: the ceiling counts every call.
+      ConversationAudienceSearch.where(id: @search.id).update_all( # rubocop:disable Rails/SkipsModelValidations
+        ['spent_usd = spent_usd + ?, conversations_read = conversations_read + ?, heartbeat_at = ?', cost, read, Time.current]
+      )
     end
   end
 
   def retry_later(result, cost)
     batch = result.batch
-    batch.update!(attempts: batch.attempts + 1, error: result.error.class.name, spent_usd: batch.spent_usd + cost)
+    attempts = batch.attempts + 1
+    skip = attempts >= MAX_ATTEMPTS && about_batch?(result.error)
+    batch.update!(attempts: attempts, error: result.error.class.name, spent_usd: batch.spent_usd + cost,
+                  status: skip ? ConversationAudienceBatch::SKIPPED : ConversationAudienceBatch::PENDING)
+    0
   end
 
   def done(result, cost)
     add_people(result.people)
     result.batch.update!(status: ConversationAudienceBatch::DONE, error: nil, spent_usd: result.batch.spent_usd + cost)
-    @search.increment(:conversations_read, result.batch.conversation_ids.size)
+    result.batch.conversation_ids.size
   end
 
-  def failed?(results)
-    results.any? do |result|
-      result.error && (result.batch.attempts >= MAX_ATTEMPTS || !passing?(result.error))
-    end
+  def outcome(failed)
+    failed = failed.reject { |result| result.batch.status == ConversationAudienceBatch::SKIPPED }
+    return CONTINUE if failed.empty?
+    return FAILED if failed.any? { |result| key?(result.error) || (passing?(result.error) && result.batch.attempts >= MAX_ATTEMPTS) }
+
+    RETRY
   end
 
-  # What can pass by itself: the AI's own passing failures (429, 5xx, timeout), an empty or unreadable answer, and
-  # anything that is not an answer from the AI (network). A refused key or exhausted quota does not pass.
+  def key?(error)
+    error.is_a?(Crm::Ai::ResponsesClient::Error) && KEY_STATUSES.include?(error.status.to_i)
+  end
+
+  # The client wraps network failures as passing errors of its own (rede: true).
   def passing?(error)
-    return true unless error.is_a?(Crm::Ai::ResponsesClient::Error)
+    error.is_a?(Crm::Ai::ResponsesClient::Error) && error.passageira?
+  end
 
-    error.passageira? || error.message == 'empty_response'
+  # Neither the key nor the AI being out: the answer for these conversations (a 400, an empty or unreadable answer).
+  def about_batch?(error)
+    !key?(error) && !passing?(error)
   end
 
   # A contact with several conversations keeps the strongest group, and the reason of that conversation.

@@ -126,7 +126,10 @@ const reopen = async id => {
   audienceName.value = opened.plan.name || '';
   onProgress(opened.progress);
   step.value = 'revise';
-  if (['fila', 'lendo'].includes(opened.progress.state)) {
+  if (
+    ['fila', 'lendo'].includes(opened.progress.state) ||
+    opened.progress.finishing
+  ) {
     api.watch(plan.value, onProgress);
   }
 };
@@ -189,7 +192,7 @@ const resume = async () => {
 // Still in line: nothing was paid, so giving up needs no confirmation (the server puts the plan back).
 const cancelQueued = async () => {
   try {
-    await api.stop();
+    await api.giveUp();
     step.value = 'confira';
   } catch {
     useAlert(t(`${NS}.ACTION_ERROR`));

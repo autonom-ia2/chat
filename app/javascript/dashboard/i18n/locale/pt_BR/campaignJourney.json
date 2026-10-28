@@ -343,6 +343,7 @@
         "RESULT_TITLE": "{count} pessoas vão receber",
         "RESULT_LINE": "Li {read} conversas.",
         "STOPPED_LINE": "Você parou a procura. Li {read} de {total} conversas.",
+        "SKIPPED_LINE": "A IA da sua empresa não conseguiu ler {count} conversas, mesmo tentando de novo. Elas ficaram fora da lista.",
         "COST_SO_FAR": "Custou {brl} ({usd}).",
         "NOBODY_TITLE": "Ninguém combinou com o pedido",
         "NOBODY_TEXT": "Li {read} conversas (custou {brl}) e ninguém combinou. Tente um período maior ou escreva o pedido de outro jeito.",

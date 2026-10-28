@@ -31,10 +31,13 @@ class Api::V1::Accounts::CampaignJourney::ConversationAudiencesController < Api:
     }
   end
 
-  # A search whose job was lost (deploy, process killed) gets a new one when the screen looks at it.
+  # A search whose job was lost (deploy, process killed) gets a new one when the screen looks at it — once: only the
+  # call that moves the old heartbeat enqueues (the screen asks every few seconds).
   def show
-    ConversationAudience::ReadJob.perform_later(@search.id) if @search.lost?
-    render json: payload(@search)
+    token = ConversationAudienceSearch.revive(@search.id)
+    ConversationAudience::ReadJob.perform_later(@search.id, token) if token
+    ConversationAudience::PlanJob.perform_later(@search.id) if ConversationAudienceSearch.replan(@search.id)
+    render json: ConversationAudience::Payload.new(@search.reload, since: since).to_h
   end
 
   # One search at a time per person: each new request pays the planner on the account's key.
@@ -47,6 +50,8 @@ class Api::V1::Accounts::CampaignJourney::ConversationAudiencesController < Api:
   end
 
   def answer
+    return render_unprocessable('search_in_progress') if busy_elsewhere?
+
     answer = params[:answer].to_s.strip.first(ConversationAudienceSearch::REQUEST_MAX)
     moved = ConversationAudienceSearch.move(@search.id, from: ConversationAudienceSearch::QUESTION, to: ConversationAudienceSearch::PLANNING,
                                                         answer: answer)
@@ -57,7 +62,7 @@ class Api::V1::Accounts::CampaignJourney::ConversationAudiencesController < Api:
   end
 
   def start
-    move(from: [ConversationAudienceSearch::PLANNED], to: ConversationAudienceSearch::QUEUED)
+    queue(from: [ConversationAudienceSearch::PLANNED])
   end
 
   def resume
@@ -68,7 +73,9 @@ class Api::V1::Accounts::CampaignJourney::ConversationAudiencesController < Api:
     ceiling = @search.spent_usd + (ConversationAudience::Cost.estimate_usd(rest.sum(:chars), rest.count) *
                                    ConversationAudience::Cost::CEILING_FACTOR)
     @search.update!(ceiling_usd: [@search.ceiling_usd.to_d, ceiling].max)
-    move(from: ConversationAudienceSearch::RESUMABLE, to: ConversationAudienceSearch::QUEUED, error: nil)
+    # "Tentar de novo" after the AI was out gives each batch its tries again.
+    rest.update_all(attempts: 0) # rubocop:disable Rails/SkipsModelValidations
+    queue(from: ConversationAudienceSearch::RESUMABLE, error: nil)
   end
 
   def stop
@@ -115,15 +122,30 @@ class Api::V1::Accounts::CampaignJourney::ConversationAudiencesController < Api:
     @search = searches.find(params[:id])
   end
 
-  def move(from:, to:, **attributes)
-    return render_unprocessable('wrong_status') unless ConversationAudienceSearch.move(@search.id, from: from, to: to, **attributes)
+  # One search working on the account's key per person: a second one waits for the first (#2303 review).
+  def busy_elsewhere?
+    searches.where.not(id: @search.id).exists?(status: ConversationAudienceSearch::BUSY)
+  end
 
-    ConversationAudience::ReadJob.perform_later(@search.id)
+  def queue(from:, **attributes)
+    return render_unprocessable('search_in_progress') if busy_elsewhere?
+
+    token = ConversationAudienceSearch.queue!(@search.id, from: from, **attributes)
+    return render_unprocessable('wrong_status') unless token
+
+    ConversationAudience::ReadJob.perform_later(@search.id, token)
     render json: payload(@search.reload)
   end
 
   def payload(search)
     ConversationAudience::Payload.new(search).to_h
+  end
+
+  # The cursor of the previous answer; anything else reads the whole list.
+  def since
+    Time.iso8601(params[:since].to_s)
+  rescue ArgumentError
+    nil
   end
 
   def render_unprocessable(code)

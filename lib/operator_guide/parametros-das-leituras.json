@@ -460,7 +460,9 @@
   },
   "campaign_journey/conversation_audiences/:id": {
     "controller": "api/v1/accounts/campaign_journey/conversation_audiences#show",
-    "parametros": []
+    "parametros": [
+      "since"
+    ]
   },
   "campaign_journey/conversation_audiences/:id/conversation": {
     "controller": "api/v1/accounts/campaign_journey/conversation_audiences#conversation",

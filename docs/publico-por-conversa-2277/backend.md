@@ -9,7 +9,13 @@ própria conta lê as conversas do período e monta a lista. A pessoa revisa e s
   e `CAMPAIGN_IMPORT_ENABLED`. Sem qualquer um dos três, a API responde 404.
 - Podem usar o administrador e quem tem uma função com `campaign_manage` **e** `conversation_view`.
 - Cada busca pertence a quem a fez. Ninguém mais vê a busca, nem pela API.
+- No público salvo, os nomes seguem a visibilidade da conversa de origem: nos endpoints `contacts` e `sample_contact`,
+  cada pessoa só vê quem veio de uma conversa que ela pode abrir (o admin vê todos). O total e o envio da campanha
+  continuam com o público inteiro. Público sem o vínculo com a busca mostra a lista vazia.
 - A IA só lê as conversas que a pessoa pode abrir (caixas, times e funis). A conferência acontece no plano e de novo em cada leva de leitura.
+- A leitura roda numa cadeia única de jobs por busca: cada "Começar" ou "Continuar" gera um `run_token` novo, e job de
+  cadeia antiga termina sem fazer nada. Busca perdida (sem batimento há 10 min, lendo ou planejando) é retomada uma
+  vez só, quando a tela olha para ela.
 - Os dois jobs conferem o acesso de novo antes de gastar a chave da conta. Se a pessoa perdeu a função ou saiu da conta, a busca termina como `failed` com o erro `no_access`.
 - A lista e o salvar mostram só quem veio de uma conversa que a pessoa ainda pode abrir. Quem perdeu uma caixa deixa de ver o motivo das pessoas dela.
 
@@ -39,8 +45,19 @@ própria conta lê as conversas do período e monta a lista. A pessoa revisa e s
   limite espera na fila; nunca dá erro por isso.
 - Antes de cada onda, se a onda puder passar do teto, a busca para em `ceiling` e pergunta.
 - Lote lido não é lido de novo. Parar, continuar e retomar depois de erro seguem do próximo lote pendente.
-- Falha passageira (429, 5xx, rede): o lote tenta de novo na onda seguinte, até 3 vezes. Chave recusada ou cota
-  esgotada param a busca em `failed`.
+- Lote que falhou tenta de novo depois de 30 s, até 3 vezes. O que acontece depois depende do que falhou:
+  - chave (401, 402, 403, 404): a busca para em `failed` na hora, porque todo lote falharia igual;
+  - IA fora do ar (429, 5xx, tempo esgotado, rede): na 3ª tentativa a busca para em `failed`. "Tentar de novo"
+    devolve as 3 tentativas a cada lote pendente;
+  - a resposta daquele lote (400, resposta vazia ou ilegível): o lote fica `skipped` e a busca segue. Um lote ruim
+    nunca trava o resto, e a tela diz quantas conversas ficaram sem ler.
+- A tela consulta a busca a cada 3 s. Depois da primeira leitura, manda o `cursor` da resposta anterior e recebe só
+  quem mudou (com 30 s de sobreposição, para não perder quem uma onda ainda gravava). Ao terminar, lê a lista inteira
+  uma vez.
+- "Parar" com uma onda no meio: a onda ainda grava quem achou. Enquanto ela não termina, a resposta traz
+  `finishing: true` e a tela continua lendo.
+- Na fila atrás de outra busca da conta, a resposta traz `ahead_minutes` (quanto falta para a outra terminar). Sem
+  ninguém na frente, a tela já mostra "lendo".
 
 ### 3. Salvar (`ConversationAudience::Save`)
 
@@ -54,7 +71,9 @@ própria conta lê as conversas do período e monta a lista. A pessoa revisa e s
 - Cada linha leva a empresa do contato e, como colunas do público, a cidade, o país e todos os atributos
   personalizados de contato da conta (`ConversationAudience::Columns`). A mensagem usa essas colunas como
   `publico.<coluna>`. Fica de fora só a coluna que ninguém do público preencheu. Atributos de data, moeda e link levam
-  o tipo, para a mensagem formatar ("04/05/1990").
+  o tipo, para a mensagem formatar ("04/05/1990"). Coluna cuja chave já existe (outra coluna, ou uma que a campanha
+  preenche sozinha: `nome`, `primeiro_nome`, `empresa`, `email`) ganha " (2)": um atributo "Empresa" nunca substitui a
+  empresa do contato.
 - Esses dados (empresa e colunas) são leitura de contato. Só entram se quem salva tem `contact_view` (ou
   `contact_manage`). Na tela do público salvo, quem não lê contatos não recebe os valores (`sample_contact`) nem a
   empresa (`contacts`), e o painel de contatos mostra telefone e e-mail mascarados. O envio da campanha usa as colunas

@@ -4,7 +4,8 @@ import ApiClient from './ApiClient';
 // "Novo público pedindo em palavras" (#2277): the account's own AI reads the conversations and builds the list.
 // GET  .../campaign_journey/conversation_audiences/status            { has_own_key, periods, open_search_id }
 // POST .../campaign_journey/conversation_audiences                   { request, period } → search (planning)
-// GET  .../campaign_journey/conversation_audiences/:id               search: plan, progress, cost, people
+// GET  .../campaign_journey/conversation_audiences/:id               ?since= → search: plan, progress, cost, people
+//                                                                     (with since: only who changed after that cursor)
 // POST .../campaign_journey/conversation_audiences/:id/answer        { answer } → planning again
 // POST .../campaign_journey/conversation_audiences/:id/start|stop|resume
 // GET  .../campaign_journey/conversation_audiences/:id/conversation  ?person_id= → { payload: [message] }
@@ -16,6 +17,10 @@ class ConversationAudiencesAPI extends ApiClient {
 
   status() {
     return axios.get(`${this.url}/status`);
+  }
+
+  show(id, since) {
+    return axios.get(`${this.url}/${id}`, { params: since ? { since } : {} });
   }
 
   answer(id, answer) {

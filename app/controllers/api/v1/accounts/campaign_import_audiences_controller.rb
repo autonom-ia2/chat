@@ -77,8 +77,7 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   # saved by this audience, paged, with their company. Contacts has no list filter, so the panel reads them here.
   def contacts
     page = [params[:page].to_i, 1].max
-    ids = @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).distinct.pluck(:contact_id)
-    scope = Current.account.contacts.where(id: ids).order(:name, :id)
+    scope = Current.account.contacts.where(id: listed_contact_ids).order(:name, :id)
     records = scope.offset((page - 1) * CONTACTS_PER_PAGE).limit(CONTACTS_PER_PAGE)
     records = records.includes(:company) if Contact.reflect_on_association(:company)
     render json: {
@@ -90,7 +89,9 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   # GET /campaign_imports/:id/sample_contact (#993, PRD §6.3 "Como o cliente vê"): the first eligible row of
   # this audience, only its own values. `payload: null` when the audience has none.
   def sample_contact
-    row = @campaign_import.campaign_import_rows.where(status: SAMPLE_ROW_STATUSES).order(:row_number).first
+    rows = @campaign_import.campaign_import_rows.where(status: SAMPLE_ROW_STATUSES).order(:row_number)
+    rows = rows.where(contact_id: named_contact_ids.to_a) if named_contact_ids
+    row = rows.first
     render json: { payload: row && sample_payload(row) }
   end
 
@@ -112,6 +113,12 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   end
 
   private
+
+  # The audience's contacts; from a search by conversation, only those the viewer may see by name.
+  def listed_contact_ids
+    ids = @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil).distinct.pluck(:contact_id)
+    named_contact_ids ? ids.select { |id| named_contact_ids.include?(id) } : ids
+  end
 
   def ensure_campaign_import_enabled
     render json: { error: 'campaign_import.disabled' }, status: :not_found unless CampaignImports::Config.enabled?
@@ -184,6 +191,15 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     @masked_reach ||= @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil)
                                       .pluck(:contact_id, :raw_phone_masked, :email_masked)
                                       .to_h { |contact_id, phone, email| [contact_id, [phone, email]] }
+  end
+
+  # #2277: who of an audience built from the conversations the viewer may see by name; nil for any other audience.
+  def named_contact_ids
+    return @named_contact_ids if defined?(@named_contact_ids)
+
+    @named_contact_ids = if ConversationAudience::Access.from_conversations?(@campaign_import)
+                           ConversationAudience::Access.visible_contact_ids(@campaign_import, Current.user)
+                         end
   end
 
   def contact_data_hidden?

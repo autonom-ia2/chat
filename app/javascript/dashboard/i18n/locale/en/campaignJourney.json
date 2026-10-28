@@ -343,6 +343,7 @@
         "RESULT_TITLE": "{count} people will receive",
         "RESULT_LINE": "I read {read} conversations.",
         "STOPPED_LINE": "You stopped the search. I read {read} of {total} conversations.",
+        "SKIPPED_LINE": "Your company AI could not read {count} conversations, even after trying again. They were left out of the list.",
         "COST_SO_FAR": "It cost {brl} ({usd}).",
         "NOBODY_TITLE": "Nobody matched the request",
         "NOBODY_TEXT": "I read {read} conversations (it cost {brl}) and nobody matched. Try a longer period or write the request another way.",

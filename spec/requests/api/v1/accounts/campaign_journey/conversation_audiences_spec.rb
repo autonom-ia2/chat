@@ -162,9 +162,28 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
     post "#{path}/#{failed.id}/resume", headers: headers
     expect(response).to have_http_status(:unprocessable_entity)
 
-    lost = search_of(admin, status: 'reading', heartbeat_at: 1.hour.ago)
-    get "#{path}/#{lost.id}", headers: headers
-    expect(ConversationAudience::ReadJob).to have_been_enqueued.with(lost.id)
+    lost = search_of(admin, status: 'reading', heartbeat_at: 1.hour.ago, run_token: 'antiga')
+    3.times { get "#{path}/#{lost.id}", headers: headers }
+    token = lost.reload.run_token
+    expect(token).not_to eq('antiga')
+    expect(ConversationAudience::ReadJob).to have_been_enqueued.with(lost.id, token).once
+
+    planning = search_of(admin, status: 'planning')
+    planning.update_columns(updated_at: 1.hour.ago) # rubocop:disable Rails/SkipsModelValidations
+    2.times { get "#{path}/#{planning.id}", headers: headers }
+    expect(ConversationAudience::PlanJob).to have_been_enqueued.with(planning.id).once
+  end
+
+  it 'refuses to start or answer a search while another one of the same person works on the key' do
+    search_of(admin, status: 'planning')
+    planned = search_of(admin, status: 'planned')
+    question = search_of(admin, status: 'question')
+
+    post "#{path}/#{planned.id}/start", headers: headers
+    expect(response.parsed_body['error']).to eq('search_in_progress')
+    post "#{path}/#{question.id}/answer", params: { answer: 'sim' }, headers: headers, as: :json
+    expect(response.parsed_body['error']).to eq('search_in_progress')
+    expect(ConversationAudience::ReadJob).not_to have_been_enqueued
   end
 
   it 'starts a planned search, stops it and resumes it' do
@@ -173,7 +192,7 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
 
     post "#{path}/#{search.id}/start", headers: headers
     expect(search.reload.status).to eq('queued')
-    expect(ConversationAudience::ReadJob).to have_been_enqueued.with(search.id)
+    expect(ConversationAudience::ReadJob).to have_been_enqueued.with(search.id, search.run_token)
 
     post "#{path}/#{search.id}/stop", headers: headers
     expect(search.reload.status).to eq('planned')
@@ -183,8 +202,10 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
     post "#{path}/#{search.id}/stop", headers: headers
     expect(search.reload.status).to eq('stopped')
 
+    search.batches.update_all(attempts: 3) # rubocop:disable Rails/SkipsModelValidations
     post "#{path}/#{search.id}/resume", headers: headers
     expect(search.reload.status).to eq('queued')
+    expect(search.batches.pluck(:attempts)).to eq([0])
 
     post "#{path}/#{search.id}/start", headers: headers
     expect(response).to have_http_status(:unprocessable_entity)
@@ -196,12 +217,15 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
     contact = create(:contact, account: account, name: 'João', phone_number: '+5511987654321', email: 'joao@example.com',
                                custom_attributes: { 'time' => 'Cruzeiro' }, additional_attributes: { 'company_name' => 'João X' })
     search = search_of(admin, status: 'done')
-    person = ConversationAudiencePerson.create!(search: search, contact: contact, group: 'certeza',
-                                                conversation: create(:conversation, account: account, contact: contact))
+    conversation = create(:conversation, account: account, contact: contact)
+    person = ConversationAudiencePerson.create!(search: search, contact: contact, group: 'certeza', conversation: conversation)
     post "#{path}/#{search.id}/save", params: { name: 'Cruzeirenses', person_ids: [person.id] }, headers: headers, as: :json
     audience_path = "/api/v1/accounts/#{account.id}/campaign_imports/#{response.parsed_body['id']}"
+    # Both open the conversation (its inbox); only the second reads contacts.
+    without, reader = [%w[campaign_manage conversation_view], %w[campaign_manage conversation_view contact_view]].map do |keys|
+      with_role(keys).tap { |user| create(:inbox_member, user: user, inbox: conversation.inbox) }
+    end
 
-    without = with_role(%w[campaign_manage])
     get "#{audience_path}/sample_contact", headers: headers(without)
     expect(response.parsed_body['payload']).to include('name' => 'João', 'company_name' => nil, 'extra_values' => {})
     get "#{audience_path}/contacts", headers: headers(without)
@@ -210,12 +234,38 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
     expect([hidden['phone_number'], hidden['email']]).to all(be_present)
     expect(response.body).not_to include('987654321', 'joao@example.com')
 
-    reader = with_role(%w[campaign_manage contact_view])
     get "#{audience_path}/sample_contact", headers: headers(reader)
     expect(response.parsed_body['payload']).to include('company_name' => 'João X', 'extra_values' => { 'Time' => 'Cruzeiro' })
     get "#{audience_path}/contacts", headers: headers(reader)
     expect(response.parsed_body['payload'].sole).to include('phone_number' => '+5511987654321', 'email' => 'joao@example.com',
                                                             'company_name' => 'João X')
+  end
+
+  it 'lists by name only the people whose conversation the viewer can open, the admin sees all' do
+    inbox_a = create(:inbox, account: account)
+    inbox_b = create(:inbox, account: account)
+    search = search_of(admin, status: 'done')
+    ids = [['Bruno', inbox_b, '+5511987654322'], ['Ana', inbox_a, '+5511987654321']].map do |name, inbox, phone|
+      contact = create(:contact, account: account, name: name, phone_number: phone)
+      ConversationAudiencePerson.create!(search: search, contact: contact, group: 'certeza',
+                                         conversation: create(:conversation, account: account, inbox: inbox, contact: contact)).id
+    end
+    post "#{path}/#{search.id}/save", params: { name: 'Reclamaram', person_ids: ids }, headers: headers, as: :json
+    audience = account.campaign_imports.find(response.parsed_body['id'])
+    audience_path = "/api/v1/accounts/#{account.id}/campaign_imports/#{audience.id}"
+    viewer = with_role(%w[campaign_manage conversation_view])
+    create(:inbox_member, user: viewer, inbox: inbox_a)
+
+    get "#{audience_path}/contacts", headers: headers(viewer)
+    expect(response.parsed_body['payload'].pluck('name')).to eq(['Ana'])
+    get "#{audience_path}/sample_contact", headers: headers(viewer)
+    expect(response.parsed_body.dig('payload', 'name')).to eq('Ana')
+    get "#{audience_path}/contacts", headers: headers
+    expect(response.parsed_body['payload'].pluck('name')).to eq(%w[Ana Bruno])
+
+    audience.update!(options: audience.options.except('conversation_audience_search_id'))
+    get "#{audience_path}/contacts", headers: headers
+    expect(response.parsed_body['payload']).to eq([])
   end
 
   it 'shows the people found without who cannot receive, and saves the audience' do
@@ -231,11 +281,52 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
 
     get "#{path}/#{search.id}", headers: headers
     expect(response.parsed_body['people'].pluck('id', 'name', 'confidence')).to eq([[kept.id, 'Mariana', 'certeza']])
-    expect(response.parsed_body['left_aside']).to eq([%w[Fixo sem_contato]])
+    expect(response.parsed_body['left_aside']).to eq([['Fixo', 'sem_contato', aside.id]])
 
     post "#{path}/#{search.id}/save", params: { name: 'Cotaram', person_ids: [kept.id, aside.id] }, headers: headers, as: :json
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to include('name' => 'Cotaram', 'count' => 1)
     expect(account.campaign_imports.find(response.parsed_body['id'])).to be_audience
+  end
+
+  it 'sends, after the first read, only who changed since the cursor' do
+    search = search_of(admin, status: 'reading')
+    inbox = create(:inbox, account: account)
+    first, second = create_list(:contact, 2, account: account, phone_number: nil).map do |contact|
+      conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
+      ConversationAudiencePerson.create!(search: search, contact: contact, conversation: conversation, group: 'provavel', reason: 'Talvez')
+    end
+
+    later = ConversationAudience::Payload::OVERLAP + 1.minute
+    travel later
+    get "#{path}/#{search.id}", headers: headers
+    expect(response.parsed_body['people'].pluck('id')).to eq([first.id, second.id])
+    cursor = response.parsed_body['cursor']
+
+    travel later
+    second.update!(group: 'certeza')
+    get "#{path}/#{search.id}", params: { since: cursor }, headers: headers
+    expect(response.parsed_body['people'].pluck('id', 'confidence')).to eq([[second.id, 'certeza']])
+  end
+
+  it 'says how long a search waits behind another of the account, and when a stopped one still finishes a wave' do
+    reader = create(:user, account: account, role: :administrator)
+    other = search_of(reader, status: 'reading', conversations_read: 50, conversations_total: 100, plan: { 'minutes' => 10 })
+    search = search_of(admin, status: 'queued')
+
+    get "#{path}/#{search.id}", headers: headers
+    expect(response.parsed_body).to include('ahead_minutes' => 5, 'finishing' => false)
+
+    other.update!(status: 'done')
+    get "#{path}/#{search.id}", headers: headers
+    expect(response.parsed_body['ahead_minutes']).to be_nil
+
+    search.update!(status: 'stopped')
+    key = ConversationAudience::ReadJob.lock_key(search.id)
+    Redis::LockManager.new.lock(key, 60)
+    get "#{path}/#{search.id}", headers: headers
+    expect(response.parsed_body['finishing']).to be(true)
+  ensure
+    Redis::LockManager.new.unlock(key) if key
   end
 end

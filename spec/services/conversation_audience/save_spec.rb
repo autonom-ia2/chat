@@ -62,6 +62,18 @@ RSpec.describe ConversationAudience::Save do
     expect(CampaignJourney::AudienceColumns.row_values(audience, mobile.id)).to include('time_do_coracao' => 'Cruzeiro', 'cidade' => 'Belo Horizonte')
   end
 
+  it 'never lets an attribute take a key the message fills by itself, like the company' do
+    create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'empresa_crm',
+                                         attribute_display_name: 'Empresa', attribute_display_type: 'text')
+    mobile.update!(custom_attributes: { 'empresa_crm' => 'Outra' }, additional_attributes: { 'company_name' => 'João X' })
+
+    audience = described_class.new(search, user: user, name: 'Com empresa', person_ids: [found(mobile).id]).perform
+
+    expect(audience.extra_columns).to eq(['Empresa (2)'])
+    expect(CampaignJourney::AudienceColumns.row_values(audience, mobile.id)).to eq('empresa_2' => 'Outra')
+    expect(audience.campaign_import_rows.first.company_name).to eq('João X')
+  end
+
   it 'leaves the contact data out when the person saving does not read contacts' do
     agent = create(:user, account: account, role: :agent)
     role = create(:custom_role, account: account, permissions: %w[campaign_manage conversation_view])

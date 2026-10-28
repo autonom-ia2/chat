@@ -34,6 +34,7 @@ class CreateConversationAudiences < ActiveRecord::Migration[7.2]
       t.datetime :started_at
       t.datetime :finished_at
       t.datetime :heartbeat_at
+      t.string :run_token
       t.timestamps
     end
     add_index :conversation_audience_searches, [:account_id, :status]

@@ -4,11 +4,14 @@
 # message then uses them as publico.<coluna> ("João, de Belo Horizonte, que torce para o Cruzeiro").
 #
 # A column nobody of the audience has a value for is left out. Dates, money and links get the type the message formats
-# them by (CampaignImports::ColumnTypes). Two columns with the same header get " (2)" in the second.
+# them by (CampaignImports::ColumnTypes). A column whose key is taken (another column, or a key the campaign fills
+# by itself: nome, primeiro_nome, empresa, email...) gets " (2)": an attribute "Empresa" never replaces the company.
 class ConversationAudience::Columns
   Column = Struct.new(:header, :type, :read)
 
   STANDARD = %w[city country].freeze
+  # Keys the campaign message already fills (CampaignJourney::EmailAudienceRecipients#custom_data and its RESERVED_KEYS).
+  TAKEN = %w[nome primeiro_nome empresa email contact unsubscribe_url].freeze
   TYPES = { 'date' => 'data', 'currency' => 'moeda', 'link' => 'link' }.freeze
 
   def initialize(account, contacts)
@@ -38,12 +41,23 @@ class ConversationAudience::Columns
   end
 
   def all
-    headers = Hash.new(0)
+    taken = TAKEN.dup
     (standard + custom).map do |column|
-      headers[column.header] += 1
-      count = headers[column.header]
-      count > 1 ? Column.new("#{column.header} (#{count})", column.type, column.read) : column
+      header = free_header(column.header, taken)
+      taken << key(header)
+      Column.new(header, column.type, column.read)
     end
+  end
+
+  def free_header(header, taken)
+    count = 1
+    candidate = header
+    candidate = "#{header} (#{count += 1})" while taken.include?(key(candidate))
+    candidate
+  end
+
+  def key(header)
+    CampaignImports::HeaderMapper.normalize_key(header)
   end
 
   def standard

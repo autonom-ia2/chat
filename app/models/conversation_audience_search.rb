@@ -36,17 +36,41 @@ class ConversationAudienceSearch < ApplicationRecord
   validates :period, inclusion: { in: PERIODS.keys }
   validates :status, inclusion: { in: STATUSES }
 
-  # A running search whose job was lost (process killed between waves): no heartbeat for LOST_AFTER.
+  # A running search whose job was lost (process killed between waves): no heartbeat for LOST_AFTER. The same for
+  # a planning search whose PlanJob was lost.
   LOST_AFTER = 10.minutes
 
   def running? = RUNNING.include?(status)
-  def lost? = running? && (heartbeat_at || updated_at) < LOST_AFTER.ago
   def resumable? = RESUMABLE.include?(status)
 
   # Conditional status change: only while the search is still in `from`, so a "Parar" clicked while a job runs is
-  # never overwritten (and the job never moves a search the person already stopped). -> true when it moved.
-  def self.move(id, from:, to:, **attributes)
-    where(id: id, status: from).update_all(attributes.merge(status: to, updated_at: Time.current)) == 1 # rubocop:disable Rails/SkipsModelValidations
+  # never overwritten (and the job never moves a search the person already stopped). With `token`, only while the
+  # search still belongs to that chain of ReadJob. -> true when it moved.
+  def self.move(id, from:, to:, token: nil, **attributes)
+    scope = where(id: id, status: from)
+    scope = scope.where(run_token: token) if token
+    scope.update_all(attributes.merge(status: to, updated_at: Time.current)) == 1 # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # Each start or resume hands the reading to ONE chain of ReadJob, with a new token: a job of an older chain (a
+  # repeated click, a revived search) finds another token and ends, so a search never has two chains requeueing
+  # themselves. -> the token, or nil when the search was not in `from`.
+  def self.queue!(id, from:, **attributes)
+    token = SecureRandom.hex(8)
+    move(id, from: from, to: QUEUED, run_token: token, **attributes) ? token : nil
+  end
+
+  # A lost running search gets a new chain once: only the call that moves the old heartbeat takes it. -> token or nil.
+  def self.revive(id)
+    token = SecureRandom.hex(8)
+    lost = where(id: id, status: RUNNING).where('COALESCE(heartbeat_at, updated_at) < ?', LOST_AFTER.ago)
+    lost.update_all(run_token: token, heartbeat_at: Time.current) == 1 ? token : nil # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  # A planning search whose PlanJob was lost is planned again, once. -> true when this call took it.
+  def self.replan(id)
+    lost = where(id: id, status: PLANNING).where(updated_at: ...LOST_AFTER.ago)
+    lost.update_all(updated_at: Time.current) == 1 # rubocop:disable Rails/SkipsModelValidations
   end
 
   def since

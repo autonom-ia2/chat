@@ -305,7 +305,8 @@ useOnEnter(async () => {
   campaignImport.value = null;
   name.value = '';
   file.value = null;
-  chosenSource.value = null;
+  // Every visit starts on the choice, except the bell's link (`?busca=`), which opens that search.
+  chosenSource.value = route.query.busca ? 'conversas' : null;
   searchingConversations.value = false;
   const importId = route.query.import;
   if (!importId) return;
@@ -364,7 +365,7 @@ onBeforeUnmount(stopPolling);
             {{ t(`${NS}.REVIEW_SUBTITLE`) }}
           </p>
           <p
-            v-else-if="phase === PHASES.UPLOAD && uploadSubtitle"
+            v-else-if="phase !== PHASES.DONE && uploadSubtitle"
             class="mb-0 mt-2 text-base leading-6 text-n-slate-11"
           >
             {{ uploadSubtitle }}
