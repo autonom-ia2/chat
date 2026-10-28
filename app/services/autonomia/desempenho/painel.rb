@@ -161,12 +161,13 @@ class Autonomia::Desempenho::Painel
     escopo.count
   end
 
-  # As que a última rodada fechada deixou para a próxima (a `teto` que não leu nada também deixa). A rodada conta as
-  # da conta inteira: quem vê só parte das caixas não recebe o número.
+  # As que a última rodada fechada deixou para a próxima (a `teto` que não leu nada também deixa), mesmo com outra
+  # rodando agora. A rodada conta as da conta inteira: quem vê só parte das caixas não recebe o número. A `erro` de
+  # RodadaComErro não conta nada (fica 0).
   def pendentes
     return 0 unless automatica? && @visiveis.nil?
 
-    ultima_rodada&.conversas_pendentes.to_i
+    rodadas.where.not(status: 'rodando').first&.conversas_pendentes.to_i
   end
 
   # A rodada grava a mensagem pendente mais antiga ao fechar; sem ela, o piso da rodada.

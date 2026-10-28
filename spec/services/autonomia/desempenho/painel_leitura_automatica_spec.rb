@@ -93,6 +93,13 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(painel.call('7')['meta']['situacao']).to be_nil
   end
 
+  it 'com uma rodada rodando agora, as pendentes da última fechada continuam no aviso' do
+    rodada!('teto', Time.utc(2026, 10, 22, 10, 0), pendentes: 3)
+    rodada!('rodando', Time.utc(2026, 10, 23, 10, 0), lidas: 0)
+
+    expect(painel.call('7')['meta']['pendentes']).to eq(3)
+  end
+
   it 'as pendentes da última rodada que leu vão em pendentes e, com a parada, em avisos para as exportações' do
     rodada!('teto', Time.utc(2026, 10, 23, 10, 0), pendentes: 3)
 

@@ -585,6 +585,24 @@ describe('EstadoDoPainel', () => {
     );
   });
 
+  it('with an empty panel, only the button that acts outside it stays (#2301)', () => {
+    expect(
+      montar({ variante: 'teto', vazio: true })
+        .find('[data-acao-estado]')
+        .exists()
+    ).toBe(false);
+    expect(
+      montar({ variante: 'chave_recusada', vazio: true })
+        .find('[data-acao-estado]')
+        .exists()
+    ).toBe(true);
+    expect(
+      montar({ variante: 'sem_ia', vazio: true, podeGerenciar: false })
+        .find('[data-acao-estado]')
+        .exists()
+    ).toBe(false);
+  });
+
   it('without the AI key, whoever only sees can still go to the numbers', () => {
     const wrapper = montar({ variante: 'sem_ia', podeGerenciar: false });
     expect(wrapper.get('[data-acao-estado]').text()).toBe(

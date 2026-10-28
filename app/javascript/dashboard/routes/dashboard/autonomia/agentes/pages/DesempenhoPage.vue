@@ -456,6 +456,7 @@ const aoMigalha = item => router.push(item.destino);
           :pode-gerenciar="
             ehAdmin && (!painel.vazio || estado !== 'leitura_desligada')
           "
+          :vazio="Boolean(painel.vazio)"
           @acao="aoEstado"
         />
 
