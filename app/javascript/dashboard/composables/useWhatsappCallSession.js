@@ -1,5 +1,5 @@
 import { readonly, ref } from 'vue';
-import Cookies from 'js-cookie';
+import { getDeviseAuthHeaders } from 'dashboard/helper/deviseAuthHeaders';
 import WhatsappCallsAPI from 'dashboard/api/channel/whatsapp/whatsappCallsAPI';
 import { remuxWebmToOgg } from 'dashboard/components/widgets/WootWriter/utils/webmOpusToOgg';
 import { VOICE_CALL_OUTBOUND_INIT_STATUS } from 'dashboard/components-next/message/constants';
@@ -209,27 +209,6 @@ const stopRecorderAndUpload = async callId => {
     await WhatsappCallsAPI.uploadRecording(callId, blob, filename);
   } catch (_) {
     /* noop */
-  }
-};
-
-// devise-token-auth requires access-token / client / uid headers on every
-// request — navigator.sendBeacon can't set custom headers, so we rehydrate
-// the auth payload from the cw_d_session_info cookie that the dashboard sets
-// at login. Used by the page-close terminate path below.
-const getDeviseAuthHeaders = () => {
-  try {
-    const raw = Cookies.get('cw_d_session_info');
-    if (!raw) return null;
-    const session = JSON.parse(raw);
-    return {
-      'access-token': session['access-token'] || '',
-      client: session.client || '',
-      uid: session.uid || '',
-      expiry: session.expiry || '',
-      'token-type': session['token-type'] || 'Bearer',
-    };
-  } catch (_) {
-    return null;
   }
 };
 

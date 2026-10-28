@@ -118,7 +118,8 @@ class Crm::FollowUp < ApplicationRecord
     retorno_da_pessoa.where("crm_follow_ups.conversation_id IS NULL OR crm_follow_ups.conversation_id IN (#{visible_conversation_ids_sql})")
   }
 
-  # O retorno da pessoa mais perto de cada card, { card_id => id }, numa consulta (a página da Lista).
+  # O retorno da pessoa mais perto de cada card, { card_id => follow_up (só id e due_at) }, numa consulta (a página da
+  # Lista). O "Feito" usa o id; a hora diz a situação e a cor do retorno (#2283).
   def self.proximos_retornos_da_pessoa(card_ids, conversation_visibility:)
     return {} if card_ids.blank?
 
@@ -127,9 +128,9 @@ class Crm::FollowUp < ApplicationRecord
     retorno_visivel(visible_sql, all: all)
       .joins(:card).where('crm_follow_ups.account_id = crm_cards.account_id') # lembrete de outra conta não conta
       .where(card_id: card_ids)
-      .select('DISTINCT ON (crm_follow_ups.card_id) crm_follow_ups.card_id, crm_follow_ups.id')
+      .select('DISTINCT ON (crm_follow_ups.card_id) crm_follow_ups.card_id, crm_follow_ups.id, crm_follow_ups.due_at')
       .reorder(Arel.sql('crm_follow_ups.card_id, crm_follow_ups.due_at, crm_follow_ups.id'))
-      .to_h { |follow_up| [follow_up.card_id, follow_up.id] }
+      .index_by(&:card_id)
   end
 
   private

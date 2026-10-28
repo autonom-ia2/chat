@@ -1,6 +1,8 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useMapGetter } from 'dashboard/composables/store';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { usePodeAbrir } from 'dashboard/components-next/sidebar/fork/usePodeAbrir';
 import { ROTA_NUMEROS, useAbaNumeros } from './useAbaNumeros';
 
@@ -9,6 +11,19 @@ import { ROTA_NUMEROS, useAbaNumeros } from './useAbaNumeros';
 const { t } = useI18n();
 const { mostrar } = useAbaNumeros();
 const { podeAbrir } = usePodeAbrir();
+const accountId = useMapGetter('getCurrentAccountId');
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+// #2283: com a Lista nova, "Quadro", como no seletor da página do CRM.
+const listaAcaoLigada = computed(() =>
+  Boolean(
+    isFeatureEnabledonAccount.value(
+      accountId.value,
+      FEATURE_FLAGS.CRM_LISTA_ACAO
+    )
+  )
+);
 
 // Quem só vê os relatórios do CRM (crm_view_reports sem crm_view) não ganha link para tela que não abre.
 const vistas = computed(() =>
@@ -16,7 +31,9 @@ const vistas = computed(() =>
     {
       id: 'kanban',
       to: { name: 'crm_kanban_index' },
-      label: t('CRM_KANBAN.VIEWS.KANBAN'),
+      label: listaAcaoLigada.value
+        ? t('CRM_LISTA_ACAO.VISTAS.QUADRO')
+        : t('CRM_KANBAN.VIEWS.KANBAN'),
       icon: 'i-lucide-kanban',
     },
     {

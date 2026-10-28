@@ -261,5 +261,10 @@
         }
       }
     }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Marcar como seguro ativo ou não fechou"
+    }
   }
 }

@@ -261,5 +261,10 @@
         }
       }
     }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Mark as active policy or not closed"
+    }
   }
 }
