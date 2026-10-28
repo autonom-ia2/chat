@@ -16,6 +16,8 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
     @custom_role = Current.account.custom_roles.create!(permitted_params)
   rescue ActiveRecord::RecordNotUnique
     render_name_taken
+  rescue CustomRoles::GrantGuard::Denied => e
+    refuse(e.code, :unauthorized)
   end
 
   def update
@@ -23,6 +25,8 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
     @custom_role.update!(permitted_params)
   rescue ActiveRecord::RecordNotUnique
     render_name_taken
+  rescue CustomRoles::GrantGuard::Denied => e
+    refuse(e.code, :unauthorized)
   end
 
   # Quem tem a função vai para o destino escolhido e a função some, tudo junto ou nada (#2185). Antes, quem tinha a
@@ -34,10 +38,12 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
     return if performed?
     return head :ok if move_holders_and_destroy(destination_id, needs_destination)
 
-    refuse_destination('changed_meanwhile', :conflict)
+    refuse('changed_meanwhile', :conflict)
   rescue ActiveRecord::InvalidForeignKey
     # Alguém ganhou a função depois da trava: a chave estrangeira recusa a exclusão e a transação já foi desfeita.
-    refuse_destination('changed_meanwhile', :conflict)
+    refuse('changed_meanwhile', :conflict)
+  rescue CustomRoles::GrantGuard::Denied => e
+    refuse(e.code, :unauthorized)
   end
 
   # Trava a função e o destino e relê quem tem a função dentro da transação: se alguém ganhou a função, ou o destino
@@ -66,12 +72,12 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
   # sem função, agente comum. Administrador nunca é destino. Sem destino, ou com um que não serve, responde 422.
   def destination_role_id
     value = params[:destination_role_id]
-    return refuse_destination('destination_required') if value.blank?
+    return refuse('destination_required') if value.blank?
     return if value == NO_ROLE_DESTINATION
 
     role = destination_candidates.find_by(id: value) if value.is_a?(String) || value.is_a?(Integer)
     # Fora do alcance de quem exclui também é destino inválido (422), como na Issue: a tela só oferece os que alcança.
-    return refuse_destination('destination_invalid') if role.nil? || !grant_guard.reach?(role.permissions)
+    return refuse('destination_invalid') if role.nil? || !grant_guard.reach?(role.permissions)
 
     role.id
   end
@@ -86,7 +92,9 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
            status: :unprocessable_entity
   end
 
-  def refuse_destination(code, status = :unprocessable_entity)
+  # Recusas com código no corpo, no mesmo formato: destino do apagar (422/409) e, no 401, o motivo — 'out_of_reach',
+  # 'own_role' ou 'feature_off' (#2308, decisão 11). O status e a regra não mudam; a tela só diz qual foi.
+  def refuse(code, status = :unprocessable_entity)
     render json: { error: code, message: I18n.t("errors.custom_role.#{code}") }, status: status
     nil
   end
@@ -100,6 +108,6 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
   end
 
   def ensure_custom_roles_feature_enabled
-    raise Pundit::NotAuthorizedError unless Current.account.feature_enabled?('custom_roles')
+    refuse('feature_off', :unauthorized) unless Current.account.feature_enabled?('custom_roles')
   end
 end

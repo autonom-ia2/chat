@@ -5,6 +5,18 @@
 # - Roles behind integration tokens are never handed out (CustomRole.for_people).
 # A plain agent (no custom role) is always allowed: rule 2 covers custom roles only (Rodrigo, 20/10).
 class CustomRoles::GrantGuard
+  # The refusal (401) with its reason, so the role screen can say which one it was (#2308, decision 11):
+  # 'own_role' (nobody but an administrator edits the role they hold) or 'out_of_reach'. Still a
+  # Pundit::NotAuthorizedError: every caller that renders the generic 401 keeps doing so.
+  class Denied < Pundit::NotAuthorizedError
+    attr_reader :code
+
+    def initialize(code)
+      @code = code
+      super("custom role refused: #{code}")
+    end
+  end
+
   def initialize(actor:)
     @actor = actor
   end
@@ -24,7 +36,7 @@ class CustomRoles::GrantGuard
   end
 
   def write!(role, permissions)
-    deny! if role.present? && !@actor.administrator? && role.id == @actor.custom_role_id
+    deny!('own_role') if role.present? && !@actor.administrator? && role.id == @actor.custom_role_id
     deny! if role.present? && !reach?(role.permissions)
     deny! unless reach?(permissions)
   end
@@ -39,7 +51,7 @@ class CustomRoles::GrantGuard
 
   private
 
-  def deny!
-    raise Pundit::NotAuthorizedError
+  def deny!(code = 'out_of_reach')
+    raise Denied, code
   end
 end
