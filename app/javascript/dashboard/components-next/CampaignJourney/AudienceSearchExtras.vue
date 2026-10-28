@@ -27,7 +27,7 @@ const groups = computed(() =>
 
 <template>
   <section
-    v-if="groups.length"
+    v-show="groups.length"
     class="flex flex-col gap-1 border-t border-n-weak pt-4"
     data-test="left-aside"
   >
