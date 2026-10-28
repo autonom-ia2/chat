@@ -838,9 +838,11 @@
         "FICA_SEM_SO": "{pessoa} will have no role."
       },
       "TENTE": "Check the internet and try again.",
+      "ESPERE": "Too many attempts in a row: wait a moment and try again.",
       "CONTINUAR": "Keep choosing",
       "SO_LEITURA_ABOVE": "Only the administrator puts people in and takes them out of this role.",
       "SO_LEITURA_MINE": "No one changes their own role: this one is yours.",
+      "SO_LEITURA_APAGADA": "The {nome} role was deleted.",
       "NINGUEM_AINDA": "No one has this role yet.",
       "FORA_DO_ALCANCE": "Couldn't change the role of {nomes}: it's beyond what you can give.",
       "TRAVADA": {
@@ -851,7 +853,8 @@
       "SALVA": "{nomes}'s role was saved. | These people's roles were saved: {nomes}.",
       "SAIU_DA_CONTA": "{nomes} is no longer in this account. | These people are no longer in this account: {nomes}.",
       "FUNCAO_SUMIU": "The role chosen for {nomes} no longer exists. Choose another. | The role chosen for these people no longer exists: {nomes}. Choose another.",
-      "NAO_MUDOU": "The role of {nomes} didn't change. Try again; if it keeps happening, talk to the administrator. | The role of these people didn't change: {nomes}. Try again; if it keeps happening, talk to the administrator."
+      "NAO_MUDOU": "The role of {nomes} didn't change. Try again; if it keeps happening, talk to the administrator. | The role of these people didn't change: {nomes}. Try again; if it keeps happening, talk to the administrator.",
+      "CONTINUA": "{nomes}'s role stays as it was. | These people's roles stay as they were: {nomes}."
     },
     "APAGAR": {
       "TITULO": "Delete the {nome} role?",

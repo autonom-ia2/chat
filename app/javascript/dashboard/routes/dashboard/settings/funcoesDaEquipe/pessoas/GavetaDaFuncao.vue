@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
@@ -20,7 +20,10 @@ import { useSalvarGaveta } from './useSalvarGaveta';
 // em useSalvarGaveta; se algo falha, a gaveta fica aberta só com o que não gravou e diz de quem e por quê. Sem
 // Pessoas, numa função fora do alcance ou na própria função, a gaveta só mostra quem é, com o motivo certo. Quem perde
 // Pessoas no meio do salvar vê o porquê no rodapé (rodada 4). Depois de um salvar com problema e nada mais pendente,
-// "Cancelar" vira "Fechar": não há o que descartar, e o que gravou já foi dito (rodada 7).
+// "Cancelar" vira "Fechar": não há o que descartar, e o que gravou já foi dito (rodada 7). A função vem como cópia de
+// quando abriu; título, trava e "Pôr como" leem a função de agora na lista, pelo id: apagada ou fora do alcance em
+// paralelo, a gaveta vira só leitura e o pendente sai (rodada 8). "Foi salva" fica numa linha neutra; cada problema,
+// num parágrafo vermelho. Mudar ou desfazer apaga o aviso antigo.
 const props = defineProps({
   funcao: { type: Object, default: null },
 });
@@ -38,10 +41,23 @@ const funcoes = useMapGetter('customRole/getCustomRoles');
 const mudancas = ref(new Map());
 const sairSemSalvar = ref(null);
 
-// Por que a gaveta é só leitura: sem Pessoas, ou a função está acima do alcance (ABOVE) ou é a de quem monta (MINE).
+// A função da gaveta como está na lista agora; null quando a gaveta é de quem está sem função, ou se ela foi apagada.
+const funcaoAtual = computed(() =>
+  props.funcao
+    ? funcoes.value.find(funcao => funcao.id === props.funcao.id) || null
+    : null
+);
+const apagada = computed(() => Boolean(props.funcao) && !funcaoAtual.value);
+const nomeDaFuncao = computed(
+  () => funcaoAtual.value?.name ?? props.funcao?.name
+);
+
+// Por que a gaveta é só leitura: a função foi apagada, sem Pessoas, ou a função está acima do alcance (ABOVE) ou é a
+// de quem monta (MINE).
 const motivoDaLeitura = computed(() => {
+  if (apagada.value) return 'SO_LEITURA_APAGADA';
   if (!canManagePeople.value) return 'SO_LEITURA';
-  const trava = props.funcao && roleLockReason(props.funcao);
+  const trava = funcaoAtual.value && roleLockReason(funcaoAtual.value);
   return trava ? `SO_LEITURA_${trava}` : '';
 });
 const somenteLeitura = computed(() => Boolean(motivoDaLeitura.value));
@@ -64,7 +80,20 @@ const travaDe = pessoa =>
   pessoa.role === 'administrator'
     ? LOCK_REASONS.ADMIN
     : memberLockReason(pessoa) || '';
-const { salvando, erro, salvar: gravar } = useSalvarGaveta(mudancas, travaDe);
+const {
+  salvando,
+  aviso,
+  salvar: gravar,
+  limparAviso,
+} = useSalvarGaveta(mudancas, { travaDe, somenteLeitura });
+const temAviso = computed(
+  () => Boolean(aviso.value.salva) || aviso.value.problemas.length > 0
+);
+
+// Só leitura no meio (função apagada, fora do alcance, sem Pessoas): nada fica pendente.
+watch(somenteLeitura, agora => {
+  if (agora) mudancas.value = new Map();
+});
 
 // Só as funções que quem monta pode dar; as outras somem da escolha, com o nome numa nota.
 const opcoes = computed(() =>
@@ -77,9 +106,11 @@ const escondidas = computed(() =>
 );
 
 const mudar = (pessoa, destino) => {
+  limparAviso();
   mudancas.value = new Map([...mudancas.value, [pessoa.id, destino]]);
 };
 const desfazer = pessoa => {
+  limparAviso();
   mudancas.value = new Map(
     [...mudancas.value].filter(([id]) => id !== pessoa.id)
   );
@@ -94,7 +125,7 @@ const linha = pessoa => ({
   somenteLeitura: somenteLeitura.value,
   salvando: salvando.value,
   opcoes: opcoes.value,
-  alvo: props.funcao,
+  alvo: funcaoAtual.value,
 });
 
 const nomeDe = id => agentes.value.find(item => item.id === id)?.name;
@@ -131,12 +162,12 @@ const frases = computed(() => [...mudancas.value].map(fraseDoRodape));
 
 const titulo = computed(() =>
   props.funcao
-    ? t('FUNCOES_EQUIPE.GAVETA.TITULO', { nome: props.funcao.name })
+    ? t('FUNCOES_EQUIPE.GAVETA.TITULO', { nome: nomeDaFuncao.value })
     : t('FUNCOES_EQUIPE.GAVETA.TITULO_SEM_FUNCAO')
 );
 
 const rotuloDeSair = computed(() =>
-  erro.value && !mudancas.value.size ? 'FECHAR' : 'CANCELAR'
+  temAviso.value && !mudancas.value.size ? 'FECHAR' : 'CANCELAR'
 );
 
 const podeFechar = () => {
@@ -182,7 +213,9 @@ const salvar = async () => {
         class="flex items-start gap-2 m-0 text-sm text-n-slate-11"
       >
         <span class="i-lucide-info size-4 mt-0.5 shrink-0" aria-hidden="true" />
-        {{ $t(`FUNCOES_EQUIPE.GAVETA.${motivoDaLeitura}`) }}
+        {{
+          $t(`FUNCOES_EQUIPE.GAVETA.${motivoDaLeitura}`, { nome: nomeDaFuncao })
+        }}
       </p>
       <p
         v-if="!jaSao.length"
@@ -195,7 +228,7 @@ const salvar = async () => {
         <h3 class="m-0 text-sm font-semibold text-n-slate-11">
           {{
             $t('FUNCOES_EQUIPE.GAVETA.JA_SAO', {
-              nome: funcao.name,
+              nome: nomeDaFuncao,
               n: jaSao.length,
             })
           }}
@@ -242,7 +275,7 @@ const salvar = async () => {
       }}
     </p>
 
-    <template v-if="!somenteLeitura || erro" #rodape>
+    <template v-if="!somenteLeitura || temAviso" #rodape>
       <p
         v-for="frase in frases"
         :key="frase"
@@ -252,12 +285,25 @@ const salvar = async () => {
         {{ frase }}
       </p>
       <p
-        v-if="erro"
+        v-if="aviso.salva"
+        data-salva-gaveta
+        role="status"
+        class="flex items-start gap-2 m-0 text-sm text-n-slate-12"
+      >
+        <span
+          class="i-lucide-check size-4 mt-0.5 shrink-0 text-n-teal-11"
+          aria-hidden="true"
+        />
+        {{ aviso.salva }}
+      </p>
+      <p
+        v-for="problema in aviso.problemas"
+        :key="problema"
         data-erro-gaveta
         role="alert"
         class="m-0 text-sm font-medium text-n-ruby-11"
       >
-        {{ erro }}
+        {{ problema }}
       </p>
       <div
         v-if="!somenteLeitura"

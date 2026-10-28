@@ -838,9 +838,11 @@
         "FICA_SEM_SO": "{pessoa} vai ficar sem função."
       },
       "TENTE": "Confira a internet e tente de novo.",
+      "ESPERE": "Foram muitas tentativas seguidas: espere um pouco e tente de novo.",
       "CONTINUAR": "Continuar escolhendo",
       "SO_LEITURA_ABOVE": "Só o administrador põe e tira pessoas desta função.",
       "SO_LEITURA_MINE": "Ninguém muda a própria função: esta é a sua.",
+      "SO_LEITURA_APAGADA": "A função {nome} foi apagada.",
       "NINGUEM_AINDA": "Ninguém tem esta função ainda.",
       "FORA_DO_ALCANCE": "Não deu para mudar a função de {nomes}: está fora do que você pode dar.",
       "TRAVADA": {
@@ -851,7 +853,8 @@
       "SALVA": "A função de {nomes} foi salva. | As funções destas pessoas foram salvas: {nomes}.",
       "SAIU_DA_CONTA": "{nomes} não está mais na conta. | Estas pessoas não estão mais na conta: {nomes}.",
       "FUNCAO_SUMIU": "A função escolhida para {nomes} não existe mais. Escolha outra. | A função escolhida para estas pessoas não existe mais: {nomes}. Escolha outra.",
-      "NAO_MUDOU": "A função de {nomes} não mudou. Tente de novo; se continuar, fale com o administrador. | A função destas pessoas não mudou: {nomes}. Tente de novo; se continuar, fale com o administrador."
+      "NAO_MUDOU": "A função de {nomes} não mudou. Tente de novo; se continuar, fale com o administrador. | A função destas pessoas não mudou: {nomes}. Tente de novo; se continuar, fale com o administrador.",
+      "CONTINUA": "A função de {nomes} continua como era. | A função destas pessoas continua como era: {nomes}."
     },
     "APAGAR": {
       "TITULO": "Apagar a função {nome}?",

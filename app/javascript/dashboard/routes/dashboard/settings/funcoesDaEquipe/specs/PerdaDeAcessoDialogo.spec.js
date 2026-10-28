@@ -40,6 +40,19 @@ describe('PerdaDeAcesso', () => {
     wrapper.unmount();
   });
 
+  // Rodada 8 (L4): o singular das próprias com as novas e o link.
+  it('uma pessoa nas próprias, com as novas e o link: singular', () => {
+    const wrapper = montar({
+      pessoas: [{ id: 1, name: 'Ana' }],
+      perdas: [{ id: 'LER_E_ATENDER_TODAS' }],
+      fica: { area: 'CONVERSATIONS', nivel: 'PROPRIAS_NOVAS_E_LINK' },
+    });
+    expect(wrapper.find('[data-texto-perda]').text()).toBe(
+      'Essa pessoa tem a função Vendedor. A partir de agora, vai atender as próprias conversas, pegar as novas sem ninguém e ajudar quando um colega manda o link.'
+    );
+    wrapper.unmount();
+  });
+
   // Rodada 5: quem desce para as próprias e continua pegando as novas e ajudando pelo link não "só" atende as próprias.
   it.each([
     [

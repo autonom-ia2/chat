@@ -282,6 +282,20 @@ describe('o que só deixa ver', () => {
     expect(nivelQueFica(antes, depois)).toEqual({ area, nivel: 'OLHA' });
   });
 
+  // Rodada 8 (L5), decisão: baixar um relatório do que já se vê conta como ver (desempenho em PDF/planilha, financeiro
+  // em CSV, relatórios das vendas); levar a lista de clientes ou de vendas para fora (exportar) não conta.
+  it('baixar um relatório conta como ver; exportar contatos ou vendas não', () => {
+    expect(
+      queMudam([
+        'DESEMPENHO_VIEW',
+        'FINANCIAL_VIEW',
+        'RELATORIOS_DAS_VENDAS',
+        'EXPORTAR_VENDAS',
+        'EXPORTAR_CONTATOS',
+      ])
+    ).toEqual(['EXPORTAR_VENDAS', 'EXPORTAR_CONTATOS']);
+  });
+
   it('marca as que só deixam ver, e só elas', () => {
     expect(
       queMudam([

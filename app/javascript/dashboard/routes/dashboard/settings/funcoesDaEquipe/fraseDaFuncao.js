@@ -111,8 +111,10 @@ const CHAVES_SO_DE_VER = ['desempenho_view'];
 // pega as novas, ajuda pelo link e lê as dos colegas; quem cria e move as vendas também as move; quem mexe no
 // financeiro também o vê (`_manage` traz `_view` no servidor). Ganhar a maior não é perder as menores (revisão do
 // #2308, rodada 4); o par mora no próprio item, para uma capacidade nova não esquecê-lo (rodada 5).
-// `soVe`: a capacidade só deixa ver, sem mudar nem levar nada. Uma área que desce de nível só "fica olhando" quando
-// tudo o que sobra nela é assim (rodada 6).
+// `soVe`: a capacidade só deixa ver, sem mudar nada. Baixar um relatório do que já se vê conta como ver (desempenho
+// em PDF ou planilha, financeiro em CSV, relatórios das vendas); levar a lista de clientes ou de vendas para fora
+// (EXPORTAR_CONTATOS, EXPORTAR_VENDAS) não conta, e essas não levam a marca (revisão do #2308, rodada 8). Uma área que
+// desce de nível só "fica olhando" quando tudo o que sobra nela é assim (rodada 6).
 const CAPACIDADES = [
   {
     id: 'LER_E_ATENDER_TODAS',

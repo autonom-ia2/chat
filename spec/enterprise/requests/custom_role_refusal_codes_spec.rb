@@ -25,6 +25,8 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
   # Rodada 6/7: todo 401 que o controller manda leva um código da lista. Lê o controller pelo parser do Ruby: cada
   # refuse(código, :unauthorized | 401) passa o código do Denied resgatado (pela variável que o próprio rescue declara),
   # um literal ou uma constante cujo valor está na lista; e nenhum render/head responde 401 por fora do refuse.
+  # Rodada 8: o status vale em símbolo, número ou texto, com `status:` ou `:status =>`; render_unauthorized é sempre um
+  # 401 por fora; e um refuse com o status numa variável não dá para ler, então também é apontado.
   let(:refusal_reader) do
     Class.new(Prism::Visitor) do
       attr_reader :refusals, :loose
@@ -52,13 +54,24 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
         args = node.receiver.nil? ? node.arguments&.arguments.to_a : []
         if refusal_401?(node, args)
           @refusals << [node.slice, code_of(args.first)]
-        elsif %i[render head].include?(node.name) && args.any? { |arg| unauthorized?(arg) }
+        elsif loose_401?(node, args)
           @loose << node.slice
         end
         super
       end
 
       private
+
+      def loose_401?(node, args)
+        return true if node.name == :render_unauthorized
+        return unreadable_status?(args.last) if node.name == :refuse && args.size == 2
+
+        %i[render head].include?(node.name) && args.any? { |arg| unauthorized?(arg) }
+      end
+
+      def unreadable_status?(node)
+        [Prism::SymbolNode, Prism::IntegerNode, Prism::StringNode].none? { |kind| node.is_a?(kind) }
+      end
 
       def refusal_401?(node, args)
         node.name == :refuse && args.size == 2 && unauthorized?(args.last)
@@ -78,12 +91,15 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
 
       def unauthorized?(node)
         case node
-        when Prism::SymbolNode then node.unescaped == 'unauthorized'
+        when Prism::SymbolNode, Prism::StringNode then %w[unauthorized 401].include?(node.unescaped)
         when Prism::IntegerNode then node.value == 401
-        when Prism::KeywordHashNode, Prism::HashNode
-          node.elements.any? { |pair| pair.is_a?(Prism::AssocNode) && pair.key.slice == 'status:' && unauthorized?(pair.value) }
+        when Prism::KeywordHashNode, Prism::HashNode then node.elements.any? { |pair| status_pair?(pair) && unauthorized?(pair.value) }
         else false
         end
+      end
+
+      def status_pair?(pair)
+        pair.is_a?(Prism::AssocNode) && pair.key.is_a?(Prism::SymbolNode) && pair.key.unescaped == 'status'
       end
     end
   end
@@ -157,6 +173,11 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
     'a code outside the list' => ["refuse('nope', 401)", false],
     'render with status: :unauthorized' => ['render json: {}, status: :unauthorized', false],
     'head 401' => ['head 401', false],
+    'render_unauthorized' => ["render_unauthorized('no')", false],
+    'render with status as text' => ["render json: {}, status: 'unauthorized'", false],
+    'render with the hash-rocket status' => ['render json: {}, :status => :unauthorized', false],
+    'refuse with the status in a variable' => ["refuse('x', variavel)", false],
+    'refuse with a status other than 401' => ["refuse('changed_meanwhile', :conflict)", true],
     'the Denied code under another variable name' =>
       ['x; rescue CustomRoles::GrantGuard::Denied => error; refuse(error.code, :unauthorized)', true],
     'a listed constant' => ['refuse(FEATURE_OFF, :unauthorized)', true],
