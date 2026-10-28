@@ -308,6 +308,6 @@ describe('o que só deixa ver', () => {
         'REPORT_MANAGE',
         'FINANCIAL_MANAGE',
       ])
-    ).toEqual(['REPORT_MANAGE', 'FINANCIAL_MANAGE']);
+    ).toEqual(['FINANCIAL_MANAGE']);
   });
 });

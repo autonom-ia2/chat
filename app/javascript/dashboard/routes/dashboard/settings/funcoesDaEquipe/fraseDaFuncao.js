@@ -56,10 +56,11 @@ const CHAVES_DA_RECOLHIDA = [
   'grant_above_own',
 ];
 
-// As da recolhida que só deixam ver (conferido no servidor). report_manage não entra: também escreve a nota da
-// avaliação (CsatSurveyResponsePolicy#update?). Toda capacidade que só deixa ver leva `soVe`, mesmo numa área que
-// só tem o nível de ver (onde a marca não muda a frase): a regra é uma só (revisão do #2308, rodada 7).
-const CHAVES_SO_DE_VER = ['desempenho_view'];
+// As da recolhida que só deixam ver. report_manage também grava a nota da avaliação (CsatSurveyResponsePolicy#update?),
+// mas para quem lê a função isso é olhar os relatórios: conta como ver (Rodrigo, 28/10). Toda capacidade que só deixa
+// ver leva `soVe`, mesmo numa área que só tem o nível de ver (onde a marca não muda a frase): a regra é uma só
+// (revisão do #2308, rodada 7).
+const CHAVES_SO_DE_VER = ['desempenho_view', 'report_manage'];
 
 // `cobre`: as capacidades menores que esta já traz. Quem lê e atende todas as conversas também responde as entregues,
 // pega as novas, ajuda pelo link e lê as dos colegas; quem cria e move as vendas também as move; quem mexe no

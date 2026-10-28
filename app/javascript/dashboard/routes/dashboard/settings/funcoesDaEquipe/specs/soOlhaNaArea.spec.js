@@ -120,14 +120,16 @@ describe('"Só olha" só quando nada muda na área', () => {
     ).toContain('Só olha');
   });
 
-  it('Só consulta: os relatórios de atendimento também escrevem a nota da avaliação, e saem do "Só olha"', () => {
-    const [soOlha, ve] = podeCurto(PRESETS.READ_ONLY());
-    expect(soOlha).toEqual({
-      chave: 'SO_OLHA_AREAS',
-      tipo: 'soOlha',
-      areas: ['CONTACTS', 'CRM', 'CAMPAIGNS'],
-    });
-    expect(ve).toEqual({ chave: 'VE_AREAS', tipo: 've', areas: ['REPORTS'] });
+  // Os relatórios de atendimento contam como ver (Rodrigo, 28/10).
+  it('Só consulta: só olha contatos, vendas, campanhas e relatórios', () => {
+    expect(podeCurto(PRESETS.READ_ONLY())).toEqual([
+      {
+        chave: 'SO_OLHA_AREAS',
+        tipo: 'soOlha',
+        areas: ['CONTACTS', 'CRM', 'CAMPAIGNS', 'REPORTS'],
+      },
+      { chave: 'NAO_ATENDE', tipo: 'naoFaz' },
+    ]);
   });
 });
 

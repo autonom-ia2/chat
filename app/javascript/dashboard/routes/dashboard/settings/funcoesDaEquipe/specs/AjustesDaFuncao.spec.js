@@ -73,14 +73,12 @@ describe('AjustesDaFuncao', () => {
     expect(texto).not.toContain('2 áreas');
   });
 
-  // Os relatórios de atendimento também escrevem a nota da avaliação (report_manage não é só de ver): com eles no
-  // nível de ver, a recolhida diz "Vê", nunca "Só olha".
-  it('a recolhida com os relatórios de atendimento diz "Vê", sem "só olha"', () => {
+  // Os relatórios de atendimento contam como ver (Rodrigo, 28/10): com eles no nível de ver, a recolhida diz
+  // "Só olha".
+  it('a recolhida com os relatórios de atendimento diz "Só olha"', () => {
     const wrapper = montar([...PRESETS.AGENT(), 'report_manage']);
     const texto = wrapper.find('[data-recolhida]').text();
-    expect(texto).toContain(
-      'Vê Relatórios e Central de Ajuda (artigos para os clientes).'
-    );
-    expect(texto.toLowerCase()).not.toContain('só olha');
+    expect(texto).toContain('Só olha Relatórios e Central de Ajuda');
+    expect(texto).not.toContain('Vê Relatórios');
   });
 });

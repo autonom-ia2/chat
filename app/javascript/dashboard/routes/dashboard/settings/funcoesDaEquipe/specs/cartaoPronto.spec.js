@@ -63,13 +63,13 @@ describe('cartões prontos', () => {
         fora: false,
       },
       READ_ONLY: {
-        capacidades: ['SO_OLHA_AREAS', 'VE_AREAS', 'NAO_ATENDE'],
+        capacidades: ['SO_OLHA_AREAS', 'NAO_ATENDE'],
         selo: [],
         travas: [{ motivo: 'MISSING', chaves: ['insurance_view'] }],
         fora: false,
       },
       FINANCE: {
-        capacidades: ['SO_OLHA_AREAS', 'VE_AREAS', 'NAO_ATENDE'],
+        capacidades: ['SO_OLHA_AREAS', 'NAO_ATENDE'],
         selo: [],
         travas: [{ motivo: 'DELEGATION', chaves: ['financial_view'] }],
         fora: true,
@@ -97,24 +97,21 @@ describe('cartões prontos', () => {
         ['campaign_send', 'contact_export']
       ),
       OPERATIONS: cartao(['TODAS', 'ARRUMA', 'CONTATOS']),
-      READ_ONLY: cartao(['SO_OLHA_AREAS', 'VE_AREAS', 'NAO_ATENDE']),
-      FINANCE: cartao(['SO_OLHA_AREAS', 'VE_AREAS', 'NAO_ATENDE']),
+      READ_ONLY: cartao(['SO_OLHA_AREAS', 'NAO_ATENDE']),
+      FINANCE: cartao(['SO_OLHA_AREAS', 'NAO_ATENDE']),
     });
   });
 
-  // Os relatórios de atendimento também escrevem a nota da avaliação: vão para o "Vê", fora do "Só olha".
-  it('Só consulta lista as áreas que só olha e, à parte, as que vê', () => {
+  // Os relatórios de atendimento contam como ver (Rodrigo, 28/10): entram no "Só olha" com as outras áreas.
+  it('Só consulta só olha contatos, vendas, campanhas e relatórios', () => {
     const [leitura] = cartoesProntos(CARLA).filter(
       c => c.chave === 'READ_ONLY'
     );
-    expect(leitura.capacidades.slice(0, 2)).toEqual([
-      {
-        chave: 'SO_OLHA_AREAS',
-        tipo: 'soOlha',
-        areas: ['CONTACTS', 'CRM', 'CAMPAIGNS'],
-      },
-      { chave: 'VE_AREAS', tipo: 've', areas: ['REPORTS'] },
-    ]);
+    expect(leitura.capacidades[0]).toEqual({
+      chave: 'SO_OLHA_AREAS',
+      tipo: 'soOlha',
+      areas: ['CONTACTS', 'CRM', 'CAMPAIGNS', 'REPORTS'],
+    });
   });
 
   it('sensitiveExtrasOn(PRESETS.SDR()) = []', () => {
