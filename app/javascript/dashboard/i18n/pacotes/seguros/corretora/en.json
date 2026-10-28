@@ -1230,5 +1230,8 @@
         }
       }
     }
+  },
+  "CRM_LISTA_ACAO": {
+    "NOVO_CLIENTE": "New quote"
   }
 }

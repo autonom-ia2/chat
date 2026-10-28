@@ -87,6 +87,7 @@ export const FEATURE_FLAGS = {
   CONVITE_DA_REUNIAO: 'convite_da_reuniao',
   FICAR_COM_A_CONVERSA_AO_ENVIAR: 'ficar_com_a_conversa_ao_enviar',
   CRM_ARQUIVADOS: 'crm_arquivados',
+  CRM_LISTA_ACAO: 'crm_lista_acao',
   AGENTES_PAINEL_DESEMPENHO: 'agentes_painel_desempenho',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',

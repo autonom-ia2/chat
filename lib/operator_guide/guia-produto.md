@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (240 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (241 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -445,6 +445,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: fechar o card (Ganhou/Perdeu ou Resolvido/Cancelado) define o **status** do card (acompanhado no **Dashboard CRM** e na visão **Lista**), diferente da **etapa** do funil; a rota do Calendário é separada, mas o seletor de visualização também existe dentro do Kanban; custom roles sem `crm_view` não veem a entrada; filtros ativos viram chips removíveis e podem esconder cards; para mudar a etapa, arraste o card ou abra **Resumo > Etapa**; o botão Mover não aparece na face do card; no card, empresa aparece em destaque, pessoa abaixo e o título do card em texto secundário; sem empresa, a pessoa aparece em destaque; cards da Prospecção preservam a empresa do card mesmo quando compartilham um contato.
 - nav_target: `crm_kanban_index`
 - highlight: `crm-filters`
+
+### Lista do CRM: o que fazer agora
+- intent: "O que eu faço agora no CRM?"; "Quem está esperando resposta?"; "Quais retornos tenho hoje?"; "Quem está sem ninguém cuidando?"; "Quais clientes estão parados?"; "Como marco um retorno como feito?"; "Como fico com um cliente?"
+- onde_fica: Sidebar > CRM > CRM Kanban > **Lista**. Só aparece assim com a flag da conta `crm_lista_acao` ligada; desligada, a Lista é a tabela de sempre.
+- rota: `crm_kanban_index` - `/app/accounts/:accountId/crm`
+- gate: papel `administrator` ou `agent` ou `crm_view`
+- perfil: quem vê o CRM vê a Lista; "Passar para alguém" exige poder mexer nos cards (função com Gerenciar cards do CRM); sem isso, a linha oferece "Ficar com este cliente".
+- pre_requisitos: flag `crm_lista_acao` ligada na conta; ao menos um funil.
+- passos: Escolha o funil no título. O topo diz quantos clientes precisam de atenção. Os clientes vêm separados pelo que pedem: **Esperando resposta** (**Responder** abre a conversa), **Retornos de hoje e atrasados** (**Feito** ou **Combinar outro**), **Ninguém cuidando** (**Passar para alguém** ou **Ficar com este cliente**), **Parados há 7 dias ou mais** (**Combinar retorno**) e **Os demais**. Em cada linha: a ação principal, **Ver conversa** e **Alterar** (combinar retorno, mudar etapa, passar, mudar valor, marcar o desfecho). Toque no nome para ver o cliente. **De todos | Só meus** troca entre a equipe e os seus; **Ver só estes** mostra um grupo; as abas **Em andamento**, ganhos, perdidos, **Arquivados** e **Tudo** mudam o que aparece; **Filtros** abre a gaveta de sempre; **Mais** baixa a planilha.
+- gotchas: "Ninguém cuidando" é sem dono, sem pessoa na conversa e sem robô (robô cuidando conta como cuidado); em **Só meus**, "Ninguém cuidando" continua aparecendo, porque o cliente sem dono pode ser seu; **Ficar com este cliente** e **Passar para alguém** mudam só quem cuida do cliente, não a conversa (ela segue a Atribuição); **Feito** mostra **Desfazer** por 10 segundos e só então marca o retorno como feito; nada encerra sozinho; o retorno de hoje fica amarelo e só fica vermelho depois do horário, no fuso da conta; mensagem automática e toque do assistente aparecem em **Os demais**, sem **Feito**; conversa de caixa que a pessoa não vê aparece como "Outra pessoa está conversando", sem nome; o que chega enquanto a pessoa trabalha não muda nenhuma linha de lugar: aparece "Chegaram N novidades" com **Atualizar**; um cliente fica em um grupo só, o primeiro da ordem.
+- nav_target: `crm_kanban_index`
 
 ### Criar funis, estágios e conectar caixas ao CRM
 - intent: "Como crio um funil?"; "Como altero os estágios?"; "Como vinculo uma caixa a um funil?"

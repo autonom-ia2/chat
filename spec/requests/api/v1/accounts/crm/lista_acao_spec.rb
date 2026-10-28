@@ -104,7 +104,8 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
 
       row = list(agent)['payload'].find { |item| item['id'] == overdue_card.id }
 
-      expect(row).to include('action_group' => 'retorno', 'next_follow_up_id' => overdue.id)
+      expect(row).to include('action_group' => 'retorno', 'next_follow_up_id' => overdue.id,
+                             'next_follow_up_due_at' => overdue.due_at.iso8601)
       expect(counts(agent)['retorno']).to eq(1)
       expect(list(agent, follow_up_status: 'due')['payload'].pluck('id')).to eq([overdue_card.id])
     end
@@ -168,8 +169,7 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
     row = response.parsed_body['payload'].first
     expect(row).not_to have_key('action_group')
     expect(row['current_responsible']).to include('type' => 'agent', 'name' => 'Atendente Beto')
-    expect(row).to have_key('next_follow_up_id')
-    expect(row['next_follow_up_id']).to be_nil
+    expect(row).to include('next_follow_up_id' => nil, 'next_follow_up_due_at' => nil, 'conversation_hidden' => false)
   end
 
   it 'devolve lista vazia, e não a lista inteira, com grupo inválido' do
@@ -223,7 +223,7 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
 
       row = list(agent)['payload'].find { |item| item['id'] == shown_card.id }
 
-      expect(row).to include('action_group' => 'demais', 'next_follow_up_id' => nil)
+      expect(row).to include('action_group' => 'demais', 'next_follow_up_id' => nil, 'conversation_hidden' => true)
       expect(counts(agent)['retorno']).to eq(0)
       expect(list(agent, follow_up_status: 'due')['payload']).to eq([])
       get "#{api}/cards/#{shown_card.id}", headers: auth_headers(agent)

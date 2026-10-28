@@ -314,7 +314,10 @@ const normalizeFilters = filters => {
 // Parâmetros da Lista, comuns à página e à planilha (#722): uma fonte só, para a
 // planilha nunca trazer um recorte diferente do que a Lista mostra. Sem sort ativo,
 // o parâmetro some e o servidor usa a ordem padrão da Lista.
-const listQueryParams = (filters, { pipelineId, sort, direction } = {}) => ({
+export const listQueryParams = (
+  filters,
+  { pipelineId, sort, direction } = {}
+) => ({
   ...normalizeFilters(filters),
   pipeline_id: pipelineId,
   ...(sort ? { sort, direction: direction || 'desc' } : {}),
@@ -322,7 +325,7 @@ const listQueryParams = (filters, { pipelineId, sort, direction } = {}) => ({
 
 // `attachment; filename="crm-2026-09-25.xlsx"; filename*=UTF-8''...` -> o nome entre aspas.
 const FALLBACK_EXPORT_FILENAME = 'crm.xlsx';
-const filenameFromDisposition = header => {
+export const filenameFromDisposition = header => {
   const [, afterKey] = String(header || '').split('filename="');
   const [name] = String(afterKey || '').split('"');
   return name || FALLBACK_EXPORT_FILENAME;

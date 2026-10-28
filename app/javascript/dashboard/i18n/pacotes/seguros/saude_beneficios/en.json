@@ -1314,5 +1314,10 @@
         }
       }
     }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Mark as implemented or not closed"
+    }
   }
 }

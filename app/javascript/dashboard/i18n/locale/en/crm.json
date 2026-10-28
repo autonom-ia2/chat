@@ -7382,5 +7382,189 @@
       "TEXTO": "Ad spend belongs to the whole account. To see how much each sale cost, choose All pipelines.",
       "ACAO": "See all pipelines"
     }
+  },
+  "CRM_LISTA_ACAO": {
+    "NOVO_CLIENTE": "New client",
+    "FUNIL": "Choose pipeline",
+    "VISTAS": {
+      "QUADRO": "Board"
+    },
+    "HEROI": {
+      "ROTULO": "Summary",
+      "TODOS": "{n} client needs attention. | {n} clients need attention.",
+      "MEUS": "{n} client needs you. | {n} clients need you.",
+      "DICA": "The most urgent is at the top.",
+      "TUDO_EM_DIA": "All caught up here."
+    },
+    "BUSCA": {
+      "ROTULO": "Search by name, phone or email",
+      "PLACEHOLDER": "Name, phone or email"
+    },
+    "FILTROS": "Filters",
+    "MAIS": "More",
+    "QUEM": {
+      "ROTULO": "Whose",
+      "TODOS": "Everyone's",
+      "MEUS": "Only mine"
+    },
+    "ABAS": {
+      "ROTULO": "Show",
+      "ABERTO": "In progress",
+      "ARQUIVADO": "Archived",
+      "TUDO": "All"
+    },
+    "LISTA": {
+      "ROTULO": "Clients",
+      "CLIENTE": "Client",
+      "SITUACAO": "Status",
+      "PROXIMO_PASSO": "Next step",
+      "MARCAR_TODOS": "Select the ones shown",
+      "MARCAR": "Select {nome}",
+      "MOSTRAR_MAIS": "Show more",
+      "VER_CLIENTE": "See client {nome}: {sobre}"
+    },
+    "GRUPOS": {
+      "ESPERANDO": "Waiting for a reply",
+      "ESPERANDO_MEUS": "Waiting for your reply",
+      "RETORNO": "Follow-ups due today and late",
+      "NINGUEM": "Nobody taking care",
+      "PARADO": "Idle for 7 days or more",
+      "DEMAIS": "Everyone else",
+      "ARQUIVADO": "Archived",
+      "CONTA": "{n} client | {n} clients",
+      "VER_SO": "Show only these",
+      "VER_SO_N": "Show only these ({n}) ›",
+      "VER_SO_ROTULO": "Show only: {grupo} ({n})",
+      "MOSTRANDO_SO": "Showing only: {grupo}",
+      "VER_TODOS": "Show all"
+    },
+    "SITUACAO": {
+      "ESPERANDO": "Waiting for a reply",
+      "ESPERANDO_DESDE": {
+        "AGORA": "Waiting since just now",
+        "HA_MIN": "Waiting for {n} min",
+        "HA_HORAS": "Waiting for {n} h",
+        "ONTEM": "Waiting since yesterday",
+        "HA_DIAS": "Waiting for {n} days"
+      },
+      "RETORNO_MARCADO": "Follow-up set",
+      "RETORNO_HOJE": "Follow-up today at {hora}",
+      "RETORNO_VENCEU_HOJE": "Follow-up was today at {hora}",
+      "RETORNO_VENCEU_ONTEM": "Follow-up was due yesterday",
+      "RETORNO_VENCEU_HA_DIAS": "Follow-up was due {n} days ago",
+      "ENTROU": {
+        "AGORA": "Came in just now",
+        "HA_MIN": "Came in {n} min ago",
+        "HA_HORAS": "Came in {n} h ago",
+        "ONTEM": "Came in yesterday",
+        "HA_DIAS": "Came in {n} days ago"
+      },
+      "PARADO": "Idle, no conversation yet",
+      "PARADO_HA_DIAS": "Idle for {n} days",
+      "RETORNO_EM": {
+        "HOJE": "Follow-up today at {hora}",
+        "AMANHA": "Follow-up tomorrow at {hora}",
+        "NO_DIA": "Follow-up {dia} at {hora}",
+        "NA_DATA": "Follow-up on {data} at {hora}"
+      },
+      "MENSAGEM_PROGRAMADA": {
+        "HOJE": "Message scheduled today at {hora}",
+        "AMANHA": "Message scheduled tomorrow at {hora}",
+        "NO_DIA": "Message scheduled {dia} at {hora}",
+        "NA_DATA": "Message scheduled on {data} at {hora}"
+      },
+      "ASSISTENTE_RETOMA": {
+        "HOJE": "Assistant follows up today at {hora}",
+        "AMANHA": "Assistant follows up tomorrow at {hora}",
+        "NO_DIA": "Assistant follows up {dia} at {hora}",
+        "NA_DATA": "Assistant follows up on {data} at {hora}"
+      },
+      "ULTIMA_MENSAGEM": {
+        "AGORA": "Last message just now",
+        "HA_MIN": "Last message {n} min ago",
+        "HA_HORAS": "Last message {n} h ago",
+        "ONTEM": "Last message yesterday",
+        "HA_DIAS": "Last message {n} days ago"
+      },
+      "SEM_MENSAGEM": "No message yet",
+      "OUTRA_PESSOA": "Someone else is talking",
+      "FECHADO": "{rotulo}",
+      "FECHADO_COM_MOTIVO": "{rotulo} · {motivo}",
+      "ARQUIVADO": "Archived"
+    },
+    "QUANDO_FUTURO": {
+      "HOJE": "today at {hora}",
+      "AMANHA": "tomorrow at {hora}",
+      "NO_DIA": "{dia} at {hora}",
+      "NA_DATA": "{data} at {hora}"
+    },
+    "QUEM_CUIDA": {
+      "PESSOA": "{nome} takes care",
+      "VOCE": "You take care",
+      "NINGUEM": "Nobody takes care"
+    },
+    "ACOES": {
+      "RESPONDER": "Reply",
+      "FEITO": "Done",
+      "COMBINAR_OUTRO": "Set another",
+      "COMBINAR_RETORNO": "Set follow-up",
+      "PASSAR": "Hand over",
+      "FICAR": "Take this client",
+      "VER_CONVERSA": "See conversation",
+      "ALTERAR": "Change",
+      "EU": "Me ({nome})",
+      "ROTULO_FEITO": "Mark follow-up with {nome} as done",
+      "ROTULO_COMBINAR_OUTRO": "Set another follow-up with {nome}",
+      "ROTULO_COMBINAR": "Set follow-up with {nome}",
+      "ROTULO_ACAO": "{acao} — {nome}",
+      "ROTULO_VER_CONVERSA": "See conversation with {nome}",
+      "ROTULO_ALTERAR": "Change {nome}",
+      "ROTULO_PASSAR": "Hand {nome} over to"
+    },
+    "ALTERAR": {
+      "MUDAR_ETAPA": "Change stage",
+      "MUDAR_VALOR": "Change value",
+      "DESFECHO": "Mark as won or lost"
+    },
+    "MAIS_MENU": {
+      "BAIXAR": "Download spreadsheet",
+      "MARCAR_VARIOS": "Select several"
+    },
+    "FAIXA": {
+      "FEITO": "Follow-up with {nome} done.",
+      "PASSOU": "{nome} now with {pessoa}.",
+      "FICOU": "{nome} is now yours.",
+      "COMBINOU": "Follow-up with {nome} set: {quando}.",
+      "DESFAZER": "Undo",
+      "DESFEITO": "Undone. {nome} is back on the list."
+    },
+    "COMBINAR": {
+      "TITULO": "When to talk to {nome}?",
+      "TITULO_OUTRO": "When to talk to {nome} again?",
+      "TITULO_DO_RETORNO": "Talk to {nome}",
+      "QUANDO": "When",
+      "CONFIRMAR": "Set",
+      "CANCELAR": "Cancel"
+    },
+    "PASSAR": {
+      "TITULO": "Hand {nome} over to whom?",
+      "CONFIRMAR": "Hand over",
+      "ESCOLHER": "Choose a person"
+    },
+    "NOVIDADES": {
+      "TEXTO": "1 update arrived. | {n} updates arrived.",
+      "ATUALIZAR": "Refresh"
+    },
+    "ERROS": {
+      "ACAO": "That did not work. Nothing changed. Try again.",
+      "PASSOU": "Choose a time that has not passed yet.",
+      "CARREGAR": "Could not show the clients right now.",
+      "TENTAR_DE_NOVO": "Try again"
+    },
+    "VAZIO": {
+      "NINGUEM": "Nobody here yet.",
+      "SEM_RESULTADO": "Nobody with these filters.",
+      "LIMPAR": "Clear filters"
+    }
   }
 }
