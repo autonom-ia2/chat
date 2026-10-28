@@ -9,6 +9,7 @@ import { criarI18n, criarStore } from './apoio';
 // #2138 — os itens novos do ⋯ do topo: só com a chave, "Mudar prioridade" sem
 // time na conta, "Acompanhar" some com a trava de funil, e incluir ou tirar a
 // própria pessoa preserva os outros.
+// #2202 (PR 3): "Etiquetas desta conversa" vale sem a chave, só para quem opera.
 vi.mock('dashboard/api/acompanharConversa', () => ({
   default: { incluir: vi.fn(), tirar: vi.fn(), quemAcompanha: vi.fn() },
 }));
@@ -23,6 +24,12 @@ enableAutoUnmount(afterEach);
 const EU = { id: 7, name: 'Bia' };
 const CONVERSA = { id: 42, inbox_id: 1, muted: false, meta: {} };
 
+const abrirEtiquetas = vi.fn();
+const EtiquetasStub = {
+  template: '<div data-etiquetas />',
+  methods: { abrir: abrirEtiquetas },
+};
+
 const montar = (estado = {}) => {
   const apoio = criarStore({
     eu: EU,
@@ -35,6 +42,7 @@ const montar = (estado = {}) => {
       plugins: [apoio.store, criarI18n()],
       stubs: {
         TimeEPrioridadeDialog: { template: '<div />', methods: { abrir() {} } },
+        EtiquetasDaConversaDialog: EtiquetasStub,
       },
     },
   });
@@ -51,10 +59,10 @@ beforeEach(() => {
 });
 
 describe('ItensDoTopo', () => {
-  it('sem a chave da conta, não acrescenta nada', async () => {
+  it('sem a chave da conta, só "Etiquetas desta conversa"', async () => {
     const { wrapper } = montar({ features: {} });
     await flushPromises();
-    expect(wrapper.vm.itens).toEqual([]);
+    expect(rotulos(wrapper)).toEqual(['Etiquetas desta conversa']);
     expect(wrapper.vm.agir('painel_novo_acompanhar')).toBe(false);
     expect(CrmMeuAcessoAPI.get).not.toHaveBeenCalled();
   });
@@ -65,6 +73,7 @@ describe('ItensDoTopo', () => {
     expect(rotulos(wrapper)).toEqual([
       'Mudar time ou prioridade',
       'Acompanhar esta conversa',
+      'Etiquetas desta conversa',
     ]);
   });
 
@@ -88,7 +97,10 @@ describe('ItensDoTopo', () => {
     });
     const restrito = montar();
     await flushPromises();
-    expect(rotulos(restrito.wrapper)).toEqual(['Mudar prioridade']);
+    expect(rotulos(restrito.wrapper)).toEqual([
+      'Mudar prioridade',
+      'Etiquetas desta conversa',
+    ]);
 
     const jaAcompanha = montar({ acompanhantes: { 42: [{ id: 7 }] } });
     await flushPromises();
@@ -185,6 +197,25 @@ describe('ItensDoTopo', () => {
   });
 });
 
+describe('ItensDoTopo — "Etiquetas desta conversa"', () => {
+  it('quem opera vê o item e tocar abre a escolha', async () => {
+    const { wrapper } = montar();
+    await flushPromises();
+    expect(rotulos(wrapper)).toContain('Etiquetas desta conversa');
+    expect(wrapper.vm.agir('etiquetas_da_conversa')).toBe(true);
+    expect(abrirEtiquetas).toHaveBeenCalledTimes(1);
+  });
+
+  it('quem só lê não vê o item nem abre a escolha', async () => {
+    const { wrapper } = montar({ podeOperar: false });
+    await flushPromises();
+    expect(rotulos(wrapper)).not.toContain('Etiquetas desta conversa');
+    expect(wrapper.vm.agir('etiquetas_da_conversa')).toBe(false);
+    expect(abrirEtiquetas).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-etiquetas]').exists()).toBe(false);
+  });
+});
+
 describe('MoreActions (⋯ do topo) com os itens do fork', () => {
   const montarMenu = estado => {
     const apoio = criarStore({
@@ -193,6 +224,7 @@ describe('MoreActions (⋯ do topo) com os itens do fork', () => {
       ...estado,
     });
     const wrapper = mount(MoreActions, {
+      attachTo: document.body,
       global: {
         plugins: [apoio.store, criarI18n()],
         stubs: {
@@ -202,8 +234,11 @@ describe('MoreActions (⋯ do topo) com os itens do fork', () => {
             template: '<div />',
             methods: { abrir() {} },
           },
+          EtiquetasDaConversaDialog: EtiquetasStub,
           DropdownMenu: {
+            name: 'DropdownMenu',
             props: ['menuItems'],
+            emits: ['action'],
             template:
               '<ul><li v-for="i in menuItems" :key="i.action" :data-acao="i.action">{{ i.label }}</li></ul>',
           },
@@ -222,7 +257,11 @@ describe('MoreActions (⋯ do topo) com os itens do fork', () => {
   it('sem a chave, o ⋯ fica como o de sempre', async () => {
     const { wrapper } = montarMenu({ features: {} });
     await flushPromises();
-    expect(await abrirMenu(wrapper)).toEqual(['mute', 'send_transcript']);
+    expect(await abrirMenu(wrapper)).toEqual([
+      'mute',
+      'send_transcript',
+      'etiquetas_da_conversa',
+    ]);
   });
 
   it('com a chave, os dois itens novos entram depois dos de sempre', async () => {
@@ -233,6 +272,40 @@ describe('MoreActions (⋯ do topo) com os itens do fork', () => {
       'send_transcript',
       'painel_novo_time_e_prioridade',
       'painel_novo_acompanhar',
+      'etiquetas_da_conversa',
     ]);
+  });
+
+  it('tocar em "Etiquetas desta conversa" abre a escolha de etiquetas', async () => {
+    const { wrapper } = montarMenu({ features: {} });
+    await flushPromises();
+    await abrirMenu(wrapper);
+    wrapper.findComponent({ name: 'DropdownMenu' }).vm.$emit('action', {
+      action: 'etiquetas_da_conversa',
+    });
+    await flushPromises();
+    expect(abrirEtiquetas).toHaveBeenCalledTimes(1);
+  });
+
+  it('voltarFoco do ⋯: ao fechar a escolha, o foco volta ao botão ⋯ (não cai no <body>)', async () => {
+    const { wrapper } = montarMenu({ features: {} });
+    await flushPromises();
+    await abrirMenu(wrapper);
+    wrapper.findComponent({ name: 'DropdownMenu' }).vm.$emit('action', {
+      action: 'etiquetas_da_conversa',
+    });
+    await flushPromises();
+    const [voltarFoco] = abrirEtiquetas.mock.calls[0];
+    expect(voltarFoco).toEqual(expect.any(Function));
+    document.activeElement.blur();
+    expect(document.activeElement).toBe(document.body);
+
+    voltarFoco();
+
+    const mais = wrapper.findAll('button')[0].element;
+    expect(document.activeElement).toBe(mais);
+    expect(mais.getAttribute('icon') || mais.innerHTML).toContain(
+      'i-lucide-more-vertical'
+    );
   });
 });

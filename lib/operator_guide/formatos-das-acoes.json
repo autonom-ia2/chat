@@ -4805,6 +4805,24 @@
     ],
     "sem_corpo": false
   },
+  "PATCH conversations/:conversation_id/labels/alterar": {
+    "campos": {
+      "por": {
+        "tipo": "lista"
+      },
+      "tirar": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/alterar_etiquetas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:15",
+      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:68",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
   "PATCH conversations/:conversation_id/messages/:id": {
     "campos": {
       "external_error": {},

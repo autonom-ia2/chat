@@ -110,7 +110,8 @@
       "DEIXAR": "Stop following",
       "ACOMPANHANDO": "Done. You get notified of every new message.",
       "DEIXOU": "You stopped following this conversation.",
-      "ERRO": "Could not change it now. Try again."
+      "ERRO": "Could not change it now. Try again.",
+      "ETIQUETAS": "Labels for this conversation"
     },
     "CARREGANDO": "Loading",
     "INFORMACOES": {
@@ -164,6 +165,17 @@
       "ARQUIVADOS": "1 card archived. | {count} cards archived.",
       "NAO_ARQUIVADOS": "1 card stayed open: you cannot archive it. | {count} cards stayed open: you cannot archive them.",
       "ERRO": "Could not change it now. Try again."
+    },
+    "ETIQUETAS": {
+      "TITULO": "Labels for this conversation",
+      "MUDAR": "Change the labels of this conversation: {etiquetas}",
+      "CRIAR": "Create a label",
+      "DIALOGO_TITULO": "Labels for this conversation",
+      "DIALOGO_FRASE": "Tap a label to add it or take it off.",
+      "PRONTO": "Done",
+      "ERRO": "Could not change the label. Try again.",
+      "ERRO_AO_CARREGAR": "Could not load the labels of this conversation.",
+      "TENTAR_DE_NOVO": "Try again"
     }
   },
   "APAGAR_CONTATO": {
