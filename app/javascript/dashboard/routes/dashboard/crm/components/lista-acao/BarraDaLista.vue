@@ -72,7 +72,7 @@ const classeDaAba = ativa =>
     : 'border border-solid border-n-weak bg-n-solid-1 text-n-slate-12 font-medium hover:bg-n-alpha-2';
 const classeDoQuem = ativo =>
   ativo
-    ? 'bg-n-solid-1 font-semibold shadow-sm text-n-slate-12 dark:bg-n-solid-3 dark:ring-1 dark:ring-n-strong'
+    ? 'bg-n-solid-1 font-semibold shadow-sm text-n-slate-12 dark:bg-n-slate-12 dark:text-n-solid-1'
     : 'font-medium text-n-slate-11 hover:text-n-slate-12';
 const mostraTotal = aba => aba === 'aberto' && props.aba === 'aberto';
 </script>

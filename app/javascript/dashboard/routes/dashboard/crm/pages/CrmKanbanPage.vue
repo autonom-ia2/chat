@@ -2748,7 +2748,8 @@ onUnmounted(() => {
           <template #content>
             <div class="grid w-72 gap-1 p-2">
               <p
-                class="mb-1 px-2 py-1 text-xs font-medium uppercase tracking-wide text-n-slate-10"
+                class="mb-1 px-2 py-1 text-xs font-medium text-n-slate-10"
+                :class="listaAcao ? 'text-sm' : 'uppercase tracking-wide'"
               >
                 {{ t('CRM_KANBAN.ACTIONS.CONFIGURE') }}
               </p>

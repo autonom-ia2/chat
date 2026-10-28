@@ -7443,8 +7443,8 @@
       "ESPERANDO": "Esperando resposta",
       "ESPERANDO_DESDE": {
         "AGORA": "Esperando agora",
-        "HA_MIN": "Esperando há {n} min",
-        "HA_HORAS": "Esperando há {n} h",
+        "HA_MIN": "Esperando há {n} minuto | Esperando há {n} minutos",
+        "HA_HORAS": "Esperando há {n} hora | Esperando há {n} horas",
         "ONTEM": "Esperando desde ontem",
         "HA_DIAS": "Esperando há {n} dias"
       },
@@ -7455,8 +7455,8 @@
       "RETORNO_VENCEU_HA_DIAS": "Retorno venceu há {n} dias",
       "ENTROU": {
         "AGORA": "Entrou agora",
-        "HA_MIN": "Entrou há {n} min",
-        "HA_HORAS": "Entrou há {n} h",
+        "HA_MIN": "Entrou há {n} minuto | Entrou há {n} minutos",
+        "HA_HORAS": "Entrou há {n} hora | Entrou há {n} horas",
         "ONTEM": "Entrou ontem",
         "HA_DIAS": "Entrou há {n} dias"
       },
@@ -7482,8 +7482,8 @@
       },
       "ULTIMA_MENSAGEM": {
         "AGORA": "Última mensagem agora",
-        "HA_MIN": "Última mensagem há {n} min",
-        "HA_HORAS": "Última mensagem há {n} h",
+        "HA_MIN": "Última mensagem há {n} minuto | Última mensagem há {n} minutos",
+        "HA_HORAS": "Última mensagem há {n} hora | Última mensagem há {n} horas",
         "ONTEM": "Última mensagem ontem",
         "HA_DIAS": "Última mensagem há {n} dias"
       },

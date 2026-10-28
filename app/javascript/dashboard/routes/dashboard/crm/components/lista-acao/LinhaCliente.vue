@@ -56,9 +56,13 @@ const temConversa = computed(
 
 const situacao = computed(() => situacaoDoCard(props.card, props.contexto));
 const tom = computed(() => TONS[situacao.value.tom] || TONS.cinza);
-const textoDaSituacao = computed(() =>
-  t(`${L}.${situacao.value.chave}`, situacao.value.valores)
-);
+// O número escolhe singular ou plural ("há 1 hora", "há 2 horas").
+const textoDaSituacao = computed(() => {
+  const { chave, valores = {} } = situacao.value;
+  return typeof valores.n === 'number'
+    ? t(`${L}.${chave}`, valores, valores.n)
+    : t(`${L}.${chave}`, valores);
+});
 
 const etapa = computed(() => props.card.stage || null);
 // Sem "quem cuida": conversa escondida (não sugere nome), "Ninguém cuidando"
@@ -201,14 +205,10 @@ const passarPara = pessoaId => {
         />
         <span>{{ textoDaSituacao }}</span>
       </span>
-      <!-- Etapa e quem cuida separados por espaço, sem "·": quando não cabem, cada
-           um desce inteiro, sem ponto solto nem corte; o valor tem linha própria
-           (revisão leiga do #2324). -->
+      <!-- Etapa, quem cuida e valor, cada um na sua linha: sem "·" solto, sem
+           corte e sem duas coisas lidas como uma (revisão leiga do #2324). -->
       <span class="flex flex-col gap-0.5 text-sm text-n-slate-11">
-        <span
-          v-if="etapa || mostraQuem"
-          class="flex flex-wrap items-center gap-x-3"
-        >
+        <span v-if="etapa || mostraQuem" class="flex flex-col items-start">
           <span
             v-if="etapa"
             class="inline-flex items-center gap-1.5 whitespace-nowrap"

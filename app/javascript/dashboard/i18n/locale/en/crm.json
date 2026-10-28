@@ -7442,8 +7442,8 @@
       "ESPERANDO": "Waiting for a reply",
       "ESPERANDO_DESDE": {
         "AGORA": "Waiting since just now",
-        "HA_MIN": "Waiting for {n} min",
-        "HA_HORAS": "Waiting for {n} h",
+        "HA_MIN": "Waiting for {n} minute | Waiting for {n} minutes",
+        "HA_HORAS": "Waiting for {n} hour | Waiting for {n} hours",
         "ONTEM": "Waiting since yesterday",
         "HA_DIAS": "Waiting for {n} days"
       },
@@ -7454,8 +7454,8 @@
       "RETORNO_VENCEU_HA_DIAS": "Follow-up was due {n} days ago",
       "ENTROU": {
         "AGORA": "Came in just now",
-        "HA_MIN": "Came in {n} min ago",
-        "HA_HORAS": "Came in {n} h ago",
+        "HA_MIN": "Came in {n} minute ago | Came in {n} minutes ago",
+        "HA_HORAS": "Came in {n} hour ago | Came in {n} hours ago",
         "ONTEM": "Came in yesterday",
         "HA_DIAS": "Came in {n} days ago"
       },
@@ -7481,8 +7481,8 @@
       },
       "ULTIMA_MENSAGEM": {
         "AGORA": "Last message just now",
-        "HA_MIN": "Last message {n} min ago",
-        "HA_HORAS": "Last message {n} h ago",
+        "HA_MIN": "Last message {n} minute ago | Last message {n} minutes ago",
+        "HA_HORAS": "Last message {n} hour ago | Last message {n} hours ago",
         "ONTEM": "Last message yesterday",
         "HA_DIAS": "Last message {n} days ago"
       },
