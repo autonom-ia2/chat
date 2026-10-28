@@ -99,4 +99,23 @@ RSpec.describe 'script/desempenho/chave.rb' do # rubocop:disable RSpec/DescribeC
     hash_ruim, erro, = gerar('--hash', 'z' * 64)
     expect([hash_ruim, erro]).to eq([false, "--hash precisa ter 64 caracteres hexadecimais\n"])
   end
+
+  it 'recusa gravar dentro de QUALQUER repositório git (outra cópia, outra worktree), direto ou por link simbólico' do
+    outro_repositorio = File.join(pasta, 'copia')
+    FileUtils.mkdir_p(File.join(outro_repositorio, 'sub'))
+    _saida, _erro, iniciado = Open3.capture3('git', 'init', '-q', outro_repositorio)
+    expect(iniciado.success?).to be(true)
+    File.symlink(File.join(outro_repositorio, 'sub'), File.join(pasta, 'atalho'))
+
+    [File.join(outro_repositorio, 'sub', 'chave.sql'), File.join(pasta, 'atalho', 'chave.sql')].each do |saida|
+      certo, erro, conteudo = gerar(saida: saida)
+      expect([certo, erro, conteudo]).to eq([false, "--saida precisa ficar fora do repositório\n", nil])
+    end
+  end
+
+  it 'recusa a pasta de --saida que não existe' do
+    certo, erro, = gerar(saida: File.join(pasta, 'nao-existe', 'chave.sql'))
+
+    expect([certo, erro]).to eq([false, "a pasta de --saida não existe\n"])
+  end
 end

@@ -744,7 +744,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_610000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "sujeito_id", "iniciada_em"], name: "idx_autonomia_desempenho_rodadas_inicio"
-    t.check_constraint "status::text = ANY ('{rodando,ok,teto,sem_ia,erro}'::text[])", name: "autonomia_desempenho_rodadas_status"
+    t.check_constraint "status::text = ANY ('{rodando,ok,teto,sem_ia,chave_recusada,erro}'::text[])", name: "autonomia_desempenho_rodadas_status"
     t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_rodadas_sujeito"
   end
 

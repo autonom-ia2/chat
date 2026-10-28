@@ -15,8 +15,14 @@ export const VARIANTES = {
     soQuemGerencia: true,
     botaoSemAcesso: true,
   },
-  // #2301 — a última rodada da leitura automática caiu: a frase só avisa; a próxima rodada tenta de novo.
+  // #2301 — a última rodada da leitura automática caiu: a frase só avisa e diz o que fazer se continuar.
   erro: { chave: 'ERRO', icone: 'i-lucide-circle-alert', semBotao: true },
+  // #2301 — a IA recusou a chave da conta: a frase pede para conferir a chave, sem botão.
+  chave_recusada: {
+    chave: 'CHAVE_RECUSADA',
+    icone: 'i-lucide-key-round',
+    semBotao: true,
+  },
   // Definir o que conta como resultado volta no PR que grava a escolha (o #2251 tirou a gaveta que não gravava).
   sem_resultado: {
     chave: 'SEM_RESULTADO',

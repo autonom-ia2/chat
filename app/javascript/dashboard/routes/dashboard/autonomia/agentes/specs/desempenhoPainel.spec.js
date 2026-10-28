@@ -353,6 +353,22 @@ describe('DesempenhoPage', () => {
     expect(semOcultas.find('[data-aviso-caixas]').exists()).toBe(false);
   });
 
+  it('says how many conversations the automatic reading could not read (#2301)', async () => {
+    respostaDaApi.painel = {
+      ...demo,
+      meta: { ...demo.meta, fonte: 'api', nao_lidas: 2 },
+    };
+    const wrapper = await abrir();
+    expect(wrapper.find('[data-aviso-nao-lidas]').exists()).toBe(true);
+
+    respostaDaApi.painel = {
+      ...demo,
+      meta: { ...demo.meta, fonte: 'api', nao_lidas: 0 },
+    };
+    const semNaoLidas = await abrir();
+    expect(semNaoLidas.find('[data-aviso-nao-lidas]').exists()).toBe(false);
+  });
+
   it('hides the export buttons from whoever lacks contact_export (#2251)', async () => {
     respostaDaApi.painel = { ...demo, meta: { ...demo.meta, fonte: 'api' } };
     estado.exporta = false;

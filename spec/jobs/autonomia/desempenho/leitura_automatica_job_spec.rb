@@ -62,6 +62,18 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomaticaJob do
                                                    [ligada.id, outro.id])
   end
 
+  it 'quem leu há mais tempo vai primeiro, e os jobs saem espaçados para a ordem valer' do
+    outro = ficha_com_chave!(ligada, create(:agent_bot, account: ligada).id)
+    Autonomia::Desempenho::Rodada.create!(account: ligada, sujeito_type: 'robo', sujeito_id: robo.id, corte_em: 1.hour.ago, piso_em: 1.day.ago,
+                                          iniciada_em: 1.hour.ago, status: 'ok', lote: 'spec')
+
+    rodar(ligada.id)
+
+    jobs = ActiveJob::Base.queue_adapter.enqueued_jobs.select { |job| job['job_class'] == 'Autonomia::Desempenho::LeituraDaFichaJob' }
+    expect(jobs.map { |job| job['arguments'].second }).to eq([outro.id, Autonomia::Desempenho::Ficha.vigente(ligada, 'robo', robo.id).id])
+    expect(jobs.second[:at] - jobs.first[:at]).to be_within(1).of(described_class::VEZ_A_VEZ)
+  end
+
   it 'pula o robô apagado e o agente apagado ou desligado' do
     ligado = agente!
     ficha_do_ligado = ficha_com_chave!(ligada, ligado.id, tipo: 'agente')

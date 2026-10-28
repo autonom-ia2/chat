@@ -13,7 +13,9 @@ module Autonomia::Desempenho::Exportacao::Planilha::AcoesELeitura
   def aba_recomendacoes
     colunas = COLUNAS_DAS_RECOMENDACOES.map { |id, tipo, largura| coluna(t("planilha.recomendacao.#{id}"), tipo.to_sym, largura.to_i) }
     linhas = Array(@painel['recomendacoes']).map { |recomendacao| linha_da_recomendacao(recomendacao) }
-    nova_aba(t('planilha.abas.recomendacoes'), t('planilha.recomendacoes_titulo')) { |sheet| tabela_de_dados(sheet, colunas, linhas) }
+    nova_aba(t('planilha.abas.recomendacoes'), t('planilha.recomendacoes_titulo'), nota: recomendacoes_de) do |sheet|
+      tabela_de_dados(sheet, colunas, linhas)
+    end
   end
 
   def aba_como_ler
@@ -29,6 +31,14 @@ module Autonomia::Desempenho::Exportacao::Planilha::AcoesELeitura
   end
 
   private
+
+  # #2301: sugestões de outras datas (as últimas do mesmo período) dizem as datas delas, como na tela.
+  def recomendacoes_de
+    datas = meta['recomendacoes_de']
+    return nil if datas.blank? || Array(@painel['recomendacoes']).empty?
+
+    t('planilha.recomendacoes_de', inicio: dia_mes(datas['inicio']), fim: data_longa(datas['fim']))
+  end
 
   def linha_da_recomendacao(recomendacao)
     ganho = recomendacao['ganho'].to_h

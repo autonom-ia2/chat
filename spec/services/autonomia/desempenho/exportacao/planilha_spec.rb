@@ -30,6 +30,12 @@ RSpec.describe Autonomia::Desempenho::Exportacao::Planilha do
     expect(titulos).to include('_xlnm.Print_Titles')
   end
 
+  it 'diz as datas das sugestões quando elas são de outras datas, como a tela (#2301)' do
+    painel['meta']['recomendacoes_de'] = { 'inicio' => '2026-10-10', 'fim' => '2026-10-16' }
+
+    expect(arquivo.sheet('Recomendações').cell(2, 1)).to include('sugestões de 10/10 a 16/10/2026')
+  end
+
   it 'marca em cada procura se era pedido de compra e traz a lista completa das perdas' do
     # O Roo troca a aba ativa a cada `sheet`: confere uma antes de abrir a outra.
     expect(arquivo.sheet('Procuras').row(4)).to include('Pedidos de compra')

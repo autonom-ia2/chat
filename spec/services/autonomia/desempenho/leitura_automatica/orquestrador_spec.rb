@@ -177,6 +177,17 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       expect(rodada).to have_attributes(status: 'teto', conversas_lidas: 0, conversas_pendentes: 1)
     end
 
+    it 'o teto é o menor entre as fichas da conta: uma ficha com teto alto não libera gasto para a outra' do
+      Crm::AiUsageEvent.create!(account: account, feature: 'painel_leitura', model: 'gpt-6.1-sol', cost_estimate: 1.2, created_at: agora - 1.hour)
+      ficha.update!(configuracao: ficha.configuracao.merge('leitura' => { 'teto_diario_usd' => 5 }))
+      outro = create(:agent_bot, account: account)
+      ficha_da_loja!(account, sujeito_id: outro.id).update!(chave_de_leitura: 'Leia.')
+      openai_devolve({ 'procuras' => [procura] })
+
+      expect(rodar.status).to eq('teto')
+      expect(corpos).to be_empty
+    end
+
     it 'o teto da ficha troca o padrão' do
       Crm::AiUsageEvent.create!(account: account, feature: 'painel_leitura', model: 'gpt-6.1-sol', cost_estimate: 1.2, created_at: agora - 1.hour)
       ficha.update!(configuracao: ficha.configuracao.merge('leitura' => { 'teto_diario_usd' => 5 }))
@@ -303,14 +314,17 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{conversa.id}")
     end
 
-    it 'chave recusada (401) fecha a rodada como sem_ia na hora, sem contar falha da conversa' do
-      openai_devolve(401)
+    it 'chave recusada (401 e 403) fecha a rodada como chave_recusada na hora, sem contar falha da conversa' do
+      [401, 403].each_with_index do |status, dia|
+        corpos.clear
+        openai_devolve(status)
 
-      rodada = rodar
+        rodada = travel_to(agora + dia.days) { described_class.new(ficha).call }
 
-      expect(corpos.size).to eq(1)
-      expect(rodada).to have_attributes(status: 'sem_ia', conversas_lidas: 0, conversas_pendentes: 2)
-      expect([falhas_de(primeira), falhas_de(segunda)]).to eq([nil, nil])
+        expect(corpos.size).to eq(1)
+        expect(rodada).to have_attributes(status: 'chave_recusada', conversas_lidas: 0, conversas_pendentes: 2)
+        expect([falhas_de(primeira), falhas_de(segunda)]).to eq([nil, nil])
+      end
     end
 
     it 'outro erro permanente (404) fecha como erro na hora' do
@@ -419,11 +433,44 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       expect(corpos).to be_empty
     end
 
-    it 'erro inesperado fora de uma conversa grava erro na rodada e sobe' do
+    it 'erro inesperado fora de uma conversa grava erro na rodada e sobe como RodadaComErro, com a causa' do
       allow(Autonomia::Desempenho::LeituraAutomatica::Candidatas).to receive(:new).and_raise(ActiveRecord::StatementInvalid)
 
-      expect { rodar }.to raise_error(ActiveRecord::StatementInvalid)
+      expect { rodar }.to raise_error(described_class::RodadaComErro) { |erro| expect(erro.cause).to be_a(ActiveRecord::StatementInvalid) }
       expect(Autonomia::Desempenho::Rodada.last.status).to eq('erro')
+    end
+
+    it 'rodada interrompida no meio (deploy) fecha como erro e solta a trava' do
+      allow(Autonomia::Desempenho::LeituraAutomatica::Leitor).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap { |leitor| allow(leitor).to receive(:ler).and_raise(Interrupt) }
+      end
+
+      expect { rodar }.to raise_error(Interrupt)
+      expect(Autonomia::Desempenho::Rodada.last).to have_attributes(status: 'erro', terminada_em: be_present)
+      expect(Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:trava")).to be_nil
+    end
+
+    it 'a conversa com erro passageiro (tempo esgotado) na 3ª rodada seguida fica não lida e sai da fila' do
+      url = 'https://api.openai.com/v1/responses'
+      stub_request(:post, url).to_return do |request|
+        corpo = JSON.parse(request.body)
+        corpos << corpo
+        raise Net::ReadTimeout if corpo.dig('input', 0, 'content', 0, 'text').include?("CONVERSA #{primeira.display_id} ")
+
+        { status: 200, body: { id: 'r', output_text: { 'procuras' => [procura('inicio' => '10-21 15:00', 'fim' => '10-21 15:01')] }.to_json,
+                               usage: { input_tokens: 1, output_tokens: 1 } }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      end
+
+      2.times do |dia|
+        expect(travel_to(agora + dia.days) { described_class.new(ficha).call }).to have_attributes(status: 'ok', conversas_pendentes: 1)
+      end
+      terceira = travel_to(agora + 2.days) { described_class.new(ficha).call }
+
+      expect(terceira).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 0)
+      expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: primeira.id).status).to eq('nao_lida')
+      chamadas = corpos.size
+      travel_to(agora + 3.days) { described_class.new(ficha).call }
+      expect(corpos.size).to eq(chamadas)
     end
 
     it 'pula a conversa apagada depois de entrar na fila' do

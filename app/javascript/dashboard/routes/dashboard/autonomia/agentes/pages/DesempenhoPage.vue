@@ -392,6 +392,18 @@ const aoMigalha = item => router.push(item.destino);
           :texto="t(`${NS}.FONTE.INSTRUCAO_TEXTO`)"
         />
         <Ressalva
+          v-if="meta.nao_lidas > 0"
+          data-aviso-nao-lidas
+          :destaque="
+            t(
+              `${NS}.FONTE.NAO_LIDAS_TITULO`,
+              { n: meta.nao_lidas },
+              meta.nao_lidas
+            )
+          "
+          :texto="t(`${NS}.FONTE.NAO_LIDAS_TEXTO`)"
+        />
+        <Ressalva
           v-if="ehDemo"
           data-aviso-demo
           :destaque="t(`${NS}.FONTE.DEMO_TITULO`)"

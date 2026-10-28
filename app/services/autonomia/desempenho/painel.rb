@@ -17,8 +17,10 @@
 #
 # O fuso é um só em tudo: o da conta (Crm::Timezone::Resolver); sem ele, o da ficha; sem nome válido, o padrão.
 #
-# O período termina no dia de `dados_ate` (a última mensagem lida), não hoje: antes da atualização automática, "7
-# dias" são os 7 dias que a leitura cobre, e as mensagens ao vivo ficam na mesma janela.
+# O período termina no dia de `dados_ate` (a última mensagem lida), não hoje: "7 dias" são os 7 dias que a leitura
+# cobre, e as mensagens ao vivo ficam na mesma janela. Com a leitura automática ligada (#2301), `dados_ate` é o "Lido
+# até" quando ele vem antes: com conversas pendentes, os dias depois dele têm só parte das conversas lidas e mostrariam
+# uma queda que não existe.
 class Autonomia::Desempenho::Painel
   PERIODOS = %w[7 30 90 tudo].freeze
   DIAS = { '7' => 7, '30' => 30, '90' => 90 }.freeze
@@ -41,7 +43,7 @@ class Autonomia::Desempenho::Painel
     preparar(chave)
     return sem_conversas(chave) if @visiveis && !todas.exists?(conversation_id: @visiveis.select(:id))
 
-    painel = com_leitura_automatica(agregador.painel(chave, @inicio, @fim, anterior: @anterior, dados_ate: dados_ate, fonte: FONTE))
+    painel = com_leitura_automatica(agregador.painel(chave, @inicio, @fim, anterior: @anterior, dados_ate: ate_onde_leu, fonte: FONTE))
     Autonomia::Desempenho::Visibilidade.new(ocultas: @visiveis && ocultas_no_periodo, ve_valores: @ve_valores)
                                        .aplicar(com_lista(painel))
   end
@@ -70,23 +72,33 @@ class Autonomia::Desempenho::Painel
 
   def com_leitura? = ficha.present? && todas.exists? && dados_ate.present?
 
+  # A leitura automática vale para este agente: a ENV ligada e a ficha com a chave de leitura. Desligada (o rollback),
+  # as rodadas antigas não mudam nada na tela.
+  def automatica? = @automatica
+
   # As datas do período e o que depende delas, refeito a cada chamada.
   def preparar(chave)
+    @automatica = Autonomia::Desempenho::LeituraAutomatica::Orquestrador.ligada? && ficha.chave_de_leitura.present?
+    @lido_ate = calcular_lido_ate
     @visiveis = so_parte_das_caixas? ? @pedidas : nil
     @inicio, @fim, @anterior = self.class.intervalo(chave, fim_dos_dados, inicio_dos_dados)
     @procuras = @procuras_do_periodo = @mensagens = @recomendacoes_de = nil
   end
 
   # O que a leitura automática (#2301) acrescenta à meta:
-  # - `lido_ate`: o corte da última rodada que leu (ok ou teto) quando ela não deixou pendente; com pendentes, o momento
-  #   antes da mensagem pendente mais antiga (sem ela, o piso da rodada), no fuso: tudo antes disso foi lido;
-  # - `situacao`: `sem_ia`, `teto` ou `erro` quando a última rodada parou por isso;
+  # - `lido_ate`: o corte da última rodada que leu (Rodada.leram) quando ela não deixou pendente; com pendentes, o
+  #   momento antes da mensagem pendente mais antiga (sem ela, o piso da rodada), no fuso: tudo antes disso foi lido;
+  # - `situacao`: `sem_ia`, `chave_recusada`, `teto` ou `erro` quando a última rodada parou por isso;
+  # - `nao_lidas`: quantas conversas a leitura automática deixou como não lidas (grandes demais ou com erro repetido):
+  #   os números delas são os da leitura anterior;
   # - `instrucao_mudou`: a instrução do agente mudou depois da chave de leitura (nil para o robô de outro sistema);
-  # - `recomendacoes_de`: as datas das sugestões quando elas são de outro período (as do período ainda não vieram).
+  # - `recomendacoes_de`: as datas das sugestões quando elas são de outro período.
+  # Tudo isso só com a leitura automática ligada para o agente (`automatica?`); o aviso de instrução vale sempre.
   def com_leitura_automatica(painel)
-    meta = painel['meta'].merge('lido_ate' => lido_ate, 'instrucao_mudou' => instrucao_mudou?, 'recomendacoes_de' => @recomendacoes_de)
-    parada = ultima_rodada&.status
-    meta['situacao'] ||= parada if %w[sem_ia teto erro].include?(parada)
+    meta = painel['meta'].merge('lido_ate' => lido_ate, 'instrucao_mudou' => instrucao_mudou?, 'recomendacoes_de' => @recomendacoes_de,
+                                'nao_lidas' => nao_lidas)
+    parada = ultima_rodada&.status if automatica?
+    meta['situacao'] ||= parada if Autonomia::Desempenho::Rodada::PARADAS.include?(parada)
     painel.merge('meta' => meta)
   end
 
@@ -94,12 +106,26 @@ class Autonomia::Desempenho::Painel
 
   def ultima_rodada = rodadas.where.not(status: 'rodando').first
 
-  def lido_ate
-    rodada = rodadas.find_by(status: Autonomia::Desempenho::Rodada::LIDAS)
+  attr_reader :lido_ate
+
+  def calcular_lido_ate
+    rodada = rodadas.leram.first if automatica?
     return nil if rodada.nil?
 
     ate = rodada.conversas_pendentes.zero? ? rodada.corte_em : antes_da_pendente(rodada)
     ate.in_time_zone(fuso).strftime('%Y-%m-%dT%H:%M')
+  end
+
+  # Até onde os números valem: a última mensagem lida, ou o "Lido até" quando ele vem antes.
+  def ate_onde_leu = [dados_ate, lido_ate].compact.min
+
+  # Só as conversas que a pessoa vê.
+  def nao_lidas
+    return 0 unless automatica?
+
+    escopo = leituras.where(status: 'nao_lida', lote: Autonomia::Desempenho::LeituraAutomatica::Gravacao::LOTE)
+    escopo = escopo.where(conversation_id: @visiveis.select(:id)) if @visiveis
+    escopo.count
   end
 
   # A rodada grava a mensagem pendente mais antiga ao fechar; sem ela, o piso da rodada.
@@ -149,7 +175,7 @@ class Autonomia::Desempenho::Painel
 
   def sem_conversas(chave)
     { 'versao' => 2, 'vazio' => true,
-      'meta' => { 'fonte' => FONTE, 'situacao' => 'sem_conversas', 'periodo' => { 'chave' => chave }, 'dados_ate' => dados_ate,
+      'meta' => { 'fonte' => FONTE, 'situacao' => 'sem_conversas', 'periodo' => { 'chave' => chave }, 'dados_ate' => ate_onde_leu,
                   'base' => nil, 'visibilidade' => { 'escopo' => 'caixas', 'ocultas' => ocultas_no_periodo } } }
   end
 
@@ -163,7 +189,7 @@ class Autonomia::Desempenho::Painel
     @dados_ate = ate&.in_time_zone(fuso)&.strftime('%Y-%m-%dT%H:%M')
   end
 
-  def fim_dos_dados = Autonomia::Desempenho::Conta.data(dados_ate)
+  def fim_dos_dados = Autonomia::Desempenho::Conta.data(ate_onde_leu)
 
   # O primeiro dia com procura, de todas as caixas (as de teste também contam, como no protótipo).
   def inicio_dos_dados
@@ -212,13 +238,13 @@ class Autonomia::Desempenho::Painel
   # As sugestões guardadas para este período, da mesma ficha. Elas são calculadas com a conta inteira: quem vê só parte
   # das caixas não as recebe. Sem leitura automática, só as das mesmas datas. Com ela (#2301), as datas andam todo dia
   # e as sugestões nem sempre acompanham: sem as do período exato, vão as últimas do mesmo período, com as datas delas
-  # em `meta.recomendacoes_de`.
+  # em `meta.recomendacoes_de` (gerar as do período é o #2320).
   def recomendacoes(chave, inicio, fim)
     return [] if @visiveis
 
     guardadas = Autonomia::Desempenho::Recomendacao.do_sujeito(@account, @sujeito_type, @sujeito_id)
                                                    .where(periodo: chave, versao_ficha: ficha.versao)
-    guardadas = guardadas.where(inicio: inicio, fim: fim) unless rodadas.exists?(status: Autonomia::Desempenho::Rodada::LIDAS)
+    guardadas = guardadas.where(inicio: inicio, fim: fim) unless automatica? && rodadas.leram.exists?
     cache = guardadas.first
     return [] if cache.nil?
 

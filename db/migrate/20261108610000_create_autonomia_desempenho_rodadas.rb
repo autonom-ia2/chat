@@ -7,7 +7,7 @@
 #   mensagem lida pela carga; as rodadas seguintes repetem o mesmo piso, para a conversa que ficou pendente (teto,
 #   limite da rodada) não sumir da fila.
 # - `status`: rodando | ok | teto (parou no teto diário de gasto) | sem_ia (a conta não tem a própria chave de IA) |
-#   erro (a rodada caiu no meio).
+#   chave_recusada (a IA recusou a chave da conta: 401 ou 403) | erro (a rodada caiu no meio).
 # - `conversas_lidas` e `conversas_pendentes`: o que a rodada leu e o que ficou para a próxima.
 # - `pendente_desde`: com pendentes, a mensagem nova mais antiga entre elas, gravada ao fechar. O painel mostra
 #   "Lido até" logo antes dela (tudo antes foi lido), sem refazer a consulta da fila.
@@ -43,7 +43,7 @@ class CreateAutonomiaDesempenhoRodadas < ActiveRecord::Migration[7.2]
   def add_checks
     add_check_constraint :autonomia_desempenho_rodadas, "sujeito_type::text = ANY ('{agente,robo}'::text[])",
                          name: 'autonomia_desempenho_rodadas_sujeito'
-    add_check_constraint :autonomia_desempenho_rodadas, "status::text = ANY ('{rodando,ok,teto,sem_ia,erro}'::text[])",
+    add_check_constraint :autonomia_desempenho_rodadas, "status::text = ANY ('{rodando,ok,teto,sem_ia,chave_recusada,erro}'::text[])",
                          name: 'autonomia_desempenho_rodadas_status'
   end
 end

@@ -4,6 +4,10 @@
 # Numa transação: apaga as procuras daquela conversa e daquele agente (de qualquer lote, a carga inclusive), grava as
 # novas no lote da leitura automática e atualiza a leitura da conversa (lida até a última mensagem lida).
 #
+# A marca `teste` só vem do modelo quando a ficha pede (`configuracao.leitura.com_teste`). Sem isso, a conversa relida
+# continua como era: de teste se tinha alguma procura de teste antes (de qualquer lote), senão fora do teste. Assim a
+# conversa de teste que ganha mensagem nova não entra nos números reais.
+#
 # `inicio` e `fim` voltam do modelo como 'MM-DD HH:MM' (UTC, o horário da transcrição, sem ano): o início é a primeira
 # mensagem daquele minuto, o fim a última. Numa conversa que atravessa o ano, o mesmo minuto pode existir em dois anos:
 # vale o par em que o início não passa do fim e os dois ficam mais perto; empatado, o mais recente (as mensagens já
@@ -23,8 +27,9 @@ class Autonomia::Desempenho::LeituraAutomatica::Gravacao
 
   # `procuras`: o que o Esquema conferiu ([{papel => valor}]).
   def gravar!(procuras)
-    linhas = procuras.each_with_index.map { |procura, indice| linha(procura, indice + 1) }
     Autonomia::Desempenho::Procura.transaction do
+      teste = escopo(Autonomia::Desempenho::Procura).exists?(teste: true) unless com_teste?
+      linhas = procuras.each_with_index.map { |procura, indice| linha(procura, indice + 1, teste) }
       escopo(Autonomia::Desempenho::Procura).delete_all
       linhas.each { |atributos| Autonomia::Desempenho::Procura.create!(atributos) }
       marcar!('lida')
@@ -43,6 +48,8 @@ class Autonomia::Desempenho::LeituraAutomatica::Gravacao
 
   def escopo(classe) = classe.where(**sujeito, conversation_id: @conversa.id)
 
+  def com_teste? = @ficha.configuracao.dig('leitura', 'com_teste') == true
+
   def marcar!(status)
     leitura = escopo(Autonomia::Desempenho::Leitura).first_or_initialize
     leitura.update!(lida_ate_em: lida_ate, versao_ficha: @ficha.versao, status: status, lote: LOTE)
@@ -54,13 +61,15 @@ class Autonomia::Desempenho::LeituraAutomatica::Gravacao
   LISTAS = { 'marcos' => :marcos, 'motivos' => :motivo_ids, 'regras' => :regra_ids }.freeze
   SIM_OU_NAO = %w[teste perda_evitavel precisava_pessoa teve_pessoa].freeze
 
-  def linha(procura, ordem)
+  # `teste`: a marca da conversa antes de relida (nil quando a ficha pede o campo ao modelo).
+  def linha(procura, ordem, teste)
     atributos = sujeito.merge(conversation_id: @conversa.id, ordem: ordem, versao_ficha: @ficha.versao, lote: LOTE, anuncio_id: anuncio_id,
                               dados: dados(procura))
     atributos[:inicio_em], atributos[:fim_em] = horarios(procura)
     COLUNAS.each { |papel, coluna| atributos[coluna] = procura[papel] }
     LISTAS.each { |papel, coluna| atributos[coluna] = Array(procura[papel]) }
     SIM_OU_NAO.each { |papel| atributos[papel.to_sym] = procura[papel] == true }
+    atributos[:teste] = teste unless teste.nil?
     atributos
   end
 

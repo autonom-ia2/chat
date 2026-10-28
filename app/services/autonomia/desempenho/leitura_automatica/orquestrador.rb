@@ -14,16 +14,21 @@
 #   tempo primeiro; passou do teto diário, a rodada para como `teto` e o resto fica para a próxima.
 # - Ao fechar com pendentes, grava `pendente_desde` (a mensagem pendente mais antiga): o painel mostra "Lido até" com
 #   ela, sem refazer a consulta da fila.
-# - Erro permanente da chamada (chave recusada, modelo inexistente, pedido inválido) fecha a rodada na hora: `sem_ia`
-#   no 401, `erro` no resto. Erro passageiro (rede, 429, 5xx) deixa a conversa pendente, sem contar falha dela; o
-#   terceiro seguido na rodada fecha `erro`.
+# - Erro permanente da chamada (chave recusada, modelo inexistente, pedido inválido) fecha a rodada na hora:
+#   `chave_recusada` no 401 e no 403, `erro` no resto. Erro passageiro (rede, tempo esgotado, 429, 5xx) deixa a conversa
+#   pendente, sem contar falha dela; o terceiro seguido na rodada fecha `erro`. Um contador próprio por conversa
+#   (VezesDaConversa) tira da fila, como não lida, a conversa com erro passageiro repetido entre rodadas: a conversa que
+#   estoura o tempo toda vez pagaria uma chamada por dia, sem o consumo entrar no teto.
 # - Conversa recusada (resposta fora do catálogo, JSON quebrado) mantém as procuras de antes; na segunda falha seguida,
 #   fica como não lida até ganhar mensagem nova.
 # - Erro inesperado numa conversa (um bug na gravação, na transcrição) não é culpa dela: ela fica pendente, sem contar
 #   falha, e o terceiro seguido na rodada fecha `erro` (o bug é do sistema, e cada conversa já pagou a chamada). Um
-#   contador próprio por conversa (separado do de falhas) tira da fila, como não lida, a conversa que der erro
-#   inesperado INESPERADOS_PARA_DESISTIR vezes seguidas: senão ela pagaria uma chamada por dia para sempre.
+#   contador próprio por conversa (VezesDaConversa, separado do de falhas) tira da fila, como não lida, a conversa com
+#   erro inesperado repetido entre rodadas: senão ela pagaria uma chamada por dia para sempre.
 # - Rodada `ok` sem pendentes: a próxima só procura mensagem depois do corte dela, com uma margem (o piso anda).
+# - Erro inesperado fora de uma conversa: a rodada fica `erro` e sobe RodadaComErro (o job descarta, sem nova tentativa).
+#   Rodada interrompida no meio (deploy: o Sidekiq::Shutdown não é StandardError) também fecha `erro`, para não ficar
+#   `rodando` para sempre.
 class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   # Fecha a rodada no meio, com o status dado.
   class Parada < StandardError
@@ -38,23 +43,23 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   # Outra rodada da mesma conta está em andamento.
   class ContaOcupada < StandardError; end
 
+  # A rodada caiu e já ficou registrada como `erro` (a causa vai em `cause`).
+  class RodadaComErro < StandardError; end
+
   ENV_LIGADA = 'AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA'.freeze
   MAX_CONVERSAS = 500
-  FALHAS_PARA_DESISTIR = 2
   PASSAGEIRAS_PARA_PARAR = 3
   INESPERADOS_PARA_PARAR = 3
-  INESPERADOS_PARA_DESISTIR = 5
   # O piso anda até o corte menos esta margem: mensagem gravada com o horário de origem (histórico do WhatsApp,
   # importação) pode chegar com `created_at` um pouco antes do corte da rodada que já passou. A margem só vale para a
   # conversa nunca lida: a que já tem leitura usa o próprio `lida_ate_em`, e mensagem retroativa anterior a ele não
   # entra na fila.
   MARGEM_DO_PISO = 1.hour
   TRAVA_POR = 6.hours
-  FALHAS_POR = 7.days
   # Agente sem carga (nenhuma leitura guardada): a primeira rodada começa nos últimos 30 dias.
   SEM_CARGA = 30.days
   ROTULO_PADRAO = 'AGENTE'.freeze
-  CHAVE_RECUSADA = 401
+  CHAVE_RECUSADA = [401, 403].freeze
 
   def self.ligada?
     ActiveModel::Type::Boolean.new.cast(ENV.fetch(ENV_LIGADA, false)) || false
@@ -73,13 +78,15 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     begin
       rodar
     ensure
+      @rodada&.interrompida!
       Redis::Alfred.delete_if_equals(trava, @token)
     end
   end
 
   private
 
-  # Erro inesperado fora de uma conversa: a rodada fica `erro` e a exceção sobe (o job descarta, sem nova tentativa).
+  # Erro inesperado fora de uma conversa: a rodada fica `erro` e sobe RodadaComErro (o job descarta, sem nova tentativa).
+  # Sem rodada aberta (o erro foi ao abrir), a exceção sobe como veio: nada foi pago nem registrado.
   def rodar
     @rodada = abrir_rodada
     credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve
@@ -91,8 +98,10 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     ler_todas(credencial)
   rescue StandardError => e
     Rails.logger.error("[desempenho][leitura] conta=#{@account.id} ficha=#{@ficha.id} erro=#{e.class.name}")
-    @rodada&.update!(status: 'erro', terminada_em: Time.current)
-    raise
+    raise if @rodada.nil?
+
+    @rodada.update!(status: 'erro', terminada_em: Time.current)
+    raise RodadaComErro, e.class.name
   end
 
   def ficha_quebrada(problemas)
@@ -165,58 +174,62 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     end
 
     resposta = chamar(leitor, texto)
-    return :pendente if resposta.nil?
+    return passageira(gravacao, conversa.id) if resposta.nil?
 
     gravacao.gravar!(esquema.procuras(resposta))
-    %w[falhas inesperados].each { |contador| Redis::Alfred.delete(chave("#{contador}:#{conversa.id}")) }
+    vezes.zerar(conversa.id)
     :lida
   rescue Autonomia::Desempenho::LeituraAutomatica::Leitor::Falha, Autonomia::Desempenho::LeituraAutomatica::Esquema::Invalida => e
     falhou(gravacao, conversa.id, e)
   end
 
   # Bug do sistema, não da conversa: ela fica pendente, sem contar falha; o terceiro seguido na rodada fecha a rodada.
-  # A mesma conversa com erro inesperado INESPERADOS_PARA_DESISTIR vezes seguidas (entre rodadas) fica como não lida.
+  # A mesma conversa com erro inesperado no limite de VezesDaConversa (entre rodadas) fica como não lida.
   def inesperado(gravacao, conversation_id, erro)
     Rails.logger.error("[desempenho][leitura] conta=#{@account.id} conversa=#{conversation_id} inesperado=#{erro.class.name}")
     @inesperados += 1
     raise Parada, 'erro' if @inesperados >= INESPERADOS_PARA_PARAR
-    return :pendente if somar_vez("inesperados:#{conversation_id}") < INESPERADOS_PARA_DESISTIR
+    return :pendente unless vezes.mais_uma?('inesperados', conversation_id)
 
     desistir_do_inesperado(gravacao, conversation_id)
   end
 
-  # Mais uma vez no contador da conversa (falhas ou inesperados), que expira em FALHAS_POR; devolve o total.
-  def somar_vez(contador)
-    vezes = Redis::Alfred.incr(chave(contador))
-    Redis::Alfred.expire(chave(contador), FALHAS_POR.to_i)
-    vezes.to_i
+  # Erro passageiro na chamada desta conversa: ela fica pendente; no limite de VezesDaConversa (entre rodadas), fica
+  # como não lida. O terceiro passageiro seguido na rodada fecha a rodada.
+  def passageira(gravacao, conversation_id)
+    return desistir(gravacao, 'passageiras', conversation_id) if vezes.mais_uma?('passageiras', conversation_id)
+    raise Parada, 'erro' if @passageiras >= PASSAGEIRAS_PARA_PARAR
+
+    :pendente
+  end
+
+  # A conversa sai da fila como não lida, e o contador do tipo volta a zero.
+  def desistir(gravacao, tipo, conversation_id)
+    gravacao.nao_lida!
+    vezes.esquecer(tipo, conversation_id)
+    :lida
   end
 
   # Se nem marcar como não lida der certo (o bug pode estar na gravação), a conversa segue pendente.
   def desistir_do_inesperado(gravacao, conversation_id)
-    gravacao.nao_lida!
-    Redis::Alfred.delete(chave("inesperados:#{conversation_id}"))
-    :lida
+    desistir(gravacao, 'inesperados', conversation_id)
   rescue StandardError => e
     Rails.logger.error("[desempenho][leitura] conta=#{@account.id} conversa=#{conversation_id} nao_lida=#{e.class.name}")
     :pendente
   end
 
-  # A resposta, ou nil no erro passageiro (a conversa fica pendente, sem contar falha). Erro permanente ou o terceiro
-  # passageiro seguido fecham a rodada (Parada).
+  # A resposta, ou nil no erro passageiro (quem chamou decide, em `passageira`). Erro permanente fecha a rodada (Parada).
   def chamar(leitor, texto)
     resposta = leitor.ler(texto, esquema.json)
     @passageiras = 0
     resposta
   rescue Crm::Ai::ResponsesClient::Error => e
-    raise Parada, (e.status.to_i == CHAVE_RECUSADA ? 'sem_ia' : 'erro') if permanente?(e)
+    raise Parada, (CHAVE_RECUSADA.include?(e.status.to_i) ? 'chave_recusada' : 'erro') if permanente?(e)
     # Sem status e sem ser de rede (resposta vazia, já cobrada): falha da conversa.
     raise Autonomia::Desempenho::LeituraAutomatica::Leitor::Falha, e.class.name unless e.passageira?
 
     Rails.logger.warn("[desempenho][leitura] conta=#{@account.id} passageiro=#{e.status.to_i}")
     @passageiras += 1
-    raise Parada, 'erro' if @passageiras >= PASSAGEIRAS_PARA_PARAR
-
     nil
   end
 
@@ -227,11 +240,9 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
 
   def falhou(gravacao, conversation_id, erro)
     Rails.logger.warn("[desempenho][leitura] conta=#{@account.id} conversa=#{conversation_id} falha=#{erro.class.name}")
-    return :pendente if somar_vez("falhas:#{conversation_id}") < FALHAS_PARA_DESISTIR
+    return :pendente unless vezes.mais_uma?('falhas', conversation_id)
 
-    Redis::Alfred.delete(chave("falhas:#{conversation_id}"))
-    gravacao.nao_lida!
-    :lida
+    desistir(gravacao, 'falhas', conversation_id)
   end
 
   def fechar(status)
@@ -242,8 +253,8 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     @rodada
   end
 
-  # O gasto da rodada: o que o leitor dela somou das respostas (as rodadas de outros agentes da conta rodam em jobs
-  # próprios, ao mesmo tempo, e o consumo gravado da conta misturaria as duas).
+  # O gasto da rodada: o que o leitor dela somou das respostas. O consumo gravado da conta no dia não serve: ele soma
+  # também as rodadas dos outros agentes da conta e as rodadas anteriores do mesmo dia.
   def custo = @leitor&.custo || 0
 
   def transcricao(conversa, mensagens)
@@ -272,5 +283,5 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   def leituras = Autonomia::Desempenho::Leitura.do_sujeito(@account, @ficha.sujeito_type, @ficha.sujeito_id)
   def sujeito = { account_id: @account.id, sujeito_type: @ficha.sujeito_type, sujeito_id: @ficha.sujeito_id }
   def trava = "autonomia:desempenho:leitura:#{@account.id}:trava"
-  def chave(parte) ="autonomia:desempenho:leitura:#{@account.id}:#{@ficha.sujeito_type}:#{@ficha.sujeito_id}:#{parte}"
+  def vezes = @vezes ||= Autonomia::Desempenho::LeituraAutomatica::VezesDaConversa.new(account: @account, ficha: @ficha)
 end

@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# A rodada de um agente (#2301): um job por ficha, descartado se cair (cada tentativa pagaria IA de novo), sem segurar
-# a rodada dos outros agentes da conta; reagendado quando outra rodada da conta está em andamento; uma por dia.
+# A rodada de um agente (#2301): um job por ficha, descartado se a rodada cair (cada tentativa pagaria IA de novo), sem
+# segurar a rodada dos outros agentes da conta; reagendado quando outra rodada da conta está em andamento ou quando o
+# erro veio antes de abrir a rodada (nada pago); uma por dia, em qualquer status.
 RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
   let(:account) { create(:account) }
   let(:orquestrador) { Autonomia::Desempenho::LeituraAutomatica::Orquestrador }
@@ -23,11 +24,11 @@ RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
                                           piso_em: 1.day.ago, iniciada_em: Time.current, status: status, lote: 'spec')
   end
 
-  # Cada rodada chamada fica em `rodadas`; a da ficha A cai com um erro, a das outras devolve `status`.
+  # Cada rodada chamada fica em `rodadas`; a da ficha A cai (registrada como erro), a das outras devolve `status`.
   def rodadas_devolvem(status: 'ok', a_cai: false)
     allow(orquestrador).to receive(:new) do |ficha|
       rodadas << ficha.id
-      raise ActiveRecord::StatementInvalid if a_cai && ficha.id == ficha_a.id
+      raise orquestrador::RodadaComErro, 'NoMethodError' if a_cai && ficha.id == ficha_a.id
 
       instance_double(orquestrador, call: rodada(status))
     end
@@ -73,19 +74,40 @@ RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
     ligada { described_class.perform_now(account.id, ficha_b.id) }
 
     expect(described_class).to have_been_enqueued.with(account.id, ficha_b.id)
-    expect(described_class::TENTATIVAS_DA_CONTA * described_class::ESPERA_DA_CONTA).to be >= orquestrador::TRAVA_POR
+    # A primeira execução conta como tentativa: são TENTATIVAS_DA_CONTA - 1 reagendamentos.
+    expect((described_class::TENTATIVAS_DA_CONTA - 1) * described_class::ESPERA_DA_CONTA).to be >= orquestrador::TRAVA_POR
   end
 
-  it 'uma rodada concluída por agente por dia: o job duplicado do mesmo dia não roda; erro não conta como concluída' do
+  it 'uma rodada por agente por dia, em qualquer status: o job duplicado do mesmo dia não paga de novo' do
     rodadas_devolvem(status: 'erro')
     ligada { described_class.perform_now(account.id, ficha_a.id) }
 
     rodadas_devolvem(status: 'teto')
     ligada { 2.times { described_class.perform_now(account.id, ficha_a.id) } }
-    expect(rodadas).to eq([ficha_a.id, ficha_a.id])
+    expect(rodadas).to eq([ficha_a.id])
 
     travel_to(1.day.from_now) { ligada { described_class.perform_now(account.id, ficha_a.id) } }
-    expect(rodadas).to eq([ficha_a.id, ficha_a.id, ficha_a.id])
+    expect(rodadas).to eq([ficha_a.id, ficha_a.id])
+  end
+
+  it 'a rodada que caiu também marca o dia: a nova tentativa do job da conta não paga de novo' do
+    rodadas_devolvem(a_cai: true)
+
+    ligada { 2.times { described_class.perform_now(account.id, ficha_a.id) } }
+
+    expect(rodadas).to eq([ficha_a.id])
+  end
+
+  it 'erro antes de abrir a rodada (nada pago) é logado com a conta e tenta de novo, sem marcar o dia' do
+    allow(orquestrador).to receive(:new).and_raise(Redis::CannotConnectError)
+    allow(Rails.logger).to receive(:error)
+
+    ligada { described_class.perform_now(account.id, ficha_a.id) }
+
+    expect(Rails.logger).to have_received(:error)
+      .with("[desempenho][leitura] conta=#{account.id} ficha=#{ficha_a.id} antes_da_rodada=Redis::CannotConnectError")
+    expect(described_class).to have_been_enqueued.with(account.id, ficha_a.id)
+    expect(Redis::Alfred.with { |redis| redis.keys("autonomia:desempenho:leitura:rodou:#{account.id}:*") }).to be_empty
   end
 
   it 'com a ENV desligada, não roda' do

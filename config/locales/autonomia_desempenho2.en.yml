@@ -268,6 +268,7 @@ en:
         acoes:
           titulo: From signal to action
           subtitulo: Each suggestion brings the number and the conversations that prove it. The gain is an estimate.
+          subtitulo_de_outras_datas: "Suggestions from %{inicio} to %{fim}. Each brings the number and the conversations that prove it."
           a_prova: The proof
           o_que_mudar: What to change
           na_instrucao: "In the instruction: %{texto}"
@@ -365,6 +366,7 @@ en:
         planilha:
           contexto: "%{agente} · %{periodo} · data up to %{dados_ate}"
           resumo_titulo: "Performance dashboard · %{agente}"
+          recomendacoes_de: "suggestions from %{inicio} to %{fim}"
           nota_grupo: "The Group column includes closings outside %{compra}. To match the summary, also filter %{compra} = yes."
           nota_fixos: Conversations, response time and messages are period values (not a simple sum of the rows).
           taxa_fechou: "% that closed"

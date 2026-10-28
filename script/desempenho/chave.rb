@@ -4,7 +4,8 @@
 #   ruby script/desempenho/chave.rb --chave <arquivo.md> --conta <id> --ficha <id> --versao <n> --saida <arquivo.sql>
 #                                   [--instrucao <arquivo.txt> | --hash <sha256>] [--com-teste]
 #
-# - A chave é dado da conta: o arquivo dela e o .sql ficam fora do repositório (o script recusa --saida dentro dele).
+# - A chave é dado da conta: o arquivo dela e o .sql ficam fora do repositório. O script recusa --saida dentro deste
+#   repositório e de qualquer working tree git (outra cópia, outra worktree), com os links simbólicos resolvidos.
 # - O UPDATE só pega a ficha com o id, a conta e a versão dados, e só se ela for a vigente (a de maior versão daquele
 #   agente). Se não atualizar exatamente uma linha, a transação é desfeita.
 # - `instrucao_hash`: o SHA-256 da instrução que o agente usa hoje, para o painel avisar quando ela mudar. Com
@@ -18,6 +19,7 @@
 #   no arquivo vira SQL.
 # - Nunca imprime o conteúdo: só o tamanho da chave e onde gravou.
 require 'digest'
+require 'open3'
 require 'optparse'
 require 'securerandom'
 
@@ -38,7 +40,7 @@ module ChaveDeLeitura
         UNION ALL
         SELECT 'leitura', l.leitura, 1000000 WHERE f.configuracao -> 'leitura' IS NULL) c)
   CONSULTA
-  REPOSITORIO = File.expand_path('../..', __dir__)
+  REPOSITORIO = File.realpath(File.expand_path('../..', __dir__))
 
   module_function
 
@@ -83,9 +85,23 @@ module ChaveDeLeitura
     opcoes
   end
 
+  # A pasta real do destino (links simbólicos resolvidos) dentro deste repositório ou de QUALQUER working tree git
+  # (outra cópia, outra worktree): o repositório é público e um `git add` publicaria a chave da conta.
   def no_repositorio?(caminho)
-    completo = File.expand_path(caminho)
-    completo == REPOSITORIO || completo.start_with?("#{REPOSITORIO}/")
+    pasta = File.realpath(File.dirname(destino_real(File.expand_path(caminho))))
+    pasta == REPOSITORIO || pasta.start_with?("#{REPOSITORIO}/") || dentro_de_git?(pasta)
+  rescue Errno::ENOENT
+    abort('a pasta de --saida não existe')
+  end
+
+  # O arquivo de destino que já existe como link simbólico grava onde o link aponta.
+  def destino_real(caminho) = File.symlink?(caminho) ? File.realpath(caminho) : caminho
+
+  def dentro_de_git?(pasta)
+    saida, _erro, _status = Open3.capture3('git', '-C', pasta, 'rev-parse', '--is-inside-work-tree')
+    saida.strip == 'true'
+  rescue Errno::ENOENT
+    abort('sem o git para conferir a pasta de --saida')
   end
 
   def hash_valido?(valor) = valor.size == 64 && valor.each_char.all? { |letra| HEX.include?(letra) }
