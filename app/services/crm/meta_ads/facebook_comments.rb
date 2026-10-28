@@ -7,7 +7,8 @@
 # - Tudo com o token da Página, pedido com o token da pessoa. Ler exige `pages_read_user_content`; responder, ocultar e
 #   apagar, `pages_manage_engagement`. Sem a primeira (ou no modo `partner`, em que o token é o da plataforma), a aba
 #   pede para entrar de novo com o Facebook (`needs_login`); sem a segunda, lê e não age. Falha passageira da Meta ao
-#   conferir permissão ou pedir o token da Página é `meta_unavailable`, não `needs_login`.
+#   conferir permissão ou pedir o token da Página é `meta_unavailable`, não `needs_login`. Recusa do token da Página que
+#   entrar de novo não resolve (a pessoa não tem papel na Página) é `meta_refused`.
 # - Só age em comentário do post. O id de comentário da Graph é `<id do post>_<id do comentário>`, em que o id do post
 #   é a parte depois do `_` do id do post da Página (`<página>_<post>`); respostas idem (a confirmar na chamada real,
 #   até 07/11). Qualquer outro formato é `comment_not_found`, sem chamar a Meta.
@@ -80,6 +81,17 @@ class Crm::MetaAds::FacebookComments
 
   def hide_on_post!(post_id, comment_id, hidden, actor:)
     hide_in(post_id, comment_id, hidden, { actor: actor, user: nil, ad_id: nil })
+  end
+
+  # Pelo webhook (Crm::MetaAds::FacebookFeed): o comentário como a Graph devolve (`message`, `from`), lido com o token da
+  # Página. Só em post de Página da conta e com a leitura concedida; nil quando não dá para ler.
+  def comment(post_id, comment_id)
+    return unless comment_of_post?(comment_id, post_id) && granted?(READ) && own_page?(post_id)
+
+    client = page_client(post_id)
+    client && graph!(client.page_comment(comment_id))
+  rescue Error => e
+    raise if e.code == 'meta_unavailable'
   end
 
   private
@@ -157,8 +169,16 @@ class Crm::MetaAds::FacebookComments
     result = user_client.page_access(page)
     raise Error, 'meta_unavailable' if result.transient?
 
-    data = result.ok ? result.data.to_h : {}
+    data = result.ok ? result.data.to_h : page_refused!(result)
     @page_clients[page] = data['access_token'].present? ? remember_page(page, data) : nil
+  end
+
+  # Token ou permissão que faltam se resolvem entrando de novo (`needs_login`, pelo `{}`). O resto (a pessoa não tem
+  # papel na Página, a Página sumiu) não: entrar de novo daria a mesma recusa.
+  def page_refused!(result)
+    return {} if result.token_invalid? || result.scope_error?
+
+    raise Error, 'meta_refused'
   end
 
   # A Página entra no resolvedor do webhook e, na primeira vez nesta conta, o `feed` dela é assinado (a assinatura une
@@ -227,18 +247,6 @@ class Crm::MetaAds::FacebookComments
   end
 
   def rows(data, page)
-    manage = granted?(MANAGE)
-    Array(data).filter_map { |item| row(item, page, manage) if item.is_a?(Hash) }
-  end
-
-  def row(item, page, manage)
-    own = item.dig('from', 'id').to_s == page
-    {
-      id: item['id'], author: { name: item.dig('from', 'name'), is_page: own }, text: item['message'],
-      created_time: item['created_time'], hidden: item['is_hidden'] == true,
-      can_reply: manage && !own && item['can_comment'] == true, can_hide: manage && item['can_hide'] == true,
-      can_delete: manage && item['can_remove'] == true, can_reply_private: false,
-      replies: Array(item.dig('comments', 'data')).filter_map { |reply| row(reply, page, manage) if reply.is_a?(Hash) }
-    }
+    Crm::MetaAds::FacebookCommentRows.build(data, page, granted?(MANAGE))
   end
 end

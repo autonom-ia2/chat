@@ -4,7 +4,8 @@
 # GET    meta_ads_connection/ads/:ad_id/facebook_comments                    → { comments: status, lista, total, cursor }
 #        (?after= para a página seguinte). Administrador ou `meta_ads_view`; as linhas só deixam agir
 #        (can_reply/can_hide/can_delete) para quem também tem `meta_ads_manage`.
-# POST   meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply  → message=; responde como a Página.
+# POST   meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply  → content=; responde como a Página. O texto vai em
+#        `content`, que o log do Rails já filtra (#2103).
 # PATCH  meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id        → hidden=true|false.
 # DELETE meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id        → apaga (irreversível; a tela confirma).
 # As três ações: administrador ou `meta_ads_manage`.
@@ -30,7 +31,7 @@ class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accou
   end
 
   def reply
-    result = comments.reply!(ad_id, comment_id, params[:message], user: Current.user)
+    result = comments.reply!(ad_id, comment_id, params[:content], user: Current.user)
     audit!('reply')
     render json: result
   rescue ::Crm::MetaAds::FacebookComments::Error => e

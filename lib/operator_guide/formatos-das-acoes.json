@@ -595,9 +595,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:51",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:91"
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:96",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:92"
     ],
     "sem_corpo": true
   },
@@ -5566,11 +5566,11 @@
       "leitura crua sem tipo: hidden (repassada a comments.hide!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:41",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:91",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:42"
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:42",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:96",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:92",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:45",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:43"
     ],
     "sem_corpo": false
   },
@@ -15717,18 +15717,18 @@
   },
   "POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply": {
     "campos": {
-      "message": {}
+      "content": {}
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#reply",
     "motivos": [
-      "leitura crua sem tipo: message (repassada a comments.reply!)"
+      "leitura crua sem tipo: content (repassada a comments.reply!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:32",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:95",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:91",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:33"
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:33",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:96",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:92",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:34"
     ],
     "sem_corpo": false
   },

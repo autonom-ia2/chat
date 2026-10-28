@@ -290,10 +290,11 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
   }
 
   // Replies as the Page → { id }.
-  replyFacebookComment(adId, commentId, message) {
+  // The text goes as `content`, which the Rails log filters.
+  replyFacebookComment(adId, commentId, content) {
     return axios.post(
       `${this.facebookCommentsUrl(adId)}/${encodeURIComponent(commentId)}/reply`,
-      { message }
+      { content }
     );
   }
 

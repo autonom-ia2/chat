@@ -116,13 +116,23 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect { described_class.new(connection).list(ad_id) }.to raise_error(described_class::Error, 'ad_not_found')
     end
 
-    it 'sem token da Página (a pessoa não administra a Página do anúncio): pede para entrar de novo' do
+    it 'sem token da Página (a Página não foi escolhida no login ou a pessoa não a administra): pede para entrar de novo' do
       stub_permissions(*all_permissions)
       stub_ad
       stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token,name' })
                                                  .to_return(status: 200, body: { id: page_id }.to_json, headers: json)
 
       expect(described_class.new(connection).list(ad_id)).to include(status: 'needs_login')
+    end
+
+    it 'Página que a Meta recusa por outro motivo (sumiu, id inválido) é meta_refused: entrar de novo não resolve' do
+      stub_permissions(*all_permissions)
+      stub_ad
+      stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token,name' })
+                                                 .to_return(status: 400, body: meta_graph_error(100).to_json, headers: json)
+      allow(Rails.logger).to receive(:warn)
+
+      expect { described_class.new(connection).list(ad_id) }.to raise_error(described_class::Error, 'meta_refused')
     end
 
     it 'falha passageira ao conferir permissão é meta_unavailable, não pedido de entrar de novo' do

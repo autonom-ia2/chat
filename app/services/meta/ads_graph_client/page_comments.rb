@@ -26,6 +26,11 @@ module Meta::AdsGraphClient::PageComments
                                limit: COMMENTS_PAGE_SIZE, after: after)
   end
 
+  # Um comentário, para o webhook `feed`, que chega só com os ids.
+  def page_comment(comment_id)
+    get(comment_id.to_s, fields: COMMENT_FIELDS)
+  end
+
   # Sai como a Página, embaixo do comentário.
   def reply_comment(comment_id, message)
     post("#{comment_id}/comments", message: message)

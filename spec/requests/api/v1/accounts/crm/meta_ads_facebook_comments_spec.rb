@@ -75,7 +75,7 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
     reply = stub_request(:post, meta_graph_url("#{comment_id}/comments"))
             .to_return(status: 200, body: { id: '200000000000002_9' }.to_json, headers: json)
 
-    post "#{path}/#{comment_id}/reply", params: { message: 'Entregamos sim!' }, headers: admin.create_new_auth_token, as: :json
+    post "#{path}/#{comment_id}/reply", params: { content: 'Entregamos sim!' }, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to eq('id' => '200000000000002_9')

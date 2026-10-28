@@ -81,7 +81,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
 - `POST crm/memoria/cards/:card_id/fatos` — leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)
-- `POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply` — leitura crua sem tipo: message (repassada a comments.reply!)
+- `POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply` — leitura crua sem tipo: content (repassada a comments.reply!)
 - `POST crm/meta_ads_connection/media` — leitura crua sem tipo: file
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
 - `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)
@@ -177,7 +177,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/meta_ads_creation#media` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` amount — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` end_time — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
-- `api/v1/accounts/crm/meta_ads_facebook_comments#reply` message — repassada a comments.reply!
+- `api/v1/accounts/crm/meta_ads_facebook_comments#reply` content — repassada a comments.reply!
 - `api/v1/accounts/crm/meta_ads_facebook_comments#update` hidden — repassada a comments.hide!
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#create` outcome_labels — o código não converte nem compara o valor
