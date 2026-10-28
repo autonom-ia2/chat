@@ -3,19 +3,27 @@ import {
   LEVELS,
   MODULES,
 } from '../customRoles/permissionMatrix';
-import { nivel } from './fraseDaFuncao';
+import { nivel, soOlhaNaArea } from './fraseDaFuncao';
 import { mexeNasVendas } from './nivelDeVendas';
 
-// As capacidades curtas dos cartões prontos (#2308, especificação 7.6): até 3, com tipo (pode | soOlha | naoFaz)
-// para o ícone. Chaves de FUNCOES_EQUIPE.CURTO; quem mostra traduz.
+// As capacidades curtas dos cartões prontos (#2308, especificação 7.6): até 3, com tipo (pode | soOlha | ve | naoFaz)
+// para o ícone. Chaves de FUNCOES_EQUIPE.CURTO; quem mostra traduz. Uma área no nível de ver "só olha" só quando nada
+// muda nela (soOlhaNaArea, a mesma regra da frase e da Perda de acesso); senão "vê", sem o "só".
 const curto = (chave, tipo = 'pode') => ({ chave, tipo });
 const mexe = (area, permissions) => nivel(area, permissions) === LEVELS.MANAGE;
 
+const deVer = (area, permissions, chaveSoOlha, chaveVe) =>
+  soOlhaNaArea(area, permissions)
+    ? curto(chaveSoOlha, 'soOlha')
+    : curto(chaveVe, 've');
+
 const CONVERSA_CURTA = {
-  [CONVERSATION_LEVELS.ALL]: curto('TODAS'),
-  [CONVERSATION_LEVELS.LIMITED]: curto('PROPRIAS'),
-  [CONVERSATION_LEVELS.VIEW]: curto('SO_OLHA_CONVERSAS', 'soOlha'),
+  [CONVERSATION_LEVELS.ALL]: () => curto('TODAS'),
+  [CONVERSATION_LEVELS.LIMITED]: () => curto('PROPRIAS'),
+  [CONVERSATION_LEVELS.VIEW]: p =>
+    deVer('CONVERSATIONS', p, 'SO_OLHA_CONVERSAS', 'VE_CONVERSAS'),
 };
+const conversas = p => CONVERSA_CURTA[nivel('CONVERSATIONS', p)]?.(p) || null;
 
 const campanhas = p => {
   if (!p.includes('campaign_manage')) return null;
@@ -36,7 +44,7 @@ const arruma = p =>
 const contatos = p => {
   if (mexe('CONTACTS', p)) return mexeNasVendas(p) ? null : curto('CONTATOS');
   return nivel('CONTACTS', p) === LEVELS.VIEW
-    ? curto('SO_OLHA_CONTATOS', 'soOlha')
+    ? deVer('CONTACTS', p, 'SO_OLHA_CONTATOS', 'VE_CONTATOS')
     : null;
 };
 const relatorios = p =>
@@ -46,8 +54,9 @@ const relatorios = p =>
 const procura = p =>
   p.includes('prospecting_manage') ? curto('PROCURA') : null;
 
-const AREAS_QUE_SO_OLHA = ['CONTACTS', 'CRM', 'CAMPAIGNS', 'REPORTS'];
-const soOlha = p =>
+const AREAS_QUE_OLHA = ['CONTACTS', 'CRM', 'CAMPAIGNS', 'REPORTS'];
+// A função que não mexe em nada pelo nível: o cartão diz as áreas que olha.
+const semMexer = p =>
   !MODULES.some(module => mexe(module.key, p)) &&
   !mexeNasVendas(p) &&
   ![CONVERSATION_LEVELS.LIMITED, CONVERSATION_LEVELS.ALL].includes(
@@ -55,14 +64,20 @@ const soOlha = p =>
   );
 
 const positivas = p => {
-  if (soOlha(p)) {
-    const areas = AREAS_QUE_SO_OLHA.filter(
-      area => nivel(area, p) !== LEVELS.NONE
-    );
-    return areas.length ? [{ ...curto('SO_OLHA_AREAS', 'soOlha'), areas }] : [];
+  if (semMexer(p)) {
+    const areas = AREAS_QUE_OLHA.filter(area => nivel(area, p) !== LEVELS.NONE);
+    const soOlhando = areas.filter(area => soOlhaNaArea(area, p));
+    const vendo = areas.filter(area => !soOlhando.includes(area));
+    return [
+      soOlhando.length && {
+        ...curto('SO_OLHA_AREAS', 'soOlha'),
+        areas: soOlhando,
+      },
+      vendo.length && { ...curto('VE_AREAS', 've'), areas: vendo },
+    ].filter(Boolean);
   }
   return [
-    CONVERSA_CURTA[nivel('CONVERSATIONS', p)],
+    conversas(p),
     campanhas(p),
     vendas(p),
     arruma(p),

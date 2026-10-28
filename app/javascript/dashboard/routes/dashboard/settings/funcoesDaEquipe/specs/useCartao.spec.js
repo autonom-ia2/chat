@@ -54,3 +54,15 @@ describe('useCartao › trava', () => {
     );
   });
 });
+
+describe('useCartao › capacidade', () => {
+  it('"Só olha" e "Vê" com a lista das áreas', () => {
+    const { capacidade } = comCartao();
+    expect(
+      capacidade({ chave: 'SO_OLHA_AREAS', areas: ['CONTACTS', 'CRM'] })
+    ).toBe('Só olha contatos e vendas');
+    expect(capacidade({ chave: 'VE_AREAS', areas: ['REPORTS'] })).toBe(
+      'Vê relatórios'
+    );
+  });
+});

@@ -37,14 +37,17 @@
     "FRASE": {
       "NAO_ATENDE": "Não atende conversas.",
       "SO_OLHA_CONVERSAS": "Só olha as conversas.",
+      "VE_CONVERSAS": "Vê as conversas.",
       "PROPRIAS": "Atende as próprias conversas.",
       "PROPRIAS_E_NOVAS": "Atende as próprias conversas e pega as novas que estão sem ninguém.",
       "TODAS": "Lê e atende todas as conversas.",
       "VENDAS_SO_OLHA": "Só olha as vendas.",
+      "VENDAS_VE": "Vê as vendas.",
       "VENDAS_OLHA_E_MOVE": "Olha e move as vendas.",
       "VENDAS_MEXE": "Cria e move as vendas em andamento.",
       "VENDAS_TUDO": "Cuida de tudo nas vendas.",
       "CONTATOS_SO_OLHA": "Só olha os contatos.",
+      "CONTATOS_VE": "Vê os contatos.",
       "CONTATOS_MEXE": "Cria e muda os contatos.",
       "CAMPANHAS_DISPARA": "Cria e dispara campanhas.",
       "CAMPANHAS_CRIA": "Cria campanhas."
@@ -137,6 +140,7 @@
     "FRASE_INICIO": {
       "NAO_ATENDE": "não atende conversas.",
       "SO_OLHA_CONVERSAS": "só olha as conversas.",
+      "VE_CONVERSAS": "vê as conversas.",
       "PROPRIAS": "atende as próprias conversas.",
       "PROPRIAS_E_NOVAS": "atende as próprias conversas e pega as novas que estão sem ninguém.",
       "TODAS": "lê e atende todas as conversas."
@@ -216,6 +220,7 @@
       "TODAS": "Lê e atende todas as conversas",
       "PROPRIAS": "Atende as próprias conversas",
       "SO_OLHA_CONVERSAS": "Só olha as conversas",
+      "VE_CONVERSAS": "Vê as conversas",
       "CAMPANHAS_DISPARA": "Cria e dispara campanhas",
       "CAMPANHAS": "Cria campanhas",
       "VENDAS_E_COLUNAS": "Mexe nas vendas e monta as colunas",
@@ -224,10 +229,12 @@
       "ARRUMA": "Arruma os canais, os robôs e as regras",
       "CONTATOS": "Mexe nos contatos",
       "SO_OLHA_CONTATOS": "Só olha os contatos",
+      "VE_CONTATOS": "Vê os contatos",
       "RELATORIOS": "Vê os relatórios",
       "PROCURA": "Procura clientes novos",
       "NAO_ATENDE": "Não atende conversas",
-      "SO_OLHA_AREAS": "Só olha {areas}"
+      "SO_OLHA_AREAS": "Só olha {areas}",
+      "VE_AREAS": "Vê {areas}"
     },
     "AREAS": {
       "CONVERSATIONS": {
@@ -458,10 +465,14 @@
         "NADA": "Hoje estão todas desligadas.",
         "N_AREAS": "{n} área | {n} áreas",
         "MEXE_E_OLHA": "Mexe em {mexe} e só olha outra. | Mexe em {mexe} e só olha outras {olha}.",
+        "MEXE_E_VE": "Mexe em {mexe} e vê outra. | Mexe em {mexe} e vê outras {olha}.",
         "MEXE_E_OLHA_NOMES": "Mexe em {mexe} e só olha {olha}.",
+        "MEXE_E_VE_NOMES": "Mexe em {mexe} e vê {olha}.",
         "SO_MEXE": "Mexe em {mexe}.",
         "SO_OLHA": "Só olha {olha}.",
+        "VE": "Vê {olha}.",
         "UMA_OLHA": "Hoje só olha {area}.",
+        "UMA_VE": "Hoje vê {area}.",
         "UMA_MEXE": "Hoje mexe em {area}.",
         "OUTRAS": "As demais ficam desligadas."
       },

@@ -5,9 +5,8 @@ import {
   getLevel,
   hasAccess,
   keysOf,
-  setLevel,
 } from '../customRoles/permissionMatrix';
-import { contidasEm, podeDaFuncao, queMudam } from './fraseDaFuncao';
+import { contidasEm, podeDaFuncao, soOlhaNaArea } from './fraseDaFuncao';
 import { NIVEIS_DE_VENDAS, nivelDeVendas } from './nivelDeVendas';
 import { chavesEfetivas } from './semFuncao';
 
@@ -73,15 +72,11 @@ const fraseDasProprias = permissions => {
   if (novas) return 'PROPRIAS_E_NOVAS';
   return link ? 'PROPRIAS_E_LINK' : 'PROPRIAS';
 };
-// "Só olha" só quando nada do que a função ainda pode nessa área muda ou leva algo: as capacidades da área são as que
-// somem quando ela fica sem acesso. Vendas em "Só olha" que ainda monta as colunas ou usa a IA não "só olha"; aí não
+// "Só olha" só quando nada do que a função ainda pode nessa área muda ou leva algo (soOlhaNaArea, a mesma regra da
+// frase, de Ajustes e dos cartões). Vendas em "Só olha" que ainda monta as colunas ou usa a IA não "só olha"; aí não
 // há frase do que fica (revisão do #2308, rodada 6).
-const soOlha = (permissions, module) => {
-  const efetivas = chavesEfetivas(permissions);
-  const semArea = podeDaFuncao(setLevel(module, LEVELS.NONE, efetivas));
-  const daArea = podeDaFuncao(efetivas).filter(id => !semArea.includes(id));
-  return queMudam(daArea).length ? null : 'OLHA';
-};
+const soOlha = (permissions, module) =>
+  soOlhaNaArea(module.key, permissions) ? 'OLHA' : null;
 const FRASE_DO_NIVEL = {
   [LEVELS.VIEW]: soOlha,
   [CONVERSATION_LEVELS.LIMITED]: fraseDasProprias,

@@ -14,6 +14,7 @@ import {
   getLevel,
   moduleByKey,
   sensitiveExtrasOn,
+  setLevel,
 } from '../customRoles/permissionMatrix';
 import { valeNoServidor } from './chavesDaFuncao';
 import { CRM_ADMIN, TUDO, mexeNasVendas, nivelDeVendas } from './nivelDeVendas';
@@ -29,53 +30,6 @@ const tem = chave => permissions => permissions.includes(chave);
 export const soOlhaEMove = permissions =>
   nivelDeVendas(permissions) === LEVELS.VIEW &&
   permissions.includes(CRM_MOVE_CARDS_PERMISSION);
-
-// Frase -------------------------------------------------------------------------------------------------------
-const FRASE_DAS_CONVERSAS = {
-  [CONVERSATION_LEVELS.NONE]: 'NAO_ATENDE',
-  [CONVERSATION_LEVELS.VIEW]: 'SO_OLHA_CONVERSAS',
-  [CONVERSATION_LEVELS.ALL]: 'TODAS',
-};
-const FRASE_DAS_VENDAS = {
-  [LEVELS.VIEW]: 'VENDAS_SO_OLHA',
-  [LEVELS.MANAGE]: 'VENDAS_MEXE',
-  [TUDO]: 'VENDAS_TUDO',
-};
-const FRASE_DOS_CONTATOS = {
-  [LEVELS.VIEW]: 'CONTATOS_SO_OLHA',
-  [LEVELS.MANAGE]: 'CONTATOS_MEXE',
-};
-
-const fraseDasConversas = permissions => {
-  if (conversas(permissions) !== CONVERSATION_LEVELS.LIMITED)
-    return FRASE_DAS_CONVERSAS[conversas(permissions)];
-  return permissions.includes(CONVERSATION_UNASSIGNED_PERMISSIONS)
-    ? 'PROPRIAS_E_NOVAS'
-    : 'PROPRIAS';
-};
-
-const fraseDasCampanhas = permissions => {
-  if (!permissions.includes('campaign_manage')) return null;
-  return permissions.includes('campaign_send')
-    ? 'CAMPANHAS_DISPARA'
-    : 'CAMPANHAS_CRIA';
-};
-
-// A função antiga "Só olha" com mover as vendas move de verdade (CardPolicy#move?): a frase diz isso, como o Pode.
-const fraseDasVendas = permissions =>
-  soOlhaEMove(permissions)
-    ? 'VENDAS_OLHA_E_MOVE'
-    : FRASE_DAS_VENDAS[nivelDeVendas(permissions)];
-
-// A de conversas vem em destaque; uma área sem acesso não entra no resto.
-export const fraseDaFuncao = permissions => ({
-  destaque: fraseDasConversas(permissions),
-  resto: [
-    fraseDasVendas(permissions),
-    fraseDasCampanhas(permissions),
-    FRASE_DOS_CONTATOS[nivel('CONTACTS', permissions)],
-  ].filter(Boolean),
-});
 
 // Pode e Não pode ------------------------------------------------------------------------------------------------
 // Uma frase por coisa, a mesma dos dois lados. `naoPode` diz quando a falta dela merece aparecer.
@@ -225,10 +179,86 @@ export const queMudam = ids =>
 export const podeDaFuncao = permissions =>
   CAPACIDADES.filter(item => item.tem(permissions)).map(item => item.id);
 
+// "Só olha" numa área: ela está no nível de ver e nada do que a função pode nela muda ou leva algo para fora. As
+// capacidades da área são as que somem quando ela fica sem acesso. Contatos que ainda vão para uma planilha, ou Vendas
+// em "Só olha" que ainda monta as colunas, leva a planilha ou usa a IA, não "só olham" (revisão do #2308). A frase da
+// função (cartão da lista e prévia), Ajustes, os cartões prontos e a Perda de acesso leem daqui.
+export const soOlhaNaArea = (area, permissions) => {
+  const module = moduleByKey(area);
+  const efetivas = chavesEfetivas(permissions);
+  if (getLevel(module, efetivas) !== LEVELS.VIEW) return false;
+  const semArea = podeDaFuncao(setLevel(module, LEVELS.NONE, efetivas));
+  const daArea = podeDaFuncao(efetivas).filter(id => !semArea.includes(id));
+  return !queMudam(daArea).length;
+};
+
 export const naoPodeDaFuncao = permissions =>
   CAPACIDADES.filter(
     item => item.naoPode?.(permissions) && !item.tem(permissions)
   ).map(item => item.id);
+
+// Frase -------------------------------------------------------------------------------------------------------
+const FRASE_DAS_CONVERSAS = {
+  [CONVERSATION_LEVELS.NONE]: 'NAO_ATENDE',
+  [CONVERSATION_LEVELS.ALL]: 'TODAS',
+};
+const FRASE_DAS_VENDAS = {
+  [LEVELS.MANAGE]: 'VENDAS_MEXE',
+  [TUDO]: 'VENDAS_TUDO',
+};
+const FRASE_DOS_CONTATOS = {
+  [LEVELS.MANAGE]: 'CONTATOS_MEXE',
+};
+// No nível de ver: "Só olha" quando nada muda na área (soOlhaNaArea); senão "Vê", e o Pode da prévia diz o resto.
+const FRASE_DE_VER = {
+  CONVERSATIONS: { soOlha: 'SO_OLHA_CONVERSAS', ve: 'VE_CONVERSAS' },
+  CRM: { soOlha: 'VENDAS_SO_OLHA', ve: 'VENDAS_VE' },
+  CONTACTS: { soOlha: 'CONTATOS_SO_OLHA', ve: 'CONTATOS_VE' },
+};
+const fraseDeVer = (area, permissions) =>
+  soOlhaNaArea(area, permissions)
+    ? FRASE_DE_VER[area].soOlha
+    : FRASE_DE_VER[area].ve;
+
+const fraseDasConversas = permissions => {
+  if (conversas(permissions) === CONVERSATION_LEVELS.VIEW)
+    return fraseDeVer('CONVERSATIONS', permissions);
+  if (conversas(permissions) !== CONVERSATION_LEVELS.LIMITED)
+    return FRASE_DAS_CONVERSAS[conversas(permissions)];
+  return permissions.includes(CONVERSATION_UNASSIGNED_PERMISSIONS)
+    ? 'PROPRIAS_E_NOVAS'
+    : 'PROPRIAS';
+};
+
+const fraseDasCampanhas = permissions => {
+  if (!permissions.includes('campaign_manage')) return null;
+  return permissions.includes('campaign_send')
+    ? 'CAMPANHAS_DISPARA'
+    : 'CAMPANHAS_CRIA';
+};
+
+// A função antiga "Só olha" com mover as vendas move de verdade (CardPolicy#move?): a frase diz isso, como o Pode.
+const fraseDasVendas = permissions => {
+  if (soOlhaEMove(permissions)) return 'VENDAS_OLHA_E_MOVE';
+  return nivelDeVendas(permissions) === LEVELS.VIEW
+    ? fraseDeVer('CRM', permissions)
+    : FRASE_DAS_VENDAS[nivelDeVendas(permissions)];
+};
+
+const fraseDosContatos = permissions =>
+  nivel('CONTACTS', permissions) === LEVELS.VIEW
+    ? fraseDeVer('CONTACTS', permissions)
+    : FRASE_DOS_CONTATOS[nivel('CONTACTS', permissions)];
+
+// A de conversas vem em destaque; uma área sem acesso não entra no resto.
+export const fraseDaFuncao = permissions => ({
+  destaque: fraseDasConversas(permissions),
+  resto: [
+    fraseDasVendas(permissions),
+    fraseDasCampanhas(permissions),
+    fraseDosContatos(permissions),
+  ].filter(Boolean),
+});
 
 // Menu -----------------------------------------------------------------------------------------------------------
 const MENU = [

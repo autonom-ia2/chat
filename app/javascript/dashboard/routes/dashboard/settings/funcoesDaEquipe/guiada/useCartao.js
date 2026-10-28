@@ -10,7 +10,7 @@ export function useCartao() {
 
   const capacidade = item =>
     item.areas
-      ? t('FUNCOES_EQUIPE.CURTO.SO_OLHA_AREAS', {
+      ? t(`FUNCOES_EQUIPE.CURTO.${item.chave}`, {
           areas: lista(
             item.areas.map(area => t(`FUNCOES_EQUIPE.AREAS.${area}.CURTO`))
           ),
@@ -55,5 +55,6 @@ export function useCartao() {
 export const ICONE_DA_CAPACIDADE = {
   pode: 'i-lucide-check text-n-teal-11',
   soOlha: 'i-lucide-eye text-n-slate-11',
+  ve: 'i-lucide-eye text-n-slate-11',
   naoFaz: 'i-lucide-x text-n-slate-11',
 };

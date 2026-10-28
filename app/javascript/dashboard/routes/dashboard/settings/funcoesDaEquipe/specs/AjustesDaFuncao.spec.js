@@ -67,11 +67,20 @@ describe('AjustesDaFuncao', () => {
   });
 
   it('a recolhida nomeia até duas áreas no estado, em vez da conta', () => {
+    const wrapper = montar([...PRESETS.AGENT(), 'desempenho_view']);
+    const texto = wrapper.find('[data-recolhida]').text();
+    expect(texto).toContain('Só olha Desempenho da equipe e Central de Ajuda');
+    expect(texto).not.toContain('2 áreas');
+  });
+
+  // Os relatórios de atendimento também escrevem a nota da avaliação (report_manage não é só de ver): com eles no
+  // nível de ver, a recolhida diz "Vê", nunca "Só olha".
+  it('a recolhida com os relatórios de atendimento diz "Vê", sem "só olha"', () => {
     const wrapper = montar([...PRESETS.AGENT(), 'report_manage']);
     const texto = wrapper.find('[data-recolhida]').text();
     expect(texto).toContain(
-      'Só olha Relatórios e Central de Ajuda (artigos para os clientes).'
+      'Vê Relatórios e Central de Ajuda (artigos para os clientes).'
     );
-    expect(texto).not.toContain('2 áreas');
+    expect(texto.toLowerCase()).not.toContain('só olha');
   });
 });

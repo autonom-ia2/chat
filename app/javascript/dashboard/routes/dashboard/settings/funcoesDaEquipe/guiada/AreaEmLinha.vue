@@ -116,7 +116,7 @@ const alternar = chave => {
         <p v-if="mudou" class="m-0 text-sm text-n-slate-11">
           {{
             $t('FUNCOES_EQUIPE.GUIADA.ANTES_DE', {
-              antes: antesDoNivel(module, nivelAntes),
+              antes: antesDoNivel(module, nivelAntes, inicial),
             })
           }}
         </p>

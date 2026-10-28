@@ -37,14 +37,17 @@
     "FRASE": {
       "NAO_ATENDE": "Does not handle conversations.",
       "SO_OLHA_CONVERSAS": "Only looks at conversations.",
+      "VE_CONVERSAS": "Sees conversations.",
       "PROPRIAS": "Handles their own conversations.",
       "PROPRIAS_E_NOVAS": "Handles their own conversations and picks up new ones nobody has taken.",
       "TODAS": "Reads and handles every conversation.",
       "VENDAS_SO_OLHA": "Only looks at sales.",
+      "VENDAS_VE": "Sees sales.",
       "VENDAS_OLHA_E_MOVE": "Looks at and moves sales.",
       "VENDAS_MEXE": "Creates and moves sales in progress.",
       "VENDAS_TUDO": "Takes care of everything in sales.",
       "CONTATOS_SO_OLHA": "Only looks at contacts.",
+      "CONTATOS_VE": "Sees contacts.",
       "CONTATOS_MEXE": "Creates and changes contacts.",
       "CAMPANHAS_DISPARA": "Creates and sends campaigns.",
       "CAMPANHAS_CRIA": "Creates campaigns."
@@ -137,6 +140,7 @@
     "FRASE_INICIO": {
       "NAO_ATENDE": "does not handle conversations.",
       "SO_OLHA_CONVERSAS": "only looks at conversations.",
+      "VE_CONVERSAS": "sees conversations.",
       "PROPRIAS": "handles their own conversations.",
       "PROPRIAS_E_NOVAS": "handles their own conversations and picks up new ones nobody has taken.",
       "TODAS": "reads and handles every conversation."
@@ -216,6 +220,7 @@
       "TODAS": "Reads and handles every conversation",
       "PROPRIAS": "Handles their own conversations",
       "SO_OLHA_CONVERSAS": "Only looks at conversations",
+      "VE_CONVERSAS": "Sees conversations",
       "CAMPANHAS_DISPARA": "Creates and sends campaigns",
       "CAMPANHAS": "Creates campaigns",
       "VENDAS_E_COLUNAS": "Works on sales and sets up the columns",
@@ -224,10 +229,12 @@
       "ARRUMA": "Sets up channels, bots and rules",
       "CONTATOS": "Works on contacts",
       "SO_OLHA_CONTATOS": "Only looks at contacts",
+      "VE_CONTATOS": "Sees contacts",
       "RELATORIOS": "Sees the reports",
       "PROCURA": "Looks for new customers",
       "NAO_ATENDE": "Does not handle conversations",
-      "SO_OLHA_AREAS": "Only looks at {areas}"
+      "SO_OLHA_AREAS": "Only looks at {areas}",
+      "VE_AREAS": "Sees {areas}"
     },
     "AREAS": {
       "CONVERSATIONS": {
@@ -458,10 +465,14 @@
         "NADA": "Today they are all off.",
         "N_AREAS": "{n} area | {n} areas",
         "MEXE_E_OLHA": "Changes {mexe} and only looks at one more. | Changes {mexe} and only looks at {olha} more.",
+        "MEXE_E_VE": "Changes {mexe} and sees one more. | Changes {mexe} and sees {olha} more.",
         "MEXE_E_OLHA_NOMES": "Changes {mexe} and only looks at {olha}.",
+        "MEXE_E_VE_NOMES": "Changes {mexe} and sees {olha}.",
         "SO_MEXE": "Changes {mexe}.",
         "SO_OLHA": "Only looks at {olha}.",
+        "VE": "Sees {olha}.",
         "UMA_OLHA": "Today only looks at {area}.",
+        "UMA_VE": "Today sees {area}.",
         "UMA_MEXE": "Today changes {area}.",
         "OUTRAS": "The rest stay off."
       },

@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import {
   CONVERSATION_LEVELS,
+  LEVELS,
   getLevel,
   moduleByKey,
 } from '../../customRoles/permissionMatrix';
@@ -12,6 +13,7 @@ import {
   resumoDaRecolhida,
 } from '../areasDaFuncao';
 import { ALCANCES_DE_CONVERSA } from '../chavesDaFuncao';
+import { soOlhaNaArea } from '../fraseDaFuncao';
 import { nivelDeVendas } from '../nivelDeVendas';
 import { chavesEfetivas } from '../semFuncao';
 import { devolverFoco } from './focoQueFica';
@@ -56,11 +58,20 @@ const VENDAS = {
   tudo: 'TUDO',
 };
 
+// No nível de ver, "Só olha" só quando nada muda na área (soOlhaNaArea, a regra da frase e da Perda de acesso); senão
+// "Vê" ("antes: via").
+const veSemSoOlhar = (area, nivel, permissions) =>
+  nivel === LEVELS.VIEW && !soOlhaNaArea(area, permissions);
+const textoDeVer = antes =>
+  t(`FUNCOES_EQUIPE.GUIADA.${antes ? 'ANTES' : 'NIVEL'}.VE`);
+
 // O "antes" fala sempre no passado e na forma curta ("antes: atendia só as próprias", "antes: só olhava"), como a
 // recolhida e a especificação 5.B2.
 const estadoDasConversas = (permissions, antes = false) => {
   const nivel = getLevel(moduleByKey('CONVERSATIONS'), permissions);
   const limitado = nivel === CONVERSATION_LEVELS.LIMITED;
+  if (veSemSoOlhar('CONVERSATIONS', nivel, permissions))
+    return textoDeVer(antes);
   if (antes)
     return t(
       `FUNCOES_EQUIPE.AJUSTES.ANTES.CONVERSAS.${limitado ? 'PROPRIAS' : CONVERSAS[nivel]}`
@@ -76,10 +87,14 @@ const estadoDasConversas = (permissions, antes = false) => {
 const estadoDosContatos = (permissions, antes = false) => {
   const contatos = moduleByKey('CONTACTS');
   const nivel = getLevel(contatos, permissions);
-  return antes ? antesDoNivel(contatos, nivel) : rotuloDoNivel(contatos, nivel);
+  return antes
+    ? antesDoNivel(contatos, nivel, permissions)
+    : rotuloDoNivel(contatos, nivel, permissions);
 };
 
 const estadoDasVendas = (permissions, antes = false) => {
+  if (veSemSoOlhar('CRM', nivelDeVendas(permissions), permissions))
+    return textoDeVer(antes);
   const nivel = VENDAS[nivelDeVendas(permissions)];
   return antes
     ? t(`FUNCOES_EQUIPE.AJUSTES.ANTES.VENDAS.${nivel}`)
@@ -180,16 +195,28 @@ const tituloDaRecolhida = computed(() => {
 });
 
 // Estado curto: uma área só ganha o nome; até duas de um lado, os nomes ("Mexe em Etiquetas e Canais"); mais, a conta
-// ("Mexe em 3 áreas e só olha outras 5."), sem o lado que é zero.
+// ("Mexe em 3 áreas e só olha outras 5."), sem o lado que é zero. "Só olha" só quando nenhuma das que estão no nível de
+// ver ainda muda algo (soOlhaNaArea: os relatórios de atendimento também escrevem a nota da avaliação); senão "vê".
 const ATE_DUAS = 2;
+const DE_VER = {
+  soOlha: {
+    UMA: 'UMA_OLHA',
+    SO: 'SO_OLHA',
+    NOMES: 'MEXE_E_OLHA_NOMES',
+    CONTA: 'MEXE_E_OLHA',
+  },
+  ve: { UMA: 'UMA_VE', SO: 'VE', NOMES: 'MEXE_E_VE_NOMES', CONTA: 'MEXE_E_VE' },
+};
 const contaDasAreas = () => {
   const { olha, mexe } = resumo.value;
+  const soOlhando = olha.every(area => soOlhaNaArea(area, props.permissions));
+  const deVer = DE_VER[soOlhando ? 'soOlha' : 've'];
   const nAreas = n => t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.N_AREAS', { n }, n);
   const areasOuConta = keys =>
     keys.length <= ATE_DUAS ? lista(nomes(keys)) : nAreas(keys.length);
   if (olha.length + mexe.length === 1)
     return olha.length
-      ? t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.UMA_OLHA', {
+      ? t(`FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.${deVer.UMA}`, {
           area: t(`FUNCOES_EQUIPE.AREAS.${olha[0]}.NA_FRASE`),
         })
       : t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.UMA_MEXE', {
@@ -200,16 +227,16 @@ const contaDasAreas = () => {
       mexe: areasOuConta(mexe),
     });
   if (!mexe.length)
-    return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.SO_OLHA', {
+    return t(`FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.${deVer.SO}`, {
       olha: areasOuConta(olha),
     });
   if (olha.length <= ATE_DUAS)
-    return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.MEXE_E_OLHA_NOMES', {
+    return t(`FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.${deVer.NOMES}`, {
       mexe: areasOuConta(mexe),
       olha: lista(nomes(olha)),
     });
   return t(
-    'FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.MEXE_E_OLHA',
+    `FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.${deVer.CONTA}`,
     { mexe: areasOuConta(mexe), olha: olha.length },
     olha.length
   );

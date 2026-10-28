@@ -63,13 +63,13 @@ describe('cartões prontos', () => {
         fora: false,
       },
       READ_ONLY: {
-        capacidades: ['SO_OLHA_AREAS', 'NAO_ATENDE'],
+        capacidades: ['SO_OLHA_AREAS', 'VE_AREAS', 'NAO_ATENDE'],
         selo: [],
         travas: [{ motivo: 'MISSING', chaves: ['insurance_view'] }],
         fora: false,
       },
       FINANCE: {
-        capacidades: ['SO_OLHA_AREAS', 'NAO_ATENDE'],
+        capacidades: ['SO_OLHA_AREAS', 'VE_AREAS', 'NAO_ATENDE'],
         selo: [],
         travas: [{ motivo: 'DELEGATION', chaves: ['financial_view'] }],
         fora: true,
@@ -97,20 +97,24 @@ describe('cartões prontos', () => {
         ['campaign_send', 'contact_export']
       ),
       OPERATIONS: cartao(['TODAS', 'ARRUMA', 'CONTATOS']),
-      READ_ONLY: cartao(['SO_OLHA_AREAS', 'NAO_ATENDE']),
-      FINANCE: cartao(['SO_OLHA_AREAS', 'NAO_ATENDE']),
+      READ_ONLY: cartao(['SO_OLHA_AREAS', 'VE_AREAS', 'NAO_ATENDE']),
+      FINANCE: cartao(['SO_OLHA_AREAS', 'VE_AREAS', 'NAO_ATENDE']),
     });
   });
 
-  it('Só consulta lista as áreas que olha', () => {
+  // Os relatórios de atendimento também escrevem a nota da avaliação: vão para o "Vê", fora do "Só olha".
+  it('Só consulta lista as áreas que só olha e, à parte, as que vê', () => {
     const [leitura] = cartoesProntos(CARLA).filter(
       c => c.chave === 'READ_ONLY'
     );
-    expect(leitura.capacidades[0]).toEqual({
-      chave: 'SO_OLHA_AREAS',
-      tipo: 'soOlha',
-      areas: ['CONTACTS', 'CRM', 'CAMPAIGNS', 'REPORTS'],
-    });
+    expect(leitura.capacidades.slice(0, 2)).toEqual([
+      {
+        chave: 'SO_OLHA_AREAS',
+        tipo: 'soOlha',
+        areas: ['CONTACTS', 'CRM', 'CAMPAIGNS'],
+      },
+      { chave: 'VE_AREAS', tipo: 've', areas: ['REPORTS'] },
+    ]);
   });
 
   it('sensitiveExtrasOn(PRESETS.SDR()) = []', () => {
@@ -130,6 +134,7 @@ describe('cartões prontos', () => {
     );
     expect(ICONE_DA_CAPACIDADE.pode).toContain('i-lucide-check');
     expect(ICONE_DA_CAPACIDADE.soOlha).toContain('i-lucide-eye');
+    expect(ICONE_DA_CAPACIDADE.ve).toContain('i-lucide-eye');
     expect(ICONE_DA_CAPACIDADE.naoFaz).toContain('i-lucide-x');
   });
 

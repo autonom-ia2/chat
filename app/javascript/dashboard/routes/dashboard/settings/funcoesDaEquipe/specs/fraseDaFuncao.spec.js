@@ -52,11 +52,14 @@ describe('fraseDaFuncao', () => {
       ...Object.values(PRESETS).map(preset => preset()),
       [],
       ['conversation_view'],
+      ['conversation_view', 'conversation_message_delete'],
       ['conversation_participating_manage'],
       ['conversation_manage', 'crm_admin'],
       ['crm_view', 'crm_move_cards'],
       ['campaign_manage'],
       ['contact_view'],
+      ['contact_view', 'contact_export'],
+      ['crm_view', 'crm_export'],
       ['contact_manage'],
     ];
     const chaves = [
