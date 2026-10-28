@@ -116,13 +116,13 @@ describe('conversationAudienceApi (#2277)', () => {
           {
             id: 3,
             name: 'Mariana',
-            phone: '+55 11 9•••• 4321',
+            contact: '+55 11 9•••• 4321',
             confidence: 'certeza',
             reason: 'Cotou',
             conversation_id: 99,
           },
         ],
-        left_aside: [['Fixo', 'sem_whatsapp']],
+        left_aside: [['Fixo', 'sem_contato']],
       },
     });
 
@@ -132,12 +132,12 @@ describe('conversationAudienceApi (#2277)', () => {
       state: 'lendo',
       read: 140,
       total: 702,
-      leftAside: [['Fixo', 'sem_whatsapp']],
+      leftAside: [['Fixo', 'sem_contato']],
     });
     expect(opened.progress.people[0]).toEqual({
       id: 3,
       name: 'Mariana',
-      phone: '+55 11 9•••• 4321',
+      contact: '+55 11 9•••• 4321',
       confidence: 'certeza',
       reason: 'Cotou',
       conversationId: 99,

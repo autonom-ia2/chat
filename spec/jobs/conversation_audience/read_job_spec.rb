@@ -58,7 +58,7 @@ RSpec.describe ConversationAudience::ReadJob do
     described_class.perform_now(search.id)
     described_class.perform_now(search.id)
 
-    expect(search.people.pluck(:left_aside).uniq).to eq(['sem_whatsapp'])
+    expect(search.people.pluck(:left_aside).uniq).to eq(['sem_contato'])
     expect(Notification::PushNotificationJob).not_to have_been_enqueued
   end
 

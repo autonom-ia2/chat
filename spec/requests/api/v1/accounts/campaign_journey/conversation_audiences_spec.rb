@@ -195,7 +195,7 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
     inbox = create(:inbox, account: account)
     mobile = create(:contact, account: account, name: 'Mariana', phone_number: '+5511987654321')
     landline = create(:contact, account: account, name: 'Fixo', phone_number: '+551133334444')
-    kept, aside = [[mobile, nil], [landline, 'sem_whatsapp']].map do |contact, left_aside|
+    kept, aside = [[mobile, nil], [landline, 'sem_contato']].map do |contact, left_aside|
       conversation = create(:conversation, account: account, inbox: inbox, contact: contact)
       ConversationAudiencePerson.create!(search: search, contact: contact, conversation: conversation, group: 'certeza', reason: 'Cotou',
                                          left_aside: left_aside)
@@ -203,7 +203,7 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
 
     get "#{path}/#{search.id}", headers: headers
     expect(response.parsed_body['people'].pluck('id', 'name', 'confidence')).to eq([[kept.id, 'Mariana', 'certeza']])
-    expect(response.parsed_body['left_aside']).to eq([%w[Fixo sem_whatsapp]])
+    expect(response.parsed_body['left_aside']).to eq([%w[Fixo sem_contato]])
 
     post "#{path}/#{search.id}/save", params: { name: 'Cotaram', person_ids: [kept.id, aside.id] }, headers: headers, as: :json
     expect(response).to have_http_status(:ok)

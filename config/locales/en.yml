@@ -307,6 +307,12 @@ en:
         feedback: Feedback Comment
         recorded_at: Recorded date
         review_notes: Review Notes
+  conversation_audience:
+    columns:
+      city: City
+      country: Country
+      'yes': 'Yes'
+      'no': 'No'
   notifications:
     notification_title:
       conversation_creation: 'A conversation (#%{display_id}) has been created in %{inbox_name}'

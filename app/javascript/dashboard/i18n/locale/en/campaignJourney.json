@@ -371,7 +371,7 @@
         "SEE_CONVERSATION_NAMED": "See the conversation with {name}",
         "IN_LIST_NAMED": "{name} in the list",
         "OUT_TITLE": "Will not receive, even following the rule:",
-        "OUT_NO_WHATSAPP": "without WhatsApp: {count}",
+        "OUT_NO_CONTACT": "no phone or e-mail: {count}",
         "OUT_OPTED_OUT": "asked not to receive: {count}",
         "OUT_NAMES": "{reason} ({names})",
         "SEE_WHO": "See who",

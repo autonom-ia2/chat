@@ -2,7 +2,8 @@
 # (CampaignImport, flow audience, completed), exactly what the spreadsheet flow leaves behind, so the audience list,
 # "Criar campanha" and the send (CampaignJourney::AudienceContacts) treat both the same. The contacts already exist:
 # nothing is imported and no contact is written; each row points to its contact with the hashes of its current
-# phone and e-mail, the consent proof the send checks again.
+# phone and e-mail, the consent proof the send checks again, plus the company and what else the contact has (city,
+# country, custom attributes) as columns the message can use (ConversationAudience::Columns).
 #
 # Only people of this search whose conversation the person can still open are saved, and never someone left aside
 # (ConversationAudience::Reach).
@@ -21,8 +22,11 @@ class ConversationAudience::Save
   def perform
     raise Error, 'name_required' if @name.blank?
 
-    rows = contacts.filter_map { |contact| row_for(contact) }
-    raise Error, 'no_people' if rows.empty?
+    people = contacts
+    raise Error, 'no_people' if people.empty?
+
+    @columns = ConversationAudience::Columns.new(@account, people)
+    rows = people.map { |contact| row_for(contact) }
 
     ActiveRecord::Base.transaction do
       # Two clicks on "Salvar" never make two audiences: the second waits here and finds the search saved.
@@ -44,27 +48,27 @@ class ConversationAudience::Save
     people = @search.people.where(id: @person_ids)
     visible = ConversationAudience::Conversations.visible_ids(@account, @user, people.pluck(:conversation_id))
     contact_ids = people.where(conversation_id: visible.to_a).pluck(:contact_id)
-    found = @account.contacts.where(id: contact_ids).order(:id).to_a
+    found = @account.contacts.where(id: contact_ids).order(:id)
+    # The company lives in the Enterprise overlay (Enterprise::Concerns::Contact); read it in one query when it is there.
+    found = (Contact.reflect_on_association(:company) ? found.includes(:company) : found).to_a
     aside = ConversationAudience::Reach.left_aside(found)
     found.reject { |contact| aside.key?(contact.id) }
   end
 
   def row_for(contact)
     phone = ConversationAudience::Reach.phone(contact)
-    email = normalized_email(contact)
+    email = ConversationAudience::Reach.email(contact)
     {
       contact_id: contact.id, raw_name: contact.name, normalized_name: contact.name.to_s.squish,
       normalized_phone_hash: phone&.hash, raw_phone_masked: phone&.masked,
-      normalized_email_hash: email && Digest::SHA256.hexdigest(email.email), email_masked: email&.masked
+      normalized_email_hash: email && Digest::SHA256.hexdigest(email.email), email_masked: email&.masked,
+      company_name: company_name(contact), extra_values: @columns.values_for(contact)
     }
   end
 
-  def normalized_email(contact)
-    return if contact.email.blank?
-
-    EmailCampaigns::EmailNormalizer.normalize!(contact.email)
-  rescue EmailCampaigns::EmailNormalizer::Error
-    nil
+  # The same reading the message uses for empresa_cliente.nome (TemplateFields::ContactResolver).
+  def company_name(contact)
+    contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name'].to_s.squish.presence
   end
 
   def create_audience(rows)
@@ -75,6 +79,7 @@ class ConversationAudience::Save
                  'source' => 'conversations', 'conversation_audience_search_id' => @search.id },
       total_rows: rows.size, valid_rows: rows.size, imported_contacts_count: rows.size, existing_contacts_count: rows.size,
       validation_summary: { 'errors' => {}, 'warnings' => [] }, channels: initial_channels(rows),
+      extra_columns: @columns.headers, schema_resolution: { CampaignImports::ColumnTypes::RESOLUTION_KEY => @columns.types },
       validated_at: now, confirmed_at: now, import_started_at: now, import_finished_at: now
     )
   end
@@ -85,7 +90,7 @@ class ConversationAudience::Save
     CampaignImportRow.insert_all!(rows.each_with_index.map do |row, index| # rubocop:disable Rails/SkipsModelValidations
       row.merge(campaign_import_id: audience.id, row_number: index + 1, batch_index: 0,
                 status: CampaignImportRow.statuses[:imported], was_existing_contact: true,
-                labels_applied: [], error_messages: [], extra_values: {}, created_at: now, updated_at: now)
+                labels_applied: [], error_messages: [], created_at: now, updated_at: now)
     end)
   end
 

@@ -31,6 +31,37 @@ RSpec.describe ConversationAudience::Save do
     expect(search.reload).to have_attributes(status: 'saved', campaign_import_id: audience.id)
   end
 
+  it 'keeps someone with only an e-mail, so an account that sends by e-mail gets the whole audience' do
+    only_email = create(:contact, account: account, name: 'Só e-mail', email: 'so@example.com')
+
+    audience = described_class.new(search, user: user, name: 'E-mail', person_ids: [found(only_email).id]).perform
+
+    expect(audience.valid_rows).to eq(1)
+    expect(audience.channels).to include('email' => include('enabled' => true, 'count' => 1), 'whatsapp' => include('enabled' => false))
+    expect(audience.campaign_import_rows.first).to have_attributes(contact_id: only_email.id, normalized_phone_hash: nil,
+                                                                   email_masked: be_present)
+  end
+
+  it 'keeps the company, the city and the custom attributes as columns the message can use' do
+    account.update!(locale: 'pt_BR')
+    { 'time' => ['Time do coração', 'text'], 'aniversario' => %w[Aniversário date], 'vazio' => ['Ninguém tem', 'text'] }
+      .each do |key, (name, type)|
+        create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: key,
+                                             attribute_display_name: name, attribute_display_type: type)
+      end
+    mobile.update!(custom_attributes: { 'time' => 'Cruzeiro', 'aniversario' => '1990-05-04T00:00:00.000Z' },
+                   additional_attributes: { 'city' => 'Belo Horizonte', 'company_name' => 'João X' })
+
+    audience = described_class.new(search, user: user, name: 'Cruzeirenses', person_ids: [found(mobile).id]).perform
+
+    expect(audience.extra_columns).to eq(['Cidade', 'Time do coração', 'Aniversário'])
+    expect(CampaignImports::ColumnTypes.stored(audience)).to eq('Aniversário' => 'data')
+    expect(audience.campaign_import_rows.first).to have_attributes(
+      company_name: 'João X', extra_values: { 'Cidade' => 'Belo Horizonte', 'Time do coração' => 'Cruzeiro', 'Aniversário' => '1990-05-04' }
+    )
+    expect(CampaignJourney::AudienceColumns.row_values(audience, mobile.id)).to include('time_do_coracao' => 'Cruzeiro', 'cidade' => 'Belo Horizonte')
+  end
+
   it 'never makes two audiences from the same search' do
     person = found(mobile)
     described_class.new(search, user: user, name: 'Uma', person_ids: [person.id]).perform

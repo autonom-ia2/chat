@@ -35,7 +35,7 @@ export class SearchError extends Error {
 const person = item => ({
   id: item.id,
   name: item.name,
-  phone: item.phone,
+  contact: item.contact,
   confidence: item.confidence,
   reason: item.reason,
   conversationId: item.conversation_id,

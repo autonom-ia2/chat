@@ -1,6 +1,6 @@
 <script setup>
-// One person found in the conversations (#2277): name and phone on top, why the person came in below (never cut
-// on the phone: it is what gives trust), a button that opens the conversation beside the list and the switch
+// One person found in the conversations (#2277): name and how it is reached (phone, or e-mail when there is
+// no phone) on top, why the person came in below (never cut on the phone: it is what gives trust), a button that opens the conversation beside the list and the switch
 // that keeps the person in or out. Who is out stays readable, only faded.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
@@ -47,7 +47,7 @@ const initials = computed(() =>
           {{ person.name }}
         </strong>
         <span class="text-xs tabular-nums text-n-slate-11">
-          {{ person.phone }}
+          {{ person.contact }}
         </span>
       </div>
       <p

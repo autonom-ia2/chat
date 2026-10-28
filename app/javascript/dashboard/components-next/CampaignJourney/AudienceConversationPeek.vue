@@ -95,7 +95,7 @@ onKeyStroke('Escape', () => {
                 {{ person.name }}
               </h3>
               <span class="text-sm tabular-nums text-n-slate-11">
-                {{ person.phone }}
+                {{ person.contact }}
               </span>
             </div>
             <span class="shrink-0 text-sm tabular-nums text-n-slate-11">

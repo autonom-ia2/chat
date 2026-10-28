@@ -47,7 +47,14 @@ própria conta lê as conversas do período e monta a lista. A pessoa revisa e s
 - Cria um `CampaignImport` de público (`flow: audience`, `completed`), como a planilha deixa. A lista de públicos,
   "Criar campanha" e o envio tratam os dois do mesmo jeito.
 - Não grava contato.
-- Ficam de fora quem pediu para não receber e quem não tem celular válido. A tela mostra essas pessoas à parte.
+- Entra quem tem celular **ou** e-mail válido, como na planilha. A campanha manda cada pessoa pelo canal que ela tem,
+  então uma conta que só dispara e-mail recebe o público inteiro.
+- Ficam de fora quem pediu para não receber (`nao_quer`) e quem não tem nem celular nem e-mail válido
+  (`sem_contato`). A tela mostra essas pessoas à parte.
+- Cada linha leva a empresa do contato e, como colunas do público, a cidade, o país e todos os atributos
+  personalizados de contato da conta (`ConversationAudience::Columns`). A mensagem usa essas colunas como
+  `publico.<coluna>`. Fica de fora só a coluna que ninguém do público preencheu. Atributos de data, moeda e link levam
+  o tipo, para a mensagem formatar ("04/05/1990").
 
 ### 4. Sininho
 

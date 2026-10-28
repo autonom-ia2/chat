@@ -35,7 +35,7 @@ class ConversationAudience::Payload
 
   def people
     rows.reject(&:left_aside).map do |row|
-      { id: row.id, name: row.name, phone: row.phone, confidence: row.group, reason: row.reason, conversation_id: row.conversation_id }
+      { id: row.id, name: row.name, contact: row.contact, confidence: row.group, reason: row.reason, conversation_id: row.conversation_id }
     end
   end
 
@@ -43,13 +43,13 @@ class ConversationAudience::Payload
     rows.select(&:left_aside).map { |row| [row.name, row.left_aside] }
   end
 
-  Row = Struct.new(:id, :name, :phone, :group, :reason, :conversation_id, :left_aside)
+  Row = Struct.new(:id, :name, :contact, :group, :reason, :conversation_id, :left_aside)
 
   # The reason sums up the conversation: only people whose conversation the person can still open.
   def rows
     @rows ||= begin
       all = @search.people.joins(:contact).order(:id)
-                   .pluck(:id, 'contacts.name', :phone_masked, :group, :reason, :conversation_id, :left_aside)
+                   .pluck(:id, 'contacts.name', :contact_masked, :group, :reason, :conversation_id, :left_aside)
                    .map { |values| Row.new(*values) }
       visible = ConversationAudience::Conversations.visible_ids(@search.account, @search.user, all.map(&:conversation_id))
       all.select { |row| visible.include?(row.conversation_id) }

@@ -57,7 +57,7 @@ class CreateConversationAudiences < ActiveRecord::Migration[7.2]
     add_index :conversation_audience_batches, [:search_id, :status]
   end
 
-  # conversation_id and contact_id indexed: deleting either cascades without a table scan. phone_masked and left_aside
+  # conversation_id and contact_id indexed: deleting either cascades without a table scan. contact_masked and left_aside
   # are written when the person is found, so the screen polling the list never normalizes phones again.
   def create_people
     create_table :conversation_audience_people do |t|
@@ -68,7 +68,7 @@ class CreateConversationAudiences < ActiveRecord::Migration[7.2]
       t.string :group, null: false
       t.text :reason
       t.jsonb :proofs, null: false, default: []
-      t.string :phone_masked
+      t.string :contact_masked
       t.string :left_aside
       t.timestamps
     end

@@ -97,7 +97,7 @@ class ConversationAudience::Wave
 
   # Written once, when found: the screen polls the list and never normalizes phones again.
   def reach(contact)
-    { phone_masked: ConversationAudience::Reach.phone(contact)&.masked, left_aside: ConversationAudience::Reach.reason_for(contact) }
+    { contact_masked: ConversationAudience::Reach.masked(contact), left_aside: ConversationAudience::Reach.reason_for(contact) }
   end
 
   def record_usage(usage)

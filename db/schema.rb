@@ -1959,7 +1959,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_600000) do
     t.string "group", null: false
     t.text "reason"
     t.jsonb "proofs", default: [], null: false
-    t.string "phone_masked"
+    t.string "contact_masked"
     t.string "left_aside"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

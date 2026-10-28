@@ -9,7 +9,7 @@ const props = defineProps({
 });
 
 const NS = 'CAMPAIGN_JOURNEY.NEW_AUDIENCE.FROM_CONVERSATIONS';
-const REASONS = { sem_whatsapp: 'OUT_NO_WHATSAPP', nao_quer: 'OUT_OPTED_OUT' };
+const REASONS = { sem_contato: 'OUT_NO_CONTACT', nao_quer: 'OUT_OPTED_OUT' };
 const { t } = useI18n();
 const showWho = ref(false);
 
