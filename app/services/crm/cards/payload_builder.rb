@@ -108,8 +108,8 @@ class Crm::Cards::PayloadBuilder
   def sanitize_hidden_conversation!(payload)
     return if primary_conversation_visible?
 
-    # A Lista nova (#2283, decisão 2) diz "Outra pessoa está conversando", sem nome: só que a conversa existe.
-    payload[:conversation_hidden] = primary_conversation.present?
+    # A Lista nova (#2283, decisão 2) diz "Outra pessoa está conversando", sem nome: só quando alguém atende a conversa.
+    payload[:conversation_hidden] = hidden_conversation_assignee?
     payload[:conversation_id] = nil
     payload[:metadata] = sanitized_metadata(payload[:metadata])
     return unless hidden_conversation_assignee?

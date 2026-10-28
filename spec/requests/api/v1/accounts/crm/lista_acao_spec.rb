@@ -230,6 +230,14 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
       expect(response.parsed_body.dig('payload', 'next_follow_up_id')).to be_nil
     end
 
+    it 'não diz que outra pessoa está conversando quando ninguém atende a conversa oculta' do
+      hidden_conversation.update!(assignee: nil)
+
+      row = list(agent)['payload'].find { |item| item['id'] == shown_card.id }
+
+      expect(row['conversation_hidden']).to be(false)
+    end
+
     it 'conta o retorno sem conversa do mesmo card, que o grupo calcula só com dado visível' do
       visible = account.crm_follow_ups.create!(card: shown_card, created_by: agent, title: 'Ligar', due_at: 1.day.ago,
                                                timezone: 'America/Sao_Paulo', status: :overdue)
