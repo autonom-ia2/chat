@@ -82,6 +82,36 @@ RSpec.describe Webhooks::FacebookFeedJob do
     expect(dispatcher).to have_received(:dispatch).once
   end
 
+  it 'erro numa conta não tira o evento das outras, e vai ao rastreador' do
+    stub_comment
+    other = create(:account)
+    other.enable_features!('meta_ads_comentarios_facebook')
+    create_meta_ads_insights_connection(other)
+    Crm::MetaAdsPage.create!(account: other, page_id: page_id)
+    allow(dispatcher).to receive(:dispatch) { |_, _, payload| raise 'listener caiu' if payload[:account_id] == account.id }
+    tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+    described_class.perform_now(page_id, value, 0)
+
+    expect(dispatcher).to have_received(:dispatch).with(anything, anything, hash_including(account_id: other.id))
+    expect(tracker).to have_received(:capture_exception).once
+    Redis::Alfred.delete("facebook:comment_received:#{other.id}:#{comment_id}")
+  end
+
+  it 'leitura recusada pela Meta: sem evento, com o motivo no log (só ids), e a Página não é registrada de novo' do
+    stub_comment(status: 400, body: { error: { code: 100, message: 'x' } })
+    allow(Rails.logger).to receive(:warn)
+    allow(Crm::MetaAdsPage).to receive(:remember!)
+
+    described_class.perform_now(page_id, value, 0)
+
+    expect(dispatcher).not_to have_received(:dispatch)
+    expect(Rails.logger).to have_received(:warn).with(include('meta_refused', comment_id))
+    expect(Rails.logger).not_to have_received(:warn).with(include('Ainda tem'))
+    expect(Crm::MetaAdsPage).not_to have_received(:remember!)
+  end
+
   it 'ignora o eco da própria Página, outros itens e verbos, Página sem dono, conta sem a flag ou sem conexão' do
     read = stub_comment
     described_class.perform_now(page_id, value.merge('from_id' => page_id), 0)

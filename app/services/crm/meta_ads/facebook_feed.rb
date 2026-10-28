@@ -12,6 +12,9 @@
 # - Conta sem conexão ativa, sem a leitura concedida ou cuja leitura a Meta recusa fica sem o evento. Meta fora do ar
 #   sobe para o retry do job.
 # - O mesmo comentário de novo em DEDUP (webhook reenviado) não sai duas vezes. A chave só fica se o evento saiu.
+#   Erro numa conta não tira o evento das outras: vai ao rastreador, e Meta fora do ar sobe no fim para o retry, que
+#   só repete as contas que ficaram sem evento (as outras estão no dedupe). Quem consome (#2212) não deve contar com
+#   entrega única: o dedupe é por 10 min, e um listener que falhe no meio solta a chave.
 # - `inbox_id`: a caixa do Messenger dessa Página na conta, se houver (o #2212 usa para responder no privado).
 # - `ad_id` vai nil: ligar o post ao anúncio pede outra chamada à Meta, e quem precisa liga do seu lado.
 class Crm::MetaAds::FacebookFeed
@@ -29,10 +32,23 @@ class Crm::MetaAds::FacebookFeed
   def perform
     return unless new_comment? && @value['from_id'].to_s != @page_id
 
-    accounts.each { |account| publish(account) if first_time?(account) }
+    unavailable = accounts.filter_map { |account| publish_alone(account) }.first
+    raise unavailable if unavailable
   end
 
   private
+
+  # Uma conta por vez: devolve a Meta fora do ar (FacebookComments só deixa sair `meta_unavailable`) para o retry; outro
+  # erro vai ao rastreador.
+  def publish_alone(account)
+    publish(account) if first_time?(account)
+    nil
+  rescue Crm::MetaAds::FacebookComments::Error => e
+    e
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: account).capture_exception
+    nil
+  end
 
   def new_comment?
     @value['item'] == 'comment' && @value['verb'] == 'add' && @value['comment_id'].is_a?(String) && @value['post_id'].is_a?(String)

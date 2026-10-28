@@ -7,8 +7,9 @@
 # - Tudo com o token da Página, pedido com o token da pessoa. Ler exige `pages_read_user_content`; responder, ocultar e
 #   apagar, `pages_manage_engagement`. Sem a primeira (ou no modo `partner`, em que o token é o da plataforma), a aba
 #   pede para entrar de novo com o Facebook (`needs_login`); sem a segunda, lê e não age. Falha passageira da Meta ao
-#   conferir permissão ou pedir o token da Página é `meta_unavailable`, não `needs_login`. Recusa do token da Página que
-#   entrar de novo não resolve (a pessoa não tem papel na Página) é `meta_refused`.
+#   conferir permissão ou pedir o token da Página é `meta_unavailable`, não `needs_login`. Sem token da Página (a
+#   Página não foi escolhida no login, ou a pessoa não a administra) é `needs_login`: entrando de novo, ela escolhe a
+#   Página. Recusa com erro que entrar de novo não resolve (a Página sumiu, id inválido) é `meta_refused`.
 # - Só age em comentário do post. O id de comentário da Graph é `<id do post>_<id do comentário>`, em que o id do post
 #   é a parte depois do `_` do id do post da Página (`<página>_<post>`); respostas idem (a confirmar na chamada real,
 #   até 07/11). Qualquer outro formato é `comment_not_found`, sem chamar a Meta.
@@ -84,14 +85,18 @@ class Crm::MetaAds::FacebookComments
   end
 
   # Pelo webhook (Crm::MetaAds::FacebookFeed): o comentário como a Graph devolve (`message`, `from`), lido com o token da
-  # Página. Só em post de Página da conta e com a leitura concedida; nil quando não dá para ler.
+  # Página. Só em post de Página da conta e com a leitura concedida; nil quando não dá para ler (a recusa vai ao log, só
+  # com ids). A Página já é da conta: aqui ela não é registrada de novo.
   def comment(post_id, comment_id)
     return unless comment_of_post?(comment_id, post_id) && granted?(READ) && own_page?(post_id)
 
-    client = page_client(post_id)
+    client = page_client(post_id, remember: false)
     client && graph!(client.page_comment(comment_id))
   rescue Error => e
     raise if e.code == 'meta_unavailable'
+
+    Rails.logger.warn("[meta_ads] comentário do Facebook não lido: #{e.code} account=#{@connection.account_id} comment=#{comment_id}")
+    nil
   end
 
   private
@@ -161,7 +166,7 @@ class Crm::MetaAds::FacebookComments
     post_id.to_s.split('_').first
   end
 
-  def page_client(post_id)
+  def page_client(post_id, remember: true)
     @page_clients ||= {}
     page = page_id(post_id)
     return @page_clients[page] if @page_clients.key?(page)
@@ -170,11 +175,12 @@ class Crm::MetaAds::FacebookComments
     raise Error, 'meta_unavailable' if result.transient?
 
     data = result.ok ? result.data.to_h : page_refused!(result)
-    @page_clients[page] = data['access_token'].present? ? remember_page(page, data) : nil
+    token = data['access_token'].presence
+    @page_clients[page] = token && (remember ? remember_page(page, data) : graph_client(token))
   end
 
-  # Token ou permissão que faltam se resolvem entrando de novo (`needs_login`, pelo `{}`). O resto (a pessoa não tem
-  # papel na Página, a Página sumiu) não: entrar de novo daria a mesma recusa.
+  # Token ou permissão que faltam se resolvem entrando de novo (`needs_login`, pelo `{}`). O resto (a Página sumiu, id
+  # inválido) não: entrar de novo daria a mesma recusa.
   def page_refused!(result)
     return {} if result.token_invalid? || result.scope_error?
 
