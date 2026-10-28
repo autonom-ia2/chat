@@ -25,8 +25,12 @@ import { useMetaAdsLive } from '../useMetaAdsLive';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { lerGestao } from '../gestaoDoAnuncio';
+import MetaAdsComments from './comentarios/MetaAdsComments.vue';
+import comentariosInstagram from './comentarios/comentariosInstagram';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsAdPost from './MetaAdsAdPost.vue';
+import MetaAdsBudget from './MetaAdsBudget.vue';
+import { lerOrcamento } from '../criacaoNaMeta';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
 // imagem no formato dela, o veredito com o porquê em números, o custo por venda ao lado da média da conta, o
@@ -291,6 +295,21 @@ const gestaoOn = computed(() =>
   )
 );
 const canManage = usePermissionGranted('meta_ads_manage');
+
+// Comentários do anúncio, uma aba por rede, cada uma atrás da própria flag: Instagram (#2196); o Facebook (#2197)
+// entra com o adaptador dele e a flag meta_ads_comentarios_facebook. Sem nenhuma aba ligada, a seção não aparece.
+const COMMENT_TABS = [
+  {
+    key: 'INSTAGRAM',
+    flag: FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+    adaptador: comentariosInstagram,
+  },
+];
+const commentTabs = computed(() =>
+  COMMENT_TABS.filter(tab =>
+    isFeatureEnabledonAccount.value(Number(route.params.accountId), tab.flag)
+  )
+);
 const gestao = ref(null);
 
 const loadGestao = async () => {
@@ -300,6 +319,34 @@ const loadGestao = async () => {
   const data = await lerGestao(asked);
   if (asked === props.adId) gestao.value = data;
 };
+
+// Orçamento e datas (#2198, flag meta_ads_criar): de quem guarda o dinheiro (grupo ou campanha). `budgetState`: ''
+// (flag desligada), 'loading', 'failed' ou 'ok'. Sem orçamento o cartão some e o "Ativar" espera; na falha, diz e
+// deixa tentar de novo.
+const budgetOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_CRIAR
+  )
+);
+const budget = ref(null);
+const budgetState = ref('');
+const loadBudget = async () => {
+  budget.value = null;
+  budgetState.value = '';
+  if (!budgetOn.value) return;
+  budgetState.value = 'loading';
+  const asked = props.adId;
+  try {
+    const data = await lerOrcamento(asked);
+    if (asked !== props.adId) return;
+    budget.value = data;
+    budgetState.value = data ? 'ok' : 'failed';
+  } catch {
+    if (asked === props.adId) budgetState.value = 'failed';
+  }
+};
+watch(() => props.adId, loadBudget);
 
 watch(() => props.adId, loadGestao);
 
@@ -314,6 +361,7 @@ const statusChanged = async status => {
 onMounted(() => {
   live.start();
   loadGestao();
+  loadBudget();
 });
 
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
@@ -407,6 +455,9 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           :ad-name="ad.name || ''"
           :gestao="gestao"
           :can-manage="canManage"
+          :budget="budget"
+          :budget-state="budgetState"
+          @retry-budget="loadBudget"
           @changed="statusChanged"
         />
       </header>
@@ -459,6 +510,14 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         </div>
 
         <div class="flex flex-col gap-5">
+          <!-- Orçamento e datas (#2198) no topo: é o que a pessoa muda depois de ver o resultado. -->
+          <MetaAdsBudget
+            v-if="budget"
+            :ad-id="adId"
+            :budget="budget"
+            :can-manage="canManage"
+            @changed="budget = $event"
+          />
           <span
             v-if="ad.verdict"
             :data-verdict="ad.verdict"
@@ -702,6 +761,13 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           </table>
         </details>
       </div>
+
+      <MetaAdsComments
+        v-if="gestaoOn && !withoutSpend && commentTabs.length"
+        :ad-id="adId"
+        :abas="commentTabs"
+        :can-manage="canManage"
+      />
 
       <div
         v-if="withoutSpend"

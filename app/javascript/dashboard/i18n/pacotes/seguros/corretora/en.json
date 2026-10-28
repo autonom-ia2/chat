@@ -1218,5 +1218,17 @@
     "BLOCO": {
       "VENDENDO": "Quoting"
     }
+  },
+  "PAINEL_DO_CONTATO": {
+    "RELACAO": {
+      "OPCOES": {
+        "INTERESSADO": {
+          "DICA": "Wants or may want insurance from you."
+        },
+        "PARCEIRO": {
+          "DICA": "Insurer, sales agency or another broker."
+        }
+      }
+    }
   }
 }

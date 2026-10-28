@@ -1381,13 +1381,34 @@
       "mode"
     ]
   },
+  "crm/meta_ads_connection/ads/:ad_id/budget": {
+    "controller": "api/v1/accounts/crm/meta_ads_creation#budget",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/ads/:ad_id/instagram_comments": {
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#index",
+    "parametros": [
+      "after",
+      "comment_id"
+    ]
+  },
   "crm/meta_ads_connection/ads/:ad_id/management": {
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#show",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/create_options": {
+    "controller": "api/v1/accounts/crm/meta_ads_creation#options",
     "parametros": []
   },
   "crm/meta_ads_connection/funnels": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnels",
     "parametros": []
+  },
+  "crm/meta_ads_connection/organico": {
+    "controller": "api/v1/accounts/crm/meta_ads_organico#show",
+    "parametros": [
+      "days"
+    ]
   },
   "crm/meta_ads_connection/pages": {
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#pages",
@@ -1416,6 +1437,10 @@
       "step"
     ]
   },
+  "crm/meta_ads_connection/paused_ads": {
+    "controller": "api/v1/accounts/crm/meta_ads_creation#paused",
+    "parametros": []
+  },
   "crm/meta_ads_connection/pixels": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#pixels",
     "parametros": [
@@ -1433,6 +1458,10 @@
   },
   "crm/meta_ads_connection/whatsapp_report": {
     "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#show",
+    "parametros": []
+  },
+  "crm/meta_ads_lead_forms": {
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#index",
     "parametros": []
   },
   "crm/meta_conversions": {

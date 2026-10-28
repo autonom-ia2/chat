@@ -14,19 +14,21 @@ class Meta::AdsGraphClient
   #   conta de anúncios a que o token não tem acesso; quem chama confere /me/permissions antes de
   #   condenar a credencial.
   # - 100 e 803: o objeto não existe ou não pode ser lido (anúncio apagado, ID de outra plataforma,
-  #   ID que não é de anúncio). Erro daquele ID, não da conta.
+  #   ID que não é de anúncio). Erro daquele ID, não da conta. O 100 puro também é parâmetro inválido:
+  #   "o objeto sumiu" com certeza é só o 100 com subcódigo 33 (`missing_object?`).
   # Qualquer outro (limite de taxa 4/17/32/613/80000+, 5xx, falha de rede) é indisponibilidade
   # passageira: não diz nada sobre o token nem sobre o objeto.
   TOKEN_INVALID_CODE = 190
   SCOPE_ERROR_CODES = ([10] + (200..299).to_a).freeze
   OBJECT_ERROR_CODES = [100, 803].freeze
+  MISSING_OBJECT = { code: 100, subcode: 33 }.freeze
   ADS_READ = 'ads_read'.freeze
   GRANTED = 'granted'.freeze
 
   # Cabeçalhos em que a Meta diz quanto do limite de uso já foi gasto (Crm::MetaAds::Insights::Usage).
   USAGE_HEADERS = %w[x-business-use-case-usage x-fb-ads-insights-throttle x-app-usage].freeze
 
-  Result = Struct.new(:ok, :http_code, :data, :error_code, :error_message, :usage_headers, keyword_init: true) do
+  Result = Struct.new(:ok, :http_code, :data, :error_code, :error_subcode, :error_message, :usage_headers, keyword_init: true) do
     def token_invalid?
       error_code == TOKEN_INVALID_CODE
     end
@@ -37,6 +39,11 @@ class Meta::AdsGraphClient
 
     def object_error?
       OBJECT_ERROR_CODES.include?(error_code)
+    end
+
+    # O objeto não existe (apagado, por exemplo). Não confunde com parâmetro inválido, que também é 100.
+    def missing_object?
+      error_code == MISSING_OBJECT[:code] && error_subcode == MISSING_OBJECT[:subcode]
     end
 
     def network_error?
@@ -60,8 +67,10 @@ class Meta::AdsGraphClient
     end
   end
 
-  def initialize(access_token:, api_version: nil)
+  # base_uri: o Instagram com o login do Instagram fala com graph.instagram.com (#2199), com as mesmas regras.
+  def initialize(access_token:, api_version: nil, base_uri: BASE_URI)
     @access_token = access_token
+    @base_uri = base_uri
     @api_version = api_version.presence || GlobalConfigService.load('WHATSAPP_API_VERSION', Meta::ConversionsApiClient::DEFAULT_API_VERSION)
   end
 
@@ -159,6 +168,9 @@ class Meta::AdsGraphClient
   end
 
   include Meta::AdsGraphClient::Management
+  include Meta::AdsGraphClient::Creation
+  include Meta::AdsGraphClient::Organico
+  include Meta::AdsGraphClient::LeadForms
 
   private
 
@@ -199,7 +211,7 @@ class Meta::AdsGraphClient
   def request(verb, path, **)
     response = HTTParty.public_send(
       verb,
-      "#{BASE_URI}/#{@api_version}/#{path}",
+      "#{@base_uri}/#{@api_version}/#{path}",
       headers: { 'Authorization' => "Bearer #{@access_token}" },
       timeout: TIMEOUT_SECONDS,
       **
@@ -225,7 +237,8 @@ class Meta::AdsGraphClient
     return Result.new(ok: true, http_code: response.code, data: body, usage_headers: usage) if response.success? && body.is_a?(Hash)
 
     error = body.is_a?(Hash) ? body['error'].to_h : {}
-    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'], usage_headers: usage,
+    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'], error_subcode: error['error_subcode'],
+               usage_headers: usage,
                error_message: sanitize(error['message'].presence || "HTTP #{response.code}"))
   end
 

@@ -591,6 +591,40 @@
     ],
     "sem_corpo": true
   },
+  "DELETE crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#destroy",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/meta_ads_lead_forms/forms/:form_id/destination": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#remove_destination",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:54",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:55",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:99"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/meta_ads_lead_forms/pages/:page_id/receive": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#stop",
+    "modelo": "Crm::Pipeline",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:42",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:41"
+    ],
+    "sem_corpo": true
+  },
   "DELETE crm/pipelines/:id": {
     "campos": {
       "inboxes_to_pipeline_id": {
@@ -5491,6 +5525,24 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:271"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH crm/meta_ads_connection/ads/:ad_id/budget": {
+    "campos": {
+      "amount": {},
+      "end_time": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#update_budget",
+    "motivos": [
+      "leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:55",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:104",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:50"
     ],
     "sem_corpo": false
   },
@@ -15582,6 +15634,126 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/meta_ads_connection/ads": {
+    "campos": {
+      "age_max": {},
+      "age_min": {},
+      "cards": {
+        "campos": {
+          "hash": {},
+          "image_hash": {},
+          "kind": {},
+          "video_id": {}
+        },
+        "tipo": "objeto"
+      },
+      "daily_amount": {},
+      "destination": {},
+      "end_date": {},
+      "headline": {},
+      "idempotency_key": {},
+      "media": {
+        "campos": {
+          "hash": {},
+          "image_hash": {},
+          "kind": {},
+          "video_id": {}
+        },
+        "tipo": "objeto"
+      },
+      "name": {},
+      "page_id": {},
+      "placement": {},
+      "ready_message": {},
+      "recreate_unconfirmed": {},
+      "region": {},
+      "site_action": {},
+      "site_url": {},
+      "special_category": {},
+      "start_date": {},
+      "states": {
+        "tipo": "lista"
+      },
+      "text": {},
+      "whatsapp_number": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:66"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/hide": {
+    "campos": {
+      "hidden": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#hide",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:43",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/private_reply": {
+    "campos": {
+      "text": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#private_reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:58",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/private_reply/release": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#release_private_reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:64",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/reply": {
+    "campos": {
+      "text": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:116",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:92"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/ads/:ad_id/status": {
     "campos": {
       "status": {
@@ -15592,6 +15764,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#status",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:27",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:82",
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:29",
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:28"
     ],
@@ -15659,6 +15832,21 @@
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:97"
     ],
     "sem_corpo": true
+  },
+  "POST crm/meta_ads_connection/media": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#media",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:30",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:31"
+    ],
+    "sem_corpo": false
   },
   "POST crm/meta_ads_connection/quote_message": {
     "campos": {
@@ -15728,6 +15916,37 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_whatsapp_reports_controller.rb:39"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/meta_ads_lead_forms/forms/:form_id/bring_past": {
+    "campos": {
+      "pipeline_id": {
+        "tipo": "inteiro"
+      },
+      "stage_id": {
+        "tipo": "inteiro"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#bring_past",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:153",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:61",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:106"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_lead_forms/pages/:page_id/receive": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#receive",
+    "modelo": "Crm::Pipeline",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:34",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:35"
     ],
     "sem_corpo": true
   },
@@ -18031,26 +18250,39 @@
   },
   "POST instagram/authorization": {
     "campos": {
+      "ad_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
       "inbox_id": {
         "tipo": "id",
         "tipo_pela_leitura": "nome"
       },
+      "purpose": {},
       "return_to": {},
       "tester_authorization_attestation": {},
       "tester_selection_token": {}
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/instagram/authorizations#create",
     "modelo": "Inbox",
+    "motivos": [
+      "leitura crua sem tipo: purpose (repassada a REAUTH_PURPOSES.[])"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:54",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:72",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:96",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:15",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:14",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:13",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:60",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:59",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:89",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:87",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:62",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:56",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:71",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:83",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:70",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:52",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:43"
     ],
@@ -24107,6 +24339,35 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:271"
+    ],
+    "sem_corpo": false
+  },
+  "PUT crm/meta_ads_lead_forms/forms/:form_id/destination": {
+    "campos": {
+      "import_past": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "pipeline_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      },
+      "stage_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#save_destination",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:153",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:49",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:99",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:107",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:106"
     ],
     "sem_corpo": false
   },

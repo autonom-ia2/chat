@@ -11,6 +11,22 @@
 # Instagram (login do Instagram) não passa por aqui: lá os campos valem pelo painel do app e o subscribed_apps da conta
 # não filtra campo (doc da Meta, Limitations; conferido no #2136).
 #
+# Vários recursos e várias contas mexem na mesma Página ao mesmo tempo (#2200): GET → junta → POST de dois deles em
+# paralelo faria um apagar o campo do outro. Por isso a escrita roda sob uma trava por Página (Redis). A trava é de
+# quem a tomou: só o dono a apaga (compare-and-delete), então uma escrita que passe do TTL não libera a de outro
+# processo. Trava ocupada, Redis fora ou campo que não ficou viram erro passageiro, para quem chamou tentar de novo.
+#
+# Limite: a trava vale dentro de uma stack, porque cada uma tem o seu Redis, e a Meta não oferece gravação
+# condicional. Um escritor de fora (a outra stack, o painel da Meta) que grave entre o nosso GET e o nosso POST perde
+# o campo dele, e nada aqui consegue ver isso. A releitura depois do POST só cobre o caso inverso, e só até ela: um
+# escritor que apague o NOSSO campo entre o nosso POST e a releitura. Aí gravamos de novo a partir da nova leitura.
+# Quem apagar depois da última releitura não é visto. Lista lida diferente da gravada fica no log (outro escritor ou
+# campo que a Meta não guardou).
+#
+# Quem chama espera até LOCK_WAIT pela trava e faz até 6 chamadas à Graph (GET /app, 3 leituras, 2 gravações), cada
+# uma com TIMEOUT_SECONDS: no pior caso, a Graph sem responder, ~50 s. Hoje o único chamador é o Channel::FacebookPage,
+# na criação e na remoção da caixa (pedido web, como já era antes desta trava). Recurso novo deve chamar de um job.
+#
 # Mesmas regras do Meta::ConversionsApiClient: o token vai só no header Authorization e todo texto de erro passa
 # pela limpeza de trechos com cara de segredo.
 class Crm::MetaAds::PageSubscription
@@ -37,8 +53,18 @@ class Crm::MetaAds::PageSubscription
 
   BASE_URI = Meta::ConversionsApiClient::BASE_URI
   TIMEOUT_SECONDS = 8
+  LOCK_TTL = 120.seconds # folga sobre as até 6 chamadas de TIMEOUT_SECONDS de uma escrita
+  LOCK_WAIT = 5.seconds
+  LOCK_POLL = 0.2
+  WRITE_ATTEMPTS = 2
   NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, SocketError, Errno::ECONNREFUSED, Errno::ECONNRESET,
                     OpenSSL::SSL::SSLError, HTTParty::Error, JSON::ParserError].freeze
+
+  LOCK_ERRORS = [Redis::BaseError, ConnectionPool::TimeoutError].freeze
+
+  def self.lock_key(page_id)
+    format(Redis::RedisKeys::META_PAGE_SUBSCRIPTION_MUTEX, page_id: page_id)
+  end
 
   def initialize(page_id:, access_token:, api_version: nil)
     @page_id = page_id
@@ -52,23 +78,77 @@ class Crm::MetaAds::PageSubscription
   end
 
   def add!(new_fields)
-    current = fields
-    wanted = (current + new_fields).uniq
-    return if wanted == current
+    change!(present: new_fields, absent: [])
+  end
+
+  def remove!(old_fields)
+    change!(present: [], absent: old_fields)
+  end
+
+  private
+
+  def change!(present:, absent:)
+    with_page_lock do
+      current = fields
+      WRITE_ATTEMPTS.times do
+        return if settled?(current, present, absent)
+
+        wanted = (current - absent + present).uniq
+        write(wanted)
+        current = fields
+        warn_concurrent_change(wanted, current)
+      end
+      return if settled?(current, present, absent)
+
+      raise Error, "subscribed_apps did not keep the change on page #{@page_id}"
+    end
+  end
+
+  def warn_concurrent_change(wanted, current)
+    return if wanted.sort == current.sort
+
+    Rails.logger.warn("[Crm::MetaAds::PageSubscription] page=#{@page_id} read differs from write: " \
+                      "wrote #{wanted.sort.join(',')}, read #{current.sort.join(',')}")
+  end
+
+  def settled?(current, present, absent)
+    (present - current).empty? && !current.intersect?(absent)
+  end
+
+  def write(wanted)
+    return request(:delete, subscribed_apps_url) if wanted.empty?
 
     request(:post, subscribed_apps_url, body: { subscribed_fields: wanted.join(',') })
   end
 
-  def remove!(old_fields)
-    current = fields
-    remaining = current - old_fields
-    return if remaining == current
-    return request(:delete, subscribed_apps_url) if remaining.empty?
-
-    request(:post, subscribed_apps_url, body: { subscribed_fields: remaining.join(',') })
+  def with_page_lock
+    key = self.class.lock_key(@page_id)
+    owner = SecureRandom.uuid
+    acquire_lock(key, owner)
+    begin
+      yield
+    ensure
+      release_lock(key, owner)
+    end
   end
 
-  private
+  def acquire_lock(key, owner)
+    deadline = Time.current + LOCK_WAIT
+    until Redis::Alfred.set(key, owner, nx: true, ex: LOCK_TTL.to_i)
+      raise Error, "subscribed_apps busy on page #{@page_id}" if Time.current >= deadline
+
+      sleep(LOCK_POLL)
+    end
+  rescue *LOCK_ERRORS => e
+    raise Error, "subscribed_apps lock unavailable on page #{@page_id}: #{e.class}"
+  end
+
+  # Falha ao soltar não muda o resultado da escrita: a trava some sozinha no TTL.
+  def release_lock(key, owner)
+    Redis::Alfred.delete_if_equals(key, owner)
+  rescue *LOCK_ERRORS => e
+    Rails.logger.warn("[Crm::MetaAds::PageSubscription] page=#{@page_id} lock release failed: #{e.class}")
+  end
 
   def token_app_id
     @token_app_id ||= request(:get, "#{BASE_URI}/#{@api_version}/app")['id'].to_s
