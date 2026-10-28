@@ -73,6 +73,7 @@ class CampaignImports::AudiencePeopleSheet
     scope = @campaign_import.campaign_import_rows.status_imported.joins(:contact).includes(:contact)
     scope = scope.includes(contact: :company) if Contact.reflect_on_association(:company)
     scope = scope.where(contact_id: @contact_ids.to_a) if @contact_ids
-    scope.sort_by { |row| [row.contact.name.to_s.downcase, row.contact_id] }.uniq(&:contact_id)
+    # A contact on two rows keeps the first one of the file (row_number): sort_by is not stable, the tie needs breaking.
+    scope.sort_by { |row| [row.contact.name.to_s.downcase, row.contact_id, row.row_number] }.uniq(&:contact_id)
   end
 end
