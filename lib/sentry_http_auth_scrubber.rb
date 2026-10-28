@@ -7,11 +7,13 @@ require 'json'
 module SentryHttpAuthScrubber
   FILTERED = '[FILTERED]'.freeze
   # `images` (#1427): as fotos do Testar do agente, em data-url, no corpo JSON que o Sentry lê cru.
+  # `content` (#2197): texto que a pessoa escreve para um cliente (resposta a comentário, mensagem); o log do Rails já
+  # filtra a mesma chave (#2103).
   SECRET_KEYS = %w[
     access_token refresh_token id_token client_secret app_secret appsecret_proof
     password token secret authorization proxy_authorization cookie set_cookie x_api_key
     fb_dtsg lsd x_fb_lsd signed_request session_json
-    images
+    images content
   ].freeze
   OAUTH_KEYS = %w[code state].freeze
   QUERY_KEYS = %w[query query_string http.query].freeze

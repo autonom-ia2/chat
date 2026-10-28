@@ -237,6 +237,15 @@ RSpec.describe SentryHttpAuthScrubber do
     expect(filtered.values).not_to include(*secrets.values)
   end
 
+  # #2197 — a resposta a um comentário do Facebook vai em `content`: o Sentry lê o corpo cru e não pode levar o texto.
+  it 'filters the reply text (content) from a JSON body, keeping the other fields' do
+    data = { body: JSON.generate(content: 'Meu CPF é 123.456.789-00', ad_id: '120') }
+
+    filtered = JSON.parse(described_class.scrub(data)[:body])
+
+    expect(filtered).to eq('content' => '[FILTERED]', 'ad_id' => '120')
+  end
+
   # #1427 — o corpo JSON do Testar do agente leva as fotos em `images` (data-url): o Sentry lê o corpo cru, sem o
   # filter_parameters do Rails, então a chave sai aqui também.
   it 'filters the photos of the agent test (images) from a JSON body, keeping the question' do
