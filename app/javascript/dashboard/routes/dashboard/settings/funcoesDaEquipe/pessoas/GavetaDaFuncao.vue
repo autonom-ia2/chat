@@ -19,7 +19,8 @@ import { useSalvarGaveta } from './useSalvarGaveta';
 // (Cancelar, Esc, X e fundo ficam travados) e o botão diz "Salvando…". O salvar e a conferência moram
 // em useSalvarGaveta; se algo falha, a gaveta fica aberta só com o que não gravou e diz de quem e por quê. Sem
 // Pessoas, numa função fora do alcance ou na própria função, a gaveta só mostra quem é, com o motivo certo. Quem perde
-// Pessoas no meio do salvar vê o porquê no rodapé (rodada 4).
+// Pessoas no meio do salvar vê o porquê no rodapé (rodada 4). Depois de um salvar com problema e nada mais pendente,
+// "Cancelar" vira "Fechar": não há o que descartar, e o que gravou já foi dito (rodada 7).
 const props = defineProps({
   funcao: { type: Object, default: null },
 });
@@ -132,6 +133,10 @@ const titulo = computed(() =>
   props.funcao
     ? t('FUNCOES_EQUIPE.GAVETA.TITULO', { nome: props.funcao.name })
     : t('FUNCOES_EQUIPE.GAVETA.TITULO_SEM_FUNCAO')
+);
+
+const rotuloDeSair = computed(() =>
+  erro.value && !mudancas.value.size ? 'FECHAR' : 'CANCELAR'
 );
 
 const podeFechar = () => {
@@ -260,7 +265,7 @@ const salvar = async () => {
       >
         <Button
           data-cancelar
-          :label="$t('FUNCOES_EQUIPE.GAVETA.CANCELAR')"
+          :label="$t(`FUNCOES_EQUIPE.GAVETA.${rotuloDeSair}`)"
           slate
           faded
           :disabled="salvando"

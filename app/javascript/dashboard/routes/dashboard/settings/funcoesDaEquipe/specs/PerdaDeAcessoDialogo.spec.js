@@ -52,7 +52,7 @@ describe('PerdaDeAcesso', () => {
     ],
     [
       'PROPRIAS_NOVAS_E_LINK',
-      'Essas pessoas têm a função Vendedor. A partir de agora, vão atender as próprias conversas, as novas sem ninguém e as que um colega mandar pelo link.',
+      'Essas pessoas têm a função Vendedor. A partir de agora, vão atender as próprias conversas, pegar as novas sem ninguém e ajudar quando um colega manda o link.',
     ],
   ])('as próprias com mais (%s): sem "só"', (nivel, texto) => {
     const wrapper = montar({

@@ -41,7 +41,7 @@ const PASSAM_DO_VENDEDOR = [
 ];
 const DEIXAM_DO_VENDEDOR = ['Procurar clientes novos'];
 const DEIXAM_DO_SUPERVISOR = [
-  'Ver a Central de Ajuda (artigos para os clientes)',
+  'Ver a Central de Ajuda',
   'Ver os relatórios',
   'Ver os robôs de IA',
   'Ver os canais',
@@ -261,10 +261,12 @@ describe('Funções da equipe: apagar', () => {
     const alertas = dialogo(wrapper).findAll('[role="alert"]');
     expect(alertas).toHaveLength(1);
     expect(alertas[0].text()).toBe(
-      'Esta função ainda tem pessoas, mas não deu para ver quem. Tente de novo.'
+      'Esta função ainda tem pessoas, mas não deu para ver quem.'
     );
     expect(dialogo(wrapper).text()).not.toContain('Escolha para onde vão');
     expect(dialogo(wrapper).find('[data-apagar-tentar]').exists()).toBe(true);
+    // Rodada 7: o botão já diz "Tentar de novo"; a frase não repete.
+    expect(dialogo(wrapper).text()).not.toContain('Tente de novo');
   });
 
   // Rodada 6: "Tentar de novo" que traz as pessoas tira o aviso de antes: o destino não abre com um erro velho.

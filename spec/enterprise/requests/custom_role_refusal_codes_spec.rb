@@ -22,6 +22,72 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
     }
   end
 
+  # Rodada 6/7: todo 401 que o controller manda leva um código da lista. Lê o controller pelo parser do Ruby: cada
+  # refuse(código, :unauthorized | 401) passa o código do Denied resgatado (pela variável que o próprio rescue declara),
+  # um literal ou uma constante cujo valor está na lista; e nenhum render/head responde 401 por fora do refuse.
+  let(:refusal_reader) do
+    Class.new(Prism::Visitor) do
+      attr_reader :refusals, :loose
+
+      def initialize
+        super
+        @refusals = []
+        @loose = []
+        @denied_var = nil
+      end
+
+      # Dentro do rescue do Denied vale a variável que ele declara; um rescue de outra coisa com o mesmo nome a esconde.
+      def visit_rescue_node(node)
+        visit_all(node.exceptions)
+        outer = @denied_var
+        name = node.reference&.name
+        denied = node.exceptions.any? { |exception| exception.slice == 'CustomRoles::GrantGuard::Denied' }
+        @denied_var = denied ? name : (outer unless name == outer)
+        visit(node.statements)
+        @denied_var = outer
+        visit(node.subsequent)
+      end
+
+      def visit_call_node(node)
+        args = node.receiver.nil? ? node.arguments&.arguments.to_a : []
+        if refusal_401?(node, args)
+          @refusals << [node.slice, code_of(args.first)]
+        elsif %i[render head].include?(node.name) && args.any? { |arg| unauthorized?(arg) }
+          @loose << node.slice
+        end
+        super
+      end
+
+      private
+
+      def refusal_401?(node, args)
+        node.name == :refuse && args.size == 2 && unauthorized?(args.last)
+      end
+
+      def code_of(node)
+        case node
+        when Prism::CallNode then [:denied] if denied_code?(node)
+        when Prism::StringNode then [:value, node.unescaped]
+        when Prism::ConstantReadNode, Prism::ConstantPathNode then [:constant, node.name]
+        end
+      end
+
+      def denied_code?(node)
+        node.name == :code && node.receiver.is_a?(Prism::LocalVariableReadNode) && node.receiver.name == @denied_var
+      end
+
+      def unauthorized?(node)
+        case node
+        when Prism::SymbolNode then node.unescaped == 'unauthorized'
+        when Prism::IntegerNode then node.value == 401
+        when Prism::KeywordHashNode, Prism::HashNode
+          node.elements.any? { |pair| pair.is_a?(Prism::AssocNode) && pair.key.slice == 'status:' && unauthorized?(pair.value) }
+        else false
+        end
+      end
+    end
+  end
+
   before { account.enable_features!('custom_roles') }
 
   def create_role(as:, permissions:)
@@ -55,28 +121,52 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
     end
   end
 
-  # Rodada 6: todo 401 que o controller manda leva um código da lista. Lê o próprio controller pelo parser do Ruby:
-  # cada refuse(..., :unauthorized) passa o código do GrantGuard (e.code, que só existe na lista dele) ou uma
-  # constante cujo valor está na lista.
+  def listed_code?(controller, (kind, value))
+    case kind
+    when :denied then true
+    when :value then controller::UNAUTHORIZED_CODES.include?(value)
+    when :constant then controller.const_defined?(value) && controller::UNAUTHORIZED_CODES.include?(controller.const_get(value))
+    else false
+    end
+  end
+
+  def refusal_problems(source)
+    parsed = Prism.parse(source)
+    raise parsed.errors.map(&:message).join(', ') if parsed.failure?
+
+    reader = refusal_reader.new
+    parsed.value.accept(reader)
+    unlisted = reader.refusals.reject { |_, code| listed_code?(Api::V1::Accounts::CustomRolesController, code) }
+    { refusals: reader.refusals.size, problems: unlisted.map(&:first) + reader.loose }
+  end
+
   it 'only sends listed codes in its 401 refusals' do
     controller = Api::V1::Accounts::CustomRolesController
-    source = Rails.root.join('enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb')
-    refusals = []
-    collect = lambda do |node|
-      next unless node.is_a?(Prism::Node)
+    source = Rails.root.join('enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb').read
+    result = refusal_problems(source)
 
-      args = node.is_a?(Prism::CallNode) && node.name == :refuse ? node.arguments&.arguments.to_a : []
-      refusals << args.first.slice if args.last.is_a?(Prism::SymbolNode) && args.last.unescaped == 'unauthorized'
-      node.compact_child_nodes.each { |child| collect.call(child) }
-    end
-    collect.call(Prism.parse_file(source.to_s).value)
-
-    expect(refusals).not_to be_empty
     expect(controller::UNAUTHORIZED_CODES).to include(*CustomRoles::GrantGuard::CODES)
-    refusals.each do |argument|
-      next if argument == 'e.code'
+    expect(result[:refusals]).to be >= 4
+    expect(result[:problems]).to be_empty
+  end
 
-      expect(controller::UNAUTHORIZED_CODES).to include(controller.const_get(argument)), argument
+  # A leitura acima pega o que deve pegar e deixa passar o que vale (rodada 7): cada trecho dentro de um método.
+  {
+    'refuse(e.code, :unauthorized) with e from another rescue' =>
+      ['x; rescue StandardError => e; refuse(e.code, :unauthorized)', false],
+    'a code outside the list' => ["refuse('nope', 401)", false],
+    'render with status: :unauthorized' => ['render json: {}, status: :unauthorized', false],
+    'head 401' => ['head 401', false],
+    'the Denied code under another variable name' =>
+      ['x; rescue CustomRoles::GrantGuard::Denied => error; refuse(error.code, :unauthorized)', true],
+    'a listed constant' => ['refuse(FEATURE_OFF, :unauthorized)', true],
+    'a listed constant through self.class' => ['refuse(self.class::FEATURE_OFF, :unauthorized)', true],
+    'a listed literal' => ["refuse('feature_off', 401)", true]
+  }.each do |label, (body, accepted)|
+    it "#{accepted ? 'accepts' : 'flags'} #{label}" do
+      result = refusal_problems("def sample\n#{body}\nend")
+
+      expect(result[:problems].empty?).to be(accepted)
     end
   end
 

@@ -142,7 +142,7 @@ describe('FuncaoGuiadaPage', () => {
       'Relatórios, Desempenho da equipe e mais 11 áreas'
     );
     expect(wrapper.find('[data-recolhida]').text()).toContain(
-      'Hoje só olha a Central de Ajuda (artigos para os clientes). As demais ficam desligadas.'
+      'Hoje só olha a Central de Ajuda. As demais ficam desligadas.'
     );
     expect(wrapper.find('[data-previa] [data-frase]').text()).toContain(
       'Com a função Atendente, a pessoa atende'

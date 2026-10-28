@@ -71,7 +71,7 @@ describe('EfeitoSemFuncao', () => {
         .map(item => item.text());
     };
     expect(await deixam(['knowledge_base_view', 'report_manage'])).toEqual([
-      'Ver a Central de Ajuda (artigos para os clientes)',
+      'Ver a Central de Ajuda',
       'Ver os relatórios',
     ]);
     expect(await deixam(['label_manage', 'macro_manage'])).toContain(

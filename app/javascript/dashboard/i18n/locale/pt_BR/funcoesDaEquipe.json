@@ -241,7 +241,7 @@
       },
       "KNOWLEDGE_BASE": {
         "NOME": "Central de Ajuda (artigos para os clientes)",
-        "NA_FRASE": "a Central de Ajuda (artigos para os clientes)"
+        "NA_FRASE": "a Central de Ajuda"
       },
       "REPORTS": {
         "NOME": "Relatórios",
@@ -825,6 +825,7 @@
       "SO_LEITURA": "Só quem pode pôr e tirar pessoas da equipe muda quem tem esta função.",
       "ESCONDIDAS": "A função {nomes} não aparece na escolha: só o administrador dá. | As funções {nomes} não aparecem na escolha: só o administrador dá.",
       "CANCELAR": "Cancelar",
+      "FECHAR": "Fechar",
       "SALVAR": "Salvar",
       "SALVANDO": "Salvando…",
       "SALVO": "Pronto. As funções das pessoas foram salvas.",
@@ -844,9 +845,12 @@
       "FORA_DO_ALCANCE": "Não deu para mudar a função de {nomes}: está fora do que você pode dar.",
       "TRAVADA": {
         "ABOVE": "A função de {nomes} não mudou: só o administrador muda. | A função destas pessoas não mudou: {nomes}. Só o administrador muda.",
-        "ADMIN": "A função de {nomes} não mudou: já pode tudo como administrador. | A função destas pessoas não mudou: {nomes}. Já podem tudo como administradores."
+        "ADMIN": "A função de {nomes} não mudou: já tem acesso de administrador e pode tudo. | A função destas pessoas não mudou: {nomes}. Já têm acesso de administrador e podem tudo."
       },
       "SEM_ACESSO": "Você não pode mais pôr e tirar pessoas das funções. Fale com o administrador.",
+      "SALVA": "A função de {nomes} foi salva. | As funções destas pessoas foram salvas: {nomes}.",
+      "SAIU_DA_CONTA": "{nomes} não está mais na conta. | Estas pessoas não estão mais na conta: {nomes}.",
+      "FUNCAO_SUMIU": "A função escolhida para {nomes} não existe mais. Escolha outra. | A função escolhida para estas pessoas não existe mais: {nomes}. Escolha outra.",
       "NAO_MUDOU": "A função de {nomes} não mudou. Tente de novo; se continuar, fale com o administrador. | A função destas pessoas não mudou: {nomes}. Tente de novo; se continuar, fale com o administrador."
     },
     "APAGAR": {
@@ -871,7 +875,7 @@
       "RECUSA": {
         "FORA_DO_ALCANCE": "Você não pode apagar esta função. Peça ao administrador.",
         "TEM_GENTE": "Esta função ainda tem pessoas. Escolha para onde vão.",
-        "TEM_GENTE_SEM_VER": "Esta função ainda tem pessoas, mas não deu para ver quem. Tente de novo.",
+        "TEM_GENTE_SEM_VER": "Esta função ainda tem pessoas, mas não deu para ver quem.",
         "INDISPONIVEL": "Funções da equipe não estão disponíveis agora. Fale com o administrador.",
         "PROPRIA_FUNCAO": "Ninguém apaga a própria função.",
         "SEM_ACESSO": "Você não pode mais mudar as funções. Fale com o administrador.",
@@ -886,7 +890,7 @@
         "PROPRIAS": "A partir de agora, só vai atender as próprias conversas. | A partir de agora, só vão atender as próprias conversas.",
         "PROPRIAS_E_NOVAS": "A partir de agora, vai atender as próprias conversas e pegar as novas que estão sem ninguém. | A partir de agora, vão atender as próprias conversas e pegar as novas que estão sem ninguém.",
         "PROPRIAS_E_LINK": "A partir de agora, vai atender as próprias conversas e ajudar quando um colega manda o link da conversa. | A partir de agora, vão atender as próprias conversas e ajudar quando um colega manda o link da conversa.",
-        "PROPRIAS_NOVAS_E_LINK": "A partir de agora, vai atender as próprias conversas, as novas sem ninguém e as que um colega mandar pelo link. | A partir de agora, vão atender as próprias conversas, as novas sem ninguém e as que um colega mandar pelo link."
+        "PROPRIAS_NOVAS_E_LINK": "A partir de agora, vai atender as próprias conversas, pegar as novas sem ninguém e ajudar quando um colega manda o link. | A partir de agora, vão atender as próprias conversas, pegar as novas sem ninguém e ajudar quando um colega manda o link."
       },
       "VOLTAR": "Voltar",
       "SALVAR": "Salvar mesmo assim",

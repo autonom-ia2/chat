@@ -1,4 +1,5 @@
 import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
+import en from 'dashboard/i18n/locale/en/funcoesDaEquipe.json';
 
 // #2308, especificação seção 3: uma palavra por coisa, e linguagem neutra (revisão do #2308: ninguém é "ele", "ela" nem
 // "administradora"). Lê o catálogo pt_BR de verdade: um texto novo com palavra proibida faz este spec falhar.
@@ -75,5 +76,19 @@ describe('vocabulário de FUNCOES_EQUIPE (pt_BR)', () => {
       'editar: Editar o perfil no CRM.',
       'crm: Editar o perfil no CRM.',
     ]);
+  });
+});
+
+// Rodada 7 (L1): o nome da área na frase (NA_FRASE) entra no meio de outras frases ("Hoje só olha …", "Ver …"): o
+// parêntese do NOME ("artigos para os clientes") não vai junto, em nenhuma das duas línguas.
+describe('NA_FRASE das áreas', () => {
+  it.each([
+    ['pt_BR', ptBR],
+    ['en', en],
+  ])('%s: nenhuma traz parêntese', (_, catalogo) => {
+    const comParentese = Object.entries(catalogo.FUNCOES_EQUIPE.AREAS)
+      .filter(([, area]) => area.NA_FRASE?.includes('('))
+      .map(([chave]) => chave);
+    expect(comParentese).toEqual([]);
   });
 });

@@ -241,7 +241,7 @@
       },
       "KNOWLEDGE_BASE": {
         "NOME": "Help Center (articles for customers)",
-        "NA_FRASE": "the Help Center (articles for customers)"
+        "NA_FRASE": "the Help Center"
       },
       "REPORTS": {
         "NOME": "Reports",
@@ -825,6 +825,7 @@
       "SO_LEITURA": "Only someone who can add and remove team members changes who has this role.",
       "ESCONDIDAS": "The {nomes} role is not in the list: only the administrator gives it. | The {nomes} roles are not in the list: only the administrator gives them.",
       "CANCELAR": "Cancel",
+      "FECHAR": "Close",
       "SALVAR": "Save",
       "SALVANDO": "Saving…",
       "SALVO": "Done. People's roles were saved.",
@@ -844,9 +845,12 @@
       "FORA_DO_ALCANCE": "Couldn't change the role of {nomes}: it's beyond what you can give.",
       "TRAVADA": {
         "ABOVE": "{nomes}'s role did not change: only the administrator changes it. | These people's roles did not change: {nomes}. Only the administrator changes them.",
-        "ADMIN": "{nomes}'s role did not change: they can already do everything as administrator. | These people's roles did not change: {nomes}. They can already do everything as administrators."
+        "ADMIN": "{nomes}'s role did not change: they already have administrator access and can do everything. | These people's roles did not change: {nomes}. They already have administrator access and can do everything."
       },
       "SEM_ACESSO": "You can no longer add or remove people from roles. Talk to the administrator.",
+      "SALVA": "{nomes}'s role was saved. | These people's roles were saved: {nomes}.",
+      "SAIU_DA_CONTA": "{nomes} is no longer in this account. | These people are no longer in this account: {nomes}.",
+      "FUNCAO_SUMIU": "The role chosen for {nomes} no longer exists. Choose another. | The role chosen for these people no longer exists: {nomes}. Choose another.",
       "NAO_MUDOU": "The role of {nomes} didn't change. Try again; if it keeps happening, talk to the administrator. | The role of these people didn't change: {nomes}. Try again; if it keeps happening, talk to the administrator."
     },
     "APAGAR": {
@@ -871,7 +875,7 @@
       "RECUSA": {
         "FORA_DO_ALCANCE": "You can't delete this role. Ask the administrator.",
         "TEM_GENTE": "This role still has people. Choose where they go.",
-        "TEM_GENTE_SEM_VER": "This role still has people, but we couldn't check who. Try again.",
+        "TEM_GENTE_SEM_VER": "This role still has people, but we couldn't check who.",
         "INDISPONIVEL": "Team roles aren't available right now. Talk to the administrator.",
         "PROPRIA_FUNCAO": "No one deletes their own role.",
         "SEM_ACESSO": "You can no longer change roles. Talk to the administrator.",
@@ -886,7 +890,7 @@
         "PROPRIAS": "From now on, they will only handle their own conversations. | From now on, they will only handle their own conversations.",
         "PROPRIAS_E_NOVAS": "From now on, they will handle their own conversations and pick up new ones nobody has taken. | From now on, they will handle their own conversations and pick up new ones nobody has taken.",
         "PROPRIAS_E_LINK": "From now on, they will handle their own conversations and help when a colleague sends the conversation link. | From now on, they will handle their own conversations and help when a colleague sends the conversation link.",
-        "PROPRIAS_NOVAS_E_LINK": "From now on, they will handle their own conversations, new ones nobody took and those a colleague sends by link. | From now on, they will handle their own conversations, new ones nobody took and those a colleague sends by link."
+        "PROPRIAS_NOVAS_E_LINK": "From now on, they will handle their own conversations, pick up new ones nobody has taken and help when a colleague sends the link. | From now on, they will handle their own conversations, pick up new ones nobody has taken and help when a colleague sends the link."
       },
       "VOLTAR": "Back",
       "SALVAR": "Save anyway",

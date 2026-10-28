@@ -6,6 +6,7 @@ import {
   moduleByKey,
   setLevel,
 } from '../../customRoles/permissionMatrix';
+import { queMudam } from '../fraseDaFuncao';
 import { nivelQueFica, perdasDeAcesso } from '../perdaDeAcesso';
 
 // #2308, especificação 5.F: o que quem já tem a função perde ao salvar uma alteração. Cada perda sai uma vez, na
@@ -258,5 +259,41 @@ describe('nivelQueFica', () => {
         expect(idioma.FUNCOES_EQUIPE.AREAS[area].NA_FRASE, area).toBeTruthy();
       });
     });
+  });
+});
+
+// Rodada 7 (L4): uma regra só para `soVe`: toda capacidade que só deixa ver tem a marca, conferida no servidor. Os
+// Relatórios (report_manage) não: também escrevem a nota da avaliação (CsatSurveyResponsePolicy#update?).
+describe('o que só deixa ver', () => {
+  it.each([
+    [
+      'Financeiro de mexer para olhar',
+      ['financial_manage'],
+      ['financial_view'],
+      'FINANCE',
+    ],
+    [
+      'Procurar clientes para só ver, com as buscas de todos',
+      ['prospecting_manage', 'prospecting_view_all_searches'],
+      ['prospecting_view', 'prospecting_view_all_searches'],
+      'PROSPECTING',
+    ],
+  ])('%s: "só vão olhar"', (_, antes, depois, area) => {
+    expect(nivelQueFica(antes, depois)).toEqual({ area, nivel: 'OLHA' });
+  });
+
+  it('marca as que só deixam ver, e só elas', () => {
+    expect(
+      queMudam([
+        'LER_COLEGAS',
+        'RELATORIOS_DAS_VENDAS',
+        'VALORES_EM_RS',
+        'BUSCAS_DE_TODOS',
+        'DESEMPENHO_VIEW',
+        'FINANCIAL_VIEW',
+        'REPORT_MANAGE',
+        'FINANCIAL_MANAGE',
+      ])
+    ).toEqual(['REPORT_MANAGE', 'FINANCIAL_MANAGE']);
   });
 });

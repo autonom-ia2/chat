@@ -3,6 +3,7 @@ import { useAlert } from 'dashboard/composables';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import GavetaDaFuncao from '../pessoas/GavetaDaFuncao.vue';
+import PessoaDaFuncao from '../pessoas/PessoaDaFuncao.vue';
 import { espiarDialogo, global, loja } from './montar';
 import { CARLA } from './quemMonta';
 
@@ -52,10 +53,12 @@ const montar = ({
   giver = CARLA,
   flags = [],
   agentes = AGENTES.map(item => ({ ...item })),
+  funcoes = [ATENDENTE, VENDEDOR, FINANCEIRO],
   atualizar = vi.fn(gravarNa(agentes)),
   recarregar = vi.fn(),
+  funcoesDeNovo = vi.fn(),
+  config = {},
 } = {}) => {
-  const funcoesDeNovo = vi.fn();
   const quemMontaPelaStore = vi.fn();
   const porNaStore = vi.fn(({ commit }, usuario) =>
     commit('SET_CURRENT_USER', usuario)
@@ -63,7 +66,7 @@ const montar = ({
   const store = loja({
     giver,
     flags,
-    funcoes: [ATENDENTE, VENDEDOR, FINANCEIRO],
+    funcoes,
     agentes,
     actions: {
       'agents/update': atualizar,
@@ -79,6 +82,7 @@ const montar = ({
     global: {
       ...global(store),
       stubs: { ...global(store).stubs, Avatar: true },
+      config,
     },
   });
   return {
@@ -409,7 +413,7 @@ describe('GavetaDaFuncao', () => {
         pessoa.role = 'administrator';
         pessoa.custom_role_id = null;
       },
-      'A função de Íris Lopes não mudou: já pode tudo como administrador.',
+      'A função de Íris Lopes não mudou: já tem acesso de administrador e pode tudo.',
     ],
   ])(
     '401 sem código e a recarga traz a pessoa %s: sai do pendente, com a frase da trava',
@@ -461,7 +465,7 @@ describe('GavetaDaFuncao', () => {
     await salvar(wrapper);
 
     expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
-      'A função de Íris Lopes não mudou: só o administrador muda.'
+      'A função de Gabriel Souza foi salva. A função de Íris Lopes não mudou: só o administrador muda.'
     );
     expect(useAlert).not.toHaveBeenCalled();
     expect(wrapper.emitted('fechar')).toBeUndefined();
@@ -501,7 +505,7 @@ describe('GavetaDaFuncao', () => {
     expect(wrapper.emitted('fechar')).toBeUndefined();
     expect(wrapper.find('[data-erro-gaveta]').attributes('role')).toBe('alert');
     expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
-      'Não deu para mudar a função de Íris Lopes: está fora do que você pode dar.'
+      'A função de Gabriel Souza foi salva. Não deu para mudar a função de Íris Lopes: está fora do que você pode dar.'
     );
     expect(wrapper.findAll('[data-frase-rodape]').map(f => f.text())).toEqual([
       'Íris Lopes passa a ser Vendedor.',
@@ -716,5 +720,249 @@ describe('GavetaDaFuncao', () => {
     expect(wrapper.findComponent(ChoiceSelect).exists()).toBe(false);
     expect(wrapper.find('[data-salvar]').exists()).toBe(false);
     expect(nomes(wrapper.find('[data-sem-funcao]'))).toHaveLength(1);
+  });
+});
+
+// Rodada 7: a tabela de desfechos do salvar (useSalvarGaveta.js), pessoa por pessoa e misturada. Gabriel (21) sai do
+// Vendedor e Íris (23) passa a ser Vendedor. Em toda linha, `salvando` volta a false.
+describe('GavetaDaFuncao: desfechos do salvar', () => {
+  const SALVA_GABRIEL = 'A função de Gabriel Souza foi salva.';
+  const SALVA_IRIS = 'A função de Íris Lopes foi salva.';
+  const TENTE_ADMIN = 'Tente de novo; se continuar, fale com o administrador.';
+  const remover = id => agentes =>
+    agentes.splice(
+      agentes.findIndex(item => item.id === id),
+      1
+    );
+  const mudarIris = mudanca => agentes =>
+    Object.assign(
+      agentes.find(item => item.id === 23),
+      mudanca
+    );
+
+  // A resposta de cada pessoa: 'gravou', 'nada' (200 sem gravar), 'rede' ou o status da recusa ([status, código]).
+  const responder = (respostas, agentes) => {
+    const gravar = gravarNa(agentes);
+    return vi.fn((contexto, dados) => {
+      const resposta = respostas[dados.id];
+      if (resposta === 'gravou') return gravar(contexto, dados);
+      if (resposta === 'nada') return Promise.resolve();
+      if (resposta === 'rede') return Promise.reject(recusa(undefined));
+      const [status, codigo = CORPO_DO_401] = [resposta].flat();
+      return Promise.reject(recusa(status, codigo));
+    });
+  };
+  const SESSOES = {
+    boa: () => validityCheck.mockResolvedValue({}),
+    semPessoas: () => validityCheck.mockResolvedValue(sessaoDe(SEM_PESSOAS)),
+    vencida: () =>
+      validityCheck.mockRejectedValue({ response: { status: 401 } }),
+    rede: () => validityCheck.mockRejectedValue(new Error('Network Error')),
+  };
+
+  it.each([
+    {
+      nome: 'todos gravaram: diz "salvas" e fecha',
+      respostas: { 21: 'gravou', 23: 'gravou' },
+      frase: '',
+      fecha: true,
+    },
+    {
+      nome: 'um gravou e outro ficou travado acima do alcance',
+      respostas: { 21: 'gravou', 23: 401 },
+      recarga: mudarIris({ custom_role_id: 3 }),
+      frase: `${SALVA_GABRIEL} A função de Íris Lopes não mudou: só o administrador muda.`,
+      sair: 'Fechar',
+      pendentes: 0,
+      funcoes: true,
+    },
+    {
+      nome: 'um gravou e outro virou administrador',
+      respostas: { 21: 'gravou', 23: 401 },
+      recarga: mudarIris({ role: 'administrator', custom_role_id: null }),
+      frase: `${SALVA_GABRIEL} A função de Íris Lopes não mudou: já tem acesso de administrador e pode tudo.`,
+      sair: 'Fechar',
+      pendentes: 0,
+      funcoes: true,
+    },
+    {
+      nome: 'um gravou e quem monta perdeu Pessoas (401 sem código)',
+      respostas: { 21: 'gravou', 23: 401 },
+      sessao: 'semPessoas',
+      frase: `${SALVA_GABRIEL} Você não pode mais pôr e tirar pessoas das funções. Fale com o administrador.`,
+      sair: null,
+      pendentes: 0,
+      funcoes: true,
+    },
+    {
+      nome: 'um gravou e outro ficou fora do alcance (401 sem código, com Pessoas)',
+      respostas: { 21: 'gravou', 23: 401 },
+      frase: `${SALVA_GABRIEL} Não deu para mudar a função de Íris Lopes: está fora do que você pode dar.`,
+      sair: 'Cancelar',
+      pendentes: 1,
+      funcoes: true,
+    },
+    {
+      nome: '401 com código (out_of_reach)',
+      respostas: { 21: 'gravou', 23: [401, 'out_of_reach'] },
+      frase: `${SALVA_GABRIEL} Não deu para mudar a função de Íris Lopes: está fora do que você pode dar.`,
+      sair: 'Cancelar',
+      pendentes: 1,
+      funcoes: true,
+    },
+    {
+      nome: 'sessão vencida: vai para o login, sem frase, tudo pendente',
+      respostas: { 21: 401, 23: 401 },
+      sessao: 'vencida',
+      frase: '',
+      sair: 'Cancelar',
+      pendentes: 2,
+      login: true,
+    },
+    {
+      nome: '401 e a conferência da sessão cai por rede',
+      respostas: { 21: 401, 23: 401 },
+      sessao: 'rede',
+      frase:
+        'A função destas pessoas não foi salva: Gabriel Souza e Íris Lopes. Confira a internet e tente de novo.',
+      sair: 'Cancelar',
+      pendentes: 2,
+      funcoes: true,
+    },
+    {
+      nome: 'um gravou e o outro saiu da conta no meio (404, H1)',
+      respostas: { 21: 404, 23: 'gravou' },
+      recarga: remover(21),
+      frase: `${SALVA_IRIS} Gabriel Souza não está mais na conta.`,
+      sair: 'Fechar',
+      pendentes: 0,
+      funcoes: true,
+    },
+    {
+      nome: '200 sem mudar, e um saiu da conta no meio (H1, ramo "não mudou")',
+      respostas: { 21: 'nada', 23: 'nada' },
+      recarga: remover(21),
+      frase: `Gabriel Souza não está mais na conta. A função de Íris Lopes não mudou. ${TENTE_ADMIN}`,
+      sair: 'Cancelar',
+      pendentes: 1,
+    },
+    {
+      nome: 'a função escolhida foi apagada no meio (404, M1)',
+      respostas: { 21: 'gravou', 23: 404 },
+      recargaDasFuncoes: funcoes => funcoes.splice(1, 1),
+      frase: `${SALVA_GABRIEL} A função escolhida para Íris Lopes não existe mais. Escolha outra.`,
+      sair: 'Fechar',
+      pendentes: 0,
+      funcoes: true,
+    },
+    {
+      nome: 'outro 4xx com a pessoa e a função ainda lá (M1)',
+      respostas: { 21: 'gravou', 23: 422 },
+      frase: `${SALVA_GABRIEL} A função de Íris Lopes não mudou. ${TENTE_ADMIN}`,
+      sair: 'Cancelar',
+      pendentes: 1,
+      funcoes: true,
+    },
+    {
+      nome: 'um gravou e o outro caiu por rede',
+      respostas: { 21: 'gravou', 23: 'rede' },
+      frase: `${SALVA_GABRIEL} A função de Íris Lopes não foi salva. Confira a internet e tente de novo.`,
+      sair: 'Cancelar',
+      pendentes: 1,
+    },
+    {
+      nome: 'os dois caíram por rede (5xx também é rede)',
+      respostas: { 21: 'rede', 23: 503 },
+      frase:
+        'A função destas pessoas não foi salva: Gabriel Souza e Íris Lopes. Confira a internet e tente de novo.',
+      sair: 'Cancelar',
+      pendentes: 2,
+    },
+    {
+      nome: '200 sem mudar nos dois',
+      respostas: { 21: 'nada', 23: 'nada' },
+      frase: `A função destas pessoas não mudou: Gabriel Souza e Íris Lopes. ${TENTE_ADMIN}`,
+      sair: 'Cancelar',
+      pendentes: 2,
+    },
+  ])(
+    '$nome',
+    async ({
+      respostas,
+      sessao = 'boa',
+      recarga = () => {},
+      recargaDasFuncoes = () => {},
+      frase,
+      fecha = false,
+      sair,
+      pendentes,
+      funcoes: recarregaFuncoes = false,
+      login = false,
+    }) => {
+      SESSOES[sessao]();
+      const agentes = AGENTES.map(item => ({ ...item }));
+      const funcoes = [ATENDENTE, VENDEDOR, FINANCEIRO];
+      const { wrapper, funcoesDeNovo } = montar({
+        agentes,
+        funcoes,
+        atualizar: responder(respostas, agentes),
+        recarregar: vi.fn(() => recarga(agentes)),
+        funcoesDeNovo: vi.fn(() => recargaDasFuncoes(funcoes)),
+      });
+
+      await linha(wrapper, 21).find('[data-acao]').trigger('click');
+      await linha(wrapper, 23).find('[data-acao]').trigger('click');
+      await salvar(wrapper);
+
+      const erro = wrapper.find('[data-erro-gaveta]');
+      expect(erro.exists() ? erro.text() : '').toBe(frase);
+      expect(useAlert.mock.calls.length > 0).toBe(fecha);
+      expect(Boolean(wrapper.emitted('fechar'))).toBe(fecha);
+      expect(clearCookiesOnLogout.mock.calls.length > 0).toBe(login);
+      expect(funcoesDeNovo.mock.calls.length > 0).toBe(recarregaFuncoes);
+      wrapper
+        .findAllComponents(PessoaDaFuncao)
+        .forEach(item => expect(item.props('salvando')).toBe(false));
+      if (fecha) return;
+      expect(wrapper.findAll('[data-frase-rodape]')).toHaveLength(pendentes);
+      const cancelar = wrapper.find('[data-cancelar]');
+      expect(cancelar.exists() ? cancelar.text() : null).toBe(sair);
+      if (cancelar.exists())
+        expect(wrapper.find('[data-salvar]').text()).toBe('Salvar');
+    }
+  );
+
+  it('sem nada pendente, o X fecha direto; com pendente, pergunta antes', async () => {
+    const { mostrar, soltar } = espiarDialogo();
+    const agentes = AGENTES.map(item => ({ ...item }));
+    const { wrapper } = montar({
+      agentes,
+      atualizar: responder({ 21: 404, 23: 'gravou' }, agentes),
+      recarregar: vi.fn(() => remover(21)(agentes)),
+    });
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await linha(wrapper, 23).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    await wrapper.find('[data-fechar]').trigger('click');
+    expect(mostrar).not.toHaveBeenCalled();
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    soltar();
+  });
+
+  it('algo lança no meio do salvar: "Salvando…" não fica para sempre', async () => {
+    const erroDoVue = vi.fn();
+    const { wrapper } = montar({
+      recarregar: vi.fn(() => Promise.reject(new Error('quebrou'))),
+      config: { errorHandler: erroDoVue },
+    });
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(erroDoVue).toHaveBeenCalled();
+    expect(wrapper.find('[data-salvar]').text()).toBe('Salvar');
+    expect(
+      wrapper.find('[data-cancelar]').attributes('disabled')
+    ).toBeUndefined();
   });
 });
