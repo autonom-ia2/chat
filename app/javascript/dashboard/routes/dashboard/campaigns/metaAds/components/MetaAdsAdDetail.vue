@@ -318,6 +318,17 @@ const commentTabs = computed(() =>
 );
 const gestao = ref(null);
 
+// Comentários só com conexão, que é quem tem token para ler na Meta (#2196). O sinal é a gestão, que leu o anúncio
+// ao vivo agora, ou o gasto, que só vem de anúncio sincronizado por uma conexão (sem login, #1960, ele é nil). A
+// gestão sozinha não basta: uma falha passageira na leitura dela tiraria os comentários de um anúncio com números. O
+// gasto sozinho também não: anúncio que nunca rodou, ou parou antes do período, não tem número nenhum (#2335).
+const showComments = computed(
+  () =>
+    gestaoOn.value &&
+    commentTabs.value.length > 0 &&
+    Boolean(gestao.value || (ad.value && !withoutSpend.value))
+);
+
 const loadGestao = async () => {
   gestao.value = null;
   if (!gestaoOn.value) return;
@@ -411,13 +422,46 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       </button>
     </div>
 
-    <p
-      v-else-if="!ad"
-      data-ad-detail-empty
-      class="m-0 rounded-2xl bg-n-solid-1 p-6 text-sm text-n-slate-11 ring-1 ring-inset ring-n-weak"
-    >
-      {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.EMPTY') }}
-    </p>
+    <!-- Sem números no período (nunca rodou, ou parou antes): o aviso fica, e o que a conexão lê ao vivo na Meta
+    (situação, orçamento, post e comentários) continua aqui (#2335). -->
+    <template v-else-if="!ad">
+      <p
+        data-ad-detail-empty
+        class="m-0 rounded-2xl bg-n-solid-1 p-6 text-sm text-n-slate-11 ring-1 ring-inset ring-n-weak"
+      >
+        {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.EMPTY') }}
+      </p>
+      <div
+        v-if="gestao"
+        data-ad-detail-gestao
+        class="rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+      >
+        <MetaAdsAdStatus
+          :ad-id="adId"
+          :gestao="gestao"
+          :can-manage="canManage"
+          :budget="budget"
+          :budget-state="budgetState"
+          tone="light"
+          @retry-budget="loadBudget"
+          @changed="statusChanged"
+        />
+      </div>
+      <MetaAdsBudget
+        v-if="budget"
+        :ad-id="adId"
+        :budget="budget"
+        :can-manage="canManage"
+        @changed="budget = $event"
+      />
+      <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
+      <MetaAdsComments
+        v-if="showComments"
+        :ad-id="adId"
+        :abas="commentTabs"
+        :can-manage="canManage"
+      />
+    </template>
 
     <template v-else>
       <header
@@ -769,7 +813,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       </div>
 
       <MetaAdsComments
-        v-if="gestaoOn && !withoutSpend && commentTabs.length"
+        v-if="showComments"
         :ad-id="adId"
         :abas="commentTabs"
         :can-manage="canManage"

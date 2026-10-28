@@ -399,6 +399,70 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
   });
 
+  // #2335 — anúncio que nunca rodou ou parou antes do período: sem números, mas a conexão lê o anúncio ao vivo.
+  const COMMENT_FLAGS = {
+    meta_ads_gestao: true,
+    meta_ads_comentarios_instagram: true,
+  };
+  const READY = {
+    status: 'ready',
+    account: { username: 'lojaexemplo' },
+    comments: [],
+    total: 0,
+    next_cursor: null,
+  };
+
+  it('without numbers but with the ad read from Meta, keeps the empty notice and shows status, post and comments (#2335)', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(null));
+    comentariosInstagram.listar.mockResolvedValue(READY);
+    lerGestao.mockResolvedValue({
+      status: 'PAUSED',
+      effective_status: 'PAUSED',
+      can_change: true,
+      needs_login: false,
+      post: { message: 'Texto do post', reactions: 0, comments: 1, shares: 0 },
+    });
+    flags.value = COMMENT_FLAGS;
+    const wrapper = await mountDetail();
+
+    expect(wrapper.find('[data-ad-detail-empty]').exists()).toBe(true);
+    expect(
+      wrapper.find('[data-ad-detail-gestao] [data-ad-status]').exists()
+    ).toBe(true);
+    expect(wrapper.find('[data-ad-post-message]').text()).toBe('Texto do post');
+    expect(wrapper.find('[data-ad-comments]').exists()).toBe(true);
+  });
+
+  it('without numbers and without the ad read from Meta, shows only the empty notice (#2335)', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(null));
+    lerGestao.mockResolvedValue(null);
+    flags.value = COMMENT_FLAGS;
+    const wrapper = await mountDetail();
+
+    expect(wrapper.find('[data-ad-detail-empty]').exists()).toBe(true);
+    expect(wrapper.find('[data-ad-detail-gestao]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-comments]').exists()).toBe(false);
+  });
+
+  it('an ad without connection (no spend) shows no comments, unless Meta reads it live (#1960, #2335)', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({ ...AD, spend: null, people: [] })
+    );
+    comentariosInstagram.listar.mockResolvedValue(READY);
+    lerGestao.mockResolvedValue(null);
+    flags.value = COMMENT_FLAGS;
+    const without = await mountDetail();
+    expect(without.find('[data-ad-comments]').exists()).toBe(false);
+    without.unmount();
+
+    lerGestao.mockResolvedValue({
+      status: 'ACTIVE',
+      effective_status: 'ACTIVE',
+    });
+    const read = await mountDetail();
+    expect(read.find('[data-ad-comments]').exists()).toBe(true);
+  });
+
   it('without the meta_ads_gestao flag, asks nothing about the ad and shows no status or post (#2161)', async () => {
     const wrapper = await mountDetail();
 
