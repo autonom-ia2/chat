@@ -1,6 +1,7 @@
 class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAccountsController
-  before_action :ensure_custom_roles_feature_enabled
+  # A autorização vem antes: quem não gerencia funções recebe a recusa genérica e não fica sabendo do plano da conta.
   before_action :check_authorization
+  before_action :ensure_custom_roles_feature_enabled
   before_action :fetch_custom_role, only: [:show, :update, :destroy]
 
   NO_ROLE_DESTINATION = 'none'.freeze
@@ -17,6 +18,7 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
   rescue ActiveRecord::RecordNotUnique
     render_name_taken
   rescue CustomRoles::GrantGuard::Denied => e
+    log_handled_error(e)
     refuse(e.code, :unauthorized)
   end
 
@@ -26,6 +28,7 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
   rescue ActiveRecord::RecordNotUnique
     render_name_taken
   rescue CustomRoles::GrantGuard::Denied => e
+    log_handled_error(e)
     refuse(e.code, :unauthorized)
   end
 
@@ -43,6 +46,7 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
     # Alguém ganhou a função depois da trava: a chave estrangeira recusa a exclusão e a transação já foi desfeita.
     refuse('changed_meanwhile', :conflict)
   rescue CustomRoles::GrantGuard::Denied => e
+    log_handled_error(e)
     refuse(e.code, :unauthorized)
   end
 

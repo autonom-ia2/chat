@@ -68,4 +68,15 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
     expect(response.parsed_body['error']).to eq('You are not authorized to do this action')
     expect(response.parsed_body).not_to have_key('message')
   end
+
+  # Quem não gerencia funções não fica sabendo do plano: com o recurso desligado, a recusa continua a genérica.
+  it 'keeps the generic refusal for whoever cannot build roles when the account does not have custom roles' do
+    plain_agent = create(:user, account: account, role: :agent)
+    account.disable_features!('custom_roles')
+
+    get "/api/v1/accounts/#{account.id}/custom_roles", headers: plain_agent.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(response.parsed_body['error']).to eq('You are not authorized to do this action')
+  end
 end
