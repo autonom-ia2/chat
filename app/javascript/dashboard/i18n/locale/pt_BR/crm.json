@@ -3179,6 +3179,8 @@
           "MORE": "Ver mais comentários",
           "YOU": "Você",
           "HIDDEN": "Oculto",
+          "ATTACHMENT_PHOTO": "Mandou uma foto",
+          "ATTACHMENT": "Mandou um anexo",
           "REPLY": "Responder",
           "REPLY_PRIVATE": "Responder no privado",
           "HIDE": "Ocultar",
@@ -3229,7 +3231,12 @@
             "NEEDS_LOGIN": "Entre de novo com o Facebook na Conexão e permita gerenciar os comentários.",
             "NEEDS_LOGIN_BUTTON": "Ir para a Conexão",
             "NOTE": "No Facebook, responda em público. Para conversar no privado, peça para a pessoa chamar no WhatsApp.",
-            "NEEDS_LOGIN_AFTER": "Depois de entrar, você volta para este anúncio."
+            "NEEDS_LOGIN_AFTER": "Depois de entrar, você volta para este anúncio.",
+            "ERRORS": {
+              "NEEDS_LOGIN": "Falta permissão nos comentários. Entre de novo com o Facebook na Conexão.",
+              "META_UNAVAILABLE": "O Facebook não respondeu. Tente de novo em um minuto.",
+              "META_REFUSED": "O Facebook recusou esta ação. Recarregue os comentários e tente de novo."
+            }
           },
           "LOGIN_ADMIN": "Peça a um administrador da conta para entrar de novo com o Instagram.",
           "ERRORS": {

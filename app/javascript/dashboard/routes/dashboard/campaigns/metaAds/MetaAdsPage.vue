@@ -249,9 +249,18 @@ const startFacebookLogin = data => {
   openStep.value = 2;
 };
 
+// Entrou de novo com o Facebook a partir dos comentários de um anúncio (#2197, `?volta=<anúncio>`): volta ao anúncio.
+const backToAd = () => {
+  const adId = route.query.volta;
+  if (!adId) return;
+  view.value = 'resultado';
+  router.replace({ query: { aba: 'resultado', anuncio: adId } });
+};
+
 const accountSaved = data => {
   rememberMode(null);
   update(data);
+  backToAd();
 };
 
 // Passo 4 gravado no funil: relê a conexão, que diz se as vendas já são avisadas.

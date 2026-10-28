@@ -591,6 +591,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:54",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:98",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:94"
+    ],
+    "sem_corpo": true
+  },
   "DELETE crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#destroy",
@@ -5543,6 +5553,24 @@
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:55",
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:104",
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:50"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id": {
+    "campos": {
+      "hidden": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#update",
+    "motivos": [
+      "leitura crua sem tipo: hidden (repassada a comments.hide!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:98",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:94",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:47",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:45"
     ],
     "sem_corpo": false
   },
@@ -15778,6 +15806,24 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:37",
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:66"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply": {
+    "campos": {
+      "content": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#reply",
+    "motivos": [
+      "leitura crua sem tipo: content (repassada a comments.reply!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:33",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:98",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:94",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:34"
     ],
     "sem_corpo": false
   },

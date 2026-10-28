@@ -158,7 +158,13 @@ const more = async () => {
 // Toda ação: chama o adaptador, avisa e lê a aba de novo. Recusa da Meta vira aviso, sem tirar nada da tela: numa
 // resposta, o texto digitado continua na caixa (ACTION_ERROR); ao ocultar ou apagar, nada mudou (MANAGE_ERROR).
 // Quando o servidor diz o motivo (`ERRORS.<CODE>`: privado já enviado, prazo vencido, falta permissão…), o aviso diz
-// esse motivo; sem permissão, a aba é lida de novo e mostra o cartão de entrar.
+// esse motivo; sem permissão, a aba é lida de novo e mostra o cartão de entrar. O texto da própria aba
+// (`<ABA>.ERRORS.<CODE>`, que diz a rede certa) vem antes do comum.
+const errorKey = (aba, code, failure) =>
+  [`${KEY}.${aba.key}.ERRORS.${code}`, `${KEY}.ERRORS.${code}`].find(
+    key => code && te(key)
+  ) || `${KEY}.${failure}`;
+
 const act = async (call, done, failure = 'ACTION_ERROR') => {
   const aba = current.value;
   try {
@@ -168,13 +174,7 @@ const act = async (call, done, failure = 'ACTION_ERROR') => {
     return true;
   } catch (error) {
     const code = String(error?.response?.data?.error || '').toUpperCase();
-    useAlert(
-      t(
-        code && te(`${KEY}.ERRORS.${code}`)
-          ? `${KEY}.ERRORS.${code}`
-          : `${KEY}.${failure}`
-      )
-    );
+    useAlert(t(errorKey(aba, code, failure)));
     if (code === 'NEEDS_LOGIN' || code.startsWith('PRIVATE_REPLY'))
       await read(aba);
     return false;

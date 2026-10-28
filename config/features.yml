@@ -992,11 +992,21 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Anúncios da Meta › comentários do anúncio no Facebook (#2197, épico #2194). Ligada: o detalhe do anúncio ganha a aba
+# Facebook dos comentários (ler, responder como a Página, ocultar e apagar, ao vivo na Meta) e a API responde; o
+# webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
+# feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2303): posição 12 (valor 2048, 1 << 11), dada pela
+# Orquestração (28/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+- name: meta_ads_comentarios_facebook
+  display_name: Anúncios da Meta › comentários do anúncio no Facebook
+  enabled: false
+  column: feature_flags_ext_2
+
 # Lista nova do CRM "o que fazer agora" (#2283, frontend; o servidor entrou no #2292). Ligada: a visão Lista do CRM vira
 # os grupos Esperando resposta, Retornos de hoje e atrasados, Ninguém cuidando, Parados há 7 dias ou mais e Os demais,
 # contados pelo servidor (sort=acao e summaries?group_by=acao), com a ação de cada linha. Desligada: a Lista de sempre,
-# intacta. Só frontend, sem migration. Fim da feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2277):
-# posição 12 (valor 2048, 1 << 11). A posição real é a ordem na main na hora da fila, e a Orquestração confirma antes de
+# intacta. Só frontend, sem migration. Fim da feature_flags_ext_2, depois de meta_ads_comentarios_facebook (#2325):
+# posição 13 (valor 4096, 1 << 12). A posição real é a ordem na main na hora da fila, e a Orquestração confirma antes de
 # enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: crm_lista_acao
   display_name: CRM › Lista nova "o que fazer agora"
