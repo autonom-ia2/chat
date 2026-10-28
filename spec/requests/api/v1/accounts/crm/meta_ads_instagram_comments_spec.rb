@@ -165,7 +165,7 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
   describe 'texto da resposta' do
     it 'chega à Meta pelo content' do
       replies = stub_request(:post, %r{#{ig}/18000000000000001/replies})
-                .with(query: hash_including('message' => 'Oi, Carla!'))
+                .with(query: hash_excluding('message'), body: { message: 'Oi, Carla!' }.to_json)
                 .to_return(status: 200, headers: json, body: { id: '18000000000000077' }.to_json)
 
       post "#{path}/18000000000000001/reply", params: { content: 'Oi, Carla!' }, headers: admin.create_new_auth_token, as: :json
@@ -181,6 +181,20 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
 
       post "#{path}/18000000000000001/private_reply", params: { text: 'Oi' }, headers: admin.create_new_auth_token, as: :json
       expect(response.parsed_body).to eq('error' => 'invalid_text')
+
+      expect(meta_call(%r{#{ig}/18000000000000001/replies|#{ig_id}/messages})).not_to have_been_made
+    end
+
+    it 'que não é texto (lista ou objeto) dá 422 e não chama a Meta' do
+      actions = %w[reply private_reply]
+      [['Oi'], { 'a' => 'Oi' }].each do |content|
+        actions.each do |action|
+          post "#{path}/18000000000000001/#{action}", params: { content: content }, headers: admin.create_new_auth_token, as: :json
+
+          expect(response).to have_http_status(:unprocessable_content)
+          expect(response.parsed_body).to eq('error' => 'invalid_text')
+        end
+      end
 
       expect(meta_call(%r{#{ig}/18000000000000001/replies|#{ig_id}/messages})).not_to have_been_made
     end
