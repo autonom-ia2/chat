@@ -267,7 +267,11 @@ const MENU = [
   ['CONVERSATIONS', 'CONVERSAS'],
   ['CONTACTS', 'CONTATOS'],
   ['CRM', 'VENDAS'],
+  // Agendamento mora dentro do grupo das vendas no menu lateral (Sidebar.vue, #1264).
+  ['SCHEDULING', 'VENDAS'],
   ['PROSPECTING', 'CLIENTES_NOVOS'],
+  // Seus posts (#2302) é item de primeiro nível do menu lateral, antes de Campanhas.
+  ['POSTS', 'SEUS_POSTS'],
   ['CAMPAIGNS', 'CAMPANHAS'],
   ['META_ADS', 'ANUNCIOS'],
   ['AUTONOMIA', 'ROBOS'],

@@ -10,9 +10,11 @@ import {
   contidasEm,
   cuidadosDaFuncao,
   fraseDaFuncao,
+  menuDaFuncao,
   mesclarPrevia,
   previaDaFuncao,
 } from '../fraseDaFuncao';
+import { DONO_DAS_CHAVES } from '../areasDaFuncao';
 
 // #2308, especificação 7.7 e 8: a fonte única do que a função pode. O "Ligar as duas" mora no PerguntaCuidado (e no
 // spec dele); aqui vale o que ele grava: campaign_manage e campaign_send (rodada 4).
@@ -203,6 +205,33 @@ describe('contidasEm', () => {
     [ptBR, en].forEach(idioma => {
       cobertas.forEach(id => {
         expect(idioma.FUNCOES_EQUIPE.PODE[id], id).toBeTruthy();
+      });
+    });
+  });
+});
+
+// Revisão do #2308 (rodada final): o "O menu vai mostrar" segue o menu lateral (Sidebar.vue). Seus posts é item de
+// primeiro nível e Agendamento mora no grupo das vendas: nenhum dos dois cai em Configurações.
+describe('menuDaFuncao', () => {
+  it('Seus posts aparece com o próprio nome, não em Configurações', () => {
+    expect(menuDaFuncao(['posts_view'])).toEqual(['SEUS_POSTS']);
+  });
+
+  it('Agendamento aparece dentro de Vendas', () => {
+    expect(menuDaFuncao(['agendamento_view'])).toEqual(['VENDAS']);
+  });
+
+  it('o que mora em Configurações continua lá', () => {
+    expect(menuDaFuncao(['label_manage'])).toEqual(['CONFIGURACOES']);
+  });
+
+  it('todo item do menu tem nome em pt_BR e en', () => {
+    const todas = Object.values(DONO_DAS_CHAVES).flat();
+    const itens = menuDaFuncao(todas);
+    expect(itens).toContain('SEUS_POSTS');
+    [ptBR, en].forEach(idioma => {
+      itens.forEach(item => {
+        expect(idioma.FUNCOES_EQUIPE.MENU[item], item).toBeTruthy();
       });
     });
   });
