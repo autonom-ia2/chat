@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
@@ -135,15 +135,21 @@ const seusPostsOn = computed(() =>
 );
 const canSeePosts = usePermissionGranted('posts_view');
 const canManagePosts = usePermissionGranted('posts_manage');
-if (
-  route.query.aba === 'organico' &&
-  seusPostsOn.value &&
-  (canSeePosts.value || canManagePosts.value)
-)
-  router.replace({
-    name: 'seus_posts_index',
-    params: { accountId: route.params.accountId },
-  });
+// As flags da conta podem chegar depois da tela montar (link direto): a troca espera por elas.
+watch(
+  () =>
+    route.query.aba === 'organico' &&
+    seusPostsOn.value &&
+    (canSeePosts.value || canManagePosts.value),
+  mover => {
+    if (mover)
+      router.replace({
+        name: 'seus_posts_index',
+        params: { accountId: route.params.accountId },
+      });
+  },
+  { immediate: true }
+);
 // A aba antiga só sai para quem abre a página nova: quem só tem Anúncios da Meta continua com ela.
 const organicOn = computed(
   () =>

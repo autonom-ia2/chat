@@ -250,6 +250,12 @@ const abrirNaRede = () => window.open(perfil.value.link, '_blank', 'noopener');
 // para esta página (purpose seus_posts). A volta do login do Instagram também exige inbox_manage (OauthBinding).
 const podeCriarCaixa = usePermissionGranted('inbox_manage');
 const podeReautorizar = usePermissionGranted('integration_manage');
+// Sem a permissão dos números: o perfil todo, ou só a leitura dos posts (os números do perfil ficam).
+const semPermissao = computed(
+  () =>
+    perfil.value?.status === 'needs_permission' ||
+    perfil.value?.postsStatus === 'needs_permission'
+);
 const podeLiberar = computed(() => {
   if (!perfil.value?.inboxId || !podeReautorizar.value) return false;
   return perfil.value.rede === 'facebook' || podeCriarCaixa.value;
@@ -263,9 +269,7 @@ const conectar = canal =>
 
 const { preloadSdk, login } = useFacebookPageConnect();
 watch(
-  () =>
-    perfil.value?.status === 'needs_permission' &&
-    perfil.value.rede === 'facebook',
+  () => semPermissao.value && perfil.value.rede === 'facebook',
   precisa => {
     if (precisa) preloadSdk().catch(() => {});
   },
@@ -463,7 +467,7 @@ const liberar = async () => {
         <!-- Nenhum post no período: sem números zerados, só a frase e o botão. Posts que a Meta não mandou agora não
              são "você não postou": os números aparecem e a grade diz o que houve. -->
         <EstadoVazio
-          v-else-if="!posts.length && perfil.postsStatus !== 'unavailable'"
+          v-else-if="!posts.length && perfil.postsStatus === 'ok'"
           data-seus-posts-sem-post
           icon="i-lucide-image-off"
           :titulo="$t('SEUS_POSTS.POSTS.EMPTY_PERIOD', { days: dias })"
@@ -631,9 +635,30 @@ const liberar = async () => {
               >
                 {{ $t('SEUS_POSTS.POSTS.TRUNCATED') }}
               </p>
+              <p
+                v-if="perfil.postsAntigos && !perfil.antigo"
+                data-seus-posts-posts-antigos
+                class="m-0 text-sm text-n-slate-11"
+              >
+                {{ $t('SEUS_POSTS.POSTS.STALE') }}
+              </p>
             </div>
             <EstadoVazio
-              v-if="perfil.postsStatus === 'unavailable'"
+              v-if="perfil.postsStatus === 'needs_permission'"
+              data-seus-posts-posts-sem-permissao
+              icon="i-lucide-lock-keyhole"
+              :titulo="$t(`SEUS_POSTS.NO_PERMISSION.${perfil.rede}`)"
+              :texto="
+                podeLiberar
+                  ? $t(`SEUS_POSTS.NO_PERMISSION.TEXT_${perfil.rede}`)
+                  : $t('SEUS_POSTS.NO_PERMISSION.ASK_ADMIN')
+              "
+              :botao="podeLiberar ? $t('SEUS_POSTS.NO_PERMISSION.BUTTON') : ''"
+              botao-icon="i-lucide-key-round"
+              @acao="liberar"
+            />
+            <EstadoVazio
+              v-else-if="perfil.postsStatus === 'unavailable'"
               data-seus-posts-posts-indisponiveis
               role="alert"
               icon="i-lucide-cloud-off"

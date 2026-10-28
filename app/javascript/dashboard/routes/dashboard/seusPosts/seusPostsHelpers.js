@@ -62,7 +62,7 @@ export const legendaDoAnuncio = (quadros, t, locale) => {
   );
   return marcados.length === quadros.length
     ? t('SEUS_POSTS.TILES.LEGEND_ALL')
-    : t('SEUS_POSTS.TILES.LEGEND', { names: nomes }, marcados.length);
+    : t('SEUS_POSTS.TILES.LEGEND', { names: nomes });
 };
 
 // Um número do post contra o normal dos posts do perfil, em palavras (quem lê "1,9×" se perde): "3 vezes o

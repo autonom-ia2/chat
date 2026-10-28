@@ -62,7 +62,7 @@
       "MAYBE_ADS": "May include ads",
       "TITLE": "Compared with the previous {days} days",
       "TITLE_NO_COMPARE": "Numbers for the last {days} days",
-      "LEGEND": "{names} may include ads. The rest is without ads. | {names} may include ads. The rest is without ads.",
+      "LEGEND": "May include ads: {names}. The rest is without ads.",
       "LEGEND_NONE": "All numbers are without ads.",
       "LEGEND_ALL": "All numbers may include ads.",
       "WHAT_IS": "What each number counts"
@@ -83,7 +83,8 @@
       "UNAVAILABLE": {
         "TITLE": "Meta did not send your posts right now.",
         "TEXT": "The numbers above still hold. Try again in a moment."
-      }
+      },
+      "STALE": "Meta did not send the posts right now: these are from the last reading."
     },
     "CARD": {
       "TYPE": {

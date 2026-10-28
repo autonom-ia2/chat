@@ -59,6 +59,21 @@ describe('MetaAdsPage · Seus posts em página própria (#2304)', () => {
     expect(abas(wrapper)).not.toContain('organico');
   });
 
+  it('flags que chegam depois da tela montar (link direto) também levam à página nova', async () => {
+    await mountPage();
+    expect(routing.replace).not.toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'seus_posts_index' })
+    );
+
+    flags.value = { meta_ads_organico: true, seus_posts: true };
+    await flushPromises();
+
+    expect(routing.replace).toHaveBeenCalledWith({
+      name: 'seus_posts_index',
+      params: { accountId: '18' },
+    });
+  });
+
   it('sem posts_view, fica em Anúncios com a aba de antes', async () => {
     flags.value = { meta_ads_organico: true, seus_posts: true };
     granted.value = ['meta_ads_view'];

@@ -62,7 +62,7 @@
       "MAYBE_ADS": "Pode incluir anúncio",
       "TITLE": "Comparado com os {days} dias anteriores",
       "TITLE_NO_COMPARE": "Números dos últimos {days} dias",
-      "LEGEND": "{names} pode incluir anúncio. O resto é sem anúncio. | {names} podem incluir anúncio. O resto é sem anúncio.",
+      "LEGEND": "Pode incluir anúncio: {names}. O resto é sem anúncio.",
       "LEGEND_NONE": "Todos os números são sem anúncio.",
       "LEGEND_ALL": "Todos os números podem incluir anúncio.",
       "WHAT_IS": "O que cada número conta"
@@ -83,7 +83,8 @@
       "UNAVAILABLE": {
         "TITLE": "A Meta não mandou seus posts agora.",
         "TEXT": "Os números de cima continuam valendo. Tente de novo daqui a pouco."
-      }
+      },
+      "STALE": "A Meta não mandou os posts agora: estes são da última leitura."
     },
     "CARD": {
       "TYPE": {

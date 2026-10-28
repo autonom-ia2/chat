@@ -117,19 +117,41 @@ describe('Seus posts: perfilParaTela', () => {
     });
   });
 
-  it('números lidos mas posts recusados: pede a mesma liberação', () => {
-    expect(
-      perfilParaTela(
-        {
-          id: 'instagram-1',
-          network: 'instagram',
-          status: 'ok',
-          posts_status: 'needs_permission',
-          inbox_id: 7,
-        },
-        null,
-        AGORA
-      )
-    ).toMatchObject({ status: 'needs_permission', inboxId: 7 });
+  it('números lidos mas posts recusados: os números ficam e só a grade pede a liberação', () => {
+    const tela = perfilParaTela(
+      {
+        id: 'instagram-1',
+        network: 'instagram',
+        status: 'ok',
+        views: 5200,
+        posts_status: 'needs_permission',
+        inbox_id: 7,
+      },
+      null,
+      AGORA
+    );
+    expect(tela).toMatchObject({
+      status: 'ok',
+      postsStatus: 'needs_permission',
+      inboxId: 7,
+    });
+    expect(tela.resumo.apareceu).toBe(5200);
+  });
+
+  it('link que não é https não vira link', () => {
+    const tela = perfilParaTela(
+      {
+        id: 'instagram-1',
+        network: 'instagram',
+        status: 'ok',
+        link: 'data:text/html,oi',
+        posts_status: 'ok',
+        posts: [{ id: 'a', permalink: 'http://instagram.com/p/a' }],
+      },
+      null,
+      AGORA
+    );
+    expect(tela.link).toBeNull();
+    expect(tela.posts[0].link).toBeNull();
   });
 });

@@ -44,31 +44,36 @@ const selo = computed(() => {
   };
 });
 
-// Post sem as vezes (Página sem Insights, número que não veio): a linha sai, em vez de um traço. No post
-// impulsionado da Página, curtidas e comentários incluem o anúncio (só as vezes se separam): o megafone.
-const numeros = computed(() => [
-  ...(props.post.semInsights
-    ? []
-    : [
-        {
-          chave: 'views',
-          label: t('SEUS_POSTS.POST.NUMBERS.VIEWS'),
-          valor: formatar(props.post.apareceu, locale.value),
-        },
-      ]),
-  {
-    chave: 'likes',
-    label: t('SEUS_POSTS.POST.NUMBERS.LIKES'),
-    valor: formatar(props.post.curtidas, locale.value),
-    anuncio: props.post.impulsionado,
-  },
-  {
-    chave: 'comments',
-    label: t('SEUS_POSTS.POST.NUMBERS.COMMENTS'),
-    valor: formatar(props.post.comentarios, locale.value),
-    anuncio: props.post.impulsionado,
-  },
-]);
+// Post sem as vezes (Página sem Insights, número que não veio): a linha sai, em vez de um traço. Post novo: sem as
+// vezes, e curtidas e comentários só se já vieram. No post impulsionado da Página, curtidas e comentários incluem o
+// anúncio (só as vezes se separam): o megafone.
+const numeros = computed(() =>
+  [
+    ...(props.post.semInsights || props.post.novo
+      ? []
+      : [
+          {
+            chave: 'views',
+            label: t('SEUS_POSTS.POST.NUMBERS.VIEWS'),
+            valor: formatar(props.post.apareceu, locale.value),
+          },
+        ]),
+    {
+      chave: 'likes',
+      label: t('SEUS_POSTS.POST.NUMBERS.LIKES'),
+      valor: formatar(props.post.curtidas, locale.value),
+      anuncio: props.post.impulsionado,
+      vazio: props.post.curtidas === null,
+    },
+    {
+      chave: 'comments',
+      label: t('SEUS_POSTS.POST.NUMBERS.COMMENTS'),
+      valor: formatar(props.post.comentarios, locale.value),
+      anuncio: props.post.impulsionado,
+      vazio: props.post.comentarios === null,
+    },
+  ].filter(numero => !(props.post.novo && numero.vazio))
+);
 const nome = computed(
   () => props.post.legenda || t(`SEUS_POSTS.CARD.NO_TEXT.${props.post.rede}`)
 );
@@ -141,7 +146,7 @@ const nome = computed(
         <span class="i-lucide-clock size-4 shrink-0" aria-hidden="true" />
         {{ $t('SEUS_POSTS.CARD.NUMBERS_SOON') }}
       </p>
-      <dl v-else class="m-0 grid grid-cols-2 gap-x-3 gap-y-3">
+      <dl v-if="numeros.length" class="m-0 grid grid-cols-2 gap-x-3 gap-y-3">
         <div
           v-for="numero in numeros"
           :key="numero.chave"

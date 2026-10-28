@@ -7,6 +7,15 @@ const UM_DIA = 24 * 60 * 60 * 1000;
 
 const ouNulo = valor => (valor === undefined ? null : valor);
 
+// Link de post ou perfil vem da Meta; só o https vira link na tela.
+const linkSeguro = endereco => {
+  try {
+    return new URL(endereco).protocol === 'https:' ? endereco : null;
+  } catch {
+    return null;
+  }
+};
+
 // O que pode incluir anúncio, pelo que o servidor sabe separar (Crm::MetaAds::Organico): no Instagram, vezes,
 // pessoas e interações saem sem o anúncio; na Página, só as vezes. Seguidores novos podem ter vindo de anúncio nas
 // duas.
@@ -47,7 +56,7 @@ export const postParaTela = (post, rede, agora = Date.now()) => {
     legenda: post.text || '',
     tipo: post.type || null,
     imagem: post.image_url || null,
-    link: post.permalink || null,
+    link: linkSeguro(post.permalink),
     publicadoEm: post.created_time,
     apareceu: vezes,
     pessoas: ouNulo(post.reach),
@@ -77,18 +86,18 @@ export const perfilParaTela = (perfil, nomeGuardado, agora = Date.now()) => {
     antigo: perfil.stale === true,
   };
   if (perfil.status !== 'ok') return base;
-  // Números do perfil lidos, mas a leitura dos posts recusada: o mesmo "Libere o acesso".
-  if (perfil.posts_status === 'needs_permission')
-    return { ...base, status: 'needs_permission' };
 
   const normal = perfil.normal || {};
   return {
     ...base,
-    link: perfil.link || null,
+    link: linkSeguro(perfil.link),
     resumo: resumoDe(perfil, rede),
     media: { apareceu: ouNulo(normal.views) },
-    // 'ok' ou 'unavailable' (a Meta falhou só nos posts: os números ficam).
+    // 'ok', 'unavailable' (a Meta falhou só nos posts) ou 'needs_permission' (a leitura dos posts foi recusada): nos
+    // dois últimos os números do perfil ficam, e só a grade muda.
     postsStatus: perfil.posts_status,
+    // A Meta não respondeu nos posts: a grade é a da última leitura boa.
+    postsAntigos: perfil.posts_stale === true,
     // A lista parou no teto de posts lidos: em 90 dias, os mais velhos podem faltar.
     postsCortados: perfil.posts_truncated === true,
     posts: (perfil.posts || []).map(post => postParaTela(post, rede, agora)),

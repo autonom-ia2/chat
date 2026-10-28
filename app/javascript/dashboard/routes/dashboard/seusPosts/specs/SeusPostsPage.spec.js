@@ -183,10 +183,16 @@ describe('Seus posts (#2304)', () => {
     ).toBe('Perto do normal');
   });
 
-  it('post novo sem as vezes não mostra número nem veredito', async () => {
+  it('post novo sem as vezes: sem veredito, com as curtidas e os comentários que já vieram', async () => {
     responder(
       instagram({
-        posts: [post('novo', { views: null, created_time: haDias(0.5) })],
+        posts: [
+          post('novo', {
+            views: null,
+            comments: null,
+            created_time: haDias(0.5),
+          }),
+        ],
       })
     );
     const wrapper = await montar();
@@ -194,6 +200,29 @@ describe('Seus posts (#2304)', () => {
     const cartao = wrapper.find('[data-seus-posts-card="novo"]');
     expect(cartao.find('[data-seus-posts-sem-numeros]').exists()).toBe(true);
     expect(cartao.find('[data-seus-posts-veredito]').exists()).toBe(false);
+    const rotulos = cartao.findAll('dt').map(dt => dt.text());
+    expect(rotulos).toEqual(['Curtidas']);
+  });
+
+  it('posts recusados: os números do perfil ficam e a grade pede a liberação', async () => {
+    responder(instagram({ posts_status: 'needs_permission', posts: [] }));
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-heroi]').exists()).toBe(true);
+    expect(wrapper.find('[data-seus-posts-sem-permissao]').exists()).toBe(
+      false
+    );
+    expect(wrapper.find('[data-seus-posts-posts-sem-permissao]').exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-seus-posts-sem-post]').exists()).toBe(false);
+  });
+
+  it('posts da última leitura boa: a grade avisa', async () => {
+    responder(instagram({ posts_stale: true }));
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-posts-antigos]').exists()).toBe(true);
   });
 
   it('403 é "sem acesso", não erro de rede', async () => {
