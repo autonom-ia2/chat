@@ -5,6 +5,10 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
   before_action :fetch_custom_role, only: [:show, :update, :destroy]
 
   NO_ROLE_DESTINATION = 'none'.freeze
+  FEATURE_OFF = 'feature_off'.freeze
+  # Todo código que um 401 daqui leva no corpo: os do GrantGuard e o da conta sem o recurso (#2308, rodada 5). A tela
+  # tem uma frase para cada (FRASE_DO_401 em salvarFuncao.js; codigosDo401.spec.js lê esta lista).
+  UNAUTHORIZED_CODES = [*CustomRoles::GrantGuard::CODES, FEATURE_OFF].freeze
 
   def index
     @custom_roles = Current.account.custom_roles.for_people
@@ -118,6 +122,6 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
     return if Current.account.feature_enabled?('custom_roles')
 
     Rails.logger.info(FEATURE_OFF_LOG)
-    refuse('feature_off', :unauthorized)
+    refuse(FEATURE_OFF, :unauthorized)
   end
 end

@@ -351,7 +351,7 @@
         "campaign_send": "disparar campanhas",
         "report_manage": "ver os relatórios de atendimento"
       },
-      "SEM_AREA": "mexer em {area}",
+      "SEM_AREA": "mudar {area}",
       "SEM_AREA_VER": "ver {area}"
     },
     "ESCOLHA": {
@@ -761,8 +761,8 @@
         }
       },
       "OUTRA": {
-        "LISTA": "Parte do que fazia em {area}",
-        "CURTO": "usar uma parte de {area}"
+        "LISTA": "Fazer algumas coisas em {area}",
+        "CURTO": "fazer algumas coisas em {area}"
       },
       "ALGO": {
         "LISTA": "Fazer uma coisa em {area}",
@@ -842,6 +842,11 @@
       "SO_LEITURA_MINE": "Ninguém muda a própria função: esta é a sua.",
       "NINGUEM_AINDA": "Ninguém tem esta função ainda.",
       "FORA_DO_ALCANCE": "Não deu para mudar a função de {nomes}: está fora do que você pode dar.",
+      "TRAVADA": {
+        "ABOVE": "A função de {nomes} não mudou: só o administrador muda. | A função destas pessoas não mudou: {nomes}. Só o administrador muda.",
+        "ADMIN": "{nomes} já pode tudo: tem acesso de administrador. | {nomes} já podem tudo: têm acesso de administrador.",
+        "SELF": "Ninguém muda a própria função. | Ninguém muda a própria função."
+      },
       "SEM_ACESSO": "Você não pode mais pôr e tirar pessoas das funções. Fale com o administrador.",
       "NAO_MUDOU": "A função de {nomes} não mudou. Tente de novo; se continuar, fale com o administrador. | A função destas pessoas não mudou: {nomes}. Tente de novo; se continuar, fale com o administrador."
     },
@@ -878,7 +883,26 @@
       "TEXTO_UMA": "Essa pessoa tem a função {nome}. | Essas pessoas têm a função {nome}.",
       "FICA": {
         "OLHA": "A partir de agora, só vai olhar {area}. | A partir de agora, só vão olhar {area}.",
-        "PROPRIAS": "A partir de agora, só vai atender as próprias conversas. | A partir de agora, só vão atender as próprias conversas."
+        "PROPRIAS": "A partir de agora, só vai atender as próprias conversas. | A partir de agora, só vão atender as próprias conversas.",
+        "PROPRIAS_E_NOVAS": "A partir de agora, vai atender as próprias conversas e pegar as novas que estão sem ninguém. | A partir de agora, vão atender as próprias conversas e pegar as novas que estão sem ninguém.",
+        "PROPRIAS_E_LINK": "A partir de agora, vai atender as próprias conversas e ajudar quando um colega manda o link da conversa. | A partir de agora, vão atender as próprias conversas e ajudar quando um colega manda o link da conversa.",
+        "PROPRIAS_NOVAS_E_LINK": "A partir de agora, vai atender as próprias conversas, pegar as novas que estão sem ninguém e ajudar quando um colega manda o link da conversa. | A partir de agora, vão atender as próprias conversas, pegar as novas que estão sem ninguém e ajudar quando um colega manda o link da conversa.",
+        "AREA": {
+          "CONVERSATIONS": "as conversas",
+          "CONTACTS": "os contatos",
+          "KNOWLEDGE_BASE": "a Central de Ajuda",
+          "CRM": "as vendas",
+          "AUTONOMIA": "os robôs de IA",
+          "PROSPECTING": "a procura de clientes novos",
+          "INSURANCE": "as cotações",
+          "CAMPAIGNS": "as campanhas",
+          "WHATSAPP_TEMPLATES": "os modelos do WhatsApp",
+          "META_ADS": "os anúncios",
+          "INBOXES": "os canais",
+          "AUTOMATIONS": "as regras automáticas",
+          "SCHEDULING": "a agenda",
+          "FINANCE": "os custos da conta"
+        }
       },
       "VOLTAR": "Voltar",
       "SALVAR": "Salvar mesmo assim",

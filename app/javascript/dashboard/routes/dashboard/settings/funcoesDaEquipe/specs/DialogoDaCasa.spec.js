@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils';
 import DialogoDaCasa from '../guiada/DialogoDaCasa.vue';
-import { global } from './montar';
+import { espiarDialogo, global } from './montar';
 
 // #2308, especificação 9 e 14: uma anatomia; o seguro tem o foco e responde ao Esc; ação nunca é vermelha no cuidado.
 const montar = (props = {}) =>
@@ -17,6 +17,12 @@ const montar = (props = {}) =>
     },
     global: global(),
   });
+
+let espiao = null;
+afterEach(() => {
+  espiao?.soltar();
+  espiao = null;
+});
 
 describe('DialogoDaCasa', () => {
   it('mostra título, texto, risco e o quadrado âmbar no cuidado', () => {
@@ -40,9 +46,7 @@ describe('DialogoDaCasa', () => {
   // Rodada 4: abrir de novo com o diálogo aberto troca o conteúdo; o foco vai ao primeiro campo marcado ou ao título,
   // para o leitor de tela dizer o que mudou.
   it('abrir com ele aberto põe o foco no campo marcado ou, sem campo, no título', async () => {
-    HTMLDialogElement.prototype.showModal = function abrirModal() {
-      this.setAttribute('open', '');
-    };
+    espiao = espiarDialogo({ marcarAberto: true });
     const wrapper = montar();
     await wrapper.vm.abrir();
     await wrapper.vm.abrir();
@@ -60,7 +64,6 @@ describe('DialogoDaCasa', () => {
     await comCampo.vm.abrir();
     expect(document.activeElement?.id).toBe('destino');
     comCampo.unmount();
-    delete HTMLDialogElement.prototype.showModal;
   });
 
   it('focarTitulo põe o foco no título', async () => {

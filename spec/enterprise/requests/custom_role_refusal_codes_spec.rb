@@ -38,7 +38,18 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
 
   def expect_refusal(code)
     expect(response).to have_http_status(:unauthorized)
+    expect(Api::V1::Accounts::CustomRolesController::UNAUTHORIZED_CODES).to include(code)
     expect(response.parsed_body).to eq('error' => code, 'message' => messages.fetch(code))
+  end
+
+  # Rodada 5: todo código de um 401 daqui está numa lista só (os do GrantGuard e o feature_off), e cada um tem
+  # mensagem. A tela lê a mesma lista (codigosDo401.spec.js).
+  it 'lists every 401 code once, frozen, each with its message' do
+    codes = Api::V1::Accounts::CustomRolesController::UNAUTHORIZED_CODES
+
+    expect(codes).to eq([*CustomRoles::GrantGuard::CODES, 'feature_off'])
+    expect(codes).to be_frozen
+    expect(messages.keys).to match_array(codes)
   end
 
   # Controle positivo: o GrantGuard não recusa tudo; dentro do alcance, quem monta cria.

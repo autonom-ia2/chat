@@ -4,7 +4,10 @@ import {
   setLevel,
   toggleExtra,
 } from '../../customRoles/permissionMatrix';
+import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
+import en from 'dashboard/i18n/locale/en/funcoesDaEquipe.json';
 import {
+  contidasEm,
   cuidadosDaFuncao,
   fraseDaFuncao,
   mesclarPrevia,
@@ -37,9 +40,39 @@ describe('fraseDaFuncao', () => {
   // Rodada 4: a função antiga "Só olha" com mover as vendas move de verdade (CardPolicy#move?); a frase diz isso,
   // como o Pode ("Mover as vendas entre as colunas").
   it('só olha e move as vendas: "Olha e move as vendas."', () => {
-    expect(fraseDaFuncao(['crm_view', 'crm_move_cards']).resto).toEqual([
-      'VENDAS_OLHA_E_MOVE',
-    ]);
+    const { resto } = fraseDaFuncao(['crm_view', 'crm_move_cards']);
+    expect(resto).toEqual(['VENDAS_OLHA_E_MOVE']);
+    expect(ptBR.FUNCOES_EQUIPE.FRASE[resto[0]]).toBe('Olha e move as vendas.');
+  });
+
+  // Rodada 5: toda chave que a frase pode devolver existe nos dois idiomas. As funções abaixo passam por todos os
+  // ramos (cada nível de conversas, vendas, campanhas e contatos); a lista do fim confere que nenhum ficou de fora.
+  it('toda chave da frase existe em pt_BR e en', () => {
+    const funcoes = [
+      ...Object.values(PRESETS).map(preset => preset()),
+      [],
+      ['conversation_view'],
+      ['conversation_participating_manage'],
+      ['conversation_manage', 'crm_admin'],
+      ['crm_view', 'crm_move_cards'],
+      ['campaign_manage'],
+      ['contact_view'],
+      ['contact_manage'],
+    ];
+    const chaves = [
+      ...new Set(
+        funcoes.flatMap(permissions => {
+          const { destaque, resto } = fraseDaFuncao(permissions);
+          return [destaque, ...resto];
+        })
+      ),
+    ].sort();
+    expect(chaves).toEqual(Object.keys(ptBR.FUNCOES_EQUIPE.FRASE).sort());
+    [ptBR, en].forEach(idioma => {
+      chaves.forEach(chave => {
+        expect(idioma.FUNCOES_EQUIPE.FRASE[chave], chave).toBeTruthy();
+      });
+    });
   });
 
   it('área sem acesso não entra; crm_admin cuida de tudo nas vendas', () => {
@@ -142,5 +175,32 @@ describe('selo de cuidado', () => {
       ])
     );
     expect(pode).not.toContain('METAS_DO_MES');
+  });
+});
+
+// Rodada 5: o que cada capacidade cobre mora nela (`cobre`). Toda capacidade coberta é uma do Pode, com texto.
+describe('contidasEm', () => {
+  it('a maior cobre as menores', () => {
+    expect(contidasEm(['LER_E_ATENDER_TODAS'])).toEqual([
+      'RESPONDER_ENTREGUES',
+      'PEGAR_NOVAS',
+      'AJUDAR_PELO_LINK',
+      'LER_COLEGAS',
+    ]);
+    expect(contidasEm(['CRIAR_MOVER_VENDAS', 'FINANCIAL_MANAGE'])).toEqual([
+      'MOVER_VENDAS',
+      'FINANCIAL_VIEW',
+    ]);
+    expect(contidasEm(['APAGAR_MENSAGENS'])).toEqual([]);
+  });
+
+  it('toda capacidade coberta existe no Pode, em pt_BR e en', () => {
+    const cobertas = contidasEm(Object.keys(ptBR.FUNCOES_EQUIPE.PODE));
+    expect(cobertas).toContain('FINANCIAL_VIEW');
+    [ptBR, en].forEach(idioma => {
+      cobertas.forEach(id => {
+        expect(idioma.FUNCOES_EQUIPE.PODE[id], id).toBeTruthy();
+      });
+    });
   });
 });

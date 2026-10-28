@@ -401,6 +401,36 @@ describe('FuncaoGuiadaPage', () => {
     );
   });
 
+  // Rodada 5: o texto da perda diz também o que fica, pela página (sem o `fica`, ele pararia em quem tem a função).
+  it('perda de acesso numa queda de nível: diz o que fica, como na especificação 5.F', async () => {
+    const vendedor = { id: 1, name: 'Vendedor', permissions: PRESETS.SDR() };
+    const { wrapper } = await montar({
+      name: 'funcoes_equipe_edit',
+      params: { roleId: '1' },
+      giver: ADMIN,
+      funcoes: [vendedor],
+      agentes: [
+        ...AGENTES,
+        { id: 11, name: 'Beto', role: 'agent', custom_role_id: 1 },
+      ],
+    });
+    await clicar(wrapper, '[data-linha="contatos"] [data-alterar-area]');
+    await clicar(wrapper, '[data-nivel="view"]');
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-botao-grande]');
+    const perda = wrapper
+      .findAll('dialog')
+      .find(item => item.find('[data-nomes]').exists());
+
+    expect(perda.find('h2').text()).toBe(
+      '2 pessoas vão deixar de mudar os dados dos contatos'
+    );
+    expect(perda.find('[data-texto-perda]').text()).toBe(
+      'Essas pessoas têm a função Vendedor. A partir de agora, só vão olhar os contatos.'
+    );
+  });
+
   it('perda de acesso não aparece para quem não é administrador', async () => {
     const { wrapper, alterar } = await montar({
       name: 'funcoes_equipe_edit',

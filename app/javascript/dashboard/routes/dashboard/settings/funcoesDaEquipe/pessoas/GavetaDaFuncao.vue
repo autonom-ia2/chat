@@ -36,7 +36,6 @@ const funcoes = useMapGetter('customRole/getCustomRoles');
 
 const mudancas = ref(new Map());
 const sairSemSalvar = ref(null);
-const { salvando, erro, salvar: gravar } = useSalvarGaveta(mudancas);
 
 // Por que a gaveta é só leitura: sem Pessoas, ou a função está acima do alcance (ABOVE) ou é a de quem monta (MINE).
 const motivoDaLeitura = computed(() => {
@@ -64,6 +63,7 @@ const travaDe = pessoa =>
   pessoa.role === 'administrator'
     ? LOCK_REASONS.ADMIN
     : memberLockReason(pessoa) || '';
+const { salvando, erro, salvar: gravar } = useSalvarGaveta(mudancas, travaDe);
 
 // Só as funções que quem monta pode dar; as outras somem da escolha, com o nome numa nota.
 const opcoes = computed(() =>
@@ -114,12 +114,9 @@ const fraseDoRodape = ([id, destino]) => {
       funcao: funcaoDe(destino)?.name,
     });
   const atual = agentes.value.find(item => item.id === id)?.custom_role_id;
-  const { ganho, perda, tambem } = efeitoDe(funcaoDe(atual)?.permissions);
-  const forma =
-    (ganho && perda && 'ganhoEPerda') ||
-    (ganho && 'ganho') ||
-    (perda && 'perda') ||
-    'nada';
+  const { forma, ganho, perda, tambem } = efeitoDe(
+    funcaoDe(atual)?.permissions
+  );
   return [
     t(`FUNCOES_EQUIPE.GAVETA.RODAPE.${RODAPE_SEM_FUNCAO[forma]}`, {
       pessoa,

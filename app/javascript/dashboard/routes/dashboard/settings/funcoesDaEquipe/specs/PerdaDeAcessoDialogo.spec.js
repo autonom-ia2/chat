@@ -40,6 +40,41 @@ describe('PerdaDeAcesso', () => {
     wrapper.unmount();
   });
 
+  // Rodada 5: quem desce para as próprias e continua pegando as novas e ajudando pelo link não "só" atende as próprias.
+  it.each([
+    [
+      'PROPRIAS_E_NOVAS',
+      'Essas pessoas têm a função Vendedor. A partir de agora, vão atender as próprias conversas e pegar as novas que estão sem ninguém.',
+    ],
+    [
+      'PROPRIAS_E_LINK',
+      'Essas pessoas têm a função Vendedor. A partir de agora, vão atender as próprias conversas e ajudar quando um colega manda o link da conversa.',
+    ],
+    [
+      'PROPRIAS_NOVAS_E_LINK',
+      'Essas pessoas têm a função Vendedor. A partir de agora, vão atender as próprias conversas, pegar as novas que estão sem ninguém e ajudar quando um colega manda o link da conversa.',
+    ],
+  ])('as próprias com mais (%s): sem "só"', (nivel, texto) => {
+    const wrapper = montar({
+      perdas: [{ id: 'LER_E_ATENDER_TODAS' }],
+      fica: { area: 'CONVERSATIONS', nivel },
+    });
+    expect(wrapper.find('[data-texto-perda]').text()).toBe(texto);
+    wrapper.unmount();
+  });
+
+  // Rodada 5: a área vai em minúscula no meio da frase ("as vendas", não "as Vendas").
+  it('a área que fica só olhando vem em minúscula', () => {
+    const wrapper = montar({
+      perdas: [{ id: 'CRIAR_MOVER_VENDAS' }],
+      fica: { area: 'CRM', nivel: 'OLHA' },
+    });
+    expect(wrapper.find('[data-texto-perda]').text()).toBe(
+      'Essas pessoas têm a função Vendedor. A partir de agora, só vão olhar as vendas.'
+    );
+    wrapper.unmount();
+  });
+
   it('sem queda de nível, só quem tem a função', () => {
     const wrapper = montar();
     expect(wrapper.find('[data-texto-perda]').text()).toBe(

@@ -44,9 +44,9 @@ export const perdasDeAcesso = (gravadasAntes, gravadasDepois) => {
 };
 
 // O que fica numa queda de nível (especificação 5.F: "A partir de agora, só vão olhar os contatos."): a área que
-// desceu sem sumir, com o nível de agora. `nivel` é 'OLHA' (ficou só vendo) ou 'PROPRIAS' (conversas: de todas para as
-// próprias); null quando nenhuma ou mais de uma área desceu assim, ou quando o nível de agora não cabe numa frase
-// (Vendas de "Cuida de tudo" para "Pode mexer").
+// desceu sem sumir, com o nível de agora. `nivel` é 'OLHA' (ficou só vendo) ou, nas conversas que descem de todas para
+// as próprias, a frase do que ainda atende (fraseDasProprias); null quando nenhuma ou mais de uma área desceu assim, ou
+// quando o nível de agora não cabe numa frase (Vendas de "Cuida de tudo" para "Pode mexer").
 const ORDEM_DAS_CONVERSAS = [
   CONVERSATION_LEVELS.NONE,
   CONVERSATION_LEVELS.VIEW,
@@ -61,9 +61,19 @@ const leitura = module => {
     return { nivel: nivelDeVendas, ordem: NIVEIS_DE_VENDAS };
   return { nivel: p => getLevel(module, p), ordem: ORDEM };
 };
+// As próprias conversas e o que vem junto, pelo Pode de agora (o mesmo da prévia): pegar as novas que estão sem
+// ninguém e ajudar pelo link. "Só as próprias" é só quando não vem nada junto (revisão do #2308, rodada 5).
+const fraseDasProprias = permissions => {
+  const pode = podeDaFuncao(permissions);
+  const novas = pode.includes('PEGAR_NOVAS');
+  const link = pode.includes('AJUDAR_PELO_LINK');
+  if (novas && link) return 'PROPRIAS_NOVAS_E_LINK';
+  if (novas) return 'PROPRIAS_E_NOVAS';
+  return link ? 'PROPRIAS_E_LINK' : 'PROPRIAS';
+};
 const FRASE_DO_NIVEL = {
-  [LEVELS.VIEW]: 'OLHA',
-  [CONVERSATION_LEVELS.LIMITED]: 'PROPRIAS',
+  [LEVELS.VIEW]: () => 'OLHA',
+  [CONVERSATION_LEVELS.LIMITED]: fraseDasProprias,
 };
 
 export const nivelQueFica = (gravadasAntes, gravadasDepois) => {
@@ -73,7 +83,10 @@ export const nivelQueFica = (gravadasAntes, gravadasDepois) => {
     const depois = nivel(gravadasDepois);
     const desceu =
       depois !== LEVELS.NONE && ordem.indexOf(depois) < ordem.indexOf(antes);
-    return desceu ? { area: module.key, nivel: FRASE_DO_NIVEL[depois] } : null;
+    const frase = FRASE_DO_NIVEL[depois];
+    return desceu
+      ? { area: module.key, nivel: frase ? frase(gravadasDepois) : null }
+      : null;
   }).filter(Boolean);
   if (desceram.length !== 1 || !desceram[0].nivel) return null;
   return desceram[0];

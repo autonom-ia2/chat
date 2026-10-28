@@ -20,18 +20,27 @@ export const FRASE_DO_401 = {
 // O 401 só diz que algo foi recusado. Quem decide se a sessão venceu é o /auth/validate_token: com ela boa, vale o
 // código (ou SEM_ACESSO); vencida, o app vai para o login sem mensagem. O validityCheck da store engole o erro e não
 // zera isLoggedIn, então não serve para decidir. Devolve a chave da frase; cada tela tem as suas (salvar, apagar).
-export const explicar401 = async codigo => {
+// `quemMonta` é o usuário que a mesma conferência trouxe (null sem ele): a gaveta lê dele se quem monta perdeu
+// Pessoas, sem uma segunda chamada que pode cair (revisão do #2308, rodada 5).
+export const explicar401ComQuemMonta = async codigo => {
   try {
-    await authAPI.validityCheck();
-    return { erro: FRASE_DO_401[codigo] || 'SEM_ACESSO' };
+    const resposta = await authAPI.validityCheck();
+    return {
+      erro: FRASE_DO_401[codigo] || 'SEM_ACESSO',
+      quemMonta: resposta?.data?.payload?.data || null,
+    };
   } catch (error) {
     if (error?.response?.status === NAO_AUTORIZADO) {
       clearCookiesOnLogout();
-      return { erro: null };
+      return { erro: null, quemMonta: null };
     }
-    return { erro: 'REDE' };
+    return { erro: 'REDE', quemMonta: null };
   }
 };
+
+export const explicar401 = async codigo => ({
+  erro: (await explicar401ComQuemMonta(codigo)).erro,
+});
 
 // 422 de nome: a lista recarregada diz se é uma função que ela mostra; senão é de uma integração, e a tela sugere
 // o primeiro nome livre, pulando todos os que o servidor já recusou nesta conversa (sem vai e volta).

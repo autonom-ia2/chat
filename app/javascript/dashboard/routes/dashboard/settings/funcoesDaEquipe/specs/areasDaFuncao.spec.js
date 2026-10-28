@@ -22,6 +22,7 @@ import {
   resumoDaRecolhida,
   travaDoNivel,
 } from '../areasDaFuncao';
+import { chavesDoServidor } from '../semFuncao';
 import {
   ADMIN,
   CARLA,
@@ -206,24 +207,23 @@ describe('Cuidado em três grupos', () => {
     expect(chaves(grupos.naoPode)).not.toContain('contact_delete');
   });
 
+  // Rodada 5: chamado como a tela chama (PerguntaCuidado: as chaves lidas pelo servidor como terceiro argumento), com
+  // funções que têm crm_admin.
   it('todo item no cadeado tem motivo', () => {
-    [CARLA, CARLA_SEM_DISPARO, SEM_VER_VENDAS, TUDO_SEM_MEXER].forEach(
-      giver => {
-        Object.values(PRESETS).forEach(preset => {
-          gruposDoCuidado(giver, preset()).naoPode.forEach(item => {
-            expect(item.motivo).toBeTruthy();
-          });
-        });
-      }
-    );
-    const comVendasForaDoAlcance = [
-      ...PRESETS.AGENT(),
-      'contact_manage',
-      'crm_admin',
+    const comoATela = (giver, permissions) =>
+      gruposDoCuidado(giver, permissions, chavesDoServidor(permissions));
+    const funcoes = [
+      ...Object.values(PRESETS).map(preset => preset()),
+      [...PRESETS.AGENT(), 'contact_manage', 'crm_admin'],
+      ['contact_view', 'crm_view', 'crm_admin'],
     ];
-    gruposDoCuidado(CARLA, comVendasForaDoAlcance).naoPode.forEach(item => {
-      expect(item.motivo).toBeTruthy();
-    });
+    const motivos = [CARLA, CARLA_SEM_DISPARO, SEM_VER_VENDAS, TUDO_SEM_MEXER]
+      .flatMap(giver =>
+        funcoes.flatMap(permissions => comoATela(giver, permissions).naoPode)
+      )
+      .map(item => item.motivo);
+    expect(motivos.length).toBeGreaterThan(0);
+    motivos.forEach(motivo => expect(motivo).toBeTruthy());
   });
 
   it('o administrador liga tudo; quem não atende conversas não vê "Apagar mensagens"', () => {

@@ -1,8 +1,9 @@
 import { ref } from 'vue';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
+import types from 'dashboard/store/mutation-types';
 import { useTextos } from '../guiada/useTextos';
-import { explicar401 } from '../salvarFuncao';
+import { explicar401ComQuemMonta } from '../salvarFuncao';
 
 // O "Salvar" da gaveta de pessoas (#2308, especificação 5.D). Manda só custom_role_id (null para sem função): reenviar
 // o nome lido da lista desfaria uma troca de nome feita em paralelo. Depois, recarrega as pessoas e confere nelas que
@@ -10,14 +11,16 @@ import { explicar401 } from '../salvarFuncao';
 // O que não gravou volta para `mudancas`, com o motivo e o nome de cada um:
 // - 401 com a sessão boa: o agents/update nunca manda código. A recusa vem do alcance de quem dá (GrantGuard) ou de
 //   quem monta ter perdido Pessoas (UserPolicy#update?; AccessGuard#touch_access! só recusa a própria pessoa e o
-//   administrador, que a gaveta já trava). A gaveta recarrega quem monta: sem Pessoas, diz que não pode mais e fica só
-//   leitura, sem nada pendente; com Pessoas, é o alcance, e recarrega também as funções, para a que saiu do alcance
-//   sumir da escolha (revisão do #2308, rodada 4);
+//   administrador, que a gaveta já trava). A gaveta lê quem monta da própria conferência da sessão (rodada 5): sem
+//   Pessoas, diz que não pode mais e fica só leitura, sem nada pendente; com Pessoas, é o alcance, e recarrega também
+//   as funções, para a que saiu do alcance sumir da escolha (revisão do #2308, rodada 4). Quem a recarga mostra
+//   travado (numa função acima do alcance, ou administrador) sai do que falta salvar, com a frase da trava (`travaDe`,
+//   a mesma da linha; rodada 5);
 // - 401 com a sessão vencida: o app vai para o login, sem mensagem;
 // - o resto (rede): tente de novo.
 const NAO_AUTORIZADO = 401;
 
-export function useSalvarGaveta(mudancas) {
+export function useSalvarGaveta(mudancas, travaDe) {
   const store = useStore();
   const { t, lista } = useTextos();
   const agentes = useMapGetter('agents/getAgents');
@@ -25,10 +28,13 @@ export function useSalvarGaveta(mudancas) {
   const salvando = ref(false);
   const erro = ref('');
 
-  const nomeDe = id => agentes.value.find(item => item.id === id)?.name;
-  const nomesDe = pedidos => lista(pedidos.map(([id]) => nomeDe(id)));
-  const funcaoDe = id =>
-    agentes.value.find(item => item.id === id)?.custom_role_id ?? null;
+  const agenteDe = id => agentes.value.find(item => item.id === id);
+  const nomesDe = pedidos => lista(pedidos.map(([id]) => agenteDe(id)?.name));
+  const travaDoPedido = ([id]) => {
+    const pessoa = agenteDe(id);
+    return pessoa ? travaDe(pessoa) : '';
+  };
+  const funcaoDe = id => agenteDe(id)?.custom_role_id ?? null;
 
   const enviar = pedidos =>
     Promise.allSettled(
@@ -51,16 +57,28 @@ export function useSalvarGaveta(mudancas) {
     };
   };
 
-  // Sem código, o 401 pode ser de quem perdeu Pessoas: recarrega quem monta para saber.
-  const perdeuPessoas = async motivo => {
+  // Sem código, o 401 pode ser de quem perdeu Pessoas: quem monta vem da própria conferência da sessão.
+  const perdeuPessoas = (motivo, quemMonta) => {
     if (motivo !== 'SEM_ACESSO') return false;
-    await store.dispatch('validityCheck');
+    if (quemMonta) store.commit(types.SET_CURRENT_USER, quemMonta);
     return !canManagePeople.value;
   };
 
-  const frases = ({ semAcesso, foraDoAlcance, caidos, semEfeito }) =>
+  // Uma frase por trava, com os nomes de quem ficou nela.
+  const frasesDasTravas = travados =>
+    [...new Set(travados.map(travaDoPedido))].map(trava => {
+      const deles = travados.filter(pedido => travaDoPedido(pedido) === trava);
+      return t(
+        `FUNCOES_EQUIPE.GAVETA.TRAVADA.${trava}`,
+        { nomes: nomesDe(deles) },
+        deles.length
+      );
+    });
+
+  const frases = ({ semAcesso, travados, foraDoAlcance, caidos, semEfeito }) =>
     [
       semAcesso && t('FUNCOES_EQUIPE.GAVETA.SEM_ACESSO'),
+      ...frasesDasTravas(travados),
       foraDoAlcance.length &&
         t('FUNCOES_EQUIPE.GAVETA.FORA_DO_ALCANCE', {
           nomes: nomesDe(foraDoAlcance),
@@ -91,32 +109,38 @@ export function useSalvarGaveta(mudancas) {
       pedidos,
       await enviar(pedidos)
     );
-    const motivo = recusados.length ? (await explicar401(codigo)).erro : '';
+    const { erro: motivo, quemMonta } = recusados.length
+      ? await explicar401ComQuemMonta(codigo)
+      : { erro: '', quemMonta: null };
     if (motivo === null) {
       salvando.value = false;
       return false;
     }
     const rede = motivo === 'REDE';
-    const semAcesso = await perdeuPessoas(motivo);
+    const semAcesso = perdeuPessoas(motivo, quemMonta);
     await Promise.all([
       store.dispatch('agents/get'),
       ...(recusados.length ? [store.dispatch('customRole/getCustomRole')] : []),
     ]);
-    const falhas = {
-      foraDoAlcance: rede || semAcesso ? [] : recusados,
-      caidos: rede ? [...caidos, ...recusados] : caidos,
-      semEfeito: gravados.filter(([id, destino]) => funcaoDe(id) !== destino),
-    };
-    // Sem Pessoas, nada mais grava: não fica nada pendente, e a gaveta fecha sem perguntar.
-    const pendentes = semAcesso ? [] : Object.values(falhas).flat();
+    // Sem Pessoas, nada mais grava: não fica nada pendente (nem quem caiu pela rede), a gaveta fica só leitura, diz só
+    // isso e fecha sem perguntar. Quem ficou travado também não fica: salvar de novo daria a mesma recusa.
+    const travados = rede || semAcesso ? [] : recusados.filter(travaDoPedido);
+    const falhas = semAcesso
+      ? { foraDoAlcance: [], caidos: [], semEfeito: [] }
+      : {
+          foraDoAlcance: rede
+            ? []
+            : recusados.filter(pedido => !travados.includes(pedido)),
+          caidos: rede ? [...caidos, ...recusados] : caidos,
+          semEfeito: gravados.filter(
+            ([id, destino]) => funcaoDe(id) !== destino
+          ),
+        };
+    const pendentes = Object.values(falhas).flat();
     mudancas.value = new Map(pendentes);
-    erro.value = frases({ ...falhas, semAcesso });
-    if (semAcesso) {
-      salvando.value = false;
-      return false;
-    }
+    erro.value = frases({ ...falhas, semAcesso, travados });
     salvando.value = false;
-    return !pendentes.length;
+    return !semAcesso && !pendentes.length;
   };
 
   return { salvando, erro, salvar };

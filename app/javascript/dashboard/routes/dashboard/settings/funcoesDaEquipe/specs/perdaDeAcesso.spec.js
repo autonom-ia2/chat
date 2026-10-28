@@ -1,4 +1,7 @@
+import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
+import en from 'dashboard/i18n/locale/en/funcoesDaEquipe.json';
 import {
+  MODULES,
   PRESETS,
   moduleByKey,
   setLevel,
@@ -139,14 +142,34 @@ describe('nivelQueFica', () => {
     ).toEqual({ area: 'CONTACTS', nivel: 'OLHA' });
   });
 
-  it('Atende todas para as próprias: fica atendendo as próprias', () => {
+  // Rodada 5: o Supervisor que desce para "Atende as próprias" continua pegando as novas e ajudando pelo link (a
+  // prévia diz isso); o que fica não pode dizer "só as próprias".
+  it('Supervisor de Atende todas para as próprias: fica com as próprias, as novas e o link', () => {
     const supervisor = PRESETS.SUPERVISOR();
     expect(
       nivelQueFica(
         supervisor,
         setLevel(moduleByKey('CONVERSATIONS'), 'limited', supervisor)
       )
-    ).toEqual({ area: 'CONVERSATIONS', nivel: 'PROPRIAS' });
+    ).toEqual({ area: 'CONVERSATIONS', nivel: 'PROPRIAS_NOVAS_E_LINK' });
+  });
+
+  it.each([
+    [['conversation_participating_manage'], 'PROPRIAS_E_LINK'],
+    [['conversation_unassigned_manage'], 'PROPRIAS_E_NOVAS'],
+    [
+      ['conversation_participating_manage', 'conversation_unassigned_manage'],
+      'PROPRIAS_NOVAS_E_LINK',
+    ],
+    [
+      ['conversation_participating_manage', 'conversation_view'],
+      'PROPRIAS_E_LINK',
+    ],
+  ])('Atende todas para as próprias (%j): %s', (depois, nivel) => {
+    expect(nivelQueFica(['conversation_manage'], depois)).toEqual({
+      area: 'CONVERSATIONS',
+      nivel,
+    });
   });
 
   it('Vendas de Pode mexer para Só olha: fica olhando as vendas', () => {
@@ -167,5 +190,25 @@ describe('nivelQueFica', () => {
         ['contact_view', 'inbox_view']
       )
     ).toBeNull();
+  });
+
+  // Rodada 5: toda área que pode descer para "só olha" tem a forma minúscula da frase ("só vão olhar as vendas"), nos
+  // dois idiomas; uma área nova sem ela mostraria a chave crua.
+  it('toda área que desce para "só olha" tem a forma da frase em pt_BR e en', () => {
+    const topo = module => (module.type === 'conversations' ? 'all' : 'manage');
+    const descem = MODULES.filter(
+      module =>
+        nivelQueFica(
+          setLevel(module, topo(module), []),
+          setLevel(module, 'view', [])
+        )?.nivel === 'OLHA'
+    ).map(module => module.key);
+    expect(descem).toContain('CRM');
+    expect(descem).toContain('CONVERSATIONS');
+    [ptBR, en].forEach(idioma => {
+      descem.forEach(area => {
+        expect(idioma.FUNCOES_EQUIPE.PERDA.FICA.AREA[area], area).toBeTruthy();
+      });
+    });
   });
 });

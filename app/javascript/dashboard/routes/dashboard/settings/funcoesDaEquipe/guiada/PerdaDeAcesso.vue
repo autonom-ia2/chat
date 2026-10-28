@@ -65,7 +65,8 @@ const texto = computed(() => {
     n.value
   );
   if (!umaSo.value || !props.fica) return quem;
-  const area = t(`FUNCOES_EQUIPE.AREAS.${props.fica.area}.COM_ARTIGO`);
+  // A área no meio da frase, em minúscula ("só vão olhar as vendas"), rodada 5.
+  const area = t(`FUNCOES_EQUIPE.PERDA.FICA.AREA.${props.fica.area}`);
   const fica = t(
     `FUNCOES_EQUIPE.PERDA.FICA.${props.fica.nivel}`,
     { area },

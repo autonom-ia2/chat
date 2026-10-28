@@ -13,24 +13,23 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const { diff, efeitoDe } = useSemFuncao();
+const { efeitoDe } = useSemFuncao();
 const id = useId();
 const tudo = ref(false);
 
-const mudanca = computed(() => diff(props.permissions));
-
+const FRASE = {
+  ganhoEPerda: 'PASSA_E_DEIXA',
+  ganho: 'SO_PASSA',
+  perda: 'SO_DEIXA',
+  nada: 'NADA',
+};
+const efeito = computed(() => efeitoDe(props.permissions));
 const frase = computed(() => {
-  const { ganho, perda, tambem } = efeitoDe(props.permissions);
-  const valores = { ganho, perda };
-  const principal = () => {
-    if (ganho && perda)
-      return t('FUNCOES_EQUIPE.EFEITO.PASSA_E_DEIXA', valores);
-    if (ganho) return t('FUNCOES_EQUIPE.EFEITO.SO_PASSA', valores);
-    return perda
-      ? t('FUNCOES_EQUIPE.EFEITO.SO_DEIXA', valores)
-      : t('FUNCOES_EQUIPE.EFEITO.NADA');
-  };
-  return [principal(), ...tambem].join(' ');
+  const { forma, ganho, perda, tambem } = efeito.value;
+  return [
+    t(`FUNCOES_EQUIPE.EFEITO.${FRASE[forma]}`, { ganho, perda }),
+    ...tambem,
+  ].join(' ');
 });
 </script>
 
@@ -58,8 +57,8 @@ const frase = computed(() => {
     <DiffDeAcesso
       v-show="tudo"
       :id="`${id}-tudo`"
-      :ganha="mudanca.ganha"
-      :perde="mudanca.perde"
+      :ganha="efeito.ganha"
+      :perde="efeito.perde"
     />
   </div>
 </template>

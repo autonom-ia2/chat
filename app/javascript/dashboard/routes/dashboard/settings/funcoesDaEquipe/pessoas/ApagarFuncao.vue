@@ -47,6 +47,9 @@ const quantas = computed(() =>
 const semContagem = computed(() => props.estadoDasPessoas !== 'pronto');
 
 const comGente = computed(() => quantas.value > 0);
+// O campo do destino só aparece com a contagem pronta e gente na função; fora dele, o motivo de ter voltado (a recusa
+// do servidor) vai para o alto do diálogo (revisão do #2308, rodada 5).
+const comDestino = computed(() => !semContagem.value && comGente.value);
 const nome = computed(() => funcao.value?.name || '');
 
 const opcoes = computed(() => [
@@ -128,6 +131,14 @@ defineExpose({ abrir });
     @acao="confirmar"
   >
     <p
+      v-if="erro && !comDestino"
+      data-erro-apagar
+      role="alert"
+      class="m-0 text-sm text-n-ruby-11"
+    >
+      {{ erro }}
+    </p>
+    <p
       v-if="estadoDasPessoas === 'carregando'"
       data-apagar-carregando
       role="status"
@@ -152,7 +163,7 @@ defineExpose({ abrir });
         {{ $t('FUNCOES_EQUIPE.ERRO.TENTAR') }}
       </button>
     </div>
-    <div v-else-if="comGente" data-destino class="flex flex-col gap-3 mt-1">
+    <div v-else-if="comDestino" data-destino class="flex flex-col gap-3 mt-1">
       <label :for="campo" class="text-sm font-semibold text-n-slate-12">
         {{ $t('FUNCOES_EQUIPE.APAGAR.NOVA_FUNCAO') }}
       </label>

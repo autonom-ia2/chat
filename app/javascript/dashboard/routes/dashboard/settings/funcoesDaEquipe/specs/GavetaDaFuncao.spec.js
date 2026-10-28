@@ -1,4 +1,3 @@
-import { reactive } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { PRESETS } from '../../customRoles/permissionMatrix';
@@ -53,9 +52,10 @@ const montar = ({
   flags = [],
   agentes = AGENTES.map(item => ({ ...item })),
   atualizar = vi.fn(gravarNa(agentes)),
+  recarregar = vi.fn(),
 } = {}) => {
-  const recarregar = vi.fn();
   const funcoesDeNovo = vi.fn();
+  const quemMontaPelaStore = vi.fn();
   const store = loja({
     giver,
     flags,
@@ -65,6 +65,7 @@ const montar = ({
       'agents/update': atualizar,
       'agents/get': recarregar,
       'customRole/getCustomRole': funcoesDeNovo,
+      validityCheck: quemMontaPelaStore,
     },
   });
   const wrapper = mount(GavetaDaFuncao, {
@@ -75,8 +76,20 @@ const montar = ({
       stubs: { ...global(store).stubs, Avatar: true },
     },
   });
-  return { wrapper, atualizar, recarregar, funcoesDeNovo };
+  return { wrapper, atualizar, recarregar, funcoesDeNovo, quemMontaPelaStore };
 };
+
+// A resposta do /auth/validate_token: quem monta como o servidor o vê agora.
+const sessaoDe = permissions => ({
+  data: {
+    payload: {
+      data: { id: CARLA.userId, accounts: [{ id: 1, permissions }] },
+    },
+  },
+});
+const SEM_PESSOAS = CARLA.permissions.filter(
+  chave => chave !== 'people_manage'
+);
 
 // A recusa como a store de agentes a lança (agents.js: Error com status e code da resposta).
 const recusa = (status, code) =>
@@ -297,39 +310,19 @@ describe('GavetaDaFuncao', () => {
     }
   );
 
-  // Rodada 4: o 401 sem código do agents/update também vem de quem perdeu Pessoas (UserPolicy#update?). A gaveta
-  // recarrega quem monta e, sem Pessoas, diz isso em vez de "fora do que você pode dar".
-  it('401 sem código de quem perdeu Pessoas: recarrega quem monta e diz que não pode mais', async () => {
-    const giver = reactive({ ...CARLA, permissions: [...CARLA.permissions] });
-    const recarregarQuemMonta = vi.fn(() => {
-      giver.permissions = giver.permissions.filter(
-        chave => chave !== 'people_manage'
-      );
-    });
+  // Rodada 4: o 401 sem código do agents/update também vem de quem perdeu Pessoas (UserPolicy#update?). Rodada 5: quem
+  // monta vem da própria conferência da sessão (authAPI.validityCheck), não do validityCheck da store, que engole a
+  // falha de rede e deixaria Pessoas velho.
+  it('401 sem código de quem perdeu Pessoas: a conferência da sessão diz que não pode mais', async () => {
+    validityCheck.mockResolvedValue(sessaoDe(SEM_PESSOAS));
     const atualizar = vi.fn(() => Promise.reject(recusa(401, CORPO_DO_401)));
-    const agentes = AGENTES.map(item => ({ ...item }));
-    const store = loja({
-      giver,
-      funcoes: [ATENDENTE, VENDEDOR, FINANCEIRO],
-      agentes,
-      actions: {
-        'agents/update': atualizar,
-        validityCheck: recarregarQuemMonta,
-      },
-    });
-    const wrapper = mount(GavetaDaFuncao, {
-      attachTo: document.body,
-      props: { funcao: VENDEDOR },
-      global: {
-        ...global(store),
-        stubs: { ...global(store).stubs, Avatar: true },
-      },
-    });
+    const { wrapper, quemMontaPelaStore } = montar({ atualizar });
 
     await linha(wrapper, 21).find('[data-acao]').trigger('click');
     await salvar(wrapper);
 
-    expect(recarregarQuemMonta).toHaveBeenCalledTimes(1);
+    expect(validityCheck).toHaveBeenCalledTimes(1);
+    expect(quemMontaPelaStore).not.toHaveBeenCalled();
     const erro = wrapper.find('[data-erro-gaveta]');
     expect(erro.attributes('role')).toBe('alert');
     expect(erro.text()).toBe(
@@ -342,6 +335,88 @@ describe('GavetaDaFuncao', () => {
     await wrapper.find('[data-fechar]').trigger('click');
     expect(wrapper.emitted('fechar')).toHaveLength(1);
   });
+
+  it('401 sem código e a conferência da sessão cai por rede: tente de novo, nunca "fora do alcance"', async () => {
+    validityCheck.mockRejectedValue(new Error('Network Error'));
+    const atualizar = vi.fn(() => Promise.reject(recusa(401, CORPO_DO_401)));
+    const { wrapper, quemMontaPelaStore } = montar({ atualizar });
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(quemMontaPelaStore).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
+      'A função de Gabriel Souza não foi salva. Confira a internet e tente de novo.'
+    );
+  });
+
+  // Rodada 5: sem Pessoas, nada fica pendente, nem quem caiu por rede: a gaveta fecha sem perguntar.
+  it('sem Pessoas, com uma pessoa recusada e outra caída por rede: nada pendente, e o X fecha direto', async () => {
+    validityCheck.mockResolvedValue(sessaoDe(SEM_PESSOAS));
+    const { mostrar, soltar } = espiarDialogo();
+    const atualizar = vi.fn((_, { id }) =>
+      Promise.reject(
+        id === 23 ? recusa(401, CORPO_DO_401) : recusa(undefined, undefined)
+      )
+    );
+    const { wrapper } = montar({ atualizar });
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await linha(wrapper, 23).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
+      'Você não pode mais pôr e tirar pessoas das funções. Fale com o administrador.'
+    );
+    expect(wrapper.find('[data-frase-rodape]').exists()).toBe(false);
+    await wrapper.find('[data-fechar]').trigger('click');
+    expect(mostrar).not.toHaveBeenCalled();
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    soltar();
+  });
+
+  // Rodada 5: o 401 sem código com Pessoas ainda ali, e a recarga mostra a pessoa travada (numa função acima do
+  // alcance, ou administradora). Ela sai do que falta salvar, com a frase da trava: nada de "Salvar" em laço.
+  it.each([
+    [
+      'numa função acima do alcance',
+      pessoa => {
+        pessoa.custom_role_id = 3;
+      },
+      'A função de Íris Lopes não mudou: só o administrador muda.',
+    ],
+    [
+      'administradora',
+      pessoa => {
+        pessoa.role = 'administrator';
+        pessoa.custom_role_id = null;
+      },
+      'Íris Lopes já pode tudo: tem acesso de administrador.',
+    ],
+  ])(
+    '401 sem código e a recarga traz a pessoa %s: sai do pendente, com a frase da trava',
+    async (_, mudar, frase) => {
+      const agentes = AGENTES.map(item => ({ ...item }));
+      const atualizar = vi.fn(() => Promise.reject(recusa(401, CORPO_DO_401)));
+      const recarregar = vi.fn(() =>
+        mudar(agentes.find(item => item.id === 23))
+      );
+      const { wrapper } = montar({ agentes, atualizar, recarregar });
+
+      await linha(wrapper, 23).find('[data-acao]').trigger('click');
+      await salvar(wrapper);
+
+      expect(recarregar).toHaveBeenCalledTimes(1);
+      expect(wrapper.find('[data-erro-gaveta]').text()).toBe(frase);
+      expect(wrapper.find('[data-erro-gaveta]').text()).not.toContain(
+        'fora do que você pode dar'
+      );
+      expect(wrapper.find('[data-frase-rodape]').exists()).toBe(false);
+      expect(
+        wrapper.find('[data-salvar]').attributes('disabled')
+      ).toBeDefined();
+    }
+  );
 
   it('401 do agents/update com sessão boa e Pessoas ainda ali (corpo real, sem código): diz que está fora do alcance e recarrega pessoas e funções', async () => {
     const agentes = AGENTES.map(item => ({ ...item }));

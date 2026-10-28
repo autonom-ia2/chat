@@ -23,14 +23,23 @@ export const loja = ({
   caixas = [],
 } = {}) =>
   createStore({
+    // Quem monta como a store guarda: SET_CURRENT_USER (o mesmo commit do auth) troca, como o validityCheck faria.
+    state: () => ({
+      currentUser: {
+        id: giver.userId,
+        accounts: [{ id: 1, permissions: giver.permissions }],
+      },
+    }),
+    mutations: {
+      SET_CURRENT_USER: (state, usuario) => {
+        state.currentUser = usuario;
+      },
+    },
     getters: {
       getCurrentAccountId: () => 1,
       getCurrentRole: () => (giver.isAdmin ? 'administrator' : 'agent'),
       getCurrentCustomRoleId: () => giver.customRoleId,
-      getCurrentUser: () => ({
-        id: giver.userId,
-        accounts: [{ id: 1, permissions: giver.permissions }],
-      }),
+      getCurrentUser: state => state.currentUser,
       'accounts/getAccount': () => () => ({ id: 1 }),
       'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
         flags.includes(flag),
@@ -51,12 +60,22 @@ export const global = (store = loja()) => ({
   stubs: { TeleportWithDirection: { template: '<div><slot /></div>' } },
 });
 
-// O jsdom não tem showModal: o espião registra a abertura do diálogo da casa; soltar() tira o espião.
-export const espiarDialogo = () => {
-  const mostrar = vi.fn();
+// O jsdom não tem showModal nem close: o espião registra a abertura (e, com `marcarAberto`, põe o atributo open, como
+// o navegador) e o fechamento do diálogo da casa. soltar() tira os espiões; quem usa chama no afterEach, para um teste
+// que falha não deixar o espião para o seguinte.
+export const espiarDialogo = ({ marcarAberto = false } = {}) => {
+  const mostrar = vi.fn(function abrirModal() {
+    if (marcarAberto) this.setAttribute('open', '');
+  });
+  const fechar = vi.fn();
   HTMLDialogElement.prototype.showModal = mostrar;
+  HTMLDialogElement.prototype.close = fechar;
   return {
     mostrar,
-    soltar: () => delete HTMLDialogElement.prototype.showModal,
+    fechar,
+    soltar: () => {
+      delete HTMLDialogElement.prototype.showModal;
+      delete HTMLDialogElement.prototype.close;
+    },
   };
 };

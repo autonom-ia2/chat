@@ -787,9 +787,9 @@
     "controller": "api/v1/accounts/custom_roles#destroy",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:34",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:74",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:103"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:41",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:82",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },
@@ -6526,9 +6526,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:23",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:68",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:103"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },
@@ -16877,8 +16877,8 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:14",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:68"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:19",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -25325,9 +25325,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:23",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:68",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:103"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },

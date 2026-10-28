@@ -1,6 +1,8 @@
+import { defineComponent } from 'vue';
 import { mount } from '@vue/test-utils';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import EfeitoSemFuncao from '../pessoas/EfeitoSemFuncao.vue';
+import { useSemFuncao } from '../useSemFuncao';
 import { global } from './montar';
 
 // #2308, especificação 5.D e revisão do #2308: se o "Sem função" passar a ver R$, tirar alguém da função só MOSTRA o ganho (linha âmbar), não
@@ -75,8 +77,47 @@ describe('EfeitoSemFuncao', () => {
     expect(await deixam(['label_manage', 'macro_manage'])).toContain(
       'Mudar os Atalhos de mensagens'
     );
+    // Rodada 5: "Vão deixar de" fecha a frase ("fazer algumas coisas em Vendas").
     expect(await deixam(['crm_manage_pipelines'])).toEqual([
-      'Parte do que fazia em Vendas',
+      'Fazer algumas coisas em Vendas',
     ]);
+  });
+
+  it('a parte que sai da área também fecha a frase curta da linha', () => {
+    const texto = montar(['crm_view', 'crm_manage_pipelines'])
+      .find('[data-efeito] p')
+      .text();
+    expect(texto).toContain('Deixa de fazer algumas coisas em Vendas.');
+  });
+});
+
+// Rodada 5: a frase da linha e a do rodapé da gaveta saem da mesma `forma`, e o efeito traz o diff inteiro (o "Ver tudo"
+// não calcula de novo).
+describe('useSemFuncao › efeitoDe', () => {
+  const comSemFuncao = () => {
+    let api;
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          api = useSemFuncao();
+          return () => null;
+        },
+      }),
+      { global: global() }
+    );
+    return { api, wrapper };
+  };
+
+  it('diz a forma da frase e traz o diff de uma vez', () => {
+    const { api, wrapper } = comSemFuncao();
+    const efeito = api.efeitoDe(['label_manage']);
+    expect(efeito.forma).toBe('ganhoEPerda');
+    expect(efeito.ganha).toEqual(api.diff(['label_manage']).ganha);
+    expect(efeito.perde).toEqual(api.diff(['label_manage']).perde);
+    expect(api.efeitoDe(['contact_view', 'contact_manage']).forma).toBe(
+      'ganho'
+    );
+    expect(api).not.toHaveProperty('curtoDa');
+    wrapper.unmount();
   });
 });

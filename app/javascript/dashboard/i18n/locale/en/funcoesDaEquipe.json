@@ -351,7 +351,7 @@
         "campaign_send": "sending campaigns",
         "report_manage": "seeing the service reports"
       },
-      "SEM_AREA": "working on {area}",
+      "SEM_AREA": "changing {area}",
       "SEM_AREA_VER": "seeing {area}"
     },
     "ESCOLHA": {
@@ -761,8 +761,8 @@
         }
       },
       "OUTRA": {
-        "LISTA": "Part of what they did in {area}",
-        "CURTO": "use part of {area}"
+        "LISTA": "Do some things in {area}",
+        "CURTO": "do some things in {area}"
       },
       "ALGO": {
         "LISTA": "Do something in {area}",
@@ -842,6 +842,11 @@
       "SO_LEITURA_MINE": "No one changes their own role: this one is yours.",
       "NINGUEM_AINDA": "No one has this role yet.",
       "FORA_DO_ALCANCE": "Couldn't change the role of {nomes}: it's beyond what you can give.",
+      "TRAVADA": {
+        "ABOVE": "{nomes}'s role did not change: only the administrator changes it. | These people's roles did not change: {nomes}. Only the administrator changes them.",
+        "ADMIN": "{nomes} can already do everything: they have administrator access. | {nomes} can already do everything: they have administrator access.",
+        "SELF": "Nobody changes their own role. | Nobody changes their own role."
+      },
       "SEM_ACESSO": "You can no longer add or remove people from roles. Talk to the administrator.",
       "NAO_MUDOU": "The role of {nomes} didn't change. Try again; if it keeps happening, talk to the administrator. | The role of these people didn't change: {nomes}. Try again; if it keeps happening, talk to the administrator."
     },
@@ -878,7 +883,26 @@
       "TEXTO_UMA": "This person has the {nome} role. | These people have the {nome} role.",
       "FICA": {
         "OLHA": "From now on, they will only look at {area}. | From now on, they will only look at {area}.",
-        "PROPRIAS": "From now on, they will only handle their own conversations. | From now on, they will only handle their own conversations."
+        "PROPRIAS": "From now on, they will only handle their own conversations. | From now on, they will only handle their own conversations.",
+        "PROPRIAS_E_NOVAS": "From now on, they will handle their own conversations and pick up new ones nobody has taken. | From now on, they will handle their own conversations and pick up new ones nobody has taken.",
+        "PROPRIAS_E_LINK": "From now on, they will handle their own conversations and help when a colleague sends the conversation link. | From now on, they will handle their own conversations and help when a colleague sends the conversation link.",
+        "PROPRIAS_NOVAS_E_LINK": "From now on, they will handle their own conversations, pick up new ones nobody has taken and help when a colleague sends the conversation link. | From now on, they will handle their own conversations, pick up new ones nobody has taken and help when a colleague sends the conversation link.",
+        "AREA": {
+          "CONVERSATIONS": "conversations",
+          "CONTACTS": "contacts",
+          "KNOWLEDGE_BASE": "the Help Center",
+          "CRM": "sales",
+          "AUTONOMIA": "AI bots",
+          "PROSPECTING": "the new-customer search",
+          "INSURANCE": "quotes",
+          "CAMPAIGNS": "campaigns",
+          "WHATSAPP_TEMPLATES": "WhatsApp templates",
+          "META_ADS": "ads",
+          "INBOXES": "channels",
+          "AUTOMATIONS": "automatic rules",
+          "SCHEDULING": "booking",
+          "FINANCE": "the account costs"
+        }
       },
       "VOLTAR": "Back",
       "SALVAR": "Save anyway",

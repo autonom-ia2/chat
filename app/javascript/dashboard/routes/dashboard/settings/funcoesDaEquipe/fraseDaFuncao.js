@@ -100,14 +100,22 @@ const CHAVES_DA_RECOLHIDA = [
   'people_manage',
   'custom_role_manage',
   'grant_above_own',
-  'financial_view',
-  'financial_manage',
 ];
 
+// `cobre`: as capacidades menores que esta já traz. Quem lê e atende todas as conversas também responde as entregues,
+// pega as novas, ajuda pelo link e lê as dos colegas; quem cria e move as vendas também as move; quem mexe no
+// financeiro também o vê (`_manage` traz `_view` no servidor). Ganhar a maior não é perder as menores (revisão do
+// #2308, rodada 4); o par mora no próprio item, para uma capacidade nova não esquecê-lo (rodada 5).
 const CAPACIDADES = [
   {
     id: 'LER_E_ATENDER_TODAS',
     tem: p => conversas(p) === CONVERSATION_LEVELS.ALL,
+    cobre: [
+      'RESPONDER_ENTREGUES',
+      'PEGAR_NOVAS',
+      'AJUDAR_PELO_LINK',
+      'LER_COLEGAS',
+    ],
   },
   {
     id: 'RESPONDER_ENTREGUES',
@@ -142,6 +150,7 @@ const CAPACIDADES = [
     id: 'CRIAR_MOVER_VENDAS',
     tem: mexeNasVendas,
     naoPode: p => nivelDeVendas(p) === LEVELS.VIEW && !soOlhaEMove(p),
+    cobre: ['MOVER_VENDAS'],
   },
   // Função antiga "Só olha" com mover as vendas (gravada pela tela de antes): o servidor deixa mover
   // (CardPolicy#move?), e a prévia diz isso em vez de "Não pode criar e mover".
@@ -178,22 +187,19 @@ const CAPACIDADES = [
     id: chave.toUpperCase(),
     tem: tem(chave),
   })),
+  { id: 'FINANCIAL_VIEW', tem: tem('financial_view') },
+  {
+    id: 'FINANCIAL_MANAGE',
+    tem: tem('financial_manage'),
+    cobre: ['FINANCIAL_VIEW'],
+  },
 ];
 
-// Capacidade que contém outras: quem lê e atende todas as conversas também responde as entregues, pega as novas,
-// ajuda pelo link e lê as dos colegas; quem cria e move as vendas também as move; quem mexe no financeiro também o vê
-// (`_manage` traz `_view` no servidor). Ganhar a maior não é perder as menores (revisão do #2308, rodada 4).
-const CONTEM = {
-  LER_E_ATENDER_TODAS: [
-    'RESPONDER_ENTREGUES',
-    'PEGAR_NOVAS',
-    'AJUDAR_PELO_LINK',
-    'LER_COLEGAS',
-  ],
-  CRIAR_MOVER_VENDAS: ['MOVER_VENDAS'],
-  FINANCIAL_MANAGE: ['FINANCIAL_VIEW'],
-};
-export const contidasEm = ids => ids.flatMap(id => CONTEM[id] || []);
+// As capacidades que as de `ids` já cobrem.
+export const contidasEm = ids =>
+  CAPACIDADES.filter(item => ids.includes(item.id)).flatMap(
+    item => item.cobre || []
+  );
 
 export const podeDaFuncao = permissions =>
   CAPACIDADES.filter(item => item.tem(permissions)).map(item => item.id);

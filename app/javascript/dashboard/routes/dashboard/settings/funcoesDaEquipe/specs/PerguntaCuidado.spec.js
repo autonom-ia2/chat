@@ -228,8 +228,10 @@ describe('PerguntaCuidado', () => {
     expect(wrapper.find('[data-cadeado="contact_delete"]').exists()).toBe(
       false
     );
+    // Rodada 5: o cadeado existe aqui (o que a Carla não dá); abri-lo é o que mostra os motivos.
     const cadeado = wrapper.find('[data-recolhida]');
-    if (cadeado.exists()) await cadeado.trigger('click');
+    expect(cadeado.exists()).toBe(true);
+    await cadeado.trigger('click');
     expect(wrapper.text()).not.toContain('FUNCOES_EQUIPE.TRAVA');
   });
 });

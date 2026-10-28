@@ -50,12 +50,22 @@ export function useSemFuncao() {
 
   // O efeito de ficar sem função numa frase, o mesmo na linha da pessoa e no rodapé da gaveta (revisão do #2308,
   // rodada 4): o primeiro ganho, a perda que mais pesa (porPeso) e, como "também", o ganho que só o administrador daria
-  // (os R$). Os textos já vêm na forma curta; '' quando não há.
+  // (os R$). Os textos já vêm na forma curta; '' quando não há. `forma` diz qual frase cabe ('ganhoEPerda', 'ganho',
+  // 'perda' ou 'nada'), e cada tela só escolhe a chave dela; `ganha` e `perde` são o diff inteiro, para o "Ver tudo"
+  // não calcular de novo (rodada 5).
+  const formaDo = (ganho, perda) => {
+    if (ganho && perda) return 'ganhoEPerda';
+    if (ganho) return 'ganho';
+    return perda ? 'perda' : 'nada';
+  };
   const efeitoDe = permissions => {
     const { ganha, perde } = diff(permissions);
     const [ganho, ...outros] = ganha;
     const [perda] = porPeso(perde);
     return {
+      ganha,
+      perde,
+      forma: formaDo(ganho, perda),
       ganho: ganho ? curtoDa(ganho) : '',
       perda: perda ? curtoDa(perda) : '',
       tambem: outros
@@ -87,7 +97,6 @@ export function useSemFuncao() {
     diff,
     efeitoDe,
     textoDa,
-    curtoDa,
     notas,
   };
 }
