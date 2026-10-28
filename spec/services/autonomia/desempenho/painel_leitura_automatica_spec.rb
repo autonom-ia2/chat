@@ -9,9 +9,10 @@ RSpec.describe Autonomia::Desempenho::Painel do
   let(:conversa) { create(:conversation, account: account, inbox: inbox) }
   let(:painel) { described_class.new(account: account, sujeito_type: 'robo', sujeito_id: robo.id) }
 
-  def rodada!(status, corte, pendentes: 0)
+  def rodada!(status, corte, pendentes: 0, pendente_desde: nil)
     Autonomia::Desempenho::Rodada.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, corte_em: corte, piso_em: corte - 1.day,
-                                          iniciada_em: corte, status: status, lote: 'spec', conversas_pendentes: pendentes)
+                                          iniciada_em: corte, status: status, lote: 'spec', conversas_pendentes: pendentes,
+                                          pendente_desde: pendente_desde)
   end
 
   before do
@@ -36,18 +37,17 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(meta).to include('lido_ate' => '2026-10-23T07:00', 'situacao' => 'sem_ia')
   end
 
-  it 'com pendentes, lido_ate é antes da mensagem pendente mais antiga, mesmo com leitura mais recente' do
-    pendente = create(:conversation, account: account, inbox: inbox)
-    create(:message, conversation: pendente, account: account, inbox: inbox, message_type: :incoming, created_at: Time.utc(2026, 10, 22, 12, 0))
-    create(:message, conversation: pendente, account: account, inbox: inbox, message_type: :outgoing, sender: robo,
-                     created_at: Time.utc(2026, 10, 22, 12, 1))
-    rodada!('teto', Time.utc(2026, 10, 23, 10, 0), pendentes: 1)
+  it 'com pendentes, lido_ate é antes da mensagem pendente mais antiga gravada na rodada, mesmo com leitura mais recente' do
+    rodada!('teto', Time.utc(2026, 10, 23, 10, 0), pendentes: 1, pendente_desde: Time.utc(2026, 10, 22, 12, 0))
+    allow(Autonomia::Desempenho::LeituraAutomatica::Candidatas).to receive(:new)
 
     # A leitura de `conversa` vai até 22/10 18:00; a pendente espera desde 22/10 09:00 (fuso da loja).
     expect(painel.call('7')['meta']).to include('lido_ate' => '2026-10-22T08:59', 'situacao' => 'teto')
+    # O painel não refaz a consulta da fila.
+    expect(Autonomia::Desempenho::LeituraAutomatica::Candidatas).not_to have_received(:new)
   end
 
-  it 'com pendentes que já não se acham (lidas por fora), lido_ate é o piso da rodada, nunca a leitura mais recente' do
+  it 'com pendentes sem a mensagem gravada, lido_ate é o piso da rodada, nunca a leitura mais recente' do
     rodada!('teto', Time.utc(2026, 10, 23, 10, 0), pendentes: 3)
 
     expect(painel.call('7')['meta']).to include('lido_ate' => '2026-10-22T07:00', 'situacao' => 'teto')

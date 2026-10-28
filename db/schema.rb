@@ -738,6 +738,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_610000) do
     t.string "status", null: false
     t.integer "conversas_lidas", default: 0, null: false
     t.integer "conversas_pendentes", default: 0, null: false
+    t.datetime "pendente_desde"
     t.decimal "custo_usd", precision: 12, scale: 6, default: "0.0", null: false
     t.string "lote", null: false
     t.datetime "created_at", null: false

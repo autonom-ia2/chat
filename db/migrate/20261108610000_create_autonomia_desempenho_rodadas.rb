@@ -9,6 +9,8 @@
 # - `status`: rodando | ok | teto (parou no teto diário de gasto) | sem_ia (a conta não tem a própria chave de IA) |
 #   erro (a rodada caiu no meio).
 # - `conversas_lidas` e `conversas_pendentes`: o que a rodada leu e o que ficou para a próxima.
+# - `pendente_desde`: com pendentes, a mensagem nova mais antiga entre elas, gravada ao fechar. O painel mostra
+#   "Lido até" logo antes dela (tudo antes foi lido), sem refazer a consulta da fila.
 # - `custo_usd`: o gasto da rodada, somado do consumo gravado pela chamada.
 #
 # Tabela nova e vazia: o índice nasce junto. Sem `sujeito_type` no índice, como em autonomia_desempenho_procuras: o
@@ -27,6 +29,7 @@ class CreateAutonomiaDesempenhoRodadas < ActiveRecord::Migration[7.2]
       t.string :status, null: false
       t.integer :conversas_lidas, null: false, default: 0
       t.integer :conversas_pendentes, null: false, default: 0
+      t.datetime :pendente_desde
       t.decimal :custo_usd, precision: 12, scale: 6, null: false, default: 0
       t.string :lote, null: false
       t.timestamps

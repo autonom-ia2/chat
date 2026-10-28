@@ -102,13 +102,8 @@ class Autonomia::Desempenho::Painel
     ate.in_time_zone(fuso).strftime('%Y-%m-%dT%H:%M')
   end
 
-  def antes_da_pendente(rodada)
-    pendente = Autonomia::Desempenho::LeituraAutomatica::Candidatas.new(
-      account: @account, sujeito_type: @sujeito_type, sujeito_id: @sujeito_id, remetentes: ficha.configuracao['remetentes_do_agente'],
-      piso: rodada.piso_em, corte: rodada.corte_em
-    ).mais_antiga
-    pendente ? pendente - 1.second : rodada.piso_em
-  end
+  # A rodada grava a mensagem pendente mais antiga ao fechar; sem ela, o piso da rodada.
+  def antes_da_pendente(rodada) = rodada.pendente_desde ? rodada.pendente_desde - 1.second : rodada.piso_em
 
   def instrucao_mudou?
     return nil unless @sujeito_type == 'agente' && ficha.instrucao_hash.present?

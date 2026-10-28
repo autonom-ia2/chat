@@ -3,11 +3,11 @@
 # ligados, na fila `low`, com uma espera aleatória para as contas não lerem todas no mesmo minuto. Com conta, enfileira
 # um LeituraDaFichaJob por agente da conta que tem ficha vigente com chave de leitura: a rodada de um agente que cai
 # não segura a dos outros. Este job só lista (não paga nada), então fica com as novas tentativas padrão.
+# Quem entra (conta e agente) é Autonomia::Desempenho::LeituraAutomatica::Elegivel, o mesmo critério do job da ficha.
 # Tudo desligado enquanto a ENV AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA não for verdadeira.
 class Autonomia::Desempenho::LeituraAutomaticaJob < ApplicationJob
   queue_as :low
 
-  FLAG = 'agentes_painel_desempenho'.freeze
   ESPALHAR_EM = 30.minutes.to_i
 
   def perform(account_id = nil)
@@ -15,7 +15,7 @@ class Autonomia::Desempenho::LeituraAutomaticaJob < ApplicationJob
     return espalhar if account_id.nil?
 
     account = Account.find_by(id: account_id)
-    return unless ligada_na_conta?(account)
+    return unless elegivel.conta?(account)
 
     fichas(account).each { |ficha| ::Autonomia::Desempenho::LeituraDaFichaJob.perform_later(account.id, ficha.id) }
   end
@@ -24,15 +24,13 @@ class Autonomia::Desempenho::LeituraAutomaticaJob < ApplicationJob
 
   def espalhar
     Account.where(id: com_chave.select(:account_id)).find_each do |account|
-      next unless ligada_na_conta?(account)
+      next unless elegivel.conta?(account)
 
       self.class.set(wait: rand(ESPALHAR_EM).seconds).perform_later(account.id)
     end
   end
 
-  def ligada_na_conta?(account)
-    account&.active? && account.feature_enabled?(FLAG) && ::Autonomia::Agents::Config.enabled?(account)
-  end
+  def elegivel = ::Autonomia::Desempenho::LeituraAutomatica::Elegivel
 
   def com_chave = ::Autonomia::Desempenho::Ficha.where.not(chave_de_leitura: [nil, ''])
 
@@ -41,16 +39,10 @@ class Autonomia::Desempenho::LeituraAutomaticaJob < ApplicationJob
   def fichas(account)
     sujeitos = ::Autonomia::Desempenho::Ficha.where(account_id: account.id).distinct.pluck(:sujeito_type, :sujeito_id)
     sujeitos.filter_map do |tipo, id|
-      next unless ativo?(account, tipo, id)
+      next unless elegivel.sujeito?(account, tipo, id)
 
       ficha = ::Autonomia::Desempenho::Ficha.vigente(account, tipo, id)
       ficha if ficha&.chave_de_leitura.present?
     end
-  end
-
-  def ativo?(account, tipo, id)
-    return AgentBot.exists?(account_id: account.id, id: id) if tipo == 'robo'
-
-    ::Autonomia::Agents::Agent.kept.exists?(account_id: account.id, id: id, enabled: true)
   end
 end

@@ -196,13 +196,46 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
         .to have_attributes(status: 'nao_lida', lida_ate_em: Time.utc(2026, 10, 21, 13, 1))
     end
 
-    it 'não roda duas vezes ao mesmo tempo para o mesmo agente' do
-      Redis::Alfred.set("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:trava", 'outra', ex: 60)
+    it 'não roda com outra rodada da mesma conta em andamento: levanta ContaOcupada sem abrir rodada' do
+      Redis::Alfred.set("autonomia:desempenho:leitura:#{account.id}:trava", 'outra', ex: 60)
 
-      expect(rodar).to be_nil
+      expect { rodar }.to raise_error(described_class::ContaOcupada)
       expect(Autonomia::Desempenho::Rodada.count).to eq(0)
     ensure
-      Redis::Alfred.delete("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:trava")
+      Redis::Alfred.delete("autonomia:desempenho:leitura:#{account.id}:trava")
+    end
+
+    it 'duas fichas da mesma conta: a segunda espera a primeira terminar (o teto é da conta) e roda depois' do
+      account.enable_features!('agentes_painel_desempenho')
+      allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
+      outro = create(:agent_bot, account: account)
+      configuracao_b = ficha.configuracao.merge('remetentes_do_agente' => [['AgentBot', outro.id]])
+      ficha_b = ficha_da_loja!(account, sujeito_id: outro.id).tap { |f| f.update!(chave_de_leitura: 'Leia.', configuracao: configuracao_b) }
+      conversa.tap do |c|
+        mensagem(c, :incoming, Time.utc(2026, 10, 21, 13, 0))
+        mensagem(c, :outgoing, Time.utc(2026, 10, 21, 13, 1), remetente: outro, texto: 'Olá!')
+      end
+      job = Autonomia::Desempenho::LeituraDaFichaJob
+      durante_a = nil
+      stub_request(:post, 'https://api.openai.com/v1/responses').to_return do |request|
+        corpos << JSON.parse(request.body)
+        # Enquanto a rodada da ficha A lê, o job da ficha B chega e encontra a conta ocupada.
+        durante_a ||= Autonomia::Desempenho::Rodada.where(sujeito_id: outro.id).count.tap { job.perform_now(account.id, ficha_b.id) }
+        { status: 200, body: { id: 'r', output_text: { 'procuras' => [procura] }.to_json, usage: { input_tokens: 1, output_tokens: 1 } }.to_json,
+          headers: { 'Content-Type' => 'application/json' } }
+      end
+
+      with_modified_env(AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA: 'true') do
+        travel_to(agora) { job.perform_now(account.id, ficha.id) }
+        expect(Autonomia::Desempenho::Rodada.where(sujeito_id: outro.id).count).to eq(0)
+        expect(job).to have_been_enqueued.with(account.id, ficha_b.id)
+
+        travel_to(agora + 10.minutes) { perform_enqueued_jobs(only: job) }
+      end
+
+      expect(durante_a).to eq(0)
+      expect(Autonomia::Desempenho::Rodada.where(sujeito_id: [robo.id, outro.id]).order(:id).pluck(:sujeito_id, :status))
+        .to eq([[robo.id, 'ok'], [outro.id, 'ok']])
     end
   end
 
@@ -296,6 +329,8 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
       expect(corpos.size).to eq(3)
       expect(rodada).to have_attributes(status: 'erro', conversas_lidas: 0, conversas_pendentes: 4)
+      # A pendente mais antiga: a mensagem do cliente de `primeira`, 14:00.
+      expect(rodada.pendente_desde).to eq(Time.utc(2026, 10, 21, 14, 0))
       # Erro passageiro não é culpa da conversa: nenhuma conta falha.
       expect([falhas_de(primeira), falhas_de(segunda), falhas_de(terceira)]).to eq([nil, nil, nil])
     end
@@ -345,6 +380,34 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       expect(rodar).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 1)
       expect(procuras_de(segunda).count).to eq(1)
       expect(falhas_de(primeira)).to be_nil
+    end
+
+    it 'a mesma conversa com erro inesperado na 5ª rodada seguida fica não lida e sai da fila' do
+      openai_devolve({ 'procuras' => [procura('inicio' => '10-21 15:00', 'fim' => '10-21 15:01')] })
+      gravar = Autonomia::Desempenho::LeituraAutomatica::Gravacao.instance_method(:gravar!)
+      allow(Autonomia::Desempenho::LeituraAutomatica::Gravacao).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap do |gravacao|
+          allow(gravacao).to receive(:gravar!) do |procuras|
+            raise NoMethodError if argumentos[:conversa].id == primeira.id
+
+            gravar.bind_call(gravacao, procuras)
+          end
+        end
+      end
+
+      4.times do |dia|
+        expect(travel_to(agora + dia.days) { described_class.new(ficha).call }).to have_attributes(status: 'ok', conversas_pendentes: 1)
+      end
+      expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: primeira.id)).to be_nil
+
+      quinta = travel_to(agora + 4.days) { described_class.new(ficha).call }
+
+      expect(quinta).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 0, pendente_desde: nil)
+      expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: primeira.id).status).to eq('nao_lida')
+      expect(falhas_de(primeira)).to be_nil
+      chamadas = corpos.size
+      travel_to(agora + 5.days) { described_class.new(ficha).call }
+      expect(corpos.size).to eq(chamadas)
     end
 
     it 'ficha com faixa quebrada fecha a rodada como erro antes de qualquer chamada' do

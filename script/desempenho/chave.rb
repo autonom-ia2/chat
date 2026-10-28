@@ -55,10 +55,10 @@ module ChaveDeLeitura
     abort('arquivo não encontrado')
   end
 
-  # Só o dono lê o arquivo: 0600 ao criar e de novo depois (o arquivo podia já existir com outra permissão).
+  # Só o dono lê o arquivo: 0600 ao criar e, se ele já existia com outra permissão, 0600 ANTES de escrever a chave.
   def gravar(caminho, conteudo)
+    File.chmod(0o600, caminho) if File.exist?(caminho)
     File.open(caminho, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |arquivo| arquivo.write(conteudo) }
-    File.chmod(0o600, caminho)
   end
 
   def ler_opcoes(argumentos)

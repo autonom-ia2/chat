@@ -8,16 +8,21 @@
 # - Quem paga é o cliente: só lê com a chave de IA da própria conta (app `crm_kanban_ai`). Sem ela (ou com a chave da
 #   instalação), a rodada fica `sem_ia`, sem nenhuma chamada, e a tela diz isso.
 # - Ficha com catálogo ou faixas quebrados: a rodada fecha `erro` antes da primeira chamada, sem gastar nada.
-# - Uma rodada por agente de cada vez (trava no Redis, renovada a cada conversa). No máximo MAX_CONVERSAS por rodada, as
-#   que esperam há mais tempo primeiro; passou do teto diário de gasto, a rodada para como `teto` e o resto fica para a
-#   próxima.
+# - Uma rodada por CONTA de cada vez (trava no Redis, renovada a cada conversa): os agentes da mesma conta rodam em
+#   fila, porque o teto diário de gasto é da conta e só é conferido antes de cada conversa. Com a trava ocupada, `call`
+#   levanta ContaOcupada e o LeituraDaFichaJob se reagenda. No máximo MAX_CONVERSAS por rodada, as que esperam há mais
+#   tempo primeiro; passou do teto diário, a rodada para como `teto` e o resto fica para a próxima.
+# - Ao fechar com pendentes, grava `pendente_desde` (a mensagem pendente mais antiga): o painel mostra "Lido até" com
+#   ela, sem refazer a consulta da fila.
 # - Erro permanente da chamada (chave recusada, modelo inexistente, pedido inválido) fecha a rodada na hora: `sem_ia`
 #   no 401, `erro` no resto. Erro passageiro (rede, 429, 5xx) deixa a conversa pendente, sem contar falha dela; o
 #   terceiro seguido na rodada fecha `erro`.
 # - Conversa recusada (resposta fora do catálogo, JSON quebrado) mantém as procuras de antes; na segunda falha seguida,
 #   fica como não lida até ganhar mensagem nova.
 # - Erro inesperado numa conversa (um bug na gravação, na transcrição) não é culpa dela: ela fica pendente, sem contar
-#   falha, e o terceiro seguido na rodada fecha `erro` (o bug é do sistema, e cada conversa já pagou a chamada).
+#   falha, e o terceiro seguido na rodada fecha `erro` (o bug é do sistema, e cada conversa já pagou a chamada). Um
+#   contador próprio por conversa (separado do de falhas) tira da fila, como não lida, a conversa que der erro
+#   inesperado INESPERADOS_PARA_DESISTIR vezes seguidas: senão ela pagaria uma chamada por dia para sempre.
 # - Rodada `ok` sem pendentes: a próxima só procura mensagem depois do corte dela, com uma margem (o piso anda).
 class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   # Fecha a rodada no meio, com o status dado.
@@ -30,13 +35,19 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     end
   end
 
+  # Outra rodada da mesma conta está em andamento.
+  class ContaOcupada < StandardError; end
+
   ENV_LIGADA = 'AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA'.freeze
   MAX_CONVERSAS = 500
   FALHAS_PARA_DESISTIR = 2
   PASSAGEIRAS_PARA_PARAR = 3
   INESPERADOS_PARA_PARAR = 3
+  INESPERADOS_PARA_DESISTIR = 5
   # O piso anda até o corte menos esta margem: mensagem gravada com o horário de origem (histórico do WhatsApp,
-  # importação) pode chegar com `created_at` um pouco antes do corte da rodada que já passou.
+  # importação) pode chegar com `created_at` um pouco antes do corte da rodada que já passou. A margem só vale para a
+  # conversa nunca lida: a que já tem leitura usa o próprio `lida_ate_em`, e mensagem retroativa anterior a ele não
+  # entra na fila.
   MARGEM_DO_PISO = 1.hour
   TRAVA_POR = 6.hours
   FALHAS_POR = 7.days
@@ -54,15 +65,15 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     @account = ficha.account
   end
 
-  # A rodada gravada, ou nil quando outra rodada do mesmo agente está em andamento.
+  # A rodada gravada. Levanta ContaOcupada, sem abrir rodada, quando outra rodada da mesma conta está em andamento.
   def call
     @token = SecureRandom.hex(8)
-    return unless Redis::Alfred.set(chave('trava'), @token, nx: true, ex: TRAVA_POR.to_i)
+    raise ContaOcupada, "conta_#{@account.id}" unless Redis::Alfred.set(trava, @token, nx: true, ex: TRAVA_POR.to_i)
 
     begin
       rodar
     ensure
-      Redis::Alfred.delete_if_equals(chave('trava'), @token)
+      Redis::Alfred.delete_if_equals(trava, @token)
     end
   end
 
@@ -112,7 +123,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     candidatas.first(MAX_CONVERSAS).each do |conversation_id|
       return fechar('teto') if teto.passou?
 
-      Redis::Alfred.expire(chave('trava'), TRAVA_POR.to_i)
+      Redis::Alfred.expire(trava, TRAVA_POR.to_i)
       contar(ler(leitor, conversation_id))
     end
     fechar('ok')
@@ -142,7 +153,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   rescue Parada
     raise
   rescue StandardError => e
-    inesperado(conversa.id, e)
+    inesperado(gravacao, conversa.id, e)
   end
 
   # A falha esperada (resposta recusada) é da conversa e conta para ela desistir.
@@ -157,18 +168,37 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     return :pendente if resposta.nil?
 
     gravacao.gravar!(esquema.procuras(resposta))
-    Redis::Alfred.delete(chave("falhas:#{conversa.id}"))
+    %w[falhas inesperados].each { |contador| Redis::Alfred.delete(chave("#{contador}:#{conversa.id}")) }
     :lida
   rescue Autonomia::Desempenho::LeituraAutomatica::Leitor::Falha, Autonomia::Desempenho::LeituraAutomatica::Esquema::Invalida => e
     falhou(gravacao, conversa.id, e)
   end
 
-  # Bug do sistema, não da conversa: ela fica pendente, sem contar falha; o terceiro seguido fecha a rodada.
-  def inesperado(conversation_id, erro)
+  # Bug do sistema, não da conversa: ela fica pendente, sem contar falha; o terceiro seguido na rodada fecha a rodada.
+  # A mesma conversa com erro inesperado INESPERADOS_PARA_DESISTIR vezes seguidas (entre rodadas) fica como não lida.
+  def inesperado(gravacao, conversation_id, erro)
     Rails.logger.error("[desempenho][leitura] conta=#{@account.id} conversa=#{conversation_id} inesperado=#{erro.class.name}")
     @inesperados += 1
     raise Parada, 'erro' if @inesperados >= INESPERADOS_PARA_PARAR
+    return :pendente if somar_vez("inesperados:#{conversation_id}") < INESPERADOS_PARA_DESISTIR
 
+    desistir_do_inesperado(gravacao, conversation_id)
+  end
+
+  # Mais uma vez no contador da conversa (falhas ou inesperados), que expira em FALHAS_POR; devolve o total.
+  def somar_vez(contador)
+    vezes = Redis::Alfred.incr(chave(contador))
+    Redis::Alfred.expire(chave(contador), FALHAS_POR.to_i)
+    vezes.to_i
+  end
+
+  # Se nem marcar como não lida der certo (o bug pode estar na gravação), a conversa segue pendente.
+  def desistir_do_inesperado(gravacao, conversation_id)
+    gravacao.nao_lida!
+    Redis::Alfred.delete(chave("inesperados:#{conversation_id}"))
+    :lida
+  rescue StandardError => e
+    Rails.logger.error("[desempenho][leitura] conta=#{@account.id} conversa=#{conversation_id} nao_lida=#{e.class.name}")
     :pendente
   end
 
@@ -197,9 +227,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
 
   def falhou(gravacao, conversation_id, erro)
     Rails.logger.warn("[desempenho][leitura] conta=#{@account.id} conversa=#{conversation_id} falha=#{erro.class.name}")
-    vezes = Redis::Alfred.incr(chave("falhas:#{conversation_id}"))
-    Redis::Alfred.expire(chave("falhas:#{conversation_id}"), FALHAS_POR.to_i)
-    return :pendente if vezes.to_i < FALHAS_PARA_DESISTIR
+    return :pendente if somar_vez("falhas:#{conversation_id}") < FALHAS_PARA_DESISTIR
 
     Redis::Alfred.delete(chave("falhas:#{conversation_id}"))
     gravacao.nao_lida!
@@ -210,7 +238,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     lidas = @lidas.to_i
     pendentes = [candidatas.size - lidas - @puladas.to_i, 0].max
     @rodada.update!(status: status, terminada_em: Time.current, conversas_lidas: lidas, conversas_pendentes: pendentes,
-                    custo_usd: custo)
+                    custo_usd: custo, pendente_desde: (fila.mais_antiga if pendentes.positive?))
     @rodada
   end
 
@@ -230,10 +258,12 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
                 @ficha.configuracao.dig('meta', 'agente', 'nome').to_s.split.first&.upcase.presence || ROTULO_PADRAO
   end
 
-  def candidatas
-    @candidatas ||= Autonomia::Desempenho::LeituraAutomatica::Candidatas.new(
+  def candidatas = @candidatas ||= fila.ids
+
+  def fila
+    @fila ||= Autonomia::Desempenho::LeituraAutomatica::Candidatas.new(
       **sujeito.except(:account_id), account: @account, remetentes: remetentes, piso: @rodada.piso_em, corte: @rodada.corte_em
-    ).ids
+    )
   end
 
   def remetentes = @ficha.configuracao['remetentes_do_agente']
@@ -241,5 +271,6 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   def teto = @teto ||= Autonomia::Desempenho::LeituraAutomatica::Teto.new(account: @account, ficha: @ficha)
   def leituras = Autonomia::Desempenho::Leitura.do_sujeito(@account, @ficha.sujeito_type, @ficha.sujeito_id)
   def sujeito = { account_id: @account.id, sujeito_type: @ficha.sujeito_type, sujeito_id: @ficha.sujeito_id }
-  def chave(parte) = "autonomia:desempenho:leitura:#{@account.id}:#{@ficha.sujeito_type}:#{@ficha.sujeito_id}:#{parte}"
+  def trava = "autonomia:desempenho:leitura:#{@account.id}:trava"
+  def chave(parte) ="autonomia:desempenho:leitura:#{@account.id}:#{@ficha.sujeito_type}:#{@ficha.sujeito_id}:#{parte}"
 end

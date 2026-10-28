@@ -5,8 +5,9 @@
 #
 # Devolve a resposta (Hash). JSON quebrado levanta Falha (sem texto da conversa); erro da chamada (rede, HTTP) sobe como
 # Crm::Ai::ResponsesClient::Error, para o orquestrador separar o passageiro do permanente. `custo` soma o gasto das
-# respostas que voltaram (a recusada também), calculado do `usage` de cada uma: é o gasto da rodada, sem misturar com
-# as rodadas de outros agentes da mesma conta que rodam ao mesmo tempo.
+# respostas com texto (a recusada também), calculado do `usage` de cada uma. Fica de fora a resposta que volta vazia:
+# ela é cobrada e o cliente grava o consumo dela (entra no teto diário), mas o erro `empty_response` não traz o
+# `usage`, então o `custo_usd` da rodada pode ficar abaixo do cobrado nesse caso.
 class Autonomia::Desempenho::LeituraAutomatica::Leitor
   class Falha < StandardError; end
 

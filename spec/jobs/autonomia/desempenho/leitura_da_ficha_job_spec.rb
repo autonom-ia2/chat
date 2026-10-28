@@ -1,11 +1,12 @@
 require 'rails_helper'
 
 # A rodada de um agente (#2301): um job por ficha, descartado se cair (cada tentativa pagaria IA de novo), sem segurar
-# a rodada dos outros agentes da conta.
+# a rodada dos outros agentes da conta; reagendado quando outra rodada da conta está em andamento; uma por dia.
 RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
   let(:account) { create(:account) }
   let(:orquestrador) { Autonomia::Desempenho::LeituraAutomatica::Orquestrador }
-  let(:ficha_a) { ficha_com_chave!(create(:agent_bot, account: account).id) }
+  let(:robo_a) { create(:agent_bot, account: account) }
+  let(:ficha_a) { ficha_com_chave!(robo_a.id) }
   let(:ficha_b) { ficha_com_chave!(create(:agent_bot, account: account).id) }
   let(:rodadas) { [] }
 
@@ -17,18 +18,32 @@ RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
     with_modified_env(AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA: 'true', &)
   end
 
-  # A rodada da ficha A cai com um erro; a da B roda.
-  def a_cai
+  def rodada(status)
+    Autonomia::Desempenho::Rodada.create!(account: account, sujeito_type: 'robo', sujeito_id: robo_a.id, corte_em: Time.current,
+                                          piso_em: 1.day.ago, iniciada_em: Time.current, status: status, lote: 'spec')
+  end
+
+  # Cada rodada chamada fica em `rodadas`; a da ficha A cai com um erro, a das outras devolve `status`.
+  def rodadas_devolvem(status: 'ok', a_cai: false)
     allow(orquestrador).to receive(:new) do |ficha|
       rodadas << ficha.id
-      raise ActiveRecord::StatementInvalid if ficha.id == ficha_a.id
+      raise ActiveRecord::StatementInvalid if a_cai && ficha.id == ficha_a.id
 
-      instance_double(orquestrador, call: nil)
+      instance_double(orquestrador, call: rodada(status))
     end
   end
 
+  before do
+    account.enable_features!('agentes_painel_desempenho')
+    allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
+  end
+
+  after do
+    Redis::Alfred.with { |redis| redis.scan_each(match: "autonomia:desempenho:leitura:rodou:#{account.id}:*").each { |chave| redis.del(chave) } }
+  end
+
   it 'erro na rodada da ficha A é descartado, sem nova tentativa, e a ficha B roda' do
-    a_cai
+    rodadas_devolvem(a_cai: true)
 
     ligada do
       expect { described_class.perform_now(account.id, ficha_a.id) }.not_to raise_error
@@ -40,9 +55,7 @@ RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
   end
 
   it 'pelo job da conta, o erro de A não impede B' do
-    a_cai
-    account.enable_features!('agentes_painel_desempenho')
-    allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
+    rodadas_devolvem(a_cai: true)
     [ficha_a, ficha_b]
 
     ligada do
@@ -50,6 +63,29 @@ RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
     end
 
     expect(rodadas).to contain_exactly(ficha_a.id, ficha_b.id)
+  end
+
+  it 'com a conta ocupada por outra rodada, reagenda a ficha para mais tarde, sem descartar' do
+    ocupada = instance_double(orquestrador)
+    allow(ocupada).to receive(:call).and_raise(orquestrador::ContaOcupada)
+    allow(orquestrador).to receive(:new).and_return(ocupada)
+
+    ligada { described_class.perform_now(account.id, ficha_b.id) }
+
+    expect(described_class).to have_been_enqueued.with(account.id, ficha_b.id)
+    expect(described_class::TENTATIVAS_DA_CONTA * described_class::ESPERA_DA_CONTA).to be >= orquestrador::TRAVA_POR
+  end
+
+  it 'uma rodada concluída por agente por dia: o job duplicado do mesmo dia não roda; erro não conta como concluída' do
+    rodadas_devolvem(status: 'erro')
+    ligada { described_class.perform_now(account.id, ficha_a.id) }
+
+    rodadas_devolvem(status: 'teto')
+    ligada { 2.times { described_class.perform_now(account.id, ficha_a.id) } }
+    expect(rodadas).to eq([ficha_a.id, ficha_a.id])
+
+    travel_to(1.day.from_now) { ligada { described_class.perform_now(account.id, ficha_a.id) } }
+    expect(rodadas).to eq([ficha_a.id, ficha_a.id, ficha_a.id])
   end
 
   it 'com a ENV desligada, não roda' do
@@ -68,6 +104,20 @@ RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
     ligada do
       described_class.perform_now(account.id, antiga.id)
       described_class.perform_now(create(:account).id, ficha_b.id)
+    end
+
+    expect(orquestrador).not_to have_received(:new)
+  end
+
+  it 'confere de novo a conta e o agente, com o mesmo critério do job da conta' do
+    allow(orquestrador).to receive(:new)
+    ficha_do_apagado = ficha_a
+    robo_a.destroy!
+
+    ligada do
+      described_class.perform_now(account.id, ficha_do_apagado.id)
+      account.disable_features!('agentes_painel_desempenho')
+      described_class.perform_now(account.id, ficha_b.id)
     end
 
     expect(orquestrador).not_to have_received(:new)
