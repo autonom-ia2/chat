@@ -38,14 +38,6 @@ module Autonomia::Desempenho::Exportacao::Pdf::ComoLer
     fixas + Array(@painel['avisos']).filter_map { |aviso| texto_do_aviso(aviso) }
   end
 
-  def texto_do_aviso(aviso)
-    valores = aviso['valores'].to_h.symbolize_keys
-    valores[:dia] = data_longa(valores[:dia]) if valores[:dia]
-    valores[:data] = data_longa(valores[:data]) if valores[:data]
-    valores[:secoes] = lista(Array(valores[:secoes]).map { |secao| t("secoes.#{secao}") }) if valores.key?(:secoes)
-    t("avisos.#{aviso['id']}", **valores, default: '').presence
-  end
-
   def texto_da_lista(linhas)
     linhas.map { |linha| "•  #{linha}" }.join("\n")
   end

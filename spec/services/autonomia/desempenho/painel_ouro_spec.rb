@@ -80,7 +80,8 @@ RSpec.describe Autonomia::Desempenho::Painel do
       esperado = Autonomia::Desempenho::Exportacao::Contrato.do_pacote(referencia, chave)
       obtido = JSON.parse(painel.call(chave).to_json)
       expect(obtido.dig('meta', 'dados_ate').first(10)).to eq(esperado.dig('meta', 'dados_ate').first(10))
-      fixos = { 'fonte' => nil, 'gerado_em' => nil, 'dados_ate' => nil }
+      # As três da leitura automática (#2301) não existem no protótipo: a carga não tem rodada.
+      fixos = { 'fonte' => nil, 'gerado_em' => nil, 'dados_ate' => nil, 'lido_ate' => nil, 'instrucao_mudou' => nil, 'recomendacoes_de' => nil }
       [chave, diferencas(esperado.merge('meta' => esperado['meta'].merge(fixos)), obtido.merge('meta' => obtido['meta'].merge(fixos)))]
     end
 

@@ -12,7 +12,8 @@
 #
 # Os números são das caixas que a pessoa vê (ESPEC 6.2; admin vê a conta inteira), e o dinheiro (ticket e ganho em
 # R$) segue `sales_value_view` (Autonomia::Desempenho::Painel e Visibilidade). Sem leitura guardada para o agente, o
-# painel vem vazio, com a situação `leitura_desligada`.
+# painel vem vazio, com a situação `leitura_desligada` (ou, com a leitura automática ligada para ele, a da rodada:
+# Autonomia::Desempenho::Painel.situacao_sem_procuras).
 class Api::V1::Accounts::Autonomia::Agents::DesempenhoController < Api::V1::Accounts::BaseController
   FLAG = 'agentes_painel_desempenho'.freeze
   FORMATOS = {
@@ -69,7 +70,8 @@ class Api::V1::Accounts::Autonomia::Agents::DesempenhoController < Api::V1::Acco
     pedido = params[:periodo].to_s
     chave = ::Autonomia::Desempenho::Painel::PERIODOS.include?(pedido) ? pedido : ::Autonomia::Desempenho::Painel::PADRAO
     { 'versao' => 2, 'vazio' => true,
-      'meta' => { 'fonte' => ::Autonomia::Desempenho::Painel::FONTE, 'situacao' => 'leitura_desligada', 'periodo' => { 'chave' => chave },
+      'meta' => { 'fonte' => ::Autonomia::Desempenho::Painel::FONTE, 'periodo' => { 'chave' => chave },
+                  'situacao' => ::Autonomia::Desempenho::Painel.situacao_sem_procuras(Current.account, *@sujeito),
                   'dados_ate' => nil, 'base' => nil, 'agente' => nil } }
   end
 end

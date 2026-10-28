@@ -21,6 +21,15 @@ class Autonomia::Desempenho::Ficha < ApplicationRecord
     do_sujeito(account, tipo, id).order(versao: :desc).first
   end
 
+  # O hash da instrução que vai ao modelo hoje (#2301), para saber se a leitura foi feita com outra. Só o agente nosso
+  # tem instrução aqui; o robô de outro sistema devolve nil.
+  def self.hash_da_instrucao(account, tipo, id)
+    return nil unless tipo == 'agente'
+
+    agente = Autonomia::Agents::Agent.where(account_id: account.id).find_by(id: id)
+    agente && Digest::SHA256.hexdigest(agente.instrucao_do_sistema.to_s)
+  end
+
   private
 
   def partes_sao_objetos

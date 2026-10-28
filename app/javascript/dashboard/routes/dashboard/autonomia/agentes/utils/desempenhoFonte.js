@@ -29,6 +29,8 @@ export const SITUACOES = [
   'lendo',
   'teto',
   'sem_ia',
+  'erro',
+  'chave_recusada',
   'sem_resultado',
   'conferencia_baixa',
   'pouco',

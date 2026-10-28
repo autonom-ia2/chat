@@ -72,6 +72,23 @@ RSpec.describe Autonomia::Desempenho::Painel do
 
     expect(painel.call('7')['recomendacoes']).to eq([{ 'id' => 'r1', 'titulo' => 'Dizer o prazo' }])
     expect(painel.call('30')['recomendacoes']).to eq([])
+    expect(painel.call('30')['meta']['recomendacoes_de']).to be_nil
+  end
+
+  it 'com leitura automática, a sugestão de outras datas do mesmo período vai com as datas dela (#2301)' do
+    base = { account: account, sujeito_type: 'robo', sujeito_id: robo.id, versao_ficha: 1, lote: 'spec', gerada_em: Time.current }
+    Autonomia::Desempenho::Recomendacao.create!(base.merge(periodo: '30', inicio: Date.new(2026, 9, 1), fim: Date.new(2026, 9, 30),
+                                                           cartoes: [{ 'id' => 'r1' }]))
+    Autonomia::Desempenho::Rodada.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, corte_em: Time.current,
+                                          piso_em: 1.day.ago, iniciada_em: Time.current, status: 'ok', lote: 'spec')
+    Autonomia::Desempenho::Ficha.do_sujeito(account, 'robo', robo.id).update_all(chave_de_leitura: 'Leia.') # rubocop:disable Rails/SkipsModelValidations
+
+    with_modified_env(AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA: 'true') do
+      expect(painel.call('30')['recomendacoes']).to eq([{ 'id' => 'r1' }])
+      expect(painel.call('30')['meta']['recomendacoes_de']).to eq('inicio' => '2026-09-01', 'fim' => '2026-09-30')
+      Autonomia::Desempenho::Recomendacao.find_by(periodo: '30').update!(versao_ficha: 2)
+      expect(painel.call('30')['recomendacoes']).to eq([])
+    end
   end
 
   it 'conta só as conversas que a pessoa vê, procuras e mensagens, sem sugestões da conta inteira' do

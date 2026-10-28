@@ -17,6 +17,8 @@ const props = defineProps({
   },
   nome: { type: String, default: '' },
   podeGerenciar: { type: Boolean, default: false },
+  // #2301 — painel sem números: só fica o botão que faz algo fora dele (`acao`).
+  vazio: { type: Boolean, default: false },
   tom: {
     type: String,
     default: 'claro',
@@ -41,6 +43,7 @@ const frase = computed(() => {
 });
 const botao = computed(() => {
   if (config.value.faixa || config.value.semBotao) return '';
+  if (props.vazio && !(config.value.acao && !semAcesso.value)) return '';
   if (!semAcesso.value) return t(`${NS}.${config.value.chave}_BOTAO`);
   return config.value.botaoSemAcesso
     ? t(`${NS}.${config.value.chave}_SEM_ACESSO_BOTAO`)

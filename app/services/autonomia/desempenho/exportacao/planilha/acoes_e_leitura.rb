@@ -13,7 +13,9 @@ module Autonomia::Desempenho::Exportacao::Planilha::AcoesELeitura
   def aba_recomendacoes
     colunas = COLUNAS_DAS_RECOMENDACOES.map { |id, tipo, largura| coluna(t("planilha.recomendacao.#{id}"), tipo.to_sym, largura.to_i) }
     linhas = Array(@painel['recomendacoes']).map { |recomendacao| linha_da_recomendacao(recomendacao) }
-    nova_aba(t('planilha.abas.recomendacoes'), t('planilha.recomendacoes_titulo')) { |sheet| tabela_de_dados(sheet, colunas, linhas) }
+    nova_aba(t('planilha.abas.recomendacoes'), t('planilha.recomendacoes_titulo'), nota: recomendacoes_de) do |sheet|
+      tabela_de_dados(sheet, colunas, linhas)
+    end
   end
 
   def aba_como_ler
@@ -29,6 +31,14 @@ module Autonomia::Desempenho::Exportacao::Planilha::AcoesELeitura
   end
 
   private
+
+  # #2301: sugestões de outras datas (as últimas do mesmo período) dizem as datas delas, como na tela.
+  def recomendacoes_de
+    datas = meta['recomendacoes_de']
+    return nil if datas.blank? || Array(@painel['recomendacoes']).empty?
+
+    t('planilha.recomendacoes_de', inicio: dia_mes(datas['inicio']), fim: data_longa(datas['fim']))
+  end
 
   def linha_da_recomendacao(recomendacao)
     ganho = recomendacao['ganho'].to_h
@@ -60,10 +70,14 @@ module Autonomia::Desempenho::Exportacao::Planilha::AcoesELeitura
     secao_de_texto(sheet, t('como_ler.nao_provam'), linhas_do_que_nao_prova_na_planilha)
   end
 
+  # #2301: com os avisos da leitura automática (parada, pendentes, não lidas, instrução), como na tela e no PDF.
   def linhas_do_que_nao_prova_na_planilha
     fixas = Autonomia::Desempenho::Exportacao::Textos::NAO_PROVAM.map { |chave| [nil, t("como_ler.nao_prova.#{chave}")] }
-    nomes['fechou_ressalva'].present? ? fixas << [nil, nomes['fechou_ressalva']] : fixas
+    fixas << [nil, nomes['fechou_ressalva']] if nomes['fechou_ressalva'].present?
+    fixas + avisos_da_leitura.filter_map { |aviso| texto_do_aviso(aviso)&.then { |texto| [nil, texto] } }
   end
+
+  def avisos_da_leitura = Array(@painel['avisos']).select { |aviso| aviso['id'].to_s.start_with?('leitura_') }
 
   def secao_de_texto(sheet, titulo, linhas)
     sheet.add_row([titulo], style: @estilos.secao, types: :string, height: 20)
