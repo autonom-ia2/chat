@@ -57,4 +57,26 @@ describe('EfeitoSemFuncao', () => {
     expect(texto).toContain('Deixa de ver os Relatórios.');
     expect(texto).not.toContain(':');
   });
+
+  // Rodada 4: a lista "Vai deixar de" fala como a Perda de acesso ("Ver os Relatórios", sem dois-pontos), e a área que
+  // o sem função ainda usa diz que só uma parte sai.
+  it('na lista, as áreas vão com artigo e sem dois-pontos, e a parte que sai não parece a área inteira', async () => {
+    const deixam = async permissions => {
+      const wrapper = montar(permissions);
+      await wrapper.find('[data-ver-tudo]').trigger('click');
+      return wrapper
+        .findAll('[data-grupo="DEIXAM"] [data-item]')
+        .map(item => item.text());
+    };
+    expect(await deixam(['knowledge_base_view', 'report_manage'])).toEqual([
+      'Ver a Central de Ajuda (artigos para os clientes)',
+      'Ver os Relatórios',
+    ]);
+    expect(await deixam(['label_manage', 'macro_manage'])).toContain(
+      'Mudar os Atalhos de mensagens'
+    );
+    expect(await deixam(['crm_manage_pipelines'])).toEqual([
+      'Parte do que fazia em Vendas',
+    ]);
+  });
 });

@@ -134,13 +134,13 @@ const PASSAM_DO_VENDEDOR = [
 ];
 const DEIXAM_DO_VENDEDOR = ['Procurar clientes novos'];
 const DEIXAM_DO_SUPERVISOR = [
-  'Ver: Central de Ajuda (artigos para os clientes)',
-  'Ver: Relatórios',
-  'Ver: Robôs de IA',
-  'Ver: Canais (números de WhatsApp, Instagram, e-mail)',
-  'Ver: Regras automáticas',
-  'Mexer: Etiquetas',
-  'Mexer: Atalhos de mensagens',
+  'Ver a Central de Ajuda (artigos para os clientes)',
+  'Ver os Relatórios',
+  'Ver os Robôs de IA',
+  'Ver os Canais',
+  'Ver as Regras automáticas',
+  'Mudar as Etiquetas',
+  'Mudar os Atalhos de mensagens',
 ];
 
 const pedirApagar = async cartao => {
@@ -474,6 +474,118 @@ describe('Funções da equipe: lista', () => {
     expect(useAlert).not.toHaveBeenCalledWith('Has people');
   });
 
+  // Rodada 4: com o diálogo aberto, a pergunta volta com o motivo (role=alert) e o foco no campo do destino, e não
+  // num conteúdo que trocou em silêncio.
+  it('destination_required achando gente: o diálogo diz por que voltou e põe o foco no destino', async () => {
+    HTMLDialogElement.prototype.showModal = function abrirModal() {
+      this.setAttribute('open', '');
+    };
+    const agentes = reactive(AGENTES.map(item => ({ ...item })));
+    const pessoasDaConta = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockImplementation(async () => {
+        agentes[1].custom_role_id = 2;
+        return true;
+      });
+    const apagar = vi.fn().mockRejectedValue(recusa('destination_required'));
+    const wrapper = await montar({ apagar, pessoasDaConta, agentes });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+
+    expect(dialogo(wrapper).find('h2').text()).toBe('Para onde vai a pessoa?');
+    const motivo = dialogo(wrapper).find('[data-erro-destino]');
+    expect(motivo.attributes('role')).toBe('alert');
+    expect(motivo.text()).toBe(
+      'Esta função ainda tem pessoas. Escolha para onde vão.'
+    );
+    expect(document.activeElement?.id).toBe(
+      dialogo(wrapper).find('label').attributes('for')
+    );
+    delete HTMLDialogElement.prototype.showModal;
+  });
+
+  // Rodada 4: a recarga das pessoas depois da recusa passa pela da página. Falhou: o próximo "Apagar" diz que não deu
+  // para ver quem usa, e não "Ninguém usa".
+  it('destination_required com a recarga das pessoas falhando: o próximo apagar não diz "Ninguém usa"', async () => {
+    const pessoasDaConta = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValue(false);
+    const apagar = vi.fn().mockRejectedValue(recusa('destination_required'));
+    const wrapper = await montar({ apagar, pessoasDaConta });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+    await pedirApagar(financeiro);
+    await flushPromises();
+
+    expect(dialogo(wrapper).text()).not.toContain('Ninguém usa');
+    expect(dialogo(wrapper).find('[data-apagar-erro]').exists()).toBe(true);
+  });
+
+  it('409 com a recarga das pessoas falhando: a lista diz que não deu para ver quem tem cada função', async () => {
+    const pessoasDaConta = vi
+      .fn()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValue(false);
+    const apagar = vi.fn().mockRejectedValue(recusa('changed_meanwhile', 409));
+    const wrapper = await montar({ apagar, pessoasDaConta });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-contagem]').text()).toContain(
+      'Não deu para ver quem tem cada função.'
+    );
+  });
+
+  it('apagando com gente: a escolha do destino fica travada', async () => {
+    let terminar;
+    const apagar = vi.fn(
+      () =>
+        new Promise(resolve => {
+          terminar = resolve;
+        })
+    );
+    const wrapper = await montar({ apagar });
+    const [atendente] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(atendente);
+    wrapper.findComponent(ChoiceSelect).vm.$emit('update:modelValue', 'none');
+    await flushPromises();
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+
+    expect(wrapper.findComponent(ChoiceSelect).props('disabled')).toBe(true);
+    terminar();
+    await flushPromises();
+  });
+
+  // Rodada 4: "Tentar de novo" some quando as pessoas voltam a carregar; o foco vai para o título do diálogo.
+  it('"Tentar de novo" no apagar devolve o foco ao título do diálogo', async () => {
+    const pessoasDaConta = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    const wrapper = await montar({ pessoasDaConta });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    const tentar = dialogo(wrapper).find('[data-apagar-tentar]');
+    tentar.element.focus();
+    await tentar.trigger('click');
+    await flushPromises();
+
+    expect(document.activeElement).toBe(dialogo(wrapper).find('h2').element);
+  });
+
   // A recusa sem código é o corpo real do check_authorization (request_exception_handler.rb).
   it.each([
     [
@@ -495,13 +607,26 @@ describe('Funções da equipe: lista', () => {
       'Funções da equipe não estão disponíveis agora. Fale com o administrador.',
     ],
     [
+      'sessão boa e a própria função: ninguém apaga a própria',
+      {},
+      'own_role',
+      'Ninguém apaga a própria função.',
+    ],
+    [
+      'sem conferir a sessão (rede): tente de novo',
+      'rede',
+      'out_of_reach',
+      'Não deu para apagar agora. Confira a internet e tente de novo.',
+    ],
+    [
       'sessão vencida: nenhum aviso e vai para o login',
       null,
       'out_of_reach',
       null,
     ],
   ])('apagar com 401, %s', async (_, sessao, codigo, frase) => {
-    if (sessao) validityCheck.mockResolvedValue(sessao);
+    if (sessao === 'rede') validityCheck.mockRejectedValue(new Error('rede'));
+    else if (sessao) validityCheck.mockResolvedValue(sessao);
     else validityCheck.mockRejectedValue({ response: { status: 401 } });
     const apagar = vi.fn().mockRejectedValue(recusa(codigo, 401));
     const wrapper = await montar({ apagar });

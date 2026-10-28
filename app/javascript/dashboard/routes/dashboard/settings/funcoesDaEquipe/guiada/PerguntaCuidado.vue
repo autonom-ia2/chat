@@ -20,7 +20,8 @@ import PerguntaDaFuncao from './PerguntaDaFuncao.vue';
 // Ações que pedem cuidado (#2308, especificação 5.B3 e 7.2), em três grupos: (b) liga junto com a área, com uma
 // confirmação só ("Ligar as duas"/"Ligar os dois"); (a) liga agora; (c) recolhida com cadeado. As linhas ligáveis
 // ficam na ordem fixa: ligar uma (b) não a tira do lugar. O que vem com "Cuida de tudo" fica ligado e travado, pela
-// mesma leitura da prévia (chavesDoServidor: uma função antiga com crm_admin sem as seis gravadas). As metas do mês sem
+// mesma leitura da prévia (chavesDoServidor: uma função antiga com crm_admin sem as seis gravadas); o alcance de quem
+// dá conta as chaves gravadas, como o servidor (gruposDoCuidado, revisão do #2308, rodada 4). As metas do mês sem
 // R$ também são (b): o diálogo pergunta pelos valores em R$. Desligar uma linha tira só a chave dela; o que entrou
 // junto (a área, o R$) fica, e a faixa com "Desfazer" some (revisão do #2308, rodada 3).
 const props = defineProps({
@@ -62,7 +63,9 @@ const titulo = computed(() =>
 
 const lidas = computed(() => chavesDoServidor(props.permissions));
 const lidasAoAbrir = computed(() => chavesDoServidor(props.inicial));
-const grupos = computed(() => gruposDoCuidado(props.giver, lidas.value));
+const grupos = computed(() =>
+  gruposDoCuidado(props.giver, props.permissions, lidas.value)
+);
 const ligaveis = computed(() => {
   const { ligaJunto, ligaAgora } = grupos.value;
   const junto = new Set(ligaJunto.map(item => item.chave));

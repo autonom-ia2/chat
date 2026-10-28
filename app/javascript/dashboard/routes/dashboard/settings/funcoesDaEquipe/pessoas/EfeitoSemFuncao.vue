@@ -1,7 +1,6 @@
 <script setup>
 import { computed, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { porPeso } from '../semFuncao';
 import { useSemFuncao } from '../useSemFuncao';
 import DiffDeAcesso from './DiffDeAcesso.vue';
 
@@ -14,22 +13,15 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
-const { diff, curtoDa } = useSemFuncao();
+const { diff, efeitoDe } = useSemFuncao();
 const id = useId();
 const tudo = ref(false);
 
 const mudanca = computed(() => diff(props.permissions));
 
 const frase = computed(() => {
-  const [ganho, ...outrosGanhos] = mudanca.value.ganha;
-  const [perda] = porPeso(mudanca.value.perde);
-  const valores = {
-    ganho: ganho && curtoDa(ganho),
-    perda: perda && curtoDa(perda),
-  };
-  const tambem = outrosGanhos
-    .filter(item => item.delegacao)
-    .map(item => t('FUNCOES_EQUIPE.EFEITO.TAMBEM', { ganho: curtoDa(item) }));
+  const { ganho, perda, tambem } = efeitoDe(props.permissions);
+  const valores = { ganho, perda };
   const principal = () => {
     if (ganho && perda)
       return t('FUNCOES_EQUIPE.EFEITO.PASSA_E_DEIXA', valores);

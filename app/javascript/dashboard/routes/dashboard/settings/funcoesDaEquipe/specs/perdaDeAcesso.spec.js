@@ -3,7 +3,7 @@ import {
   moduleByKey,
   setLevel,
 } from '../../customRoles/permissionMatrix';
-import { perdasDeAcesso } from '../perdaDeAcesso';
+import { nivelQueFica, perdasDeAcesso } from '../perdaDeAcesso';
 
 // #2308, especificação 5.F: o que quem já tem a função perde ao salvar uma alteração. Cada perda sai uma vez, na
 // ordem do Pode, e uma área só entra quando nenhuma capacidade dela já saiu (a mais específica vence, rodada 3).
@@ -83,7 +83,89 @@ describe('perdasDeAcesso', () => {
     ]);
   });
 
+  // Rodada 4: uma capacidade que sai porque outra maior do Pode depois a cobre não é perda.
+  it('Atende as próprias para Atende todas: nada se perde', () => {
+    const atendente = PRESETS.AGENT();
+    const depois = setLevel(moduleByKey('CONVERSATIONS'), 'all', atendente);
+    expect(perdasDeAcesso(atendente, depois)).toEqual([]);
+    const lendoColegas = [...atendente, 'conversation_view'];
+    expect(perdasDeAcesso(lendoColegas, depois)).toEqual([]);
+  });
+
+  it('Só olha as conversas para Atende todas: não perde ler as dos colegas', () => {
+    expect(
+      perdasDeAcesso(['conversation_view'], ['conversation_manage'])
+    ).toEqual([]);
+  });
+
+  it('Só olha e move as vendas para Pode mexer: não perde mover', () => {
+    expect(
+      perdasDeAcesso(
+        ['crm_view', 'crm_move_cards'],
+        setLevel(moduleByKey('CRM'), 'manage', ['crm_view', 'crm_move_cards'])
+      )
+    ).toEqual([]);
+  });
+
+  it('Financeiro de Ver para Mexer: não perde ver os custos', () => {
+    expect(perdasDeAcesso(['financial_view'], ['financial_manage'])).toEqual(
+      []
+    );
+  });
+
+  it('Atende todas para as próprias: perde ler e atender todas, e mais nada', () => {
+    const supervisor = PRESETS.SUPERVISOR();
+    const depois = setLevel(
+      moduleByKey('CONVERSATIONS'),
+      'limited',
+      supervisor
+    );
+    expect(perdasDeAcesso(supervisor, depois)).toEqual([
+      { id: 'LER_E_ATENDER_TODAS' },
+    ]);
+  });
+
   it('sem mudança, nada se perde', () => {
     expect(perdasDeAcesso(PRESETS.SDR(), PRESETS.SDR())).toEqual([]);
+  });
+});
+
+// Rodada 4 (especificação 5.F): numa queda de nível, a perda diz também o que fica ("só vão olhar os contatos").
+describe('nivelQueFica', () => {
+  it('Contatos de Mexer para Ver: fica olhando os contatos', () => {
+    const sdr = PRESETS.SDR();
+    expect(
+      nivelQueFica(sdr, setLevel(moduleByKey('CONTACTS'), 'view', sdr))
+    ).toEqual({ area: 'CONTACTS', nivel: 'OLHA' });
+  });
+
+  it('Atende todas para as próprias: fica atendendo as próprias', () => {
+    const supervisor = PRESETS.SUPERVISOR();
+    expect(
+      nivelQueFica(
+        supervisor,
+        setLevel(moduleByKey('CONVERSATIONS'), 'limited', supervisor)
+      )
+    ).toEqual({ area: 'CONVERSATIONS', nivel: 'PROPRIAS' });
+  });
+
+  it('Vendas de Pode mexer para Só olha: fica olhando as vendas', () => {
+    expect(
+      nivelQueFica(['crm_view', 'crm_manage_cards'], ['crm_view'])
+    ).toEqual({ area: 'CRM', nivel: 'OLHA' });
+  });
+
+  it('a área que some, nada que caiu ou duas que caíram: nada a dizer', () => {
+    const sdr = PRESETS.SDR();
+    expect(
+      nivelQueFica(sdr, setLevel(moduleByKey('CONTACTS'), 'none', sdr))
+    ).toBeNull();
+    expect(nivelQueFica(['contact_view'], ['contact_manage'])).toBeNull();
+    expect(
+      nivelQueFica(
+        ['contact_manage', 'inbox_manage'],
+        ['contact_view', 'inbox_view']
+      )
+    ).toBeNull();
   });
 });

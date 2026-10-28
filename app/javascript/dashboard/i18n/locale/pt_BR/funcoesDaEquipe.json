@@ -41,6 +41,7 @@
       "PROPRIAS_E_NOVAS": "Atende as próprias conversas e pega as novas que estão sem ninguém.",
       "TODAS": "Lê e atende todas as conversas.",
       "VENDAS_SO_OLHA": "Só olha as vendas.",
+      "VENDAS_OLHA_E_MOVE": "Olha e move as vendas.",
       "VENDAS_MEXE": "Cria e move as vendas em andamento.",
       "VENDAS_TUDO": "Cuida de tudo nas vendas.",
       "CONTATOS_SO_OLHA": "Só olha os contatos.",
@@ -346,9 +347,12 @@
         "crm_metas_manage": "as metas do mês",
         "sales_value_view": "os valores em R$",
         "insurance_view": "ver as cotações",
-        "insurance_manage": "fazer cotações"
+        "insurance_manage": "fazer cotações",
+        "campaign_send": "disparar campanhas",
+        "report_manage": "ver os relatórios de atendimento"
       },
-      "SEM_AREA": "mexer em {area}"
+      "SEM_AREA": "mexer em {area}",
+      "SEM_AREA_VER": "ver {area}"
     },
     "ESCOLHA": {
       "TITULO": "Para quem é esta função?",
@@ -432,8 +436,7 @@
         "TODAS": "Atende todas",
         "PROPRIAS_TUDO": "Atende as próprias, pega as novas e ajuda quando um colega chama",
         "PROPRIAS_NOVAS": "Atende as próprias e pega as novas",
-        "PROPRIAS_AJUDA": "Atende as próprias e ajuda quando um colega chama",
-        "PROPRIAS_CURTO": "Só as próprias"
+        "PROPRIAS_AJUDA": "Atende as próprias e ajuda quando um colega chama"
       },
       "CUIDADO_NENHUMA": "Nenhuma ligada · apagar, planilhas, campanhas e IA",
       "ANTES": {
@@ -749,17 +752,17 @@
       },
       "AREA": {
         "MEXER": {
-          "LISTA": "Mexer: {area}",
+          "LISTA": "Mudar {area}",
           "CURTO": "mudar {area}"
         },
         "VER": {
-          "LISTA": "Ver: {area}",
+          "LISTA": "Ver {area}",
           "CURTO": "ver {area}"
         }
       },
       "OUTRA": {
-        "LISTA": "Usar tudo em {area}",
-        "CURTO": "usar tudo em {area}"
+        "LISTA": "Parte do que fazia em {area}",
+        "CURTO": "usar uma parte de {area}"
       },
       "ALGO": {
         "LISTA": "Fazer uma coisa em {area}",
@@ -802,7 +805,7 @@
       "OUTRA_FUNCAO": "Pôr em outra função",
       "OUTRA_FUNCAO_ROTULO": "Pôr em outra função: {pessoa}",
       "ESCOLHER_FUNCAO": "Escolher função",
-      "ESCOLHER_FUNCAO_ROTULO": "Escolher a função de {pessoa}",
+      "ESCOLHER_FUNCAO_ROTULO": "Escolher função: {pessoa}",
       "SEM_FUNCAO": "Sem função",
       "VAI_FICAR_SEM": "Vai ficar sem função",
       "HOJE_E": "Hoje é {atual}. Vai passar a ser {nova}.",
@@ -829,6 +832,8 @@
       "RODAPE": {
         "PASSA_A_SER": "{pessoa} passa a ser {funcao}.",
         "FICA_SEM": "{pessoa} vai ficar sem função e passa a {ganho}.",
+        "FICA_SEM_E_DEIXA": "{pessoa} vai ficar sem função e passa a {ganho}. Deixa de {perda}.",
+        "FICA_SEM_DEIXA": "{pessoa} vai ficar sem função e deixa de {perda}.",
         "FICA_SEM_SO": "{pessoa} vai ficar sem função."
       },
       "TENTE": "Confira a internet e tente de novo.",
@@ -837,6 +842,7 @@
       "SO_LEITURA_MINE": "Ninguém muda a própria função: esta é a sua.",
       "NINGUEM_AINDA": "Ninguém tem esta função ainda.",
       "FORA_DO_ALCANCE": "Não deu para mudar a função de {nomes}: está fora do que você pode dar.",
+      "SEM_ACESSO": "Você não pode mais pôr e tirar pessoas das funções. Fale com o administrador.",
       "NAO_MUDOU": "A função de {nomes} não mudou. Tente de novo; se continuar, fale com o administrador. | A função destas pessoas não mudou: {nomes}. Tente de novo; se continuar, fale com o administrador."
     },
     "APAGAR": {
@@ -870,6 +876,10 @@
     "PERDA": {
       "TEXTO": "Essa pessoa tem a função {nome}. A partir de agora, não vai mais poder: | Essas pessoas têm a função {nome}. A partir de agora, não vão mais poder:",
       "TEXTO_UMA": "Essa pessoa tem a função {nome}. | Essas pessoas têm a função {nome}.",
+      "FICA": {
+        "OLHA": "A partir de agora, só vai olhar {area}. | A partir de agora, só vão olhar {area}.",
+        "PROPRIAS": "A partir de agora, só vai atender as próprias conversas. | A partir de agora, só vão atender as próprias conversas."
+      },
       "VOLTAR": "Voltar",
       "SALVAR": "Salvar mesmo assim",
       "TITULO_UMA": "{n} pessoa vai deixar de {coisa} | {n} pessoas vão deixar de {coisa}",

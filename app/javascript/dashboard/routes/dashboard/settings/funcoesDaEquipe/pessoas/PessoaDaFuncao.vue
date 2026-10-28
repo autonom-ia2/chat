@@ -19,6 +19,8 @@ const props = defineProps({
   trava: { type: String, default: '' },
   somenteLeitura: { type: Boolean, default: false },
   opcoes: { type: Array, default: () => [] },
+  // Enquanto a gaveta salva, a linha não muda: o fim do salvar troca as mudanças pelo que não gravou (rodada 4).
+  salvando: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['mudar', 'desfazer']);
@@ -118,6 +120,7 @@ const valores = computed(() => ({
         :aria-label="$t(`FUNCOES_EQUIPE.PESSOA.${acao.chave}_ROTULO`, valores)"
         slate
         faded
+        :disabled="salvando"
         class="min-h-11 sm:min-w-[11.5rem] max-sm:w-full"
         @click="acao.emitir"
       />
@@ -134,6 +137,7 @@ const valores = computed(() => ({
         :options="opcoes"
         :aria-label="$t(`FUNCOES_EQUIPE.PESSOA.${escolha}_ROTULO`, valores)"
         :placeholder="$t(`FUNCOES_EQUIPE.PESSOA.${escolha}`)"
+        :disabled="salvando"
         class="w-full sm:w-auto sm:self-start"
         @update:model-value="valor => emit('mudar', valor)"
       />

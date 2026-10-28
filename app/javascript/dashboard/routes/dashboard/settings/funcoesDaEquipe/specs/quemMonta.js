@@ -70,3 +70,26 @@ export const SEM_VER_VENDAS = {
     'contact_manage',
   ],
 };
+
+// Quem monta com "Cuida de tudo nas vendas" vindo de "Só olha": crm_view, crm_admin e as seis, sem crm_manage_cards
+// nem crm_move_cards (revisão do #2308, rodada 4). Alcança uma função com crm_admin; o servidor confere o alcance pelas
+// chaves gravadas mais as implicadas (GrantGuard#reach?), não pelo que o crm_admin dá.
+export const TUDO_SEM_MEXER = {
+  userId: 13,
+  isAdmin: false,
+  customRoleId: 14,
+  permissions: [
+    'custom_role_manage',
+    'people_manage',
+    'contact_manage',
+    'contact_delete',
+    'crm_view',
+    'crm_admin',
+    'crm_view_reports',
+    'crm_manage_pipelines',
+    'crm_manage_ai',
+    'crm_export',
+    'crm_delete_cards',
+    'crm_metas_manage',
+  ],
+};

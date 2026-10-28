@@ -1,3 +1,4 @@
+import { reactive } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { PRESETS } from '../../customRoles/permissionMatrix';
@@ -123,6 +124,23 @@ describe('GavetaDaFuncao', () => {
     ).toBe('Pôr como Vendedor: Kauã Moreira');
   });
 
+  // Rodada 4: a pessoa numa função acima do alcance (Financeiro) e a própria Carla não têm ação nenhuma.
+  it('quem está numa função acima do alcance e a própria Carla ficam sem ação, com o motivo', () => {
+    const agentes = [
+      ...AGENTES.map(item => ({ ...item })),
+      { id: 26, name: 'Nina Alves', role: 'agent', custom_role_id: 3 },
+    ];
+    const { wrapper } = montar({ agentes });
+
+    expect(linha(wrapper, 26).find('[data-acao]').exists()).toBe(false);
+    expect(linha(wrapper, 26).text()).toContain(
+      'Só o administrador muda a função desta pessoa'
+    );
+    expect(linha(wrapper, CARLA.userId).find('[data-acao]').exists()).toBe(
+      false
+    );
+  });
+
   it('tirar e pôr marcam a linha, e o rodapé diz a frase de cada pessoa', async () => {
     const { wrapper, atualizar } = montar();
 
@@ -139,7 +157,8 @@ describe('GavetaDaFuncao', () => {
       'Hoje é Atendente. Vai passar a ser Vendedor.'
     );
     expect(wrapper.findAll('[data-frase-rodape]').map(f => f.text())).toEqual([
-      'Gabriel Souza vai ficar sem função e passa a ler e atender as conversas dos colegas. Também passa a ver os valores das vendas em R$.',
+      // Rodada 4: a mesma frase da linha, com a perda que mais pesa.
+      'Gabriel Souza vai ficar sem função e passa a ler e atender as conversas dos colegas. Deixa de procurar clientes novos. Também passa a ver os valores das vendas em R$.',
       'Íris Lopes passa a ser Vendedor.',
     ]);
 
@@ -278,7 +297,53 @@ describe('GavetaDaFuncao', () => {
     }
   );
 
-  it('401 do agents/update com sessão boa (corpo real, sem código): diz que está fora do alcance e recarrega pessoas e funções', async () => {
+  // Rodada 4: o 401 sem código do agents/update também vem de quem perdeu Pessoas (UserPolicy#update?). A gaveta
+  // recarrega quem monta e, sem Pessoas, diz isso em vez de "fora do que você pode dar".
+  it('401 sem código de quem perdeu Pessoas: recarrega quem monta e diz que não pode mais', async () => {
+    const giver = reactive({ ...CARLA, permissions: [...CARLA.permissions] });
+    const recarregarQuemMonta = vi.fn(() => {
+      giver.permissions = giver.permissions.filter(
+        chave => chave !== 'people_manage'
+      );
+    });
+    const atualizar = vi.fn(() => Promise.reject(recusa(401, CORPO_DO_401)));
+    const agentes = AGENTES.map(item => ({ ...item }));
+    const store = loja({
+      giver,
+      funcoes: [ATENDENTE, VENDEDOR, FINANCEIRO],
+      agentes,
+      actions: {
+        'agents/update': atualizar,
+        validityCheck: recarregarQuemMonta,
+      },
+    });
+    const wrapper = mount(GavetaDaFuncao, {
+      attachTo: document.body,
+      props: { funcao: VENDEDOR },
+      global: {
+        ...global(store),
+        stubs: { ...global(store).stubs, Avatar: true },
+      },
+    });
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(recarregarQuemMonta).toHaveBeenCalledTimes(1);
+    const erro = wrapper.find('[data-erro-gaveta]');
+    expect(erro.attributes('role')).toBe('alert');
+    expect(erro.text()).toBe(
+      'Você não pode mais pôr e tirar pessoas das funções. Fale com o administrador.'
+    );
+    expect(erro.text()).not.toContain('fora do que você pode dar');
+    expect(wrapper.find('[data-so-leitura]').exists()).toBe(true);
+    expect(acoesDasPessoas(wrapper)).toHaveLength(0);
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    await wrapper.find('[data-fechar]').trigger('click');
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+  });
+
+  it('401 do agents/update com sessão boa e Pessoas ainda ali (corpo real, sem código): diz que está fora do alcance e recarrega pessoas e funções', async () => {
     const agentes = AGENTES.map(item => ({ ...item }));
     const gravar = gravarNa(agentes);
     const atualizar = vi.fn((contexto, dados) =>
@@ -420,6 +485,56 @@ describe('GavetaDaFuncao', () => {
     expect(wrapper.find('[data-salvar]').text()).toBe('Salvar');
   });
 
+  // Rodada 4: o fim do salvar troca as mudanças pelo que não gravou; mexer numa linha no meio se perderia, e a gaveta
+  // fecharia "Salvo". Enquanto salva, as linhas não mudam.
+  it('enquanto salva, as linhas ficam travadas: nem a ação nem a escolha mudam nada', async () => {
+    let soltarPedido;
+    const atualizar = vi.fn(
+      () =>
+        new Promise(resolve => {
+          soltarPedido = resolve;
+        })
+    );
+    const { wrapper } = montar({ atualizar });
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await wrapper.find('[data-salvar]').trigger('click');
+
+    const acoes = acoesDasPessoas(wrapper);
+    expect(acoes.length).toBeGreaterThan(0);
+    acoes.forEach(acao => expect(acao.attributes('disabled')).toBeDefined());
+    await linha(wrapper, 23).find('[data-acao]').trigger('click');
+    expect(linha(wrapper, 23).find('[data-estado]').text()).toBe('Atendente');
+    wrapper
+      .findAllComponents(ChoiceSelect)
+      .forEach(escolha => expect(escolha.props('disabled')).toBe(true));
+
+    soltarPedido();
+    await flushPromises();
+  });
+
+  it('quem está sem função, enquanto salva: a escolha fica travada', async () => {
+    let soltarPedido;
+    const atualizar = vi.fn(
+      () =>
+        new Promise(resolve => {
+          soltarPedido = resolve;
+        })
+    );
+    const { wrapper } = montar({ funcao: null, atualizar });
+    const escolha = wrapper.findComponent(ChoiceSelect);
+    escolha.vm.$emit('update:modelValue', 1);
+    await flushPromises();
+    await wrapper.find('[data-salvar]').trigger('click');
+
+    expect(wrapper.findComponent(ChoiceSelect).props('disabled')).toBe(true);
+    expect(
+      linha(wrapper, 24).find('[data-acao]').attributes('disabled')
+    ).toBeDefined();
+
+    soltarPedido();
+    await flushPromises();
+  });
+
   it('quem está sem função: uma escolha por pessoa, só com as funções ao alcance', async () => {
     const { wrapper } = montar({ funcao: null });
 
@@ -432,6 +547,8 @@ describe('GavetaDaFuncao', () => {
       'Atendente',
       'Vendedor',
     ]);
+    // Rodada 4: o nome acessível começa pelo texto visível ("Escolher função").
+    expect(escolha.props('ariaLabel')).toBe('Escolher função: Kauã Moreira');
     expect(wrapper.find('[data-escondidas]').text()).toBe(
       'A função Financeiro não aparece na escolha: só o administrador dá.'
     );

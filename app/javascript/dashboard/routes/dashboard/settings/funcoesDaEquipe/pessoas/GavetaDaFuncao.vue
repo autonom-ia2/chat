@@ -18,7 +18,8 @@ import { useSalvarGaveta } from './useSalvarGaveta';
 // "Cancelar" descarta; Esc, o X e o clique no fundo, com mudança pendente, perguntam antes. Enquanto salva, nada fecha
 // (Cancelar, Esc, X e fundo ficam travados) e o botão diz "Salvando…". O salvar e a conferência moram
 // em useSalvarGaveta; se algo falha, a gaveta fica aberta só com o que não gravou e diz de quem e por quê. Sem
-// Pessoas, numa função fora do alcance ou na própria função, a gaveta só mostra quem é, com o motivo certo.
+// Pessoas, numa função fora do alcance ou na própria função, a gaveta só mostra quem é, com o motivo certo. Quem perde
+// Pessoas no meio do salvar vê o porquê no rodapé (rodada 4).
 const props = defineProps({
   funcao: { type: Object, default: null },
 });
@@ -29,7 +30,7 @@ const { t } = useI18n();
 const { lista } = useTextos();
 const { canManagePeople, memberLockReason, roleLockReason, reachesRole } =
   usePeopleAccess();
-const { diff, curtoDa } = useSemFuncao();
+const { efeitoDe } = useSemFuncao();
 const agentes = useMapGetter('agents/getAgents');
 const funcoes = useMapGetter('customRole/getCustomRoles');
 
@@ -90,13 +91,21 @@ const linha = pessoa => ({
   nomeDoDestino: funcaoDe(mudancas.value.get(pessoa.id))?.name || '',
   trava: travaDe(pessoa),
   somenteLeitura: somenteLeitura.value,
+  salvando: salvando.value,
   opcoes: opcoes.value,
   alvo: props.funcao,
 });
 
 const nomeDe = id => agentes.value.find(item => item.id === id)?.name;
 
-// Quem fica sem função: o primeiro ganho e, como na linha da pessoa, o que só o administrador daria (os R$).
+// Quem fica sem função: a mesma frase da linha da pessoa (efeitoDe), com o primeiro ganho, a perda que mais pesa e o
+// que só o administrador daria (os R$) (revisão do #2308, rodada 4).
+const RODAPE_SEM_FUNCAO = {
+  ganhoEPerda: 'FICA_SEM_E_DEIXA',
+  ganho: 'FICA_SEM',
+  perda: 'FICA_SEM_DEIXA',
+  nada: 'FICA_SEM_SO',
+};
 const fraseDoRodape = ([id, destino]) => {
   const pessoa = nomeDe(id);
   if (destino !== null)
@@ -105,15 +114,17 @@ const fraseDoRodape = ([id, destino]) => {
       funcao: funcaoDe(destino)?.name,
     });
   const atual = agentes.value.find(item => item.id === id)?.custom_role_id;
-  const [ganho, ...outros] = diff(funcaoDe(atual)?.permissions).ganha;
-  if (!ganho) return t('FUNCOES_EQUIPE.GAVETA.RODAPE.FICA_SEM_SO', { pessoa });
-  const tambem = outros
-    .filter(item => item.delegacao)
-    .map(item => t('FUNCOES_EQUIPE.EFEITO.TAMBEM', { ganho: curtoDa(item) }));
+  const { ganho, perda, tambem } = efeitoDe(funcaoDe(atual)?.permissions);
+  const forma =
+    (ganho && perda && 'ganhoEPerda') ||
+    (ganho && 'ganho') ||
+    (perda && 'perda') ||
+    'nada';
   return [
-    t('FUNCOES_EQUIPE.GAVETA.RODAPE.FICA_SEM', {
+    t(`FUNCOES_EQUIPE.GAVETA.RODAPE.${RODAPE_SEM_FUNCAO[forma]}`, {
       pessoa,
-      ganho: curtoDa(ganho),
+      ganho,
+      perda,
     }),
     ...tambem,
   ].join(' ');
@@ -229,7 +240,7 @@ const salvar = async () => {
       }}
     </p>
 
-    <template v-if="!somenteLeitura" #rodape>
+    <template v-if="!somenteLeitura || erro" #rodape>
       <p
         v-for="frase in frases"
         :key="frase"
@@ -246,7 +257,10 @@ const salvar = async () => {
       >
         {{ erro }}
       </p>
-      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+      <div
+        v-if="!somenteLeitura"
+        class="flex flex-col gap-2 sm:flex-row sm:justify-end"
+      >
         <Button
           data-cancelar
           :label="$t('FUNCOES_EQUIPE.GAVETA.CANCELAR')"

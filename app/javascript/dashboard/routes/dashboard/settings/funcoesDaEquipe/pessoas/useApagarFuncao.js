@@ -4,9 +4,16 @@ import { useStore } from 'dashboard/composables/store';
 import { explicar401 } from '../salvarFuncao';
 
 // Apagar uma função da lista (#2308, especificação 5.E). `apagarRef` é o diálogo (ApagarFuncao), `pessoasDa` diz
-// quem usa a função e `carregar` recarrega as funções. As recusas falam de apagar, não de salvar nem de dar, e nunca
-// mostram o texto cru do servidor. `apagar` só volta quando acabou: o diálogo fica em "Apagando…" até lá.
-export function useApagarFuncao({ apagarRef, pessoasDa, carregar }) {
+// quem usa a função, `carregar` recarrega as funções e `carregarPessoas` as pessoas, pelo caminho da página: uma
+// recarga que falha vira "Não deu para ver quem usa", nunca "Ninguém usa" (revisão do #2308, rodada 4). Devolve se
+// carregou. As recusas falam de apagar, não de salvar nem de dar, e nunca mostram o texto cru do servidor. `apagar`
+// só volta quando acabou: o diálogo fica em "Apagando…" até lá.
+export function useApagarFuncao({
+  apagarRef,
+  pessoasDa,
+  carregar,
+  carregarPessoas,
+}) {
   const store = useStore();
   const { t } = useI18n();
 
@@ -14,12 +21,15 @@ export function useApagarFuncao({ apagarRef, pessoasDa, carregar }) {
     apagarRef.value?.abrir(funcao, mensagem);
 
   // O servidor recusou: a lista de agentes estava velha (achou gente), a função de destino sumiu ou saiu do alcance,
-  // ou alguém mudou a função no meio. A tela recarrega o que mudou e pergunta de novo.
+  // ou alguém mudou a função no meio. A tela recarrega o que mudou e pergunta de novo, dizendo por quê. Se a recarga
+  // das pessoas falhou, pergunta também: o diálogo diz que não deu para ver quem usa e oferece tentar.
   const RECUSAS = {
     destination_required: async funcao => {
-      await store.dispatch('agents/get');
-      if (pessoasDa(funcao).length) pedirParaApagar(funcao);
-      else useAlert(t('FUNCOES_EQUIPE.APAGAR.RECUSA.TEM_GENTE'));
+      const carregou = await carregarPessoas();
+      const temGente = t('FUNCOES_EQUIPE.APAGAR.RECUSA.TEM_GENTE');
+      if (!carregou || pessoasDa(funcao).length)
+        pedirParaApagar(funcao, temGente);
+      else useAlert(temGente);
     },
     destination_invalid: async funcao => {
       await store.dispatch('customRole/getCustomRole');
@@ -27,7 +37,7 @@ export function useApagarFuncao({ apagarRef, pessoasDa, carregar }) {
     },
     changed_meanwhile: async () => {
       useAlert(t('FUNCOES_EQUIPE.APAGAR.MUDOU'));
-      await Promise.all([carregar(), store.dispatch('agents/get')]);
+      await Promise.all([carregar(), carregarPessoas()]);
     },
   };
 
@@ -37,7 +47,7 @@ export function useApagarFuncao({ apagarRef, pessoasDa, carregar }) {
         id: funcao.id,
         destinationRoleId: destino,
       });
-      if (destino) store.dispatch('agents/get');
+      if (destino) carregarPessoas();
       useAlert(t('FUNCOES_EQUIPE.APAGAR.APAGADA', { nome: funcao.name }));
     } catch (error) {
       const recusa = RECUSAS[error?.code];

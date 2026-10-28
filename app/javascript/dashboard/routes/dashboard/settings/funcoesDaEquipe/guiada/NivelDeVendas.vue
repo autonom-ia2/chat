@@ -20,7 +20,8 @@ import EscolhaDeNivel from './EscolhaDeNivel.vue';
 // quem não é administrador nem tem grant_above_own, fica tracejado com "Só o administrador dá isto.". O aviso não
 // fala em metas nem em R$ (decisão 14A). O "antes do 4º nível" fica na memória da conversa, não aqui: a pergunta é
 // desmontada no "Pronto", e sair de "Cuida de tudo" numa visita seguinte ainda devolve o que era. Entre os outros
-// três, voltar a um nível por onde passou devolve os ajustes de lá.
+// três, voltar a um nível por onde passou devolve os ajustes de lá; entrar e sair do 4º esquece o que estava guardado
+// (revisão do #2308, rodada 4).
 const props = defineProps({
   permissions: { type: Array, required: true },
   // A função quando abriu: com crm_admin, sair do 4º nível tira as seis (não dá para saber o que era dela).
@@ -74,6 +75,7 @@ const aplicar = valor => {
   if (valor === TUDO && nivel.value !== TUDO)
     memoria.guardarAntesDoTudo(props.permissions);
   const comMemoria = ![valor, nivel.value].includes(TUDO);
+  if (!comMemoria) memoria.esquecer(vendas.key);
   emit(
     'update:permissions',
     comMemoria

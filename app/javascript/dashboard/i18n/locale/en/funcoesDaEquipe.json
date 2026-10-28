@@ -41,6 +41,7 @@
       "PROPRIAS_E_NOVAS": "Handles their own conversations and picks up new ones nobody has taken.",
       "TODAS": "Reads and handles every conversation.",
       "VENDAS_SO_OLHA": "Only looks at sales.",
+      "VENDAS_OLHA_E_MOVE": "Looks at and moves sales.",
       "VENDAS_MEXE": "Creates and moves sales in progress.",
       "VENDAS_TUDO": "Takes care of everything in sales.",
       "CONTATOS_SO_OLHA": "Only looks at contacts.",
@@ -346,9 +347,12 @@
         "crm_metas_manage": "the monthly goals",
         "sales_value_view": "the amounts in R$",
         "insurance_view": "seeing quotes",
-        "insurance_manage": "making quotes"
+        "insurance_manage": "making quotes",
+        "campaign_send": "sending campaigns",
+        "report_manage": "seeing the service reports"
       },
-      "SEM_AREA": "working on {area}"
+      "SEM_AREA": "working on {area}",
+      "SEM_AREA_VER": "seeing {area}"
     },
     "ESCOLHA": {
       "TITULO": "Who is this role for?",
@@ -432,8 +436,7 @@
         "TODAS": "Handles all",
         "PROPRIAS_TUDO": "Handles their own, picks up new ones and helps when a colleague calls",
         "PROPRIAS_NOVAS": "Handles their own and picks up new ones",
-        "PROPRIAS_AJUDA": "Handles their own and helps when a colleague calls",
-        "PROPRIAS_CURTO": "Only their own"
+        "PROPRIAS_AJUDA": "Handles their own and helps when a colleague calls"
       },
       "CUIDADO_NENHUMA": "None on · deleting, spreadsheets, campaigns and AI",
       "ANTES": {
@@ -749,17 +752,17 @@
       },
       "AREA": {
         "MEXER": {
-          "LISTA": "Change: {area}",
+          "LISTA": "Change {area}",
           "CURTO": "change {area}"
         },
         "VER": {
-          "LISTA": "See: {area}",
+          "LISTA": "See {area}",
           "CURTO": "see {area}"
         }
       },
       "OUTRA": {
-        "LISTA": "Use all of {area}",
-        "CURTO": "use all of {area}"
+        "LISTA": "Part of what they did in {area}",
+        "CURTO": "use part of {area}"
       },
       "ALGO": {
         "LISTA": "Do something in {area}",
@@ -802,7 +805,7 @@
       "OUTRA_FUNCAO": "Move to another role",
       "OUTRA_FUNCAO_ROTULO": "Move to another role: {pessoa}",
       "ESCOLHER_FUNCAO": "Choose a role",
-      "ESCOLHER_FUNCAO_ROTULO": "Choose the role for {pessoa}",
+      "ESCOLHER_FUNCAO_ROTULO": "Choose a role: {pessoa}",
       "SEM_FUNCAO": "No role",
       "VAI_FICAR_SEM": "Will have no role",
       "HOJE_E": "Today is {atual}. Will become {nova}.",
@@ -829,6 +832,8 @@
       "RODAPE": {
         "PASSA_A_SER": "{pessoa} becomes {funcao}.",
         "FICA_SEM": "{pessoa} will have no role and will {ganho}.",
+        "FICA_SEM_E_DEIXA": "{pessoa} will have no role and will {ganho}. They will no longer {perda}.",
+        "FICA_SEM_DEIXA": "{pessoa} will have no role and will no longer {perda}.",
         "FICA_SEM_SO": "{pessoa} will have no role."
       },
       "TENTE": "Check the internet and try again.",
@@ -837,6 +842,7 @@
       "SO_LEITURA_MINE": "No one changes their own role: this one is yours.",
       "NINGUEM_AINDA": "No one has this role yet.",
       "FORA_DO_ALCANCE": "Couldn't change the role of {nomes}: it's beyond what you can give.",
+      "SEM_ACESSO": "You can no longer add or remove people from roles. Talk to the administrator.",
       "NAO_MUDOU": "The role of {nomes} didn't change. Try again; if it keeps happening, talk to the administrator. | The role of these people didn't change: {nomes}. Try again; if it keeps happening, talk to the administrator."
     },
     "APAGAR": {
@@ -870,6 +876,10 @@
     "PERDA": {
       "TEXTO": "This person has the {nome} role. From now on, they can no longer: | These people have the {nome} role. From now on, they can no longer:",
       "TEXTO_UMA": "This person has the {nome} role. | These people have the {nome} role.",
+      "FICA": {
+        "OLHA": "From now on, they will only look at {area}. | From now on, they will only look at {area}.",
+        "PROPRIAS": "From now on, they will only handle their own conversations. | From now on, they will only handle their own conversations."
+      },
       "VOLTAR": "Back",
       "SALVAR": "Save anyway",
       "TITULO_UMA": "{n} person will no longer {coisa} | {n} people will no longer {coisa}",

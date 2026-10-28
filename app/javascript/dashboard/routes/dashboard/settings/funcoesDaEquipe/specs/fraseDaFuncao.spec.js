@@ -11,15 +11,13 @@ import {
   previaDaFuncao,
 } from '../fraseDaFuncao';
 
-// #2308, especificação 7.7 e 8: a fonte única do que a função pode.
-const ligarAsDuas = permissions => {
-  const area = moduleByKey('CAMPAIGNS');
-  return toggleExtra(
-    area,
-    'campaign_send',
-    setLevel(area, 'manage', permissions)
-  );
-};
+// #2308, especificação 7.7 e 8: a fonte única do que a função pode. O "Ligar as duas" mora no PerguntaCuidado (e no
+// spec dele); aqui vale o que ele grava: campaign_manage e campaign_send (rodada 4).
+const comAsDuas = permissions => [
+  ...permissions,
+  'campaign_manage',
+  'campaign_send',
+];
 
 describe('fraseDaFuncao', () => {
   it('Atendente: próprias e novas, cria e move as vendas, só olha os contatos', () => {
@@ -34,6 +32,14 @@ describe('fraseDaFuncao', () => {
       destaque: 'NAO_ATENDE',
       resto: ['VENDAS_SO_OLHA', 'CAMPANHAS_DISPARA', 'CONTATOS_MEXE'],
     });
+  });
+
+  // Rodada 4: a função antiga "Só olha" com mover as vendas move de verdade (CardPolicy#move?); a frase diz isso,
+  // como o Pode ("Mover as vendas entre as colunas").
+  it('só olha e move as vendas: "Olha e move as vendas."', () => {
+    expect(fraseDaFuncao(['crm_view', 'crm_move_cards']).resto).toEqual([
+      'VENDAS_OLHA_E_MOVE',
+    ]);
   });
 
   it('área sem acesso não entra; crm_admin cuida de tudo nas vendas', () => {
@@ -67,20 +73,11 @@ describe('prévia "Como vai ficar"', () => {
     );
   });
 
-  it('"Ligar as duas" grava exatamente campaign_manage e campaign_send', () => {
-    const antes = PRESETS.AGENT();
-    expect(ligarAsDuas(antes)).toEqual([
-      ...antes,
-      'campaign_manage',
-      'campaign_send',
-    ]);
-  });
-
   it('estável: o novo entra no fim do Pode com "novo"; o Não pode não muda', () => {
     const antes = PRESETS.AGENT();
     const previa = mesclarPrevia(
       previaDaFuncao(antes),
-      previaDaFuncao(ligarAsDuas(antes))
+      previaDaFuncao(comAsDuas(antes))
     );
     expect(previa.pode.slice(-2)).toEqual([
       { id: 'CAMPAIGN_MANAGE', novo: true },

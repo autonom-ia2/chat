@@ -3,7 +3,7 @@ import { PRESETS } from '../../customRoles/permissionMatrix';
 import PerguntaCuidado from '../guiada/PerguntaCuidado.vue';
 import { global } from './montar';
 import { escolherNivelDeVendas } from '../nivelDeVendas';
-import { ADMIN, CARLA, CARLA_SEM_DISPARO } from './quemMonta';
+import { ADMIN, CARLA, CARLA_SEM_DISPARO, TUDO_SEM_MEXER } from './quemMonta';
 
 // #2308, especificação 5.B3 e 7.7: o Cuidado da Carla para o Atendente.
 const ATENDENTE = PRESETS.AGENT();
@@ -216,5 +216,20 @@ describe('PerguntaCuidado', () => {
     expect(wrapper.find('[data-cuidado="crm_metas_manage"]').exists()).toBe(
       false
     );
+  });
+
+  // Rodada 4: quem tem "Cuida de tudo" sem crm_manage_cards altera outra função com crm_admin. O alcance é o das
+  // chaves gravadas (mais as implicadas), como no servidor; antes, o que o crm_admin dá punha "Apagar contatos" no
+  // cadeado sem motivo (FUNCOES_EQUIPE.TRAVA.undefined).
+  it('alcance pelas chaves gravadas: apagar contatos liga junto, e o cadeado sempre diz o motivo', async () => {
+    const outra = ['contact_view', 'crm_view', 'crm_admin'];
+    const wrapper = montar(TUDO_SEM_MEXER, outra, outra);
+    expect(wrapper.find('[data-cuidado="contact_delete"]').exists()).toBe(true);
+    expect(wrapper.find('[data-cadeado="contact_delete"]').exists()).toBe(
+      false
+    );
+    const cadeado = wrapper.find('[data-recolhida]');
+    if (cadeado.exists()) await cadeado.trigger('click');
+    expect(wrapper.text()).not.toContain('FUNCOES_EQUIPE.TRAVA');
   });
 });

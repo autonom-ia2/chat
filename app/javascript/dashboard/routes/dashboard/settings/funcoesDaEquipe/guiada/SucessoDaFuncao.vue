@@ -1,4 +1,5 @@
 <script setup>
+import { nextTick, onMounted, ref } from 'vue';
 import BotaoGrande from './BotaoGrande.vue';
 
 // Sucesso (#2308, especificação 5.B5): a função foi criada e a próxima pergunta é quem vai tê-la. Sem poder pôr
@@ -10,6 +11,14 @@ defineProps({
 });
 
 const emit = defineEmits(['escolherPessoas', 'voltar']);
+
+// Um role=status que já nasce com o texto não é anunciado: o "criada" entra depois de montar, enquanto o foco vai
+// para o h1 (revisão do #2308, rodada 4).
+const anunciar = ref(false);
+onMounted(async () => {
+  await nextTick();
+  anunciar.value = true;
+});
 </script>
 
 <template>
@@ -17,10 +26,12 @@ const emit = defineEmits(['escolherPessoas', 'voltar']);
     <template v-if="podeEscolherPessoas">
       <p
         role="status"
-        class="flex items-center gap-2 m-0 font-semibold text-n-teal-11"
+        class="flex items-center gap-2 m-0 font-semibold min-h-6 text-n-teal-11"
       >
-        <span class="i-lucide-circle-check size-5" aria-hidden="true" />
-        {{ $t('FUNCOES_EQUIPE.SUCESSO.CRIADA', { nome }) }}
+        <template v-if="anunciar">
+          <span class="i-lucide-circle-check size-5" aria-hidden="true" />
+          {{ $t('FUNCOES_EQUIPE.SUCESSO.CRIADA', { nome }) }}
+        </template>
       </p>
       <h1
         class="m-0 text-2xl font-bold tracking-tight sm:text-3xl text-n-slate-12"

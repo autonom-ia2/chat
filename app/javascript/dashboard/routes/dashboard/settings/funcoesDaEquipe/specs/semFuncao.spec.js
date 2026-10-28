@@ -1,6 +1,10 @@
 import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
 import en from 'dashboard/i18n/locale/en/funcoesDaEquipe.json';
-import { PRESETS } from '../../customRoles/permissionMatrix';
+import {
+  PRESETS,
+  moduleByKey,
+  setLevel,
+} from '../../customRoles/permissionMatrix';
 import { escolherNivelDeVendas } from '../nivelDeVendas';
 import { capacidadesSemFuncao, diffEntre } from '../semFuncao';
 import contrato from '../semFuncaoCapacidades.json';
@@ -87,6 +91,20 @@ describe('semFuncao', () => {
       'MACROS:MEXER',
       'SLA:MEXER',
     ]);
+  });
+
+  // Rodada 4: o extra anuncio_de_origem (meta_ads_view) diz só o que o sem função ganha; a página de Anúncios ele
+  // não tem (sem_funcao_capacidades.rb), e quem a via perde.
+  it('quem vê a página de Anúncios perde a página; o extra não a esconde', () => {
+    const comAnuncios = setLevel(
+      moduleByKey('META_ADS'),
+      'view',
+      PRESETS.SDR()
+    );
+    const { ganha, perde } = diff(comAnuncios);
+    expect(perde).toContain('META_ADS:VER');
+    expect(ganha).not.toContain('anuncio_de_origem');
+    expect(diff(PRESETS.SDR()).ganha).toContain('anuncio_de_origem');
   });
 
   it('quem só olha os contatos ganha mudar os contatos; quem leva planilha perde', () => {

@@ -7,11 +7,14 @@ import { useTextos } from './useTextos';
 // quem já tem a função, diz quem perde o quê antes de gravar. Com uma perda só, o título diz qual ("5 pessoas vão
 // deixar de mudar os dados dos contatos") e a lista não a repete; com mais, quantas, e a lista vem embaixo, um item
 // por coisa (a contagem bate com a lista). `perdas` sai de perdasDeAcesso: { id } de FUNCOES_EQUIPE.PODE ou { area }
-// que deixa de ser vista ("Ver os Relatórios"). Os nomes param em 3, com "e mais N pessoas".
+// que deixa de ser vista ("Ver os Relatórios"). Os nomes param em 3, com "e mais N pessoas". Com uma perda só numa
+// queda de nível, o texto diz também o que fica ("A partir de agora, só vão olhar os contatos."; `fica` sai de
+// nivelQueFica, revisão do #2308, rodada 4).
 const props = defineProps({
   nome: { type: String, required: true },
   pessoas: { type: Array, default: () => [] },
   perdas: { type: Array, default: () => [] },
+  fica: { type: Object, default: null },
 });
 
 const emit = defineEmits(['salvar']);
@@ -55,6 +58,22 @@ const nomes = computed(() => {
   );
 });
 
+const texto = computed(() => {
+  const quem = t(
+    `FUNCOES_EQUIPE.PERDA.${umaSo.value ? 'TEXTO_UMA' : 'TEXTO'}`,
+    { nome: props.nome },
+    n.value
+  );
+  if (!umaSo.value || !props.fica) return quem;
+  const area = t(`FUNCOES_EQUIPE.AREAS.${props.fica.area}.COM_ARTIGO`);
+  const fica = t(
+    `FUNCOES_EQUIPE.PERDA.FICA.${props.fica.nivel}`,
+    { area },
+    n.value
+  );
+  return `${quem} ${fica}`;
+});
+
 defineExpose({ abrir: () => dialogo.value?.abrir() });
 </script>
 
@@ -71,10 +90,8 @@ defineExpose({ abrir: () => dialogo.value?.abrir() });
     <p data-nomes class="m-0 text-sm font-medium text-n-slate-12">
       {{ nomes }}
     </p>
-    <p class="m-0 text-[0.9375rem] text-n-slate-11">
-      {{
-        $t(`FUNCOES_EQUIPE.PERDA.${umaSo ? 'TEXTO_UMA' : 'TEXTO'}`, { nome }, n)
-      }}
+    <p data-texto-perda class="m-0 text-[0.9375rem] text-n-slate-11">
+      {{ texto }}
     </p>
     <ul
       v-if="!umaSo"

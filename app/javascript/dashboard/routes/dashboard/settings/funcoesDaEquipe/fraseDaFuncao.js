@@ -61,11 +61,17 @@ const fraseDasCampanhas = permissions => {
     : 'CAMPANHAS_CRIA';
 };
 
+// A função antiga "Só olha" com mover as vendas move de verdade (CardPolicy#move?): a frase diz isso, como o Pode.
+const fraseDasVendas = permissions =>
+  soOlhaEMove(permissions)
+    ? 'VENDAS_OLHA_E_MOVE'
+    : FRASE_DAS_VENDAS[nivelDeVendas(permissions)];
+
 // A de conversas vem em destaque; uma área sem acesso não entra no resto.
 export const fraseDaFuncao = permissions => ({
   destaque: fraseDasConversas(permissions),
   resto: [
-    FRASE_DAS_VENDAS[nivelDeVendas(permissions)],
+    fraseDasVendas(permissions),
     fraseDasCampanhas(permissions),
     FRASE_DOS_CONTATOS[nivel('CONTACTS', permissions)],
   ].filter(Boolean),
@@ -173,6 +179,21 @@ const CAPACIDADES = [
     tem: tem(chave),
   })),
 ];
+
+// Capacidade que contém outras: quem lê e atende todas as conversas também responde as entregues, pega as novas,
+// ajuda pelo link e lê as dos colegas; quem cria e move as vendas também as move; quem mexe no financeiro também o vê
+// (`_manage` traz `_view` no servidor). Ganhar a maior não é perder as menores (revisão do #2308, rodada 4).
+const CONTEM = {
+  LER_E_ATENDER_TODAS: [
+    'RESPONDER_ENTREGUES',
+    'PEGAR_NOVAS',
+    'AJUDAR_PELO_LINK',
+    'LER_COLEGAS',
+  ],
+  CRIAR_MOVER_VENDAS: ['MOVER_VENDAS'],
+  FINANCIAL_MANAGE: ['FINANCIAL_VIEW'],
+};
+export const contidasEm = ids => ids.flatMap(id => CONTEM[id] || []);
 
 export const podeDaFuncao = permissions =>
   CAPACIDADES.filter(item => item.tem(permissions)).map(item => item.id);

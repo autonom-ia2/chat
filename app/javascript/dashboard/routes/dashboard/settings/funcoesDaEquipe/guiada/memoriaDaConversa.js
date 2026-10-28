@@ -11,7 +11,7 @@ const CHAVE = Symbol('memoriaDaConversa');
 //   alcances, que lá não aparecem). Voltar a um nível que aceita devolve as tiradas e tira as postas, só se continuam
 //   como a troca deixou. O que estava à vista no nível do meio fica como a pessoa deixou: o R$ desligado em "Só olha"
 //   continua desligado, os relatórios ligados em "Só olha" continuam ligados (revisão do #2308, rodada 3). Esvazia a
-//   cada etapa.
+//   cada etapa, e numa área a cada troca que não passa por aqui (`esquecer`).
 export const criarMemoria = () => {
   let antesDoTudo = null;
   let mexidas = {};
@@ -60,6 +60,11 @@ export const criarMemoria = () => {
       antesDoTudo = [...permissions];
     },
     trocarNivel,
+    // Uma troca que não passa por trocarNivel (entrar e sair de "Cuida de tudo") vira a página da área: o que estava
+    // guardado de antes não volta depois (revisão do #2308, rodada 4).
+    esquecer: moduleKey => {
+      mexidas = { ...mexidas, [moduleKey]: undefined };
+    },
     novaVisita: () => {
       mexidas = {};
     },

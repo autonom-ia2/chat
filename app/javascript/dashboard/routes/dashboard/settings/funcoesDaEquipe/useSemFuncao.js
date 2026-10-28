@@ -5,6 +5,7 @@ import { useTextos } from './guiada/useTextos';
 import {
   capacidadesSemFuncao,
   diffEntre,
+  porPeso,
   premissasSemFuncao,
 } from './semFuncao';
 
@@ -20,11 +21,9 @@ export function useSemFuncao() {
 
   const nomeDaArea = key => t(`FUNCOES_EQUIPE.AREAS.${key}.NOME`);
 
-  // No meio de uma frase, a área inteira vai com artigo ("deixa de ver a Central de Ajuda"), sem dois-pontos.
-  const areaNaFrase = (key, forma) =>
-    forma === 'CURTO'
-      ? t(`FUNCOES_EQUIPE.AREAS.${key}.COM_ARTIGO`)
-      : nomeDaArea(key);
+  // A área inteira vai com artigo e sem dois-pontos, na frase ("deixa de ver a Central de Ajuda") e na lista ("Ver os
+  // Relatórios"), como a Perda de acesso (revisão do #2308, rodada 4).
+  const areaNaFrase = key => t(`FUNCOES_EQUIPE.AREAS.${key}.COM_ARTIGO`);
 
   const texto = (item, forma) => {
     if (item.tipo === 'area') {
@@ -33,7 +32,7 @@ export function useSemFuncao() {
           area: nomeDaArea(item.chave),
         });
       return t(`FUNCOES_EQUIPE.SEM_FUNCAO.AREA.${item.jeito}.${forma}`, {
-        area: areaNaFrase(item.chave, forma),
+        area: areaNaFrase(item.chave),
       });
     }
     const chave = `FUNCOES_EQUIPE.SEM_FUNCAO.${item.chave}.${forma}`;
@@ -47,6 +46,25 @@ export function useSemFuncao() {
   };
   const textoDa = item => texto(item, 'LISTA');
   const curtoDa = item => texto(item, 'CURTO');
+  const diff = permissions => diffEntre(permissions || [], estaLigada);
+
+  // O efeito de ficar sem função numa frase, o mesmo na linha da pessoa e no rodapé da gaveta (revisão do #2308,
+  // rodada 4): o primeiro ganho, a perda que mais pesa (porPeso) e, como "também", o ganho que só o administrador daria
+  // (os R$). Os textos já vêm na forma curta; '' quando não há.
+  const efeitoDe = permissions => {
+    const { ganha, perde } = diff(permissions);
+    const [ganho, ...outros] = ganha;
+    const [perda] = porPeso(perde);
+    return {
+      ganho: ganho ? curtoDa(ganho) : '',
+      perda: perda ? curtoDa(perda) : '',
+      tambem: outros
+        .filter(item => item.delegacao)
+        .map(item =>
+          t('FUNCOES_EQUIPE.EFEITO.TAMBEM', { ganho: curtoDa(item) })
+        ),
+    };
+  };
 
   // "Mais detalhes": o que só vale nos canais ou nas colunas, montado pelas premissas do contrato.
   const notas = computed(() => [
@@ -66,7 +84,8 @@ export function useSemFuncao() {
         chaves,
       }))
     ),
-    diff: permissions => diffEntre(permissions || [], estaLigada),
+    diff,
+    efeitoDe,
     textoDa,
     curtoDa,
     notas,

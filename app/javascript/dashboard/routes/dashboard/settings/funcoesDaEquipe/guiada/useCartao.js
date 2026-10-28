@@ -26,14 +26,19 @@ export function useCartao() {
         })
       : '';
 
+  // Uma chave sem nome próprio cai na área, com "ver" ou "mexer" pelo nível dela: report_manage é o ver dos
+  // Relatórios, e "Sem mexer em Relatórios" contradiria o "Vê os relatórios" do cartão (revisão do #2308, rodada 4).
+  const semArea = chave => {
+    const module = modulesWithKeys([chave])[0];
+    const forma = module?.levels?.view === chave ? 'SEM_AREA_VER' : 'SEM_AREA';
+    return t(`FUNCOES_EQUIPE.TRAVA.${forma}`, {
+      area: t(`FUNCOES_EQUIPE.AREAS.${module?.key}.NOME`),
+    });
+  };
   const semCoisa = chave =>
     te(`FUNCOES_EQUIPE.TRAVA.SEM.${chave}`)
       ? t(`FUNCOES_EQUIPE.TRAVA.SEM.${chave}`)
-      : t('FUNCOES_EQUIPE.TRAVA.SEM_AREA', {
-          area: t(
-            `FUNCOES_EQUIPE.AREAS.${modulesWithKeys([chave])[0]?.key}.NOME`
-          ),
-        });
+      : semArea(chave);
 
   const trava = ({ motivo, chaves }) =>
     t(`FUNCOES_EQUIPE.TRAVA.CARTAO.${TRAVA_POR_MOTIVO[motivo]}`, {

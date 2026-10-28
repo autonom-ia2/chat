@@ -29,6 +29,8 @@ const props = defineProps({
   acaoOcupada: { type: String, default: '' },
   // Seletor de um alvo estável (o título da página) para quando quem abriu some.
   focoDeReserva: { type: String, default: '' },
+  // Seletor, dentro do diálogo, do campo que recebe o foco quando ele é aberto de novo já aberto (o destino do apagar).
+  focoAoReabrir: { type: String, default: '' },
 });
 
 const emit = defineEmits(['seguro', 'acao']);
@@ -36,6 +38,7 @@ const emit = defineEmits(['seguro', 'acao']);
 const id = useId();
 const dialogo = ref(null);
 const botaoSeguro = ref(null);
+const cabecalho = ref(null);
 let gatilho = null;
 
 const destrutivo = computed(() => props.tipo === 'destrutivo');
@@ -49,9 +52,23 @@ const ESTILO = {
 };
 const estilo = computed(() => ESTILO[props.tipo]);
 
-// Abrir de novo com ele aberto (o apagar que volta a perguntar) só troca o conteúdo.
+const focarTitulo = () => cabecalho.value?.focus();
+
+// Abrir de novo com ele aberto (o apagar que volta a perguntar) troca o conteúdo: o foco vai ao campo marcado ou, sem
+// ele, ao título, para o leitor de tela dizer o que mudou (revisão do #2308, rodada 4).
+const reabrir = async () => {
+  await nextTick();
+  const campo =
+    props.focoAoReabrir && dialogo.value?.querySelector(props.focoAoReabrir);
+  if (campo) campo.focus();
+  else focarTitulo();
+};
+
 const abrir = async () => {
-  if (dialogo.value?.open) return;
+  if (dialogo.value?.open) {
+    await reabrir();
+    return;
+  }
   gatilho = document.activeElement;
   dialogo.value?.showModal?.();
   await nextTick();
@@ -86,7 +103,13 @@ const aoCancelar = evento => {
   escolher('seguro');
 };
 
-defineExpose({ abrir, fechar });
+// No Chrome, um segundo Esc sem "cancel" atendido fecha o <dialog> direto (close watcher). Enquanto grava, o Esc
+// para no teclado e não chega a ele.
+const aoEsc = evento => {
+  if (props.ocupado) evento.preventDefault();
+};
+
+defineExpose({ abrir, fechar, focarTitulo });
 </script>
 
 <template>
@@ -97,6 +120,7 @@ defineExpose({ abrir, fechar });
       :aria-describedby="`${id}-texto`"
       class="w-full p-0 bg-transparent max-w-md rounded-2xl shadow-xl backdrop:bg-n-alpha-black1 max-sm:m-0 max-sm:mt-auto max-sm:max-w-none max-sm:rounded-b-none"
       @cancel="aoCancelar"
+      @keydown.esc="aoEsc"
     >
       <div
         class="flex flex-col gap-4 p-6 rounded-2xl max-sm:rounded-b-none bg-n-solid-1"
@@ -113,7 +137,9 @@ defineExpose({ abrir, fechar });
         </span>
         <h2
           :id="`${id}-titulo`"
-          class="m-0 text-lg font-semibold leading-snug text-n-slate-12"
+          ref="cabecalho"
+          tabindex="-1"
+          class="m-0 text-lg font-semibold leading-snug outline-none text-n-slate-12"
         >
           {{ titulo }}
         </h2>

@@ -67,7 +67,9 @@ export const chavesEfetivas = permissions => {
 };
 
 // O que quem está sem função tem: só as chaves das capacidades que ele pode, com as implicadas. Atender todas as
-// conversas grava também os dois alcances (setLevel em ALL), então os cobre.
+// conversas grava também os dois alcances (setLevel em ALL), então os cobre. Os extras ficam de fora: a chave de um
+// extra abre mais do que o sem função tem (meta_ads_view abre a página de Anúncios; ele só vê a origem do anúncio na
+// venda), e quem a tinha perde isso (revisão do #2308, rodada 4). Eles só entram no que o sem função ganha.
 const chavesSemFuncao = itens => {
   const chaves = comImplicadas(
     itens.filter(item => item.pode).flatMap(item => item.chaves)
@@ -118,7 +120,9 @@ export const diffEntre = (
   const itens = itensDo(contrato, estaLigada);
   const daFuncao = chavesEfetivas(permissions);
   const funcaoTem = quemTem(daFuncao);
-  const semFuncao = chavesSemFuncao(itens);
+  const semFuncao = chavesSemFuncao(
+    itensDo({ capacidades: contrato.capacidades }, estaLigada)
+  );
   const semFuncaoTem = quemTem(semFuncao);
   const perdidasNoContrato = itens.filter(
     item => !item.pode && item.chaves.some(funcaoTem)

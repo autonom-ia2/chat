@@ -22,7 +22,13 @@ import {
   resumoDaRecolhida,
   travaDoNivel,
 } from '../areasDaFuncao';
-import { ADMIN, CARLA, CARLA_SEM_DISPARO } from './quemMonta';
+import {
+  ADMIN,
+  CARLA,
+  CARLA_SEM_DISPARO,
+  SEM_VER_VENDAS,
+  TUDO_SEM_MEXER,
+} from './quemMonta';
 
 // #2308, especificação 6 e 7: o mapa fechado (24/24 módulos, 57/57 chaves), a recolhida e o Cuidado em três grupos.
 const permissoesDoServidor = () => {
@@ -190,6 +196,34 @@ describe('Cuidado em três grupos', () => {
       'crm_export',
       'crm_metas_manage',
     ]);
+  });
+
+  // Rodada 4: o alcance é o do servidor (gravadas + implicadas), não o que o crm_admin dá.
+  it('função com crm_admin: o alcance conta as chaves gravadas, não as que o crm_admin dá', () => {
+    const outra = ['contact_view', 'crm_view', 'crm_admin'];
+    const grupos = gruposDoCuidado(TUDO_SEM_MEXER, outra);
+    expect(chaves(grupos.ligaJunto)).toContain('contact_delete');
+    expect(chaves(grupos.naoPode)).not.toContain('contact_delete');
+  });
+
+  it('todo item no cadeado tem motivo', () => {
+    [CARLA, CARLA_SEM_DISPARO, SEM_VER_VENDAS, TUDO_SEM_MEXER].forEach(
+      giver => {
+        Object.values(PRESETS).forEach(preset => {
+          gruposDoCuidado(giver, preset()).naoPode.forEach(item => {
+            expect(item.motivo).toBeTruthy();
+          });
+        });
+      }
+    );
+    const comVendasForaDoAlcance = [
+      ...PRESETS.AGENT(),
+      'contact_manage',
+      'crm_admin',
+    ];
+    gruposDoCuidado(CARLA, comVendasForaDoAlcance).naoPode.forEach(item => {
+      expect(item.motivo).toBeTruthy();
+    });
   });
 
   it('o administrador liga tudo; quem não atende conversas não vê "Apagar mensagens"', () => {

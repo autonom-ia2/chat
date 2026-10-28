@@ -418,10 +418,11 @@ describe('FuncaoGuiadaPage', () => {
   });
 
   it.each([
+    // Criar nunca recusa com own_role (não há função ainda): o código possível aqui é out_of_reach (rodada 4).
     [
       'sessão boa: diz o motivo e fica no Confira',
       'resolve',
-      'Ninguém muda a própria função.',
+      'Você não pode dar parte disto. Peça ao administrador.',
     ],
     ['sessão vencida: vai para o login, sem mensagem', 'reject', ''],
   ])('401 ao salvar, %s', async (_, sessao, frase) => {
@@ -431,7 +432,7 @@ describe('FuncaoGuiadaPage', () => {
       query: { pronta: 'AGENT' },
       actions: {
         'customRole/createCustomRole': vi.fn(() =>
-          Promise.reject(recusa('own_role'))
+          Promise.reject(recusa('out_of_reach'))
         ),
       },
     });
@@ -447,7 +448,7 @@ describe('FuncaoGuiadaPage', () => {
       expect(wrapper.find('[data-erro-salvar]').exists()).toBe(false);
       expect(wrapper.find('[data-erro-nome]').exists()).toBe(false);
       [
-        ptBR.FUNCOES_EQUIPE.SALVAR.PROPRIA_FUNCAO,
+        ptBR.FUNCOES_EQUIPE.SALVAR.FORA_DO_ALCANCE,
         ptBR.FUNCOES_EQUIPE.SALVAR.SEM_ACESSO,
         ptBR.FUNCOES_EQUIPE.SALVAR.REDE,
       ].forEach(texto => expect(wrapper.text()).not.toContain(texto));

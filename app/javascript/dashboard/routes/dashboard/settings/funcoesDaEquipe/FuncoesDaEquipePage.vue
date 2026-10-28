@@ -79,10 +79,12 @@ const carregar = async () => {
   carregou.value = true;
 };
 
+// Devolve se as pessoas vieram.
 const carregarPessoas = async () => {
   pessoasCarregando.value = true;
   pessoasFalharam.value = (await store.dispatch('agents/get')) === false;
   pessoasCarregando.value = false;
+  return !pessoasFalharam.value;
 };
 
 onMounted(() => {
@@ -115,6 +117,7 @@ const { pedirParaApagar, apagar } = useApagarFuncao({
   apagarRef,
   pessoasDa,
   carregar,
+  carregarPessoas,
 });
 const estadoDasPessoas = computed(() => {
   if (pessoasCarregando.value) return 'carregando';

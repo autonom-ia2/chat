@@ -209,12 +209,17 @@ export const ligaJunto = (giver, item, permissions) =>
 export const ligaAgora = (giver, item, permissions) =>
   !motivoDaTrava(giver, item.chave) && !faltaOJunto(item, permissions);
 
-const motivoDoCuidado = (giver, item) => {
+// O motivo nunca fica vazio: quem dá alcança a chave e a área, mas não o resto da função com elas (ligaJunto confere
+// a função inteira), e o motivo é o dessa função inteira.
+const motivoDoCuidado = (giver, item, permissions) => {
   const module = moduleByKey(item.area);
   const comArea = precisaDeManage(module, item.chave)
     ? [item.chave, module.levels.manage]
     : [item.chave];
-  return motivoDasChaves(giver, comArea) || motivoDaTrava(giver, item.chave);
+  return (
+    motivoDasChaves(giver, comArea) ||
+    motivoDasChaves(giver, [...permissions, ...juntoCom(item), item.chave])
+  );
 };
 
 // Ordem de teste: (b) antes de (a), e (c) o resto.
@@ -241,22 +246,25 @@ const aparece = (item, permissions) => {
   );
 };
 
-// `preso`: vem com "Cuida de tudo nas vendas" (crm_admin), fica ligada e não desliga sozinha.
-export const gruposDoCuidado = (giver, permissions) => {
-  const itens = CUIDADO.filter(item => aparece(item, permissions)).map(
-    item => ({
-      ...item,
-      grupo: grupoDe(giver, item, permissions),
-      preso: isExtraLocked(item.chave, permissions),
-    })
-  );
+// `preso`: vem com "Cuida de tudo nas vendas" (crm_admin), fica ligada e não desliga sozinha. `gravadas` é a função
+// como será gravada. O alcance conta as gravadas mais as implicadas, como o servidor (GrantGuard#reach? com
+// with_implied_permissions); o que aparece e o que está ligado contam também o que o crm_admin dá (chavesDoServidor),
+// a mesma leitura da prévia. Ler o alcance pelo que o crm_admin dá punha no cadeado, sem motivo, o que o servidor
+// aceitaria (revisão do #2308, rodada 4).
+export const gruposDoCuidado = (giver, gravadas, lidas = gravadas) => {
+  const alcance = comImplicadas(gravadas);
+  const itens = CUIDADO.filter(item => aparece(item, lidas)).map(item => ({
+    ...item,
+    grupo: grupoDe(giver, item, alcance),
+    preso: isExtraLocked(item.chave, lidas),
+  }));
   const doGrupo = grupo => itens.filter(item => item.grupo === grupo);
   return {
     ligaJunto: doGrupo('ligaJunto'),
     ligaAgora: doGrupo('ligaAgora'),
     naoPode: doGrupo('naoPode').map(item => ({
       ...item,
-      motivo: motivoDoCuidado(giver, item),
+      motivo: motivoDoCuidado(giver, item, alcance),
     })),
   };
 };

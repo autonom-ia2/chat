@@ -37,6 +37,56 @@ describe('DialogoDaCasa', () => {
     wrapper.unmount();
   });
 
+  // Rodada 4: abrir de novo com o diálogo aberto troca o conteúdo; o foco vai ao primeiro campo marcado ou ao título,
+  // para o leitor de tela dizer o que mudou.
+  it('abrir com ele aberto põe o foco no campo marcado ou, sem campo, no título', async () => {
+    HTMLDialogElement.prototype.showModal = function abrirModal() {
+      this.setAttribute('open', '');
+    };
+    const wrapper = montar();
+    await wrapper.vm.abrir();
+    await wrapper.vm.abrir();
+    expect(document.activeElement).toBe(wrapper.find('h2').element);
+    wrapper.unmount();
+
+    const comCampo = mount(DialogoDaCasa, {
+      attachTo: document.body,
+      props: { titulo: 'Para onde vão?', seguro: 'Manter', acao: 'Mover' },
+      slots: { default: '<button id="destino" type="button">Escolha</button>' },
+      global: global(),
+    });
+    await comCampo.vm.abrir();
+    await comCampo.setProps({ focoAoReabrir: '#destino' });
+    await comCampo.vm.abrir();
+    expect(document.activeElement?.id).toBe('destino');
+    comCampo.unmount();
+    delete HTMLDialogElement.prototype.showModal;
+  });
+
+  it('focarTitulo põe o foco no título', async () => {
+    const wrapper = montar();
+    await wrapper.vm.focarTitulo();
+    expect(document.activeElement).toBe(wrapper.find('h2').element);
+    wrapper.unmount();
+  });
+
+  // Rodada 4: no Chrome, o segundo Esc fecha o <dialog> sem "cancel"; ocupado, o Esc não chega a ele.
+  it('ocupado, o Esc é barrado no teclado; livre, segue para o "cancel"', () => {
+    const esc = () =>
+      new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
+    const ocupado = montar({ ocupado: true });
+    const naOcupada = esc();
+    ocupado.find('dialog').element.dispatchEvent(naOcupada);
+    expect(naOcupada.defaultPrevented).toBe(true);
+    ocupado.unmount();
+
+    const livre = montar();
+    const naLivre = esc();
+    livre.find('dialog').element.dispatchEvent(naLivre);
+    expect(naLivre.defaultPrevented).toBe(false);
+    livre.unmount();
+  });
+
   it('Esc vira a ação segura; os botões emitem cada um o seu', async () => {
     const wrapper = montar();
     const cancel = new Event('cancel', { cancelable: true });

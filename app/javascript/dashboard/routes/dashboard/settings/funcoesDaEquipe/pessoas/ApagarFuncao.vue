@@ -12,7 +12,8 @@ import DiffDeAcesso from './DiffDeAcesso.vue';
 // obrigatório (outra função que quem apaga pode dar, ou "Sem função"), e "Sem função" mostra o que as pessoas ganham
 // e perdem. O servidor continua decidindo (destination_required, destination_invalid, changed_meanwhile). Enquanto as
 // pessoas carregam ou falharam, o diálogo diz isso e não deixa apagar: nunca "Ninguém usa" sem a contagem. Enquanto
-// apaga, fica aberto em "Apagando…", com tudo travado; o foco cai no título da lista se o cartão sumiu.
+// apaga, fica aberto em "Apagando…", com tudo travado (o destino também); o foco cai no título da lista se o cartão
+// sumiu. Quando o servidor faz perguntar de novo com ele aberto, o motivo vai ao role=alert e o foco, ao destino.
 const props = defineProps({
   pessoasDa: { type: Function, required: true },
   // 'pronto', 'carregando' ou 'erro': o estado das pessoas na lista.
@@ -81,9 +82,11 @@ const textos = computed(() =>
       }
 );
 
-// `mensagem`: a recusa do servidor ao reabrir (a função escolhida sumiu ou saiu do alcance).
+// `mensagem`: a recusa do servidor ao reabrir (a função escolhida sumiu ou saiu do alcance, ainda tem gente). Quem
+// reabre no meio do apagar é a recusa: o servidor já respondeu, e o destino destrava para receber o foco.
 const abrir = (funcaoParaApagar, mensagem = '') => {
   vez += 1;
+  apagando.value = false;
   funcao.value = funcaoParaApagar;
   destino.value = '';
   erro.value = mensagem;
@@ -102,6 +105,12 @@ const confirmar = async () => {
   if (minhaVez === vez) dialogo.value?.fechar();
 };
 
+// "Tentar de novo" some quando as pessoas voltam a carregar: o foco vai ao título do diálogo, que fica.
+const tentarPessoas = () => {
+  emit('tentarPessoas');
+  dialogo.value?.focarTitulo();
+};
+
 defineExpose({ abrir });
 </script>
 
@@ -115,6 +124,7 @@ defineExpose({ abrir });
     :ocupado="apagando"
     :acao-ocupada="$t('FUNCOES_EQUIPE.APAGAR.APAGANDO')"
     :foco-de-reserva="focoDeReserva"
+    :foco-ao-reabrir="`#${campo}`"
     @acao="confirmar"
   >
     <p
@@ -137,7 +147,7 @@ defineExpose({ abrir });
         type="button"
         data-apagar-tentar
         class="px-1 font-semibold underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-        @click="emit('tentarPessoas')"
+        @click="tentarPessoas"
       >
         {{ $t('FUNCOES_EQUIPE.ERRO.TENTAR') }}
       </button>
@@ -153,6 +163,7 @@ defineExpose({ abrir });
         :aria-label="$t('FUNCOES_EQUIPE.APAGAR.NOVA_FUNCAO')"
         :placeholder="$t('FUNCOES_EQUIPE.APAGAR.ESCOLHA')"
         :invalid="Boolean(erro)"
+        :disabled="apagando"
         class="w-full"
         @change="erro = ''"
       />

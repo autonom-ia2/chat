@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import { useTextos } from '../guiada/useTextos';
 import { explicar401 } from '../salvarFuncao';
 
@@ -7,8 +8,11 @@ import { explicar401 } from '../salvarFuncao';
 // o nome lido da lista desfaria uma troca de nome feita em paralelo. Depois, recarrega as pessoas e confere nelas que
 // cada uma ficou na função pedida; o 200 sozinho não prova (sem custom_roles na conta, o servidor ignora a função).
 // O que não gravou volta para `mudancas`, com o motivo e o nome de cada um:
-// - 401 com a sessão boa: o agents/update nunca manda código, e a única recusa possível ali é o alcance de quem dá
-//   (GrantGuard); a tela recarrega também as funções, para a que saiu do alcance sumir da escolha;
+// - 401 com a sessão boa: o agents/update nunca manda código. A recusa vem do alcance de quem dá (GrantGuard) ou de
+//   quem monta ter perdido Pessoas (UserPolicy#update?; AccessGuard#touch_access! só recusa a própria pessoa e o
+//   administrador, que a gaveta já trava). A gaveta recarrega quem monta: sem Pessoas, diz que não pode mais e fica só
+//   leitura, sem nada pendente; com Pessoas, é o alcance, e recarrega também as funções, para a que saiu do alcance
+//   sumir da escolha (revisão do #2308, rodada 4);
 // - 401 com a sessão vencida: o app vai para o login, sem mensagem;
 // - o resto (rede): tente de novo.
 const NAO_AUTORIZADO = 401;
@@ -17,6 +21,7 @@ export function useSalvarGaveta(mudancas) {
   const store = useStore();
   const { t, lista } = useTextos();
   const agentes = useMapGetter('agents/getAgents');
+  const { canManagePeople } = usePeopleAccess();
   const salvando = ref(false);
   const erro = ref('');
 
@@ -46,8 +51,16 @@ export function useSalvarGaveta(mudancas) {
     };
   };
 
-  const frases = ({ foraDoAlcance, caidos, semEfeito }) =>
+  // Sem código, o 401 pode ser de quem perdeu Pessoas: recarrega quem monta para saber.
+  const perdeuPessoas = async motivo => {
+    if (motivo !== 'SEM_ACESSO') return false;
+    await store.dispatch('validityCheck');
+    return !canManagePeople.value;
+  };
+
+  const frases = ({ semAcesso, foraDoAlcance, caidos, semEfeito }) =>
     [
+      semAcesso && t('FUNCOES_EQUIPE.GAVETA.SEM_ACESSO'),
       foraDoAlcance.length &&
         t('FUNCOES_EQUIPE.GAVETA.FORA_DO_ALCANCE', {
           nomes: nomesDe(foraDoAlcance),
@@ -84,18 +97,24 @@ export function useSalvarGaveta(mudancas) {
       return false;
     }
     const rede = motivo === 'REDE';
+    const semAcesso = await perdeuPessoas(motivo);
     await Promise.all([
       store.dispatch('agents/get'),
       ...(recusados.length ? [store.dispatch('customRole/getCustomRole')] : []),
     ]);
     const falhas = {
-      foraDoAlcance: rede ? [] : recusados,
+      foraDoAlcance: rede || semAcesso ? [] : recusados,
       caidos: rede ? [...caidos, ...recusados] : caidos,
       semEfeito: gravados.filter(([id, destino]) => funcaoDe(id) !== destino),
     };
-    const pendentes = Object.values(falhas).flat();
+    // Sem Pessoas, nada mais grava: não fica nada pendente, e a gaveta fecha sem perguntar.
+    const pendentes = semAcesso ? [] : Object.values(falhas).flat();
     mudancas.value = new Map(pendentes);
-    erro.value = frases(falhas);
+    erro.value = frases({ ...falhas, semAcesso });
+    if (semAcesso) {
+      salvando.value = false;
+      return false;
+    }
     salvando.value = false;
     return !pendentes.length;
   };

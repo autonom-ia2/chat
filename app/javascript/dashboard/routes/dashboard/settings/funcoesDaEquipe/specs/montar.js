@@ -41,6 +41,7 @@ export const loja = ({
     actions: {
       'customRole/getCustomRole': vi.fn(),
       'agents/get': vi.fn(),
+      validityCheck: vi.fn(),
       ...actions,
     },
   });

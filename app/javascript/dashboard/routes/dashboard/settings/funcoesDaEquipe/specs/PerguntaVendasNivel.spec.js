@@ -20,7 +20,29 @@ const montar = (giver, permissions = PRESETS.AGENT(), inicial = permissions) =>
 
 const ultimo = wrapper => wrapper.emitted('update:permissions').at(-1)[0];
 
+// Escolhe um nível e passa o resultado de volta, como a conversa faz (v-model).
+const escolher = async (wrapper, nivel) => {
+  await wrapper.find(`[data-nivel="${nivel}"]`).trigger('click');
+  if (nivel === 'tudo') await wrapper.find('[data-acao]').trigger('click');
+  await wrapper.setProps({ permissions: ultimo(wrapper) });
+};
+
 describe('NivelDeVendas', () => {
+  // Rodada 4: entrar e sair de "Cuida de tudo" não passa pela memória das trocas; o que ela guardava antes ("arquivar"
+  // tirado ao ir para "Só olha") religava depois que a pessoa já o viu desligado em "Pode mexer".
+  it('Atendente com arquivar: Só olha, Cuida de tudo, Pode mexer, Só olha, Pode mexer não religa arquivar', async () => {
+    const comArquivar = [...PRESETS.AGENT(), 'crm_delete_cards'];
+    const wrapper = montar(ADMIN, comArquivar);
+
+    await escolher(wrapper, 'view');
+    await escolher(wrapper, 'tudo');
+    await escolher(wrapper, 'manage');
+    expect(ultimo(wrapper)).not.toContain('crm_delete_cards');
+    await escolher(wrapper, 'view');
+    await escolher(wrapper, 'manage');
+    expect(ultimo(wrapper)).not.toContain('crm_delete_cards');
+  });
+
   it('para a Carla, "Cuida de tudo" fica tracejado e clique, Espaço e Enter não fazem nada', async () => {
     const { mostrar, soltar } = espiarDialogo();
     const wrapper = montar(CARLA);

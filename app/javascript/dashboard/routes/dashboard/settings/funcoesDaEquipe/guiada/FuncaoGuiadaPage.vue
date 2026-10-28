@@ -6,7 +6,7 @@ import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import ErroAoAbrir from '../components/ErroAoAbrir.vue';
 import PaywallDasFuncoes from '../components/PaywallDasFuncoes.vue';
 import GavetaDaFuncao from '../pessoas/GavetaDaFuncao.vue';
-import { perdasDeAcesso } from '../perdaDeAcesso';
+import { nivelQueFica, perdasDeAcesso } from '../perdaDeAcesso';
 import { oferecerMemoria } from './memoriaDaConversa';
 import { useEtapasDaGuiada } from './useEtapasDaGuiada';
 import { useFuncaoGuiada } from './useFuncaoGuiada';
@@ -123,6 +123,7 @@ const pessoasDaFuncao = computed(() =>
     : []
 );
 const perdas = computed(() => perdasDeAcesso(inicial.value, permissions.value));
+const fica = computed(() => nivelQueFica(inicial.value, permissions.value));
 const pedirSalvar = () => {
   if (isAdmin.value && pessoasDaFuncao.value.length && perdas.value.length)
     perda.value?.abrir();
@@ -261,6 +262,7 @@ onMounted(carregar);
       :nome="comeco.nome"
       :pessoas="pessoasDaFuncao"
       :perdas="perdas"
+      :fica="fica"
       @salvar="salvar"
     />
     <GavetaDaFuncao v-if="gaveta" :funcao="gaveta" @fechar="fecharGaveta" />
