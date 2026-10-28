@@ -17,6 +17,8 @@ const props = defineProps({
   filtrosAtivos: { type: Number, default: 0 },
   podeBaixar: { type: Boolean, default: false },
   podeMarcar: { type: Boolean, default: false },
+  // Abaixo de 1024 px o "Configurar" do topo vira item do "Mais" (Rodrigo, 28/10).
+  podeConfigurar: { type: Boolean, default: false },
 });
 const emit = defineEmits(['quem', 'aba', 'filtros', 'mais']);
 const busca = defineModel('busca', { type: String, default: '' });
@@ -25,6 +27,16 @@ const { t } = useI18n();
 const L = 'CRM_LISTA_ACAO';
 const QUEM = ['todos', 'meus'];
 const itensMais = computed(() => [
+  ...(props.podeConfigurar
+    ? [
+        {
+          chave: 'configurar',
+          rotulo: t('CRM_KANBAN.ACTIONS.CONFIGURE'),
+          icone: 'i-lucide-settings-2',
+          classe: 'lg:hidden',
+        },
+      ]
+    : []),
   ...(props.podeBaixar
     ? [
         {
@@ -45,9 +57,13 @@ const itensMais = computed(() => [
       ]
     : []),
 ]);
-// "Marcar vários" só existe no celular: sem "Baixar planilha", o "Mais" some
-// da tela larga.
-const maisSoNoCelular = computed(() => !props.podeBaixar && props.podeMarcar);
+// Sem "Baixar planilha", o "Mais" some onde nenhum item aparece: "Marcar
+// vários" só no celular, "Configurar" só abaixo de 1024 px.
+const classeDoMais = computed(() => {
+  if (props.podeBaixar) return {};
+  if (props.podeConfigurar) return { 'lg:hidden': true };
+  return { 'md:hidden': props.podeMarcar };
+});
 const rotuloDaAba = aba =>
   props.rotulosDasAbas[aba] || t(`${L}.ABAS.${aba.toUpperCase()}`);
 const classeDaAba = ativa =>
@@ -117,7 +133,7 @@ const mostraTotal = aba => aba === 'aberto' && props.aba === 'aberto';
       <div
         v-if="itensMais.length"
         class="grid md:order-4"
-        :class="{ 'md:hidden': maisSoNoCelular }"
+        :class="classeDoMais"
         data-lista-acao-mais
       >
         <MenuDeAcoes

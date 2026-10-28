@@ -59,10 +59,12 @@ const props = defineProps({
   podeMexer: { type: Boolean, default: false },
   podeBaixar: { type: Boolean, default: false },
   podeMarcar: { type: Boolean, default: false },
+  podeConfigurar: { type: Boolean, default: false },
   selecionados: { type: Array, default: () => [] },
 });
 const emit = defineEmits([
   'filtros',
+  'configurar',
   'abrir',
   'conversa',
   'selecionar',
@@ -345,6 +347,7 @@ const baixarPlanilha = async () => {
 const aoMais = chave => {
   if (chave === 'baixar') baixarPlanilha();
   if (chave === 'marcar') marcando.value = !marcando.value;
+  if (chave === 'configurar') emit('configurar');
 };
 const atualizar = () => dados.carregar();
 
@@ -422,6 +425,7 @@ defineExpose({ recarregar: atualizar });
       :filtros-ativos="filtrosAtivos"
       :pode-baixar="podeBaixar"
       :pode-marcar="podeMarcar"
+      :pode-configurar="podeConfigurar"
       @quem="trocarQuem"
       @aba="trocarAba"
       @filtros="emit('filtros')"

@@ -90,13 +90,21 @@ export const ehMeu = (card, meuId) => {
 export const acaoDoCard = (card, { meuId, podePassar, podeMexer }) => {
   const grupo = grupoDoCard(card);
   const meu = ehMeu(card, meuId);
-  if (grupo === 'esperando') return meu ? 'responder' : '';
-  if (grupo === 'retorno')
-    return meu && podeMexer && card.next_follow_up_id ? 'feito' : '';
-  if (grupo === 'ninguem') {
+  const acaoDeNinguem = () => {
     if (podePassar) return 'passar';
     return podeMexer ? 'ficar' : '';
+  };
+  if (grupo === 'esperando') {
+    if (meu) return 'responder';
+    // Esperando e ninguém cuidando (nem pessoa, nem robô, nem atendente de
+    // conversa oculta): o caso mais urgente ganha a ação de "Ninguém cuidando"
+    // (Rodrigo, 28/10, revisão leiga do #2324).
+    const ninguemCuida = !card.current_responsible && !card.conversation_hidden;
+    return ninguemCuida ? acaoDeNinguem() : '';
   }
+  if (grupo === 'retorno')
+    return meu && podeMexer && card.next_follow_up_id ? 'feito' : '';
+  if (grupo === 'ninguem') return acaoDeNinguem();
   if (grupo === 'parado') return podeMexer ? 'combinar' : '';
   return '';
 };

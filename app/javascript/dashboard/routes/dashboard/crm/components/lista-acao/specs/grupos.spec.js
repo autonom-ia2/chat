@@ -61,10 +61,36 @@ describe('acaoDoCard — a ação principal de cada grupo', () => {
       })
     ).toBe('responder');
     expect(
-      acaoDoCard(card(2, { action_group: 'esperando', owner_id: COLEGA }), {
-        meuId: EU,
-        ...OPCOES,
-      })
+      acaoDoCard(
+        card(2, {
+          action_group: 'esperando',
+          owner_id: COLEGA,
+          current_responsible: { type: 'agent', id: COLEGA, name: 'Bia' },
+        }),
+        { meuId: EU, ...OPCOES }
+      )
+    ).toBe('');
+  });
+
+  it('Esperando sem ninguém cuidando: a ação de "Ninguém cuidando"', () => {
+    const sozinho = card(3, {
+      action_group: 'esperando',
+      owner_id: null,
+      current_responsible: null,
+    });
+    expect(acaoDoCard(sozinho, { meuId: EU, ...OPCOES })).toBe('passar');
+    expect(
+      acaoDoCard(sozinho, { meuId: EU, podePassar: false, podeMexer: true })
+    ).toBe('ficar');
+    expect(
+      acaoDoCard(sozinho, { meuId: EU, podePassar: false, podeMexer: false })
+    ).toBe('');
+    // Conversa oculta com atendente: alguém cuida, mesmo sem nome.
+    expect(
+      acaoDoCard(
+        { ...sozinho, conversation_hidden: true },
+        { meuId: EU, ...OPCOES }
+      )
     ).toBe('');
   });
 

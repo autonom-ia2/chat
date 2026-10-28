@@ -1342,6 +1342,19 @@ const isCaixasNoCrm = computed(
 const canOpenInboxSettings = computed(() =>
   isCaixasNoCrm.value ? canAdminCrm.value : canManagePipelines.value
 );
+// Há o que configurar neste funil: o botão do topo e, na Lista nova abaixo de
+// 1024 px, o item "Configurar" do "Mais" (#2283).
+const podeConfigurar = computed(
+  () =>
+    canManagePipelines.value ||
+    canOpenInboxSettings.value ||
+    (!isCalendarOnly.value && canManageAi.value) ||
+    (!isCalendarOnly.value && arquivadosLigado.value)
+);
+// O "Mais" fecha no mesmo clique; o popover abre depois, para o clique não o
+// fechar de volta.
+const abrirConfiguracao = () =>
+  setTimeout(() => configurationPopover.value?.show(), 0);
 
 const openInboxSettingsDrawer = async () => {
   if (isCaixasNoCrm.value) {
@@ -2711,12 +2724,7 @@ onUnmounted(() => {
           @click="openBooking"
         />
         <Popover
-          v-if="
-            canManagePipelines ||
-            canOpenInboxSettings ||
-            (!isCalendarOnly && canManageAi) ||
-            (!isCalendarOnly && arquivadosLigado)
-          "
+          v-if="podeConfigurar"
           ref="configurationPopover"
           align="end"
           class="order-1"
@@ -2731,7 +2739,7 @@ onUnmounted(() => {
               class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
               :class="
                 listaAcao
-                  ? 'min-w-11 max-lg:!px-0 max-lg:[&>.truncate]:sr-only'
+                  ? 'max-lg:invisible max-lg:!w-0 max-lg:!min-w-0 max-lg:!p-0 max-lg:!outline-0 max-lg:overflow-hidden'
                   : ''
               "
               :aria-label="t('CRM_KANBAN.ACTIONS.CONFIGURE')"
@@ -3126,8 +3134,10 @@ onUnmounted(() => {
         :pode-mexer="canManageCards"
         :pode-baixar="canExportCrm"
         :pode-marcar="canBulkAct"
+        :pode-configurar="podeConfigurar"
         :selecionados="listSelection"
         @filtros="showFiltersDrawer = true"
+        @configurar="abrirConfiguracao"
         @abrir="openCardFromBoard"
         @conversa="openCardConversation"
         @selecionar="ids => store.dispatch('crmKanban/setListSelection', ids)"
