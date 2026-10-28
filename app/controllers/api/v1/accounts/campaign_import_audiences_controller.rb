@@ -95,6 +95,16 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
     render json: { payload: row && sample_payload(row) }
   end
 
+  # GET /campaign_imports/:id/people_sheet (#2332, side panel "Baixar lista"): who the audience holds, as an Excel file.
+  # The same contacts the panel lists; an audience from the conversations needs contact_view (#2277).
+  def people_sheet
+    return render json: { error: 'campaign_import.contacts_hidden' }, status: :forbidden if contact_data_hidden?
+
+    sheet = CampaignImports::AudiencePeopleSheet.new(@campaign_import, contact_ids: named_contact_ids)
+    send_data sheet.to_xlsx, filename: sheet.filename, disposition: 'attachment',
+                             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  end
+
   # GET /campaign_imports/:id/variable_suggestions?variables[][key]=2&variables[][label]=mês de vencimento
   def variable_suggestions
     variables = params.permit(variables: [:key, :label]).fetch(:variables, []).map(&:to_h)
@@ -127,8 +137,8 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   def fetch_campaign_import
     # Contact imports (#1006) are never audiences: campaign_flows keeps them out.
     @campaign_import = Current.account.campaign_imports.campaign_flows.includes(:user, :campaign_import_labels).find(params[:id])
-    # Old imports (Base Campanha) also list their contacts in the side panel (F1).
-    return if @campaign_import.audience? || action_name == 'contacts'
+    # Old imports (Base Campanha) also list their contacts in the side panel (F1), and download them (#2332).
+    return if @campaign_import.audience? || %w[contacts people_sheet].include?(action_name)
 
     render_unprocessable('campaign_import.not_an_audience')
   end

@@ -307,6 +307,13 @@ en:
         feedback: Feedback Comment
         recorded_at: Recorded date
         review_notes: Review Notes
+  campaign_import:
+    people_sheet:
+      sheet: Audience
+      name: Name
+      phone: Phone
+      email: E-mail
+      company: Company
   conversation_audience:
     columns:
       city: City

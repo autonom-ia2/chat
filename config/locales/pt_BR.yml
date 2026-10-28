@@ -294,6 +294,13 @@ pt_BR:
         feedback: Comentário de Feedback
         recorded_at: Data de gravação
         review_notes: Notas de Avaliação
+  campaign_import:
+    people_sheet:
+      sheet: Público
+      name: Nome
+      phone: Telefone
+      email: E-mail
+      company: Empresa
   conversation_audience:
     columns:
       city: Cidade

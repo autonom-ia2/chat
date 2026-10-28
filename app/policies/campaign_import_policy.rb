@@ -45,6 +45,11 @@ class CampaignImportPolicy < ApplicationPolicy
     permission_granted?('campaign_manage')
   end
 
+  # "Baixar lista" of an audience (#2332): the same people a normalized file download gives.
+  def people_sheet?
+    permission_granted?('campaign_manage')
+  end
+
   # Públicos (#992): choosing columns and wiring message variables are part of building a campaign.
   def columns?
     permission_granted?('campaign_manage')

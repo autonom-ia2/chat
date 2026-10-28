@@ -129,7 +129,10 @@
           "PAUSED": "Paused",
           "CANCELLED": "Cancelled",
           "FAILED": "Failed"
-        }
+        },
+        "DOWNLOAD": "Download list",
+        "DOWNLOAD_ERROR": "Could not download the list now.",
+        "DOWNLOAD_HIDDEN": "Only who can see contacts downloads this list."
       }
     },
     "STEPPER": {

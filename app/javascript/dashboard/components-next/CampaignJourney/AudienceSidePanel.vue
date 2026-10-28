@@ -4,9 +4,10 @@ import { DOT } from 'dashboard/components-next/CampaignJourney/textMarks';
 // Painel lateral do público (#993, PRD §6.6, §7 "37rem", F1–F3, B8): channel badges, people,
 // companies, other columns kept, who does not receive, campaigns that used it, "Usar em nova
 // campanha", "Ver contatos e empresas" (contacts of the audience, paged — Contacts has no list
-// filter) and "Excluir público". Reads GET campaign_imports/:id (show).
+// filter), "Baixar lista" (#2332, Excel file of the people) and "Excluir público". Reads GET campaign_imports/:id (show).
 import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { audiencesAPI } from 'dashboard/api/campaignJourney';
@@ -34,6 +35,7 @@ const contacts = ref([]);
 const contactsMeta = ref({ count: 0, page: 0 });
 const contactsOpen = ref(false);
 const contactsError = ref(false);
+const isDownloading = ref(false);
 const closeButton = ref(null);
 const panelRef = ref(null);
 
@@ -81,6 +83,32 @@ const loadContacts = async () => {
 const toggleContacts = () => {
   contactsOpen.value = !contactsOpen.value;
   if (contactsOpen.value && !contactsMeta.value.page) loadContacts();
+};
+
+const saveFile = (blob, filename) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+    link.remove();
+  }, 1000);
+};
+
+const downloadPeople = async () => {
+  isDownloading.value = true;
+  try {
+    const { data } = await audiencesAPI.peopleSheet(props.audienceId);
+    saveFile(data, `${name.value || props.audienceId}.xlsx`);
+  } catch (error) {
+    const hidden = error?.response?.status === 403;
+    useAlert(t(`${NS}.${hidden ? 'DOWNLOAD_HIDDEN' : 'DOWNLOAD_ERROR'}`));
+  } finally {
+    isDownloading.value = false;
+  }
 };
 
 const campaignStatus = status =>
@@ -234,16 +262,32 @@ onMounted(load);
       </section>
 
       <section data-test="panel-contacts">
-        <Button
-          :label="contactsOpen ? t(`${NS}.CONTACTS_HIDE`) : t(`${NS}.CONTACTS`)"
-          icon="i-lucide-users"
-          variant="outline"
-          color="slate"
-          class="!min-h-11 !rounded-xl"
-          :aria-expanded="contactsOpen"
-          data-test="panel-contacts-toggle"
-          @click="toggleContacts"
-        />
+        <div class="flex flex-wrap gap-2">
+          <Button
+            :label="
+              contactsOpen ? t(`${NS}.CONTACTS_HIDE`) : t(`${NS}.CONTACTS`)
+            "
+            icon="i-lucide-users"
+            variant="outline"
+            color="slate"
+            class="!min-h-11 !rounded-xl"
+            :aria-expanded="contactsOpen"
+            data-test="panel-contacts-toggle"
+            @click="toggleContacts"
+          />
+          <Button
+            v-if="canManage"
+            :label="t(`${NS}.DOWNLOAD`)"
+            icon="i-lucide-download"
+            variant="outline"
+            color="slate"
+            class="!min-h-11 !rounded-xl"
+            :is-loading="isDownloading"
+            :disabled="isDownloading"
+            data-test="panel-download"
+            @click="downloadPeople"
+          />
+        </div>
         <template v-if="contactsOpen">
           <p
             v-if="contactsError"
