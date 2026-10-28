@@ -9,6 +9,7 @@ import {
 } from '../../customRoles/permissionMatrix';
 import {
   CONDICIONAL,
+  CUIDADO,
   DENTRO_DE,
   DONO_DAS_CHAVES,
   LINHAS,
@@ -16,10 +17,11 @@ import {
   SO_ADMIN,
   areasDaRecolhida,
   gruposDoCuidado,
+  ligaAgora,
+  ligaJunto,
   resumoDaRecolhida,
   travaDoNivel,
 } from '../areasDaFuncao';
-import { motivoDaTrava } from '../motivoDaTrava';
 import { ADMIN, CARLA, CARLA_SEM_DISPARO } from './quemMonta';
 
 // #2308, especificação 6 e 7: o mapa fechado (24/24 módulos, 57/57 chaves), a recolhida e o Cuidado em três grupos.
@@ -141,23 +143,32 @@ describe('Cuidado em três grupos', () => {
     ]);
   });
 
-  // (a) e (b) não se sobrepõem: (b) é "a área ainda não está em manage", (a) é "já está". Por isso a ordem dos testes
-  // não importa; o que importa é que cada chave cai em um grupo só, e que a mesma chave troca de grupo com a área.
-  it('cada chave ligável cai em um grupo só: "liga junto" e "liga agora" são disjuntos', () => {
-    expect(motivoDaTrava(CARLA, 'contact_delete')).toBeNull();
-    [PRESETS.AGENT(), PRESETS.SDR(), PRESETS.MARKETING()].forEach(funcao => {
-      const { ligaJunto, ligaAgora } = gruposDoCuidado(CARLA, funcao);
-      const junto = chaves(ligaJunto);
-      expect(chaves(ligaAgora).filter(chave => junto.includes(chave))).toEqual(
-        []
-      );
-    });
-    expect(chaves(gruposDoCuidado(CARLA, PRESETS.AGENT()).ligaJunto)).toContain(
-      'contact_delete'
+  // Os predicados, não os grupos: grupoDe testa (b) antes de (a), então comparar os grupos nunca acharia uma chave nos
+  // dois. Aqui cada par quem monta × função × chave confere que ligaJunto e ligaAgora nunca valem ao mesmo tempo.
+  it('"liga junto" e "liga agora" nunca valem juntos para a mesma chave', () => {
+    const quemMonta = [CARLA, ADMIN, CARLA_SEM_DISPARO];
+    const funcoes = Object.values(PRESETS).map(preset => preset());
+    const juntos = quemMonta.flatMap(giver =>
+      funcoes.flatMap(funcao =>
+        CUIDADO.filter(
+          item =>
+            ligaJunto(giver, item, funcao) && ligaAgora(giver, item, funcao)
+        ).map(item => item.chave)
+      )
     );
-    expect(
-      chaves(gruposDoCuidado(CARLA, PRESETS.AGENT()).ligaAgora)
-    ).not.toContain('contact_delete');
+    expect(juntos).toEqual([]);
+  });
+
+  it('apagar contatos com Contatos só em ver: não liga agora, liga junto com Mexer', () => {
+    const item = CUIDADO.find(linha => linha.chave === 'contact_delete');
+    expect(ligaAgora(CARLA, item, PRESETS.AGENT())).toBe(false);
+    expect(ligaJunto(CARLA, item, PRESETS.AGENT())).toBe(true);
+  });
+
+  it('metas sem R$, para o administrador: grupo (b), porque o R$ entra junto', () => {
+    const semRs = PRESETS.SDR().filter(chave => chave !== 'sales_value_view');
+    const { ligaJunto: junto } = gruposDoCuidado(ADMIN, semRs);
+    expect(chaves(junto)).toContain('crm_metas_manage');
   });
 
   it('com a área já em manage, a mesma chave liga agora', () => {

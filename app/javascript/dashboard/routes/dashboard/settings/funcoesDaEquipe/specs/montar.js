@@ -4,7 +4,7 @@ import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
 import { CARLA } from './quemMonta';
 
 // Montagem comum das specs da conversa guiada (#2308): i18n pt_BR e a store que o usePeopleAccess lê, com as flags
-// da conta (crm_numeros_lentes muda o que quem fica sem função vê).
+// da conta (custom_roles ligada por padrão; crm_numeros_lentes muda o que quem fica sem função vê).
 export const i18n = () =>
   createI18n({
     legacy: false,
@@ -18,7 +18,7 @@ export const loja = ({
   giver = CARLA,
   funcoes = [],
   agentes = [],
-  flags = [],
+  flags = ['custom_roles'],
   actions = {},
   caixas = [],
 } = {}) =>

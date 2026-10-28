@@ -1383,8 +1383,14 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CUSTOM_ROLES'),
           icon: 'i-lucide-shield-plus',
           to: accountScopedRoute('custom_roles_list'),
-          // Com funcoes_guiadas ligada, a lista nova (#2308) fica marcada no menu.
-          activeOn: ['funcoes_equipe_list'],
+          // Com funcoes_guiadas ligada, a lista nova (#2308) e a conversa guiada ficam marcadas no menu. Nomes de
+          // listaPelaFlag.js, escritos aqui porque importar aquele arquivo traz a store para o menu.
+          activeOn: [
+            'funcoes_equipe_list',
+            'funcoes_equipe_new',
+            'funcoes_equipe_edit',
+            'funcoes_equipe_duplicate',
+          ],
         },
         {
           name: 'Conversation Workflow',

@@ -45,7 +45,7 @@ describe('EfeitoSemFuncao', () => {
 
   it('o id que a tela não conhece vira a frase genérica da área, nunca a chave crua', () => {
     const texto = montar(['label_manage']).find('[data-efeito] p').text();
-    expect(texto).toContain('Deixa de usar uma parte de Etiquetas.');
+    expect(texto).toContain('Deixa de usar uma parte: Etiquetas.');
     expect(texto).not.toContain('coisa_que_a_tela_nao_conhece');
   });
 });

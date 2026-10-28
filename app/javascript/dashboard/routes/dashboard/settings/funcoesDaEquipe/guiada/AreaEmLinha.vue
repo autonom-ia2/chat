@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   LEVELS,
   getLevel,
@@ -10,13 +10,16 @@ import {
 } from '../../customRoles/permissionMatrix';
 import { DONO_DAS_CHAVES, travaDoNivel } from '../areasDaFuncao';
 import { TEXTO_DA_TRAVA, motivoDaTrava } from '../motivoDaTrava';
+import { devolverFoco } from './focoQueFica';
+import { useMemoria } from './memoriaDaConversa';
 import { useTextos } from './useTextos';
 import EscolhaDeNivel from './EscolhaDeNivel.vue';
 import InterruptorDaLinha from './InterruptorDaLinha.vue';
 
 // Uma área com os níveis à mão (#2308, especificação 5.B2): na recolhida de Ajustes e no "Mais" das perguntas. Nível
 // que quem monta não pode dar fica com cadeado e o motivo; a área inteira travada mostra só o motivo. Mudou desde o
-// começo: faixa de 4 px, "você mudou" e o que era antes.
+// começo: faixa de 4 px, "você mudou" e o que era antes. Voltar a um nível por onde passou devolve os ajustes de lá
+// (memoriaDaConversa); um ajuste que some ao desligar devolve o foco ao nível escolhido.
 const props = defineProps({
   module: { type: Object, required: true },
   permissions: { type: Array, required: true },
@@ -26,6 +29,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:permissions']);
 const { t, rotuloDoNivel, antesDoNivel, nomeDaArea } = useTextos();
+const memoria = useMemoria();
+const raiz = ref(null);
 
 const nivel = computed(() => getLevel(props.module, props.permissions));
 const nivelAntes = computed(
@@ -67,16 +72,27 @@ const travaDoExtra = chave =>
     : textoDaTrava(motivoDaTrava(props.giver, chave));
 
 const escolher = valor =>
-  emit('update:permissions', setLevel(props.module, valor, props.permissions));
-const alternar = chave =>
+  emit(
+    'update:permissions',
+    memoria.trocarNivel(props.module, {
+      de: nivel.value,
+      para: valor,
+      permissions: props.permissions,
+      novas: setLevel(props.module, valor, props.permissions),
+    })
+  );
+const alternar = chave => {
   emit(
     'update:permissions',
     toggleExtra(props.module, chave, props.permissions)
   );
+  devolverFoco(raiz.value, ['[role="radio"][aria-checked="true"]']);
+};
 </script>
 
 <template>
   <div
+    ref="raiz"
     :data-area="module.key"
     class="flex flex-col gap-3 py-3 pe-4"
     :class="mudou ? 'border-s-4 border-n-blue-9 ps-3' : 'ps-4'"

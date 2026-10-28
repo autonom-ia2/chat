@@ -1,9 +1,15 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
+import { CRM_METAS_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 import Input from 'dashboard/components-next/input/Input.vue';
-import { modulesWithKeys } from '../../customRoles/permissionMatrix';
-import { menuDaFuncao } from '../fraseDaFuncao';
+import {
+  CONVERSATION_LEVELS,
+  modulesWithKeys,
+} from '../../customRoles/permissionMatrix';
+import { dependenciaDe } from '../chavesDaFuncao';
+import { menuDaFuncao, nivel } from '../fraseDaFuncao';
 import { useTextos } from './useTextos';
 import BotaoGrande from './BotaoGrande.vue';
 import ComoVaiFicar from './ComoVaiFicar.vue';
@@ -11,8 +17,10 @@ import DialogoDaCasa from './DialogoDaCasa.vue';
 
 // Confira (#2308, especificação 5.B4 e 10.4). No celular, a ordem é: "Vai se chamar … · Trocar", a prévia completa,
 // o formulário e a nota; o rodapé fixo repete o menu acima de "Salvar função". No computador, a prévia fica na
-// coluna da direita (da página) e esta etapa mostra só o formulário. "Ver os canais" abre uma folha com os canais da
-// conta (sem sair daqui nem depender da tela de Canais). O erro do nome é anunciado e quebra linha no celular.
+// coluna da direita (da página) e esta etapa mostra só o formulário. A nota dos canais só aparece para quem atende
+// conversas; "Ver os canais" abre uma folha com os canais que quem monta enxerga (todos, para o administrador; os
+// dele, para os outros). Sem nome ("Começar do zero"), nenhuma frase fica pela metade. O erro do nome é anunciado e
+// quebra linha no celular.
 const props = defineProps({
   modo: { type: String, required: true },
   permissions: { type: Array, required: true },
@@ -31,22 +39,31 @@ const nome = defineModel('nome', { type: String, required: true });
 const descricao = defineModel('descricao', { type: String, default: '' });
 
 const { t, te, lista, nomeDaArea } = useTextos();
+const { isAdmin } = usePeopleAccess();
 const caixas = useMapGetter('inboxes/getInboxes');
 const ID_DO_NOME = 'funcao-guiada-nome';
 const ID_DO_ERRO = 'funcao-guiada-nome-erro';
 const folhaDosCanais = ref(null);
 
-const menu = computed(() =>
-  lista(
-    menuDaFuncao(props.permissions).map(item =>
-      t(`FUNCOES_EQUIPE.MENU.${item}`)
-    )
-  )
+const semNome = computed(() => !nome.value.trim());
+const noMenu = computed(() => {
+  const itens = menuDaFuncao(props.permissions);
+  if (!itens.length) return t('FUNCOES_EQUIPE.CONFIRA.MENU_VAZIO');
+  return t('FUNCOES_EQUIPE.CONFIRA.NO_MENU', {
+    itens: lista(itens.map(item => t(`FUNCOES_EQUIPE.MENU.${item}`))),
+  });
+});
+const atendeConversas = computed(
+  () => nivel('CONVERSATIONS', props.permissions) !== CONVERSATION_LEVELS.NONE
 );
 const canais = computed(() => (caixas.value || []).map(caixa => caixa.name));
+const daFolha = computed(() => (isAdmin.value ? 'DA_CONTA' : 'SEUS'));
 
 // R$ e metas saem juntos (KEY_DEPENDENCIES), e o aviso diz isso numa coisa só.
-const JUNTAS = ['sales_value_view', 'crm_metas_manage'];
+const JUNTAS = [
+  CRM_METAS_MANAGE_PERMISSION,
+  dependenciaDe(CRM_METAS_MANAGE_PERMISSION),
+];
 const coisaDaCopia = chave =>
   te(`FUNCOES_EQUIPE.CONFIRA.COPIA.${chave}`)
     ? t(`FUNCOES_EQUIPE.CONFIRA.COPIA.${chave}`)
@@ -98,6 +115,20 @@ const trocarNome = async () => {
     </p>
 
     <p
+      v-if="semNome"
+      data-vai-se-chamar
+      class="flex flex-wrap items-center m-0 gap-x-2 lg:hidden text-n-slate-12"
+    >
+      <button
+        type="button"
+        class="font-medium underline min-h-11 underline-offset-4 text-n-blue-11"
+        @click="trocarNome"
+      >
+        {{ $t('FUNCOES_EQUIPE.CONFIRA.DAR_NOME') }}
+      </button>
+    </p>
+    <p
+      v-else
       data-vai-se-chamar
       class="flex flex-wrap items-center m-0 gap-x-2 lg:hidden text-n-slate-12"
     >
@@ -151,7 +182,11 @@ const trocarNome = async () => {
       />
     </section>
 
-    <p class="flex flex-wrap items-center gap-2 m-0 text-sm text-n-slate-11">
+    <p
+      v-if="atendeConversas"
+      data-nota-canais
+      class="flex flex-wrap items-center gap-2 m-0 text-sm text-n-slate-11"
+    >
       <span class="i-lucide-info size-4 shrink-0" aria-hidden="true" />
       {{ $t('FUNCOES_EQUIPE.CONFIRA.NOTA_CANAIS') }}
       <button
@@ -167,8 +202,8 @@ const trocarNome = async () => {
       ref="folhaDosCanais"
       tipo="aviso"
       icone="i-lucide-inbox"
-      :titulo="$t('FUNCOES_EQUIPE.CONFIRA.CANAIS.TITULO')"
-      :texto="$t('FUNCOES_EQUIPE.CONFIRA.CANAIS.TEXTO')"
+      :titulo="$t(`FUNCOES_EQUIPE.CONFIRA.CANAIS.${daFolha}.TITULO`)"
+      :texto="$t(`FUNCOES_EQUIPE.CONFIRA.CANAIS.${daFolha}.TEXTO`)"
       :seguro="$t('FUNCOES_EQUIPE.CONFIRA.CANAIS.FECHAR')"
     >
       <ul
@@ -189,7 +224,7 @@ const trocarNome = async () => {
         </li>
       </ul>
       <p v-else class="m-0 text-sm text-n-slate-11">
-        {{ $t('FUNCOES_EQUIPE.CONFIRA.CANAIS.VAZIO') }}
+        {{ $t(`FUNCOES_EQUIPE.CONFIRA.CANAIS.${daFolha}.VAZIO`) }}
       </p>
     </DialogoDaCasa>
     <p
@@ -197,7 +232,11 @@ const trocarNome = async () => {
       class="flex items-center gap-2 m-0 text-sm text-n-slate-11"
     >
       <span class="i-lucide-users size-4 shrink-0" aria-hidden="true" />
-      {{ $t('FUNCOES_EQUIPE.CONFIRA.DEPOIS', { nome }) }}
+      {{
+        semNome
+          ? $t('FUNCOES_EQUIPE.CONFIRA.DEPOIS_SEM_NOME')
+          : $t('FUNCOES_EQUIPE.CONFIRA.DEPOIS', { nome })
+      }}
     </p>
 
     <p
@@ -224,7 +263,7 @@ const trocarNome = async () => {
     >
       <template #acima>
         <p data-no-menu class="mt-0 mb-3 text-sm md:hidden text-n-slate-11">
-          {{ $t('FUNCOES_EQUIPE.CONFIRA.NO_MENU', { itens: menu }) }}
+          {{ noMenu }}
         </p>
       </template>
     </BotaoGrande>

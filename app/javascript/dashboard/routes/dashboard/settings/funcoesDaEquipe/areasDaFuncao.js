@@ -8,6 +8,7 @@ import {
   setLevel,
 } from '../customRoles/permissionMatrix';
 import { reachesKeys } from 'dashboard/helper/peopleAccess';
+import { dependenciaDe, valeNoServidor } from './chavesDaFuncao';
 import { comImplicadas } from './comImplicadas';
 import { motivoDasChaves, motivoDaTrava } from './motivoDaTrava';
 
@@ -166,7 +167,7 @@ export const resumoDaRecolhida = (recolhidas, permissions) => ({
 });
 
 // Cuidado em três grupos -----------------------------------------------------------------------------------------
-const CUIDADO = [
+export const CUIDADO = [
   { chave: 'contact_export', area: 'CONTACTS' },
   { chave: 'conversation_message_delete', area: 'CONVERSATIONS' },
   { chave: 'crm_manage_ai', area: 'CRM' },
@@ -179,22 +180,34 @@ const CUIDADO = [
 const precisaDeManage = (module, chave) =>
   (module.manageOnlyExtras || []).includes(chave);
 
-// (b) liga junto com a área: só vale com a área em manage, que hoje não está, e quem dá alcança as duas.
-export const ligaJunto = (giver, item, permissions) => {
-  const module = moduleByKey(item.area);
-  if (!precisaDeManage(module, item.chave) || emManage(module, permissions))
-    return false;
-  const comArea = [...permissions, module.levels.manage, item.chave];
-  return reachesKeys(giver, comImplicadas(comArea));
+// O que entra junto ao ligar uma (b): a chave de que ela depende (as metas trazem o R$, KEY_DEPENDENCIES) ou, sem
+// dependência, a área em manage (apagar contatos, disparar campanhas).
+export const juntoCom = item => {
+  const dependencia = dependenciaDe(item.chave);
+  return dependencia ? [dependencia] : [moduleByKey(item.area).levels.manage];
 };
 
-// (a) liga agora: quem dá alcança a chave, e a área já está em manage (ou a chave não depende disso). É a negação
-// exata da condição de área de (b): os dois nunca valem juntos, e a ordem de teste de grupoDe é só a da especificação.
-export const ligaAgora = (giver, item, permissions) => {
+// Falta o que (b) liga junto: a dependência desligada, ou a área (de uma chave que só vale com ela em manage) fora de
+// manage.
+const faltaOJunto = (item, permissions) => {
+  if (dependenciaDe(item.chave))
+    return !valeNoServidor(item.chave, permissions);
   const module = moduleByKey(item.area);
-  if (motivoDaTrava(giver, item.chave)) return false;
-  return emManage(module, permissions) || !precisaDeManage(module, item.chave);
+  return precisaDeManage(module, item.chave) && !emManage(module, permissions);
 };
+
+// (b) liga junto: falta o que ela precisa, e quem dá alcança as duas coisas.
+export const ligaJunto = (giver, item, permissions) =>
+  faltaOJunto(item, permissions) &&
+  reachesKeys(
+    giver,
+    comImplicadas([...permissions, ...juntoCom(item), item.chave])
+  );
+
+// (a) liga agora: quem dá alcança a chave, e nada falta. É a negação exata de faltaOJunto: os dois nunca valem
+// juntos, e a ordem de teste de grupoDe é só a da especificação.
+export const ligaAgora = (giver, item, permissions) =>
+  !motivoDaTrava(giver, item.chave) && !faltaOJunto(item, permissions);
 
 const motivoDoCuidado = (giver, item) => {
   const module = moduleByKey(item.area);
@@ -213,14 +226,14 @@ const grupoDe = (giver, item, permissions) => {
 
 // Quando uma linha aparece: apagar mensagens só para quem atende; uma chave que não depende de mexer na área só
 // com a área à vista (senão ficaria inerte, como levar a planilha de contatos sem ver os contatos), a não ser que já
-// esteja ligada, para dar para desligar; e as metas sem R$ nunca (ficam inertes no servidor, decisão 14A).
+// esteja ligada, para dar para desligar; e uma chave ligada sem a dependência nunca (as metas sem R$ ficam inertes no
+// servidor, decisão 14A).
 const aparece = (item, permissions) => {
   const module = moduleByKey(item.area);
   const ligada = permissions.includes(item.chave);
   if (item.chave === 'conversation_message_delete')
     return emManage(module, permissions);
-  if (item.chave === 'crm_metas_manage' && ligada)
-    return permissions.includes('sales_value_view');
+  if (ligada && !valeNoServidor(item.chave, permissions)) return false;
   return (
     ligada ||
     precisaDeManage(module, item.chave) ||

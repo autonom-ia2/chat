@@ -31,7 +31,8 @@
       "ESCOLHER_PESSOAS": "Choose people",
       "ESCOLHER_PESSOAS_ROTULO": "Choose people for the role {nome}",
       "SELO": "Can {coisas}",
-      "VER_PESSOAS_ROTULO": "See the person who is {nome} | See the {n} people who are {nome}"
+      "VER_PESSOAS_ROTULO": "See the person who is {nome} | See the {n} people who are {nome}",
+      "PROPRIA": "No one changes their own role."
     },
     "FRASE": {
       "NAO_ATENDE": "Does not handle conversations.",
@@ -142,8 +143,8 @@
     "PREVIA": {
       "TITULO": "How it will look",
       "SALVA": "Saved",
-      "ABRE": "Whoever is {nome} {comeco}",
-      "ABRE_SEM_NOME": "Whoever has this role {comeco}",
+      "ABRE": "With the {nome} role, the person {comeco}",
+      "ABRE_SEM_NOME": "With this role, the person {comeco}",
       "PODE": "Can",
       "NAO_PODE": "Cannot",
       "NOVO": "new",
@@ -361,7 +362,9 @@
       "CRIAR_A_PARTIR": "Create another from the ready-made one",
       "VER_MAIS": "See {n} more ready-made roles",
       "ZERO": "Start from scratch, with everything off",
-      "FORA": "Only the administrator creates the {nome} role."
+      "FORA": "Only the administrator creates the {nome} role.",
+      "POR_PESSOA_ROTULO": "Put a person in the {nome} role",
+      "CRIAR_A_PARTIR_ROTULO": "Create another from {nome}"
     },
     "GUIADA": {
       "VOCE_MUDOU": "you changed",
@@ -387,14 +390,6 @@
         "FAZER_DEPOIS": "Do it later and go back to the list"
       },
       "VOLTAR_LISTA": "Back to the list",
-      "QUEM": {
-        "OBJETO": "the {nome}",
-        "OBJETO_SEM_NOME": "this role",
-        "SUJEITO": "the {nome}",
-        "SUJEITO_SEM_NOME": "this role",
-        "NOME": "the {nome}",
-        "NOME_SEM_NOME": "this role"
-      },
       "NIVEL": {
         "NAO_VE": "Doesn't see",
         "SO_OLHA": "Only looks",
@@ -420,7 +415,9 @@
         "TEXTO": "What you changed will be lost.",
         "CONTINUAR": "Keep adjusting",
         "TROCAR": "Change"
-      }
+      },
+      "COM_A_FUNCAO": "With the {nome} role",
+      "COM_ESTA_FUNCAO": "With this role"
     },
     "AJUSTES": {
       "TITULO": "Want to change anything?",
@@ -434,25 +431,26 @@
         "TODAS": "Handles all",
         "PROPRIAS_TUDO": "Handles their own, picks up new ones and helps when a colleague calls",
         "PROPRIAS_NOVAS": "Handles their own and picks up new ones",
-        "PROPRIAS_AJUDA": "Handles their own and helps when a colleague calls"
+        "PROPRIAS_AJUDA": "Handles their own and helps when a colleague calls",
+        "PROPRIAS_CURTO": "Only their own"
       },
       "CUIDADO_NENHUMA": "None on · deleting, spreadsheets, campaigns and AI",
       "RECOLHIDA": {
         "TITULO": "{areas} and {n} more area | {areas} and {n} more areas",
         "NADA": "Today they are all off.",
         "N_AREAS": "{n} area | {n} areas",
-        "MEXE_E_OLHA": "Changes {mexe} and only looks at {olha}.",
+        "MEXE_E_OLHA": "Changes {mexe} and only looks at one more. | Changes {mexe} and only looks at {olha} more.",
         "SO_MEXE": "Changes {mexe}.",
         "SO_OLHA": "Only looks at {olha}.",
         "UMA_OLHA": "Today only looks at {area}.",
         "UMA_MEXE": "Today changes {area}.",
-        "OUTRAS": "The others are off."
+        "OUTRAS": "The rest stay off."
       },
       "SO_DO_ADMIN": "Account, security and billing always stay with the administrator.",
       "CUIDADO_NENHUMA_CURTO": "none on"
     },
     "CONVERSAS": {
-      "TITULO": "Which conversations does {nome} handle?",
+      "TITULO": "{com}, which conversations does the person handle?",
       "DICA": "Only the channels the person is in count: WhatsApp numbers, Instagram, email.",
       "NENHUMA": {
         "TITULO": "None",
@@ -492,7 +490,7 @@
       "PELO_MENOS_UMA": "At least one stays on."
     },
     "CONTATOS": {
-      "TITULO": "What does {quem} do with contacts?",
+      "TITULO": "{com}, what does the person do with contacts?",
       "DICA": {
         "NAO_VE": "Contacts disappear from the menu",
         "SO_OLHA": "Sees contacts, without changing",
@@ -501,7 +499,7 @@
       "MAIS": "Extra fields"
     },
     "VENDAS": {
-      "TITULO": "What does {quem} do in sales?",
+      "TITULO": "{com}, what does the person do in sales?",
       "NAO_VE": {
         "TITULO": "Doesn't see",
         "DICA": "Sales disappear from the menu",
@@ -523,7 +521,7 @@
         "ESTADO": "Takes care of everything in sales"
       },
       "AVISO_TUDO": {
-        "TITULO": "Let {quem} take care of everything in sales?",
+        "TITULO": "{com}, will the person take care of everything in sales?",
         "TEXTO": "They will be able to set up the sales columns, archive sales, see the sales reports, take sales to a spreadsheet and ask the AI for help in sales.",
         "RISCO": "Each request for AI help costs money on your account.",
         "LIGAR": "Turn everything on"
@@ -543,7 +541,7 @@
       "grant_above_own": "Give more than they have"
     },
     "CUIDADO_TELA": {
-      "TITULO": "Can {quem} do any of these things?",
+      "TITULO": "{com}, can the person do any of these things?",
       "DICA": "Everything is off today. If not needed, tap \"Done\".",
       "DICA_CURTA": "Everything off. If not needed, tap \"Done\".",
       "DICA_LIGADA": "If nothing else is needed, tap \"Done\".",
@@ -580,20 +578,28 @@
       },
       "JUNTO": {
         "CONTATOS": {
-          "NOTA": "When turned on, {quem} also starts changing contacts.",
+          "NOTA": "When turned on, the person also starts changing contacts.",
           "TITULO": "Turn contacts on too?",
-          "TEXTO": "To delete, {quem} will also change contact details.",
+          "TEXTO": "To delete, the person will also change contact details.",
           "RISCO": "Deleting a contact removes it for everyone, for good.",
           "LIGAR": "Turn both on",
-          "AGORA": "Now {quem} changes and deletes contacts."
+          "AGORA": "Now the person changes and deletes contacts."
         },
         "CAMPANHAS": {
-          "NOTA": "When turned on, {quem} also starts creating campaigns.",
+          "NOTA": "When turned on, the person also starts creating campaigns.",
           "TITULO": "Turn campaigns on too?",
-          "TEXTO": "To send, {quem} will also create and change campaigns.",
+          "TEXTO": "To send, the person will also create and change campaigns.",
           "RISCO": "Sending messages many people at once.",
           "LIGAR": "Turn both on",
-          "AGORA": "Now {quem} creates, changes and sends campaigns."
+          "AGORA": "Now the person creates, changes and sends campaigns."
+        },
+        "METAS": {
+          "NOTA": "When turned on, the person also starts seeing sales values in R$.",
+          "TITULO": "Also turn on the values in R$?",
+          "TEXTO": "To set the goals, the person will also see the whole team's sales values in R$.",
+          "RISCO": "The values in R$ show how much each person sells.",
+          "LIGAR": "Turn on both",
+          "AGORA": "Now the person sets the goals and sees the values in R$."
         }
       }
     },
@@ -619,11 +625,21 @@
         "insurance_manage": "making quotes"
       },
       "CANAIS": {
-        "TITULO": "The account's channels",
-        "TEXTO": "The person only sees conversations from the channels they are in. These are the account's channels:",
-        "VAZIO": "The account has no channels yet.",
-        "FECHAR": "Close"
-      }
+        "FECHAR": "Close",
+        "DA_CONTA": {
+          "TITULO": "The account's channels",
+          "TEXTO": "The person only sees conversations from the channels they are in. These are the account's channels:",
+          "VAZIO": "The account has no channels yet."
+        },
+        "SEUS": {
+          "TITULO": "The channels you are in",
+          "TEXTO": "The person only sees conversations from the channels they are in. These are the channels you are in:",
+          "VAZIO": "You aren't in any channel yet."
+        }
+      },
+      "DAR_NOME": "Give the role a name",
+      "DEPOIS_SEM_NOME": "After saving, you choose who gets this role.",
+      "MENU_VAZIO": "Nothing shows in the menu yet"
     },
     "SALVAR": {
       "NOME_CURTO": "Give a name with at least 2 letters.",
@@ -636,13 +652,15 @@
       "PROPRIA_FUNCAO": "Nobody changes their own role.",
       "INDISPONIVEL": "Team roles are not available right now. Talk to the administrator.",
       "REDE": "Couldn't save right now. Check the internet and try again.",
-      "ALTERADA": "{nome} role saved."
+      "ALTERADA": "{nome} role saved.",
+      "SEM_ACESSO": "You can no longer change roles. Talk to the administrator."
     },
     "SUCESSO": {
       "CRIADA": "{nome} role created.",
       "QUEM": "Who will be {nome}?",
       "DICA": "Choose now or do it later, from the list.",
-      "ESCOLHER": "Choose people"
+      "ESCOLHER": "Choose people",
+      "PECA_AO_ADMIN": "Ask the administrator to put people in it."
     },
     "GUARDA": {
       "TITULO": "Leave without saving?",
@@ -713,17 +731,17 @@
       },
       "AREA": {
         "MEXER": {
-          "LISTA": "Change {area}",
-          "CURTO": "change {area}"
+          "LISTA": "Change: {area}",
+          "CURTO": "change: {area}"
         },
         "VER": {
-          "LISTA": "See {area}",
-          "CURTO": "see {area}"
+          "LISTA": "See: {area}",
+          "CURTO": "see: {area}"
         }
       },
       "OUTRA": {
-        "LISTA": "Use part of {area}",
-        "CURTO": "use part of {area}"
+        "LISTA": "Use part of: {area}",
+        "CURTO": "use part of: {area}"
       },
       "OUTRA_SEM_AREA": {
         "LISTA": "Use another part of the platform",
@@ -791,7 +809,12 @@
         "FICA_SEM_SO": "{pessoa} will have no role."
       },
       "TENTE": "Check the internet and try again.",
-      "CONTINUAR": "Keep choosing"
+      "CONTINUAR": "Keep choosing",
+      "SO_LEITURA_ABOVE": "Only the administrator puts people in and takes them out of this role.",
+      "SO_LEITURA_MINE": "No one changes their own role: this one is yours.",
+      "NINGUEM_AINDA": "No one has this role yet.",
+      "FORA_DO_ALCANCE": "Couldn't change the role of {nomes}: it's beyond what you can give.",
+      "NAO_MUDOU": "The role of {nomes} didn't change. Try again; if it keeps happening, talk to the administrator. | The role of these people didn't change: {nomes}. Try again; if it keeps happening, talk to the administrator."
     },
     "APAGAR": {
       "TITULO": "Delete the {nome} role?",
@@ -808,13 +831,23 @@
       "APAGADA": "{nome} role deleted.",
       "MUDOU": "Someone just changed this role. Check again.",
       "INDISPONIVEL": "That role is no longer available. Choose another.",
-      "ERRO": "Could not delete right now. Check your internet and try again."
+      "ERRO": "Could not delete right now. Check your internet and try again.",
+      "RECUSA": {
+        "FORA_DO_ALCANCE": "You can't delete this role. Ask the administrator.",
+        "INDISPONIVEL": "Team roles aren't available right now. Talk to the administrator.",
+        "PROPRIA_FUNCAO": "No one deletes their own role.",
+        "SEM_ACESSO": "You can no longer change roles. Talk to the administrator.",
+        "REDE": "Couldn't delete right now. Check the internet and try again."
+      }
     },
     "PERDA": {
-      "TITULO": "{n} person will lose access to some things | {n} people will lose access to some things",
       "TEXTO": "This person has the {nome} role. From now on, they can no longer: | These people have the {nome} role. From now on, they can no longer:",
       "VOLTAR": "Back",
-      "SALVAR": "Save anyway"
+      "SALVAR": "Save anyway",
+      "TITULO_UMA": "{n} person will no longer {coisa} | {n} people will no longer {coisa}",
+      "TITULO_VARIAS": "{n} person will lose {coisas} things | {n} people will lose {coisas} things",
+      "VER_AREAS": "See: {areas}",
+      "NOMES_E_MAIS": "{nomes} and {n} more person | {nomes} and {n} more people"
     }
   }
 }

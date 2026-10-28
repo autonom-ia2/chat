@@ -1,11 +1,12 @@
 <script setup>
 import { computed, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { porPeso } from '../semFuncao';
 import { useSemFuncao } from '../useSemFuncao';
 import DiffDeAcesso from './DiffDeAcesso.vue';
 
-// A linha âmbar de quem vai ficar sem função (#2308, especificação 5.D): o primeiro ganho e a primeira perda numa
-// frase, e "Ver tudo o que muda" abre o mesmo diff do apagar. Tirar alguém da função não é restringir: sem função,
+// A linha âmbar de quem vai ficar sem função (#2308, especificação 5.D): o primeiro ganho e a perda que mais importa
+// (porPeso: conversas, vendas, contatos, o resto) numa frase, e "Ver tudo o que muda" abre o mesmo diff do apagar. Tirar alguém da função não é restringir: sem função,
 // a pessoa costuma ver mais. Um ganho que só o administrador daria (os valores em R$) sempre aparece na frase: o
 // servidor deixa, mas quem tira precisa ver.
 const props = defineProps({
@@ -21,7 +22,7 @@ const mudanca = computed(() => diff(props.permissions));
 
 const frase = computed(() => {
   const [ganho, ...outrosGanhos] = mudanca.value.ganha;
-  const [perda] = mudanca.value.perde;
+  const [perda] = porPeso(mudanca.value.perde);
   const valores = {
     ganho: ganho && curtoDa(ganho),
     perda: perda && curtoDa(perda),
@@ -55,7 +56,7 @@ const frase = computed(() => {
           data-ver-tudo
           :aria-expanded="tudo"
           :aria-controls="`${id}-tudo`"
-          class="font-semibold underline rounded underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          class="inline-flex items-center px-1 -mx-1 font-semibold underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           @click="tudo = !tudo"
         >
           {{ $t('FUNCOES_EQUIPE.EFEITO.VER_TUDO') }}

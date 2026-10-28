@@ -1,8 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -15,15 +13,14 @@ import VazioDasFuncoes from './components/VazioDasFuncoes.vue';
 import ApagarFuncao from './pessoas/ApagarFuncao.vue';
 import GavetaDaFuncao from './pessoas/GavetaDaFuncao.vue';
 import { ALTERAR_NOVA, CRIAR_NOVA, DUPLICAR_NOVA } from './listaPelaFlag';
-import { explicar401 } from './salvarFuncao';
+import { useApagarFuncao } from './pessoas/useApagarFuncao';
 
 // Funções da equipe, a lista nova (#2308, épico #1784, especificação 5.A). Atrás da flag funcoes_guiadas
 // (listaPelaFlag.js). Criar, alterar e duplicar abrem a conversa guiada (PR 3); quem usa, quem está sem função e
 // apagar ficam aqui (PR 4, especificação 5.D e 5.E).
 const store = useStore();
 const router = useRouter();
-const { t } = useI18n();
-const { canManagePeople, roleLockReason, reachesRole } = usePeopleAccess();
+const { canManagePeople, roleLockReason } = usePeopleAccess();
 
 const funcoes = useMapGetter('customRole/getCustomRoles');
 const uiFlags = useMapGetter('customRole/getUIFlags');
@@ -41,7 +38,8 @@ const TONS = [
 ];
 
 const carregou = ref(false);
-// A lista de pessoas falhou: a tela diz isso em vez de "nenhuma pessoa com função".
+// As pessoas ainda vêm (esqueleto) ou falharam (a tela diz isso): nos dois casos, nunca "nenhuma pessoa com função".
+const pessoasCarregando = ref(true);
 const pessoasFalharam = ref(false);
 const apagarRef = ref(null);
 // A gaveta aberta: { funcao } de uma função, { funcao: null } para quem está sem função.
@@ -78,7 +76,9 @@ const carregar = async () => {
 };
 
 const carregarPessoas = async () => {
+  pessoasCarregando.value = true;
   pessoasFalharam.value = (await store.dispatch('agents/get')) === false;
+  pessoasCarregando.value = false;
 };
 
 onMounted(() => {
@@ -103,51 +103,11 @@ const abrirGaveta = funcao => {
 const podeEscolherPessoas = funcao =>
   canManagePeople.value && !roleLockReason(funcao);
 
-const pedirParaApagar = (funcao, mensagem) =>
-  apagarRef.value?.abrir(funcao, pessoasDa(funcao).length, mensagem);
-
-// O servidor recusou: a lista de agentes estava velha (achou gente), a função de destino sumiu ou saiu do alcance,
-// ou alguém mudou a função no meio. A tela recarrega o que mudou e pergunta de novo.
-const RECUSAS = {
-  destination_required: async (funcao, mensagem) => {
-    await store.dispatch('agents/get');
-    if (pessoasDa(funcao).length) pedirParaApagar(funcao);
-    else useAlert(mensagem);
-  },
-  destination_invalid: async funcao => {
-    await store.dispatch('customRole/getCustomRole');
-    pedirParaApagar(funcao, t('FUNCOES_EQUIPE.APAGAR.INDISPONIVEL'));
-  },
-  changed_meanwhile: async () => {
-    useAlert(t('FUNCOES_EQUIPE.APAGAR.MUDOU'));
-    await Promise.all([carregar(), store.dispatch('agents/get')]);
-  },
-};
-
-const apagar = async ({ funcao, destino }) => {
-  try {
-    await store.dispatch('customRole/deleteCustomRole', {
-      id: funcao.id,
-      destinationRoleId: destino,
-    });
-    if (destino) store.dispatch('agents/get');
-    useAlert(t('FUNCOES_EQUIPE.APAGAR.APAGADA', { nome: funcao.name }));
-  } catch (error) {
-    const mensagem = error?.message || t('FUNCOES_EQUIPE.APAGAR.ERRO');
-    const recusa = RECUSAS[error?.code];
-    if (recusa) {
-      await recusa(funcao, mensagem);
-      return;
-    }
-    if (error?.status !== 401) {
-      useAlert(mensagem);
-      return;
-    }
-    // Sessão vencida: o app vai para o login, sem mensagem; sessão boa: o motivo (alcance, flag, a própria função).
-    const { erro } = await explicar401(error.code);
-    if (erro) useAlert(t(`FUNCOES_EQUIPE.SALVAR.${erro}`));
-  }
-};
+const { pedirParaApagar, apagar } = useApagarFuncao({
+  apagarRef,
+  pessoasDa,
+  carregar,
+});
 </script>
 
 <template>
@@ -199,7 +159,13 @@ const apagar = async ({ funcao, destino }) => {
                   )
                 }}
                 {{ $t('FUNCOES_EQUIPE.CONTAGEM.SEPARADOR') }}
-                <template v-if="pessoasFalharam">
+                <span
+                  v-if="pessoasCarregando"
+                  data-pessoas-carregando
+                  aria-hidden="true"
+                  class="inline-block w-32 h-4 align-middle rounded bg-n-alpha-2 animate-pulse"
+                />
+                <template v-else-if="pessoasFalharam">
                   <span data-pessoas-erro role="alert">
                     {{ $t('FUNCOES_EQUIPE.CONTAGEM.PESSOAS_ERRO') }}
                   </span>
@@ -238,7 +204,12 @@ const apagar = async ({ funcao, destino }) => {
 
           <template v-else>
             <FaixaSemFuncao
-              v-if="canManagePeople && semFuncao && !pessoasFalharam"
+              v-if="
+                canManagePeople &&
+                semFuncao &&
+                !pessoasFalharam &&
+                !pessoasCarregando
+              "
               :quantidade="semFuncao"
               @ver-quem-sao="abrirGaveta(null)"
             />
@@ -250,9 +221,9 @@ const apagar = async ({ funcao, destino }) => {
                 :funcao="funcao"
                 :pessoas="pessoasDa(funcao)"
                 :sem-pessoas="pessoasFalharam"
+                :carregando-pessoas="pessoasCarregando"
                 :tom="TONS[indice % TONS.length]"
-                :travada="!!roleLockReason(funcao)"
-                :pode-duplicar="reachesRole(funcao)"
+                :trava="roleLockReason(funcao) || ''"
                 :pode-escolher-pessoas="podeEscolherPessoas(funcao)"
                 @alterar="alterar(funcao)"
                 @duplicar="duplicar(funcao)"
@@ -265,7 +236,7 @@ const apagar = async ({ funcao, destino }) => {
             <FuncoesFixas
               :administradores="administradores"
               :sem-funcao="semFuncao"
-              :sem-pessoas="pessoasFalharam"
+              :sem-pessoas="pessoasFalharam || pessoasCarregando"
             />
           </template>
         </template>

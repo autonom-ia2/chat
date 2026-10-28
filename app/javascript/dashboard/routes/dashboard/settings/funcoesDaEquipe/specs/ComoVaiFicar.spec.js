@@ -29,7 +29,7 @@ describe('ComoVaiFicar', () => {
     expect(aoVivo.find('[data-nao-pode]').exists()).toBe(true);
     expect(aoVivo.find('[data-frase]').exists()).toBe(false);
     expect(wrapper.find('[data-frase]').text()).toBe(
-      'Quem for Atendente atende as próprias conversas e pega as novas que estão sem ninguém. Cria e move as vendas em andamento. Só olha os contatos.'
+      'Com a função Atendente, a pessoa atende as próprias conversas e pega as novas que estão sem ninguém. Cria e move as vendas em andamento. Só olha os contatos.'
     );
     expect(wrapper.findAll('[data-pode] li').map(li => li.text())).toEqual([
       'Responder as próprias conversas',

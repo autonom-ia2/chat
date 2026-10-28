@@ -4,19 +4,23 @@ import { moduleByKey } from '../../customRoles/permissionMatrix';
 import { travaDoNivel } from '../areasDaFuncao';
 import { TEXTO_DA_TRAVA } from '../motivoDaTrava';
 import {
+  CRM_ADMIN,
   NIVEIS_DE_VENDAS,
   TUDO,
   escolherNivelDeVendas,
   nivelDeVendas,
   travaDoTudo,
 } from '../nivelDeVendas';
+import { useMemoria } from './memoriaDaConversa';
 import { useTextos } from './useTextos';
 import DialogoDaCasa from './DialogoDaCasa.vue';
 import EscolhaDeNivel from './EscolhaDeNivel.vue';
 
 // Os quatro níveis de Vendas (#2308, especificação 5.B3 e 7.4). "Cuida de tudo" pede confirmação (5.F) e, para
 // quem não é administrador nem tem grant_above_own, fica tracejado com "Só o administrador dá isto.". O aviso não
-// fala em metas nem em R$ (decisão 14A).
+// fala em metas nem em R$ (decisão 14A). O "antes do 4º nível" fica na memória da conversa, não aqui: a pergunta é
+// desmontada no "Pronto", e sair de "Cuida de tudo" numa visita seguinte ainda devolve o que era. Entre os outros
+// três, voltar a um nível por onde passou devolve os ajustes de lá.
 const props = defineProps({
   permissions: { type: Array, required: true },
   // A função quando abriu: com crm_admin, sair do 4º nível tira as seis (não dá para saber o que era dela).
@@ -27,7 +31,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:permissions']);
-const { t, quemFor } = useTextos();
+const { t, comAFuncao } = useTextos();
+const memoria = useMemoria();
 
 const vendas = moduleByKey('CRM');
 const OPCAO = {
@@ -37,8 +42,6 @@ const OPCAO = {
   [TUDO]: 'TUDO',
 };
 const dialogo = ref(null);
-// O que a função tinha ao entrar no 4º nível nesta pergunta; sem isso, vale a de quando abriu (sem crm_admin).
-const antesDoTudo = ref(null);
 
 const nivel = computed(() => nivelDeVendas(props.permissions));
 const motivoDe = valor =>
@@ -58,16 +61,27 @@ const opcoes = computed(() =>
   })
 );
 
+// O que a função tinha ao entrar no 4º nível; sem isso, vale a de quando abriu (se não abriu com crm_admin).
 const antes = () =>
-  antesDoTudo.value ||
-  (props.inicial.includes('crm_admin') ? null : props.inicial);
+  memoria.antesDoTudo() ||
+  (props.inicial.includes(CRM_ADMIN) ? null : props.inicial);
+
+const comMemoria = (valor, novas) =>
+  [valor, nivel.value].includes(TUDO)
+    ? novas
+    : memoria.trocarNivel(vendas, {
+        de: nivel.value,
+        para: valor,
+        permissions: props.permissions,
+        novas,
+      });
 
 const aplicar = valor => {
   if (valor === TUDO && nivel.value !== TUDO)
-    antesDoTudo.value = props.permissions;
+    memoria.guardarAntesDoTudo(props.permissions);
   emit(
     'update:permissions',
-    escolherNivelDeVendas(valor, props.permissions, antes())
+    comMemoria(valor, escolherNivelDeVendas(valor, props.permissions, antes()))
   );
 };
 
@@ -89,8 +103,7 @@ const escolher = valor => {
       ref="dialogo"
       :titulo="
         $t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.TITULO', {
-          quem: quemFor(nome),
-          nome: quemFor(nome, 'NOME'),
+          com: comAFuncao(nome),
         })
       "
       :texto="$t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.TEXTO')"

@@ -8,20 +8,22 @@ import { nomeEmUso, primeiroNomeLivre } from './nomeDisponivel';
 // FUNCOES_EQUIPE.SALVAR; `sugestao` vai para o campo do nome. Nunca reenvia sozinho.
 const NAO_AUTORIZADO = 401;
 
-// Código que o servidor manda no corpo do 401 (decisão 11, custom_roles_controller.rb) → frase.
+// Código que o servidor manda no corpo do 401 (decisão 11, custom_roles_controller.rb) → frase. Sem código (a
+// recusa do check_authorization, ou o agents/update, que nunca manda código) com a sessão boa, quem recusou foi o
+// acesso de quem monta: SEM_ACESSO. INDISPONIVEL é só a flag da conta desligada (feature_off).
 const FRASE_DO_401 = {
   out_of_reach: 'FORA_DO_ALCANCE',
   feature_off: 'INDISPONIVEL',
   own_role: 'PROPRIA_FUNCAO',
 };
 
-// O 401 só diz que algo foi recusado. Quem decide se a sessão venceu é o /auth/validate_token: com ela boa, o 401
-// veio do alcance, da flag ou da própria função; vencida, o app vai para o login sem mensagem. O validityCheck da
-// store engole o erro e não zera isLoggedIn, então não serve para decidir.
+// O 401 só diz que algo foi recusado. Quem decide se a sessão venceu é o /auth/validate_token: com ela boa, vale o
+// código (ou SEM_ACESSO); vencida, o app vai para o login sem mensagem. O validityCheck da store engole o erro e não
+// zera isLoggedIn, então não serve para decidir. Devolve a chave da frase; cada tela tem as suas (salvar, apagar).
 export const explicar401 = async codigo => {
   try {
     await authAPI.validityCheck();
-    return { erro: FRASE_DO_401[codigo] || 'INDISPONIVEL' };
+    return { erro: FRASE_DO_401[codigo] || 'SEM_ACESSO' };
   } catch (error) {
     if (error?.response?.status === NAO_AUTORIZADO) {
       clearCookiesOnLogout();
@@ -32,12 +34,12 @@ export const explicar401 = async codigo => {
 };
 
 // 422 de nome: a lista recarregada diz se é uma função que ela mostra; senão é de uma integração, e a tela sugere
-// o primeiro nome livre.
-const explicarNome = async (store, nome, id) => {
+// o primeiro nome livre, pulando todos os que o servidor já recusou nesta conversa (sem vai e volta).
+const explicarNome = async (store, nome, id, recusados) => {
   await store.dispatch('customRole/getCustomRole');
   const funcoes = store.getters['customRole/getCustomRoles'];
   if (nomeEmUso(nome, funcoes, id)) return { erroDoNome: 'NOME_REPETIDO' };
-  const sugestao = primeiroNomeLivre(nome, funcoes, [nome]);
+  const sugestao = primeiroNomeLivre(nome, funcoes, [...recusados, nome]);
   return { erroDoNome: 'NOME_DE_INTEGRACAO', sugestao };
 };
 
@@ -46,7 +48,13 @@ const gravar = (store, id, dados) =>
     ? store.dispatch('customRole/updateCustomRole', { id, ...dados })
     : store.dispatch('customRole/createCustomRole', dados);
 
-export const salvarFuncao = async ({ store, giver, id = null, dados }) => {
+export const salvarFuncao = async ({
+  store,
+  giver,
+  id = null,
+  dados,
+  recusados = [],
+}) => {
   if (!reachesKeys(giver, comImplicadas(dados.permissions)))
     return { erro: 'TRAVA' };
   try {
@@ -54,7 +62,7 @@ export const salvarFuncao = async ({ store, giver, id = null, dados }) => {
   } catch (error) {
     if (error?.status === NAO_AUTORIZADO) return explicar401(error.code);
     if (error?.attributes?.includes('name'))
-      return explicarNome(store, dados.name, id);
+      return explicarNome(store, dados.name, id, recusados);
     return { erro: 'REDE' };
   }
 };

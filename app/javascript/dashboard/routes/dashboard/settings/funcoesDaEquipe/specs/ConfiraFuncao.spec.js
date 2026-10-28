@@ -83,6 +83,11 @@ describe('ConfiraFuncao', () => {
     await wrapper.find('[data-ver-canais]').trigger('click');
     expect(mostrar).toHaveBeenCalledTimes(1);
     expect(abrirAba).not.toHaveBeenCalled();
+    // Quem monta não é administrador: a folha mostra os canais em que a pessoa está, não "os da conta".
+    expect(wrapper.find('dialog h2').text()).toBe('Os canais em que você está');
+    expect(wrapper.find('dialog').text()).toContain(
+      'Estes são os canais em que você está:'
+    );
     expect(wrapper.findAll('[data-canais] li').map(li => li.text())).toEqual([
       'WhatsApp Loja',
       'Instagram',
@@ -100,5 +105,23 @@ describe('ConfiraFuncao', () => {
     const campo = wrapper.find('[data-formulario] input');
     expect(campo.attributes('aria-invalid')).toBe('true');
     expect(campo.attributes('aria-describedby')).toBe(erro.attributes('id'));
+  });
+
+  it('começar do zero: sem nome e sem nada ligado, o rodapé pede o nome e diz que o menu está vazio', () => {
+    const wrapper = montar({ nome: '', permissions: [], inicial: [] });
+    expect(wrapper.find('[data-vai-se-chamar]').text()).toContain(
+      'Dê um nome para a função'
+    );
+    expect(wrapper.find('[data-no-menu]').text()).toBe(
+      'Ainda não aparece nada no menu'
+    );
+  });
+
+  it('quem não atende conversas não vê a nota nem o "Ver os canais"', () => {
+    const wrapper = montar({
+      permissions: ['contact_manage'],
+      inicial: ['contact_manage'],
+    });
+    expect(wrapper.find('[data-ver-canais]').exists()).toBe(false);
   });
 });

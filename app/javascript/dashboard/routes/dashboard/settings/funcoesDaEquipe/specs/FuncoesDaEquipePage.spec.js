@@ -4,15 +4,22 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
+import { PRESETS } from '../../customRoles/permissionMatrix';
 import FuncoesDaEquipePage from '../FuncoesDaEquipePage.vue';
 
 // #2308, especificação 5.A e 5.E: a lista nova. Faixa só com Pessoas, erro nunca vira lista vazia, função travada
 // sem ações, as fixas, a gaveta de pessoas e o apagar com destino.
-const { routerPush, validityCheck } = vi.hoisted(() => ({
+const { routerPush, validityCheck, clearCookiesOnLogout } = vi.hoisted(() => ({
   routerPush: vi.fn(),
   validityCheck: vi.fn(),
+  clearCookiesOnLogout: vi.fn(),
 }));
 vi.mock('dashboard/api/auth', () => ({ default: { validityCheck } }));
+// O logout de verdade limparia o storage e redirecionaria dentro do jsdom: o teste só confere que foi pedido.
+vi.mock('dashboard/store/utils/api', async importOriginal => ({
+  ...(await importOriginal()),
+  clearCookiesOnLogout,
+}));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }) }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
@@ -53,6 +60,7 @@ const montar = async ({
   apagar = vi.fn(),
   lentes = false,
   pessoasDaConta = vi.fn(),
+  agentes = AGENTES,
 } = {}) => {
   const permissoes = [
     'custom_role_manage',
@@ -75,7 +83,7 @@ const montar = async ({
         fetchingList: false,
         fetchingListFailed: falha,
       }),
-      'agents/getAgents': () => AGENTES,
+      'agents/getAgents': () => agentes,
     },
     actions: {
       'customRole/getCustomRole': recarregar,
@@ -112,6 +120,27 @@ afterEach(() => {
   document.body.innerHTML = '';
   vi.clearAllMocks();
 });
+
+// Especificação 5.E (Vendedor → Sem função), com o que o contrato gerado diz a mais com crm_numeros_lentes desligada.
+const PASSAM_DO_VENDEDOR = [
+  'Ler e atender as conversas dos colegas, nos canais em que estão',
+  'Criar e mudar as respostas prontas',
+  'Apagar mensagens',
+  'Arquivar vendas',
+  'Ver os relatórios das vendas',
+  'Ver os valores das vendas em R$',
+  'Ver de que anúncio veio cada cliente',
+];
+const DEIXAM_DO_VENDEDOR = ['Procurar clientes novos'];
+const DEIXAM_DO_SUPERVISOR = [
+  'Ver: Central de Ajuda (artigos para os clientes)',
+  'Ver: Relatórios',
+  'Ver: Robôs de IA',
+  'Ver: Canais (números de WhatsApp, Instagram, e-mail)',
+  'Ver: Regras automáticas',
+  'Mexer: Etiquetas',
+  'Mexer: Atalhos de mensagens',
+];
 
 const pedirApagar = async cartao => {
   await cartao.find('[data-mais]').trigger('click');
@@ -190,8 +219,59 @@ describe('Funções da equipe: lista', () => {
       'Só o administrador muda esta função.'
     );
     expect(financeiro.find('[data-alterar]').exists()).toBe(false);
-    expect(financeiro.find('[data-mais]').exists()).toBe(false);
+    await financeiro.find('[data-mais]').trigger('click');
+    expect(
+      financeiro.findAll('[role="menuitem"]').map(item => item.text())
+    ).toEqual(['Duplicar']);
+    await financeiro.find('[data-acao="duplicar"]').trigger('click');
+    expect(routerPush).toHaveBeenCalledWith({
+      name: 'funcoes_equipe_duplicate',
+      params: { roleId: 2 },
+    });
     expect(atendente.find('[data-alterar]').exists()).toBe(true);
+  });
+
+  it('a própria função diz que ninguém muda a própria e ainda oferece Duplicar', async () => {
+    const minha = { ...ATENDENTE, id: 99, name: 'Gerente da loja' };
+    const wrapper = await montar({ funcoes: [minha], admin: false });
+    const cartao = wrapper.find('[data-cartao-funcao]');
+
+    expect(cartao.find('[data-travada]').text()).toBe(
+      'Ninguém muda a própria função.'
+    );
+    expect(cartao.find('[data-alterar]').exists()).toBe(false);
+    await cartao.find('[data-mais]').trigger('click');
+    expect(
+      cartao.findAll('[role="menuitem"]').map(item => item.text())
+    ).toEqual(['Duplicar']);
+  });
+
+  it('enquanto as pessoas carregam: esqueleto, nunca "nenhuma pessoa" nem "Ninguém usa ainda"', async () => {
+    let soltar;
+    const pessoasDaConta = vi.fn(
+      () =>
+        new Promise(resolve => {
+          soltar = resolve;
+        })
+    );
+    const wrapper = await montar({ pessoasDaConta });
+
+    expect(
+      wrapper.find('[data-contagem] [data-pessoas-carregando]').exists()
+    ).toBe(true);
+    expect(wrapper.find('[data-contagem]').text()).not.toContain('nenhuma');
+    expect(
+      wrapper.find('[data-cartao-funcao] [data-pessoas-carregando]').exists()
+    ).toBe(true);
+    expect(wrapper.text()).not.toContain('Ninguém usa ainda');
+    expect(wrapper.find('[data-faixa-sem-funcao]').exists()).toBe(false);
+
+    soltar(true);
+    await flushPromises();
+    expect(wrapper.find('[data-pessoas-carregando]').exists()).toBe(false);
+    expect(wrapper.find('[data-contagem]').text()).toBe(
+      '2 funções criadas · 1 pessoa com função'
+    );
   });
 
   it('"Escolher pessoas" só com Pessoas e numa função ao alcance', async () => {
@@ -390,17 +470,36 @@ describe('Funções da equipe: lista', () => {
     expect(useAlert).toHaveBeenCalledWith('Has people');
   });
 
+  // A recusa sem código é o corpo real do check_authorization (request_exception_handler.rb).
   it.each([
     [
-      'sessão boa: diz o motivo',
+      'sessão boa e fora do alcance: frase de apagar',
       {},
-      'Você não pode dar parte disto. Peça ao administrador.',
+      'out_of_reach',
+      'Você não pode apagar esta função. Peça ao administrador.',
     ],
-    ['sessão vencida: nenhum aviso', null, null],
-  ])('apagar com 401, %s', async (_, sessao, frase) => {
+    [
+      'sessão boa e sem código: perdeu o acesso',
+      {},
+      'You are not authorized to do this action',
+      'Você não pode mais mudar as funções. Fale com o administrador.',
+    ],
+    [
+      'sessão boa e flag desligada: indisponível',
+      {},
+      'feature_off',
+      'Funções da equipe não estão disponíveis agora. Fale com o administrador.',
+    ],
+    [
+      'sessão vencida: nenhum aviso e vai para o login',
+      null,
+      'out_of_reach',
+      null,
+    ],
+  ])('apagar com 401, %s', async (_, sessao, codigo, frase) => {
     if (sessao) validityCheck.mockResolvedValue(sessao);
     else validityCheck.mockRejectedValue({ response: { status: 401 } });
-    const apagar = vi.fn().mockRejectedValue(recusa('out_of_reach', 401));
+    const apagar = vi.fn().mockRejectedValue(recusa(codigo, 401));
     const wrapper = await montar({ apagar });
     const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
 
@@ -411,6 +510,49 @@ describe('Funções da equipe: lista', () => {
     expect(validityCheck).toHaveBeenCalledTimes(1);
     if (frase) expect(useAlert).toHaveBeenCalledWith(frase);
     else expect(useAlert).not.toHaveBeenCalled();
+    expect(clearCookiesOnLogout).toHaveBeenCalledTimes(frase ? 0 : 1);
+  });
+
+  it('apagar um Vendedor com gente para "Sem função" desenha o que se ganha e o que se perde', async () => {
+    const vendedor = { id: 4, name: 'Vendedor', permissions: PRESETS.SDR() };
+    const wrapper = await montar({
+      funcoes: [vendedor],
+      agentes: [{ id: 10, name: 'Ana', role: 'agent', custom_role_id: 4 }],
+    });
+
+    await pedirApagar(wrapper.find('[data-cartao-funcao]'));
+    wrapper.findComponent(ChoiceSelect).vm.$emit('update:modelValue', 'none');
+    await flushPromises();
+    const diff = dialogo(wrapper).find('[data-diff]');
+    const itens = grupo =>
+      diff.findAll(`[data-grupo="${grupo}"] [data-item]`).map(i => i.text());
+
+    expect(diff.find('p').text()).toBe(
+      'Essa pessoa vai ganhar umas coisas e perder outras.'
+    );
+    expect(diff.find('[data-grupo="DEIXAM"] p').text()).toBe('Vai deixar de');
+    expect(itens('PASSAM')).toEqual(PASSAM_DO_VENDEDOR);
+    expect(itens('DEIXAM')).toEqual(DEIXAM_DO_VENDEDOR);
+  });
+
+  it('apagar um Supervisor para "Sem função": as áreas que somem aparecem com o texto da área, sem chave crua', async () => {
+    const supervisor = {
+      id: 5,
+      name: 'Supervisor',
+      permissions: PRESETS.SUPERVISOR(),
+    };
+    const wrapper = await montar({
+      funcoes: [supervisor],
+      agentes: [{ id: 10, name: 'Ana', role: 'agent', custom_role_id: 5 }],
+    });
+
+    await pedirApagar(wrapper.find('[data-cartao-funcao]'));
+    wrapper.findComponent(ChoiceSelect).vm.$emit('update:modelValue', 'none');
+    await flushPromises();
+    const deixam = dialogo(wrapper)
+      .findAll('[data-grupo="DEIXAM"] [data-item]')
+      .map(i => i.text());
+    expect(deixam).toEqual(DEIXAM_DO_SUPERVISOR);
   });
 
   it('falha ao buscar as pessoas não vira "nenhuma pessoa": diz que não deu e oferece tentar', async () => {

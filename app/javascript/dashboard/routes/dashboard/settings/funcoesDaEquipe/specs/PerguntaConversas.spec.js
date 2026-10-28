@@ -9,11 +9,19 @@ const PROPRIAS = [
   'conversation_unassigned_manage',
 ];
 
-const montar = permissions =>
-  mount(PerguntaConversas, {
-    props: { permissions, inicial: PROPRIAS, giver: CARLA, nome: 'Atendente' },
+const montar = permissions => {
+  const wrapper = mount(PerguntaConversas, {
+    props: {
+      permissions,
+      inicial: PROPRIAS,
+      giver: CARLA,
+      nome: 'Atendente',
+      'onUpdate:permissions': novas => wrapper.setProps({ permissions: novas }),
+    },
     global: global(),
   });
+  return wrapper;
+};
 
 const interruptor = (wrapper, chave) =>
   wrapper.find(`[data-subescolha="${chave}"] [role="switch"]`);
@@ -21,7 +29,7 @@ const interruptor = (wrapper, chave) =>
 describe('PerguntaConversas', () => {
   it('título neutro, com o nome da função', () => {
     expect(montar(PROPRIAS).find('h1').text()).toBe(
-      'Quais conversas Atendente atende?'
+      'Com a função Atendente, quais conversas a pessoa atende?'
     );
   });
 
@@ -48,5 +56,20 @@ describe('PerguntaConversas', () => {
 
     await botao.trigger('click');
     expect(wrapper.emitted('update:permissions')).toBeUndefined();
+  });
+
+  it('ir para "Atende todas" e voltar a "Atende as próprias" devolve os alcances de entrada', async () => {
+    const entrada = ['conversation_participating_manage'];
+    const wrapper = montar(entrada);
+    const radios = () => wrapper.findAll('[role="radio"]');
+    const proprias = radios().findIndex(
+      r => r.attributes('aria-checked') === 'true'
+    );
+
+    await radios()[proprias + 1].trigger('click');
+    expect(wrapper.props('permissions')).toContain('conversation_manage');
+
+    await radios()[proprias].trigger('click');
+    expect(wrapper.props('permissions')).toEqual(entrada);
   });
 });

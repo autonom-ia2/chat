@@ -1,6 +1,7 @@
 import { PRESETS } from '../customRoles/permissionMatrix';
 import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
-import { cuidadosDaFuncao, podeCurto } from './fraseDaFuncao';
+import { cuidadosDaFuncao } from './fraseDaFuncao';
+import { podeCurto } from './podeCurto';
 import { motivoDaTrava } from './motivoDaTrava';
 
 // Os cartões de função pronta da Escolha e do vazio (#2308, especificação 5.B1 e 7.6). Cada um mostra até 3

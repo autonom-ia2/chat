@@ -2,7 +2,7 @@ import { useI18n } from 'vue-i18n';
 import { LEVELS } from '../../customRoles/permissionMatrix';
 
 // Textos que várias etapas montam do mesmo jeito (#2308): listas com "e", o nome de um nível, a primeira letra
-// maiúscula e quem tem a função nas perguntas ("quem for Atendente", sem gênero). Tudo por i18n, sem regex.
+// maiúscula e o começo das perguntas ("Com a função Atendente", sem artigo de gênero). Tudo por i18n, sem regex.
 const ROTULO_DO_NIVEL = {
   [LEVELS.VIEW]: module => (module.levels?.manage ? 'SO_OLHA' : 'VE'),
   [LEVELS.MANAGE]: () => 'PODE_MEXER',
@@ -31,12 +31,12 @@ export function useTextos() {
 
   const nomeDaArea = key => t(`FUNCOES_EQUIPE.AREAS.${key}.NOME`);
 
-  // forma: OBJETO ("quem for Atendente"), SUJEITO ("Quem for Atendente") ou NOME ("Atendente"); sem nome, "esta função".
-  // SUJEITO é a forma do começo do título em pt; em en a pergunta começa pelo verbo, e ela fica minúscula.
-  const quemFor = (nome, forma = 'OBJETO') =>
+  // "Com a função Atendente" (sem nome, "Com esta função"): o sujeito das perguntas é a pessoa, e a função entra sem
+  // artigo, porque o nome dela pode ter qualquer gênero.
+  const comAFuncao = nome =>
     nome
-      ? t(`FUNCOES_EQUIPE.GUIADA.QUEM.${forma}`, { nome })
-      : t(`FUNCOES_EQUIPE.GUIADA.QUEM.${forma}_SEM_NOME`);
+      ? t('FUNCOES_EQUIPE.GUIADA.COM_A_FUNCAO', { nome })
+      : t('FUNCOES_EQUIPE.GUIADA.COM_ESTA_FUNCAO');
 
   return {
     t,
@@ -47,6 +47,6 @@ export function useTextos() {
     rotuloDoNivel,
     antesDoNivel,
     nomeDaArea,
-    quemFor,
+    comAFuncao,
   };
 }

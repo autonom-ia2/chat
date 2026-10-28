@@ -18,9 +18,19 @@ const TRECHOS = [
   'opcional',
   'se quiser',
   'administradora',
+  // A coluna "Nunca" da tabela da seção 3.
+  'perfil',
+  'papel',
+  'editar',
+  'ativar',
+  'habilitar',
+  'atribuída',
+  'inbox',
+  'pipeline',
+  'números das vendas',
 ];
-// Palavras inteiras: "ela" não pode casar com "janela" nem com "vela".
-const PALAVRAS = ['ele', 'ela', 'eles', 'elas', 'dele', 'dela'];
+// Palavras inteiras: "ela" não pode casar com "janela" nem com "vela"; "crm" é a sigla solta (a seção 3 diz "vendas").
+const PALAVRAS = ['ele', 'ela', 'eles', 'elas', 'dele', 'dela', 'crm'];
 const PONTUACAO = ['.', ',', ':', ';', '!', '?', '(', ')', '"', '…'];
 
 const textos = valor =>
@@ -55,11 +65,15 @@ describe('vocabulário de FUNCOES_EQUIPE (pt_BR)', () => {
         A: 'Ela é administradora.',
         B: 'O colega chama a pessoa e manda o link (dele).',
         C: 'A janela da vela fica aberta.',
+        D: 'Editar o perfil no CRM.',
       })
     ).toEqual([
       'administradora: Ela é administradora.',
       'ela: Ela é administradora.',
       'dele: O colega chama a pessoa e manda o link (dele).',
+      'perfil: Editar o perfil no CRM.',
+      'editar: Editar o perfil no CRM.',
+      'crm: Editar o perfil no CRM.',
     ]);
   });
 });

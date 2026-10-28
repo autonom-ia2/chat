@@ -109,6 +109,24 @@ describe('semFuncao', () => {
     ).toEqual([]);
   });
 
+  it('a implicada também conta do lado da função: crm_export traz crm_view, e a perda de ver as vendas aparece', () => {
+    const soVer = {
+      ...contrato,
+      capacidades: [
+        {
+          id: 'ver_as_vendas',
+          chaves: ['crm_view'],
+          premissas: [],
+          pode: false,
+        },
+      ],
+      extras: [],
+    };
+    expect(diff(['crm_export'], desligada, soVer).perde).toContain(
+      'ver_as_vendas'
+    );
+  });
+
   it('"Cuida de tudo" sem R$: cada pedaço das vendas sai pelo nome, sem "Usar uma parte de Vendas", e ganha R$', () => {
     const tudo = escolherNivelDeVendas('tudo', PRESETS.AGENT());
     expect(diff(tudo)).toEqual({

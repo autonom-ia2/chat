@@ -20,6 +20,9 @@ const { capacidade, selo, trava, nome, descricao } = useCartao();
 const textoDoSelo = computed(() => selo(props.cartao.selo));
 const poe = computed(() => Boolean(props.existente) && props.podePorPessoa);
 
+// O nome tem a mesma letra nos dois tipos de cartão (anatomia única, especificação 9): o botão do navegador não
+// herda o tamanho e o peso do título, então a classe vai no próprio nome, botão ou não.
+const NOME = 'text-lg font-semibold leading-snug text-n-slate-12';
 const ESTICADO =
   'after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none';
 </script>
@@ -35,15 +38,14 @@ const ESTICADO =
     >
       <span class="size-5" :class="cartao.icone" aria-hidden="true" />
     </span>
-    <h3
-      class="flex items-center gap-2 m-0 text-lg font-semibold text-n-slate-12"
-    >
+    <h3 class="flex items-center gap-2 m-0">
       <button
         v-if="!existente"
         type="button"
         data-principal
+        data-nome
         class="flex-1 text-start"
-        :class="ESTICADO"
+        :class="[NOME, ESTICADO]"
         :aria-label="
           $t('FUNCOES_EQUIPE.ESCOLHA.CRIAR', { nome: nome(cartao.chave) })
         "
@@ -51,7 +53,9 @@ const ESTICADO =
       >
         {{ nome(cartao.chave) }}
       </button>
-      <span v-else class="flex-1">{{ nome(cartao.chave) }}</span>
+      <span v-else data-nome class="flex-1" :class="NOME">
+        {{ nome(cartao.chave) }}
+      </span>
       <span
         v-if="!existente"
         class="i-lucide-chevron-right size-5 text-n-slate-11 rtl:rotate-180"
@@ -124,6 +128,15 @@ const ESTICADO =
           data-principal
           class="inline-flex items-center gap-2 px-4 text-sm font-medium rounded-xl min-h-11 bg-n-alpha-2 text-n-slate-12"
           :class="ESTICADO"
+          :aria-label="
+            poe
+              ? $t('FUNCOES_EQUIPE.ESCOLHA.POR_PESSOA_ROTULO', {
+                  nome: nome(cartao.chave),
+                })
+              : $t('FUNCOES_EQUIPE.ESCOLHA.CRIAR_A_PARTIR_ROTULO', {
+                  nome: nome(cartao.chave),
+                })
+          "
           @click="poe ? emit('porPessoa') : emit('criar')"
         >
           <span
@@ -141,6 +154,11 @@ const ESTICADO =
           v-if="poe"
           type="button"
           data-criar-a-partir
+          :aria-label="
+            $t('FUNCOES_EQUIPE.ESCOLHA.CRIAR_A_PARTIR_ROTULO', {
+              nome: nome(cartao.chave),
+            })
+          "
           class="relative z-10 text-sm font-medium underline min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           @click="emit('criar')"
         >

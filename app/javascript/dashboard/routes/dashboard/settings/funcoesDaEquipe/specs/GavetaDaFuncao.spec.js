@@ -6,10 +6,20 @@ import { espiarDialogo, global, loja } from './montar';
 import { CARLA } from './quemMonta';
 
 // #2308, especificação 5.D e 14: a gaveta de quem usa uma função e a de quem está sem função, com a Carla.
-vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-vi.mock('dashboard/api/auth', () => ({
-  default: { validityCheck: vi.fn().mockResolvedValue({}) },
+const { validityCheck, clearCookiesOnLogout } = vi.hoisted(() => ({
+  validityCheck: vi.fn(),
+  clearCookiesOnLogout: vi.fn(),
 }));
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/api/auth', () => ({ default: { validityCheck } }));
+vi.mock('dashboard/store/utils/api', async importOriginal => ({
+  ...(await importOriginal()),
+  clearCookiesOnLogout,
+}));
+
+// O corpo de verdade do 401 do agents/update: o GrantGuard::Denied cai no handler genérico
+// (request_exception_handler.rb), sem código; a store põe a frase em `code`.
+const CORPO_DO_401 = 'You are not authorized to do this action';
 
 const ATENDENTE = { id: 1, name: 'Atendente', permissions: PRESETS.AGENT() };
 const VENDEDOR = { id: 2, name: 'Vendedor', permissions: PRESETS.SDR() };
@@ -29,19 +39,32 @@ const AGENTES = [
 
 const GERENTE = { id: 7, name: 'Gerente da loja', permissions: ['crm_view'] };
 
+// O servidor de mentira: o update grava a função na lista que o agents/get "recarrega", como o de verdade.
+const gravarNa =
+  agentes =>
+  (_, { id, custom_role_id: funcao }) => {
+    agentes.find(item => item.id === id).custom_role_id = funcao;
+  };
+
 const montar = ({
   funcao = VENDEDOR,
   giver = CARLA,
   flags = [],
-  atualizar = vi.fn(),
+  agentes = AGENTES.map(item => ({ ...item })),
+  atualizar = vi.fn(gravarNa(agentes)),
 } = {}) => {
   const recarregar = vi.fn();
+  const funcoesDeNovo = vi.fn();
   const store = loja({
     giver,
     flags,
     funcoes: [ATENDENTE, VENDEDOR, FINANCEIRO],
-    agentes: AGENTES,
-    actions: { 'agents/update': atualizar, 'agents/get': recarregar },
+    agentes,
+    actions: {
+      'agents/update': atualizar,
+      'agents/get': recarregar,
+      'customRole/getCustomRole': funcoesDeNovo,
+    },
   });
   const wrapper = mount(GavetaDaFuncao, {
     attachTo: document.body,
@@ -51,7 +74,7 @@ const montar = ({
       stubs: { ...global(store).stubs, Avatar: true },
     },
   });
-  return { wrapper, atualizar, recarregar };
+  return { wrapper, atualizar, recarregar, funcoesDeNovo };
 };
 
 // A recusa como a store de agentes a lança (agents.js: Error com status e code da resposta).
@@ -62,9 +85,20 @@ const acoesDasPessoas = wrapper => wrapper.findAll('[data-pessoa] [data-acao]');
 const linha = (wrapper, id) => wrapper.find(`[data-pessoa="${id}"]`);
 const nomes = lista => lista.findAll('[data-pessoa]').map(item => item.text());
 
+beforeEach(() => {
+  validityCheck.mockResolvedValue({});
+});
+
 afterEach(() => {
   document.body.innerHTML = '';
+  validityCheck.mockReset();
+  clearCookiesOnLogout.mockReset();
 });
+
+const salvar = async wrapper => {
+  await wrapper.find('[data-salvar]').trigger('click');
+  await flushPromises();
+};
 
 describe('GavetaDaFuncao', () => {
   it('quem já é, em ordem alfabética, e as outras pessoas com a trava escrita', () => {
@@ -105,17 +139,71 @@ describe('GavetaDaFuncao', () => {
       'Hoje é Atendente. Vai passar a ser Vendedor.'
     );
     expect(wrapper.findAll('[data-frase-rodape]').map(f => f.text())).toEqual([
-      'Gabriel Souza vai ficar sem função e passa a ler e atender as conversas dos colegas.',
+      'Gabriel Souza vai ficar sem função e passa a ler e atender as conversas dos colegas. Também passa a ver os valores das vendas em R$.',
       'Íris Lopes passa a ser Vendedor.',
     ]);
 
-    await wrapper.find('[data-salvar]').trigger('click');
-    await flushPromises();
+    await salvar(wrapper);
+    // Só a função vai no pedido: o nome lido da lista desfaria uma troca de nome feita em paralelo.
     expect(atualizar.mock.calls.map(([, dados]) => dados)).toEqual([
-      { id: 21, name: 'Gabriel Souza', custom_role_id: null },
-      { id: 23, name: 'Íris Lopes', custom_role_id: 2 },
+      { id: 21, custom_role_id: null },
+      { id: 23, custom_role_id: 2 },
     ]);
     expect(wrapper.emitted('fechar')).toHaveLength(1);
+  });
+
+  it('o servidor responde 200 sem gravar (conta sem custom_roles): a gaveta confere e diz que não mudou', async () => {
+    const { wrapper, recarregar } = montar({ atualizar: vi.fn() });
+
+    await linha(wrapper, 24).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(recarregar).toHaveBeenCalledTimes(1);
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
+      'A função de Kauã Moreira não mudou. Tente de novo; se continuar, fale com o administrador.'
+    );
+  });
+
+  it('ao tirar alguém, "Pôr em outra função" leva a pessoa para a função escolhida', async () => {
+    const { wrapper, atualizar } = montar();
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    const escolha = linha(wrapper, 21).findComponent(ChoiceSelect);
+    expect(escolha.props('options').map(opcao => opcao.label)).toEqual([
+      'Atendente',
+    ]);
+    escolha.vm.$emit('update:modelValue', 1);
+    await flushPromises();
+    expect(wrapper.find('[data-frase-rodape]').text()).toBe(
+      'Gabriel Souza passa a ser Atendente.'
+    );
+
+    await salvar(wrapper);
+    expect(atualizar.mock.calls.map(([, dados]) => dados)).toEqual([
+      { id: 21, custom_role_id: 1 },
+    ]);
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+  });
+
+  it('função sem ninguém: "Ninguém tem esta função ainda." em vez de "Já são … (0)"', () => {
+    const vazia = { id: 9, name: 'Marketing', permissions: ['campaign_view'] };
+    const { wrapper } = montar({ funcao: vazia });
+
+    expect(wrapper.find('[data-ninguem-ainda]').text()).toBe(
+      'Ninguém tem esta função ainda.'
+    );
+    expect(wrapper.text()).not.toContain('Já são Marketing');
+  });
+
+  it('no celular, "Cancelar" vem antes de "Salvar", como nos diálogos', async () => {
+    const { wrapper } = montar();
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    const botoes = wrapper.find('[data-salvar]').element.parentElement;
+
+    expect(botoes.classList.contains('flex-col')).toBe(true);
+    expect(botoes.classList.contains('flex-col-reverse')).toBe(false);
+    expect(botoes.firstElementChild.hasAttribute('data-cancelar')).toBe(true);
   });
 
   it('"Desfazer" restaura a linha e o rodapé', async () => {
@@ -158,7 +246,9 @@ describe('GavetaDaFuncao', () => {
     };
     const { wrapper } = montar({ giver });
 
-    expect(wrapper.find('[data-so-leitura]').exists()).toBe(true);
+    expect(wrapper.find('[data-so-leitura]').text()).toBe(
+      'Só quem pode pôr e tirar pessoas da equipe muda quem tem esta função.'
+    );
     expect(acoesDasPessoas(wrapper)).toHaveLength(0);
     expect(wrapper.find('[data-salvar]').exists()).toBe(false);
     expect(wrapper.find('[data-outras]').exists()).toBe(false);
@@ -166,37 +256,88 @@ describe('GavetaDaFuncao', () => {
   });
 
   it.each([
-    ['acima do alcance (ABOVE)', FINANCEIRO],
-    ['a própria função (MINE)', GERENTE],
-  ])('função %s: só leitura, mesmo com Pessoas', (_, funcao) => {
-    const { wrapper } = montar({ funcao });
+    [
+      'acima do alcance (ABOVE)',
+      FINANCEIRO,
+      'Só o administrador põe e tira pessoas desta função.',
+    ],
+    [
+      'a própria função (MINE)',
+      GERENTE,
+      'Ninguém muda a própria função: esta é a sua.',
+    ],
+  ])(
+    'função %s: só leitura, mesmo com Pessoas, com o motivo certo',
+    (_, funcao, motivo) => {
+      const { wrapper } = montar({ funcao });
 
-    expect(wrapper.find('[data-so-leitura]').exists()).toBe(true);
-    expect(acoesDasPessoas(wrapper)).toHaveLength(0);
-    expect(wrapper.find('[data-salvar]').exists()).toBe(false);
-    expect(wrapper.find('[data-outras]').exists()).toBe(false);
-  });
+      expect(wrapper.find('[data-so-leitura]').text()).toBe(motivo);
+      expect(acoesDasPessoas(wrapper)).toHaveLength(0);
+      expect(wrapper.find('[data-salvar]').exists()).toBe(false);
+      expect(wrapper.find('[data-outras]').exists()).toBe(false);
+    }
+  );
 
-  it('falha ao salvar: a gaveta fica, diz quem não foi salvo e por quê (401 explicado), e recarrega as pessoas', async () => {
-    const atualizar = vi.fn((_, { id }) =>
-      id === 23 ? Promise.reject(recusa(401, 'out_of_reach')) : undefined
+  it('401 do agents/update com sessão boa (corpo real, sem código): diz que está fora do alcance e recarrega pessoas e funções', async () => {
+    const agentes = AGENTES.map(item => ({ ...item }));
+    const gravar = gravarNa(agentes);
+    const atualizar = vi.fn((contexto, dados) =>
+      dados.id === 23
+        ? Promise.reject(recusa(401, CORPO_DO_401))
+        : gravar(contexto, dados)
     );
-    const { wrapper, recarregar } = montar({ atualizar });
+    const { wrapper, recarregar, funcoesDeNovo } = montar({
+      agentes,
+      atualizar,
+    });
 
     await linha(wrapper, 21).find('[data-acao]').trigger('click');
     await linha(wrapper, 23).find('[data-acao]').trigger('click');
-    await wrapper.find('[data-salvar]').trigger('click');
-    await flushPromises();
+    await salvar(wrapper);
 
+    expect(validityCheck).toHaveBeenCalledTimes(1);
     expect(wrapper.emitted('fechar')).toBeUndefined();
     expect(wrapper.find('[data-erro-gaveta]').attributes('role')).toBe('alert');
     expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
-      'A função de Íris Lopes não foi salva. Você não pode dar parte disto. Peça ao administrador.'
+      'Não deu para mudar a função de Íris Lopes: está fora do que você pode dar.'
     );
     expect(wrapper.findAll('[data-frase-rodape]').map(f => f.text())).toEqual([
       'Íris Lopes passa a ser Vendedor.',
     ]);
     expect(recarregar).toHaveBeenCalledTimes(1);
+    expect(funcoesDeNovo).toHaveBeenCalledTimes(1);
+    expect(clearCookiesOnLogout).not.toHaveBeenCalled();
+  });
+
+  it('401 com a sessão vencida: vai para o login, sem mensagem e sem fechar', async () => {
+    validityCheck.mockRejectedValue({ response: { status: 401 } });
+    const atualizar = vi.fn(() => Promise.reject(recusa(401, CORPO_DO_401)));
+    const { wrapper } = montar({ atualizar });
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(clearCookiesOnLogout).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-erro-gaveta]').exists()).toBe(false);
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+  });
+
+  it('falha mista (um 401 e uma queda de rede): cada nome com o seu motivo', async () => {
+    const atualizar = vi.fn((_, { id }) =>
+      Promise.reject(
+        id === 23 ? recusa(401, CORPO_DO_401) : recusa(undefined, undefined)
+      )
+    );
+    const { wrapper } = montar({ atualizar });
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await linha(wrapper, 23).find('[data-acao]').trigger('click');
+    await salvar(wrapper);
+
+    expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
+      'Não deu para mudar a função de Íris Lopes: está fora do que você pode dar. A função de Gabriel Souza não foi salva. Confira a internet e tente de novo.'
+    );
+    expect(wrapper.findAll('[data-frase-rodape]')).toHaveLength(2);
   });
 
   it('falha de rede ao salvar: pede para conferir a internet', async () => {
@@ -248,6 +389,12 @@ describe('GavetaDaFuncao', () => {
       'A função Financeiro não aparece na escolha: só o administrador dá.'
     );
 
+    // Lia é administradora e Carla tem função: só o Kauã está sem função.
+    expect(nomes(wrapper.find('[data-sem-funcao]'))).toHaveLength(1);
+    expect(nomes(wrapper.find('[data-sem-funcao]'))[0]).toContain(
+      'Kauã Moreira'
+    );
+
     escolha.vm.$emit('update:modelValue', 1);
     await flushPromises();
     expect(linha(wrapper, 24).find('[data-estado]').text()).toBe(
@@ -256,5 +403,17 @@ describe('GavetaDaFuncao', () => {
     expect(wrapper.find('[data-frase-rodape]').text()).toBe(
       'Kauã Moreira passa a ser Atendente.'
     );
+  });
+
+  it('quem está sem função, sem Pessoas: só a lista, sem escolha', () => {
+    const giver = {
+      ...CARLA,
+      permissions: CARLA.permissions.filter(chave => chave !== 'people_manage'),
+    };
+    const { wrapper } = montar({ funcao: null, giver });
+
+    expect(wrapper.findComponent(ChoiceSelect).exists()).toBe(false);
+    expect(wrapper.find('[data-salvar]').exists()).toBe(false);
+    expect(nomes(wrapper.find('[data-sem-funcao]'))).toHaveLength(1);
   });
 });

@@ -7,7 +7,10 @@ import {
   toggleExtra,
 } from '../../customRoles/permissionMatrix';
 import { gruposDoCuidado } from '../areasDaFuncao';
+import { dependenciaDe } from '../chavesDaFuncao';
 import { TEXTO_DA_TRAVA } from '../motivoDaTrava';
+import { devolverFoco } from './focoQueFica';
+import { useMemoria } from './memoriaDaConversa';
 import { useTextos } from './useTextos';
 import DialogoDaCasa from './DialogoDaCasa.vue';
 import InterruptorDaLinha from './InterruptorDaLinha.vue';
@@ -16,7 +19,9 @@ import PerguntaDaFuncao from './PerguntaDaFuncao.vue';
 
 // Ações que pedem cuidado (#2308, especificação 5.B3 e 7.2), em três grupos: (b) liga junto com a área, com uma
 // confirmação só ("Ligar as duas"/"Ligar os dois"); (a) liga agora; (c) recolhida com cadeado. As linhas ligáveis
-// ficam na ordem fixa: ligar uma (b) não a tira do lugar. O que vem com "Cuida de tudo" fica ligado e travado.
+// ficam na ordem fixa: ligar uma (b) não a tira do lugar. O que vem com "Cuida de tudo" fica ligado e travado. As
+// metas do mês sem R$ também são (b): o diálogo pergunta pelos valores em R$, e desligar as metas tira o R$ que
+// entrou com elas (decisão 6; lembrado na memória da conversa, que dura mais que esta tela).
 const props = defineProps({
   permissions: { type: Array, required: true },
   inicial: { type: Array, required: true },
@@ -25,10 +30,15 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:permissions', 'pronto']);
-const { t, lista, maiuscula, quemFor } = useTextos();
+const { t, lista, maiuscula, comAFuncao } = useTextos();
+const memoria = useMemoria();
 
 // Chave i18n do diálogo e da faixa de cada (b).
-const JUNTO = { contact_delete: 'CONTATOS', campaign_send: 'CAMPANHAS' };
+const JUNTO = {
+  contact_delete: 'CONTATOS',
+  campaign_send: 'CAMPANHAS',
+  crm_metas_manage: 'METAS',
+};
 
 const ORDEM = [
   'contact_export',
@@ -41,19 +51,13 @@ const ORDEM = [
 ];
 
 const dialogo = ref(null);
+const raiz = ref(null);
 const pendente = ref(null);
 // O último "Ligar as duas": o que ele acrescentou e o que tirou, para desfazer só isso.
 const desfazer = ref(null);
 
-const valores = computed(() => ({
-  quem: quemFor(props.nome),
-  nome: quemFor(props.nome, 'NOME'),
-}));
 const titulo = computed(() =>
-  t('FUNCOES_EQUIPE.CUIDADO_TELA.TITULO', {
-    quem: quemFor(props.nome, 'SUJEITO'),
-    nome: valores.value.nome,
-  })
+  t('FUNCOES_EQUIPE.CUIDADO_TELA.TITULO', { com: comAFuncao(props.nome) })
 );
 
 const grupos = computed(() => gruposDoCuidado(props.giver, props.permissions));
@@ -87,34 +91,60 @@ const faixa = computed(() => {
   if (!desfazer.value) return '';
   const { chave, acrescentadas } = desfazer.value;
   if (!acrescentadas.every(item => props.permissions.includes(item))) return '';
-  return t(
-    `FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[chave]}.AGORA`,
-    valores.value
-  );
+  return t(`FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[chave]}.AGORA`);
 });
 
 const atualizar = permissions => emit('update:permissions', permissions);
 
-// "Ligar as duas": a área em manage e a chave, exatamente essas duas (especificação 7.7).
+// "Ligar as duas": a área em manage e a chave, exatamente essas duas (especificação 7.7). As metas trazem o R$ pelo
+// toggleExtra (KEY_DEPENDENCIES), e a memória guarda que o R$ entrou por elas.
 const ligarJunto = ({ chave, area }) => {
   const module = moduleByKey(area);
   const antes = props.permissions;
-  const depois = toggleExtra(
-    module,
-    chave,
-    setLevel(module, LEVELS.MANAGE, antes)
-  );
+  const comArea = dependenciaDe(chave)
+    ? antes
+    : setLevel(module, LEVELS.MANAGE, antes);
+  const depois = toggleExtra(module, chave, comArea);
+  const acrescentadas = depois.filter(item => !antes.includes(item));
   atualizar(depois);
+  if (dependenciaDe(chave))
+    memoria.guardarEntrouCom(
+      chave,
+      acrescentadas.filter(item => item !== chave)
+    );
   desfazer.value = {
     chave,
-    acrescentadas: depois.filter(item => !antes.includes(item)),
+    acrescentadas,
     tiradas: antes.filter(item => !depois.includes(item)),
   };
 };
 
+// Desligar uma chave tira também o que entrou só por ela (o R$ das metas), se ainda estiver ligado.
+const desligar = item => {
+  const module = moduleByKey(item.area);
+  const semElas = memoria
+    .entrouCom(item.chave)
+    .filter(junto => props.permissions.includes(junto))
+    .reduce(
+      (chaves, junto) => toggleExtra(module, junto, chaves),
+      props.permissions
+    );
+  memoria.guardarEntrouCom(item.chave, []);
+  atualizar(
+    semElas.includes(item.chave)
+      ? toggleExtra(module, item.chave, semElas)
+      : semElas
+  );
+};
+
+// Uma linha que só aparece ligada some ao desligar: o foco vai para a primeira linha ou para o título.
 const alternar = item => {
-  const ligando = !props.permissions.includes(item.chave);
-  if (ligando && item.junto) {
+  if (props.permissions.includes(item.chave)) {
+    desligar(item);
+    devolverFoco(raiz.value?.$el, ['[data-interruptor]', 'h1']);
+    return;
+  }
+  if (item.junto) {
     pendente.value = item;
     dialogo.value?.abrir();
     return;
@@ -127,10 +157,13 @@ const confirmar = () => {
   pendente.value = null;
 };
 
-// Desfaz só o que o "Ligar as duas" mudou, sobre o estado de agora: o que a pessoa ligou depois fica. O foco volta
-// ao interruptor da linha (o botão "Desfazer" some).
+// Desfaz só o que o "Ligar as duas" mudou, sobre o estado de agora (delta inverso): o que a pessoa ligou depois fica.
+// A especificação 7.7 diz "restaura o array anterior"; o delta inverso foi mantido de propósito (decisão 7 da revisão
+// do #2308), porque restaurar o array apagaria as mudanças feitas depois. O foco volta ao interruptor da linha (o
+// botão "Desfazer" some).
 const voltarAtras = async () => {
   const { chave, acrescentadas, tiradas } = desfazer.value;
+  memoria.guardarEntrouCom(chave, []);
   atualizar([
     ...props.permissions.filter(item => !acrescentadas.includes(item)),
     ...tiradas.filter(item => !props.permissions.includes(item)),
@@ -145,8 +178,7 @@ const voltarAtras = async () => {
 const textoDoDialogo = parte =>
   pendente.value
     ? t(
-        `FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[pendente.value.chave]}.${parte}`,
-        valores.value
+        `FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[pendente.value.chave]}.${parte}`
       )
     : '';
 
@@ -155,7 +187,7 @@ const travaDaLinha = item =>
 </script>
 
 <template>
-  <PerguntaDaFuncao :titulo="titulo" @pronto="emit('pronto')">
+  <PerguntaDaFuncao ref="raiz" :titulo="titulo" @pronto="emit('pronto')">
     <template #dica>
       <p class="m-0 text-base text-n-slate-11">
         <template v-if="algumaLigada">
@@ -205,10 +237,7 @@ const travaDaLinha = item =>
         :texto="$t(`FUNCOES_EQUIPE.CUIDADO_TELA.LINHA.${item.chave}.TEXTO`)"
         :nota="
           item.junto
-            ? $t(
-                `FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[item.chave]}.NOTA`,
-                valores
-              )
+            ? $t(`FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[item.chave]}.NOTA`)
             : ''
         "
         :trava="travaDaLinha(item)"

@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import {
   CONVERSATION_LEVELS,
   getLevel,
@@ -11,7 +11,9 @@ import {
   areasDaRecolhida,
   resumoDaRecolhida,
 } from '../areasDaFuncao';
+import { ALCANCES_DE_CONVERSA, valeNoServidor } from '../chavesDaFuncao';
 import { nivelDeVendas } from '../nivelDeVendas';
+import { devolverFoco } from './focoQueFica';
 import { useTextos } from './useTextos';
 import AreaEmLinha from './AreaEmLinha.vue';
 import BotaoGrande from './BotaoGrande.vue';
@@ -19,7 +21,8 @@ import LinhaDaArea from './LinhaDaArea.vue';
 import LinhaRecolhida from './LinhaRecolhida.vue';
 
 // Ajustes (#2308, especificação 5.B2 e 7.1): quatro linhas com "Alterar", a recolhida com as outras áreas na ordem
-// fixa (a mudada sobe e o título se refaz) e o cadeado de quem não é administrador.
+// fixa (a mudada sobe e o título se refaz) e o cadeado de quem não é administrador. A área que sobe (ou volta) é
+// montada de novo em outro lugar: o foco vai junto, para o nível escolhido dela.
 const props = defineProps({
   titulo: { type: String, required: true },
   dica: { type: String, required: true },
@@ -31,12 +34,13 @@ const props = defineProps({
 
 const emit = defineEmits(['update:permissions', 'alterar', 'continuar']);
 const { t, lista, maiuscula, minuscula, rotuloDoNivel } = useTextos();
+const raiz = ref(null);
 
+const [NOVAS, AJUDA] = ALCANCES_DE_CONVERSA;
 const CONVERSAS_LIMITADAS = {
-  'conversation_unassigned_manage conversation_participating_manage':
-    'PROPRIAS_TUDO',
-  conversation_unassigned_manage: 'PROPRIAS_NOVAS',
-  conversation_participating_manage: 'PROPRIAS_AJUDA',
+  [`${NOVAS} ${AJUDA}`]: 'PROPRIAS_TUDO',
+  [NOVAS]: 'PROPRIAS_NOVAS',
+  [AJUDA]: 'PROPRIAS_AJUDA',
 };
 const CONVERSAS = {
   [CONVERSATION_LEVELS.NONE]: 'NENHUMA',
@@ -50,19 +54,16 @@ const VENDAS = {
   tudo: 'TUDO',
 };
 
-const estadoDasConversas = permissions => {
+// No "antes", as próprias viram uma forma curta ("só as próprias"), em vez de repetir a frase longa.
+const estadoDasConversas = (permissions, curto = false) => {
   const nivel = getLevel(moduleByKey('CONVERSATIONS'), permissions);
-  const escopo = [
-    'conversation_unassigned_manage',
-    'conversation_participating_manage',
-  ]
-    .filter(chave => permissions.includes(chave))
-    .join(' ');
-  const chave =
-    nivel === CONVERSATION_LEVELS.LIMITED
-      ? CONVERSAS_LIMITADAS[escopo]
-      : CONVERSAS[nivel];
-  return t(`FUNCOES_EQUIPE.AJUSTES.CONVERSAS.${chave}`);
+  if (nivel !== CONVERSATION_LEVELS.LIMITED)
+    return t(`FUNCOES_EQUIPE.AJUSTES.CONVERSAS.${CONVERSAS[nivel]}`);
+  if (curto) return t('FUNCOES_EQUIPE.AJUSTES.CONVERSAS.PROPRIAS_CURTO');
+  const escopo = ALCANCES_DE_CONVERSA.filter(chave =>
+    permissions.includes(chave)
+  ).join(' ');
+  return t(`FUNCOES_EQUIPE.AJUSTES.CONVERSAS.${CONVERSAS_LIMITADAS[escopo]}`);
 };
 
 const estadoDosContatos = permissions => {
@@ -76,9 +77,7 @@ const estadoDasVendas = permissions =>
 // Metas sem R$ ficam inertes no servidor (decisão 14A): a linha não as promete. No "antes", a forma curta.
 const estadoDoCuidado = (permissions, curto = false) => {
   const ligadas = DONO_DAS_CHAVES.CUIDADO.filter(
-    chave =>
-      permissions.includes(chave) &&
-      (chave !== 'crm_metas_manage' || permissions.includes('sales_value_view'))
+    chave => permissions.includes(chave) && valeNoServidor(chave, permissions)
   );
   if (!ligadas.length)
     return curto
@@ -165,7 +164,8 @@ const tituloDaRecolhida = computed(() => {
   );
 });
 
-// Estado curto: uma área só ganha o nome; mais de uma, a conta ("Mexe em 3 áreas e só olha 5.").
+// Estado curto: uma área só ganha o nome; mais de uma, a conta ("Mexe em 3 áreas e só olha outras 5."), sem o lado
+// que é zero.
 const contaDasAreas = () => {
   const { olha, mexe } = resumo.value;
   const nAreas = n => t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.N_AREAS', { n }, n);
@@ -185,10 +185,11 @@ const contaDasAreas = () => {
     return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.SO_OLHA', {
       olha: nAreas(olha.length),
     });
-  return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.MEXE_E_OLHA', {
-    mexe: nAreas(mexe.length),
-    olha: olha.length,
-  });
+  return t(
+    'FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.MEXE_E_OLHA',
+    { mexe: nAreas(mexe.length), olha: olha.length },
+    olha.length
+  );
 };
 
 const estadoDaRecolhida = computed(() => {
@@ -201,11 +202,20 @@ const estadoDaRecolhida = computed(() => {
     : `${contaDasAreas()} ${t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.OUTRAS')}`;
 });
 
-const atualizar = permissions => emit('update:permissions', permissions);
+// A área mexida pode subir da recolhida (ou voltar para ela): o foco segue para o nível escolhido dela.
+const atualizar = permissions => {
+  const area = document.activeElement?.closest?.('[data-area]')?.dataset.area;
+  emit('update:permissions', permissions);
+  if (!area) return;
+  devolverFoco(raiz.value, [
+    `[data-area="${area}"] [role="radio"][aria-checked="true"]`,
+    'h1',
+  ]);
+};
 </script>
 
 <template>
-  <div class="flex flex-col gap-5">
+  <div ref="raiz" class="flex flex-col gap-5">
     <header class="flex flex-col gap-2">
       <h1
         class="m-0 text-2xl font-bold tracking-tight sm:text-3xl text-n-slate-12"

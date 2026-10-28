@@ -1,12 +1,14 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
-import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import ErroAoAbrir from '../components/ErroAoAbrir.vue';
+import PaywallDasFuncoes from '../components/PaywallDasFuncoes.vue';
 import GavetaDaFuncao from '../pessoas/GavetaDaFuncao.vue';
 import { perdasDeAcesso } from '../perdaDeAcesso';
+import { oferecerMemoria } from './memoriaDaConversa';
+import { useEtapasDaGuiada } from './useEtapasDaGuiada';
 import { useFuncaoGuiada } from './useFuncaoGuiada';
 import AjustesDaFuncao from './AjustesDaFuncao.vue';
 import ComoVaiFicar from './ComoVaiFicar.vue';
@@ -23,7 +25,6 @@ import SucessoDaFuncao from './SucessoDaFuncao.vue';
 
 // Criar, alterar e duplicar uma função numa conversa guiada (#2308, PR 3 do épico #1784): Escolha → Ajustes →
 // perguntas → Confira → Sucesso, com "Como vai ficar" ao lado e a guarda "Sair sem salvar?".
-const { t } = useI18n();
 const { giver, isAdmin, canManagePeople, reachesRole } = usePeopleAccess();
 const agentes = useMapGetter('agents/getAgents');
 const conta = useMapGetter('accounts/getAccount');
@@ -33,6 +34,8 @@ const {
   idDaFuncao,
   carregou,
   erroAoAbrir,
+  semPlano,
+  memoria,
   etapa,
   pronta,
   permissions,
@@ -61,8 +64,6 @@ const PERGUNTAS = {
   vendas: PerguntaVendas,
   cuidado: PerguntaCuidado,
 };
-const ETAPA_DO_PASSO = { escolha: 'ESCOLHA', confira: 'CONFIRA' };
-
 // A função cuja gaveta de pessoas está aberta (Escolha › "Pôr uma pessoa nela" e Sucesso › "Escolher pessoas").
 const gaveta = ref(null);
 const perda = ref(null);
@@ -70,73 +71,23 @@ const guarda = ref(null);
 const trocar = ref(null);
 let responderGuarda = null;
 
-const etapas = computed(() =>
-  modo.value === 'criar'
-    ? ['ESCOLHA', 'AJUSTES', 'CONFIRA']
-    : ['AJUSTES', 'CONFIRA']
-);
-const passo = computed(() => {
-  if (etapa.value === 'sucesso') return etapas.value.length;
-  return etapas.value.indexOf(ETAPA_DO_PASSO[etapa.value] || 'AJUSTES');
-});
-
 const podeEscolherPessoas = computed(
   () => canManagePeople.value && (!salva.value || reachesRole(salva.value))
 );
 
-// O voltar diz para onde vai.
-const irPara = proxima => () => {
-  etapa.value = proxima;
-};
-// "Trocar a função pronta" com ajustes feitos pergunta antes: escolher outra pronta recomeça do zero.
-const trocarPronta = () => {
-  if (mudou.value) trocar.value?.abrir();
-  else etapa.value = 'escolha';
-};
-const voltar = computed(() => {
-  if (etapa.value === 'escolha')
-    return { texto: 'VOLTAR_LISTA', ir: voltarParaLista };
-  if (etapa.value === 'sucesso')
-    return {
-      texto: podeEscolherPessoas.value ? 'FAZER_DEPOIS' : 'VOLTAR_LISTA',
-      ir: voltarParaLista,
-    };
-  if (etapa.value !== 'ajustes')
-    return { texto: 'VOLTAR_AJUSTES', ir: irPara('ajustes') };
-  return modo.value === 'criar'
-    ? { texto: 'TROCAR_PRONTA', ir: trocarPronta }
-    : { texto: 'VOLTAR_LISTA', ir: voltarParaLista };
+const { etapas, passo, voltar, nomeNaFrase, ajustes } = useEtapasDaGuiada({
+  modo,
+  etapa,
+  pronta,
+  nome,
+  comeco,
+  mudou,
+  podeEscolherPessoas,
+  nomeDaPronta,
+  voltarParaLista,
+  pedirTroca: () => trocar.value?.abrir(),
 });
-
-// Antes do Confira, a pronta dá nome às perguntas ("quem for Atendente"); depois, o nome escolhido.
-const nomeNaFrase = computed(() => {
-  const antesDoNome = !['confira', 'sucesso'].includes(etapa.value);
-  if (modo.value === 'criar' && pronta.value && antesDoNome)
-    return nomeDaPronta(pronta.value);
-  return nome.value.trim();
-});
-
-const ajustes = computed(() => {
-  if (modo.value === 'alterar')
-    return {
-      titulo: t('FUNCOES_EQUIPE.AJUSTES.TITULO_ALTERAR', {
-        nome: comeco.value.nome,
-      }),
-      dica: t('FUNCOES_EQUIPE.AJUSTES.DICA_ALTERAR'),
-    };
-  const dica = pronta.value
-    ? t('FUNCOES_EQUIPE.AJUSTES.DICA_PRONTA', {
-        nome: nomeDaPronta(pronta.value),
-      })
-    : t('FUNCOES_EQUIPE.AJUSTES.DICA_ZERO');
-  return {
-    titulo: t('FUNCOES_EQUIPE.AJUSTES.TITULO'),
-    dica:
-      modo.value === 'duplicar'
-        ? t('FUNCOES_EQUIPE.AJUSTES.DICA_ALTERAR')
-        : dica,
-  };
-});
+oferecerMemoria(memoria);
 
 // Cotações: só na conta com Cotação ou quando a função já tem a chave (decisão 13).
 const comCotacoes = computed(
@@ -196,14 +147,18 @@ onMounted(carregar);
         class="flex flex-col w-full gap-8 px-4 pt-6 mx-auto max-w-6xl pb-56 sm:px-8 sm:pt-8 md:pb-12"
       >
         <EtapasDaFuncao
-          :voltar="$t(`FUNCOES_EQUIPE.GUIADA.VOLTAR.${voltar.texto}`)"
+          :voltar="
+            voltar ? $t(`FUNCOES_EQUIPE.GUIADA.VOLTAR.${voltar.texto}`) : ''
+          "
           :etapas="etapas"
           :atual="passo"
           :desabilitado="salvando"
-          @voltar="voltar.ir"
+          @voltar="voltar?.ir()"
         />
 
-        <ErroAoAbrir v-if="erroAoAbrir" @tentar="carregar" />
+        <PaywallDasFuncoes v-if="semPlano" />
+
+        <ErroAoAbrir v-else-if="erroAoAbrir" @tentar="carregar" />
 
         <div v-else-if="!carregou" aria-busy="true" class="flex flex-col gap-4">
           <span class="sr-only">{{ $t('FUNCOES_EQUIPE.CARREGANDO') }}</span>
@@ -263,6 +218,7 @@ onMounted(carregar);
               :nome="salva?.name || nome"
               :pode-escolher-pessoas="podeEscolherPessoas"
               @escolher-pessoas="gaveta = salva"
+              @voltar="voltarParaLista"
             />
           </div>
           <ComoVaiFicar

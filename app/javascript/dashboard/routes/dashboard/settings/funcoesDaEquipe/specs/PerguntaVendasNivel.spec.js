@@ -42,7 +42,7 @@ describe('NivelDeVendas', () => {
 
     const dialogo = wrapper.find('dialog');
     expect(dialogo.find('h2').text()).toBe(
-      'Deixar quem for Atendente cuidar de tudo nas vendas?'
+      'Com a função Atendente, a pessoa vai cuidar de tudo nas vendas?'
     );
     expect(dialogo.text()).not.toContain('metas');
     expect(dialogo.text()).not.toContain('R$');
@@ -90,16 +90,18 @@ describe('NivelDeVendas', () => {
     expect([...ultimo(wrapper)].sort()).toEqual([...PRESETS.AGENT()].sort());
   });
 
-  it('os outros níveis trocam direto', async () => {
+  // "Só olha" não deixa mover as vendas: o servidor aceita crm_move_cards sozinho (CardPolicy#move?), e a tela diz
+  // que a pessoa não cria nem move vendas.
+  it('os outros níveis trocam direto, e "Só olha" tira mover as vendas', async () => {
     const wrapper = montar(CARLA);
     await wrapper.find('[data-nivel="view"]').trigger('click');
     expect(ultimo(wrapper)).toEqual([
       'conversation_participating_manage',
       'contact_view',
       'knowledge_base_view',
-      'crm_move_cards',
       'conversation_unassigned_manage',
       'crm_view',
     ]);
+    expect(ultimo(wrapper)).not.toContain('crm_move_cards');
   });
 });

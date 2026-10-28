@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { CONVERSATION_VIEW_PERMISSION } from 'dashboard/constants/permissions';
 import {
   CONVERSATION_LEVELS,
   getLevel,
@@ -9,7 +10,10 @@ import {
   toggleExtra,
 } from '../../customRoles/permissionMatrix';
 import { areasDentroDe, travaDoNivel } from '../areasDaFuncao';
+import { ALCANCES_DE_CONVERSA } from '../chavesDaFuncao';
 import { TEXTO_DA_TRAVA, motivoDaTrava } from '../motivoDaTrava';
+import { devolverFoco } from './focoQueFica';
+import { useMemoria } from './memoriaDaConversa';
 import { useTextos } from './useTextos';
 import AreaEmLinha from './AreaEmLinha.vue';
 import EscolhaDeNivel from './EscolhaDeNivel.vue';
@@ -18,8 +22,9 @@ import LinhaRecolhida from './LinhaRecolhida.vue';
 import PerguntaDaFuncao from './PerguntaDaFuncao.vue';
 
 // Conversas (#2308, especificação 5.B3): Nenhuma / Só olha / Atende as próprias / Atende todas. Em "Atende as
-// próprias", as duas subescolhas por dentro; pelo menos uma fica ligada (regra do toggleExtra). "Quem recebe cada
-// conversa nova" (ASSIGNMENT) mora aqui.
+// próprias", as duas subescolhas por dentro; pelo menos uma fica ligada (regra do toggleExtra, que não é de
+// permissão: ícone info, não cadeado). "Quem recebe cada conversa nova" (ASSIGNMENT) mora aqui. Voltar a um nível
+// por onde passou devolve os ajustes de lá (memoriaDaConversa): voltar a "Atende as próprias" devolve o de entrada.
 const props = defineProps({
   permissions: { type: Array, required: true },
   inicial: { type: Array, required: true },
@@ -28,7 +33,9 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:permissions', 'pronto']);
-const { t, quemFor } = useTextos();
+const { t, comAFuncao } = useTextos();
+const memoria = useMemoria();
+const raiz = ref(null);
 
 const conversas = moduleByKey('CONVERSATIONS');
 const [quemRecebe] = areasDentroDe('CONVERSATIONS');
@@ -38,20 +45,14 @@ const OPCAO = {
   [CONVERSATION_LEVELS.LIMITED]: 'PROPRIAS',
   [CONVERSATION_LEVELS.ALL]: 'TODAS',
 };
-const LER_COLEGAS = 'conversation_view';
-const SUBESCOLHAS = [
-  'conversation_unassigned_manage',
-  'conversation_participating_manage',
-];
+const LER_COLEGAS = CONVERSATION_VIEW_PERMISSION;
+const SUBESCOLHAS = ALCANCES_DE_CONVERSA;
 
 const textoDaTrava = motivo =>
   motivo ? t(`FUNCOES_EQUIPE.TRAVA.${TEXTO_DA_TRAVA[motivo]}`) : '';
 
 const titulo = computed(() =>
-  t('FUNCOES_EQUIPE.CONVERSAS.TITULO', {
-    quem: quemFor(props.nome),
-    nome: quemFor(props.nome, 'NOME'),
-  })
+  t('FUNCOES_EQUIPE.CONVERSAS.TITULO', { com: comAFuncao(props.nome) })
 );
 
 const nivel = computed(() => getLevel(conversas, props.permissions));
@@ -83,26 +84,24 @@ const travaDaSubescolha = chave => {
     ? ''
     : textoDaTrava(motivoDaTrava(props.giver, chave));
 };
+const iconeDaTrava = chave =>
+  ultimoAlcance(chave) ? 'i-lucide-info' : 'i-lucide-lock';
 
-// Voltar a "Atende as próprias" na mesma visita devolve os alcances com que a pergunta abriu, em vez do padrão.
-const entrada = props.permissions;
 const atualizar = permissions => emit('update:permissions', permissions);
-const escolher = valor => {
-  const novas = setLevel(conversas, valor, props.permissions);
-  const voltaAsProprias =
-    valor === CONVERSATION_LEVELS.LIMITED &&
-    getLevel(conversas, entrada) === CONVERSATION_LEVELS.LIMITED;
+const escolher = valor =>
   atualizar(
-    voltaAsProprias
-      ? [
-          ...novas.filter(chave => !SUBESCOLHAS.includes(chave)),
-          ...SUBESCOLHAS.filter(chave => entrada.includes(chave)),
-        ]
-      : novas
+    memoria.trocarNivel(conversas, {
+      de: nivel.value,
+      para: valor,
+      permissions: props.permissions,
+      novas: setLevel(conversas, valor, props.permissions),
+    })
   );
-};
-const alternar = chave =>
+// "Também lê as dos colegas" some ao desligar: o foco volta ao nível escolhido.
+const alternar = chave => {
   atualizar(toggleExtra(conversas, chave, props.permissions));
+  devolverFoco(raiz.value?.$el, ['[role="radio"][aria-checked="true"]']);
+};
 
 const estadoDeQuemRecebe = computed(() =>
   props.permissions.includes('assignment_manage')
@@ -113,6 +112,7 @@ const estadoDeQuemRecebe = computed(() =>
 
 <template>
   <PerguntaDaFuncao
+    ref="raiz"
     :titulo="titulo"
     :dica="$t('FUNCOES_EQUIPE.CONVERSAS.DICA')"
     @pronto="emit('pronto')"
@@ -136,6 +136,7 @@ const estadoDeQuemRecebe = computed(() =>
             :texto="$t(`FUNCOES_EQUIPE.CONVERSAS.EXTRAS.${chave}.TEXTO`)"
             :ligado="permissions.includes(chave)"
             :trava="travaDaSubescolha(chave)"
+            :icone-da-trava="iconeDaTrava(chave)"
             class="!ps-0"
             @alternar="alternar(chave)"
           />

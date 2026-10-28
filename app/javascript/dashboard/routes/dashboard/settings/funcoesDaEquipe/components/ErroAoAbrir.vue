@@ -13,7 +13,7 @@ const emit = defineEmits(['tentar']);
     class="flex flex-col items-center gap-4 px-6 text-center border py-14 rounded-2xl border-n-weak bg-n-solid-1"
   >
     <span
-      class="grid place-items-center size-12 rounded-xl bg-n-ruby-3 text-n-ruby-11"
+      class="grid place-items-center size-11 rounded-xl bg-n-ruby-3 text-n-ruby-11"
     >
       <span class="i-lucide-wifi-off size-6" aria-hidden="true" />
     </span>

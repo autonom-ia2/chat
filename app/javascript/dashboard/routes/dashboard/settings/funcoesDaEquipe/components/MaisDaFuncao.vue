@@ -3,12 +3,12 @@ import { computed, nextTick, ref, useTemplateRef } from 'vue';
 import { vOnClickOutside } from '@vueuse/components';
 import Button from 'dashboard/components-next/button/Button.vue';
 
-// "··· Mais" do cartão de função (#2308): Duplicar e Apagar. Menu do WAI-ARIA: os itens ficam fora do Tab (setas,
+// "··· Mais" do cartão de função (#2308): Duplicar e Apagar (numa função travada, só Duplicar). Menu do WAI-ARIA: os itens ficam fora do Tab (setas,
 // Home e End andam por eles); Esc fecha e devolve o foco ao botão; Tab fecha e deixa o foco seguir a partir do botão;
 // o menu fecha quando o foco sai dele (clique fora ou outro elemento).
 const props = defineProps({
   nome: { type: String, required: true },
-  podeDuplicar: { type: Boolean, default: true },
+  podeApagar: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['duplicar', 'apagar']);
@@ -19,13 +19,13 @@ const botao = useTemplateRef('botao');
 
 const itens = computed(() =>
   [
-    props.podeDuplicar && {
+    {
       acao: 'duplicar',
       chave: 'DUPLICAR',
       icone: 'i-lucide-copy',
       escolher: () => emit('duplicar'),
     },
-    {
+    props.podeApagar && {
       acao: 'apagar',
       chave: 'APAGAR',
       icone: 'i-lucide-trash-2',

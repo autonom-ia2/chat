@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import MaisDaFuncao from './MaisDaFuncao.vue';
@@ -7,17 +8,19 @@ import { cuidadosDaFuncao, fraseDaFuncao } from '../fraseDaFuncao';
 import { useTextos } from '../guiada/useTextos';
 
 // Uma função da conta na lista (#2308, especificação 5.A): o que ela pode em uma frase, o selo do que pede
-// cuidado, quem usa e as ações. Travada (roleLockReason) fica tracejada, só com o motivo. A pilha de rostos abre a
-// gaveta de quem usa (só leitura sem Pessoas). Se a lista de pessoas não veio, a linha de quem usa some (nunca
-// "Ninguém usa ainda" por engano).
+// cuidado, quem usa e as ações. Travada (roleLockReason) fica tracejada, com o motivo (acima do alcance: só o
+// administrador muda; a própria: ninguém muda a própria função) e só "Duplicar" no Mais: a cópia corta o que quem
+// monta não pode dar. A pilha de rostos abre a gaveta de quem usa (só leitura sem Pessoas). Enquanto as pessoas vêm,
+// um esqueleto; se a lista não veio, a linha some (nunca "Ninguém usa ainda" por engano).
 const props = defineProps({
   funcao: { type: Object, required: true },
   pessoas: { type: Array, default: () => [] },
   tom: { type: String, required: true },
-  travada: { type: Boolean, default: false },
-  podeDuplicar: { type: Boolean, default: true },
+  // Motivo da trava (LOCK_REASONS.ABOVE ou MINE); vazio, livre.
+  trava: { type: String, default: '' },
   podeEscolherPessoas: { type: Boolean, default: false },
   semPessoas: { type: Boolean, default: false },
+  carregandoPessoas: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -31,6 +34,8 @@ const emit = defineEmits([
 const { t, lista } = useTextos();
 
 const MAX_ROSTOS = 4;
+const TEXTO_DA_TRAVA = { [LOCK_REASONS.MINE]: 'PROPRIA' };
+const travada = computed(() => Boolean(props.trava));
 
 const frase = computed(() => fraseDaFuncao(props.funcao.permissions || []));
 const restoDaFrase = computed(() =>
@@ -96,7 +101,13 @@ const outrasPessoas = computed(() =>
         {{ selo }}
       </span>
 
-      <template v-if="!semPessoas">
+      <span
+        v-if="carregandoPessoas"
+        data-pessoas-carregando
+        aria-hidden="true"
+        class="w-40 h-8 my-1.5 rounded-lg bg-n-alpha-2 animate-pulse"
+      />
+      <template v-else-if="!semPessoas">
         <button
           v-if="pessoas.length"
           type="button"
@@ -170,14 +181,23 @@ const outrasPessoas = computed(() =>
       </template>
     </div>
 
-    <p
+    <div
       v-if="travada"
-      data-travada
-      class="inline-flex items-center gap-2 m-0 text-sm font-medium shrink-0 text-n-slate-12"
+      class="flex flex-wrap items-center gap-x-3 gap-y-2 shrink-0"
     >
-      <span class="i-lucide-lock size-4 shrink-0" aria-hidden="true" />
-      {{ $t('FUNCOES_EQUIPE.CARTAO.TRAVADO') }}
-    </p>
+      <p
+        data-travada
+        class="inline-flex items-center gap-2 m-0 text-sm font-medium text-n-slate-12"
+      >
+        <span class="i-lucide-lock size-4 shrink-0" aria-hidden="true" />
+        {{ $t(`FUNCOES_EQUIPE.CARTAO.${TEXTO_DA_TRAVA[trava] || 'TRAVADO'}`) }}
+      </p>
+      <MaisDaFuncao
+        :nome="funcao.name"
+        :pode-apagar="false"
+        @duplicar="emit('duplicar')"
+      />
+    </div>
     <div v-else class="grid grid-cols-2 gap-2 sm:flex shrink-0">
       <Button
         data-alterar
@@ -193,7 +213,6 @@ const outrasPessoas = computed(() =>
       />
       <MaisDaFuncao
         :nome="funcao.name"
-        :pode-duplicar="podeDuplicar"
         @duplicar="emit('duplicar')"
         @apagar="emit('apagar')"
       />

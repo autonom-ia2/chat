@@ -64,4 +64,20 @@ describe('EscolhaDeNivel', () => {
     await wrapper.find('[data-nivel="manage"]').trigger('click');
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
+
+  it('o radiogroup é dono só dos botões (aria-owns), e o que fica dentro da escolhida fica fora dele', () => {
+    wrapper = mount(EscolhaDeNivel, {
+      attachTo: document.body,
+      props: { opcoes: OPCOES, rotulo: 'Anúncios', modelValue: 'view' },
+      slots: { dentro: '<button role="switch" data-dentro>Extra</button>' },
+    });
+    const grupo = wrapper.find('[role="radiogroup"]');
+    const ids = wrapper.findAll('[role="radio"]').map(r => r.attributes('id'));
+    expect(grupo.attributes('aria-owns')).toBe(ids.join(' '));
+    expect(new Set(ids).size).toBe(3);
+    expect(wrapper.find('[data-dentro]').exists()).toBe(true);
+    expect(grupo.element.contains(wrapper.find('[data-dentro]').element)).toBe(
+      false
+    );
+  });
 });

@@ -1,9 +1,10 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, useId } from 'vue';
 
 // Uma escolha de nível (#2308, especificação 14 › Acessibilidade): radiogroup com tabindex móvel. Só a opção
 // escolhida entra no Tab; setas trocam a escolha (padrão WAI-ARIA radio group), Home e End vão às pontas. A opção
-// travada fica tracejada, com cadeado e o motivo, e as setas a pulam. O slot "dentro" aparece na escolhida.
+// travada fica tracejada, com cadeado e o motivo, e as setas a pulam. O slot "dentro" aparece na escolhida, mas fica
+// fora do grupo: o radiogroup é dono só dos botões (aria-owns), e os interruptores de dentro não contam como opção.
 const props = defineProps({
   // { valor, titulo, dica?, trava? } — trava é o texto do motivo.
   opcoes: { type: Array, required: true },
@@ -15,6 +16,11 @@ const emit = defineEmits(['escolher']);
 const modelo = defineModel({ type: String, required: true });
 
 const botoes = ref([]);
+const id = useId();
+const idDa = indice => `${id}-opcao-${indice}`;
+const donos = computed(() =>
+  props.opcoes.map((_, indice) => idDa(indice)).join(' ')
+);
 const livres = computed(() => props.opcoes.filter(opcao => !opcao.trava));
 const escolhidaLivre = computed(() =>
   livres.value.some(opcao => opcao.valor === modelo.value)
@@ -50,12 +56,13 @@ const mover = async (evento, opcao) => {
 </script>
 
 <template>
-  <div
-    role="radiogroup"
-    :aria-label="rotulo"
-    class="flex gap-2"
-    :class="compacto ? 'flex-wrap' : 'flex-col'"
-  >
+  <div class="flex gap-2" :class="compacto ? 'flex-wrap' : 'flex-col'">
+    <div
+      role="radiogroup"
+      class="sr-only"
+      :aria-label="rotulo"
+      :aria-owns="donos"
+    />
     <div
       v-for="(opcao, indice) in opcoes"
       :key="opcao.valor"
@@ -70,6 +77,7 @@ const mover = async (evento, opcao) => {
       ]"
     >
       <button
+        :id="idDa(indice)"
         :ref="elemento => (botoes[indice] = elemento)"
         type="button"
         role="radio"

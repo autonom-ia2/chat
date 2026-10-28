@@ -25,6 +25,36 @@ describe('FuncaoPronta', () => {
     expect(wrapper.emitted('criar')).toHaveLength(1);
   });
 
+  it('o nome tem a mesma classe no cartão que cria e no cartão que a conta já tem (anatomia única)', () => {
+    const cria = montar().find('[data-nome]');
+    const jaTem = montar({ existente, podePorPessoa: true }).find(
+      '[data-nome]'
+    );
+    const daLetra = classes =>
+      classes.filter(
+        classe =>
+          (classe.startsWith('text-') && classe !== 'text-start') ||
+          classe.startsWith('font-') ||
+          classe.startsWith('leading-')
+      );
+    expect(cria.element.tagName).toBe('BUTTON');
+    expect(jaTem.element.tagName).toBe('SPAN');
+    expect(daLetra(cria.classes())).toEqual(
+      expect.arrayContaining(['text-lg', 'font-semibold', 'leading-snug'])
+    );
+    expect(daLetra(cria.classes())).toEqual(daLetra(jaTem.classes()));
+  });
+
+  it('as ações do rodapé dizem de qual função são', () => {
+    const wrapper = montar({ existente, podePorPessoa: true });
+    expect(wrapper.find('[data-principal]').attributes('aria-label')).toBe(
+      'Pôr uma pessoa na função Atendente'
+    );
+    expect(wrapper.find('[data-criar-a-partir]').attributes('aria-label')).toBe(
+      'Criar outra a partir de Atendente'
+    );
+  });
+
   it('com Pessoas e alcance: "Pôr uma pessoa nela" e o link irmão', async () => {
     const wrapper = montar({ existente, podePorPessoa: true });
     expect(wrapper.text()).toContain('Você já tem esta função · 3 pessoas');

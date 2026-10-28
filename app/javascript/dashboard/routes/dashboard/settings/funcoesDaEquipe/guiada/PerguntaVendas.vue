@@ -27,7 +27,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:permissions', 'pronto']);
-const { t, lista, quemFor } = useTextos();
+const { t, lista, comAFuncao } = useTextos();
 
 const vendas = moduleByKey('CRM');
 const areasDoMais = areasDentroDe('CRM');
@@ -61,10 +61,7 @@ const estadoDoMais = computed(() =>
 );
 
 const titulo = computed(() =>
-  t('FUNCOES_EQUIPE.VENDAS.TITULO', {
-    quem: quemFor(props.nome),
-    nome: quemFor(props.nome, 'NOME'),
-  })
+  t('FUNCOES_EQUIPE.VENDAS.TITULO', { com: comAFuncao(props.nome) })
 );
 
 const atualizar = permissions => emit('update:permissions', permissions);

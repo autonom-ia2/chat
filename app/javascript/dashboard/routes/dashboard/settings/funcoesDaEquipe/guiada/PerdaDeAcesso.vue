@@ -1,11 +1,15 @@
 <script setup>
 import { computed, ref } from 'vue';
+import { itemDoMenu } from '../fraseDaFuncao';
 import DialogoDaCasa from './DialogoDaCasa.vue';
 import { useTextos } from './useTextos';
 
 // Perda de acesso (#2308, especificação 5.F), só para o administrador: ao salvar uma alteração que tira algo de
-// quem já tem a função, diz quem perde o quê antes de gravar. Título curto; a lista vem embaixo. `perdas` sai de
-// perdasDeAcesso: { id } de FUNCOES_EQUIPE.PODE ou { area } que deixa de ser vista.
+// quem já tem a função, diz quem perde o quê antes de gravar. Com uma perda só, o título diz qual ("5 pessoas vão
+// deixar de mudar os dados dos contatos"); com mais, quantas, e a lista vem embaixo. `perdas` sai de perdasDeAcesso:
+// { id } de FUNCOES_EQUIPE.PODE ou { areas } que deixam de ser vistas (numa linha, com dois-pontos e sem artigo, pelo
+// nome do menu: "Ver: Clientes novos", nunca "Ver Procurar clientes novos").
+// Os nomes param em 3, com "e mais N pessoas".
 const props = defineProps({
   nome: { type: String, required: true },
   pessoas: { type: Array, default: () => [] },
@@ -14,20 +18,47 @@ const props = defineProps({
 
 const emit = defineEmits(['salvar']);
 
-const { t, lista, nomeDaArea } = useTextos();
+const { t, lista, minuscula, nomeDaArea } = useTextos();
 const dialogo = ref(null);
+const MAX_NOMES = 3;
+const nomeNoMenu = area => {
+  const item = itemDoMenu(area);
+  return item ? t(`FUNCOES_EQUIPE.MENU.${item}`) : nomeDaArea(area);
+};
 
 const n = computed(() => props.pessoas.length);
 const itens = computed(() =>
   props.perdas.map(perda =>
-    perda.area
-      ? t('FUNCOES_EQUIPE.SEM_FUNCAO.AREA.VER.LISTA', {
-          area: nomeDaArea(perda.area),
+    perda.areas
+      ? t('FUNCOES_EQUIPE.PERDA.VER_AREAS', {
+          areas: lista(perda.areas.map(nomeNoMenu)),
         })
       : t(`FUNCOES_EQUIPE.PODE.${perda.id}`)
   )
 );
-const nomes = computed(() => lista(props.pessoas.map(pessoa => pessoa.name)));
+const titulo = computed(() =>
+  itens.value.length === 1
+    ? t(
+        'FUNCOES_EQUIPE.PERDA.TITULO_UMA',
+        { n: n.value, coisa: minuscula(itens.value[0]) },
+        n.value
+      )
+    : t(
+        'FUNCOES_EQUIPE.PERDA.TITULO_VARIAS',
+        { n: n.value, coisas: itens.value.length },
+        n.value
+      )
+);
+const nomes = computed(() => {
+  const todos = props.pessoas.map(pessoa => pessoa.name);
+  if (todos.length <= MAX_NOMES) return lista(todos);
+  const resto = todos.length - MAX_NOMES;
+  return t(
+    'FUNCOES_EQUIPE.PERDA.NOMES_E_MAIS',
+    { nomes: todos.slice(0, MAX_NOMES).join(', '), n: resto },
+    resto
+  );
+});
 
 defineExpose({ abrir: () => dialogo.value?.abrir() });
 </script>
@@ -37,7 +68,7 @@ defineExpose({ abrir: () => dialogo.value?.abrir() });
     ref="dialogo"
     tipo="destrutivo"
     icone="i-lucide-user-minus"
-    :titulo="$t('FUNCOES_EQUIPE.PERDA.TITULO', { n }, n)"
+    :titulo="titulo"
     :seguro="$t('FUNCOES_EQUIPE.PERDA.VOLTAR')"
     :acao="$t('FUNCOES_EQUIPE.PERDA.SALVAR')"
     @acao="emit('salvar')"

@@ -1,18 +1,18 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
-import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
 import { PRONTAS, cartaoPronto } from '../cartaoPronto';
 import { ALTERAR_NOVA, DUPLICAR_NOVA, LISTA_NOVA } from '../listaPelaFlag';
 import { motivoDaTrava } from '../motivoDaTrava';
 import { nomeEmUso, primeiroNomeLivre } from '../nomeDisponivel';
 import { salvarFuncao } from '../salvarFuncao';
+import { criarMemoria } from './memoriaDaConversa';
 
 // O estado da conversa guiada (#2308, especificação 5.B e 5.C): de onde começa (pronta, do zero, a função para
-// alterar ou a cópia), a etapa, o que mudou desde o começo e o salvar.
+// alterar ou a cópia), a etapa, o que mudou desde o começo, a memória entre as telas (memoriaDaConversa) e o salvar.
 const MODO = { [ALTERAR_NOVA]: 'alterar', [DUPLICAR_NOVA]: 'duplicar' };
 const mesmas = (a, b) =>
   a.length === b.length && a.every(chave => b.includes(chave));
@@ -25,12 +25,16 @@ export function useFuncaoGuiada() {
   const { giver, roleLockReason } = usePeopleAccess();
   const funcoes = useMapGetter('customRole/getCustomRoles');
   const uiFlags = useMapGetter('customRole/getUIFlags');
+  const ligadaNaConta = useMapGetter('accounts/isFeatureEnabledonAccount');
+  const accountId = useMapGetter('getCurrentAccountId');
 
   const modo = computed(() => MODO[route.name] || 'criar');
   const idDaFuncao = computed(() => Number(route.params.roleId) || null);
 
   const carregou = ref(false);
   const erroAoAbrir = ref(false);
+  // Conta sem custom_roles (plano rebaixado, ou aberta pela URL): o paywall, nunca o erro de internet.
+  const semPlano = ref(false);
   const etapa = ref('escolha');
   const pronta = ref(null);
   const base = ref('');
@@ -44,8 +48,13 @@ export function useFuncaoGuiada() {
   const salvando = ref(false);
   const erro = ref('');
   const erroDoNome = ref('');
+  // Nomes que o servidor recusou (de uma integração): a sugestão pula todos.
+  const recusados = ref([]);
+  const memoria = criarMemoria();
+  watch(etapa, () => memoria.novaVisita());
 
   const comecar = ({ chaves, nomeNovo = '', descricaoNova = '', proxima }) => {
+    memoria.recomecar();
     permissions.value = [...chaves];
     inicial.value = [...chaves];
     nome.value = nomeNovo;
@@ -77,12 +86,10 @@ export function useFuncaoGuiada() {
 
   const voltarParaLista = () => router.push({ name: LISTA_NOVA });
 
-  // Alterar exige alcançar a função e não ser a própria; duplicar só não abre uma acima do alcance (como a lista).
-  const podeAbrir = funcao => {
-    if (!funcao) return false;
-    const trava = roleLockReason(funcao);
-    return modo.value === 'alterar' ? !trava : trava !== LOCK_REASONS.ABOVE;
-  };
+  // Alterar exige alcançar a função e não ser a própria. Duplicar abre qualquer uma: a cópia corta o que quem monta
+  // não pode dar e avisa (especificação 5.C).
+  const podeAbrir = funcao =>
+    Boolean(funcao) && (modo.value !== 'alterar' || !roleLockReason(funcao));
 
   const abrirDaConta = funcao => {
     if (modo.value === 'alterar') {
@@ -118,6 +125,8 @@ export function useFuncaoGuiada() {
   const carregar = async () => {
     carregou.value = false;
     erroAoAbrir.value = false;
+    semPlano.value = !ligadaNaConta.value(accountId.value, 'custom_roles');
+    if (semPlano.value) return;
     const [, pessoas] = await Promise.all([
       store.dispatch('customRole/getCustomRole'),
       store.dispatch('agents/get'),
@@ -171,6 +180,8 @@ export function useFuncaoGuiada() {
   };
 
   const mostrar = (resultado, nomeLimpo) => {
+    if (resultado.erroDoNome === 'NOME_DE_INTEGRACAO')
+      recusados.value = [...recusados.value, nomeLimpo];
     if (resultado.sugestao) nome.value = resultado.sugestao;
     const valores = { nome: nomeLimpo, sugestao: resultado.sugestao };
     erroDoNome.value = resultado.erroDoNome
@@ -200,6 +211,7 @@ export function useFuncaoGuiada() {
         description: descricao.value.trim(),
         permissions: permissions.value,
       },
+      recusados: recusados.value,
     });
     salvando.value = false;
     if (resultado.funcao) concluir(resultado.funcao);
@@ -211,6 +223,8 @@ export function useFuncaoGuiada() {
     idDaFuncao,
     carregou,
     erroAoAbrir,
+    semPlano,
+    memoria,
     etapa,
     pronta,
     permissions,

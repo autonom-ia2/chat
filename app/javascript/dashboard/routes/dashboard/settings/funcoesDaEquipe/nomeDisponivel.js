@@ -6,11 +6,15 @@ export const nomeEmUso = (nome, funcoes, idAtual = null) =>
     funcao => funcao.id !== idAtual && normal(funcao.name) === normal(nome)
   );
 
-// "Atendente 2" → "Atendente": o número do fim é a contagem de cópias, não parte do nome.
+// "Atendente 2" → "Atendente": o número do fim é a contagem de cópias, não parte do nome. Só dígitos contam ("Fase
+// 2.0" e "Time 0x10" ficam inteiros).
+const DIGITOS = '0123456789';
+const soDigitos = texto =>
+  texto !== '' && [...texto].every(letra => DIGITOS.includes(letra));
 const semNumeroNoFim = nome => {
   const partes = nome.trim().split(' ');
   const ultima = partes[partes.length - 1];
-  const ehNumero = ultima !== '' && Number.isInteger(Number(ultima));
+  const ehNumero = soDigitos(ultima);
   return partes.length > 1 && ehNumero
     ? partes.slice(0, -1).join(' ').trim()
     : nome.trim();

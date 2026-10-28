@@ -8,9 +8,9 @@ import { ADMIN, CARLA, CARLA_SEM_DISPARO } from './quemMonta';
 // #2308, especificação 5.B3 e 7.7: o Cuidado da Carla para o Atendente.
 const ATENDENTE = PRESETS.AGENT();
 
-const montar = (giver = CARLA, permissions = ATENDENTE) =>
+const montar = (giver = CARLA, permissions = ATENDENTE, inicial = ATENDENTE) =>
   mount(PerguntaCuidado, {
-    props: { permissions, inicial: ATENDENTE, giver, nome: 'Atendente' },
+    props: { permissions, inicial, giver, nome: 'Atendente' },
     global: global(),
   });
 
@@ -21,7 +21,7 @@ describe('PerguntaCuidado', () => {
     const wrapper = montar();
 
     expect(wrapper.find('h1').text()).toBe(
-      'Quem for Atendente pode fazer alguma destas coisas?'
+      'Com a função Atendente, a pessoa pode fazer alguma destas coisas?'
     );
     expect(
       wrapper.findAll('[data-cuidado]').map(l => l.attributes('data-cuidado'))
@@ -36,7 +36,7 @@ describe('PerguntaCuidado', () => {
       wrapper.findAll('[role="switch"]').map(s => s.attributes('aria-checked'))
     ).toEqual(['false', 'false', 'false', 'false', 'false']);
     expect(wrapper.find('[data-cuidado="campaign_send"]').text()).toContain(
-      'Ao ligar, quem for Atendente também passa a criar campanhas.'
+      'Ao ligar, a pessoa também passa a criar campanhas.'
     );
     const cadeado = wrapper.find('[data-recolhida]');
     expect(cadeado.text()).toContain('Mais 2 coisas que você não pode dar');
@@ -66,7 +66,7 @@ describe('PerguntaCuidado', () => {
 
     await wrapper.setProps({ permissions: depois });
     expect(wrapper.find('[data-faixa-junto]').text()).toContain(
-      'Agora quem for Atendente cria, muda e dispara as campanhas.'
+      'Agora a pessoa cria, muda e dispara as campanhas.'
     );
     const linha = wrapper.find('[data-cuidado="campaign_send"]');
     expect(linha.find('[role="switch"]').attributes('aria-checked')).toBe(
@@ -153,5 +153,27 @@ describe('PerguntaCuidado', () => {
     expect(wrapper.find('[data-recolhida]').text()).toContain(
       'Disparar campanhas, levar as vendas para uma planilha e definir as metas do mês'
     );
+  });
+
+  it('metas sem R$ (administrador): pergunta pelo R$, liga os dois e, ao desligar as metas, o R$ sai junto', async () => {
+    const semRs = PRESETS.SDR().filter(chave => chave !== 'sales_value_view');
+    const wrapper = montar(ADMIN, semRs, semRs);
+    const metas = () =>
+      wrapper.find('[data-cuidado="crm_metas_manage"] [role="switch"]');
+
+    await metas().trigger('click');
+    expect(wrapper.emitted('update:permissions')).toBeUndefined();
+    expect(wrapper.find('dialog h2').text()).toBe(
+      'Ligar também os valores em R$?'
+    );
+    await wrapper.find('[data-acao]').trigger('click');
+    const ligadas = ultimo(wrapper);
+    expect([...ligadas].sort()).toEqual(
+      [...semRs, 'crm_metas_manage', 'sales_value_view'].sort()
+    );
+
+    await wrapper.setProps({ permissions: ligadas });
+    await metas().trigger('click');
+    expect(ultimo(wrapper)).toEqual(semRs);
   });
 });

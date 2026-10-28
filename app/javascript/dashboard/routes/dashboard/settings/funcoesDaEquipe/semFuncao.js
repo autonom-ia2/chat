@@ -1,11 +1,10 @@
-import {
-  DELEGATION_KEYS,
-  KEY_DEPENDENCIES,
-} from 'dashboard/constants/permissions';
+import { DELEGATION_KEYS } from 'dashboard/constants/permissions';
 import { holdsKey } from 'dashboard/helper/peopleAccess';
 import { modulesWithKeys } from '../customRoles/permissionMatrix';
 import { DONO_DAS_CHAVES } from './areasDaFuncao';
+import { ALCANCES_DE_CONVERSA, valeNoServidor } from './chavesDaFuncao';
 import { comImplicadas } from './comImplicadas';
+import { CRM_ADMIN } from './nivelDeVendas';
 import contratoGerado from './semFuncaoCapacidades.json';
 
 // O que muda para quem fica sem função (#2308, especificação 5.D, 5.E e 7.9). Lê o contrato gerado das policies
@@ -18,10 +17,6 @@ import contratoGerado from './semFuncaoCapacidades.json';
 const CHAVES_DE_VENDAS = Object.values(DONO_DAS_CHAVES)
   .flat()
   .filter(chave => chave.startsWith('crm_'));
-const ALCANCES = [
-  'conversation_unassigned_manage',
-  'conversation_participating_manage',
-];
 const PREMISSAS = ['na_caixa', 'participa_da_coluna'];
 
 const podeSemFuncao = (capacidade, estaLigada) => {
@@ -59,15 +54,12 @@ export const premissasSemFuncao = (estaLigada, contrato = contratoGerado) =>
 // mês pedem os valores em R$, que o crm_admin não liga (Enterprise::Crm::MetasPolicy#manage?). Sem R$, a função não
 // define metas, e ir para "Sem função" não as tira.
 const comAdmin = chaves =>
-  chaves.includes('crm_admin')
+  chaves.includes(CRM_ADMIN)
     ? [...new Set([...chaves, ...CHAVES_DE_VENDAS])]
     : chaves;
-const efetivas = permissions => {
+export const chavesEfetivas = permissions => {
   const chaves = comAdmin(comImplicadas(permissions));
-  return chaves.filter(
-    chave =>
-      !KEY_DEPENDENCIES[chave] || chaves.includes(KEY_DEPENDENCIES[chave])
-  );
+  return chaves.filter(chave => valeNoServidor(chave, chaves));
 };
 
 // O que quem está sem função tem: só as chaves das capacidades que ele pode, com as implicadas. Atender todas as
@@ -77,7 +69,7 @@ const chavesSemFuncao = itens => {
     itens.filter(item => item.pode).flatMap(item => item.chaves)
   );
   return chaves.includes('conversation_manage')
-    ? [...chaves, ...ALCANCES]
+    ? [...chaves, ...ALCANCES_DE_CONVERSA]
     : chaves;
 };
 
@@ -120,7 +112,7 @@ export const diffEntre = (
   contrato = contratoGerado
 ) => {
   const itens = itensDo(contrato, estaLigada);
-  const daFuncao = efetivas(permissions);
+  const daFuncao = chavesEfetivas(permissions);
   const funcaoTem = quemTem(daFuncao);
   const semFuncao = chavesSemFuncao(itens);
   const semFuncaoTem = quemTem(semFuncao);
@@ -141,3 +133,21 @@ export const diffEntre = (
     ],
   };
 };
+
+// Para a frase curta, a perda que mais importa primeiro: conversas, vendas, contatos e o resto, nessa ordem (a lista
+// completa do diff continua na ordem do contrato).
+const PESO_DA_AREA = {
+  CONVERSATIONS: 0,
+  CRM: 1,
+  PROSPECTING: 1,
+  SCHEDULING: 1,
+  CONTACTS: 2,
+};
+const PESO_DO_RESTO = 3;
+const areaDo = item =>
+  item.tipo === 'area'
+    ? item.chave
+    : modulesWithKeys(item.chaves || [])[0]?.key;
+const pesoDo = item => PESO_DA_AREA[areaDo(item)] ?? PESO_DO_RESTO;
+export const porPeso = itens =>
+  [...itens].sort((a, b) => pesoDo(a) - pesoDo(b));

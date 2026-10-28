@@ -91,8 +91,9 @@ describe('salvarFuncao', () => {
     ['out_of_reach', 'FORA_DO_ALCANCE'],
     ['feature_off', 'INDISPONIVEL'],
     ['own_role', 'PROPRIA_FUNCAO'],
-    ['You are not authorized to do this action', 'INDISPONIVEL'],
-    [undefined, 'INDISPONIVEL'],
+    // O corpo real do check_authorization (request_exception_handler.rb): sem código, a frase de acesso.
+    ['You are not authorized to do this action', 'SEM_ACESSO'],
+    [undefined, 'SEM_ACESSO'],
   ])('401 com sessão boa e código %s: %s', async (codigo, frase) => {
     validityCheck.mockResolvedValue({ status: 200 });
     const store = loja({ falha: recusa(401, { error: codigo }) });
@@ -165,6 +166,24 @@ describe('salvarFuncao', () => {
       ([acao]) => acao === 'customRole/createCustomRole'
     );
     expect(criacoes).toHaveLength(1);
+  });
+
+  // Sem vai-e-volta: "Atendente 3" também recusado não pode sugerir "Atendente 2" de novo.
+  it('422 de novo, com a sugestão: pula todos os nomes já recusados', async () => {
+    const store = loja({
+      falha: recusa(422, { attributes: ['name'] }),
+      funcoes: [{ id: 1, name: 'Atendente' }],
+    });
+    const segunda = await salvarFuncao({
+      store,
+      giver: CARLA,
+      dados: { ...dados(), name: 'Atendente 3' },
+      recusados: ['Atendente 2'],
+    });
+    expect(segunda).toEqual({
+      erroDoNome: 'NOME_DE_INTEGRACAO',
+      sugestao: 'Atendente 4',
+    });
   });
 
   it('outra falha: erro de rede', async () => {

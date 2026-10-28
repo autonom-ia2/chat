@@ -43,6 +43,18 @@ const GERENTE = {
   ],
 };
 const ACIMA = { id: 3, name: 'Financeiro', permissions: ['financial_view'] };
+// Acima do alcance da Carla pelo R$ (sales_value_view é de delegação): o exemplo da especificação 5.C.
+const GERENTE_DE_VENDAS = {
+  id: 5,
+  name: 'Gerente de vendas',
+  permissions: [
+    'crm_view',
+    'crm_manage_cards',
+    'crm_move_cards',
+    'sales_value_view',
+    'crm_metas_manage',
+  ],
+};
 const AGENTES = [{ id: 10, name: 'Ana', role: 'agent', custom_role_id: 1 }];
 
 const montar = async ({
@@ -129,10 +141,10 @@ describe('FuncaoGuiadaPage', () => {
       'Relatórios, Desempenho da equipe e mais 11 áreas'
     );
     expect(wrapper.find('[data-recolhida]').text()).toContain(
-      'Hoje só olha a Central de Ajuda (artigos para os clientes). As outras estão desligadas.'
+      'Hoje só olha a Central de Ajuda (artigos para os clientes). As demais ficam desligadas.'
     );
     expect(wrapper.find('[data-previa] [data-frase]').text()).toContain(
-      'Quem for Atendente atende'
+      'Com a função Atendente, a pessoa atende'
     );
 
     await clicar(wrapper, '[data-botao-grande]');
@@ -163,7 +175,7 @@ describe('FuncaoGuiadaPage', () => {
 
     await clicar(wrapper, '[data-linha="contatos"] [data-alterar-area]');
     expect(wrapper.find('h1').text()).toBe(
-      'O que quem for Atendente faz com os contatos?'
+      'Com a função Atendente, o que a pessoa faz com os contatos?'
     );
     await clicar(wrapper, '[data-nivel="manage"]');
     await clicar(wrapper, '[data-botao-grande]');
@@ -210,9 +222,39 @@ describe('FuncaoGuiadaPage', () => {
     expect(replace).toHaveBeenCalledWith({ name: 'funcoes_equipe_list' });
   });
 
-  it('duplicar uma função acima do alcance volta para a lista', async () => {
-    await montar({ name: 'funcoes_equipe_duplicate', params: { roleId: '3' } });
-    expect(replace).toHaveBeenCalledWith({ name: 'funcoes_equipe_list' });
+  // Decisão 2 da revisão: duplicar uma função acima do alcance abre a cópia cortada, com o aviso da 5.C.
+  it('duplicar uma função acima do alcance abre a cópia sem o que a Carla não pode dar, e avisa', async () => {
+    const { wrapper, criar } = await montar({
+      name: 'funcoes_equipe_duplicate',
+      params: { roleId: '5' },
+      funcoes: [ATENDENTE, GERENTE, GERENTE_DE_VENDAS],
+    });
+    expect(replace).not.toHaveBeenCalled();
+    expect(wrapper.find('h1').text()).toBe('Confira a cópia');
+    expect(wrapper.find('[data-aviso-copia]').text()).toBe(
+      'Ficou de fora o que você não pode dar: ver os valores das vendas em R$ e, junto, as metas do mês.'
+    );
+    await clicar(wrapper, '[data-botao-grande]');
+    expect(criar.mock.calls[0][1].permissions).toEqual([
+      'crm_view',
+      'crm_manage_cards',
+      'crm_move_cards',
+    ]);
+  });
+
+  // Decisão 4: sem custom_roles na conta, a conversa mostra o paywall, nunca o erro de internet nem a busca.
+  it('com custom_roles desligado, mostra o paywall e não busca as funções', async () => {
+    const buscar = vi.fn();
+    Object.assign(rota, { name: 'funcoes_equipe_new', params: {}, query: {} });
+    const store = loja({
+      flags: [],
+      actions: { 'customRole/getCustomRole': buscar },
+    });
+    const wrapper = mount(FuncaoGuiadaPage, { global: global(store) });
+    await flushPromises();
+    expect(wrapper.find('[data-paywall]').exists()).toBe(true);
+    expect(wrapper.find('[data-erro]').exists()).toBe(false);
+    expect(buscar).not.toHaveBeenCalled();
   });
 
   it('duplicar abre "Confira a cópia" e avisa o que ficou de fora', async () => {
@@ -269,13 +311,17 @@ describe('FuncaoGuiadaPage', () => {
     const perda = wrapper
       .findAll('dialog')
       .find(item => item.find('[data-nomes]').exists());
+    // Texto da 5.F com a decisão de gênero: quantas coisas no título e a função sem artigo no texto.
     expect(perda.find('h2').text()).toBe(
-      '1 pessoa vai perder acesso a algumas coisas'
+      '1 pessoa vai deixar de fazer 2 coisas'
     );
     expect(perda.find('[data-nomes]').text()).toBe('Ana');
+    expect(perda.text()).toContain(
+      'Essa pessoa tem a função Atendente. A partir de agora, não vai mais poder:'
+    );
     expect(perda.findAll('[data-perdas] li').map(li => li.text())).toEqual([
       'Criar e mover as vendas em andamento',
-      'Ver Vendas',
+      'Ver: Vendas',
     ]);
     expect(alterar).not.toHaveBeenCalled();
 
@@ -305,9 +351,40 @@ describe('FuncaoGuiadaPage', () => {
       .findAll('dialog')
       .find(item => item.find('[data-nomes]').exists());
     expect(perda.find('h2').text()).toBe(
-      '2 pessoas vão perder acesso a algumas coisas'
+      '2 pessoas vão deixar de fazer 2 coisas'
     );
     expect(perda.find('[data-nomes]').text()).toBe('Ana e Beto');
+    expect(perda.text()).toContain(
+      'Essas pessoas têm a função Atendente. A partir de agora, não vão mais poder:'
+    );
+  });
+
+  it('perda de acesso com uma coisa só: o título diz qual, e os nomes param em 3', async () => {
+    const { wrapper } = await montar({
+      name: 'funcoes_equipe_edit',
+      params: { roleId: '1' },
+      giver: ADMIN,
+      agentes: ['Ana', 'Beto', 'Caio', 'Duda', 'Eva'].map((name, i) => ({
+        id: 20 + i,
+        name,
+        role: 'agent',
+        custom_role_id: 1,
+      })),
+    });
+    await clicar(wrapper, '[data-linha="contatos"] [data-alterar-area]');
+    await clicar(wrapper, '[data-nivel="none"]');
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-botao-grande]');
+    const perda = wrapper
+      .findAll('dialog')
+      .find(item => item.find('[data-nomes]').exists());
+    expect(perda.find('h2').text()).toBe(
+      '5 pessoas vão deixar de ver: Contatos'
+    );
+    expect(perda.find('[data-nomes]').text()).toBe(
+      'Ana, Beto, Caio e mais 2 pessoas'
+    );
   });
 
   it('perda de acesso não aparece para quem não é administrador', async () => {
@@ -316,8 +393,14 @@ describe('FuncaoGuiadaPage', () => {
       params: { roleId: '1' },
     });
 
+    const { mostrar, soltar } = espiarDialogo();
     await tirarAsVendas(wrapper);
-    expect(alterar).toHaveBeenCalled();
+    expect(mostrar).not.toHaveBeenCalled();
+    // O diálogo da perda fica montado fechado: o que importa é que ele não abriu.
+    const dialogo = wrapper.find('[data-nomes]').element.closest('dialog');
+    expect(dialogo.hasAttribute('open')).toBe(false);
+    expect(alterar).toHaveBeenCalledTimes(1);
+    soltar();
   });
 
   it.each([
@@ -355,9 +438,18 @@ describe('FuncaoGuiadaPage', () => {
     await clicar(wrapper, '[data-botao-grande]');
     await clicar(wrapper, '[data-botao-grande]');
     const sucesso = wrapper.find('[data-sucesso]');
-    expect(sucesso.text()).toContain('Função Atendente 2 criada.');
-    expect(sucesso.find('[data-botao-grande]').exists()).toBe(false);
-    expect(wrapper.find('[data-voltar]').text()).toBe('Voltar para a lista');
+    const titulo = sucesso.find('h1');
+    expect(titulo.text()).toBe('Função Atendente 2 criada.');
+    expect(document.activeElement).toBe(titulo.element);
+    expect(sucesso.text()).toContain(
+      'Peça ao administrador para pôr pessoas nela.'
+    );
+    expect(sucesso.find('[data-botao-grande]').text()).toBe(
+      'Voltar para a lista'
+    );
+    expect(wrapper.find('[data-voltar]').exists()).toBe(false);
+    await clicar(wrapper, '[data-sucesso] [data-botao-grande]');
+    expect(push).toHaveBeenCalledWith({ name: 'funcoes_equipe_list' });
   });
 
   it('erro de rede ao abrir: mostra o erro com "Tentar de novo", e tentar recarrega', async () => {

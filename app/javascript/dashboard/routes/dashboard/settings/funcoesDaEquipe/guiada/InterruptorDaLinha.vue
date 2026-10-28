@@ -4,12 +4,15 @@ import { computed, useId } from 'vue';
 // Uma linha com interruptor (#2308, especificação 9): o interruptor fica sempre à direita do rótulo, sem texto
 // "Ligado" (o estado vai em aria-checked e na cor), com alvo de 44 px. Travado desligado não tem interruptor: mostra
 // o cadeado e o motivo, nunca só opacidade. Travado ligado (vem com "Cuida de tudo", o último alcance) mostra o
-// interruptor ligado com aria-disabled e o motivo embaixo: o toque não faz nada, mas a linha diz por quê.
+// interruptor ligado com aria-disabled e o motivo embaixo: o toque não faz nada, mas a linha diz por quê. O nome do
+// interruptor é o título; a descrição é só o resto (texto, nota, motivo), para o leitor não ler o título duas vezes.
 const props = defineProps({
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
   nota: { type: String, default: '' },
   trava: { type: String, default: '' },
+  // O cadeado diz "você não pode dar isto"; uma regra que não é de permissão (o último alcance) usa o info.
+  iconeDaTrava: { type: String, default: 'i-lucide-lock' },
   ligado: { type: Boolean, default: false },
   mudou: { type: Boolean, default: false },
 });
@@ -18,6 +21,12 @@ const emit = defineEmits(['alternar']);
 const id = useId();
 
 const preso = computed(() => Boolean(props.trava) && props.ligado);
+const descricao = computed(() =>
+  ['texto', 'nota', 'trava']
+    .filter(parte => props[parte])
+    .map(parte => `${id}-${parte}`)
+    .join(' ')
+);
 const alternar = () => {
   if (!preso.value) emit('alternar');
 };
@@ -28,7 +37,7 @@ const alternar = () => {
     class="flex items-center gap-4 py-3 ps-4 pe-2"
     :class="mudou ? 'border-s-4 border-n-blue-9 bg-n-blue-2 ps-3' : ''"
   >
-    <div :id="`${id}-sobre`" class="flex flex-col flex-1 min-w-0 gap-0.5">
+    <div class="flex flex-col flex-1 min-w-0 gap-0.5">
       <p
         class="flex flex-wrap items-center gap-2 m-0 font-medium text-n-slate-12"
       >
@@ -40,9 +49,12 @@ const alternar = () => {
           {{ $t('FUNCOES_EQUIPE.GUIADA.VOCE_MUDOU') }}
         </span>
       </p>
-      <p v-if="texto" class="m-0 text-sm text-n-slate-11">{{ texto }}</p>
+      <p v-if="texto" :id="`${id}-texto`" class="m-0 text-sm text-n-slate-11">
+        {{ texto }}
+      </p>
       <p
         v-if="nota"
+        :id="`${id}-nota`"
         class="flex items-start gap-1.5 m-0 text-sm font-medium text-n-slate-12"
       >
         <span
@@ -53,9 +65,14 @@ const alternar = () => {
       </p>
       <p
         v-if="trava"
+        :id="`${id}-trava`"
         class="flex items-start gap-1.5 m-0 text-sm text-n-slate-11"
       >
-        <span class="i-lucide-lock size-4 mt-0.5 shrink-0" aria-hidden="true" />
+        <span
+          class="size-4 mt-0.5 shrink-0"
+          :class="iconeDaTrava"
+          aria-hidden="true"
+        />
         {{ trava }}
       </p>
     </div>
@@ -67,7 +84,7 @@ const alternar = () => {
       :aria-checked="ligado"
       :aria-disabled="preso || undefined"
       :aria-label="titulo"
-      :aria-describedby="`${id}-sobre`"
+      :aria-describedby="descricao || undefined"
       class="grid place-items-center size-11 shrink-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       :class="{ 'cursor-not-allowed': preso }"
       @click="alternar"

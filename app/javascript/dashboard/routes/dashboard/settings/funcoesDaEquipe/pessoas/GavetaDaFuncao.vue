@@ -2,30 +2,28 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
-import { useMapGetter, useStore } from 'dashboard/composables/store';
+import { useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
 import DialogoDaCasa from '../guiada/DialogoDaCasa.vue';
 import { useTextos } from '../guiada/useTextos';
-import { explicar401 } from '../salvarFuncao';
 import { useSemFuncao } from '../useSemFuncao';
 import PessoaDaFuncao from './PessoaDaFuncao.vue';
+import { useSalvarGaveta } from './useSalvarGaveta';
 
 // Quem usa uma função, ou quem está sem função (#2308, especificação 5.D). Com `funcao`: "Quem vai ser …?", com quem
 // já é e as outras pessoas; sem ela: "Quem está sem função", uma escolha por pessoa. Nada grava até "Salvar";
-// "Cancelar" descarta; Esc e o clique no fundo, com mudança pendente, perguntam antes. Grava como o diálogo de hoje
-// (AssignAgentsDialog): agents/update com custom_role_id, null para sem função. Se alguma falha, a gaveta fica
-// aberta só com o que não gravou, diz de quem e por quê (o 401 passa pelo explicar401) e recarrega as pessoas. Sem
-// Pessoas, ou numa função fora do alcance, a gaveta só mostra quem é.
+// "Cancelar" descarta; Esc e o clique no fundo, com mudança pendente, perguntam antes. O salvar e a conferência moram
+// em useSalvarGaveta; se algo falha, a gaveta fica aberta só com o que não gravou e diz de quem e por quê. Sem
+// Pessoas, numa função fora do alcance ou na própria função, a gaveta só mostra quem é, com o motivo certo.
 const props = defineProps({
   funcao: { type: Object, default: null },
 });
 
 const emit = defineEmits(['fechar']);
 
-const store = useStore();
 const { t } = useI18n();
 const { lista } = useTextos();
 const { canManagePeople, memberLockReason, roleLockReason, reachesRole } =
@@ -35,15 +33,16 @@ const agentes = useMapGetter('agents/getAgents');
 const funcoes = useMapGetter('customRole/getCustomRoles');
 
 const mudancas = ref(new Map());
-const salvando = ref(false);
-const erro = ref('');
 const sairSemSalvar = ref(null);
+const { salvando, erro, salvar: gravar } = useSalvarGaveta(mudancas);
 
-const somenteLeitura = computed(
-  () =>
-    !canManagePeople.value ||
-    Boolean(props.funcao && roleLockReason(props.funcao))
-);
+// Por que a gaveta é só leitura: sem Pessoas, ou a função está acima do alcance (ABOVE) ou é a de quem monta (MINE).
+const motivoDaLeitura = computed(() => {
+  if (!canManagePeople.value) return 'SO_LEITURA';
+  const trava = props.funcao && roleLockReason(props.funcao);
+  return trava ? `SO_LEITURA_${trava}` : '';
+});
+const somenteLeitura = computed(() => Boolean(motivoDaLeitura.value));
 
 const porNome = (a, b) => a.name.localeCompare(b.name);
 const daFuncao = pessoa => pessoa.custom_role_id === props.funcao?.id;
@@ -96,6 +95,7 @@ const linha = pessoa => ({
 
 const nomeDe = id => agentes.value.find(item => item.id === id)?.name;
 
+// Quem fica sem função: o primeiro ganho e, como na linha da pessoa, o que só o administrador daria (os R$).
 const fraseDoRodape = ([id, destino]) => {
   const pessoa = nomeDe(id);
   if (destino !== null)
@@ -104,13 +104,18 @@ const fraseDoRodape = ([id, destino]) => {
       funcao: funcaoDe(destino)?.name,
     });
   const atual = agentes.value.find(item => item.id === id)?.custom_role_id;
-  const [ganho] = diff(funcaoDe(atual)?.permissions).ganha;
-  return ganho
-    ? t('FUNCOES_EQUIPE.GAVETA.RODAPE.FICA_SEM', {
-        pessoa,
-        ganho: curtoDa(ganho),
-      })
-    : t('FUNCOES_EQUIPE.GAVETA.RODAPE.FICA_SEM_SO', { pessoa });
+  const [ganho, ...outros] = diff(funcaoDe(atual)?.permissions).ganha;
+  if (!ganho) return t('FUNCOES_EQUIPE.GAVETA.RODAPE.FICA_SEM_SO', { pessoa });
+  const tambem = outros
+    .filter(item => item.delegacao)
+    .map(item => t('FUNCOES_EQUIPE.EFEITO.TAMBEM', { ganho: curtoDa(item) }));
+  return [
+    t('FUNCOES_EQUIPE.GAVETA.RODAPE.FICA_SEM', {
+      pessoa,
+      ganho: curtoDa(ganho),
+    }),
+    ...tambem,
+  ].join(' ');
 };
 const frases = computed(() => [...mudancas.value].map(fraseDoRodape));
 
@@ -126,51 +131,10 @@ const podeFechar = () => {
   return false;
 };
 
-// O motivo da falha: o 401 diz se foi alcance, flag ou a própria função (sessão vencida vai para o login, sem
-// mensagem); o resto é rede.
-const motivoDa = async falhas => {
-  const recusa = falhas.find(({ razao }) => razao?.status === 401);
-  if (!recusa) return t('FUNCOES_EQUIPE.GAVETA.TENTE');
-  const { erro: chave } = await explicar401(recusa.razao.code);
-  return chave === null ? null : t(`FUNCOES_EQUIPE.SALVAR.${chave}`);
-};
-
 const salvar = async () => {
-  salvando.value = true;
-  erro.value = '';
-  const pedidos = [...mudancas.value];
-  const resultados = await Promise.allSettled(
-    pedidos.map(([id, destino]) =>
-      store.dispatch('agents/update', {
-        id,
-        name: nomeDe(id),
-        custom_role_id: destino,
-      })
-    )
-  );
-  const falhas = pedidos
-    .map((pedido, indice) => ({ pedido, razao: resultados[indice].reason }))
-    .filter((_, indice) => resultados[indice].status === 'rejected');
-  if (!falhas.length) {
-    salvando.value = false;
-    useAlert(t('FUNCOES_EQUIPE.GAVETA.SALVO'));
-    emit('fechar');
-    return;
-  }
-  const nomes = falhas.map(({ pedido: [id] }) => nomeDe(id));
-  const motivo = await motivoDa(falhas);
-  if (motivo === null) {
-    salvando.value = false;
-    return;
-  }
-  mudancas.value = new Map(falhas.map(({ pedido }) => pedido));
-  erro.value = t(
-    'FUNCOES_EQUIPE.GAVETA.ERRO_PARCIAL',
-    { nomes: lista(nomes), motivo },
-    nomes.length
-  );
-  await store.dispatch('agents/get');
-  salvando.value = false;
+  if (!(await gravar())) return;
+  useAlert(t('FUNCOES_EQUIPE.GAVETA.SALVO'));
+  emit('fechar');
 };
 </script>
 
@@ -202,9 +166,16 @@ const salvar = async () => {
         class="flex items-start gap-2 m-0 text-sm text-n-slate-11"
       >
         <span class="i-lucide-info size-4 mt-0.5 shrink-0" aria-hidden="true" />
-        {{ $t('FUNCOES_EQUIPE.GAVETA.SO_LEITURA') }}
+        {{ $t(`FUNCOES_EQUIPE.GAVETA.${motivoDaLeitura}`) }}
       </p>
-      <section class="flex flex-col gap-1">
+      <p
+        v-if="!jaSao.length"
+        data-ninguem-ainda
+        class="m-0 text-[0.9375rem] text-n-slate-11"
+      >
+        {{ $t('FUNCOES_EQUIPE.GAVETA.NINGUEM_AINDA') }}
+      </p>
+      <section v-else class="flex flex-col gap-1">
         <h3 class="m-0 text-sm font-semibold text-n-slate-11">
           {{
             $t('FUNCOES_EQUIPE.GAVETA.JA_SAO', {
@@ -272,7 +243,7 @@ const salvar = async () => {
       >
         {{ erro }}
       </p>
-      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
         <Button
           data-cancelar
           :label="$t('FUNCOES_EQUIPE.GAVETA.CANCELAR')"
