@@ -16,8 +16,9 @@ module Meta::AdsGraphClient::Creation
   BOOST_POSTS_LIMIT = 25
   BOOST_PAGE_POST_FIELDS = 'id,message,created_time,full_picture,is_eligible_for_promotion,attachments{type},' \
                            'reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)'.freeze
+  # Carrossel pode vir sem `media_url`: a imagem do primeiro filho serve de capa.
   BOOST_INSTAGRAM_MEDIA_FIELDS = 'id,caption,timestamp,media_type,media_url,thumbnail_url,like_count,comments_count,' \
-                                 'boost_eligibility_info'.freeze
+                                 'children{media_type,media_url,thumbnail_url},boost_eligibility_info'.freeze
 
   def create_campaign(ad_account_id, params)
     post("act_#{ad_account_id}/campaigns", params)

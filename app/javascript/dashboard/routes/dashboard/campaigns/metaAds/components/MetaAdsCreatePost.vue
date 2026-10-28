@@ -72,6 +72,28 @@ const choose = post => {
   draft.value = { ...draft.value, post_id: post.id };
 };
 
+// Cartões no padrão WAI-ARIA de grupo de rádio: só um entra no Tab (o escolhido, ou o primeiro que pode), e as setas
+// escolhem o próximo que pode, levando o foco junto.
+const grid = ref(null);
+const eligible = computed(() => list.value.filter(post => post.eligible));
+const focusable = computed(
+  () =>
+    eligible.value.find(post => post.id === draft.value.post_id)?.id ||
+    eligible.value[0]?.id
+);
+const moveChoice = async (post, delta) => {
+  const options = eligible.value;
+  if (!options.length) return;
+  const index = Math.max(
+    options.findIndex(item => item.id === post.id),
+    0
+  );
+  const target = options[(index + delta + options.length) % options.length];
+  choose(target);
+  await nextTick();
+  grid.value?.querySelector(`[data-create-post="${target.id}"]`)?.focus();
+};
+
 const tapNote = computed(() => {
   if (draft.value.post_source === 'facebook') return 'TAP_FACEBOOK';
   return props.hasNumber ? 'TAP_INSTAGRAM_WHATSAPP' : 'TAP_INSTAGRAM';
@@ -179,6 +201,7 @@ const move = async step => {
         </p>
         <div
           v-else
+          ref="grid"
           class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
           role="radiogroup"
           :aria-label="$t(`${KEY}.TITLE`)"
@@ -191,6 +214,7 @@ const move = async step => {
             :aria-checked="draft.post_id === post.id"
             :aria-disabled="!post.eligible || undefined"
             :data-create-post="post.id"
+            :tabindex="post.id === focusable ? 0 : -1"
             class="flex min-w-0 flex-col overflow-hidden rounded-2xl border-0 p-0 text-start transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
             :class="[
               draft.post_id === post.id
@@ -199,6 +223,10 @@ const move = async step => {
               post.eligible ? '' : 'cursor-not-allowed',
             ]"
             @click="choose(post)"
+            @keydown.right.prevent="moveChoice(post, 1)"
+            @keydown.down.prevent="moveChoice(post, 1)"
+            @keydown.left.prevent="moveChoice(post, -1)"
+            @keydown.up.prevent="moveChoice(post, -1)"
           >
             <img
               v-if="post.image_url"

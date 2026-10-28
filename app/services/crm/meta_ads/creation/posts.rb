@@ -79,10 +79,15 @@ class Crm::MetaAds::Creation::Posts
     }
   end
 
+  # A imagem que representa a mídia: a capa do vídeo, ou a própria foto.
+  def cover_of(media)
+    media['media_type'] == 'VIDEO' ? media['thumbnail_url'] : media['media_url']
+  end
+
   def instagram_post(media)
     {
       id: media['id'].to_s, caption: media['caption'].to_s, timestamp: media['timestamp'],
-      image_url: media['media_type'] == 'VIDEO' ? media['thumbnail_url'] : media['media_url'],
+      image_url: cover_of(media) || cover_of(Array(media.dig('children', 'data')).first.to_h),
       likes: media['like_count'].to_i, comments: media['comments_count'].to_i,
       eligible: media.dig('boost_eligibility_info', 'eligible_to_boost') == true, reason: nil
     }

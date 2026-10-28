@@ -138,7 +138,6 @@ const step = ref(0);
 
 const pages = computed(() => options.value?.pages || []);
 const numbers = computed(() => options.value?.whatsapp_numbers || []);
-const instagram = computed(() => options.value?.instagram || null);
 const kinds = computed(() => options.value?.kinds || []);
 // O tipo já decidido: pelo botão que abriu, ou porque o servidor só oferece um.
 const fixedKind = computed(
@@ -194,6 +193,8 @@ const chosenNumber = computed(() =>
 const chosenPage = computed(() =>
   pages.value.find(page => page.id === draft.value.page_id)
 );
+// O Instagram da Página escolhida (cada Página tem o seu, ou nenhum).
+const instagram = computed(() => chosenPage.value?.instagram || null);
 
 // O botão do anúncio: o do destino; no post, o do post.
 const action = computed(() =>
@@ -252,7 +253,11 @@ const STEP_READY = {
         (numbers.value.length <= 1 || draft.value.whatsapp_number)
     ),
   CONTENT: () => !contentMissing.value,
-  POST: () => Boolean(postEscolhido.value?.eligible),
+  // Enquanto lê (ou relê para outra Página), o post marcado ainda pode ser o da leitura anterior.
+  POST: () =>
+    !impulsionar.lendo.value &&
+    !impulsionar.falhou.value &&
+    Boolean(postEscolhido.value?.eligible),
   AUDIENCE: () =>
     draft.value.special_category !== null &&
     (draft.value.region === 'BR' || draft.value.states.length > 0) &&
@@ -266,7 +271,8 @@ const blockReason = computed(() => {
   if (current.value === 'CONTENT' && contentMissing.value) {
     return t(`${KEY}.CONTENT.${contentMissing.value}`);
   }
-  if (current.value === 'POST' && !ready.value) {
+  const lendoPosts = impulsionar.lendo.value || impulsionar.falhou.value;
+  if (current.value === 'POST' && !ready.value && !lendoPosts) {
     return t(`${KEY}.POST.NEED_POST`);
   }
   return '';

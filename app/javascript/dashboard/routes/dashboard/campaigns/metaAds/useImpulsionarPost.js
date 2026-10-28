@@ -34,21 +34,25 @@ export const useImpulsionarPost = ({ draft, numbers }) => {
     };
   };
 
+  // Só vale a resposta da Página que ainda está escolhida: a de uma leitura anterior, que chegou atrasada, é descartada.
   const lerPosts = async () => {
     const pageId = draft.value.page_id;
     if (!pageId) return;
+    lidos.value = null;
+    lidosDaPagina.value = null;
     lendo.value = true;
     falhou.value = false;
     try {
       const data = await lerPostsParaImpulsionar(pageId);
+      if (draft.value.page_id !== pageId) return;
       lidos.value = data;
       lidosDaPagina.value = pageId;
       falhou.value = Boolean(data.posts_error);
       if (!falhou.value) marcarPrimeiro();
     } catch {
-      falhou.value = true;
+      if (draft.value.page_id === pageId) falhou.value = true;
     } finally {
-      lendo.value = false;
+      if (draft.value.page_id === pageId) lendo.value = false;
     }
   };
 

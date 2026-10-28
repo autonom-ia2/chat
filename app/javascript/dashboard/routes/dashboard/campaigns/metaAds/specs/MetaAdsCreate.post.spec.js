@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsCreate from '../components/MetaAdsCreate.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { esquecerTentativas } from '../criacaoNaMeta';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
@@ -35,7 +36,9 @@ const OPTIONS = {
   needs_login: false,
   facebook_login: { app_id: '1', api_version: 'v23.0', configuration_id: '2' },
   kinds: ['ad', 'post'],
-  pages: [{ id: PAGE, name: 'Loja' }],
+  pages: [
+    { id: PAGE, name: 'Loja', instagram: { id: '178', username: 'loja' } },
+  ],
   instagram: { id: '178', username: 'loja', publish_left: null },
   whatsapp_numbers: [{ id: NUMBER, name: 'Loja', phone: NUMBER }],
   images: [],
@@ -78,6 +81,7 @@ const BOOST = {
   posts: [
     pagePost('901'),
     pagePost('902', { eligible: false, reason: 'profile_or_cover' }),
+    pagePost('903'),
   ],
   instagram_posts: [igPost('1790', { eligible: false }), igPost('1791')],
   posts_error: null,
@@ -300,5 +304,93 @@ describe('Anúncios da Meta · impulsionar post (#2339)', () => {
 
     expect(step(wrapper)).toBe('WHERE');
     expect(CrmMetaAdsConnectionAPI.boostPosts).not.toHaveBeenCalled();
+  });
+
+  it('arrow keys move the choice to the next post Meta lets boost, skipping the greyed one', async () => {
+    const wrapper = await mountCreate();
+    await choosePost(wrapper);
+    await wrapper.find('[data-create-post-source="facebook"]').trigger('click');
+
+    const first = wrapper.find(`[data-create-post="${PAGE}_901"]`);
+    expect(first.attributes('tabindex')).toBe('0');
+    expect(
+      wrapper.find(`[data-create-post="${PAGE}_902"]`).attributes('tabindex')
+    ).toBe('-1');
+
+    await first.trigger('keydown', { key: 'ArrowRight' });
+
+    expect(
+      wrapper
+        .find(`[data-create-post="${PAGE}_903"]`)
+        .attributes('aria-checked')
+    ).toBe('true');
+  });
+
+  describe('with two Pages', () => {
+    const OTHER = '220000000002161';
+    const TWO_PAGES = {
+      ...OPTIONS,
+      pages: [...OPTIONS.pages, { id: OTHER, name: 'Outra', instagram: null }],
+    };
+    const pickPage = async (wrapper, id) => {
+      const select = wrapper
+        .findAllComponents(ChoiceSelect)
+        .find(item => item.attributes('data-create-page') !== undefined);
+      select.vm.$emit('update:modelValue', id);
+      await flushPromises();
+    };
+
+    it('the Page without Instagram has no Instagram tab', async () => {
+      const wrapper = await mountCreate({
+        options: TWO_PAGES,
+        boost: {
+          posts: [pagePost('901')],
+          instagram_posts: [],
+          posts_error: null,
+        },
+      });
+      await choosePost(wrapper);
+      expect(step(wrapper)).toBe('WHERE');
+      await pickPage(wrapper, OTHER);
+      await submit(wrapper);
+
+      expect(step(wrapper)).toBe('POST');
+      expect(CrmMetaAdsConnectionAPI.boostPosts).toHaveBeenCalledWith(OTHER);
+      expect(wrapper.find('[data-create-post-source]').exists()).toBe(false);
+    });
+
+    it('a late answer for the Page chosen before is dropped', async () => {
+      let answerFirst;
+      const wrapper = await mountCreate({ options: TWO_PAGES, boost: BOOST });
+      // A Página escolhida antes responde por último.
+      CrmMetaAdsConnectionAPI.boostPosts.mockImplementation(pageId =>
+        pageId === PAGE
+          ? new Promise(resolve => {
+              answerFirst = resolve;
+            })
+          : Promise.resolve({
+              data: {
+                posts: [pagePost('777')],
+                instagram_posts: [],
+                posts_error: null,
+              },
+            })
+      );
+      await choosePost(wrapper);
+      await pickPage(wrapper, PAGE);
+      await submit(wrapper);
+      expect(step(wrapper)).toBe('POST');
+
+      await wrapper.find('[data-create-back]').trigger('click');
+      await pickPage(wrapper, OTHER);
+      await submit(wrapper);
+      answerFirst({ data: BOOST });
+      await flushPromises();
+
+      expect(wrapper.find(`[data-create-post="${PAGE}_777"]`).exists()).toBe(
+        true
+      );
+      expect(wrapper.find('[data-create-post="1791"]').exists()).toBe(false);
+    });
   });
 });

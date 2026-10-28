@@ -166,6 +166,20 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(stubs[:campaign]).not_to have_been_made
   end
 
+  it 'recusa antes de gravar com tentativa não confirmada da mesma chave: não diz "nada foi criado"' do
+    Crm::MetaAdsCreatedObject.create!(account: account, idempotency_key: key, status: 'unconfirmed', name: 'Antes',
+                                      ad_account_id: connection.ad_account_id)
+    stub_posts(media: [{ id: '1790', boost_eligibility_info: { eligible_to_boost: false } }])
+    stubs = stub_creation
+
+    expect { create!(draft.merge(recreate_unconfirmed: true)) }.to raise_error(Crm::MetaAds::Creation::Error) { |e|
+      expect(e.code).to eq('post_not_eligible')
+      expect(e.nothing_created).to be(false)
+      expect(e.attempt_key).to eq(key)
+    }
+    expect(stubs[:campaign]).not_to have_been_made
+  end
+
   it 'origem desconhecida ou sem post: invalid_post' do
     expect { create!(draft.merge(post_source: 'tiktok')) }
       .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_post') }

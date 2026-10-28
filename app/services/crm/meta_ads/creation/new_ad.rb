@@ -24,6 +24,8 @@ class Crm::MetaAds::Creation::NewAd
                  'ON_POST' => 'OUTCOME_ENGAGEMENT' }.freeze
   OPTIMIZATION_GOALS = { 'WEBSITE' => 'LINK_CLICKS', 'ON_POST' => 'POST_ENGAGEMENT' }.freeze
   SPECIAL_CATEGORY = 'FINANCIAL_PRODUCTS_SERVICES'.freeze
+  # Tentativas que podem ter deixado campanha na Meta.
+  PENDING_STATUSES = %w[creating unconfirmed rollback_failed].freeze
   WHATSAPP_ACTION = { type: 'WHATSAPP_MESSAGE', value: { app_destination: 'WHATSAPP' } }.freeze
 
   # true quando esta chamada criou o anúncio (a mesma chave de novo devolve o que já existia).
@@ -41,14 +43,7 @@ class Crm::MetaAds::Creation::NewAd
     done = already_created(params)
     return result(done) if done
 
-    # O fuso da conta de anúncios só é lido para conferir as datas, depois de todo o resto do rascunho valer.
-    draft = draft_class(params).new(params, account: @account, zone: -> { zone }).validate!
-
-    ensure_account_ready!
-    page = find_page!(draft[:page_id])
-    ensure_content_ready!(draft, page)
-    # O público (estados → regiões da Meta) se resolve antes de criar qualquer coisa.
-    @targeting = Crm::MetaAds::Creation::Targeting.new(client).build(draft.values)
+    draft, page = checked_before_claim(params) { prepare!(params) }
     record = @attempt.claim!(draft[:idempotency_key], { name: draft[:name], budget: budget(draft), request_digest: draft.digest },
                              recreate: draft[:recreate_unconfirmed])
     return result(record) if record.status == 'created'
@@ -59,6 +54,30 @@ class Crm::MetaAds::Creation::NewAd
   end
 
   private
+
+  # Tudo o que se confere antes de gravar a tentativa: o rascunho, a conta, a Página, o post ou o vídeo e o público.
+  def prepare!(params)
+    # O fuso da conta de anúncios só é lido para conferir as datas, depois de todo o resto do rascunho valer.
+    draft = draft_class(params).new(params, account: @account, zone: -> { zone }).validate!
+    ensure_account_ready!
+    page = find_page!(draft[:page_id])
+    ensure_content_ready!(draft, page)
+    # O público (estados → regiões da Meta) se resolve antes de criar qualquer coisa.
+    @targeting = Crm::MetaAds::Creation::Targeting.new(client).build(draft.values)
+    [draft, page]
+  end
+
+  # Recusa antes de gravar a tentativa costuma ser "nada foi criado". Não quando esta chave já tem tentativa que pode
+  # ter deixado algo na Meta (o recriar de uma não confirmada, por exemplo): aí a tela pede para conferir.
+  def checked_before_claim(params)
+    yield
+  rescue Crm::MetaAds::Creation::Error => e
+    key = params.to_h.with_indifferent_access[:idempotency_key].to_s.strip
+    pending = key.present? && Crm::MetaAdsCreatedObject.exists?(account: @account, idempotency_key: key, status: PENDING_STATUSES)
+    raise e unless pending
+
+    raise Crm::MetaAds::Creation::Error.new(e.code, nothing_created: false, attempt_key: key)
+  end
 
   def client
     @access.client

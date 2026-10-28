@@ -98,6 +98,15 @@ RSpec.describe Crm::MetaAds::Creation::Posts do
       expect(posts.last[:image_url]).to eq('https://cdn.example/1793-capa.jpg')
     end
 
+    it 'carrossel sem media_url usa a imagem do primeiro filho' do
+      stub_page_posts([])
+      child = { media_type: 'IMAGE', media_url: 'https://cdn.example/filho.jpg' }
+      album = ig_media('1794', media_type: 'CAROUSEL_ALBUM').except(:media_url, :thumbnail_url).merge(children: { data: [child] })
+      stub_ig_media([album])
+
+      expect(list[:instagram_posts].first[:image_url]).to eq('https://cdn.example/filho.jpg')
+    end
+
     it 'sem Instagram ligado à Página: não lê mídia' do
       stub_page_posts([])
 

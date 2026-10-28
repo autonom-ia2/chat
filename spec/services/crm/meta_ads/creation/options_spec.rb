@@ -42,7 +42,7 @@ RSpec.describe Crm::MetaAds::Creation::Options do
     payload = described_class.new(account, connection).payload
 
     expect(payload).to include(
-      needs_login: false, pages: [{ id: '110', name: 'Loja Exemplo' }],
+      needs_login: false, pages: [{ id: '110', name: 'Loja Exemplo', instagram: { id: '178', username: 'lojaexemplo' } }],
       whatsapp_numbers: [{ id: '+5511900002161', name: account.inboxes.first.name, phone: '+5511900002161' }],
       instagram: { id: '178', username: 'lojaexemplo', publish_left: nil },
       images: [{ hash: 'abc', url: 'https://scontent.example/abc.jpg', width: 600, height: 600 }],
