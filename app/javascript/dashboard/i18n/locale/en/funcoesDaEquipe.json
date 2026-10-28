@@ -1,0 +1,120 @@
+{
+  "FUNCOES_EQUIPE": {
+    "TITULO": "Team roles",
+    "SUBTITULO": "Say what each person can see and do. Everything else leaves their menu.",
+    "CARREGANDO": "Opening the roles",
+    "CONTAGEM": {
+      "FUNCOES": "{n} role created | {n} roles created",
+      "PESSOAS": "no one with a role | {n} person with a role | {n} people with a role",
+      "SEPARADOR": "·"
+    },
+    "CRIAR": "Create role",
+    "FAIXA": {
+      "TITULO": "{n} person has no role. | {n} people have no role.",
+      "TEXTO": "They see their teammates' conversations. Give them a role to show less. | They see their teammates' conversations. Give them a role to show less.",
+      "TITULO_CURTO": "{n} person without a role. | {n} people without a role.",
+      "TEXTO_CURTO": "Sees teammates' conversations. | See teammates' conversations.",
+      "VER_QUEM_SAO": "See who"
+    },
+    "CARTAO": {
+      "ALTERAR": "Change",
+      "ALTERAR_ROTULO": "Change the role {nome}",
+      "MAIS": "More",
+      "MAIS_ROTULO": "More actions for the role {nome}",
+      "DUPLICAR": "Duplicate",
+      "APAGAR": "Delete",
+      "TRAVADO": "Only the administrator changes this role.",
+      "PESSOAS": "{n} person | {n} people",
+      "OUTRAS_PESSOAS": "+{n}",
+      "NINGUEM": "No one uses it yet",
+      "ESCOLHER_PESSOAS": "Choose people",
+      "ESCOLHER_PESSOAS_ROTULO": "Choose people for the role {nome}",
+      "SELO": "Can {coisas}"
+    },
+    "FRASE": {
+      "NAO_ATENDE": "Does not handle conversations.",
+      "SO_OLHA_CONVERSAS": "Only looks at conversations.",
+      "PROPRIAS": "Handles their own conversations.",
+      "PROPRIAS_E_NOVAS": "Handles their own conversations and picks up new ones nobody has taken.",
+      "TODAS": "Reads and handles every conversation.",
+      "VENDAS_SO_OLHA": "Only looks at sales.",
+      "VENDAS_MEXE": "Creates and moves sales in progress.",
+      "VENDAS_TUDO": "Takes care of everything in sales.",
+      "CONTATOS_SO_OLHA": "Only looks at contacts.",
+      "CONTATOS_MEXE": "Changes contacts."
+    },
+    "CUIDADO": {
+      "crm_manage_ai": "ask the AI for help in sales",
+      "crm_export": "take sales to a spreadsheet",
+      "crm_metas_manage": "set the monthly goals",
+      "sales_value_view": "see the amounts in R$",
+      "crm_admin": "take care of everything in sales",
+      "contact_export": "take the customer list to a spreadsheet",
+      "contact_delete": "delete contacts and companies",
+      "conversation_message_delete": "delete messages",
+      "campaign_send": "send campaigns",
+      "custom_role_manage": "change the roles",
+      "grant_above_own": "give more than they have"
+    },
+    "FIXAS": {
+      "TITULO": "Roles that come with the account",
+      "PESSOAS": "no one · does not change | {n} person · does not change | {n} people · does not change",
+      "ADMIN": {
+        "NOME": "Administrator",
+        "TEXTO": "Can do everything, including changing the roles."
+      },
+      "SEM_FUNCAO": {
+        "NOME": "No role",
+        "TEXTO": "Sees and handles teammates' conversations, in the channels they are in. Creates and changes contacts and canned responses.",
+        "CHAMADA": "Give them a role to show less."
+      }
+    },
+    "VAZIO": {
+      "TITULO": "Each person sees only what they need.",
+      "TEXTO": "Start from a ready-made role. It takes a minute.",
+      "CRIAR": "Create the first role",
+      "DESTAQUE": "Or start from one of these",
+      "CRIAR_PRONTA": "Create {nome}"
+    },
+    "PRONTAS": {
+      "ATENDENTE": {
+        "NOME": "Agent",
+        "DESCRICAO": "Whoever answers WhatsApp day to day.",
+        "CAP_1": "Handles their own conversations",
+        "CAP_2": "Creates and moves sales",
+        "CAP_3": "Only looks at contacts"
+      },
+      "VENDEDOR": {
+        "NOME": "Salesperson",
+        "DESCRICAO": "Whoever sells and looks for new customers.",
+        "CAP_1": "Handles their own conversations",
+        "CAP_2": "Changes contacts and sales",
+        "CAP_3": "Looks for new customers"
+      },
+      "SUPERVISOR": {
+        "NOME": "Supervisor",
+        "DESCRICAO": "Whoever follows the team and every conversation.",
+        "CAP_1": "Reads and handles every conversation",
+        "CAP_2": "Changes contacts and sales",
+        "CAP_3": "Sees the reports"
+      }
+    },
+    "ERRO": {
+      "TITULO": "We couldn't open the roles right now.",
+      "TEXTO": "Your roles are still there. Check the internet and try again.",
+      "TENTAR": "Try again"
+    },
+    "PAYWALL": {
+      "TITLE": "Change plans to create roles",
+      "AVAILABLE_ON": "Team roles are part of the Business and Enterprise plans.",
+      "UPGRADE_PROMPT": "With them, each person sees only what they need.",
+      "UPGRADE_NOW": "Change plan",
+      "CANCEL_ANYTIME": "You can change or cancel the plan whenever you need."
+    },
+    "ENTERPRISE_PAYWALL": {
+      "AVAILABLE_ON": "Team roles are part of the paid plans.",
+      "UPGRADE_PROMPT": "With them, each person sees only what they need.",
+      "ASK_ADMIN": "Talk to the administrator to change the plan."
+    }
+  }
+}

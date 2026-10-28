@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (239 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (240 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -268,6 +268,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - gotchas: a rota nao aparece em instalacao sem suporte Enterprise/Cloud; alem do administrador, quem tem Montar funcoes (custom_role_manage) cria e edita funcoes, so com as chaves que ele mesmo tem (Pessoas, Montar funcoes, Financeiro e Pode entregar acesso acima do proprio so para quem ja tem esse ultimo), e nao edita a propria funcao nem uma acima do proprio acesso, que aparecem com cadeado; Editar ja inclui Ver; o que nao for liberado some do menu da pessoa; opcoes sensiveis pedem confirmacao; com Acesso total ao CRM as opcoes que ele inclui ficam travadas; enviar leads da Prospeccao para campanha exige Campanhas em Editar; em Campanhas, Editar monta e o ajuste Disparar campanhas envia, agenda e retoma (cargos que ja editavam ganharam o ajuste; cargo novo nasce sem ele); administrador nao recebe funcao personalizada; permissao customizada nao concede automaticamente acesso a todas as caixas; o nome da funcao e unico na conta, sem diferenciar maiusculas nem espacos nas pontas; excluir uma funcao que tem pessoas exige dizer para onde elas vao, em `destination_role_id`: o id de outra funcao da conta que quem exclui poderia entregar, ou o texto `none` (sem funcao, agente comum, que ve quase todo o CRM); confirme o destino com o usuario antes, porque as pessoas mudam de funcao na hora; funcao sem ninguem e excluida sem destino; ao salvar uma funcao que tem pessoas e perde chaves, a tela lista as areas que essas pessoas vao perder e pede confirmacao.
 - nav_target: `custom_roles_list`
 - highlight: `settings-add-role`
+
+### Ver as funcoes da equipe
+- intent: Onde vejo as funcoes da equipe?; Quem esta sem funcao?; O que cada funcao pode fazer?; Quantas pessoas tem cada funcao?; Como dou uma funcao para quem esta sem?
+- onde_fica: Configuracoes > Funcoes Personalizadas, quando a conta tem a flag funcoes_guiadas ligada (com ela desligada, o mesmo menu abre a tela de sempre)
+- rota: `funcoes_equipe_list` - `/app/accounts/:accountId/settings/funcoes-da-equipe`
+- gate: feature flag `custom_roles`; papel `administrator` ou `custom_role_manage`
+- pre_requisitos: Enterprise/Cloud habilitado; administrador ou funcao com Montar funcoes (custom_role_manage); flag funcoes_guiadas ligada na conta
+- passos: 1. Abra Configuracoes > Funcoes Personalizadas; 2. Leia em cada cartao a frase do que a funcao pode, o selo do que pede cuidado e quem usa; 3. Para mudar, toque em Alterar; para copiar ou apagar, em Mais; 4. Para por alguem numa funcao sem ninguem, toque em Escolher pessoas; 5. Para criar, toque em Criar funcao.
+- gotchas: quem esta sem funcao ve MAIS, nao menos: le e atende as conversas dos colegas nos canais em que esta e cria e muda contatos e respostas prontas; a faixa de quem esta sem funcao e Escolher pessoas so aparecem para quem tem Pessoas (people_manage); funcao acima do alcance de quem ve, ou a propria funcao, fica tracejada com So o administrador muda esta funcao, sem Alterar nem Mais; Administrador e Sem funcao vem com a conta e nao mudam; se a lista nao abrir, a tela diz Nao deu para abrir as funcoes agora e oferece Tentar de novo, e nunca mostra a lista vazia; criar, alterar, duplicar e apagar ainda abrem o editor e os dialogos de hoje (#2308, PR 1).
+- nav_target: `funcoes_equipe_list`
 
 ### Montar as permissoes de uma funcao personalizada
 - intent: Crie uma funcao so leitura; Quero que o time de marketing veja tudo da caixa X; Crie uma funcao para quem so ve relatorios; Que permissoes uso para uma funcao?; Como dou acesso a uma caixa especifica?

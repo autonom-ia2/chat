@@ -16,6 +16,8 @@ export const state = {
   records: [],
   uiFlags: {
     fetchingList: false,
+    // A lista nova de Funções (#2308) mostra o erro de rede em vez de uma lista vazia.
+    fetchingListFailed: false,
     creatingItem: false,
     updatingItem: false,
     deletingItem: false,
@@ -37,9 +39,15 @@ export const actions = {
     try {
       const response = await CustomRoleAPI.get();
       commit(types.default.SET_CUSTOM_ROLE, response.data);
-      commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: false });
+      commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, {
+        fetchingList: false,
+        fetchingListFailed: false,
+      });
     } catch (error) {
-      commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: false });
+      commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, {
+        fetchingList: false,
+        fetchingListFailed: true,
+      });
     }
   },
 

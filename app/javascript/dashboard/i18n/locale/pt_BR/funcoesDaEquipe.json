@@ -1,0 +1,120 @@
+{
+  "FUNCOES_EQUIPE": {
+    "TITULO": "Funções da equipe",
+    "SUBTITULO": "Diga o que cada pessoa pode ver e fazer. O resto some do menu dela.",
+    "CARREGANDO": "Abrindo as funções",
+    "CONTAGEM": {
+      "FUNCOES": "{n} função criada | {n} funções criadas",
+      "PESSOAS": "nenhuma pessoa com função | {n} pessoa com função | {n} pessoas com função",
+      "SEPARADOR": "·"
+    },
+    "CRIAR": "Criar função",
+    "FAIXA": {
+      "TITULO": "{n} pessoa está sem função. | {n} pessoas estão sem função.",
+      "TEXTO": "Ela vê as conversas dos colegas. Dê uma função para mostrar menos. | Elas veem as conversas dos colegas. Dê uma função para mostrar menos.",
+      "TITULO_CURTO": "{n} pessoa sem função. | {n} pessoas sem função.",
+      "TEXTO_CURTO": "Vê as conversas dos colegas. | Veem as conversas dos colegas.",
+      "VER_QUEM_SAO": "Ver quem são"
+    },
+    "CARTAO": {
+      "ALTERAR": "Alterar",
+      "ALTERAR_ROTULO": "Alterar a função {nome}",
+      "MAIS": "Mais",
+      "MAIS_ROTULO": "Mais ações da função {nome}",
+      "DUPLICAR": "Duplicar",
+      "APAGAR": "Apagar",
+      "TRAVADO": "Só o administrador muda esta função.",
+      "PESSOAS": "{n} pessoa | {n} pessoas",
+      "OUTRAS_PESSOAS": "+{n}",
+      "NINGUEM": "Ninguém usa ainda",
+      "ESCOLHER_PESSOAS": "Escolher pessoas",
+      "ESCOLHER_PESSOAS_ROTULO": "Escolher pessoas para a função {nome}",
+      "SELO": "Pode {coisas}"
+    },
+    "FRASE": {
+      "NAO_ATENDE": "Não atende conversas.",
+      "SO_OLHA_CONVERSAS": "Só olha as conversas.",
+      "PROPRIAS": "Atende as próprias conversas.",
+      "PROPRIAS_E_NOVAS": "Atende as próprias conversas e pega as novas que estão sem ninguém.",
+      "TODAS": "Lê e atende todas as conversas.",
+      "VENDAS_SO_OLHA": "Só olha as vendas.",
+      "VENDAS_MEXE": "Cria e move as vendas em andamento.",
+      "VENDAS_TUDO": "Cuida de tudo nas vendas.",
+      "CONTATOS_SO_OLHA": "Só olha os contatos.",
+      "CONTATOS_MEXE": "Mexe nos contatos."
+    },
+    "CUIDADO": {
+      "crm_manage_ai": "pedir ajuda à IA nas vendas",
+      "crm_export": "levar as vendas para uma planilha",
+      "crm_metas_manage": "definir as metas do mês",
+      "sales_value_view": "ver os valores em R$",
+      "crm_admin": "cuidar de tudo nas vendas",
+      "contact_export": "levar a lista de clientes para uma planilha",
+      "contact_delete": "apagar contatos e empresas",
+      "conversation_message_delete": "apagar mensagens",
+      "campaign_send": "disparar campanhas",
+      "custom_role_manage": "mudar as funções",
+      "grant_above_own": "dar mais do que tem"
+    },
+    "FIXAS": {
+      "TITULO": "Funções que já vêm com a conta",
+      "PESSOAS": "nenhuma pessoa · não muda | {n} pessoa · não muda | {n} pessoas · não muda",
+      "ADMIN": {
+        "NOME": "Administrador",
+        "TEXTO": "Pode tudo, inclusive mudar as funções."
+      },
+      "SEM_FUNCAO": {
+        "NOME": "Sem função",
+        "TEXTO": "Vê e atende as conversas dos colegas, nos canais em que está. Cria e muda os contatos e as respostas prontas.",
+        "CHAMADA": "Dê uma função para mostrar menos."
+      }
+    },
+    "VAZIO": {
+      "TITULO": "Cada pessoa vê só o que precisa.",
+      "TEXTO": "Comece de uma função pronta. Leva um minuto.",
+      "CRIAR": "Criar a primeira função",
+      "DESTAQUE": "Ou comece por um destes",
+      "CRIAR_PRONTA": "Criar {nome}"
+    },
+    "PRONTAS": {
+      "ATENDENTE": {
+        "NOME": "Atendente",
+        "DESCRICAO": "Quem atende o WhatsApp no dia a dia.",
+        "CAP_1": "Atende as próprias conversas",
+        "CAP_2": "Cria e move as vendas",
+        "CAP_3": "Só olha os contatos"
+      },
+      "VENDEDOR": {
+        "NOME": "Vendedor",
+        "DESCRICAO": "Quem vende e procura clientes novos.",
+        "CAP_1": "Atende as próprias conversas",
+        "CAP_2": "Mexe nos contatos e nas vendas",
+        "CAP_3": "Procura clientes novos"
+      },
+      "SUPERVISOR": {
+        "NOME": "Supervisor",
+        "DESCRICAO": "Quem acompanha a equipe e todas as conversas.",
+        "CAP_1": "Lê e atende todas as conversas",
+        "CAP_2": "Mexe nos contatos e nas vendas",
+        "CAP_3": "Vê os relatórios"
+      }
+    },
+    "ERRO": {
+      "TITULO": "Não deu para abrir as funções agora.",
+      "TEXTO": "Suas funções continuam lá. Confira a internet e tente de novo.",
+      "TENTAR": "Tentar de novo"
+    },
+    "PAYWALL": {
+      "TITLE": "Mude de plano para criar funções",
+      "AVAILABLE_ON": "As funções da equipe fazem parte dos planos Business e Enterprise.",
+      "UPGRADE_PROMPT": "Com elas, cada pessoa vê só o que precisa.",
+      "UPGRADE_NOW": "Mudar de plano",
+      "CANCEL_ANYTIME": "Você pode mudar ou cancelar o plano quando precisar."
+    },
+    "ENTERPRISE_PAYWALL": {
+      "AVAILABLE_ON": "As funções da equipe fazem parte dos planos pagos.",
+      "UPGRADE_PROMPT": "Com elas, cada pessoa vê só o que precisa.",
+      "ASK_ADMIN": "Fale com o administrador para mudar o plano."
+    }
+  }
+}

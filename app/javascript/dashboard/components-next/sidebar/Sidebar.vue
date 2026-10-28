@@ -1383,6 +1383,8 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CUSTOM_ROLES'),
           icon: 'i-lucide-shield-plus',
           to: accountScopedRoute('custom_roles_list'),
+          // Com funcoes_guiadas ligada, a lista nova (#2308) fica marcada no menu.
+          activeOn: ['funcoes_equipe_list'],
         },
         {
           name: 'Conversation Workflow',

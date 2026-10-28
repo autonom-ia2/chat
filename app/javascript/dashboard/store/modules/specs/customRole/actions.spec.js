@@ -15,7 +15,10 @@ describe('#actions', () => {
       expect(commit.mock.calls).toEqual([
         [types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: true }],
         [types.default.SET_CUSTOM_ROLE, customRoleList],
-        [types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: false }],
+        [
+          types.default.SET_CUSTOM_ROLE_UI_FLAG,
+          { fetchingList: false, fetchingListFailed: false },
+        ],
       ]);
     });
     it('sends correct actions if API is error', async () => {
@@ -23,7 +26,10 @@ describe('#actions', () => {
       await actions.getCustomRole({ commit });
       expect(commit.mock.calls).toEqual([
         [types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: true }],
-        [types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: false }],
+        [
+          types.default.SET_CUSTOM_ROLE_UI_FLAG,
+          { fetchingList: false, fetchingListFailed: true },
+        ],
       ]);
     });
   });

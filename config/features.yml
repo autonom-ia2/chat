@@ -970,3 +970,13 @@
   display_name: Anúncios da Meta › criar anúncio, orçamento e datas
   enabled: false
   column: feature_flags_ext_2
+
+# Funções da equipe guiadas (#2308, épico #1784, PR 1). Ligada: entrar em Funções pelo menu abre a lista nova (cartões
+# com a frase do que cada função pode, quem está sem função e as duas fixas); criar, alterar, duplicar e apagar ainda
+# usam os fluxos de hoje até os PRs seguintes. Desligada: a tela de hoje, intacta. Sem migration e sem mudança de
+# servidor. Fim da feature_flags_ext_2: posição provisória 13 pela Orquestração, confirmada na hora da fila (na main de
+# hoje cai na 10, valor 512, 1 << 9, depois do meta_ads_criar).
+- name: funcoes_guiadas
+  display_name: Funções da equipe › lista e criação guiadas
+  enabled: false
+  column: feature_flags_ext_2
