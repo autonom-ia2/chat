@@ -160,7 +160,7 @@ const ESTICADO =
               nome: nome(cartao.chave),
             })
           "
-          class="relative z-10 text-sm font-medium underline min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          class="relative z-10 px-0 text-sm font-medium underline min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           @click="emit('criar')"
         >
           {{ $t('FUNCOES_EQUIPE.ESCOLHA.CRIAR_A_PARTIR') }}

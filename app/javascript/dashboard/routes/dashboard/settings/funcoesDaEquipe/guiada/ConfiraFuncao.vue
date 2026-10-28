@@ -136,7 +136,7 @@ watch(
     >
       <button
         type="button"
-        class="font-medium underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="px-0 font-medium underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         @click="trocarNome"
       >
         {{ $t('FUNCOES_EQUIPE.CONFIRA.DAR_NOME') }}
@@ -154,7 +154,7 @@ watch(
       </span>
       <button
         type="button"
-        class="font-medium underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="px-0 font-medium underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         @click="trocarNome"
       >
         {{ $t('FUNCOES_EQUIPE.CONFIRA.TROCAR') }}
@@ -210,7 +210,7 @@ watch(
       <button
         type="button"
         data-ver-canais
-        class="font-medium underline min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        class="px-0 font-medium underline min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         @click="folhaDosCanais?.abrir()"
       >
         {{ $t('FUNCOES_EQUIPE.CONFIRA.VER_CANAIS') }}

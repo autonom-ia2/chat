@@ -85,7 +85,7 @@ const alternar = () => {
       :aria-disabled="preso || undefined"
       :aria-label="titulo"
       :aria-describedby="descricao || undefined"
-      class="grid place-items-center size-11 shrink-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+      class="grid p-0 place-items-center size-11 shrink-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       :class="{ 'cursor-not-allowed': preso }"
       @click="alternar"
     >
