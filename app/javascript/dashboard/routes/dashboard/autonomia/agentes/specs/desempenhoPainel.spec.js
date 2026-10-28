@@ -369,6 +369,22 @@ describe('DesempenhoPage', () => {
     expect(semNaoLidas.find('[data-aviso-nao-lidas]').exists()).toBe(false);
   });
 
+  it('says how many conversations wait for the next automatic reading (#2301)', async () => {
+    respostaDaApi.painel = {
+      ...demo,
+      meta: { ...demo.meta, fonte: 'api', pendentes: 3 },
+    };
+    const wrapper = await abrir();
+    expect(wrapper.find('[data-aviso-pendentes]').exists()).toBe(true);
+
+    respostaDaApi.painel = {
+      ...demo,
+      meta: { ...demo.meta, fonte: 'api', pendentes: 0 },
+    };
+    const semPendentes = await abrir();
+    expect(semPendentes.find('[data-aviso-pendentes]').exists()).toBe(false);
+  });
+
   it('hides the export buttons from whoever lacks contact_export (#2251)', async () => {
     respostaDaApi.painel = { ...demo, meta: { ...demo.meta, fonte: 'api' } };
     estado.exporta = false;
@@ -556,6 +572,17 @@ describe('EstadoDoPainel', () => {
     });
     expect(wrapper.text()).toContain('LEITURA_DESLIGADA_SEM_ACESSO');
     expect(wrapper.find('[data-acao-estado]').exists()).toBe(false);
+  });
+
+  it('with the key refused, whoever only sees is asked to call the admin and can go to the numbers (#2301)', () => {
+    const wrapper = montar({
+      variante: 'chave_recusada',
+      podeGerenciar: false,
+    });
+    expect(wrapper.text()).toContain('CHAVE_RECUSADA_SEM_ACESSO');
+    expect(wrapper.get('[data-acao-estado]').text()).toBe(
+      'AGENTS.DESEMPENHO.ESTADO.CHAVE_RECUSADA_SEM_ACESSO_BOTAO'
+    );
   });
 
   it('without the AI key, whoever only sees can still go to the numbers', () => {

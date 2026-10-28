@@ -70,10 +70,14 @@ module Autonomia::Desempenho::Exportacao::Planilha::AcoesELeitura
     secao_de_texto(sheet, t('como_ler.nao_provam'), linhas_do_que_nao_prova_na_planilha)
   end
 
+  # #2301: com os avisos da leitura automática (parada, pendentes, não lidas, instrução), como na tela e no PDF.
   def linhas_do_que_nao_prova_na_planilha
     fixas = Autonomia::Desempenho::Exportacao::Textos::NAO_PROVAM.map { |chave| [nil, t("como_ler.nao_prova.#{chave}")] }
-    nomes['fechou_ressalva'].present? ? fixas << [nil, nomes['fechou_ressalva']] : fixas
+    fixas << [nil, nomes['fechou_ressalva']] if nomes['fechou_ressalva'].present?
+    fixas + avisos_da_leitura.filter_map { |aviso| texto_do_aviso(aviso)&.then { |texto| [nil, texto] } }
   end
+
+  def avisos_da_leitura = Array(@painel['avisos']).select { |aviso| aviso['id'].to_s.start_with?('leitura_') }
 
   def secao_de_texto(sheet, titulo, linhas)
     sheet.add_row([titulo], style: @estilos.secao, types: :string, height: 20)

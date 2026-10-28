@@ -55,6 +55,8 @@ module ChaveDeLeitura
     abort("#{e.class.name}: #{e.message}")
   rescue Errno::ENOENT
     abort('arquivo não encontrado')
+  rescue SystemCallError => e
+    abort("não deu para ler ou gravar os arquivos: #{e.class.name}")
   end
 
   # Só o dono lê o arquivo: 0600 ao criar e, se ele já existia com outra permissão, 0600 ANTES de escrever a chave.
@@ -92,6 +94,8 @@ module ChaveDeLeitura
     pasta == REPOSITORIO || pasta.start_with?("#{REPOSITORIO}/") || dentro_de_git?(pasta)
   rescue Errno::ENOENT
     abort('a pasta de --saida não existe')
+  rescue SystemCallError => e
+    abort("não deu para conferir a pasta de --saida: #{e.class.name}")
   end
 
   # O arquivo de destino que já existe como link simbólico grava onde o link aponta.

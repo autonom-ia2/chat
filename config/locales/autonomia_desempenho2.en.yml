@@ -61,6 +61,13 @@ en:
           instrucao_mudou: "The AI instruction changed on %{data}. Before and after don't compare directly."
           lido_por_amostra: We read a sample of the conversations in this period.
           sem_anuncio: This account has no ads connected.
+          leitura_teto: The last automatic reading stopped at the daily AI spending limit. The rest goes into the next reading.
+          leitura_sem_ia: The automatic reading is not working on this account because the AI key is not connected.
+          leitura_chave_recusada: The AI rejected this account's key. The automatic reading only comes back after the key is checked.
+          leitura_erro: The last automatic reading stopped because of an error. The numbers show what was already read.
+          leitura_pendentes: "Conversations waiting for the next AI reading: %{n}. The numbers stop before them."
+          leitura_nao_lidas: "Conversations the AI could not read: %{n}. If they were read before, their numbers come from that reading; if they never were, they are left out."
+          leitura_instrucao: The agent's instruction changed after the reading was set up. The AI keeps reading with the old criteria until support updates the reading.
         kpi:
           procuras: Requests
           conversas: Conversations

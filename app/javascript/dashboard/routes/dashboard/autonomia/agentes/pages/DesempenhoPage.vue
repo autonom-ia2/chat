@@ -274,7 +274,7 @@ const exportar = async formato => {
 const aoEstado = variante => {
   if (variante === 'sem_conversas') periodo.value = 'tudo';
   else if (variante === 'leitura_desligada') trocar({ estado: undefined });
-  else if (variante === 'sem_ia' && ehAdmin.value) {
+  else if (['sem_ia', 'chave_recusada'].includes(variante) && ehAdmin.value) {
     router.push({
       name: 'settings_applications_integration',
       params: { integration_id: CRM_AI_INTEGRATION_ID },
@@ -390,6 +390,18 @@ const aoMigalha = item => router.push(item.destino);
           data-aviso-instrucao
           :destaque="t(`${NS}.FONTE.INSTRUCAO_TITULO`)"
           :texto="t(`${NS}.FONTE.INSTRUCAO_TEXTO`)"
+        />
+        <Ressalva
+          v-if="meta.pendentes > 0"
+          data-aviso-pendentes
+          :destaque="
+            t(
+              `${NS}.FONTE.PENDENTES_TITULO`,
+              { n: meta.pendentes },
+              meta.pendentes
+            )
+          "
+          :texto="t(`${NS}.FONTE.PENDENTES_TEXTO`)"
         />
         <Ressalva
           v-if="meta.nao_lidas > 0"

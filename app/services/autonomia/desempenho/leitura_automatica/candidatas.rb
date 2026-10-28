@@ -1,15 +1,18 @@
 # As conversas que a leitura automática precisa ler (#2301): as da conta com mensagem pública (do cliente ou da
 # equipe) depois de onde a leitura parou e até o corte, e em que o agente falou alguma vez. "Onde parou" é o
-# `lida_ate_em` da leitura da conversa; a conversa que nunca foi lida usa o piso da rodada.
+# `lida_ate_em` da leitura da conversa. A conversa que nunca foi lida usa o mais antigo entre o piso da rodada e o
+# `piso_sem_leitura` (o corte menos 30 dias): a conversa que a carga não leu, ou que chegou com mensagens antigas
+# (histórico do WhatsApp, importação), entra na fila mesmo com todas as mensagens antes do piso. Depois de lida (ou
+# marcada como não lida), ela tem leitura e passa a usar o `lida_ate_em`.
 # Ordem: a que espera há mais tempo primeiro (a mensagem nova mais antiga), para o teto e o limite da rodada não
 # deixarem sempre as mesmas para trás.
 class Autonomia::Desempenho::LeituraAutomatica::Candidatas
-  def initialize(account:, sujeito_type:, sujeito_id:, remetentes:, piso:, corte:) # rubocop:disable Metrics/ParameterLists
+  def initialize(account:, sujeito_type:, sujeito_id:, remetentes:, piso:, corte:, piso_sem_leitura: piso) # rubocop:disable Metrics/ParameterLists
     @account = account
     @sujeito_type = sujeito_type
     @sujeito_id = sujeito_id
     @remetentes = Array(remetentes)
-    @piso = piso
+    @piso = [piso, piso_sem_leitura].min
     @corte = corte
   end
 

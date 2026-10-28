@@ -72,8 +72,9 @@ class Autonomia::Desempenho::Painel
 
   def com_leitura? = ficha.present? && todas.exists? && dados_ate.present?
 
-  # A leitura automática vale para este agente: a ENV ligada e a ficha com a chave de leitura. Desligada (o rollback),
-  # as rodadas antigas não mudam nada na tela.
+  # A leitura automática vale para este agente: a ENV ligada e a ficha com a chave de leitura. Desligada, as rodadas
+  # antigas não mudam nada na tela, mas o que elas gravaram fica: a gravação troca as procuras da carga pelas novas, e
+  # desligar a ENV não devolve a carga (a volta dos dados é o pacote de volta da conta, por psql).
   def automatica? = @automatica
 
   # As datas do período e o que depende delas, refeito a cada chamada.
@@ -88,23 +89,39 @@ class Autonomia::Desempenho::Painel
   # O que a leitura automática (#2301) acrescenta à meta:
   # - `lido_ate`: o corte da última rodada que leu (Rodada.leram) quando ela não deixou pendente; com pendentes, o
   #   momento antes da mensagem pendente mais antiga (sem ela, o piso da rodada), no fuso: tudo antes disso foi lido;
-  # - `situacao`: `sem_ia`, `chave_recusada`, `teto` ou `erro` quando a última rodada parou por isso;
-  # - `nao_lidas`: quantas conversas a leitura automática deixou como não lidas (grandes demais ou com erro repetido):
-  #   os números delas são os da leitura anterior;
+  # - `situacao`: `sem_ia`, `chave_recusada`, `teto` ou `erro` quando a última rodada parou por isso (com uma rodada
+  #   rodando agora, nenhuma: a parada de antes pode já não valer);
+  # - `pendentes`: quantas conversas a última rodada que leu deixou para a próxima (o "Lido até" para antes delas);
+  # - `nao_lidas`: quantas conversas do período a leitura automática deixou como não lidas (grandes demais ou com erro
+  #   repetido): a última mensagem delas cai no período, e as de teste ficam de fora. Os números delas são os da última
+  #   leitura, quando houve uma;
   # - `instrucao_mudou`: a instrução do agente mudou depois da chave de leitura (nil para o robô de outro sistema);
   # - `recomendacoes_de`: as datas das sugestões quando elas são de outro período.
-  # Tudo isso só com a leitura automática ligada para o agente (`automatica?`); o aviso de instrução vale sempre.
+  # Tudo isso só com a leitura automática ligada para o agente (`automatica?`). Os avisos vão também em `avisos`, para
+  # as exportações dizerem o mesmo que a tela.
   def com_leitura_automatica(painel)
     meta = painel['meta'].merge('lido_ate' => lido_ate, 'instrucao_mudou' => instrucao_mudou?, 'recomendacoes_de' => @recomendacoes_de,
-                                'nao_lidas' => nao_lidas)
+                                'nao_lidas' => nao_lidas, 'pendentes' => pendentes)
     parada = ultima_rodada&.status if automatica?
     meta['situacao'] ||= parada if Autonomia::Desempenho::Rodada::PARADAS.include?(parada)
-    painel.merge('meta' => meta)
+    painel.merge('meta' => meta, 'avisos' => Array(painel['avisos']) + avisos_da_leitura(meta, parada))
+  end
+
+  # Os avisos da leitura automática para as exportações (o PDF e a planilha), na ordem da tela.
+  def avisos_da_leitura(meta, parada)
+    [(["leitura_#{parada}", {}] if Autonomia::Desempenho::Rodada::PARADAS.include?(parada)),
+     (['leitura_pendentes', { 'n' => meta['pendentes'] }] if meta['pendentes'].positive?),
+     (['leitura_nao_lidas', { 'n' => meta['nao_lidas'] }] if meta['nao_lidas'].positive?),
+     (['leitura_instrucao', {}] if meta['instrucao_mudou'])].compact.map { |id, valores| { 'id' => id, 'valores' => valores } }
   end
 
   def rodadas = Autonomia::Desempenho::Rodada.do_sujeito(@account, @sujeito_type, @sujeito_id).recentes
 
-  def ultima_rodada = rodadas.where.not(status: 'rodando').first
+  # A última rodada que fechou, ou nil com uma rodando agora.
+  def ultima_rodada
+    rodada = rodadas.first
+    rodada unless rodada.nil? || rodada.status == 'rodando'
+  end
 
   attr_reader :lido_ate
 
@@ -119,20 +136,29 @@ class Autonomia::Desempenho::Painel
   # Até onde os números valem: a última mensagem lida, ou o "Lido até" quando ele vem antes.
   def ate_onde_leu = [dados_ate, lido_ate].compact.min
 
-  # Só as conversas que a pessoa vê.
+  # Só as conversas que a pessoa vê, com a última mensagem dentro do período e sem procura de teste.
   def nao_lidas
     return 0 unless automatica?
 
-    escopo = leituras.where(status: 'nao_lida', lote: Autonomia::Desempenho::LeituraAutomatica::Gravacao::LOTE)
+    escopo = leituras.where(status: 'nao_lida', lote: Autonomia::Desempenho::LeituraAutomatica::Gravacao::LOTE,
+                            lida_ate_em: faixa_em_horas(@inicio..@fim))
+                     .where.not(conversation_id: todas.where(teste: true).select(:conversation_id))
     escopo = escopo.where(conversation_id: @visiveis.select(:id)) if @visiveis
     escopo.count
+  end
+
+  def pendentes
+    return 0 unless automatica?
+
+    rodadas.leram.first&.conversas_pendentes.to_i
   end
 
   # A rodada grava a mensagem pendente mais antiga ao fechar; sem ela, o piso da rodada.
   def antes_da_pendente(rodada) = rodada.pendente_desde ? rodada.pendente_desde - 1.second : rodada.piso_em
 
+  # Só com a leitura automática: desligada, ninguém lê com a chave, e o aviso não tem o que dizer.
   def instrucao_mudou?
-    return nil unless @sujeito_type == 'agente' && ficha.instrucao_hash.present?
+    return nil unless automatica? && @sujeito_type == 'agente' && ficha.instrucao_hash.present?
 
     Autonomia::Desempenho::Ficha.hash_da_instrucao(@account, @sujeito_type, @sujeito_id) != ficha.instrucao_hash
   end

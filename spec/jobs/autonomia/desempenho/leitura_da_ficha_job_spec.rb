@@ -110,6 +110,20 @@ RSpec.describe Autonomia::Desempenho::LeituraDaFichaJob do
     expect(Redis::Alfred.with { |redis| redis.keys("autonomia:desempenho:leitura:rodou:#{account.id}:*") }).to be_empty
   end
 
+  it 'erro ao marcar o dia depois da rodada (já paga) só fica no log: o job não tenta de novo' do
+    rodadas_devolvem
+    allow(Redis::Alfred).to receive(:set).and_call_original
+    allow(Redis::Alfred).to receive(:set).with(start_with('autonomia:desempenho:leitura:rodou:'), anything, anything)
+                                         .and_raise(Redis::CannotConnectError)
+    allow(Rails.logger).to receive(:error)
+
+    ligada { described_class.perform_now(account.id, ficha_a.id) }
+
+    expect(Rails.logger).to have_received(:error)
+      .with("[desempenho][leitura] conta=#{account.id} ficha=#{ficha_a.id} marca_rodou=Redis::CannotConnectError")
+    expect(described_class).not_to have_been_enqueued
+  end
+
   it 'com a ENV desligada, não roda' do
     allow(orquestrador).to receive(:new)
 

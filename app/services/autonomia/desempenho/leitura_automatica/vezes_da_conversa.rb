@@ -4,8 +4,9 @@
 #
 # - `falhas`: a resposta recusada (fora do catálogo, JSON quebrado), culpa da conversa;
 # - `inesperados`: um bug do sistema naquela conversa (na gravação, na transcrição);
-# - `passageiras`: erro passageiro na chamada (rede, tempo esgotado, 429, 5xx). É o caso da conversa que estoura o tempo
-#   toda vez: a OpenAI cobra a chamada, mas o consumo não é gravado e não entra no teto.
+# - `passageiras`: só o tempo esgotado da chamada (a OpenAI fora do ar, 429 e 5xx não contam: não são culpa da
+#   conversa). É o caso da conversa que estoura o tempo toda vez: a OpenAI cobra a chamada, mas o consumo não é gravado
+#   e não entra no teto.
 class Autonomia::Desempenho::LeituraAutomatica::VezesDaConversa
   LIMITES = { 'falhas' => 2, 'inesperados' => 5, 'passageiras' => 3 }.freeze
   POR = 7.days

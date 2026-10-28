@@ -111,6 +111,20 @@ module Autonomia::Desempenho::Exportacao::Textos
     fuso.to_s.tr('_', ' ')
   end
 
+  # A frase de um aviso do painel (`avisos`), ou nil quando não há texto para ele.
+  def texto_do_aviso(aviso)
+    t("avisos.#{aviso['id']}", **valores_do_aviso(aviso), default: '').presence
+  end
+
+  def valores_do_aviso(aviso)
+    valores = aviso['valores'].to_h.symbolize_keys
+    valores[:dia] = data_longa(valores[:dia]) if valores[:dia]
+    valores[:data] = data_longa(valores[:data]) if valores[:data]
+    valores[:secoes] = lista(Array(valores[:secoes]).map { |secao| t("secoes.#{secao}") }) if valores.key?(:secoes)
+    valores[:n] = numero(valores[:n]) if valores[:n]
+    valores
+  end
+
   # "fuso da sua conta (America/Sao Paulo)", a mesma frase da tela.
   def fuso_da_conta(fuso)
     t('formato.fuso_da_conta', fuso: fuso_legivel(fuso))

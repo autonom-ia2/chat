@@ -79,6 +79,23 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(painel.call('7')['meta']).to include('lido_ate' => '2026-10-22T07:00', 'situacao' => 'teto')
   end
 
+  it 'com uma rodada rodando agora, a parada de antes não aparece' do
+    rodada!('teto', Time.utc(2026, 10, 22, 10, 0))
+    rodada!('rodando', Time.utc(2026, 10, 23, 10, 0), lidas: 0)
+
+    expect(painel.call('7')['meta']['situacao']).to be_nil
+  end
+
+  it 'as pendentes da última rodada que leu vão em pendentes e, com a parada, em avisos para as exportações' do
+    rodada!('teto', Time.utc(2026, 10, 23, 10, 0), pendentes: 3)
+
+    resultado = painel.call('7')
+
+    expect(resultado['meta']['pendentes']).to eq(3)
+    expect(resultado['avisos']).to include({ 'id' => 'leitura_teto', 'valores' => {} },
+                                           { 'id' => 'leitura_pendentes', 'valores' => { 'n' => 3 } })
+  end
+
   it 'a chave recusada pela IA vira a situação própria' do
     rodada!('chave_recusada', Time.utc(2026, 10, 23, 10, 0))
 
@@ -120,6 +137,24 @@ RSpec.describe Autonomia::Desempenho::Painel do
     rodada!('ok', Time.utc(2026, 10, 22, 10, 0))
 
     expect(painel.call('7')['meta']['nao_lidas']).to eq(1)
+  end
+
+  it 'as não lidas contam só as do período e sem procura de teste' do
+    [Time.utc(2026, 10, 21, 18), Time.utc(2026, 9, 1, 18), Time.utc(2026, 10, 21, 19)].each_with_index do |ate, indice|
+      outra = create(:conversation, account: account, inbox: inbox)
+      Autonomia::Desempenho::Leitura.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, conversation: outra,
+                                             lida_ate_em: ate, versao_ficha: 1, status: 'nao_lida', lote: 'leitura_automatica')
+      next unless indice == 2
+
+      Autonomia::Desempenho::Procura.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, conversation: outra, ordem: 1,
+                                             inicio_em: ate - 1.hour, fim_em: ate, versao_ficha: 1, lote: 'spec', teste: true)
+    end
+    rodada!('ok', Time.utc(2026, 10, 22, 10, 0))
+
+    resultado = painel.call('7')
+
+    expect(resultado['meta']['nao_lidas']).to eq(1)
+    expect(resultado['avisos']).to include({ 'id' => 'leitura_nao_lidas', 'valores' => { 'n' => 1 } })
   end
 
   it 'sem as sugestões do período exato, mostra as últimas do mesmo período com as datas delas' do
@@ -173,6 +208,14 @@ RSpec.describe Autonomia::Desempenho::Painel do
 
       agente.update!(instruction: 'Responda com o prazo e o preço.')
       expect(described_class.new(account: account, sujeito_type: 'agente', sujeito_id: agente.id).call('7')['meta']['instrucao_mudou']).to be(true)
+    end
+
+    it 'com a leitura automática desligada não avisa: ninguém lê com a chave' do
+      ficha.update!(instrucao_hash: 'outra')
+
+      meta = with_modified_env(AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA: 'false') { painel_do_agente.call('7')['meta'] }
+
+      expect(meta['instrucao_mudou']).to be_nil
     end
 
     it 'sem hash guardado, e para o robô de outro sistema, não avisa' do

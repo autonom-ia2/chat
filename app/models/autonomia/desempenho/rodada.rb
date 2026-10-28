@@ -20,9 +20,9 @@ class Autonomia::Desempenho::Rodada < ApplicationRecord
 
   # A rodada que ficou `rodando` porque o processo foi interrompido no meio (deploy: o Sidekiq::Shutdown não é
   # StandardError) fecha como `erro`, para não ficar `rodando` para sempre. Roda no `ensure` do orquestrador: não
-  # levanta, só loga.
+  # levanta, só loga. Confere o status do banco, não o da memória: um `update!` que falhou deixa o novo status só aqui.
   def interrompida!
-    return unless status == 'rodando'
+    return unless status_in_database == 'rodando'
 
     update_columns(status: 'erro', terminada_em: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
   rescue StandardError => e

@@ -45,11 +45,14 @@ class Autonomia::Desempenho::LeituraAutomatica::Teto
 
   def teto_da(leitura) = numero(leitura['teto_diario_usd']) || numero(ENV.fetch(ENV_TETO, nil)) || TETO_DIARIO_USD
 
-  # As fichas vigentes com chave de leitura dos outros agentes da conta.
+  # As fichas vigentes com chave de leitura dos outros agentes da conta que entram na leitura (Elegivel): o agente
+  # apagado ou desligado não lê, e o teto dele não vale.
   def outras_fichas
     sujeitos = Autonomia::Desempenho::Ficha.where(account_id: @account.id).where.not(chave_de_leitura: [nil, ''])
                                            .distinct.pluck(:sujeito_type, :sujeito_id) - [[@ficha.sujeito_type, @ficha.sujeito_id]]
     sujeitos.filter_map do |tipo, id|
+      next unless Autonomia::Desempenho::LeituraAutomatica::Elegivel.sujeito?(@account, tipo, id)
+
       ficha = Autonomia::Desempenho::Ficha.vigente(@account, tipo, id)
       ficha if ficha&.chave_de_leitura.present?
     end

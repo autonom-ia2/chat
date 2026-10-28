@@ -8,10 +8,11 @@
 # - Os agentes da mesma conta rodam em fila (o teto diário é da conta): com outra rodada da conta em andamento, o
 #   orquestrador levanta ContaOcupada e este job se reagenda para dali a ESPERA_DA_CONTA, até TENTATIVAS_DA_CONTA
 #   vezes, que somam mais que a trava de 6 horas do orquestrador. Esgotadas, fica registrado no log e o agente lê no
-#   dia seguinte.
+#   dia seguinte. Sem `jitter`: a espera fixa mantém a ordem em que o job da conta enfileirou os agentes.
 # - Uma rodada por agente por dia, no fuso da conta: a marca `rodou` no Redis, gravada com a rodada fechada em
 #   qualquer status (ok, teto, sem_ia, chave_recusada ou erro), barra o job duplicado do mesmo dia (uma nova tentativa
-#   do job da conta) e não deixa pagar duas vezes.
+#   do job da conta) e não deixa pagar duas vezes. Erro ao gravar a marca, com a rodada já paga, só fica no log: uma
+#   nova tentativa do job pagaria a rodada de novo.
 # - Confere de novo, na hora de rodar, que a leitura segue ligada, a conta e o agente seguem elegíveis (o mesmo critério
 #   do job da conta) e a ficha ainda é a vigente com chave de leitura.
 class Autonomia::Desempenho::LeituraDaFichaJob < ApplicationJob
@@ -28,7 +29,7 @@ class Autonomia::Desempenho::LeituraDaFichaJob < ApplicationJob
     Rails.logger.error("[desempenho][leitura] conta=#{job.arguments.first} ficha=#{job.arguments.second} desistiu=#{erro.class.name}")
   end
   discard_on ::Autonomia::Desempenho::LeituraAutomatica::Orquestrador::RodadaComErro
-  retry_on ::Autonomia::Desempenho::LeituraAutomatica::Orquestrador::ContaOcupada, wait: ESPERA_DA_CONTA,
+  retry_on ::Autonomia::Desempenho::LeituraAutomatica::Orquestrador::ContaOcupada, wait: ESPERA_DA_CONTA, jitter: 0,
                                                                                    attempts: TENTATIVAS_DA_CONTA do |job, _erro|
     Rails.logger.warn("[desempenho][leitura] conta=#{job.arguments.first} ficha=#{job.arguments.second} conta_ocupada_esgotou")
   end
@@ -49,15 +50,22 @@ class Autonomia::Desempenho::LeituraDaFichaJob < ApplicationJob
 
   def rodar(ficha, rodou)
     rodada = ::Autonomia::Desempenho::LeituraAutomatica::Orquestrador.new(ficha).call
-    Redis::Alfred.set(rodou, rodada.id, ex: RODOU_POR.to_i)
+    marcar(ficha, rodou, rodada.id)
   rescue ::Autonomia::Desempenho::LeituraAutomatica::Orquestrador::ContaOcupada
     raise
   rescue ::Autonomia::Desempenho::LeituraAutomatica::Orquestrador::RodadaComErro
-    Redis::Alfred.set(rodou, 'erro', ex: RODOU_POR.to_i)
+    marcar(ficha, rodou, 'erro')
     raise
   rescue StandardError => e
     Rails.logger.error("[desempenho][leitura] conta=#{ficha.account_id} ficha=#{ficha.id} antes_da_rodada=#{e.class.name}")
     raise
+  end
+
+  # A rodada já fechou (e pagou): erro aqui não pode subir, ou o job tentaria de novo e pagaria tudo outra vez.
+  def marcar(ficha, rodou, valor)
+    Redis::Alfred.set(rodou, valor, ex: RODOU_POR.to_i)
+  rescue StandardError => e
+    Rails.logger.error("[desempenho][leitura] conta=#{ficha.account_id} ficha=#{ficha.id} marca_rodou=#{e.class.name}")
   end
 
   def rodar?(ficha)
