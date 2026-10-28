@@ -508,6 +508,20 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
   end
 
   describe 'exclusão por contato' do
+    # #2084: a cadência que já estava andando para quando a pessoa marca o contato fora do funil.
+    it 'para a cadência ativa do contato marcado parceiro' do
+      account, user = create_account_and_user
+      account.enable_features!('contato_relacao')
+      follow_up = setup_followup(account: account, user: user)
+      follow_up.conversation.contact.update!(relacao: :parceiro)
+      expect(Crm::Ai::FollowUpComposer).not_to receive(:new)
+
+      result = described_class.new(follow_up: follow_up, now: Time.current).perform
+
+      expect(result.status).to eq(:stopped)
+      expect(follow_up.card.reload.metadata.dig('ai', 'auto_followup_state', 'stopped_reason')).to eq('contact_disabled')
+    end
+
     it 'para a cadência sem chamar a IA e sem gastar o ciclo' do
       account, user = create_account_and_user
       follow_up = setup_followup(account: account, user: user)
