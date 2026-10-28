@@ -2,7 +2,8 @@
 # (usa o `get`/`post` privados dele). A situação do próprio anúncio (`status`: ACTIVE, PAUSED…), a entrega de fato
 # (`effective_status`: também CAMPAIGN_PAUSED, ADSET_PAUSED…), a conta de anúncios dona dele e o post da Página por
 # trás do criativo. Do criativo também vêm a mídia do anúncio no Instagram e a conta do Instagram que o publica
-# (comentários do Instagram, #2196). O nome vai na confirmação de pausar e ativar quando o anúncio não tem números (#2335).
+# (comentários do Instagram, #2196). O nome vem sempre; quem usa é o detalhe do anúncio sem números, na confirmação de
+# pausar e ativar (#2335).
 module Meta::AdsGraphClient::Management
   AD_MANAGEMENT_FIELDS = 'id,name,account_id,status,effective_status,' \
                          'creative{effective_object_story_id,effective_instagram_media_id,instagram_permalink_url,instagram_user_id}'.freeze

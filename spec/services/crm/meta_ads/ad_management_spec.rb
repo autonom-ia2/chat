@@ -39,6 +39,10 @@ RSpec.describe Crm::MetaAds::AdManagement do
   end
 
   describe '#payload' do
+    it 'pede o nome do anúncio à Meta (o detalhe sem números não tem outro lugar de onde tirar, #2335)' do
+      expect(Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS.split(',')).to include('name')
+    end
+
     it 'traz a situação, a entrega, o post da Página e se pode mudar' do
       stub_permissions('ads_read', 'ads_management')
       stub_ad(effective: 'ADSET_PAUSED')
