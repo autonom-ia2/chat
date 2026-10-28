@@ -41,7 +41,7 @@ class Autonomia::Desempenho::Painel
     preparar(chave)
     return sem_conversas(chave) if @visiveis && !todas.exists?(conversation_id: @visiveis.select(:id))
 
-    painel = agregador.painel(chave, @inicio, @fim, anterior: @anterior, dados_ate: dados_ate, fonte: FONTE)
+    painel = com_leitura_automatica(agregador.painel(chave, @inicio, @fim, anterior: @anterior, dados_ate: dados_ate, fonte: FONTE))
     Autonomia::Desempenho::Visibilidade.new(ocultas: @visiveis && ocultas_no_periodo, ve_valores: @ve_valores)
                                        .aplicar(com_lista(painel))
   end
@@ -74,7 +74,34 @@ class Autonomia::Desempenho::Painel
   def preparar(chave)
     @visiveis = so_parte_das_caixas? ? @pedidas : nil
     @inicio, @fim, @anterior = self.class.intervalo(chave, fim_dos_dados, inicio_dos_dados)
-    @procuras = @procuras_do_periodo = @mensagens = nil
+    @procuras = @procuras_do_periodo = @mensagens = @recomendacoes_de = nil
+  end
+
+  # O que a leitura automática (#2301) acrescenta à meta:
+  # - `lido_ate`: o corte da última rodada que leu (ok ou teto), no fuso;
+  # - `situacao`: `sem_ia` ou `teto` quando a última rodada parou por isso;
+  # - `instrucao_mudou`: a instrução do agente mudou depois da chave de leitura (nil para o robô de outro sistema);
+  # - `recomendacoes_de`: as datas das sugestões quando elas são de outro período (as do período ainda não vieram).
+  def com_leitura_automatica(painel)
+    meta = painel['meta'].merge('lido_ate' => lido_ate, 'instrucao_mudou' => instrucao_mudou?, 'recomendacoes_de' => @recomendacoes_de)
+    parada = ultima_rodada&.status
+    meta['situacao'] ||= parada if %w[sem_ia teto].include?(parada)
+    painel.merge('meta' => meta)
+  end
+
+  def rodadas = Autonomia::Desempenho::Rodada.do_sujeito(@account, @sujeito_type, @sujeito_id).recentes
+
+  def ultima_rodada = rodadas.where.not(status: 'rodando').first
+
+  def lido_ate
+    corte = rodadas.where(status: Autonomia::Desempenho::Rodada::LIDAS).pick(:corte_em)
+    corte&.in_time_zone(fuso)&.strftime('%Y-%m-%dT%H:%M')
+  end
+
+  def instrucao_mudou?
+    return nil unless @sujeito_type == 'agente' && ficha.instrucao_hash.present?
+
+    Autonomia::Desempenho::Ficha.hash_da_instrucao(@account, @sujeito_type, @sujeito_id) != ficha.instrucao_hash
   end
 
   def ficha
@@ -175,13 +202,17 @@ class Autonomia::Desempenho::Painel
                                                         visiveis: @visiveis, faixa: faixa)
   end
 
-  # As sugestões guardadas para este período, só se forem das mesmas datas e da mesma ficha. Elas são calculadas
-  # com a conta inteira: quem vê só parte das caixas não as recebe.
+  # As sugestões guardadas para este período, da mesma ficha. Elas são calculadas com a conta inteira: quem vê só parte
+  # das caixas não as recebe. Com a leitura automática, as datas andam todo dia e as sugestões nem sempre acompanham
+  # (#2301): sem as do período exato, vão as últimas do mesmo período, com as datas delas em `meta.recomendacoes_de`.
   def recomendacoes(chave, inicio, fim)
     return [] if @visiveis
 
     cache = Autonomia::Desempenho::Recomendacao.do_sujeito(@account, @sujeito_type, @sujeito_id)
-                                               .find_by(periodo: chave, inicio: inicio, fim: fim, versao_ficha: ficha.versao)
-    cache ? cache.cartoes : []
+                                               .find_by(periodo: chave, versao_ficha: ficha.versao)
+    return [] if cache.nil?
+
+    @recomendacoes_de = { 'inicio' => cache.inicio.iso8601, 'fim' => cache.fim.iso8601 } unless cache.inicio == inicio && cache.fim == fim
+    cache.cartoes
   end
 end

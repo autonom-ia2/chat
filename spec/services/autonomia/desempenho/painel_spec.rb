@@ -63,7 +63,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(resultado['kpis'].find { |kpi| kpi['id'] == 'tempo_resposta' }['valor']).to eq(30)
   end
 
-  it 'usa a sugestão guardada só quando ela é do mesmo período e da mesma ficha' do
+  it 'usa a sugestão guardada do mesmo período e da mesma ficha; de outras datas, diz quais (#2301)' do
     base = { account: account, sujeito_type: 'robo', sujeito_id: robo.id, versao_ficha: 1, lote: 'spec', gerada_em: Time.current }
     Autonomia::Desempenho::Recomendacao.create!(base.merge(periodo: '7', inicio: Date.new(2026, 10, 20), fim: Date.new(2026, 10, 22),
                                                            cartoes: [{ 'id' => 'r1', 'titulo' => 'Dizer o prazo' }]))
@@ -71,6 +71,10 @@ RSpec.describe Autonomia::Desempenho::Painel do
                                                            cartoes: [{ 'id' => 'r1' }]))
 
     expect(painel.call('7')['recomendacoes']).to eq([{ 'id' => 'r1', 'titulo' => 'Dizer o prazo' }])
+    expect(painel.call('7')['meta']['recomendacoes_de']).to be_nil
+    expect(painel.call('30')['recomendacoes']).to eq([{ 'id' => 'r1' }])
+    expect(painel.call('30')['meta']['recomendacoes_de']).to eq('inicio' => '2026-09-01', 'fim' => '2026-09-30')
+    Autonomia::Desempenho::Recomendacao.find_by(periodo: '30').update!(versao_ficha: 2)
     expect(painel.call('30')['recomendacoes']).to eq([])
   end
 

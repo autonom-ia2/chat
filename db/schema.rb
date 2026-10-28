@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_610000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -725,6 +725,26 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
     t.index ["account_id", "sujeito_type", "sujeito_id", "periodo"], name: "idx_autonomia_desempenho_recomendacoes_periodo", unique: true
     t.check_constraint "periodo::text = ANY ('{7,30,90,tudo}'::text[])", name: "autonomia_desempenho_recomendacoes_periodo"
     t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_recomendacoes_sujeito"
+  end
+
+  create_table "autonomia_desempenho_rodadas", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "sujeito_type", null: false
+    t.bigint "sujeito_id", null: false
+    t.datetime "corte_em", null: false
+    t.datetime "iniciada_em", null: false
+    t.datetime "terminada_em"
+    t.datetime "piso_em", null: false
+    t.string "status", null: false
+    t.integer "conversas_lidas", default: 0, null: false
+    t.integer "conversas_pendentes", default: 0, null: false
+    t.decimal "custo_usd", precision: 12, scale: 6, default: "0.0", null: false
+    t.string "lote", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "sujeito_id", "iniciada_em"], name: "idx_autonomia_desempenho_rodadas_inicio"
+    t.check_constraint "status::text = ANY ('{rodando,ok,teto,sem_ia,erro}'::text[])", name: "autonomia_desempenho_rodadas_status"
+    t.check_constraint "sujeito_type::text = ANY ('{agente,robo}'::text[])", name: "autonomia_desempenho_rodadas_sujeito"
   end
 
   create_table "autonomia_guide_avisos", force: :cascade do |t|
@@ -4481,6 +4501,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_590000) do
   add_foreign_key "autonomia_desempenho_procuras", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_procuras", "conversations", on_delete: :cascade
   add_foreign_key "autonomia_desempenho_recomendacoes", "accounts", on_delete: :cascade
+  add_foreign_key "autonomia_desempenho_rodadas", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "accounts", on_delete: :cascade
   add_foreign_key "autonomia_guide_avisos", "autonomia_guide_turns", column: "turno_id", on_delete: :nullify
   add_foreign_key "autonomia_guide_avisos", "users", on_delete: :cascade
