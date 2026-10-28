@@ -5,16 +5,18 @@
 # (crmKanban.js) OR force a refetch-on-realtime. Per-filter realtime contract:
 #   * client-predicate (mirrored in cardMatchesFilters): stage_ids, value_min/value_max,
 #     score_min/score_max,
-#     stale_days, standalone, team_id, priority, inbox_id, owner_id, search, follow_up,
-#     campaign_source_ids (mirrored via card.campaigns.some(t => ids.includes(t.source_id))).
+#     stale_days, standalone, team_id, priority, inbox_id, owner_id, search, follow_up.
 #   * server-only + refetch-on-realtime (cannot be derived from a single upsert payload):
 #     responsible_kind (bot/none rely on the agent_bot_inbox join + conversation assignee),
 #     ai_pending (the pending-suggestion set is computed per board load) and label_ids
-#     (matches taggings of the primary conversation, source of truth for labels).
+#     (matches taggings of the primary conversation, source of truth for labels) and campaign_source_ids (without
+#     meta_ads_view the ad touch comes without source_id, #2271).
 module Crm::Cards::SharedFilters
   include Crm::Cards::CompanyFilters
 
   RESPONSIBLE_KINDS = %w[agent bot none].freeze
+  # Parado: sem mensagem real e sem mudar de etapa (GREATEST ignora o NULL). Também é o grupo "Parados" da Lista nova.
+  STALE_SQL = 'GREATEST(crm_cards.last_message_at, crm_cards.entered_stage_at)'.freeze
 
   def apply_stage_ids_filter(cards)
     ids = parse_stage_ids
@@ -42,8 +44,7 @@ module Crm::Cards::SharedFilters
     days = @params[:stale_days].presence&.to_i
     return cards if days.blank? || days <= 0
 
-    stale_sql = 'GREATEST(crm_cards.last_message_at, crm_cards.entered_stage_at)'
-    cards.where("#{stale_sql} IS NULL OR #{stale_sql} < ?", days.days.ago)
+    cards.where("#{STALE_SQL} IS NULL OR #{STALE_SQL} < ?", days.days.ago)
   end
 
   def apply_team_filter(cards)
@@ -140,15 +141,17 @@ module Crm::Cards::SharedFilters
 
   # A human is responsible when the linked conversation has an assignee, or (for cards
   # without a linked conversation) when an owner is set. Mirrors Crm::Card#responsible_descriptor.
-  def human_responsible_sql
-    '(crm_cards.conversation_id IS NOT NULL AND conversations.assignee_id IS NOT NULL) OR ' \
+  # `conversation` é o nome da conversa principal na consulta (a Lista nova, #2283, junta com outro nome).
+  def human_responsible_sql(conversation = 'conversations')
+    "(crm_cards.conversation_id IS NOT NULL AND #{conversation}.assignee_id IS NOT NULL) OR " \
       '(crm_cards.conversation_id IS NULL AND crm_cards.owner_id IS NOT NULL)'
   end
 
   # Robô responsável: o atribuído à conversa (#1377) ou o robô ativo da caixa. Mirrors Crm::Card#responsible_agent_bot.
-  def bot_responsible_sql
-    "(conversations.assignee_agent_bot_id IS NOT NULL AND COALESCE(conversations.ai_assignee_type, '') = 'AgentBot') " \
-      'OR agent_bot_inboxes.id IS NOT NULL'
+  # `inbox_bot` diz como a consulta acha o robô ativo da caixa (aqui, pelo LEFT JOIN em agent_bot_inboxes).
+  def bot_responsible_sql(conversation = 'conversations', inbox_bot = 'agent_bot_inboxes.id IS NOT NULL')
+    "(#{conversation}.assignee_agent_bot_id IS NOT NULL AND COALESCE(#{conversation}.ai_assignee_type, '') = 'AgentBot') " \
+      "OR #{inbox_bot}"
   end
 
   def parse_stage_ids
@@ -166,12 +169,22 @@ module Crm::Cards::SharedFilters
   end
 
   # source_ids are opaque Meta ad ids — keep them as strings (never Integer-cast).
+  # Anúncio de origem (#2271): para a função personalizada sem meta_ads_view, os ids de anúncio saem do filtro (filtrar
+  # por eles revelaria qual card veio de qual anúncio); os de divulgação (WhatsApp, e-mail, SMS) continuam filtrando.
+  # Só com ids de anúncio, o filtro fica vazio e é ignorado, como o filtro por valor (#2075).
+  # O robô filtra por tudo; sem identidade, não (Crm::AnuncioDeOrigem.ve_no_contexto?).
   def parse_campaign_source_ids
-    Array(@params[:campaign_source_ids].presence)
-      .flat_map { |source_id| source_id.to_s.split(',') }
-      .map(&:strip)
-      .reject(&:blank?)
-      .uniq
+    ids = Array(@params[:campaign_source_ids].presence)
+          .flat_map { |source_id| source_id.to_s.split(',') }
+          .map(&:strip)
+          .reject(&:blank?)
+          .uniq
+    @conversation_visibility.anuncio_visivel? ? ids : sem_ids_de_anuncio(ids)
+  end
+
+  def sem_ids_de_anuncio(ids)
+    account = @account_user&.account || @account
+    account ? ids - Crm::AnuncioDeOrigem::Ids.de_anuncio(account, ids) : []
   end
 
   # Valor de venda (#2075): sem `sales_value_view` o filtro por valor é ignorado, porque revelaria o valor. Também vale

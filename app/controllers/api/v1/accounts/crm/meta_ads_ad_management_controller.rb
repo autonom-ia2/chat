@@ -25,9 +25,9 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
   end
 
   def status
-    status = management.change!(params[:ad_id].to_s, params[:status].to_s)
+    status = change_status!(params[:ad_id].to_s, params[:status].to_s)
     audit!(params[:ad_id].to_s, status)
-    render json: { status: status }
+    render json: { status: status }.merge(activation(status))
   rescue ::Crm::MetaAds::AdManagement::Error => e
     return render json: { error: e.code }, status: :not_found if e.code == 'ad_not_found'
 
@@ -65,18 +65,45 @@ class Api::V1::Accounts::Crm::MetaAdsAdManagementController < Api::V1::Accounts:
     render json: { error: 'not_connected' }, status: :not_found if @connection&.ad_account_id.blank?
   end
 
+  # Gerenciador simples (#2198, ponto 6): anúncio criado aqui nasceu com os três níveis pausados; ativar liga os três e
+  # pausar pausa os três. Outro anúncio: a gestão de sempre, só o anúncio.
+  def change_status!(ad_id, status)
+    @created = creation_activation.created_here(ad_id) if criar?
+    return management.change!(ad_id, status) if @created.nil?
+
+    creation_activation.change!(@created, status)
+  end
+
+  # Ao ativar, diz se a campanha ou o grupo seguram o anúncio (`held_by`). Criado aqui: os três acabaram de ser ligados.
+  def activation(status)
+    return {} unless status == 'ACTIVE' && criar?
+    return { held_by: nil } if @created
+
+    { held_by: creation_activation.held_by(params[:ad_id].to_s) }
+  end
+
+  def criar?
+    Current.account.feature_enabled?('meta_ads_criar')
+  end
+
+  def creation_activation
+    @creation_activation ||= ::Crm::MetaAds::Creation::Activation.new(@connection, user: Current.user)
+  end
+
   def management
     @management ||= ::Crm::MetaAds::AdManagement.new(@connection)
   end
 
   # Pausar ou ativar mexe no dinheiro do cliente: fica na Auditoria da conta (o log da aplicação não sobrevive ao
-  # deploy). Só id, nome do anúncio e situação nova; nunca o token. A Meta já mudou o anúncio quando isto roda: falha
+  # deploy). Só ids, nome do anúncio e situação nova; nunca o token. Anúncio criado aqui: também a campanha e o grupo,
+  # que mudaram junto. A Meta já mudou o anúncio quando isto roda: falha
   # ao gravar vai para o rastreador de erros e a resposta continua dizendo a verdade (a situação nova), em vez de um 500
   # que faria a pessoa repetir achando que não foi.
   def audit!(ad_id, status)
     Audited.audit_class.create!(
       auditable: Current.account, user: Current.user, action: AUDIT_ACTION,
-      audited_changes: { 'ad_id' => ad_id, 'ad_name' => management.ad_name(ad_id), 'status' => status }.compact
+      audited_changes: { 'ad_id' => ad_id, 'campaign_id' => @created&.campaign_id, 'adset_id' => @created&.adset_id,
+                         'ad_name' => management.ad_name(ad_id), 'status' => status }.compact
     )
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: Current.account).capture_exception

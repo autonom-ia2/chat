@@ -1,8 +1,8 @@
-# Comentários do post da Página por trás do anúncio (#2197), parte do Meta::AdsGraphClient: mesmas regras de token,
-# versão e limpeza de erro. Sempre com o token da Página (pages_read_user_content para ler, pages_manage_engagement
-# para responder, ocultar e apagar). Comentário de primeiro nível do mais novo para o mais antigo, com uma camada de
-# respostas (o Facebook não aninha mais que isso), até REPLIES_LIMIT por comentário: anúncio raramente passa disso, e
-# a casca não pagina respostas.
+# Comentários do post da Página por trás do anúncio (#2197). Entra no Meta::AdsGraphClient por `extend`, só nos clientes
+# do Crm::MetaAds::FacebookComments: mesmas regras de token, versão e limpeza de erro. Sempre com o token da Página
+# (pages_read_user_content para ler, pages_manage_engagement para responder, ocultar e apagar). Comentário de primeiro
+# nível do mais novo para o mais antigo, com uma camada de respostas (o Facebook não aninha mais que isso), até
+# REPLIES_LIMIT por comentário: anúncio raramente passa disso, e a casca não pagina respostas.
 module Meta::AdsGraphClient::PageComments
   COMMENTS_PAGE_SIZE = 25
   REPLIES_LIMIT = 100

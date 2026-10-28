@@ -52,7 +52,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
     body = { id: post_id, permalink_url: 'https://www.facebook.com/p/1',
              comments: { data: data, summary: { total_count: total },
                          paging: { cursors: { after: after }, next: after && 'https://graph.facebook.com/next' }.compact } }
-    stub_request(:get, meta_graph_url(post_id)).with(query: { fields: Meta::AdsGraphClient::POST_COMMENTS_FIELDS },
+    stub_request(:get, meta_graph_url(post_id)).with(query: { fields: Meta::AdsGraphClient::PageComments::POST_COMMENTS_FIELDS },
                                                      headers: { 'Authorization' => "Bearer #{page_token}" })
                                                .to_return(status: 200, body: body.to_json, headers: json)
   end
@@ -157,7 +157,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
     it 'mais comentários pelo cursor' do
       ready!(*all_permissions)
       stub_request(:get, meta_graph_url("#{post_id}/comments"))
-        .with(query: hash_including('after' => 'CURSOR1', 'fields' => Meta::AdsGraphClient::COMMENT_FIELDS_WITH_REPLIES))
+        .with(query: hash_including('after' => 'CURSOR1', 'fields' => Meta::AdsGraphClient::PageComments::COMMENT_FIELDS_WITH_REPLIES))
         .to_return(status: 200, headers: json,
                    body: { data: [comment('200000000000002_600', name: 'Fernanda Lima', message: 'Outras cores?')], paging: {} }.to_json)
 
@@ -179,8 +179,8 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       user = create(:user)
       expect(described_class.new(connection).reply!(ad_id, comment_id, '  Entregamos sim!  ', user: user)).to eq(id: '200000000000002_700')
       expect(reply).to have_been_requested.once
-      expect(Crm::MetaAdsCommentAction).to have_received(:record!)
-        .with(account: account, network: 'facebook', ad_id: ad_id, comment_id: comment_id, action: 'reply', actor: 'user', user: user)
+      expect(Crm::MetaAdsCommentAction.sole).to have_attributes(account_id: account.id, network: 'facebook', ad_id: ad_id,
+                                                                comment_id: comment_id, action: 'reply', actor: 'user', user_id: user.id)
     end
 
     it 'oculta e mostra' do
@@ -212,8 +212,8 @@ RSpec.describe Crm::MetaAds::FacebookComments do
     it 'texto vazio ou longo demais não vai' do
       service = described_class.new(connection)
 
-      expect { service.reply!(ad_id, comment_id, '   ') }.to raise_error(described_class::Error, 'invalid_message')
-      expect { service.reply!(ad_id, comment_id, 'a' * 8001) }.to raise_error(described_class::Error, 'invalid_message')
+      expect { service.reply!(ad_id, comment_id, '   ') }.to raise_error(described_class::Error, 'invalid_text')
+      expect { service.reply!(ad_id, comment_id, 'a' * 8001) }.to raise_error(described_class::Error, 'invalid_text')
     end
 
     it 'sem pages_manage_engagement não age' do
@@ -238,7 +238,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
       expect(described_class.new(connection).hide_on_post!(post_id, comment_id, true, actor: 'ai')).to be(true)
       expect(hide).to have_been_requested.once
-      expect(Crm::MetaAdsCommentAction).to have_received(:record!).with(hash_including(action: 'hide', actor: 'ai', ad_id: nil))
+      expect(Crm::MetaAdsCommentAction.sole).to have_attributes(action: 'hide', actor: 'ai', ad_id: nil, user_id: nil)
 
       allow(Crm::MetaAdsPage).to receive(:account_ids_for).and_return([account.id + 1])
       expect { described_class.new(connection).hide_on_post!(post_id, comment_id, true, actor: 'ai') }

@@ -191,6 +191,8 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Seus posts (#2302, F1 #2304): os números do perfil e os posts do Instagram e da Página das caixas.
+          get :seus_posts, to: 'seus_posts#index'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member
@@ -404,6 +406,20 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
+              get :create_options, to: 'meta_ads_creation#options'
+              post :media, to: 'meta_ads_creation#media'
+              post :ads, to: 'meta_ads_creation#create'
+              get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
+              patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
+              get :paused_ads, to: 'meta_ads_creation#paused'
+              # Comentários do anúncio no Instagram (#2196): ler, responder, ocultar, apagar e responder no privado.
+              get 'ads/:ad_id/instagram_comments', to: 'meta_ads_instagram_comments#index'
+              post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'
+              post 'ads/:ad_id/instagram_comments/:comment_id/hide', to: 'meta_ads_instagram_comments#hide'
+              post 'ads/:ad_id/instagram_comments/:comment_id/private_reply', to: 'meta_ads_instagram_comments#private_reply'
+              post 'ads/:ad_id/instagram_comments/:comment_id/private_reply/release',
+                   to: 'meta_ads_instagram_comments#release_private_reply'
+              delete 'ads/:ad_id/instagram_comments/:comment_id', to: 'meta_ads_instagram_comments#destroy'
               # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
               post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'
@@ -414,6 +430,13 @@ Rails.application.routes.draw do
               patch 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#update'
               delete 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#destroy'
             end
+            # Formulários dos anúncios (#2195): Páginas, formulários e para onde vai quem preenche.
+            get 'meta_ads_lead_forms', to: 'meta_ads_lead_forms#index'
+            post 'meta_ads_lead_forms/pages/:page_id/receive', to: 'meta_ads_lead_forms#receive'
+            delete 'meta_ads_lead_forms/pages/:page_id/receive', to: 'meta_ads_lead_forms#stop'
+            put 'meta_ads_lead_forms/forms/:form_id/destination', to: 'meta_ads_lead_forms#save_destination'
+            delete 'meta_ads_lead_forms/forms/:form_id/destination', to: 'meta_ads_lead_forms#remove_destination'
+            post 'meta_ads_lead_forms/forms/:form_id/bring_past', to: 'meta_ads_lead_forms#bring_past'
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
@@ -821,6 +844,7 @@ Rails.application.routes.draw do
               resources :assignments, only: [:create]
               resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
+              patch 'labels/alterar', to: 'alterar_etiquetas#update', as: :alterar_etiquetas # fork chat#2202: pôr/tirar uma a uma
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]

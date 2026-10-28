@@ -151,6 +151,24 @@ RSpec.describe 'IA de assunto: dúvida com sinal de pedido novo vira sugestão' 
     end
   end
 
+  # #2084: a pessoa marca o contato como parceiro enquanto o modelo maior pensa. A dúvida não vira sugestão.
+  it 'contato marcado parceiro durante a dúvida: nenhuma sugestão fica esperando' do
+    account.enable_features!('contato_relacao')
+    create_card(title: 'Seguro do Onix', metadata: { 'subject' => { 'source' => 'ai' } })
+    stub_jev(novo, confidence: 0.88)
+    item = { resposta: novo, titulo: 'Cotação seguro residencial', seguro: false }
+    allow(cliente).to receive(:create) do
+      contact.update!(relacao: :parceiro)
+      { text: item.merge(motivo: 'não ficou claro', assuntos: [item], principal: 0).to_json }
+    end
+
+    decisao = identify(incoming('quero cotar um seguro pra minha casa também'))
+
+    expect(decisao.state).not_to eq('suggested')
+    expect(Crm::SubjectDecision.where(state: 'suggested')).to be_empty
+    expect(account.crm_cards.count).to eq(1)
+  end
+
   describe 'caminho triste' do
     it 'dúvida sem sinal de pedido novo fica como antes' do
       create_card(title: 'Seguro do Onix', metadata: { 'subject' => { 'source' => 'ai' } })

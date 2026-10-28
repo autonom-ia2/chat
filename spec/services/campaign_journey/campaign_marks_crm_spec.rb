@@ -43,7 +43,7 @@ RSpec.describe CampaignJourney::CampaignMarks do
   it 'K3: the card lists the link and the two campaigns in order (first + 2)' do
     card = card_with_link_and_two_campaigns
 
-    campaigns = Crm::Cards::PayloadBuilder.aggregated_campaigns_for(card, conversation_visibility: visibility)
+    campaigns = Crm::Cards::PayloadBuilder.aggregated_campaigns_for(card, conversation_visibility: visibility, ad_visible: true)
 
     expect(campaigns.pluck(:source, :headline)).to eq(
       [['tracked_link', 'Feira 2026'], ['campaign_email', 'Novidades de outubro'], ['campaign_whatsapp', 'Renovação auto — outubro']]

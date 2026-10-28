@@ -15,7 +15,7 @@
 #   (Crm::MetaAds::PageSubscription, #2200) para o webhook de comentário novo (Crm::MetaAds::FacebookFeed).
 # - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197; é do #2212).
 #
-# Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_message`, `meta_unavailable` (rede, 5xx, limite)
+# Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_text`, `meta_unavailable` (rede, 5xx, limite)
 # e `meta_refused` (qualquer outra recusa da Meta).
 class Crm::MetaAds::FacebookComments
   class Error < Crm::MetaAds::AdManagement::Error; end
@@ -90,7 +90,7 @@ class Crm::MetaAds::FacebookComments
 
   def reply_to(post_id, comment_id, message, by)
     text = message.to_s.strip
-    raise Error, 'invalid_message' if text.empty? || text.length > MESSAGE_MAX
+    raise Error, 'invalid_text' if text.empty? || text.length > MESSAGE_MAX
 
     { id: act!(post_id, comment_id, 'reply', by) { |client| client.reply_comment(comment_id, text) }['id'] }
   end
@@ -105,7 +105,13 @@ class Crm::MetaAds::FacebookComments
   end
 
   def user_client
-    @user_client ||= Meta::AdsGraphClient.new(access_token: @connection.read_token)
+    @user_client ||= graph_client(@connection.read_token)
+  end
+
+  # Só este serviço usa as chamadas de comentário: cada cliente ganha Meta::AdsGraphClient::PageComments para si, sem
+  # crescer a classe comum.
+  def graph_client(token)
+    Meta::AdsGraphClient.new(access_token: token).extend(Meta::AdsGraphClient::PageComments)
   end
 
   def granted?(permission)
@@ -158,7 +164,7 @@ class Crm::MetaAds::FacebookComments
   # A Página entra no resolvedor do webhook e, na primeira vez nesta conta, o `feed` dela é assinado (a assinatura une
   # os campos: não apaga o leadgen do #2195). Falha aqui não tira a lista da tela.
   def remember_page(page, data)
-    client = Meta::AdsGraphClient.new(access_token: data['access_token'])
+    client = graph_client(data['access_token'])
     Crm::MetaAdsPage.remember!(@connection.account, [{ 'id' => page, 'name' => data['name'] }])
     subscribe_feed(page, data['access_token'])
     client

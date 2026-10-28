@@ -192,8 +192,14 @@
         "META_ADS": {
           "NAME": "Meta ads",
           "HINT": "Facebook and Instagram ads panel",
-          "LEVEL_VIEW": "Sees the ads panel and its results. Connecting and configuring need Edit.",
-          "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, and acts on the advisor."
+          "LEVEL_VIEW": "Sees the ads panel, its results and each ad's budget and dates. Creating, connecting and configuring need Edit.",
+          "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, acts on the advisor, creates ads (always paused), activates them and changes their budget and dates."
+        },
+        "POSTS": {
+          "NAME": "Your posts",
+          "HINT": "Instagram and Page posts, with their numbers",
+          "LEVEL_VIEW": "Sees the posts and numbers of the Instagram and Page inboxes they see.",
+          "LEVEL_MANAGE": "For now, the same as View. Once the page has comments, also replies, hides and sends the private reply, on the inboxes they see."
         },
         "INBOXES": {
           "NAME": "Inboxes",

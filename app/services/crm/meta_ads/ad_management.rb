@@ -50,8 +50,7 @@ class Crm::MetaAds::AdManagement
     raise Error, result.transient? ? 'meta_unavailable' : 'meta_refused'
   end
 
-  # O anúncio, se for da conta de anúncios da conexão (com o post da Página no criativo); nil se não for. Usado pelos
-  # comentários do Facebook (#2197).
+  # O anúncio como a Meta devolve (com o criativo), só se for da conta de anúncios da conexão; senão nil.
   def ad(ad_id)
     read_ad(ad_id)
   end

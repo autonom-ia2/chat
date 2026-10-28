@@ -506,6 +506,8 @@ describe('permissionMatrix', () => {
     'whatsapp_templates_manage',
     'meta_ads_view',
     'meta_ads_manage',
+    'posts_view',
+    'posts_manage',
     'label_manage',
     'attribute_manage',
     'macro_manage',
@@ -526,8 +528,8 @@ describe('permissionMatrix', () => {
     ...(module.type === 'conversations' ? ['conversation_manage'] : []),
   ]);
 
-  it('covers exactly the 57 server keys in the matrix', () => {
-    expect(SERVER_KEYS).toHaveLength(57);
+  it('covers exactly the 59 server keys in the matrix', () => {
+    expect(SERVER_KEYS).toHaveLength(59);
     expect([...new Set(known)].sort()).toEqual([...SERVER_KEYS].sort());
   });
 

@@ -24,7 +24,7 @@ const props = defineProps({
   main: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['connect', 'conversations']);
+const emit = defineEmits(['connect', 'conversations', 'retry']);
 
 const { t, locale } = useI18n();
 const HISTORY_DAYS = 90;
@@ -52,6 +52,11 @@ const pageTexts = () => ({
     text: t('META_ADS_ORGANIC.SOURCE.PAGE.NOT_CONNECTED.TEXT'),
     button: t('META_ADS_ORGANIC.SOURCE.PAGE.NOT_CONNECTED.BUTTON'),
   },
+  unavailable: {
+    title: t('META_ADS_ORGANIC.SOURCE.PAGE.UNAVAILABLE'),
+    text: t('META_ADS_ORGANIC.ERROR.TEXT'),
+    button: t('META_ADS_ORGANIC.ERROR.RETRY'),
+  },
 });
 const instagramTexts = () => ({
   name: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NAME'),
@@ -74,9 +79,16 @@ const instagramTexts = () => ({
     text: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NOT_CONNECTED.TEXT'),
     button: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.NOT_CONNECTED.BUTTON'),
   },
+  unavailable: {
+    title: t('META_ADS_ORGANIC.SOURCE.INSTAGRAM.UNAVAILABLE'),
+    text: t('META_ADS_ORGANIC.ERROR.TEXT'),
+    button: t('META_ADS_ORGANIC.ERROR.RETRY'),
+  },
 });
 const texts = computed(() => (isPage.value ? pageTexts() : instagramTexts()));
 const blockedTexts = computed(() => texts.value[props.data.status]);
+// Meta fora só neste lugar: "Tentar de novo" relê a tela, para quem só lê também; sem passo numerado.
+const unavailable = computed(() => props.data.status === 'unavailable');
 
 const title = computed(() =>
   isPage.value
@@ -86,12 +98,12 @@ const title = computed(() =>
 
 // Período sem post e sem ninguém que viu: uma frase e o caminho para postar, em vez de zeros que parecem defeito.
 const quiet = computed(
-  () => ready.value && !props.data.reach && !props.data.top_posts?.length
+  () => ready.value && props.data.reach === 0 && !props.data.top_posts?.length
 );
 
 const blockedTitle = computed(() => {
   const text = blockedTexts.value.title;
-  return props.step
+  return props.step && !unavailable.value
     ? t('META_ADS_ORGANIC.STEP', { step: props.step, text })
     : text;
 });
@@ -109,22 +121,28 @@ const followersExtra = computed(() =>
 // Instagram no período de 90 dias: a Meta só guarda 90 dias, então não há período anterior. Uma frase acima dos
 // quadros diz por quê, uma vez só.
 const noCompare = computed(() => !isPage.value && props.days === HISTORY_DAYS);
+// Período anterior em que os posts não apareceram sem anúncio: o servidor não manda a comparação (first_period), porque
+// "X a mais" compararia com um período parado.
+const firstPeriod = computed(() => Boolean(props.data.first_period));
 
-// Seguidores mostra o total de hoje, sem comparação: o que mudou no período já está na linha "+N".
+// Seguidores mostra o total de hoje, sem comparação: o que mudou no período já está na linha "+N". Vezes que apareceu
+// vem primeiro: soma certo nos dois lugares. No Instagram, quem viu é soma por tipo de post (a Meta não deduplica):
+// o quadro diz "até N".
 const tiles = computed(() => {
   const previous = props.data.previous || {};
   return [
-    {
-      name: 'REACH',
-      icon: 'i-lucide-users',
-      value: props.data.reach,
-      previous: previous.reach ?? null,
-    },
     {
       name: 'VIEWS',
       icon: 'i-lucide-eye',
       value: props.data.views,
       previous: previous.views ?? null,
+    },
+    {
+      name: 'REACH',
+      icon: 'i-lucide-users',
+      value: props.data.reach,
+      previous: previous.reach ?? null,
+      upTo: !isPage.value,
     },
     {
       name: 'INTERACTIONS',
@@ -146,8 +164,12 @@ const share = computed(() =>
   isPage.value
     ? {
         textKey: 'ADS_SHARE',
-        part: props.data.views - props.data.views_from_ads,
-        total: props.data.views,
+        part: props.data.views,
+        // Lado que a Meta não mandou é "sem número": sem os dois, a barra não aparece.
+        total:
+          props.data.views === null || props.data.views_from_ads === null
+            ? null
+            : props.data.views + props.data.views_from_ads,
       }
     : {
         textKey: 'NEW_PEOPLE',
@@ -216,7 +238,17 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
         {{ blockedTexts.text }}
       </p>
       <Button
-        v-if="!readOnly"
+        v-if="unavailable"
+        :data-organic-retry="source"
+        variant="faded"
+        color="slate"
+        icon="i-lucide-refresh-cw"
+        :label="blockedTexts.button"
+        class="!min-h-11 !rounded-xl"
+        @click="emit('retry')"
+      />
+      <Button
+        v-else-if="!readOnly"
         :data-organic-connect="source"
         :variant="primary ? 'solid' : 'faded'"
         :color="primary ? 'blue' : 'slate'"
@@ -241,7 +273,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
       <p class="m-0 text-sm leading-6 text-n-slate-11">
         {{
           $t('META_ADS_ORGANIC.QUIET.TEXT', {
-            followers: format(data.followers || 0),
+            followers: data.followers === null ? '—' : format(data.followers),
           })
         }}
       </p>
@@ -295,6 +327,13 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
       >
         {{ $t('META_ADS_ORGANIC.TILES.NO_COMPARE') }}
       </p>
+      <p
+        v-else-if="firstPeriod"
+        data-organic-first-period
+        class="m-0 -mb-2 text-sm text-n-slate-11"
+      >
+        {{ $t('META_ADS_ORGANIC.TILES.FIRST_PERIOD', { days }) }}
+      </p>
       <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
         <OrganicTile
           v-for="tile in tiles"
@@ -305,6 +344,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
           :previous="tile.previous"
           :days="days"
           :extra="tile.extra"
+          :up-to="tile.upTo"
         />
       </div>
 

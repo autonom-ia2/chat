@@ -87,22 +87,45 @@ const anyReady = computed(
 const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
 
-// Quem viu na Página e no Instagram lado a lado, nunca somados: a mesma pessoa pode ter visto os dois.
+// Vezes que os posts apareceram sem anúncio (o servidor já tira o anúncio das duas), na Página e no Instagram lado a
+// lado, nunca somadas. Não é "quem viu": no Instagram a Meta não deduplica quem viu entre tipos de post, e na Página o
+// "quem viu" pode incluir o pago.
+const organicViews = place => (isReady(place) ? (place.views ?? null) : null);
+// Lugar ligado cujas vezes a Meta não mandou: não dá para dizer que ninguém viu os posts dele.
+const viewsUnknown = computed(() =>
+  [page.value, instagram.value].some(
+    place => isReady(place) && organicViews(place) === null
+  )
+);
+// Nenhum lugar com números e algum com a Meta fora: "Libere o acesso" seria falso.
+const anyUnavailable = computed(() =>
+  [page.value, instagram.value].some(place => place?.status === 'unavailable')
+);
 const headline = computed(() => {
-  if (!anyReady.value) return t('META_ADS_ORGANIC.HEADLINE.NONE');
-  const pageReach = isReady(page.value) ? page.value.reach : 0;
-  const instagramReach = isReady(instagram.value) ? instagram.value.reach : 0;
-  if (!pageReach && !instagramReach)
+  if (!anyReady.value)
+    return anyUnavailable.value
+      ? t('META_ADS_ORGANIC.HEADLINE.UNAVAILABLE')
+      : t('META_ADS_ORGANIC.HEADLINE.NONE');
+  const pageViews = organicViews(page.value);
+  const instagramViews = organicViews(instagram.value);
+  // As vezes que a Meta não mandou (null) não viram "não apareceram".
+  if (pageViews === null && instagramViews === null)
+    return t('META_ADS_ORGANIC.HEADLINE.UNAVAILABLE');
+  if (!pageViews && !instagramViews && !viewsUnknown.value)
     return t('META_ADS_ORGANIC.HEADLINE.ZERO', { days: days.value });
-  if (pageReach && instagramReach)
+  if (pageViews && instagramViews)
     return t('META_ADS_ORGANIC.HEADLINE.BOTH', {
-      page: format(pageReach),
-      instagram: format(instagramReach),
+      page: format(pageViews),
+      instagram: format(instagramViews),
     });
-  const count = format(pageReach || instagramReach);
-  return pageReach
-    ? t('META_ADS_ORGANIC.HEADLINE.PAGE', { count })
-    : t('META_ADS_ORGANIC.HEADLINE.INSTAGRAM', { count });
+  // Um lugar só com número: o que apareceu, ou o único que a Meta mandou (mesmo 0).
+  const onPage =
+    instagramViews === null || (pageViews !== null && pageViews > 0);
+  return onPage
+    ? t('META_ADS_ORGANIC.HEADLINE.PAGE', { count: format(pageViews) })
+    : t('META_ADS_ORGANIC.HEADLINE.INSTAGRAM', {
+        count: format(instagramViews),
+      });
 });
 
 // Até 90 caracteres, o post inteiro. Mais longo: até o fim da última frase que cabe, se ela tiver 40 caracteres ou
@@ -159,7 +182,9 @@ const range = computed(() =>
 
 // Um botão de destaque por tela: o do topo, quando há conversas; senão a Página primeiro, e o Instagram só quando a
 // Página já está pronta.
-const blocked = place => place && !isReady(place);
+// Bloqueado é o que pede uma ação da pessoa (liberar ou conectar); Meta fora num lugar só não conta.
+const blocked = place =>
+  ['needs_permission', 'not_connected'].includes(place?.status);
 const bothBlocked = computed(
   () => blocked(page.value) && blocked(instagram.value)
 );
@@ -168,8 +193,8 @@ const instagramPrimary = computed(() => !blocked(page.value));
 const bothQuiet = computed(
   () =>
     [page.value, instagram.value].every(isReady) &&
-    !page.value.reach &&
-    !instagram.value.reach
+    page.value.reach === 0 &&
+    instagram.value.reach === 0
 );
 
 // Entrar: sem caixa, a criação da caixa de sempre (inbox_manage). Com caixa sem a permissão, reautoriza a mesma caixa
@@ -353,6 +378,7 @@ const connect = async source => {
           :main="mainConversations?.source === 'page'"
           @connect="connect"
           @conversations="openConversations"
+          @retry="load"
         />
         <OrganicSourceCard
           source="instagram"
@@ -365,6 +391,7 @@ const connect = async source => {
           :class="{ 'order-first lg:order-none': bothQuiet }"
           @connect="connect"
           @conversations="openConversations"
+          @retry="load"
         />
       </div>
     </template>

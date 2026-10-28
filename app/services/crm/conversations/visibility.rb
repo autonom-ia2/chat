@@ -12,6 +12,13 @@ class Crm::Conversations::Visibility
     @full_contact = Crm::Cards::ContactReading.full?(user: @user, account_user: @account_user)
   end
 
+  # Anúncio de origem (#2271): quem lê (pessoa ou robô) vê o anúncio que trouxe o card? Sem identidade, não.
+  def anuncio_visivel?
+    return @anuncio_visivel if defined?(@anuncio_visivel)
+
+    @anuncio_visivel = Crm::AnuncioDeOrigem.ve_no_contexto?(@user, @account_user)
+  end
+
   # Acesso por funil (#1148, parte C): o CRM passa pela mesma regra da lista de conversas.
   def visible?(conversation)
     return false unless base_visible?(conversation)
@@ -38,9 +45,14 @@ class Crm::Conversations::Visibility
     funnel_scope.preload_ids(cards.map(&:conversation_id) + linked)
   end
 
+  # Vê todas as conversas da conta: o `scope` abaixo não filtra nada (filtro de visibilidade pode ser pulado).
+  def all_conversations?
+    administrator?
+  end
+
   def scope(conversations)
     base = conversations.where(account_id: @account.id)
-    return base if administrator?
+    return base if all_conversations?
     return base.none if @user.blank?
 
     unrestricted = base.where(inbox_id: user_inbox_ids).where.not(inbox_id: assigned_only_inbox_ids)

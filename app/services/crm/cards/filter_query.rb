@@ -1,5 +1,7 @@
 class Crm::Cards::FilterQuery
   include Crm::Cards::SharedFilters
+  # Lista nova "o que fazer agora" (#2283): sort=acao, waiting, follow_up_status=due, mine e action_group.
+  include Crm::Cards::ActionGroups
 
   FILTER_ATTRIBUTES = %i[pipeline_id inbox_id owner_id priority external_id].freeze
   # List-view-only "Resultado" filter. Uses a DISTINCT param key (`result`) so it
@@ -42,7 +44,7 @@ class Crm::Cards::FilterQuery
     cards = apply_standalone_filter(cards)
     cards = apply_search(apply_follow_up_filter(apply_closed_in_filter(apply_result_filter(cards))))
     cards = apply_origens_filter(cards)
-    apply_sort(cards)
+    apply_sort(apply_action_groups(cards))
   end
 
   private
@@ -57,6 +59,7 @@ class Crm::Cards::FilterQuery
   # mesmo updated_at trocam de posição entre consultas e somem ou duplicam entre páginas.
   def apply_sort(cards)
     return cards.order(score: :desc, updated_at: :desc, id: :desc) if @params[:sort].blank?
+    return apply_action_sort(cards) if Crm::Cards::ActionGroups.sort?(@params)
 
     column = SORTABLE[@params[:sort].to_s] || :updated_at
     # Valor de venda (#2075): ordenar por valor revelaria o valor; sem `sales_value_view`, vale o padrão.
@@ -71,6 +74,9 @@ class Crm::Cards::FilterQuery
                     contact: Crm::Cards::CompanyResolver.contact_preload,
                     primary_conversation: [:conversation_participants, { applied_sla: :sla_policy }])
           .preload(primary_conversation: :ai_assignee) # robô responsável (#1377), sem N+1 por card
+          # Quem cuida (responsible e current_responsible, #2283): o atendente e o robô ativo da caixa, sem N+1 por card.
+          .preload(primary_conversation: [:assignee, { inbox: { agent_bot_inbox: :agent_bot } }],
+                   inbox: { agent_bot_inbox: :agent_bot }, account: [])
   end
 
   def apply_filters(cards)
