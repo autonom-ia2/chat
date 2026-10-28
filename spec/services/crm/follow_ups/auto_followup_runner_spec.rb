@@ -273,6 +273,19 @@ RSpec.describe Crm::FollowUps::AutoFollowupRunner do
       expect(follow_up.card.reload.metadata.dig('ai', 'auto_followup_state', 'touches').last['outcome']).to eq('reminded')
     end
 
+    # A Lista nova (#2283) só põe em "Retornos" o toque da IA que virou lembrete para a equipe por esta marca
+    # (Crm::FollowUp.retorno_da_pessoa).
+    it 'marks the fired touch as a team reminder for the CRM list' do
+      follow_up = reminder_setup
+      described_class.new(follow_up: follow_up, now: now).perform
+      follow_up.reload
+
+      expect(follow_up.metadata['action_mode']).to eq(Crm::FollowUp::AI_REMINDER_ACTION_MODE)
+      expect(follow_up.metadata['source']).to eq(Crm::FollowUp::AI_FOLLOWUP_SOURCE)
+      expect(follow_up).to be_reminder_only
+      expect(Crm::FollowUp.retorno_da_pessoa).to include(follow_up)
+    end
+
     it 'localizes the reminder title using the account language' do
       follow_up = reminder_setup
       follow_up.account.update!(locale: 'pt_BR')
