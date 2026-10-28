@@ -54,22 +54,39 @@ class Crm::Cards::PayloadBuilder
     end
   end
 
-  UNRESOLVED_COMPANY = Object.new.freeze
+  # Quem cuida sem o atendente da conversa principal (#2283): para quem não vê essa conversa, o nome do atendente não vai;
+  # vale o dono do card, senão o robô (a mesma ordem de Crm::Card#current_responsible). O Quadro usa o mesmo.
+  def self.responsible_without_conversation_agent(card)
+    return { type: 'agent', id: card.owner.id, name: card.owner.name } if card.owner.present?
 
-  def initialize(card, user: nil, account_user: nil, conversation_visibility: nil, company: UNRESOLVED_COMPANY)
+    bot = card.responsible_agent_bot
+    { type: 'bot', id: bot.id, name: bot.name } if bot.present?
+  end
+
+  UNRESOLVED_COMPANY = Object.new.freeze
+  UNRESOLVED_FOLLOW_UP = Object.new.freeze
+  # Lista legada e planilha não usam o next_follow_up_id: o campo vai nil e a consulta não roda.
+  SKIP_FOLLOW_UP = Object.new.freeze
+
+  # next_follow_up_id: a página da Lista nova manda o de todos os cards de uma vez
+  # (Crm::FollowUp.proximos_retornos_da_pessoa); sem ele, um card só (detalhe e tempo real) faz a consulta.
+  def initialize(card, user: nil, account_user: nil, conversation_visibility: nil, company: UNRESOLVED_COMPANY, # rubocop:disable Metrics/ParameterLists
+                 next_follow_up_id: UNRESOLVED_FOLLOW_UP)
     @card = card
     @user = user
     @account_user = account_user
     @conversation_visibility = conversation_visibility
     @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
+    @next_follow_up_id = next_follow_up_id
   end
 
   def perform
     ATTRIBUTES.index_with { |attribute| @card.public_send(attribute) }
               .merge(timestamp_payload)
+              .tap { |payload| append_nested_payloads(payload) }
+              .tap { |payload| append_action_list_payload(payload) }
               .tap { |payload| sanitize_hidden_conversation!(payload) }
               .tap { |payload| sanitize_lead_form_answers!(payload) }
-              .tap { |payload| append_nested_payloads(payload) }
               .tap { |payload| Crm::ValorDeVenda.oculta_card!(payload) unless value_visible? }
   end
 
@@ -85,11 +102,22 @@ class Crm::Cards::PayloadBuilder
     payload[:metadata] = Crm::MetaAds::LeadForms::Answers.without(payload[:metadata]) unless full_contact?
   end
 
+  # Conversa que a pessoa não vê (#2283, item 7): o nome de quem atende essa conversa não vai, nem como responsável nem
+  # como quem cuida. No lugar dele, o próximo da ordem: o dono do card, senão o robô.
   def sanitize_hidden_conversation!(payload)
     return if primary_conversation_visible?
 
     payload[:conversation_id] = nil
     payload[:metadata] = sanitized_metadata(payload[:metadata])
+    return unless hidden_conversation_assignee?
+
+    fallback = self.class.responsible_without_conversation_agent(@card)
+    fallback ? payload[:responsible] = fallback : payload.delete(:responsible)
+    payload[:current_responsible] = fallback
+  end
+
+  def hidden_conversation_assignee?
+    primary_conversation.present? && primary_conversation.assignee_id.present?
   end
 
   def append_nested_payloads(payload)
@@ -106,6 +134,20 @@ class Crm::Cards::PayloadBuilder
       value = send(method_name)
       payload[key] = value if value.present?
     end
+  end
+
+  # Lista nova (#2283): quem cuida (dono -> pessoa da conversa -> robô, Crm::Card#current_responsible), o retorno da
+  # pessoa mais perto (o "Feito" usa o id) e, com sort=acao, o grupo do card (Crm::Cards::ActionGroups).
+  def append_action_list_payload(payload)
+    payload[:current_responsible] = @card.current_responsible
+    payload[:next_follow_up_id] = @next_follow_up_id.equal?(SKIP_FOLLOW_UP) ? nil : next_follow_up_id
+    payload[:action_group] = Crm::Cards::ActionGroups::KEYS[@card[:acao_grupo]] if @card.has_attribute?(:acao_grupo)
+  end
+
+  def next_follow_up_id
+    return @next_follow_up_id unless @next_follow_up_id.equal?(UNRESOLVED_FOLLOW_UP)
+
+    Crm::FollowUp.proximos_retornos_da_pessoa([@card.id], conversation_visibility: visibility)[@card.id]
   end
 
   # Label titles (strings) of the PRIMARY conversation only, in cached_label_list
