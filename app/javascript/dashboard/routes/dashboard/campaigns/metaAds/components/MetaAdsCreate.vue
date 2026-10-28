@@ -80,7 +80,8 @@ const HTTP_CONFLICT = 409;
 const options = ref(null);
 const loading = ref(true);
 const loadFailed = ref(false);
-// Sem conta de anúncios escolhida (404 not_connected, #2338): não é a Meta fora do ar, é um passo que falta.
+// Sem conexão ativa com conta de anúncios (404 not_connected, #2338: sem conexão, caída ou sem a conta escolhida): não é
+// a Meta fora do ar, é um passo que falta. A Conexão abre no passo certo.
 const noAdAccount = ref(false);
 const heading = ref(null);
 const created = ref(null);

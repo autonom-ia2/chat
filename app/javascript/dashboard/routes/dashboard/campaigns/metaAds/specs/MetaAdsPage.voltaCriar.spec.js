@@ -42,18 +42,25 @@ const WITH_AD_ACCOUNT = {
   ad_account: { id: 'act_1', name: 'Loja' },
 };
 
+// O endereço é um só para todos os testes: a página de um teste anterior, ainda montada, reagiria à mudança dele.
+let mounted = null;
 const mountPage = async () => {
-  const wrapper = shallowMount(MetaAdsPage, {
+  mounted = shallowMount(MetaAdsPage, {
     global: { mocks: { $t: key => key } },
   });
   await flushPromises();
-  return wrapper;
+  return mounted;
 };
 
 describe('MetaAdsPage · volta para criar anúncio (#2338)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     routing.route.query = {};
+  });
+
+  afterEach(() => {
+    mounted?.unmount();
+    mounted = null;
   });
 
   it('rereads the connection when creation sends the person to choose the ad account', async () => {
@@ -80,6 +87,45 @@ describe('MetaAdsPage · volta para criar anúncio (#2338)', () => {
 
     expect(routing.replace).toHaveBeenLastCalledWith({
       query: { aba: 'resultado', criar: 'novo' },
+    });
+  });
+
+  it('without any connection, goes through signing in and still returns to creating the ad', async () => {
+    routing.route.query = { aba: 'conexao', volta: 'criar' };
+    CrmMetaAdsConnectionAPI.get.mockResolvedValue({
+      data: { configured: false },
+    });
+    const wrapper = await mountPage();
+    expect(CrmMetaAdsConnectionAPI.get).toHaveBeenCalledTimes(1);
+
+    wrapper.findComponent({ name: 'MetaAdsHero' }).vm.$emit('start');
+    await flushPromises();
+    wrapper
+      .findComponent({ name: 'MetaAdsConnectStep' })
+      .vm.$emit('facebookLogin', WITHOUT_AD_ACCOUNT);
+    await flushPromises();
+    wrapper
+      .findComponent({ name: 'MetaAdsAccountStep' })
+      .vm.$emit('saved', WITH_AD_ACCOUNT);
+    await flushPromises();
+
+    expect(routing.replace).toHaveBeenLastCalledWith({
+      query: { aba: 'resultado', criar: 'novo' },
+    });
+  });
+
+  it('changing tab drops the pending return', async () => {
+    routing.route.query = { aba: 'resultado', volta: 'criar', periodo: '7d' };
+    CrmMetaAdsConnectionAPI.get.mockResolvedValue({ data: WITH_AD_ACCOUNT });
+    const wrapper = await mountPage();
+
+    wrapper
+      .findComponent({ name: 'MetaAdsViewTabs' })
+      .vm.$emit('choose', 'conexao');
+    await flushPromises();
+
+    expect(routing.replace).toHaveBeenLastCalledWith({
+      query: { aba: 'conexao', periodo: '7d' },
     });
   });
 

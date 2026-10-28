@@ -69,9 +69,11 @@ const tabLabels = computed(() => ({
 const view = ref(
   ALL_VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
 );
+// Trocar de aba encerra a volta pendente (`?volta=`): escolher a conta depois não leva mais à criação nem ao anúncio.
 const chooseView = value => {
   view.value = value;
-  router.replace({ query: { ...route.query, aba: value } });
+  const { volta, ...query } = route.query;
+  router.replace({ query: { ...query, aba: value } });
 };
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'

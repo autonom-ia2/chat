@@ -3450,8 +3450,8 @@
         "RECREATE": "Não está no Gerenciador, criar de novo",
         "BLOCKERS": {
           "NO_AD_ACCOUNT": {
-            "TITLE": "Falta escolher a conta de anúncios. É rapidinho.",
-            "ACTION": "Escolher a conta de anúncios"
+            "TITLE": "Para criar anúncio por aqui, falta ligar a sua conta de anúncios.",
+            "ACTION": "Ligar a conta de anúncios"
           },
           "LOGIN": {
             "TITLE": "Para criar anúncios por aqui, entre de novo com o Facebook.",
