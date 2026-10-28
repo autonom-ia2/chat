@@ -274,7 +274,7 @@ const exportar = async formato => {
 const aoEstado = variante => {
   if (variante === 'sem_conversas') periodo.value = 'tudo';
   else if (variante === 'leitura_desligada') trocar({ estado: undefined });
-  else if (variante === 'sem_ia' && ehAdmin.value) {
+  else if (['sem_ia', 'chave_recusada'].includes(variante) && ehAdmin.value) {
     router.push({
       name: 'settings_applications_integration',
       params: { integration_id: CRM_AI_INTEGRATION_ID },
@@ -331,6 +331,7 @@ const aoMigalha = item => router.push(item.destino);
         :migalha="migalha"
         :periodo="textoDoPeriodo"
         :dados-ate="meta.dados_ate || ''"
+        :lido-ate="meta.lido_ate || ''"
         :exportacao="exportacao"
         :pode-exportar="podeExportar"
         @migalha="aoMigalha"
@@ -385,6 +386,36 @@ const aoMigalha = item => router.push(item.destino);
           "
         />
         <Ressalva
+          v-if="meta.instrucao_mudou"
+          data-aviso-instrucao
+          :destaque="t(`${NS}.FONTE.INSTRUCAO_TITULO`)"
+          :texto="t(`${NS}.FONTE.INSTRUCAO_TEXTO`)"
+        />
+        <Ressalva
+          v-if="meta.pendentes > 0"
+          data-aviso-pendentes
+          :destaque="
+            t(
+              `${NS}.FONTE.PENDENTES_TITULO`,
+              { n: fmt.n(meta.pendentes) },
+              meta.pendentes
+            )
+          "
+          :texto="t(`${NS}.FONTE.PENDENTES_TEXTO`)"
+        />
+        <Ressalva
+          v-if="meta.nao_lidas > 0"
+          data-aviso-nao-lidas
+          :destaque="
+            t(
+              `${NS}.FONTE.NAO_LIDAS_TITULO`,
+              { n: fmt.n(meta.nao_lidas) },
+              meta.nao_lidas
+            )
+          "
+          :texto="t(`${NS}.FONTE.NAO_LIDAS_TEXTO`)"
+        />
+        <Ressalva
           v-if="ehDemo"
           data-aviso-demo
           :destaque="t(`${NS}.FONTE.DEMO_TITULO`)"
@@ -422,7 +453,10 @@ const aoMigalha = item => router.push(item.destino);
           v-if="estado"
           :variante="estado"
           :nome="nome"
-          :pode-gerenciar="ehAdmin && !painel.vazio"
+          :pode-gerenciar="
+            ehAdmin && (!painel.vazio || estado !== 'leitura_desligada')
+          "
+          :vazio="Boolean(painel.vazio)"
           @acao="aoEstado"
         />
 

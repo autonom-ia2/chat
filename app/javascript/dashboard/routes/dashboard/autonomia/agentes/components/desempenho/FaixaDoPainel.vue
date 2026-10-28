@@ -13,6 +13,8 @@ const props = defineProps({
   migalha: { type: Array, default: () => [] },
   periodo: { type: String, default: '' },
   dadosAte: { type: String, default: '' },
+  // #2301 — com a leitura automática, até onde a IA leu: mostrado no lugar de "Dados até".
+  lidoAte: { type: String, default: '' },
   // { pdf: { estado: 'verificando'|'pronto'|'sem_arquivo'|'baixando' }, xlsx: {…} }
   exportacao: { type: Object, default: () => ({}) },
   // #2251 — sem contact_export, a pessoa vê o painel mas não baixa o arquivo: os botões nem aparecem.
@@ -102,7 +104,17 @@ const aoNavegar = (evento, item) => {
               class="flex flex-wrap items-center m-0 text-sm gap-x-2 text-white/80 tabular-nums"
             >
               <span>{{ periodo }}</span>
-              <template v-if="dadosAte">
+              <template v-if="lidoAte">
+                <span aria-hidden="true">{{
+                  fmt.t('AGENTS.DESEMPENHO2.A.COMUM.SEPARADOR')
+                }}</span>
+                <span data-lido-ate>
+                  {{
+                    fmt.t(`${NS}.LIDO_ATE`, { quando: fmt.dataHora(lidoAte) })
+                  }}
+                </span>
+              </template>
+              <template v-else-if="dadosAte">
                 <span aria-hidden="true">{{
                   fmt.t('AGENTS.DESEMPENHO2.A.COMUM.SEPARADOR')
                 }}</span>

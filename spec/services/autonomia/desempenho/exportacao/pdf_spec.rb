@@ -55,6 +55,14 @@ RSpec.describe Autonomia::Desempenho::Exportacao::Pdf do
     expect(acoes).to include('Ganho estimado: neste período ainda não dá para', 'no histórico completo (4 meses, 25/06 a 26/10)')
   end
 
+  it 'diz as datas das sugestões quando elas são de outras datas, como a tela (#2301)' do
+    painel['meta']['recomendacoes_de'] = { 'inicio' => '2026-10-10', 'fim' => '2026-10-16' }
+
+    acoes = Range.new(*servico.paginas_da_secao(:acoes)).map { |numero| texto(numero) }.join(' ')
+
+    expect(acoes).to include('Sugestões de 10/10 a 16/10/2026.')
+  end
+
   it 'mostra o número dentro das células do mapa de calor e o pico' do
     mapa = texto(pagina_de(:horarios))
 
