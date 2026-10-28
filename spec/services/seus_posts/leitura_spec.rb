@@ -133,6 +133,31 @@ RSpec.describe SeusPosts::Leitura do
       expect(perfil).to include(status: 'ok', stale: true, posts_status: 'ok', posts_stale: true)
       expect(perfil[:posts].pluck(:id)).to eq(%w[m4 m1 m3])
     end
+
+    it 'Meta limitando com cópia antiga: serve a cópia e espera antes de chamar a Meta de novo' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      leitura
+      travel 20.minutes
+      stub_request(:get, "#{ig}/me/media")
+        .with(query: hash_including({}))
+        .to_return(status: 400, body: { error: { code: 4, message: 'limite' } }.to_json)
+
+      2.times { expect(leitura[:perfil]).to include(posts_status: 'ok', posts_stale: true) }
+      # Uma da leitura boa e uma da falha: a segunda recarga não volta à Meta.
+      expect(a_request(:get, "#{ig}/me/media").with(query: hash_including({}))).to have_been_made.twice
+    end
+
+    it 'o nosso teto de tempo não é falha da Meta: a próxima recarga lê de novo' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      leitura
+      travel 20.minutes
+      posts = instance_double(SeusPosts::PostsInstagram)
+      allow(posts).to receive(:perform).and_raise(Crm::MetaAds::Organico::Indisponivel.new('passou do tempo', codigo: 'tempo'))
+      allow(SeusPosts::Posts).to receive(:para).and_return(posts)
+
+      2.times { expect(leitura[:perfil]).to include(posts_status: 'ok', posts_stale: true) }
+      expect(posts).to have_received(:perform).twice
+    end
   end
 
   describe 'Página' do
@@ -175,7 +200,14 @@ RSpec.describe SeusPosts::Leitura do
     it 'separa as vezes sem anúncio e usa as pessoas da vida toda do post' do
       p1 = leitura[:perfil][:posts].find { |item| item[:id] == 'p1' }
 
-      expect(p1).to include(views: 800, views_from_ads: nil, reach: 500, clicks: 20, likes: 40, comments: 4, boosted: false)
+      expect(p1).to include(views: 800, views_from_ads: nil, reach: 500, clicks: 20, likes: 40, comments: 4)
+    end
+
+    it 'sem o lado de anúncio não se sabe se teve anúncio (nil); com o lado em 0, não teve' do
+      posts = leitura[:perfil][:posts]
+
+      expect(posts.find { |item| item[:id] == 'p1' }).to include(boosted: nil)
+      expect(posts.find { |item| item[:id] == 'p2' }).to include(boosted: false, views_from_ads: 0)
     end
 
     it 'post sem o recorte de anúncio: não se sabe se teve anúncio, entra no normal sem as vezes' do
