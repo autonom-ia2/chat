@@ -40,23 +40,25 @@ class Crm::MetaAds::InstagramComments
     return empty(target.merge(status: 'needs_login')) if login_error?(result)
     raise Error, failure(result) unless result.ok
 
-    rows = Array(result.data['data'])
+    threads = threads(result, channel)
     {
       status: 'ready', account: target[:account], permalink_url: target[:permalink_url],
-      comments: present(rows, channel), total: total(channel, target[:media_id], rows), next_cursor: next_cursor(result.data)
+      comments: present(threads, channel), total: total(channel, target[:media_id], threads), next_cursor: next_cursor(result.data)
     }
   end
 
   # No Instagram a resposta fica num nível só: responder a uma resposta vai para o comentário de cima, como no app.
-  def reply!(ad_id, comment_id, text)
+  # O id da resposta fica gravado (`page_reply`): a Graph a devolve sem `from`, e é ele que a mostra como da conta (#2313).
+  def reply!(ad_id, comment_id, text, user:)
     text = valid_text!(text, MAX_TEXT)
     found = comment_of_ad!(ad_id, comment_id)
     channel = found[:channel]
     result = client(channel).reply(found[:comment]['parent_id'].presence || comment_id, text)
     raise Error, failure(result) unless result.ok
 
+    Crm::MetaAdsCommentAction.record_reply(account: @connection.account, ad_id: ad_id, reply_id: result.data['id'], user: user)
     row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
-          'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, channel, actions: {})
+          'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, channel, actions: {}, own: true)
   end
 
   def hide!(ad_id, comment_id, hidden:)
@@ -150,24 +152,25 @@ class Crm::MetaAds::InstagramComments
     target[:status] == 'needs_login' ? payload.merge(inbox_id: target[:inbox_id]) : payload
   end
 
-  def present(rows, channel)
+  # A resposta da própria conta vem em dobro da Graph: Crm::MetaAds::InstagramCommentThreads deixa uma só (#2313).
+  def threads(result, channel) = Crm::MetaAds::InstagramCommentThreads.build(Array(result.data['data']), channel, @connection.account_id)
+
+  def present(threads, channel)
     actions = Crm::MetaAdsCommentAction.where(account_id: @connection.account_id, network: 'instagram', action: 'private_reply',
-                                              comment_id: rows.flat_map { |item| [item['id'], *replies(item).pluck('id')] })
+                                              comment_id: threads.ids)
                                        .includes(:conversation).reject(&:abandoned?).index_by(&:comment_id)
-    rows.map do |item|
-      row(item, channel, actions: actions).merge(replies: replies(item).map { |reply| row(reply, channel, actions: actions, nested: true) })
+    threads.top.map do |item|
+      row(item, channel, actions: actions, own: threads.own?(item))
+        .merge(replies: threads.replies(item).map { |reply| row(reply, channel, actions: actions, nested: true, own: threads.own?(reply)) })
     end
   end
 
-  def replies(item)
-    Array(item.dig('replies', 'data'))
-  end
-
   # O privado só vale em comentário de primeiro nível de outra pessoa (`nested`: resposta dentro de um comentário).
-  def row(item, channel, actions:, nested: false)
-    own = item.dig('from', 'id').to_s == channel.instagram_id
+  # `own`: é da conta mesmo quando a Graph não traz o `from` (#2313); o @ é o da caixa.
+  def row(item, channel, actions:, own:, nested: false)
+    username = item.dig('from', 'username') || (channel.provider_name if own)
     {
-      id: item['id'].to_s, author: { name: nil, username: item.dig('from', 'username'), is_page: own }, text: item['text'],
+      id: item['id'].to_s, author: { name: nil, username: username, is_page: own }, text: item['text'],
       created_time: item['timestamp'], hidden: item['hidden'] == true, replies: [],
       can_reply: @can_manage && !own, can_hide: @can_manage && !own, can_delete: @can_manage
     }.merge(private_state(item, !own && !nested, actions[item['id'].to_s], member?(channel)))
@@ -214,12 +217,12 @@ class Crm::MetaAds::InstagramComments
     "/app/accounts/#{conversation.account_id}/conversations/#{conversation.display_id}"
   end
 
-  # Total de comentários da mídia como a Meta conta; sem ele, o que veio nesta página.
-  def total(channel, media_id, rows)
+  # Total de comentários da mídia como a Meta conta; sem ele, o que veio nesta página, sem a cópia em dobro.
+  def total(channel, media_id, threads)
     result = client(channel).comments_count(media_id)
     return result.data['comments_count'].to_i if result.ok && result.data.key?('comments_count')
 
-    rows.sum { |item| 1 + replies(item).size }
+    threads.ids.size
   end
 
   # O @ do Instagram do anúncio quando ele não tem caixa: só para o texto da tela, pelo token da conexão.

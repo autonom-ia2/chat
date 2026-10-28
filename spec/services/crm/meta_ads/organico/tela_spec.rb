@@ -128,6 +128,34 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(tela(days: 30).perform[:page]).to eq(status: 'unavailable')
     end
 
+    # Chamada real de 27/10: a Meta manda os dois lados de is_from_ads todo dia, até com 0. Lado ausente é falta de dado.
+    it 'lado de anúncio que não veio, dia sem valor e métrica sem nenhum valor: sem número, nunca 0' do
+      stub_pagina
+      so_sem_anuncio = { 'name' => 'page_media_view', 'period' => 'day',
+                         'values' => [{ 'value' => 6000, 'is_from_ads' => '0' }, { 'value' => nil, 'is_from_ads' => '0' }] }
+      stub_get("#{fb}/1001/insights", janela(30).merge(metric: 'page_media_view', breakdown: 'is_from_ads'), [so_sem_anuncio])
+      stub_get("#{fb}/1001/insights", janela(30).merge(metric: 'page_post_engagements,page_daily_follows_unique', period: 'day'),
+               [diario('page_post_engagements', [nil, nil]), diario('page_daily_follows_unique', [3, nil])])
+
+      expect(tela(days: 30).perform[:page]).to include(status: 'ok', views: 6000, views_from_ads: nil, interactions: nil, new_followers: 3)
+    end
+
+    it 'quem viu com valor que não é número: sem número, nunca 0' do
+      stub_pagina
+      stub_get("#{fb}/1001/insights", janela(30).merge(metric: 'page_total_media_view_unique', period: 'total_over_range'),
+               [diario('page_total_media_view_unique', ['N/A'])])
+
+      expect(tela(days: 30).perform[:page]).to include(status: 'ok', reach: nil)
+    end
+
+    it 'lado sem anúncio que não veio: as vezes ficam sem número, nunca 0' do
+      stub_pagina
+      so_de_anuncio = { 'name' => 'page_media_view', 'period' => 'day', 'values' => [{ 'value' => 900, 'is_from_ads' => '1' }] }
+      stub_get("#{fb}/1001/insights", janela(30).merge(metric: 'page_media_view', breakdown: 'is_from_ads'), [so_de_anuncio])
+
+      expect(tela(days: 30).perform[:page]).to include(status: 'ok', views: nil, views_from_ads: 900)
+    end
+
     it 'devolve os números da Página com o período anterior, a parte de anúncios e os 3 posts com mais curtidas' do
       stub_pagina
       create_list(:conversation, 2, account: account, inbox: inbox)
@@ -143,7 +171,7 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(page[:top_posts].pluck(:id)).to eq(%w[p1 p2 p3])
       expect(page[:top_posts].first).to eq(id: 'p1', text: 'Agenda aberta', image_url: 'https://img/p1.jpg', reach: 1840,
                                            interactions: 186, created_time: '2026-10-24T10:00:00+0000', permalink: 'https://fb.com/p1')
-      expect(page[:top_posts].last).to include(text: '', reach: 0, image_url: nil)
+      expect(page[:top_posts].last).to include(text: '', reach: nil, image_url: nil)
     end
 
     it 'pede de novo o acesso quando a Meta recusa por falta de permissão' do
@@ -448,6 +476,17 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(tela(days: 30).perform[:instagram]).to include(status: 'ok', interactions: 0)
     end
 
+    it 'lado sem valor fica fora da soma; nenhum lado com valor é sem número, nunca 0' do
+      stub_instagram
+      nulos = { 'dimension_keys' => ['media_product_type'], 'results' => [{ 'dimension_values' => ['POST'], 'value' => nil }] }
+      sem_valor = { 'name' => 'total_interactions', 'period' => 'day', 'total_value' => { 'breakdowns' => [nulos] } }
+      vistas = por_tipo('views', { 'POST' => 300 })
+      vistas['total_value']['breakdowns'].first['results'] << { 'dimension_values' => ['REEL'], 'value' => nil }
+      stub_vistas([vistas, sem_valor])
+
+      expect(tela(days: 30).perform[:instagram]).to include(status: 'ok', views: 300, interactions: nil)
+    end
+
     it 'recorte sem os lados com total acima de zero: indisponível' do
       stub_instagram
       sem_lados = total('views', 11_050, breakdown: { 'dimension_keys' => ['media_product_type'] })
@@ -505,11 +544,13 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
                          instagram: { status: 'not_connected' })
   end
 
-  it 'Instagram pelo Messenger não conta como Página' do
+  it 'Página com Instagram ligado (instagram_id preenchido) conta como Página' do
     canal = create(:channel_instagram_fb_page, account: account, instagram_id: '178400')
-    create(:inbox, account: account, channel: canal)
+    inbox = create(:inbox, account: account, channel: canal)
+    pagina = instance_double(Crm::MetaAds::Organico::Pagina, perform: { status: 'needs_permission' })
+    allow(Crm::MetaAds::Organico::Pagina).to receive(:new).with(channel: canal, periodo: anything).and_return(pagina)
 
-    expect(tela(days: 7).perform[:page]).to eq(status: 'not_connected')
+    expect(tela(days: 7).perform[:page]).to eq(status: 'needs_permission', inbox_id: inbox.id)
   end
 
   it 'recusa período fora de 7, 30 e 90 dias' do

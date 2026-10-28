@@ -72,6 +72,7 @@ export const FEATURE_FLAGS = {
   META_ADS_GESTAO: 'meta_ads_gestao',
   META_ADS_FORMULARIOS: 'meta_ads_formularios',
   META_ADS_CRIAR: 'meta_ads_criar',
+  SEUS_POSTS: 'seus_posts',
   CONTATO_RELACAO: 'contato_relacao',
   META_ADS_ORGANICO: 'meta_ads_organico',
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',
@@ -87,6 +88,7 @@ export const FEATURE_FLAGS = {
   FICAR_COM_A_CONVERSA_AO_ENVIAR: 'ficar_com_a_conversa_ao_enviar',
   CRM_ARQUIVADOS: 'crm_arquivados',
   AGENTES_PAINEL_DESEMPENHO: 'agentes_painel_desempenho',
+  CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',
@@ -100,6 +102,7 @@ export const FEATURE_FLAGS = {
   CONVERSATION_REQUIRED_ATTRIBUTES: 'conversation_required_attributes',
   CONVERSATION_UNREAD_COUNTS: 'conversation_unread_counts',
   UNREAD_COUNT_FOR_FILTERS: 'unread_count_for_filters',
+  META_ADS_COMENTARIOS_FACEBOOK: 'meta_ads_comentarios_facebook',
 };
 
 export const PREMIUM_FEATURES = [

@@ -248,6 +248,23 @@ RSpec.describe SentryHttpAuthScrubber do
     expect(filtered).to eq('message' => 'Quanto custa este?', 'images' => '[FILTERED]')
   end
 
+  # #2327 — a resposta a comentário e o texto de mensagem vão em `content`: o log do Rails filtra, e o Sentry, que lê o
+  # corpo JSON cru (send_default_pii), também precisa filtrar.
+  it 'filters content from the JSON body of an exported event' do
+    body = JSON.generate(content: 'Oi, Carla! Seu CPF confere.', hidden: true)
+    event = Sentry::ErrorEvent.new(configuration: configuration, message: 'reply failed')
+    env_options = { 'REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json', :input => body }
+    event.rack_env = Rack::MockRequest.env_for('https://app.example.invalid/api/v1/accounts/1/crm/reply', env_options)
+    expect(event.request.data.to_s).to include('Oi, Carla!')
+
+    described_class.install(configuration)
+    client.send_event(event)
+    payload = client.transport.payloads.fetch(0)
+
+    expect(payload).not_to include('Oi, Carla!')
+    expect(JSON.parse(JSON.parse(payload.lines.fetch(2)).dig('request', 'data'))).to eq('content' => '[FILTERED]', 'hidden' => true)
+  end
+
   %i[before_send before_send_transaction].each do |callback_name|
     it "preserves #{callback_name} behavior and sanitizes its returned event" do
       hint = { background: false }

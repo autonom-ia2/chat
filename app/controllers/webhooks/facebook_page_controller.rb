@@ -4,7 +4,9 @@
 # formulário (`leadgen`) e comentários (`feed`). Aqui o POST é conferido (X-Hub-Signature-256) e repartido:
 # - `messaging` vai para os handlers da gem (config/initializers/facebook_messenger.rb), como antes;
 # - cada `changes[]` vira o job do seu campo, com (page_id, value, time). O job é do recurso que usa o campo e
-#   ignora Página que não conhece nesta stack.
+#   ignora Página que não conhece nesta stack. Se o job tiver `webhook_value`, o `value` passa por ele antes de virar
+#   argumento: o Sidekiq guarda os argumentos em claro no Redis (fila, retry, dead set), e o comentário (`feed`, #2197)
+#   vai só com os ids.
 # O GET de verificação continua na gem.
 #
 # O app tem um só endereço de webhook de Página para todas as stacks. A que recebe repassa às outras
@@ -39,7 +41,8 @@ class Webhooks::FacebookPageController < ActionController::API
     job = CHANGE_JOBS[change['field']]&.safe_constantize
     return Rails.logger.info("Facebook page webhook: no job for field #{change['field'].inspect}") if job.nil?
 
-    job.perform_later(entry['id'].to_s, change['value'], entry['time'])
+    value = job.respond_to?(:webhook_value) ? job.webhook_value(change['value']) : change['value']
+    job.perform_later(entry['id'].to_s, value, entry['time'])
   end
 
   def relay_to_other_stacks(entries)

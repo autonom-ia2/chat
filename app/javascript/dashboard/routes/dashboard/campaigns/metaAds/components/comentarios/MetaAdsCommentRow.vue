@@ -276,10 +276,23 @@ const DANGER =
           </div>
         </div>
         <p
+          v-if="comment.text"
           class="m-0 whitespace-pre-line break-words text-sm leading-relaxed"
           :class="comment.hidden ? 'text-n-slate-11' : 'text-n-slate-12'"
         >
           {{ comment.text }}
+        </p>
+        <p
+          v-else-if="comment.attachment"
+          data-ad-comment-attachment
+          class="m-0 inline-flex items-center gap-1.5 text-sm italic text-n-slate-11"
+        >
+          <span class="i-lucide-image size-3.5" aria-hidden="true" />
+          {{
+            $t(
+              `${KEY}.${comment.attachment === 'photo' ? 'ATTACHMENT_PHOTO' : 'ATTACHMENT'}`
+            )
+          }}
         </p>
         <p
           v-if="privateSent"

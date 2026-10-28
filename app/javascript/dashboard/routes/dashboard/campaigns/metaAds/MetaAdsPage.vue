@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
@@ -125,11 +125,39 @@ const panelAvailable = computed(
     connection.value?.status === 'active' &&
     Boolean(connection.value?.ad_account)
 );
-const organicOn = computed(() =>
+// Seus posts virou página própria (#2302): com a flag seus_posts, a aba sai daqui e o endereço antigo (?aba=organico,
+// de links e da volta do login do Instagram) leva à página nova, para quem pode abri-la.
+const seusPostsOn = computed(() =>
   isFeatureEnabledonAccount.value(
     Number(route.params.accountId),
-    FEATURE_FLAGS.META_ADS_ORGANICO
+    FEATURE_FLAGS.SEUS_POSTS
   )
+);
+const canSeePosts = usePermissionGranted('posts_view');
+const canManagePosts = usePermissionGranted('posts_manage');
+// As flags da conta podem chegar depois da tela montar (link direto): a troca espera por elas.
+watch(
+  () =>
+    route.query.aba === 'organico' &&
+    seusPostsOn.value &&
+    (canSeePosts.value || canManagePosts.value),
+  mover => {
+    if (mover)
+      router.replace({
+        name: 'seus_posts_index',
+        params: { accountId: route.params.accountId },
+      });
+  },
+  { immediate: true }
+);
+// A aba antiga só sai para quem abre a página nova: quem só tem Anúncios da Meta continua com ela.
+const organicOn = computed(
+  () =>
+    !(seusPostsOn.value && (canSeePosts.value || canManagePosts.value)) &&
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.META_ADS_ORGANICO
+    )
 );
 const leadFormsOn = computed(() =>
   isFeatureEnabledonAccount.value(
@@ -221,9 +249,18 @@ const startFacebookLogin = data => {
   openStep.value = 2;
 };
 
+// Entrou de novo com o Facebook a partir dos comentários de um anúncio (#2197, `?volta=<anúncio>`): volta ao anúncio.
+const backToAd = () => {
+  const adId = route.query.volta;
+  if (!adId) return;
+  view.value = 'resultado';
+  router.replace({ query: { aba: 'resultado', anuncio: adId } });
+};
+
 const accountSaved = data => {
   rememberMode(null);
   update(data);
+  backToAd();
 };
 
 // Passo 4 gravado no funil: relê a conexão, que diz se as vendas já são avisadas.

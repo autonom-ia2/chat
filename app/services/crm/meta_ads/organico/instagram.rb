@@ -23,7 +23,7 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
     @perfil = ler(api.instagram_profile)
     {
       status: 'ok', username: @perfil['username'], link: "https://www.instagram.com/#{@perfil['username']}",
-      followers: @perfil['followers_count'].to_i, **janela(periodo.atual), **comparacao, top_posts: top_posts
+      followers: @perfil['followers_count']&.to_i, **janela(periodo.atual), **comparacao, top_posts: top_posts
     }
   end
 
@@ -50,16 +50,23 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
     }
   end
 
-  # Soma dos lados orgânicos do recorte; com follow_type, só os desse lado.
+  # Soma dos lados orgânicos do recorte; com follow_type, só os desse lado. Lado sem valor fica fora; nenhum lado com
+  # valor é "sem número" (nil), nunca 0. A métrica que veio 0 sem os lados (período parado) é 0. Ao contrário da
+  # Página, o Instagram não manda o tipo zerado: na conta real (27/10) o período parado veio só com a linha AD. Por
+  # isso tipo orgânico ausente, com outros lados com valor, é 0.
   def sem_anuncio(data, name, chaves, follow_type: nil)
     recorte = recorte_por_tipo(data, name, chaves)
-    Array(recorte['results']).sum do |resultado|
-      lado = recorte['dimension_keys'].zip(Array(resultado['dimension_values'])).to_h
-      next 0 unless organico?(lado['media_product_type'], name)
-      next 0 if follow_type && lado['follow_type'] != follow_type
+    return 0 if recorte.empty?
 
-      resultado['value'].to_i
-    end
+    com_valor = Array(recorte['results']).select { |resultado| resultado['value'].is_a?(Numeric) }
+    return if com_valor.empty?
+
+    com_valor.sum { |resultado| conta?(recorte, resultado, name, follow_type) ? resultado['value'] : 0 }
+  end
+
+  def conta?(recorte, resultado, name, follow_type)
+    lado = recorte['dimension_keys'].zip(Array(resultado['dimension_values'])).to_h
+    organico?(lado['media_product_type'], name) && (follow_type.nil? || lado['follow_type'] == follow_type)
   end
 
   def organico?(tipo, name)

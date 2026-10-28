@@ -458,6 +458,22 @@
       "inbox_id"
     ]
   },
+  "campaign_journey/conversation_audiences/:id": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#show",
+    "parametros": [
+      "since"
+    ]
+  },
+  "campaign_journey/conversation_audiences/:id/conversation": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#conversation",
+    "parametros": [
+      "person_id"
+    ]
+  },
+  "campaign_journey/conversation_audiences/status": {
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#status",
+    "parametros": []
+  },
   "campaign_journey/drafts": {
     "controller": "api/v1/accounts/campaign_journey/drafts#index",
     "parametros": []
@@ -1226,7 +1242,8 @@
   "crm/cards": {
     "controller": "api/v1/accounts/crm/cards#index",
     "motivos": [
-      "params inteiro repassado a ::Crm::Cards::FilterQuery.new"
+      "params inteiro repassado a ::Crm::Cards::FilterQuery.new",
+      "params inteiro repassado a ::Crm::Cards::ActionGroups.sort?"
     ]
   },
   "crm/cards/:id": {
@@ -1384,6 +1401,12 @@
   "crm/meta_ads_connection/ads/:ad_id/budget": {
     "controller": "api/v1/accounts/crm/meta_ads_creation#budget",
     "parametros": []
+  },
+  "crm/meta_ads_connection/ads/:ad_id/facebook_comments": {
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#index",
+    "parametros": [
+      "after"
+    ]
   },
   "crm/meta_ads_connection/ads/:ad_id/instagram_comments": {
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#index",
@@ -2197,6 +2220,13 @@
     "controller": "api/v1/accounts/search#messages",
     "motivos": [
       "params inteiro repassado a SearchService.new"
+    ]
+  },
+  "seus_posts": {
+    "controller": "api/v1/accounts/seus_posts#index",
+    "parametros": [
+      "days",
+      "perfil"
     ]
   },
   "sla_policies": {
