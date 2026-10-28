@@ -26,6 +26,11 @@ class Crm::MetaAds::Organico::Periodo
     @inicio..@agora
   end
 
+  # As conversas do período anterior, para comparar (Seus posts #2304).
+  def intervalo_anterior
+    (@inicio - dias.days)...@inicio
+  end
+
   # Datas que a tela mostra ("21 de out. a 27 de out.").
   def de
     @inicio.to_date.iso8601

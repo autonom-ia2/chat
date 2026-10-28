@@ -191,6 +191,8 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Seus posts (#2302, F1 #2304): os números do perfil e os posts do Instagram e da Página das caixas.
+          get :seus_posts, to: 'seus_posts#index'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member

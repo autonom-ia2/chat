@@ -73,6 +73,10 @@
 #   grant_above_own, which only an administrator turns on. Choosing an ad account grants the platform system user
 #   access to the client's ad account. CRM sales values are out of its scope (sales_value_view, lote 13); the ad
 #   budget it shows and changes is the ad's own money at Meta, in the ad account's currency (#2198).
+# - 'posts_view' / 'posts_manage': Seus posts (#2302), the Instagram and Facebook Page posts of the account's inboxes.
+#   view sees the profile numbers and the posts; the comments (who wrote them) also need to see the inbox
+#   (InboxPolicy#show?). manage answers, hides and shows a comment again and sends the private reply, also only on
+#   inboxes the person sees. Common delegable module (Funções, 27/10).
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 # - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 # - 'people_manage': add, invite, edit and remove agents, and manage teams (#1931). Never administrators, never one's own
@@ -154,6 +158,8 @@ class CustomRole < ApplicationRecord
     whatsapp_templates_manage
     meta_ads_view
     meta_ads_manage
+    posts_view
+    posts_manage
     label_manage
     attribute_manage
     macro_manage

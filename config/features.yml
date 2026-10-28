@@ -971,11 +971,22 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Seus posts (#2302, F1 #2304): página própria no grupo Crescer, com os números do perfil e todos os posts do Instagram
+# e da Página das caixas da conta (sem conexão de anúncios). Ligada: a API GET seus_posts responde (PR 1a); o item no
+# menu, a rota e os links antigos da aba "Seus posts" de Anúncios chegam no PR 1b. Desligada: a API responde 404. Sem
+# migration. Fim da feature_flags_ext_2 da main: posição 10 (valor 512, 1 << 9), válida contra a main de 27/10
+# (Orquestração). Se outra flag entrar antes, a Orquestração pede o ajuste antes da fila. Nasce ligada no piloto
+# (contas 1, 16 e 18).
+- name: seus_posts
+  display_name: Seus posts (Instagram e Página)
+  enabled: false
+  column: feature_flags_ext_2
+
 # Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
 # pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
 # lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Migration 20261108600000
-# (conversation_audience_*). Fim da feature_flags_ext_2, depois de meta_ads_criar (#2198): posição 10 (valor 512,
-# 1 << 9), confirmada pela Orquestração em 27/10.
+# (conversation_audience_*). Fim da feature_flags_ext_2, depois de seus_posts (#2304): posição 11 (valor 1024,
+# 1 << 10), a confirmar pela Orquestração antes da fila.
 - name: campanhas_publico_por_conversa
   display_name: Campanhas › Novo público pedindo em palavras
   enabled: false
