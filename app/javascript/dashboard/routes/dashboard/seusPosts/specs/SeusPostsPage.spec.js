@@ -1,0 +1,333 @@
+import { flushPromises, mount } from '@vue/test-utils';
+import { reactive, ref } from 'vue';
+import { createI18n } from 'vue-i18n';
+import ptBR from 'dashboard/i18n/locale/pt_BR/seusPosts.json';
+import SeusPostsPage from '../pages/SeusPostsPage.vue';
+import SeusPostsAPI from 'dashboard/api/seusPosts';
+import FBChannel from 'dashboard/api/channel/fbChannel';
+import instagramClient from 'dashboard/api/channel/instagramClient';
+
+// Seus posts (#2302, F1 #2304): a página com o que GET seus_posts manda. Dados sintéticos.
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/api/seusPosts', () => ({ default: { get: vi.fn() } }));
+vi.mock('dashboard/api/channel/fbChannel', () => ({
+  default: { reauthorizeFacebookPage: vi.fn() },
+}));
+vi.mock('dashboard/api/channel/instagramClient', () => ({
+  default: { generateAuthorization: vi.fn() },
+}));
+const login = vi.fn();
+vi.mock('dashboard/composables/useFacebookPageConnect', () => ({
+  useFacebookPageConnect: () => ({
+    preloadSdk: () => Promise.resolve(),
+    login,
+  }),
+}));
+const granted = ref([]);
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return {
+    usePermissionGranted: key => computed(() => granted.value.includes(key)),
+  };
+});
+const route = reactive({ query: {}, params: { accountId: 1 } });
+const push = vi.fn();
+const replace = vi.fn(({ query }) => {
+  route.query = query;
+});
+vi.mock('vue-router', () => ({
+  useRoute: () => route,
+  useRouter: () => ({ push, replace }),
+}));
+
+const UM_DIA = 24 * 60 * 60 * 1000;
+const haDias = dias => new Date(Date.now() - dias * UM_DIA).toISOString();
+
+const post = (id, extra = {}) => ({
+  id,
+  text: `Post ${id}`,
+  type: 'foto',
+  image_url: null,
+  permalink: `https://www.instagram.com/p/${id}`,
+  created_time: haDias(5),
+  boosted: false,
+  views: 400,
+  reach: 300,
+  likes: 20,
+  comments: 3,
+  ...extra,
+});
+
+const instagram = (extra = {}) => ({
+  id: 'instagram-1',
+  network: 'instagram',
+  status: 'ok',
+  username: 'studioacme',
+  link: 'https://www.instagram.com/studioacme',
+  followers: 2300,
+  reach: 1800,
+  views: 5200,
+  interactions: 410,
+  new_followers: 35,
+  previous: { reach: 1500, views: 4000, interactions: 380, new_followers: 20 },
+  messages: { count: 12, previous: 9, inbox_id: 7 },
+  posts_status: 'ok',
+  posts: [post('a', { views: 1200 }), post('b')],
+  normal: { views: 400, likes: 20, comments: 3 },
+  ...extra,
+});
+
+const responder = (perfil, perfis) =>
+  SeusPostsAPI.get.mockResolvedValue({
+    data: {
+      days: 30,
+      from: '2026-09-28',
+      to: '2026-10-27',
+      perfil,
+      perfis: perfis || [
+        { id: perfil.id, network: perfil.network, name: '@studioacme' },
+      ],
+    },
+  });
+
+// A rota é uma só para todos os testes: a página de um teste não pode seguir viva no seguinte.
+const montadas = [];
+const montar = async () => {
+  const wrapper = mount(SeusPostsPage, {
+    global: {
+      plugins: [
+        createI18n({
+          legacy: false,
+          locale: 'pt_BR',
+          messages: { pt_BR: ptBR },
+        }),
+      ],
+      stubs: { ChoiceSelect: true },
+    },
+  });
+  montadas.push(wrapper);
+  await flushPromises();
+  return wrapper;
+};
+
+describe('Seus posts (#2304)', () => {
+  afterEach(() => {
+    montadas.splice(0).forEach(wrapper => wrapper.unmount());
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    route.query = {};
+    granted.value = ['integration_manage', 'inbox_manage'];
+    delete window.location;
+    window.location = { href: '' };
+  });
+
+  it('pede 30 dias e o primeiro perfil quando o endereço não diz', async () => {
+    responder(instagram());
+    await montar();
+    expect(SeusPostsAPI.get).toHaveBeenCalledWith({
+      perfil: undefined,
+      days: 30,
+    });
+  });
+
+  it('mostra a frase, a comparação e os quatro números', async () => {
+    responder(instagram());
+    const wrapper = await montar();
+
+    const heroi = wrapper.find('[data-seus-posts-heroi]').text();
+    expect(heroi).toContain('5.200 vezes sem anúncio');
+    expect(heroi).toContain('1.200 a mais que nos 30 dias anteriores');
+    const quadros = wrapper.findAll('[data-seus-posts-quadro]');
+    expect(quadros.map(q => q.attributes('data-seus-posts-quadro'))).toEqual([
+      'people',
+      'interactions',
+      'followers',
+      'messages',
+    ]);
+    // No Instagram, quem viu é o teto.
+    expect(quadros[0].text()).toContain('até 1.800');
+    expect(quadros[3].text()).toContain('3 a mais');
+  });
+
+  it('sem ver a caixa, sem o quadro de mensagens nem "Ver conversas"', async () => {
+    responder(
+      instagram({ messages: { count: null, previous: null, inbox_id: null } })
+    );
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-quadro="messages"]').exists()).toBe(
+      false
+    );
+    expect(wrapper.find('[data-seus-posts-ver-conversas]').exists()).toBe(
+      false
+    );
+  });
+
+  it('cada post contra o normal, o destaque e o link para a rede', async () => {
+    responder(instagram());
+    const wrapper = await montar();
+
+    const melhor = wrapper.find('[data-seus-posts-card="a"]');
+    expect(melhor.find('[data-seus-posts-veredito]').text()).toBe(
+      '3 vezes o normal'
+    );
+    expect(melhor.find('[data-seus-posts-destaque]').exists()).toBe(true);
+    expect(melhor.find('[data-seus-posts-abrir="a"]').attributes('href')).toBe(
+      'https://www.instagram.com/p/a'
+    );
+    expect(
+      wrapper
+        .find('[data-seus-posts-card="b"] [data-seus-posts-veredito]')
+        .text()
+    ).toBe('Perto do normal');
+  });
+
+  it('post novo sem as vezes não mostra número nem veredito', async () => {
+    responder(
+      instagram({
+        posts: [post('novo', { views: null, created_time: haDias(0.5) })],
+      })
+    );
+    const wrapper = await montar();
+
+    const cartao = wrapper.find('[data-seus-posts-card="novo"]');
+    expect(cartao.find('[data-seus-posts-sem-numeros]').exists()).toBe(true);
+    expect(cartao.find('[data-seus-posts-veredito]').exists()).toBe(false);
+  });
+
+  it('403 é "sem acesso", não erro de rede', async () => {
+    SeusPostsAPI.get.mockRejectedValue({ response: { status: 403 } });
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-sem-acesso]').exists()).toBe(true);
+    expect(wrapper.find('[data-seus-posts-erro]').exists()).toBe(false);
+  });
+
+  it('falha de rede mostra "Tentar de novo"', async () => {
+    SeusPostsAPI.get.mockRejectedValue(new Error('Network Error'));
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-erro]').exists()).toBe(true);
+  });
+
+  it('perfil do endereço que sumiu volta para o primeiro', async () => {
+    route.query = { perfil: 'instagram-99' };
+    SeusPostsAPI.get.mockRejectedValueOnce({ response: { status: 404 } });
+    responder(instagram());
+    await montar();
+
+    expect(SeusPostsAPI.get).toHaveBeenLastCalledWith({
+      perfil: undefined,
+      days: 30,
+    });
+  });
+
+  it('Meta fora no perfil: "Tentar de novo" só nele', async () => {
+    responder({
+      id: 'instagram-1',
+      network: 'instagram',
+      status: 'unavailable',
+    });
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-indisponivel]').exists()).toBe(true);
+  });
+
+  it('Instagram sem a permissão: o login volta para Seus posts', async () => {
+    responder({
+      id: 'instagram-1',
+      network: 'instagram',
+      status: 'needs_permission',
+      inbox_id: 7,
+    });
+    instagramClient.generateAuthorization.mockResolvedValue({
+      data: { url: 'https://www.instagram.com/oauth/authorize?x=1' },
+    });
+    const wrapper = await montar();
+
+    await wrapper
+      .find('[data-seus-posts-sem-permissao] button')
+      .trigger('click');
+    await flushPromises();
+
+    expect(instagramClient.generateAuthorization).toHaveBeenCalledWith({
+      inbox_id: 7,
+      return_to: 'meta_ads',
+      purpose: 'seus_posts',
+    });
+    expect(window.location.href).toBe(
+      'https://www.instagram.com/oauth/authorize?x=1'
+    );
+  });
+
+  it('Página sem a permissão: reautoriza com read_insights e lê de novo', async () => {
+    responder({
+      id: 'facebook-2',
+      network: 'facebook',
+      status: 'needs_permission',
+      name: 'Studio Acme',
+      inbox_id: 8,
+    });
+    login.mockResolvedValue('token-sintetico');
+    FBChannel.reauthorizeFacebookPage.mockResolvedValue({});
+    const wrapper = await montar();
+
+    await wrapper
+      .find('[data-seus-posts-sem-permissao] button')
+      .trigger('click');
+    await flushPromises();
+
+    expect(login).toHaveBeenCalledWith(['read_insights']);
+    expect(FBChannel.reauthorizeFacebookPage).toHaveBeenCalledWith({
+      omniauthToken: 'token-sintetico',
+      inboxId: 8,
+    });
+    expect(SeusPostsAPI.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('quem não pode trocar a credencial da caixa recebe o que pedir, sem botão', async () => {
+    granted.value = [];
+    responder({
+      id: 'instagram-1',
+      network: 'instagram',
+      status: 'needs_permission',
+      inbox_id: null,
+    });
+    const wrapper = await montar();
+
+    const bloco = wrapper.find('[data-seus-posts-sem-permissao]');
+    expect(bloco.text()).toContain('Peça a quem administra a conta');
+    expect(bloco.find('button').exists()).toBe(false);
+  });
+
+  it('sem caixa nenhuma: conectar o Instagram', async () => {
+    SeusPostsAPI.get.mockResolvedValue({
+      data: { days: 30, perfil: null, perfis: [] },
+    });
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-sem-caixa]').exists()).toBe(true);
+  });
+
+  it('sem post no período: oferece 90 dias, sem números zerados', async () => {
+    responder(instagram({ posts: [], views: 0 }));
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-sem-post]').exists()).toBe(true);
+    expect(wrapper.find('[data-seus-posts-numeros]').exists()).toBe(false);
+  });
+
+  it('primeiro período com números: diz que ainda não compara', async () => {
+    responder(instagram({ previous: null, first_period: true }));
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-seus-posts-mudanca]').text()).toContain(
+      'ainda não dá para comparar'
+    );
+    expect(wrapper.find('[data-seus-posts-numeros] h2').text()).toBe(
+      'Números dos últimos 30 dias'
+    );
+  });
+});

@@ -125,11 +125,32 @@ const panelAvailable = computed(
     connection.value?.status === 'active' &&
     Boolean(connection.value?.ad_account)
 );
-const organicOn = computed(() =>
+// Seus posts virou página própria (#2302): com a flag seus_posts, a aba sai daqui e o endereço antigo (?aba=organico,
+// de links e da volta do login do Instagram) leva à página nova, para quem pode abri-la.
+const seusPostsOn = computed(() =>
   isFeatureEnabledonAccount.value(
     Number(route.params.accountId),
-    FEATURE_FLAGS.META_ADS_ORGANICO
+    FEATURE_FLAGS.SEUS_POSTS
   )
+);
+const canSeePosts = usePermissionGranted('posts_view');
+const canManagePosts = usePermissionGranted('posts_manage');
+if (
+  route.query.aba === 'organico' &&
+  seusPostsOn.value &&
+  (canSeePosts.value || canManagePosts.value)
+)
+  router.replace({
+    name: 'seus_posts_index',
+    params: { accountId: route.params.accountId },
+  });
+const organicOn = computed(
+  () =>
+    !seusPostsOn.value &&
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.META_ADS_ORGANICO
+    )
 );
 const leadFormsOn = computed(() =>
   isFeatureEnabledonAccount.value(
