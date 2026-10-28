@@ -2199,6 +2199,13 @@
       "params inteiro repassado a SearchService.new"
     ]
   },
+  "seus_posts": {
+    "controller": "api/v1/accounts/seus_posts#index",
+    "parametros": [
+      "days",
+      "perfil"
+    ]
+  },
   "sla_policies": {
     "controller": "api/v1/accounts/sla_policies#index",
     "parametros": []

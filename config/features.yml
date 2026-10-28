@@ -970,3 +970,13 @@
   display_name: Anúncios da Meta › criar anúncio, orçamento e datas
   enabled: false
   column: feature_flags_ext_2
+
+# Seus posts (#2302, F1 #2304): página própria no grupo Crescer, com os números do perfil e todos os posts do Instagram
+# e da Página das caixas da conta (sem conexão de anúncios). Ligada: a API GET seus_posts responde (PR 1a); o item no
+# menu, a rota e os links antigos da aba "Seus posts" de Anúncios chegam no PR 1b. Desligada: a API responde 404. Sem migration. Fim da feature_flags_ext_2, posição pela ordem na main, confirmada pela Orquestração na
+# hora da fila (provisória 12, valor 2048, 1 << 11: a 10 é do #2303 e a 11 da crm_lista_acao). Nasce ligada no piloto
+# (contas 1, 16 e 18).
+- name: seus_posts
+  display_name: Seus posts (Instagram e Página)
+  enabled: false
+  column: feature_flags_ext_2

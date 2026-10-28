@@ -195,6 +195,12 @@
           "LEVEL_VIEW": "Vê o painel dos anúncios, os resultados e o orçamento e as datas de cada anúncio. Criar, conectar e configurar pede Editar.",
           "LEVEL_MANAGE": "Também conecta, configura e desconecta a conta de anúncios, para onde os anúncios levam, o aviso de vendas no funil e o resumo no WhatsApp, age sobre o consultor, cria anúncios (sempre pausados), ativa e muda o orçamento e as datas."
         },
+        "POSTS": {
+          "NAME": "Seus posts",
+          "HINT": "Posts do Instagram e da Página, com os números e os comentários",
+          "LEVEL_VIEW": "Vê os posts e os números. Os comentários aparecem só das caixas que vê.",
+          "LEVEL_MANAGE": "Também responde no comentário, esconde e mostra de novo e manda no privado, nas caixas que vê."
+        },
         "INBOXES": {
           "NAME": "Caixas de entrada",
           "HINT": "Canais, QR do WhatsApp e membros",

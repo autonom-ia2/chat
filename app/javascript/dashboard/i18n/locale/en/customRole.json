@@ -195,6 +195,12 @@
           "LEVEL_VIEW": "Sees the ads panel, its results and each ad's budget and dates. Creating, connecting and configuring need Edit.",
           "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, acts on the advisor, creates ads (always paused), activates them and changes their budget and dates."
         },
+        "POSTS": {
+          "NAME": "Your posts",
+          "HINT": "Instagram and Page posts, with their numbers and comments",
+          "LEVEL_VIEW": "Sees the posts and their numbers. Comments show only for the inboxes they see.",
+          "LEVEL_MANAGE": "Also replies on the comment, hides and shows it again and sends the private reply, on the inboxes they see."
+        },
         "INBOXES": {
           "NAME": "Inboxes",
           "HINT": "Channels, WhatsApp QR and members",
