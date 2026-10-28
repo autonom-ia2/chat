@@ -147,6 +147,34 @@ RSpec.describe SeusPosts::Leitura do
       expect(a_request(:get, "#{ig}/me/media").with(query: hash_including({}))).to have_been_made.twice
     end
 
+    it 'números e posts do perfil dividem o mesmo teto de tempo' do
+      prazos = []
+      allow(SeusPosts::NumerosInstagram).to receive(:new) do |**args|
+        prazos << args[:prazo]
+        instance_double(SeusPosts::NumerosInstagram, perform: { status: 'ok', followers: 10 })
+      end
+      allow(SeusPosts::Posts).to receive(:para).and_wrap_original do |original, *args, **opcoes|
+        prazos << opcoes[:prazo]
+        original.call(*args, **opcoes)
+      end
+
+      leitura
+
+      expect(prazos.size).to eq(2)
+      expect(prazos.uniq.size).to eq(1)
+      expect(prazos.first).to be_a(Float)
+    end
+
+    it 'teto de tempo de verdade nos posts: indisponível, sem a espera de falha da Meta' do
+      store = ActiveSupport::Cache::MemoryStore.new
+      allow(Rails).to receive(:cache).and_return(store)
+      stub_const('SeusPosts::Orcamento::SEGUNDOS', 0)
+
+      expect(leitura[:perfil]).to include(status: 'ok', posts_status: 'unavailable')
+      expect(store.exist?("seus_posts:v2:#{account.id}:posts:instagram-#{canal.id}:falha")).to be(false)
+      expect(a_request(:get, "#{ig}/me/media").with(query: hash_including({}))).not_to have_been_made
+    end
+
     it 'o nosso teto de tempo não é falha da Meta: a próxima recarga lê de novo' do
       allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
       leitura

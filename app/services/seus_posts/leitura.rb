@@ -40,13 +40,15 @@ class SeusPosts::Leitura
 
   private
 
+  # Números e posts dividem o teto de tempo do perfil (SeusPosts::Orcamento).
   def perfil(canal)
-    numeros = ler_numeros(canal)
+    prazo = SeusPosts::Orcamento.prazo
+    numeros = ler_numeros(canal, prazo)
     base = { id: id_do(canal), network: rede(canal), inbox_id: canal.inbox.id, **numeros.except(:top_posts) }
     return base unless numeros[:status] == 'ok'
 
     guardar_nome(canal, numeros)
-    base.merge(messages: mensagens(canal.inbox, numeros), **ler_posts(canal))
+    base.merge(messages: mensagens(canal.inbox, numeros), **ler_posts(canal, prazo))
   rescue Crm::MetaAds::Organico::Indisponivel => e
     Rails.logger.warn("[SeusPosts] conta=#{@account.id} perfil=#{id_do(canal)} status=unavailable code=#{e.codigo}")
     { id: id_do(canal), network: rede(canal), inbox_id: canal.inbox.id, status: 'unavailable' }
@@ -60,8 +62,8 @@ class SeusPosts::Leitura
   end
 
   # Os posts do período, o normal e se a lista parou no teto de posts lidos.
-  def ler_posts(canal)
-    lidos = guardado("posts:#{id_do(canal)}") { SeusPosts::Posts.para(canal, periodo: @periodo).perform }
+  def ler_posts(canal, prazo)
+    lidos = guardado("posts:#{id_do(canal)}") { SeusPosts::Posts.para(canal, periodo: @periodo, prazo: prazo).perform }
     return { posts_status: lidos[:status], posts: [], normal: nil } unless lidos[:status] == 'ok'
 
     inicio = @periodo.atual[:since]
@@ -83,8 +85,10 @@ class SeusPosts::Leitura
     "seus_posts:#{CACHE_VERSION}:#{@account.id}:nome:#{id_do(canal)}"
   end
 
-  def ler_numeros(canal)
-    guardado("numeros:#{id_do(canal)}:#{@periodo.dias}") { classe_dos_numeros(canal).new(channel: canal, periodo: @periodo).perform }
+  def ler_numeros(canal, prazo)
+    guardado("numeros:#{id_do(canal)}:#{@periodo.dias}") do
+      classe_dos_numeros(canal).new(channel: canal, periodo: @periodo, prazo: prazo).perform
+    end
   end
 
   # Só o que veio ok fica guardado: "Libere…" lê de novo na próxima vez. Meta fora ou passou do tempo: a última leitura

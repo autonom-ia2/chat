@@ -51,7 +51,9 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
   end
 
   # Soma dos lados orgânicos do recorte; com follow_type, só os desse lado. Lado sem valor fica fora; nenhum lado com
-  # valor é "sem número" (nil), nunca 0. A métrica que veio 0 sem os lados (período parado) é 0.
+  # valor é "sem número" (nil), nunca 0. A métrica que veio 0 sem os lados (período parado) é 0. Ao contrário da
+  # Página, o Instagram não manda o tipo zerado: na conta real (27/10) o período parado veio só com a linha AD. Por
+  # isso tipo orgânico ausente, com outros lados com valor, é 0.
   def sem_anuncio(data, name, chaves, follow_type: nil)
     recorte = recorte_por_tipo(data, name, chaves)
     return 0 if recorte.empty?
