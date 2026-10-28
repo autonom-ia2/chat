@@ -60,6 +60,19 @@ class Autonomia::Desempenho::Painel
     [inicio, fim, completo ? [ant_ini, ant_fim] : nil]
   end
 
+  # A situação do painel sem nenhuma procura do agente. Com a leitura automática ligada para ele (#2301): `lendo` antes
+  # da primeira rodada e durante uma, a parada da última rodada, ou `sem_conversas` quando ela leu e não achou nada.
+  # Sem ela, `leitura_desligada`.
+  def self.situacao_sem_procuras(account, sujeito_type, sujeito_id)
+    ficha = Autonomia::Desempenho::Ficha.vigente(account, sujeito_type, sujeito_id)
+    return 'leitura_desligada' unless Autonomia::Desempenho::LeituraAutomatica::Orquestrador.ligada? && ficha&.chave_de_leitura.present?
+
+    ultima = Autonomia::Desempenho::Rodada.do_sujeito(account, sujeito_type, sujeito_id).recentes.first
+    return 'lendo' if ultima.nil? || ultima.status == 'rodando'
+
+    Autonomia::Desempenho::Rodada::PARADAS.include?(ultima.status) ? ultima.status : 'sem_conversas'
+  end
+
   # O nome IANA do fuso: o da conta, senão o da ficha, senão o padrão da plataforma. Nunca um nome inválido.
   def self.fuso_de(account, ficha)
     nome = Crm::Timezone::Resolver.new(account: account).name ||
@@ -72,9 +85,10 @@ class Autonomia::Desempenho::Painel
 
   def com_leitura? = ficha.present? && todas.exists? && dados_ate.present?
 
-  # A leitura automática vale para este agente: a ENV ligada e a ficha com a chave de leitura. Desligada, as rodadas
-  # antigas não mudam nada na tela, mas o que elas gravaram fica: a gravação troca as procuras da carga pelas novas, e
-  # desligar a ENV não devolve a carga (a volta dos dados é o pacote de volta da conta, por psql).
+  # A leitura automática vale para este agente: a ENV ligada e a ficha com a chave de leitura. Desligada, somem o
+  # "Lido até", a situação e os avisos da leitura, e nenhuma rodada nova roda. Os números continuam os gravados, com
+  # o que a leitura automática já regravou: ela troca as procuras da carga pelas novas e move a última mensagem lida
+  # ("Dados até"). Desligar a ENV não devolve a carga; a volta dos dados é o pacote de volta da conta, por psql.
   def automatica? = @automatica
 
   # As datas do período e o que depende delas, refeito a cada chamada.
@@ -147,10 +161,12 @@ class Autonomia::Desempenho::Painel
     escopo.count
   end
 
+  # As que a última rodada fechada deixou para a próxima (a `teto` que não leu nada também deixa). A rodada conta as
+  # da conta inteira: quem vê só parte das caixas não recebe o número.
   def pendentes
-    return 0 unless automatica?
+    return 0 unless automatica? && @visiveis.nil?
 
-    rodadas.leram.first&.conversas_pendentes.to_i
+    ultima_rodada&.conversas_pendentes.to_i
   end
 
   # A rodada grava a mensagem pendente mais antiga ao fechar; sem ela, o piso da rodada.

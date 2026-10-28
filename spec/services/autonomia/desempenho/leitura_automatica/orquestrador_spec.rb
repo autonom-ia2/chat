@@ -125,6 +125,16 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: velha.id)).to be_nil
     end
 
+    it 'a conversa nunca lida antes do piso que fica pendente não recua o pendente_desde para antes do piso' do
+      conversa_com_agente(9)
+      openai_devolve(503, { 'procuras' => [procura('inicio' => '10-21 14:00', 'fim' => '10-21 14:01')] }, 503)
+
+      rodada = rodar
+
+      expect(rodada).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 2)
+      expect(rodada.pendente_desde).to eq(Time.utc(2026, 10, 21, 16, 0))
+    end
+
     it 'grava os campos no formato do painel, com cortes, resumo e porquê em dados' do
       Autonomia::Desempenho::Leitura.find_by(conversation_id: cresceu.id).update!(lida_ate_em: Time.utc(2026, 10, 21, 14, 1))
       campos = { 'inicio' => '10-21 16:00', 'fim' => '10-21 16:01', 'teste' => true, 'motivos' => ['sem_estoque'], 'regras' => ['R-PRAZO'],
@@ -296,6 +306,15 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       end
       expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: cresceu.id).status).to eq('lida')
       expect(Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:passageiras:#{cresceu.id}")).to be_nil
+    end
+
+    it 'três tempos esgotados seguidos numa rodada fecham a rodada sem contar o terceiro contra a conversa' do
+      outras = [conversa_com_agente(15), conversa_com_agente(16)]
+      stub_request(:post, 'https://api.openai.com/v1/responses').to_raise(Net::ReadTimeout)
+
+      expect(rodar).to have_attributes(status: 'erro')
+      chave = "autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:passageiras:"
+      expect([cresceu, *outras].map { |c| Redis::Alfred.get("#{chave}#{c.id}") }).to eq(['1', '1', nil])
     end
 
     it 'resposta recusada mantém as procuras antigas; na segunda vez seguida, a conversa fica não lida e sai da fila' do

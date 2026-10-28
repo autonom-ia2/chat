@@ -14,9 +14,10 @@ class Autonomia::Desempenho::Rodada < ApplicationRecord
   validates :conversas_lidas, :conversas_pendentes, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
 
   scope :recentes, -> { order(iniciada_em: :desc, id: :desc) }
-  # As que leram de verdade, e o "Lido até" sai delas: a `ok` e a `teto` que leu alguma conversa. A `teto` que parou
-  # antes da primeira (outro agente da conta gastou o teto do dia) não leu nada.
-  scope :leram, -> { where(status: 'ok').or(where(status: 'teto', conversas_lidas: 1..)) }
+  # As que leram de verdade, e o "Lido até" sai delas: a `ok` e a que parou (`teto`, `erro`, `chave_recusada`) depois
+  # de ler alguma conversa; a pendente dela fica em `pendente_desde`. A que parou antes da primeira não leu nada (a
+  # `erro` de RodadaComErro nem conta as lidas).
+  scope :leram, -> { where(status: 'ok').or(where(status: %w[teto erro chave_recusada], conversas_lidas: 1..)) }
 
   # A rodada que ficou `rodando` porque o processo foi interrompido no meio (deploy: o Sidekiq::Shutdown não é
   # StandardError) fecha como `erro`, para não ficar `rodando` para sempre. Roda no `ensure` do orquestrador: não

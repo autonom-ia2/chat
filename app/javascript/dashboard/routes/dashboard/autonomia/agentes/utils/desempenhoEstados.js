@@ -7,7 +7,8 @@ export const VARIANTES = {
     icone: 'i-lucide-book-open',
     soQuemGerencia: true,
   },
-  lendo: { chave: 'LENDO', icone: 'i-lucide-hourglass' },
+  // #2301 — a leitura automática ainda não leu este agente: não há o que ver, então sem botão.
+  lendo: { chave: 'LENDO', icone: 'i-lucide-hourglass', semBotao: true },
   teto: { chave: 'TETO', icone: 'i-lucide-circle-pause' },
   sem_ia: {
     chave: 'SEM_IA',

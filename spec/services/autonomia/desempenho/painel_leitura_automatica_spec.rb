@@ -57,11 +57,18 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(painel.call('7')['meta']).to include('lido_ate' => '2026-10-22T07:00', 'situacao' => 'teto')
   end
 
-  it 'a rodada que caiu aparece como erro' do
+  it 'a rodada que caiu antes de ler aparece como erro e não move o lido_ate' do
     rodada!('ok', Time.utc(2026, 10, 22, 10, 0))
-    rodada!('erro', Time.utc(2026, 10, 23, 10, 0))
+    rodada!('erro', Time.utc(2026, 10, 23, 10, 0), lidas: 0)
 
     expect(painel.call('7')['meta']).to include('situacao' => 'erro', 'lido_ate' => '2026-10-22T07:00')
+  end
+
+  it 'a rodada que caiu depois de ler move o lido_ate até antes da pendente: os números mostram o que ela leu' do
+    rodada!('ok', Time.utc(2026, 10, 22, 10, 0))
+    rodada!('erro', Time.utc(2026, 10, 23, 10, 0), pendentes: 2, pendente_desde: Time.utc(2026, 10, 22, 21, 0))
+
+    expect(painel.call('7')['meta']).to include('situacao' => 'erro', 'lido_ate' => '2026-10-22T17:59', 'pendentes' => 2)
   end
 
   it 'teto na última rodada vira a situação; ok depois limpa' do
@@ -170,8 +177,8 @@ RSpec.describe Autonomia::Desempenho::Painel do
   end
 
   it 'só rodadas que não leram nada (sem_ia, erro) não trazem sugestões de outras datas' do
-    rodada!('sem_ia', Time.utc(2026, 10, 22, 10, 0))
-    rodada!('erro', Time.utc(2026, 10, 23, 10, 0))
+    rodada!('sem_ia', Time.utc(2026, 10, 22, 10, 0), lidas: 0)
+    rodada!('erro', Time.utc(2026, 10, 23, 10, 0), lidas: 0)
     Autonomia::Desempenho::Recomendacao.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, periodo: '7',
                                                 inicio: Date.new(2026, 10, 10), fim: Date.new(2026, 10, 16), versao_ficha: 1,
                                                 cartoes: [{ 'id' => 'r1' }], gerada_em: Time.current, lote: 'spec')
@@ -180,6 +187,28 @@ RSpec.describe Autonomia::Desempenho::Painel do
 
     expect(resultado['recomendacoes']).not_to eq([{ 'id' => 'r1' }])
     expect(resultado['meta']['recomendacoes_de']).to be_nil
+  end
+
+  describe '.situacao_sem_procuras (o painel vazio)' do
+    def situacao = described_class.situacao_sem_procuras(account, 'robo', robo.id)
+
+    it 'com a leitura automática ligada: lendo antes da primeira rodada e durante uma, depois a parada ou sem conversas' do
+      expect(situacao).to eq('lendo')
+      rodada!('sem_ia', Time.utc(2026, 10, 22, 10, 0), lidas: 0)
+      expect(situacao).to eq('sem_ia')
+      rodada!('rodando', Time.utc(2026, 10, 23, 10, 0), lidas: 0)
+      expect(situacao).to eq('lendo')
+      Autonomia::Desempenho::Rodada.last.update!(status: 'ok')
+      expect(situacao).to eq('sem_conversas')
+    end
+
+    it 'sem a leitura automática (ENV desligada ou ficha sem chave), leitura_desligada como antes' do
+      rodada!('erro', Time.utc(2026, 10, 22, 10, 0))
+      expect(with_modified_env(AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA: 'false') { situacao }).to eq('leitura_desligada')
+
+      Autonomia::Desempenho::Ficha.do_sujeito(account, 'robo', robo.id).update_all(chave_de_leitura: nil) # rubocop:disable Rails/SkipsModelValidations
+      expect(situacao).to eq('leitura_desligada')
+    end
   end
 
   describe 'aviso de instrução' do

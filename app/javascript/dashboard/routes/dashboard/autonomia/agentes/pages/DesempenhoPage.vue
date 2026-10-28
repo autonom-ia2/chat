@@ -397,7 +397,7 @@ const aoMigalha = item => router.push(item.destino);
           :destaque="
             t(
               `${NS}.FONTE.PENDENTES_TITULO`,
-              { n: meta.pendentes },
+              { n: fmt.n(meta.pendentes) },
               meta.pendentes
             )
           "
@@ -409,7 +409,7 @@ const aoMigalha = item => router.push(item.destino);
           :destaque="
             t(
               `${NS}.FONTE.NAO_LIDAS_TITULO`,
-              { n: meta.nao_lidas },
+              { n: fmt.n(meta.nao_lidas) },
               meta.nao_lidas
             )
           "
@@ -453,7 +453,9 @@ const aoMigalha = item => router.push(item.destino);
           v-if="estado"
           :variante="estado"
           :nome="nome"
-          :pode-gerenciar="ehAdmin && !painel.vazio"
+          :pode-gerenciar="
+            ehAdmin && (!painel.vazio || estado !== 'leitura_desligada')
+          "
           @acao="aoEstado"
         />
 
