@@ -111,7 +111,13 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
     @grant_guard ||= CustomRoles::GrantGuard.new(actor: Current.account_user)
   end
 
+  # A recusa fica no log, como as do GrantGuard: sem isso, um plano rebaixado não deixaria rastro na investigação.
+  FEATURE_OFF_LOG = 'custom_roles: recusa feature_off (recurso desligado na conta)'.freeze
+
   def ensure_custom_roles_feature_enabled
-    refuse('feature_off', :unauthorized) unless Current.account.feature_enabled?('custom_roles')
+    return if Current.account.feature_enabled?('custom_roles')
+
+    Rails.logger.info(FEATURE_OFF_LOG)
+    refuse('feature_off', :unauthorized)
   end
 end

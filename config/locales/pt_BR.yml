@@ -63,11 +63,11 @@ pt_BR:
   errors:
     custom_role:
       unknown_permissions: 'tem chaves desconhecidas: %{unknown}. Chaves válidas: %{valid}'
-      destination_required: 'Esta função tem pessoas. Escolha para onde elas vão: outra função ou sem função (agente comum).'
-      destination_invalid: 'As pessoas desta função não podem ir para essa função. Escolha outra função desta conta ou sem função.'
-      changed_meanwhile: 'Alguém mudou esta função ou as pessoas dela enquanto você excluía. Nada foi alterado. Tente de novo.'
+      destination_required: 'Esta função ainda tem pessoas. Escolha para onde vão: outra função ou sem função.'
+      destination_invalid: 'As pessoas desta função não podem ir para a função escolhida. Escolha outra ou sem função.'
+      changed_meanwhile: 'Alguém mudou esta função ou as pessoas dela enquanto você apagava. Nada mudou. Tente de novo.'
       out_of_reach: 'Você não pode dar parte desta função. Peça ao administrador.'
-      own_role: 'Só o administrador muda a função que ele mesmo tem.'
+      own_role: 'Ninguém muda a própria função.'
       feature_off: 'As funções da equipe não estão disponíveis nesta conta agora.'
     account:
       not_authorized: Você não está autorizado a acessar esta conta

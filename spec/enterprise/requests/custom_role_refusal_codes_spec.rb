@@ -12,6 +12,16 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
     user
   end
 
+  # A mensagem é comparada com o texto literal do en.yml, não com o I18n.t do próprio teste: se a chave sumir, os dois
+  # lados virariam 'Translation missing' e o teste passaria.
+  let(:messages) do
+    {
+      'feature_off' => 'Team roles are not available on this account right now.',
+      'own_role' => 'Nobody changes their own role.',
+      'out_of_reach' => "You can't give part of this role. Ask the administrator."
+    }
+  end
+
   before { account.enable_features!('custom_roles') }
 
   def create_role(as:, permissions:)
@@ -28,13 +38,29 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
 
   def expect_refusal(code)
     expect(response).to have_http_status(:unauthorized)
-    expect(response.parsed_body).to eq('error' => code, 'message' => I18n.t("errors.custom_role.#{code}"))
+    expect(response.parsed_body).to eq('error' => code, 'message' => messages.fetch(code))
   end
 
-  it "answers 'feature_off' when the account does not have custom roles" do
+  # Controle positivo: o GrantGuard não recusa tudo; dentro do alcance, quem monta cria.
+  it 'lets the builder create a role within reach' do
+    expect { create_role(as: builder, permissions: %w[contact_view]) }.to change(CustomRole, :count).by(1)
+    expect(response).to have_http_status(:ok)
+  end
+
+  it "answers 'feature_off' when the account does not have custom roles, and logs the refusal" do
     account.disable_features!('custom_roles')
+    allow(Rails.logger).to receive(:info).and_call_original
 
     expect { create_role(as: admin, permissions: %w[contact_view]) }.not_to change(CustomRole, :count)
+    expect_refusal('feature_off')
+    expect(Rails.logger).to have_received(:info).with('custom_roles: recusa feature_off (recurso desligado na conta)')
+  end
+
+  it "answers 'feature_off' to the builder too when the account does not have custom roles" do
+    account.disable_features!('custom_roles')
+
+    get "/api/v1/accounts/#{account.id}/custom_roles", headers: builder.create_new_auth_token, as: :json
+
     expect_refusal('feature_off')
   end
 
