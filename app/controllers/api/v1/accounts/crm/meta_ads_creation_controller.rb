@@ -1,14 +1,17 @@
 # Gerenciador simples (#2198, PR 1, flag `meta_ads_criar`). Sem a flag, 404: nada aqui chama a Meta.
 #
 # GET   meta_ads_connection/create_options    → o que a pessoa escolhe para criar (Crm::MetaAds::Creation::Options).
+# GET   meta_ads_connection/boost_posts       → ?page_id= → posts da Página e do Instagram dela para impulsionar
+#                                               (PR 2, #2339) → { posts, instagram_posts, posts_error }.
 # POST  meta_ads_connection/media             → foto ou vídeo do celular → { kind, hash | video_id }.
-# POST  meta_ads_connection/ads               → anúncio novo, sempre pausado → { ad_id, name, status, budget }.
+# POST  meta_ads_connection/ads               → anúncio novo ou post impulsionado (`kind: post`), sempre pausado →
+#                                               { ad_id, name, status, budget }.
 # GET   meta_ads_connection/ads/:ad_id/budget → orçamento e datas; falha é erro, nunca vazio.
 # PATCH meta_ads_connection/ads/:ad_id/budget → { amount, end_time } → orçamento novo.
 # GET   meta_ads_connection/paused_ads        → anúncios criados aqui que seguem pausados.
 #
 # Ver orçamento e pausados: administrador ou `meta_ads_view`. As opções de criar (Páginas, Instagram, números do
-# WhatsApp e fotos da conta de anúncios), criar, subir mídia e mudar orçamento: administrador ou `meta_ads_manage`. O
+# WhatsApp e fotos da conta de anúncios), os posts para impulsionar, criar, subir mídia e mudar orçamento: administrador ou `meta_ads_manage`. O
 # que muda fica na Auditoria da conta com quem fez (nunca o token). Sem conexão ativa com conta de anúncios: 404
 # not_connected.
 class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm::BaseController
@@ -18,13 +21,17 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
 
   before_action :ensure_feature
   before_action :ensure_view
-  before_action :ensure_manage, only: [:options, :media, :create, :update_budget]
+  before_action :ensure_manage, only: [:options, :boost_posts, :media, :create, :update_budget]
   before_action :load_connection
 
   rescue_from ::Crm::MetaAds::Creation::Error, with: :render_creation_error
 
   def options
     render json: { options: ::Crm::MetaAds::Creation::Options.new(Current.account, @connection).payload }
+  end
+
+  def boost_posts
+    render json: ::Crm::MetaAds::Creation::Options.new(Current.account, @connection).boost_posts(params[:page_id].to_s)
   end
 
   def media
@@ -63,9 +70,9 @@ class Api::V1::Accounts::Crm::MetaAdsCreationController < Api::V1::Accounts::Crm
   private
 
   def create_params
-    params.permit(:idempotency_key, :name, :destination, :page_id, :whatsapp_number, :site_url, :site_action, :text, :headline,
-                  :ready_message, :placement, :region, :age_min, :age_max, :special_category, :daily_amount, :start_date,
-                  :end_date, :recreate_unconfirmed,
+    params.permit(:kind, :post_source, :post_id, :idempotency_key, :name, :destination, :page_id, :whatsapp_number, :site_url,
+                  :site_action, :text, :headline, :ready_message, :placement, :region, :age_min, :age_max, :special_category,
+                  :daily_amount, :start_date, :end_date, :recreate_unconfirmed,
                   states: [], media: [:kind, :hash, :video_id, :image_hash], cards: [:kind, :hash, :video_id, :image_hash]).to_h
   end
 

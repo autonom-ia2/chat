@@ -68,6 +68,33 @@ RSpec.describe 'Anúncios da Meta: criar e orçamento com funções (#2198)', ty
     expect(Crm::MetaAdsCreatedObject.count).to eq(0)
   end
 
+  it 'meta_ads_view não lê os posts para impulsionar nem impulsiona (#2339), sem chamar a Meta' do
+    headers = pessoa_com(%w[meta_ads_view]).create_new_auth_token
+
+    get "#{path}/boost_posts", params: { page_id: '110' }, headers: headers
+    expect(response).to have_http_status(:forbidden)
+
+    post "#{path}/ads", params: { kind: 'post', post_source: 'instagram', post_id: '1790' }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+
+    expect(a_request(:get, meta_graph_url('110/published_posts')).with(query: hash_including({}))).not_to have_been_made
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
+  # Pedido da Funções no PR 1: ligar ou pausar anúncio é mudar, não ver.
+  it 'meta_ads_view não liga nem pausa anúncio (403), sem chamar a Meta' do
+    account.enable_features!('meta_ads_gestao')
+    headers = pessoa_com(%w[meta_ads_view]).create_new_auth_token
+
+    post "#{path}/ads/#{ad_id}/status", params: { status: 'ACTIVE' }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+
+    post "#{path}/ads/#{ad_id}/status", params: { status: 'PAUSED' }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
   it 'meta_ads_manage muda o orçamento' do
     manager = pessoa_com(%w[meta_ads_manage])
     update = stub_request(:post, meta_graph_url(adset_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)

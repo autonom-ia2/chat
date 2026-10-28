@@ -44,9 +44,9 @@ RSpec.describe Crm::MetaAds::Creation::Options do
     expect(payload).to include(
       needs_login: false, pages: [{ id: '110', name: 'Loja Exemplo' }],
       whatsapp_numbers: [{ id: '+5511900002161', name: account.inboxes.first.name, phone: '+5511900002161' }],
-      instagram: { id: '178', username: 'lojaexemplo', posts: [], publish_left: nil }, posts: [],
+      instagram: { id: '178', username: 'lojaexemplo', publish_left: nil },
       images: [{ hash: 'abc', url: 'https://scontent.example/abc.jpg', width: 600, height: 600 }],
-      currency: 'BRL', min_daily: 6, max_daily: 500, kinds: ['ad'],
+      currency: 'BRL', min_daily: 6, max_daily: 500, kinds: %w[ad post],
       # 01:30 UTC de 28/10 ainda é 27/10 no fuso da conta de anúncios (São Paulo).
       today: '2026-10-27',
       destinations: %w[WHATSAPP WEBSITE],
