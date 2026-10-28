@@ -193,7 +193,7 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
   it 'shows the contact data of a saved audience only to who reads contacts' do
     create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'time',
                                          attribute_display_name: 'Time', attribute_display_type: 'text')
-    contact = create(:contact, account: account, name: 'João', phone_number: '+5511987654321',
+    contact = create(:contact, account: account, name: 'João', phone_number: '+5511987654321', email: 'joao@example.com',
                                custom_attributes: { 'time' => 'Cruzeiro' }, additional_attributes: { 'company_name' => 'João X' })
     search = search_of(admin, status: 'done')
     person = ConversationAudiencePerson.create!(search: search, contact: contact, group: 'certeza',
@@ -205,10 +205,17 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
     get "#{audience_path}/sample_contact", headers: headers(without)
     expect(response.parsed_body['payload']).to include('name' => 'João', 'company_name' => nil, 'extra_values' => {})
     get "#{audience_path}/contacts", headers: headers(without)
-    expect(response.parsed_body['payload'].sole['company_name']).to be_nil
+    hidden = response.parsed_body['payload'].sole
+    expect(hidden).to include('name' => 'João', 'company_name' => nil)
+    expect([hidden['phone_number'], hidden['email']]).to all(be_present)
+    expect(response.body).not_to include('987654321', 'joao@example.com')
 
-    get "#{audience_path}/sample_contact", headers: headers(with_role(%w[campaign_manage contact_view]))
+    reader = with_role(%w[campaign_manage contact_view])
+    get "#{audience_path}/sample_contact", headers: headers(reader)
     expect(response.parsed_body['payload']).to include('company_name' => 'João X', 'extra_values' => { 'Time' => 'Cruzeiro' })
+    get "#{audience_path}/contacts", headers: headers(reader)
+    expect(response.parsed_body['payload'].sole).to include('phone_number' => '+5511987654321', 'email' => 'joao@example.com',
+                                                            'company_name' => 'João X')
   end
 
   it 'shows the people found without who cannot receive, and saves the audience' do

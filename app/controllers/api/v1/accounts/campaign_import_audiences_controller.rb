@@ -171,8 +171,19 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
 
   def contact_payload(contact)
     company = contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name']
-    { id: contact.id, name: contact.name, email: contact.email, phone_number: contact.phone_number,
-      company_name: (company unless contact_data_hidden?) }
+    payload = { id: contact.id, name: contact.name, email: contact.email, phone_number: contact.phone_number, company_name: company }
+    return payload unless contact_data_hidden?
+
+    # #2277: phone and e-mail as the audience keeps them (masked), never the contact's own.
+    phone, email = masked_reach[contact.id]
+    payload.merge(email: email, phone_number: phone, company_name: nil)
+  end
+
+  # { contact_id => [raw_phone_masked, email_masked] } of this audience's rows.
+  def masked_reach
+    @masked_reach ||= @campaign_import.campaign_import_rows.status_imported.where.not(contact_id: nil)
+                                      .pluck(:contact_id, :raw_phone_masked, :email_masked)
+                                      .to_h { |contact_id, phone, email| [contact_id, [phone, email]] }
   end
 
   def contact_data_hidden?
