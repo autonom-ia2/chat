@@ -140,6 +140,14 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(tela(days: 30).perform[:page]).to include(status: 'ok', views: 6000, views_from_ads: nil, interactions: nil, new_followers: 3)
     end
 
+    it 'quem viu com valor que não é número: sem número, nunca 0' do
+      stub_pagina
+      stub_get("#{fb}/1001/insights", janela(30).merge(metric: 'page_total_media_view_unique', period: 'total_over_range'),
+               [diario('page_total_media_view_unique', ['N/A'])])
+
+      expect(tela(days: 30).perform[:page]).to include(status: 'ok', reach: nil)
+    end
+
     it 'lado sem anúncio que não veio: as vezes ficam sem número, nunca 0' do
       stub_pagina
       so_de_anuncio = { 'name' => 'page_media_view', 'period' => 'day', 'values' => [{ 'value' => 900, 'is_from_ads' => '1' }] }
