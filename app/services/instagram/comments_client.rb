@@ -38,8 +38,9 @@ class Instagram::CommentsClient
     request(:get, comment_id.to_s, { fields: 'id,text,timestamp,parent_id,from{id,username},media{id}' })
   end
 
+  # Em formulário: com JSON, a Graph do login do Instagram recusou a resposta em produção (400, código 24, #2330).
   def reply(comment_id, text)
-    request(:post, "#{comment_id}/replies", {}, body: { message: text }.to_json, headers: { 'Content-Type' => 'application/json' })
+    request(:post, "#{comment_id}/replies", {}, body: { message: text })
   end
 
   def hide(comment_id, hidden:)

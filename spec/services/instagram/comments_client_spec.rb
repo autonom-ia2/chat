@@ -24,7 +24,8 @@ RSpec.describe Instagram::CommentsClient do
 
   it 'responde em público, oculta, apaga e manda a resposta no privado pelo id do comentário' do
     reply = stub_request(:post, "#{base}/1/replies").with(query: { 'access_token' => channel.access_token },
-                                                          body: { message: 'Temos sim' }.to_json)
+                                                          body: 'message=Temos%20sim',
+                                                          headers: { 'Content-Type' => 'application/x-www-form-urlencoded' })
                                                     .to_return(status: 200, body: { id: '2' }.to_json, headers: json)
     hide = stub_request(:post, "#{base}/1").with(query: hash_including('hide' => 'true'))
                                            .to_return(status: 200, body: { success: true }.to_json, headers: json)
