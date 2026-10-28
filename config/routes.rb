@@ -238,6 +238,18 @@ Rails.application.routes.draw do
           end
           namespace :campaign_journey do
             resources :campaigns, only: [:create]
+            # #2277: novo público pedindo em palavras (a IA da conta lê as conversas).
+            resources :conversation_audiences, only: [:create, :show] do
+              get :status, on: :collection
+              member do
+                post :answer
+                post :start
+                post :stop
+                post :resume
+                get :conversation
+                post :save
+              end
+            end
             resources :drafts, only: %i[index show create update destroy] # #1898
             resources :contact_origins, only: [:show]
             resources :campaign_names, only: [:index]
