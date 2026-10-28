@@ -86,8 +86,10 @@ class Crm::MetaAds::Organico::Lugar
     numeros.sum if numeros.any?
   end
 
+  # O primeiro valor da métrica; valor que não é número ("", "N/A") é "sem número" (nil), nunca 0.
   def primeiro(data, name)
-    valores(data, name).first&.dig('value')&.to_i
+    valor = valores(data, name).first&.dig('value')
+    valor.is_a?(Numeric) ? valor.to_i : nil
   end
 
   def valores(data, name)
