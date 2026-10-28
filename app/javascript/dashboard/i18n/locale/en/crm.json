@@ -2394,7 +2394,7 @@
           "SIGN_IN_AGAIN": "Sign in with Facebook again"
         },
         "INSTAGRAM": {
-          "TITLE": "Bring @{username} here",
+          "TITLE": "Bring {username} here",
           "TEXT": "Sign in with Instagram once. After that, nothing else asks for permission.",
           "MESSAGES": "Direct messages arrive in your inbox",
           "COMMENTS": "Comments on your ads show up here",
@@ -3528,8 +3528,8 @@
         "RECREATE": "It's not in Ads Manager, create again",
         "BLOCKERS": {
           "NO_AD_ACCOUNT": {
-            "TITLE": "Choose your ad account first. It only takes a moment.",
-            "ACTION": "Choose the ad account"
+            "TITLE": "To create ads here, connect your ad account first.",
+            "ACTION": "Connect the ad account"
           },
           "LOGIN": {
             "TITLE": "To create ads from here, sign in with Facebook again.",

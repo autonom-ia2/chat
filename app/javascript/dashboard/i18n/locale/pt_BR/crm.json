@@ -2395,7 +2395,7 @@
           "SIGN_IN_AGAIN": "Entrar de novo com o Facebook"
         },
         "INSTAGRAM": {
-          "TITLE": "Traga o @{username} para cá",
+          "TITLE": "Traga o {username} para cá",
           "TEXT": "Entre uma vez com o Instagram. Depois disso, nada mais pede autorização.",
           "MESSAGES": "As mensagens do Direct chegam na caixa de entrada",
           "COMMENTS": "Os comentários dos anúncios aparecem aqui",
@@ -3529,8 +3529,8 @@
         "RECREATE": "Não está no Gerenciador, criar de novo",
         "BLOCKERS": {
           "NO_AD_ACCOUNT": {
-            "TITLE": "Falta escolher a conta de anúncios. É rapidinho.",
-            "ACTION": "Escolher a conta de anúncios"
+            "TITLE": "Para criar anúncio por aqui, falta ligar a sua conta de anúncios.",
+            "ACTION": "Ligar a conta de anúncios"
           },
           "LOGIN": {
             "TITLE": "Para criar anúncios por aqui, entre de novo com o Facebook.",

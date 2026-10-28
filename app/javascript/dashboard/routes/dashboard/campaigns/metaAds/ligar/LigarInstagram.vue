@@ -32,7 +32,11 @@ const entrar = () => {
     </span>
     <div class="flex flex-col gap-2">
       <h3 class="m-0 text-lg font-semibold text-n-slate-12">
-        {{ $t(`${KEY}.TITLE`, { username: page?.instagram?.username || '' }) }}
+        {{
+          $t(`${KEY}.TITLE`, {
+            username: `@${page?.instagram?.username || ''}`,
+          })
+        }}
       </h3>
       <p class="m-0 text-sm leading-6 text-n-slate-11">
         {{ $t(`${KEY}.TEXT`) }}
