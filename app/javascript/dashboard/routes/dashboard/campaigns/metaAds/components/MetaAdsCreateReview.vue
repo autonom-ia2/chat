@@ -11,7 +11,8 @@ import MetaAdsCreatePlacement from './MetaAdsCreatePlacement.vue';
 
 // Anúncios da Meta (#2198), criar: o que vai para a Meta, numa tela. O quê (e para onde vai quem toca), onde aparece
 // (Automático já marcado, com o Trocar ali mesmo), quem vê, o dinheiro por extenso e o nome. Nasce pausado: o aviso
-// fica junto do botão.
+// fica junto do botão. Post impulsionado (#2339): o post escolhido no lugar da mídia e do texto; o da Página roda só
+// no Facebook, sem "Trocar".
 const props = defineProps({
   pageName: { type: String, default: '' },
   phone: { type: String, default: '' },
@@ -25,6 +26,8 @@ const props = defineProps({
   dayLimitsLine: { type: String, default: '' },
   // Lugares que a chamada real já confirmou para este anúncio.
   placements: { type: Array, required: true },
+  // Post impulsionado: o texto do post.
+  postText: { type: String, default: '' },
 });
 
 const draft = defineModel({ type: Object, required: true });
@@ -32,15 +35,33 @@ const draft = defineModel({ type: Object, required: true });
 const { t, locale } = useI18n();
 const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR.REVIEW';
 
-const what = computed(() =>
-  t(`${KEY}.WHAT_AD.${draft.value.destination}`, {
+const isPost = computed(() => draft.value.kind === 'post');
+const facebookPost = computed(
+  () => isPost.value && draft.value.post_source === 'facebook'
+);
+
+const what = computed(() => {
+  if (isPost.value) {
+    return t(`${KEY}.WHAT_POST.${draft.value.post_source.toUpperCase()}`, {
+      username: props.username,
+    });
+  }
+  return t(`${KEY}.WHAT_AD.${draft.value.destination}`, {
     number: props.phone,
     username: props.username,
     url: siteNormalizado(draft.value.site_url),
-  })
-);
+  });
+});
 
-const tap = computed(() => t(`${KEY}.TAP.${draft.value.destination}`));
+const tap = computed(() => {
+  if (facebookPost.value) return t(`${KEY}.TAP.POST_FACEBOOK`);
+  if (isPost.value) {
+    return t(
+      `${KEY}.TAP.${props.action ? 'POST_INSTAGRAM_WHATSAPP' : 'POST_INSTAGRAM'}`
+    );
+  }
+  return t(`${KEY}.TAP.${draft.value.destination}`);
+});
 
 const where = computed(() => {
   if (draft.value.region === 'BR') {
@@ -93,6 +114,7 @@ const dates = computed(() => {
         </div>
         <MetaAdsCreatePlacement
           :model-value="draft.placement"
+          :fixed="facebookPost"
           :options="placements"
           @update:model-value="draft = { ...draft, placement: $event }"
         />
@@ -150,12 +172,13 @@ const dates = computed(() => {
     </div>
     <MetaAdsAdPreview
       :page-name="pageName"
-      :text="draft.text"
+      :text="isPost ? postText : draft.text"
       :media="media"
       :cards="cards"
       :headline="draft.headline"
       :action="action"
-      :places="draft.placement"
+      :places="facebookPost ? 'FACEBOOK' : draft.placement"
+      :feed-only="facebookPost"
     />
   </div>
 </template>

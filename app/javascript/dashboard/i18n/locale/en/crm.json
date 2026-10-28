@@ -3440,7 +3440,8 @@
             "INSTAGRAM": "on Instagram",
             "FACEBOOK": "on Facebook"
           },
-          "NOTE_STORIES_PORTRAIT": "A slightly upright photo may show smaller in Stories and Reels."
+          "NOTE_STORIES_PORTRAIT": "A slightly upright photo may show smaller in Stories and Reels.",
+          "NOTE_FEED_FACEBOOK": "In the Facebook feed."
         },
         "FAILED": {
           "TITLE": "We couldn't reach Meta right now. Nothing was created.",
@@ -3467,6 +3468,10 @@
             "TITLE": "Connect a WhatsApp number so the ad opens a chat.",
             "ACTION": "Connect number",
             "OTHER": "Advertise with another destination"
+          },
+          "NO_POST": {
+            "TITLE": "You don't have a post to boost on Instagram or on your Page yet.",
+            "ACTION": "Create a new ad"
           }
         },
         "DATE": {
@@ -3490,7 +3495,9 @@
           "REASONS": {
             "NO_DESTINATION": "You can't create a new ad in this account yet. {support}"
           },
-          "SUPPORT": "Contact support."
+          "SUPPORT": "Contact support.",
+          "POST": "Boost a post",
+          "POST_HINT": "Shows a post you already published on Instagram or Facebook to more people."
         },
         "WHERE": {
           "TITLE": "Page and WhatsApp number",
@@ -3591,9 +3598,17 @@
             "WHATSAPP": "People who tap start a chat with you on WhatsApp.",
             "INSTAGRAM_DIRECT": "People who tap start a chat with you on Instagram Direct.",
             "MESSENGER": "People who tap start a chat with you on Messenger.",
-            "WEBSITE": "People who tap open your website."
+            "WEBSITE": "People who tap open your website.",
+            "POST_FACEBOOK": "People who tap see the post on your Page.",
+            "POST_INSTAGRAM_WHATSAPP": "People who tap the button start a chat with you on WhatsApp.",
+            "POST_INSTAGRAM": "People who tap see the post on Instagram."
           },
-          "DEFAULT_NAME_AD": "{where} · {date}"
+          "DEFAULT_NAME_AD": "{where} · {date}",
+          "DEFAULT_NAME_POST": "Boosted post · {date}",
+          "WHAT_POST": {
+            "INSTAGRAM": "Boost the chosen Instagram post ({'@'}{username})",
+            "FACEBOOK": "Boost the chosen Facebook Page post"
+          }
         },
         "DONE": {
           "TITLE": "\"{name}\" created and paused",
@@ -3691,7 +3706,8 @@
             "AUTO": "Meta shows it where it's most likely to get results: feed, Stories or Reels.",
             "INSTAGRAM": "Instagram feed, Stories and Reels, wherever Meta chooses.",
             "FACEBOOK": "Facebook feed, Stories and Reels, wherever Meta chooses."
-          }
+          },
+          "FACEBOOK_POST": "Facebook, to more people beyond those who already follow your Page."
         },
         "ERRORS": {
           "INVALID_PARAMS": "Some ad information is missing, like the name or the text. Check it and try again.",
@@ -3714,8 +3730,31 @@
           "NOTHING_CREATED": "Nothing was created.",
           "CHECK_META": "A campaign may have been left half done: check Meta Ads Manager before trying again.",
           "NETWORK": "The connection dropped before the answer. Tap \"Create paused ad\" again: the ad won't be created twice.",
-          "IN_PROGRESS": "This ad is still being created. Wait a moment and tap again."
-        }
+          "IN_PROGRESS": "This ad is still being created. Wait a moment and tap again.",
+          "INVALID_POST": "This post isn't on your Page or on its Instagram anymore. Go back and pick another one.",
+          "POST_NOT_ELIGIBLE": "Meta doesn't allow boosting this post. Go back and pick another one."
+        },
+        "POST": {
+          "TITLE": "Which post?",
+          "HINT": "Pick a post you already published. It shows to more people.",
+          "NUMBERS": "{likes} likes · {comments} comments",
+          "SOURCES": {
+            "INSTAGRAM": "Instagram",
+            "FACEBOOK": "Facebook"
+          },
+          "NOT_ELIGIBLE": "Meta doesn't allow boosting this post.",
+          "NEED_POST": "Pick a post to continue.",
+          "TAP_INSTAGRAM_WHATSAPP": "Instagram posts get the Send message button: people who tap start a chat with you on WhatsApp.",
+          "TAP_INSTAGRAM": "People who tap see the post on Instagram.",
+          "TAP_FACEBOOK": "People who tap see the post on your Page. Facebook posts don't get a WhatsApp button.",
+          "REASONS": {
+            "PROFILE_OR_COVER": "It's your Page's profile or cover photo. Meta doesn't allow boosting it."
+          },
+          "LOAD_FAILED": "We couldn't read your posts right now.",
+          "RETRY": "Try again",
+          "EMPTY_SOURCE": "No posts here yet."
+        },
+        "CREATE_BOOST": "Create paused boost"
       }
     },
     "BOOKING_AGENDA": {

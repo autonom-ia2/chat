@@ -3441,7 +3441,8 @@
             "INSTAGRAM": "do Instagram",
             "FACEBOOK": "do Facebook"
           },
-          "NOTE_STORIES_PORTRAIT": "Foto um pouco em pé pode ficar menor nos Stories e Reels."
+          "NOTE_STORIES_PORTRAIT": "Foto um pouco em pé pode ficar menor nos Stories e Reels.",
+          "NOTE_FEED_FACEBOOK": "No feed do Facebook."
         },
         "FAILED": {
           "TITLE": "Não conseguimos falar com a Meta agora. Nada foi criado.",
@@ -3468,6 +3469,10 @@
             "TITLE": "Conecte um número de WhatsApp para o anúncio abrir conversa.",
             "ACTION": "Conectar número",
             "OTHER": "Anunciar com outro destino"
+          },
+          "NO_POST": {
+            "TITLE": "Você ainda não tem post para impulsionar no Instagram nem na Página.",
+            "ACTION": "Criar anúncio novo"
           }
         },
         "DATE": {
@@ -3491,7 +3496,9 @@
           "REASONS": {
             "NO_DESTINATION": "Ainda não dá para criar anúncio novo nesta conta. {support}"
           },
-          "SUPPORT": "Fale com o suporte."
+          "SUPPORT": "Fale com o suporte.",
+          "POST": "Impulsionar um post",
+          "POST_HINT": "Mostra para mais gente um post que você já publicou no Instagram ou no Facebook."
         },
         "WHERE": {
           "TITLE": "Página e número do WhatsApp",
@@ -3592,9 +3599,17 @@
             "WHATSAPP": "Quem toca começa uma conversa com você no WhatsApp.",
             "INSTAGRAM_DIRECT": "Quem toca começa uma conversa com você no Direct do Instagram.",
             "MESSENGER": "Quem toca começa uma conversa com você no Messenger.",
-            "WEBSITE": "Quem toca abre o seu site."
+            "WEBSITE": "Quem toca abre o seu site.",
+            "POST_FACEBOOK": "Quem toca vê o post na sua Página.",
+            "POST_INSTAGRAM_WHATSAPP": "Quem toca no botão começa uma conversa com você no WhatsApp.",
+            "POST_INSTAGRAM": "Quem toca vê o post no Instagram."
           },
-          "DEFAULT_NAME_AD": "{where} · {date}"
+          "DEFAULT_NAME_AD": "{where} · {date}",
+          "DEFAULT_NAME_POST": "Post impulsionado · {date}",
+          "WHAT_POST": {
+            "INSTAGRAM": "Impulsionar o post escolhido do Instagram ({'@'}{username})",
+            "FACEBOOK": "Impulsionar o post escolhido da Página do Facebook"
+          }
         },
         "DONE": {
           "TITLE": "\"{name}\" criado e pausado",
@@ -3692,7 +3707,8 @@
             "AUTO": "A Meta mostra onde tiver mais chance de resultado: feed, Stories ou Reels.",
             "INSTAGRAM": "Feed, Stories e Reels do Instagram, onde a Meta escolher.",
             "FACEBOOK": "Feed, Stories e Reels do Facebook, onde a Meta escolher."
-          }
+          },
+          "FACEBOOK_POST": "Facebook, para mais gente além de quem já segue a Página."
         },
         "ERRORS": {
           "INVALID_PARAMS": "Falta alguma informação do anúncio, como o nome ou o texto. Confira e tente de novo.",
@@ -3715,8 +3731,31 @@
           "NOTHING_CREATED": "Nada foi criado.",
           "CHECK_META": "Pode ter ficado uma campanha pela metade: confira no Gerenciador de Anúncios da Meta antes de tentar de novo.",
           "NETWORK": "A conexão caiu antes da resposta. Toque em \"Criar anúncio pausado\" de novo: o anúncio não vai ser criado duas vezes.",
-          "IN_PROGRESS": "Este anúncio ainda está sendo criado. Espere um pouco e toque de novo."
-        }
+          "IN_PROGRESS": "Este anúncio ainda está sendo criado. Espere um pouco e toque de novo.",
+          "INVALID_POST": "Este post não está mais na sua Página nem no Instagram dela. Volte e escolha outro.",
+          "POST_NOT_ELIGIBLE": "A Meta não deixa impulsionar este post. Volte e escolha outro."
+        },
+        "POST": {
+          "TITLE": "Qual post?",
+          "HINT": "Escolha um post que você já publicou. Ele aparece para mais gente.",
+          "NUMBERS": "{likes} curtidas · {comments} comentários",
+          "SOURCES": {
+            "INSTAGRAM": "Instagram",
+            "FACEBOOK": "Facebook"
+          },
+          "NOT_ELIGIBLE": "A Meta não deixa impulsionar este post.",
+          "NEED_POST": "Escolha um post para continuar.",
+          "TAP_INSTAGRAM_WHATSAPP": "Post do Instagram leva o botão Enviar mensagem: quem toca começa uma conversa com você no WhatsApp.",
+          "TAP_INSTAGRAM": "Quem toca vê o post no Instagram.",
+          "TAP_FACEBOOK": "Quem toca vê o post na sua Página. Post do Facebook não leva botão de WhatsApp.",
+          "REASONS": {
+            "PROFILE_OR_COVER": "É a foto de perfil ou de capa da Página. A Meta não deixa impulsionar."
+          },
+          "LOAD_FAILED": "Não consegui ler seus posts agora.",
+          "RETRY": "Tentar de novo",
+          "EMPTY_SOURCE": "Ainda não há posts aqui."
+        },
+        "CREATE_BOOST": "Criar impulsionamento pausado"
       }
     },
     "BOOKING_AGENDA": {

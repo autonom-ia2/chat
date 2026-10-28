@@ -98,10 +98,12 @@ const focusCard = adId =>
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
 );
-// ?criar=novo abre a escolha (ou entra direto no único tipo que o servidor oferece); anuncio já escolhe.
+// ?criar=novo abre a escolha (ou entra direto no único tipo que o servidor oferece); anuncio e post (impulsionar,
+// #2339) já escolhem.
 const CREATE_KINDS = {
   novo: null,
   anuncio: 'ad',
+  post: 'post',
 };
 const creatingFromRoute = () =>
   Object.hasOwn(CREATE_KINDS, route.query.criar) ? route.query.criar : null;

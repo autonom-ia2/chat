@@ -11,7 +11,8 @@ quatro PRs, nesta ordem:
 4. Cuidar: duplicar e trocar a foto como cópia (`can_swap_creative`).
 
 Este documento guarda o que a implementação precisa cumprir e que a tela já
-promete ao cliente. O que o servidor do PR 1 faz está em "Servidor do PR 1".
+promete ao cliente. O que o servidor faz está em "Servidor do PR 1" e
+"Servidor do PR 2" (impulsionar post, #2339).
 
 O escopo cresceu em 26/10 por decisão do Rodrigo: "inclua as permissões para
 14/11 e complete. Quero a experiência do gerenciador aqui, só que de forma
@@ -432,6 +433,42 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   escrita na conta de anúncios do cliente: só com OK explícito do Rodrigo,
   pedido pela sessão Meta aprovar e reconfirmado pela Orquestração. Nada é
   ativado e nenhum centavo é gasto.
+
+## Servidor do PR 2
+
+Impulsionar post (#2339), na mesma flag `meta_ads_criar`. Pedido do Rodrigo em
+28/10: "ja coloca no ar agora".
+
+- `GET meta_ads_connection/boost_posts?page_id=` (`meta_ads_manage`): os posts
+  da Página escolhida, só uma que o token alcança, e os do Instagram ligado a
+  ela. A tela lê quando a pessoa chega no passo do post, então cada Página tem
+  os seus. Ficam 25 de cada lado, os mais recentes. Falha ao ler devolve
+  `posts_error` e a tela diz que não conseguiu ler, nunca "sem posts".
+- Página: `published_posts` com o token da Página. Pode impulsionar quando
+  `is_eligible_for_promotion` é true. Foto de perfil ou de capa (anexo
+  `profile_media` ou `cover_photo`) sai apagada com o motivo
+  `profile_or_cover`, mesmo que a Meta diga que pode. Ela recusa no criar:
+  erro #1487472 no post 122099468234344741, em 28/10.
+- Instagram: `/{ig-user}/media` com o token do Facebook. Pode impulsionar só
+  com `boost_eligibility_info.eligible_to_boost` true. A doc da Meta não lista
+  os subcampos, e o nome vem da biblioteca restfb. Sem o campo, conta como
+  "não pode".
+- Criar (`POST ads` com `kind: post`): o mesmo caminho do anúncio novo, com a
+  chave, o gêmeo, os três níveis `PAUSED`, a releitura e o desfazer. O
+  rascunho é `Crm::MetaAds::Creation::PostDraft`. O post é relido na Meta antes
+  de criar qualquer coisa. Um post que não é da Página ou do Instagram dela dá
+  `invalid_post`; um que não pode ser impulsionado dá `post_not_eligible`.
+- Post do Instagram leva `object_id` (a Página), `instagram_user_id` e
+  `source_instagram_media_id`. Com número do WhatsApp na conta, o número é
+  obrigatório e o anúncio leva o botão `WHATSAPP_MESSAGE`, com o grupo de
+  conversas no WhatsApp, em Automático. Sem número, é engajamento no post
+  (`ON_POST`, `POST_ENGAGEMENT`).
+- Post da Página leva `object_story_id`, só no Facebook, com engajamento no post
+  e sem botão de WhatsApp (item 7 continua a confirmar).
+- Na chamada real (conta 18, flag só nela), confirmar:
+  - os subcampos de `boost_eligibility_info`;
+  - se `ON_POST` com `OUTCOME_ENGAGEMENT` passa sem `promoted_object`;
+  - o filtro de perfil e capa num post real.
 
 ## Permissões que a Meta precisa ver no vídeo
 

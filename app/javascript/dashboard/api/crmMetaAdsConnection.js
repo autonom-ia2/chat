@@ -186,6 +186,14 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.get(`${this.url}/create_options`);
   }
 
+  // Posts of the chosen Page and of its Instagram, to boost (#2339) →
+  // { posts, instagram_posts, posts_error }.
+  boostPosts(pageId) {
+    return axios.get(`${this.url}/boost_posts`, {
+      params: { page_id: pageId },
+    });
+  }
+
   // Photo or video from the device (multipart, field `file`) →
   // { media: { kind: 'image', hash, url, width, height } } or
   // { media: { kind: 'video', video_id } }. 422 invalid_media,

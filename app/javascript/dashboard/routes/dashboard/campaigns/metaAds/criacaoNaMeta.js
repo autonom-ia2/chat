@@ -24,6 +24,13 @@ export const lerOpcoesDeCriacao = async () => {
   return data.options;
 };
 
+// Posts para impulsionar (#2339), da Página escolhida e do Instagram dela: { posts, instagram_posts, posts_error }.
+// `posts_error`: o servidor não conseguiu ler um dos lados; a tela diz isso, nunca "sem posts".
+export const lerPostsParaImpulsionar = async pageId => {
+  const { data } = await CrmMetaAdsConnectionAPI.boostPosts(pageId);
+  return data;
+};
+
 // O servidor nunca devolve orçamento vazio: sem ele, devolve erro, e a tela diz que não deu para ler.
 export const lerOrcamento = async adId => {
   const { data } = await CrmMetaAdsConnectionAPI.adBudget(adId);
@@ -65,9 +72,35 @@ const midiaNaMeta = media =>
     ? { kind: 'video', video_id: media.video_id, image_hash: media.image_hash }
     : { kind: 'image', hash: media.hash };
 
-// O rascunho da tela vira o pedido do anúncio novo. Só vai o que vale para o destino escolhido. O valor vai como
-// texto decimal ("20.00"), do jeito que a pessoa digitou, sem passar por float.
+// Quem vê, quanto e quando: igual no anúncio novo e no post impulsionado. O valor vai como texto decimal ("20.00"),
+// do jeito que a pessoa digitou, sem passar por float.
+const publicoEDinheiro = draft => ({
+  region: draft.region === 'BR' ? 'BR' : 'STATES',
+  states: draft.region === 'BR' ? [] : draft.states,
+  age_min: draft.age_min,
+  age_max: draft.age_max,
+  special_category: Boolean(draft.special_category),
+  daily_amount: decimalAmount(draft.daily_amount),
+  start_date: draft.start_date,
+  end_date: draft.end_date || '',
+});
+
+// Post impulsionado (#2339): o post escolhido no lugar da mídia e do texto. O número do WhatsApp só vai com post do
+// Instagram (post da Página não leva o botão); o servidor confere tudo de novo, e relê o post na Meta.
+const pedidoDoPost = draft => ({
+  kind: 'post',
+  name: draft.name.trim(),
+  page_id: draft.page_id,
+  post_source: draft.post_source,
+  post_id: draft.post_id,
+  whatsapp_number:
+    draft.post_source === 'instagram' ? draft.whatsapp_number : null,
+  ...publicoEDinheiro(draft),
+});
+
+// O rascunho da tela vira o pedido do anúncio novo. Só vai o que vale para o destino escolhido.
 export const pedidoDoAnuncio = draft => {
+  if (draft.kind === 'post') return pedidoDoPost(draft);
   const whatsapp = draft.destination === 'WHATSAPP';
   const site = draft.destination === 'WEBSITE';
   return {
@@ -81,14 +114,7 @@ export const pedidoDoAnuncio = draft => {
     headline: draft.headline.trim(),
     ready_message: whatsapp ? draft.ready_message.trim() : null,
     placement: draft.placement,
-    region: draft.region === 'BR' ? 'BR' : 'STATES',
-    states: draft.region === 'BR' ? [] : draft.states,
-    age_min: draft.age_min,
-    age_max: draft.age_max,
-    special_category: Boolean(draft.special_category),
-    daily_amount: decimalAmount(draft.daily_amount),
-    start_date: draft.start_date,
-    end_date: draft.end_date || '',
+    ...publicoEDinheiro(draft),
     media: midiaNaMeta(draft.media),
     cards: draft.more_media.map(midiaNaMeta),
   };
