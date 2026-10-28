@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { SEM_LOGIN } from './anunciosSemLogin';
 import { examplePanel } from './anunciosExemplo';
@@ -21,6 +22,11 @@ const props = defineProps({
 });
 const emit = defineEmits(['connected']);
 const connecting = ref(false);
+// PROTÓTIPO #2338: conectar abre o passo a passo único (?ligar=inicio) no lugar da conexão guiada antiga.
+const route = useRoute();
+const router = useRouter();
+const startConnect = () =>
+  router.replace({ query: { ...route.query, ligar: 'inicio' } });
 const root = ref(null);
 
 // Voltar da conexão devolve o foco ao botão que a abriu (o da tela "pronto" ou o "Ver quanto gastei").
@@ -89,7 +95,7 @@ const resume = computed(() =>
         type="button"
         data-anuncios-conexao-continuar
         class="inline-flex min-h-11 items-center gap-2 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-semibold text-n-slate-12 ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-        @click="connecting = true"
+        @click="startConnect"
       >
         {{ $t(`${SEM_LOGIN}.PENDING.${pending.toUpperCase()}.CTA`) }}
         <span class="i-lucide-arrow-right size-4" aria-hidden="true" />
@@ -101,7 +107,7 @@ const resume = computed(() =>
       :inboxes="result.official_inboxes || []"
       :can-connect="!readOnly && !pending"
       @example="example = true"
-      @connect="connecting = true"
+      @connect="startConnect"
     />
 
     <template v-else-if="screen === 'example'">
@@ -141,6 +147,6 @@ const resume = computed(() =>
       @connected="emit('connected')"
     />
 
-    <MetaAdsPanel v-else :read-only="readOnly" @connect="connecting = true" />
+    <MetaAdsPanel v-else :read-only="readOnly" @connect="startConnect" />
   </div>
 </template>

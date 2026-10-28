@@ -2359,6 +2359,85 @@
       "CAMPAIGN_MESSAGE_TEMPLATE": "Campanha: {name} · modelo {template}"
     },
     "META_ADS_HUB": {
+      "LIGAR": {
+        "PROGRESS": "Passo {n} de {total}",
+        "PROGRESS_LABEL": "Passos para ligar os anúncios",
+        "CHANGE": "Alterar",
+        "INICIO": {
+          "TITLE": "Ligue seus anúncios da Meta",
+          "TEXT": "São 5 passos e leva uns 5 minutos. No fim, seus anúncios, sua Página e seu Instagram ficam ligados aqui.",
+          "START": "Começar"
+        },
+        "PASSOS": {
+          "FACEBOOK": "Entrar com o Facebook",
+          "FACEBOOK_HINT": "Um login só para anúncios, Página e Instagram.",
+          "CONTA": "Escolher a conta de anúncios",
+          "CONTA_HINT": "A conta que paga os anúncios.",
+          "PAGINA": "Conferir a Página e o Instagram",
+          "PAGINA_HINT": "Quem aparece no anúncio.",
+          "INSTAGRAM": "Trazer o Instagram para cá",
+          "INSTAGRAM_HINT": "Mensagens e comentários chegam aqui.",
+          "DESTINO": "Para onde o anúncio leva",
+          "DESTINO_HINT": "WhatsApp ou o seu site."
+        },
+        "PAGINA": {
+          "TITLE": "Confira sua Página e seu Instagram",
+          "TEXT": "É esta Página que vai aparecer nos seus anúncios.",
+          "CHOOSE_TITLE": "Qual Página vai anunciar?",
+          "CHOOSE_TEXT": "Achamos mais de uma. Escolha a que aparece nos seus anúncios.",
+          "PAGE_LABEL": "Página do Facebook",
+          "INSTAGRAM_LABEL": "Instagram",
+          "NO_INSTAGRAM": "Sem Instagram ligado a esta Página",
+          "CONFIRM": "Está certo, continuar",
+          "NOT_THIS": "Não é essa? Entrar de novo e marcar outra",
+          "NONE_TITLE": "Não achamos a sua Página do Facebook",
+          "NONE_TEXT": "Entre de novo e, na janela do Facebook, marque a sua Página e o seu Instagram.",
+          "SIGN_IN_AGAIN": "Entrar de novo com o Facebook"
+        },
+        "INSTAGRAM": {
+          "TITLE": "Traga o @{username} para cá",
+          "TEXT": "Entre uma vez com o Instagram. Depois disso, nada mais pede autorização.",
+          "MESSAGES": "As mensagens do Direct chegam na caixa de entrada",
+          "COMMENTS": "Os comentários dos anúncios aparecem aqui",
+          "NUMBERS": "Os números dos seus posts aparecem em Seus posts",
+          "CTA": "Entrar com o Instagram"
+        },
+        "PRONTO": {
+          "TITLE": "Pronto! Seus anúncios estão ligados",
+          "TEXT": "Veja o que já funciona. Se faltar algo, o botão leva direto ao que falta.",
+          "FUNCIONA": "Funcionando",
+          "SEE_PANEL": "Ver meus anúncios",
+          "RECURSOS": {
+            "RESULTADO": "Ver o resultado dos anúncios",
+            "CRIAR": "Criar anúncio",
+            "COMENTARIOS_FACEBOOK": "Comentários do Facebook",
+            "FORMULARIOS": "Formulários de contato",
+            "COMENTARIOS_INSTAGRAM": "Comentários do Instagram",
+            "SEUS_POSTS": "Números dos seus posts",
+            "VENDAS": "Avisar a Meta das vendas"
+          },
+          "FALTA": {
+            "FACEBOOK": "Falta entrar com o Facebook",
+            "CONTA": "Falta escolher a conta de anúncios",
+            "PAGINA": "Falta conferir a Página",
+            "INSTAGRAM": "Falta trazer o Instagram",
+            "DESTINO": "Falta dizer para onde o anúncio leva",
+            "PERMISSAO": "Falta uma permissão: entre de novo com o Facebook e deixe tudo marcado",
+            "NUMEROS": "Falta liberar os números da Página",
+            "VENDAS": "Opcional: ajuda a Meta a achar quem compra"
+          },
+          "RESOLVER": {
+            "FACEBOOK": "Entrar",
+            "CONTA": "Escolher",
+            "PAGINA": "Conferir",
+            "INSTAGRAM": "Trazer",
+            "DESTINO": "Escolher",
+            "PERMISSAO": "Entrar de novo",
+            "NUMEROS": "Liberar",
+            "VENDAS": "Ligar"
+          }
+        }
+      },
       "PAGE": {
         "BACK": "Voltar",
         "TITLE": "Anúncios",
@@ -3449,6 +3528,10 @@
         },
         "RECREATE": "Não está no Gerenciador, criar de novo",
         "BLOCKERS": {
+          "NO_AD_ACCOUNT": {
+            "TITLE": "Falta escolher a conta de anúncios. É rapidinho.",
+            "ACTION": "Escolher a conta de anúncios"
+          },
           "LOGIN": {
             "TITLE": "Para criar anúncios por aqui, entre de novo com o Facebook.",
             "ACTION": "Entrar com o Facebook",

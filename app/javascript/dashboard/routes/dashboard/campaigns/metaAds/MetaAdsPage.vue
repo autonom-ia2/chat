@@ -22,6 +22,9 @@ import MetaAdsOrganic from './organico/MetaAdsOrganic.vue';
 import MetaAdsViewTabs from './components/MetaAdsViewTabs.vue';
 import MetaAdsLeadForms from './leadForms/MetaAdsLeadForms.vue';
 import { currentStep } from './metaAdsHelpers';
+// PROTÓTIPO #2338 (só na demo): o passo a passo novo abre com ?ligar=.
+import LigarAnuncios from './ligar/LigarAnuncios.vue';
+import { ativarDemo } from './ligar/ligarDemo';
 
 // Campanhas › Anúncios da Meta (#1047, F1b): a conexão guiada num lugar só, em 4 passos —
 // conectar, escolher a conta, para onde o anúncio leva, avisar a Meta quando vender. Substitui o
@@ -44,6 +47,7 @@ const openStep = ref(null);
 const MODES = ['partner', 'token', 'facebook_login'];
 const route = useRoute();
 const router = useRouter();
+ativarDemo(route.query);
 const chosenMode = ref(
   MODES.includes(route.query.modo) ? route.query.modo : null
 );
@@ -250,11 +254,13 @@ const startFacebookLogin = data => {
 };
 
 // Entrou de novo com o Facebook a partir dos comentários de um anúncio (#2197, `?volta=<anúncio>`): volta ao anúncio.
+// Veio de criar anúncio sem conta de anúncios (#2338, `?volta=criar`): volta para criar.
 const backToAd = () => {
-  const adId = route.query.volta;
-  if (!adId) return;
+  const target = route.query.volta;
+  if (!target) return;
   view.value = 'resultado';
-  router.replace({ query: { aba: 'resultado', anuncio: adId } });
+  const back = target === 'criar' ? { criar: 'novo' } : { anuncio: target };
+  router.replace({ query: { aba: 'resultado', ...back } });
 };
 
 const accountSaved = data => {
@@ -309,6 +315,27 @@ const removed = async () => {
   await load();
 };
 
+// Criar anúncio achou a conexão sem conta de anúncios (#2338): a conexão em memória está velha (o login refeito na
+// criação limpou a escolha). Relê, e a Conexão abre no passo da conta.
+watch(
+  () => route.query.volta,
+  target => {
+    if (target === 'criar') load();
+  }
+);
+// PROTÓTIPO #2338: saindo do passo a passo (?ligar=), a conexão é relida.
+watch(
+  () => route.query.ligar,
+  (now, before) => {
+    if (!before || now) return;
+    view.value = ALL_VIEWS.includes(route.query.aba)
+      ? route.query.aba
+      : 'resultado';
+    if (route.query.passo === 'vendas') openStep.value = SALES_STEP;
+    load();
+  }
+);
+
 onMounted(load);
 </script>
 
@@ -338,7 +365,9 @@ onMounted(load);
         </p>
       </header>
 
-      <div v-if="loading && !connection" class="flex justify-center p-12">
+      <LigarAnuncios v-if="route.query.ligar" />
+
+      <div v-else-if="loading && !connection" class="flex justify-center p-12">
         <Spinner />
       </div>
 
