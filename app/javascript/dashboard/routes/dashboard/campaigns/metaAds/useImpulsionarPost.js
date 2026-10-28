@@ -13,6 +13,8 @@ export const useImpulsionarPost = ({ draft, numbers }) => {
   const lidosDaPagina = ref(null);
   const lendo = ref(false);
   const falhou = ref(false);
+  // Cada leitura leva um número; só vale a resposta da mais recente.
+  let ultimaLeitura = 0;
 
   const posts = computed(() => lidos.value?.posts || []);
   const postsDoInstagram = computed(() => lidos.value?.instagram_posts || []);
@@ -34,25 +36,28 @@ export const useImpulsionarPost = ({ draft, numbers }) => {
     };
   };
 
-  // Só vale a resposta da Página que ainda está escolhida: a de uma leitura anterior, que chegou atrasada, é descartada.
+  // Resposta de uma leitura anterior (outra Página, ou a mesma lida de novo) que chegou atrasada é descartada.
   const lerPosts = async () => {
     const pageId = draft.value.page_id;
     if (!pageId) return;
+    ultimaLeitura += 1;
+    const leitura = ultimaLeitura;
+    const atual = () => leitura === ultimaLeitura;
     lidos.value = null;
     lidosDaPagina.value = null;
     lendo.value = true;
     falhou.value = false;
     try {
       const data = await lerPostsParaImpulsionar(pageId);
-      if (draft.value.page_id !== pageId) return;
+      if (!atual()) return;
       lidos.value = data;
       lidosDaPagina.value = pageId;
       falhou.value = Boolean(data.posts_error);
       if (!falhou.value) marcarPrimeiro();
     } catch {
-      if (draft.value.page_id === pageId) falhou.value = true;
+      if (atual()) falhou.value = true;
     } finally {
-      if (draft.value.page_id === pageId) lendo.value = false;
+      if (atual()) lendo.value = false;
     }
   };
 

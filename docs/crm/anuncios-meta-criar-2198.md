@@ -466,7 +466,9 @@ Impulsionar post (#2339), na mesma flag `meta_ads_criar`. Pedido do Rodrigo em
 - Post da Página leva `object_story_id`, só no Facebook, com engajamento no post
   e sem botão de WhatsApp (item 7 continua a confirmar).
 - Na chamada real (conta 18, flag só nela), confirmar:
-  - os subcampos de `boost_eligibility_info`;
+  - os subcampos de `boost_eligibility_info` e o `children{...}` do carrossel,
+    que vão na mesma leitura de `/media`: se a Meta recusar um dos dois, a
+    lista do Instagram inteira falha;
   - se `ON_POST` com `OUTCOME_ENGAGEMENT` passa sem `promoted_object`;
   - o filtro de perfil e capa num post real.
 
