@@ -76,13 +76,14 @@ class Crm::MetaAds::Organico::Lugar
     resultados.find { |resultado| resultado['dimension_values'] == [dimensao] }&.dig('value')
   end
 
-  # Métrica com um valor por dia (Página): soma do período. `where` filtra o lado do recorte. Métrica que não veio é
-  # "sem número" (nil), nunca 0; com dias e nenhum do lado pedido, o lado é 0.
+  # Métrica com um valor por dia (Página): soma do período. `where` filtra o lado do recorte. Métrica, lado ou valor que
+  # não veio é "sem número" (nil), nunca 0: a Meta manda os dois lados de is_from_ads todo dia, até com 0 (chamada real
+  # de 27/10), então lado ausente é falta de dado. Dia sem valor fica fora da soma.
   def soma(data, name, **where)
-    dias = valores(data, name)
-    return if dias.empty?
-
-    dias.sum { |valor| where.all? { |chave, esperado| valor[chave.to_s] == esperado } ? valor['value'].to_i : 0 }
+    numeros = valores(data, name).filter_map do |valor|
+      valor['value'] if valor['value'].is_a?(Numeric) && where.all? { |chave, esperado| valor[chave.to_s] == esperado }
+    end
+    numeros.sum if numeros.any?
   end
 
   def primeiro(data, name)
