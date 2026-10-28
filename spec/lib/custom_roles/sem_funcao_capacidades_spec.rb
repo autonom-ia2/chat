@@ -13,21 +13,39 @@ RSpec.describe CustomRoles::SemFuncaoCapacidades do
     expect(described_class.em_dia?).to be(true), "fora de dia: #{described_class::ARQUIVO.relative_path_from(Rails.root)}"
   end
 
-  it 'traz as 9 capacidades e os 2 extras, com chaves que existem', :aggregate_failures do
+  it 'traz as 14 capacidades e os 2 extras, com chaves que existem', :aggregate_failures do
     gerado = described_class.gerar
 
-    expect(gerado[:capacidades].size).to eq(9)
+    expect(gerado[:capacidades].size).to eq(14)
     expect(gerado[:extras].pluck(:id)).to eq(%w[responsavel_de_agendamento anuncio_de_origem])
-    expect(gerado[:capacidades].flat_map { |item| item[:chaves] } - CustomRole::PERMISSIONS).to eq([])
-    expect(gerado[:extras].flat_map { |item| item[:chaves] }).to eq([])
+    expect((gerado[:capacidades] + gerado[:extras]).flat_map { |item| item[:chaves] } - CustomRole::PERMISSIONS).to eq([])
+    expect(capacidade('anuncio_de_origem')[:chaves]).to eq(%w[meta_ads_view])
   end
 
-  it 'o agente sem função pode o que a tela vai dizer e não pode procurar clientes nem levar planilha', :aggregate_failures do
+  it 'o agente sem função pode o que a tela vai dizer e não pode o que só a função dá', :aggregate_failures do
     pode = %w[conversas_dos_colegas contatos respostas_prontas apagar_mensagens vendas_das_colunas arquivar_vendas
-              responsavel_de_agendamento anuncio_de_origem]
+              valores_das_vendas responsavel_de_agendamento anuncio_de_origem]
+    nao_pode = %w[procurar_clientes_novos planilha_de_clientes montar_colunas ia_das_vendas cuidar_de_tudo_nas_vendas
+                  metas_do_mes]
 
     pode.each { |id| expect(capacidade(id)).to include(pode: true) }
-    %w[procurar_clientes_novos planilha_de_clientes].each { |id| expect(capacidade(id)).to include(pode: false) }
+    nao_pode.each { |id| expect(capacidade(id)).to include(pode: false) }
+  end
+
+  describe 'com função' do
+    def item_com(id, permissions)
+      described_class.gerar(custom_role: CustomRole.new(id: 1, permissions: permissions))[:capacidades]
+                     .find { |item| item[:id] == id }
+    end
+
+    it 'vê os valores das vendas só com sales_value_view', :aggregate_failures do
+      expect(item_com('valores_das_vendas', %w[crm_view crm_admin])).to include(pode: false)
+      expect(item_com('valores_das_vendas', %w[sales_value_view])).to include(pode: true)
+    end
+
+    it 'crm_admin sozinho liga as chaves crm_* (superchave): mexe nas vendas das colunas' do
+      expect(item_com('vendas_das_colunas', %w[crm_admin])).to include(pode: true)
+    end
   end
 
   describe 'relatórios das vendas e a flag crm_numeros_lentes' do

@@ -53,15 +53,40 @@ module CustomRoles::SemFuncaoCapacidades
       pergunta: ->(c) { c.account_user.permission_granted?('prospecting_view') } },
     { id: 'planilha_de_clientes', chaves: %w[contact_export crm_export], premissas: [],
       fontes: %w[Enterprise::ContactPolicy#export? Enterprise::Crm::CardPolicy#export? CrmPermissions::PLAIN_AGENT_DENIED_KEYS],
-      pergunta: ->(c) { c.pode?(ContactPolicy, Contact.new, :export?) || c.pode?(CardAlcancado, Crm::Card.new, :export?) } }
+      pergunta: ->(c) { c.pode?(ContactPolicy, Contact.new, :export?) || c.pode?(CardAlcancado, Crm::Card.new, :export?) } },
+    { id: 'valores_das_vendas', chaves: %w[sales_value_view], premissas: [],
+      fontes: %w[Crm::ValorDeVenda.ve?],
+      pergunta: ->(c) { Crm::ValorDeVenda.ve?(c.account_user) } },
+    # As chaves que o sem função nunca recebe (CrmPermissions::PLAIN_AGENT_DENIED_KEYS) e as metas, que só a função dá.
+    { id: 'montar_colunas', chaves: %w[crm_manage_pipelines], premissas: [],
+      fontes: %w[Enterprise::Crm::PipelinePolicy#create? Enterprise::Crm::PipelinePolicy#update? CrmPermissions::PLAIN_AGENT_DENIED_KEYS],
+      pergunta: ->(c) { c.pode?(Crm::PipelinePolicy, Crm::Pipeline.new, :create?, :update?) } },
+    { id: 'ia_das_vendas', chaves: %w[crm_manage_ai], premissas: %w[ve_o_card participa_da_coluna],
+      fontes: %w[Enterprise::Crm::CardPolicy#evaluate_ai? Enterprise::Crm::CardPolicy#summarize?
+                 CrmPermissions::PLAIN_AGENT_DENIED_KEYS],
+      pergunta: ->(c) { c.pode?(CardAlcancado, Crm::Card.new, :evaluate_ai?, :summarize?) } },
+    # crm_admin liga todas as chaves crm_* da função (CrmPermissions#crm_permission?); só dele são as caixas do CRM
+    # (quem vê o quê) e os calendários de SLA.
+    { id: 'cuidar_de_tudo_nas_vendas', chaves: %w[crm_admin], premissas: [],
+      fontes: %w[CrmPermissions#crm_permission? Enterprise::Crm::InboxAgentAccessPolicy#update?
+                 Enterprise::Crm::ServiceSchedulePolicy#create? CrmPermissions::PLAIN_AGENT_DENIED_KEYS],
+      pergunta: lambda { |c|
+        c.pode?(Crm::InboxAgentAccessPolicy, %i[crm inbox_agent_access], :update?) &&
+          c.pode?(Crm::ServiceSchedulePolicy, Crm::ServiceSchedule.new, :create?)
+      } },
+    { id: 'metas_do_mes', chaves: %w[crm_metas_manage], premissas: [],
+      fontes: %w[Enterprise::Crm::MetasPolicy#manage?],
+      pergunta: ->(c) { c.pode?(Crm::MetasPolicy, :metas, :manage?) } }
   ].freeze
 
-  # Sem chave própria: seguem do "sem função" sem que nenhuma chave da tela os ligue.
+  # Sem chave só deles: seguem do "sem função"; a chave que a função usa (quando há) abre mais que isso.
   EXTRAS = [
     { id: 'responsavel_de_agendamento', chaves: [], premissas: [],
       fontes: %w[Crm::BookingV2::HostEligibility.sees_cards?],
       pergunta: ->(c) { Crm::BookingV2::HostEligibility.send(:sees_cards?, c.account_user) } },
-    { id: 'anuncio_de_origem', chaves: [], premissas: [],
+    # Com função, vê a origem do anúncio só com meta_ads_view; segue extra porque a chave também abre a página de
+    # Anúncios, que o sem função não tem.
+    { id: 'anuncio_de_origem', chaves: %w[meta_ads_view], premissas: [],
       fontes: %w[Crm::AnuncioDeOrigem.ve?],
       pergunta: ->(c) { Crm::AnuncioDeOrigem.ve?(c.account_user) } }
   ].freeze
