@@ -22,139 +22,6 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
     }
   end
 
-  # Rodada 6/7: todo 401 que o controller manda leva um código da lista. Lê o controller pelo parser do Ruby: cada
-  # refuse(código, :unauthorized | 401) passa o código do Denied resgatado (pela variável que o próprio rescue declara),
-  # um literal ou uma constante cujo valor está na lista; e nenhum render/head responde 401 por fora do refuse.
-  # Rodada 8: o status vale em símbolo, número ou texto, com `status:` ou `:status =>`; render_unauthorized é sempre um
-  # 401 por fora; e um refuse com o status numa variável não dá para ler, então também é apontado.
-  # Rodada 9: a chamada vale também com receptor self e por send/__send__/public_send; um status que não é literal no
-  # render ou no head também é apontado (menos no próprio refuse, que repassa o status que recebeu); e o Denied vale
-  # escrito com :: na frente.
-  let(:refusal_reader) do
-    Class.new(Prism::Visitor) do
-      attr_reader :refusals, :loose
-
-      def initialize
-        super
-        @refusals = []
-        @loose = []
-        @denied_var = nil
-        @method_name = nil
-      end
-
-      def visit_def_node(node)
-        outer = @method_name
-        @method_name = node.name
-        super
-        @method_name = outer
-      end
-
-      # Dentro do rescue do Denied vale a variável que ele declara; um rescue de outra coisa com o mesmo nome a esconde.
-      def visit_rescue_node(node)
-        visit_all(node.exceptions)
-        outer = @denied_var
-        name = node.reference&.name
-        denied = node.exceptions.any? { |exception| exception.slice.delete_prefix('::') == 'CustomRoles::GrantGuard::Denied' }
-        @denied_var = denied ? name : (outer unless name == outer)
-        visit(node.statements)
-        @denied_var = outer
-        visit(node.subsequent)
-      end
-
-      def visit_call_node(node)
-        name, args = call_of(node)
-        if refusal_401?(name, args)
-          @refusals << [node.slice, code_of(args.first)]
-        elsif loose_401?(name, args)
-          @loose << node.slice
-        end
-        super
-      end
-
-      private
-
-      # O nome e os argumentos da chamada como o controller a faria: sem receptor ou com self, direto ou por send.
-      def call_of(node)
-        return [node.name, []] unless node.receiver.nil? || node.receiver.is_a?(Prism::SelfNode)
-
-        args = node.arguments&.arguments.to_a
-        target = args.first
-        return [target.unescaped.to_sym, args.drop(1)] if %i[send __send__ public_send].include?(node.name) && literal_name?(target)
-
-        [node.name, args]
-      end
-
-      def literal_name?(node)
-        node.is_a?(Prism::SymbolNode) || node.is_a?(Prism::StringNode)
-      end
-
-      def loose_401?(name, args)
-        return true if name == :render_unauthorized
-        return unreadable_status?(args.last) if name == :refuse && args.size == 2
-
-        %i[render head].include?(name) && loose_render?(name, args)
-      end
-
-      def loose_render?(name, args)
-        args.any? { |arg| unauthorized?(arg) } || status_values(name, args).any? { |value| hidden_status?(value) }
-      end
-
-      # Onde o status vai: `status:` (ou `:status =>`) num hash e, no head, o primeiro argumento.
-      def status_values(name, args)
-        pairs = args.select { |arg| hash?(arg) }.flat_map(&:elements).select { |pair| status_pair?(pair) }
-        pairs.map(&:value) + (name == :head ? head_status(args) : [])
-      end
-
-      def head_status(args)
-        args.first.nil? || hash?(args.first) ? [] : [args.first]
-      end
-
-      def hash?(node)
-        node.is_a?(Prism::KeywordHashNode) || node.is_a?(Prism::HashNode)
-      end
-
-      # O próprio refuse repassa ao render o status que recebeu; quem chama o refuse é que é lido.
-      def hidden_status?(value)
-        return false if @method_name == :refuse && value.is_a?(Prism::LocalVariableReadNode)
-
-        unreadable_status?(value)
-      end
-
-      def unreadable_status?(node)
-        [Prism::SymbolNode, Prism::IntegerNode, Prism::StringNode].none? { |kind| node.is_a?(kind) }
-      end
-
-      def refusal_401?(name, args)
-        name == :refuse && args.size == 2 && unauthorized?(args.last)
-      end
-
-      def code_of(node)
-        case node
-        when Prism::CallNode then [:denied] if denied_code?(node)
-        when Prism::StringNode then [:value, node.unescaped]
-        when Prism::ConstantReadNode, Prism::ConstantPathNode then [:constant, node.name]
-        end
-      end
-
-      def denied_code?(node)
-        node.name == :code && node.receiver.is_a?(Prism::LocalVariableReadNode) && node.receiver.name == @denied_var
-      end
-
-      def unauthorized?(node)
-        case node
-        when Prism::SymbolNode, Prism::StringNode then %w[unauthorized 401].include?(node.unescaped)
-        when Prism::IntegerNode then node.value == 401
-        when Prism::KeywordHashNode, Prism::HashNode then node.elements.any? { |pair| status_pair?(pair) && unauthorized?(pair.value) }
-        else false
-        end
-      end
-
-      def status_pair?(pair)
-        pair.is_a?(Prism::AssocNode) && pair.key.is_a?(Prism::SymbolNode) && pair.key.unescaped == 'status'
-      end
-    end
-  end
-
   before { account.enable_features!('custom_roles') }
 
   def create_role(as:, permissions:)
@@ -169,90 +36,27 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
         headers: as.create_new_auth_token, as: :json
   end
 
+  def delete_role(role, as:)
+    delete "/api/v1/accounts/#{account.id}/custom_roles/#{role.id}", headers: as.create_new_auth_token, as: :json
+  end
+
   def expect_refusal(code)
     expect(response).to have_http_status(:unauthorized)
     expect(Api::V1::Accounts::CustomRolesController::UNAUTHORIZED_CODES).to include(code)
     expect(response.parsed_body).to eq('error' => code, 'message' => messages.fetch(code))
   end
 
-  # Rodada 6: todo código da lista tem mensagem nos arquivos de verdade (en e pt_BR), lidos do disco: o I18n cairia no
+  # Todo código da lista tem mensagem nos arquivos de verdade (en e pt_BR), lidos do disco: o I18n cairia no
   # inglês e esconderia a falta do português.
   it 'has a message for every 401 code in the real en and pt_BR files' do
     codes = Api::V1::Accounts::CustomRolesController::UNAUTHORIZED_CODES
 
     expect(codes).to be_frozen
+    expect(codes).to include(*CustomRoles::GrantGuard::CODES)
     %w[en pt_BR].each do |locale|
       file = YAML.load_file(Rails.root.join("config/locales/#{locale}.yml"))
       texts = file.dig(locale, 'errors', 'custom_role')
       codes.each { |code| expect(texts[code]).to be_present, "#{locale}: #{code}" }
-    end
-  end
-
-  def listed_code?(controller, (kind, value))
-    case kind
-    when :denied then true
-    when :value then controller::UNAUTHORIZED_CODES.include?(value)
-    when :constant then controller.const_defined?(value) && controller::UNAUTHORIZED_CODES.include?(controller.const_get(value))
-    else false
-    end
-  end
-
-  def refusal_problems(source)
-    parsed = Prism.parse(source)
-    raise parsed.errors.map(&:message).join(', ') if parsed.failure?
-
-    reader = refusal_reader.new
-    parsed.value.accept(reader)
-    unlisted = reader.refusals.reject { |_, code| listed_code?(Api::V1::Accounts::CustomRolesController, code) }
-    { refusals: reader.refusals.size, problems: unlisted.map(&:first) + reader.loose }
-  end
-
-  it 'only sends listed codes in its 401 refusals' do
-    controller = Api::V1::Accounts::CustomRolesController
-    source = Rails.root.join('enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb').read
-    result = refusal_problems(source)
-
-    expect(controller::UNAUTHORIZED_CODES).to include(*CustomRoles::GrantGuard::CODES)
-    expect(result[:refusals]).to be >= 4
-    expect(result[:problems]).to be_empty
-  end
-
-  # A leitura acima pega o que deve pegar e deixa passar o que vale (rodada 7): cada trecho dentro de um método.
-  {
-    'refuse(e.code, :unauthorized) with e from another rescue' =>
-      ['x; rescue StandardError => e; refuse(e.code, :unauthorized)', false],
-    'a code outside the list' => ["refuse('nope', 401)", false],
-    'render with status: :unauthorized' => ['render json: {}, status: :unauthorized', false],
-    'head 401' => ['head 401', false],
-    'render_unauthorized' => ["render_unauthorized('no')", false],
-    'render with status as text' => ["render json: {}, status: 'unauthorized'", false],
-    'render with the hash-rocket status' => ['render json: {}, :status => :unauthorized', false],
-    'refuse with the status in a variable' => ["refuse('x', variavel)", false],
-    'refuse with a status other than 401' => ["refuse('changed_meanwhile', :conflict)", true],
-    'the Denied code under another variable name' =>
-      ['x; rescue CustomRoles::GrantGuard::Denied => error; refuse(error.code, :unauthorized)', true],
-    'a listed constant' => ['refuse(FEATURE_OFF, :unauthorized)', true],
-    'a listed constant through self.class' => ['refuse(self.class::FEATURE_OFF, :unauthorized)', true],
-    'a listed literal' => ["refuse('feature_off', 401)", true],
-    # Rodada 9: receptor self, send, status calculado e o Denied escrito com :: na frente.
-    'refuse through self' => ["self.refuse('nope', :unauthorized)", false],
-    'render through self' => ['self.render json: {}, status: :unauthorized', false],
-    'refuse through send' => ["send(:refuse, 'nope', 401)", false],
-    'refuse through public_send' => ["public_send('refuse', 'nope', :unauthorized)", false],
-    'a listed literal through send' => ["send(:refuse, 'feature_off', 401)", true],
-    'render with the status in a variable' => ['s = :unauthorized; render json: {}, status: s', false],
-    'render with a computed status' => ['render json: {}, status: Rack::Utils.status_code(:unauthorized)', false],
-    'head with the status in a variable' => ['s = 401; head s', false],
-    'render with a status other than 401' => ['render json: {}, status: :conflict', true],
-    'the refuse method passing its own status along' =>
-      ["def refuse(code, status = :unprocessable_entity)\nrender json: { error: code }, status: status\nend", true],
-    'the Denied code with a leading ::' =>
-      ['x; rescue ::CustomRoles::GrantGuard::Denied => e; refuse(e.code, :unauthorized)', true]
-  }.each do |label, (body, accepted)|
-    it "#{accepted ? 'accepts' : 'flags'} #{label}" do
-      result = refusal_problems("def sample\n#{body}\nend")
-
-      expect(result[:problems].empty?).to be(accepted)
     end
   end
 
@@ -279,23 +83,40 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
     expect_refusal('feature_off')
   end
 
-  it "answers 'own_role' when someone who is not an administrator changes the role they hold" do
+  # Um pedido por caminho de 401 do controller: create, update e destroy, cada um com os códigos que pode dar.
+  it "answers 'out_of_reach' on create for keys the giver does not hold" do
+    expect { create_role(as: builder, permissions: %w[contact_view crm_export]) }.not_to change(CustomRole, :count)
+    expect_refusal('out_of_reach')
+  end
+
+  it "answers 'own_role' on update when someone who is not an administrator changes the role they hold" do
     update_role(builder_role, as: builder)
 
     expect_refusal('own_role')
     expect(builder_role.reload.name).not_to eq('Outro nome')
   end
 
-  it "answers 'out_of_reach' for keys the giver does not hold and for a role above them" do
-    expect { create_role(as: builder, permissions: %w[contact_view crm_export]) }.not_to change(CustomRole, :count)
-    expect_refusal('out_of_reach')
-
+  it "answers 'out_of_reach' on update for a role above the giver" do
     above = create(:custom_role, account: account, name: 'Financeiro', permissions: %w[financial_view])
+
     update_role(above, as: builder)
+
     expect_refusal('out_of_reach')
     expect(above.reload.name).to eq('Financeiro')
+  end
 
-    delete "/api/v1/accounts/#{account.id}/custom_roles/#{above.id}", headers: builder.create_new_auth_token, as: :json
+  it "answers 'own_role' on destroy when someone who is not an administrator deletes the role they hold" do
+    delete_role(builder_role, as: builder)
+
+    expect_refusal('own_role')
+    expect(CustomRole.exists?(builder_role.id)).to be(true)
+  end
+
+  it "answers 'out_of_reach' on destroy for a role above the giver" do
+    above = create(:custom_role, account: account, name: 'Financeiro', permissions: %w[financial_view])
+
+    delete_role(above, as: builder)
+
     expect_refusal('out_of_reach')
     expect(CustomRole.exists?(above.id)).to be(true)
   end

@@ -6,13 +6,12 @@ import { FRASE_DO_401 } from '../salvarFuncao';
 
 // #2308: os códigos do 401 saem do servidor, numa lista só (rodada 5): UNAUTHORIZED_CODES do controller, que junta os
 // CODES do GrantGuard (o Denied recusa qualquer outro) e o FEATURE_OFF. Lidos dos próprios arquivos: se o servidor
-// renomear ou ganhar um código, este spec falha, em vez de a tela cair em SEM_ACESSO em silêncio. Sem regex: corta o
-// texto pelas marcas.
+// renomear ou ganhar um código, este spec falha, em vez de a tela cair em SEM_ACESSO em silêncio. Só lê as constantes,
+// sem regex: corta o texto pelas marcas. Que todo 401 leve um código da lista é provado por pedido, no spec de request.
 const ler = caminho => readFileSync(resolve(process.cwd(), caminho), 'utf8');
 const guarda = () => ler('enterprise/app/services/custom_roles/grant_guard.rb');
 const controller = () =>
   ler('enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb');
-const vezes = (fonte, marca) => fonte.split(marca).length - 1;
 
 // O texto de `NOME = '...'`; undefined quando a constante não existe.
 const constante = (fonte, nome) => {
@@ -49,22 +48,6 @@ describe('códigos do 401 de /custom_roles', () => {
       'own_role',
     ]);
     expect(Object.keys(FRASE_DO_401).sort()).toEqual(codigosDoServidor());
-  });
-
-  // Rodada 5: do GrantGuard, o código só sai pelo Denied, que recusa o que não está em CODES. No controller, todo 401
-  // com código passa pelo refuse, com o código do Denied ou com o FEATURE_OFF; um render solto com
-  // status: :unauthorized, ou um refuse com outro código, faria um código passar sem frase.
-  it('toda recusa 401 do controller sai por uma forma que leva a um código da lista', () => {
-    const fonteDaGuarda = guarda();
-    expect(fonteDaGuarda).toContain('unless CODES.include?(code)');
-    const fonteDoController = controller();
-    expect(vezes(fonteDoController, ':unauthorized')).toBe(
-      vezes(fonteDoController, 'refuse(e.code, :unauthorized)') +
-        vezes(fonteDoController, 'refuse(FEATURE_OFF, :unauthorized)')
-    );
-    expect(vezes(fonteDoController, 'Denied => e')).toBe(
-      vezes(fonteDoController, 'refuse(e.code, :unauthorized)')
-    );
   });
 
   // Rodada 4: cada frase do 401 (e SEM_ACESSO e REDE, que não vêm com código) existe no salvar e no apagar, nos dois
