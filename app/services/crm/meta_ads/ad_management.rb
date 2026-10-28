@@ -32,7 +32,7 @@ class Crm::MetaAds::AdManagement
     return if ad.nil?
 
     {
-      status: ad['status'], effective_status: ad['effective_status'], mode: @connection.mode,
+      name: ad['name'], status: ad['status'], effective_status: ad['effective_status'], mode: @connection.mode,
       can_change: can_change?, needs_login: @connection.own_token? && !ads_management?,
       post: post_payload(ad.dig('creative', 'effective_object_story_id'))
     }

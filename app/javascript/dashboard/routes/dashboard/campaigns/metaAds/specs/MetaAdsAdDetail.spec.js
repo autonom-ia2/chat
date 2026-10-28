@@ -6,6 +6,7 @@ import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { lerGestao } from '../gestaoDoAnuncio';
 import comentariosInstagram from '../components/comentarios/comentariosInstagram';
+import MetaAdsAdStatus from '../components/MetaAdsAdStatus.vue';
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: { panelAd: vi.fn(), adBudget: vi.fn() },
@@ -416,6 +417,7 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(null));
     comentariosInstagram.listar.mockResolvedValue(READY);
     lerGestao.mockResolvedValue({
+      name: 'Anúncio do post',
       status: 'PAUSED',
       effective_status: 'PAUSED',
       can_change: true,
@@ -429,6 +431,10 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     expect(
       wrapper.find('[data-ad-detail-gestao] [data-ad-status]').exists()
     ).toBe(true);
+    // A confirmação de pausar e ativar diz o nome, que aqui vem da Meta.
+    expect(wrapper.findComponent(MetaAdsAdStatus).props('adName')).toBe(
+      'Anúncio do post'
+    );
     expect(wrapper.find('[data-ad-post-message]').text()).toBe('Texto do post');
     expect(wrapper.find('[data-ad-comments]').exists()).toBe(true);
   });

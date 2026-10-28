@@ -438,6 +438,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       >
         <MetaAdsAdStatus
           :ad-id="adId"
+          :ad-name="gestao.name || ''"
           :gestao="gestao"
           :can-manage="canManage"
           :budget="budget"
