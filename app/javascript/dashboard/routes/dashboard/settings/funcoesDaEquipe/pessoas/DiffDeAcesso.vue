@@ -3,15 +3,15 @@ import { computed, ref, useId } from 'vue';
 import { useSemFuncao } from '../useSemFuncao';
 
 // O que muda para quem fica sem função (#2308, especificação 5.E e 9): aviso de bloco âmbar com "Vão passar a poder"
-// e "Vão deixar de", calculado do contrato (diffEntre). "Mais detalhes" diz, sem jargão, que o acesso pelos canais e
-// pelas colunas das vendas continua valendo.
+// e "Vão deixar de", calculado do contrato (diffEntre). "Mais detalhes" diz, sem jargão, o que só vale nos canais em
+// que a pessoa está e nas colunas de que participa (premissas do contrato).
 const props = defineProps({
   ganha: { type: Array, default: () => [] },
   perde: { type: Array, default: () => [] },
   pessoas: { type: Number, default: 1 },
 });
 
-const { textoDa } = useSemFuncao();
+const { textoDa, notas } = useSemFuncao();
 const id = useId();
 const detalhes = ref(false);
 
@@ -25,11 +25,15 @@ const grupos = computed(() =>
   [
     {
       chave: 'PASSAM',
-      ids: props.ganha,
+      itens: props.ganha,
       icone: 'i-lucide-check text-n-teal-11',
     },
-    { chave: 'DEIXAM', ids: props.perde, icone: 'i-lucide-x text-n-ruby-11' },
-  ].filter(grupo => grupo.ids.length)
+    {
+      chave: 'DEIXAM',
+      itens: props.perde,
+      icone: 'i-lucide-x text-n-slate-11',
+    },
+  ].filter(grupo => grupo.itens.length)
 );
 </script>
 
@@ -56,9 +60,9 @@ const grupos = computed(() =>
       </p>
       <ul class="flex flex-col gap-2 p-0 m-0 list-none">
         <li
-          v-for="item in grupo.ids"
-          :key="item"
-          :data-item="item"
+          v-for="item in grupo.itens"
+          :key="item.chave"
+          :data-item="item.chave"
           class="flex items-start gap-2 text-[0.9375rem] text-n-slate-12"
         >
           <span
@@ -80,14 +84,16 @@ const grupos = computed(() =>
     >
       {{ $t('FUNCOES_EQUIPE.DIFF.MAIS_DETALHES') }}
     </button>
-    <p
+    <ul
       v-show="detalhes"
       :id="`${id}-detalhes`"
       data-nota-funil
-      class="flex items-start gap-2 m-0 text-sm text-n-slate-11"
+      class="flex flex-col gap-1.5 p-0 m-0 list-none text-sm text-n-slate-11"
     >
-      <span class="i-lucide-info size-4 mt-0.5 shrink-0" aria-hidden="true" />
-      {{ $t('FUNCOES_EQUIPE.SEM_FUNCAO.NOTA') }}
-    </p>
+      <li v-for="nota in notas" :key="nota" class="flex items-start gap-2">
+        <span class="i-lucide-info size-4 mt-0.5 shrink-0" aria-hidden="true" />
+        {{ nota }}
+      </li>
+    </ul>
   </div>
 </template>

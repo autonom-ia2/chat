@@ -5,8 +5,8 @@ import { DESTAQUES, PRONTAS, cartaoPronto } from '../cartaoPronto';
 import { ICONE_DA_CAPACIDADE, useCartao } from '../guiada/useCartao';
 
 // A conta sem nenhuma função (#2308): o herói e as 3 prontas em destaque, com o que cada uma faz (as mesmas
-// capacidades da Escolha, do fraseDaFuncao). O herói usa o botão branco sobre navy da casa (Automações), a única
-// exceção registrada na especificação (seção 9). Tocar numa pronta abre a conversa guiada com ela escolhida.
+// capacidades da Escolha, do fraseDaFuncao). O herói usa o botão branco sobre o navy da casa (token n-heroi, o mesmo
+// da tela inicial), a única exceção registrada na especificação (seção 9). Tocar numa pronta abre a conversa guiada com ela escolhida.
 const emit = defineEmits(['criar']);
 
 const { giver } = usePeopleAccess();
@@ -22,7 +22,7 @@ const destaques = computed(() =>
 <template>
   <div data-vazio class="flex flex-col gap-6">
     <section
-      class="relative px-6 py-10 overflow-hidden text-white rounded-3xl bg-[#0D2344] md:px-12 md:py-12"
+      class="relative px-6 py-10 overflow-hidden text-white rounded-3xl bg-n-heroi dark:bg-n-heroi-escuro md:px-12 md:py-12"
     >
       <span
         aria-hidden="true"
@@ -47,7 +47,7 @@ const destaques = computed(() =>
         <button
           type="button"
           data-criar-primeira
-          class="inline-flex items-center self-start gap-2 px-5 text-sm font-semibold bg-white rounded-xl min-h-11 text-[#0D2344] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          class="inline-flex items-center self-start gap-2 px-5 text-sm font-semibold bg-white rounded-xl min-h-11 text-n-heroi focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           @click="emit('criar')"
         >
           {{ $t('FUNCOES_EQUIPE.VAZIO.CRIAR') }}
@@ -67,7 +67,7 @@ const destaques = computed(() =>
         <button
           type="button"
           :data-pronta="pronta.chave"
-          class="flex flex-col w-full gap-3 p-5 transition border shadow-sm text-start rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          class="flex flex-col w-full gap-3 p-5 transition border text-start rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
           :aria-label="
             $t('FUNCOES_EQUIPE.VAZIO.CRIAR_PRONTA', {
               nome: nome(pronta.chave),

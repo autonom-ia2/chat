@@ -5,8 +5,7 @@ import { useAlert } from 'dashboard/composables';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
-import { PRESETS } from '../../customRoles/permissionMatrix';
-import { cartaoPronto } from '../cartaoPronto';
+import { PRONTAS, cartaoPronto } from '../cartaoPronto';
 import { ALTERAR_NOVA, DUPLICAR_NOVA, LISTA_NOVA } from '../listaPelaFlag';
 import { motivoDaTrava } from '../motivoDaTrava';
 import { nomeEmUso, primeiroNomeLivre } from '../nomeDisponivel';
@@ -25,11 +24,13 @@ export function useFuncaoGuiada() {
   const { t } = useI18n();
   const { giver, roleLockReason } = usePeopleAccess();
   const funcoes = useMapGetter('customRole/getCustomRoles');
+  const uiFlags = useMapGetter('customRole/getUIFlags');
 
   const modo = computed(() => MODO[route.name] || 'criar');
   const idDaFuncao = computed(() => Number(route.params.roleId) || null);
 
   const carregou = ref(false);
+  const erroAoAbrir = ref(false);
   const etapa = ref('escolha');
   const pronta = ref(null);
   const base = ref('');
@@ -106,12 +107,28 @@ export function useFuncaoGuiada() {
     });
   };
 
+  // ?pronta= só aceita uma pronta de verdade e ao alcance de quem monta (o Financeiro sem ver os custos fica fora).
+  const prontaValida = chave => {
+    const achada = PRONTAS.find(item => item.chave === chave);
+    return Boolean(achada) && !cartaoPronto(achada, giver.value).fora;
+  };
+
+  // Sempre a lista fresca e as pessoas (a perda de acesso depende delas). Falhou: erro com "Tentar de novo", nunca
+  // a lista vazia nem a volta em silêncio.
   const carregar = async () => {
-    if (!funcoes.value.length) await store.dispatch('customRole/getCustomRole');
-    store.dispatch('agents/get');
+    carregou.value = false;
+    erroAoAbrir.value = false;
+    const [, pessoas] = await Promise.all([
+      store.dispatch('customRole/getCustomRole'),
+      store.dispatch('agents/get'),
+    ]);
+    if (uiFlags.value?.fetchingListFailed || pessoas === false) {
+      erroAoAbrir.value = true;
+      return;
+    }
     carregou.value = true;
     if (modo.value === 'criar') {
-      if (PRESETS[route.query.pronta]) usarPronta(route.query.pronta);
+      if (prontaValida(route.query.pronta)) usarPronta(route.query.pronta);
       return;
     }
     const funcao = funcoes.value.find(item => item.id === idDaFuncao.value);
@@ -165,6 +182,7 @@ export function useFuncaoGuiada() {
   };
 
   const salvar = async () => {
+    if (salvando.value) return;
     const nomeLimpo = nome.value.trim();
     const idAtual = modo.value === 'alterar' ? idDaFuncao.value : null;
     const recusa = conferirAntes(nomeLimpo, idAtual);
@@ -192,6 +210,7 @@ export function useFuncaoGuiada() {
     modo,
     idDaFuncao,
     carregou,
+    erroAoAbrir,
     etapa,
     pronta,
     permissions,

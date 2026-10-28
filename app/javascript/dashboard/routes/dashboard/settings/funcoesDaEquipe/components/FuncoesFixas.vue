@@ -4,12 +4,14 @@ import { useSemFuncao } from '../useSemFuncao';
 
 // As duas funções que vêm com a conta (#2308): Administrador e Sem função. Não mudam. "Ver tudo o que pode" abre o
 // contrato de Sem função (semFuncaoCapacidades.json, gerado das policies), com as flags reais da conta.
+// Sem a lista de pessoas (falhou), as contagens somem: nunca "nenhuma pessoa" por engano.
 defineProps({
   administradores: { type: Number, default: 0 },
   semFuncao: { type: Number, default: 0 },
+  semPessoas: { type: Boolean, default: false },
 });
 
-const { capacidades, textoDa } = useSemFuncao();
+const { capacidades, textoDa, notas } = useSemFuncao();
 const id = useId();
 const aberto = ref(false);
 
@@ -17,12 +19,12 @@ const grupos = computed(() => [
   {
     chave: 'PODE',
     icone: 'i-lucide-check text-n-teal-11',
-    ids: capacidades.value.filter(item => item.pode).map(item => item.id),
+    itens: capacidades.value.filter(item => item.pode),
   },
   {
     chave: 'NAO_PODE',
     icone: 'i-lucide-x text-n-slate-11',
-    ids: capacidades.value.filter(item => !item.pode).map(item => item.id),
+    itens: capacidades.value.filter(item => !item.pode),
   },
 ]);
 </script>
@@ -49,7 +51,7 @@ const grupos = computed(() => [
           <p class="m-0 text-[0.9375rem] text-n-slate-11">
             {{ $t('FUNCOES_EQUIPE.FIXAS.ADMIN.TEXTO') }}
           </p>
-          <p class="m-0 text-sm text-n-slate-11">
+          <p v-if="!semPessoas" class="m-0 text-sm text-n-slate-11">
             {{
               $t(
                 'FUNCOES_EQUIPE.FIXAS.PESSOAS',
@@ -82,12 +84,14 @@ const grupos = computed(() => [
           <p
             class="flex flex-wrap items-center m-0 text-sm gap-x-2 text-n-slate-11"
           >
-            {{
-              $t('FUNCOES_EQUIPE.FIXAS.PESSOAS', { n: semFuncao }, semFuncao)
-            }}
-            <span aria-hidden="true">
-              {{ $t('FUNCOES_EQUIPE.CONTAGEM.SEPARADOR') }}
-            </span>
+            <template v-if="!semPessoas">
+              {{
+                $t('FUNCOES_EQUIPE.FIXAS.PESSOAS', { n: semFuncao }, semFuncao)
+              }}
+              <span aria-hidden="true">
+                {{ $t('FUNCOES_EQUIPE.CONTAGEM.SEPARADOR') }}
+              </span>
+            </template>
             <button
               type="button"
               data-ver-tudo-sem-funcao
@@ -116,9 +120,9 @@ const grupos = computed(() => [
               </p>
               <ul class="flex flex-col gap-1.5 p-0 m-0 list-none">
                 <li
-                  v-for="item in grupo.ids"
-                  :key="item"
-                  :data-item="item"
+                  v-for="item in grupo.itens"
+                  :key="item.chave"
+                  :data-item="item.chave"
                   class="flex items-start gap-2 text-sm text-n-slate-12"
                 >
                   <span
@@ -130,12 +134,16 @@ const grupos = computed(() => [
                 </li>
               </ul>
             </div>
-            <p class="flex items-start gap-2 m-0 text-sm text-n-slate-11">
+            <p
+              v-for="nota in notas"
+              :key="nota"
+              class="flex items-start gap-2 m-0 text-sm text-n-slate-11"
+            >
               <span
                 class="i-lucide-info size-4 mt-0.5 shrink-0"
                 aria-hidden="true"
               />
-              {{ $t('FUNCOES_EQUIPE.SEM_FUNCAO.NOTA') }}
+              {{ nota }}
             </p>
           </div>
         </div>

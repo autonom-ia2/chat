@@ -1,16 +1,18 @@
 <script setup>
-import { computed, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
+import { computed, nextTick, ref } from 'vue';
+import { useMapGetter } from 'dashboard/composables/store';
 import Input from 'dashboard/components-next/input/Input.vue';
 import { modulesWithKeys } from '../../customRoles/permissionMatrix';
 import { menuDaFuncao } from '../fraseDaFuncao';
 import { useTextos } from './useTextos';
 import BotaoGrande from './BotaoGrande.vue';
 import ComoVaiFicar from './ComoVaiFicar.vue';
+import DialogoDaCasa from './DialogoDaCasa.vue';
 
 // Confira (#2308, especificação 5.B4 e 10.4). No celular, a ordem é: "Vai se chamar … · Trocar", a prévia completa,
 // o formulário e a nota; o rodapé fixo repete o menu acima de "Salvar função". No computador, a prévia fica na
-// coluna da direita (da página) e esta etapa mostra só o formulário.
+// coluna da direita (da página) e esta etapa mostra só o formulário. "Ver os canais" abre uma folha com os canais da
+// conta (sem sair daqui nem depender da tela de Canais). O erro do nome é anunciado e quebra linha no celular.
 const props = defineProps({
   modo: { type: String, required: true },
   permissions: { type: Array, required: true },
@@ -28,9 +30,11 @@ const emit = defineEmits(['salvar']);
 const nome = defineModel('nome', { type: String, required: true });
 const descricao = defineModel('descricao', { type: String, default: '' });
 
-const router = useRouter();
 const { t, te, lista, nomeDaArea } = useTextos();
+const caixas = useMapGetter('inboxes/getInboxes');
 const ID_DO_NOME = 'funcao-guiada-nome';
+const ID_DO_ERRO = 'funcao-guiada-nome-erro';
+const folhaDosCanais = ref(null);
 
 const menu = computed(() =>
   lista(
@@ -39,9 +43,7 @@ const menu = computed(() =>
     )
   )
 );
-const canais = computed(
-  () => router.resolve({ name: 'settings_inbox_list' }).href
-);
+const canais = computed(() => (caixas.value || []).map(caixa => caixa.name));
 
 // R$ e metas saem juntos (KEY_DEPENDENCIES), e o aviso diz isso numa coisa só.
 const JUNTAS = ['sales_value_view', 'crm_metas_manage'];
@@ -121,14 +123,28 @@ const trocarNome = async () => {
       data-formulario
       class="flex flex-col gap-4 p-5 border rounded-2xl border-n-weak bg-n-solid-1"
     >
-      <Input
-        :id="ID_DO_NOME"
-        v-model="nome"
-        :label="$t('FUNCOES_EQUIPE.CONFIRA.NOME')"
-        :message="erroDoNome || dicaDoNome"
-        :message-type="erroDoNome ? 'error' : 'info'"
-        autocomplete="off"
-      />
+      <div class="flex flex-col gap-1">
+        <Input
+          :id="ID_DO_NOME"
+          v-model="nome"
+          :label="$t('FUNCOES_EQUIPE.CONFIRA.NOME')"
+          :message="erroDoNome ? '' : dicaDoNome"
+          :message-type="erroDoNome ? 'error' : 'info'"
+          :aria-invalid="Boolean(erroDoNome)"
+          :aria-describedby="erroDoNome ? ID_DO_ERRO : undefined"
+          wrap-message
+          autocomplete="off"
+        />
+        <p
+          v-if="erroDoNome"
+          :id="ID_DO_ERRO"
+          data-erro-nome
+          role="alert"
+          class="m-0 text-sm break-words text-n-ruby-11"
+        >
+          {{ erroDoNome }}
+        </p>
+      </div>
       <Input
         v-model="descricao"
         :label="$t('FUNCOES_EQUIPE.CONFIRA.PARA_QUEM')"
@@ -138,15 +154,44 @@ const trocarNome = async () => {
     <p class="flex flex-wrap items-center gap-2 m-0 text-sm text-n-slate-11">
       <span class="i-lucide-info size-4 shrink-0" aria-hidden="true" />
       {{ $t('FUNCOES_EQUIPE.CONFIRA.NOTA_CANAIS') }}
-      <a
-        :href="canais"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="font-medium underline underline-offset-4 text-n-blue-11"
+      <button
+        type="button"
+        data-ver-canais
+        class="font-medium underline min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        @click="folhaDosCanais?.abrir()"
       >
         {{ $t('FUNCOES_EQUIPE.CONFIRA.VER_CANAIS') }}
-      </a>
+      </button>
     </p>
+    <DialogoDaCasa
+      ref="folhaDosCanais"
+      tipo="aviso"
+      icone="i-lucide-inbox"
+      :titulo="$t('FUNCOES_EQUIPE.CONFIRA.CANAIS.TITULO')"
+      :texto="$t('FUNCOES_EQUIPE.CONFIRA.CANAIS.TEXTO')"
+      :seguro="$t('FUNCOES_EQUIPE.CONFIRA.CANAIS.FECHAR')"
+    >
+      <ul
+        v-if="canais.length"
+        data-canais
+        class="flex flex-col gap-1.5 p-0 m-0 list-none"
+      >
+        <li
+          v-for="canal in canais"
+          :key="canal"
+          class="flex items-center gap-2 text-[0.9375rem] text-n-slate-12"
+        >
+          <span
+            class="i-lucide-inbox size-4 shrink-0 text-n-slate-11"
+            aria-hidden="true"
+          />
+          {{ canal }}
+        </li>
+      </ul>
+      <p v-else class="m-0 text-sm text-n-slate-11">
+        {{ $t('FUNCOES_EQUIPE.CONFIRA.CANAIS.VAZIO') }}
+      </p>
+    </DialogoDaCasa>
     <p
       v-if="podeEscolherPessoas && modo !== 'alterar'"
       class="flex items-center gap-2 m-0 text-sm text-n-slate-11"
@@ -178,7 +223,7 @@ const trocarNome = async () => {
       @click="emit('salvar')"
     >
       <template #acima>
-        <p data-no-menu class="mt-0 mb-3 text-sm lg:hidden text-n-slate-11">
+        <p data-no-menu class="mt-0 mb-3 text-sm md:hidden text-n-slate-11">
           {{ $t('FUNCOES_EQUIPE.CONFIRA.NO_MENU', { itens: menu }) }}
         </p>
       </template>

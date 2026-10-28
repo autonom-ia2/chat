@@ -1,8 +1,9 @@
 <script setup>
 // O alto de toda etapa (#2308, especificação 4): o voltar (o texto diz para onde) e as etapas, de uma cor só
-// (feita = blue-3 com check, atual = brand).
+// (feita = blue-3 com check, atual = brand). Durante o salvar, o voltar fica desabilitado.
 const props = defineProps({
   voltar: { type: String, required: true },
+  desabilitado: { type: Boolean, default: false },
   etapas: { type: Array, required: true },
   atual: { type: Number, required: true },
 });
@@ -20,7 +21,8 @@ const estado = indice => {
     <button
       type="button"
       data-voltar
-      class="inline-flex items-center gap-2 px-2 -mx-2 text-[0.9375rem] font-medium rounded-lg min-h-11 text-n-slate-12 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+      :disabled="desabilitado"
+      class="inline-flex items-center gap-2 px-2 -mx-2 text-[0.9375rem] font-medium rounded-lg min-h-11 text-n-slate-12 hover:enabled:bg-n-alpha-2 disabled:text-n-slate-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
       @click="emit('voltar')"
     >
       <span

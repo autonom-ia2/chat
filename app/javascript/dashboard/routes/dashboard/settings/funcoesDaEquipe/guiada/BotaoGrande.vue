@@ -1,6 +1,8 @@
 <script setup>
 // O botão principal de cada etapa (#2308, especificação 4 e 10): 52 px logo depois do conteúdo no computador; no
-// celular, fixo embaixo, com sombra para cima e o esmaecido de 56 px. A página reserva o padding de baixo.
+// celular, fixo embaixo, com sombra para cima e o esmaecido de 56 px. A página reserva o padding de baixo. "Celular"
+// é abaixo de md (768 px), o mesmo ponto em que a barra lateral vira o botão flutuante do menu
+// (MobileSidebarLauncher, fixo em bottom-4 start-4): o rodapé reserva o espaço dele à esquerda.
 defineProps({
   label: { type: String, required: true },
   carregando: { type: Boolean, default: false },
@@ -11,11 +13,11 @@ const emit = defineEmits(['click']);
 
 <template>
   <div
-    class="max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-10 max-lg:px-4 max-lg:py-4 max-lg:border-t max-lg:border-n-weak max-lg:bg-n-solid-1 max-lg:shadow-[0_-8px_16px_-8px_rgb(0_0_0/0.12)]"
+    class="max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-10 max-md:py-4 max-md:pe-4 max-md:ps-20 max-md:border-t max-md:border-n-weak max-md:bg-n-solid-1 max-md:shadow-[0_-8px_16px_-8px_rgb(0_0_0/0.12)]"
   >
     <span
       aria-hidden="true"
-      class="absolute inset-x-0 pointer-events-none lg:hidden -top-14 h-14 bg-gradient-to-t from-n-surface-1 to-transparent"
+      class="absolute inset-x-0 pointer-events-none md:hidden -top-14 h-14 bg-gradient-to-t from-n-surface-1 to-transparent"
     />
     <slot name="acima" />
     <button

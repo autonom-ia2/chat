@@ -49,6 +49,21 @@ describe('DialogoDaCasa', () => {
     wrapper.unmount();
   });
 
+  it('no celular, o rodapé empilha com o seguro em cima; sem ação, só o seguro', () => {
+    const wrapper = montar();
+    const botoes = wrapper.findAll('dialog button');
+    expect(
+      botoes.map(botao => botao.attributes('data-seguro') !== undefined)
+    ).toEqual([true, false]);
+    expect(botoes[0].element.parentElement.className).toContain('flex-col');
+    wrapper.unmount();
+
+    const aviso = montar({ tipo: 'aviso', acao: '' });
+    expect(aviso.find('[data-acao]').exists()).toBe(false);
+    expect(aviso.html()).toContain('i-lucide-info');
+    aviso.unmount();
+  });
+
   it('destrutivo usa ruby e a porta quando pedida', () => {
     const wrapper = montar({ tipo: 'destrutivo', icone: 'i-lucide-door-open' });
     expect(wrapper.html()).toContain('bg-n-ruby-3');

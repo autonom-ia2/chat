@@ -7,6 +7,7 @@ import {
 } from '../../customRoles/permissionMatrix';
 import {
   DONO_DAS_CHAVES,
+  LINHAS,
   areasDaRecolhida,
   resumoDaRecolhida,
 } from '../areasDaFuncao';
@@ -29,7 +30,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:permissions', 'alterar', 'continuar']);
-const { t, lista, maiuscula, rotuloDoNivel } = useTextos();
+const { t, lista, maiuscula, minuscula, rotuloDoNivel } = useTextos();
 
 const CONVERSAS_LIMITADAS = {
   'conversation_unassigned_manage conversation_participating_manage':
@@ -72,62 +73,72 @@ const estadoDosContatos = permissions => {
 const estadoDasVendas = permissions =>
   t(`FUNCOES_EQUIPE.VENDAS.${VENDAS[nivelDeVendas(permissions)]}.ESTADO`);
 
-const estadoDoCuidado = permissions => {
-  const ligadas = DONO_DAS_CHAVES.CUIDADO.filter(chave =>
-    permissions.includes(chave)
+// Metas sem R$ ficam inertes no servidor (decisão 14A): a linha não as promete. No "antes", a forma curta.
+const estadoDoCuidado = (permissions, curto = false) => {
+  const ligadas = DONO_DAS_CHAVES.CUIDADO.filter(
+    chave =>
+      permissions.includes(chave) &&
+      (chave !== 'crm_metas_manage' || permissions.includes('sales_value_view'))
   );
-  if (!ligadas.length) return t('FUNCOES_EQUIPE.AJUSTES.CUIDADO_NENHUMA');
+  if (!ligadas.length)
+    return curto
+      ? t('FUNCOES_EQUIPE.AJUSTES.CUIDADO_NENHUMA_CURTO')
+      : t('FUNCOES_EQUIPE.AJUSTES.CUIDADO_NENHUMA');
   return maiuscula(
     lista(ligadas.map(chave => t(`FUNCOES_EQUIPE.CUIDADO.${chave}`)))
   );
 };
 
-const minuscula = texto =>
-  texto ? `${texto.charAt(0).toLocaleLowerCase()}${texto.slice(1)}` : '';
-
-const linha = (pergunta, area, icone, tom, estado) => {
+const linha = ({ pergunta, area, icone, tom, estado }) => {
   const agora = estado(props.permissions);
-  const antes = estado(props.inicial);
+  const antes = estado(props.inicial, true);
   return {
     pergunta,
     icone,
     tom,
     titulo: t(`FUNCOES_EQUIPE.AREAS.${area}.NOME`),
     estado: agora,
-    antes: agora === antes ? '' : minuscula(antes),
+    antes: agora === estado(props.inicial) ? '' : minuscula(antes),
   };
 };
 
-const linhas = computed(() => [
-  linha(
-    'conversas',
-    'CONVERSATIONS',
-    'i-lucide-message-circle',
-    'bg-n-blue-3 text-n-blue-11',
-    estadoDasConversas
-  ),
-  linha(
-    'contatos',
-    'CONTACTS',
-    'i-lucide-contact',
-    'bg-n-teal-3 text-n-teal-11',
-    estadoDosContatos
-  ),
-  linha(
-    'vendas',
-    'CRM',
-    'i-lucide-kanban-square',
-    'bg-n-iris-3 text-n-iris-11',
-    estadoDasVendas
-  ),
-  linha(
-    'cuidado',
-    'CUIDADO',
-    'i-lucide-triangle-alert',
-    'bg-n-amber-3 text-n-amber-11',
-    estadoDoCuidado
-  ),
-]);
+// As três linhas fixas (LINHAS do mapa) e o Cuidado.
+const DAS_LINHAS = {
+  CONVERSATIONS: {
+    pergunta: 'conversas',
+    icone: 'i-lucide-message-circle',
+    tom: 'bg-n-blue-3 text-n-blue-11',
+    estado: estadoDasConversas,
+  },
+  CONTACTS: {
+    pergunta: 'contatos',
+    icone: 'i-lucide-contact',
+    tom: 'bg-n-teal-3 text-n-teal-11',
+    estado: estadoDosContatos,
+  },
+  CRM: {
+    pergunta: 'vendas',
+    icone: 'i-lucide-kanban-square',
+    tom: 'bg-n-iris-3 text-n-iris-11',
+    estado: estadoDasVendas,
+  },
+};
+const CUIDADO = {
+  pergunta: 'cuidado',
+  icone: 'i-lucide-triangle-alert',
+  tom: 'bg-n-amber-3 text-n-amber-11',
+  estado: estadoDoCuidado,
+};
+
+const linhas = computed(() =>
+  [
+    ...LINHAS.map(area => ({ ...DAS_LINHAS[area], area })),
+    {
+      ...CUIDADO,
+      area: 'CUIDADO',
+    },
+  ].map(linha)
+);
 
 const areas = computed(() =>
   areasDaRecolhida({
@@ -142,9 +153,8 @@ const resumo = computed(() =>
 );
 
 const nomes = keys => keys.map(key => t(`FUNCOES_EQUIPE.AREAS.${key}.NOME`));
-const comArtigo = keys =>
-  lista(keys.map(key => t(`FUNCOES_EQUIPE.AREAS.${key}.COM_ARTIGO`)));
 
+// Título: as duas primeiras áreas mexíveis + "e mais N" (especificação 7.1).
 const tituloDaRecolhida = computed(() => {
   const { primeiras, mais } = resumo.value;
   if (!mais) return lista(nomes(primeiras));
@@ -155,20 +165,40 @@ const tituloDaRecolhida = computed(() => {
   );
 });
 
+// Estado curto: uma área só ganha o nome; mais de uma, a conta ("Mexe em 3 áreas e só olha 5.").
+const contaDasAreas = () => {
+  const { olha, mexe } = resumo.value;
+  const nAreas = n => t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.N_AREAS', { n }, n);
+  if (olha.length + mexe.length === 1)
+    return olha.length
+      ? t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.UMA_OLHA', {
+          area: t(`FUNCOES_EQUIPE.AREAS.${olha[0]}.COM_ARTIGO`),
+        })
+      : t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.UMA_MEXE', {
+          area: nomes(mexe)[0],
+        });
+  if (!olha.length)
+    return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.SO_MEXE', {
+      mexe: nAreas(mexe.length),
+    });
+  if (!mexe.length)
+    return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.SO_OLHA', {
+      olha: nAreas(olha.length),
+    });
+  return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.MEXE_E_OLHA', {
+    mexe: nAreas(mexe.length),
+    olha: olha.length,
+  });
+};
+
 const estadoDaRecolhida = computed(() => {
   const { olha, mexe } = resumo.value;
-  const total = areas.value.recolhidas.length;
   if (!olha.length && !mexe.length)
     return t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.NADA');
-  const partes = [
-    mexe.length &&
-      t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.MEXE', { areas: comArtigo(mexe) }),
-    olha.length &&
-      t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.OLHA', { areas: comArtigo(olha) }),
-    olha.length + mexe.length < total &&
-      t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.OUTRAS'),
-  ];
-  return partes.filter(Boolean).join(' ');
+  const todas = olha.length + mexe.length === areas.value.recolhidas.length;
+  return todas
+    ? contaDasAreas()
+    : `${contaDasAreas()} ${t('FUNCOES_EQUIPE.AJUSTES.RECOLHIDA.OUTRAS')}`;
 });
 
 const atualizar = permissions => emit('update:permissions', permissions);

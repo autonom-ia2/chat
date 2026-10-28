@@ -20,17 +20,24 @@ const vendas = () => moduleByKey('CRM');
 export const nivelDeVendas = permissions =>
   permissions.includes(CRM_ADMIN) ? TUDO : getLevel(vendas(), permissions);
 
-// Sair de "Cuida de tudo" tira o crm_admin e as seis que vieram com ele: voltar a "Pode mexer" não deixa as
-// planilhas e as metas ligadas sem a pessoa ver.
-export const escolherNivelDeVendas = (nivel, permissions) => {
+// Sair de "Cuida de tudo" tira o crm_admin e só o que ele trouxe: `antes` é a função de quando a pessoa entrou no 4º
+// nível, e o que já estava ligado antes volta como era. Sem `antes` (a função já abriu com crm_admin), não dá para
+// saber o que era dela: saem as seis, para "Pode mexer" não deixar planilhas e metas ligadas sem a pessoa ver.
+export const escolherNivelDeVendas = (nivel, permissions, antes = null) => {
   if (nivel === TUDO)
     return permissions.includes(CRM_ADMIN)
       ? permissions
       : toggleExtra(vendas(), CRM_ADMIN, permissions);
-  const semTudo = permissions.includes(CRM_ADMIN)
-    ? permissions.filter(chave => !CHAVES_DO_TUDO.includes(chave))
-    : permissions;
-  return setLevel(vendas(), nivel, semTudo);
+  if (!permissions.includes(CRM_ADMIN))
+    return setLevel(vendas(), nivel, permissions);
+  const trouxe = CHAVES_DO_TUDO.filter(
+    chave => !antes || chave === CRM_ADMIN || !antes.includes(chave)
+  );
+  return setLevel(
+    vendas(),
+    nivel,
+    permissions.filter(chave => !trouxe.includes(chave))
+  );
 };
 
 // Para quem não é administrador nem tem grant_above_own, sempre DELEGATION: metas do mês precisam de R$.

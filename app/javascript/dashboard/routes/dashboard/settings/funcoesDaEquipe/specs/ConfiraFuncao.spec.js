@@ -1,17 +1,12 @@
 import { mount } from '@vue/test-utils';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import ConfiraFuncao from '../guiada/ConfiraFuncao.vue';
-import { global } from './montar';
+import { espiarDialogo, global, loja } from './montar';
 
 // #2308, especificação 5.B4, 5.C e 10.4: a ordem do celular e o rodapé com o menu.
-vi.mock('vue-router', () => ({
-  useRouter: () => ({
-    resolve: () => ({ href: '/app/accounts/1/settings/inboxes/list' }),
-  }),
-}));
-
-const montar = (props = {}) =>
+const montar = (props = {}, caixas = []) =>
   mount(ConfiraFuncao, {
+    attachTo: document.body,
     props: {
       modo: 'criar',
       nome: 'Atendente 2',
@@ -21,8 +16,12 @@ const montar = (props = {}) =>
       podeEscolherPessoas: true,
       ...props,
     },
-    global: global(),
+    global: global(loja({ caixas })),
   });
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
 
 const posicao = (wrapper, seletor) =>
   wrapper.html().indexOf(wrapper.find(seletor).element.outerHTML.slice(0, 40));
@@ -71,5 +70,35 @@ describe('ConfiraFuncao', () => {
     expect(wrapper.find('[data-botao-grande]').text()).toBe(
       'Salvar alterações'
     );
+  });
+
+  it('"Ver os canais" abre a folha com os nomes dos canais da conta, sem sair da tela', async () => {
+    const { mostrar, soltar } = espiarDialogo();
+    const abrirAba = vi.spyOn(window, 'open');
+    const wrapper = montar({}, [
+      { id: 1, name: 'WhatsApp Loja' },
+      { id: 2, name: 'Instagram' },
+    ]);
+
+    await wrapper.find('[data-ver-canais]').trigger('click');
+    expect(mostrar).toHaveBeenCalledTimes(1);
+    expect(abrirAba).not.toHaveBeenCalled();
+    expect(wrapper.findAll('[data-canais] li').map(li => li.text())).toEqual([
+      'WhatsApp Loja',
+      'Instagram',
+    ]);
+    soltar();
+    abrirAba.mockRestore();
+  });
+
+  it('o erro do nome é anunciado e ligado ao campo, inteiro, fora da dica', () => {
+    const erroDoNome = 'Você já tem uma função Atendente 2. Dê outro nome.';
+    const wrapper = montar({ erroDoNome });
+    const erro = wrapper.find('[data-erro-nome]');
+    expect(erro.attributes('role')).toBe('alert');
+    expect(erro.text()).toBe(erroDoNome);
+    const campo = wrapper.find('[data-formulario] input');
+    expect(campo.attributes('aria-invalid')).toBe('true');
+    expect(campo.attributes('aria-describedby')).toBe(erro.attributes('id'));
   });
 });

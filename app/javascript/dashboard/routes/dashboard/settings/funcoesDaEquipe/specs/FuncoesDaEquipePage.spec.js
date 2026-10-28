@@ -8,7 +8,11 @@ import FuncoesDaEquipePage from '../FuncoesDaEquipePage.vue';
 
 // #2308, especificação 5.A e 5.E: a lista nova. Faixa só com Pessoas, erro nunca vira lista vazia, função travada
 // sem ações, as fixas, a gaveta de pessoas e o apagar com destino.
-const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
+const { routerPush, validityCheck } = vi.hoisted(() => ({
+  routerPush: vi.fn(),
+  validityCheck: vi.fn(),
+}));
+vi.mock('dashboard/api/auth', () => ({ default: { validityCheck } }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }) }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 
@@ -48,6 +52,7 @@ const montar = async ({
   plano = true,
   apagar = vi.fn(),
   lentes = false,
+  pessoasDaConta = vi.fn(),
 } = {}) => {
   const permissoes = [
     'custom_role_manage',
@@ -75,7 +80,7 @@ const montar = async ({
     actions: {
       'customRole/getCustomRole': recarregar,
       'customRole/deleteCustomRole': apagar,
-      'agents/get': vi.fn(),
+      'agents/get': pessoasDaConta,
     },
   });
   const wrapper = mount(FuncoesDaEquipePage, {
@@ -131,7 +136,7 @@ describe('Funções da equipe: lista', () => {
       '1 pessoa · não muda'
     );
     expect(wrapper.find('[data-fixa-sem-funcao]').text()).toContain(
-      'Cria e muda os contatos e as respostas prontas.'
+      'Mexe em todos os contatos e nas respostas prontas.'
     );
     expect(wrapper.find('[data-fixa-sem-funcao]').text()).toContain(
       '2 pessoas · não muda'
@@ -275,7 +280,7 @@ describe('Funções da equipe: lista', () => {
       'Apagar a função Financeiro?'
     );
     expect(dialogo(wrapper).text()).toContain(
-      'Ninguém usa esta função. Ela some da lista.'
+      'Ninguém usa esta função. A função some da lista.'
     );
     expect(dialogo(wrapper).find('[data-seguro]').text()).toBe('Manter');
     await dialogo(wrapper).find('[data-acao]').trigger('click');
@@ -302,7 +307,9 @@ describe('Funções da equipe: lista', () => {
     wrapper.findComponent(ChoiceSelect).vm.$emit('update:modelValue', 'none');
     await flushPromises();
     const diff = dialogo(wrapper).find('[data-diff]');
-    expect(diff.text()).toContain('Ela vai passar a poder mais coisas.');
+    expect(diff.text()).toContain(
+      'Essa pessoa vai passar a poder mais coisas.'
+    );
     expect(diff.find('[data-grupo="PASSAM"]').text()).toContain(
       'Ler e atender as conversas dos colegas, nos canais em que estão'
     );
@@ -358,5 +365,71 @@ describe('Funções da equipe: lista', () => {
     expect(
       dialogo(wrapper).find('[data-acao]').attributes('disabled')
     ).toBeDefined();
+    expect(recarregar).toHaveBeenCalledTimes(2);
+  });
+
+  const recusa = (code, status) =>
+    Object.assign(new Error('Has people'), { code, status });
+
+  it('destination_required: recarrega as pessoas e, achando gente, pergunta o destino', async () => {
+    const apagar = vi.fn().mockRejectedValue(recusa('destination_required'));
+    const pessoasDaConta = vi.fn();
+    const wrapper = await montar({ apagar, pessoasDaConta });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+
+    // A lista de agentes do teste não tem ninguém no Financeiro: o aviso do servidor aparece.
+    expect(pessoasDaConta).toHaveBeenCalledTimes(2);
+    expect(useAlert).toHaveBeenCalledWith('Has people');
+  });
+
+  it.each([
+    [
+      'sessão boa: diz o motivo',
+      {},
+      'Você não pode dar parte disto. Peça ao administrador.',
+    ],
+    ['sessão vencida: nenhum aviso', null, null],
+  ])('apagar com 401, %s', async (_, sessao, frase) => {
+    if (sessao) validityCheck.mockResolvedValue(sessao);
+    else validityCheck.mockRejectedValue({ response: { status: 401 } });
+    const apagar = vi.fn().mockRejectedValue(recusa('out_of_reach', 401));
+    const wrapper = await montar({ apagar });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+
+    expect(validityCheck).toHaveBeenCalledTimes(1);
+    if (frase) expect(useAlert).toHaveBeenCalledWith(frase);
+    else expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  it('falha ao buscar as pessoas não vira "nenhuma pessoa": diz que não deu e oferece tentar', async () => {
+    const pessoasDaConta = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    const wrapper = await montar({ pessoasDaConta });
+
+    expect(wrapper.find('[data-contagem]').text()).toContain(
+      'Não deu para ver quem tem cada função.'
+    );
+    expect(wrapper.find('[data-contagem]').text()).not.toContain('nenhuma');
+    expect(wrapper.find('[data-faixa-sem-funcao]').exists()).toBe(false);
+    expect(wrapper.find('[data-cartao-funcao]').text()).not.toContain(
+      'Ninguém usa'
+    );
+
+    await wrapper.find('[data-tentar-pessoas]').trigger('click');
+    await flushPromises();
+    expect(pessoasDaConta).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-contagem]').text()).toBe(
+      '2 funções criadas · 1 pessoa com função'
+    );
   });
 });

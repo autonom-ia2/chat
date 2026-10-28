@@ -19,14 +19,20 @@ const montar = permissions =>
 describe('ComoVaiFicar', () => {
   it('frase, Pode, Não pode e menu do Atendente', () => {
     const wrapper = montar(ATENDENTE);
-    expect(wrapper.find('[data-previa]').attributes('aria-live')).toBe(
-      'polite'
-    );
+    // Só a lista Pode/Não pode é anunciada; o resto da prévia não fala a cada toque.
+    expect(
+      wrapper.find('[data-previa]').attributes('aria-live')
+    ).toBeUndefined();
+    const aoVivo = wrapper.find('[data-ao-vivo]');
+    expect(aoVivo.attributes('aria-live')).toBe('polite');
+    expect(aoVivo.find('[data-pode]').exists()).toBe(true);
+    expect(aoVivo.find('[data-nao-pode]').exists()).toBe(true);
+    expect(aoVivo.find('[data-frase]').exists()).toBe(false);
     expect(wrapper.find('[data-frase]').text()).toBe(
       'Quem for Atendente atende as próprias conversas e pega as novas que estão sem ninguém. Cria e move as vendas em andamento. Só olha os contatos.'
     );
     expect(wrapper.findAll('[data-pode] li').map(li => li.text())).toEqual([
-      'Responder as conversas entregues a ela',
+      'Responder as próprias conversas',
       'Pegar as conversas novas que estão sem ninguém',
       'Ajudar quando um colega manda o link da conversa',
       'Criar e mover as vendas em andamento',

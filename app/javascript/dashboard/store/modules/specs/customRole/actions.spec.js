@@ -91,6 +91,21 @@ describe('#actions', () => {
     });
   });
 
+  // #2308: a conversa guiada separa o 401 (alcance, flag, a própria função) pelo status e pelo código do corpo.
+  it.each([
+    ['createCustomRole', 'post', customRoleList[0]],
+    ['updateCustomRole', 'patch', { id: 1, ...customRoleList[0] }],
+  ])('%s keeps status and code of a 401', async (acao, metodo, dados) => {
+    axios[metodo].mockRejectedValue({
+      response: { status: 401, data: { error: 'out_of_reach' } },
+    });
+    await expect(actions[acao]({ commit }, dados)).rejects.toMatchObject({
+      status: 401,
+      code: 'out_of_reach',
+      attributes: [],
+    });
+  });
+
   describe('#deleteCustomRole', () => {
     // #2185: com gente na função, o destino delas vai junto.
     it('sends where the people go', async () => {

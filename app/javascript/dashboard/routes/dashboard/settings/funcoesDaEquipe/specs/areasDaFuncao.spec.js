@@ -141,8 +141,20 @@ describe('Cuidado em três grupos', () => {
     ]);
   });
 
-  it('(b) é testado antes de (a): apagar contatos não trava, mas vai para "liga junto"', () => {
+  // (a) e (b) não se sobrepõem: (b) é "a área ainda não está em manage", (a) é "já está". Por isso a ordem dos testes
+  // não importa; o que importa é que cada chave cai em um grupo só, e que a mesma chave troca de grupo com a área.
+  it('cada chave ligável cai em um grupo só: "liga junto" e "liga agora" são disjuntos', () => {
     expect(motivoDaTrava(CARLA, 'contact_delete')).toBeNull();
+    [PRESETS.AGENT(), PRESETS.SDR(), PRESETS.MARKETING()].forEach(funcao => {
+      const { ligaJunto, ligaAgora } = gruposDoCuidado(CARLA, funcao);
+      const junto = chaves(ligaJunto);
+      expect(chaves(ligaAgora).filter(chave => junto.includes(chave))).toEqual(
+        []
+      );
+    });
+    expect(chaves(gruposDoCuidado(CARLA, PRESETS.AGENT()).ligaJunto)).toContain(
+      'contact_delete'
+    );
     expect(
       chaves(gruposDoCuidado(CARLA, PRESETS.AGENT()).ligaAgora)
     ).not.toContain('contact_delete');

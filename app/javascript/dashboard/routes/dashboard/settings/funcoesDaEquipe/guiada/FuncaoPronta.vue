@@ -27,7 +27,7 @@ const ESTICADO =
 <template>
   <li
     :data-pronta="cartao.chave"
-    class="relative flex flex-col gap-3 p-5 transition border shadow-sm rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7 focus-within:ring-2 focus-within:ring-n-brand"
+    class="relative flex flex-col gap-3 p-5 transition border rounded-2xl border-n-weak bg-n-solid-1 hover:border-n-blue-7 focus-within:ring-2 focus-within:ring-n-brand"
   >
     <span
       class="grid place-items-center size-11 rounded-xl"

@@ -7,6 +7,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CartaoDaFuncao from './components/CartaoDaFuncao.vue';
+import ErroAoAbrir from './components/ErroAoAbrir.vue';
 import FaixaSemFuncao from './components/FaixaSemFuncao.vue';
 import FuncoesFixas from './components/FuncoesFixas.vue';
 import PaywallDasFuncoes from './components/PaywallDasFuncoes.vue';
@@ -14,6 +15,7 @@ import VazioDasFuncoes from './components/VazioDasFuncoes.vue';
 import ApagarFuncao from './pessoas/ApagarFuncao.vue';
 import GavetaDaFuncao from './pessoas/GavetaDaFuncao.vue';
 import { ALTERAR_NOVA, CRIAR_NOVA, DUPLICAR_NOVA } from './listaPelaFlag';
+import { explicar401 } from './salvarFuncao';
 
 // Funções da equipe, a lista nova (#2308, épico #1784, especificação 5.A). Atrás da flag funcoes_guiadas
 // (listaPelaFlag.js). Criar, alterar e duplicar abrem a conversa guiada (PR 3); quem usa, quem está sem função e
@@ -39,6 +41,8 @@ const TONS = [
 ];
 
 const carregou = ref(false);
+// A lista de pessoas falhou: a tela diz isso em vez de "nenhuma pessoa com função".
+const pessoasFalharam = ref(false);
 const apagarRef = ref(null);
 // A gaveta aberta: { funcao } de uma função, { funcao: null } para quem está sem função.
 const gaveta = ref(null);
@@ -73,9 +77,13 @@ const carregar = async () => {
   carregou.value = true;
 };
 
+const carregarPessoas = async () => {
+  pessoasFalharam.value = (await store.dispatch('agents/get')) === false;
+};
+
 onMounted(() => {
   carregar();
-  store.dispatch('agents/get');
+  carregarPessoas();
 });
 
 // Do vazio, a pronta escolhida já vem na rota e a conversa começa em Ajustes.
@@ -127,8 +135,17 @@ const apagar = async ({ funcao, destino }) => {
   } catch (error) {
     const mensagem = error?.message || t('FUNCOES_EQUIPE.APAGAR.ERRO');
     const recusa = RECUSAS[error?.code];
-    if (recusa) await recusa(funcao, mensagem);
-    else useAlert(mensagem);
+    if (recusa) {
+      await recusa(funcao, mensagem);
+      return;
+    }
+    if (error?.status !== 401) {
+      useAlert(mensagem);
+      return;
+    }
+    // Sessão vencida: o app vai para o login, sem mensagem; sessão boa: o motivo (alcance, flag, a própria função).
+    const { erro } = await explicar401(error.code);
+    if (erro) useAlert(t(`FUNCOES_EQUIPE.SALVAR.${erro}`));
   }
 };
 </script>
@@ -182,13 +199,28 @@ const apagar = async ({ funcao, destino }) => {
                   )
                 }}
                 {{ $t('FUNCOES_EQUIPE.CONTAGEM.SEPARADOR') }}
-                {{
-                  $t(
-                    'FUNCOES_EQUIPE.CONTAGEM.PESSOAS',
-                    { n: comFuncao },
-                    comFuncao
-                  )
-                }}
+                <template v-if="pessoasFalharam">
+                  <span data-pessoas-erro role="alert">
+                    {{ $t('FUNCOES_EQUIPE.CONTAGEM.PESSOAS_ERRO') }}
+                  </span>
+                  <button
+                    type="button"
+                    data-tentar-pessoas
+                    class="px-1 font-semibold underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+                    @click="carregarPessoas"
+                  >
+                    {{ $t('FUNCOES_EQUIPE.ERRO.TENTAR') }}
+                  </button>
+                </template>
+                <template v-else>
+                  {{
+                    $t(
+                      'FUNCOES_EQUIPE.CONTAGEM.PESSOAS',
+                      { n: comFuncao },
+                      comFuncao
+                    )
+                  }}
+                </template>
               </p>
             </div>
             <Button
@@ -202,37 +234,11 @@ const apagar = async ({ funcao, destino }) => {
             />
           </header>
 
-          <div
-            v-if="estado === 'erro'"
-            data-erro
-            role="alert"
-            class="flex flex-col items-center gap-4 px-6 text-center border py-14 rounded-2xl border-n-weak bg-n-solid-1"
-          >
-            <span
-              class="grid place-items-center size-12 rounded-xl bg-n-ruby-3 text-n-ruby-11"
-            >
-              <span class="i-lucide-wifi-off size-6" aria-hidden="true" />
-            </span>
-            <p class="m-0 text-xl font-semibold leading-snug text-n-slate-12">
-              {{ $t('FUNCOES_EQUIPE.ERRO.TITULO') }}
-            </p>
-            <p class="m-0 text-[0.9375rem] text-n-slate-11">
-              {{ $t('FUNCOES_EQUIPE.ERRO.TEXTO') }}
-            </p>
-            <Button
-              data-tentar-de-novo
-              :label="$t('FUNCOES_EQUIPE.ERRO.TENTAR')"
-              icon="i-lucide-refresh-cw"
-              slate
-              faded
-              class="min-h-11"
-              @click="carregar"
-            />
-          </div>
+          <ErroAoAbrir v-if="estado === 'erro'" @tentar="carregar" />
 
           <template v-else>
             <FaixaSemFuncao
-              v-if="canManagePeople && semFuncao"
+              v-if="canManagePeople && semFuncao && !pessoasFalharam"
               :quantidade="semFuncao"
               @ver-quem-sao="abrirGaveta(null)"
             />
@@ -243,6 +249,7 @@ const apagar = async ({ funcao, destino }) => {
                 :key="funcao.id"
                 :funcao="funcao"
                 :pessoas="pessoasDa(funcao)"
+                :sem-pessoas="pessoasFalharam"
                 :tom="TONS[indice % TONS.length]"
                 :travada="!!roleLockReason(funcao)"
                 :pode-duplicar="reachesRole(funcao)"
@@ -258,6 +265,7 @@ const apagar = async ({ funcao, destino }) => {
             <FuncoesFixas
               :administradores="administradores"
               :sem-funcao="semFuncao"
+              :sem-pessoas="pessoasFalharam"
             />
           </template>
         </template>
@@ -266,7 +274,7 @@ const apagar = async ({ funcao, destino }) => {
 
     <div
       v-if="estado === 'lista'"
-      class="fixed inset-x-0 bottom-0 z-10 px-4 py-4 border-t sm:hidden border-n-weak bg-n-solid-1 shadow-[0_-8px_16px_-8px_rgb(0_0_0/0.12)]"
+      class="fixed inset-x-0 bottom-0 z-10 py-4 pe-4 ps-20 border-t sm:hidden border-n-weak bg-n-solid-1 shadow-[0_-8px_16px_-8px_rgb(0_0_0/0.12)]"
     >
       <span
         aria-hidden="true"

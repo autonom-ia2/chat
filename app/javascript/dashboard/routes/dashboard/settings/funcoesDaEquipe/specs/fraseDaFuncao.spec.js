@@ -69,8 +69,8 @@ describe('prévia "Como vai ficar"', () => {
 
   it('"Ligar as duas" grava exatamente campaign_manage e campaign_send', () => {
     const antes = PRESETS.AGENT();
-    const depois = ligarAsDuas(antes);
-    expect(depois.filter(chave => !antes.includes(chave))).toEqual([
+    expect(ligarAsDuas(antes)).toEqual([
+      ...antes,
       'campaign_manage',
       'campaign_send',
     ]);

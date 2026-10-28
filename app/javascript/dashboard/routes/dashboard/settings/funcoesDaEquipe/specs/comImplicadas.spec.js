@@ -1,9 +1,27 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { CRM_EDITING_KEYS, comImplicadas } from '../comImplicadas';
+
+// A lista do servidor, lida do próprio custom_role.rb: se o servidor ganhar uma chave, este spec falha.
+const chavesDoServidor = () => {
+  const fonte = readFileSync(
+    resolve(process.cwd(), 'enterprise/app/models/custom_role.rb'),
+    'utf8'
+  );
+  const marca = 'CRM_EDITING_KEYS = %w[';
+  const inicio = fonte.indexOf(marca) + marca.length;
+  return fonte
+    .slice(inicio, fonte.indexOf('].freeze', inicio))
+    .split('\n')
+    .flatMap(linha => linha.trim().split(' '))
+    .filter(Boolean);
+};
 
 // #2308, especificação 14: espelho de CustomRole.with_implied_permissions (custom_role.rb), no padrão de
 // useCrmPermissions.spec.js.
 describe('comImplicadas', () => {
-  it('são as 7 chaves de editar as vendas do servidor', () => {
+  it('são as chaves de editar as vendas do servidor', () => {
+    expect(CRM_EDITING_KEYS).toEqual(chavesDoServidor());
     expect(CRM_EDITING_KEYS).toEqual([
       'crm_manage_cards',
       'crm_move_cards',

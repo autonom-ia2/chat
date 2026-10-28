@@ -3,8 +3,9 @@ import { computed, nextTick, ref, useTemplateRef } from 'vue';
 import { vOnClickOutside } from '@vueuse/components';
 import Button from 'dashboard/components-next/button/Button.vue';
 
-// "··· Mais" do cartão de função (#2308): Duplicar e Apagar. Menu do WAI-ARIA: setas, Home e End andam pelos
-// itens; Esc fecha e devolve o foco ao botão.
+// "··· Mais" do cartão de função (#2308): Duplicar e Apagar. Menu do WAI-ARIA: os itens ficam fora do Tab (setas,
+// Home e End andam por eles); Esc fecha e devolve o foco ao botão; Tab fecha e deixa o foco seguir a partir do botão;
+// o menu fecha quando o foco sai dele (clique fora ou outro elemento).
 const props = defineProps({
   nome: { type: String, required: true },
   podeDuplicar: { type: Boolean, default: true },
@@ -57,7 +58,24 @@ const escolher = item => {
   item.escolher();
 };
 
+// Tab: o foco volta ao botão antes de o navegador mover, então segue para o próximo elemento depois dele.
+const sairPeloTab = () => {
+  aberto.value = false;
+  botao.value?.$el.focus();
+};
+
+// Só fecha quando o foco vai para outro elemento; sem destino (clique que não foca, como no Safari), quem fecha é o
+// clique fora.
+const aoSairDoFoco = ({ currentTarget, relatedTarget }) => {
+  if (relatedTarget && !currentTarget.contains(relatedTarget))
+    aberto.value = false;
+};
+
 const mover = evento => {
+  if (evento.key === 'Tab') {
+    sairPeloTab();
+    return;
+  }
   const elementos = itensDoMenu();
   const atual = elementos.indexOf(document.activeElement);
   const destinos = {
@@ -77,6 +95,7 @@ const mover = evento => {
     v-on-click-outside="() => (aberto = false)"
     class="relative"
     @keydown.esc="fechar"
+    @focusout="aoSairDoFoco"
   >
     <Button
       ref="botao"
@@ -104,6 +123,7 @@ const mover = evento => {
         :key="item.acao"
         type="button"
         role="menuitem"
+        tabindex="-1"
         :data-acao="item.acao"
         class="flex items-center w-full gap-3 px-3 text-sm rounded-lg min-h-11 text-start hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
         :class="item.perigo ? 'text-n-ruby-11' : 'text-n-slate-12'"

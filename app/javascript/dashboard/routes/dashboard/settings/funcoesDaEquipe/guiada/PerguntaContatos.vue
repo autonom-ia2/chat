@@ -7,7 +7,7 @@ import {
   moduleByKey,
   setLevel,
 } from '../../customRoles/permissionMatrix';
-import { travaDoNivel } from '../areasDaFuncao';
+import { areasDentroDe, travaDoNivel } from '../areasDaFuncao';
 import { TEXTO_DA_TRAVA } from '../motivoDaTrava';
 import { useTextos } from './useTextos';
 import AreaEmLinha from './AreaEmLinha.vue';
@@ -20,14 +20,15 @@ const props = defineProps({
   permissions: { type: Array, required: true },
   inicial: { type: Array, required: true },
   giver: { type: Object, required: true },
-  quem: { type: String, required: true },
+  // O nome da função (a pronta antes do Confira); vazio, "esta função".
+  nome: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:permissions', 'pronto']);
-const { t, rotuloDoNivel } = useTextos();
+const { t, rotuloDoNivel, quemFor } = useTextos();
 
 const contatos = moduleByKey('CONTACTS');
-const camposExtras = moduleByKey('ATTRIBUTES');
+const [camposExtras] = areasDentroDe('CONTACTS');
 const DICA = {
   [LEVELS.NONE]: 'NAO_VE',
   [LEVELS.VIEW]: 'SO_OLHA',
@@ -48,20 +49,24 @@ const opcoes = computed(() =>
   })
 );
 
+const titulo = computed(() =>
+  t('FUNCOES_EQUIPE.CONTATOS.TITULO', {
+    quem: quemFor(props.nome),
+    nome: quemFor(props.nome, 'NOME'),
+  })
+);
+
 const atualizar = permissions => emit('update:permissions', permissions);
 const escolher = valor =>
   atualizar(setLevel(contatos, valor, props.permissions));
 </script>
 
 <template>
-  <PerguntaDaFuncao
-    :titulo="$t('FUNCOES_EQUIPE.CONTATOS.TITULO', { quem })"
-    @pronto="emit('pronto')"
-  >
+  <PerguntaDaFuncao :titulo="titulo" @pronto="emit('pronto')">
     <EscolhaDeNivel
       :model-value="nivel"
       :opcoes="opcoes"
-      :rotulo="$t('FUNCOES_EQUIPE.CONTATOS.TITULO', { quem })"
+      :rotulo="titulo"
       @update:model-value="escolher"
     />
     <LinhaRecolhida

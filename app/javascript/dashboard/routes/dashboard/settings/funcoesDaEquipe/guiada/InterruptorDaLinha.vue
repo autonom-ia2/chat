@@ -1,10 +1,11 @@
 <script setup>
-import { useId } from 'vue';
+import { computed, useId } from 'vue';
 
 // Uma linha com interruptor (#2308, especificação 9): o interruptor fica sempre à direita do rótulo, sem texto
-// "Ligado" (o estado vai em aria-checked e na cor), com alvo de 44 px. Travado não tem interruptor: mostra o
-// cadeado e o motivo, nunca só opacidade.
-defineProps({
+// "Ligado" (o estado vai em aria-checked e na cor), com alvo de 44 px. Travado desligado não tem interruptor: mostra
+// o cadeado e o motivo, nunca só opacidade. Travado ligado (vem com "Cuida de tudo", o último alcance) mostra o
+// interruptor ligado com aria-disabled e o motivo embaixo: o toque não faz nada, mas a linha diz por quê.
+const props = defineProps({
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
   nota: { type: String, default: '' },
@@ -15,6 +16,11 @@ defineProps({
 
 const emit = defineEmits(['alternar']);
 const id = useId();
+
+const preso = computed(() => Boolean(props.trava) && props.ligado);
+const alternar = () => {
+  if (!preso.value) emit('alternar');
+};
 </script>
 
 <template>
@@ -54,15 +60,17 @@ const id = useId();
       </p>
     </div>
     <button
-      v-if="!trava"
+      v-if="!trava || preso"
       type="button"
       role="switch"
       data-interruptor
       :aria-checked="ligado"
+      :aria-disabled="preso || undefined"
       :aria-label="titulo"
       :aria-describedby="`${id}-sobre`"
       class="grid place-items-center size-11 shrink-0 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-      @click="emit('alternar')"
+      :class="{ 'cursor-not-allowed': preso }"
+      @click="alternar"
     >
       <span
         aria-hidden="true"

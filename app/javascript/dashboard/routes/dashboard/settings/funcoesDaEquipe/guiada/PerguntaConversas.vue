@@ -8,7 +8,7 @@ import {
   setLevel,
   toggleExtra,
 } from '../../customRoles/permissionMatrix';
-import { travaDoNivel } from '../areasDaFuncao';
+import { areasDentroDe, travaDoNivel } from '../areasDaFuncao';
 import { TEXTO_DA_TRAVA, motivoDaTrava } from '../motivoDaTrava';
 import { useTextos } from './useTextos';
 import AreaEmLinha from './AreaEmLinha.vue';
@@ -24,14 +24,14 @@ const props = defineProps({
   permissions: { type: Array, required: true },
   inicial: { type: Array, required: true },
   giver: { type: Object, required: true },
-  quem: { type: String, required: true },
+  nome: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:permissions', 'pronto']);
-const { t } = useTextos();
+const { t, quemFor } = useTextos();
 
 const conversas = moduleByKey('CONVERSATIONS');
-const quemRecebe = moduleByKey('ASSIGNMENT');
+const [quemRecebe] = areasDentroDe('CONVERSATIONS');
 const OPCAO = {
   [CONVERSATION_LEVELS.NONE]: 'NENHUMA',
   [CONVERSATION_LEVELS.VIEW]: 'SO_OLHA',
@@ -46,6 +46,13 @@ const SUBESCOLHAS = [
 
 const textoDaTrava = motivo =>
   motivo ? t(`FUNCOES_EQUIPE.TRAVA.${TEXTO_DA_TRAVA[motivo]}`) : '';
+
+const titulo = computed(() =>
+  t('FUNCOES_EQUIPE.CONVERSAS.TITULO', {
+    quem: quemFor(props.nome),
+    nome: quemFor(props.nome, 'NOME'),
+  })
+);
 
 const nivel = computed(() => getLevel(conversas, props.permissions));
 const opcoes = computed(() =>
@@ -65,14 +72,35 @@ const subescolhas = computed(() => [
   ...SUBESCOLHAS,
   ...(props.permissions.includes(LER_COLEGAS) ? [LER_COLEGAS] : []),
 ]);
-const travaDaSubescolha = chave =>
-  props.permissions.includes(chave)
+// Pelo menos um alcance fica ligado (toggleExtra): o último diz por que não desliga, em vez de não responder.
+const ultimoAlcance = chave => {
+  const ligados = SUBESCOLHAS.filter(item => props.permissions.includes(item));
+  return ligados.length === 1 && ligados[0] === chave;
+};
+const travaDaSubescolha = chave => {
+  if (ultimoAlcance(chave)) return t('FUNCOES_EQUIPE.CONVERSAS.PELO_MENOS_UMA');
+  return props.permissions.includes(chave)
     ? ''
     : textoDaTrava(motivoDaTrava(props.giver, chave));
+};
 
+// Voltar a "Atende as próprias" na mesma visita devolve os alcances com que a pergunta abriu, em vez do padrão.
+const entrada = props.permissions;
 const atualizar = permissions => emit('update:permissions', permissions);
-const escolher = valor =>
-  atualizar(setLevel(conversas, valor, props.permissions));
+const escolher = valor => {
+  const novas = setLevel(conversas, valor, props.permissions);
+  const voltaAsProprias =
+    valor === CONVERSATION_LEVELS.LIMITED &&
+    getLevel(conversas, entrada) === CONVERSATION_LEVELS.LIMITED;
+  atualizar(
+    voltaAsProprias
+      ? [
+          ...novas.filter(chave => !SUBESCOLHAS.includes(chave)),
+          ...SUBESCOLHAS.filter(chave => entrada.includes(chave)),
+        ]
+      : novas
+  );
+};
 const alternar = chave =>
   atualizar(toggleExtra(conversas, chave, props.permissions));
 
@@ -85,14 +113,14 @@ const estadoDeQuemRecebe = computed(() =>
 
 <template>
   <PerguntaDaFuncao
-    :titulo="$t('FUNCOES_EQUIPE.CONVERSAS.TITULO', { quem })"
+    :titulo="titulo"
     :dica="$t('FUNCOES_EQUIPE.CONVERSAS.DICA')"
     @pronto="emit('pronto')"
   >
     <EscolhaDeNivel
       :model-value="nivel"
       :opcoes="opcoes"
-      :rotulo="$t('FUNCOES_EQUIPE.CONVERSAS.TITULO', { quem })"
+      :rotulo="titulo"
       @update:model-value="escolher"
     >
       <template #dentro="{ valor }">
@@ -103,6 +131,7 @@ const estadoDeQuemRecebe = computed(() =>
           <InterruptorDaLinha
             v-for="chave in subescolhas"
             :key="chave"
+            :data-subescolha="chave"
             :titulo="$t(`FUNCOES_EQUIPE.CONVERSAS.EXTRAS.${chave}.TITULO`)"
             :texto="$t(`FUNCOES_EQUIPE.CONVERSAS.EXTRAS.${chave}.TEXTO`)"
             :ligado="permissions.includes(chave)"

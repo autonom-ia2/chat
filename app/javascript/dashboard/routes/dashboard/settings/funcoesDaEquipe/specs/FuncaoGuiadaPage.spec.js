@@ -1,16 +1,24 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import FuncaoGuiadaPage from '../guiada/FuncaoGuiadaPage.vue';
-import { global, loja } from './montar';
+import { espiarDialogo, global, loja } from './montar';
 import { ADMIN, CARLA } from './quemMonta';
 
 // #2308, especificação 5.B, 5.C, 5.F e Guarda: a conversa guiada de ponta a ponta, com a Carla (e o administrador
 // para o aviso de perda de acesso).
-const { rota, push, replace, saida } = vi.hoisted(() => ({
-  rota: { name: '', params: {}, query: {} },
-  push: vi.fn(),
-  replace: vi.fn(),
-  saida: { guarda: null },
+const { rota, push, replace, saida, validityCheck, clearCookiesOnLogout } =
+  vi.hoisted(() => ({
+    rota: { name: '', params: {}, query: {} },
+    push: vi.fn(),
+    replace: vi.fn(),
+    saida: { guarda: null },
+    validityCheck: vi.fn(),
+    clearCookiesOnLogout: vi.fn(),
+  }));
+vi.mock('dashboard/api/auth', () => ({ default: { validityCheck } }));
+vi.mock('dashboard/store/utils/api', async importOriginal => ({
+  ...(await importOriginal()),
+  clearCookiesOnLogout,
 }));
 vi.mock('vue-router', () => ({
   useRoute: () => rota,
@@ -43,6 +51,8 @@ const montar = async ({
   query = {},
   giver = CARLA,
   funcoes = [ATENDENTE, GERENTE, ACIMA],
+  agentes = AGENTES,
+  actions = {},
 } = {}) => {
   Object.assign(rota, { name, params: { accountId: '1', ...params }, query });
   const criar = vi.fn(async (_contexto, dados) => ({ id: 9, ...dados }));
@@ -53,10 +63,11 @@ const montar = async ({
   const store = loja({
     giver,
     funcoes,
-    agentes: AGENTES,
+    agentes,
     actions: {
       'customRole/createCustomRole': criar,
       'customRole/updateCustomRole': alterar,
+      ...actions,
     },
   });
   const wrapper = mount(FuncaoGuiadaPage, {
@@ -67,8 +78,17 @@ const montar = async ({
     },
   });
   await flushPromises();
-  return { wrapper, criar, alterar };
+  return { wrapper, criar, alterar, store };
 };
+
+const SEM_PESSOAS = {
+  ...CARLA,
+  permissions: CARLA.permissions.filter(chave => chave !== 'people_manage'),
+};
+const recusa = code =>
+  Object.assign(new Error('recusa'), { status: 401, code, attributes: [] });
+const dialogoCom = (wrapper, texto) =>
+  wrapper.findAll('dialog').find(item => item.find('h2').text() === texto);
 
 const clicar = async (wrapper, seletor) => {
   await wrapper.find(seletor).trigger('click');
@@ -79,6 +99,8 @@ afterEach(() => {
   document.body.innerHTML = '';
   push.mockReset();
   replace.mockReset();
+  validityCheck.mockReset();
+  clearCookiesOnLogout.mockReset();
 });
 
 describe('FuncaoGuiadaPage', () => {
@@ -141,7 +163,7 @@ describe('FuncaoGuiadaPage', () => {
 
     await clicar(wrapper, '[data-linha="contatos"] [data-alterar-area]');
     expect(wrapper.find('h1').text()).toBe(
-      'O que o Atendente faz com os contatos?'
+      'O que quem for Atendente faz com os contatos?'
     );
     await clicar(wrapper, '[data-nivel="manage"]');
     await clicar(wrapper, '[data-botao-grande]');
@@ -236,7 +258,7 @@ describe('FuncaoGuiadaPage', () => {
     await clicar(wrapper, '[data-botao-grande]');
   };
 
-  it('perda de acesso: o administrador vê quem perde o quê antes de salvar', async () => {
+  it('perda de acesso: o administrador vê quem perde o quê antes de salvar; "Voltar" não salva', async () => {
     const { wrapper, alterar } = await montar({
       name: 'funcoes_equipe_edit',
       params: { roleId: '1' },
@@ -248,14 +270,44 @@ describe('FuncaoGuiadaPage', () => {
       .findAll('dialog')
       .find(item => item.find('[data-nomes]').exists());
     expect(perda.find('h2').text()).toBe(
-      '1 pessoa vai deixar de criar e mover as vendas em andamento'
+      '1 pessoa vai perder acesso a algumas coisas'
     );
     expect(perda.find('[data-nomes]').text()).toBe('Ana');
+    expect(perda.findAll('[data-perdas] li').map(li => li.text())).toEqual([
+      'Criar e mover as vendas em andamento',
+      'Ver Vendas',
+    ]);
     expect(alterar).not.toHaveBeenCalled();
 
+    await perda.find('[data-seguro]').trigger('click');
+    await flushPromises();
+    expect(alterar).not.toHaveBeenCalled();
+
+    await clicar(wrapper, '[data-botao-grande]');
     await perda.find('[data-acao]').trigger('click');
     await flushPromises();
-    expect(alterar).toHaveBeenCalled();
+    expect(alterar).toHaveBeenCalledTimes(1);
+  });
+
+  it('perda de acesso com várias pessoas: plural certo e todos os nomes', async () => {
+    const { wrapper } = await montar({
+      name: 'funcoes_equipe_edit',
+      params: { roleId: '1' },
+      giver: ADMIN,
+      agentes: [
+        ...AGENTES,
+        { id: 11, name: 'Beto', role: 'agent', custom_role_id: 1 },
+      ],
+    });
+
+    await tirarAsVendas(wrapper);
+    const perda = wrapper
+      .findAll('dialog')
+      .find(item => item.find('[data-nomes]').exists());
+    expect(perda.find('h2').text()).toBe(
+      '2 pessoas vão perder acesso a algumas coisas'
+    );
+    expect(perda.find('[data-nomes]').text()).toBe('Ana e Beto');
   });
 
   it('perda de acesso não aparece para quem não é administrador', async () => {
@@ -266,5 +318,116 @@ describe('FuncaoGuiadaPage', () => {
 
     await tirarAsVendas(wrapper);
     expect(alterar).toHaveBeenCalled();
+  });
+
+  it.each([
+    [
+      'sessão boa: diz o motivo e fica no Confira',
+      'resolve',
+      'Ninguém muda a própria função.',
+    ],
+    ['sessão vencida: vai para o login, sem mensagem', 'reject', ''],
+  ])('401 ao salvar, %s', async (_, sessao, frase) => {
+    if (sessao === 'resolve') validityCheck.mockResolvedValue({});
+    else validityCheck.mockRejectedValue({ response: { status: 401 } });
+    const { wrapper } = await montar({
+      query: { pronta: 'AGENT' },
+      actions: {
+        'customRole/createCustomRole': vi.fn(() =>
+          Promise.reject(recusa('own_role'))
+        ),
+      },
+    });
+
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-botao-grande]');
+    expect(wrapper.find('h1').text()).toBe('Está certo assim?');
+    expect(wrapper.find('[data-sucesso]').exists()).toBe(false);
+    if (frase) expect(wrapper.text()).toContain(frase);
+    expect(clearCookiesOnLogout).toHaveBeenCalledTimes(frase ? 0 : 1);
+  });
+
+  it('sem Pessoas, o Sucesso não tem "Escolher pessoas" e a Escolha não tem "Pôr uma pessoa nela"', async () => {
+    const { wrapper } = await montar({ giver: SEM_PESSOAS });
+    expect(wrapper.text()).not.toContain('Pôr uma pessoa nela');
+
+    await clicar(wrapper, '[data-pronta="AGENT"] [data-principal]');
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-botao-grande]');
+    const sucesso = wrapper.find('[data-sucesso]');
+    expect(sucesso.text()).toContain('Função Atendente 2 criada.');
+    expect(sucesso.find('[data-botao-grande]').exists()).toBe(false);
+    expect(wrapper.find('[data-voltar]').text()).toBe('Voltar para a lista');
+  });
+
+  it('erro de rede ao abrir: mostra o erro com "Tentar de novo", e tentar recarrega', async () => {
+    const pessoas = vi
+      .fn()
+      .mockResolvedValueOnce(false)
+      .mockResolvedValue(true);
+    const { wrapper } = await montar({
+      name: 'funcoes_equipe_edit',
+      params: { roleId: '1' },
+      actions: { 'agents/get': pessoas },
+    });
+    expect(wrapper.find('[data-erro]').attributes('role')).toBe('alert');
+    expect(replace).not.toHaveBeenCalled();
+
+    await clicar(wrapper, '[data-tentar-de-novo]');
+    expect(pessoas).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-erro]').exists()).toBe(false);
+    expect(wrapper.find('h1').text()).toBe('Alterar Atendente');
+  });
+
+  it.each([
+    ['inexistente', 'NAO_EXISTE'],
+    ['fora do alcance', 'FINANCE'],
+  ])('?pronta= %s fica na Escolha', async (_, pronta) => {
+    const { wrapper } = await montar({ query: { pronta } });
+    expect(wrapper.find('h1').text()).toBe('Para quem é esta função?');
+  });
+
+  it('"Trocar a função pronta" com ajustes pergunta antes; sem ajustes, volta direto', async () => {
+    const { mostrar, soltar } = espiarDialogo();
+    const { wrapper } = await montar({ query: { pronta: 'AGENT' } });
+
+    await clicar(wrapper, '[data-linha="contatos"] [data-alterar-area]');
+    await clicar(wrapper, '[data-nivel="manage"]');
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-voltar]');
+    expect(mostrar).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('h1').text()).toBe('Quer mudar alguma coisa?');
+
+    const trocar = dialogoCom(wrapper, 'Trocar a função pronta?');
+    await trocar.find('[data-acao]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('h1').text()).toBe('Para quem é esta função?');
+    expect(document.activeElement).toBe(wrapper.find('h1').element);
+    soltar();
+  });
+
+  it('salvando: o voltar fica desligado, a guarda não deixa sair e um segundo toque não duplica', async () => {
+    let terminar;
+    const criar = vi.fn(
+      () =>
+        new Promise(resolve => {
+          terminar = resolve;
+        })
+    );
+    const { wrapper } = await montar({
+      query: { pronta: 'AGENT' },
+      actions: { 'customRole/createCustomRole': criar },
+    });
+    await clicar(wrapper, '[data-botao-grande]');
+
+    await wrapper.find('[data-botao-grande]').trigger('click');
+    await wrapper.find('[data-botao-grande]').trigger('click');
+    expect(criar).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-voltar]').attributes('disabled')).toBeDefined();
+    expect(await saida.guarda()).toBe(false);
+
+    terminar({ id: 9, name: 'Atendente 2' });
+    await flushPromises();
+    expect(wrapper.find('[data-sucesso]').exists()).toBe(true);
   });
 });

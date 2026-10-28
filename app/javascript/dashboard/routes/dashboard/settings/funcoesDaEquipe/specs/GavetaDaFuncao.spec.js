@@ -2,11 +2,14 @@ import { flushPromises, mount } from '@vue/test-utils';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import GavetaDaFuncao from '../pessoas/GavetaDaFuncao.vue';
-import { global, loja } from './montar';
+import { espiarDialogo, global, loja } from './montar';
 import { CARLA } from './quemMonta';
 
 // #2308, especificação 5.D e 14: a gaveta de quem usa uma função e a de quem está sem função, com a Carla.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/api/auth', () => ({
+  default: { validityCheck: vi.fn().mockResolvedValue({}) },
+}));
 
 const ATENDENTE = { id: 1, name: 'Atendente', permissions: PRESETS.AGENT() };
 const VENDEDOR = { id: 2, name: 'Vendedor', permissions: PRESETS.SDR() };
@@ -24,14 +27,21 @@ const AGENTES = [
   { id: CARLA.userId, name: 'Carla Dias', role: 'agent', custom_role_id: 7 },
 ];
 
-const montar = ({ funcao = VENDEDOR, giver = CARLA, flags = [] } = {}) => {
-  const atualizar = vi.fn();
+const GERENTE = { id: 7, name: 'Gerente da loja', permissions: ['crm_view'] };
+
+const montar = ({
+  funcao = VENDEDOR,
+  giver = CARLA,
+  flags = [],
+  atualizar = vi.fn(),
+} = {}) => {
+  const recarregar = vi.fn();
   const store = loja({
     giver,
     flags,
     funcoes: [ATENDENTE, VENDEDOR, FINANCEIRO],
     agentes: AGENTES,
-    actions: { 'agents/update': atualizar },
+    actions: { 'agents/update': atualizar, 'agents/get': recarregar },
   });
   const wrapper = mount(GavetaDaFuncao, {
     attachTo: document.body,
@@ -41,8 +51,13 @@ const montar = ({ funcao = VENDEDOR, giver = CARLA, flags = [] } = {}) => {
       stubs: { ...global(store).stubs, Avatar: true },
     },
   });
-  return { wrapper, atualizar };
+  return { wrapper, atualizar, recarregar };
 };
+
+// A recusa como a store de agentes a lança (agents.js: Error com status e code da resposta).
+const recusa = (status, code) =>
+  Object.assign(new Error('Request failed'), { status, code });
+const acoesDasPessoas = wrapper => wrapper.findAll('[data-pessoa] [data-acao]');
 
 const linha = (wrapper, id) => wrapper.find(`[data-pessoa="${id}"]`);
 const nomes = lista => lista.findAll('[data-pessoa]').map(item => item.text());
@@ -62,7 +77,7 @@ describe('GavetaDaFuncao', () => {
       linha(wrapper, 21).find('[data-acao]').attributes('aria-label')
     ).toBe('Tirar Gabriel Souza desta função');
     expect(linha(wrapper, 25).text()).toContain(
-      'É administradora: já pode tudo'
+      'Já pode tudo: tem acesso de administrador'
     );
     expect(linha(wrapper, 25).find('[data-acao]').exists()).toBe(false);
     expect(linha(wrapper, CARLA.userId).text()).toContain(
@@ -144,10 +159,77 @@ describe('GavetaDaFuncao', () => {
     const { wrapper } = montar({ giver });
 
     expect(wrapper.find('[data-so-leitura]').exists()).toBe(true);
-    expect(wrapper.find('[data-acao]').exists()).toBe(false);
+    expect(acoesDasPessoas(wrapper)).toHaveLength(0);
     expect(wrapper.find('[data-salvar]').exists()).toBe(false);
     expect(wrapper.find('[data-outras]').exists()).toBe(false);
     expect(nomes(wrapper.find('[data-ja-sao]'))).toHaveLength(2);
+  });
+
+  it.each([
+    ['acima do alcance (ABOVE)', FINANCEIRO],
+    ['a própria função (MINE)', GERENTE],
+  ])('função %s: só leitura, mesmo com Pessoas', (_, funcao) => {
+    const { wrapper } = montar({ funcao });
+
+    expect(wrapper.find('[data-so-leitura]').exists()).toBe(true);
+    expect(acoesDasPessoas(wrapper)).toHaveLength(0);
+    expect(wrapper.find('[data-salvar]').exists()).toBe(false);
+    expect(wrapper.find('[data-outras]').exists()).toBe(false);
+  });
+
+  it('falha ao salvar: a gaveta fica, diz quem não foi salvo e por quê (401 explicado), e recarrega as pessoas', async () => {
+    const atualizar = vi.fn((_, { id }) =>
+      id === 23 ? Promise.reject(recusa(401, 'out_of_reach')) : undefined
+    );
+    const { wrapper, recarregar } = montar({ atualizar });
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await linha(wrapper, 23).find('[data-acao]').trigger('click');
+    await wrapper.find('[data-salvar]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    expect(wrapper.find('[data-erro-gaveta]').attributes('role')).toBe('alert');
+    expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
+      'A função de Íris Lopes não foi salva. Você não pode dar parte disto. Peça ao administrador.'
+    );
+    expect(wrapper.findAll('[data-frase-rodape]').map(f => f.text())).toEqual([
+      'Íris Lopes passa a ser Vendedor.',
+    ]);
+    expect(recarregar).toHaveBeenCalledTimes(1);
+  });
+
+  it('falha de rede ao salvar: pede para conferir a internet', async () => {
+    const atualizar = vi.fn(() => Promise.reject(recusa(undefined, undefined)));
+    const { wrapper } = montar({ atualizar });
+
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+    await wrapper.find('[data-salvar]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-erro-gaveta]').text()).toBe(
+      'A função de Gabriel Souza não foi salva. Confira a internet e tente de novo.'
+    );
+  });
+
+  it('clique no fundo com mudança pendente pergunta "Sair sem salvar?"; sem mudança, fecha', async () => {
+    const { mostrar, soltar } = espiarDialogo();
+    const { wrapper } = montar();
+    await linha(wrapper, 21).find('[data-acao]').trigger('click');
+
+    await wrapper.find('[data-fundo]').trigger('click');
+    expect(wrapper.emitted('fechar')).toBeUndefined();
+    expect(mostrar).toHaveBeenCalledTimes(1);
+    const dialogo = wrapper.find('dialog');
+    expect(dialogo.find('h2').text()).toBe('Sair sem salvar?');
+    soltar();
+
+    await dialogo.find('[data-acao]').trigger('click');
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+
+    const limpo = montar().wrapper;
+    await limpo.find('[data-fundo]').trigger('click');
+    expect(limpo.emitted('fechar')).toHaveLength(1);
   });
 
   it('quem está sem função: uma escolha por pessoa, só com as funções ao alcance', async () => {
@@ -155,7 +237,7 @@ describe('GavetaDaFuncao', () => {
 
     expect(wrapper.find('h2').text()).toBe('Quem está sem função');
     expect(wrapper.text()).toContain(
-      'Ela vê as conversas dos colegas. Dê uma função para mostrar menos.'
+      'Essa pessoa vê as conversas dos colegas. Dê uma função para mostrar menos.'
     );
     const escolha = wrapper.findComponent(ChoiceSelect);
     expect(escolha.props('options').map(opcao => opcao.label)).toEqual([

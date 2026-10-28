@@ -19,12 +19,15 @@ import EscolhaDeNivel from './EscolhaDeNivel.vue';
 // fala em metas nem em R$ (decisão 14A).
 const props = defineProps({
   permissions: { type: Array, required: true },
+  // A função quando abriu: com crm_admin, sair do 4º nível tira as seis (não dá para saber o que era dela).
+  inicial: { type: Array, required: true },
   giver: { type: Object, required: true },
-  quem: { type: String, required: true },
+  nome: { type: String, default: '' },
+  rotulo: { type: String, required: true },
 });
 
 const emit = defineEmits(['update:permissions']);
-const { t } = useTextos();
+const { t, quemFor } = useTextos();
 
 const vendas = moduleByKey('CRM');
 const OPCAO = {
@@ -34,6 +37,8 @@ const OPCAO = {
   [TUDO]: 'TUDO',
 };
 const dialogo = ref(null);
+// O que a função tinha ao entrar no 4º nível nesta pergunta; sem isso, vale a de quando abriu (sem crm_admin).
+const antesDoTudo = ref(null);
 
 const nivel = computed(() => nivelDeVendas(props.permissions));
 const motivoDe = valor =>
@@ -53,8 +58,18 @@ const opcoes = computed(() =>
   })
 );
 
-const aplicar = valor =>
-  emit('update:permissions', escolherNivelDeVendas(valor, props.permissions));
+const antes = () =>
+  antesDoTudo.value ||
+  (props.inicial.includes('crm_admin') ? null : props.inicial);
+
+const aplicar = valor => {
+  if (valor === TUDO && nivel.value !== TUDO)
+    antesDoTudo.value = props.permissions;
+  emit(
+    'update:permissions',
+    escolherNivelDeVendas(valor, props.permissions, antes())
+  );
+};
 
 const escolher = valor => {
   if (valor === TUDO) dialogo.value?.abrir();
@@ -67,12 +82,17 @@ const escolher = valor => {
     <EscolhaDeNivel
       :model-value="nivel"
       :opcoes="opcoes"
-      :rotulo="$t('FUNCOES_EQUIPE.VENDAS.TITULO', { quem })"
+      :rotulo="rotulo"
       @update:model-value="escolher"
     />
     <DialogoDaCasa
       ref="dialogo"
-      :titulo="$t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.TITULO', { quem })"
+      :titulo="
+        $t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.TITULO', {
+          quem: quemFor(nome),
+          nome: quemFor(nome, 'NOME'),
+        })
+      "
       :texto="$t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.TEXTO')"
       :risco="$t('FUNCOES_EQUIPE.VENDAS.AVISO_TUDO.RISCO')"
       :seguro="$t('FUNCOES_EQUIPE.GUIADA.AGORA_NAO')"

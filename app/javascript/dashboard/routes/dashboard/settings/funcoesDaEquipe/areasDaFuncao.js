@@ -2,6 +2,7 @@ import {
   CONVERSATION_LEVELS,
   LEVELS,
   getLevel,
+  isExtraLocked,
   levelOptions,
   moduleByKey,
   setLevel,
@@ -19,6 +20,11 @@ export const DENTRO_DE = {
   PROSPECTING: 'CRM',
   SCHEDULING: 'CRM',
 };
+// As áreas que moram dentro de uma linha de Ajustes, na ordem do mapa: as perguntas leem daqui.
+export const areasDentroDe = linha =>
+  Object.keys(DENTRO_DE)
+    .filter(area => DENTRO_DE[area] === linha)
+    .map(moduleByKey);
 export const RECOLHIDA = [
   'REPORTS',
   'DESEMPENHO',
@@ -174,7 +180,7 @@ const precisaDeManage = (module, chave) =>
   (module.manageOnlyExtras || []).includes(chave);
 
 // (b) liga junto com a área: só vale com a área em manage, que hoje não está, e quem dá alcança as duas.
-const ligaJunto = (giver, item, permissions) => {
+export const ligaJunto = (giver, item, permissions) => {
   const module = moduleByKey(item.area);
   if (!precisaDeManage(module, item.chave) || emManage(module, permissions))
     return false;
@@ -182,8 +188,9 @@ const ligaJunto = (giver, item, permissions) => {
   return reachesKeys(giver, comImplicadas(comArea));
 };
 
-// (a) liga agora: quem dá alcança a chave, e a área já está em manage (ou a chave não depende disso).
-const ligaAgora = (giver, item, permissions) => {
+// (a) liga agora: quem dá alcança a chave, e a área já está em manage (ou a chave não depende disso). É a negação
+// exata da condição de área de (b): os dois nunca valem juntos, e a ordem de teste de grupoDe é só a da especificação.
+export const ligaAgora = (giver, item, permissions) => {
   const module = moduleByKey(item.area);
   if (motivoDaTrava(giver, item.chave)) return false;
   return emManage(module, permissions) || !precisaDeManage(module, item.chave);
@@ -197,18 +204,39 @@ const motivoDoCuidado = (giver, item) => {
   return motivoDasChaves(giver, comArea) || motivoDaTrava(giver, item.chave);
 };
 
-// Ordem de teste: (b) antes de (a), e (c) o resto. Apagar mensagens só existe para quem atende conversas.
+// Ordem de teste: (b) antes de (a), e (c) o resto.
 const grupoDe = (giver, item, permissions) => {
   if (ligaJunto(giver, item, permissions)) return 'ligaJunto';
   if (ligaAgora(giver, item, permissions)) return 'ligaAgora';
   return 'naoPode';
 };
 
+// Quando uma linha aparece: apagar mensagens só para quem atende; uma chave que não depende de mexer na área só
+// com a área à vista (senão ficaria inerte, como levar a planilha de contatos sem ver os contatos), a não ser que já
+// esteja ligada, para dar para desligar; e as metas sem R$ nunca (ficam inertes no servidor, decisão 14A).
+const aparece = (item, permissions) => {
+  const module = moduleByKey(item.area);
+  const ligada = permissions.includes(item.chave);
+  if (item.chave === 'conversation_message_delete')
+    return emManage(module, permissions);
+  if (item.chave === 'crm_metas_manage' && ligada)
+    return permissions.includes('sales_value_view');
+  return (
+    ligada ||
+    precisaDeManage(module, item.chave) ||
+    getLevel(module, permissions) !== LEVELS.NONE
+  );
+};
+
+// `preso`: vem com "Cuida de tudo nas vendas" (crm_admin), fica ligada e não desliga sozinha.
 export const gruposDoCuidado = (giver, permissions) => {
-  const atende = emManage(moduleByKey('CONVERSATIONS'), permissions);
-  const itens = CUIDADO.filter(
-    item => atende || item.chave !== 'conversation_message_delete'
-  ).map(item => ({ ...item, grupo: grupoDe(giver, item, permissions) }));
+  const itens = CUIDADO.filter(item => aparece(item, permissions)).map(
+    item => ({
+      ...item,
+      grupo: grupoDe(giver, item, permissions),
+      preso: isExtraLocked(item.chave, permissions),
+    })
+  );
   const doGrupo = grupo => itens.filter(item => item.grupo === grupo);
   return {
     ligaJunto: doGrupo('ligaJunto'),

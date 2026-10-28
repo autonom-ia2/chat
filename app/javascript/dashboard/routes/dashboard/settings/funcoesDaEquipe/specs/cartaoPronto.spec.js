@@ -77,19 +77,29 @@ describe('cartões prontos', () => {
     });
   });
 
-  it('administrador: nada travado, o selo é o que a pronta traz', () => {
-    const admin = tabela(ADMIN);
-    Object.values(admin).forEach(cartao => {
-      expect(cartao.travas).toEqual([]);
-      expect(cartao.fora).toBe(false);
+  it('administrador: tabela literal, nada travado, o selo é o que a pronta traz', () => {
+    const cartao = (capacidades, selo = []) => ({
+      capacidades,
+      selo,
+      travas: [],
+      fora: false,
     });
-    expect(admin.SALES_MANAGER.selo).toEqual([
-      'crm_export',
-      'crm_metas_manage',
-      'sales_value_view',
-    ]);
-    expect(admin.MARKETING.selo).toEqual(['campaign_send', 'contact_export']);
-    expect(admin.AGENT.capacidades).toEqual(tabela(CARLA).AGENT.capacidades);
+    expect(tabela(ADMIN)).toEqual({
+      AGENT: cartao(['PROPRIAS', 'VENDAS', 'SO_OLHA_CONTATOS']),
+      SDR: cartao(['PROPRIAS', 'CONTATOS_E_VENDAS', 'PROCURA']),
+      SUPERVISOR: cartao(['TODAS', 'CONTATOS_E_VENDAS', 'RELATORIOS']),
+      SALES_MANAGER: cartao(
+        ['TODAS', 'VENDAS_E_COLUNAS', 'RELATORIOS'],
+        ['crm_export', 'crm_metas_manage', 'sales_value_view']
+      ),
+      MARKETING: cartao(
+        ['CAMPANHAS_DISPARA', 'CONTATOS', 'NAO_ATENDE'],
+        ['campaign_send', 'contact_export']
+      ),
+      OPERATIONS: cartao(['TODAS', 'ARRUMA', 'CONTATOS']),
+      READ_ONLY: cartao(['SO_OLHA_AREAS', 'NAO_ATENDE']),
+      FINANCE: cartao(['SO_OLHA_AREAS', 'NAO_ATENDE']),
+    });
   });
 
   it('Só consulta lista as áreas que olha', () => {

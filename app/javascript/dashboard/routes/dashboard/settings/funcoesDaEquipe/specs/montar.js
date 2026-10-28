@@ -20,6 +20,7 @@ export const loja = ({
   agentes = [],
   flags = [],
   actions = {},
+  caixas = [],
 } = {}) =>
   createStore({
     getters: {
@@ -35,6 +36,7 @@ export const loja = ({
         flags.includes(flag),
       'customRole/getCustomRoles': () => funcoes,
       'agents/getAgents': () => agentes,
+      'inboxes/getInboxes': () => caixas,
     },
     actions: {
       'customRole/getCustomRole': vi.fn(),
@@ -47,3 +49,13 @@ export const global = (store = loja()) => ({
   plugins: [store, i18n()],
   stubs: { TeleportWithDirection: { template: '<div><slot /></div>' } },
 });
+
+// O jsdom não tem showModal: o espião registra a abertura do diálogo da casa; soltar() tira o espião.
+export const espiarDialogo = () => {
+  const mostrar = vi.fn();
+  HTMLDialogElement.prototype.showModal = mostrar;
+  return {
+    mostrar,
+    soltar: () => delete HTMLDialogElement.prototype.showModal,
+  };
+};

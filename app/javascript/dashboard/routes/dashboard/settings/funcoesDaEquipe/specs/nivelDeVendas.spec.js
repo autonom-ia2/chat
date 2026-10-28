@@ -1,7 +1,4 @@
-import {
-  CRM_EXTRAS_IMPLIED_BY_ADMIN,
-  PRESETS,
-} from '../../customRoles/permissionMatrix';
+import { PRESETS } from '../../customRoles/permissionMatrix';
 import {
   escolherNivelDeVendas,
   nivelDeVendas,
@@ -17,22 +14,35 @@ describe('nivelDeVendas', () => {
 
     expect(tudo.filter(chave => !atendente.includes(chave))).toEqual([
       'crm_admin',
-      ...CRM_EXTRAS_IMPLIED_BY_ADMIN,
+      'crm_view_reports',
+      'crm_manage_pipelines',
+      'crm_manage_ai',
+      'crm_export',
+      'crm_delete_cards',
+      'crm_metas_manage',
     ]);
     expect(tudo).not.toContain('sales_value_view');
     expect(nivelDeVendas(tudo)).toBe('tudo');
   });
 
-  it('sair de "Cuida de tudo" tira o crm_admin e as 6', () => {
+  it('sair de "Cuida de tudo" sem saber o antes tira o crm_admin e as 6', () => {
     const tudo = escolherNivelDeVendas('tudo', PRESETS.AGENT());
-    const mexe = escolherNivelDeVendas('manage', tudo);
-
-    expect(mexe).not.toContain('crm_admin');
-    CRM_EXTRAS_IMPLIED_BY_ADMIN.forEach(chave =>
-      expect(mexe).not.toContain(chave)
+    expect([...escolherNivelDeVendas('manage', tudo)].sort()).toEqual(
+      [...PRESETS.AGENT()].sort()
     );
-    expect(nivelDeVendas(mexe)).toBe('manage');
     expect(nivelDeVendas(escolherNivelDeVendas('none', tudo))).toBe('none');
+  });
+
+  it('com o antes, sair de "Cuida de tudo" só tira o que ele trouxe: o Gerente de vendas volta igual', () => {
+    const gerente = PRESETS.SALES_MANAGER();
+    const tudo = escolherNivelDeVendas('tudo', gerente);
+    expect(tudo.filter(chave => !gerente.includes(chave))).toEqual([
+      'crm_admin',
+      'crm_manage_ai',
+      'crm_delete_cards',
+    ]);
+    const volta = escolherNivelDeVendas('manage', tudo, gerente);
+    expect([...volta].sort()).toEqual([...gerente].sort());
   });
 
   it('travaDoTudo: Carla = DELEGATION; administrador e grant_above_own = nada', () => {

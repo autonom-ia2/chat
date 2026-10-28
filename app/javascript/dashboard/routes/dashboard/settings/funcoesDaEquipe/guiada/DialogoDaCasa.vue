@@ -4,21 +4,22 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import TeleportWithDirection from 'dashboard/components-next/TeleportWithDirection.vue';
 
 // O diálogo da casa (#2308, especificação 9), uma anatomia só: quadrado de 44 px com ícone por tipo, título,
-// explicação, risco opcional e o rodapé (à direita no computador; empilhado, na largura toda, no celular).
-// Cuidado = âmbar com ação azul; destrutivo = ruby com ação vermelha. O <dialog> modal deixa o resto inerte (foco
-// preso); o botão seguro tem o foco inicial e responde ao Esc; ao fechar, o foco volta a quem abriu.
+// explicação, risco opcional e o rodapé (à direita no computador; empilhado, na largura toda, no celular, com o
+// seguro em cima, como no mockup). Cuidado = âmbar com ação azul; destrutivo = ruby com ação vermelha; aviso = cinza,
+// só com o botão de fechar (a folha dos canais). O <dialog> modal deixa o resto inerte (foco preso); o botão seguro
+// tem o foco inicial e responde ao Esc; ao fechar, o foco volta a quem abriu.
 const props = defineProps({
   tipo: {
     type: String,
     default: 'cuidado',
-    validator: valor => ['cuidado', 'destrutivo'].includes(valor),
+    validator: valor => ['cuidado', 'destrutivo', 'aviso'].includes(valor),
   },
   icone: { type: String, default: '' },
   titulo: { type: String, required: true },
   texto: { type: String, default: '' },
   risco: { type: String, default: '' },
   seguro: { type: String, required: true },
-  acao: { type: String, required: true },
+  acao: { type: String, default: '' },
   // Mesmo rótulo, só o estado muda (especificação 9): "Mover as pessoas e apagar" espera o destino.
   acaoDesabilitada: { type: Boolean, default: false },
 });
@@ -31,11 +32,15 @@ const botaoSeguro = ref(null);
 let gatilho = null;
 
 const destrutivo = computed(() => props.tipo === 'destrutivo');
-const iconeDoTipo = computed(
-  () =>
-    props.icone ||
-    (destrutivo.value ? 'i-lucide-trash-2' : 'i-lucide-triangle-alert')
-);
+const ESTILO = {
+  cuidado: {
+    icone: 'i-lucide-triangle-alert',
+    tom: 'bg-n-amber-3 text-n-amber-11',
+  },
+  destrutivo: { icone: 'i-lucide-trash-2', tom: 'bg-n-ruby-3 text-n-ruby-11' },
+  aviso: { icone: 'i-lucide-info', tom: 'bg-n-alpha-2 text-n-slate-11' },
+};
+const estilo = computed(() => ESTILO[props.tipo]);
 
 const abrir = async () => {
   gatilho = document.activeElement;
@@ -75,13 +80,13 @@ defineExpose({ abrir });
       >
         <span
           class="grid place-items-center size-11 rounded-xl"
-          :class="
-            destrutivo
-              ? 'bg-n-ruby-3 text-n-ruby-11'
-              : 'bg-n-amber-3 text-n-amber-11'
-          "
+          :class="estilo.tom"
         >
-          <span class="size-5" :class="iconeDoTipo" aria-hidden="true" />
+          <span
+            class="size-5"
+            :class="icone || estilo.icone"
+            aria-hidden="true"
+          />
         </span>
         <h2
           :id="`${id}-titulo`"
@@ -106,7 +111,7 @@ defineExpose({ abrir });
           </p>
           <slot />
         </div>
-        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button
             ref="botaoSeguro"
             data-seguro
@@ -118,6 +123,7 @@ defineExpose({ abrir });
             @click="escolher('seguro')"
           />
           <Button
+            v-if="acao"
             data-acao
             type="button"
             :label="acao"

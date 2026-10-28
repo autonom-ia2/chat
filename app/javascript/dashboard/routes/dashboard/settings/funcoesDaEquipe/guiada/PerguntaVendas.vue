@@ -7,7 +7,7 @@ import {
   toggleExtra,
   visibleExtras,
 } from '../../customRoles/permissionMatrix';
-import { DONO_DAS_CHAVES } from '../areasDaFuncao';
+import { DONO_DAS_CHAVES, areasDentroDe } from '../areasDaFuncao';
 import { TEXTO_DA_TRAVA, motivoDaTrava } from '../motivoDaTrava';
 import { nivelDeVendas } from '../nivelDeVendas';
 import { useTextos } from './useTextos';
@@ -23,14 +23,14 @@ const props = defineProps({
   permissions: { type: Array, required: true },
   inicial: { type: Array, required: true },
   giver: { type: Object, required: true },
-  quem: { type: String, required: true },
+  nome: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:permissions', 'pronto']);
-const { t, lista } = useTextos();
+const { t, lista, quemFor } = useTextos();
 
 const vendas = moduleByKey('CRM');
-const areasDoMais = [moduleByKey('PROSPECTING'), moduleByKey('SCHEDULING')];
+const areasDoMais = areasDentroDe('CRM');
 const DO_MAIS = DONO_DAS_CHAVES.VENDAS_MAIS;
 
 const temVendas = computed(
@@ -60,20 +60,26 @@ const estadoDoMais = computed(() =>
     : t('FUNCOES_EQUIPE.VENDAS.MAIS_NADA')
 );
 
+const titulo = computed(() =>
+  t('FUNCOES_EQUIPE.VENDAS.TITULO', {
+    quem: quemFor(props.nome),
+    nome: quemFor(props.nome, 'NOME'),
+  })
+);
+
 const atualizar = permissions => emit('update:permissions', permissions);
 const alternar = chave =>
   atualizar(toggleExtra(vendas, chave, props.permissions));
 </script>
 
 <template>
-  <PerguntaDaFuncao
-    :titulo="$t('FUNCOES_EQUIPE.VENDAS.TITULO', { quem })"
-    @pronto="emit('pronto')"
-  >
+  <PerguntaDaFuncao :titulo="titulo" @pronto="emit('pronto')">
     <NivelDeVendas
       :permissions="permissions"
+      :inicial="inicial"
       :giver="giver"
-      :quem="quem"
+      :nome="nome"
+      :rotulo="titulo"
       @update:permissions="atualizar"
     />
     <LinhaRecolhida

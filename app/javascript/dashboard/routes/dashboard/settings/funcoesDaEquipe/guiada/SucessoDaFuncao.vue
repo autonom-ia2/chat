@@ -1,13 +1,14 @@
 <script setup>
 import BotaoGrande from './BotaoGrande.vue';
 
-// Sucesso (#2308, especificação 5.B5): a função foi criada e a próxima pergunta é quem vai tê-la.
+// Sucesso (#2308, especificação 5.B5): a função foi criada e a próxima pergunta é quem vai tê-la. Sem poder pôr
+// pessoas, só o aviso: o voltar do alto ("Voltar para a lista") é o único caminho, sem dois botões iguais.
 defineProps({
   nome: { type: String, required: true },
   podeEscolherPessoas: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['escolherPessoas', 'voltar']);
+const emit = defineEmits(['escolherPessoas']);
 </script>
 
 <template>
@@ -33,10 +34,5 @@ const emit = defineEmits(['escolherPessoas', 'voltar']);
         @click="emit('escolherPessoas')"
       />
     </template>
-    <BotaoGrande
-      v-else
-      :label="$t('FUNCOES_EQUIPE.GUIADA.VOLTAR_LISTA')"
-      @click="emit('voltar')"
-    />
   </div>
 </template>

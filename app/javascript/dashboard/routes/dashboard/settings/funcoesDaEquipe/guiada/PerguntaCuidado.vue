@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import {
   LEVELS,
   moduleByKey,
@@ -16,17 +16,16 @@ import PerguntaDaFuncao from './PerguntaDaFuncao.vue';
 
 // Ações que pedem cuidado (#2308, especificação 5.B3 e 7.2), em três grupos: (b) liga junto com a área, com uma
 // confirmação só ("Ligar as duas"/"Ligar os dois"); (a) liga agora; (c) recolhida com cadeado. As linhas ligáveis
-// ficam na ordem fixa: ligar uma (b) não a tira do lugar.
+// ficam na ordem fixa: ligar uma (b) não a tira do lugar. O que vem com "Cuida de tudo" fica ligado e travado.
 const props = defineProps({
   permissions: { type: Array, required: true },
   inicial: { type: Array, required: true },
   giver: { type: Object, required: true },
-  quem: { type: String, required: true },
-  quemSujeito: { type: String, required: true },
+  nome: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:permissions', 'pronto']);
-const { t, lista, maiuscula } = useTextos();
+const { t, lista, maiuscula, quemFor } = useTextos();
 
 // Chave i18n do diálogo e da faixa de cada (b).
 const JUNTO = { contact_delete: 'CONTATOS', campaign_send: 'CAMPANHAS' };
@@ -35,13 +34,27 @@ const ORDEM = [
   'contact_export',
   'conversation_message_delete',
   'crm_manage_ai',
+  'crm_export',
+  'crm_metas_manage',
   'contact_delete',
   'campaign_send',
 ];
 
 const dialogo = ref(null);
 const pendente = ref(null);
+// O último "Ligar as duas": o que ele acrescentou e o que tirou, para desfazer só isso.
 const desfazer = ref(null);
+
+const valores = computed(() => ({
+  quem: quemFor(props.nome),
+  nome: quemFor(props.nome, 'NOME'),
+}));
+const titulo = computed(() =>
+  t('FUNCOES_EQUIPE.CUIDADO_TELA.TITULO', {
+    quem: quemFor(props.nome, 'SUJEITO'),
+    nome: valores.value.nome,
+  })
+);
 
 const grupos = computed(() => gruposDoCuidado(props.giver, props.permissions));
 const ligaveis = computed(() => {
@@ -69,15 +82,34 @@ const tituloDoCadeado = computed(() => {
   };
 });
 
+// A faixa "Agora…" vale enquanto o que o "Ligar as duas" acrescentou continua ligado: desligou, ela some.
+const faixa = computed(() => {
+  if (!desfazer.value) return '';
+  const { chave, acrescentadas } = desfazer.value;
+  if (!acrescentadas.every(item => props.permissions.includes(item))) return '';
+  return t(
+    `FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[chave]}.AGORA`,
+    valores.value
+  );
+});
+
 const atualizar = permissions => emit('update:permissions', permissions);
 
 // "Ligar as duas": a área em manage e a chave, exatamente essas duas (especificação 7.7).
 const ligarJunto = ({ chave, area }) => {
   const module = moduleByKey(area);
   const antes = props.permissions;
-  const comArea = setLevel(module, LEVELS.MANAGE, antes);
-  atualizar(toggleExtra(module, chave, comArea));
-  desfazer.value = { chave, antes };
+  const depois = toggleExtra(
+    module,
+    chave,
+    setLevel(module, LEVELS.MANAGE, antes)
+  );
+  atualizar(depois);
+  desfazer.value = {
+    chave,
+    acrescentadas: depois.filter(item => !antes.includes(item)),
+    tiradas: antes.filter(item => !depois.includes(item)),
+  };
 };
 
 const alternar = item => {
@@ -95,27 +127,35 @@ const confirmar = () => {
   pendente.value = null;
 };
 
-const voltarAtras = () => {
-  atualizar(desfazer.value.antes);
+// Desfaz só o que o "Ligar as duas" mudou, sobre o estado de agora: o que a pessoa ligou depois fica. O foco volta
+// ao interruptor da linha (o botão "Desfazer" some).
+const voltarAtras = async () => {
+  const { chave, acrescentadas, tiradas } = desfazer.value;
+  atualizar([
+    ...props.permissions.filter(item => !acrescentadas.includes(item)),
+    ...tiradas.filter(item => !props.permissions.includes(item)),
+  ]);
   desfazer.value = null;
+  await nextTick();
+  document
+    .querySelector(`[data-cuidado="${chave}"] [data-interruptor]`)
+    ?.focus();
 };
 
 const textoDoDialogo = parte =>
   pendente.value
     ? t(
         `FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[pendente.value.chave]}.${parte}`,
-        {
-          quem: props.quem,
-        }
+        valores.value
       )
     : '';
+
+const travaDaLinha = item =>
+  item.preso ? t('FUNCOES_EQUIPE.VENDAS.VEM_COM_TUDO') : '';
 </script>
 
 <template>
-  <PerguntaDaFuncao
-    :titulo="$t('FUNCOES_EQUIPE.CUIDADO_TELA.TITULO', { quem: quemSujeito })"
-    @pronto="emit('pronto')"
-  >
+  <PerguntaDaFuncao :titulo="titulo" @pronto="emit('pronto')">
     <template #dica>
       <p class="m-0 text-base text-n-slate-11">
         <template v-if="algumaLigada">
@@ -132,34 +172,26 @@ const textoDoDialogo = parte =>
       </p>
     </template>
 
-    <div
-      v-if="desfazer"
-      data-faixa-junto
-      role="status"
-      class="flex items-center gap-3 px-4 py-3 border rounded-2xl border-n-blue-6 bg-n-blue-2"
-    >
-      <span
-        class="i-lucide-info size-5 shrink-0 text-n-blue-11"
-        aria-hidden="true"
-      />
-      <p class="flex-1 m-0 font-medium text-n-slate-12">
-        {{
-          $t(
-            `FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[desfazer.chave]}.AGORA`,
-            {
-              quem,
-            }
-          )
-        }}
-      </p>
-      <button
-        type="button"
-        data-desfazer
-        class="px-4 text-sm font-medium rounded-xl min-h-11 bg-n-alpha-2 text-n-slate-12 hover:bg-n-alpha-3"
-        @click="voltarAtras"
+    <div role="status">
+      <div
+        v-if="faixa"
+        data-faixa-junto
+        class="flex items-center gap-3 px-4 py-3 border rounded-2xl border-n-blue-6 bg-n-blue-2"
       >
-        {{ $t('FUNCOES_EQUIPE.GUIADA.DESFAZER') }}
-      </button>
+        <span
+          class="i-lucide-info size-5 shrink-0 text-n-blue-11"
+          aria-hidden="true"
+        />
+        <p class="flex-1 m-0 font-medium text-n-slate-12">{{ faixa }}</p>
+        <button
+          type="button"
+          data-desfazer
+          class="px-4 text-sm font-medium rounded-xl min-h-11 bg-n-alpha-2 text-n-slate-12 hover:bg-n-alpha-3"
+          @click="voltarAtras"
+        >
+          {{ $t('FUNCOES_EQUIPE.GUIADA.DESFAZER') }}
+        </button>
+      </div>
     </div>
 
     <div
@@ -175,12 +207,11 @@ const textoDoDialogo = parte =>
           item.junto
             ? $t(
                 `FUNCOES_EQUIPE.CUIDADO_TELA.JUNTO.${JUNTO[item.chave]}.NOTA`,
-                {
-                  quem,
-                }
+                valores
               )
             : ''
         "
+        :trava="travaDaLinha(item)"
         :ligado="permissions.includes(item.chave)"
         :mudou="mudou(item.chave)"
         @alternar="alternar(item)"

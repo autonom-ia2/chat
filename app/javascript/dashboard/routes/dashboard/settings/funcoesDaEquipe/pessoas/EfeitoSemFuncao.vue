@@ -6,7 +6,8 @@ import DiffDeAcesso from './DiffDeAcesso.vue';
 
 // A linha âmbar de quem vai ficar sem função (#2308, especificação 5.D): o primeiro ganho e a primeira perda numa
 // frase, e "Ver tudo o que muda" abre o mesmo diff do apagar. Tirar alguém da função não é restringir: sem função,
-// a pessoa costuma ver mais.
+// a pessoa costuma ver mais. Um ganho que só o administrador daria (os valores em R$) sempre aparece na frase: o
+// servidor deixa, mas quem tira precisa ver.
 const props = defineProps({
   permissions: { type: Array, default: () => [] },
 });
@@ -19,17 +20,24 @@ const tudo = ref(false);
 const mudanca = computed(() => diff(props.permissions));
 
 const frase = computed(() => {
-  const [ganho] = mudanca.value.ganha;
+  const [ganho, ...outrosGanhos] = mudanca.value.ganha;
   const [perda] = mudanca.value.perde;
   const valores = {
     ganho: ganho && curtoDa(ganho),
     perda: perda && curtoDa(perda),
   };
-  if (ganho && perda) return t('FUNCOES_EQUIPE.EFEITO.PASSA_E_DEIXA', valores);
-  if (ganho) return t('FUNCOES_EQUIPE.EFEITO.SO_PASSA', valores);
-  return perda
-    ? t('FUNCOES_EQUIPE.EFEITO.SO_DEIXA', valores)
-    : t('FUNCOES_EQUIPE.EFEITO.NADA');
+  const tambem = outrosGanhos
+    .filter(item => item.delegacao)
+    .map(item => t('FUNCOES_EQUIPE.EFEITO.TAMBEM', { ganho: curtoDa(item) }));
+  const principal = () => {
+    if (ganho && perda)
+      return t('FUNCOES_EQUIPE.EFEITO.PASSA_E_DEIXA', valores);
+    if (ganho) return t('FUNCOES_EQUIPE.EFEITO.SO_PASSA', valores);
+    return perda
+      ? t('FUNCOES_EQUIPE.EFEITO.SO_DEIXA', valores)
+      : t('FUNCOES_EQUIPE.EFEITO.NADA');
+  };
+  return [principal(), ...tambem].join(' ');
 });
 </script>
 

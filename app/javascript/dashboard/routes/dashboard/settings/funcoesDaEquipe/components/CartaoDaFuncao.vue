@@ -1,14 +1,15 @@
 <script setup>
 import { computed } from 'vue';
-import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import MaisDaFuncao from './MaisDaFuncao.vue';
 import { cuidadosDaFuncao, fraseDaFuncao } from '../fraseDaFuncao';
+import { useTextos } from '../guiada/useTextos';
 
 // Uma função da conta na lista (#2308, especificação 5.A): o que ela pode em uma frase, o selo do que pede
 // cuidado, quem usa e as ações. Travada (roleLockReason) fica tracejada, só com o motivo. A pilha de rostos abre a
-// gaveta de quem usa (só leitura sem Pessoas).
+// gaveta de quem usa (só leitura sem Pessoas). Se a lista de pessoas não veio, a linha de quem usa some (nunca
+// "Ninguém usa ainda" por engano).
 const props = defineProps({
   funcao: { type: Object, required: true },
   pessoas: { type: Array, default: () => [] },
@@ -16,6 +17,7 @@ const props = defineProps({
   travada: { type: Boolean, default: false },
   podeDuplicar: { type: Boolean, default: true },
   podeEscolherPessoas: { type: Boolean, default: false },
+  semPessoas: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -26,7 +28,7 @@ const emit = defineEmits([
   'verPessoas',
 ]);
 
-const { t, locale } = useI18n();
+const { t, lista } = useTextos();
 
 const MAX_ROSTOS = 4;
 
@@ -38,10 +40,7 @@ const restoDaFrase = computed(() =>
 const selo = computed(() => {
   const cuidados = cuidadosDaFuncao(props.funcao.permissions || []);
   if (!cuidados.length) return '';
-  const lista = new Intl.ListFormat(locale.value.replaceAll('_', '-'), {
-    type: 'conjunction',
-  });
-  const coisas = lista.format(
+  const coisas = lista(
     cuidados.map(chave => t(`FUNCOES_EQUIPE.CUIDADO.${chave}`))
   );
   return t('FUNCOES_EQUIPE.CARTAO.SELO', { coisas });
@@ -56,9 +55,7 @@ const outrasPessoas = computed(() =>
   <li
     data-cartao-funcao
     class="flex flex-col gap-4 p-4 border rounded-2xl bg-n-solid-1 sm:flex-row sm:items-center sm:p-5"
-    :class="
-      travada ? 'border-dashed border-n-slate-8' : 'shadow-sm border-n-weak'
-    "
+    :class="travada ? 'border-dashed border-n-slate-8' : 'border-n-weak'"
   >
     <span
       class="hidden sm:grid place-items-center size-11 shrink-0 rounded-xl"
@@ -99,76 +96,78 @@ const outrasPessoas = computed(() =>
         {{ selo }}
       </span>
 
-      <button
-        v-if="pessoas.length"
-        type="button"
-        data-pessoas
-        class="flex items-center self-start gap-2.5 px-2 -mx-2 min-h-11 rounded-xl hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-        :aria-label="
-          $t(
-            'FUNCOES_EQUIPE.CARTAO.VER_PESSOAS_ROTULO',
-            { nome: funcao.name, n: pessoas.length },
-            pessoas.length
-          )
-        "
-        @click="emit('verPessoas')"
-      >
-        <span class="flex -space-x-1.5" aria-hidden="true">
-          <Avatar
-            v-for="pessoa in pessoas.slice(0, MAX_ROSTOS)"
-            :key="pessoa.id"
-            :name="pessoa.name"
-            :src="pessoa.thumbnail"
-            :size="32"
-            rounded-full
-            class="ring-2 ring-n-solid-1"
-          />
-          <span
-            v-if="outrasPessoas"
-            class="grid text-xs font-medium rounded-full place-items-center size-8 ring-2 ring-n-solid-1 bg-n-alpha-2 text-n-slate-12"
-          >
-            {{
-              $t('FUNCOES_EQUIPE.CARTAO.OUTRAS_PESSOAS', { n: outrasPessoas })
-            }}
-          </span>
-        </span>
-        <span
-          class="text-sm font-medium underline underline-offset-4 decoration-n-slate-7 text-n-slate-12"
-        >
-          {{
+      <template v-if="!semPessoas">
+        <button
+          v-if="pessoas.length"
+          type="button"
+          data-pessoas
+          class="flex items-center self-start gap-2.5 px-2 -mx-2 min-h-11 rounded-xl hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+          :aria-label="
             $t(
-              'FUNCOES_EQUIPE.CARTAO.PESSOAS',
-              { n: pessoas.length },
+              'FUNCOES_EQUIPE.CARTAO.VER_PESSOAS_ROTULO',
+              { nome: funcao.name, n: pessoas.length },
               pessoas.length
             )
-          }}
-        </span>
-      </button>
-      <p
-        v-else
-        data-ninguem
-        class="flex flex-wrap items-center m-0 text-sm gap-x-2 min-h-11 text-n-slate-11"
-      >
-        {{ $t('FUNCOES_EQUIPE.CARTAO.NINGUEM') }}
-        <template v-if="podeEscolherPessoas">
-          <span aria-hidden="true">
-            {{ $t('FUNCOES_EQUIPE.CONTAGEM.SEPARADOR') }}
+          "
+          @click="emit('verPessoas')"
+        >
+          <span class="flex -space-x-1.5" aria-hidden="true">
+            <Avatar
+              v-for="pessoa in pessoas.slice(0, MAX_ROSTOS)"
+              :key="pessoa.id"
+              :name="pessoa.name"
+              :src="pessoa.thumbnail"
+              :size="32"
+              rounded-full
+              class="ring-2 ring-n-solid-1"
+            />
+            <span
+              v-if="outrasPessoas"
+              class="grid text-xs font-medium rounded-full place-items-center size-8 ring-2 ring-n-solid-1 bg-n-alpha-2 text-n-slate-12"
+            >
+              {{
+                $t('FUNCOES_EQUIPE.CARTAO.OUTRAS_PESSOAS', { n: outrasPessoas })
+              }}
+            </span>
           </span>
-          <button
-            type="button"
-            data-escolher-pessoas
-            class="px-1 -mx-1 font-semibold underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-            :aria-label="
-              $t('FUNCOES_EQUIPE.CARTAO.ESCOLHER_PESSOAS_ROTULO', {
-                nome: funcao.name,
-              })
-            "
-            @click="emit('escolherPessoas')"
+          <span
+            class="text-sm font-medium underline underline-offset-4 decoration-n-slate-7 text-n-slate-12"
           >
-            {{ $t('FUNCOES_EQUIPE.CARTAO.ESCOLHER_PESSOAS') }}
-          </button>
-        </template>
-      </p>
+            {{
+              $t(
+                'FUNCOES_EQUIPE.CARTAO.PESSOAS',
+                { n: pessoas.length },
+                pessoas.length
+              )
+            }}
+          </span>
+        </button>
+        <p
+          v-else
+          data-ninguem
+          class="flex flex-wrap items-center m-0 text-sm gap-x-2 min-h-11 text-n-slate-11"
+        >
+          {{ $t('FUNCOES_EQUIPE.CARTAO.NINGUEM') }}
+          <template v-if="podeEscolherPessoas">
+            <span aria-hidden="true">
+              {{ $t('FUNCOES_EQUIPE.CONTAGEM.SEPARADOR') }}
+            </span>
+            <button
+              type="button"
+              data-escolher-pessoas
+              class="px-1 -mx-1 font-semibold underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+              :aria-label="
+                $t('FUNCOES_EQUIPE.CARTAO.ESCOLHER_PESSOAS_ROTULO', {
+                  nome: funcao.name,
+                })
+              "
+              @click="emit('escolherPessoas')"
+            >
+              {{ $t('FUNCOES_EQUIPE.CARTAO.ESCOLHER_PESSOAS') }}
+            </button>
+          </template>
+        </p>
+      </template>
     </div>
 
     <p

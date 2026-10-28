@@ -1,11 +1,12 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
+import ErroAoAbrir from '../components/ErroAoAbrir.vue';
 import GavetaDaFuncao from '../pessoas/GavetaDaFuncao.vue';
-import { podeDaFuncao } from '../fraseDaFuncao';
+import { perdasDeAcesso } from '../perdaDeAcesso';
 import { useFuncaoGuiada } from './useFuncaoGuiada';
 import AjustesDaFuncao from './AjustesDaFuncao.vue';
 import ComoVaiFicar from './ComoVaiFicar.vue';
@@ -31,6 +32,7 @@ const {
   modo,
   idDaFuncao,
   carregou,
+  erroAoAbrir,
   etapa,
   pronta,
   permissions,
@@ -65,6 +67,7 @@ const ETAPA_DO_PASSO = { escolha: 'ESCOLHA', confira: 'CONFIRA' };
 const gaveta = ref(null);
 const perda = ref(null);
 const guarda = ref(null);
+const trocar = ref(null);
 let responderGuarda = null;
 
 const etapas = computed(() =>
@@ -77,39 +80,41 @@ const passo = computed(() => {
   return etapas.value.indexOf(ETAPA_DO_PASSO[etapa.value] || 'AJUSTES');
 });
 
+const podeEscolherPessoas = computed(
+  () => canManagePeople.value && (!salva.value || reachesRole(salva.value))
+);
+
 // O voltar diz para onde vai.
 const irPara = proxima => () => {
   etapa.value = proxima;
+};
+// "Trocar a função pronta" com ajustes feitos pergunta antes: escolher outra pronta recomeça do zero.
+const trocarPronta = () => {
+  if (mudou.value) trocar.value?.abrir();
+  else etapa.value = 'escolha';
 };
 const voltar = computed(() => {
   if (etapa.value === 'escolha')
     return { texto: 'VOLTAR_LISTA', ir: voltarParaLista };
   if (etapa.value === 'sucesso')
-    return { texto: 'FAZER_DEPOIS', ir: voltarParaLista };
+    return {
+      texto: podeEscolherPessoas.value ? 'FAZER_DEPOIS' : 'VOLTAR_LISTA',
+      ir: voltarParaLista,
+    };
   if (etapa.value !== 'ajustes')
     return { texto: 'VOLTAR_AJUSTES', ir: irPara('ajustes') };
   return modo.value === 'criar'
-    ? { texto: 'TROCAR_PRONTA', ir: irPara('escolha') }
+    ? { texto: 'TROCAR_PRONTA', ir: trocarPronta }
     : { texto: 'VOLTAR_LISTA', ir: voltarParaLista };
 });
 
-// Antes do Confira, a pronta dá nome às perguntas ("o Atendente"); depois, o nome escolhido.
+// Antes do Confira, a pronta dá nome às perguntas ("quem for Atendente"); depois, o nome escolhido.
 const nomeNaFrase = computed(() => {
   const antesDoNome = !['confira', 'sucesso'].includes(etapa.value);
   if (modo.value === 'criar' && pronta.value && antesDoNome)
     return nomeDaPronta(pronta.value);
   return nome.value.trim();
 });
-const quem = computed(() =>
-  nomeNaFrase.value
-    ? t('FUNCOES_EQUIPE.GUIADA.QUEM.OBJETO', { nome: nomeNaFrase.value })
-    : t('FUNCOES_EQUIPE.GUIADA.QUEM.OBJETO_SEM_NOME')
-);
-const quemSujeito = computed(() =>
-  nomeNaFrase.value
-    ? t('FUNCOES_EQUIPE.GUIADA.QUEM.SUJEITO', { nome: nomeNaFrase.value })
-    : t('FUNCOES_EQUIPE.GUIADA.QUEM.SUJEITO_SEM_NOME')
-);
 
 const ajustes = computed(() => {
   if (modo.value === 'alterar')
@@ -140,11 +145,9 @@ const comCotacoes = computed(
     inicial.value.some(chave => chave.startsWith('insurance_'))
 );
 
-const podeEscolherPessoas = computed(
-  () => canManagePeople.value && (!salva.value || reachesRole(salva.value))
-);
-
+// Durante o envio ninguém sai: a função seria criada mesmo com "Sair".
 onBeforeRouteLeave(() => {
+  if (salvando.value) return false;
   if (!mudou.value || salva.value) return true;
   guarda.value?.abrir();
   return new Promise(resolve => {
@@ -167,33 +170,42 @@ const pessoasDaFuncao = computed(() =>
     ? agentes.value.filter(item => item.custom_role_id === idDaFuncao.value)
     : []
 );
-const perdas = computed(() => {
-  const depois = new Set(podeDaFuncao(permissions.value));
-  return podeDaFuncao(inicial.value).filter(id => !depois.has(id));
-});
+const perdas = computed(() => perdasDeAcesso(inicial.value, permissions.value));
 const pedirSalvar = () => {
   if (isAdmin.value && pessoasDaFuncao.value.length && perdas.value.length)
     perda.value?.abrir();
   else salvar();
 };
 
+// A cada troca de etapa, o foco vai para o título dela: quem usa teclado ou leitor de tela sabe que mudou.
+const principal = ref(null);
+watch(etapa, async () => {
+  await nextTick();
+  const titulo = principal.value?.querySelector('h1');
+  titulo?.setAttribute('tabindex', '-1');
+  titulo?.focus();
+});
+
 onMounted(carregar);
 </script>
 
 <template>
   <section class="flex flex-col w-full h-full overflow-hidden bg-n-surface-1">
-    <main class="flex-1 overflow-y-auto">
+    <main ref="principal" class="flex-1 overflow-y-auto">
       <div
-        class="flex flex-col w-full gap-8 px-4 pt-6 mx-auto max-w-6xl pb-44 sm:px-8 sm:pt-8 lg:pb-12"
+        class="flex flex-col w-full gap-8 px-4 pt-6 mx-auto max-w-6xl pb-56 sm:px-8 sm:pt-8 md:pb-12"
       >
         <EtapasDaFuncao
           :voltar="$t(`FUNCOES_EQUIPE.GUIADA.VOLTAR.${voltar.texto}`)"
           :etapas="etapas"
           :atual="passo"
+          :desabilitado="salvando"
           @voltar="voltar.ir"
         />
 
-        <div v-if="!carregou" aria-busy="true" class="flex flex-col gap-4">
+        <ErroAoAbrir v-if="erroAoAbrir" @tentar="carregar" />
+
+        <div v-else-if="!carregou" aria-busy="true" class="flex flex-col gap-4">
           <span class="sr-only">{{ $t('FUNCOES_EQUIPE.CARREGANDO') }}</span>
           <div class="w-72 h-10 rounded-xl bg-n-alpha-2 animate-pulse" />
           <div class="h-64 rounded-2xl bg-n-alpha-2 animate-pulse" />
@@ -228,8 +240,7 @@ onMounted(carregar);
               v-model:permissions="permissions"
               :inicial="inicial"
               :giver="giver"
-              :quem="quem"
-              :quem-sujeito="quemSujeito"
+              :nome="nomeNaFrase"
               @pronto="etapa = 'ajustes'"
             />
             <ConfiraFuncao
@@ -252,7 +263,6 @@ onMounted(carregar);
               :nome="salva?.name || nome"
               :pode-escolher-pessoas="podeEscolherPessoas"
               @escolher-pessoas="gaveta = salva"
-              @voltar="voltarParaLista"
             />
           </div>
           <ComoVaiFicar
@@ -277,6 +287,16 @@ onMounted(carregar);
       :acao="$t('FUNCOES_EQUIPE.GUARDA.SAIR')"
       @seguro="sair(false)"
       @acao="sair(true)"
+    />
+    <DialogoDaCasa
+      ref="trocar"
+      tipo="destrutivo"
+      icone="i-lucide-undo-2"
+      :titulo="$t('FUNCOES_EQUIPE.GUIADA.TROCAR.TITULO')"
+      :texto="$t('FUNCOES_EQUIPE.GUIADA.TROCAR.TEXTO')"
+      :seguro="$t('FUNCOES_EQUIPE.GUIADA.TROCAR.CONTINUAR')"
+      :acao="$t('FUNCOES_EQUIPE.GUIADA.TROCAR.TROCAR')"
+      @acao="etapa = 'escolha'"
     />
     <PerdaDeAcesso
       ref="perda"

@@ -7,14 +7,18 @@ import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
 import Button from 'dashboard/components-next/button/Button.vue';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
+import DialogoDaCasa from '../guiada/DialogoDaCasa.vue';
 import { useTextos } from '../guiada/useTextos';
+import { explicar401 } from '../salvarFuncao';
 import { useSemFuncao } from '../useSemFuncao';
 import PessoaDaFuncao from './PessoaDaFuncao.vue';
 
 // Quem usa uma função, ou quem está sem função (#2308, especificação 5.D). Com `funcao`: "Quem vai ser …?", com quem
-// já é e as outras pessoas; sem ela: "Quem está sem função", uma escolha por pessoa. Nada grava até "Salvar"; Esc e
-// "Cancelar" descartam. Grava como o diálogo de hoje (AssignAgentsDialog): agents/update com custom_role_id, null
-// para sem função. Sem Pessoas, ou numa função fora do alcance, a gaveta só mostra quem é.
+// já é e as outras pessoas; sem ela: "Quem está sem função", uma escolha por pessoa. Nada grava até "Salvar";
+// "Cancelar" descarta; Esc e o clique no fundo, com mudança pendente, perguntam antes. Grava como o diálogo de hoje
+// (AssignAgentsDialog): agents/update com custom_role_id, null para sem função. Se alguma falha, a gaveta fica
+// aberta só com o que não gravou, diz de quem e por quê (o 401 passa pelo explicar401) e recarrega as pessoas. Sem
+// Pessoas, ou numa função fora do alcance, a gaveta só mostra quem é.
 const props = defineProps({
   funcao: { type: Object, default: null },
 });
@@ -32,6 +36,8 @@ const funcoes = useMapGetter('customRole/getCustomRoles');
 
 const mudancas = ref(new Map());
 const salvando = ref(false);
+const erro = ref('');
+const sairSemSalvar = ref(null);
 
 const somenteLeitura = computed(
   () =>
@@ -88,8 +94,10 @@ const linha = pessoa => ({
   alvo: props.funcao,
 });
 
+const nomeDe = id => agentes.value.find(item => item.id === id)?.name;
+
 const fraseDoRodape = ([id, destino]) => {
-  const pessoa = agentes.value.find(item => item.id === id)?.name;
+  const pessoa = nomeDe(id);
   if (destino !== null)
     return t('FUNCOES_EQUIPE.GAVETA.RODAPE.PASSA_A_SER', {
       pessoa,
@@ -112,30 +120,66 @@ const titulo = computed(() =>
     : t('FUNCOES_EQUIPE.GAVETA.TITULO_SEM_FUNCAO')
 );
 
+const podeFechar = () => {
+  if (!mudancas.value.size) return true;
+  sairSemSalvar.value?.abrir();
+  return false;
+};
+
+// O motivo da falha: o 401 diz se foi alcance, flag ou a própria função (sessão vencida vai para o login, sem
+// mensagem); o resto é rede.
+const motivoDa = async falhas => {
+  const recusa = falhas.find(({ razao }) => razao?.status === 401);
+  if (!recusa) return t('FUNCOES_EQUIPE.GAVETA.TENTE');
+  const { erro: chave } = await explicar401(recusa.razao.code);
+  return chave === null ? null : t(`FUNCOES_EQUIPE.SALVAR.${chave}`);
+};
+
 const salvar = async () => {
   salvando.value = true;
+  erro.value = '';
+  const pedidos = [...mudancas.value];
   const resultados = await Promise.allSettled(
-    [...mudancas.value].map(([id, destino]) =>
+    pedidos.map(([id, destino]) =>
       store.dispatch('agents/update', {
         id,
-        name: agentes.value.find(item => item.id === id)?.name,
+        name: nomeDe(id),
         custom_role_id: destino,
       })
     )
   );
-  salvando.value = false;
-  const falhas = resultados.filter(item => item.status === 'rejected').length;
-  useAlert(
-    falhas
-      ? t('FUNCOES_EQUIPE.GAVETA.ERRO_PARCIAL', { n: falhas }, falhas)
-      : t('FUNCOES_EQUIPE.GAVETA.SALVO')
+  const falhas = pedidos
+    .map((pedido, indice) => ({ pedido, razao: resultados[indice].reason }))
+    .filter((_, indice) => resultados[indice].status === 'rejected');
+  if (!falhas.length) {
+    salvando.value = false;
+    useAlert(t('FUNCOES_EQUIPE.GAVETA.SALVO'));
+    emit('fechar');
+    return;
+  }
+  const nomes = falhas.map(({ pedido: [id] }) => nomeDe(id));
+  const motivo = await motivoDa(falhas);
+  if (motivo === null) {
+    salvando.value = false;
+    return;
+  }
+  mudancas.value = new Map(falhas.map(({ pedido }) => pedido));
+  erro.value = t(
+    'FUNCOES_EQUIPE.GAVETA.ERRO_PARCIAL',
+    { nomes: lista(nomes), motivo },
+    nomes.length
   );
-  emit('fechar');
+  await store.dispatch('agents/get');
+  salvando.value = false;
 };
 </script>
 
 <template>
-  <AgenteGaveta :titulo="titulo" @fechar="emit('fechar')">
+  <AgenteGaveta
+    :titulo="titulo"
+    :pode-fechar="podeFechar"
+    @fechar="emit('fechar')"
+  >
     <template v-if="!funcao">
       <p class="m-0 text-[0.9375rem] text-n-slate-11">
         {{ $t('FUNCOES_EQUIPE.FAIXA.TEXTO', semFuncao.length) }}
@@ -220,6 +264,14 @@ const salvar = async () => {
       >
         {{ frase }}
       </p>
+      <p
+        v-if="erro"
+        data-erro-gaveta
+        role="alert"
+        class="m-0 text-sm font-medium text-n-ruby-11"
+      >
+        {{ erro }}
+      </p>
       <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button
           data-cancelar
@@ -240,4 +292,14 @@ const salvar = async () => {
       </div>
     </template>
   </AgenteGaveta>
+  <DialogoDaCasa
+    ref="sairSemSalvar"
+    tipo="destrutivo"
+    icone="i-lucide-door-open"
+    :titulo="$t('FUNCOES_EQUIPE.GUARDA.TITULO')"
+    :texto="$t('FUNCOES_EQUIPE.GUARDA.TEXTO')"
+    :seguro="$t('FUNCOES_EQUIPE.GAVETA.CONTINUAR')"
+    :acao="$t('FUNCOES_EQUIPE.GUARDA.SAIR')"
+    @acao="emit('fechar')"
+  />
 </template>

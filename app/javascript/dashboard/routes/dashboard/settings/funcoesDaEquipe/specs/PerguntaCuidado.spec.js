@@ -2,20 +2,15 @@ import { mount } from '@vue/test-utils';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import PerguntaCuidado from '../guiada/PerguntaCuidado.vue';
 import { global } from './montar';
-import { CARLA, CARLA_SEM_DISPARO } from './quemMonta';
+import { escolherNivelDeVendas } from '../nivelDeVendas';
+import { ADMIN, CARLA, CARLA_SEM_DISPARO } from './quemMonta';
 
 // #2308, especificação 5.B3 e 7.7: o Cuidado da Carla para o Atendente.
 const ATENDENTE = PRESETS.AGENT();
 
 const montar = (giver = CARLA, permissions = ATENDENTE) =>
   mount(PerguntaCuidado, {
-    props: {
-      permissions,
-      inicial: ATENDENTE,
-      giver,
-      quem: 'o Atendente',
-      quemSujeito: 'O Atendente',
-    },
+    props: { permissions, inicial: ATENDENTE, giver, nome: 'Atendente' },
     global: global(),
   });
 
@@ -26,7 +21,7 @@ describe('PerguntaCuidado', () => {
     const wrapper = montar();
 
     expect(wrapper.find('h1').text()).toBe(
-      'O Atendente pode fazer alguma destas coisas?'
+      'Quem for Atendente pode fazer alguma destas coisas?'
     );
     expect(
       wrapper.findAll('[data-cuidado]').map(l => l.attributes('data-cuidado'))
@@ -41,7 +36,7 @@ describe('PerguntaCuidado', () => {
       wrapper.findAll('[role="switch"]').map(s => s.attributes('aria-checked'))
     ).toEqual(['false', 'false', 'false', 'false', 'false']);
     expect(wrapper.find('[data-cuidado="campaign_send"]').text()).toContain(
-      'Ao ligar, o Atendente também passa a criar campanhas.'
+      'Ao ligar, quem for Atendente também passa a criar campanhas.'
     );
     const cadeado = wrapper.find('[data-recolhida]');
     expect(cadeado.text()).toContain('Mais 2 coisas que você não pode dar');
@@ -67,14 +62,11 @@ describe('PerguntaCuidado', () => {
 
     await wrapper.find('[data-acao]').trigger('click');
     const depois = ultimo(wrapper);
-    expect(depois.filter(chave => !ATENDENTE.includes(chave))).toEqual([
-      'campaign_manage',
-      'campaign_send',
-    ]);
+    expect(depois).toEqual([...ATENDENTE, 'campaign_manage', 'campaign_send']);
 
     await wrapper.setProps({ permissions: depois });
     expect(wrapper.find('[data-faixa-junto]').text()).toContain(
-      'Agora o Atendente cria, muda e dispara as campanhas.'
+      'Agora quem for Atendente cria, muda e dispara as campanhas.'
     );
     const linha = wrapper.find('[data-cuidado="campaign_send"]');
     expect(linha.find('[role="switch"]').attributes('aria-checked')).toBe(
@@ -84,6 +76,54 @@ describe('PerguntaCuidado', () => {
 
     await wrapper.find('[data-desfazer]').trigger('click');
     expect(ultimo(wrapper)).toEqual(ATENDENTE);
+  });
+
+  it('"Desfazer" tira só o que o "Ligar as duas" pôs: o que a pessoa ligou depois fica', async () => {
+    const wrapper = montar();
+    await wrapper
+      .find('[data-cuidado="campaign_send"] [role="switch"]')
+      .trigger('click');
+    await wrapper.find('[data-acao]').trigger('click');
+    await wrapper.setProps({
+      permissions: [...ultimo(wrapper), 'contact_export'],
+    });
+
+    await wrapper.find('[data-desfazer]').trigger('click');
+    expect(ultimo(wrapper)).toEqual([...ATENDENTE, 'contact_export']);
+  });
+
+  it('a faixa "Agora…" some quando a pessoa desliga o que ela anunciou', async () => {
+    const wrapper = montar();
+    await wrapper
+      .find('[data-cuidado="campaign_send"] [role="switch"]')
+      .trigger('click');
+    await wrapper.find('[data-acao]').trigger('click');
+    const depois = ultimo(wrapper);
+    await wrapper.setProps({ permissions: depois });
+    expect(wrapper.find('[data-faixa-junto]').exists()).toBe(true);
+
+    await wrapper.setProps({
+      permissions: depois.filter(chave => chave !== 'campaign_send'),
+    });
+    expect(wrapper.find('[data-faixa-junto]').exists()).toBe(false);
+    expect(wrapper.find('[role="status"]').exists()).toBe(true);
+  });
+
+  it('com "Cuida de tudo", a IA das vendas fica ligada e travada, e as metas sem R$ não aparecem', async () => {
+    const tudo = escolherNivelDeVendas('tudo', ATENDENTE);
+    const wrapper = montar(ADMIN, tudo);
+    const ia = wrapper.find('[data-cuidado="crm_manage_ai"]');
+    const interruptor = ia.find('[role="switch"]');
+    expect(interruptor.attributes('aria-checked')).toBe('true');
+    expect(interruptor.attributes('aria-disabled')).toBe('true');
+    expect(ia.text()).toContain('Vem com "Cuida de tudo nas vendas".');
+    await interruptor.trigger('click');
+    expect(wrapper.emitted('update:permissions')).toBeUndefined();
+
+    expect(wrapper.find('[data-cuidado="crm_metas_manage"]').exists()).toBe(
+      false
+    );
+    expect(wrapper.text()).not.toContain('metas');
   });
 
   it('"Agora não" deixa tudo igual', async () => {

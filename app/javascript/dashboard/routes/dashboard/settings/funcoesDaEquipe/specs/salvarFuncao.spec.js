@@ -1,3 +1,4 @@
+import { actions } from 'dashboard/store/modules/customRole';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import { salvarFuncao } from '../salvarFuncao';
 import { ADMIN, CARLA } from './quemMonta';
@@ -8,7 +9,10 @@ const { validityCheck, clearCookiesOnLogout } = vi.hoisted(() => ({
   clearCookiesOnLogout: vi.fn(),
 }));
 vi.mock('dashboard/api/auth', () => ({ default: { validityCheck } }));
-vi.mock('dashboard/store/utils/api', () => ({ clearCookiesOnLogout }));
+vi.mock('dashboard/store/utils/api', async importOriginal => ({
+  ...(await importOriginal()),
+  clearCookiesOnLogout,
+}));
 
 const recusa = (status, data = {}) =>
   Object.assign(new Error('recusa'), {
@@ -99,6 +103,26 @@ describe('salvarFuncao', () => {
       }
     );
     expect(clearCookiesOnLogout).not.toHaveBeenCalled();
+  });
+
+  // O contrato de ponta a ponta: o erro que a store de verdade lança (status e código da resposta) chega aqui.
+  it('401 que a store de verdade lança vira a frase certa', async () => {
+    validityCheck.mockResolvedValue({ status: 200 });
+    window.axios = {
+      patch: vi.fn().mockRejectedValue({
+        response: { status: 401, data: { error: 'own_role' } },
+      }),
+    };
+    const store = {
+      dispatch: (_acao, dadosDoPedido) =>
+        actions.updateCustomRole({ commit: vi.fn() }, dadosDoPedido),
+    };
+
+    expect(
+      await salvarFuncao({ store, giver: ADMIN, id: 4, dados: dados() })
+    ).toEqual({ erro: 'PROPRIA_FUNCAO' });
+    expect(window.axios.patch).toHaveBeenCalledTimes(1);
+    delete window.axios;
   });
 
   it('401 e a conferência da sessão sem rede: erro de rede, sessão intacta', async () => {
