@@ -48,6 +48,8 @@ class Crm::MetaAds::Organico::Lugar
     return { previous: nil } unless compara?
 
     anterior = janela(periodo.anterior).slice(*COMPARADOS)
+    # Sem as vezes do anterior (a Meta não mandou), não se sabe se ele estava parado: sem comparação.
+    return { previous: nil } if anterior[:views].nil?
     return { previous: nil, first_period: true } if anterior[:views] <= VIEWS_SEM_ATIVIDADE
 
     { previous: anterior }
@@ -74,13 +76,20 @@ class Crm::MetaAds::Organico::Lugar
     resultados.find { |resultado| resultado['dimension_values'] == [dimensao] }&.dig('value')
   end
 
-  # Métrica com um valor por dia (Página): soma do período. `where` filtra o lado do recorte.
+  # Métrica com um valor por dia (Página): soma do período. `where` filtra o lado do recorte. Métrica, lado ou valor que
+  # não veio é "sem número" (nil), nunca 0: a Meta manda os dois lados de is_from_ads todo dia, até com 0 (chamada real
+  # de 27/10), então lado ausente é falta de dado. Dia sem valor fica fora da soma.
   def soma(data, name, **where)
-    valores(data, name).sum { |valor| where.all? { |chave, esperado| valor[chave.to_s] == esperado } ? valor['value'].to_i : 0 }
+    numeros = valores(data, name).filter_map do |valor|
+      valor['value'] if valor['value'].is_a?(Numeric) && where.all? { |chave, esperado| valor[chave.to_s] == esperado }
+    end
+    numeros.sum if numeros.any?
   end
 
+  # O primeiro valor da métrica; valor que não é número ("", "N/A") é "sem número" (nil), nunca 0.
   def primeiro(data, name)
-    valores(data, name).first&.dig('value').to_i
+    valor = valores(data, name).first&.dig('value')
+    valor.is_a?(Numeric) ? valor.to_i : nil
   end
 
   def valores(data, name)

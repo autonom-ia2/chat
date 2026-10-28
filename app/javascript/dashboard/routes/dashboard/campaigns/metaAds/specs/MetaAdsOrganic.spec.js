@@ -88,6 +88,39 @@ describe('Anúncios · Seus posts (#2199)', () => {
     ).toBe(true);
   });
 
+  it('a number Meta did not send shows "—", never 0', async () => {
+    answer(
+      ready({
+        name: 'Studio Acme',
+        views: null,
+        reach: null,
+        views_from_ads: null,
+      }),
+      { status: 'not_connected' }
+    );
+
+    const wrapper = await mountScreen();
+
+    expect(wrapper.find('[data-organic-hero]').text()).toContain(
+      'META_ADS_ORGANIC.HEADLINE.UNAVAILABLE'
+    );
+    expect(wrapper.find('[data-organic-tile="views"]').text()).toContain('—');
+    expect(wrapper.find('[data-organic-quiet]').exists()).toBe(false);
+  });
+
+  it('a place without the number does not turn the other 0 into "nobody saw"', async () => {
+    answer(
+      ready({ name: 'Studio Acme', views: null }),
+      ready({ username: 'studioacme', views: 0 })
+    );
+
+    const wrapper = await mountScreen();
+
+    const hero = wrapper.find('[data-organic-hero]').text();
+    expect(hero).not.toContain('META_ADS_ORGANIC.HEADLINE.ZERO');
+    expect(hero).toContain('META_ADS_ORGANIC.HEADLINE.INSTAGRAM');
+  });
+
   it('shows the retry when Meta is down', async () => {
     CrmMetaAdsConnectionAPI.organico.mockRejectedValue(new Error('503'));
 
