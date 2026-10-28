@@ -982,12 +982,22 @@
   enabled: false
   column: feature_flags_ext_2
 
+# Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
+# pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
+# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Migration 20261108600000
+# (conversation_audience_*). Fim da feature_flags_ext_2, depois de seus_posts (#2304): posição 11 (valor 1024,
+# 1 << 10), a confirmar pela Orquestração antes da fila.
+- name: campanhas_publico_por_conversa
+  display_name: Campanhas › Novo público pedindo em palavras
+  enabled: false
+  column: feature_flags_ext_2
+
 # Lista nova do CRM "o que fazer agora" (#2283, frontend; o servidor entrou no #2292). Ligada: a visão Lista do CRM vira
 # os grupos Esperando resposta, Retornos de hoje e atrasados, Ninguém cuidando, Parados há 7 dias ou mais e Os demais,
 # contados pelo servidor (sort=acao e summaries?group_by=acao), com a ação de cada linha. Desligada: a Lista de sempre,
-# intacta. Só frontend, sem migration. Fim da feature_flags_ext_2: na main de 28/10 a ordem do yml dá a posição 11
-# (valor 1024, 1 << 10); a Orquestração pediu a 12 como provisória. A posição real é a ordem na main na hora da fila, e
-# a Orquestração confirma antes de enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
+# intacta. Só frontend, sem migration. Fim da feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2277):
+# posição 12 (valor 2048, 1 << 11). A posição real é a ordem na main na hora da fila, e a Orquestração confirma antes de
+# enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: crm_lista_acao
   display_name: CRM › Lista nova "o que fazer agora"
   enabled: false

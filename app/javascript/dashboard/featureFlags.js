@@ -89,6 +89,7 @@ export const FEATURE_FLAGS = {
   CRM_ARQUIVADOS: 'crm_arquivados',
   CRM_LISTA_ACAO: 'crm_lista_acao',
   AGENTES_PAINEL_DESEMPENHO: 'agentes_painel_desempenho',
+  CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

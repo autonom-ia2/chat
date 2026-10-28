@@ -37,6 +37,7 @@
       "PARTICIPATING_CONVERSATION_NEW_MESSAGE": "Nova Mensagem",
       "ASSIGNED_CONVERSATION_NEW_MESSAGE": "Nova Mensagem",
       "GUIDE_ALERT": "Aviso do Guia",
+      "CONVERSATION_AUDIENCE_READY": "Público pelas conversas",
       "SNOOZED_UNTIL": "Adiado para {time}",
       "SNOOZED_ENDS": "Adiamento encerrado"
     },

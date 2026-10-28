@@ -47,7 +47,9 @@ class Notification < ApplicationRecord
     crm_followup_reminder: 9,
     conversation_handoff_request: 10,
     # #935 — aviso urgente do Guia da Plataforma (o ator é o `Autonomia::Guide::Aviso`).
-    guide_alert: 11
+    guide_alert: 11,
+    # #2277 — a search by conversation ended (the actor is the `ConversationAudienceSearch`). In-app only.
+    conversation_audience_ready: 12
   }.freeze
 
   enum notification_type: NOTIFICATION_TYPES
@@ -105,6 +107,7 @@ class Notification < ApplicationRecord
     }
 
     return I18n.t('notifications.notification_title.guide_alert') if guide_alert?
+    return I18n.t('notifications.notification_title.conversation_audience_ready') if conversation_audience_ready?
 
     i18n_key = notification_title_map[notification_type]
     return '' unless i18n_key
@@ -130,6 +133,8 @@ class Notification < ApplicationRecord
       message_body((conversation.messages.incoming.last || conversation.messages.outgoing.last))
     when 'guide_alert'
       primary_actor.texto.to_s.truncate(200)
+    when 'conversation_audience_ready'
+      conversation_audience_body
     else
       ''
     end
@@ -140,6 +145,12 @@ class Notification < ApplicationRecord
   end
 
   private
+
+  # #2277: the audience's suggested name and how the search ended.
+  def conversation_audience_body
+    status = I18n.t("notifications.conversation_audience.#{primary_actor.status}", default: '')
+    [primary_actor.plan['name'].presence, status.presence].compact.join(': ')
+  end
 
   def message_body(actor)
     sender_name = sender_name(actor)
@@ -163,6 +174,9 @@ class Notification < ApplicationRecord
   end
 
   def process_notification_delivery
+    # #2277: the search-by-conversation bell is in-app only; push and e-mail are made for conversations.
+    return Notification::RemoveDuplicateNotificationJob.perform_later(self) if conversation_audience_ready?
+
     Notification::PushNotificationJob.perform_later(self) if user_subscribed_to_notification?('push')
 
     # Should we do something about the case where user subscribed to both push and email ?

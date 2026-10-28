@@ -110,7 +110,8 @@
       "DEIXAR": "Deixar de acompanhar",
       "ACOMPANHANDO": "Pronto. Você recebe aviso de cada mensagem nova.",
       "DEIXOU": "Você deixou de acompanhar esta conversa.",
-      "ERRO": "Não deu para mudar agora. Tente de novo."
+      "ERRO": "Não deu para mudar agora. Tente de novo.",
+      "ETIQUETAS": "Etiquetas desta conversa"
     },
     "CARREGANDO": "Carregando",
     "INFORMACOES": {
@@ -164,6 +165,17 @@
       "ARQUIVADOS": "1 card arquivado. | {count} cards arquivados.",
       "NAO_ARQUIVADOS": "1 card ficou aberto: você não pode arquivá-lo. | {count} cards ficaram abertos: você não pode arquivá-los.",
       "ERRO": "Não deu para mudar agora. Tente de novo."
+    },
+    "ETIQUETAS": {
+      "TITULO": "Etiquetas desta conversa",
+      "MUDAR": "Mudar as etiquetas desta conversa: {etiquetas}",
+      "CRIAR": "Criar etiqueta",
+      "DIALOGO_TITULO": "Etiquetas desta conversa",
+      "DIALOGO_FRASE": "Toque numa etiqueta para pôr ou tirar.",
+      "PRONTO": "Pronto",
+      "ERRO": "Não deu para mudar a etiqueta. Tente de novo.",
+      "ERRO_AO_CARREGAR": "Não deu para carregar as etiquetas desta conversa.",
+      "TENTAR_DE_NOVO": "Tentar de novo"
     }
   },
   "APAGAR_CONTATO": {
