@@ -62,6 +62,22 @@ RSpec.describe ConversationAudience::Save do
     expect(CampaignJourney::AudienceColumns.row_values(audience, mobile.id)).to include('time_do_coracao' => 'Cruzeiro', 'cidade' => 'Belo Horizonte')
   end
 
+  it 'leaves the contact data out when the person saving does not read contacts' do
+    agent = create(:user, account: account, role: :agent)
+    role = create(:custom_role, account: account, permissions: %w[campaign_manage conversation_view])
+    agent.account_users.find_by(account: account).update!(custom_role: role)
+    create(:inbox_member, user: agent, inbox: inbox)
+    search.update!(user: agent)
+    create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'time',
+                                         attribute_display_name: 'Time', attribute_display_type: 'text')
+    mobile.update!(custom_attributes: { 'time' => 'Cruzeiro' }, additional_attributes: { 'city' => 'BH', 'company_name' => 'João X' })
+
+    audience = described_class.new(search, user: agent, name: 'Sem dados', person_ids: [found(mobile).id]).perform
+
+    expect(audience.extra_columns).to eq([])
+    expect(audience.campaign_import_rows.first).to have_attributes(company_name: nil, extra_values: {}, contact_id: mobile.id)
+  end
+
   it 'never makes two audiences from the same search' do
     person = found(mobile)
     described_class.new(search, user: user, name: 'Uma', person_ids: [person.id]).perform

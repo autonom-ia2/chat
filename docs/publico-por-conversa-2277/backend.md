@@ -55,6 +55,9 @@ própria conta lê as conversas do período e monta a lista. A pessoa revisa e s
   personalizados de contato da conta (`ConversationAudience::Columns`). A mensagem usa essas colunas como
   `publico.<coluna>`. Fica de fora só a coluna que ninguém do público preencheu. Atributos de data, moeda e link levam
   o tipo, para a mensagem formatar ("04/05/1990").
+- Esses dados (empresa e colunas) são leitura de contato. Só entram se quem salva tem `contact_view` (ou
+  `contact_manage`). Na tela do público salvo, quem não lê contatos não recebe os valores (`sample_contact`) nem a
+  empresa (`contacts`). O envio da campanha usa as colunas normalmente.
 
 ### 4. Sininho
 

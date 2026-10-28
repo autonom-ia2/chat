@@ -190,6 +190,27 @@ RSpec.describe 'Conversation audiences API (#2277)', :aggregate_failures, type: 
     expect(response).to have_http_status(:unprocessable_entity)
   end
 
+  it 'shows the contact data of a saved audience only to who reads contacts' do
+    create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'time',
+                                         attribute_display_name: 'Time', attribute_display_type: 'text')
+    contact = create(:contact, account: account, name: 'João', phone_number: '+5511987654321',
+                               custom_attributes: { 'time' => 'Cruzeiro' }, additional_attributes: { 'company_name' => 'João X' })
+    search = search_of(admin, status: 'done')
+    person = ConversationAudiencePerson.create!(search: search, contact: contact, group: 'certeza',
+                                                conversation: create(:conversation, account: account, contact: contact))
+    post "#{path}/#{search.id}/save", params: { name: 'Cruzeirenses', person_ids: [person.id] }, headers: headers, as: :json
+    audience_path = "/api/v1/accounts/#{account.id}/campaign_imports/#{response.parsed_body['id']}"
+
+    without = with_role(%w[campaign_manage])
+    get "#{audience_path}/sample_contact", headers: headers(without)
+    expect(response.parsed_body['payload']).to include('name' => 'João', 'company_name' => nil, 'extra_values' => {})
+    get "#{audience_path}/contacts", headers: headers(without)
+    expect(response.parsed_body['payload'].sole['company_name']).to be_nil
+
+    get "#{audience_path}/sample_contact", headers: headers(with_role(%w[campaign_manage contact_view]))
+    expect(response.parsed_body['payload']).to include('company_name' => 'João X', 'extra_values' => { 'Time' => 'Cruzeiro' })
+  end
+
   it 'shows the people found without who cannot receive, and saves the audience' do
     search = search_of(admin, status: 'done')
     inbox = create(:inbox, account: account)

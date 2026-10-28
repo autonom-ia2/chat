@@ -170,17 +170,26 @@ class Api::V1::Accounts::CampaignImportAudiencesController < Api::V1::Accounts::
   end
 
   def contact_payload(contact)
+    company = contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name']
     { id: contact.id, name: contact.name, email: contact.email, phone_number: contact.phone_number,
-      company_name: contact.try(:company)&.name.presence || contact.additional_attributes.to_h['company_name'] }
+      company_name: (company unless contact_data_hidden?) }
+  end
+
+  def contact_data_hidden?
+    return @contact_data_hidden if defined?(@contact_data_hidden)
+
+    @contact_data_hidden = ConversationAudience::Access.hides_contact_data?(@campaign_import, Current.account_user)
   end
 
   def sample_payload(row)
     name = (row.contact&.name.presence || row.normalized_name.presence || row.raw_name).to_s.squish
-    {
+    payload = {
       name: name, first_name: name.split.first.to_s,
       company_name: row.contact.try(:company)&.name.presence || row.company_name,
       extra_values: row.extra_values.to_h
     }
+    # #2277: the columns of an audience built from the conversations are the contact's data.
+    contact_data_hidden? ? payload.merge(company_name: nil, extra_values: {}) : payload
   end
 
   # Free-form maps keyed by template variable; the services check every key and value.

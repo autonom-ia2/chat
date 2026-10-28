@@ -3,7 +3,8 @@
 # "Criar campanha" and the send (CampaignJourney::AudienceContacts) treat both the same. The contacts already exist:
 # nothing is imported and no contact is written; each row points to its contact with the hashes of its current
 # phone and e-mail, the consent proof the send checks again, plus the company and what else the contact has (city,
-# country, custom attributes) as columns the message can use (ConversationAudience::Columns).
+# country, custom attributes) as columns the message can use (ConversationAudience::Columns) — only when the person
+# saving reads contacts (contact_view); otherwise the audience carries name, phone and e-mail only.
 #
 # Only people of this search whose conversation the person can still open are saved, and never someone left aside
 # (ConversationAudience::Reach).
@@ -25,7 +26,7 @@ class ConversationAudience::Save
     people = contacts
     raise Error, 'no_people' if people.empty?
 
-    @columns = ConversationAudience::Columns.new(@account, people)
+    @columns = ConversationAudience::Columns.new(@account, reads_contacts? ? people : [])
     rows = people.map { |contact| row_for(contact) }
 
     ActiveRecord::Base.transaction do
@@ -62,8 +63,14 @@ class ConversationAudience::Save
       contact_id: contact.id, raw_name: contact.name, normalized_name: contact.name.to_s.squish,
       normalized_phone_hash: phone&.hash, raw_phone_masked: phone&.masked,
       normalized_email_hash: email && Digest::SHA256.hexdigest(email.email), email_masked: email&.masked,
-      company_name: company_name(contact), extra_values: @columns.values_for(contact)
+      company_name: (company_name(contact) if reads_contacts?), extra_values: @columns.values_for(contact)
     }
+  end
+
+  def reads_contacts?
+    return @reads_contacts if defined?(@reads_contacts)
+
+    @reads_contacts = ConversationAudience::Access.reads_contacts?(AccountUser.find_by(account: @account, user: @user))
   end
 
   # The same reading the message uses for empresa_cliente.nome (TemplateFields::ContactResolver).
@@ -76,7 +83,7 @@ class ConversationAudience::Save
     @account.campaign_imports.create!(
       user: @user, status: :completed, mode: 'single_label', name: @name, campaign_name: @name, batch_count: 1,
       options: { 'default_country' => 'BR', 'flow' => CampaignImport::AUDIENCE_FLOW, 'create_companies' => false,
-                 'source' => 'conversations', 'conversation_audience_search_id' => @search.id },
+                 'source' => ConversationAudience::Access::SOURCE, 'conversation_audience_search_id' => @search.id },
       total_rows: rows.size, valid_rows: rows.size, imported_contacts_count: rows.size, existing_contacts_count: rows.size,
       validation_summary: { 'errors' => {}, 'warnings' => [] }, channels: initial_channels(rows),
       extra_columns: @columns.headers, schema_resolution: { CampaignImports::ColumnTypes::RESOLUTION_KEY => @columns.types },
