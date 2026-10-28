@@ -129,7 +129,7 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
     end
 
     # Chamada real de 27/10: a Meta manda os dois lados de is_from_ads todo dia, até com 0. Lado ausente é falta de dado.
-    it 'lado de anúncio que não veio e métrica só com dias sem valor: sem número, nunca 0' do
+    it 'lado de anúncio que não veio, dia sem valor e métrica sem nenhum valor: sem número, nunca 0' do
       stub_pagina
       so_sem_anuncio = { 'name' => 'page_media_view', 'period' => 'day',
                          'values' => [{ 'value' => 6000, 'is_from_ads' => '0' }, { 'value' => nil, 'is_from_ads' => '0' }] }
@@ -138,6 +138,14 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
                [diario('page_post_engagements', [nil, nil]), diario('page_daily_follows_unique', [3, nil])])
 
       expect(tela(days: 30).perform[:page]).to include(status: 'ok', views: 6000, views_from_ads: nil, interactions: nil, new_followers: 3)
+    end
+
+    it 'lado sem anúncio que não veio: as vezes ficam sem número, nunca 0' do
+      stub_pagina
+      so_de_anuncio = { 'name' => 'page_media_view', 'period' => 'day', 'values' => [{ 'value' => 900, 'is_from_ads' => '1' }] }
+      stub_get("#{fb}/1001/insights", janela(30).merge(metric: 'page_media_view', breakdown: 'is_from_ads'), [so_de_anuncio])
+
+      expect(tela(days: 30).perform[:page]).to include(status: 'ok', views: nil, views_from_ads: 900)
     end
 
     it 'devolve os números da Página com o período anterior, a parte de anúncios e os 3 posts com mais curtidas' do
