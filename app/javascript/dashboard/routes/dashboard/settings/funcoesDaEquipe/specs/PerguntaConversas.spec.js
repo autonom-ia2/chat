@@ -72,4 +72,17 @@ describe('PerguntaConversas', () => {
     await radios()[proprias].trigger('click');
     expect(wrapper.props('permissions')).toEqual(entrada);
   });
+
+  // Só "Atende as próprias" tem o bloco de dentro; nas outras, nada de linha vazia dentro do cartão.
+  it('"Atende todas" não desenha o bloco de dentro', async () => {
+    const wrapper = montar(PROPRIAS);
+    const radios = () => wrapper.findAll('[role="radio"]');
+    const proprias = radios().findIndex(
+      r => r.attributes('aria-checked') === 'true'
+    );
+    expect(wrapper.findAll('[data-subescolha]').length).toBeGreaterThan(0);
+
+    await radios()[proprias + 1].trigger('click');
+    expect(wrapper.find('.border-t.border-n-blue-6').exists()).toBe(false);
+  });
 });

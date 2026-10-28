@@ -65,6 +65,7 @@ const opcoes = computed(() =>
       valor === nivel.value
         ? ''
         : textoDaTrava(travaDoNivel(props.giver, conversas, valor)),
+    dentro: valor === CONVERSATION_LEVELS.LIMITED,
   }))
 );
 

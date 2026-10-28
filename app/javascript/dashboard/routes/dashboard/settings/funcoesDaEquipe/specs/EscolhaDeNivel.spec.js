@@ -4,7 +4,7 @@ import EscolhaDeNivel from '../guiada/EscolhaDeNivel.vue';
 // #2308, especificação 14 › Acessibilidade: radiogroup com tabindex móvel; a travada não é escolhível.
 const OPCOES = [
   { valor: 'none', titulo: 'Não vê' },
-  { valor: 'view', titulo: 'Só olha' },
+  { valor: 'view', titulo: 'Só olha', dentro: true },
   {
     valor: 'manage',
     titulo: 'Pode mexer',

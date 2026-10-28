@@ -8,7 +8,8 @@ import { computed, nextTick, ref, useId } from 'vue';
 // travada fica tracejada, com cadeado e o motivo, e as setas a pulam. O slot "dentro" aparece na escolhida, mas fica
 // fora do grupo: o radiogroup é dono só dos botões (aria-owns), e os interruptores de dentro não contam como opção.
 const props = defineProps({
-  // { valor, titulo, dica?, trava?, confirma? } — trava é o texto do motivo.
+  // { valor, titulo, dica?, trava?, confirma?, dentro? } — trava é o texto do motivo; dentro diz que a opção tem o
+  // slot #dentro quando escolhida (sem ele, nada de linha vazia dentro do cartão).
   opcoes: { type: Array, required: true },
   rotulo: { type: String, required: true },
   compacto: { type: Boolean, default: false },
@@ -129,7 +130,7 @@ const mover = async (evento, opcao) => {
         </span>
       </button>
       <div
-        v-if="$slots.dentro && modelo === opcao.valor"
+        v-if="opcao.dentro && $slots.dentro && modelo === opcao.valor"
         class="pb-2 ms-[3.25rem] me-4 border-t border-n-blue-6"
       >
         <slot name="dentro" :valor="opcao.valor" />
