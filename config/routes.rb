@@ -238,6 +238,18 @@ Rails.application.routes.draw do
           end
           namespace :campaign_journey do
             resources :campaigns, only: [:create]
+            # #2277: novo público pedindo em palavras (a IA da conta lê as conversas).
+            resources :conversation_audiences, only: [:create, :show] do
+              get :status, on: :collection
+              member do
+                post :answer
+                post :start
+                post :stop
+                post :resume
+                get :conversation
+                post :save
+              end
+            end
             resources :drafts, only: %i[index show create update destroy] # #1898
             resources :contact_origins, only: [:show]
             resources :campaign_names, only: [:index]
@@ -839,6 +851,7 @@ Rails.application.routes.draw do
               resources :assignments, only: [:create]
               resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
+              patch 'labels/alterar', to: 'alterar_etiquetas#update', as: :alterar_etiquetas # fork chat#2202: pôr/tirar uma a uma
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]

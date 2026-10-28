@@ -132,6 +132,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['CampaignAudienceLink', :por_conta],
     ['CampaignPause', :por_conta],
     ['CampaignReplyCode', :por_conta],
+    # Público pelas conversas (#2277): pessoas e lotes saem na cascata da busca.
+    ['ConversationAudienceSearch', :por_conta],
     # E-mail.
     ['ConversaCanal::EmailLido', :por_conta],
     ['ConversaCanal::EmailLidoCaixa', :por_conta],

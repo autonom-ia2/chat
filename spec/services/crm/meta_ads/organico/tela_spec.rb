@@ -544,11 +544,13 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
                          instagram: { status: 'not_connected' })
   end
 
-  it 'Instagram pelo Messenger não conta como Página' do
+  it 'Página com Instagram ligado (instagram_id preenchido) conta como Página' do
     canal = create(:channel_instagram_fb_page, account: account, instagram_id: '178400')
-    create(:inbox, account: account, channel: canal)
+    inbox = create(:inbox, account: account, channel: canal)
+    pagina = instance_double(Crm::MetaAds::Organico::Pagina, perform: { status: 'needs_permission' })
+    allow(Crm::MetaAds::Organico::Pagina).to receive(:new).with(channel: canal, periodo: anything).and_return(pagina)
 
-    expect(tela(days: 7).perform[:page]).to eq(status: 'not_connected')
+    expect(tela(days: 7).perform[:page]).to eq(status: 'needs_permission', inbox_id: inbox.id)
   end
 
   it 'recusa período fora de 7, 30 e 90 dias' do
