@@ -5,12 +5,12 @@ import { useAlert } from 'dashboard/composables';
 import { useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import { LOCK_REASONS } from 'dashboard/helper/peopleAccess';
-import Button from 'dashboard/components-next/button/Button.vue';
 import AgenteGaveta from 'dashboard/routes/dashboard/autonomia/agentes/components/AgenteGaveta.vue';
 import DialogoDaCasa from '../guiada/DialogoDaCasa.vue';
 import { useTextos } from '../guiada/useTextos';
 import { useSemFuncao } from '../useSemFuncao';
 import PessoaDaFuncao from './PessoaDaFuncao.vue';
+import RodapeDaGaveta from './RodapeDaGaveta.vue';
 import { useSalvarGaveta } from './useSalvarGaveta';
 
 // Quem usa uma função, ou quem está sem função (#2308, especificação 5.D). Com `funcao`: "Quem vai ser …?", com quem
@@ -19,11 +19,9 @@ import { useSalvarGaveta } from './useSalvarGaveta';
 // (Cancelar, Esc, X e fundo ficam travados) e o botão diz "Salvando…". O salvar e a conferência moram
 // em useSalvarGaveta; se algo falha, a gaveta fica aberta só com o que não gravou e diz de quem e por quê. Sem
 // Pessoas, numa função fora do alcance ou na própria função, a gaveta só mostra quem é, com o motivo certo. Quem perde
-// Pessoas no meio do salvar vê o porquê no rodapé (rodada 4). Depois de um salvar com problema e nada mais pendente,
-// "Cancelar" vira "Fechar": não há o que descartar, e o que gravou já foi dito (rodada 7). A função vem como cópia de
-// quando abriu; título, trava e "Pôr como" leem a função de agora na lista, pelo id: apagada ou fora do alcance em
-// paralelo, a gaveta vira só leitura e o pendente sai (rodada 8). "Foi salva" fica numa linha neutra; cada problema,
-// num parágrafo vermelho. Mudar ou desfazer apaga o aviso antigo.
+// Pessoas no meio do salvar vê o porquê no rodapé (rodada 4). A função vem como cópia de quando abriu; título, trava
+// e "Pôr como" leem a função de agora na lista, pelo id: apagada ou fora do alcance em paralelo, a gaveta vira só
+// leitura e o pendente sai (rodada 8). Mudar ou desfazer apaga o aviso antigo. Rodapé e avisos: RodapeDaGaveta.
 const props = defineProps({
   funcao: { type: Object, default: null },
 });
@@ -68,11 +66,13 @@ const jaSao = computed(() => agentes.value.filter(daFuncao).sort(porNome));
 const outras = computed(() =>
   agentes.value.filter(pessoa => !daFuncao(pessoa)).sort(porNome)
 );
+const estaSemFuncao = pessoa =>
+  pessoa.role === 'agent' && !pessoa.custom_role_id;
 const semFuncao = computed(() =>
-  agentes.value
-    .filter(pessoa => pessoa.role === 'agent' && !pessoa.custom_role_id)
-    .sort(porNome)
+  agentes.value.filter(estaSemFuncao).sort(porNome)
 );
+// Quem a gaveta mostra: a de uma função mostra todo mundo; a de quem está sem função, só essas pessoas.
+const naLista = pessoa => Boolean(props.funcao) || estaSemFuncao(pessoa);
 
 const funcaoDe = id => funcoes.value.find(funcao => funcao.id === id) || null;
 // Administrador já pode tudo: uma função só esconderia telas dele.
@@ -85,12 +85,13 @@ const {
   aviso,
   salvar: gravar,
   limparAviso,
-} = useSalvarGaveta(mudancas, { travaDe, somenteLeitura });
+} = useSalvarGaveta(mudancas, { travaDe, naLista, somenteLeitura });
 const temAviso = computed(
   () => Boolean(aviso.value.salva) || aviso.value.problemas.length > 0
 );
 
-// Só leitura no meio (função apagada, fora do alcance, sem Pessoas): nada fica pendente.
+// Só leitura no meio (função apagada, fora do alcance, sem Pessoas; no salvar ou por uma recarga de fora): nada fica
+// pendente.
 watch(somenteLeitura, agora => {
   if (agora) mudancas.value = new Map();
 });
@@ -160,15 +161,12 @@ const fraseDoRodape = ([id, destino]) => {
 };
 const frases = computed(() => [...mudancas.value].map(fraseDoRodape));
 
-const titulo = computed(() =>
-  props.funcao
-    ? t('FUNCOES_EQUIPE.GAVETA.TITULO', { nome: nomeDaFuncao.value })
-    : t('FUNCOES_EQUIPE.GAVETA.TITULO_SEM_FUNCAO')
-);
-
-const rotuloDeSair = computed(() =>
-  temAviso.value && !mudancas.value.size ? 'FECHAR' : 'CANCELAR'
-);
+// Apagada, a função não tem mais quem "vai ser": o título fica só com o nome (rodada 9).
+const titulo = computed(() => {
+  if (!props.funcao) return t('FUNCOES_EQUIPE.GAVETA.TITULO_SEM_FUNCAO');
+  if (apagada.value) return nomeDaFuncao.value;
+  return t('FUNCOES_EQUIPE.GAVETA.TITULO', { nome: nomeDaFuncao.value });
+});
 
 const podeFechar = () => {
   if (salvando.value) return false;
@@ -218,13 +216,13 @@ const salvar = async () => {
         }}
       </p>
       <p
-        v-if="!jaSao.length"
+        v-if="!apagada && !jaSao.length"
         data-ninguem-ainda
         class="m-0 text-[0.9375rem] text-n-slate-11"
       >
         {{ $t('FUNCOES_EQUIPE.GAVETA.NINGUEM_AINDA') }}
       </p>
-      <section v-else class="flex flex-col gap-1">
+      <section v-else-if="!apagada" class="flex flex-col gap-1">
         <h3 class="m-0 text-sm font-semibold text-n-slate-11">
           {{
             $t('FUNCOES_EQUIPE.GAVETA.JA_SAO', {
@@ -275,60 +273,18 @@ const salvar = async () => {
       }}
     </p>
 
-    <template v-if="!somenteLeitura || temAviso" #rodape>
-      <p
-        v-for="frase in frases"
-        :key="frase"
-        data-frase-rodape
-        class="m-0 text-sm text-n-slate-12"
-      >
-        {{ frase }}
-      </p>
-      <p
-        v-if="aviso.salva"
-        data-salva-gaveta
-        role="status"
-        class="flex items-start gap-2 m-0 text-sm text-n-slate-12"
-      >
-        <span
-          class="i-lucide-check size-4 mt-0.5 shrink-0 text-n-teal-11"
-          aria-hidden="true"
-        />
-        {{ aviso.salva }}
-      </p>
-      <p
-        v-for="problema in aviso.problemas"
-        :key="problema"
-        data-erro-gaveta
-        role="alert"
-        class="m-0 text-sm font-medium text-n-ruby-11"
-      >
-        {{ problema }}
-      </p>
-      <div
-        v-if="!somenteLeitura"
-        class="flex flex-col gap-2 sm:flex-row sm:justify-end"
-      >
-        <Button
-          data-cancelar
-          :label="$t(`FUNCOES_EQUIPE.GAVETA.${rotuloDeSair}`)"
-          slate
-          faded
-          :disabled="salvando"
-          class="min-h-11 max-sm:w-full max-sm:!h-12"
-          @click="emit('fechar')"
-        />
-        <Button
-          data-salvar
-          :label="
-            $t(`FUNCOES_EQUIPE.GAVETA.${salvando ? 'SALVANDO' : 'SALVAR'}`)
-          "
-          :disabled="!mudancas.size || salvando"
-          :is-loading="salvando"
-          class="min-h-11 max-sm:w-full max-sm:!h-12"
-          @click="salvar"
-        />
-      </div>
+    <!-- O rodapé fica na tela enquanto salva: o status do "foi salva" não nasce de novo se a gaveta virar só leitura
+    no meio do salvar. A gaveta que já abre só leitura não tem rodapé (rodada 9). -->
+    <template v-if="!somenteLeitura || temAviso || salvando" #rodape>
+      <RodapeDaGaveta
+        :frases="frases"
+        :aviso="aviso"
+        :salvando="salvando"
+        :somente-leitura="somenteLeitura"
+        :pendentes="mudancas.size"
+        @fechar="emit('fechar')"
+        @salvar="salvar"
+      />
     </template>
   </AgenteGaveta>
   <DialogoDaCasa

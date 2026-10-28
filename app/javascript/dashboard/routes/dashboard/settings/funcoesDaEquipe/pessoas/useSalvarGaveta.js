@@ -9,25 +9,30 @@ import { explicar401ComQuemMonta } from '../salvarFuncao';
 // cada uma ficou na função pedida; o 200 sozinho não prova (sem custom_roles na conta, o servidor ignora a função).
 // Os nomes saem da lista no momento do pedido: quem some na recarga ainda tem nome na frase (rodada 7).
 //
-// Desfechos por pessoa (revisão do #2308, rodadas 7 e 8; GavetaDaFuncao.spec.js cobre cada linha e as misturas):
-// | desfecho                                        | frase                                     | pendente? |
-// | 200 e a recarga mostra a função pedida          | SALVA, só quando nem todos gravaram       | não       |
-// | 200 e a recarga mostra outra                    | NAO_MUDOU                                 | fica      |
-// | 401 com a sessão vencida                        | nenhuma: o app vai para o login           | fica tudo |
-// | 401 e a conferência da sessão cai (rede)        | ERRO_PARCIAL + TENTE                      | fica      |
-// | 401 e quem monta perdeu Pessoas                 | SEM_ACESSO + CONTINUA (só leitura)        | nada fica |
-// | a função da gaveta foi apagada (na recarga)     | CONTINUA (só leitura, SO_LEITURA_APAGADA) | nada fica |
-// | a função da gaveta saiu do alcance (na recarga) | CONTINUA (só leitura, SO_LEITURA_ABOVE)   | nada fica |
-// | 401 e a recarga mostra a pessoa travada         | TRAVADA.<trava>                           | não       |
-// | 401 com Pessoas, sem trava (ou com código)      | FORA_DO_ALCANCE (recarrega as funções)    | fica      |
-// | 401 e o destino escolhido saiu do alcance       | FORA_DO_ALCANCE (recarrega as funções)    | não       |
-// | destino já fora do alcance antes do pedido      | FORA_DO_ALCANCE, sem mandar o pedido      | não       |
-// | 4xx e a função escolhida sumiu                  | FUNCAO_SUMIU (recarrega as funções)       | não       |
-// | 4xx com pessoa e função ainda lá                | NAO_MUDOU (recarrega as funções)          | fica      |
-// | 429 (muitos pedidos seguidos)                   | ERRO_PARCIAL + ESPERE                     | fica      |
-// | rede (sem status, ou 5xx)                       | ERRO_PARCIAL + TENTE                      | fica      |
-// | algo lança no meio do salvar                    | ERRO_PARCIAL + TENTE, para todos          | fica tudo |
-// | a pessoa some na recarga (qualquer acima)       | SAIU_DA_CONTA                             | não       |
+// Desfechos por pessoa (revisão do #2308, rodadas 7 a 9; GavetaDaFuncao.spec.js cobre cada linha e as misturas):
+// | desfecho                                           | frase                                     | pendente? |
+// | 200 e a recarga mostra a função pedida             | SALVA, só quando nem todos gravaram       | não       |
+// | 200 e a recarga mostra outra                       | NAO_MUDOU                                 | fica      |
+// | 401 com a sessão vencida                           | nenhuma: o app vai para o login           | fica tudo |
+// | 401 e a conferência da sessão cai (rede)           | ERRO_PARCIAL + TENTE                      | fica      |
+// | 401 e quem monta perdeu Pessoas                    | SEM_ACESSO + CONTINUA (só leitura)        | nada fica |
+// | a função da gaveta foi apagada (na recarga)        | CONTINUA (só leitura, SO_LEITURA_APAGADA) | nada fica |
+// | a função da gaveta saiu do alcance (na recarga)    | CONTINUA (só leitura, SO_LEITURA_ABOVE)   | nada fica |
+// | a recarga mostra a pessoa travada (qualquer acima) | TRAVADA.<trava>                           | não       |
+// | a pessoa já estava travada antes do pedido         | TRAVADA.<trava>, sem mandar o pedido      | não       |
+// | a pessoa saiu da lista visível (já tem função)     | SAIU_DA_LISTA                             | não       |
+// | 401 com Pessoas, sem trava (ou com código)         | FORA_DO_ALCANCE (recarrega as funções)    | fica      |
+// | 401 e o destino escolhido saiu do alcance          | FORA_DO_ALCANCE (recarrega as funções)    | não       |
+// | destino já fora do alcance antes do pedido         | FORA_DO_ALCANCE, sem mandar o pedido      | não       |
+// | 4xx e a função escolhida sumiu                     | FUNCAO_SUMIU (recarrega as funções)       | não       |
+// | 4xx com pessoa e função ainda lá                   | NAO_MUDOU (recarrega as funções)          | fica      |
+// | 429 (muitos pedidos seguidos)                      | ERRO_PARCIAL + ESPERE                     | fica      |
+// | rede (sem status, ou 5xx)                          | ERRO_PARCIAL + TENTE                      | fica      |
+// | erro inesperado (algo lança no meio do salvar)     | NAO_CONFIRMOU, uma frase só               | fica tudo |
+// | a pessoa some na recarga (qualquer acima)          | SAIU_DA_CONTA                             | não       |
+// Travada e fora da lista valem depois de qualquer resposta (até 200 sem gravar, 429 ou rede): mandar de novo
+// não mudaria nada, e a linha dela já não tem Desfazer (rodada 9). "Lista visível" é a da gaveta: a de quem está
+// sem função perde quem ganhou função em paralelo; a de uma função mostra todo mundo.
 // "Só leitura" é a gaveta inteira: sem Pessoas, ou a função dela, lida da lista pelo id, sumiu ou saiu do alcance
 // (`somenteLeitura`). Aí quem não gravou ouve CONTINUA e nada fica pendente (rodada 8). FUNCAO_SUMIU ("Escolha outra")
 // só sai para um destino escolhido na linha: o "Pôr como" da gaveta leva à função dela, e ela sumida é só leitura.
@@ -47,7 +52,10 @@ const tipoDaFalha = status => {
   return 'caido';
 };
 
-export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
+export function useSalvarGaveta(
+  mudancas,
+  { travaDe, naLista, somenteLeitura }
+) {
   const store = useStore();
   const { t, lista } = useTextos();
   const agentes = useMapGetter('agents/getAgents');
@@ -72,9 +80,15 @@ export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
       )
     );
 
+  // A trava da pessoa como a lista a mostra agora; quem não está mais na conta não tem trava (sai como SAIU_DA_CONTA).
+  const travaAgora = id => {
+    const agente = agenteDe(id);
+    return agente ? travaDe(agente) : '';
+  };
+
   // Cada pedido com o que o servidor respondeu: gravado, recusado (401), limitado (429), invalido (outro 4xx) ou
-  // caido (o resto). Os barrados nem foram: o destino já estava fora do alcance.
-  const separar = (pedidos, barrados, resultados) => {
+  // caido (o resto). Os barrados nem foram: o destino já estava fora do alcance; os travados antes, também não.
+  const separar = (pedidos, { barrados, travadosAntes }, resultados) => {
     const tipos = resultados.map(resultado =>
       resultado.status === 'fulfilled'
         ? 'gravado'
@@ -89,6 +103,7 @@ export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
       invalidos: de('invalido'),
       caidos: de('caido'),
       barrados,
+      travadosAntes,
       codigo: recusa?.reason?.code,
     };
   };
@@ -118,6 +133,7 @@ export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
 
   const GRUPOS_VAZIOS = {
     travados: [],
+    foraDaLista: [],
     funcaoSumiu: [],
     foraDoAlcance: [],
     caidos: [],
@@ -127,29 +143,42 @@ export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
     semAcesso: false,
   };
 
-  // Os recusados que a recarga mostra travados, com a trava junto ([pedido, trava]), para uma frase por trava.
-  const travadosEm = recusados =>
-    recusados
-      .map(pedido => [pedido, travaDe(agenteDe(pedido[0]))])
+  // Os pedidos que a recarga mostra travados, com a trava junto ([pedido, trava]), para uma frase por trava.
+  const travadosEm = grupo =>
+    grupo
+      .map(pedido => [pedido, travaAgora(pedido[0])])
       .filter(([, trava]) => trava);
 
-  // Depois da recarga: em que grupo cada pedido fica. Quem saiu da conta vem antes de qualquer outro motivo. Com a
-  // gaveta só leitura, quem não gravou só "continua como era".
+  // Depois da recarga: em que grupo cada pedido fica. Quem saiu da conta vem antes de qualquer outro motivo; depois,
+  // quem ficou travado e quem saiu da lista da gaveta, seja qual for a resposta. Com a gaveta só leitura, quem não
+  // gravou só "continua como era".
   const classificar = (pedidos, separados, { motivo, semAcesso }) => {
     const naConta = ([id]) => Boolean(agenteDe(id));
-    const ficam = grupo => grupo.filter(naConta);
     const sairam = pedidos.filter(pedido => !naConta(pedido));
-    const ficaram = ficam(separados.gravados);
-    const salvos = ficaram.filter(([id, destino]) => funcaoDe(id) === destino);
-    if (semAcesso || somenteLeitura.value) {
-      const continuam = ficam(pedidos).filter(p => !salvos.includes(p));
-      return { ...GRUPOS_VAZIOS, salvos, sairam, continuam, semAcesso };
-    }
-    const rede = motivo === 'REDE';
-    const recusadosAqui = ficam(separados.recusados);
-    const travados = rede ? [] : travadosEm(recusadosAqui);
+    const salvos = separados.gravados.filter(
+      ([id, destino]) => naConta([id]) && funcaoDe(id) === destino
+    );
+    const restantes = pedidos.filter(p => naConta(p) && !salvos.includes(p));
+    if (semAcesso || somenteLeitura.value)
+      return {
+        ...GRUPOS_VAZIOS,
+        salvos,
+        sairam,
+        continuam: restantes,
+        semAcesso,
+      };
+    const travados = travadosEm(restantes);
     const travou = pedido => travados.some(([travado]) => travado === pedido);
-    const invalidosAqui = ficam(separados.invalidos);
+    const foraDaLista = restantes.filter(
+      pedido => !travou(pedido) && !naLista(agenteDe(pedido[0]))
+    );
+    const livres = grupo =>
+      grupo.filter(
+        p => restantes.includes(p) && !travou(p) && !foraDaLista.includes(p)
+      );
+    const rede = motivo === 'REDE';
+    const recusadosAqui = livres(separados.recusados);
+    const invalidosAqui = livres(separados.invalidos);
     const funcaoSumiu = invalidosAqui.filter(
       ([, destino]) => destino !== null && !acharFuncao(destino)
     );
@@ -158,16 +187,18 @@ export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
       salvos,
       sairam,
       travados,
+      foraDaLista,
       funcaoSumiu,
       foraDoAlcance: [
-        ...(rede ? [] : recusadosAqui.filter(p => !travou(p))),
-        ...ficam(separados.barrados),
+        ...(rede ? [] : recusadosAqui),
+        ...livres(separados.barrados),
       ],
-      caidos: [...ficam(separados.caidos), ...(rede ? recusadosAqui : [])],
-      limitados: ficam(separados.limitados),
+      caidos: [...livres(separados.caidos), ...(rede ? recusadosAqui : [])],
+      limitados: livres(separados.limitados),
       semEfeito: [
-        ...ficaram.filter(pedido => !salvos.includes(pedido)),
+        ...livres(separados.gravados),
         ...invalidosAqui.filter(pedido => !funcaoSumiu.includes(pedido)),
+        ...livres(separados.travadosAntes),
       ],
     };
   };
@@ -206,6 +237,7 @@ export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
       grupos.semAcesso && t('FUNCOES_EQUIPE.GAVETA.SEM_ACESSO'),
       ...travas.map(trava => frase(`TRAVADA.${trava}`, naTrava(trava))),
       frase('SAIU_DA_CONTA', grupos.sairam),
+      frase('SAIU_DA_LISTA', grupos.foraDaLista),
       frase('FUNCAO_SUMIU', grupos.funcaoSumiu),
       frase('FORA_DO_ALCANCE', grupos.foraDoAlcance),
       frase('ERRO_PARCIAL', grupos.caidos, tente),
@@ -219,34 +251,43 @@ export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
     };
   };
 
-  // Os pedidos, os nomes de agora e o pedido de cada um, sem mandar o que o destino já não alcança.
+  // Os pedidos e os nomes de agora, sem mandar o que o servidor recusaria: a pessoa que uma recarga já travou e o
+  // destino que já não se alcança.
   const montarPedidos = () => {
     const pedidos = [...mudancas.value];
     const nomeNoPedido = new Map(
       pedidos.map(([id]) => [id, agenteDe(id)?.name ?? ''])
     );
+    const travadosAntes = pedidos.filter(([id]) => travaAgora(id));
     return {
       pedidos,
       nomeNoPedido,
-      barrados: pedidos.filter(p => !alcanca(p)),
+      travadosAntes,
+      barrados: pedidos.filter(p => !travadosAntes.includes(p) && !alcanca(p)),
     };
   };
 
   // Devolve true só quando tudo o que estava pendente gravou; false deixa a gaveta aberta (com a frase, ou indo para
-  // o login). Se algo lança no meio, tudo segue pendente com "tente de novo", e o erro sobe para o Vue registrar.
+  // o login). Se algo lança no meio, tudo segue pendente e a gaveta diz que não deu para confirmar o que gravou (o
+  // servidor pode ter gravado; quase sempre é defeito, não rede), e o erro sobe para o Vue registrar.
   const salvar = async () => {
     if (salvando.value) return false;
     salvando.value = true;
     aviso.value = SEM_AVISO;
-    const { pedidos, nomeNoPedido, barrados } = montarPedidos();
+    const { pedidos, nomeNoPedido, ...foraDoEnvio } = montarPedidos();
     try {
-      const enviados = pedidos.filter(p => !barrados.includes(p));
-      const separados = separar(enviados, barrados, await enviar(enviados));
+      const { barrados, travadosAntes } = foraDoEnvio;
+      const enviados = pedidos.filter(
+        p => !barrados.includes(p) && !travadosAntes.includes(p)
+      );
+      const separados = separar(enviados, foraDoEnvio, await enviar(enviados));
       const { recusados, invalidos, codigo } = separados;
       const sessao = await conferirSessao(recusados, codigo);
       if (sessao.vencida) return false;
       await recarregar(
-        recusados.length + invalidos.length + barrados.length > 0
+        [recusados, invalidos, barrados, travadosAntes].some(
+          grupo => grupo.length
+        )
       );
       const grupos = classificar(pedidos, separados, sessao);
       const todosSalvos = grupos.salvos.length === pedidos.length;
@@ -256,11 +297,7 @@ export function useSalvarGaveta(mudancas, { travaDe, somenteLeitura }) {
     } catch (falha) {
       aviso.value = {
         salva: '',
-        problemas: [
-          fraseDe('ERRO_PARCIAL', [...mudancas.value], nomeNoPedido, {
-            motivo: t('FUNCOES_EQUIPE.GAVETA.TENTE'),
-          }),
-        ],
+        problemas: [t('FUNCOES_EQUIPE.GAVETA.NAO_CONFIRMOU')],
       };
       throw falha;
     } finally {

@@ -27,6 +27,9 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
   # um literal ou uma constante cujo valor está na lista; e nenhum render/head responde 401 por fora do refuse.
   # Rodada 8: o status vale em símbolo, número ou texto, com `status:` ou `:status =>`; render_unauthorized é sempre um
   # 401 por fora; e um refuse com o status numa variável não dá para ler, então também é apontado.
+  # Rodada 9: a chamada vale também com receptor self e por send/__send__/public_send; um status que não é literal no
+  # render ou no head também é apontado (menos no próprio refuse, que repassa o status que recebeu); e o Denied vale
+  # escrito com :: na frente.
   let(:refusal_reader) do
     Class.new(Prism::Visitor) do
       attr_reader :refusals, :loose
@@ -36,6 +39,14 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
         @refusals = []
         @loose = []
         @denied_var = nil
+        @method_name = nil
+      end
+
+      def visit_def_node(node)
+        outer = @method_name
+        @method_name = node.name
+        super
+        @method_name = outer
       end
 
       # Dentro do rescue do Denied vale a variável que ele declara; um rescue de outra coisa com o mesmo nome a esconde.
@@ -43,7 +54,7 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
         visit_all(node.exceptions)
         outer = @denied_var
         name = node.reference&.name
-        denied = node.exceptions.any? { |exception| exception.slice == 'CustomRoles::GrantGuard::Denied' }
+        denied = node.exceptions.any? { |exception| exception.slice.delete_prefix('::') == 'CustomRoles::GrantGuard::Denied' }
         @denied_var = denied ? name : (outer unless name == outer)
         visit(node.statements)
         @denied_var = outer
@@ -51,10 +62,10 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
       end
 
       def visit_call_node(node)
-        args = node.receiver.nil? ? node.arguments&.arguments.to_a : []
-        if refusal_401?(node, args)
+        name, args = call_of(node)
+        if refusal_401?(name, args)
           @refusals << [node.slice, code_of(args.first)]
-        elsif loose_401?(node, args)
+        elsif loose_401?(name, args)
           @loose << node.slice
         end
         super
@@ -62,19 +73,59 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
 
       private
 
-      def loose_401?(node, args)
-        return true if node.name == :render_unauthorized
-        return unreadable_status?(args.last) if node.name == :refuse && args.size == 2
+      # O nome e os argumentos da chamada como o controller a faria: sem receptor ou com self, direto ou por send.
+      def call_of(node)
+        return [node.name, []] unless node.receiver.nil? || node.receiver.is_a?(Prism::SelfNode)
 
-        %i[render head].include?(node.name) && args.any? { |arg| unauthorized?(arg) }
+        args = node.arguments&.arguments.to_a
+        target = args.first
+        return [target.unescaped.to_sym, args.drop(1)] if %i[send __send__ public_send].include?(node.name) && literal_name?(target)
+
+        [node.name, args]
+      end
+
+      def literal_name?(node)
+        node.is_a?(Prism::SymbolNode) || node.is_a?(Prism::StringNode)
+      end
+
+      def loose_401?(name, args)
+        return true if name == :render_unauthorized
+        return unreadable_status?(args.last) if name == :refuse && args.size == 2
+
+        %i[render head].include?(name) && loose_render?(name, args)
+      end
+
+      def loose_render?(name, args)
+        args.any? { |arg| unauthorized?(arg) } || status_values(name, args).any? { |value| hidden_status?(value) }
+      end
+
+      # Onde o status vai: `status:` (ou `:status =>`) num hash e, no head, o primeiro argumento.
+      def status_values(name, args)
+        pairs = args.select { |arg| hash?(arg) }.flat_map(&:elements).select { |pair| status_pair?(pair) }
+        pairs.map(&:value) + (name == :head ? head_status(args) : [])
+      end
+
+      def head_status(args)
+        args.first.nil? || hash?(args.first) ? [] : [args.first]
+      end
+
+      def hash?(node)
+        node.is_a?(Prism::KeywordHashNode) || node.is_a?(Prism::HashNode)
+      end
+
+      # O próprio refuse repassa ao render o status que recebeu; quem chama o refuse é que é lido.
+      def hidden_status?(value)
+        return false if @method_name == :refuse && value.is_a?(Prism::LocalVariableReadNode)
+
+        unreadable_status?(value)
       end
 
       def unreadable_status?(node)
         [Prism::SymbolNode, Prism::IntegerNode, Prism::StringNode].none? { |kind| node.is_a?(kind) }
       end
 
-      def refusal_401?(node, args)
-        node.name == :refuse && args.size == 2 && unauthorized?(args.last)
+      def refusal_401?(name, args)
+        name == :refuse && args.size == 2 && unauthorized?(args.last)
       end
 
       def code_of(node)
@@ -182,7 +233,21 @@ RSpec.describe 'Custom role refusal codes (#2308)', :aggregate_failures, type: :
       ['x; rescue CustomRoles::GrantGuard::Denied => error; refuse(error.code, :unauthorized)', true],
     'a listed constant' => ['refuse(FEATURE_OFF, :unauthorized)', true],
     'a listed constant through self.class' => ['refuse(self.class::FEATURE_OFF, :unauthorized)', true],
-    'a listed literal' => ["refuse('feature_off', 401)", true]
+    'a listed literal' => ["refuse('feature_off', 401)", true],
+    # Rodada 9: receptor self, send, status calculado e o Denied escrito com :: na frente.
+    'refuse through self' => ["self.refuse('nope', :unauthorized)", false],
+    'render through self' => ['self.render json: {}, status: :unauthorized', false],
+    'refuse through send' => ["send(:refuse, 'nope', 401)", false],
+    'refuse through public_send' => ["public_send('refuse', 'nope', :unauthorized)", false],
+    'a listed literal through send' => ["send(:refuse, 'feature_off', 401)", true],
+    'render with the status in a variable' => ['s = :unauthorized; render json: {}, status: s', false],
+    'render with a computed status' => ['render json: {}, status: Rack::Utils.status_code(:unauthorized)', false],
+    'head with the status in a variable' => ['s = 401; head s', false],
+    'render with a status other than 401' => ['render json: {}, status: :conflict', true],
+    'the refuse method passing its own status along' =>
+      ["def refuse(code, status = :unprocessable_entity)\nrender json: { error: code }, status: status\nend", true],
+    'the Denied code with a leading ::' =>
+      ['x; rescue ::CustomRoles::GrantGuard::Denied => e; refuse(e.code, :unauthorized)', true]
   }.each do |label, (body, accepted)|
     it "#{accepted ? 'accepts' : 'flags'} #{label}" do
       result = refusal_problems("def sample\n#{body}\nend")

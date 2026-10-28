@@ -1,3 +1,4 @@
+import { reactive } from 'vue';
 import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
@@ -21,8 +22,12 @@ export const loja = ({
   flags = ['custom_roles'],
   actions = {},
   caixas = [],
-} = {}) =>
-  createStore({
+} = {}) => {
+  // Funções e pessoas reativas, como na store de verdade: uma recarga que muda a lista recalcula a tela (rodada 9).
+  // Quem quer mexer na lista depois de montar passa a própria lista reativa (reactive devolve o mesmo proxy).
+  const funcoesVivas = reactive(funcoes);
+  const agentesVivos = reactive(agentes);
+  return createStore({
     // Quem monta como a store guarda: SET_CURRENT_USER (o mesmo commit do auth) troca, pela ação setCurrentUser.
     state: () => ({
       currentUser: {
@@ -43,8 +48,8 @@ export const loja = ({
       'accounts/getAccount': () => () => ({ id: 1 }),
       'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
         flags.includes(flag),
-      'customRole/getCustomRoles': () => funcoes,
-      'agents/getAgents': () => agentes,
+      'customRole/getCustomRoles': () => funcoesVivas,
+      'agents/getAgents': () => agentesVivos,
       'inboxes/getInboxes': () => caixas,
     },
     actions: {
@@ -56,6 +61,7 @@ export const loja = ({
       ...actions,
     },
   });
+};
 
 export const global = (store = loja()) => ({
   plugins: [store, i18n()],

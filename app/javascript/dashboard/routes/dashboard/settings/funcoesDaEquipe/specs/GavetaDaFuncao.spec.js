@@ -42,6 +42,10 @@ const AGENTES = [
 
 const GERENTE = { id: 7, name: 'Gerente da loja', permissions: ['crm_view'] };
 
+// As pessoas como a store de verdade as guarda: reativas, para a gaveta ver uma recarga que muda alguém (rodada 9).
+const pessoas = (extras = []) =>
+  reactive([...AGENTES, ...extras].map(item => ({ ...item })));
+
 // O servidor de mentira: o update grava a função na lista que o agents/get "recarrega", como o de verdade.
 const gravarNa =
   agentes =>
@@ -53,7 +57,7 @@ const montar = ({
   funcao = VENDEDOR,
   giver = CARLA,
   flags = [],
-  agentes = AGENTES.map(item => ({ ...item })),
+  agentes = pessoas(),
   funcoes = [ATENDENTE, VENDEDOR, FINANCEIRO],
   atualizar = vi.fn(gravarNa(agentes)),
   recarregar = vi.fn(),
@@ -163,10 +167,9 @@ describe('GavetaDaFuncao', () => {
 
   // Rodada 4: a pessoa numa função acima do alcance (Financeiro) e a própria Carla não têm ação nenhuma.
   it('quem está numa função acima do alcance e a própria Carla ficam sem ação, com o motivo', () => {
-    const agentes = [
-      ...AGENTES.map(item => ({ ...item })),
+    const agentes = pessoas([
       { id: 26, name: 'Nina Alves', role: 'agent', custom_role_id: 3 },
-    ];
+    ]);
     const { wrapper } = montar({ agentes });
 
     expect(linha(wrapper, 26).find('[data-acao]').exists()).toBe(false);
@@ -311,6 +314,8 @@ describe('GavetaDaFuncao', () => {
     );
     expect(acoesDasPessoas(wrapper)).toHaveLength(0);
     expect(wrapper.find('[data-salvar]').exists()).toBe(false);
+    // Rodada 9 (M1): a gaveta que já abre só leitura não tem botão embaixo (só o X).
+    expect(wrapper.find('[data-fechar-gaveta]').exists()).toBe(false);
     expect(wrapper.find('[data-outras]').exists()).toBe(false);
     expect(nomes(wrapper.find('[data-ja-sao]'))).toHaveLength(2);
   });
@@ -434,7 +439,7 @@ describe('GavetaDaFuncao', () => {
   ])(
     '401 sem código e a recarga traz a pessoa %s: sai do pendente, com a frase da trava',
     async (_, mudar, frase) => {
-      const agentes = AGENTES.map(item => ({ ...item }));
+      const agentes = pessoas();
       const atualizar = vi.fn(() => Promise.reject(recusa(401, CORPO_DO_401)));
       const recarregar = vi.fn(() =>
         mudar(agentes.find(item => item.id === 23))
@@ -462,7 +467,7 @@ describe('GavetaDaFuncao', () => {
   // Rodada 6: uma pessoa gravou e outra ficou travada. Nem tudo o que estava pendente gravou: a gaveta fica aberta,
   // com a frase da trava, sem o "salvas".
   it('uma pessoa gravada e outra travada: fica aberta com a frase da trava, sem dizer "salvas"', async () => {
-    const agentes = AGENTES.map(item => ({ ...item }));
+    const agentes = pessoas();
     const gravar = gravarNa(agentes);
     const atualizar = vi.fn((contexto, dados) =>
       dados.id === 23
@@ -499,7 +504,7 @@ describe('GavetaDaFuncao', () => {
   });
 
   it('401 do agents/update com sessão boa e Pessoas ainda ali (corpo real, sem código): diz que está fora do alcance e recarrega pessoas e funções', async () => {
-    const agentes = AGENTES.map(item => ({ ...item }));
+    const agentes = pessoas();
     const gravar = gravarNa(agentes);
     const atualizar = vi.fn((contexto, dados) =>
       dados.id === 23
@@ -814,7 +819,7 @@ describe('GavetaDaFuncao: desfechos do salvar', () => {
     recargaDasFuncoes = () => {},
     quebra = false,
   } = {}) => {
-    const agentes = AGENTES.map(item => ({ ...item }));
+    const agentes = pessoas();
     const funcoes = reactive([ATENDENTE, VENDEDOR, FINANCEIRO]);
     const erroDoVue = vi.fn();
     const montado = montar({
@@ -828,7 +833,7 @@ describe('GavetaDaFuncao: desfechos do salvar', () => {
       funcoesDeNovo: vi.fn(() => recargaDasFuncoes(funcoes)),
       config: { errorHandler: erroDoVue },
     });
-    return { ...montado, funcoes, erroDoVue };
+    return { ...montado, funcoes, agentes, erroDoVue };
   };
 
   it.each([
@@ -1023,11 +1028,39 @@ describe('GavetaDaFuncao: desfechos do salvar', () => {
       pendentes: 2,
     },
     {
+      nome: '200 sem gravar e a recarga mostra a pessoa numa função acima do alcance: frase da trava, nada pendente (L1)',
+      respostas: { 21: 'gravou', 23: 'nada' },
+      recarga: mudarIris({ custom_role_id: 3 }),
+      frase: `${SALVA_GABRIEL} A função de Íris Lopes não mudou: só o administrador muda.`,
+      sair: 'Fechar',
+      pendentes: 0,
+    },
+    {
+      nome: 'a pessoa ficou travada antes do salvar (outra recarga): nem manda, frase da trava (L1)',
+      respostas: { 21: 'gravou' },
+      antes: (_, agentes) => mudarIris({ custom_role_id: 3 })(agentes),
+      frase: `${SALVA_GABRIEL} A função de Íris Lopes não mudou: só o administrador muda.`,
+      enviados: [21],
+      sair: 'Fechar',
+      pendentes: 0,
+      funcoes: true,
+    },
+    {
+      nome: 'gaveta sem função, 429, e a recarga mostra que a pessoa já tem função: saiu da lista, nada pendente (L1)',
+      funcao: null,
+      agir: wrapper => escolher(wrapper, 24, ATENDENTE.id),
+      respostas: { 24: 429 },
+      recarga: mudarPessoas({ custom_role_id: VENDEDOR.id }, [24]),
+      frase: 'Kauã Moreira já tem uma função e saiu desta lista.',
+      sair: 'Fechar',
+      pendentes: 0,
+    },
+    {
       nome: 'algo lança no meio do salvar: diz tente de novo, tudo pendente, e o erro chega ao Vue',
       respostas: { 21: 'gravou', 23: 'gravou' },
       quebra: true,
-      frase:
-        'A função destas pessoas não foi salva: Gabriel Souza e Íris Lopes. Confira a internet e tente de novo.',
+      // Rodada 9 (L2): o catch quase sempre é defeito, não rede, e o servidor pode ter gravado.
+      frase: 'Não deu para confirmar o que foi salvo. Tente de novo.',
       sair: 'Cancelar',
       pendentes: 2,
     },
@@ -1053,16 +1086,17 @@ describe('GavetaDaFuncao: desfechos do salvar', () => {
       login = false,
     }) => {
       SESSOES[sessao]();
-      const { wrapper, atualizar, funcoesDeNovo, funcoes, erroDoVue } = abrir({
-        funcao,
-        respostas,
-        recarga,
-        recargaDasFuncoes,
-        quebra,
-      });
+      const { wrapper, atualizar, funcoesDeNovo, funcoes, agentes, erroDoVue } =
+        abrir({
+          funcao,
+          respostas,
+          recarga,
+          recargaDasFuncoes,
+          quebra,
+        });
 
       await agir(wrapper);
-      antes(funcoes);
+      antes(funcoes, agentes);
       await flushPromises();
       await salvar(wrapper);
 
@@ -1090,6 +1124,10 @@ describe('GavetaDaFuncao: desfechos do salvar', () => {
       expect(wrapper.findAll('[data-frase-rodape]')).toHaveLength(pendentes);
       const cancelar = wrapper.find('[data-cancelar]');
       expect(cancelar.exists() ? cancelar.text() : null).toBe(sair);
+      // Rodada 9 (M1): virou só leitura com aviso: um só "Fechar", com o foco.
+      const fechar = wrapper.find('[data-fechar-gaveta]');
+      expect(fechar.exists()).toBe(Boolean(soLeitura));
+      if (soLeitura) expect(document.activeElement).toBe(fechar.element);
       if (cancelar.exists())
         expect(wrapper.find('[data-salvar]').text()).toBe('Salvar');
     }
@@ -1123,7 +1161,9 @@ describe('GavetaDaFuncao: desfechos do salvar', () => {
 
     const salva = wrapper.find('[data-salva-gaveta]');
     expect(salva.text()).toBe(SALVA_GABRIEL);
-    expect(salva.attributes('role')).toBe('status');
+    expect(wrapper.find('[data-status-gaveta]').attributes('role')).toBe(
+      'status'
+    );
     expect(salva.classes()).toContain('text-n-slate-12');
     expect(salva.classes()).not.toContain('text-n-ruby-11');
     expect(salva.find('.i-lucide-check').exists()).toBe(true);
@@ -1162,5 +1202,104 @@ describe('GavetaDaFuncao: desfechos do salvar', () => {
     const { wrapper } = abrir();
 
     expect(wrapper.find('[data-cancelar]').text()).toBe('Cancelar');
+  });
+
+  // Rodada 9 (M1): depois do 404 do "Pôr como" (função apagada), Cancelar e Salvar somem; fica um "Fechar" largo, perto
+  // do polegar, com o foco.
+  it('virou só leitura depois de salvar: um "Fechar" largo, com o foco, que fecha', async () => {
+    const { wrapper } = abrir({
+      respostas: { 21: 'gravou', 23: 404 },
+      recargaDasFuncoes: funcoes => funcoes.splice(1, 1),
+    });
+    await tirarGabrielEPorIris(wrapper);
+    await salvar(wrapper);
+
+    const fechar = wrapper.find('[data-fechar-gaveta]');
+    expect(fechar.text()).toBe('Fechar');
+    expect(fechar.classes()).toEqual(
+      expect.arrayContaining(['min-h-11', 'max-sm:w-full'])
+    );
+    expect(document.activeElement).toBe(fechar.element);
+    expect(wrapper.find('[data-salvar]').exists()).toBe(false);
+    await fechar.trigger('click');
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+  });
+
+  // Rodada 9 (L3): função apagada não pergunta "Quem vai ser…?" nem diz "Ninguém tem esta função ainda".
+  it('função apagada: título só com o nome, sem "Ninguém tem" nem "Já são"', async () => {
+    const { wrapper } = abrir({
+      respostas: { 21: 'gravou', 23: 404 },
+      recarga: mudarPessoas({ custom_role_id: null }, [22]),
+      recargaDasFuncoes: funcoes => funcoes.splice(1, 1),
+    });
+    await tirarGabrielEPorIris(wrapper);
+    await salvar(wrapper);
+
+    expect(wrapper.find('h2').text()).toBe('Vendedor');
+    expect(wrapper.find('[data-so-leitura]').text()).toBe(
+      'A função Vendedor foi apagada.'
+    );
+    expect(wrapper.find('[data-ninguem-ainda]').exists()).toBe(false);
+    expect(wrapper.find('[data-ja-sao]').exists()).toBe(false);
+  });
+
+  // Rodada 9 (L4): o "foi salva" entra num role=status que já estava na tela (o leitor só anuncia o que muda nele),
+  // até quando a gaveta vira só leitura no meio do salvar.
+  it.each([
+    ['com a gaveta editável', { respostas: { 21: 'gravou', 23: 'rede' } }],
+    [
+      'quando ela vira só leitura no salvar',
+      {
+        respostas: { 21: 'gravou', 23: 404 },
+        recargaDasFuncoes: funcoes => funcoes.splice(1, 1),
+      },
+    ],
+  ])('"foi salva" entra no status que já existia, %s', async (_, opcoes) => {
+    const { wrapper } = abrir(opcoes);
+    await tirarGabrielEPorIris(wrapper);
+    const status = wrapper.find('[data-status-gaveta]');
+    expect(status.attributes('role')).toBe('status');
+    expect(status.text()).toBe('');
+
+    await salvar(wrapper);
+
+    expect(wrapper.find('[data-status-gaveta]').element).toBe(status.element);
+    expect(status.text()).toBe(SALVA_GABRIEL);
+  });
+
+  // Rodada 9 (L5): a gaveta lê a função de agora na lista, pelo id; renomeada em paralelo, título e "Pôr como" seguem.
+  it('a função renomeada em paralelo: título e "Pôr como" com o nome novo', async () => {
+    const { wrapper, funcoes } = abrir();
+
+    funcoes.splice(1, 1, { ...VENDEDOR, name: 'Vendedor Sênior' });
+    await flushPromises();
+
+    expect(wrapper.find('h2').text()).toBe('Quem vai ser Vendedor Sênior?');
+    expect(
+      linha(wrapper, 24).find('[data-acao]').attributes('aria-label')
+    ).toBe('Pôr como Vendedor Sênior: Kauã Moreira');
+    await linha(wrapper, 24).find('[data-acao]').trigger('click');
+    expect(wrapper.find('[data-frase-rodape]').text()).toBe(
+      'Kauã Moreira passa a ser Vendedor Sênior.'
+    );
+  });
+
+  // Rodada 9 (L5): a gaveta vira só leitura sem salvar (a lista muda por fora): o pendente some, e o X fecha direto.
+  it('virou só leitura por fora, sem salvar: o pendente some e o X fecha sem perguntar', async () => {
+    const { mostrar, soltar } = espiarDialogo();
+    const { wrapper, funcoes } = abrir();
+    await tirarGabrielEPorIris(wrapper);
+
+    acimaDoAlcance(funcoes, 1);
+    await flushPromises();
+
+    expect(wrapper.find('[data-so-leitura]').text()).toBe(
+      'Só o administrador põe e tira pessoas desta função.'
+    );
+    expect(wrapper.find('[data-frase-rodape]').exists()).toBe(false);
+    await wrapper.find('[data-fechar]').trigger('click');
+    expect(mostrar).not.toHaveBeenCalled();
+    expect(wrapper.emitted('fechar')).toHaveLength(1);
+    soltar();
   });
 });

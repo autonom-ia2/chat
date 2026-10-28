@@ -854,7 +854,9 @@
       "SAIU_DA_CONTA": "{nomes} não está mais na conta. | Estas pessoas não estão mais na conta: {nomes}.",
       "FUNCAO_SUMIU": "A função escolhida para {nomes} não existe mais. Escolha outra. | A função escolhida para estas pessoas não existe mais: {nomes}. Escolha outra.",
       "NAO_MUDOU": "A função de {nomes} não mudou. Tente de novo; se continuar, fale com o administrador. | A função destas pessoas não mudou: {nomes}. Tente de novo; se continuar, fale com o administrador.",
-      "CONTINUA": "A função de {nomes} continua como era. | A função destas pessoas continua como era: {nomes}."
+      "CONTINUA": "A função de {nomes} continua como era. | A função destas pessoas continua como era: {nomes}.",
+      "SAIU_DA_LISTA": "{nomes} já tem uma função e saiu desta lista. | Estas pessoas já têm uma função e saíram desta lista: {nomes}.",
+      "NAO_CONFIRMOU": "Não deu para confirmar o que foi salvo. Tente de novo."
     },
     "APAGAR": {
       "TITULO": "Apagar a função {nome}?",
