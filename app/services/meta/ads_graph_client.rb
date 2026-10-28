@@ -28,7 +28,10 @@ class Meta::AdsGraphClient
   # Cabeçalhos em que a Meta diz quanto do limite de uso já foi gasto (Crm::MetaAds::Insights::Usage).
   USAGE_HEADERS = %w[x-business-use-case-usage x-fb-ads-insights-throttle x-app-usage].freeze
 
-  Result = Struct.new(:ok, :http_code, :data, :error_code, :error_subcode, :error_message, :usage_headers, keyword_init: true) do
+  # Recusa da Meta: além do código, o subcódigo, o título e a mensagem para a pessoa (dizem qual campo e por quê) e o
+  # fbtrace_id, que a Meta pede para achar a chamada (#2341). Todos já limpos.
+  Result = Struct.new(:ok, :http_code, :data, :error_code, :error_subcode, :error_message, :usage_headers,
+                      :error_user_title, :error_user_msg, :fbtrace_id, keyword_init: true) do
     def token_invalid?
       error_code == TOKEN_INVALID_CODE
     end
@@ -175,6 +178,7 @@ class Meta::AdsGraphClient
   include Meta::AdsGraphClient::SeusPosts
   include Meta::AdsGraphClient::LeadForms
   include Meta::AdsGraphClient::Prazo
+  include Meta::AdsGraphClient::Recusa
 
   private
 
@@ -229,25 +233,12 @@ class Meta::AdsGraphClient
     log_failure(verb, path, Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: sanitize(e.message)))
   end
 
-  # Toda recusa da Meta fica no log com o caminho, o código e a mensagem já limpa: sem isso, um erro que
-  # quem chama trata como "ainda não" vira silêncio em produção (#1068). O token nunca entra no caminho.
-  def log_failure(verb, path, result)
-    return result if result.ok
-
-    Rails.logger.warn("[MetaAdsGraph] #{verb.to_s.upcase} #{path} http=#{result.http_code.inspect} " \
-                      "code=#{result.error_code.inspect} message=#{result.error_message}")
-    result
-  end
-
   def build_result(response)
     body = parse(response.body)
     usage = usage_headers(response)
     return Result.new(ok: true, http_code: response.code, data: body, usage_headers: usage) if response.success? && body.is_a?(Hash)
 
-    error = body.is_a?(Hash) ? body['error'].to_h : {}
-    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'], error_subcode: error['error_subcode'],
-               usage_headers: usage,
-               error_message: sanitize(error['message'].presence || "HTTP #{response.code}"))
+    failure_result(response, body.is_a?(Hash) ? body['error'].to_h : {}, usage)
   end
 
   def usage_headers(response)
