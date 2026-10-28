@@ -102,11 +102,13 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(reply).to include(can_reply: true, can_hide: true)
     end
 
-    it 'cópia de cima com o comentário pai em outra página: some daqui, e lá a resposta gravada pelo painel é da conta' do
+    it 'cópia de cima com o comentário pai em outra página: fica em cima, como da conta; lá, a gravada pelo painel é da conta' do
       stub_ad
       stub_comments(body: { data: [{ id: 'r1', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601, parent_id: 'c9',
                                      from: { id: ig_id, username: 'lojaexemplo' } }] })
-      expect(service.payload(ad_id)[:comments]).to be_empty
+      alone = service.payload(ad_id)[:comments].sole
+      expect(alone).to include(id: 'r1', can_reply_private: false)
+      expect(alone[:author]).to include(username: 'lojaexemplo', is_page: true)
 
       Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', ad_id: ad_id, comment_id: 'r9', action: 'page_reply',
                                         actor: 'user', user: user)
@@ -114,6 +116,21 @@ RSpec.describe Crm::MetaAds::InstagramComments do
                                      replies: { data: [{ id: 'r9', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601 }] } }] })
 
       reply = service.payload(ad_id)[:comments].sole[:replies].sole
+      expect(reply[:author]).to eq(name: nil, username: 'lojaexemplo', is_page: true)
+      expect(reply).to include(can_reply: false, can_hide: false, can_delete: true)
+    end
+
+    it 'resposta da conta com from, feita pelo app do Instagram e sem page_reply, é da conta' do
+      stub_ad
+      stub_comments(body: {
+                      data: [{ id: 'c1', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+                               replies: { data: [{ id: 'r3', text: 'Valeu!', timestamp: 5.minutes.ago.iso8601,
+                                                   from: { id: ig_id, username: 'lojaexemplo' } }] } }]
+                    })
+
+      reply = service.payload(ad_id)[:comments].sole[:replies].sole
+
+      expect(Crm::MetaAdsCommentAction.count).to eq(0)
       expect(reply[:author]).to eq(name: nil, username: 'lojaexemplo', is_page: true)
       expect(reply).to include(can_reply: false, can_hide: false, can_delete: true)
     end
@@ -228,11 +245,12 @@ RSpec.describe Crm::MetaAds::InstagramComments do
     it 'resposta aceita pela Meta não vira erro quando gravar a linha falha' do
       stub_comment('c1')
       stub_request(:post, %r{#{ig}/c1/replies}).to_return(status: 200, headers: json, body: { id: 'c9' }.to_json)
-      allow(Crm::MetaAdsCommentAction).to receive(:record!).and_raise(ActiveRecord::ConnectionTimeoutError)
+      allow(Crm::MetaAdsCommentAction).to receive(:record!).and_raise(NoMethodError, 'quebra fora do banco')
       tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
       allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
 
       expect(service.reply!(ad_id, 'c1', 'Temos sim', user: user)).to include(id: 'c9')
+      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(NoMethodError), account: account)
       expect(tracker).to have_received(:capture_exception)
     end
 

@@ -52,12 +52,12 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   # A resposta pública que a conta publicou no Instagram pelo painel (#2313). Ela já está no Instagram: falha ao gravar
   # não vira erro (a pessoa responderia de novo); sem a linha, a resposta só aparece sem o "Você" quando a Graph não
   # traz o `from`.
-  def self.record_reply(account_id:, ad_id:, reply_id:, user:)
-    record!(account_id: account_id, network: 'instagram', ad_id: ad_id.to_s, comment_id: reply_id.to_s, action: 'page_reply',
+  def self.record_reply(account:, ad_id:, reply_id:, user:)
+    record!(account: account, network: 'instagram', ad_id: ad_id.to_s, comment_id: reply_id.to_s, action: 'page_reply',
             actor: 'user', user: user)
-  rescue ActiveRecord::ActiveRecordError => e
+  rescue StandardError => e
     Rails.logger.error("[MetaAdsCommentAction] resposta #{reply_id} sem registro: #{e.class.name}")
-    ChatwootExceptionTracker.new(e, user: user).capture_exception
+    ChatwootExceptionTracker.new(e, account: account).capture_exception
   end
 
   # A chamada à Meta vai sair agora: daqui em diante, sem confirmação a linha fica travada. Falso quando a reserva já

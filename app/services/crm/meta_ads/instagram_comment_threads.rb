@@ -3,11 +3,12 @@
 # A Graph devolve a resposta da própria conta duas vezes (visto em produção): em primeiro nível, com o `from` da conta,
 # e dentro do comentário respondido, sem `from`. A Graph do login do Facebook, para a mesma mídia, traz a resposta só
 # dentro do comentário. Então:
-# - fica só a cópia de dentro, onde ela está no app: sai de cima o item que tem `parent_id` (o pai pode estar em outra
-#   página) ou que aparece dentro de um comentário desta página;
+# - fica só a cópia de dentro, onde ela está no app: sai de cima o item que aparece dentro de um comentário desta
+#   página. Uma resposta cuja cópia de dentro não veio (outra página, replies cortado) continua em cima, como antes;
 # - a cópia de dentro sem `from` herda o da cópia de cima, quando ela veio na página;
-# - `own_ids`: as respostas que o painel publicou (Crm::MetaAdsCommentAction `page_reply`), da conta mesmo sem
-#   `from`. Só vale para resposta, nunca para comentário de primeiro nível.
+# - é da conta o que tem o `from` da conta, inclusive resposta feita pelo app do Instagram; e a resposta de dentro
+#   cujo id o painel gravou (`own_ids`, Crm::MetaAdsCommentAction `page_reply`), para a cópia sem `from`. O id gravado
+#   nunca marca comentário de primeiro nível.
 class Crm::MetaAds::InstagramCommentThreads
   # Com as respostas que o painel publicou nesta página, gravadas na conta.
   def self.build(rows, channel, account_id)
@@ -24,7 +25,7 @@ class Crm::MetaAds::InstagramCommentThreads
   end
 
   def top
-    @rows.reject { |item| item['parent_id'].present? || nested_ids.include?(item['id'].to_s) }
+    @rows.reject { |item| nested_ids.include?(item['id'].to_s) }
   end
 
   def replies(item)

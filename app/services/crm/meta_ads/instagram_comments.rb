@@ -56,7 +56,7 @@ class Crm::MetaAds::InstagramComments
     result = client(channel).reply(found[:comment]['parent_id'].presence || comment_id, text)
     raise Error, failure(result) unless result.ok
 
-    Crm::MetaAdsCommentAction.record_reply(account_id: @connection.account_id, ad_id: ad_id, reply_id: result.data['id'], user: user)
+    Crm::MetaAdsCommentAction.record_reply(account: @connection.account, ad_id: ad_id, reply_id: result.data['id'], user: user)
     row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
           'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, channel, actions: {}, own: true)
   end
