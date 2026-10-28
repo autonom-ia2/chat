@@ -3914,6 +3914,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.30",
+     "titulo": "Ver se seus posts do Instagram e da Página estão dando resultado",
+     "para_que_serve": "Ler quantas vezes os posts apareceram sem anúncio, o que cada número conta e como cada post foi contra o normal do perfil.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "seus_posts_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "seus_posts_index",
+      "destaque": null
+     },
+     "requer": "seus_posts",
+     "prints": [],
+     "fontes": [
+      "porques: ver_como_seus_posts_estao_indo"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

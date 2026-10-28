@@ -1,7 +1,7 @@
 # Seus posts (#2302, F1 #2304): o que a página mostra de um perfil.
 #
 # Perfis são as caixas da conta com Instagram (login do Instagram) ou Página do Facebook que a pessoa vê
-# (InboxPolicy#show?, SeusPosts::Caixa); o Instagram pelo Messenger não conta como Página. Caixa que a pessoa não vê
+# (InboxPolicy#show?, SeusPosts::Caixa); a Página com Instagram ligado continua sendo Página (#2321). Caixa que a pessoa não vê
 # nem aparece: nome, posts e números do perfil saem do mesmo lugar que a caixa (revisão final do #2312). O id do
 # perfil é do canal ("instagram-12", "facebook-3"). Sem perfil escolhido, o primeiro.
 #
@@ -131,11 +131,12 @@ class SeusPosts::Leitura
 
   def canais
     @canais ||= (com_caixa(Channel::Instagram.where(account_id: @account.id)) +
-                 com_caixa(Channel::FacebookPage.where(account_id: @account.id, instagram_id: nil)))
+                 com_caixa(Channel::FacebookPage.where(account_id: @account.id)))
                 .select { |canal| SeusPosts::Caixa.new(inbox: canal.inbox, viewer: @viewer).ve? }
   end
 
   # Só canal com caixa nesta conta: é a caixa que tem as conversas e que o "Libere o acesso" reautoriza.
+  # A Página entra mesmo com instagram_id: o Chatwoot o grava em toda Página com Instagram ligado (#2321).
   def com_caixa(escopo)
     escopo.where(id: Inbox.where(account_id: @account.id, channel_type: escopo.klass.name).select(:channel_id))
           .includes(:inbox).order(:id).to_a

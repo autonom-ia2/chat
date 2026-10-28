@@ -23,7 +23,11 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize ::Crm::Card
     # Ordering is owned by FilterQuery#apply_sort (whitelisted sort/direction,
     # defaulting to updated_at desc — byte-identical to the historical default).
-    @cards = filtered_cards.page(params[:page] || 1).per(per_page)
+    @action_list = ::Crm::Cards::ActionGroups.sort?(params)
+    cards = filtered_cards
+    # Lista nova (#2283): o grupo e o retorno de cada card vêm na linha; a contagem abaixo é de outra consulta, sem o select.
+    cards = cards.select('crm_cards.*', ::Crm::Cards::ActionGroups::SELECT) if @action_list
+    @cards = cards.page(params[:page] || 1).per(per_page)
     @card_companies = Crm::Cards::CompanyResolver.for_cards(@cards.to_a)
     @cards_count = filtered_cards.count
   end

@@ -1,6 +1,6 @@
 # Seus posts (#2199): o que a aba mostra, no formato que a tela já usa (o mesmo do protótipo aprovado). Uma Página
-# do Facebook e um Instagram (login do Instagram) por conta, os primeiros conectados; o Instagram pelo Messenger não
-# conta como Página. A leitura da Meta fica 15 minutos guardada por lugar e período, para não gastar o limite de
+# do Facebook e um Instagram (login do Instagram) por conta, os primeiros conectados; a Página com Instagram ligado
+# continua sendo a Página (#2321). A leitura da Meta fica 15 minutos guardada por lugar e período, para não gastar o limite de
 # chamadas a cada troca de aba; as conversas da caixa no período são contadas na hora.
 #
 # Acesso: SeusPosts::Caixa (contagem de conversas e id da caixa só do que a pessoa vê; parecer da sessão Funções).
@@ -68,8 +68,9 @@ class Crm::MetaAds::Organico::Tela
   end
 
   # Só canal com caixa: é a caixa que tem as conversas e que o "Libere…" reautoriza.
+  # Sem filtrar instagram_id: o Chatwoot o grava em toda Página com Instagram ligado, e ela continua sendo a Página (#2321).
   def pagina
-    Channel::FacebookPage.joins(:inbox).where(account_id: @account.id, instagram_id: nil).order(:id).first
+    Channel::FacebookPage.joins(:inbox).where(account_id: @account.id).order(:id).first
   end
 
   def instagram

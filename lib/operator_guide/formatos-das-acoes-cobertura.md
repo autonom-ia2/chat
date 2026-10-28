@@ -5,10 +5,10 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 666 |
+| No catálogo | 667 |
 | Sem corpo | 197 |
-| Com corpo | 469 |
-| Com corpo e formato completo | 386 (82,3%) |
+| Com corpo | 470 |
+| Com corpo e formato completo | 387 (82,3%) |
 | Com corpo e formato incompleto | 83 |
 
 ## Por dentro dos campos
@@ -242,7 +242,7 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 - `GET contacts/active` — lê params em código de fora do repositório (Sift#filtrate)
 - `GET contacts/search` — lê params em código de fora do repositório (Sift#filtrate)
 - `GET crm/calendar/events` — params inteiro repassado a ::Crm::Cards::CalendarQuery.new; params inteiro repassado a ::Crm::FollowUps::FilterQuery.new
-- `GET crm/cards` — params inteiro repassado a ::Crm::Cards::FilterQuery.new
+- `GET crm/cards` — params inteiro repassado a ::Crm::Cards::FilterQuery.new; params inteiro repassado a ::Crm::Cards::ActionGroups.sort?
 - `GET crm/cards/export` — params inteiro repassado a ::Crm::Cards::FilterQuery.new
 - `GET crm/cards/summaries` — params inteiro repassado a ::Crm::Cards::GroupSummary.new
 - `GET crm/follow_ups` — params inteiro repassado a ::Crm::FollowUps::FilterQuery.new

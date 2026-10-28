@@ -1242,7 +1242,8 @@
   "crm/cards": {
     "controller": "api/v1/accounts/crm/cards#index",
     "motivos": [
-      "params inteiro repassado a ::Crm::Cards::FilterQuery.new"
+      "params inteiro repassado a ::Crm::Cards::FilterQuery.new",
+      "params inteiro repassado a ::Crm::Cards::ActionGroups.sort?"
     ]
   },
   "crm/cards/:id": {

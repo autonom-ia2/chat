@@ -1,0 +1,160 @@
+{
+  "SEUS_POSTS": {
+    "TITLE": "Your posts",
+    "SUBTITLE": "See how your posts are doing.",
+    "LOADING": "Loading your posts",
+    "PROFILE_LABEL": "Profile",
+    "PROFILE": {
+      "instagram": "Instagram · {name}",
+      "facebook": "Facebook Page · {name}"
+    },
+    "PROFILE_NO_NAME": {
+      "instagram": "Instagram",
+      "facebook": "Facebook Page"
+    },
+    "PERIOD_LABEL": "Period",
+    "PERIODS": "{days} days",
+    "RANGE": "Last {days} days · Meta numbers can take up to 2 days",
+    "HEADLINE": {
+      "instagram": "Your Instagram was seen {count} times without ads.",
+      "facebook": "Your Page was seen {count} times without ads.",
+      "ZERO": "Your posts were not seen in the last {days} days.",
+      "ACCOUNT_NOTE": {
+        "instagram": "Also counts stories and older posts seen in the period.",
+        "facebook": "Also counts videos and older posts seen in the period."
+      },
+      "NO_NUMBER": "Meta has not sent the views for the last {days} days yet."
+    },
+    "CHANGE": {
+      "MORE": "{count} more than the previous {days} days",
+      "FEWER": "{count} fewer than the previous {days} days",
+      "SAME": "Same as the previous {days} days",
+      "SHORT_MORE": "{count} more",
+      "SHORT_FEWER": "{count} fewer",
+      "SHORT_SAME": "Same",
+      "FIRST_PERIOD": "First period with numbers: nothing to compare yet."
+    },
+    "TILES": {
+      "VIEWS": {
+        "LABEL": "Times seen",
+        "HELP": "the same person can see it more than once."
+      },
+      "PEOPLE": {
+        "LABEL": "People who saw",
+        "UP_TO": "up to {count}",
+        "HELP_instagram": "at most this number. Someone who saw a post and a story can count twice.",
+        "HELP_facebook": "each person counts once, even after seeing several posts."
+      },
+      "INTERACTIONS": {
+        "LABEL": "Interactions",
+        "HELP_instagram": "likes, comments, saves and shares, across all posts and stories.",
+        "HELP_facebook": "likes, comments, shares and clicks."
+      },
+      "FOLLOWERS": {
+        "LABEL": "Followers",
+        "NEW": "{count} started following",
+        "LEFT": "{count} stopped following",
+        "FEW": "At {min} followers I show who started following"
+      },
+      "MESSAGES": {
+        "LABEL": "Messages",
+        "HELP": "conversations started in this profile's inbox in the period."
+      },
+      "MAYBE_ADS": "May include ads",
+      "TITLE": "Compared with the previous {days} days",
+      "TITLE_NO_COMPARE": "Numbers for the last {days} days",
+      "LEGEND": "May include ads: {names}. The rest is without ads.",
+      "LEGEND_NONE": "All numbers are without ads.",
+      "LEGEND_ALL": "All numbers may include ads.",
+      "WHAT_IS": "What each number counts"
+    },
+    "MESSAGES": {
+      "OPEN": "See conversations"
+    },
+    "POSTS": {
+      "TITLE": "Posts from the last {days} days",
+      "EMPTY_PERIOD": "You did not post in the last {days} days.",
+      "EMPTY_PERIOD_TEXT": "Pick a longer period to find your posts.",
+      "SEE_90": "See the last 90 days",
+      "EMPTY_POST": {
+        "instagram": "Post on Instagram and come back to see how it went.",
+        "facebook": "Post on your Page and come back to see how it went."
+      },
+      "TRUNCATED": "You posted a lot in this period: showing the 300 most recent posts.",
+      "UNAVAILABLE": {
+        "TITLE": "Meta did not send your posts right now.",
+        "TEXT": "The numbers above still hold. Try again in a moment."
+      },
+      "STALE": "Meta did not send the posts right now: these are from the last reading."
+    },
+    "CARD": {
+      "TYPE": {
+        "foto": "Photo",
+        "video": "Video",
+        "carrossel": "Several photos"
+      },
+      "NO_TEXT": {
+        "instagram": "Post without caption",
+        "facebook": "Post without text"
+      },
+      "BEST": "Seen the most without ads",
+      "PUBLISHED": "Posted on {date}",
+      "PUBLISHED_NO_INSIGHTS": "Posted on {date} · likes and comments only",
+      "OPEN_LABEL": {
+        "instagram": "Open on Instagram: {name}",
+        "facebook": "Open on Facebook: {name}"
+      },
+      "HAD_ADS": "Had ads",
+      "NUMBERS_SOON": "Numbers arrive within 2 days"
+    },
+    "POST": {
+      "OPEN": {
+        "instagram": "Open on Instagram",
+        "facebook": "Open on Facebook"
+      },
+      "NUMBERS": {
+        "VIEWS": "Times seen",
+        "LIKES": "Likes",
+        "COMMENTS": "Comments"
+      }
+    },
+    "VS_NORMAL": {
+      "TIMES": "{times} times the usual",
+      "DOUBLE": "Twice the usual",
+      "WELL_ABOVE": "Well above usual",
+      "ABOVE": "Above usual",
+      "SAME": "Close to usual",
+      "BELOW": "Below usual"
+    },
+    "NO_INBOX": {
+      "TITLE": "Connect your Instagram to see how your posts are doing.",
+      "TEXT": "Once connected, I show here how each post went.",
+      "ASK_ADMIN": "Ask the account administrator to connect Instagram or the Facebook Page.",
+      "BUTTON": "Connect Instagram",
+      "PAGE": "Using a Facebook Page? Connect the Page"
+    },
+    "NO_PERMISSION": {
+      "instagram": "Allow your Instagram numbers",
+      "facebook": "Allow your Page numbers",
+      "TEXT_instagram": "Instagram asks for your permission once. Then you come back to this page.",
+      "TEXT_facebook": "Facebook asks for your permission once. Then you come back to this page.",
+      "ASK_ADMIN": "Ask the account administrator to allow this profile's numbers.",
+      "BUTTON": "Allow access",
+      "ERROR": "Could not open the authorization. Try again."
+    },
+    "NO_ACCESS": {
+      "TITLE": "Your role does not open Your posts.",
+      "TEXT": "Ask the account administrator to add Your posts to your role."
+    },
+    "ERROR": {
+      "TITLE": "Could not load your posts.",
+      "TEXT": "Check your connection and try again.",
+      "RETRY": "Try again"
+    },
+    "UNAVAILABLE": {
+      "TITLE": "Meta did not answer right now.",
+      "TEXT": "This profile's numbers come back as soon as Meta answers."
+    },
+    "STALE": "Meta did not answer right now: these are the numbers from the last reading."
+  }
+}
