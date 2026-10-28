@@ -3,9 +3,18 @@ import { defineComponent, h } from 'vue';
 import CrmVistasNumeros from './CrmVistasNumeros.vue';
 
 // Seletor da página Números (#1617): só leva a vistas que a pessoa abre.
-const estado = { abre: () => true };
+const estado = { abre: () => true, listaAcao: false };
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  const getters = {
+    getCurrentAccountId: () => 1,
+    'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+      flag === 'crm_lista_acao' && estado.listaAcao,
+  };
+  return { useMapGetter: nome => computed(getters[nome]) };
+});
 vi.mock('./useAbaNumeros', async () => {
   const { computed } = await import('vue');
   return {
@@ -46,6 +55,13 @@ describe('CrmVistasNumeros', () => {
       'CRM_KANBAN.VIEWS.CALENDAR',
       'FORK_SIDEBAR.CRM.ABA_NUMEROS',
     ]);
+  });
+
+  it('com a Lista nova (#2283), o Kanban se chama Quadro', () => {
+    estado.abre = () => true;
+    estado.listaAcao = true;
+    expect(textos(montar())[0]).toBe('CRM_LISTA_ACAO.VISTAS.QUADRO');
+    estado.listaAcao = false;
   });
 
   it('crm_view_reports sem crm_view: só Números, sem link para o quadro', () => {
