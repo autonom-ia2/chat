@@ -732,9 +732,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_610000) do
     t.string "sujeito_type", null: false
     t.bigint "sujeito_id", null: false
     t.datetime "corte_em", null: false
+    t.datetime "piso_em", null: false
     t.datetime "iniciada_em", null: false
     t.datetime "terminada_em"
-    t.datetime "piso_em", null: false
     t.string "status", null: false
     t.integer "conversas_lidas", default: 0, null: false
     t.integer "conversas_pendentes", default: 0, null: false

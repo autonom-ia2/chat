@@ -78,14 +78,15 @@ class Autonomia::Desempenho::Painel
   end
 
   # O que a leitura automática (#2301) acrescenta à meta:
-  # - `lido_ate`: o corte da última rodada que leu (ok ou teto), no fuso;
-  # - `situacao`: `sem_ia` ou `teto` quando a última rodada parou por isso;
+  # - `lido_ate`: o corte da última rodada que leu (ok ou teto) quando ela não deixou pendente; com pendentes, a última
+  #   mensagem lida de fato (o maior `lida_ate_em`), no fuso;
+  # - `situacao`: `sem_ia`, `teto` ou `erro` quando a última rodada parou por isso;
   # - `instrucao_mudou`: a instrução do agente mudou depois da chave de leitura (nil para o robô de outro sistema);
   # - `recomendacoes_de`: as datas das sugestões quando elas são de outro período (as do período ainda não vieram).
   def com_leitura_automatica(painel)
     meta = painel['meta'].merge('lido_ate' => lido_ate, 'instrucao_mudou' => instrucao_mudou?, 'recomendacoes_de' => @recomendacoes_de)
     parada = ultima_rodada&.status
-    meta['situacao'] ||= parada if %w[sem_ia teto].include?(parada)
+    meta['situacao'] ||= parada if %w[sem_ia teto erro].include?(parada)
     painel.merge('meta' => meta)
   end
 
@@ -94,8 +95,11 @@ class Autonomia::Desempenho::Painel
   def ultima_rodada = rodadas.where.not(status: 'rodando').first
 
   def lido_ate
-    corte = rodadas.where(status: Autonomia::Desempenho::Rodada::LIDAS).pick(:corte_em)
-    corte&.in_time_zone(fuso)&.strftime('%Y-%m-%dT%H:%M')
+    corte, pendentes = rodadas.where(status: Autonomia::Desempenho::Rodada::LIDAS).pick(:corte_em, :conversas_pendentes)
+    return nil if corte.nil?
+
+    ate = pendentes.zero? ? corte : leituras.maximum(:lida_ate_em)
+    ate&.in_time_zone(fuso)&.strftime('%Y-%m-%dT%H:%M')
   end
 
   def instrucao_mudou?
@@ -203,13 +207,16 @@ class Autonomia::Desempenho::Painel
   end
 
   # As sugestões guardadas para este período, da mesma ficha. Elas são calculadas com a conta inteira: quem vê só parte
-  # das caixas não as recebe. Com a leitura automática, as datas andam todo dia e as sugestões nem sempre acompanham
-  # (#2301): sem as do período exato, vão as últimas do mesmo período, com as datas delas em `meta.recomendacoes_de`.
+  # das caixas não as recebe. Sem leitura automática, só as das mesmas datas. Com ela (#2301), as datas andam todo dia
+  # e as sugestões nem sempre acompanham: sem as do período exato, vão as últimas do mesmo período, com as datas delas
+  # em `meta.recomendacoes_de`.
   def recomendacoes(chave, inicio, fim)
     return [] if @visiveis
 
-    cache = Autonomia::Desempenho::Recomendacao.do_sujeito(@account, @sujeito_type, @sujeito_id)
-                                               .find_by(periodo: chave, versao_ficha: ficha.versao)
+    guardadas = Autonomia::Desempenho::Recomendacao.do_sujeito(@account, @sujeito_type, @sujeito_id)
+                                                   .where(periodo: chave, versao_ficha: ficha.versao)
+    guardadas = guardadas.where(inicio: inicio, fim: fim) unless rodadas.exists?
+    cache = guardadas.first
     return [] if cache.nil?
 
     @recomendacoes_de = { 'inicio' => cache.inicio.iso8601, 'fim' => cache.fim.iso8601 } unless cache.inicio == inicio && cache.fim == fim

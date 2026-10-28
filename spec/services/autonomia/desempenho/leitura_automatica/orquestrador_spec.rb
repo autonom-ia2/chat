@@ -8,7 +8,9 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
   let(:inbox) { create(:inbox, account: account) }
   let(:equipe) { create(:user, account: account) }
   let(:ficha) do
-    ficha_da_loja!(account, sujeito_id: robo.id).tap { |f| f.update!(chave_de_leitura: 'Leia a conversa da loja. Marque `teste` quando for teste.') }
+    ficha_da_loja!(account, sujeito_id: robo.id).tap do |f|
+      f.update!(chave_de_leitura: 'Leia a conversa da loja.', configuracao: f.configuracao.merge('leitura' => { 'com_teste' => true }))
+    end
   end
   let(:corpos) { [] }
   let(:agora) { Time.utc(2026, 10, 22, 10, 0) }
@@ -239,6 +241,108 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
         expect(rodar).to have_attributes(conversas_lidas: 0, conversas_pendentes: 1)
         expect(procuras_de(cresceu).pluck(:lote)).to eq(['carga'])
       end
+    end
+  end
+
+  describe 'erro da chamada e da conversa' do
+    let!(:primeira) { conversa_com_agente(14) }
+    let!(:segunda) { conversa_com_agente(15) }
+
+    before { leitura!(conversa_com_agente(10), Time.utc(2026, 10, 21, 12, 0)) }
+
+    def falhas_de(conversa)
+      Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{conversa.id}")
+    end
+
+    it 'chave recusada (401) fecha a rodada como sem_ia na hora, sem contar falha da conversa' do
+      openai_devolve(401)
+
+      rodada = rodar
+
+      expect(corpos.size).to eq(1)
+      expect(rodada).to have_attributes(status: 'sem_ia', conversas_lidas: 0, conversas_pendentes: 2)
+      expect([falhas_de(primeira), falhas_de(segunda)]).to eq([nil, nil])
+    end
+
+    it 'outro erro permanente (404) fecha como erro na hora' do
+      openai_devolve(404)
+
+      expect(rodar).to have_attributes(status: 'erro', conversas_pendentes: 2)
+      expect(corpos.size).to eq(1)
+    end
+
+    it 'três falhas passageiras seguidas fecham a rodada como erro' do
+      terceira = conversa_com_agente(16)
+      conversa_com_agente(17)
+      openai_devolve(503)
+
+      rodada = rodar
+
+      expect(corpos.size).to eq(3)
+      expect(rodada).to have_attributes(status: 'erro', conversas_lidas: 0, conversas_pendentes: 4)
+      # As duas primeiras contam falha da conversa; a terceira fecha a rodada antes de contar.
+      expect([falhas_de(primeira), falhas_de(terceira)]).to eq(['1', nil])
+    end
+
+    it 'exceção depois da chamada paga é da conversa: segue para a próxima e, na segunda vez, a conversa sai da fila' do
+      openai_devolve({ 'procuras' => [procura('inicio' => '10-21 14:00', 'fim' => '10-21 14:01')] },
+                     { 'procuras' => [procura('inicio' => '10-21 15:00', 'fim' => '10-21 15:01')] })
+      gravar = Autonomia::Desempenho::LeituraAutomatica::Gravacao.instance_method(:gravar!)
+      allow(Autonomia::Desempenho::LeituraAutomatica::Gravacao).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap do |gravacao|
+          allow(gravacao).to receive(:gravar!) do |procuras|
+            raise ActiveRecord::RecordInvalid, Autonomia::Desempenho::Procura.new if argumentos[:conversa].id == primeira.id
+
+            gravar.bind_call(gravacao, procuras)
+          end
+        end
+      end
+
+      expect(rodar).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 1)
+      expect(procuras_de(segunda).count).to eq(1)
+
+      segunda_rodada = travel_to(agora + 1.day) { described_class.new(ficha).call }
+      expect(segunda_rodada).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 0)
+      expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: primeira.id).status).to eq('nao_lida')
+
+      chamadas = corpos.size
+      travel_to(agora + 2.days) { described_class.new(ficha).call }
+      expect(corpos.size).to eq(chamadas)
+    end
+
+    it 'ficha com faixa quebrada fecha a rodada como erro antes de qualquer chamada' do
+      cortes = ficha.configuracao['cortes'] + [{ 'id' => 'itens', 'campo' => 'itens', 'faixas' => [[5, 1, 'ao contrário']] }]
+      ficha.update!(configuracao: ficha.configuracao.merge('cortes' => cortes))
+      openai_devolve({ 'procuras' => [procura] })
+
+      expect(rodar).to have_attributes(status: 'erro')
+      expect(corpos).to be_empty
+    end
+
+    it 'erro inesperado fora de uma conversa grava erro na rodada e sobe' do
+      allow(Autonomia::Desempenho::LeituraAutomatica::Candidatas).to receive(:new).and_raise(ActiveRecord::StatementInvalid)
+
+      expect { rodar }.to raise_error(ActiveRecord::StatementInvalid)
+      expect(Autonomia::Desempenho::Rodada.last.status).to eq('erro')
+    end
+
+    it 'pula a conversa apagada depois de entrar na fila' do
+      candidatas = instance_double(Autonomia::Desempenho::LeituraAutomatica::Candidatas, ids: [primeira.id + 10_000])
+      allow(Autonomia::Desempenho::LeituraAutomatica::Candidatas).to receive(:new).and_return(candidatas)
+
+      expect(rodar).to have_attributes(status: 'ok', conversas_lidas: 0, conversas_pendentes: 0)
+      expect(corpos).to be_empty
+    end
+
+    it 'rodada ok sem pendentes leva o piso da próxima para o corte dela' do
+      openai_devolve({ 'procuras' => [procura('inicio' => '10-21 14:00', 'fim' => '10-21 14:01')] },
+                     { 'procuras' => [procura('inicio' => '10-21 15:00', 'fim' => '10-21 15:01')] })
+      primeira_rodada = rodar
+      expect(primeira_rodada).to have_attributes(status: 'ok', conversas_pendentes: 0, piso_em: Time.utc(2026, 10, 21, 12, 0))
+
+      proxima = travel_to(agora + 1.day) { described_class.new(ficha).call }
+
+      expect(proxima.piso_em).to eq(primeira_rodada.corte_em)
     end
   end
 end

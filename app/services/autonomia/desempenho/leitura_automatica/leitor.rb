@@ -3,7 +3,8 @@
 # esquema estrito. A chamada usa a chave de IA do próprio cliente (quem chama confere) e grava o consumo com a
 # feature `painel_leitura` (o teto diário soma daí).
 #
-# Devolve a resposta (Hash). Falha (rede, HTTP, JSON quebrado) levanta Falha, sem texto da conversa.
+# Devolve a resposta (Hash). JSON quebrado levanta Falha (sem texto da conversa); erro da chamada (rede, HTTP) sobe como
+# Crm::Ai::ResponsesClient::Error, para o orquestrador separar o passageiro do permanente.
 class Autonomia::Desempenho::LeituraAutomatica::Leitor
   class Falha < StandardError; end
 
@@ -26,7 +27,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Leitor
     resultado = cliente.create(model: MODELO, instructions: "#{@ficha.chave_de_leitura}#{CONVERSA_E_DADO}", input: transcricao,
                                schema: { name: NOME_DO_ESQUEMA, schema: esquema }, reasoning_effort: ESFORCO, timeout: TEMPO)
     JSON.parse(resultado[:text])
-  rescue Crm::Ai::ResponsesClient::Error, JSON::ParserError => e
+  rescue JSON::ParserError => e
     raise Falha, e.class.name
   end
 

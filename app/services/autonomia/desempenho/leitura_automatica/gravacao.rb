@@ -4,8 +4,10 @@
 # Numa transação: apaga as procuras daquela conversa e daquele agente (de qualquer lote, a carga inclusive), grava as
 # novas no lote da leitura automática e atualiza a leitura da conversa (lida até a última mensagem lida).
 #
-# `inicio` e `fim` voltam do modelo como 'MM-DD HH:MM' (UTC, o horário da transcrição): o início é a primeira
-# mensagem daquele minuto, o fim a última. Horário que não é de nenhuma mensagem recusa a leitura (Esquema::Invalida).
+# `inicio` e `fim` voltam do modelo como 'MM-DD HH:MM' (UTC, o horário da transcrição, sem ano): o início é a primeira
+# mensagem daquele minuto, o fim a última. Numa conversa que atravessa o ano, o mesmo minuto pode existir em dois anos:
+# vale o par em que o início não passa do fim e os dois ficam mais perto; empatado, o mais recente (as mensagens já
+# param no corte). Sem par possível, a leitura é recusada (Esquema::Invalida).
 class Autonomia::Desempenho::LeituraAutomatica::Gravacao
   LOTE = 'leitura_automatica'.freeze
 
@@ -54,12 +56,11 @@ class Autonomia::Desempenho::LeituraAutomatica::Gravacao
 
   def linha(procura, ordem)
     atributos = sujeito.merge(conversation_id: @conversa.id, ordem: ordem, versao_ficha: @ficha.versao, lote: LOTE, anuncio_id: anuncio_id,
-                              inicio_em: instante(procura['inicio'], :first), fim_em: instante(procura['fim'], :last),
                               dados: dados(procura))
+    atributos[:inicio_em], atributos[:fim_em] = horarios(procura)
     COLUNAS.each { |papel, coluna| atributos[coluna] = procura[papel] }
     LISTAS.each { |papel, coluna| atributos[coluna] = Array(procura[papel]) }
     SIM_OU_NAO.each { |papel| atributos[papel.to_sym] = procura[papel] == true }
-    conferir_horarios!(atributos)
     atributos
   end
 
@@ -67,20 +68,20 @@ class Autonomia::Desempenho::LeituraAutomatica::Gravacao
     { 'cortes' => @esquema.cortes(procura), 'resumo' => procura['resumo'], 'por_que' => procura['por_que'].presence }
   end
 
-  # 'MM-DD HH:MM' (ou com T, como na transcrição) -> a primeira ou a última mensagem daquele minuto.
-  def instante(texto, ponta)
-    minuto = texto.to_s.strip.tr(' ', 'T')
-    no_minuto = @mensagens.select { |m| Autonomia::Desempenho::LeituraAutomatica::Transcricao.minuto(m.created_at) == minuto }
-    momento = no_minuto.public_send(ponta)&.created_at
-    raise Autonomia::Desempenho::LeituraAutomatica::Esquema::Invalida, 'horário fora da conversa' if momento.nil?
+  # [inicio_em, fim_em]: o par de mensagens (um candidato por ano) com início <= fim e mais perto um do outro.
+  def horarios(procura)
+    pares = pontas(procura['inicio'], :first).product(pontas(procura['fim'], :last)).select { |inicio, fim| inicio <= fim }
+    par = pares.min_by { |inicio, fim| [fim - inicio, -inicio.to_f] }
+    raise Autonomia::Desempenho::LeituraAutomatica::Esquema::Invalida, 'horário fora da conversa' if par.nil?
 
-    momento
+    par
   end
 
-  def conferir_horarios!(atributos)
-    return if atributos[:fim_em] >= atributos[:inicio_em]
-
-    raise Autonomia::Desempenho::LeituraAutomatica::Esquema::Invalida, 'fim antes do início'
+  # 'MM-DD HH:MM' (ou com T, como na transcrição) -> a primeira ou a última mensagem daquele minuto, uma por ano.
+  def pontas(texto, ponta)
+    minuto = texto.to_s.strip.tr(' ', 'T')
+    no_minuto = @mensagens.select { |m| Autonomia::Desempenho::LeituraAutomatica::Transcricao.minuto(m.created_at) == minuto }
+    no_minuto.group_by { |m| m.created_at.utc.year }.values.map { |do_ano| do_ano.public_send(ponta).created_at }
   end
 
   # A origem da conversa é o primeiro toque (Crm::MetaAds::Links): o anúncio só entra com os anúncios ligados na ficha.

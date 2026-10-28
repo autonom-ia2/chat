@@ -9,9 +9,9 @@ RSpec.describe Autonomia::Desempenho::Painel do
   let(:conversa) { create(:conversation, account: account, inbox: inbox) }
   let(:painel) { described_class.new(account: account, sujeito_type: 'robo', sujeito_id: robo.id) }
 
-  def rodada!(status, corte, tipo: 'robo', id: robo.id)
-    Autonomia::Desempenho::Rodada.create!(account: account, sujeito_type: tipo, sujeito_id: id, corte_em: corte, piso_em: corte - 1.day,
-                                          iniciada_em: corte, status: status, lote: 'spec')
+  def rodada!(status, corte, pendentes: 0)
+    Autonomia::Desempenho::Rodada.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, corte_em: corte, piso_em: corte - 1.day,
+                                          iniciada_em: corte, status: status, lote: 'spec', conversas_pendentes: pendentes)
   end
 
   before do
@@ -36,6 +36,19 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(meta).to include('lido_ate' => '2026-10-23T07:00', 'situacao' => 'sem_ia')
   end
 
+  it 'com pendentes, lido_ate é a última mensagem lida de fato, não o corte' do
+    rodada!('teto', Time.utc(2026, 10, 23, 10, 0), pendentes: 3)
+
+    expect(painel.call('7')['meta']).to include('lido_ate' => '2026-10-22T18:00', 'situacao' => 'teto')
+  end
+
+  it 'a rodada que caiu aparece como erro' do
+    rodada!('ok', Time.utc(2026, 10, 22, 10, 0))
+    rodada!('erro', Time.utc(2026, 10, 23, 10, 0))
+
+    expect(painel.call('7')['meta']).to include('situacao' => 'erro', 'lido_ate' => '2026-10-22T07:00')
+  end
+
   it 'teto na última rodada vira a situação; ok depois limpa' do
     rodada!('teto', Time.utc(2026, 10, 23, 10, 0))
     expect(painel.call('7')['meta']['situacao']).to eq('teto')
@@ -45,6 +58,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
   end
 
   it 'sem as sugestões do período exato, mostra as últimas do mesmo período com as datas delas' do
+    rodada!('ok', Time.utc(2026, 10, 22, 10, 0))
     Autonomia::Desempenho::Recomendacao.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, periodo: '7',
                                                 inicio: Date.new(2026, 10, 10), fim: Date.new(2026, 10, 16), versao_ficha: 1,
                                                 cartoes: [{ 'id' => 'r1' }], gerada_em: Time.current, lote: 'spec')

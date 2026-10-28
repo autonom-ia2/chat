@@ -63,7 +63,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(resultado['kpis'].find { |kpi| kpi['id'] == 'tempo_resposta' }['valor']).to eq(30)
   end
 
-  it 'usa a sugestão guardada do mesmo período e da mesma ficha; de outras datas, diz quais (#2301)' do
+  it 'usa a sugestão guardada só quando ela é do mesmo período e da mesma ficha' do
     base = { account: account, sujeito_type: 'robo', sujeito_id: robo.id, versao_ficha: 1, lote: 'spec', gerada_em: Time.current }
     Autonomia::Desempenho::Recomendacao.create!(base.merge(periodo: '7', inicio: Date.new(2026, 10, 20), fim: Date.new(2026, 10, 22),
                                                            cartoes: [{ 'id' => 'r1', 'titulo' => 'Dizer o prazo' }]))
@@ -71,7 +71,17 @@ RSpec.describe Autonomia::Desempenho::Painel do
                                                            cartoes: [{ 'id' => 'r1' }]))
 
     expect(painel.call('7')['recomendacoes']).to eq([{ 'id' => 'r1', 'titulo' => 'Dizer o prazo' }])
-    expect(painel.call('7')['meta']['recomendacoes_de']).to be_nil
+    expect(painel.call('30')['recomendacoes']).to eq([])
+    expect(painel.call('30')['meta']['recomendacoes_de']).to be_nil
+  end
+
+  it 'com leitura automática, a sugestão de outras datas do mesmo período vai com as datas dela (#2301)' do
+    base = { account: account, sujeito_type: 'robo', sujeito_id: robo.id, versao_ficha: 1, lote: 'spec', gerada_em: Time.current }
+    Autonomia::Desempenho::Recomendacao.create!(base.merge(periodo: '30', inicio: Date.new(2026, 9, 1), fim: Date.new(2026, 9, 30),
+                                                           cartoes: [{ 'id' => 'r1' }]))
+    Autonomia::Desempenho::Rodada.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, corte_em: Time.current,
+                                          piso_em: 1.day.ago, iniciada_em: Time.current, status: 'ok', lote: 'spec')
+
     expect(painel.call('30')['recomendacoes']).to eq([{ 'id' => 'r1' }])
     expect(painel.call('30')['meta']['recomendacoes_de']).to eq('inicio' => '2026-09-01', 'fim' => '2026-09-30')
     Autonomia::Desempenho::Recomendacao.find_by(periodo: '30').update!(versao_ficha: 2)

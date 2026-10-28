@@ -3,6 +3,9 @@
 # - Teto diário em dólares: TETO_DIARIO_USD; a ENV AUTONOMIA_DESEMPENHO_TETO_DIARIO_USD troca o padrão da instalação, e
 #   a ficha (`configuracao.leitura.teto_diario_usd`) troca o da conta. O gasto é a soma do consumo gravado com a
 #   feature da leitura desde o começo do dia no fuso da conta.
+# - O teto é conferido antes de cada conversa, não reservado: a rodada pode passar dele em até uma conversa (a que
+#   começou abaixo do teto). E o gasto vem do consumo gravado na resposta: uma chamada que estoura o tempo depois de a
+#   OpenAI processar não grava consumo, e o gasto fica menor que o cobrado.
 # - Conversa grande demais: acima de MAX_CARACTERES na transcrição (ou `configuracao.leitura.max_caracteres`), a
 #   conversa não vai ao modelo e fica como não lida.
 class Autonomia::Desempenho::LeituraAutomatica::Teto

@@ -2091,6 +2091,7 @@
         "SEM_IA_BOTAO": "Connect the key",
         "SEM_IA_SEM_ACESSO": "Reading isn't working in this account right now. We already told whoever runs the account.",
         "SEM_IA_SEM_ACESSO_BOTAO": "See the numbers",
+        "ERRO": "The last reading stopped because of an error. We try again tomorrow; the numbers show what was already read.",
         "SEM_RESULTADO": "We don't know yet what counts as a result for {nome}.",
         "CONFERENCIA_BAIXA": "The subjects may be inaccurate. We are reviewing them."
       },

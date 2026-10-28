@@ -5,6 +5,8 @@
 # Tudo desligado enquanto a ENV AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA não for verdadeira.
 class Autonomia::Desempenho::LeituraAutomaticaJob < ApplicationJob
   queue_as :low
+  # Cada tentativa paga chamadas de IA de novo: falhou, a rodada fica `erro` e a próxima é a do dia seguinte.
+  discard_on StandardError
 
   FLAG = 'agentes_painel_desempenho'.freeze
   ESPALHAR_EM = 30.minutes.to_i
@@ -35,12 +37,21 @@ class Autonomia::Desempenho::LeituraAutomaticaJob < ApplicationJob
 
   def com_chave = ::Autonomia::Desempenho::Ficha.where.not(chave_de_leitura: [nil, ''])
 
-  # A ficha vigente (a de maior versão) de cada agente da conta, só quando ela tem a chave de leitura.
+  # A ficha vigente (a de maior versão) de cada agente da conta, só quando ela tem a chave de leitura e o agente existe
+  # e está ligado (o robô de outro sistema, só que exista na conta).
   def fichas(account)
     sujeitos = ::Autonomia::Desempenho::Ficha.where(account_id: account.id).distinct.pluck(:sujeito_type, :sujeito_id)
     sujeitos.filter_map do |tipo, id|
+      next unless ativo?(account, tipo, id)
+
       ficha = ::Autonomia::Desempenho::Ficha.vigente(account, tipo, id)
       ficha if ficha&.chave_de_leitura.present?
     end
+  end
+
+  def ativo?(account, tipo, id)
+    return AgentBot.exists?(account_id: account.id, id: id) if tipo == 'robo'
+
+    ::Autonomia::Agents::Agent.kept.exists?(account_id: account.id, id: id, enabled: true)
   end
 end

@@ -1,33 +1,113 @@
-# Grava a chave de leitura na ficha vigente de um agente do painel de desempenho (#2301), a partir de um arquivo fora
-# do repositório (a chave é dado da conta: nunca entra no git). Grava também o hash da instrução que o agente usa hoje,
-# para o painel avisar quando ela mudar (só para agente nosso; o robô de outro sistema fica sem hash).
+# Gera o .sql que grava a chave de leitura na ficha do painel de desempenho (#2301). Script LOCAL, em Ruby puro (sem
+# Rails): em produção não se roda `rails runner`. Quem executa o .sql é a Orquestração, com psql.
 #
-#   bundle exec rails runner script/desempenho/chave.rb <conta> <agente|robo> <id do sujeito> <arquivo.md>
+#   ruby script/desempenho/chave.rb --chave <arquivo.md> --conta <id> --ficha <id> --versao <n> --saida <arquivo.sql>
+#                                   [--instrucao <arquivo.txt> | --hash <sha256>]
 #
-# - Atualiza a ficha de maior versão; não cria versão nova.
-# - Nunca imprime o conteúdo do arquivo: só o tamanho, a versão da ficha e se o hash foi gravado.
+# - A chave é dado da conta: o arquivo dela e o .sql ficam fora do repositório (o script recusa --saida dentro dele).
+# - O UPDATE só pega a ficha com o id, a conta e a versão dados, e só se ela for a vigente (a de maior versão daquele
+#   agente). Se não atualizar exatamente uma linha, a transação é desfeita.
+# - `instrucao_hash`: o SHA-256 da instrução que o agente usa hoje, para o painel avisar quando ela mudar. Com
+#   --instrucao, o script calcula o hash do arquivo (o texto exato da instrução, em UTF-8); com --hash, usa o dado.
+#   Sem nenhum dos dois (robô de outro sistema), o hash fica vazio.
+# - A chave vai entre aspas de dólar com marcas aleatórias que o script confere não aparecerem no texto, então nada
+#   no arquivo vira SQL.
+# - Nunca imprime o conteúdo: só o tamanho da chave e onde gravou.
+require 'digest'
+require 'optparse'
+require 'securerandom'
+
 module ChaveDeLeitura
+  HEX = '0123456789abcdef'.freeze
+  REPOSITORIO = File.expand_path('../..', __dir__)
+
   module_function
 
   def rodar(argumentos)
-    conta, tipo, id, caminho = argumentos
-    abort('uso: chave.rb <conta> <agente|robo> <id do sujeito> <arquivo.md>') if [conta, tipo, id, caminho].any?(&:blank?)
-    abort('tipo: agente ou robo') unless Autonomia::Desempenho::Sujeito::TIPOS.include?(tipo)
+    opcoes = ler_opcoes(argumentos)
+    chave = File.read(opcoes.fetch(:chave), encoding: 'UTF-8')
+    abort('o arquivo da chave está vazio') if chave.strip.empty?
 
-    gravar(Account.find(conta), tipo, id.to_i, File.read(caminho, encoding: 'UTF-8'))
-  rescue ActiveRecord::RecordNotFound, Errno::ENOENT => e
-    abort("#{e.class.name}: conta ou arquivo não encontrado")
+    File.write(opcoes.fetch(:saida), sql(chave, opcoes))
+    puts "#{opcoes[:saida]}: chave com #{chave.size} caracteres; hash da instrução #{hash_da_instrucao(opcoes) ? 'incluído' : 'vazio'}"
+  rescue KeyError, OptionParser::ParseError => e
+    abort("#{e.class.name}: #{e.message}")
+  rescue Errno::ENOENT
+    abort('arquivo não encontrado')
   end
 
-  def gravar(account, tipo, id, chave)
-    abort('o arquivo está vazio') if chave.strip.empty?
-    ficha = Autonomia::Desempenho::Ficha.vigente(account, tipo, id)
-    abort('este agente não tem ficha') if ficha.nil?
+  def ler_opcoes(argumentos)
+    opcoes = {}
+    OptionParser.new do |o|
+      %i[chave saida instrucao hash].each { |nome| o.on("--#{nome} VALOR", String) { |valor| opcoes[nome] = valor } }
+      %i[conta ficha versao].each { |nome| o.on("--#{nome} N", Integer) { |valor| opcoes[nome] = valor } }
+    end.parse!(argumentos.dup)
+    conferir!(opcoes)
+  end
 
-    instrucao = Autonomia::Desempenho::Ficha.hash_da_instrucao(account, tipo, id)
-    ficha.update!(chave_de_leitura: chave, instrucao_hash: instrucao)
-    puts "ficha versão #{ficha.versao}: chave com #{chave.size} caracteres; hash da instrução #{instrucao ? 'gravado' : 'vazio'}"
+  def conferir!(opcoes)
+    %i[chave conta ficha versao saida].each { |nome| abort("falta --#{nome}") if opcoes[nome].nil? }
+    abort('--saida precisa ficar fora do repositório') if no_repositorio?(opcoes[:saida])
+    conferir_hash!(opcoes)
+  end
+
+  def conferir_hash!(opcoes)
+    abort('use --instrucao ou --hash, não os dois') if opcoes[:instrucao] && opcoes[:hash]
+    abort('--hash precisa ter 64 caracteres hexadecimais') if opcoes[:hash] && !hash_valido?(opcoes[:hash])
+    opcoes
+  end
+
+  def no_repositorio?(caminho)
+    completo = File.expand_path(caminho)
+    completo == REPOSITORIO || completo.start_with?("#{REPOSITORIO}/")
+  end
+
+  def hash_valido?(valor) = valor.size == 64 && valor.each_char.all? { |letra| HEX.include?(letra) }
+
+  def hash_da_instrucao(opcoes)
+    return opcoes[:hash] if opcoes[:hash]
+
+    Digest::SHA256.hexdigest(File.read(opcoes[:instrucao], encoding: 'UTF-8')) if opcoes[:instrucao]
+  end
+
+  # Uma marca de aspas de dólar que não aparece no texto.
+  def marca(prefixo, texto)
+    nova = "#{prefixo}_#{SecureRandom.hex(8)}"
+    nova = "#{prefixo}_#{SecureRandom.hex(8)}" while texto.include?(nova)
+    nova
+  end
+
+  def sql(chave, opcoes)
+    corpo = marca('leitura', chave)
+    <<~SQL
+      -- Grava a chave de leitura na ficha #{opcoes[:ficha]} (conta #{opcoes[:conta]}, versão #{opcoes[:versao]}). #2301
+      BEGIN;
+      DO $#{corpo}$
+      DECLARE linhas integer;
+      BEGIN
+      #{update(chave, opcoes)}
+        GET DIAGNOSTICS linhas = ROW_COUNT;
+        IF linhas <> 1 THEN
+          RAISE EXCEPTION 'esperava 1 ficha vigente, achou %', linhas;
+        END IF;
+      END
+      $#{corpo}$;
+      COMMIT;
+    SQL
+  end
+
+  # Só a ficha com o id, a conta e a versão dados, e só se ela for a de maior versão daquele agente. Linhas juntas à
+  # mão, sem heredoc: a chave entra exatamente como está no arquivo, com as quebras de linha dela.
+  def update(chave, opcoes)
+    texto = marca('chave', chave)
+    instrucao = hash_da_instrucao(opcoes)
+    ['UPDATE autonomia_desempenho_fichas f',
+     "   SET chave_de_leitura = $#{texto}$#{chave}$#{texto}$,",
+     "       instrucao_hash = #{instrucao ? "'#{instrucao}'" : 'NULL'}, updated_at = now()",
+     " WHERE f.id = #{opcoes[:ficha]} AND f.account_id = #{opcoes[:conta]} AND f.versao = #{opcoes[:versao]}",
+     '   AND f.versao = (SELECT max(v.versao) FROM autonomia_desempenho_fichas v',
+     '                    WHERE v.account_id = f.account_id AND v.sujeito_type = f.sujeito_type AND v.sujeito_id = f.sujeito_id);'].join("\n")
   end
 end
 
-ChaveDeLeitura.rodar(ARGV)
+ChaveDeLeitura.rodar(ARGV) if $PROGRAM_NAME == __FILE__

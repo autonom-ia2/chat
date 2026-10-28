@@ -4,7 +4,8 @@
 # catálogo da ficha (temas, marcos, resultados, motivos, regras, quem, origens e as faixas de cada corte), nunca do
 # código. Os nomes dos campos são os papéis abaixo; a ficha pode trocar o nome de um papel em
 # `configuracao.leitura.campos` ({papel => nome}) para casar com a chave de leitura, e acrescentar campos que a chave
-# pede mas o painel não guarda em `configuracao.leitura.extras` ({nome => esquema JSON}).
+# pede mas o painel não guarda em `configuracao.leitura.extras` ({nome => esquema JSON}). O campo `teste` só entra com
+# `configuracao.leitura.com_teste` verdadeiro.
 #
 # A conferência recusa (Invalida) o que não dá para gravar: id fora do catálogo, horário que não é de uma mensagem da
 # conversa, fim antes do início, lista vazia. Recusada, a conversa fica com as procuras de antes.
@@ -20,13 +21,15 @@ class Autonomia::Desempenho::LeituraAutomatica::Esquema
   LISTAS = { 'quem' => 'quem', 'origem' => 'origens', 'tema' => 'temas', 'marcos' => 'marcos', 'resultado' => 'resultados',
              'motivos' => 'motivos', 'regras' => 'regras' }.freeze
   TEXTO = { 'type' => 'string' }.freeze
+  # O formato do horário vai descrito no próprio esquema, como a transcrição escreve (o código acha a mensagem).
+  HORARIO = { 'type' => 'string', 'description' => 'MM-DD HH:MM em UTC, igual ao horário da linha da transcrição' }.freeze
   SIM_OU_NAO = { 'type' => 'boolean' }.freeze
 
   def initialize(ficha)
     @catalogo = ficha.catalogo
     @configuracao = ficha.configuracao
     @leitura = @configuracao['leitura'].is_a?(Hash) ? @configuracao['leitura'] : {}
-    @com_teste = ficha.chave_de_leitura.to_s.include?("`#{nome('teste')}`")
+    @com_teste = @leitura['com_teste'] == true
   end
 
   def json
@@ -60,7 +63,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Esquema
 
   # [[papel, esquema]] na ordem da prova: quem é, o pedido, o tema, os cortes, o que aconteceu, a qualidade, a pessoa.
   def campos
-    [['conversa', { 'type' => 'integer' }], ['procura', { 'type' => 'integer' }], ['inicio', TEXTO], ['fim', TEXTO],
+    [['conversa', { 'type' => 'integer' }], ['procura', { 'type' => 'integer' }], ['inicio', HORARIO], ['fim', HORARIO],
      *(@com_teste ? [['teste', SIM_OU_NAO]] : []),
      ['quem', um_de(ids('quem'))], ['pedido', um_de(pedidos)], ['tema', um_de(ids('tema'))], *campos_de_corte,
      ['marcos', lista_de(ids('marcos'))], ['resultado', um_de(ids('resultado'))], ['motivos', lista_de(ids('motivos'))],

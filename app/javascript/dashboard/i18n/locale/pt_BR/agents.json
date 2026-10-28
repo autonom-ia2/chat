@@ -2091,6 +2091,7 @@
         "SEM_IA_BOTAO": "Conectar a chave",
         "SEM_IA_SEM_ACESSO": "A leitura não está funcionando nesta conta agora. Já avisamos quem cuida da conta.",
         "SEM_IA_SEM_ACESSO_BOTAO": "Ver os números",
+        "ERRO": "A última leitura parou por um erro. Tentamos de novo amanhã; os números mostram o que já foi lido.",
         "SEM_RESULTADO": "Ainda não sabemos o que conta como resultado para {nome}.",
         "CONFERENCIA_BAIXA": "Os assuntos podem estar imprecisos. Estamos revisando."
       },

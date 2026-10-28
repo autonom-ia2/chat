@@ -27,12 +27,16 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Esquema do
                          'resultado' => %w[comprou vai_pensar duvida_resolvida], 'regras' => ['R-PRAZO'], 'pedido' => %w[comprar duvida],
                          'qualidade' => %w[acertou erro_leve erro_grave nao_atuou])
     expect(propriedades).not_to have_key('teste')
+    expect(propriedades['inicio']['description']).to eq('MM-DD HH:MM em UTC, igual ao horário da linha da transcrição')
   end
 
-  it 'pede o campo teste só quando a chave de leitura fala dele' do
+  it 'pede o campo teste só com configuracao.leitura.com_teste' do
     ficha.update!(chave_de_leitura: 'Marque `teste` quando for teste da equipe.')
+    expect(propriedades).not_to have_key('teste')
 
-    expect(propriedades['teste']).to eq('type' => 'boolean')
+    ficha.update!(configuracao: ficha.configuracao.merge('leitura' => { 'com_teste' => true }))
+
+    expect(described_class.new(ficha).json.dig('properties', 'procuras', 'items', 'properties', 'teste')).to eq('type' => 'boolean')
   end
 
   it 'troca o nome de um papel e acrescenta extras pela ficha, e o corte com faixas vira número' do

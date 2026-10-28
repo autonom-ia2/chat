@@ -15,6 +15,8 @@ export const VARIANTES = {
     soQuemGerencia: true,
     botaoSemAcesso: true,
   },
+  // #2301 — a última rodada da leitura automática caiu: a frase só avisa; a próxima rodada tenta de novo.
+  erro: { chave: 'ERRO', icone: 'i-lucide-circle-alert', semBotao: true },
   // Definir o que conta como resultado volta no PR que grava a escolha (o #2251 tirou a gaveta que não gravava).
   sem_resultado: {
     chave: 'SEM_RESULTADO',
