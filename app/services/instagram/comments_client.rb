@@ -5,8 +5,9 @@
 #   (`instagram_business_manage_messages`, a mesma do Direct da caixa), uma vez só, até 7 dias depois do comentário.
 # - Devolve Meta::AdsGraphClient::Result: o mesmo `scope_error?` (10, 200–299), `token_invalid?` (190) e
 #   `transient?` do cliente de anúncios, para quem chama separar falta de permissão de falha passageira.
-# - O login do Instagram recebe o token na query. Por isso o log só leva o caminho e o código, nunca a URL nem a
-#   mensagem da Meta sem limpar.
+# - O login do Instagram recebe o token na query. Por isso o log só leva o caminho, o HTTP e o código da Meta: nunca a
+#   URL nem a mensagem de erro, que pode repetir o texto enviado (#2327).
+# - O texto da resposta vai no corpo, nunca na query (#2327): a query fica na URL, e a URL vai a log, trace e span.
 # https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/comment-moderation
 class Instagram::CommentsClient
   TIMEOUT_SECONDS = 8
@@ -38,7 +39,7 @@ class Instagram::CommentsClient
   end
 
   def reply(comment_id, text)
-    request(:post, "#{comment_id}/replies", { message: text })
+    request(:post, "#{comment_id}/replies", {}, body: { message: text }.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 
   def hide(comment_id, hidden:)
@@ -81,7 +82,7 @@ class Instagram::CommentsClient
     return result if result.ok
 
     Rails.logger.warn("[InstagramComments] #{verb.to_s.upcase} #{path} http=#{result.http_code.inspect} " \
-                      "code=#{result.error_code.inspect} message=#{result.error_message}")
+                      "code=#{result.error_code.inspect}")
     result
   end
 
