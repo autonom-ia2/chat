@@ -31,6 +31,8 @@ class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accou
   end
 
   def reply
+    return render_unprocessable('invalid_text') unless params[:content].is_a?(String)
+
     result = comments.reply!(ad_id, comment_id, params[:content], user: Current.user)
     audit!('reply')
     render json: result

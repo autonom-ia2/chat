@@ -46,7 +46,8 @@ RSpec.describe Crm::MetaAds::FacebookComments do
   def stub_comments(data: nil, after: nil, total: 2)
     data ||= [
       comment(comment_id, name: 'Mariana Costa', message: 'Ainda tem no tamanho M?',
-                          replies: [comment('200000000000002_400', name: 'Loja Exemplo', message: 'Temos sim!', from_id: page_id, can_hide: false)]),
+                          replies: [comment('200000000000002_400', name: 'Loja Exemplo', message: 'Temos sim!', from_id: page_id, can_hide: false),
+                                    comment('200000000000002_450', name: 'Ana', message: 'Eu também quero')]),
       comment('200000000000002_500', name: nil, message: 'Ainda não chegou.', hidden: true)
     ]
     body = { id: post_id, permalink_url: 'https://www.facebook.com/p/1',
@@ -75,7 +76,28 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect(first).to include(id: comment_id, author: { name: 'Mariana Costa', is_page: false }, text: 'Ainda tem no tamanho M?',
                                hidden: false, can_reply: true, can_hide: true, can_delete: true, can_reply_private: false)
       expect(first[:replies].first).to include(author: { name: 'Loja Exemplo', is_page: true }, can_hide: false, can_reply: false)
+      # Provisório até a chamada real: resposta sem botões, mesmo de cliente e com a Meta deixando.
+      expect(first[:replies].last).to include(author: { name: 'Ana', is_page: false }, can_reply: false, can_hide: false, can_delete: false)
       expect(second).to include(author: { name: nil, is_page: false }, hidden: true, replies: [])
+    end
+
+    it 'comentário só com foto vem com o tipo do anexo, sem texto' do
+      ready!(*all_permissions)
+      stub_comments(data: [comment(comment_id, name: 'Ana', message: nil).merge(attachment: { type: 'photo' })], total: nil)
+
+      result = described_class.new(connection).list(ad_id)
+
+      expect(result[:comments].first).to include(text: nil, attachment: 'photo')
+      expect(result[:total]).to be_nil
+    end
+
+    it 'post apagado (a Meta não acha mais): a aba some, em vez de erro para sempre' do
+      ready!(*all_permissions)
+      stub_request(:get, meta_graph_url(post_id)).with(query: hash_including({}))
+                                                 .to_return(status: 400, body: meta_graph_error(100, subcode: 33).to_json, headers: json)
+      allow(Rails.logger).to receive(:warn)
+
+      expect(described_class.new(connection).list(ad_id)).to include(status: 'no_post', comments: [])
     end
 
     it 'sem pages_manage_engagement lê, mas nenhuma linha deixa responder, ocultar ou apagar' do
@@ -243,19 +265,6 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect { described_class.new(connection).delete!(ad_id, comment_id) }.to raise_error(described_class::Error, 'meta_unavailable')
     end
 
-    it 'pela IA, por post: só em Página da conta, e a ação fica gravada com actor ai' do
-      hide = stub_request(:post, meta_graph_url(comment_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)
-
-      expect(described_class.new(connection).hide_on_post!(post_id, comment_id, true, actor: 'ai')).to be(true)
-      expect(hide).to have_been_requested.once
-      expect(Crm::MetaAdsCommentAction.sole).to have_attributes(action: 'hide', actor: 'ai', ad_id: nil, user_id: nil)
-
-      allow(Crm::MetaAdsPage).to receive(:account_ids_for).and_return([account.id + 1])
-      expect { described_class.new(connection).hide_on_post!(post_id, comment_id, true, actor: 'ai') }
-        .to raise_error(described_class::Error, 'comment_not_found')
-      expect(hide).to have_been_requested.once
-    end
-
     it 'falha ao gravar a ação não desfaz o que a Meta já fez' do
       stub_request(:delete, meta_graph_url(comment_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)
       allow(Crm::MetaAdsCommentAction).to receive(:record!).and_raise(ActiveRecord::RecordInvalid)
@@ -264,6 +273,38 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
       expect(described_class.new(connection).delete!(ad_id, comment_id)).to be(true)
       expect(tracker).to have_received(:capture_exception)
+    end
+  end
+
+  describe '#comment (quem consome meta_ads.comment_received, que leva só ids)' do
+    before do
+      stub_permissions(*all_permissions)
+      stub_page_token
+    end
+
+    it 'lê o comentário com o token da Página, sem registrar a Página de novo' do
+      stub_request(:get, meta_graph_url(comment_id)).with(query: hash_including({}), headers: { 'Authorization' => "Bearer #{page_token}" })
+                                                    .to_return(status: 200, headers: json,
+                                                               body: { id: comment_id, from: { id: '555', name: 'Ana' }, message: 'Oi' }.to_json)
+      allow(Crm::MetaAdsPage).to receive(:remember!)
+
+      expect(described_class.new(connection).comment(post_id, comment_id)).to include('message' => 'Oi')
+      expect(Crm::MetaAdsPage).not_to have_received(:remember!)
+    end
+
+    it 'comentário de outro post: nil, com o motivo no log só com ids, sem chamar a Meta pelo comentário' do
+      allow(Rails.logger).to receive(:warn)
+
+      expect(described_class.new(connection).comment(post_id, '999_1')).to be_nil
+      expect(Rails.logger).to have_received(:warn).with(include('comment_not_found', '999_1'))
+      expect(a_request(:get, meta_graph_url('999_1'))).not_to have_been_made
+    end
+
+    it 'Página de outra conta: nil, sem chamar a Meta pelo comentário' do
+      allow(Crm::MetaAdsPage).to receive(:account_ids_for).and_return([account.id + 1])
+
+      expect(described_class.new(connection).comment(post_id, comment_id)).to be_nil
+      expect(a_request(:get, meta_graph_url(comment_id))).not_to have_been_made
     end
   end
 end

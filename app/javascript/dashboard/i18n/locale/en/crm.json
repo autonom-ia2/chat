@@ -3178,6 +3178,8 @@
           "MORE": "See more comments",
           "YOU": "You",
           "HIDDEN": "Hidden",
+          "ATTACHMENT_PHOTO": "Sent a photo",
+          "ATTACHMENT": "Sent an attachment",
           "REPLY": "Reply",
           "REPLY_PRIVATE": "Reply privately",
           "HIDE": "Hide",

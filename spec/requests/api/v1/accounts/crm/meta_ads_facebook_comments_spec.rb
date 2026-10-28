@@ -86,6 +86,16 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
     expect(audit.audited_changes.to_json).not_to include('Entregamos', 'PAGETOKEN123')
   end
 
+  it 'resposta que não vem como texto é recusada sem chamar a Meta' do
+    stub_meta
+
+    post "#{path}/#{comment_id}/reply", params: { content: { a: 1 } }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body).to eq('error' => 'invalid_text')
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
   it 'oculta e apaga' do
     stub_meta
     stub_request(:post, meta_graph_url(comment_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)

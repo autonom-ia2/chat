@@ -95,6 +95,17 @@ describe('MetaAdsComments (#2196)', () => {
     expect(said('FACEBOOK.ERRORS.META_UNAVAILABLE')).toContain('Facebook');
   });
 
+  it('shows a photo-only comment with the photo label, not as an empty line (#2197)', async () => {
+    const fb = adaptador(
+      ready([{ ...comment('1'), text: null, attachment: 'photo' }])
+    );
+    const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }]);
+
+    expect(shell.find('[data-ad-comment-attachment]').text()).toBe(
+      said('ATTACHMENT_PHOTO')
+    );
+  });
+
   it('falls back to the generic message for an unknown code', async () => {
     const ig = adaptador(ready([comment('1')]));
     ig.ocultar.mockRejectedValue(refused(422, 'something_new'));

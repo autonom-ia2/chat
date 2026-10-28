@@ -6,7 +6,7 @@
 module Meta::AdsGraphClient::PageComments
   COMMENTS_PAGE_SIZE = 25
   REPLIES_LIMIT = 100
-  COMMENT_FIELDS = 'id,from{id,name},message,created_time,is_hidden,can_hide,can_remove,can_comment'.freeze
+  COMMENT_FIELDS = 'id,from{id,name},message,attachment{type},created_time,is_hidden,can_hide,can_remove,can_comment'.freeze
   COMMENT_FIELDS_WITH_REPLIES = "#{COMMENT_FIELDS},comments.limit(#{REPLIES_LIMIT}){#{COMMENT_FIELDS}}".freeze
   POST_COMMENTS_FIELDS = 'permalink_url,comments.filter(toplevel).order(reverse_chronological)' \
                          ".limit(#{COMMENTS_PAGE_SIZE}).summary(total_count){#{COMMENT_FIELDS_WITH_REPLIES}}".freeze

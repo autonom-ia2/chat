@@ -3,7 +3,8 @@
 # crm_meta_ads_comment_actions (#2196), sem o texto.
 #
 # - Pela tela: só o post do anúncio da conta de anúncios da conexão (Crm::MetaAds::AdManagement#ad); anúncio de outra
-#   conta é `ad_not_found`. Pela IA (#2212): `*_on_post!`, só em post de Página da conta (Crm::MetaAdsPage, #2195).
+#   conta é `ad_not_found`; post apagado ou que a Meta não acha mais é `no_post`. Pelo evento do webhook
+#   (`meta_ads.comment_received`, que leva só ids): `comment`, só em post de Página da conta (Crm::MetaAdsPage, #2195).
 # - Tudo com o token da Página, pedido com o token da pessoa. Ler exige `pages_read_user_content`; responder, ocultar e
 #   apagar, `pages_manage_engagement`. Sem a primeira (ou no modo `partner`, em que o token é o da plataforma), a aba
 #   pede para entrar de novo com o Facebook (`needs_login`); sem a segunda, lê e não age. Falha passageira da Meta ao
@@ -42,11 +43,14 @@ class Crm::MetaAds::FacebookComments
     client = page_client(post_id)
     return empty('needs_login') if client.nil?
 
-    data = graph!(client.post_comments(post_id))
+    result = client.post_comments(post_id)
+    return empty('no_post') if result.missing_object?
+
+    data = graph!(result)
     comments = data['comments'].to_h
     {
       status: 'ready', permalink_url: data['permalink_url'], comments: rows(comments['data'], page_id(post_id)),
-      total: comments.dig('summary', 'total_count').to_i, next_cursor: next_cursor(comments)
+      total: comments.dig('summary', 'total_count'), next_cursor: next_cursor(comments)
     }
   end
 
@@ -75,20 +79,13 @@ class Crm::MetaAds::FacebookComments
     true
   end
 
-  # Pela IA (#2212), por post: sem anúncio, o post precisa ser de Página da conta.
-  def reply_on_post!(post_id, comment_id, message, actor:)
-    reply_to(post_id, comment_id, message, { actor: actor, user: nil, ad_id: nil })
-  end
-
-  def hide_on_post!(post_id, comment_id, hidden, actor:)
-    hide_in(post_id, comment_id, hidden, { actor: actor, user: nil, ad_id: nil })
-  end
-
-  # Pelo webhook (Crm::MetaAds::FacebookFeed): o comentário como a Graph devolve (`message`, `from`), lido com o token da
-  # Página. Só em post de Página da conta e com a leitura concedida; nil quando não dá para ler (a recusa vai ao log, só
-  # com ids). A Página já é da conta: aqui ela não é registrada de novo.
+  # Para quem consome `meta_ads.comment_received` (#2212), que leva só ids: o comentário como a Graph devolve
+  # (`message`, `from`, `attachment`), lido com o token da Página. Só em post de Página da conta e com a leitura
+  # concedida; nil quando não dá para ler (a recusa vai ao log, só com ids). A Página já é da conta: aqui ela não é
+  # registrada de novo.
   def comment(post_id, comment_id)
-    return unless comment_of_post?(comment_id, post_id) && granted?(READ) && own_page?(post_id)
+    return unless granted?(READ) && own_page?(post_id)
+    raise Error, 'comment_not_found' unless comment_of_post?(comment_id, post_id)
 
     client = page_client(post_id, remember: false)
     client && graph!(client.page_comment(comment_id))
@@ -207,11 +204,10 @@ class Crm::MetaAds::FacebookComments
     record.update!(feed_receiving: true)
   end
 
-  # `by`: { actor:, user:, ad_id: }. Com anúncio, o post já veio dele; sem, a Página precisa ser da conta.
+  # `by`: { actor:, user:, ad_id: }. O post já veio do anúncio da conta (post_id!).
   def act!(post_id, comment_id, acao, by)
     raise Error, 'comment_not_found' unless comment_of_post?(comment_id, post_id)
     raise Error, 'needs_login' unless granted?(MANAGE)
-    raise Error, 'comment_not_found' unless by[:ad_id] || own_page?(post_id)
 
     client = page_client(post_id) || raise(Error, 'needs_login')
     data = graph!(yield(client))
