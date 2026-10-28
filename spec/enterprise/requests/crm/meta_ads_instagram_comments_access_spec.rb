@@ -43,7 +43,7 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
   end
 
   def private_reply
-    post "#{path}/18000000000000001/private_reply", params: { text: 'Oi, Carla!' }, headers: manager.create_new_auth_token, as: :json
+    post "#{path}/18000000000000001/private_reply", params: { content: 'Oi, Carla!' }, headers: manager.create_new_auth_token, as: :json
   end
 
   # A criação da caixa pela factory inscreve o app (subscribed_apps): não é chamada dos comentários.
@@ -74,13 +74,13 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
 
   it 'quem só vê os anúncios recebe 403 em toda ação, sem chamar o Instagram' do
     headers = viewer.create_new_auth_token
-    post "#{path}/18000000000000001/reply", params: { text: 'Oi' }, headers: headers, as: :json
+    post "#{path}/18000000000000001/reply", params: { content: 'Oi' }, headers: headers, as: :json
     expect(response).to have_http_status(:forbidden)
     post "#{path}/18000000000000001/hide", params: { hidden: true }, headers: headers, as: :json
     expect(response).to have_http_status(:forbidden)
     delete "#{path}/18000000000000001", headers: headers, as: :json
     expect(response).to have_http_status(:forbidden)
-    post "#{path}/18000000000000001/private_reply", params: { text: 'Oi' }, headers: headers, as: :json
+    post "#{path}/18000000000000001/private_reply", params: { content: 'Oi' }, headers: headers, as: :json
     expect(response).to have_http_status(:forbidden)
 
     expect(instagram_call).not_to have_been_made

@@ -8,7 +8,10 @@
 # TRANSIÇÃO (#2291, prazo 15/11/2026): o `value` completo do webhook, com texto, de antes do deploy do #2287, ainda é
 # aceito; daqui só os ids são usados.
 #
-# Vira o evento comum `meta_ads.comment_received` para quem cuida dos comentários (#2212). Ficam de fora: outros
+# Vira o evento comum `meta_ads.comment_received` para quem cuida dos comentários (#2212), só com ids: sem o texto e
+# sem o username (#2327). O Dispatcher passa o payload ao EventDispatcherJob, cujos argumentos ficam no Redis e podem
+# sair no log; quem consome lê o texto e o autor pelo Instagram::CommentsClient. A leitura na Graph daqui continua: é
+# ela que separa o eco da própria conta. Ficam de fora: outros
 # campos (`mentions`), o eco das respostas da própria conta, Instagram sem caixa na plataforma (o relay entre stacks
 # entrega o mesmo corpo às duas; cada uma só publica o que é dela), conta sem a flag `meta_ads_comentarios_instagram`
 # (sem ela a caixa não tem a permissão de ler comentários) e o mesmo comentário de novo em DEDUP (webhook reenviado).
@@ -94,8 +97,7 @@ class Webhooks::InstagramCommentJob < ApplicationJob
     {
       network: 'instagram', account_id: channel.account_id, inbox_id: channel.inbox.id, instagram_id: channel.instagram_id,
       media_id: comment.dig('media', 'id')&.to_s, ad_id: ad_id, comment_id: comment['id'].to_s,
-      parent_id: comment['parent_id']&.to_s, from_id: comment.dig('from', 'id')&.to_s, from_name: comment.dig('from', 'username'),
-      text: comment['text'], created_time: Time.zone.at(Integer(time.to_s))
+      parent_id: comment['parent_id']&.to_s, from_id: comment.dig('from', 'id')&.to_s, created_time: Time.zone.at(Integer(time.to_s))
     }
   end
 end

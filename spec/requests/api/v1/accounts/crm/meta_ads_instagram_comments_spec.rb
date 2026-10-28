@@ -96,7 +96,7 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
     stub_request(:post, %r{#{ig}/#{ig_id}/messages})
       .to_return(status: 200, headers: json, body: { recipient_id: '7001', message_id: 'mid.1' }.to_json)
 
-    post "#{path}/18000000000000001/private_reply", params: { text: 'Oi, Carla!' }, headers: admin.create_new_auth_token, as: :json
+    post "#{path}/18000000000000001/private_reply", params: { content: 'Oi, Carla!' }, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
     conversation = Message.find_by(source_id: 'mid.1').conversation
@@ -128,9 +128,9 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
 
     delete "#{path}/18000000000000009", headers: headers, as: :json
     expect(response).to have_http_status(:not_found)
-    post "#{path}/18000000000000009/reply", params: { text: 'Oi' }, headers: headers, as: :json
+    post "#{path}/18000000000000009/reply", params: { content: 'Oi' }, headers: headers, as: :json
     expect(response).to have_http_status(:not_found)
-    post "#{path}/18000000000000009/private_reply", params: { text: 'Oi' }, headers: headers, as: :json
+    post "#{path}/18000000000000009/private_reply", params: { content: 'Oi' }, headers: headers, as: :json
     expect(response).to have_http_status(:not_found)
 
     expect(a_request(:delete, /graph\.instagram\.com/)).not_to have_been_made
@@ -161,8 +161,33 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
     expect(audit.audited_changes).to include('action' => 'private_reply_release', 'comment_id' => '18000000000000001')
   end
 
+  # #2327: o texto vai em `content`, que o log do Rails filtra; em `text` ele sairia em claro no CloudWatch.
+  describe 'texto da resposta' do
+    it 'chega à Meta pelo content' do
+      replies = stub_request(:post, %r{#{ig}/18000000000000001/replies})
+                .with(query: hash_including('message' => 'Oi, Carla!'))
+                .to_return(status: 200, headers: json, body: { id: '18000000000000077' }.to_json)
+
+      post "#{path}/18000000000000001/reply", params: { content: 'Oi, Carla!' }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(replies).to have_been_made.once
+      expect(request.filtered_parameters['content']).to eq('[FILTERED]')
+    end
+
+    it 'em text não é mais aceito e não chama a Meta' do
+      post "#{path}/18000000000000001/reply", params: { text: 'Oi' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('error' => 'invalid_text')
+
+      post "#{path}/18000000000000001/private_reply", params: { text: 'Oi' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('error' => 'invalid_text')
+
+      expect(meta_call(%r{#{ig}/18000000000000001/replies|#{ig_id}/messages})).not_to have_been_made
+    end
+  end
+
   it 'erro de regra vira 422 com o código' do
-    post "#{path}/18000000000000001/reply", params: { text: ' ' }, headers: admin.create_new_auth_token, as: :json
+    post "#{path}/18000000000000001/reply", params: { content: ' ' }, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.parsed_body).to eq('error' => 'invalid_text')
