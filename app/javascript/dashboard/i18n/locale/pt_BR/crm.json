@@ -7390,5 +7390,189 @@
       "TEXTO": "O gasto com anúncios é da conta toda. Para ver quanto custou cada venda, escolha Todos os funis.",
       "ACAO": "Ver todos os funis"
     }
+  },
+  "CRM_LISTA_ACAO": {
+    "NOVO_CLIENTE": "Novo cliente",
+    "FUNIL": "Escolher funil",
+    "VISTAS": {
+      "QUADRO": "Quadro"
+    },
+    "HEROI": {
+      "ROTULO": "Resumo",
+      "TODOS": "{n} cliente precisa de atenção. | {n} clientes precisam de atenção.",
+      "MEUS": "{n} cliente precisa de você. | {n} clientes precisam de você.",
+      "DICA": "O mais urgente está no topo.",
+      "TUDO_EM_DIA": "Tudo em dia por aqui."
+    },
+    "BUSCA": {
+      "ROTULO": "Buscar por nome, telefone ou e-mail",
+      "PLACEHOLDER": "Buscar cliente"
+    },
+    "FILTROS": "Filtros",
+    "MAIS": "Mais",
+    "QUEM": {
+      "ROTULO": "De quem",
+      "TODOS": "De todos",
+      "MEUS": "Só meus"
+    },
+    "ABAS": {
+      "ROTULO": "Mostrar",
+      "ABERTO": "Em andamento",
+      "ARQUIVADO": "Arquivados",
+      "TUDO": "Tudo"
+    },
+    "LISTA": {
+      "ROTULO": "Clientes",
+      "CLIENTE": "Cliente",
+      "SITUACAO": "Situação",
+      "PROXIMO_PASSO": "Próximo passo",
+      "MARCAR_TODOS": "Marcar os que aparecem",
+      "MARCAR": "Marcar {nome}",
+      "MOSTRAR_MAIS": "Mostrar mais",
+      "VER_CLIENTE": "Ver cliente {nome}: {sobre}"
+    },
+    "GRUPOS": {
+      "ESPERANDO": "Esperando resposta",
+      "ESPERANDO_MEUS": "Esperando sua resposta",
+      "RETORNO": "Retornos de hoje e atrasados",
+      "NINGUEM": "Ninguém cuidando",
+      "PARADO": "Parados há 7 dias ou mais",
+      "DEMAIS": "Os demais",
+      "ARQUIVADO": "Arquivados",
+      "CONTA": "{n} cliente | {n} clientes",
+      "VER_SO": "Ver só estes",
+      "VER_SO_N": "Ver só estes ({n}) ›",
+      "VER_SO_ROTULO": "Ver só: {grupo} ({n})",
+      "MOSTRANDO_SO": "Mostrando só: {grupo}",
+      "VER_TODOS": "Ver todos"
+    },
+    "SITUACAO": {
+      "ESPERANDO": "Esperando resposta",
+      "ESPERANDO_DESDE": {
+        "AGORA": "Esperando agora",
+        "HA_MIN": "Esperando há {n} minuto | Esperando há {n} minutos",
+        "HA_HORAS": "Esperando há {n} hora | Esperando há {n} horas",
+        "ONTEM": "Esperando desde ontem",
+        "HA_DIAS": "Esperando há {n} dias"
+      },
+      "RETORNO_MARCADO": "Retorno marcado",
+      "RETORNO_HOJE": "Retorno hoje às {hora}",
+      "RETORNO_VENCEU_HOJE": "Retorno era hoje às {hora}",
+      "RETORNO_VENCEU_ONTEM": "Retorno venceu ontem",
+      "RETORNO_VENCEU_HA_DIAS": "Retorno venceu há {n} dias",
+      "ENTROU": {
+        "AGORA": "Entrou agora",
+        "HA_MIN": "Entrou há {n} minuto | Entrou há {n} minutos",
+        "HA_HORAS": "Entrou há {n} hora | Entrou há {n} horas",
+        "ONTEM": "Entrou ontem",
+        "HA_DIAS": "Entrou há {n} dias"
+      },
+      "PARADO": "Parado, sem nenhuma conversa",
+      "PARADO_HA_DIAS": "Parado há {n} dias",
+      "RETORNO_EM": {
+        "HOJE": "Retorno hoje às {hora}",
+        "AMANHA": "Retorno amanhã às {hora}",
+        "NO_DIA": "Retorno {dia} às {hora}",
+        "NA_DATA": "Retorno em {data} às {hora}"
+      },
+      "MENSAGEM_PROGRAMADA": {
+        "HOJE": "Mensagem programada hoje às {hora}",
+        "AMANHA": "Mensagem programada amanhã às {hora}",
+        "NO_DIA": "Mensagem programada {dia} às {hora}",
+        "NA_DATA": "Mensagem programada em {data} às {hora}"
+      },
+      "ASSISTENTE_RETOMA": {
+        "HOJE": "Assistente retoma hoje às {hora}",
+        "AMANHA": "Assistente retoma amanhã às {hora}",
+        "NO_DIA": "Assistente retoma {dia} às {hora}",
+        "NA_DATA": "Assistente retoma em {data} às {hora}"
+      },
+      "ULTIMA_MENSAGEM": {
+        "AGORA": "Última mensagem agora",
+        "HA_MIN": "Última mensagem há {n} minuto | Última mensagem há {n} minutos",
+        "HA_HORAS": "Última mensagem há {n} hora | Última mensagem há {n} horas",
+        "ONTEM": "Última mensagem ontem",
+        "HA_DIAS": "Última mensagem há {n} dias"
+      },
+      "SEM_MENSAGEM": "Ainda sem mensagem",
+      "OUTRA_PESSOA": "Outra pessoa está conversando",
+      "FECHADO": "{rotulo}",
+      "FECHADO_COM_MOTIVO": "{rotulo} · {motivo}",
+      "ARQUIVADO": "Arquivado"
+    },
+    "QUANDO_FUTURO": {
+      "HOJE": "hoje às {hora}",
+      "AMANHA": "amanhã às {hora}",
+      "NO_DIA": "{dia} às {hora}",
+      "NA_DATA": "{data} às {hora}"
+    },
+    "QUEM_CUIDA": {
+      "PESSOA": "{nome} cuida",
+      "VOCE": "Você cuida",
+      "NINGUEM": "Ninguém cuida"
+    },
+    "ACOES": {
+      "RESPONDER": "Responder",
+      "FEITO": "Feito",
+      "COMBINAR_OUTRO": "Combinar outro",
+      "COMBINAR_RETORNO": "Combinar retorno",
+      "PASSAR": "Passar para alguém",
+      "FICAR": "Ficar com este cliente",
+      "VER_CONVERSA": "Ver conversa",
+      "ALTERAR": "Alterar",
+      "EU": "Eu ({nome})",
+      "ROTULO_FEITO": "Marcar retorno de {nome} como feito",
+      "ROTULO_COMBINAR_OUTRO": "Combinar outro retorno com {nome}",
+      "ROTULO_COMBINAR": "Combinar retorno com {nome}",
+      "ROTULO_ACAO": "{acao} — {nome}",
+      "ROTULO_VER_CONVERSA": "Ver conversa com {nome}",
+      "ROTULO_ALTERAR": "Alterar {nome}",
+      "ROTULO_PASSAR": "Passar {nome} para"
+    },
+    "ALTERAR": {
+      "MUDAR_ETAPA": "Mudar etapa",
+      "MUDAR_VALOR": "Mudar valor",
+      "DESFECHO": "Marcar como ganho ou perdido"
+    },
+    "MAIS_MENU": {
+      "BAIXAR": "Baixar planilha",
+      "MARCAR_VARIOS": "Marcar vários"
+    },
+    "FAIXA": {
+      "FEITO": "Retorno de {nome} feito.",
+      "PASSOU": "{nome} agora com {pessoa}.",
+      "FICOU": "{nome} agora é seu.",
+      "COMBINOU": "Retorno com {nome} combinado: {quando}.",
+      "DESFAZER": "Desfazer",
+      "DESFEITO": "Desfeito. {nome} voltou para a lista."
+    },
+    "COMBINAR": {
+      "TITULO": "Quando falar com {nome}?",
+      "TITULO_OUTRO": "Quando falar de novo com {nome}?",
+      "TITULO_DO_RETORNO": "Falar com {nome}",
+      "QUANDO": "Quando",
+      "CONFIRMAR": "Combinar",
+      "CANCELAR": "Cancelar"
+    },
+    "PASSAR": {
+      "TITULO": "Passar {nome} para quem?",
+      "CONFIRMAR": "Passar",
+      "ESCOLHER": "Escolher pessoa"
+    },
+    "NOVIDADES": {
+      "TEXTO": "Chegou 1 novidade. | Chegaram {n} novidades.",
+      "ATUALIZAR": "Atualizar"
+    },
+    "ERROS": {
+      "ACAO": "Não deu certo. Nada mudou. Tente de novo.",
+      "PASSOU": "Escolha um horário que ainda não passou.",
+      "CARREGAR": "Não deu para mostrar os clientes agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo"
+    },
+    "VAZIO": {
+      "NINGUEM": "Ainda não tem ninguém aqui.",
+      "SEM_RESULTADO": "Ninguém com esses filtros.",
+      "LIMPAR": "Limpar filtros"
+    }
   }
 }

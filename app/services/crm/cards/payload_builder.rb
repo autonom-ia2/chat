@@ -65,19 +65,20 @@ class Crm::Cards::PayloadBuilder
 
   UNRESOLVED_COMPANY = Object.new.freeze
   UNRESOLVED_FOLLOW_UP = Object.new.freeze
-  # Lista legada e planilha não usam o next_follow_up_id: o campo vai nil e a consulta não roda.
+  # Lista legada e planilha não usam o retorno da pessoa: next_follow_up_id e next_follow_up_due_at vão nil e a consulta
+  # não roda.
   SKIP_FOLLOW_UP = Object.new.freeze
 
-  # next_follow_up_id: a página da Lista nova manda o de todos os cards de uma vez
+  # next_follow_up: o retorno da pessoa (id e due_at); a página da Lista nova manda o de todos os cards de uma vez
   # (Crm::FollowUp.proximos_retornos_da_pessoa); sem ele, um card só (detalhe e tempo real) faz a consulta.
   def initialize(card, user: nil, account_user: nil, conversation_visibility: nil, company: UNRESOLVED_COMPANY, # rubocop:disable Metrics/ParameterLists
-                 next_follow_up_id: UNRESOLVED_FOLLOW_UP)
+                 next_follow_up: UNRESOLVED_FOLLOW_UP)
     @card = card
     @user = user
     @account_user = account_user
     @conversation_visibility = conversation_visibility
     @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
-    @next_follow_up_id = next_follow_up_id
+    @next_follow_up = next_follow_up
   end
 
   def perform
@@ -107,6 +108,8 @@ class Crm::Cards::PayloadBuilder
   def sanitize_hidden_conversation!(payload)
     return if primary_conversation_visible?
 
+    # A Lista nova (#2283, decisão 2) diz "Outra pessoa está conversando", sem nome: só quando alguém atende a conversa.
+    payload[:conversation_hidden] = hidden_conversation_assignee?
     payload[:conversation_id] = nil
     payload[:metadata] = sanitized_metadata(payload[:metadata])
     return unless hidden_conversation_assignee?
@@ -137,15 +140,19 @@ class Crm::Cards::PayloadBuilder
   end
 
   # Lista nova (#2283): quem cuida (dono -> pessoa da conversa -> robô, Crm::Card#current_responsible), o retorno da
-  # pessoa mais perto (o "Feito" usa o id) e, com sort=acao, o grupo do card (Crm::Cards::ActionGroups).
+  # pessoa mais perto (o "Feito" usa o id; a hora dá a situação e a cor) e, com sort=acao, o grupo do card
+  # (Crm::Cards::ActionGroups).
   def append_action_list_payload(payload)
     payload[:current_responsible] = @card.current_responsible
-    payload[:next_follow_up_id] = @next_follow_up_id.equal?(SKIP_FOLLOW_UP) ? nil : next_follow_up_id
+    retorno = next_follow_up
+    payload[:next_follow_up_id] = retorno&.id
+    payload[:next_follow_up_due_at] = retorno&.due_at&.iso8601
     payload[:action_group] = Crm::Cards::ActionGroups::KEYS[@card[:acao_grupo]] if @card.has_attribute?(:acao_grupo)
   end
 
-  def next_follow_up_id
-    return @next_follow_up_id unless @next_follow_up_id.equal?(UNRESOLVED_FOLLOW_UP)
+  def next_follow_up
+    return if @next_follow_up.equal?(SKIP_FOLLOW_UP)
+    return @next_follow_up unless @next_follow_up.equal?(UNRESOLVED_FOLLOW_UP)
 
     Crm::FollowUp.proximos_retornos_da_pessoa([@card.id], conversation_visibility: visibility)[@card.id]
   end
