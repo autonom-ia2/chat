@@ -1402,6 +1402,12 @@
     "controller": "api/v1/accounts/crm/meta_ads_creation#budget",
     "parametros": []
   },
+  "crm/meta_ads_connection/ads/:ad_id/facebook_comments": {
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#index",
+    "parametros": [
+      "after"
+    ]
+  },
   "crm/meta_ads_connection/ads/:ad_id/instagram_comments": {
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#index",
     "parametros": [

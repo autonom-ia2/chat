@@ -436,6 +436,11 @@ Rails.application.routes.draw do
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
               post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'
               post 'advisor_actions/:id/dismiss', to: 'meta_ads_advisor_actions#dismiss'
+              # Comentários do anúncio no Facebook (#2197): ler, responder como a Página, ocultar e apagar.
+              get 'ads/:ad_id/facebook_comments', to: 'meta_ads_facebook_comments#index'
+              post 'ads/:ad_id/facebook_comments/:comment_id/reply', to: 'meta_ads_facebook_comments#reply'
+              patch 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#update'
+              delete 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#destroy'
             end
             # Formulários dos anúncios (#2195): Páginas, formulários e para onde vai quem preenche.
             get 'meta_ads_lead_forms', to: 'meta_ads_lead_forms#index'

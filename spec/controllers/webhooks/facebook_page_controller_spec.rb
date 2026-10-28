@@ -65,6 +65,21 @@ RSpec.describe 'Webhooks::FacebookPageController', type: :request do
       expect(leadgen_job).not_to have_received(:perform_later)
     end
 
+    it 'passes the value through the job webhook_value when it has one, so the comment text stays out of Redis (#2197)' do
+      slim_job = Class.new do
+        def self.webhook_value(value) = value.except('message')
+        def self.perform_later(*); end
+      end
+      stub_const('Webhooks::FacebookFeedJob', slim_job)
+      allow(slim_job).to receive(:perform_later)
+      value = { 'item' => 'comment', 'verb' => 'add', 'comment_id' => '1_2', 'message' => 'meu CPF é 123' }
+      body = { object: 'page', entry: [{ id: page_id, time: 10, changes: [{ field: 'feed', value: value }] }] }.to_json
+
+      post_page_webhook(body)
+
+      expect(slim_job).to have_received(:perform_later).with(page_id, { 'item' => 'comment', 'verb' => 'add', 'comment_id' => '1_2' }, 10)
+    end
+
     it 'accepts events signed with the WhatsApp app secret (same Meta app as the ads login)' do
       post_page_webhook(leadgen_body, signature: signature_for(leadgen_body, 'whatsapp-secret'),
                                       env: { WHATSAPP_APP_SECRET: 'whatsapp-secret' })
