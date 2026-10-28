@@ -42,6 +42,7 @@ const CHAVES_DA_RECOLHIDA = [
   'campaign_send',
   'whatsapp_templates_manage',
   'meta_ads_manage',
+  'posts_manage',
   'inbox_manage',
   'autonomia_manage',
   'automation_manage',

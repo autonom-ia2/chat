@@ -12,8 +12,8 @@ import { dependenciaDe, valeNoServidor } from './chavesDaFuncao';
 import { comImplicadas } from './comImplicadas';
 import { motivoDasChaves, motivoDaTrava } from './motivoDaTrava';
 
-// O mapa fechado das áreas e chaves (#2308, especificação 6): onde cada um dos 24 módulos e cada uma das 57 chaves
-// aparece na conversa guiada. Os specs conferem 24/24 e 57/57.
+// O mapa fechado das áreas e chaves (#2308, especificação 6): onde cada um dos 25 módulos e cada uma das 59 chaves
+// aparece na conversa guiada. Os specs conferem 25/25 e 59/59.
 export const LINHAS = ['CONVERSATIONS', 'CONTACTS', 'CRM'];
 export const DENTRO_DE = {
   ASSIGNMENT: 'CONVERSATIONS',
@@ -34,6 +34,7 @@ export const RECOLHIDA = [
   'CAMPAIGNS',
   'WHATSAPP_TEMPLATES',
   'META_ADS',
+  'POSTS',
   'INBOXES',
   'AUTONOMIA',
   'AUTOMATIONS',
@@ -87,6 +88,8 @@ export const DONO_DAS_CHAVES = {
     'whatsapp_templates_manage',
     'meta_ads_view',
     'meta_ads_manage',
+    'posts_view',
+    'posts_manage',
     'inbox_view',
     'inbox_manage',
     'autonomia_view',

@@ -31,7 +31,7 @@ import {
   TUDO_SEM_MEXER,
 } from './quemMonta';
 
-// #2308, especificação 6 e 7: o mapa fechado (24/24 módulos, 57/57 chaves), a recolhida e o Cuidado em três grupos.
+// #2308, especificação 6 e 7: o mapa fechado (25/25 módulos, 59/59 chaves), a recolhida e o Cuidado em três grupos.
 const permissoesDoServidor = () => {
   const fonte = readFileSync(
     resolve(process.cwd(), 'enterprise/app/models/custom_role.rb'),
@@ -47,7 +47,7 @@ const permissoesDoServidor = () => {
 };
 
 describe('mapa das áreas e chaves', () => {
-  it('24/24 módulos têm lugar, sem repetir', () => {
+  it('25/25 módulos têm lugar, sem repetir', () => {
     const lugares = [
       ...LINHAS,
       ...Object.keys(DENTRO_DE),
@@ -55,16 +55,16 @@ describe('mapa das áreas e chaves', () => {
       ...CONDICIONAL,
       ...SO_ADMIN,
     ];
-    expect(lugares).toHaveLength(24);
+    expect(lugares).toHaveLength(25);
     expect(new Set(lugares)).toEqual(new Set(MODULES.map(m => m.key)));
   });
 
-  it('57/57 chaves de CustomRole::PERMISSIONS têm dono, sem repetir', () => {
+  it('59/59 chaves de CustomRole::PERMISSIONS têm dono, sem repetir', () => {
     const donas = Object.values(DONO_DAS_CHAVES).flat();
     const servidor = permissoesDoServidor();
 
-    expect(servidor).toHaveLength(57);
-    expect(donas).toHaveLength(57);
+    expect(servidor).toHaveLength(59);
+    expect(donas).toHaveLength(59);
     expect(new Set(donas)).toEqual(new Set(servidor));
   });
 });
@@ -80,7 +80,8 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
       comCotacoes: false,
     });
     expect(areas.subiram).toEqual([]);
-    expect(areas.cadeado.map(m => m.key)).toEqual(SO_ADMIN);
+    // Seus posts (#2302): a Carla não tem posts_view, então a área inteira fica fora do alcance dela.
+    expect(areas.cadeado.map(m => m.key)).toEqual(['POSTS', ...SO_ADMIN]);
     expect(resumoDaRecolhida(areas.recolhidas, atendente)).toEqual({
       primeiras: ['REPORTS', 'DESEMPENHO'],
       mais: 11,
@@ -112,7 +113,7 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
       comCotacoes: true,
     });
     expect(areas.cadeado).toEqual([]);
-    expect(areas.recolhidas).toHaveLength(17);
+    expect(areas.recolhidas).toHaveLength(18);
   });
 
   it('Anúncios: "Pode mexer" com cadeado de delegação; Cotações: as duas com MISSING', () => {

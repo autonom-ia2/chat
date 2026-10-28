@@ -188,6 +188,7 @@
       "CAMPAIGN_SEND": "Disparar campanhas",
       "WHATSAPP_TEMPLATES_MANAGE": "Criar e mudar os modelos do WhatsApp",
       "META_ADS_MANAGE": "Conectar e mudar os anúncios",
+      "POSTS_MANAGE": "Responder e esconder os comentários dos posts",
       "INBOX_MANAGE": "Arrumar os canais",
       "AUTONOMIA_MANAGE": "Criar e treinar os robôs de IA",
       "AUTOMATION_MANAGE": "Criar e mudar as regras automáticas",
@@ -292,6 +293,10 @@
       "META_ADS": {
         "NOME": "Anúncios",
         "NA_FRASE": "os anúncios"
+      },
+      "POSTS": {
+        "NOME": "Seus posts",
+        "NA_FRASE": "os posts"
       },
       "INBOXES": {
         "NOME": "Canais (números de WhatsApp, Instagram, e-mail)",

@@ -188,6 +188,7 @@
       "CAMPAIGN_SEND": "Send campaigns",
       "WHATSAPP_TEMPLATES_MANAGE": "Create and change WhatsApp templates",
       "META_ADS_MANAGE": "Connect and change the ads",
+      "POSTS_MANAGE": "Reply to and hide the comments on the posts",
       "INBOX_MANAGE": "Set up the channels",
       "AUTONOMIA_MANAGE": "Create and train the AI bots",
       "AUTOMATION_MANAGE": "Create and change the automatic rules",
@@ -292,6 +293,10 @@
       "META_ADS": {
         "NOME": "Ads",
         "NA_FRASE": "ads"
+      },
+      "POSTS": {
+        "NOME": "Your posts",
+        "NA_FRASE": "the posts"
       },
       "INBOXES": {
         "NOME": "Channels (WhatsApp numbers, Instagram, email)",
