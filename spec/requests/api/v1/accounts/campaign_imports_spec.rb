@@ -29,6 +29,26 @@ RSpec.describe 'Campaign imports API', type: :request do
     expect(response.body).not_to include('11987654321')
   end
 
+  # #2332: the files this app wrote open in Excel with accents and columns; the person's own upload goes back as it came.
+  it 'downloads the normalized file with BOM and ";", and the original untouched' do
+    account, user = create_account_and_user
+    content = "nome,telefone\nFlávia,11987654321\n"
+    campaign_import = create_campaign_import(account: account, user: user, content: content)
+    campaign_import.normalized_csv.attach(io: StringIO.new("nome,telefone\nFlávia,+5511987654321\n"), filename: 'normalizado.csv',
+                                          content_type: 'text/csv')
+    path = "/api/v1/accounts/#{account.id}/campaign_imports/#{campaign_import.id}/download"
+
+    get path, params: { file: 'normalized_csv' }, headers: auth_headers(user)
+    body = response.body.dup.force_encoding(Encoding::UTF_8)
+    expect(body).to start_with("\uFEFF")
+    expect(body.lines.first).to include(';')
+    expect(body).to include('Flávia')
+
+    get path, params: { file: 'original' }, headers: auth_headers(user)
+    expect(response.body.b).to eq(campaign_import.original_file.download.b)
+    expect(response.body.b).to start_with('nome,telefone')
+  end
+
   it 'allows deleting an import before contacts are created' do
     account, user = create_account_and_user
     campaign_import = create_campaign_import(account: account, user: user, content: "nome,telefone\nAna,11987654321\nBia,21987654321\n")

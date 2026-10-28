@@ -129,7 +129,10 @@
           "PAUSED": "Pausada",
           "CANCELLED": "Cancelada",
           "FAILED": "Falhou"
-        }
+        },
+        "DOWNLOAD": "Baixar lista",
+        "DOWNLOAD_ERROR": "Não foi possível baixar a lista agora.",
+        "DOWNLOAD_HIDDEN": "Só quem pode ver contatos baixa esta lista."
       }
     },
     "STEPPER": {

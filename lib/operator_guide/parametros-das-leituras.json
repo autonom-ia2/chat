@@ -419,6 +419,10 @@
       "file"
     ]
   },
+  "campaign_imports/:id/people_sheet": {
+    "controller": "api/v1/accounts/campaign_import_audiences#people_sheet",
+    "parametros": []
+  },
   "campaign_imports/:id/problem_rows": {
     "controller": "api/v1/accounts/campaign_import_audiences#problem_rows",
     "parametros": [

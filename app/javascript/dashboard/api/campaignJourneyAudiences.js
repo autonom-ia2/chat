@@ -48,6 +48,13 @@ class AudiencesAPI extends ApiClient {
     return axios.get(`${this.url}/${id}/contacts`, { params: { page } });
   }
 
+  // Side panel "Baixar lista" (#2332): the audience's people as an Excel file.
+  peopleSheet(id) {
+    return axios.get(`${this.url}/${id}/people_sheet`, {
+      responseType: 'blob',
+    });
+  }
+
   sampleContact(id) {
     return axios.get(`${this.url}/${id}/sample_contact`);
   }

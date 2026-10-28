@@ -234,6 +234,7 @@ Rails.application.routes.draw do
               get :problem_rows, to: 'campaign_import_audiences#problem_rows'
               get :sample_contact, to: 'campaign_import_audiences#sample_contact'
               get :contacts, to: 'campaign_import_audiences#contacts'
+              get :people_sheet, to: 'campaign_import_audiences#people_sheet'
             end
           end
           namespace :campaign_journey do
