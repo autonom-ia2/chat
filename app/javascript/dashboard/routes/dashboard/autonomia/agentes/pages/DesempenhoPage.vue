@@ -331,6 +331,7 @@ const aoMigalha = item => router.push(item.destino);
         :migalha="migalha"
         :periodo="textoDoPeriodo"
         :dados-ate="meta.dados_ate || ''"
+        :lido-ate="meta.lido_ate || ''"
         :exportacao="exportacao"
         :pode-exportar="podeExportar"
         @migalha="aoMigalha"
@@ -383,6 +384,12 @@ const aoMigalha = item => router.push(item.destino);
               total: fmt.n(meta.lista.total),
             })
           "
+        />
+        <Ressalva
+          v-if="meta.instrucao_mudou"
+          data-aviso-instrucao
+          :destaque="t(`${NS}.FONTE.INSTRUCAO_TITULO`)"
+          :texto="t(`${NS}.FONTE.INSTRUCAO_TEXTO`)"
         />
         <Ressalva
           v-if="ehDemo"

@@ -2085,7 +2085,7 @@
         "LEITURA_DESLIGADA_SEM_ACESSO": "A leitura das conversas está desligada. Quem cuida da conta pode ligar.",
         "LENDO": "Estamos lendo as conversas dos últimos 30 dias. Os assuntos aparecem em algumas horas.",
         "LENDO_BOTAO": "Ver o que já temos",
-        "TETO": "A leitura parou este mês. As conversas novas ficam para o mês que vem.",
+        "TETO": "A leitura parou hoje: chegou ao limite diário de gasto com IA. O resto é lido amanhã.",
         "TETO_BOTAO": "Ver o que já temos",
         "SEM_IA": "A leitura não está funcionando nesta conta: falta conectar a chave de IA.",
         "SEM_IA_BOTAO": "Conectar a chave",
@@ -2473,6 +2473,7 @@
           "TITULO": "Do sinal à ação",
           "DESCRICAO": "Cada sugestão traz o número e as conversas que a provam. O ganho é uma estimativa.",
           "NENHUMA": "Nenhuma sugestão neste período.",
+          "DE_OUTRAS_DATAS": "Sugestões de {inicio} a {fim}. As deste período ainda não ficaram prontas.",
           "FRENTE": {
             "INSTRUCAO": "Ensinar {nome}",
             "SISTEMA": "Ferramenta e sistema",
@@ -2547,6 +2548,7 @@
         },
         "FAIXA": {
           "DADOS_ATE": "Dados até {quando}",
+          "LIDO_ATE": "Lido até {quando}",
           "EXPORTANDO": "Preparando…",
           "EXPORTAR": {
             "PDF": "Exportar PDF",
@@ -2582,6 +2584,8 @@
           "CAIXAS_TEXTO": "Os números e as listas contam só as caixas que você vê. {n} procuras de outras caixas ficam de fora, e as sugestões, feitas com a conta inteira, não aparecem.",
           "LISTA_TITULO": "Só as procuras mais recentes.",
           "LISTA_TEXTO": "O Detalhe lista as {mostradas} procuras mais recentes de {total}. Os números de cima contam todas.",
+          "INSTRUCAO_TITULO": "A instrução do agente mudou.",
+          "INSTRUCAO_TEXTO": "Parte das conversas foi lida com a instrução anterior. As conversas novas são lidas com a atual.",
           "DEMO_TITULO": "Dados inventados.",
           "DEMO_TEXTO": "Estes números são de um exemplo, para mostrar como o painel funciona. Não são da sua conta.",
           "FALHOU_TITULO": "Não conseguimos ler os dados reais.",

@@ -2085,7 +2085,7 @@
         "LEITURA_DESLIGADA_SEM_ACESSO": "Conversation reading is off. Whoever runs the account can turn it on.",
         "LENDO": "We are reading the conversations from the last 30 days. Subjects show up in a few hours.",
         "LENDO_BOTAO": "See what we have",
-        "TETO": "Reading stopped this month. New conversations wait for next month.",
+        "TETO": "Reading paused today: it reached the daily AI spending limit. The rest is read tomorrow.",
         "TETO_BOTAO": "See what we have",
         "SEM_IA": "Reading isn't working in this account: the AI key needs to be connected.",
         "SEM_IA_BOTAO": "Connect the key",
@@ -2473,6 +2473,7 @@
           "TITULO": "From signal to action",
           "DESCRICAO": "Each suggestion brings the number and the conversations that prove it. The gain is an estimate.",
           "NENHUMA": "No suggestions in this period.",
+          "DE_OUTRAS_DATAS": "Suggestions from {inicio} to {fim}. New ones for this period are not ready yet.",
           "FRENTE": {
             "INSTRUCAO": "Teach {nome}",
             "SISTEMA": "Tools and system",
@@ -2547,6 +2548,7 @@
         },
         "FAIXA": {
           "DADOS_ATE": "Data up to {quando}",
+          "LIDO_ATE": "Read up to {quando}",
           "EXPORTANDO": "Preparing…",
           "EXPORTAR": {
             "PDF": "Export PDF",
@@ -2582,6 +2584,8 @@
           "CAIXAS_TEXTO": "The numbers and lists count only the inboxes you see. {n} requests from other inboxes are left out, and the suggestions, made with the whole account, are not shown.",
           "LISTA_TITULO": "Recent requests only.",
           "LISTA_TEXTO": "Detail lists the {mostradas} most recent requests of {total}. The numbers above count all of them.",
+          "INSTRUCAO_TITULO": "The agent's instruction changed.",
+          "INSTRUCAO_TEXTO": "Some conversations were read with the previous instruction. New conversations are read with the current one.",
           "DEMO_TITULO": "Made-up data.",
           "DEMO_TEXTO": "These numbers come from an example, to show how the panel works. They are not from your account.",
           "FALHOU_TITULO": "We could not read the real data.",
