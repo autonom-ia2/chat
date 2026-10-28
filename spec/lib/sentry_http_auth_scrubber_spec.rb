@@ -237,15 +237,6 @@ RSpec.describe SentryHttpAuthScrubber do
     expect(filtered.values).not_to include(*secrets.values)
   end
 
-  # #2197 — a resposta a um comentário do Facebook vai em `content`: o Sentry lê o corpo cru e não pode levar o texto.
-  it 'filters the reply text (content) from a JSON body, keeping the other fields' do
-    data = { body: JSON.generate(content: 'Meu CPF é 123.456.789-00', ad_id: '120') }
-
-    filtered = JSON.parse(described_class.scrub(data)[:body])
-
-    expect(filtered).to eq('content' => '[FILTERED]', 'ad_id' => '120')
-  end
-
   # #1427 — o corpo JSON do Testar do agente leva as fotos em `images` (data-url): o Sentry lê o corpo cru, sem o
   # filter_parameters do Rails, então a chave sai aqui também.
   it 'filters the photos of the agent test (images) from a JSON body, keeping the question' do
@@ -255,6 +246,23 @@ RSpec.describe SentryHttpAuthScrubber do
     filtered = JSON.parse(described_class.scrub(data)[:body])
 
     expect(filtered).to eq('message' => 'Quanto custa este?', 'images' => '[FILTERED]')
+  end
+
+  # #2327 — a resposta a comentário e o texto de mensagem vão em `content`: o log do Rails filtra, e o Sentry, que lê o
+  # corpo JSON cru (send_default_pii), também precisa filtrar.
+  it 'filters content from the JSON body of an exported event' do
+    body = JSON.generate(content: 'Oi, Carla! Seu CPF confere.', hidden: true)
+    event = Sentry::ErrorEvent.new(configuration: configuration, message: 'reply failed')
+    env_options = { 'REQUEST_METHOD' => 'POST', 'CONTENT_TYPE' => 'application/json', :input => body }
+    event.rack_env = Rack::MockRequest.env_for('https://app.example.invalid/api/v1/accounts/1/crm/reply', env_options)
+    expect(event.request.data.to_s).to include('Oi, Carla!')
+
+    described_class.install(configuration)
+    client.send_event(event)
+    payload = client.transport.payloads.fetch(0)
+
+    expect(payload).not_to include('Oi, Carla!')
+    expect(JSON.parse(JSON.parse(payload.lines.fetch(2)).dig('request', 'data'))).to eq('content' => '[FILTERED]', 'hidden' => true)
   end
 
   %i[before_send before_send_transaction].each do |callback_name|

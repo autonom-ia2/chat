@@ -23,7 +23,8 @@ RSpec.describe Instagram::CommentsClient do
   end
 
   it 'responde em público, oculta, apaga e manda a resposta no privado pelo id do comentário' do
-    reply = stub_request(:post, "#{base}/1/replies").with(query: hash_including('message' => 'Temos sim'))
+    reply = stub_request(:post, "#{base}/1/replies").with(query: { 'access_token' => channel.access_token },
+                                                          body: { message: 'Temos sim' }.to_json)
                                                     .to_return(status: 200, body: { id: '2' }.to_json, headers: json)
     hide = stub_request(:post, "#{base}/1").with(query: hash_including('hide' => 'true'))
                                            .to_return(status: 200, body: { success: true }.to_json, headers: json)
@@ -50,6 +51,16 @@ RSpec.describe Instagram::CommentsClient do
     expect(result.ok).to be(false)
     expect(result.scope_error?).to be(true)
     expect(Rails.logger).to have_received(:warn).with(satisfy { |line| line.exclude?(channel.access_token) })
+  end
+
+  # #2327: a mensagem de erro da Meta pode repetir o texto enviado; o log leva só o caminho, o HTTP e o código.
+  it 'erro da Meta não leva a mensagem dela ao log' do
+    error = { error: { code: 100, message: 'Texto: Oi, Carla' } }
+    stub_request(:post, "#{base}/1/replies").with(query: hash_including({})).to_return(status: 400, headers: json, body: error.to_json)
+    allow(Rails.logger).to receive(:warn)
+
+    expect(client.reply('1', 'Oi, Carla')).to have_attributes(ok: false, error_code: 100)
+    expect(Rails.logger).to have_received(:warn).with('[InstagramComments] POST 1/replies http=400 code=100')
   end
 
   it 'falha de rede vira resultado passageiro, sem levantar' do

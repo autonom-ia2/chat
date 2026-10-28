@@ -2,7 +2,8 @@ require 'rails_helper'
 
 # Comentário novo no Instagram (#2196, campo `comments` do webhook, roteado pela infra #2200): vira o evento comum
 # `meta_ads.comment_received` para quem cuida dos comentários (#2212). Contrato único: (instagram_id, field, value_ids,
-# time), com o hash que o enqueue_comment do #2287 monta; o texto e o autor vêm da Graph. O eco da própria conta,
+# time), com o hash que o enqueue_comment do #2287 monta. O evento sai só com ids (#2327): quem consome lê o texto e o
+# autor na Graph. O eco da própria conta,
 # Instagram sem caixa, conta sem a flag e o mesmo comentário repetido ficam de fora. Nada do comentário é gravado.
 RSpec.describe Webhooks::InstagramCommentJob do
   let(:account) { create(:account) }
@@ -34,7 +35,7 @@ RSpec.describe Webhooks::InstagramCommentJob do
     expect(described_class.log_arguments?).to be(false)
   end
 
-  it 'contrato do #2287: lê texto e autor na Graph e publica com a caixa e o anúncio' do
+  it 'contrato do #2287: lê o comentário na Graph e publica só os ids, com a caixa e o anúncio' do
     described_class.perform_now(ig_id, 'comments', value_ids, time)
 
     expect(Rails.configuration.dispatcher).to have_received(:dispatch).with(
@@ -42,7 +43,7 @@ RSpec.describe Webhooks::InstagramCommentJob do
       {
         network: 'instagram', account_id: account.id, inbox_id: channel.inbox.id, instagram_id: ig_id,
         media_id: '123123', ad_id: '999', comment_id: comment_id, parent_id: '17800000000000001',
-        from_id: '232323', from_name: 'carla.dias', text: 'Tem M?', created_time: Time.zone.at(time)
+        from_id: '232323', created_time: Time.zone.at(time)
       }
     )
   end
@@ -51,8 +52,18 @@ RSpec.describe Webhooks::InstagramCommentJob do
     described_class.perform_now(ig_id, 'comments', value_ids.merge('text' => 'ignorado', 'from' => { 'id' => '232323', 'username' => 'x' }),
                                 time.to_s)
 
-    expected = hash_including(text: 'Tem M?', ad_id: '999')
+    expected = hash_including(comment_id: comment_id, ad_id: '999')
     expect(Rails.configuration.dispatcher).to have_received(:dispatch).once.with(anything, anything, expected)
+  end
+
+  # #2327: o payload vai aos argumentos do EventDispatcherJob (Redis e, às vezes, log). Texto e autor não entram.
+  it 'o evento não leva o texto nem o username de quem comentou' do
+    described_class.perform_now(ig_id, 'comments', value_ids.merge('text' => 'Tem M?'), time)
+
+    expect(Rails.configuration.dispatcher).to have_received(:dispatch) do |_name, _time, payload|
+      expect(payload.keys).not_to include(:text, :from_name)
+      expect(payload.values.map(&:to_s)).not_to include('Tem M?', 'carla.dias')
+    end
   end
 
   it 'o mesmo comentário repetido (webhook reenviado) lê a Graph e publica uma vez só' do

@@ -3,9 +3,10 @@
 #
 # GET    meta_ads_connection/ads/:ad_id/instagram_comments?after=          → comentários (Crm::MetaAds::InstagramComments).
 #        Ver: administrador ou `meta_ads_view`.
-# POST   .../instagram_comments/:comment_id/reply          text=           → responder em público.
+# POST   .../instagram_comments/:comment_id/reply          content=        → responder em público.
 # POST   .../instagram_comments/:comment_id/hide           hidden=         → ocultar ou mostrar de novo.
-# POST   .../instagram_comments/:comment_id/private_reply  text=           → responder no privado (Private Reply).
+# POST   .../instagram_comments/:comment_id/private_reply  content=        → responder no privado (Private Reply).
+#        O texto vai em `content`, que o log do Rails já filtra (#2103, #2327); `text` sairia em claro no CloudWatch.
 # POST   .../instagram_comments/:comment_id/private_reply/release          → "Não foi enviado": libera o privado sem
 #        confirmação da Meta (Crm::MetaAdsCommentAction), depois de a pessoa conferir no Direct.
 # DELETE .../instagram_comments/:comment_id                                → apagar (a tela confirma antes).
@@ -35,7 +36,7 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   end
 
   def reply
-    result = comments.reply!(ad_id, comment_id, params[:text].to_s, user: Current.user)
+    result = comments.reply!(ad_id, comment_id, content, user: Current.user)
     audit!('reply')
     render json: result
   end
@@ -56,7 +57,7 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
   end
 
   def private_reply
-    result = comments.private_reply!(ad_id, comment_id, params[:text].to_s, user: Current.user)
+    result = comments.private_reply!(ad_id, comment_id, content, user: Current.user)
     audit!('private_reply')
     render json: result
   end
@@ -114,6 +115,14 @@ class Api::V1::Accounts::Crm::MetaAdsInstagramCommentsController < Api::V1::Acco
 
   def comment_id
     params[:comment_id].to_s
+  end
+
+  # Só texto: lista ou objeto em `content` virariam outro texto no `to_s` e iriam à Meta (#2327).
+  def content
+    value = params[:content]
+    raise ::Crm::MetaAds::InstagramComments::Error, 'invalid_text' unless value.nil? || value.is_a?(String)
+
+    value.to_s
   end
 
   def render_error(error)
