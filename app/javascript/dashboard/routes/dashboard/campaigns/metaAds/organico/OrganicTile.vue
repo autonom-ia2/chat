@@ -8,7 +8,8 @@ import { intlLocale } from '../metaAdsHelpers';
 const props = defineProps({
   name: { type: String, required: true },
   icon: { type: String, required: true },
-  value: { type: Number, required: true },
+  // null: a Meta não mandou o número (aparece "—", nunca 0).
+  value: { type: Number, default: null },
   previous: { type: Number, default: null },
   days: { type: Number, required: true },
   extra: { type: String, default: '' },
@@ -43,15 +44,17 @@ const texts = computed(() => tileTexts()[props.name]);
 const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
 
-const shown = computed(() =>
-  props.upTo && props.value
+const shown = computed(() => {
+  if (props.value === null) return '—';
+  return props.upTo && props.value
     ? t('META_ADS_ORGANIC.TILES.UP_TO', { count: format(props.value) })
-    : format(props.value)
-);
+    : format(props.value);
+});
 
 // Teto contra teto não dá diferença exata: o quadro "até N" fica sem a linha "X a mais".
 const change = computed(() => {
-  if (props.previous === null || props.upTo) return null;
+  if (props.previous === null || props.value === null || props.upTo)
+    return null;
   const diff = props.value - props.previous;
   if (diff === 0)
     return {

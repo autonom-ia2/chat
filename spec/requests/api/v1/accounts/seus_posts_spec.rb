@@ -31,6 +31,14 @@ RSpec.describe 'Seus posts API', type: :request do
     expect(response).to have_http_status(:unprocessable_entity)
   end
 
+  it 'período em lista ou objeto no endereço, 422 (não 500)' do
+    ["#{path}?days[]=30", "#{path}?days[x]=30"].each do |endereco|
+      get endereco, headers: auth_headers(admin)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
   it 'agente sem posts_view, 403' do
     agent = create(:user, account: account, role: :agent)
 

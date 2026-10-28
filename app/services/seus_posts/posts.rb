@@ -1,11 +1,14 @@
-# Seus posts (#2302, F1 #2304): os posts de um perfil com os números de cada um e o normal do perfil, para o veredito
-# do post ("o dobro do normal"). Os números vêm junto com a lista, numa chamada por página de posts.
+# Seus posts (#2302, F1 #2304): os posts de um perfil dos últimos HISTORICO_DIAS dias, com os números de cada um e o
+# normal do perfil, para o veredito do post ("o dobro do normal"). Os números vêm junto com a lista, numa chamada por
+# página de posts. A lista é a mesma para 7, 30 e 90 dias: SeusPosts::Leitura guarda uma vez e filtra pelo período.
 #
 # O normal tem janela fixa, que não muda com o período escolhido (rodada 9 do protótipo: em 7 dias a lista e o post
-# divergiam): os últimos NORMAL_POSTS posts dos últimos HISTORICO_DIAS dias, sem o post impulsionado. Número que a
-# Meta não manda (post dentro de álbum, post apagado) é "sem número" (nil), nunca 0: um 0 puxaria a média para baixo e
-# todo post pareceria acima do normal.
+# divergiam): para cada número, os últimos NORMAL_POSTS posts com ele, sem o post que se sabe impulsionado. Número que
+# a Meta não manda (post dentro de álbum, post apagado) é "sem número" (nil), e zero (post de hoje que ainda não
+# apareceu) também fica fora: os dois puxariam a média para baixo e todo post pareceria acima do normal.
 class SeusPosts::Posts < Crm::MetaAds::Organico::Lugar
+  include SeusPosts::Orcamento
+
   HISTORICO_DIAS = 90
   NORMAL_POSTS = 30
   VIDA_TODA = 'lifetime'.freeze
@@ -18,10 +21,9 @@ class SeusPosts::Posts < Crm::MetaAds::Organico::Lugar
   private
 
   def numeros
+    @truncado = false
     todos = ler_posts(historico).sort_by { |post| post[:created_time].to_s }.reverse
-    inicio = periodo.atual[:since]
-    { status: 'ok', posts: todos.select { |post| Time.zone.parse(post[:created_time].to_s).to_i >= inicio },
-      normal: normal(todos) }
+    { status: 'ok', posts: todos, normal: normal(todos), truncated: @truncado }
   end
 
   def bloqueado
@@ -33,11 +35,18 @@ class SeusPosts::Posts < Crm::MetaAds::Organico::Lugar
     { since: ate - HISTORICO_DIAS.days.to_i, until: ate }
   end
 
+  # Uma lista da Meta (organic_posts): os itens, e se ela parou no teto de posts lidos.
+  def lista(result)
+    dados = ler(result).to_h
+    @truncado ||= dados['truncated'] == true
+    Array(dados['data'])
+  end
+
   def normal(todos)
-    # Só o post que se sabe sem anúncio (boosted false); o que não se sabe (nil) também fica fora.
-    base = todos.select { |post| post[:boosted] == false }.first(NORMAL_POSTS)
+    # O post que se sabe impulsionado (boosted true) fica fora; o que não se sabe (nil) entra.
+    base = todos.reject { |post| post[:boosted] == true }
     self.class::COMPARAVEIS.index_with do |chave|
-      valores = base.filter_map { |post| post[chave] }
+      valores = base.filter_map { |post| post[chave] if post[chave].to_i.positive? }.first(NORMAL_POSTS)
       valores.empty? ? nil : (valores.sum.to_f / valores.size).round
     end
   end

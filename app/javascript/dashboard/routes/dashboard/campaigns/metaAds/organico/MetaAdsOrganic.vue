@@ -90,7 +90,7 @@ const format = value =>
 // Vezes que os posts apareceram sem anúncio (o servidor já tira o anúncio das duas), na Página e no Instagram lado a
 // lado, nunca somadas. Não é "quem viu": no Instagram a Meta não deduplica quem viu entre tipos de post, e na Página o
 // "quem viu" pode incluir o pago.
-const organicViews = place => (isReady(place) ? place.views : 0);
+const organicViews = place => (isReady(place) ? place.views : null);
 // Nenhum lugar com números e algum com a Meta fora: "Libere o acesso" seria falso.
 const anyUnavailable = computed(() =>
   [page.value, instagram.value].some(place => place?.status === 'unavailable')
@@ -102,6 +102,9 @@ const headline = computed(() => {
       : t('META_ADS_ORGANIC.HEADLINE.NONE');
   const pageViews = organicViews(page.value);
   const instagramViews = organicViews(instagram.value);
+  // As vezes que a Meta não mandou (null) não viram "não apareceram".
+  if (pageViews === null && instagramViews === null)
+    return t('META_ADS_ORGANIC.HEADLINE.UNAVAILABLE');
   if (!pageViews && !instagramViews)
     return t('META_ADS_ORGANIC.HEADLINE.ZERO', { days: days.value });
   if (pageViews && instagramViews)
@@ -180,8 +183,8 @@ const instagramPrimary = computed(() => !blocked(page.value));
 const bothQuiet = computed(
   () =>
     [page.value, instagram.value].every(isReady) &&
-    !page.value.reach &&
-    !instagram.value.reach
+    page.value.reach === 0 &&
+    instagram.value.reach === 0
 );
 
 // Entrar: sem caixa, a criação da caixa de sempre (inbox_manage). Com caixa sem a permissão, reautoriza a mesma caixa

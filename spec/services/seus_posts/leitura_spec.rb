@@ -43,6 +43,11 @@ RSpec.describe SeusPosts::Leitura do
     (agora - dias.days).iso8601
   end
 
+  # A chamada pelos campos pedidos (as constantes do cliente: :INSTAGRAM, :PAGE, :PAGE_VIEWS).
+  def com_campos(nome)
+    { query: hash_including('fields' => Meta::AdsGraphClient::SeusPosts.const_get("SEUS_POSTS_#{nome}_FIELDS")) }
+  end
+
   describe 'Instagram' do
     # A factory do Instagram já cria a caixa nesta conta.
     let!(:canal) { create(:channel_instagram, account: account) }
@@ -55,7 +60,10 @@ RSpec.describe SeusPosts::Leitura do
         { 'id' => 'm2', 'caption' => 'Reels', 'timestamp' => dias_atras(40), 'media_type' => 'VIDEO', 'thumbnail_url' => 'https://img/2',
           'insights' => insights('views' => 300, 'reach' => 200, 'likes' => 30, 'comments' => 3) },
         # Post dentro de álbum ou sem insights: sem número, fora da média.
-        { 'id' => 'm3', 'caption' => 'Sem números', 'timestamp' => dias_atras(5), 'media_type' => 'CAROUSEL_ALBUM', 'media_url' => 'https://img/3' }
+        { 'id' => 'm3', 'caption' => 'Sem números', 'timestamp' => dias_atras(5), 'media_type' => 'CAROUSEL_ALBUM', 'media_url' => 'https://img/3' },
+        # Post de hoje que ainda não apareceu: zero real, fora da média.
+        { 'id' => 'm4', 'caption' => 'Agora', 'timestamp' => dias_atras(0.1), 'media_type' => 'IMAGE', 'media_url' => 'https://img/4',
+          'insights' => insights('views' => 0, 'likes' => 0, 'comments' => 0) }
       ]
       stub_request(:get, "#{ig}/me/media").with(query: hash_including({})).to_return(json(midias))
     end
@@ -64,12 +72,14 @@ RSpec.describe SeusPosts::Leitura do
       perfil = leitura(days: 30)[:perfil]
 
       expect(perfil).to include(id: "instagram-#{canal.id}", network: 'instagram', status: 'ok', posts_status: 'ok')
-      expect(perfil[:posts].pluck(:id)).to eq(%w[m1 m3])
-      expect(perfil[:posts].first).to include(type: 'foto', image_url: 'https://img/1', views: 900, likes: 90, comments: 9, saved: 5)
+      expect(perfil[:posts].pluck(:id)).to eq(%w[m4 m1 m3])
+      expect(perfil[:posts].second).to include(type: 'foto', image_url: 'https://img/1', views: 900, likes: 90, comments: 9, saved: 5,
+                                               boosted: nil)
       expect(perfil[:posts].last).to include(type: 'carrossel', views: nil, likes: nil)
+      expect(perfil).to include(posts_truncated: false, posts_stale: false)
     end
 
-    it 'o normal não muda com o período e ignora o post sem número' do
+    it 'o normal não muda com o período e ignora o post sem número e o zero' do
       normal30 = leitura(days: 30)[:perfil][:normal]
       normal7 = leitura(days: 7)[:perfil][:normal]
 
@@ -87,7 +97,41 @@ RSpec.describe SeusPosts::Leitura do
     it 'pede os números de cada post na mesma chamada da lista' do
       leitura
 
-      expect(a_request(:get, "#{ig}/me/media").with(query: hash_including('fields' => /insights\.metric\(views,reach/))).to have_been_made.once
+      expect(a_request(:get, "#{ig}/me/media").with(**com_campos(:INSTAGRAM))).to have_been_made.once
+    end
+
+    it 'a lista dos 90 dias é lida uma vez para 7, 30 e 90 dias' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      [7, 30, 90].each { |dias| leitura(days: dias) }
+
+      expect(a_request(:get, "#{ig}/me/media").with(query: hash_including({}))).to have_been_made.once
+    end
+
+    it 'lista que parou no teto de posts lidos sai marcada' do
+      corpo = { data: [], paging: { cursors: { after: 'x' }, next: "#{ig}/me/media?after=x" } }.to_json
+      resposta = { status: 200, body: corpo, headers: { 'Content-Type' => 'application/json' } }
+      stub_request(:get, "#{ig}/me/media").with(query: hash_including({})).to_return(resposta)
+
+      expect(leitura[:perfil]).to include(posts_status: 'ok', posts_truncated: true)
+    end
+
+    it 'Meta fora só nos posts: os números ficam e os posts vêm indisponíveis' do
+      stub_request(:get, "#{ig}/me/media").with(query: hash_including({})).to_return(status: 500, body: '{}')
+
+      perfil = leitura[:perfil]
+      expect(perfil).to include(status: 'ok', username: 'studioacme', posts_status: 'unavailable', posts: [], normal: nil)
+    end
+
+    it 'Meta fora depois de uma leitura boa: serve a última, marcada' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      leitura
+      travel 20.minutes
+      allow(SeusPosts::NumerosInstagram).to receive(:new).and_raise(Crm::MetaAds::Organico::Indisponivel.new('fora', codigo: 4))
+      stub_request(:get, "#{ig}/me/media").with(query: hash_including({})).to_return(status: 500, body: '{}')
+
+      perfil = leitura[:perfil]
+      expect(perfil).to include(status: 'ok', stale: true, posts_status: 'ok', posts_stale: true)
+      expect(perfil[:posts].pluck(:id)).to eq(%w[m4 m1 m3])
     end
   end
 
@@ -124,9 +168,8 @@ RSpec.describe SeusPosts::Leitura do
                post_da_pagina('p3', 12, [900, 90, 9000, 300])]
       vistas_dos_posts = [{ 'id' => 'p1', 'insights' => vistas(800, nil) }, { 'id' => 'p2', 'insights' => vistas(1000, 0) },
                           { 'id' => 'p3', 'insights' => vistas(2000, 15_000) }]
-      stub_request(:get, "#{fb}/1001/published_posts")
-        .with(query: hash_including('fields' => /breakdown\(is_from_ads\)/)).to_return(json(vistas_dos_posts))
-      stub_request(:get, "#{fb}/1001/published_posts").with(query: hash_including('fields' => /post_clicks/)).to_return(json(lista))
+      stub_request(:get, "#{fb}/1001/published_posts").with(**com_campos(:PAGE_VIEWS)).to_return(json(vistas_dos_posts))
+      stub_request(:get, "#{fb}/1001/published_posts").with(**com_campos(:PAGE)).to_return(json(lista))
     end
 
     it 'separa as vezes sem anúncio e usa as pessoas da vida toda do post' do
@@ -135,14 +178,13 @@ RSpec.describe SeusPosts::Leitura do
       expect(p1).to include(views: 800, views_from_ads: nil, reach: 500, clicks: 20, likes: 40, comments: 4, boosted: false)
     end
 
-    it 'post sem o recorte de anúncio: não se sabe se teve anúncio, fica fora do normal' do
-      stub_request(:get, "#{fb}/1001/published_posts")
-        .with(query: hash_including('fields' => /breakdown\(is_from_ads\)/)).to_return(json([]))
+    it 'post sem o recorte de anúncio: não se sabe se teve anúncio, entra no normal sem as vezes' do
+      stub_request(:get, "#{fb}/1001/published_posts").with(**com_campos(:PAGE_VIEWS)).to_return(json([]))
 
       perfil = leitura[:perfil]
 
       expect(perfil[:posts].pluck(:boosted)).to eq([nil, nil, nil])
-      expect(perfil[:normal].values).to all(be_nil)
+      expect(perfil[:normal]).to eq(views: nil, reach: 3400, likes: 333, comments: 33, clicks: 117)
     end
 
     it 'o post impulsionado fica fora do normal' do
@@ -157,6 +199,6 @@ RSpec.describe SeusPosts::Leitura do
     canal = create(:channel_instagram, account: account)
     allow(SeusPosts::NumerosInstagram).to receive(:new).and_raise(Crm::MetaAds::Organico::Indisponivel.new('fora', codigo: 2))
 
-    expect(leitura[:perfil]).to eq(id: "instagram-#{canal.id}", network: 'instagram', status: 'unavailable')
+    expect(leitura[:perfil]).to eq(id: "instagram-#{canal.id}", network: 'instagram', inbox_id: canal.inbox.id, status: 'unavailable')
   end
 end
