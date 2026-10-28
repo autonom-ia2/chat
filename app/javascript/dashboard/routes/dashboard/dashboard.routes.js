@@ -6,6 +6,7 @@ import { routes as callRoutes } from './calls/routes';
 import { routes as contactRoutes } from './contacts/routes';
 import { routes as crmRoutes } from './crm/crm.routes';
 import { routes as financialRoutes } from './financial/financial.routes';
+import { routes as seusPostsRoutes } from './seusPosts/seusPosts.routes';
 import { routes as autonomiaRoutes } from './autonomia/autonomia.routes';
 import { routes as automacoesRoutes } from './automacoes/automacoes.routes';
 import { routes as modelosWhatsappRoutes } from './campaigns/modelos/modelos.routes';
@@ -39,6 +40,7 @@ export default {
         ...withCampaignJourneyRedirects(contactRoutes),
         ...crmRoutes,
         ...financialRoutes,
+        ...seusPostsRoutes,
         ...autonomiaRoutes,
         ...automacoesRoutes,
         ...modelosWhatsappRoutes,

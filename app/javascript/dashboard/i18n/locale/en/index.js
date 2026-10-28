@@ -18,6 +18,7 @@ import novaConversa from './novaConversa.json';
 import horarioDoCanal from './horarioDoCanal.json';
 import sidebarFork from './sidebarFork.json';
 import telaInicial from './telaInicial.json';
+import seusPosts from './seusPosts.json';
 import painelDoContato from './painelDoContato.json';
 import listaDeConversas from './listaDeConversas.json';
 import metaAdsOrganico from './metaAdsOrganico.json';
@@ -93,6 +94,7 @@ export default {
   ...horarioDoCanal,
   ...sidebarFork,
   ...telaInicial,
+  ...seusPosts,
   ...painelDoContato,
   ...listaDeConversas,
   ...metaAdsOrganico,

@@ -41,6 +41,8 @@ export const SCHEDULING_PERMISSIONS = [
 // que só o administrador liga.
 export const META_ADS_VIEW_PERMISSION = 'meta_ads_view';
 export const META_ADS_MANAGE_PERMISSION = 'meta_ads_manage';
+// #2302 — Seus posts: ver os posts e os números das caixas que vê (posts_manage também vê).
+export const POSTS_PERMISSIONS = ['posts_view', 'posts_manage'];
 
 // Pessoas (#1931): agentes e times, montar funções, entregar acesso acima do próprio.
 export const PEOPLE_MANAGE_PERMISSION = 'people_manage';
