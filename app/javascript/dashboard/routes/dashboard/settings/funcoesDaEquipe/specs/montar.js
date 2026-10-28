@@ -3,7 +3,8 @@ import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
 import { CARLA } from './quemMonta';
 
-// Montagem comum das specs da conversa guiada (#2308): i18n pt_BR e a store que o usePeopleAccess lê.
+// Montagem comum das specs da conversa guiada (#2308): i18n pt_BR e a store que o usePeopleAccess lê, com as flags
+// da conta (crm_numeros_lentes muda o que quem fica sem função vê).
 export const i18n = () =>
   createI18n({
     legacy: false,
@@ -17,6 +18,7 @@ export const loja = ({
   giver = CARLA,
   funcoes = [],
   agentes = [],
+  flags = [],
   actions = {},
 } = {}) =>
   createStore({
@@ -29,6 +31,8 @@ export const loja = ({
         accounts: [{ id: 1, permissions: giver.permissions }],
       }),
       'accounts/getAccount': () => () => ({ id: 1 }),
+      'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+        flags.includes(flag),
       'customRole/getCustomRoles': () => funcoes,
       'agents/getAgents': () => agentes,
     },

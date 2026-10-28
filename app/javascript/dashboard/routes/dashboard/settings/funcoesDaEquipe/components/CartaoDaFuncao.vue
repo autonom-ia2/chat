@@ -7,7 +7,8 @@ import MaisDaFuncao from './MaisDaFuncao.vue';
 import { cuidadosDaFuncao, fraseDaFuncao } from '../fraseDaFuncao';
 
 // Uma função da conta na lista (#2308, especificação 5.A): o que ela pode em uma frase, o selo do que pede
-// cuidado, quem usa e as ações. Travada (roleLockReason) fica tracejada, só com o motivo.
+// cuidado, quem usa e as ações. Travada (roleLockReason) fica tracejada, só com o motivo. A pilha de rostos abre a
+// gaveta de quem usa (só leitura sem Pessoas).
 const props = defineProps({
   funcao: { type: Object, required: true },
   pessoas: { type: Array, default: () => [] },
@@ -17,7 +18,13 @@ const props = defineProps({
   podeEscolherPessoas: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['alterar', 'duplicar', 'apagar', 'escolherPessoas']);
+const emit = defineEmits([
+  'alterar',
+  'duplicar',
+  'apagar',
+  'escolherPessoas',
+  'verPessoas',
+]);
 
 const { t, locale } = useI18n();
 
@@ -92,10 +99,19 @@ const outrasPessoas = computed(() =>
         {{ selo }}
       </span>
 
-      <div
+      <button
         v-if="pessoas.length"
+        type="button"
         data-pessoas
-        class="flex items-center gap-2.5 min-h-11"
+        class="flex items-center self-start gap-2.5 px-2 -mx-2 min-h-11 rounded-xl hover:bg-n-alpha-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+        :aria-label="
+          $t(
+            'FUNCOES_EQUIPE.CARTAO.VER_PESSOAS_ROTULO',
+            { nome: funcao.name, n: pessoas.length },
+            pessoas.length
+          )
+        "
+        @click="emit('verPessoas')"
       >
         <span class="flex -space-x-1.5" aria-hidden="true">
           <Avatar
@@ -116,7 +132,9 @@ const outrasPessoas = computed(() =>
             }}
           </span>
         </span>
-        <span class="text-sm font-medium text-n-slate-12">
+        <span
+          class="text-sm font-medium underline underline-offset-4 decoration-n-slate-7 text-n-slate-12"
+        >
           {{
             $t(
               'FUNCOES_EQUIPE.CARTAO.PESSOAS',
@@ -125,7 +143,7 @@ const outrasPessoas = computed(() =>
             )
           }}
         </span>
-      </div>
+      </button>
       <p
         v-else
         data-ninguem

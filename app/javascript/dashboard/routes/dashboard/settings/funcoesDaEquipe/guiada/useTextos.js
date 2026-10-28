@@ -20,6 +20,8 @@ export function useTextos() {
 
   const maiuscula = texto =>
     texto ? `${texto.charAt(0).toLocaleUpperCase()}${texto.slice(1)}` : '';
+  const minuscula = texto =>
+    texto ? `${texto.charAt(0).toLocaleLowerCase()}${texto.slice(1)}` : '';
 
   const rotuloDoNivel = (module, nivel) =>
     t(`FUNCOES_EQUIPE.GUIADA.NIVEL.${ROTULO_DO_NIVEL[nivel](module)}`);
@@ -29,5 +31,14 @@ export function useTextos() {
 
   const nomeDaArea = key => t(`FUNCOES_EQUIPE.AREAS.${key}.NOME`);
 
-  return { t, te, lista, maiuscula, rotuloDoNivel, antesDoNivel, nomeDaArea };
+  return {
+    t,
+    te,
+    lista,
+    maiuscula,
+    minuscula,
+    rotuloDoNivel,
+    antesDoNivel,
+    nomeDaArea,
+  };
 }

@@ -2,9 +2,10 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { PRESETS } from '../../customRoles/permissionMatrix';
 import FuncaoGuiadaPage from '../guiada/FuncaoGuiadaPage.vue';
 import { global, loja } from './montar';
-import { CARLA } from './quemMonta';
+import { ADMIN, CARLA } from './quemMonta';
 
-// #2308, especificação 5.B, 5.C e Guarda: a conversa guiada de ponta a ponta, com a Carla.
+// #2308, especificação 5.B, 5.C, 5.F e Guarda: a conversa guiada de ponta a ponta, com a Carla (e o administrador
+// para o aviso de perda de acesso).
 const { rota, push, replace, saida } = vi.hoisted(() => ({
   rota: { name: '', params: {}, query: {} },
   push: vi.fn(),
@@ -40,27 +41,33 @@ const montar = async ({
   name = 'funcoes_equipe_new',
   params = {},
   query = {},
+  giver = CARLA,
+  funcoes = [ATENDENTE, GERENTE, ACIMA],
 } = {}) => {
   Object.assign(rota, { name, params: { accountId: '1', ...params }, query });
   const criar = vi.fn(async (_contexto, dados) => ({ id: 9, ...dados }));
+  const alterar = vi.fn(async (_contexto, { id, ...dados }) => ({
+    id,
+    ...dados,
+  }));
   const store = loja({
-    giver: CARLA,
-    funcoes: [ATENDENTE, GERENTE, ACIMA],
+    giver,
+    funcoes,
     agentes: AGENTES,
-    actions: { 'customRole/createCustomRole': criar },
+    actions: {
+      'customRole/createCustomRole': criar,
+      'customRole/updateCustomRole': alterar,
+    },
   });
   const wrapper = mount(FuncaoGuiadaPage, {
     attachTo: document.body,
     global: {
       ...global(store),
-      stubs: {
-        ...global(store).stubs,
-        AssignAgentsDialog: true,
-      },
+      stubs: { ...global(store).stubs, Avatar: true },
     },
   });
   await flushPromises();
-  return { wrapper, criar };
+  return { wrapper, criar, alterar };
 };
 
 const clicar = async (wrapper, seletor) => {
@@ -196,5 +203,68 @@ describe('FuncaoGuiadaPage', () => {
     expect(wrapper.find('[data-aviso-copia]').text()).toContain(
       'ver os valores das vendas em R$ e, junto, as metas do mês'
     );
+  });
+
+  it('"Pôr uma pessoa nela" abre a gaveta "Quem vai ser …?"', async () => {
+    const { wrapper } = await montar();
+
+    await clicar(wrapper, '[data-pronta="AGENT"] [data-principal]');
+    expect(wrapper.find('aside h2').text()).toBe('Quem vai ser Atendente?');
+    expect(wrapper.find('[data-ja-sao]').text()).toContain('Ana');
+  });
+
+  it.each([
+    ['ABOVE', { id: 4, name: 'Vendedor', permissions: ['financial_view'] }],
+    ['MINE', { id: 7, name: 'Vendedor', permissions: PRESETS.SDR() }],
+  ])('"Pôr uma pessoa nela" some com a trava %s', async (trava, vendedor) => {
+    const { wrapper } = await montar({ funcoes: [ATENDENTE, vendedor] });
+    const cartao = wrapper.find('[data-pronta="SDR"]');
+
+    expect(cartao.text()).not.toContain('Pôr uma pessoa nela');
+    expect(cartao.find('[data-trava-pessoa]').text()).toBe(
+      trava === 'ABOVE'
+        ? 'Só o administrador põe pessoas nela.'
+        : 'Ninguém muda a própria função.'
+    );
+  });
+
+  const tirarAsVendas = async wrapper => {
+    await clicar(wrapper, '[data-linha="vendas"] [data-alterar-area]');
+    await clicar(wrapper, '[data-nivel="none"]');
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-botao-grande]');
+    await clicar(wrapper, '[data-botao-grande]');
+  };
+
+  it('perda de acesso: o administrador vê quem perde o quê antes de salvar', async () => {
+    const { wrapper, alterar } = await montar({
+      name: 'funcoes_equipe_edit',
+      params: { roleId: '1' },
+      giver: ADMIN,
+    });
+
+    await tirarAsVendas(wrapper);
+    const perda = wrapper
+      .findAll('dialog')
+      .find(item => item.find('[data-nomes]').exists());
+    expect(perda.find('h2').text()).toBe(
+      '1 pessoa vai deixar de criar e mover as vendas em andamento'
+    );
+    expect(perda.find('[data-nomes]').text()).toBe('Ana');
+    expect(alterar).not.toHaveBeenCalled();
+
+    await perda.find('[data-acao]').trigger('click');
+    await flushPromises();
+    expect(alterar).toHaveBeenCalled();
+  });
+
+  it('perda de acesso não aparece para quem não é administrador', async () => {
+    const { wrapper, alterar } = await montar({
+      name: 'funcoes_equipe_edit',
+      params: { roleId: '1' },
+    });
+
+    await tirarAsVendas(wrapper);
+    expect(alterar).toHaveBeenCalled();
   });
 });

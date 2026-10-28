@@ -29,7 +29,8 @@
       "NINGUEM": "No one uses it yet",
       "ESCOLHER_PESSOAS": "Choose people",
       "ESCOLHER_PESSOAS_ROTULO": "Choose people for the role {nome}",
-      "SELO": "Can {coisas}"
+      "SELO": "Can {coisas}",
+      "VER_PESSOAS_ROTULO": "See the person who is {nome} | See the {n} people who are {nome}"
     },
     "FRASE": {
       "NAO_ATENDE": "Does not handle conversations.",
@@ -68,7 +69,8 @@
       "SEM_FUNCAO": {
         "NOME": "No role",
         "TEXTO": "Sees and handles teammates' conversations, in the channels they are in. Creates and changes contacts and canned responses.",
-        "CHAMADA": "Give them a role to show less."
+        "CHAMADA": "Give them a role to show less.",
+        "VER_TUDO": "See everything they can do"
       }
     },
     "VAZIO": {
@@ -626,6 +628,123 @@
       "TEXTO": "What you changed will be lost.",
       "CONTINUAR": "Keep adjusting",
       "SAIR": "Leave"
+    },
+    "SEM_FUNCAO": {
+      "conversas_dos_colegas": {
+        "LISTA": "Read and handle teammates' conversations, in the channels they are in",
+        "CURTO": "read and handle teammates' conversations"
+      },
+      "contatos": {
+        "LISTA": "Create and change contacts",
+        "CURTO": "create and change contacts"
+      },
+      "respostas_prontas": {
+        "LISTA": "Create and change canned responses",
+        "CURTO": "create and change canned responses"
+      },
+      "apagar_mensagens": {
+        "LISTA": "Delete messages",
+        "CURTO": "delete messages"
+      },
+      "vendas_das_colunas": {
+        "LISTA": "Create and move sales in the columns they take part in",
+        "CURTO": "create and move sales"
+      },
+      "arquivar_vendas": {
+        "LISTA": "Archive sales",
+        "CURTO": "archive sales"
+      },
+      "relatorios_das_vendas": {
+        "LISTA": "See the sales reports",
+        "CURTO": "see the sales reports"
+      },
+      "procurar_clientes_novos": {
+        "LISTA": "Look for new customers",
+        "CURTO": "look for new customers"
+      },
+      "planilha_de_clientes": {
+        "LISTA": "Take the customer list to a spreadsheet",
+        "CURTO": "take the customer list to a spreadsheet"
+      },
+      "NOTA": "All of this only applies to the channels the person is in and the sales columns they take part in, as today."
+    },
+    "DIFF": {
+      "GANHAR_E_PERDER": "They will gain some things and lose others. | They will gain some things and lose others.",
+      "SO_GANHAR": "They will be able to do more. | They will be able to do more.",
+      "SO_PERDER": "They will lose some things. | They will lose some things.",
+      "NADA": "Nothing changes in what they can do. | Nothing changes in what they can do.",
+      "PASSAM": "Will be able to | Will be able to",
+      "DEIXAM": "Will no longer | Will no longer",
+      "MAIS_DETALHES": "More details"
+    },
+    "EFEITO": {
+      "PASSA_E_DEIXA": "Without a role, they will {ganho}. They will no longer {perda}.",
+      "SO_PASSA": "Without a role, they will {ganho}.",
+      "SO_DEIXA": "Without a role, they will no longer {perda}.",
+      "NADA": "Without a role, they can still do the same.",
+      "VER_TUDO": "See everything that changes"
+    },
+    "PESSOA": {
+      "TIRAR": "Remove from this role",
+      "TIRAR_ROTULO": "Remove {pessoa} from this role",
+      "POR_COMO": "Make {funcao}",
+      "POR_COMO_ROTULO": "Make {pessoa} {funcao}",
+      "DESFAZER": "Undo",
+      "DESFAZER_ROTULO": "Undo the change for {pessoa}",
+      "OUTRA_FUNCAO": "Move to another role",
+      "OUTRA_FUNCAO_ROTULO": "Move {pessoa} to another role",
+      "ESCOLHER_FUNCAO": "Choose a role",
+      "ESCOLHER_FUNCAO_ROTULO": "Choose the role for {pessoa}",
+      "SEM_FUNCAO": "No role",
+      "VAI_FICAR_SEM": "Will have no role",
+      "HOJE_E": "Today is {atual}. Will become {nova}.",
+      "HOJE_SEM": "Has no role today. Will become {nova}.",
+      "VAI_SER": "Will be {nova}.",
+      "TRAVA": {
+        "SELF": "Nobody changes their own role",
+        "ADMIN": "Is an administrator: can already do everything",
+        "ABOVE": "Only the administrator changes this person's role"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "Who will be {nome}?",
+      "TITULO_SEM_FUNCAO": "Who has no role",
+      "JA_SAO": "Already {nome} ({n})",
+      "OUTRAS": "Other people",
+      "SO_LEITURA": "Only someone who can add and remove team members changes who has this role.",
+      "ESCONDIDAS": "The {nomes} role is not in the list: only the administrator gives it. | The {nomes} roles are not in the list: only the administrator gives them.",
+      "CANCELAR": "Cancel",
+      "SALVAR": "Save",
+      "SALVO": "Done. People's roles were saved.",
+      "ERRO_PARCIAL": "{n} person did not change role. Try again. | {n} people did not change role. Try again.",
+      "RODAPE": {
+        "PASSA_A_SER": "{pessoa} becomes {funcao}.",
+        "FICA_SEM": "{pessoa} will have no role and will {ganho}.",
+        "FICA_SEM_SO": "{pessoa} will have no role."
+      }
+    },
+    "APAGAR": {
+      "TITULO": "Delete the {nome} role?",
+      "TEXTO": "Nobody uses this role. It disappears from the list.",
+      "MANTER": "Keep",
+      "APAGAR": "Delete",
+      "PARA_ONDE": "Where does this person go? | Where do the {n} people go?",
+      "PARA_ONDE_TEXTO": "The {nome} role will be deleted. Choose this person's new role. | The {nome} role will be deleted. Choose these people's new role.",
+      "NOVA_FUNCAO": "New role",
+      "ESCOLHA": "Choose the new role",
+      "SEM_FUNCAO": "No role",
+      "MANTER_FUNCAO": "Keep the role",
+      "MOVER": "Move the people and delete",
+      "APAGADA": "{nome} role deleted.",
+      "MUDOU": "Someone just changed this role. Check again.",
+      "INDISPONIVEL": "That role is no longer available. Choose another.",
+      "ERRO": "Could not delete right now. Check your internet and try again."
+    },
+    "PERDA": {
+      "TITULO": "{n} person will no longer {coisas} | {n} people will no longer {coisas}",
+      "TEXTO": "This person has the {nome} role. From now on, they will no longer be able to do this. | These people have the {nome} role. From now on, they will no longer be able to do this.",
+      "VOLTAR": "Back",
+      "SALVAR": "Save anyway"
     }
   }
 }

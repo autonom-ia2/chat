@@ -6,18 +6,18 @@ import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import Button from 'dashboard/components-next/button/Button.vue';
-import AssignAgentsDialog from '../customRoles/component/AssignAgentsDialog.vue';
-import DeleteRoleDialog from '../customRoles/component/DeleteRoleDialog.vue';
 import CartaoDaFuncao from './components/CartaoDaFuncao.vue';
 import FaixaSemFuncao from './components/FaixaSemFuncao.vue';
 import FuncoesFixas from './components/FuncoesFixas.vue';
 import PaywallDasFuncoes from './components/PaywallDasFuncoes.vue';
 import VazioDasFuncoes from './components/VazioDasFuncoes.vue';
+import ApagarFuncao from './pessoas/ApagarFuncao.vue';
+import GavetaDaFuncao from './pessoas/GavetaDaFuncao.vue';
 import { ALTERAR_NOVA, CRIAR_NOVA, DUPLICAR_NOVA } from './listaPelaFlag';
 
 // Funções da equipe, a lista nova (#2308, épico #1784, especificação 5.A). Atrás da flag funcoes_guiadas
-// (listaPelaFlag.js). Criar, alterar e duplicar abrem a conversa guiada (PR 3); até o PR 4, apagar e escolher
-// pessoas usam os diálogos de hoje.
+// (listaPelaFlag.js). Criar, alterar e duplicar abrem a conversa guiada (PR 3); quem usa, quem está sem função e
+// apagar ficam aqui (PR 4, especificação 5.D e 5.E).
 const store = useStore();
 const router = useRouter();
 const { t } = useI18n();
@@ -39,10 +39,9 @@ const TONS = [
 ];
 
 const carregou = ref(false);
-const escolherPessoasRef = ref(null);
-const apagarComGenteRef = ref(null);
-const funcaoParaApagar = ref(null);
-const confirmarApagar = ref(false);
+const apagarRef = ref(null);
+// A gaveta aberta: { funcao } de uma função, { funcao: null } para quem está sem função.
+const gaveta = ref(null);
 
 const atrasDoPlano = computed(
   () => !isFeatureEnabledOnAccount.value(accountId.value, 'custom_roles')
@@ -88,63 +87,50 @@ const alterar = funcao =>
   router.push({ name: ALTERAR_NOVA, params: { roleId: funcao.id } });
 const duplicar = funcao =>
   router.push({ name: DUPLICAR_NOVA, params: { roleId: funcao.id } });
-// Provisório até a gaveta "Quem está sem função" (PR 4): a tela de agentes.
-const verQuemSao = () => router.push({ name: 'agent_list' });
+const abrirGaveta = funcao => {
+  gaveta.value = { funcao };
+};
 
 // "Pôr uma pessoa nela" (especificação 7.8): precisa de Pessoas e de alcançar a função.
 const podeEscolherPessoas = funcao =>
   canManagePeople.value && !roleLockReason(funcao);
 
-// A lista de agentes estava velha e o servidor achou gente na função: recarrega e pergunta o destino.
-const perguntarDestinoDepoisDaRecusa = async (funcao, mensagem) => {
-  await store.dispatch('agents/get');
-  const quantas = pessoasDa(funcao).length;
-  if (!quantas) {
-    useAlert(mensagem);
-    return;
-  }
-  apagarComGenteRef.value?.open(funcao, quantas);
+const pedirParaApagar = (funcao, mensagem) =>
+  apagarRef.value?.abrir(funcao, pessoasDa(funcao).length, mensagem);
+
+// O servidor recusou: a lista de agentes estava velha (achou gente), a função de destino sumiu ou saiu do alcance,
+// ou alguém mudou a função no meio. A tela recarrega o que mudou e pergunta de novo.
+const RECUSAS = {
+  destination_required: async (funcao, mensagem) => {
+    await store.dispatch('agents/get');
+    if (pessoasDa(funcao).length) pedirParaApagar(funcao);
+    else useAlert(mensagem);
+  },
+  destination_invalid: async funcao => {
+    await store.dispatch('customRole/getCustomRole');
+    pedirParaApagar(funcao, t('FUNCOES_EQUIPE.APAGAR.INDISPONIVEL'));
+  },
+  changed_meanwhile: async () => {
+    useAlert(t('FUNCOES_EQUIPE.APAGAR.MUDOU'));
+    await Promise.all([carregar(), store.dispatch('agents/get')]);
+  },
 };
 
-const apagar = async (funcao, destinationRoleId) => {
+const apagar = async ({ funcao, destino }) => {
   try {
     await store.dispatch('customRole/deleteCustomRole', {
       id: funcao.id,
-      destinationRoleId,
+      destinationRoleId: destino,
     });
-    if (destinationRoleId) store.dispatch('agents/get');
-    useAlert(t('CUSTOM_ROLE.DELETE.API.SUCCESS_MESSAGE'));
+    if (destino) store.dispatch('agents/get');
+    useAlert(t('FUNCOES_EQUIPE.APAGAR.APAGADA', { nome: funcao.name }));
   } catch (error) {
-    const mensagem =
-      error?.message || t('CUSTOM_ROLE.DELETE.API.ERROR_MESSAGE');
-    if (error?.code === 'destination_required') {
-      await perguntarDestinoDepoisDaRecusa(funcao, mensagem);
-      return;
-    }
-    useAlert(mensagem);
+    const mensagem = error?.message || t('FUNCOES_EQUIPE.APAGAR.ERRO');
+    const recusa = RECUSAS[error?.code];
+    if (recusa) await recusa(funcao, mensagem);
+    else useAlert(mensagem);
   }
 };
-
-// Com gente na função, o diálogo de hoje pergunta para onde as pessoas vão (#2185).
-const pedirParaApagar = funcao => {
-  funcaoParaApagar.value = funcao;
-  const quantas = pessoasDa(funcao).length;
-  if (quantas) {
-    apagarComGenteRef.value?.open(funcao, quantas);
-    return;
-  }
-  confirmarApagar.value = true;
-};
-
-const apagarSemGente = () => {
-  confirmarApagar.value = false;
-  apagar(funcaoParaApagar.value);
-};
-
-const apagarComGente = ({ role, destinationRoleId }) =>
-  apagar(role, destinationRoleId);
-
-const nomeParaApagar = computed(() => funcaoParaApagar.value?.name || '');
 </script>
 
 <template>
@@ -248,7 +234,7 @@ const nomeParaApagar = computed(() => funcaoParaApagar.value?.name || '');
             <FaixaSemFuncao
               v-if="canManagePeople && semFuncao"
               :quantidade="semFuncao"
-              @ver-quem-sao="verQuemSao"
+              @ver-quem-sao="abrirGaveta(null)"
             />
 
             <ul class="flex flex-col gap-3.5 p-0 m-0 list-none">
@@ -264,7 +250,8 @@ const nomeParaApagar = computed(() => funcaoParaApagar.value?.name || '');
                 @alterar="alterar(funcao)"
                 @duplicar="duplicar(funcao)"
                 @apagar="pedirParaApagar(funcao)"
-                @escolher-pessoas="escolherPessoasRef?.open(funcao)"
+                @escolher-pessoas="abrirGaveta(funcao)"
+                @ver-pessoas="abrirGaveta(funcao)"
               />
             </ul>
 
@@ -295,17 +282,11 @@ const nomeParaApagar = computed(() => funcaoParaApagar.value?.name || '');
       />
     </div>
 
-    <woot-delete-modal
-      v-model:show="confirmarApagar"
-      :on-close="() => (confirmarApagar = false)"
-      :on-confirm="apagarSemGente"
-      :title="$t('CUSTOM_ROLE.DELETE.CONFIRM.TITLE')"
-      :message="$t('CUSTOM_ROLE.DELETE.CONFIRM.MESSAGE')"
-      :message-value="nomeParaApagar"
-      :confirm-text="$t('CUSTOM_ROLE.DELETE.CONFIRM.YES')"
-      :reject-text="$t('CUSTOM_ROLE.DELETE.CONFIRM.NO')"
+    <ApagarFuncao ref="apagarRef" @apagar="apagar" />
+    <GavetaDaFuncao
+      v-if="gaveta"
+      :funcao="gaveta.funcao"
+      @fechar="gaveta = null"
     />
-    <DeleteRoleDialog ref="apagarComGenteRef" @confirm="apagarComGente" />
-    <AssignAgentsDialog ref="escolherPessoasRef" />
   </section>
 </template>

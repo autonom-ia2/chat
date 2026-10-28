@@ -4,7 +4,8 @@ import { onBeforeRouteLeave } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
-import AssignAgentsDialog from '../../customRoles/component/AssignAgentsDialog.vue';
+import GavetaDaFuncao from '../pessoas/GavetaDaFuncao.vue';
+import { podeDaFuncao } from '../fraseDaFuncao';
 import { useFuncaoGuiada } from './useFuncaoGuiada';
 import AjustesDaFuncao from './AjustesDaFuncao.vue';
 import ComoVaiFicar from './ComoVaiFicar.vue';
@@ -12,6 +13,7 @@ import ConfiraFuncao from './ConfiraFuncao.vue';
 import DialogoDaCasa from './DialogoDaCasa.vue';
 import EscolhaDaFuncao from './EscolhaDaFuncao.vue';
 import EtapasDaFuncao from './EtapasDaFuncao.vue';
+import PerdaDeAcesso from './PerdaDeAcesso.vue';
 import PerguntaContatos from './PerguntaContatos.vue';
 import PerguntaConversas from './PerguntaConversas.vue';
 import PerguntaCuidado from './PerguntaCuidado.vue';
@@ -21,11 +23,13 @@ import SucessoDaFuncao from './SucessoDaFuncao.vue';
 // Criar, alterar e duplicar uma função numa conversa guiada (#2308, PR 3 do épico #1784): Escolha → Ajustes →
 // perguntas → Confira → Sucesso, com "Como vai ficar" ao lado e a guarda "Sair sem salvar?".
 const { t } = useI18n();
-const { giver, canManagePeople, reachesRole } = usePeopleAccess();
+const { giver, isAdmin, canManagePeople, reachesRole } = usePeopleAccess();
+const agentes = useMapGetter('agents/getAgents');
 const conta = useMapGetter('accounts/getAccount');
 const accountId = useMapGetter('getCurrentAccountId');
 const {
   modo,
+  idDaFuncao,
   carregou,
   etapa,
   pronta,
@@ -57,7 +61,9 @@ const PERGUNTAS = {
 };
 const ETAPA_DO_PASSO = { escolha: 'ESCOLHA', confira: 'CONFIRA' };
 
-const escolherPessoas = ref(null);
+// A função cuja gaveta de pessoas está aberta (Escolha › "Pôr uma pessoa nela" e Sucesso › "Escolher pessoas").
+const gaveta = ref(null);
+const perda = ref(null);
 const guarda = ref(null);
 let responderGuarda = null;
 
@@ -150,8 +156,25 @@ const sair = decisao => {
   responderGuarda = null;
 };
 
-const depoisDeEscolher = () => {
+const fecharGaveta = () => {
+  gaveta.value = null;
   if (etapa.value === 'sucesso') voltarParaLista();
+};
+
+// Perda de acesso (especificação 5.F), só para o administrador: o que quem já tem a função deixa de poder.
+const pessoasDaFuncao = computed(() =>
+  modo.value === 'alterar'
+    ? agentes.value.filter(item => item.custom_role_id === idDaFuncao.value)
+    : []
+);
+const perdas = computed(() => {
+  const depois = new Set(podeDaFuncao(permissions.value));
+  return podeDaFuncao(inicial.value).filter(id => !depois.has(id));
+});
+const pedirSalvar = () => {
+  if (isAdmin.value && pessoasDaFuncao.value.length && perdas.value.length)
+    perda.value?.abrir();
+  else salvar();
 };
 
 onMounted(carregar);
@@ -180,7 +203,7 @@ onMounted(carregar);
           v-else-if="etapa === 'escolha'"
           @criar="usarPronta"
           @zero="doZero"
-          @por-pessoa="funcao => escolherPessoas?.open(funcao)"
+          @por-pessoa="funcao => (gaveta = funcao)"
         />
 
         <div
@@ -222,13 +245,13 @@ onMounted(carregar);
               :erro="erro"
               :salvando="salvando"
               :pode-escolher-pessoas="podeEscolherPessoas"
-              @salvar="salvar"
+              @salvar="pedirSalvar"
             />
             <SucessoDaFuncao
               v-else
               :nome="salva?.name || nome"
               :pode-escolher-pessoas="podeEscolherPessoas"
-              @escolher-pessoas="escolherPessoas?.open(salva)"
+              @escolher-pessoas="gaveta = salva"
               @voltar="voltarParaLista"
             />
           </div>
@@ -255,6 +278,13 @@ onMounted(carregar);
       @seguro="sair(false)"
       @acao="sair(true)"
     />
-    <AssignAgentsDialog ref="escolherPessoas" @done="depoisDeEscolher" />
+    <PerdaDeAcesso
+      ref="perda"
+      :nome="comeco.nome"
+      :pessoas="pessoasDaFuncao"
+      :perdas="perdas"
+      @salvar="salvar"
+    />
+    <GavetaDaFuncao v-if="gaveta" :funcao="gaveta" @fechar="fecharGaveta" />
   </section>
 </template>

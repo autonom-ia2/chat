@@ -19,6 +19,8 @@ const props = defineProps({
   risco: { type: String, default: '' },
   seguro: { type: String, required: true },
   acao: { type: String, required: true },
+  // Mesmo rótulo, só o estado muda (especificação 9): "Mover as pessoas e apagar" espera o destino.
+  acaoDesabilitada: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['seguro', 'acao']);
@@ -120,6 +122,7 @@ defineExpose({ abrir });
             type="button"
             :label="acao"
             :color="destrutivo ? 'ruby' : 'blue'"
+            :disabled="acaoDesabilitada"
             class="max-sm:w-full max-sm:!h-12 min-h-11"
             @click="escolher('acao')"
           />

@@ -1,11 +1,13 @@
 import { mount, flushPromises } from '@vue/test-utils';
+import { useAlert } from 'dashboard/composables';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { createStore } from 'vuex';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/funcoesDaEquipe.json';
 import FuncoesDaEquipePage from '../FuncoesDaEquipePage.vue';
 
-// #2308, especificação 5.A: a lista nova. Faixa só com Pessoas, erro nunca vira lista vazia, função travada
-// sem ações, e as fixas.
+// #2308, especificação 5.A e 5.E: a lista nova. Faixa só com Pessoas, erro nunca vira lista vazia, função travada
+// sem ações, as fixas, a gaveta de pessoas e o apagar com destino.
 const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: routerPush }) }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -36,12 +38,16 @@ const AGENTES = [
 ];
 
 // Carla: não administradora, monta funções e tem as chaves do Atendente; Pessoas só quando o teste pede.
+const recarregar = vi.fn();
+
 const montar = async ({
   funcoes = [ATENDENTE, FINANCEIRO],
   admin = true,
   pessoas = false,
   falha = false,
   plano = true,
+  apagar = vi.fn(),
+  lentes = false,
 } = {}) => {
   const permissoes = [
     'custom_role_manage',
@@ -57,7 +63,8 @@ const montar = async ({
         id: 50,
         accounts: [{ id: 1, permissions: admin ? [] : permissoes }],
       }),
-      'accounts/isFeatureEnabledonAccount': () => () => plano,
+      'accounts/isFeatureEnabledonAccount': () => (_conta, flag) =>
+        flag === 'crm_numeros_lentes' ? lentes : plano,
       'customRole/getCustomRoles': () => funcoes,
       'customRole/getUIFlags': () => ({
         fetchingList: false,
@@ -66,11 +73,13 @@ const montar = async ({
       'agents/getAgents': () => AGENTES,
     },
     actions: {
-      'customRole/getCustomRole': vi.fn(),
+      'customRole/getCustomRole': recarregar,
+      'customRole/deleteCustomRole': apagar,
       'agents/get': vi.fn(),
     },
   });
   const wrapper = mount(FuncoesDaEquipePage, {
+    attachTo: document.body,
     global: {
       plugins: [
         store,
@@ -84,16 +93,26 @@ const montar = async ({
       ],
       stubs: {
         Avatar: true,
-        AssignAgentsDialog: true,
-        DeleteRoleDialog: true,
+        GavetaDaFuncao: true,
         PaywallDasFuncoes: { template: '<div data-paywall />' },
-        'woot-delete-modal': true,
+        TeleportWithDirection: { template: '<div><slot /></div>' },
       },
     },
   });
   await flushPromises();
   return wrapper;
 };
+
+afterEach(() => {
+  document.body.innerHTML = '';
+  vi.clearAllMocks();
+});
+
+const pedirApagar = async cartao => {
+  await cartao.find('[data-mais]').trigger('click');
+  await cartao.find('[data-acao="apagar"]').trigger('click');
+};
+const dialogo = wrapper => wrapper.find('dialog');
 
 describe('Funções da equipe: lista', () => {
   it('mostra título, contagem, cartões com a frase curta e as fixas', async () => {
@@ -210,5 +229,134 @@ describe('Funções da equipe: lista', () => {
 
     expect(wrapper.find('[data-paywall]').exists()).toBe(true);
     expect(wrapper.find('[data-cartao-funcao]').exists()).toBe(false);
+  });
+
+  it('"Ver quem são" abre a gaveta de quem está sem função; a pilha abre quem usa', async () => {
+    const wrapper = await montar();
+    const gaveta = () => wrapper.findComponent({ name: 'GavetaDaFuncao' });
+
+    await wrapper.find('[data-ver-quem-sao]').trigger('click');
+    expect(gaveta().props('funcao')).toBeNull();
+
+    gaveta().vm.$emit('fechar');
+    await flushPromises();
+    expect(gaveta().exists()).toBe(false);
+
+    await wrapper.find('[data-pessoas]').trigger('click');
+    expect(gaveta().props('funcao')).toEqual(ATENDENTE);
+    expect(wrapper.find('[data-pessoas]').attributes('aria-label')).toBe(
+      'Ver a pessoa que é Atendente'
+    );
+  });
+
+  it('"Ver tudo o que pode" do Sem função segue a flag crm_numeros_lentes', async () => {
+    const itens = async lentes => {
+      const wrapper = await montar({ lentes });
+      await wrapper.find('[data-ver-tudo-sem-funcao]').trigger('click');
+      return wrapper
+        .findAll('[data-grupo="NAO_PODE"] [data-item]')
+        .map(item => item.text());
+    };
+
+    expect(await itens(false)).toEqual([
+      'Procurar clientes novos',
+      'Levar a lista de clientes para uma planilha',
+    ]);
+    expect(await itens(true)).toContain('Ver os relatórios das vendas');
+  });
+
+  it('apagar sem ninguém: "Apagar a função …?" e apaga sem destino', async () => {
+    const apagar = vi.fn();
+    const wrapper = await montar({ apagar });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(financeiro);
+    expect(dialogo(wrapper).find('h2').text()).toBe(
+      'Apagar a função Financeiro?'
+    );
+    expect(dialogo(wrapper).text()).toContain(
+      'Ninguém usa esta função. Ela some da lista.'
+    );
+    expect(dialogo(wrapper).find('[data-seguro]').text()).toBe('Manter');
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+
+    expect(apagar).toHaveBeenCalledWith(expect.anything(), {
+      id: 2,
+      destinationRoleId: undefined,
+    });
+    expect(useAlert).toHaveBeenCalledWith('Função Financeiro apagada.');
+  });
+
+  it('apagar com gente: destino obrigatório, e "Sem função" mostra o que muda', async () => {
+    const apagar = vi.fn();
+    const wrapper = await montar({ apagar });
+    const [atendente] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(atendente);
+    expect(dialogo(wrapper).find('h2').text()).toBe('Para onde vai a pessoa?');
+    const mover = dialogo(wrapper).find('[data-acao]');
+    expect(mover.text()).toBe('Mover as pessoas e apagar');
+    expect(mover.attributes('disabled')).toBeDefined();
+
+    wrapper.findComponent(ChoiceSelect).vm.$emit('update:modelValue', 'none');
+    await flushPromises();
+    const diff = dialogo(wrapper).find('[data-diff]');
+    expect(diff.text()).toContain('Ela vai passar a poder mais coisas.');
+    expect(diff.find('[data-grupo="PASSAM"]').text()).toContain(
+      'Ler e atender as conversas dos colegas, nos canais em que estão'
+    );
+    expect(mover.attributes('disabled')).toBeUndefined();
+
+    await mover.trigger('click');
+    await flushPromises();
+    expect(apagar).toHaveBeenCalledWith(expect.anything(), {
+      id: 1,
+      destinationRoleId: 'none',
+    });
+  });
+
+  it('409: avisa que alguém mudou a função e recarrega', async () => {
+    const apagar = vi.fn().mockRejectedValue(
+      Object.assign(new Error('conflito'), {
+        code: 'changed_meanwhile',
+        status: 409,
+      })
+    );
+    const wrapper = await montar({ apagar });
+    const [, financeiro] = wrapper.findAll('[data-cartao-funcao]');
+    recarregar.mockClear();
+
+    await pedirApagar(financeiro);
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(
+      'Alguém mudou esta função agora. Confira de novo.'
+    );
+    expect(recarregar).toHaveBeenCalled();
+  });
+
+  it('destination_invalid: reabre a pergunta com o motivo', async () => {
+    const apagar = vi
+      .fn()
+      .mockRejectedValue(
+        Object.assign(new Error('recusado'), { code: 'destination_invalid' })
+      );
+    const wrapper = await montar({ apagar });
+    const [atendente] = wrapper.findAll('[data-cartao-funcao]');
+
+    await pedirApagar(atendente);
+    wrapper.findComponent(ChoiceSelect).vm.$emit('update:modelValue', 'none');
+    await flushPromises();
+    await dialogo(wrapper).find('[data-acao]').trigger('click');
+    await flushPromises();
+
+    expect(dialogo(wrapper).find('[data-erro-destino]').text()).toBe(
+      'Essa função não está mais disponível. Escolha outra.'
+    );
+    expect(
+      dialogo(wrapper).find('[data-acao]').attributes('disabled')
+    ).toBeDefined();
   });
 });

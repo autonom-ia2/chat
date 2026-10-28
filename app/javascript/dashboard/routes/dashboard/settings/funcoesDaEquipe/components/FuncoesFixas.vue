@@ -1,10 +1,30 @@
 <script setup>
-// As duas funções que vêm com a conta (#2308): Administrador e Sem função. Não mudam; o texto de Sem função
-// segue a especificação 5.A até o contrato gerado do servidor chegar (PR 2).
+import { computed, ref, useId } from 'vue';
+import { useSemFuncao } from '../useSemFuncao';
+
+// As duas funções que vêm com a conta (#2308): Administrador e Sem função. Não mudam. "Ver tudo o que pode" abre o
+// contrato de Sem função (semFuncaoCapacidades.json, gerado das policies), com as flags reais da conta.
 defineProps({
   administradores: { type: Number, default: 0 },
   semFuncao: { type: Number, default: 0 },
 });
+
+const { capacidades, textoDa } = useSemFuncao();
+const id = useId();
+const aberto = ref(false);
+
+const grupos = computed(() => [
+  {
+    chave: 'PODE',
+    icone: 'i-lucide-check text-n-teal-11',
+    ids: capacidades.value.filter(item => item.pode).map(item => item.id),
+  },
+  {
+    chave: 'NAO_PODE',
+    icone: 'i-lucide-x text-n-slate-11',
+    ids: capacidades.value.filter(item => !item.pode).map(item => item.id),
+  },
+]);
 </script>
 
 <template>
@@ -59,11 +79,65 @@ defineProps({
           <p class="m-0 text-[0.9375rem] font-semibold text-n-slate-12">
             {{ $t('FUNCOES_EQUIPE.FIXAS.SEM_FUNCAO.CHAMADA') }}
           </p>
-          <p class="m-0 text-sm text-n-slate-11">
+          <p
+            class="flex flex-wrap items-center m-0 text-sm gap-x-2 text-n-slate-11"
+          >
             {{
               $t('FUNCOES_EQUIPE.FIXAS.PESSOAS', { n: semFuncao }, semFuncao)
             }}
+            <span aria-hidden="true">
+              {{ $t('FUNCOES_EQUIPE.CONTAGEM.SEPARADOR') }}
+            </span>
+            <button
+              type="button"
+              data-ver-tudo-sem-funcao
+              :aria-expanded="aberto"
+              :aria-controls="`${id}-tudo`"
+              class="px-1 -mx-1 font-semibold underline rounded min-h-11 underline-offset-4 text-n-blue-11 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
+              @click="aberto = !aberto"
+            >
+              {{ $t('FUNCOES_EQUIPE.FIXAS.SEM_FUNCAO.VER_TUDO') }}
+            </button>
           </p>
+          <div
+            v-show="aberto"
+            :id="`${id}-tudo`"
+            data-tudo-sem-funcao
+            class="flex flex-col gap-3 pt-2"
+          >
+            <div
+              v-for="grupo in grupos"
+              :key="grupo.chave"
+              :data-grupo="grupo.chave"
+              class="flex flex-col gap-1.5"
+            >
+              <p class="m-0 text-sm font-semibold text-n-slate-12">
+                {{ $t(`FUNCOES_EQUIPE.PREVIA.${grupo.chave}`) }}
+              </p>
+              <ul class="flex flex-col gap-1.5 p-0 m-0 list-none">
+                <li
+                  v-for="item in grupo.ids"
+                  :key="item"
+                  :data-item="item"
+                  class="flex items-start gap-2 text-sm text-n-slate-12"
+                >
+                  <span
+                    class="size-4 mt-0.5 shrink-0"
+                    :class="grupo.icone"
+                    aria-hidden="true"
+                  />
+                  {{ textoDa(item) }}
+                </li>
+              </ul>
+            </div>
+            <p class="flex items-start gap-2 m-0 text-sm text-n-slate-11">
+              <span
+                class="i-lucide-info size-4 mt-0.5 shrink-0"
+                aria-hidden="true"
+              />
+              {{ $t('FUNCOES_EQUIPE.SEM_FUNCAO.NOTA') }}
+            </p>
+          </div>
         </div>
       </div>
     </div>

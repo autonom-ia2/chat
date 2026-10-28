@@ -50,8 +50,10 @@ const fechar = () => {
   botao.value?.$el.focus();
 };
 
+// O foco volta ao "Mais" antes da ação: o diálogo que ela abre devolve o foco a ele ao fechar.
 const escolher = item => {
   aberto.value = false;
+  botao.value?.$el.focus();
   item.escolher();
 };
 

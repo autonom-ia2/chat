@@ -29,7 +29,8 @@
       "NINGUEM": "Ninguém usa ainda",
       "ESCOLHER_PESSOAS": "Escolher pessoas",
       "ESCOLHER_PESSOAS_ROTULO": "Escolher pessoas para a função {nome}",
-      "SELO": "Pode {coisas}"
+      "SELO": "Pode {coisas}",
+      "VER_PESSOAS_ROTULO": "Ver a pessoa que é {nome} | Ver as {n} pessoas que são {nome}"
     },
     "FRASE": {
       "NAO_ATENDE": "Não atende conversas.",
@@ -68,7 +69,8 @@
       "SEM_FUNCAO": {
         "NOME": "Sem função",
         "TEXTO": "Vê e atende as conversas dos colegas, nos canais em que está. Cria e muda os contatos e as respostas prontas.",
-        "CHAMADA": "Dê uma função para mostrar menos."
+        "CHAMADA": "Dê uma função para mostrar menos.",
+        "VER_TUDO": "Ver tudo o que pode"
       }
     },
     "VAZIO": {
@@ -626,6 +628,123 @@
       "TEXTO": "O que você mudou vai se perder.",
       "CONTINUAR": "Continuar ajustando",
       "SAIR": "Sair"
+    },
+    "SEM_FUNCAO": {
+      "conversas_dos_colegas": {
+        "LISTA": "Ler e atender as conversas dos colegas, nos canais em que estão",
+        "CURTO": "ler e atender as conversas dos colegas"
+      },
+      "contatos": {
+        "LISTA": "Criar e mudar os contatos",
+        "CURTO": "criar e mudar os contatos"
+      },
+      "respostas_prontas": {
+        "LISTA": "Criar e mudar as respostas prontas",
+        "CURTO": "criar e mudar as respostas prontas"
+      },
+      "apagar_mensagens": {
+        "LISTA": "Apagar mensagens",
+        "CURTO": "apagar mensagens"
+      },
+      "vendas_das_colunas": {
+        "LISTA": "Criar e mover as vendas nas colunas de que participam",
+        "CURTO": "criar e mover as vendas"
+      },
+      "arquivar_vendas": {
+        "LISTA": "Arquivar vendas",
+        "CURTO": "arquivar vendas"
+      },
+      "relatorios_das_vendas": {
+        "LISTA": "Ver os relatórios das vendas",
+        "CURTO": "ver os relatórios das vendas"
+      },
+      "procurar_clientes_novos": {
+        "LISTA": "Procurar clientes novos",
+        "CURTO": "procurar clientes novos"
+      },
+      "planilha_de_clientes": {
+        "LISTA": "Levar a lista de clientes para uma planilha",
+        "CURTO": "levar a lista de clientes para uma planilha"
+      },
+      "NOTA": "Tudo isso vale só nos canais em que a pessoa está e nas colunas das vendas de que ela participa, como hoje."
+    },
+    "DIFF": {
+      "GANHAR_E_PERDER": "Ela vai ganhar umas coisas e perder outras. | Elas vão ganhar umas coisas e perder outras.",
+      "SO_GANHAR": "Ela vai passar a poder mais coisas. | Elas vão passar a poder mais coisas.",
+      "SO_PERDER": "Ela vai perder umas coisas. | Elas vão perder umas coisas.",
+      "NADA": "Nada muda no que ela pode fazer. | Nada muda no que elas podem fazer.",
+      "PASSAM": "Vai passar a poder | Vão passar a poder",
+      "DEIXAM": "Vai deixar de | Vão deixar de",
+      "MAIS_DETALHES": "Mais detalhes"
+    },
+    "EFEITO": {
+      "PASSA_E_DEIXA": "Sem função, passa a {ganho}. Deixa de {perda}.",
+      "SO_PASSA": "Sem função, passa a {ganho}.",
+      "SO_DEIXA": "Sem função, deixa de {perda}.",
+      "NADA": "Sem função, continua podendo o mesmo.",
+      "VER_TUDO": "Ver tudo o que muda"
+    },
+    "PESSOA": {
+      "TIRAR": "Tirar desta função",
+      "TIRAR_ROTULO": "Tirar {pessoa} desta função",
+      "POR_COMO": "Pôr como {funcao}",
+      "POR_COMO_ROTULO": "Pôr {pessoa} como {funcao}",
+      "DESFAZER": "Desfazer",
+      "DESFAZER_ROTULO": "Desfazer a mudança de {pessoa}",
+      "OUTRA_FUNCAO": "Pôr em outra função",
+      "OUTRA_FUNCAO_ROTULO": "Pôr {pessoa} em outra função",
+      "ESCOLHER_FUNCAO": "Escolher função",
+      "ESCOLHER_FUNCAO_ROTULO": "Escolher a função de {pessoa}",
+      "SEM_FUNCAO": "Sem função",
+      "VAI_FICAR_SEM": "Vai ficar sem função",
+      "HOJE_E": "Hoje é {atual}. Vai passar a ser {nova}.",
+      "HOJE_SEM": "Hoje está sem função. Vai passar a ser {nova}.",
+      "VAI_SER": "Vai ser {nova}.",
+      "TRAVA": {
+        "SELF": "Ninguém muda a própria função",
+        "ADMIN": "É administradora: já pode tudo",
+        "ABOVE": "Só o administrador muda a função desta pessoa"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "Quem vai ser {nome}?",
+      "TITULO_SEM_FUNCAO": "Quem está sem função",
+      "JA_SAO": "Já são {nome} ({n})",
+      "OUTRAS": "Outras pessoas",
+      "SO_LEITURA": "Só quem pode pôr e tirar pessoas da equipe muda quem tem esta função.",
+      "ESCONDIDAS": "A função {nomes} não aparece na escolha: só o administrador dá. | As funções {nomes} não aparecem na escolha: só o administrador dá.",
+      "CANCELAR": "Cancelar",
+      "SALVAR": "Salvar",
+      "SALVO": "Pronto. As funções das pessoas foram salvas.",
+      "ERRO_PARCIAL": "{n} pessoa não mudou de função. Tente de novo. | {n} pessoas não mudaram de função. Tente de novo.",
+      "RODAPE": {
+        "PASSA_A_SER": "{pessoa} passa a ser {funcao}.",
+        "FICA_SEM": "{pessoa} vai ficar sem função e passa a {ganho}.",
+        "FICA_SEM_SO": "{pessoa} vai ficar sem função."
+      }
+    },
+    "APAGAR": {
+      "TITULO": "Apagar a função {nome}?",
+      "TEXTO": "Ninguém usa esta função. Ela some da lista.",
+      "MANTER": "Manter",
+      "APAGAR": "Apagar",
+      "PARA_ONDE": "Para onde vai a pessoa? | Para onde vão as {n} pessoas?",
+      "PARA_ONDE_TEXTO": "A função {nome} vai ser apagada. Escolha a nova função dessa pessoa. | A função {nome} vai ser apagada. Escolha a nova função dessas pessoas.",
+      "NOVA_FUNCAO": "Nova função",
+      "ESCOLHA": "Escolha a nova função",
+      "SEM_FUNCAO": "Sem função",
+      "MANTER_FUNCAO": "Manter a função",
+      "MOVER": "Mover as pessoas e apagar",
+      "APAGADA": "Função {nome} apagada.",
+      "MUDOU": "Alguém mudou esta função agora. Confira de novo.",
+      "INDISPONIVEL": "Essa função não está mais disponível. Escolha outra.",
+      "ERRO": "Não deu para apagar agora. Confira a internet e tente de novo."
+    },
+    "PERDA": {
+      "TITULO": "{n} pessoa vai deixar de {coisas} | {n} pessoas vão deixar de {coisas}",
+      "TEXTO": "Essa pessoa tem a função {nome}. A partir de agora, não vai mais poder fazer isso. | Essas pessoas têm a função {nome}. A partir de agora, não vão mais poder fazer isso.",
+      "VOLTAR": "Voltar",
+      "SALVAR": "Salvar mesmo assim"
     }
   }
 }

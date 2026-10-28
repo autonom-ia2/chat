@@ -190,6 +190,7 @@ export function useFuncaoGuiada() {
 
   return {
     modo,
+    idDaFuncao,
     carregou,
     etapa,
     pronta,
