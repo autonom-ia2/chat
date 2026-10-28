@@ -12,9 +12,10 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+const routing = vi.hoisted(() => ({ replace: vi.fn(), push: vi.fn() }));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '18' }, query: {} }),
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useRouter: () => routing,
 }));
 vi.mock('../useMetaAdsFacebookLogin', async () => {
   const { ref } = await import('vue');
@@ -186,6 +187,28 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     await mounted.find('[data-create-failed] button').trigger('click');
     await flushPromises();
     expect(step(mounted)).toBe('CONTENT');
+  });
+
+  it('without an ad account (404 not_connected) asks to choose it, never "could not reach Meta" (#2338)', async () => {
+    CrmMetaAdsConnectionAPI.createOptions.mockRejectedValue(
+      refusal(404, { error: 'not_connected' })
+    );
+    mounted = mount(MetaAdsCreate, {
+      global: { mocks: { $t: key => key }, stubs: STUBS },
+    });
+    await flushPromises();
+
+    expect(mounted.find('[data-create-failed]').exists()).toBe(false);
+    expect(mounted.find('[data-create-blocker]').attributes()).toMatchObject({
+      'data-create-blocker': 'NO_AD_ACCOUNT',
+    });
+    expect(mounted.text()).toContain(`${KEY}.BLOCKERS.NO_AD_ACCOUNT.TITLE`);
+
+    routing.replace.mockClear();
+    await mounted.find('[data-create-blocker-action]').trigger('click');
+    expect(routing.replace).toHaveBeenCalledWith({
+      query: { aba: 'conexao', volta: 'criar' },
+    });
   });
 
   it('a failed read says so and lets the person try again', async () => {

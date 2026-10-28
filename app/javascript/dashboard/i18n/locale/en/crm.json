@@ -3448,6 +3448,10 @@
         },
         "RECREATE": "It's not in Ads Manager, create again",
         "BLOCKERS": {
+          "NO_AD_ACCOUNT": {
+            "TITLE": "Choose your ad account first. It only takes a moment.",
+            "ACTION": "Choose the ad account"
+          },
           "LOGIN": {
             "TITLE": "To create ads from here, sign in with Facebook again.",
             "ACTION": "Sign in with Facebook",

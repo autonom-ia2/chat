@@ -250,11 +250,13 @@ const startFacebookLogin = data => {
 };
 
 // Entrou de novo com o Facebook a partir dos comentários de um anúncio (#2197, `?volta=<anúncio>`): volta ao anúncio.
+// Veio de criar anúncio sem conta de anúncios (#2338, `?volta=criar`): volta para criar.
 const backToAd = () => {
-  const adId = route.query.volta;
-  if (!adId) return;
+  const target = route.query.volta;
+  if (!target) return;
   view.value = 'resultado';
-  router.replace({ query: { aba: 'resultado', anuncio: adId } });
+  const back = target === 'criar' ? { criar: 'novo' } : { anuncio: target };
+  router.replace({ query: { aba: 'resultado', ...back } });
 };
 
 const accountSaved = data => {
@@ -308,6 +310,15 @@ const removed = async () => {
   openStep.value = null;
   await load();
 };
+
+// Criar anúncio achou a conexão sem conta de anúncios (#2338): a conexão em memória está velha (o login refeito na
+// criação limpou a escolha). Relê, e a Conexão abre no passo da conta.
+watch(
+  () => route.query.volta,
+  target => {
+    if (target === 'criar') load();
+  }
+);
 
 onMounted(load);
 </script>
