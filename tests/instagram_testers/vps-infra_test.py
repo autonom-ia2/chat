@@ -884,7 +884,8 @@ class ConfigTests(SyntheticAccounts, unittest.TestCase):
                 check.validate('hub2you', 'gateway', baseline | {key: value}, 123)
         for url in ('https://runtime.invalid/hub2you/?ticket=synthetic',
                     'https://runtime.invalid/hub2you/#fragment', 'https://runtime.invalid/autonomia/',
-                    'https://runtime.invalid:8080/hub2you/'):
+                    'https://runtime.invalid:8080/hub2you/', 'https://runtime.invalid/hub2you/',
+                    'https://runtime.invalid:443/hub2you/'):
             with self.subTest(url=url), self.assertRaises(ValueError):
                 check.validate('hub2you', 'gateway', baseline | {'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL': url}, 123)
 
