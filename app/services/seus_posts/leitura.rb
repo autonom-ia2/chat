@@ -16,6 +16,7 @@ class SeusPosts::Leitura
   ULTIMA_BOA_TTL = 1.day
   # Depois de uma falha sem leitura boa guardada, a próxima tentativa espera um pouco (limite de uso da Meta).
   FALHA_TTL = 2.minutes
+  SEM_ESPERA = [Meta::AdsGraphClient::Prazo::TEMPO, 'espera'].freeze
   CACHE_VERSION = 'v2'.freeze
   NOME_TTL = 30.days
 
@@ -96,10 +97,12 @@ class SeusPosts::Leitura
     recente_falhou!(chave)
     yield.tap { |dados| guardar(chave, dados) if dados[:status] == 'ok' }
   rescue Crm::MetaAds::Organico::Indisponivel => e
+    # Falha da Meta (limite de uso, fora do ar): a próxima tentativa espera, com ou sem cópia antiga para servir. O
+    # nosso teto de tempo ('tempo') não é falha da Meta, e 'espera' já é a própria espera.
+    Rails.cache.write("#{chave}:falha", true, expires_in: FALHA_TTL) unless SEM_ESPERA.include?(e.codigo)
     ultima = Rails.cache.read("#{chave}:ultima")
     return ultima.merge(stale: true) if ultima
 
-    Rails.cache.write("#{chave}:falha", true, expires_in: FALHA_TTL) unless e.codigo == 'espera'
     raise
   end
 

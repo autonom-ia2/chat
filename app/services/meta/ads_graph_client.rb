@@ -68,9 +68,11 @@ class Meta::AdsGraphClient
   end
 
   # base_uri: o Instagram com o login do Instagram fala com graph.instagram.com (#2199), com as mesmas regras.
-  def initialize(access_token:, api_version: nil, base_uri: BASE_URI)
+  # prazo: até quando quem chama espera (Meta::AdsGraphClient::Prazo).
+  def initialize(access_token:, api_version: nil, base_uri: BASE_URI, prazo: nil)
     @access_token = access_token
     @base_uri = base_uri
+    @prazo = prazo
     @api_version = api_version.presence || GlobalConfigService.load('WHATSAPP_API_VERSION', Meta::ConversionsApiClient::DEFAULT_API_VERSION)
   end
 
@@ -172,6 +174,7 @@ class Meta::AdsGraphClient
   include Meta::AdsGraphClient::Organico
   include Meta::AdsGraphClient::SeusPosts
   include Meta::AdsGraphClient::LeadForms
+  include Meta::AdsGraphClient::Prazo
 
   private
 
@@ -210,15 +213,19 @@ class Meta::AdsGraphClient
   end
 
   def request(verb, path, **)
+    return log_failure(verb, path, sem_tempo) if passou_do_prazo?
+
     response = HTTParty.public_send(
       verb,
       "#{@base_uri}/#{@api_version}/#{path}",
       headers: { 'Authorization' => "Bearer #{@access_token}" },
-      timeout: TIMEOUT_SECONDS,
+      timeout: [TIMEOUT_SECONDS, restante].compact.min,
       **
     )
     log_failure(verb, path, build_result(response))
   rescue StandardError => e
+    return log_failure(verb, path, sem_tempo) if passou_do_prazo?
+
     log_failure(verb, path, Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: sanitize(e.message)))
   end
 

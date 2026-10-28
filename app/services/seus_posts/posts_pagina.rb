@@ -16,8 +16,9 @@ class SeusPosts::PostsPagina < SeusPosts::Posts
   def post(item, vistas)
     numeros = da_vida_toda(item['insights'])
     de_anuncio = lado(vistas, DE_ANUNCIO)
-    # Sem o recorte do post, não dá para saber se ele teve anúncio: boosted nil, e ele fica fora do normal.
-    impulsionado = vistas && lado(vistas, SEM_ANUNCIO) ? de_anuncio.to_i.positive? : nil
+    # A Meta manda os dois lados de is_from_ads, até com 0 (chamada real de 27/10). Sem o lado de anúncio, não dá para
+    # saber se o post teve anúncio: boosted nil (não se sabe), nunca false.
+    impulsionado = de_anuncio.is_a?(Numeric) ? de_anuncio.positive? : nil
     {
       id: item['id'], text: item['message'].to_s, type: nil, image_url: item['full_picture'],
       permalink: item['permalink_url'], created_time: item['created_time'], boosted: impulsionado,
