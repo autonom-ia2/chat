@@ -69,6 +69,39 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(second).to include(hidden: true, can_reply_private: false, private_reply_expired: true)
     end
 
+    # Formato visto em produção (#2313): a Graph devolve a resposta da conta em primeiro nível, com `from`, e dentro do
+    # comentário, sem `from`.
+    it 'resposta da própria conta aparece uma vez só, dentro do comentário, como da conta e só com apagar' do
+      stub_ad
+      stub_comments(body: {
+                      data: [
+                        { id: 'r1', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601, from: { id: ig_id, username: 'lojaexemplo' } },
+                        { id: 'c1', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+                          replies: { data: [{ id: 'r1', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601, parent_id: 'c1' }] } }
+                      ]
+                    })
+
+      comments = service.payload(ad_id)[:comments]
+
+      expect(comments.pluck(:id)).to eq(['c1'])
+      reply = comments.first[:replies].sole
+      expect(reply).to include(id: 'r1', can_reply: false, can_hide: false, can_delete: true, can_reply_private: false)
+      expect(reply[:author]).to eq(name: nil, username: 'lojaexemplo', is_page: true)
+    end
+
+    it 'resposta de outra pessoa sem from continua sem autor e com as ações' do
+      stub_ad
+      stub_comments(body: {
+                      data: [{ id: 'c1', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
+                               replies: { data: [{ id: 'r2', text: 'Também achei', timestamp: 5.minutes.ago.iso8601 }] } }]
+                    })
+
+      reply = service.payload(ad_id)[:comments].sole[:replies].sole
+
+      expect(reply[:author]).to eq(name: nil, username: nil, is_page: false)
+      expect(reply).to include(can_reply: true, can_hide: true)
+    end
+
     it 'mostra a resposta no privado já enviada, com o caminho da conversa' do
       stub_ad
       stub_comments

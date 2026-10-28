@@ -56,7 +56,7 @@ class Crm::MetaAds::InstagramComments
     raise Error, failure(result) unless result.ok
 
     row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
-          'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, channel, actions: {})
+          'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, channel, actions: {}, own: true)
   end
 
   def hide!(ad_id, comment_id, hidden:)
@@ -150,24 +150,24 @@ class Crm::MetaAds::InstagramComments
     target[:status] == 'needs_login' ? payload.merge(inbox_id: target[:inbox_id]) : payload
   end
 
+  # A resposta da própria conta vem em dobro da Graph: Crm::MetaAds::InstagramCommentThreads deixa uma só (#2313).
   def present(rows, channel)
+    threads = Crm::MetaAds::InstagramCommentThreads.new(rows, channel.instagram_id)
     actions = Crm::MetaAdsCommentAction.where(account_id: @connection.account_id, network: 'instagram', action: 'private_reply',
-                                              comment_id: rows.flat_map { |item| [item['id'], *replies(item).pluck('id')] })
+                                              comment_id: threads.ids)
                                        .includes(:conversation).reject(&:abandoned?).index_by(&:comment_id)
-    rows.map do |item|
-      row(item, channel, actions: actions).merge(replies: replies(item).map { |reply| row(reply, channel, actions: actions, nested: true) })
+    threads.top.map do |item|
+      row(item, channel, actions: actions, own: threads.own?(item))
+        .merge(replies: threads.replies(item).map { |reply| row(reply, channel, actions: actions, nested: true, own: threads.own?(reply)) })
     end
   end
 
-  def replies(item)
-    Array(item.dig('replies', 'data'))
-  end
-
   # O privado só vale em comentário de primeiro nível de outra pessoa (`nested`: resposta dentro de um comentário).
-  def row(item, channel, actions:, nested: false)
-    own = item.dig('from', 'id').to_s == channel.instagram_id
+  # `own`: é da conta mesmo quando a Graph não traz o `from` (#2313); o @ é o da caixa.
+  def row(item, channel, actions:, own:, nested: false)
+    username = item.dig('from', 'username') || (channel.provider_name if own)
     {
-      id: item['id'].to_s, author: { name: nil, username: item.dig('from', 'username'), is_page: own }, text: item['text'],
+      id: item['id'].to_s, author: { name: nil, username: username, is_page: own }, text: item['text'],
       created_time: item['timestamp'], hidden: item['hidden'] == true, replies: [],
       can_reply: @can_manage && !own, can_hide: @can_manage && !own, can_delete: @can_manage
     }.merge(private_state(item, !own && !nested, actions[item['id'].to_s], member?(channel)))
@@ -219,7 +219,7 @@ class Crm::MetaAds::InstagramComments
     result = client(channel).comments_count(media_id)
     return result.data['comments_count'].to_i if result.ok && result.data.key?('comments_count')
 
-    rows.sum { |item| 1 + replies(item).size }
+    rows.sum { |item| 1 + Array(item.dig('replies', 'data')).size }
   end
 
   # O @ do Instagram do anúncio quando ele não tem caixa: só para o texto da tela, pelo token da conexão.
