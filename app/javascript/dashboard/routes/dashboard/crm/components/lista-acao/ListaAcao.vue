@@ -197,6 +197,13 @@ const itensAlterar = computed(() =>
     : []
 );
 
+// Quem não vê o valor de venda (value_hidden, #2075) não ganha "Mudar valor": o
+// servidor ignoraria a mudança (parecer de Funções do #2324).
+const itensAlterarDoCard = card =>
+  card.value_hidden
+    ? itensAlterar.value.filter(item => item.chave !== 'valor')
+    : itensAlterar.value;
+
 // --- carregar -----------------------------------------------------------------
 const chaveDaBusca = computed(() =>
   JSON.stringify({ ...estado(), busca: undefined })
@@ -574,7 +581,7 @@ defineExpose({ recarregar: atualizar });
             :meu-id="meuId"
             :contexto="contexto"
             :pessoas="pessoas"
-            :itens-alterar="itensAlterar"
+            :itens-alterar="itensAlterarDoCard(linha.card)"
             :faixa="faixas.faixas.value[linha.card.id]"
             :marcado="selecionados.includes(linha.card.id)"
             :marcavel="podeMarcar"

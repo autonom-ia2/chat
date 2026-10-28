@@ -95,7 +95,7 @@ const BASE_SEM_TEXTO = 'w-full !h-11 !rounded-xl !px-3 whitespace-nowrap';
 const BASE = `${BASE_SEM_TEXTO} !text-base !font-semibold`;
 const NEUTRO_COR =
   '!text-n-slate-12 !outline-n-weak bg-n-solid-1 hover:enabled:!bg-n-alpha-2';
-const CHEIO = `${BASE} !bg-n-blue-10 dark:!bg-n-blue-8 hover:enabled:!bg-n-blue-11 dark:hover:enabled:!bg-n-blue-7`;
+const CHEIO = `${BASE} !bg-n-blue-10 !text-white dark:!bg-n-blue-8 hover:enabled:!bg-n-blue-11 dark:hover:enabled:!bg-n-blue-7`;
 const CONTORNO = `${BASE} !outline-2 -outline-offset-2 hover:enabled:!bg-n-alpha-2`;
 const NEUTRO = `${BASE} ${NEUTRO_COR}`;
 const CONVERSA = `${BASE_SEM_TEXTO} ${NEUTRO_COR} !gap-1.5 !px-2.5 !text-[15px] !font-medium`;
@@ -201,30 +201,34 @@ const passarPara = pessoaId => {
         />
         <span>{{ textoDaSituacao }}</span>
       </span>
-      <span
-        class="flex flex-wrap items-center gap-x-1.5 text-sm text-n-slate-11"
-      >
-        <span v-if="etapa" class="whitespace-nowrap">
-          <span class="inline-flex items-center gap-1.5">
+      <!-- Etapa e quem cuida separados por espaço, sem "·": quando não cabem, cada
+           um desce inteiro, sem ponto solto nem corte; o valor tem linha própria
+           (revisão leiga do #2324). -->
+      <span class="flex flex-col gap-0.5 text-sm text-n-slate-11">
+        <span
+          v-if="etapa || mostraQuem"
+          class="flex flex-wrap items-center gap-x-3"
+        >
+          <span
+            v-if="etapa"
+            class="inline-flex items-center gap-1.5 whitespace-nowrap"
+          >
             <span
               v-if="etapa.color"
               class="size-2.5 rounded-full ring-1 ring-black/10 dark:ring-white/40"
               :style="{ backgroundColor: etapa.color }"
               aria-hidden="true"
-            />{{ etapa.name }}</span
-          ><span v-if="mostraQuem || valor" aria-hidden="true"> ·</span>
+            />{{ etapa.name }}
+          </span>
+          <span v-if="mostraQuem" class="whitespace-nowrap">
+            <span
+              v-if="robo"
+              class="i-lucide-bot me-1 inline-block size-4 align-[-3px] text-n-slate-11"
+              aria-hidden="true"
+            />{{ quemCuida }}
+          </span>
         </span>
-        <span v-if="mostraQuem" class="whitespace-nowrap">
-          <span
-            v-if="robo"
-            class="i-lucide-bot me-1 inline-block size-4 align-[-3px] text-n-slate-11"
-            aria-hidden="true"
-          />{{ quemCuida }}<span v-if="valor" aria-hidden="true"> ·</span>
-        </span>
-        <span
-          v-if="valor"
-          class="whitespace-nowrap tabular-nums text-n-slate-12"
-        >
+        <span v-if="valor" class="tabular-nums text-n-slate-12">
           {{ valor }}
         </span>
       </span>

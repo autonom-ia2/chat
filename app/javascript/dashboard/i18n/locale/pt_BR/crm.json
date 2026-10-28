@@ -7399,7 +7399,7 @@
     },
     "BUSCA": {
       "ROTULO": "Buscar por nome, telefone ou e-mail",
-      "PLACEHOLDER": "Nome, telefone ou e-mail"
+      "PLACEHOLDER": "Buscar cliente"
     },
     "FILTROS": "Filtros",
     "MAIS": "Mais",

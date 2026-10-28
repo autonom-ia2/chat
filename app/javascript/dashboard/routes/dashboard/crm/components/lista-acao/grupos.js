@@ -45,9 +45,10 @@ export const COLUNAS = {
     linha: 'grid-cols-[44px_minmax(0,1fr)_276px_452px]',
     botoes: 'grid-cols-[204px_144px_88px]',
   },
+  // A 1ª vaga fica com a largura da cheia: "Passar para alguém" cabe inteiro.
   compacta: {
-    linha: 'grid-cols-[44px_minmax(0,1fr)_228px_404px]',
-    botoes: 'grid-cols-[176px_140px_72px]',
+    linha: 'grid-cols-[44px_minmax(0,1fr)_216px_432px]',
+    botoes: 'grid-cols-[204px_140px_72px]',
   },
 };
 
