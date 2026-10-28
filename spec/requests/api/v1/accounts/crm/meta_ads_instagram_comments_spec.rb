@@ -165,7 +165,7 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
   describe 'texto da resposta' do
     it 'chega à Meta pelo content' do
       replies = stub_request(:post, %r{#{ig}/18000000000000001/replies})
-                .with(query: hash_excluding('message'), body: { message: 'Oi, Carla!' }.to_json)
+                .with(query: hash_excluding('message'), body: { message: 'Oi, Carla!' })
                 .to_return(status: 200, headers: json, body: { id: '18000000000000077' }.to_json)
 
       post "#{path}/18000000000000001/reply", params: { content: 'Oi, Carla!' }, headers: admin.create_new_auth_token, as: :json
