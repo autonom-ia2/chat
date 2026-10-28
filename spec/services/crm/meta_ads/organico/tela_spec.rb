@@ -143,7 +143,7 @@ RSpec.describe Crm::MetaAds::Organico::Tela do
       expect(page[:top_posts].pluck(:id)).to eq(%w[p1 p2 p3])
       expect(page[:top_posts].first).to eq(id: 'p1', text: 'Agenda aberta', image_url: 'https://img/p1.jpg', reach: 1840,
                                            interactions: 186, created_time: '2026-10-24T10:00:00+0000', permalink: 'https://fb.com/p1')
-      expect(page[:top_posts].last).to include(text: '', reach: 0, image_url: nil)
+      expect(page[:top_posts].last).to include(text: '', reach: nil, image_url: nil)
     end
 
     it 'pede de novo o acesso quando a Meta recusa por falta de permissão' do

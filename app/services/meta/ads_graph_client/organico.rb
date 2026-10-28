@@ -43,12 +43,14 @@ module Meta::AdsGraphClient::Organico
 
   private
 
-  # Como o `paged`, com o teto de posts de Seus posts: { "data" => [...] } numa página só.
+  # Como o `paged`, com o teto de posts de Seus posts: { "data" => [...], "truncated" => bool } numa página só;
+  # `truncated` diz que parou no teto com mais posts na Meta.
   def organic_posts(path, query)
     rows = []
     result = each_page(path, query.merge(limit: Meta::AdsGraphClient::LIST_LIMIT), max_pages: ORGANIC_POSTS_MAX_PAGES) { |page| rows.concat(page) }
     return result unless result.ok
 
-    Meta::AdsGraphClient::Result.new(ok: true, http_code: 200, data: { 'data' => rows })
+    Meta::AdsGraphClient::Result.new(ok: true, http_code: 200,
+                                     data: { 'data' => rows, 'truncated' => result.data.to_h.dig('paging', 'next').present? })
   end
 end

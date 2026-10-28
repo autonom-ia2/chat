@@ -1,7 +1,8 @@
-# Seus posts (#2302) e a aba de Anúncios (#2199): o que a pessoa vê da caixa de um perfil (parecer da sessão Funções,
-# 27/10; mesma regra do painel de desempenho #2254, "os números são do que a pessoa vê"). A contagem de conversas é só
-# das que ela vê (Conversations::PermissionFilterService); quem não vê a caixa recebe contagem nula, nunca zero. O id
-# da caixa vai só para quem vê a caixa ou pode reautorizá-la (integration_manage).
+# Seus posts (#2302): o que a pessoa vê da caixa de um perfil (parecer da sessão Funções, 27/10; mesma regra do painel
+# de desempenho #2254, "os números são do que a pessoa vê"). Perfil de caixa que a pessoa não vê não aparece
+# (SeusPosts::Leitura). A contagem de conversas é só das que ela vê (Conversations::PermissionFilterService); quem não vê
+# a caixa recebe contagem nula, nunca zero. Na aba de Anúncios (#2199), o id da caixa vai só para quem vê a caixa ou pode
+# reautorizá-la (integration_manage).
 class SeusPosts::Caixa
   # viewer: o pundit_user do controller ({ user:, account:, account_user: }).
   def initialize(inbox:, viewer:)

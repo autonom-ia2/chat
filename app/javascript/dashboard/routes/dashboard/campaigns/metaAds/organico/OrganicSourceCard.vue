@@ -98,7 +98,7 @@ const title = computed(() =>
 
 // Período sem post e sem ninguém que viu: uma frase e o caminho para postar, em vez de zeros que parecem defeito.
 const quiet = computed(
-  () => ready.value && !props.data.reach && !props.data.top_posts?.length
+  () => ready.value && props.data.reach === 0 && !props.data.top_posts?.length
 );
 
 const blockedTitle = computed(() => {
@@ -165,7 +165,11 @@ const share = computed(() =>
     ? {
         textKey: 'ADS_SHARE',
         part: props.data.views,
-        total: props.data.views + props.data.views_from_ads,
+        // Lado que a Meta não mandou é "sem número": sem os dois, a barra não aparece.
+        total:
+          props.data.views === null || props.data.views_from_ads === null
+            ? null
+            : props.data.views + props.data.views_from_ads,
       }
     : {
         textKey: 'NEW_PEOPLE',
@@ -269,7 +273,7 @@ const openLink = () => window.open(props.data.link, '_blank', 'noopener');
       <p class="m-0 text-sm leading-6 text-n-slate-11">
         {{
           $t('META_ADS_ORGANIC.QUIET.TEXT', {
-            followers: format(data.followers || 0),
+            followers: data.followers === null ? '—' : format(data.followers),
           })
         }}
       </p>

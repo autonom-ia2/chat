@@ -23,7 +23,7 @@ class Crm::MetaAds::Organico::Instagram < Crm::MetaAds::Organico::Lugar
     @perfil = ler(api.instagram_profile)
     {
       status: 'ok', username: @perfil['username'], link: "https://www.instagram.com/#{@perfil['username']}",
-      followers: @perfil['followers_count'].to_i, **janela(periodo.atual), **comparacao, top_posts: top_posts
+      followers: @perfil['followers_count']&.to_i, **janela(periodo.atual), **comparacao, top_posts: top_posts
     }
   end
 

@@ -7,7 +7,8 @@ class Api::V1::Accounts::SeusPostsController < Api::V1::Accounts::BaseController
   before_action :ensure_allowed
 
   def index
-    days = params[:days].to_i
+    # `days[]=1` chega como Array: to_s antes do to_i, e só 7, 30 ou 90 passam.
+    days = params[:days].to_s.to_i
     return render json: { error: 'invalid_period' }, status: :unprocessable_entity unless SeusPosts::Leitura::DIAS.include?(days)
 
     leitura = SeusPosts::Leitura.new(account: Current.account, perfil: params[:perfil].presence, days: days, viewer: pundit_user)

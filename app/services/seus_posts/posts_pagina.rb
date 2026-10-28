@@ -9,8 +9,8 @@ class SeusPosts::PostsPagina < SeusPosts::Posts
   private
 
   def ler_posts(janela)
-    vistas = Array(ler(api.seus_posts_page_views(page_id, janela))['data']).to_h { |item| [item['id'], item['insights']] }
-    Array(ler(api.seus_posts_page(page_id, janela))['data']).map { |item| post(item, vistas[item['id']]) }
+    vistas = lista(api.seus_posts_page_views(page_id, janela)).to_h { |item| [item['id'], item['insights']] }
+    lista(api.seus_posts_page(page_id, janela)).map { |item| post(item, vistas[item['id']]) }
   end
 
   def post(item, vistas)

@@ -13,7 +13,7 @@ class Crm::MetaAds::Organico::Pagina < Crm::MetaAds::Organico::Lugar
     perfil = ler(api.page_profile(page_id))
     atual = janela(periodo.atual)
     {
-      status: 'ok', name: perfil['name'], link: perfil['link'], followers: perfil['followers_count'].to_i,
+      status: 'ok', name: perfil['name'], link: perfil['link'], followers: perfil['followers_count']&.to_i,
       **atual, **comparacao, top_posts: top_posts
     }
   end

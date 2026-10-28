@@ -48,6 +48,8 @@ class Crm::MetaAds::Organico::Lugar
     return { previous: nil } unless compara?
 
     anterior = janela(periodo.anterior).slice(*COMPARADOS)
+    # Sem as vezes do anterior (a Meta não mandou), não se sabe se ele estava parado: sem comparação.
+    return { previous: nil } if anterior[:views].nil?
     return { previous: nil, first_period: true } if anterior[:views] <= VIEWS_SEM_ATIVIDADE
 
     { previous: anterior }
@@ -74,13 +76,17 @@ class Crm::MetaAds::Organico::Lugar
     resultados.find { |resultado| resultado['dimension_values'] == [dimensao] }&.dig('value')
   end
 
-  # Métrica com um valor por dia (Página): soma do período. `where` filtra o lado do recorte.
+  # Métrica com um valor por dia (Página): soma do período. `where` filtra o lado do recorte. Métrica que não veio é
+  # "sem número" (nil), nunca 0; com dias e nenhum do lado pedido, o lado é 0.
   def soma(data, name, **where)
-    valores(data, name).sum { |valor| where.all? { |chave, esperado| valor[chave.to_s] == esperado } ? valor['value'].to_i : 0 }
+    dias = valores(data, name)
+    return if dias.empty?
+
+    dias.sum { |valor| where.all? { |chave, esperado| valor[chave.to_s] == esperado } ? valor['value'].to_i : 0 }
   end
 
   def primeiro(data, name)
-    valores(data, name).first&.dig('value').to_i
+    valores(data, name).first&.dig('value')&.to_i
   end
 
   def valores(data, name)
