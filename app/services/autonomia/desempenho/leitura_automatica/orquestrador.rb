@@ -12,10 +12,13 @@
 #   que esperam há mais tempo primeiro; passou do teto diário de gasto, a rodada para como `teto` e o resto fica para a
 #   próxima.
 # - Erro permanente da chamada (chave recusada, modelo inexistente, pedido inválido) fecha a rodada na hora: `sem_ia`
-#   no 401, `erro` no resto. Erro passageiro (rede, 429, 5xx) conta para a conversa; o terceiro seguido fecha `erro`.
-# - Conversa recusada (resposta fora do catálogo, JSON quebrado, qualquer exceção depois da chamada) mantém as
-#   procuras de antes; na segunda falha seguida, fica como não lida até ganhar mensagem nova.
-# - Rodada `ok` sem pendentes: a próxima só procura mensagem depois do corte dela (o piso anda).
+#   no 401, `erro` no resto. Erro passageiro (rede, 429, 5xx) deixa a conversa pendente, sem contar falha dela; o
+#   terceiro seguido na rodada fecha `erro`.
+# - Conversa recusada (resposta fora do catálogo, JSON quebrado) mantém as procuras de antes; na segunda falha seguida,
+#   fica como não lida até ganhar mensagem nova.
+# - Erro inesperado numa conversa (um bug na gravação, na transcrição) não é culpa dela: ela fica pendente, sem contar
+#   falha, e o terceiro seguido na rodada fecha `erro` (o bug é do sistema, e cada conversa já pagou a chamada).
+# - Rodada `ok` sem pendentes: a próxima só procura mensagem depois do corte dela, com uma margem (o piso anda).
 class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   # Fecha a rodada no meio, com o status dado.
   class Parada < StandardError
@@ -31,6 +34,10 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   MAX_CONVERSAS = 500
   FALHAS_PARA_DESISTIR = 2
   PASSAGEIRAS_PARA_PARAR = 3
+  INESPERADOS_PARA_PARAR = 3
+  # O piso anda até o corte menos esta margem: mensagem gravada com o horário de origem (histórico do WhatsApp,
+  # importação) pode chegar com `created_at` um pouco antes do corte da rodada que já passou.
+  MARGEM_DO_PISO = 1.hour
   TRAVA_POR = 6.hours
   FALHAS_POR = 7.days
   # Agente sem carga (nenhuma leitura guardada): a primeira rodada começa nos últimos 30 dias.
@@ -89,18 +96,19 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   end
 
   # O piso da primeira rodada é a última mensagem que a carga leu. Depois de uma rodada `ok` sem pendentes, é o corte
-  # dela (nada antes disso ficou por ler); senão, repete o piso da anterior, para a pendente não sumir da fila.
+  # dela menos MARGEM_DO_PISO (nada antes disso ficou por ler); senão, repete o piso da anterior, para a pendente não
+  # sumir da fila. A conversa já lida usa o próprio `lida_ate_em`, então a margem só relê o que é novo.
   def piso(corte)
     anterior = Autonomia::Desempenho::Rodada.do_sujeito(@account, @ficha.sujeito_type, @ficha.sujeito_id).recentes
                                             .where.not(status: 'rodando').first
-    return anterior.corte_em if anterior&.status == 'ok' && anterior.conversas_pendentes.zero?
+    return anterior.corte_em - MARGEM_DO_PISO if anterior&.status == 'ok' && anterior.conversas_pendentes.zero?
 
     anterior&.piso_em || leituras.maximum(:lida_ate_em) || (corte - SEM_CARGA)
   end
 
   def ler_todas(credencial)
-    leitor = Autonomia::Desempenho::LeituraAutomatica::Leitor.new(account: @account, ficha: @ficha, credencial: credencial)
-    @lidas = @puladas = @passageiras = 0
+    @leitor = leitor = Autonomia::Desempenho::LeituraAutomatica::Leitor.new(account: @account, ficha: @ficha, credencial: credencial)
+    @lidas = @puladas = @passageiras = @inesperados = 0
     candidatas.first(MAX_CONVERSAS).each do |conversation_id|
       return fechar('teto') if teto.passou?
 
@@ -128,35 +136,58 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
   end
 
   def ler_e_gravar(leitor, conversa, mensagens, gravacao)
+    resultado = tentar(leitor, conversa, mensagens, gravacao)
+    @inesperados = 0
+    resultado
+  rescue Parada
+    raise
+  rescue StandardError => e
+    inesperado(conversa.id, e)
+  end
+
+  # A falha esperada (resposta recusada) é da conversa e conta para ela desistir.
+  def tentar(leitor, conversa, mensagens, gravacao)
     texto = transcricao(conversa, mensagens)
     if texto.size > teto.max_caracteres
       gravacao.nao_lida!
       return :lida
     end
 
-    gravacao.gravar!(esquema.procuras(chamar(leitor, texto)))
+    resposta = chamar(leitor, texto)
+    return :pendente if resposta.nil?
+
+    gravacao.gravar!(esquema.procuras(resposta))
     Redis::Alfred.delete(chave("falhas:#{conversa.id}"))
     :lida
-  rescue Parada
-    raise
-  rescue StandardError => e
-    # Erro passageiro da chamada e qualquer exceção depois dela são da conversa: não derrubam a rodada e, na segunda
-    # vez seguida, a conversa sai da fila.
+  rescue Autonomia::Desempenho::LeituraAutomatica::Leitor::Falha, Autonomia::Desempenho::LeituraAutomatica::Esquema::Invalida => e
     falhou(gravacao, conversa.id, e)
   end
 
-  # Erro permanente ou o terceiro passageiro seguido fecham a rodada (Parada); o passageiro sobe para a conversa.
+  # Bug do sistema, não da conversa: ela fica pendente, sem contar falha; o terceiro seguido fecha a rodada.
+  def inesperado(conversation_id, erro)
+    Rails.logger.error("[desempenho][leitura] conta=#{@account.id} conversa=#{conversation_id} inesperado=#{erro.class.name}")
+    @inesperados += 1
+    raise Parada, 'erro' if @inesperados >= INESPERADOS_PARA_PARAR
+
+    :pendente
+  end
+
+  # A resposta, ou nil no erro passageiro (a conversa fica pendente, sem contar falha). Erro permanente ou o terceiro
+  # passageiro seguido fecham a rodada (Parada).
   def chamar(leitor, texto)
     resposta = leitor.ler(texto, esquema.json)
     @passageiras = 0
     resposta
   rescue Crm::Ai::ResponsesClient::Error => e
     raise Parada, (e.status.to_i == CHAVE_RECUSADA ? 'sem_ia' : 'erro') if permanente?(e)
+    # Sem status e sem ser de rede (resposta vazia, já cobrada): falha da conversa.
+    raise Autonomia::Desempenho::LeituraAutomatica::Leitor::Falha, e.class.name unless e.passageira?
 
+    Rails.logger.warn("[desempenho][leitura] conta=#{@account.id} passageiro=#{e.status.to_i}")
     @passageiras += 1
     raise Parada, 'erro' if @passageiras >= PASSAGEIRAS_PARA_PARAR
 
-    raise
+    nil
   end
 
   # 4xx que não é passageiro (401, 403, 404, 400, 422): não adianta tentar a próxima conversa. Sem status (resposta
@@ -183,12 +214,9 @@ class Autonomia::Desempenho::LeituraAutomatica::Orquestrador
     @rodada
   end
 
-  # O gasto da rodada é o consumo gravado pela chamada desde que ela abriu (conta também a resposta que veio e foi
-  # recusada). As rodadas da mesma conta rodam uma depois da outra, no mesmo job.
-  def custo
-    Crm::AiUsageEvent.for_account(@account.id).where(feature: Autonomia::Desempenho::LeituraAutomatica::Leitor::FEATURE)
-                     .since(@rodada.iniciada_em).sum(:cost_estimate)
-  end
+  # O gasto da rodada: o que o leitor dela somou das respostas (as rodadas de outros agentes da conta rodam em jobs
+  # próprios, ao mesmo tempo, e o consumo gravado da conta misturaria as duas).
+  def custo = @leitor&.custo || 0
 
   def transcricao(conversa, mensagens)
     Autonomia::Desempenho::LeituraAutomatica::Transcricao.new(conversa: conversa, mensagens: mensagens, remetentes: remetentes,

@@ -17,7 +17,15 @@ class Autonomia::Desempenho::LeituraAutomatica::Candidatas
   def ids
     return [] if @remetentes.empty?
 
-    ActiveRecord::Base.connection.select_values(sql).map(&:to_i)
+    ActiveRecord::Base.connection.select_rows(sql).map { |id, _desde| id.to_i }
+  end
+
+  # A mensagem nova mais antiga entre as conversas da fila (nil quando não há nenhuma): até antes dela, tudo foi lido.
+  def mais_antiga
+    return nil if @remetentes.empty?
+
+    valor = ActiveRecord::Base.connection.select_value("SELECT MIN(desde) FROM (#{sql}) fila")
+    valor && ActiveRecord::Type::DateTime.new.cast(valor)
   end
 
   private
@@ -25,7 +33,7 @@ class Autonomia::Desempenho::LeituraAutomatica::Candidatas
   def sql
     binds = { conta: @account.id, tipo: @sujeito_type, sujeito: @sujeito_id, piso: @piso, corte: @corte }
     ActiveRecord::Base.sanitize_sql_array([<<~SQL.squish, binds])
-      SELECT c.id
+      SELECT c.id, MIN(m.created_at) AS desde
       FROM conversations c
       LEFT JOIN autonomia_desempenho_leituras l
         ON l.conversation_id = c.id AND l.account_id = :conta AND l.sujeito_type = :tipo AND l.sujeito_id = :sujeito

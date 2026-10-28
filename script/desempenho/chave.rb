@@ -2,7 +2,7 @@
 # Rails): em produção não se roda `rails runner`. Quem executa o .sql é a Orquestração, com psql.
 #
 #   ruby script/desempenho/chave.rb --chave <arquivo.md> --conta <id> --ficha <id> --versao <n> --saida <arquivo.sql>
-#                                   [--instrucao <arquivo.txt> | --hash <sha256>]
+#                                   [--instrucao <arquivo.txt> | --hash <sha256>] [--com-teste]
 #
 # - A chave é dado da conta: o arquivo dela e o .sql ficam fora do repositório (o script recusa --saida dentro dele).
 # - O UPDATE só pega a ficha com o id, a conta e a versão dados, e só se ela for a vigente (a de maior versão daquele
@@ -10,6 +10,10 @@
 # - `instrucao_hash`: o SHA-256 da instrução que o agente usa hoje, para o painel avisar quando ela mudar. Com
 #   --instrucao, o script calcula o hash do arquivo (o texto exato da instrução, em UTF-8); com --hash, usa o dado.
 #   Sem nenhum dos dois (robô de outro sistema), o hash fica vazio.
+# - --com-teste grava `configuracao.leitura.com_teste = true` no mesmo UPDATE (o leitor passa a pedir o campo `teste`).
+#   A coluna é `json`, não `jsonb`: a ordem das chaves da ficha importa (desempata rankings), então o objeto é refeito
+#   com json_each/json_object_agg na ordem de antes, sem passar por jsonb.
+# - O .sql sai com permissão 0600 (só o dono lê): ele carrega a chave da conta.
 # - A chave vai entre aspas de dólar com marcas aleatórias que o script confere não aparecerem no texto, então nada
 #   no arquivo vira SQL.
 # - Nunca imprime o conteúdo: só o tamanho da chave e onde gravou.
@@ -19,6 +23,21 @@ require 'securerandom'
 
 module ChaveDeLeitura
   HEX = '0123456789abcdef'.freeze
+  # configuracao com leitura.com_teste = true, nas posições de antes (o que é novo vai para o fim de cada objeto).
+  # Ruby puro (sem o squish do Rails): os espaços viram um só com split/join.
+  COM_TESTE = <<~CONSULTA.split.join(' ').freeze
+    (SELECT json_object_agg(c.k, c.v ORDER BY c.n)
+       FROM (SELECT json_object_agg(x.k, x.v ORDER BY x.n) AS leitura
+               FROM (SELECT k, v, n FROM json_each(COALESCE(f.configuracao -> 'leitura', '{}'::json)) WITH ORDINALITY AS t(k, v, n)
+                      WHERE k <> 'com_teste'
+                     UNION ALL
+                     SELECT 'com_teste', 'true'::json, 1000000) x) l
+      CROSS JOIN LATERAL (
+        SELECT k, CASE WHEN k = 'leitura' THEN l.leitura ELSE v END AS v, n
+          FROM json_each(f.configuracao) WITH ORDINALITY AS e(k, v, n)
+        UNION ALL
+        SELECT 'leitura', l.leitura, 1000000 WHERE f.configuracao -> 'leitura' IS NULL) c)
+  CONSULTA
   REPOSITORIO = File.expand_path('../..', __dir__)
 
   module_function
@@ -28,7 +47,7 @@ module ChaveDeLeitura
     chave = File.read(opcoes.fetch(:chave), encoding: 'UTF-8')
     abort('o arquivo da chave está vazio') if chave.strip.empty?
 
-    File.write(opcoes.fetch(:saida), sql(chave, opcoes))
+    gravar(opcoes.fetch(:saida), sql(chave, opcoes))
     puts "#{opcoes[:saida]}: chave com #{chave.size} caracteres; hash da instrução #{hash_da_instrucao(opcoes) ? 'incluído' : 'vazio'}"
   rescue KeyError, OptionParser::ParseError => e
     abort("#{e.class.name}: #{e.message}")
@@ -36,9 +55,16 @@ module ChaveDeLeitura
     abort('arquivo não encontrado')
   end
 
+  # Só o dono lê o arquivo: 0600 ao criar e de novo depois (o arquivo podia já existir com outra permissão).
+  def gravar(caminho, conteudo)
+    File.open(caminho, File::WRONLY | File::CREAT | File::TRUNC, 0o600) { |arquivo| arquivo.write(conteudo) }
+    File.chmod(0o600, caminho)
+  end
+
   def ler_opcoes(argumentos)
     opcoes = {}
     OptionParser.new do |o|
+      o.on('--com-teste') { opcoes[:com_teste] = true }
       %i[chave saida instrucao hash].each { |nome| o.on("--#{nome} VALOR", String) { |valor| opcoes[nome] = valor } }
       %i[conta ficha versao].each { |nome| o.on("--#{nome} N", Integer) { |valor| opcoes[nome] = valor } }
     end.parse!(argumentos.dup)
@@ -103,7 +129,8 @@ module ChaveDeLeitura
     instrucao = hash_da_instrucao(opcoes)
     ['UPDATE autonomia_desempenho_fichas f',
      "   SET chave_de_leitura = $#{texto}$#{chave}$#{texto}$,",
-     "       instrucao_hash = #{instrucao ? "'#{instrucao}'" : 'NULL'}, updated_at = now()",
+     "       instrucao_hash = #{instrucao ? "'#{instrucao}'" : 'NULL'}, updated_at = now()#{opcoes[:com_teste] ? ',' : ''}",
+     *(opcoes[:com_teste] ? ["       configuracao = #{COM_TESTE}"] : []),
      " WHERE f.id = #{opcoes[:ficha]} AND f.account_id = #{opcoes[:conta]} AND f.versao = #{opcoes[:versao]}",
      '   AND f.versao = (SELECT max(v.versao) FROM autonomia_desempenho_fichas v',
      '                    WHERE v.account_id = f.account_id AND v.sujeito_type = f.sujeito_type AND v.sujeito_id = f.sujeito_id);'].join("\n")

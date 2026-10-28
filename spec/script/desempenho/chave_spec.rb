@@ -37,6 +37,54 @@ RSpec.describe 'script/desempenho/chave.rb' do # rubocop:disable RSpec/DescribeC
     expect(ficha.reload).to have_attributes(chave_de_leitura: chave, instrucao_hash: Digest::SHA256.hexdigest('Responda com o prazo.'))
   end
 
+  it 'grava o .sql só para o dono ler (0600), mesmo se o arquivo já existia aberto' do
+    saida = File.join(pasta, 'chave.sql')
+    File.write(saida, 'antigo')
+    File.chmod(0o644, saida)
+
+    gerar(saida: saida)
+
+    expect(File.stat(saida).mode & 0o777).to eq(0o600)
+  end
+
+  it '--com-teste grava leitura.com_teste no mesmo UPDATE, sem mudar a ordem das chaves da ficha' do
+    antes = ficha.configuracao
+    ordem = antes.keys
+    certo, _erro, sql = gerar('--com-teste')
+    executar(sql)
+
+    configuracao = ficha.reload.configuracao
+    expect(certo).to be(true)
+    expect(ficha.chave_de_leitura).to eq(chave)
+    expect(configuracao.keys).to eq(ordem.include?('leitura') ? ordem : ordem + ['leitura'])
+    expect(configuracao['leitura']['com_teste']).to be(true)
+    expect(configuracao.except('leitura')).to eq(antes.except('leitura'))
+  end
+
+  it '--com-teste mantém o que a leitura já tinha, na mesma posição, e não duplica com_teste' do
+    leitura = { 'rotulo_do_agente' => 'LOJA', 'com_teste' => false, 'max_caracteres' => 9 }
+    ficha.update!(configuracao: ficha.configuracao.merge('leitura' => leitura))
+    ordem = ficha.reload.configuracao.keys
+
+    _certo, _erro, sql = gerar('--com-teste')
+    executar(sql)
+
+    configuracao = ficha.reload.configuracao
+    expect(configuracao.keys).to eq(ordem)
+    expect(configuracao['leitura']).to eq('rotulo_do_agente' => 'LOJA', 'max_caracteres' => 9, 'com_teste' => true)
+    expect(configuracao['leitura'].keys).to eq(%w[rotulo_do_agente max_caracteres com_teste])
+  end
+
+  it 'sem --com-teste não toca na configuracao' do
+    antes = ficha.configuracao
+    _certo, _erro, sql = gerar
+
+    executar(sql)
+
+    expect(sql).not_to include('configuracao =')
+    expect(ficha.reload.configuracao).to eq(antes)
+  end
+
   it 'não atualiza nada se a versão não for a vigente' do
     _certo, _erro, sql = gerar(versao: ficha.versao + 1)
 

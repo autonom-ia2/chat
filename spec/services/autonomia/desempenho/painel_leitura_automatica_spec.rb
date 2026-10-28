@@ -36,10 +36,21 @@ RSpec.describe Autonomia::Desempenho::Painel do
     expect(meta).to include('lido_ate' => '2026-10-23T07:00', 'situacao' => 'sem_ia')
   end
 
-  it 'com pendentes, lido_ate é a última mensagem lida de fato, não o corte' do
+  it 'com pendentes, lido_ate é antes da mensagem pendente mais antiga, mesmo com leitura mais recente' do
+    pendente = create(:conversation, account: account, inbox: inbox)
+    create(:message, conversation: pendente, account: account, inbox: inbox, message_type: :incoming, created_at: Time.utc(2026, 10, 22, 12, 0))
+    create(:message, conversation: pendente, account: account, inbox: inbox, message_type: :outgoing, sender: robo,
+                     created_at: Time.utc(2026, 10, 22, 12, 1))
+    rodada!('teto', Time.utc(2026, 10, 23, 10, 0), pendentes: 1)
+
+    # A leitura de `conversa` vai até 22/10 18:00; a pendente espera desde 22/10 09:00 (fuso da loja).
+    expect(painel.call('7')['meta']).to include('lido_ate' => '2026-10-22T08:59', 'situacao' => 'teto')
+  end
+
+  it 'com pendentes que já não se acham (lidas por fora), lido_ate é o piso da rodada, nunca a leitura mais recente' do
     rodada!('teto', Time.utc(2026, 10, 23, 10, 0), pendentes: 3)
 
-    expect(painel.call('7')['meta']).to include('lido_ate' => '2026-10-22T18:00', 'situacao' => 'teto')
+    expect(painel.call('7')['meta']).to include('lido_ate' => '2026-10-22T07:00', 'situacao' => 'teto')
   end
 
   it 'a rodada que caiu aparece como erro' do
@@ -67,6 +78,19 @@ RSpec.describe Autonomia::Desempenho::Painel do
 
     expect(resultado['recomendacoes']).to eq([{ 'id' => 'r1' }])
     expect(resultado['meta']['recomendacoes_de']).to eq('inicio' => '2026-10-10', 'fim' => '2026-10-16')
+  end
+
+  it 'só rodadas que não leram nada (sem_ia, erro) não trazem sugestões de outras datas' do
+    rodada!('sem_ia', Time.utc(2026, 10, 22, 10, 0))
+    rodada!('erro', Time.utc(2026, 10, 23, 10, 0))
+    Autonomia::Desempenho::Recomendacao.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, periodo: '7',
+                                                inicio: Date.new(2026, 10, 10), fim: Date.new(2026, 10, 16), versao_ficha: 1,
+                                                cartoes: [{ 'id' => 'r1' }], gerada_em: Time.current, lote: 'spec')
+
+    resultado = painel.call('7')
+
+    expect(resultado['recomendacoes']).not_to eq([{ 'id' => 'r1' }])
+    expect(resultado['meta']['recomendacoes_de']).to be_nil
   end
 
   describe 'aviso de instrução' do

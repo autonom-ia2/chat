@@ -215,19 +215,35 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       procura_da_carga!(cresceu, Time.utc(2026, 10, 21, 14, 0))
     end
 
-    it 'mantém as procuras antigas; na segunda falha seguida, a conversa fica não lida' do
+    it 'erro passageiro (500) deixa a conversa pendente nas duas rodadas, sem contar falha nem virar não lida' do
       openai_devolve(500)
 
       primeira = rodar
       expect(primeira).to have_attributes(status: 'ok', conversas_lidas: 0, conversas_pendentes: 1)
       expect(procuras_de(cresceu).pluck(:lote)).to eq(['carga'])
+
+      segunda = travel_to(agora + 1.day) { described_class.new(ficha).call }
+      expect(segunda).to have_attributes(status: 'ok', conversas_lidas: 0, conversas_pendentes: 1)
+      expect(procuras_de(cresceu).pluck(:lote)).to eq(['carga'])
       expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: cresceu.id).status).to eq('lida')
+      expect(Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{cresceu.id}")).to be_nil
+    end
+
+    it 'resposta recusada mantém as procuras antigas; na segunda vez seguida, a conversa fica não lida e sai da fila' do
+      openai_devolve({ 'procuras' => [procura('tema' => 'inventado', 'inicio' => '10-21 14:00', 'fim' => '10-21 14:01')] })
+
+      expect(rodar).to have_attributes(status: 'ok', conversas_lidas: 0, conversas_pendentes: 1)
+      expect(procuras_de(cresceu).pluck(:lote)).to eq(['carga'])
 
       segunda = travel_to(agora + 1.day) { described_class.new(ficha).call }
       expect(segunda).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 0)
       expect(procuras_de(cresceu).pluck(:lote)).to eq(['carga'])
       expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: cresceu.id))
         .to have_attributes(status: 'nao_lida', lida_ate_em: Time.utc(2026, 10, 21, 14, 1))
+
+      chamadas = corpos.size
+      travel_to(agora + 2.days) { described_class.new(ficha).call }
+      expect(corpos.size).to eq(chamadas)
     end
 
     it 'recusa id fora do catálogo, JSON quebrado e horário que não é de mensagem, sem tocar nas procuras antigas' do
@@ -280,11 +296,39 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
       expect(corpos.size).to eq(3)
       expect(rodada).to have_attributes(status: 'erro', conversas_lidas: 0, conversas_pendentes: 4)
-      # As duas primeiras contam falha da conversa; a terceira fecha a rodada antes de contar.
-      expect([falhas_de(primeira), falhas_de(terceira)]).to eq(['1', nil])
+      # Erro passageiro não é culpa da conversa: nenhuma conta falha.
+      expect([falhas_de(primeira), falhas_de(segunda), falhas_de(terceira)]).to eq([nil, nil, nil])
     end
 
-    it 'exceção depois da chamada paga é da conversa: segue para a próxima e, na segunda vez, a conversa sai da fila' do
+    it 'bug do sistema na gravação fecha a rodada como erro no terceiro seguido, sem contar falha das conversas' do
+      4.times { |i| conversa_com_agente(16 + i) }
+      openai_devolve({ 'procuras' => [procura] })
+      allow(Autonomia::Desempenho::LeituraAutomatica::Gravacao).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap { |gravacao| allow(gravacao).to receive(:gravar!).and_raise(NoMethodError) }
+      end
+
+      rodada = rodar
+
+      expect(corpos.size).to eq(3)
+      expect(rodada).to have_attributes(status: 'erro', conversas_lidas: 0, conversas_pendentes: 6)
+      expect([falhas_de(primeira), falhas_de(segunda)]).to eq([nil, nil])
+      expect(Autonomia::Desempenho::Leitura.where(conversation_id: [primeira.id, segunda.id]).count).to eq(0)
+    end
+
+    it 'sem retry interno: 503 e timeout custam uma chamada por conversa' do
+      url = 'https://api.openai.com/v1/responses'
+      stub_request(:post, url).to_return(status: 503, body: { error: { message: 'falhou' } }.to_json,
+                                         headers: { 'Content-Type' => 'application/json' })
+      expect(rodar).to have_attributes(status: 'ok', conversas_pendentes: 2)
+      expect(a_request(:post, url)).to have_been_made.times(2)
+
+      WebMock.reset!
+      stub_request(:post, url).to_timeout
+      expect(travel_to(agora + 1.day) { described_class.new(ficha).call }).to have_attributes(status: 'ok', conversas_pendentes: 2)
+      expect(a_request(:post, url)).to have_been_made.times(2)
+    end
+
+    it 'um erro inesperado isolado deixa só aquela conversa pendente, sem contar falha, e segue para a próxima' do
       openai_devolve({ 'procuras' => [procura('inicio' => '10-21 14:00', 'fim' => '10-21 14:01')] },
                      { 'procuras' => [procura('inicio' => '10-21 15:00', 'fim' => '10-21 15:01')] })
       gravar = Autonomia::Desempenho::LeituraAutomatica::Gravacao.instance_method(:gravar!)
@@ -300,14 +344,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
       expect(rodar).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 1)
       expect(procuras_de(segunda).count).to eq(1)
-
-      segunda_rodada = travel_to(agora + 1.day) { described_class.new(ficha).call }
-      expect(segunda_rodada).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 0)
-      expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: primeira.id).status).to eq('nao_lida')
-
-      chamadas = corpos.size
-      travel_to(agora + 2.days) { described_class.new(ficha).call }
-      expect(corpos.size).to eq(chamadas)
+      expect(falhas_de(primeira)).to be_nil
     end
 
     it 'ficha com faixa quebrada fecha a rodada como erro antes de qualquer chamada' do
@@ -334,7 +371,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       expect(corpos).to be_empty
     end
 
-    it 'rodada ok sem pendentes leva o piso da próxima para o corte dela' do
+    it 'rodada ok sem pendentes leva o piso da próxima para o corte dela menos a margem' do
       openai_devolve({ 'procuras' => [procura('inicio' => '10-21 14:00', 'fim' => '10-21 14:01')] },
                      { 'procuras' => [procura('inicio' => '10-21 15:00', 'fim' => '10-21 15:01')] })
       primeira_rodada = rodar
@@ -342,7 +379,8 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
       proxima = travel_to(agora + 1.day) { described_class.new(ficha).call }
 
-      expect(proxima.piso_em).to eq(primeira_rodada.corte_em)
+      expect(described_class::MARGEM_DO_PISO).to eq(1.hour)
+      expect(proxima.piso_em).to eq(primeira_rodada.corte_em - 1.hour)
     end
   end
 end

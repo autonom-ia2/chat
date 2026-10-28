@@ -78,8 +78,8 @@ class Autonomia::Desempenho::Painel
   end
 
   # O que a leitura automática (#2301) acrescenta à meta:
-  # - `lido_ate`: o corte da última rodada que leu (ok ou teto) quando ela não deixou pendente; com pendentes, a última
-  #   mensagem lida de fato (o maior `lida_ate_em`), no fuso;
+  # - `lido_ate`: o corte da última rodada que leu (ok ou teto) quando ela não deixou pendente; com pendentes, o momento
+  #   antes da mensagem pendente mais antiga (sem ela, o piso da rodada), no fuso: tudo antes disso foi lido;
   # - `situacao`: `sem_ia`, `teto` ou `erro` quando a última rodada parou por isso;
   # - `instrucao_mudou`: a instrução do agente mudou depois da chave de leitura (nil para o robô de outro sistema);
   # - `recomendacoes_de`: as datas das sugestões quando elas são de outro período (as do período ainda não vieram).
@@ -95,11 +95,19 @@ class Autonomia::Desempenho::Painel
   def ultima_rodada = rodadas.where.not(status: 'rodando').first
 
   def lido_ate
-    corte, pendentes = rodadas.where(status: Autonomia::Desempenho::Rodada::LIDAS).pick(:corte_em, :conversas_pendentes)
-    return nil if corte.nil?
+    rodada = rodadas.find_by(status: Autonomia::Desempenho::Rodada::LIDAS)
+    return nil if rodada.nil?
 
-    ate = pendentes.zero? ? corte : leituras.maximum(:lida_ate_em)
-    ate&.in_time_zone(fuso)&.strftime('%Y-%m-%dT%H:%M')
+    ate = rodada.conversas_pendentes.zero? ? rodada.corte_em : antes_da_pendente(rodada)
+    ate.in_time_zone(fuso).strftime('%Y-%m-%dT%H:%M')
+  end
+
+  def antes_da_pendente(rodada)
+    pendente = Autonomia::Desempenho::LeituraAutomatica::Candidatas.new(
+      account: @account, sujeito_type: @sujeito_type, sujeito_id: @sujeito_id, remetentes: ficha.configuracao['remetentes_do_agente'],
+      piso: rodada.piso_em, corte: rodada.corte_em
+    ).mais_antiga
+    pendente ? pendente - 1.second : rodada.piso_em
   end
 
   def instrucao_mudou?
@@ -215,7 +223,7 @@ class Autonomia::Desempenho::Painel
 
     guardadas = Autonomia::Desempenho::Recomendacao.do_sujeito(@account, @sujeito_type, @sujeito_id)
                                                    .where(periodo: chave, versao_ficha: ficha.versao)
-    guardadas = guardadas.where(inicio: inicio, fim: fim) unless rodadas.exists?
+    guardadas = guardadas.where(inicio: inicio, fim: fim) unless rodadas.exists?(status: Autonomia::Desempenho::Rodada::LIDAS)
     cache = guardadas.first
     return [] if cache.nil?
 

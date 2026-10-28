@@ -1,12 +1,11 @@
 # A leitura automática diária do painel de desempenho (#2301). Roda às 07:00 UTC (`config/schedule.yml`).
 # Sem conta, espalha: um job por conta com ficha de leitura, a flag `agentes_painel_desempenho` e o módulo de Agentes
-# ligados, na fila `low`, com uma espera aleatória para as contas não lerem todas no mesmo minuto. Com conta, roda a
-# rodada de cada agente da conta que tem ficha vigente com chave de leitura, um depois do outro.
+# ligados, na fila `low`, com uma espera aleatória para as contas não lerem todas no mesmo minuto. Com conta, enfileira
+# um LeituraDaFichaJob por agente da conta que tem ficha vigente com chave de leitura: a rodada de um agente que cai
+# não segura a dos outros. Este job só lista (não paga nada), então fica com as novas tentativas padrão.
 # Tudo desligado enquanto a ENV AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA não for verdadeira.
 class Autonomia::Desempenho::LeituraAutomaticaJob < ApplicationJob
   queue_as :low
-  # Cada tentativa paga chamadas de IA de novo: falhou, a rodada fica `erro` e a próxima é a do dia seguinte.
-  discard_on StandardError
 
   FLAG = 'agentes_painel_desempenho'.freeze
   ESPALHAR_EM = 30.minutes.to_i
@@ -18,7 +17,7 @@ class Autonomia::Desempenho::LeituraAutomaticaJob < ApplicationJob
     account = Account.find_by(id: account_id)
     return unless ligada_na_conta?(account)
 
-    fichas(account).each { |ficha| ::Autonomia::Desempenho::LeituraAutomatica::Orquestrador.new(ficha).call }
+    fichas(account).each { |ficha| ::Autonomia::Desempenho::LeituraDaFichaJob.perform_later(account.id, ficha.id) }
   end
 
   private
