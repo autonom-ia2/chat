@@ -6,12 +6,13 @@
 # - fica só a cópia de dentro, onde ela está no app: sai de cima o item que tem `parent_id` (o pai pode estar em outra
 #   página) ou que aparece dentro de um comentário desta página;
 # - a cópia de dentro sem `from` herda o da cópia de cima, quando ela veio na página;
-# - `own_ids`: as respostas que o painel publicou (Crm::MetaAdsCommentAction `reply`), da conta mesmo sem `from`.
+# - `own_ids`: as respostas que o painel publicou (Crm::MetaAdsCommentAction `page_reply`), da conta mesmo sem
+#   `from`. Só vale para resposta, nunca para comentário de primeiro nível.
 class Crm::MetaAds::InstagramCommentThreads
   # Com as respostas que o painel publicou nesta página, gravadas na conta.
   def self.build(rows, channel, account_id)
     ids = rows.flat_map { |item| [item['id'], *Array(item.dig('replies', 'data')).pluck('id')] }.map(&:to_s)
-    own_ids = Crm::MetaAdsCommentAction.where(account_id: account_id, network: 'instagram', action: 'reply', comment_id: ids)
+    own_ids = Crm::MetaAdsCommentAction.where(account_id: account_id, network: 'instagram', action: 'page_reply', comment_id: ids)
                                        .pluck(:comment_id)
     new(rows, channel.instagram_id, own_ids: own_ids)
   end
@@ -36,7 +37,7 @@ class Crm::MetaAds::InstagramCommentThreads
   end
 
   def own?(item)
-    item.dig('from', 'id').to_s == @instagram_id || @own_ids.include?(item['id'].to_s)
+    item.dig('from', 'id').to_s == @instagram_id || (nested_ids.include?(item['id'].to_s) && @own_ids.include?(item['id'].to_s))
   end
 
   private

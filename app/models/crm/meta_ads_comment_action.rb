@@ -1,8 +1,9 @@
 # O que já foi feito num comentário de anúncio da Meta (#2196), nas duas redes. O comentário em si nunca é gravado.
 #
 # - `network`: `instagram` ou `facebook`; `comment_id` é o id da Meta; `ad_id` quando a ação veio do anúncio. Em
-#   `reply`, `comment_id` é a resposta que a conta publicou, não o comentário respondido: a Graph do Instagram a devolve
-#   sem `from`, e é esta linha que a mostra como da conta (#2313).
+#   `page_reply`, `comment_id` é a resposta que a conta publicou pelo painel, não o comentário respondido (que é o
+#   `comment_id` de `reply`): a Graph do Instagram devolve essa resposta sem `from`, e é esta linha que a mostra como da
+#   conta (#2313).
 # - `action`: o que a pessoa (#2196, #2197) ou a IA dos comentários (#2212) fez. `ai_seen`, `to_you` e
 #   `private_reply_failed` são só da IA: a leitura do comentário, a reclamação passada à pessoa e o privado recusado.
 # - `actor`: `user` (com `user_id`) ou `ai`.
@@ -26,7 +27,7 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   self.table_name = 'crm_meta_ads_comment_actions'
 
   NETWORKS = %w[instagram facebook].freeze
-  ACTIONS = %w[private_reply reply hide show delete ai_seen to_you private_reply_failed].freeze
+  ACTIONS = %w[private_reply reply page_reply hide show delete ai_seen to_you private_reply_failed].freeze
   ONCE = %w[private_reply ai_seen].freeze
   ACTORS = %w[user ai].freeze
   RESERVED_TTL = 2.minutes
@@ -52,10 +53,11 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   # não vira erro (a pessoa responderia de novo); sem a linha, a resposta só aparece sem o "Você" quando a Graph não
   # traz o `from`.
   def self.record_reply(account_id:, ad_id:, reply_id:, user:)
-    record!(account_id: account_id, network: 'instagram', ad_id: ad_id.to_s, comment_id: reply_id.to_s, action: 'reply',
+    record!(account_id: account_id, network: 'instagram', ad_id: ad_id.to_s, comment_id: reply_id.to_s, action: 'page_reply',
             actor: 'user', user: user)
   rescue ActiveRecord::ActiveRecordError => e
     Rails.logger.error("[MetaAdsCommentAction] resposta #{reply_id} sem registro: #{e.class.name}")
+    ChatwootExceptionTracker.new(e, user: user).capture_exception
   end
 
   # A chamada à Meta vai sair agora: daqui em diante, sem confirmação a linha fica travada. Falso quando a reserva já

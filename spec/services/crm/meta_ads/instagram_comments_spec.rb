@@ -108,7 +108,7 @@ RSpec.describe Crm::MetaAds::InstagramComments do
                                      from: { id: ig_id, username: 'lojaexemplo' } }] })
       expect(service.payload(ad_id)[:comments]).to be_empty
 
-      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', ad_id: ad_id, comment_id: 'r9', action: 'reply',
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', ad_id: ad_id, comment_id: 'r9', action: 'page_reply',
                                         actor: 'user', user: user)
       stub_comments(body: { data: [{ id: 'c9', text: 'Muito bom!', timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' },
                                      replies: { data: [{ id: 'r9', text: 'Obrigado!', timestamp: 5.minutes.ago.iso8601 }] } }] })
@@ -116,6 +116,20 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       reply = service.payload(ad_id)[:comments].sole[:replies].sole
       expect(reply[:author]).to eq(name: nil, username: 'lojaexemplo', is_page: true)
       expect(reply).to include(can_reply: false, can_hide: false, can_delete: true)
+    end
+
+    it 'linha gravada para um comentário de primeiro nível não o faz da conta (a IA grava `reply` com o comentário do cliente)' do
+      stub_ad
+      stub_comments
+      %w[reply page_reply].each do |action|
+        Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', ad_id: ad_id, comment_id: 'c1', action: action,
+                                          actor: 'ai')
+      end
+
+      first = service.payload(ad_id)[:comments].first
+
+      expect(first[:author]).to include(username: 'carla.dias', is_page: false)
+      expect(first).to include(can_reply: true, can_reply_private: true)
     end
 
     it 'resposta de outra pessoa em dobro: fica a de dentro, com o autor da cópia de cima' do
@@ -208,7 +222,18 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(row).to include(id: 'c9', text: 'Temos sim', can_reply: false)
       expect(row[:author]).to include(username: 'lojaexemplo', is_page: true)
       expect(Crm::MetaAdsCommentAction.sole).to have_attributes(account_id: account.id, network: 'instagram', ad_id: ad_id,
-                                                                comment_id: 'c9', action: 'reply', actor: 'user', user_id: user.id)
+                                                                comment_id: 'c9', action: 'page_reply', actor: 'user', user_id: user.id)
+    end
+
+    it 'resposta aceita pela Meta não vira erro quando gravar a linha falha' do
+      stub_comment('c1')
+      stub_request(:post, %r{#{ig}/c1/replies}).to_return(status: 200, headers: json, body: { id: 'c9' }.to_json)
+      allow(Crm::MetaAdsCommentAction).to receive(:record!).and_raise(ActiveRecord::ConnectionTimeoutError)
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+      expect(service.reply!(ad_id, 'c1', 'Temos sim', user: user)).to include(id: 'c9')
+      expect(tracker).to have_received(:capture_exception)
     end
 
     it 'resposta a uma resposta vai para o comentário de cima, como no app' do

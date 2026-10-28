@@ -48,7 +48,7 @@ class Crm::MetaAds::InstagramComments
   end
 
   # No Instagram a resposta fica num nível só: responder a uma resposta vai para o comentário de cima, como no app.
-  # O id da resposta fica gravado (`reply`): a Graph a devolve sem `from`, e é ele que a mostra como da conta (#2313).
+  # O id da resposta fica gravado (`page_reply`): a Graph a devolve sem `from`, e é ele que a mostra como da conta (#2313).
   def reply!(ad_id, comment_id, text, user:)
     text = valid_text!(text, MAX_TEXT)
     found = comment_of_ad!(ad_id, comment_id)
