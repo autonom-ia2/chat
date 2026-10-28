@@ -45,8 +45,8 @@ const selo = computed(() => {
 });
 
 // Post sem as vezes (Página sem Insights, número que não veio): a linha sai, em vez de um traço. Post novo: sem as
-// vezes, e curtidas e comentários só se já vieram. No post impulsionado da Página, curtidas e comentários incluem o
-// anúncio (só as vezes se separam): o megafone.
+// vezes, e curtidas e comentários só se já vieram. Curtidas e comentários incluem o anúncio quando houve (só as vezes
+// se separam): o megafone, sempre que não se sabe que o post ficou sem anúncio.
 const numeros = computed(() =>
   [
     ...(props.post.semInsights || props.post.novo
@@ -62,14 +62,14 @@ const numeros = computed(() =>
       chave: 'likes',
       label: t('SEUS_POSTS.POST.NUMBERS.LIKES'),
       valor: formatar(props.post.curtidas, locale.value),
-      anuncio: props.post.impulsionado,
+      anuncio: props.post.podeTerAnuncio,
       vazio: props.post.curtidas === null,
     },
     {
       chave: 'comments',
       label: t('SEUS_POSTS.POST.NUMBERS.COMMENTS'),
       valor: formatar(props.post.comentarios, locale.value),
-      anuncio: props.post.impulsionado,
+      anuncio: props.post.podeTerAnuncio,
       vazio: props.post.comentarios === null,
     },
   ].filter(numero => !(props.post.novo && numero.vazio))

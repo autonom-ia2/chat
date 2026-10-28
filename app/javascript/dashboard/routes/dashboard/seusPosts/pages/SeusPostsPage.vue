@@ -107,6 +107,20 @@ const resumo = computed(() => perfil.value?.resumo);
 // Abaixo disso o Instagram não manda quem começou a seguir.
 const MIN_SEGUIDORES = 100;
 const num = valor => formatar(valor, locale.value);
+// Seguidores novos do período. A Meta manda quem começou a seguir (Instagram: follows_and_unfollows no lado FOLLOWER;
+// Página: page_daily_follows_unique), não o saldo; negativo só por erro, e mesmo assim não vira "-3 começaram".
+const mudancaDeSeguidores = novos => {
+  if (novos === null) return null;
+  if (novos < 0)
+    return {
+      texto: t('SEUS_POSTS.TILES.FOLLOWERS.LEFT', { count: num(-novos) }),
+      tom: 'desce',
+    };
+  return {
+    texto: t('SEUS_POSTS.TILES.FOLLOWERS.NEW', { count: num(novos) }),
+    tom: novos > 0 ? 'sobe' : 'igual',
+  };
+};
 
 const manchete = computed(() => {
   // Sem as vezes (a Meta não mandou) não é "não apareceram": isso só com zero de verdade.
@@ -134,15 +148,21 @@ const mudancaDaManchete = computed(() => {
 const quadros = computed(() => {
   const r = resumo.value;
   const muda = (atual, antes) => comparacaoCurta(atual, antes, t, locale.value);
-  const poucosSeguidores = r.seguidoresNovos === null;
+  // Só com o total abaixo do mínimo: total que a Meta não mandou fica "—", sem o aviso.
+  const poucosSeguidores =
+    r.seguidoresNovos === null &&
+    r.seguidores !== null &&
+    r.seguidores < MIN_SEGUIDORES;
   return [
     {
       nome: 'people',
       label: t('SEUS_POSTS.TILES.PEOPLE.LABEL'),
       // No Instagram é o teto: a mesma pessoa pode contar num post e num story.
-      valor: r.pessoasAte
-        ? t('SEUS_POSTS.TILES.PEOPLE.UP_TO', { count: num(r.pessoas) })
-        : num(r.pessoas),
+      // Sem o número, só "—" (nunca "até —").
+      valor:
+        r.pessoasAte && r.pessoas !== null
+          ? t('SEUS_POSTS.TILES.PEOPLE.UP_TO', { count: num(r.pessoas) })
+          : num(r.pessoas),
       mudanca: muda(r.pessoas, r.pessoasAntes),
       ajuda: t(`SEUS_POSTS.TILES.PEOPLE.HELP_${perfil.value.rede}`),
       anuncio: r.lados.pessoas,
@@ -161,14 +181,7 @@ const quadros = computed(() => {
       valor: num(r.seguidores),
       // Quem começou a seguir vai na linha da comparação. Abaixo de 100 seguidores o Instagram não conta: o quadro
       // diz isso no lugar.
-      mudanca: poucosSeguidores
-        ? null
-        : {
-            texto: t('SEUS_POSTS.TILES.FOLLOWERS.NEW', {
-              count: num(r.seguidoresNovos),
-            }),
-            tom: r.seguidoresNovos > 0 ? 'sobe' : 'igual',
-          },
+      mudanca: mudancaDeSeguidores(r.seguidoresNovos),
       extra: poucosSeguidores
         ? t('SEUS_POSTS.TILES.FOLLOWERS.FEW', { min: MIN_SEGUIDORES })
         : '',
@@ -215,11 +228,14 @@ const posts = computed(() =>
       new Date(b.publicadoEm) - new Date(a.publicadoEm)
   )
 );
-// O destaque é o post que mais apareceu sem anúncio: as vezes do post já são sem anúncio nas duas redes.
+// O destaque diz "Mais apareceu sem anúncio": só entra post que se sabe sem anúncio (boosted false). No Instagram
+// (boosted nil, não se sabe) não há destaque.
 const melhorPost = computed(
   () =>
     posts.value
-      .filter(post => post.apareceu && !post.semInsights)
+      .filter(
+        post => post.apareceu && !post.semInsights && !post.podeTerAnuncio
+      )
       .sort((a, b) => b.apareceu - a.apareceu)[0]
 );
 // Como cada post foi contra o normal do perfil, em palavras, no cartão.

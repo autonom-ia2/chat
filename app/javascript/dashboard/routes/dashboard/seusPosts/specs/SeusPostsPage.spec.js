@@ -225,6 +225,83 @@ describe('Seus posts (#2304)', () => {
     expect(wrapper.find('[data-seus-posts-posts-antigos]').exists()).toBe(true);
   });
 
+  it('seguidores negativos não viram "-3 começaram": "3 deixaram de seguir", descendo', async () => {
+    responder(instagram({ new_followers: -3 }));
+    const wrapper = await montar();
+
+    const quadro = wrapper.find('[data-seus-posts-quadro="followers"]').text();
+    expect(quadro).toContain('3 deixaram de seguir');
+    expect(quadro).not.toContain('-3');
+  });
+
+  it('seguidores que a Meta não mandou: "—", sem o aviso de poucos seguidores', async () => {
+    responder(instagram({ followers: null, new_followers: null }));
+    const wrapper = await montar();
+
+    const quadro = wrapper.find('[data-seus-posts-quadro="followers"]').text();
+    expect(quadro).toContain('—');
+    expect(quadro).not.toContain('Com 100 seguidores');
+  });
+
+  it('menos de 100 seguidores: o aviso no lugar de quem começou a seguir', async () => {
+    responder(instagram({ followers: 80, new_followers: null }));
+    const wrapper = await montar();
+
+    expect(
+      wrapper.find('[data-seus-posts-quadro="followers"]').text()
+    ).toContain('Com 100 seguidores');
+  });
+
+  it('pessoas que a Meta não mandou: só "—", nunca "até —"', async () => {
+    responder(instagram({ reach: null }));
+    const wrapper = await montar();
+
+    const quadro = wrapper.find('[data-seus-posts-quadro="people"]').text();
+    expect(quadro).toContain('—');
+    expect(quadro).not.toContain('até');
+  });
+
+  it('o destaque "sem anúncio" só vai para post que se sabe sem anúncio', async () => {
+    responder(
+      instagram({
+        posts: [
+          post('pago', { views: 5000, boosted: true }),
+          post('nao-se-sabe', { views: 3000, boosted: null }),
+          post('organico', { views: 900, boosted: false }),
+        ],
+      })
+    );
+    const wrapper = await montar();
+
+    const destacado = wrapper.find('[data-seus-posts-destaque]');
+    expect(destacado.exists()).toBe(true);
+    expect(
+      wrapper
+        .find('[data-seus-posts-card="organico"] [data-seus-posts-destaque]')
+        .exists()
+    ).toBe(true);
+    expect(wrapper.findAll('[data-seus-posts-destaque]')).toHaveLength(1);
+  });
+
+  it('megafone nas curtidas quando não se sabe se teve anúncio; sem ele quando se sabe que não', async () => {
+    responder(
+      instagram({
+        posts: [
+          post('nao-se-sabe', { boosted: null }),
+          post('organico', { boosted: false }),
+        ],
+      })
+    );
+    const wrapper = await montar();
+
+    const marcas = id =>
+      wrapper.findAll(
+        `[data-seus-posts-card="${id}"] [data-seus-posts-marca-anuncio]`
+      );
+    expect(marcas('nao-se-sabe').length).toBeGreaterThan(0);
+    expect(marcas('organico')).toHaveLength(0);
+  });
+
   it('403 é "sem acesso", não erro de rede', async () => {
     SeusPostsAPI.get.mockRejectedValue({ response: { status: 403 } });
     const wrapper = await montar();

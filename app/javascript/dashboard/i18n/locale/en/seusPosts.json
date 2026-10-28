@@ -53,6 +53,7 @@
       "FOLLOWERS": {
         "LABEL": "Followers",
         "NEW": "{count} started following",
+        "LEFT": "{count} stopped following",
         "FEW": "At {min} followers I show who started following"
       },
       "MESSAGES": {

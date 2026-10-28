@@ -64,6 +64,9 @@ export const postParaTela = (post, rede, agora = Date.now()) => {
     comentarios: ouNulo(post.comments),
     // boosted nil é "não se sabe" (Instagram): só o true vira "Teve anúncio".
     impulsionado: post.boosted === true,
+    // Curtidas e comentários incluem o anúncio quando houve: true ou nil (não se sabe) acendem "pode incluir anúncio";
+    // só o false (Página com o recorte em 0) garante que não.
+    podeTerAnuncio: post.boosted !== false,
     // Novo: a Meta ainda não mandou as vezes. Depois de 2 dias sem elas, o post fica só com curtidas e comentários.
     novo: vezes === null && novoNaMeta,
     // Até 2 dias, um zero ainda não se compara com o normal (os números da Meta podem atrasar).
