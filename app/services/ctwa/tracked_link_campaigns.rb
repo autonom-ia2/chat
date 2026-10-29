@@ -11,20 +11,6 @@
 # (sem a chave, a chave do valor nem vem, e a tela não mostra a coluna).
 class Ctwa::TrackedLinkCampaigns
   KEY_SQL = "COALESCE(NULLIF(ctwa_tracked_link_clicks.campaign_key, ''), 'none')".freeze
-  # Clique que veio de anúncio da Meta (#2338), pela regra da origem da conversa (Ctwa::CampaignBuilder#source_for):
-  # gclid e ttclid vêm antes; depois, fbclid ou UTMs pagas da Meta (o iPhone pode tirar o fbclid). O cookie fbc não
-  # entra: fica meses no navegador (visita direta contaria como anúncio) e some na retenção dos cliques. Visita direta
-  # ou orgânica ao site também chega sem nome de campanha; sem isto o aviso de "clique sem nome" contava as duas.
-  META_CLICK_CONDITION = ActiveRecord::Base.sanitize_sql_array(
-    [
-      "COALESCE(ctwa_tracked_link_clicks.params ->> 'gclid', '') = '' " \
-      "AND COALESCE(ctwa_tracked_link_clicks.params ->> 'ttclid', '') = '' " \
-      "AND (COALESCE(ctwa_tracked_link_clicks.params ->> 'fbclid', '') <> '' " \
-      "OR (LOWER(BTRIM(ctwa_tracked_link_clicks.params ->> 'utm_source', :blank)) IN (:sources) " \
-      "AND LOWER(BTRIM(ctwa_tracked_link_clicks.params ->> 'utm_medium', :blank)) IN (:mediums)))",
-      { blank: " \t\n\v\f\r", sources: Ctwa::CampaignBuilder::META_UTM_SOURCES, mediums: Ctwa::CampaignBuilder::PAID_UTM_MEDIUMS }
-    ]
-  ).freeze
 
   def self.for_links(account, links, account_user:)
     new(account, links, account_user: account_user).perform
@@ -76,9 +62,27 @@ class Ctwa::TrackedLinkCampaigns
   def click_counts
     clicks.group(:tracked_link_id, Arel.sql(KEY_SQL))
           .order(Arel.sql('COUNT(*) DESC'), Arel.sql(KEY_SQL))
-          .pluck(:tracked_link_id, Arel.sql(KEY_SQL), Arel.sql('COUNT(*)'), Arel.sql("COUNT(*) FILTER (WHERE #{META_CLICK_CONDITION})"),
+          .pluck(:tracked_link_id, Arel.sql(KEY_SQL), Arel.sql('COUNT(*)'), Arel.sql("COUNT(*) FILTER (WHERE #{meta_click_condition})"),
                  Arel.sql('MAX(ctwa_tracked_link_clicks.created_at)'),
-                 Arel.sql("MAX(ctwa_tracked_link_clicks.created_at) FILTER (WHERE #{META_CLICK_CONDITION})"))
+                 Arel.sql("MAX(ctwa_tracked_link_clicks.created_at) FILTER (WHERE #{meta_click_condition})"))
+  end
+
+  # Clique que veio de anúncio da Meta (#2338), pela regra da origem da conversa (Ctwa::CampaignBuilder#source_for):
+  # gclid e ttclid vêm antes; depois, fbclid ou UTMs pagas da Meta (o iPhone pode tirar o fbclid). O cookie fbc não
+  # entra: fica meses no navegador (visita direta contaria como anúncio) e some na retenção dos cliques. Visita direta
+  # ou orgânica ao site também chega sem nome de campanha; sem isto o aviso de "clique sem nome" contava as duas.
+  # Montada na consulta, não no corpo da classe: o quoting pede conexão com o banco, e o boot não pode depender dela.
+  def meta_click_condition
+    ActiveRecord::Base.sanitize_sql_array(
+      [
+        "COALESCE(ctwa_tracked_link_clicks.params ->> 'gclid', '') = '' " \
+        "AND COALESCE(ctwa_tracked_link_clicks.params ->> 'ttclid', '') = '' " \
+        "AND (COALESCE(ctwa_tracked_link_clicks.params ->> 'fbclid', '') <> '' " \
+        "OR (LOWER(BTRIM(ctwa_tracked_link_clicks.params ->> 'utm_source', :blank)) IN (:sources) " \
+        "AND LOWER(BTRIM(ctwa_tracked_link_clicks.params ->> 'utm_medium', :blank)) IN (:mediums)))",
+        { blank: " \t\n\v\f\r", sources: Ctwa::CampaignBuilder::META_UTM_SOURCES, mediums: Ctwa::CampaignBuilder::PAID_UTM_MEDIUMS }
+      ]
+    )
   end
 
   # Nome = utm_campaign mais recente da chave.
