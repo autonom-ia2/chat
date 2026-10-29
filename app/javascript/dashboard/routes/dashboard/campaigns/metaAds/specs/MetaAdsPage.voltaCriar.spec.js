@@ -114,6 +114,21 @@ describe('MetaAdsPage · volta para criar anúncio (#2338)', () => {
     });
   });
 
+  // "Ligar a conta de anúncios" na criação só muda o endereço (`?aba=conexao`): a aba na tela tem de acompanhar,
+  // mesmo quando a conexão relida já está completa.
+  it('shows the tab the address asks for when it changes after loading', async () => {
+    routing.route.query = { aba: 'resultado' };
+    CrmMetaAdsConnectionAPI.get.mockResolvedValue({ data: WITH_AD_ACCOUNT });
+    const wrapper = await mountPage();
+    const tabs = () => wrapper.findComponent({ name: 'MetaAdsViewTabs' });
+    expect(tabs().props('active')).toBe('resultado');
+
+    routing.route.query = { aba: 'conexao', volta: 'criar' };
+    await flushPromises();
+
+    expect(tabs().props('active')).toBe('conexao');
+  });
+
   it('changing tab drops the pending return', async () => {
     routing.route.query = { aba: 'resultado', volta: 'criar', periodo: '7d' };
     CrmMetaAdsConnectionAPI.get.mockResolvedValue({ data: WITH_AD_ACCOUNT });

@@ -69,6 +69,14 @@ const tabLabels = computed(() => ({
 const view = ref(
   ALL_VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
 );
+// A aba segue o endereço: quem manda para a Conexão de dentro do Resultado (criar anúncio sem conta, sem Página) só
+// muda o `?aba=`.
+watch(
+  () => route.query.aba,
+  aba => {
+    if (ALL_VIEWS.includes(aba)) view.value = aba;
+  }
+);
 // Trocar de aba encerra a volta pendente (`?volta=`): escolher a conta depois não leva mais à criação nem ao anúncio.
 const chooseView = value => {
   view.value = value;
