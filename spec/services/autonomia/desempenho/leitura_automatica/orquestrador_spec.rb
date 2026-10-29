@@ -32,9 +32,10 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
     end
   end
 
-  # Lê o Redis no relógio da rodada. O MockRedis do teste vence a chave pelo `Time.now`: fora do `travel_to`, com o
-  # relógio real além de `agora` + a validade da chave (7 dias nos contadores, 6 horas na trava), toda chave lida aqui
-  # já teria sumido, e o `be_nil` passaria sem conferir nada.
+  # Todo acesso ao Redis neste arquivo roda no relógio da rodada. O MockRedis do teste vence a chave pelo `Time.now` e,
+  # a cada comando, apaga o que já venceu: no relógio real, além de `agora` + a validade da chave (7 dias nos contadores,
+  # 6 horas na trava), a chave da rodada já teria sumido, e o `be_nil` passaria sem conferir nada. Pelo mesmo motivo,
+  # leia no instante da última rodada do exemplo, nunca antes de uma leitura mais tardia.
   def redis_get(chave, quando: agora)
     travel_to(quando) { Redis::Alfred.get(chave) }
   end
@@ -240,12 +241,12 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
     end
 
     it 'não roda com outra rodada da mesma conta em andamento: levanta ContaOcupada sem abrir rodada' do
-      Redis::Alfred.set("autonomia:desempenho:leitura:#{account.id}:trava", 'outra', ex: 60)
+      travel_to(agora) { Redis::Alfred.set("autonomia:desempenho:leitura:#{account.id}:trava", 'outra', ex: 60) }
 
       expect { rodar }.to raise_error(described_class::ContaOcupada)
       expect(Autonomia::Desempenho::Rodada.count).to eq(0)
     ensure
-      Redis::Alfred.delete("autonomia:desempenho:leitura:#{account.id}:trava")
+      travel_to(agora) { Redis::Alfred.delete("autonomia:desempenho:leitura:#{account.id}:trava") }
     end
 
     it 'duas fichas da mesma conta: a segunda espera a primeira terminar (o teto é da conta) e roda depois' do
@@ -347,7 +348,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
        { 'procuras' => [procura('inicio' => '10-21 09:00', 'fim' => '10-21 14:01')] },
        { 'procuras' => [procura('inicio' => '10-21 14:01', 'fim' => '10-21 14:00')] },
        { 'procuras' => [] }, '{"procuras": ['].each do |resposta|
-        Redis::Alfred.delete("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{cresceu.id}")
+        travel_to(agora) { Redis::Alfred.delete("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{cresceu.id}") }
         openai_devolve(resposta)
 
         expect(rodar).to have_attributes(conversas_lidas: 0, conversas_pendentes: 1)
