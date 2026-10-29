@@ -44,7 +44,7 @@ const textoDaTrava = motivo =>
   motivo ? t(`FUNCOES_EQUIPE.TRAVA.${TEXTO_DA_TRAVA[motivo]}`) : '';
 
 const opcoes = computed(() =>
-  levelOptions(props.module).map(valor => ({
+  levelOptions(props.module, nivel.value).map(valor => ({
     valor,
     titulo: rotuloDoNivel(props.module, valor),
     trava:
