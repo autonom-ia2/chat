@@ -3,10 +3,10 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
-import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
+import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { clockTime, relativeTime } from '../metaAdsHelpers';
 
-// Anúncios da Meta (#1047), passo 3: uma página do site ligada em Links e QR codes (#1011).
+// Anúncios da Meta (#1047), passo 3: uma página do site (o link de site de Links e QR codes, #1011).
 // "Testar agora" (CA-1.6) abre a página e espera o primeiro aviso de clique chegar; a lista de
 // campanhas (CA-1.7) confirma, campanha por campanha, que o texto dos anúncios foi colado.
 const props = defineProps({
@@ -71,9 +71,11 @@ const stop = () => {
   timer = null;
 };
 
+// Relê por Anúncios (#2338), que serve a quem tem meta_ads_view. Ele não traz as campanhas: ficam as já carregadas.
 const refresh = async () => {
-  const { data } = await CtwaTrackedLinksAPI.get();
-  return (data.payload || []).find(link => link.id === current.value.id);
+  const { data } = await CrmMetaAdsConnectionAPI.sitePages();
+  const fresh = (data.payload || []).find(page => page.id === current.value.id);
+  return fresh && { ...fresh, campaigns: current.value.campaigns };
 };
 
 const startTest = () => {

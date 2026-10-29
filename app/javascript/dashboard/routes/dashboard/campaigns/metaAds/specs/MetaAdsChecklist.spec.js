@@ -42,4 +42,22 @@ describe('Anúncios da Meta · passos da conexão', () => {
 
     expect(account(wrapper).find('[data-step-pending]').exists()).toBe(false);
   });
+
+  // #2338: anúncio levando ao site sem página ligada — o passo do Destino pede a página, com "Ligar".
+  const destinations = wrapper => wrapper.find('[data-step="DESTINATIONS"]');
+
+  it('with the site chosen and no page linked, the destination step asks to link it', async () => {
+    const wrapper = mount(MetaAdsChecklist, {
+      props: { current: 5, destinationsPending: true },
+    });
+
+    expect(destinations(wrapper).find('.i-lucide-check').exists()).toBe(false);
+    expect(destinations(wrapper).text()).toContain(
+      'Falta ligar a página do site'
+    );
+    const button = destinations(wrapper).find('[data-step-pending]');
+    expect(button.text()).toBe('Ligar');
+    await button.trigger('click');
+    expect(wrapper.emitted('change')).toEqual([[3]]);
+  });
 });

@@ -5,17 +5,20 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { errorMessageKey } from '../metaAdsHelpers';
 import MetaAdsSitePage from './MetaAdsSitePage.vue';
+import MetaAdsSiteLinkDialog from './MetaAdsSiteLinkDialog.vue';
 import MetaAdsDestinationArt from './MetaAdsDestinationArt.vue';
 
 // Anúncios da Meta (#1047), passo 3: para onde os anúncios levam. WhatsApp direto já funciona
-// sozinho; site usa as páginas ligadas em Links e QR codes (#1011) e o texto dos parâmetros de URL.
+// sozinho; site usa as páginas do site (os links de site de Links e QR codes, #1011) e o texto dos parâmetros de URL.
+// A página é ligada ali mesmo, sem sair dos Anúncios (#2338).
 const props = defineProps({
   destinations: { type: Object, default: () => ({}) },
 });
 
-const emit = defineEmits(['saved']);
+const emit = defineEmits(['saved', 'pageLinked']);
 
 const { t } = useI18n();
 
@@ -25,6 +28,9 @@ const choice = ref({
 });
 const sitePages = ref([]);
 const saving = ref(false);
+const linkDialog = ref(null);
+// O que chegou de cada campanha (cliques, nomes) só vem para quem vê Links e QR codes (campaign_view).
+const canSeeCampaigns = usePermissionGranted('campaign_view');
 
 const OPTIONS = [
   { key: 'whatsapp', icon: 'i-lucide-message-circle' },
@@ -34,15 +40,31 @@ const OPTIONS = [
 const adText = computed(() => sitePages.value[0]?.ad_url_params || '');
 const canSave = computed(() => choice.value.whatsapp || choice.value.site);
 
-const loadPages = async () => {
+const withCampaigns = async pages => {
+  if (!canSeeCampaigns.value || !pages.length) return pages;
   try {
     const { data } = await CtwaTrackedLinksAPI.get();
-    sitePages.value = (data.payload || []).filter(
-      link => link.usage === 'website'
+    const campaigns = Object.fromEntries(
+      (data.payload || []).map(link => [link.id, link.campaigns])
     );
+    return pages.map(page => ({ ...page, campaigns: campaigns[page.id] }));
+  } catch {
+    return pages;
+  }
+};
+
+const loadPages = async () => {
+  try {
+    const { data } = await CrmMetaAdsConnectionAPI.sitePages();
+    sitePages.value = await withCampaigns(data.payload || []);
   } catch {
     sitePages.value = [];
   }
+};
+
+const pageLinked = page => {
+  sitePages.value = [...sitePages.value, page];
+  emit('pageLinked');
 };
 
 const copyAdText = async () => {
@@ -160,17 +182,28 @@ onMounted(loadPages);
             :page="page"
           />
         </ul>
-        <div v-else class="flex flex-wrap items-center gap-3">
+        <div v-else data-site-empty class="flex flex-col items-start gap-3">
           <span class="text-sm text-n-slate-11">
             {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_EMPTY') }}
           </span>
-          <router-link
-            :to="{ name: 'campaigns_tracked_links_index' }"
-            class="text-sm font-semibold underline rounded text-n-blue-11 underline-offset-2"
-          >
-            {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE') }}
-          </router-link>
+          <Button
+            data-site-link-open
+            class="!min-h-11 !rounded-xl"
+            icon="i-lucide-link"
+            :label="$t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE')"
+            @click="linkDialog?.open()"
+          />
         </div>
+        <button
+          v-if="sitePages.length"
+          type="button"
+          data-site-link-another
+          class="self-start p-0 text-sm font-medium bg-transparent border-0 rounded-lg min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          @click="linkDialog?.open()"
+        >
+          {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE_ANOTHER') }}
+        </button>
+        <MetaAdsSiteLinkDialog ref="linkDialog" @created="pageLinked" />
       </div>
 
       <!-- O texto é para a Meta, não para a pessoa: só o botão de copiar aparece; o caminho e o

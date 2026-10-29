@@ -1,9 +1,10 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsSitePage from '../components/MetaAdsSitePage.vue';
-import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
+import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 
-vi.mock('dashboard/api/ctwaTrackedLinks', () => ({
-  default: { get: vi.fn() },
+// "Testar agora" relê a página por Anúncios (#2338), que não traz cliques nem campanhas.
+vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
+  default: { sitePages: vi.fn() },
 }));
 
 const BEFORE = '2026-10-06T10:00:00Z';
@@ -30,8 +31,10 @@ const mountPage = (page = PAGE) =>
   });
 
 const replyWith = signalAt =>
-  CtwaTrackedLinksAPI.get.mockResolvedValue({
-    data: { payload: [{ ...PAGE, last_signal_at: signalAt }] },
+  CrmMetaAdsConnectionAPI.sitePages.mockResolvedValue({
+    data: {
+      payload: [{ ...PAGE, campaigns: undefined, last_signal_at: signalAt }],
+    },
   });
 
 describe('Anúncios da Meta · página do site (#1047)', () => {
@@ -69,6 +72,7 @@ describe('Anúncios da Meta · página do site (#1047)', () => {
     await flushPromises();
 
     expect(wrapper.find('[data-site-test-ok]').exists()).toBe(true);
+    expect(wrapper.findAll('[data-site-campaign]')).toHaveLength(2);
   });
 
   it('gives up with a hint when no click arrives in time', async () => {
