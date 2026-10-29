@@ -1087,6 +1087,7 @@ Rails.application.routes.draw do
                 get :usage
               end
               post :media, on: :collection
+              get 'media/:conversion_id', action: :media_status, on: :collection, as: :media_status
             end
             # Catálogo de produtos da WABA da caixa para a Nova campanha (#1418): só leitura, controller do fork.
             resource :whatsapp_catalog, only: [:show], module: :inboxes do

@@ -6,6 +6,9 @@ import { pollAiRequest } from '../helper/aiRequestPolling';
 // O job leva até 25 s por tentativa, com 1 nova tentativa, mais a fila (#1333);
 // a tela desiste depois disto.
 const SUGGESTION_POLL = { intervalMs: 1500, timeoutMs: 120 * 1000 };
+// Vídeo que o WhatsApp não entrega é convertido num job (até 5 min de ffmpeg,
+// mais a fila) e a subida volta 202 (#2370).
+const MEDIA_POLL = { intervalMs: 2000, timeoutMs: 10 * 60 * 1000 };
 
 // Modelos de mensagem do WhatsApp oficial (#1330 backend, #1332 tela). Uma caixa por chamada: a conta do WhatsApp
 // (WABA) é sempre a da caixa, nunca escolhida aqui.
@@ -65,7 +68,10 @@ class WhatsappTemplatesAPI extends ApiClient {
   uploadMedia(inboxId, file) {
     const body = new FormData();
     body.append('file', file);
-    return axios.post(`${this.templatesUrl(inboxId)}/media`, body);
+    return pollAiRequest(
+      axios.post(`${this.templatesUrl(inboxId)}/media`, body),
+      MEDIA_POLL
+    );
   }
 
   suggest(body) {

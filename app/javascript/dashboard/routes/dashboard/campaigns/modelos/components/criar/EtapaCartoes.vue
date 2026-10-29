@@ -29,7 +29,11 @@ const TIPOS = [
 ];
 const MIDIAS = [
   { chave: 'foto', icone: 'i-lucide-image', aceita: 'image/jpeg,image/png' },
-  { chave: 'video', icone: 'i-lucide-video', aceita: 'video/mp4' },
+  {
+    chave: 'video',
+    icone: 'i-lucide-video',
+    aceita: 'video/mp4,video/quicktime,.mp4,.mov',
+  },
 ];
 
 const mudarCartoes = lista => {
