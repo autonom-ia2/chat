@@ -65,6 +65,12 @@ export const entrar = async (status, adId) => {
   window.location.assign(data.url);
 };
 
+// Quem chega ao fim do caminho de `entrar` (#2358, a régua de MetaAdsOrganic.vue): conectar é criar a caixa
+// (`criarCaixa`, inbox_manage); reautorizar pede `reautorizar` (integration_manage) para gerar o link e inbox_manage
+// na volta (Instagram::Testers::OauthBinding).
+export const podeEntrar = (status, { criarCaixa, reautorizar }) =>
+  criarCaixa && (status !== 'needs_login' || reautorizar);
+
 export default {
   listar,
   mais,
@@ -74,4 +80,5 @@ export default {
   privado,
   liberar,
   entrar,
+  podeEntrar,
 };

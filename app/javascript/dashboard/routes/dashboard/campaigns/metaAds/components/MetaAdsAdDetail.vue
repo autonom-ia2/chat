@@ -296,14 +296,23 @@ const gestaoOn = computed(() =>
   )
 );
 const canManage = usePermissionGranted('meta_ads_manage');
+const canCreateInbox = usePermissionGranted('inbox_manage');
+const canReauthorize = usePermissionGranted('integration_manage');
 
 // Comentários do anúncio, uma aba por rede, cada uma atrás da própria flag: Instagram (#2196) e Facebook (#2197).
 // Sem nenhuma aba ligada, a seção não aparece.
+// O botão de entrar no Instagram segue as permissões do caminho (comentariosInstagram.podeEntrar, #2358). O do
+// Facebook leva à Conexão, que já é de quem gere os anúncios.
 const COMMENT_TABS = [
   {
     key: 'INSTAGRAM',
     flag: FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
     adaptador: comentariosInstagram,
+    podeEntrar: status =>
+      comentariosInstagram.podeEntrar(status, {
+        criarCaixa: canCreateInbox.value,
+        reautorizar: canReauthorize.value,
+      }),
   },
   {
     key: 'FACEBOOK',
