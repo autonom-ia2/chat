@@ -3235,10 +3235,18 @@
             "NEEDS_LOGIN_BUTTON": "Go to Connection",
             "NOTE": "On Facebook, reply in public. To talk privately, ask the person to message you on WhatsApp.",
             "NEEDS_LOGIN_AFTER": "After logging in, you'll come back to this ad.",
+            "NO_INBOX_TITLE": "Connect this Page to Messenger",
+            "NO_INBOX": "Connect this Page to Messenger to see the comments.",
+            "NO_INBOX_BUTTON": "Connect to Messenger",
+            "NO_INBOX_ASK": "Whoever manages the account's inboxes can connect it.",
+            "NOT_INBOX_MEMBER_TITLE": "You're not in this Page's inbox",
+            "NOT_INBOX_MEMBER": "This Page's comments are for the people in its Messenger inbox. Ask whoever manages the account's inboxes to add you.",
             "ERRORS": {
               "NEEDS_LOGIN": "Comment access is missing. Log in with Facebook again under Connection.",
               "META_UNAVAILABLE": "Facebook didn't answer. Try again in a minute.",
-              "META_REFUSED": "Facebook refused this action. Reload the comments and try again."
+              "META_REFUSED": "Facebook refused this action. Reload the comments and try again.",
+              "NO_INBOX": "This Page isn't connected to Messenger. Connect it to manage the comments.",
+              "NOT_INBOX_MEMBER": "You're not in this Page's Messenger inbox."
             }
           },
           "LOGIN_ADMIN": "Ask an account administrator to log in with Instagram again.",
