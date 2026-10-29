@@ -53,8 +53,8 @@ class Crm::MetaAds::InstagramComments
     raise Error, failure(result) unless result.ok
 
     Crm::MetaAdsCommentAction.record_reply(account: @connection.account, ad_id: ad_id, reply_id: result.data['id'], user: user)
-    row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
-          'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, channel, actions: {}, own: true)
+    rows(channel).row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
+                        'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, actions: {}, own: true)
   end
 
   def hide!(ad_id, comment_id, hidden:)
@@ -79,7 +79,7 @@ class Crm::MetaAds::InstagramComments
     found = comment_of_ad!(ad_id, comment_id)
     sent = Crm::MetaAds::InstagramPrivateReply.new(found[:channel]).perform!(comment: found[:comment], text: text, actor: 'user', user: user,
                                                                              ad_id: ad_id)
-    { sent_at: Time.current.iso8601, conversation_path: conversation_path(sent[:conversation]) }
+    { sent_at: Time.current.iso8601, conversation_path: rows(found[:channel]).conversation_path(sent[:conversation]) }
   end
 
   # "Não foi enviado": quem gere os anúncios conferiu no Direct que o privado sem confirmação não chegou e libera o
@@ -152,7 +152,7 @@ class Crm::MetaAds::InstagramComments
     threads = threads(result, channel)
     {
       status: 'ready', account: target[:account], permalink_url: target[:permalink_url],
-      comments: present(threads, channel), total: total(channel, target[:media_id], threads), next_cursor: next_cursor(result.data)
+      comments: rows(channel).present(threads), total: total(channel, target[:media_id], threads), next_cursor: next_cursor(result.data)
     }
   end
 
@@ -167,61 +167,13 @@ class Crm::MetaAds::InstagramComments
   # A resposta da própria conta vem em dobro da Graph: Crm::MetaAds::InstagramCommentThreads deixa uma só (#2313).
   def threads(result, channel) = Crm::MetaAds::InstagramCommentThreads.build(Array(result.data['data']), channel, @connection.account_id)
 
-  def present(threads, channel)
-    actions = Crm::MetaAdsCommentAction.where(account_id: @connection.account_id, network: 'instagram', action: 'private_reply',
-                                              comment_id: threads.ids)
-                                       .includes(:conversation).reject(&:abandoned?).index_by(&:comment_id)
-    threads.top.map do |item|
-      row(item, channel, actions: actions, own: threads.own?(item))
-        .merge(replies: threads.replies(item).map { |reply| row(reply, channel, actions: actions, nested: true, own: threads.own?(reply)) })
-    end
-  end
-
-  # O privado só vale em comentário de primeiro nível de outra pessoa (`nested`: resposta dentro de um comentário).
-  # `own`: é da conta mesmo quando a Graph não traz o `from` (#2313); o @ é o da caixa.
-  def row(item, channel, actions:, own:, nested: false)
-    username = item.dig('from', 'username') || (channel.provider_name if own)
-    {
-      id: item['id'].to_s, author: { name: nil, username: username, is_page: own }, text: item['text'],
-      created_time: item['timestamp'], hidden: item['hidden'] == true, replies: [],
-      can_reply: @can_manage && !own, can_hide: @can_manage && !own, can_delete: @can_manage
-    }.merge(private_state(item, !own && !nested, actions[item['id'].to_s]))
-  end
-
   def member?(channel)
     @member ||= {}
     @member.fetch(channel.id) { @member[channel.id] = @inbox_access.call(channel.inbox) == true }
   end
 
-  # Responder no privado: uma vez só (a linha em Crm::MetaAdsCommentAction diz que já foi) e só até 7 dias depois.
-  def private_state(item, eligible, action)
-    expired = eligible && expired?(item)
-    {
-      can_reply_private: @can_manage && eligible && !expired && action.nil?, private_reply_expired: expired && action.nil?,
-      private_reply: private_reply(action)
-    }
-  end
-
-  def private_reply(action)
-    return if action.nil?
-
-    { sent_at: action.at.iso8601, confirmed: action.confirmed_at.present?, conversation_path: conversation_path(action.conversation),
-      can_release: @can_manage && action.releasable? }
-  end
-
-  def expired?(item)
-    created = Time.zone.parse(item['timestamp'].to_s)
-    created.present? && created.before?(Crm::MetaAds::InstagramPrivateReply::WINDOW.ago)
-  end
-
   def next_cursor(data)
     data.dig('paging', 'cursors', 'after') if data.dig('paging', 'next').present?
-  end
-
-  def conversation_path(conversation)
-    return if conversation.nil?
-
-    "/app/accounts/#{conversation.account_id}/conversations/#{conversation.display_id}"
   end
 
   # Total de comentários da mídia como a Meta conta; sem ele, o que veio nesta página, sem a cópia em dobro.
@@ -259,6 +211,12 @@ class Crm::MetaAds::InstagramComments
 
   def client(channel)
     Instagram::CommentsClient.new(channel)
+  end
+
+  # A aba do anúncio mostra a conversa do privado a quem lê os comentários, como antes da extração (#2305).
+  def rows(channel)
+    Crm::MetaAds::InstagramCommentRows.new(channel, account_id: @connection.account_id, can_manage: @can_manage,
+                                                    conversation_access: Crm::MetaAds::InstagramCommentRows::EVERY_CONVERSATION)
   end
 
   def management

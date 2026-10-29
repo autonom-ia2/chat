@@ -3,6 +3,9 @@
 # - Página: token da Página. O recorte is_from_ads vai numa chamada própria: duas métricas com o mesmo recorte na mesma
 #   chamada dão erro (code 2). post_total_media_view_unique vem duas vezes (lifetime e day): quem lê usa a lifetime.
 # - Instagram: token do login do Instagram, graph.instagram.com (base_uri). Números lifetime de cada mídia.
+# - Comentários dos posts, para "esperando você" (F2, #2305): os primeiros COMENTARIOS_POR_POST de primeiro nível de
+#   cada post, com quem escreveu e quem respondeu, embutidos na lista de posts (chamada real de 29/10: veio nas duas
+#   redes). Numa chamada própria: sem a permissão de ler comentários, só ela falha, e os números do F1 continuam.
 module Meta::AdsGraphClient::SeusPosts
   SEUS_POSTS_PAGE_FIELDS = 'id,message,created_time,permalink_url,full_picture,status_type,' \
                            'reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0),' \
@@ -10,6 +13,10 @@ module Meta::AdsGraphClient::SeusPosts
   SEUS_POSTS_PAGE_VIEWS_FIELDS = 'id,insights.metric(post_media_view).breakdown(is_from_ads).metric_type(total_value)'.freeze
   SEUS_POSTS_INSTAGRAM_FIELDS = 'id,caption,timestamp,permalink,media_type,media_url,thumbnail_url,' \
                                 'insights.metric(views,reach,saved,shares,comments,likes)'.freeze
+  COMENTARIOS_POR_POST = 50
+  SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS = "id,comments.limit(#{COMENTARIOS_POR_POST}){id,hidden,from{id},replies{id,from{id}}}".freeze
+  SEUS_POSTS_PAGE_COMMENTS_FIELDS = "id,comments.filter(toplevel).limit(#{COMENTARIOS_POR_POST})" \
+                                    '{id,is_hidden,from{id},comments.limit(25){id,from{id}}}'.freeze
 
   def seus_posts_page(page_id, window)
     organic_posts("#{page_id}/published_posts", window.merge(fields: SEUS_POSTS_PAGE_FIELDS))
@@ -21,5 +28,13 @@ module Meta::AdsGraphClient::SeusPosts
 
   def seus_posts_instagram(window)
     organic_posts('me/media', window.merge(fields: SEUS_POSTS_INSTAGRAM_FIELDS))
+  end
+
+  def seus_posts_instagram_comments(window)
+    organic_posts('me/media', window.merge(fields: SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS))
+  end
+
+  def seus_posts_page_comments(page_id, window)
+    organic_posts("#{page_id}/published_posts", window.merge(fields: SEUS_POSTS_PAGE_COMMENTS_FIELDS))
   end
 end
