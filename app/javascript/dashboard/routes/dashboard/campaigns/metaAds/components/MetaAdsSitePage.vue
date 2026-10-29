@@ -29,16 +29,17 @@ const siteUrl = computed(() => current.value.allowed_origins?.[0] || '');
 const named = computed(() =>
   (current.value.campaigns || []).filter(row => row.name)
 );
+// Só clique de anúncio da Meta (#2338): visita direta ao site também chega sem nome, e não há texto a colar nela.
 const unnamedClicks = computed(() =>
   (current.value.campaigns || [])
     .filter(row => !row.name)
-    .reduce((total, row) => total + row.clicks, 0)
+    .reduce((total, row) => total + row.meta_clicks, 0)
 );
-// Quando chegou o último clique sem nome: é o que deixa a pessoa achar o anúncio sem o texto (#1068).
+// Quando chegou o último clique de anúncio sem nome: é o que deixa a pessoa achar o anúncio sem o texto (#1068).
 const lastUnnamed = computed(() => {
   const times = (current.value.campaigns || [])
-    .filter(row => !row.name && row.last_clicked_at)
-    .map(row => row.last_clicked_at)
+    .filter(row => !row.name && row.last_meta_clicked_at)
+    .map(row => row.last_meta_clicked_at)
     .sort();
   return relativeTime(times[times.length - 1], locale.value);
 });
