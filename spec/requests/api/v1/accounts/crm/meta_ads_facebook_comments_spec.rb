@@ -108,7 +108,8 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
 
     delete "#{path}/#{comment_id}", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
-    expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_facebook_comment').map { |a| a.audited_changes['acao'] })
+    # Ordem pelo id: sem `order` o Postgres não garante a ordem das linhas (falhou assim no #2356).
+    expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_facebook_comment').order(:id).map { |a| a.audited_changes['acao'] })
       .to eq(%w[hide delete])
   end
 
