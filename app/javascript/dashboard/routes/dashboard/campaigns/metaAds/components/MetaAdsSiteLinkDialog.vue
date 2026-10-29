@@ -113,6 +113,13 @@ defineExpose({ open });
           }}
         </span>
       </label>
+      <p
+        v-if="!inboxOptions.length"
+        data-site-link-no-whatsapp
+        class="m-0 text-sm text-n-amber-11"
+      >
+        {{ $t(`${KEY}.NO_WHATSAPP`) }}
+      </p>
       <div v-if="inboxOptions.length > 1" class="flex flex-col gap-1.5">
         <span class="text-sm font-medium text-n-slate-12">
           {{ $t(`${KEY}.WHATSAPP`) }}

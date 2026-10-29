@@ -27,6 +27,8 @@ const choice = ref({
   site: props.destinations.site ?? false,
 });
 const sitePages = ref([]);
+// Falha ao carregar não é "nenhuma página": oferecer ligar ali criaria uma página repetida.
+const loadFailed = ref(false);
 const saving = ref(false);
 const linkDialog = ref(null);
 // O que chegou de cada campanha (cliques, nomes) só vem para quem vê Links e QR codes (campaign_view).
@@ -54,11 +56,12 @@ const withCampaigns = async pages => {
 };
 
 const loadPages = async () => {
+  loadFailed.value = false;
   try {
     const { data } = await CrmMetaAdsConnectionAPI.sitePages();
     sitePages.value = await withCampaigns(data.payload || []);
   } catch {
-    sitePages.value = [];
+    loadFailed.value = true;
   }
 };
 
@@ -172,8 +175,27 @@ onMounted(loadPages);
         <span class="text-sm font-semibold text-n-slate-12">
           {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_LINKS') }}
         </span>
+        <div
+          v-if="loadFailed"
+          data-site-load-error
+          role="alert"
+          class="flex flex-col items-start gap-3"
+        >
+          <span class="text-sm text-n-ruby-11">
+            {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_LOAD_ERROR') }}
+          </span>
+          <Button
+            data-site-retry
+            class="!min-h-11 !rounded-xl"
+            icon="i-lucide-refresh-cw"
+            slate
+            faded
+            :label="$t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_RETRY')"
+            @click="loadPages"
+          />
+        </div>
         <ul
-          v-if="sitePages.length"
+          v-else-if="sitePages.length"
           class="flex flex-col gap-2 p-0 m-0 list-none"
         >
           <MetaAdsSitePage
@@ -195,7 +217,7 @@ onMounted(loadPages);
           />
         </div>
         <button
-          v-if="sitePages.length"
+          v-if="!loadFailed && sitePages.length"
           type="button"
           data-site-link-another
           class="self-start p-0 text-sm font-medium bg-transparent border-0 rounded-lg min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"

@@ -14,8 +14,9 @@ class Api::V1::Accounts::Crm::MetaAdsSitePagesController < Api::V1::Accounts::Cr
   before_action :ensure_manage, only: [:create]
 
   def index
-    pages = Ctwa::TrackedLink.where(account_id: Current.account.id, usage: 'website').order(id: :desc)
-    render json: { payload: pages.map { |page| page_payload(page) } }
+    pages = Ctwa::TrackedLink.where(account_id: Current.account.id, usage: 'website').order(id: :desc).to_a
+    blocked = Ctwa::TrackedLinkPayload.blocked_ids(pages.map(&:id))
+    render json: { payload: pages.map { |page| page_payload(page, signals_blocked: blocked.include?(page.id)) } }
   end
 
   def create
@@ -51,8 +52,8 @@ class Api::V1::Accounts::Crm::MetaAdsSitePagesController < Api::V1::Accounts::Cr
     Ctwa::TrackedLinkAttributes.for_create(account: Current.account, inbox: inbox, params: page_params.merge(usage: 'website'))
   end
 
-  def page_payload(page)
+  def page_payload(page, **website_options)
     { id: page.id, name: page.name, code: page.code, usage: page.usage, inbox_id: page.inbox_id }
-      .merge(Ctwa::TrackedLinkPayload.website(page))
+      .merge(Ctwa::TrackedLinkPayload.website(page, **website_options))
   end
 end

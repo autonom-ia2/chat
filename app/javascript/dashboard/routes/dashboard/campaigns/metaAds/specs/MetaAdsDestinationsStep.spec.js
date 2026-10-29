@@ -86,4 +86,23 @@ describe('MetaAdsDestinationsStep · página do site', () => {
     expect(CrmMetaAdsConnectionAPI.sitePages).toHaveBeenCalled();
     expect(wrapper.findAll('[data-site-page-stub]')).toHaveLength(1);
   });
+
+  // Falha ao carregar não é "nenhuma página": oferecer ligar ali criaria uma página repetida.
+  it('says the pages did not load and tries again, without offering to link a new one', async () => {
+    CrmMetaAdsConnectionAPI.sitePages.mockRejectedValueOnce(new Error('x'));
+    const wrapper = await mountStep();
+
+    expect(wrapper.find('[data-site-load-error]').exists()).toBe(true);
+    expect(wrapper.find('[data-site-empty]').exists()).toBe(false);
+    expect(wrapper.find('[data-site-link-open]').exists()).toBe(false);
+
+    CrmMetaAdsConnectionAPI.sitePages.mockResolvedValue({
+      data: { payload: [PAGE] },
+    });
+    await wrapper.get('[data-site-retry]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-site-load-error]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-site-page-stub]')).toHaveLength(1);
+  });
 });

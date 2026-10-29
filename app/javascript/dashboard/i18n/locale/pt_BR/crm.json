@@ -2719,6 +2719,8 @@
         "SITE_EMPTY": "Ligue a página do seu site para saber quem chegou pelo anúncio.",
         "SITE_CREATE": "Ligar a página do site",
         "SITE_CREATE_ANOTHER": "Ligar outra página",
+        "SITE_LOAD_ERROR": "Não deu para carregar as páginas do site agora.",
+        "SITE_RETRY": "Tentar de novo",
         "LINK_DIALOG": {
           "TITLE": "Ligar a página do site",
           "TEXT": "Cole o endereço da página para onde o anúncio leva.",
@@ -2731,7 +2733,8 @@
           "SAVE": "Ligar a página",
           "CANCEL": "Cancelar",
           "NAME": "Site {site}",
-          "ERROR": "Não deu para ligar a página agora. Tente de novo."
+          "ERROR": "Não deu para ligar a página agora. Tente de novo.",
+          "NO_WHATSAPP": "Para ligar a página, a conta precisa de um WhatsApp conectado. Conecte em Configurações › Caixas de Entrada."
         },
         "AD_TEXT_TITLE": "Cole este texto nos anúncios que levam para o site",
         "AD_TEXT_HINT": "Assim cada campanha aparece com o nome certo no CRM.",

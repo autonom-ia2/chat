@@ -65,7 +65,9 @@ RSpec.describe 'CRM meta_ads_connection site pages (#2338)', type: :request do
     expect(response).to have_http_status(:ok)
     page = response.parsed_body['payload'].sole
     expect(page).to include('name' => 'Site loja.com.br', 'usage' => 'website', 'inbox_id' => inbox.id)
-    expect(page.keys).not_to include('campaigns', 'clicks_count', 'conversations_count')
+    # Lista fechada: campo novo aqui passa pela sessão de Funções (sem contagem e sem R$).
+    expect(page.keys).to match_array(%w[id name code usage inbox_id allowed_origins last_signal_at signals_blocked signal_url
+                                        kit_url ad_url_params])
 
     post path, params: create_params, headers: user.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)
@@ -101,5 +103,17 @@ RSpec.describe 'CRM meta_ads_connection site pages (#2338)', type: :request do
     get "/api/v1/accounts/#{account.id}/crm/meta_ads_connection", headers: admin.create_new_auth_token, as: :json
 
     expect(response.parsed_body['site_pages_count']).to eq(1)
+  end
+
+  it 'diz qual página bateu o teto diário de avisos' do
+    stub_const('Ctwa::TrackedLink::SIGNALS_DAILY_LIMIT', 2)
+    full = website_link('Site cheio')
+    website_link('Site livre')
+    create_list(:ctwa_tracked_link_click, 2, account: account, tracked_link: full)
+
+    get path, headers: admin.create_new_auth_token, as: :json
+
+    blocked = response.parsed_body['payload'].to_h { |page| [page['name'], page['signals_blocked']] }
+    expect(blocked).to eq('Site cheio' => true, 'Site livre' => false)
   end
 end

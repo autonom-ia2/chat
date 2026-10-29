@@ -119,4 +119,16 @@ describe('MetaAdsSiteLinkDialog', () => {
     expect(wrapper.emitted('created')).toBeUndefined();
     wrapper.unmount();
   });
+
+  it('says a WhatsApp is needed first when the account has none, and does not save', async () => {
+    whatsapps.value = [];
+    const wrapper = await mountDialog();
+    await wrapper.get('[data-site-link-address]').setValue('loja.com.br');
+
+    expect(wrapper.get('[data-site-link-no-whatsapp]').text()).toContain(
+      `${KEY}.NO_WHATSAPP`
+    );
+    expect(confirm(wrapper).attributes('disabled')).toBeDefined();
+    wrapper.unmount();
+  });
 });
