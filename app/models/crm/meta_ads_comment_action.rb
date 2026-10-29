@@ -49,11 +49,11 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
     create!(attributes.merge(at: Time.current))
   end
 
-  # A resposta pública que a conta publicou no Instagram pelo painel (#2313). Ela já está no Instagram: falha ao gravar
-  # não vira erro (a pessoa responderia de novo); sem a linha, a resposta só aparece sem o "Você" quando a Graph não
-  # traz o `from`.
+  # A resposta pública que a conta publicou no Instagram pelo painel (#2313), no anúncio ou no post (`ad_id` nil, Seus
+  # posts #2305). Ela já está no Instagram: falha ao gravar não vira erro (a pessoa responderia de novo); sem a linha, a
+  # resposta só aparece sem o "Você" quando a Graph não traz o `from`.
   def self.record_reply(account:, ad_id:, reply_id:, user:)
-    record!(account: account, network: 'instagram', ad_id: ad_id.to_s, comment_id: reply_id.to_s, action: 'page_reply',
+    record!(account: account, network: 'instagram', ad_id: ad_id&.to_s, comment_id: reply_id.to_s, action: 'page_reply',
             actor: 'user', user: user)
   rescue StandardError => e
     Rails.logger.error("[MetaAdsCommentAction] resposta #{reply_id} sem registro: #{e.class.name}")

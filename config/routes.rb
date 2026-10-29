@@ -193,6 +193,14 @@ Rails.application.routes.draw do
           resources :canned_responses, only: [:index, :create, :update, :destroy]
           # Seus posts (#2302, F1 #2304): os números do perfil e os posts do Instagram e da Página das caixas.
           get :seus_posts, to: 'seus_posts#index'
+          # F2 (#2305): o post, os comentários dele e as ações (?perfil= em todos).
+          get 'seus_posts/posts/:post_id', to: 'seus_posts_comentarios#show'
+          get 'seus_posts/posts/:post_id/comments', to: 'seus_posts_comentarios#index'
+          post 'seus_posts/posts/:post_id/comments/:comment_id/reply', to: 'seus_posts_comentarios#reply'
+          post 'seus_posts/posts/:post_id/comments/:comment_id/private_reply', to: 'seus_posts_comentarios#private_reply'
+          post 'seus_posts/posts/:post_id/comments/:comment_id/private_reply/release', to: 'seus_posts_comentarios#release_private_reply'
+          post 'seus_posts/posts/:post_id/comments/:comment_id/hide', to: 'seus_posts_comentarios#hide'
+          delete 'seus_posts/posts/:post_id/comments/:comment_id', to: 'seus_posts_comentarios#destroy'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member

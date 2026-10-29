@@ -43,6 +43,16 @@ RSpec.describe SeusPosts::Leitura do
     expect(SeusPosts::NumerosInstagram).not_to have_received(:new)
   end
 
+  it 'com "esperando você" ligado (F2, #2305), quem não vê a caixa nunca recebe a contagem, nem 0' do
+    account.enable_features!('seus_posts_comentarios')
+    allow(SeusPosts::Esperando).to receive(:new)
+
+    resposta = described_class.new(account: account, perfil: nil, days: 30, viewer: viewer(member_with(%w[posts_view]))).perform
+
+    expect(resposta).to include(perfil: nil, perfis: [])
+    expect(SeusPosts::Esperando).not_to have_received(:new)
+  end
+
   it 'perfil de caixa que a pessoa não vê, pedido pelo id: 404, como o de outra conta' do
     leitura = described_class.new(account: account, perfil: "instagram-#{canal.id}", days: 30,
                                   viewer: viewer(member_with(%w[posts_view])))

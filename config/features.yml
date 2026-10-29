@@ -1026,3 +1026,15 @@
   display_name: Funções da equipe › lista e criação guiadas
   enabled: false
   column: feature_flags_ext_2
+
+# Seus posts F2 (#2305, épico #2302): os comentários de cada post do Instagram e da Página, com responder, mandar no
+# privado (só Instagram), esconder, mostrar de novo e apagar, e "esperando você" em cada post da lista. Ligada: o servidor
+# abre seus_posts/posts/:post_id e as ações (com a flag seus_posts também ligada). Desligada: 404 nesses endereços e a
+# lista sem "esperando você", como no F1. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2,
+# depois de funcoes_guiadas (#2308): posição 15 (valor 16384, 1 << 14), provisória. A posição real é a ordem na main na
+# hora da fila, e a Orquestração confirma antes de enfileirar. Nasce ligada no piloto (contas 1, 16 e 18), com OK do
+# Rodrigo.
+- name: seus_posts_comentarios
+  display_name: Seus posts › comentários de cada post
+  enabled: false
+  column: feature_flags_ext_2

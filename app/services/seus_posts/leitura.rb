@@ -10,6 +10,11 @@
 # lidos uma vez para os 90 dias e filtrados aqui pelo período. Cada leitura da Meta fica 15 minutos guardada; a última
 # boa fica um dia, para servir quando a Meta falhar ou passar do tempo (`stale: true`). Meta fora nos números: o perfil
 # vem `unavailable`; só nos posts: os números ficam e os posts vêm `posts_status: 'unavailable'`.
+#
+# F2 (#2305), com a flag `seus_posts_comentarios`: cada post vem com `waiting`, os comentários que esperam a conta
+# (SeusPosts::Esperando), sem os que já receberam o privado. Como o perfil só aparece para quem vê a caixa, quem não vê
+# nunca recebe a contagem. Sem a permissão de ler comentários ou com a Meta fora nessa leitura, `waiting` nulo (nunca 0)
+# e `waiting_status` diz o motivo; os números e os posts continuam.
 class SeusPosts::Leitura
   DIAS = Crm::MetaAds::Organico::Periodo::DIAS
   CACHE_TTL = 15.minutes
@@ -19,6 +24,7 @@ class SeusPosts::Leitura
   SEM_ESPERA = [Meta::AdsGraphClient::Prazo::TEMPO, 'espera'].freeze
   CACHE_VERSION = 'v2'.freeze
   NOME_TTL = 30.days
+  FLAG_COMENTARIOS = 'seus_posts_comentarios'.freeze
 
   class PerfilDesconhecido < StandardError; end
 
@@ -29,6 +35,18 @@ class SeusPosts::Leitura
     @viewer = viewer
   end
 
+  # A chave de uma leitura guardada desta conta.
+  def self.chave(account_id, sufixo)
+    "seus_posts:#{CACHE_VERSION}:#{account_id}:#{sufixo}"
+  end
+
+  # Depois de uma ação num comentário, "esperando você" do perfil é lido de novo na próxima vez. A última leitura boa
+  # também sai: com a Meta fora, ela traria de volta o comentário que acabou de ser cuidado.
+  def self.esquecer_esperando(account, canal)
+    chave = chave(account.id, "esperando:#{SeusPosts::Perfil.id_do(canal)}")
+    Rails.cache.delete_multi([chave, "#{chave}:ultima"])
+  end
+
   def perform
     canal = escolhido
     {
@@ -36,6 +54,19 @@ class SeusPosts::Leitura
       perfil: canal && perfil(canal),
       perfis: canais.map { |item| { id: id_do(item), network: rede(item), name: Rails.cache.read(chave_do_nome(item)) } }
     }
+  end
+
+  # O post `post_id` do perfil escolhido, da mesma lista guardada dos posts: { status:, post:, normal: }. Post que não
+  # está na lista (de outro perfil, ou de antes de SeusPosts::Posts::HISTORICO_DIAS) vem nil. Sem a lista, só o status.
+  def post(post_id)
+    canal = escolhido
+    lidos = posts_lidos(canal, SeusPosts::Orcamento.prazo)
+    return { status: lidos[:status] } unless lidos[:status] == 'ok'
+
+    achado = lidos[:posts].find { |item| item[:id].to_s == post_id.to_s }
+    achado && { status: 'ok', post: achado, normal: lidos[:normal] }
+  rescue Crm::MetaAds::Organico::Indisponivel
+    { status: 'unavailable' }
   end
 
   private
@@ -63,15 +94,56 @@ class SeusPosts::Leitura
 
   # Os posts do período, o normal e se a lista parou no teto de posts lidos.
   def ler_posts(canal, prazo)
-    lidos = guardado("posts:#{id_do(canal)}") { SeusPosts::Posts.para(canal, periodo: @periodo, prazo: prazo).perform }
+    lidos = posts_lidos(canal, prazo)
     return { posts_status: lidos[:status], posts: [], normal: nil } unless lidos[:status] == 'ok'
 
     inicio = @periodo.atual[:since]
-    { posts_status: 'ok', posts: lidos[:posts].select { |post| Time.zone.parse(post[:created_time].to_s).to_i >= inicio },
-      normal: lidos[:normal], posts_truncated: lidos[:truncated] == true, posts_stale: lidos[:stale] == true }
+    posts = lidos[:posts].select { |post| Time.zone.parse(post[:created_time].to_s).to_i >= inicio }
+    { posts_status: 'ok', normal: lidos[:normal], posts_truncated: lidos[:truncated] == true, posts_stale: lidos[:stale] == true,
+      **esperando(canal, posts, prazo) }
   rescue Crm::MetaAds::Organico::Indisponivel => e
     Rails.logger.warn("[SeusPosts] conta=#{@account.id} perfil=#{id_do(canal)} posts=unavailable code=#{e.codigo}")
     { posts_status: 'unavailable', posts: [], normal: nil }
+  end
+
+  def posts_lidos(canal, prazo)
+    guardado("posts:#{id_do(canal)}") { SeusPosts::Posts.para(canal, periodo: @periodo, prazo: prazo).perform }
+  end
+
+  # "Esperando você" (F2): sem a flag, os posts vêm como no F1.
+  def esperando(canal, posts, prazo)
+    return { posts: posts } unless @account.feature_enabled?(FLAG_COMENTARIOS)
+
+    lidos = guardado("esperando:#{id_do(canal)}", tambem: %w[needs_permission]) do
+      SeusPosts::Esperando.new(channel: canal, periodo: @periodo, prazo: prazo).perform
+    end
+    return sem_esperando(posts, lidos[:status]) unless lidos[:status] == 'ok'
+
+    privado = com_privado(canal, lidos[:pendentes])
+    { posts: posts.map { |post| post.merge(contagem(lidos[:pendentes][post[:id].to_s], privado)) }, waiting_status: 'ok' }
+  rescue Crm::MetaAds::Organico::Indisponivel => e
+    Rails.logger.warn("[SeusPosts] conta=#{@account.id} perfil=#{id_do(canal)} esperando=unavailable code=#{e.codigo}")
+    sem_esperando(posts, 'unavailable')
+  end
+
+  def sem_esperando(posts, status)
+    { posts: posts.map { |post| post.merge(waiting: nil) }, waiting_status: status }
+  end
+
+  # Post que não veio na leitura dos comentários (publicado depois dela): sem número, nunca 0.
+  def contagem(pendente, privado)
+    return { waiting: nil } if pendente.nil?
+
+    { waiting: (pendente[:ids] - privado).size, waiting_more: pendente[:mais] }
+  end
+
+  # Quem já recebeu o privado não espera mais. Lido do banco a cada vez: o privado de agora já conta.
+  def com_privado(canal, pendentes)
+    ids = pendentes.values.flat_map { |pendente| pendente[:ids] }
+    return [] if ids.empty?
+
+    Crm::MetaAdsCommentAction.where(account_id: @account.id, network: rede(canal), action: 'private_reply', comment_id: ids)
+                             .reject(&:abandoned?).map(&:comment_id)
   end
 
   # O nome do perfil na Meta (@usuario do Instagram, nome da Página), para a escolha do perfil no topo sem uma chamada
@@ -82,7 +154,7 @@ class SeusPosts::Leitura
   end
 
   def chave_do_nome(canal)
-    "seus_posts:#{CACHE_VERSION}:#{@account.id}:nome:#{id_do(canal)}"
+    self.class.chave(@account.id, "nome:#{id_do(canal)}")
   end
 
   def ler_numeros(canal, prazo)
@@ -91,15 +163,23 @@ class SeusPosts::Leitura
     end
   end
 
-  # Só o que veio ok fica guardado: "Libere…" lê de novo na próxima vez. Meta fora ou passou do tempo: a última leitura
-  # boa, marcada `stale`; sem ela, a falha sobe e a próxima tentativa espera FALHA_TTL.
-  def guardado(chave)
-    chave = "seus_posts:#{CACHE_VERSION}:#{@account.id}:#{chave}"
+  # Só o que veio ok fica guardado: "Libere…" lê de novo na próxima vez. Quem pede `tambem` guarda também outros
+  # estados por CACHE_TTL, nunca como última boa ("esperando você" sem permissão não chama a Meta a cada lista). Meta
+  # fora ou passou do tempo: a última leitura boa, marcada `stale`; sem ela, a falha sobe e a próxima tentativa espera
+  # FALHA_TTL.
+  def guardado(chave, tambem: [])
+    chave = self.class.chave(@account.id, chave)
     lido = Rails.cache.read(chave)
     return lido if lido
 
     recente_falhou!(chave)
-    yield.tap { |dados| guardar(chave, dados) if dados[:status] == 'ok' }
+    yield.tap do |dados|
+      if dados[:status] == 'ok'
+        guardar(chave, dados)
+      elsif tambem.include?(dados[:status])
+        Rails.cache.write(chave, dados, expires_in: CACHE_TTL)
+      end
+    end
   rescue Crm::MetaAds::Organico::Indisponivel => e
     # Falha da Meta (limite de uso, fora do ar): a próxima tentativa espera, com ou sem cópia antiga para servir. O
     # nosso teto de tempo ('tempo') não é falha da Meta, e 'espera' já é a própria espera.
@@ -130,24 +210,15 @@ class SeusPosts::Leitura
   end
 
   def canais
-    @canais ||= (com_caixa(Channel::Instagram.where(account_id: @account.id)) +
-                 com_caixa(Channel::FacebookPage.where(account_id: @account.id)))
-                .select { |canal| SeusPosts::Caixa.new(inbox: canal.inbox, viewer: @viewer).ve? }
-  end
-
-  # Só canal com caixa nesta conta: é a caixa que tem as conversas e que o "Libere o acesso" reautoriza.
-  # A Página entra mesmo com instagram_id: o Chatwoot o grava em toda Página com Instagram ligado (#2321).
-  def com_caixa(escopo)
-    escopo.where(id: Inbox.where(account_id: @account.id, channel_type: escopo.klass.name).select(:channel_id))
-          .includes(:inbox).order(:id).to_a
+    @canais ||= SeusPosts::Perfil.canais(@account).select { |canal| SeusPosts::Caixa.new(inbox: canal.inbox, viewer: @viewer).ve? }
   end
 
   def id_do(canal)
-    "#{rede(canal)}-#{canal.id}"
+    SeusPosts::Perfil.id_do(canal)
   end
 
   def rede(canal)
-    canal.is_a?(Channel::Instagram) ? 'instagram' : 'facebook'
+    SeusPosts::Perfil.rede(canal)
   end
 
   def zona

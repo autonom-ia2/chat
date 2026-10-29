@@ -1124,6 +1124,25 @@
     ],
     "sem_corpo": true
   },
+  "DELETE seus_posts/posts/:post_id/comments/:comment_id": {
+    "campos": {
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#destroy",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:82",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
   "DELETE sla_policies/:id": {
     "completo": true,
     "controller": "api/v1/accounts/sla_policies#destroy",
@@ -19668,6 +19687,97 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:9",
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:39"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/comments/:comment_id/hide": {
+    "campos": {
+      "hidden": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#hide",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:73",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:74",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/comments/:comment_id/private_reply": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#private_reply",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:57",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:181",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/comments/:comment_id/private_reply/release": {
+    "campos": {
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#release_private_reply",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:65",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/comments/:comment_id/reply": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#reply",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:51",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:181",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
     ],
     "sem_corpo": false
   },

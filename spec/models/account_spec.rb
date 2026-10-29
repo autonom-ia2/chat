@@ -296,12 +296,14 @@ RSpec.describe Account do
       # #2197: meta_ads_comentarios_facebook depois dela, 12 (1 << 11 = 2048), dada pela Orquestração (28/10).
       # #2283: crm_lista_acao depois dela, 13 (1 << 12 = 4096), dada pela Orquestração (28/10).
       # #2308: funcoes_guiadas depois dela, 14 (1 << 13 = 8192).
+      # #2305: seus_posts_comentarios depois dela, 15 (1 << 14 = 16384), provisória da Orquestração (29/10).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
         feature_meta_ads_formularios: 64, feature_meta_ads_comentarios_instagram: 128, feature_meta_ads_criar: 256,
         feature_seus_posts: 512, feature_campanhas_publico_por_conversa: 1024,
-        feature_meta_ads_comentarios_facebook: 2048, feature_crm_lista_acao: 4096, feature_funcoes_guiadas: 8192
+        feature_meta_ads_comentarios_facebook: 2048, feature_crm_lista_acao: 4096, feature_funcoes_guiadas: 8192,
+        feature_seus_posts_comentarios: 16_384
       )
     end
 

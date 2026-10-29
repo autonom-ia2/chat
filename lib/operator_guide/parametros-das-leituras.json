@@ -2247,6 +2247,21 @@
       "perfil"
     ]
   },
+  "seus_posts/posts/:post_id": {
+    "controller": "api/v1/accounts/seus_posts_comentarios#show",
+    "parametros": [
+      "comment_id",
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id/comments": {
+    "controller": "api/v1/accounts/seus_posts_comentarios#index",
+    "parametros": [
+      "after",
+      "comment_id",
+      "perfil"
+    ]
+  },
   "sla_policies": {
     "controller": "api/v1/accounts/sla_policies#index",
     "parametros": []
