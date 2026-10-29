@@ -19,8 +19,8 @@
 # - Ler e agir pela tela pedem ver a caixa do Messenger da Página (#2359, decisão A): o Channel::FacebookPage da conta
 #   com o mesmo page_id, e `inbox_access` (InboxPolicy#show? de quem abre) dizendo sim. Sem essa caixa na conta é
 #   `no_inbox` para todos, inclusive o administrador; com ela e sem ser dela, `not_inbox_member`. Nos dois casos a
-#   Página não é lida (nem token, nem comentários). Antes disso já foram lidos o anúncio (para achar a Página) e as
-#   permissões. O evento do webhook (`comment`) não passa por aqui: não há pessoa.
+#   Página não é lida (nem token, nem comentários) e as permissões da pessoa nem são conferidas; só o anúncio foi
+#   lido, para achar a Página. O evento do webhook (`comment`) não passa por aqui: não há pessoa.
 # - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197; é do #2212).
 #
 # Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_text`, `no_inbox`, `not_inbox_member`,
@@ -42,12 +42,12 @@ class Crm::MetaAds::FacebookComments
   end
 
   def list(ad_id)
-    return empty('needs_login') unless granted?(READ)
+    return empty('needs_login') unless @connection.own_token?
 
     post_id = post_id_for(ad_id)
     return empty('no_post') if post_id.blank?
 
-    refusal = inbox_refusal(post_id)
+    refusal = reading_refusal(post_id)
     return empty(refusal) if refusal
 
     client = page_client(post_id, remember: @can_manage)
@@ -65,10 +65,10 @@ class Crm::MetaAds::FacebookComments
   end
 
   def more(ad_id, cursor)
-    return empty('needs_login') unless granted?(READ)
+    return empty('needs_login') unless @connection.own_token?
 
     post_id = post_id!(ad_id)
-    refusal = inbox_refusal(post_id)
+    refusal = reading_refusal(post_id)
     return empty(refusal) if refusal
 
     client = page_client(post_id)
@@ -229,6 +229,11 @@ class Crm::MetaAds::FacebookComments
     data = graph!(yield(client))
     record_action(acao, comment_id, by)
     data
+  end
+
+  # A caixa vem antes da permissão de leitura: sem ela, o motivo é a caixa para todos, e entrar de novo não resolveria.
+  def reading_refusal(post_id)
+    inbox_refusal(post_id) || ('needs_login' unless granted?(READ))
   end
 
   # A caixa do Messenger da Página nesta conta, a mesma do webhook (Crm::MetaAds::FacebookFeed#inbox_id).

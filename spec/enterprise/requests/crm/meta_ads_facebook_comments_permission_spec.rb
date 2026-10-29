@@ -65,19 +65,18 @@ RSpec.describe 'Anúncios da Meta: comentários do Facebook com funções (#2197
 
   # #2359: leitura não escreve. Só quem pode gerir guarda a Página e assina o feed dela ao abrir os comentários.
   it 'meta_ads_view lê sem gravar a Página nem assinar o feed; meta_ads_manage assina' do
-    page = Crm::MetaAdsPage.find_by!(account: account, page_id: page_id)
-    page.update!(feed_receiving: false)
+    Crm::MetaAdsPage.where(account: account).delete_all
     stub_request(:get, meta_graph_url(post_id)).with(query: hash_including({}))
                                                .to_return(status: 200, headers: json, body: { comments: { data: [] } }.to_json)
 
     get path, headers: pessoa_com(%w[meta_ads_view]).create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
-    expect(page.reload.feed_receiving).to be(false)
+    expect(Crm::MetaAdsPage.where(account: account)).to be_empty
     expect(Crm::MetaAds::PageSubscription).not_to have_received(:new).with(page_id: page_id, access_token: 'PAGETOKEN123')
 
     get path, headers: pessoa_com(%w[meta_ads_manage]).create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
-    expect(page.reload.feed_receiving).to be(true)
+    expect(Crm::MetaAdsPage.find_by!(account: account, page_id: page_id).feed_receiving).to be(true)
   end
 
   # #2359 (decisão A): as três situações da caixa do Messenger da Página.

@@ -163,6 +163,23 @@ describe('MetaAdsComments (#2196)', () => {
       expect(card.find('[data-ad-comments-action]').exists()).toBe(false);
     });
 
+    it('a refusal for the Page inbox says why and reads the tab again', async () => {
+      const fb = adaptador(ready([comment('1')]));
+      fb.ocultar.mockRejectedValue(refused(403, 'not_inbox_member'));
+      const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }]);
+
+      await shell
+        .findComponent({ name: 'MetaAdsCommentRow' })
+        .props('acoes')
+        .ocultar(comment('1'), true);
+      await flushPromises();
+
+      expect(useAlert).toHaveBeenCalledWith(
+        said('FACEBOOK.ERRORS.NOT_INBOX_MEMBER')
+      );
+      expect(fb.listar).toHaveBeenCalledTimes(2);
+    });
+
     it('outside the Page inbox, explains it without any button', async () => {
       const shell = await mountShell(
         [{ key: 'FACEBOOK', adaptador: fbWith('not_inbox_member') }],

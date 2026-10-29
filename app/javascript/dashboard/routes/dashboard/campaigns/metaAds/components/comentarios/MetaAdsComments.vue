@@ -178,8 +178,9 @@ const more = async () => {
 // Toda ação: chama o adaptador, avisa e lê a aba de novo. Recusa da Meta vira aviso, sem tirar nada da tela: numa
 // resposta, o texto digitado continua na caixa (ACTION_ERROR); ao ocultar ou apagar, nada mudou (MANAGE_ERROR).
 // Quando o servidor diz o motivo (`ERRORS.<CODE>`: privado já enviado, prazo vencido, falta permissão…), o aviso diz
-// esse motivo; sem permissão, a aba é lida de novo e mostra o cartão de entrar. O texto da própria aba
-// (`<ABA>.ERRORS.<CODE>`, que diz a rede certa) vem antes do comum.
+// esse motivo; sem permissão ou sem a caixa da Página (#2359), a aba é lida de novo e mostra o cartão. O texto da
+// própria aba (`<ABA>.ERRORS.<CODE>`, que diz a rede certa) vem antes do comum.
+const REREAD = ['NEEDS_LOGIN', 'NO_INBOX', 'NOT_INBOX_MEMBER'];
 const errorKey = (aba, code, failure) =>
   [`${KEY}.${aba.key}.ERRORS.${code}`, `${KEY}.ERRORS.${code}`].find(
     key => code && te(key)
@@ -195,7 +196,7 @@ const act = async (call, done, failure = 'ACTION_ERROR') => {
   } catch (error) {
     const code = String(error?.response?.data?.error || '').toUpperCase();
     useAlert(t(errorKey(aba, code, failure)));
-    if (code === 'NEEDS_LOGIN' || code.startsWith('PRIVATE_REPLY'))
+    if (REREAD.includes(code) || code.startsWith('PRIVATE_REPLY'))
       await read(aba);
     return false;
   }

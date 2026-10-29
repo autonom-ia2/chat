@@ -119,6 +119,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
     it 'sem pages_read_user_content pede para entrar de novo, sem ler o post' do
       stub_permissions('pages_manage_engagement', 'ads_read')
+      stub_ad
 
       expect(build_service.list(ad_id)).to eq(status: 'needs_login', comments: [], total: 0, next_cursor: nil)
       expect(a_request(:get, meta_graph_url(post_id))).not_to have_been_made
@@ -166,6 +167,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
     it 'falha passageira ao conferir permissão é meta_unavailable, não pedido de entrar de novo' do
       stub_request(:get, meta_graph_url('me/permissions')).to_return(status: 500, body: meta_graph_error(1).to_json, headers: json)
+      stub_ad
       allow(Rails.logger).to receive(:warn)
 
       expect { build_service.list(ad_id) }.to raise_error(described_class::Error, 'meta_unavailable')
@@ -200,6 +202,7 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
     it 'mais comentários sem permissão: mesmo estado da primeira página' do
       stub_permissions('ads_read')
+      stub_ad
 
       expect(build_service.more(ad_id, 'CURSOR1')).to include(status: 'needs_login', comments: [])
     end
@@ -252,6 +255,15 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect(service.list(ad_id)).to eq(status: 'no_inbox', comments: [], total: 0, next_cursor: nil)
       expect { service.hide!(ad_id, comment_id, true) }.to raise_error(described_class::Error, 'no_inbox')
       expect(a_request(:get, meta_graph_url(page_id)).with(query: hash_including({}))).not_to have_been_made
+    end
+
+    it 'sem caixa, o motivo é a caixa mesmo sem a permissão de leitura, e as permissões nem são conferidas' do
+      Channel::FacebookPage.where(id: page_inbox.channel_id).delete_all
+      stub_permissions('ads_read')
+      stub_ad
+
+      expect(build_service.list(ad_id)).to include(status: 'no_inbox')
+      expect(a_request(:get, meta_graph_url('me/permissions'))).not_to have_been_made
     end
 
     it 'caixa do Messenger de outra Página não conta' do
