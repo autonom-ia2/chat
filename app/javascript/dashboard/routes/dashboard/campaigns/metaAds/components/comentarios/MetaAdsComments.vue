@@ -18,18 +18,19 @@ import MetaAdsCommentRow from './MetaAdsCommentRow.vue';
 // Uma aba pode trazer uma linha fixa no topo (`<ABA>.NOTE`): no Facebook, que a resposta é só pública.
 //
 // Ver é `meta_ads_view`; responder, ocultar, apagar e responder no privado só com `canManage` (`meta_ads_manage`).
+// Aba que não pode ser lida (`needs_login`, `not_connected`, `no_inbox`, `not_inbox_member`) mostra um cartão com o
+// motivo. Ler e agir pedem ver a caixa da rede (Instagram #2358, Facebook #2359): fora dela, `not_inbox_member`. O
+// botão do cartão é de quem pode resolver: entrar de novo, `canManage`; conectar a caixa que falta (`no_inbox`,
+// #2359), `canCreateInbox` (`inbox_manage`). A aba pode afinar quem entra com `podeEntrar(status)` (no Instagram,
+// conectar pede inbox_manage e entrar de novo pede também integration_manage, #2358). Os demais leem a quem pedir
+// (`<STATUS>_ASK`). Sem `<STATUS>_BUTTON` (fora da caixa), não há botão.
 // Apagar some com o comentário de vez: pede confirmação citando o texto. Depois de cada ação a aba é lida de novo.
-// No Instagram, ver e agir pedem também ver a caixa: sem ela, o servidor manda `not_inbox_member` e a aba diz isso no
-// lugar da lista (#2358).
-//
-// O cartão de entrar (`needs_login`, `not_connected`) só mostra o botão a quem consegue chegar ao fim do caminho: a
-// aba diz quem é em `podeEntrar(status)`; sem ele, basta `canManage`. Quem não consegue lê a quem pedir
-// (`<ABA>.<STATUS>_ASK`), em vez de cair num erro depois de clicar.
 const props = defineProps({
   adId: { type: String, required: true },
   // [{ key: 'INSTAGRAM' | 'FACEBOOK', adaptador, podeEntrar?(status) }]
   abas: { type: Array, required: true },
   canManage: { type: Boolean, default: false },
+  canCreateInbox: { type: Boolean, default: false },
 });
 
 const { t, te, locale } = useI18n();
@@ -64,16 +65,22 @@ const current = computed(
 );
 const result = computed(() => results.value[current.value?.key] || null);
 const status = computed(() => result.value?.status || 'ready');
-const STATE_CARDS = ['needs_login', 'not_connected', 'not_inbox_member'];
-const LOGIN_STATES = ['needs_login', 'not_connected'];
-const canEnter = computed(
-  () =>
-    props.canManage &&
-    LOGIN_STATES.includes(status.value) &&
-    (current.value.podeEntrar?.(status.value) ?? true)
+const BLOCKED = [
+  'needs_login',
+  'not_connected',
+  'no_inbox',
+  'not_inbox_member',
+];
+const blocked = computed(() => BLOCKED.includes(status.value));
+const statusKey = computed(
+  () => `${KEY}.${current.value?.key}.${status.value.toUpperCase()}`
 );
-const stateKey = suffix =>
-  `${KEY}.${current.value.key}.${status.value.toUpperCase()}${suffix}`;
+const canFix = computed(() => {
+  if (status.value === 'no_inbox') return props.canCreateInbox;
+  return props.canManage && (current.value.podeEntrar?.(status.value) ?? true);
+});
+const showFix = computed(() => canFix.value && te(`${statusKey.value}_BUTTON`));
+const showAsk = computed(() => !canFix.value && te(`${statusKey.value}_ASK`));
 const unknownAuthorKey = computed(
   () => `${KEY}.${current.value.key}.UNKNOWN_AUTHOR`
 );
@@ -174,8 +181,9 @@ const more = async () => {
 // Toda ação: chama o adaptador, avisa e lê a aba de novo. Recusa da Meta vira aviso, sem tirar nada da tela: numa
 // resposta, o texto digitado continua na caixa (ACTION_ERROR); ao ocultar ou apagar, nada mudou (MANAGE_ERROR).
 // Quando o servidor diz o motivo (`ERRORS.<CODE>`: privado já enviado, prazo vencido, falta permissão…), o aviso diz
-// esse motivo; sem permissão ou sem ver a caixa, a aba é lida de novo e mostra o cartão. O texto da própria aba
-// (`<ABA>.ERRORS.<CODE>`, que diz a rede certa) vem antes do comum.
+// esse motivo; sem permissão ou sem a caixa da Página (#2359), a aba é lida de novo e mostra o cartão. O texto da
+// própria aba (`<ABA>.ERRORS.<CODE>`, que diz a rede certa) vem antes do comum.
+const REREAD = ['NEEDS_LOGIN', 'NO_INBOX', 'NOT_INBOX_MEMBER'];
 const errorKey = (aba, code, failure) =>
   [`${KEY}.${aba.key}.ERRORS.${code}`, `${KEY}.ERRORS.${code}`].find(
     key => code && te(key)
@@ -191,10 +199,7 @@ const act = async (call, done, failure = 'ACTION_ERROR') => {
   } catch (error) {
     const code = String(error?.response?.data?.error || '').toUpperCase();
     useAlert(t(errorKey(aba, code, failure)));
-    if (
-      ['NEEDS_LOGIN', 'NOT_INBOX_MEMBER'].includes(code) ||
-      code.startsWith('PRIVATE_REPLY')
-    )
+    if (REREAD.includes(code) || code.startsWith('PRIVATE_REPLY'))
       await read(aba);
     return false;
   }
@@ -363,18 +368,25 @@ const tabCount = aba => {
           </div>
 
           <div
-            v-else-if="STATE_CARDS.includes(status)"
+            v-else-if="blocked"
             :data-ad-comments-state="status"
             class="flex flex-col items-start gap-3 rounded-xl bg-n-alpha-1 p-4"
           >
             <p class="m-0 text-base font-semibold text-n-slate-12">
-              {{ $t(stateKey('_TITLE')) }}
+              {{ $t(`${statusKey}_TITLE`) }}
             </p>
             <p class="m-0 text-sm text-n-slate-11">
-              {{ $t(stateKey(''), { username: result.account?.username }) }}
+              {{ $t(statusKey, { username: result.account?.username }) }}
+            </p>
+            <p
+              v-if="showAsk"
+              data-ad-comments-ask
+              class="m-0 text-sm text-n-slate-11"
+            >
+              {{ $t(`${statusKey}_ASK`) }}
             </p>
             <button
-              v-if="canEnter"
+              v-if="showFix"
               type="button"
               :data-ad-comments-action="status"
               class="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-lg border-0 bg-n-brand px-4 text-sm font-medium text-white hover:bg-n-brand/90"
@@ -385,20 +397,13 @@ const tabCount = aba => {
                 class="size-4"
                 aria-hidden="true"
               />
-              {{ $t(stateKey('_BUTTON')) }}
+              {{ $t(`${statusKey}_BUTTON`) }}
             </button>
             <p
-              v-if="canEnter && $te(stateKey('_AFTER'))"
+              v-if="showFix && $te(`${statusKey}_AFTER`)"
               class="m-0 text-sm text-n-slate-11"
             >
-              {{ $t(stateKey('_AFTER')) }}
-            </p>
-            <p
-              v-else-if="!canEnter && $te(stateKey('_ASK'))"
-              data-ad-comments-ask
-              class="m-0 text-sm text-n-slate-11"
-            >
-              {{ $t(stateKey('_ASK')) }}
+              {{ $t(`${statusKey}_AFTER`) }}
             </p>
           </div>
 

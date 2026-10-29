@@ -2,7 +2,8 @@
 # opção a, 27/10) e só a pessoa liga, no "Ativar anúncio".
 #
 # - `ensure_paused!`: depois de criar, relê os três; o que não vier PAUSED é pausado na hora e fica na Auditoria
-#   (`meta_ads_create_repaused`). Sem conseguir pausar, erro: o criar desfaz tudo.
+#   (`meta_ads_create_repaused`). Sem conseguir pausar, erro: o criar desfaz tudo. Devolve o que releu, e o criar diz
+#   por ele se o anúncio já está em análise da Meta (#2354).
 # - `activate!`: liga campanha, grupo e anúncio, nesta ordem, relendo cada um. Se um falhar, volta os já ligados para
 #   PAUSED e sobe o erro. Se nem voltar der, `meta_partial` com os ids que ficaram ligados, e a Auditoria registra
 #   (`meta_ads_activate_partial`). Se a Meta ligou os três e só a gravação local falhar, é sucesso: o erro vai para o
@@ -22,16 +23,17 @@ class Crm::MetaAds::Creation::Levels
     @user = user
   end
 
+  # Devolve como cada nível ficou ({ 'ad' => { 'status', 'effective_status' }, … }; {} quando não leu). Nível pausado
+  # na hora é relido de novo: a situação de entrega depois de pausar é outra.
   def ensure_paused!(record)
-    COLUMNS.each do |level, column|
+    COLUMNS.to_h do |level, column|
       id = record.public_send(column)
       reread = @client.object_status(id)
-      next if reread.ok && reread.data['status'] == 'PAUSED'
-
-      result = @client.update_object(id, status: 'PAUSED')
-      audit!(REPAUSED_ACTION, 'level' => level, 'object_id' => id, 'paused' => result.ok,
-                              'status' => reread.ok ? reread.data['status'] : 'unread')
-      raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
+      unless reread.ok && reread.data['status'] == 'PAUSED'
+        repause!(level, id, reread)
+        reread = @client.object_status(id)
+      end
+      [level, reread.ok ? reread.data : {}]
     end
   end
 
@@ -61,6 +63,13 @@ class Crm::MetaAds::Creation::Levels
   end
 
   private
+
+  def repause!(level, id, reread)
+    result = @client.update_object(id, status: 'PAUSED')
+    audit!(REPAUSED_ACTION, 'level' => level, 'object_id' => id, 'paused' => result.ok,
+                            'status' => reread.ok ? reread.data['status'] : 'unread')
+    raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
+  end
 
   def mark_activated(record)
     record.update!(activated_at: Time.current)

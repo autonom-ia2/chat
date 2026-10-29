@@ -183,7 +183,6 @@
       "REPORT_MANAGE": "See the service reports",
       "DESEMPENHO_VIEW": "See the team performance",
       "CANNED_RESPONSE_MANAGE": "Create and change canned responses",
-      "KNOWLEDGE_BASE_MANAGE": "Write the Help Center articles",
       "CAMPAIGN_MANAGE": "Create and change campaigns",
       "CAMPAIGN_SEND": "Send campaigns",
       "WHATSAPP_TEMPLATES_MANAGE": "Create and change WhatsApp templates",
@@ -215,7 +214,6 @@
       "ROBOS": "AI bots",
       "COTACOES": "Quotes",
       "RELATORIOS": "Reports",
-      "CENTRAL_DE_AJUDA": "Help Center",
       "CONFIGURACOES": "Settings"
     },
     "CURTO": {
@@ -247,10 +245,6 @@
         "NOME": "Contacts",
         "CURTO": "contacts",
         "NA_FRASE": "contacts"
-      },
-      "KNOWLEDGE_BASE": {
-        "NOME": "Help Center (articles for customers)",
-        "NA_FRASE": "the Help Center"
       },
       "REPORTS": {
         "NOME": "Reports",

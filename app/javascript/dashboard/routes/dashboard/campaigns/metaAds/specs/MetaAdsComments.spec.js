@@ -48,9 +48,9 @@ const refused = (status, code) =>
   });
 
 let wrapper;
-const mountShell = async abas => {
+const mountShell = async (abas, extra = {}) => {
   wrapper = mount(MetaAdsComments, {
-    props: { adId: '120', abas, canManage: true },
+    props: { adId: '120', abas, canManage: true, ...extra },
     global: { stubs: { Spinner: true, Dialog: true } },
   });
   await flushPromises();
@@ -130,6 +130,67 @@ describe('MetaAdsComments (#2196)', () => {
     await flushPromises();
 
     expect(useAlert).toHaveBeenCalledWith(said('LOGIN_ADMIN'));
+  });
+
+  // #2359 (decisão A): sem a caixa do Messenger da Página, ninguém lê; o botão de conectar é de quem cria caixas.
+  describe('Facebook Page inbox (#2359)', () => {
+    const fbWith = status =>
+      adaptador({ status, comments: [], total: 0, next_cursor: null });
+
+    it('without the Page inbox, offers to connect it to whoever can create inboxes', async () => {
+      const fb = fbWith('no_inbox');
+      const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }], {
+        canCreateInbox: true,
+      });
+
+      const card = shell.find('[data-ad-comments-state="no_inbox"]');
+      expect(card.text()).toContain(said('FACEBOOK.NO_INBOX_TITLE'));
+      expect(card.text()).toContain(said('FACEBOOK.NO_INBOX'));
+      expect(card.text()).not.toContain(said('FACEBOOK.NO_INBOX_ASK'));
+      await card.find('[data-ad-comments-action="no_inbox"]').trigger('click');
+
+      expect(fb.entrar).toHaveBeenCalledWith('no_inbox', '120');
+    });
+
+    it('without the Page inbox and without inbox permission, says who can connect it', async () => {
+      const shell = await mountShell(
+        [{ key: 'FACEBOOK', adaptador: fbWith('no_inbox') }],
+        { canCreateInbox: false }
+      );
+
+      const card = shell.find('[data-ad-comments-state="no_inbox"]');
+      expect(card.text()).toContain(said('FACEBOOK.NO_INBOX_ASK'));
+      expect(card.find('[data-ad-comments-action]').exists()).toBe(false);
+    });
+
+    it('a refusal for the Page inbox says why and reads the tab again', async () => {
+      const fb = adaptador(ready([comment('1')]));
+      fb.ocultar.mockRejectedValue(refused(403, 'not_inbox_member'));
+      const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }]);
+
+      await shell
+        .findComponent({ name: 'MetaAdsCommentRow' })
+        .props('acoes')
+        .ocultar(comment('1'), true);
+      await flushPromises();
+
+      expect(useAlert).toHaveBeenCalledWith(
+        said('FACEBOOK.ERRORS.NOT_INBOX_MEMBER')
+      );
+      expect(fb.listar).toHaveBeenCalledTimes(2);
+    });
+
+    it('outside the Page inbox, explains it without any button', async () => {
+      const shell = await mountShell(
+        [{ key: 'FACEBOOK', adaptador: fbWith('not_inbox_member') }],
+        { canCreateInbox: true }
+      );
+
+      const card = shell.find('[data-ad-comments-state="not_inbox_member"]');
+      expect(card.text()).toContain(said('FACEBOOK.NOT_INBOX_MEMBER_TITLE'));
+      expect(card.text()).toContain(said('FACEBOOK.NOT_INBOX_MEMBER'));
+      expect(card.find('[data-ad-comments-action]').exists()).toBe(false);
+    });
   });
 
   // #2358: no Instagram, ver e agir pedem ver a caixa; o servidor manda `not_inbox_member` no lugar da lista.

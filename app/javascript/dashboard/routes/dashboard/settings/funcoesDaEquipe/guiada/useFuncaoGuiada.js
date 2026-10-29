@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
+import { KEYS_OUTSIDE_MATRIX } from '../../customRoles/permissionMatrix';
 import { PRONTAS, cartaoPronto } from '../cartaoPronto';
 import { ALTERAR_NOVA, DUPLICAR_NOVA, LISTA_NOVA } from '../listaPelaFlag';
 import { motivoDaTrava } from '../motivoDaTrava';
@@ -103,13 +104,17 @@ export function useFuncaoGuiada() {
       });
       return;
     }
-    // A cópia corta o que quem monta não pode dar, e avisa (especificação 5.C).
-    deFora.value = funcao.permissions.filter(chave =>
+    // A cópia corta o que quem monta não pode dar, e avisa (especificação 5.C). As chaves que nenhuma tela de função
+    // mostra (KEYS_OUTSIDE_MATRIX, #2352) também saem, mas sem aviso: não há área para nomear.
+    const cortadas = funcao.permissions.filter(chave =>
       motivoDaTrava(giver.value, chave)
+    );
+    deFora.value = cortadas.filter(
+      chave => !KEYS_OUTSIDE_MATRIX.includes(chave)
     );
     base.value = funcao.name;
     comecar({
-      chaves: funcao.permissions.filter(chave => !deFora.value.includes(chave)),
+      chaves: funcao.permissions.filter(chave => !cortadas.includes(chave)),
       nomeNovo: primeiroNomeLivre(funcao.name, funcoes.value),
       descricaoNova: funcao.description || '',
       proxima: 'confira',

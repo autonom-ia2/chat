@@ -3102,6 +3102,9 @@
           "PARTIAL": "Part of the ad was left on at Meta and we couldn't pause it back. Check Meta Ads Manager.",
           "PAUSE_PARTIAL": "We couldn't pause everything: part of the ad may still be on at Meta. Check Meta Ads Manager.",
           "IN_PROGRESS": "This ad is already being changed. Wait a moment and look again.",
+          "IN_REVIEW": "Meta is still checking this ad. You can turn it on once it finishes, usually within 1 day.",
+          "IN_REVIEW_NOTE": "Meta is checking this ad. It usually takes up to 1 day.",
+          "IN_REVIEW_NOTE_HINT": "You can turn it on once Meta finishes.",
           "ACTIVATE_SPEND_END": "When you turn it on, the ad starts spending {value} per day, until {end}. In total, at most {total}.",
           "ACTIVATE_SPEND_NO_END": "When you turn it on, the ad starts spending {value} per day, with no end date. It only stops when you pause it.",
           "ACTIVATE_SPEND_BUTTON": "Turn on and start spending",
@@ -3223,10 +3226,10 @@
             "NOT_CONNECTED_TITLE": "This ad also runs on Instagram",
             "NOT_CONNECTED": "Instagram {'@'}{username} isn't connected to Chat2You yet. Connect it to see and reply to comments here.",
             "NOT_CONNECTED_BUTTON": "Connect Instagram",
-            "NOT_CONNECTED_ASK": "Ask an account administrator to connect this Instagram.",
+            "NOT_CONNECTED_ASK": "Whoever manages the account's inboxes can connect this Instagram.",
             "NEEDS_LOGIN_ASK": "Ask an account administrator to log in with Instagram again.",
             "NOT_INBOX_MEMBER_TITLE": "These comments stay with the Instagram team",
-            "NOT_INBOX_MEMBER": "Only people who handle the {'@'}{username} Instagram inbox can see and answer these comments. Ask an account administrator to add you to it.",
+            "NOT_INBOX_MEMBER": "Only people who handle the {'@'}{username} Instagram inbox can see and answer these comments. Ask whoever manages the account's inboxes to add you.",
             "NEEDS_LOGIN_AFTER": "After logging in, you'll come back to this ad."
           },
           "FACEBOOK": {
@@ -3238,10 +3241,18 @@
             "NEEDS_LOGIN_BUTTON": "Go to Connection",
             "NOTE": "On Facebook, reply in public. To talk privately, ask the person to message you on WhatsApp.",
             "NEEDS_LOGIN_AFTER": "After logging in, you'll come back to this ad.",
+            "NO_INBOX_TITLE": "This Page isn't on Messenger",
+            "NO_INBOX": "Connect this Page to Messenger to see the comments.",
+            "NO_INBOX_BUTTON": "Connect to Messenger",
+            "NO_INBOX_ASK": "Whoever manages the account's inboxes can connect it.",
+            "NOT_INBOX_MEMBER_TITLE": "You're not in this Page's inbox",
+            "NOT_INBOX_MEMBER": "This Page's comments are for the people in its Messenger inbox. Ask whoever manages the account's inboxes to add you.",
             "ERRORS": {
               "NEEDS_LOGIN": "Comment access is missing. Log in with Facebook again under Connection.",
               "META_UNAVAILABLE": "Facebook didn't answer. Try again in a minute.",
-              "META_REFUSED": "Facebook refused this action. Reload the comments and try again."
+              "META_REFUSED": "Facebook refused this action. Reload the comments and try again.",
+              "NO_INBOX": "This Page isn't connected to Messenger. Connect it to manage the comments.",
+              "NOT_INBOX_MEMBER": "You're not in this Page's Messenger inbox."
             }
           },
           "LOGIN_ADMIN": "Ask an account administrator to log in with Instagram again.",

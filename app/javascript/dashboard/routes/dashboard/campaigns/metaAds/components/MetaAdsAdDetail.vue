@@ -302,11 +302,13 @@ const loginPermissions = Object.fromEntries(
     usePermissionGranted(key),
   ])
 );
+// Conectar a Página como caixa do Messenger, quando a conta não tem (comentários do Facebook, #2359).
+const canCreateInbox = loginPermissions.inbox_manage;
 
 // Comentários do anúncio, uma aba por rede, cada uma atrás da própria flag: Instagram (#2196) e Facebook (#2197).
 // Sem nenhuma aba ligada, a seção não aparece.
 // O botão de entrar no Instagram segue as permissões do caminho (comentariosInstagram.podeEntrar, #2358). O do
-// Facebook leva à Conexão, que já é de quem gere os anúncios.
+// Facebook leva à Conexão, que já é de quem gere os anúncios, ou a conectar a caixa da Página (canCreateInbox, #2359).
 const COMMENT_TABS = [
   {
     key: 'INSTAGRAM',
@@ -474,6 +476,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         :ad-id="adId"
         :abas="commentTabs"
         :can-manage="canManage"
+        :can-create-inbox="canCreateInbox"
       />
     </template>
 
@@ -831,6 +834,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         :ad-id="adId"
         :abas="commentTabs"
         :can-manage="canManage"
+        :can-create-inbox="canCreateInbox"
       />
 
       <div

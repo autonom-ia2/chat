@@ -7,6 +7,10 @@ import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { lerGestao } from '../gestaoDoAnuncio';
 import comentariosInstagram from '../components/comentarios/comentariosInstagram';
 import MetaAdsAdStatus from '../components/MetaAdsAdStatus.vue';
+import MetaAdsComments from '../components/comentarios/MetaAdsComments.vue';
+
+// Permissões negadas no teste; o resto passa (administrador).
+const { negadas } = vi.hoisted(() => ({ negadas: new Set() }));
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: { panelAd: vi.fn(), adBudget: vi.fn() },
@@ -17,10 +21,8 @@ vi.mock('dashboard/composables/store', () => ({
   useMapGetter: () =>
     computed(() => (_accountId, flag) => Boolean(flags.value[flag])),
 }));
-// Permissões que a pessoa não tem (#2358: o botão de entrar no Instagram).
-const denied = ref([]);
 vi.mock('dashboard/composables/useCanManage', () => ({
-  usePermissionGranted: key => computed(() => !denied.value.includes(key)),
+  usePermissionGranted: key => computed(() => !negadas.has(key)),
 }));
 vi.mock('../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
 // Comentários (#2196): o adaptador do Instagram responde sem chamar a API.
@@ -116,7 +118,6 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     flags.value = {};
-    denied.value = [];
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(AD));
   });
 
@@ -412,35 +413,48 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
   });
 
-  // #2358: entrar de novo com o Instagram pede integration_manage e inbox_manage; sem uma delas, sem o botão.
-  it('shows the Instagram login button only with integration_manage and inbox_manage (#2358)', async () => {
-    lerGestao.mockResolvedValue(null);
-    comentariosInstagram.listar.mockResolvedValue({
-      status: 'needs_login',
-      account: { username: 'lojaexemplo' },
-      comments: [],
-      total: 0,
-      next_cursor: null,
-      inbox_id: 7,
-    });
+  // #2358: entrar de novo com o Instagram pede integration_manage e inbox_manage; a aba recebe essa régua ligada às
+  // permissões reais.
+  it('wires the Instagram login rule to integration_manage and inbox_manage (#2358)', async () => {
     flags.value = {
       meta_ads_gestao: true,
       meta_ads_comentarios_instagram: true,
     };
 
-    const loginButton = async deniedKeys => {
-      denied.value = deniedKeys;
+    const canLogIn = async (deniedKeys, status) => {
+      deniedKeys.forEach(key => negadas.add(key));
       const wrapper = await mountDetail();
-      const shown = wrapper
-        .find('[data-ad-comments-action="needs_login"]')
-        .exists();
+      const [instagram] = wrapper.findComponent(MetaAdsComments).props('abas');
+      const allowed = instagram.podeEntrar(status);
+      negadas.clear();
       wrapper.unmount();
-      return shown;
+      return allowed;
     };
 
-    expect(await loginButton(['integration_manage'])).toBe(false);
-    expect(await loginButton(['inbox_manage'])).toBe(false);
-    expect(await loginButton([])).toBe(true);
+    expect(await canLogIn([], 'needs_login')).toBe(true);
+    expect(await canLogIn(['integration_manage'], 'needs_login')).toBe(false);
+    expect(await canLogIn(['inbox_manage'], 'needs_login')).toBe(false);
+    expect(await canLogIn(['integration_manage'], 'not_connected')).toBe(true);
+  });
+
+  it('lets only who has inbox_manage connect the Page to Messenger (#2359)', async () => {
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+    expect(
+      (await mountDetail())
+        .findComponent(MetaAdsComments)
+        .props('canCreateInbox')
+    ).toBe(true);
+
+    negadas.add('inbox_manage');
+    const sem = await mountDetail();
+    negadas.clear();
+    expect(sem.findComponent(MetaAdsComments).props()).toMatchObject({
+      canCreateInbox: false,
+      canManage: true,
+    });
   });
 
   // #2335 — anúncio que nunca rodou ou parou antes do período: sem números, mas a conexão lê o anúncio ao vivo.

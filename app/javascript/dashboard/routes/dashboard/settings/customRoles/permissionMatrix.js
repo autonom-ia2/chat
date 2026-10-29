@@ -16,6 +16,14 @@ import {
   TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
 
+// Chaves do servidor que nenhuma tela de função mostra (#2352). knowledge_base_* guardam o portal de artigos para
+// clientes do Chatwoot, que não está no menu do produto; a Central de Ajuda da plataforma é aberta a todos e não
+// depende de chave. Funções que já têm essas chaves continuam com elas: o setLevel só mexe nas chaves da área que muda.
+export const KEYS_OUTSIDE_MATRIX = [
+  'knowledge_base_view',
+  'knowledge_base_manage',
+];
+
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
 // Conversas: só olha (conversation_view, #1800), ou atende as próprias (LIMITED) ou todas (ALL). Na tela, as duas
 // últimas dividem a posição "Atender" e a escolha entre elas aparece embaixo.
@@ -91,14 +99,6 @@ export const MODULE_GROUPS = [
         // Exportar e excluir são chaves próprias (#1845). Excluir só aparece para quem edita.
         extras: ['contact_export', 'contact_delete'],
         manageOnlyExtras: ['contact_delete'],
-      },
-      {
-        key: 'KNOWLEDGE_BASE',
-        icon: 'i-lucide-book-open',
-        levels: {
-          view: 'knowledge_base_view',
-          manage: 'knowledge_base_manage',
-        },
       },
       {
         key: 'REPORTS',
@@ -559,7 +559,6 @@ export const PRESETS = {
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.LIMITED,
       CONTACTS: LEVELS.VIEW,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       CRM: LEVELS.MANAGE,
     }),
     // "Pegar da fila".
@@ -569,7 +568,6 @@ export const PRESETS = {
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.ALL,
       CONTACTS: LEVELS.MANAGE,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       REPORTS: LEVELS.VIEW,
       CANNED_RESPONSES: LEVELS.MANAGE,
       CRM: LEVELS.MANAGE,
@@ -642,7 +640,6 @@ export const PRESETS = {
   READ_ONLY: () => [
     ...build({
       CONTACTS: LEVELS.VIEW,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       REPORTS: LEVELS.VIEW,
       CRM: LEVELS.VIEW,
       AUTONOMIA: LEVELS.VIEW,

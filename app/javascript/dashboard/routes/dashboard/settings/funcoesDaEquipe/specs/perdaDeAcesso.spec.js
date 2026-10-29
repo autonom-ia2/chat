@@ -30,10 +30,10 @@ describe('perdasDeAcesso', () => {
   });
 
   it('a área que só olhava e some sem capacidade própria sai como área', () => {
-    const atendente = PRESETS.AGENT();
+    const supervisor = PRESETS.SUPERVISOR();
     expect(
-      perdasDeAcesso(atendente, semChave(atendente, 'knowledge_base_view'))
-    ).toEqual([{ area: 'KNOWLEDGE_BASE' }]);
+      perdasDeAcesso(supervisor, semChave(supervisor, 'automation_view'))
+    ).toEqual([{ area: 'AUTOMATIONS' }]);
   });
 
   it('Canais de Mexer para Ver: perde mexer nos canais, sem repetir a área', () => {
