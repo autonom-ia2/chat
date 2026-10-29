@@ -16,7 +16,7 @@ RSpec.describe Crm::MetaAds::AdManagement do
 
   def stub_ad(account_id: connection.ad_account_id, status: 'ACTIVE', effective: 'ACTIVE', story: post_id, http: 200)
     body = if http == 200
-             { id: ad_id, account_id: account_id, status: status, effective_status: effective,
+             { id: ad_id, name: 'Capa', account_id: account_id, status: status, effective_status: effective,
                creative: { id: '9', effective_object_story_id: story }.compact }
            else
              meta_graph_error(http == 500 ? 1 : 100)
@@ -39,13 +39,17 @@ RSpec.describe Crm::MetaAds::AdManagement do
   end
 
   describe '#payload' do
+    it 'pede o nome do anúncio à Meta (o detalhe sem números não tem outro lugar de onde tirar, #2335)' do
+      expect(Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS.split(',')).to include('name')
+    end
+
     it 'traz a situação, a entrega, o post da Página e se pode mudar' do
       stub_permissions('ads_read', 'ads_management')
       stub_ad(effective: 'ADSET_PAUSED')
       stub_post
 
       expect(described_class.new(connection).payload(ad_id)).to eq(
-        status: 'ACTIVE', effective_status: 'ADSET_PAUSED', mode: 'token', can_change: true, needs_login: false,
+        name: 'Capa', status: 'ACTIVE', effective_status: 'ADSET_PAUSED', mode: 'token', can_change: true, needs_login: false,
         post: { message: 'Seu orçamento em 2 minutos.', created_time: '2026-10-01T17:20:00+0000',
                 permalink_url: 'https://www.facebook.com/p/1', page_name: 'Loja Exemplo', reactions: 128, comments: 14, shares: 6 }
       )
