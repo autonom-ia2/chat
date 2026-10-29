@@ -207,6 +207,9 @@ export const MODULE_GROUPS = [
         key: 'POSTS',
         icon: 'i-lucide-layout-grid',
         levels: { view: 'posts_view', manage: 'posts_manage' },
+        // Responder, esconder e o privado chegam na F2 (#2305); até lá nenhum endpoint confere posts_manage, e as telas
+        // não oferecem "Pode mexer" (#2360). Função que já tem a chave continua vendo o nível, para poder baixar.
+        laterLevels: [LEVELS.MANAGE],
       },
     ],
   },
@@ -339,12 +342,17 @@ const withoutKeys = (permissions, keys) =>
 
 const unique = permissions => [...new Set(permissions)];
 
-export const levelOptions = module => {
+// `current`: o nível que a função já tem. Um nível que a área ainda não oferece (laterLevels) só aparece para ela.
+export const levelOptions = (module, current = null) => {
   if (module.type === 'conversations')
     return Object.values(CONVERSATION_LEVELS);
+  const later = module.laterLevels || [];
   return [
     LEVELS.NONE,
-    ...[LEVELS.VIEW, LEVELS.MANAGE].filter(level => module.levels[level]),
+    ...[LEVELS.VIEW, LEVELS.MANAGE].filter(
+      level =>
+        module.levels[level] && (!later.includes(level) || level === current)
+    ),
   ];
 };
 
@@ -365,11 +373,11 @@ export const slotLevel = (module, level) =>
     ? LEVELS.MANAGE
     : level;
 
-export const levelSlots = module => {
+export const levelSlots = (module, current = null) => {
   if (module.type === 'conversations')
     return [LEVELS.NONE, LEVELS.VIEW, LEVELS.MANAGE];
   const slots = [null, null, null];
-  levelOptions(module).forEach(level => {
+  levelOptions(module, current).forEach(level => {
     slots[SLOT_BY_LEVEL[level]] = level;
   });
   return slots;

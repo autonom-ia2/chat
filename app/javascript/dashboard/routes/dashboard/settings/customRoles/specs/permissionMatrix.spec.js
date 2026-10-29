@@ -8,6 +8,7 @@ import {
   CONVERSATION_LEVELS,
   getLevel,
   setLevel,
+  levelOptions,
   levelSlots,
   slotLevel,
   visibleExtras,
@@ -558,6 +559,29 @@ describe('permissionMatrix', () => {
       'campaign_view',
     ]);
     expect(permissions).toEqual(['knowledge_base_view', 'campaign_manage']);
+  });
+
+  // #2360: "Pode mexer" de Seus posts só chega com a F2 (#2305).
+  describe('levels offered later', () => {
+    const posts = moduleByKey('POSTS');
+
+    it('does not offer posts edit to a new role', () => {
+      expect(levelOptions(posts)).toEqual([LEVELS.NONE, LEVELS.VIEW]);
+      expect(levelSlots(posts)).toEqual([LEVELS.NONE, LEVELS.VIEW, null]);
+    });
+
+    it('still shows posts edit to a role that already has it, so it can be lowered', () => {
+      expect(levelOptions(posts, LEVELS.MANAGE)).toEqual([
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        LEVELS.MANAGE,
+      ]);
+      expect(getLevel(posts, ['posts_manage'])).toBe(LEVELS.MANAGE);
+    });
+
+    it('keeps offering edit on the other modules', () => {
+      expect(levelOptions(moduleByKey('CAMPAIGNS'))).toContain(LEVELS.MANAGE);
+    });
   });
 
   describe('level slots', () => {

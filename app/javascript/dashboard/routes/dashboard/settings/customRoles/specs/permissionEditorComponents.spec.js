@@ -43,6 +43,18 @@ describe('PermissionRow', () => {
     expect(checked(wrapper).text()).toBe('CUSTOM_ROLE.MATRIX.BASELINE.USE');
   });
 
+  // #2360: Seus posts não oferece editar até a F2 (#2305), salvo para quem já tem.
+  it('leaves the posts edit position empty for a new role', () => {
+    expect(radios(mountRow('POSTS', ['posts_view']))).toHaveLength(2);
+  });
+
+  it('keeps posts edit selectable for a role that already has it', () => {
+    const wrapper = mountRow('POSTS', ['posts_manage']);
+
+    expect(radios(wrapper)).toHaveLength(3);
+    expect(checked(wrapper).text()).toBe('CUSTOM_ROLE.MATRIX.LEVELS.MANAGE');
+  });
+
   it('emits the chosen level', async () => {
     const wrapper = mountRow('INBOXES', []);
 
