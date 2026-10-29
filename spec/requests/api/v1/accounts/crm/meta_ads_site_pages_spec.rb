@@ -108,8 +108,11 @@ RSpec.describe 'CRM meta_ads_connection site pages (#2338)', type: :request do
   it 'diz qual página bateu o teto diário de avisos' do
     stub_const('Ctwa::TrackedLink::SIGNALS_DAILY_LIMIT', 2)
     full = website_link('Site cheio')
-    website_link('Site livre')
+    free = website_link('Site livre')
     create_list(:ctwa_tracked_link_click, 2, account: account, tracked_link: full)
+    # Clique de ontem não conta para o teto de hoje.
+    create(:ctwa_tracked_link_click, account: account, tracked_link: free)
+    create(:ctwa_tracked_link_click, account: account, tracked_link: free, created_at: 25.hours.ago)
 
     get path, headers: admin.create_new_auth_token, as: :json
 

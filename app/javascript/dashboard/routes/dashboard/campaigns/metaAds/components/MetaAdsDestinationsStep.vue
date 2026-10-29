@@ -27,7 +27,8 @@ const choice = ref({
   site: props.destinations.site ?? false,
 });
 const sitePages = ref([]);
-// Falha ao carregar não é "nenhuma página": oferecer ligar ali criaria uma página repetida.
+// Carregando ou com falha não é "nenhuma página": oferecer ligar ali criaria uma página repetida.
+const loadingPages = ref(true);
 const loadFailed = ref(false);
 const saving = ref(false);
 const linkDialog = ref(null);
@@ -56,12 +57,15 @@ const withCampaigns = async pages => {
 };
 
 const loadPages = async () => {
+  loadingPages.value = true;
   loadFailed.value = false;
   try {
     const { data } = await CrmMetaAdsConnectionAPI.sitePages();
     sitePages.value = await withCampaigns(data.payload || []);
   } catch {
     loadFailed.value = true;
+  } finally {
+    loadingPages.value = false;
   }
 };
 
@@ -204,7 +208,11 @@ onMounted(loadPages);
             :page="page"
           />
         </ul>
-        <div v-else data-site-empty class="flex flex-col items-start gap-3">
+        <div
+          v-else-if="!loadingPages"
+          data-site-empty
+          class="flex flex-col items-start gap-3"
+        >
           <span class="text-sm text-n-slate-11">
             {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_EMPTY') }}
           </span>

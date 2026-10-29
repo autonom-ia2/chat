@@ -87,6 +87,24 @@ describe('MetaAdsDestinationsStep · página do site', () => {
     expect(wrapper.findAll('[data-site-page-stub]')).toHaveLength(1);
   });
 
+  it('does not offer to link a page while the pages are still loading', async () => {
+    let finish;
+    CrmMetaAdsConnectionAPI.sitePages.mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      })
+    );
+    const wrapper = await mountStep();
+
+    expect(wrapper.find('[data-site-empty]').exists()).toBe(false);
+    expect(wrapper.find('[data-site-link-open]').exists()).toBe(false);
+
+    finish({ data: { payload: [] } });
+    await flushPromises();
+
+    expect(wrapper.find('[data-site-empty]').exists()).toBe(true);
+  });
+
   // Falha ao carregar não é "nenhuma página": oferecer ligar ali criaria uma página repetida.
   it('says the pages did not load and tries again, without offering to link a new one', async () => {
     CrmMetaAdsConnectionAPI.sitePages.mockRejectedValueOnce(new Error('x'));
