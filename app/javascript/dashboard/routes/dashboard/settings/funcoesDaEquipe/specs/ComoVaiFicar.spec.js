@@ -43,7 +43,7 @@ describe('ComoVaiFicar', () => {
       'Levar a lista de clientes para uma planilha',
     ]);
     expect(wrapper.find('[data-menu]').text()).toBe(
-      'O menu vai mostrar: Conversas, Contatos, Vendas e Central de Ajuda.'
+      'O menu vai mostrar: Conversas, Contatos e Vendas.'
     );
   });
 

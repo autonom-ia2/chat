@@ -31,7 +31,7 @@ import {
   TUDO_SEM_MEXER,
 } from './quemMonta';
 
-// #2308, especificação 6 e 7: o mapa fechado (25/25 módulos, 59/59 chaves), a recolhida e o Cuidado em três grupos.
+// #2308, especificação 6 e 7: o mapa fechado (24/24 módulos, 59/59 chaves), a recolhida e o Cuidado em três grupos.
 const permissoesDoServidor = () => {
   const fonte = readFileSync(
     resolve(process.cwd(), 'enterprise/app/models/custom_role.rb'),
@@ -47,7 +47,7 @@ const permissoesDoServidor = () => {
 };
 
 describe('mapa das áreas e chaves', () => {
-  it('25/25 módulos têm lugar, sem repetir', () => {
+  it('24/24 módulos têm lugar, sem repetir', () => {
     const lugares = [
       ...LINHAS,
       ...Object.keys(DENTRO_DE),
@@ -55,7 +55,7 @@ describe('mapa das áreas e chaves', () => {
       ...CONDICIONAL,
       ...SO_ADMIN,
     ];
-    expect(lugares).toHaveLength(25);
+    expect(lugares).toHaveLength(24);
     expect(new Set(lugares)).toEqual(new Set(MODULES.map(m => m.key)));
   });
 
@@ -72,20 +72,26 @@ describe('mapa das áreas e chaves', () => {
 describe('recolhida de Ajustes (Carla + Atendente)', () => {
   const atendente = PRESETS.AGENT();
 
-  it('título e estado: duas primeiras + "mais 11"; só olha a Central de Ajuda', () => {
+  // A Central de Ajuda saiu das telas de função (#2352); o exemplo de "só olha" passa a ser o Desempenho da equipe.
+  it('título e estado: duas primeiras + "mais 10"; só olha o Desempenho da equipe', () => {
+    const comDesempenho = setLevel(
+      moduleByKey('DESEMPENHO'),
+      'view',
+      atendente
+    );
     const areas = areasDaRecolhida({
       giver: CARLA,
-      permissions: atendente,
-      inicial: atendente,
+      permissions: comDesempenho,
+      inicial: comDesempenho,
       comCotacoes: false,
     });
     expect(areas.subiram).toEqual([]);
     // Seus posts (#2302): a Carla não tem posts_view, então a área inteira fica fora do alcance dela.
     expect(areas.cadeado.map(m => m.key)).toEqual(['POSTS', ...SO_ADMIN]);
-    expect(resumoDaRecolhida(areas.recolhidas, atendente)).toEqual({
+    expect(resumoDaRecolhida(areas.recolhidas, comDesempenho)).toEqual({
       primeiras: ['REPORTS', 'DESEMPENHO'],
-      mais: 11,
-      olha: ['KNOWLEDGE_BASE'],
+      mais: 10,
+      olha: ['DESEMPENHO'],
       mexe: [],
     });
   });
@@ -101,7 +107,7 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
     expect(areas.subiram.map(m => m.key)).toEqual(['REPORTS']);
     expect(resumoDaRecolhida(areas.recolhidas, comRelatorios)).toMatchObject({
       primeiras: ['DESEMPENHO', 'CANNED_RESPONSES'],
-      mais: 10,
+      mais: 9,
     });
   });
 
@@ -113,7 +119,7 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
       comCotacoes: true,
     });
     expect(areas.cadeado).toEqual([]);
-    expect(areas.recolhidas).toHaveLength(18);
+    expect(areas.recolhidas).toHaveLength(17);
   });
 
   it('Anúncios: "Pode mexer" com cadeado de delegação; Cotações: as duas com MISSING', () => {

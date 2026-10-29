@@ -51,9 +51,10 @@ describe('EfeitoSemFuncao', () => {
     expect(texto).not.toContain('coisa_que_a_tela_nao_conhece');
   });
 
-  // Rodada 3: frase corrida, com artigo e sem dois-pontos; Relatórios pesam mais que a Central de Ajuda.
-  it('a área perdida entra na frase com artigo, e os Relatórios vêm antes da Central de Ajuda', () => {
-    const texto = montar(['knowledge_base_view', 'report_manage'])
+  // Rodada 3: frase corrida, com artigo e sem dois-pontos; Relatórios pesam mais que as Campanhas (a Central de Ajuda,
+  // exemplo de antes, saiu das telas de função no #2352).
+  it('a área perdida entra na frase com artigo, e os Relatórios vêm antes das Campanhas', () => {
+    const texto = montar(['campaign_view', 'report_manage'])
       .find('[data-efeito] p')
       .text();
     expect(texto).toContain('Deixa de ver os relatórios.');
@@ -70,9 +71,9 @@ describe('EfeitoSemFuncao', () => {
         .findAll('[data-grupo="DEIXAM"] [data-item]')
         .map(item => item.text());
     };
-    expect(await deixam(['knowledge_base_view', 'report_manage'])).toEqual([
-      'Ver a Central de Ajuda',
+    expect(await deixam(['campaign_view', 'report_manage'])).toEqual([
       'Ver os relatórios',
+      'Ver as campanhas',
     ]);
     expect(await deixam(['label_manage', 'macro_manage'])).toContain(
       'Mudar os atalhos de mensagens'

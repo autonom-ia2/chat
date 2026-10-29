@@ -41,7 +41,6 @@ const PASSAM_DO_VENDEDOR = [
 ];
 const DEIXAM_DO_VENDEDOR = ['Procurar clientes novos'];
 const DEIXAM_DO_SUPERVISOR = [
-  'Ver a Central de Ajuda',
   'Ver os relatórios',
   'Ver os robôs de IA',
   'Ver os canais',

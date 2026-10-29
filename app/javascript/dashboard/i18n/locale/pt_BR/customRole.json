@@ -131,12 +131,6 @@
           "LEVEL_VIEW": "Abre e consulta contatos. Não altera.",
           "LEVEL_MANAGE": "Cria, edita e importa contatos."
         },
-        "KNOWLEDGE_BASE": {
-          "NAME": "Base de conhecimento",
-          "HINT": "Portais e artigos",
-          "LEVEL_VIEW": "Lê portais e artigos.",
-          "LEVEL_MANAGE": "Escreve e publica artigos."
-        },
         "REPORTS": {
           "NAME": "Relatórios",
           "HINT": "Visão geral, CSAT, SLA, robôs e times",

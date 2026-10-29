@@ -74,7 +74,6 @@ describe('NivelDeVendas', () => {
     expect(ultimo(wrapper)).toEqual([
       'conversation_participating_manage',
       'contact_view',
-      'knowledge_base_view',
       'crm_view',
       'crm_manage_cards',
       'crm_move_cards',
@@ -121,7 +120,6 @@ describe('NivelDeVendas', () => {
     expect(ultimo(wrapper)).toEqual([
       'conversation_participating_manage',
       'contact_view',
-      'knowledge_base_view',
       'conversation_unassigned_manage',
       'crm_view',
     ]);
