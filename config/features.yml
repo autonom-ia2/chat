@@ -1012,3 +1012,17 @@
   display_name: CRM › Lista nova "o que fazer agora"
   enabled: false
   column: feature_flags_ext_2
+
+# Funções da equipe guiadas (#2308, épico #1784). Ligada: Funções da equipe abre a tela nova inteira: a lista
+# (cartões com a frase do que cada função pode, quem está sem função e as duas fixas), a conversa guiada de criar,
+# alterar e duplicar (Escolha, Ajustes, perguntas, Confira e o aviso de perda de acesso), a gaveta de pôr e tirar
+# pessoas e o apagar com destino. Desligada: a tela de hoje, intacta. Rollback: desligar a flag na conta (a tela de
+# hoje volta na hora; as funções gravadas são as mesmas). Sem migration. O servidor muda para as duas telas, com a flag
+# ligada ou desligada: o 401 de /custom_roles diz o motivo no corpo (out_of_reach, own_role, feature_off), a autorização
+# vem antes da conferência do plano e o feature_off fica no log. Fim da feature_flags_ext_2: posição 14
+# (valor 8192, 1 << 13), depois de crm_lista_acao (#2324). A posição real é a ordem na main na hora da fila, e a
+# Orquestração confirma antes de enfileirar.
+- name: funcoes_guiadas
+  display_name: Funções da equipe › lista e criação guiadas
+  enabled: false
+  column: feature_flags_ext_2

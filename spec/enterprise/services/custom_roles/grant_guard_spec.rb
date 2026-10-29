@@ -32,4 +32,28 @@ RSpec.describe CustomRoles::GrantGuard do
 
     expect(described_class.new(actor: membership.reload).reach?(%w[crm_manage_pipelines])).to be(false)
   end
+
+  # #2308, rodada 5: o motivo da recusa só sai da lista CODES. A tela tem uma frase para cada código
+  # (FRASE_DO_401 em salvarFuncao.js; codigosDo401.spec.js lê esta lista), então um código fora dela não sai.
+  describe 'refusal codes' do
+    it 'keeps every code in one frozen list' do
+      expect(described_class::CODES).to eq(%w[out_of_reach own_role])
+      expect(described_class::CODES).to be_frozen
+    end
+
+    it 'refuses only with a listed code' do
+      described_class::CODES.each { |code| expect(described_class::Denied.new(code).code).to eq(code) }
+      expect { described_class::Denied.new('made_up') }.to raise_error(ArgumentError, /made_up/)
+    end
+
+    it 'says own_role and out_of_reach' do
+      role = give_giver(%w[contact_view custom_role_manage])
+      guard = described_class.new(actor: membership.reload)
+
+      expect { guard.write!(role, %w[contact_view]) }
+        .to raise_error(described_class::Denied) { |error| expect(error.code).to eq(described_class::OWN_ROLE) }
+      expect { guard.write!(nil, %w[financial_view]) }
+        .to raise_error(described_class::Denied) { |error| expect(error.code).to eq(described_class::OUT_OF_REACH) }
+    end
+  end
 end

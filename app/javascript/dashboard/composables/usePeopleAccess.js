@@ -31,6 +31,8 @@ export function usePeopleAccess() {
   const holds = key => computed(() => holdsKey(giver.value, key));
 
   return {
+    // Quem está montando, para as regras que pedem o lugar inteiro (motivoDaTrava, alcance antes de salvar).
+    giver,
     isAdmin: computed(() => giver.value.isAdmin),
     canManagePeople: holds(PEOPLE_MANAGE_PERMISSION),
     canManageInboxes: holds(INBOX_MANAGE_PERMISSION),

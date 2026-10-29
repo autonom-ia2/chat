@@ -86,6 +86,9 @@
     },
     {
       "file": "seusPosts.json"
+    },
+    {
+      "file": "funcoesDaEquipe.json"
     }
   ],
   "pacotes": {
