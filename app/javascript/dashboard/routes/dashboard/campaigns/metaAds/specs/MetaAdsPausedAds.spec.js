@@ -61,36 +61,6 @@ describe('Anúncios da Meta · pausados esperando ativar (#2198)', () => {
     expect(wrapper.emitted('count')).toEqual([[1]]);
   });
 
-  // #2354: anúncio pausado que a Meta ainda analisa. A linha diz isso e não oferece ativar.
-  it('an ad under Meta review shows the review note instead of the turn-on button', async () => {
-    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
-      data: { ads: [{ ...AD, in_review: true }] },
-    });
-    const wrapper = mountList();
-    await flushPromises();
-
-    const row = wrapper.find(`[data-panel-paused-ad="${AD.ad_id}"]`);
-    const LIST = 'CRM_KANBAN.META_ADS_HUB.CRIAR.PAUSED_LIST';
-    expect(row.find('[data-panel-paused-review]').text().split(/\s+/)).toEqual([
-      `${LIST}.IN_REVIEW`,
-      `${LIST}.IN_REVIEW_HINT`,
-    ]);
-    expect(row.find('[data-status-stub]').exists()).toBe(false);
-    expect(wrapper.emitted('count')).toEqual([[1]]);
-  });
-
-  it('a ready ad keeps the turn-on button and no review note', async () => {
-    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
-      data: { ads: [{ ...AD, in_review: false }] },
-    });
-    const wrapper = mountList();
-    await flushPromises();
-
-    const row = wrapper.find(`[data-panel-paused-ad="${AD.ad_id}"]`);
-    expect(row.find('[data-status-stub]').exists()).toBe(true);
-    expect(row.find('[data-panel-paused-review]').exists()).toBe(false);
-  });
-
   // Com a situação de verdade: o "Ativar" de cada linha.
   const mountWithStatus = () =>
     mount(MetaAdsPausedAds, {
@@ -109,6 +79,32 @@ describe('Anúncios da Meta · pausados esperando ativar (#2198)', () => {
     ads_count: 1,
     active_ads_count: 0,
   };
+
+  // #2354: anúncio pausado que a Meta ainda analisa. A linha diz isso e não oferece ativar; a mesma regra do detalhe.
+  it('an ad under Meta review shows the review note instead of the turn-on button', async () => {
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
+      data: { ads: [{ ...AD, in_review: true }] },
+    });
+    const wrapper = mountWithStatus();
+    await flushPromises();
+
+    const row = wrapper.find(`[data-panel-paused-ad="${AD.ad_id}"]`);
+    expect(row.find('[data-ad-status-review]').exists()).toBe(true);
+    expect(row.find('[data-ad-status-toggle]').exists()).toBe(false);
+    expect(wrapper.emitted('count')).toEqual([[1]]);
+  });
+
+  it('a ready ad keeps the turn-on button and no review note', async () => {
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
+      data: { ads: [{ ...AD, in_review: false }] },
+    });
+    const wrapper = mountWithStatus();
+    await flushPromises();
+
+    const row = wrapper.find(`[data-panel-paused-ad="${AD.ad_id}"]`);
+    expect(row.find('[data-ad-status-toggle]').exists()).toBe(true);
+    expect(row.find('[data-ad-status-review]').exists()).toBe(false);
+  });
 
   it('opening the list reads no budget and shows the amount from when it was created', async () => {
     CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({

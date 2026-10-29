@@ -9,8 +9,6 @@
 class Crm::MetaAds::Creation::Activation
   # Situações de entrega que seguram o anúncio, mesmo ativo.
   HOLDING = %w[PAUSED CAMPAIGN_PAUSED ADSET_PAUSED ARCHIVED DELETED].freeze
-  # Em análise da Meta (#2354). A doc do Ad não diz se dá para ligar um anúncio durante a análise: não oferecemos.
-  IN_REVIEW = %w[PENDING_REVIEW IN_PROCESS].freeze
   # Trava esquecida (processo caiu no meio): os três níveis, com a volta, cabem nisso com folga
   # (Meta::AdsGraphClient::TIMEOUT_SECONDS por chamada).
   SWITCH_STALE_AFTER = 3.minutes
@@ -75,7 +73,7 @@ class Crm::MetaAds::Creation::Activation
     result = @client.ad_management(record.ad_id)
     raise Crm::MetaAds::AdManagement::Error, 'meta_unavailable' unless result.ok
 
-    IN_REVIEW.include?(result.data['effective_status'])
+    Crm::MetaAds::AdManagement.in_review?(result.data['status'], result.data['effective_status'])
   end
 
   def paused?(object)

@@ -62,10 +62,16 @@ const badge = computed(() => {
     : 'OFF';
 });
 const action = computed(() => (active.value ? 'PAUSE' : 'ACTIVATE'));
+// Pausado em análise da Meta (`in_review`, #2354): o servidor recusaria o ligar. No lugar do botão, a frase de que a
+// Meta está conferindo. A mesma regra na lista de pausados, no topo do anúncio e no cartão de criado.
+const inReview = computed(
+  () => props.gestao.status === 'PAUSED' && Boolean(props.gestao.in_review)
+);
 const showButton = computed(
   () =>
     props.canManage &&
     props.gestao.can_change &&
+    !inReview.value &&
     ['ACTIVE', 'PAUSED'].includes(props.gestao.status)
 );
 const showLoginHint = computed(
@@ -288,6 +294,23 @@ const confirm = async () => {
         {{ $t(`${KEY}.BUDGET_FAILED`) }}
       </p>
     </template>
+    <p
+      v-else-if="inReview"
+      data-ad-status-review
+      role="status"
+      class="m-0 flex max-w-sm gap-2 text-sm"
+      :class="light ? 'text-n-slate-11' : 'text-white/75'"
+    >
+      <span
+        class="i-lucide-hourglass mt-0.5 size-4 shrink-0"
+        :class="light ? 'text-n-amber-11' : 'text-white'"
+        aria-hidden="true"
+      />
+      <span>
+        {{ $t(`${KEY}.IN_REVIEW_NOTE`) }}
+        {{ $t(`${KEY}.IN_REVIEW_NOTE_HINT`) }}
+      </span>
+    </p>
     <p
       v-else-if="!showButton && showLoginHint"
       data-ad-status-login

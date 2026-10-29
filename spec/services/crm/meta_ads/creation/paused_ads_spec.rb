@@ -35,8 +35,8 @@ RSpec.describe Crm::MetaAds::Creation::PausedAds do
     expect(a_request(:get, meta_graph_url('4')).with(query: hash_including({}))).not_to have_been_made
   end
 
-  # Por classe de effective_status (#2354, enum da doc do Ad): PAUSED pronto para ativar; PENDING_REVIEW e IN_PROCESS em
-  # análise da Meta; o resto fica fora. Sempre com o próprio anúncio PAUSED.
+  # Por classe de effective_status (#2354, enum da doc do Ad): PAUSED, CAMPAIGN_PAUSED e ADSET_PAUSED prontos para
+  # ativar; PENDING_REVIEW e IN_PROCESS em análise da Meta; o resto fica fora. Sempre com o próprio anúncio PAUSED.
   it 'anúncio pausado em análise da Meta entra na lista, marcado como em análise' do
     created('1', at: 2.days.ago)
     created('2', at: 1.day.ago)
@@ -50,8 +50,21 @@ RSpec.describe Crm::MetaAds::Creation::PausedAds do
     expect(list.map { |ad| ad.values_at(:ad_id, :in_review) }).to eq([['3', false], ['2', true], ['1', true]])
   end
 
+  # Regra, não leitura real: em 29/10 o anúncio com os três níveis pausados veio PAUSED depois da análise. Se a Meta
+  # devolver o nível de cima, o Ativar de um anúncio criado aqui liga os três, então ele também está pronto.
+  it 'regra: anúncio pausado com a campanha ou o grupo pausados está pronto para ativar' do
+    created('1', at: 1.day.ago)
+    created('2')
+    stub_ad('1', 'CAMPAIGN_PAUSED', status: 'PAUSED')
+    stub_ad('2', 'ADSET_PAUSED', status: 'PAUSED')
+
+    list = described_class.new(connection).list
+
+    expect(list.map { |ad| ad.values_at(:ad_id, :in_review) }).to eq([['2', false], ['1', false]])
+  end
+
   it 'fora da lista: anúncio ligado em análise e os outros estados de entrega' do
-    others = %w[DISAPPROVED WITH_ISSUES PENDING_BILLING_INFO PREAPPROVED CAMPAIGN_PAUSED ADSET_PAUSED ARCHIVED DELETED ACTIVE]
+    others = %w[DISAPPROVED WITH_ISSUES PENDING_BILLING_INFO PREAPPROVED ARCHIVED DELETED ACTIVE]
     created('1')
     stub_ad('1', 'IN_PROCESS', status: 'ACTIVE')
     others.each_with_index do |effective, index|

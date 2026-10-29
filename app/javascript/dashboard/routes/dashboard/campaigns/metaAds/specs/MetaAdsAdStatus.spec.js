@@ -166,6 +166,32 @@ describe('Anúncios da Meta · situação do anúncio (#2161)', () => {
     expect(failed.emitted('retryBudget')).toHaveLength(1);
   });
 
+  // #2354: anúncio pausado em análise da Meta. O servidor recusaria o ligar: no lugar do botão, a mesma frase da lista.
+  it('a paused ad under Meta review shows the review note instead of the turn-on button', () => {
+    const wrapper = mountStatus({
+      gestao: {
+        ...GESTAO,
+        status: 'PAUSED',
+        effective_status: 'IN_PROCESS',
+        in_review: true,
+      },
+    });
+
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-review]').text().split(/\s+/)).toEqual(
+      [`${KEY}.IN_REVIEW_NOTE`, `${KEY}.IN_REVIEW_NOTE_HINT`]
+    );
+  });
+
+  it('an ad that is on while Meta reviews a change can still be paused', () => {
+    const wrapper = mountStatus({
+      gestao: { ...GESTAO, effective_status: 'IN_PROCESS', in_review: false },
+    });
+
+    expect(wrapper.find('[data-ad-status-toggle]').text()).toBe(`${KEY}.PAUSE`);
+    expect(wrapper.find('[data-ad-status-review]').exists()).toBe(false);
+  });
+
   // #2354: o servidor recusa ligar um anúncio que a Meta ainda analisa.
   it('Meta still reviewing the ad: says so instead of a generic error', async () => {
     mudarStatus.mockRejectedValue({

@@ -231,6 +231,21 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(true);
   });
 
+  // #2354: anúncio novo passa pela análise da Meta antes; o cartão de criado avisa em vez de oferecer o Ativar.
+  it('a new ad still under Meta review shows the review note instead of activate', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({
+      data: { ...CREATED, in_review: true },
+    });
+    const wrapper = await mountCreate();
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+
+    expect(wrapper.find('[data-create-done]').exists()).toBe(true);
+    expect(wrapper.find('[data-ad-status-toggle]').exists()).toBe(false);
+    expect(wrapper.find('[data-ad-status-review]').exists()).toBe(true);
+  });
+
   it('sends the same idempotency key again after a network failure of the same attempt', async () => {
     CrmMetaAdsConnectionAPI.createAd
       .mockRejectedValueOnce(new Error('Network Error'))

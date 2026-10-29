@@ -10,8 +10,8 @@ import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 // leitura são 4 chamadas à Meta; ler a lista inteira ao abrir o painel bateria no limite de uso da conta) e a
 // confirmação usa só ele. Enquanto lê, o botão mostra que está carregando; se falhar, a confirmação não abre e o
 // "Tentar de novo" lê outra vez.
-// Em análise da Meta (`in_review`, #2354): a linha diz que a Meta está conferindo e não oferece ativar. A doc da Meta
-// não diz se dá para ligar durante a análise.
+// Em análise da Meta (`in_review`, #2354): a situação (MetaAdsAdStatus) diz que a Meta está conferindo e não oferece
+// ativar. A doc da Meta não diz se dá para ligar durante a análise.
 const props = defineProps({
   // { ad_id, name, created_at, budget, in_review }: `budget` é o de quando o anúncio foi criado.
   ad: { type: Object, required: true },
@@ -21,11 +21,12 @@ const emit = defineEmits(['changed']);
 
 const { locale } = useI18n();
 const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR.PAUSED_LIST';
-const PAUSED = {
+const gestao = computed(() => ({
   status: 'PAUSED',
   effective_status: 'PAUSED',
   can_change: true,
-};
+  in_review: Boolean(props.ad.in_review),
+}));
 
 const readBudget = () => lerOrcamento(props.ad.ad_id);
 
@@ -52,25 +53,10 @@ const perDay = computed(() =>
         }}
       </span>
     </div>
-    <p
-      v-if="ad.in_review"
-      data-panel-paused-review
-      class="m-0 flex max-w-sm gap-2 text-sm text-n-slate-11"
-    >
-      <span
-        class="i-lucide-hourglass mt-0.5 size-4 shrink-0 text-n-amber-11"
-        aria-hidden="true"
-      />
-      <span>
-        {{ $t(`${KEY}.IN_REVIEW`) }}
-        {{ $t(`${KEY}.IN_REVIEW_HINT`) }}
-      </span>
-    </p>
     <MetaAdsAdStatus
-      v-else
       :ad-id="ad.ad_id"
       :ad-name="ad.name"
-      :gestao="PAUSED"
+      :gestao="gestao"
       :read-budget="readBudget"
       can-manage
       tone="light"

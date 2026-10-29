@@ -143,7 +143,7 @@ class Crm::MetaAds::Creation::NewAd
     step!(record, :ad_id, :create_ad, name: draft[:name], adset_id: record.adset_id,
                                       creative: { creative_id: record.creative_id }.to_json, status: 'PAUSED')
     alive!(record)
-    Crm::MetaAds::Creation::Levels.new(client, account: @account, user: @user).ensure_paused!(record)
+    @reread = Crm::MetaAds::Creation::Levels.new(client, account: @account, user: @user).ensure_paused!(record)
     record.update!(status: 'created')
   rescue Crm::MetaAds::Creation::Error => e
     raise @attempt.rollback!(record, e, unknown: @campaign_unknown)
@@ -230,7 +230,11 @@ class Crm::MetaAds::Creation::NewAd
       call_to_action: (WHATSAPP_ACTION.to_json if draft[:destination] == 'WHATSAPP') }.compact
   end
 
+  # `in_review` (#2354) vem da releitura que o criar acabou de fazer. A mesma chave de novo não chama a Meta (ponto 4):
+  # sem releitura, false. A tela oferece o Ativar, e o servidor recusa se a Meta ainda estiver analisando.
   def result(record)
-    { ad_id: record.ad_id, name: record.name, status: 'PAUSED', budget: record.budget.merge('active_ads_count' => 0) }
+    ad = @reread.to_h['ad'].to_h
+    { ad_id: record.ad_id, name: record.name, status: 'PAUSED', budget: record.budget.merge('active_ads_count' => 0),
+      in_review: Crm::MetaAds::AdManagement.in_review?(ad['status'], ad['effective_status']) }
   end
 end
