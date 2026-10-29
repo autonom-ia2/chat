@@ -2,6 +2,7 @@ require 'rails_helper'
 
 # Formulários do anúncio da Meta (#2195) com funções personalizadas (parecer da sessão Funções, 27/10):
 # - meta_ads_view vê a tela, mas não liga, para, escolhe destino nem traz antigos (403 antes de chamar a Meta);
+# - abrir a tela só para ver não grava Página; as Páginas lidas só ficam guardadas quando quem abre tem meta_ads_manage (#2357);
 # - a lista de quem chegou (nome, telefone, e-mail) pede também contact_view;
 # - trazer em lote cria cards: pede também crm_manage_cards, mesmo com meta_ads_manage.
 RSpec.describe 'Formulários da Meta com funções personalizadas', type: :request do
@@ -53,6 +54,23 @@ RSpec.describe 'Formulários da Meta com funções personalizadas', type: :reque
       expect(response.parsed_body['recent_leads']).to be_nil
     end
 
+    it 'abrir a tela não grava as Páginas lidas' do
+      stub_pages
+
+      expect { get path, headers: auth_headers(marketing), as: :json }.not_to change(Crm::MetaAdsPage, :count)
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['pages']).to contain_exactly(include('id' => '104882', 'name' => 'Studio Aurora'))
+    end
+
+    it 'abrir a tela não renomeia a Página já guardada' do
+      Crm::MetaAdsPage.create!(account: account, page_id: '104882', name: 'Nome antigo')
+      stub_pages
+
+      get path, headers: auth_headers(marketing), as: :json
+
+      expect(Crm::MetaAdsPage.find_by(account: account, page_id: '104882').name).to eq('Nome antigo')
+    end
+
     it 'com contact_view vê também a lista de quem chegou' do
       stub_pages
 
@@ -81,6 +99,28 @@ RSpec.describe 'Formulários da Meta com funções personalizadas', type: :reque
 
   describe 'meta_ads_manage sem criar card no CRM' do
     let(:gestor) { pessoa_com(%w[meta_ads_view meta_ads_manage crm_view]) }
+
+    it 'abrir a tela guarda as Páginas lidas' do
+      stub_pages
+
+      get path, headers: auth_headers(gestor), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(Crm::MetaAdsPage.where(account: account).pluck(:page_id, :name)).to eq([['104882', 'Studio Aurora']])
+    end
+
+    # O webhook acha a conta pela linha da Página: ligar sem ter aberto a tela antes tem de criá-la.
+    it 'ligar a Página sem abrir a tela antes deixa a Página achável pelo webhook' do
+      stub_pages
+      subscription = instance_double(Crm::MetaAds::PageSubscription, add!: true)
+      allow(Crm::MetaAds::PageSubscription).to receive(:new).and_return(subscription)
+
+      post "#{path}/pages/104882/receive", headers: auth_headers(gestor), as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(Crm::MetaAdsPage.account_ids_for('104882')).to eq([account.id])
+      expect(Crm::MetaAdsPage.leadgen_receiving.pluck(:page_id)).to eq(['104882'])
+    end
 
     it 'não traz antigos de formulário arquivado: 403 sem chamar a Meta' do
       post "#{path}/forms/9003/bring_past", params: destination, headers: auth_headers(gestor), as: :json
