@@ -37,7 +37,6 @@ const CHAVES_DA_RECOLHIDA = [
   'report_manage',
   'desempenho_view',
   'canned_response_manage',
-  'knowledge_base_manage',
   'campaign_manage',
   'campaign_send',
   'whatsapp_templates_manage',
@@ -278,7 +277,6 @@ const MENU = [
   ['INSURANCE', 'COTACOES'],
   ['REPORTS', 'RELATORIOS'],
   ['DESEMPENHO', 'RELATORIOS'],
-  ['KNOWLEDGE_BASE', 'CENTRAL_DE_AJUDA'],
 ];
 const DO_MENU = new Set(MENU.map(([area]) => area));
 // O nome com que a área aparece no menu (FUNCOES_EQUIPE.MENU), ou null para a que mora em Configurações.

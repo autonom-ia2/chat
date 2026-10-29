@@ -139,10 +139,10 @@ describe('FuncaoGuiadaPage', () => {
       'Nenhuma ligada · apagar, planilhas, campanhas e IA'
     );
     expect(wrapper.find('[data-recolhida]').text()).toContain(
-      'Relatórios, Desempenho da equipe e mais 11 áreas'
+      'Relatórios, Desempenho da equipe e mais 10 áreas'
     );
     expect(wrapper.find('[data-recolhida]').text()).toContain(
-      'Hoje só olha a Central de Ajuda. As demais ficam desligadas.'
+      'Hoje estão todas desligadas.'
     );
     expect(wrapper.find('[data-previa] [data-frase]').text()).toContain(
       'Com a função Atendente, a pessoa atende'
@@ -257,6 +257,26 @@ describe('FuncaoGuiadaPage', () => {
       funcoes: [ATENDENTE, vendedor],
     });
     expect(wrapper.find('h1').text()).toBe('Confira a cópia');
+    await clicar(wrapper, '[data-botao-grande]');
+    expect(criar.mock.calls[0][1].permissions).toEqual(['contact_view']);
+  });
+
+  // #2352: a chave do portal de artigos não tem área nas telas de função. Quem não a pode dar duplica sem ela e sem
+  // aviso (antes o aviso nomeava uma área que não existe mais).
+  it('duplicar corta em silêncio a chave que nenhuma tela de função mostra', async () => {
+    const comPortal = {
+      id: 8,
+      name: 'Com portal',
+      permissions: ['contact_view', 'knowledge_base_manage'],
+    };
+    const { wrapper, criar } = await montar({
+      name: 'funcoes_equipe_duplicate',
+      params: { roleId: '8' },
+      giver: SEM_VER_VENDAS,
+      funcoes: [ATENDENTE, comPortal],
+    });
+    expect(wrapper.find('h1').text()).toBe('Confira a cópia');
+    expect(wrapper.find('[data-aviso-copia]').exists()).toBe(false);
     await clicar(wrapper, '[data-botao-grande]');
     expect(criar.mock.calls[0][1].permissions).toEqual(['contact_view']);
   });

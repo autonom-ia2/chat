@@ -98,7 +98,7 @@ describe('prévia "Como vai ficar"', () => {
         'CRIAR_MOVER_VENDAS',
       ],
       naoPode: ['LER_COLEGAS', 'MUDAR_CONTATOS', 'EXPORTAR_CONTATOS'],
-      menu: ['CONVERSAS', 'CONTATOS', 'VENDAS', 'CENTRAL_DE_AJUDA'],
+      menu: ['CONVERSAS', 'CONTATOS', 'VENDAS'],
     });
   });
 

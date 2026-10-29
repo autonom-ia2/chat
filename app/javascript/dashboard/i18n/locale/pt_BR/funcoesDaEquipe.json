@@ -183,7 +183,6 @@
       "REPORT_MANAGE": "Ver os relatórios de atendimento",
       "DESEMPENHO_VIEW": "Ver o desempenho da equipe",
       "CANNED_RESPONSE_MANAGE": "Criar e mudar as respostas prontas",
-      "KNOWLEDGE_BASE_MANAGE": "Escrever os artigos da Central de Ajuda",
       "CAMPAIGN_MANAGE": "Criar e mudar as campanhas",
       "CAMPAIGN_SEND": "Disparar campanhas",
       "WHATSAPP_TEMPLATES_MANAGE": "Criar e mudar os modelos do WhatsApp",
@@ -215,7 +214,6 @@
       "ROBOS": "Robôs de IA",
       "COTACOES": "Cotações",
       "RELATORIOS": "Relatórios",
-      "CENTRAL_DE_AJUDA": "Central de Ajuda",
       "CONFIGURACOES": "Configurações"
     },
     "CURTO": {
@@ -247,10 +245,6 @@
         "NOME": "Contatos",
         "CURTO": "contatos",
         "NA_FRASE": "os contatos"
-      },
-      "KNOWLEDGE_BASE": {
-        "NOME": "Central de Ajuda (artigos para os clientes)",
-        "NA_FRASE": "a Central de Ajuda"
       },
       "REPORTS": {
         "NOME": "Relatórios",
