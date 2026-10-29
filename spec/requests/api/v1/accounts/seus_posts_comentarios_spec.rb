@@ -54,11 +54,71 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
     expect(response.parsed_body['can_manage']).to be(true)
   end
 
-  it 'o administrador manda o privado e recebe o caminho da conversa' do
+  def stub_comentario
     stub_request(:get, %r{#{ig}/#{comment_id}\?}).to_return(
       status: 200, headers: json,
       body: { id: comment_id, timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' }, media: { id: post_id } }.to_json
     )
+  end
+
+  def headers
+    admin.create_new_auth_token
+  end
+
+  it 'Meta fora só nos comentários: o post vem, e os comentários dizem meta_unavailable' do
+    stub_request(:get, %r{#{ig}/#{post_id}/comments}).to_return(status: 503, headers: json, body: { error: { code: 2 } }.to_json)
+
+    get base, params: { perfil: perfil }, headers: headers, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('post', 'id')).to eq(post_id)
+    expect(response.parsed_body['comments']).to include('status' => 'meta_unavailable', 'total' => nil)
+  end
+
+  it 'Meta fora ao conferir o comentário: 422 meta_unavailable, não 404' do
+    stub_request(:get, %r{#{ig}/#{comment_id}\?}).to_return(status: 503, headers: json, body: { error: { code: 2 } }.to_json)
+
+    delete "#{base}/comments/#{comment_id}", params: { perfil: perfil }, headers: headers, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body['error']).to eq('meta_unavailable')
+  end
+
+  it 'esconde e apaga, grava as ações sem anúncio e esquece "esperando você" do perfil' do
+    stub_comentario
+    stub_request(:post, %r{#{ig}/#{comment_id}\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
+    stub_request(:delete, %r{#{ig}/#{comment_id}\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+    chave = SeusPosts::Leitura.chave(account.id, "esperando:#{perfil}")
+    Rails.cache.write(chave, { status: 'ok' })
+    Rails.cache.write("#{chave}:ultima", { status: 'ok' })
+
+    post "#{base}/comments/#{comment_id}/hide", params: { perfil: perfil, hidden: true }, headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+    delete "#{base}/comments/#{comment_id}", params: { perfil: perfil }, headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+
+    expect(Crm::MetaAdsCommentAction.where(comment_id: comment_id, ad_id: nil).pluck(:action)).to contain_exactly('hide', 'delete')
+    expect(Rails.cache.read(chave)).to be_nil
+    expect(Rails.cache.read("#{chave}:ultima")).to be_nil
+  end
+
+  it '"Não foi enviado": libera só o privado sem confirmação do post, e recusa o que não está pendente' do
+    stub_comentario
+    action = Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: comment_id, action: 'private_reply',
+                                               actor: 'user', user: admin, attempted_at: 5.minutes.ago, failed_at: 4.minutes.ago)
+
+    post "#{base}/comments/#{comment_id}/private_reply/release", params: { perfil: perfil }, headers: headers, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentAction.exists?(action.id)).to be(false)
+
+    post "#{base}/comments/#{comment_id}/private_reply/release", params: { perfil: perfil }, headers: headers, as: :json
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body['error']).to eq('private_reply_not_pending')
+  end
+
+  it 'o administrador manda o privado e recebe o caminho da conversa' do
+    stub_comentario
     stub_request(:post, %r{#{ig}/#{ig_id}/messages})
       .to_return(status: 200, headers: json, body: { recipient_id: '7001', message_id: 'mid.1' }.to_json)
 

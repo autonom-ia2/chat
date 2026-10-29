@@ -40,9 +40,11 @@ class SeusPosts::Leitura
     "seus_posts:#{CACHE_VERSION}:#{account_id}:#{sufixo}"
   end
 
-  # Depois de uma ação num comentário, "esperando você" do perfil é lido de novo na próxima vez.
+  # Depois de uma ação num comentário, "esperando você" do perfil é lido de novo na próxima vez. A última leitura boa
+  # também sai: com a Meta fora, ela traria de volta o comentário que acabou de ser cuidado.
   def self.esquecer_esperando(account, canal)
-    Rails.cache.delete(chave(account.id, "esperando:#{SeusPosts::Perfil.id_do(canal)}"))
+    chave = chave(account.id, "esperando:#{SeusPosts::Perfil.id_do(canal)}")
+    Rails.cache.delete_multi([chave, "#{chave}:ultima"])
   end
 
   def perform
@@ -112,7 +114,9 @@ class SeusPosts::Leitura
   def esperando(canal, posts, prazo)
     return { posts: posts } unless @account.feature_enabled?(FLAG_COMENTARIOS)
 
-    lidos = guardado("esperando:#{id_do(canal)}") { SeusPosts::Esperando.new(channel: canal, periodo: @periodo, prazo: prazo).perform }
+    lidos = guardado("esperando:#{id_do(canal)}", tambem: %w[needs_permission]) do
+      SeusPosts::Esperando.new(channel: canal, periodo: @periodo, prazo: prazo).perform
+    end
     return sem_esperando(posts, lidos[:status]) unless lidos[:status] == 'ok'
 
     privado = com_privado(canal, lidos[:pendentes])
@@ -159,15 +163,23 @@ class SeusPosts::Leitura
     end
   end
 
-  # Só o que veio ok fica guardado: "Libere…" lê de novo na próxima vez. Meta fora ou passou do tempo: a última leitura
-  # boa, marcada `stale`; sem ela, a falha sobe e a próxima tentativa espera FALHA_TTL.
-  def guardado(chave)
+  # Só o que veio ok fica guardado: "Libere…" lê de novo na próxima vez. Quem pede `tambem` guarda também outros
+  # estados por CACHE_TTL, nunca como última boa ("esperando você" sem permissão não chama a Meta a cada lista). Meta
+  # fora ou passou do tempo: a última leitura boa, marcada `stale`; sem ela, a falha sobe e a próxima tentativa espera
+  # FALHA_TTL.
+  def guardado(chave, tambem: [])
     chave = self.class.chave(@account.id, chave)
     lido = Rails.cache.read(chave)
     return lido if lido
 
     recente_falhou!(chave)
-    yield.tap { |dados| guardar(chave, dados) if dados[:status] == 'ok' }
+    yield.tap do |dados|
+      if dados[:status] == 'ok'
+        guardar(chave, dados)
+      elsif tambem.include?(dados[:status])
+        Rails.cache.write(chave, dados, expires_in: CACHE_TTL)
+      end
+    end
   rescue Crm::MetaAds::Organico::Indisponivel => e
     # Falha da Meta (limite de uso, fora do ar): a próxima tentativa espera, com ou sem cópia antiga para servir. O
     # nosso teto de tempo ('tempo') não é falha da Meta, e 'espera' já é a própria espera.

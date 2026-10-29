@@ -6,6 +6,9 @@
 # - Comentários dos posts, para "esperando você" (F2, #2305): os primeiros COMENTARIOS_POR_POST de primeiro nível de
 #   cada post, com quem escreveu e quem respondeu, embutidos na lista de posts (chamada real de 29/10: veio nas duas
 #   redes). Numa chamada própria: sem a permissão de ler comentários, só ela falha, e os números do F1 continuam.
+#   POSTS_COM_COMENTARIOS por página, não 100: cada post traz até 50 comentários, e a resposta cresce. As respostas
+#   de cada comentário vêm só na primeira página delas (25): resposta da conta depois disso não é vista, e o
+#   comentário conta como esperando.
 module Meta::AdsGraphClient::SeusPosts
   SEUS_POSTS_PAGE_FIELDS = 'id,message,created_time,permalink_url,full_picture,status_type,' \
                            'reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0),' \
@@ -14,6 +17,7 @@ module Meta::AdsGraphClient::SeusPosts
   SEUS_POSTS_INSTAGRAM_FIELDS = 'id,caption,timestamp,permalink,media_type,media_url,thumbnail_url,' \
                                 'insights.metric(views,reach,saved,shares,comments,likes)'.freeze
   COMENTARIOS_POR_POST = 50
+  POSTS_COM_COMENTARIOS = 50
   SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS = "id,comments.limit(#{COMENTARIOS_POR_POST}){id,hidden,from{id},replies{id,from{id}}}".freeze
   SEUS_POSTS_PAGE_COMMENTS_FIELDS = "id,comments.filter(toplevel).limit(#{COMENTARIOS_POR_POST})" \
                                     '{id,is_hidden,from{id},comments.limit(25){id,from{id}}}'.freeze
@@ -31,10 +35,10 @@ module Meta::AdsGraphClient::SeusPosts
   end
 
   def seus_posts_instagram_comments(window)
-    organic_posts('me/media', window.merge(fields: SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS))
+    organic_posts('me/media', window.merge(fields: SEUS_POSTS_INSTAGRAM_COMMENTS_FIELDS), limit: POSTS_COM_COMENTARIOS)
   end
 
   def seus_posts_page_comments(page_id, window)
-    organic_posts("#{page_id}/published_posts", window.merge(fields: SEUS_POSTS_PAGE_COMMENTS_FIELDS))
+    organic_posts("#{page_id}/published_posts", window.merge(fields: SEUS_POSTS_PAGE_COMMENTS_FIELDS), limit: POSTS_COM_COMENTARIOS)
   end
 end

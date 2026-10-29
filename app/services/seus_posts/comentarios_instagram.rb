@@ -91,8 +91,10 @@ class SeusPosts::ComentariosInstagram
 
   def comment_of!(post_id, comment_id)
     result = client.comment(comment_id)
-    raise Error, 'needs_permission' if permission_error?(result)
-    raise Error, 'comment_not_found' if !result.ok || result.data.dig('media', 'id').to_s != post_id.to_s
+    # Id que a Meta não acha (ou de outra conta) é `comment_not_found`; falha passageira não: a pessoa tenta de novo.
+    raise Error, 'comment_not_found' if !result.ok && result.object_error?
+    raise Error, failure(result) unless result.ok
+    raise Error, 'comment_not_found' if result.data.dig('media', 'id').to_s != post_id.to_s
 
     result.data
   end
@@ -106,7 +108,7 @@ class SeusPosts::ComentariosInstagram
   end
 
   def vazio
-    { status: 'needs_permission', comments: [], total: 0, next_cursor: nil }
+    { status: 'needs_permission', comments: [], total: nil, next_cursor: nil }
   end
 
   # Total de comentários do post como a Meta conta; sem ele, o que veio nesta página, sem a cópia em dobro.

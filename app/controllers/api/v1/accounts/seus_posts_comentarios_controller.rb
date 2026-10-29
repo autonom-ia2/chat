@@ -45,7 +45,7 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
     base = { perfil: perfil, status: lido[:status], can_manage: manage? }
     return render json: base unless lido[:status] == 'ok'
 
-    render json: base.merge(post: lido[:post], normal: lido[:normal], comments: comentarios.payload(post_id))
+    render json: base.merge(post: lido[:post], normal: lido[:normal], comments: primeiros_comentarios)
   end
 
   def reply
@@ -86,6 +86,13 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
   end
 
   private
+
+  # O post já veio: Meta fora só nos comentários não tira o post da tela.
+  def primeiros_comentarios
+    comentarios.payload(post_id)
+  rescue ::Crm::MetaAds::InstagramPrivateReply::Error, ::Crm::MetaAds::FacebookComments::Error => e
+    { status: e.code, comments: [], total: nil, next_cursor: nil }
+  end
 
   def ensure_flags
     head :not_found unless FLAGS.all? { |flag| Current.account.feature_enabled?(flag) }
@@ -192,10 +199,16 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
     render json: { error: code }, status: status
   end
 
-  # A Meta já agiu quando isto roda: "esperando você" do perfil é lido de novo, e falha ao gravar a Auditoria vai para
-  # o rastreador de erros, com a resposta dizendo a verdade (mesma regra dos comentários do anúncio, #2196).
+  # A Meta já agiu quando isto roda: falha ao gravar a Auditoria ou ao esquecer "esperando você" vai para o rastreador
+  # de erros, cada uma por si, com a resposta dizendo a verdade (mesma regra dos comentários do anúncio, #2196).
   def acted!(action)
+    audit!(action)
     SeusPosts::Leitura.esquecer_esperando(Current.account, @canal)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: Current.account).capture_exception
+  end
+
+  def audit!(action)
     Audited.audit_class.create!(
       auditable: Current.account, user: Current.user, action: AUDIT_ACTION,
       audited_changes: { 'network' => SeusPosts::Perfil.rede(@canal), 'perfil' => SeusPosts::Perfil.id_do(@canal), 'post_id' => post_id,

@@ -84,7 +84,7 @@ class SeusPosts::ComentariosPagina
   end
 
   def vazio
-    { status: 'needs_permission', comments: [], total: 0, next_cursor: nil }
+    { status: 'needs_permission', comments: [], total: nil, next_cursor: nil }
   end
 
   def permission_error?(result)

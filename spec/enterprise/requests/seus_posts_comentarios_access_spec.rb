@@ -179,13 +179,31 @@ RSpec.describe 'Seus posts: comentários de cada post só para quem vê a caixa 
       user
     end
 
+    def facebook_call
+      a_request(:any, /graph\.facebook\.com/).with { |request| !request.uri.path.end_with?('subscribed_apps') }
+    end
+
+    it 'só posts_view: 403; posts_manage sem a caixa do Messenger: 403 not_inbox_member; sem chamar a Meta' do
+      so_ve = member_with(%w[posts_view], caixa: false)
+      create(:inbox_member, user: so_ve, inbox: pagina.inbox)
+      sem_caixa = member_with(%w[posts_manage], caixa: false)
+      caminho = "/api/v1/accounts/#{account.id}/seus_posts/posts/#{post_pagina}/comments/1_10"
+
+      delete caminho, params: { perfil: perfil_pagina }, headers: so_ve.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
+      delete caminho, params: { perfil: perfil_pagina }, headers: sem_caixa.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body['error']).to eq('not_inbox_member')
+      expect(facebook_call).not_to have_been_made
+    end
+
     it 'comentário de outro post da Página: 404, sem chamar a Meta' do
       headers = manager_da_pagina.create_new_auth_token
       delete "/api/v1/accounts/#{account.id}/seus_posts/posts/#{post_pagina}/comments/2_10",
              params: { perfil: perfil_pagina }, headers: headers, as: :json
 
       expect(response).to have_http_status(:not_found)
-      expect(a_request(:any, /graph\.facebook\.com/).with { |request| !request.uri.path.end_with?('subscribed_apps') }).not_to have_been_made
+      expect(facebook_call).not_to have_been_made
     end
 
     it 'esconde como a Página e grava a ação sem anúncio' do

@@ -133,10 +133,14 @@ RSpec.describe SeusPosts::Esperando do
         expect(perfil[:posts].first).to include(waiting: 1, waiting_more: false)
       end
 
-      it 'sem a permissão de ler comentários: waiting nulo (nunca 0), e os posts continuam' do
+      it 'sem a permissão de ler comentários: waiting nulo (nunca 0), os posts continuam, e a Meta não é chamada a cada lista' do
+        allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
         allow(described_class).to receive(:new).and_return(instance_double(described_class, perform: { status: 'needs_permission' }))
 
+        lista
         perfil = lista
+
+        expect(described_class).to have_received(:new).once
 
         expect(perfil[:waiting_status]).to eq('needs_permission')
         expect(perfil[:posts]).to eq([post.merge(waiting: nil)])
