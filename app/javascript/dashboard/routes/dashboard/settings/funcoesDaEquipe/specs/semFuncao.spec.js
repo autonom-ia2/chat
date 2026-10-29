@@ -74,7 +74,6 @@ describe('semFuncao', () => {
 
   it('as áreas inteiras que o "Sem função" não dá também saem: Supervisor e Operação não perdem "nada"', () => {
     expect(diff(PRESETS.SUPERVISOR()).perde).toEqual([
-      'KNOWLEDGE_BASE:VER',
       'REPORTS:VER',
       'AUTONOMIA:VER',
       'INBOXES:VER',
@@ -161,7 +160,6 @@ describe('semFuncao', () => {
         'montar_colunas',
         'ia_das_vendas',
         'cuidar_de_tudo_nas_vendas',
-        'KNOWLEDGE_BASE:VER',
       ],
     });
   });
@@ -185,7 +183,6 @@ describe('semFuncao', () => {
         'ia_das_vendas',
         'cuidar_de_tudo_nas_vendas',
         'metas_do_mes',
-        'KNOWLEDGE_BASE:VER',
       ],
     });
   });

@@ -42,7 +42,7 @@ describe('ConfiraFuncao', () => {
   it('rodapé fixo com o menu acima de "Salvar função"', () => {
     const wrapper = montar();
     expect(wrapper.find('[data-no-menu]').text()).toBe(
-      'No menu: Conversas, Contatos, Vendas e Central de Ajuda'
+      'No menu: Conversas, Contatos e Vendas'
     );
     expect(wrapper.find('[data-botao-grande]').text()).toBe('Salvar função');
     expect(wrapper.text()).toContain(

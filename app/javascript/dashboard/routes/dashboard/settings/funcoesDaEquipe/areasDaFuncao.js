@@ -1,5 +1,6 @@
 import {
   CONVERSATION_LEVELS,
+  KEYS_OUTSIDE_MATRIX,
   LEVELS,
   getLevel,
   isExtraLocked,
@@ -12,8 +13,8 @@ import { dependenciaDe, valeNoServidor } from './chavesDaFuncao';
 import { comImplicadas } from './comImplicadas';
 import { motivoDasChaves, motivoDaTrava } from './motivoDaTrava';
 
-// O mapa fechado das áreas e chaves (#2308, especificação 6): onde cada um dos 25 módulos e cada uma das 59 chaves
-// aparece na conversa guiada. Os specs conferem 25/25 e 59/59.
+// O mapa fechado das áreas e chaves (#2308, especificação 6): onde cada um dos 24 módulos e cada uma das 59 chaves
+// aparece na conversa guiada. Os specs conferem 24/24 e 59/59; as chaves que nenhuma tela mostra ficam em FORA (#2352).
 export const LINHAS = ['CONVERSATIONS', 'CONTACTS', 'CRM'];
 export const DENTRO_DE = {
   ASSIGNMENT: 'CONVERSATIONS',
@@ -30,7 +31,6 @@ export const RECOLHIDA = [
   'REPORTS',
   'DESEMPENHO',
   'CANNED_RESPONSES',
-  'KNOWLEDGE_BASE',
   'CAMPAIGNS',
   'WHATSAPP_TEMPLATES',
   'META_ADS',
@@ -80,8 +80,6 @@ export const DONO_DAS_CHAVES = {
     'report_manage',
     'desempenho_view',
     'canned_response_manage',
-    'knowledge_base_view',
-    'knowledge_base_manage',
     'campaign_view',
     'campaign_manage',
     'whatsapp_templates_view',
@@ -110,6 +108,7 @@ export const DONO_DAS_CHAVES = {
     'financial_view',
     'financial_manage',
   ],
+  FORA: KEYS_OUTSIDE_MATRIX,
 };
 
 // Níveis e travas ------------------------------------------------------------------------------------------------

@@ -67,18 +67,26 @@ describe('AjustesDaFuncao', () => {
   });
 
   it('a recolhida nomeia até duas áreas no estado, em vez da conta', () => {
-    const wrapper = montar([...PRESETS.AGENT(), 'desempenho_view']);
+    const wrapper = montar([
+      ...PRESETS.AGENT(),
+      'desempenho_view',
+      'campaign_view',
+    ]);
     const texto = wrapper.find('[data-recolhida]').text();
-    expect(texto).toContain('Só olha Desempenho da equipe e Central de Ajuda');
+    expect(texto).toContain('Só olha Desempenho da equipe e Campanhas');
     expect(texto).not.toContain('2 áreas');
   });
 
   // Os relatórios de atendimento contam como ver (Rodrigo, 28/10): com eles no nível de ver, a recolhida diz
   // "Só olha".
   it('a recolhida com os relatórios de atendimento diz "Só olha"', () => {
-    const wrapper = montar([...PRESETS.AGENT(), 'report_manage']);
+    const wrapper = montar([
+      ...PRESETS.AGENT(),
+      'report_manage',
+      'campaign_view',
+    ]);
     const texto = wrapper.find('[data-recolhida]').text();
-    expect(texto).toContain('Só olha Relatórios e Central de Ajuda');
+    expect(texto).toContain('Só olha Relatórios e Campanhas');
     expect(texto).not.toContain('Vê Relatórios');
   });
 });
