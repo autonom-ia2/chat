@@ -12,12 +12,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
-import {
-  amount,
-  errorMessageKey,
-  pickPixel,
-  relativeTime,
-} from '../metaAdsHelpers';
+import { amount, errorMessageKey, relativeTime } from '../metaAdsHelpers';
 import { useMetaAdsFacebookLogin } from '../useMetaAdsFacebookLogin';
 import { SEM_LOGIN } from './anunciosSemLogin';
 import MetaTelaGuia from './MetaTelaGuia.vue';
@@ -28,8 +23,8 @@ import MetaTelaGuia from './MetaTelaGuia.vue';
 // Outros jeitos, para quem precisa: "Outra pessoa cuida dos meus anúncios" (mensagem pronta para mandar, com o
 // compartilhamento como parceiro) e o próprio compartilhamento passo a passo (copiar → abrir a Meta → marcar).
 // "Conferir" só lê (ad_accounts); quem grava a conta é "Conectar esta conta" (selection), com o toque da pessoa.
-// O código do site (Pixel) vai junto, sem perguntar (#2343): o marcado na janela do Facebook (o mais recente, se
-// marcou vários). Quando a Meta não diz qual foi marcado, vai o mais recente da conta e o "pronto" oferece "Alterar".
+// O código do site (Pixel) (#2343): com um só, vai junto sem perguntar; com mais de um, uma tela pergunta qual (a
+// Meta não diz qual a pessoa marcou na janela do Facebook). Sem nenhum, a conta conecta sem código do site.
 // Ainda não chegou: a tela confere de novo sozinha algumas vezes antes de pedir o toque.
 // `resume` (connection_state do servidor): 'choosing' volta direto para a escolha da conta; 'broken' começa do
 // início com o aviso de que a conexão caiu.
@@ -72,7 +67,6 @@ const autoChecking = ref(false);
 const destinationFailed = ref(false);
 const pixels = ref([]);
 const pixel = ref(null);
-const pixelFromLogin = ref(false);
 const pixelFailed = ref(false);
 const pickingPixel = ref(false);
 const pixelChoice = ref('');
@@ -97,6 +91,7 @@ const FACEBOOK_SCREENS = {
   checking: 2,
   found: 2,
   choose: 2,
+  pixel: 2,
   connecting: 2,
   notyet: 2,
   done: 3,
@@ -116,9 +111,7 @@ const whatsappLink = computed(
   () => `https://wa.me/?text=${encodeURIComponent(message.value)}`
 );
 const fmt = (value, currency) => amount(value, currency, locale.value);
-const canChangePixel = computed(
-  () => !pixelFromLogin.value && pixels.value.length > 1
-);
+const canChangePixel = computed(() => pixels.value.length > 1);
 const pixelChoices = computed(() => [
   ...pixels.value.map(row => {
     const time = relativeTime(row.last_fired_time, locale.value);
@@ -235,7 +228,7 @@ const openMeta = () => {
 };
 
 // Sem a lista de Pixels a conexão vale do mesmo jeito: o "pronto" avisa onde escolher o código depois.
-const loadPixel = async account => {
+const loadPixels = async account => {
   pickingPixel.value = false;
   try {
     const { data } = await CrmMetaAdsConnectionAPI.pixels(
@@ -243,27 +236,21 @@ const loadPixel = async account => {
       account.id
     );
     pixels.value = data.pixels || [];
-    ({ pixel: pixel.value, fromLogin: pixelFromLogin.value } = pickPixel(
-      pixels.value
-    ));
     pixelFailed.value = false;
   } catch {
     pixels.value = [];
-    pixel.value = null;
-    pixelFromLogin.value = false;
     pixelFailed.value = true;
   }
 };
 
-const connectAccount = async account => {
-  chosen.value = account;
+const save = async ({ noSite = false } = {}) => {
   go('connecting');
-  await loadPixel(account);
   try {
     await CrmMetaAdsConnectionAPI.select({
       mode: mode.value,
-      adAccountId: account.id,
+      adAccountId: chosen.value.id,
       pixelId: pixel.value?.id || null,
+      noSite,
     });
   } catch (error) {
     errorCode.value = error?.response?.data?.error || 'generic';
@@ -283,6 +270,28 @@ const connectAccount = async account => {
     destinationFailed.value = true;
   }
   go('done');
+};
+
+const connectAccount = async account => {
+  chosen.value = account;
+  pixel.value = null;
+  go('connecting');
+  await loadPixels(account);
+  if (pixels.value.length > 1) {
+    pixelChoice.value = '';
+    go('pixel');
+    return;
+  }
+  pixel.value = pixels.value[0] || null;
+  await save();
+};
+
+const confirmPixel = () => {
+  const noSite = pixelChoice.value === NO_SITE;
+  pixel.value = noSite
+    ? null
+    : pixels.value.find(row => row.id === pixelChoice.value);
+  save({ noSite });
 };
 
 const openPixelChoice = () => {
@@ -789,6 +798,38 @@ onBeforeUnmount(stopRecheck);
           </button>
         </li>
       </ul>
+    </template>
+
+    <!-- Mais de um código do site: a pessoa escolhe -->
+    <template v-else-if="screen === 'pixel'">
+      <div class="flex flex-col gap-2">
+        <h2
+          data-conectar-titulo
+          tabindex="-1"
+          class="m-0 text-2xl font-bold tracking-tight text-balance text-n-slate-12 outline-none"
+        >
+          {{ $t(`${C}.PIXEL.TITLE`) }}
+        </h2>
+        <p class="m-0 text-base text-n-slate-11">
+          {{ $t(`${C}.PIXEL.TEXT`, { name: chosen?.name }) }}
+        </p>
+      </div>
+      <ChoiceSelect
+        v-model="pixelChoice"
+        data-conectar-pixel-pergunta
+        class="w-full sm:w-auto sm:min-w-80 sm:self-start"
+        :options="pixelChoices"
+        :placeholder="$t(`${C}.PIXEL.PLACEHOLDER`)"
+        :aria-label="$t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_TITLE')"
+      />
+      <Button
+        data-conectar-pixel-continuar
+        class="!min-h-12 !rounded-xl self-start"
+        icon="i-lucide-plug"
+        :disabled="!pixelChoice"
+        :label="$t(`${C}.FOUND.CTA`)"
+        @click="confirmPixel"
+      />
     </template>
 
     <!-- Ainda não chegou / deu erro -->

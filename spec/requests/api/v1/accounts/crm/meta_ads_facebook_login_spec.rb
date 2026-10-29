@@ -246,11 +246,11 @@ RSpec.describe 'CRM meta_ads_connection facebook_login API', type: :request do
       expect(response.parsed_body['error']).to eq('token_missing')
     end
 
-    describe 'Pixels marcados no login (#2343)' do
+    # A Meta não diz qual Pixel a pessoa marcou na janela do login (#2343): o usuário do sistema da integração
+    # acumula os Pixels de logins anteriores. A lista vai inteira, e a tela pergunta quando há mais de um.
+    describe 'Pixels no login (#2343)' do
       let(:seguros) { '2164882667623689' }
       let(:medico) { '1674865833738871' }
-      let(:bisu) { '122100000000000001' }
-      let(:client_business) { '1013433763956648' }
 
       def stub_pixels
         stub_graph("act_#{ad_account}", account_row)
@@ -260,76 +260,22 @@ RSpec.describe 'CRM meta_ads_connection facebook_login API', type: :request do
                    ] })
       end
 
-      def stub_assigned(pixel, users, status: 200)
-        stub_graph("#{pixel}/assigned_users", users, status: status, query: hash_including(business: client_business))
-      end
-
-      def granted_by_id
-        response.parsed_body['pixels'].to_h { |row| [row['id'], row['granted']] }
-      end
-
-      it 'marca o Pixel que tem o usuário do sistema do login' do
+      it 'lista todos os Pixels da conta sem perguntar à Meta quem foi marcado' do
         connect_with_login
         stub_pixels
-        stub_graph('me', { id: bisu, client_business_id: client_business })
-        stub_assigned(medico, { data: [{ id: bisu }, { id: '555' }] })
-        stub_assigned(seguros, { data: [{ id: '555' }] })
-
-        allow(Rails.logger).to receive(:info).and_call_original
-        expect(Rails.logger).to receive(:info).with('[MetaAdsLogin] pixels total=2 source=assigned_users granted=1')
-        get "#{base}/pixels", params: { mode: 'facebook_login', ad_account_id: ad_account }, headers: auth_headers(admin)
-
-        expect(granted_by_id).to eq(seguros => false, medico => true)
-      end
-
-      it 'Meta recusa a leitura de quem tem acesso: nenhum Pixel marcado (a tela fica com o mais recente)' do
-        connect_with_login
-        stub_pixels
-        stub_graph('me', { id: bisu, client_business_id: client_business })
-        stub_assigned(seguros, { data: [{ id: bisu }] })
-        stub_assigned(medico, { error: { code: 200, message: 'Permissions error' } }, status: 403)
-
-        allow(Rails.logger).to receive(:info).and_call_original
-        expect(Rails.logger).to receive(:info).with('[MetaAdsLogin] pixels total=2 source=latest reason=assigned_users code=200')
-        get "#{base}/pixels", params: { mode: 'facebook_login', ad_account_id: ad_account }, headers: auth_headers(admin)
-
-        expect(granted_by_id).to eq(seguros => nil, medico => nil)
-      end
-
-      it 'token sem portfólio do cliente não consulta os Pixels um a um' do
-        connect_with_login
-        stub_pixels
-        stub_graph('me', { id: bisu })
+        me = stub_request(:get, meta_graph_url('me')).with(query: hash_including({}))
         assigned = stub_request(:get, %r{/assigned_users})
 
         get "#{base}/pixels", params: { mode: 'facebook_login', ad_account_id: ad_account }, headers: auth_headers(admin)
 
-        expect(granted_by_id.values).to all(be_nil)
+        expect(response.parsed_body['pixels']).to eq([
+                                                       { 'id' => seguros, 'name' => 'Pixel Placement Seguros',
+                                                         'last_fired_time' => '2026-10-27T10:00:00+0000' },
+                                                       { 'id' => medico, 'name' => 'Pixel Placement - RC Médico',
+                                                         'last_fired_time' => '2026-10-22T10:00:00+0000' }
+                                                     ])
+        expect(me).not_to have_been_requested
         expect(assigned).not_to have_been_requested
-      end
-
-      it 'Meta recusa o /me: nenhum Pixel marcado, e o motivo vai para o log' do
-        connect_with_login
-        stub_pixels
-        stub_graph('me', { error: { code: 200, message: 'Permissions error' } }, status: 403)
-
-        allow(Rails.logger).to receive(:info).and_call_original
-        expect(Rails.logger).to receive(:info).with('[MetaAdsLogin] pixels total=2 source=latest reason=me code=200')
-        get "#{base}/pixels", params: { mode: 'facebook_login', ad_account_id: ad_account }, headers: auth_headers(admin)
-
-        expect(granted_by_id.values).to all(be_nil)
-      end
-
-      it 'ninguém do login em nenhum Pixel vale como não saber' do
-        connect_with_login
-        stub_pixels
-        stub_graph('me', { id: bisu, client_business_id: client_business })
-        stub_assigned(seguros, { data: [] })
-        stub_assigned(medico, { data: [{ id: '555' }] })
-
-        get "#{base}/pixels", params: { mode: 'facebook_login', ad_account_id: ad_account }, headers: auth_headers(admin)
-
-        expect(granted_by_id.values).to all(be_nil)
       end
 
       it 'grava o Pixel escolhido com o token do login' do

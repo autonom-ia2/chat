@@ -2514,6 +2514,11 @@
             "TITLE": "We found your ad account",
             "CTA": "Connect this account"
           },
+          "PIXEL": {
+            "TITLE": "Which website code should we use?",
+            "TEXT": "{name} has more than one website code (Pixel). Pick the one on the website where you sell.",
+            "PLACEHOLDER": "Choose a code"
+          },
           "CHOOSE": {
             "TITLE": "Which account runs your WhatsApp ads?",
             "TEXT": "We found more than one. Tap the one you use.",

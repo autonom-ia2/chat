@@ -2515,6 +2515,11 @@
             "TITLE": "Achamos sua conta de anúncios",
             "CTA": "Conectar esta conta"
           },
+          "PIXEL": {
+            "TITLE": "Qual código do site usar?",
+            "TEXT": "{name} tem mais de um código do site (Pixel). Escolha o do site onde você vende.",
+            "PLACEHOLDER": "Escolha um código"
+          },
           "CHOOSE": {
             "TITLE": "Qual é a conta dos anúncios do WhatsApp?",
             "TEXT": "Achamos mais de uma. Toque na que você usa.",
