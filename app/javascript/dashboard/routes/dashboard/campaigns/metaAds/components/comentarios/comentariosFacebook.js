@@ -9,7 +9,9 @@ import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 //
 // Tudo ao vivo na Meta, pelo servidor (Crm::MetaAds::FacebookComments). `status`: `ready`; `no_post` (anúncio sem post
 // da Página: a aba some); `needs_login` (falta pages_read_user_content/pages_manage_engagement, ou a pessoa não
-// administra a Página). Falha ao ler sobe para a casca, que mostra "tente de novo"; recusa ao agir também.
+// administra a Página); `no_inbox` (a conta não tem a Página como caixa do Messenger: ninguém lê, #2359);
+// `not_inbox_member` (a pessoa não está nessa caixa). Falha ao ler sobe para a casca, que mostra "tente de novo";
+// recusa ao agir também.
 // Resposta no privado fica fora deste envio à Meta (decisão de 25/10 na #2197): exige pages_messaging, que está em
 // acesso padrão, e a doc não cita anúncio. can_reply_private vem sempre false; a tela sugere o WhatsApp.
 
@@ -50,9 +52,15 @@ export const apagar = async (adId, id) => {
   return data;
 };
 
-// Sem permissão: a aba Conexão, onde fica o Entrar com o Facebook, levando o anúncio em `volta`; depois de entrar e
-// escolher a conta, a página volta ao anúncio (MetaAdsPage.vue).
-export const entrar = (_status, adId) => {
+// Sem a caixa da Página: a tela de conectar uma caixa do Messenger (só quem cria caixas vê o botão). Sem permissão:
+// a aba Conexão, onde fica o Entrar com o Facebook, levando o anúncio em `volta`; depois de entrar e escolher a conta,
+// a página volta ao anúncio (MetaAdsPage.vue).
+export const entrar = (status, adId) => {
+  if (status === 'no_inbox') {
+    const conta = window.location.pathname.split('/campaigns')[0];
+    window.location.assign(`${conta}/settings/inboxes/new/facebook`);
+    return;
+  }
   const query = new URLSearchParams(window.location.search);
   query.set('aba', 'conexao');
   query.set('volta', adId || query.get('anuncio') || '');

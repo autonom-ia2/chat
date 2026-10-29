@@ -296,6 +296,8 @@ const gestaoOn = computed(() =>
   )
 );
 const canManage = usePermissionGranted('meta_ads_manage');
+// Conectar a Página como caixa do Messenger, quando a conta não tem (comentários do Facebook, #2359).
+const canCreateInbox = usePermissionGranted('inbox_manage');
 
 // Comentários do anúncio, uma aba por rede, cada uma atrás da própria flag: Instagram (#2196) e Facebook (#2197).
 // Sem nenhuma aba ligada, a seção não aparece.
@@ -461,6 +463,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         :ad-id="adId"
         :abas="commentTabs"
         :can-manage="canManage"
+        :can-create-inbox="canCreateInbox"
       />
     </template>
 
@@ -818,6 +821,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         :ad-id="adId"
         :abas="commentTabs"
         :can-manage="canManage"
+        :can-create-inbox="canCreateInbox"
       />
 
       <div

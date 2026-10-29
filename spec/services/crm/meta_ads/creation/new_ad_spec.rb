@@ -49,10 +49,10 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
   end
 
   # A releitura dos três níveis depois de criar. `ad_status:` muda só a situação do anúncio.
-  def stub_reread(ad_status: 'PAUSED')
-    { '900' => 'PAUSED', '901' => 'PAUSED', '903' => ad_status }.each do |id, status|
+  def stub_reread(ad_status: 'PAUSED', ad_effective: ad_status)
+    { '900' => %w[PAUSED PAUSED], '901' => %w[PAUSED PAUSED], '903' => [ad_status, ad_effective] }.each do |id, (status, effective)|
       stub_request(:get, meta_graph_url(id)).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
-                                            .to_return(ok(id: id, status: status, effective_status: status))
+                                            .to_return(ok(id: id, status: status, effective_status: effective))
     end
   end
 
@@ -86,13 +86,21 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       .to_return(ok(data: %w[ads_management pages_manage_ads].map { |name| { permission: name, status: 'granted' } }))
   end
 
+  # #2354: pela doc do Ad, anúncio novo passa pela análise da Meta antes. O cartão de criado não oferece Ativar então.
+  it 'anúncio recém-criado em análise da Meta: a resposta diz in_review, da releitura que o criar já faz' do
+    stub_creation
+    stub_reread(ad_effective: 'IN_PROCESS')
+
+    expect(create!).to include(ad_id: '903', status: 'PAUSED', in_review: true)
+  end
+
   it 'cria campanha, grupo e anúncio PAUSED, com destino WhatsApp e público do Brasil' do
     stubs = stub_creation
     stub_reread
 
     result = create!
 
-    expect(result).to include(ad_id: '903', name: 'Bolo de pote · WhatsApp', status: 'PAUSED')
+    expect(result).to include(ad_id: '903', name: 'Bolo de pote · WhatsApp', status: 'PAUSED', in_review: false)
     campaign_ok = lambda do |req|
       body = form(req)
       body['objective'] == 'OUTCOME_ENGAGEMENT' && body['status'] == 'PAUSED' && body['special_ad_categories'] == '[]' &&
@@ -143,6 +151,26 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
     expect(pause).to have_been_made.once
     expect(Audited.audit_class.where(action: 'meta_ads_create_repaused').last.audited_changes).to include('level' => 'campaign')
+  end
+
+  it 'anúncio pausado na hora: in_review vem da releitura depois de pausar (#2354)' do
+    stub_creation
+    stub_reread
+    stub_request(:get, meta_graph_url('903')).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
+                                             .to_return(ok(id: '903', status: 'ACTIVE', effective_status: 'ACTIVE'),
+                                                        ok(id: '903', status: 'PAUSED', effective_status: 'IN_PROCESS'))
+    stub_request(:post, meta_graph_url('903')).with(body: { 'status' => 'PAUSED' }).to_return(ok(success: true))
+
+    expect(create!).to include(in_review: true)
+  end
+
+  it 'a mesma chave de novo não chama a Meta (ponto 4): sem releitura, in_review false (#2354)' do
+    stub_creation
+    stub_reread(ad_effective: 'IN_PROCESS')
+    expect(create!).to include(in_review: true)
+
+    expect(create!).to include(in_review: false)
+    expect(a_request(:get, meta_graph_url('903')).with(query: hash_including({}))).to have_been_made.once
   end
 
   it 'a mesma chave não cria duas campanhas (ponto 4)' do

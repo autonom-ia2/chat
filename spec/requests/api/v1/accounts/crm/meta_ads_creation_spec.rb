@@ -271,7 +271,13 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
       a_request(:post, meta_graph_url(id)).with(body: { 'status' => 'PAUSED' })
     end
 
-    before { stub_permissions }
+    # Antes de ligar, a situação do anúncio: pausado e fora de análise (#2354).
+    before do
+      stub_permissions
+      stub_request(:get, meta_graph_url(ad_id)).with(query: { fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS })
+                                               .to_return(status: 200, headers: json,
+                                                          body: { id: ad_id, status: 'PAUSED', effective_status: 'PAUSED' }.to_json)
+    end
 
     it 'liga os três, em ordem, relendo cada um, e marca como ativado' do
       [campaign_id, adset_id, ad_id].each { |id| stub_level(id) }
@@ -286,6 +292,32 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
         .to include('ad_id' => ad_id, 'campaign_id' => campaign_id, 'adset_id' => adset_id, 'status' => 'ACTIVE')
     end
 
+    # #2354: a doc da Meta não diz se dá para ligar um anúncio durante a análise. Não oferecemos.
+    it 'anúncio em análise da Meta: in_review, sem ligar nada' do
+      stub_request(:get, meta_graph_url(ad_id)).with(query: { fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS })
+                                               .to_return(status: 200, headers: json,
+                                                          body: { id: ad_id, status: 'PAUSED', effective_status: 'IN_PROCESS' }.to_json)
+
+      activate!
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('in_review')
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+      expect(record.reload).to have_attributes(activated_at: nil, switching_at: nil)
+    end
+
+    it 'sem conseguir ler a situação do anúncio: meta_unavailable, sem ligar nada' do
+      stub_request(:get, meta_graph_url(ad_id)).with(query: { fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS })
+                                               .to_return(status: 500, headers: json, body: meta_graph_error(1).to_json)
+
+      activate!
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('meta_unavailable')
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+      expect(record.reload).to have_attributes(activated_at: nil, switching_at: nil)
+    end
+
     it 'segundo clique enquanto o primeiro liga: in_progress, sem chamar a Meta' do
       record.update!(switching_at: 1.minute.ago)
 
@@ -294,6 +326,7 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
       expect(response).to have_http_status(:unprocessable_entity)
       expect(response.parsed_body['error']).to eq('in_progress')
       expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+      expect(a_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))).not_to have_been_made
     end
 
     it 'trava esquecida (processo caiu) há mais de 3 minutos não prende o anúncio' do

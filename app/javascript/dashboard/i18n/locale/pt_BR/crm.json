@@ -3103,6 +3103,9 @@
           "PARTIAL": "Parte do anúncio ficou ligada na Meta e não deu para pausar de volta. Confira no Gerenciador de Anúncios.",
           "PAUSE_PARTIAL": "Não deu para pausar tudo: parte do anúncio pode continuar ligada na Meta. Confira no Gerenciador de Anúncios.",
           "IN_PROGRESS": "Este anúncio já está sendo mudado. Espere um instante e olhe de novo.",
+          "IN_REVIEW": "A Meta ainda está conferindo este anúncio. Você poderá ativar quando ela terminar, em geral em até 1 dia.",
+          "IN_REVIEW_NOTE": "A Meta está conferindo este anúncio. Em geral leva até 1 dia.",
+          "IN_REVIEW_NOTE_HINT": "Você poderá ativar quando ela terminar.",
           "ACTIVATE_SPEND_END": "Ao ativar, o anúncio começa a gastar {value} por dia, até {end}. No total, no máximo {total}.",
           "ACTIVATE_SPEND_NO_END": "Ao ativar, o anúncio começa a gastar {value} por dia, sem data para terminar. Ele só para quando você pausar.",
           "ACTIVATE_SPEND_BUTTON": "Ativar e começar a gastar",
@@ -3236,10 +3239,18 @@
             "NEEDS_LOGIN_BUTTON": "Ir para a Conexão",
             "NOTE": "No Facebook, responda em público. Para conversar no privado, peça para a pessoa chamar no WhatsApp.",
             "NEEDS_LOGIN_AFTER": "Depois de entrar, você volta para este anúncio.",
+            "NO_INBOX_TITLE": "Esta Página não está no Messenger",
+            "NO_INBOX": "Conecte esta Página no Messenger para ver os comentários.",
+            "NO_INBOX_BUTTON": "Conectar no Messenger",
+            "NO_INBOX_ASK": "Quem cuida das caixas de entrada da conta pode conectar.",
+            "NOT_INBOX_MEMBER_TITLE": "Você não está na caixa desta Página",
+            "NOT_INBOX_MEMBER": "Os comentários desta Página ficam com quem está na caixa do Messenger dela. Peça a quem cuida das caixas de entrada da conta para incluir você.",
             "ERRORS": {
               "NEEDS_LOGIN": "Falta permissão nos comentários. Entre de novo com o Facebook na Conexão.",
               "META_UNAVAILABLE": "O Facebook não respondeu. Tente de novo em um minuto.",
-              "META_REFUSED": "O Facebook recusou esta ação. Recarregue os comentários e tente de novo."
+              "META_REFUSED": "O Facebook recusou esta ação. Recarregue os comentários e tente de novo.",
+              "NO_INBOX": "Esta Página não está conectada no Messenger. Conecte para cuidar dos comentários.",
+              "NOT_INBOX_MEMBER": "Você não está na caixa do Messenger desta Página."
             }
           },
           "LOGIN_ADMIN": "Peça a um administrador da conta para entrar de novo com o Instagram.",

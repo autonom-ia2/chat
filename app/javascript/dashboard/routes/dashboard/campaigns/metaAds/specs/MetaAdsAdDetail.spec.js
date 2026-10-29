@@ -7,6 +7,10 @@ import { BUS_EVENTS } from 'shared/constants/busEvents';
 import { lerGestao } from '../gestaoDoAnuncio';
 import comentariosInstagram from '../components/comentarios/comentariosInstagram';
 import MetaAdsAdStatus from '../components/MetaAdsAdStatus.vue';
+import MetaAdsComments from '../components/comentarios/MetaAdsComments.vue';
+
+// Permissões negadas no teste; o resto passa (administrador).
+const { negadas } = vi.hoisted(() => ({ negadas: new Set() }));
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: { panelAd: vi.fn(), adBudget: vi.fn() },
@@ -18,7 +22,7 @@ vi.mock('dashboard/composables/store', () => ({
     computed(() => (_accountId, flag) => Boolean(flags.value[flag])),
 }));
 vi.mock('dashboard/composables/useCanManage', () => ({
-  usePermissionGranted: () => computed(() => true),
+  usePermissionGranted: key => computed(() => !negadas.has(key)),
 }));
 vi.mock('../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
 // Comentários (#2196): o adaptador do Instagram responde sem chamar a API.
@@ -398,6 +402,26 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     const on = await mountDetail();
     expect(on.find('[data-ad-comments]').exists()).toBe(true);
     expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
+  });
+
+  it('lets only who has inbox_manage connect the Page to Messenger (#2359)', async () => {
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+    expect(
+      (await mountDetail())
+        .findComponent(MetaAdsComments)
+        .props('canCreateInbox')
+    ).toBe(true);
+
+    negadas.add('inbox_manage');
+    const sem = await mountDetail();
+    negadas.clear();
+    expect(sem.findComponent(MetaAdsComments).props()).toMatchObject({
+      canCreateInbox: false,
+      canManage: true,
+    });
   });
 
   // #2335 — anúncio que nunca rodou ou parou antes do período: sem números, mas a conexão lê o anúncio ao vivo.
