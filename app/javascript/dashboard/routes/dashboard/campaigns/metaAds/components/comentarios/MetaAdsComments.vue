@@ -18,12 +18,17 @@ import MetaAdsCommentRow from './MetaAdsCommentRow.vue';
 // Uma aba pode trazer uma linha fixa no topo (`<ABA>.NOTE`): no Facebook, que a resposta é só pública.
 //
 // Ver é `meta_ads_view`; responder, ocultar, apagar e responder no privado só com `canManage` (`meta_ads_manage`).
+// Aba que não pode ser lida (`needs_login`, `not_connected`, `no_inbox`, `not_inbox_member`) mostra um cartão com o
+// motivo. O botão dele é de quem pode resolver: entrar de novo, `canManage`; conectar a caixa que falta (`no_inbox`,
+// #2359), `canCreateInbox` (`inbox_manage`), e os demais leem a quem pedir (`<STATUS>_ASK`). Sem `<STATUS>_BUTTON`
+// (fora da caixa), não há botão.
 // Apagar some com o comentário de vez: pede confirmação citando o texto. Depois de cada ação a aba é lida de novo.
 const props = defineProps({
   adId: { type: String, required: true },
   // [{ key: 'INSTAGRAM' | 'FACEBOOK', adaptador }]
   abas: { type: Array, required: true },
   canManage: { type: Boolean, default: false },
+  canCreateInbox: { type: Boolean, default: false },
 });
 
 const { t, te, locale } = useI18n();
@@ -58,6 +63,21 @@ const current = computed(
 );
 const result = computed(() => results.value[current.value?.key] || null);
 const status = computed(() => result.value?.status || 'ready');
+const BLOCKED = [
+  'needs_login',
+  'not_connected',
+  'no_inbox',
+  'not_inbox_member',
+];
+const blocked = computed(() => BLOCKED.includes(status.value));
+const statusKey = computed(
+  () => `${KEY}.${current.value?.key}.${status.value.toUpperCase()}`
+);
+const canFix = computed(() =>
+  status.value === 'no_inbox' ? props.canCreateInbox : props.canManage
+);
+const showFix = computed(() => canFix.value && te(`${statusKey.value}_BUTTON`));
+const showAsk = computed(() => !canFix.value && te(`${statusKey.value}_ASK`));
 const unknownAuthorKey = computed(
   () => `${KEY}.${current.value.key}.UNKNOWN_AUTHOR`
 );
@@ -158,8 +178,9 @@ const more = async () => {
 // Toda ação: chama o adaptador, avisa e lê a aba de novo. Recusa da Meta vira aviso, sem tirar nada da tela: numa
 // resposta, o texto digitado continua na caixa (ACTION_ERROR); ao ocultar ou apagar, nada mudou (MANAGE_ERROR).
 // Quando o servidor diz o motivo (`ERRORS.<CODE>`: privado já enviado, prazo vencido, falta permissão…), o aviso diz
-// esse motivo; sem permissão, a aba é lida de novo e mostra o cartão de entrar. O texto da própria aba
-// (`<ABA>.ERRORS.<CODE>`, que diz a rede certa) vem antes do comum.
+// esse motivo; sem permissão ou sem a caixa da Página (#2359), a aba é lida de novo e mostra o cartão. O texto da
+// própria aba (`<ABA>.ERRORS.<CODE>`, que diz a rede certa) vem antes do comum.
+const REREAD = ['NEEDS_LOGIN', 'NO_INBOX', 'NOT_INBOX_MEMBER'];
 const errorKey = (aba, code, failure) =>
   [`${KEY}.${aba.key}.ERRORS.${code}`, `${KEY}.ERRORS.${code}`].find(
     key => code && te(key)
@@ -175,7 +196,7 @@ const act = async (call, done, failure = 'ACTION_ERROR') => {
   } catch (error) {
     const code = String(error?.response?.data?.error || '').toUpperCase();
     useAlert(t(errorKey(aba, code, failure)));
-    if (code === 'NEEDS_LOGIN' || code.startsWith('PRIVATE_REPLY'))
+    if (REREAD.includes(code) || code.startsWith('PRIVATE_REPLY'))
       await read(aba);
     return false;
   }
@@ -344,22 +365,21 @@ const tabCount = aba => {
           </div>
 
           <div
-            v-else-if="status === 'needs_login' || status === 'not_connected'"
+            v-else-if="blocked"
             :data-ad-comments-state="status"
             class="flex flex-col items-start gap-3 rounded-xl bg-n-alpha-1 p-4"
           >
             <p class="m-0 text-base font-semibold text-n-slate-12">
-              {{ $t(`${KEY}.${current.key}.${status.toUpperCase()}_TITLE`) }}
+              {{ $t(`${statusKey}_TITLE`) }}
             </p>
             <p class="m-0 text-sm text-n-slate-11">
-              {{
-                $t(`${KEY}.${current.key}.${status.toUpperCase()}`, {
-                  username: result.account?.username,
-                })
-              }}
+              {{ $t(statusKey, { username: result.account?.username }) }}
+            </p>
+            <p v-if="showAsk" class="m-0 text-sm text-n-slate-11">
+              {{ $t(`${statusKey}_ASK`) }}
             </p>
             <button
-              v-if="canManage"
+              v-if="showFix"
               type="button"
               :data-ad-comments-action="status"
               class="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-lg border-0 bg-n-brand px-4 text-sm font-medium text-white hover:bg-n-brand/90"
@@ -370,16 +390,13 @@ const tabCount = aba => {
                 class="size-4"
                 aria-hidden="true"
               />
-              {{ $t(`${KEY}.${current.key}.${status.toUpperCase()}_BUTTON`) }}
+              {{ $t(`${statusKey}_BUTTON`) }}
             </button>
             <p
-              v-if="
-                canManage &&
-                $te(`${KEY}.${current.key}.${status.toUpperCase()}_AFTER`)
-              "
+              v-if="showFix && $te(`${statusKey}_AFTER`)"
               class="m-0 text-sm text-n-slate-11"
             >
-              {{ $t(`${KEY}.${current.key}.${status.toUpperCase()}_AFTER`) }}
+              {{ $t(`${statusKey}_AFTER`) }}
             </p>
           </div>
 

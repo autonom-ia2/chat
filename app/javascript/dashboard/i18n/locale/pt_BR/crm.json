@@ -3236,10 +3236,18 @@
             "NEEDS_LOGIN_BUTTON": "Ir para a Conexão",
             "NOTE": "No Facebook, responda em público. Para conversar no privado, peça para a pessoa chamar no WhatsApp.",
             "NEEDS_LOGIN_AFTER": "Depois de entrar, você volta para este anúncio.",
+            "NO_INBOX_TITLE": "Esta Página não está no Messenger",
+            "NO_INBOX": "Conecte esta Página no Messenger para ver os comentários.",
+            "NO_INBOX_BUTTON": "Conectar no Messenger",
+            "NO_INBOX_ASK": "Quem cuida das caixas de entrada da conta pode conectar.",
+            "NOT_INBOX_MEMBER_TITLE": "Você não está na caixa desta Página",
+            "NOT_INBOX_MEMBER": "Os comentários desta Página ficam com quem está na caixa do Messenger dela. Peça a quem cuida das caixas de entrada da conta para incluir você.",
             "ERRORS": {
               "NEEDS_LOGIN": "Falta permissão nos comentários. Entre de novo com o Facebook na Conexão.",
               "META_UNAVAILABLE": "O Facebook não respondeu. Tente de novo em um minuto.",
-              "META_REFUSED": "O Facebook recusou esta ação. Recarregue os comentários e tente de novo."
+              "META_REFUSED": "O Facebook recusou esta ação. Recarregue os comentários e tente de novo.",
+              "NO_INBOX": "Esta Página não está conectada no Messenger. Conecte para cuidar dos comentários.",
+              "NOT_INBOX_MEMBER": "Você não está na caixa do Messenger desta Página."
             }
           },
           "LOGIN_ADMIN": "Peça a um administrador da conta para entrar de novo com o Instagram.",
