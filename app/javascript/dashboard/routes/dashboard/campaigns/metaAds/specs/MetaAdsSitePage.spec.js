@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsSitePage from '../components/MetaAdsSitePage.vue';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
+import { relativeTime } from '../metaAdsHelpers';
 
 vi.mock('dashboard/api/ctwaTrackedLinks', () => ({
   default: { get: vi.fn() },
@@ -16,7 +17,13 @@ const PAGE = {
   campaigns: [
     { campaign_key: '1', name: 'CBO 1-1-4', clicks: 31, conversations: 22 },
     { campaign_key: '2', name: 'Viagem Europa', clicks: 9, conversations: 7 },
-    { campaign_key: 'none', name: null, clicks: 4, conversations: 2 },
+    {
+      campaign_key: 'none',
+      name: null,
+      clicks: 4,
+      meta_clicks: 4,
+      conversations: 2,
+    },
   ],
 };
 
@@ -98,7 +105,9 @@ describe('Anúncios da Meta · página do site (#1047)', () => {
           campaign_key: 'none',
           name: null,
           clicks: 4,
+          meta_clicks: 4,
           last_clicked_at: '2026-10-06T10:00:00Z',
+          last_meta_clicked_at: '2026-10-06T10:00:00Z',
         },
       ],
     });
@@ -108,5 +117,58 @@ describe('Anúncios da Meta · página do site (#1047)', () => {
     );
     const href = wrapper.get('[data-site-kit-whatsapp]').attributes('href');
     expect(href.startsWith('https://wa.me/?text=')).toBe(true);
+  });
+
+  // #2338: visita direta ao site também chega sem nome de campanha. O aviso conta só clique de anúncio, e o "último"
+  // é o do último clique de anúncio.
+  describe('clicks without a campaign name', () => {
+    const mountCounting = campaigns =>
+      mount(MetaAdsSitePage, {
+        props: { page: { ...PAGE, campaigns } },
+        global: {
+          mocks: {
+            $t: (key, params) =>
+              `${key} ${params?.count ?? ''} ${params?.time ?? ''}`,
+          },
+          stubs: { Button: { template: '<button><slot /></button>' } },
+        },
+      });
+
+    it('counts only the clicks that came from an ad', () => {
+      const wrapper = mountCounting([
+        { campaign_key: 'none', name: null, clicks: 9, meta_clicks: 1 },
+      ]);
+
+      expect(wrapper.get('[data-site-unnamed]').text()).toContain(
+        'CRM_KANBAN.META_ADS_HUB.SITE.UNNAMED 1'
+      );
+    });
+
+    it('hides the warning when no click without a name came from an ad', () => {
+      const wrapper = mountCounting([
+        { campaign_key: 'none', name: null, clicks: 8, meta_clicks: 0 },
+      ]);
+
+      expect(wrapper.find('[data-site-unnamed]').exists()).toBe(false);
+    });
+
+    it('dates the warning by the last click from an ad, not the last visit', () => {
+      vi.setSystemTime(new Date('2026-10-06T12:00:00Z'));
+      const wrapper = mountCounting([
+        {
+          campaign_key: 'none',
+          name: null,
+          clicks: 9,
+          meta_clicks: 1,
+          last_clicked_at: '2026-10-06T11:59:00Z',
+          last_meta_clicked_at: '2026-10-04T12:00:00Z',
+        },
+      ]);
+
+      const text = wrapper.get('[data-site-unnamed]').text();
+      expect(text).toContain('CRM_KANBAN.META_ADS_HUB.SITE.UNNAMED_WHEN 1');
+      expect(text).toContain(relativeTime('2026-10-04T12:00:00Z', 'en'));
+      expect(text).not.toContain(relativeTime('2026-10-06T11:59:00Z', 'en'));
+    });
   });
 });

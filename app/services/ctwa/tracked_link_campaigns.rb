@@ -11,16 +11,18 @@
 # (sem a chave, a chave do valor nem vem, e a tela não mostra a coluna).
 class Ctwa::TrackedLinkCampaigns
   KEY_SQL = "COALESCE(NULLIF(ctwa_tracked_link_clicks.campaign_key, ''), 'none')".freeze
-  # Clique que veio de anúncio da Meta (#2338): a mesma regra da origem da conversa (Ctwa::CampaignBuilder#meta_paid?:
-  # fbclid, ou UTMs pagas da Meta, porque o iPhone pode tirar o fbclid) e o cookie fbc que a página manda. Visita direta
-  # ou orgânica ao site também chega sem nome de campanha; sem isso o aviso de "clique sem nome" contava as duas.
-  META_CLICK_SQL = ActiveRecord::Base.sanitize_sql_array(
+  # Clique que veio de anúncio da Meta (#2338), pela regra da origem da conversa (Ctwa::CampaignBuilder#source_for):
+  # gclid e ttclid vêm antes; depois, fbclid ou UTMs pagas da Meta (o iPhone pode tirar o fbclid). O cookie fbc não
+  # entra: fica meses no navegador (visita direta contaria como anúncio) e some na retenção dos cliques. Visita direta
+  # ou orgânica ao site também chega sem nome de campanha; sem isto o aviso de "clique sem nome" contava as duas.
+  META_CLICK_CONDITION = ActiveRecord::Base.sanitize_sql_array(
     [
-      "COUNT(*) FILTER (WHERE COALESCE(ctwa_tracked_link_clicks.params ->> 'fbclid', '') <> '' " \
-      "OR COALESCE(ctwa_tracked_link_clicks.meta_signals ->> 'fbc', '') <> '' " \
-      "OR (LOWER(TRIM(ctwa_tracked_link_clicks.params ->> 'utm_source')) IN (?) " \
-      "AND LOWER(TRIM(ctwa_tracked_link_clicks.params ->> 'utm_medium')) IN (?)))",
-      Ctwa::CampaignBuilder::META_UTM_SOURCES, Ctwa::CampaignBuilder::PAID_UTM_MEDIUMS
+      "COALESCE(ctwa_tracked_link_clicks.params ->> 'gclid', '') = '' " \
+      "AND COALESCE(ctwa_tracked_link_clicks.params ->> 'ttclid', '') = '' " \
+      "AND (COALESCE(ctwa_tracked_link_clicks.params ->> 'fbclid', '') <> '' " \
+      "OR (LOWER(BTRIM(ctwa_tracked_link_clicks.params ->> 'utm_source', :blank)) IN (:sources) " \
+      "AND LOWER(BTRIM(ctwa_tracked_link_clicks.params ->> 'utm_medium', :blank)) IN (:mediums)))",
+      { blank: " \t\n\v\f\r", sources: Ctwa::CampaignBuilder::META_UTM_SOURCES, mediums: Ctwa::CampaignBuilder::PAID_UTM_MEDIUMS }
     ]
   ).freeze
 
@@ -35,7 +37,8 @@ class Ctwa::TrackedLinkCampaigns
     @include_value = Crm::ValorDeVenda.ve?(account_user)
   end
 
-  # { link_id => [{ campaign_key:, name:, clicks:, meta_clicks:, last_clicked_at:, conversations:, won_cards:, won_value_by_currency: }] }
+  # { link_id => [{ campaign_key:, name:, clicks:, meta_clicks:, last_clicked_at:, last_meta_clicked_at:, conversations:,
+  #                 won_cards:, won_value_by_currency: }] }
   # (a última só com o Crm::ValorDeVenda.ve?)
   def perform
     return {} if @link_ids.empty?
@@ -44,11 +47,11 @@ class Ctwa::TrackedLinkCampaigns
     won = won_cards_by_conversation(conversations.values.flatten.uniq)
     names = names_by_campaign
 
-    click_counts.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(link_id, key, clicks, meta_clicks, last_clicked_at), result|
+    click_counts.each_with_object(Hash.new { |hash, key| hash[key] = [] }) do |(link_id, key, clicks, meta_clicks, last_at, last_meta_at), result|
       conversation_ids = conversations.fetch([link_id, key], [])
       row = campaign_row(key, names[[link_id, key]], { clicks: clicks, meta_clicks: meta_clicks }, conversation_ids, won)
       # Quando chegou o último clique da campanha: com isso a tela diz qual anúncio ficou sem o texto (#1068).
-      result[link_id] << row.merge(last_clicked_at: last_clicked_at&.iso8601)
+      result[link_id] << row.merge(last_clicked_at: last_at&.iso8601, last_meta_clicked_at: last_meta_at&.iso8601)
     end
   end
 
@@ -73,8 +76,9 @@ class Ctwa::TrackedLinkCampaigns
   def click_counts
     clicks.group(:tracked_link_id, Arel.sql(KEY_SQL))
           .order(Arel.sql('COUNT(*) DESC'), Arel.sql(KEY_SQL))
-          .pluck(:tracked_link_id, Arel.sql(KEY_SQL), Arel.sql('COUNT(*)'), Arel.sql(META_CLICK_SQL),
-                 Arel.sql('MAX(ctwa_tracked_link_clicks.created_at)'))
+          .pluck(:tracked_link_id, Arel.sql(KEY_SQL), Arel.sql('COUNT(*)'), Arel.sql("COUNT(*) FILTER (WHERE #{META_CLICK_CONDITION})"),
+                 Arel.sql('MAX(ctwa_tracked_link_clicks.created_at)'),
+                 Arel.sql("MAX(ctwa_tracked_link_clicks.created_at) FILTER (WHERE #{META_CLICK_CONDITION})"))
   end
 
   # Nome = utm_campaign mais recente da chave.
