@@ -32,6 +32,13 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
     end
   end
 
+  # Lê o Redis no relógio da rodada. O MockRedis do teste vence a chave pelo `Time.now`: fora do `travel_to`, com o
+  # relógio real além de `agora` + a validade da chave (7 dias nos contadores, 6 horas na trava), toda chave lida aqui
+  # já teria sumido, e o `be_nil` passaria sem conferir nada.
+  def redis_get(chave, quando: agora)
+    travel_to(quando) { Redis::Alfred.get(chave) }
+  end
+
   def leitura!(conversa, ate)
     Autonomia::Desempenho::Leitura.create!(account: account, sujeito_type: 'robo', sujeito_id: robo.id, conversation: conversa,
                                            lida_ate_em: ate, versao_ficha: 1, status: 'lida', lote: 'carga')
@@ -295,7 +302,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
       expect(segunda).to have_attributes(status: 'ok', conversas_lidas: 0, conversas_pendentes: 1)
       expect(procuras_de(cresceu).pluck(:lote)).to eq(['carga'])
       expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: cresceu.id).status).to eq('lida')
-      expect(Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{cresceu.id}")).to be_nil
+      expect(redis_get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{cresceu.id}", quando: agora + 1.day)).to be_nil
     end
 
     it 'a OpenAI fora do ar (503) por dias seguidos nunca tira a conversa da fila: só o tempo esgotado conta contra ela' do
@@ -305,7 +312,8 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
         expect(travel_to(agora + dia.days) { described_class.new(ficha).call }).to have_attributes(status: 'ok', conversas_pendentes: 1)
       end
       expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: cresceu.id).status).to eq('lida')
-      expect(Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:passageiras:#{cresceu.id}")).to be_nil
+      expect(redis_get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:passageiras:#{cresceu.id}", quando: agora + 3.days))
+        .to be_nil
     end
 
     it 'três tempos esgotados seguidos numa rodada fecham a rodada sem contar o terceiro contra a conversa' do
@@ -314,7 +322,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
       expect(rodar).to have_attributes(status: 'erro')
       chave = "autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:passageiras:"
-      expect([cresceu, *outras].map { |c| Redis::Alfred.get("#{chave}#{c.id}") }).to eq(['1', '1', nil])
+      expect([cresceu, *outras].map { |c| redis_get("#{chave}#{c.id}") }).to eq(['1', '1', nil])
     end
 
     it 'resposta recusada mantém as procuras antigas; na segunda vez seguida, a conversa fica não lida e sai da fila' do
@@ -354,8 +362,8 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
     before { leitura!(conversa_com_agente(10), Time.utc(2026, 10, 21, 12, 0)) }
 
-    def falhas_de(conversa)
-      Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{conversa.id}")
+    def falhas_de(conversa, quando: agora)
+      redis_get("autonomia:desempenho:leitura:#{account.id}:robo:#{robo.id}:falhas:#{conversa.id}", quando: quando)
     end
 
     it 'chave recusada (401 e 403) fecha a rodada como chave_recusada na hora, sem contar falha da conversa' do
@@ -367,7 +375,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
         expect(corpos.size).to eq(1)
         expect(rodada).to have_attributes(status: 'chave_recusada', conversas_lidas: 0, conversas_pendentes: 2)
-        expect([falhas_de(primeira), falhas_de(segunda)]).to eq([nil, nil])
+        expect([falhas_de(primeira, quando: agora + dia.days), falhas_de(segunda, quando: agora + dia.days)]).to eq([nil, nil])
       end
     end
 
@@ -462,7 +470,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
       expect(quinta).to have_attributes(status: 'ok', conversas_lidas: 1, conversas_pendentes: 0, pendente_desde: nil)
       expect(Autonomia::Desempenho::Leitura.find_by(conversation_id: primeira.id).status).to eq('nao_lida')
-      expect(falhas_de(primeira)).to be_nil
+      expect(falhas_de(primeira, quando: agora + 4.days)).to be_nil
       chamadas = corpos.size
       travel_to(agora + 5.days) { described_class.new(ficha).call }
       expect(corpos.size).to eq(chamadas)
@@ -491,7 +499,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomatica::Orquestrador do
 
       expect { rodar }.to raise_error(Interrupt)
       expect(Autonomia::Desempenho::Rodada.last).to have_attributes(status: 'erro', terminada_em: be_present)
-      expect(Redis::Alfred.get("autonomia:desempenho:leitura:#{account.id}:trava")).to be_nil
+      expect(redis_get("autonomia:desempenho:leitura:#{account.id}:trava")).to be_nil
     end
 
     it 'o update! da rodada que falha não engana a interrompida!: o status do banco segue rodando e ela fecha erro' do
