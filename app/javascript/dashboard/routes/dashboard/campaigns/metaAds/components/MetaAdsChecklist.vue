@@ -12,6 +12,8 @@ const props = defineProps({
   salesOff: { type: Boolean, default: false },
   // Conta de anúncios gravada sem código do site e sem "Não tenho site" (#2343): o passo não ganha o visto.
   accountPending: { type: Boolean, default: false },
+  // Anúncio levando ao site sem página ligada (#2338): o passo do Destino pede a página.
+  destinationsPending: { type: Boolean, default: false },
 });
 
 defineEmits(['change']);
@@ -19,17 +21,26 @@ defineEmits(['change']);
 const STEPS = ['CONNECT', 'ACCOUNT', 'DESTINATIONS', 'SALES'];
 const SALES_STEP = 4;
 const ACCOUNT_STEP = 2;
+const DESTINATIONS_STEP = 3;
+// O que falta num passo feito pela metade: a dica e o botão que leva até ele.
+const PENDING = {
+  [ACCOUNT_STEP]: { hint: 'ACCOUNT_PENDING_HINT', action: 'PICK' },
+  [DESTINATIONS_STEP]: { hint: 'DESTINATIONS_PENDING_HINT', action: 'LINK' },
+};
 
 const steps = computed(() =>
   STEPS.map((key, index) => {
     const number = index + 1;
     const off = number === SALES_STEP && props.salesOff;
-    const pending =
-      number === ACCOUNT_STEP && number < props.current && props.accountPending;
+    const flagged = {
+      [ACCOUNT_STEP]: props.accountPending,
+      [DESTINATIONS_STEP]: props.destinationsPending,
+    }[number];
+    const pending = number < props.current && Boolean(flagged);
     return {
       key,
       number,
-      pending,
+      pending: pending ? PENDING[number] : null,
       done: number < props.current && !off && !pending,
       off: off && number !== props.current,
       now: number === props.current,
@@ -82,7 +93,7 @@ const steps = computed(() =>
           <span class="text-xs text-n-slate-11">
             {{
               step.pending
-                ? $t('CRM_KANBAN.META_ADS_HUB.STEPS.ACCOUNT_PENDING_HINT')
+                ? $t(`CRM_KANBAN.META_ADS_HUB.STEPS.${step.pending.hint}`)
                 : $t(`CRM_KANBAN.META_ADS_HUB.STEPS.${step.key}_HINT`)
             }}
           </span>
@@ -100,7 +111,7 @@ const steps = computed(() =>
           class="px-3 text-xs font-semibold border-0 rounded-lg min-h-11 bg-n-amber-3 text-n-amber-11 hover:bg-n-amber-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
           @click="$emit('change', step.number)"
         >
-          {{ $t('CRM_KANBAN.META_ADS_HUB.STEPS.PICK') }}
+          {{ $t(`CRM_KANBAN.META_ADS_HUB.STEPS.${step.pending.action}`) }}
         </button>
         <button
           v-else-if="step.off"

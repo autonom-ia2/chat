@@ -1489,6 +1489,10 @@
       "period"
     ]
   },
+  "crm/meta_ads_connection/site_pages": {
+    "controller": "api/v1/accounts/crm/meta_ads_site_pages#index",
+    "parametros": []
+  },
   "crm/meta_ads_connection/whatsapp_report": {
     "controller": "api/v1/accounts/crm/meta_ads_whatsapp_reports#show",
     "parametros": []

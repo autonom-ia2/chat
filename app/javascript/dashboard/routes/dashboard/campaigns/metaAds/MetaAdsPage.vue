@@ -133,6 +133,12 @@ const accountPending = computed(
     !connection.value?.pixel &&
     !connection.value?.no_site
 );
+// Anúncio levando ao site sem página do site ligada (#2338): o passo do Destino fica pendente, não feito.
+const destinationsPending = computed(
+  () =>
+    Boolean(connection.value?.destinations?.site) &&
+    connection.value?.site_pages_count === 0
+);
 const checklistCurrent = computed(() =>
   activeStep.value === 2 && !connection.value?.configured ? 2 : step.value
 );
@@ -488,6 +494,7 @@ onMounted(load);
               v-else-if="activeStep === 3"
               :destinations="connection.destinations"
               @saved="update"
+              @page-linked="load"
             />
             <MetaAdsFunnelStep
               v-else-if="activeStep === 4"
@@ -507,6 +514,7 @@ onMounted(load);
             :open="activeStep <= 4 ? activeStep : null"
             :sales-off="salesOff"
             :account-pending="accountPending"
+            :destinations-pending="destinationsPending"
             @change="openStep = $event"
           />
         </aside>

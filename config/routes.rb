@@ -427,6 +427,9 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
+              # Destino (#2338): ligar a página do site sem sair de Anúncios.
+              get :site_pages, to: 'meta_ads_site_pages#index'
+              post :site_pages, to: 'meta_ads_site_pages#create'
               get :create_options, to: 'meta_ads_creation#options'
               get :boost_posts, to: 'meta_ads_creation#boost_posts'
               post :media, to: 'meta_ads_creation#media'

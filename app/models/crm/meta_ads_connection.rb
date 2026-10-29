@@ -98,8 +98,15 @@ class Crm::MetaAdsConnection < ApplicationRecord
       configured: true, status: status, mode: mode, last_checked_at: last_checked_at, last_error: last_error,
       verified_at: verified_at, destinations: destinations_payload,
       ad_account: ad_account_id.present? ? { id: ad_account_id, name: ad_account_name } : nil,
-      pixel: pixel_id.present? ? { id: pixel_id, name: pixel_name } : nil, no_site: no_site?
+      pixel: pixel_id.present? ? { id: pixel_id, name: pixel_name } : nil, no_site: no_site?,
+      site_pages_count: site_pages_count
     }
+  end
+
+  # Destino (#2338): páginas do site ligadas na conta (links de site de Links e QR codes). Com o anúncio levando ao site
+  # e nenhuma página, o passo do Destino pede a página. Só a contagem: cliques e vendas seguem atrás de campaign_view.
+  def site_pages_count
+    Ctwa::TrackedLink.where(account_id: account_id, usage: 'website').count
   end
 
   def token_mode?
