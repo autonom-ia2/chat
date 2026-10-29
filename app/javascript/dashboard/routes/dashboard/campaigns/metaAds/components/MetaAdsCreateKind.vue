@@ -7,7 +7,7 @@ import { I18nT } from 'vue-i18n';
 // Cartão apagado não é botão: dentro dele vai o link.
 const props = defineProps({
   modelValue: { type: String, default: null },
-  // Tipos que o servidor oferece: ['ad'].
+  // Tipos que o servidor oferece: ['ad', 'post'] (#2339).
   kinds: { type: Array, default: () => [] },
   // { ad: 'NO_DESTINATION' }: o tipo e o motivo de não dar.
   unavailable: { type: Object, default: () => ({}) },
@@ -16,7 +16,10 @@ const props = defineProps({
 const emit = defineEmits(['choose']);
 
 const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR.KIND';
-const KINDS = [{ value: 'ad', icon: 'i-lucide-megaphone' }];
+const KINDS = [
+  { value: 'ad', icon: 'i-lucide-megaphone' },
+  { value: 'post', icon: 'i-lucide-rocket' },
+];
 const offered = computed(() =>
   KINDS.filter(option => props.kinds.includes(option.value))
 );

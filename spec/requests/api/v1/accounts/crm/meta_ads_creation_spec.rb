@@ -187,6 +187,58 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
     expect(response.parsed_body['ads'].pluck('ad_id')).to eq([ad_id])
   end
 
+  describe 'impulsionar post (#2339): os posts da Página escolhida e o criar com o post' do
+    let(:page_id) { '110000000002161' }
+
+    before do
+      stub_graph('me/permissions', { data: %w[ads_management pages_manage_ads].map { |name| { permission: name, status: 'granted' } } })
+      stub_graph('me/accounts', { data: [{ id: page_id, name: 'Loja Exemplo', instagram_business_account: { id: '178', username: 'loja' } }] })
+      stub_graph(page_id, { id: page_id, access_token: 'token-da-pagina-2339' }, fields: 'access_token')
+      cover = { id: "#{page_id}_901", message: 'Oi', is_eligible_for_promotion: true, attachments: { data: [{ type: 'cover_photo' }] } }
+      stub_graph("#{page_id}/published_posts", { data: [cover] })
+      stub_graph('178/media', { data: [{ id: '1790', caption: 'Vestidos', boost_eligibility_info: { eligible_to_boost: true } }] })
+    end
+
+    it 'traz os posts da Página e do Instagram dela; capa vem apagada com o motivo' do
+      get "#{path}/boost_posts", params: { page_id: page_id }, headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:ok)
+      body = response.parsed_body
+      expect(body['posts'].map { |post| post.slice('id', 'eligible', 'reason') })
+        .to eq([{ 'id' => "#{page_id}_901", 'eligible' => false, 'reason' => 'profile_or_cover' }])
+      expect(body['instagram_posts'].map { |post| post.slice('id', 'eligible') }).to eq([{ 'id' => '1790', 'eligible' => true }])
+      expect(body['posts_error']).to be_nil
+    end
+
+    it 'Página que o token não alcança: 422 invalid_page, sem ler posts' do
+      get "#{path}/boost_posts", params: { page_id: '999' }, headers: admin.create_new_auth_token
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('invalid_page')
+      expect(a_request(:get, meta_graph_url('999/published_posts')).with(query: hash_including({}))).not_to have_been_made
+    end
+
+    it 'agente comum não lê os posts (403), sem chamar a Meta' do
+      get "#{path}/boost_posts", params: { page_id: page_id }, headers: agent.create_new_auth_token
+
+      expect(response).to have_http_status(:forbidden)
+      expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'o criar recebe o post escolhido' do
+      service = instance_double(Crm::MetaAds::Creation::NewAd, created_now: true)
+      allow(Crm::MetaAds::Creation::NewAd).to receive(:new).and_return(service)
+      allow(service).to receive(:create!).and_return(ad_id: ad_id, name: 'Impulsionar', status: 'PAUSED', budget: {})
+
+      post "#{path}/ads", params: { kind: 'post', post_source: 'instagram', post_id: '1790', page_id: page_id },
+                          headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(service).to have_received(:create!)
+        .with(hash_including('kind' => 'post', 'post_source' => 'instagram', 'post_id' => '1790', 'page_id' => page_id))
+    end
+  end
+
   describe 'ativar (ponto 6): tudo nasce pausado, e ativar liga campanha, grupo e anúncio' do
     let(:campaign_id) { '120000000000000001' }
     let!(:record) do
@@ -318,6 +370,23 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
 
       expect(response.parsed_body).to eq('status' => 'ACTIVE', 'held_by' => 'campaign')
       expect(turned_on(campaign_id)).not_to have_been_made
+    end
+
+    # Pedido da Funções no PR 1: a linha de outra conta da plataforma com o mesmo anúncio não liga campanha nem grupo.
+    it 'linha de outra conta da plataforma com o mesmo anúncio: a ativação de sempre, sem tocar campanha e grupo' do
+      record.update!(account: create(:account))
+      stub_graph(ad_id, { id: ad_id, account_id: connection.ad_account_id, status: 'PAUSED', effective_status: 'PAUSED' },
+                 fields: Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS)
+      stub_graph(ad_id, { success: true }, verb: :post)
+      stub_graph(ad_id, { id: ad_id, account_id: connection.ad_account_id, adset: { id: adset_id, effective_status: 'ACTIVE' },
+                          campaign: { id: campaign_id, effective_status: 'PAUSED' } }, fields: Meta::AdsGraphClient::AD_BUDGET_FIELDS)
+
+      activate!
+
+      expect(response.parsed_body).to eq('status' => 'ACTIVE', 'held_by' => 'campaign')
+      expect(turned_on(campaign_id)).not_to have_been_made
+      expect(turned_on(adset_id)).not_to have_been_made
+      expect(record.reload.activated_at).to be_nil
     end
   end
 

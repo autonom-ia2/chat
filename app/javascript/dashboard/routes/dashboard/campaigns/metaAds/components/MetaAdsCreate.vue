@@ -28,11 +28,13 @@ import {
   pedidoDoAnuncio,
 } from '../criacaoNaMeta';
 import { useMetaAdsFacebookLogin } from '../useMetaAdsFacebookLogin';
+import { useImpulsionarPost } from '../useImpulsionarPost';
 import MetaAdsCreateAudience from './MetaAdsCreateAudience.vue';
 import MetaAdsCreateBudget from './MetaAdsCreateBudget.vue';
 import MetaAdsCreateContent from './MetaAdsCreateContent.vue';
 import MetaAdsCreateDone from './MetaAdsCreateDone.vue';
 import MetaAdsCreateKind from './MetaAdsCreateKind.vue';
+import MetaAdsCreatePost from './MetaAdsCreatePost.vue';
 import MetaAdsCreateReview from './MetaAdsCreateReview.vue';
 
 // Anúncios da Meta (#2198), o Gerenciador simples, sem sair do painel. Anúncio novo, uma pergunta por tela: foto,
@@ -41,9 +43,10 @@ import MetaAdsCreateReview from './MetaAdsCreateReview.vue';
 // mais de um tipo (`kinds` das opções); com um só, a tela entra direto nele. A Página e o número só viram passo
 // quando há mais de um. O resto começa pronto (R$ 20,00 por dia, hoje, sem data para terminar). O anúncio nasce
 // PAUSADO (campanha e grupo ativos, gasto zero); a tela final já traz o "Ativar anúncio", que mostra quanto vai
-// gastar antes de o dinheiro começar a sair.
+// gastar antes de o dinheiro começar a sair. Impulsionar post (#2339): o post (abas Instagram e Facebook) → quem vê →
+// quanto investir → conferir, também pausado.
 const props = defineProps({
-  // 'ad' (anúncio novo): o botão que abriu já escolhe.
+  // 'ad' (anúncio novo) ou 'post' (impulsionar): o botão que abriu já escolhe.
   kind: { type: String, default: null },
 });
 
@@ -72,6 +75,8 @@ const CREATE_ERRORS = [
   'meta_refused',
   'currency_not_supported',
   'unconfirmed',
+  'invalid_post',
+  'post_not_eligible',
 ];
 // Os limites e o valor são em reais: conta de anúncios em outra moeda não cria por aqui.
 const ACCOUNT_CURRENCY = 'BRL';
@@ -124,13 +129,15 @@ const draft = ref({
   start_date: todayIso(),
   end_date: '',
   name: '',
+  // Impulsionar: de onde é o post e qual.
+  post_source: 'facebook',
+  post_id: null,
 });
 
 const step = ref(0);
 
 const pages = computed(() => options.value?.pages || []);
 const numbers = computed(() => options.value?.whatsapp_numbers || []);
-const instagram = computed(() => options.value?.instagram || null);
 const kinds = computed(() => options.value?.kinds || []);
 // O tipo já decidido: pelo botão que abriu, ou porque o servidor só oferece um.
 const fixedKind = computed(
@@ -142,10 +149,11 @@ const needsWhere = computed(
   () => pages.value.length > 1 || numbers.value.length > 1
 );
 
+const isPost = computed(() => draft.value.kind === 'post');
 const STEPS = computed(() => [
   'KIND',
   ...(needsWhere.value ? ['WHERE'] : []),
-  'CONTENT',
+  isPost.value ? 'POST' : 'CONTENT',
   'AUDIENCE',
   'BUDGET',
   'REVIEW',
@@ -153,13 +161,17 @@ const STEPS = computed(() => [
 const current = computed(() => STEPS.value[step.value]);
 const total = computed(() => STEPS.value.length - 1);
 
-// O que impede criar, antes do primeiro passo da escolha: entrar de novo, sem Página ou sem número.
+const impulsionar = useImpulsionarPost({ draft, numbers });
+const { postEscolhido, botaoDoPost } = impulsionar;
+
+// O que impede criar: entrar de novo, sem Página, sem número (anúncio para o WhatsApp) ou sem post para impulsionar.
 const blocker = computed(() => {
   if (!options.value) return null;
   if (options.value.needs_login) return 'LOGIN';
   if (options.value.currency !== ACCOUNT_CURRENCY) return 'CURRENCY';
   if (!draft.value.kind) return null;
   if (!pages.value.length) return 'NO_PAGE';
+  if (isPost.value) return impulsionar.semPosts.value ? 'NO_POST' : null;
   if (draft.value.destination === 'WHATSAPP' && !numbers.value.length) {
     return 'NO_NUMBER';
   }
@@ -181,16 +193,26 @@ const chosenNumber = computed(() =>
 const chosenPage = computed(() =>
   pages.value.find(page => page.id === draft.value.page_id)
 );
+// O Instagram da Página escolhida (cada Página tem o seu, ou nenhum).
+const instagram = computed(() => chosenPage.value?.instagram || null);
 
-// O botão do anúncio: o do destino.
-const action = computed(() => botaoDoAnuncio(draft.value));
+// O botão do anúncio: o do destino; no post, o do post.
+const action = computed(() =>
+  isPost.value ? botaoDoPost.value : botaoDoAnuncio(draft.value)
+);
 // Só o que a chamada real já confirmou para a conta: os destinos e, para o destino do anúncio, os lugares. Lugar
 // escolhido que deixa de valer (trocou o destino) volta para Automático.
 const destinations = computed(() => destinosDaConta(options.value));
-const placements = computed(() =>
-  lugaresDoDestino(options.value, draft.value.destination)
-);
+// Post do Instagram vai em Automático; o da Página, só no Facebook (o servidor manda assim).
+const placements = computed(() => {
+  if (isPost.value) {
+    return draft.value.post_source === 'facebook' ? ['FACEBOOK'] : ['AUTO'];
+  }
+  return lugaresDoDestino(options.value, draft.value.destination);
+});
 watch(placements, list => {
+  // O post tem lugar fixo (o servidor decide); só o anúncio novo volta para Automático.
+  if (isPost.value) return;
   if (!list.includes(draft.value.placement)) {
     draft.value = { ...draft.value, placement: 'AUTO' };
   }
@@ -231,6 +253,11 @@ const STEP_READY = {
         (numbers.value.length <= 1 || draft.value.whatsapp_number)
     ),
   CONTENT: () => !contentMissing.value,
+  // Enquanto lê (ou relê para outra Página), o post marcado ainda pode ser o da leitura anterior.
+  POST: () =>
+    !impulsionar.lendo.value &&
+    !impulsionar.falhou.value &&
+    Boolean(postEscolhido.value?.eligible),
   AUDIENCE: () =>
     draft.value.special_category !== null &&
     (draft.value.region === 'BR' || draft.value.states.length > 0) &&
@@ -240,11 +267,16 @@ const STEP_READY = {
 };
 const ready = computed(() => STEP_READY[current.value]());
 
-const blockReason = computed(() =>
-  current.value === 'CONTENT' && contentMissing.value
-    ? t(`${KEY}.CONTENT.${contentMissing.value}`)
-    : ''
-);
+const blockReason = computed(() => {
+  if (current.value === 'CONTENT' && contentMissing.value) {
+    return t(`${KEY}.CONTENT.${contentMissing.value}`);
+  }
+  const lendoPosts = impulsionar.lendo.value || impulsionar.falhou.value;
+  if (current.value === 'POST' && !ready.value && !lendoPosts) {
+    return t(`${KEY}.POST.NEED_POST`);
+  }
+  return '';
+});
 
 // Idade mínima maior que a máxima: o "Continuar" desliga e a tela diz por quê.
 const ageError = computed(
@@ -264,6 +296,7 @@ const defaultName = () => {
     locale.value.startsWith('pt') ? 'pt-BR' : 'en-US',
     { day: 'numeric', month: 'short' }
   );
+  if (isPost.value) return t(`${KEY}.REVIEW.DEFAULT_NAME_POST`, { date });
   return t(`${KEY}.REVIEW.DEFAULT_NAME_AD`, {
     where: t(`${KEY}.DESTINATION.SHORT.${draft.value.destination}`),
     date,
@@ -353,9 +386,15 @@ const recreate = () => create({ recriar: true });
 // acha a tentativa pelo pedido e devolve a chave dela.
 onBeforeUnmount(esquecerTentativas);
 
-const submitLabel = computed(() =>
-  current.value === 'REVIEW' ? t(`${KEY}.CREATE`) : t(`${KEY}.NEXT`)
-);
+const submitLabel = computed(() => {
+  if (current.value !== 'REVIEW') return t(`${KEY}.NEXT`);
+  return isPost.value ? t(`${KEY}.CREATE_BOOST`) : t(`${KEY}.CREATE`);
+});
+
+// Os posts são lidos ao chegar no passo do post (e de novo se a Página mudou).
+watch(current, value => {
+  if (value === 'POST') impulsionar.lerSePreciso();
+});
 
 const submit = () => {
   if (unconfirmed.value) return;
@@ -440,10 +479,17 @@ const blockerAction = computed(() =>
     : t(`${KEY}.BLOCKERS.${blocker.value}.ACTION`)
 );
 
+// Sem post para impulsionar: segue com o anúncio novo, quando a conta pode criar um (tem destino).
+const canSwitchToAd = computed(
+  () => kinds.value.includes('ad') && destinations.value.length > 0
+);
+const switchToAd = () => chooseKind('ad');
+
 const BLOCKERS = {
   LOGIN: { icon: 'i-lucide-log-in', action: signIn },
   NO_PAGE: { icon: 'i-lucide-flag', action: goToConnection },
   CURRENCY: { icon: 'i-lucide-banknote', action: goToConnection },
+  NO_POST: { icon: 'i-lucide-image-off', action: switchToAd },
   NO_NUMBER: {
     icon: 'i-ri-whatsapp-line',
     action: goToInboxes,
@@ -522,6 +568,7 @@ const BLOCKERS = {
         {{ $t(`${KEY}.BLOCKERS.${blocker}.TITLE`) }}
       </h2>
       <Button
+        v-if="blocker !== 'NO_POST' || canSwitchToAd"
         :data-create-blocker-action="blocker"
         :label="blockerAction"
         :is-loading="blocker === 'LOGIN' && isConnecting"
@@ -645,6 +692,18 @@ const BLOCKERS = {
           :destinations="destinations"
         />
 
+        <MetaAdsCreatePost
+          v-else-if="current === 'POST'"
+          v-model="draft"
+          :posts="impulsionar.posts.value"
+          :instagram-posts="impulsionar.postsDoInstagram.value"
+          :has-instagram="Boolean(instagram)"
+          :has-number="numbers.length > 0"
+          :loading="impulsionar.lendo.value"
+          :failed="impulsionar.falhou.value"
+          @retry="impulsionar.lerPosts"
+        />
+
         <MetaAdsCreateAudience
           v-else-if="current === 'AUDIENCE'"
           v-model="draft"
@@ -666,8 +725,9 @@ const BLOCKERS = {
           :page-name="chosenPage?.name"
           :phone="chosenNumber?.phone"
           :username="instagram?.username"
-          :media="draft.media"
-          :cards="adCards"
+          :media="isPost ? postEscolhido?.media : draft.media"
+          :cards="isPost ? [] : adCards"
+          :post-text="postEscolhido?.text"
           :action="action"
           :per-day-line="perDayLine"
           :total-line="totalLine"

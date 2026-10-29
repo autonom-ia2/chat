@@ -1,12 +1,12 @@
-# O que a pessoa escolhe para criar (#2198, pontos 8 e 12): Páginas que concedeu (com a conta do Instagram ligada),
-# números do WhatsApp da conta, fotos já usadas na conta de anúncios, limites do orçamento e só os destinos e lugares
-# que a chamada real confirmou. `needs_login`: o token não pode criar; a tela pede para entrar de novo com o Facebook
-# (`facebook_login`, o mesmo do GET da conexão) e não lê nada na Meta. Posts para impulsionar e o limite de posts do
-# Instagram chegam nos PRs seguintes: por ora, vazios. Quem pode criar recebe também a moeda lida na Meta (sem
-# fallback: leitura que falha é erro, e a tela não mostra valor) e o dia de hoje no fuso da conta de anúncios, que vale
-# para as datas do anúncio.
+# O que a pessoa escolhe para criar (#2198, pontos 8 e 12): Páginas que concedeu (cada uma com a conta do Instagram
+# ligada a ela, ou nil), números do WhatsApp da conta, fotos já usadas na conta de anúncios, limites do orçamento e só
+# os destinos e lugares que a chamada real confirmou. `needs_login`: o token não pode criar; a tela pede para entrar de
+# novo com o Facebook (`facebook_login`, o mesmo do GET da conexão) e não lê nada na Meta. Os posts para impulsionar
+# (PR 2, #2339) são lidos por Página, quando a pessoa chega no passo do post (Crm::MetaAds::Creation::Posts). Quem pode
+# criar recebe também a moeda lida na Meta (sem fallback: leitura que falha é erro, e a tela não mostra valor) e o dia
+# de hoje no fuso da conta de anúncios, que vale para as datas do anúncio.
 class Crm::MetaAds::Creation::Options
-  KINDS = %w[ad].freeze
+  KINDS = %w[ad post].freeze
   CURRENCY = Crm::MetaAds::Creation::Money::CURRENCY
   MIN_DAILY = 6
   MAX_DAILY = 500
@@ -22,10 +22,18 @@ class Crm::MetaAds::Creation::Options
     pages = can_create ? read_pages : []
     {
       needs_login: !can_create, facebook_login: Crm::MetaAds::FacebookLogin.public_payload, kinds: KINDS,
-      pages: pages.map { |page| page.slice(:id, :name) }, instagram: instagram(pages),
-      whatsapp_numbers: whatsapp_numbers, posts: [],
+      pages: pages.map { |page| page.slice(:id, :name, :instagram) },
+      whatsapp_numbers: whatsapp_numbers,
       images: can_create ? images : [], min_daily: MIN_DAILY, max_daily: MAX_DAILY, **account_facts(can_create)
     }.merge(Crm::MetaAds::Creation::Confirmed.payload)
+  end
+
+  # Posts da Página escolhida (só uma que o token alcança) e do Instagram dela. Sem poder criar: entrar de novo.
+  def boost_posts(page_id)
+    raise Crm::MetaAds::Creation::Error, 'cannot_create' unless @access.can_create?
+
+    page = read_pages.find { |item| item[:id] == page_id } || raise(Crm::MetaAds::Creation::Error, 'invalid_page')
+    Crm::MetaAds::Creation::Posts.new(@access.client).list(page)
   end
 
   # Páginas que o token alcança: [{ id:, name:, instagram: { id:, username: } | nil }]. Também usada pelo criar, para
@@ -59,11 +67,6 @@ class Crm::MetaAds::Creation::Options
 
   def whatsapp_numbers
     self.class.whatsapp_numbers(@account)
-  end
-
-  def instagram(pages)
-    found = pages.filter_map { |page| page[:instagram] }.first
-    found&.merge(posts: [], publish_left: nil)
   end
 
   # Fotos já usadas: se a leitura falhar, a pessoa ainda sobe uma do celular.
