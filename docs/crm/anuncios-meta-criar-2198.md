@@ -98,6 +98,31 @@ Mais quatro pontos, que a tela já supõe:
    anúncios a plataforma criou e lê na Meta só esses, quando ainda pausados.
    Não lista todos os pausados da conta. No protótipo a lista vem da memória do
    navegador.
+   Com o próprio anúncio `PAUSED`, a lista decide por classe de
+   `effective_status` (#2354): `PAUSED` está pronto para ativar;
+   `PENDING_REVIEW` e `IN_PROCESS` estão em análise da Meta e entram com
+   `in_review: true`; o resto fica fora. Leitura real de 29/10 (conta 18,
+   anúncio 120255124400230416, os três níveis pausados): logo depois de criar,
+   `IN_PROCESS`; depois da análise, `PAUSED`. `CAMPAIGN_PAUSED` e
+   `ADSET_PAUSED` também contam como prontos, por regra: o Ativar de um anúncio
+   criado aqui liga os três níveis. Que a Meta devolva um deles para um anúncio
+   pausado: **não confirmado** (não apareceu na leitura real).
+   O `in_review` vale em todo lugar que oferece o Ativar: a lista, o topo do
+   anúncio (o detalhe traz `in_review` da gestão) e o cartão de criado (a
+   resposta do criar traz `in_review` da releitura que ele já faz). No lugar do
+   botão, a mesma frase: "A Meta está conferindo este anúncio. Em geral leva
+   até 1 dia. Você poderá ativar quando ela terminar." O servidor relê o
+   anúncio depois da trava e recusa ligar com `in_review` (ou
+   `meta_unavailable`, se não conseguir ler), no anúncio criado aqui e em
+   qualquer outro da conta. Nível pausado na hora pelo criar é relido depois de
+   pausar. A mesma chave pedida de novo (depois de uma falha de rede) não chama
+   a Meta (ponto 4) e volta `in_review: false`: o cartão de criado oferece o
+   Ativar, e o servidor recusa com a frase da análise se for o caso.
+   A doc do Ad não diz se dá para ligar um anúncio durante a análise: **não
+   confirmado**, por isso não oferecemos. Ela diz que, ao fim da análise, o
+   anúncio volta ao status escolhido (aqui, PAUSED).
+   [Enum do Ad](https://developers.facebook.com/docs/marketing-api/reference/adgroup/),
+   [análise em até 24 horas, seção 3](https://transparency.meta.com/policies/ad-standards/)
 10. **O orçamento traz `active_ads_count`**: quantos anúncios do grupo (ou da
     campanha, quando o dinheiro é dela) estão no ar agora. O "Ativar" só diz
     "passa a dividir o dinheiro com os outros" quando esse número é maior que
