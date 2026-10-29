@@ -48,14 +48,8 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
     source_params.permit(:name, :inbox_id, :prefilled_text, :usage, allowed_origins: [])
   end
 
-  # `usage` só na criação; texto pré-preenchido só existe no QR/link direto — no modo site
-  # o texto é da página (cotação + código).
   def create_attributes(inbox)
-    usage = tracked_link_params[:usage].presence || 'direct'
-    attributes = { account: Current.account, inbox: inbox, name: tracked_link_params[:name], usage: usage }
-    attributes[:prefilled_text] = tracked_link_params[:prefilled_text] if usage == 'direct'
-    attributes[:allowed_origins] = Array(tracked_link_params[:allowed_origins]) if tracked_link_params.key?(:allowed_origins)
-    attributes
+    Ctwa::TrackedLinkAttributes.for_create(account: Current.account, inbox: inbox, params: tracked_link_params)
   end
 
   def update_attributes
@@ -80,7 +74,7 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
       conversations_count: tracked_link.conversations_count,
       inbox_id: tracked_link.inbox_id,
       wa_link: tracked_link.wa_link,
-      short_url: short_url_for(tracked_link)
+      short_url: Ctwa::TrackedLinkPayload.short_url(tracked_link)
     }
   end
 
@@ -89,20 +83,6 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
       return { allowed_origins: [], last_signal_at: nil, signals_blocked: false, signal_url: nil, kit_url: nil, ad_url_params: nil, campaigns: [] }
     end
 
-    {
-      allowed_origins: tracked_link.allowed_origins,
-      last_signal_at: tracked_link.last_signal_at&.iso8601,
-      # Teto diário de avisos atingido: a página está sendo recusada (429) agora.
-      signals_blocked: tracked_link.signals_daily_limit_reached?,
-      signal_url: "#{short_url_for(tracked_link)}/clicks",
-      # Página pública com o código pronto para quem cuida do site (CA-1.6, #1068).
-      kit_url: "#{short_url_for(tracked_link)}/kit",
-      ad_url_params: Crm::MetaAds::UrlTags::TEXT,
-      campaigns: (@campaigns || {}).fetch(tracked_link.id, [])
-    }
-  end
-
-  def short_url_for(tracked_link)
-    "#{ENV.fetch('FRONTEND_URL', '').to_s.chomp('/')}/l/#{tracked_link.code}"
+    Ctwa::TrackedLinkPayload.website(tracked_link).merge(campaigns: (@campaigns || {}).fetch(tracked_link.id, []))
   end
 end
