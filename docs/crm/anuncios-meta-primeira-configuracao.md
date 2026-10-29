@@ -65,15 +65,18 @@ Flag nova liga primeiro nas contas piloto; ligar para todas é decisão do Rodri
 | Chave | O que libera |
 |---|---|
 | `meta_ads_view` | Painel de Resultado, estado da conexão, lista de páginas do site no Destino (#2374). Não vê a aba Conexão. |
-| `meta_ads_manage` | Conectar, escolher conta e Pixel, Destino (inclusive ligar a página do site, #2374), Avisar a Meta, pausar, criar, orçamento. Implica `meta_ads_view`. Chave protegida: só o administrador entrega. |
-| `sales_value_view` | Valores de venda em R$ no painel e no anúncio. Sem ela, aparecem só contagens. |
+| `meta_ads_manage` | Conectar, escolher conta e Pixel, Destino (inclusive ligar a página do site, #2374), Avisar a Meta, pausar, criar, orçamento. Implica `meta_ads_view`. Chave protegida. |
+| `sales_value_view` | Valores de venda em R$ no painel e no anúncio. Função personalizada sem ela vê só contagens (e o valor dos próprios cards); administrador e agente sem função veem o R$. Chave protegida. |
 | `contact_view` | Em Formulários, a lista de quem chegou (nome, telefone, e-mail). Trazer quem já preencheu pede também poder criar card no CRM. |
 | `campaign_view` / `campaign_manage` | Não liberam Anúncios. Com `campaign_view`, o Destino mostra também o resultado por campanha da página do site; editar e apagar a página continua em Links e QR codes (`campaign_manage`). |
-| `posts_view` / `posts_manage` | Seus posts. |
+| `posts_view` / `posts_manage` | `posts_view`: vê Seus posts. `posts_manage`: chega com a publicação (#2305). |
+
+Chave protegida: só entrega o administrador ou quem tem o ajuste "Pode entregar acesso acima do próprio" (`grant_above_own`).
 
 Comentários: ver pede `meta_ads_view`; agir pede `meta_ads_manage`. Os do Instagram pedem também ver a caixa do
 Instagram, para ler e para agir (#2358); "Entrar de novo" no Instagram pede `integration_manage`. Os do Facebook
-pedem também ver a caixa do Messenger da Página.
+pedem também ver a caixa do Messenger da Página; conta sem essa caixa faz todos verem o aviso de caixa faltando, e o
+botão de conectar a caixa pede `inbox_manage`.
 
 ## 3. O passo a passo no painel
 
