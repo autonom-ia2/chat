@@ -85,6 +85,9 @@ const HTTP_CONFLICT = 409;
 const options = ref(null);
 const loading = ref(true);
 const loadFailed = ref(false);
+// Sem conexão ativa com conta de anúncios (404 not_connected, #2338: sem conexão, caída ou sem a conta escolhida): não é
+// a Meta fora do ar, é um passo que falta. A Conexão abre no passo certo.
+const noAdAccount = ref(false);
 const heading = ref(null);
 const created = ref(null);
 const saving = ref(false);
@@ -166,6 +169,7 @@ const { postEscolhido, botaoDoPost } = impulsionar;
 
 // O que impede criar: entrar de novo, sem Página, sem número (anúncio para o WhatsApp) ou sem post para impulsionar.
 const blocker = computed(() => {
+  if (noAdAccount.value) return 'NO_AD_ACCOUNT';
   if (!options.value) return null;
   if (options.value.needs_login) return 'LOGIN';
   if (options.value.currency !== ACCOUNT_CURRENCY) return 'CURRENCY';
@@ -424,13 +428,18 @@ const prefill = data => {
 const load = async () => {
   loading.value = true;
   loadFailed.value = false;
+  noAdAccount.value = false;
   try {
     const data = await lerOpcoesDeCriacao();
     options.value = data;
     prefill(data);
     if (draft.value.kind && !blocker.value) step.value = 1;
-  } catch {
-    loadFailed.value = true;
+  } catch (error) {
+    if (error?.response?.data?.error === 'not_connected') {
+      noAdAccount.value = true;
+    } else {
+      loadFailed.value = true;
+    }
   } finally {
     loading.value = false;
     focusHeading();
@@ -442,6 +451,9 @@ onMounted(load);
 // Saídas dos bloqueios: entrar com o Facebook ali mesmo (a configuração vem nas opções), Conexão (Página), caixas
 // de entrada (número).
 const goToConnection = () => router.replace({ query: { aba: 'conexao' } });
+// Escolhida a conta na Conexão, a pessoa volta para criar o anúncio (`?volta=criar`).
+const chooseAdAccount = () =>
+  router.replace({ query: { aba: 'conexao', volta: 'criar' } });
 const { isConnecting, connect } = useMetaAdsFacebookLogin();
 const loginNotice = ref('');
 const signIn = async () => {
@@ -487,6 +499,7 @@ const switchToAd = () => chooseKind('ad');
 
 const BLOCKERS = {
   LOGIN: { icon: 'i-lucide-log-in', action: signIn },
+  NO_AD_ACCOUNT: { icon: 'i-lucide-briefcase', action: chooseAdAccount },
   NO_PAGE: { icon: 'i-lucide-flag', action: goToConnection },
   CURRENCY: { icon: 'i-lucide-banknote', action: goToConnection },
   NO_POST: { icon: 'i-lucide-image-off', action: switchToAd },

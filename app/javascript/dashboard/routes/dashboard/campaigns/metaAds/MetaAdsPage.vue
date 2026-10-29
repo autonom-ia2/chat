@@ -69,9 +69,19 @@ const tabLabels = computed(() => ({
 const view = ref(
   ALL_VIEWS.includes(route.query.aba) ? route.query.aba : 'resultado'
 );
+// A aba segue o endereço: quem manda para a Conexão de dentro do Resultado (criar anúncio sem conta, sem Página) só
+// muda o `?aba=`.
+watch(
+  () => route.query.aba,
+  aba => {
+    if (ALL_VIEWS.includes(aba)) view.value = aba;
+  }
+);
+// Trocar de aba encerra a volta pendente (`?volta=`): escolher a conta depois não leva mais à criação nem ao anúncio.
 const chooseView = value => {
   view.value = value;
-  router.replace({ query: { ...route.query, aba: value } });
+  const { volta, ...query } = route.query;
+  router.replace({ query: { ...query, aba: value } });
 };
 const isFeatureEnabledonAccount = useMapGetter(
   'accounts/isFeatureEnabledonAccount'
@@ -263,11 +273,13 @@ const startFacebookLogin = data => {
 };
 
 // Entrou de novo com o Facebook a partir dos comentários de um anúncio (#2197, `?volta=<anúncio>`): volta ao anúncio.
+// Veio de criar anúncio sem conta de anúncios (#2338, `?volta=criar`): volta para criar.
 const backToAd = () => {
-  const adId = route.query.volta;
-  if (!adId) return;
+  const target = route.query.volta;
+  if (!target) return;
   view.value = 'resultado';
-  router.replace({ query: { aba: 'resultado', anuncio: adId } });
+  const back = target === 'criar' ? { criar: 'novo' } : { anuncio: target };
+  router.replace({ query: { aba: 'resultado', ...back } });
 };
 
 const accountSaved = data => {
@@ -321,6 +333,15 @@ const removed = async () => {
   openStep.value = null;
   await load();
 };
+
+// Criar anúncio achou a conexão sem conta de anúncios (#2338): a conexão em memória está velha (o login refeito na
+// criação limpou a escolha). Relê, e a Conexão abre no passo da conta.
+watch(
+  () => route.query.volta,
+  target => {
+    if (target === 'criar') load();
+  }
+);
 
 onMounted(load);
 </script>
