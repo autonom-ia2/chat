@@ -35,7 +35,8 @@ class Crm::MetaAds::Setup
   def pixels(mode, ad_account_id)
     client = client_for(mode)
     ensure_allowed!(mode, client, ad_account_id)
-    list_pixels(client, ad_account_id)
+    pixels = list_pixels(client, ad_account_id)
+    mode == 'facebook_login' ? Crm::MetaAds::LoginPixels.new(client).mark(pixels) : pixels
   end
 
   # Lê a conta (nome, gasto dos últimos 30 dias) e o Pixel antes de gravar. Qualquer leitura que falhe

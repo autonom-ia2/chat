@@ -167,6 +167,17 @@ class Meta::AdsGraphClient
     paged("act_#{ad_account_id}/adspixels", fields: PIXEL_FIELDS)
   end
 
+  # Token do Login do Facebook para Empresas (#2343): `me` é o usuário do sistema da integração, criado no portfólio
+  # do cliente (client_business_id).
+  def login_identity
+    get('me', fields: 'id,client_business_id')
+  end
+
+  # Usuários e usuários do sistema com acesso ao Pixel naquele portfólio. `business` é obrigatório.
+  def pixel_assigned_users(pixel_id, business_id)
+    paged("#{pixel_id}/assigned_users", business: business_id, fields: 'id')
+  end
+
   # Para onde leva cada conjunto da conta (#2054): WHATSAPP, WEBSITE, ON_VIDEO…
   def ad_set_destinations(ad_account_id)
     paged("act_#{ad_account_id}/adsets", fields: 'id,destination_type')
