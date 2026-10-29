@@ -136,7 +136,8 @@ RSpec.describe CampaignJourney::SentMessageRecorder, :aggregate_failures do
       { 'body' => {}, 'carousel' => { 'cards' => [card_sent, card_sent] } }
     end
 
-    it 'a mídia vai à Meta pelo link assinado e fica gravada pelo endereço permanente' do
+    it 'a mídia vai à Meta pelo id e fica gravada pelo endereço permanente' do
+      stub_meta_media_upload
       sent = stub_graph_messages
       conversation = open_conversation_for('Ana Souza', '5511987654321')
 
@@ -147,8 +148,8 @@ RSpec.describe CampaignJourney::SentMessageRecorder, :aggregate_failures do
       expect(cartoes.size).to eq(2)
       expect(cartoes.first).to eq('midia' => { 'tipo' => 'image', 'url' => permanente }, 'texto' => 'Limão, cupom 15OFF',
                                   'botoes' => [{ 'tipo' => 'url', 'texto' => 'Comprar', 'url' => 'https://loja.com.br/p/limao' }])
-      link_da_meta = sent.first.dig('template', 'components').find { |c| c['type'] == 'carousel' }['cards'].first['components'].first
-      expect(link_da_meta.dig('parameters', 0, 'image', 'link')).to be_present.and(satisfy { |link| link != permanente })
+      topo_da_meta = sent.first.dig('template', 'components').find { |c| c['type'] == 'carousel' }['cards'].first['components'].first
+      expect(topo_da_meta.dig('parameters', 0, 'image')).to eq('id' => 'media_1')
       expect(sent.to_json).not_to include('media_signed_id')
     end
   end
@@ -159,9 +160,32 @@ RSpec.describe CampaignJourney::SentMessageRecorder, :aggregate_failures do
                { 'type' => 'BODY', 'text' => 'Segue a proposta.' })
     end
 
-    it 'o documento vai à Meta pelo link assinado e fica gravado pelo endereço permanente, com o nome' do
+    def save_proposal
       profile = WhatsappTemplateProfile.create!(account: account, inbox: inbox, waba_id: channel.waba_id, name: 'proposta', language: 'pt_BR')
       profile.header_file.attach(io: StringIO.new('%PDF'), filename: 'proposta.pdf', content_type: 'application/pdf')
+      profile
+    end
+
+    it 'o documento vai à Meta pelo id, com o nome, e fica gravado pelo endereço permanente' do
+      profile = save_proposal
+      uploads = stub_meta_media_upload
+      sent = stub_graph_messages
+      conversation = open_conversation_for('Ana Souza', '5511987654321')
+
+      send_campaign(campaign_with(template, { 'header' => { 'media_url' => '', 'media_type' => 'document' }, 'body' => {} }))
+
+      topo = campaign_message_in(conversation).additional_attributes.dig('campaign_template_enviado', 'topo')
+      expect(topo).to eq('tipo' => 'document', 'url' => Rails.application.routes.url_helpers.rails_blob_url(profile.header_file.blob),
+                         'nome' => 'proposta.pdf')
+      expect(uploads).to eq(['proposta.pdf'])
+      header = sent.first.dig('template', 'components').find { |c| c['type'] == 'header' }
+      expect(header.dig('parameters', 0)).to eq('type' => 'document', 'document' => { 'id' => 'media_1', 'filename' => 'proposta.pdf' })
+      expect(sent.to_json).not_to include('media_signed_id', profile.header_file.blob.signed_id)
+    end
+
+    it 'a Meta recusa a subida: o documento vai pelo link assinado, com o nome' do
+      profile = save_proposal
+      stub_meta_media_upload(status: 400)
       sent = stub_graph_messages
       conversation = open_conversation_for('Ana Souza', '5511987654321')
 

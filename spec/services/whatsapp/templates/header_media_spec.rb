@@ -121,15 +121,35 @@ RSpec.describe Whatsapp::Templates::HeaderMedia, :aggregate_failures do
       campaign
     end
 
-    def header_links(sent)
+    def header_images(sent)
       sent.map do |body|
         header = Array(body.dig('template', 'components')).find { |component| component['type'] == 'header' }
-        header&.dig('parameters', 0, 'image', 'link')
+        header&.dig('parameters', 0, 'image')
       end
     end
 
-    it 'sem link na campanha: cada envio leva o arquivo do perfil do modelo' do
+    def header_links(sent)
+      header_images(sent).map { |image| image&.dig('link') }
+    end
+
+    # #2367: pelo link, a Meta baixa o arquivo do nosso armazenamento e a busca falha com 131053; pelo id, não baixa.
+    it 'sem link na campanha: o arquivo do perfil sobe à Meta uma vez e cada envio leva o id dele' do
       save_profile_file
+      uploads = stub_meta_media_upload
+      sent = stub_graph_messages
+
+      Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
+
+      expect(uploads).to eq(['oferta.png'])
+      expect(header_images(sent)).to eq([{ 'id' => 'media_1' }] * 2)
+      expect(campaign.reload).to be_completed
+      expect(campaign.template_params.dig('processed_params', 'header', 'media_url')).to eq('')
+      expect(campaign.template_params.dig('processed_params', 'header')).not_to have_key('media_id')
+    end
+
+    it 'a Meta recusa a subida: cada envio leva o link do arquivo do perfil, como antes' do
+      save_profile_file
+      stub_meta_media_upload(status: 400)
       sent = stub_graph_messages
 
       Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
@@ -138,7 +158,6 @@ RSpec.describe Whatsapp::Templates::HeaderMedia, :aggregate_failures do
       expect(links.size).to eq(2)
       expect(links).to all(start_with('http').and(include('oferta.png')))
       expect(campaign.reload).to be_completed
-      expect(campaign.template_params.dig('processed_params', 'header', 'media_url')).to eq('')
     end
 
     it 'sem link e o arquivo sumiu do perfil: pausa com template_media_missing e não envia' do
@@ -150,17 +169,17 @@ RSpec.describe Whatsapp::Templates::HeaderMedia, :aggregate_failures do
       expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'template', reason_code: 'template_media_missing')
     end
 
-    it 'com arquivo escolhido na campanha: cada envio leva o link desse arquivo, não o do perfil' do
+    it 'com arquivo escolhido na campanha: sobe esse arquivo, não o do perfil, e cada envio leva o id dele' do
       save_profile_file
       blob = uploaded('nova.png')
       campaign.update!(template_params: params({ 'media_url' => '', 'media_blob' => blob.signed_id, 'media_type' => 'image' }))
+      uploads = stub_meta_media_upload
       sent = stub_graph_messages
 
       Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
 
-      links = header_links(sent)
-      expect(links.size).to eq(2)
-      expect(links).to all(start_with('http').and(include('nova.png')))
+      expect(uploads).to eq(['nova.png'])
+      expect(header_images(sent)).to eq([{ 'id' => 'media_1' }] * 2)
       expect(campaign.reload).to be_completed
       expect(campaign.template_params.dig('processed_params', 'header', 'media_blob')).to eq(blob.signed_id)
       expect(sent.map(&:to_json)).to all(satisfy { |body| body.exclude?('media_blob') && body.exclude?(blob.signed_id) })
@@ -189,13 +208,15 @@ RSpec.describe Whatsapp::Templates::HeaderMedia, :aggregate_failures do
       expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'template', reason_code: 'template_media_missing')
     end
 
-    it 'com link digitado: usa o link, sem olhar o perfil' do
+    it 'com link digitado: usa o link, sem olhar o perfil e sem subir nada à Meta' do
       campaign.update!(template_params: params({ 'media_url' => 'https://exemplo.com/oferta.png', 'media_type' => 'image' }))
+      uploads = stub_meta_media_upload
       sent = stub_graph_messages
 
       Whatsapp::OneoffCampaignService.new(campaign: campaign).perform
 
       expect(header_links(sent)).to eq(['https://exemplo.com/oferta.png'] * 2)
+      expect(uploads).to be_empty
     end
   end
 end
