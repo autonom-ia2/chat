@@ -148,6 +148,11 @@ class Crm::MetaAdsConnection < ApplicationRecord
     destinations.to_h[NO_SITE] == true
   end
 
+  # Destinos com a marca "Não tenho site" ligada ou fora: a chave só existe quando é verdade.
+  def destinations_with_no_site(values, no_site)
+    values.to_h.except(NO_SITE).merge(no_site ? { NO_SITE => true } : {})
+  end
+
   def destinations_payload
     DESTINATIONS.index_with { |key| destinations.to_h[key] == true }
   end

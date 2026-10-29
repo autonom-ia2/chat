@@ -190,7 +190,7 @@ class Crm::MetaAds::Setup
   def save!(mode, details, pixel, no_site:)
     connection.assign_attributes(
       mode: mode, **ad_account_attributes(details), pixel_id: pixel&.dig(:id), pixel_name: limited(pixel&.dig(:name)),
-      destinations: connection.destinations.to_h.merge(Crm::MetaAdsConnection::NO_SITE => no_site),
+      destinations: connection.destinations_with_no_site(connection.destinations, no_site),
       status: 'active', verified_at: Time.current, last_checked_at: Time.current, last_error: nil
     )
     connection.access_token = nil if mode == 'partner'
