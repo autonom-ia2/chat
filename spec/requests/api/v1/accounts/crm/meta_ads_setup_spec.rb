@@ -210,6 +210,7 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
 
       expect(response.parsed_body).to include('no_site' => false)
       expect(response.parsed_body['pixel']).to include('id' => pixel)
+      expect(Crm::MetaAdsConnection.find_by!(account_id: account.id).destinations).not_to have_key('no_site')
     end
 
     it 'sem Pixel e sem "Não tenho site", a escolha não marca a recusa do site' do
