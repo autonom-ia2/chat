@@ -24,6 +24,10 @@ RSpec.describe 'Seus posts: comentários de cada post só para quem vê a caixa 
       instance_double(SeusPosts::PostsInstagram, perform: { status: 'ok', posts: [{ id: post_id, created_time: 1.day.ago.iso8601 }],
                                                             normal: {} })
     )
+    # Quem espera no post: a mesma contagem do cartão da lista (SeusPosts::Esperando).
+    allow(SeusPosts::Esperando).to receive(:new).and_return(
+      instance_double(SeusPosts::Esperando, perform: { status: 'ok', pendentes: { post_id => { ids: %w[18000000000000001], mais: true } } })
+    )
     stub_request(:get, %r{#{ig}/#{comment_id}\?}).to_return(
       status: 200, headers: json,
       body: { id: comment_id, timestamp: 1.hour.ago.iso8601, from: { id: '501', username: 'carla.dias' }, media: { id: post_id } }.to_json

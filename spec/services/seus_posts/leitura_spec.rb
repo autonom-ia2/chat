@@ -231,6 +231,14 @@ RSpec.describe SeusPosts::Leitura do
       expect(p1).to include(views: 800, views_from_ads: nil, reach: 500, clicks: 20, likes: 40, comments: 4)
     end
 
+    it 'compartilhamentos vêm do post; sem o campo (ninguém compartilhou), 0' do
+      lista = [post_da_pagina('p1', 3, [40, 4, 500, 20]).merge('shares' => { 'count' => 7 }), post_da_pagina('p2', 10, [60, 6, 700, 30])]
+      stub_request(:get, "#{fb}/1001/published_posts").with(**com_campos(:PAGE)).to_return(json(lista))
+      posts = leitura[:perfil][:posts].to_h { |item| [item[:id], item[:shares]] }
+
+      expect(posts).to include('p1' => 7, 'p2' => 0)
+    end
+
     it 'sem o lado de anúncio não se sabe se teve anúncio (nil); com o lado em 0, não teve' do
       posts = leitura[:perfil][:posts]
 

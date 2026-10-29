@@ -43,12 +43,12 @@ describe('PermissionRow', () => {
     expect(checked(wrapper).text()).toBe('CUSTOM_ROLE.MATRIX.BASELINE.USE');
   });
 
-  // #2360: Seus posts não oferece editar até a F2 (#2305), salvo para quem já tem.
-  it('leaves the posts edit position empty for a new role', () => {
-    expect(radios(mountRow('POSTS', ['posts_view']))).toHaveLength(2);
+  // Seus posts oferece editar desde a F2 (#2305): responder, esconder, apagar e o privado.
+  it('offers posts edit to a new role', () => {
+    expect(radios(mountRow('POSTS', ['posts_view']))).toHaveLength(3);
   });
 
-  it('keeps posts edit selectable for a role that already has it', () => {
+  it('marks posts edit for a role that has it', () => {
     const wrapper = mountRow('POSTS', ['posts_manage']);
 
     expect(radios(wrapper)).toHaveLength(3);

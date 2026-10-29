@@ -18,6 +18,19 @@ export const dataCurta = (valor, locale) =>
 
 const semValor = valor => valor === null || valor === undefined;
 
+// "há 2 horas", "há 3 dias", no idioma da tela (F2, os comentários do post).
+export const haQuanto = (valor, locale) => {
+  const minutos = Math.round((Date.now() - new Date(valor).getTime()) / 60000);
+  // Sem data (ou data que não se lê), sem o "há quanto": um comentário assim não derruba a lista.
+  if (Number.isNaN(minutos)) return '';
+  const rtf = new Intl.RelativeTimeFormat(intlLocale(locale), {
+    numeric: 'auto',
+  });
+  if (minutos < 60) return rtf.format(-Math.max(minutos, 1), 'minute');
+  if (minutos < 60 * 24) return rtf.format(-Math.round(minutos / 60), 'hour');
+  return rtf.format(-Math.round(minutos / (60 * 24)), 'day');
+};
+
 // Comparação com o período anterior: texto e tom (sobe, desce, igual). Sem anterior, nada.
 export const comparacao = (atual, anterior, dias, t, locale) => {
   if (semValor(atual) || semValor(anterior)) return null;

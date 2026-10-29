@@ -58,13 +58,18 @@ class SeusPosts::Leitura
 
   # O post `post_id` do perfil escolhido, da mesma lista guardada dos posts: { status:, post:, normal: }. Post que não
   # está na lista (de outro perfil, ou de antes de SeusPosts::Posts::HISTORICO_DIAS) vem nil. Sem a lista, só o status.
-  def post(post_id)
+  # Com `contar`, quem espera vem da mesma contagem do cartão da lista (`waiting`, `waiting_more`), não da página de
+  # comentários. Só a tela do post conta: as ações só conferem que o post é do perfil.
+  def post(post_id, contar: false)
     canal = escolhido
-    lidos = posts_lidos(canal, SeusPosts::Orcamento.prazo)
+    prazo = SeusPosts::Orcamento.prazo
+    lidos = posts_lidos(canal, prazo)
     return { status: lidos[:status] } unless lidos[:status] == 'ok'
 
     achado = lidos[:posts].find { |item| item[:id].to_s == post_id.to_s }
-    achado && { status: 'ok', post: achado, normal: lidos[:normal] }
+    return unless achado
+
+    { status: 'ok', post: contar ? esperando(canal, [achado], prazo)[:posts].first : achado, normal: lidos[:normal] }
   rescue Crm::MetaAds::Organico::Indisponivel
     { status: 'unavailable' }
   end

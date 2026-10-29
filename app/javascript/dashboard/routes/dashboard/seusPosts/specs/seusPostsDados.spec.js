@@ -1,5 +1,9 @@
-import { perfilParaTela, postParaTela } from '../seusPostsDados';
-import { vereditoDoPost } from '../seusPostsHelpers';
+import {
+  comentarioParaTela,
+  perfilParaTela,
+  postParaTela,
+} from '../seusPostsDados';
+import { haQuanto, vereditoDoPost } from '../seusPostsHelpers';
 
 // Seus posts (#2304): número que a Meta não mandou continua nulo, nunca 0.
 const AGORA = new Date('2026-10-27T12:00:00Z').getTime();
@@ -153,5 +157,70 @@ describe('Seus posts: perfilParaTela', () => {
     );
     expect(tela.link).toBeNull();
     expect(tela.posts[0].link).toBeNull();
+  });
+});
+
+// F2 (#2305): o estado de cada comentário e quem espera no cartão.
+describe('Seus posts: comentarioParaTela', () => {
+  const base = { id: 'c', text: 'Oi', author: { username: 'pessoa' } };
+
+  it.each([
+    [{ author: { name: 'Loja', is_page: true } }, 'meu'],
+    [{ hidden: true }, 'escondido'],
+    [{ private_reply: { sent_at: em(1), confirmed: true } }, 'privado'],
+    [{ replies: [{ id: 'r', author: { is_page: true } }] }, 'respondido'],
+    [{ replies: [{ id: 'r', author: { username: 'outra' } }] }, 'esperando'],
+    [{}, 'esperando'],
+  ])('%o vira %s', (extra, estado) => {
+    expect(comentarioParaTela({ ...base, ...extra }).estado).toBe(estado);
+  });
+
+  it('autor do Instagram ganha @; botões só com o que o servidor deixa', () => {
+    const tela = comentarioParaTela({ ...base, can_reply: true });
+    expect(tela.autor).toBe('@pessoa');
+    expect(tela.pode).toEqual({
+      responder: true,
+      esconder: false,
+      apagar: false,
+      privado: false,
+    });
+  });
+});
+
+describe('Seus posts: quem espera no post', () => {
+  it('sem a contagem (flag desligada) fica nulo, nunca 0', () => {
+    const post = postParaTela(
+      { id: '1', created_time: em(5) },
+      'instagram',
+      AGORA
+    );
+    expect(post.esperando).toBeNull();
+    expect(post.esperandoMais).toBe(false);
+  });
+
+  it('com mais de 50 comentários, marca o "ou mais"', () => {
+    const post = postParaTela(
+      {
+        id: '1',
+        created_time: em(5),
+        waiting: 50,
+        waiting_more: true,
+        shares: 3,
+      },
+      'instagram',
+      AGORA
+    );
+    expect(post).toMatchObject({
+      esperando: 50,
+      esperandoMais: true,
+      compartilharam: 3,
+    });
+  });
+});
+
+describe('Seus posts: haQuanto', () => {
+  it('comentário sem data não derruba a lista', () => {
+    expect(haQuanto(undefined, 'pt_BR')).toBe('');
+    expect(haQuanto('não é data', 'pt_BR')).toBe('');
   });
 });

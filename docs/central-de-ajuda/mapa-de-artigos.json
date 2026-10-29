@@ -3959,6 +3959,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.31",
+     "titulo": "Responder os comentários dos seus posts sem sair da plataforma",
+     "para_que_serve": "Achar os comentários que esperam você em cada post e responder, esconder, apagar ou mandar no privado sem abrir o Instagram ou o Facebook.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "seus_posts_post"
+     ],
+     "me_leve_ate_la": {
+      "rota": "seus_posts_post",
+      "destaque": null
+     },
+     "requer": "seus_posts_comentarios",
+     "prints": [],
+     "fontes": [
+      "porques: responder_comentarios_dos_seus_posts"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

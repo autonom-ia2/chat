@@ -24,7 +24,9 @@ class SeusPosts::PostsPagina < SeusPosts::Posts
       permalink: item['permalink_url'], created_time: item['created_time'], boosted: impulsionado,
       views: lado(vistas, SEM_ANUNCIO), views_from_ads: de_anuncio, reach: numeros['post_total_media_view_unique'],
       clicks: numeros['post_clicks'], likes: item.dig('reactions', 'summary', 'total_count'),
-      comments: item.dig('comments', 'summary', 'total_count')
+      comments: item.dig('comments', 'summary', 'total_count'),
+      # A Meta não manda `shares` no post que ninguém compartilhou (F2, #2305): sem o campo, 0.
+      shares: item.dig('shares', 'count') || 0
     }
   end
 

@@ -7,11 +7,16 @@ module Instagram::IntegrationHelper
   # Contrato comum com o #2196 (comentários dos anúncios no Instagram), que soma a entrada dele.
   # - meta_ads_organico (#2199): Seus posts.
   # - seus_posts (#2304): a página própria Seus posts, em Crescer.
+  # - seus_posts_comentarios (#2305): a mesma página com os comentários de cada post; pede os números e os
+  #   comentários juntos, para a nova autorização não perder os números.
   # - meta_ads_comentarios_instagram (#2196): comentários do anúncio, na aba Resultado; volta ao anúncio (`ad_id`, só
   #   em purpose com `ad: true`).
   REAUTH_PURPOSES = {
     'meta_ads_organico' => { flag: 'meta_ads_organico', scopes: %w[instagram_business_manage_insights], return_query: 'aba=organico' },
     'seus_posts' => { flag: 'seus_posts', scopes: %w[instagram_business_manage_insights], return_path: 'seus-posts' },
+    'seus_posts_comentarios' => { flag: 'seus_posts_comentarios',
+                                  scopes: %w[instagram_business_manage_insights instagram_business_manage_comments],
+                                  return_path: 'seus-posts' },
     'meta_ads_comentarios_instagram' => { flag: 'meta_ads_comentarios_instagram', scopes: %w[instagram_business_manage_comments],
                                           return_query: 'aba=resultado', ad: true }
   }.freeze

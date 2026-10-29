@@ -85,7 +85,13 @@
         "TITLE": "A Meta não mandou seus posts agora.",
         "TEXT": "Os números de cima continuam valendo. Tente de novo daqui a pouco."
       },
-      "STALE": "A Meta não mandou os posts agora: estes são da última leitura."
+      "STALE": "A Meta não mandou os posts agora: estes são da última leitura.",
+      "TITLE_WAITING": "Posts com comentário esperando você nos últimos {days} dias",
+      "FILTER_LABEL": "Mostrar",
+      "FILTERS": {
+        "all": "Últimos {days} dias",
+        "waiting": "Esperando você"
+      }
     },
     "CARD": {
       "TYPE": {
@@ -105,7 +111,11 @@
         "facebook": "Abrir no Facebook: {name}"
       },
       "HAD_ADS": "Teve anúncio",
-      "NUMBERS_SOON": "Números chegam em até 2 dias"
+      "NUMBERS_SOON": "Números chegam em até 2 dias",
+      "WAITING": "{count} comentário esperando você | {count} comentários esperando você",
+      "OR_MORE": "{count} ou mais",
+      "SEE_POST": "Ver post",
+      "SEE_POST_LABEL": "Ver o post: {name}"
     },
     "POST": {
       "OPEN": {
@@ -115,7 +125,109 @@
       "NUMBERS": {
         "VIEWS": "Vezes que apareceu",
         "LIKES": "Curtidas",
-        "COMMENTS": "Comentários"
+        "COMMENTS": "Comentários",
+        "TITLE": "Números do post",
+        "PEOPLE": "Pessoas que viram",
+        "SHARES": "Compartilharam",
+        "SAVED": "{count} salvou | {count} salvaram",
+        "SHARED": "{count} compartilhou | {count} compartilharam",
+        "CLICKED": "{count} clique no post | {count} cliques no post"
+      },
+      "BACK": "Seus posts",
+      "HERO_CONTEXT": {
+        "instagram": "Instagram · publicado em {date}",
+        "facebook": "Página do Facebook · publicado em {date}"
+      },
+      "POST_TITLE": "O post",
+      "ABOUT_NUMBERS": "Sobre estes números",
+      "SEE_WAITING": "Ver quem espera",
+      "NO_ACCESS": {
+        "TITLE": "Você não vê este post.",
+        "TEXT": "Peça a quem administra a conta para incluir você na caixa deste perfil."
+      },
+      "GONE": {
+        "TITLE": "Não achei este post.",
+        "TEXT": "Ele pode ter sido apagado ou ser de outro perfil. Volte para Seus posts."
+      },
+      "SUMMARY": {
+        "ABOVE": "Este post apareceu mais que seus posts costumam aparecer.",
+        "BELOW": "Este post apareceu menos que seus posts costumam aparecer.",
+        "NEW": "Este post é novo: os números da Meta chegam em até 2 dias.",
+        "BOOSTED": "Este post teve anúncio. As vezes que apareceu contam só o que foi sem anúncio; os outros números incluem o anúncio.",
+        "TIMES": "Este post foi bem: apareceu {times} vezes mais que seus posts costumam aparecer.",
+        "DOUBLE": "Este post foi bem: apareceu o dobro do que seus posts costumam aparecer.",
+        "WELL_ABOVE": "Este post foi bem: apareceu bem mais que seus posts costumam aparecer.",
+        "SAME": "Este post apareceu como seus posts costumam aparecer.",
+        "NO_INSIGHTS": "A Página ainda não tem 100 curtidas, então a Meta só mostra as curtidas e os comentários deste post.",
+        "NO_NORMAL": "Ainda não dá para comparar: seus outros posts do período não têm números."
+      },
+      "SIDE": {
+        "BOOSTED": "Teve anúncio: só “{name}” é sem anúncio.",
+        "INSTAGRAM": "Vezes que apareceu, curtidas e comentários são sem anúncio. Pessoas que viram, salvos e compartilhamentos podem incluir anúncio."
+      },
+      "COMMENTS": {
+        "TITLE": "Comentários",
+        "TITLE_COUNT": "Comentários ({count})",
+        "FILTER_LABEL": "Mostrar comentários",
+        "FILTERS": {
+          "all": "Todos",
+          "esperando": "Esperando você",
+          "privado": "Recebeu no privado",
+          "escondido": "Escondidos"
+        },
+        "EMPTY": "Nenhum comentário aqui.",
+        "UNAVAILABLE": "A Meta não mandou os comentários agora.",
+        "MORE_COMMENTS": "Ver mais comentários",
+        "SOMEONE": "Alguém",
+        "YOU": "Você",
+        "ATTACHMENT": "[anexo]",
+        "STATE": {
+          "esperando": "Esperando você",
+          "respondido": "Respondido",
+          "privado": "Recebeu no privado",
+          "escondido": "Escondido",
+          "meu": "Seu comentário"
+        },
+        "WHY": {
+          "escondido": "Só você vê este comentário. Toque em Mostrar de novo para voltar.",
+          "velho": "Mais de 7 dias: não dá mais para mandar no privado. Responda no comentário."
+        },
+        "REPLY": "Responder",
+        "PRIVATE": "Mandar no privado",
+        "HIDE": "Esconder",
+        "SHOW": "Mostrar de novo",
+        "DELETE": "Apagar",
+        "MORE": "Mais",
+        "REPLY_LABEL": "Sua resposta para {name}",
+        "PRIVATE_LABEL": "Sua mensagem no privado para {name}",
+        "PRIVATE_NOTE": "A mensagem vai para a caixa do Instagram. Dá para mandar uma por comentário, até 7 dias depois dele.",
+        "SEND": "Responder no comentário",
+        "PRIVATE_SEND": "Mandar no privado",
+        "CANCEL": "Cancelar",
+        "DELETE_CONFIRM": "Apagar o comentário de {name}? Ele some do post para todo mundo e não volta.",
+        "DELETE_SEND": "Apagar comentário",
+        "YOUR_REPLY": "Você respondeu:",
+        "SENT_PRIVATE": "Mandado no privado.",
+        "SENT_UNCONFIRMED": "Mandado no privado. A Meta ainda não confirmou.",
+        "OPEN_CONVERSATION": "Ver conversa",
+        "NOT_SENT": "Não foi enviado",
+        "DONE": {
+          "reply": "Resposta publicada.",
+          "private": "Mensagem mandada no privado.",
+          "hide": "Comentário escondido.",
+          "show": "Comentário visível de novo.",
+          "delete": "Comentário apagado.",
+          "release": "Pronto: dá para mandar no privado de novo."
+        },
+        "ERROR": "Não consegui fazer isso agora. Tente de novo.",
+        "ERRORS": {
+          "invalid_text": "Escreva a mensagem antes de mandar.",
+          "comment_not_found": "Este comentário não está mais no post.",
+          "meta_unavailable": "A Meta não respondeu agora. Tente de novo daqui a pouco.",
+          "meta_refused": "A Meta não deixou fazer isso neste comentário.",
+          "private_reply_not_pending": "Este privado já foi resolvido.",
+          "not_inbox_member": "Você não está na caixa deste perfil."
+        }
       }
     },
     "VS_NORMAL": {
@@ -155,6 +267,17 @@
       "TITLE": "A Meta não respondeu agora.",
       "TEXT": "Os números deste perfil voltam assim que a Meta responder."
     },
-    "STALE": "A Meta não respondeu agora: estes são os números da última leitura."
+    "STALE": "A Meta não respondeu agora: estes são os números da última leitura.",
+    "ATTENTION": {
+      "TEXT": "{count} comentário esperando você em {posts} | {count} comentários esperando você em {posts}",
+      "TEXT_OR_MORE": "{count} ou mais comentários esperando você em {posts}",
+      "POSTS": "{count} post | {count} posts",
+      "SEE": "Ver esses posts"
+    },
+    "COMMENTS_ACCESS": {
+      "TITLE": "Libere os comentários deste perfil",
+      "TEXT": "Para ver quem está esperando você nos comentários, a Meta pede sua autorização uma vez.",
+      "ASK_ADMIN": "Para ver quem espera você nos comentários, peça a quem administra a conta para liberar este perfil."
+    }
   }
 }

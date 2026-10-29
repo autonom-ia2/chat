@@ -62,6 +62,13 @@ export const postParaTela = (post, rede, agora = Date.now()) => {
     pessoas: ouNulo(post.reach),
     curtidas: ouNulo(post.likes),
     comentarios: ouNulo(post.comments),
+    compartilharam: ouNulo(post.shares),
+    salvaram: ouNulo(post.saved),
+    cliques: ouNulo(post.clicks),
+    // F2 (#2305): os comentários que esperam a conta; nulo quando não se sabe (sem permissão, Meta fora, flag
+    // desligada), nunca 0. `esperandoMais`: o post tem mais comentários do que os lidos ("50 ou mais").
+    esperando: ouNulo(post.waiting),
+    esperandoMais: post.waiting_more === true,
     // boosted nil é "não se sabe" (Instagram): só o true vira "Teve anúncio".
     impulsionado: post.boosted === true,
     // Curtidas e comentários incluem o anúncio quando houve: true ou nil (não se sabe) acendem "pode incluir anúncio";
@@ -104,5 +111,53 @@ export const perfilParaTela = (perfil, nomeGuardado, agora = Date.now()) => {
     // A lista parou no teto de posts lidos: em 90 dias, os mais velhos podem faltar.
     postsCortados: perfil.posts_truncated === true,
     posts: (perfil.posts || []).map(post => postParaTela(post, rede, agora)),
+    // F2: 'ok', 'needs_permission' ou 'unavailable'; null com a flag desligada (a lista é a do F1).
+    esperandoStatus: perfil.waiting_status || null,
   };
 };
+
+// Um comentário do post (F2, #2305), da casca comum dos comentários (Crm::MetaAds::InstagramCommentRows e
+// FacebookCommentRows). O estado diz o que aconteceu com ele: escondido, recebeu no privado, respondido pela conta,
+// da própria conta ou esperando você. A ordem é a do servidor: a mesma régua do "esperando você" da lista.
+const autorDe = autor =>
+  autor?.username ? `@${autor.username}` : autor?.name || null;
+
+const estadoDe = comentario => {
+  if (comentario.author?.is_page) return 'meu';
+  if (comentario.hidden) return 'escondido';
+  if (comentario.private_reply) return 'privado';
+  if ((comentario.replies || []).some(resposta => resposta.author?.is_page))
+    return 'respondido';
+  return 'esperando';
+};
+
+export const comentarioParaTela = comentario => ({
+  id: comentario.id,
+  autor: autorDe(comentario.author),
+  texto: comentario.text || '',
+  // Comentário só com foto ou figurinha: a tela diz o tipo, em vez de uma linha vazia.
+  anexo: comentario.attachment || null,
+  quando: comentario.created_time,
+  estado: estadoDe(comentario),
+  respostas: (comentario.replies || []).map(resposta => ({
+    id: resposta.id,
+    autor: autorDe(resposta.author),
+    texto: resposta.text || '',
+    daConta: resposta.author?.is_page === true,
+  })),
+  pode: {
+    responder: comentario.can_reply === true,
+    esconder: comentario.can_hide === true,
+    apagar: comentario.can_delete === true,
+    privado: comentario.can_reply_private === true,
+  },
+  privadoExpirado: comentario.private_reply_expired === true,
+  privado: comentario.private_reply
+    ? {
+        enviadoEm: comentario.private_reply.sent_at,
+        confirmado: comentario.private_reply.confirmed === true,
+        conversa: comentario.private_reply.conversation_path || null,
+        podeLiberar: comentario.private_reply.can_release === true,
+      }
+    : null,
+});

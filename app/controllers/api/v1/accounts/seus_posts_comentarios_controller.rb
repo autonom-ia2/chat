@@ -39,7 +39,7 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
   end
 
   def show
-    lido = leitura.post(post_id)
+    lido = leitura.post(post_id, contar: true)
     return render_error_code('post_not_found') if lido.nil?
 
     base = { perfil: perfil, status: lido[:status], can_manage: manage? }

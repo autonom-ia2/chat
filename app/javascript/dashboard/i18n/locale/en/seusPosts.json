@@ -85,7 +85,13 @@
         "TITLE": "Meta did not send your posts right now.",
         "TEXT": "The numbers above still hold. Try again in a moment."
       },
-      "STALE": "Meta did not send the posts right now: these are from the last reading."
+      "STALE": "Meta did not send the posts right now: these are from the last reading.",
+      "TITLE_WAITING": "Posts with comments waiting for you in the last {days} days",
+      "FILTER_LABEL": "Show",
+      "FILTERS": {
+        "all": "Last {days} days",
+        "waiting": "Waiting for you"
+      }
     },
     "CARD": {
       "TYPE": {
@@ -105,7 +111,11 @@
         "facebook": "Open on Facebook: {name}"
       },
       "HAD_ADS": "Had ads",
-      "NUMBERS_SOON": "Numbers arrive within 2 days"
+      "NUMBERS_SOON": "Numbers arrive within 2 days",
+      "WAITING": "{count} comment waiting for you | {count} comments waiting for you",
+      "OR_MORE": "{count} or more",
+      "SEE_POST": "See post",
+      "SEE_POST_LABEL": "See the post: {name}"
     },
     "POST": {
       "OPEN": {
@@ -115,7 +125,109 @@
       "NUMBERS": {
         "VIEWS": "Times seen",
         "LIKES": "Likes",
-        "COMMENTS": "Comments"
+        "COMMENTS": "Comments",
+        "TITLE": "Post numbers",
+        "PEOPLE": "People who saw it",
+        "SHARES": "Shared",
+        "SAVED": "{count} saved | {count} saved",
+        "SHARED": "{count} shared | {count} shared",
+        "CLICKED": "{count} click on the post | {count} clicks on the post"
+      },
+      "BACK": "Your posts",
+      "HERO_CONTEXT": {
+        "instagram": "Instagram · published on {date}",
+        "facebook": "Facebook Page · published on {date}"
+      },
+      "POST_TITLE": "The post",
+      "ABOUT_NUMBERS": "About these numbers",
+      "SEE_WAITING": "See who is waiting",
+      "NO_ACCESS": {
+        "TITLE": "You can’t see this post.",
+        "TEXT": "Ask your account admin to add you to this profile’s inbox."
+      },
+      "GONE": {
+        "TITLE": "I couldn’t find this post.",
+        "TEXT": "It may have been deleted or belong to another profile. Go back to Your posts."
+      },
+      "SUMMARY": {
+        "ABOVE": "This post showed up more than your posts usually do.",
+        "BELOW": "This post showed up less than your posts usually do.",
+        "NEW": "This post is new: Meta’s numbers arrive within 2 days.",
+        "BOOSTED": "This post had an ad. Times shown counts only what was not from the ad; the other numbers include the ad.",
+        "TIMES": "This post did well: it showed up {times} times more than your posts usually do.",
+        "DOUBLE": "This post did well: it showed up twice as much as your posts usually do.",
+        "WELL_ABOVE": "This post did well: it showed up much more than your posts usually do.",
+        "SAME": "This post showed up as much as your posts usually do.",
+        "NO_INSIGHTS": "The Page doesn’t have 100 likes yet, so Meta only shows the likes and comments of this post.",
+        "NO_NORMAL": "Nothing to compare yet: your other posts in this period have no numbers."
+      },
+      "SIDE": {
+        "BOOSTED": "Had an ad: only “{name}” is without the ad.",
+        "INSTAGRAM": "Times shown, likes and comments are without ads. People who saw it, saves and shares may include ads."
+      },
+      "COMMENTS": {
+        "TITLE": "Comments",
+        "TITLE_COUNT": "Comments ({count})",
+        "FILTER_LABEL": "Show comments",
+        "FILTERS": {
+          "all": "All",
+          "esperando": "Waiting for you",
+          "privado": "Got a private message",
+          "escondido": "Hidden"
+        },
+        "EMPTY": "No comments here.",
+        "UNAVAILABLE": "Meta didn’t send the comments right now.",
+        "MORE_COMMENTS": "See more comments",
+        "SOMEONE": "Someone",
+        "YOU": "You",
+        "ATTACHMENT": "[attachment]",
+        "STATE": {
+          "esperando": "Waiting for you",
+          "respondido": "Replied",
+          "privado": "Got a private message",
+          "escondido": "Hidden",
+          "meu": "Your comment"
+        },
+        "WHY": {
+          "escondido": "Only you see this comment. Tap Show again to bring it back.",
+          "velho": "More than 7 days old: a private message is no longer possible. Reply in the comment."
+        },
+        "REPLY": "Reply",
+        "PRIVATE": "Send privately",
+        "HIDE": "Hide",
+        "SHOW": "Show again",
+        "DELETE": "Delete",
+        "MORE": "More",
+        "REPLY_LABEL": "Your reply to {name}",
+        "PRIVATE_LABEL": "Your private message to {name}",
+        "PRIVATE_NOTE": "The message goes to the Instagram inbox. You can send one per comment, up to 7 days after it.",
+        "SEND": "Reply in the comment",
+        "PRIVATE_SEND": "Send privately",
+        "CANCEL": "Cancel",
+        "DELETE_CONFIRM": "Delete the comment from {name}? It disappears from the post for everyone and can’t be undone.",
+        "DELETE_SEND": "Delete comment",
+        "YOUR_REPLY": "You replied:",
+        "SENT_PRIVATE": "Sent privately.",
+        "SENT_UNCONFIRMED": "Sent privately. Meta hasn’t confirmed it yet.",
+        "OPEN_CONVERSATION": "See conversation",
+        "NOT_SENT": "It wasn’t sent",
+        "DONE": {
+          "reply": "Reply posted.",
+          "private": "Private message sent.",
+          "hide": "Comment hidden.",
+          "show": "Comment visible again.",
+          "delete": "Comment deleted.",
+          "release": "Done: you can send a private message again."
+        },
+        "ERROR": "I couldn’t do that right now. Try again.",
+        "ERRORS": {
+          "invalid_text": "Write the message before sending.",
+          "comment_not_found": "This comment is no longer on the post.",
+          "meta_unavailable": "Meta didn’t respond right now. Try again in a moment.",
+          "meta_refused": "Meta didn’t allow this on this comment.",
+          "private_reply_not_pending": "This private message was already handled.",
+          "not_inbox_member": "You are not in this profile’s inbox."
+        }
       }
     },
     "VS_NORMAL": {
@@ -155,6 +267,17 @@
       "TITLE": "Meta did not answer right now.",
       "TEXT": "This profile's numbers come back as soon as Meta answers."
     },
-    "STALE": "Meta did not answer right now: these are the numbers from the last reading."
+    "STALE": "Meta did not answer right now: these are the numbers from the last reading.",
+    "ATTENTION": {
+      "TEXT": "{count} comment waiting for you on {posts} | {count} comments waiting for you on {posts}",
+      "TEXT_OR_MORE": "{count} or more comments waiting for you on {posts}",
+      "POSTS": "{count} post | {count} posts",
+      "SEE": "See these posts"
+    },
+    "COMMENTS_ACCESS": {
+      "TITLE": "Allow the comments of this profile",
+      "TEXT": "To see who is waiting for you in the comments, Meta asks for your authorization once.",
+      "ASK_ADMIN": "To see who is waiting for you in the comments, ask your account admin to allow this profile."
+    }
   }
 }

@@ -30,6 +30,13 @@ vi.mock('dashboard/composables/useCanManage', async () => {
     usePermissionGranted: key => computed(() => granted.value.includes(key)),
   };
 });
+// F2 (#2305): a flag dos comentários muda o que o "Liberar acesso" pede à Meta.
+const flags = ref([]);
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    isCloudFeatureEnabled: flag => flags.value.includes(flag),
+  }),
+}));
 const route = reactive({ query: {}, params: { accountId: 1 } });
 const push = vi.fn();
 const replace = vi.fn(({ query }) => {
@@ -103,7 +110,13 @@ const montar = async () => {
           messages: { pt_BR: ptBR },
         }),
       ],
-      stubs: { ChoiceSelect: true },
+      stubs: {
+        ChoiceSelect: true,
+        RouterLink: {
+          props: ['to'],
+          template: '<a :data-para="JSON.stringify(to)"><slot /></a>',
+        },
+      },
     },
   });
   montadas.push(wrapper);
@@ -118,8 +131,11 @@ describe('Seus posts (#2304)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // O jsdom não rola a página.
+    Element.prototype.scrollIntoView = vi.fn();
     route.query = {};
     granted.value = ['integration_manage', 'inbox_manage'];
+    flags.value = [];
     delete window.location;
     window.location = { href: '' };
   });
@@ -489,5 +505,128 @@ describe('Seus posts (#2304)', () => {
     expect(wrapper.find('[data-seus-posts-numeros] h2').text()).toBe(
       'Números dos últimos 30 dias'
     );
+  });
+  describe('comentários esperando você (F2 #2305)', () => {
+    const comComentarios = () =>
+      instagram({
+        waiting_status: 'ok',
+        posts: [
+          post('a', { waiting: 2 }),
+          post('b', { waiting: 0 }),
+          post('c', { waiting: 50, waiting_more: true }),
+        ],
+      });
+
+    it('soma quem espera na faixa e diz "ou mais" quando um post passou de 50', async () => {
+      responder(comComentarios());
+      const wrapper = await montar();
+
+      expect(wrapper.find('[data-seus-posts-atencao]').text()).toContain(
+        '52 ou mais comentários esperando você em 2 posts'
+      );
+      expect(
+        wrapper
+          .find('[data-seus-posts-card="c"] [data-seus-posts-esperando]')
+          .text()
+      ).toContain('50 ou mais comentários esperando você');
+    });
+
+    it('o filtro Esperando você deixa só os posts com alguém esperando', async () => {
+      responder(comComentarios());
+      const wrapper = await montar();
+
+      await wrapper.find('[data-seus-posts-ver-esperando]').trigger('click');
+
+      expect(
+        wrapper
+          .findAll('[data-seus-posts-card]')
+          .map(card => card.attributes('data-seus-posts-card'))
+      ).toEqual(['a', 'c']);
+    });
+
+    it('Ver post abre o post aqui dentro, com o perfil no endereço', async () => {
+      route.query = { dias: '30' };
+      responder(comComentarios());
+      const wrapper = await montar();
+
+      const para = JSON.parse(
+        wrapper
+          .find('[data-seus-posts-card="a"] [data-para]')
+          .attributes('data-para')
+      );
+      expect(para).toEqual({
+        name: 'seus_posts_post',
+        params: { accountId: 1, postId: 'a' },
+        query: { perfil: 'instagram-1', dias: '30' },
+      });
+    });
+
+    it('sem a flag no servidor (waiting_status ausente): nem faixa, nem link interno', async () => {
+      responder(instagram());
+      const wrapper = await montar();
+
+      expect(wrapper.find('[data-seus-posts-atencao]').exists()).toBe(false);
+      expect(wrapper.find('[data-para]').exists()).toBe(false);
+    });
+
+    it('sem a permissão de comentários: os números ficam e o pedido aparece', async () => {
+      responder(instagram({ waiting_status: 'needs_permission' }));
+      const wrapper = await montar();
+
+      expect(
+        wrapper.find('[data-seus-posts-comentarios-sem-permissao]').exists()
+      ).toBe(true);
+      expect(wrapper.find('[data-seus-posts-card="a"]').exists()).toBe(true);
+    });
+
+    it('com a flag, liberar a Página pede também os comentários', async () => {
+      flags.value = ['seus_posts_comentarios'];
+      responder({
+        id: 'facebook-2',
+        network: 'facebook',
+        status: 'needs_permission',
+        name: 'Studio Acme',
+        inbox_id: 8,
+      });
+      login.mockResolvedValue('token-sintetico');
+      FBChannel.reauthorizeFacebookPage.mockResolvedValue({});
+      const wrapper = await montar();
+
+      await wrapper
+        .find('[data-seus-posts-sem-permissao] button')
+        .trigger('click');
+      await flushPromises();
+
+      expect(login).toHaveBeenCalledWith([
+        'read_insights',
+        'pages_read_user_content',
+        'pages_manage_engagement',
+      ]);
+    });
+
+    it('com a flag, liberar o Instagram pede números e comentários juntos', async () => {
+      flags.value = ['seus_posts_comentarios'];
+      responder({
+        id: 'instagram-1',
+        network: 'instagram',
+        status: 'needs_permission',
+        inbox_id: 7,
+      });
+      instagramClient.generateAuthorization.mockResolvedValue({
+        data: { url: 'https://www.instagram.com/oauth/authorize?x=2' },
+      });
+      const wrapper = await montar();
+
+      await wrapper
+        .find('[data-seus-posts-sem-permissao] button')
+        .trigger('click');
+      await flushPromises();
+
+      expect(instagramClient.generateAuthorization).toHaveBeenCalledWith({
+        inbox_id: 7,
+        return_to: 'meta_ads',
+        purpose: 'seus_posts_comentarios',
+      });
+    });
   });
 });
