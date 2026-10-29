@@ -3472,6 +3472,10 @@
         },
         "RECREATE": "It's not in Ads Manager, create again",
         "BLOCKERS": {
+          "NO_AD_ACCOUNT": {
+            "TITLE": "To create ads here, connect your ad account first.",
+            "ACTION": "Connect the ad account"
+          },
           "LOGIN": {
             "TITLE": "To create ads from here, sign in with Facebook again.",
             "ACTION": "Sign in with Facebook",
