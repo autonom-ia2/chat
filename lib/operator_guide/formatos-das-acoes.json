@@ -617,10 +617,10 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#remove_destination",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:54",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:56",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:99"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:58",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:57",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:105"
     ],
     "sem_corpo": true
   },
@@ -629,9 +629,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#stop",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:40",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:42",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:41"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:43"
     ],
     "sem_corpo": true
   },
@@ -16081,11 +16081,11 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#bring_past",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:60",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:153",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:107",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:161",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:113",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112"
     ],
     "sem_corpo": false
   },
@@ -16094,9 +16094,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#receive",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:34",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:35"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:37"
     ],
     "sem_corpo": true
   },
@@ -24513,13 +24513,13 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#save_destination",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:46",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:153",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:49",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:99",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:107",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:161",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:51",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:113",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112"
     ],
     "sem_corpo": false
   },
