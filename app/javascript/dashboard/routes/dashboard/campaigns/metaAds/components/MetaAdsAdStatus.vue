@@ -47,6 +47,8 @@ const STATUS_ERRORS = {
   meta_partial: 'PARTIAL',
   pause_partial: 'PAUSE_PARTIAL',
   in_progress: 'IN_PROGRESS',
+  // A Meta ainda analisa o anúncio (#2354): ligar fica para quando ela terminar.
+  in_review: 'IN_REVIEW',
 };
 
 // O botão mexe na situação do próprio anúncio. "No ar" só quando a entrega também está ativa: anúncio ativo com a

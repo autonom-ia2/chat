@@ -166,6 +166,22 @@ describe('Anúncios da Meta · situação do anúncio (#2161)', () => {
     expect(failed.emitted('retryBudget')).toHaveLength(1);
   });
 
+  // #2354: o servidor recusa ligar um anúncio que a Meta ainda analisa.
+  it('Meta still reviewing the ad: says so instead of a generic error', async () => {
+    mudarStatus.mockRejectedValue({
+      response: { data: { error: 'in_review' } },
+    });
+    const wrapper = mountStatus({
+      gestao: { ...GESTAO, status: 'PAUSED', effective_status: 'PAUSED' },
+    });
+
+    await wrapper.find('[data-confirm]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('changed')).toBeUndefined();
+    expect(useAlert).toHaveBeenCalledWith(`${KEY}.IN_REVIEW`);
+  });
+
   it('a refusal from Meta keeps the status and warns', async () => {
     mudarStatus.mockRejectedValue({
       response: { data: { error: 'meta_refused' } },

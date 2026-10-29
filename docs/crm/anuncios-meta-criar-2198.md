@@ -98,6 +98,22 @@ Mais quatro pontos, que a tela já supõe:
    anúncios a plataforma criou e lê na Meta só esses, quando ainda pausados.
    Não lista todos os pausados da conta. No protótipo a lista vem da memória do
    navegador.
+   Com o próprio anúncio `PAUSED`, a lista decide por classe de
+   `effective_status` (#2354): `PAUSED` está pronto para ativar;
+   `PENDING_REVIEW` e `IN_PROCESS` estão em análise da Meta e entram com
+   `in_review: true`. A linha diz "A Meta está conferindo este anúncio. Em geral
+   leva até 1 dia. Você poderá ativar quando ela terminar." e não oferece
+   "Ativar"; o servidor relê o anúncio depois da trava e recusa ligar com
+   `in_review` (ou `meta_unavailable`, se não conseguir ler). O resto fica fora.
+   A doc do Ad não diz se dá para ligar um anúncio durante a análise: **não
+   confirmado**, por isso não oferecemos. Ela diz que, ao fim da análise, o
+   anúncio volta ao status escolhido (aqui, PAUSED), e então pode ser ativado.
+   Também **não confirmado**: em campanha ou grupo pausados, se o
+   `effective_status` de um anúncio em análise vem como análise ou como
+   `CAMPAIGN_PAUSED`/`ADSET_PAUSED` (aqui os três nascem pausados e a
+   leitura real de 29/10 veio `IN_PROCESS`).
+   [Enum do Ad](https://developers.facebook.com/docs/marketing-api/reference/adgroup/),
+   [análise em até 24 horas, seção 3](https://transparency.meta.com/policies/ad-standards/)
 10. **O orçamento traz `active_ads_count`**: quantos anúncios do grupo (ou da
     campanha, quando o dinheiro é dela) estão no ar agora. O "Ativar" só diz
     "passa a dividir o dinheiro com os outros" quando esse número é maior que

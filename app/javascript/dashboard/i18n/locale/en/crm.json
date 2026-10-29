@@ -3098,6 +3098,7 @@
           "PARTIAL": "Part of the ad was left on at Meta and we couldn't pause it back. Check Meta Ads Manager.",
           "PAUSE_PARTIAL": "We couldn't pause everything: part of the ad may still be on at Meta. Check Meta Ads Manager.",
           "IN_PROGRESS": "This ad is already being changed. Wait a moment and look again.",
+          "IN_REVIEW": "Meta is still checking this ad. You can turn it on once it finishes, usually within 1 day.",
           "ACTIVATE_SPEND_END": "When you turn it on, the ad starts spending {value} per day, until {end}. In total, at most {total}.",
           "ACTIVATE_SPEND_NO_END": "When you turn it on, the ad starts spending {value} per day, with no end date. It only stops when you pause it.",
           "ACTIVATE_SPEND_BUTTON": "Turn on and start spending",
@@ -3622,7 +3623,9 @@
           "HINT": "They were created here and do not spend anything until you turn them on.",
           "LINE": "Created on {date} · Amount when created: {value} per day",
           "FAILED": "We couldn't load your paused ads right now.",
-          "RETRY": "Try again"
+          "RETRY": "Try again",
+          "IN_REVIEW": "Meta is checking this ad. It usually takes up to 1 day.",
+          "IN_REVIEW_HINT": "You can turn it on once Meta finishes."
         },
         "MEDIA": {
           "LABEL": "Photo or video",

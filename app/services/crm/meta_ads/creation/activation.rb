@@ -9,6 +9,8 @@
 class Crm::MetaAds::Creation::Activation
   # Situações de entrega que seguram o anúncio, mesmo ativo.
   HOLDING = %w[PAUSED CAMPAIGN_PAUSED ADSET_PAUSED ARCHIVED DELETED].freeze
+  # Em análise da Meta (#2354). A doc do Ad não diz se dá para ligar um anúncio durante a análise: não oferecemos.
+  IN_REVIEW = %w[PENDING_REVIEW IN_PROCESS].freeze
   # Trava esquecida (processo caiu no meio): os três níveis, com a volta, cabem nisso com folga
   # (Meta::AdsGraphClient::TIMEOUT_SECONDS por chamada).
   SWITCH_STALE_AFTER = 3.minutes
@@ -32,6 +34,8 @@ class Crm::MetaAds::Creation::Activation
     raise Crm::MetaAds::AdManagement::Error, 'cannot_change' unless @access.can_change_ads?
 
     hold!(record) do
+      raise Crm::MetaAds::AdManagement::Error, 'in_review' if status == 'ACTIVE' && in_review?(record)
+
       levels = Crm::MetaAds::Creation::Levels.new(@client, account: @connection.account, user: @user)
       status == 'ACTIVE' ? levels.activate!(record) : levels.pause!(record)
     end
@@ -63,6 +67,15 @@ class Crm::MetaAds::Creation::Activation
     ensure
       scope.update_all(switching_at: nil) # rubocop:disable Rails/SkipsModelValidations
     end
+  end
+
+  # Lido depois da trava: o segundo clique não chama a Meta. Sem conseguir ler, não liga: em análise, ligar não é
+  # oferecido, e a leitura que falha não diz se o anúncio está nela.
+  def in_review?(record)
+    result = @client.ad_management(record.ad_id)
+    raise Crm::MetaAds::AdManagement::Error, 'meta_unavailable' unless result.ok
+
+    IN_REVIEW.include?(result.data['effective_status'])
   end
 
   def paused?(object)
