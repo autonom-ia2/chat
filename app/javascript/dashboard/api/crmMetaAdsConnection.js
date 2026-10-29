@@ -61,6 +61,20 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.patch(`${this.url}/destinations`, { destinations });
   }
 
+  // Destino (#2338): páginas do site, sem cliques nem vendas (meta_ads_view), e ligar uma ali mesmo
+  // (meta_ads_manage) → { payload }.
+  sitePages() {
+    return axios.get(`${this.url}/site_pages`);
+  }
+
+  createSitePage({ name, inbox_id, allowed_origins }) {
+    return axios.post(`${this.url}/site_pages`, {
+      name,
+      inbox_id,
+      allowed_origins,
+    });
+  }
+
   // Step 4: active pipelines tied to the official WhatsApp →
   // { funnels: [{ id, name, numbers, enabled, stages, missing }],
   //   unlinked_numbers, ai_available }

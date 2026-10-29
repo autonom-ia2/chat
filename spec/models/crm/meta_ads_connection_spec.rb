@@ -35,7 +35,7 @@ RSpec.describe Crm::MetaAdsConnection do
     connection = create_meta_ads_connection(account)
 
     expect(connection.public_payload.keys).to contain_exactly(:configured, :status, :mode, :last_checked_at, :last_error, :verified_at,
-                                                              :destinations, :ad_account, :pixel, :no_site)
+                                                              :destinations, :ad_account, :pixel, :no_site, :site_pages_count)
     expect(connection.public_payload.to_json).not_to include(MetaAdsHelpers::TEST_TOKEN.first(8))
   end
 
