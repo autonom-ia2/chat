@@ -42,11 +42,10 @@ RSpec.describe Crm::MetaAds::Creation::Options do
     payload = described_class.new(account, connection).payload
 
     expect(payload).to include(
-      needs_login: false, pages: [{ id: '110', name: 'Loja Exemplo' }],
+      needs_login: false, pages: [{ id: '110', name: 'Loja Exemplo', instagram: { id: '178', username: 'lojaexemplo' } }],
       whatsapp_numbers: [{ id: '+5511900002161', name: account.inboxes.first.name, phone: '+5511900002161' }],
-      instagram: { id: '178', username: 'lojaexemplo', posts: [], publish_left: nil }, posts: [],
       images: [{ hash: 'abc', url: 'https://scontent.example/abc.jpg', width: 600, height: 600 }],
-      currency: 'BRL', min_daily: 6, max_daily: 500, kinds: ['ad'],
+      currency: 'BRL', min_daily: 6, max_daily: 500, kinds: %w[ad post],
       # 01:30 UTC de 28/10 ainda é 27/10 no fuso da conta de anúncios (São Paulo).
       today: '2026-10-27',
       destinations: %w[WHATSAPP WEBSITE],
@@ -60,7 +59,7 @@ RSpec.describe Crm::MetaAds::Creation::Options do
 
     payload = described_class.new(account, connection).payload
 
-    expect(payload).to include(needs_login: true, pages: [], images: [], instagram: nil, currency: nil, today: nil)
+    expect(payload).to include(needs_login: true, pages: [], images: [], currency: nil, today: nil)
     expect(a_request(:get, meta_graph_url('me/accounts'))).not_to have_been_made
   end
 
@@ -92,6 +91,6 @@ RSpec.describe Crm::MetaAds::Creation::Options do
     stub_pages([])
     stub_images(status: 500)
 
-    expect(described_class.new(account, connection).payload).to include(images: [], instagram: nil)
+    expect(described_class.new(account, connection).payload).to include(images: [], pages: [])
   end
 end

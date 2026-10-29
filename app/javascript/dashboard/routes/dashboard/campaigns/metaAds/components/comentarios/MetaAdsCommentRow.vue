@@ -10,8 +10,8 @@ import { relativeTime } from '../../metaAdsHelpers';
 // Privado enviado sem a Meta confirmar (rede caiu no meio): `private_reply.confirmed` false, e a linha diz isso. O
 // botão não volta sozinho, porque a Meta pode ter entregado: quem gere confere no Direct e usa "Não foi enviado"
 // (`private_reply.can_release`).
-// Sem o privado, a linha diz o motivo: passou de 7 dias (`private_reply_expired`) ou quem vê não é da caixa que
-// receberia a conversa (`private_reply_not_member`).
+// Sem o privado porque passou de 7 dias (`private_reply_expired`), a linha diz isso. Quem não vê a caixa nem recebe a
+// lista (#2358).
 //
 // Mensagem para o cliente só sai pelo botão: Enter quebra linha (no celular, a tecla de quebrar linha mandaria uma
 // mensagem pela metade, e o privado só vai uma vez). Fechar a caixa guarda o rascunho; ele só some depois de enviar
@@ -330,13 +330,6 @@ const DANGER =
           class="m-0 text-sm text-n-slate-11"
         >
           {{ $t(`${KEY}.PRIVATE_EXPIRED`) }}
-        </p>
-        <p
-          v-else-if="canManage && comment.private_reply_not_member"
-          data-ad-comment-private-not-member
-          class="m-0 text-sm text-n-slate-11"
-        >
-          {{ $t(`${KEY}.PRIVATE_NOT_MEMBER`) }}
         </p>
         <div
           v-if="canManage && hasActions"

@@ -56,6 +56,27 @@ describe('peopleAccess', () => {
       });
     });
 
+    // GrantGuard#reach? reads the role through CustomRole.with_implied_permissions: an editing CRM key brings
+    // crm_view, so an old role saved without it is out of reach for a giver who lacks crm_view.
+    it('counts crm_view implied by an editing CRM key in the role', () => {
+      const noCrmView = {
+        ...manager,
+        permissions: ['people_manage', 'contact_manage', 'crm_manage_cards'],
+      };
+      const oldRole = { id: 23, permissions: ['crm_manage_cards'] };
+      expect(reachesRole(noCrmView, oldRole)).toBe(false);
+      expect(roleLockReason(noCrmView, oldRole)).toBe(LOCK_REASONS.ABOVE);
+      expect(
+        memberLockReason(noCrmView, { id: 5, custom_role_id: 23 }, [oldRole])
+      ).toBe(LOCK_REASONS.ABOVE);
+      expect(
+        reachesRole(
+          { ...noCrmView, permissions: [...noCrmView.permissions, 'crm_view'] },
+          oldRole
+        )
+      ).toBe(true);
+    });
+
     it('always reaches a plain agent (no custom role)', () => {
       expect(reachesRole(manager, null)).toBe(true);
     });

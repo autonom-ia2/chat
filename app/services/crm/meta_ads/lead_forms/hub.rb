@@ -9,15 +9,19 @@
 #
 # Só no modo em que o token é do próprio cliente (Crm::MetaAdsConnection#own_token?): no `partner` o token é o da
 # plataforma, e me/accounts traria Páginas de outros clientes.
+#
+# remember_pages: as Páginas lidas só ficam guardadas em crm_meta_ads_pages (id e nome) para quem pode mexer
+# (meta_ads_manage). Quem só vê lê a lista sem gravar Página (#2357). Ligar a Página cria a linha dela (page_record).
 class Crm::MetaAds::LeadForms::Hub
   LEADGEN = 'leadgen'.freeze
   ACTIVE = 'ACTIVE'.freeze
   SHOWN_STATUSES = %w[ACTIVE ARCHIVED].freeze
 
-  def initialize(connection:, account:, user: nil)
+  def initialize(connection:, account:, remember_pages:, user: nil)
     @connection = connection
     @account = account
     @user = user
+    @remember_pages = remember_pages
   end
 
   # visible_cards: os cards que a pessoa enxerga (nil quando ela não vê a lista de quem chegou).
@@ -130,9 +134,13 @@ class Crm::MetaAds::LeadForms::Hub
       list = @connection.own_token? ? Array(check!(client.pages_with_tokens).data.to_h['data']) : []
       list = list.select { |page| page.is_a?(Hash) && page['id'].present? && page['access_token'].present? }
                  .map { |page| page.merge('id' => page['id'].to_s) }
-      Crm::MetaAdsPage.remember!(@account, list)
+      remember(list)
       list
     end
+  end
+
+  def remember(list)
+    Crm::MetaAdsPage.remember!(@account, list) if @remember_pages
   end
 
   def find_page!(page_id)

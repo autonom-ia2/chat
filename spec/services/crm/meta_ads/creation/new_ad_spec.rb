@@ -11,6 +11,10 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
   let(:page_id) { '110000000002161' }
   let(:json) { { 'Content-Type' => 'application/json' } }
   let(:whatsapp_number) { '+5511900002161' }
+  # O texto da tela Conexão › Destino (#2345), escrito à mão para o spec pegar mudança na fonte. Só vai no anúncio do site.
+  let(:url_tags) do
+    'utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}&utm_id={{campaign.id}}'
+  end
   # A campanha da tentativa leva a marca da chave no nome (os 8 primeiros caracteres).
   let(:campaign_name) { 'Bolo de pote · WhatsApp [a1b2c3d4]' }
 
@@ -45,10 +49,10 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
   end
 
   # A releitura dos três níveis depois de criar. `ad_status:` muda só a situação do anúncio.
-  def stub_reread(ad_status: 'PAUSED')
-    { '900' => 'PAUSED', '901' => 'PAUSED', '903' => ad_status }.each do |id, status|
+  def stub_reread(ad_status: 'PAUSED', ad_effective: ad_status)
+    { '900' => %w[PAUSED PAUSED], '901' => %w[PAUSED PAUSED], '903' => [ad_status, ad_effective] }.each do |id, (status, effective)|
       stub_request(:get, meta_graph_url(id)).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
-                                            .to_return(ok(id: id, status: status, effective_status: status))
+                                            .to_return(ok(id: id, status: status, effective_status: effective))
     end
   end
 
@@ -82,13 +86,21 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       .to_return(ok(data: %w[ads_management pages_manage_ads].map { |name| { permission: name, status: 'granted' } }))
   end
 
+  # #2354: pela doc do Ad, anúncio novo passa pela análise da Meta antes. O cartão de criado não oferece Ativar então.
+  it 'anúncio recém-criado em análise da Meta: a resposta diz in_review, da releitura que o criar já faz' do
+    stub_creation
+    stub_reread(ad_effective: 'IN_PROCESS')
+
+    expect(create!).to include(ad_id: '903', status: 'PAUSED', in_review: true)
+  end
+
   it 'cria campanha, grupo e anúncio PAUSED, com destino WhatsApp e público do Brasil' do
     stubs = stub_creation
     stub_reread
 
     result = create!
 
-    expect(result).to include(ad_id: '903', name: 'Bolo de pote · WhatsApp', status: 'PAUSED')
+    expect(result).to include(ad_id: '903', name: 'Bolo de pote · WhatsApp', status: 'PAUSED', in_review: false)
     campaign_ok = lambda do |req|
       body = form(req)
       body['objective'] == 'OUTCOME_ENGAGEMENT' && body['status'] == 'PAUSED' && body['special_ad_categories'] == '[]' &&
@@ -105,7 +117,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     end
     creative_ok = lambda do |req|
       spec = JSON.parse(form(req)['object_story_spec'])
-      spec['page_id'] == page_id && spec.dig('link_data', 'image_hash') == 'abc123' &&
+      form(req)['url_tags'].nil? &&
+        spec['page_id'] == page_id && spec.dig('link_data', 'image_hash') == 'abc123' &&
         spec.dig('link_data', 'call_to_action') == { 'type' => 'WHATSAPP_MESSAGE', 'value' => { 'app_destination' => 'WHATSAPP' } }
     end
     expect(stubs[:campaign].with(&campaign_ok)).to have_been_made.once
@@ -138,6 +151,26 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
     expect(pause).to have_been_made.once
     expect(Audited.audit_class.where(action: 'meta_ads_create_repaused').last.audited_changes).to include('level' => 'campaign')
+  end
+
+  it 'anúncio pausado na hora: in_review vem da releitura depois de pausar (#2354)' do
+    stub_creation
+    stub_reread
+    stub_request(:get, meta_graph_url('903')).with(query: { fields: Meta::AdsGraphClient::OBJECT_STATUS_FIELDS })
+                                             .to_return(ok(id: '903', status: 'ACTIVE', effective_status: 'ACTIVE'),
+                                                        ok(id: '903', status: 'PAUSED', effective_status: 'IN_PROCESS'))
+    stub_request(:post, meta_graph_url('903')).with(body: { 'status' => 'PAUSED' }).to_return(ok(success: true))
+
+    expect(create!).to include(in_review: true)
+  end
+
+  it 'a mesma chave de novo não chama a Meta (ponto 4): sem releitura, in_review false (#2354)' do
+    stub_creation
+    stub_reread(ad_effective: 'IN_PROCESS')
+    expect(create!).to include(in_review: true)
+
+    expect(create!).to include(in_review: false)
+    expect(a_request(:get, meta_graph_url('903')).with(query: hash_including({}))).to have_been_made.once
   end
 
   it 'a mesma chave não cria duas campanhas (ponto 4)' do
@@ -192,8 +225,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
         JSON.parse(body['targeting'])['publisher_platforms'] == ['instagram']
     end
     creative_ok = lambda do |req|
-      JSON.parse(form(req)['object_story_spec']).dig('link_data', 'call_to_action') ==
-        { 'type' => 'SHOP_NOW', 'value' => { 'link' => 'https://lojaexemplo.com.br' } }
+      action = JSON.parse(form(req)['object_story_spec']).dig('link_data', 'call_to_action')
+      form(req)['url_tags'] == url_tags && action == { 'type' => 'SHOP_NOW', 'value' => { 'link' => 'https://lojaexemplo.com.br' } }
     end
     expect(stubs[:adset].with(&adset_ok)).to have_been_made
     expect(stubs[:creative].with(&creative_ok)).to have_been_made

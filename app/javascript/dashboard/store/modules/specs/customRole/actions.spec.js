@@ -15,7 +15,10 @@ describe('#actions', () => {
       expect(commit.mock.calls).toEqual([
         [types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: true }],
         [types.default.SET_CUSTOM_ROLE, customRoleList],
-        [types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: false }],
+        [
+          types.default.SET_CUSTOM_ROLE_UI_FLAG,
+          { fetchingList: false, fetchingListFailed: false },
+        ],
       ]);
     });
     it('sends correct actions if API is error', async () => {
@@ -23,7 +26,10 @@ describe('#actions', () => {
       await actions.getCustomRole({ commit });
       expect(commit.mock.calls).toEqual([
         [types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: true }],
-        [types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: false }],
+        [
+          types.default.SET_CUSTOM_ROLE_UI_FLAG,
+          { fetchingList: false, fetchingListFailed: true },
+        ],
       ]);
     });
   });
@@ -82,6 +88,21 @@ describe('#actions', () => {
         [types.default.SET_CUSTOM_ROLE_UI_FLAG, { updatingItem: true }],
         [types.default.SET_CUSTOM_ROLE_UI_FLAG, { updatingItem: false }],
       ]);
+    });
+  });
+
+  // #2308: a conversa guiada separa o 401 (alcance, flag, a própria função) pelo status e pelo código do corpo.
+  it.each([
+    ['createCustomRole', 'post', customRoleList[0]],
+    ['updateCustomRole', 'patch', { id: 1, ...customRoleList[0] }],
+  ])('%s keeps status and code of a 401', async (acao, metodo, dados) => {
+    axios[metodo].mockRejectedValue({
+      response: { status: 401, data: { error: 'out_of_reach' } },
+    });
+    await expect(actions[acao]({ commit }, dados)).rejects.toMatchObject({
+      status: 401,
+      code: 'out_of_reach',
+      attributes: [],
     });
   });
 

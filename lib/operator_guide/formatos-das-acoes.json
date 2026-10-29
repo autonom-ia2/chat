@@ -594,10 +594,11 @@
   "DELETE crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#destroy",
+    "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:54",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:98",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:94"
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:101"
     ],
     "sem_corpo": true
   },
@@ -606,10 +607,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#destroy",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:53",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:54",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -617,10 +618,10 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#remove_destination",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:54",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:56",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:99"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:58",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:57",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:105"
     ],
     "sem_corpo": true
   },
@@ -629,9 +630,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#stop",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:40",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:42",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:41"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:43"
     ],
     "sem_corpo": true
   },
@@ -736,8 +737,8 @@
     "controller": "api/v1/accounts/ctwa_tracked_links#destroy",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:34",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:29",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:43"
     ],
     "sem_corpo": true
   },
@@ -797,9 +798,9 @@
     "controller": "api/v1/accounts/custom_roles#destroy",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:30",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:68",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:41",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:82",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },
@@ -5534,7 +5535,7 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:271"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:272"
     ],
     "sem_corpo": false
   },
@@ -5549,10 +5550,10 @@
       "leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:48",
       "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:104",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:50"
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:57"
     ],
     "sem_corpo": false
   },
@@ -5562,15 +5563,16 @@
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#update",
+    "modelo": "Crm::MetaAdsConnection",
     "motivos": [
       "leitura crua sem tipo: hidden (repassada a comments.hide!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:98",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:94",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:47",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:45"
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:49",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:101",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:50"
     ],
     "sem_corpo": false
   },
@@ -5579,7 +5581,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:149"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:150"
     ],
     "sem_corpo": true
   },
@@ -5605,10 +5607,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:163",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:267",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:167",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:166"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:164",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:268",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:168",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:167"
     ],
     "sem_corpo": false
   },
@@ -6414,9 +6416,9 @@
       "leitura crua sem tipo: ctwa_tracked_link"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:26",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:21",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:47",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:43"
     ],
     "sem_corpo": false
   },
@@ -6574,9 +6576,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:21",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },
@@ -15776,6 +15778,7 @@
       "end_date": {},
       "headline": {},
       "idempotency_key": {},
+      "kind": {},
       "media": {
         "campos": {
           "hash": {},
@@ -15788,6 +15791,8 @@
       "name": {},
       "page_id": {},
       "placement": {},
+      "post_id": {},
+      "post_source": {},
       "ready_message": {},
       "recreate_unconfirmed": {},
       "region": {},
@@ -15804,8 +15809,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_creation#create",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:37",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:66"
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:73"
     ],
     "sem_corpo": false
   },
@@ -15815,15 +15820,16 @@
     },
     "completo": false,
     "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#reply",
+    "modelo": "Crm::MetaAdsConnection",
     "motivos": [
       "leitura crua sem tipo: content (repassada a comments.reply!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:33",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:98",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:94",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:34"
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:101",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:39"
     ],
     "sem_corpo": false
   },
@@ -15838,11 +15844,11 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#hide",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
       "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:45",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -15857,11 +15863,11 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#private_reply",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:59",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:122",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -15870,10 +15876,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#release_private_reply",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:65",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": true
   },
@@ -15888,11 +15894,11 @@
     "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#reply",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:38",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:117",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:122",
-      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:93"
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:39",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
     ],
     "sem_corpo": false
   },
@@ -15985,8 +15991,8 @@
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:30",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:31"
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:38"
     ],
     "sem_corpo": false
   },
@@ -16021,6 +16027,10 @@
           "facebook_login"
         ]
       },
+      "no_site": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
       "pixel_id": {
         "tipo": "string"
       }
@@ -16030,8 +16040,9 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:140",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:142",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:141",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:202"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:203"
     ],
     "sem_corpo": false
   },
@@ -16046,9 +16057,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:177",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:181",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:180"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:178",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:182",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:181"
     ],
     "sem_corpo": false
   },
@@ -16073,11 +16084,11 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#bring_past",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:60",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:153",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:107",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:161",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:113",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112"
     ],
     "sem_corpo": false
   },
@@ -16086,9 +16097,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#receive",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:34",
       "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:36",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:35"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:37"
     ],
     "sem_corpo": true
   },
@@ -16863,8 +16874,8 @@
       "leitura crua sem tipo: ctwa_tracked_link"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:17",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:12",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -17039,8 +17050,8 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:14",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:19",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -24482,7 +24493,7 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:271"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:272"
     ],
     "sem_corpo": false
   },
@@ -24505,13 +24516,13 @@
     "controller": "api/v1/accounts/crm/meta_ads_lead_forms#save_destination",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:46",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:153",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:49",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:99",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:107",
-      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:106"
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:161",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:51",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:113",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112"
     ],
     "sem_corpo": false
   },
@@ -25329,9 +25340,9 @@
       "leitura crua sem tipo: ctwa_tracked_link"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:26",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:21",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:47",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:43"
     ],
     "sem_corpo": false
   },
@@ -25489,9 +25500,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:21",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },

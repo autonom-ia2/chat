@@ -15,6 +15,7 @@ const facebook = vi.hoisted(() => ({
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
     adAccounts: vi.fn(),
+    pixels: vi.fn(),
     select: vi.fn(),
     updateDestinations: vi.fn(),
   },
@@ -52,6 +53,22 @@ const OTHER = {
   recommended: false,
 };
 
+const SEGUROS = {
+  id: '2164882667623689',
+  name: 'Pixel Placement Seguros',
+  last_fired_time: '2026-10-22T10:00:00+0000',
+};
+const MEDICO = {
+  id: '1674865833738871',
+  name: 'Pixel Placement - RC Médico',
+  last_fired_time: '2026-10-27T10:00:00+0000',
+};
+
+const pixelsReply = rows =>
+  CrmMetaAdsConnectionAPI.pixels.mockResolvedValue({
+    data: { pixels: rows },
+  });
+
 const accountsReply = rows =>
   CrmMetaAdsConnectionAPI.adAccounts.mockResolvedValue({
     data: { ad_accounts: rows },
@@ -83,13 +100,14 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     CrmMetaAdsConnectionAPI.select.mockResolvedValue({ data: {} });
+    pixelsReply([]);
     CrmMetaAdsConnectionAPI.updateDestinations.mockResolvedValue({ data: {} });
   });
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('with Facebook: signs in, finds the only account, connects it measuring WhatsApp and goes to the panel', async () => {
+  it('with Facebook: signs in, finds the only account, connects it measuring WhatsApp and goes to the panel (no Pixel: asks nothing)', async () => {
     facebook.connect.mockResolvedValue({ ok: true });
     accountsReply([ACCOUNT]);
     const wrapper = await mountConnect();
@@ -113,7 +131,9 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
       mode: 'facebook_login',
       adAccountId: 'act_1',
       pixelId: null,
+      noSite: false,
     });
+    expect(wrapper.find('[data-conectar-pixel-pergunta]').exists()).toBe(false);
     expect(CrmMetaAdsConnectionAPI.updateDestinations).toHaveBeenCalledWith({
       whatsapp: true,
       site: false,
@@ -156,6 +176,195 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     );
   });
 
+  // A Meta não diz qual Pixel a pessoa marcou na janela do Facebook (#2343): com mais de um, a tela pergunta.
+  const connectWithTwo = async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    pixelsReply([SEGUROS, MEDICO]);
+    const wrapper = await mountConnect();
+    await wrapper.find('[data-conectar-facebook]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-conectar]').trigger('click');
+    await flushPromises();
+    return wrapper;
+  };
+
+  const answer = async (wrapper, value) => {
+    await wrapper
+      .find(`[role="option"][data-value="${value}"]`)
+      .trigger('click');
+    await wrapper.find('[data-conectar-pixel-continuar]').trigger('click');
+    await flushPromises();
+  };
+
+  it('with more than one Pixel, asks which one before saving anything', async () => {
+    const wrapper = await connectWithTwo();
+
+    expect(CrmMetaAdsConnectionAPI.pixels).toHaveBeenCalledWith(
+      'facebook_login',
+      'act_1'
+    );
+    expect(wrapper.attributes('data-screen')).toBe('pixel');
+    expect(CrmMetaAdsConnectionAPI.select).not.toHaveBeenCalled();
+    expect(wrapper.find('[role="combobox"]').exists()).toBe(true);
+    expect(wrapper.find('select').exists()).toBe(false);
+    expect(
+      wrapper.find('[data-conectar-pixel-continuar]').attributes('disabled')
+    ).toBeDefined();
+
+    // O mais antigo, de propósito: nada escolhe pelo disparo mais recente.
+    await answer(wrapper, SEGUROS.id);
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledTimes(1);
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith({
+      mode: 'facebook_login',
+      adAccountId: 'act_1',
+      pixelId: SEGUROS.id,
+      noSite: false,
+    });
+    expect(wrapper.attributes('data-screen')).toBe('done');
+    expect(wrapper.find('[data-conectar-pixel]').text()).toContain(
+      'Pixel Placement Seguros'
+    );
+    expect(wrapper.find('[data-conectar-pixel-alterar]').exists()).toBe(true);
+  });
+
+  it('with more than one Pixel, "I have no website" saves no Pixel on purpose', async () => {
+    const wrapper = await connectWithTwo();
+
+    await answer(wrapper, 'none');
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith({
+      mode: 'facebook_login',
+      adAccountId: 'act_1',
+      pixelId: null,
+      noSite: true,
+    });
+    expect(wrapper.find('[data-conectar-pixel]').text()).toContain(
+      'sem código do site'
+    );
+  });
+
+  it('a failed save after the question goes to the error screen', async () => {
+    const wrapper = await connectWithTwo();
+    CrmMetaAdsConnectionAPI.select.mockRejectedValue({
+      response: { data: { error: 'pixel_not_found' } },
+    });
+
+    await answer(wrapper, MEDICO.id);
+
+    expect(wrapper.attributes('data-screen')).toBe('notyet');
+    expect(CrmMetaAdsConnectionAPI.updateDestinations).not.toHaveBeenCalled();
+  });
+
+  const connectAndChange = async () => {
+    const wrapper = await connectWithTwo();
+    await answer(wrapper, MEDICO.id);
+    await wrapper.find('[data-conectar-pixel-alterar]').trigger('click');
+    return wrapper;
+  };
+
+  it('"Change" in done saves another Pixel', async () => {
+    const wrapper = await connectAndChange();
+
+    expect(
+      wrapper.find('[data-conectar-pixel] [role="combobox"]').exists()
+    ).toBe(true);
+    await wrapper
+      .find(`[data-conectar-pixel] [role="option"][data-value="${SEGUROS.id}"]`)
+      .trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenLastCalledWith({
+      mode: 'facebook_login',
+      adAccountId: 'act_1',
+      pixelId: SEGUROS.id,
+      noSite: false,
+    });
+    expect(wrapper.find('[data-conectar-pixel]').text()).toContain(
+      'Pixel Placement Seguros'
+    );
+  });
+
+  it('"Change" to "I have no website" saves no Pixel on purpose', async () => {
+    const wrapper = await connectAndChange();
+
+    await wrapper
+      .find('[data-conectar-pixel] [role="option"][data-value="none"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenLastCalledWith({
+      mode: 'facebook_login',
+      adAccountId: 'act_1',
+      pixelId: null,
+      noSite: true,
+    });
+  });
+
+  it('"Cancel" closes the change without saving', async () => {
+    const wrapper = await connectAndChange();
+
+    await wrapper.find('[data-conectar-pixel-cancelar]').trigger('click');
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-conectar-pixel-alterar]').exists()).toBe(true);
+  });
+
+  it('a failed change says why and keeps the choice open', async () => {
+    const wrapper = await connectAndChange();
+    CrmMetaAdsConnectionAPI.select.mockRejectedValue({
+      response: { data: { error: 'pixel_not_found' } },
+    });
+
+    await wrapper
+      .find(`[data-conectar-pixel] [role="option"][data-value="${SEGUROS.id}"]`)
+      .trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-conectar-pixel-erro]').text()).not.toBe('');
+    expect(wrapper.find('[data-conectar-pixel-cancelar]').exists()).toBe(true);
+  });
+
+  it('a single Pixel is saved by itself, with nothing to ask or change', async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    pixelsReply([SEGUROS]);
+    const wrapper = await mountConnect();
+
+    await wrapper.find('[data-conectar-facebook]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-conectar]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-conectar-pixel-pergunta]').exists()).toBe(false);
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith({
+      mode: 'facebook_login',
+      adAccountId: 'act_1',
+      pixelId: SEGUROS.id,
+      noSite: false,
+    });
+    expect(wrapper.find('[data-conectar-pixel-alterar]').exists()).toBe(false);
+  });
+
+  it('without the Pixel list the account still connects, and "done" says where to choose the code', async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    CrmMetaAdsConnectionAPI.pixels.mockRejectedValue(new Error());
+    const wrapper = await mountConnect();
+
+    await wrapper.find('[data-conectar-facebook]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-conectar]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith(
+      expect.objectContaining({ pixelId: null })
+    );
+    expect(wrapper.attributes('data-screen')).toBe('done');
+    expect(wrapper.find('[data-conectar-pixel-falhou]').exists()).toBe(true);
+  });
+
   it('closing the Facebook window keeps the start screen with a notice and asks nothing', async () => {
     facebook.connect.mockResolvedValue(null);
     const wrapper = await mountConnect();
@@ -164,7 +373,9 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     await flushPromises();
 
     expect(wrapper.attributes('data-screen')).toBe('start');
-    expect(wrapper.find('[data-conectar-aviso-login]').exists()).toBe(true);
+    const notice = wrapper.find('[data-conectar-aviso-login]').text();
+    expect(notice).toContain('fechou antes do fim');
+    expect(notice).not.toContain('não abriu');
     expect(CrmMetaAdsConnectionAPI.adAccounts).not.toHaveBeenCalled();
   });
 

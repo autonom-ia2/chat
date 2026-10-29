@@ -90,4 +90,21 @@ describe('comentariosFacebook', () => {
     );
     vi.unstubAllGlobals();
   });
+
+  // #2359: sem a caixa do Messenger da Página, o botão leva a conectar a Página como caixa.
+  it('sem a caixa da Página leva a conectar o Messenger', () => {
+    const assign = vi.fn();
+    vi.stubGlobal('location', {
+      pathname: '/app/accounts/1/campaigns/meta-ads',
+      search: '?aba=resultado&anuncio=99',
+      assign,
+    });
+
+    adaptador.entrar('no_inbox', '99');
+
+    expect(assign).toHaveBeenCalledWith(
+      '/app/accounts/1/settings/inboxes/new/facebook'
+    );
+    vi.unstubAllGlobals();
+  });
 });

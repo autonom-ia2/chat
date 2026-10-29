@@ -293,20 +293,34 @@ RSpec.describe Whatsapp::Templates::SendParams, :aggregate_failures do
       expect(CampaignPause.open_for(campaign)).to have_attributes(source: 'template', reason_code: 'template_offer_expired')
     end
 
-    it 'carrossel: cada cartão leva o link do arquivo guardado no modelo' do
+    # #2367: cada arquivo sobe à Meta uma vez no disparo e o cartão leva o id (pelo link, a busca da Meta falha com 131053).
+    it 'carrossel: o arquivo guardado de cada cartão sobe à Meta e o cartão leva o id' do
       save_card_files
+      uploads = stub_meta_media_upload
       sent = stub_graph_messages
 
       dispatch(params('vitrine', stored_cards))
 
-      puts sent.first.to_json
       cards = component(sent.first, 'carousel')['cards']
       expect(cards.pluck('card_index')).to eq([0, 1])
-      expect(cards.map { |item| item.dig('components', 0, 'parameters', 0, 'image', 'link') })
-        .to match([include('cartao-1.png'), include('cartao-2.png')])
+      expect(uploads).to eq(%w[cartao-1.png cartao-2.png])
+      expect(cards.map { |item| item.dig('components', 0, 'parameters', 0, 'image') }).to eq([{ 'id' => 'media_1' }, { 'id' => 'media_2' }])
     end
 
-    it 'carrossel: o arquivo escolhido na campanha vai com link gerado no disparo' do
+    it 'carrossel: o arquivo escolhido na campanha sobe à Meta e o cartão leva o id' do
+      uploads = stub_meta_media_upload
+      sent = stub_graph_messages
+      cards = %w[nova.png outra.png].map { |name| { 'header' => { 'media_blob' => uploaded(name).signed_id, 'media_type' => 'image' } } }
+
+      dispatch(params('vitrine', { 'carousel' => { 'cards' => cards } }))
+
+      images = component(sent.first, 'carousel')['cards'].map { |item| item.dig('components', 0, 'parameters', 0, 'image') }
+      expect(uploads).to eq(%w[nova.png outra.png])
+      expect(images).to eq([{ 'id' => 'media_1' }, { 'id' => 'media_2' }])
+    end
+
+    it 'carrossel: a Meta recusa a subida e o cartão leva o link gerado no disparo' do
+      stub_meta_media_upload(status: 400)
       sent = stub_graph_messages
       cards = %w[nova.png outra.png].map { |name| { 'header' => { 'media_blob' => uploaded(name).signed_id, 'media_type' => 'image' } } }
 

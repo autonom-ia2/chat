@@ -2593,6 +2593,11 @@
             "TITLE": "We found your ad account",
             "CTA": "Connect this account"
           },
+          "PIXEL": {
+            "TITLE": "Which website code should we use?",
+            "TEXT": "{name} has more than one website code (Pixel). Pick the one on the website where you sell.",
+            "PLACEHOLDER": "Choose a code"
+          },
           "CHOOSE": {
             "TITLE": "Which account runs your WhatsApp ads?",
             "TEXT": "We found more than one. Tap the one you use.",
@@ -2612,6 +2617,8 @@
             "TITLE": "Done, you are connected!",
             "TEXT": "We are bringing the spend of {name}. In a few minutes it shows on your panel, next to conversations and sales.",
             "CTA": "See my panel",
+            "PIXEL_CANCEL": "Cancel",
+            "PIXEL_FAILED": "We could not read the website code (Pixel) now. The account is already connected; choose the code later in the Connection tab.",
             "DESTINATION_FAILED": "We could not mark WhatsApp as where your ads lead. Open the Connection tab, in \"Ad destination\", and choose WhatsApp."
           },
           "GUIDE": {
@@ -2640,9 +2647,9 @@
             },
             "CTA": "Sign in with Facebook",
             "RETRY": "Sign in again",
-            "WAITING": "The Facebook window is open. Keep everything checked and tap \"Continue\" until the end.",
-            "POPUP_TITLE": "The Facebook window did not open",
-            "POPUP_TEXT": "The browser may have blocked it. Tap the blocked window icon in the address bar, choose \"Always allow\" and sign in again.",
+            "WAITING": "The Facebook window is open. Keep everything checked and tap \"Next\", \"Confirm\" and, at the end, \"Done\".",
+            "POPUP_TITLE": "The Facebook window closed before the end",
+            "POPUP_TEXT": "Tap \"Sign in again\" and go until \"Done\". If the window never opened, the browser blocked it: tap the blocked window icon in the address bar and choose \"Always allow\".",
             "REFUSED_TITLE": "Facebook did not share your ads",
             "BROKEN": "The connection with Meta dropped. Sign in again to see your spend.",
             "SOMEONE": "Someone else takes care of my ads",
@@ -2686,7 +2693,9 @@
         "NOW": "Now",
         "CHANGE": "Change",
         "OFF": "Off",
-        "TURN_ON": "Turn on"
+        "TURN_ON": "Turn on",
+        "PICK": "Choose",
+        "ACCOUNT_PENDING_HINT": "Website code (Pixel) missing"
       },
       "CONNECT": {
         "TITLE": "How do you want to connect?",
@@ -2717,11 +2726,11 @@
           "HOW_1_TITLE": "A Facebook window opens",
           "HOW_1_TEXT": "If it asks, sign in with your Facebook email and password.",
           "HOW_2_TITLE": "Leave everything checked",
-          "HOW_2_TEXT": "Facebook shows your accounts and what we will use. Don't uncheck anything and tap \"Continue\" until the end.",
+          "HOW_2_TEXT": "Facebook shows your accounts and what we will use. Don't uncheck anything and tap \"Next\", \"Confirm\" and, at the end, \"Done\".",
           "HOW_3_TITLE": "You come back here",
           "HOW_3_TEXT": "The window closes by itself and we take it from here.",
           "CTA": "Sign in with Facebook",
-          "WAITING": "The Facebook window is open. Leave everything checked and tap \"Continue\" until the end.",
+          "WAITING": "The Facebook window is open. Leave everything checked and tap \"Next\", \"Confirm\" and, at the end, \"Done\".",
           "TRUST_PASSWORD": "We never see your password",
           "TRUST_ADS": "Nothing changes in your ads unless you ask",
           "TRUST_OFF": "You can turn it off whenever you want",
@@ -2732,8 +2741,8 @@
           "TOKEN_TITLE": "Use an access key",
           "TOKEN_TEXT": "For those who already have a key created on Meta.",
           "TOKEN_CTA": "Paste the key",
-          "POPUP_TITLE": "The Facebook window didn't open",
-          "POPUP_TEXT": "Your browser may have blocked it. Allow it and try again:",
+          "POPUP_TITLE": "The Facebook window closed before the end",
+          "POPUP_TEXT": "Sign in again and go until \"Done\". If the window never opened, your browser blocked it. Allow it like this:",
           "POPUP_STEP_1": "Tap the blocked window icon at the end of the address bar.",
           "POPUP_STEP_2": "Choose \"Always allow\" for this site.",
           "POPUP_STEP_3": "Tap \"Sign in again\".",
@@ -3177,6 +3186,9 @@
           "PARTIAL": "Part of the ad was left on at Meta and we couldn't pause it back. Check Meta Ads Manager.",
           "PAUSE_PARTIAL": "We couldn't pause everything: part of the ad may still be on at Meta. Check Meta Ads Manager.",
           "IN_PROGRESS": "This ad is already being changed. Wait a moment and look again.",
+          "IN_REVIEW": "Meta is still checking this ad. You can turn it on once it finishes, usually within 1 day.",
+          "IN_REVIEW_NOTE": "Meta is checking this ad. It usually takes up to 1 day.",
+          "IN_REVIEW_NOTE_HINT": "You can turn it on once Meta finishes.",
           "ACTIVATE_SPEND_END": "When you turn it on, the ad starts spending {value} per day, until {end}. In total, at most {total}.",
           "ACTIVATE_SPEND_NO_END": "When you turn it on, the ad starts spending {value} per day, with no end date. It only stops when you pause it.",
           "ACTIVATE_SPEND_BUTTON": "Turn on and start spending",
@@ -3284,7 +3296,6 @@
           "PRIVATE_UNCONFIRMED": "Sent privately, without confirmation from Instagram. Check Instagram Direct first: if the message is there, don't click.",
           "PRIVATE_NOT_SENT": "It wasn't sent",
           "PRIVATE_RELEASED": "Done. You can reply privately again.",
-          "PRIVATE_NOT_MEMBER": "You don't handle the Instagram inbox, so you can't reply privately.",
           "UNANSWERED": "No reply yet",
           "TAB_UNANSWERED": "1 with no reply | {count} with no reply",
           "MORE_ACTIONS": "More actions",
@@ -3299,6 +3310,10 @@
             "NOT_CONNECTED_TITLE": "This ad also runs on Instagram",
             "NOT_CONNECTED": "Instagram {'@'}{username} isn't connected to Chat2You yet. Connect it to see and reply to comments here.",
             "NOT_CONNECTED_BUTTON": "Connect Instagram",
+            "NOT_CONNECTED_ASK": "Whoever manages the account's inboxes can connect this Instagram.",
+            "NEEDS_LOGIN_ASK": "Ask an account administrator to log in with Instagram again.",
+            "NOT_INBOX_MEMBER_TITLE": "These comments stay with the Instagram team",
+            "NOT_INBOX_MEMBER": "Only people who handle the {'@'}{username} Instagram inbox can see and answer these comments. Ask whoever manages the account's inboxes to add you.",
             "NEEDS_LOGIN_AFTER": "After logging in, you'll come back to this ad."
           },
           "FACEBOOK": {
@@ -3310,10 +3325,18 @@
             "NEEDS_LOGIN_BUTTON": "Go to Connection",
             "NOTE": "On Facebook, reply in public. To talk privately, ask the person to message you on WhatsApp.",
             "NEEDS_LOGIN_AFTER": "After logging in, you'll come back to this ad.",
+            "NO_INBOX_TITLE": "This Page isn't on Messenger",
+            "NO_INBOX": "Connect this Page to Messenger to see the comments.",
+            "NO_INBOX_BUTTON": "Connect to Messenger",
+            "NO_INBOX_ASK": "Whoever manages the account's inboxes can connect it.",
+            "NOT_INBOX_MEMBER_TITLE": "You're not in this Page's inbox",
+            "NOT_INBOX_MEMBER": "This Page's comments are for the people in its Messenger inbox. Ask whoever manages the account's inboxes to add you.",
             "ERRORS": {
               "NEEDS_LOGIN": "Comment access is missing. Log in with Facebook again under Connection.",
               "META_UNAVAILABLE": "Facebook didn't answer. Try again in a minute.",
-              "META_REFUSED": "Facebook refused this action. Reload the comments and try again."
+              "META_REFUSED": "Facebook refused this action. Reload the comments and try again.",
+              "NO_INBOX": "This Page isn't connected to Messenger. Connect it to manage the comments.",
+              "NOT_INBOX_MEMBER": "You're not in this Page's Messenger inbox."
             }
           },
           "LOGIN_ADMIN": "Ask an account administrator to log in with Instagram again.",
@@ -3323,7 +3346,7 @@
             "NEEDS_LOGIN": "Comment access is missing. Log in with Instagram again.",
             "META_UNAVAILABLE": "Instagram didn't answer. Try again in a minute.",
             "INVALID_TEXT": "Write the reply before sending.",
-            "NOT_INBOX_MEMBER": "You don't handle the Instagram inbox, so you can't reply privately.",
+            "NOT_INBOX_MEMBER": "You don't handle this ad's Instagram inbox, so you can't see or answer its comments here.",
             "META_REFUSED": "Instagram refused this action. Reload the comments and try again.",
             "COMMENT_NOT_FOUND": "This comment is no longer on the ad. Reload the comments.",
             "PRIVATE_REPLY_TOP_ONLY": "Private replies only work on comments, not on replies.",
@@ -3519,7 +3542,8 @@
             "INSTAGRAM": "on Instagram",
             "FACEBOOK": "on Facebook"
           },
-          "NOTE_STORIES_PORTRAIT": "A slightly upright photo may show smaller in Stories and Reels."
+          "NOTE_STORIES_PORTRAIT": "A slightly upright photo may show smaller in Stories and Reels.",
+          "NOTE_FEED_FACEBOOK": "In the Facebook feed."
         },
         "FAILED": {
           "TITLE": "We couldn't reach Meta right now. Nothing was created.",
@@ -3534,7 +3558,7 @@
           "LOGIN": {
             "TITLE": "To create ads from here, sign in with Facebook again.",
             "ACTION": "Sign in with Facebook",
-            "POPUP": "The Facebook window closed before the end. Try again and tap Continue until the end.",
+            "POPUP": "The Facebook window closed before the end. Sign in again and tap Next, Confirm and, at the end, Done.",
             "ERROR": "We couldn't sign in with Facebook right now. Try again in a moment.",
             "ACTION_CONNECTION": "Go to Connection and sign in"
           },
@@ -3550,6 +3574,10 @@
             "TITLE": "Connect a WhatsApp number so the ad opens a chat.",
             "ACTION": "Connect number",
             "OTHER": "Advertise with another destination"
+          },
+          "NO_POST": {
+            "TITLE": "You don't have a post to boost on Instagram or on your Page yet.",
+            "ACTION": "Create a new ad"
           }
         },
         "DATE": {
@@ -3573,7 +3601,9 @@
           "REASONS": {
             "NO_DESTINATION": "You can't create a new ad in this account yet. {support}"
           },
-          "SUPPORT": "Contact support."
+          "SUPPORT": "Contact support.",
+          "POST": "Boost a post",
+          "POST_HINT": "Shows a post you already published on Instagram or Facebook to more people."
         },
         "WHERE": {
           "TITLE": "Page and WhatsApp number",
@@ -3674,9 +3704,17 @@
             "WHATSAPP": "People who tap start a chat with you on WhatsApp.",
             "INSTAGRAM_DIRECT": "People who tap start a chat with you on Instagram Direct.",
             "MESSENGER": "People who tap start a chat with you on Messenger.",
-            "WEBSITE": "People who tap open your website."
+            "WEBSITE": "People who tap open your website.",
+            "POST_FACEBOOK": "People who tap see the post on your Page.",
+            "POST_INSTAGRAM_WHATSAPP": "People who tap the button start a chat with you on WhatsApp.",
+            "POST_INSTAGRAM": "People who tap see the post on Instagram."
           },
-          "DEFAULT_NAME_AD": "{where} · {date}"
+          "DEFAULT_NAME_AD": "{where} · {date}",
+          "DEFAULT_NAME_POST": "Boosted post · {date}",
+          "WHAT_POST": {
+            "INSTAGRAM": "Boost the chosen Instagram post ({'@'}{username})",
+            "FACEBOOK": "Boost the chosen Facebook Page post"
+          }
         },
         "DONE": {
           "TITLE": "\"{name}\" created and paused",
@@ -3774,7 +3812,8 @@
             "AUTO": "Meta shows it where it's most likely to get results: feed, Stories or Reels.",
             "INSTAGRAM": "Instagram feed, Stories and Reels, wherever Meta chooses.",
             "FACEBOOK": "Facebook feed, Stories and Reels, wherever Meta chooses."
-          }
+          },
+          "FACEBOOK_POST": "Facebook, to more people beyond those who already follow your Page."
         },
         "ERRORS": {
           "INVALID_PARAMS": "Some ad information is missing, like the name or the text. Check it and try again.",
@@ -3797,8 +3836,32 @@
           "NOTHING_CREATED": "Nothing was created.",
           "CHECK_META": "A campaign may have been left half done: check Meta Ads Manager before trying again.",
           "NETWORK": "The connection dropped before the answer. Tap \"Create paused ad\" again: the ad won't be created twice.",
-          "IN_PROGRESS": "This ad is still being created. Wait a moment and tap again."
-        }
+          "IN_PROGRESS": "This ad is still being created. Wait a moment and tap again.",
+          "INVALID_POST": "This post isn't on your Page or on its Instagram anymore. Go back and pick another one.",
+          "POST_NOT_ELIGIBLE": "Meta doesn't allow boosting this post. Go back and pick another one."
+        },
+        "POST": {
+          "TITLE": "Which post?",
+          "HINT": "Pick a post you already published. It shows to more people.",
+          "NUMBERS": "{likes} likes · {comments} comments",
+          "SOURCES": {
+            "INSTAGRAM": "Instagram",
+            "FACEBOOK": "Facebook"
+          },
+          "LOADING": "Reading your posts…",
+          "NOT_ELIGIBLE": "Meta doesn't allow boosting this post.",
+          "NEED_POST": "Pick a post to continue.",
+          "TAP_INSTAGRAM_WHATSAPP": "Instagram posts get the Send message button: people who tap start a chat with you on WhatsApp.",
+          "TAP_INSTAGRAM": "People who tap see the post on Instagram.",
+          "TAP_FACEBOOK": "People who tap see the post on your Page. Facebook posts don't get a WhatsApp button.",
+          "REASONS": {
+            "PROFILE_OR_COVER": "It's your Page's profile or cover photo. Meta doesn't allow boosting it."
+          },
+          "LOAD_FAILED": "We couldn't read your posts right now.",
+          "RETRY": "Try again",
+          "EMPTY_SOURCE": "No posts here yet."
+        },
+        "CREATE_BOOST": "Create paused boost"
       }
     },
     "BOOKING_AGENDA": {

@@ -1,10 +1,10 @@
 require 'rails_helper'
 
-# Comentários do anúncio no Instagram (#2196), parecer da sessão Funções: responder no privado cria contato, conversa e
-# mensagem na caixa do Instagram em nome de quem clicou. Por isso pede, além de `meta_ads_manage`, ser da caixa
-# (InboxPolicy#show?, a mesma regra de começar conversa). Sem ser da caixa: 403 antes de qualquer chamada ao Instagram,
-# e a lista mostra o motivo no lugar do botão. Fica em spec/enterprise: a metade de função personalizada é EE.
-RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2196)', type: :request do
+# Comentários do anúncio no Instagram (#2196, #2358), parecer da sessão Funções: ler e agir em comentário pede, além da
+# chave de Anúncios, ver a caixa do Instagram (InboxPolicy#show?), a regra de Seus posts. Sem ver a caixa: a lista diz
+# o motivo no lugar dos comentários, e toda ação dá 403 antes de qualquer chamada ao Instagram. Fica em
+# spec/enterprise: a metade de função personalizada é EE.
+RSpec.describe 'Comentários do Instagram: ler e agir só para quem vê a caixa (#2196, #2358)', type: :request do
   around do |example|
     with_modified_env CRM_KANBAN_ENABLED: 'true' do
       example.run
@@ -61,14 +61,15 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
     stub_request(:get, %r{#{ig}/#{media_id}\?}).to_return(status: 200, headers: json, body: { comments_count: 2 }.to_json)
   end
 
-  it 'quem só vê os anúncios lê a lista sem nenhuma ação, nem nas respostas' do
+  it 'quem só vê os anúncios e é da caixa lê a lista sem nenhuma ação, nem nas respostas' do
+    create(:inbox_member, user: viewer, inbox: inbox)
     stub_list
 
     get path, headers: viewer.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:ok)
     first = response.parsed_body['comments'].first
-    flags = %w[can_reply can_hide can_delete can_reply_private private_reply_not_member]
+    flags = %w[can_reply can_hide can_delete can_reply_private]
     [first, first['replies'].first].each { |row| expect(row.slice(*flags).values).to all(be(false)) }
   end
 
@@ -86,11 +87,18 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
     expect(instagram_call).not_to have_been_made
   end
 
-  it 'quem gere os anúncios sem ser da caixa recebe 403 e o Instagram não é chamado' do
+  it 'quem gere os anúncios sem ser da caixa recebe 403 em toda ação e o Instagram não é chamado' do
+    headers = manager.create_new_auth_token
     expect { private_reply }.not_to change(Message, :count)
 
+    post "#{path}/18000000000000001/reply", params: { content: 'Oi' }, headers: headers, as: :json
     expect(response).to have_http_status(:forbidden)
     expect(response.parsed_body).to eq('error' => 'not_inbox_member')
+    post "#{path}/18000000000000001/hide", params: { hidden: true }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+    delete "#{path}/18000000000000001", headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+
     expect(instagram_call).not_to have_been_made
     expect(Crm::MetaAdsCommentAction.count).to eq(0)
   end
@@ -104,12 +112,25 @@ RSpec.describe 'Comentários do Instagram: privado só para quem é da caixa (#2
     expect(Message.find_by(source_id: 'mid.1')).to be_present
   end
 
-  it 'a lista diz o motivo em vez de oferecer o privado a quem não é da caixa' do
+  it 'quem não é da caixa não lê os comentários, nem os ocultos: a lista diz o motivo, sem chamar o Instagram' do
+    stub_list
+
+    [manager, viewer].each do |user|
+      get path, headers: user.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to eq('status' => 'not_inbox_member', 'account' => { 'username' => 'lojaexemplo', 'name' => nil },
+                                         'comments' => [], 'total' => 0, 'next_cursor' => nil)
+    end
+    expect(instagram_call).not_to have_been_made
+  end
+
+  it 'quem gere os anúncios e é da caixa lê a lista com as ações' do
+    create(:inbox_member, user: manager, inbox: inbox)
     stub_list
 
     get path, headers: manager.create_new_auth_token, as: :json
 
-    expect(response.parsed_body['comments'].first).to include('can_reply_private' => false, 'private_reply_not_member' => true,
-                                                              'can_reply' => true, 'can_hide' => true)
+    expect(response.parsed_body['comments'].first).to include('can_reply' => true, 'can_hide' => true, 'can_reply_private' => true)
   end
 end

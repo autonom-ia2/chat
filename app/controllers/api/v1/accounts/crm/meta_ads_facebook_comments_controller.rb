@@ -3,12 +3,16 @@
 #
 # GET    meta_ads_connection/ads/:ad_id/facebook_comments                    → { comments: status, lista, total, cursor }
 #        (?after= para a página seguinte). Administrador ou `meta_ads_view`; as linhas só deixam agir
-#        (can_reply/can_hide/can_delete) para quem também tem `meta_ads_manage`.
+#        (can_reply/can_hide/can_delete) para quem também tem `meta_ads_manage`. Só para esse a leitura guarda a Página
+#        e assina o `feed` dela; com só `meta_ads_view`, ler não grava nada (#2359).
 # POST   meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply  → content=; responde como a Página. O texto vai em
 #        `content`, que o log do Rails já filtra (#2103).
 # PATCH  meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id        → hidden=true|false.
 # DELETE meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id        → apaga (irreversível; a tela confirma).
 # As três ações: administrador ou `meta_ads_manage`.
+#
+# Ler e agir pedem também ver a caixa do Messenger da Página (InboxPolicy#show?, #2359). Sem ela na conta, a lista vem
+# com status `no_inbox` (e agir, 422 `no_inbox`); com ela e sem ser dela, status `not_inbox_member` (agir, 403).
 #
 # Sem conexão ativa com conta de anúncios: 404 not_connected. Anúncio de outra conta ou comentário de outro post: 404.
 # Cada ação fica na Auditoria da conta e em crm_meta_ads_comment_actions (#2196) com pessoa, anúncio, comentário e
@@ -16,6 +20,7 @@
 class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accounts::Crm::BaseController
   AUDIT_ACTION = 'meta_ads_facebook_comment'.freeze
   NOT_FOUND = %w[ad_not_found comment_not_found].freeze
+  FORBIDDEN = %w[not_inbox_member].freeze
   ACTION_FLAGS = %i[can_reply can_hide can_delete].freeze
 
   before_action :ensure_feature
@@ -87,7 +92,9 @@ class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accou
   end
 
   def comments
-    @comments ||= ::Crm::MetaAds::FacebookComments.new(@connection)
+    @comments ||= ::Crm::MetaAds::FacebookComments.new(
+      @connection, inbox_access: ->(inbox) { Pundit.policy!(pundit_user, inbox).show? }, can_manage: manage?
+    )
   end
 
   def ad_id
@@ -100,6 +107,7 @@ class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accou
 
   def render_error(code)
     return render json: { error: code }, status: :not_found if NOT_FOUND.include?(code)
+    return render json: { error: code }, status: :forbidden if FORBIDDEN.include?(code)
 
     render_unprocessable(code)
   end

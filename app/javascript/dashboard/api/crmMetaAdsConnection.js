@@ -45,12 +45,14 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
-  // Reads the account, its 30-day spend and the Pixel before saving.
-  select({ mode, adAccountId, pixelId }) {
+  // Reads the account, its 30-day spend and the Pixel before saving. noSite:
+  // without a Pixel, the person chose "I have no website" on purpose (#2343).
+  select({ mode, adAccountId, pixelId, noSite = false }) {
     return axios.post(`${this.url}/selection`, {
       mode,
       ad_account_id: adAccountId,
       pixel_id: pixelId,
+      no_site: noSite,
     });
   }
 
@@ -184,6 +186,14 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
   // currency, min_daily, max_daily, destinations, placements_by_destination } }.
   createOptions() {
     return axios.get(`${this.url}/create_options`);
+  }
+
+  // Posts of the chosen Page and of its Instagram, to boost (#2339) →
+  // { posts, instagram_posts, posts_error }.
+  boostPosts(pageId) {
+    return axios.get(`${this.url}/boost_posts`, {
+      params: { page_id: pageId },
+    });
   }
 
   // Photo or video from the device (multipart, field `file`) →

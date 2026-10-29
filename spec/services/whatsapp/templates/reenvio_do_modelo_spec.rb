@@ -187,6 +187,23 @@ RSpec.describe Whatsapp::Templates::ReenvioDoModelo, :aggregate_failures do
       ActiveStorage.verifier.verified(partes[3], purpose: :blob_key).with_indifferent_access[:key]
     end
 
+    before { stub_meta_media_upload }
+
+    # #2367: o id gravado no envio original vale só para a caixa que subiu e vence em 30 dias; o reenvio sobe de novo.
+    it 'id da mídia gravado no envio original: nunca reaproveitado, o arquivo sobe pela caixa de destino' do
+      subidas = stub_meta_media_upload
+      link = Whatsapp::Templates::HeaderMedia.signed_media(arquivo)['media_url']
+      original = modelo_enviado(com_foto, { 'header' => { 'media_url' => link, 'media_type' => 'image', 'media_id' => 'id_antigo' },
+                                            'body' => { '1' => 'verão' } })
+
+      nova = enviar(reenviar(original)[:message])
+
+      expect(subidas).to eq(['colecao.jpg'])
+      expect(nova.additional_attributes.dig('template_params', 'processed_params', 'header', 'media_id')).to eq('media_1')
+      topo = enviados.last['template']['components'].find { |component| component['type'] == 'header' }
+      expect(topo.dig('parameters', 0)).to eq('type' => 'image', 'image' => { 'id' => 'media_1' })
+    end
+
     it 'link da nuvem (S3) gravado na mensagem: o mesmo arquivo com link novo, no topo e nos cartões' do
       cartao = { 'header' => { 'media_url' => link_na_nuvem, 'media_type' => 'image' } }
       original = modelo_enviado(do_fixture.call('carrossel_de_fotos'), { 'carousel' => { 'cards' => [cartao, cartao] } })

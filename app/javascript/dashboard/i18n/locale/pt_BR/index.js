@@ -23,6 +23,7 @@ import seusPosts from './seusPosts.json';
 import painelDoContato from './painelDoContato.json';
 import listaDeConversas from './listaDeConversas.json';
 import metaAdsOrganico from './metaAdsOrganico.json';
+import funcoesDaEquipe from './funcoesDaEquipe.json';
 import brandKits from './brandKits.json';
 import booking from './booking.json';
 import resultJourney from './resultJourney.json';
@@ -100,6 +101,7 @@ export default {
   ...painelDoContato,
   ...listaDeConversas,
   ...metaAdsOrganico,
+  ...funcoesDaEquipe,
   ...brandKits,
   ...booking,
   ...resultJourney,

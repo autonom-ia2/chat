@@ -5,7 +5,8 @@ import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 // Anúncios da Meta (#2198), criar: criado e pausado. O "Ativar anúncio" fica à mão e mostra o valor por extenso
 // antes de o dinheiro começar a sair. Ativado ali mesmo, o título e a frase passam a dizer que está no ar, ou que a
 // campanha (ou o grupo) pausada no Gerenciador da Meta ainda segura o anúncio (`held_by`).
-defineProps({
+const props = defineProps({
+  // { ad_id, name, status, budget, in_review }: `in_review` (#2354) quando a Meta já analisa o anúncio recém-criado.
   created: { type: Object, required: true },
   budget: { type: Object, required: true },
 });
@@ -19,6 +20,7 @@ const gestao = ref({
   status: 'PAUSED',
   effective_status: 'PAUSED',
   can_change: true,
+  in_review: Boolean(props.created.in_review),
 });
 // A entrega como a Meta diria: ativo com a campanha ou o grupo pausados fica "Fora do ar".
 const HELD_STATUS = { campaign: 'CAMPAIGN_PAUSED', adset: 'ADSET_PAUSED' };

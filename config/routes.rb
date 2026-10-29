@@ -420,6 +420,7 @@ Rails.application.routes.draw do
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
               get :create_options, to: 'meta_ads_creation#options'
+              get :boost_posts, to: 'meta_ads_creation#boost_posts'
               post :media, to: 'meta_ads_creation#media'
               post :ads, to: 'meta_ads_creation#create'
               get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'

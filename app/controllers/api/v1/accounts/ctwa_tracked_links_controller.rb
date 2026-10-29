@@ -1,9 +1,4 @@
 class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseController
-  # Parâmetros de URL que o marketing cola no anúncio da Meta (modo site, #1011). As chaves
-  # {{...}} são macros da Meta, preenchidas por ela em cada clique.
-  AD_URL_PARAMS = 'utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_term={{adset.name}}' \
-                  '&utm_content={{ad.name}}&utm_id={{campaign.id}}'.freeze
-
   before_action :fetch_tracked_link, only: [:update, :destroy]
 
   def index
@@ -102,7 +97,7 @@ class Api::V1::Accounts::CtwaTrackedLinksController < Api::V1::Accounts::BaseCon
       signal_url: "#{short_url_for(tracked_link)}/clicks",
       # Página pública com o código pronto para quem cuida do site (CA-1.6, #1068).
       kit_url: "#{short_url_for(tracked_link)}/kit",
-      ad_url_params: AD_URL_PARAMS,
+      ad_url_params: Crm::MetaAds::UrlTags::TEXT,
       campaigns: (@campaigns || {}).fetch(tracked_link.id, [])
     }
   end

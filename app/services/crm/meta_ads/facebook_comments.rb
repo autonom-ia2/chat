@@ -11,15 +11,20 @@
 #   conferir permissão ou pedir o token da Página é `meta_unavailable`, não `needs_login`. Sem token da Página (a
 #   Página não foi escolhida no login, ou a pessoa não a administra) é `needs_login`: entrando de novo, ela escolhe a
 #   Página. Recusa com erro que entrar de novo não resolve (a Página sumiu, id inválido) é `meta_refused`.
-# - Só age em comentário do post. O id de comentário da Graph é `<id do post>_<id do comentário>`, em que o id do post
-#   é a parte depois do `_` do id do post da Página (`<página>_<post>`); respostas idem (a confirmar na chamada real,
-#   até 07/11). Qualquer outro formato é `comment_not_found`, sem chamar a Meta.
-# - Ao ler, a Página entra em Crm::MetaAdsPage e, na primeira vez, o app assina o campo `feed` dela
-#   (Crm::MetaAds::PageSubscription, #2200) para o webhook de comentário novo (Crm::MetaAds::FacebookFeed).
+# - Só age em comentário do post (Crm::MetaAds::FacebookCommentId). Qualquer outro formato é `comment_not_found`, sem
+#   chamar a Meta.
+# - Ao ler a primeira página de comentários, quem pode gerir (`can_manage`) guarda a Página em Crm::MetaAdsPage e, na
+#   primeira vez, o app assina o campo `feed` dela (Crm::MetaAds::PageSubscription, #2200) para o webhook de comentário
+#   novo (Crm::MetaAds::FacebookFeed). Quem só vê lê sem gravar nada, e a página seguinte (`more`) nunca grava (#2359).
+# - Ler e agir pela tela pedem ver a caixa do Messenger da Página (#2359, decisão A): o Channel::FacebookPage da conta
+#   com o mesmo page_id, e `inbox_access` (InboxPolicy#show? de quem abre) dizendo sim. Sem essa caixa na conta é
+#   `no_inbox` para todos, inclusive o administrador; com ela e sem ser dela, `not_inbox_member`. Nos dois casos a
+#   Página não é lida (nem token, nem comentários) e as permissões da pessoa nem são conferidas; só o anúncio foi
+#   lido, para achar a Página. O evento do webhook (`comment`) não passa por aqui: não há pessoa.
 # - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197; é do #2212).
 #
-# Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_text`, `meta_unavailable` (rede, 5xx, limite)
-# e `meta_refused` (qualquer outra recusa da Meta).
+# Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_text`, `no_inbox`, `not_inbox_member`,
+# `meta_unavailable` (rede, 5xx, limite) e `meta_refused` (qualquer outra recusa da Meta).
 class Crm::MetaAds::FacebookComments
   class Error < Crm::MetaAds::AdManagement::Error; end
 
@@ -30,17 +35,22 @@ class Crm::MetaAds::FacebookComments
   # Limite de texto de comentário no Facebook.
   MESSAGE_MAX = 8000
 
-  def initialize(connection)
+  def initialize(connection, inbox_access:, can_manage: false)
     @connection = connection
+    @inbox_access = inbox_access
+    @can_manage = can_manage
   end
 
   def list(ad_id)
-    return empty('needs_login') unless granted?(READ)
+    return empty('needs_login') unless @connection.own_token?
 
     post_id = post_id_for(ad_id)
     return empty('no_post') if post_id.blank?
 
-    client = page_client(post_id)
+    refusal = reading_refusal(post_id)
+    return empty(refusal) if refusal
+
+    client = page_client(post_id, remember: @can_manage)
     return empty('needs_login') if client.nil?
 
     result = client.post_comments(post_id)
@@ -55,9 +65,12 @@ class Crm::MetaAds::FacebookComments
   end
 
   def more(ad_id, cursor)
-    return empty('needs_login') unless granted?(READ)
+    return empty('needs_login') unless @connection.own_token?
 
     post_id = post_id!(ad_id)
+    refusal = reading_refusal(post_id)
+    return empty(refusal) if refusal
+
     client = page_client(post_id)
     return empty('needs_login') if client.nil?
 
@@ -85,9 +98,9 @@ class Crm::MetaAds::FacebookComments
   # registrada de novo.
   def comment(post_id, comment_id)
     return unless granted?(READ) && own_page?(post_id)
-    raise Error, 'comment_not_found' unless comment_of_post?(comment_id, post_id)
+    raise Error, 'comment_not_found' unless Crm::MetaAds::FacebookCommentId.of_post?(comment_id, post_id)
 
-    client = page_client(post_id, remember: false)
+    client = page_client(post_id)
     client && graph!(client.page_comment(comment_id))
   rescue Error => e
     raise if e.code == 'meta_unavailable'
@@ -163,7 +176,7 @@ class Crm::MetaAds::FacebookComments
     post_id.to_s.split('_').first
   end
 
-  def page_client(post_id, remember: true)
+  def page_client(post_id, remember: false)
     @page_clients ||= {}
     page = page_id(post_id)
     return @page_clients[page] if @page_clients.key?(page)
@@ -206,13 +219,29 @@ class Crm::MetaAds::FacebookComments
 
   # `by`: { actor:, user:, ad_id: }. O post já veio do anúncio da conta (post_id!).
   def act!(post_id, comment_id, acao, by)
-    raise Error, 'comment_not_found' unless comment_of_post?(comment_id, post_id)
+    raise Error, 'comment_not_found' unless Crm::MetaAds::FacebookCommentId.of_post?(comment_id, post_id)
+
+    refusal = inbox_refusal(post_id)
+    raise Error, refusal if refusal
     raise Error, 'needs_login' unless granted?(MANAGE)
 
     client = page_client(post_id) || raise(Error, 'needs_login')
     data = graph!(yield(client))
     record_action(acao, comment_id, by)
     data
+  end
+
+  # A caixa vem antes da permissão de leitura: sem ela, o motivo é a caixa para todos, e entrar de novo não resolveria.
+  def reading_refusal(post_id)
+    inbox_refusal(post_id) || ('needs_login' unless granted?(READ))
+  end
+
+  # A caixa do Messenger da Página nesta conta, a mesma do webhook (Crm::MetaAds::FacebookFeed#inbox_id).
+  def inbox_refusal(post_id)
+    inbox = Channel::FacebookPage.find_by(account_id: @connection.account_id, page_id: page_id(post_id))&.inbox
+    return 'no_inbox' if inbox.nil?
+
+    'not_inbox_member' unless @inbox_access.call(inbox)
   end
 
   def own_page?(post_id)
@@ -225,17 +254,6 @@ class Crm::MetaAds::FacebookComments
                                       action: acao, actor: by[:actor], user: by[:user])
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @connection.account).capture_exception
-  end
-
-  def comment_of_post?(comment_id, post_id)
-    return false unless comment_id.is_a?(String) && post_id.is_a?(String)
-
-    parts = comment_id.split('_', -1)
-    parts.length == 2 && parts.all? { |part| digits?(part) } && parts.first == post_id.split('_').last
-  end
-
-  def digits?(text)
-    text.present? && text.each_char.all? { |char| char.between?('0', '9') }
   end
 
   def graph!(result)

@@ -80,6 +80,32 @@ describe('Anúncios da Meta · pausados esperando ativar (#2198)', () => {
     active_ads_count: 0,
   };
 
+  // #2354: anúncio pausado que a Meta ainda analisa. A linha diz isso e não oferece ativar; a mesma regra do detalhe.
+  it('an ad under Meta review shows the review note instead of the turn-on button', async () => {
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
+      data: { ads: [{ ...AD, in_review: true }] },
+    });
+    const wrapper = mountWithStatus();
+    await flushPromises();
+
+    const row = wrapper.find(`[data-panel-paused-ad="${AD.ad_id}"]`);
+    expect(row.find('[data-ad-status-review]').exists()).toBe(true);
+    expect(row.find('[data-ad-status-toggle]').exists()).toBe(false);
+    expect(wrapper.emitted('count')).toEqual([[1]]);
+  });
+
+  it('a ready ad keeps the turn-on button and no review note', async () => {
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
+      data: { ads: [{ ...AD, in_review: false }] },
+    });
+    const wrapper = mountWithStatus();
+    await flushPromises();
+
+    const row = wrapper.find(`[data-panel-paused-ad="${AD.ad_id}"]`);
+    expect(row.find('[data-ad-status-toggle]').exists()).toBe(true);
+    expect(row.find('[data-ad-status-review]').exists()).toBe(false);
+  });
+
   it('opening the list reads no budget and shows the amount from when it was created', async () => {
     CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({
       data: { ads: [AD, { ...AD, ad_id: '120000000000990002' }] },

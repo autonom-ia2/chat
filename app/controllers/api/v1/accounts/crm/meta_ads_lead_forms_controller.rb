@@ -12,12 +12,14 @@
 # pede também `contact_view`. Escrever pede `meta_ads_manage`. O funil tem de ser um que a pessoa enxerga (mesmo filtro
 # do Kanban) e a etapa tem de ser dele. Trazer quem já preencheu cria cards em lote: pede também criar card no CRM.
 # Cada ligar, parar, destino e "trazer" fica na Auditoria da conta, sem token.
+# Abrir a tela só para ver não grava Página: as Páginas lidas só ficam guardadas para quem tem `meta_ads_manage` (#2357).
 class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Crm::BaseController
   FEATURE = 'meta_ads_formularios'.freeze
   NOT_FOUND_CODES = %w[page_not_found form_not_found].freeze
 
   before_action :ensure_feature
   before_action :ensure_view
+  before_action :load_manage_access
   before_action :ensure_manage, except: [:index]
   before_action :load_connection
   before_action :ensure_current_destination_visible, only: [:save_destination, :remove_destination]
@@ -73,8 +75,12 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
     render json: { error: 'forbidden' }, status: :forbidden unless connection_policy.show?
   end
 
+  def load_manage_access
+    @can_manage = connection_policy.update?
+  end
+
   def ensure_manage
-    render json: { error: 'forbidden' }, status: :forbidden unless connection_policy.update?
+    render json: { error: 'forbidden' }, status: :forbidden unless @can_manage
   end
 
   # Quem não cria card à mão não cria em lote.
@@ -113,7 +119,9 @@ class Api::V1::Accounts::Crm::MetaAdsLeadFormsController < Api::V1::Accounts::Cr
   end
 
   def hub
-    @hub ||= ::Crm::MetaAds::LeadForms::Hub.new(connection: @connection, account: Current.account, user: Current.user)
+    @hub ||= ::Crm::MetaAds::LeadForms::Hub.new(
+      connection: @connection, account: Current.account, user: Current.user, remember_pages: @can_manage
+    )
   end
 
   def payload

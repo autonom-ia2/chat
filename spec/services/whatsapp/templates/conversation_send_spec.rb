@@ -174,12 +174,15 @@ RSpec.describe Whatsapp::Templates::ConversationSend do
     expect(a_request(:get, products_url).with(query: hash_including({}))).not_to have_been_made
   end
 
-  it 'photo carousel: each chosen photo goes as a signed link, the message keeps the file reference' do
+  # #2367: pelo link, a Meta baixa a foto do nosso armazenamento e a busca falha com 131053; pelo id, não baixa.
+  it 'photo carousel: each chosen photo goes up to Meta and the card carries its id, the message keeps the file reference' do
+    uploads = stub_meta_media_upload
     blobs = [photo, photo]
     message = send_message(photo_carousel, photo_cards(blobs))
 
     cards = sent.last.find { |component| component['type'] == 'carousel' }['cards']
-    expect(cards.map { |card| card.dig('components', 0, 'parameters', 0, 'image', 'link') }).to all(start_with('http'))
+    expect(uploads).to eq(%w[foto.png foto.png])
+    expect(cards.map { |card| card.dig('components', 0, 'parameters', 0, 'image') }).to eq([{ 'id' => 'media_1' }, { 'id' => 'media_2' }])
     expect(cards.map { |card| card.dig('components', 1, 'parameters', 0, 'text') }).to eq(%w[tênis mochila])
     expect(sent.last.to_json).not_to include(blobs.first.signed_id)
     stored = message.additional_attributes.dig('template_params', 'processed_params', 'carousel', 'cards')
@@ -187,7 +190,17 @@ RSpec.describe Whatsapp::Templates::ConversationSend do
     expect(message.additional_attributes.dig('template_params', 'enviado', 'cartoes').size).to eq(2)
   end
 
+  it 'photo carousel: Meta refuses the upload and each card goes as a signed link' do
+    stub_meta_media_upload(status: 400)
+    message = send_message(photo_carousel, photo_cards([photo, photo]))
+
+    cards = sent.last.find { |component| component['type'] == 'carousel' }['cards']
+    expect(message.external_error).to be_nil
+    expect(cards.map { |card| card.dig('components', 0, 'parameters', 0, 'image', 'link') }).to all(start_with('http'))
+  end
+
   it 'a computer photo used in a send stops being temporary (the conversation shows it)' do
+    stub_meta_media_upload
     uploaded = photo(upload: true)
     send_message(photo_carousel, photo_cards([uploaded, photo]))
 

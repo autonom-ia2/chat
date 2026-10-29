@@ -8,7 +8,7 @@ import MetaAdsPreviewMedia from './MetaAdsPreviewMedia.vue';
 // vertical — no Instagram e no Facebook, ou só num deles. Foto que não é vertical aparece inteira no centro dos
 // Stories, com o fundo preenchido; a frase embaixo diz isso sem prometer o que a Meta faz (o ajuste dela não está
 // documentado para estes anúncios). O botão segue o destino (WhatsApp, Direct, Messenger ou o texto do site). Com
-// mais de uma mídia, o feed mostra o carrossel.
+// mais de uma mídia, o feed mostra o carrossel. Post impulsionado do Facebook aparece só no feed.
 const props = defineProps({
   pageName: { type: String, default: '' },
   text: { type: String, default: '' },
@@ -21,6 +21,8 @@ const props = defineProps({
   action: { type: String, default: null },
   // Onde aparece: AUTO (Instagram e Facebook), INSTAGRAM ou FACEBOOK.
   places: { type: String, default: 'AUTO' },
+  // Só o feed, sem abas: post impulsionado do Facebook.
+  feedOnly: { type: Boolean, default: false },
 });
 
 const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR.PREVIEW';
@@ -38,7 +40,7 @@ const feedFrame = computed(() =>
     ? 'aspect-[4/5]'
     : 'aspect-square'
 );
-const showFeed = computed(() => place.value === 'FEED');
+const showFeed = computed(() => props.feedOnly || place.value === 'FEED');
 
 const SITE_ACTIONS = ['LEARN_MORE', 'SHOP_NOW'];
 const button = computed(() => {
@@ -53,6 +55,7 @@ const button = computed(() => {
 });
 
 const note = computed(() => {
+  if (props.feedOnly) return 'NOTE_FEED_FACEBOOK';
   if (isCarousel.value) return 'NOTE_CAROUSEL';
   if (place.value === 'FEED') {
     return vertical.value ? 'NOTE_FEED_VERTICAL' : 'NOTE_FEED';
@@ -99,6 +102,7 @@ const move = async step => {
     </p>
 
     <div
+      v-if="!feedOnly"
       role="tablist"
       :aria-label="$t(`${KEY}.LABEL`)"
       class="flex gap-1 self-start rounded-xl bg-n-alpha-2 p-1"
@@ -131,7 +135,7 @@ const move = async step => {
     <div
       v-if="showFeed"
       :id="`previa-${uid}-FEED`"
-      role="tabpanel"
+      :role="feedOnly ? undefined : 'tabpanel'"
       data-create-preview-feed
       class="flex w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-n-solid-2 ring-1 ring-n-weak"
     >

@@ -11,6 +11,14 @@ module Meta::AdsGraphClient::Creation
   IMAGES_LIMIT = 30
   CAMPAIGNS_LIMIT = 25
   OBJECT_STATUS_FIELDS = 'status,effective_status'.freeze
+  # Posts para impulsionar (PR 2, #2339): os mais recentes de cada lado, com o que diz se a Meta deixa promover. O tipo
+  # do anexo separa a foto de perfil (`profile_media`) e a de capa (`cover_photo`), que a Meta recusa no criar.
+  BOOST_POSTS_LIMIT = 25
+  BOOST_PAGE_POST_FIELDS = 'id,message,created_time,full_picture,is_eligible_for_promotion,attachments{type},' \
+                           'reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)'.freeze
+  # Carrossel pode vir sem `media_url`: a imagem do primeiro filho serve de capa.
+  BOOST_INSTAGRAM_MEDIA_FIELDS = 'id,caption,timestamp,media_type,media_url,thumbnail_url,like_count,comments_count,' \
+                                 'children{media_type,media_url,thumbnail_url},boost_eligibility_info'.freeze
 
   def create_campaign(ad_account_id, params)
     post("act_#{ad_account_id}/campaigns", params)
@@ -51,6 +59,16 @@ module Meta::AdsGraphClient::Creation
   # Páginas que a pessoa concedeu, com a conta do Instagram ligada a cada uma (todas as páginas da lista).
   def pages_with_instagram
     paged('me/accounts', fields: PAGES_FIELDS)
+  end
+
+  # Posts publicados da Página: pede o token da Página (pages_read_engagement).
+  def boost_page_posts(page_id)
+    get("#{page_id}/published_posts", fields: BOOST_PAGE_POST_FIELDS, limit: BOOST_POSTS_LIMIT)
+  end
+
+  # Mídias da conta do Instagram ligada à Página, com o token do Facebook (instagram_basic).
+  def boost_instagram_media(instagram_user_id)
+    get("#{instagram_user_id}/media", fields: BOOST_INSTAGRAM_MEDIA_FIELDS, limit: BOOST_POSTS_LIMIT)
   end
 
   def ad_budget(ad_id)

@@ -4,17 +4,20 @@ import { computed, ref } from 'vue';
 // Anúncios da Meta (#2198): onde o anúncio aparece, na conferência. Automático (recomendado) já vem marcado: vai
 // para a Meta como publisher_platforms ["facebook", "instagram"] sem posição, e ela escolhe feed, Stories ou Reels.
 // "Só Instagram" e "Só Facebook" mandam uma plataforma. Só aparecem os lugares que a chamada real já confirmou para
-// o destino (`placements_by_destination` das opções); com um lugar só, não há "Trocar".
+// o destino (`placements_by_destination` das opções); com um lugar só, não há "Trocar". Post impulsionado do Facebook
+// não troca: roda no Facebook (#2339).
 const props = defineProps({
   // Lugares confirmados, na ordem da tela.
   options: { type: Array, default: () => ['AUTO', 'INSTAGRAM', 'FACEBOOK'] },
+  // Post da Página: sem escolha, só a frase.
+  fixed: { type: Boolean, default: false },
 });
 
 const placement = defineModel({ type: String, default: 'AUTO' });
 
 const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR.PLACEMENT';
 const open = ref(false);
-const canChange = computed(() => props.options.length > 1);
+const canChange = computed(() => !props.fixed && props.options.length > 1);
 
 const choose = option => {
   placement.value = option;
@@ -48,13 +51,15 @@ const choose = option => {
       </button>
     </div>
     <p
-      v-if="!open"
+      v-if="fixed || !open"
       data-create-review-where
       class="m-0 text-sm text-n-slate-12"
     >
-      {{ $t(`${KEY}.OPTIONS.${placement}`) }}
+      {{
+        fixed ? $t(`${KEY}.FACEBOOK_POST`) : $t(`${KEY}.OPTIONS.${placement}`)
+      }}
     </p>
-    <p v-if="!open" class="m-0 text-xs text-n-slate-11">
+    <p v-if="!fixed && !open" class="m-0 text-xs text-n-slate-11">
       {{ $t(`${KEY}.HINTS.${placement}`) }}
     </p>
     <div

@@ -2,7 +2,8 @@
 # flags, 404: nada aqui chama a Meta.
 #
 # GET    meta_ads_connection/ads/:ad_id/instagram_comments?after=          → comentários (Crm::MetaAds::InstagramComments).
-#        Ver: administrador ou `meta_ads_view`.
+#        Ver: administrador ou `meta_ads_view`, e ver a caixa do Instagram (InboxPolicy#show?). Sem ver a caixa,
+#        `status: not_inbox_member` e nenhum comentário (#2358).
 # POST   .../instagram_comments/:comment_id/reply          content=        → responder em público.
 # POST   .../instagram_comments/:comment_id/hide           hidden=         → ocultar ou mostrar de novo.
 # POST   .../instagram_comments/:comment_id/private_reply  content=        → responder no privado (Private Reply).
@@ -10,8 +11,8 @@
 # POST   .../instagram_comments/:comment_id/private_reply/release          → "Não foi enviado": libera o privado sem
 #        confirmação da Meta (Crm::MetaAdsCommentAction), depois de a pessoa conferir no Direct.
 # DELETE .../instagram_comments/:comment_id                                → apagar (a tela confirma antes).
-#        Agir: administrador ou `meta_ads_manage`. O privado pede também ser da caixa do Instagram (InboxPolicy#show?):
-#        cria conversa nela em nome de quem clicou. Sem ser: 403 `not_inbox_member`, antes de chamar o Instagram.
+#        Agir: administrador ou `meta_ads_manage`, e ver a caixa do Instagram (InboxPolicy#show?), a mesma regra de Seus
+#        posts (#2358). Sem ver: 403 `not_inbox_member`, antes de chamar o Instagram.
 #
 # Erros de regra: 422 com { error: code }; comentário de outra mídia ou anúncio de outra conta: 404. Toda ação fica
 # na Auditoria da conta com quem, o anúncio, o comentário e a ação (nunca o texto: o do

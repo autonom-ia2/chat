@@ -24,6 +24,8 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
     account.enable_features!('meta_ads_comentarios_facebook')
     create_meta_ads_insights_connection(account)
     simulate_meta_ads_comment_pieces(account: account, page_id: page_id)
+    # A caixa do Messenger da Página (#2359): o administrador vê toda caixa da conta.
+    create(:inbox, account: account, channel: build(:channel_facebook_page, account: account, page_id: page_id))
   end
 
   def stub_meta
@@ -106,7 +108,8 @@ RSpec.describe 'CRM meta_ads_connection Facebook comments (#2197)', type: :reque
 
     delete "#{path}/#{comment_id}", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:ok)
-    expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_facebook_comment').map { |a| a.audited_changes['acao'] })
+    # Ordem pelo id: sem `order` o Postgres não garante a ordem das linhas (falhou assim no #2356).
+    expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_facebook_comment').order(:id).map { |a| a.audited_changes['acao'] })
       .to eq(%w[hide delete])
   end
 

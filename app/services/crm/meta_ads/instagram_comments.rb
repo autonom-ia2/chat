@@ -7,7 +7,8 @@
 # - `ready`: a lista; `no_post`: o anúncio não aparece no Instagram;
 # - `not_connected`: o Instagram do anúncio não tem caixa nesta conta;
 # - `needs_login`: a caixa existe, mas sem a permissão de comentários (ou esperando nova autorização); vem com o
-#   `inbox_id`, que a tela usa para pedir o login de novo (Instagram::IntegrationHelper::REAUTH_PURPOSES).
+#   `inbox_id`, que a tela usa para pedir o login de novo (Instagram::IntegrationHelper::REAUTH_PURPOSES);
+# - `not_inbox_member`: quem chama não vê a caixa do Instagram; a tela diz isso no lugar da lista.
 # nil quando o anúncio não é da conta de anúncios da conexão (a tela trata como inexistente).
 #
 # Cada ação confere antes que o comentário é da mídia do anúncio: sem isso, quem gere os anúncios agiria em qualquer
@@ -15,10 +16,13 @@
 # `comment_not_found`, `invalid_text`, `needs_login`, `meta_unavailable`, `meta_refused`, `not_inbox_member` e os do
 # privado (Crm::MetaAds::InstagramPrivateReply).
 #
-# Responder no privado cria contato, conversa e mensagem na caixa do Instagram em nome de quem clicou: além de gerir os
-# anúncios, pede ser da caixa (`inbox_access`, InboxPolicy#show? de quem chama, parecer da sessão Funções). Quem não é
-# vê `private_reply_not_member` no lugar do botão. Quem só vê os anúncios (`can_manage: false`) recebe todos os `can_*`
-# falsos: a lista não oferece ação que o servidor recusaria.
+# Ler e agir em comentário (listar, inclusive os ocultos, responder em público ou no privado, ocultar e apagar) pede,
+# além da chave de Anúncios, ver a caixa do Instagram (`inbox_access`, InboxPolicy#show? de quem chama). É a regra de
+# Seus posts (decisão c do parecer da sessão Funções, #2358): quem comenta é cliente daquela caixa, e o privado cria
+# contato, conversa e mensagem nela em nome de quem clicou. Sem ver a caixa, a ação é recusada antes de chamar o
+# Instagram (`not_inbox_member`). Os estados sem lista (`no_post`, `not_connected`, `needs_login`) vêm antes dessa
+# conferência, na lista e nas ações: neles nenhum comentário é lido, e o Instagram não é chamado. Quem só vê os
+# anúncios (`can_manage: false`) recebe todos os `can_*` falsos: a lista não oferece ação que o servidor recusaria.
 class Crm::MetaAds::InstagramComments
   Error = Crm::MetaAds::InstagramPrivateReply::Error
 
@@ -34,17 +38,9 @@ class Crm::MetaAds::InstagramComments
     target = target(ad_id)
     return if target.nil?
     return empty(target) unless target[:status] == 'ready'
+    return outsider(target) unless member?(target[:channel])
 
-    channel = target[:channel]
-    result = client(channel).comments(target[:media_id], after: after)
-    return empty(target.merge(status: 'needs_login')) if login_error?(result)
-    raise Error, failure(result) unless result.ok
-
-    threads = threads(result, channel)
-    {
-      status: 'ready', account: target[:account], permalink_url: target[:permalink_url],
-      comments: present(threads, channel), total: total(channel, target[:media_id], threads), next_cursor: next_cursor(result.data)
-    }
+    ready_payload(target, after)
   end
 
   # No Instagram a resposta fica num nível só: responder a uma resposta vai para o comentário de cima, como no app.
@@ -80,10 +76,7 @@ class Crm::MetaAds::InstagramComments
 
   def private_reply!(ad_id, comment_id, text, user:)
     valid_text!(text, Crm::MetaAds::InstagramPrivateReply::MAX_TEXT)
-    target = ready_target!(ad_id)
-    raise Error, 'not_inbox_member' unless member?(target[:channel])
-
-    found = comment_of!(target, comment_id)
+    found = comment_of_ad!(ad_id, comment_id)
     sent = Crm::MetaAds::InstagramPrivateReply.new(found[:channel]).perform!(comment: found[:comment], text: text, actor: 'user', user: user,
                                                                              ad_id: ad_id)
     { sent_at: Time.current.iso8601, conversation_path: conversation_path(sent[:conversation]) }
@@ -128,7 +121,10 @@ class Crm::MetaAds::InstagramComments
   end
 
   def comment_of_ad!(ad_id, comment_id)
-    comment_of!(ready_target!(ad_id), comment_id)
+    target = ready_target!(ad_id)
+    raise Error, 'not_inbox_member' unless member?(target[:channel])
+
+    comment_of!(target, comment_id)
   end
 
   def ready_target!(ad_id)
@@ -146,6 +142,22 @@ class Crm::MetaAds::InstagramComments
 
     { channel: target[:channel], comment: result.data }
   end
+
+  def ready_payload(target, after)
+    channel = target[:channel]
+    result = client(channel).comments(target[:media_id], after: after)
+    return empty(target.merge(status: 'needs_login')) if login_error?(result)
+    raise Error, failure(result) unless result.ok
+
+    threads = threads(result, channel)
+    {
+      status: 'ready', account: target[:account], permalink_url: target[:permalink_url],
+      comments: present(threads, channel), total: total(channel, target[:media_id], threads), next_cursor: next_cursor(result.data)
+    }
+  end
+
+  # Sem ver a caixa, nem o nome dela: só o @ do Instagram, que é público.
+  def outsider(target) = empty(target.merge(status: 'not_inbox_member', account: target[:account].merge(name: nil)))
 
   def empty(target)
     payload = { status: target[:status], account: target[:account], comments: [], total: 0, next_cursor: nil }
@@ -173,7 +185,7 @@ class Crm::MetaAds::InstagramComments
       id: item['id'].to_s, author: { name: nil, username: username, is_page: own }, text: item['text'],
       created_time: item['timestamp'], hidden: item['hidden'] == true, replies: [],
       can_reply: @can_manage && !own, can_hide: @can_manage && !own, can_delete: @can_manage
-    }.merge(private_state(item, !own && !nested, actions[item['id'].to_s], member?(channel)))
+    }.merge(private_state(item, !own && !nested, actions[item['id'].to_s]))
   end
 
   def member?(channel)
@@ -182,17 +194,12 @@ class Crm::MetaAds::InstagramComments
   end
 
   # Responder no privado: uma vez só (a linha em Crm::MetaAdsCommentAction diz que já foi) e só até 7 dias depois.
-  def private_state(item, eligible, action, member)
+  def private_state(item, eligible, action)
     expired = eligible && expired?(item)
-    open = private_open?(eligible, expired, action)
     {
-      can_reply_private: open && member, private_reply_not_member: open && !member, private_reply_expired: expired && action.nil?,
+      can_reply_private: @can_manage && eligible && !expired && action.nil?, private_reply_expired: expired && action.nil?,
       private_reply: private_reply(action)
     }
-  end
-
-  def private_open?(eligible, expired, action)
-    @can_manage && eligible && !expired && action.nil?
   end
 
   def private_reply(action)

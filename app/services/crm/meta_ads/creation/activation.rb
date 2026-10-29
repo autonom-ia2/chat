@@ -32,6 +32,8 @@ class Crm::MetaAds::Creation::Activation
     raise Crm::MetaAds::AdManagement::Error, 'cannot_change' unless @access.can_change_ads?
 
     hold!(record) do
+      raise Crm::MetaAds::AdManagement::Error, 'in_review' if status == 'ACTIVE' && in_review?(record)
+
       levels = Crm::MetaAds::Creation::Levels.new(@client, account: @connection.account, user: @user)
       status == 'ACTIVE' ? levels.activate!(record) : levels.pause!(record)
     end
@@ -63,6 +65,15 @@ class Crm::MetaAds::Creation::Activation
     ensure
       scope.update_all(switching_at: nil) # rubocop:disable Rails/SkipsModelValidations
     end
+  end
+
+  # Lido depois da trava: o segundo clique não chama a Meta. Sem conseguir ler, não liga: em análise, ligar não é
+  # oferecido, e a leitura que falha não diz se o anúncio está nela.
+  def in_review?(record)
+    result = @client.ad_management(record.ad_id)
+    raise Crm::MetaAds::AdManagement::Error, 'meta_unavailable' unless result.ok
+
+    Crm::MetaAds::AdManagement.in_review?(result.data['status'], result.data['effective_status'])
   end
 
   def paused?(object)

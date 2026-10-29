@@ -48,9 +48,9 @@ const refused = (status, code) =>
   });
 
 let wrapper;
-const mountShell = async abas => {
+const mountShell = async (abas, extra = {}) => {
   wrapper = mount(MetaAdsComments, {
-    props: { adId: '120', abas, canManage: true },
+    props: { adId: '120', abas, canManage: true, ...extra },
     global: { stubs: { Spinner: true, Dialog: true } },
   });
   await flushPromises();
@@ -132,20 +132,129 @@ describe('MetaAdsComments (#2196)', () => {
     expect(useAlert).toHaveBeenCalledWith(said('LOGIN_ADMIN'));
   });
 
-  it('says why there is no private reply for someone outside the Instagram inbox', async () => {
-    const outsider = {
-      ...comment('1'),
-      can_reply_private: false,
-      private_reply_not_member: true,
-    };
+  // #2359 (decisão A): sem a caixa do Messenger da Página, ninguém lê; o botão de conectar é de quem cria caixas.
+  describe('Facebook Page inbox (#2359)', () => {
+    const fbWith = status =>
+      adaptador({ status, comments: [], total: 0, next_cursor: null });
+
+    it('without the Page inbox, offers to connect it to whoever can create inboxes', async () => {
+      const fb = fbWith('no_inbox');
+      const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }], {
+        canCreateInbox: true,
+      });
+
+      const card = shell.find('[data-ad-comments-state="no_inbox"]');
+      expect(card.text()).toContain(said('FACEBOOK.NO_INBOX_TITLE'));
+      expect(card.text()).toContain(said('FACEBOOK.NO_INBOX'));
+      expect(card.text()).not.toContain(said('FACEBOOK.NO_INBOX_ASK'));
+      await card.find('[data-ad-comments-action="no_inbox"]').trigger('click');
+
+      expect(fb.entrar).toHaveBeenCalledWith('no_inbox', '120');
+    });
+
+    it('without the Page inbox and without inbox permission, says who can connect it', async () => {
+      const shell = await mountShell(
+        [{ key: 'FACEBOOK', adaptador: fbWith('no_inbox') }],
+        { canCreateInbox: false }
+      );
+
+      const card = shell.find('[data-ad-comments-state="no_inbox"]');
+      expect(card.text()).toContain(said('FACEBOOK.NO_INBOX_ASK'));
+      expect(card.find('[data-ad-comments-action]').exists()).toBe(false);
+    });
+
+    it('a refusal for the Page inbox says why and reads the tab again', async () => {
+      const fb = adaptador(ready([comment('1')]));
+      fb.ocultar.mockRejectedValue(refused(403, 'not_inbox_member'));
+      const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }]);
+
+      await shell
+        .findComponent({ name: 'MetaAdsCommentRow' })
+        .props('acoes')
+        .ocultar(comment('1'), true);
+      await flushPromises();
+
+      expect(useAlert).toHaveBeenCalledWith(
+        said('FACEBOOK.ERRORS.NOT_INBOX_MEMBER')
+      );
+      expect(fb.listar).toHaveBeenCalledTimes(2);
+    });
+
+    it('outside the Page inbox, explains it without any button', async () => {
+      const shell = await mountShell(
+        [{ key: 'FACEBOOK', adaptador: fbWith('not_inbox_member') }],
+        { canCreateInbox: true }
+      );
+
+      const card = shell.find('[data-ad-comments-state="not_inbox_member"]');
+      expect(card.text()).toContain(said('FACEBOOK.NOT_INBOX_MEMBER_TITLE'));
+      expect(card.text()).toContain(said('FACEBOOK.NOT_INBOX_MEMBER'));
+      expect(card.find('[data-ad-comments-action]').exists()).toBe(false);
+    });
+  });
+
+  // #2358: no Instagram, ver e agir pedem ver a caixa; o servidor manda `not_inbox_member` no lugar da lista.
+  it('says the comments stay with the Instagram team for someone outside the inbox', async () => {
+    const ig = adaptador({ ...ready([]), status: 'not_inbox_member' });
+    const shell = await mountShell([{ key: 'INSTAGRAM', adaptador: ig }]);
+
+    const card = shell.find('[data-ad-comments-state="not_inbox_member"]');
+    expect(card.text()).toContain(said('INSTAGRAM.NOT_INBOX_MEMBER_TITLE'));
+    expect(card.text()).toContain('@loja');
+    expect(card.find('[data-ad-comments-action]').exists()).toBe(false);
+    expect(shell.find('[data-ad-comments-list]').exists()).toBe(false);
+  });
+
+  it('reads the tab again when an action is refused for someone outside the inbox', async () => {
+    const ig = adaptador(ready([comment('1')]));
+    ig.responder.mockRejectedValue(refused(403, 'not_inbox_member'));
+    const shell = await mountShell([{ key: 'INSTAGRAM', adaptador: ig }]);
+
+    await shell
+      .findComponent({ name: 'MetaAdsCommentRow' })
+      .props('acoes')
+      .responder(comment('1'), 'Oi');
+    await flushPromises();
+
+    expect(useAlert).toHaveBeenCalledWith(said('ERRORS.NOT_INBOX_MEMBER'));
+    expect(ig.listar).toHaveBeenCalledTimes(2);
+  });
+
+  // #2358: o botão de entrar só aparece para quem chega ao fim do caminho; os outros leem a quem pedir.
+  it('hides the login button and says whom to ask when the tab says this person cannot log in', async () => {
+    const ig = adaptador({ ...ready([]), status: 'needs_login' });
+    const podeEntrar = vi.fn().mockReturnValue(false);
     const shell = await mountShell([
-      { key: 'INSTAGRAM', adaptador: adaptador(ready([outsider])) },
+      { key: 'INSTAGRAM', adaptador: ig, podeEntrar },
     ]);
 
-    expect(shell.find('[data-ad-comment-private]').exists()).toBe(false);
-    expect(shell.find('[data-ad-comment-private-not-member]').text()).toBe(
-      said('PRIVATE_NOT_MEMBER')
+    expect(podeEntrar).toHaveBeenCalledWith('needs_login');
+    expect(shell.find('[data-ad-comments-action]').exists()).toBe(false);
+    expect(shell.find('[data-ad-comments-ask]').text()).toBe(
+      said('INSTAGRAM.NEEDS_LOGIN_ASK')
     );
+  });
+
+  it('keeps the login button for whoever manages the ads on a tab without podeEntrar (Facebook)', async () => {
+    const fb = adaptador({ ...ready([]), status: 'needs_login' });
+    const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }]);
+
+    expect(shell.find('[data-ad-comments-action="needs_login"]').exists()).toBe(
+      true
+    );
+    expect(shell.find('[data-ad-comments-ask]').exists()).toBe(false);
+  });
+
+  it('shows the connect button when the tab says this person can create the inbox', async () => {
+    const ig = adaptador({ ...ready([]), status: 'not_connected' });
+    const shell = await mountShell([
+      { key: 'INSTAGRAM', adaptador: ig, podeEntrar: () => true },
+    ]);
+
+    expect(
+      shell.find('[data-ad-comments-action="not_connected"]').exists()
+    ).toBe(true);
+    expect(shell.find('[data-ad-comments-ask]').exists()).toBe(false);
   });
 
   it('says when Instagram did not confirm the private reply and lets the manager release it', async () => {

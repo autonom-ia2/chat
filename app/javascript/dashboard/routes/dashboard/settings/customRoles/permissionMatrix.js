@@ -16,6 +16,14 @@ import {
   TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
 
+// Chaves do servidor que nenhuma tela de função mostra (#2352). knowledge_base_* guardam o portal de artigos para
+// clientes do Chatwoot, que não está no menu do produto; a Central de Ajuda da plataforma é aberta a todos e não
+// depende de chave. Funções que já têm essas chaves continuam com elas: o setLevel só mexe nas chaves da área que muda.
+export const KEYS_OUTSIDE_MATRIX = [
+  'knowledge_base_view',
+  'knowledge_base_manage',
+];
+
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
 // Conversas: só olha (conversation_view, #1800), ou atende as próprias (LIMITED) ou todas (ALL). Na tela, as duas
 // últimas dividem a posição "Atender" e a escolha entre elas aparece embaixo.
@@ -91,14 +99,6 @@ export const MODULE_GROUPS = [
         // Exportar e excluir são chaves próprias (#1845). Excluir só aparece para quem edita.
         extras: ['contact_export', 'contact_delete'],
         manageOnlyExtras: ['contact_delete'],
-      },
-      {
-        key: 'KNOWLEDGE_BASE',
-        icon: 'i-lucide-book-open',
-        levels: {
-          view: 'knowledge_base_view',
-          manage: 'knowledge_base_manage',
-        },
       },
       {
         key: 'REPORTS',
@@ -207,6 +207,9 @@ export const MODULE_GROUPS = [
         key: 'POSTS',
         icon: 'i-lucide-layout-grid',
         levels: { view: 'posts_view', manage: 'posts_manage' },
+        // Responder, esconder e o privado chegam na F2 (#2305); até lá nenhum endpoint confere posts_manage, e as telas
+        // não oferecem "Pode mexer" (#2360). Função que já tem a chave continua vendo o nível, para poder baixar.
+        laterLevels: [LEVELS.MANAGE],
       },
     ],
   },
@@ -328,7 +331,8 @@ export const MODULES = MODULE_GROUPS.flatMap(group => group.modules);
 
 export const moduleByKey = key => MODULES.find(module => module.key === key);
 
-const keysOf = module => [
+// As chaves de uma área: as dos níveis e os ajustes.
+export const keysOf = module => [
   ...Object.values(module.levels || {}),
   ...(module.extras || []),
 ];
@@ -338,12 +342,17 @@ const withoutKeys = (permissions, keys) =>
 
 const unique = permissions => [...new Set(permissions)];
 
-export const levelOptions = module => {
+// `current`: o nível que a função já tem. Um nível que a área ainda não oferece (laterLevels) só aparece para ela.
+export const levelOptions = (module, current = null) => {
   if (module.type === 'conversations')
     return Object.values(CONVERSATION_LEVELS);
+  const later = module.laterLevels || [];
   return [
     LEVELS.NONE,
-    ...[LEVELS.VIEW, LEVELS.MANAGE].filter(level => module.levels[level]),
+    ...[LEVELS.VIEW, LEVELS.MANAGE].filter(
+      level =>
+        module.levels[level] && (!later.includes(level) || level === current)
+    ),
   ];
 };
 
@@ -364,11 +373,11 @@ export const slotLevel = (module, level) =>
     ? LEVELS.MANAGE
     : level;
 
-export const levelSlots = module => {
+export const levelSlots = (module, current = null) => {
   if (module.type === 'conversations')
     return [LEVELS.NONE, LEVELS.VIEW, LEVELS.MANAGE];
   const slots = [null, null, null];
-  levelOptions(module).forEach(level => {
+  levelOptions(module, current).forEach(level => {
     slots[SLOT_BY_LEVEL[level]] = level;
   });
   return slots;
@@ -558,7 +567,6 @@ export const PRESETS = {
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.LIMITED,
       CONTACTS: LEVELS.VIEW,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       CRM: LEVELS.MANAGE,
     }),
     // "Pegar da fila".
@@ -568,7 +576,6 @@ export const PRESETS = {
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.ALL,
       CONTACTS: LEVELS.MANAGE,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       REPORTS: LEVELS.VIEW,
       CANNED_RESPONSES: LEVELS.MANAGE,
       CRM: LEVELS.MANAGE,
@@ -641,7 +648,6 @@ export const PRESETS = {
   READ_ONLY: () => [
     ...build({
       CONTACTS: LEVELS.VIEW,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       REPORTS: LEVELS.VIEW,
       CRM: LEVELS.VIEW,
       AUTONOMIA: LEVELS.VIEW,

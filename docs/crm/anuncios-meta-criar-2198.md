@@ -11,7 +11,8 @@ quatro PRs, nesta ordem:
 4. Cuidar: duplicar e trocar a foto como cópia (`can_swap_creative`).
 
 Este documento guarda o que a implementação precisa cumprir e que a tela já
-promete ao cliente. O que o servidor do PR 1 faz está em "Servidor do PR 1".
+promete ao cliente. O que o servidor faz está em "Servidor do PR 1" e
+"Servidor do PR 2" (impulsionar post, #2339).
 
 O escopo cresceu em 26/10 por decisão do Rodrigo: "inclua as permissões para
 14/11 e complete. Quero a experiência do gerenciador aqui, só que de forma
@@ -97,6 +98,31 @@ Mais quatro pontos, que a tela já supõe:
    anúncios a plataforma criou e lê na Meta só esses, quando ainda pausados.
    Não lista todos os pausados da conta. No protótipo a lista vem da memória do
    navegador.
+   Com o próprio anúncio `PAUSED`, a lista decide por classe de
+   `effective_status` (#2354): `PAUSED` está pronto para ativar;
+   `PENDING_REVIEW` e `IN_PROCESS` estão em análise da Meta e entram com
+   `in_review: true`; o resto fica fora. Leitura real de 29/10 (conta 18,
+   anúncio 120255124400230416, os três níveis pausados): logo depois de criar,
+   `IN_PROCESS`; depois da análise, `PAUSED`. `CAMPAIGN_PAUSED` e
+   `ADSET_PAUSED` também contam como prontos, por regra: o Ativar de um anúncio
+   criado aqui liga os três níveis. Que a Meta devolva um deles para um anúncio
+   pausado: **não confirmado** (não apareceu na leitura real).
+   O `in_review` vale em todo lugar que oferece o Ativar: a lista, o topo do
+   anúncio (o detalhe traz `in_review` da gestão) e o cartão de criado (a
+   resposta do criar traz `in_review` da releitura que ele já faz). No lugar do
+   botão, a mesma frase: "A Meta está conferindo este anúncio. Em geral leva
+   até 1 dia. Você poderá ativar quando ela terminar." O servidor relê o
+   anúncio depois da trava e recusa ligar com `in_review` (ou
+   `meta_unavailable`, se não conseguir ler), no anúncio criado aqui e em
+   qualquer outro da conta. Nível pausado na hora pelo criar é relido depois de
+   pausar. A mesma chave pedida de novo (depois de uma falha de rede) não chama
+   a Meta (ponto 4) e volta `in_review: false`: o cartão de criado oferece o
+   Ativar, e o servidor recusa com a frase da análise se for o caso.
+   A doc do Ad não diz se dá para ligar um anúncio durante a análise: **não
+   confirmado**, por isso não oferecemos. Ela diz que, ao fim da análise, o
+   anúncio volta ao status escolhido (aqui, PAUSED).
+   [Enum do Ad](https://developers.facebook.com/docs/marketing-api/reference/adgroup/),
+   [análise em até 24 horas, seção 3](https://transparency.meta.com/policies/ad-standards/)
 10. **O orçamento traz `active_ads_count`**: quantos anúncios do grupo (ou da
     campanha, quando o dinheiro é dela) estão no ar agora. O "Ativar" só diz
     "passa a dividir o dinheiro com os outros" quando esse número é maior que
@@ -238,6 +264,19 @@ Verificado na documentação oficial em 26/10/2026.
   [Fonte](https://developers.facebook.com/docs/marketing-api/reference/ad-creative/)
 - A aba Instagram abre primeiro quando há post de lá que pode ser impulsionado,
   porque leva o WhatsApp.
+
+## Rastreio do clique (`url_tags`, #2345)
+
+O anúncio novo com destino site sai com `url_tags` igual ao texto da tela
+Conexão › Destino, de uma fonte só (`Crm::MetaAds::UrlTags::TEXT`). O
+`url_tags` vale para os links clicados em anúncio de post da Página; o anúncio
+novo é um post da Página não publicado, criado pelo `object_story_spec`. A doc
+não lista `url_tags` entre os campos que se atualizam no criativo (`name`,
+`status`, `adlabels`, `account_id`); por isso vai na criação. Que a Meta aceita
+o campo no anúncio de site: **não confirmado** em chamada real. Anúncio com
+botão de WhatsApp e post impulsionado não levam ao site: o campo não vai
+(decisão de 29/10, para não arriscar recusa onde ele não serve).
+[Fonte](https://developers.facebook.com/docs/marketing-api/reference/ad-creative/)
 
 ## Fluxo 3: criar post
 
@@ -432,6 +471,44 @@ Flag `meta_ads_criar`. Sem ela, 404 e nenhuma chamada à Meta. Rotas em
   escrita na conta de anúncios do cliente: só com OK explícito do Rodrigo,
   pedido pela sessão Meta aprovar e reconfirmado pela Orquestração. Nada é
   ativado e nenhum centavo é gasto.
+
+## Servidor do PR 2
+
+Impulsionar post (#2339), na mesma flag `meta_ads_criar`. Pedido do Rodrigo em
+28/10: "ja coloca no ar agora".
+
+- `GET meta_ads_connection/boost_posts?page_id=` (`meta_ads_manage`): os posts
+  da Página escolhida, só uma que o token alcança, e os do Instagram ligado a
+  ela. A tela lê quando a pessoa chega no passo do post, então cada Página tem
+  os seus. Ficam 25 de cada lado, os mais recentes. Falha ao ler devolve
+  `posts_error` e a tela diz que não conseguiu ler, nunca "sem posts".
+- Página: `published_posts` com o token da Página. Pode impulsionar quando
+  `is_eligible_for_promotion` é true. Foto de perfil ou de capa (anexo
+  `profile_media` ou `cover_photo`) sai apagada com o motivo
+  `profile_or_cover`, mesmo que a Meta diga que pode. Ela recusa no criar:
+  erro #1487472 no post 122099468234344741, em 28/10.
+- Instagram: `/{ig-user}/media` com o token do Facebook. Pode impulsionar só
+  com `boost_eligibility_info.eligible_to_boost` true. A doc da Meta não lista
+  os subcampos, e o nome vem da biblioteca restfb. Sem o campo, conta como
+  "não pode".
+- Criar (`POST ads` com `kind: post`): o mesmo caminho do anúncio novo, com a
+  chave, o gêmeo, os três níveis `PAUSED`, a releitura e o desfazer. O
+  rascunho é `Crm::MetaAds::Creation::PostDraft`. O post é relido na Meta antes
+  de criar qualquer coisa. Um post que não é da Página ou do Instagram dela dá
+  `invalid_post`; um que não pode ser impulsionado dá `post_not_eligible`.
+- Post do Instagram leva `object_id` (a Página), `instagram_user_id` e
+  `source_instagram_media_id`. Com número do WhatsApp na conta, o número é
+  obrigatório e o anúncio leva o botão `WHATSAPP_MESSAGE`, com o grupo de
+  conversas no WhatsApp, em Automático. Sem número, é engajamento no post
+  (`ON_POST`, `POST_ENGAGEMENT`).
+- Post da Página leva `object_story_id`, só no Facebook, com engajamento no post
+  e sem botão de WhatsApp (item 7 continua a confirmar).
+- Na chamada real (conta 18, flag só nela), confirmar:
+  - os subcampos de `boost_eligibility_info` e o `children{...}` do carrossel,
+    que vão na mesma leitura de `/media`: se a Meta recusar um dos dois, a
+    lista do Instagram inteira falha;
+  - se `ON_POST` com `OUTCOME_ENGAGEMENT` passa sem `promoted_object`;
+  - o filtro de perfil e capa num post real.
 
 ## Permissões que a Meta precisa ver no vídeo
 
