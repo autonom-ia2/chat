@@ -60,6 +60,23 @@ RSpec.describe 'Anúncios da Meta: comentários do Facebook com funções (#2197
     expect(a_request(:delete, /graph\.facebook\.com/)).not_to have_been_made
   end
 
+  # #2359: leitura não escreve. Só quem pode gerir guarda a Página e assina o feed dela ao abrir os comentários.
+  it 'meta_ads_view lê sem gravar a Página nem assinar o feed; meta_ads_manage assina' do
+    page = Crm::MetaAdsPage.find_by!(account: account, page_id: page_id)
+    page.update!(feed_receiving: false)
+    stub_request(:get, meta_graph_url(post_id)).with(query: hash_including({}))
+                                               .to_return(status: 200, headers: json, body: { comments: { data: [] } }.to_json)
+
+    get path, headers: pessoa_com(%w[meta_ads_view]).create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(page.reload.feed_receiving).to be(false)
+    expect(Crm::MetaAds::PageSubscription).not_to have_received(:new)
+
+    get path, headers: pessoa_com(%w[meta_ads_manage]).create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(page.reload.feed_receiving).to be(true)
+  end
+
   it 'meta_ads_manage apaga' do
     manager = pessoa_com(%w[meta_ads_manage])
     stub_request(:delete, meta_graph_url(comment_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)

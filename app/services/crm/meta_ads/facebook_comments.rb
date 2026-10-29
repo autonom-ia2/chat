@@ -14,8 +14,9 @@
 # - Só age em comentário do post. O id de comentário da Graph é `<id do post>_<id do comentário>`, em que o id do post
 #   é a parte depois do `_` do id do post da Página (`<página>_<post>`); respostas idem (a confirmar na chamada real,
 #   até 07/11). Qualquer outro formato é `comment_not_found`, sem chamar a Meta.
-# - Ao ler, a Página entra em Crm::MetaAdsPage e, na primeira vez, o app assina o campo `feed` dela
-#   (Crm::MetaAds::PageSubscription, #2200) para o webhook de comentário novo (Crm::MetaAds::FacebookFeed).
+# - Ao ler a primeira página de comentários, quem pode gerir (`can_manage`) guarda a Página em Crm::MetaAdsPage e, na
+#   primeira vez, o app assina o campo `feed` dela (Crm::MetaAds::PageSubscription, #2200) para o webhook de comentário
+#   novo (Crm::MetaAds::FacebookFeed). Quem só vê lê sem gravar nada, e a página seguinte (`more`) nunca grava (#2359).
 # - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197; é do #2212).
 #
 # Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_text`, `meta_unavailable` (rede, 5xx, limite)
@@ -30,8 +31,9 @@ class Crm::MetaAds::FacebookComments
   # Limite de texto de comentário no Facebook.
   MESSAGE_MAX = 8000
 
-  def initialize(connection)
+  def initialize(connection, can_manage: false)
     @connection = connection
+    @can_manage = can_manage
   end
 
   def list(ad_id)
@@ -40,7 +42,7 @@ class Crm::MetaAds::FacebookComments
     post_id = post_id_for(ad_id)
     return empty('no_post') if post_id.blank?
 
-    client = page_client(post_id)
+    client = page_client(post_id, remember: @can_manage)
     return empty('needs_login') if client.nil?
 
     result = client.post_comments(post_id)
@@ -87,7 +89,7 @@ class Crm::MetaAds::FacebookComments
     return unless granted?(READ) && own_page?(post_id)
     raise Error, 'comment_not_found' unless comment_of_post?(comment_id, post_id)
 
-    client = page_client(post_id, remember: false)
+    client = page_client(post_id)
     client && graph!(client.page_comment(comment_id))
   rescue Error => e
     raise if e.code == 'meta_unavailable'
@@ -163,7 +165,7 @@ class Crm::MetaAds::FacebookComments
     post_id.to_s.split('_').first
   end
 
-  def page_client(post_id, remember: true)
+  def page_client(post_id, remember: false)
     @page_clients ||= {}
     page = page_id(post_id)
     return @page_clients[page] if @page_clients.key?(page)

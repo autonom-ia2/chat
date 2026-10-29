@@ -3,7 +3,8 @@
 #
 # GET    meta_ads_connection/ads/:ad_id/facebook_comments                    → { comments: status, lista, total, cursor }
 #        (?after= para a página seguinte). Administrador ou `meta_ads_view`; as linhas só deixam agir
-#        (can_reply/can_hide/can_delete) para quem também tem `meta_ads_manage`.
+#        (can_reply/can_hide/can_delete) para quem também tem `meta_ads_manage`. Só para esse a leitura guarda a Página
+#        e assina o `feed` dela; com só `meta_ads_view`, ler não grava nada (#2359).
 # POST   meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply  → content=; responde como a Página. O texto vai em
 #        `content`, que o log do Rails já filtra (#2103).
 # PATCH  meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id        → hidden=true|false.
@@ -87,7 +88,7 @@ class Api::V1::Accounts::Crm::MetaAdsFacebookCommentsController < Api::V1::Accou
   end
 
   def comments
-    @comments ||= ::Crm::MetaAds::FacebookComments.new(@connection)
+    @comments ||= ::Crm::MetaAds::FacebookComments.new(@connection, can_manage: manage?)
   end
 
   def ad_id

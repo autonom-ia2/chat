@@ -164,20 +164,31 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect { described_class.new(connection).list(ad_id) }.to raise_error(described_class::Error, 'meta_unavailable')
     end
 
-    it 'guarda a Página e assina o feed dela uma vez' do
+    it 'quem pode gerir: guarda a Página e assina o feed dela uma vez' do
       page_record.update!(feed_receiving: false)
       subscription = instance_double(Crm::MetaAds::PageSubscription, add!: true)
       allow(Crm::MetaAds::PageSubscription).to receive(:new).and_return(subscription)
       ready!(*all_permissions)
       stub_comments
 
-      described_class.new(connection).list(ad_id)
-      described_class.new(connection).list(ad_id)
+      described_class.new(connection, can_manage: true).list(ad_id)
+      described_class.new(connection, can_manage: true).list(ad_id)
 
       expect(page_record.reload).to have_attributes(name: 'Loja Exemplo', feed_receiving: true)
       expect(Crm::MetaAds::PageSubscription).to have_received(:new)
         .with(page_id: page_id, access_token: page_token).once
       expect(subscription).to have_received(:add!).with(%w[feed]).once
+    end
+
+    # #2359: leitura não escreve. Quem só vê lê os comentários sem gravar a Página nem assinar o feed dela.
+    it 'quem só vê: lê sem guardar a Página nem assinar o feed' do
+      page_record.destroy!
+      ready!(*all_permissions)
+      stub_comments
+
+      expect(described_class.new(connection).list(ad_id)).to include(status: 'ready')
+      expect(Crm::MetaAdsPage.where(account_id: account.id)).to be_empty
+      expect(Crm::MetaAds::PageSubscription).not_to have_received(:new)
     end
 
     it 'mais comentários sem permissão: mesmo estado da primeira página' do
@@ -193,10 +204,15 @@ RSpec.describe Crm::MetaAds::FacebookComments do
         .to_return(status: 200, headers: json,
                    body: { data: [comment('200000000000002_600', name: 'Fernanda Lima', message: 'Outras cores?')], paging: {} }.to_json)
 
-      result = described_class.new(connection).more(ad_id, 'CURSOR1')
+      page_record.destroy!
+
+      result = described_class.new(connection, can_manage: true).more(ad_id, 'CURSOR1')
 
       expect(result).to match(status: 'ready', comments: [hash_including(id: '200000000000002_600', text: 'Outras cores?')],
                               next_cursor: nil)
+      # #2359: a página seguinte nunca grava nada, nem para quem pode gerir (a primeira já guardou).
+      expect(Crm::MetaAdsPage.where(account_id: account.id)).to be_empty
+      expect(Crm::MetaAds::PageSubscription).not_to have_received(:new)
     end
   end
 
