@@ -240,6 +240,19 @@ Verificado na documentação oficial em 26/10/2026.
 - A aba Instagram abre primeiro quando há post de lá que pode ser impulsionado,
   porque leva o WhatsApp.
 
+## Rastreio do clique (`url_tags`, #2345)
+
+O anúncio novo com destino site sai com `url_tags` igual ao texto da tela
+Conexão › Destino, de uma fonte só (`Crm::MetaAds::UrlTags::TEXT`). O
+`url_tags` vale para os links clicados em anúncio de post da Página; o anúncio
+novo é um post da Página não publicado, criado pelo `object_story_spec`. A doc
+não lista `url_tags` entre os campos que se atualizam no criativo (`name`,
+`status`, `adlabels`, `account_id`); por isso vai na criação. Que a Meta aceita
+o campo no anúncio de site: **não confirmado** em chamada real. Anúncio com
+botão de WhatsApp e post impulsionado não levam ao site: o campo não vai
+(decisão de 29/10, para não arriscar recusa onde ele não serve).
+[Fonte](https://developers.facebook.com/docs/marketing-api/reference/ad-creative/)
+
 ## Fluxo 3: criar post
 
 - **Página do Facebook:** `POST /{page-id}/photos`, `/videos` ou `/feed`, com
