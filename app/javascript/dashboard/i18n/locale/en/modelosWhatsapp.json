@@ -450,12 +450,12 @@
       "LIMITE_DO_BOTAO": "{n} of {limite} characters",
       "ARQUIVO_ERRADO": {
         "foto": "Pick a JPG or PNG photo.",
-        "video": "Pick an MP4 video.",
+        "video": "Pick an MP4 or MOV video.",
         "documento": "Pick a PDF file."
       },
       "ARQUIVO_GRANDE": {
         "foto": "The photo can have up to 5 MB.",
-        "video": "The video can have up to 16 MB.",
+        "video": "The video can have up to 100 MB.",
         "documento": "The PDF can have up to 100 MB."
       },
       "TOPO_AJUDA": "Optional. The same file goes to everyone who receives the message. Use it for something that is the same for everyone (menu, catalog, rules). A bill, receipt or document for each customer does not go here."

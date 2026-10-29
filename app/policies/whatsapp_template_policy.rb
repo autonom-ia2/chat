@@ -25,6 +25,11 @@ class WhatsappTemplatePolicy < ApplicationPolicy
     manage?
   end
 
+  # A conversão do vídeo que a mesma pessoa subiu (#2370).
+  def media_status?
+    manage?
+  end
+
   private
 
   def view?
