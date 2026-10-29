@@ -17,14 +17,25 @@ vi.mock('dashboard/composables/store', () => ({
   useMapGetter: () =>
     computed(() => (_accountId, flag) => Boolean(flags.value[flag])),
 }));
+// Permissões que a pessoa não tem (#2358: o botão de entrar no Instagram).
+const denied = ref([]);
 vi.mock('dashboard/composables/useCanManage', () => ({
-  usePermissionGranted: () => computed(() => true),
+  usePermissionGranted: key => computed(() => !denied.value.includes(key)),
 }));
 vi.mock('../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
 // Comentários (#2196): o adaptador do Instagram responde sem chamar a API.
-vi.mock('../components/comentarios/comentariosInstagram', () => ({
-  default: { listar: vi.fn() },
-}));
+vi.mock('../components/comentarios/comentariosInstagram', async () => {
+  const real = await vi.importActual(
+    '../components/comentarios/comentariosInstagram'
+  );
+  return {
+    default: {
+      listar: vi.fn(),
+      podeEntrar: real.podeEntrar,
+      PERMISSOES_PARA_ENTRAR: real.PERMISSOES_PARA_ENTRAR,
+    },
+  };
+});
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '18' }, query: {} }),
 }));
@@ -105,6 +116,7 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     flags.value = {};
+    denied.value = [];
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(answer(AD));
   });
 
@@ -398,6 +410,37 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     const on = await mountDetail();
     expect(on.find('[data-ad-comments]').exists()).toBe(true);
     expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
+  });
+
+  // #2358: entrar de novo com o Instagram pede integration_manage e inbox_manage; sem uma delas, sem o botão.
+  it('shows the Instagram login button only with integration_manage and inbox_manage (#2358)', async () => {
+    lerGestao.mockResolvedValue(null);
+    comentariosInstagram.listar.mockResolvedValue({
+      status: 'needs_login',
+      account: { username: 'lojaexemplo' },
+      comments: [],
+      total: 0,
+      next_cursor: null,
+      inbox_id: 7,
+    });
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+
+    const loginButton = async deniedKeys => {
+      denied.value = deniedKeys;
+      const wrapper = await mountDetail();
+      const shown = wrapper
+        .find('[data-ad-comments-action="needs_login"]')
+        .exists();
+      wrapper.unmount();
+      return shown;
+    };
+
+    expect(await loginButton(['integration_manage'])).toBe(false);
+    expect(await loginButton(['inbox_manage'])).toBe(false);
+    expect(await loginButton([])).toBe(true);
   });
 
   // #2335 — anúncio que nunca rodou ou parou antes do período: sem números, mas a conexão lê o anúncio ao vivo.

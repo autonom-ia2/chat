@@ -174,6 +174,16 @@ describe('MetaAdsComments (#2196)', () => {
     );
   });
 
+  it('keeps the login button for whoever manages the ads on a tab without podeEntrar (Facebook)', async () => {
+    const fb = adaptador({ ...ready([]), status: 'needs_login' });
+    const shell = await mountShell([{ key: 'FACEBOOK', adaptador: fb }]);
+
+    expect(shell.find('[data-ad-comments-action="needs_login"]').exists()).toBe(
+      true
+    );
+    expect(shell.find('[data-ad-comments-ask]').exists()).toBe(false);
+  });
+
   it('shows the connect button when the tab says this person can create the inbox', async () => {
     const ig = adaptador({ ...ready([]), status: 'not_connected' });
     const shell = await mountShell([

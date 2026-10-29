@@ -20,8 +20,9 @@
 # além da chave de Anúncios, ver a caixa do Instagram (`inbox_access`, InboxPolicy#show? de quem chama). É a regra de
 # Seus posts (decisão c do parecer da sessão Funções, #2358): quem comenta é cliente daquela caixa, e o privado cria
 # contato, conversa e mensagem nela em nome de quem clicou. Sem ver a caixa, a ação é recusada antes de chamar o
-# Instagram (`not_inbox_member`). Quem só vê os anúncios (`can_manage: false`) recebe todos os `can_*` falsos: a lista
-# não oferece ação que o servidor recusaria.
+# Instagram (`not_inbox_member`). Os estados sem lista (`no_post`, `not_connected`, `needs_login`) vêm antes dessa
+# conferência, na lista e nas ações: neles nenhum comentário é lido, e o Instagram não é chamado. Quem só vê os
+# anúncios (`can_manage: false`) recebe todos os `can_*` falsos: a lista não oferece ação que o servidor recusaria.
 class Crm::MetaAds::InstagramComments
   Error = Crm::MetaAds::InstagramPrivateReply::Error
 

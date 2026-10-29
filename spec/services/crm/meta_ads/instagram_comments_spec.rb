@@ -303,6 +303,15 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(Crm::MetaAdsCommentAction.count).to eq(0)
     end
 
+    it 'quem não vê a caixa, com a caixa pedindo login: needs_login, sem ler comentário nem chamar o Instagram' do
+      allow(Channel::Instagram).to receive(:find_by).and_return(channel)
+      allow(channel).to receive(:reauthorization_required?).and_return(true)
+      outsider = described_class.new(connection, inbox_access: ->(_inbox) { false }, can_manage: true)
+
+      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('needs_login') }
+      expect(instagram_call).not_to have_been_made
+    end
+
     it 'texto vazio ou longo demais: invalid_text, sem chamar a Meta' do
       expect { service.reply!(ad_id, 'c1', '  ', user: user) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('invalid_text') }
       expect { service.private_reply!(ad_id, 'c1', 'a' * 1001, user: user) }
