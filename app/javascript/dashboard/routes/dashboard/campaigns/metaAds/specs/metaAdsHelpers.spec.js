@@ -6,10 +6,29 @@ import {
   formatFact,
   money,
   periodRange,
+  pickPixel,
   thumbClass,
 } from '../metaAdsHelpers';
 
 describe('Anúncios da Meta · helpers (#1047)', () => {
+  it('picks the most recent Pixel among the ones marked in the login (#2343)', () => {
+    const old = { id: 'a', last_fired_time: '2026-10-22T00:00:00+0000' };
+    const recent = { id: 'b', last_fired_time: '2026-10-27T00:00:00+0000' };
+    const never = { id: 'c', last_fired_time: null };
+
+    expect(
+      pickPixel([
+        { ...old, granted: true },
+        { ...recent, granted: false },
+      ])
+    ).toEqual({ pixel: { ...old, granted: true }, fromLogin: true });
+    expect(pickPixel([never, old, recent])).toEqual({
+      pixel: recent,
+      fromLogin: false,
+    });
+    expect(pickPixel([])).toEqual({ pixel: null, fromLogin: false });
+  });
+
   const connected = {
     configured: true,
     verified_at: '2026-10-06T10:00:00Z',

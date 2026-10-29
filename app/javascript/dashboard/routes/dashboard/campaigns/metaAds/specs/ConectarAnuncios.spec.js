@@ -245,9 +245,12 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     expect(CrmMetaAdsConnectionAPI.select).toHaveBeenLastCalledWith(
       expect.objectContaining({ pixelId: MEDICO.id })
     );
-    expect(wrapper.find('select').exists()).toBe(false);
 
     await wrapper.find('[data-conectar-pixel-alterar]').trigger('click');
+    expect(
+      wrapper.find('[data-conectar-pixel] [role="combobox"]').exists()
+    ).toBe(true);
+    expect(wrapper.find('select').exists()).toBe(false);
     await wrapper
       .find(`[data-conectar-pixel] [role="option"][data-value="${SEGUROS.id}"]`)
       .trigger('click');
@@ -257,10 +260,70 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
       mode: 'facebook_login',
       adAccountId: 'act_1',
       pixelId: SEGUROS.id,
+      noSite: false,
     });
     expect(wrapper.find('[data-conectar-pixel]').text()).toContain(
       'Pixel Placement Seguros'
     );
+  });
+
+  const connectWithTwoUnknown = async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    pixelsReply([
+      { ...SEGUROS, granted: null },
+      { ...MEDICO, granted: null },
+    ]);
+    const wrapper = await mountConnect();
+    await wrapper.find('[data-conectar-facebook]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-conectar]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-pixel-alterar]').trigger('click');
+    return wrapper;
+  };
+
+  it('"I have no website" saves no Pixel on purpose', async () => {
+    const wrapper = await connectWithTwoUnknown();
+
+    await wrapper
+      .find('[data-conectar-pixel] [role="option"][data-value="none"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenLastCalledWith({
+      mode: 'facebook_login',
+      adAccountId: 'act_1',
+      pixelId: null,
+      noSite: true,
+    });
+    expect(wrapper.find('[data-conectar-pixel]').text()).toContain(
+      'sem código do site'
+    );
+  });
+
+  it('"Cancel" closes the choice without saving', async () => {
+    const wrapper = await connectWithTwoUnknown();
+
+    await wrapper.find('[data-conectar-pixel-cancelar]').trigger('click');
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-conectar-pixel-alterar]').exists()).toBe(true);
+  });
+
+  it('a failed change says why and keeps the choice open', async () => {
+    const wrapper = await connectWithTwoUnknown();
+    CrmMetaAdsConnectionAPI.select.mockRejectedValue({
+      response: { data: { error: 'pixel_not_found' } },
+    });
+
+    await wrapper
+      .find(`[data-conectar-pixel] [role="option"][data-value="${SEGUROS.id}"]`)
+      .trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-conectar-pixel-erro]').text()).not.toBe('');
+    expect(wrapper.find('[data-conectar-pixel-cancelar]').exists()).toBe(true);
   });
 
   it('a single Pixel is saved by itself, with nothing to change', async () => {

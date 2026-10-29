@@ -198,6 +198,28 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       expect(reads).not_to have_been_requested
     end
 
+    it '"Não tenho site" de propósito fica gravado; escolher um Pixel depois desfaz (#2343)' do
+      stub_reads
+
+      post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, no_site: true }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body).to include('pixel' => nil, 'no_site' => true)
+
+      post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, pixel_id: pixel, no_site: true },
+                                headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body).to include('no_site' => false)
+      expect(response.parsed_body['pixel']).to include('id' => pixel)
+    end
+
+    it 'sem Pixel e sem "Não tenho site", a escolha não marca a recusa do site' do
+      stub_reads
+
+      post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body).to include('pixel' => nil, 'no_site' => false)
+    end
+
     it 'lê conta, gasto e Pixel antes de gravar e só então fica conectada' do
       stub_reads
 
@@ -283,7 +305,16 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       patch "#{base}/destinations", params: { destinations: { whatsapp: true, site: 'false', outro: true } }, headers: auth_headers(admin), as: :json
 
       expect(response.parsed_body['destinations']).to eq('whatsapp' => true, 'site' => false)
-      expect(connection.reload.destinations).to eq('whatsapp' => true, 'site' => false)
+      expect(connection.reload.destinations).to eq('whatsapp' => true, 'site' => false, 'no_site' => false)
+    end
+
+    it 'trocar os destinos mantém o "Não tenho site" escolhido (#2343)' do
+      connection.update!(pixel_id: nil, destinations: { 'whatsapp' => true, 'no_site' => true })
+
+      patch "#{base}/destinations", params: { destinations: { whatsapp: true, site: true } }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['no_site']).to be(true)
+      expect(connection.reload.destinations).to include('site' => true, 'no_site' => true)
     end
   end
 

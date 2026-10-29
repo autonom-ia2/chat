@@ -3,14 +3,18 @@
 # conta de anúncios, porém, traz todos. A única leitura documentada que separa os marcados é
 # GET /{pixel}/assigned_users?business=<portfólio do cliente>: o Pixel marcado tem esse usuário do sistema.
 #
+# As consultas têm um prazo só, para a tela de conexão não ficar presa: passado ele, vale como não saber.
+#
 # `granted` em cada Pixel: true/false quando a Meta respondeu e pelo menos um veio marcado; nil quando não deu para
 # saber (a tela então fica com o de disparo mais recente e oferece "Alterar"). O log diz qual caminho valeu, só com
 # contagens e o código da recusa da Meta.
 class Crm::MetaAds::LoginPixels
   MAX_LOOKUPS = 10
+  BUDGET_SECONDS = 12
 
-  def initialize(client)
-    @client = client
+  def initialize(access_token)
+    @client = Meta::AdsGraphClient.new(access_token: access_token,
+                                       prazo: Process.clock_gettime(Process::CLOCK_MONOTONIC) + BUDGET_SECONDS)
   end
 
   def mark(pixels)

@@ -84,7 +84,9 @@ const loadPixels = async () => {
     const keep = pixels.value.find(
       pixel => pixel.id === props.current?.pixel?.id
     );
-    pixelId.value = keep?.id || latestPixel(pixels.value)?.id || '';
+    const noSite = props.current?.no_site && !props.current?.pixel;
+    pixelId.value =
+      keep?.id || (noSite ? '' : latestPixel(pixels.value)?.id || '');
   } catch (error) {
     pixels.value = [];
     saveError.value = errorText(error);
@@ -130,6 +132,7 @@ const save = async () => {
       mode: props.mode,
       adAccountId: chosen.value.id,
       pixelId: firstRelease ? null : pixelId.value || null,
+      noSite: !firstRelease && !pixelId.value,
     });
     if (firstRelease) {
       accounts.value = accounts.value.map(item =>

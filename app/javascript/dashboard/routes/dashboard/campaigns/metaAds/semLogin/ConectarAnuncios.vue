@@ -47,6 +47,8 @@ const RECHECK_SECONDS = 20;
 const RECHECK_TIMES = 3;
 const FACEBOOK_STEPS = ['ENTER', 'CHOOSE', 'SEE'];
 const PARTNER_STEPS = ['copy', 'meta', 'mark'];
+// Opção "Não tenho site" no "Alterar" do código do site.
+const NO_SITE = 'none';
 
 const { t, locale } = useI18n();
 const {
@@ -117,8 +119,8 @@ const fmt = (value, currency) => amount(value, currency, locale.value);
 const canChangePixel = computed(
   () => !pixelFromLogin.value && pixels.value.length > 1
 );
-const pixelChoices = computed(() =>
-  pixels.value.map(row => {
+const pixelChoices = computed(() => [
+  ...pixels.value.map(row => {
     const time = relativeTime(row.last_fired_time, locale.value);
     return {
       value: row.id,
@@ -127,8 +129,13 @@ const pixelChoices = computed(() =>
         ? t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_LAST', { time })
         : t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_NEVER'),
     };
-  })
-);
+  }),
+  {
+    value: NO_SITE,
+    label: t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_NONE'),
+    hint: t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_NONE_HINT'),
+  },
+]);
 
 // A tela trocou inteira: o foco vai para o título dela, para o leitor de tela anunciar onde a pessoa está.
 watch(screen, async () => {
@@ -279,21 +286,25 @@ const connectAccount = async account => {
 };
 
 const openPixelChoice = () => {
-  pixelChoice.value = pixel.value?.id || '';
+  pixelChoice.value = pixel.value?.id || NO_SITE;
   pixelError.value = null;
   pickingPixel.value = true;
 };
 
 const changePixel = async () => {
+  const noSite = pixelChoice.value === NO_SITE;
   savingPixel.value = true;
   pixelError.value = null;
   try {
     await CrmMetaAdsConnectionAPI.select({
       mode: mode.value,
       adAccountId: chosen.value.id,
-      pixelId: pixelChoice.value,
+      pixelId: noSite ? null : pixelChoice.value,
+      noSite,
     });
-    pixel.value = pixels.value.find(row => row.id === pixelChoice.value);
+    pixel.value = noSite
+      ? null
+      : pixels.value.find(row => row.id === pixelChoice.value);
     pickingPixel.value = false;
   } catch (error) {
     pixelError.value = error?.response?.data?.error || 'generic';
@@ -862,7 +873,7 @@ onBeforeUnmount(stopRecheck);
         {{ $t(`${C}.DONE.TEXT`, { name: chosen?.name }) }}
       </p>
       <div
-        v-if="pixel"
+        v-if="pixels.length"
         data-conectar-pixel
         class="flex w-full max-w-md flex-col gap-2 rounded-xl bg-n-alpha-1 p-4 text-start"
       >
@@ -872,9 +883,11 @@ onBeforeUnmount(stopRecheck);
         >
           <span class="text-sm font-medium text-n-slate-12">
             {{
-              $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_SUMMARY', {
-                pixel: pixel.name,
-              })
+              pixel
+                ? $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_SUMMARY', {
+                    pixel: pixel.name,
+                  })
+                : $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_SUMMARY_NONE')
             }}
           </span>
           <button
@@ -887,15 +900,27 @@ onBeforeUnmount(stopRecheck);
             {{ $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_CHANGE') }}
           </button>
         </div>
-        <ChoiceSelect
-          v-else
-          v-model="pixelChoice"
-          data-conectar-pixel-escolha
-          :options="pixelChoices"
-          :disabled="savingPixel"
-          :aria-label="$t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_TITLE')"
-          @change="changePixel"
-        />
+        <div v-else class="flex flex-wrap items-center gap-2">
+          <ChoiceSelect
+            v-model="pixelChoice"
+            data-conectar-pixel-escolha
+            :options="pixelChoices"
+            :disabled="savingPixel"
+            :aria-label="$t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_TITLE')"
+            @change="changePixel"
+          />
+          <button
+            type="button"
+            data-conectar-pixel-cancelar
+            :disabled="savingPixel"
+            class="inline-flex min-h-11 items-center rounded-lg border-0 bg-transparent px-3 text-sm font-medium text-n-slate-11 hover:text-n-slate-12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+            @click="pickingPixel = false"
+          >
+            {{
+              $t('CRM_KANBAN.META_ADS_HUB.SEM_LOGIN.CONNECT.DONE.PIXEL_CANCEL')
+            }}
+          </button>
+        </div>
         <p
           v-if="pixelError"
           data-conectar-pixel-erro

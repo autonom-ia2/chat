@@ -45,12 +45,14 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     });
   }
 
-  // Reads the account, its 30-day spend and the Pixel before saving.
-  select({ mode, adAccountId, pixelId }) {
+  // Reads the account, its 30-day spend and the Pixel before saving. noSite:
+  // without a Pixel, the person chose "I have no website" on purpose (#2343).
+  select({ mode, adAccountId, pixelId, noSite = false }) {
     return axios.post(`${this.url}/selection`, {
       mode,
       ad_account_id: adAccountId,
       pixel_id: pixelId,
+      no_site: noSite,
     });
   }
 

@@ -2534,6 +2534,7 @@
             "TITLE": "Pronto, está conectado!",
             "TEXT": "Estamos trazendo os gastos de {name}. Em alguns minutos eles aparecem no seu painel, ao lado das conversas e vendas.",
             "CTA": "Ver meu painel",
+            "PIXEL_CANCEL": "Cancelar",
             "PIXEL_FAILED": "Não conseguimos ler o código do site (Pixel) agora. A conta já está conectada; escolha o código depois na aba Conexão.",
             "DESTINATION_FAILED": "Não conseguimos marcar o WhatsApp como destino dos anúncios. Abra a aba Conexão, em \"Destino do anúncio\", e escolha WhatsApp."
           },
@@ -2609,7 +2610,9 @@
         "NOW": "Agora",
         "CHANGE": "Alterar",
         "OFF": "Desligado",
-        "TURN_ON": "Ligar"
+        "TURN_ON": "Ligar",
+        "PICK": "Escolher",
+        "ACCOUNT_PENDING_HINT": "Falta o código do site (Pixel)"
       },
       "CONNECT": {
         "TITLE": "Como você quer conectar?",

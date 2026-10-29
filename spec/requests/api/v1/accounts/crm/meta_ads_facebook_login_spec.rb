@@ -308,6 +308,18 @@ RSpec.describe 'CRM meta_ads_connection facebook_login API', type: :request do
         expect(assigned).not_to have_been_requested
       end
 
+      it 'Meta recusa o /me: nenhum Pixel marcado, e o motivo vai para o log' do
+        connect_with_login
+        stub_pixels
+        stub_graph('me', { error: { code: 200, message: 'Permissions error' } }, status: 403)
+
+        allow(Rails.logger).to receive(:info).and_call_original
+        expect(Rails.logger).to receive(:info).with('[MetaAdsLogin] pixels total=2 source=latest reason=me code=200')
+        get "#{base}/pixels", params: { mode: 'facebook_login', ad_account_id: ad_account }, headers: auth_headers(admin)
+
+        expect(granted_by_id.values).to all(be_nil)
+      end
+
       it 'ninguém do login em nenhum Pixel vale como não saber' do
         connect_with_login
         stub_pixels
