@@ -5,6 +5,7 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import CtwaTrackedLinksAPI from 'dashboard/api/ctwaTrackedLinks';
+import MetaAdsSiteLinkDialog from './MetaAdsSiteLinkDialog.vue';
 import { errorMessageKey } from '../metaAdsHelpers';
 import MetaAdsSitePage from './MetaAdsSitePage.vue';
 import MetaAdsDestinationArt from './MetaAdsDestinationArt.vue';
@@ -25,6 +26,11 @@ const choice = ref({
 });
 const sitePages = ref([]);
 const saving = ref(false);
+// Ligar a página do site ali mesmo (#2338): a página nova entra na lista sem sair dos Anúncios.
+const linkDialog = ref(null);
+const pageLinked = page => {
+  sitePages.value = [...sitePages.value, page];
+};
 
 const OPTIONS = [
   { key: 'whatsapp', icon: 'i-lucide-message-circle' },
@@ -160,17 +166,28 @@ onMounted(loadPages);
             :page="page"
           />
         </ul>
-        <div v-else class="flex flex-wrap items-center gap-3">
+        <div v-else data-site-empty class="flex flex-col items-start gap-3">
           <span class="text-sm text-n-slate-11">
             {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_EMPTY') }}
           </span>
-          <router-link
-            :to="{ name: 'campaigns_tracked_links_index' }"
-            class="text-sm font-semibold underline rounded text-n-blue-11 underline-offset-2"
-          >
-            {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE') }}
-          </router-link>
+          <Button
+            data-site-link-open
+            class="!min-h-11 !rounded-xl"
+            icon="i-lucide-link"
+            :label="$t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE')"
+            @click="linkDialog?.open()"
+          />
         </div>
+        <button
+          v-if="sitePages.length"
+          type="button"
+          data-site-link-another
+          class="self-start p-0 text-sm font-medium bg-transparent border-0 rounded-lg min-h-11 text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          @click="linkDialog?.open()"
+        >
+          {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE_ANOTHER') }}
+        </button>
+        <MetaAdsSiteLinkDialog ref="linkDialog" @created="pageLinked" />
       </div>
 
       <!-- O texto é para a Meta, não para a pessoa: só o botão de copiar aparece; o caminho e o

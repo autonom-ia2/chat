@@ -45,6 +45,15 @@ export const recursos = estado => [
     const semPermissao = (estado.semPermissao || []).includes(PERMISSAO[chave]);
     return { chave, falta: passo || (semPermissao ? 'PERMISSAO' : null) };
   }),
+  // Anúncio que leva ao site precisa da página ligada (#2338): sem ela, ninguém sabe quem chegou pelo anúncio.
+  ...(estado.destinations.site
+    ? [
+        {
+          chave: 'SITE',
+          falta: (estado.sitePages || []).length ? null : 'PAGINA_SITE',
+        },
+      ]
+    : []),
   // Seus posts lê os números da Página pela caixa de entrada do Facebook: liberar é um clique à parte.
   { chave: 'SEUS_POSTS', falta: estado.pageInsights ? null : 'NUMEROS' },
   { chave: 'VENDAS', falta: estado.salesSignal ? null : 'VENDAS' },

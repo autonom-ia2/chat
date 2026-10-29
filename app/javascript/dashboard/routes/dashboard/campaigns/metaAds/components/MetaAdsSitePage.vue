@@ -29,10 +29,12 @@ const siteUrl = computed(() => current.value.allowed_origins?.[0] || '');
 const named = computed(() =>
   (current.value.campaigns || []).filter(row => row.name)
 );
+// Só conta clique que veio de anúncio da Meta (#2338, `meta_clicks`: com fbclid). Visita direta ou orgânica ao site também
+// chega sem nome de campanha, e não é anúncio sem o texto colado.
 const unnamedClicks = computed(() =>
   (current.value.campaigns || [])
     .filter(row => !row.name)
-    .reduce((total, row) => total + row.clicks, 0)
+    .reduce((total, row) => total + (row.meta_clicks ?? row.clicks), 0)
 );
 // Quando chegou o último clique sem nome: é o que deixa a pessoa achar o anúncio sem o texto (#1068).
 const lastUnnamed = computed(() => {

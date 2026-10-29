@@ -18,6 +18,7 @@ const resolver = falta => {
   if (falta === 'NUMEROS') emit('numeros');
   else if (falta === 'VENDAS') emit('vendas');
   else if (falta === 'PERMISSAO') emit('abrir', 'FACEBOOK');
+  else if (falta === 'PAGINA_SITE') emit('abrir', 'DESTINO');
   else emit('abrir', falta);
 };
 </script>

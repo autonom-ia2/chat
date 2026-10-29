@@ -2378,7 +2378,7 @@
           "INSTAGRAM": "Trazer o Instagram para cá",
           "INSTAGRAM_HINT": "Mensagens e comentários chegam aqui.",
           "DESTINO": "Para onde o anúncio leva",
-          "DESTINO_HINT": "WhatsApp ou o seu site."
+          "DESTINO_HINT": "WhatsApp ou uma página do seu site."
         },
         "PAGINA": {
           "TITLE": "Confira sua Página e seu Instagram",
@@ -2408,6 +2408,7 @@
           "FUNCIONA": "Funcionando",
           "SEE_PANEL": "Ver meus anúncios",
           "RECURSOS": {
+            "SITE": "Anúncios que levam ao site",
             "RESULTADO": "Ver o resultado dos anúncios",
             "CRIAR": "Criar anúncio",
             "COMENTARIOS_FACEBOOK": "Comentários do Facebook",
@@ -2417,6 +2418,7 @@
             "VENDAS": "Avisar a Meta das vendas"
           },
           "FALTA": {
+            "PAGINA_SITE": "Falta ligar a página do site",
             "FACEBOOK": "Falta entrar com o Facebook",
             "CONTA": "Falta escolher a conta de anúncios",
             "PAGINA": "Falta conferir a Página",
@@ -2427,6 +2429,7 @@
             "VENDAS": "Opcional: ajuda a Meta a achar quem compra"
           },
           "RESOLVER": {
+            "PAGINA_SITE": "Ligar",
             "FACEBOOK": "Entrar",
             "CONTA": "Escolher",
             "PAGINA": "Conferir",
@@ -2793,13 +2796,28 @@
         "SITE_LINKS": "Páginas ligadas",
         "SITE_LAST": "Último clique {time}",
         "SITE_NONE_YET": "Nenhum clique ainda",
-        "SITE_EMPTY": "Nenhuma página ligada ainda.",
-        "SITE_CREATE": "Ligar uma página",
+        "SITE_EMPTY": "Ligue a página do seu site para saber quem chegou pelo anúncio.",
+        "SITE_CREATE": "Ligar a página do site",
+        "SITE_CREATE_ANOTHER": "Ligar outra página",
+        "LINK_DIALOG": {
+          "TITLE": "Ligar a página do site",
+          "TEXT": "Cole o endereço da página para onde o anúncio leva.",
+          "ADDRESS": "Endereço da página",
+          "ADDRESS_PLACEHOLDER": "lojaexemplo.com.br/promocao",
+          "ADDRESS_HINT": "Copie da barra do navegador, com a página aberta.",
+          "ADDRESS_ERROR": "Esse endereço não parece de um site. Confira e cole de novo.",
+          "WHATSAPP": "Qual WhatsApp atende quem vem da página?",
+          "WHATSAPP_PLACEHOLDER": "Escolha o WhatsApp",
+          "SAVE": "Ligar a página",
+          "CANCEL": "Cancelar",
+          "NAME": "Site {site}",
+          "ERROR": "Não deu para ligar a página agora. Tente de novo."
+        },
         "AD_TEXT_TITLE": "Cole este texto nos anúncios que levam para o site",
         "AD_TEXT_HINT": "Assim cada campanha aparece com o nome certo no CRM.",
         "COPY_TEXT": "Copiar texto",
         "COPIED": "Texto copiado.",
-        "SAVE": "Continuar",
+        "SAVE": "Salvar e continuar",
         "SAVED": "Destinos salvos.",
         "PICK_ONE": "Marque pelo menos um destino.",
         "WHERE": "Onde colar na Meta?",
@@ -2908,8 +2926,8 @@
         "TEST_TIMEOUT": "O clique ainda não chegou. Confira se o código está na página e tente de novo.",
         "CAMPAIGNS_TITLE": "Campanhas chegando com nome",
         "CAMPAIGNS_MORE": "+ {count} campanhas",
-        "UNNAMED": "1 clique chegou sem nome de campanha. Cole o texto nesse anúncio. | {count} cliques chegaram sem nome de campanha. Cole o texto nesses anúncios.",
-        "UNNAMED_WHEN": "1 clique chegou sem nome de campanha, {time}. Cole o texto nos anúncios que levam a esta página. | {count} cliques chegaram sem nome de campanha, o último {time}. Cole o texto nos anúncios que levam a esta página.",
+        "UNNAMED": "1 clique de anúncio chegou sem o nome da campanha. Cole o texto nesse anúncio. | {count} cliques de anúncio chegaram sem o nome da campanha. Cole o texto nesses anúncios.",
+        "UNNAMED_WHEN": "1 clique de anúncio chegou sem o nome da campanha, {time}. Cole o texto nos anúncios que levam a esta página. | {count} cliques de anúncio chegaram sem o nome da campanha, o último {time}. Cole o texto nos anúncios que levam a esta página.",
         "KIT_TITLE": "Instruções para quem cuida do site",
         "KIT_HINT": "Uma página com o código pronto e o passo a passo. Leva uns 10 minutos.",
         "KIT_SEND": "Enviar por WhatsApp",

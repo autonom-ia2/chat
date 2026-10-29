@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { instalarMetaDemo } from './demoMeta';
+import { instalarMetaDemo, paginaDoSite } from './demoMeta';
 
 // PROTÓTIPO (#2338), só para a demo local: com `?demo=<cena>` no endereço, a Meta é simulada (demoMeta.js) e a cena
 // fica guardada na aba (sessionStorage) para seguir valendo ao navegar. Nada daqui vai ao PR final; lá, o estado
@@ -11,6 +11,8 @@ import { instalarMetaDemo } from './demoMeta';
 // ?demo=sem-pagina     o login não trouxe Página nenhuma
 // ?demo=sem-permissao  na janela da Meta a pessoa desmarcou "gerenciar comentários" e "formulários"
 // ?demo=sem-conta      tudo ligado, mas criar anúncio acha a conta de anúncios limpa (o 404 not_connected)
+// ?demo=site-vazio     tudo ligado, anúncio leva ao site, nenhuma página ligada (o que o Rodrigo viu em 29/10)
+// ?demo=site-ligado    tudo ligado, uma página do site com 9 cliques sem nome (só 1 veio de anúncio)
 // ?demo=sair           volta ao painel de verdade
 const CHAVE = 'demo-2338';
 
@@ -39,7 +41,30 @@ const zerado = cena => ({
       ? ['pages_manage_engagement', 'leads_retrieval']
       : [],
   perdeContaNaCriacao: false,
+  sitePages: [],
 });
+
+const PAGINA_COM_CLIQUES = paginaDoSite(
+  501,
+  'Site lojaexemplo.com.br',
+  'https://lojaexemplo.com.br',
+  [
+    {
+      campaign_key: 'verao',
+      name: 'Promoção de verão',
+      clicks: 14,
+      meta_clicks: 14,
+      last_clicked_at: new Date(Date.now() - 2 * 3600e3).toISOString(),
+    },
+    {
+      campaign_key: 'none',
+      name: null,
+      clicks: 9,
+      meta_clicks: 1,
+      last_clicked_at: new Date(Date.now() - 5 * 3600e3).toISOString(),
+    },
+  ]
+);
 
 const ligado = cena => ({
   ...zerado(cena),
@@ -47,12 +72,22 @@ const ligado = cena => ({
   adAccount: { id: 'act_1001', name: 'Loja Exemplo' },
   page: PAGE,
   instagramInbox: true,
-  destinations: { whatsapp: true, site: false },
   salesSignal: true,
   perdeContaNaCriacao: cena === 'sem-conta',
+  destinations: {
+    whatsapp: true,
+    site: ['site-vazio', 'site-ligado'].includes(cena),
+  },
+  sitePages: cena === 'site-ligado' ? [PAGINA_COM_CLIQUES] : [],
 });
 
-const CENAS_LIGADAS = ['pronto', 'sem-conta', 'sem-permissao'];
+const CENAS_LIGADAS = [
+  'pronto',
+  'sem-conta',
+  'sem-permissao',
+  'site-vazio',
+  'site-ligado',
+];
 
 export const estadoDemo = ref(null);
 let cenaAtiva = null;

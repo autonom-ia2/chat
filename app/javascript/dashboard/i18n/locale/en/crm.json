@@ -2377,7 +2377,7 @@
           "INSTAGRAM": "Bring Instagram here",
           "INSTAGRAM_HINT": "Messages and comments arrive here.",
           "DESTINO": "Where the ad leads",
-          "DESTINO_HINT": "WhatsApp or your website."
+          "DESTINO_HINT": "WhatsApp or a page of your site."
         },
         "PAGINA": {
           "TITLE": "Check your Page and Instagram",
@@ -2407,6 +2407,7 @@
           "FUNCIONA": "Working",
           "SEE_PANEL": "See my ads",
           "RECURSOS": {
+            "SITE": "Ads that lead to the site",
             "RESULTADO": "See your ad results",
             "CRIAR": "Create an ad",
             "COMENTARIOS_FACEBOOK": "Facebook comments",
@@ -2416,6 +2417,7 @@
             "VENDAS": "Tell Meta about sales"
           },
           "FALTA": {
+            "PAGINA_SITE": "Connect the site page first",
             "FACEBOOK": "Sign in with Facebook first",
             "CONTA": "Choose the ad account first",
             "PAGINA": "Check your Page first",
@@ -2426,6 +2428,7 @@
             "VENDAS": "Optional: helps Meta find buyers"
           },
           "RESOLVER": {
+            "PAGINA_SITE": "Connect",
             "FACEBOOK": "Sign in",
             "CONTA": "Choose",
             "PAGINA": "Check",
@@ -2792,13 +2795,28 @@
         "SITE_LINKS": "Linked pages",
         "SITE_LAST": "Last click {time}",
         "SITE_NONE_YET": "No clicks yet",
-        "SITE_EMPTY": "No page linked yet.",
-        "SITE_CREATE": "Link a page",
+        "SITE_EMPTY": "Connect your site page to know who came from the ad.",
+        "SITE_CREATE": "Connect the site page",
+        "SITE_CREATE_ANOTHER": "Connect another page",
+        "LINK_DIALOG": {
+          "TITLE": "Connect the site page",
+          "TEXT": "Paste the address of the page the ad leads to.",
+          "ADDRESS": "Page address",
+          "ADDRESS_PLACEHOLDER": "examplestore.com/sale",
+          "ADDRESS_HINT": "Copy it from the browser bar with the page open.",
+          "ADDRESS_ERROR": "This does not look like a site address. Check it and paste again.",
+          "WHATSAPP": "Which WhatsApp answers people from the page?",
+          "WHATSAPP_PLACEHOLDER": "Choose the WhatsApp",
+          "SAVE": "Connect the page",
+          "CANCEL": "Cancel",
+          "NAME": "Site {site}",
+          "ERROR": "Could not connect the page now. Try again."
+        },
         "AD_TEXT_TITLE": "Paste this text in the ads that lead to the website",
         "AD_TEXT_HINT": "This way each campaign shows up with the right name in the CRM.",
         "COPY_TEXT": "Copy text",
         "COPIED": "Text copied.",
-        "SAVE": "Continue",
+        "SAVE": "Save and continue",
         "SAVED": "Destinations saved.",
         "PICK_ONE": "Pick at least one destination.",
         "WHERE": "Where to paste it on Meta?",
@@ -2907,8 +2925,8 @@
         "TEST_TIMEOUT": "The click has not arrived yet. Check that the code is on the page and try again.",
         "CAMPAIGNS_TITLE": "Campaigns arriving with their name",
         "CAMPAIGNS_MORE": "+ {count} more",
-        "UNNAMED": "1 click arrived without a campaign name. Paste the text in that ad. | {count} clicks arrived without a campaign name. Paste the text in those ads.",
-        "UNNAMED_WHEN": "1 click came without a campaign name, {time}. Paste the text in the ads that lead to this page. | {count} clicks came without a campaign name, the last {time}. Paste the text in the ads that lead to this page.",
+        "UNNAMED": "1 click from an ad arrived without the campaign name. Paste the text into that ad. | {count} clicks from ads arrived without the campaign name. Paste the text into those ads.",
+        "UNNAMED_WHEN": "1 click from an ad arrived without the campaign name, {time}. Paste the text into the ads that lead to this page. | {count} clicks from ads arrived without the campaign name, the last one {time}. Paste the text into the ads that lead to this page.",
         "KIT_TITLE": "Instructions for your website person",
         "KIT_HINT": "A page with the ready code and the steps. Takes about 10 minutes.",
         "KIT_SEND": "Send on WhatsApp",

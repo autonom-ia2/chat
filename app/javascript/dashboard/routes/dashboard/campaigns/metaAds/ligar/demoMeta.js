@@ -653,6 +653,23 @@ const achar = (lista, id) =>
     null
   );
 
+// Uma página do site no formato do GET de ctwa_tracked_links (website_payload). `meta_clicks`: cliques que vieram de
+// anúncio da Meta (com fbclid) — a proposta do #2338 para o aviso dos cliques sem nome.
+export const paginaDoSite = (id, name, origem, campaigns) => ({
+  id,
+  name,
+  usage: 'website',
+  inbox_id: 1,
+  allowed_origins: [origem],
+  last_signal_at: campaigns.length ? horasAtras(3) : null,
+  signals_blocked: false,
+  signal_url: `https://exemplo.chat/l/demo${id}/clicks`,
+  kit_url: `https://exemplo.chat/l/demo${id}/kit`,
+  ad_url_params:
+    'utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}',
+  campaigns,
+});
+
 const criarRotas = ctx => {
   const atual = () => ctx.estado.value;
   const mudarEstado = parte => {
@@ -1103,11 +1120,23 @@ const criarRotas = ctx => {
     return null;
   };
 
+  // Páginas do site ligadas (#2338): a lista sai do estado da cena; ligar uma nova acrescenta.
+  const linksDoSite = (method, dados) => {
+    if (method === 'get') return ok({ payload: atual().sitePages || [] });
+    const origem = dados.allowed_origins?.[0] || 'https://lojaexemplo.com.br';
+    const pagina = paginaDoSite(Date.now(), dados.name, origem, []);
+    ctx.estado.value = {
+      ...atual(),
+      sitePages: [...(atual().sitePages || []), pagina],
+    };
+    return ok({ payload: pagina });
+  };
+
   return config => {
     const caminho = String(config.url || '').split('?')[0];
     const method = String(config.method || 'get').toLowerCase();
     const params = config.params || {};
-    if (caminho.endsWith(LINKS)) return ok({ payload: [] });
+    if (caminho.endsWith(LINKS)) return linksDoSite(method, corpo(config));
     if (caminho.includes(FORMULARIOS))
       return rotaFormularios(
         method,
