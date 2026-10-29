@@ -99,7 +99,7 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
       body = form(req)
       body['object_id'] == page_id && body['instagram_user_id'] == '178' && body['source_instagram_media_id'] == '1790' &&
         JSON.parse(body['call_to_action']) == { 'type' => 'WHATSAPP_MESSAGE', 'value' => { 'app_destination' => 'WHATSAPP' } } &&
-        body['object_story_spec'].nil? && body['object_story_id'].nil?
+        body['object_story_spec'].nil? && body['object_story_id'].nil? && body['url_tags'].nil?
     end
     expect(stubs[:campaign].with { |req| form(req).values_at('objective', 'status') == %w[OUTCOME_ENGAGEMENT PAUSED] })
       .to have_been_made.once
@@ -122,7 +122,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     end
     creative_ok = lambda do |req|
       body = form(req)
-      body['object_story_id'] == page_post_id && body['call_to_action'].nil? && body['source_instagram_media_id'].nil?
+      body['object_story_id'] == page_post_id && body['call_to_action'].nil? && body['source_instagram_media_id'].nil? &&
+        body['url_tags'].nil?
     end
     expect(stubs[:adset].with(&adset_ok)).to have_been_made.once
     expect(stubs[:creative].with(&creative_ok)).to have_been_made.once

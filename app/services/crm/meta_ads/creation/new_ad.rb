@@ -206,9 +206,16 @@ class Crm::MetaAds::Creation::NewAd
     end
   end
 
+  # Anúncio que leva ao site sai com os parâmetros de rastreio da tela Conexão › Destino (#2345), que só dá para pôr na
+  # criação. WhatsApp e post impulsionado não levam ao site: o campo não vai.
   def creative_params(draft, page)
     return post_creative_params(draft, page) if draft[:kind] == 'post'
 
+    params = story_creative_params(draft, page)
+    draft[:destination] == 'WEBSITE' ? params.merge(url_tags: Crm::MetaAds::UrlTags::TEXT) : params
+  end
+
+  def story_creative_params(draft, page)
     story = Crm::MetaAds::Creation::Story.new(draft.values, instagram_id: page.dig(:instagram, :id))
     { name: draft[:name], object_story_spec: story.object_story_spec.to_json }
   end
