@@ -236,9 +236,9 @@ RSpec.describe 'CTWA tracked links API', type: :request do
       expect(campaigns.first['last_clicked_at']).to eq(latest.iso8601)
       expect(campaigns.map { |row| row.except('last_clicked_at') }).to eq(
         [
-          { 'campaign_key' => '120211', 'name' => 'Viagem EUA', 'clicks' => 4, 'conversations' => 2, 'won_cards' => 3,
-            'won_value_by_currency' => { 'BRL' => 151_120, 'USD' => 5_000 } },
-          { 'campaign_key' => 'none', 'name' => nil, 'clicks' => 1, 'conversations' => 1, 'won_cards' => 0,
+          { 'campaign_key' => '120211', 'name' => 'Viagem EUA', 'clicks' => 4, 'meta_clicks' => 0, 'conversations' => 2,
+            'won_cards' => 3, 'won_value_by_currency' => { 'BRL' => 151_120, 'USD' => 5_000 } },
+          { 'campaign_key' => 'none', 'name' => nil, 'clicks' => 1, 'meta_clicks' => 0, 'conversations' => 1, 'won_cards' => 0,
             'won_value_by_currency' => {} }
         ]
       )
@@ -262,9 +262,31 @@ RSpec.describe 'CTWA tracked links API', type: :request do
 
       expect(response).to have_http_status(:ok)
       campaign = response.parsed_body['payload'].find { |link| link['id'] == tracked_link.id }['campaigns'].sole
-      expect(campaign.except('last_clicked_at')).to eq('campaign_key' => '120211', 'name' => nil, 'clicks' => 1, 'conversations' => 1,
-                                                       'won_cards' => 1)
+      expect(campaign.except('last_clicked_at')).to eq('campaign_key' => '120211', 'name' => nil, 'clicks' => 1, 'meta_clicks' => 0,
+                                                       'conversations' => 1, 'won_cards' => 1)
       expect(response.body).not_to include('won_value_by_currency', '37780')
+    end
+
+    # #2338: visita direta ao site também chega sem nome de campanha. O aviso de "clique de anúncio sem nome" conta só
+    # o que veio de anúncio da Meta, com a mesma regra da origem da conversa (Ctwa::CampaignBuilder#meta_paid?) e o
+    # cookie fbc da página.
+    it 'separa os cliques que vieram de anúncio da Meta dos demais' do
+      tracked_link = create_website_link
+      [
+        { params: { 'fbclid' => 'IwAR1' } },
+        { params: {}, meta_signals: { 'fbc' => 'fb.1.1730000000000.IwAR2' } },
+        { params: { 'utm_source' => ' Facebook ', 'utm_medium' => 'PAID' } },
+        { params: { 'utm_source' => 'facebook', 'utm_medium' => 'social' } },
+        { params: { 'utm_source' => 'google', 'utm_medium' => 'cpc' } },
+        { params: {} }
+      ].each do |attributes|
+        create(:ctwa_tracked_link_click, account: account, tracked_link: tracked_link, campaign_key: 'none', **attributes)
+      end
+
+      get base_url, headers: auth_headers(admin)
+
+      campaign = response.parsed_body['payload'].find { |link| link['id'] == tracked_link.id }['campaigns'].sole
+      expect(campaign).to include('campaign_key' => 'none', 'clicks' => 6, 'meta_clicks' => 3)
     end
 
     it 'não mistura cliques de links ou contas diferentes no resultado por campanha' do
