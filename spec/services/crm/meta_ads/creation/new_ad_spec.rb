@@ -11,6 +11,10 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
   let(:page_id) { '110000000002161' }
   let(:json) { { 'Content-Type' => 'application/json' } }
   let(:whatsapp_number) { '+5511900002161' }
+  # O texto da tela Conexão › Destino (#2345), escrito à mão para o spec pegar mudança na fonte. Só vai no anúncio do site.
+  let(:url_tags) do
+    'utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_term={{adset.name}}&utm_content={{ad.name}}&utm_id={{campaign.id}}'
+  end
   # A campanha da tentativa leva a marca da chave no nome (os 8 primeiros caracteres).
   let(:campaign_name) { 'Bolo de pote · WhatsApp [a1b2c3d4]' }
 
@@ -105,7 +109,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     end
     creative_ok = lambda do |req|
       spec = JSON.parse(form(req)['object_story_spec'])
-      spec['page_id'] == page_id && spec.dig('link_data', 'image_hash') == 'abc123' &&
+      form(req)['url_tags'].nil? &&
+        spec['page_id'] == page_id && spec.dig('link_data', 'image_hash') == 'abc123' &&
         spec.dig('link_data', 'call_to_action') == { 'type' => 'WHATSAPP_MESSAGE', 'value' => { 'app_destination' => 'WHATSAPP' } }
     end
     expect(stubs[:campaign].with(&campaign_ok)).to have_been_made.once
@@ -192,8 +197,8 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
         JSON.parse(body['targeting'])['publisher_platforms'] == ['instagram']
     end
     creative_ok = lambda do |req|
-      JSON.parse(form(req)['object_story_spec']).dig('link_data', 'call_to_action') ==
-        { 'type' => 'SHOP_NOW', 'value' => { 'link' => 'https://lojaexemplo.com.br' } }
+      action = JSON.parse(form(req)['object_story_spec']).dig('link_data', 'call_to_action')
+      form(req)['url_tags'] == url_tags && action == { 'type' => 'SHOP_NOW', 'value' => { 'link' => 'https://lojaexemplo.com.br' } }
     end
     expect(stubs[:adset].with(&adset_ok)).to have_been_made
     expect(stubs[:creative].with(&creative_ok)).to have_been_made
