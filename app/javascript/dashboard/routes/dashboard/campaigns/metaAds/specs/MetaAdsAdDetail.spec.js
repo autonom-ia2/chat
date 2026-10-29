@@ -26,9 +26,18 @@ vi.mock('dashboard/composables/useCanManage', () => ({
 }));
 vi.mock('../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
 // Comentários (#2196): o adaptador do Instagram responde sem chamar a API.
-vi.mock('../components/comentarios/comentariosInstagram', () => ({
-  default: { listar: vi.fn() },
-}));
+vi.mock('../components/comentarios/comentariosInstagram', async () => {
+  const real = await vi.importActual(
+    '../components/comentarios/comentariosInstagram'
+  );
+  return {
+    default: {
+      listar: vi.fn(),
+      podeEntrar: real.podeEntrar,
+      PERMISSOES_PARA_ENTRAR: real.PERMISSOES_PARA_ENTRAR,
+    },
+  };
+});
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: '18' }, query: {} }),
 }));
@@ -402,6 +411,30 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     const on = await mountDetail();
     expect(on.find('[data-ad-comments]').exists()).toBe(true);
     expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
+  });
+
+  // #2358: entrar de novo com o Instagram pede integration_manage e inbox_manage; a aba recebe essa régua ligada às
+  // permissões reais.
+  it('wires the Instagram login rule to integration_manage and inbox_manage (#2358)', async () => {
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+
+    const canLogIn = async (deniedKeys, status) => {
+      deniedKeys.forEach(key => negadas.add(key));
+      const wrapper = await mountDetail();
+      const [instagram] = wrapper.findComponent(MetaAdsComments).props('abas');
+      const allowed = instagram.podeEntrar(status);
+      negadas.clear();
+      wrapper.unmount();
+      return allowed;
+    };
+
+    expect(await canLogIn([], 'needs_login')).toBe(true);
+    expect(await canLogIn(['integration_manage'], 'needs_login')).toBe(false);
+    expect(await canLogIn(['inbox_manage'], 'needs_login')).toBe(false);
+    expect(await canLogIn(['integration_manage'], 'not_connected')).toBe(true);
   });
 
   it('lets only who has inbox_manage connect the Page to Messenger (#2359)', async () => {

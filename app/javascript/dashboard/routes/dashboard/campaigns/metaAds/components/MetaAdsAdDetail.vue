@@ -296,16 +296,29 @@ const gestaoOn = computed(() =>
   )
 );
 const canManage = usePermissionGranted('meta_ads_manage');
+const loginPermissions = Object.fromEntries(
+  comentariosInstagram.PERMISSOES_PARA_ENTRAR.map(key => [
+    key,
+    usePermissionGranted(key),
+  ])
+);
 // Conectar a Página como caixa do Messenger, quando a conta não tem (comentários do Facebook, #2359).
-const canCreateInbox = usePermissionGranted('inbox_manage');
+const canCreateInbox = loginPermissions.inbox_manage;
 
 // Comentários do anúncio, uma aba por rede, cada uma atrás da própria flag: Instagram (#2196) e Facebook (#2197).
 // Sem nenhuma aba ligada, a seção não aparece.
+// O botão de entrar no Instagram segue as permissões do caminho (comentariosInstagram.podeEntrar, #2358). O do
+// Facebook leva à Conexão, que já é de quem gere os anúncios, ou a conectar a caixa da Página (canCreateInbox, #2359).
 const COMMENT_TABS = [
   {
     key: 'INSTAGRAM',
     flag: FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
     adaptador: comentariosInstagram,
+    podeEntrar: status =>
+      comentariosInstagram.podeEntrar(
+        status,
+        key => loginPermissions[key].value
+      ),
   },
   {
     key: 'FACEBOOK',

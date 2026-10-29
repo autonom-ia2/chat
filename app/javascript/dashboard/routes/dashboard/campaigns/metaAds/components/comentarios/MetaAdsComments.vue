@@ -19,13 +19,15 @@ import MetaAdsCommentRow from './MetaAdsCommentRow.vue';
 //
 // Ver é `meta_ads_view`; responder, ocultar, apagar e responder no privado só com `canManage` (`meta_ads_manage`).
 // Aba que não pode ser lida (`needs_login`, `not_connected`, `no_inbox`, `not_inbox_member`) mostra um cartão com o
-// motivo. O botão dele é de quem pode resolver: entrar de novo, `canManage`; conectar a caixa que falta (`no_inbox`,
-// #2359), `canCreateInbox` (`inbox_manage`), e os demais leem a quem pedir (`<STATUS>_ASK`). Sem `<STATUS>_BUTTON`
-// (fora da caixa), não há botão.
+// motivo. Ler e agir pedem ver a caixa da rede (Instagram #2358, Facebook #2359): fora dela, `not_inbox_member`. O
+// botão do cartão é de quem pode resolver: entrar de novo, `canManage`; conectar a caixa que falta (`no_inbox`,
+// #2359), `canCreateInbox` (`inbox_manage`). A aba pode afinar quem entra com `podeEntrar(status)` (no Instagram,
+// conectar pede inbox_manage e entrar de novo pede também integration_manage, #2358). Os demais leem a quem pedir
+// (`<STATUS>_ASK`). Sem `<STATUS>_BUTTON` (fora da caixa), não há botão.
 // Apagar some com o comentário de vez: pede confirmação citando o texto. Depois de cada ação a aba é lida de novo.
 const props = defineProps({
   adId: { type: String, required: true },
-  // [{ key: 'INSTAGRAM' | 'FACEBOOK', adaptador }]
+  // [{ key: 'INSTAGRAM' | 'FACEBOOK', adaptador, podeEntrar?(status) }]
   abas: { type: Array, required: true },
   canManage: { type: Boolean, default: false },
   canCreateInbox: { type: Boolean, default: false },
@@ -73,9 +75,10 @@ const blocked = computed(() => BLOCKED.includes(status.value));
 const statusKey = computed(
   () => `${KEY}.${current.value?.key}.${status.value.toUpperCase()}`
 );
-const canFix = computed(() =>
-  status.value === 'no_inbox' ? props.canCreateInbox : props.canManage
-);
+const canFix = computed(() => {
+  if (status.value === 'no_inbox') return props.canCreateInbox;
+  return props.canManage && (current.value.podeEntrar?.(status.value) ?? true);
+});
 const showFix = computed(() => canFix.value && te(`${statusKey.value}_BUTTON`));
 const showAsk = computed(() => !canFix.value && te(`${statusKey.value}_ASK`));
 const unknownAuthorKey = computed(
@@ -375,7 +378,11 @@ const tabCount = aba => {
             <p class="m-0 text-sm text-n-slate-11">
               {{ $t(statusKey, { username: result.account?.username }) }}
             </p>
-            <p v-if="showAsk" class="m-0 text-sm text-n-slate-11">
+            <p
+              v-if="showAsk"
+              data-ad-comments-ask
+              class="m-0 text-sm text-n-slate-11"
+            >
               {{ $t(`${statusKey}_ASK`) }}
             </p>
             <button

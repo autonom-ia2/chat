@@ -3213,7 +3213,6 @@
           "PRIVATE_UNCONFIRMED": "Enviado no privado, sem confirmação do Instagram. Confira no Direct antes: se a mensagem estiver lá, não clique.",
           "PRIVATE_NOT_SENT": "Não foi enviado",
           "PRIVATE_RELEASED": "Pronto. Você pode responder no privado de novo.",
-          "PRIVATE_NOT_MEMBER": "Você não atende a caixa do Instagram, por isso não pode responder no privado.",
           "UNANSWERED": "Sem resposta",
           "TAB_UNANSWERED": "1 sem resposta | {count} sem resposta",
           "MORE_ACTIONS": "Mais ações",
@@ -3228,6 +3227,10 @@
             "NOT_CONNECTED_TITLE": "Este anúncio também aparece no Instagram",
             "NOT_CONNECTED": "O Instagram {'@'}{username} ainda não está conectado ao Chat2You. Conecte para ver e responder os comentários aqui.",
             "NOT_CONNECTED_BUTTON": "Conectar o Instagram",
+            "NOT_CONNECTED_ASK": "Quem cuida das caixas de entrada da conta pode conectar este Instagram.",
+            "NEEDS_LOGIN_ASK": "Peça a um administrador da conta para entrar de novo com o Instagram.",
+            "NOT_INBOX_MEMBER_TITLE": "Estes comentários ficam com quem atende o Instagram",
+            "NOT_INBOX_MEMBER": "Só quem atende a caixa do Instagram {'@'}{username} vê e responde estes comentários. Peça a quem cuida das caixas de entrada da conta para incluir você.",
             "NEEDS_LOGIN_AFTER": "Depois de entrar, você volta para este anúncio."
           },
           "FACEBOOK": {
@@ -3260,7 +3263,7 @@
             "NEEDS_LOGIN": "Falta a permissão dos comentários. Entre de novo com o Instagram.",
             "META_UNAVAILABLE": "O Instagram não respondeu. Tente de novo em um minuto.",
             "INVALID_TEXT": "Escreva a resposta antes de enviar.",
-            "NOT_INBOX_MEMBER": "Você não atende a caixa do Instagram, por isso não pode responder no privado.",
+            "NOT_INBOX_MEMBER": "Você não atende a caixa do Instagram deste anúncio, por isso não pode ver nem responder os comentários aqui.",
             "META_REFUSED": "O Instagram recusou esta ação. Recarregue os comentários e tente de novo.",
             "COMMENT_NOT_FOUND": "Este comentário não está mais no anúncio. Recarregue os comentários.",
             "PRIVATE_REPLY_TOP_ONLY": "A resposta no privado só vale para comentário, não para resposta.",

@@ -61,7 +61,7 @@ RSpec.describe Crm::MetaAds::InstagramComments do
                                 account: { username: 'lojaexemplo', name: channel.inbox.name })
       first, second = result[:comments]
       expect(first).to include(id: 'c1', text: 'Tem M?', hidden: false, can_reply: true, can_hide: true, can_delete: true,
-                               can_reply_private: true, private_reply_not_member: false, private_reply_expired: false,
+                               can_reply_private: true, private_reply_expired: false,
                                private_reply: nil)
       expect(first[:author]).to eq(name: nil, username: 'carla.dias', is_page: false)
       expect(first[:replies].first).to include(id: 'c1r', can_reply: false, can_hide: false, can_reply_private: false)
@@ -219,6 +219,16 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(service.payload(ad_id)).to be_nil
     end
 
+    # #2358: ler os comentários (inclusive os ocultos) pede ver a caixa do Instagram, como em Seus posts.
+    it 'quem não vê a caixa: not_inbox_member, só com o @ e sem chamar o Instagram' do
+      stub_ad
+      outsider = described_class.new(connection, inbox_access: ->(_inbox) { false }, can_manage: true)
+
+      expect(outsider.payload(ad_id)).to eq(status: 'not_inbox_member', account: { username: 'lojaexemplo', name: nil },
+                                            comments: [], total: 0, next_cursor: nil)
+      expect(instagram_call).not_to have_been_made
+    end
+
     it 'falha passageira do Instagram vira meta_unavailable' do
       stub_ad
       stub_comments(status: 500, body: { error: { code: 2 } })
@@ -278,6 +288,28 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(service.hide!(ad_id, 'c1', hidden: true)).to eq(id: 'c1', hidden: true)
       expect(service.hide!(ad_id, 'c1', hidden: false)).to eq(id: 'c1', hidden: false)
       expect(service.delete!(ad_id, 'c1')).to eq(id: 'c1')
+    end
+
+    # #2358: agir em comentário pede ver a caixa do Instagram, não só o privado.
+    it 'quem não vê a caixa: not_inbox_member em responder, ocultar, apagar e no privado, sem chamar o Instagram' do
+      outsider = described_class.new(connection, inbox_access: ->(_inbox) { false }, can_manage: true)
+      refused = ->(code) { raise_error(described_class::Error) { |e| expect(e.code).to eq(code) } }
+
+      expect { outsider.reply!(ad_id, 'c1', 'Temos sim', user: user) }.to refused.call('not_inbox_member')
+      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to refused.call('not_inbox_member')
+      expect { outsider.delete!(ad_id, 'c1') }.to refused.call('not_inbox_member')
+      expect { outsider.private_reply!(ad_id, 'c1', 'Oi', user: user) }.to refused.call('not_inbox_member')
+      expect(instagram_call).not_to have_been_made
+      expect(Crm::MetaAdsCommentAction.count).to eq(0)
+    end
+
+    it 'quem não vê a caixa, com a caixa pedindo login: needs_login, sem ler comentário nem chamar o Instagram' do
+      allow(Channel::Instagram).to receive(:find_by).and_return(channel)
+      allow(channel).to receive(:reauthorization_required?).and_return(true)
+      outsider = described_class.new(connection, inbox_access: ->(_inbox) { false }, can_manage: true)
+
+      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('needs_login') }
+      expect(instagram_call).not_to have_been_made
     end
 
     it 'texto vazio ou longo demais: invalid_text, sem chamar a Meta' do

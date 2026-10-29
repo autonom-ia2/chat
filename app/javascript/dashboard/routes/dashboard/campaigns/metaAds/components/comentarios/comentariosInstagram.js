@@ -65,6 +65,14 @@ export const entrar = async (status, adId) => {
   window.location.assign(data.url);
 };
 
+// Quem chega ao fim do caminho de `entrar` (#2358, a régua de MetaAdsOrganic.vue): conectar é criar a caixa
+// (inbox_manage); reautorizar pede integration_manage para gerar o link e inbox_manage na volta
+// (Instagram::Testers::OauthBinding). `tem(chave)` diz se a pessoa tem a permissão (usePermissionGranted).
+export const PERMISSOES_PARA_ENTRAR = ['inbox_manage', 'integration_manage'];
+export const podeEntrar = (status, tem) =>
+  tem('inbox_manage') &&
+  (status !== 'needs_login' || tem('integration_manage'));
+
 export default {
   listar,
   mais,
@@ -74,4 +82,6 @@ export default {
   privado,
   liberar,
   entrar,
+  podeEntrar,
+  PERMISSOES_PARA_ENTRAR,
 };
