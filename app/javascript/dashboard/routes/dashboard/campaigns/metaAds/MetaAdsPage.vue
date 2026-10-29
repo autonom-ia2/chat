@@ -116,6 +116,13 @@ const partnerName = computed(
   () => connection.value?.partner?.business_name || 'Hub2You'
 );
 // Compartilhar escolhido e conexão ainda não gravada: o passo 1 já conta como feito.
+// Conta gravada sem código do site e sem "Não tenho site": o passo da conta fica pendente, não feito (#2343).
+const accountPending = computed(
+  () =>
+    Boolean(connection.value?.ad_account) &&
+    !connection.value?.pixel &&
+    !connection.value?.no_site
+);
 const checklistCurrent = computed(() =>
   activeStep.value === 2 && !connection.value?.configured ? 2 : step.value
 );
@@ -478,6 +485,7 @@ onMounted(load);
             :current="checklistCurrent"
             :open="activeStep <= 4 ? activeStep : null"
             :sales-off="salesOff"
+            :account-pending="accountPending"
             @change="openStep = $event"
           />
         </aside>

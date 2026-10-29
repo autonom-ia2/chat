@@ -37,6 +37,22 @@ export const periodRange = (from, to, locale) => {
   }).formatRange(start, end);
 };
 
+// Código do site (Pixel) usado mais recentemente; undefined com a lista vazia.
+export const latestPixel = list =>
+  [...list].sort((a, b) =>
+    String(b.last_fired_time || '').localeCompare(
+      String(a.last_fired_time || '')
+    )
+  )[0];
+
+// Pixel gravado ao conectar (#2343): o mais recente entre os marcados no "Entrar com o Facebook" (granted). Sem essa
+// resposta da Meta, o mais recente da conta de anúncios, e fromLogin falso para a tela oferecer "Alterar".
+export const pickPixel = list => {
+  const granted = list.filter(pixel => pixel.granted);
+  const pool = granted.length ? granted : list;
+  return { pixel: latestPixel(pool) || null, fromLogin: granted.length > 0 };
+};
+
 // "há 2 horas", do próprio timestamp; null quando não há data válida.
 export const relativeTime = (value, locale) => {
   const date = new Date(value || '');

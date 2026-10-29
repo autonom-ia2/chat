@@ -10,8 +10,14 @@ import {
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
-import { amount, errorMessageKey } from '../metaAdsHelpers';
+import {
+  amount,
+  errorMessageKey,
+  pickPixel,
+  relativeTime,
+} from '../metaAdsHelpers';
 import { useMetaAdsFacebookLogin } from '../useMetaAdsFacebookLogin';
 import { SEM_LOGIN } from './anunciosSemLogin';
 import MetaTelaGuia from './MetaTelaGuia.vue';
@@ -22,6 +28,8 @@ import MetaTelaGuia from './MetaTelaGuia.vue';
 // Outros jeitos, para quem precisa: "Outra pessoa cuida dos meus anúncios" (mensagem pronta para mandar, com o
 // compartilhamento como parceiro) e o próprio compartilhamento passo a passo (copiar → abrir a Meta → marcar).
 // "Conferir" só lê (ad_accounts); quem grava a conta é "Conectar esta conta" (selection), com o toque da pessoa.
+// O código do site (Pixel) vai junto, sem perguntar (#2343): o marcado na janela do Facebook (o mais recente, se
+// marcou vários). Quando a Meta não diz qual foi marcado, vai o mais recente da conta e o "pronto" oferece "Alterar".
 // Ainda não chegou: a tela confere de novo sozinha algumas vezes antes de pedir o toque.
 // `resume` (connection_state do servidor): 'choosing' volta direto para a escolha da conta; 'broken' começa do
 // início com o aviso de que a conexão caiu.
@@ -39,6 +47,8 @@ const RECHECK_SECONDS = 20;
 const RECHECK_TIMES = 3;
 const FACEBOOK_STEPS = ['ENTER', 'CHOOSE', 'SEE'];
 const PARTNER_STEPS = ['copy', 'meta', 'mark'];
+// Opção "Não tenho site" no "Alterar" do código do site.
+const NO_SITE = 'none';
 
 const { t, locale } = useI18n();
 const {
@@ -60,6 +70,14 @@ const copied = ref(false);
 const rechecks = ref(0);
 const autoChecking = ref(false);
 const destinationFailed = ref(false);
+const pixels = ref([]);
+const pixel = ref(null);
+const pixelFromLogin = ref(false);
+const pixelFailed = ref(false);
+const pickingPixel = ref(false);
+const pixelChoice = ref('');
+const savingPixel = ref(false);
+const pixelError = ref(null);
 const root = ref(null);
 let recheckTimer = null;
 
@@ -98,6 +116,26 @@ const whatsappLink = computed(
   () => `https://wa.me/?text=${encodeURIComponent(message.value)}`
 );
 const fmt = (value, currency) => amount(value, currency, locale.value);
+const canChangePixel = computed(
+  () => !pixelFromLogin.value && pixels.value.length > 1
+);
+const pixelChoices = computed(() => [
+  ...pixels.value.map(row => {
+    const time = relativeTime(row.last_fired_time, locale.value);
+    return {
+      value: row.id,
+      label: row.name,
+      hint: time
+        ? t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_LAST', { time })
+        : t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_NEVER'),
+    };
+  }),
+  {
+    value: NO_SITE,
+    label: t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_NONE'),
+    hint: t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_NONE_HINT'),
+  },
+]);
 
 // A tela trocou inteira: o foco vai para o título dela, para o leitor de tela anunciar onde a pessoa está.
 watch(screen, async () => {
@@ -196,14 +234,36 @@ const openMeta = () => {
   go('mark');
 };
 
+// Sem a lista de Pixels a conexão vale do mesmo jeito: o "pronto" avisa onde escolher o código depois.
+const loadPixel = async account => {
+  pickingPixel.value = false;
+  try {
+    const { data } = await CrmMetaAdsConnectionAPI.pixels(
+      mode.value,
+      account.id
+    );
+    pixels.value = data.pixels || [];
+    ({ pixel: pixel.value, fromLogin: pixelFromLogin.value } = pickPixel(
+      pixels.value
+    ));
+    pixelFailed.value = false;
+  } catch {
+    pixels.value = [];
+    pixel.value = null;
+    pixelFromLogin.value = false;
+    pixelFailed.value = true;
+  }
+};
+
 const connectAccount = async account => {
   chosen.value = account;
   go('connecting');
+  await loadPixel(account);
   try {
     await CrmMetaAdsConnectionAPI.select({
       mode: mode.value,
       adAccountId: account.id,
-      pixelId: null,
+      pixelId: pixel.value?.id || null,
     });
   } catch (error) {
     errorCode.value = error?.response?.data?.error || 'generic';
@@ -223,6 +283,34 @@ const connectAccount = async account => {
     destinationFailed.value = true;
   }
   go('done');
+};
+
+const openPixelChoice = () => {
+  pixelChoice.value = pixel.value?.id || NO_SITE;
+  pixelError.value = null;
+  pickingPixel.value = true;
+};
+
+const changePixel = async () => {
+  const noSite = pixelChoice.value === NO_SITE;
+  savingPixel.value = true;
+  pixelError.value = null;
+  try {
+    await CrmMetaAdsConnectionAPI.select({
+      mode: mode.value,
+      adAccountId: chosen.value.id,
+      pixelId: noSite ? null : pixelChoice.value,
+      noSite,
+    });
+    pixel.value = noSite
+      ? null
+      : pixels.value.find(row => row.id === pixelChoice.value);
+    pickingPixel.value = false;
+  } catch (error) {
+    pixelError.value = error?.response?.data?.error || 'generic';
+  } finally {
+    savingPixel.value = false;
+  }
 };
 
 const startOver = () => {
@@ -783,6 +871,71 @@ onBeforeUnmount(stopRecheck);
       </h2>
       <p class="m-0 max-w-md text-base text-n-slate-11">
         {{ $t(`${C}.DONE.TEXT`, { name: chosen?.name }) }}
+      </p>
+      <div
+        v-if="pixels.length"
+        data-conectar-pixel
+        class="flex w-full max-w-md flex-col gap-2 rounded-xl bg-n-alpha-1 p-4 text-start"
+      >
+        <div
+          v-if="!pickingPixel"
+          class="flex flex-wrap items-center justify-between gap-2"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{
+              pixel
+                ? $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_SUMMARY', {
+                    pixel: pixel.name,
+                  })
+                : $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_SUMMARY_NONE')
+            }}
+          </span>
+          <button
+            v-if="canChangePixel"
+            type="button"
+            data-conectar-pixel-alterar
+            class="inline-flex min-h-11 items-center rounded-lg border-0 bg-transparent px-3 text-sm font-semibold text-n-blue-11 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+            @click="openPixelChoice"
+          >
+            {{ $t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_CHANGE') }}
+          </button>
+        </div>
+        <div v-else class="flex flex-wrap items-center gap-2">
+          <ChoiceSelect
+            v-model="pixelChoice"
+            data-conectar-pixel-escolha
+            :options="pixelChoices"
+            :disabled="savingPixel"
+            :aria-label="$t('CRM_KANBAN.META_ADS_HUB.ACCOUNT.PIXEL_TITLE')"
+            @change="changePixel"
+          />
+          <button
+            type="button"
+            data-conectar-pixel-cancelar
+            :disabled="savingPixel"
+            class="inline-flex min-h-11 items-center rounded-lg border-0 bg-transparent px-3 text-sm font-medium text-n-slate-11 hover:text-n-slate-12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+            @click="pickingPixel = false"
+          >
+            {{
+              $t('CRM_KANBAN.META_ADS_HUB.SEM_LOGIN.CONNECT.DONE.PIXEL_CANCEL')
+            }}
+          </button>
+        </div>
+        <p
+          v-if="pixelError"
+          data-conectar-pixel-erro
+          role="alert"
+          class="m-0 text-sm text-n-ruby-11"
+        >
+          {{ errorText(pixelError) }}
+        </p>
+      </div>
+      <p
+        v-if="pixelFailed"
+        data-conectar-pixel-falhou
+        class="m-0 max-w-md rounded-xl bg-n-amber-2 p-4 text-sm text-n-amber-12 ring-1 ring-inset ring-n-amber-6"
+      >
+        {{ $t(`${C}.DONE.PIXEL_FAILED`) }}
       </p>
       <p
         v-if="destinationFailed"

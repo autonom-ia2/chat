@@ -2534,6 +2534,8 @@
             "TITLE": "Pronto, está conectado!",
             "TEXT": "Estamos trazendo os gastos de {name}. Em alguns minutos eles aparecem no seu painel, ao lado das conversas e vendas.",
             "CTA": "Ver meu painel",
+            "PIXEL_CANCEL": "Cancelar",
+            "PIXEL_FAILED": "Não conseguimos ler o código do site (Pixel) agora. A conta já está conectada; escolha o código depois na aba Conexão.",
             "DESTINATION_FAILED": "Não conseguimos marcar o WhatsApp como destino dos anúncios. Abra a aba Conexão, em \"Destino do anúncio\", e escolha WhatsApp."
           },
           "GUIDE": {
@@ -2562,9 +2564,9 @@
             },
             "CTA": "Entrar com o Facebook",
             "RETRY": "Entrar de novo",
-            "WAITING": "A janela do Facebook está aberta. Deixe tudo marcado e toque em \"Continuar\" até o fim.",
-            "POPUP_TITLE": "A janela do Facebook não abriu",
-            "POPUP_TEXT": "O navegador pode ter bloqueado. Toque no ícone de janela bloqueada na barra de endereço, escolha \"Sempre permitir\" e entre de novo.",
+            "WAITING": "A janela do Facebook está aberta. Deixe tudo marcado e vá tocando em \"Avançar\", \"Confirmar\" e, no fim, \"Concluir\".",
+            "POPUP_TITLE": "A janela do Facebook fechou antes do fim",
+            "POPUP_TEXT": "Toque em \"Entrar de novo\" e vá até \"Concluir\". Se a janela nem chegou a abrir, o navegador bloqueou: toque no ícone de janela bloqueada na barra de endereço e escolha \"Sempre permitir\".",
             "REFUSED_TITLE": "O Facebook não liberou os seus anúncios",
             "BROKEN": "A conexão com a Meta caiu. Entre de novo para voltar a ver os gastos.",
             "SOMEONE": "Outra pessoa cuida dos meus anúncios",
@@ -2608,7 +2610,9 @@
         "NOW": "Agora",
         "CHANGE": "Alterar",
         "OFF": "Desligado",
-        "TURN_ON": "Ligar"
+        "TURN_ON": "Ligar",
+        "PICK": "Escolher",
+        "ACCOUNT_PENDING_HINT": "Falta o código do site (Pixel)"
       },
       "CONNECT": {
         "TITLE": "Como você quer conectar?",
@@ -2639,11 +2643,11 @@
           "HOW_1_TITLE": "Abre uma janela do Facebook",
           "HOW_1_TEXT": "Se pedir, entre com o seu e-mail e senha do Facebook.",
           "HOW_2_TITLE": "Deixe tudo marcado",
-          "HOW_2_TEXT": "O Facebook mostra suas contas e o que vamos usar. Não desmarque nada e toque em \"Continuar\" até o fim.",
+          "HOW_2_TEXT": "O Facebook mostra suas contas e o que vamos usar. Não desmarque nada e vá tocando em \"Avançar\", \"Confirmar\" e, no fim, \"Concluir\".",
           "HOW_3_TITLE": "Você volta para cá",
           "HOW_3_TEXT": "A janela fecha sozinha e a gente segue daqui.",
           "CTA": "Entrar com o Facebook",
-          "WAITING": "A janela do Facebook está aberta. Deixe tudo marcado e toque em \"Continuar\" até o fim.",
+          "WAITING": "A janela do Facebook está aberta. Deixe tudo marcado e vá tocando em \"Avançar\", \"Confirmar\" e, no fim, \"Concluir\".",
           "TRUST_PASSWORD": "Não vemos sua senha",
           "TRUST_ADS": "Nada muda nos seus anúncios sem você pedir",
           "TRUST_OFF": "Você pode desligar quando quiser",
@@ -2654,8 +2658,8 @@
           "TOKEN_TITLE": "Usar uma chave de acesso",
           "TOKEN_TEXT": "Para quem já tem uma chave gerada na Meta.",
           "TOKEN_CTA": "Colar a chave",
-          "POPUP_TITLE": "A janela do Facebook não abriu",
-          "POPUP_TEXT": "O navegador pode ter bloqueado. Libere e tente de novo:",
+          "POPUP_TITLE": "A janela do Facebook fechou antes do fim",
+          "POPUP_TEXT": "Entre de novo e vá até \"Concluir\". Se a janela nem chegou a abrir, o navegador bloqueou. Libere assim:",
           "POPUP_STEP_1": "Toque no ícone de janela bloqueada no fim da barra de endereço.",
           "POPUP_STEP_2": "Escolha \"Sempre permitir\" para este site.",
           "POPUP_STEP_3": "Toque em \"Entrar de novo\".",
@@ -3453,7 +3457,7 @@
           "LOGIN": {
             "TITLE": "Para criar anúncios por aqui, entre de novo com o Facebook.",
             "ACTION": "Entrar com o Facebook",
-            "POPUP": "A janela do Facebook fechou antes do fim. Tente de novo e toque em Continuar até o fim.",
+            "POPUP": "A janela do Facebook fechou antes do fim. Entre de novo e vá tocando em Avançar, Confirmar e, no fim, Concluir.",
             "ERROR": "Não deu para entrar com o Facebook agora. Tente de novo daqui a pouco.",
             "ACTION_CONNECTION": "Ir para a Conexão e entrar"
           },
