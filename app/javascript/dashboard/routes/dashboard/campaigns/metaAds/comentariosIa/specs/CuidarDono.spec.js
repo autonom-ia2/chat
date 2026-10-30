@@ -188,6 +188,29 @@ describe('CuidarDono (#2212)', () => {
     expect(recebe).not.toContain('@velha');
   });
 
+  it('cuidado novo (o servidor manda frases vazias): vem a frase padrão e dá para ligar', async () => {
+    const wrapper = montar({
+      data: painel({
+        message: 'Oi!',
+        para_quem: 'Quem pedir o link',
+        phrases: [],
+      }),
+    });
+    await proximo(wrapper).trigger('click');
+    await proximo(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-ia-dono-phrase]').text()).toBe(
+      'Te chamei no privado 😊'
+    );
+    expect(wrapper.find('[data-ia-dono-phrase-field]').exists()).toBe(false);
+    expect(wrapper.find('[data-ia-dono-start]').element.disabled).toBe(false);
+    await wrapper.find('[data-ia-dono-start]').trigger('click');
+    expect(wrapper.emitted('done')[0][0].phrase).toBe(
+      'Te chamei no privado 😊'
+    );
+  });
+
   it('ligar emite done com a mensagem, o para quem e a frase mudada', async () => {
     const preview = vi.fn().mockResolvedValue({
       recebe: { sample: true },

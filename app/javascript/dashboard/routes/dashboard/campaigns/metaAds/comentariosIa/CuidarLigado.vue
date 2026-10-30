@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { intlLocale } from '../metaAdsHelpers';
-import { porRede } from './redes';
+import { linhaDoResultado } from './redes';
 
 // Comentários que viram cliente (#2212): o post depois de ligado. O selo, o resultado (quem recebeu no privado e quem
 // respondeu), "Esperando você" com o que a IA deixou com você, "Chegaram antes de você ligar" com o "Ler e mandar", e
@@ -36,8 +36,9 @@ const format = value =>
 const handle = item =>
   item.network === 'facebook' ? item.author : `@${item.author}`;
 // "Esperando você" sempre; "Escondi" só quando escondi algum. As perguntas que chegaram antes de ligar ficam num grupo
-// próprio, com "Ler e mandar": quem disse "Agora não" depois de ligar ainda pode voltar atrás.
-const BEFORE_KINDS = ['waiting', 'older', 'skipped'];
+// próprio, com "Ler e mandar": quem disse "Agora não" depois de ligar ainda pode voltar atrás. O que a IA já leu depois
+// de ligar e não era o caso (`skipped`) fica em "Esperando você": não é antigo nem volta para a fila.
+const BEFORE_KINDS = ['waiting', 'older'];
 const toSee = computed(() => props.data.to_see || []);
 const hidden = computed(() =>
   (props.data.hidden || []).map(item => ({ ...item, kind: 'hidden' }))
@@ -60,20 +61,8 @@ const groups = computed(() => [
     ? [{ key: 'hidden', title: 'HIDDEN', items: hidden.value }]
     : []),
 ]);
-// "1 recebeu · 0 responderam": a forma de cada número escolhida aqui (1 = singular), sem depender da escolha de
-// plural do vue-i18n, que pegava o singular para o 0.
-const counts = computed(() => ({
-  sent: Number(props.data.results?.sent) || 0,
-  replied: Number(props.data.results?.replied) || 0,
-}));
-const results = computed(() => ({
-  sent: format(counts.value.sent),
-  replied: format(counts.value.replied),
-}));
-const one = (key, count) => (count === 1 ? `${key}_ONE` : key);
-const resultLine = computed(
-  () =>
-    `${t(one(porRede(`${KEY}.RESULT`, props.data.network), counts.value.sent), results.value)} · ${t(one(`${KEY}.REPLIED`, counts.value.replied), results.value)}`
+const resultLine = computed(() =>
+  linhaDoResultado(t, props.data.network, props.data.results, format)
 );
 const startedText = computed(() => {
   if (props.started === 'queued') return t(`${KEY}.STARTED_OLD_QUEUED`);
@@ -121,7 +110,7 @@ const startedText = computed(() => {
     <p v-if="!on" class="m-0 text-base font-medium leading-6 text-n-slate-12">
       {{ $t(`${KEY}.PAUSED_TEXT`) }}
     </p>
-    <div v-else-if="counts.sent" class="flex flex-col gap-1">
+    <div v-else-if="Number(data.results?.sent)" class="flex flex-col gap-1">
       <p
         data-ia-result
         class="m-0 text-2xl font-bold leading-tight tracking-tight text-n-slate-12 tabular-nums"

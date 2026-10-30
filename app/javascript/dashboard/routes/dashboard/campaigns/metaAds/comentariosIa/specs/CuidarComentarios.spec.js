@@ -173,6 +173,39 @@ describe('CuidarComentarios (#2212)', () => {
     expect(wrapper.emitted('back')).toHaveLength(1);
   });
 
+  it('o que a IA leu depois de ligar e não era o caso fica em "Esperando você", não nos antigos', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        para_quem: 'Quem pedir o link',
+        to_see: [
+          {
+            id: 'c-1',
+            network: 'instagram',
+            author: 'ana',
+            text: 'Link?',
+            kind: 'waiting',
+          },
+          {
+            id: 'c-4',
+            network: 'instagram',
+            author: 'cris',
+            text: 'Lindo!',
+            kind: 'skipped',
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-ia-to-see="waiting"]').text()).toContain(
+      'Lindo!'
+    );
+    expect(wrapper.find('[data-ia-to-see="before"]').text()).not.toContain(
+      'Lindo!'
+    );
+  });
+
   it('ligado: resultado, pausar e, no grupo dos antigos, ler e mandar', async () => {
     ComentariosIaAPI.getCuidado.mockResolvedValue({
       data: painel({

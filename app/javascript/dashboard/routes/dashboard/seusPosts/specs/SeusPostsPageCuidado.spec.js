@@ -177,6 +177,17 @@ describe('Seus posts: o cuidado da IA (#2212)', () => {
     expect(faixa.find('[data-ia-band-post="a"]').text()).toContain('Post a');
   });
 
+  it('na faixa, 1 é singular: "1 recebeu no privado · 1 respondeu"', async () => {
+    responder(instagram());
+    cuidados([{ ...item('a', 'on'), results: { sent: 1, replied: 1 } }]);
+    const wrapper = await montar();
+
+    await wrapper.find('[data-ia-band-toggle]').trigger('click');
+    expect(wrapper.find('[data-ia-band-post="a"]').text()).toContain(
+      '1 recebeu no privado · 1 respondeu'
+    );
+  });
+
   it('cuidado de um post fora do período: entra na faixa, sem foto', async () => {
     responder(instagram());
     cuidados([item('velho', 'on')]);

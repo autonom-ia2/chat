@@ -9,10 +9,7 @@
       "HIDE": "Fechar lista",
       "PAUSE_ALL": "Pausar todos",
       "RESUME_ALL": "Voltar a cuidar de todos",
-      "RESULT": "{sent} receberam no privado · {replied} responderam",
       "LIST_LABEL": "Posts que eu cuido",
-      "RESULT_FACEBOOK": "{sent} receberam no Messenger · {replied} responderam",
-      "RESULT_BOTH": "{sent} receberam mensagem · {replied} responderam",
       "ERROR": "Não consegui mudar agora. Tente de novo."
     },
     "SCREEN": {
@@ -130,6 +127,7 @@
         "YOU_ASKED": "Você pediu:",
         "PHRASE_EDIT": "Mudar a frase",
         "PHRASE_DONE": "Pronto",
+        "PHRASE_DEFAULT": "Te chamei no privado 😊",
         "GETS_BEFORE": "É o caso · chegou antes",
         "LOADING": "Estou lendo os comentários do post…",
         "PREVIEW_ERROR": "Não consegui ler os comentários do post agora. Este é um exemplo: você pode ligar assim mesmo."
@@ -151,7 +149,7 @@
       "OLD_NOTE": "O que já está aqui: pergunto depois de ligar. | Os {count} que já estão aqui: pergunto depois de ligar.",
       "OLD_DIALOG": {
         "TITLE": "Ler também o comentário que já está aqui? | Ler também os {count} comentários que já estão aqui?",
-        "TEXT": "Eu leio e mando a mensagem só se for o caso. | Eu leio as {count} e mando a mensagem só para quem for o caso.",
+        "TEXT": "Eu leio e mando a mensagem só se for o caso. | Eu leio os {count} e mando a mensagem só para quem for o caso.",
         "CONFIRM": "Ler e mandar",
         "BACK": "Agora não"
       }
