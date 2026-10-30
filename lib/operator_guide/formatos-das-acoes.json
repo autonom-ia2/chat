@@ -19795,7 +19795,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:63",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:74",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -19809,21 +19809,22 @@
         "tipo": "string",
         "tipo_pela_leitura": "uso"
       },
-      "para_quem": {},
+      "para_quem": {
+        "max_caracteres": 500,
+        "tipo": "string"
+      },
       "perfil": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#previa",
-    "motivos": [
-      "leitura crua sem tipo: para_quem"
-    ],
+    "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:56",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:63",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:57",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:64",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
@@ -27201,8 +27202,8 @@
     "controller": "api/v1/accounts/seus_posts_cuidado#mudar_todos",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:31",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:32",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:37",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:38",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
     ],
     "sem_corpo": false
@@ -27231,10 +27232,10 @@
       "leitura crua sem tipo: message, para_quem, phrases"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:49",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:56",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:51",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:50",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:58",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:57",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
