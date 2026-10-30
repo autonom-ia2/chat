@@ -14,7 +14,8 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   STATUSES = %w[on paused].freeze
   # assignment: você ou sua equipe, pela Atribuição; agent: o agente de IA da caixa.
   HANDOFFS = %w[assignment agent].freeze
-  # Texto de uma mensagem do Instagram (a mais curta das duas redes).
+  # Texto de uma mensagem do Instagram (a mais curta das duas redes), em bytes UTF-8, como a Meta conta: acento e emoji
+  # ocupam mais de um byte. A tela (CuidarDono) conta igual.
   MESSAGE_LIMIT = 1_000
   NOTE_LIMIT = 500
   PHRASES = (1..3)
@@ -32,10 +33,11 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   validates :network, inclusion: { in: NETWORKS }
   validates :status, inclusion: { in: STATUSES }
   validates :handoff, inclusion: { in: HANDOFFS }
-  validates :message, presence: true, length: { maximum: MESSAGE_LIMIT }
+  validates :message, presence: true
   validates :note, length: { maximum: NOTE_LIMIT }
   validates :para_quem, length: { maximum: NOTE_LIMIT }
   validates :price_reply, length: { maximum: PHRASE_LIMIT }
+  validate :message_no_limite
   validate :phrases_validas
   validate :botao_do_whatsapp
 
@@ -73,6 +75,10 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   end
 
   private
+
+  def message_no_limite
+    errors.add(:message, :too_long) if message.to_s.bytesize > MESSAGE_LIMIT
+  end
 
   def phrases_validas
     lista = Array(phrases)
