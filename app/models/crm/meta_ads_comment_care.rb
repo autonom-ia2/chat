@@ -15,7 +15,7 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   # assignment: você ou sua equipe, pela Atribuição; agent: o agente de IA da caixa.
   HANDOFFS = %w[assignment agent].freeze
   # Texto de uma mensagem do Instagram (a mais curta das duas redes), em bytes UTF-8, como a Meta conta: acento e emoji
-  # ocupam mais de um byte. A tela (CuidarDono) conta igual.
+  # ocupam mais de um byte. Conta com o aviso do fim (texto_do_privado), como a tela (CuidarDono).
   MESSAGE_LIMIT = 1_000
   NOTE_LIMIT = 500
   PHRASES = (1..3)
@@ -67,6 +67,13 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
     offer? || para_quem.present?
   end
 
+  # O que a pessoa recebe no privado: a mensagem do dono e, no fim, o aviso de que é automática (a tela mostra o mesmo
+  # texto, "No fim, eu ponho sozinho"), no idioma da conta.
+  def texto_do_privado
+    sufixo = I18n.t('conversations.activity.meta_ads_comment.private_reply_suffix', locale: account&.locale.presence || I18n.default_locale)
+    "#{message.to_s.strip} #{sufixo}"
+  end
+
   # A frase do comentário depois do privado. `vez` reveza as frases, para a IA não repetir a mesma em seguida.
   def resposta_publica(decisao, vez)
     return price_reply if decisao == 'price' && price_reply.present?
@@ -77,7 +84,7 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   private
 
   def message_no_limite
-    errors.add(:message, :too_long) if message.to_s.bytesize > MESSAGE_LIMIT
+    errors.add(:message, :too_long) if texto_do_privado.bytesize > MESSAGE_LIMIT
   end
 
   def phrases_validas
