@@ -23,6 +23,10 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
       instance_double(SeusPosts::PostsInstagram, perform: { status: 'ok', posts: [{ id: post_id, created_time: 1.day.ago.iso8601 }],
                                                             normal: {} })
     )
+    # Quem espera no post: a mesma contagem do cartão da lista (SeusPosts::Esperando).
+    allow(SeusPosts::Esperando).to receive(:new).and_return(
+      instance_double(SeusPosts::Esperando, perform: { status: 'ok', pendentes: { post_id => { ids: %w[18000000000000001], mais: true } } })
+    )
   end
 
   it 'sem a flag seus_posts_comentarios: 404, sem ler os posts' do
@@ -73,6 +77,14 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body.dig('post', 'id')).to eq(post_id)
     expect(response.parsed_body['comments']).to include('status' => 'meta_unavailable', 'total' => nil)
+  end
+
+  it 'o post traz quem espera pela mesma contagem do cartão da lista, com o "ou mais"' do
+    stub_request(:get, %r{#{ig}/#{post_id}/comments}).to_return(status: 503, headers: json, body: { error: { code: 2 } }.to_json)
+
+    get base, params: { perfil: perfil }, headers: headers, as: :json
+
+    expect(response.parsed_body['post']).to include('waiting' => 1, 'waiting_more' => true)
   end
 
   it 'Meta fora ao conferir o comentário: 422 meta_unavailable, não 404' do

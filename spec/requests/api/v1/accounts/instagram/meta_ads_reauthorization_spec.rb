@@ -53,6 +53,21 @@ RSpec.describe 'Instagram reauthorization from Meta ads (#2196)', type: :request
     expect(state).to include('inbox_id' => inbox.id, 'return_to' => 'meta_ads', 'purpose' => 'seus_posts')
   end
 
+  it 'Seus posts com comentários pede números e comentários juntos, só com a flag dela (#2305)' do
+    comentarios = { inbox_id: inbox.id, return_to: 'meta_ads', purpose: 'seus_posts_comentarios' }
+    account.enable_features!(:seus_posts)
+    authorize(comentarios)
+    expect(response).to have_http_status(:unprocessable_entity)
+
+    account.enable_features!(:seus_posts_comentarios)
+    authorize(comentarios)
+
+    scopes, state = url_parts
+    expect(scopes).to eq(Instagram::IntegrationHelper::REQUIRED_SCOPES +
+                         %w[instagram_business_manage_insights instagram_business_manage_comments])
+    expect(state).to include('purpose' => 'seus_posts_comentarios')
+  end
+
   it 'Seus posts não aceita anúncio de volta (#2304)' do
     account.enable_features!(:seus_posts)
     authorize(inbox_id: inbox.id, return_to: 'meta_ads', purpose: 'seus_posts', ad_id: '120254710382770416')

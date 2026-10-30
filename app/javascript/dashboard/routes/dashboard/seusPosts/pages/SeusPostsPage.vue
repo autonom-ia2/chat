@@ -3,17 +3,15 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { frontendURL } from 'dashboard/helper/URLHelper';
-import { useAlert } from 'dashboard/composables';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
-import { useFacebookPageConnect } from 'dashboard/composables/useFacebookPageConnect';
 import SeusPostsAPI from 'dashboard/api/seusPosts';
-import FBChannel from 'dashboard/api/channel/fbChannel';
-import instagramClient from 'dashboard/api/channel/instagramClient';
+import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import EstadoVazio from '../components/EstadoVazio.vue';
 import NumeroQuadro from '../components/NumeroQuadro.vue';
 import PostCard from '../components/PostCard.vue';
 import { perfilParaTela } from '../seusPostsDados';
+import { useLiberarAcesso } from '../useLiberarAcesso';
 import {
   ICONE_DA_REDE,
   PERIODOS,
@@ -27,7 +25,9 @@ import {
 
 // Seus posts (#2302, F1 #2304): página própria em Crescer. Usa as caixas do Instagram e da Página do Facebook, sem
 // conexão própria. De cima para baixo: perfil e período, a frase do período, os números e a grade dos posts do
-// período. Uma ação principal: abrir um post. Os comentários esperando e o cuidado chegam na F2 e na F3.
+// período. Uma ação principal: abrir um post. Com os comentários (F2, #2305, flag seus_posts_comentarios), cada
+// cartão diz quantos comentários esperam você e abre o post aqui dentro; uma faixa e um filtro levam aos posts com
+// gente esperando. O cuidado da IA chega na F3.
 //
 // Os dados vêm de GET seus_posts (SeusPosts::Leitura). Perfil e período ficam no endereço (?perfil=, ?dias=).
 const { t, locale } = useI18n();
@@ -228,6 +228,46 @@ const posts = computed(() =>
       new Date(b.publicadoEm) - new Date(a.publicadoEm)
   )
 );
+// "Esperando você" (F2): só quando o servidor sabe contar (waiting_status ok). Os posts do período com alguém
+// esperando, a soma deles para a faixa e o filtro da grade.
+const comComentarios = computed(() => perfil.value?.esperandoStatus !== null);
+const comEsperando = computed(() =>
+  perfil.value?.esperandoStatus === 'ok'
+    ? posts.value.filter(post => post.esperando)
+    : []
+);
+const esperandoNoTotal = computed(() =>
+  comEsperando.value.reduce((soma, post) => soma + post.esperando, 0)
+);
+// Algum post com mais de 50 comentários: a soma é "pelo menos" e a faixa diz "ou mais".
+const esperandoMais = computed(() =>
+  comEsperando.value.some(post => post.esperandoMais)
+);
+const filtro = ref('all');
+watch(perfilId, () => {
+  filtro.value = 'all';
+});
+// Respondeu tudo e ninguém espera mais: volta para Todos, em vez de uma grade vazia.
+watch(comEsperando, lista => {
+  if (!lista.length) filtro.value = 'all';
+});
+const postsVisiveis = computed(() =>
+  filtro.value === 'waiting' ? comEsperando.value : posts.value
+);
+const grade = ref(null);
+const verEsperando = () => {
+  filtro.value = 'waiting';
+  grade.value?.scrollIntoView({ behavior: 'smooth' });
+};
+const linkDoPost = post =>
+  comComentarios.value
+    ? {
+        name: 'seus_posts_post',
+        params: { accountId: route.params.accountId, postId: post.id },
+        query: { perfil: perfil.value.id, dias: route.query.dias },
+      }
+    : null;
+
 // O destaque diz "Mais apareceu sem anúncio": só entra post que se sabe sem anúncio (boosted false). No Instagram
 // (boosted nil, não se sabe) não há destaque.
 const melhorPost = computed(
@@ -260,61 +300,28 @@ const abrirConversas = () =>
   });
 const abrirNaRede = () => window.open(perfil.value.link, '_blank', 'noopener');
 
-// Sem caixa: a criação da caixa de sempre (inbox_manage). Caixa sem a permissão de números: reautoriza a mesma
-// caixa (integration_manage, a régua do servidor para trocar a credencial). Página → Entrar com Facebook com
-// read_insights, e a tela relê; Instagram → login do Instagram com instagram_business_manage_insights, que volta
-// para esta página (purpose seus_posts). A volta do login do Instagram também exige inbox_manage (OauthBinding).
+// Sem caixa: a criação da caixa de sempre (inbox_manage). Caixa sem a permissão: reautoriza a mesma caixa
+// (useLiberarAcesso).
 const podeCriarCaixa = usePermissionGranted('inbox_manage');
-const podeReautorizar = usePermissionGranted('integration_manage');
-// Sem a permissão dos números: o perfil todo, ou só a leitura dos posts (os números do perfil ficam).
+// Sem a permissão dos números: o perfil todo, ou só a leitura dos posts (os números do perfil ficam). Sem a dos
+// comentários (F2): os números ficam, e a faixa pede para liberar.
 const semPermissao = computed(
   () =>
     perfil.value?.status === 'needs_permission' ||
-    perfil.value?.postsStatus === 'needs_permission'
+    perfil.value?.postsStatus === 'needs_permission' ||
+    perfil.value?.esperandoStatus === 'needs_permission'
 );
-const podeLiberar = computed(() => {
-  if (!perfil.value?.inboxId || !podeReautorizar.value) return false;
-  return perfil.value.rede === 'facebook' || podeCriarCaixa.value;
-});
 const conectar = canal =>
   router.push(
     frontendURL(
       `accounts/${route.params.accountId}/settings/inboxes/new/${canal}`
     )
   );
-
-const { preloadSdk, login } = useFacebookPageConnect();
-watch(
-  () => semPermissao.value && perfil.value.rede === 'facebook',
-  precisa => {
-    if (precisa) preloadSdk().catch(() => {});
-  },
-  { immediate: true }
-);
-const ESCOPOS_DA_PAGINA = ['read_insights'];
-const liberar = async () => {
-  const { rede, inboxId } = perfil.value;
-  try {
-    if (rede === 'facebook') {
-      const token = await login(ESCOPOS_DA_PAGINA);
-      if (!token) return;
-      await FBChannel.reauthorizeFacebookPage({
-        omniauthToken: token,
-        inboxId,
-      });
-      await carregar();
-      return;
-    }
-    const { data } = await instagramClient.generateAuthorization({
-      inbox_id: inboxId,
-      return_to: 'meta_ads',
-      purpose: 'seus_posts',
-    });
-    window.location.href = data.url;
-  } catch {
-    useAlert(t('SEUS_POSTS.NO_PERMISSION.ERROR'));
-  }
-};
+const { podeLiberar, liberar } = useLiberarAcesso({
+  perfil,
+  precisa: semPermissao,
+  reler: carregar,
+});
 </script>
 
 <template>
@@ -613,7 +620,11 @@ const liberar = async () => {
                 </summary>
                 <dl class="m-0 grid gap-x-6 gap-y-1 pb-1 ps-5 lg:grid-cols-3">
                   <div v-for="quadro in ajudas" :key="quadro.nome">
-                    <dt class="inline font-semibold">{{ quadro.label }}:</dt>
+                    <dt class="inline font-semibold">
+                      {{
+                        $t('SEUS_POSTS.TILES.HELP_TERM', { name: quadro.label })
+                      }}
+                    </dt>
                     {{ ' ' }}
                     <dd class="m-0 inline">{{ quadro.ajuda }}</dd>
                   </div>
@@ -635,29 +646,142 @@ const liberar = async () => {
             </div>
           </section>
 
+          <!-- F2: o que pede gente agora, logo acima da grade. -->
+          <div
+            v-if="esperandoNoTotal"
+            data-seus-posts-atencao
+            class="flex flex-col gap-3 rounded-2xl bg-n-amber-2 px-5 py-4 ring-1 ring-inset ring-n-amber-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+          >
+            <p
+              class="m-0 flex items-center gap-3 text-base font-semibold text-n-slate-12"
+            >
+              <span
+                class="grid size-10 shrink-0 place-items-center rounded-xl bg-n-amber-4 text-n-amber-11"
+                aria-hidden="true"
+              >
+                <span class="i-lucide-message-circle-question size-5" />
+              </span>
+              {{
+                $t(
+                  esperandoMais
+                    ? 'SEUS_POSTS.ATTENTION.TEXT_OR_MORE'
+                    : 'SEUS_POSTS.ATTENTION.TEXT',
+                  {
+                    count: esperandoNoTotal,
+                    posts: $t(
+                      'SEUS_POSTS.ATTENTION.POSTS',
+                      { count: comEsperando.length },
+                      comEsperando.length
+                    ),
+                  },
+                  esperandoNoTotal
+                )
+              }}
+            </p>
+            <Button
+              v-if="filtro !== 'waiting'"
+              data-seus-posts-ver-esperando
+              :label="$t('SEUS_POSTS.ATTENTION.SEE')"
+              class="!min-h-11 shrink-0 !rounded-xl max-sm:w-full"
+              @click="verEsperando"
+            />
+          </div>
+          <!-- F2 sem a permissão de comentários: os números ficam; aqui, o que falta para ver quem espera. -->
+          <div
+            v-else-if="perfil.esperandoStatus === 'needs_permission'"
+            data-seus-posts-comentarios-sem-permissao
+            class="flex flex-col gap-3 rounded-2xl bg-n-solid-1 px-5 py-4 ring-1 ring-inset ring-n-weak sm:flex-row sm:items-center sm:justify-between sm:px-6"
+          >
+            <p class="m-0 flex items-center gap-3 text-sm text-n-slate-12">
+              <span
+                class="i-lucide-lock-keyhole size-5 shrink-0 text-n-slate-10"
+                aria-hidden="true"
+              />
+              {{
+                podeLiberar
+                  ? $t('SEUS_POSTS.COMMENTS_ACCESS.TEXT')
+                  : $t('SEUS_POSTS.COMMENTS_ACCESS.ASK_ADMIN')
+              }}
+            </p>
+            <Button
+              v-if="podeLiberar"
+              data-seus-posts-liberar-comentarios
+              variant="faded"
+              color="slate"
+              icon="i-lucide-key-round"
+              :label="$t('SEUS_POSTS.NO_PERMISSION.BUTTON')"
+              class="!min-h-11 shrink-0 !rounded-xl max-sm:w-full"
+              @click="liberar"
+            />
+          </div>
+
           <!-- A grade num painel, como a lista de anúncios do painel de Anúncios. -->
           <section
-            class="flex flex-col gap-5 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+            ref="grade"
+            class="flex scroll-mt-4 flex-col gap-5 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
             data-seus-posts-grade
           >
-            <div class="flex flex-col gap-1">
-              <h2 class="m-0 text-sm font-semibold text-n-slate-11">
-                {{ $t('SEUS_POSTS.POSTS.TITLE', { days: dias }) }}
-              </h2>
-              <p
-                v-if="perfil.postsCortados"
-                data-seus-posts-cortados
-                class="m-0 text-sm text-n-slate-11"
+            <div
+              class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div class="flex flex-col gap-1">
+                <h2 class="m-0 text-sm font-semibold text-n-slate-11">
+                  {{
+                    filtro === 'waiting'
+                      ? $t('SEUS_POSTS.POSTS.TITLE_WAITING', { days: dias })
+                      : $t('SEUS_POSTS.POSTS.TITLE', { days: dias })
+                  }}
+                </h2>
+                <p
+                  v-if="perfil.postsCortados"
+                  data-seus-posts-cortados
+                  class="m-0 text-sm text-n-slate-11"
+                >
+                  {{ $t('SEUS_POSTS.POSTS.TRUNCATED') }}
+                </p>
+                <p
+                  v-if="perfil.postsAntigos && !perfil.antigo"
+                  data-seus-posts-posts-antigos
+                  class="m-0 text-sm text-n-slate-11"
+                >
+                  {{ $t('SEUS_POSTS.POSTS.STALE') }}
+                </p>
+              </div>
+              <!-- Só com alguém esperando há o que escolher; sem isso, o grupo não aparece. -->
+              <div
+                v-if="comEsperando.length"
+                role="group"
+                :aria-label="$t('SEUS_POSTS.POSTS.FILTER_LABEL')"
+                class="sm:-my-2"
               >
-                {{ $t('SEUS_POSTS.POSTS.TRUNCATED') }}
-              </p>
-              <p
-                v-if="perfil.postsAntigos && !perfil.antigo"
-                data-seus-posts-posts-antigos
-                class="m-0 text-sm text-n-slate-11"
-              >
-                {{ $t('SEUS_POSTS.POSTS.STALE') }}
-              </p>
+                <div
+                  class="flex flex-wrap gap-1 rounded-2xl bg-n-alpha-1 p-1 sm:w-max sm:flex-nowrap"
+                >
+                  <button
+                    v-for="chave in ['all', 'waiting']"
+                    :key="chave"
+                    type="button"
+                    :aria-pressed="filtro === chave"
+                    :data-seus-posts-filtro="chave"
+                    class="min-h-11 shrink-0 whitespace-nowrap rounded-xl border-0 px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+                    :class="
+                      filtro === chave
+                        ? 'bg-n-solid-1 text-n-slate-12 shadow-sm'
+                        : 'bg-transparent text-n-slate-11 hover:text-n-slate-12'
+                    "
+                    @click="filtro = chave"
+                  >
+                    {{
+                      $t(`SEUS_POSTS.POSTS.FILTERS.${chave}`, { days: dias })
+                    }}
+                    <span class="ms-1.5 tabular-nums text-n-slate-11">
+                      {{
+                        chave === 'waiting' ? comEsperando.length : posts.length
+                      }}
+                    </span>
+                  </button>
+                </div>
+              </div>
             </div>
             <EstadoVazio
               v-if="perfil.postsStatus === 'needs_permission'"
@@ -688,9 +812,11 @@ const liberar = async () => {
               v-else
               class="m-0 grid list-none items-stretch gap-5 p-0 sm:grid-cols-2 xl:grid-cols-3"
             >
-              <li v-for="post in posts" :key="post.id" class="flex">
+              <li v-for="post in postsVisiveis" :key="post.id" class="flex">
                 <PostCard
                   :post="post"
+                  :to="linkDoPost(post)"
+                  :com-esperando="perfil.esperandoStatus === 'ok'"
                   :veredito="vereditoDe(post)"
                   :destaque="post.id === melhorPost?.id"
                   class="w-full"

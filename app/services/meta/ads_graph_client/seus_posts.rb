@@ -10,7 +10,7 @@
 #   de cada comentário vêm só na primeira página delas (25): resposta da conta depois disso não é vista, e o
 #   comentário conta como esperando.
 module Meta::AdsGraphClient::SeusPosts
-  SEUS_POSTS_PAGE_FIELDS = 'id,message,created_time,permalink_url,full_picture,status_type,' \
+  SEUS_POSTS_PAGE_FIELDS = 'id,message,created_time,permalink_url,full_picture,status_type,shares,' \
                            'reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0),' \
                            'insights.metric(post_total_media_view_unique,post_clicks)'.freeze
   SEUS_POSTS_PAGE_VIEWS_FIELDS = 'id,insights.metric(post_media_view).breakdown(is_from_ads).metric_type(total_value)'.freeze

@@ -5,10 +5,13 @@ import { dataCurta, formatar } from '../seusPostsHelpers';
 
 // Seus posts (#2302): um post na grade, no mesmo cartão dos anúncios do painel de Anúncios (o nome com um selo só ao
 // lado, os números em duas colunas, a foto na moldura 4:5 e um link que cobre o cartão inteiro). Post novo, ainda
-// sem número da Meta, não mostra números: só quando eles chegam. Até o detalhe do post (F2, #2305), o link abre o
-// post na rede.
+// sem número da Meta, não mostra números: só quando eles chegam. Sem `to` (F1), o link abre o post na rede; com ele
+// (F2, #2305), abre o post aqui dentro. Com `comEsperando`, o cartão diz quantos comentários esperam você e quantas
+// vezes o post foi compartilhado.
 const props = defineProps({
   post: { type: Object, required: true },
+  to: { type: Object, default: null },
+  comEsperando: { type: Boolean, default: false },
   // Como o post foi contra o normal dos posts do perfil: { nivel, texto } ou null (novo, sem números, impulsionado).
   veredito: { type: Object, default: null },
   // O post sem anúncio que mais apareceu no período.
@@ -74,6 +77,23 @@ const numeros = computed(() =>
     },
   ].filter(numero => !(props.post.novo && numero.vazio))
 );
+// F2: quem espera ao lado das vezes, e compartilhamentos junto de curtidas e comentários. Com mais de 50 comentários
+// no post, "50 ou mais".
+const esperando = computed(() => {
+  const valor = props.post.esperando;
+  if (valor === null) return '—';
+  const numero = formatar(valor, locale.value);
+  return props.post.esperandoMais
+    ? t('SEUS_POSTS.CARD.OR_MORE', { count: numero })
+    : numero;
+});
+const compartilharam = computed(() => ({
+  chave: 'shares',
+  label: t('SEUS_POSTS.POST.NUMBERS.SHARES'),
+  valor: formatar(props.post.compartilharam, locale.value),
+  // No Instagram, compartilhamentos podem incluir anúncio (a Meta não separa); na Página, só se teve anúncio.
+  anuncio: props.post.rede === 'instagram' || props.post.podeTerAnuncio,
+}));
 const nome = computed(
   () => props.post.legenda || t(`SEUS_POSTS.CARD.NO_TEXT.${props.post.rede}`)
 );
@@ -146,9 +166,28 @@ const nome = computed(
         <span class="i-lucide-clock size-4 shrink-0" aria-hidden="true" />
         {{ $t('SEUS_POSTS.CARD.NUMBERS_SOON') }}
       </p>
+      <p
+        v-if="comEsperando && post.esperando"
+        data-seus-posts-esperando
+        class="m-0 flex items-center gap-2 text-sm font-semibold text-n-amber-11"
+      >
+        <span
+          class="i-lucide-message-circle-question size-4 shrink-0"
+          aria-hidden="true"
+        />
+        {{
+          $t(
+            'SEUS_POSTS.CARD.WAITING',
+            { count: esperando },
+            post.esperandoMais ? 2 : post.esperando
+          )
+        }}
+      </p>
       <dl v-if="numeros.length" class="m-0 grid grid-cols-2 gap-x-3 gap-y-3">
         <div
-          v-for="numero in numeros"
+          v-for="numero in comEsperando && !post.novo
+            ? [...numeros, compartilharam]
+            : numeros"
           :key="numero.chave"
           class="flex min-w-0 flex-col gap-1"
         >
@@ -194,8 +233,18 @@ const nome = computed(
       </p>
       <!-- O link cobre o cartão inteiro (after:inset-0): tocar em qualquer parte abre o post, e o leitor de tela
            ouve um só link com o nome dele. -->
+      <router-link
+        v-if="to"
+        :to="to"
+        :data-seus-posts-abrir="post.id"
+        :aria-label="$t('SEUS_POSTS.CARD.SEE_POST_LABEL', { name: nome })"
+        class="mt-auto inline-flex min-h-11 items-center gap-1 self-start rounded-xl text-sm font-medium text-n-blue-11 no-underline focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
+      >
+        {{ $t('SEUS_POSTS.CARD.SEE_POST') }}
+        <span class="i-lucide-arrow-right size-3.5" aria-hidden="true" />
+      </router-link>
       <a
-        v-if="post.link"
+        v-else-if="post.link"
         :href="post.link"
         target="_blank"
         rel="noopener noreferrer"

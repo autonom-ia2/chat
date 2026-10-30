@@ -202,14 +202,11 @@ export const MODULE_GROUPS = [
         },
       },
       {
-        // Seus posts (#2302): ver os posts e os números do Instagram e da Página das caixas; editar responde, esconde
-        // e manda no privado. Os comentários só aparecem para quem vê a caixa.
+        // Seus posts (#2302): ver os posts e os números do Instagram e da Página das caixas; editar (F2 #2305)
+        // responde, esconde, apaga e manda no privado. Os comentários só aparecem para quem vê a caixa.
         key: 'POSTS',
         icon: 'i-lucide-layout-grid',
         levels: { view: 'posts_view', manage: 'posts_manage' },
-        // Responder, esconder e o privado chegam na F2 (#2305); até lá nenhum endpoint confere posts_manage, e as telas
-        // não oferecem "Pode mexer" (#2360). Função que já tem a chave continua vendo o nível, para poder baixar.
-        laterLevels: [LEVELS.MANAGE],
       },
     ],
   },

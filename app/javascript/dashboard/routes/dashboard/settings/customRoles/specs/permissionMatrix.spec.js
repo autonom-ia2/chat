@@ -563,24 +563,31 @@ describe('permissionMatrix', () => {
 
   // #2360: "Pode mexer" de Seus posts só chega com a F2 (#2305).
   describe('levels offered later', () => {
-    const posts = moduleByKey('POSTS');
+    // Nenhuma área adia um nível hoje (Seus posts liberou editar na F2 #2305); a regra continua valendo.
+    const later = { ...moduleByKey('CAMPAIGNS'), laterLevels: [LEVELS.MANAGE] };
 
-    it('does not offer posts edit to a new role', () => {
-      expect(levelOptions(posts)).toEqual([LEVELS.NONE, LEVELS.VIEW]);
-      expect(levelSlots(posts)).toEqual([LEVELS.NONE, LEVELS.VIEW, null]);
+    it('does not offer a later level to a new role', () => {
+      expect(levelOptions(later)).toEqual([LEVELS.NONE, LEVELS.VIEW]);
+      expect(levelSlots(later)).toEqual([LEVELS.NONE, LEVELS.VIEW, null]);
     });
 
-    it('still shows posts edit to a role that already has it, so it can be lowered', () => {
-      expect(levelOptions(posts, LEVELS.MANAGE)).toEqual([
+    it('still shows a later level to a role that already has it, so it can be lowered', () => {
+      expect(levelOptions(later, LEVELS.MANAGE)).toEqual([
+        LEVELS.NONE,
+        LEVELS.VIEW,
+        LEVELS.MANAGE,
+      ]);
+    });
+
+    it('offers posts edit to every role since F2 (#2305)', () => {
+      const posts = moduleByKey('POSTS');
+
+      expect(levelOptions(posts)).toEqual([
         LEVELS.NONE,
         LEVELS.VIEW,
         LEVELS.MANAGE,
       ]);
       expect(getLevel(posts, ['posts_manage'])).toBe(LEVELS.MANAGE);
-    });
-
-    it('keeps offering edit on the other modules', () => {
-      expect(levelOptions(moduleByKey('CAMPAIGNS'))).toContain(LEVELS.MANAGE);
     });
   });
 
