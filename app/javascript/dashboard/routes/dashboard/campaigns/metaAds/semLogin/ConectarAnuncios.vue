@@ -16,10 +16,13 @@ import { amount, errorMessageKey, relativeTime } from '../metaAdsHelpers';
 import { useMetaAdsFacebookLogin } from '../useMetaAdsFacebookLogin';
 import { SEM_LOGIN } from './anunciosSemLogin';
 import MetaTelaGuia from './MetaTelaGuia.vue';
+import MetaAdsDestinationsStep from '../components/MetaAdsDestinationsStep.vue';
 
 // Conectar a conta de anúncios a partir do painel sem login (#2054), sem ninguém da plataforma no portfólio do
 // cliente. Uma ação por tela:
-//   começo → Entrar com o Facebook → (a conta aparece sozinha) Conectar → pronto
+//   começo → Entrar com o Facebook → (a conta aparece sozinha) Conectar → para onde o anúncio leva → pronto
+// O destino (#2338) é o mesmo passo da aba Conexão (MetaAdsDestinationsStep): WhatsApp, site ou os dois, e a página
+// do site ligada ali mesmo.
 // Outros jeitos, para quem precisa: "Outra pessoa cuida dos meus anúncios" (mensagem pronta para mandar, com o
 // compartilhamento como parceiro) e o próprio compartilhamento passo a passo (copiar → abrir a Meta → marcar).
 // "Conferir" só lê (ad_accounts); quem grava a conta é "Conectar esta conta" (selection), com o toque da pessoa.
@@ -40,7 +43,7 @@ const META_PARTNERS_URL =
   'https://business.facebook.com/latest/settings/partners';
 const RECHECK_SECONDS = 20;
 const RECHECK_TIMES = 3;
-const FACEBOOK_STEPS = ['ENTER', 'CHOOSE', 'SEE'];
+const FACEBOOK_STEPS = ['ENTER', 'CHOOSE', 'WHERE', 'SEE'];
 const PARTNER_STEPS = ['copy', 'meta', 'mark'];
 // Opção "Não tenho site" no "Alterar" do código do site.
 const NO_SITE = 'none';
@@ -64,7 +67,6 @@ const chosen = ref(null);
 const copied = ref(false);
 const rechecks = ref(0);
 const autoChecking = ref(false);
-const destinationFailed = ref(false);
 const pixels = ref([]);
 const pixel = ref(null);
 const pixelFailed = ref(false);
@@ -86,7 +88,7 @@ const partnersUrl = computed(() => {
     : META_PARTNERS_URL;
 });
 const partnerStep = computed(() => PARTNER_STEPS.indexOf(screen.value) + 1);
-// Depois de entrar com o Facebook, a faixa "Entrar → Confirmar → Ver" mostra onde a pessoa está.
+// Depois de entrar com o Facebook, a faixa "Entrar → Confirmar → Destino → Ver" mostra onde a pessoa está.
 const FACEBOOK_SCREENS = {
   checking: 2,
   found: 2,
@@ -94,12 +96,31 @@ const FACEBOOK_SCREENS = {
   pixel: 2,
   connecting: 2,
   notyet: 2,
-  done: 3,
+  destino: 3,
+  done: 4,
 };
 const facebookStep = computed(() =>
   mode.value === 'facebook_login' ? FACEBOOK_SCREENS[screen.value] || 0 : 0
 );
 const broken = computed(() => props.resume?.state === 'broken');
+// Quem conecta a partir do WhatsApp mede o WhatsApp: conta sem destino nenhum (o servidor manda os dois falsos)
+// ganha o WhatsApp marcado; conta que já escolheu segue com a escolha.
+const WHATSAPP_ONLY = { whatsapp: true, site: false };
+const NONE = { whatsapp: false, site: false };
+// Gravar o WhatsApp antes falhou: o passo 3 mostra a conta como ela está (nada marcado) e pede a escolha.
+const preWriteFailed = ref(false);
+const chosenDestinations = computed(() => {
+  const current = props.connection.destinations;
+  return current?.whatsapp || current?.site ? current : null;
+});
+const destinations = computed(() => {
+  if (chosenDestinations.value) return chosenDestinations.value;
+  return preWriteFailed.value ? NONE : WHATSAPP_ONLY;
+});
+// Depois de conectar, voltar sairia do passo a passo com a conta já ligada: o "Voltar" some.
+const canGoBack = computed(
+  () => screen.value !== 'destino' && screen.value !== 'done'
+);
 const message = computed(() =>
   t(`${C}.SEND.MESSAGE`, {
     partner: partnerName.value,
@@ -133,7 +154,13 @@ const pixelChoices = computed(() => [
 // A tela trocou inteira: o foco vai para o título dela, para o leitor de tela anunciar onde a pessoa está.
 watch(screen, async () => {
   await nextTick();
-  root.value?.querySelector('[data-conectar-titulo]')?.focus();
+  // O passo de destinos é da aba Conexão e não tem o marcador: o foco vai para a pergunta dele.
+  const title =
+    root.value?.querySelector('[data-conectar-titulo]') ||
+    root.value?.querySelector('[data-meta-ads-destinations] h3');
+  if (!title) return;
+  title.setAttribute('tabindex', '-1');
+  title.focus();
 });
 
 const go = value => {
@@ -257,19 +284,17 @@ const save = async ({ noSite = false } = {}) => {
     go('notyet');
     return;
   }
-  // Quem conecta a partir do WhatsApp mede o WhatsApp: o destino já vem marcado. A conta já está conectada; se
-  // marcar o destino falhar, a pessoa ajusta depois na aba Conexão (passo "Destino do anúncio").
-  try {
-    await CrmMetaAdsConnectionAPI.updateDestinations({
-      whatsapp: true,
-      site: false,
-    });
-    destinationFailed.value = false;
-  } catch {
-    // A conexão vale sem o destino marcado: "pronto" diz onde marcar.
-    destinationFailed.value = true;
+  // Conta sem destino nenhum ganha o WhatsApp já aqui: quem sair no passo 3 fica como antes (#2054). Se falhar,
+  // o passo 3 abre sem nada marcado e só segue com uma escolha gravada.
+  if (!chosenDestinations.value) {
+    try {
+      await CrmMetaAdsConnectionAPI.updateDestinations(WHATSAPP_ONLY);
+      preWriteFailed.value = false;
+    } catch {
+      preWriteFailed.value = true;
+    }
   }
-  go('done');
+  go('destino');
 };
 
 const connectAccount = async account => {
@@ -349,11 +374,11 @@ onBeforeUnmount(stopRecheck);
     class="mx-auto flex w-full max-w-2xl flex-col gap-6 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-8"
   >
     <div
-      v-if="screen !== 'done' || partnerStep"
+      v-if="canGoBack || partnerStep"
       class="flex flex-wrap items-center justify-between gap-3"
     >
       <button
-        v-if="screen !== 'done'"
+        v-if="canGoBack"
         type="button"
         data-conectar-voltar
         class="inline-flex min-h-11 items-center gap-1 rounded-xl border-0 bg-transparent px-0 text-sm font-medium text-n-slate-11 hover:text-n-slate-12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
@@ -402,10 +427,8 @@ onBeforeUnmount(stopRecheck);
           <template v-else>{{ index + 1 }}</template>
         </span>
         <span
-          class="truncate"
-          :class="
-            index + 1 === facebookStep ? 'text-n-slate-12' : 'text-n-slate-11'
-          "
+          class="min-w-0 leading-tight"
+          :class="index + 1 === facebookStep ? 'text-n-slate-12' : 'sr-only'"
         >
           {{ $t(`${C}.START.STEPS.${item}`) }}
         </span>
@@ -439,7 +462,8 @@ onBeforeUnmount(stopRecheck);
         {{ $t(`${C}.START.BROKEN`) }}
       </p>
       <ol
-        class="m-0 grid list-none grid-cols-3 gap-2 p-0"
+        data-conectar-como
+        class="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-4"
         :aria-label="$t(`${C}.START.HOW`)"
       >
         <li
@@ -893,6 +917,13 @@ onBeforeUnmount(stopRecheck);
       </button>
     </template>
 
+    <!-- Para onde o anúncio leva (#2338): o passo de destinos da aba Conexão -->
+    <MetaAdsDestinationsStep
+      v-else-if="screen === 'destino'"
+      :destinations="destinations"
+      @saved="go('done')"
+    />
+
     <!-- Pronto -->
     <div
       v-else-if="screen === 'done'"
@@ -977,13 +1008,6 @@ onBeforeUnmount(stopRecheck);
         class="m-0 max-w-md rounded-xl bg-n-amber-2 p-4 text-sm text-n-amber-12 ring-1 ring-inset ring-n-amber-6"
       >
         {{ $t(`${C}.DONE.PIXEL_FAILED`) }}
-      </p>
-      <p
-        v-if="destinationFailed"
-        data-conectar-destino-falhou
-        class="m-0 max-w-md rounded-xl bg-n-amber-2 p-4 text-sm text-n-amber-12 ring-1 ring-inset ring-n-amber-6"
-      >
-        {{ $t(`${C}.DONE.DESTINATION_FAILED`) }}
       </p>
       <Button
         data-conectar-ver-painel

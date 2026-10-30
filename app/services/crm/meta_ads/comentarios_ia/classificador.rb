@@ -28,17 +28,8 @@ class Crm::MetaAds::ComentariosIa::Classificador
     @jev = jev
   end
 
-  # A chave da decisão ('private', 'price', 'to_you', 'hide', 'no_reply') ou nil. O motor (Cuidar) usa este: com o Jev
-  # fora do ar, o comentário fica para a pessoa, como no "sem certeza".
-  def decidir(texto)
-    decidir!(texto)
-  rescue TypesafeAi::Decisor::Error => e
-    Rails.logger.warn("[comentarios_ia] care=#{@care.id} jev=#{e.code}")
-    nil
-  end
-
-  # O mesmo, mas o Jev fora do ar levanta TypesafeAi::Decisor::Error: o Resumo e a Previa precisam separar "sem
-  # certeza" (nil) de "não deu para perguntar".
+  # A chave da decisão ('private', 'price', 'to_you', 'hide', 'no_reply') ou nil (sem certeza). O Jev fora do ar
+  # levanta TypesafeAi::Decisor::Error: "sem certeza" não é "não deu para perguntar". O motor tenta de novo (CuidarJob).
   def decidir!(texto)
     return if texto.to_s.strip.empty?
 
