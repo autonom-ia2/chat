@@ -15837,8 +15837,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:64",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:96"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:98"
     ],
     "sem_corpo": true
   },
@@ -15852,9 +15852,9 @@
       "leitura crua sem tipo: para_quem"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:57",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:58",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:96"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:98"
     ],
     "sem_corpo": false
   },
@@ -24720,10 +24720,10 @@
       "leitura crua sem tipo: message, para_quem, phrases"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:50",
       "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:52",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:51",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:96"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:54",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:53",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:98"
     ],
     "sem_corpo": false
   },

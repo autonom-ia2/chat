@@ -15,8 +15,10 @@
 # uma rede e `meta_ads_comentarios_ia` (404 sem elas: nada aqui chama a Meta); conexão ativa com conta de anúncios;
 # anúncio dessa conta (senão 404). As redes do cuidado vêm do criativo (Anuncio): só as com post, flag e caixa na
 # conta. Sem nenhuma, 422 `no_post` (o anúncio não aparece numa rede ligada) ou `no_inbox` (falta a caixa). Ler os
-# comentários pede ver a caixa de cada rede do anúncio (InboxPolicy#show?): sem ver, 403 `not_inbox_member`, antes de
-# ler na Meta.
+# comentários pede ver a caixa de TODAS as redes do anúncio (InboxPolicy#show?), não só de uma: o Painel junta as
+# redes e o "Ler e mandar" age nas duas (decisão de 30/10: mais seguro). Sem ver, 403 `not_inbox_member`, antes de ler
+# os comentários na Meta; o criativo já foi lido (uma vez só por chamada: é ele que diz as caixas, e a Fonte reusa a
+# leitura).
 #
 # O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,
 # mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
