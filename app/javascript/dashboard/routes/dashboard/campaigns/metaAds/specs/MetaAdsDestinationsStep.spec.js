@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import MetaAdsDestinationsStep from '../components/MetaAdsDestinationsStep.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
+import { useAlert } from 'dashboard/composables';
 
 // Destino (#2338): a página do site é ligada ali mesmo, sem ir a Links e QR codes. As páginas vêm de Anúncios
 // (meta_ads_view); o resultado por campanha só vem para quem tem campaign_view.
@@ -68,9 +69,71 @@ describe('MetaAdsDestinationsStep · página do site', () => {
     expect(
       wrapper.findComponent('[data-site-link-open]').props('variant')
     ).toBe('outline');
+    // Sem variante, o Button é o azul cheio: o principal.
     expect(
       wrapper.findComponent('[data-save-destinations]').props('variant')
-    ).not.toBe('outline');
+    ).toBeNull();
+  });
+
+  it('saving tells the page what the server saved', async () => {
+    CrmMetaAdsConnectionAPI.sitePages.mockResolvedValue({
+      data: { payload: [] },
+    });
+    const saved = { destinations: { whatsapp: true, site: false } };
+    CrmMetaAdsConnectionAPI.updateDestinations.mockResolvedValue({
+      data: saved,
+    });
+    const wrapper = await mountStep({ whatsapp: true, site: false });
+
+    await wrapper.find('[data-save-destinations]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.updateDestinations).toHaveBeenCalledWith({
+      whatsapp: true,
+      site: false,
+    });
+    expect(wrapper.emitted('saved')).toEqual([[saved]]);
+    expect(wrapper.emitted('failed')).toBeUndefined();
+  });
+
+  it('a failed save says so and does not move on', async () => {
+    CrmMetaAdsConnectionAPI.sitePages.mockResolvedValue({
+      data: { payload: [] },
+    });
+    CrmMetaAdsConnectionAPI.updateDestinations.mockRejectedValue(new Error());
+    const wrapper = await mountStep({ whatsapp: true, site: false });
+
+    await wrapper.find('[data-save-destinations]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('saved')).toBeUndefined();
+    expect(wrapper.emitted('failed')).toHaveLength(1);
+    expect(useAlert).toHaveBeenCalled();
+  });
+
+  it('the question is a level-3 title in the Connection tab and level 2 when the page asks', async () => {
+    CrmMetaAdsConnectionAPI.sitePages.mockResolvedValue({
+      data: { payload: [] },
+    });
+    expect(
+      (await mountStep()).find('[data-destinations-title]').element.tagName
+    ).toBe('H3');
+
+    const embedded = mount(MetaAdsDestinationsStep, {
+      props: { destinations: {}, headingLevel: 2 },
+      global: {
+        mocks: { $t: key => key },
+        stubs: {
+          MetaAdsSiteLinkDialog: true,
+          MetaAdsSitePage: true,
+          MetaAdsDestinationArt: true,
+        },
+      },
+    });
+    await flushPromises();
+    expect(embedded.find('[data-destinations-title]').element.tagName).toBe(
+      'H2'
+    );
   });
 
   it('shows the new page in the list and tells the page it was linked', async () => {

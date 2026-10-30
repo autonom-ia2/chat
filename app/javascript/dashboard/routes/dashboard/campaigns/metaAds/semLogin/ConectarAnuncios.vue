@@ -17,6 +17,7 @@ import { useMetaAdsFacebookLogin } from '../useMetaAdsFacebookLogin';
 import { SEM_LOGIN } from './anunciosSemLogin';
 import MetaTelaGuia from './MetaTelaGuia.vue';
 import MetaAdsDestinationsStep from '../components/MetaAdsDestinationsStep.vue';
+import MetaAdsSiteLinkDialog from '../components/MetaAdsSiteLinkDialog.vue';
 
 // Conectar a conta de anúncios a partir do painel sem login (#2054), sem ninguém da plataforma no portfólio do
 // cliente. Uma ação por tela:
@@ -117,6 +118,17 @@ const destinations = computed(() => {
   if (chosenDestinations.value) return chosenDestinations.value;
   return preWriteFailed.value ? NONE : WHATSAPP_ONLY;
 });
+// Gravar o destino falhou no passo 3: "Escolher depois" deixa seguir, e o pronto diz onde escolher.
+const destinationFailed = ref(false);
+const destinationLater = ref(false);
+// O que o passo 3 gravou: com o site marcado e nenhuma página ligada, o pronto pede para ligar a página.
+const savedDestination = ref(null);
+const pageMissing = computed(
+  () =>
+    Boolean(savedDestination.value?.destinations?.site) &&
+    savedDestination.value.site_pages_count === 0
+);
+const linkDialog = ref(null);
 // Depois de conectar, voltar sairia do passo a passo com a conta já ligada: o "Voltar" some.
 const canGoBack = computed(
   () => screen.value !== 'destino' && screen.value !== 'done'
@@ -157,7 +169,7 @@ watch(screen, async () => {
   // O passo de destinos é da aba Conexão e não tem o marcador: o foco vai para a pergunta dele.
   const title =
     root.value?.querySelector('[data-conectar-titulo]') ||
-    root.value?.querySelector('[data-meta-ads-destinations] h3');
+    root.value?.querySelector('[data-destinations-title]');
   if (!title) return;
   title.setAttribute('tabindex', '-1');
   title.focus();
@@ -165,6 +177,26 @@ watch(screen, async () => {
 
 const go = value => {
   screen.value = value;
+};
+
+const destinationSaved = data => {
+  savedDestination.value = data;
+  go('done');
+};
+// No celular o aviso nasce abaixo do botão, fora da tela: rola até ele.
+const destinationNotSaved = async () => {
+  destinationFailed.value = true;
+  await nextTick();
+  root.value
+    ?.querySelector('[data-conectar-escolher-depois]')
+    ?.scrollIntoView?.({ block: 'nearest' });
+};
+const chooseLater = () => {
+  destinationLater.value = true;
+  go('done');
+};
+const pageLinked = () => {
+  savedDestination.value = { ...savedDestination.value, site_pages_count: 1 };
 };
 
 const copy = async text => {
@@ -918,11 +950,31 @@ onBeforeUnmount(stopRecheck);
     </template>
 
     <!-- Para onde o anúncio leva (#2338): o passo de destinos da aba Conexão -->
-    <MetaAdsDestinationsStep
-      v-else-if="screen === 'destino'"
-      :destinations="destinations"
-      @saved="go('done')"
-    />
+    <div v-else-if="screen === 'destino'" class="flex flex-col gap-4">
+      <MetaAdsDestinationsStep
+        :destinations="destinations"
+        :heading-level="2"
+        @saved="destinationSaved"
+        @failed="destinationNotSaved"
+      />
+      <p
+        v-if="destinationFailed"
+        data-conectar-destino-falhou
+        role="alert"
+        class="m-0 rounded-xl bg-n-ruby-2 p-4 text-sm text-n-ruby-12 ring-1 ring-inset ring-n-ruby-6"
+      >
+        {{ $t(`${C}.DONE.DESTINATION_NOT_SAVED`) }}
+      </p>
+      <button
+        v-if="destinationFailed"
+        type="button"
+        data-conectar-escolher-depois
+        class="inline-flex min-h-11 items-center self-center rounded-lg border-0 bg-transparent px-3 text-sm font-semibold text-n-blue-11 underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="chooseLater"
+      >
+        {{ $t(`${C}.DONE.DESTINATION_LATER`) }}
+      </button>
+    </div>
 
     <!-- Pronto -->
     <div
@@ -1009,6 +1061,31 @@ onBeforeUnmount(stopRecheck);
       >
         {{ $t(`${C}.DONE.PIXEL_FAILED`) }}
       </p>
+      <p
+        v-if="destinationLater"
+        data-conectar-destino-depois
+        class="m-0 max-w-md rounded-xl bg-n-amber-2 p-4 text-sm text-n-amber-12 ring-1 ring-inset ring-n-amber-6"
+      >
+        {{ $t(`${C}.DONE.DESTINATION_LATER_HINT`) }}
+      </p>
+      <div
+        v-if="pageMissing"
+        data-conectar-falta-pagina
+        class="flex w-full max-w-md flex-wrap items-center justify-between gap-2 rounded-xl bg-n-amber-2 p-4 text-start ring-1 ring-inset ring-n-amber-6"
+      >
+        <p class="m-0 min-w-0 flex-1 text-sm text-n-amber-12">
+          {{ $t(`${C}.DONE.PAGE_MISSING`) }}
+        </p>
+        <Button
+          data-conectar-ligar-pagina
+          variant="outline"
+          size="sm"
+          class="!min-h-11"
+          :label="$t(`${C}.DONE.PAGE_LINK`)"
+          @click="linkDialog?.open()"
+        />
+      </div>
+      <MetaAdsSiteLinkDialog ref="linkDialog" @created="pageLinked" />
       <Button
         data-conectar-ver-painel
         class="!min-h-12 !rounded-xl"

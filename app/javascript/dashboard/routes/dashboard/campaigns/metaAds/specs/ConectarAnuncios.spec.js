@@ -18,8 +18,14 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
     pixels: vi.fn(),
     select: vi.fn(),
     updateDestinations: vi.fn(),
+    sitePages: vi.fn(),
   },
 }));
+vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return { usePermissionGranted: () => computed(() => false) };
+});
 vi.mock('../useMetaAdsFacebookLogin', async () => {
   const { ref } = await import('vue');
   return {
@@ -75,6 +81,7 @@ const accountsReply = rows =>
     data: { ad_accounts: rows },
   });
 
+const siteDialogOpen = vi.fn();
 const mountConnect = async props => {
   const wrapper = mount(ConectarAnuncios, {
     props: { connection: CONNECTION, ...props },
@@ -84,9 +91,15 @@ const mountConnect = async props => {
         MetaTelaGuia: true,
         MetaAdsDestinationsStep: {
           name: 'MetaAdsDestinationsStep',
-          props: ['destinations'],
-          emits: ['saved'],
+          props: ['destinations', 'headingLevel'],
+          emits: ['saved', 'failed'],
           template: '<div data-destino-stub />',
+        },
+        MetaAdsSiteLinkDialog: {
+          name: 'MetaAdsSiteLinkDialog',
+          emits: ['created'],
+          template: '<div data-dialogo-stub />',
+          methods: { open: siteDialogOpen },
         },
       },
     },
@@ -95,9 +108,21 @@ const mountConnect = async props => {
   return wrapper;
 };
 
-// Passo 3 (#2338): o destino é gravado pelo próprio passo de destinos, que avisa "saved".
-const saveDestination = async wrapper => {
-  wrapper.findComponent({ name: 'MetaAdsDestinationsStep' }).vm.$emit('saved');
+// Passo 3 (#2338): o destino é gravado pelo próprio passo de destinos, que avisa "saved" com o que o servidor gravou.
+const saveDestination = async (
+  wrapper,
+  saved = { destinations: { whatsapp: true, site: false }, site_pages_count: 0 }
+) => {
+  wrapper
+    .findComponent({ name: 'MetaAdsDestinationsStep' })
+    .vm.$emit('saved', saved);
+  await flushPromises();
+};
+
+const toStepThree = async wrapper => {
+  await wrapper.find('[data-conectar-facebook]').trigger('click');
+  await flushPromises();
+  await wrapper.find('[data-conectar-conectar]').trigger('click');
   await flushPromises();
 };
 
@@ -515,7 +540,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
             name: 'MetaAdsDestinationsStep',
             props: ['destinations'],
             template:
-              '<section data-meta-ads-destinations><h3>Para onde?</h3></section>',
+              '<section data-meta-ads-destinations><h2 data-destinations-title>Para onde?</h2></section>',
           },
         },
       },
@@ -614,4 +639,105 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     expect(wrapper.find('[data-conectar-caiu]').exists()).toBe(true);
     expect(CrmMetaAdsConnectionAPI.adAccounts).not.toHaveBeenCalled();
   });
+
+  it('on step 3 the question is the screen title (level 2)', async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    const wrapper = await mountConnect();
+    await toStepThree(wrapper);
+
+    expect(
+      wrapper
+        .findComponent({ name: 'MetaAdsDestinationsStep' })
+        .props('headingLevel')
+    ).toBe(2);
+  });
+
+  // Erro ao gravar no passo 3 não prende a pessoa: "Escolher depois" leva ao pronto, que diz onde escolher.
+  it('when saving step 3 fails, "Choose later" goes to done and says where to choose', async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    CrmMetaAdsConnectionAPI.sitePages.mockResolvedValue({
+      data: { payload: [] },
+    });
+    const wrapper = mount(ConectarAnuncios, {
+      props: { connection: CONNECTION },
+      global: {
+        stubs: {
+          Spinner: true,
+          MetaTelaGuia: true,
+          MetaAdsSiteLinkDialog: true,
+          MetaAdsSitePage: true,
+          MetaAdsDestinationArt: true,
+        },
+      },
+    });
+    await flushPromises();
+    await toStepThree(wrapper);
+    expect(wrapper.find('[data-conectar-escolher-depois]').exists()).toBe(
+      false
+    );
+
+    CrmMetaAdsConnectionAPI.updateDestinations.mockRejectedValue(new Error());
+    await wrapper.find('[data-save-destinations]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.attributes('data-screen')).toBe('destino');
+    expect(
+      wrapper.find('[data-conectar-destino-falhou]').attributes('role')
+    ).toBe('alert');
+    await wrapper.find('[data-conectar-escolher-depois]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.attributes('data-screen')).toBe('done');
+    expect(wrapper.find('[data-conectar-destino-depois]').text()).toContain(
+      'Conexão'
+    );
+  });
+
+  it('done warns when the ad leads to the site and no page is linked, with the button to link it', async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    const wrapper = await mountConnect();
+    await toStepThree(wrapper);
+    await saveDestination(wrapper, {
+      destinations: { whatsapp: true, site: true },
+      site_pages_count: 0,
+    });
+
+    expect(wrapper.attributes('data-screen')).toBe('done');
+    expect(wrapper.find('[data-conectar-falta-pagina]').text()).toContain(
+      'Falta ligar a página do site'
+    );
+    await wrapper.find('[data-conectar-ligar-pagina]').trigger('click');
+    expect(siteDialogOpen).toHaveBeenCalled();
+
+    wrapper
+      .findComponent({ name: 'MetaAdsSiteLinkDialog' })
+      .vm.$emit('created', { id: 9 });
+    await flushPromises();
+    expect(wrapper.find('[data-conectar-falta-pagina]').exists()).toBe(false);
+  });
+
+  it.each([
+    ['a page is linked', { whatsapp: false, site: true }, 1],
+    ['the site is not marked', { whatsapp: true, site: false }, 0],
+  ])(
+    'done says nothing about the page when %s',
+    async (_, destinations, pages) => {
+      facebook.connect.mockResolvedValue({ ok: true });
+      accountsReply([ACCOUNT]);
+      const wrapper = await mountConnect();
+      await toStepThree(wrapper);
+      await saveDestination(wrapper, {
+        destinations,
+        site_pages_count: pages,
+      });
+
+      expect(wrapper.find('[data-conectar-falta-pagina]').exists()).toBe(false);
+      expect(wrapper.find('[data-conectar-destino-depois]').exists()).toBe(
+        false
+      );
+    }
+  );
 });

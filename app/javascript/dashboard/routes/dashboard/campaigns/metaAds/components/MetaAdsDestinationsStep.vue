@@ -16,9 +16,15 @@ import MetaAdsDestinationArt from './MetaAdsDestinationArt.vue';
 // A página é ligada ali mesmo, sem sair dos Anúncios (#2338).
 const props = defineProps({
   destinations: { type: Object, default: () => ({}) },
+  // Embutido no passo a passo do "Conectar anúncios" (#2338) a pergunta é o título da tela: nível 2.
+  headingLevel: {
+    type: Number,
+    default: 3,
+    validator: value => [2, 3].includes(value),
+  },
 });
 
-const emit = defineEmits(['saved', 'pageLinked']);
+const emit = defineEmits(['saved', 'failed', 'pageLinked']);
 
 const { t } = useI18n();
 
@@ -97,6 +103,7 @@ const save = async () => {
     emit('saved', data);
   } catch (error) {
     useAlert(t(errorMessageKey(error)));
+    emit('failed');
   } finally {
     saving.value = false;
   }
@@ -108,9 +115,13 @@ onMounted(loadPages);
 <template>
   <section data-meta-ads-destinations class="flex flex-col gap-4">
     <header class="flex flex-col gap-1">
-      <h3 class="m-0 text-xl font-semibold tracking-tight text-n-slate-12">
+      <component
+        :is="`h${headingLevel}`"
+        data-destinations-title
+        class="m-0 text-xl font-semibold tracking-tight text-n-slate-12"
+      >
         {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.TITLE') }}
-      </h3>
+      </component>
       <p class="m-0 text-sm leading-6 text-n-slate-11">
         {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.HINT') }}
       </p>

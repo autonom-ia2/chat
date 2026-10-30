@@ -309,13 +309,27 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       expect(connection.reload.destinations).to eq('whatsapp' => true, 'site' => false)
     end
 
-    it 'trocar os destinos mantém o "Não tenho site" escolhido (#2343)' do
+    it 'trocar os destinos sem marcar o site mantém o "Não tenho site" escolhido (#2338)' do
+      connection.update!(pixel_id: nil, destinations: { 'whatsapp' => true, 'no_site' => true })
+
+      patch "#{base}/destinations", params: { destinations: { whatsapp: false, site: false } }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['no_site']).to be(true)
+      expect(connection.reload.destinations).to include('site' => false, 'no_site' => true)
+    end
+
+    # #2338: dizer que o anúncio leva ao site desfaz o "Não tenho site"; a lista volta a pedir o código do site.
+    it 'marcar o site tira o "Não tenho site", e desmarcar depois não o recoloca' do
       connection.update!(pixel_id: nil, destinations: { 'whatsapp' => true, 'no_site' => true })
 
       patch "#{base}/destinations", params: { destinations: { whatsapp: true, site: true } }, headers: auth_headers(admin), as: :json
 
-      expect(response.parsed_body['no_site']).to be(true)
-      expect(connection.reload.destinations).to include('site' => true, 'no_site' => true)
+      expect(response.parsed_body['no_site']).to be(false)
+      expect(connection.reload.destinations).to eq('whatsapp' => true, 'site' => true)
+
+      patch "#{base}/destinations", params: { destinations: { whatsapp: true, site: false } }, headers: auth_headers(admin), as: :json
+
+      expect(connection.reload.destinations).to eq('whatsapp' => true, 'site' => false)
     end
   end
 

@@ -2540,7 +2540,12 @@
             "TEXT": "Estamos trazendo os gastos de {name}. Em alguns minutos eles aparecem no seu painel, ao lado das conversas e vendas.",
             "CTA": "Ver meu painel",
             "PIXEL_CANCEL": "Cancelar",
-            "PIXEL_FAILED": "Não conseguimos ler o código do site (Pixel) agora. A conta já está conectada; escolha o código depois na aba Conexão."
+            "PIXEL_FAILED": "Não conseguimos ler o código do site (Pixel) agora. A conta já está conectada; escolha o código depois na aba Conexão.",
+            "DESTINATION_NOT_SAVED": "Não conseguimos salvar para onde seus anúncios levam. Toque em \"Salvar e continuar\" de novo, ou escolha depois.",
+            "DESTINATION_LATER": "Escolher depois",
+            "DESTINATION_LATER_HINT": "A conta está conectada. Escolha para onde seus anúncios levam na aba Conexão.",
+            "PAGE_MISSING": "Falta ligar a página do site. Ligue para contarmos as visitas que vêm dos anúncios.",
+            "PAGE_LINK": "Ligar"
           },
           "GUIDE": {
             "LABEL": "Onde tocar na Meta",
