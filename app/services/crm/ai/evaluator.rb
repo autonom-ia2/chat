@@ -297,10 +297,13 @@ module Crm
       # funil, como mover sozinho; "Avaliar agora" é a pessoa olhando o card, e ela mesma arquiva se quiser. As guardas do
       # card são do Crm::Ai::NaoENegocio. Com pedido de atendente neste card, ele fica: arquivar pularia a passagem. O "era
       # teste" (F3) é sempre sugestão: vale também sem o movimento automático, e a promessa de pessoa também o barra.
+      # #2396: com o pedido de fechar na mesma resposta (quem desistiu ou chegou sem querer), vale a sugestão de fechar:
+      # arquivar tiraria da contagem o lead que é perda, e sem ninguém conferir.
       def nao_e_negocio!(classification)
         return false if @trigger == 'manual' || classification[:nao_e_negocio].blank?
         return false unless NaoENegocio.ligada?(@card.account)
         return false if HandoffIntent.requested?(classification[:handoff])
+        return false if FecharCard.ligada?(@account) && classification[:fechar_card].present?
 
         teste = classification.dig(:nao_e_negocio, :motivo) == NaoENegocio::MOTIVO_TESTE
         # Nem na avaliação do card parado: o silêncio não diz que era teste.

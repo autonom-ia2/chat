@@ -197,6 +197,39 @@ RSpec.describe Crm::Ai::Evaluator do
     end
   end
 
+  # #2396 (decisão do Rodrigo, 30/10): quem desistiu ou chegou sem querer é perda, que vira sugestão; nunca o arquivamento
+  # automático do "não é negócio", que tira o lead do relatório de anúncios.
+  describe '"não é negócio" e "fechar" na mesma resposta' do
+    before { account.enable_features!(Crm::Ai::NaoENegocio::FLAG) }
+
+    let(:os_dois) do
+      { nao_e_negocio: { motivo: 'fora_do_negocio', confidence: 0.95, reasoning: 'Clicou sem querer.', duplicado_de: nil },
+        fechar_card: { resultado: 'perdido', motivo: 'recusou', retorno_em: nil, confidence: 0.95, reasoning: 'Não tem interesse.' },
+        suggested_stage_id: stage.id }
+    end
+
+    # Pega: o lead que desistiu sair arquivado (some do relatório de anúncios) em vez de virar sugestão de perdido.
+    it 'vale a sugestão de perdido; nada é arquivado', :aggregate_failures do
+      ia_responde(os_dois)
+
+      resultado = avaliar
+
+      expect(resultado.status).to eq(:suggested)
+      expect(resultado.suggestion.fechar).to eq('resultado' => 'perdido', 'motivo' => 'recusou')
+      expect(card.reload).to be_open
+      expect(Crm::Activity.where(card: card, event_type: 'archive')).to be_empty
+    end
+
+    # Pega: a regra derrubar o arquivamento do lixo de verdade, que vem sem pedido de fechar.
+    it 'só o "não é negócio": arquiva como antes' do
+      ia_responde(os_dois.merge(fechar_card: nil))
+
+      avaliar
+
+      expect(card.reload).to be_archived
+    end
+  end
+
   describe 'voltar de etapa com uma pessoa mexendo há pouco (regra h, D1)' do
     let!(:proposta) { create_crm_stage(account: account, pipeline: pipeline, name: 'Proposta', position: 1) }
     let!(:fechamento) { create_crm_stage(account: account, pipeline: pipeline, name: 'Fechamento', position: 2) }

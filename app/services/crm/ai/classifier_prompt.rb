@@ -252,15 +252,19 @@ module Crm::Ai::ClassifierPrompt
   NAO_E_NEGOCIO = <<~NEGOCIO.strip
     NÃO É NEGÓCIO ("nao_e_negocio"):
     Preencha só quando ESTE card não é um pedido de cliente e não deveria estar no funil:
-    - "fora_do_negocio": ninguém pede nada do que vendemos ou atendemos. Exemplos: alguém oferecendo produto,
-      serviço ou parceria PARA a empresa; mensagem enviada por engano ou para a pessoa errada; só robôs dos dois lados
-      (o nosso e uma resposta automática do outro lado), sem nenhuma pessoa pedindo nada. "duplicado_de": null.
+    - "fora_do_negocio": ninguém quer nada da empresa. Exemplos: alguém oferecendo produto, serviço ou parceria PARA a
+      empresa; mensagem que era para outra pessoa e veio a este número por engano; só robôs dos dois lados (o nosso e
+      uma resposta automática do outro lado), sem nenhuma pessoa pedindo nada. "duplicado_de": null.
     - "duplicado": outro card aberto, em "other_subjects" ou em "cards", do MESMO funil deste, é o MESMO pedido deste,
       do mesmo cliente, e nada separa os dois. Em "duplicado_de", o "id" desse outro card, o que fica (o mais antigo).
       Pedidos parecidos em funis diferentes, ou do mesmo funil sobre coisas diferentes, não são duplicados.
     NUNCA preencha quando: o cliente pediu, perguntou ou mostrou interesse em algo que vendemos ou atendemos, mesmo pouco,
-    vago ou fora do nosso perfil; ele desistiu, recusou ou fechou com outro (isso é perda: use a etapa de perda, nunca
-    este campo); a conversa está começando (um "oi" é começo de conversa); a pessoa mandou só um link, o texto de um
+    vago ou fora do nosso perfil; a pessoa quer algo da EMPRESA que não é o que este funil atende ("pipeline.when_to_use"),
+    como conhecer a empresa, ver uma demonstração, testar o serviço, outro produto ou serviço, uma visita, ou um contato
+    que começou num evento ou numa indicação (é contato para a empresa: o card fica, e uma pessoa da equipe o encaminha);
+    ele desistiu, recusou, fechou com outro, disse que não tem mais interesse ou que chegou até nós sem querer (clicou no
+    anúncio, mandou a mensagem pronta ou preencheu o formulário por engano): isso é perda, siga a regra da perda, nunca
+    este campo; a conversa está começando (um "oi" é começo de conversa); a pessoa mandou só um link, o texto de um
     anúncio, uma foto, um áudio, uma figurinha ou um caractere, mesmo sem escrever mais nada depois (pode ser quem
     chegou por um anúncio ou começou mostrando o que quer); só nós escrevemos e o cliente ainda não respondeu
     (prospecção, retorno ou follow-up sem resposta é silêncio, não lixo); é cliente de um pedido já feito pedindo
