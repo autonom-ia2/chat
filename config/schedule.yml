@@ -149,6 +149,13 @@ crm_ai_handoff_drain_job:
   class: 'Crm::Ai::HandoffDrainJob'
   queue: scheduled_jobs
 
+# A cada 15 minutos (#2109): relê a mídia que ficou pendente (sem texto e sem marca de lido) nas contas com o leitor
+# de mídia do CRM; o anexo marcado nunca volta e o teto do dia por conta continua valendo.
+crm_ai_reler_midia_pendente_job:
+  cron: '7,22,37,52 * * * *'
+  class: 'Crm::Ai::RelerMidiaPendenteJob'
+  queue: scheduled_jobs
+
 # executed every 15 minutes; marks stale R3 invite cycles as expired
 crm_ai_handoff_expiry_job:
   cron: '*/15 * * * *'
@@ -383,4 +390,12 @@ conversa_canal_limpar_email_lidos_job:
 whatsapp_hybrid_foto_do_contato_backfill_job:
   cron: '*/15 * * * *'
   class: 'WhatsappHybrid::FotoDoContatoBackfillJob'
+  queue: scheduled_jobs
+
+# executed every day at 07:00 UTC; a leitura automática do painel de desempenho (#2301): espalha um job por conta com o
+# painel ligado, e cada conta lê as conversas que ganharam mensagem desde a última leitura. Desligada pela ENV
+# AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA (padrão: desligada).
+autonomia_desempenho_leitura_automatica_job:
+  cron: '0 7 * * *'
+  class: 'Autonomia::Desempenho::LeituraAutomaticaJob'
   queue: scheduled_jobs

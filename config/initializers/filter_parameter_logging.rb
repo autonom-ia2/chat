@@ -15,7 +15,10 @@ Rails.application.config.filter_parameters += [
   # #1427 — as fotos do Testar do agente (data-url em base64, `images` do POST /agents/:id/test) não vão para o log do
   # Rails. O filtro casa qualquer chave que contenha "images"; hoje só esse endpoint recebe uma. O Sentry lê o corpo
   # JSON cru e não passa por aqui: lá quem tira as fotos é o SentryHttpAuthScrubber.
-  :images
+  :images,
+  # #2103 — o log do Rails vai para o CloudWatch por 30 dias. E-mail e texto de mensagem (`content`) de cliente
+  # não vão junto; telefone já sai filtrado acima.
+  :email, :content
 ]
 
 # Regex to filter all occurrences of 'token' in keys except for 'website_token'

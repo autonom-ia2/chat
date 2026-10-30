@@ -8,6 +8,7 @@ class Crm::Kanban::BoardPayloadBuilder
     @pipeline = pipeline
     @cards_scope = cards_scope
     @params = context.params
+    @account_user = context.account_user
     @conversation_visibility = Crm::Conversations::Visibility.new(
       account: context.account,
       user: context.user,
@@ -134,13 +135,14 @@ class Crm::Kanban::BoardPayloadBuilder
     Crm::Kanban::CardPayloadBuilder.new(
       card: card,
       conversation_visibility: @conversation_visibility,
+      account_user: @account_user,
       pending_suggestion: pending_suggestions[card.id],
       company: @company_by_card_id.fetch(card.id)
     ).perform
   end
 
   def board_pending_suggestions
-    return {} unless Crm::Ai::Config.enabled?
+    return {} unless Crm::Ai::Config.enabled? && Crm::SugestaoDeEtapa.le?(@account_user)
 
     card_ids = filtered_cards.pluck(:id)
     return {} if card_ids.blank?

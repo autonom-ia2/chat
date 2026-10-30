@@ -9,12 +9,15 @@ import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 
 import RelationshipFields from 'dashboard/components-next/Relationships/RelationshipFields.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
 import ConfirmContactDeleteDialog from 'dashboard/components-next/Contacts/ContactsForm/ConfirmContactDeleteDialog.vue';
 import ContactOptOutSection from 'dashboard/components-next/Contacts/ContactOptOut/ContactOptOutSection.vue';
 import ContactCustomerSection from 'dashboard/components-next/Contacts/ContactCustomer/ContactCustomerSection.vue';
+import SecaoDaRelacao from 'dashboard/components-next/contato-relacao/SecaoDaRelacao.vue';
+import { useRelacaoLigada } from 'dashboard/components-next/contato-relacao/useRelacaoLigada';
 import Policy from 'dashboard/components/policy.vue';
 
 const props = defineProps({
@@ -28,6 +31,7 @@ const props = defineProps({
 const emit = defineEmits(['goToContactsList']);
 
 const exactTimestamp = useExactTimestamp();
+const relacaoLigada = useRelacaoLigada();
 
 const { t, locale } = useI18n();
 const store = useStore();
@@ -188,7 +192,7 @@ const handleAvatarDelete = async () => {
       />
       <div class="flex flex-col gap-1">
         <h3 class="text-base font-medium text-n-slate-12">
-          {{ selectedContact?.name }}
+          {{ nomeDoContatoNaTela(selectedContact) }}
         </h3>
         <div class="flex flex-col gap-1.5">
           <span
@@ -254,6 +258,11 @@ const handleAvatarDelete = async () => {
       surface="contact_details"
       :read-only="readOnly"
     />
+    <SecaoDaRelacao
+      v-if="relacaoLigada && selectedContact?.id"
+      :contact-id="selectedContact.id"
+      :read-only="readOnly"
+    />
     <ContactCustomerSection :contact="selectedContact" :read-only="readOnly" />
     <ContactOptOutSection :contact="selectedContact" :read-only="readOnly" />
     <Policy :permissions="['administrator', 'contact_delete']">
@@ -265,7 +274,7 @@ const handleAvatarDelete = async () => {
             {{ t('CONTACTS_LAYOUT.DETAILS.DELETE_CONTACT') }}
           </h6>
           <span class="text-sm text-n-slate-11">
-            {{ t('CONTACTS_LAYOUT.DETAILS.DELETE_CONTACT_DESCRIPTION') }}
+            {{ t('APAGAR_CONTATO.UM') }}
           </span>
         </div>
         <Button

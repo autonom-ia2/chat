@@ -214,6 +214,8 @@ module Autonomia
       # mensagens do contato (ex.: várias linhas seguidas) vira UMA resposta sobre o
       # contexto mais recente. last-writer-wins sobre o token de debounce.
       OPERATE_DEBOUNCE_SECONDS = 6.seconds
+      # O teto da janela por agente (o clamp de debounce_seconds_for). Também entra no teto do turno (#2154).
+      OPERATE_DEBOUNCE_MAX_SECONDS = 30.seconds
 
       # Janela de debounce EFETIVA por agente (refino): default OPERATE_DEBOUNCE_SECONDS, mas o
       # agente pode sobrescrever via config['debounce_seconds'] (ex.: nicho que manda muitas linhas
@@ -223,7 +225,7 @@ module Autonomia
         secs = raw.respond_to?(:to_f) && raw.to_s.present? ? raw.to_f : nil
         return OPERATE_DEBOUNCE_SECONDS if secs.nil? || secs <= 0
 
-        secs.clamp(2.0, 30.0).seconds
+        secs.clamp(2.0, OPERATE_DEBOUNCE_MAX_SECONDS.to_f).seconds
       end
 
       # ENTREGA HUMANIZADA (chunk + delay + "digitando") — traz para o agente NATIVO o que antes só

@@ -19,7 +19,11 @@
     "REMETENTE": {
       "AGENTE_COM_NOME": "AI agent · {nome}",
       "AGENTE": "AI agent",
-      "AUTOMATICO": "{nome} · automatic"
+      "ORIGEM": {
+        "FOLLOW_UP": "Automatic follow-up",
+        "RETORNO": "Automatic callback",
+        "AGENDAMENTO": "Automatic scheduling"
+      }
     },
     "ECO_DO_CELULAR": {
       "ENVIADA_PELO_CELULAR": "Sent from the phone",
@@ -162,6 +166,30 @@
     "JANELA_FECHADA": {
       "TEXTO": "It has been 24 hours since the customer last wrote. To talk to them again, send a template.",
       "ESCOLHER_MODELO": "Choose template"
+    },
+    "FICAR": {
+      "FICA_COM_VOCE": "When you send, the conversation stays with you",
+      "FICA_COM_VOCE_SAI_DE": "When you send, the conversation moves from {nome} to you",
+      "CONTINUA_SEM_NINGUEM": "When you send, the conversation stays unassigned",
+      "CONTINUA_COM": "When you send, the conversation stays with {nome}",
+      "DICA_LIGADA": "Turn off to not keep the conversation",
+      "DICA_DESLIGADA": "Turn on to keep the conversation",
+      "NAO_DEU": "Could not keep the conversation right now. It stays with whoever had it."
+    },
+    "DEVOLVER": {
+      "PARA": "Hand back to {nome}",
+      "DICA": "{nome} takes over this conversation again",
+      "DEVOLVIDA": "Conversation handed back to {nome}",
+      "FALHOU": "Could not hand the conversation back. Try again.",
+      "VEIO_DE": "This conversation came from {nome}",
+      "VEIO_DA_IA": "This conversation came from the AI",
+      "A_IA": "the AI",
+      "RECUSA": {
+        "NAO_ATENDE_CLIENTE": "{nome} is paused right now. The conversation stays with you.",
+        "SEM_VINCULO_NA_CAIXA": "{nome} no longer works in this inbox. The conversation stays with you.",
+        "CONVERSA_RESOLVIDA": "This conversation is resolved. Reopen it to hand it back.",
+        "FASE2_DESLIGADA": "AI agents are off in this account. The conversation stays with you."
+      }
     },
     "CAIXA": {
       "DIGITE": "Type a message",
@@ -592,6 +620,9 @@
         "CANCELADA_TEXTO": "The organizer canceled this meeting.",
         "ENTRAR": "Join meeting",
         "ENTRAR_NO": "Join on {app}",
+        "SEPARADOR": "·",
+        "DURACAO": "({duracao})",
+        "A_MAIS": "+{n}",
         "MINUTOS": "{n} min",
         "HORAS": "{n} h",
         "HORAS_E_MINUTOS": "{h} h {m} min",
@@ -612,6 +643,9 @@
         "RECORRENTE": "Recurring",
         "OCORRENCIA": "One date of a recurring meeting",
         "PASSOU": "This meeting has already ended.",
+        "SUBSTITUIDO": "The organizer changed this meeting in a newer email. Answer the new invitation.",
+        "CANCELADA_DEPOIS": "The organizer canceled this meeting in a newer email.",
+        "VER_O_NOVO": "Open the newer email",
         "MANTER": "Keep my answer",
         "SEM_ORGANIZADOR": "This invitation does not say who organized it, so it cannot be answered from here."
       }
@@ -623,6 +657,30 @@
     },
     "NOTA_DO_CONECTOR": {
       "AVISO": "⚠️ A WhatsApp message did not reach this conversation. Check the inbox phone."
+    },
+    "INSTAGRAM": {
+      "HORARIO": "{mes} {dia}, {ano} {hora}",
+      "VISTO": "Seen",
+      "RESPONDER": "Reply",
+      "MAIS_OPCOES": "More options",
+      "REAGIR_FORA_DA_JANELA": "The customer has not written within the allowed time. Instagram only accepts reactions while the conversation is open.",
+      "VOCE_RESPONDEU": "You replied",
+      "RESPONDEU_A_VOCE": "Replied to you",
+      "RESPONDEU_AO_STORY": "Replied to your story",
+      "VOCE_RESPONDEU_AO_STORY": "You replied to their story",
+      "MENCIONOU_NO_STORY": "Mentioned you in their story",
+      "VOCE_MENCIONOU_NO_STORY": "You mentioned them in your story",
+      "STORY_INDISPONIVEL": "Story unavailable",
+      "POST": "Shared post",
+      "CLIPE": "Reel",
+      "ABRIR_FOTO": "Open photo",
+      "ABRIR_VIDEO": "Open video",
+      "REPRODUZIR": "Play",
+      "PAUSAR": "Pause",
+      "MENSAGEM_VAZIA": "Message",
+      "CAMPO": "Message...",
+      "VER_TRANSCRICAO": "See transcription",
+      "MIDIA_INDISPONIVEL": "Media unavailable"
     }
   }
 }

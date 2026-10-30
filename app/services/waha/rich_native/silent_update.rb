@@ -21,12 +21,16 @@ module Waha::RichNative::SilentUpdate
   SILENT_KEYS = %w[reactions read_receipt_sent_at link_preview played_at deleted_by_contact_at poll_votes event_responses
                    edit_history edited_at c2y_hidden view_once_resolved_by].freeze
   ALLOWED_COLUMNS = %w[content content_attributes updated_at processed_message_content].freeze
+  # O que a edição (Waha::RichNative::Edits) tira junto com o texto que sai: a tradução dele. Só silencia junto com o
+  # `edit_history`; sozinha, a mudança da tradução segue como antes. Fica fora da SILENT_KEYS, que é a lista da pele.
+  EDIT_COMPANION_KEYS = %w[translations].freeze
 
   def self.silent?(previous_changes)
     changes = previous_changes.to_h.stringify_keys
     return false unless changes.key?('content_attributes') && (changes.keys - ALLOWED_COLUMNS).empty?
 
     changed = changed_attribute_keys(changes['content_attributes'])
+    changed -= EDIT_COMPANION_KEYS if changed.include?('edit_history')
     changed.any? && (changed - SILENT_KEYS).empty? && (!changes.key?('content') || changed.include?('edit_history'))
   end
 

@@ -2,7 +2,7 @@
 #
 # É o mesmo turno do atendimento — a mesma instrução, o mesmo histórico público, os mesmos especialistas, a
 # mesma conferência de preços e da fala, a mesma elegibilidade conferida com estado fresco e a mesma postagem
-# sob o lock —, com cinco diferenças, e cada uma tem motivo:
+# sob o lock —, com seis diferenças, e cada uma tem motivo:
 #
 #   1. A "pergunta" é a NOTA DO SISTEMA do evento (`Tools::Evento#nota_do_sistema`), escrita para deixar claro
 #      que não é a pessoa falando. Não há mídia do turno: ninguém mandou nada agora.
@@ -14,6 +14,7 @@
 #   4. A idempotência é a MARCA do evento na mensagem (`Tools::Evento::CHAVE`), não o id da mensagem de origem:
 #      um retry do job, ou um evento duplicado, encontra a mensagem e não posta de novo.
 #   5. A porta de engajamento não se aplica: o evento é continuação de um pedido que a pessoa já fez.
+#   6. O sinal de passar segue passando a conversa (`bot_handoff!`), com a flag `agente_so_informa` (#2154) ou sem ela.
 #
 # O SILÊNCIO AQUI É FALHA, não decisão: IA indisponível, resposta vazia ou o sinal de silêncio voltam como
 # `silenced` com o motivo, e quem decide a nova tentativa e a escalada é o `EventoJob`.
@@ -41,6 +42,12 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
   end
 
   private
+
+  # #2154: o evento da cotação fica fora da regra "o agente só informa". Com a flag ligada ou não, o sinal da instrução
+  # no evento segue passando a conversa (`bot_handoff!`), como antes.
+  def agente_so_informa?
+    false
+  end
 
   def silencio(motivo)
     registrar_silencio(motivo)

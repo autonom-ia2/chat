@@ -29,6 +29,18 @@ class RedisDeTesteSerializado < SimpleDelegator
     __getobj__.respond_to?(name, include_private)
   end
 
+  # #2062: o SCAN do MockRedis pagina pela posição em `data.keys`. Se o bloco apaga chaves,
+  # a lista encolhe, a página seguinte começa adiante e chaves que casam são puladas. O Redis
+  # real devolve toda chave que existiu do começo ao fim da varredura, mesmo apagando nela.
+  # Aqui as chaves são juntadas antes (com ou sem bloco) e entregues depois, como no Redis real.
+  def scan_each(*, &)
+    chaves = @monitor.synchronize { __getobj__.scan_each(*).to_a }
+    return chaves.each unless block_given?
+
+    chaves.each(&)
+    nil
+  end
+
   def self.pool_compartilhado(original, namespace)
     redis = new(MockRedis.new)
     ConnectionPool.new(size: original.size, timeout: original.instance_variable_get(:@timeout)) do

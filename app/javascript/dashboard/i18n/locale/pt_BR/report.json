@@ -131,7 +131,7 @@
       "RESULT_COUNT_MESSAGE": "{count} mensagem | {count} mensagens",
       "EMPTY": "Nenhum registro encontrado para esta barra.",
       "ERROR": "Não foi possível carregar os registros. Por favor, tente novamente.",
-      "ADMIN_ONLY": "Apenas administradores podem visualizar os detalhes dos registros do relatório.",
+      "SCOPED_NOTICE": "Esta lista mostra só as conversas que você acompanha, então pode ter menos itens que o gráfico.",
       "LOAD_MORE": "Carregar mais",
       "PREVIOUS_BUCKET": "Barra anterior",
       "NEXT_BUCKET": "Próxima barra",

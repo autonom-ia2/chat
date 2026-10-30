@@ -14,6 +14,7 @@ class Crm::Cards::Mover
 
     ActiveRecord::Base.transaction do
       from_stage_id = @card.stage_id
+      @from_stage_name = @card.stage&.name
       from_pipeline_id = @card.pipeline_id
 
       move_card!
@@ -50,6 +51,7 @@ class Crm::Cards::Mover
     Crm::Cards::Outcome.status_after_move(pipeline, @card.status)
   end
 
+  # O nome das etapas vai junto: se uma delas for apagada, o histórico continua dizendo de onde para onde o card foi.
   def log_move!(from_stage_id:, from_pipeline_id:)
     Crm::ActivityLogger.new(
       card: @card,
@@ -59,7 +61,9 @@ class Crm::Cards::Mover
         from_pipeline_id: from_pipeline_id,
         to_pipeline_id: @card.pipeline_id,
         from_stage_id: from_stage_id,
-        to_stage_id: @card.stage_id
+        to_stage_id: @card.stage_id,
+        from_stage_name: @from_stage_name,
+        to_stage_name: @target_stage.name
       }
     ).perform
   end

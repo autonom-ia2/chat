@@ -38,6 +38,18 @@ RSpec.describe Crm::Subjects::Abrir do
       expect_recusa(:sem_crm)
     end
 
+    # #2084: o contato foi marcado parceiro do mercado ou não é negócio.
+    it ':fora_do_funil com o contato marcado e a flag contato_relacao ligada' do
+      account.enable_features!('contato_relacao')
+      conversation.contact.update!(relacao: :parceiro)
+      expect_recusa(:fora_do_funil)
+    end
+
+    it 'com a flag contato_relacao desligada, a marca não recusa' do
+      conversation.contact.update!(relacao: :nao_e_negocio)
+      expect(abrir).to have_attributes(ok: true)
+    end
+
     it ':funil_invalido para funil arquivado ou fora da caixa' do
       suporte.update!(status: :archived)
       expect_recusa(:funil_invalido)

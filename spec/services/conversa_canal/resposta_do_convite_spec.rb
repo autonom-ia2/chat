@@ -250,6 +250,66 @@ RSpec.describe ConversaCanal::RespostaDoConvite do
       end
       expect(convite_gravado['via']).to eq('email')
     end
+
+    it 'ocorrência sem fuso volta com o RECURRENCE-ID como veio (#1995)', :aggregate_failures do
+      convite['ocorrencia'] = convite['inicio']
+      convite['ocorrencia_original'] = { 'valor' => '20261029T130000', 'tzid' => 'Fuso Inventado' }
+
+      responder
+
+      expect(smtp).to have_received(:deliver!) do |mail|
+        expect(mail.parts.last.decoded).to include('RECURRENCE-ID;TZID=Fuso Inventado:20261029T130000')
+      end
+    end
+  end
+
+  describe 'uma resposta por vez (#1995)' do
+    let(:chave) { format(described_class::CHAVE_DA_TRAVA, message_id: message.id) }
+
+    it 'com outra resposta saindo, recusa e não manda nada', :aggregate_failures do
+      Redis::LockManager.new.lock(chave, 60)
+
+      expect { responder }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.convite.em_andamento'))
+      expect(smtp).not_to have_received(:deliver!)
+    ensure
+      Redis::LockManager.new.unlock(chave)
+    end
+
+    it 'solta a trava depois de responder, e também depois de uma recusa', :aggregate_failures do
+      responder('aceito')
+      expect { responder('quem_sabe') }.to raise_error(described_class::Recusa)
+      responder('recusado')
+
+      expect(smtp).to have_received(:deliver!).twice
+      expect(Redis::LockManager.new.locked?(chave)).to be(false)
+    end
+
+    it 'Redis caindo ao soltar a trava não troca a resposta que já saiu', :aggregate_failures do
+      trava = instance_double(Redis::LockManager, lock: true)
+      allow(trava).to receive(:unlock).and_raise(Redis::CannotConnectError)
+      allow(Redis::LockManager).to receive(:new).and_return(trava)
+
+      expect(responder['minha_resposta']).to eq('aceito')
+      expect(smtp).to have_received(:deliver!).once
+    end
+
+    it 'Redis fora do ar ao pegar a trava: falha no envio (502), nada sai', :aggregate_failures do
+      trava = instance_double(Redis::LockManager)
+      allow(trava).to receive(:lock).and_raise(Redis::CannotConnectError)
+      allow(Redis::LockManager).to receive(:new).and_return(trava)
+
+      expect { responder }.to raise_error(described_class::FalhaNoEnvio)
+      expect(smtp).not_to have_received(:deliver!)
+    end
+
+    it 'relê a mensagem: a resposta que outro atendente acabou de gravar não sai de novo', :aggregate_failures do
+      servico = described_class.new(message: Message.find(message.id), resposta: 'aceito', user: user)
+      responder('aceito')
+
+      servico.perform
+
+      expect(smtp).to have_received(:deliver!).once
+    end
   end
 
   describe 'a mesma resposta de novo' do
@@ -262,6 +322,24 @@ RSpec.describe ConversaCanal::RespostaDoConvite do
   end
 
   describe 'recusas' do
+    it 'convite que o organizador mudou ou cancelou num e-mail mais novo (#1995)', :aggregate_failures do
+      convite['substituido_por'] = 123
+
+      expect { responder }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.convite.substituido'))
+      expect(smtp).not_to have_received(:deliver!)
+    end
+
+    it 'série que já acabou (#1995)' do
+      convite.merge!('recorrente' => true, 'inicio' => 3.weeks.ago.to_i, 'fim' => (3.weeks.ago + 1.hour).to_i,
+                     'fim_da_serie' => 1.day.ago.to_i)
+      expect { responder }.to raise_error(described_class::Recusa, I18n.t('conversa_canal.convite.ja_passou'))
+    end
+
+    it 'série sem fim segue respondível depois da primeira ocorrência' do
+      convite.merge!('recorrente' => true, 'inicio' => 3.weeks.ago.to_i, 'fim' => (3.weeks.ago + 1.hour).to_i)
+      expect(responder['minha_resposta']).to eq('aceito')
+    end
+
     it 'reunião que já terminou' do
       convite['inicio'] = 2.hours.ago.to_i
       convite['fim'] = 1.hour.ago.to_i

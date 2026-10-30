@@ -350,7 +350,9 @@ describe('Nova campanha — e-mail (D8–D13)', () => {
         title: 'Renovação — outubro',
         delivery_mode: 'ses',
         sender_identity_id: 4,
-        from_email: 'ola@empresa.com.br',
+        // #2237: the sender starts from the same-domain inbox, never from the address saved
+        // when the domain was registered.
+        from_email: 'respostas@empresa.com.br',
         reply_to_inbox_id: 12,
       },
     });

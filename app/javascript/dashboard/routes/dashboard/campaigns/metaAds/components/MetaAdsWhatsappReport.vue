@@ -6,12 +6,15 @@ import { useAlert } from 'dashboard/composables';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import CrmMetaAdsWhatsappReportAPI from 'dashboard/api/crmMetaAdsWhatsappReport';
+import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { clockTime, intlLocale, relativeTime } from '../metaAdsHelpers';
 
 // Anúncios da Meta (#1100, F4b): resumo diário e alerta no WhatsApp do dono (docs/crm/anuncios-meta-f4.md §2).
 // Vem desligado. A pessoa escolhe de qual número sai (só os conectados que o servidor devolve) e para qual
 // número vai. Quem valida o número, a origem e o modelo da Meta é o servidor; a tela mostra o código que ele
 // devolve. "Enviar teste" usa só o que está salvo, nunca o rascunho.
+// #2075 — o resumo leva o valor vendido: sem a chave de valores de venda, ligar, salvar e testar ficam travados (o
+// servidor responde 403) e a tela diz por quê. Ver a configuração continua.
 const KINDS = ['whatsapp_cloud', 'waha'];
 const TEMPLATE_KEYS = ['summary', 'alert'];
 const STATUS_CLASSES = {
@@ -31,6 +34,7 @@ const KNOWN_ERRORS = [
   'send_failed',
   'send_uncertain',
   'whatsapp_number_not_found',
+  'sales_value_forbidden',
 ];
 // Erro que pertence a um campo aparece embaixo dele; o resto, junto do botão.
 const FIELD_OF_ERROR = {
@@ -41,6 +45,8 @@ const FIELD_OF_ERROR = {
 };
 
 const { t, locale } = useI18n();
+const { canSeeSalesValues } = useCrmPermissions();
+const locked = computed(() => !canSeeSalesValues.value);
 const uid = useId();
 const ids = {
   title: `${uid}-title`,
@@ -268,6 +274,7 @@ const load = async () => {
 };
 
 const toggle = key => {
+  if (locked.value) return;
   form.value = { ...form.value, [key]: !form.value[key] };
   saveError.value = null;
 };
@@ -389,7 +396,8 @@ onMounted(load);
           role="switch"
           :data-report-toggle="item.key"
           :aria-checked="form[item.key]"
-          class="flex items-center w-full gap-4 px-4 py-3 border border-solid text-start min-h-11 rounded-xl border-n-weak bg-n-solid-1 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          :disabled="locked"
+          class="flex items-center w-full gap-4 px-4 py-3 border border-solid text-start min-h-11 rounded-xl border-n-weak bg-n-solid-1 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand disabled:cursor-not-allowed disabled:opacity-60"
           @click="toggle(item.key)"
         >
           <span class="flex flex-col flex-1 min-w-0 gap-0.5">
@@ -640,7 +648,7 @@ onMounted(load);
             class="!min-h-11 !rounded-xl"
             icon="i-lucide-check"
             :is-loading="saving"
-            :disabled="saving || !dirty"
+            :disabled="locked || saving || !dirty"
             :label="$t('CRM_KANBAN.META_ADS_HUB.WHATSAPP_REPORT.SAVE')"
             @click="save"
           />
@@ -651,7 +659,7 @@ onMounted(load);
             color="slate"
             icon="i-lucide-send"
             :is-loading="testing"
-            :disabled="testing || !canTest"
+            :disabled="locked || testing || !canTest"
             :label="$t('CRM_KANBAN.META_ADS_HUB.WHATSAPP_REPORT.TEST')"
             @click="sendTest"
           />
@@ -667,6 +675,13 @@ onMounted(load);
             @click="discard"
           />
         </div>
+        <p
+          v-if="locked"
+          data-report-needs-sales-value
+          class="m-0 text-sm leading-6 text-n-slate-11"
+        >
+          {{ $t('CRM_KANBAN.META_ADS_HUB.WHATSAPP_REPORT.NEEDS_SALES_VALUE') }}
+        </p>
         <p
           v-if="generalError"
           data-report-error

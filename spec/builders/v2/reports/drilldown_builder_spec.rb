@@ -1,9 +1,10 @@
 require 'rails_helper'
 
 RSpec.describe V2::Reports::DrilldownBuilder do
-  subject(:drilldown) { described_class.new(account, params).build }
+  subject(:drilldown) { described_class.new(account, params, viewer: administrator).build }
 
   let(:account) { create(:account) }
+  let(:administrator) { create(:account_user, account: account, role: :administrator) }
   let(:inbox) { create(:inbox, account: account) }
   let(:current_time) { Time.zone.parse('2026-05-20 12:00') }
   let(:bucket_start) { current_time.beginning_of_day }

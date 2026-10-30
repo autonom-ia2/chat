@@ -14,6 +14,8 @@ import {
 const props = defineProps({
   isNewRole: { type: Boolean, default: true },
   initialProfile: { type: String, default: 'AGENT' },
+  // O filtro de alcance do editor (#2115): a prévia conta só o que o modelo vai mesmo aplicar.
+  reach: { type: Function, default: keys => keys },
 });
 
 const emit = defineEmits(['choose', 'back']);
@@ -24,12 +26,14 @@ const options = [...PROFILES.map(profile => profile.key), BLANK_PROFILE];
 const profile = computed(() =>
   PROFILES.find(item => item.key === selected.value)
 );
-const areaCount = computed(() => {
-  const permissions = profilePermissions(selected.value);
-  return MODULES.filter(module => hasAccess(module, permissions)).length;
-});
-const sensitiveCount = computed(
-  () => sensitiveExtrasOn(profilePermissions(selected.value)).length
+const applied = computed(() => props.reach(profilePermissions(selected.value)));
+const areaCount = computed(
+  () => MODULES.filter(module => hasAccess(module, applied.value)).length
+);
+const sensitiveCount = computed(() => sensitiveExtrasOn(applied.value).length);
+// As frases "Pode" vêm do modelo inteiro; quando o alcance tira chaves, a prévia avisa (#2115).
+const isPartial = computed(
+  () => applied.value.length < profilePermissions(selected.value).length
 );
 const profileName = key => `CUSTOM_ROLE.PROFILES.${key}.NAME`;
 
@@ -233,6 +237,14 @@ const move = step => {
               </ul>
             </div>
           </div>
+          <p
+            v-if="profile && isPartial"
+            role="note"
+            class="flex items-start gap-2.5 m-0 text-sm text-n-amber-11"
+          >
+            <span class="i-lucide-lock size-4 mt-0.5 shrink-0" />
+            {{ $t('CUSTOM_ROLE.PICKER.LEFT_OUT') }}
+          </p>
           <div
             class="flex flex-wrap items-center justify-between gap-3 pt-5 border-t border-n-weak"
           >

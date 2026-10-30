@@ -1,6 +1,7 @@
 <script setup>
 import { I18nT } from 'vue-i18n';
 import FunilResumoCartao from './FunilResumoCartao.vue';
+import { useCrmPermissions } from '../../composables/useCrmPermissions';
 
 // #1384 — "Vendas e meta" em uma frase, no resumo e no Confira.
 // #1498 — virou "Para que serve", sempre no topo: Vender ou Atender, para a
@@ -15,6 +16,8 @@ defineProps({
 });
 
 defineEmits(['alterar']);
+// #2075 — sem a chave de valores a meta não vem do servidor: o cartão não fala dela (nem "sem meta").
+const { canSeeSalesValues } = useCrmPermissions();
 </script>
 
 <template>
@@ -33,18 +36,20 @@ defineEmits(['alterar']);
           </strong>
         </template>
       </I18nT>
-      {{ ' ' }}
-      <I18nT
-        v-if="Number(meta) > 0"
-        keypath="CRM_FUNIL.RESUMO.META"
-        tag="span"
-        scope="global"
-      >
-        <template #valor>
-          <strong class="font-semibold">{{ dinheiro(meta) }}</strong>
-        </template>
-      </I18nT>
-      <template v-else>{{ $t('CRM_FUNIL.RESUMO.SEM_META') }}</template>
+      <template v-if="canSeeSalesValues">
+        {{ ' ' }}
+        <I18nT
+          v-if="Number(meta) > 0"
+          keypath="CRM_FUNIL.RESUMO.META"
+          tag="span"
+          scope="global"
+        >
+          <template #valor>
+            <strong class="font-semibold">{{ dinheiro(meta) }}</strong>
+          </template>
+        </I18nT>
+        <template v-else>{{ $t('CRM_FUNIL.RESUMO.SEM_META') }}</template>
+      </template>
     </template>
     <I18nT
       v-else

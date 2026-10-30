@@ -1,5 +1,5 @@
 <script setup>
-import { computed, provide, ref, useId } from 'vue';
+import { computed, provide, ref, useId, watch } from 'vue';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
@@ -10,6 +10,7 @@ import CrmOpportunityForm from '../CrmOpportunityForm.vue';
 import CardHeroi from './CardHeroi.vue';
 import CardFaixa from './CardFaixa.vue';
 import CardProximoPasso from './CardProximoPasso.vue';
+import OrigemAnuncioMeta from './origem/OrigemAnuncioMeta.vue';
 import CardResumo from './CardResumo.vue';
 import CardLado from './CardLado.vue';
 import CardRodape from './CardRodape.vue';
@@ -39,6 +40,7 @@ import { passosDoCard } from './proximoPasso';
 import { payloadDoNegocio, useCardNegocio } from './useCardNegocio';
 import { useCardRetorno } from './useCardRetorno';
 import { useCardHistorico } from './useCardHistorico';
+import { useAvisoDeReuniao } from '../../composables/useAvisoDeReuniao';
 import { useCardDesfecho } from './useCardDesfecho';
 import { useCardTipo } from './useCardTipo';
 import { useCardConversao } from './useCardConversao';
@@ -51,6 +53,8 @@ import { useResumoConversa } from './useResumoConversa';
 import { useCardMoldura } from './useCardMoldura';
 import { useFormato } from './useFormato';
 import { useFocoPreso } from './useFocoPreso';
+import ArquivarCardDialogo from '../arquivados/ArquivarCardDialogo.vue';
+import CardArquivado from '../arquivados/CardArquivado.vue';
 
 // #1423 — o card do funil ("Resumo primeiro"), no lugar da gaveta antiga
 // com abas. A página fala com ele por props, eventos e guardNavigation (o
@@ -80,6 +84,11 @@ const props = defineProps({
   isFetchingFollowUps: { type: Boolean, default: false },
   isSavingFollowUp: { type: Boolean, default: false },
   meetingsEnabled: { type: Boolean, default: false },
+  // #2095 (flag crm_arquivados): a janela nova de arquivar e o card arquivado com Restaurar.
+  arquivadosLigado: { type: Boolean, default: false },
+  erroArquivar: { type: String, default: '' },
+  restaurando: { type: Boolean, default: false },
+  erroRestaurar: { type: String, default: '' },
 });
 
 const emit = defineEmits([
@@ -92,6 +101,7 @@ const emit = defineEmits([
   'completeFollowUp',
   'cancelFollowUp',
   'refreshCard',
+  'restaurar',
 ]);
 
 const { t, te, locale } = useI18n();
@@ -116,6 +126,9 @@ const iaLigada = computed(
 const podeIa = computed(
   () => props.canManageAi && (!editando.value || card.value.can_edit === true)
 );
+// #2150 — a sugestão de etapa da IA é de quem tem crm_manage_ai: sem a chave, a
+// gaveta nem pede ao servidor (que recusaria) e não mostra a leitura da IA.
+const leSugestao = computed(() => iaLigada.value && props.canManageAi);
 const podeGerenciar = computed(() => props.canManageCards);
 const podeMover = computed(() => props.canMoveCards);
 const podeArquivar = computed(() => props.canDeleteCards);
@@ -163,8 +176,10 @@ const { porDia } = useCardHistorico({
 const sugestao = useSugestaoEtapa({
   t,
   cardId,
-  inicial: computed(() => props.card?.ai_suggestion || null),
-  ligada: computed(() => iaLigada.value && editando.value && props.show),
+  inicial: computed(() =>
+    props.canManageAi ? props.card?.ai_suggestion || null : null
+  ),
+  ligada: computed(() => leSugestao.value && editando.value && props.show),
   aoMudar: () => emit('refreshCard'),
 });
 const reuniao = useProximaReuniao({
@@ -184,12 +199,22 @@ const conversao = useCardConversao({
   cardId,
 });
 
+// #2195 — quem chegou pelo formulário do anúncio da Meta e ainda não tem conversa: a origem e as respostas ficam
+// abertas no card, e o próximo passo é chamar no WhatsApp.
+const formularioMeta = computed(() => {
+  const formulario = card.value.metadata?.meta_lead_form;
+  return formulario?.fields?.length && !card.value.conversation?.display_id
+    ? formulario
+    : null;
+});
+
 const passos = computed(() =>
   passosDoCard({
     reuniao: reuniao.reuniao.value,
     retornos: props.followUps,
     esperaDesde: card.value.conversation?.waiting_since || null,
-    sugestao: iaLigada.value ? sugestao.sugestao.value : null,
+    sugestao: leSugestao.value ? sugestao.sugestao.value : null,
+    formulario: formularioMeta.value,
     status: status.value,
   })
 );
@@ -379,12 +404,57 @@ const perdeu = () =>
 const reabrir = () =>
   guardar(() => podeGerenciar.value && emit('closeDeal', { result: 'reopen' }));
 const fecharNegocio = dados => podeGerenciar.value && emit('closeDeal', dados);
+// A reunião marcada continua de pé ao arquivar (#2091): o diálogo avisa.
+// Arquivar espera o aviso chegar (carregando, com teto em useAvisoDeReuniao).
+const {
+  aviso: avisoDeReuniao,
+  carregando: carregandoAviso,
+  consultar: consultarReuniao,
+} = useAvisoDeReuniao();
 const arquivar = () =>
-  guardar(() => podeArquivar.value && dialogoArquivar.value?.open());
+  guardar(() => {
+    if (!podeArquivar.value) return;
+    consultarReuniao(cardId.value ? [cardId.value] : []);
+    dialogoArquivar.value?.open();
+  });
 const confirmarArquivar = () => {
+  if (carregandoAviso.value) return;
   dialogoArquivar.value?.close();
   if (podeArquivar.value) emit('archive');
 };
+// #2095: com a flag, a janela nova fica aberta até a página responder (erro aparece nela; o sucesso fecha o card).
+const arquivado = computed(
+  () => props.arquivadosLigado && status.value === 'archived'
+);
+const dialogoArquivarNovo = ref(null);
+const arquivarNovo = () =>
+  guardar(() => {
+    if (!podeArquivar.value) return;
+    consultarReuniao(cardId.value ? [cardId.value] : []);
+    dialogoArquivarNovo.value?.open();
+  });
+// O que o Archiver cancela: lembretes por vencer, menos o da reunião marcada.
+const retornosQueParam = computed(
+  () =>
+    props.followUps.filter(
+      item =>
+        ['pending', 'overdue'].includes(item.status) &&
+        item.follow_up_type !== 'meeting'
+    ).length
+);
+const confirmarArquivarNovo = () =>
+  podeArquivar.value && emit('archive', { retornos: retornosQueParam.value });
+const vendaQueContinua = computed(() =>
+  status.value === 'won' && venda.value && !card.value.value_hidden
+    ? formato.dinheiro(card.value.value_cents, card.value.currency)
+    : ''
+);
+watch(
+  () => props.show,
+  aberta => {
+    if (!aberta) dialogoArquivarNovo.value?.close();
+  }
+);
 const {
   dialogo: dialogoMover,
   pedida: etapaPedida,
@@ -446,6 +516,7 @@ const salvarNegocio = () => {
   if (!podeGerenciar.value || !negocio.valido.value) return;
   const payload = payloadDoNegocio(negocio.form, {
     cobranca: jeito.cobranca.value,
+    valorOculto: Boolean(card.value.value_hidden),
   });
   emit('save', payload, undefined, () => {
     negocio.carregar({ ...props.card, ...payload });
@@ -559,15 +630,35 @@ defineExpose({
     @confirm="descarte.confirmar"
     @close="descarte.aberto.value = false"
   />
+  <ArquivarCardDialogo
+    v-if="arquivadosLigado"
+    ref="dialogoArquivarNovo"
+    :nome="nome"
+    :retornos="retornosQueParam"
+    :aviso-de-reuniao="avisoDeReuniao"
+    :venda-que-continua="vendaQueContinua"
+    :ocupado="isArchiving"
+    :erro="erroArquivar"
+    @confirmar="confirmarArquivarNovo"
+  />
   <Dialog
+    v-else
     ref="dialogoArquivar"
     type="alert"
     :title="t('CRM_CARD.ARQUIVAR.TITULO', { nome: titulo })"
     :description="t('CRM_CARD.ARQUIVAR.TEXTO')"
     :confirm-button-label="t('CRM_CARD.ARQUIVAR.BOTAO')"
-    :is-loading="isArchiving"
+    :is-loading="isArchiving || carregandoAviso"
     @confirm="confirmarArquivar"
-  />
+  >
+    <p
+      v-if="avisoDeReuniao"
+      data-aviso-reuniao
+      class="mb-0 text-sm text-n-amber-11"
+    >
+      {{ avisoDeReuniao }}
+    </p>
+  </Dialog>
   <Dialog
     ref="dialogoCliente"
     :type="cliente.virar.value ? 'edit' : 'alert'"
@@ -665,7 +756,18 @@ defineExpose({
             </template>
 
             <template v-else-if="tela === 'resumo'">
+              <CardArquivado
+                v-if="arquivado"
+                :card="card"
+                :funil="funil"
+                :formato="formato"
+                :pode-arquivar="podeArquivar"
+                :ocupado="restaurando"
+                :erro="erroRestaurar"
+                @restaurar="emit('restaurar')"
+              />
               <CardProximoPasso
+                v-else
                 :passos="passos"
                 :nome="nome"
                 :formato="formato"
@@ -675,6 +777,7 @@ defineExpose({
                 :ocupado="isSavingFollowUp || sugestao.respondendo.value"
                 :status="desfecho.status"
                 :venda="venda"
+                :contato-id="card.contact_id ? String(card.contact_id) : null"
                 @responder="abrirConversa()"
                 @feito="feito"
                 @retorno="novoRetorno"
@@ -682,6 +785,10 @@ defineExpose({
                 @aceitar="sugestao.aceitar"
                 @dispensar="sugestao.dispensar"
                 @reabrir="reabrir"
+              />
+              <OrigemAnuncioMeta
+                v-if="formularioMeta"
+                :formulario="formularioMeta"
               />
               <CardResumo
                 :card="card"
@@ -700,14 +807,14 @@ defineExpose({
                 :formato="formato"
                 :nome="nome"
                 :pode-gerenciar="podeGerenciar"
-                :pode-arquivar="podeArquivar"
+                :pode-arquivar="podeArquivar && !arquivado"
                 :pode-registros="canManageRelationshipRecords"
                 :pode-ver-contatos="canViewRelationshipRecords"
                 :arquivando="isArchiving"
                 :empresas="empresasLigadas"
                 :jeito="jeito"
                 @abrir="abrir"
-                @arquivar="arquivar"
+                @arquivar="arquivadosLigado ? arquivarNovo() : arquivar()"
                 @conversa="abrirConversa()"
                 @cliente="cliente.pedir"
               />
@@ -719,7 +826,7 @@ defineExpose({
               :atual="card.stage_id"
               :pode-mover="podeMover"
               :movendo="isMovingCard"
-              :leitura="iaLigada"
+              :leitura="leSugestao"
               :pode-ia="podeIa"
               :sugestao="sugestao.sugestao.value"
               :carregando="sugestao.carregando.value"

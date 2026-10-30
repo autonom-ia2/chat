@@ -16,6 +16,11 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // #2255: caixa API ligada ao WAHA é o WhatsApp do celular.
+  wahaProvider: {
+    type: Boolean,
+    default: false,
+  },
 });
 const getters = useStoreGetters();
 const { t } = useI18n();
@@ -44,6 +49,9 @@ const twilioChannelName = () => {
 };
 
 const readableChannelName = computed(() => {
+  if (props.channelType === 'Channel::Api' && props.wahaProvider) {
+    return t('INBOX_MGMT.CHANNELS.WHATSAPP_CELULAR');
+  }
   if (props.channelType === 'Channel::Api') {
     return globalConfig.value.apiChannelName || t('INBOX_MGMT.CHANNELS.API');
   }

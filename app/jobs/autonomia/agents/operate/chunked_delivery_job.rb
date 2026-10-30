@@ -27,7 +27,9 @@ module Autonomia
           agent_inbox = ::Autonomia::Agents::AgentInbox.kept.find_by(id: agent_inbox_id)
           return if agent_inbox.blank? || agent_inbox.agent.blank?
 
+          @turno_segue = false
           deliver(conversation, agent_inbox, reply_to_message_id, Array(chunks), index.to_i, meta || {})
+          soltar_o_turno(conversation, reply_to_message_id) unless @turno_segue
         end
 
         private
@@ -44,14 +46,23 @@ module Autonomia
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado. Só a troca de
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
-          return refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta) if motivo == :dono_mudou
-          return avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index) if motivo == :pessoa_respondeu
-          return unless posted
+          return parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo) if motivo
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
-          log_replied(agent_inbox.agent, conversation, meta, posted) if index.zero?
+          primeiro_pedaco(agent_inbox.agent, conversation, meta, posted) if index.zero?
 
           schedule_next(conversation, agent_inbox, reply_to_message_id, chunks, index, meta, typing)
+        end
+
+        # A cadeia parou (o pedaço não foi postado; `posted` só vem sem motivo). A troca de dono pode refazer o turno, a
+        # pessoa que respondeu deixa o rastro e (#2154) o cliente que escreveu depois de algum pedaço de uma fala que
+        # avisou que vai chamar alguém não impede a avaliação da Atribuição. Os outros motivos só encerram.
+        def parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
+          case motivo
+          when :dono_mudou then refazer_se_o_dono_mudou(conversation, agent_inbox, reply_to_message_id, index, meta)
+          when :pessoa_respondeu then avisar_pessoa_respondeu(agent_inbox, conversation, reply_to_message_id, index)
+          when :turno_mudou then pedir_avaliacao(conversation, meta) if index.positive?
+          end
         end
 
         # #1606: a cadeia parou antes do 1º pedaço porque OUTRO vínculo ativo da caixa virou o dono depois da IA (troca sem
@@ -67,6 +78,7 @@ module Autonomia
           ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: conversation, message_id: reply_to_message_id,
                                                                origem: :responder, quem_perdeu: agent_inbox,
                                                                posse_de_quem_perdeu: meta['posse'])
+          @turno_segue = true # #2154: o mesmo turno segue com o dono novo, com a marca dele
         end
 
         # -> nil para seguir; senão o motivo de parar (:turno_mudou, :dono_mudou, :ja_postado, :pessoa_respondeu).
@@ -104,13 +116,50 @@ module Autonomia
           next_chunk = chunks[nxt]
           if next_chunk.blank?
             typing.off
-            return
+            return pedir_avaliacao(conversation, meta)
           end
 
           typing.on
           wait_seconds = (next_chunk['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0)
+          renovar_o_turno(conversation, reply_to_message_id)
           self.class.set(wait: wait_seconds.seconds)
               .perform_later(conversation.id, agent_inbox.id, reply_to_message_id, chunks, nxt, meta)
+        end
+
+        # O 1º pedaço entrou: o "respondido" de sempre e, se o turno avisou que vai chamar alguém (#2154, marca no meta), o
+        # registro do aviso, agora que a fala de fato começou a sair.
+        def primeiro_pedaco(agent, conversation, meta, posted)
+          log_replied(agent, conversation, meta, posted)
+          aviso = meta[::Autonomia::Agents::AgenteSoInforma::META]
+          return unless aviso
+
+          ::Autonomia::Agents::AgenteSoInforma.fala_comecou!(agent: agent, conversation: conversation, reason: aviso.to_h['motivo'],
+                                                             message: posted)
+        end
+
+        # #2154 (flag `agente_so_informa`): o turno avisou que vai chamar alguém (marca no meta, posta pelo Responder) e a fala
+        # terminou de sair (o último pedaço, ou o cliente escreveu depois de algum pedaço): a IA de Atribuição lê e decide.
+        # Nunca derruba a entrega (AgenteSoInforma.fala_terminou!).
+        def pedir_avaliacao(conversation, meta)
+          return unless meta[::Autonomia::Agents::AgenteSoInforma::META]
+
+          ::Autonomia::Agents::AgenteSoInforma.fala_terminou!(conversation)
+        end
+
+        # #2154 (flag `agente_so_informa`, Operate::TurnoEmCurso): o próximo pedaço vai sair; a marca do turno é renovada
+        # ANTES de agendá-lo, só se ainda é deste turno (compare-and-expire), e o turno segue na cadeia.
+        def renovar_o_turno(conversation, reply_to_message_id)
+          @turno_segue = true
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.renovar(conversation.id, reply_to_message_id)
+        end
+
+        # A cadeia terminou, por qualquer motivo: solta a marca, só se ainda é deste turno (compare-and-delete).
+        def soltar_o_turno(conversation, reply_to_message_id)
+          return unless ::Autonomia::Agents::AgenteSoInforma.ligada?(conversation.account)
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.soltar(conversation.id, reply_to_message_id)
         end
 
         # Posta UM pedaço como outgoing do AgentBot-espelho. Idempotente por token composto, dentro do

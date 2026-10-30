@@ -8,6 +8,7 @@ import CardMaisDetalhes from './CardMaisDetalhes.vue';
 import { atrasado } from './proximoPasso';
 import { formatClientPhone } from '../../helpers/meetingDay';
 import { promessaDoCard } from './useCardNegocio';
+import { textoDoFechamento } from './sugestaoDeFechar';
 
 // #1423 — o card em quatro frases, sempre na mesma ordem: Cliente, Negócio,
 // Agenda e Conversa. Cada coisa aparece num lugar só da tela: o que já está no
@@ -84,6 +85,13 @@ const posicao = computed(() =>
 const etapaAtual = computed(
   () => props.etapas[posicao.value]?.name || props.card.stage?.name || ''
 );
+// F3: a sugestão de fechar o card diz o que acabou, e não a etapa.
+const textoDaSugestao = computed(() => {
+  const fechar = textoDoFechamento(props.sugestao);
+  if (!fechar)
+    return t(`${R}.SUGESTAO`, { etapa: props.sugestao?.to_stage_name });
+  return t(fechar.frase, { motivo: fechar.motivo ? t(fechar.motivo) : '' });
+});
 const sugestaoNaLinha = computed(
   () =>
     props.ia &&
@@ -128,6 +136,14 @@ const vencimento = computed(() =>
 const promessa = computed(() => {
   const dia = promessaDoCard(props.card);
   return dia ? diaFalado(diaLocal(dia)) : '';
+});
+// #2075 — valor que a pessoa não vê (sem a chave de valores): a frase diz isso, nunca "R$ 0".
+const valorOculto = computed(() => Boolean(props.card.value_hidden));
+const fraseNegocio = computed(() => {
+  if (valorOculto.value) return `${R}.NEGOCIO_VALOR_OCULTO`;
+  return props.card.value_cents
+    ? `${R}.NEGOCIO_FRASE`
+    : `${R}.NEGOCIO_SEM_VALOR`;
 });
 const fraseCobranca = computed(() => {
   if (!vencimento.value) return `${R}.COBRANCA_SEM_DATA`;
@@ -337,7 +353,11 @@ const temConversa = computed(() =>
             </template>
             <template #valor>
               <strong class="font-semibold">
-                {{ formato.dinheiro(card.value_cents, card.currency) }}
+                {{
+                  valorOculto
+                    ? t(`${R}.VALOR_OCULTO`)
+                    : formato.dinheiro(card.value_cents, card.currency)
+                }}
               </strong>
             </template>
             <template #vencimento>
@@ -377,9 +397,7 @@ const temConversa = computed(() =>
         </I18nT>
         <I18nT
           v-else
-          :keypath="
-            card.value_cents ? `${R}.NEGOCIO_FRASE` : `${R}.NEGOCIO_SEM_VALOR`
-          "
+          :keypath="fraseNegocio"
           tag="p"
           scope="global"
           class="mb-0"
@@ -463,7 +481,7 @@ const temConversa = computed(() =>
               class="i-lucide-sparkles mt-0.5 size-4 shrink-0"
               aria-hidden="true"
             />
-            {{ t(`${R}.SUGESTAO`, { etapa: sugestao.to_stage_name }) }}
+            {{ textoDaSugestao }}
           </p>
         </template>
       </CardCartao>

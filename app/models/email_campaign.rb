@@ -132,6 +132,16 @@ class EmailCampaign < ApplicationRecord
     end
   end
 
+  # The From address the e-mail really carries (#2237). The inbox address in direct mode; by the
+  # domain, the campaign's own address, then the domain's default, then no-reply@<domain> — the
+  # same chain Ses::Sender#resolve_from ends with. The send, the test send and the Reply-To all
+  # read it here, so they cannot drift apart again.
+  def sender_address
+    return from_email.presence if direct_inbox?
+
+    from_email.presence || sender_identity&.from_email.presence || (sender_identity && "no-reply@#{sender_identity.domain}")
+  end
+
   # The account does not e-mail this address: it is suppressed (bounce, complaint, unsubscribe) or
   # belongs to a contact who refused messages. Same protection as the real send
   # (EmailCampaigns::DeliveryClaim); the test send refuses it too (#1093).

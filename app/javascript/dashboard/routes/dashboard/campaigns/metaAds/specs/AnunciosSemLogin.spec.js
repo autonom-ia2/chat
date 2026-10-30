@@ -159,7 +159,11 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
         wrapper
           .findAll('[data-panel-path]')
           .map(step => step.attributes('data-panel-path'))
-      ).toEqual(['CONVERSATIONS', 'QUOTES', 'SALES']);
+      ).toEqual(['SPEND', 'CONVERSATIONS', 'QUOTES', 'SALES']);
+      // Sem gasto ainda (#2054): o investimento é o convite para conectar.
+      expect(
+        wrapper.find('[data-panel-path="SPEND"] [data-panel-connect]').exists()
+      ).toBe(true);
       expect(wrapper.find('[data-panel-response-time]').exists()).toBe(true);
       expect(wrapper.find('[data-verdict]').exists()).toBe(false);
       expect(wrapper.find('[data-summary-confidence]').exists()).toBe(false);
@@ -269,6 +273,117 @@ describe('Anúncios sem login (#1960, degrau 0)', () => {
       );
       expect(wrapper.find('[data-ad-detail-chart-scale]').exists()).toBe(false);
       expect(wrapper.find('[data-ad-detail-quotes]').exists()).toBe(false);
+    });
+  });
+
+  describe('conectar a conta de anúncios (#2054)', () => {
+    const ConectarStub = {
+      name: 'ConectarAnuncios',
+      props: ['connection', 'resume'],
+      emits: ['back', 'connected'],
+      template: '<div data-conectar-stub />',
+    };
+    const mountWithConnect = props =>
+      mount(AnunciosSemLogin, {
+        props: { result: result(), connection: { partner: {} }, ...props },
+        global: { stubs: { ...stubs, ConectarAnuncios: ConectarStub } },
+      });
+
+    it('"Ver quanto gastei" opens the connection and its end goes back to the page', async () => {
+      const wrapper = mountWithConnect();
+      await flushPromises();
+
+      await wrapper.find('[data-panel-connect]').trigger('click');
+      const connect = wrapper.findComponent(ConectarStub);
+      expect(connect.exists()).toBe(true);
+      expect(connect.props('resume')).toBeNull();
+
+      connect.vm.$emit('connected');
+      expect(wrapper.emitted('connected')).toHaveLength(1);
+    });
+
+    it('a connection stopped in the middle shows the notice and continues from where it stopped', async () => {
+      const wrapper = mountWithConnect({
+        result: result({
+          connection_state: 'choosing',
+          connection_mode: 'facebook_login',
+        }),
+      });
+      await flushPromises();
+
+      expect(wrapper.find('[data-anuncios-conexao="choosing"]').exists()).toBe(
+        true
+      );
+      await wrapper.find('[data-anuncios-conexao-continuar]').trigger('click');
+
+      expect(wrapper.findComponent(ConectarStub).props('resume')).toEqual({
+        state: 'choosing',
+        mode: 'facebook_login',
+      });
+    });
+
+    it('with nobody from an ad yet, the "ready" screen also connects (#2190)', async () => {
+      const wrapper = mountWithConnect({ result: result({ ad_touch: false }) });
+      await flushPromises();
+
+      expect(wrapper.find('[data-see-example]').exists()).toBe(true);
+      await wrapper
+        .find('[data-anuncios-vazio-conectar-botao]')
+        .trigger('click');
+
+      expect(wrapper.findComponent(ConectarStub).exists()).toBe(true);
+      expect(wrapper.find('[data-anuncios-vazio]').exists()).toBe(false);
+
+      wrapper.findComponent(ConectarStub).vm.$emit('back');
+      await flushPromises();
+      expect(
+        wrapper.find('[data-anuncios-vazio-conectar-botao]').exists()
+      ).toBe(true);
+    });
+
+    it('with a connection stopped in the middle, the "ready" screen keeps only the notice (#2190)', async () => {
+      const wrapper = mountWithConnect({
+        result: result({
+          ad_touch: false,
+          connection_state: 'choosing',
+          connection_mode: 'facebook_login',
+        }),
+      });
+      await flushPromises();
+
+      expect(wrapper.find('[data-anuncios-conexao="choosing"]').exists()).toBe(
+        true
+      );
+      expect(wrapper.find('[data-anuncios-vazio-conectar]').exists()).toBe(
+        false
+      );
+    });
+
+    it('read-only on the "ready" screen does not see the way to connect (#2190)', async () => {
+      const wrapper = mountWithConnect({
+        readOnly: true,
+        result: result({ ad_touch: false }),
+      });
+      await flushPromises();
+
+      expect(wrapper.find('[data-see-example]').exists()).toBe(true);
+      expect(wrapper.find('[data-anuncios-vazio-conectar]').exists()).toBe(
+        false
+      );
+    });
+
+    it('read-only sees neither the notice nor the way to connect', async () => {
+      const wrapper = mountWithConnect({
+        readOnly: true,
+        result: result({
+          connection_state: 'broken',
+          connection_mode: 'partner',
+        }),
+      });
+      await flushPromises();
+
+      expect(wrapper.find('[data-anuncios-conexao]').exists()).toBe(false);
+      expect(wrapper.find('[data-panel-connect]').exists()).toBe(false);
     });
   });
 

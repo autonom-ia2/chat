@@ -52,6 +52,8 @@ export const barrasDoAudio = (amostras, total = BARRAS) => {
 // balão fica com as barras neutras: tocar continua funcionando pelo <audio>.
 // A onda de cada endereço fica guardada: o balão que sai e volta à tela (rolagem,
 // troca de conversa) não baixa o arquivo de novo. Só as últimas, para não crescer.
+// Quem baixa por um endereço com carimbo de tempo passa a `chave` estável (o
+// endereço sem o carimbo), senão cada montagem vira uma onda nova (#2113).
 const ONDAS_GUARDADAS = 60;
 const ondas = new Map();
 
@@ -94,7 +96,7 @@ const passarAVez = () => {
   fila.shift()?.();
 };
 
-const baixarEDecodificar = async (url, signal) => {
+const baixarEDecodificar = async (url, chave, signal) => {
   const resposta = await fetch(url, { signal });
   if (!resposta.ok) return null;
   const dados = await resposta.arrayBuffer();
@@ -103,19 +105,19 @@ const baixarEDecodificar = async (url, signal) => {
     barras: barrasDoAudio(audio.getChannelData(0)),
     duracao: audio.duration,
   };
-  guardar(url, onda);
+  guardar(chave, onda);
   return onda;
 };
 
-export const carregarOnda = async (url, { signal } = {}) => {
+export const carregarOnda = async (url, { signal, chave = url } = {}) => {
   if (signal?.aborted) return null;
-  if (ondas.has(url)) return ondas.get(url);
+  if (ondas.has(chave)) return ondas.get(chave);
   if (!(await esperarAVez(signal))) return null;
   try {
     if (signal?.aborted) return null;
     // Enquanto esperava, outro balão pode ter trazido a mesma onda.
-    if (ondas.has(url)) return ondas.get(url);
-    return await baixarEDecodificar(url, signal);
+    if (ondas.has(chave)) return ondas.get(chave);
+    return await baixarEDecodificar(url, chave, signal);
   } catch {
     return null;
   } finally {

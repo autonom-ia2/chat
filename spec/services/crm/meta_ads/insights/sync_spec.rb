@@ -8,6 +8,7 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
   let(:ad_account_id) { connection.ad_account_id }
   let(:sync) { described_class.new(connection) }
 
+  before { stub_meta_ad_set_destinations(ad_account_id) }
   after { Redis::Alfred.delete(Crm::MetaAds::Insights::Usage.key(ad_account_id)) }
 
   # A leitura da frequência de 7 dias (F5, D5.4): a consulta exata, sem `time_increment` nem janela de atribuição.
@@ -176,5 +177,59 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
     connection.update!(ad_account_id: nil)
 
     expect(sync.perform('today')).to eq(:skipped)
+  end
+
+  describe 'destino dos conjuntos (#2054)' do
+    let(:adset_id) { '120254710067060777' }
+
+    it 'depois do gasto de hoje, lê uma vez o destino do conjunto que ainda não tem' do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
+      listed = [{ id: adset_id, destination_type: 'WEBSITE' }, { id: '999', destination_type: 'WHATSAPP' }]
+      adsets = stub_meta_ad_set_destinations(ad_account_id, rows: listed)
+
+      sync.perform('today')
+      described_class.new(connection).perform('today')
+
+      expect(adsets).to have_been_requested.once
+      expect(Crm::MetaAdObject.where(account_id: account.id).pluck(:meta_object_id, :destination_type)).to contain_exactly(
+        [adset_id, 'WEBSITE'], ['120254710067060999', nil], ['120254710067060416', nil]
+      )
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id).name).to eq('Conjunto 60+')
+    end
+
+    it 'conjunto fora da lista da Meta fica UNDEFINED e não é pedido de novo' do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
+      adsets = stub_meta_ad_set_destinations(ad_account_id, rows: [])
+
+      2.times { described_class.new(connection).perform('today') }
+
+      expect(adsets).to have_been_requested.once
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id).destination_type).to eq('UNDEFINED')
+    end
+
+    it 'lista cortada no teto de páginas: só grava os que vieram, o resto fica para a próxima leitura' do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
+      page = { data: [{ id: '999', destination_type: 'WHATSAPP' }], paging: { cursors: { after: 'C' }, next: 'https://graph.facebook.com/n' } }
+      stub_request(:get, meta_graph_url("act_#{ad_account_id}/adsets"))
+        .with(query: hash_including('fields' => 'id,destination_type'))
+        .to_return(status: 200, body: page.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      sync.perform('today')
+
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id).destination_type).to be_nil
+      expect(Crm::MetaAdObject.find_by(meta_object_id: '999')).to be_nil
+    end
+
+    it 'erro na lista de conjuntos não muda o resultado nem a conexão, e tenta de novo na próxima' do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
+      adsets = stub_meta_ad_set_destinations(ad_account_id, status: 400)
+
+      expect(sync.perform('today')).to eq(:ok)
+      described_class.new(connection).perform('today')
+
+      expect(connection.reload.status).to eq('active')
+      expect(adsets).to have_been_requested.twice
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id).destination_type).to be_nil
+    end
   end
 end

@@ -1,0 +1,116 @@
+{
+  "META_ADS_ORGANIC": {
+    "TAB": "Your posts",
+    "SUBTITLE": "See who saw your posts and who messaged you.",
+    "PERIOD_LABEL": "Period",
+    "PERIODS": {
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days"
+    },
+    "LOADING": "Loading your posts",
+    "RANGE": "{range} · Meta can take up to 2 days to update",
+    "HEADLINE": {
+      "BOTH": "Your posts showed up {page} times on Facebook and {instagram} on Instagram, not counting ads.",
+      "PAGE": "Your Page posts showed up {count} times, not counting ads.",
+      "INSTAGRAM": "Your Instagram posts showed up {count} times, not counting ads.",
+      "ZERO": "You haven't posted in the last {days} days. A new post brings people back.",
+      "NONE": "Allow access to see how many people your Page and your Instagram reach.",
+      "UNAVAILABLE": "We couldn't read the numbers right now. Try again."
+    },
+    "BEST_POST": "Your most-liked post was on {place}. Make more posts like this one: “{text}”",
+    "STEP": "{step}. {text}",
+    "SOURCE": {
+      "PAGE": {
+        "NAME": "Facebook Page",
+        "OPEN": "Open Page",
+        "POST": "Open Facebook to post",
+        "MESSAGES": "No one messaged your Page in this period. | 1 person messaged your Page. This includes people who came from ads. | {count} people messaged your Page. This includes people who came from ads.",
+        "NEEDS_PERMISSION": {
+          "TITLE": "Give access to your Page",
+          "TEXT": "Continue with Facebook again and allow access to your Page results. Your ads keep running.",
+          "BUTTON": "Continue with Facebook"
+        },
+        "NOT_CONNECTED": {
+          "TITLE": "No Page connected",
+          "TEXT": "Continue with Facebook and choose the Page you post on.",
+          "BUTTON": "Continue with Facebook"
+        },
+        "SEE_CONVERSATIONS": "See Page conversations",
+        "UNAVAILABLE": "We couldn't read your Page right now"
+      },
+      "INSTAGRAM": {
+        "NAME": "Instagram",
+        "OPEN": "Open profile",
+        "POST": "Open Instagram to post",
+        "MESSAGES": "No one messaged you on Instagram in this period. | 1 person messaged you on Instagram. This includes people who came from ads. | {count} people messaged you on Instagram. This includes people who came from ads.",
+        "NEEDS_PERMISSION": {
+          "TITLE": "Give access to your Instagram",
+          "TEXT": "Log in with Instagram again and allow access to your results. Your messages keep coming in.",
+          "BUTTON": "Log in with Instagram"
+        },
+        "NOT_CONNECTED": {
+          "TITLE": "No Instagram connected",
+          "TEXT": "Log in with your Instagram business account to see its results here.",
+          "BUTTON": "Log in with Instagram"
+        },
+        "SEE_CONVERSATIONS": "See Instagram conversations",
+        "UNAVAILABLE": "We couldn't read your Instagram right now"
+      }
+    },
+    "ASK_ADMIN": "Ask an administrator of this account to connect.",
+    "ERROR": {
+      "TEXT": "We couldn't reach Meta right now. Try again in a few minutes.",
+      "RETRY": "Try again"
+    },
+    "TILES": {
+      "REACH": {
+        "LABEL": "People who saw",
+        "HELP": "Each person counts once.",
+        "HELP_UP_TO": "The same person may count more than once if they saw a post and a story."
+      },
+      "VIEWS": {
+        "LABEL": "Times shown",
+        "HELP": "One person can see it more than once."
+      },
+      "INTERACTIONS": {
+        "LABEL": "Likes and comments",
+        "HELP": "Includes shares and saves."
+      },
+      "FOLLOWERS": {
+        "LABEL": "Followers",
+        "HELP": "Total as of today.",
+        "NEW": "+{count} in the last {days} days",
+        "SMALL_ACCOUNT": "Meta shows new followers once you reach 100 followers."
+      },
+      "MORE": "{count} more than the previous {days} days",
+      "FEWER": "{count} fewer than the previous {days} days",
+      "SAME": "Same as the previous {days} days",
+      "NO_COMPARE": "No comparison on Instagram: Meta only keeps 90 days.",
+      "FIRST_PERIOD": "First period with data: your posts didn't show up without ads in the previous {days} days.",
+      "UP_TO": "up to {count}"
+    },
+    "ADS_SHARE": {
+      "TEXT": "{first}% of the times your Page showed up were free. {second}% came from ads.",
+      "FIRST": "Free",
+      "SECOND": "From ads"
+    },
+    "NEW_PEOPLE": {
+      "TEXT": "{first}% of the people who saw your Instagram don't follow you yet.",
+      "FIRST": "Not following yet",
+      "SECOND": "Already following"
+    },
+    "TOP_POSTS": {
+      "TITLE": "Posts with the most likes and comments",
+      "EMPTY": "No posts in the last {days} days.",
+      "REACH": "reach {count}",
+      "INTERACTIONS": "{count} likes and comments"
+    },
+    "QUIET": {
+      "TITLE": "No posts in the last {days} days",
+      "TEXT": "You have {followers} followers. When you post, the numbers show up here."
+    },
+    "CONNECT_ERROR": "We couldn't open the sign-in. Try again in a few minutes.",
+    "MESSAGES_NO_ACCESS": "You don't have access to the conversations in this inbox."
+  }
+}

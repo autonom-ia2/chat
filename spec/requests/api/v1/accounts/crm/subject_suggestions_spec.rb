@@ -49,6 +49,29 @@ RSpec.describe 'CRM subject suggestions API', type: :request do
                                                           'pipeline_name' => 'Comercial')
   end
 
+  it '#2162: a sugestão que veio de uma dúvida da IA diz isso, e a comum não' do
+    decision = suggestion(action: 'create', title: nil)
+    decision.update!(reason: Crm::Subjects::DuvidaSugerida::MOTIVO)
+
+    get "#{base_url}/cards", headers: auth_headers(agent)
+    expect(response.parsed_body['suggestion']).to include('id' => decision.id, 'title' => nil, 'duvida' => true)
+
+    decision.update!(reason: nil)
+    get "#{base_url}/cards", headers: auth_headers(agent)
+    expect(response.parsed_body['suggestion']).to include('duvida' => false)
+  end
+
+  it '#2162: aceitar a sugestão sem nome cria o card sem nome (a IA dá o nome depois)' do
+    decision = suggestion(action: 'create', title: nil)
+    allow(Crm::Subjects::Notifier).to receive(:notify)
+
+    expect { accept(decision) }.to change(Crm::Card, :count).by(1)
+
+    novo = account.crm_cards.order(:id).last
+    expect(novo).to have_attributes(title: 'Joana Lima', stage_id: stage.id)
+    expect(Crm::Subjects::Naming.named?(novo)).to be(false)
+  end
+
   it 'sem sugestão esperando, suggestion vem vazio' do
     card('Agentes de IA')
 

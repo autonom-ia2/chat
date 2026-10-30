@@ -29,13 +29,22 @@ class Crm::Cards::Broadcaster
     return unless EVENTS.include?(@event_name)
 
     recipient_users.each do |user|
-      next if user.pubsub_token.blank?
+      next if user.pubsub_token.blank? || !crm_reader?(user)
 
       ActionCableBroadcastJob.perform_later([user.pubsub_token], @event_name, payload_for(user))
     end
   end
 
   private
+
+  # #2075: o tempo real segue a lista e o quadro: o card não vai a quem a função não dá o CRM (crm_view). Antes, ia a
+  # todo membro da caixa, com o valor de venda junto.
+  def crm_reader?(user)
+    account_user = account_user_for(user)
+    return false if account_user.blank?
+
+    Crm::CardPolicy.new({ user: user, account: account, account_user: account_user }, Crm::Card).index?
+  end
 
   def payload_for(user)
     Crm::Cards::PayloadBuilder.new(
@@ -125,7 +134,12 @@ class Crm::Cards::Broadcaster
     account_users_by_user_id[user.id]
   end
 
+  # A função de cada um vem junto (crm_reader? e o valor de venda a leem por destinatário). No OSS não há a associação.
   def account_users_by_user_id
-    @account_users_by_user_id ||= account.account_users.where(user_id: recipient_users.map(&:id)).index_by(&:user_id)
+    @account_users_by_user_id ||= begin
+      scope = account.account_users.where(user_id: recipient_users.map(&:id))
+      scope = scope.includes(:custom_role) if AccountUser.reflect_on_association(:custom_role)
+      scope.index_by(&:user_id)
+    end
   end
 end

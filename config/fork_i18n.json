@@ -74,6 +74,21 @@
     },
     {
       "file": "telaInicial.json"
+    },
+    {
+      "file": "painelDoContato.json"
+    },
+    {
+      "file": "listaDeConversas.json"
+    },
+    {
+      "file": "metaAdsOrganico.json"
+    },
+    {
+      "file": "seusPosts.json"
+    },
+    {
+      "file": "funcoesDaEquipe.json"
     }
   ],
   "pacotes": {

@@ -1,6 +1,7 @@
 # De onde sai o painel de Anúncios (#1960): da conexão com conta de anúncios (painel completo, com gasto) ou, com
 # Anúncios sem login ligado e sem essa conexão, do que o WhatsApp contou (fonte nil, Crm::MetaAds::SemLogin).
-# Espera `current_connection` no controller.
+# Espera `current_connection` no controller. O painel sem login é o mesmo pedido com sessão: a pessoa é a do pedido
+# (`viewer`), e os valores de venda em R$ seguem ela como no painel com conexão (#2075).
 module Crm::MetaAdsPanelSource
   extend ActiveSupport::Concern
 
@@ -21,7 +22,7 @@ module Crm::MetaAdsPanelSource
 
   # O mesmo painel da conexão, sem gasto, com o tempo de resposta do período (das conversas que o WhatsApp contou).
   def whatsapp_panel_payload
-    report = ::Crm::MetaAds::Panel::Report.new(nil, period: panel_period, account: Current.account)
+    report = ::Crm::MetaAds::Panel::Report.new(nil, period: panel_period, account: Current.account, visible: viewer)
     report.payload.merge(response_time: whatsapp_response_time(report))
   end
 
@@ -39,6 +40,11 @@ module Crm::MetaAdsPanelSource
 
   # Período, conversas que a pessoa já vê (#1794) e a conta, comuns ao anúncio por dentro e às listas.
   def panel_scope
-    { period: panel_period, visible: ::Crm::MetaAds::VisibleConversations.current, account: Current.account }
+    { period: panel_period, visible: viewer, account: Current.account }
+  end
+
+  # A pessoa do pedido: as conversas que ela já vê (#1794) e os valores de venda que ela vê (#2075).
+  def viewer
+    @viewer ||= ::Crm::MetaAds::VisibleConversations.current
   end
 end

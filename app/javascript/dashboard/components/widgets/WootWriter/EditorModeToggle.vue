@@ -16,6 +16,11 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  // #2211: a conversa vazia (antes de existir conversa) não tem nota privada: só "Responder".
+  soResposta: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits(['toggleMode']);
@@ -79,7 +84,11 @@ const translateValue = computed(() => {
     <div ref="wootEditorReplyMode" class="flex items-center gap-1 px-2 z-20">
       {{ $t('CONVERSATION.REPLYBOX.REPLY') }}
     </div>
-    <div ref="wootEditorPrivateMode" class="flex items-center gap-1 px-2 z-20">
+    <div
+      v-if="!soResposta"
+      ref="wootEditorPrivateMode"
+      class="flex items-center gap-1 px-2 z-20"
+    >
       {{ $t('CONVERSATION.REPLYBOX.PRIVATE_NOTE') }}
     </div>
     <div

@@ -10,7 +10,7 @@ import {
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { messageStamp } from 'shared/helpers/timeHelper';
 import CampaignsAPI from 'dashboard/api/campaigns';
 
@@ -76,7 +76,7 @@ const inboxIcon = computed(() => {
   if (!inbox) return '';
 
   return getInboxIconByType(
-    inbox.channel_type,
+    tipoDoIconeDaCaixa(inbox),
     inbox.medium,
     'fill',
     inbox.voice_enabled

@@ -1,0 +1,280 @@
+{
+  "placar": [
+    {
+      "tipo": "seguradora",
+      "variante": "sem_camada",
+      "aprovadas": "1/3",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "1/3",
+      "correta_e_util": "1/3",
+      "chama_de_segurado_sem_apolice": "0/3",
+      "diz_vendedor_ou_ganho": "0/3",
+      "diz_corretora_ou_cotacao": "2/3"
+    },
+    {
+      "tipo": "seguradora",
+      "variante": "com_camada",
+      "aprovadas": "1/3",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "3/3",
+      "correta_e_util": "1/3",
+      "chama_de_segurado_sem_apolice": "0/3",
+      "diz_vendedor_ou_ganho": "0/3",
+      "diz_corretora_ou_cotacao": "0/3"
+    },
+    {
+      "tipo": "insurtech",
+      "variante": "sem_camada",
+      "aprovadas": "1/3",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "1/3",
+      "correta_e_util": "1/3",
+      "chama_de_segurado_sem_apolice": "0/3",
+      "diz_vendedor_ou_ganho": "0/3",
+      "diz_corretora_ou_cotacao": "2/3"
+    },
+    {
+      "tipo": "insurtech",
+      "variante": "com_camada",
+      "aprovadas": "2/3",
+      "retidas": 0,
+      "usa_vocabulario_do_tipo": "3/3",
+      "correta_e_util": "2/3",
+      "chama_de_segurado_sem_apolice": "0/3",
+      "diz_vendedor_ou_ganho": "0/3",
+      "diz_corretora_ou_cotacao": "0/3"
+    }
+  ],
+  "custo_usd": 0.5132,
+  "pulados": [],
+  "execucoes": [
+    {
+      "tipo": "seguradora",
+      "pergunta": "p5",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "A cotação nova começa na conversa do WhatsApp:\n1. O cliente pede uma cotação ao agente.\n2. Responde às perguntas que ele fizer.\n3. Recebe o comparativo em PDF quando todas as seguradoras tiverem um desfecho, normalmente em **1 a 2 minutos**.\n\nPara isso, você precisa ter o agente de cotação criado e a conexão com a seguradora funcionando.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": true,
+        "justificativa": "Para uma seguradora, a resposta adota \"cotação\" como se fosse o trabalho da conta e ainda não orienta de forma útil no CRM descrito, desviando para WhatsApp/agente sem caminho de tela coerente com os dados informados."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0671,
+      "custo_acumulado_usd": 0.0671
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p5",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "A nova proposta começa na conversa do WhatsApp com o agente:\n1. O contato pede uma proposta e responde às perguntas do agente.\n2. O agente consulta as seguradoras e espera todas terminarem.\n3. O contato recebe o comparativo em PDF na própria conversa.\n\nPara funcionar, o agente precisa estar criado e a conexão com a seguradora funcionando.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa termos compatíveis como proposta e contato, mas não responde de forma útil como criar isso na plataforma nem indica caminho na tela."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0671,
+      "custo_acumulado_usd": 0.1341
+    },
+    {
+      "tipo": "insurtech",
+      "pergunta": "p5",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "A cotação nova começa pelo **WhatsApp**, não por um botão no painel:\n1. O cliente pede uma cotação na conversa.\n2. O agente faz as perguntas e coleta os dados necessários.\n3. Quando a cotação termina, o cliente recebe o comparativo em **PDF** na própria conversa.\n\nPara funcionar, o agente de cotação precisa estar criado e a conexão com a seguradora funcionando.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": true,
+        "justificativa": "A resposta adota “cotação” e “agente de cotação”, que esse tipo de conta não usa, e ainda traz um fluxo por WhatsApp sem indicar um caminho de tela coerente com os dados da conta."
+      },
+      "aprovada": false,
+      "custo_usd": 0.068,
+      "custo_acumulado_usd": 0.2021
+    },
+    {
+      "tipo": "insurtech",
+      "pergunta": "p5",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "A nova proposta começa na conversa do WhatsApp com o agente:\n1. O contato pede uma proposta de seguro.\n2. Responde às perguntas do agente.\n3. Quando todas as seguradoras tiverem um resultado, recebe o comparativo em PDF na própria conversa.\n\nPara isso funcionar, o agente precisa estar criado e a conexão com a seguradora funcionando.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Evita termos inadequados e usa “proposta”/“seguro”, mas não responde de forma útil como criar isso na plataforma e ainda inventa um fluxo de WhatsApp/agente/conexão com seguradora que não aparece nos dados da conta."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0689,
+      "custo_acumulado_usd": 0.271
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p6",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Você quer enviar a proposta de uma seguradora após a cotação ou montar uma proposta comercial para o cliente?",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": true,
+        "justificativa": "A resposta não orienta como fazer na tela e ainda usa “cotação”, termo que essa seguradora não usa para falar do próprio trabalho."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0286,
+      "custo_acumulado_usd": 0.2996
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p6",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "Você quer preparar e enviar uma proposta de seguro ao contato ou criar um card no funil para acompanhar essa proposta?",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa termos adequados para seguradora, mas não responde de forma útil ao pedir o caminho na plataforma e só devolve uma pergunta de esclarecimento."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0281,
+      "custo_acumulado_usd": 0.3277
+    },
+    {
+      "tipo": "insurtech",
+      "pergunta": "p6",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "Você quer fazer uma **proposta de seguro a partir de uma cotação** ou escrever uma **proposta comercial** para enviar ao cliente?",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": false,
+        "correta_e_util": false,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": true,
+        "justificativa": "A resposta não orienta como fazer a proposta e ainda usa “cotação” como parte do trabalho da operação, termo que esse tipo de conta não usa."
+      },
+      "aprovada": false,
+      "custo_usd": 0.0302,
+      "custo_acumulado_usd": 0.3579
+    },
+    {
+      "tipo": "insurtech",
+      "pergunta": "p6",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "Você quer gerar o documento da proposta de uma seguradora para enviar ao contato ou cadastrar a proposta como um **card no funil**?",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa termos adequados ao tipo da conta, distingue bem entre documento da proposta e card no funil, e não usa nenhum vocabulário inadequado como segurado sem apólice, vendedor, ganho, corretora ou cotação."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0275,
+      "custo_acumulado_usd": 0.3854
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p4",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "No **CRM → CRM Kanban**, abra o card do cliente em um funil de **Vender**:\n1. Clique em **Fechou o seguro**, no topo do card.\n2. Confira quanto ficou e clique em **Marcar: fechou o seguro**.\n\nO contato passa a ser marcado como cliente automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa o vocabulário esperado de seguradora, indica um caminho e ação coerentes para marcar que o cliente fechou o seguro, sem chamar contato sem apólice de segurado nem usar termos proibidos como corretora, vendedor ou ganho."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0322,
+      "custo_acumulado_usd": 0.4176
+    },
+    {
+      "tipo": "seguradora",
+      "pergunta": "p4",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "No **CRM → CRM Kanban**, abra o card do contato:\n1. No topo, clique em **Fechou o seguro**.\n2. Confira quanto ficou o **Valor**.\n3. Confirme em **Marcar: fechou o seguro**.\n\nEssa opção aparece nos funis de **Vender**.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa o vocabulário esperado da seguradora ao dizer “fechou o seguro”, traz um caminho de tela plausível e não usa “segurado”, “vendedor”, “ganho” nem trata a operação como corretora ou cotação."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0315,
+      "custo_acumulado_usd": 0.4491
+    },
+    {
+      "tipo": "insurtech",
+      "pergunta": "p4",
+      "variante": "sem_camada",
+      "execucao": 1,
+      "resposta": "No **CRM → CRM Kanban**, abra o card do cliente num funil de **Vender**:\n1. Clique em **Fechou o seguro**, no topo do card.\n2. Confira quanto ficou e clique em **Marcar: fechou o seguro**.\n\nO contato passa a ser marcado como cliente automaticamente.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa o vocabulário esperado para uma empresa de seguros digital, indica um caminho de tela e a ação de fechamento de forma coerente com o funil de Vender, sem usar termos proibidos ou inadequados."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0315,
+      "custo_acumulado_usd": 0.4806
+    },
+    {
+      "tipo": "insurtech",
+      "pergunta": "p4",
+      "variante": "com_camada",
+      "execucao": 1,
+      "resposta": "1. No **CRM → CRM Kanban**, abra o card do contato em um funil de Vender.\n2. No topo do card, clique em **Fechou o seguro**.\n3. Confira quanto ficou e confirme em **Marcar: fechou o seguro**.",
+      "retido": false,
+      "veredito": {
+        "usa_vocabulario_do_tipo": true,
+        "correta_e_util": true,
+        "chama_de_segurado_sem_apolice": false,
+        "diz_vendedor_ou_ganho": false,
+        "diz_corretora_ou_cotacao": false,
+        "justificativa": "Usa o vocabulário esperado para uma empresa de seguros digital e orienta de forma útil o caminho no CRM para marcar que o cliente fechou o seguro, sem usar termos proibidos ou incoerentes."
+      },
+      "aprovada": true,
+      "custo_usd": 0.0325,
+      "custo_acumulado_usd": 0.5132
+    }
+  ]
+}

@@ -10,3 +10,4 @@ en:
           pessoa_atribuida: "A person is already handling this conversation."
           esperando_pessoa: "This conversation is waiting for a person."
           assunto_escolhido_por_pessoa: "A person chose the current subject of this conversation a short while ago."
+          fora_do_funil: "This contact was marked as a market partner or not business: it does not become a card on its own."

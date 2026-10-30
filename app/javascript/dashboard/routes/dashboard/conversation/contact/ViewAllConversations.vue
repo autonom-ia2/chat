@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useConversationRoutePath } from 'dashboard/composables/useConversationRoutePath';
-import { useUISettings } from 'dashboard/composables/useUISettings';
+import { useLayoutExpandidoDaLista } from 'dashboard/components-next/Conversation/ListaDeConversas/useLayoutDaLista';
 import wootConstants from 'dashboard/constants/globals';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 
@@ -22,7 +22,8 @@ const router = useRouter();
 const { t } = useI18n();
 const { buildConversationPath, buildConversationListPath, isOnFolderView } =
   useConversationRoutePath();
-const { isOnExpandedLayout } = useUISettings();
+// #2202: com a lista nova no computador, o layout é condensado mesmo com o expandido salvo.
+const isOnExpandedLayout = useLayoutExpandidoDaLista();
 
 const neighbours = useMapGetter(
   'contactConversations/getConversationNeighbours'
@@ -82,6 +83,7 @@ const viewAllConversations = async () => {
 };
 </script>
 
+<!-- eslint-disable-next-line vue/no-root-v-if -->
 <template>
   <NextButton
     v-if="isVisible"

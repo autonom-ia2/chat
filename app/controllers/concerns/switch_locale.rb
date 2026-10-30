@@ -51,6 +51,8 @@ module SwitchLocale
 
   def set_locale(locale, &)
     safe_locale = validate_and_get_locale(locale)
+    # O `rescue_from` roda depois que este bloco termina; ApplicationController#rescue_with_handler reabre este idioma.
+    @request_locale = safe_locale
     # Ensure locale won't bleed into other requests
     # https://guides.rubyonrails.org/i18n.html#managing-the-locale-across-requests
     I18n.with_locale(safe_locale, &)

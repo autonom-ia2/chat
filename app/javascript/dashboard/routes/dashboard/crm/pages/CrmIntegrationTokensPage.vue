@@ -6,6 +6,8 @@ import { useAlert } from 'dashboard/composables';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import CrmIntegrationTokensAPI from 'dashboard/api/crmIntegrationTokens';
 import { useCrmPermissions } from '../composables/useCrmPermissions';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { TOKEN_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -14,7 +16,10 @@ import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.v
 
 const { t } = useI18n();
 const router = useRouter();
-const { canAdminCrm } = useCrmPermissions();
+// Tokens são segredos que a plataforma gera (#2027): administrador ou token_manage. Um token nunca leva mais do que
+// a pessoa tem: só aparecem os escopos que a própria função já tem (o servidor confere de novo).
+const canManageTokens = usePermissionGranted(TOKEN_MANAGE_PERMISSION);
+const { hasCrmPermission } = useCrmPermissions();
 
 const goBack = () => router.back();
 // The snippet keeps its line breaks; in one constant the <pre> fits a line and the formatter leaves its text alone.
@@ -32,7 +37,13 @@ const SCOPE_KEYS = [
   'crm_manage_ai',
   'crm_view_reports',
   'crm_admin',
+  // #2075: sem ela, o token lê o CRM sem os valores de venda em R$.
+  'sales_value_view',
 ];
+
+const grantableScopes = computed(() =>
+  SCOPE_KEYS.filter(scope => hasCrmPermission(scope))
+);
 
 const tokens = ref([]);
 const isLoading = ref(true);
@@ -208,7 +219,7 @@ onMounted(fetchTokens);
     </header>
 
     <div
-      v-if="!canAdminCrm"
+      v-if="!canManageTokens"
       class="m-8 rounded-xl border border-n-weak bg-n-alpha-black1 px-6 py-8 text-center text-sm text-n-slate-11"
     >
       {{ t('CRM_INTEGRATION_TOKENS.NO_PERMISSION') }}
@@ -288,9 +299,15 @@ onMounted(fetchTokens);
           <span class="text-sm font-medium text-n-slate-12">
             {{ t('CRM_INTEGRATION_TOKENS.CREATE.SCOPES_LABEL') }}
           </span>
-          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <p
+            v-if="!grantableScopes.length"
+            class="mb-0 text-sm text-n-slate-11"
+          >
+            {{ t('CRM_INTEGRATION_TOKENS.CREATE.NO_SCOPES') }}
+          </p>
+          <div v-else class="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <label
-              v-for="scope in SCOPE_KEYS"
+              v-for="scope in grantableScopes"
               :key="scope"
               class="flex cursor-pointer items-start gap-2 rounded-lg border border-n-weak px-3 py-2 hover:bg-n-alpha-2"
             >
@@ -398,6 +415,7 @@ onMounted(fetchTokens);
               class="flex shrink-0 flex-row gap-2"
             >
               <Button
+                v-if="(token.scopes || []).every(hasCrmPermission)"
                 :label="t('CRM_INTEGRATION_TOKENS.LIST.ROTATE')"
                 icon="i-lucide-refresh-cw"
                 slate

@@ -68,8 +68,20 @@ const faltaNome = computed(() => mexeuNoNome.value && !titulo.value.trim());
       auto-height
       min-height="6rem"
     />
+    <div
+      v-if="(!atender || cobranca) && card.value_hidden"
+      class="flex flex-col gap-1"
+      data-valor-oculto
+    >
+      <span class="text-sm font-medium text-n-slate-12">
+        {{ texto('VALOR') }}
+      </span>
+      <p class="mb-0 rounded-xl bg-n-alpha-2 p-3 text-sm text-n-slate-11">
+        {{ t('CRM_CARD.NEGOCIO.VALOR_OCULTO') }}
+      </p>
+    </div>
     <CampoValor
-      v-if="!atender || cobranca"
+      v-else-if="!atender || cobranca"
       v-model:valor="valor"
       v-model:moeda="moeda"
       :rotulo="texto('VALOR')"

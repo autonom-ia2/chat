@@ -53,7 +53,7 @@ class CampaignJourney::ResultReplies
     linked = Crm::CardConversation.where(account_id: @account.id, conversation_id: conversation_ids).select(:card_id)
     account_cards = Crm::Card.where(account_id: @account.id)
     cards = account_cards.where(conversation_id: conversation_ids).or(account_cards.where(id: linked))
-    { cards: cards.count, won: cards.won.count }
+    { cards: cards.count, won: cards.com_desfecho(:won).count }
   end
 
   private

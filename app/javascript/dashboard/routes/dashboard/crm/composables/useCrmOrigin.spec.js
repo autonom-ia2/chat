@@ -31,6 +31,31 @@ describe('useCrmOrigin', () => {
     originLabelOverHierarchy,
   } = useCrmOrigin();
 
+  it('keeps only where and when an ad touch came from when the ad is hidden (#2271)', () => {
+    const origin = originFromCampaign({
+      ...landingPageTouch,
+      ad_hidden: true,
+      touched_at: '2026-10-01T12:00:00Z',
+      ad_thumbnail_url: 'https://thumb.example/ad.jpg',
+      ad_preview_url: 'https://preview.example/ad',
+    });
+
+    expect(origin).toMatchObject({
+      source: 'meta_paid',
+      adHidden: true,
+      headline: '',
+      campaign: '',
+      adset: '',
+      ad: '',
+      sourceUrl: '',
+      adPreviewUrl: '',
+      adThumbnailUrl: '',
+      touchedAt: '2026-10-01T12:00:00Z',
+    });
+    expect(humanizedOriginLabel(origin)).toBe('CRM_KANBAN.ORIGIN.META_PAID');
+    expect(adHierarchyLines(origin)).toEqual([]);
+  });
+
   it('carries campaign, ad set and ad from the UTMs', () => {
     const origin = originFromCampaign(landingPageTouch);
 

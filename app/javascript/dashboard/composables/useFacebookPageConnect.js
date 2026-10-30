@@ -37,7 +37,7 @@ export function useFacebookPageConnect() {
 
   // FB.login never rejects; resolve the user access token on success and null
   // for any other status (closed popup, not_authorized, unknown).
-  const login = () =>
+  const login = (extraScopes = []) =>
     new Promise(resolve => {
       window.FB.login(
         response => {
@@ -47,7 +47,7 @@ export function useFacebookPageConnect() {
               : null
           );
         },
-        { scope: buildFacebookLoginScopes() }
+        { scope: buildFacebookLoginScopes({ extraScopes }) }
       );
     });
 
@@ -73,5 +73,7 @@ export function useFacebookPageConnect() {
     }
   };
 
-  return { isAuthenticating, preloadSdk, loginAndFetchPages };
+  // Reauthorizing a page that already has an inbox only needs the user token
+  // (Your posts #2199 asks read_insights on top of the page scopes).
+  return { isAuthenticating, preloadSdk, login, loginAndFetchPages };
 }

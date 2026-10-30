@@ -183,7 +183,7 @@ useOnEnter(load);
             trailing-icon
             variant="outline"
             color="slate"
-            class="!min-h-11 !rounded-xl !bg-white"
+            class="!min-h-11 !rounded-xl !bg-white !text-n-heroi"
             @click="fromCampaign ? backToCampaign() : createEmail()"
           />
         </div>
@@ -222,7 +222,7 @@ useOnEnter(load);
             icon="i-lucide-globe"
             variant="outline"
             color="slate"
-            class="mt-6 !min-h-11 !rounded-xl !bg-white !text-n-slate-12"
+            class="mt-6 !min-h-11 !rounded-xl !bg-white !text-n-heroi"
             data-test="use-my-site"
             @click="startNew"
           />

@@ -58,6 +58,12 @@ const props = defineProps({
     default: 'center',
     validator: value => ['center', 'top'].includes(value),
   },
+  // Janela destrutiva (digitar EXCLUIR, escolhas que apagam): tocar fora não fecha, para o que foi
+  // escolhido ou digitado não se perder num clique sem querer. Esc e Cancelar continuam fechando.
+  closeOnOutsideClick: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['confirm', 'close']);
@@ -103,6 +109,7 @@ const handleDialogClose = e => e.target === dialogRef.value && close();
 // Only close on click-outside if this dialog is the topmost one.
 // If another dialog (e.g. ProseMirror prompt) is open on top, ignore.
 const handleClickOutside = () => {
+  if (!props.closeOnOutsideClick) return;
   const dialogs = document.querySelectorAll('dialog[open]');
   if (dialogs[dialogs.length - 1] === dialogRef.value) close();
 };

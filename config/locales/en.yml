@@ -76,6 +76,12 @@ en:
   errors:
     custom_role:
       unknown_permissions: 'has unknown keys: %{unknown}. Valid keys: %{valid}'
+      destination_required: 'This role still has people. Choose where they go: another role or no role.'
+      destination_invalid: 'People of this role cannot go to the chosen role. Choose another one or no role.'
+      changed_meanwhile: 'Someone changed this role or its people while you were deleting it. Nothing changed. Try again.'
+      out_of_reach: "You can't give part of this role. Ask the administrator."
+      own_role: 'Nobody changes their own role.'
+      feature_off: 'Team roles are not available on this account right now.'
     crm:
       contact_already_linked: 'is already linked to this card. Use the existing contact or change the link explicitly.'
       contact_idempotency_required: 'An Idempotency-Key is required to create a contact for this card.'
@@ -191,6 +197,7 @@ en:
     openai:
       invalid_api_key: 'OpenAI API key was rejected. Check that it is correct, not revoked, and that the account has credit at platform.openai.com.'
     inboxes:
+      password_needed: Type the mail server password again to point the inbox to another server.
       imap:
         socket_error: Please check the network connection, IMAP address and try again.
         no_response_error: Please check the IMAP credentials and try again.
@@ -303,6 +310,19 @@ en:
         feedback: Feedback Comment
         recorded_at: Recorded date
         review_notes: Review Notes
+  campaign_import:
+    people_sheet:
+      sheet: Audience
+      name: Name
+      phone: Phone
+      email: E-mail
+      company: Company
+  conversation_audience:
+    columns:
+      city: City
+      country: Country
+      'yes': 'Yes'
+      'no': 'No'
   notifications:
     notification_title:
       conversation_creation: 'A conversation (#%{display_id}) has been created in %{inbox_name}'
@@ -314,8 +334,13 @@ en:
       sla_missed_next_response: 'SLA target next response missed for conversation (#%{display_id})'
       sla_missed_resolution: 'SLA target resolution missed for conversation (#%{display_id})'
       guide_alert: 'The Guide has an urgent warning for you'
+      conversation_audience_ready: 'Your audience from conversations is done'
     attachment: 'Attachment'
     no_content: 'No content'
+    conversation_audience:
+      done: "the list is ready to review"
+      ceiling: "stopped at the agreed cost and waits for you"
+      failed: "stopped because the account's AI did not answer"
   conversations:
     captain:
       handoff: 'Transferring to another agent for further assistance.'
@@ -414,6 +439,10 @@ en:
   contacts:
     online:
       delete: '%{contact_name} is Online, please try again later'
+    # #2096: deleting the contact cancels the future meetings of its CRM cards first; nothing is deleted if one fails.
+    meeting_cancel_failed: 'A future meeting of this contact could not be canceled in the calendar, so nothing was deleted. Please try again.'
+    busy_try_again: "This contact was being changed at the same moment, so nothing was deleted. Please try again."
+    crm_cards_changed: 'A CRM card of this contact changed while it was being deleted (a meeting was just booked), so nothing was deleted. Please try again.'
     opt_out:
       undo_only_manual: 'Only an opt-out marked by the team, or a request to stop recognized in a reply to a campaign, can be undone here. Opt-outs from Prospecting are undone on the lead in Prospecting; a request to stop in a follow-up reply ends when the follow-up is reactivated on every CRM card where the contact asked to stop; email unsubscribes are not undone here.'
   integration_apps:
@@ -480,6 +509,8 @@ en:
       unknown_action: 'The Guide does not do that.'
       only_on_screen:
         whatsapp_template_consent: 'This is only done on screen: Templates › Permission.'
+        crm_permanent_delete: 'Permanent deletion is only done on screen, typing the confirmation: CRM › Archived, or when deleting the contact.'
+        contact_delete: 'Deleting a contact is only done on screen: Contacts › open the contact › Delete contact.'
       admin_only: 'Only an account admin can do this.'
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
@@ -577,6 +608,14 @@ en:
       autoteste_indisponivel: 'There is no approved material to test yet.'
       autoteste_espere: 'Wait a little to test again.'
       autoteste_amanha: 'This agent was already tested many times today. You can test again tomorrow.'
+    base_de_seguros:
+      sem_base_nova: 'There is no new insurance base for this agent. The page was updated.'
+      base_mudou: 'The agent changed in the meantime. The page was updated.'
+      comparar_espere: 'Wait a couple of minutes to compare again.'
+      comparar_amanha: 'This account has compared many times today. You can compare again tomorrow.'
+      comparar_antes: 'Compare the answers before updating the base.'
+      sem_instrucao: 'This agent has no instructions yet, so its base cannot be updated.'
+      desfazer_fechado: 'The agent changed after the update, so Undo no longer applies. To go back, use the version history.'
     source:
       invalid_kind: 'This kind of material is not available. Reload the page and try again.'
       arquivo_grande: 'The file is too large. The maximum size is 25 MB.'
@@ -689,6 +728,8 @@ en:
     # Em português também aqui, como insurance.errors: a Prospecção é produto brasileiro e o texto não pode cair em
     # inglês para conta com locale en.
     prospecting:
+      # Nome do lead que recusou contato e ficou só como prova da recusa, depois de excluído o contato (#2143).
+      lead_removido: "Lead removido #"
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
       # Jogadas salvas (#732): frases que a tela mostra como vieram.
@@ -1020,6 +1061,21 @@ en:
   automation:
     system_name: 'Automation System'
   crm:
+    # #2096: the card kept without personal data after its contact was deleted (LGPD), and its reminders and meetings.
+    cards:
+      anonimizado:
+        title: 'Removed customer #%{id}'
+        history_title: 'Removed customer'
+    # IA entende a conversa F3: o motivo que a IA grava ao marcar Perdido (lost_reason) e o título do retorno do "adiou".
+    ai_fechar_card:
+      motivos:
+        adiou: 'Postponed'
+        recusou: 'Declined'
+        fechou_com_outra: 'Went with someone else'
+      retorno: 'Get back in touch: the customer postponed'
+    # #2101, #2130: a person does not create a reminder on an archived card.
+    follow_ups:
+      card_archived: 'This card is archived. Restore it before creating a reminder.'
     # #1498: titles of the Serve reminders (shown in the card agenda).
     service_reminders:
       progress: 'Share progress'

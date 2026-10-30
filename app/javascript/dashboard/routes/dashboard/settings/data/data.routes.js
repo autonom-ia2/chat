@@ -1,5 +1,6 @@
 import { FEATURE_FLAGS } from '../../../../featureFlags';
 import { frontendURL } from '../../../../helper/URLHelper';
+import { INTEGRATION_MANAGE_PERMISSION } from 'dashboard/constants/permissions';
 
 const SettingsWrapper = () => import('../SettingsWrapper.vue');
 const Index = () => import('./Index.vue');
@@ -17,7 +18,7 @@ export default {
           component: Index,
           meta: {
             featureFlag: FEATURE_FLAGS.DATA_IMPORT,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
         },
         {
@@ -26,7 +27,7 @@ export default {
           component: Show,
           meta: {
             featureFlag: FEATURE_FLAGS.DATA_IMPORT,
-            permissions: ['administrator'],
+            permissions: ['administrator', INTEGRATION_MANAGE_PERMISSION],
           },
         },
       ],

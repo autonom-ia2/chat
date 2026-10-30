@@ -1,5 +1,5 @@
 # Conexão da conta com os anúncios da Meta (#1034, #1047). Ver (READ_ACTIONS): administrador ou `meta_ads_view` (#1794);
-# o resto só administrador (policy Crm::MetaAdsConnection).
+# o resto: administrador ou `meta_ads_manage`, chave protegida (#2070, policy Crm::MetaAdsConnection).
 #
 # GET    → estado da conexão (nunca o token), dados do portfólio parceiro da plataforma e se algum funil
 #          ligado ao WhatsApp oficial já avisa a Meta das vendas.
@@ -37,7 +37,8 @@
 # (Panel::WhatsappCohort).
 #
 # Sem a permissão, 403 (não 401: a sessão é válida, só falta a permissão). As listas que levam a uma conversa
-# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794).
+# mostram só as visíveis para a pessoa (Crm::MetaAds::VisibleConversations, #1794). Os valores de venda em R$ do painel,
+# do anúncio, das listas e do consultor seguem a mesma pessoa (#2075, Crm::MetaAds::Panel::SalesValue).
 class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::Crm::BaseController
   include DeferInteractiveAi
   include Crm::MetaAdsPanelSource
@@ -47,7 +48,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   SELECTION_RESET = { ad_account_id: nil, ad_account_name: nil, ad_account_business_id: nil, ad_account_timezone: nil,
                       pixel_id: nil, pixel_name: nil, verified_at: nil }.freeze
   # O que `meta_ads_view` alcança (#1794): o estado da conexão e o painel. Contas, Pixels, funis e a leitura avulsa
-  # são da conexão guiada e do resumo, do administrador (chamam a Meta com o token ou trazem caixas e funis).
+  # são da conexão guiada e do resumo, de `meta_ads_manage` (#2070; chamam a Meta com o token ou trazem caixas e funis).
   READ_ACTIONS = %w[show panel panel_ad panel_list].freeze
 
   before_action :ensure_allowed
@@ -107,7 +108,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     connection = current_connection
     refreshing = ::Crm::MetaAds::Insights::Refresh.request!(connection)
-    report = ::Crm::MetaAds::Panel::Report.new(connection, period: panel_period)
+    report = ::Crm::MetaAds::Panel::Report.new(connection, period: panel_period, visible: viewer)
     render json: { panel: panel_payload(connection, report).merge(synced_at: connection.reload.insights_synced_at, refreshing: refreshing) }
   end
 
@@ -137,7 +138,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   end
 
   def selection
-    setup.select!(mode: params[:mode], ad_account_id: params[:ad_account_id].to_s, pixel_id: params[:pixel_id].presence&.to_s)
+    setup.select!(mode: params[:mode], ad_account_id: params[:ad_account_id].to_s, pixel_id: params[:pixel_id].presence&.to_s,
+                  no_site: ActiveModel::Type::Boolean.new.cast(params[:no_site]) == true)
     render json: payload
   rescue Crm::MetaAds::Setup::Error => e
     render_unprocessable(e.code)
@@ -151,7 +153,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     bool = ActiveModel::Type::Boolean.new
     values = ::Crm::MetaAdsConnection::DESTINATIONS.index_with { |key| bool.cast(params.dig(:destinations, key)) == true }
-    connection.update!(destinations: values)
+    connection.update!(destinations: connection.destinations_with_no_site(values, connection.no_site?))
     render json: payload
   end
 
@@ -224,8 +226,9 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
     report.payload.merge(
       meta_comparison: ::Crm::MetaAds::Panel::MetaComparison.new(connection, report).payload,
       response_time: response_time(connection, report),
-      advice: ::Crm::MetaAds::VisibleConversations.current.advice(
-        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?)
+      advice: viewer.advice(
+        ::Crm::MetaAds::Advisor::Analysis.current(connection, locale: I18n.locale.to_s, report: report, shown: !authenticate_by_access_token?,
+                                                              visible: viewer)
       )
     )
   end

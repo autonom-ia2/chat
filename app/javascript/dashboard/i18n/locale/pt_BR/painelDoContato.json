@@ -1,0 +1,185 @@
+{
+  "PAINEL_DO_CONTATO": {
+    "TITULO": "Sobre este contato",
+    "FECHAR": "Fechar",
+    "VOLTAR_PARA_CONVERSA": "Voltar para a conversa",
+    "VOLTAR": "Voltar",
+    "SO_LEITURA": "Você pode ver esta conversa, mas não mudar.",
+    "ERRO": "Não deu para carregar esta parte agora.",
+    "TENTAR_DE_NOVO": "Tentar de novo",
+    "NOME": {
+      "COPIAR": "Copiar",
+      "NUMERO_COPIADO": "Número copiado",
+      "EDITAR": "Editar dados",
+      "RECUSA": "Pediu para não receber mensagens automáticas. Você pode responder normalmente.",
+      "ETIQUETAS": "Etiquetas do contato"
+    },
+    "QUEM_CUIDA": {
+      "TITULO": "Quem cuida",
+      "VOCE": "Está com você.",
+      "COLEGA": "Está com {nome}.",
+      "IA": "Está com a IA {nome}.",
+      "NINGUEM": "Ninguém está cuidando desta conversa.",
+      "NINGUEM_AO_RESPONDER": "Ninguém está cuidando desta conversa. Ao responder, ela fica com você.",
+      "TIME_E_PRIORIDADE": "Está no time {time}, com prioridade {nivel}.",
+      "SO_TIME": "Está no time {time}.",
+      "SO_PRIORIDADE": "Prioridade {nivel}.",
+      "TROCAR": "Trocar",
+      "ESCOLHER": "Escolher quem cuida",
+      "ESCOLHA_TITULO": "Quem cuida desta conversa",
+      "PESSOAS": "Pessoas",
+      "GRUPO_IA": "IA",
+      "NINGUEM_OPCAO": "Ninguém",
+      "AGORA_COM": "Agora está com {nome}.",
+      "AGORA_NINGUEM": "Agora ninguém está cuidando desta conversa.",
+      "ERRO": "Não deu para trocar agora. Tente de novo."
+    },
+    "COMBINADO": {
+      "TITULO": "Combinado",
+      "ERA_PARA": "Era para {quando}: {oQue}.",
+      "QUANDO": "{quando}: {oQue}.",
+      "AUTOMATICA": "{quando} vai uma mensagem automática.",
+      "VER_OS_OUTROS": "Ver o outro | Ver os outros {count}",
+      "MOSTRAR_MENOS": "Mostrar menos",
+      "ATRASADO": "Atrasado",
+      "TIPO": {
+        "TASK": "Tarefa",
+        "MESSAGE": "Mandar mensagem",
+        "CALL": "Ligar",
+        "MEETING": "Reunião",
+        "NOTE": "Anotação"
+      }
+    },
+    "DATA": {
+      "QUANDO": "{dia} às {hora}",
+      "HOJE": "hoje",
+      "AMANHA": "amanhã",
+      "ONTEM": "ontem",
+      "SEMANA": {
+        "DOMINGO": "domingo",
+        "SEGUNDA": "segunda",
+        "TERCA": "terça",
+        "QUARTA": "quarta",
+        "QUINTA": "quinta",
+        "SEXTA": "sexta",
+        "SABADO": "sábado"
+      }
+    },
+    "ASSUNTO": {
+      "TITULO": "Assunto",
+      "FRASE": "{assunto} está em {etapa}.",
+      "SEM_NOME": "O assunto desta conversa está em {etapa}."
+    },
+    "ORIGEM": {
+      "TITULO": "De onde veio",
+      "ANUNCIO": "Chegou por um anúncio: {nome}.",
+      "ANUNCIO_SEM_NOME": "Chegou por um anúncio.",
+      "ANUNCIO_NO": "Chegou por um anúncio no {canal}: {nome}.",
+      "ANUNCIO_NO_SEM_NOME": "Chegou por um anúncio no {canal}.",
+      "LINK": "Chegou pelo link {nome}.",
+      "LINK_SEM_NOME": "Chegou por um link.",
+      "PUBLICACAO": "Chegou por uma publicação: {nome}.",
+      "PUBLICACAO_SEM_NOME": "Chegou por uma publicação.",
+      "CAMPANHA": "Chegou por uma campanha: {nome}.",
+      "CAMPANHA_SEM_NOME": "Chegou por uma campanha."
+    },
+    "LISTAS": {
+      "CONVERSAS": "Conversas anteriores ({count})",
+      "ARQUIVOS": "Arquivos desta conversa ({count})",
+      "INFORMACOES": "Outras informações ({count})",
+      "ACOMPANHAM": "Quem acompanha esta conversa ({count})",
+      "TITULO_CONVERSAS": "Conversas anteriores",
+      "TITULO_ARQUIVOS": "Arquivos desta conversa",
+      "TITULO_INFORMACOES": "Outras informações",
+      "TITULO_ACOMPANHAM": "Quem acompanha esta conversa",
+      "CONVERSA_COM": "Conversa de {dia}, com {nome}.",
+      "CONVERSA_COM_IA": "Conversa de {dia}, com a IA {nome}.",
+      "CONVERSA_SEM_NINGUEM": "Conversa de {dia}, sem ninguém.",
+      "AINDA_ABERTA": "Ainda aberta.",
+      "ABRIR_ARQUIVO": "Abrir {nome}",
+      "ACOMPANHAR_NO_MENU": "Para acompanhar ou deixar de acompanhar, use o menu ⋯ no alto da conversa."
+    },
+    "PE": {
+      "VER_PAGINA": "Ver página do contato",
+      "FRASE": "Lá você junta cadastros repetidos e começa outra conversa."
+    },
+    "MENU_DO_TOPO": {
+      "TIME_E_PRIORIDADE": "Mudar time ou prioridade",
+      "SO_PRIORIDADE": "Mudar prioridade",
+      "ACOMPANHAR": "Acompanhar esta conversa",
+      "DEIXAR": "Deixar de acompanhar",
+      "ACOMPANHANDO": "Pronto. Você recebe aviso de cada mensagem nova.",
+      "DEIXOU": "Você deixou de acompanhar esta conversa.",
+      "ERRO": "Não deu para mudar agora. Tente de novo.",
+      "ETIQUETAS": "Etiquetas desta conversa"
+    },
+    "CARREGANDO": "Carregando",
+    "INFORMACOES": {
+      "SALVO": "Pronto.",
+      "ERRO": "Não deu para salvar agora. Tente de novo.",
+      "COPIADO": "Copiado."
+    },
+    "TIME_E_PRIORIDADE": {
+      "TITULO": "Time e prioridade",
+      "TITULO_SO_PRIORIDADE": "Prioridade",
+      "TIME": "Time",
+      "PRIORIDADE": "Prioridade",
+      "SEM_TIME": "Sem time",
+      "SEM_PRIORIDADE": "Sem prioridade",
+      "BAIXA": "Baixa",
+      "MEDIA": "Média",
+      "ALTA": "Alta",
+      "URGENTE": "Urgente",
+      "SALVAR": "Salvar",
+      "CANCELAR": "Cancelar",
+      "PRONTO": "Pronto.",
+      "ERRO": "Não deu para salvar agora. Tente de novo."
+    },
+    "RELACAO": {
+      "TITULO": "Este contato é",
+      "OPCOES": {
+        "INTERESSADO": {
+          "ROTULO": "Interessado",
+          "DICA": "Compra ou pode comprar de você."
+        },
+        "PARCEIRO": {
+          "ROTULO": "Parceiro do mercado",
+          "DICA": "Fornecedor ou colega do seu ramo."
+        },
+        "NAO_E_NEGOCIO": {
+          "ROTULO": "Não é negócio",
+          "DICA": "Engano, propaganda ou pessoal."
+        }
+      },
+      "EFEITO": {
+        "INTERESSADO": "As conversas deste contato viram card no funil e contam nos Números.",
+        "FORA": "As conversas deste contato não viram card sozinhas e ficam fora dos Números. Você ainda pode criar um card à mão."
+      },
+      "ARQUIVAR": {
+        "TITULO": "Este contato tem 1 card aberto. Arquivar? | Este contato tem {count} cards abertos. Arquivar?",
+        "TEXTO": "O card arquivado sai do funil e dos Números. Nada se perde: dá para reabrir pelo CRM.",
+        "SIM": "Arquivar",
+        "NAO": "Deixar"
+      },
+      "SALVO": "Agora este contato é {relacao}.",
+      "ARQUIVADOS": "1 card arquivado. | {count} cards arquivados.",
+      "NAO_ARQUIVADOS": "1 card ficou aberto: você não pode arquivá-lo. | {count} cards ficaram abertos: você não pode arquivá-los.",
+      "ERRO": "Não deu para mudar agora. Tente de novo."
+    },
+    "ETIQUETAS": {
+      "TITULO": "Etiquetas desta conversa",
+      "MUDAR": "Mudar as etiquetas desta conversa: {etiquetas}",
+      "CRIAR": "Criar etiqueta",
+      "DIALOGO_TITULO": "Etiquetas desta conversa",
+      "DIALOGO_FRASE": "Toque numa etiqueta para pôr ou tirar.",
+      "PRONTO": "Pronto",
+      "ERRO": "Não deu para mudar a etiqueta. Tente de novo.",
+      "ERRO_AO_CARREGAR": "Não deu para carregar as etiquetas desta conversa.",
+      "TENTAR_DE_NOVO": "Tentar de novo"
+    }
+  },
+  "APAGAR_CONTATO": {
+    "UM": "O contato, as conversas e as mensagens dele serão apagados. Não dá para desfazer.",
+    "VARIOS": "Os {count} contatos, as conversas e as mensagens deles serão apagados. Não dá para desfazer."
+  }
+}

@@ -107,7 +107,7 @@ jobs:
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'deploy'))
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     environment: production
     permissions:
@@ -154,7 +154,7 @@ jobs:
       id-token: write
       # Só para o passo que pede um deploy novo quando o push mais novo perdeu a vez.
       actions: write
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 120
     environment: production
     # Lidos pelo job desligar-blue. Só saem preenchidos quando o deploy chega ao fim com o tráfego na green.
@@ -348,19 +348,26 @@ jobs:
             old_previous_tg_arn=""
           fi
 
+          # #2032: repositório público. IDs e ARNs vão para um arquivo que o BASH_ENV carrega em todo passo bash, e não
+          # para o GITHUB_ENV, que o runner reimprime no cabeçalho de cada passo seguinte. Lá ficam só o BASH_ENV e as marcas.
+          deploy_state="$RUNNER_TEMP/deploy-estado.sh"
+          (umask 077 && : > "$deploy_state")
           {
-            echo "LB_ARN=$lb_arn"
-            echo "LISTENER_ARN=$listener_arn"
-            echo "VPC_ID=$vpc_id"
-            echo "BLUE_TG_ARN=$current_tg_arn"
-            echo "BLUE_INSTANCE_ID=$current_instance_id"
-            echo "OLD_PREVIOUS_INSTANCE_ID=$old_previous_instance_id"
-            echo "OLD_PREVIOUS_TG_ARN=$old_previous_tg_arn"
-            echo "SUBNET_ID=$subnet_id"
-            echo "SECURITY_GROUP_IDS=$security_group_ids"
-            echo "IAM_PROFILE_NAME=$iam_profile_name"
-            echo "AMI_ID=$ami_id"
-            echo "ROOT_DEVICE_NAME=$root_device_name"
+            printf 'export LB_ARN=%q\n' "$lb_arn"
+            printf 'export LISTENER_ARN=%q\n' "$listener_arn"
+            printf 'export VPC_ID=%q\n' "$vpc_id"
+            printf 'export BLUE_TG_ARN=%q\n' "$current_tg_arn"
+            printf 'export BLUE_INSTANCE_ID=%q\n' "$current_instance_id"
+            printf 'export OLD_PREVIOUS_INSTANCE_ID=%q\n' "$old_previous_instance_id"
+            printf 'export OLD_PREVIOUS_TG_ARN=%q\n' "$old_previous_tg_arn"
+            printf 'export SUBNET_ID=%q\n' "$subnet_id"
+            printf 'export SECURITY_GROUP_IDS=%q\n' "$security_group_ids"
+            printf 'export IAM_PROFILE_NAME=%q\n' "$iam_profile_name"
+            printf 'export AMI_ID=%q\n' "$ami_id"
+            printf 'export ROOT_DEVICE_NAME=%q\n' "$root_device_name"
+          } >> "$deploy_state"
+          {
+            echo "BASH_ENV=$deploy_state"
             echo "TRAFFIC_SHIFT_DONE=false"
             echo "GREEN_WORKER_START_ATTEMPTED=false"
             echo "PREVIOUS_WRITE_ATTEMPTED=false"
@@ -408,6 +415,11 @@ jobs:
 
           dnf update -y
           dnf install -y docker awscli openssh-clients python3 iproute
+          # Logs dos containers no CloudWatch (#2103); `docker logs` segue pelo cache local do Docker 25.
+          mkdir -p /etc/docker
+          cat > /etc/docker/daemon.json <<EOF
+          {"log-driver":"awslogs","log-opts":{"awslogs-region":"$AWS_REGION","awslogs-group":"/chatwoot/prod/app","tag":"{{.Name}}/{{.ID}}","mode":"non-blocking","max-buffer-size":"4m"}}
+          EOF
           systemctl enable --now docker
 
           mkdir -p "$APP_DIR"
@@ -823,7 +835,7 @@ jobs:
               "$current_instance"|"$previous_instance"|"$BLUE_INSTANCE_ID") continue ;;
             esac
             if [ "$(date -u -d "$launch_time" +%s)" -lt "$limit" ]; then
-              echo "::warning::Green esquecida: $instance_id (Name=$instance_name, LaunchTime=$launch_time). Não é a atual nem a previous; conferir e terminar à mão."
+              echo "::warning::Green esquecida: Name=$instance_name, LaunchTime=$launch_time. Não é a atual nem a previous; conferir e terminar à mão."
               forgotten=$((forgotten + 1))
             fi
           done < "$RUNNER_TEMP/running-greens.txt"
@@ -845,13 +857,13 @@ jobs:
             if [ -z "$leftover" ]; then
               break
             fi
-            echo "Esperando a green $leftover terminar o boot e parar ($attempt)"
+            echo "Esperando a green que sobrou terminar o boot e parar ($attempt)"
             sleep 5
           done
           if [ -n "$leftover" ]; then
-            echo "A green $leftover continua de pé depois de 30 min; terminando para seguir com o deploy."
+            echo "A green que sobrou continua de pé depois de 30 min; terminando para seguir com o deploy."
             # shellcheck disable=SC2086 # uma ou mais IDs separadas por espaço
-            aws ec2 terminate-instances --instance-ids $leftover
+            aws ec2 terminate-instances --instance-ids $leftover >/dev/null
           fi
 
           stopped=$(aws ec2 describe-instances \
@@ -859,9 +871,9 @@ jobs:
             --query 'Reservations[].Instances[].InstanceId' \
             --output text)
           if [ -n "$stopped" ]; then
-            echo "Terminando greens paradas por um deploy interrompido: $stopped"
+            echo "Terminando as greens paradas por um deploy interrompido."
             # shellcheck disable=SC2086 # uma ou mais IDs separadas por espaço
-            aws ec2 terminate-instances --instance-ids $stopped
+            aws ec2 terminate-instances --instance-ids $stopped >/dev/null
           fi
 
       # A espera acima pode levar 30 min e o login dura 1 h (#972).
@@ -897,7 +909,9 @@ jobs:
             --query 'Instances[0].InstanceId' \
             --output text)
 
-          echo "GREEN_INSTANCE_ID=$green_instance_id" >> "$GITHUB_ENV"
+          printf 'export GREEN_INSTANCE_ID=%q\n' "$green_instance_id" >> "$BASH_ENV"
+          # Lida no if: do diagnóstico, que não enxerga o BASH_ENV.
+          [ -z "$green_instance_id" ] || echo "GREEN_INSTANCE_LAUNCHED=true" >> "$GITHUB_ENV"
 
       # #1979: um rollback que congelou durante o boot para o deploy aqui, antes do build. Sem imagem a green não roda o
       # deploy.sh nem migration, e a limpeza só a termina, sem tocar na blue.
@@ -963,7 +977,7 @@ jobs:
             if [ "$ping_status" = "Online" ]; then
               break
             fi
-            echo "Waiting for SSM on $GREEN_INSTANCE_ID, attempt $attempt"
+            echo "Waiting for SSM on green, attempt $attempt"
             sleep 5
           done
 
@@ -1066,7 +1080,7 @@ jobs:
             --query 'TargetGroups[0].TargetGroupArn' \
             --output text)
 
-          echo "GREEN_TG_ARN=$green_tg_arn" >> "$GITHUB_ENV"
+          printf 'export GREEN_TG_ARN=%q\n' "$green_tg_arn" >> "$BASH_ENV"
 
           aws elbv2 register-targets \
             --target-group-arn "$green_tg_arn" \
@@ -1077,7 +1091,8 @@ jobs:
 
           aws elbv2 modify-listener \
             --listener-arn "$LISTENER_ARN" \
-            --default-actions "Type=forward,ForwardConfig={TargetGroups=[{TargetGroupArn=$BLUE_TG_ARN,Weight=100},{TargetGroupArn=$green_tg_arn,Weight=0}]}"
+            --default-actions "Type=forward,ForwardConfig={TargetGroups=[{TargetGroupArn=$BLUE_TG_ARN,Weight=100},{TargetGroupArn=$green_tg_arn,Weight=0}]}" \
+            >/dev/null
 
           aws elbv2 wait target-in-service \
             --target-group-arn "$green_tg_arn" \
@@ -1259,7 +1274,7 @@ jobs:
       # não tomar o tempo da limpeza, e falhar aqui não muda nada no deploy.
       - name: Collect green diagnostics
         id: diagnostico
-        if: ${{ !cancelled() && env.GREEN_INSTANCE_ID != '' }}
+        if: ${{ !cancelled() && env.GREEN_INSTANCE_LAUNCHED == 'true' }}
         continue-on-error: true
         timeout-minutes: 4
         env:
@@ -1407,7 +1422,7 @@ jobs:
                 exit 1
                 ;;
             esac
-            echo "Green $GREEN_INSTANCE_ID: ${deploy_status:-sem resposta do SSM}"
+            echo "Green: ${deploy_status:-sem resposta do SSM}"
             if [ "${deploy_status#*DEPLOY_RUNNING}" != "$deploy_status" ] \
               && aws ec2 create-tags --resources "$GREEN_INSTANCE_ID" --tags Key=DeployCleanup,Value=pending; then
               retire_params=$(jq -nc '{commands: ["systemd-run --unit=green-retire --no-block sh -c \"while [ -e /run/chatwoot-deploy.running ]; do sleep 5; done; shutdown -h now\""]}')
@@ -1419,14 +1434,14 @@ jobs:
             fi
 
             if [ "$retired" = "true" ]; then
-              echo "Green $GREEN_INSTANCE_ID rodando o deploy.sh: desliga sozinha quando ele acabar; o próximo deploy a remove."
+              echo "Green rodando o deploy.sh: desliga sozinha quando ele acabar; o próximo deploy a remove."
             elif [ "${deploy_status#*DEPLOY_RUNNING}" != "$deploy_status" ]; then
               echo "blue_green_deferred_shutdown_failed" >&2
               exit 1
             else
-              echo "Terminando a green $GREEN_INSTANCE_ID agora."
+              echo "Terminando a green agora."
               aws ec2 terminate-instances \
-                --instance-ids "$GREEN_INSTANCE_ID"
+                --instance-ids "$GREEN_INSTANCE_ID" >/dev/null
             fi
           fi
 
@@ -1472,23 +1487,33 @@ jobs:
     concurrency:
       group: desligar-blue-hub2you
       cancel-in-progress: false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: production
     permissions:
       contents: read
       id-token: write
       actions: read
-    env:
-      LISTENER_ARN: ${{ needs.deploy.outputs.listener_arn }}
-      BLUE_INSTANCE_ID: ${{ needs.deploy.outputs.blue_instance_id }}
-      BLUE_TG_ARN: ${{ needs.deploy.outputs.blue_tg_arn }}
-      GREEN_INSTANCE_ID: ${{ needs.deploy.outputs.green_instance_id }}
-      GREEN_TG_ARN: ${{ needs.deploy.outputs.green_tg_arn }}
-      OLD_PREVIOUS_INSTANCE_ID: ${{ needs.deploy.outputs.old_previous_instance_id }}
-      OLD_PREVIOUS_TG_ARN: ${{ needs.deploy.outputs.old_previous_tg_arn }}
 
     steps:
+      # #2032: os IDs e ARNs aparecem só no cabeçalho deste passo; os outros os leem do arquivo do BASH_ENV.
+      - name: Load deploy hand-off
+        env:
+          LISTENER_ARN: ${{ needs.deploy.outputs.listener_arn }}
+          BLUE_INSTANCE_ID: ${{ needs.deploy.outputs.blue_instance_id }}
+          BLUE_TG_ARN: ${{ needs.deploy.outputs.blue_tg_arn }}
+          GREEN_INSTANCE_ID: ${{ needs.deploy.outputs.green_instance_id }}
+          GREEN_TG_ARN: ${{ needs.deploy.outputs.green_tg_arn }}
+          OLD_PREVIOUS_INSTANCE_ID: ${{ needs.deploy.outputs.old_previous_instance_id }}
+          OLD_PREVIOUS_TG_ARN: ${{ needs.deploy.outputs.old_previous_tg_arn }}
+        run: |
+          deploy_state="$RUNNER_TEMP/deploy-estado.sh"
+          (umask 077 && : > "$deploy_state")
+          for name in LISTENER_ARN BLUE_INSTANCE_ID BLUE_TG_ARN GREEN_INSTANCE_ID GREEN_TG_ARN OLD_PREVIOUS_INSTANCE_ID OLD_PREVIOUS_TG_ARN; do
+            printf 'export %s=%q\n' "$name" "${!name}" >> "$deploy_state"
+          done
+          echo "BASH_ENV=$deploy_state" >> "$GITHUB_ENV"
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -1496,7 +1521,7 @@ jobs:
 
       - name: Keep blue online for fast rollback
         run: |
-          echo "A blue $BLUE_INSTANCE_ID fica ligada por 5 minutos antes de parar (janela de rollback rápido)."
+          echo "A blue fica ligada por 5 minutos antes de parar (janela de rollback rápido)."
           sleep 300
 
       - name: Wait for a running rollback
@@ -1537,7 +1562,7 @@ jobs:
           # onde voltar. O primeiro deploy depois de descongelar termina o que sobrar.
           read_deploy_freeze
           if [ "$DEPLOY_FREEZE" = on ]; then
-            echo "::warning::Produção congelada por um rollback (#1979): a blue $BLUE_INSTANCE_ID e a mais antiga ${OLD_PREVIOUS_INSTANCE_ID:-nenhuma} ficam como estão."
+            echo "::warning::Produção congelada por um rollback (#1979): a blue e a mais antiga ficam como estão."
             exit 0
           fi
           echo "Rollback policy: keep only this immediately previous instance; terminate any older rollback instance recorded before this deploy."
@@ -1548,28 +1573,38 @@ jobs:
           previous_instance=$(aws ssm get-parameter --name "$PREVIOUS_INSTANCE_PARAMETER" --query Parameter.Value --output text)
           current_tg=$(aws ssm get-parameter --name "$CURRENT_TG_PARAMETER" --query Parameter.Value --output text)
           previous_tg=$(aws ssm get-parameter --name "$PREVIOUS_TG_PARAMETER" --query Parameter.Value --output text)
-          echo "Agora: listener -> $ACTIVE_INSTANCE_ID; current=$current_instance; previous=$previous_instance"
+          # Papel no lugar do ID (repositório público, #2032).
+          papel() {
+            case "$1" in
+              "") echo nenhuma ;;
+              "$BLUE_INSTANCE_ID") echo blue ;;
+              "$GREEN_INSTANCE_ID") echo green ;;
+              "${OLD_PREVIOUS_INSTANCE_ID:-}") echo mais-antiga ;;
+              *) echo outra ;;
+            esac
+          }
+          echo "Agora: listener -> $(papel "$ACTIVE_INSTANCE_ID"); current=$(papel "$current_instance"); previous=$(papel "$previous_instance")"
 
           if [ "$BLUE_INSTANCE_ID" = "$ACTIVE_INSTANCE_ID" ] || [ "$BLUE_INSTANCE_ID" = "$current_instance" ]; then
-            echo "::warning::A blue $BLUE_INSTANCE_ID voltou a ser a atual (rollback durante a janela): continua ligada."
+            echo "::warning::A blue voltou a ser a atual (rollback durante a janela): continua ligada."
           else
             instance_state "$BLUE_INSTANCE_ID"
             case "$INSTANCE_STATE" in
               pending|running)
-                aws ec2 stop-instances --instance-ids "$BLUE_INSTANCE_ID"
+                aws ec2 stop-instances --instance-ids "$BLUE_INSTANCE_ID" >/dev/null
                 aws ec2 wait instance-stopped --instance-ids "$BLUE_INSTANCE_ID"
                 ;;
               stopping)
                 aws ec2 wait instance-stopped --instance-ids "$BLUE_INSTANCE_ID"
                 ;;
               stopped)
-                echo "A blue $BLUE_INSTANCE_ID já está parada."
+                echo "A blue já está parada."
                 ;;
               shutting-down|terminated)
-                echo "A blue $BLUE_INSTANCE_ID já foi terminada por um deploy mais novo."
+                echo "A blue já foi terminada por um deploy mais novo."
                 ;;
               *)
-                echo "blue_green_instance_state_unknown:$BLUE_INSTANCE_ID:$INSTANCE_STATE" >&2
+                echo "blue_green_instance_state_unknown:blue:$INSTANCE_STATE" >&2
                 exit 1
                 ;;
             esac
@@ -1578,24 +1613,24 @@ jobs:
           # Relido antes de terminar a mais antiga: um rollback pode ter congelado durante a parada da blue.
           read_deploy_freeze
           if [ "$DEPLOY_FREEZE" = on ]; then
-            echo "::warning::Produção congelada por um rollback durante a parada (#1979): a mais antiga ${OLD_PREVIOUS_INSTANCE_ID:-nenhuma} fica."
+            echo "::warning::Produção congelada por um rollback durante a parada (#1979): a mais antiga fica."
             exit 0
           fi
 
           if [ -n "${OLD_PREVIOUS_INSTANCE_ID:-}" ]; then
             case "$OLD_PREVIOUS_INSTANCE_ID" in
               "$BLUE_INSTANCE_ID"|"$GREEN_INSTANCE_ID"|"$ACTIVE_INSTANCE_ID"|"$current_instance"|"$previous_instance")
-                echo "A mais antiga $OLD_PREVIOUS_INSTANCE_ID está em uso agora: fica."
+                echo "A mais antiga está em uso agora: fica."
                 ;;
               *)
                 instance_state "$OLD_PREVIOUS_INSTANCE_ID"
                 case "$INSTANCE_STATE" in
                   shutting-down|terminated|None)
-                    echo "A mais antiga $OLD_PREVIOUS_INSTANCE_ID já foi terminada."
+                    echo "A mais antiga já foi terminada."
                     ;;
                   *)
-                    echo "Terminating older rollback instance $OLD_PREVIOUS_INSTANCE_ID (state=$INSTANCE_STATE)."
-                    aws ec2 terminate-instances --instance-ids "$OLD_PREVIOUS_INSTANCE_ID"
+                    echo "Terminating older rollback instance (state=$INSTANCE_STATE)."
+                    aws ec2 terminate-instances --instance-ids "$OLD_PREVIOUS_INSTANCE_ID" >/dev/null
                     ;;
                 esac
                 ;;
@@ -1605,12 +1640,12 @@ jobs:
           if [ -n "${OLD_PREVIOUS_TG_ARN:-}" ]; then
             case "$OLD_PREVIOUS_TG_ARN" in
               "$BLUE_TG_ARN"|"$GREEN_TG_ARN"|"$ACTIVE_TG_ARN"|"$current_tg"|"$previous_tg")
-                echo "O target group mais antigo $OLD_PREVIOUS_TG_ARN está em uso agora: fica."
+                echo "O target group mais antigo está em uso agora: fica."
                 ;;
               *)
-                echo "Deleting older rollback target group $OLD_PREVIOUS_TG_ARN."
+                echo "Deleting older rollback target group."
                 if ! aws elbv2 delete-target-group --target-group-arn "$OLD_PREVIOUS_TG_ARN"; then
-                  echo "::warning::Não deu para apagar o target group $OLD_PREVIOUS_TG_ARN (pode já ter sido apagado)."
+                  echo "::warning::Não deu para apagar o target group mais antigo (pode já ter sido apagado)."
                 fi
                 ;;
             esac
@@ -1625,7 +1660,7 @@ jobs:
     if: always() && (needs.deploy.result == 'success' || needs.deploy.result == 'failure')
     # Falha aqui (checkout, API) nunca pinta de vermelho um deploy que deu certo.
     continue-on-error: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
@@ -1672,7 +1707,7 @@ jobs:
   congelar:
     name: Congelar a produção
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'rollback'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     environment: production
     permissions:
@@ -1767,7 +1802,7 @@ jobs:
       group: deploy-hub2you-blue-green
       cancel-in-progress: false
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.confirm_production == true && inputs.action == 'rollback'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: production
     permissions:
@@ -1860,7 +1895,7 @@ jobs:
                 --instance-ids "$previous_instance_id"
             fi
             aws ec2 start-instances \
-              --instance-ids "$previous_instance_id"
+              --instance-ids "$previous_instance_id" >/dev/null
             aws ec2 wait instance-running \
               --instance-ids "$previous_instance_id"
           fi
@@ -1873,7 +1908,7 @@ jobs:
             if [ "$ping_status" = "Online" ]; then
               break
             fi
-            echo "Waiting for SSM on previous instance $previous_instance_id, attempt $attempt"
+            echo "Waiting for SSM on previous instance, attempt $attempt"
             sleep 15
           done
 
@@ -1932,7 +1967,7 @@ jobs:
     name: Avisar descongelar que falhou
     needs: deploy
     if: always() && needs.deploy.outputs.unfreeze_outcome == 'failure'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - name: Unfreeze failed
@@ -1944,7 +1979,7 @@ jobs:
     name: Avisar rollback cancelado
     needs: [congelar, rollback]
     if: always() && needs.congelar.result == 'success' && needs.rollback.result == 'cancelled'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - name: Rollback cancelled before switching traffic

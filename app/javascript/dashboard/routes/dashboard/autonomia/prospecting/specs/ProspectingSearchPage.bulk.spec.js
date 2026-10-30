@@ -142,6 +142,17 @@ describe('ProspectingSearchPage · ações em lote', () => {
     expect(AutonomiaProspectingAPI.exportSearch).not.toHaveBeenCalled();
   });
 
+  // O servidor só exporta com prospecting_manage (#2147): sem ela, não há botão.
+  it('sem prospecting_manage não há botão de download', async () => {
+    permission.canManage = false;
+    const wrapper = await mountSearchPage();
+
+    expect(leadCards(wrapper).length).toBeGreaterThan(0);
+    expect(
+      buttonWithTitle(wrapper, 'PROSPECTING.SEARCH.CSV_EXPORT').exists()
+    ).toBe(false);
+  });
+
   it('exporta CSV de todos os leads visíveis, na ordem da tela', async () => {
     const wrapper = await mountSearchPage();
     const download = captureCsvDownload();

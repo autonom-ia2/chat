@@ -50,12 +50,14 @@ RSpec.describe 'Api::V1::Accounts::Crm::Metas', type: :request do
   end
 
   describe 'quem define' do
+    # #2075: a meta é dinheiro, então metas e crm_admin também pedem os valores em R$ (sales_value_view).
     it 'administrador e função com crm_metas_manage ou crm_admin; nunca o agente sem função nem só relatórios' do
       sale
       quem = {
-        admin => :ok, role_user('crm_view', 'crm_metas_manage') => :ok, role_user('crm_admin') => :ok,
-        ana => :unauthorized, role_user('crm_view', 'crm_view_reports') => :unauthorized,
-        role_user('crm_metas_manage') => :unauthorized
+        admin => :ok, role_user('crm_view', 'crm_metas_manage', 'sales_value_view') => :ok,
+        role_user('crm_admin', 'sales_value_view') => :ok, ana => :unauthorized,
+        role_user('crm_view', 'crm_view_reports') => :unauthorized, role_user('crm_metas_manage') => :unauthorized,
+        role_user('crm_view', 'crm_metas_manage') => :unauthorized, role_user('crm_admin') => :unauthorized
       }
       quem.each do |user, status|
         call(:get, user, "#{base}/metas")
@@ -95,7 +97,7 @@ RSpec.describe 'Api::V1::Accounts::Crm::Metas', type: :request do
       liberado = sale.first
       restrito, = create_crm_pipeline(account: account, user: admin, name: 'Restrito')
       restrito.update!(counts_as_sale: true)
-      gestora = role_user('crm_view', 'crm_metas_manage')
+      gestora = role_user('crm_view', 'crm_metas_manage', 'sales_value_view')
       inbox = create_crm_inbox(account: account, members: [gestora])
       [liberado, restrito].each { |funil| account.crm_pipeline_inboxes.create!(pipeline: funil, inbox: inbox, created_by: admin) }
       acesso = Crm::InboxAgentAccess.create!(account: account, inbox: inbox, user: gestora, all_pipelines: false, triage: false)
@@ -265,6 +267,8 @@ RSpec.describe 'Api::V1::Accounts::Crm::Metas', type: :request do
     it 'não soma a meta de funil arquivado' do
       sale
       goal(ana, 8000)
+      # Funil arquivado sai dos Números: com outro de Vender ativo, o topo existe e não leva a meta do arquivado.
+      create_crm_pipeline(account: account, user: admin, name: 'Vendas novo')
       sale.first.archived!
 
       call(:get, ana, "#{base}/numeros")

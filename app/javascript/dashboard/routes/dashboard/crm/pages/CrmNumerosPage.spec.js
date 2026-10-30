@@ -10,6 +10,7 @@ import CrmNumerosPage from './CrmNumerosPage.vue';
 const estado = reactive({
   contaCarregada: true,
   flag: true,
+  flagEquipe: false,
   papel: 'agent',
   funcao: null,
   chaves: [],
@@ -44,7 +45,9 @@ vi.mock('dashboard/composables/store', () => ({
       }),
       getCurrentRole: ref(estado.papel),
       getCurrentCustomRoleId: ref(estado.funcao),
-      'accounts/isFeatureEnabledonAccount': ref(() => estado.flag),
+      'accounts/isFeatureEnabledonAccount': ref((_id, nome) =>
+        nome === 'crm_numeros_equipe' ? estado.flagEquipe : estado.flag
+      ),
       'accounts/getAccount': ref(() =>
         estado.contaCarregada ? { id: 1, features: {} } : {}
       ),
@@ -109,6 +112,7 @@ describe('CrmNumerosPage', () => {
     Object.assign(estado, {
       contaCarregada: true,
       flag: true,
+      flagEquipe: false,
       papel: 'agent',
       funcao: null,
       chaves: [],
@@ -212,5 +216,45 @@ describe('CrmNumerosPage', () => {
     await flushPromises();
     expect(deNovo.find('[data-numeros-aviso-admin]').exists()).toBe(false);
     window.localStorage.removeItem('crm-numeros-aviso-equipe-1');
+  });
+
+  // #1992 (F5): com a `crm_numeros_equipe`, a aba Equipe é a visão nova e não pede
+  // mais os relatórios do painel antigo.
+  it('administrador com as duas flags: a Equipe nova, com o aviso e sem o painel antigo', async () => {
+    Object.assign(estado, { papel: 'administrator', flagEquipe: true });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-numeros-visao-equipe]').exists()).toBe(true);
+    expect(wrapper.find('[data-painel-equipe]').exists()).toBe(false);
+    expect(wrapper.find('[data-numeros-aviso-admin]').exists()).toBe(true);
+    expect(CrmNumerosAPI.show).toHaveBeenCalledWith({
+      mes: undefined,
+      visao: 'equipe',
+    });
+    expect(CrmKanbanAPI.getReportPipelines).not.toHaveBeenCalled();
+  });
+
+  it('a flag da Equipe sem a "Só eu" não muda nada: o painel antigo', async () => {
+    Object.assign(estado, {
+      papel: 'administrator',
+      flag: false,
+      flagEquipe: true,
+    });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-painel-equipe]').exists()).toBe(true);
+    expect(wrapper.find('[data-numeros-visao-equipe]').exists()).toBe(false);
+    expect(CrmNumerosAPI.show).not.toHaveBeenCalled();
+  });
+
+  it('o agente sem função com as duas flags continua no "Só eu"', async () => {
+    estado.flagEquipe = true;
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-numeros-visao-equipe]').exists()).toBe(false);
+    expect(CrmNumerosAPI.show).toHaveBeenCalledWith({
+      mes: undefined,
+      visao: undefined,
+    });
   });
 });

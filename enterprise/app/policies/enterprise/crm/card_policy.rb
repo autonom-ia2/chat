@@ -27,6 +27,12 @@ module Enterprise::Crm::CardPolicy
     crm_permission?('crm_delete_cards') && show? && funnel_member?
   end
 
+  # Restaurar o arquivado (#2095): a mesma chave de arquivar. Antes, desfazer passava pelo reabrir (`close?`), que pede
+  # `crm_manage_cards`, e a função só com "Arquivar cards" arquivava sem conseguir desfazer.
+  def restore?
+    destroy?
+  end
+
   def move?
     (crm_permission?('crm_move_cards') || crm_permission?('crm_manage_cards')) && show? && funnel_member?
   end
@@ -63,7 +69,8 @@ module Enterprise::Crm::CardPolicy
     crm_permission?('crm_manage_ai') && show? && funnel_member?
   end
 
+  # A sugestão de etapa da IA (#2150): só quem tem crm_manage_ai a lê (Crm::SugestaoDeEtapa).
   def current_ai_suggestion?
-    crm_permission?('crm_view') && show?
+    crm_permission?('crm_manage_ai') && show?
   end
 end

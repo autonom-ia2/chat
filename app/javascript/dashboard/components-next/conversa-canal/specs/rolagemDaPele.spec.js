@@ -200,7 +200,7 @@ describe('destaque da mensagem citada', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('pisca por 1,5 s e apaga', () => {
+  it('fica destacada por 3 s e apaga', () => {
     destacarMensagem('42');
     expect(mensagemDestacada.value).toBe(42);
     vi.advanceTimersByTime(DESTAQUE_EM_MS - 1);
@@ -211,11 +211,11 @@ describe('destaque da mensagem citada', () => {
 
   it('outra citação no meio recomeça o tempo', () => {
     destacarMensagem(1);
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(2000);
     destacarMensagem(2);
-    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(2000);
     expect(mensagemDestacada.value).toBe(2);
-    vi.advanceTimersByTime(500);
+    vi.advanceTimersByTime(1000);
     expect(mensagemDestacada.value).toBeNull();
   });
 });

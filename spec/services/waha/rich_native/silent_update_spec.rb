@@ -45,6 +45,18 @@ describe Waha::RichNative::SilentUpdate do
     expect(inbox_payloads(edit)).to be_empty
   end
 
+  # #2113: a edição tira a tradução do texto antigo (Waha::RichNative::Edits); segue silenciosa. A tradução sozinha
+  # continua indo ao conector, como antes.
+  it 'keeps silent the edit that drops the old translation, and not a translation change alone' do
+    edit = { 'content' => ['Até', 'Até logo'], 'processed_message_content' => ['Até', 'Até logo'],
+             'content_attributes' => [{ 'translations' => { 'en' => 'Bye' } },
+                                      { 'edit_history' => [{ 'content' => 'Até' }], 'edited_at' => 'agora' }] }
+    translation = { 'content_attributes' => [{}, { 'translations' => { 'en' => 'Bye' } }] }
+
+    expect(inbox_payloads(edit)).to be_empty
+    expect(inbox_payloads(translation).size).to eq(1)
+  end
+
   # As chaves que a tela grava na "pele" da mensagem (#1702b): numa mensagem com `external_error: nil`, o conector leria
   # o `message_updated` como pedido de reenvio.
   it 'does not send an update of only read_receipt_sent_at or only link_preview to the connector' do

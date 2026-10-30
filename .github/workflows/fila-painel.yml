@@ -40,7 +40,7 @@ jobs:
       (github.event_name == 'pull_request_target' || github.event_name == 'workflow_run') &&
       (!contains(fromJSON('["labeled","unlabeled"]'), github.event.action) ||
       startsWith(github.event.label.name, 'fila:') || github.event.label.name == 'hotfix')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Rótulos e alertas
@@ -99,7 +99,7 @@ jobs:
     concurrency:
       group: fila-painel
       cancel-in-progress: true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - name: Atualizar o painel

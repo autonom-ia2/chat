@@ -15,10 +15,10 @@
 module Crm::Subjects::Reabertura
   ESTADOS = %w[applied kept doubt no_content no_quota failed].freeze
   ZERADA = { state: 'pending', action: 'none', pipeline_id: nil, title: nil, confidence: nil, decided_by: nil,
-             reason: nil, touched_card_ids: nil }.freeze
+             reason: nil, touched_card_ids: nil, jev_answer: nil, review_reason: nil }.freeze
   # O que a decisão era antes de reabrir: volta assim se der erro, e serve de comparação para não avisar à toa. A lista
   # de cards tocados (#1693) zera e não volta: a reaberta é de um assunto só, e a IA do CRM relê o card em foco.
-  RETRATO = %w[state action card_id pipeline_id title confidence decided_by reason mode updated_at].freeze
+  RETRATO = %w[state action card_id pipeline_id title confidence decided_by reason mode jev_answer review_reason updated_at].freeze
 
   # O retrato da decisão anterior, com a linha já reaberta (pending), ou nil quando não há o que reabrir. O update
   # condicional é a reserva: dois jobs da mesma mensagem não reabrem os dois.

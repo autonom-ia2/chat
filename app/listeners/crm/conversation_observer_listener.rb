@@ -8,6 +8,8 @@ class Crm::ConversationObserverListener < BaseListener
     Crm::SyncConversationCardJob.perform_later(message.conversation_id, message.id)
     # Multifunil (#1145): só mensagem do cliente, e só em caixa com a IA de assunto ligada.
     Crm::Subjects.identificar_depois(message)
+    # IA entende a conversa F4 (flag `crm_ia_leitor_de_midia`): o anexo é lido na chegada, uma vez, para todas as IAs.
+    Crm::Ai::LeitorDeMidia.ler_depois(message)
   end
 
   # SLA auto-apply v1 (gatilho "conversa criada"): hand off to a job so listener

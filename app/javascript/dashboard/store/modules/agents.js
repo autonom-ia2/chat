@@ -41,14 +41,17 @@ export const getters = {
 };
 
 export const actions = {
+  // Fork (#2308): devolve se deu certo, para a tela não mostrar "ninguém" quando a lista não veio.
   get: async ({ commit }) => {
     commit(types.default.SET_AGENT_FETCHING_STATUS, true);
     try {
       const response = await AgentAPI.get();
       commit(types.default.SET_AGENT_FETCHING_STATUS, false);
       commit(types.default.SET_AGENTS, response.data);
+      return true;
     } catch (error) {
       commit(types.default.SET_AGENT_FETCHING_STATUS, false);
+      return false;
     }
   },
   create: async ({ commit }, agentInfo) => {
@@ -73,7 +76,11 @@ export const actions = {
       commit(types.default.SET_AGENT_UPDATING_STATUS, false);
     } catch (error) {
       commit(types.default.SET_AGENT_UPDATING_STATUS, false);
-      throw new Error(error);
+      // Fork (#2308): a mensagem fica a mesma; status e código da recusa vão junto (a gaveta de funções separa o 401).
+      const failure = new Error(error);
+      failure.status = error?.response?.status;
+      failure.code = error?.response?.data?.error;
+      throw failure;
     }
   },
   updateSingleAgentPresence: ({ commit }, { id, availabilityStatus }) => {

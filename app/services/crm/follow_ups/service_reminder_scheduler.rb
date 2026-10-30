@@ -53,12 +53,24 @@ class Crm::FollowUps::ServiceReminderScheduler
   end
 
   # -> número de lembretes criados ou levados para outro horário (#1589)
-  # Com o card travado: duas rodadas do job ao mesmo tempo não criam o mesmo lembrete duas vezes. Trava a linha sem
-  # recarregar o card (with_lock recarrega e joga fora o que o job pré-carregou); o que mudar até o envio, o
-  # DueProcessor confere de novo (wanted?).
+  # Travas na ordem do resto do CRM, lembrete e depois card (#2100, ver Crm::Cards::Archiver): o DueProcessor trava o
+  # lembrete e depois lê o card; travar o card antes, aqui, fechava o ciclo (ActiveRecord::Deadlocked).
+  # 1. Os lembretes ativos deste card, sem esperar (SKIP LOCKED): o que o DueProcessor segura (na chamada à IA, no envio)
+  #    fica com ele, que confere wanted? no envio; não muda de horário nem é cancelado nesta rodada, e não é criado de
+  #    novo (create_unless_known! o acha pela chave). Esperar por ele parava o job no card e estourava o statement_timeout.
+  # 2. O card, que serializa duas rodadas do job: não criam o mesmo lembrete duas vezes. FOR NO KEY UPDATE: não espera o
+  #    FOR KEY SHARE da barreira, que o DueProcessor segura durante a IA e o envio, e ainda espera o arquivamento (FOR
+  #    UPDATE) e o UPDATE do card com que o DueProcessor fecha o lembrete (CardNextDueUpdater). Trava a linha sem
+  #    recarregar o card (with_lock recarrega e joga fora o que o job pré-carregou); relê só o status do card e o do funil, para não
+  #    criar lembrete em card ou funil que acabou de ser arquivado (o arquivamento segura o card até confirmar). O que
+  #    mudar até o envio, o DueProcessor confere de novo (wanted?).
+  # 3. Com o card travado, nada mais espera: o lembrete que nasceu entre 1 e 2 vem também com SKIP LOCKED.
   def perform
     Crm::Card.transaction do
-      Crm::Card.where(id: @card.id).lock.pluck(:id)
+      @travados = travar_lembretes_livres([])
+      next 0 if arquivado_sob_trava?
+
+      @travados += travar_lembretes_livres(@travados)
       wanted = desired
       cancel_obsolete!(wanted.map(&:key))
       @criar ? wanted.count { |reminder| create_unless_known!(reminder) } : 0
@@ -73,6 +85,13 @@ class Crm::FollowUps::ServiceReminderScheduler
   end
 
   private
+
+  def travar_lembretes_livres(vistos) = known_scope.active.where.not(id: vistos.map(&:id)).order(:id).lock('FOR UPDATE SKIP LOCKED').to_a
+
+  def arquivado_sob_trava?
+    status = Crm::Card.where(id: @card.id).lock('FOR NO KEY UPDATE').pick(:status)
+    status == 'archived' || Crm::Pipeline.where(id: @card.pipeline_id).pick(:status) == 'archived'
+  end
 
   def settings
     @settings ||= Crm::Ai::Config.service_reminders_settings(@card.pipeline)
@@ -96,13 +115,9 @@ class Crm::FollowUps::ServiceReminderScheduler
     @card.last_activity_at.present? && @card.last_activity_at > @now - progress_after_hours.hours
   end
 
-  def progress_after_hours
-    settings[:progress_after_hours]
-  end
+  def progress_after_hours = settings[:progress_after_hours]
 
-  def resolved_check_after_hours
-    settings[:resolved_check_after_hours]
-  end
+  def resolved_check_after_hours = settings[:resolved_check_after_hours]
 
   # Andamento e "deu certo?" esperam o follow-up automático que está falando com este cliente (#1589). O pagamento da
   # Cobrança tem dia marcado e não espera.
@@ -205,17 +220,14 @@ class Crm::FollowUps::ServiceReminderScheduler
     Crm::FollowUp.where(account_id: @card.account_id, card_id: @card.id).where("metadata ->> 'source' = ?", SOURCE)
   end
 
-  # Travado e conferido de novo: o DueProcessor pode ter acabado de mandar este mesmo lembrete.
+  # Só os travados no perform, lidos depois da trava: o DueProcessor pode ter acabado de mandar este mesmo lembrete.
   def cancel_obsolete!(keys)
-    known_scope.active.find_each do |follow_up|
+    @travados.each do |follow_up|
       next if keys.include?(follow_up.metadata.to_h['key'])
+      next unless follow_up.pending? || follow_up.overdue?
 
-      follow_up.with_lock do
-        next unless follow_up.pending? || follow_up.overdue?
-
-        follow_up.update!(status: :canceled, canceled_at: @now,
-                          metadata: follow_up.metadata.merge('canceled_reason' => 'no_longer_due'))
-      end
+      follow_up.update!(status: :canceled, canceled_at: @now,
+                        metadata: follow_up.metadata.merge('canceled_reason' => 'no_longer_due'))
     end
   end
 
@@ -226,7 +238,7 @@ class Crm::FollowUps::ServiceReminderScheduler
 
     @card.account.crm_follow_ups.create!(
       card: @card, conversation: conversation, contact: @card.contact, inbox: conversation.inbox,
-      title: I18n.with_locale(@card.account.locale) { I18n.t("crm.service_reminders.#{reminder.kind}") },
+      title: Crm::FollowUps::ServiceReminderTitle.for(@card.account, reminder.kind),
       due_at: reminder.due_at, timezone: timezone, follow_up_type: :message, automation_mode: :auto_send_message,
       assignee_id: sender&.id, created_by_id: sender&.id,
       metadata: reminder_metadata(reminder)
@@ -242,18 +254,16 @@ class Crm::FollowUps::ServiceReminderScheduler
   # #1589: o tempo escolhido mudou e o lembrete ainda não saiu: vai para o novo horário. Lembrete anterior à escolha
   # não tem o tempo gravado e era de 1 dia. Conta como criado: entra no teto e no espaçamento do job (trocar 3 dias
   # por 4 horas não solta todos os pendentes do funil no mesmo minuto).
+  # Só o travado no perform: o que outro segura (o DueProcessor mandando) não muda de horário nesta rodada.
   def reschedule_if_time_changed!(known, reminder)
-    return false if reminder.after_hours.nil? || !known.pending?
+    known = @travados.find { |travado| travado.id == known.id }
+    return false if known.nil? || reminder.after_hours.nil? || !known.pending?
 
     gravado = known.metadata.to_h.fetch('after_hours', Crm::Ai::Config::DEFAULT_SERVICE_REMINDER_HOURS).to_i
     return false if gravado == reminder.after_hours
 
-    known.with_lock do
-      next unless known.pending?
-
-      known.update!(due_at: reminder.due_at, metadata: known.metadata.merge('after_hours' => reminder.after_hours))
-      true
-    end
+    known.update!(due_at: reminder.due_at, metadata: known.metadata.merge('after_hours' => reminder.after_hours))
+    true
   end
 
   # Sem quem envie, o auto_send morre em 'sender_required': dono do card, quem atende a conversa ou um admin.

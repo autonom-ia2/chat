@@ -4,9 +4,16 @@ class DeleteObjectJob < ApplicationJob
   BATCH_SIZE = 5_000
 
   def perform(object, user = nil, ip = nil)
+    # Fork (#2133): a conta é suspensa e as campanhas agendadas param; antes do pré-apagar saem só as tabelas que o
+    # barrariam (chave sem cascata para mensagem); o resto do fork sai depois dele, logo antes do destroy!.
+    # Ver Autonomia::ExclusaoDaConta.
+    exclusao_do_fork = Autonomia::ExclusaoDaConta.new(object) if object.is_a?(Account)
+    exclusao_do_fork&.parar_a_conta
+    exclusao_do_fork&.antes_do_pre_apagar
     # Pre-purge heavy associations for large objects to avoid
     # timeouts & race conditions due to destroy_async fan-out.
     purge_heavy_associations(object)
+    exclusao_do_fork&.perform
     object.destroy!
     process_post_deletion_tasks(object, user, ip)
   end
@@ -40,4 +47,6 @@ class DeleteObjectJob < ApplicationJob
   end
 end
 
+# Exclusão da conta: os contatos não cancelam reunião nem anonimizam cards um a um (#2096, Crm::ContatosSoltamCardsNaExclusaoDaConta).
+DeleteObjectJob.prepend(Crm::ContatosSoltamCardsNaExclusaoDaConta)
 DeleteObjectJob.prepend_mod_with('DeleteObjectJob')

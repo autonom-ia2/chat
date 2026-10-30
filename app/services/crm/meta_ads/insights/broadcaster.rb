@@ -1,5 +1,6 @@
 # Avisa a tela aberta que a leitura de hoje terminou (#1073, CA-2.8): a tela troca os números sem recarregar.
-# Vai só para os administradores da conta, os únicos que veem Anúncios da Meta.
+# Vai para quem vê Anúncios da Meta: administrador ou função com `meta_ads_view`/`meta_ads_manage` (#2070), a mesma
+# regra da tela (Crm::MetaAdsConnectionPolicy#show?).
 class Crm::MetaAds::Insights::Broadcaster
   include Events::Types
 
@@ -15,10 +16,19 @@ class Crm::MetaAds::Insights::Broadcaster
   end
 
   def self.broadcast(connection)
-    tokens = connection.account.administrators.filter_map(&:pubsub_token)
+    tokens = recipients(connection.account_id).filter_map { |account_user| account_user.user.pubsub_token }
     return if tokens.empty?
 
     payload = { account_id: connection.account_id }.merge(Crm::MetaAds::Insights::Summary.payload(connection, refreshing: false))
     ActionCableBroadcastJob.perform_later(tokens, CRM_META_ADS_INSIGHTS_UPDATED, payload)
   end
+
+  # Duas leituras fixas (membros com usuário e, no EE, as funções), sem consulta por pessoa. `custom_role` só existe
+  # no EE: carregar a associação no OSS levanta AssociationNotFound (como em Crm::Ai::UsageBroadcaster).
+  def self.recipients(account_id)
+    relation = AccountUser.human.where(account_id: account_id).includes(:user)
+    relation = relation.includes(:custom_role) if AccountUser.reflect_on_association(:custom_role)
+    relation.select { |account_user| account_user.permission_granted?('meta_ads_view') }
+  end
+  private_class_method :recipients
 end

@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import CrmAiUsageAPI from 'dashboard/api/crmAiUsage';
+import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import { withFullI18n } from 'test-i18n';
 import CrmAiUsagePage from './CrmAiUsagePage.vue';
 
@@ -15,6 +16,10 @@ vi.mock('dashboard/api/crmAiUsage', () => ({
     get: vi.fn(),
     export: vi.fn(),
   },
+}));
+
+vi.mock('dashboard/api/crmKanban', () => ({
+  default: { getReportAiVsHuman: vi.fn() },
 }));
 
 vi.mock('dashboard/composables/emitter', () => ({
@@ -122,6 +127,9 @@ describe('CrmAiUsagePage', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-06-28T12:00:00Z'));
     vi.clearAllMocks();
+    CrmKanbanAPI.getReportAiVsHuman.mockResolvedValue({
+      data: { payload: { ai_auto_moves: 0, ai_accepted: 0, ai_dismissed: 0 } },
+    });
     Object.keys(emitterHandlers).forEach(key => {
       delete emitterHandlers[key];
     });
@@ -241,5 +249,64 @@ describe('CrmAiUsagePage', () => {
     );
     expect(wrapper.text()).toContain('Monthly spend');
     expect(wrapper.text()).toContain('Monthly spend (by day)');
+  });
+
+  // #2000 — o "IA vs humano" saiu de Números e virou esta frase, sobre todos os funis que a pessoa vê.
+  it('says in one sentence what the AI did in the stages, for all visible pipelines', async () => {
+    CrmKanbanAPI.getReportAiVsHuman.mockResolvedValue({
+      data: { payload: { ai_auto_moves: 3, ai_accepted: 2, ai_dismissed: 1 } },
+    });
+    const wrapper = await mountPage();
+
+    expect(CrmKanbanAPI.getReportAiVsHuman).toHaveBeenCalledWith(
+      expect.objectContaining({ todos_os_funis: true })
+    );
+    const bloco = wrapper.get('[data-ia-vs-humano]');
+    expect(bloco.text()).toContain('What the AI did in the pipeline');
+    expect(bloco.get('[data-ia-vs-humano-frase]').text()).toBe(
+      'In this period, the AI moved customers to another stage on its own 3 times. It also suggested changes: the team accepted 2 and turned down 1.'
+    );
+  });
+
+  it('says it moved no one on its own when the team only judged suggestions', async () => {
+    CrmKanbanAPI.getReportAiVsHuman.mockResolvedValue({
+      data: { payload: { ai_auto_moves: 0, ai_accepted: 1, ai_dismissed: 0 } },
+    });
+    const wrapper = await mountPage();
+
+    expect(wrapper.get('[data-ia-vs-humano-frase]').text()).toBe(
+      'In this period, the AI did not move anyone to another stage on its own. It also suggested changes: the team accepted 1 and turned down 0.'
+    );
+  });
+
+  it('says plainly when the AI did nothing in the stages', async () => {
+    const wrapper = await mountPage();
+
+    expect(wrapper.get('[data-ia-vs-humano-frase]').text()).toBe(
+      'In this period, the AI did not move anyone to another stage, nor suggest changes.'
+    );
+  });
+
+  it('leaves the sentence out, and the rest of the page in, when the reading fails', async () => {
+    CrmKanbanAPI.getReportAiVsHuman.mockRejectedValue(new Error('403'));
+    const wrapper = await mountPage();
+
+    expect(wrapper.find('[data-ia-vs-humano]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('AI uses');
+  });
+
+  it('reads the sentence again for the new period', async () => {
+    const wrapper = await mountPage();
+    CrmAiUsageAPI.get.mockResolvedValueOnce({
+      data: { payload: makePayload() },
+    });
+
+    await wrapper
+      .findAll('button')
+      .find(button => button.text() === 'Month')
+      .trigger('click');
+    await flushPromises();
+
+    expect(CrmKanbanAPI.getReportAiVsHuman).toHaveBeenCalledTimes(2);
   });
 });

@@ -41,6 +41,10 @@ class Crm::StageAutomation < ApplicationRecord
 
   has_many :steps, class_name: 'Crm::StageAutomationStep', foreign_key: :stage_automation_id,
                    dependent: :destroy, inverse_of: :stage_automation
+  # O registro de cada vez que a automação rodou num card sai com ela. Sem isso, a FK (sem on_delete) barrava apagar a
+  # automação, e a etapa dela, de quem já tinha rodado alguma vez.
+  has_many :executions, class_name: 'Crm::StageAutomationExecution', foreign_key: :stage_automation_id,
+                        dependent: :delete_all, inverse_of: :stage_automation
 
   enum trigger_event: { on_enter: 0, on_exit: 1 }
 

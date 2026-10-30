@@ -6,18 +6,6 @@ import { ABRIR_REACOES } from '../reacaoDoAtendente';
 import { emitter } from 'shared/helpers/mitt';
 import en from '../../../i18n/locale/en/conversaCanal.json';
 
-// O seletor completo de emoji usa a lista virtual (virtua), que mede com ResizeObserver; o jsdom não tem.
-beforeAll(() => {
-  vi.stubGlobal(
-    'ResizeObserver',
-    vi.fn(() => ({ observe: vi.fn(), unobserve: vi.fn(), disconnect: vi.fn() }))
-  );
-});
-
-afterAll(() => {
-  vi.unstubAllGlobals();
-});
-
 const i18n = createI18n({ legacy: false, locale: 'en', messages: { en } });
 
 const montar = (props = {}) =>
@@ -26,7 +14,13 @@ const montar = (props = {}) =>
     attachTo: document.body,
     global: {
       plugins: [i18n],
-      stubs: { Icon: true },
+      // A janela de emojis vai para o body, como no painel (fora do botão de reagir).
+      stubs: {
+        Icon: true,
+        TeleportWithDirection: {
+          template: '<Teleport to="body"><slot /></Teleport>',
+        },
+      },
     },
   });
 
@@ -101,23 +95,137 @@ describe('BotaoDeReagir', () => {
     wrapper.unmount();
   });
 
-  it('o "+" abre o seletor completo com o foco dentro dele', async () => {
-    const wrapper = montar();
+  const abrirJanela = async wrapper => {
     await wrapper.find('button[aria-haspopup]').trigger('click');
     await nextTick();
     await barra(wrapper).findAll('button')[6].trigger('click');
+    await nextTick();
+  };
+  const janela = () => document.body.querySelector('[data-janela-de-emojis]');
 
-    // Enquanto o seletor carrega, o foco espera no botão de reagir, não no body.
+  it('o "+" abre a janela de emojis da caixa de resposta, com o foco na busca', async () => {
+    const wrapper = montar();
+    await abrirJanela(wrapper);
+
     expect(barra(wrapper).exists()).toBe(false);
+    expect(janela()).not.toBeNull();
+    expect(document.activeElement.matches('[data-buscar-emoji]')).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('escolher na janela reage com o emoji e fecha', async () => {
+    const wrapper = montar();
+    await abrirJanela(wrapper);
+
+    const emoji = [...janela().querySelectorAll('button')].find(
+      b => b.textContent.trim() === '😀'
+    );
+    emoji.click();
+    await nextTick();
+
+    expect(wrapper.emitted('reagir')).toEqual([['😀']]);
+    expect(janela()).toBeNull();
+    wrapper.unmount();
+  });
+
+  it('Esc fecha a janela e o foco volta para o botão de reagir', async () => {
+    const wrapper = montar();
+    await abrirJanela(wrapper);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await nextTick();
+
+    expect(janela()).toBeNull();
     expect(document.activeElement).toBe(
       wrapper.find('button[aria-haspopup]').element
     );
-    // Montado o seletor, o foco vai para a busca dele.
-    await vi.waitFor(
-      () => expect(document.activeElement.tagName).toBe('INPUT'),
-      { timeout: 5000 }
+    wrapper.unmount();
+  });
+
+  // Clique de verdade: pointerdown e depois click, como o onClickOutside trata.
+  const clicar = async elemento => {
+    elemento.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+    elemento.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, detail: 1 })
     );
-    expect(wrapper.element.contains(document.activeElement)).toBe(true);
+    await nextTick();
+    await new Promise(resolve => {
+      setTimeout(resolve, 5);
+    });
+  };
+  const abrirJanelaClicando = async wrapper => {
+    await clicar(wrapper.find('button[aria-haspopup]').element);
+    await clicar(barra(wrapper).findAll('button')[6].element);
+  };
+  const janelas = () =>
+    document.body.querySelectorAll('[data-janela-de-emojis]');
+
+  it('clique de verdade num emoji da janela reage', async () => {
+    const wrapper = montar();
+    await abrirJanelaClicando(wrapper);
+    const emoji = [...janelas()[0].querySelectorAll('button')].find(
+      b => b.textContent.trim() === '😀'
+    );
+    await clicar(emoji);
+
+    expect(wrapper.emitted('reagir')).toEqual([['😀']]);
+    expect(janelas()).toHaveLength(0);
+    wrapper.unmount();
+  });
+
+  it('clique fora fecha a janela', async () => {
+    const wrapper = montar();
+    await abrirJanelaClicando(wrapper);
+    const fora = document.createElement('div');
+    document.body.appendChild(fora);
+    await clicar(fora);
+
+    expect(janelas()).toHaveLength(0);
+    expect(
+      wrapper.find('button[aria-haspopup]').attributes('aria-expanded')
+    ).toBe('false');
+    wrapper.unmount();
+    fora.remove();
+  });
+
+  it('dois balões: abrir no segundo fecha a janela do primeiro', async () => {
+    const primeiro = montar({ mensagemId: 1 });
+    const segundo = montar({ mensagemId: 2 });
+    await abrirJanelaClicando(primeiro);
+    await clicar(segundo.find('button[aria-haspopup]').element);
+
+    expect(janelas()).toHaveLength(0);
+    expect(barra(segundo).exists()).toBe(true);
+    primeiro.unmount();
+    segundo.unmount();
+  });
+
+  it('no celular, a barra que passaria da borda da tela anda para dentro (#2113)', async () => {
+    const larguraAntes = window.innerWidth;
+    window.innerWidth = 390;
+    const medida = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ left: 298, right: 620, top: 0, bottom: 0 });
+    const wrapper = montar();
+    await wrapper.find('button[aria-haspopup]').trigger('click');
+    await nextTick();
+
+    expect(barra(wrapper).attributes('style')).toContain('translateX(-238px)');
+    medida.mockRestore();
+    window.innerWidth = larguraAntes;
+    wrapper.unmount();
+  });
+
+  it('a barra que cabe na tela fica onde está', async () => {
+    const medida = vi
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ left: 100, right: 420, top: 0, bottom: 0 });
+    const wrapper = montar();
+    await wrapper.find('button[aria-haspopup]').trigger('click');
+    await nextTick();
+
+    expect(barra(wrapper).attributes('style')).toBeUndefined();
+    medida.mockRestore();
     wrapper.unmount();
   });
 });

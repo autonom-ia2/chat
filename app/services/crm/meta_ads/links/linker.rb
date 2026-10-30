@@ -50,9 +50,14 @@ class Crm::MetaAds::Links::Linker
 
   private
 
+  # Conversa antiga (antes da lista de toques) guarda só o toque em `campaign`: vale como o único toque dela, como no
+  # painel sem login (Panel::WhatsappCohort), para o número não encolher ao conectar a conta de anúncios (#2054).
   def touches
-    list = @conversation.additional_attributes.to_h['campaign_touches']
-    list.is_a?(Array) ? list : []
+    attributes = @conversation.additional_attributes.to_h
+    list = attributes['campaign_touches']
+    return list if list.is_a?(Array) && list.any?
+
+    attributes['campaign'].is_a?(Hash) ? [attributes['campaign']] : []
   end
 
   def record(touch, first)

@@ -3,7 +3,7 @@
 # like the CRM card), plus the audiences (Públicos) the contact is in. Read-only.
 class Api::V1::Accounts::CampaignJourney::ContactOriginsController < Api::V1::Accounts::BaseController
   MAX_CONVERSATIONS = 50
-  MARK_KEYS = %w[source source_id source_type headline source_url touched_at].freeze
+  MARK_KEYS = %w[source source_id source_type headline source_url touched_at ad_hidden].freeze
 
   def show
     contact = Current.account.contacts.find(params[:id])
@@ -23,8 +23,19 @@ class Api::V1::Accounts::CampaignJourney::ContactOriginsController < Api::V1::Ac
   # Legacy single-touch conversations come back as one touch (Ctwa::CampaignBuilder.existing_touches).
   def conversation_marks(conversation)
     Ctwa::CampaignBuilder.existing_touches(conversation).map do |touch|
-      touch.slice(*MARK_KEYS).merge('conversation_display_id' => conversation.display_id)
+      visible_touch(touch).slice(*MARK_KEYS).merge('conversation_display_id' => conversation.display_id)
     end
+  end
+
+  # Anúncio de origem (#2271): a função personalizada sem meta_ads_view vê a marca do anúncio sem o anúncio.
+  def visible_touch(touch)
+    hide_ads? ? Crm::AnuncioDeOrigem.oculta_toque(touch) : touch
+  end
+
+  def hide_ads?
+    return @hide_ads if defined?(@hide_ads)
+
+    @hide_ads = !Crm::AnuncioDeOrigem.ve_no_contexto?(Current.user, Current.account_user)
   end
 
   # Same visibility the conversation list uses (Conversations::PermissionFilterService).

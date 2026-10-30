@@ -39,12 +39,17 @@
 #   had crm_manage_cards kept it).
 # - 'crm_metas_manage': Can see and set every person's monthly goal in CRM › Números (Metas do mês, #1991). crm_admin
 #   implies it; agents without a custom role never get it.
+# Every CRM editing key (CRM_EDITING_KEYS) implies crm_view: the role is saved with crm_view added (#2124), so the
+# policies, booking host eligibility, live updates, integration token scopes and the panel all read the same keys.
+# crm_view_reports (reports only) and sales_value_view (money) do not imply it.
 #
 # Module keys: '<module>_manage' implies '<module>_view' (see Enterprise::AccountUser#permission_granted?).
 # - 'contact_view' / 'knowledge_base_view': read-only access to contacts / help center.
 # - 'contact_export': export the contact base (split from contact_manage in #1845; roles that had contact_manage kept it).
 # - 'contact_delete': delete contacts and companies, one by one or in bulk (#1845).
 # - 'autonomia_view': view and test Autonom.ia agents. 'autonomia_manage': create, train and publish them.
+# - 'desempenho_view': the agent performance panel and its PDF/spreadsheet export (#2251). Independent from
+#   autonomia_view; the panel shows a conversation only to who sees its inbox. View only (no _manage).
 # - 'campaign_view': view campaigns and their reports. 'campaign_manage': build campaigns and import lists.
 #   'campaign_send': send, schedule and resume them (#1898; roles that had campaign_manage kept sending).
 # - 'inbox_view': view every inbox configuration. 'inbox_manage': create, connect and configure inboxes.
@@ -58,7 +63,20 @@
 # - 'whatsapp_templates_view' / 'whatsapp_templates_manage': WhatsApp (Cloud) message templates of the inboxes (#1330).
 #   manage creates, edits, duplicates and deletes them at Meta; platform templates stay read-only.
 # - 'meta_ads_view': Meta Ads panel, connection state and the panel AI (#1794). Lists that lead to a conversation show
-#   only the conversations the person already sees. Connecting and configuring stay with administrators.
+#   only the conversations the person already sees. It also shows each ad's budget and dates in R$ and the ads created
+#   here that are still paused (#2198).
+# - 'meta_ads_manage': connect, configure and disconnect Meta Ads (token, Facebook login, ad account and Pixel choice,
+#   destinations, funnel sale signal, insights refresh, the owner's WhatsApp report) and act on the advisor (#2070).
+#   It also pauses and activates ads (#2161; activating is what spends), creates new ads (always born paused), uploads
+#   photos and videos to the ad account, and changes an ad's budget and end date (#2198).
+#   Protected key (two-list rule, #1782; decision D7 of lote 11): only an administrator hands it out, or whoever holds
+#   grant_above_own, which only an administrator turns on. Choosing an ad account grants the platform system user
+#   access to the client's ad account. CRM sales values are out of its scope (sales_value_view, lote 13); the ad
+#   budget it shows and changes is the ad's own money at Meta, in the ad account's currency (#2198).
+# - 'posts_view' / 'posts_manage': Seus posts (#2302), the Instagram and Facebook Page posts of the account's inboxes.
+#   view sees the profile numbers and the posts; the comments (who wrote them) also need to see the inbox
+#   (InboxPolicy#show?). manage answers, hides and shows a comment again and sends the private reply, also only on
+#   inboxes the person sees. Common delegable module (Funções, 27/10).
 # - 'label_manage', 'attribute_manage', 'macro_manage' (team-wide macros), 'sla_manage': account settings.
 # - 'assignment_manage': assignment and agent capacity policies, and which policy each inbox uses (#1797).
 # - 'people_manage': add, invite, edit and remove agents, and manage teams (#1931). Never administrators, never one's own
@@ -69,6 +87,15 @@
 # - 'financial_view': the account's costs in money: AI usage values (R$/US$, CSV, live push) and the Meta charge
 #   authorization screen (#1969). 'financial_manage': turn the Meta charge authorization on and off. Plan, invoices and
 #   payments (Financeiro module) stay with administrators.
+# - 'integration_manage': connect, configure and disconnect integrations (Slack, Linear, Notion, Shopify, dashboard apps,
+#   imports), webhooks and agent bots, and swap the credentials of an existing inbox (#2027). Creating an inbox stays
+#   with inbox_manage. Credentials pasted from other systems are never shown back to it.
+# - 'token_manage': see and rotate the secrets the platform issues (inbox HMAC and API secret, webhook signing secret,
+#   agent bot token and secret, CRM integration tokens, Google conversion feed), never minting more than one holds (#2027).
+# - 'sales_value_view': see sales values in money in the CRM: card value, sums, goals in money and ratios taken from
+#   money (ROI, % of goal, win rate by value). Without it, counts stay, and a person still sees the value of the cards
+#   they own and their own numbers. A delegation key, so crm_admin does not imply it; agents without a custom role keep
+#   seeing values (#2075).
 
 class CustomRole < ApplicationRecord
   belongs_to :account
@@ -80,6 +107,8 @@ class CustomRole < ApplicationRecord
     where.not(id: AccountUser.where(integration: true).where.not(custom_role_id: nil).select(:custom_role_id))
   }
 
+  before_validation :add_implied_permissions
+  before_validation :strip_name
   before_destroy :capture_filtered_unread_count_user_ids, prepend: true
   after_update_commit :invalidate_filtered_unread_count_visibility_update, if: :filtered_unread_count_permissions_changed?
   after_destroy_commit :invalidate_filtered_unread_count_visibility_destroy
@@ -109,6 +138,7 @@ class CustomRole < ApplicationRecord
     knowledge_base_view
     autonomia_view
     autonomia_manage
+    desempenho_view
     campaign_view
     campaign_manage
     campaign_send
@@ -127,6 +157,9 @@ class CustomRole < ApplicationRecord
     whatsapp_templates_view
     whatsapp_templates_manage
     meta_ads_view
+    meta_ads_manage
+    posts_view
+    posts_manage
     label_manage
     attribute_manage
     macro_manage
@@ -137,12 +170,33 @@ class CustomRole < ApplicationRecord
     grant_above_own
     financial_view
     financial_manage
+    integration_manage
+    token_manage
+    sales_value_view
   ].freeze
 
   # Delegable keys only an administrator hands out, unless the giver has grant_above_own (CLAUDE.md, #1931).
-  DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage].freeze
+  DELEGATION_KEYS = %w[people_manage custom_role_manage grant_above_own financial_view financial_manage integration_manage
+                       token_manage meta_ads_manage sales_value_view].freeze
 
+  # Editing the CRM needs seeing it (#2124). crm_view_reports and sales_value_view stay apart.
+  CRM_EDITING_KEYS = %w[crm_manage_cards crm_move_cards crm_manage_pipelines crm_manage_ai crm_delete_cards crm_metas_manage
+                        crm_export].freeze
+
+  # The keys as the role stores them: an editing key brings crm_view along. Readers check the stored keys, and the grant
+  # guard checks these, so nobody hands out a crm_view they do not hold.
+  def self.with_implied_permissions(permissions)
+    keys = Array(permissions).map(&:to_s)
+    return keys if keys.include?('crm_view') || !keys.intersect?(CRM_EDITING_KEYS)
+
+    keys + ['crm_view']
+  end
+
+  # Um nome por conta, sem diferenciar maiúsculas nem espaços nas pontas (#2185): duas "Vendas" confundem quem dá a
+  # função. O índice único em lower(trim(name)) segura duas gravações ao mesmo tempo.
+  # Só confere quando o nome muda, para não consultar o banco a cada troca de chaves.
   validates :name, presence: true
+  validate :name_not_taken, if: :will_save_change_to_name?
   # The inclusion validator stays: tools read the accepted keys from it (#900). The message
   # names the rejected keys and the accepted ones, so a person or the Guide can fix the
   # request instead of guessing (#894).
@@ -154,6 +208,22 @@ class CustomRole < ApplicationRecord
   end
 
   private
+
+  # A mesma conta que o índice faz (lower(trim(name))): um nome antigo salvo com espaço nas pontas também conta.
+  def name_not_taken
+    return if name.blank?
+
+    taken = self.class.where(account_id: account_id).where.not(id: id).exists?(['lower(trim(name)) = ?', name.downcase])
+    errors.add(:name, :taken) if taken
+  end
+
+  def strip_name
+    self.name = name.strip if name.is_a?(String)
+  end
+
+  def add_implied_permissions
+    self.permissions = self.class.with_implied_permissions(permissions)
+  end
 
   def filtered_unread_count_permissions_changed?
     previous_changes.key?('permissions')

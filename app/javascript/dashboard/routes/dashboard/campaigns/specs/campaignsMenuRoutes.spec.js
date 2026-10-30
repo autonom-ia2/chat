@@ -1,5 +1,6 @@
 import { createRouter, createMemoryHistory } from 'vue-router';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { routeIsAccessibleFor } from 'dashboard/helper/routeHelpers';
 
 // Páginas trocadas por componentes vazios: aqui só importa o roteamento.
 const vazio = { render: () => null };
@@ -25,6 +26,7 @@ vi.mock('../../crm/pages/CrmIntegrationTokensPage.vue', () => ({
 vi.mock('../../crm/pages/CrmCampaignManagementPage.vue', () => ({
   default: vazio,
 }));
+vi.mock('../metaAds/MetaAdsPage.vue', () => ({ default: vazio }));
 
 const { default: campaignsRoutes } = await import('../campaigns.routes');
 const { default: crmRoutes } = await import('../../crm/crm.routes');
@@ -98,5 +100,23 @@ describe('rotas do menu de Campanhas', () => {
       campaign: '12',
       period: '30d',
     });
+  });
+
+  // #2070: a função guarda só a chave mais alta, e a lista de chaves que chega ao painel não expande manage em view.
+  it('Anúncios da Meta abre para a função só com meta_ads_manage, e não para quem não tem chave dela', () => {
+    const rota = montarRoteador().resolve({
+      name: 'campaigns_meta_ads_index',
+      params: { accountId: 1 },
+    });
+
+    expect(routeIsAccessibleFor(rota, ['meta_ads_manage', 'custom_role'])).toBe(
+      true
+    );
+    expect(routeIsAccessibleFor(rota, ['meta_ads_view', 'custom_role'])).toBe(
+      true
+    );
+    expect(routeIsAccessibleFor(rota, ['campaign_view', 'custom_role'])).toBe(
+      false
+    );
   });
 });

@@ -191,6 +191,16 @@ Rails.application.routes.draw do
             end
           end
           resources :canned_responses, only: [:index, :create, :update, :destroy]
+          # Seus posts (#2302, F1 #2304): os números do perfil e os posts do Instagram e da Página das caixas.
+          get :seus_posts, to: 'seus_posts#index'
+          # F2 (#2305): o post, os comentários dele e as ações (?perfil= em todos).
+          get 'seus_posts/posts/:post_id', to: 'seus_posts_comentarios#show'
+          get 'seus_posts/posts/:post_id/comments', to: 'seus_posts_comentarios#index'
+          post 'seus_posts/posts/:post_id/comments/:comment_id/reply', to: 'seus_posts_comentarios#reply'
+          post 'seus_posts/posts/:post_id/comments/:comment_id/private_reply', to: 'seus_posts_comentarios#private_reply'
+          post 'seus_posts/posts/:post_id/comments/:comment_id/private_reply/release', to: 'seus_posts_comentarios#release_private_reply'
+          post 'seus_posts/posts/:post_id/comments/:comment_id/hide', to: 'seus_posts_comentarios#hide'
+          delete 'seus_posts/posts/:post_id/comments/:comment_id', to: 'seus_posts_comentarios#destroy'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member
@@ -232,10 +242,23 @@ Rails.application.routes.draw do
               get :problem_rows, to: 'campaign_import_audiences#problem_rows'
               get :sample_contact, to: 'campaign_import_audiences#sample_contact'
               get :contacts, to: 'campaign_import_audiences#contacts'
+              get :people_sheet, to: 'campaign_import_audiences#people_sheet'
             end
           end
           namespace :campaign_journey do
             resources :campaigns, only: [:create]
+            # #2277: novo público pedindo em palavras (a IA da conta lê as conversas).
+            resources :conversation_audiences, only: [:create, :show] do
+              get :status, on: :collection
+              member do
+                post :answer
+                post :start
+                post :stop
+                post :resume
+                get :conversation
+                post :save
+              end
+            end
             resources :drafts, only: %i[index show create update destroy] # #1898
             resources :contact_origins, only: [:show]
             resources :campaign_names, only: [:index]
@@ -268,12 +291,27 @@ Rails.application.routes.draw do
           resources :ctwa_tracked_links, only: [:index, :create, :update, :destroy]
           namespace :crm do
             get 'contacts/:contact_id/opportunities', to: 'contact_opportunities#index'
+            # LGPD (#2096): excluir o contato apagando os cards ou mantendo-os sem dado pessoal, só administrador; a
+            # prévia lista os cards para a janela perguntar.
+            post 'contacts/:contact_id/permanent_delete', to: 'contacts/permanent_deletions#create'
+            get 'contacts/:contact_id/permanent_delete_preview', to: 'contacts/permanent_deletions#preview'
+            # Este contato é (#2084/#2085): interessado, parceiro do mercado ou não é negócio; só com a flag contato_relacao.
+            get 'contacts/:contact_id/relacao', to: 'contacts/relacoes#show'
+            put 'contacts/:contact_id/relacao', to: 'contacts/relacoes#update'
             get 'companies/:company_id/opportunities', to: 'company_opportunities#index' if ChatwootApp.enterprise?
             resources :pipelines, only: [:index, :create, :show, :update, :destroy] do
+              # Excluir de vez um funil arquivado (#2096), só administrador.
+              post :permanent_delete, on: :member, to: 'pipelines/permanent_deletions#create'
+              get :permanent_delete_preview, on: :member, to: 'pipelines/permanent_deletions#preview'
               resources :stages, only: [:index, :create]
               resources :inboxes, controller: 'pipeline_inboxes', only: [:index, :create, :destroy], param: :inbox_id
               resource :ai_settings, only: [:show, :update], controller: 'ai_settings' do
                 post :improve_criteria
+              end
+              # Funil arquivado (#2095): restaurar e a prévia do arquivamento.
+              member do
+                post :restore
+                get :archive_preview
               end
             end
             # Funil ainda não salvo (#1384): critério padrão e IA das etapas.
@@ -289,8 +327,14 @@ Rails.application.routes.draw do
               resources :steps, controller: 'stage_automation_steps', only: [:create, :update, :destroy]
             end
             post 'cards/bulk', to: 'cards/bulk#create'
+            # Excluir de vez cards arquivados (#2096), um ou vários, só administrador.
+            post 'cards/permanent_delete', to: 'cards/permanent_deletions#create'
             get 'cards/owner_options', to: 'cards#owner_options'
             get 'cards/summaries', to: 'cards/summaries#index'
+            # Arquivados (#2095): a lista e restaurar vários.
+            get 'cards/archived', to: 'cards/archived#index'
+            post 'cards/restore', to: 'cards/restores#create'
+            get 'cards/upcoming_meetings', to: 'cards/upcoming_meetings#index'
             resources :cards, only: [:index, :create, :show, :update, :destroy] do
               resource :contact, only: [:create], controller: 'cards/contacts'
               post :from_conversation, on: :collection
@@ -298,6 +342,7 @@ Rails.application.routes.draw do
               member do
                 post :move
                 post :close
+                post :restore
                 post :link_conversation
                 post :unlink_conversation
                 post :link_contact
@@ -371,16 +416,52 @@ Rails.application.routes.draw do
             scope 'meta_ads_connection' do
               # Relatório baixado (#1960): PDF ou planilha do painel no período.
               get :report, to: 'meta_ads_reports#show'
+              # Seus posts (#2199): resultado orgânico da Página e do Instagram.
+              get :organico, to: 'meta_ads_organico#show'
               post :daily_action, to: 'meta_ads_ai#daily_action'
               post :quote_message, to: 'meta_ads_ai#quote_message'
               get :whatsapp_report, to: 'meta_ads_whatsapp_reports#show'
               patch :whatsapp_report, to: 'meta_ads_whatsapp_reports#update'
               post 'whatsapp_report/test', to: 'meta_ads_whatsapp_reports#test_send'
+              # Gestão mínima do anúncio (#2161): situação, pausar/ativar, post da Página e Páginas da conexão.
+              get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
+              post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
+              get :pages, to: 'meta_ads_ad_management#pages'
+              # Destino (#2338): ligar a página do site sem sair de Anúncios.
+              get :site_pages, to: 'meta_ads_site_pages#index'
+              post :site_pages, to: 'meta_ads_site_pages#create'
+              get :create_options, to: 'meta_ads_creation#options'
+              get :boost_posts, to: 'meta_ads_creation#boost_posts'
+              post :media, to: 'meta_ads_creation#media'
+              post :ads, to: 'meta_ads_creation#create'
+              get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
+              patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
+              get :paused_ads, to: 'meta_ads_creation#paused'
+              # Comentários do anúncio no Instagram (#2196): ler, responder, ocultar, apagar e responder no privado.
+              get 'ads/:ad_id/instagram_comments', to: 'meta_ads_instagram_comments#index'
+              post 'ads/:ad_id/instagram_comments/:comment_id/reply', to: 'meta_ads_instagram_comments#reply'
+              post 'ads/:ad_id/instagram_comments/:comment_id/hide', to: 'meta_ads_instagram_comments#hide'
+              post 'ads/:ad_id/instagram_comments/:comment_id/private_reply', to: 'meta_ads_instagram_comments#private_reply'
+              post 'ads/:ad_id/instagram_comments/:comment_id/private_reply/release',
+                   to: 'meta_ads_instagram_comments#release_private_reply'
+              delete 'ads/:ad_id/instagram_comments/:comment_id', to: 'meta_ads_instagram_comments#destroy'
               # F5 (#1110): abrir, aceitar e dispensar cada ação do consultor.
               post 'advisor_actions/:id/open', to: 'meta_ads_advisor_actions#open'
               post 'advisor_actions/:id/accept', to: 'meta_ads_advisor_actions#accept'
               post 'advisor_actions/:id/dismiss', to: 'meta_ads_advisor_actions#dismiss'
+              # Comentários do anúncio no Facebook (#2197): ler, responder como a Página, ocultar e apagar.
+              get 'ads/:ad_id/facebook_comments', to: 'meta_ads_facebook_comments#index'
+              post 'ads/:ad_id/facebook_comments/:comment_id/reply', to: 'meta_ads_facebook_comments#reply'
+              patch 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#update'
+              delete 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#destroy'
             end
+            # Formulários dos anúncios (#2195): Páginas, formulários e para onde vai quem preenche.
+            get 'meta_ads_lead_forms', to: 'meta_ads_lead_forms#index'
+            post 'meta_ads_lead_forms/pages/:page_id/receive', to: 'meta_ads_lead_forms#receive'
+            delete 'meta_ads_lead_forms/pages/:page_id/receive', to: 'meta_ads_lead_forms#stop'
+            put 'meta_ads_lead_forms/forms/:form_id/destination', to: 'meta_ads_lead_forms#save_destination'
+            delete 'meta_ads_lead_forms/forms/:form_id/destination', to: 'meta_ads_lead_forms#remove_destination'
+            post 'meta_ads_lead_forms/forms/:form_id/bring_past', to: 'meta_ads_lead_forms#bring_past'
             get 'conversations/card_stages', to: 'cards#card_stages'
             get 'conversations/:conversation_id/card', to: 'cards#by_conversation'
             get 'conversations/:conversation_id/cards', to: 'conversation_cards#index'
@@ -394,6 +475,9 @@ Rails.application.routes.draw do
             get :kanban, to: 'kanban#index'
             # CRM › Números por papel (#1897): a visão "Só eu" de quem abre, atrás da flag `crm_numeros_lentes`.
             get :numeros, to: 'numeros#show'
+            # Números › "De onde vieram os clientes" (#2001, F6 do #1871), atrás da flag `crm_numeros_origens`.
+            get 'numeros/origens', to: 'numeros_origens#show'
+            get 'numeros/origens/report', to: 'numeros_origens#report'
             # Metas do mês por pessoa (#1991, F4 do #1871): a gaveta "Metas do mês", atrás da flag `crm_metas`.
             get :metas, to: 'metas#show'
             put :metas, to: 'metas#update'
@@ -539,6 +623,11 @@ Rails.application.routes.draw do
               get 'material', to: 'agents/material#show'
               post 'material/problemas/:problema_id/resolver', to: 'agents/material#resolver'
               post 'material/autoteste', to: 'agents/material#autoteste'
+              # #1429 (tema 8, F3) — a base de seguros do agente: ler, comparar (antes e depois), atualizar e desfazer.
+              get 'base', to: 'agents/base_de_seguros#show'
+              post 'base/comparar', to: 'agents/base_de_seguros#comparar'
+              post 'base/atualizar', to: 'agents/base_de_seguros#atualizar'
+              post 'base/desfazer', to: 'agents/base_de_seguros#desfazer'
               # #1720 — o "Salvar" da gaveta Onde e quando: porta, áreas e janela numa transação só.
               put 'onde_atende', to: 'agents/onde_atende#update'
               resources :channels, only: [:index, :create, :destroy],
@@ -560,6 +649,10 @@ Rails.application.routes.draw do
                    to: 'agents/instruction_versions#restore'
               # Tema 14 (#1434) — quem o ajudante ajuda e quando chamar (atrás da chave da Fase 2).
               resource :ajuda, only: [:show, :update], controller: 'agents/ajuda'
+              # #2251 — painel de desempenho (agente nosso ou, com ?origem=webhook, o robô de outro sistema) e a
+              # exportação em PDF e planilha. Chave própria desempenho_view, atrás da flag agentes_painel_desempenho.
+              get 'desempenho', to: 'agents/desempenho#show'
+              get 'desempenho/exportar', to: 'agents/desempenho#exportar'
             end
             resources :build_threads, only: [:create, :show], controller: 'agents/build_threads' do
               member do
@@ -776,6 +869,7 @@ Rails.application.routes.draw do
               resources :assignments, only: [:create]
               resource :passar_para, only: [:show, :create], controller: 'passar_para'
               resources :labels, only: [:create, :index]
+              patch 'labels/alterar', to: 'alterar_etiquetas#update', as: :alterar_etiquetas # fork chat#2202: pôr/tirar uma a uma
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]
@@ -797,6 +891,8 @@ Rails.application.routes.draw do
             end
           end
 
+          # #2211: a busca dentro da lista de conversas (SearchService::BuscaDaLista).
+          resource :busca_da_lista, only: [:show], controller: :busca_da_lista
           resources :search, only: [:index] do
             collection do
               get :conversations
@@ -1002,6 +1098,7 @@ Rails.application.routes.draw do
                 get :usage
               end
               post :media, on: :collection
+              get 'media/:conversion_id', action: :media_status, on: :collection, as: :media_status
             end
             # Catálogo de produtos da WABA da caixa para a Nova campanha (#1418): só leitura, controller do fork.
             resource :whatsapp_catalog, only: [:show], module: :inboxes do
@@ -1367,6 +1464,8 @@ Rails.application.routes.draw do
 
   # ----------------------------------------------------------------------
   # Routes for channel integrations
+  # #2200: o POST do webhook de Página passa pelo nosso controller (leadgen, feed, repasse); o GET de verificação fica na gem.
+  post 'bot', to: 'webhooks/facebook_page#events'
   mount Facebook::Messenger::Server, at: 'bot'
   get 'webhooks/twitter', to: 'api/v1/webhooks#twitter_crc'
   post 'webhooks/twitter', to: 'api/v1/webhooks#twitter_events'

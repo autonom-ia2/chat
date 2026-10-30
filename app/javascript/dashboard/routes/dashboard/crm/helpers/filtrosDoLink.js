@@ -25,6 +25,9 @@ export const CHAVES_DO_LINK = [
   'closed_in',
   'follow_up_status',
   CRM_CAMPAIGN_QUERY,
+  'origem',
+  'anuncio',
+  'entrou_em',
 ];
 export const CHAVES_DO_MEU_DIA = ['quem', 'tipos', 'funil'];
 
@@ -37,6 +40,31 @@ const dono = (valor, currentUserId) =>
   valor === EU ? idPositivo(currentUserId) : idPositivo(valor);
 
 const daLista = (lista, valor) => (lista.includes(valor) ? valor : null);
+
+// Números › Origens (#2001, F6). `result=todos` abre a Lista em "Todos"
+// (quem entrou e quem já fechou); `anuncio` é o id do anúncio (só dígitos).
+const ORIGENS = ['anuncio_meta', 'google', 'site', 'direto', 'outras'];
+const TODOS = 'todos';
+const ANUNCIO_MAX = 64;
+const anuncioDoLink = valor =>
+  typeof valor === 'string' &&
+  valor.length > 0 &&
+  valor.length <= ANUNCIO_MAX &&
+  [...valor].every(c => c >= '0' && c <= '9')
+    ? valor
+    : null;
+// Um mês AAAA-MM (Números › Origens, decisão 1: entrou ou fechou no mês).
+const mesDoLink = valor => {
+  if (typeof valor !== 'string' || valor.length !== 7 || valor[4] !== '-')
+    return null;
+  const digitos = [...valor.slice(0, 4), ...valor.slice(5)];
+  const mes = Number(valor.slice(5));
+  return digitos.every(c => c >= '0' && c <= '9') && mes >= 1 && mes <= 12
+    ? valor
+    : null;
+};
+const resultadoDoLink = valor =>
+  valor === TODOS ? '' : daLista(RESULTADOS, valor);
 
 const semVazios = filtro => {
   const cheio = Object.fromEntries(
@@ -52,8 +80,11 @@ export const filtrosDoLink = (query = {}, { currentUserId } = {}) =>
     ownerId: query.owner_id ? dono(query.owner_id, currentUserId) : null,
     staleDays: daLista(DIAS_PARADO, query.stale_days),
     responsibleKind: daLista(RESPONSAVEIS, query.responsible_kind),
-    result: daLista(RESULTADOS, query.result),
+    result: resultadoDoLink(query.result),
     closedIn: daLista(FECHADO_EM, query.closed_in),
+    origem: daLista(ORIGENS, query.origem),
+    anuncio: anuncioDoLink(query.anuncio),
+    entrouEm: mesDoLink(query.entrou_em),
     followUpStatus: daLista(RETORNOS, query.follow_up_status),
     campaignSourceIds: campaignSourceIdsFromQuery(query),
   });

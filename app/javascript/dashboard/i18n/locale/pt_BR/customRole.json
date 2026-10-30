@@ -56,6 +56,7 @@
       "CRM_EXPORT": "Exportar a lista do CRM para Excel",
       "CRM_DELETE_CARDS": "Arquivar cards do CRM",
       "CRM_METAS_MANAGE": "Ver e definir as metas do mês",
+      "SALES_VALUE_VIEW": "Ver os valores de venda em R$",
       "CONTACT_VIEW": "Ver contatos",
       "CONTACT_EXPORT": "Exportar contatos",
       "CONTACT_DELETE": "Excluir contatos e empresas",
@@ -85,7 +86,10 @@
       "GRANT_ABOVE_OWN": "Pode entregar acesso acima do próprio",
       "FINANCIAL_VIEW": "Ver os custos da conta",
       "FINANCIAL_MANAGE": "Ligar e desligar a autorização de cobranças da Meta",
-      "CONVERSATION_MESSAGE_DELETE": "Apagar mensagens"
+      "CONVERSATION_MESSAGE_DELETE": "Apagar mensagens",
+      "INTEGRATION_MANAGE": "Cuidar das integrações",
+      "TOKEN_MANAGE": "Ver e trocar tokens e chaves",
+      "META_ADS_MANAGE": "Conectar e configurar os anúncios da Meta"
     },
     "MATRIX": {
       "GROUPS": {
@@ -127,12 +131,6 @@
           "LEVEL_VIEW": "Abre e consulta contatos. Não altera.",
           "LEVEL_MANAGE": "Cria, edita e importa contatos."
         },
-        "KNOWLEDGE_BASE": {
-          "NAME": "Base de conhecimento",
-          "HINT": "Portais e artigos",
-          "LEVEL_VIEW": "Lê portais e artigos.",
-          "LEVEL_MANAGE": "Escreve e publica artigos."
-        },
         "REPORTS": {
           "NAME": "Relatórios",
           "HINT": "Visão geral, CSAT, SLA, robôs e times",
@@ -154,6 +152,11 @@
           "HINT": "Seus agentes de IA",
           "LEVEL_VIEW": "Abre os agentes e conversa no playground.",
           "LEVEL_MANAGE": "Cria, treina e publica agentes."
+        },
+        "DESEMPENHO": {
+          "NAME": "Desempenho do agente",
+          "HINT": "O que as pessoas procuram, resultados e exportação",
+          "LEVEL_VIEW": "Abre o painel de desempenho, com os números das caixas que vê. Baixar o PDF e a planilha pede também Exportar contatos."
         },
         "PROSPECTING": {
           "NAME": "Prospecção",
@@ -183,13 +186,26 @@
         "META_ADS": {
           "NAME": "Anúncios da Meta",
           "HINT": "Painel dos anúncios do Facebook e do Instagram",
-          "LEVEL_VIEW": "Vê o painel dos anúncios e os resultados. Conectar fica com o administrador."
+          "LEVEL_VIEW": "Vê o painel dos anúncios, os resultados e o orçamento e as datas de cada anúncio. Criar, conectar e configurar pede Editar.",
+          "LEVEL_MANAGE": "Também conecta, configura e desconecta a conta de anúncios, para onde os anúncios levam, o aviso de vendas no funil e o resumo no WhatsApp, age sobre o consultor, cria anúncios (sempre pausados), ativa e muda o orçamento e as datas."
+        },
+        "POSTS": {
+          "NAME": "Seus posts",
+          "HINT": "Posts do Instagram e da Página, com os números",
+          "LEVEL_VIEW": "Vê os posts e os números do Instagram e da Página das caixas que vê.",
+          "LEVEL_MANAGE": "Por agora, igual a Ver. Quando a página tiver os comentários, também responde, esconde e manda no privado, nas caixas que vê."
         },
         "INBOXES": {
           "NAME": "Caixas de entrada",
           "HINT": "Canais, QR do WhatsApp e membros",
           "LEVEL_VIEW": "Vê todas as caixas nas configurações.",
           "LEVEL_MANAGE": "Cria caixas, reconecta o WhatsApp e cuida dos membros."
+        },
+        "INTEGRATIONS": {
+          "NAME": "Integrações",
+          "HINT": "Integrações, webhooks, robôs, reconectar canais e os tokens",
+          "LEVEL_MANAGE": "Conecta e desconecta integrações, cria webhooks e robôs e reconecta os canais. Criar caixa nova fica em Caixas de entrada.",
+          "SUGGESTION": "Para reconectar um canal, Caixas de entrada precisa estar ao menos em Ver."
         },
         "AUTOMATIONS": {
           "NAME": "Automações",
@@ -246,7 +262,8 @@
       "NAME": {
         "LABEL": "Nome",
         "PLACEHOLDER": "Ex.: Atendente noturno",
-        "ERROR": "Dê um nome com pelo menos 2 letras."
+        "ERROR": "Dê um nome com pelo menos 2 letras.",
+        "TAKEN": "Já existe uma função com esse nome. Escolha outro."
       },
       "DESCRIPTION": {
         "LABEL": "Para quem é (opcional)",
@@ -290,6 +307,16 @@
         "MESSAGE": "Você tem certeza que deseja excluir ",
         "YES": "Sim, excluir ",
         "NO": "Não, manter "
+      },
+      "MOVE": {
+        "TITLE": "Para qual função vão as pessoas? | Para qual função vai 1 pessoa? | Para qual função vão as {n} pessoas?",
+        "DESCRIPTION": "“{name}” vai ser excluída. Escolha a função que essas pessoas terão daqui para frente.",
+        "LABEL": "Nova função dessas pessoas",
+        "PLACEHOLDER": "Escolha uma função",
+        "NO_ROLE": "Sem função (agente comum)",
+        "NO_ROLE_HINT": "Vê o CRM como qualquer agente comum",
+        "NO_ROLE_WARNING": "Sem função, elas ficam com o acesso de agente comum, que vê quase todo o CRM.",
+        "CONFIRM": "Mover e excluir"
       }
     },
     "EXTRAS": {
@@ -302,7 +329,8 @@
       "CRM_EXPORT": "Baixa a lista com dados de clientes.",
       "CRM_DELETE_CARDS": "Arquiva cards, um a um ou vários de uma vez.",
       "CRM_METAS_MANAGE": "Vê e define a meta do mês de cada pessoa, em dinheiro.",
-      "CRM_ADMIN": "Liga tudo acima, o SLA do CRM e os tokens de integração.",
+      "SALES_VALUE_VIEW": "Valor dos cards, somas, metas e taxas tiradas do dinheiro. Sem isso, vê as contagens e só o valor dos próprios cards.",
+      "CRM_ADMIN": "Liga tudo acima, menos os valores de venda, e o SLA do CRM. Os tokens de integração ficam em Integrações.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Sem isto, vê só as próprias buscas.",
       "CONVERSATION_VIEW": "Lê também as conversas da caixa que não atende, sem responder.",
       "CONVERSATION_MESSAGE_DELETE": "Apaga mensagens das conversas que atende. O anexo some e a mensagem fica como apagada.",
@@ -310,7 +338,8 @@
       "CONTACT_DELETE": "Exclui contatos e empresas, um a um ou vários de uma vez.",
       "CAMPAIGN_SEND": "Envia e agenda campanhas e retoma as pausadas. Sem isto, monta e deixa pronta para quem dispara.",
       "CUSTOM_ROLE_MANAGE": "Cria e edita funções, dentro das próprias chaves.",
-      "GRANT_ABOVE_OWN": "Entrega qualquer função da conta, menos administrador. Tudo fica no histórico."
+      "GRANT_ABOVE_OWN": "Entrega qualquer função da conta, menos administrador. Tudo fica no histórico.",
+      "TOKEN_MANAGE": "Vê e troca os tokens da plataforma: caixas da API e do site, webhooks, robôs, tokens do CRM e o link do Google. Nunca cria token com mais poder do que a própria função."
     },
     "EDITOR": {
       "NEW_TITLE": "Ajuste o que for diferente",
@@ -332,7 +361,7 @@
       "FOOTER_COUNT": "Nenhuma área liberada | 1 área liberada | {n} áreas liberadas",
       "ADMIN_ONLY": {
         "TITLE": "Sempre do administrador",
-        "ITEMS": "Robôs, integrações, conta, segurança, cobrança e auditoria.",
+        "ITEMS": "Conta, segurança, cobrança e auditoria.",
         "GUIDE": "O Guia da Plataforma segue esta função: só mostra e só faz o que a pessoa pode fazer."
       },
       "SENSITIVE_CONFIRM": {
@@ -347,9 +376,19 @@
         "DONE": "Modelo {name} aplicado."
       },
       "INCLUDED_IN_ADMIN": "Incluído no acesso total ao CRM.",
+      "LEFT_OUT": {
+        "TITLE": "Parte deste modelo ficou de fora",
+        "DESCRIPTION": "Você não pode entregar algumas das permissões dele, então elas ficam desligadas nestas áreas. Um administrador pode liberá-las."
+      },
       "LOCK": {
         "MISSING": "Você não tem esta chave",
         "DELEGATION": "Só quem pode entregar acima do próprio acesso"
+      },
+      "LOST_ACCESS": {
+        "TITLE": "Ninguém perde acesso | 1 pessoa vai perder acesso | {n} pessoas vão perder acesso",
+        "DESCRIPTION": "Perdem tudo ou parte de: {areas}.",
+        "CONFIRM": "Salvar assim mesmo",
+        "BACK": "Voltar"
       }
     },
     "SUMMARY": {
@@ -370,6 +409,7 @@
       "BLANK_META": "Em branco",
       "CAN": "Pode",
       "CANNOT": "Não pode",
+      "LEFT_OUT": "Você não pode entregar parte destas permissões, então elas ficam desligadas.",
       "ADJUST_LATER": "Você ajusta qualquer área no próximo passo.",
       "CONTINUE": "Continuar com {name}",
       "APPLY": "Aplicar {name}"
@@ -435,6 +475,7 @@
         "SETTINGS": "Mexer em configurações",
         "ALL_CONVERSATIONS": "Ver e atender todas as conversas",
         "EDIT_CONTACTS": "Editar, importar e exportar contatos",
+        "EDIT_IMPORT_CONTACTS": "Editar e importar contatos",
         "TEAM_SETUP": "Organizar etiquetas e macros da equipe",
         "DELETE_DATA": "Excluir conversas ou contatos",
         "BILLING_INTEGRATIONS": "Mexer em integrações e cobrança",
@@ -443,11 +484,12 @@
         "EDIT_PIPELINES": "Criar e editar funis do CRM",
         "EXPORT_CRM": "Exportar a lista do CRM",
         "ALL_SEARCHES": "Ver as buscas de prospecção de todos",
+        "SET_GOALS": "Ver os valores em R$ e definir as metas da equipe",
         "ANSWER_CONVERSATIONS": "Atender conversas",
         "EDIT_DEALS": "Editar cards no CRM",
         "CRM_DASHBOARD": "Ver o painel do CRM e o custo de IA",
         "CHANGE_ANYTHING": "Alterar qualquer coisa",
-        "SETUP_INBOXES": "Configurar caixas e reconectar o WhatsApp",
+        "SETUP_INBOXES": "Criar e configurar caixas",
         "SETUP_RULES": "Configurar automações, etiquetas, macros e SLA",
         "PUBLISH_AGENTS": "Criar e publicar agentes Autonom.ia",
         "SEE_EVERYTHING": "Ver contatos, CRM, campanhas e agentes"

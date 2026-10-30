@@ -29,6 +29,8 @@ import {
   INSURANCE_PERMISSIONS,
   SLA_MANAGE_PERMISSION,
   META_ADS_VIEW_PERMISSION,
+  META_ADS_MANAGE_PERMISSION,
+  POSTS_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import { canViewRelationshipRecordsFrom } from 'dashboard/composables/useRelationshipPermissions';
 
@@ -51,6 +53,8 @@ import EmojiIcon from 'next/emoji-icon-picker/EmojiIcon.vue';
 import SidebarAccountSwitcher from './SidebarAccountSwitcher.vue';
 import ForkSidebarNav from './fork/ForkSidebarNav.vue';
 import ComposeConversation from 'dashboard/components-next/NovaConversa/NovaConversaEntrada.vue';
+import { useListaNova } from 'dashboard/components-next/Conversation/ListaDeConversas/useListaNova';
+import { useAtalhoDaBusca } from 'dashboard/components-next/Conversation/ListaDeConversas/busca/atalhoDaBusca';
 import { useQuemVeNumeros } from 'dashboard/routes/dashboard/crm/components/numeros/useQuemVeNumeros';
 import {
   SIDEBAR_SORT_SECTIONS,
@@ -83,6 +87,10 @@ const isCallsAvailable = computed(
   () => isOnChatwootCloud.value || isEnterprise
 );
 const searchShortcut = useKbd([`$mod`, 'k']);
+// #2211: com a lista nova, a busca mora no topo da lista de conversas e ⌘/Ctrl+K foca o campo dela.
+// A página /search continua existindo (link antigo, Guia 08.12), só sem entrada aqui.
+const listaNova = useListaNova();
+useAtalhoDaBusca();
 const { t } = useI18n();
 
 const isACustomBrandedInstance = useMapGetter(
@@ -132,9 +140,14 @@ const slaFeatureEnabled = computed(() =>
 const whatsappApiCampaignsEnabled = computed(
   () => globalConfig.value?.whatsappApiCampaignsEnabled === true
 );
-// Anúncios da Meta (#1047): por conta. Vê o item o administrador ou quem tem meta_ads_view (#1794).
+// Anúncios da Meta (#1047): por conta. Vê o item o administrador ou quem tem meta_ads_view (#1794) ou meta_ads_manage
+// (#2070; a função guarda só a chave mais alta).
 const metaAdsHubEnabled = computed(() =>
   isFeatureEnabledonAccount.value(accountId.value, FEATURE_FLAGS.META_ADS_HUB)
+);
+// Seus posts (#2302): por conta, flag seus_posts. Vê o item o administrador ou quem tem posts_view/posts_manage.
+const seusPostsEnabled = computed(() =>
+  isFeatureEnabledonAccount.value(accountId.value, FEATURE_FLAGS.SEUS_POSTS)
 );
 
 const crmKanbanEnabled = computed(
@@ -1105,6 +1118,18 @@ const menuItems = computed(() => {
         },
       ],
     },
+    ...(seusPostsEnabled.value &&
+    (isAdministrator.value || hasAnyPermission(POSTS_PERMISSIONS))
+      ? [
+          {
+            name: 'SeusPosts',
+            label: t('SEUS_POSTS.TITLE'),
+            icon: 'i-lucide-layout-grid',
+            to: accountScopedRoute('seus_posts_index'),
+            activeOn: ['seus_posts_index'],
+          },
+        ]
+      : []),
     {
       name: 'Campaigns',
       label: t('SIDEBAR.CAMPAIGNS'),
@@ -1133,7 +1158,11 @@ const menuItems = computed(() => {
           : []),
         ...(crmKanbanEnabled.value &&
         metaAdsHubEnabled.value &&
-        (isAdministrator.value || hasAnyPermission([META_ADS_VIEW_PERMISSION]))
+        (isAdministrator.value ||
+          hasAnyPermission([
+            META_ADS_VIEW_PERMISSION,
+            META_ADS_MANAGE_PERMISSION,
+          ]))
           ? [
               {
                 name: 'Campaign Meta Ads',
@@ -1371,6 +1400,14 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CUSTOM_ROLES'),
           icon: 'i-lucide-shield-plus',
           to: accountScopedRoute('custom_roles_list'),
+          // Com funcoes_guiadas ligada, a lista nova (#2308) e a conversa guiada ficam marcadas no menu. Nomes de
+          // listaPelaFlag.js, escritos aqui porque importar aquele arquivo traz a store para o menu.
+          activeOn: [
+            'funcoes_equipe_list',
+            'funcoes_equipe_new',
+            'funcoes_equipe_edit',
+            'funcoes_equipe_duplicate',
+          ],
         },
         {
           name: 'Conversation Workflow',
@@ -1480,7 +1517,10 @@ const menuItems = computed(() => {
           />
         </template>
       </div>
+      <!-- #2211: com a lista nova, a busca e o começo de conversa moram no topo da lista ("Escrever" na
+        pessoa achada); a linha da busca e do lápis sai do menu. -->
       <div
+        v-if="!listaNova"
         class="flex gap-2"
         :class="isEffectivelyCollapsed ? 'flex-col items-center' : 'px-2'"
       >

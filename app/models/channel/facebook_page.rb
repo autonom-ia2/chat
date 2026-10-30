@@ -29,6 +29,10 @@ class Channel::FacebookPage < ApplicationRecord
 
   self.table_name = 'channel_facebook_pages'
 
+  MESSENGER_FIELDS = %w[
+    messages message_deliveries message_echoes message_reads standby messaging_handovers messaging_postbacks
+  ].freeze
+
   validates :page_id, uniqueness: { scope: :account_id }
 
   after_create_commit :subscribe
@@ -48,21 +52,28 @@ class Channel::FacebookPage < ApplicationRecord
 
   def subscribe
     # ref https://developers.facebook.com/docs/messenger-platform/reference/webhook-events
-    Facebook::Messenger::Subscriptions.subscribe(
-      access_token: page_access_token,
-      subscribed_fields: %w[
-        messages message_deliveries message_echoes message_reads standby messaging_handovers messaging_postbacks
-      ]
-    )
+    # #2200: soma só os campos do Messenger; leadgen e feed da mesma Página continuam inscritos.
+    page_subscription.add!(MESSENGER_FIELDS)
   rescue StandardError => e
-    Rails.logger.debug { "Rescued: #{e.inspect}" }
+    Rails.logger.warn("[Channel::FacebookPage] subscribed_apps page=#{page_id} #{e.class}: #{e.message}")
     true
   end
 
+  # A mesma Página pode ser caixa de outra conta desta stack: aí os campos do Messenger continuam dela. Esta conferência
+  # só vê o banco desta stack: Página que também é caixa na outra stack perde os campos do Messenger lá (risco aberto
+  # no #2200). Duas remoções simultâneas da mesma Página podem deixar os campos inscritos (só sobra evento ignorado).
   def unsubscribe
-    Facebook::Messenger::Subscriptions.unsubscribe(access_token: page_access_token)
+    return true if Channel::FacebookPage.where(page_id: page_id).where.not(id: id).exists?
+
+    page_subscription.remove!(MESSENGER_FIELDS)
   rescue StandardError => e
-    Rails.logger.debug { "Rescued: #{e.inspect}" }
+    Rails.logger.warn("[Channel::FacebookPage] subscribed_apps page=#{page_id} #{e.class}: #{e.message}")
     true
+  end
+
+  private
+
+  def page_subscription
+    Crm::MetaAds::PageSubscription.new(page_id: page_id, access_token: page_access_token)
   end
 end

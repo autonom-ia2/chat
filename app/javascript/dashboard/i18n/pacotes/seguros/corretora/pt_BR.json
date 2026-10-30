@@ -1214,6 +1214,24 @@
       "BOTAO": {
         "MEUS_PARADOS": "Abrir minha cotação parada | Abrir minhas {n} cotações paradas"
       }
+    },
+    "BLOCO": {
+      "VENDENDO": "Cotando"
     }
+  },
+  "PAINEL_DO_CONTATO": {
+    "RELACAO": {
+      "OPCOES": {
+        "INTERESSADO": {
+          "DICA": "Quer ou pode querer um seguro com você."
+        },
+        "PARCEIRO": {
+          "DICA": "Seguradora, assessoria ou outro corretor."
+        }
+      }
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "NOVO_CLIENTE": "Nova cotação"
   }
 }

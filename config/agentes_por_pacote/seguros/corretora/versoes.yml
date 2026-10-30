@@ -1,0 +1,6 @@
+# A data em que cada texto do agentes.md desta pasta entrou NO AR (#1429, F3). A chave é a versão do texto: os 12
+# primeiros caracteres do SHA-256 do agentes.md sem os espaços das pontas (Autonomia::Segmentos::Bloco.versao).
+#
+# Quem edita o agentes.md registra aqui a data prevista do deploy e corrige no PR se escorregar.
+# Não apague versões antigas: os agentes que nasceram com elas mostram essa data na página.
+"bc7dee3b0b25": "2026-10-21"

@@ -11,6 +11,15 @@ vi.mock('dashboard/composables/useUISettings', async () => {
   };
 });
 
+const listaNova = vi.hoisted(() => ({ value: false }));
+vi.mock(
+  'dashboard/components-next/Conversation/ListaDeConversas/useListaNova',
+  async () => {
+    const { ref } = await import('vue');
+    return { useListaNova: () => ref(listaNova.value) };
+  }
+);
+
 const mountHeader = props =>
   shallowMount(ChatListHeader, {
     props: {
@@ -93,5 +102,21 @@ describe('ChatListHeader', () => {
     expect(wrapper.find('h1').text()).toBe('Conversations');
     expect(wrapper.find('[icon="i-lucide-pen-line"]').exists()).toBe(true);
     expect(wrapper.find('[icon="i-lucide-trash-2"]').exists()).toBe(true);
+  });
+
+  // #2202: com a lista nova, o layout não muda no computador; o botão de trocar não aparece.
+  it('mostra o botão de trocar o layout com a chave lista_quem_espera desligada', () => {
+    listaNova.value = false;
+    expect(mountHeader().findComponent({ name: 'SwitchLayout' }).exists()).toBe(
+      true
+    );
+  });
+
+  it('esconde o botão de trocar o layout com a chave lista_quem_espera ligada', () => {
+    listaNova.value = true;
+    expect(mountHeader().findComponent({ name: 'SwitchLayout' }).exists()).toBe(
+      false
+    );
+    listaNova.value = false;
   });
 });

@@ -7,8 +7,10 @@ class Crm::Cards::ConversationDefaultsResolver
 
   def perform
     pipeline = resolve_pipeline
+    raise ActiveRecord::RecordNotFound if pipeline.blank?
+
     stage = resolve_stage(pipeline)
-    raise ActiveRecord::RecordNotFound if pipeline.blank? || stage.blank?
+    raise ActiveRecord::RecordNotFound if stage.blank?
 
     { pipeline_id: pipeline.id, stage_id: stage.id }
   end
@@ -18,8 +20,12 @@ class Crm::Cards::ConversationDefaultsResolver
   def resolve_pipeline
     return @account.crm_pipelines.find(@requested[:pipeline_id]) if @requested[:pipeline_id].present?
 
+    # O funil padrão da caixa só vale ativo; arquivado, o card nasce no próximo funil ativo, ou em nenhum (como o
+    # Crm::Conversations::CardSyncer).
+    active = @account.crm_pipelines.active
     setting = @account.crm_inbox_settings.find_by(inbox_id: @conversation.inbox_id)
-    setting&.default_pipeline || @account.crm_pipelines.active.order(:position, :id).first
+    default = active.find_by(id: setting.default_pipeline_id) if setting&.default_pipeline_id.present?
+    default || active.order(:position, :id).first
   end
 
   def resolve_stage(pipeline)

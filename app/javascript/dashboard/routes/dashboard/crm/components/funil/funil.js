@@ -99,6 +99,7 @@ const etapasDo = (chave, total) =>
 // `falha` trazem o nome dos desfechos (MODELOS.<X>.SUCESSO e .FALHA), que vai
 // para metadata.outcome_labels ao criar o funil.
 const CORRETORA = ['seguros/corretora'];
+const SAUDE = ['seguros/saude_beneficios'];
 
 export const MODELOS = [
   {
@@ -153,6 +154,24 @@ export const MODELOS = [
     sucesso: true,
     ideias: ['TROCOU_CARRO', 'MUDOU_ENDERECO', 'INCLUIR_MOTORISTA'],
   },
+  // #2083 — a Carteira da saúde: o cliente depois do plano implantado, até o
+  // aniversário do contrato. Vem antes dos de todos, como os da corretora.
+  // "Aniversário do contrato" não é espera do cliente: a variante da saúde
+  // (variantes.json) faz da E3 andamento, e o prazo não pausa.
+  {
+    chave: 'CARTEIRA',
+    tipo: 'ATENDER',
+    icone: 'i-lucide-heart-pulse',
+    tom: 'bg-n-teal-3 text-n-teal-11',
+    venda: false,
+    camadas: SAUDE,
+    etapas: etapasDo('CARTEIRA', 4),
+    categorias: CATEGORIAS,
+    // Termina em "Renovado / Cancelado".
+    sucesso: true,
+    falha: true,
+    ideias: ['PLANO_NOVO', 'USAR_PLANO', 'ANIVERSARIO_CONTRATO'],
+  },
   {
     chave: 'ATENDIMENTO',
     tipo: 'ATENDER',
@@ -196,14 +215,15 @@ export const MODELOS = [
     ideias: ['MARCAR', 'REMARCAR', 'HORARIOS'],
   },
 ];
-// #1802 — os modelos da corretora (os que têm camada). Só o funil que nasceu
-// de um deles usa o nome próprio do desfecho no diálogo de "não deu certo" e
-// no aviso depois de marcar; os outros funis ficam com o texto de sempre.
-export const MODELOS_DA_CORRETORA = MODELOS.filter(
-  modelo => modelo.camadas
-).map(modelo => modelo.chave);
+// #1802 — os modelos de um tipo de conta (os que têm camada: corretora e, desde
+// o #2083, saúde). Só o funil que nasceu de um deles usa o nome próprio do
+// desfecho no diálogo de "não deu certo" e no aviso depois de marcar; os outros
+// funis ficam com o texto de sempre.
+export const MODELOS_DE_CAMADA = MODELOS.filter(modelo => modelo.camadas).map(
+  modelo => modelo.chave
+);
 export const usaNomeDoDesfecho = funil =>
-  MODELOS_DA_CORRETORA.includes(funil?.metadata?.template);
+  MODELOS_DE_CAMADA.includes(funil?.metadata?.template);
 
 // #1548 (passo 2) — variante do modelo por tipo de conta: a própria lista de
 // categorias. Chave = camada do pacote da F1 (#1550); conta sem pacote (ou com

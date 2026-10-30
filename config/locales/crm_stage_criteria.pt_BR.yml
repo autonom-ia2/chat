@@ -47,6 +47,12 @@ pt_BR:
         e2: 'A equipe avisou o cliente que pediu a mudança à seguradora e está esperando a resposta dela.'
         e3: 'A equipe pediu ao cliente um documento ou um dado e ele ainda não mandou.'
         e4: 'A equipe avisou o cliente que a mudança foi feita ou mandou a apólice nova.'
+      # #2083: modelo da saúde (camada seguros/saude_beneficios). O texto mora aqui, no catálogo base.
+      carteira:
+        e1: 'O plano do cliente acabou de ser implantado e a equipe está dando as boas-vindas: carteirinha, aplicativo ou como usar a rede.'
+        e2: 'O cliente já usa o plano e fala com a equipe por dúvida, boleto, segunda via, inclusão de dependente ou pedido de autorização.'
+        e3: 'O contrato do cliente está perto do aniversário e a equipe falou com ele do reajuste ou da renovação.'
+        e4: 'O cliente disse que segue com o plano depois do aniversário do contrato, ou trocou de plano com a equipe.'
       legado:
         novo: 'Primeiro contato ou lead recém-criado. Cliente demonstrou interesse inicial, fez primeira pergunta ou respondeu pela primeira vez. Ainda não há diagnóstico de necessidade nem proposta enviada.'
         em_atendimento: 'Conversa ativa com qualificação em andamento: agente ou IA está entendendo necessidade, coletando dados, tirando dúvidas ou agendando. Ainda não houve envio formal de proposta, orçamento ou condições comerciais.'

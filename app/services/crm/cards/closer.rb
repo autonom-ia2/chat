@@ -20,8 +20,16 @@ module Crm
 
       class InvalidResult < StandardError; end
 
-      def initialize(card:, actor:, result:, value_cents: nil, currency: nil, lost_reason: nil)
+      # O pedido é de reabrir ('reopen' ou o 'open' da tela)? No card arquivado, reabrir é restaurar (#2095).
+      def self.reopen?(result)
+        VERB_ALIASES.fetch(result.to_s, result.to_s) == 'reopen'
+      end
+
+      # payload_extra: o que mais vai na atividade do fechamento (IA entende a conversa F3: o fechamento da IA leva
+      # `by: 'ai'`, o motivo e a confiança, Crm::Ai::FecharCard). Sem ele, a atividade é a de sempre.
+      def initialize(card:, actor:, result:, value_cents: nil, currency: nil, lost_reason: nil, payload_extra: {})
         @card = card
+        @payload_extra = payload_extra.to_h
         @actor = actor
         @result = VERB_ALIASES.fetch(result.to_s, result.to_s)
         @value_cents = value_cents
@@ -33,16 +41,37 @@ module Crm
         target_status = RESULTS[@result]
         raise InvalidResult, "unknown result: #{@result}" if target_status.blank?
 
-        @target_status = Crm::Cards::Outcome.status_for(@card.pipeline, target_status).to_sym
+        @target_status = restauracao || Crm::Cards::Outcome.status_for(@card.pipeline, target_status).to_sym
 
         ActiveRecord::Base.transaction do
           @card.update!(close_attributes(@target_status))
-          log_activity!
+          @restaurado ? log_restauracao! : log_activity!
+          # IA entende a conversa F3: card fechado não tem mais o que "Encerrar".
+          Crm::Ai::FecharCard.expirar_ao_fechar(@card) if Crm::Cards::Outcome::CLOSED_STATUSES.include?(@target_status.to_s)
         end
         @card
       end
 
       private
+
+      # Card arquivado depois de fechado (Crm::Card::DESFECHO_ARQUIVADO): reabrir, ou pedir o mesmo desfecho, devolve o
+      # que ele era, com a data de antes. Não é um fechamento novo: sem atividade de ganho, o crédito do fechamento e a
+      # conversão de anúncio ficam como estavam.
+      def restauracao
+        desfecho = @card.desfecho_arquivado
+        return if desfecho.blank?
+
+        desfecho = Crm::Cards::Outcome.status_for(@card.pipeline, desfecho)
+        return unless @result == 'reopen' || Crm::Cards::Outcome.status_for(@card.pipeline, RESULTS[@result]) == desfecho
+
+        @restaurado = true
+        desfecho.to_sym
+      end
+
+      def log_restauracao!
+        Crm::ActivityLogger.new(card: @card, actor: @actor, event_type: 'reopen',
+                                payload: @payload_extra.merge(desfecho_restaurado: @target_status.to_s)).perform
+      end
 
       def close_attributes(target_status)
         attributes = { status: target_status, last_activity_at: Time.current }
@@ -79,7 +108,7 @@ module Crm
       end
 
       def activity_payload
-        outcome_payload.merge(closed_with_payload)
+        @payload_extra.merge(outcome_payload).merge(closed_with_payload)
       end
 
       def outcome_payload

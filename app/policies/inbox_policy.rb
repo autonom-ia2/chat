@@ -61,6 +61,12 @@ class InboxPolicy < ApplicationPolicy
     inbox_manage?
   end
 
+  # The inbox settings save (PATCH /inboxes/:id) also takes integration_manage, only to change how the inbox connects;
+  # anything else in it still needs inbox_manage (Api::V1::Accounts::Concerns::InboxCredentialGuard, #2027).
+  def update_connection?
+    inbox_manage? || @account_user.permission_granted?('integration_manage')
+  end
+
   def destroy?
     inbox_manage?
   end
@@ -77,22 +83,23 @@ class InboxPolicy < ApplicationPolicy
     inbox_manage?
   end
 
-  # Credentials stay admin-only even for inbox_manage (#452): the token and the secret leave the account.
+  # Pasting the Meta management token swaps a credential of a live inbox (#2027): admin or integration_manage.
   def whatsapp_business_management_token?
-    @account_user.administrator?
+    @account_user.permission_granted?('integration_manage')
   end
 
   def health?
     inbox_manage?
   end
 
+  # The API secret and the HMAC token are issued by the platform and leave the account (#452, #2027): admin or
+  # token_manage.
   def reset_secret?
-    @account_user.administrator?
+    @account_user.permission_granted?('token_manage')
   end
 
-  # Same rule as reset_secret? (#452): the HMAC token is a credential that leaves the account.
   def rotate_hmac_token?
-    @account_user.administrator?
+    @account_user.permission_granted?('token_manage')
   end
 
   def enable_whatsapp_api_campaigns?

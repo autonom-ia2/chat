@@ -46,6 +46,26 @@ describe Webhooks::InstagramEventsJob do
         expect(instagram_messenger_inbox.messages.last.content_attributes['is_unsupported']).to be_nil
       end
 
+      # #2113: a edição vale também para o Instagram ligado pela página do Facebook (o mesmo IGSID na caixa).
+      it 'applies the customer edit (message_edit) to the existing message' do
+        dm_event = build(:instagram_message_create_event, sender_id: 'Sender-id-edit-fb').with_indifferent_access
+        allow(Koala::Facebook::API).to receive(:new).and_return(fb_object)
+        allow(fb_object).to receive(:get_object).and_return(return_object_for('Sender-id-edit-fb').with_indifferent_access)
+        instagram_webhook.perform_now(dm_event[:entry])
+        edit_entry = [{
+          id: 'ig-entry', time: 1_760_000_000,
+          messaging: [{ sender: { id: 'Sender-id-edit-fb' }, recipient: { id: 'chatwoot-app-user-id-1' }, timestamp: 1_760_000_000_000,
+                        message_edit: { mid: 'message-id-1', text: 'Edited by the customer', num_edit: 1 } }]
+        }.with_indifferent_access]
+
+        instagram_webhook.perform_now(edit_entry)
+
+        message = instagram_messenger_inbox.messages.last
+        expect(instagram_messenger_inbox.messages.count).to be 1
+        expect(message.content).to eq 'Edited by the customer'
+        expect(message.content_attributes['edit_history'].last['content']).to eq 'This is the first message from the customer'
+      end
+
       it 'creates standby message in the instagram inbox' do
         standby_event = build(:instagram_message_standby_event).with_indifferent_access
         sender_id = standby_event[:entry][0][:standby][0][:sender][:id]
@@ -132,6 +152,8 @@ describe Webhooks::InstagramEventsJob do
         expect(instagram_messenger_inbox.messages.last.attachments.count).to be 1
 
         attachment = instagram_messenger_inbox.messages.last.attachments.last
+        # Story media keeps the Meta URL, even with the downloaded copy (#2113): Meta forbids serving it.
+        expect(attachment.file).to be_attached
         expect(attachment.push_event_data[:data_url]).to eq(attachment.external_url)
       end
 
@@ -308,6 +330,24 @@ describe Webhooks::InstagramEventsJob do
         expect(message.content).to eq 'This message was deleted'
         expect(message.deleted).to be true
         expect(message.attachments.count).to be 0
+      end
+
+      # #2113: o cliente editou a mensagem no Instagram; o texto troca na mesma mensagem.
+      it 'applies the customer edit (message_edit) to the existing message' do
+        dm_event = build(:instagram_message_create_event, sender_id: 'Sender-id-edit').with_indifferent_access
+        instagram_webhook.perform_now(dm_event[:entry])
+        edit_entry = [{
+          id: 'ig-entry', time: 1_760_000_000,
+          messaging: [{ sender: { id: 'Sender-id-edit' }, recipient: { id: 'chatwoot-app-user-id-1' }, timestamp: 1_760_000_000_000,
+                        message_edit: { mid: 'message-id-1', text: 'Edited by the customer', num_edit: 1 } }]
+        }.with_indifferent_access]
+
+        instagram_webhook.perform_now(edit_entry)
+
+        message = instagram_inbox.messages.last
+        expect(instagram_inbox.messages.count).to be 1
+        expect(message.content).to eq 'Edited by the customer'
+        expect(message.content_attributes['edit_history'].last['content']).to eq 'This is the first message from the customer'
       end
 
       it 'creates incoming message with attachments in the instagram direct inbox' do

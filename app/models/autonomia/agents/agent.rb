@@ -53,6 +53,8 @@ module Autonomia
       include Autonomia::Agents::AgentVersioning
       # #1428 (parte 3) — o Desfazer do último ajuste do "Mudar conversando" (piloto).
       include Autonomia::Agents::DesfazerAjuste
+      # #1429 (F3) — "Atualizar com a nova base" e o Desfazer dela, pelo mesmo histórico de versões (Fase 2).
+      include Autonomia::Agents::TrocaDaBase
       # #1426 (tema 4b) — as chaves do material escritas pelo sistema (conferências e autoteste), protegidas do save.
       include Autonomia::Agents::ConfigDoMaterial
 

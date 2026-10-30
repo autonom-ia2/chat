@@ -35,7 +35,8 @@ class Api::V1::Accounts::Crm::MetaConversionsController < Api::V1::Accounts::Crm
       accepted_count: scope.accepted.count,
       # Grouped by currency: cards are not all BRL, and a mixed-currency sum under a
       # single R$ label would be wrong. Null currency buckets under 'BRL' (card default).
-      accepted_value_by_currency: accepted_value_by_currency(scope),
+      # Valor de venda (#2075): nil sem `sales_value_view`; as contagens ficam.
+      accepted_value_by_currency: (accepted_value_by_currency(scope) if ::Crm::ValorDeVenda.ve?(Current.account_user)),
       last_sent_at: scope.accepted.maximum(:sent_at)
     } }
   end

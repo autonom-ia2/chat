@@ -22,6 +22,15 @@ en:
         next_follow_up_at: 'Next follow-up'
     follow_up_reminder:
       due_at: 'Scheduled for: %{time}'
+    # Vocabulary in the messages the AI writes to the customer (#2034).
+    ai:
+      vocabulario: 'Speak as the brokerage: say broker, quote and policy; call someone a client only after they sign up and an insured only if they hold a policy.'
+    # Title of the payment reminder on the card (#2076). Only the brokerage says "installment"; insurer, insurtech and
+    # health keep "payment", like the panel screens.
+    service_reminders:
+      payment_before: 'Installment reminder: 3 days before'
+      payment_due: 'Installment reminder: on the day'
+      payment_after: 'Installment reminder: after the due date'
     # Booking page templates (F2, lote 5). The title is stored on the new page and becomes the card title.
     booking_v2:
       templates:

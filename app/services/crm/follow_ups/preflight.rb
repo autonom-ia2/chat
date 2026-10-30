@@ -63,11 +63,29 @@ class Crm::FollowUps::Preflight
   # Sob trava e antes do trabalho lento: confere que ainda vale e grava a marca "iniciado", para um 2º job não repetir.
   def iniciar
     @follow_up.with_lock do
-      next false unless @follow_up.pending? && self.class.pendente?(@follow_up) && aplica?
+      next false unless @follow_up.pending? && self.class.pendente?(@follow_up)
+      next cancelar_do_card_arquivado if card_arquivado?
+      next false unless aplica?
 
       escrever('estado' => INICIADO, 'at' => @now.iso8601)
       true
     end
+  end
+
+  # A barreira do arquivamento (#2100), lida com o lembrete travado, como no DueProcessor: um arquivamento em curso
+  # termina antes, e o que começar depois espera este lembrete. Sem ela, o SKIP LOCKED da 2ª passagem do
+  # Crm::Cards::Archiver pulava o lembrete que o pré-voo segurava, e ele ficava pendente no card arquivado.
+  def card_arquivado?
+    @follow_up.card_id.present? && Crm::Cards::Archiver.arquivado_sob_trava?(@follow_up.card_id)
+  end
+
+  # Cancelado como o arquivamento cancela, sem criar modelo na Meta para um card que não vai mandar nada.
+  def cancelar_do_card_arquivado
+    @follow_up.update!(status: :canceled, canceled_at: @now,
+                       metadata: @follow_up.metadata.to_h.merge('canceled_reason' => Crm::Cards::Archiver::MOTIVO))
+    # validar: false, como no #2096: o card arquivado com dono que saiu da conta não passa na validação.
+    Crm::FollowUps::CardNextDueUpdater.update(@follow_up.card.reload, validar: false)
+    false
   end
 
   # Fora da janela NO HORÁRIO do envio, no número oficial, com os interruptores ligados e sem barreira do contato.

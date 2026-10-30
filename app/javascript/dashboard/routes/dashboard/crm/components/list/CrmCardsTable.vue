@@ -19,6 +19,7 @@ import { buildCrmCardIdentity, crmCardIdentityLabel } from './cardIdentity.js';
 import { countsAsSale } from '../../helpers/cardOutcome';
 import { ehCobranca } from '../funil/funil';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
+import { useCrmPermissions } from '../../composables/useCrmPermissions';
 
 const props = defineProps({
   cards: {
@@ -130,6 +131,9 @@ const comValor = computed(
   () => countsAsSale(props.pipeline) || ehCobranca(props.pipeline)
 );
 
+// #2075 — sem a chave de valores: sem soma no grupo e sem ordenar por valor.
+const { canSeeSalesValues } = useCrmPermissions();
+
 const columns = computed(() =>
   buildCrmCardColumns({
     t,
@@ -138,6 +142,7 @@ const columns = computed(() =>
     includeMeta: props.showMetaColumn,
     includeValue: comValor.value,
     includeSelect: props.selectable,
+    valueVisible: canSeeSalesValues.value,
   })
 );
 
@@ -354,7 +359,7 @@ const toggleGroup = key => {
 };
 
 const groupTotalLabel = group =>
-  comValor.value
+  comValor.value && canSeeSalesValues.value
     ? t('CRM_KANBAN.LIST.GROUP_TOTAL', {
         count: group.count,
         value: formatMoneyCents(
@@ -422,6 +427,10 @@ const slaChatFor = card => {
 };
 
 const isEditable = column => !!column.columnDef.meta?.editable;
+// #2075 — valor que a pessoa não vê: só um traço, sem edição.
+const TRACO = '—';
+const isHiddenValue = (column, card) =>
+  column.columnDef.meta?.kind === 'value' && !!card.value_hidden;
 const cellKind = column => column.columnDef.meta?.kind;
 const ALIGN_CLASS = {
   right: 'text-right',
@@ -838,6 +847,18 @@ const onRowKeydown = (event, card) => {
                       </span>
                     </button>
 
+                    <span
+                      v-else-if="isHiddenValue(cell.column, row.original)"
+                      class="block text-n-slate-10"
+                      :title="t('CRM_KANBAN.LIST.VALUE_HIDDEN')"
+                      data-crm-value-hidden
+                    >
+                      {{ TRACO }}
+                      <span class="sr-only">{{
+                        t('CRM_KANBAN.LIST.VALUE_HIDDEN')
+                      }}</span>
+                    </span>
+
                     <!-- EDITABLE cells delegate to sibling component -->
                     <CrmTableCellEditable
                       v-else-if="isEditable(cell.column)"
@@ -1039,7 +1060,10 @@ const onRowKeydown = (event, card) => {
               </span>
             </div>
           </button>
-          <span class="shrink-0 text-right text-sm font-medium text-n-slate-12">
+          <span
+            v-if="!card.value_hidden"
+            class="shrink-0 text-right text-sm font-medium text-n-slate-12"
+          >
             {{
               formatMoneyCents(
                 card.value_cents,

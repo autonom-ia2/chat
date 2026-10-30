@@ -1,4 +1,10 @@
 class Crm::AiStageSuggestionPolicy < ApplicationPolicy
+  # Ler a sugestão de etapa sem um card na mão (Crm::SugestaoDeEtapa, #2150): no OSS, como aceitar e dispensar, quem vê o
+  # card. O Enterprise pede crm_manage_ai.
+  def read?
+    account_user.present?
+  end
+
   def show?
     card_visible?
   end

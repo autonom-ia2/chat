@@ -699,7 +699,7 @@
         "ONDE_CANAL": "Answers on {canal}",
         "SEMANA_VAZIA": "No conversations this week yet",
         "SEMANA_RESPONDIDAS": "This week: {n} conversation answered | This week: {n} conversations answered",
-        "SEMANA_PASSADAS": "{n} handed to the team | {n} handed to the team",
+        "SEMANA_PASSADAS": "{n} handed to someone on the team | {n} handed to someone on the team",
         "PARADO": "Not answering anyone right now.",
         "PARADO_SEM_CANAL": "Not on any channel yet.",
         "RASCUNHO": "You started and did not finish.",
@@ -1170,9 +1170,14 @@
           "ROTULO": "This week in numbers",
           "VAZIA": "No conversations this week yet. The numbers show up here as soon as {nome} answers someone.",
           "RESPONDIDAS": "conversation answered | conversations answered",
-          "PASSADAS": "handed to the team | handed to the team",
-          "NOTA_RESPONDIDAS": "This week, {nome} answered {n} conversation and handed {m} to the team. | This week, {nome} answered {n} conversations and handed {m} to the team.",
-          "NOTA_PASSADAS": "When it did not know how to answer."
+          "PASSADAS": "handed to someone on the team | handed to someone on the team",
+          "RESOLVIDAS": "solved without the team | solved without the team",
+          "PERIODO": "This week (the last 7 days, today included)",
+          "NO_MES": "In Numbers › Team you see these numbers for the month.",
+          "VER": "See the conversations",
+          "NOTA_RESPONDIDAS": "Conversations where {nome} sent at least one answer.",
+          "NOTA_PASSADAS": "Because of business hours, at the customer's request or because it did not know.",
+          "NOTA_RESOLVIDAS": "Closed with no one from the team stepping in."
         },
         "SILENCIOS": {
           "TITULO": "When {nome} did not answer",
@@ -1189,7 +1194,8 @@
           "TITULO": "Conversations this week",
           "MOSTRAR": "Show",
           "RESPONDIDAS": "Answered",
-          "PASSADAS": "Handed to the team",
+          "PASSADAS": "Handed to someone on the team",
+          "RESOLVIDAS": "Solved without the team",
           "CARREGANDO": "Loading the conversations",
           "ABRIR": "Open conversation",
           "ABRIR_ARIA": "Open conversation with {contato}",
@@ -1442,7 +1448,8 @@
             "KB_REFRESH": "Updated from the files and websites",
             "MANUAL_EDIT": "Written by you",
             "ROLLBACK": "Went back to a previous way",
-            "ROLLBACK_DE": "Went back to the way from {quando}"
+            "ROLLBACK_DE": "Went back to the way from {quando}",
+            "BASE_DE_SEGUROS": "Insurance base updated"
           },
           "VOLTAR_ESTA": "Go back to this one",
           "VOLTANDO": "Going back…",
@@ -1454,6 +1461,47 @@
           "ERRO_GARANTIA": "Nothing changed.",
           "LER_ERRO": "Could not show the previous ways right now.",
           "LER_ERRO_GARANTIA": "Nothing changed."
+        },
+        "BASE": {
+          "TITULO": "Insurance base",
+          "ROTULO": "{tipo} · from {data}",
+          "SEM_BASE": "{nome} still works without an insurance base.",
+          "EXPLICA": "It is what {nome} knows about the insurance business. It only changes when someone updates it.",
+          "NOVA": "New base available: {base}",
+          "NOVA_CONTA_MUDOU": "The account is now {tipo}. New base available: {base}",
+          "TIPOS": {
+            "CORRETORA": "Broker",
+            "SEGURADORA": "Insurer",
+            "INSURTECH": "Insurtech",
+            "SAUDE_BENEFICIOS": "Health and benefits",
+            "OUTRO": "Insurance"
+          },
+          "ATUALIZAR": "Update with the new base",
+          "ATUALIZADA": "Base updated. If you do not like the answers, you can undo it.",
+          "DESFAZER": "Undo",
+          "DESFAZENDO": "Undoing…",
+          "DESFAZER_ERRO": "Could not undo right now. Nothing changed.",
+          "FEITO": "Done. {nome} uses the new base in the next conversations.",
+          "DESFEITO": "Done. {nome} is back to the previous base.",
+          "GAVETA": {
+            "TITULO": "Update with the new base",
+            "INTRO": "See how {nome} answers today and how it will answer with the new base. Same questions, answered right now.",
+            "SO_A_BASE": "Only the insurance base changes. The instructions, the way of talking, the material and the tools of {nome} stay the same.",
+            "COMPARANDO": "Asking {nome} the same questions with each base…",
+            "ERRO_COMPARAR": "Could not show the answers right now.",
+            "NADA_MUDOU": "Nothing changed.",
+            "LISTA": "Questions answered with today’s base and with the new one",
+            "CLIENTE_PERGUNTA": "Customer question:",
+            "HOJE": "Today ({base})",
+            "NOVA": "With the new base ({base})",
+            "SEM_BASE": "no base",
+            "PASSA_EQUIPE": "Would hand the conversation over to the team.",
+            "PRONTAS": "The answers are ready. Compare them before updating {nome}.",
+            "NOTA": "After updating, if you do not like it, use Undo on the page of {nome}.",
+            "AGORA_NAO": "Not now",
+            "ATUALIZANDO": "Updating…",
+            "ERRO_ATUALIZAR": "Could not update right now. Nothing changed."
+          }
         },
         "INSTRUCOES": {
           "MENU": "Write the instructions in your own words",
@@ -2028,6 +2076,730 @@
         "ERRO": "Could not connect right now. Try again."
       },
       "ESCOLHER_FOTO": "Choose photo"
+    },
+    "DESEMPENHO": {
+      "VER_TUDO": "See everything about {nome}",
+      "CARREGANDO": "Loading the performance",
+      "MIGALHA": {
+        "ROTULO": "Where you are",
+        "AGENTES": "Agents",
+        "DESEMPENHO": "Performance"
+      },
+      "DE_FORA": "Agent from another system: we only see what it sends.",
+      "ESTADO": {
+        "SEM_CONVERSAS": "{nome} didn't talk to anyone in this period.",
+        "SEM_CONVERSAS_BOTAO": "See another period",
+        "LEITURA_DESLIGADA": "Turn on conversation reading to see what people talk about.",
+        "LEITURA_DESLIGADA_BOTAO": "Turn on",
+        "LEITURA_DESLIGADA_SEM_ACESSO": "Conversation reading is off. Whoever runs the account can turn it on.",
+        "LENDO": "The AI reads the conversations from the last 30 days in the automatic reading, which runs once a day. The numbers show up when it finishes.",
+        "TETO": "The last reading stopped at the daily AI spending limit. The rest goes into the next reading.",
+        "TETO_BOTAO": "See what we have",
+        "SEM_IA": "Reading isn't working in this account: the AI key needs to be connected.",
+        "SEM_IA_BOTAO": "Connect the key",
+        "SEM_IA_SEM_ACESSO": "Reading isn't working in this account right now. Ask whoever runs the account to connect the AI key.",
+        "SEM_IA_SEM_ACESSO_BOTAO": "See the numbers",
+        "ERRO": "Automatic reading stopped because of an error. What was already read stays saved. If it keeps happening, contact support.",
+        "CHAVE_RECUSADA": "The AI refused this account's key. Check the AI key. What was already read stays saved.",
+        "CHAVE_RECUSADA_BOTAO": "Check the key",
+        "CHAVE_RECUSADA_SEM_ACESSO": "The AI refused this account's key. Ask whoever runs the account to check the key. What was already read stays saved.",
+        "CHAVE_RECUSADA_SEM_ACESSO_BOTAO": "See the numbers",
+        "SEM_RESULTADO": "We don't know yet what counts as a result for {nome}.",
+        "CONFERENCIA_BAIXA": "The subjects may be inaccurate. We are reviewing them."
+      },
+      "INSTRUCAO": {
+        "COLADA": "Instruction pasted by {autor} on {data}",
+        "AVISO": "It is the text pasted here, not necessarily what the other system uses."
+      },
+      "ALTERAR": "Change"
+    },
+    "DESEMPENHO2": {
+      "A": {
+        "FORMATO": {
+          "PONTOS": "{n} point | {n} points",
+          "SEGUNDOS": "{n} s",
+          "MINUTOS": "{n} min",
+          "HORAS": "{n} h",
+          "DIA_CURTO": {
+            "SEG": "Mon",
+            "TER": "Tue",
+            "QUA": "Wed",
+            "QUI": "Thu",
+            "SEX": "Fri",
+            "SAB": "Sat",
+            "DOM": "Sun"
+          },
+          "DIA_LONGO": {
+            "SEG": "Monday",
+            "TER": "Tuesday",
+            "QUA": "Wednesday",
+            "QUI": "Thursday",
+            "SEX": "Friday",
+            "SAB": "Saturday",
+            "DOM": "Sunday"
+          },
+          "PERIODO": "{inicio} to {fim}",
+          "DURACAO_DIAS": "{n} days | {n} day | {n} days",
+          "DURACAO_MESES": "{n} months | {n} month | {n} months",
+          "MINUTOS_E_SEGUNDOS": "{m} min {s} s"
+        },
+        "COMUM": {
+          "CONVERSA": "Conversation #{numero}",
+          "NOVA_ABA": "(opens in a new tab)",
+          "SEM_NOME": "No name",
+          "NADA_NO_PERIODO": "Nothing in this period.",
+          "VER_EXEMPLOS": "See examples ({n})",
+          "VER_TODOS": "See all {n}",
+          "VER_MENOS": "See less",
+          "AGENTE": "the AI agent",
+          "POUCOS_CASOS": "Few cases: compare with care",
+          "HISTORICO_COMPLETO": "Full history",
+          "EXEMPLOS": "Examples ({n})",
+          "SEPARADOR": "·",
+          "SEM_VALOR": "—",
+          "MARCA_PARCIAL": "*",
+          "ROTULO_E_VALOR": "{rotulo}: {valor}"
+        },
+        "DELTA": {
+          "DIAS_ANTES": "in the {dias} days before",
+          "ANTES": "in the previous period",
+          "IGUAL": "Same number as {quando}",
+          "MAIS": "{valor} more than {quando}",
+          "MENOS": "{valor} fewer than {quando}"
+        },
+        "KPI": {
+          "PROCURAS": {
+            "ROTULO": "Requests",
+            "EXPLICA": "Real requests. One conversation can have several. Tests left out."
+          },
+          "CONVERSAS": {
+            "ROTULO": "Conversations",
+            "EXPLICA": "Different people who wrote in the period"
+          },
+          "COMPRA": {
+            "EXPLICA": "{pct} of requests · {explicacao}"
+          },
+          "FECHARAM": {
+            "EXPLICA": "{pct} of {m} {compra}"
+          },
+          "DUVIDAS_RESOLVIDAS": {
+            "ROTULO": "Questions answered",
+            "EXPLICA": "{n} of {m} questions, with no person needed"
+          },
+          "SEM_PESSOA": {
+            "ROTULO": "Left without a person",
+            "EXPLICA": "of {m} that needed someone from the team"
+          },
+          "PERDAS_EVITAVEIS": {
+            "ROTULO": "Sales lost for a fixable reason",
+            "EXPLICA": "{pct} of {m} {compra}"
+          },
+          "TEMPO_RESPOSTA": {
+            "ROTULO": "Time for {nome} to reply",
+            "EXPLICA": "Typical time. 9 in 10 within {p90}"
+          }
+        },
+        "LEITURA": {
+          "VOLUME": {
+            "TITULO": "Volume",
+            "FRASE": "{nome} sent {agente} messages and the team sent {equipe}, in {conversas} conversations.",
+            "NOTA": "Team members who write through {nome}'s account count as {nome}, not as the team."
+          },
+          "TRAVA": {
+            "TITULO": "Biggest blocker",
+            "FRASE": "{motivo}: {n} of {total} {compra} ({pct})."
+          },
+          "RITMO": {
+            "TITULO": "Pace",
+            "FRASE": "{compra} per week: {antes} at the start and {depois} at the end (average of the first {k} and the last {k} full weeks).",
+            "FRASE_DIA": "{compra} per week: {antes} in the first full week and {depois} in the last one."
+          },
+          "DECISAO": {
+            "TITULO": "Where to start",
+            "FRASE": "{titulo}.",
+            "FRASE_COM_GANHO": "{titulo}. Estimated gain: {ganho}.",
+            "VER": "See the suggestion"
+          }
+        },
+        "NUMEROS": {
+          "SOBRE": "Period summary",
+          "TITULO": "The numbers for the period",
+          "DESCRICAO": "Each number says what it counts. The arrow compares with the same number of days just before.",
+          "FECHOU_CONTA": "Here, “{fechou}” means: {explicacao}.",
+          "DESCRICAO_SEM_ANTERIOR": "Each number says what it counts. This period has no earlier period of the same length to compare with, so there is no arrow."
+        },
+        "EVOLUCAO": {
+          "TITULO": "How activity changed",
+          "DESCRICAO": {
+            "DIA": "Per day",
+            "SEMANA": "Per week (starts on Monday)"
+          },
+          "VISAO": {
+            "ROTULO": "What to see in the chart",
+            "GERAL": "Overview",
+            "RESULTADO": "Result",
+            "ORIGEM": "Source"
+          },
+          "SERIE": {
+            "PROCURAS": "Requests",
+            "COM_ANUNCIO": "Came from an ad",
+            "SEM_ANUNCIO": "Came without an ad"
+          },
+          "FAIXA": {
+            "TIVERAM_PESSOA": "Handed to a person",
+            "SEM_PESSOA": "Left without a person"
+          },
+          "TOTAL": "{serie} in the period",
+          "PICO": {
+            "DIA": "Peak · day {data}",
+            "SEMANA": "Peak · week of {data}"
+          },
+          "MEDIA": "Average per {unidade}",
+          "UNIDADE": {
+            "DIA": "day",
+            "SEMANA": "week"
+          },
+          "SEMANA_DE": "Week of {data}",
+          "LEITURA_DA_SERIE": "{serie} per {unidade}: {valores}",
+          "FAIXA_TOTAL": "{nome}: {n} in the period",
+          "PARCIAL": {
+            "DIA": "* The last day is still in progress.",
+            "SEMANA": "* The last week is still in progress."
+          }
+        },
+        "FUNIL": {
+          "SOBRE": "How far they get",
+          "TITULO": "From request to result",
+          "DESCRICAO": "How many requests reached each step. They don't have to be in order.",
+          "MARCOS": "Steps along the way",
+          "MARCOS_DESCRICAO": "Base: {n} requests",
+          "DO_INICIO": "{pct} of the start",
+          "DA_ANTERIOR": "{pct} of the previous step",
+          "VEZES": "{x}× more",
+          "IGUAL": "Equal",
+          "PONTOS_A_MAIS": "{pontos} more",
+          "PONTOS_A_MENOS": "{pontos} fewer",
+          "RECORTE": {
+            "MARCO": "By step",
+            "HORARIO": "By time",
+            "ORIGEM": "By source",
+            "QUEM": "By who asks",
+            "OUTRO": "Other split"
+          },
+          "COMPARA_DESCRICAO": "How many reached “{fechou}” in each group",
+          "N_DE_M": "{n} of {m}",
+          "NAO_CAUSA": "They show up together; that doesn't mean one caused the other.",
+          "SEM_COMPARAR": "Too few cases to compare",
+          "COMPARACOES": "What changes the result",
+          "CONCILIACAO": "Why “{etapa}” ({a}) and “{fechou}” ({b}) are not the same number: {partes}.",
+          "CONCILIACAO_NAO_FECHARAM": "{n} reached this step and did not end in “{fechou}” | {n} reached this step and did not end in “{fechou}” | {n} reached this step and did not end in “{fechou}”",
+          "CONCILIACAO_FORA": "{n} ended in “{fechou}” without this step | {n} ended in “{fechou}” without this step | {n} ended in “{fechou}” without this step"
+        },
+        "TEMAS": {
+          "SOBRE": "Topics and requests",
+          "TITULO": "What they talk about and ask for",
+          "DESCRICAO": "Tap an item to see its requests in the Detail tab.",
+          "FALAM": "What people talk about",
+          "FALAM_DESCRICAO": "The main topic of each request",
+          "UNIDADE_TEMAS": "Unit: requests. Each request has one main topic.",
+          "FECHARAM": "{pct} {fechou} ({n} of {m})",
+          "SEM_COMPRA": "No {compra}",
+          "MAIS_TRAVA": "biggest blocker: {motivo}",
+          "SUBIU": "{n} more than before",
+          "DESCEU": "{n} fewer than before",
+          "PEDIRAM": "What they asked for",
+          "PEDIRAM_DESCRICAO": "Base: {n} requests",
+          "UNIDADE_CORTES": "Unit: requests. The details the person gave when asking.",
+          "ESCOLHER_CORTE": "Choose the detail",
+          "FECHARAM_POUCOS": "{fechou}: {n} of {m} (few cases)",
+          "ERRO_GRAVE": "{pct} serious mistakes"
+        },
+        "ORIGEM": {
+          "SOBRE": "Source",
+          "TITULO": "Where requests come from",
+          "DESCRICAO": "The same measure for those who came from an ad and those who came without one.",
+          "LADO": {
+            "ANUNCIO": "Came from an ad",
+            "SEM_ANUNCIO": "Came without an ad"
+          },
+          "PROCURAS_PCT": "requests · {pct}",
+          "COMPRA_E_FECHARAM": "{compra} {nome} · {fecharam} {fechou}",
+          "TAXA": "{fechou}",
+          "VEZES": "{x}× the rate without ads",
+          "POR_ANUNCIO": "By ad",
+          "POR_ANUNCIO_DESCRICAO": "Requests that came from each ad",
+          "UNIDADE": "Unit: requests.",
+          "FECHARAM": "{n} {fechou}",
+          "CUSTO_POR_FECHOU": "{valor} per result",
+          "SEM_SABER_QUAL": "Came from an ad, unknown which: {n}",
+          "SEM_ANUNCIO_CHEGARAM": "Without an ad, how they came",
+          "DIRECT_FORA": "Ads that open Instagram Direct don't show here yet.",
+          "COMO_CHEGARAM": "How they came",
+          "COMO_CHEGARAM_DESCRICAO": "What the person said in the conversation",
+          "FECHAM": "{pct} {fechou} ({n} of {m} {compra})",
+          "SEM_COMPRA": "No {compra}",
+          "SEM_ANUNCIO_FRASE": "This account has no ads connected. Everything here came without an ad.",
+          "LIGAR_ANUNCIOS": "Connect ads to compare ›",
+          "MAIORIA_NAO_DISSE": "Most people didn't say where they came from. The source is what the person said in the conversation.",
+          "FECHAM_POUCOS": "{fechou}: {n} of {m} {compra} (few cases)"
+        },
+        "HORARIOS": {
+          "SOBRE": "When it arrives",
+          "TITULO": "Busiest hours",
+          "DESCRICAO": "To know when to have team members around.",
+          "MAPA_TITULO": "Requests by day and hour",
+          "FUSO": "Times in your account's time zone ({fuso})",
+          "UNIDADE": "Unit: requests. The numbers in the cells replace the mouse.",
+          "PICO": "Peak · {dia}, {hora}h",
+          "TOTAL_PROCURAS": "Requests in the period",
+          "FORA_DO_HORARIO": "Outside business hours",
+          "CELULA": "{dia}, {hora}h: {n} requests",
+          "MAPA_ROTULO": "Requests by weekday and hour",
+          "DIA": "Day",
+          "TOTAL": "Total",
+          "MENOS": "Fewer",
+          "MAIS": "More",
+          "MAXIMO": "max {n}",
+          "N_DE_M": "{n} of {m}",
+          "PROCURAS_DO_TOTAL": "{n} requests ({pct} of total)",
+          "FAIXAS_TITULO": "When it arrives and how much it yields",
+          "FAIXAS_DESCRICAO": "A request can be in more than one row (e.g. weekend night).",
+          "COL": {
+            "QUANDO": "When",
+            "PROCURAS": "Requests",
+            "DO_TOTAL": "% of total",
+            "TAXA": "Rate",
+            "SEM_PESSOA": "No person"
+          },
+          "FAIXA": {
+            "DENTRO": "During business hours",
+            "FORA": "Outside business hours",
+            "FIM_DE_SEMANA": "Weekend",
+            "NOITE": "Night (6pm to 11pm)"
+          },
+          "FAIXAS_NOTA": "Rate = share of {compra} that ended in “{fechou}”. The highest is green when the range has at least {minimo} cases.",
+          "HORARIO_COMERCIAL": "Business hours: {dias}, {inicio}h to {fim}h",
+          "DIAS_SEGUIDOS": "{de} to {ate}",
+          "ARRASTAR": "Drag sideways to see every hour.",
+          "VISAO": {
+            "ROTULO": "What the map shows",
+            "PROCURAS": "All requests",
+            "SEM_PESSOA": "Left without a person"
+          },
+          "MAPA_SEM_PESSOA": "Who was left without a person, by day and hour",
+          "UNIDADE_SEM_PESSOA": "Unit: requests that needed someone from the team and got no one.",
+          "TOTAL_SEM_PESSOA": "Left without a person in the period",
+          "FILA": {
+            "TITULO": "Where the team did not reach",
+            "DESCRICAO": "Who needed a person and got no one.",
+            "SEM": "of {m} who needed one got no one",
+            "FORA": "{n} arrived outside business hours",
+            "PICO": "peak: {dia}, {hora}h"
+          }
+        },
+        "QUALIDADE": {
+          "SOBRE": "Quality",
+          "TITULO": "How {nome} did",
+          "DESCRICAO": "We read every request {nome} answered and marked whether it got it right, made a small mistake or a serious one.",
+          "COMO_SE_SAIU": "Right and wrong",
+          "COMO_SE_SAIU_DESCRICAO": "Base: {n} requests where {nome} acted",
+          "DIST": {
+            "ACERTOU": "Got it right",
+            "ERRO_LEVE": "Small slip",
+            "ERRO_GRAVE": "Serious mistake",
+            "NAO_ATUOU": "Didn't act"
+          },
+          "ACIMA_5_MIN": "Responses over 5 min",
+          "MENSAGENS": "messages from {nome} per message from the person",
+          "OTIMISTA": "These numbers came out optimistic in the check ({pct} right).",
+          "OTIMISTA_ERROS": "The real mistakes are higher.",
+          "REGRAS": "Most broken rules",
+          "REGRAS_DESCRICAO": "Instruction rules {nome} did not follow",
+          "REGRAS_UNIDADE": "Unit: requests. One request can break more than one rule.",
+          "SISTEMICA": "Half or more",
+          "LISTA": {
+            "FORTES": "Strengths",
+            "PIORES": "Where it errs most"
+          },
+          "ACERTO_EM": "{pct} right in {n} requests",
+          "ERRO_GRAVE_EM": "{pct} serious mistakes · {acerto} right in {n} requests",
+          "FORA_DA_BASE": "outside the base"
+        },
+        "PESSOA": {
+          "SOBRE": "Handing to the team",
+          "TITULO": "Who needed a person",
+          "DESCRICAO": "Requests only someone from the team could solve.",
+          "PRECISAVAM": "Needed a person",
+          "TIVERAM": "Got a person",
+          "FICARAM_SEM": "Left without",
+          "N_DE_M": "{n} of {m}",
+          "PROMETEU": "Promised to hand over to the team and no one came",
+          "SOBRE_O_QUE": "What it was about",
+          "COMO_TERMINOU": "How it ended",
+          "UNIDADE": "Unit: requests left without a person.",
+          "FORA_DO_HORARIO": "{n} of {m} left without a person arrived outside business hours.",
+          "EXEMPLOS": "Example conversations",
+          "EQUIPE_POR_MES": "Team messages per month",
+          "EQUIPE_POR_MES_DESCRICAO": "How much the team wrote in conversations, month by month.",
+          "UNIDADE_EQUIPE": "Unit: messages written by team members.",
+          "CONTA_DO_AGENTE": "Team members who write through {nome}'s account count as {nome}, not as the team. So a request can be handled by a person in a month with 0 team messages."
+        },
+        "QUEM": {
+          "SOBRE": "Who asks",
+          "TITULO": "Who they are and how often they return",
+          "DESCRICAO": "What kind of person asks and how much the use is concentrated in a few conversations.",
+          "QUEM_E": "Who asks",
+          "UNIDADE": "Unit: requests.",
+          "FECHAM": "{pct} {fechou} ({n} of {m})",
+          "CONCENTRACAO": "Concentration",
+          "CONCENTRACAO_DESCRICAO": "How much the use is concentrated in a few conversations",
+          "CONVERSAS_COM_COMPRA": "conversations with {compra}",
+          "CONVERSAS_FECHARAM": "conversations that reached the result",
+          "UMA_VEZ": "conversations with a single request",
+          "TOP10": "of all {compra} come from the 10 conversations that ask the most",
+          "VER_ATIVAS": "See the conversations that ask the most",
+          "MAIS_PEDEM": "Who asks for {compra} the most, and how many {fechou}",
+          "MAIS_PEDEM_DESCRICAO": "Someone who asks a lot and never closes here may be closing some other way.",
+          "COL": {
+            "CONVERSA": "Conversation",
+            "O_QUE_FAZER": "What to do"
+          },
+          "ACAO_OK": "Already closes here",
+          "ACAO_CONFERIR": "Check whether they {fechou} some other way",
+          "FECHAM_POUCOS": "{fechou}: {n} of {m} (few cases)"
+        },
+        "PERDAS": {
+          "SOBRE": "Losses",
+          "TITULO": "Lost sales that could be avoided",
+          "DESCRICAO": "Requests that stopped for something the business can fix (people who gave up over price or were just browsing don't count).",
+          "DA_COMPRA": "{pct} of {m} {compra}",
+          "VER_NA_TABELA": "See the {n} in the table",
+          "POR_QUE": "Why",
+          "UNIDADE_POR_QUE": "Unit: requests. A loss can have more than one reason.",
+          "ONDE_TRAVAM": "Where all requests get stuck",
+          "BASE_TRAVAS": "Base: {n} requests with a noted reason. A request can have more than one.",
+          "POR_QUE_DESCRICAO": "A loss can have more than one reason.",
+          "ONDE_TRAVAM_DESCRICAO": "{n} of {m} requests had a noted reason. The base here is different (all requests, not only {compra}), so the number does not match the “Biggest blocker” at the top."
+        },
+        "ACOES": {
+          "SOBRE": "What to do",
+          "TITULO": "From signal to action",
+          "DESCRICAO": "Each suggestion brings the number and the conversations that prove it. The gain is an estimate.",
+          "NENHUMA": "No suggestions in this period.",
+          "DE_OUTRAS_DATAS": "Suggestions from {inicio} to {fim}.",
+          "FRENTE": {
+            "INSTRUCAO": "Teach {nome}",
+            "SISTEMA": "Tools and system",
+            "EQUIPE": "Team",
+            "ANUNCIO": "Ads and follow-up"
+          },
+          "PROVA": "The proof",
+          "O_QUE_MUDAR": "What to change",
+          "NA_INSTRUCAO": "In the instructions:",
+          "NO_SISTEMA": "In the system:",
+          "GANHO": "Estimated gain:",
+          "GANHO_FECHAMENTOS": "≈ {n} more sales | ≈ {n} more sale | ≈ {n} more sales",
+          "GANHO_VALOR": "≈ {valor}",
+          "GANHO_SEM_CONTA": "not possible to estimate yet",
+          "GANHO_NO_PERIODO": "{ganho} in {duracao} ({inicio} to {fim})",
+          "GANHO_DO_HISTORICO": "not enough data in this period yet; in the full history ({duracao}, {inicio} to {fim}): {ganho}",
+          "COMO_CALCULAMOS": "How we calculated",
+          "COLUNA": {
+            "FALTA_DADO": "Needs more data"
+          },
+          "FALTA": "Missing: {falta}",
+          "NA_EQUIPE": "In the team:",
+          "BASE_DO_TICKET": "The gain in money uses {valor} per sale: the typical value of a sale, from {n} sales with a value in the full history."
+        },
+        "COMO_LER": {
+          "SOBRE": "How to read",
+          "TITULO": "How to read and what the data doesn't prove",
+          "DESCRICAO": "What each number measures, where not to overreach and how much to trust it.",
+          "COMO_LER": "How to read",
+          "TESTES": "Team tests are left out ({n} requests).",
+          "NAO_PROVAM": "What these numbers don't prove",
+          "FRASE": {
+            "ASSUNTO": "Topic is not the reason for buying. It shows what people talk about, not why they buy.",
+            "FORA_DA_CONVERSA": "We only know what shows up in the conversation. What gets solved outside it isn't counted.",
+            "ANUNCIO": "We only count as ad those who came from an identified ad.",
+            "AUDIO": "Audio without transcription and images without reading were not read.",
+            "ANDAMENTO": "Conversations still in progress stay out until they end.",
+            "JUNTOS": "When two numbers show up together, that doesn't mean one caused the other."
+          },
+          "AVISO": {
+            "DIA_PARCIAL": "The day {dia} is still in progress.",
+            "SO_PERIODO_TODO": "These use the full history, not only this period: {secoes}.",
+            "POUCO_DADO": "Little data in this period: read with care.",
+            "INSTRUCAO_MUDOU": "The instructions changed on {data}. Before and after can't be compared directly.",
+            "LIDO_POR_AMOSTRA": "We read a sample in this period.",
+            "SEM_ANUNCIO": "Without tracked ads, we can't compare those who came from an ad with those who came without."
+          },
+          "CONFIAR": "How much to trust",
+          "CONFERIMOS": "We checked {n} requests by reading the whole conversation.",
+          "COL": {
+            "CAMPO": "What we checked",
+            "ACERTOS": "Right",
+            "PCT": "Accuracy",
+            "BARRA": "Accuracy bar",
+            "LEITURA": "Reading"
+          },
+          "DE": "{n} of {m}",
+          "LEITURA": {
+            "FIRME": "Solid",
+            "OTIMISTA": "Optimistic",
+            "FRACA": "Weak"
+          },
+          "RESSALVA_DO_CAMPO": "{campo} · {leitura} reading ({pct} correct in the check):",
+          "SECAO": {
+            "CONFIANCA": "the check (“How much to trust”)",
+            "TICKET": "the typical value of a sale (used in the estimated gain of the suggestions)",
+            "KPIS": "the response time and the messages",
+            "QUALIDADE": "the quality of the replies",
+            "PESSOA": "the handover to a person",
+            "ACOES": "the suggestions"
+          }
+        },
+        "FAIXA": {
+          "DADOS_ATE": "Data up to {quando}",
+          "LIDO_ATE": "Read up to {quando}",
+          "EXPORTANDO": "Preparing…",
+          "EXPORTAR": {
+            "PDF": "Export PDF",
+            "XLSX": "Export Excel"
+          },
+          "SEM_EXPORTACAO": "The export for this period hasn't been generated yet.",
+          "EXPORTAR_FALHOU": "The file could not be downloaded right now. Try again.",
+          "PERIODO": {
+            "7": "Last 7 days ({datas})",
+            "30": "Last 30 days ({datas})",
+            "90": "Last 90 days ({datas})",
+            "TUDO": "Whole period ({datas})"
+          }
+        },
+        "BARRA": {
+          "ABAS": "Panel tabs",
+          "ABA": {
+            "RESUMO": "Summary",
+            "DETALHE": "Detail"
+          },
+          "PERIODOS": "Period",
+          "PERIODO": {
+            "7": "7 days",
+            "30": "30 days",
+            "90": "90 days",
+            "TUDO": "All"
+          },
+          "BASE": "Base: {procuras} requests · {conversas} conversations",
+          "CONFERIMOS": "We checked {n} requests"
+        },
+        "FONTE": {
+          "CAIXAS_TITULO": "Numbers from your inboxes only.",
+          "CAIXAS_TEXTO": "The numbers and lists count only the inboxes you see. {n} requests from other inboxes are left out, and the suggestions, made with the whole account, are not shown.",
+          "LISTA_TITULO": "Recent requests only.",
+          "LISTA_TEXTO": "Detail lists the {mostradas} most recent requests of {total}. The numbers above count all of them.",
+          "INSTRUCAO_TITULO": "The agent's instruction changed.",
+          "INSTRUCAO_TEXTO": "The AI keeps reading conversations with the previous criteria. To read with the new instruction, talk to support.",
+          "PENDENTES_TITULO": "1 conversation is waiting for the next AI reading. | {n} conversations are waiting for the next AI reading.",
+          "PENDENTES_TEXTO": "The numbers stop before them, at “Read up to”. They go into the next reading.",
+          "NAO_LIDAS_TITULO": "1 conversation could not be read by the AI. | {n} conversations could not be read by the AI.",
+          "NAO_LIDAS_TEXTO": "They are too long or the reading failed several times. If they were read before, their numbers come from that reading; if they were never read, they are left out. We try again when a new message arrives.",
+          "DEMO_TITULO": "Made-up data.",
+          "DEMO_TEXTO": "These numbers come from an example, to show how the panel works. They are not from your account.",
+          "FALHOU_TITULO": "We could not read the real data.",
+          "FALHOU": {
+            "SEM_ARQUIVO": "The real data file is not on this machine. Showing the example instead.",
+            "FORMATO": "The real data file is in a format the panel does not understand. Showing the example instead.",
+            "LEITURA": "Reading the file failed. Showing the example instead.",
+            "API": "The panel did not load right now. Try again in a few minutes."
+          }
+        }
+      },
+      "B": {
+        "SOBRE": "Detail",
+        "TITULO": "The exact numbers",
+        "TITULO_COM_NOME": "The exact numbers for {nome}",
+        "DESCRICAO": "Every number on the Summary tab, in tables you can search, filter and sort. Click a conversation to open it in a new tab.",
+        "ESCOLHA": "Which table",
+        "SEM_NOME": "No name",
+        "TABELAS": {
+          "PROCURAS": "Requests",
+          "PERIODO": "By period",
+          "TEMA": "By topic",
+          "ATIVAS": "Most active conversations",
+          "REGRAS": "Rules broken"
+        },
+        "TABELA": {
+          "VAZIO": "Nothing to show here."
+        },
+        "PAGINACAO": {
+          "ROTULO": "Pages of the table",
+          "FAIXA": "{de}–{ate} of {total}",
+          "TAMANHO": "Rows per page",
+          "POR_PAGINA": "{n} per page",
+          "ANTERIOR": "Previous",
+          "PROXIMA": "Next"
+        },
+        "FILTROS": {
+          "TODOS": "All",
+          "TODO_O_GRUPO": "All in {grupo}",
+          "GRUPO": {
+            "FECHOU": "Closed",
+            "AVANCOU": "Moved forward",
+            "PAROU": "Stopped",
+            "RESOLVEU": "Solved",
+            "PASSOU": "Passed to a person",
+            "SEM_NEGOCIO": "No business"
+          },
+          "QUALIDADE": {
+            "ROTULO": "How {nome} did",
+            "ACERTOU": "Got it right",
+            "ERRO_LEVE": "Small mistake",
+            "ERRO_GRAVE": "Serious mistake",
+            "NAO_ATUOU": "Did not act"
+          },
+          "BUSCA": "Search",
+          "BUSCA_DICA": "Summary, conversation number or topic",
+          "TEMA": "Topic",
+          "RESULTADO": "How it ended",
+          "MARCO": "Step reached",
+          "ORIGEM": "Where it came from",
+          "CORTE": "What they asked for",
+          "SO_PERDAS": "Only sales lost for a fixable reason",
+          "SO_PESSOA": "Only those who needed a person",
+          "MOSTRAR_TESTES": "Show team tests",
+          "LIMPAR": "Clear filters"
+        },
+        "PROCURAS": {
+          "TITULO": "All requests",
+          "DESCRICAO": "One row per request. A conversation can have more than one. Newest first.",
+          "UNIDADE": "Unit: requests. Team tests stay out unless you turn them on.",
+          "CONTADOR": "{n} requests with these filters",
+          "CONTADOR_FECHARAM": "{fechou}: {n} of {m} {compra} ({pct})",
+          "VAZIO": "No request matches these filters. Try clearing a filter.",
+          "ABRIR_CONVERSA": "Open conversation {n} in a new tab",
+          "OUTRA_EQUIPE": "Conversation from another inbox",
+          "TESTE": "Team test",
+          "MAIS": "more",
+          "MENOS": "less",
+          "COL": {
+            "QUANDO": "When",
+            "CONVERSA": "Conversation",
+            "TEMA": "Topic",
+            "PEDIDO": "What they asked for",
+            "MARCO": "How far it got",
+            "RESULTADO": "How it ended",
+            "AGENTE": "{nome}",
+            "ORIGEM": "Where it came from",
+            "RESUMO": "Summary"
+          },
+          "NUMERO": "#{n}",
+          "NUMERO_E_PROCURA": "#{n}·{procura}",
+          "EXPLICA_NUMERO": "The number “#312·2” means: conversation 312, its second request.",
+          "TEMA_COMPLETO": "Topic: {tema}"
+        },
+        "PERIODO": {
+          "TITULO_DIA": "Day by day",
+          "TITULO_SEMANA": "Week by week",
+          "DESCRICAO": "The exact number behind each point of the movement chart.",
+          "UNIDADE": "Unit: requests, except new conversations.",
+          "TOTAL": "Total for the period",
+          "SEMANA_DE": "Week of {data}",
+          "PARCIAL_DIA": "* day still in progress",
+          "PARCIAL_SEMANA": "* week still in progress",
+          "COL": {
+            "DIA": "Day",
+            "SEMANA": "Week",
+            "PROCURAS": "Requests",
+            "CONVERSAS_NOVAS": "New conversations",
+            "COMPRA": "Purchase requests",
+            "FECHARAM": "Closed",
+            "TAXA": "% closed",
+            "PRECISAVAM": "Needed a person",
+            "TIVERAM": "Had a person",
+            "COM_ANUNCIO": "From an ad",
+            "SEM_ANUNCIO": "Without an ad"
+          }
+        },
+        "TEMA": {
+          "TITULO": "By topic",
+          "DESCRICAO": "Each topic with how much it closes, how {nome} did and what holds it back the most. Click a topic to see its requests.",
+          "UNIDADE": "Unit: requests. Each request has one main topic.",
+          "VER_PROCURAS": "See the requests about {tema}",
+          "DELTA_MAIS": "{n} more",
+          "DELTA_MENOS": "{n} fewer",
+          "DELTA_IGUAL": "same",
+          "COL": {
+            "TEMA": "Topic",
+            "PROCURAS": "Requests",
+            "PCT": "% of total",
+            "COMPRA": "Purchase requests",
+            "FECHARAM": "Closed",
+            "TAXA": "% closed",
+            "ACERTO": "{nome} got it right",
+            "ERRO_GRAVE": "Serious mistake",
+            "TRAVA": "What holds it back most",
+            "DELTA": "vs. the period before"
+          }
+        },
+        "ATIVAS": {
+          "TITULO": "Conversations that ask the most",
+          "DESCRICAO": "Conversations with the most purchase requests in the period.",
+          "UNIDADE": "Unit: conversations. First and last contact in the account time zone.",
+          "SOMA": "These {n} conversations add up to {procuras} of {m} {compra} ({pct}).",
+          "COL": {
+            "CONVERSA": "Conversation",
+            "PROCURAS": "Requests",
+            "COMPRA": "Purchase requests",
+            "FECHARAM": "Closed",
+            "PRIMEIRA": "First contact",
+            "ULTIMA": "Last contact",
+            "TEMA": "Most common topic"
+          }
+        },
+        "REGRAS": {
+          "TITULO": "Rules broken",
+          "DESCRICAO": "Rules from {nome}'s instructions that were not followed, with the conversations that show it.",
+          "UNIDADE": "Unit: requests. One request can break more than one rule.",
+          "VAZIO": "No rule broken in this period.",
+          "SIM": "Almost always",
+          "VER_EXEMPLOS": "See examples ({n})",
+          "ESCONDER_EXEMPLOS": "Hide examples",
+          "COL": {
+            "REGRA": "Rule",
+            "PROCURAS": "Requests",
+            "PCT": "% of requests",
+            "QUASE_SEMPRE": "Half or more",
+            "EXEMPLOS": "Examples"
+          }
+        }
+      },
+      "D": {
+        "SEM_NOME": "No name",
+        "DEMO": {
+          "TITULO": "Where these numbers come from",
+          "TEXTO_DEMO": "Made-up data, just to see how the screen looks.",
+          "TEXTO_VIDA_REAL": "Real data, read from the conversations. It exists only on this computer.",
+          "FONTE": "Numbers",
+          "FONTE_VIDA_REAL": "Real conversations",
+          "FONTE_DEMO": "Demonstration",
+          "SEM_VIDA_REAL": "The real data file is not on this computer",
+          "ANUNCIOS": "Ads",
+          "COM_ANUNCIOS": "With ads",
+          "SEM_ANUNCIOS": "No ads",
+          "SITUACAO": "Situation",
+          "NORMAL": "Everything working",
+          "SITUACAO_SEM_CONVERSAS": "No conversations",
+          "SITUACAO_LEITURA_DESLIGADA": "Reading off",
+          "SITUACAO_LENDO": "Reading for the first time",
+          "SITUACAO_TETO": "Reading stopped at the spending limit",
+          "SITUACAO_ERRO": "Reading stopped by an error",
+          "SITUACAO_CHAVE_RECUSADA": "AI key refused",
+          "SITUACAO_SEM_IA": "No AI key",
+          "SITUACAO_SEM_RESULTADO": "No result defined",
+          "SITUACAO_CONFERENCIA_BAIXA": "Low check",
+          "SITUACAO_POUCO": "Few conversations"
+        }
+      }
     }
   }
 }

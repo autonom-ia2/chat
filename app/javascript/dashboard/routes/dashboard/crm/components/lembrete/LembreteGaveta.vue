@@ -15,6 +15,7 @@ import CampoLigarA from './CampoLigarA.vue';
 import LembreteSerie from './LembreteSerie.vue';
 import LembreteUnico from './LembreteUnico.vue';
 import { paredeDe } from './recorrencia';
+import { avisoAoSalvar } from './avisoAoSalvar';
 
 // #1460/#1461/#1462 — o lembrete fora do card, na mesma gaveta do card (topo
 // escuro, formulário à esquerda, prévia à direita, rodapé com uma ação azul).
@@ -59,8 +60,8 @@ const criarDeVerdade = async (_evento, payload) => {
     await store.dispatch('crmKanban/createFollowUp', payload);
     useAlert(t('CRM_LEMBRETE.SALVO'));
     salvou();
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.FOLLOW_UP_SAVE_ERROR'));
+  } catch (erro) {
+    useAlert(avisoAoSalvar(erro, t));
   } finally {
     salvando.value = false;
   }

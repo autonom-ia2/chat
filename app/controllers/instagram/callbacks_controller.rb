@@ -38,6 +38,7 @@ class Instagram::CallbacksController < ApplicationController
     inbox, already_exists = find_or_create_inbox
 
     return redirect_to app_onboarding_inbox_setup_url(account_id: account_id) if return_to == 'onboarding'
+    return redirect_to meta_ads_return_path if return_to == 'meta_ads'
 
     if already_exists
       redirect_to app_instagram_inbox_settings_url(account_id: account_id, inbox_id: inbox.id)
@@ -189,6 +190,16 @@ class Instagram::CallbacksController < ApplicationController
 
   def account_id
     @oauth_payload&.fetch('sub')
+  end
+
+  # Reautorização que saiu de Anúncios da Meta (#2199/#2196) ou de Seus posts (#2304): volta para a tela e a aba do
+  # purpose, da lista fixa, e ao anúncio quando houver (`ad_id`, só dígitos, conferido no state por
+  # Instagram::Testers::OauthBinding).
+  def meta_ads_return_path
+    purpose = REAUTH_PURPOSES[@oauth_payload['purpose']].to_h
+    query = purpose[:return_query]
+    query = [query, "anuncio=#{@oauth_payload['ad_id']}"].compact.join('&') if @oauth_payload['ad_id']
+    ["/app/accounts/#{account_id}/#{purpose.fetch(:return_path, 'campaigns/meta-ads')}", query].compact.join('?')
   end
 
   def return_to

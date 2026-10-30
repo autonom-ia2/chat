@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import ContentTemplateSelector from 'dashboard/components-next/NewConversation/components/ContentTemplateSelector.vue';
 import NovaConversaOpcao from './NovaConversaOpcao.vue';
@@ -10,6 +10,7 @@ import NovaConversaAnexo from './NovaConversaAnexo.vue';
 import NovaConversaCaixaDoWhatsapp from './NovaConversaCaixaDoWhatsapp.vue';
 import { useCaixaDeEmailNova } from 'dashboard/components-next/conversa-canal/email/caixaDeEmailNova';
 import { MODOS, TIPOS, aceitaAnexo, usaCaixaDoWhatsapp } from './novaConversa';
+import { useModeloUnico } from './useModeloUnico';
 
 // #1459 — "Sua mensagem": o que aparece depende do canal escolhido. Escrever
 // é um campo simples; mensagem pronta é uma lista de modelos aprovados pelo
@@ -72,17 +73,8 @@ const caixaDoWhatsapp = computed(
     usaCaixaDoWhatsapp({ canal: props.canal, tipo: props.tipo })
 );
 
-// "Começar pronto": quando só dá para enviar mensagem pronta e há uma só
-// aprovada, ela já vem marcada. Olha a quantidade, e não a lista, para não
-// marcar de novo depois de a pessoa clicar em "Alterar".
-watch(
-  () => modelos.value.length,
-  quantas => {
-    if (props.tipo !== TIPOS.WHATSAPP_PRONTA || quantas !== 1) return;
-    if (!modelo.value) [modelo.value] = modelos.value;
-  },
-  { immediate: true }
-);
+// "Começar pronto": a única mensagem pronta já vem marcada.
+useModeloUnico({ modelos, tipo: computed(() => props.tipo), modelo });
 
 defineExpose({ montar: () => pronta.value?.montar() ?? null });
 </script>

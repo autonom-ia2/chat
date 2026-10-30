@@ -22,12 +22,22 @@ module Crm
       # instrução); a IA do CRM não tira a conversa por conta própria. Só quando o agente pode responder agora (o dono
       # do QuemResponde): espelho de vínculo arquivado ou de agente pausado não segura a conversa, senão ela ficaria sem
       # ninguém. O n8n e a conversa sem robô seguem como antes. A fila da conversa (HandoffDrainJob) usa a mesma regra.
+      # Exceção (IA entende a conversa F1, flag `crm_ia_fatos_da_conversa`, regra f do Rodrigo): o nosso assistente já
+      # prometeu ao cliente que uma pessoa vai assumir, ninguém assumiu e o problema não foi resolvido depois
+      # (`handoff.promised_by_our_assistant`, lido pelo modelo). A promessa é um fato à parte da intenção (`intent`), e
+      # só vale com um agente nosso dono da conversa (o caso do #1673): aí a IA do CRM cumpre a promessa pela Entrega de
+      # sempre, com as outras guardas valendo (pessoa já atribuída, intervalo, devolução). Sem dono nosso, ou com o agente
+      # protegido (`instrucao_mantida?`) dono, a promessa não muda nada. A espera vai com o motivo do pedido do robô
+      # (MOTIVO_DA_PROMESSA): foi o robô que prometeu, e a fila (HandoffDrainJob) não larga a espera de volta para ele.
       OWNED_BY_OUR_AGENT = 'owned_by_our_agent'.freeze
       MOTIVO_DA_ENTREGA = 'ia_crm'.freeze
+      MOTIVO_DA_PROMESSA = 'robo_pediu'.freeze
 
       # pelo_card (#1693, decisão 1a do Rodrigo, 16/10): numa mensagem de vários assuntos, o pedido vai pela regra do card
       # a que o cliente o ligou, mesmo fora do foco, enquanto ele seguir aberto nesta conversa; senão, pela regra do foco.
-      def initialize(card:, handoff:, trigger: 'message', pelo_card: false)
+      # tentativa (#2154): a da avaliação depois da fala do agente, para o teto do reagendamento.
+      def initialize(card:, handoff:, trigger: 'message', pelo_card: false, tentativa: 0)
+        @tentativa = tentativa
         @card = card
         @handoff = normalize(handoff)
         @trigger = trigger
@@ -40,11 +50,13 @@ module Crm
       def perform
         blocked = blocked_reason
         return skip_blocked(blocked) if blocked
+        return fala_em_curso if fala_em_curso?
 
         # Decisão do Rodrigo (16/10, opção a): o card do pedido saiu da conversa (fechou) e o cliente pediu gente;
         # alguém recebe, pela regra do foco. A linha deixa contar quantas vezes isso acontece.
         registrar('desvio', motivo: 'pedido_card_fechado_foco') if @pelo_card && !Crm::Assunto.da_conversa?(@card, @conversation)
-        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: MOTIVO_DA_ENTREGA, origem: @trigger, pelo_card: @pelo_card,
+        motivo = promessa_a_cumprir? || depois_da_fala_do_agente? ? MOTIVO_DA_PROMESSA : MOTIVO_DA_ENTREGA
+        entrega = Crm::Entrega.new(conversation: @conversation, card: @card, motivo: motivo, origem: @trigger, pelo_card: @pelo_card,
                                    pedido: { sugestao: @handoff[:suggested_agent], razao: @handoff[:reason] }).call
         depois_da_entrega(entrega)
       end
@@ -68,12 +80,59 @@ module Crm
         # Com pelo_card, quem escolhe a regra é a Entrega: a do card do pedido, ou a do foco se ele saiu da conversa.
         return 'assunto_mudou' unless @pelo_card || Crm::Assunto.atual?(@card, @conversation)
         return 'already_assigned' if @conversation.assignee_id.present?
-        return OWNED_BY_OUR_AGENT if ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
+        return OWNED_BY_OUR_AGENT if agente_nosso_segura?
         # Devolvida à IA por um humano e sem nada novo desde então: a "transferência" que a IA leu é a fala antiga.
         return 'devolvida_sem_pedido_novo' if Crm::Ai::DevolucaoAIa.sem_pedido_novo?(@card, @conversation)
         return 'cooldown' if registro.intervalo_ativo?
 
         nil
+      end
+
+      def agente_nosso_segura?
+        return false if dono_ativo.nil?
+        return true unless promessa_a_cumprir? || depois_da_fala_do_agente?
+
+        registrar(promessa_a_cumprir? ? 'promessa_do_robo' : 'depois_da_fala_do_agente', motivo: OWNED_BY_OUR_AGENT)
+        false
+      end
+
+      def dono_ativo
+        return @dono_ativo if defined?(@dono_ativo)
+
+        @dono_ativo = ::Autonomia::Agents::QuemResponde.dono_ativo(@conversation)
+      end
+
+      # A promessa só conta com a flag, com um agente nosso dono da conversa e que não seja o protegido.
+      def promessa_a_cumprir?
+        return @promessa_a_cumprir if defined?(@promessa_a_cumprir)
+
+        @promessa_a_cumprir = FatosDaConversa.ligada?(@card.account) && FatosDaConversa.promessa?(@handoff) &&
+                              dono_ativo.present? && !dono_ativo.agent&.instrucao_mantida?
+      end
+
+      # #2154 (flag `agente_so_informa`, regra do Rodrigo de 24/10): o agente nosso não passa mais a conversa; avisou o
+      # cliente e a fala já saiu (Crm::Ai::AvaliacaoDepoisDaFala). Nesta avaliação a IA de Atribuição decide com o agente
+      # no nome. Como na promessa, a espera vai com o motivo do pedido do robô (MOTIVO_DA_PROMESSA): a fila
+      # (HandoffDrainJob) não a larga de volta para o agente, que segue no nome até alguém receber. Os outros gatilhos
+      # (a mensagem do cliente, que roda antes da fala) seguem com o bloqueio do #1673.
+      def depois_da_fala_do_agente?
+        return @depois_da_fala_do_agente if defined?(@depois_da_fala_do_agente)
+
+        @depois_da_fala_do_agente = @trigger == AvaliacaoDepoisDaFala::TRIGGER && dono_ativo.present? &&
+                                    ::Autonomia::Agents::AgenteSoInforma.ligada?(@card.account)
+      end
+
+      # #2154 (revisões): o modelo leva de 15 a 25 s, e nesse meio tempo o cliente pode ter escrito e o agente estar
+      # respondendo o turno seguinte (debounce, IA ou pedaços: Autonomia::Agents::Operate::TurnoEmCurso). Entregar agora
+      # faria a resposta se perder ou cortaria a fala no meio: a avaliação volta depois, com teto de tentativas
+      # (AvaliacaoDepoisDaFala.reagendar), sem mexer na espera.
+      def fala_em_curso?
+        depois_da_fala_do_agente? && AvaliacaoDepoisDaFala.fala_em_curso?(@conversation)
+      end
+
+      def fala_em_curso
+        AvaliacaoDepoisDaFala.reagendar(@card, @conversation, @tentativa)
+        skip('fala_em_curso')
       end
 
       def depois_da_entrega(entrega)
@@ -111,7 +170,12 @@ module Crm
 
       # Só "transferir" dispara. "consultar" fica em standby e "continuar" segue o atendimento. Fallback ao
       # should_handoff legado enquanto respostas antigas (sem intent) circulam.
+      # IA entende a conversa F1: a promessa do nosso assistente a cumprir também é pedido (promessa_a_cumprir?).
       def requested?
+        pedido_do_modelo? || promessa_a_cumprir?
+      end
+
+      def pedido_do_modelo?
         intent = @handoff[:intent].to_s
         return true if intent == 'transferir'
         return false if %w[continuar consultar].include?(intent)

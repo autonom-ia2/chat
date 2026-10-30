@@ -40,6 +40,7 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import ConfirmModal from 'dashboard/components/widgets/modal/ConfirmationModal.vue';
 import CrmKanbanCard from '../components/CrmKanbanCard.vue';
+import { nomeDoMes } from '../components/numeros/v2/numerosTextos';
 import CrmKanbanZoom from '../components/CrmKanbanZoom.vue';
 import { useCrmKanbanZoom } from '../composables/useCrmKanbanZoom';
 import { useCrmKanbanAutoScroll } from '../composables/useCrmKanbanAutoScroll';
@@ -59,6 +60,9 @@ import CrmResultTabs from '../components/list/CrmResultTabs.vue';
 import CrmBulkActionBar from '../components/list/CrmBulkActionBar.vue';
 import CrmCalendar from '../components/calendar/CrmCalendar.vue';
 import CrmAbaNumeros from '../components/numeros/CrmAbaNumeros.vue';
+import ListaAcao from '../components/lista-acao/ListaAcao.vue';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
+import { accountTimeZone } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import { useMenuNovo } from 'dashboard/components-next/sidebar/fork/useMenuNovo';
 import CalendarioOuro from '../components/calendario/CalendarioOuro.vue';
 import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue';
@@ -67,6 +71,16 @@ import LembreteGaveta from '../components/lembrete/LembreteGaveta.vue';
 import MensagemMarcadaGaveta from '../components/mensagemMarcada/MensagemMarcadaGaveta.vue';
 import CrmCalendarMeetingScheduler from '../components/calendar/CrmCalendarMeetingScheduler.vue';
 import CrmMeetingDetail from '../components/calendar/CrmMeetingDetail.vue';
+// #2095 (flag crm_arquivados): Arquivados, Funis arquivados e as janelas novas de arquivar e restaurar.
+import PainelArquivados from '../components/arquivados/PainelArquivados.vue';
+import PainelFunisArquivados from '../components/arquivados/PainelFunisArquivados.vue';
+import RestaurarConflito from '../components/arquivados/RestaurarConflito.vue';
+import ArquivarFunilDialogo from '../components/arquivados/ArquivarFunilDialogo.vue';
+import CrmAviso from '../components/arquivados/CrmAviso.vue';
+import {
+  FUNIS_ARQUIVADOS,
+  useArquivadosNaPagina,
+} from '../components/arquivados/useArquivadosNaPagina';
 import {
   FAILURE_STATUSES,
   SUCCESS_STATUSES,
@@ -84,7 +98,7 @@ import {
 } from '../components/list/cardColumns.js';
 
 const store = useStore();
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const { zoom, zoomClass, setZoom, persistenceFailed } = useCrmKanbanZoom();
 const kanbanBoard = ref(null);
 const isRTL = useMapGetter('accounts/isRTL');
@@ -146,7 +160,16 @@ const {
   canManageAi,
   canExportCrm,
   canAdminCrm,
+  canSeeSalesValues,
 } = useCrmPermissions();
+
+// #2075 — sem a chave de valores o servidor ignora filtro e ordem por valor; a tela também larga os dois.
+const temFiltroDeValor = f =>
+  Boolean(f) && (`${f.valueMin ?? ''}` !== '' || `${f.valueMax ?? ''}` !== '');
+const semFiltroDeValor = f =>
+  canSeeSalesValues.value ? f : { ...f, valueMin: '', valueMax: '' };
+const ordemPermitida = sort =>
+  !canSeeSalesValues.value && sort?.id === 'value' ? null : sort;
 
 // Ação em massa (#1874): cada botão só para quem pode a ação; sem nenhuma, a lista não tem seleção.
 const bulkPermissions = computed(() => ({
@@ -238,7 +261,7 @@ watch(
   },
   { immediate: true }
 );
-const filters = ref({ ...storedFilters.value });
+const filters = ref(semFiltroDeValor({ ...storedFilters.value }));
 const drawerMode = ref('create');
 const selectedCard = ref(null);
 // Acesso por funil (#1149): o card aberto diz se a pessoa pode mexer nele.
@@ -320,6 +343,60 @@ const pipelineOptions = computed(() =>
     label: pipeline.name,
   }))
 );
+const arquivadosLigado = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_ARQUIVADOS
+    ] === true
+);
+// #2283: Lista nova "o que fazer agora" (flag de conta). Desligada: a Lista de sempre, igual.
+const listaAcaoLigada = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_LISTA_ACAO
+    ] === true
+);
+const listaAcao = computed(
+  () => listaAcaoLigada.value && viewMode.value === 'list'
+);
+const listaAcaoRef = ref(null);
+// Datas da Lista nova no fuso da conta (o mesmo padrão do servidor), nunca no do navegador.
+const fusoDaListaAcao = computed(() => {
+  const conta = getAccount.value(currentAccountId.value);
+  return fusoDaConta(conta) || accountTimeZone(conta);
+});
+// No celular, as abas Quadro/Lista/Calendário/Números viram 4 colunas com o ícone em cima.
+const ABA_DA_LISTA_ACAO =
+  'max-md:min-h-14 max-md:flex-col max-md:justify-center max-md:gap-0.5 max-md:px-1 max-md:text-[13px]';
+const arquivados = useArquivadosNaPagina({
+  t,
+  ligado: arquivadosLigado,
+  funilAtual: () => selectedPipeline.value,
+});
+// O erro de arquivar é daquele card: outro card aberto começa sem ele.
+watch(
+  () => selectedCard.value?.id,
+  () => {
+    arquivados.erroArquivarCard.value = '';
+  }
+);
+// Com a flag, "Funis arquivados" fica no fim da escolha de funil (uma opção à parte, que abre o painel). Sem funil
+// arquivado, não aparece.
+const pipelineGroups = computed(() =>
+  arquivadosLigado.value && arquivados.totalDeFunis.value
+    ? [
+        { label: '', options: pipelineOptions.value },
+        arquivados.opcaoDosFunisArquivados.value,
+      ]
+    : []
+);
+const escolherFunil = valor => {
+  if (valor === FUNIS_ARQUIVADOS) {
+    arquivados.abrirFunis();
+    return;
+  }
+  currentPipelineId.value = valor;
+};
 const inboxOptions = computed(() =>
   inboxes.value.map(inbox => ({ value: inbox.id, label: inbox.name }))
 );
@@ -695,6 +772,29 @@ const activeFilterChips = computed(() => {
       label: t('CRM_FILTRO_DO_LINK.FECHADO_NO_MES'),
     });
   }
+  // Números › Origens (#2001, F6): os filtros que chegam do "Ver" (só da Lista).
+  if (f.origem && viewMode.value === 'list') {
+    chips.push({
+      key: 'origem',
+      label: `${t('CRM_FILTRO_DO_LINK.ORIGEM')}: ${t(`CRM_NUMEROS_ORIGENS.NOMES.${f.origem.toUpperCase()}`)}`,
+    });
+  }
+  if (f.anuncio && viewMode.value === 'list') {
+    chips.push({
+      key: 'anuncio',
+      label: `${t('CRM_FILTRO_DO_LINK.ANUNCIO')}: ${labelForOption(campaignFilterOptions, f.anuncio)}`,
+    });
+  }
+  if (f.entrouEm && viewMode.value === 'list') {
+    chips.push({
+      key: 'entrouEm',
+      label: t('CRM_FILTRO_DO_LINK.ENTROU_EM_MES', {
+        mes: nomeDoMes(f.entrouEm, {
+          locale: String(locale.value).replace('_', '-'),
+        }),
+      }),
+    });
+  }
   if (f.stageIds?.length) {
     const names = f.stageIds
       .map(id => labelForOption(stageOptions, id))
@@ -764,18 +864,29 @@ const activeFilterChips = computed(() => {
       label: `${t('CRM_KANBAN.FILTERS.LINKED')}: ${labelForOption(linkedOptions, f.standalone)}`,
     });
   }
-  if (f.aiPending) {
+  // #2150 — sem crm_manage_ai o servidor ignora o filtro: a etiqueta não finge que ele vale.
+  if (f.aiPending && canManageAi.value) {
     chips.push({ key: 'aiPending', label: t('CRM_KANBAN.FILTERS.AI_PENDING') });
   }
   return chips;
 });
 
 const activeFilterCount = computed(() => activeFilterChips.value.length);
+// #2283: na Lista nova, aba e busca são dela; conta só o que veio da gaveta.
+const filtrosDaListaAcao = computed(
+  () =>
+    activeFilterChips.value.filter(
+      chip => !['result', 'search'].includes(chip.key)
+    ).length
+);
 
 const viewModeOptions = computed(() => [
   {
     id: 'kanban',
-    label: t('CRM_KANBAN.VIEWS.KANBAN'),
+    // #2283: com a Lista nova, "Quadro" (a palavra que a pessoa entende).
+    label: listaAcaoLigada.value
+      ? t('CRM_LISTA_ACAO.VISTAS.QUADRO')
+      : t('CRM_KANBAN.VIEWS.KANBAN'),
     icon: 'i-lucide-kanban',
   },
   { id: 'list', label: t('CRM_KANBAN.VIEWS.LIST'), icon: 'i-lucide-list' },
@@ -828,7 +939,7 @@ const hasMoreCards = computed(
 // FilterQuery whitelists (e.g. `value_cents`). Empty when no sort is active.
 // Shared by the list fetch and the Excel export (#722), so both use the same order.
 const listSortParams = computed(() => {
-  const activeSort = listSort.value;
+  const activeSort = ordemPermitida(listSort.value);
   const sortParam = activeSort?.id
     ? COLUMN_TO_SORT_PARAM[activeSort.id]
     : undefined;
@@ -892,7 +1003,9 @@ const loadCurrentCalendar = async () => {
 };
 
 const loadActiveView = async (includeCounts = false) => {
-  if (viewMode.value === 'list') return loadCurrentList();
+  // #2283: a Lista nova busca sozinha (funil, filtros, aba) e não pula linha no tempo real.
+  if (viewMode.value === 'list')
+    return listaAcao.value ? null : loadCurrentList();
   if (viewMode.value === 'calendar') return loadCurrentCalendar();
   return loadCurrentBoard(includeCounts);
 };
@@ -1229,6 +1342,19 @@ const isCaixasNoCrm = computed(
 const canOpenInboxSettings = computed(() =>
   isCaixasNoCrm.value ? canAdminCrm.value : canManagePipelines.value
 );
+// Há o que configurar neste funil: o botão do topo e, na Lista nova abaixo de
+// 1024 px, o item "Configurar" do "Mais" (#2283).
+const podeConfigurar = computed(
+  () =>
+    canManagePipelines.value ||
+    canOpenInboxSettings.value ||
+    (!isCalendarOnly.value && canManageAi.value) ||
+    (!isCalendarOnly.value && arquivadosLigado.value)
+);
+// O "Mais" fecha no mesmo clique; o popover abre depois, para o clique não o
+// fechar de volta.
+const abrirConfiguracao = () =>
+  setTimeout(() => configurationPopover.value?.show(), 0);
 
 const openInboxSettingsDrawer = async () => {
   if (isCaixasNoCrm.value) {
@@ -1304,8 +1430,16 @@ const saveInboxSetting = async payload => {
   }
 };
 
+const arquivarFunilDialogo = ref(null);
 const archivePipeline = async () => {
   if (!selectedPipeline.value?.id) return;
+  if (arquivadosLigado.value) {
+    arquivarFunilDialogo.value?.abrir({
+      alvo: selectedPipeline.value,
+      ativos: pipelines.value,
+    });
+    return;
+  }
   const confirmed = await askConfirmation({
     title: t('CRM_KANBAN.CONFIRM.ARCHIVE_PIPELINE_TITLE'),
     description: t('CRM_KANBAN.CONFIRM.ARCHIVE_PIPELINE_DESCRIPTION'),
@@ -1321,8 +1455,12 @@ const archivePipeline = async () => {
     currentPipelineId.value = nextPipeline?.id || '';
     closePipelineDrawer();
     useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVED'));
-  } catch {
-    useAlert(t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVE_ERROR'));
+  } catch (error) {
+    // O último funil ativo e o único principal não se arquivam: a API diz por quê, na língua de quem usa.
+    useAlert(
+      error?.response?.data?.message ||
+        t('CRM_KANBAN.ALERTS.PIPELINE_ARCHIVE_ERROR')
+    );
   }
 };
 
@@ -1347,6 +1485,7 @@ const deleteStageHasCards = computed(() =>
 const STAGE_DELETE_ERROR_KEYS = {
   'crm.stage_has_cards': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_HAS_CARDS',
   'crm.stage_is_last': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_LAST_STAGE',
+  'crm.stage_in_use': 'CRM_KANBAN.ALERTS.STAGE_DELETE_ERROR_IN_USE',
 };
 
 const deleteStageErrorMessage = error => {
@@ -1615,14 +1754,22 @@ const cancelFollowUp = async followUp => {
   }
 };
 
-const archiveCard = async () => {
+// `detalhes.retornos` (janela nova, #2095): quantos retornos o arquivar para, para o Desfazer avisar.
+const archiveCard = async (detalhes = {}) => {
   if (!selectedCard.value?.id) return;
+  const card = selectedCard.value;
+  arquivados.erroArquivarCard.value = '';
   try {
-    await store.dispatch('crmKanban/archiveCard', selectedCard.value.id);
-    useAlert(t('CRM_KANBAN.ALERTS.CARD_ARCHIVED'));
+    await store.dispatch('crmKanban/archiveCard', card.id);
+    if (arquivadosLigado.value)
+      arquivados.avisarArquivado(card, detalhes?.retornos || 0);
+    else useAlert(t('CRM_KANBAN.ALERTS.CARD_ARCHIVED'));
     closeDrawer();
+    if (arquivadosLigado.value) arquivados.contar();
   } catch (error) {
-    avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_ARCHIVE_ERROR');
+    // #2095: com a flag, o erro fica na janela de arquivar, com o motivo; nada mudou.
+    if (arquivadosLigado.value) arquivados.erroAoArquivar(error);
+    else avisarErro(error, 'CRM_KANBAN.ALERTS.CARD_ARCHIVE_ERROR');
   }
 };
 
@@ -1850,13 +1997,20 @@ const onSavedViewApply = async ({ view }) => {
       ...(config.density ? { density: config.density } : {}),
     });
   }
-  store.dispatch('crmKanban/setListSort', config.sort || null);
+  const valorIgnorado =
+    !canSeeSalesValues.value &&
+    (temFiltroDeValor(config.filters) || config.sort?.id === 'value');
+  store.dispatch('crmKanban/setListSort', ordemPermitida(config.sort || null));
   store.dispatch('crmKanban/setListGroupBy', config.group_by || 'none');
   if (config.filters) {
-    filters.value = { ...defaultFilters(), ...config.filters };
+    filters.value = semFiltroDeValor({
+      ...defaultFilters(),
+      ...config.filters,
+    });
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
   await loadCurrentList();
+  if (valorIgnorado) useAlert(t('CRM_KANBAN.LIST.SAVED_VIEWS.VALUE_IGNORED'));
 };
 
 const onSavedViewCreate = async payload => {
@@ -1894,6 +2048,10 @@ const runBulkAction = async (action, payload = {}) => {
       payload,
     });
     useAlert(t('CRM_KANBAN.BULK.DONE', { count: listSelection.value.length }));
+    if (listaAcao.value) {
+      store.dispatch('crmKanban/setListSelection', []);
+      listaAcaoRef.value?.recarregar();
+    }
   } catch {
     useAlert(t('CRM_KANBAN.EDIT.ERROR'));
   }
@@ -2369,6 +2527,49 @@ const setViewMode = mode => {
   });
 };
 
+// #2095: as ações da página que Arquivados usa (declaradas acima deste ponto).
+arquivados.ligar({
+  recarregarVista: () => loadActiveView(true),
+  fecharCard: closeDrawer,
+  abrirCard: (card, aba = null) =>
+    openCardDrawer({ id: card.id }, { initialTab: aba }),
+  atualizarCardAberto: async id => {
+    if (showDrawer.value && selectedCard.value?.id === id)
+      await refreshSelectedCard();
+  },
+  funilPorId: id => pipelines.value.find(item => item.id === Number(id)),
+  irParaALista: async (pipelineId, status) => {
+    if (pipelineId && pipelines.value.some(p => p.id === Number(pipelineId)))
+      currentPipelineId.value = Number(pipelineId);
+    setViewMode('list');
+    await selectResult(status);
+  },
+  recarregarFunis: async preferido => {
+    const lista = await store.dispatch('crmKanban/fetchPipelines');
+    const proximo =
+      lista.find(item => item.id === Number(preferido)) ||
+      lista.find(item => item.is_default) ||
+      lista[0];
+    currentPipelineId.value = proximo?.id || '';
+    closePipelineDrawer();
+  },
+  juntar: nomes =>
+    new Intl.ListFormat(String(locale.value).replace('_', '-'), {
+      style: 'long',
+      type: 'conjunction',
+    }).format(nomes),
+});
+const abrirArquivadosDosFiltros = () => {
+  showFiltersDrawer.value = false;
+  arquivados.abrirPainel();
+};
+const abrirCardArquivado = linha => {
+  arquivados.painelAberto.value = false;
+  openCardFromBoard({ id: linha.id });
+};
+const carregarEtapasDoFunil = id =>
+  store.dispatch('crmKanban/fetchPipelineStages', id);
+
 useEmitter(BUS_EVENTS.WEBSOCKET_RECONNECT_COMPLETED, handleRealtimeConnected);
 useEmitter(BUS_EVENTS.CRM_BOARD_REFETCH, handleServerFilterRefetch);
 // Com o quadro já aberto, a URL com `card_id` não reabre um card que já passou
@@ -2420,8 +2621,24 @@ onUnmounted(() => {
       v-if="!calendarioOuro"
       class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-n-weak px-6 py-3 sm:px-8"
     >
-      <div class="flex min-w-0 flex-wrap items-center gap-4">
-        <h1 class="mb-0 text-2xl font-semibold text-n-slate-12">
+      <div
+        class="flex min-w-0 flex-wrap items-center gap-4"
+        :class="{ 'max-md:contents': listaAcao }"
+      >
+        <h1 v-if="listaAcao" class="mb-0 max-md:order-1">
+          <ChoiceSelect
+            :model-value="currentPipelineId"
+            :options="pipelineGroups.length ? [] : pipelineOptions"
+            :groups="pipelineGroups"
+            :aria-label="t('CRM_LISTA_ACAO.FUNIL')"
+            :disabled="!hasPipelines"
+            fit-selected
+            data-lista-acao-funil
+            class="[&>button]:!h-11 [&>button]:!rounded-xl [&>button]:!bg-transparent [&>button]:!text-2xl [&>button]:!font-semibold [&>button]:!outline-0 hover:[&>button]:!bg-n-alpha-2"
+            @update:model-value="escolherFunil"
+          />
+        </h1>
+        <h1 v-else class="mb-0 text-2xl font-semibold text-n-slate-12">
           {{
             isCalendarOnly ? t('SIDEBAR.CRM_CALENDAR') : t('CRM_KANBAN.TITLE')
           }}
@@ -2429,7 +2646,11 @@ onUnmounted(() => {
         <div
           v-if="!isCalendarOnly"
           class="flex items-center rounded-xl bg-n-alpha-2 p-1"
-          :class="{ 'flex-wrap': menuNovo }"
+          :class="
+            listaAcao
+              ? 'max-md:order-3 max-md:grid max-md:w-full max-md:grid-cols-4'
+              : { 'flex-wrap': menuNovo }
+          "
           role="group"
           :aria-label="t('CRM_KANBAN.VIEWS.LABEL')"
         >
@@ -2438,23 +2659,28 @@ onUnmounted(() => {
             :key="mode.id"
             type="button"
             class="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-            :class="
+            :class="[
               viewMode === mode.id
                 ? '!font-bold bg-n-surface-2 text-n-slate-12 shadow-sm'
-                : ''
-            "
+                : '',
+              listaAcao ? ABA_DA_LISTA_ACAO : '',
+            ]"
             :aria-pressed="viewMode === mode.id"
             @click="setViewMode(mode.id)"
           >
             <span :class="mode.icon" class="size-3.5" aria-hidden="true" />
             {{ mode.label }}
           </button>
-          <CrmAbaNumeros />
+          <CrmAbaNumeros :class="listaAcao ? ABA_DA_LISTA_ACAO : ''" />
         </div>
       </div>
 
-      <div class="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+      <div
+        class="flex min-w-0 flex-wrap items-center gap-2 sm:w-auto"
+        :class="listaAcao ? 'ms-auto max-md:order-2' : 'w-full'"
+      >
         <Button
+          v-if="!listaAcao"
           icon="i-lucide-refresh-cw"
           slate
           outline
@@ -2468,15 +2694,22 @@ onUnmounted(() => {
           v-if="canManageCards && viewMode !== 'calendar'"
           :label="
             t(
-              funilDeVenda
-                ? 'CRM_KANBAN.ACTIONS.NEW_CARD'
-                : 'CRM_KANBAN.ACTIONS.NEW_CARD_ATENDER'
+              listaAcao && funilDeVenda
+                ? 'CRM_LISTA_ACAO.NOVO_CLIENTE'
+                : funilDeVenda
+                  ? 'CRM_KANBAN.ACTIONS.NEW_CARD'
+                  : 'CRM_KANBAN.ACTIONS.NEW_CARD_ATENDER'
             )
           "
           icon="i-lucide-plus"
           data-crm-new-card
           :disabled="!hasPipelines || isLoading"
           class="order-2 !rounded-lg min-h-11 !font-bold"
+          :class="
+            listaAcao
+              ? '!rounded-xl !bg-n-solid-1 !text-n-slate-12 !outline-n-weak hover:enabled:!bg-n-alpha-2'
+              : ''
+          "
           @click="openCreateDrawer"
         />
         <Button
@@ -2491,11 +2724,7 @@ onUnmounted(() => {
           @click="openBooking"
         />
         <Popover
-          v-if="
-            canManagePipelines ||
-            canOpenInboxSettings ||
-            (!isCalendarOnly && canManageAi)
-          "
+          v-if="podeConfigurar"
           ref="configurationPopover"
           align="end"
           class="order-1"
@@ -2506,13 +2735,21 @@ onUnmounted(() => {
               icon="i-lucide-settings-2"
               slate
               outline
+              data-crm-configurar
               class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
+              :class="
+                listaAcao
+                  ? 'max-lg:invisible max-lg:!w-0 max-lg:!min-w-0 max-lg:!p-0 max-lg:!outline-0 max-lg:overflow-hidden'
+                  : ''
+              "
+              :aria-label="t('CRM_KANBAN.ACTIONS.CONFIGURE')"
             />
           </template>
           <template #content>
             <div class="grid w-72 gap-1 p-2">
               <p
-                class="mb-1 px-2 py-1 text-xs font-medium uppercase tracking-wide text-n-slate-10"
+                class="mb-1 px-2 py-1 text-xs font-medium text-n-slate-10"
+                :class="listaAcao ? 'text-sm' : 'uppercase tracking-wide'"
               >
                 {{ t('CRM_KANBAN.ACTIONS.CONFIGURE') }}
               </p>
@@ -2555,6 +2792,23 @@ onUnmounted(() => {
                 class="w-full"
                 @click="runConfigurationAction(openInboxSettingsDrawer)"
               />
+              <template v-if="!isCalendarOnly && arquivadosLigado">
+                <hr class="my-1 border-n-weak" />
+                <Button
+                  data-config-funis-arquivados
+                  :label="
+                    t('CRM_ARQUIVADOS.FUNIS.TITULO_N', {
+                      count: arquivados.totalDeFunis.value,
+                    })
+                  "
+                  icon="i-lucide-archive"
+                  slate
+                  ghost
+                  start
+                  class="w-full"
+                  @click="runConfigurationAction(arquivados.abrirFunis)"
+                />
+              </template>
             </div>
           </template>
         </Popover>
@@ -2562,17 +2816,19 @@ onUnmounted(() => {
     </header>
 
     <section
-      v-if="viewMode !== 'calendar'"
+      v-if="viewMode !== 'calendar' && !listaAcao"
       class="flex shrink-0 flex-col gap-3 border-b border-n-weak bg-n-surface-1 px-6 py-3 sm:px-8"
     >
       <div class="flex flex-wrap items-end gap-3">
         <div class="flex items-center gap-2">
           <ChoiceSelect
-            v-model="currentPipelineId"
-            :options="pipelineOptions"
+            :model-value="currentPipelineId"
+            :options="pipelineGroups.length ? [] : pipelineOptions"
+            :groups="pipelineGroups"
             :aria-label="t('CRM_KANBAN.FILTERS.PIPELINE')"
             :disabled="!hasPipelines"
             class="w-44 sm:w-52 [&>button]:!min-h-11 [&>button]:!rounded-lg [&>button]:!bg-n-surface-1 [&>button]:!font-bold"
+            @update:model-value="escolherFunil"
           />
           <Button
             v-if="canManagePipelines"
@@ -2607,16 +2863,6 @@ onUnmounted(() => {
           class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
           :aria-expanded="showFiltersDrawer"
           @click="showFiltersDrawer = true"
-        />
-        <Button
-          :label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI')"
-          icon="i-lucide-sparkles"
-          slate
-          outline
-          class="!rounded-lg min-h-11 !outline-n-weak bg-n-surface-1"
-          disabled
-          :title="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
-          :aria-label="t('CRM_KANBAN.ACTIONS.FIND_WITH_AI_UNAVAILABLE')"
         />
         <CrmKanbanZoom
           v-if="viewMode === 'kanban'"
@@ -2686,7 +2932,12 @@ onUnmounted(() => {
       :stale-choices="staleChoices"
       :linked-choices="linkedChoices"
       :result-choices="resultChoices"
-      :can-manage-ai="canManageAi"
+      :arquivados="
+        arquivadosLigado && viewMode !== 'calendar'
+          ? (arquivados.totalDoFunil.value ?? 0)
+          : null
+      "
+      @abrir-arquivados="abrirArquivadosDosFiltros"
       @close="showFiltersDrawer = false"
       @apply="applyFiltersFromDrawer"
       @clear="clearFiltersFromDrawer"
@@ -2867,6 +3118,50 @@ onUnmounted(() => {
     </section>
 
     <section
+      v-else-if="listaAcao"
+      class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    >
+      <ListaAcao
+        ref="listaAcaoRef"
+        :pipeline-id="currentPipelineId"
+        :pipeline="selectedPipeline"
+        :filtros="storedFilters"
+        :filtros-ativos="filtrosDaListaAcao"
+        :meu-id="currentUser?.id"
+        :meu-nome="currentUser?.name || ''"
+        :pessoas="agents"
+        :fuso="fusoDaListaAcao"
+        :pode-passar="canManageCards"
+        :pode-mexer="canManageCards"
+        :pode-baixar="canExportCrm"
+        :pode-marcar="canBulkAct"
+        :pode-configurar="podeConfigurar"
+        :selecionados="listSelection"
+        @filtros="showFiltersDrawer = true"
+        @configurar="abrirConfiguracao"
+        @abrir="openCardFromBoard"
+        @conversa="openCardConversation"
+        @selecionar="ids => store.dispatch('crmKanban/setListSelection', ids)"
+        @limpar-filtros="clearFilters"
+      />
+      <CrmBulkActionBar
+        :count="listSelection.length"
+        :ids="listSelection"
+        :permissions="bulkPermissions"
+        :stages="stages"
+        :owners="agents"
+        :blocked-owner-ids="[]"
+        :pipeline="selectedPipeline"
+        :is-busy="uiFlags.isBulkActing"
+        @move="onBulkMove"
+        @assign="onBulkAssign"
+        @status="onBulkStatus"
+        @archive="onBulkArchive"
+        @clear="onBulkClear"
+      />
+    </section>
+
+    <section
       v-else-if="viewMode === 'list'"
       class="flex min-h-0 flex-1 flex-col px-8 py-5"
     >
@@ -2907,7 +3202,7 @@ onUnmounted(() => {
         :show-meta-column="isMetaSyncActive"
         :loading="uiFlags.isFetchingCardsList"
         :error="!!loadError"
-        :sort="listSort"
+        :sort="ordemPermitida(listSort)"
         :group-by="listGroupBy"
         :column-state="listColumnState"
         :selected-ids="listSelection"
@@ -2928,6 +3223,7 @@ onUnmounted(() => {
       />
       <CrmBulkActionBar
         :count="listSelection.length"
+        :ids="listSelection"
         :permissions="bulkPermissions"
         :stages="stages"
         :owners="agents"
@@ -3089,6 +3385,11 @@ onUnmounted(() => {
       :is-fetching-follow-ups="uiFlags.isFetchingFollowUps"
       :is-saving-follow-up="uiFlags.isSavingFollowUp"
       :meetings-enabled="isMeetingFeatureEnabled"
+      :arquivados-ligado="arquivadosLigado"
+      :erro-arquivar="arquivados.erroArquivarCard.value"
+      :restaurando="arquivados.restaurandoCard.value"
+      :erro-restaurar="arquivados.erroRestaurarCard.value"
+      @restaurar="arquivados.restaurarCardAberto(selectedCard)"
       @save="saveCard"
       @move="moveCardFromDetails"
       @archive="archiveCard"
@@ -3139,6 +3440,43 @@ onUnmounted(() => {
       :agents="agents"
       @close="closeBookingProfilesDrawer"
     />
+
+    <template v-if="arquivadosLigado">
+      <PainelArquivados
+        :ref="el => (arquivados.painel.value = el)"
+        :show="arquivados.painelAberto.value"
+        :funil="selectedPipeline"
+        :funis="pipelines"
+        :pode-arquivar="canDeleteCards"
+        :restaurar="arquivados.restaurar"
+        @close="arquivados.painelAberto.value = false"
+        @abrir-card="abrirCardArquivado"
+        @ver-funis-arquivados="arquivados.abrirFunis"
+        @mudou="arquivados.depoisDeMudar"
+      />
+      <PainelFunisArquivados
+        :show="arquivados.funisAbertos.value"
+        :pode-gerenciar="canManagePipelines"
+        @close="arquivados.funisAbertos.value = false"
+        @restaurado="arquivados.funilRestaurado"
+      />
+      <RestaurarConflito
+        :ref="el => (arquivados.dialogoConflito.value = el)"
+        :conflito="arquivados.conflito.value"
+        :ocupado="arquivados.conflitoOcupado.value"
+        :erro="arquivados.conflitoErro.value"
+        @abrir-aberto="arquivados.abrirOAberto"
+        @restaurar-mesmo-assim="arquivados.restaurarMesmoAssim"
+        @close="arquivados.aoFecharConflito"
+      />
+      <ArquivarFunilDialogo
+        ref="arquivarFunilDialogo"
+        :carregar-etapas="carregarEtapasDoFunil"
+        @arquivado="arquivados.funilArquivado"
+        @criar-funil="openCreatePipelineDrawer"
+      />
+      <CrmAviso />
+    </template>
 
     <ConfirmModal
       ref="confirmModal"

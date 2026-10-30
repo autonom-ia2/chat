@@ -37,8 +37,13 @@ RSpec.describe 'Contact opportunities role boundaries', type: :request do
     expect(response.parsed_body).not_to have_key('meta')
   end
 
-  it 'does not equate management permission with CRM viewing permission' do
+  # #2124: a CRM editing key brings crm_view along; CRM reports alone still do not open the cards.
+  it 'treats a CRM editing key as CRM viewing, but not CRM reports alone' do
     role.update!(permissions: %w[contact_view crm_manage_cards])
+    get url, headers: auth_headers(agent)
+    expect(response).to have_http_status(:ok)
+
+    role.update!(permissions: %w[contact_view crm_view_reports])
     get url, headers: auth_headers(agent)
     expect(response).to have_http_status(:unauthorized)
   end

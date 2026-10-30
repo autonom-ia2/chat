@@ -8,6 +8,7 @@
     "NO_RESULTS": "Nenhuma caixa de entrada encontrada correspondente à sua busca",
     "RECONNECTION_REQUIRED": "Sua caixa de entrada está desconectada. Você não receberá novas mensagens até reautorizar.",
     "CLICK_TO_RECONNECT": "Clique aqui para reconectar.",
+    "RECONNECTION_ASK_INTEGRATIONS": "Peça a quem cuida das integrações para reconectar.",
     "WHATSAPP_REGISTRATION_INCOMPLETE": "Seu registro no WhatsApp Business não foi concluído. Verifique o status do seu nome de exibição no Meta Business Manager antes de reconectar.",
     "COMPLETE_REGISTRATION": "Concluir registro",
     "LIST": {
@@ -141,7 +142,8 @@
         "CHANNEL_WEBHOOK_URL": {
           "LABEL": "URL do webhook",
           "PLACEHOLDER": "Insira o URL do seu webhook",
-          "ERROR": "Por favor, insira uma URL válida"
+          "ERROR": "Por favor, insira uma URL válida",
+          "ONLY_INTEGRATIONS": "Só quem cuida das integrações troca este endereço."
         },
         "CHANNEL_WEBHOOK_SECRET": {
           "LABEL": "Segredo do Webhook",
@@ -1066,7 +1068,8 @@
         "DESCRIPTION": "Habilite chamadas de voz nesta caixa de entrada. Agentes poderão fazer e receber chamadas telefônicas."
       },
       "CREDENTIALS": {
-        "DESCRIPTION": "Chamada de voz requer credenciais de chave da API Twilio. Elas são usadas para gerar tokens para conexões de voz do agente."
+        "DESCRIPTION": "Chamada de voz requer credenciais de chave da API Twilio. Elas são usadas para gerar tokens para conexões de voz do agente.",
+        "ONLY_INTEGRATIONS": "Só quem cuida das integrações coloca estas chaves."
       },
       "INBOUND": {
         "LABEL": "Permitir chamadas de entrada",
@@ -1969,6 +1972,7 @@
       "TWITTER_PROFILE": "Twitter",
       "TWILIO_SMS": "SMS Twilio",
       "WHATSAPP": "WhatsApp",
+      "WHATSAPP_CELULAR": "WhatsApp do celular",
       "SMS": "SMS",
       "EMAIL": "E-mail",
       "TELEGRAM": "Telegram",

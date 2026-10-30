@@ -9,6 +9,11 @@ import {
 } from './helper/filterHelper.js';
 import { groupFilterTypes } from './helper/filterAttributeIcons.js';
 import countries from 'shared/constants/countries.js';
+import { useRelacaoLigada } from 'dashboard/components-next/contato-relacao/useRelacaoLigada';
+import {
+  RELACOES,
+  chaveDoTexto,
+} from 'dashboard/components-next/contato-relacao/relacaoDoContato';
 
 /**
  * @typedef {Object} FilterOption
@@ -54,6 +59,7 @@ export function useContactFilterContext() {
 
   const contactAttributes = useMapGetter('attributes/getContactAttributes');
   const labels = useMapGetter('labels/getLabels');
+  const relacaoLigada = useRelacaoLigada();
 
   const {
     equalityOperators,
@@ -61,6 +67,29 @@ export function useContactFilterContext() {
     dateOperators,
     getOperatorTypes,
   } = useOperators();
+
+  // #2084/#2085 — "Este contato é", só com a chave `contato_relacao` da conta.
+  const relacaoFilterTypes = computed(() =>
+    relacaoLigada.value
+      ? [
+          {
+            attributeKey: CONTACT_ATTRIBUTES.RELACAO,
+            value: CONTACT_ATTRIBUTES.RELACAO,
+            attributeName: t('PAINEL_DO_CONTATO.RELACAO.TITULO'),
+            label: t('PAINEL_DO_CONTATO.RELACAO.TITULO'),
+            icon: 'i-lucide-handshake',
+            inputType: 'searchSelect',
+            options: RELACOES.map(relacao => ({
+              id: relacao,
+              name: t(chaveDoTexto(relacao, 'ROTULO')),
+            })),
+            dataType: 'text',
+            filterOperators: equalityOperators.value,
+            attributeModel: 'standard',
+          },
+        ]
+      : []
+  );
 
   /**
    * @type {import('vue').ComputedRef<FilterType[]>}
@@ -202,6 +231,7 @@ export function useContactFilterContext() {
       filterOperators: equalityOperators.value,
       attributeModel: 'standard',
     },
+    ...relacaoFilterTypes.value,
     ...customFilterTypes.value,
   ]);
 

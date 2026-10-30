@@ -11,11 +11,18 @@ RSpec.describe Crm::MetaAds::SemLogin do
     create(:channel_whatsapp, account: target, phone_number: phone, sync_templates: false, validate_provider_config: false)
   end
 
-  it 'vale só com a flag, WhatsApp oficial e sem conexão nenhuma, mesmo caída ou sem conta escolhida' do
+  it 'vale com a flag e WhatsApp oficial enquanto não há conexão ativa com conta de anúncios (#2054)' do
     official_whatsapp
     expect(described_class.whatsapp_panel?(account)).to be(true)
+    expect(described_class.payload(account, admin)).to include(enabled: true, connection_state: nil, connection_mode: nil)
 
-    Crm::MetaAdsConnection.create!(account: account, mode: 'partner', status: 'invalid')
+    connection = create_meta_ads_connection(account).tap { |row| row.update!(mode: 'facebook_login') }
+    expect(described_class.payload(account, admin)).to include(enabled: true, connection_state: 'choosing', connection_mode: 'facebook_login')
+
+    connection.update!(ad_account_id: '999', status: 'invalid')
+    expect(described_class.payload(account, admin)).to include(enabled: true, connection_state: 'broken')
+
+    connection.update!(status: 'active')
     expect(described_class.whatsapp_panel?(account)).to be(false)
     expect(described_class.payload(account, admin)).to eq(enabled: false)
   end

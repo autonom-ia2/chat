@@ -14,8 +14,8 @@ class Crm::Numeros::EquipePct
     alvo = metas.sum(&:last)
     return if alvo.zero?
 
-    ganho = @account.crm_cards.where(pipeline_id: metas.map(&:first), status: Crm::Card.statuses[:won], currency: @moeda,
-                                     closed_at: @range).sum(:value_cents)
+    ganho = Crm::Relacao.cards_do_funil(@account).where(pipeline_id: metas.map(&:first), currency: @moeda, closed_at: @range)
+                        .com_desfecho(:won).sum(:value_cents)
     ((ganho.to_f / alvo) * 100).round
   end
 

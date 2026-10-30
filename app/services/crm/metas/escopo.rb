@@ -72,11 +72,12 @@ class Crm::Metas::Escopo
   end
 
   def abertos_por_dono
-    @abertos_por_dono ||= @account.crm_cards.where(status: Crm::Card.statuses[:open]).where.not(owner_id: nil)
-                                  .distinct.pluck(:owner_id, :pipeline_id)
-                                  .each_with_object(Hash.new { |hash, chave| hash[chave] = [] }) do |(dono, funil), mapa|
-                                    mapa[dono] << funil
-                                  end
+    @abertos_por_dono ||= begin
+      abertos = Crm::Relacao.cards_do_funil(@account).where(status: Crm::Card.statuses[:open]).where.not(owner_id: nil)
+      abertos.distinct.pluck(:owner_id, :pipeline_id).each_with_object(Hash.new { |hash, chave| hash[chave] = [] }) do |(dono, funil), mapa|
+        mapa[dono] << funil
+      end
+    end
   end
 
   def com_meta

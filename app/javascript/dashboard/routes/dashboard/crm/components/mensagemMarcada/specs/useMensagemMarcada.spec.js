@@ -1,6 +1,8 @@
 import { flushPromises } from '@vue/test-utils';
 import { ref } from 'vue';
 import { usaGavetaNova, useMensagemMarcada } from '../useMensagemMarcada';
+import en from 'dashboard/i18n/locale/en/crm.json';
+import ptBR from 'dashboard/i18n/locale/pt_BR/crm.json';
 
 const getFollowUpMessagingWindow = vi.fn();
 vi.mock('dashboard/api/crmKanban', () => ({
@@ -200,6 +202,26 @@ describe('useMensagemMarcada', () => {
     dispatch.mockRejectedValue(new Error('rede'));
     await m.criar({ titulo: 'x' });
     expect(m.erro.value).toBe('GERAL');
+  });
+
+  // #2130: card arquivado não recebe mensagem marcada; a tela diz o motivo.
+  it('o 422 de card arquivado vira o erro ARQUIVADO, com texto em en e pt_BR', async () => {
+    const { store, dispatch } = novaLoja();
+    dispatch.mockRejectedValue({
+      response: { status: 422, data: { code: 'card_archived' } },
+    });
+    const m = useMensagemMarcada({ store, fuso: ref('America/Sao_Paulo') });
+    m.escolherAlvo(card());
+    marcarAmanha(m);
+    m.mensagem.value = { texto: 'Oi!', modelo: null };
+
+    expect(await m.criar({ titulo: 'x' })).toBe(false);
+    expect(m.erro.value).toBe('ARQUIVADO');
+    [en, ptBR].forEach(catalogo =>
+      expect(catalogo.CRM_MENSAGEM_MARCADA.CONFIRMAR.ERRO.ARQUIVADO).toContain(
+        'card'
+      )
+    );
   });
 
   it('clique duplo em "Marcar mensagem" faz uma ida só ao servidor', async () => {

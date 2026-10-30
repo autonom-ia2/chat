@@ -108,6 +108,7 @@ const setPermissions = overrides => {
     canManagePipelines: ref(true),
     canManageAi: ref(true),
     canExportCrm: ref(false),
+    canSeeSalesValues: ref(true),
     ...Object.fromEntries(
       Object.entries(overrides).map(([key, value]) => [key, ref(value)])
     ),
@@ -123,6 +124,7 @@ const setGetters = ({
   keys,
   menuNovo = false,
   agents = [],
+  filters = {},
 } = {}) => {
   Object.assign(storeGetters, {
     getCurrentRole: ref(role),
@@ -142,7 +144,7 @@ const setGetters = ({
     'crmKanban/getFollowUps': ref([]),
     'crmKanban/getCalendarEvents': ref([]),
     'crmKanban/getUIFlags': ref({}),
-    'crmKanban/getFilters': ref({}),
+    'crmKanban/getFilters': ref(filters),
     'crmKanban/getListPrefs': ref({}),
     'crmKanban/getListSort': ref({}),
     'crmKanban/getListGroupBy': ref(''),
@@ -429,6 +431,19 @@ describe('CrmKanbanPage', () => {
       });
       expect(wrapper.text()).toContain('CRM_FILTRO_DO_LINK.FECHADO_NO_MES');
       expect(replace).toHaveBeenLastCalledWith({ query: { view: 'list' } });
+    });
+
+    // #2150 — sem crm_manage_ai o servidor ignora "Pendente de IA": o chip não finge que o filtro vale.
+    it('o chip "Pendente de IA" só aparece com crm_manage_ai', async () => {
+      route.name = 'crm_kanban_index';
+      route.query = { pipeline_id: '1' };
+      const account = { filters: { aiPending: true } };
+      wrapper = await mountPage({ account });
+      expect(wrapper.text()).toContain('CRM_KANBAN.FILTERS.AI_PENDING');
+      wrapper.unmount();
+
+      wrapper = await mountPage({ account, perms: { canManageAi: false } });
+      expect(wrapper.text()).not.toContain('CRM_KANBAN.FILTERS.AI_PENDING');
     });
 
     it('sem filtro no link, a sessão segue com o filtro que já tinha', async () => {

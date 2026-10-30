@@ -1,6 +1,7 @@
 require 'rails_helper'
 
-# Carga das ligações dos últimos 90 dias (#1073, F2b): só banco, uma por conexão, avisa a tela no fim.
+# Carga das ligações (#1073, F2b): só banco, uma por conexão, avisa a tela no fim. Desde o #2054 cobre o "desde o
+# início" do painel (37 meses) e o toque legado em `campaign`.
 RSpec.describe Crm::MetaAds::LinksBackfillJob do
   let(:account) { create(:account) }
   let(:connection) { create_meta_ads_insights_connection(account) }
@@ -15,16 +16,19 @@ RSpec.describe Crm::MetaAds::LinksBackfillJob do
     expect(described_class.start(connection)).to be(false)
   end
 
-  it 'liga as conversas com toque dos últimos 90 dias, marca a carga, avisa a tela e solta a marca' do
+  it 'liga as conversas com toque do histórico do painel, marca a carga, avisa a tela e solta a marca' do
     create(:user, account: account, role: :administrator)
     recent = create(:conversation, account: account, additional_attributes: { 'campaign_touches' => [ctwa_touch] })
-    old = create(:conversation, account: account, additional_attributes: { 'campaign_touches' => [ctwa_touch.merge('ctwa_clid' => 'clid-old')] })
-    old.update_columns(updated_at: 100.days.ago) # rubocop:disable Rails/SkipsModelValidations
+    months_ago = create(:conversation, account: account, additional_attributes: { 'campaign_touches' => [ctwa_touch.merge('ctwa_clid' => 'clid-m')] })
+    months_ago.update_columns(updated_at: 200.days.ago) # rubocop:disable Rails/SkipsModelValidations
+    legacy = create(:conversation, account: account, additional_attributes: { 'campaign' => ctwa_touch.merge('ctwa_clid' => 'clid-legacy') })
+    too_old = create(:conversation, account: account, additional_attributes: { 'campaign_touches' => [ctwa_touch.merge('ctwa_clid' => 'clid-old')] })
+    too_old.update_columns(updated_at: 40.months.ago) # rubocop:disable Rails/SkipsModelValidations
     described_class.start(connection)
 
     expect { described_class.perform_now(connection.id) }.to have_enqueued_job(ActionCableBroadcastJob)
 
-    expect(Crm::MetaAdLink.pluck(:conversation_id)).to eq([recent.id])
+    expect(Crm::MetaAdLink.pluck(:conversation_id)).to contain_exactly(recent.id, months_ago.id, legacy.id)
     expect(connection.reload.links_backfilled_at).to be_present
     expect(described_class.start(connection)).to be(true)
   end

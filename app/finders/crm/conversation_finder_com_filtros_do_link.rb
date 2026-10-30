@@ -1,6 +1,9 @@
 # Por cima do ConversationFinder do Chatwoot (Números F2, #1883): os botões do Números abrem a caixa já filtrada.
 # - `da_ia=1`: só as conversas que um agente de IA passou para uma pessoa da equipe (Crm::Passagem.da_ia_para_equipe).
 # - `esperando_min=N` (1 a 1440): só as que esperam alguém há mais de N minutos (waiting_since). Outro valor é ignorado.
+# - `no_funil=1` (Números F5, #1992): só as de cliente com card num funil que a pessoa vê no Números
+#   (Crm::Access::VisiblePipelines#apply_to_reports), pelo card principal ou pelo vínculo (crm_card_conversations). É o
+#   escopo da visão "Equipe": a conversa de um funil que o gestor não vê, em que ele só participa, não entra.
 # Entram no `set_up`, depois do filtro de sempre e da visibilidade: as contagens das abas seguem a mesma regra, e o link
 # não mostra nada que a pessoa já não veria. No Spam e na Lixeira do e-mail, a pasta manda e estes filtros não valem.
 # Sem os parâmetros, nada muda: só quem abre o link vê a lista filtrada (por isso sem chave de recurso).
@@ -15,6 +18,7 @@ module Crm::ConversationFinderComFiltrosDoLink
 
     filtrar_recebidas_da_ia if params[:da_ia] == '1'
     filtrar_esperando if minutos_esperando
+    filtrar_no_funil if params[:no_funil] == '1'
   end
 
   # A passagem gravada, ou a marca de espera de pessoa: o robô passou e ninguém estava online, então a Entrega não
@@ -35,6 +39,15 @@ module Crm::ConversationFinderComFiltrosDoLink
                                       'conversations.additional_attributes::text LIKE :no_texto))',
                                       { chave: chave, no_texto: "%#{chave}%" }
                                     ])
+  end
+
+  def filtrar_no_funil
+    funis = Crm::Access::VisiblePipelines.new(user: current_user, account: current_account)
+                                         .apply_to_reports(current_account.crm_pipelines).select(:id)
+    cards = Crm::Card.where(account_id: current_account.id, pipeline_id: funis)
+    principais = cards.where.not(conversation_id: nil).select(:conversation_id)
+    vinculadas = Crm::CardConversation.where(account_id: current_account.id, card_id: cards.select(:id)).select(:conversation_id)
+    @conversations = @conversations.where(id: Conversation.where(id: principais).or(Conversation.where(id: vinculadas)).select(:id))
   end
 
   def filtrar_esperando

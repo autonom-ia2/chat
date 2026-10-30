@@ -12,7 +12,8 @@ module Autonomia
       #
       # SEM HANDOFF DE SISTEMA NA RESPOSTA: "passar para humano" é TEXTO da instrução e a resposta
       # postada não muda. O que o sinal `should_handoff` da instrução faz (#284) é fechar o ciclo do
-      # ai_assignee: `conversation.bot_handoff!` (solta o espelho, abre a conversa) + evento handed_off.
+      # ai_assignee: `conversation.bot_handoff!` (solta o espelho, abre a conversa) + evento handed_off. Com a flag
+      # `agente_so_informa` (#2154), o agente não passa: o sinal vira registro e a IA de Atribuição decide depois da fala.
       #
       # ANTI-LOOP: a mensagem postada é OUTGOING (sender AgentBot), logo NUNCA é incoming e o
       # MessageListener a ignora. SEGURANÇA/IP: só o texto destinado ao cliente é postado; nunca
@@ -100,6 +101,14 @@ module Autonomia
           falha_no_turno(e)
         end
 
+        # #2154: o turno segue depois deste Responder (a cadeia de pedaços assumiu a marca, ou o dono novo refaz o turno).
+        # Quem abriu a marca (ReplyJob#settle) só a solta quando não segue.
+        def turno_segue? = @turno_segue == true
+
+        # #2154: o turno desta mensagem já tem resposta do robô (a consulta de idempotência, already_replied?). O
+        # ReplyJob#settle pergunta quando a posse do turno já foi tomada.
+        def respondida? = already_replied?
+
         # A resposta do agente é o sinal de silêncio? (compara o texto inteiro, normalizado, com o(s)
         # token(s) de silêncio). A instrução é quem decide emitir o sinal; aqui o sistema só HONRA.
         def silence_signal?(result)
@@ -153,7 +162,13 @@ module Autonomia
         # Best-effort: nunca derruba a resposta já postada.
         def handoff_if_signaled(result)
           return unless result&.handoff&.dig(:should)
+          return avisou_que_chama_alguem(result) if agente_so_informa?
 
+          passar_a_conversa(result)
+        end
+
+        # O caminho de sempre do sinal (sem a flag `agente_so_informa`, e no evento da cotação): bot_handoff! sob lock.
+        def passar_a_conversa(result)
           released = false
           @conversation.with_lock do
             if bot_still_in_command?
@@ -168,6 +183,36 @@ module Autonomia
         rescue StandardError => e
           Rails.logger.warn("[autonomia][operate] handoff_signal_failed agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
           nil
+        end
+
+        # #2154 (flag `agente_so_informa`, regra do Rodrigo de 24/10): nenhum agente nosso passa a conversa. O sinal da
+        # instrução vira o registro do turno, e o agente segue atendendo. Quem decide passar é a IA de Atribuição, DEPOIS
+        # que a fala saiu: na entrega de uma mensagem só (e na de voz), já saiu, e o registro e a avaliação são daqui; na
+        # entrega em pedaços, é o ChunkedDeliveryJob (pela marca no meta): o registro no 1º pedaço postado, a avaliação no
+        # último. Sem fala (silêncio, já respondido), nada. Sem a NotaDoEncaminhamento: a conversa não foi encaminhada; as
+        # recusas ficam guardadas até a passagem, para a nota que sai quando a Atribuição de fato entrega.
+        def avisou_que_chama_alguem(result)
+          ::Autonomia::Agents::Tools::RecusasRecentes.guardar_ate_a_passagem(@conversation.id)
+          mensagem = @entrega&.message
+          return if mensagem.blank?
+
+          aviso = ::Autonomia::Agents::AgenteSoInforma
+          aviso.fala_comecou!(agent: @agent, conversation: @conversation, reason: result.handoff[:reason], message: mensagem)
+          aviso.fala_terminou!(@conversation)
+        end
+
+        # Lido pelo ResponderAoEvento, que fica fora do #2154.
+        def agente_so_informa?
+          ::Autonomia::Agents::AgenteSoInforma.ligada?(@conversation.account)
+        end
+
+        # A marca que faz o 1º pedaço registrar o aviso e o último pedir a avaliação (#2154), com o motivo já curado (só o
+        # código da allowlist viaja no job). Vazia quando o turno não avisou ou sem a flag.
+        def marca_do_aviso(result)
+          return {} unless result&.handoff&.dig(:should) && agente_so_informa?
+
+          motivo = ::Autonomia::Agents::Operate::EventLogger.curated_reason(result)
+          { ::Autonomia::Agents::AgenteSoInforma::META => { 'motivo' => motivo } }
         end
 
         # A porta bloqueou (fora do público-alvo / fora do horário): o agente NÃO responde e passa a
@@ -331,17 +376,30 @@ module Autonomia
           # nunca engole a resposta silenciosamente.
           return classic_deliver(result) if chunks.empty?
 
-          # `used_entry_ids` viaja no meta (só ids) para o job registrar as fontes no evento replied.
-          meta = {
-            'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge,
-            'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result),
-            'posse' => @posse, **metadata_da_memoria
-          }
+          passar_o_turno_a_cadeia
           ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: @conversation, agent_inbox: @agent_inbox).on
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
             .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
-            .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta)
+            .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta_dos_pedacos(result))
           Result.replied(nil)
+        end
+
+        # #2154: a cadeia de pedaços assume a marca do turno (Operate::TurnoEmCurso), ANTES de ser agendada: renova com o
+        # TTL da cadeia, só se a marca ainda é deste turno. Só com a flag.
+        def passar_o_turno_a_cadeia
+          return unless agente_so_informa?
+
+          ::Autonomia::Agents::Operate::TurnoEmCurso.renovar(@conversation.id, @reply_to_message_id)
+          @turno_segue = true
+        end
+
+        # `used_entry_ids` viaja no meta (só ids) para o job registrar as fontes no evento replied. #2154: a marca do aviso.
+        def meta_dos_pedacos(result)
+          {
+            'confidence' => result.confidence, 'answered_from_knowledge' => result.answered_from_knowledge,
+            'used_entry_ids' => ::Autonomia::Agents::Operate::EventLogger.used_entry_ids(result),
+            'posse' => @posse, **metadata_da_memoria, **marca_do_aviso(result)
+          }
         end
 
         # As guardas baratas da entrega em pedaços, na ordem de sempre. -> o Result de quem não agenda, ou nil.
@@ -432,6 +490,7 @@ module Autonomia
           ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: @conversation, message_id: @reply_to_message_id,
                                                                origem: :responder, quem_perdeu: @agent_inbox,
                                                                posse_de_quem_perdeu: @posse)
+          @turno_segue = true # #2154: o mesmo turno segue com o dono novo
         end
 
         # #1606: uma mensagem mais nova do cliente abriu outro turno durante a IA (a marca do debounce aponta para ela).
@@ -480,6 +539,7 @@ module Autonomia
         # não roda: passar a conversa para "humanos" com a pessoa já nela abriria a fila de espera à toa.
         def depois_da_entrega(result, outcome)
           dispatch_async(replied: outcome.status == :replied || @calou_pela_pessoa.present?)
+          @entrega = outcome # #2154: a fala que saiu, para o aviso (avisou_que_chama_alguem)
           handoff_if_signaled(result) unless @calou_pela_pessoa
           evento_da_pessoa
         end
@@ -525,6 +585,7 @@ module Autonomia
           ::Autonomia::Agents::Operate::ReenfileirarTurno.call(conversation: @conversation, message_id: @reply_to_message_id,
                                                                origem: :responder, quem_perdeu: @agent_inbox,
                                                                posse_de_quem_perdeu: @posse)
+          @turno_segue = true # #2154: o mesmo turno segue com o dono novo
           Result.silenced
         end
 

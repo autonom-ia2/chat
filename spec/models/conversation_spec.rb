@@ -700,8 +700,11 @@ RSpec.describe Conversation do
       create(:message, message_type: :incoming, **message_params)
     end
 
+    # #2202: a resposta de uma pessoa marca a conversa como vista (ConversaCanal::VistaAoResponder), o que zeraria esta
+    # mensagem do cliente no mesmo instante. Por isso a saída aqui é de campanha, que não marca: prova o filtro de
+    # recebidas sem depender do #2202.
     before do
-      create(:message, message_type: :outgoing, **message_params)
+      create(:message, message_type: :outgoing, **message_params, additional_attributes: { 'campaign_id' => 1 })
     end
 
     it 'returns unread incoming messages' do
@@ -1133,6 +1136,28 @@ RSpec.describe Conversation do
       allow(message_window_service).to receive(:can_reply?).and_return(false)
       expect(conversation.can_reply?).to be false
       expect(message_window_service).to have_received(:can_reply?)
+    end
+  end
+
+  describe '#can_reply_automatically? (#2259)' do
+    it 'is the same as can_reply? outside Instagram and Messenger, so the WhatsApp Hybrid override still applies' do
+      conversation = create(:conversation)
+      allow(conversation).to receive(:can_reply?).and_return(true)
+
+      expect(conversation.can_reply_automatically?).to be true
+      expect(conversation).to have_received(:can_reply?)
+    end
+
+    it 'keeps 24 hours on Instagram even with HUMAN_AGENT on (automatic sends never carry the tag)' do
+      channel = create(:channel_instagram)
+      inbox = create(:inbox, channel: channel, account: channel.account)
+      conversation = create(:conversation, inbox: inbox, account: channel.account)
+      create(:message, account: channel.account, inbox: inbox, conversation: conversation, created_at: 3.days.ago)
+
+      with_modified_env ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT: 'true' do
+        expect(conversation.can_reply?).to be true
+        expect(conversation.can_reply_automatically?).to be false
+      end
     end
   end
 

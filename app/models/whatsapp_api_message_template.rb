@@ -10,7 +10,7 @@
 #  created_at    :datetime         not null
 #  updated_at    :datetime         not null
 #  account_id    :bigint           not null
-#  created_by_id :bigint           not null
+#  created_by_id :bigint
 #  inbox_id      :bigint
 #  updated_by_id :bigint
 #
@@ -33,7 +33,9 @@
 class WhatsappApiMessageTemplate < ApplicationRecord
   belongs_to :account
   belongs_to :inbox
-  belongs_to :created_by, class_name: 'User'
+  # Nulo só quando quem criou foi excluído da plataforma (#2135). Criar exige autor.
+  belongs_to :created_by, class_name: 'User', optional: true
+  validates :created_by, presence: true, on: :create
   belongs_to :updated_by, class_name: 'User', optional: true
 
   validates :name, presence: true, length: { maximum: 120 }

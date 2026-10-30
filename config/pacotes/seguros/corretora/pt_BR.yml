@@ -22,6 +22,15 @@ pt_BR:
         next_follow_up_at: 'Próximo retorno'
     follow_up_reminder:
       due_at: 'Marcado para: %{time}'
+    # Vocabulário nas mensagens que a IA escreve ao cliente (#2034).
+    ai:
+      vocabulario: 'Fale como a corretora: diga corretor, cotação e apólice; chame de cliente só quem já contratou e de segurado só quem tem apólice.'
+    # Título do lembrete de pagamento no card (#2076). Só a corretora diz "parcela"; seguradora, insurtech e saúde
+    # seguem com "pagamento", como as telas do painel.
+    service_reminders:
+      payment_before: 'Lembrar da parcela: 3 dias antes'
+      payment_due: 'Lembrar da parcela: no dia'
+      payment_after: 'Lembrar da parcela: depois do vencimento'
     # Modelos da página de agendamento (Lote 5 da F2). O título fica gravado na página nova e vira o título do card.
     booking_v2:
       templates:

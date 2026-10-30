@@ -21,6 +21,10 @@ import store from 'dashboard/store';
 import constants from 'dashboard/constants/globals';
 import * as Sentry from '@sentry/vue';
 import {
+  breadcrumbSemQuery,
+  eventoSemQuery,
+} from 'dashboard/helper/sentryPrivacy';
+import {
   initializeAnalyticsEvents,
   initializeChatwootEvents,
 } from 'dashboard/helper/scriptHelpers.js';
@@ -90,6 +94,10 @@ const startDashboard = async () => {
       ignoreErrors: [
         'ResizeObserver loop completed with undelivered notifications',
       ],
+      // URLs de xhr/fetch/navegação saem sem query string: a busca de
+      // contatos leva e-mail e telefone em ?q= (#2092).
+      beforeBreadcrumb: breadcrumbSemQuery,
+      beforeSend: eventoSemQuery,
     });
   }
 

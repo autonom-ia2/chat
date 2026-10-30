@@ -128,7 +128,11 @@ defineExpose({ dirty, saving });
       />
       <label class="grid gap-2 text-sm text-n-slate-12">
         <span>{{ label('PHONE') }}</span>
-        <PhoneNumberInput v-model="form.phone_number" :disabled="saving" />
+        <PhoneNumberInput
+          v-model="form.phone_number"
+          :compact="false"
+          :disabled="saving"
+        />
       </label>
       <p class="mb-0 text-xs leading-5 text-n-slate-11">
         {{ label('OPTIONAL_CHANNELS') }}

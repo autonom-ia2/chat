@@ -3,13 +3,15 @@
 # A coorte é a mesma do Panel::Report do período, então o total bate com o número que a pessoa clicou:
 # - `conversations`: cada conversa de anúncio, com o card principal dela, a mais recente primeiro;
 # - `quotes`: as propostas, as abertas paradas há mais tempo no topo, depois as ganhas;
-# - `sales`: as vendas, da maior para a menor;
+# - `sales`: as vendas, da maior para a menor; para quem não vê os valores de venda (#2075), da mais recente para a
+#   mais antiga, para a ordem não dizer quem comprou mais;
 # - `slow_replies`: as conversas sem resposta (a entrada mais antiga primeiro) e as respondidas depois de
 #   SLOW_SECONDS (a mais lenta primeiro), pelo Panel::ResponseTime do mesmo período.
 #
 # Cada linha leva à conversa e ao card no CRM. No máximo LIST_LIMIT linhas; `total` é a lista inteira. Título do
 # card ou, sem card, o nome do contato. Com `visible` (Crm::MetaAds::VisibleConversations, #1794), só as conversas
-# que a pessoa já veria na lista de conversas; o total conta essas.
+# que a pessoa já veria na lista de conversas; o total conta essas. O valor de cada card segue a mesma pessoa
+# (Panel::SalesValue): sem `sales_value_view`, nil com `value_hidden`, menos o card de que ela é dona.
 #
 # Sem conexão (Anúncios sem login, #1960), `scope[:account]` diz a conta; `scope[:ad_id]` limita as conversas às de
 # um anúncio (as pessoas do anúncio por dentro); `scope[:report]` reaproveita o Report já montado (mesma coorte);
@@ -50,7 +52,13 @@ class Crm::MetaAds::Panel::PathList
   end
 
   def sales_rows
-    cohort.cards.select(&:sale?).sort_by { |card| -card.value }.map { |card| [card.conversation_id, card] }
+    sales = cohort.cards.select(&:sale?)
+    sorted = if Crm::MetaAds::Panel::SalesValue.visible?(@visible)
+               sales.sort_by { |card| -card.value }
+             else
+               sales.sort_by { |card| -card.closed_at.to_i }
+             end
+    sorted.map { |card| [card.conversation_id, card] }
   end
 
   def slow_replies_rows
@@ -72,12 +80,17 @@ class Crm::MetaAds::Panel::PathList
 
   def item(conversation_id, card, names)
     reply = responses_needed? ? responses[conversation_id] : nil
-    {
+    row = {
       conversation_id: conversation_id, card_id: card&.id, title: card&.title.presence || names[conversation_id],
       ad_name: ad_names[cohort.conversation_ads[conversation_id]], touched_at: touched_at(conversation_id),
       stage_name: card&.stage_name, status: card&.status, value: card&.value, waiting_since: card&.waiting_since,
       stalled: card ? stalled_ids.include?(card.id) : false, response_seconds: reply&.dig(:seconds), answered: reply&.dig(:answered)
     }
+    with_value(row, card)
+  end
+
+  def with_value(row, card)
+    card.nil? || Crm::MetaAds::Panel::SalesValue.card?(@visible, card) ? row : row.merge(value: nil, value_hidden: true)
   end
 
   def touched_at(conversation_id)

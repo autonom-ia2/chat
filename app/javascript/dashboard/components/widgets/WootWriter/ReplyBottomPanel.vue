@@ -16,6 +16,7 @@ import MaisDoWhatsapp from 'dashboard/components-next/conversa-canal/mais/MaisDo
 import BotoesDoEmail from 'dashboard/components-next/conversa-canal/email/BotoesDoEmail.vue';
 import BotaoDeAudio from 'dashboard/components-next/conversa-canal/email/BotaoDeAudio.vue';
 import MaisDoEmail from 'dashboard/components-next/conversa-canal/email/MaisDoEmail.vue';
+import FicarComAConversa from 'dashboard/components-next/conversa-canal/atribuir/FicarComAConversa.vue';
 import { useEmailDaConversa } from 'dashboard/components-next/conversa-canal/email/useConversaDeEmail';
 import {
   anexarArquivos,
@@ -29,6 +30,7 @@ export default {
     BotoesDoEmail,
     BotaoDeAudio,
     MaisDoEmail,
+    FicarComAConversa,
     NextButton,
     FileUpload,
     VideoCallButton,
@@ -105,6 +107,17 @@ export default {
       type: Boolean,
       default: false,
     },
+    // #2067: o ícone "ficar com a conversa ao enviar" (null quando não se aplica: a conversa
+    // já é minha, ou é nota privada).
+    ficar: {
+      type: Object,
+      default: null,
+    },
+    // #2067: a flag da conta; desligada, a barra fica como na main.
+    ficarNaConta: {
+      type: Boolean,
+      default: false,
+    },
     isOnPrivateNote: {
       type: Boolean,
       default: false,
@@ -154,6 +167,11 @@ export default {
       type: Boolean,
       default: false,
     },
+    // #2211: a conversa vazia da busca (ainda sem conversa): o "+" só anexa e sem vídeo.
+    semConversa: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: [
     'toggleInsertArticle',
@@ -189,12 +207,15 @@ export default {
 
     useKeyboardEvents(keyboardEvents);
     // #1702: "+" e Enviar verde na conversa com a cara do WhatsApp.
-    const { ehWhatsapp, soTexto, classesDaResposta } = usePeleDaResposta();
+    // #2079: na conversa do Instagram, a pílula do Direct e o Enviar com o aviãozinho.
+    const { ehWhatsapp, ehInstagram, soTexto, classesDaResposta } =
+      usePeleDaResposta();
     // #1786: Aa, Modelos e Descartar na resposta da conversa de e-mail nova.
     const emailNovo = useEmailDaConversa().ligado;
 
     return {
       ehWhatsapp,
+      ehInstagram,
       emailNovo,
       soTexto,
       classesDaResposta,
@@ -221,6 +242,10 @@ export default {
         this.showAudioRecorderButton &&
         this.campoVazio
       );
+    },
+    // #2079: no Instagram, o Enviar é o aviãozinho do Direct (a nota segue com o texto).
+    enviarComIcone() {
+      return this.ehWhatsapp || (this.ehInstagram && !this.isNote);
     },
     wrapClass() {
       return {
@@ -317,8 +342,11 @@ export default {
   },
   methods: {
     // #1895: o ReplyBox ancora a janela de emojis na barra que tem o botão do rosto.
+    // #2079: no Instagram essa barra não tem caixa própria (display: contents); a âncora
+    // é a pílula inteira.
     barraDosEmojis() {
-      return this.$refs.barraDaEsquerda;
+      const barra = this.$refs.barraDaEsquerda;
+      return this.ehInstagram ? barra?.closest('.reply-box') || barra : barra;
     },
     toggleMessageSignature() {
       this.setSignatureFlagForInbox(this.channelType, !this.sendWithSignature);
@@ -333,7 +361,8 @@ export default {
 <template>
   <div
     class="flex justify-between p-3"
-    :class="[wrapClass, ehWhatsapp ? classesDaResposta.painel : '']"
+    :class="[wrapClass, classesDaResposta.painel]"
+    :data-com-texto="!campoVazio || undefined"
   >
     <div ref="barraDaEsquerda" class="left-wrap">
       <BotoesDoEmail v-if="emailNovo && !isNote" parte="esquerda" />
@@ -345,6 +374,7 @@ export default {
         v-if="ehWhatsapp && !isOnPrivateNote && !isEditorDisabled"
         :caixa="inbox"
         :enviar="enviarRico"
+        :so-arquivos="semConversa"
         @arquivos="escolha => anexarArquivos(escolha, onFileUpload)"
       />
       <NextButton
@@ -378,7 +408,7 @@ export default {
           v-if="showAttachButton"
           v-tooltip.top-end="$t('CONVERSATION.REPLYBOX.TIP_ATTACH_ICON')"
           :class="{ '!hidden': emailNovo }"
-          icon="i-ph-paperclip"
+          :icon="ehInstagram ? 'i-woot-midia-do-instagram' : 'i-ph-paperclip'"
           slate
           faded
           sm
@@ -449,6 +479,7 @@ export default {
         v-if="
           (isAWebWidgetInbox || isAPIInbox) &&
           !isOnPrivateNote &&
+          !semConversa &&
           !isEditorDisabled
         "
         :conversation-id="conversationId"
@@ -474,8 +505,9 @@ export default {
         @click="toggleInsertArticle"
       />
     </div>
-    <div class="right-wrap">
+    <div class="right-wrap" :class="{ 'items-center gap-1': ficarNaConta }">
       <BotoesDoEmail v-if="emailNovo" parte="direita" />
+      <FicarComAConversa v-if="ficar" :ficar="ficar" />
       <button
         v-if="microfoneNaDireita"
         type="button"
@@ -489,10 +521,10 @@ export default {
       </button>
       <NextButton
         v-else
-        v-tooltip.top-end="ehWhatsapp ? sendButtonText : null"
-        :label="ehWhatsapp ? '' : sendButtonText"
+        v-tooltip.top-end="enviarComIcone ? sendButtonText : null"
+        :label="enviarComIcone ? '' : sendButtonText"
         :icon="
-          ehWhatsapp
+          enviarComIcone
             ? classesDaResposta.iconeEnviar
             : emailNovo && !isNote
               ? 'i-lucide-send-horizontal'

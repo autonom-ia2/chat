@@ -1,7 +1,7 @@
 # Cadastro POR CONTA das credenciais do app OAuth de e-mail (Azure/Google).
-# Admin-only. O secret nunca é devolvido ao cliente (só se está configurado).
+# Administrador ou integration_manage (#2027). O secret nunca é devolvido ao cliente (só se está configurado).
 class Api::V1::Accounts::EmailOauthAppsController < Api::V1::Accounts::BaseController
-  before_action :ensure_admin
+  before_action -> { check_permission_granted!('integration_manage') }
   before_action :validate_provider
 
   def show

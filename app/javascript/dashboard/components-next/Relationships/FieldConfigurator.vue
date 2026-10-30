@@ -18,8 +18,15 @@ const props = defineProps({
   showActions: { type: Boolean, default: true },
 });
 const { t } = useI18n();
-const { accountId, attributesEnabled, companiesEnabled, state, load, save } =
-  useRelationships();
+const {
+  accountId,
+  attributesEnabled,
+  companiesEnabled,
+  state,
+  allDefinitions,
+  load,
+  save,
+} = useRelationships();
 const dialog = ref(null);
 const inputId = useId();
 const query = ref('');
@@ -123,11 +130,11 @@ const selected = (surface, id) =>
     { surfaces: layout.value },
     surface
   ).some(item => item.id === id);
+// Fork (#2138): parte da lista inteira (com os campos internos da WAHA, que a
+// tela não mostra), para um clique não tirar da área salva os ids escondidos.
 const toggle = (surface, id, checked) => {
   const ids = selectDefinitions(
-    state.value.definitions.filter(
-      item => item.attribute_model === model.value
-    ),
+    allDefinitions.value.filter(item => item.attribute_model === model.value),
     { surfaces: layout.value },
     surface
   )
@@ -464,8 +471,9 @@ defineExpose({ open });
             <label
               :for="`${inputId}-search`"
               class="text-sm font-medium text-n-slate-12"
-              >{{ t('RELATIONSHIPS.SEARCH') }}</label
             >
+              {{ t('RELATIONSHIPS.SEARCH') }}
+            </label>
             <Input
               :id="`${inputId}-search`"
               v-model="query"

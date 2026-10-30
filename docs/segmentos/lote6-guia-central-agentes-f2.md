@@ -8,12 +8,21 @@ Até aqui o painel falava a língua da conta, mas o Guia e a Central de Ajuda ai
 
 ### Guia da Plataforma por pacote
 
-- Cada camada tem `lib/operator_guide/pacotes/<camada>/porques.md`, com os fluxos do `porques.md` geral, pelo mesmo cabeçalho, e só os campos de texto que mudam: `titulo`, `intent`, `onde_fica`, `passos` e `gotchas`. Rota, gate, `nav_target` e `cobre` vêm sempre do geral; o build recusa fluxo desconhecido e campo proibido.
+- Cada camada tem `lib/operator_guide/pacotes/<camada>/porques.md`, com os fluxos do `porques.md` geral, pelo mesmo cabeçalho, e só os campos de texto que mudam: `titulo`, `intent`, `onde_fica`, `perfil` e `pre_requisitos` (desde o lote 4 do #2083), `passos` e `gotchas`. Rota, gate, `nav_target` e `cobre` vêm sempre do geral; o build recusa fluxo desconhecido e campo proibido.
 - O `pnpm guia:build` gera `lib/operator_guide/pacotes/<camada>/guia-produto.md` compondo as camadas (geral ← seguros ← tipo). O `pnpm guia:check` reprova arquivo de pacote fora de dia e arquivo gerado sem `porques.md`.
 - Hoje: `seguros` (11 fluxos), `seguros/corretora` (10) e `seguros/saude_beneficios` (8).
 - O Seed escolhe a base pela conta (`Autonomia::Guide::Seed.kb_path_for`, `Autonomia::Guide::BaseDoPacote`): a camada mais específica que tiver arquivo. Sem arquivo, ou com o interruptor desligado, fica a base geral. O `kb_version` é o da base escolhida, então a conta geral não é re-semeada e a conta de pacote é re-semeada uma vez quando o interruptor liga ou o texto do pacote muda.
 - O aquecimento do Guia no deploy (`WarmUpJob`) usa `Seed.versao_da_instalacao`, que só soma os arquivos de pacote com o interruptor ligado.
 - O modo aprendiz (`guia-aprendiz.yml`) também adiciona `lib/operator_guide/pacotes` no PR que abre.
+
+### Instrução do Guia por pacote (6.B)
+
+- Três camadas têm `lib/operator_guide/pacotes/<camada>/guia-instrucao.md`, escrito à mão: `seguros` (seguradora e insurtech), `seguros/corretora` e `seguros/saude_beneficios`. Cada uma é uma seção "Vocabulário desta conta", curta, que diz ao Guia como chamar as coisas na resposta ao operador.
+- A conta recebe a instrução geral + `"\n\n"` + o arquivo da camada mais específica que existir (`Seed.instrucao_para`, `BaseDoPacote.instrucao_com`, mesmo critério da base). Não somam: a corretora lê só a dela, que não herda o "nunca diga corretora" da camada `seguros`.
+- Conta geral, ou interruptor desligado: instrução e `kb_version` iguais aos de antes, byte a byte (o `seed_spec` confere). A conta com camada é re-semeada uma vez quando o interruptor liga ou o arquivo muda; `versao_da_instalacao` soma também esses arquivos.
+- O `guia:build` e o `guia:check` não leem nem geram `guia-instrucao.md`.
+- O painel liga a sugestão `AUTONOMIA_GUIDE.SUGGESTIONS.REPORTS`: "Quantos seguros fechei este mês?" na camada `seguros` (vale para corretora, seguradora e insurtech) e "Quantos planos fechei este mês?" na saúde.
+- Eval pago: `spec/services/autonomia/guide/vocabulario_eval_spec.rb`; relatório em `docs/audit/2026-10-21-1802-eval-guia-vocabulario/`.
 
 ### Central de Ajuda por pacote
 
@@ -46,7 +55,7 @@ Até aqui o painel falava a língua da conta, mas o Guia e a Central de Ajuda ai
 
 ## O que ficou de fora, e por quê
 
-- **Instrução do Guia por pacote (6.B):** muda o comportamento do Guia e precisa de eval próprio e OK. A sugestão "Quantos seguros fechei" (`SUGGESTIONS.REPORTS`) espera por ela.
+- **Instrução do Guia por pacote (6.B):** saiu em PR próprio, com eval pago (ver "Instrução do Guia por pacote (6.B)" acima).
 - **Central em inglês por pacote:** a Central em inglês é etapa própria do épico.
 - **Vídeo próprio da corretora:** a variante fica sem vídeo até haver gravação com os botões da corretora.
 - **Texto geral neutro (lote 0):** à parte.

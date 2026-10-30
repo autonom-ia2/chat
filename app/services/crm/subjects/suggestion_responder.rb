@@ -6,6 +6,9 @@
 # sugestão. Tudo no lock da conversa, e só vale para sugestão ainda esperando: outra pessoa pode ter respondido, ou uma
 # mensagem nova ter trocado a sugestão. Sugestão que deixou de fazer sentido (card fechado ou apagado, funil arquivado
 # ou fora da caixa, caixa que saiu do modo Sugerir — #1221) expira, para o aviso não ficar preso na tela.
+#
+# A sugestão que veio de uma dúvida da IA (#2162, Crm::Subjects::DuvidaSugerida) pode vir sem nome: aceita, o card
+# nasce sem nome (o do contato, como o que a caixa cria) e a IA de assunto dá o nome quando o pedido ficar claro (#1918).
 class Crm::Subjects::SuggestionResponder
   class Error < StandardError
     attr_reader :code
@@ -118,8 +121,15 @@ class Crm::Subjects::SuggestionResponder
     Crm::Cards::Creator.new(
       account: @account, user: @user, conversation: @conversation,
       params: { pipeline_id: @decision.pipeline_id, stage_id: self.class.pipeline_stage(@decision).id, title: @decision.title,
-                metadata: { 'subject' => { 'source' => 'ai', 'named_at' => Time.current.iso8601 } } }
+                metadata: nome_da_ia }
     ).perform
+  end
+
+  # Sem nome (#2162), o card não leva a marca de nome dado: segue "sem assunto" até a IA dar o nome.
+  def nome_da_ia
+    return {} if @decision.title.blank?
+
+    { 'subject' => { 'source' => 'ai', 'named_at' => Time.current.iso8601 } }
   end
 
   def dar_nome(card)

@@ -217,6 +217,13 @@ contacts:
     filter_operators:
       - "equal_to"
       - "not_equal_to"
+  # Este contato é (#2084/#2085): interessado, parceiro ou nao_e_negocio; o valor chega pelo nome (Contacts::FilterService).
+  relacao:
+    attribute_type: "standard"
+    data_type: "numeric"
+    filter_operators:
+      - "equal_to"
+      - "not_equal_to"
 
 ### ----- End of Contact Filters ----- ###
 

@@ -184,7 +184,7 @@ watch(
         :placeholder="placeholder"
         :disabled="disabled"
         :custom-input-class="`!border-0 !outline-none ${compact ? 'h-8' : 'h-10'} !py-0.5 !bg-transparent ltr:!pl-1 rtl:!pr-1`"
-        class="w-full !flex-row"
+        class="w-full !flex-row items-center"
       >
         <template #prefix>
           <div class="flex items-center flex-shrink-0">

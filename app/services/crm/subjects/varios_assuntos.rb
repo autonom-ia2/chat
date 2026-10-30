@@ -51,11 +51,12 @@ module Crm::Subjects::VariosAssuntos
     resultado.merge(tocados: [do_principal, *tocados].compact.uniq(&:id))
   end
 
-  # O principal, ou a dúvida dele. Aplicado, o card dele já está gravado (conta para a falha depois de gravar).
-  def aplicar_principal(principal, duvida)
-    return duvida.dup unless principal
+  # O principal, ou a dúvida dele (que pode virar sugestão, #2162). Aplicado, o card dele já está gravado (conta para a
+  # falha depois de gravar).
+  def aplicar_principal(principal, em_duvida)
+    return duvida(em_duvida) unless principal
 
-    aplicar(principal.opcao, principal.titulo, principal.etapa).tap do |resultado|
+    aplicar(principal.opcao, principal.titulo, principal.etapa, generico: principal.generico == true).tap do |resultado|
       next unless resultado[:state] == 'applied'
 
       @principal_aplicado = resultado[:card]
@@ -63,31 +64,35 @@ module Crm::Subjects::VariosAssuntos
     end
   end
 
+  # O assunto encerrado (F2) não toca card nenhum: cai fora do case (nil).
   def tocar(escolha, criados)
     opcao = escolha.opcao
     case opcao.tipo
     when :mesmo then @question.atual
     when :card then opcao.card
-    when :novo then outro_pedido_novo(opcao.pipeline, escolha.titulo, @question.etapa(opcao.pipeline, escolha.etapa))&.tap { |card| criados << card }
+    when :novo
+      etapa = @question.etapa(opcao.pipeline, escolha.etapa)
+      outro_pedido_novo(opcao.pipeline, escolha.titulo, etapa, generico: escolha.generico == true)&.tap { |card| criados << card }
     end
   end
 
   # O pedido novo que não é o principal: nasce sem levar o foco embora (o principal, aplicado depois, fica com ele).
-  # etapa (#1910): a coluna escolhida, ou nil (1ª etapa).
-  def outro_pedido_novo(pipeline, titulo, etapa)
+  # etapa (#1910): a coluna escolhida, ou nil (1ª etapa). generico (#2163): o nome é genérico.
+  def outro_pedido_novo(pipeline, titulo, etapa, generico: false)
     return if titulo.blank?
 
     resultado = nil
     @entradas = []
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
-      next if mensagem_mais_nova?
+      # #2084: o contato que saiu do funil enquanto a IA pensava também não ganha o card do outro pedido.
+      next if mensagem_mais_nova? || saiu_do_funil?
       # Sugerir, ou a pessoa a respeitar: o pedido novo que não é o principal não vira card nem sugestão (só cabe uma
       # sugestão por conversa, e ela é do principal). Fica no log.
       if modo_efetivo('create', { pipeline: pipeline }) != 'auto'
         next Rails.logger.info("[crm][assunto] outro pedido novo mantido decisao=#{@decisao.id} funil=#{pipeline.id}")
       end
 
-      resultado = criar_ou_dar_nome(pipeline, titulo, etapa)
+      resultado = criar_ou_dar_nome(pipeline, titulo, etapa, generico: generico)
     end
     entrar_nas_etapas
     resultado[:card] if resultado&.dig(:state) == 'applied'
@@ -95,21 +100,25 @@ module Crm::Subjects::VariosAssuntos
 
   # Como no principal: o assunto atual ainda sem nome, no mesmo funil, ganha o nome em vez de nascer outro card.
   # Também como no principal (C36, #1712): o card sem nome que a caixa criou na chegada vai para o funil do pedido e ganha
-  # o nome, em vez de sobrar vazio quando o principal fica em dúvida.
-  def criar_ou_dar_nome(pipeline, titulo, etapa)
+  # o nome, em vez de sobrar vazio quando o principal fica em dúvida. O card sem nome que já carregava um pedido (#2163)
+  # não é renomeado: o pedido novo vira outro card.
+  def criar_ou_dar_nome(pipeline, titulo, etapa, generico:)
     atual = @question.atual
-    return dar_nome_e_levar(atual.reload, titulo, etapa) if @question.atual_sem_nome? && atual.pipeline_id == pipeline.id
+    mesmo_funil = @question.atual_sem_nome? && atual.pipeline_id == pipeline.id
+    return dar_nome_e_levar(atual.reload, titulo, etapa, generico: generico) if mesmo_funil && !@question.atual_carrega_pedido?
+    return criar(pipeline, titulo, etapa, generico: generico) if mesmo_funil
 
     @chegada = card_da_chegada(pipeline)
-    return adotar_a_chegada(atual.reload, titulo, pipeline, etapa) if @chegada
+    return adotar_a_chegada(atual.reload, titulo, pipeline, etapa, generico: generico) if @chegada
 
-    criar(pipeline, titulo, etapa)
+    criar(pipeline, titulo, etapa, generico: generico)
   end
 
   # Sem assunto (#1918, revoga o critério 5 do #1693): o card em foco, que o Applier devolve; sem card em foco, nada.
   # Pedido novo que virou sugestão não tem card; a sugestão repetida nem chega aqui (Identifier#tocados_da_repetida).
+  # Assunto encerrado (F2): nenhum card a reler; o encerrado não continua.
   def card_do_principal(opcao, resultado)
-    return if opcao.nil? || %w[applied kept suggested].exclude?(resultado[:state])
+    return if opcao.nil? || opcao.tipo == Crm::Subjects::Encerrado::TIPO || %w[applied kept suggested].exclude?(resultado[:state])
     return if opcao.tipo == :sem_assunto && chegada_intacta?(resultado[:card])
 
     resultado[:card]

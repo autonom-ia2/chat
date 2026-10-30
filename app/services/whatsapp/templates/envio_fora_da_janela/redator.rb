@@ -49,8 +49,10 @@ class Whatsapp::Templates::EnvioForaDaJanela::Redator
 
   private
 
+  # #2034: a linha de vocabulário da conta fecha o pedido; conta fora de um pacote não recebe nada a mais.
   def pedido
-    [@tipo.proposito, REGRA_DA_CATEGORIA.fetch(@tipo.categoria), SO_CORPO].join(' ')
+    [@tipo.proposito, REGRA_DA_CATEGORIA.fetch(@tipo.categoria), SO_CORPO, Crm::Ai::Vocabulario.da(@inbox.account)]
+      .compact_blank.join(' ')
   end
 
   def serve?(opcao)

@@ -63,6 +63,12 @@ pt_BR:
   errors:
     custom_role:
       unknown_permissions: 'tem chaves desconhecidas: %{unknown}. Chaves válidas: %{valid}'
+      destination_required: 'Esta função ainda tem pessoas. Escolha para onde vão: outra função ou sem função.'
+      destination_invalid: 'As pessoas desta função não podem ir para a função escolhida. Escolha outra ou sem função.'
+      changed_meanwhile: 'Alguém mudou esta função ou as pessoas dela enquanto você apagava. Nada mudou. Tente de novo.'
+      out_of_reach: 'Você não pode dar parte desta função. Peça ao administrador.'
+      own_role: 'Ninguém muda a própria função.'
+      feature_off: 'As funções da equipe não estão disponíveis nesta conta agora.'
     account:
       not_authorized: Você não está autorizado a acessar esta conta
       email_limit_exceeded: O limite diário de envio de e-mails desta conta foi atingido
@@ -172,6 +178,7 @@ pt_BR:
     openai:
       invalid_api_key: 'Chave da OpenAI recusada. Confira se ela está correta, se não foi revogada e se a conta tem crédito em platform.openai.com.'
     inboxes:
+      password_needed: Digite de novo a senha do servidor de e-mail para apontar a caixa para outro servidor.
       imap:
         socket_error: Por favor, verifique a conexão de rede, endereço IMAP e tente novamente.
         no_response_error: Por favor, verifique as credenciais de IMAP e tente novamente.
@@ -290,6 +297,19 @@ pt_BR:
         feedback: Comentário de Feedback
         recorded_at: Data de gravação
         review_notes: Notas de Avaliação
+  campaign_import:
+    people_sheet:
+      sheet: Público
+      name: Nome
+      phone: Telefone
+      email: E-mail
+      company: Empresa
+  conversation_audience:
+    columns:
+      city: Cidade
+      country: País
+      'yes': Sim
+      'no': Não
   notifications:
     notification_title:
       conversation_creation: 'A conversa (#%{display_id}) foi criada em %{inbox_name}'
@@ -301,8 +321,13 @@ pt_BR:
       sla_missed_next_response: 'Meta de SLA de Próxima Resposta não alcançada para a conversa (#%{display_id})'
       sla_missed_resolution: 'Meta de SLA de Resolução não alcançada para a conversa (#%{display_id})'
       guide_alert: 'O Guia tem um aviso urgente para você'
+      conversation_audience_ready: 'Seu público pelas conversas terminou'
     attachment: 'Anexo'
     no_content: 'Sem conteúdo'
+    conversation_audience:
+      done: "a lista está pronta para revisar"
+      ceiling: "parou no custo combinado e espera você"
+      failed: "parou porque a IA da conta não respondeu"
   conversations:
     captain:
       handoff: 'Transferindo para que outro agente dê assistência.'
@@ -401,6 +426,10 @@ pt_BR:
   contacts:
     online:
       delete: '%{contact_name} está Online, por favor, tente novamente mais tarde'
+    # #2096: excluir o contato cancela antes as reuniões futuras dos cards; se uma falhar, nada é apagado.
+    meeting_cancel_failed: 'Uma reunião futura deste contato não foi cancelada na agenda, então nada foi apagado. Tente de novo.'
+    busy_try_again: "Este contato estava sendo alterado no mesmo instante, então nada foi apagado. Tente de novo."
+    crm_cards_changed: 'Um card do CRM deste contato mudou durante a exclusão (uma reunião acabou de ser marcada), então nada foi apagado. Tente de novo.'
     opt_out:
       undo_only_manual: 'Aqui só se desfaz a recusa marcada pela equipe ou o pedido de parar reconhecido na resposta a uma campanha. A da Prospecção sai no lead, pelo "Desfazer: pode ser contatado"; o pedido de parar no follow-up sai quando o "Reativar retorno automático" é usado em todos os cards do CRM em que a pessoa pediu para parar; o descadastro de e-mail não se desfaz por aqui.'
   integration_apps:
@@ -605,6 +634,21 @@ pt_BR:
   automation:
     system_name: 'Sistema de Automação'
   crm:
+    # #2096: o card mantido sem dado pessoal depois que o contato foi excluído (LGPD), e os retornos e reuniões dele.
+    cards:
+      anonimizado:
+        title: 'Cliente removido #%{id}'
+        history_title: 'Cliente removido'
+    # IA entende a conversa F3: o motivo que a IA grava ao marcar Perdido (lost_reason) e o título do retorno do "adiou".
+    ai_fechar_card:
+      motivos:
+        adiou: 'Adiou'
+        recusou: 'Recusou'
+        fechou_com_outra: 'Fechou com outra empresa'
+      retorno: 'Retomar o contato: o cliente adiou'
+    # #2101, #2130: pessoa não cria lembrete em card arquivado.
+    follow_ups:
+      card_archived: 'Este card está arquivado. Restaure o card antes de criar um lembrete.'
     # #1498: título dos lembretes de Atender (aparecem na agenda do card).
     service_reminders:
       progress: 'Avisar o andamento'
@@ -954,6 +998,8 @@ pt_BR:
       unknown_action: 'Isto o Guia não faz.'
       only_on_screen:
         whatsapp_template_consent: 'Isto só se faz na tela: Modelos › Autorização.'
+        crm_permanent_delete: 'Excluir de vez só se faz na tela, digitando a confirmação: no CRM, em Arquivados, ou ao excluir o contato.'
+        contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
@@ -1135,6 +1181,8 @@ pt_BR:
           sem_principal: "O agente principal de %{canal} não está atendendo agora. O agente da equipe precisa do principal atendendo no canal."
           robo_externo: "Um agente externo atende em %{canal}. O agente da equipe ainda não entra em canal com agente externo."
     prospecting:
+      # Nome do lead que recusou contato e ficou só como prova da recusa, depois de excluído o contato (#2143).
+      lead_removido: "Lead removido #"
       presets:
         invalid: 'Essa jogada não existe para a forma de pesquisa escolhida. Escolha outra jogada ou busque sem jogada.'
       # Jogadas salvas (#732): frases que a tela mostra como vieram.
@@ -1326,6 +1374,14 @@ pt_BR:
       autoteste_indisponivel: 'Ainda não há material aprovado para testar.'
       autoteste_espere: 'Espere um pouco para testar de novo.'
       autoteste_amanha: 'Este agente já foi testado muitas vezes hoje. Amanhã dá para testar de novo.'
+    base_de_seguros:
+      sem_base_nova: 'Não há base de seguros nova para este agente. A página foi atualizada.'
+      base_mudou: 'O agente mudou enquanto isso. A página foi atualizada.'
+      comparar_espere: 'Espere uns 2 minutos para comparar de novo.'
+      comparar_amanha: 'Hoje esta conta já comparou muitas vezes. Amanhã dá para comparar de novo.'
+      comparar_antes: 'Compare as respostas antes de atualizar a base.'
+      sem_instrucao: 'Este agente ainda não tem instruções, então a base dele não pode ser atualizada.'
+      desfazer_fechado: 'O agente mudou depois da atualização, e o Desfazer não vale mais. Para voltar, use o histórico de versões.'
     source:
       invalid_kind: "Este tipo de material não está disponível. Recarregue a página e tente de novo."
       arquivo_grande: "O arquivo é grande demais. O tamanho máximo é 25 MB."

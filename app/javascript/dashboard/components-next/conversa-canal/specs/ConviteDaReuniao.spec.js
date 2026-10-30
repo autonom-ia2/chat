@@ -8,6 +8,10 @@ import ConversaCanalAPI from 'dashboard/api/conversaCanal';
 vi.mock('dashboard/api/conversaCanal', () => ({
   default: { responderConvite: vi.fn() },
 }));
+vi.mock('dashboard/composables/store', async () => {
+  const { ref } = await import('vue');
+  return { useMapGetter: () => ref(1) };
+});
 
 // Sempre no futuro: o cartão de reunião que já terminou não pergunta nada.
 const DAQUI_A_DOIS_DIAS = Math.floor(Date.now() / 1000) + 2 * 86400;
@@ -37,7 +41,14 @@ const montar = (props = {}) =>
       fuso: 'America/Sao_Paulo',
       ...props,
     },
-    global: { stubs: { Icon: true, Avatar: true, Spinner: true } },
+    global: {
+      stubs: {
+        Icon: true,
+        Avatar: true,
+        Spinner: true,
+        RouterLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
+      },
+    },
   });
 
 describe('ConviteDaReuniao (#1984)', () => {
@@ -118,6 +129,69 @@ describe('ConviteDaReuniao (#1984)', () => {
 
     expect(cartao.findAll('[data-responder]')).toHaveLength(3);
     expect(cartao.find('[data-convite-recorrente]').exists()).toBe(true);
+  });
+
+  it('série que já acabou não pergunta nada (#1995)', () => {
+    const ontem = Math.floor(Date.now() / 1000) - 86400;
+    const cartao = montar({
+      convite: convite({
+        inicio: ontem - 30 * 86400,
+        fim: ontem - 30 * 86400 + 3600,
+        recorrente: true,
+        fimDaSerie: ontem,
+      }),
+    });
+
+    expect(cartao.find('[data-convite-passou]').exists()).toBe(true);
+    expect(cartao.find('[data-responder]').exists()).toBe(false);
+  });
+
+  it('convite mudado num e-mail mais novo avisa e não pergunta (#1995)', () => {
+    const cartao = montar({
+      convite: convite({ substituidoPor: 99, minhaResposta: 'aceito' }),
+    });
+
+    expect(cartao.get('[data-convite-substituido]').text()).toContain(
+      'CONVERSA_CANAL.EMAIL.CONVITE.SUBSTITUIDO'
+    );
+    expect(cartao.find('[data-responder]').exists()).toBe(false);
+    expect(cartao.find('[data-convite-respondido]').exists()).toBe(false);
+  });
+
+  it('convite cancelado num e-mail mais novo diz que foi cancelado e some o "Entrar" (#1995)', () => {
+    const cartao = montar({
+      convite: convite({ substituidoPor: 99, substituidoCancelado: true }),
+    });
+
+    expect(cartao.get('[data-convite-substituido]').text()).toContain(
+      'CONVERSA_CANAL.EMAIL.CONVITE.CANCELADA_DEPOIS'
+    );
+    expect(cartao.find('[data-entrar-na-reuniao]').exists()).toBe(false);
+  });
+
+  it('a versão nova em outra conversa ganha o link; na mesma, não (#1995)', () => {
+    const fora = montar({
+      convite: convite({ substituidoPor: 99, substituidoNaConversa: 40 }),
+    });
+    expect(fora.get('[data-convite-novo]').attributes('href')).toBe(
+      '/app/accounts/1/conversations/40'
+    );
+
+    const aqui = montar({
+      convite: convite({ substituidoPor: 99, substituidoNaConversa: 3 }),
+    });
+    expect(aqui.find('[data-convite-novo]').exists()).toBe(false);
+  });
+
+  it('o cancelamento desfeito por um convite novo não aparece como cancelado (#1995)', () => {
+    const cartao = montar({
+      convite: convite({ metodo: 'CANCEL', substituidoPor: 99 }),
+    });
+
+    expect(cartao.find('[data-convite-substituido]').exists()).toBe(true);
+    expect(cartao.text()).not.toContain(
+      'CONVERSA_CANAL.EMAIL.CONVITE.CANCELADA_TEXTO'
+    );
   });
 
   it('quem só lê vê o convite sem os botões', () => {

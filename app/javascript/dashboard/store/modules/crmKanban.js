@@ -35,15 +35,20 @@ export const defaultFilters = () => ({
   // #1883: "fechado neste mês" (`this_month`), só da Lista, como o `result`. O mês
   // é calculado no servidor, no fuso da conta; por isso força o refetch no realtime.
   closedIn: '',
+  // Números › Origens (#2001, F6): os "Ver" da tela. Só da Lista, como o `closedIn`:
+  // origem de primeiro toque, anúncio de primeiro toque e "entrou no funil este mês".
+  origem: '',
+  anuncio: '',
+  entrouEm: '',
   // PR14.7b/c high-value filters. Realtime contract per filter:
-  //  - stageIds / teamId / valueMin / valueMax / staleDays / campaignSourceIds
-  //    are evaluable from a single card payload and ARE mirrored in
-  //    cardMatchesFilters below (campaignSourceIds reads card.campaigns, the
-  //    CTWA multi-touch aggregate carried by both payload builders).
-  //  - companyId, search, responsibleKind (bot/none), aiPending and labelIds are server-truth only;
-  //    a realtime upsert cannot be reliably classified client-side (label
-  //    add/remove never emits a card upsert), so they force a refetch
-  //    (see SERVER_ONLY_FILTER_KEYS / hasServerOnlyFilters).
+  //  - stageIds / teamId / valueMin / valueMax / staleDays are evaluable from
+  //    a single card payload and ARE mirrored in cardMatchesFilters below.
+  //  - companyId, search, responsibleKind (bot/none), aiPending, labelIds and
+  //    campaignSourceIds are server-truth only; a realtime upsert cannot be
+  //    reliably classified client-side (label add/remove never emits a card
+  //    upsert; without meta_ads_view the ad touch comes without source_id,
+  //    #2271), so they force a refetch (see SERVER_ONLY_FILTER_KEYS /
+  //    hasServerOnlyFilters).
   stageIds: [],
   teamId: '',
   valueMin: '',
@@ -66,13 +71,19 @@ export const defaultFilters = () => ({
 // matching card drop out — the exact class of bug the old Status filter caused).
 // labelIds is here because adding/removing a label on a conversation does NOT
 // broadcast a card upsert, so the payload's labels can be stale mid-session.
+// campaignSourceIds is here because, without meta_ads_view, the ad touch comes
+// without source_id (#2271) while the server still matches the card.
 export const SERVER_ONLY_FILTER_KEYS = [
   'companyId',
   'search',
   'responsibleKind',
   'aiPending',
   'labelIds',
+  'campaignSourceIds',
   'closedIn',
+  'origem',
+  'anuncio',
+  'entrouEm',
 ];
 
 export const hasServerOnlyFilters = filters =>
@@ -280,6 +291,9 @@ const normalizeFilters = filters => {
   // List-only "Resultado" filter; the board strips it in fetchBoard.
   if (filters.result) params.result = filters.result;
   if (filters.closedIn) params.closed_in = filters.closedIn;
+  if (filters.origem) params.origem = filters.origem;
+  if (filters.anuncio) params.anuncio = filters.anuncio;
+  if (filters.entrouEm) params.entrou_em = filters.entrouEm;
   if (filters.stageIds?.length) params.stage_ids = filters.stageIds.join(',');
   if (filters.labelIds?.length) params.label_ids = filters.labelIds.join(',');
   if (filters.campaignSourceIds?.length)
@@ -300,7 +314,10 @@ const normalizeFilters = filters => {
 // Parâmetros da Lista, comuns à página e à planilha (#722): uma fonte só, para a
 // planilha nunca trazer um recorte diferente do que a Lista mostra. Sem sort ativo,
 // o parâmetro some e o servidor usa a ordem padrão da Lista.
-const listQueryParams = (filters, { pipelineId, sort, direction } = {}) => ({
+export const listQueryParams = (
+  filters,
+  { pipelineId, sort, direction } = {}
+) => ({
   ...normalizeFilters(filters),
   pipeline_id: pipelineId,
   ...(sort ? { sort, direction: direction || 'desc' } : {}),
@@ -308,7 +325,7 @@ const listQueryParams = (filters, { pipelineId, sort, direction } = {}) => ({
 
 // `attachment; filename="crm-2026-09-25.xlsx"; filename*=UTF-8''...` -> o nome entre aspas.
 const FALLBACK_EXPORT_FILENAME = 'crm.xlsx';
-const filenameFromDisposition = header => {
+export const filenameFromDisposition = header => {
   const [, afterKey] = String(header || '').split('filename="');
   const [name] = String(afterKey || '').split('"');
   return name || FALLBACK_EXPORT_FILENAME;
@@ -402,8 +419,9 @@ const cardMatchesFilters = (card, filters) => {
   if (filters.teamId && !stringMatches(card.team_id, filters.teamId)) {
     return false;
   }
-  const valueMinCents = toCents(filters.valueMin);
-  const valueMaxCents = toCents(filters.valueMax);
+  // #2075 — card com valor oculto: o servidor não filtra por um valor que a pessoa não vê.
+  const valueMinCents = card.value_hidden ? null : toCents(filters.valueMin);
+  const valueMaxCents = card.value_hidden ? null : toCents(filters.valueMax);
   if (valueMinCents != null && Number(card.value_cents || 0) < valueMinCents) {
     return false;
   }
@@ -431,19 +449,7 @@ const cardMatchesFilters = (card, filters) => {
   ) {
     return false;
   }
-  // Campaign filter mirror: OR over the card's aggregated CTWA touches
-  // (card.campaigns carries one slim touch per linked-conversation click).
-  // source_id comparison is String-based on BOTH sides — Meta ad ids overflow
-  // Number.MAX_SAFE_INTEGER, so Number() coercion would corrupt them.
-  if (filters.campaignSourceIds?.length) {
-    const touchIds = (card.campaigns || []).map(touch =>
-      String(touch.source_id)
-    );
-    if (!filters.campaignSourceIds.some(id => touchIds.includes(String(id)))) {
-      return false;
-    }
-  }
-  // companyId, search, responsibleKind, aiPending and labelIds are intentionally
+  // companyId, search, responsibleKind, aiPending, labelIds and campaignSourceIds are intentionally
   // NOT evaluated here — they are server-truth filters (see
   // SERVER_ONLY_FILTER_KEYS). When active, the page refetches on realtime
   // instead of relying on this predicate.
@@ -533,6 +539,9 @@ export const actions = {
       const {
         result,
         closed_in: _closedIn,
+        origem: _origem,
+        anuncio: _anuncio,
+        entrou_em: _entrouEm,
         ...boardFilters
       } = normalizeFilters($state.filters);
       // An explicit stageIds payload (used to refetch specific columns) wins;

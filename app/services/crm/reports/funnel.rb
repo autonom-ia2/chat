@@ -9,10 +9,12 @@ module Crm
 
         stages = pipeline.stages.order(:position, :id).to_a
         counts = open_cards.group(:stage_id).count
-        values = open_cards.group(:stage_id, :currency).sum(:value_cents)
+        # Valor de venda (#2075): sem `sales_value_view`, value_by_currency vem nil e a contagem fica.
+        values = value_visible? ? open_cards.group(:stage_id, :currency).sum(:value_cents) : nil
 
         {
           pipeline: { id: pipeline.id, name: pipeline.name },
+          value_hidden: !value_visible?,
           stages: stages.map { |stage| stage_entry(stage, counts, values) }
         }
       end
@@ -24,20 +26,23 @@ module Crm
       end
 
       def open_cards
-        account.crm_cards.where(pipeline_id: pipeline.id, status: Crm::Card.statuses[:open])
+        Crm::Relacao.cards_do_funil(account).where(pipeline_id: pipeline.id, status: Crm::Card.statuses[:open])
       end
 
       def stage_entry(stage, counts, values)
-        currency_values = values.select { |(stage_id, _currency), _cents| stage_id == stage.id }
-                                .map { |(_stage_id, currency), cents| { currency: currency, value_cents: cents } }
         {
           id: stage.id,
           name: stage.name,
           position: stage.position,
           color: stage.color,
           count: counts[stage.id] || 0,
-          value_by_currency: currency_values
+          value_by_currency: values && stage_values(stage, values)
         }
+      end
+
+      def stage_values(stage, values)
+        values.select { |(stage_id, _currency), _cents| stage_id == stage.id }
+              .map { |(_stage_id, currency), cents| { currency: currency, value_cents: cents } }
       end
     end
   end

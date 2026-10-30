@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { textoDoFechamento } from '../sugestaoDeFechar';
 
 // #1423 — em que etapa o cliente está. Tocar numa etapa move na hora, como
 // hoje (RS-02); a lista é a do funil do card, não a do quadro (ET-01). Abaixo,
@@ -23,6 +24,8 @@ defineEmits(['mover', 'ler', 'aceitar', 'dispensar']);
 
 const { t } = useI18n();
 const E = 'CRM_CARD.ETAPA';
+// F3: a sugestão de fechar o card troca o texto e o botão; não marca etapa.
+const fechar = computed(() => textoDoFechamento(props.sugestao));
 const travada = computed(
   () => !props.podeMover || props.movendo || !props.etapas.length
 );
@@ -87,7 +90,7 @@ const travada = computed(
             {{ t('CRM_CARD.LADO.ESTA_AQUI') }}
           </span>
           <span
-            v-else-if="sugestao?.to_stage_id === etapa.id"
+            v-else-if="!fechar && sugestao?.to_stage_id === etapa.id"
             class="shrink-0 rounded-lg bg-n-iris-3 px-2 py-0.5 text-xs font-semibold text-n-iris-11"
           >
             {{ t(`${E}.SUGERIDA`) }}
@@ -123,15 +126,26 @@ const travada = computed(
       </p>
       <template v-else-if="sugestao">
         <p class="mb-0 text-[0.9375rem] text-n-slate-12">
-          {{ t(`${E}.ACHAMOS`, { etapa: sugestao.to_stage_name }) }}
+          {{
+            fechar
+              ? t(fechar.frase, {
+                  motivo: fechar.motivo ? t(fechar.motivo) : '',
+                })
+              : t(`${E}.ACHAMOS`, { etapa: sugestao.to_stage_name })
+          }}
         </p>
         <p v-if="sugestao.reasoning" class="mb-0 text-sm text-n-slate-11">
           {{ sugestao.reasoning }}
         </p>
+        <p v-if="fechar?.retorno" class="mb-0 text-sm text-n-slate-11">
+          {{ t(fechar.retorno) }}
+        </p>
         <div v-if="podeIa" class="flex flex-wrap gap-2">
           <Button
             :label="
-              t('CRM_CARD.PASSO.MOVER', { etapa: sugestao.to_stage_name })
+              fechar
+                ? t(fechar.botao)
+                : t('CRM_CARD.PASSO.MOVER', { etapa: sugestao.to_stage_name })
             "
             icon="i-lucide-arrow-right"
             slate

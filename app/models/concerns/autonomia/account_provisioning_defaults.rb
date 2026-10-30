@@ -9,6 +9,7 @@ module Autonomia::AccountProvisioningDefaults
 
   included do
     before_create :apply_autonomia_default_feature_flags, if: :autonomia_account_defaults_enabled?
+    before_create :apply_autonomia_default_internal_attributes, if: :autonomia_account_defaults_enabled?
     after_create_commit :ensure_autonomia_default_account_user, if: :autonomia_account_defaults_enabled?
   end
 
@@ -20,6 +21,15 @@ module Autonomia::AccountProvisioningDefaults
   def apply_autonomia_default_feature_flags
     self.feature_flags = autonomia_default_feature_flags
     enable_features(*(autonomia_named_default_features - CHATWOOT_INTERNAL_FEATURES))
+  end
+
+  # #2228: conta nova nasce com a Fase 2 dos Agentes e o "Agente de IA" por caixa. As chaves que já vêm na criação
+  # (billing_provider, signup_source, ou a própria chave dada por quem cria) valem por cima do padrão.
+  def apply_autonomia_default_internal_attributes
+    self.internal_attributes = {
+      Autonomia::Agents::Fase2::INTERNAL_ATTR_KEY => true,
+      Autonomia::Agents::AgenteIaPorCaixa::INTERNAL_ATTR_KEY => true
+    }.merge(internal_attributes.to_h.stringify_keys)
   end
 
   def autonomia_named_default_features

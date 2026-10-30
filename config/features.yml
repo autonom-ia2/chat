@@ -4,14 +4,16 @@
 # display_name:       the name to be used in the UI
 # enabled:            whether the feature is enabled by default
 # column:             the account bitset column used to store the flag. Defaults to feature_flags. 
-#                     Use feature_flags_ext_1 for extension flags. Each bigint column supports 63 flags.
+#                     Extension columns: feature_flags_ext_1, feature_flags_ext_2. Each bigint column supports 63 flags.
 # help_url:           the url to the help center article
 # chatwoot_internal:  whether the feature is internal to Chatwoot and should not be shown in the UI for other self hosted installations
 # deprecated:         purpose of feature flag is done, no need to show it in the UI anymore
 #
 # ADDING A NEW FEATURE FLAG:
 #   - The `feature_flags` column is FULL (63/63 slots used). Do NOT add to it.
-#   - New flags MUST set `column: feature_flags_ext_1` and be appended at the end.
+#   - `feature_flags_ext_1` has no free slot either: positions 1-61 are in use (61 = meta_ads_gestao, #2164) and
+#     62/63 are provisionally reserved for #2182/#2183 (Orquestração, 25/10). Do NOT add to it (#2186).
+#   - New flags MUST set `column: feature_flags_ext_2` and be appended at the end.
 #   - Bit positions are persisted per column; never reorder or remove existing
 #     entries, and never change an existing feature's `column` after release.
 - name: inbound_emails
@@ -573,12 +575,12 @@
 # robô, follow-up, automação; não campanha) marca a conversa como lida antes de sair (ConversaCanal::LeituraAoResponder,
 # que usa a lida do #1702 e depende também de `conversa_cara_do_canal`). Posição 39 na feature_flags_ext_1, bit 38
 # (274877906944), logo depois de `conversa_email_nova` (tabela da Orquestração, 19/10): a posição na lista é o bit; se
-# outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Desligada
-# (padrão): tudo como antes.
-# Sem migration. Nasce ligada nas contas 1, 16 e 18 da stack Hub2You (Orquestração, depois do deploy).
+# outra flag entrar antes na main, esta vai para o fim e o bit sobe (ajustar o spec/models/account_spec.rb). Desligada:
+# tudo como antes. Padrão das contas novas: ligada desde o #2221 (migration 20261108500000), pedido do Rodrigo em
+# 26/10/2026, que mandou ligar em todas as contas das duas stacks. Antes, só nas contas 1, 16, 17 e 18 da stack Hub2You.
 - name: whatsapp_agenda_do_contato
   display_name: Contato na agenda do aparelho e lida ao responder (WhatsApp API)
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # "Lido" do e-mail sincronizado com o servidor do cliente (#1870): na caixa de e-mail com IMAP (Gmail e Microsoft por
@@ -660,12 +662,12 @@
 # arquivar o card que não é pedido de cliente (fornecedor, engano, só robôs, repetido), sem contar como perda
 # (Crm::Ai::NaoENegocio). A regra do prompt (ClassifierPrompt::NAO_E_NEGOCIO), o campo `nao_e_negocio` do schema e o
 # `id` em other_subjects só vão ao modelo com ela. Posição 46 na feature_flags_ext_1 (1 << 45), definitiva da
-# Orquestração (21/10), logo depois de anuncios_sem_login. Sem migration.
-# Desligada (padrão): prompt, schema e entrada iguais aos de antes, e nada é arquivado. Nasce ligada só nas contas 1, 16
-# e 18 da stack Hub2You (Orquestração, depois do deploy).
+# Orquestração (21/10), logo depois de anuncios_sem_login.
+# Desligada: prompt, schema e entrada iguais aos de antes, e nada é arquivado. Ligada nas contas existentes das duas
+# stacks pela Orquestração. Padrão das contas novas: ligada desde o #2008 (migration 20261108280000).
 - name: crm_ia_arquiva_lixo
   display_name: IA de etapa arquiva o card que não é negócio
-  enabled: false
+  enabled: true
   column: feature_flags_ext_1
 
 # Mensagem da equipe ao cliente relê o card em foco (#1923). Ligada (junto com `crm_avaliar_toda_mensagem`): a mensagem
@@ -705,11 +707,334 @@
 
 # Metas do mês por pessoa em CRM › Números (#1991, F4 do épico #1871). Ligada: a gaveta "Metas do mês" (funis de Vender,
 # meta do funil e de cada pessoa, em R$ na moeda do funil) para o administrador e a função com `crm_metas_manage` (ou
-# `crm_admin`), e quem vende vê a própria meta no topo de "Só eu" (Decisão 4: nunca a dos colegas). Desligada (padrão):
+# `crm_admin`), e quem vende vê a própria meta no topo de "Só eu" (Decisão 4: nunca a dos colegas). Desligada:
 # tudo como antes. Posição 50 (1 << 49 = 562949953421312), definitiva da Orquestração (21/10), na feature_flags_ext_1,
 # logo depois de convite_da_reuniao.
-# Sem migration: a Orquestração liga depois do deploy, na stack Hub2You, contas 1, 16 e 18.
+# Ligada nas contas existentes pela Orquestração. Padrão das contas novas: ligada desde o #2045
+# (migration 20261108300000).
 - name: crm_metas
   display_name: CRM › Metas do mês por pessoa
+  enabled: true
+  column: feature_flags_ext_1
+
+# CRM › Números por papel, visão "Equipe" nova e a IA no time (#1992, F5 do épico #1871). Ligada (com a
+# `crm_numeros_lentes`): a aba Equipe de CRM › Números mostra o topo, o próximo passo, Vendendo, Atendendo, "Quem
+# precisa de ajuda" e o resto recolhido ("Quem cuidou", com a IA numa linha própria, sem meta). Quem vê continua o mesmo
+# (administrador e função com `crm_view_reports`); o custo da IA fica só com o administrador. Desligada (padrão): a aba
+# Equipe é o painel de sempre. Posição 51 na feature_flags_ext_1 (1125899906842624 = 1 << 50), da Orquestração (21/10),
+# logo depois de crm_metas. Sem migration: a Orquestração liga na stack Hub2You, contas 1, 16 e 18, depois do deploy.
+- name: crm_numeros_equipe
+  display_name: CRM › Números por papel (visão "Equipe" e a IA no time)
   enabled: false
   column: feature_flags_ext_1
+
+# Ficar com a conversa ao enviar (#2067). Ligada: na caixa de resposta e na gaveta "Enviar mensagem" (conversa que já
+# existe), o ícone ao lado do Enviar decide se quem envia fica com a conversa (ligado sem ninguém ou com a IA; desligado
+# na conversa de colega), e a conversa que veio de um agente de IA mostra "Devolver para <agente>" a quem está com ela.
+# Desligada: a tela é a de antes (faixa "Atribuir a mim") e o servidor ignora o pedido do envio. Posição provisória 52 na
+# feature_flags_ext_1 (1 << 51), logo depois de crm_numeros_equipe; a Orquestração reserva a 56 (o #2065 tem 52–55) e
+# reemite na vez do PR. Ligada nas contas existentes pela Orquestração depois do deploy (psql); padrão das contas novas:
+# ligada (migration 20261108340000).
+- name: ficar_com_a_conversa_ao_enviar
+  display_name: Ficar com a conversa ao enviar e Devolver para a IA
+  enabled: true
+  column: feature_flags_ext_1
+
+# IA entende a conversa, F1 — fatos da conversa (sem Issue própria ainda; épico "IA entende a conversa" do CRM).
+# Ligada: (a) a IA de assunto lê quem falou (cliente, pessoa da equipe, nosso assistente, outro sistema) e a hora de
+# cada mensagem, e a de etapa lê a ordem (`after`) e desde quando o cliente espera (`customer_waiting_since`); (b) a
+# fala pública do nosso agente de IA relê o card em foco 2 min depois (até 6 vezes por card por dia; follow-up,
+# Agendamento e o agente de cotação ficam de fora); (c) a passagem para pessoa que o nosso assistente prometeu e
+# ninguém cumpriu é honrada pela IA do CRM, mesmo com o agente dono da conversa (exceção ao #1673; nunca com o agente
+# de cotação). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration.
+# Posição 53 na feature_flags_ext_1 (1 << 52), definitiva da Orquestração (22/10).
+- name: crm_ia_fatos_da_conversa
+  display_name: CRM › IA lê quem falou e em que ordem
+  enabled: false
+  column: feature_flags_ext_1
+
+# IA entende a conversa, F2 — assunto encerrado e "o que entra aqui" (sem Issue própria ainda; épico "IA entende a
+# conversa" do CRM). Ligada: (a) os cards da conversa fechados nos últimos 90 dias (até 3, arquivado fora) viram opção
+# da IA de assunto; mensagem só sobre um deles (agradecer, comentar, dar notícia) não cria, não foca e não reabre card,
+# e a IA de etapa não relê card por causa dela (assunto de card fechado não continua); pedido novo sobre o mesmo
+# assunto segue sendo pedido novo; (b) a IA de etapa lê o "quando usar" do funil e, sem ele, a descrição que a conta já
+# escreveu. Desligada (padrão): pergunta, instruções e entrada iguais às de antes. Sem migration, sem tela.
+# Posição 54 na feature_flags_ext_1 (1 << 53), definitiva da Orquestração (22/10).
+- name: crm_ia_assunto_encerrado
+  display_name: CRM › IA reconhece assunto encerrado
+  enabled: false
+  column: feature_flags_ext_1
+
+# IA entende a conversa, F3 — a IA fecha o card (sem Issue própria ainda; épico "IA entende a conversa" do CRM).
+# Ligada: (a) a IA de etapa pode marcar Perdido com motivo (adiou, recusou, fechou com outra; "adiou" = agora não sem
+# recusa, em qualquer funil, com lembrete de retorno na data do cliente ou em 30 dias), e Resolvido só em funil de
+# Atender, com confirmação do cliente; nunca Ganho; silêncio nunca fecha (a avaliação do card parado não fecha); (b)
+# "era teste" vira sugestão de arquivar como não é negócio (com a flag crm_ia_arquiva_lixo); (c) uma pessoa escolheu a etapa há
+# pouco e a IA quer voltar o card: vira sugestão; (d) o card fechado pela IA não segura o pedido novo pelo respeito de
+# 24 h; (e) fechar é sugestão por padrão, que a pessoa aceita num clique; sozinha, só com confiança de 0,95
+# (Crm::Ai::Config::AUTO_CLOSE_THRESHOLD). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
+# Posição 55 na feature_flags_ext_1 (1 << 54), definitiva da Orquestração (22/10).
+- name: crm_ia_fecha_card
+  display_name: CRM › IA fecha o card (perdido com motivo, resolvido)
+  enabled: false
+  column: feature_flags_ext_1
+
+# IA entende a conversa, F4 — leitor de mídia na chegada (sem Issue própria ainda; épico "IA entende a conversa" do
+# CRM). Ligada: a mensagem com anexo (dos dois lados, numa caixa com o CRM) é lida uma vez, na chegada
+# (Crm::Ai::LeitorDeMidia): áudio transcrito, foto descrita e PDF com a camada de texto lida (sem OCR); a IA de assunto
+# passa a ler a mensagem só de mídia (antes descartada) e as IAs de etapa e memória leem o texto do PDF. Tetos: 4 fotos,
+# 2 PDFs e 3 áudios por mensagem; 500 leituras por conta por dia. Desligada (padrão): leitura, prompts e comportamento
+# iguais aos de antes. Sem migration, sem tela.
+# Posição 56 na feature_flags_ext_1 (1 << 55), definitiva da Orquestração (22/10).
+- name: crm_ia_leitor_de_midia
+  display_name: CRM › IA lê foto, áudio e PDF na chegada
+  enabled: false
+  column: feature_flags_ext_1
+
+# Conversa do Instagram com a cara do Direct (#2079, épico #1701). Ligada: na caixa Instagram, a conversa usa as cores,
+# os balões, os horários, o "Visto" e a caixa de escrever do instagram.com/direct, nos modos claro e escuro; só muda o
+# desenho, com o que já chega gravado (envio e recebimento iguais). Desligada: a conversa de sempre. Posição 57 na
+# feature_flags_ext_1 (1 << 56), definitiva da Orquestração (22/10). Liberada para todas as contas (Rodrigo, 22/10):
+# conta nova nasce ligada pela migration 20261108350000; as existentes são ligadas pela Orquestração depois do deploy.
+- name: conversa_instagram
+  display_name: Conversa do Instagram com a cara do Direct
+  enabled: true
+  column: feature_flags_ext_1
+
+# Arquivados, restaurar e excluir de vez no CRM (#2095 / #2096, PRs #2097 e #2098). Ligada: o funil ganha "Arquivados"
+# (restaurar um ou vários, com o aviso do cliente que já voltou), "Funis arquivados" (restaurar o funil), a janela nova
+# de arquivar card e funil (o que para, o que continua, para onde vão os cards e as caixas de entrada) e, para o
+# administrador, "Excluir de vez" (card, vários, funil e os cards ao excluir um contato). Também só com ela ligada
+# (decisão do Rodrigo, 23/10): tirar um agente da conta solta os cards dele (Agents::DestroyJob, #2097) e excluir um contato
+# anonimiza os cards e cancela as reuniões futuras. Desligada: as telas e o servidor de sempre, como na main; as rotas
+# novas das Partes B e C respondem nos dois casos. Posição 58 na feature_flags_ext_1 (1 << 57), confirmada pela
+# Orquestração (23/10). Ligada nas contas existentes das duas stacks. Padrão das contas novas: ligada desde o #2159
+# (Rodrigo, 24/10; migration 20261108380000).
+- name: crm_arquivados
+  display_name: CRM › Arquivados, restaurar e excluir de vez
+  enabled: true
+  column: feature_flags_ext_1
+
+# Painel do contato enxuto na conversa (#2138). Ligada: o painel da direita vira "Sobre este contato" (nome, quem
+# cuida, o combinado, de onde veio e "Mais" só com conteúdo; tela inteira no celular) e o ⋯ do topo da conversa ganha
+# "Mudar time ou prioridade" e "Acompanhar esta conversa". Desligada: o painel e o ⋯ de sempre. Só frontend.
+# Posição 59 na feature_flags_ext_1 (1 << 58), depois da 58 do crm_arquivados #2097 (Orquestração, 23/10).
+# Piloto 1, 16 e 18 por psql. Conta nova nasce ligada pela migration 20261108370000 (Rodrigo, 24/10).
+- name: painel_contato_enxuto
+  display_name: Painel do contato enxuto na conversa
+  enabled: true
+  column: feature_flags_ext_1
+
+# O agente só informa; a IA de Atribuição passa a conversa (#2154, regra do Rodrigo de 24/10). Ligada: quando a instrução
+# do agente de IA manda passar (`should_handoff`), ele responde o que a instrução diz e continua atendendo; não chama mais
+# o `bot_handoff!` (Autonomia::Agents::Operate::Responder). Depois que a fala sai (no último pedaço, na entrega em pedaços),
+# a IA de Atribuição do CRM avalia o card em foco (gatilho `fala_do_agente`) e, se decidir passar, entrega pelo
+# Crm::Entrega com as regras de sempre, mesmo com o agente no nome (Crm::Ai::HandoffExecutor). O evento da cotação
+# (ResponderAoEvento) não muda. Desligada: tudo como antes. Sem migration, sem tela. Posição 60 na feature_flags_ext_1
+# (1 << 59), PROVISÓRIA da Orquestração (24/10); definitiva na vez do PR. Piloto 1, 16 e 18 da hub por psql, pela
+# Orquestração, depois do NO AR. Padrão das contas novas: ligada desde o #2228 (migration 20261108510000), junto com
+# a Fase 2 dos Agentes e o "Agente de IA" por caixa (internal_attributes, Autonomia::AccountProvisioningDefaults).
+- name: agente_so_informa
+  display_name: Agentes IA › o agente avisa, a Atribuição passa a conversa
+  enabled: true
+  column: feature_flags_ext_1
+
+# Anúncios da Meta: gestão mínima do anúncio (#2161). Ligada: o detalhe do anúncio mostra se ele está ativo ou
+# pausado, com o botão para pausar ou ativar (quem tem meta_ads_manage), e o post da Página por trás do anúncio; a
+# Conexão mostra a Página. Desligada: o painel de sempre. Posição 61 na feature_flags_ext_1 (1 << 60), depois da 60
+# do agente_so_informa #2166 (Orquestração, 25/10). Ligada em todas as contas existentes das duas stacks por decisão
+# do Rodrigo (25/10). Padrão das contas novas: ligada desde o #2191 (migration 20261108440000).
+- name: meta_ads_gestao
+  display_name: Anúncios da Meta - pausar anúncio e post da Página
+  enabled: true
+  column: feature_flags_ext_1
+
+# IA de assunto: nome genérico refinado uma vez (#2163). Ligada: o modelo maior diz se o nome que deu ao pedido é
+# genérico por falta de informação ("Nova cotação"); o card guarda essa marca. Quando o detalhe chega no mesmo pedido,
+# o nome é trocado UMA vez pelo específico, no mesmo card, sem criar outro. Nome dado ou editado por pessoa nunca é
+# trocado. O card sem nome que já carregava um pedido (houve "o mesmo assunto" nele) ganha nome pelo mesmo assunto, e o
+# pedido novo no mesmo funil vira card novo em vez de apagar o primeiro. Desligada: prompt, schema e comportamento iguais
+# aos de antes. Sem migration. Posição 62 na feature_flags_ext_1 (1 << 61), definitiva da Orquestração (25/10), depois
+# da 61 do meta_ads_gestao #2164. Piloto 1, 16 e 18 da hub por psql, depois do NO AR.
+- name: crm_ia_nome_provisorio
+  display_name: CRM › IA refina o nome genérico do pedido
+  enabled: false
+  column: feature_flags_ext_1
+
+# IA de assunto: dúvida com sinal de pedido novo vira sugestão (#2162). Ligada: quando a IA de assunto fica em dúvida e
+# alguém (o Jev ou o modelo maior) viu um pedido novo, a equipe vê a sugestão "Parece um pedido novo: criar card?" no
+# painel Assuntos da conversa, em Sugerir e em Automática, e aceita ou ignora. Nada é criado sozinho. Sugestão ignorada
+# não volta por 24 h (#1260). Dúvida sem sinal de pedido novo fica como antes. Desligada: a dúvida não muda nada, como
+# antes. Sem migration. Posição 63 na feature_flags_ext_1 (1 << 62), definitiva da Orquestração (25/10), depois da 62
+# do crm_ia_nome_provisorio #2163; é a última posição da coluna. Piloto 1, 16 e 18 da hub por psql, depois do NO AR.
+- name: crm_ia_duvida_vira_sugestao
+  display_name: CRM › Dúvida da IA de assunto vira sugestão
+  enabled: false
+  column: feature_flags_ext_1
+
+# Este contato é (#2084/#2085): interessado (o padrão), parceiro do mercado ou não é negócio, na coluna contacts.relacao.
+# Ligada: parceiro e não é negócio não viram card sozinhos e ficam fora dos Números (Crm::Relacao). Card criado à mão
+# continua valendo. Desligada: todo contato é do funil, como antes. Este PR só traz a coluna, a regra e a flag; as
+# travas, os Números, a API e as telas vêm nos PRs seguintes do #2084. Posição 1 na feature_flags_ext_2 (1 << 0), a
+# primeira da coluna, confirmada pela Orquestração (25/10): chega à main antes das flags de anúncio (#2195, #2199, #2212).
+- name: contato_relacao
+  display_name: Contatos › este contato é interessado, parceiro ou não é negócio
+  enabled: false
+  column: feature_flags_ext_2
+
+# CRM › Números › "De onde vieram os clientes" (#2001, F6 do #1871). Ligada: a visão "Equipe" de Números ganha o
+# atalho e a tela das origens (mês e funil, anúncios, gasto só em "Todos os funis" para quem vê os anúncios) e o
+# relatório em PDF e planilha. Desligada: nada disso aparece e a API responde 404. Depende de crm_numeros_lentes e
+# crm_numeros_equipe. Sem migration. Posição 2 na feature_flags_ext_2 (1 << 1), logo depois de contato_relacao,
+# DEFINITIVA da Orquestração (26/10).
+- name: crm_numeros_origens
+  display_name: CRM › Números · De onde vieram os clientes
+  enabled: false
+  column: feature_flags_ext_2
+
+# Lista de conversas "Quem está esperando" (#2202, PR1). Ligada: o item da lista vira o CardDaConversa (2 ou 3 linhas:
+# nome e horário, quem disse e o quê, e o sinal de espera), e o topo da lista ganha "Recentes ▾", "Filtrar ▾" e as abas
+# Minhas, Para pegar e Todas. Desligada: a lista de sempre, idêntica. Só frontend, sem migration. Fim da
+# feature_flags_ext_2, posição pela ordem de chegada à main; hoje 3 (valor 4, 1 << 2), confirmada pela Orquestração.
+# Se outra flag da ext_2 entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+# Ligada em todas as contas em 27/10 (Orquestração, psql, com backup). Padrão das contas novas: ligada desde o #2253
+# (migration 20261108560000).
+- name: lista_quem_espera
+  display_name: Lista de conversas › quem está esperando
+  enabled: true
+  column: feature_flags_ext_2
+
+# Painel de desempenho do agente (#2226 protótipo, #2251 leitura guardada no banco). Ligada: a página Agentes › {nome} ›
+# Desempenho, o link "Ver tudo de {nome}" na página do agente (nosso e de outro sistema) e a API do painel e da
+# exportação (PDF/planilha). Desligada: nada aparece, a rota volta para o início e a API responde 404. Ver o painel
+# pede desempenho_view (função personalizada) ou admin; baixar o arquivo pede também contact_export. No fim da
+# feature_flags_ext_2, depois de lista_quem_espera: posição 4 (valor 8, 1 << 3), confirmada pela Orquestração (27/10).
+- name: agentes_painel_desempenho
+  display_name: Agentes IA › painel de desempenho do agente
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta: resultados orgânicos (#2199). Ligada: a página de Anúncios da Meta ganha a aba "Seus posts", ao
+# lado do Resultado, com quem viu os posts da Página do Facebook (read_insights) e do Instagram
+# (instagram_business_manage_insights), quem mandou mensagem por ali e os posts com mais curtidas e comentários.
+# Desligada: Resultado e Conexão de sempre. Fim da feature_flags_ext_2, posição pela ordem de chegada à main; hoje 5
+# (valor 16, 1 << 4), depois de agentes_painel_desempenho. Se outra flag da ext_2 entrar antes, esta vai para depois
+# dela (a Orquestração confere antes de enfileirar).
+- name: meta_ads_organico
+  display_name: Anúncios da Meta - resultados orgânicos da Página e do Instagram
+  enabled: false
+  column: feature_flags_ext_2
+
+# Leitura no celular apaga a bolinha (#2246, opção C). Ligada: quando o celular do negócio lê as mensagens do cliente,
+# o "visto" do agente anda até elas e a bolinha de não lida apaga, sem sino (ConversaCanal::VistaNoCelular). Hoje só
+# na caixa oficial com WhatsApp Híbrido, pela sessão auxiliar (WhatsappHybrid::LeituraNoCelular); a caixa WhatsApp API
+# (WAHA comum) depende de patch no conector e a Cloud sem Híbrido não recebe o sinal da Meta. Desligada: a bolinha só
+# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. Fim da feature_flags_ext_2, depois de
+# meta_ads_organico: posição 6 (valor 32, 1 << 5), confirmada pela Orquestração (27/10). Nasce desligada em todas;
+# primeiro liga só numa conta de teste com Híbrido, para medir (Orquestração, com OK do Rodrigo).
+- name: leitura_no_celular
+  display_name: Conversas › leitura no celular apaga a bolinha
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta › Formulários (#2195). Ligada: a aba Formulários mostra as Páginas que a pessoa concedeu ao entrar com
+# o Facebook e os formulários instantâneos de cada uma; escolher o funil e a etapa de um formulário liga o recebimento
+# da Página (assina o campo leadgen, pages_manage_metadata), e quem preenche vira contato e card ali, com o anúncio de
+# origem e as respostas no card (leads_retrieval). Também traz quem preencheu nos últimos 90 dias. Desligada: a aba
+# some, a API responde 404 e o webhook leadgen não cria nada. Com migration (20261108590000). Fim da
+# feature_flags_ext_2: posição 7 (valor 64, 1 << 6), depois da leitura_no_celular (#2246), que chegou antes à main
+# (27/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+- name: meta_ads_formularios
+  display_name: Anúncios da Meta › Formulários (leads no funil)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada (com meta_ads_gestao): o detalhe
+# do anúncio ganha a aba Instagram dos comentários (ver, responder, ocultar, apagar e responder no privado), e a caixa
+# do Instagram pode pedir de novo o login com instagram_business_manage_comments, voltando ao anúncio. Desligada: a aba
+# não aparece e a API responde 404. Migration 20261108550000 (crm_meta_ads_comment_actions). Fim da
+# feature_flags_ext_2, depois de meta_ads_formularios (#2195): posição 8 (valor 128, 1 << 7). Se outra flag da ext_2
+# entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+- name: meta_ads_comentarios_instagram
+  display_name: Anúncios da Meta › comentários do anúncio no Instagram
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta: o Gerenciador simples (#2198, PR 1). Ligada: "Criar anúncio" no Resultado abre o anúncio novo
+# (WhatsApp ou site, só os destinos e lugares que a chamada real confirmou), o detalhe do anúncio mostra o orçamento e
+# as datas com "Mudar", e os anúncios criados aqui que seguem pausados aparecem no topo. Tudo nasce pausado: nada gasta
+# até a pessoa tocar em "Ativar anúncio". Desligada: o painel de sempre; nenhuma rota de criar chama a Meta (404).
+# Migration 20261108580000 (tabela nova crm_meta_ads_created_objects). Fim da feature_flags_ext_2, posição pela ordem
+# na main, confirmada pela Orquestração na hora da fila (hoje 9, valor 256, 1 << 8, depois do meta_ads_comentarios_instagram).
+- name: meta_ads_criar
+  display_name: Anúncios da Meta › criar anúncio, orçamento e datas
+  enabled: false
+  column: feature_flags_ext_2
+
+# Seus posts (#2302, F1 #2304): página própria no grupo Crescer, com os números do perfil e todos os posts do Instagram
+# e da Página das caixas da conta (sem conexão de anúncios). Ligada: a API GET seus_posts responde (PR 1a); o item no
+# menu, a rota e os links antigos da aba "Seus posts" de Anúncios chegam no PR 1b. Desligada: a API responde 404. Sem
+# migration. Fim da feature_flags_ext_2 da main: posição 10 (valor 512, 1 << 9), válida contra a main de 27/10
+# (Orquestração). Se outra flag entrar antes, a Orquestração pede o ajuste antes da fila. Nasce ligada no piloto
+# (contas 1, 16 e 18).
+- name: seus_posts
+  display_name: Seus posts (Instagram e Página)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
+# pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
+# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Migration 20261108600000
+# (conversation_audience_*). Fim da feature_flags_ext_2, depois de seus_posts (#2304): posição 11 (valor 1024,
+# 1 << 10), a confirmar pela Orquestração antes da fila.
+- name: campanhas_publico_por_conversa
+  display_name: Campanhas › Novo público pedindo em palavras
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta › comentários do anúncio no Facebook (#2197, épico #2194). Ligada: o detalhe do anúncio ganha a aba
+# Facebook dos comentários (ler, responder como a Página, ocultar e apagar, ao vivo na Meta) e a API responde; o
+# webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
+# feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2303): posição 12 (valor 2048, 1 << 11), dada pela
+# Orquestração (28/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+- name: meta_ads_comentarios_facebook
+  display_name: Anúncios da Meta › comentários do anúncio no Facebook
+  enabled: false
+  column: feature_flags_ext_2
+
+# Lista nova do CRM "o que fazer agora" (#2283, frontend; o servidor entrou no #2292). Ligada: a visão Lista do CRM vira
+# os grupos Esperando resposta, Retornos de hoje e atrasados, Ninguém cuidando, Parados há 7 dias ou mais e Os demais,
+# contados pelo servidor (sort=acao e summaries?group_by=acao), com a ação de cada linha. Desligada: a Lista de sempre,
+# intacta. Só frontend, sem migration. Fim da feature_flags_ext_2, depois de meta_ads_comentarios_facebook (#2325):
+# posição 13 (valor 4096, 1 << 12). A posição real é a ordem na main na hora da fila, e a Orquestração confirma antes de
+# enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: crm_lista_acao
+  display_name: CRM › Lista nova "o que fazer agora"
+  enabled: false
+  column: feature_flags_ext_2
+
+# Funções da equipe guiadas (#2308, épico #1784). Ligada: Funções da equipe abre a tela nova inteira: a lista
+# (cartões com a frase do que cada função pode, quem está sem função e as duas fixas), a conversa guiada de criar,
+# alterar e duplicar (Escolha, Ajustes, perguntas, Confira e o aviso de perda de acesso), a gaveta de pôr e tirar
+# pessoas e o apagar com destino. Desligada: a tela de hoje, intacta. Rollback: desligar a flag na conta (a tela de
+# hoje volta na hora; as funções gravadas são as mesmas). Sem migration. O servidor muda para as duas telas, com a flag
+# ligada ou desligada: o 401 de /custom_roles diz o motivo no corpo (out_of_reach, own_role, feature_off), a autorização
+# vem antes da conferência do plano e o feature_off fica no log. Fim da feature_flags_ext_2: posição 14
+# (valor 8192, 1 << 13), depois de crm_lista_acao (#2324). A posição real é a ordem na main na hora da fila, e a
+# Orquestração confirma antes de enfileirar.
+- name: funcoes_guiadas
+  display_name: Funções da equipe › lista e criação guiadas
+  enabled: false
+  column: feature_flags_ext_2
+
+# Seus posts F2 (#2305, épico #2302): os comentários de cada post do Instagram e da Página, com responder, mandar no
+# privado (só Instagram), esconder, mostrar de novo e apagar, e "esperando você" em cada post da lista. Ligada: o servidor
+# abre seus_posts/posts/:post_id e as ações (com a flag seus_posts também ligada). Desligada: 404 nesses endereços e a
+# lista sem "esperando você", como no F1. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2,
+# depois de funcoes_guiadas (#2308): posição 15 (valor 16384, 1 << 14), provisória. A posição real é a ordem na main na
+# hora da fila, e a Orquestração confirma antes de enfileirar. Nasce ligada no piloto (contas 1, 16 e 18), com OK do
+# Rodrigo.
+- name: seus_posts_comentarios
+  display_name: Seus posts › comentários de cada post
+  enabled: false
+  column: feature_flags_ext_2

@@ -138,7 +138,7 @@ module EmailCampaigns
 
     def from_email
       name = @campaign.from_name.presence
-      addr = @campaign.from_email.presence || @campaign.sender_identity.from_email.presence
+      addr = @campaign.sender_address
       addr.present? && name.present? ? "#{name} <#{addr}>" : addr
     end
 

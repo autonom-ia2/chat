@@ -18,11 +18,13 @@ import wootConstants from 'dashboard/constants/globals';
 import { conversationListPageURL } from 'dashboard/helper/URLHelper';
 import { snoozedReopenTime } from 'dashboard/helper/snoozeHelpers';
 import { useInbox } from 'dashboard/composables/useInbox';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { useAlert } from 'dashboard/composables';
 import { useI18n } from 'vue-i18n';
 import { copyTextToClipboard } from 'shared/helpers/clipboard';
 import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
 import { usePeleDoTopo } from 'dashboard/components-next/conversa-canal/usePeleDaConversa';
+import { useTopoDoInstagram } from 'dashboard/components-next/conversa-canal/instagram/useConversaDoInstagram';
 import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 
 const props = defineProps({
@@ -42,6 +44,8 @@ const route = useRoute();
 const conversationHeader = ref(null);
 // #1702: faixa cinza do WhatsApp na conversa com a cara do canal.
 const classesDoTopo = usePeleDoTopo();
+// #2079: topo do Direct na conversa do Instagram: foto de 44 px, nome forte e o @usuário.
+const topoDoInstagram = useTopoDoInstagram();
 const { width } = useElementSize(conversationHeader);
 const { isAWebWidgetInbox } = useInbox();
 
@@ -83,6 +87,14 @@ const isHMACVerified = computed(() => {
 const currentContact = computed(() =>
   store.getters['contacts/getContact'](props.chat.meta.sender.id)
 );
+// Nome que é só telefone sai legível (#2255); só exibição.
+const nomeNaTela = computed(() => nomeDoContatoNaTela(currentContact.value));
+// #2079: o @usuário do Instagram ao lado do número da conversa.
+const usuarioDoInstagram = computed(
+  () =>
+    topoDoInstagram.value &&
+    currentContact.value?.additional_attributes?.social_instagram_user_name
+);
 
 const isSnoozed = computed(
   () => currentChat.value.status === wootConstants.STATUS_TYPE.SNOOZED
@@ -123,7 +135,7 @@ const copyConversationId = async () => {
   <div
     ref="conversationHeader"
     class="flex flex-col gap-3 items-center justify-between flex-1 w-full min-w-0 xl:flex-row px-3 pt-3 pb-2 h-24 xl:h-12"
-    :class="classesDoTopo"
+    :class="[classesDoTopo, topoDoInstagram]"
   >
     <div
       class="flex items-center justify-start w-full xl:w-auto max-w-full min-w-0 xl:flex-1"
@@ -136,8 +148,8 @@ const copyConversationId = async () => {
       <Avatar
         :name="currentContact.name"
         :src="currentContact.thumbnail"
-        :size="classesDoTopo ? 40 : 32"
-        :rounded-full="!!classesDoTopo"
+        :size="topoDoInstagram ? 44 : classesDoTopo ? 40 : 32"
+        :rounded-full="!!classesDoTopo || !!topoDoInstagram"
         :status="currentContact.availability_status"
         hide-offline-status
       />
@@ -147,9 +159,11 @@ const copyConversationId = async () => {
             class="text-sm font-medium truncate leading-tight text-n-slate-12"
             :class="{
               '!text-base !text-[#0A0A0A] dark:!text-[#FAFAFA]': classesDoTopo,
+              '!text-base !font-semibold !text-[#0C1014] dark:!text-[#F5F5F5]':
+                topoDoInstagram,
             }"
           >
-            {{ currentContact.name }}
+            {{ nomeNaTela }}
           </span>
           <CustomerBadge :contact="currentContact" show-since />
           <fluent-icon
@@ -164,6 +178,13 @@ const copyConversationId = async () => {
         <div
           class="flex items-center gap-1 overflow-hidden text-xs conversation--header--actions text-n-slate-11 text-ellipsis whitespace-nowrap"
         >
+          <span
+            v-if="usuarioDoInstagram"
+            class="truncate text-xs text-[#6A717A] dark:text-[#A8A8A8]"
+          >
+            {{ usuarioDoInstagram }}
+          </span>
+          <span v-if="usuarioDoInstagram">{{ BULLET }}</span>
           <button
             type="button"
             class="truncate text-label-small text-n-slate-11 hover:text-n-slate-12 !p-0 cucursor-pointer"

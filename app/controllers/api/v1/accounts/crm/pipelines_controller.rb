@@ -1,19 +1,25 @@
 class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::BaseController
+  include Crm::PipelineArchiving
+
   PIXEL_ID_MAX_LENGTH = 20
 
-  before_action :fetch_pipeline, only: [:show, :update, :destroy]
+  before_action :fetch_pipeline, only: [:show, :update]
   before_action :ensure_outcome_labels_format, only: [:update]
 
+  # `status=archived` lista os funis arquivados (#2095), com quantos cards abertos cada um guarda, quantos cards tem ao
+  # todo e as caixas que criam card nele. Sem ele, os ativos, como sempre.
   def index
     authorize ::Crm::Pipeline
-    @pipelines = policy_scope(::Crm::Pipeline).active.order(:position, :id)
+    archived = params[:status].to_s == 'archived'
+    @pipelines = policy_scope(::Crm::Pipeline).where(status: archived ? :archived : :active).order(:position, :id)
     @pipelines_count = @pipelines.count
+    archived_pipeline_counts(@pipelines) if archived
   end
 
   def show; end
 
   def create
-    @pipeline = Current.account.crm_pipelines.new(pipeline_params)
+    @pipeline = Current.account.crm_pipelines.new(permitted_pipeline_params)
     @pipeline.created_by = Current.user
     authorize @pipeline
     return render_outcome_labels_invalid unless outcome_labels_param_valid?
@@ -26,7 +32,9 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
   end
 
   def update
-    @pipeline.update!(pipeline_params)
+    @pipeline.assign_attributes(permitted_pipeline_params)
+    return render_archive_blocked unless save_pipeline!
+
     update_goal!
     update_outcome_labels!
     update_meta_sync!
@@ -35,12 +43,26 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     render :show
   end
 
-  def destroy
-    @pipeline.archived!
-    render :show
+  private
+
+  # Último funil ativo ou único principal ativo não se arquiva. A regra vale para a mudança que vai ser gravada (PATCH
+  # com o status em qualquer forma: "archived", 1, "1"; o DELETE confere o mesmo no Crm::Pipelines::Archiver), conferida
+  # e gravada sob a trava de arquivar da conta (Crm::Pipelines::TravaDeArquivar, a mesma do DELETE): dois arquivamentos
+  # ao mesmo tempo não zeram os funis ativos. false quando a regra recusou (nada foi gravado).
+  def save_pipeline!
+    return @pipeline.save! unless @pipeline.will_save_change_to_status?(to: 'archived')
+
+    ActiveRecord::Base.transaction do
+      ::Crm::Pipelines::TravaDeArquivar.travar!(Current.account.id)
+      @archive_blocked = @pipeline.motivo_para_nao_arquivar
+      @archive_blocked.nil? && @pipeline.save!
+    end
   end
 
-  private
+  def render_archive_blocked
+    render json: { error: "crm.pipeline_archive_#{@archive_blocked}", message: I18n.t("crm.pipelines.archive_#{@archive_blocked}"),
+                   moved_count: archive_moved_before_failure }, status: :unprocessable_entity
+  end
 
   def fetch_pipeline
     @pipeline = policy_scope(::Crm::Pipeline).find(params[:id])
@@ -68,11 +90,26 @@ class Api::V1::Accounts::Crm::PipelinesController < Api::V1::Accounts::Crm::Base
     parameter_set(:pipeline).permit(:name, :description, :status, :is_default, :position, :counts_as_sale, :when_to_use, metadata: {})
   end
 
+  # Valor de venda (#2075): quem não vê a meta em R$ não a muda. O metadata que a tela devolve vem sem metadata['goals']
+  # (_pipeline.json.jbuilder): gravá-lo como veio apagaria a meta sem querer, então a meta salva fica.
+  def permitted_pipeline_params
+    attributes = pipeline_params
+    return attributes if goal_visible? || !attributes.key?(:metadata)
+
+    goals = (@pipeline&.persisted? && @pipeline.metadata.to_h['goals'])
+    metadata = attributes[:metadata].to_h.except('goals')
+    attributes.merge(metadata: goals ? metadata.merge('goals' => goals) : metadata)
+  end
+
+  def goal_visible?
+    ::Crm::ValorDeVenda.ve?(Current.account_user)
+  end
+
   # Monthly sales target lives in metadata['goals'] and is merged in separately
   # so it never clobbers metadata['ai'] (pipeline AI settings).
   def update_goal!
     goal = params.dig(:pipeline, :goal)
-    return if goal.nil?
+    return if goal.nil? || !goal_visible?
 
     metadata = (@pipeline.metadata || {}).deep_dup
     target = goal[:monthly_target_cents].to_i

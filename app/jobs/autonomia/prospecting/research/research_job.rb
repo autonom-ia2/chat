@@ -15,7 +15,9 @@ class Autonomia::Prospecting::Research::ResearchJob < ApplicationJob
 
     waiting = research(lead, force) == :waiting
     self.class.set(wait: WAIT_FOR_COMPANY).perform_later(lead_id, force) if waiting
-    Autonomia::Prospecting::LeadBroadcaster.updated(lead.reload) unless waiting
+    # Apagado durante a pesquisa (contato excluído, #2143): não há o que avisar à tela.
+    atual = Autonomia::Prospecting::Lead.find_by(id: lead_id)
+    Autonomia::Prospecting::LeadBroadcaster.updated(atual) if atual && !waiting
   end
 
   private

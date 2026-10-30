@@ -22,6 +22,10 @@
 class Crm::Ai::NaoENegocio
   FLAG = 'crm_ia_arquiva_lixo'.freeze
   MOTIVOS = %w[fora_do_negocio duplicado].freeze
+  # IA entende a conversa F3, regra k: "era teste" vira SUGESTÃO de arquivar como não é negócio (#sugerir_teste!), sem
+  # contar como perda; a pessoa aceita num clique. Só com a flag `crm_ia_fecha_card` (Crm::Ai::FecharCard::TESTE); as
+  # guardas do arquivamento são as mesmas.
+  MOTIVO_TESTE = 'teste'.freeze
 
   # O campo da avaliação de etapa (a regra está em ClassifierPrompt::NAO_E_NEGOCIO).
   CAMPO = {
@@ -41,26 +45,36 @@ class Crm::Ai::NaoENegocio
     account.present? && account.feature_enabled?(FLAG)
   end
 
-  # O schema de um card (StageClassifier::CLASSIFICATION_SCHEMA) com o campo `nao_e_negocio` no fim, obrigatório.
-  def self.com_campo(schema)
+  # Os motivos aceitos na conta: com a flag da F3, também o "teste".
+  def self.motivos(account)
+    Crm::Ai::FecharCard.ligada?(account) ? [*MOTIVOS, MOTIVO_TESTE] : MOTIVOS
+  end
+
+  # O schema de um card (StageClassifier::CLASSIFICATION_SCHEMA) com o campo `nao_e_negocio` no fim, obrigatório. teste:
+  # o enum do motivo com o "teste" (F3).
+  def self.com_campo(schema, teste: false)
     corpo = schema[:schema]
+    campo = teste ? CAMPO.deep_merge(properties: { motivo: { enum: [*MOTIVOS, MOTIVO_TESTE] } }) : CAMPO
     schema.merge(
-      schema: corpo.merge(properties: corpo[:properties].merge(nao_e_negocio: CAMPO), required: [*corpo[:required], 'nao_e_negocio'])
+      schema: corpo.merge(properties: corpo[:properties].merge(nao_e_negocio: campo), required: [*corpo[:required], 'nao_e_negocio'])
     ).freeze
   end
 
-  # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier).
-  def initialize(card:, decisao:, lido_em:)
+  # lido_em: quando a conversa foi lida para a avaliação (Crm::Ai::Evaluator#stage_classifier). origem: model_used e
+  # trigger da sugestão do "era teste".
+  def initialize(card:, decisao:, lido_em:, origem: {})
     @card = card
     @decisao = decisao.is_a?(Hash) ? decisao.with_indifferent_access : {}
     @lido_em = lido_em
+    @origem = origem.to_h.with_indifferent_access
   end
 
-  # true quando o card foi arquivado.
+  # true quando o card foi arquivado; a sugestão (Crm::AiStageSuggestion) no "era teste".
   def aplicar!
     return false unless decisao_valida?
+    return sugerir_teste! if motivo == MOTIVO_TESTE
 
-    arquivado = @card.with_lock { pode_arquivar? && arquivar! }
+    arquivado = arquivar!
     Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_ARCHIVED) if arquivado
     arquivado
   end
@@ -71,8 +85,27 @@ class Crm::Ai::NaoENegocio
 
   def confianca = @decisao[:confidence].to_f
 
+  # IA entende a conversa F3 (decisão do Rodrigo, 22/10): o "era teste" nunca arquiva sozinho, nem com confiança
+  # máxima. Na rodada paga F5 o arquivamento errado (estresse-09:1) e o certo (c18-21:19) vieram os dois com 0,99: a
+  # confiança não separa um do outro. Vira sugestão de fechar (Crm::Ai::FecharCard.aceitar! arquiva).
+  def sugerir_teste!
+    @card.with_lock do
+      # O agente de cotação atendendo a conversa: a IA do CRM não sugere "era teste" por cima dele.
+      next false unless pode_arquivar? && !Crm::Ai::FatosDaConversa.agente_protegido_atendendo?(@card)
+
+      Crm::Ai::SuggestionRecorder.new(
+        card: @card, from_stage: @card.stage, to_stage: @card.stage, confidence: confianca, reasoning: @decisao[:reasoning],
+        model_used: @origem[:model_used], status: :pending,
+        metadata: { trigger: @origem[:trigger], fechar: { resultado: Crm::Ai::FecharCard::ARQUIVADO, motivo: MOTIVO_TESTE },
+                    lido_em: Crm::Ai::FecharCard.lido_em_para_gravar(@lido_em) }.compact
+      ).perform
+    end
+  end
+
+  # O "era teste" vira sugestão: basta a confiança de sugerir.
   def decisao_valida?
-    MOTIVOS.include?(motivo) && confianca >= Crm::Ai::Config::AUTO_MOVE_THRESHOLD && @lido_em.present?
+    minimo = motivo == MOTIVO_TESTE ? Crm::Ai::Config::SUGGESTION_THRESHOLD : Crm::Ai::Config::AUTO_MOVE_THRESHOLD
+    self.class.motivos(@card.account).include?(motivo) && confianca >= minimo && @lido_em.present?
   end
 
   def pode_arquivar?
@@ -106,11 +139,9 @@ class Crm::Ai::NaoENegocio
     abertos.where(conversation_id: conversas).or(abertos.where(id: vinculados)).exists?(id: id)
   end
 
+  # As guardas são relidas sob as travas do Crm::Cards::Archiver (lembretes antes do card, a ordem do DueProcessor).
   def arquivar!
-    @card.update!(status: :archived, last_activity_at: Time.current)
-    @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).find_each { |sugestao| sugestao.update!(status: :expired) }
-    Crm::ActivityLogger.new(card: @card, actor: nil, event_type: 'archive', payload: payload).perform
-    true
+    Crm::Cards::Archiver.new(card: @card, actor: nil, payload: payload).perform { pode_arquivar? }
   end
 
   def payload

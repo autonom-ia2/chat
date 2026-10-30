@@ -45,9 +45,11 @@ class Api::V1::Accounts::Crm::ProfileOpportunitiesController < Api::V1::Accounts
     cards.where('LOWER(crm_cards.title) LIKE ?', "%#{search}%")
   end
 
+  # Valor de venda (#2075): sem `sales_value_view`, o card sai sem value_cents, menos o card de que a pessoa é dona.
   def card_payload(card)
-    card.slice(:id, :title, :status, :value_cents, :currency, :expected_close_at).merge(
+    row = card.slice(:id, :title, :status, :value_cents, :currency, :expected_close_at).merge(
       pipeline: card.pipeline.slice(:id, :name), stage: card.stage.slice(:id, :name), owner: card.owner&.slice(:id, :name)
     )
+    ::Crm::ValorDeVenda.ve_o_card?(Current.account_user, card) ? row : ::Crm::ValorDeVenda.oculta_card!(row)
   end
 end

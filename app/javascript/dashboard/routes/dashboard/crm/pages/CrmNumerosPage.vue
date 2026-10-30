@@ -7,6 +7,7 @@ import Banner from 'dashboard/components-next/banner/Banner.vue';
 import ResultsToggle from 'dashboard/routes/dashboard/settings/booking/results/ResultsToggle.vue';
 import CrmDashboardPage from './CrmDashboardPage.vue';
 import CrmNumerosSoEu from '../components/numeros/v2/CrmNumerosSoEu.vue';
+import CrmNumerosEquipe from '../components/numeros/v2/CrmNumerosEquipe.vue';
 import NumerosEspera from '../components/numeros/v2/NumerosEspera.vue';
 import NumerosMetasAtalho from '../components/numeros/v2/NumerosMetasAtalho.vue';
 import { useQuemVeNumeros } from '../components/numeros/useQuemVeNumeros';
@@ -16,11 +17,14 @@ import { P } from '../components/numeros/v2/numerosTextos';
 // hoje. Com ela: "Só eu" para quem trabalha no CRM e "Equipe" (até a F5, o painel
 // de hoje) para quem vê a equipe; quem vê as duas troca no seletor, e abre em
 // "Equipe" (?visao=eu|equipe). Quem vê a equipe recebe o aviso da Decisão 2.
+// Com a flag `crm_numeros_equipe` (#1992, F5), a "Equipe" é a visão nova; sem ela,
+// continua o painel de hoje.
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const accountId = useMapGetter('getCurrentAccountId');
-const { pronto, ligado, veEquipe, veSoEu, abreNumeros } = useQuemVeNumeros();
+const { pronto, ligado, equipeNova, veEquipe, veSoEu, abreNumeros } =
+  useQuemVeNumeros();
 
 const visoes = computed(() =>
   [veSoEu.value && 'eu', veEquipe.value && 'equipe'].filter(Boolean)
@@ -125,6 +129,23 @@ watch(
       </Banner>
     </template>
   </CrmNumerosSoEu>
+  <CrmNumerosEquipe
+    v-else-if="equipeNova && visao === 'equipe'"
+    :visoes="visoes"
+    @visao="trocarVisao"
+  >
+    <template #aviso>
+      <Banner
+        v-if="mostrarAviso"
+        color="slate"
+        :action-label="t(`${P}.AVISO_ADMIN.ENTENDI`)"
+        data-numeros-aviso-admin
+        @action="fecharAviso"
+      >
+        {{ t(`${P}.AVISO_ADMIN.TEXTO`) }}
+      </Banner>
+    </template>
+  </CrmNumerosEquipe>
   <CrmDashboardPage v-else-if="abreNumeros">
     <template v-if="ligado" #topo>
       <div class="flex flex-col gap-3 px-6 pt-4">

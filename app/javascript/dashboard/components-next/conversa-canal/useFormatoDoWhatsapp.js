@@ -11,17 +11,11 @@ import { computed } from 'vue';
 import MessageFormatter from 'shared/helpers/MessageFormatter.js';
 import { useCamelCase } from 'dashboard/composables/useTransformKeys';
 import { useMessageContext } from '../message/provider.js';
-import { MESSAGE_TYPES, SENDER_TYPES } from '../message/constants';
+import { MESSAGE_TYPES } from '../message/constants';
 import { PELES, usePele } from './pele';
 import { formatarWhatsapp } from './formatacaoWhatsapp';
+import { ehRobo } from './origemDoEnvio';
 
-// Remetente como vem no objeto `sender` (agent_bot) ou no `sender_type` cru (AgentBot).
-const ROBOS = [
-  SENDER_TYPES.AGENT_BOT,
-  SENDER_TYPES.CAPTAIN_ASSISTANT,
-  'AgentBot',
-  'Captain::Assistant',
-];
 // As marcas de envio automático em nome de pessoa: espelho de
 // Autonomia::Agents::Operate::PessoaDaEquipe (MARCAS_DE_ENVIO_AUTOMATICO e MARCAS_DE_CAMPANHA),
 // a lista única que o envio (Messages::EnvioAutomatico) também lê.
@@ -40,7 +34,7 @@ export const envioAutomatico = ({
   contentAttributes,
   additionalAttributes,
 }) =>
-  ROBOS.includes(tipoDoRemetente) ||
+  ehRobo(tipoDoRemetente) ||
   MARCAS_DE_ENVIO_AUTOMATICO.some(marca => !!contentAttributes?.[marca]) ||
   MARCAS_DE_CAMPANHA.some(marca => !!additionalAttributes?.[marca]);
 

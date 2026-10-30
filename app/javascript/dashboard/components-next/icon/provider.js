@@ -1,6 +1,7 @@
 import {
   INBOX_TYPES,
   TWILIO_CHANNEL_MEDIUM,
+  ehWhatsappDoCelular,
   isVoiceCallEnabled,
   getInboxVoiceIcon,
 } from 'dashboard/helper/inbox';
@@ -58,6 +59,11 @@ export function useChannelIcon(inbox) {
       }
     }
 
+    // #2255: WhatsApp pelo celular leva o ícone do WhatsApp, não o "{ }" da API.
+    if (ehWhatsappDoCelular(inboxDetails)) {
+      icon = channelTypeIconMap['Channel::Whatsapp'];
+    }
+
     // Special case for Twilio whatsapp
     if (
       type === INBOX_TYPES.TWILIO &&
@@ -93,6 +99,10 @@ export function useChannelBrandIcon(inbox) {
       type === INBOX_TYPES.TWILIO &&
       inboxDetails.medium === TWILIO_CHANNEL_MEDIUM.WHATSAPP
     ) {
+      icon = channelTypeBrandIconMap['Channel::Whatsapp'];
+    }
+
+    if (ehWhatsappDoCelular(inboxDetails)) {
       icon = channelTypeBrandIconMap['Channel::Whatsapp'];
     }
 

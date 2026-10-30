@@ -56,6 +56,7 @@
       "CRM_EXPORT": "Export the CRM list to Excel",
       "CRM_DELETE_CARDS": "Archive CRM cards",
       "CRM_METAS_MANAGE": "See and set the monthly goals",
+      "SALES_VALUE_VIEW": "See sales values in money",
       "CONTACT_VIEW": "View contacts",
       "CONTACT_EXPORT": "Export contacts",
       "CONTACT_DELETE": "Delete contacts and companies",
@@ -85,7 +86,10 @@
       "GRANT_ABOVE_OWN": "Can grant access above their own",
       "FINANCIAL_VIEW": "See account costs",
       "FINANCIAL_MANAGE": "Turn the Meta charge authorization on and off",
-      "CONVERSATION_MESSAGE_DELETE": "Delete messages"
+      "CONVERSATION_MESSAGE_DELETE": "Delete messages",
+      "INTEGRATION_MANAGE": "Manage integrations",
+      "TOKEN_MANAGE": "See and rotate tokens and keys",
+      "META_ADS_MANAGE": "Connect and configure Meta ads"
     },
     "MATRIX": {
       "GROUPS": {
@@ -127,12 +131,6 @@
           "LEVEL_VIEW": "Opens and reads contacts. Does not change them.",
           "LEVEL_MANAGE": "Creates, edits and imports contacts."
         },
-        "KNOWLEDGE_BASE": {
-          "NAME": "Knowledge base",
-          "HINT": "Portals and articles",
-          "LEVEL_VIEW": "Reads portals and articles.",
-          "LEVEL_MANAGE": "Writes and publishes articles."
-        },
         "REPORTS": {
           "NAME": "Reports",
           "HINT": "Overview, CSAT, SLA, bots and teams",
@@ -154,6 +152,11 @@
           "HINT": "Your AI agents",
           "LEVEL_VIEW": "Opens the agents and chats in the playground.",
           "LEVEL_MANAGE": "Creates, trains and publishes agents."
+        },
+        "DESEMPENHO": {
+          "NAME": "Agent performance",
+          "HINT": "What people look for, results and exports",
+          "LEVEL_VIEW": "Opens the performance panel, with the numbers of the inboxes they see. Downloading the PDF and spreadsheet also needs Export contacts."
         },
         "PROSPECTING": {
           "NAME": "Prospecting",
@@ -183,13 +186,26 @@
         "META_ADS": {
           "NAME": "Meta ads",
           "HINT": "Facebook and Instagram ads panel",
-          "LEVEL_VIEW": "Sees the ads panel and its results. Connecting stays with administrators."
+          "LEVEL_VIEW": "Sees the ads panel, its results and each ad's budget and dates. Creating, connecting and configuring need Edit.",
+          "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, acts on the advisor, creates ads (always paused), activates them and changes their budget and dates."
+        },
+        "POSTS": {
+          "NAME": "Your posts",
+          "HINT": "Instagram and Page posts, with their numbers",
+          "LEVEL_VIEW": "Sees the posts and numbers of the Instagram and Page inboxes they see.",
+          "LEVEL_MANAGE": "For now, the same as View. Once the page has comments, also replies, hides and sends the private reply, on the inboxes they see."
         },
         "INBOXES": {
           "NAME": "Inboxes",
           "HINT": "Channels, WhatsApp QR and members",
           "LEVEL_VIEW": "Sees every inbox in settings.",
           "LEVEL_MANAGE": "Creates inboxes, reconnects WhatsApp and manages members."
+        },
+        "INTEGRATIONS": {
+          "NAME": "Integrations",
+          "HINT": "Integrations, webhooks, bots, channel reconnection and tokens",
+          "LEVEL_MANAGE": "Connects and disconnects integrations, creates webhooks and bots and reconnects channels. Creating a new inbox stays in Inboxes.",
+          "SUGGESTION": "To reconnect a channel, Inboxes needs at least View."
         },
         "AUTOMATIONS": {
           "NAME": "Automations",
@@ -246,7 +262,8 @@
       "NAME": {
         "LABEL": "Name",
         "PLACEHOLDER": "E.g. Night shift agent",
-        "ERROR": "Give the role a name with at least 2 characters."
+        "ERROR": "Give the role a name with at least 2 characters.",
+        "TAKEN": "There is already a role with this name. Choose another one."
       },
       "DESCRIPTION": {
         "LABEL": "Who it is for (optional)",
@@ -290,6 +307,16 @@
         "MESSAGE": "Are you sure to delete ",
         "YES": "Yes, delete ",
         "NO": "No, keep "
+      },
+      "MOVE": {
+        "TITLE": "Where do the people go? | Where does the 1 person go? | Where do the {n} people go?",
+        "DESCRIPTION": "“{name}” will be deleted. Choose the role these people will have from now on.",
+        "LABEL": "New role for these people",
+        "PLACEHOLDER": "Choose a role",
+        "NO_ROLE": "No role (plain agent)",
+        "NO_ROLE_HINT": "Sees the CRM like any plain agent",
+        "NO_ROLE_WARNING": "Without a role, they get the access of a plain agent, which sees almost all of the CRM.",
+        "CONFIRM": "Move and delete"
       }
     },
     "EXTRAS": {
@@ -302,7 +329,8 @@
       "CRM_EXPORT": "Downloads the list with customer data.",
       "CRM_DELETE_CARDS": "Archives cards, one by one or in bulk.",
       "CRM_METAS_MANAGE": "Sees and sets each person's monthly goal, in money.",
-      "CRM_ADMIN": "Turns on everything above, plus CRM SLA and integration tokens.",
+      "SALES_VALUE_VIEW": "Card values, totals, goals and money-based rates. Without this, they see counts and the value of their own cards only.",
+      "CRM_ADMIN": "Turns on everything above except sales values, and the CRM SLA. Integration tokens live in Integrations.",
       "PROSPECTING_VIEW_ALL_SEARCHES": "Without this, they only see their own searches.",
       "CONVERSATION_VIEW": "Also reads the inbox conversations they do not handle, without replying.",
       "CONVERSATION_MESSAGE_DELETE": "Deletes messages in the conversations they handle. The attachment is removed and the message shows as deleted.",
@@ -310,7 +338,8 @@
       "CONTACT_DELETE": "Deletes contacts and companies, one by one or in bulk.",
       "CAMPAIGN_SEND": "Sends and schedules campaigns and resumes paused ones. Without this, they build and mark campaigns ready for someone who sends.",
       "CUSTOM_ROLE_MANAGE": "Creates and edits roles, within their own keys.",
-      "GRANT_ABOVE_OWN": "Hands out any role in the account, except administrator. Everything goes to the audit log."
+      "GRANT_ABOVE_OWN": "Hands out any role in the account, except administrator. Everything goes to the audit log.",
+      "TOKEN_MANAGE": "Sees and rotates platform tokens: API and website inboxes, webhooks, bots, CRM tokens and the Google link. Never mints a token stronger than its own role."
     },
     "EDITOR": {
       "NEW_TITLE": "Adjust what is different",
@@ -332,7 +361,7 @@
       "FOOTER_COUNT": "No area granted | 1 area granted | {n} areas granted",
       "ADMIN_ONLY": {
         "TITLE": "Always administrator only",
-        "ITEMS": "Bots, integrations, account settings, security, billing and audit logs.",
+        "ITEMS": "Account settings, security, billing and audit logs.",
         "GUIDE": "The Platform Guide follows this role: it only shows and does what the person can do."
       },
       "SENSITIVE_CONFIRM": {
@@ -347,9 +376,19 @@
         "DONE": "{name} profile applied."
       },
       "INCLUDED_IN_ADMIN": "Included in full CRM access.",
+      "LEFT_OUT": {
+        "TITLE": "Part of this profile was left out",
+        "DESCRIPTION": "You cannot hand out some of its permissions, so they stay off in these areas. An administrator can grant them."
+      },
       "LOCK": {
         "MISSING": "You do not have this key",
         "DELEGATION": "Only someone who can grant access above their own"
+      },
+      "LOST_ACCESS": {
+        "TITLE": "Nobody loses access | 1 person will lose access | {n} people will lose access",
+        "DESCRIPTION": "They lose all or part of: {areas}.",
+        "CONFIRM": "Save anyway",
+        "BACK": "Back"
       }
     },
     "SUMMARY": {
@@ -370,6 +409,7 @@
       "BLANK_META": "Blank",
       "CAN": "Can",
       "CANNOT": "Cannot",
+      "LEFT_OUT": "You cannot hand out some of these permissions, so they will stay off.",
       "ADJUST_LATER": "You can adjust any area in the next step.",
       "CONTINUE": "Continue with {name}",
       "APPLY": "Apply {name}"
@@ -435,6 +475,7 @@
         "SETTINGS": "Change settings",
         "ALL_CONVERSATIONS": "See and answer every conversation",
         "EDIT_CONTACTS": "Edit, import and export contacts",
+        "EDIT_IMPORT_CONTACTS": "Edit and import contacts",
         "TEAM_SETUP": "Organise labels and team macros",
         "DELETE_DATA": "Delete conversations or contacts",
         "BILLING_INTEGRATIONS": "Touch integrations and billing",
@@ -443,11 +484,12 @@
         "EDIT_PIPELINES": "Create and edit CRM pipelines",
         "EXPORT_CRM": "Export the CRM list",
         "ALL_SEARCHES": "See everyone's prospecting searches",
+        "SET_GOALS": "See sales values and set the team's goals",
         "ANSWER_CONVERSATIONS": "Answer conversations",
         "EDIT_DEALS": "Edit cards in the CRM",
         "CRM_DASHBOARD": "See the CRM dashboard and AI cost",
         "CHANGE_ANYTHING": "Change anything",
-        "SETUP_INBOXES": "Set up inboxes and reconnect WhatsApp",
+        "SETUP_INBOXES": "Create and set up inboxes",
         "SETUP_RULES": "Set up automations, labels, macros and SLA",
         "PUBLISH_AGENTS": "Create and publish Autonom.ia agents",
         "SEE_EVERYTHING": "See contacts, CRM, campaigns and agents"

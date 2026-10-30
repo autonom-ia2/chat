@@ -67,6 +67,24 @@ describe('onda do áudio (#1702)', () => {
     decode.mockRestore();
   });
 
+  it('com a chave estável, o endereço com carimbo novo não baixa de novo (#2113)', async () => {
+    const decode = vi.spyOn(Decoder, 'decode').mockResolvedValue({
+      getChannelData: () => new Float32Array(10),
+      duration: 3,
+    });
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+    });
+    const chave = 'https://exemplo.com/carimbada.ogg';
+    const primeira = await carregarOnda(`${chave}?t=1`, { chave });
+    const segunda = await carregarOnda(`${chave}?t=2`, { chave });
+    expect(segunda).toBe(primeira);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(globalThis.fetch.mock.calls[0][0]).toBe(`${chave}?t=1`);
+    decode.mockRestore();
+  });
+
   it(`no máximo ${SIMULTANEAS} áudios baixando ao mesmo tempo; os outros esperam`, async () => {
     const decode = vi.spyOn(Decoder, 'decode').mockResolvedValue({
       getChannelData: () => new Float32Array(10),

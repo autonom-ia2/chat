@@ -8,6 +8,7 @@
     "NO_RESULTS": "No inboxes found matching your search",
     "RECONNECTION_REQUIRED": "Your inbox is disconnected. You won't receive new messages until you reauthorize it.",
     "CLICK_TO_RECONNECT": "Click here to reconnect.",
+    "RECONNECTION_ASK_INTEGRATIONS": "Ask whoever looks after integrations to reconnect it.",
     "WHATSAPP_REGISTRATION_INCOMPLETE": "Your WhatsApp Business registration isn’t complete. Please check your display name status in Meta Business Manager before reconnecting.",
     "COMPLETE_REGISTRATION": "Complete Registration",
     "LIST": {
@@ -141,7 +142,8 @@
         "CHANNEL_WEBHOOK_URL": {
           "LABEL": "Webhook URL",
           "PLACEHOLDER": "Please enter your Webhook URL",
-          "ERROR": "Please enter a valid URL"
+          "ERROR": "Please enter a valid URL",
+          "ONLY_INTEGRATIONS": "Only whoever looks after integrations changes this address."
         },
         "CHANNEL_WEBHOOK_SECRET": {
           "LABEL": "Webhook Secret",
@@ -1065,7 +1067,8 @@
         "DESCRIPTION": "Enable voice calling on this inbox. Agents will be able to make and receive phone calls."
       },
       "CREDENTIALS": {
-        "DESCRIPTION": "Voice calling requires Twilio API Key credentials. These are used to generate tokens for agent voice connections."
+        "DESCRIPTION": "Voice calling requires Twilio API Key credentials. These are used to generate tokens for agent voice connections.",
+        "ONLY_INTEGRATIONS": "Only whoever looks after integrations enters these keys."
       },
       "INBOUND": {
         "LABEL": "Allow incoming calls",
@@ -1968,6 +1971,7 @@
       "TWITTER_PROFILE": "Twitter",
       "TWILIO_SMS": "Twilio SMS",
       "WHATSAPP": "WhatsApp",
+      "WHATSAPP_CELULAR": "WhatsApp on the phone",
       "SMS": "SMS",
       "EMAIL": "Email",
       "TELEGRAM": "Telegram",

@@ -19,7 +19,11 @@
     "REMETENTE": {
       "AGENTE_COM_NOME": "Agente de IA · {nome}",
       "AGENTE": "Agente de IA",
-      "AUTOMATICO": "{nome} · automático"
+      "ORIGEM": {
+        "FOLLOW_UP": "Follow-up automático",
+        "RETORNO": "Retorno automático",
+        "AGENDAMENTO": "Agendamento automático"
+      }
     },
     "ECO_DO_CELULAR": {
       "ENVIADA_PELO_CELULAR": "Enviada pelo celular",
@@ -162,6 +166,30 @@
     "JANELA_FECHADA": {
       "TEXTO": "Já passaram 24 horas desde a última mensagem do cliente. Para voltar a falar com ele, mande um modelo.",
       "ESCOLHER_MODELO": "Escolher modelo"
+    },
+    "FICAR": {
+      "FICA_COM_VOCE": "Ao enviar, a conversa fica com você",
+      "FICA_COM_VOCE_SAI_DE": "Ao enviar, a conversa sai de {nome} e fica com você",
+      "CONTINUA_SEM_NINGUEM": "Ao enviar, a conversa continua sem ninguém",
+      "CONTINUA_COM": "Ao enviar, a conversa continua com {nome}",
+      "DICA_LIGADA": "Desative para não ficar com a conversa",
+      "DICA_DESLIGADA": "Ative para ficar com a conversa",
+      "NAO_DEU": "Não deu para ficar com a conversa agora. Ela continua com quem estava."
+    },
+    "DEVOLVER": {
+      "PARA": "Devolver para {nome}",
+      "DICA": "{nome} volta a atender esta conversa",
+      "DEVOLVIDA": "Conversa devolvida para {nome}",
+      "FALHOU": "Não deu para devolver a conversa. Tente de novo.",
+      "VEIO_DE": "Esta conversa veio de {nome}",
+      "VEIO_DA_IA": "Esta conversa veio da IA",
+      "A_IA": "a IA",
+      "RECUSA": {
+        "NAO_ATENDE_CLIENTE": "{nome} está com o atendimento parado agora. A conversa continua com você.",
+        "SEM_VINCULO_NA_CAIXA": "{nome} não atende mais esta caixa. A conversa continua com você.",
+        "CONVERSA_RESOLVIDA": "Esta conversa já foi resolvida. Reabra para devolver.",
+        "FASE2_DESLIGADA": "Os agentes de IA não estão ligados nesta conta. A conversa continua com você."
+      }
     },
     "CAIXA": {
       "DIGITE": "Digite uma mensagem",
@@ -592,6 +620,9 @@
         "CANCELADA_TEXTO": "O organizador cancelou esta reunião.",
         "ENTRAR": "Entrar na reunião",
         "ENTRAR_NO": "Entrar no {app}",
+        "SEPARADOR": "·",
+        "DURACAO": "({duracao})",
+        "A_MAIS": "+{n}",
         "MINUTOS": "{n} min",
         "HORAS": "{n} h",
         "HORAS_E_MINUTOS": "{h} h {m} min",
@@ -612,6 +643,9 @@
         "RECORRENTE": "Recorrente",
         "OCORRENCIA": "Uma data de reunião recorrente",
         "PASSOU": "Esta reunião já terminou.",
+        "SUBSTITUIDO": "O organizador mudou esta reunião num e-mail mais novo. Responda pelo convite novo.",
+        "CANCELADA_DEPOIS": "O organizador cancelou esta reunião num e-mail mais novo.",
+        "VER_O_NOVO": "Abrir o e-mail mais novo",
         "MANTER": "Manter a resposta",
         "SEM_ORGANIZADOR": "Este convite não diz quem organizou, por isso não dá para responder daqui."
       }
@@ -623,6 +657,30 @@
     },
     "NOTA_DO_CONECTOR": {
       "AVISO": "⚠️ Uma mensagem do WhatsApp não chegou aqui. Confira no celular da caixa."
+    },
+    "INSTAGRAM": {
+      "HORARIO": "{dia} de {mes} de {ano} {hora}",
+      "VISTO": "Visto",
+      "RESPONDER": "Responder",
+      "MAIS_OPCOES": "Mais opções",
+      "REAGIR_FORA_DA_JANELA": "A conversa passou do prazo sem mensagem do cliente. O Instagram só aceita reação com a conversa aberta.",
+      "VOCE_RESPONDEU": "Você respondeu",
+      "RESPONDEU_A_VOCE": "Respondeu a você",
+      "RESPONDEU_AO_STORY": "Respondeu ao seu story",
+      "VOCE_RESPONDEU_AO_STORY": "Você respondeu ao story",
+      "MENCIONOU_NO_STORY": "Mencionou você no próprio story",
+      "VOCE_MENCIONOU_NO_STORY": "Você mencionou no seu story",
+      "STORY_INDISPONIVEL": "Story indisponível",
+      "POST": "Post compartilhado",
+      "CLIPE": "Clipe",
+      "ABRIR_FOTO": "Abrir foto",
+      "ABRIR_VIDEO": "Abrir o vídeo",
+      "REPRODUZIR": "Reproduzir",
+      "PAUSAR": "Pausar",
+      "MENSAGEM_VAZIA": "Mensagem",
+      "CAMPO": "Mensagem...",
+      "VER_TRANSCRICAO": "Ver transcrição",
+      "MIDIA_INDISPONIVEL": "Mídia indisponível"
     }
   }
 }

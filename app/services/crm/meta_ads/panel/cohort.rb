@@ -7,11 +7,14 @@
 # Proposta: card aberto numa etapa que a pessoa marcou como "opportunity" ou "negotiation" (passo 4), ou card
 # ganho. Venda: card ganho. É uma coorte — "das conversas que chegaram no período, o que virou" —, não o que
 # fechou no período.
+#
+# O card leva o dono (`owner_id`, para o Crm::ValorDeVenda.ve_o_card?) e quando fechou (`closed_at`, a ordem das vendas
+# para quem não vê o valor, #2075).
 class Crm::MetaAds::Panel::Cohort
   QUOTE_TYPES = %w[opportunity negotiation].freeze
 
   Card = Struct.new(:id, :title, :status, :value, :stage_type, :stage_name, :conversation_id, :ad_id, :waiting_since,
-                    keyword_init: true) do
+                    :owner_id, :closed_at, keyword_init: true) do
     def quote?
       status == 'won' || (status == 'open' && QUOTE_TYPES.include?(stage_type))
     end
@@ -67,12 +70,16 @@ class Crm::MetaAds::Panel::Cohort
     links = card_links
     return [] if links.empty?
 
-    Crm::Card.where(account_id: @account_id, id: links.keys).includes(:stage).map do |card|
-      conversation_id = links[card.id]
-      Card.new(id: card.id, title: card.title, status: card.status, value: card.value_cents / 100.0,
-               stage_type: card.stage&.metadata.to_h['funnel_stage_type'], stage_name: card.stage&.name, conversation_id: conversation_id,
-               ad_id: conversation_ads[conversation_id], waiting_since: card.last_message_at || card.entered_stage_at)
-    end
+    # #2084: card de contato fora do funil (parceiro, não é negócio) não conta como proposta nem venda do anúncio.
+    Crm::Relacao.cards_do_funil(Account.find(@account_id)).where(id: links.keys).includes(:stage)
+                .map { |card| card_row(card, links[card.id]) }
+  end
+
+  def card_row(card, conversation_id)
+    Card.new(id: card.id, title: card.title, status: card.status, value: card.value_cents / 100.0,
+             stage_type: card.stage&.metadata.to_h['funnel_stage_type'], stage_name: card.stage&.name, conversation_id: conversation_id,
+             ad_id: conversation_ads[conversation_id], waiting_since: card.last_message_at || card.entered_stage_at,
+             owner_id: card.owner_id, closed_at: card.closed_at)
   end
 
   # { card_id => conversation_id }, preferindo a conversa que tem anúncio identificado.

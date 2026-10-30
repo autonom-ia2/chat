@@ -40,6 +40,49 @@ RSpec.describe Crm::Conversations::CardSyncer do
     expect(Crm::Cards::Broadcaster).not_to have_received(:broadcast)
   end
 
+  # #2084: contato marcado parceiro do mercado ou não é negócio não ganha card sozinho.
+  describe 'with contato_relacao' do
+    def cenario(relacao)
+      account, admin = create_account_and_user
+      account.enable_features!('contato_relacao')
+      inbox = create_crm_inbox(account: account, members: [admin])
+      contact = account.contacts.create!(name: 'Fornecedor', phone_number: '+5511987654321', relacao: relacao)
+      conversation = create_crm_conversation(account: account, inbox: inbox, contact: contact, assignee: admin)
+      pipeline, stage = create_crm_pipeline(account: account, user: admin)
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+      [account, conversation, create_crm_message(conversation: conversation, sender: contact), pipeline, stage]
+    end
+
+    %i[parceiro nao_e_negocio].each do |relacao|
+      it "does not auto-create a card for a contact marked #{relacao}" do
+        account, conversation, message = cenario(relacao)
+
+        described_class.new(conversation: conversation, message: message).perform
+
+        expect(account.crm_cards).to be_blank
+      end
+    end
+
+    it 'keeps the card made by hand following the conversation of a contact marked parceiro' do
+      account, conversation, message, pipeline, stage = cenario(:parceiro)
+      feito_a_mao = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: conversation.contact,
+                                              inbox: conversation.inbox, title: 'Feito à mão')
+
+      described_class.new(conversation: conversation, message: message).perform
+
+      expect(account.crm_cards).to contain_exactly(feito_a_mao)
+      expect(Crm::CardConversation.where(card: feito_a_mao, conversation: conversation)).to exist
+    end
+
+    it 'still auto-creates the card for an interessado contact' do
+      account, conversation, message = cenario(:interessado)
+
+      described_class.new(conversation: conversation, message: message).perform
+
+      expect(account.crm_cards.count).to eq(1)
+    end
+  end
+
   it 'does not create cards for inboxes without auto-create binding' do
     account, admin = create_account_and_user
     inbox = create_crm_inbox(account: account, members: [admin])

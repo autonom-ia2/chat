@@ -5,12 +5,16 @@
 // convidados (pelo e-mail dela ou pelo da agenda ligada): convite recebido em cópia
 // mostra as informações e diz por que não dá para responder daqui. A resposta fica
 // gravada na mensagem e chega aos outros atendentes pela atualização da conversa.
+// Convite que o organizador mudou ou cancelou num e-mail mais novo (#1995) e série que
+// já acabou não perguntam mais.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Icon from 'next/icon/Icon.vue';
 import Avatar from 'next/avatar/Avatar.vue';
 import Spinner from 'next/spinner/Spinner.vue';
 import ConversaCanalAPI from 'dashboard/api/conversaCanal';
+import { useMapGetter } from 'dashboard/composables/store';
+import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import { useAgora } from '../useAgora';
 import { idiomaDoPainel } from '../dataDaConversa';
 import {
@@ -82,14 +86,32 @@ watch(
   }
 );
 
-const cancelado = computed(() => props.convite.metodo === 'CANCEL');
+const substituido = computed(() => Boolean(props.convite.substituidoPor));
+// Cancelada: o próprio cancelamento (se não veio um convite novo depois) ou o
+// convite que o organizador cancelou num e-mail mais novo.
+const cancelado = computed(
+  () =>
+    (props.convite.metodo === 'CANCEL' && !substituido.value) ||
+    Boolean(props.convite.substituidoCancelado)
+);
+const contaAtual = useMapGetter('getCurrentAccountId');
+// A versão nova costuma chegar noutra conversa (o Outlook manda num e-mail novo).
+// Quem não tem acesso a ela (só as atribuídas, outro time) cai na tela de sem
+// acesso da própria conversa: o aviso do cartão vale do mesmo jeito.
+const conversaDoNovo = computed(() => {
+  const id = props.convite.substituidoNaConversa;
+  if (!id || id === props.conversationId) return '';
+  return frontendURL(conversationUrl({ accountId: contaAtual.value, id }));
+});
 const idioma = computed(() => idiomaDoPainel(locale.value));
 const diaInteiro = computed(() => Boolean(props.convite.diaInteiro));
 // Dia inteiro vem guardado ao meio-dia UTC: a data se lê em UTC, sem fuso trocar o dia.
 const fusoDaData = computed(() => (diaInteiro.value ? 'UTC' : props.fuso));
+// A série vale até a última ocorrência (fimDaSerie, quando tem fim); sem fim, não passa.
 const passou = computed(() => {
-  if (props.convite.recorrente) return false;
-  const termino = props.convite.fim || props.convite.inicio;
+  const termino = props.convite.recorrente
+    ? props.convite.fimDaSerie
+    : props.convite.fim || props.convite.inicio;
   return Boolean(termino) && termino < agora.value;
 });
 const bloco = computed(() =>
@@ -170,6 +192,7 @@ const nomeDaCaixa = computed(
 const perguntando = computed(
   () =>
     !cancelado.value &&
+    !substituido.value &&
     !passou.value &&
     podeResponder.value &&
     props.podeOperar &&
@@ -268,11 +291,13 @@ const responder = async escolha => {
           <Icon icon="i-lucide-clock-3" class="size-4 text-n-slate-11" />
           <span class="font-medium">{{ dia }}</span>
           <span class="whitespace-nowrap">
-            <span class="text-n-slate-9">·</span>
+            <span class="text-n-slate-9" aria-hidden="true">
+              {{ t('CONVERSA_CANAL.EMAIL.CONVITE.SEPARADOR') }}
+            </span>
             {{ horario }}
           </span>
           <span v-if="duracao" class="whitespace-nowrap text-n-slate-11">
-            ({{ duracao }})
+            {{ t('CONVERSA_CANAL.EMAIL.CONVITE.DURACAO', { duracao }) }}
           </span>
           <span
             v-if="convite.fusoIncerto && !diaInteiro"
@@ -327,7 +352,7 @@ const responder = async escolha => {
           v-if="aMais > 0"
           class="flex size-7 items-center justify-center rounded-full bg-n-alpha-2 text-[0.6875rem] font-medium text-n-slate-11 ring-2 ring-n-solid-1"
         >
-          +{{ aMais }}
+          {{ t('CONVERSA_CANAL.EMAIL.CONVITE.A_MAIS', { n: aMais }) }}
         </span>
       </div>
       <p class="min-w-0 text-xs leading-snug text-n-slate-11">
@@ -341,7 +366,35 @@ const responder = async escolha => {
 
     <footer class="border-t border-n-weak bg-n-alpha-1 px-4 py-3 sm:px-5">
       <p
-        v-if="cancelado"
+        v-if="substituido"
+        class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-n-slate-11"
+        data-convite-substituido
+      >
+        <Icon
+          :icon="
+            convite.substituidoCancelado
+              ? 'i-lucide-calendar-x'
+              : 'i-lucide-calendar-sync'
+          "
+          class="size-4"
+        />
+        {{
+          convite.substituidoCancelado
+            ? t('CONVERSA_CANAL.EMAIL.CONVITE.CANCELADA_DEPOIS')
+            : t('CONVERSA_CANAL.EMAIL.CONVITE.SUBSTITUIDO')
+        }}
+        <router-link
+          v-if="conversaDoNovo"
+          :to="conversaDoNovo"
+          class="font-medium text-n-blue-11 hover:underline"
+          data-convite-novo
+        >
+          {{ t('CONVERSA_CANAL.EMAIL.CONVITE.VER_O_NOVO') }}
+        </router-link>
+      </p>
+
+      <p
+        v-else-if="cancelado"
         class="flex items-center gap-2 text-sm text-n-slate-11"
       >
         <Icon icon="i-lucide-calendar-x" class="size-4 text-n-ruby-11" />

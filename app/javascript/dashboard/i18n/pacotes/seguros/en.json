@@ -44,7 +44,8 @@
       },
       "SUBTITLE": "How the funnel is doing, stage by stage. See what closed, what did not, and who served: AI or a person.",
       "META_SYNC": {
-        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a policy, the data shows up here."
+        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a policy, the data shows up here.",
+        "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, policies closed on the landing page through the website Pixel."
       }
     },
     "CONFIRM": {
@@ -212,6 +213,13 @@
     },
     "TOPO": {
       "SEM_META_EU": "Your month so far: {n} policy closed, {valor} | Your month so far: {n} policies closed, {valor}"
+    },
+    "BLOCO": {
+      "VENDENDO": "Closing policies"
+    },
+    "ESTIMADO": "Some policies closed before this record were counted for the card's current responsible person.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Policies closed before this record count for the card's current responsible person."
     }
   },
   "MODELOS_WHATSAPP": {
@@ -226,6 +234,37 @@
         "PARA": "To tell the policyholder their claim has moved forward.",
         "TEXTO": "Hello, [nome_cliente]. An update from [nome_empresa]: your claim has moved forward. Want to know the details? Tap the button below."
       }
+    }
+  },
+  "AUTONOMIA_GUIDE": {
+    "SUGGESTIONS": {
+      "REPORTS": "How many policies did I close this month?"
+    }
+  },
+  "AGENTS": {
+    "DESEMPENHO2": {
+      "A": {
+        "KPI": {
+          "PERDAS_EVITAVEIS": {
+            "ROTULO": "Did not close for a fixable reason"
+          }
+        },
+        "PERDAS": {
+          "SOBRE": "Did not close",
+          "TITULO": "Did not close, and it could be avoided",
+          "UNIDADE_POR_QUE": "Unit: requests. A request that did not close can have more than one reason."
+        }
+      },
+      "B": {
+        "FILTROS": {
+          "SO_PERDAS": "Only the ones that did not close for a fixable reason"
+        }
+      }
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Mark as active policy or not closed"
     }
   }
 }

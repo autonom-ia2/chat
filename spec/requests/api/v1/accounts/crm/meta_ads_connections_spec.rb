@@ -53,7 +53,8 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.keys).to contain_exactly('configured', 'status', 'mode', 'last_checked_at', 'last_error', 'verified_at',
                                                            'destinations', 'ad_account', 'pixel', 'partner', 'whatsapp_portfolio',
-                                                           'client_portfolio_id', 'sales_signal', 'facebook_login', 'whatsapp_result')
+                                                           'client_portfolio_id', 'sales_signal', 'facebook_login', 'whatsapp_result', 'no_site',
+                                                           'site_pages_count')
       expect(response.parsed_body).to include('mode' => 'token', 'destinations' => { 'whatsapp' => false, 'site' => false })
       expect(response.parsed_body).to include('configured' => true, 'status' => 'active')
       expect_no_token_in(response.body)
@@ -529,17 +530,24 @@ RSpec.describe 'CRM meta_ads_connection API', type: :request do
       expect(response.parsed_body.dig('list', 'total')).to eq(1)
     end
 
-    it 'com a flag e uma conexão caída, segue o caminho antigo' do
+    # #2054: conexão sem conta escolhida (entrou com o Facebook e parou) ou caída não esvazia a página.
+    it 'com a flag e a conexão no meio do caminho ou caída, segue o painel do WhatsApp com o aviso' do
       account.enable_features!('anuncios_sem_login')
       official_whatsapp
       from_ad
-      Crm::MetaAdsConnection.create!(account: account, mode: 'partner', status: 'invalid')
-
-      get "#{path}/panel", headers: auth_headers(admin), as: :json
-      expect(response.parsed_body['panel']).to be_nil
+      connection = create_meta_ads_connection(account).tap { |row| row.update!(mode: 'facebook_login') }
 
       get path, headers: auth_headers(admin), as: :json
-      expect(response.parsed_body['whatsapp_result']).to eq('enabled' => false)
+      expect(response.parsed_body['whatsapp_result'])
+        .to include('enabled' => true, 'connection_state' => 'choosing', 'connection_mode' => 'facebook_login')
+      get "#{path}/panel", headers: auth_headers(admin), as: :json
+      expect(response.parsed_body['panel']).to include('source' => 'whatsapp')
+
+      connection.update!(ad_account_id: '999', status: 'invalid')
+      get path, headers: auth_headers(admin), as: :json
+      expect(response.parsed_body['whatsapp_result']).to include('enabled' => true, 'connection_state' => 'broken')
+      get "#{path}/panel", headers: auth_headers(admin), as: :json
+      expect(response.parsed_body['panel']).to include('source' => 'whatsapp')
     end
 
     it 'com a flag e a conexão completa, segue o painel com gasto' do

@@ -9,8 +9,10 @@ module AutomationRules::CrmActions
   # Só cria quando a conversa não tem card aberto: com só cards ganhos/perdidos, pedido novo vira card novo (#1197).
   # Sem o índice único (#1142), duas automações disparadas juntas poderiam criar dois: a trava da conversa e a
   # checagem dentro dela garantem um só.
+  # #2084: a automação não cria card para contato fora do funil (parceiro, não é negócio).
   def crm_create_card(params)
     return unless Crm::Config.enabled?
+    return if Crm::Relacao.fora_do_funil?(@conversation.contact)
 
     stage = crm_stage(params)
     return if stage.blank?

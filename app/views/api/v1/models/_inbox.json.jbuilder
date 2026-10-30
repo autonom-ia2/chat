@@ -35,6 +35,8 @@ json.provider_name resource.channel.try(:provider_name) if resource.facebook? ||
 
 ## WhatsApp API (conector via motor externo) — sinaliza a aba/conexão dedicada
 json.waha_provider resource.channel.try(:waha_provider?) || false
+# #2211: o número do WhatsApp do celular (a tela mostra por onde a mensagem sai). Ver Waha::NumeroDoCelular.
+json.waha_phone_number Waha::NumeroDoCelular.de(resource.channel) if resource.channel.try(:waha_provider?)
 
 ## WebWidget Attributes
 json.allowed_domains resource.channel.try(:allowed_domains)
@@ -48,7 +50,7 @@ json.website_token resource.channel.try(:website_token)
 json.selected_feature_flags resource.channel.try(:selected_feature_flags)
 json.reply_time resource.channel.try(:reply_time)
 if resource.web_widget?
-  json.hmac_token resource.channel.try(:hmac_token) if Current.account_user&.administrator?
+  json.hmac_token resource.channel.try(:hmac_token) if Current.account_user&.permission_granted?('token_manage')
   json.pre_chat_form_enabled resource.channel.try(:pre_chat_form_enabled)
   json.pre_chat_form_options resource.channel.try(:pre_chat_form_options)
   json.continuity_via_email resource.channel.try(:continuity_via_email)
@@ -99,25 +101,28 @@ if resource.email?
     json.branded_email_layout resource.branded_email_layout
   end
 
+  # Whoever reconnects the mailbox (integration_manage) sees how it connects; the passwords pasted from the mail
+  # provider only go back to administrators, and a blank one on save keeps the stored one (#2027).
   ## IMAP
-  if Current.account_user&.administrator?
+  if Current.account_user&.permission_granted?('integration_manage')
     json.imap_login resource.channel.try(:imap_login)
-    json.imap_password resource.channel.try(:imap_password)
+    json.imap_password resource.channel.try(:imap_password) if Current.account_user&.administrator?
     json.imap_address resource.channel.try(:imap_address)
     json.imap_port resource.channel.try(:imap_port)
     json.imap_enabled resource.channel.try(:imap_enabled)
     json.imap_enable_ssl resource.channel.try(:imap_enable_ssl)
     json.imap_authentication resource.channel.try(:imap_authentication)
+  end
 
-    if resource.channel.try(:microsoft?) || resource.channel.try(:google?) || resource.channel.try(:legacy_google?)
-      json.reauthorization_required resource.channel.try(:provider_config).empty? || resource.channel.try(:reauthorization_required?)
-    end
+  # Says only that the mailbox disconnected, so whoever sees the inbox knows (#2027).
+  if resource.channel.try(:microsoft?) || resource.channel.try(:google?) || resource.channel.try(:legacy_google?)
+    json.reauthorization_required resource.channel.try(:provider_config).empty? || resource.channel.try(:reauthorization_required?)
   end
 
   ## SMTP
-  if Current.account_user&.administrator?
+  if Current.account_user&.permission_granted?('integration_manage')
     json.smtp_login resource.channel.try(:smtp_login)
-    json.smtp_password resource.channel.try(:smtp_password)
+    json.smtp_password resource.channel.try(:smtp_password) if Current.account_user&.administrator?
     json.smtp_address resource.channel.try(:smtp_address)
     json.smtp_port resource.channel.try(:smtp_port)
     json.smtp_enabled resource.channel.try(:smtp_enabled)
@@ -131,8 +136,8 @@ end
 
 ## API Channel Attributes
 if resource.api?
-  json.hmac_token resource.channel.try(:hmac_token) if Current.account_user&.administrator?
-  json.secret resource.channel.try(:secret) if Current.account_user&.administrator?
+  json.hmac_token resource.channel.try(:hmac_token) if Current.account_user&.permission_granted?('token_manage')
+  json.secret resource.channel.try(:secret) if Current.account_user&.permission_granted?('token_manage')
   json.webhook_url resource.channel.try(:webhook_url)
   json.inbox_identifier resource.channel.try(:identifier)
   json.additional_attributes resource.channel.try(:additional_attributes)
@@ -154,7 +159,8 @@ if resource.whatsapp?
   message_templates = resource.channel.try(:message_templates)
   json.message_templates message_templates.is_a?(Array) ? message_templates : []
   json.provider_config resource.channel.try(:provider_config) if Current.account_user&.administrator?
-  if Current.account_user&.administrator? &&
+  # Only says whether it is set; whoever may paste it (integration_manage, #2027) needs to know.
+  if Current.account_user&.permission_granted?('integration_manage') &&
      ChatwootApp.chatwoot_cloud? &&
      (resource.channel.try(:provider_config) || {}).to_h['source'] == 'embedded_signup'
     json.business_management_token_configured resource.channel.try(:business_management_token).present?

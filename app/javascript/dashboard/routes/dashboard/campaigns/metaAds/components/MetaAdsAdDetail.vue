@@ -22,6 +22,16 @@ import {
   thumbClass,
 } from '../metaAdsHelpers';
 import { useMetaAdsLive } from '../useMetaAdsLive';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { lerGestao } from '../gestaoDoAnuncio';
+import MetaAdsComments from './comentarios/MetaAdsComments.vue';
+import comentariosInstagram from './comentarios/comentariosInstagram';
+import comentariosFacebook from './comentarios/comentariosFacebook';
+import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
+import MetaAdsAdPost from './MetaAdsAdPost.vue';
+import MetaAdsBudget from './MetaAdsBudget.vue';
+import { lerOrcamento } from '../criacaoNaMeta';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
 // imagem no formato dela, o veredito com o porquê em números, o custo por venda ao lado da média da conta, o
@@ -274,7 +284,117 @@ const axis = computed(() => {
   return [...new Set(picks)].map(index => dayLabel(daily[index].date));
 });
 
-onMounted(() => live.start());
+// Gestão mínima (#2161, flag meta_ads_gestao): situação do anúncio, botão de pausar e o post da Página. Só com
+// conexão (sem login não há token para ler nem mudar o anúncio).
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+const gestaoOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_GESTAO
+  )
+);
+const canManage = usePermissionGranted('meta_ads_manage');
+const loginPermissions = Object.fromEntries(
+  comentariosInstagram.PERMISSOES_PARA_ENTRAR.map(key => [
+    key,
+    usePermissionGranted(key),
+  ])
+);
+// Conectar a Página como caixa do Messenger, quando a conta não tem (comentários do Facebook, #2359).
+const canCreateInbox = loginPermissions.inbox_manage;
+
+// Comentários do anúncio, uma aba por rede, cada uma atrás da própria flag: Instagram (#2196) e Facebook (#2197).
+// Sem nenhuma aba ligada, a seção não aparece.
+// O botão de entrar no Instagram segue as permissões do caminho (comentariosInstagram.podeEntrar, #2358). O do
+// Facebook leva à Conexão, que já é de quem gere os anúncios, ou a conectar a caixa da Página (canCreateInbox, #2359).
+const COMMENT_TABS = [
+  {
+    key: 'INSTAGRAM',
+    flag: FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+    adaptador: comentariosInstagram,
+    podeEntrar: status =>
+      comentariosInstagram.podeEntrar(
+        status,
+        key => loginPermissions[key].value
+      ),
+  },
+  {
+    key: 'FACEBOOK',
+    flag: FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK,
+    adaptador: comentariosFacebook,
+  },
+];
+const commentTabs = computed(() =>
+  COMMENT_TABS.filter(tab =>
+    isFeatureEnabledonAccount.value(Number(route.params.accountId), tab.flag)
+  )
+);
+const gestao = ref(null);
+
+// Comentários só com conexão, que é quem tem token para ler na Meta (#2196). O sinal é a gestão, que leu o anúncio
+// ao vivo agora, ou o gasto, que só vem de anúncio sincronizado por uma conexão (sem login, #1960, ele é nil). A
+// gestão sozinha não basta: uma falha passageira na leitura dela tiraria os comentários de um anúncio com números. O
+// gasto sozinho também não: anúncio que nunca rodou, ou parou antes do período, não tem número nenhum (#2335).
+const showComments = computed(
+  () =>
+    gestaoOn.value &&
+    commentTabs.value.length > 0 &&
+    Boolean(gestao.value || (ad.value && !withoutSpend.value))
+);
+
+const loadGestao = async () => {
+  gestao.value = null;
+  if (!gestaoOn.value) return;
+  const asked = props.adId;
+  const data = await lerGestao(asked);
+  if (asked === props.adId) gestao.value = data;
+};
+
+// Orçamento e datas (#2198, flag meta_ads_criar): de quem guarda o dinheiro (grupo ou campanha). `budgetState`: ''
+// (flag desligada), 'loading', 'failed' ou 'ok'. Sem orçamento o cartão some e o "Ativar" espera; na falha, diz e
+// deixa tentar de novo.
+const budgetOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_CRIAR
+  )
+);
+const budget = ref(null);
+const budgetState = ref('');
+const loadBudget = async () => {
+  budget.value = null;
+  budgetState.value = '';
+  if (!budgetOn.value) return;
+  budgetState.value = 'loading';
+  const asked = props.adId;
+  try {
+    const data = await lerOrcamento(asked);
+    if (asked !== props.adId) return;
+    budget.value = data;
+    budgetState.value = data ? 'ok' : 'failed';
+  } catch {
+    if (asked === props.adId) budgetState.value = 'failed';
+  }
+};
+watch(() => props.adId, loadBudget);
+
+watch(() => props.adId, loadGestao);
+
+// A entrega (`effective_status`) é a Meta quem diz: depois de mudar, a situação é lida de novo, sem tirar o selo.
+const statusChanged = async status => {
+  gestao.value = { ...gestao.value, status };
+  const asked = props.adId;
+  const data = await lerGestao(asked);
+  if (data && asked === props.adId) gestao.value = data;
+};
+
+onMounted(() => {
+  live.start();
+  loadGestao();
+  loadBudget();
+});
 
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
 // a tentar).
@@ -317,13 +437,48 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       </button>
     </div>
 
-    <p
-      v-else-if="!ad"
-      data-ad-detail-empty
-      class="m-0 rounded-2xl bg-n-solid-1 p-6 text-sm text-n-slate-11 ring-1 ring-inset ring-n-weak"
-    >
-      {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.EMPTY') }}
-    </p>
+    <!-- Sem números no período (nunca rodou, ou parou antes): o aviso fica, e o que a conexão lê ao vivo na Meta
+    (situação, orçamento, post e comentários) continua aqui (#2335). -->
+    <template v-else-if="!ad">
+      <p
+        data-ad-detail-empty
+        class="m-0 rounded-2xl bg-n-solid-1 p-6 text-sm text-n-slate-11 ring-1 ring-inset ring-n-weak"
+      >
+        {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.EMPTY') }}
+      </p>
+      <div
+        v-if="gestao"
+        data-ad-detail-gestao
+        class="rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+      >
+        <MetaAdsAdStatus
+          :ad-id="adId"
+          :ad-name="gestao.name || ''"
+          :gestao="gestao"
+          :can-manage="canManage"
+          :budget="budget"
+          :budget-state="budgetState"
+          tone="light"
+          @retry-budget="loadBudget"
+          @changed="statusChanged"
+        />
+      </div>
+      <MetaAdsBudget
+        v-if="budget"
+        :ad-id="adId"
+        :budget="budget"
+        :can-manage="canManage"
+        @changed="budget = $event"
+      />
+      <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
+      <MetaAdsComments
+        v-if="showComments"
+        :ad-id="adId"
+        :abas="commentTabs"
+        :can-manage="canManage"
+        :can-create-inbox="canCreateInbox"
+      />
+    </template>
 
     <template v-else>
       <header
@@ -361,53 +516,75 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
             <span class="min-w-0">{{ part.name }}</span>
           </span>
         </p>
+        <MetaAdsAdStatus
+          v-if="gestao"
+          :ad-id="adId"
+          :ad-name="ad.name || ''"
+          :gestao="gestao"
+          :can-manage="canManage"
+          :budget="budget"
+          :budget-state="budgetState"
+          @retry-budget="loadBudget"
+          @changed="statusChanged"
+        />
       </header>
 
       <div
         class="grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]"
       >
-        <figure
-          class="m-0 flex flex-col gap-2 overflow-hidden rounded-2xl bg-n-solid-1 ring-1 ring-n-weak"
-        >
-          <div class="flex justify-center bg-n-alpha-1">
-            <img
-              v-if="image"
-              :src="image"
-              :alt="ad.name || ''"
-              data-ad-detail-image
-              class="block object-contain w-full h-auto max-h-[40rem]"
-              @error="brokenImages = [...brokenImages, image]"
-            />
-            <div
-              v-else
-              data-ad-detail-placeholder
-              class="grid w-full aspect-[4/3] lg:aspect-square place-items-center bg-gradient-to-br"
-              :class="thumbClass(ad.ad_id)"
-            >
-              <span
-                class="i-lucide-image size-10 text-white/50"
-                aria-hidden="true"
+        <div class="flex flex-col gap-5">
+          <figure
+            class="m-0 flex flex-col gap-2 overflow-hidden rounded-2xl bg-n-solid-1 ring-1 ring-n-weak"
+          >
+            <div class="flex justify-center bg-n-alpha-1">
+              <img
+                v-if="image"
+                :src="image"
+                :alt="ad.name || ''"
+                data-ad-detail-image
+                class="block object-contain w-full h-auto max-h-[40rem]"
+                @error="brokenImages = [...brokenImages, image]"
               />
+              <div
+                v-else
+                data-ad-detail-placeholder
+                class="grid w-full aspect-[4/3] lg:aspect-square place-items-center bg-gradient-to-br"
+                :class="thumbClass(ad.ad_id)"
+              >
+                <span
+                  class="i-lucide-image size-10 text-white/50"
+                  aria-hidden="true"
+                />
+              </div>
             </div>
-          </div>
-          <figcaption v-if="ad.preview_url" class="px-4 pb-3">
-            <a
-              :href="ad.preview_url"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-ad-detail-preview
-              class="inline-flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-medium text-n-blue-11 no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-            >
-              {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PREVIEW') }}
-              <span
-                class="i-lucide-external-link size-3.5"
-                aria-hidden="true"
-              />
-            </a>
-          </figcaption>
-        </figure>
+            <figcaption v-if="ad.preview_url" class="px-4 pb-3">
+              <a
+                :href="ad.preview_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                data-ad-detail-preview
+                class="inline-flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-medium text-n-blue-11 no-underline hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+              >
+                {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PREVIEW') }}
+                <span
+                  class="i-lucide-external-link size-3.5"
+                  aria-hidden="true"
+                />
+              </a>
+            </figcaption>
+          </figure>
+          <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
+        </div>
 
         <div class="flex flex-col gap-5">
+          <!-- Orçamento e datas (#2198) no topo: é o que a pessoa muda depois de ver o resultado. -->
+          <MetaAdsBudget
+            v-if="budget"
+            :ad-id="adId"
+            :budget="budget"
+            :can-manage="canManage"
+            @changed="budget = $event"
+          />
           <span
             v-if="ad.verdict"
             :data-verdict="ad.verdict"
@@ -652,6 +829,14 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         </details>
       </div>
 
+      <MetaAdsComments
+        v-if="showComments"
+        :ad-id="adId"
+        :abas="commentTabs"
+        :can-manage="canManage"
+        :can-create-inbox="canCreateInbox"
+      />
+
       <div
         v-if="withoutSpend"
         data-ad-detail-people
@@ -754,7 +939,10 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
                 </span>
               </span>
             </span>
-            <span class="text-base font-semibold tabular-nums text-n-slate-12">
+            <span
+              v-if="card.value != null"
+              class="text-base font-semibold tabular-nums text-n-slate-12"
+            >
               {{ fmt(card.value) }}
             </span>
             <router-link

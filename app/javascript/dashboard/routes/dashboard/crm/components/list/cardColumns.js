@@ -136,6 +136,8 @@ export const buildCrmCardColumns = ({
   includeValue = true,
   // #1874 — sem nenhuma ação em massa possível, a lista não tem seleção.
   includeSelect = true,
+  // #2075 — sem a chave de valores o servidor ignora a ordenação por valor.
+  valueVisible = true,
 } = {}) => {
   const L = key => t(`CRM_KANBAN.LIST.COLUMNS.${key}`);
 
@@ -204,7 +206,7 @@ export const buildCrmCardColumns = ({
       id: 'value',
       accessorFn: row => Number(row?.value_cents || 0),
       header: L('VALUE'),
-      enableSorting: true,
+      enableSorting: valueVisible,
       size: COLUMN_SIZES.value,
       meta: {
         kind: 'value',

@@ -68,6 +68,9 @@ const onDelete = async hide => {
           <p class="mb-0 text-sm text-n-slate-11">
             {{ confirmMessage }}
           </p>
+          <p class="mb-0 text-sm text-n-slate-11">
+            {{ t('APAGAR_CONTATO.UM') }}
+          </p>
         </div>
         <div class="flex items-center justify-end gap-2">
           <Button

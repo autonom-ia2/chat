@@ -4,6 +4,8 @@
 # - Conversas: cada pessoa que chegou por anúncio (só as que a pessoa vê), com etapa, situação, valor e resposta;
 #   só para quem pode exportar o CRM (Dados#com_pessoas?);
 # - Por dia: conversas de cada dia, no total e por anúncio.
+# Sem os valores de venda (Dados#valores?, #2075), o valor vendido sai do resumo e a coluna de valor sai das abas
+# Anúncios e Conversas: nada de coluna vazia nem de "R$ 0".
 class Crm::MetaAds::Relatorio::Planilha
   include Crm::MetaAds::Relatorio::Formato
 
@@ -58,7 +60,7 @@ class Crm::MetaAds::Relatorio::Planilha
 
   def resumo
     itens = %i[conversations quotes open_quotes sales].map { |chave| [t("summary.#{chave}"), totais[chave].to_i, :inteiro] }
-    itens << [t('summary.sales_value'), totais[:sales_value].to_f, :dinheiro]
+    itens << [t('summary.sales_value'), totais[:sales_value].to_f, :dinheiro] if @dados.valores?
     itens += gasto unless @dados.sem_gasto?
     itens + resumo_da_resposta
   end
@@ -73,15 +75,16 @@ class Crm::MetaAds::Relatorio::Planilha
 
   def gasto
     [[t('summary.spend'), totais[:spend].to_f, :dinheiro]] +
-      (totais[:cost_per_sale] ? [[t('summary.cost_per_sale'), totais[:cost_per_sale].to_f, :dinheiro]] : [])
+      (totais[:cost_per_sale] ? [[t('summary.cost_per_sale'), totais[:cost_per_sale].to_f, :dinheiro]] : []) +
+      (totais[:other_spend].to_f.positive? ? [[t('summary.other_spend'), totais[:other_spend].to_f, :dinheiro]] : [])
   end
 
   def colunas_de_anuncio
     base = [
       { titulo: t('columns.ad'), tipo: :texto, largura: 44 }, { titulo: t('columns.conversations'), tipo: :inteiro, largura: 14 },
-      { titulo: t('columns.open_quotes'), tipo: :inteiro, largura: 18 }, { titulo: t('columns.sales'), tipo: :inteiro, largura: 10 },
-      { titulo: t('columns.sales_value'), tipo: :dinheiro, largura: 16 }
+      { titulo: t('columns.open_quotes'), tipo: :inteiro, largura: 18 }, { titulo: t('columns.sales'), tipo: :inteiro, largura: 10 }
     ]
+    base << { titulo: t('columns.sales_value'), tipo: :dinheiro, largura: 16 } if @dados.valores?
     return base if @dados.sem_gasto?
 
     base + [{ titulo: t('columns.spend'), tipo: :dinheiro, largura: 14 }, { titulo: t('columns.cost_per_sale'), tipo: :dinheiro, largura: 16 }]
@@ -89,8 +92,8 @@ class Crm::MetaAds::Relatorio::Planilha
 
   def linhas_de_anuncio
     @dados.anuncios.map do |anuncio|
-      linha = [nome_do_anuncio(anuncio), anuncio[:conversations].to_i, abertas(anuncio),
-               anuncio[:sales].to_i, anuncio[:sales_value].to_f]
+      linha = [nome_do_anuncio(anuncio), anuncio[:conversations].to_i, abertas(anuncio), anuncio[:sales].to_i]
+      linha << anuncio[:sales_value].to_f if @dados.valores?
       @dados.sem_gasto? ? linha : linha + [anuncio[:spend].to_f, anuncio[:cost_per_sale]&.to_f]
     end
   end
@@ -99,15 +102,16 @@ class Crm::MetaAds::Relatorio::Planilha
     [
       { titulo: t('columns.date'), tipo: :data, largura: 17 }, { titulo: t('columns.person'), tipo: :texto, largura: 30 },
       { titulo: t('columns.ad'), tipo: :texto, largura: 36 }, { titulo: t('columns.stage'), tipo: :texto, largura: 20 },
-      { titulo: t('columns.situation'), tipo: :texto, largura: 16 }, { titulo: t('columns.value'), tipo: :dinheiro, largura: 14 },
+      { titulo: t('columns.situation'), tipo: :texto, largura: 16 },
+      ({ titulo: t('columns.value'), tipo: :dinheiro, largura: 14 } if @dados.valores?),
       { titulo: t('columns.response'), tipo: :texto, largura: 16 }
-    ]
+    ].compact
   end
 
   def linhas_de_conversa
     @dados.conversas[:items].map do |item|
       [item[:touched_at]&.in_time_zone(@dados.zona), item[:title].presence || t('no_name'), item[:ad_name].presence || t('ad_no_name'),
-       item[:stage_name].to_s, t("situation.#{situacao(item)}"), item[:value]&.to_f, resposta(item)]
+       item[:stage_name].to_s, t("situation.#{situacao(item)}"), *([item[:value]&.to_f] if @dados.valores?), resposta(item)]
     end
   end
 

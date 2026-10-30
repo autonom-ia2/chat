@@ -5,14 +5,21 @@
 # - nos dois, o evento só vale se for do mesmo organizador do convite (um convite forjado com o UID de uma reunião
 #   real não responde por ela); sem evento assim, cai na resposta por e-mail;
 # - as demais (Hostinger e IMAP/SMTP): e-mail de resposta padrão de calendário (iMIP, RFC 6047) ao organizador.
-# Só responde a caixa que está entre os convidados; convite cancelado ou de outra forma não se responde.
+# Só responde a caixa que está entre os convidados; convite cancelado ou de outra forma não se responde, nem o que
+# ficou para trás numa versão mais nova (ConversaCanal::ConviteSubstituido, #1995).
 # A resposta fica gravada no próprio convite da mensagem (minha_resposta), para todos da equipe verem.
+# Uma resposta por vez em cada convite (trava no Redis, #1995): o clique de outra pessoa enquanto a primeira resposta
+# sai é recusado (em_andamento); quem clica depois relê a mensagem e não manda de novo a resposta que já saiu.
 class ConversaCanal::RespostaDoConvite
   RESPOSTAS = %w[aceito talvez recusado].freeze
   CHAVE = 'convite_da_reuniao'.freeze
   Recusa = Class.new(StandardError)
   # O provedor da agenda ou o servidor de e-mail falhou: a resposta não foi entregue.
   FalhaNoEnvio = Class.new(StandardError)
+  # Bem maior que a requisição: o Rack::Timeout corta o clique antes (15 s, o padrão, sem RACK_TIMEOUT_SERVICE_TIMEOUT
+  # em produção) e o ensure solta a trava. Ela só vence sozinha se o processo morrer no meio.
+  TEMPO_DA_TRAVA = 90.seconds
+  CHAVE_DA_TRAVA = 'CONVERSA_CANAL::CONVITE_RESPOSTA::%<message_id>d'.freeze
 
   def initialize(message:, resposta:, user:)
     @message = message
@@ -21,18 +28,53 @@ class ConversaCanal::RespostaDoConvite
   end
 
   def perform
-    validar!
-    # A mesma resposta de novo não sai outra vez: cada troca é um e-mail ou aviso ao organizador.
-    return convite if convite['minha_resposta'] == @resposta
+    travar do
+      reler
+      validar!
+      # A mesma resposta de novo não sai outra vez: cada troca é um e-mail ou aviso ao organizador.
+      next convite if convite['minha_resposta'] == @resposta
 
-    via = responder
-    gravar(via)
+      gravar(responder)
+    end
   end
 
   private
 
   def convite
     @convite ||= (@message.content_attributes || {}).dig('email', 'convite') || {}
+  end
+
+  def travar
+    travas = Redis::LockManager.new
+    chave = format(CHAVE_DA_TRAVA, message_id: @message.id)
+    recusar(:em_andamento) unless trava_livre?(travas, chave)
+    begin
+      yield
+    ensure
+      soltar(travas, chave)
+    end
+  end
+
+  # Redis caindo depois da resposta não troca o resultado: a trava vence sozinha no TEMPO_DA_TRAVA.
+  def soltar(travas, chave)
+    travas.unlock(chave)
+  rescue Redis::BaseError, ConnectionPool::TimeoutError => e
+    Rails.logger.warn("[RespostaDoConvite] trava não solta na mensagem #{@message.id}: #{e.class}")
+  end
+
+  # Redis fora do ar: a resposta não sai (502 com a frase da tela), em vez de um erro 500.
+  def trava_livre?(travas, chave)
+    travas.lock(chave, TEMPO_DA_TRAVA)
+  rescue Redis::BaseError, ConnectionPool::TimeoutError => e
+    Rails.logger.warn("[RespostaDoConvite] trava indisponível na mensagem #{@message.id}: #{e.class}")
+    raise FalhaNoEnvio, e.class.name
+  end
+
+  # A mensagem como está agora: outra pessoa pode ter respondido entre a tela abrir e este clique.
+  def reler
+    @message.reload
+    @convite = nil
+    @endereco = nil
   end
 
   def channel
@@ -42,16 +84,22 @@ class ConversaCanal::RespostaDoConvite
   def validar!
     recusar(:sem_chave) unless @message.account.feature_enabled?(CHAVE)
     recusar(:resposta_invalida) unless RESPOSTAS.include?(@resposta)
-    recusar(:sem_convite) unless convite_aberto?
+    validar_convite!
     recusar(:nao_e_email) unless channel.is_a?(Channel::Email)
     recusar(:nao_convidada) unless convidada?
+  end
+
+  def validar_convite!
+    recusar(:sem_convite) unless convite_aberto?
+    recusar(:substituido) if convite['substituido_por'].present?
     recusar(:ja_passou) if ja_passou?
   end
 
-  # Reunião única que já terminou não se responde. A série (RRULE) segue valendo depois da primeira.
+  # Reunião que já terminou não se responde. A série (RRULE) vale até o fim da última ocorrência (fim_da_serie, quando
+  # tem UNTIL ou COUNT); sem fim, segue respondível.
   def ja_passou?
-    termino = convite['fim'] || convite['inicio']
-    convite['recorrente'].blank? && termino.present? && termino.to_i < Time.current.to_i
+    termino = convite['recorrente'].present? ? convite['fim_da_serie'] : convite['fim'] || convite['inicio']
+    termino.present? && termino.to_i < Time.current.to_i
   end
 
   # Convite recebido, ainda de pé (cancelamento não se responde) e com o UID que o organizador reconhece.

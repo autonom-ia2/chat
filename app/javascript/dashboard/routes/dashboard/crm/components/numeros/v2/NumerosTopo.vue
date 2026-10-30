@@ -1,12 +1,11 @@
 <script setup>
 import { computed } from 'vue';
+import { P, pctDe } from './numerosTextos';
 import {
-  P,
-  botaoDoTopo,
-  fraseDoTopo,
-  pctDe,
-  tituloDoTopo,
-} from './numerosTextos';
+  botaoDoTopoDe,
+  fraseDoTopoDe,
+  tituloDoTopoDe,
+} from './numerosTextosEquipe';
 import { useNumerosFormato } from './useNumerosFormato';
 import { inicioDe, larguraDe } from './barras';
 
@@ -29,7 +28,7 @@ const { t, traduzir } = useNumerosFormato(props.moeda);
 
 const venda = computed(() => props.topo.medida === 'valor');
 const titulo = computed(() => {
-  const texto = tituloDoTopo(props.topo, props.mes);
+  const texto = tituloDoTopoDe(props.topo, props.mes);
   return traduzir(
     { ...texto, params: { ...texto.params, mes: props.mesNome } },
     ['valor']
@@ -37,7 +36,7 @@ const titulo = computed(() => {
 });
 const frase = computed(() =>
   traduzir(
-    fraseDoTopo(props.topo, props.mes),
+    fraseDoTopoDe(props.topo, props.mes),
     venda.value ? ['feito', 'meta', 'valor'] : []
   )
 );
@@ -46,7 +45,7 @@ const esperado = computed(() =>
   props.mes.fechado ? 100 : props.topo.esperadoPct
 );
 const botao = computed(() =>
-  props.topo.botao ? traduzir(botaoDoTopo(props.topo.botao), ['valor']) : ''
+  props.topo.botao ? traduzir(botaoDoTopoDe(props.topo.botao), ['valor']) : ''
 );
 </script>
 
@@ -101,7 +100,7 @@ const botao = computed(() =>
         v-if="botao && destino"
         :to="destino.to"
         data-topo-botao
-        class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-n-slate-12 transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-n-heroi transition hover:bg-white/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         {{ botao }}
         <span

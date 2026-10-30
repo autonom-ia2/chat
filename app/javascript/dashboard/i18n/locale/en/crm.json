@@ -1,4 +1,99 @@
 {
+  "CRM_EXCLUIR": {
+    "BOTAO": "Delete permanently",
+    "BOTAO_N": "Delete {count} permanently",
+    "CANCELAR": "Cancel",
+    "VOLTAR": "Back",
+    "CARREGANDO": "Loading…",
+    "ESCOLHA": "Choose",
+    "DIGITE_EXCLUIR": "To confirm, type EXCLUIR",
+    "ANUNCIO": "This card came from an ad. What was already sent to Meta or Google to measure the conversion stays with them and is not deleted. | Some cards came from an ad. What was already sent to Meta or Google to measure the conversion stays with them and is not deleted.",
+    "CARD": {
+      "TITULO": "Permanently delete {nome}'s card?",
+      "TEXTO": "This can't be undone.",
+      "SOME": "What goes away",
+      "SOME_ETAPAS": "The card and its stage history",
+      "SOME_ANOTACOES": "The notes",
+      "SOME_RETORNOS": "Follow-ups and meetings",
+      "SOME_IA": "What the AI kept about the card",
+      "FICA": "What stays",
+      "FICA_CONVERSA": "The conversation in the inbox",
+      "FICA_CONTATO": "The customer's contact",
+      "VENDA": "This card is a {valor} sale. It leaves Numbers and doesn't come back."
+    },
+    "VARIOS": {
+      "TITULO": "Permanently delete {count} card? | Permanently delete {count} cards?",
+      "TEXTO": "Each card and its history go away. Conversations and contacts stay. This can't be undone.",
+      "E_MAIS": "and {count} more | and {count} more",
+      "VENDAS": "There is {count} sale of {valor}. It leaves Numbers and doesn't come back. | There are {count} sales totaling {valor}. They leave Numbers and don't come back."
+    },
+    "REUNIAO": {
+      "UMA": "There is a meeting scheduled for {quando}.",
+      "VARIAS": "There is {count} meeting scheduled. | There are {count} meetings scheduled.",
+      "CANCELA": "It is canceled before deleting. | They are canceled before deleting.",
+      "CLIENTE_AVISADO": "Google or Microsoft notifies the customer.",
+      "CLIENTE_SEM_AVISO": "Booked through WhatsApp or only here, it leaves the system and the customer gets no notice.",
+      "CLIENTE_DEPENDE": "If it was booked through Google or Microsoft, the customer is notified. Booked through WhatsApp or only here, it leaves the system and the customer gets no notice.",
+      "INCERTA": "Couldn't check the meetings. Any scheduled meeting is canceled before deleting."
+    },
+    "FUNIL": {
+      "TITULO": "Permanently delete the {funil} pipeline?",
+      "TEXTO": "Deletes the pipeline and its stages. This can't be undone. Customer conversations stay.",
+      "CARDS_ROTULO": "It has {cards} ({abertos}, {outros}). What should happen to them?",
+      "N_CARDS": "{count} card | {count} cards",
+      "N_ABERTOS": "{count} open | {count} open",
+      "N_OUTROS": "{count} archived or closed | {count} archived or closed",
+      "MOVER": "Move to another pipeline",
+      "MOVER_TEXTO": "The cards stay, with their history, in the pipeline you choose.",
+      "JUNTO": "Delete the cards too",
+      "JUNTO_TEXTO": "Each card and its history go away. Conversations stay.",
+      "FUNIL_DESTINO": "Pipeline",
+      "ETAPA_DOS_ABERTOS": "Stage for the open card | Stage for the {count} open cards",
+      "FECHADOS_VAO": "The closed or archived card goes to the List and to Archived in {funil}. It doesn't show on the board. | The {count} closed or archived cards go to the List and to Archived in {funil}. They don't show on the board.",
+      "VENDAS_SOBEM": "{valor} in sales starts counting in {funil}'s Numbers.",
+      "VENDAS_NAO_ENTRAM": "{valor} in sales doesn't count in Numbers: {funil} isn't a sales pipeline.",
+      "VENDAS_JUNTO": "These cards have {valor} in sales. If you delete them too, they can't be brought back.",
+      "SEGUNDO_PLANO": "With cards, deletion runs in the background. If it fails, nothing is deleted and the reason goes to the account's Audit log.",
+      "DIGITE_NOME": "To confirm, type the pipeline name: {funil}"
+    },
+    "CONTATO": {
+      "TITULO": "Delete {nome}?",
+      "TEXTO": "Deletes the contact, their conversations and messages. This can't be undone.",
+      "OS_CARDS": "This contact's card | This contact's {count} cards",
+      "PERGUNTA": "Also delete this contact's card in the CRM? | Also delete this contact's {count} cards in the CRM?",
+      "APAGAR": "Yes, delete the card | Yes, delete the {count} cards",
+      "APAGAR_TEXTO": "Everything on the cards goes away: history, follow-ups and meetings. Use it when the customer asks to delete their data.",
+      "MANTER": "No, keep them without personal data",
+      "MANTER_TEXTO": "Each card becomes \"Removed customer\": name, phone, extra fields, notes, memory and AI texts go away. Only value, pipeline, stage, dates and outcome stay.",
+      "VENDA_SAI": "The {valor} sale stops counting in Numbers. | The {valor} in sales stops counting in Numbers.",
+      "VENDA_FICA": "The {valor} sale stays in Numbers. | The {valor} in sales stays in Numbers.",
+      "FUNIL_ARQUIVADO": "{onde} (archived pipeline)",
+      "ARQUIVADO_COM": "{arquivado} · {desfecho}",
+      "BOTAO": "Delete contact",
+      "EXCLUIDO": "{nome} was deleted.",
+      "EXCLUIDO_APAGADOS": "{nome} was deleted. The card was deleted too. | {nome} was deleted. {count} cards were deleted too.",
+      "EXCLUIDO_MANTIDOS": "{nome} was deleted. The card stayed as \"Removed customer\", without personal data. | {nome} was deleted. {count} cards stayed as \"Removed customer\", without personal data.",
+      "NOTA_CARDS": "If they have cards in the CRM, the cards stay as \"Removed customer\", without personal data, and any scheduled meeting is canceled."
+    },
+    "ERROS": {
+      "NADA_MUDOU": "Couldn't delete: {motivo} Nothing was deleted.",
+      "ARQUIVOU_SEM_EXCLUIR": "The card was archived, but not deleted: {motivo}",
+      "PREVIA": "Couldn't load what will be deleted: {motivo}",
+      "RECUSOU": "the system refused ({codigo}).",
+      "SEM_CONEXAO": "no internet connection.",
+      "SO_ADMIN": "only the account administrator can delete permanently.",
+      "NAO_ARQUIVADO": "the card or pipeline is no longer archived. Someone restored it.",
+      "CONFIRMACAO": "the typed text doesn't match.",
+      "REUNIAO": "a meeting couldn't be canceled in the calendar. Try again.",
+      "CONTATO_ONLINE": "the contact is online right now. Try again later.",
+      "MUDOU": "the cards changed while the window was open. Close it and open it again.",
+      "JA_EXCLUIDO": "it was already deleted.",
+      "DESTINO": "the target pipeline or stage is no longer available. Choose another one.",
+      "MUITOS": "too many cards at once. Delete them in parts.",
+      "ESCOLHA": "choose what happens to the cards.",
+      "JA_CANCELADAS": "One meeting had already been canceled and stays canceled. | {count} meetings had already been canceled and stay canceled."
+    }
+  },
   "CAMPAIGN_MANAGEMENT": {
     "HEADER": {
       "TITLE": "Campaign Management",
@@ -130,6 +225,13 @@
     "PRIVACY_FOOTER": "We never show the content of conversations with AI.",
     "RATE_UNAVAILABLE": "BRL exchange rate is unavailable right now; showing values in USD.",
     "RESOURCE_FALLBACK": "Other",
+    "IA_VS_HUMANO": {
+      "TITULO": "What the AI did in the pipeline",
+      "MUDOU": "In this period, the AI moved customers to another stage on its own {auto} time. | In this period, the AI moved customers to another stage on its own {auto} times.",
+      "NAO_MUDOU": "In this period, the AI did not move anyone to another stage on its own.",
+      "SUGERIU": "It also suggested changes: the team accepted {aceitas} and turned down {recusadas}.",
+      "VAZIA": "In this period, the AI did not move anyone to another stage, nor suggest changes."
+    },
     "LOADING": "Loading AI usage…",
     "ERROR": "Could not load AI usage. Try again.",
     "SEM_VALORES": {
@@ -450,7 +552,7 @@
     },
     "DASHBOARD": {
       "TITLE": "CRM Dashboard",
-      "SUBTITLE": "Pipeline performance: funnel, deals won and lost, AI vs human, and throughput.",
+      "SUBTITLE": "Pipeline performance: funnel, deals won and lost, and throughput.",
       "META_SYNC": {
         "TITLE": "Meta conversions (Ads)",
         "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, landing page sales through the website Pixel.",
@@ -523,14 +625,6 @@
         "CARDS": "cards",
         "EMPTY": "No open cards in this pipeline."
       },
-      "AI": {
-        "TITLE": "AI vs human",
-        "AUTO_MOVES": "AI auto-moves",
-        "ACCEPTED": "Accepted by human",
-        "DISMISSED": "Dismissed",
-        "ACCEPTANCE_RATE": "Acceptance rate",
-        "EMPTY": "No AI activity in the period."
-      },
       "THROUGHPUT": {
         "TITLE": "Throughput (closed)",
         "WON": "Won",
@@ -561,7 +655,7 @@
         "SO_DIAS": "{d} d",
         "SO_HORAS": "{h} h"
       },
-      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, resolution time and AI vs human."
+      "SUBTITLE_ATENDER": "Pipeline performance: stages, resolved and cancelled, and resolution time."
     },
     "ACTIONS": {
       "REFRESH": "Refresh",
@@ -574,8 +668,6 @@
       "FILTER": "Filter",
       "FILTERS": "Filters",
       "MORE_FILTERS": "More filters",
-      "FIND_WITH_AI": "Find with AI",
-      "FIND_WITH_AI_UNAVAILABLE": "Find with AI is not available yet",
       "CONFIGURE": "Configure",
       "CLOSE": "Close",
       "CANCEL": "Cancel",
@@ -762,8 +854,10 @@
         "NEW": "New view",
         "RENAME": "Rename",
         "DELETE": "Delete view",
-        "SAVE": "Save view"
-      }
+        "SAVE": "Save view",
+        "VALUE_IGNORED": "This view filters or sorts by value. Without access to sales values, that part was left out."
+      },
+      "VALUE_HIDDEN": "You can't see sales values"
     },
     "CALENDAR": {
       "FOLLOW_UP": "Follow-up",
@@ -1146,7 +1240,8 @@
       "UNDO": "Undo",
       "CLEAR": "Clear",
       "DONE": "{count} card updated | {count} cards updated",
-      "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?"
+      "DELETE_CONFIRM": "Archive {count} card? | Archive {count} cards?",
+      "DELETE_MEETINGS": "{count} card has a meeting booked; it stays booked. | {count} cards have meetings booked; they stay booked."
     },
     "EDIT": {
       "SAVED": "Saved",
@@ -1183,6 +1278,7 @@
       "STAGE_DELETE_ERROR": "Could not remove the stage.",
       "STAGE_DELETE_ERROR_HAS_CARDS": "This stage still has cards linked to it — move them to another stage first.",
       "STAGE_DELETE_ERROR_LAST_STAGE": "Could not remove the stage — a pipeline needs at least one stage.",
+      "STAGE_DELETE_ERROR_IN_USE": "Could not remove the stage — another record in the system still points to it. Nothing was deleted.",
       "CARD_CREATED": "Card created.",
       "CARD_UPDATED": "Card updated.",
       "CARD_LOAD_ERROR": "Could not load card details.",
@@ -1556,6 +1652,9 @@
         "PIPELINE_STAGE": "{pipeline} · {stage}",
         "SUGGESTION_CREATE": "Looks like a new subject: {title} ({pipeline}).",
         "SUGGESTION_CREATE_ACCEPT": "Create subject",
+        "SUGGESTION_DOUBT_CREATE": "Looks like a new request in {pipeline}. Create a card?",
+        "SUGGESTION_DOUBT_CREATE_TITLE": "Looks like a new request: {title} ({pipeline}). Create a card?",
+        "SUGGESTION_DOUBT_CREATE_ACCEPT": "Create card",
         "SUGGESTION_RENAME": "Looks like this subject is: {title}.",
         "SUGGESTION_RENAME_ACCEPT": "Use this name",
         "SUGGESTION_FOCUS": "Looks like the customer is back to: {title}.",
@@ -2260,6 +2359,7 @@
     },
     "META_ADS_HUB": {
       "PAGE": {
+        "BACK": "Back",
         "TITLE": "Ads",
         "SUBTITLE": "See which ads bring conversations and sales.",
         "LOADING": "Loading…",
@@ -2270,13 +2370,86 @@
         "NOT_CONNECTED_TITLE": "The ads are not connected yet",
         "NOT_CONNECTED_TEXT": "Ask an administrator to connect the Meta ads. Then the results show up here."
       },
+      "LEAD_FORMS": {
+        "TITLE": "Instant forms on your ads",
+        "SUBTITLE": "Choose which pipeline each form goes to.",
+        "WHATSAPP_RULE": "People who fill in the form haven't messaged you on WhatsApp yet. To reach them, use a message from Templates.",
+        "READ_ONLY": "Only people who manage ads can change this.",
+        "LOAD_FAILED": "We couldn't open your forms. Try again.",
+        "TRY_AGAIN": "Try again",
+        "NO_PAGES": "We couldn't find your Facebook Page.",
+        "NO_PAGES_HINT": "Connect again and select the Page your ads run on.",
+        "CONNECT": "Go to Connection",
+        "ACTION_FAILED": "That didn't work. Nothing changed. Try again.",
+        "WHERE": "{pipeline} › {stage}",
+        "SAVED": "Done. People who fill in \"{form}\" go to {where}.",
+        "SAVED_BRINGING": "Done. People who fill in \"{form}\" go to {where}. People from the last 90 days are being added now: the cards show up in the pipeline in a few minutes.",
+        "REMOVED": "\"{form}\" no longer goes to the pipeline.",
+        "STOPPED": "The {page} Page stopped sending its forms.",
+        "FACEBOOK_PAGE": "Facebook Page",
+        "RECEIVING": "Receiving forms",
+        "PAGE_MENU": "More options for the {page} Page",
+        "STOP": "Stop receiving",
+        "STOP_TITLE": "Stop receiving forms from the {page} Page?",
+        "STOP_HINT": "People who fill in a form from now on won't go to your pipeline. People already there stay.",
+        "KEEP": "Keep receiving",
+        "PAGE_UNAVAILABLE": "We couldn't read this Page's forms right now. Try again in a few minutes.",
+        "PAGE_REFUSED": "Meta doesn't let us read this Page's forms. Connect again and give the Page access to its forms.",
+        "OR_MORE": "{count} or more",
+        "NO_FORMS": "This Page has no forms on its ads yet.",
+        "FILLED": "No one filled it in yet | 1 person filled it in | {count} people filled it in",
+        "FILLED_LAST": "{filled} · last one: {when}",
+        "GOES_TO": "Goes to {pipeline} › {stage}",
+        "NOWHERE": "Not going to any pipeline yet",
+        "CHOOSE": "Send to pipeline",
+        "CHANGE": "Change",
+        "OLD_FORMS": "Old forms ({count})",
+        "BRING_OLD": "Add people who filled it in",
+        "DESTINATION": {
+          "TITLE": "Where should people from \"{form}\" go?",
+          "HINT": "Each person becomes a customer in this stage, along with the ad they came from.",
+          "PIPELINE": "Pipeline",
+          "STAGE": "Stage",
+          "PAST": "Also add the person who filled it in over the last 90 days | Also add the person who filled it in over the last 90 days | Also add the {count} people who filled it in over the last 90 days",
+          "PAST_HINT": "People who are already customers won't be added again.",
+          "SAVE": "Send to pipeline",
+          "CANCEL": "Cancel",
+          "REMOVE": "Stop sending this form to the pipeline",
+          "REMOVE_TITLE": "Stop sending \"{form}\" to the pipeline?",
+          "REMOVE_HINT": "People who fill it in from now on won't go to your pipeline. People already there stay.",
+          "REMOVE_CONFIRM": "Stop sending",
+          "REMOVE_KEEP": "Keep sending",
+          "RESUMES_PAGE": "This turns the Page back on. Its other forms will start receiving again too."
+        },
+        "RECENT": {
+          "TITLE": "New people from your forms",
+          "EMPTY": "No one yet. When someone fills in a form, they show up here.",
+          "NEW": "New customer",
+          "KNOWN": "Already a customer",
+          "ORIGIN": "{form} · ad {ad} · {when}",
+          "OPEN": "See in {pipeline} › {stage}"
+        },
+        "RESUME": "Start receiving again",
+        "RESUMED": "The {page} Page is sending its forms again.",
+        "PAUSED_LINE": "New people won't go to your pipeline for now.",
+        "BRINGING": "We are adding the people who filled in \"{form}\" to {where}. The cards show up in the pipeline in a few minutes.",
+        "BROUGHT_LINE": "No one added | 1 person added to {pipeline} › {stage} | {count} people added to {pipeline} › {stage}",
+        "BRING": {
+          "TITLE": "Add the people from the last 90 days of \"{form}\"? | Add the person from the last 90 days of \"{form}\"? | Add the {count} people from the last 90 days of \"{form}\"?",
+          "HINT": "This form no longer takes new people. You can add people who filled it in over the last 90 days. People who are already customers won't be added again.",
+          "CONFIRM": "Add | Add 1 person | Add {count} people"
+        },
+        "PAUSED": "Stopped"
+      },
       "SEM_LOGIN": {
         "NO_NAME": "No name",
         "READY": {
           "TEXT_PHONE": "Your WhatsApp {phone} is ready: people who come from an ad show up here.",
           "TEXT": "Your WhatsApp is ready: people who come from an ad show up here.",
           "TEXT_MANY": "Your WhatsApp numbers are ready: people who come from an ad show up here.",
-          "EXAMPLE": "See an example"
+          "EXAMPLE": "See an example",
+          "CONNECT_TEXT": "Already advertising on Facebook or Instagram, or about to start? Connect your ad account to see how much you spent.",
+          "CONNECT_CTA": "Connect my ad account"
         },
         "EXAMPLE": {
           "BADGE": "Example",
@@ -2297,6 +2470,121 @@
             "TALKING": "Talking",
             "LOST": "Lost",
             "NO_ANSWER": "No reply"
+          }
+        },
+        "CONNECT": {
+          "BACK": "Back to the panel",
+          "STEP_OF": "Step {step} of {total}",
+          "COPIED": "Copied",
+          "COPY_AGAIN": "Copy the code again",
+          "TRUST": {
+            "SAFE": "We only see the numbers. Nothing changes in your ads",
+            "TIME": "No password, no key",
+            "OFF": "Turn it off anytime"
+          },
+          "COPY": {
+            "TITLE": "Copy the {partner} code",
+            "TEXT": "This is how Meta knows who to share with.",
+            "CTA": "Copy and continue"
+          },
+          "META": {
+            "TITLE": "Paste the code on Meta",
+            "TEXT": "On the Partners screen, tap Add, choose to give access to your assets and paste the code.",
+            "CTA": "Open Meta",
+            "AGAIN": "Open Meta again"
+          },
+          "MARK": {
+            "TITLE": "Check the ad account",
+            "TEXT": "Turn on only \"View performance\" and save. Nothing else is needed.",
+            "CTA": "Done, I shared it"
+          },
+          "SEND": {
+            "TITLE": "Send this message to who creates your ads",
+            "TEXT": "It explains what to do, step by step.",
+            "MESSAGE": "Hi! Please share our ad account with {partner}, just to see the numbers.\n\n1. Open: {link}\n2. Tap Add and choose to give access to your assets\n3. Paste the code {id}\n4. Check the ad account, turn on only \"View performance\" and save\n\nThanks!",
+            "WHATSAPP": "Send on WhatsApp",
+            "COPY": "Copy message",
+            "AFTER": "When they say it is shared, tap here:",
+            "CHECK": "Check now"
+          },
+          "CHECKING": "Looking for your account on Meta…",
+          "CONNECTING": "Connecting {name}…",
+          "SPEND_30D": "{value} in the last 30 days",
+          "FOUND": {
+            "TITLE": "We found your ad account",
+            "CTA": "Connect this account"
+          },
+          "PIXEL": {
+            "TITLE": "Which website code should we use?",
+            "TEXT": "{name} has more than one website code (Pixel). Pick the one on the website where you sell.",
+            "PLACEHOLDER": "Choose a code"
+          },
+          "CHOOSE": {
+            "TITLE": "Which account runs your WhatsApp ads?",
+            "TEXT": "We found more than one. Tap the one you use.",
+            "RECOMMENDED": "Most used"
+          },
+          "NOT_YET": {
+            "TITLE": "Not there yet",
+            "TITLE_ERROR": "Could not connect",
+            "TEXT": "Meta does not show the account shared with {partner} yet. Sometimes it takes a few minutes.",
+            "AUTO": "Checking again by itself…",
+            "CHECK": "Check again",
+            "STEPS": "See the steps again",
+            "ASK_SOMEONE": "Rather ask someone else?",
+            "TEXT_FACEBOOK": "We found no ad account on this Facebook. Sign in with the Facebook you use to create your ads."
+          },
+          "DONE": {
+            "TITLE": "Done, you are connected!",
+            "TEXT": "We are bringing the spend of {name}. In a few minutes it shows on your panel, next to conversations and sales.",
+            "CTA": "See my panel",
+            "PIXEL_CANCEL": "Cancel",
+            "PIXEL_FAILED": "We could not read the website code (Pixel) now. The account is already connected; choose the code later in the Connection tab.",
+            "DESTINATION_FAILED": "We could not mark WhatsApp as where your ads lead. Open the Connection tab, in \"Ad destination\", and choose WhatsApp."
+          },
+          "GUIDE": {
+            "LABEL": "Where to tap on Meta",
+            "SETTINGS": "Business settings",
+            "PARTNERS": "Partners",
+            "ADD": "Add",
+            "GIVE_ACCESS": "Give a partner access to your assets",
+            "PARTNER_ID": "Partner ID",
+            "PASTE": "paste the code here",
+            "AD_ACCOUNTS": "Ad accounts",
+            "YOUR_ACCOUNT": "Your ad account",
+            "VIEW": "View performance",
+            "MANAGE": "Manage campaigns",
+            "SAVE": "Save changes",
+            "CAPTION": "A drawing to guide you. The Meta screen may look a little different."
+          },
+          "START": {
+            "TITLE": "See how much you spent on each ad",
+            "TEXT": "Sign in with the same Facebook you use to create your ads. We find the account for you.",
+            "HOW": "How it works",
+            "STEPS": {
+              "ENTER": "Sign in with Facebook",
+              "CHOOSE": "Confirm your account",
+              "SEE": "See your spend"
+            },
+            "CTA": "Sign in with Facebook",
+            "RETRY": "Sign in again",
+            "WAITING": "The Facebook window is open. Keep everything checked and tap \"Next\", \"Confirm\" and, at the end, \"Done\".",
+            "POPUP_TITLE": "The Facebook window closed before the end",
+            "POPUP_TEXT": "Tap \"Sign in again\" and go until \"Done\". If the window never opened, the browser blocked it: tap the blocked window icon in the address bar and choose \"Always allow\".",
+            "REFUSED_TITLE": "Facebook did not share your ads",
+            "BROKEN": "The connection with Meta dropped. Sign in again to see your spend.",
+            "SOMEONE": "Someone else takes care of my ads",
+            "PARTNER": "Share through Business Manager"
+          }
+        },
+        "PENDING": {
+          "CHOOSING": {
+            "TEXT": "You only need to pick your ad account.",
+            "CTA": "Continue"
+          },
+          "BROKEN": {
+            "TEXT": "Meta stopped sending your spend. Meanwhile, the panel shows what WhatsApp counted.",
+            "CTA": "Connect again"
           }
         }
       },
@@ -2326,7 +2614,11 @@
         "NOW": "Now",
         "CHANGE": "Change",
         "OFF": "Off",
-        "TURN_ON": "Turn on"
+        "TURN_ON": "Turn on",
+        "PICK": "Choose",
+        "LINK": "Connect",
+        "ACCOUNT_PENDING_HINT": "Website code (Pixel) missing",
+        "DESTINATIONS_PENDING_HINT": "Site page missing"
       },
       "CONNECT": {
         "TITLE": "How do you want to connect?",
@@ -2357,11 +2649,11 @@
           "HOW_1_TITLE": "A Facebook window opens",
           "HOW_1_TEXT": "If it asks, sign in with your Facebook email and password.",
           "HOW_2_TITLE": "Leave everything checked",
-          "HOW_2_TEXT": "Facebook shows your accounts and what we will use. Don't uncheck anything and tap \"Continue\" until the end.",
+          "HOW_2_TEXT": "Facebook shows your accounts and what we will use. Don't uncheck anything and tap \"Next\", \"Confirm\" and, at the end, \"Done\".",
           "HOW_3_TITLE": "You come back here",
           "HOW_3_TEXT": "The window closes by itself and we take it from here.",
           "CTA": "Sign in with Facebook",
-          "WAITING": "The Facebook window is open. Leave everything checked and tap \"Continue\" until the end.",
+          "WAITING": "The Facebook window is open. Leave everything checked and tap \"Next\", \"Confirm\" and, at the end, \"Done\".",
           "TRUST_PASSWORD": "We never see your password",
           "TRUST_ADS": "Nothing changes in your ads unless you ask",
           "TRUST_OFF": "You can turn it off whenever you want",
@@ -2372,8 +2664,8 @@
           "TOKEN_TITLE": "Use an access key",
           "TOKEN_TEXT": "For those who already have a key created on Meta.",
           "TOKEN_CTA": "Paste the key",
-          "POPUP_TITLE": "The Facebook window didn't open",
-          "POPUP_TEXT": "Your browser may have blocked it. Allow it and try again:",
+          "POPUP_TITLE": "The Facebook window closed before the end",
+          "POPUP_TEXT": "Sign in again and go until \"Done\". If the window never opened, your browser blocked it. Allow it like this:",
           "POPUP_STEP_1": "Tap the blocked window icon at the end of the address bar.",
           "POPUP_STEP_2": "Choose \"Always allow\" for this site.",
           "POPUP_STEP_3": "Tap \"Sign in again\".",
@@ -2423,13 +2715,31 @@
         "SITE_LINKS": "Linked pages",
         "SITE_LAST": "Last click {time}",
         "SITE_NONE_YET": "No clicks yet",
-        "SITE_EMPTY": "No page linked yet.",
-        "SITE_CREATE": "Link a page",
+        "SITE_EMPTY": "Connect your site page to know who came from the ad.",
+        "SITE_CREATE": "Connect the site page",
+        "SITE_CREATE_ANOTHER": "Connect another page",
+        "SITE_LOAD_ERROR": "Couldn't load your site pages right now.",
+        "SITE_RETRY": "Try again",
+        "LINK_DIALOG": {
+          "TITLE": "Connect the site page",
+          "TEXT": "Paste the address of the page the ad leads to.",
+          "ADDRESS": "Page address",
+          "ADDRESS_PLACEHOLDER": "examplestore.com/sale",
+          "ADDRESS_HINT": "Copy it from the browser bar with the page open.",
+          "ADDRESS_ERROR": "This does not look like a site address. Check it and paste again.",
+          "WHATSAPP": "Which WhatsApp answers people from the page?",
+          "WHATSAPP_PLACEHOLDER": "Choose the WhatsApp",
+          "SAVE": "Connect the page",
+          "CANCEL": "Cancel",
+          "NAME": "Site {site}",
+          "ERROR": "Could not connect the page now. Try again.",
+          "NO_WHATSAPP": "To connect the page, the account needs a connected WhatsApp. Connect one in Settings › Inboxes."
+        },
         "AD_TEXT_TITLE": "Paste this text in the ads that lead to the website",
         "AD_TEXT_HINT": "This way each campaign shows up with the right name in the CRM.",
         "COPY_TEXT": "Copy text",
         "COPIED": "Text copied.",
-        "SAVE": "Continue",
+        "SAVE": "Save and continue",
         "SAVED": "Destinations saved.",
         "PICK_ONE": "Pick at least one destination.",
         "WHERE": "Where to paste it on Meta?",
@@ -2472,7 +2782,7 @@
         "NEXT_TITLE": "What happens now",
         "NEXT_NAMES": "Each conversation from an ad shows the campaign name and See ad in the CRM card.",
         "NEXT_SALES": "When a card moves forward or is won, Meta is told and learns who buys.",
-        "NEXT_PANEL": "Next step: a dashboard with what each sale cost, ad by ad.",
+        "NEXT_PANEL": "In Results you see what each sale cost, ad by ad.",
         "SPEND_TODAY": "Spent today",
         "SPEND_ON": "Spent on {date}",
         "SPEND_CONVERSATIONS": "1 conversation from ads today | {count} conversations from ads today",
@@ -2538,8 +2848,8 @@
         "TEST_TIMEOUT": "The click has not arrived yet. Check that the code is on the page and try again.",
         "CAMPAIGNS_TITLE": "Campaigns arriving with their name",
         "CAMPAIGNS_MORE": "+ {count} more",
-        "UNNAMED": "1 click arrived without a campaign name. Paste the text in that ad. | {count} clicks arrived without a campaign name. Paste the text in those ads.",
-        "UNNAMED_WHEN": "1 click came without a campaign name, {time}. Paste the text in the ads that lead to this page. | {count} clicks came without a campaign name, the last {time}. Paste the text in the ads that lead to this page.",
+        "UNNAMED": "1 click from an ad arrived without the campaign name. Paste the text into that ad. | {count} clicks from ads arrived without the campaign name. Paste the text into those ads.",
+        "UNNAMED_WHEN": "1 click from an ad arrived without the campaign name, {time}. Paste the text into the ads that lead to this page. | {count} clicks from ads arrived without the campaign name, the last one {time}. Paste the text into the ads that lead to this page.",
         "KIT_TITLE": "Instructions for your website person",
         "KIT_HINT": "A page with the ready code and the steps. Takes about 10 minutes.",
         "KIT_SEND": "Send on WhatsApp",
@@ -2585,6 +2895,7 @@
       "PANEL": {
         "TABS": {
           "RESULT": "Results",
+          "LEAD_FORMS": "Instant forms",
           "CONNECTION": "Connection",
           "LABEL": "What to see"
         },
@@ -2635,6 +2946,7 @@
           "STALLED_QUOTES": {
             "TEXT": "1 quote from ads has been stalled for more than {days} days. It came from \"{ad}\". | {count} quotes from ads have been stalled for more than {days} days. Most came from \"{ad}\".",
             "WHY": "Why: they add up to {value} in negotiation. Following up with someone who asked for a quote costs less than advertising again.",
+            "WHY_NO_VALUE": "Why: following up with someone who asked for a quote costs less than advertising again.",
             "BUTTON": "See the quote | See the {count} quotes"
           },
           "FIX_TRACKING": {
@@ -2781,6 +3093,207 @@
           "CONFIRM": "Download",
           "ERROR": "Could not download right now. Try again.",
           "NO_PEOPLE": "Without the \"Export the CRM list to Excel\" permission, the file has only the numbers, without the list of people."
+        },
+        "CONNECT_SPEND": {
+          "NOTE": "Connect your ad account to see it",
+          "CTA": "See how much I spent"
+        },
+        "ADS_WHATSAPP_TITLE": "Ads that bring conversations",
+        "OTHER_ADS": {
+          "TITLE": "Other ads",
+          "TOTAL": "{value} invested",
+          "HINT": "They brought no conversation: they lead to your website, a video or your profile. They stay out of the cost per conversation and per sale.",
+          "SPEND": "Invested",
+          "CLICKS": "Clicks",
+          "SHOWN": "Shown"
+        }
+      },
+      "GESTAO": {
+        "STATUS": {
+          "ACTIVE": "Running",
+          "PAUSED": "Paused",
+          "OFF": "Not running",
+          "PAUSE": "Pause ad",
+          "ACTIVATE": "Turn ad on",
+          "PAUSE_TITLE": "Pause the ad \"{name}\"?",
+          "PAUSE_HINT": "It stops showing to people and stops spending. You can turn it on again at any time. The change also shows in Meta Ads Manager.",
+          "ACTIVATE_TITLE": "Turn on the ad \"{name}\"?",
+          "ACTIVATE_HINT": "It shows to people again and spends from its ad set budget. The change also shows in Meta Ads Manager.",
+          "PAUSE_DONE": "Ad paused.",
+          "ACTIVATE_DONE": "Ad turned on.",
+          "CANCEL": "Cancel",
+          "ERROR": "Meta did not accept the change now. Try again in a moment.",
+          "NEEDS_LOGIN": "To pause from here, sign in with Facebook again in Connection.",
+          "PARTIAL": "Part of the ad was left on at Meta and we couldn't pause it back. Check Meta Ads Manager.",
+          "PAUSE_PARTIAL": "We couldn't pause everything: part of the ad may still be on at Meta. Check Meta Ads Manager.",
+          "IN_PROGRESS": "This ad is already being changed. Wait a moment and look again.",
+          "IN_REVIEW": "Meta is still checking this ad. You can turn it on once it finishes, usually within 1 day.",
+          "IN_REVIEW_NOTE": "Meta is checking this ad. It usually takes up to 1 day.",
+          "IN_REVIEW_NOTE_HINT": "You can turn it on once Meta finishes.",
+          "ACTIVATE_SPEND_END": "When you turn it on, the ad starts spending {value} per day, until {end}. In total, at most {total}.",
+          "ACTIVATE_SPEND_NO_END": "When you turn it on, the ad starts spending {value} per day, with no end date. It only stops when you pause it.",
+          "ACTIVATE_SPEND_BUTTON": "Turn on and start spending",
+          "ACTIVATE_SPEND_TOTAL": "When you turn it on, the ad starts spending from its total budget of {total}, until {end}. It never goes over that.",
+          "ACTIVATE_SPEND_SHARED": "When you turn it on, this ad starts sharing the group's {value} per day with the other ad running in \"{name}\". The group's spend does not go up. | When you turn it on, this ad starts sharing the group's {value} per day with the other {others} ads running in \"{name}\". The group's spend does not go up.",
+          "ACTIVATE_SPEND_SHARED_CAMPAIGN": "When you turn it on, this ad starts sharing the campaign's {value} per day with the other ad running in \"{name}\". The campaign's spend does not go up. | When you turn it on, this ad starts sharing the campaign's {value} per day with the other {others} ads running in \"{name}\". The campaign's spend does not go up.",
+          "BUDGET_PENDING": "Reading the budget to show how much it will spend…",
+          "BUDGET_FAILED": "We couldn't read the budget right now. You can't turn the ad on without it.",
+          "BUDGET_RETRY": "Try again",
+          "HELD": {
+            "CAMPAIGN": "Ad activated, but the campaign is paused in Meta Ads Manager. Turn the campaign on there for the ad to start running.",
+            "ADSET": "Ad activated, but the ad set is paused in Meta Ads Manager. Turn the ad set on there for the ad to start running."
+          }
+        },
+        "POST": {
+          "TITLE": "Ad post",
+          "WHERE": "On the {page} Page · {date}",
+          "REACTIONS": "1 reaction | {count} reactions",
+          "COMMENTS": "1 comment | {count} comments",
+          "SHARES": "1 share | {count} shares",
+          "OPEN": "See on Facebook"
+        },
+        "PAGE": "Page: {page}",
+        "BUDGET": {
+          "TITLE": "Budget and dates",
+          "SCOPE_ADSET": "Applies to the 1 ad in the group \"{name}\". | Applies to the {count} ads in the group \"{name}\". They share this money.",
+          "SCOPE_CAMPAIGN": "Applies to the 1 ad in the campaign \"{name}\". | Applies to the {count} ads in the campaign \"{name}\". They share this money.",
+          "PER_DAY": "{value} per day",
+          "TOTAL": "{value} in total",
+          "DATES": "From {start} to {end}",
+          "DATES_NO_END": "Since {start} · no end date",
+          "EDIT": "Change budget and dates",
+          "EDIT_TITLE": "Change budget and dates",
+          "REVIEW_TITLE": "Check before changing",
+          "REVIEW": "Review the change",
+          "CONFIRM_PER_DAY": "Change to {value} per day",
+          "CONFIRM_TOTAL": "Change to {value} in total",
+          "CONFIRM_END": "Change the end date",
+          "CANCEL": "Cancel",
+          "BACK": "Change the values",
+          "AMOUNT_DAILY": "How much per day",
+          "AMOUNT_TOTAL": "Total budget",
+          "LIMITS": "From {min} to {max} per day.",
+          "BIG_CHANGE": "Changing a lot at once makes Meta test again who to show the ad to. For a few days, results can vary.",
+          "NO_END": "no end date",
+          "CHANGE": {
+            "AMOUNT": "Budget",
+            "END": "End date"
+          },
+          "FROM": "Before:",
+          "TO": "After:",
+          "PROJECTION_UNTIL": "Until {end} ({days} days), it spends at most {value} in total.",
+          "PROJECTION_NO_END": "No end date: it spends up to {value} every 30 days, until you pause it.",
+          "DAY_LIMITS": "On one day Meta can spend up to {day}. In a week, it never goes over {week}.",
+          "AUDIT": "The change goes to the account Audit log, with your name.",
+          "DONE": "Budget changed. It also shows in Meta Ads Manager.",
+          "ERROR": "Meta did not accept the change now. Try again in a moment.",
+          "ERRORS": {
+            "AMOUNT": "Type an amount, like 45.00.",
+            "MIN": "Meta asks for at least {value} per day.",
+            "MAX": "The limit here is {value} per day. For more, use Meta Ads Manager.",
+            "END_REQUIRED": "Choose the end date.",
+            "TOTAL_MIN": "The total must be at least {value}.",
+            "TOTAL_MAX": "Until that date, the total can be at most {value} ({daily} per remaining day). For more, use Meta Ads Manager."
+          },
+          "FAILURES": {
+            "INVALID_AMOUNT": "Meta did not accept this amount. Check the limits and try again.",
+            "INVALID_DATES": "This date does not work: the end must be after today and after the ad start.",
+            "CANNOT_CLEAR_END": "Removing the end date is not available here yet. Pick another date or change it in Meta Ads Manager.",
+            "META_PARTIAL": "Only part of the change was made at Meta. Check the budget and dates in Meta Ads Manager."
+          }
+        },
+        "COMMENTS": {
+          "TITLE": "Comments",
+          "EMPTY": "No one has commented on this ad yet.",
+          "ERROR": "We couldn't load the comments right now.",
+          "RETRY": "Try again",
+          "MORE": "See more comments",
+          "YOU": "You",
+          "HIDDEN": "Hidden",
+          "ATTACHMENT_PHOTO": "Sent a photo",
+          "ATTACHMENT": "Sent an attachment",
+          "REPLY": "Reply",
+          "REPLY_PRIVATE": "Reply privately",
+          "HIDE": "Hide",
+          "SHOW": "Unhide",
+          "DELETE": "Delete",
+          "CANCEL": "Cancel",
+          "SEND": "Post reply",
+          "SEND_PRIVATE": "Send Direct message",
+          "REPLY_HINT": "Public reply to {name}: everyone who sees the ad can read it.",
+          "PRIVATE_HINT": "Only {name} will see this. You can send one message. If they reply, the chat shows up in Conversations.",
+          "PRIVATE_SENT": "Replied privately.",
+          "OPEN_CONVERSATION": "Open conversation",
+          "REPLY_DONE": "Reply posted.",
+          "PRIVATE_DONE": "Direct message sent. If they reply, the chat shows up in Conversations.",
+          "HIDE_DONE": "Comment hidden: other people no longer see it.",
+          "SHOW_DONE": "Comment visible again.",
+          "DELETE_TITLE": "Delete the comment from {name}?",
+          "DELETE_HINT": "“{text}” will be removed from the ad for everyone. This can't be undone. To just keep it out of sight, tap Hide.",
+          "DELETE_CONFIRM": "Delete comment",
+          "DELETE_DONE": "Comment deleted.",
+          "ACTION_ERROR": "That didn't work right now. Your text is still here. Try again in a minute.",
+          "PRIVATE_EXPIRED": "It's been over 7 days, so you can't reply privately anymore.",
+          "PRIVATE_UNCONFIRMED": "Sent privately, without confirmation from Instagram. Check Instagram Direct first: if the message is there, don't click.",
+          "PRIVATE_NOT_SENT": "It wasn't sent",
+          "PRIVATE_RELEASED": "Done. You can reply privately again.",
+          "UNANSWERED": "No reply yet",
+          "TAB_UNANSWERED": "1 with no reply | {count} with no reply",
+          "MORE_ACTIONS": "More actions",
+          "MANAGE_ERROR": "That didn't work right now. Nothing changed on the comment. Try again in a minute.",
+          "INSTAGRAM": {
+            "TAB": "Instagram",
+            "OPEN": "View on Instagram",
+            "UNKNOWN_AUTHOR": "Instagram user",
+            "NEEDS_LOGIN_TITLE": "Comment access needed",
+            "NEEDS_LOGIN": "Log in again with Instagram {'@'}{username} and allow comment management.",
+            "NEEDS_LOGIN_BUTTON": "Log in with Instagram",
+            "NOT_CONNECTED_TITLE": "This ad also runs on Instagram",
+            "NOT_CONNECTED": "Instagram {'@'}{username} isn't connected to Chat2You yet. Connect it to see and reply to comments here.",
+            "NOT_CONNECTED_BUTTON": "Connect Instagram",
+            "NOT_CONNECTED_ASK": "Whoever manages the account's inboxes can connect this Instagram.",
+            "NEEDS_LOGIN_ASK": "Ask an account administrator to log in with Instagram again.",
+            "NOT_INBOX_MEMBER_TITLE": "These comments stay with the Instagram team",
+            "NOT_INBOX_MEMBER": "Only people who handle the {'@'}{username} Instagram inbox can see and answer these comments. Ask whoever manages the account's inboxes to add you.",
+            "NEEDS_LOGIN_AFTER": "After logging in, you'll come back to this ad."
+          },
+          "FACEBOOK": {
+            "TAB": "Facebook",
+            "OPEN": "View on Facebook",
+            "UNKNOWN_AUTHOR": "Facebook user",
+            "NEEDS_LOGIN_TITLE": "Comment access needed",
+            "NEEDS_LOGIN": "Log in with Facebook again under Connection and allow comment management.",
+            "NEEDS_LOGIN_BUTTON": "Go to Connection",
+            "NOTE": "On Facebook, reply in public. To talk privately, ask the person to message you on WhatsApp.",
+            "NEEDS_LOGIN_AFTER": "After logging in, you'll come back to this ad.",
+            "NO_INBOX_TITLE": "This Page isn't on Messenger",
+            "NO_INBOX": "Connect this Page to Messenger to see the comments.",
+            "NO_INBOX_BUTTON": "Connect to Messenger",
+            "NO_INBOX_ASK": "Whoever manages the account's inboxes can connect it.",
+            "NOT_INBOX_MEMBER_TITLE": "You're not in this Page's inbox",
+            "NOT_INBOX_MEMBER": "This Page's comments are for the people in its Messenger inbox. Ask whoever manages the account's inboxes to add you.",
+            "ERRORS": {
+              "NEEDS_LOGIN": "Comment access is missing. Log in with Facebook again under Connection.",
+              "META_UNAVAILABLE": "Facebook didn't answer. Try again in a minute.",
+              "META_REFUSED": "Facebook refused this action. Reload the comments and try again.",
+              "NO_INBOX": "This Page isn't connected to Messenger. Connect it to manage the comments.",
+              "NOT_INBOX_MEMBER": "You're not in this Page's Messenger inbox."
+            }
+          },
+          "LOGIN_ADMIN": "Ask an account administrator to log in with Instagram again.",
+          "ERRORS": {
+            "PRIVATE_REPLY_DONE": "This comment already got a private reply.",
+            "PRIVATE_REPLY_EXPIRED": "The 7 days to reply privately to this comment are over.",
+            "NEEDS_LOGIN": "Comment access is missing. Log in with Instagram again.",
+            "META_UNAVAILABLE": "Instagram didn't answer. Try again in a minute.",
+            "INVALID_TEXT": "Write the reply before sending.",
+            "NOT_INBOX_MEMBER": "You don't handle this ad's Instagram inbox, so you can't see or answer its comments here.",
+            "META_REFUSED": "Instagram refused this action. Reload the comments and try again.",
+            "COMMENT_NOT_FOUND": "This comment is no longer on the ad. Reload the comments.",
+            "PRIVATE_REPLY_TOP_ONLY": "Private replies only work on comments, not on replies.",
+            "PRIVATE_REPLY_RETRY": "Someone else was sending this private reply at the same time. Reload the comments and try again.",
+            "PRIVATE_REPLY_NOT_PENDING": "This private reply is no longer waiting for confirmation. Reload the comments."
+          }
         }
       },
       "AD_DETAIL": {
@@ -2912,6 +3425,7 @@
         "DISCARD": "Discard changes",
         "TEST": "Send test",
         "TEST_HINT": "Sends yesterday's summary now, marked as a test.",
+        "NEEDS_SALES_VALUE": "The summary shows how much was sold. Turning it on, changing it and testing it need permission to see sales values.",
         "TEST_NEEDS_SAVE": "Save the sending number and the receiving number before testing.",
         "TEST_NEEDS_SAVE_CHANGES": "Save or discard your changes before testing.",
         "TEST_NEEDS_ORIGIN": "The sending number is not connected now. Choose another one and save before testing.",
@@ -2935,8 +3449,360 @@
           "SEND_FAILED": "WhatsApp did not accept the message. Check the connection of the sending number.",
           "SEND_UNCERTAIN": "We could not confirm it arrived. Check your WhatsApp before trying again.",
           "WHATSAPP_NUMBER_NOT_FOUND": "This number has no WhatsApp.",
+          "SALES_VALUE_FORBIDDEN": "You need permission to see sales values to change or test the summary.",
           "GENERIC": "It did not work this time. Try again."
         }
+      },
+      "CRIAR": {
+        "BUTTON": "Create ad",
+        "BACK": "Back",
+        "BACK_TO_PANEL": "Back to the panel",
+        "PROGRESS": "Step {step} of {total}",
+        "NEXT": "Continue",
+        "CREATE": "Create paused ad",
+        "PREVIEW": {
+          "LABEL": "How the ad looks",
+          "FEED": "Feed",
+          "STORIES": "Stories and Reels",
+          "SPONSORED": "· Sponsored",
+          "CTA": "Send message",
+          "NOTE_FEED": "In the feed {where}, if Meta shows it there.",
+          "NOTE_FEED_VERTICAL": "In the feed, an upright photo or video is trimmed a little at the top and bottom.",
+          "NOTE_STORIES_VERTICAL": "In Stories and Reels {where}, full screen, if Meta shows it there.",
+          "NOTE_STORIES_FIT": "A square photo may look smaller in Stories and Reels. For full screen, use an upright photo or video.",
+          "EMPTY": "Your photo or video shows here.",
+          "NOTE_CAROUSEL": "Carousel: people swipe the cards sideways. Meta chooses where to show it.",
+          "CAROUSEL_COUNT": "1 of {count}",
+          "WHERE": {
+            "AUTO": "Instagram and Facebook",
+            "INSTAGRAM": "Instagram only",
+            "FACEBOOK": "Facebook only"
+          },
+          "IN": {
+            "AUTO": "on Instagram and Facebook",
+            "INSTAGRAM": "on Instagram",
+            "FACEBOOK": "on Facebook"
+          },
+          "NOTE_STORIES_PORTRAIT": "A slightly upright photo may show smaller in Stories and Reels.",
+          "NOTE_FEED_FACEBOOK": "In the Facebook feed."
+        },
+        "FAILED": {
+          "TITLE": "We couldn't reach Meta right now. Nothing was created.",
+          "RETRY": "Try again"
+        },
+        "RECREATE": "It's not in Ads Manager, create again",
+        "BLOCKERS": {
+          "NO_AD_ACCOUNT": {
+            "TITLE": "To create ads here, connect your ad account first.",
+            "ACTION": "Connect the ad account"
+          },
+          "LOGIN": {
+            "TITLE": "To create ads from here, sign in with Facebook again.",
+            "ACTION": "Sign in with Facebook",
+            "POPUP": "The Facebook window closed before the end. Sign in again and tap Next, Confirm and, at the end, Done.",
+            "ERROR": "We couldn't sign in with Facebook right now. Try again in a moment.",
+            "ACTION_CONNECTION": "Go to Connection and sign in"
+          },
+          "NO_PAGE": {
+            "TITLE": "To advertise, your Facebook Page needs to be connected.",
+            "ACTION": "Go to Connection"
+          },
+          "CURRENCY": {
+            "TITLE": "Creating ads here works only for ad accounts in reais (BRL). This ad account uses another currency.",
+            "ACTION": "Go to Connection"
+          },
+          "NO_NUMBER": {
+            "TITLE": "Connect a WhatsApp number so the ad opens a chat.",
+            "ACTION": "Connect number",
+            "OTHER": "Advertise with another destination"
+          },
+          "NO_POST": {
+            "TITLE": "You don't have a post to boost on Instagram or on your Page yet.",
+            "ACTION": "Create a new ad"
+          }
+        },
+        "DATE": {
+          "PREVIOUS": "Previous month",
+          "NEXT": "Next month"
+        },
+        "END": {
+          "LABEL": "Until when",
+          "NONE": "No end date",
+          "D7": "For 7 days",
+          "D30": "For 30 days",
+          "PICK": "Choose date",
+          "PICK_LABEL": "Ends on",
+          "PICK_PLACEHOLDER": "Choose the day"
+        },
+        "KIND": {
+          "TITLE": "What do you want to do?",
+          "HINT": "Ads and boosts start paused. They only spend after you turn them on.",
+          "AD": "New ad",
+          "AD_HINT": "Your photo or video with a button that opens a WhatsApp chat with you.",
+          "REASONS": {
+            "NO_DESTINATION": "You can't create a new ad in this account yet. {support}"
+          },
+          "SUPPORT": "Contact support.",
+          "POST": "Boost a post",
+          "POST_HINT": "Shows a post you already published on Instagram or Facebook to more people."
+        },
+        "WHERE": {
+          "TITLE": "Page and WhatsApp number",
+          "HINT": "The ad shows in the name of the Page and opens a chat with this number.",
+          "PAGE": "Facebook Page",
+          "NUMBER": "WhatsApp number",
+          "CHOOSE": "Choose"
+        },
+        "CONTENT": {
+          "TITLE": "Photo or video and text",
+          "HINT": "Instagram and Facebook. Meta chooses where to show it: feed, Stories or Reels.",
+          "TEXT": "Text",
+          "TEXT_PLACEHOLDER": "Say what you offer in one sentence",
+          "HEADLINE": "Title",
+          "HEADLINE_PLACEHOLDER": "For example: Cupcakes for $3",
+          "READY_MESSAGE": "Message the person sends",
+          "READY_MESSAGE_HINT": "It's already typed in WhatsApp. The person can change it before sending.",
+          "READY_MESSAGE_DEFAULT": "Hi! I saw the ad and want to know more.",
+          "OFFER": "What do you want to sell?",
+          "OFFER_PLACEHOLDER": "For example: cupcakes for $3",
+          "OFFER_HINT": "We use it to write the text and the title. You can change them later.",
+          "HEADLINE_HINT": "Shows in bold below the photo.",
+          "NEED_OFFER": "Write what you want to sell to continue.",
+          "NEED_MEDIA": "Choose a photo or video to continue.",
+          "NEED_TEXT": "Write the ad text to continue.",
+          "TEXT_FROM_OFFER": {
+            "WHATSAPP": "{offer}. Message us on WhatsApp and place your order.",
+            "INSTAGRAM_DIRECT": "{offer}. Message us on Direct and place your order.",
+            "MESSENGER": "{offer}. Message us on Messenger and place your order.",
+            "WEBSITE": "{offer}. See it on our website and place your order."
+          },
+          "NEED_SITE": "Type the website address to continue.",
+          "TEXT_READY": "Ready text: “{text}”",
+          "TEXT_READY_EMPTY": "The text comes from what you sell.",
+          "TEXT_CHANGE": "Change text",
+          "UPLOADING": "Wait for the photo or video to finish uploading to continue."
+        },
+        "AUDIENCE": {
+          "TITLE": "Who sees the ad",
+          "HINT": "Among these people, Meta shows the ad to those most likely to reply.",
+          "SPECIAL": "Is the ad about insurance, credit, loans or investments?",
+          "YES": "Yes",
+          "NO": "No",
+          "SPECIAL_HINT": "Meta asks for ads like this to be marked. The age stays from 18 to 65+ and gender cannot be chosen.",
+          "WHERE": "Where",
+          "ALL_BRAZIL": "All of Brazil",
+          "SOME_STATES": "Some states",
+          "STATE_SEARCH": "Type the state",
+          "STATE_NONE": "No state with this name.",
+          "AGE": "Age",
+          "AGE_LOCKED": "From 18 to 65+ years (Meta's rule for these ads).",
+          "FROM": "From",
+          "TO": "to",
+          "YEARS": "years",
+          "AGE_MIN": "Minimum age",
+          "AGE_MAX": "Maximum age",
+          "AGE_ERROR": "The starting age must be lower than the ending age."
+        },
+        "BUDGET": {
+          "TITLE": "How much to invest",
+          "HINT": "You choose the amount per day. It only starts after you turn the ad on.",
+          "AMOUNT": "How much per day",
+          "SUGGESTION": "Suggestion to start: {value} per day. You can change it later. From {min} to {max}.",
+          "DAY_LIMITS": "On one day Meta can spend up to {day}. In a week, it never goes over {week}.",
+          "START": "Starts on",
+          "ERRORS": {
+            "AMOUNT": "Type an amount, like 20.00.",
+            "MIN": "Meta asks for at least {value} per day.",
+            "MAX": "The limit here is {value} per day. For more, use Meta Ads Manager."
+          }
+        },
+        "REVIEW": {
+          "TITLE": "Check and create",
+          "HINT": "This is what goes to Meta.",
+          "WHAT": "What",
+          "WHO": "Who sees it",
+          "WHO_LINE": "{where} · {ages}",
+          "SPECIAL": "Marked as financial services (insurance, credit, loans or investments).",
+          "AGES": "{min} to {max} years",
+          "MONEY": "Money",
+          "PER_DAY": "{value} per day",
+          "TOTAL_DAYS": "Until {end} ({days} days), at most {value} in total.",
+          "TOTAL_NO_END": "No end date: it spends up to {value} every 30 days, until you pause it.",
+          "DATES": "From {start} to {end}",
+          "DATES_NO_END": "Starts on {start} · no end date",
+          "NAME": "Name",
+          "NAME_HINT": "Only you see it, in the panel and in Meta Ads Manager.",
+          "PAUSED": "The ad is created paused. It does not spend anything until you turn it on.",
+          "AUDIT": "This goes to the account Audit log, with your name.",
+          "WHAT_AD": {
+            "WHATSAPP": "New ad that opens WhatsApp ({number})",
+            "INSTAGRAM_DIRECT": "New ad that opens Instagram Direct ({'@'}{username})",
+            "MESSENGER": "New ad that opens Messenger",
+            "WEBSITE": "New ad that goes to your website ({url})"
+          },
+          "WHAT_CAROUSEL": "Carousel with {count} cards",
+          "TAP": {
+            "WHATSAPP": "People who tap start a chat with you on WhatsApp.",
+            "INSTAGRAM_DIRECT": "People who tap start a chat with you on Instagram Direct.",
+            "MESSENGER": "People who tap start a chat with you on Messenger.",
+            "WEBSITE": "People who tap open your website.",
+            "POST_FACEBOOK": "People who tap see the post on your Page.",
+            "POST_INSTAGRAM_WHATSAPP": "People who tap the button start a chat with you on WhatsApp.",
+            "POST_INSTAGRAM": "People who tap see the post on Instagram."
+          },
+          "DEFAULT_NAME_AD": "{where} · {date}",
+          "DEFAULT_NAME_POST": "Boosted post · {date}",
+          "WHAT_POST": {
+            "INSTAGRAM": "Boost the chosen Instagram post ({'@'}{username})",
+            "FACEBOOK": "Boost the chosen Facebook Page post"
+          }
+        },
+        "DONE": {
+          "TITLE": "\"{name}\" created and paused",
+          "HINT": "Meta reviews every new ad, usually within a day. When you want it to start, tap \"Turn ad on\".",
+          "TITLE_ACTIVE": "\"{name}\" is running",
+          "HINT_ACTIVE": "Meta reviews every new ad, usually within a day.",
+          "TITLE_HELD": "\"{name}\" activated"
+        },
+        "PAUSED_LIST": {
+          "TITLE": "Paused, waiting for you to turn on ({count})",
+          "HINT": "They were created here and do not spend anything until you turn them on.",
+          "LINE": "Created on {date} · Amount when created: {value} per day",
+          "FAILED": "We couldn't load your paused ads right now.",
+          "RETRY": "Try again"
+        },
+        "MEDIA": {
+          "LABEL": "Photo or video",
+          "DROP": "Choose a photo or video",
+          "DROP_HINT": "A photo, or a video up to 1 minute. Upright works best in Stories and Reels.",
+          "CHOSEN_IMAGE": "Photo chosen",
+          "CHOSEN_VIDEO": "Video chosen · {seconds} s",
+          "CHANGE": "Change",
+          "LIBRARY": "Use an image from an earlier ad",
+          "LIBRARY_PICK": "Use image {number} of {total}",
+          "SHAPES": {
+            "VERTICAL": "Upright: full screen in Stories and Reels.",
+            "PORTRAIT": "Slightly upright: looks good in the feed.",
+            "SQUARE": "Square: looks good in the feed.",
+            "LANDSCAPE": "Sideways: shows smaller on phones."
+          },
+          "ERRORS": {
+            "TYPE": "This file won't work. Choose a photo or a video from your phone.",
+            "IMAGE_SIZE": "This photo is too heavy. Choose another one or send a screenshot of it.",
+            "VIDEO_SIZE": "This video is too heavy. Trim it in your phone's photos app and choose it again.",
+            "VIDEO_LONG": "The video is longer than 1 minute. Trim it in your phone's photos app and choose it again.",
+            "READ": "We couldn't open this file. Try another one.",
+            "UPLOAD": "We couldn't send this file to Meta right now. Try again."
+          },
+          "DROP_WHERE": "From your phone or computer: tap here or drag the file.",
+          "CAROUSEL": {
+            "LABEL": "Carousel with {count} cards",
+            "ADD": "Add another photo or video (carousel)",
+            "REMOVE": "Remove card {number}",
+            "HINT": "With 2 or more, it becomes a carousel: people swipe sideways. Up to 10.",
+            "FULL": "You reached the maximum: 10 cards."
+          },
+          "UPLOADING": "Uploading to Meta…"
+        },
+        "DESTINATION": {
+          "GOES_TO": "People who tap go to:",
+          "CHANGE": "Change",
+          "CURRENT_WHATSAPP": "WhatsApp ({phone})",
+          "CURRENT_INSTAGRAM_DIRECT": "Instagram Direct ({'@'}{username})",
+          "OPTIONS": {
+            "WHATSAPP": "WhatsApp",
+            "INSTAGRAM_DIRECT": "Instagram Direct",
+            "MESSENGER": "Messenger",
+            "WEBSITE": "Your website"
+          },
+          "HINTS": {
+            "WHATSAPP": "Opens a chat with your number.",
+            "INSTAGRAM_DIRECT": "Opens a chat in {'@'}{username}'s Direct.",
+            "MESSENGER": "Opens a chat with your Page on Messenger.",
+            "WEBSITE": "Takes people to the address you choose."
+          },
+          "REASONS": {
+            "NO_NUMBER": "Connect a WhatsApp number to use this.",
+            "NO_INSTAGRAM": "Link an Instagram professional account to your Page to use this.",
+            "CAROUSEL": "Carousels only work with WhatsApp or a website. Remove the extra cards to use this."
+          },
+          "SITE_URL": "Website address",
+          "SITE_URL_PLACEHOLDER": "samplestore.com",
+          "SITE_URL_ERROR": "Type the website address. For example: samplestore.com",
+          "SITE_ACTION": "Button text",
+          "ACTIONS": {
+            "LEARN_MORE": "Learn more",
+            "SHOP_NOW": "Shop now"
+          },
+          "SHORT": {
+            "WHATSAPP": "WhatsApp",
+            "INSTAGRAM_DIRECT": "Direct",
+            "MESSENGER": "Messenger",
+            "WEBSITE": "Website"
+          }
+        },
+        "PLACEMENT": {
+          "TITLE": "Where it appears",
+          "CHANGE": "Change",
+          "OPTIONS": {
+            "AUTO": "Automatic (recommended): Instagram and Facebook",
+            "INSTAGRAM": "Instagram only",
+            "FACEBOOK": "Facebook only"
+          },
+          "HINTS": {
+            "AUTO": "Meta shows it where it's most likely to get results: feed, Stories or Reels.",
+            "INSTAGRAM": "Instagram feed, Stories and Reels, wherever Meta chooses.",
+            "FACEBOOK": "Facebook feed, Stories and Reels, wherever Meta chooses."
+          },
+          "FACEBOOK_POST": "Facebook, to more people beyond those who already follow your Page."
+        },
+        "ERRORS": {
+          "INVALID_PARAMS": "Some ad information is missing, like the name or the text. Check it and try again.",
+          "INVALID_DESTINATION": "This destination isn't available for this account yet.",
+          "INVALID_PLACEMENT": "This placement doesn't work with this destination. Pick another one under \"Where it shows\".",
+          "INVALID_AMOUNT": "The daily amount is outside the limit. Go back and change it.",
+          "INVALID_DATES": "The dates don't work: the start can't be before today, and the end must come after the start.",
+          "INVALID_SITE": "The website address doesn't work. Check that it's right, like samplestore.com.",
+          "INVALID_WHATSAPP_NUMBER": "This WhatsApp number doesn't belong to this account. Pick another one.",
+          "INVALID_PAGE": "The Facebook Page isn't available to the platform. Sign in with Facebook again under Connection.",
+          "INVALID_MEDIA": "Meta didn't accept the photo or video. Choose it again.",
+          "INVALID_AUDIENCE": "The audience doesn't work. Check the states and the age.",
+          "VIDEO_PROCESSING": "Meta is still preparing the video. Try again in a minute.",
+          "CANNOT_CREATE": "To create ads here, sign in with Facebook again under Connection.",
+          "META_UNAVAILABLE": "We couldn't reach Meta right now. Try again in a little while.",
+          "META_REFUSED": "Meta refused the ad.",
+          "CURRENCY_NOT_SUPPORTED": "Creating ads here works only for ad accounts in reais (BRL). Nothing was created.",
+          "UNCONFIRMED": "We couldn't confirm with Meta whether the campaign was created. Check Meta Ads Manager before trying again.",
+          "UNKNOWN": "We couldn't create the ad right now.",
+          "NOTHING_CREATED": "Nothing was created.",
+          "CHECK_META": "A campaign may have been left half done: check Meta Ads Manager before trying again.",
+          "NETWORK": "The connection dropped before the answer. Tap \"Create paused ad\" again: the ad won't be created twice.",
+          "IN_PROGRESS": "This ad is still being created. Wait a moment and tap again.",
+          "INVALID_POST": "This post isn't on your Page or on its Instagram anymore. Go back and pick another one.",
+          "POST_NOT_ELIGIBLE": "Meta doesn't allow boosting this post. Go back and pick another one."
+        },
+        "POST": {
+          "TITLE": "Which post?",
+          "HINT": "Pick a post you already published. It shows to more people.",
+          "NUMBERS": "{likes} likes · {comments} comments",
+          "SOURCES": {
+            "INSTAGRAM": "Instagram",
+            "FACEBOOK": "Facebook"
+          },
+          "LOADING": "Reading your posts…",
+          "NOT_ELIGIBLE": "Meta doesn't allow boosting this post.",
+          "NEED_POST": "Pick a post to continue.",
+          "TAP_INSTAGRAM_WHATSAPP": "Instagram posts get the Send message button: people who tap start a chat with you on WhatsApp.",
+          "TAP_INSTAGRAM": "People who tap see the post on Instagram.",
+          "TAP_FACEBOOK": "People who tap see the post on your Page. Facebook posts don't get a WhatsApp button.",
+          "REASONS": {
+            "PROFILE_OR_COVER": "It's your Page's profile or cover photo. Meta doesn't allow boosting it."
+          },
+          "LOAD_FAILED": "We couldn't read your posts right now.",
+          "RETRY": "Try again",
+          "EMPTY_SOURCE": "No posts here yet."
+        },
+        "CREATE_BOOST": "Create paused boost"
       }
     },
     "BOOKING_AGENDA": {
@@ -3398,7 +4264,7 @@
     "TITLE": "CRM integration tokens",
     "SUBTITLE": "Per-account, scoped, revocable tokens so external systems like n8n can call the CRM API without a full-access user credential.",
     "BACK": "Back",
-    "NO_PERMISSION": "You need the CRM admin permission to manage integration tokens.",
+    "NO_PERMISSION": "Only administrators or whoever looks after tokens create and rotate integration tokens.",
     "STATUS": {
       "ACTIVE": "Active",
       "REVOKED": "Revoked"
@@ -3411,7 +4277,8 @@
       "CRM_MANAGE_PIPELINES": "Manage pipelines",
       "CRM_MANAGE_AI": "Manage AI",
       "CRM_VIEW_REPORTS": "View reports",
-      "CRM_ADMIN": "CRM admin"
+      "CRM_ADMIN": "CRM admin",
+      "SALES_VALUE_VIEW": "Sales values"
     },
     "SCOPES": {
       "CRM_VIEW": "Read pipelines, stages, and cards.",
@@ -3421,13 +4288,15 @@
       "CRM_MANAGE_PIPELINES": "Create and edit pipelines and stages.",
       "CRM_MANAGE_AI": "Manage CRM AI settings.",
       "CRM_VIEW_REPORTS": "Read CRM reports.",
-      "CRM_ADMIN": "Full CRM access, including managing tokens."
+      "CRM_ADMIN": "Full CRM access, except sales values.",
+      "SALES_VALUE_VIEW": "Read and change sales values in money (card value, totals and goals). Without it, values come empty and updates keep the saved value."
     },
     "CREATE": {
       "TITLE": "Create a token",
       "NAME_LABEL": "Name",
       "NAME_PLACEHOLDER": "e.g. n8n production",
       "SCOPES_LABEL": "Scopes",
+      "NO_SCOPES": "A token only carries what your role already has in the CRM, and yours has nothing in the CRM. Ask an administrator.",
       "SUBMIT": "Create token",
       "CANCEL": "Cancel",
       "SUCCESS": "Token created. Copy the secret now — it is shown only once.",
@@ -3627,7 +4496,10 @@
     }
   },
   "CRM_FILTRO_DO_LINK": {
-    "FECHADO_NO_MES": "Closed: this month"
+    "FECHADO_NO_MES": "Closed: this month",
+    "ORIGEM": "Origin",
+    "ANUNCIO": "Ad",
+    "ENTROU_EM_MES": "Entered or closed: {mes}"
   },
   "AUTONOMIA_COPILOT": {
     "TITLE": "Autonom.ia Copilot",
@@ -4402,6 +5274,16 @@
         "E3": "Missing document",
         "E4": "Done",
         "SUCESSO": "Done"
+      },
+      "CARTEIRA": {
+        "NOME": "Portfolio",
+        "TEXTO": "From the implemented plan to the contract renewal.",
+        "E1": "Welcome",
+        "E2": "Using the plan",
+        "E3": "Contract anniversary",
+        "E4": "Renewed",
+        "SUCESSO": "Renewed",
+        "FALHA": "Cancelled"
       }
     },
     "ETAPAS": {
@@ -4517,7 +5399,10 @@
         "ACIONAR": "wants to file a claim",
         "TROCOU_CARRO": "changed cars",
         "MUDOU_ENDERECO": "moved to a new address",
-        "INCLUIR_MOTORISTA": "wants to add a driver"
+        "INCLUIR_MOTORISTA": "wants to add a driver",
+        "PLANO_NOVO": "just had the plan implemented",
+        "USAR_PLANO": "has a question about using the plan",
+        "ANIVERSARIO_CONTRATO": "has a contract anniversary coming up"
       },
       "NOTA": "Team note (optional)",
       "NOTA_AJUDA": "Only your team reads it. It changes nothing in the pipeline."
@@ -4637,6 +5522,7 @@
         "PASSOS": "Steps to turn on Google",
         "COPIE_TITULO": "Copy this address",
         "COPIE_TEXTO": "This is how Google learns about your sales. It is only yours.",
+        "SEM_TOKEN": "The Google address is created by whoever looks after tokens.",
         "COLE_TITULO": "Paste the address in Google Ads",
         "COLE_1": "Sign in to Google Ads, in your ads account.",
         "COLE_2": "In the Google Ads search, type “uploads” and open Scheduled uploads.",
@@ -4867,13 +5753,15 @@
       },
       "CANCELAR_EXEMPLO": "Why was it cancelled?",
       "PERDEU_TITULO_ROTULO": "{rotulo}: what happened?",
-      "PERDEU_CONFIRMA_ROTULO": "Mark as: {rotulo}"
+      "PERDEU_CONFIRMA_ROTULO": "Mark as: {rotulo}",
+      "VALOR_OCULTO": "The deal's amount stays as it is."
     },
     "ARQUIVAR": {
       "BOTAO": "Archive",
       "DICA": "Archiving takes this customer off the board. Nothing is deleted.",
       "TITULO": "Archive {nome}?",
-      "TEXTO": "It leaves the funnel board. Conversations, follow-ups and history stay saved."
+      "TEXTO": "It leaves the funnel board. Follow-ups still due are canceled; conversations and history stay saved.",
+      "REUNIAO": "This card has a meeting booked for {quando}. It stays booked; cancel it in the calendar if needed."
     },
     "SAIR": {
       "TITULO": "Leave without saving?",
@@ -4887,6 +5775,28 @@
       "DONO": "the change of who takes care",
       "ASSUNTO": "the changes to the subject"
     },
+    "FECHAR_SUGESTAO": {
+      "FRASE": {
+        "PERDIDO": "Reading the conversation, we think this request is over: {motivo}.",
+        "RESOLVIDO": "Reading the conversation, we think this request was solved.",
+        "ARQUIVADO": "Reading the conversation, we think it was only a test."
+      },
+      "MOTIVO": {
+        "ADIOU": "the customer left it for later",
+        "RECUSOU": "the customer said no",
+        "FECHOU_COM_OUTRA": "the customer went with someone else"
+      },
+      "CURTO": {
+        "PERDIDO": "We think the request is over",
+        "RESOLVIDO": "We think the request was solved",
+        "ARQUIVADO": "We think it was only a test"
+      },
+      "RETORNO": "When you close it, we set a follow-up to get back in touch.",
+      "ENCERRAR": "Close the request",
+      "ARQUIVAR": "Archive as a test",
+      "BADGE": "AI: close",
+      "FECHOU": "Request closed."
+    },
     "PASSO": {
       "ROTULO": "Next step",
       "REUNIAO_HOJE": "Meeting with {nome} {quando}.",
@@ -4895,6 +5805,10 @@
       "SUGESTAO": "Reading the conversation, we think {nome} is already at {etapa}.",
       "RETORNO_HOJE": "{quando}: {titulo}",
       "EM_DIA": "All caught up with {nome}. Nothing overdue.",
+      "FORMULARIO": "{nome} filled in your form. Reach out on WhatsApp.",
+      "FORMULARIO_SEM_CONVERSA": "Ask whoever handles conversations to reach out.",
+      "FORMULARIO_LEITURA": "{nome} filled in your form.",
+      "CHAMAR_WHATSAPP": "Message on WhatsApp",
       "ATRASADO_DESDE": "Overdue since {quando}",
       "VOCE_ANOTOU": "You wrote: “{texto}”",
       "ABRIR_CONVERSA": "Open the conversation",
@@ -4910,6 +5824,7 @@
         "REUNIAO_HOJE": "Meeting {quando}",
         "RETORNO_ATRASADO": "Overdue follow-up: {titulo}",
         "ESPERA": "{nome} waiting for a reply since {quando}",
+        "FORMULARIO": "Filled in your form",
         "SUGESTAO": "We think it is already {etapa}",
         "RETORNO_HOJE": "{quando}: {titulo}",
         "REUNIAO_FUTURA": "Meeting {quando}",
@@ -4979,7 +5894,9 @@
       "EM_DIA": "on {dia}",
       "ASSUNTO_FRASE": "{titulo}. Priority: {prioridade}, open for {tempo}.",
       "ASSUNTO_SEM_TEMPO": "{titulo}. Priority: {prioridade}.",
-      "SEM_CONTATO_ATENDER": "No person is linked to this request yet."
+      "SEM_CONTATO_ATENDER": "No person is linked to this request yet.",
+      "NEGOCIO_VALOR_OCULTO": "{titulo}. Urgency: {urgencia}.",
+      "VALOR_OCULTO": "hidden amount"
     },
     "ETAPA": {
       "TELA": "Stage",
@@ -5024,7 +5941,8 @@
       "FECHAR_ATE": "Should close by",
       "ATALHO_MES": "End of month",
       "ATALHO_15": "In 15 days",
-      "ATALHO_30": "In 30 days"
+      "ATALHO_30": "In 30 days",
+      "VALOR_OCULTO": "Only people with access to sales values see this deal's amount."
     },
     "DONO": {
       "TELA": "Who handles it",
@@ -5187,10 +6105,12 @@
     },
     "ORIGEM": {
       "TELA": "Where it came from",
+      "FORMULARIO_META": "Came from the \"{formulario}\" form · ad {anuncio}",
       "TITULO": "How {nome} arrived",
       "TEXTO": "The path so far and what this customer is linked to.",
       "CAMINHO": "Path so far",
       "SEM_ORIGEM": "We do not know where it came from. It may have come straight from the conversation.",
+      "ANUNCIO_OCULTO": "The ad name and picture show only to people who can see the ads.",
       "PREENCHEU": "What was filled in on the page",
       "AVISO": "Notice to Facebook and Instagram",
       "AVISO_TEXTO": "When the deal moves, we tell the ads so they bring similar customers.",
@@ -5426,6 +6346,7 @@
       "QUEM_MARCOU": "Who set it",
       "MARCOU_CLIENTE": "The customer, through the link",
       "MARCOU_ASSISTENTE": "The assistant",
+      "PESSOA_REMOVIDA": "Person removed",
       "CONVIDADOS": "Other guests",
       "N_CONVIDADOS": "{n} person | {n} people",
       "ESTA_AQUI": "It is here",
@@ -5471,7 +6392,11 @@
       "MORE_CONTACT": "More about the person",
       "EDIT_HELP": "What you change here counts for this person everywhere. The card does not change.",
       "SAVED": "Person saved.",
-      "SAVE_ERROR": "Could not save. Check the details and try again.",
+      "SAVE_ERROR_MOTIVO": "Could not save: {motivo}",
+      "SAVE_ERROR_SERVIDOR": "The server did not confirm the save (error {status}). Reopen the person to see if it was saved before trying again.",
+      "SAVE_ERROR_REDE": "Could not reach the server. Check your connection and try again.",
+      "SAVE_ERROR_TELA": "Something went wrong on this screen. Reload the page and check the details before trying again.",
+      "CAMPO_CONFIRA": "Check this field.",
       "COMPANY_FORM": {
         "CHANGE": "Change the company",
         "EDIT_TITLE": "Edit the company",
@@ -6022,6 +6947,7 @@
       "ERRO": {
         "PASSADO": "That time has passed. Go back and choose another one.",
         "PRONTA": "At that time only an approved message can go out. Go back and choose one.",
+        "ARQUIVADO": "This card is archived. Restore it before scheduling a message.",
         "GERAL": "Could not schedule right now. Try again."
       }
     },
@@ -6107,21 +7033,48 @@
         "EU_ATENDE_SEM_FALTA": "{noPrazo} on time.",
         "EU_ATENDE_SEM_PRAZO": "{dias} day left in the month. | {dias} days left in the month.",
         "CEDO": "The month started {dias} day ago. So far: {valor}. | The month started {dias} days ago. So far: {valor}.",
-        "CEDO_RESOLVEU": "The month started {dias} day ago. Cases solved so far: {n}. | The month started {dias} days ago. Cases solved so far: {n}."
+        "CEDO_RESOLVEU": "The month started {dias} day ago. Cases solved so far: {n}. | The month started {dias} days ago. Cases solved so far: {n}.",
+        "EMPRESA": "You closed {feito} of {meta}. Support resolved {resolvidos} of {metaResolvidos}.",
+        "EMPRESA_RESOLVEU": "You closed {feito} of {meta}. Support resolved {resolvidos}.",
+        "EMPRESA_SEM_META": "There is no goal for this month yet. Support resolved {resolvidos}.",
+        "EQUIPE_VENDAS": "The team closed {feito} of {meta}. Nobody needs help. | The team closed {feito} of {meta}. {ajuda} person needs help. | The team closed {feito} of {meta}. {ajuda} people need help.",
+        "EQUIPE_VENDAS_SEM_META": "There is no goal for this month yet.",
+        "EQUIPE_ATENDE_SEM_PRAZO": "No reminder fell behind. | {lembretes} reminder fell behind. | {lembretes} reminders fell behind.",
+        "EQUIPE_VENDAS_SEM_VALOR": "Nobody needs help. | {ajuda} person needs help. | {ajuda} people need help.",
+        "EMPRESA_SEM_VALOR": "Support resolved {resolvidos}."
       },
       "BOTAO": {
         "MEUS_ATRASADOS": "Open my overdue follow-up | Open my {n} overdue follow-ups",
         "MEUS_PARADOS": "Open my stalled deal | Open my {n} stalled deals",
         "MEUS_CARDS": "Open my cards",
         "MEUS_LEMBRETES": "Open my overdue reminder | Open my {n} overdue reminders",
-        "MEUS_CASOS": "Open my cases"
+        "MEUS_CASOS": "Open my cases",
+        "PARADOS": "Open {n} stalled deal ({valor}) | Open {n} stalled deals ({valor})",
+        "ATRASADOS_EQUIPE": "Open the team's overdue follow-up | Open the team's {n} overdue follow-ups",
+        "CARDS_EQUIPE": "Open the team's cards",
+        "LEMBRETES_EQUIPE": "Open the overdue reminder | Open the {n} overdue reminders",
+        "CASOS_EQUIPE": "Open the team's cases",
+        "PARADOS_SEM_VALOR": "Open {n} stalled deal | Open {n} stalled deals"
       },
-      "METAS_LINK": "{mes} goals"
+      "SEM_META_EMPRESA": "You closed {valor} in {mes}",
+      "SEM_META_EQUIPE": "The team closed {valor} in {mes}",
+      "SEM_META_RESOLVEU_EQUIPE": "The team resolved {n} case in {mes} | The team resolved {n} cases in {mes}",
+      "FALTAM_EMPRESA": "{valor} to go for the {mes} goal",
+      "FALTAM_EQUIPE": "{valor} to go for the team goal",
+      "RESOLVEU_EQUIPE": "The team resolved {feito} of {meta}",
+      "BATIDA_EMPRESA": "You hit the {mes} goal",
+      "BATIDA_EQUIPE": "The team hit the {mes} goal",
+      "LEITURA": "You are viewing in read-only mode.",
+      "METAS_LINK": "{mes} goals",
+      "FECHOU_EQUIPE_SEM_VALOR": "The team closed {n} sale | The team closed {n} sales",
+      "FECHOU_EMPRESA_SEM_VALOR": "You closed {n} sale | You closed {n} sales"
     },
     "PROXIMO": {
       "TITULO": "Next step",
       "CAMPANHA_COM_VOCE": "{n} person who replied to the {campanha} campaign is with you | {n} people who replied to the {campanha} campaign are with you",
-      "VER": "See"
+      "VER": "See",
+      "SEM_RESPONSAVEL": "{n} sale this month has no owner | {n} sales this month have no owner",
+      "IA_ESPERANDO": "{n} conversation {ia} handed over has been waiting for someone for more than 30 min | {n} conversations {ia} handed over have been waiting for someone for more than 30 min"
     },
     "BLOCO": {
       "VENDENDO": "Selling",
@@ -6131,7 +7084,12 @@
       "ATRASADOS": "overdue follow-up | overdue follow-ups",
       "RESOLVIDOS": "solved | solved",
       "COM_VOCE": "with you now",
-      "DEU_CERTO": "got the \"did it work out?\""
+      "DEU_CERTO": "got the \"did it work out?\"",
+      "VENDENDO_EQUIPE": "Selling (team)",
+      "ATENDENDO_EQUIPE": "Support (team)",
+      "LEMBRETES": "overdue reminder | overdue reminders",
+      "PARADOS_ATENDE": "stalled for 7+ days | stalled for 7+ days",
+      "FECHADAS_SEM_VALOR": "sale closed | sales closed"
     },
     "ESTIMADO": "Some older sales were counted for the card's current responsible person.",
     "IA_AJUDOU": {
@@ -6169,6 +7127,44 @@
       "EXEMPLO_3": "Day 15: Ana closes. Marcos is the one who marked it closed.",
       "EXEMPLO_RESULTADO": "The R$ 3,000 count for Ana. Bruno and Sofia took part."
     },
+    "AJUDA": {
+      "TITULO": "Who needs help",
+      "RETORNOS_N": "{n} overdue follow-up | {n} overdue follow-ups",
+      "RETORNOS_ACAO": "Open {nome}'s follow-ups",
+      "CASOS_PARADOS_N": "{n} case stalled for more than 7 days | {n} cases stalled for more than 7 days",
+      "CASOS_PARADOS_ACAO": "Open {nome}'s cases"
+    },
+    "CUIDOU": {
+      "TITULO": "Who took care · {n} person and 1 AI | Who took care · {n} people and 1 AI",
+      "TITULO_SEM_IA": "Who took care · {n} person | Who took care · {n} people",
+      "PLATAFORMA": "This month {ia} answered {atendeu} conversations and took part in {participou} sale ({valor}). | This month {ia} answered {atendeu} conversations and took part in {participou} sales ({valor}).",
+      "CAMINHO": "On track: {nomes}.",
+      "VOCE": "you",
+      "E": "and",
+      "VENDA": "received {recebeu} · closed {fechou}",
+      "ATENDE_SEM_PRAZO": "resolved {resolveu}",
+      "DETALHE_VENDA": "{valor} of {meta}, {pct}% of the goal.",
+      "DETALHE_VENDA_SEM_META": "{valor} closed.",
+      "VOCE_NOME": "{nome} (you)",
+      "VER_CONVERSAS": "See {nome}'s conversations",
+      "FORA_DA_EQUIPE": "No owner or no longer on the team",
+      "FORA_VENDA": "closed {fechou} · {valor}",
+      "IA_SELO": "AI",
+      "IA_ATENDEU": "answered {n} conversation | answered {n} conversations",
+      "IA_PARTICIPOU": "took part in {n} sale ({valor}) | took part in {n} sales ({valor})",
+      "IA_PASSOU": "handed {n} conversation to someone on the team | handed {n} conversations to someone on the team",
+      "IA_RESOLVEU_SOZINHA": "solved {n} conversation without the team | solved {n} conversations without the team",
+      "IA_VER": "See the agent",
+      "IA_SEMANA": "On the agent page, the same count shows by week.",
+      "IA_VER_TODOS": "See the agents",
+      "IA_CUSTO_AGENTES": "AI agents cost: {valor} this month, about {porConversa} per conversation.",
+      "IA_CUSTO_AGENTES_SEM_CONVERSA": "AI agents cost: {valor} this month.",
+      "IA_CUSTO_FALTA": "Estimate: AI usage is not split by agent.",
+      "RODAPE": "We only count customers who entered the pipeline.",
+      "PLATAFORMA_SEM_VALOR": "This month {ia} answered {atendeu} conversations and took part in {participou} sale. | This month {ia} answered {atendeu} conversations and took part in {participou} sales.",
+      "IA_PARTICIPOU_SEM_VALOR": "took part in {n} sale | took part in {n} sales",
+      "FORA_VENDA_SEM_VALOR": "closed {fechou}"
+    },
     "METAS": {
       "TITULO": "{mes} goals",
       "DESCRICAO": "Set each person's goal. Each person's screen shows only their own goal.",
@@ -6194,6 +7190,475 @@
       "ERRO_SALVAR": "Could not save the goals. Try again.",
       "MES_MUDOU": "The month changed. Check the {mes} goals and save again.",
       "INVALIDO": "Use numbers only, without dots."
+    }
+  },
+  "CRM_ARQUIVADOS": {
+    "TITULO": "Archived",
+    "ATALHO": "Archived ({count})",
+    "SUB_FUNIL": "Pipeline {funil} · {cards}",
+    "SUB_TODOS": "All pipelines · {cards}",
+    "CARDS": "{count} card | {count} cards",
+    "BUSCA": "Search by name",
+    "BUSCA_ROTULO": "Search archived cards by name",
+    "TODOS_OS_FUNIS": "Search all pipelines",
+    "CARREGANDO": "Loading",
+    "TENTAR_DE_NOVO": "Try again",
+    "VAZIO": "No archived cards in this pipeline.",
+    "VAZIO_TODOS": "No archived cards in any pipeline.",
+    "VOLTAR_AO_QUADRO": "Back to the board",
+    "NADA_ACHADO": "Nothing found for \"{termo}\" in this pipeline.",
+    "NADA_ACHADO_TODOS": "Nothing found for \"{termo}\".",
+    "LIMPAR_BUSCA": "Clear search",
+    "VER_MAIS": "Show more",
+    "SEM_VALOR": "No value",
+    "SEM_PERMISSAO": "To restore, ask the administrator for the \"Archive cards\" permission.",
+    "RESTAURAR": "Restore",
+    "RESTAURAR_N": "Restore ({count})",
+    "SELECIONAR_VARIOS": "Select several",
+    "SELECIONAR_UM": "Select {nome}",
+    "SELECIONADOS": "{count} selected | {count} selected",
+    "VER": "View",
+    "VER_ARQUIVADOS": "View archived",
+    "VER_FUNIS_ARQUIVADOS": "View archived pipelines",
+    "AGENDAR_RETORNO": "Schedule a follow-up",
+    "DESFAZER": "Undo",
+    "CANCELAR": "Cancel",
+    "FECHAR": "Close",
+    "ESCOLHA": "Choose",
+    "ARQUIVADO": "{nome}'s card was archived. It stays in Archived.",
+    "ARQUIVADO_VENDA": "The sale still counts.",
+    "ERRO_ARQUIVAR": "Could not archive: {motivo}. Nothing changed. Try again.",
+    "ERRO_CARREGAR": "Could not load the archived cards: {motivo}.",
+    "ERRO_RESTAURAR": "Could not restore: {motivo}. Nothing changed.",
+    "AVISO": {
+      "ATALHO": "Ctrl+Z also undoes",
+      "FECHAR": "Close notice"
+    },
+    "ERROS": {
+      "SEM_CONEXAO": "no internet connection",
+      "RECUSOU": "the system refused the request",
+      "SEM_PERMISSAO": "you do not have permission for this",
+      "NAO_ARQUIVADO": "this card is no longer archived",
+      "FECHAR_ARQUIVADO": "the card is archived; restore it before setting the outcome",
+      "FUNIL_ARQUIVADO": "this card's pipeline is archived; restore the pipeline first",
+      "CONFLITO": "the customer already has another open card in this pipeline",
+      "FUNIL_NAO_ARQUIVADO": "this pipeline is already active",
+      "FUNIL_JA_ARQUIVADO": "this pipeline is already archived",
+      "DESTINO_INVALIDO": "the pipeline chosen for the cards is no longer available",
+      "DESTINO_CAIXAS_INVALIDO": "the pipeline chosen for the inboxes is no longer available",
+      "PRINCIPAL_INVALIDO": "the pipeline chosen as main is no longer available",
+      "ULTIMO_FUNIL": "it is the only active pipeline; create another one first",
+      "UNICO_PRINCIPAL": "it is the main pipeline; choose another main pipeline first",
+      "FUNIL_MUDOU": "someone else archived or restored this pipeline in the meantime; close the window and open it again"
+    },
+    "MOTIVO_IA": {
+      "FORA_DO_NEGOCIO": "it was not a deal",
+      "DUPLICADO": "it was a duplicate",
+      "TESTE": "it was a test"
+    },
+    "LINHA": {
+      "POR": "Archived on {dia} by {nome}",
+      "EM": "Archived on {dia}",
+      "PELA_IA": "Archived by the AI on {dia}",
+      "PELA_IA_MOTIVO": "Archived by the AI on {dia}: {motivo}",
+      "GUARDADO_COM_O_FUNIL": "Kept with the pipeline",
+      "ESTAVA_EM": "was in {etapa}",
+      "FUNIL_ARQUIVADO": "{funil} (archived pipeline)",
+      "DICA_FECHADO": "When restored, it goes to the List, {aba} tab. It does not return to the board because the deal is over.",
+      "DICA_FUNIL_ARQUIVADO": "It is in an archived pipeline. To bring it back, restore the {funil} pipeline."
+    },
+    "RESTAURADO": {
+      "QUADRO": "{nome}'s card is back in {etapa}.",
+      "LISTA": "{nome}'s card is back in the List, {aba} tab. It is not on the board because the deal is over.",
+      "RETORNOS": "The follow-up that was scheduled does not come back on its own. | The follow-ups that were scheduled do not come back on their own."
+    },
+    "CONFLITO": {
+      "TITULO": "{nome} already has another open card",
+      "TEXTO": "The open card is \"{titulo}\", in {funil} · {etapa}. Restoring this one leaves two open cards for the same customer in this pipeline.",
+      "MESMO_ASSIM": "Restore anyway",
+      "ABRIR_ABERTO": "Open the open card"
+    },
+    "LOTE": {
+      "RESTAURADOS": "{count} card restored. | {count} cards restored.",
+      "FECHADOS": "1 had already ended and went to the List. | {count} had already ended and went to the List.",
+      "NAO_VOLTARAM": "1 did not come back; see below. | {count} did not come back; see below.",
+      "NENHUM_VOLTOU_CONFLITOS": "No card came back: 1 customer already has an open card in this pipeline. | No card came back: {count} customers already have an open card in this pipeline.",
+      "ERRO": "Could not restore: {motivo}. No card came back. Try again.",
+      "CONFLITOS_TITULO": "1 customer already has an open card in this pipeline | {count} customers already have an open card in this pipeline",
+      "CONFLITOS_TEXTO": "These did not come back. Check each one: the archived card is on the left, the open one on the right.",
+      "ARQUIVADO": "Archived",
+      "ABERTO": "Open",
+      "ABERTO_SEM_ACESSO": "You do not have access to this card.",
+      "TODOS_MESMO_ASSIM": "Restore all of these anyway",
+      "OUTROS_TITULO": "1 card did not come back for another reason | {count} cards did not come back for another reason",
+      "PULADO": "{nome}: {motivo}.",
+      "ENTENDI": "Got it"
+    },
+    "ARQUIVAR": {
+      "TITULO": "Archive {nome}'s card?",
+      "TEXTO": "It leaves the board. You can restore it later.",
+      "BOTAO": "Archive",
+      "VENDA": "The {valor} sale still counts in Numbers.",
+      "RETORNOS": "The follow-up scheduled for the customer stops. If you restore, it does not come back on its own. | The {count} follow-ups scheduled for the customer stop. If you restore, they do not come back on their own."
+    },
+    "CARD": {
+      "ROTULO": "Next step",
+      "FRASE": "This card is archived. It does not show on the board.",
+      "ESTAVA_EM": "It was in {etapa}",
+      "VAI_PARA_A_LISTA": "When restored, it goes to the List, {aba} tab, because the deal is over.",
+      "RETORNOS_PARARAM": "The scheduled follow-up stopped when it was archived and does not come back on its own. | The {count} scheduled follow-ups stopped when it was archived and do not come back on their own."
+    },
+    "FUNIL": {
+      "TITULO": "Archive the {funil} pipeline?",
+      "TEXTO_COM_CARDS": "It has 1 open card. Choose what to do with it. | It has {count} open cards. Choose what to do with them.",
+      "TEXTO_SEM_CARDS": "It leaves the pipeline list. You can restore it later, in Archived pipelines.",
+      "UNICO_TITULO": "{funil} cannot be archived",
+      "UNICO_TEXTO": "It is the only active pipeline, and the CRM needs at least one. Create another pipeline first.",
+      "CRIAR_FUNIL": "Create pipeline",
+      "PRINCIPAL_TITULO": "{funil} is the main pipeline",
+      "PRINCIPAL_TEXTO": "New cards go into it. Choose another pipeline to be the main one before archiving.",
+      "NOVO_PRINCIPAL": "New main pipeline",
+      "CONTINUAR": "Continue",
+      "VIRA_PRINCIPAL": "{funil} becomes the main pipeline.",
+      "O_QUE_FAZER": "What to do with the open cards",
+      "MOVER": "Move to another pipeline",
+      "MOVER_TEXTO": "They stay on the board, in the pipeline and stage you choose. Follow-ups and meetings continue.",
+      "GUARDAR": "Keep them with the pipeline",
+      "GUARDAR_TEXTO": "They leave the board and come back if you restore the pipeline.",
+      "PARAM": "Stops: 1 scheduled follow-up. It does not come back on its own. | Stops: {count} scheduled follow-ups. They do not come back on their own.",
+      "FUNIL": "Pipeline",
+      "ETAPA": "Stage",
+      "VAO_PARA": "1 card goes to {funil} · {etapa}. | {count} cards go to {funil} · {etapa}.",
+      "REUNIOES": "1 card has a scheduled meeting. It stays scheduled. If it will not happen, cancel it in the card's calendar. | {count} cards have scheduled meetings. They stay scheduled. If one will not happen, cancel it in the card's calendar.",
+      "JA_ARQUIVADOS": "Cards already archived stay with the pipeline.",
+      "CAIXAS_UMA": "The {caixas} inbox creates cards in this pipeline. Once archived, it stops receiving new customers.",
+      "CAIXAS_VARIAS": "The {caixas} inboxes create cards in this pipeline. Once archived, it stops receiving new customers.",
+      "CAIXAS_ROTULO": "What to do with the inboxes",
+      "CAIXAS_PASSAR": "Hand them to another pipeline",
+      "CAIXAS_PASSAR_TEXTO": "New customers keep becoming cards, in the pipeline you choose.",
+      "CAIXAS_PARAR": "Leave them without a pipeline",
+      "CAIXAS_PARAR_TEXTO_UMA": "New customers from this inbox do not become cards until you link another pipeline.",
+      "CAIXAS_PARAR_TEXTO": "New customers from these inboxes do not become cards until you link another pipeline.",
+      "CAIXAS_PARAR_TEXTO_LIGADAS": "The link to this pipeline is kept and works again if you restore the pipeline.",
+      "CAIXAS_DESTINO": "Pipeline that starts receiving",
+      "CAIXAS_ENTRAM": "New customers from {caixas} go into {funil} · {etapa}.",
+      "CAIXAS_SEM_FUNIL_UMA": "New customers from {caixas} do not become cards. If you restore the pipeline, it creates them again.",
+      "CAIXAS_SEM_FUNIL": "New customers from {caixas} do not become cards. If you restore the pipeline, they create them again.",
+      "CAIXA_VAI_PARA_OUTRO": "New customers from {caixa} become cards in {funil}, another pipeline linked to it.",
+      "BOTAO": "Archive pipeline",
+      "ERRO": "Could not archive the pipeline: {motivo}. Nothing changed.",
+      "ERRO_PARCIAL": "Could not finish archiving the pipeline: {motivo}. Before that, 1 card had already left for the chosen stage. Check the board before trying again. | Could not finish archiving the pipeline: {motivo}. Before that, {count} cards had already left for the chosen stage. Check the board before trying again.",
+      "ERRO_PREVIA": "Could not check the pipeline: {motivo}. Close and try again.",
+      "ERRO_ETAPAS": "Could not load the stages of that pipeline: {motivo}. Choose it again.",
+      "ARQUIVADO": "Pipeline {funil} archived.",
+      "FORAM_PARA": "1 card went to {funil}. | {count} cards went to {funil}.",
+      "MAIS_DE_UM_ABERTO": "1 customer now has more than one open card in {funil}. | {count} customers now have more than one open card in {funil}.",
+      "MAIS_DE_UM_ABERTO_QUEM": "1 customer now has more than one open card in {funil}: {nomes}. | {count} customers now have more than one open card in {funil}: {nomes}.",
+      "MAIS_N": "1 more | {count} more",
+      "FICARAM_GUARDADOS": "1 open card was kept with it. | {count} open cards were kept with it.",
+      "CAIXAS_AGORA": "New customers from {caixas} now go into {funil}.",
+      "CAIXAS_PARARAM": "New customers from {caixas} no longer go into this pipeline."
+    },
+    "FUNIS": {
+      "TITULO": "Archived pipelines",
+      "TITULO_N": "Archived pipelines ({count})",
+      "OPCAO": "Archive",
+      "SUB": "Restoring brings the pipeline back, with the cards kept in it.",
+      "SEM_CARDS": "No cards",
+      "GUARDADOS": "1 card kept | {count} cards kept",
+      "ABERTOS": "1 was open | {count} were open",
+      "CAIXAS_VOLTAM": "Creates cards from {caixas} again when restored.",
+      "SEM_PERMISSAO": "To restore a pipeline, ask the administrator for the \"Manage pipelines\" permission.",
+      "VAZIO": "No archived pipelines.",
+      "ERRO_CARREGAR": "Could not load the archived pipelines: {motivo}.",
+      "ERRO_RESTAURAR": "Could not restore the pipeline: {motivo}. Nothing changed.",
+      "VOLTOU": "Pipeline {funil} is back.",
+      "ABERTOS_VOLTARAM": "1 open card is back on the board. | {count} open cards are back on the board.",
+      "CAIXAS_VOLTARAM": "New customers from {caixas} go into it again."
+    }
+  },
+  "CRM_NUMEROS_ORIGENS": {
+    "TITULO": "Where customers come from",
+    "VOLTAR": "Numbers",
+    "NOVA_ABA": "(opens in a new tab)",
+    "NOMES": {
+      "ANUNCIO_META": "Facebook or Instagram ad",
+      "GOOGLE": "Google ad",
+      "SITE": "Your website or link",
+      "DIRETO": "Came in directly",
+      "OUTRAS": "Other ways"
+    },
+    "EXPLICA": {
+      "DIRETO": "Sent a message without coming from an ad or from your website or link.",
+      "OUTRAS": "Posts without ads, ads on other networks, messages you sent to many people and other ways."
+    },
+    "DE_ONDE": {
+      "TITULO": "Where did customers come from in {mes}?",
+      "RESUMO": "{n} new customer {onde} | {n} new customers {onde}",
+      "CLIENTES": "{n} new customer | {n} new customers",
+      "VENDAS": "{n} sale | {n} sales",
+      "SEM_VENDA": "no sales yet",
+      "VER": "See list",
+      "DESTAQUE": "{n} of the {total} new customers came from: {origem}.",
+      "VER_ARIA": "See the customer from {origem}: {vendas} | See the {n} customers from {origem}: {vendas}",
+      "SEM_VENDA_FUNIL": "No sales in this pipeline in {mes}.",
+      "SEM_VENDA_TODOS": "No sales in {mes}.",
+      "SEPARADOR": "·"
+    },
+    "ANUNCIOS": {
+      "TITULO": "Which ad brought a sale?",
+      "SEM_VENDA": "no sale yet",
+      "GASTOU": "spent {valor}",
+      "POR_VENDA": "{valor} per sale",
+      "VER": "See the customers from this ad",
+      "VER_ARIA": "See the customers from the ad {anuncio}: {numeros}",
+      "SEM_NOME": "Unnamed ad"
+    },
+    "GASTO": {
+      "TITULO": "How much did you pay for each sale?",
+      "TOTAL": "spent on ads in {mes}",
+      "POR_VENDA": "per sale",
+      "RETORNO": "Each {um} spent on ads brought {valor} in sales.",
+      "POR_CLIENTE": "per new customer"
+    },
+    "NAO_MANDARAM": {
+      "TITULO": "How many tapped the ad and did not send a message?",
+      "FRASE": "Of {toques} taps on the ads, {n} became a new customer. | Of {toques} taps on the ads, {n} became new customers.",
+      "EXPLICA": "The others tapped and did not send a message, or tapped more than once. Facebook does not say who they are.",
+      "VER": "Open the ads on Facebook"
+    },
+    "VAZIO": {
+      "TITULO": "No new customers in {mes}.",
+      "ACAO": "Open the pipeline",
+      "TITULO_FUNIL": "Nobody entered the {funil} pipeline in {mes}."
+    },
+    "ATALHO": {
+      "TEXTO": "{n} of the {total} new customers came from: {origem}."
+    },
+    "COMO_CONTAMOS": {
+      "LINK": "How we count",
+      "TITULO": "How we count",
+      "DESCRICAO": "The rules behind the numbers on this screen.",
+      "REGRA_QUEM": "New customers are the ones who entered the chosen pipeline in the month, in the account time zone ({fuso}).",
+      "REGRA_ORIGEM": "The origin is the first way the person came in. If they come back later through another ad, the origin does not change.",
+      "REGRA_VENDA": "A sale counts in the month it was closed, even if the customer entered earlier. That is why the list shows who entered or closed in the month.",
+      "REGRA_DIRETO": "Came in directly: sent a message without coming from an ad or from your website or link.",
+      "REGRA_GASTO": "Spend comes from Facebook and shows only in \"All pipelines\", because it belongs to the whole account. Cost per new customer uses the customers who entered the pipelines, so it can differ from the Facebook number.",
+      "REGRA_GASTO_TOTAL": "Spend is the account total on ads in the month, including ads that brought no conversation. So it can be higher than the sum of the ads listed and differ from the Ads screen."
+    },
+    "GASTO_OCULTO": "Ad spend is shown only to people who can see the ads. Ask the account administrator.",
+    "FUNIL": {
+      "ROTULO": "Pipeline",
+      "PRINCIPAL": "{nome} (main)",
+      "NOME": "{nome}",
+      "TODOS": "All pipelines",
+      "ONDE": "in the {nome} pipeline",
+      "ONDE_TODOS": "in all pipelines",
+      "SEM_LISTA": "Choose a pipeline to see the list"
+    },
+    "RELATORIO": {
+      "BUTTON": "Download report",
+      "TITLE": "Download the report",
+      "DESCRIPTION": "{filtro}. It has the same numbers as this screen.",
+      "FILTRO_FUNIL": "{mes}, {funil} pipeline",
+      "FILTRO_TODOS": "{mes}, all pipelines",
+      "PDF_TITLE": "PDF to present",
+      "PDF_HINT": "A page ready to show or send to someone.",
+      "SHEET_TITLE": "Spreadsheet to work the numbers",
+      "SHEET_HINT": "Opens in Excel or Google Sheets, with each source and each ad.",
+      "CONFIRM": "Download",
+      "WITH_PEOPLE": "The customer list goes along.",
+      "NO_PEOPLE": "Without the \"Export the CRM list to Excel\" permission, the file has only the numbers, without the list of people.",
+      "ALTERAR": "Change month or pipeline",
+      "ERROR": "Could not download the report. Try again."
+    },
+    "GASTO_EM_TODOS": {
+      "TEXTO": "Ad spend belongs to the whole account. To see how much each sale cost, choose All pipelines.",
+      "ACAO": "See all pipelines"
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "NOVO_CLIENTE": "New client",
+    "FUNIL": "Choose pipeline",
+    "VISTAS": {
+      "QUADRO": "Board"
+    },
+    "HEROI": {
+      "ROTULO": "Summary",
+      "TODOS": "{n} client needs attention. | {n} clients need attention.",
+      "MEUS": "{n} client needs you. | {n} clients need you.",
+      "DICA": "The most urgent is at the top.",
+      "TUDO_EM_DIA": "All caught up here."
+    },
+    "BUSCA": {
+      "ROTULO": "Search by name, phone or email",
+      "PLACEHOLDER": "Search client"
+    },
+    "FILTROS": "Filters",
+    "MAIS": "More",
+    "QUEM": {
+      "ROTULO": "Whose",
+      "TODOS": "Everyone's",
+      "MEUS": "Only mine"
+    },
+    "ABAS": {
+      "ROTULO": "Show",
+      "ABERTO": "In progress",
+      "ARQUIVADO": "Archived",
+      "TUDO": "All"
+    },
+    "LISTA": {
+      "ROTULO": "Clients",
+      "CLIENTE": "Client",
+      "SITUACAO": "Status",
+      "PROXIMO_PASSO": "Next step",
+      "MARCAR_TODOS": "Select the ones shown",
+      "MARCAR": "Select {nome}",
+      "MOSTRAR_MAIS": "Show more",
+      "VER_CLIENTE": "See client {nome}: {sobre}"
+    },
+    "GRUPOS": {
+      "ESPERANDO": "Waiting for a reply",
+      "ESPERANDO_MEUS": "Waiting for your reply",
+      "RETORNO": "Follow-ups due today and late",
+      "NINGUEM": "Nobody taking care",
+      "PARADO": "Idle for 7 days or more",
+      "DEMAIS": "Everyone else",
+      "ARQUIVADO": "Archived",
+      "CONTA": "{n} client | {n} clients",
+      "VER_SO": "Show only these",
+      "VER_SO_N": "Show only these ({n}) ›",
+      "VER_SO_ROTULO": "Show only: {grupo} ({n})",
+      "MOSTRANDO_SO": "Showing only: {grupo}",
+      "VER_TODOS": "Show all"
+    },
+    "SITUACAO": {
+      "ESPERANDO": "Waiting for a reply",
+      "ESPERANDO_DESDE": {
+        "AGORA": "Waiting since just now",
+        "HA_MIN": "Waiting for {n} minute | Waiting for {n} minutes",
+        "HA_HORAS": "Waiting for {n} hour | Waiting for {n} hours",
+        "ONTEM": "Waiting since yesterday",
+        "HA_DIAS": "Waiting for {n} days"
+      },
+      "RETORNO_MARCADO": "Follow-up set",
+      "RETORNO_HOJE": "Follow-up today at {hora}",
+      "RETORNO_VENCEU_HOJE": "Follow-up was today at {hora}",
+      "RETORNO_VENCEU_ONTEM": "Follow-up was due yesterday",
+      "RETORNO_VENCEU_HA_DIAS": "Follow-up was due {n} days ago",
+      "ENTROU": {
+        "AGORA": "Came in just now",
+        "HA_MIN": "Came in {n} minute ago | Came in {n} minutes ago",
+        "HA_HORAS": "Came in {n} hour ago | Came in {n} hours ago",
+        "ONTEM": "Came in yesterday",
+        "HA_DIAS": "Came in {n} days ago"
+      },
+      "PARADO": "Idle, no conversation yet",
+      "PARADO_HA_DIAS": "Idle for {n} days",
+      "RETORNO_EM": {
+        "HOJE": "Follow-up today at {hora}",
+        "AMANHA": "Follow-up tomorrow at {hora}",
+        "NO_DIA": "Follow-up {dia} at {hora}",
+        "NA_DATA": "Follow-up on {data} at {hora}"
+      },
+      "MENSAGEM_PROGRAMADA": {
+        "HOJE": "Message scheduled today at {hora}",
+        "AMANHA": "Message scheduled tomorrow at {hora}",
+        "NO_DIA": "Message scheduled {dia} at {hora}",
+        "NA_DATA": "Message scheduled on {data} at {hora}"
+      },
+      "ASSISTENTE_RETOMA": {
+        "HOJE": "Assistant follows up today at {hora}",
+        "AMANHA": "Assistant follows up tomorrow at {hora}",
+        "NO_DIA": "Assistant follows up {dia} at {hora}",
+        "NA_DATA": "Assistant follows up on {data} at {hora}"
+      },
+      "ULTIMA_MENSAGEM": {
+        "AGORA": "Last message just now",
+        "HA_MIN": "Last message {n} minute ago | Last message {n} minutes ago",
+        "HA_HORAS": "Last message {n} hour ago | Last message {n} hours ago",
+        "ONTEM": "Last message yesterday",
+        "HA_DIAS": "Last message {n} days ago"
+      },
+      "SEM_MENSAGEM": "No message yet",
+      "OUTRA_PESSOA": "Someone else is talking",
+      "FECHADO": "{rotulo}",
+      "FECHADO_COM_MOTIVO": "{rotulo} · {motivo}",
+      "ARQUIVADO": "Archived"
+    },
+    "QUANDO_FUTURO": {
+      "HOJE": "today at {hora}",
+      "AMANHA": "tomorrow at {hora}",
+      "NO_DIA": "{dia} at {hora}",
+      "NA_DATA": "{data} at {hora}"
+    },
+    "QUEM_CUIDA": {
+      "PESSOA": "{nome} takes care",
+      "VOCE": "You take care",
+      "NINGUEM": "Nobody takes care"
+    },
+    "ACOES": {
+      "RESPONDER": "Reply",
+      "FEITO": "Done",
+      "COMBINAR_OUTRO": "Set another",
+      "COMBINAR_RETORNO": "Set follow-up",
+      "PASSAR": "Hand over",
+      "FICAR": "Take this client",
+      "VER_CONVERSA": "See conversation",
+      "ALTERAR": "Change",
+      "EU": "Me ({nome})",
+      "ROTULO_FEITO": "Mark follow-up with {nome} as done",
+      "ROTULO_COMBINAR_OUTRO": "Set another follow-up with {nome}",
+      "ROTULO_COMBINAR": "Set follow-up with {nome}",
+      "ROTULO_ACAO": "{acao} — {nome}",
+      "ROTULO_VER_CONVERSA": "See conversation with {nome}",
+      "ROTULO_ALTERAR": "Change {nome}",
+      "ROTULO_PASSAR": "Hand {nome} over to"
+    },
+    "ALTERAR": {
+      "MUDAR_ETAPA": "Change stage",
+      "MUDAR_VALOR": "Change value",
+      "DESFECHO": "Mark as won or lost"
+    },
+    "MAIS_MENU": {
+      "BAIXAR": "Download spreadsheet",
+      "MARCAR_VARIOS": "Select several"
+    },
+    "FAIXA": {
+      "FEITO": "Follow-up with {nome} done.",
+      "PASSOU": "{nome} now with {pessoa}.",
+      "FICOU": "{nome} is now yours.",
+      "COMBINOU": "Follow-up with {nome} set: {quando}.",
+      "DESFAZER": "Undo",
+      "DESFEITO": "Undone. {nome} is back on the list."
+    },
+    "COMBINAR": {
+      "TITULO": "When to talk to {nome}?",
+      "TITULO_OUTRO": "When to talk to {nome} again?",
+      "TITULO_DO_RETORNO": "Talk to {nome}",
+      "QUANDO": "When",
+      "CONFIRMAR": "Set",
+      "CANCELAR": "Cancel"
+    },
+    "PASSAR": {
+      "TITULO": "Hand {nome} over to whom?",
+      "CONFIRMAR": "Hand over",
+      "ESCOLHER": "Choose a person"
+    },
+    "NOVIDADES": {
+      "TEXTO": "1 update arrived. | {n} updates arrived.",
+      "ATUALIZAR": "Refresh"
+    },
+    "ERROS": {
+      "ACAO": "That did not work. Nothing changed. Try again.",
+      "PASSOU": "Choose a time that has not passed yet.",
+      "CARREGAR": "Could not show the clients right now.",
+      "TENTAR_DE_NOVO": "Try again"
+    },
+    "VAZIO": {
+      "NINGUEM": "Nobody here yet.",
+      "SEM_RESULTADO": "Nobody with these filters.",
+      "LIMPAR": "Clear filters"
     }
   }
 }

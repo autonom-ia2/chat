@@ -36,6 +36,30 @@ describe Conversations::ChannelTyping::Deliverer do
       )
     end
 
+    it 'marks the read as made by the system up to the marked message, so it does not count as read on the phone (#2246)' do
+      last = create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming,
+                              source_id: 'wamid.LAST')
+      account.enable_features!(ConversaCanal::VistaNoCelular::FLAG)
+      Redis::Alfred.delete(ConversaCanal::LeituraDoSistema.chave(conversation))
+
+      deliver(conversation, 'on')
+
+      expect(ConversaCanal::LeituraDoSistema.ate(conversation)).to eq(last.reload.created_at)
+    ensure
+      Redis::Alfred.delete(ConversaCanal::LeituraDoSistema.chave(conversation))
+    end
+
+    it 'leaves no system read mark and sends the same typing request with the flag off (#2246)' do
+      create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming, source_id: 'wamid.LAST')
+
+      deliver(conversation, 'on')
+
+      expect(ConversaCanal::LeituraDoSistema.ate(conversation)).to be_nil
+      expect(WebMock).to have_requested(:post, meta_typing_url).once.with(
+        body: { messaging_product: 'whatsapp', status: 'read', message_id: 'wamid.LAST', typing_indicator: { type: 'text' } }.to_json
+      )
+    end
+
     it 'does nothing when the installation turned channel typing off' do
       create(:message, conversation: conversation, account: account, inbox: channel.inbox, message_type: :incoming, source_id: 'wamid.LAST')
 

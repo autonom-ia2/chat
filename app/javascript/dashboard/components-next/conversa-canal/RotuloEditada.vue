@@ -11,6 +11,9 @@ import { useFuso } from './pele';
 
 const props = defineProps({
   atributos: { type: Object, required: true },
+  // Rótulo no início da linha (mensagem recebida no Instagram, #2113): as versões abrem
+  // alinhadas pelo início, para dentro da conversa, e não cortam na borda.
+  abrirNoInicio: { type: Boolean, default: false },
 });
 
 const { t, locale } = useI18n();
@@ -80,7 +83,10 @@ const fecharPeloTeclado = () => {
       tabindex="-1"
       role="dialog"
       :aria-label="t('CONVERSA_CANAL.EDITADA.TITULO')"
-      class="absolute bottom-full ltr:right-0 rtl:left-0 z-10 mb-1 w-64 max-w-[80vw] p-3 rounded-[10px] text-start whitespace-normal bg-white dark:bg-[#242626] text-[#0A0A0A] dark:text-[#FAFAFA] shadow-[0_2px_8px_rgba(11,20,26,0.26)] pointer-events-auto"
+      :class="
+        abrirNoInicio ? 'ltr:left-0 rtl:right-0' : 'ltr:right-0 rtl:left-0'
+      "
+      class="absolute bottom-full z-10 mb-1 w-64 max-w-[80vw] p-3 rounded-[10px] text-start whitespace-normal bg-white dark:bg-[#242626] text-[#0A0A0A] dark:text-[#FAFAFA] shadow-[0_2px_8px_rgba(11,20,26,0.26)] pointer-events-auto"
       data-versoes-anteriores
     >
       <p

@@ -55,7 +55,8 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
     aggregation = format(AGGREGATION_SQL, visible_ids: visible_conversations.reorder(nil).select(:id).to_sql)
     sql = ActiveRecord::Base.sanitize_sql_array([aggregation, Current.account.id])
 
-    ActiveRecord::Base.connection.select_all(sql).map do |row|
+    rows = without_hidden_ads(ActiveRecord::Base.connection.select_all(sql).to_a)
+    rows.map do |row|
       {
         source_id: row['source_id'],
         source: row['source'],
@@ -64,6 +65,17 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
         last_touch_at: row['last_touch_at']
       }
     end
+  end
+
+  # Anúncio de origem (#2271): a função personalizada sem meta_ads_view não recebe as linhas de anúncio (nome e id),
+  # aqui e no filtro de Conversas, que usa as mesmas opções. Divulgação, link e publicação continuam; o robô vê tudo e,
+  # sem identidade, não vê. O id que foi anúncio em qualquer toque da conta conta como anúncio, como no filtro
+  # (Crm::AnuncioDeOrigem::Ids: uma consulta só, com todas as campanhas da lista).
+  def without_hidden_ads(rows)
+    return rows if Crm::AnuncioDeOrigem.ve_no_contexto?(Current.user, Current.account_user)
+
+    ads = Crm::AnuncioDeOrigem::Ids.de_anuncio(Current.account, rows.pluck('source_id')).to_set
+    rows.reject { |row| ads.include?(row['source_id']) }
   end
 
   def include_origin_metrics?
@@ -75,7 +87,9 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
     Crm::Reports::OriginMetrics.new(
       visible_ids_sql: visible_conversations.reorder(nil).select(:id).to_sql,
       card_filters: card_filters.join(' AND '),
-      binds: binds
+      binds: binds,
+      # Valor de venda (#2075): o R$ segue o Crm::ValorDeVenda; a contagem fica.
+      value_visible: Crm::ValorDeVenda.ve?(Current.account_user)
     ).perform
   end
 
@@ -84,20 +98,26 @@ class Api::V1::Accounts::CtwaCampaignsController < Api::V1::Accounts::BaseContro
   def origin_metric_card_filters
     filters = [
       'crm_cards.account_id = ?',
-      'crm_cards.status = ?',
+      "(crm_cards.status = ? OR #{Crm::Card.desfecho_sql})",
       'crm_cards.closed_at BETWEEN ? AND ?',
       'crm_cards.pipeline_id IN (SELECT id FROM crm_pipelines WHERE crm_pipelines.account_id = ? AND crm_pipelines.counts_as_sale)'
     ]
-    binds = [Current.account.id, Crm::Card.statuses[:won], since_time, until_time, Current.account.id]
+    binds = [Current.account.id, Crm::Card.statuses[:won], 'won', since_time, until_time, Current.account.id]
 
     if params[:pipeline_id].present?
       filters << 'crm_cards.pipeline_id = ?'
       binds << params[:pipeline_id]
     end
-    # Acesso por funil (#1148, PR D, decisão do Rodrigo em 11/10): a soma conta só os cards que a pessoa vê no CRM.
-    filters << Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user).ids_condition
+    [(filters + origin_metric_scope_filters).compact, binds]
+  end
 
-    [filters.compact, binds]
+  # Acesso por funil (#1148, PR D, decisão do Rodrigo em 11/10): a soma conta só os cards que a pessoa vê no CRM.
+  # Este contato é (#2084): e, por cima, sem a venda de contato fora do funil (parceiro, não é negócio).
+  def origin_metric_scope_filters
+    [
+      Crm::Access::CardScope.new(user: Current.user, account: Current.account, account_user: Current.account_user).ids_condition,
+      Crm::Relacao.condicao_sql(Current.account)
+    ]
   end
 
   # #1876: o período é o do fuso da conta, igual aos relatórios do CRM (Crm::Reports::BaseReport).

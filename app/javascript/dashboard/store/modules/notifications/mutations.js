@@ -25,9 +25,12 @@ export const mutations = {
   },
   [types.SET_NOTIFICATIONS]: ($state, data) => {
     data.forEach(notification => {
-      // Find existing notification with same primary_actor_id (primary_actor_id is unique)
+      // Find existing notification with the same primary actor. The type counts too: the Guide's warning (#935) and
+      // the search by conversation (#2277) have ids of their own, which can equal a conversation's.
       const existingNotification = Object.values($state.records).find(
-        record => record.primary_actor_id === notification.primary_actor_id
+        record =>
+          record.primary_actor_id === notification.primary_actor_id &&
+          record.primary_actor_type === notification.primary_actor_type
       );
       // This is to handle the case where the same notification is received multiple times
       // On reconnect, if there is existing notification with same primary_actor_id,

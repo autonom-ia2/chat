@@ -287,23 +287,61 @@ RSpec.describe 'Autonomia prospecting export', type: :request do
       expect(response.body).not_to include('Clinica Sorriso')
     end
 
+    # Exportar pede prospecting_manage, não só ver (#2147): só ver responde 401 mesmo na própria busca e com "Ver buscas de
+    # todos", e não entrega arquivo.
+    it 'só com prospecting_view não exporta a própria busca nem a lista' do
+      agent = agent_with(%w[prospecting_view prospecting_view_all_searches])
+      search.update!(user: agent)
+      list = Autonomia::Prospecting::List.create!(account: account, user: agent, name: 'Minha')
+      Autonomia::Prospecting::ListLead.create!(account: account, list: list, lead: researched)
+
+      get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(agent)
+      expect(response).to have_http_status(:unauthorized)
+      expect(response.body).not_to include('Clinica Sorriso')
+
+      get "#{base_path}/lists/#{list.id}/export", params: { format: 'csv' }, headers: auth_headers(agent)
+      expect(response).to have_http_status(:unauthorized)
+      expect(response.body).not_to include('Clinica Sorriso')
+    end
+
+    # Só registra o comportamento de antes do #2147: o agente sem função já fica fora no check do módulo
+    # (no OSS, permission_granted? só libera administrador). Não protege a regra nova de exportação.
+    it 'agente sem função não exporta, como hoje não entra na prospecção' do
+      plain_agent = create(:user, account: account, role: :agent)
+
+      get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(plain_agent)
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
     # O agente exporta a própria busca; a de outra pessoa só com "Ver buscas de todos" (#732, item 6).
-    it 'com prospecting_view exporta a própria busca' do
-      agent = agent_with(['prospecting_view'])
+    it 'com prospecting_manage exporta a própria busca' do
+      agent = agent_with(['prospecting_manage'])
       search.update!(user: agent)
 
       get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(agent)
 
       expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Clinica Sorriso')
     end
 
-    it 'com prospecting_view não exporta a busca de outra pessoa, e com "Ver buscas de todos" exporta' do
-      get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(agent_with(['prospecting_view']))
+    it 'com prospecting_manage não exporta a busca de outra pessoa, e com "Ver buscas de todos" exporta' do
+      get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' }, headers: auth_headers(agent_with(['prospecting_manage']))
       expect(response).to have_http_status(:not_found)
 
       get "#{base_path}/searches/#{search.id}/export", params: { format: 'csv' },
-                                                       headers: auth_headers(agent_with(%w[prospecting_view prospecting_view_all_searches]))
+                                                       headers: auth_headers(agent_with(%w[prospecting_manage prospecting_view_all_searches]))
       expect(response).to have_http_status(:ok)
+    end
+
+    it 'com prospecting_manage exporta a lista' do
+      list = Autonomia::Prospecting::List.create!(account: account, user: admin, name: 'Dentistas')
+      Autonomia::Prospecting::ListLead.create!(account: account, list: list, lead: researched)
+
+      get "#{base_path}/lists/#{list.id}/export", params: { format: 'csv' }, headers: auth_headers(agent_with(['prospecting_manage']))
+
+      expect(response).to have_http_status(:ok)
+      expect(csv_rows.drop(1).pluck(1)).to eq(['Clinica Sorriso'])
     end
 
     it 'com a prospecção desligada na conta responde 404' do

@@ -18,9 +18,12 @@ class Autonomia::Prospecting::Research::LeadWriter
     @lead = lead
   end
 
+  # Lead apagado no meio da pesquisa (o contato dele foi excluído, #2143): não há onde gravar, e nada é recriado.
   def write(outcome)
     Autonomia::Prospecting::Lead.transaction do
-      @lead.lock!
+      next false unless Autonomia::Prospecting::Lead.where(id: @lead.id).lock.exists?
+
+      @lead.reload
       @lead.update_columns(attributes(outcome)) # rubocop:disable Rails/SkipsModelValidations -- só as colunas da pesquisa
     end
   end

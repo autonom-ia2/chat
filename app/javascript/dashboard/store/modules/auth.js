@@ -103,19 +103,27 @@ export const getters = {
   },
 };
 
+// Fork (#2308): o usuário de agora entra na store e é avisado ao widget e à análise (setUser), num lugar só. O
+// validityCheck e quem já tem o usuário em mãos (setCurrentUser, a gaveta de Funções) passam por aqui.
+const applyCurrentUser = (commit, currentUser) => {
+  setUser(currentUser);
+  commit(types.SET_CURRENT_USER, currentUser);
+};
+
 // actions
 export const actions = {
   async validityCheck(context) {
     try {
       const response = await authAPI.validityCheck();
-      const currentUser = response.data.payload.data;
-      setUser(currentUser);
-      context.commit(types.SET_CURRENT_USER, currentUser);
+      applyCurrentUser(context.commit, response.data.payload.data);
     } catch (error) {
       if (error?.response?.status === 401) {
         clearCookiesOnLogout();
       }
     }
+  },
+  setCurrentUser({ commit }, currentUser) {
+    applyCurrentUser(commit, currentUser);
   },
   async setUser({ commit, dispatch }) {
     if (authAPI.hasAuthCookie()) {

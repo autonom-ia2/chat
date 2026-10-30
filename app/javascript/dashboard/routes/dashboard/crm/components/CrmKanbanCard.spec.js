@@ -10,8 +10,15 @@ vi.mock('vue-i18n', () => ({
     locale: { value: 'en' },
   }),
 }));
+const CAIXAS_DA_CONTA = {
+  7: { id: 7, channel_type: 'Channel::Api', waha_provider: true },
+  8: { id: 8, channel_type: 'Channel::Api', waha_provider: false },
+};
 vi.mock('dashboard/composables/store', () => ({
-  useMapGetter: () => ({ value: [] }),
+  useMapGetter: nome =>
+    nome === 'inboxes/getInbox'
+      ? { value: id => CAIXAS_DA_CONTA[id] || {} }
+      : { value: [] },
 }));
 
 const CONVERSATION_CARD = {
@@ -275,5 +282,45 @@ describe('CrmKanbanCard customer badge (#1258)', () => {
     });
 
     expect(wrapper.find('[data-customer-badge]').exists()).toBe(false);
+  });
+});
+
+describe('CrmKanbanCard caixa do card (#2255)', () => {
+  const iconeDaCaixa = inbox =>
+    mount(CrmKanbanCard, {
+      props: {
+        card: { ...NO_CONVERSATION_CARD, inbox },
+        stageColor: '#2563eb',
+      },
+      global: {
+        stubs: {
+          Avatar: true,
+          ChannelIcon: {
+            name: 'ChannelIcon',
+            props: ['inbox'],
+            template: '<i class="canal" />',
+          },
+          CardPriorityIcon: true,
+          CardLabels: true,
+          SLACardLabel: true,
+        },
+      },
+    })
+      .findComponent({ name: 'ChannelIcon' })
+      .props('inbox');
+
+  it('a caixa do WhatsApp do celular leva waha_provider para o ícone', () => {
+    expect(
+      iconeDaCaixa({ id: 7, name: 'Celular', channel_type: 'Channel::Api' })
+    ).toEqual({ channel_type: 'Channel::Api', waha_provider: true });
+  });
+
+  it('caixa API comum, ou que não está na conta, continua API', () => {
+    expect(
+      iconeDaCaixa({ id: 8, name: 'API', channel_type: 'Channel::Api' })
+    ).toEqual({ channel_type: 'Channel::Api', waha_provider: false });
+    expect(
+      iconeDaCaixa({ id: 99, name: 'Outra', channel_type: 'Channel::Api' })
+    ).toEqual({ channel_type: 'Channel::Api', waha_provider: false });
   });
 });

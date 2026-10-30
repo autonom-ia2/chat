@@ -10,7 +10,9 @@ class Autonomia::Prospecting::EnrichLeadJob < ApplicationJob
     return unless lead&.enrichment_queued?
 
     enrich(lead)
-    Autonomia::Prospecting::LeadBroadcaster.updated(lead.reload)
+    # Apagado durante o enriquecimento (contato excluído, #2143): não há o que avisar à tela.
+    atual = Autonomia::Prospecting::Lead.find_by(id: lead_id)
+    Autonomia::Prospecting::LeadBroadcaster.updated(atual) if atual
   end
 
   private
@@ -19,7 +21,8 @@ class Autonomia::Prospecting::EnrichLeadJob < ApplicationJob
   # (failed), que aceita um pedido novo.
   def enrich(lead)
     Autonomia::Prospecting::LeadEnricher.new(lead: lead, user: nil).perform
-    verify_site_whatsapp(lead.reload)
+    atual = Autonomia::Prospecting::Lead.find_by(id: lead.id)
+    verify_site_whatsapp(atual) if atual
   rescue Autonomia::Prospecting::LeadEnricher::Error
     nil
   rescue StandardError => e

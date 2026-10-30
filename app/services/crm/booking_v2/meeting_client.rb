@@ -53,7 +53,7 @@ class Crm::BookingV2::MeetingClient
     return @reply_conversation if defined?(@reply_conversation)
 
     seen = candidates.select { |conversation| @visible.call(conversation) }
-    @reply_conversation = seen.find(&:can_reply?) || seen.first
+    @reply_conversation = seen.find(&:can_reply_automatically?) || seen.first
   end
 
   # O cliente não quer mensagens ativas: recusou (opt-out), parou os avisos da página (contato) ou desta reunião.

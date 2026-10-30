@@ -42,13 +42,22 @@ export const negocioDoCard = card => ({
 
 // `cobranca`: só a Cobrança mexe na promessa de pagamento; os outros cards
 // não mandam o campo (e não apagam uma promessa antiga).
-export const payloadDoNegocio = (form, { cobranca = false } = {}) => ({
-  title: form.title.trim(),
-  description: form.description.trim(),
+// `valorOculto` (#2075): sem a chave de valores a pessoa não vê o valor, então
+// não manda valor nem moeda (o servidor também descarta).
+const valorDoNegocio = form => ({
   value_cents: form.valueAmount
     ? Math.round(Number(form.valueAmount) * 100)
     : 0,
   currency: form.currency || 'BRL',
+});
+
+export const payloadDoNegocio = (
+  form,
+  { cobranca = false, valorOculto = false } = {}
+) => ({
+  title: form.title.trim(),
+  description: form.description.trim(),
+  ...(valorOculto ? {} : valorDoNegocio(form)),
   priority: form.priority,
   score: Math.min(Math.max(Number(form.score || 0), 0), 100),
   expected_close_at: form.expectedCloseAt || null,

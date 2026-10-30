@@ -31,7 +31,7 @@ concurrency:
 
 jobs:
   trava:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write
@@ -125,7 +125,7 @@ jobs:
   # sempre rodam, pelo mesmo motivo do comentário no topo deste arquivo (check obrigatório
   # não pode ficar esperando um `if` de PR que nunca dispara o job).
   central:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write

@@ -2,7 +2,8 @@
 import ApiClient from './ApiClient';
 
 // Anúncios da Meta (#1100, F4b): resumo diário e alerta no WhatsApp do dono
-// (docs/crm/anuncios-meta-f4.md §2 e §3). Vem desligado; só administrador.
+// (docs/crm/anuncios-meta-f4.md §2 e §3). Vem desligado; administrador ou
+// `meta_ads_manage` (#2070).
 class CrmMetaAdsWhatsappReportAPI extends ApiClient {
   constructor() {
     super('crm/meta_ads_connection/whatsapp_report', { accountScoped: true });

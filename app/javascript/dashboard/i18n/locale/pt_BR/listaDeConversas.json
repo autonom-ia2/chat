@@ -1,0 +1,161 @@
+{
+  "LISTA_DE_CONVERSAS": {
+    "HORA": {
+      "ONTEM": "Ontem",
+      "HOJE": "hoje {hora}",
+      "AMANHA": "amanhã {hora}",
+      "DIA_E_HORA": "{dia} {hora}",
+      "DICA": "Última mensagem em {ultima} · Começou em {comeco}",
+      "DIA_CURTO": {
+        "0": "dom",
+        "1": "seg",
+        "2": "ter",
+        "3": "qua",
+        "4": "qui",
+        "5": "sex",
+        "6": "sáb"
+      }
+    },
+    "DURACAO": {
+      "MENOS_DE_1_MIN": "há menos de 1 min",
+      "MIN": "há {n} min",
+      "HORA": "há 1 hora | há {n} horas",
+      "DIA": "há 1 dia | há {n} dias",
+      "MESES": "há {n} meses"
+    },
+    "PREFIXO": {
+      "VOCE": "Você",
+      "EQUIPE": "Equipe",
+      "NOTA": "Nota",
+      "SELO_IA": "IA",
+      "SEPARADOR": ":"
+    },
+    "SINAL": {
+      "SUA_VEZ": "Sua vez: {n} min para pegar",
+      "SUA_VEZ_AGORA": "Sua vez: pegue agora",
+      "RESERVADA": "Reservada para {nome}",
+      "RESERVADA_SEM_NOME": "Reservada para outra pessoa",
+      "OUTRA_PESSOA": "outra pessoa",
+      "ADIADA_ATE": "Adiada até {quando}",
+      "ADIADA_CLIENTE": "Adiada até o cliente responder",
+      "PEDIU_AJUDA": "{nome} pediu ajuda {duracao}",
+      "ASSISTENTE_PEDIU_AJUDA": "A assistente pediu ajuda {duracao}",
+      "ASSISTENTE": "A assistente",
+      "ESPERANDO": "Esperando {duracao}",
+      "SEM_RESPOSTA": "Sem resposta {duracao}",
+      "RESPONDEU_SEM_PEGAR": "{nome} respondeu sem pegar",
+      "VOCE_RESPONDEU": "Você respondeu sem pegar",
+      "COM": "Com {nome}",
+      "SEM_NINGUEM": "Sem ninguém",
+      "SEPARADOR": "·",
+      "RESOLVIDA": "Resolvida"
+    },
+    "PRIORIDADE": {
+      "URGENTE": "Urgente",
+      "ALTA": "Prioridade alta"
+    },
+    "ETAPA": {
+      "DICA": "Funil {funil}, etapa {etapa}",
+      "MAIS": "+{n}"
+    },
+    "ARIA": {
+      "SUA_VEZ": "Sua vez de pegar esta conversa. Faltam {n} minutos",
+      "RESERVADA": "Reservada para {nome} por mais {n} minutos",
+      "PEDIU_AJUDA": "{nome}, assistente de IA, pediu ajuda {duracao}",
+      "COM_ROBO": "Com {nome}, assistente de IA",
+      "ROBO_ESCREVEU": "{nome}, assistente de IA, escreveu:",
+      "ESCREVEU": "{nome} escreveu:",
+      "ULTIMA": "Última mensagem: {quando}.",
+      "NAO_LIDAS": "1 mensagem nova. | {n} mensagens novas."
+    },
+    "CABECALHO": {
+      "ORDEM": "Ordem da lista",
+      "RECENTES": "Mais recentes primeiro",
+      "RECENTES_CURTO": "Recentes",
+      "ESPERA": "Quem espera há mais tempo",
+      "ESPERA_CURTO": "Quem espera",
+      "ANTIGAS": "Mais antigas primeiro",
+      "ANTIGAS_CURTO": "Antigas",
+      "AJUDA_ESPERA": "Primeiro quem espera há mais tempo. Conta desde a primeira mensagem sem resposta.",
+      "FILTRAR": "Filtrar",
+      "FILTRAR_ARIA": "Filtrar a lista",
+      "ABERTAS": "Abertas",
+      "RESOLVIDAS": "Resolvidas",
+      "ADIADAS": "Adiadas",
+      "PENDENTES": "Pendentes",
+      "TODOS_OS_STATUS": "Todos os status",
+      "MAIS_FILTROS": "Mais filtros…",
+      "VOLTAR_ABERTAS": "Voltar para as abertas"
+    },
+    "ABAS": {
+      "ARIA": "Quais conversas",
+      "MINHAS": "Minhas",
+      "PARA_PEGAR": "Para pegar",
+      "TODAS": "Todas"
+    },
+    "VAZIA": {
+      "MINHAS": "Nenhuma conversa com você agora.",
+      "PARA_PEGAR": "Nada para pegar. Tudo em dia.",
+      "TODAS": "Nenhuma conversa aberta.",
+      "RESOLVIDAS": "Nenhuma conversa resolvida.",
+      "ADIADAS": "Nenhuma conversa adiada. Quando você adiar uma, ela aparece aqui até a hora de voltar.",
+      "PENDENTES": "Nenhuma conversa pendente.",
+      "TODOS_OS_STATUS": "Nenhuma conversa nesta aba."
+    },
+    "FUNIS": {
+      "TODOS": "Todos",
+      "ERRO": "Não deu para carregar os funis.",
+      "TENTAR": "Tentar de novo"
+    },
+    "BUSCA": {
+      "CAMPO": "Buscar nome, telefone ou mensagem",
+      "CAMPO_ARIA": "Buscar conversa, mensagem ou pessoa",
+      "LIMPAR": "Limpar a busca",
+      "BUSCANDO": "Buscando…",
+      "ERRO": "Não deu para buscar agora.",
+      "TENTAR": "Tentar de novo",
+      "NADA": "Nada encontrado para “{texto}”.",
+      "SECOES": {
+        "CONVERSAS": "Conversas",
+        "MENSAGENS": "Mensagens",
+        "PESSOAS": "Pessoas sem conversa"
+      },
+      "MENSAGEM_ARIA": "Mensagem de {quem} em {quando}, na conversa com {contato}",
+      "NOTA": "Nota",
+      "AUDIO": "Áudio",
+      "VOCE": "Você",
+      "COMECAR_COM_TELEFONE": "Começar conversa com {telefone}",
+      "COMECAR_COM_TELEFONE_AJUDA": "Ninguém tem este número. O contato é criado quando você enviar.",
+      "SEM_DADOS": "Sem telefone nem e-mail",
+      "ESCREVER": "Escrever",
+      "PARCIAL": "Parte do resultado demorou demais e ficou de fora. Tente uma palavra mais longa.",
+      "ESCREVER_PARA_EMAIL": "Escrever para {email}",
+      "ESCREVER_PARA_EMAIL_AJUDA": "Ninguém tem este e-mail. O contato é criado quando você enviar.",
+      "RESULTADOS": "{count} resultado | {count} resultados"
+    },
+    "CONVERSA_VAZIA": {
+      "CARREGANDO": "Carregando…",
+      "ERRO": "Não deu para abrir a conversa.",
+      "TENTAR": "Tentar de novo",
+      "POR_ONDE": "Por onde mandar?",
+      "FECHAR": "Fechar",
+      "TROCAR": "Trocar",
+      "TROCAR_ARIA": "Mandando por {caixa}. Trocar",
+      "ESCOLHER_CAIXA": "Escolher por onde mandar",
+      "SEM_CAIXA": "Não dá para escrever para {nome}: o contato não tem telefone nem e-mail.",
+      "COMPLETAR_CONTATO": "Completar o contato",
+      "SEM_CAIXA_NA_CONTA": "Nenhuma caixa desta conta manda mensagem para {nome}.",
+      "SEM_INSTAGRAM": "O Instagram não aparece aqui: nele, só a pessoa pode mandar a primeira mensagem.",
+      "MODELO_LINHA": "No WhatsApp oficial, a primeira mensagem é um modelo já aprovado. Depois que a pessoa responder, você escreve à vontade.",
+      "ESCOLHER_MODELO": "Escolher o modelo",
+      "ENVIAR": "Enviar",
+      "ENVIANDO": "Enviando…",
+      "ERRO_CONTATO": "Não deu para criar o contato.",
+      "ENVIADA_OCULTA": "Mensagem enviada. Ela entrou numa conversa que está com outra pessoa.",
+      "CAIXA_NAO_VOLTOU": "O contato foi criado, mas a caixa não voltou para ele. Tente enviar de novo.",
+      "TIPO_MUDOU": "Esta caixa mudou o que dá para mandar primeiro. Confira a mensagem e envie de novo: o que você escreveu ficou.",
+      "TIPO_MUDOU_PARA_MODELO": "Este número precisa de uma mensagem aprovada agora. Escolha uma para começar.",
+      "TELEFONE_INVALIDO": "{telefone} não é um telefone válido. Volte para a lista e confira o número."
+    }
+  }
+}

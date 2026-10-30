@@ -1,127 +1,376 @@
 {
   "CRM_KANBAN": {
     "DRAWER": {
-      "STATUS_WON": "Active plan",
-      "ACTIVITY_WON": "Plan closed",
-      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Not a sale: nobody asked for a plan. To undo, reopen the card."
+      "STATUS_WON": "Implemented",
+      "ACTIVITY_WON": "Marked as implemented",
+      "ACTIVITY_DETAIL_NAO_E_NEGOCIO": "Not a sale: nobody asked for a plan. To undo, reopen the card.",
+      "CARD_FIELDS": {
+        "EMPTY_ADMIN": "No card fields yet. Create them in Settings → Custom attributes → Card. E.g.: Current operator, Number of lives, Contract anniversary.",
+        "HELP": "Details specific to this plan."
+      }
     },
     "META_SYNC_STATUS": {
-      "EVENT_WON": "Plan closed"
+      "EVENT_WON": "Implemented"
     },
     "ALERTS": {
-      "CARD_WON": "Marked: plan closed."
+      "CARD_WON": "Card marked as implemented."
     },
     "DASHBOARD": {
       "KPI": {
-        "WON": "Plans closed",
-        "WON_INFO": "Cards that closed a plan in the selected period.",
-        "WIN_RATE_INFO": "Of all cards that ended in the period, how many closed a plan (in %).",
-        "WON_VALUE_INFO": "Total value of plans closed in the period, by currency."
+        "WON": "Plans implemented",
+        "WON_INFO": "Cards marked as implemented in the selected period.",
+        "WIN_RATE_INFO": "Of all cards that ended in the period, how many were implemented (in %).",
+        "WON_VALUE_INFO": "Total value of plans implemented in the period, by currency.",
+        "GOAL_INFO": "How much of this month's sales target is already implemented. Pace compares it to how much of the month has passed.",
+        "WIN_RATE": "Implementation rate (count)",
+        "WIN_RATE_VALUE": "Implementation rate (value)",
+        "WIN_RATE_VALUE_INFO": "Of the value of everything that ended in the period, how much was implemented (in %).",
+        "WON_VALUE": "Implemented value"
       },
       "META_SYNC": {
-        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card closes a plan, the data shows up here."
+        "EMPTY": "No conversions sent yet. Turn on Meta sync in a funnel. When a card is marked as implemented, the data shows up here.",
+        "SUBTITLE": "Conversions sent back to Meta to optimize your ads: Click-to-WhatsApp through the WhatsApp connection, plans implemented from the landing page through the website Pixel.",
+        "REVENUE": "Value sent"
+      },
+      "THROUGHPUT": {
+        "WON": "Implemented"
       }
     },
     "PIPELINE_DRAWER": {
-      "META_SYNC_HELP": "Send each result back to Meta. This happens when a card closes a plan, does not close or moves stage. Meta then shows your Click-to-WhatsApp ads to people more likely to buy."
+      "META_SYNC_HELP": "Send each result back to Meta. This happens when a card plan is implemented, does not close or moves stage. Meta then shows your Click-to-WhatsApp ads to people more likely to buy.",
+      "NAME_PLACEHOLDER": "E.g. Sales, Client book",
+      "STAGE_NAME_PLACEHOLDER": "E.g. With the carrier",
+      "WHEN_TO_USE_HELP": "The AI reads this to know when a conversation belongs to this pipeline. Name the plans or cases that come here.",
+      "WHEN_TO_USE_PLACEHOLDER": "E.g.: health plan, dental and life insurance quotes."
     },
     "PIPELINE_EDITOR": {
-      "AD_RESULTS_HELP": "Show which ads became sales. A sale is counted when a card closes a plan, regardless of its column.",
+      "AD_RESULTS_HELP": "Show which ads became implemented plans. It counts when a card is marked as implemented, in any column.",
       "META_PROGRESS": {
         "NONE": {
-          "HELP": "Do not send entry into this stage. Closed plans still follow the pipeline settings."
+          "HELP": "Do not send entry into this stage. Implemented plans still follow the pipeline settings."
+        },
+        "PROPOSAL": {
+          "HELP": "The customer got the quote options and is choosing.",
+          "TITLE": "Quote under review"
+        },
+        "QUALIFIED": {
+          "HELP": "We know what the customer is looking for and have the data to quote, such as ages and number of lives."
+        },
+        "NEGOTIATION": {
+          "HELP": "The client is settling the price, the operator or the network."
+        },
+        "INTEREST": {
+          "HELP": "The client asked for a quote or information."
         }
       }
     },
     "GOOGLE_SYNC": {
-      "CONVERSION_NAME_WON": "Conversion name for closed plans",
-      "CONVERSION_NAME_WON_PLACEHOLDER": "E.g. CRM - Plan closed"
+      "CONVERSION_NAME_WON": "Conversion name for implemented plans",
+      "CONVERSION_NAME_WON_PLACEHOLDER": "E.g. CRM - Plan implemented"
     },
     "CALENDAR": {
       "EVENT": {
-        "WIN": "Plan closed"
+        "WIN": "Implemented"
+      },
+      "MEETING_SCHEDULER": {
+        "TITLE_PLACEHOLDER": "E.g.: Go over the quote options",
+        "SUBTITLE": "Schedule a meeting about this plan and send calendar invites to the guests."
+      },
+      "QUICK_ADD": {
+        "TITLE_PLACEHOLDER": "E.g.: Send the quote options"
       }
     },
     "META_ADS_HUB": {
       "PANEL": {
         "PATH_LIST": {
-          "WON": "Active plan"
-        }
+          "WON": "Implemented",
+          "TITLE_QUOTES": "Quotes",
+          "TOTAL_QUOTES": "1 quote | {count} quotes"
+        },
+        "ACTION": {
+          "STALLED_QUOTES": {
+            "BUTTON": "See the quote | See the {count} quotes",
+            "TEXT": "1 quote from ads has been stalled for more than {days} days. It came from \"{ad}\". | {count} quotes from ads have been stalled for more than {days} days. Most came from \"{ad}\".",
+            "WHY": "Why: they add up to {value} in negotiation. Following up with someone who asked for a quote costs less than advertising again."
+          }
+        },
+        "AD_QUOTES": "1 open quote | {count} open quotes",
+        "OPEN_QUOTES": "Sales on the way: 1 open quote | Sales on the way: {count} open quotes",
+        "PATH": {
+          "QUOTES": "quote | quotes"
+        },
+        "STALLED_TITLE": "1 stalled quote | {count} stalled quotes"
       },
       "SUMMARY": {
-        "NEXT_SALES": "When a card moves forward or closes a plan, Meta is told and learns who buys."
+        "NEXT_SALES": "When a card moves forward or a plan is implemented, Meta is told and learns who signs up."
       },
       "FUNNEL": {
-        "HINT": "When a card moves forward or closes a plan in the CRM, we tell Meta. It learns to show your ad to people who buy."
+        "HINT": "When a card moves forward or is marked as implemented in the CRM, we tell Meta. It learns to show your ad to people who sign up."
       },
       "AI": {
         "QUOTE": {
           "REASONS": {
-            "CLOSED": "The customer already closed the plan. Nothing to resume here."
+            "CLOSED": "The customer's plan is already implemented. Nothing to resume here."
           }
         }
       },
       "SEM_LOGIN": {
         "AD": {
           "STATUS": {
-            "BOUGHT": "Plan closed: {value}",
-            "BOUGHT_NO_VALUE": "Plan closed"
+            "BOUGHT": "Implemented: {value}",
+            "BOUGHT_NO_VALUE": "Implemented"
           }
         },
         "EXAMPLE": {
           "ADS": {
-            "WINTER": "Health plan for your company"
+            "WINTER": "Health plan for your company",
+            "SHIPPING": "Health plan for the whole family"
           }
         }
+      },
+      "AD_DETAIL": {
+        "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
+        "MEANWHILE_SEE": "See the quotes",
+        "QUOTES_EMPTY": "No quote from this ad in this period yet.",
+        "QUOTES_TITLE": "Quotes from this ad",
+        "TILES": {
+          "QUOTES": "Quotes"
+        },
+        "WON": "Implemented"
       }
+    },
+    "BOOKING": {
+      "ADMIN": {
+        "PIPELINE": "Customer pipeline",
+        "STAGE": "Customer stage",
+        "SUBTITLE": "Let customers book a time on a calendar-enabled inbox. Share the public link, no login needed.",
+        "TITLE_PLACEHOLDER": "E.g.: Talk about your plan"
+      }
+    },
+    "COMPANY_OPPORTUNITIES": {
+      "HELP": "Cards of customers linked to this company. Only the cards you can access."
+    },
+    "CONTACT_OPPORTUNITIES": {
+      "HELP": "This customer's cards across pipelines. Only cards you can access.",
+      "SEARCH_HINT": "Card name. E.g.: Souza family plan"
+    },
+    "CONVERSATION": {
+      "SUBJECTS": {
+        "TITLE_PLACEHOLDER": "E.g.: SME plan quote"
+      }
+    },
+    "RELATIONSHIP": {
+      "COMPANY_FORM": {
+        "LINK_HELP": "The company will be linked to {name} and used on all cards for this client."
+      },
+      "SAME_OPPORTUNITY": "The client will be linked to this card. The card details stay as they are.",
+      "SAVE_CONFLICT": "Unable to link the client. Check whether they already exist or this card has another person's conversations."
+    },
+    "AI_SETTINGS": {
+      "ATTRIBUTE_EXTRACTION_HELP": "Extracts data such as number of lives, ages, city and current operator, then fills any empty custom field of the contact or conversation. A filled field is never overwritten.",
+      "AUTO_FOLLOWUP": {
+        "TONE_PLACEHOLDER": "informal, address as 'você', keep it short…"
+      }
+    },
+    "OPPORTUNITY": {
+      "CONTEXT": {
+        "OPEN_NEW_TAB": "New card: opens the CRM in another tab"
+      }
+    },
+    "TRACKED_LINKS": {
+      "EMPTY": "No trackable links yet. Create the first one to attribute office, broker or bio conversations.",
+      "NAME_PLACEHOLDER": "E.g.: Office QR · Downtown",
+      "PAGE": {
+        "ATTRIBUTION_HINT": "Use one source per office, broker, partner, promotion or website page. When the conversation starts, the source is recorded in your CRM.",
+        "MESSAGE_PLACEHOLDER": "Hello! I would like a health plan quote.",
+        "NAME_PLACEHOLDER": "Example: Downtown office · front desk",
+        "USAGE_DIRECT_HINT": "Office, broker, bio and printed material.",
+        "WEBSITE_NAME_PLACEHOLDER": "Example: Small business health plan page",
+        "WON": "Implemented"
+      },
+      "PREFILLED_PLACEHOLDER": "E.g.: Hi! I want a health plan quote for my family",
+      "SUBTITLE": "Create a link or QR per campaign, broker or office. Conversations started through it arrive attributed in the CRM."
+    },
+    "PASSAGEM": {
+      "PREVIA": {
+        "QUANDO_SIM_MSG": "I did not understand the price in the quote. I want to talk to someone."
+      },
+      "QUANDO": {
+        "IDEIA_2": "When the customer picks a plan and wants to move on with the proposal",
+        "IDEIA_3": "When the client complains about a denied authorization or the operator"
+      }
+    },
+    "STAGE_AUTOMATIONS": {
+      "RULE_NAME_PLACEHOLDER": "E.g.: Remind to ask for the documents"
     }
   },
   "CRM_CARD": {
     "DESFECHO": {
-      "GANHOU": "Plan closed",
-      "GANHOU_TITULO_PADRAO": "Plan closed! How much was it?",
-      "GANHOU_CONFIRMA_PADRAO": "Mark as: plan closed"
+      "GANHOU": "Implemented",
+      "GANHOU_TITULO_PADRAO": "Plan implemented! What is the monthly amount?",
+      "GANHOU_CONFIRMA_PADRAO": "Mark as implemented",
+      "GANHOU_TEXTO": "Check the monthly amount. It goes to the sales reports.",
+      "MOTIVO": {
+        "OUTRO_LUGAR": "Went with another broker"
+      }
     },
     "ORIGEM": {
       "AVISO_ESTADO": {
         "QUANDO": {
-          "GANHO": "It was when the plan closed."
+          "GANHO": "It was when the plan was implemented."
         }
+      },
+      "AVISO_TEXTO": "When the card moves forward in the funnel, we tell the ads so they bring similar customers."
+    },
+    "AGENDA": {
+      "LEMBRETE_EXEMPLO": "E.g.: Chase the plan provider about the proposal · Ask for the health declaration"
+    },
+    "ASSUNTO": {
+      "TITULO_EXEMPLO": "E.g.: Add a dependent to the plan"
+    },
+    "CRIAR": {
+      "TEXTO_2": "Say which plan it is and which stage it starts in. The rest can wait.",
+      "TEXTO_2_COBRANCA": "Say which plan the bill is for, the amount and the due date. The rest can wait.",
+      "TITULO_2": "About the plan",
+      "TITULO_2_COBRANCA": "About the bill"
+    },
+    "RETORNO": {
+      "SEU_TEXTO_EXEMPLO": "Hi! Did you see the quote options?",
+      "TITULO_EXEMPLO": "E.g.: Chase the provider about the pending item · Ask for the health declaration"
+    },
+    "RESUMO": {
+      "AVISO_FACEBOOK": "When the card moves to another stage, we let Facebook and Instagram know.",
+      "COBRANCA_FRASE": "{titulo}: {valor} bill, due {vencimento}.",
+      "COBRANCA_SEM_DATA": "{titulo}: {valor} bill, no due date.",
+      "COBRANCA_VENCEU": "{titulo}: {valor} bill, was due {vencimento}.",
+      "JA_COMPROU": "Already has a plan with you.",
+      "MAIS_DETALHES_DICA": "Where they came from, what happened, more about the plan and archive",
+      "MAIS_NEGOCIO": "More about the plan",
+      "NEGOCIO": "Plan",
+      "NEGOCIO_DE": "Plan: {titulo}",
+      "SEM_CONTATO": "No customer is linked to this card yet."
+    },
+    "HISTORICO": {
+      "EVENTO": {
+        "ACTIVITY_LINK_CONTACT": "A customer was added to this card",
+        "ACTIVITY_UNLINK_CONTACT": "The customer was removed from this card",
+        "ACTIVITY_UPDATE": "The plan details changed"
+      },
+      "GRUPO": {
+        "NEGOCIO": "Stages and plan"
       }
+    },
+    "PASSO": {
+      "FECHADO": "This card is over: {status}. If the customer comes back, tap Reopen."
+    },
+    "NEGOCIO": {
+      "NOME": "Which plan",
+      "TELA": "Plan",
+      "TEXTO": "Which plan {nome} wants, the monthly amount and how urgent it is.",
+      "TITULO": "About the plan",
+      "TITULO_EXEMPLO": "E.g.: Company plan, 3 lives",
+      "TITULO_FALTA": "Write which plan it is.",
+      "VALOR": "Monthly amount",
+      "OBSERVACOES_EXEMPLO": "E.g.: wants to keep the same hospital from the current network"
+    },
+    "COBRANCA": {
+      "NOME": "Which plan the bill is for",
+      "TEXTO": "How much {nome}'s bill is, when it is due and whether they promised to pay.",
+      "TITULO": "About the bill",
+      "TITULO_EXEMPLO": "E.g. October bill",
+      "VALOR": "Bill amount"
+    },
+    "SAIR": {
+      "NEGOCIO": "the changes to the plan"
     }
   },
   "CRM_DASHBOARD": {
     "ORIGIN": {
-      "SUBTITLE": "Plans closed and revenue, by campaign source.",
-      "EMPTY": "No plans closed with a campaign source in this period."
+      "SUBTITLE": "Implemented plans and revenue, by campaign source.",
+      "EMPTY": "No plans implemented with a campaign source in this period.",
+      "WON": "Implemented"
     }
   },
   "CRM_CAIXAS": {
     "FUNIS": {
-      "TIPO_SALES": "Sales: ends when the plan closes or does not close"
+      "TIPO_SALES": "Sales: ends when the plan is implemented or does not close"
+    },
+    "SOZINHO": {
+      "AUTO_UM_EXEMPLO": "The customer asks for a health plan and a dental plan: that makes two cards in {funil}.",
+      "MENSAGEM": "Hi! How much is a health plan for my family?",
+      "MENSAGEM_DOIS_PEDIDOS": "I want a quote for a health plan and also for a dental plan."
     }
   },
   "CONTACTS_LAYOUT": {
     "DETAILS": {
       "CUSTOMER": {
-        "DESCRIPTION": "Becomes a customer on its own when a plan closes in a sales funnel. Mark it here if they bought some other way."
+        "DESCRIPTION": "Becomes a customer on its own when a plan is implemented in a sales funnel. Mark it here if the person already has a plan with you outside the funnel."
+      }
+    },
+    "HEADER": {
+      "ACTIONS": {
+        "FILTERS": {
+          "CREATE_SEGMENT": {
+            "PLACEHOLDER": "E.g.: Clients with a small business plan"
+          }
+        },
+        "IMPORT_CONTACT": {
+          "DESCRIPTION": "Import your client book spreadsheet (CSV file)."
+        }
+      }
+    },
+    "CARD": {
+      "EDIT_DETAILS_FORM": {
+        "FORM": {
+          "BIO": {
+            "PLACEHOLDER": "E.g.: has a 3-life plan with us and wants a dental quote"
+          }
+        }
+      }
+    },
+    "EMPTY_STATE": {
+      "SUBTITLE": "Add your first customer with the button below. To bring in your whole client book, use Import contacts."
+    },
+    "FILTER": {
+      "SEGMENT": {
+        "INPUT_PLACEHOLDER": "E.g.: Clients with a small business (PME) plan"
+      }
+    },
+    "SIDEBAR": {
+      "ATTRIBUTES": {
+        "EMPTY_STATE": "This account has no contact fields yet. In settings, create fields such as Current health plan provider, Number of lives and Contract anniversary."
+      },
+      "NOTES": {
+        "EMPTY_STATE": "No notes for this contact yet. Use the box above for what the team needs to remember, like their preferred hospital or the bill due date.",
+        "PLACEHOLDER": "E.g.: wants to add his wife as a dependent"
       }
     }
   },
   "AUTOMATION": {
     "CRM_CARD_STATUS": {
-      "WON": "Active plan"
+      "WON": "Implemented"
     },
     "ACTIONS": {
-      "CRM_MARK_CARD_WON": "Mark CRM card: plan closed"
-    }
+      "CRM_MARK_CARD_WON": "Mark CRM card as implemented"
+    },
+    "ADD": {
+      "FORM": {
+        "DESC": {
+          "PLACEHOLDER": "E.g.: adds the pending label and hands over to the pending items team"
+        },
+        "NAME": {
+          "PLACEHOLDER": "E.g.: Pending label"
+        }
+      }
+    },
+    "DESCRIPTION": "Automation does the repeated work for you, like adding the right label (company, family, pending item) and handing the conversation to whoever handles it. This leaves the team more time to quote and serve people."
   },
   "INTEGRATION_SETTINGS": {
     "WEBHOOK": {
       "FORM": {
         "SUBSCRIPTIONS": {
           "CRM_EVENTS": {
-            "CRM_CARD_WON": "CRM card: plan closed"
+            "CRM_CARD_WON": "CRM card implemented"
           }
         }
       }
@@ -129,17 +378,27 @@
     "CRM_N8N": {
       "EVENTS": {
         "LIST": {
-          "CRM_CARD_WON": "A card closed a plan."
+          "CRM_CARD_WON": "A card was marked as implemented."
         }
       }
     }
   },
   "CRM_NUMEROS_V2": {
     "IA_AJUDOU": {
-      "VIRARAM": "None closed a plan yet. | 1 closed a plan. | {n} closed a plan."
+      "VIRARAM": "None had a plan implemented yet. | 1 had a plan implemented. | {n} had a plan implemented."
     },
     "TOPO": {
-      "SEM_META_EU": "Your month so far: {n} plan closed, {valor} | Your month so far: {n} plans closed, {valor}"
+      "SEM_META_EU": "Your month so far: {n} plan implemented, {valor} | Your month so far: {n} plans implemented, {valor}",
+      "BOTAO": {
+        "MEUS_PARADOS": "Open my stalled quote | Open my {n} stalled quotes"
+      }
+    },
+    "BLOCO": {
+      "VENDENDO": "Quoting"
+    },
+    "ESTIMADO": "Some plans implemented before this record were counted for the card's current responsible person.",
+    "COMO_CONTAMOS": {
+      "REGRA_ANTIGAS": "Plans implemented before this record count for the card's current responsible person."
     }
   },
   "MODELOS_WHATSAPP": {
@@ -150,10 +409,915 @@
         "TEXTO": "Hello, [nome_cliente]. A notice from [nome_empresa]: your plan renews on [data]. Want to review the renewal with us? Tap one of the options below."
       },
       "andamento": {
-        "TITULO": "Reimbursement update",
-        "PARA": "To tell the beneficiary the reimbursement request has moved forward.",
-        "TEXTO": "Hello, [nome_cliente]. An update from [nome_empresa]: your reimbursement request has moved forward. Want to know the details? Tap the button below."
+        "TITULO": "Proposal update",
+        "PARA": "To tell the customer their proposal has moved forward at the health plan company.",
+        "TEXTO": "Hello, [nome_cliente]. An update from [nome_empresa]: your proposal has moved forward at the health plan company. Want to know the details? Tap the button below."
+      },
+      "boas_vindas": {
+        "TEXTO": "Hello, [nome_cliente]! This is [nome_empresa]. Glad to have you with us. Whenever you need a quote, a copy of your bill or help with your plan, just send us a message here."
+      },
+      "cobranca": {
+        "PARA": "To remind the customer of a health plan bill coming due.",
+        "TEXTO": "Hello, [nome_cliente]. A reminder from [nome_empresa]: your health plan bill of [valor] is due on [data]. If you have already paid, please disregard. Check that the bill is in the plan provider's name. If you need a copy, tap the button below.",
+        "TITULO": "Bill due"
+      },
+      "promocao": {
+        "TEXTO": "Hi, [nome_cliente]! Until [data], [nome_empresa] has a campaign with [desconto] off health plans, under the plan provider's rules. Want a quote? Tap the button below.",
+        "PARA": "To announce a special, time-limited offer to sign up for the plan.",
+        "TITULO": "Plan offer"
+      },
+      "retomar": {
+        "PARA": "To talk again to someone who asked for a quote and went quiet.",
+        "TEXTO": "Hi, [nome_cliente]! This is [nome_empresa]. Any questions left about your health plan quote? Just reply here and we will pick it up.",
+        "TITULO": "Resume the quote"
+      },
+      "lembrete": {
+        "TEXTO": "Hello, [nome_cliente]! A reminder of your appointment with [nome_empresa]: on [data], at [horario]. Do you confirm? Tap one of the options below."
       }
+    },
+    "TEXTO": {
+      "TIPO": {
+        "aviso": {
+          "PARA": "Bill, documents, proposal at the health plan provider, pending item. Costs less per send."
+        },
+        "divulgacao": {
+          "PARA": "New plan, dental, offer. Costs more per send."
+        }
+      }
+    },
+    "TIPOS_DE_BOTAO": {
+      "site": {
+        "EXEMPLO": "E.g.: See the plans"
+      }
+    },
+    "FORMATOS": {
+      "carrossel": {
+        "BOTAO": "Get a quote",
+        "CARTAO_1": {
+          "TEXTO": "Health plan: we get quotes from several plan providers."
+        },
+        "CARTAO_2": {
+          "TEXTO": "Dental plan: a quote with no commitment."
+        },
+        "NOME_PADRAO": "Our plans",
+        "TEXTO": "Hi, [nome_cliente]! Here are some plans we can quote for you:"
+      },
+      "formulario": {
+        "NOME_PADRAO": "Quote details",
+        "TEXTO": "Hi, [nome_cliente]! It takes 1 minute: fill in the form and we will prepare your quote."
+      }
+    },
+    "VAZIO": {
+      "TITULO": "Create your first message for WhatsApp to approve and remind people about a bill, documents or the contract anniversary."
+    },
+    "EXTRAS": {
+      "TOPO_AJUDA": "Optional. The same file goes to everyone who receives the message. Use it for something that is the same for everyone (price table, document list). A bill, proposal or document for each customer does not go here.",
+      "RODAPE_EXEMPLO": "E.g.: Your Brokerage · open Monday to Friday"
+    },
+    "CAMPOS": {
+      "link": {
+        "EXEMPLO": "yoursite.com/b/123"
+      },
+      "nome_empresa": {
+        "EXEMPLO": "Your Brokerage",
+        "ROTULO": "Brokerage name"
+      }
+    },
+    "IA": {
+      "OBJETIVO_EXEMPLO": "E.g.: let the customer know the proposal was sent to the operator"
+    },
+    "CATALOGO_DE_CAMPOS": {
+      "minha_empresa": {
+        "endereco": "My brokerage address",
+        "nome": "My brokerage name",
+        "site": "My brokerage website",
+        "telefone": "My brokerage phone"
+      },
+      "negocio": {
+        "titulo": "Card title",
+        "valor": "Card value"
+      }
+    },
+    "JANELA": {
+      "GAVETA": {
+        "LINK_DIGITADO": "Links cannot be typed in the text. Use the field button (e.g. the proposal link, from the audience).",
+        "O_QUE_EXEMPLO": "E.g.: let them know their contract anniversary is coming and they can review their plan by replying",
+        "PARECE_LINK": "This looks like a link. For links, use the field button (e.g. the proposal link)."
+      }
+    },
+    "SITUACOES": {
+      "desativado": {
+        "DICA": "duplicate the template, rewrite the text saying right at the start who is talking, and send it only to people who know your brokerage."
+      },
+      "pausado": {
+        "DICA": "send only to people who know your brokerage and say who is talking right at the start."
+      }
+    },
+    "SAUDE": {
+      "SINAIS": {
+        "bom": {
+          "TEXTO": "Almost nobody blocked or reported this message. Keep sending it to people who know your brokerage."
+        }
+      }
+    }
+  },
+  "AUTONOMIA_GUIDE": {
+    "SUGGESTIONS": {
+      "REPORTS": "How many plans were implemented this month?"
+    },
+    "MEMORY": {
+      "EXAMPLE_COMPANY_1": "Remember that a sale counts in the month the plan is activated",
+      "EXAMPLE_COMPANY_2": "Remember that our main pipeline is for small business plans",
+      "ABOUT_COMPANY": "About the brokerage",
+      "EMPTY_COMPANY_TITLE": "I haven't noted anything about the brokerage yet",
+      "ONLY_ADMIN": "Only account admins can change what applies to the whole brokerage."
+    }
+  },
+  "CRM_FUNIL": {
+    "ATENDER": {
+      "LEMBRETES": {
+        "ANDAMENTO": {
+          "MSG": "Hi, {nome}! We are still handling your request with the plan provider. I will let you know as soon as there is news."
+        },
+        "COBRAR": {
+          "MSG_ANTES": "Hi, {nome}! Just a reminder that your plan's payment slip of {valor} is due on Friday.",
+          "MSG_DEPOIS": "Hi, {nome}! We have not seen the payment of the {valor} payment slip yet. Can I help with anything?",
+          "MSG_NO_DIA": "Hi, {nome}! Your plan's payment slip of {valor} is due today. If you already paid, please ignore this.",
+          "TITULO": "Payment slip reminders"
+        }
+      }
+    },
+    "ANUNCIOS": {
+      "GOOGLE": {
+        "NOME_EXEMPLO": "E.g.: Plan implemented"
+      }
+    },
+    "PREVIA": {
+      "ANUNCIO_FECHOU": "Ana's plan was implemented: {valor} a month.",
+      "LEMBRETE_TEXTO": "Ana hasn't replied since Monday. Next step: ask if anything about the quote is unclear.",
+      "META_EXEMPLO": "{valor} in implemented plans so far",
+      "MSG_NOSSA": "Here is the quote with the options. Any questions, just ask.",
+      "MSG_RETORNO": "Hi, Ana! Did you get a chance to look at the quote options? If you want, we can quote another plan for you.",
+      "SEM_META": "Without a goal, the dashboard shows only the total implemented.",
+      "VENDAS_TEXTO": "Example with 40% of the goal already implemented."
+    },
+    "RESUMO": {
+      "COBRAR_LEMBRETES": "We send bill reminders before, on and after the due date.",
+      "TIPO_VENDER": "{tipo}: get a new customer. Each implemented plan counts on the dashboard."
+    },
+    "SOBRE": {
+      "EXEMPLO": "E.g.: asks for a health plan quote",
+      "IDEIAS": {
+        "ATRASADO": "is late on a bill",
+        "COMO_FUNCIONA": "wants a plan for the family or the company",
+        "COMPRAR": "wants to know how much the plan costs",
+        "PAGAR": "wants to pay the bill",
+        "PRECO": "asks for a quote",
+        "SEGUNDA_VIA": "asks for a copy of the bill"
+      }
+    },
+    "VENDAS": {
+      "META": "Monthly goal of plans implemented",
+      "TEXTO": "Plans implemented here go to the dashboard, next to the monthly goal.",
+      "TITULO": "Know how many plans from this pipeline were implemented"
+    },
+    "MODELOS": {
+      "VENDAS": {
+        "E2": "Quote",
+        "E3": "Proposal",
+        "TEXTO": "From the quote until the plan is implemented.",
+        "NOME": "Plan sale",
+        "E1": "New",
+        "E4": "At the provider",
+        "E5": "Implemented"
+      }
+    },
+    "ETAPA": {
+      "EXEMPLO": "E.g.: the customer got the quote options and is thinking about it."
+    }
+  },
+  "CRM_LEMBRETE": {
+    "LIGAR": {
+      "NADA_TEXTO": "Stays only on the calendar. E.g.: check this week's contract anniversaries."
+    }
+  },
+  "CRM_CALENDARIO": {
+    "EXEMPLO": {
+      "FECHAR": "The day the plan should be implemented",
+      "LEMBRETE": "E.g.: call the client about the contract anniversary on Friday"
+    }
+  },
+  "CRM_SLA": {
+    "POLICIES": {
+      "DIALOG": {
+        "NAME": {
+          "PLACEHOLDER": "E.g.: Fast reply for pending items"
+        }
+      }
+    }
+  },
+  "AGENTS": {
+    "JORNADA": {
+      "AJUDANTE": {
+        "QUANDO": {
+          "EXEMPLO": "E.g.: when the question is about the plan's waiting period or network"
+        }
+      },
+      "CRIAR": {
+        "BASE": {
+          "SITE_EXEMPLO": "www.yourbrokerage.com",
+          "VAZIO": "Nothing here yet. Send the plan price list, the list of documents or your website address."
+        },
+        "CONFIRA": {
+          "PERGUNTAS": {
+            "COMO_RESPONDO": "The client thought the quote was too expensive. How do I reply?",
+            "DESCONTO": "Roughly how much would it be?",
+            "PEDIDO": "I want to get a health plan",
+            "PROXIMO_PASSO": "I sent the quote options and the client went quiet. What is the next step?",
+            "QUANTO_CUSTA": "How much is a health plan for my family?",
+            "RASCUNHO": "Write a message asking for the documents of the main member and the dependents",
+            "TROCAR": "I want to add a dependent to my plan",
+            "AJUDA": "Hi, I need a copy of my bill",
+            "SABADO": "How do I get reimbursed for an appointment?"
+          }
+        },
+        "CONTE": {
+          "ANEXO_FRASE": "Do you have the plan price list, a list of common questions or your website? {acao} It is optional.",
+          "EXEMPLO_AJUDANTE": "E.g.: explain waiting periods and networks based on the plan provider's material, for the other agents",
+          "EXEMPLO_DO_MEU_JEITO": "E.g.: answer questions about health plans and hand over to the team",
+          "IDEIAS": {
+            "DOCES": "Health and dental plan broker",
+            "ESTETICA": "Association health plan broker",
+            "OFICINA": "Business health plan broker",
+            "ROUPAS": "Individual and family health plan broker"
+          },
+          "EXEMPLO_COPILOTO": "E.g.: summarize the conversation and say what is still missing for the quote"
+        }
+      },
+      "MODELOS": {
+        "SDR": {
+          "AGENTE": "Great! Tell me how many people will be on the plan and each one's age, and I'll call someone from the team.",
+          "CLIENTE": "I want to get a health plan",
+          "TEXTO": "Finds out which plan the person is looking for and hands over to the team to quote.",
+          "TITULO": "Serve people who want a plan"
+        },
+        "SUPPORT": {
+          "AGENTE": "I'll call someone from the team to help you with the bill copy.",
+          "CLIENTE": "How do I get a copy of my bill?",
+          "TEXTO": "Answers questions about the plan, the bill, bill copies and anything else people ask."
+        },
+        "RECEPTION": {
+          "AGENTE": "Hi! Great to hear from you. Is this about a new plan or the plan you already have?",
+          "CLIENTE": "Hi, I want a health plan quote",
+          "TEXTO": "Welcomes people, finds out if it's a quote, a bill or a reimbursement, and hands over to the team."
+        }
+      },
+      "PAGINA": {
+        "FERRAMENTAS": {
+          "LISTA": {
+            "CONTEXTO": "Tools let {nome} look things up in other systems during the conversation, like the price list, calendar or customer records. The agent decides on its own when to use each one, based on what is written in \"When to use\".",
+            "VAZIO": "This agent does not look anything up in other systems yet. Add a tool when it needs data from outside, like the status of a client's proposal."
+          },
+          "PASSOS": {
+            "TRES": {
+              "DESCRICAO_EXEMPLO": "The main member's CPF, the way the client sent it."
+            },
+            "UM": {
+              "NOME_AJUDA_VAZIO": "So you can find it on the list. E.g.: Proposal lookup",
+              "QUANDO_EXEMPLO": "Use when the client asks where the proposal stands or whether there is a pending item at the health plan provider. Brings the provider, the proposal status and the pending items."
+            }
+          },
+          "RASCUNHO_EXEMPLO": {
+            "ENDERECO": "https://api.suacorretora.com.br/propostas/busca",
+            "NOME": "Proposal lookup"
+          }
+        },
+        "MUDAR_VISTA": {
+          "CHIPS_GERAL": {
+            "B": "Change rules or requested documents"
+          }
+        },
+        "SABE": {
+          "ENVIAR_ARQUIVO_TEXTO": "Plan price list, document list, common questions. Up to 25 MB.",
+          "SITE_ERRO": "Check the website address. E.g.: www.yourbrokerage.com"
+        },
+        "TESTE": {
+          "CHIPS": {
+            "RECEPTION": {
+              "B": "I want to add a dependent to my plan",
+              "A": "Hi, I want a health plan quote"
+            },
+            "SDR": {
+              "A": "I want to get a health plan",
+              "B": "Roughly how much would it be?"
+            },
+            "SUPPORT": {
+              "A": "How do I get a copy of my bill?",
+              "B": "How do I get reimbursed for an appointment?"
+            }
+          }
+        },
+        "GAVETA_AGENDA": {
+          "EXEMPLO": {
+            "CLIENTE": "Hi! I'd like to talk about a health plan for my company."
+          }
+        }
+      }
+    },
+    "OUTRO_SISTEMA": {
+      "DESCRICAO_EXEMPLO": "E.g.: answers questions about the plan and hands over to the team"
+    },
+    "TUNE": {
+      "GREETING_PLACEHOLDER": "Hi! How are you? How can I help with your health plan?"
+    }
+  },
+  "RELATIONSHIPS": {
+    "MEDIA": {
+      "CONTACT_EMPTY_HINT": "Files from this client's authorized conversations show up here.",
+      "EMPTY_HINT": "Files from this company's authorized conversations, such as bills and member cards, show up here.",
+      "SUBTITLE": "Bills, member cards, documents and photos shared in conversations."
+    },
+    "CARD_DETAILS": {
+      "ATTRIBUTES": {
+        "BASIC_DESCRIPTION": "Create the fields you use, like Current plan provider and Contract anniversary.",
+        "DESCRIPTION": "Create fields like Current plan provider, Number of lives and Contract anniversary, and choose where they show up."
+      },
+      "COMPANIES": {
+        "BASIC_DESCRIPTION": "Organize the companies you serve, like small businesses and sole proprietors, and link each one to its people.",
+        "DESCRIPTION": "Organize the companies you serve, like small businesses and sole proprietors, and link each one to its people and files."
+      },
+      "CONTACTS": {
+        "BASIC_DESCRIPTION": "Add your clients and see each one's conversation history.",
+        "DESCRIPTION": "Add your clients and see, for each one, the conversations, the files (like the proposal and the payment slip) and the fields.",
+        "SUBTITLE": "Look after your client book"
+      }
+    },
+    "DESCRIPTION_HINT": "Say what the field is for and how to fill it in. E.g.: the contract anniversary date.",
+    "HOME_SUPPORT_DESCRIPTION": "Keep details like plan provider and contract anniversary up to date, so you can get ready before the price adjustment.",
+    "HOME_SUPPORT_TITLE": "Well-served customers renew and refer others",
+    "SUBTITLE": "Your clients, the companies you serve and the details of each one, all in one place."
+  },
+  "COMPANIES": {
+    "DETAIL": {
+      "ATTRIBUTES": {
+        "EMPTY_STATE": "This account has no company fields yet. In settings, create fields such as Tax ID (CNPJ), Number of lives and Contract anniversary."
+      },
+      "PROFILE": {
+        "DESCRIPTION_PLACEHOLDER": "E.g.: company with 12 employees; wants a quote for a small business plan with copayment"
+      }
+    }
+  },
+  "ATTRIBUTES_MGMT": {
+    "DESCRIPTION": "Extra fields keep what the brokerage needs to know about each client or conversation, such as the current health plan provider, the number of lives, the plan type and the contract anniversary. They can be text, list, number or date.",
+    "ADD": {
+      "FORM": {
+        "DESC": {
+          "PLACEHOLDER": "E.g. Month of the contract anniversary"
+        },
+        "KEY": {
+          "PLACEHOLDER": "E.g. contract_anniversary"
+        },
+        "NAME": {
+          "PLACEHOLDER": "E.g. Contract anniversary"
+        },
+        "TYPE": {
+          "LIST": {
+            "PLACEHOLDER": "E.g. Individual, Association, SME, MEI. Type each one and press Enter"
+          }
+        }
+      }
+    },
+    "LIST": {
+      "EMPTY_RESULT": {
+        "404": "No extra fields yet. To start: Provider, Number of lives, Plan type and Contract anniversary."
+      }
+    }
+  },
+  "BOOKING": {
+    "TEMPLATE": {
+      "CONSULT": {
+        "NAME": "Office appointment"
+      },
+      "SALES": {
+        "NAME": "Quote call"
+      },
+      "VISIT": {
+        "NAME": "Business meeting"
+      }
+    },
+    "LOOK": {
+      "HEADLINE_PLACEHOLDER": "Pick the best time to talk about your plan"
+    },
+    "PAGE": {
+      "SUBTITLE": "Create the page where people book a time to talk about their plan with you."
+    },
+    "PREVIEW": {
+      "PUBLISHED_TEXT": "Send the link with the quote or on the contract anniversary, or show the QR code."
+    }
+  },
+  "CANNED_MGMT": {
+    "DESCRIPTION": "Canned responses are the messages you send the most, saved to use in one tap. In the conversation, type '/' and the shortcut. E.g.: if you create the /quote shortcut, it sends \"Here is your quote with the plan options. Which one do you prefer?\"",
+    "LIST": {
+      "404": "No canned responses yet. Start with the messages you send the most, like \"How many people will be on the plan?\""
+    },
+    "ADD": {
+      "DESC": "Save a message you send all the time. E.g.: \"Can you send me the ID and CPF of the holder and the dependents?\"",
+      "FORM": {
+        "CONTENT": {
+          "PLACEHOLDER": "E.g.: Here is your quote with the plan options. Which one do you prefer?"
+        },
+        "SHORT_CODE": {
+          "PLACEHOLDER": "E.g.: quote"
+        }
+      }
+    },
+    "EDIT": {
+      "FORM": {
+        "CONTENT": {
+          "PLACEHOLDER": "E.g.: Here is your quote with the plan options. Which one do you prefer?"
+        },
+        "SHORT_CODE": {
+          "PLACEHOLDER": "E.g.: quote"
+        }
+      }
+    }
+  },
+  "CONTACT_IMPORT_JOURNEY": {
+    "ATTRIBUTES": {
+      "HINT": "They become client fields, like health plan provider and number of lives"
+    },
+    "SUBTITLE": "Upload your client book spreadsheet. We find the columns and the companies. Each extra column, like plan provider or contract anniversary, becomes a client field.",
+    "UPLOAD": {
+      "HINT": "CSV or Excel · up to {size} MB · name and mobile or e-mail; company, plan provider, plan and other columns are welcome"
+    }
+  },
+  "LABEL_MGMT": {
+    "DESCRIPTION": "Labels sort conversations and clients by topic, such as small business, association plan, pending documents or dental. You add a label from the panel next to the conversation or client.",
+    "LIST": {
+      "404": "No labels yet. To start, create small business, affinity and dental."
+    },
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. The health statement is still missing"
+      },
+      "NAME": {
+        "PLACEHOLDER": "E.g. missing-documents",
+        "VALID_ERROR": "No spaces: use a hyphen. E.g. duplicate-bill"
+      }
+    },
+    "ADD": {
+      "DESC": "Labels sort conversations by topic, such as quotes or pending issues."
+    }
+  },
+  "PROFILE_SETTINGS": {
+    "FORM": {
+      "MESSAGE_SIGNATURE": {
+        "PLACEHOLDER": "E.g. Ana Souza · Health plan broker"
+      }
+    }
+  },
+  "TEAMS_SETTINGS": {
+    "DESCRIPTION": "Teams group people by topic, such as Sales, Pending items and Portfolio. One person can be in several teams, and a conversation can go straight to the right team.",
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. Handles pending items from the health plan company and missing documents."
+      },
+      "NAME": {
+        "PLACEHOLDER": "E.g. Sales, Pending items, Portfolio"
+      }
+    }
+  },
+  "AUTOMACOES": {
+    "HEROI": {
+      "EXEMPLO": "E.g.: when a customer asks for a quote, notify the broker",
+      "IDEIAS": {
+        "ORCAMENTO": "Tag people asking for a quote"
+      }
+    },
+    "MODELOS": {
+      "ORCAMENTO": {
+        "FAZ": "Adds the quote label",
+        "PEDIDO": "I want an automation: when a customer message asks for a plan quote, add the quote label to the conversation.",
+        "QUANDO": "The customer asks for a quote",
+        "TEXTO": "Quote requests get a label and are never forgotten in the queue.",
+        "TITULO": "Tag quote requests"
+      }
+    }
+  },
+  "NOVA_CONVERSA": {
+    "MENSAGEM": {
+      "ASSUNTO_PLACEHOLDER": "E.g.: Health plan quote",
+      "PLACEHOLDER": "E.g.: Hi, how are you? I've put together the options for your quote."
+    }
+  },
+  "TEAM_REPORTS": {
+    "DESCRIPTION": "See how each team is doing: conversations, time to reply and time to solve. E.g.: sales, implementation, client book. Click a team to see more."
+  },
+  "INBOX_MGMT": {
+    "CSAT": {
+      "MESSAGE": {
+        "PLACEHOLDER": "E.g. How was your broker's service today?"
+      }
+    },
+    "PRE_CHAT_FORM": {
+      "PRE_CHAT_MESSAGE": {
+        "PLACEHOLDER": "E.g. To speed up your quote, tell us your name and how many people will join the plan."
+      }
+    },
+    "ADD": {
+      "CHANNEL_NAME": {
+        "PLACEHOLDER": "Enter the inbox name (e.g. Plan quotes)"
+      },
+      "EMAIL_CHANNEL": {
+        "EMAIL": {
+          "SUBTITLE": "Email address where people send quote requests, proposals and documents"
+        }
+      },
+      "WEBSITE_CHANNEL": {
+        "CHANNEL_GREETING_MESSAGE": {
+          "PLACEHOLDER": "We reply during business hours."
+        },
+        "CHANNEL_WELCOME_TAGLINE": {
+          "PLACEHOLDER": "Ask for a quote or a copy of your bill, or ask about your plan here."
+        }
+      },
+      "WEBSITE_NAME": {
+        "PLACEHOLDER": "Enter your website name (e.g. your brokerage name)"
+      },
+      "WHATSAPP": {
+        "EMBEDDED_SIGNUP": {
+          "ACCESS_REQUEST": {
+            "USE_CASE_PLACEHOLDER": "For example, we are a health plan brokerage and use WhatsApp to send quotes, collect documents and follow up until the plan is implemented."
+          }
+        }
+      },
+      "WHATSAPP_API": {
+        "CHANNEL_NAME": {
+          "PLACEHOLDER": "E.g. Sales or Portfolio"
+        }
+      }
+    },
+    "EDIT": {
+      "SENDER_NAME_SECTION": {
+        "BUSINESS_NAME": {
+          "PLACEHOLDER": "Brokerage name"
+        }
+      }
+    },
+    "WHATSAPP_HYBRID": {
+      "ROUTING": {
+        "PREVIEW": {
+          "AGENT_TEMPLATE": "Ana, from the team, wants to send Maria the bill copy 3 days later. She can only send an approved template.",
+          "AGENT_WEB": "Ana, from the team, sends Maria the bill copy 3 days later. The reply goes out through WhatsApp API.",
+          "FOLLOW_UP_TEMPLATE": "Carlos has not replied to the quote for 2 days. The CRM reminder goes out as an approved template through the official number.",
+          "FOLLOW_UP_WEB": "Carlos has not replied to the quote for 2 days. The CRM reminder goes out through WhatsApp API at 10:00."
+        },
+        "WHO": {
+          "ORIGINS": {
+            "HUMAN": {
+              "EXAMPLE": "When someone on the team picks up a stalled quote."
+            }
+          }
+        }
+      }
+    }
+  },
+  "CUSTOM_ROLE": {
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g. People who handle pending items and bill copies, only in their own conversations"
+      },
+      "NAME": {
+        "PLACEHOLDER": "E.g. Pending items agent"
+      }
+    },
+    "PROFILES": {
+      "AGENT": {
+        "WHO": "For people who serve customers day to day: questions, bills and pending issues."
+      },
+      "SDR": {
+        "NAME": "Broker",
+        "SHORT": "Handles quotes and new plans",
+        "WHO": "For people who handle quote requests, send the options and follow up until the plan is implemented."
+      },
+      "SALES_MANAGER": {
+        "WHO": "For whoever owns the pipelines and the brokerage goal."
+      }
+    },
+    "MATRIX": {
+      "MODULES": {
+        "CRM": {
+          "HINT": "Sales and portfolio pipelines, and the calendar",
+          "LEVEL_MANAGE": "Creates, edits and moves cards: quotes and portfolio plans."
+        },
+        "FINANCE": {
+          "LEVEL_VIEW": "Sees the Meta charge authorization and, for whoever also has CRM reports, what AI costs in money. Subscription and invoices stay with the administrator."
+        }
+      }
+    }
+  },
+  "BRAND_KITS": {
+    "PREVIEW": {
+      "ITEM_1": "Quotes from several health plan providers",
+      "ITEM_2": "Help with your documents",
+      "ITEM_3": "A heads-up before your contract anniversary",
+      "SAMPLE_BUTTON": "I want a quote",
+      "SAMPLE_NOTE": "The quote comes with no commitment.",
+      "SAMPLE_SUBJECT": "Your health plan with people who care",
+      "SAMPLE_TEXT": "We get quotes from several providers and send you the options on WhatsApp.",
+      "SAMPLE_TITLE": "Your health plan with people who care"
+    },
+    "FOOTER": {
+      "COMPANY": "Brokerage name",
+      "LINK_PLACEHOLDER": "instagram.com/yourbrokerage"
+    },
+    "READER": {
+      "ADDRESS_PLACEHOLDER": "yourbrokerage.com"
+    }
+  },
+  "COMPOSE_NEW_CONVERSATION": {
+    "FORM": {
+      "EMAIL_OPTIONS": {
+        "SUBJECT_PLACEHOLDER": "E.g.: Health plan quote"
+      }
+    }
+  },
+  "LABEL_REPORTS": {
+    "DESCRIPTION": "See, by label, how many conversations came in and how long the team took to reply and solve them. E.g.: Quote, Small business, Pending issue, Bill copy. Click a label to see more.",
+    "FILTERS": {
+      "INPUT_PLACEHOLDER": {
+        "LABELS": "Search labels. E.g.: pending"
+      }
+    }
+  },
+  "WHATSAPP_TEMPLATES": {
+    "PARSER": {
+      "DOCUMENT_NAME_PLACEHOLDER": "Enter document filename (e.g., Proposal_2026.pdf)"
+    }
+  },
+  "SETTINGS_INICIO": {
+    "CARTOES": {
+      "CAMPOS": {
+        "TEXTO": "Extra details about each customer, such as health plan company, number of lives and contract anniversary."
+      },
+      "CANAIS": {
+        "TEXTO": "WhatsApp, email, Instagram and website: where customers ask for quotes and talk to you."
+      },
+      "ETIQUETAS": {
+        "TEXTO": "Names and colors to sort conversations and customers, such as SME, association plan and pending items."
+      },
+      "RESPOSTAS": {
+        "TEXTO": "Texts you always use, like asking for documents or sending a bill copy, one click away in the conversation."
+      },
+      "TIMES": {
+        "TEXTO": "Groups of people to share the work, such as Sales, Pending items and Portfolio."
+      },
+      "DADOS_EMPRESA": {
+        "TEXTO": "Brokerage name, language and time zone.",
+        "TITULO": "Brokerage details"
+      },
+      "USUARIOS": {
+        "TEXTO": "Who at the brokerage signs in and what each person can do."
+      },
+      "PLANO": {
+        "TITULO": "Subscription and invoices",
+        "TEXTO": "Your subscription, the next payment and the invoices."
+      }
+    },
+    "GRUPOS": {
+      "SUA_EMPRESA": "Your brokerage"
+    }
+  },
+  "GENERAL_SETTINGS": {
+    "FORM": {
+      "AUTO_RESOLVE": {
+        "MESSAGE": {
+          "PLACEHOLDER": "We closed this chat because we didn't hear back. Need a quote, a bill copy or help with your plan? Just send us a message."
+        }
+      },
+      "NAME": {
+        "PLACEHOLDER": "Your brokerage name"
+      },
+      "SUPPORT_EMAIL": {
+        "PLACEHOLDER": "Your brokerage's service email"
+      }
+    }
+  },
+  "CAMPAIGN": {
+    "SMS": {
+      "EMPTY_STATE": {
+        "SUBTITLE": "Send one SMS to many customers at once: a bill or plan renewal notice. Click 'Create campaign' to get started."
+      }
+    },
+    "WHATSAPP": {
+      "EMPTY_STATE": {
+        "SUBTITLE": "Send an approved template to many people at once: contract anniversary, bill or new plan. Click \"Create campaign\" to get started."
+      }
+    },
+    "EMAIL_CAMPAIGN": {
+      "AI": {
+        "COMPOSER": {
+          "BRIEF_PLACEHOLDER": "E.g.: email to people who asked for a quote and did not reply, friendly tone, invitation to talk to the broker",
+          "ROLE_PRODUCT": "Plan",
+          "ASSET_DESCRIPTION_PLACEHOLDER": "What is this asset? E.g.: plan price table by age group"
+        }
+      },
+      "BUILDER": {
+        "SAVE_TEMPLATE_NAME_PLACEHOLDER": "e.g.: Contract anniversary"
+      },
+      "DIALOG": {
+        "FROM_EMAIL_PLACEHOLDER": "e.g.: plans{'@'}yourbrokerage.com",
+        "FROM_NAME_PLACEHOLDER": "e.g.: Your Health Plan Brokerage",
+        "NAME_PLACEHOLDER": "e.g.: Small business plans, November",
+        "REPLY_TO_PLACEHOLDER": "e.g. service{'@'}yourbrokerage.com"
+      }
+    },
+    "EMAIL_SENDER": {
+      "DIALOG": {
+        "FROM_EMAIL_PLACEHOLDER": "e.g.: plans{'@'}yourbrokerage.com",
+        "DOMAIN_PLACEHOLDER": "e.g. mail.yourbrokerage.com"
+      }
+    },
+    "WHATSAPP_API": {
+      "CREATE": {
+        "FORM": {
+          "TITLE": {
+            "PLACEHOLDER": "E.g.: Small business plan, November"
+          }
+        }
+      }
+    }
+  },
+  "CONVERSATION": {
+    "FOOTER": {
+      "PRIVATE_MSG_INPUT": "Only your team sees this. E.g.: customer prefers the bill due on the 10th. Shift + Enter for new line."
+    },
+    "NO_MESSAGE_1": "No conversations yet. When a customer asks for a quote, the conversation shows up here."
+  },
+  "CAMPAIGN_JOURNEY": {
+    "NEW_CAMPAIGN": {
+      "API": {
+        "MESSAGE_PLACEHOLDER": "e.g. Hi, how are you? Your plan's contract anniversary is this month. Want us to check the options?"
+      },
+      "EMAIL": {
+        "FROM_NAME_PLACEHOLDER": "e.g. Your Health Plan Brokerage"
+      },
+      "MESSAGE": {
+        "NAME_PLACEHOLDER": "e.g. Contract anniversary in November"
+      },
+      "SMS": {
+        "MESSAGE_PLACEHOLDER": "Short text, e.g. your plan's bill is due tomorrow."
+      },
+      "VARIABLES": {
+        "HINT": "Columns kept in the audience can be used here, like the provider or the number of lives."
+      }
+    },
+    "NEW_AUDIENCE": {
+      "COLUMNS": {
+        "OTHER_HINT": "Kept to use in the message, like the contract anniversary"
+      },
+      "FILE_HINT": "CSV or Excel. Name and mobile or email. Carrier, number of lives and contract anniversary help too: you can use them in the message.",
+      "NAME_PLACEHOLDER": "e.g. Contract anniversary in November"
+    },
+    "AUDIENCES": {
+      "EMPTY_SUBTITLE": "An audience is a list of people, like your customer portfolio. Upload a spreadsheet with your customers to create the first one."
+    },
+    "LIVE_CHAT": {
+      "URL_PLACEHOLDER": "https://www.yourbrokerage.com/health-plans"
+    }
+  },
+  "MACROS": {
+    "ADD": {
+      "FORM": {
+        "NAME": {
+          "PLACEHOLDER": "E.g.: Ask for the documents"
+        }
+      }
+    },
+    "DESCRIPTION": "A macro runs several actions at once, in one click. E.g.: add the Missing documents label, send the document list and mark the conversation as pending."
+  },
+  "ONBOARDING_TRAIL": {
+    "DONE_SUBTITLE": "The essentials are done: you receive, reply and organize quotes and renewals. What is left is fine tuning, at your own pace.",
+    "ETAPAS": {
+      "organizar": "Organize sales and portfolio"
+    },
+    "TITLE": "Let's get your brokerage ready to serve customers",
+    "DONE_TITLE": "Your brokerage is up and running"
+  },
+  "CONVERSA_CANAL": {
+    "JANELA": {
+      "BOTAO_DE_LINK": {
+        "AJUDA": "The customer taps the button and opens the website. E.g.: the link to sign the proposal."
+      },
+      "CONTATO": {
+        "AJUDA": "The customer gets the card and can chat with this number. E.g.: the carrier's service line."
+      },
+      "LOCALIZACAO": {
+        "BUSCAR_EXEMPLO": "E.g.: 1000 Paulista Ave or Example Office",
+        "AJUDA": "The client gets the place on a map. E.g.: the brokerage address."
+      },
+      "OPCOES": {
+        "AJUDA": "The customer replies with one tap. E.g.: Health plan, Dental, Life insurance. Up to 3 options become buttons; more than that, a list."
+      }
+    }
+  },
+  "AGENT_BOTS": {
+    "FORM": {
+      "DESCRIPTION": {
+        "PLACEHOLDER": "E.g.: answers questions about plans and hands over to the broker"
+      }
+    }
+  },
+  "CONVERSATION_SIDEBAR": {
+    "ACCORDION": {
+      "CONTACT_ATTRIBUTES": "Customer details"
+    }
+  },
+  "RESULT_JOURNEY": {
+    "OVERVIEW": {
+      "TOTALS": {
+        "DEALS_NOTE": "cards with a campaign mark · {won} implemented"
+      }
+    }
+  },
+  "AGENT_MGMT": {
+    "ADD": {
+      "DESC": "Invite who will serve customers: sales, pending issues or existing clients."
+    },
+    "DESCRIPTION": "Here are the people at the brokerage who sign in: the brokers, those who serve customers and those who look after the portfolio."
+  },
+  "CAMPAIGN_IMPORT": {
+    "FIELDS": {
+      "CAMPAIGN_NAME_PLACEHOLDER": "Example: contract_anniversary_november"
+    }
+  },
+  "CONVERSATION_WORKFLOW": {
+    "INDEX": {
+      "HEADER": {
+        "DESCRIPTION": "Choose what must be filled in before closing a conversation, such as the operator or the number of lives."
+      }
+    },
+    "REQUIRED_ATTRIBUTES": {
+      "DESCRIPTION": "Before closing a conversation, the team fills in these fields, such as the health plan provider or the number of lives."
+    }
+  },
+  "SEARCH": {
+    "EMPTY_STATE_DEFAULT": "Search by the customer's name, phone or email, the conversation number, or a word from messages of the last 3 months, like \"bill\" or \"proposal\"."
+  },
+  "CONTACT_FORM": {
+    "FORM": {
+      "BIO": {
+        "PLACEHOLDER": "E.g.: has an individual plan and wants a small business plan quote for the company"
+      }
+    }
+  },
+  "HELP_CENTER": {
+    "CENTRAL_DE_AJUDA": {
+      "BUSCA": {
+        "DICA": "Examples: connect WhatsApp, mark a plan as activated, see activated plans."
+      },
+      "POR_ASSUNTO": {
+        "FAMILIAS": {
+          "VENDER": "Sell plans and measure"
+        },
+        "NOMES": {
+          "CRM": "CRM: sales and portfolio"
+        }
+      }
+    }
+  },
+  "ONBOARDING_NEXT": {
+    "COMPANY_DETAILS": "Brokerage details",
+    "PLACEHOLDERS": {
+      "ENTER_COMPANY_NAME": "Your brokerage name",
+      "ENTER_WEBSITE": "www.yourbrokerage.com"
+    }
+  },
+  "FINANCIAL": {
+    "SUBSCRIPTION": {
+      "DESCRIPTION": "See your subscription and how your charge is made up.",
+      "SUMMARY": {
+        "TITLE": "Subscription summary",
+        "DESCRIPTION": "Base subscription and the items that make up the charge.",
+        "PLAN": "Subscription"
+      }
+    }
+  },
+  "PAINEL_DO_CONTATO": {
+    "RELACAO": {
+      "OPCOES": {
+        "INTERESSADO": {
+          "DICA": "Wants or may want a health plan from you."
+        },
+        "PARCEIRO": {
+          "DICA": "Health insurer, sales agency or another broker."
+        }
+      }
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Mark as implemented or not closed"
     }
   }
 }

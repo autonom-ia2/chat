@@ -15,6 +15,8 @@ const routing = vi.hoisted(() => ({
   route: { params: { accountId: '18' }, query: {} },
   replace: vi.fn(),
 }));
+// Flags ligadas na conta; nenhuma por padrão.
+const accountFlags = vi.hoisted(() => new Set());
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
@@ -26,9 +28,24 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
     acceptAdvice: vi.fn(),
     dismissAdvice: vi.fn(),
     quoteMessage: vi.fn(),
+    pausedAds: vi.fn(),
+    createOptions: vi.fn(),
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// O anúncio por dentro lê a flag meta_ads_gestao (#2161) e o painel a meta_ads_criar (#2198): desligadas, salvo
+// quando o teste liga.
+vi.mock('dashboard/composables/store', async () => {
+  const { computed } = await import('vue');
+  return {
+    useMapGetter: () =>
+      computed(() => (_accountId, flag) => accountFlags.has(flag)),
+  };
+});
+vi.mock('dashboard/composables/useCanManage', async () => {
+  const { computed } = await import('vue');
+  return { usePermissionGranted: () => computed(() => true) };
+});
 vi.mock('vue-router', () => ({
   useRoute: () => routing.route,
   useRouter: () => ({ replace: routing.replace }),
@@ -184,6 +201,62 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     vi.useRealTimers();
   });
 
+  // A marcação gravada no arquivo saiu do MetaAdsPanel.vue da main de antes do #2198. Sem comentários (os do template
+  // e os marcadores <!--v-if--> do Vue), que não aparecem na tela.
+  it('with meta_ads_criar off, renders exactly the markup of the panel before #2198', async () => {
+    // Relógio parado: "há 26 dias" e "agora" não mudam com o dia em que o teste roda.
+    const now = new Date('2026-10-27T12:00:00Z');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(now);
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: { panel: { ...PANEL, synced_at: now.toISOString() } },
+    });
+    const wrapper = await mountPanel();
+    const clone = wrapper.element.cloneNode(true);
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
+    const comments = [];
+    while (walker.nextNode()) comments.push(walker.currentNode);
+    comments.forEach(node => node.remove());
+
+    await expect(clone.outerHTML).toMatchFileSnapshot(
+      './__snapshots__/MetaAdsPanel.semCriar.txt'
+    );
+  });
+
+  it('with meta_ads_criar off, the panel has no "Create ad" and no paused list (#2198)', async () => {
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-create]').exists()).toBe(false);
+    expect(CrmMetaAdsConnectionAPI.pausedAds).not.toHaveBeenCalled();
+  });
+
+  it('with meta_ads_criar on, offers "Create ad" and reads the paused ads (#2198)', async () => {
+    accountFlags.add('meta_ads_criar');
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({ data: { ads: [] } });
+    try {
+      const wrapper = await mountPanel();
+
+      expect(wrapper.find('[data-panel-create]').exists()).toBe(true);
+      expect(CrmMetaAdsConnectionAPI.pausedAds).toHaveBeenCalledTimes(1);
+
+      await wrapper.find('[data-panel-create]').trigger('click');
+      expect(routing.route.query.criar).toBe('novo');
+    } finally {
+      accountFlags.clear();
+    }
+  });
+
+  it('read-only (meta_ads_view only) never offers "Create ad", even with the flag (#2198)', async () => {
+    accountFlags.add('meta_ads_criar');
+    try {
+      const wrapper = await mountPanel({ props: { readOnly: true } });
+
+      expect(wrapper.find('[data-panel-create]').exists()).toBe(false);
+    } finally {
+      accountFlags.clear();
+    }
+  });
+
   it('offers the report of the period next to the period choice (#1960)', async () => {
     const wrapper = await mountPanel();
 
@@ -223,6 +296,66 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(card.find('a').attributes('href')).toContain(
       '/app/accounts/18/conversations/99'
     );
+  });
+
+  // #2075 — sem a chave de valores de venda o servidor manda o valor vazio, com value_hidden.
+  it('without sales values: the sales step and the stalled quote show no money, the counts stay', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          totals: {
+            ...PANEL.totals,
+            sales: 2,
+            sales_value: null,
+            return_per_real: null,
+            value_hidden: true,
+          },
+          advice: {
+            ...PANEL.advice,
+            actions: [
+              {
+                ...STALLED_ACTION,
+                cards: STALLED_ACTION.cards.map(card => ({
+                  ...card,
+                  value: null,
+                  value_hidden: true,
+                })),
+              },
+            ],
+          },
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    const sales = wrapper.find('[data-panel-path="SALES"]').text();
+    expect(sales).toContain('2');
+    expect(sales).not.toContain('PANEL.SALES_VALUE');
+    expect(wrapper.text()).not.toContain('PANEL.RETURN');
+    await wrapper.find('[data-panel-action-button]').trigger('click');
+    const card = wrapper.find('[data-panel-stalled-card]');
+    expect(card.text()).toContain('Virgínia');
+    expect(card.text()).not.toContain('842');
+    expect(card.text()).not.toContain('R$');
+  });
+
+  it('with sales values: the sales step and the stalled quote show the money', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          totals: { ...PANEL.totals, sales: 2, sales_value: 1500 },
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-path="SALES"]').text()).toContain(
+      'PANEL.SALES_VALUE'
+    );
+    await wrapper.find('[data-panel-action-button]').trigger('click');
+    expect(wrapper.find('[data-panel-stalled-card]').text()).toContain('842');
   });
 
   it('an ad to review opens that ad and records the opening', async () => {
@@ -544,6 +677,77 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     const ad = wrapper.find('[data-panel-ad="1"]');
     expect(ad.text()).toContain('Capa (1080x1350)');
     expect(ad.find('[data-verdict]').text()).toContain('VERDICT.EARLY');
+  });
+
+  it('without a connection, the spend step invites to connect and says so to the page (#2054)', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          source: 'whatsapp',
+          totals: { ...PANEL.totals, spend: null },
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    const spend = wrapper.find('[data-panel-path="SPEND"]');
+    expect(spend.text()).toContain('—');
+    await spend.find('[data-panel-connect]').trigger('click');
+
+    expect(wrapper.emitted('connect')).toHaveLength(1);
+  });
+
+  it('read-only without a connection: no spend step to connect (#2054)', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          source: 'whatsapp',
+          totals: { ...PANEL.totals, spend: null },
+        },
+      },
+    });
+    const wrapper = await mountPanel({ props: { readOnly: true } });
+
+    expect(wrapper.find('[data-panel-connect]').exists()).toBe(false);
+  });
+
+  it('ads without a conversation go to their own block, with spend, clicks and reach (#2054)', async () => {
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          totals: { ...PANEL.totals, other_spend: 101.76 },
+          other_ads: [
+            {
+              ad_id: '9',
+              name: 'EUA',
+              spend: 101.76,
+              link_clicks: 540,
+              impressions: 35454,
+              thumbnail_url: null,
+              image_url: null,
+            },
+          ],
+        },
+      },
+    });
+    const wrapper = await mountPanel();
+
+    const other = wrapper.find('[data-panel-other-ads]');
+    expect(other.text()).toContain('PANEL.OTHER_ADS.TITLE');
+    expect(other.find('[data-panel-other-ad="9"]').text()).toContain('EUA');
+    expect(other.find('[data-panel-other-ad="9"]').text()).toContain('540');
+    expect(wrapper.text()).toContain('PANEL.ADS_WHATSAPP_TITLE');
+    expect(wrapper.find('[data-panel-ad="9"]').exists()).toBe(false);
+  });
+
+  it('without ads outside WhatsApp there is no other block and the usual title (#2054)', async () => {
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-other-ads]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('PANEL.ADS_TITLE');
   });
 
   it('shows the whole ad image in the same 4:5 frame for every card, or a placeholder without one', async () => {

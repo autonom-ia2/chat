@@ -75,6 +75,8 @@ const statusText = computed(() => {
   if (isContactDisabled.value) return label('STATUS_CONTACT_DISABLED');
   if (!hasState.value) return label('STATUS_NOT_STARTED');
   const reason = stoppedReason.value;
+  // Parou porque o contato saiu do follow-up de IA, inclusive por "Este contato é" (#2084).
+  if (reason === 'contact_disabled') return label('STATUS_CONTACT_DISABLED');
   if (reason === 'opt_out') return label('STATUS_OPT_OUT');
   if (reason === 'replied') return label('STATUS_REPLIED');
   if (reason === 'conversation_closed') return label('STATUS_CLOSED');

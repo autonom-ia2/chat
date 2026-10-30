@@ -2,7 +2,11 @@
 import { computed, onMounted, ref } from 'vue';
 import { useStore } from 'vuex';
 import { useFunctionGetter, useMapGetter } from 'dashboard/composables/store';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import {
+  INTEGRATION_MANAGE_PERMISSION,
+  TOKEN_MANAGE_PERMISSION,
+} from 'dashboard/constants/permissions';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 
 import SettingsLayout from '../SettingsLayout.vue';
@@ -10,7 +14,11 @@ import BaseSettingsHeader from '../components/BaseSettingsHeader.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 const store = useStore();
-const { isAdmin } = useAdmin();
+// Tokens e webhooks são chaves separadas (#2027); o administrador passa nas duas.
+const canManageTokens = usePermissionGranted(TOKEN_MANAGE_PERMISSION);
+const canManageIntegrations = usePermissionGranted(
+  INTEGRATION_MANAGE_PERMISSION
+);
 
 const integrationLoaded = ref(false);
 
@@ -37,7 +45,7 @@ const tokensLink = computed(() =>
 );
 
 // Deep-link to the account Webhook creator (the CRM events section is shown
-// there when CRM Kanban is enabled — see W4.2). Admin-only route.
+// there when CRM Kanban is enabled — see W4.2). Admin or integration_manage.
 const webhookLink = computed(() =>
   frontendURL(`accounts/${accountId.value}/settings/integrations/webhook`)
 );
@@ -100,8 +108,11 @@ onMounted(() => {
             {{ $t('INTEGRATION_SETTINGS.CRM_N8N.SETUP.DESCRIPTION') }}
           </p>
 
-          <div v-if="isAdmin" class="flex flex-wrap gap-3">
-            <router-link :to="tokensLink">
+          <div
+            v-if="canManageTokens || canManageIntegrations"
+            class="flex flex-wrap gap-3"
+          >
+            <router-link v-if="canManageTokens" :to="tokensLink">
               <Button
                 blue
                 faded
@@ -109,7 +120,7 @@ onMounted(() => {
                 :label="$t('INTEGRATION_SETTINGS.CRM_N8N.SETUP.TOKENS_CTA')"
               />
             </router-link>
-            <router-link :to="webhookLink">
+            <router-link v-if="canManageIntegrations" :to="webhookLink">
               <Button
                 slate
                 faded

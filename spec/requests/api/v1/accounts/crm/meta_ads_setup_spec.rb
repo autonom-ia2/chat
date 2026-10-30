@@ -198,6 +198,29 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       expect(reads).not_to have_been_requested
     end
 
+    it '"Não tenho site" de propósito fica gravado; escolher um Pixel depois desfaz (#2343)' do
+      stub_reads
+
+      post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, no_site: true }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body).to include('pixel' => nil, 'no_site' => true)
+
+      post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, pixel_id: pixel, no_site: true },
+                                headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body).to include('no_site' => false)
+      expect(response.parsed_body['pixel']).to include('id' => pixel)
+      expect(Crm::MetaAdsConnection.find_by!(account_id: account.id).destinations).not_to have_key('no_site')
+    end
+
+    it 'sem Pixel e sem "Não tenho site", a escolha não marca a recusa do site' do
+      stub_reads
+
+      post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body).to include('pixel' => nil, 'no_site' => false)
+    end
+
     it 'lê conta, gasto e Pixel antes de gravar e só então fica conectada' do
       stub_reads
 
@@ -211,6 +234,20 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       connection = Crm::MetaAdsConnection.find_by!(account_id: account.id)
       expect(connection.access_token).to be_nil
       expect(connection.read_token).to eq(platform_token)
+    end
+
+    it 'a primeira conexão começa a carga das ligações conversa → anúncio de todo o histórico (#2054)' do
+      stub_reads
+
+      expect do
+        post "#{base}/selection", params: { mode: 'partner', ad_account_id: ad_account, pixel_id: pixel }, headers: auth_headers(admin), as: :json
+      end.to have_enqueued_job(Crm::MetaAds::LinksBackfillJob)
+
+      connection = Crm::MetaAdsConnection.find_by!(account_id: account.id)
+      expect(Crm::MetaAds::LinksBackfillJob.start(connection)).to be(false)
+    ensure
+      Redis::Alfred.delete("#{Crm::MetaAds::LinksBackfillJob::RUNNING_KEY}:#{connection.id}") if connection
+      Crm::MetaAds::Insights::Backfill.release(connection.id) if connection
     end
 
     it 'trocar de conta de anúncios zera a coleta e começa a carga de 90 dias (#1073)' do
@@ -270,6 +307,15 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
 
       expect(response.parsed_body['destinations']).to eq('whatsapp' => true, 'site' => false)
       expect(connection.reload.destinations).to eq('whatsapp' => true, 'site' => false)
+    end
+
+    it 'trocar os destinos mantém o "Não tenho site" escolhido (#2343)' do
+      connection.update!(pixel_id: nil, destinations: { 'whatsapp' => true, 'no_site' => true })
+
+      patch "#{base}/destinations", params: { destinations: { whatsapp: true, site: true } }, headers: auth_headers(admin), as: :json
+
+      expect(response.parsed_body['no_site']).to be(true)
+      expect(connection.reload.destinations).to include('site' => true, 'no_site' => true)
     end
   end
 

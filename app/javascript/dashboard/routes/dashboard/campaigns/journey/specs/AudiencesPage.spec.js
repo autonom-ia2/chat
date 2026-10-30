@@ -5,7 +5,11 @@ import enJourney from 'dashboard/i18n/locale/en/campaignJourney.json';
 import enImport from 'dashboard/i18n/locale/en/campaignImport.json';
 import AudiencesPage from '../AudiencesPage.vue';
 
-const panelApi = vi.hoisted(() => ({ show: vi.fn(), contacts: vi.fn() }));
+const panelApi = vi.hoisted(() => ({
+  show: vi.fn(),
+  contacts: vi.fn(),
+  peopleSheet: vi.fn(),
+}));
 vi.mock('dashboard/api/campaignJourney', () => ({ audiencesAPI: panelApi }));
 const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
@@ -294,6 +298,67 @@ describe('Painel lateral do público (PRD §6.6, F1, B8)', () => {
     });
     await wrapper.find('[data-test="panel-close"]').trigger('click');
     expect(wrapper.find('[data-test="audience-panel"]').exists()).toBe(false);
+  });
+});
+
+describe('Detalhes e Baixar lista (#2332)', () => {
+  beforeEach(() => {
+    panelApi.show.mockResolvedValue({
+      data: { payload: { ...NEW_IMPORT, can_delete: true } },
+    });
+    alert.mockClear();
+  });
+
+  it('opens the panel of the audience clicked, not the old history', async () => {
+    const { wrapper } = mountPage([OLD_IMPORT, NEW_IMPORT]);
+    await flushPromises();
+
+    await wrapper.find('[data-details="2"]').trigger('click');
+    await flushPromises();
+
+    expect(panelApi.show).toHaveBeenLastCalledWith(2);
+    expect(wrapper.find('[data-test="audience-panel"]').exists()).toBe(true);
+    expect(push).not.toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'contacts_campaign_imports' })
+    );
+  });
+
+  it('downloads the list as an Excel file named after the audience', async () => {
+    panelApi.peopleSheet.mockResolvedValue({ data: new Blob(['x']) });
+    const createObjectURL = vi.fn(() => 'blob:lista');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+    const { wrapper } = mountPage([NEW_IMPORT]);
+    await flushPromises();
+    await wrapper.find('[data-details="2"]').trigger('click');
+    await flushPromises();
+
+    await wrapper.find('[data-test="panel-download"]').trigger('click');
+    await flushPromises();
+
+    expect(panelApi.peopleSheet).toHaveBeenCalledWith(2);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(click.mock.contexts[0].download).toBe('Corretoras parceiras.xlsx');
+    click.mockRestore();
+    vi.unstubAllGlobals();
+  });
+
+  it('says why when the person cannot see the contacts', async () => {
+    panelApi.peopleSheet.mockRejectedValue({ response: { status: 403 } });
+    const { wrapper } = mountPage([NEW_IMPORT]);
+    await flushPromises();
+    await wrapper.find('[data-details="2"]').trigger('click');
+    await flushPromises();
+
+    await wrapper.find('[data-test="panel-download"]').trigger('click');
+    await flushPromises();
+
+    expect(alert).toHaveBeenCalledWith(
+      'Only who can see contacts downloads this list.'
+    );
   });
 });
 

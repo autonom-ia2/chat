@@ -36,7 +36,7 @@ class CsatSurveyService
   end
 
   def within_messaging_window?
-    conversation.can_reply?
+    conversation.can_reply_automatically?
   end
 
   def csat_allowed_by_survey_rules?

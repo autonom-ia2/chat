@@ -19,6 +19,17 @@ import TopoDoEmail from '../conversa-canal/email/TopoDoEmail.vue';
 import AcoesDoEmail from '../conversa-canal/email/AcoesDoEmail.vue';
 import { useEmailDaConversa } from '../conversa-canal/email/useConversaDeEmail';
 import {
+  useInstagramDaConversa,
+  fornecerSequencia,
+} from '../conversa-canal/instagram/useConversaDoInstagram';
+import {
+  mensagensDoInstagram,
+  sequenciaDoInstagram,
+  vistoDaConversa,
+} from '../conversa-canal/instagram/sequenciaDoInstagram';
+import HorarioDoInstagram from '../conversa-canal/instagram/HorarioDoInstagram.vue';
+import VistoDoInstagram from '../conversa-canal/instagram/VistoDoInstagram.vue';
+import {
   ocultaNaPele,
   primeiraNaoLidaVisivel,
 } from '../conversa-canal/marcasDaMensagem';
@@ -84,6 +95,8 @@ const temAlbumDoWaha = atributos => {
 };
 // #1786: assunto no topo e Responder / Responder a todos / Encaminhar no fim.
 const emailNovo = useEmailDaConversa().ligado;
+// #2079/#2113: conversa do Instagram com a cara do Direct (sem a pele do WhatsApp).
+const instagram = useInstagramDaConversa().ligado;
 const allMessages = computed(() => {
   const comPele = Boolean(peleDaLista.value);
   const passa = message =>
@@ -96,6 +109,7 @@ const allMessages = computed(() => {
       'content_attributes.whatsapp_flow_response.response_json',
     ],
   });
+  if (instagram.value) return mensagensDoInstagram(mensagens);
   if (!comPele) return mensagens;
   return mensagens
     .filter(mensagem => !ocultaNaPele(mensagem) || temMarcaDoWaha(mensagem))
@@ -186,6 +200,17 @@ const shouldGroupWithNext = (index, searchList) => {
   return Math.floor(next.createdAt / 60) === Math.floor(current.createdAt / 60);
 };
 
+// #2079: na conversa do Instagram, horário entre os blocos, grupos e o "Visto".
+const sequenciaInstagram = computed(() =>
+  instagram.value ? sequenciaDoInstagram(allMessages.value) : new Map()
+);
+fornecerSequencia(sequenciaInstagram);
+const vistoInstagram = computed(() =>
+  instagram.value ? vistoDaConversa(allMessages.value) : null
+);
+const horarioInstagram = id =>
+  Boolean(sequenciaInstagram.value.get(id)?.horario);
+
 // #1702: com a pele do canal, bico no 1º balão da sequência e etiqueta do dia.
 const { abreODia, pele } = useSequenciaDaConversa(allMessages);
 // #1702: fotos e vídeos mandados juntos aparecem no mosaico do 1º item.
@@ -235,7 +260,11 @@ const getInReplyToMessage = parentMessage => {
     <slot name="beforeAll" />
     <TopoDoEmail v-if="emailNovo" :mensagens="mensagensNaOrdem" />
     <template v-for="(message, index) in mensagensNaOrdem" :key="message.id">
-      <SeparadorDeDia v-if="abreODia(index)" :quando="message.createdAt" />
+      <HorarioDoInstagram
+        v-if="instagram && horarioInstagram(message.id)"
+        :quando="message.createdAt"
+      />
+      <SeparadorDeDia v-else-if="abreODia(index)" :quando="message.createdAt" />
       <!-- #1786: com o mais recente no topo, a faixa "não lida" cairia no lugar errado. -->
       <slot
         v-if="naoLidaDaLista && message.id === naoLidaDaLista && !emailNovo"
@@ -253,6 +282,7 @@ const getInReplyToMessage = parentMessage => {
         @retry="emit('retry', message)"
       />
       <BotoesDoModelo v-if="pele" parte="carrossel" :message="message" />
+      <VistoDoInstagram v-if="instagram && message.id === vistoInstagram" />
     </template>
     <AcoesDoEmail v-if="emailNovo && allMessages.length" />
     <slot name="after" />

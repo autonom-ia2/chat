@@ -3,8 +3,52 @@ en:
   crm:
     export:
       statuses:
-        won: 'Active plan'
+        won: 'Implemented'
+      columns:
+        next_follow_up_at: 'Next follow-up'
+    # #2083: the "Plan sale" is the Sales model with the health plan stages (New, Quote, Proposal, At the provider,
+    # Implemented). A refusal from the provider is not a loss: the card stays in "At the provider" until the proposal
+    # returns. The "legado" criteria are for old pipelines, by stage name.
+    stage_criteria:
+      vendas:
+        e1: 'The customer just arrived and wants a plan. They have not said how many people the plan covers or sent the ages for the quote yet.'
+        e2: 'The customer is sending the details for the quote (how many people, ages, city, company tax ID for a business), or the team said it is quoting. The options have not been sent yet.'
+        e3: 'The team sent the quote options, or asked for the documents and the health statement to make the proposal. The proposal has not gone to the provider yet.'
+        e4: 'The team told the customer it sent the proposal to the provider and is waiting for the answer. A pending item from the provider also stays here.'
+        e5: 'The team told the customer the provider approved and the plan was implemented: sent the member card, the contract number or the start date.'
+      legado:
+        em_atendimento: 'The customer is sending the details for the quote (how many people, ages, city, company tax ID for a business), or the team said it is quoting. The options have not been sent yet.'
+        fechamento: 'The customer picked the plan and said they want to sign up: sent the documents, the health statement or asked us to make the proposal.'
+        novo: 'The customer just arrived: sent the first message or asked for a quote. They have not said how many people the plan covers or sent the ages for the quote yet.'
+        perdido: 'Ended without closing: the customer clearly refused, asked not to be contacted, said they signed up with another broker, the number is invalid, there was no reply after the attempts set by the pipeline, or the agent ended the conversation without closing. A refusal from the provider does not go here. Do not use for anyone still negotiating or who only said "I will think about it".'
+        proposta: 'The team already sent the quote options and the customer is comparing or thinking. They have not said which plan they want.'
+    # Vocabulary in the messages the AI writes to the customer (#2034).
+    ai:
+      vocabulario: 'Talk about plan, members, main member and dependents, provider, bill and reimbursement; call anyone looking for or holding a plan a client and never say insured or policy.'
+    booking_v2:
+      templates:
+        consult_45:
+          description: 'Pick a time to talk about your plan at our office.'
+          title: 'Office appointment'
+        sales_30:
+          description: 'Pick a time and we will quote your plan on a WhatsApp video call.'
+          title: 'Plan quote call'
+        visit_60:
+          description: 'Pick a time for an in-person meeting about your company''s plan.'
+          title: 'Company plan meeting'
+    follow_up_reminder:
+      due_at: 'Scheduled for: %{time}'
+    service_reminders:
+      payment_after: 'Bill reminder: after the due date'
+      payment_before: 'Bill reminder: 3 days before'
+      payment_due: 'Bill reminder: on the day'
+  # Error when importing the brand kit from the website (#2083, lote 3).
+  brand_kits:
+    import_errors:
+      invalid_url: 'Enter the full website address, for example https://yourbrokerage.com.'
   # Line of business for the e-mail AI (#2037).
   email_campaigns:
     ai:
-      vocabulario: 'Line of business: health plans and benefits. Say plan and beneficiary. Do not talk about policy, policyholder or claim.'
+      vocabulario: 'Line of business: health plans and benefits. Say plan, members, main member and dependents, provider and bill. Do not talk about policy, policyholder or claim. Do not promise coverage, waiting periods, network or price adjustments.'
+  meta_ads_report:
+    glossary: 'Conversation: someone messaged on WhatsApp after tapping an ad. Quote: the card reached an opportunity or negotiation stage. Sale: the card was marked as implemented.'

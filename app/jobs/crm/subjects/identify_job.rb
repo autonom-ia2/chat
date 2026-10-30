@@ -63,7 +63,11 @@ class Crm::Subjects::IdentifyJob < ApplicationJob
     decidir(conversation, message)
   end
 
+  # IA entende a conversa F4 (flag `crm_ia_leitor_de_midia`): a espera do assunto na ordem do turno é curta, então os
+  # anexos da rajada que o job da chegada ainda não leu são lidos aqui, em linha, antes da pergunta (a trava por anexo
+  # faz quem chega depois esperar e encontrar lido). Sem a flag, não faz nada.
   def decidir(conversation, message)
+    Crm::Ai::LeitorDeMidia.ler_a_rajada(conversation, message)
     decisao = Crm::Subjects::Identifier.new(conversation: conversation, message: message).perform
     decisao&.state || 'sem_decisao'
   ensure

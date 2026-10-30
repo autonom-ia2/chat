@@ -46,7 +46,7 @@ pt_BR:
     reacoes:
       emoji_invalido: 'Escolha um emoji só.'
       mensagem_invalida: 'Esta mensagem não aceita reação.'
-      caixa_sem_reacao: 'Reação só existe nas caixas de WhatsApp.'
+      caixa_sem_reacao: 'Reação só existe nas caixas de WhatsApp e Instagram.'
       sem_identificacao: 'Esta mensagem ainda não tem a identificação do WhatsApp. Tente de novo em instantes.'
       so_recebida: 'No WhatsApp oficial dá para reagir só às mensagens do cliente.'
       fora_da_janela: 'A conversa passou de 24 horas sem mensagem do cliente. O WhatsApp oficial só aceita reação com a conversa aberta.'
@@ -54,6 +54,12 @@ pt_BR:
       provedor_recusou: 'O WhatsApp não aceitou a reação: %{motivo}'
       waha_recusou: 'O WhatsApp não aceitou a reação. Confira a conexão da caixa e tente de novo.'
       provedor_fora: 'O WhatsApp não respondeu agora. Tente de novo em instantes.'
+      instagram:
+        sem_identificacao: 'Esta mensagem ainda não tem a identificação do Instagram. Tente de novo em instantes.'
+        so_recebida: 'No Instagram dá para reagir só às mensagens do cliente.'
+        fora_da_janela: 'A conversa passou do prazo sem mensagem do cliente. O Instagram só aceita reação com a conversa aberta.'
+        provedor_recusou: 'O Instagram não aceitou a reação: %{motivo}'
+        provedor_fora: 'O Instagram não respondeu agora. Tente de novo em instantes.'
     encaminhar:
       sem_mensagem: 'Marque pelo menos uma mensagem para encaminhar.'
       sem_destino: 'Escolha pelo menos uma conversa para encaminhar.'
@@ -71,6 +77,8 @@ pt_BR:
       nao_e_email: 'Só dá para responder convite que chegou numa caixa de e-mail.'
       nao_convidada: 'Esta caixa não está na lista de convidados desta reunião.'
       ja_passou: 'Esta reunião já terminou.'
+      substituido: 'O organizador mudou ou cancelou esta reunião num e-mail mais novo.'
+      em_andamento: 'Alguém está respondendo a este convite agora. Espere um instante e recarregue a conversa.'
       sem_envio: 'Esta caixa não envia e-mail (só recebe por encaminhamento). Conecte por IMAP/SMTP, Google ou Microsoft para responder.'
       falhou: 'Não deu para mandar a resposta ao organizador. Tente de novo em instantes.'
       assunto:

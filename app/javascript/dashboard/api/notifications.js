@@ -33,6 +33,12 @@ class NotificationsAPI extends ApiClient {
     });
   }
 
+  // One notification by id: the actors that are not a conversation (the Guide's warning, #935; the search by
+  // conversation, #2277). `read` by actor only knows conversations and would mark every notification as read.
+  readOne(id) {
+    return axios.patch(`${this.url}/${id}`);
+  }
+
   unRead(id) {
     return axios.post(`${this.url}/${id}/unread`);
   }

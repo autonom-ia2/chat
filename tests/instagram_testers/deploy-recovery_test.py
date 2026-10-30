@@ -907,7 +907,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                                                      fail_coordination_instance='i-green',
                                                      coordination_error=noise + self.real_error(code))
                         self.assertEqual(result.returncode, 0, result.stderr)
-                        self.assertIn(f'::warning::INSTAGRAM_ASSISTED_SUSPENDED step={code} instance=i-green\n',
+                        self.assertIn(f'::warning::INSTAGRAM_ASSISTED_SUSPENDED step={code}\n',
                                       result.stdout)
                         self.assertEqual(state['markers'], {'i-green': f'INSTAGRAM_ASSISTED_SUSPENDED step={code}'})
                         self.assertEqual([node for node, _ in state['suspensions']], ['i-green'])
@@ -962,12 +962,12 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                                                      listener='tg-blue', running_workers=['i-blue'],
                                                      fail_coordination_instance='i-green', **failure)
                         if case in ('status-InProgress', 'status-Pending'):
-                            self.assertIn('instagram_preflight_status_unexpected:i-green', result.stderr)
+                            self.assertIn('instagram_preflight_status_unexpected', result.stderr)
                         self.assertNotEqual(result.returncode, 0)
                         self.assertNotIn('::warning::', result.stdout)
                         self.assertNotIn('10.0.0.1', result.stdout + result.stderr)
                         if case.startswith('host-'):
-                            self.assertIn(f"instagram_preflight_failed_without_verdict:i-green host_step={case[5:].split(':')[0]}",
+                            self.assertIn(f"instagram_preflight_failed_without_verdict host_step={case[5:].split(':')[0]}",
                                           result.stderr)
                         if not case.startswith(('suspension', 'restart')):
                             self.assertNotIn('suspensions', state)
@@ -993,7 +993,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                         self.assertNotIn('suspensions', state)
                         self.assertNotIn('web_restarts', state)
                         self.assertNotIn('INSTAGRAM_ASSISTED_SUSPENDED', result.stderr)
-                        warning = (f'::warning::INSTAGRAM_ASSISTED_SUSPENDED step={earlier} instance=i-green '
+                        warning = (f'::warning::INSTAGRAM_ASSISTED_SUSPENDED step={earlier} '
                                    '(suspenso antes deste passo)')
                         self.assertEqual(warning in result.stdout, bool(earlier))
                         if not earlier:
@@ -1014,7 +1014,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                                          running_workers=['i-green'], markers=first['markers'],
                                          fail_coordination_instance='i-green')
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn('::warning::INSTAGRAM_ASSISTED_SUSPENDED step=coordination_ping_failed instance=i-green '
+            self.assertIn('::warning::INSTAGRAM_ASSISTED_SUSPENDED step=coordination_ping_failed '
                           '(suspenso antes deste passo)', result.stdout)
             self.assertNotIn('suspensions', state)
             self.assertLess(state['green_in_service'][0],
@@ -1058,7 +1058,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                 result, state = self.execute(run_block(workflow.read_text(), name),
                     running_workers=['i-green'], fail_suspension_instance='i-blue')
                 self.assertNotEqual(result.returncode, 0)
-                self.assertIn('instagram_recovery_suspension_failed:i-blue', result.stderr)
+                self.assertIn('instagram_recovery_suspension_failed', result.stderr)
                 self.assertEqual(state['running_workers'], ['i-green'])
                 self.assertEqual(state['workers'], [])
                 self.assertEqual(state['writes'], [])
@@ -1072,7 +1072,7 @@ sudo() { fake_step "$@" || return $?; if [ "$1" = tee ]; then cat >/dev/null; fi
                 instance_state='stopped', boot_worker_enabled=True, running_workers=['i-green'],
                 fail_suspension_instance='i-blue')
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn('instagram_recovery_suspension_failed:i-blue', result.stderr)
+            self.assertIn('instagram_recovery_suspension_failed', result.stderr)
             self.assertEqual(state['listener'], 'tg-green')
             self.assertEqual(state['writes'], [])
             self.assertTrue(all(len(event[2]) <= 1 for event in state['worker_timeline']))
@@ -1490,7 +1490,7 @@ printf 'shutdown\\n' >> "$REMOTE_LOG"
                     # #1979: com a blue intocada, a falha possível dela é o listener fora da blue.
                     extra = {'listener': 'tg-green'} if blue_failure else {}
                     result, state = self.execute(script, fail_operation='terminate-instances', **{**initial, **extra})
-                    self.assertIn('blue_green_unused_green_termination_failed:i-green', result.stderr)
+                    self.assertIn('blue_green_unused_green_termination_failed', result.stderr)
                     # Com falha na blue, sai com o erro dela; sem, a terminação falha o job. Nunca sucesso.
                     self.assertEqual(result.returncode, 1, result.stderr)
                     self.assertEqual('blue_green_destination_mismatch' in result.stderr, blue_failure)
@@ -1512,7 +1512,7 @@ printf 'shutdown\\n' >> "$REMOTE_LOG"
                 with self.subTest(stack=workflow.name, image=image, scenario='suspension-failed'):
                     result, state = self.execute(script, image=image, fail_suspension_instance='i-blue', **initial)
                     self.assertNotEqual(result.returncode, 0)
-                    self.assertIn('instagram_recovery_suspension_failed:i-blue', result.stderr)
+                    self.assertIn('instagram_recovery_suspension_failed', result.stderr)
                     self.assertNotIn('terminated', state)
 
     def test_cleanup_after_published_image_never_asks_ecr(self):
@@ -1568,6 +1568,47 @@ printf 'shutdown\\n' >> "$REMOTE_LOG"
                     self.assertIn(f'      {name}: ${{{{ steps.hand-off.outputs.{name} }}}}\n', deploy)
                     if name != 'traffic_shift_done':  # este só entra no if: do job
                         self.assertIn(f'${{{{ needs.deploy.outputs.{name} }}}}', job)
+
+    # #2032: repositório público. IDs e ARNs não passam pelo GITHUB_ENV (o runner os reimprime no cabeçalho de cada passo)
+    # nem pelo env: do job desligar-blue; um arquivo carregado pelo BASH_ENV os entrega aos passos bash.
+    def test_ids_and_arns_stay_out_of_step_headers(self):
+        discovered = ('LB_ARN', 'LISTENER_ARN', 'VPC_ID', 'BLUE_TG_ARN', 'BLUE_INSTANCE_ID', 'OLD_PREVIOUS_INSTANCE_ID',
+                      'OLD_PREVIOUS_TG_ARN', 'SUBNET_ID', 'SECURITY_GROUP_IDS', 'IAM_PROFILE_NAME', 'AMI_ID', 'ROOT_DEVICE_NAME')
+        hand_off = {'LISTENER_ARN': 'listener-test', 'BLUE_INSTANCE_ID': 'i-blue', 'BLUE_TG_ARN': 'tg blue',
+                    'GREEN_INSTANCE_ID': 'i-green', 'GREEN_TG_ARN': 'tg-green', 'OLD_PREVIOUS_INSTANCE_ID': '',
+                    'OLD_PREVIOUS_TG_ARN': 'tg-older'}
+        state_file = self.directory / 'deploy-estado.sh'
+        for workflow in WORKFLOWS:
+            source = workflow.read_text()
+            job = source.split('\n  desligar-blue:\n', 1)[1].split('\n  rollback:\n', 1)[0]
+            with self.subTest(stack=workflow.name):
+                discover = run_block(source, 'Discover current infrastructure')
+                for name in (*discovered, 'GREEN_INSTANCE_ID', 'GREEN_TG_ARN'):
+                    self.assertNotIn(f'echo "{name}=', source)
+                    self.assertNotIn(f'env.{name}', source)
+                    self.assertNotIn(f'\n      {name}: ', job)  # env: de job, reimpresso em todo passo
+                for name in discovered:
+                    self.assertIn(f"printf 'export {name}=%q\\n'", discover)
+                self.assertIn('echo "BASH_ENV=$deploy_state"', discover)
+                self.assertIn("env.GREEN_INSTANCE_LAUNCHED == 'true'", source)
+                # O hand-off entra uma vez só, no env: do passo que grava o arquivo.
+                load = job.split('      - name: Load deploy hand-off\n', 1)[1].split('\n      - name: ', 1)[0]
+                for name in hand_off:
+                    self.assertEqual(job.count(f'{name}: ${{{{ needs.deploy.outputs.{name.lower()} }}}}'), 1, name)
+                    self.assertIn(f'\n          {name}: ${{{{ needs.deploy.outputs.{name.lower()} }}}}', load)
+
+                (self.directory / 'github-env').write_text('')
+                subprocess.run(['/bin/bash', '-e', '-c', run_block(source, 'Load deploy hand-off')], check=True,
+                               env={'PATH': '/usr/bin:/bin', 'RUNNER_TEMP': str(self.directory),
+                                    'GITHUB_ENV': str(self.directory / 'github-env'), **hand_off})
+                self.assertEqual((self.directory / 'github-env').read_text(), f'BASH_ENV={state_file}\n')
+                self.assertEqual(state_file.stat().st_mode & 0o777, 0o600)
+                # Um bash novo, como o de cada passo, lê de volta os mesmos valores, inclusive com espaço e vazio.
+                loaded = subprocess.run(
+                    ['/bin/bash', '-c', 'for n in "$@"; do printf "%s=%s\\n" "$n" "${!n-ausente}"; done', '_', *hand_off],
+                    env={'PATH': '/usr/bin:/bin', 'BASH_ENV': str(state_file)}, capture_output=True, text=True, check=True)
+                self.assertEqual(loaded.stdout, ''.join(f'{name}={value}\n' for name, value in hand_off.items()))
+                state_file.unlink()
 
     def test_shutdown_stops_blue_and_retires_older_rollback(self):
         for workflow in WORKFLOWS:
@@ -1676,7 +1717,8 @@ print(int(moment.timestamp()))
                 self.assertEqual(result.returncode, 0, result.stderr)
                 warnings = [line for line in result.stdout.splitlines() if line.startswith('::warning::')]
                 self.assertEqual(len(warnings), 1, result.stdout)
-                self.assertIn('i-forgotten (Name=chatwoot-x-prod-ec2-green-1, LaunchTime=2026-10-10T13:05:12+00:00)',
+                self.assertNotIn('i-forgotten', warnings[0])
+                self.assertIn('Green esquecida: Name=chatwoot-x-prod-ec2-green-1, LaunchTime=2026-10-10T13:05:12+00:00.',
                               warnings[0])
                 mutations = ('stop-instances', 'terminate-instances', 'create-tags', 'put-parameter')
                 self.assertFalse(any(call[1] in mutations for call in state['calls']))
@@ -1724,9 +1766,9 @@ elif op == ('elbv2', 'describe-target-health'):
     full = {{'TargetHealthDescriptions': [{{'Target': {{'Id': 'i-green', 'Port': 3000}}, 'TargetGroupArn': arn,
         'TargetHealth': {{'State': 'unhealthy', 'Reason': 'Target.Timeout', 'Description': 'Request timed out'}}}}]}}
     if query():
-        assert query() == ('TargetHealthDescriptions[].{{Id:Target.Id,Port:Target.Port,State:TargetHealth.State,'
+        assert query() == ('TargetHealthDescriptions[].{{Port:Target.Port,State:TargetHealth.State,'
                            'Reason:TargetHealth.Reason,Description:TargetHealth.Description}}'), query()
-        print(json.dumps([{{'Id': 'i-green', 'Port': 3000, 'State': 'unhealthy', 'Reason': 'Target.Timeout',
+        print(json.dumps([{{'Port': 3000, 'State': 'unhealthy', 'Reason': 'Target.Timeout',
                             'Description': 'Request timed out'}}]))
     else:
         print(json.dumps(full))
@@ -1883,10 +1925,9 @@ else:
                 self.assertIn('SECRET_KEY_BASE=<REDACTED>', package)
                 self.assertIn('HTTP 502 em 0.01s', package)
                 self.assertIn('status da invocação: Success', package)
-                self.assertIn(f'aws ssm get-command-invocation --command-id {self.LOGS_ID} --instance-id i-green',
-                              package)
-                self.assertIn(f'aws ssm get-command-invocation --command-id {self.LOGS_ID}', summary)
-                self.assertIn('### Diagnóstico da green i-green', summary)
+                self.assertIn(f'aws ssm list-command-invocations --command-id {self.LOGS_ID} --details', package)
+                self.assertIn(f'aws ssm list-command-invocations --command-id {self.LOGS_ID} --details', summary)
+                self.assertIn('### Diagnóstico da green\n', summary)
                 self.assertEqual(output.splitlines(), ['green_launch_time=2026-10-21T10:00:00+00:00',
                                                        'green_boot_done=1792578600'])
                 # Nada do que os passos existentes leem muda: GITHUB_ENV intocado.
@@ -1921,7 +1962,7 @@ else:
                     self.assertIn(collected, summary)
                     self.assertNotIn(collected, job_log)
                 for line in job_log.splitlines():
-                    self.assertTrue(line.startswith(('::warning::Coletando diagnóstico da green i-green: falhou: ',
+                    self.assertTrue(line.startswith(('::warning::Coletando diagnóstico da green: falhou: ',
                                                      'Passos críticos', 'Job falhou')), line)
 
     @staticmethod
@@ -2101,7 +2142,7 @@ else:
                         self.assertNotIn('GITHUB_ENV', header, name)
                 diagnostics = deploy.split('      - name: Collect green diagnostics\n', 1)[1].split('\n      - name: ', 1)[0]
                 # Nunca no cancelamento (a limpeza precisa do tempo) e sempre antes da limpeza que termina a green.
-                self.assertIn("        if: ${{ !cancelled() && env.GREEN_INSTANCE_ID != '' }}\n", diagnostics)
+                self.assertIn("        if: ${{ !cancelled() && env.GREEN_INSTANCE_LAUNCHED == 'true' }}\n", diagnostics)
                 self.assertIn('        timeout-minutes: 4\n', diagnostics)
                 order = [deploy.index(f'      - name: {name}\n') for name in (
                     'Refresh AWS credentials for cleanup', 'Collect green diagnostics',

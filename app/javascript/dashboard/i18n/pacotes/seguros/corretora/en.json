@@ -1214,6 +1214,24 @@
       "BOTAO": {
         "MEUS_PARADOS": "Open my stalled quote | Open my {n} stalled quotes"
       }
+    },
+    "BLOCO": {
+      "VENDENDO": "Quoting"
     }
+  },
+  "PAINEL_DO_CONTATO": {
+    "RELACAO": {
+      "OPCOES": {
+        "INTERESSADO": {
+          "DICA": "Wants or may want insurance from you."
+        },
+        "PARCEIRO": {
+          "DICA": "Insurer, sales agency or another broker."
+        }
+      }
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "NOVO_CLIENTE": "New quote"
   }
 }

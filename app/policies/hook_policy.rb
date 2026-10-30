@@ -1,10 +1,11 @@
+# Connecting, changing and disconnecting an integration is admin or integration_manage (#2027); using it is open.
 class HookPolicy < ApplicationPolicy
   def create?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def update?
-    @account_user.administrator?
+    integration_manage?
   end
 
   def process_event?
@@ -12,6 +13,12 @@ class HookPolicy < ApplicationPolicy
   end
 
   def destroy?
-    @account_user.administrator?
+    integration_manage?
+  end
+
+  private
+
+  def integration_manage?
+    @account_user.permission_granted?('integration_manage')
   end
 end

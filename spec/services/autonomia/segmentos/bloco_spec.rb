@@ -63,8 +63,8 @@ RSpec.describe Autonomia::Segmentos::Bloco do
       expect(described_class.for_segmento('seguros/corretora')).to include('corretora de seguros', 'não é a seguradora')
     end
 
-    it 'calls the health plan user a beneficiary' do
-      expect(described_class.for_segmento('seguros/saude_beneficios')).to include('beneficiário, não segurado')
+    it 'counts lives and lists holder and dependents, never the insured' do
+      expect(described_class.for_segmento('seguros/saude_beneficios')).to include('titular e dependentes', 'Não diga segurado nem apólice')
     end
 
     it 'gives no text nor version to a segmento without a file' do

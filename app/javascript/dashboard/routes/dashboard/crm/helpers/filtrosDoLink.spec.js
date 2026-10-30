@@ -126,3 +126,39 @@ describe('semChaves', () => {
     });
   });
 });
+
+describe('filtrosDoLink — o "Ver" de Números › Origens (#2001, F6)', () => {
+  it('reads the month, the origin and the ad, with "Todos" as the result', () => {
+    expect(
+      filtrosDoLink(
+        { result: 'todos', entrou_em: '2026-10', origem: 'anuncio_meta' },
+        { currentUserId: EU }
+      )
+    ).toEqual({ result: '', entrouEm: '2026-10', origem: 'anuncio_meta' });
+    expect(
+      filtrosDoLink(
+        { entrou_em: '2026-09', anuncio: '120210000000101' },
+        { currentUserId: EU }
+      )
+    ).toEqual({ entrouEm: '2026-09', anuncio: '120210000000101' });
+  });
+
+  it('drops an unknown origin, an ad id with letters and a broken month', () => {
+    expect(
+      filtrosDoLink(
+        {
+          origem: 'indicacao',
+          anuncio: '12a',
+          entrou_em: '2026-13',
+        },
+        { currentUserId: EU }
+      )
+    ).toBeNull();
+    expect(
+      filtrosDoLink({ entrou_em: 'this_month' }, { currentUserId: EU })
+    ).toBeNull();
+    expect(CHAVES_DO_LINK).toEqual(
+      expect.arrayContaining(['origem', 'anuncio', 'entrou_em'])
+    );
+  });
+});

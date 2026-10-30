@@ -9,6 +9,7 @@ class Crm::Numeros::Credito
   STATUSES = %w[won resolved].freeze
   MAX_CARDS = 20_000
   CAMPOS = %i[id status value_cents currency owner_id].freeze
+  DESFECHO_ARQUIVADO = Arel.sql("crm_cards.metadata->>'#{Crm::Card::DESFECHO_ARQUIVADO}'")
 
   def initialize(account:, user:, range:)
     @account = account
@@ -36,10 +37,16 @@ class Crm::Numeros::Credito
     ganhos.group_by { |fechado| fechado[:currency] }.transform_values { |lista| lista.sum { |fechado| fechado[:value_cents] } }
   end
 
+  # Só os funis ativos, como as Metas (Crm::Metas::Escopo): o funil arquivado sai dos Números.
   def fechados
-    @fechados ||= @account.crm_cards.where(status: STATUSES.map { |status| Crm::Card.statuses[status] }, closed_at: @range)
-                          .order(:id).limit(MAX_CARDS)
-                          .pluck(*CAMPOS).map { |linha| CAMPOS.zip(linha).to_h }
+    @fechados ||= linhas(Crm::Relacao.cards_do_funil(@account).where(pipeline_id: @account.crm_pipelines.active.select(:id), closed_at: @range))
+  end
+
+  # O card arquivado depois de fechado conta pelo desfecho que tinha (Crm::Card::DESFECHO_ARQUIVADO).
+  def linhas(cards)
+    cards.com_desfecho(STATUSES).order(:id).limit(MAX_CARDS).pluck(*CAMPOS, DESFECHO_ARQUIVADO).map do |*valores, desfecho|
+      CAMPOS.zip(valores).to_h.tap { |linha| linha[:status] = Crm::Card.desfecho_de(linha[:status], desfecho) }
+    end
   end
 
   # O `closed_with` do último fechamento de cada card (ganho ou resolvido; o reaberto não fecha).

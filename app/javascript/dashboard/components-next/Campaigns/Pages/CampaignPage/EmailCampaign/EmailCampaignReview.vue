@@ -313,7 +313,11 @@ onMounted(() => {
                   {{ t('CAMPAIGN.EMAIL_CAMPAIGN.DIALOG.REPLY_TO_LABEL') }}
                 </p>
                 <p class="mb-0 break-words text-sm text-n-slate-12">
-                  {{ campaign.reply_to || campaign.from_email }}
+                  {{
+                    campaign.reply_to_address ||
+                    campaign.reply_to ||
+                    campaign.from_email
+                  }}
                 </p>
               </div>
             </div>

@@ -1,6 +1,9 @@
 {
   "sobre": "#1550 — textos do catálogo base que falam em ganho/perda mas NÃO são o resultado da venda, então ficam fora dos pacotes de segmento. Cada chave leva o motivo. A trava (scripts/i18n-pacotes/cobertura.mjs) reprova chave nova sem decisão e exceção que não serve mais. Veja docs/segmentos/README.md.",
   "painel": {
+    "PAINEL_DO_CONTATO.RELACAO.ARQUIVAR.TEXTO": "Arquivar o card não perde nada, dá para reabrir (#2084); não é resultado de venda.",
+    "CUSTOM_ROLE.EDITOR.LOST_ACCESS.TITLE": "Pessoas que perdem acesso ao salvar a função (#2185); não é resultado de venda.",
+    "CUSTOM_ROLE.EDITOR.LOST_ACCESS.DESCRIPTION": "Áreas que as pessoas da função perdem ao salvar (#2185); não é resultado de venda.",
     "AGENTS.JORNADA.EXCLUIR.TEXTO": "Perder o que foi digitado ao excluir o rascunho do agente; não é resultado de venda.",
     "AGENTS.JORNADA.PAGINA.FERRAMENTAS.PASSOS.SAIR.TEXTO": "Perder o que foi digitado ao sair da ferramenta; não é resultado de venda.",
     "NOVA_CONVERSA.ERRO.PADRAO": "Avisa que nada do que foi escrito se perdeu; não é resultado de venda.",
@@ -41,12 +44,31 @@
     "INTEGRATION_SETTINGS.SLACK.HELP_TEXT.BODY": "\"Nunca perder uma mensagem\" no Slack; não é resultado de venda.",
     "MODELOS_WHATSAPP.LISTA.NAO_ATUALIZOU_PERMISSAO": "O número perdeu a permissão no WhatsApp; não é resultado de venda.",
     "HELP_CENTER.CENTRAL_DE_AJUDA.MAIS_PROCURADOS.DISPARO": "Disparar sem perder o número (bloqueio do WhatsApp); não é resultado de venda.",
-    "YEAR_IN_REVIEW.BUSIEST_DAY.COMPARISON.500_PLUS": "\"Perdeu a calma\": expressão da retrospectiva do ano."
+    "YEAR_IN_REVIEW.BUSIEST_DAY.COMPARISON.500_PLUS": "\"Perdeu a calma\": expressão da retrospectiva do ano.",
+    "AGENTS.DESEMPENHO2.A.ACOES.DESCRICAO": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "AGENTS.DESEMPENHO2.A.ACOES.GANHO": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "AGENTS.DESEMPENHO2.A.PERDAS.POR_QUE_DESCRICAO": "Perda do painel de desempenho (#2226): venda que parou por causa corrigível, um conceito do painel que vale para qualquer negócio, não o desfecho de um segmento.",
+    "AGENTS.DESEMPENHO2.A.LEITURA.DECISAO.FRASE_COM_GANHO": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "AGENTS.DESEMPENHO2.A.COMO_LER.SECAO.TICKET": "Valor típico de uma venda usado no ganho estimado das sugestões do painel de desempenho (#2226); não é o desfecho de venda do funil.",
+    "AGENTS.DESEMPENHO2.A.ACOES.BASE_DO_TICKET": "Valor típico de uma venda usado no ganho estimado das sugestões do painel de desempenho (#2226); não é o desfecho de venda do funil.",
+    "FUNCOES_EQUIPE.GUARDA.TEXTO": "Sair da conversa guiada sem salvar perde o que foi mudado na função (#2308); não é resultado de venda.",
+    "FUNCOES_EQUIPE.DIFF.GANHAR_E_PERDER": "O que as pessoas ganham e perdem de acesso ao ficar sem função (#2308); não é resultado de venda.",
+    "FUNCOES_EQUIPE.DIFF.SO_PERDER": "O acesso que as pessoas perdem ao ficar sem função (#2308); não é resultado de venda.",
+    "FUNCOES_EQUIPE.GUIADA.TROCAR.TEXTO": "Trocar a função pronta perde os ajustes feitos na conversa guiada (#2308); não é resultado de venda.",
+    "FUNCOES_EQUIPE.PERDA.TITULO_VARIAS": "Pessoas que perdem acesso ao salvar a função (#2308); não é resultado de venda."
   },
   "servidor": {
     "autonomia.guide.avisos.whatsapp_proxy.sessao_instavel_trocada": "\"O número ganhou outro\" IP: aviso técnico do proxy do WhatsApp; não é resultado de venda.",
     "whatsapp_templates.errors.catalog_not_found": "\"A conexão perdeu o acesso\" ao catálogo do WhatsApp: aviso de conexão; não é resultado de venda.",
     "waha.call.missed_voice": "\"Ligação de voz perdida\": ligação do WhatsApp que ninguém atendeu (chat#1709); não é resultado de venda.",
-    "waha.call.missed_video": "\"Ligação de vídeo perdida\": ligação do WhatsApp que ninguém atendeu (chat#1709); não é resultado de venda."
+    "waha.call.missed_video": "\"Ligação de vídeo perdida\": ligação do WhatsApp que ninguém atendeu (chat#1709); não é resultado de venda.",
+    "autonomia.desempenho2.c.acoes.subtitulo": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "autonomia.desempenho2.c.acoes.ganho": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "autonomia.desempenho2.c.planilha.recomendacao.ganho_fechamentos": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "autonomia.desempenho2.c.planilha.recomendacao.ganho_valor": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "autonomia.desempenho2.c.planilha.recomendacao.ganho_periodo": "Período do ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil.",
+    "autonomia.desempenho2.c.planilha.perdas_titulo": "Perda do painel de desempenho (#2226): venda que parou por causa corrigível, um conceito do painel que vale para qualquer negócio, não o desfecho de um segmento.",
+    "autonomia.desempenho2.c.planilha.abas.perdas": "Perda do painel de desempenho (#2226): venda que parou por causa corrigível, um conceito do painel que vale para qualquer negócio, não o desfecho de um segmento.",
+    "autonomia.desempenho2.c.leituras.decisao_com_ganho": "Ganho estimado de uma sugestão do painel de desempenho (#2226): o benefício esperado de corrigir algo, não o desfecho de venda do funil."
   }
 }

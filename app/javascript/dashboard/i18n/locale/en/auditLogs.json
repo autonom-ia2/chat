@@ -31,7 +31,7 @@
         "AUTOMATION_RULES": "Automation rules",
         "MACROS": "Macros",
         "CONVERSATION_DELETIONS": "Conversation deletions",
-      "MESSAGE_DELETIONS": "Message deletions"
+        "MESSAGE_DELETIONS": "Message deletions"
       },
       "SORT": {
         "NEWEST": "Newest first",
@@ -121,6 +121,29 @@
     },
     "GUIDE": {
       "ACTION": "{agentName} did through the Platform Guide: {frase}"
+    },
+    "META_ADS": {
+      "PAUSED": "{agentName} paused the ad {adName} (#{adId}) on Meta",
+      "ACTIVE": "{agentName} turned on the ad {adName} (#{adId}) on Meta"
+    },
+    "CRM_EXCLUIR": {
+      "CARDS": "{agentName} permanently deleted archived CRM cards. Cards deleted: {cardsApagados}",
+      "FUNIL": "{agentName} permanently deleted archived pipeline #{pipelineId}. Cards deleted: {cardsApagados}. Cards moved to another pipeline: {cardsMovidos}",
+      "CONTATO_APAGANDO": "{agentName} deleted contact #{contactId} and their CRM cards. Cards deleted: {cardsApagados}",
+      "CONTATO_MANTENDO": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}",
+      "CONTATO_MANTENDO_REUNIOES": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}. Meetings canceled: {reunioesCanceladas}",
+      "CONTATO_MANTENDO_REUNIOES_SO_AQUI": "{agentName} deleted contact #{contactId}; their CRM cards stayed without personal data. Cards kept: {cardsMantidos}. Meetings canceled: {reunioesCanceladas} ({reunioesSoAqui} only here, calendar unreachable)",
+      "CONTATO_LEADS": "{agentName} deleted contact #{contactId}; their Prospecting leads were deleted. Leads deleted: {leadsApagados}. Leads kept only as proof that the person refused contact: {leadsMinimizados}",
+      "CONTATO_FALHOU": "The deletion of contact #{contactId}, requested by {agentName} in a bulk action, was not done; the contact and their CRM cards stayed. Reason: {motivo}",
+      "FUNIL_FALHOU": "Deleting archived pipeline #{pipelineId}, requested by {agentName}, didn't happen and nothing was deleted. Reason: {motivo}",
+      "MOTIVOS": {
+        "NOT_ARCHIVED": "the pipeline was no longer archived",
+        "CARDS_CHANGED": "the pipeline's cards changed after the request",
+        "TARGET_UNAVAILABLE": "the target pipeline was no longer available",
+        "ALREADY_DELETED": "the pipeline had already been deleted",
+        "MEETING_CANCEL_FAILED": "a meeting couldn't be canceled in the calendar",
+        "OUTRO": "the system refused the deletion"
+      }
     },
     "MESSAGE": {
       "DELETE": "{agentName} deleted a message in conversation #{conversationId}"

@@ -1,0 +1,919 @@
+{
+  "FUNCOES_EQUIPE": {
+    "TITULO": "Funções da equipe",
+    "SUBTITULO": "Diga o que cada pessoa pode ver e fazer. O resto some do menu da pessoa.",
+    "CARREGANDO": "Abrindo as funções",
+    "CONTAGEM": {
+      "FUNCOES": "{n} função criada | {n} funções criadas",
+      "PESSOAS": "nenhuma pessoa com função | {n} pessoa com função | {n} pessoas com função",
+      "SEPARADOR": "·",
+      "PESSOAS_ERRO": "Não deu para ver quem tem cada função."
+    },
+    "CRIAR": "Criar função",
+    "FAIXA": {
+      "TITULO": "{n} pessoa está sem função. | {n} pessoas estão sem função.",
+      "TEXTO": "Essa pessoa vê as conversas dos colegas. Dê uma função para mostrar menos. | Essas pessoas veem as conversas dos colegas. Dê uma função para mostrar menos.",
+      "TITULO_CURTO": "{n} pessoa sem função. | {n} pessoas sem função.",
+      "TEXTO_CURTO": "Vê as conversas dos colegas. | Veem as conversas dos colegas.",
+      "VER_QUEM_SAO": "Ver quem são"
+    },
+    "CARTAO": {
+      "ALTERAR": "Alterar",
+      "ALTERAR_ROTULO": "Alterar a função {nome}",
+      "MAIS": "Mais",
+      "MAIS_ROTULO": "Mais ações da função {nome}",
+      "DUPLICAR": "Duplicar",
+      "APAGAR": "Apagar",
+      "TRAVADO": "Só o administrador muda esta função.",
+      "PESSOAS": "{n} pessoa | {n} pessoas",
+      "OUTRAS_PESSOAS": "+{n}",
+      "NINGUEM": "Ninguém usa ainda",
+      "ESCOLHER_PESSOAS": "Escolher pessoas",
+      "ESCOLHER_PESSOAS_ROTULO": "Escolher pessoas para a função {nome}",
+      "SELO": "Pode {coisas}",
+      "VER_PESSOAS_ROTULO": "Ver a pessoa que é {nome} | Ver as {n} pessoas que são {nome}",
+      "PROPRIA": "Ninguém muda a própria função."
+    },
+    "FRASE": {
+      "NAO_ATENDE": "Não atende conversas.",
+      "SO_OLHA_CONVERSAS": "Só olha as conversas.",
+      "VE_CONVERSAS": "Vê as conversas.",
+      "PROPRIAS": "Atende as próprias conversas.",
+      "PROPRIAS_E_NOVAS": "Atende as próprias conversas e pega as novas que estão sem ninguém.",
+      "TODAS": "Lê e atende todas as conversas.",
+      "VENDAS_SO_OLHA": "Só olha as vendas.",
+      "VENDAS_VE": "Vê as vendas.",
+      "VENDAS_OLHA_E_MOVE": "Olha e move as vendas.",
+      "VENDAS_MEXE": "Cria e move as vendas em andamento.",
+      "VENDAS_TUDO": "Cuida de tudo nas vendas.",
+      "CONTATOS_SO_OLHA": "Só olha os contatos.",
+      "CONTATOS_VE": "Vê os contatos.",
+      "CONTATOS_MEXE": "Cria e muda os contatos.",
+      "CAMPANHAS_DISPARA": "Cria e dispara campanhas.",
+      "CAMPANHAS_CRIA": "Cria campanhas."
+    },
+    "CUIDADO": {
+      "crm_manage_ai": "pedir ajuda à IA nas vendas",
+      "crm_export": "levar as vendas para uma planilha",
+      "crm_metas_manage": "definir as metas do mês",
+      "sales_value_view": "ver os valores em R$",
+      "crm_admin": "cuidar de tudo nas vendas",
+      "contact_export": "levar a lista de clientes para uma planilha",
+      "contact_delete": "apagar contatos e empresas",
+      "conversation_message_delete": "apagar mensagens",
+      "campaign_send": "disparar campanhas",
+      "custom_role_manage": "mudar as funções",
+      "grant_above_own": "dar mais do que tem"
+    },
+    "FIXAS": {
+      "TITULO": "Funções que já vêm com a conta",
+      "PESSOAS": "nenhuma pessoa · não muda | {n} pessoa · não muda | {n} pessoas · não muda",
+      "ADMIN": {
+        "NOME": "Administrador",
+        "TEXTO": "Pode tudo, inclusive mudar as funções."
+      },
+      "SEM_FUNCAO": {
+        "NOME": "Sem função",
+        "TEXTO": "Vê e atende as conversas dos colegas, nos canais em que está. Mexe em todos os contatos e nas respostas prontas.",
+        "CHAMADA": "Dê uma função para mostrar menos.",
+        "VER_TUDO": "Ver tudo o que pode"
+      }
+    },
+    "VAZIO": {
+      "TITULO": "Cada pessoa vê só o que precisa.",
+      "TEXTO": "Comece de uma função pronta. Leva um minuto.",
+      "CRIAR": "Criar a primeira função",
+      "DESTAQUE": "Ou comece por um destes",
+      "CRIAR_PRONTA": "Criar {nome}"
+    },
+    "PRONTAS": {
+      "AGENT": {
+        "NOME": "Atendente",
+        "DESCRICAO": "Quem atende o WhatsApp no dia a dia."
+      },
+      "SDR": {
+        "NOME": "Vendedor",
+        "DESCRICAO": "Quem vende e procura clientes novos."
+      },
+      "SUPERVISOR": {
+        "NOME": "Supervisor",
+        "DESCRICAO": "Quem acompanha a equipe e todas as conversas."
+      },
+      "SALES_MANAGER": {
+        "NOME": "Gerente de vendas",
+        "DESCRICAO": "Quem cuida das vendas da equipe."
+      },
+      "MARKETING": {
+        "NOME": "Marketing",
+        "DESCRICAO": "Quem cuida das campanhas."
+      },
+      "OPERATIONS": {
+        "NOME": "Operação",
+        "DESCRICAO": "Quem arruma os canais, os robôs e as regras."
+      },
+      "READ_ONLY": {
+        "NOME": "Só consulta",
+        "DESCRICAO": "Quem só precisa olhar, sem mudar nada."
+      },
+      "FINANCE": {
+        "NOME": "Financeiro",
+        "DESCRICAO": "Quem cuida dos custos da conta."
+      }
+    },
+    "ERRO": {
+      "TITULO": "Não deu para abrir as funções agora.",
+      "TEXTO": "Suas funções continuam lá. Confira a internet e tente de novo.",
+      "TENTAR": "Tentar de novo"
+    },
+    "PAYWALL": {
+      "TITLE": "Mude de plano para criar funções",
+      "AVAILABLE_ON": "As funções da equipe fazem parte dos planos Business e Enterprise.",
+      "UPGRADE_PROMPT": "Com uma função, cada pessoa vê só o que precisa.",
+      "UPGRADE_NOW": "Mudar de plano",
+      "CANCEL_ANYTIME": "Você pode mudar ou cancelar o plano quando precisar."
+    },
+    "ENTERPRISE_PAYWALL": {
+      "AVAILABLE_ON": "As funções da equipe fazem parte dos planos pagos.",
+      "UPGRADE_PROMPT": "Com uma função, cada pessoa vê só o que precisa.",
+      "ASK_ADMIN": "Fale com o administrador para mudar o plano."
+    },
+    "FRASE_INICIO": {
+      "NAO_ATENDE": "não atende conversas.",
+      "SO_OLHA_CONVERSAS": "só olha as conversas.",
+      "VE_CONVERSAS": "vê as conversas.",
+      "PROPRIAS": "atende as próprias conversas.",
+      "PROPRIAS_E_NOVAS": "atende as próprias conversas e pega as novas que estão sem ninguém.",
+      "TODAS": "lê e atende todas as conversas."
+    },
+    "PREVIA": {
+      "TITULO": "Como vai ficar",
+      "SALVA": "Salva",
+      "ABRE": "Com a função {nome}, a pessoa {comeco}",
+      "ABRE_SEM_NOME": "Com esta função, a pessoa {comeco}",
+      "PODE": "Pode",
+      "NAO_PODE": "Não pode",
+      "NOVO": "novo",
+      "MENU": "O menu vai mostrar: {itens}."
+    },
+    "PODE": {
+      "LER_E_ATENDER_TODAS": "Ler e atender todas as conversas",
+      "RESPONDER_ENTREGUES": "Responder as próprias conversas",
+      "PEGAR_NOVAS": "Pegar as conversas novas que estão sem ninguém",
+      "AJUDAR_PELO_LINK": "Ajudar quando um colega manda o link da conversa",
+      "LER_COLEGAS": "Ler as conversas dos colegas",
+      "ATENDER_CONVERSAS": "Atender conversas",
+      "APAGAR_MENSAGENS": "Apagar mensagens",
+      "QUEM_RECEBE": "Escolher quem recebe cada conversa nova",
+      "CRIAR_MOVER_VENDAS": "Criar e mover as vendas em andamento",
+      "MOVER_VENDAS": "Mover as vendas entre as colunas",
+      "ARQUIVAR_VENDAS": "Arquivar vendas",
+      "MONTAR_COLUNAS": "Montar as colunas das vendas",
+      "RELATORIOS_DAS_VENDAS": "Ver os relatórios das vendas",
+      "VALORES_EM_RS": "Ver os valores das vendas em R$",
+      "METAS_DO_MES": "Definir as metas do mês de cada pessoa",
+      "EXPORTAR_VENDAS": "Levar as vendas para uma planilha",
+      "IA_NAS_VENDAS": "Pedir ajuda à IA nas vendas",
+      "PROCURAR_CLIENTES": "Procurar clientes novos",
+      "BUSCAS_DE_TODOS": "Ver as buscas de clientes novos de todos",
+      "AGENDA": "Criar e mudar as páginas da agenda",
+      "MUDAR_CONTATOS": "Mudar os dados dos contatos",
+      "EXPORTAR_CONTATOS": "Levar a lista de clientes para uma planilha",
+      "APAGAR_CONTATOS": "Apagar contatos e empresas",
+      "CAMPOS_EXTRAS": "Criar e mudar os campos extras",
+      "REPORT_MANAGE": "Ver os relatórios de atendimento",
+      "DESEMPENHO_VIEW": "Ver o desempenho da equipe",
+      "CANNED_RESPONSE_MANAGE": "Criar e mudar as respostas prontas",
+      "CAMPAIGN_MANAGE": "Criar e mudar as campanhas",
+      "CAMPAIGN_SEND": "Disparar campanhas",
+      "WHATSAPP_TEMPLATES_MANAGE": "Criar e mudar os modelos do WhatsApp",
+      "META_ADS_MANAGE": "Conectar e mudar os anúncios",
+      "POSTS_MANAGE": "Responder, esconder e apagar os comentários dos posts",
+      "INBOX_MANAGE": "Arrumar os canais",
+      "AUTONOMIA_MANAGE": "Criar e treinar os robôs de IA",
+      "AUTOMATION_MANAGE": "Criar e mudar as regras automáticas",
+      "LABEL_MANAGE": "Criar e mudar as etiquetas",
+      "MACRO_MANAGE": "Criar e mudar os atalhos de mensagens",
+      "SLA_MANAGE": "Criar e mudar os prazos de resposta",
+      "INSURANCE_MANAGE": "Fazer cotações",
+      "INTEGRATION_MANAGE": "Conectar as integrações",
+      "TOKEN_MANAGE": "Ver e trocar as chaves de acesso",
+      "PEOPLE_MANAGE": "Pôr e tirar pessoas da equipe",
+      "CUSTOM_ROLE_MANAGE": "Mudar as funções",
+      "GRANT_ABOVE_OWN": "Dar mais do que tem",
+      "FINANCIAL_VIEW": "Ver os custos da conta",
+      "FINANCIAL_MANAGE": "Autorizar as cobranças da Meta"
+    },
+    "MENU": {
+      "CONVERSAS": "Conversas",
+      "CONTATOS": "Contatos",
+      "VENDAS": "Vendas",
+      "CLIENTES_NOVOS": "Clientes novos",
+      "SEUS_POSTS": "Seus posts",
+      "CAMPANHAS": "Campanhas",
+      "ANUNCIOS": "Anúncios",
+      "ROBOS": "Robôs de IA",
+      "COTACOES": "Cotações",
+      "RELATORIOS": "Relatórios",
+      "CONFIGURACOES": "Configurações"
+    },
+    "CURTO": {
+      "TODAS": "Lê e atende todas as conversas",
+      "PROPRIAS": "Atende as próprias conversas",
+      "SO_OLHA_CONVERSAS": "Só olha as conversas",
+      "VE_CONVERSAS": "Vê as conversas",
+      "CAMPANHAS_DISPARA": "Cria e dispara campanhas",
+      "CAMPANHAS": "Cria campanhas",
+      "VENDAS_E_COLUNAS": "Mexe nas vendas e monta as colunas",
+      "CONTATOS_E_VENDAS": "Mexe nos contatos e nas vendas",
+      "VENDAS": "Cria e move as vendas",
+      "ARRUMA": "Arruma os canais, os robôs e as regras",
+      "CONTATOS": "Mexe nos contatos",
+      "SO_OLHA_CONTATOS": "Só olha os contatos",
+      "VE_CONTATOS": "Vê os contatos",
+      "RELATORIOS": "Vê os relatórios",
+      "PROCURA": "Procura clientes novos",
+      "NAO_ATENDE": "Não atende conversas",
+      "SO_OLHA_AREAS": "Só olha {areas}",
+      "VE_AREAS": "Vê {areas}"
+    },
+    "AREAS": {
+      "CONVERSATIONS": {
+        "NOME": "Conversas",
+        "NA_FRASE": "as conversas"
+      },
+      "CONTACTS": {
+        "NOME": "Contatos",
+        "CURTO": "contatos",
+        "NA_FRASE": "os contatos"
+      },
+      "REPORTS": {
+        "NOME": "Relatórios",
+        "CURTO": "relatórios",
+        "NA_FRASE": "os relatórios"
+      },
+      "CANNED_RESPONSES": {
+        "NOME": "Respostas prontas",
+        "NA_FRASE": "as respostas prontas"
+      },
+      "CRM": {
+        "NOME": "Vendas",
+        "CURTO": "vendas",
+        "NA_FRASE": "as vendas"
+      },
+      "AUTONOMIA": {
+        "NOME": "Robôs de IA",
+        "NA_FRASE": "os robôs de IA"
+      },
+      "DESEMPENHO": {
+        "NOME": "Desempenho da equipe",
+        "NA_FRASE": "o desempenho da equipe"
+      },
+      "PROSPECTING": {
+        "NOME": "Procurar clientes novos",
+        "NA_FRASE": "a procura de clientes novos"
+      },
+      "INSURANCE": {
+        "NOME": "Cotações",
+        "NA_FRASE": "as cotações"
+      },
+      "CAMPAIGNS": {
+        "NOME": "Campanhas",
+        "CURTO": "campanhas",
+        "NA_FRASE": "as campanhas"
+      },
+      "WHATSAPP_TEMPLATES": {
+        "NOME": "Modelos do WhatsApp",
+        "NA_FRASE": "os modelos do WhatsApp"
+      },
+      "META_ADS": {
+        "NOME": "Anúncios",
+        "NA_FRASE": "os anúncios"
+      },
+      "POSTS": {
+        "NOME": "Seus posts",
+        "NA_FRASE": "os posts"
+      },
+      "INBOXES": {
+        "NOME": "Canais (números de WhatsApp, Instagram, e-mail)",
+        "NA_FRASE": "os canais"
+      },
+      "INTEGRATIONS": {
+        "NOME": "Integrações",
+        "NA_FRASE": "as integrações"
+      },
+      "AUTOMATIONS": {
+        "NOME": "Regras automáticas",
+        "NA_FRASE": "as regras automáticas"
+      },
+      "SCHEDULING": {
+        "NOME": "Agenda",
+        "NA_FRASE": "a agenda"
+      },
+      "LABELS": {
+        "NOME": "Etiquetas",
+        "NA_FRASE": "as etiquetas"
+      },
+      "ATTRIBUTES": {
+        "NOME": "Campos extras",
+        "NA_FRASE": "os campos extras"
+      },
+      "MACROS": {
+        "NOME": "Atalhos de mensagens",
+        "NA_FRASE": "os atalhos de mensagens"
+      },
+      "SLA": {
+        "NOME": "Prazos de resposta",
+        "NA_FRASE": "os prazos de resposta"
+      },
+      "ASSIGNMENT": {
+        "NOME": "Quem recebe cada conversa nova",
+        "NA_FRASE": "quem recebe cada conversa nova"
+      },
+      "PEOPLE": {
+        "NOME": "Equipe (quem entra e sai)",
+        "NA_FRASE": "a equipe"
+      },
+      "FINANCE": {
+        "NOME": "Financeiro",
+        "NA_FRASE": "os custos da conta"
+      },
+      "CUIDADO": {
+        "NOME": "Ações que pedem cuidado"
+      }
+    },
+    "TRAVA": {
+      "SO_ADMIN": "Só o administrador dá isto.",
+      "NAO_TEM": "Você não tem isto, então não pode dar.",
+      "CARTAO": {
+        "NAO_TEM": "Sem {coisas}: você não tem isto.",
+        "SO_ADMIN": "Sem {coisas}: só o administrador dá."
+      },
+      "E_SEM": " e sem ",
+      "SEM": {
+        "crm_export": "levar as vendas para uma planilha",
+        "crm_metas_manage": "as metas do mês",
+        "sales_value_view": "os valores em R$",
+        "insurance_view": "ver as cotações",
+        "insurance_manage": "fazer cotações",
+        "campaign_send": "disparar campanhas",
+        "report_manage": "ver os relatórios de atendimento"
+      },
+      "SEM_AREA": "mudar {area}",
+      "SEM_AREA_VER": "ver {area}"
+    },
+    "ESCOLHA": {
+      "TITULO": "Para quem é esta função?",
+      "DICA": "Toque na mais parecida. Você vê e muda tudo antes de salvar.",
+      "CRIAR": "Criar {nome}",
+      "JA_TEM": "Você já tem esta função · ninguém usa | Você já tem esta função · {n} pessoa | Você já tem esta função · {n} pessoas",
+      "TRAVA_PESSOA": {
+        "ABOVE": "Só o administrador põe pessoas nela.",
+        "MINE": "Ninguém muda a própria função."
+      },
+      "POR_PESSOA": "Pôr uma pessoa nela",
+      "CRIAR_A_PARTIR": "Criar outra a partir da pronta",
+      "VER_MAIS": "Ver mais {n} funções prontas",
+      "ZERO": "Começar do zero, com tudo desligado",
+      "FORA": "Só o administrador cria a função {nome}.",
+      "POR_PESSOA_ROTULO": "Pôr uma pessoa nela: {nome}",
+      "CRIAR_A_PARTIR_ROTULO": "Criar outra a partir da pronta: {nome}"
+    },
+    "GUIADA": {
+      "VOCE_MUDOU": "você mudou",
+      "ANTES_DE": "· antes: {antes}",
+      "ALTERAR": "Alterar",
+      "ALTERAR_ROTULO": "Alterar {area}",
+      "ABRIR": "Abrir",
+      "FECHAR": "Fechar",
+      "PRONTO": "Pronto",
+      "CONTINUAR": "Continuar",
+      "AGORA_NAO": "Agora não",
+      "DESFAZER": "Desfazer",
+      "PASSOS": "Passos para montar a função",
+      "ETAPA": {
+        "ESCOLHA": "Escolha",
+        "AJUSTES": "Ajustes",
+        "CONFIRA": "Confira"
+      },
+      "VOLTAR": {
+        "VOLTAR_LISTA": "Voltar para a lista",
+        "TROCAR_PRONTA": "Trocar a função pronta",
+        "VOLTAR_AJUSTES": "Voltar aos ajustes",
+        "FAZER_DEPOIS": "Fazer depois e voltar para a lista"
+      },
+      "VOLTAR_LISTA": "Voltar para a lista",
+      "NIVEL": {
+        "NAO_VE": "Não vê",
+        "SO_OLHA": "Só olha",
+        "VE": "Vê",
+        "PODE_MEXER": "Pode mexer",
+        "BASE_USE": "Só usa",
+        "BASE_APPLY": "Só aplica",
+        "BASE_FILL": "Só preenche",
+        "BASE_PERSONAL": "Só os próprios"
+      },
+      "ANTES": {
+        "NAO_VE": "não via",
+        "SO_OLHA": "só olhava",
+        "VE": "via",
+        "PODE_MEXER": "podia mexer",
+        "BASE_USE": "só usava",
+        "BASE_APPLY": "só aplicava",
+        "BASE_FILL": "só preenchia",
+        "BASE_PERSONAL": "só tinha os próprios"
+      },
+      "TROCAR": {
+        "TITULO": "Trocar a função pronta?",
+        "TEXTO": "O que você mudou vai se perder.",
+        "CONTINUAR": "Continuar ajustando",
+        "TROCAR": "Trocar"
+      },
+      "COM_A_FUNCAO": "Com a função {nome}",
+      "COM_ESTA_FUNCAO": "Com esta função"
+    },
+    "AJUSTES": {
+      "TITULO": "Quer mudar alguma coisa?",
+      "TITULO_ALTERAR": "Alterar {nome}",
+      "DICA_PRONTA": "A função pronta {nome} já vem assim. Se estiver bom, toque em \"Continuar\".",
+      "DICA_ZERO": "Tudo começa desligado. Ligue o que esta função precisa e toque em \"Continuar\".",
+      "DICA_ALTERAR": "Mude o que for diferente e toque em \"Continuar\".",
+      "CONVERSAS": {
+        "NENHUMA": "Nenhuma",
+        "SO_OLHA": "Só olha",
+        "TODAS": "Atende todas",
+        "PROPRIAS_TUDO": "Atende as próprias, pega as novas e ajuda quando um colega chama",
+        "PROPRIAS_NOVAS": "Atende as próprias e pega as novas",
+        "PROPRIAS_AJUDA": "Atende as próprias e ajuda quando um colega chama"
+      },
+      "CUIDADO_NENHUMA": "Nenhuma ligada · apagar, planilhas, campanhas e IA",
+      "ANTES": {
+        "CONVERSAS": {
+          "NENHUMA": "não atendia",
+          "SO_OLHA": "só olhava",
+          "TODAS": "atendia todas",
+          "PROPRIAS": "atendia só as próprias"
+        },
+        "VENDAS": {
+          "NAO_VE": "não via",
+          "SO_OLHA": "só olhava",
+          "PODE_MEXER": "criava e movia as vendas",
+          "TUDO": "cuidava de tudo nas vendas"
+        }
+      },
+      "RECOLHIDA": {
+        "TITULO": "{areas} e mais {n} área | {areas} e mais {n} áreas",
+        "NADA": "Hoje estão todas desligadas.",
+        "N_AREAS": "{n} área | {n} áreas",
+        "MEXE_E_OLHA": "Mexe em {mexe} e só olha outra. | Mexe em {mexe} e só olha outras {olha}.",
+        "MEXE_E_VE": "Mexe em {mexe} e vê outra. | Mexe em {mexe} e vê outras {olha}.",
+        "MEXE_E_OLHA_NOMES": "Mexe em {mexe} e só olha {olha}.",
+        "MEXE_E_VE_NOMES": "Mexe em {mexe} e vê {olha}.",
+        "SO_MEXE": "Mexe em {mexe}.",
+        "SO_OLHA": "Só olha {olha}.",
+        "VE": "Vê {olha}.",
+        "UMA_OLHA": "Hoje só olha {area}.",
+        "UMA_VE": "Hoje vê {area}.",
+        "UMA_MEXE": "Hoje mexe em {area}.",
+        "OUTRAS": "As demais ficam desligadas."
+      },
+      "SO_DO_ADMIN": "Conta, segurança e cobrança ficam sempre com o administrador.",
+      "CUIDADO_NENHUMA_CURTO": "nenhuma ligada"
+    },
+    "CONVERSAS": {
+      "TITULO": "{com}, quais conversas a pessoa atende?",
+      "DICA": "Só contam os canais em que a pessoa está: números de WhatsApp, Instagram, e-mail.",
+      "NENHUMA": {
+        "TITULO": "Nenhuma",
+        "DICA": "As conversas somem do menu"
+      },
+      "SO_OLHA": {
+        "TITULO": "Só olha",
+        "DICA": "Lê as conversas, sem responder"
+      },
+      "PROPRIAS": {
+        "TITULO": "Atende as próprias",
+        "DICA": "As que recebeu e as que pegou"
+      },
+      "TODAS": {
+        "TITULO": "Atende todas",
+        "DICA": "Também as que estão com os colegas"
+      },
+      "EXTRAS": {
+        "conversation_unassigned_manage": {
+          "TITULO": "Também pega as novas que estão sem ninguém",
+          "TEXTO": "Conversas que ninguém pegou ainda"
+        },
+        "conversation_participating_manage": {
+          "TITULO": "Também ajuda quando um colega chama",
+          "TEXTO": "O colega chama a pessoa para a conversa e manda o link"
+        },
+        "conversation_view": {
+          "TITULO": "Também lê as conversas dos colegas",
+          "TEXTO": "Sem responder nelas"
+        }
+      },
+      "QUEM_RECEBE": {
+        "TITULO": "Quem recebe cada conversa nova",
+        "NAO_MEXE": "Hoje não mexe nisso",
+        "MEXE": "Hoje mexe nisso"
+      },
+      "PELO_MENOS_UMA": "Pelo menos uma fica ligada."
+    },
+    "CONTATOS": {
+      "TITULO": "{com}, o que a pessoa faz com os contatos?",
+      "DICA": {
+        "NAO_VE": "Os contatos somem do menu",
+        "SO_OLHA": "Vê os contatos, sem mudar",
+        "PODE_MEXER": "Cria e muda os dados dos contatos"
+      },
+      "MAIS": "Campos extras"
+    },
+    "VENDAS": {
+      "TITULO": "{com}, o que a pessoa faz nas vendas?",
+      "NAO_VE": {
+        "TITULO": "Não vê",
+        "DICA": "As vendas somem do menu",
+        "ESTADO": "Não vê"
+      },
+      "SO_OLHA": {
+        "TITULO": "Só olha",
+        "DICA": "Vê as vendas, sem mudar",
+        "ESTADO": "Só olha"
+      },
+      "PODE_MEXER": {
+        "TITULO": "Pode mexer",
+        "DICA": "Cria e move as vendas em andamento",
+        "ESTADO": "Cria e move as vendas em andamento"
+      },
+      "TUDO": {
+        "TITULO": "Cuida de tudo nas vendas",
+        "DICA": "Também monta as colunas, arquiva e vê os relatórios das vendas",
+        "ESTADO": "Cuida de tudo nas vendas"
+      },
+      "AVISO_TUDO": {
+        "TITULO": "{com}, a pessoa vai cuidar de tudo nas vendas?",
+        "TEXTO": "Vai poder montar as colunas das vendas, arquivar vendas, ver os relatórios das vendas, levar as vendas para uma planilha e pedir ajuda à IA nas vendas.",
+        "RISCO": "Cada pedido de ajuda à IA custa dinheiro na sua conta.",
+        "LIGAR": "Ligar tudo"
+      },
+      "MAIS": "Mais",
+      "MAIS_NADA": "Nada a mais ligado",
+      "MAIS_AREAS": "Junto com as vendas",
+      "VEM_COM_TUDO": "Vem com \"Cuida de tudo nas vendas\"."
+    },
+    "EXTRAS": {
+      "crm_delete_cards": "Arquivar vendas",
+      "crm_move_cards": "Mover as vendas entre as colunas",
+      "crm_manage_pipelines": "Montar as colunas das vendas",
+      "crm_view_reports": "Ver os relatórios das vendas",
+      "sales_value_view": "Ver os valores em R$",
+      "prospecting_view_all_searches": "Ver as buscas de todos",
+      "token_manage": "Chaves de acesso",
+      "custom_role_manage": "Mudar as funções",
+      "grant_above_own": "Dar mais do que tem"
+    },
+    "CUIDADO_TELA": {
+      "TITULO": "{com}, a pessoa pode fazer alguma destas coisas?",
+      "DICA": "Hoje está tudo desligado. Se não precisar, toque em \"Pronto\".",
+      "DICA_CURTA": "Tudo desligado. Se não precisar, toque em \"Pronto\".",
+      "DICA_LIGADA": "Se não precisar de mais nada, toque em \"Pronto\".",
+      "CADEADO": "Mais {n} coisa que você não pode dar | Mais {n} coisas que você não pode dar",
+      "LINHA": {
+        "contact_export": {
+          "TITULO": "Levar a lista de clientes para uma planilha",
+          "TEXTO": "A lista sai da plataforma, com nome e telefone"
+        },
+        "conversation_message_delete": {
+          "TITULO": "Apagar mensagens",
+          "TEXTO": "A mensagem fica como apagada na conversa"
+        },
+        "crm_manage_ai": {
+          "TITULO": "Pedir ajuda à IA nas vendas",
+          "TEXTO": "Cada pedido custa dinheiro na sua conta."
+        },
+        "contact_delete": {
+          "TITULO": "Apagar contatos e empresas",
+          "TEXTO": "Somem para todos, sem volta"
+        },
+        "campaign_send": {
+          "TITULO": "Disparar campanhas",
+          "TEXTO": "Manda mensagem para muita gente de uma vez"
+        },
+        "crm_export": {
+          "TITULO": "Levar as vendas para uma planilha",
+          "TEXTO": "A lista das vendas sai da plataforma"
+        },
+        "crm_metas_manage": {
+          "TITULO": "Definir as metas do mês de cada pessoa",
+          "TEXTO": "Vê a meta de cada pessoa da equipe"
+        }
+      },
+      "JUNTO": {
+        "CONTATOS": {
+          "NOTA": "Ao ligar, a pessoa também passa a mudar os contatos.",
+          "TITULO": "Ligar também os contatos?",
+          "TEXTO": "Para apagar, a pessoa também vai mudar os dados dos contatos.",
+          "RISCO": "Um contato apagado some para todos, sem volta.",
+          "LIGAR": "Ligar os dois",
+          "AGORA": "Agora a pessoa muda e apaga os contatos."
+        },
+        "CAMPANHAS": {
+          "NOTA": "Ao ligar, a pessoa também passa a criar campanhas.",
+          "TITULO": "Ligar também as campanhas?",
+          "TEXTO": "Para disparar, a pessoa também vai criar e mudar as campanhas.",
+          "RISCO": "Disparar manda mensagem para muita gente de uma vez.",
+          "LIGAR": "Ligar as duas",
+          "AGORA": "Agora a pessoa cria, muda e dispara as campanhas."
+        },
+        "METAS": {
+          "NOTA": "Ao ligar, a pessoa também passa a ver os valores das vendas em R$.",
+          "TITULO": "Ligar também os valores em R$?",
+          "TEXTO": "Para definir as metas, a pessoa também vai ver os valores das vendas em R$ de toda a equipe.",
+          "RISCO": "Os valores em R$ mostram quanto cada pessoa vende.",
+          "LIGAR": "Ligar os dois",
+          "AGORA": "Agora a pessoa define as metas e vê os valores em R$."
+        }
+      }
+    },
+    "CONFIRA": {
+      "TITULO": "Está certo assim?",
+      "TITULO_COPIA": "Confira a cópia",
+      "VAI_SE_CHAMAR": "Vai se chamar",
+      "TROCAR": "Trocar",
+      "NOME": "Como vai se chamar?",
+      "PARA_QUEM": "Para quem é (se precisar)",
+      "DICA_NOME": "Você já tem uma função {base}. Pode trocar este nome.",
+      "NOTA_CANAIS": "A pessoa só vê as conversas dos canais em que está.",
+      "VER_CANAIS": "Ver os canais",
+      "DEPOIS": "Depois de salvar, você escolhe quem vai ser {nome}.",
+      "SALVAR": "Salvar função",
+      "SALVAR_ALTERACOES": "Salvar alterações",
+      "NO_MENU": "No menu: {itens}",
+      "AVISO_COPIA": "Ficou de fora o que você não pode dar: {coisas}.",
+      "COPIA": {
+        "VALORES_E_METAS": "ver os valores das vendas em R$ e, junto, as metas do mês",
+        "crm_export": "levar as vendas para uma planilha",
+        "insurance_view": "ver as cotações",
+        "insurance_manage": "fazer cotações"
+      },
+      "CANAIS": {
+        "FECHAR": "Fechar",
+        "DA_CONTA": {
+          "TITULO": "Os canais da conta",
+          "TEXTO": "A pessoa só vê as conversas dos canais em que está. Estes são os canais da conta:",
+          "VAZIO": "A conta ainda não tem canais."
+        },
+        "SEUS": {
+          "TITULO": "Os canais em que você está",
+          "TEXTO": "A pessoa só vê as conversas dos canais em que está. Estes são os canais em que você está:",
+          "VAZIO": "Você ainda não está em nenhum canal."
+        }
+      },
+      "DAR_NOME": "Dê um nome para a função",
+      "DEPOIS_SEM_NOME": "Depois de salvar, você escolhe quem vai ter esta função.",
+      "MENU_VAZIO": "Ainda não aparece nada no menu"
+    },
+    "SALVAR": {
+      "NOME_CURTO": "Dê um nome com pelo menos 2 letras.",
+      "NOME_EM_USO": "Você já tem uma função {nome}. Dê outro nome.",
+      "NOME_REPETIDO": "Já existe uma função com esse nome. Escolha outro.",
+      "NOME_DE_INTEGRACAO": "Esse nome já é usado por uma integração. Que tal {sugestao}?",
+      "NADA_LIGADO": "Ligue pelo menos uma coisa antes de salvar.",
+      "TRAVA": "Você não pode dar parte disto. Peça ao administrador.",
+      "FORA_DO_ALCANCE": "Você não pode dar parte disto. Peça ao administrador.",
+      "PROPRIA_FUNCAO": "Ninguém muda a própria função.",
+      "INDISPONIVEL": "Funções da equipe não estão disponíveis agora. Fale com o administrador.",
+      "REDE": "Não deu para salvar agora. Confira a internet e tente de novo.",
+      "ALTERADA": "Função {nome} salva.",
+      "SEM_ACESSO": "Você não pode mais mudar as funções. Fale com o administrador."
+    },
+    "SUCESSO": {
+      "CRIADA": "Função {nome} criada.",
+      "QUEM": "Quem vai ser {nome}?",
+      "DICA": "Escolha agora ou faça isso depois, pela lista.",
+      "ESCOLHER": "Escolher pessoas",
+      "PECA_AO_ADMIN": "Peça ao administrador para pôr pessoas nela."
+    },
+    "GUARDA": {
+      "TITULO": "Sair sem salvar?",
+      "TEXTO": "O que você mudou vai se perder.",
+      "CONTINUAR": "Continuar ajustando",
+      "SAIR": "Sair"
+    },
+    "SEM_FUNCAO": {
+      "conversas_dos_colegas": {
+        "LISTA": "Ler e atender as conversas dos colegas, nos canais em que estão",
+        "CURTO": "ler e atender as conversas dos colegas"
+      },
+      "contatos": {
+        "LISTA": "Criar e mudar os contatos",
+        "CURTO": "criar e mudar os contatos"
+      },
+      "respostas_prontas": {
+        "LISTA": "Criar e mudar as respostas prontas",
+        "CURTO": "criar e mudar as respostas prontas"
+      },
+      "apagar_mensagens": {
+        "LISTA": "Apagar mensagens",
+        "CURTO": "apagar mensagens"
+      },
+      "vendas_das_colunas": {
+        "LISTA": "Criar e mover as vendas nas colunas de que participam",
+        "CURTO": "criar e mover as vendas"
+      },
+      "arquivar_vendas": {
+        "LISTA": "Arquivar vendas",
+        "CURTO": "arquivar vendas"
+      },
+      "relatorios_das_vendas": {
+        "LISTA": "Ver os relatórios das vendas",
+        "CURTO": "ver os relatórios das vendas"
+      },
+      "procurar_clientes_novos": {
+        "LISTA": "Procurar clientes novos",
+        "CURTO": "procurar clientes novos"
+      },
+      "planilha_de_clientes": {
+        "LISTA": "Levar a lista de clientes para uma planilha",
+        "CURTO": "levar a lista de clientes para uma planilha"
+      },
+      "valores_das_vendas": {
+        "LISTA": "Ver os valores das vendas em R$",
+        "CURTO": "ver os valores das vendas em R$"
+      },
+      "montar_colunas": {
+        "LISTA": "Montar as colunas das vendas",
+        "CURTO": "montar as colunas das vendas"
+      },
+      "ia_das_vendas": {
+        "LISTA": "Pedir ajuda à IA nas vendas",
+        "CURTO": "pedir ajuda à IA nas vendas"
+      },
+      "cuidar_de_tudo_nas_vendas": {
+        "LISTA": "Cuidar de tudo nas vendas",
+        "CURTO": "cuidar de tudo nas vendas"
+      },
+      "metas_do_mes": {
+        "LISTA": "Definir as metas do mês de cada pessoa",
+        "CURTO": "definir as metas do mês de cada pessoa"
+      },
+      "anuncio_de_origem": {
+        "LISTA": "Ver de que anúncio veio cada cliente",
+        "CURTO": "ver de que anúncio veio cada cliente"
+      },
+      "AREA": {
+        "MEXER": {
+          "LISTA": "Mudar {area}",
+          "CURTO": "mudar {area}"
+        },
+        "VER": {
+          "LISTA": "Ver {area}",
+          "CURTO": "ver {area}"
+        }
+      },
+      "OUTRA": {
+        "LISTA": "Fazer algumas coisas em {area}",
+        "CURTO": "fazer algumas coisas em {area}"
+      },
+      "ALGO": {
+        "LISTA": "Fazer uma coisa em {area}",
+        "CURTO": "fazer uma coisa em {area}"
+      },
+      "OUTRA_SEM_AREA": {
+        "LISTA": "Usar outra parte da plataforma",
+        "CURTO": "usar outra parte da plataforma"
+      },
+      "PREMISSA": {
+        "na_caixa": "Só nos canais em que a pessoa está: {coisas}.",
+        "participa_da_coluna": "Só nas colunas das vendas de que a pessoa participa: {coisas}."
+      },
+      "NOTA_RESTO": "O resto vale para a conta toda."
+    },
+    "DIFF": {
+      "GANHAR_E_PERDER": "Essa pessoa vai ganhar umas coisas e perder outras. | Essas pessoas vão ganhar umas coisas e perder outras.",
+      "SO_GANHAR": "Essa pessoa vai passar a poder mais coisas. | Essas pessoas vão passar a poder mais coisas.",
+      "SO_PERDER": "Essa pessoa vai perder umas coisas. | Essas pessoas vão perder umas coisas.",
+      "NADA": "Nada muda no que essa pessoa pode fazer. | Nada muda no que essas pessoas podem fazer.",
+      "PASSAM": "Vai passar a poder | Vão passar a poder",
+      "DEIXAM": "Vai deixar de | Vão deixar de",
+      "MAIS_DETALHES": "Mais detalhes"
+    },
+    "EFEITO": {
+      "PASSA_E_DEIXA": "Sem função, passa a {ganho}. Deixa de {perda}.",
+      "SO_PASSA": "Sem função, passa a {ganho}.",
+      "SO_DEIXA": "Sem função, deixa de {perda}.",
+      "NADA": "Sem função, continua podendo o mesmo.",
+      "VER_TUDO": "Ver tudo o que muda",
+      "TAMBEM": "Também passa a {ganho}."
+    },
+    "PESSOA": {
+      "TIRAR": "Tirar desta função",
+      "TIRAR_ROTULO": "Tirar desta função: {pessoa}",
+      "POR_COMO": "Pôr como {funcao}",
+      "POR_COMO_ROTULO": "Pôr como {funcao}: {pessoa}",
+      "DESFAZER": "Desfazer",
+      "DESFAZER_ROTULO": "Desfazer a mudança de {pessoa}",
+      "OUTRA_FUNCAO": "Pôr em outra função",
+      "OUTRA_FUNCAO_ROTULO": "Pôr em outra função: {pessoa}",
+      "ESCOLHER_FUNCAO": "Escolher função",
+      "ESCOLHER_FUNCAO_ROTULO": "Escolher função: {pessoa}",
+      "SEM_FUNCAO": "Sem função",
+      "VAI_FICAR_SEM": "Vai ficar sem função",
+      "HOJE_E": "Hoje é {atual}. Vai passar a ser {nova}.",
+      "HOJE_SEM": "Hoje está sem função. Vai passar a ser {nova}.",
+      "VAI_SER": "Vai ser {nova}.",
+      "TRAVA": {
+        "SELF": "Ninguém muda a própria função",
+        "ADMIN": "Já pode tudo: tem acesso de administrador",
+        "ABOVE": "Só o administrador muda a função desta pessoa"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "Quem vai ser {nome}?",
+      "TITULO_SEM_FUNCAO": "Quem está sem função",
+      "JA_SAO": "Já são {nome} ({n})",
+      "OUTRAS": "Outras pessoas",
+      "SO_LEITURA": "Só quem pode pôr e tirar pessoas da equipe muda quem tem esta função.",
+      "ESCONDIDAS": "A função {nomes} não aparece na escolha: só o administrador dá. | As funções {nomes} não aparecem na escolha: só o administrador dá.",
+      "CANCELAR": "Cancelar",
+      "FECHAR": "Fechar",
+      "SALVAR": "Salvar",
+      "SALVANDO": "Salvando…",
+      "SALVO": "Pronto. As funções das pessoas foram salvas.",
+      "ERRO_PARCIAL": "A função de {nomes} não foi salva. {motivo} | A função destas pessoas não foi salva: {nomes}. {motivo}",
+      "RODAPE": {
+        "PASSA_A_SER": "{pessoa} passa a ser {funcao}.",
+        "FICA_SEM": "{pessoa} vai ficar sem função e passa a {ganho}.",
+        "FICA_SEM_E_DEIXA": "{pessoa} vai ficar sem função e passa a {ganho}. Deixa de {perda}.",
+        "FICA_SEM_DEIXA": "{pessoa} vai ficar sem função e deixa de {perda}.",
+        "FICA_SEM_SO": "{pessoa} vai ficar sem função."
+      },
+      "TENTE": "Confira a internet e tente de novo.",
+      "ESPERE": "Foram muitas tentativas seguidas: espere um pouco e tente de novo.",
+      "CONTINUAR": "Continuar escolhendo",
+      "SO_LEITURA_ABOVE": "Só o administrador põe e tira pessoas desta função.",
+      "SO_LEITURA_MINE": "Ninguém muda a própria função: esta é a sua.",
+      "SO_LEITURA_APAGADA": "A função {nome} foi apagada.",
+      "NINGUEM_AINDA": "Ninguém tem esta função ainda.",
+      "FORA_DO_ALCANCE": "Não deu para mudar a função de {nomes}: está fora do que você pode dar.",
+      "TRAVADA": {
+        "ABOVE": "A função de {nomes} não mudou: só o administrador muda. | A função destas pessoas não mudou: {nomes}. Só o administrador muda.",
+        "ADMIN": "A função de {nomes} não mudou: já tem acesso de administrador e pode tudo. | A função destas pessoas não mudou: {nomes}. Já têm acesso de administrador e podem tudo."
+      },
+      "SEM_ACESSO": "Você não pode mais pôr e tirar pessoas das funções. Fale com o administrador.",
+      "SALVA": "A função de {nomes} foi salva. | As funções destas pessoas foram salvas: {nomes}.",
+      "SAIU_DA_CONTA": "{nomes} não está mais na conta. | Estas pessoas não estão mais na conta: {nomes}.",
+      "FUNCAO_SUMIU": "A função escolhida para {nomes} não existe mais. Escolha outra. | A função escolhida para estas pessoas não existe mais: {nomes}. Escolha outra.",
+      "NAO_MUDOU": "A função de {nomes} não mudou. Tente de novo; se continuar, fale com o administrador. | A função destas pessoas não mudou: {nomes}. Tente de novo; se continuar, fale com o administrador.",
+      "CONTINUA": "A função de {nomes} continua como era. | A função destas pessoas continua como era: {nomes}.",
+      "SAIU_DA_LISTA": "{nomes} já tem uma função e saiu desta lista. | Estas pessoas já têm uma função e saíram desta lista: {nomes}.",
+      "NAO_CONFIRMOU": "Não deu para confirmar o que foi salvo. Tente de novo."
+    },
+    "APAGAR": {
+      "TITULO": "Apagar a função {nome}?",
+      "TEXTO": "Ninguém usa esta função. A função some da lista.",
+      "MANTER": "Manter",
+      "APAGAR": "Apagar",
+      "PARA_ONDE": "Para onde vai a pessoa? | Para onde vão as {n} pessoas?",
+      "PARA_ONDE_TEXTO": "A função {nome} vai ser apagada. Escolha a nova função dessa pessoa. | A função {nome} vai ser apagada. Escolha a nova função dessas pessoas.",
+      "NOVA_FUNCAO": "Nova função",
+      "ESCOLHA": "Escolha a nova função",
+      "SEM_FUNCAO": "Sem função",
+      "MANTER_FUNCAO": "Manter a função",
+      "MOVER": "Mover as pessoas e apagar",
+      "APAGANDO": "Apagando…",
+      "VENDO_QUEM": "Vendo quem usa esta função…",
+      "SEM_PESSOAS": "Não deu para ver quem usa esta função.",
+      "APAGADA": "Função {nome} apagada.",
+      "MUDOU": "Alguém mudou esta função agora. Confira de novo.",
+      "INDISPONIVEL": "Essa função não está mais disponível. Escolha outra.",
+      "ERRO": "Não deu para apagar agora. Confira a internet e tente de novo.",
+      "RECUSA": {
+        "FORA_DO_ALCANCE": "Você não pode apagar esta função. Peça ao administrador.",
+        "TEM_GENTE": "Esta função ainda tem pessoas. Escolha para onde vão.",
+        "TEM_GENTE_SEM_VER": "Esta função ainda tem pessoas, mas não deu para ver quem.",
+        "INDISPONIVEL": "Funções da equipe não estão disponíveis agora. Fale com o administrador.",
+        "PROPRIA_FUNCAO": "Ninguém apaga a própria função.",
+        "SEM_ACESSO": "Você não pode mais mudar as funções. Fale com o administrador.",
+        "REDE": "Não deu para apagar agora. Confira a internet e tente de novo."
+      }
+    },
+    "PERDA": {
+      "TEXTO": "Essa pessoa tem a função {nome}. A partir de agora, não vai mais poder: | Essas pessoas têm a função {nome}. A partir de agora, não vão mais poder:",
+      "TEXTO_UMA": "Essa pessoa tem a função {nome}. | Essas pessoas têm a função {nome}.",
+      "FICA": {
+        "OLHA": "A partir de agora, só vai olhar {area}. | A partir de agora, só vão olhar {area}.",
+        "PROPRIAS": "A partir de agora, só vai atender as próprias conversas. | A partir de agora, só vão atender as próprias conversas.",
+        "PROPRIAS_E_NOVAS": "A partir de agora, vai atender as próprias conversas e pegar as novas que estão sem ninguém. | A partir de agora, vão atender as próprias conversas e pegar as novas que estão sem ninguém.",
+        "PROPRIAS_E_LINK": "A partir de agora, vai atender as próprias conversas e ajudar quando um colega manda o link da conversa. | A partir de agora, vão atender as próprias conversas e ajudar quando um colega manda o link da conversa.",
+        "PROPRIAS_NOVAS_E_LINK": "A partir de agora, vai atender as próprias conversas, pegar as novas sem ninguém e ajudar quando um colega manda o link. | A partir de agora, vão atender as próprias conversas, pegar as novas sem ninguém e ajudar quando um colega manda o link."
+      },
+      "VOLTAR": "Voltar",
+      "SALVAR": "Salvar mesmo assim",
+      "TITULO_UMA": "{n} pessoa vai deixar de {coisa} | {n} pessoas vão deixar de {coisa}",
+      "TITULO_VARIAS": "{n} pessoa vai deixar de fazer {coisas} coisas | {n} pessoas vão deixar de fazer {coisas} coisas",
+      "VER_AREA": "Ver {area}",
+      "NOMES_E_MAIS": "{nomes} e mais {n} pessoa | {nomes} e mais {n} pessoas"
+    }
+  }
+}

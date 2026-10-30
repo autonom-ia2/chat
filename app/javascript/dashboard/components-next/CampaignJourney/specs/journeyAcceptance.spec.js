@@ -32,6 +32,13 @@ const catalogs = ['en', 'pt_BR'].map(locale =>
   )
 );
 const texts = catalogs.flatMap(catalog => strings(catalog));
+// #2277: "Novo público pedindo em palavras" runs on the account's own AI key, so its screen has to name the AI
+// the person connects and pays for. Only "AI"/"IA" is allowed there; the other words stay forbidden.
+const fromConversations = new Set(
+  catalogs.flatMap(catalog =>
+    strings(catalog.CAMPAIGN_JOURNEY.NEW_AUDIENCE.FROM_CONVERSATIONS)
+  )
+);
 const words = text =>
   text
     .split(' ')
@@ -56,8 +63,12 @@ describe('campaign journey acceptance (#993)', () => {
 
   it('B1a, D3, F4: texts never mention the engine, AI, batches or label names', () => {
     const forbidden = ['jev', 'ia', 'ai', 'lote', 'lotes', 'batch', 'batches'];
+    const namesTheAi = ['ia', 'ai'];
     texts.forEach(text => {
-      const found = words(text).filter(word => forbidden.includes(word));
+      const allowed = fromConversations.has(text) ? namesTheAi : [];
+      const found = words(text).filter(
+        word => forbidden.includes(word) && !allowed.includes(word)
+      );
       expect(found, text).toEqual([]);
       expect(text.includes('campanha_'), text).toBe(false);
     });

@@ -5,7 +5,6 @@ import { GROUP_BY_FILTER } from './constants';
 import fromUnixTime from 'date-fns/fromUnixTime';
 import format from 'date-fns/format';
 import { formatTime } from '@chatwoot/utils';
-import { useAlert } from 'dashboard/composables';
 import ChartStats from './components/ChartElements/ChartStats.vue';
 import BarChart from 'shared/components/charts/BarChart.vue';
 import ReportDrilldownDrawer from './components/ReportDrilldownDrawer.vue';
@@ -221,10 +220,6 @@ export default {
 
       const dataPoint = event.item;
       if (!this.canOpenDrilldown(metric, dataPoint)) return;
-      if (!this.isAdmin) {
-        useAlert(this.$t('REPORT.DRILLDOWN.ADMIN_ONLY'));
-        return;
-      }
 
       this.openDrilldownAt(metric, event.pointIndex);
     },
@@ -352,6 +347,7 @@ export default {
     :business-hours="drilldownRequest?.businessHours"
     :can-prev="canDrilldownPrev"
     :can-next="canDrilldownNext"
+    :show-scoped-notice="!isAdmin"
     @navigate="navigateDrilldown"
     @close="closeDrilldown"
   />

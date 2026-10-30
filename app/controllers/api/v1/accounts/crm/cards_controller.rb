@@ -10,7 +10,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   include DeferInteractiveAi
 
   before_action :fetch_card, only: [
-    :show, :update, :destroy, :move, :close, :link_conversation, :unlink_conversation, :link_contact, :unlink_contact,
+    :show, :update, :destroy, :restore, :move, :close, :link_conversation, :unlink_conversation, :link_contact, :unlink_contact,
     :current_ai_suggestion, :evaluate_ai, :summarize, :reset_auto_followup
   ]
   before_action :ensure_crm_ai_enabled, only: [:current_ai_suggestion, :evaluate_ai, :summarize, :reset_auto_followup]
@@ -23,7 +23,11 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     authorize ::Crm::Card
     # Ordering is owned by FilterQuery#apply_sort (whitelisted sort/direction,
     # defaulting to updated_at desc — byte-identical to the historical default).
-    @cards = filtered_cards.page(params[:page] || 1).per(per_page)
+    @action_list = ::Crm::Cards::ActionGroups.sort?(params)
+    cards = filtered_cards
+    # Lista nova (#2283): o grupo e o retorno de cada card vêm na linha; a contagem abaixo é de outra consulta, sem o select.
+    cards = cards.select('crm_cards.*', ::Crm::Cards::ActionGroups::SELECT) if @action_list
+    @cards = cards.page(params[:page] || 1).per(per_page)
     @card_companies = Crm::Cards::CompanyResolver.for_cards(@cards.to_a)
     @cards_count = filtered_cards.count
   end
@@ -111,7 +115,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def update
-    attributes = update_params.to_h.with_indifferent_access
+    attributes = update_params.to_h.with_indifferent_access.except(*hidden_value_attributes)
     strip_ai_metadata!(attributes)
     promessa = payment_promise_from(attributes)
     return render_unprocessable('crm.invalid_payment_promise') if promessa == PROMESSA_INVALIDA
@@ -127,9 +131,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def destroy
-    @card.update!(status: :archived, last_activity_at: Time.current)
-    ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'archive', payload: {}).perform
-    broadcast_card(::Events::Types::CRM_CARD_ARCHIVED)
+    broadcast_card(::Events::Types::CRM_CARD_ARCHIVED) if ::Crm::Cards::Archiver.new(card: @card, actor: Current.user).perform
     render :show
   end
 
@@ -143,8 +145,13 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     end
   end
 
+  # Card arquivado (#2095, com a flag crm_arquivados): reabrir por aqui é restaurar, com as regras do restaurar
+  # (permissão de arquivar, funil arquivado, cliente que já voltou). Ganhar ou perder um card arquivado é recusado:
+  # restaure antes. Sem a flag, como antes.
   def close
     with_idempotency do
+      next close_archived if ::Crm::Cards::Restorer.reabrir_e_restaurar?(@card)
+
       @card = ::Crm::Cards::Closer.new(
         card: @card,
         actor: Current.user,
@@ -158,6 +165,18 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     rescue ::Crm::Cards::Closer::InvalidResult
       render json: { error: 'invalid_result' }, status: :unprocessable_entity
     end
+  end
+
+  # Restaurar o arquivado (#2095): volta para a etapa onde estava (Crm::Cards::Restorer). Quem pode arquivar pode
+  # restaurar (Crm::CardPolicy#restore?). Cliente que já voltou (outro card aberto do contato no mesmo funil) dá 409 com
+  # esse card, se a pessoa o enxerga; `force=true` restaura mesmo assim.
+  def restore
+    force = ActiveModel::Type::Boolean.new.cast(params[:force]) || false
+    result = ::Crm::Cards::Restorer.new(card: @card, actor: Current.user, force: force).perform
+    return render_restore_refusal(result) unless result.restored?
+
+    broadcast_card(::Events::Types::CRM_CARD_UPDATED)
+    render :show
   end
 
   def link_conversation
@@ -260,7 +279,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   def upsert_existing_card!(card, permitted_params)
     @card = card
     authorize @card, :update?
-    attributes = permitted_params.slice(*UPSERT_ATTRIBUTES.map(&:to_s)).compact
+    attributes = permitted_params.slice(*(UPSERT_ATTRIBUTES.map(&:to_s) - hidden_value_attributes)).compact
     attributes['contact_id'] = attachable_contact!(attributes['contact_id']).id if attributes['contact_id'].present?
     ensure_move_allowed!(@card, upsert_pipeline_id(attributes)) if attributes.key?('pipeline_id') || attributes.key?('stage_id')
     ensure_new_owner_allowed!(attributes['owner_id'], pipeline_id: upsert_pipeline_id(attributes) || @card.pipeline_id) if attributes.key?('owner_id')
@@ -274,6 +293,12 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
     render :show, status: :ok
+  end
+
+  # Valor de venda (#2075): quem não vê o valor deste card não o muda. A gaveta manda value_cents em toda edição; com o
+  # valor escondido (nil), gravaria 0 por cima e travaria a IA. Ganhar (#close) segue aceitando o valor digitado.
+  def hidden_value_attributes
+    ::Crm::ValorDeVenda.ve_o_card?(Current.account_user, @card) ? [] : %w[value_cents currency]
   end
 
   # The 'ai' metadata block is server-owned (value_source lock, summary, eval
@@ -360,7 +385,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
   end
 
   def ai_suggestion_payload(suggestion)
-    return if suggestion.blank?
+    return if suggestion.blank? || suggestion.fechar_fora_da_tela?(@card)
 
     {
       id: suggestion.id,
@@ -371,7 +396,7 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       reasoning: suggestion.reasoning,
       status: suggestion.status,
       created_at: suggestion.created_at
-    }
+    }.merge(suggestion.fechar ? { fechar: suggestion.fechar } : {})
   end
 
   def fetch_card
@@ -379,7 +404,20 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
       { contact: Crm::Cards::CompanyResolver.contact_preload },
       :owner, :inbox, :stage, :pipeline, :primary_conversation
     ).find(params[:id])
-    authorize @card, "#{action_name}?".to_sym
+    authorize @card, card_policy_query
+  end
+
+  # Reabrir o card arquivado pelo /close é restaurar (#2095): a regra é a do restaurar, não a do fechar.
+  def card_policy_query
+    return :restore? if action_name == 'close' && ::Crm::Cards::Restorer.reabrir_e_restaurar?(@card)
+
+    "#{action_name}?".to_sym
+  end
+
+  def close_archived
+    return render_unprocessable(::Crm::Cards::Restorer::CLOSE_ARCHIVED) unless ::Crm::Cards::Closer.reopen?(params[:result])
+
+    restore
   end
 
   def conversation_for_from_conversation!
@@ -568,6 +606,17 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     return if owner_id.to_s == @card.owner_id.to_s
 
     card_guard.ensure_owner_allowed!(owner_id, inbox_id: @card.inbox_id, pipeline_id: pipeline_id)
+  end
+
+  def render_restore_refusal(result)
+    return render_unprocessable(result.error) unless result.error == ::Crm::Cards::Restorer::CONFLICT
+
+    open_card = result.open_card if policy(result.open_card).show?
+    render json: { error: result.error, open_card: open_card && restore_conflict_payload(open_card) }, status: :conflict
+  end
+
+  def restore_conflict_payload(card)
+    { id: card.id, title: card.title, pipeline_id: card.pipeline_id, stage_id: card.stage_id, stage_name: card.stage&.name }
   end
 
   def render_owner_without_funnel

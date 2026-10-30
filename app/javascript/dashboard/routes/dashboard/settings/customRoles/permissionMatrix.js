@@ -3,11 +3,26 @@
 // A `<module>_manage` key implies `<module>_view` on the backend, so only the highest key is stored.
 import {
   CUSTOM_ROLE_MANAGE_PERMISSION,
+  DESEMPENHO_VIEW_PERMISSION,
   FINANCIAL_MANAGE_PERMISSION,
   FINANCIAL_VIEW_PERMISSION,
   GRANT_ABOVE_OWN_PERMISSION,
+  INTEGRATION_MANAGE_PERMISSION,
+  KEY_DEPENDENCIES,
+  META_ADS_MANAGE_PERMISSION,
+  META_ADS_VIEW_PERMISSION,
   PEOPLE_MANAGE_PERMISSION,
+  SALES_VALUE_VIEW_PERMISSION,
+  TOKEN_MANAGE_PERMISSION,
 } from 'dashboard/constants/permissions';
+
+// Chaves do servidor que nenhuma tela de função mostra (#2352). knowledge_base_* guardam o portal de artigos para
+// clientes do Chatwoot, que não está no menu do produto; a Central de Ajuda da plataforma é aberta a todos e não
+// depende de chave. Funções que já têm essas chaves continuam com elas: o setLevel só mexe nas chaves da área que muda.
+export const KEYS_OUTSIDE_MATRIX = [
+  'knowledge_base_view',
+  'knowledge_base_manage',
+];
 
 export const LEVELS = { NONE: 'none', VIEW: 'view', MANAGE: 'manage' };
 // Conversas: só olha (conversation_view, #1800), ou atende as próprias (LIMITED) ou todas (ALL). Na tela, as duas
@@ -51,6 +66,8 @@ export const SENSITIVE_EXTRAS = [
   'crm_export',
   // #1991: abre o R$ de cada pessoa da equipe e grava a meta de todos.
   'crm_metas_manage',
+  // #2075: abre o R$ das vendas de toda a equipe.
+  SALES_VALUE_VIEW_PERMISSION,
   CRM_ADMIN,
   'contact_export',
   'contact_delete',
@@ -84,14 +101,6 @@ export const MODULE_GROUPS = [
         manageOnlyExtras: ['contact_delete'],
       },
       {
-        key: 'KNOWLEDGE_BASE',
-        icon: 'i-lucide-book-open',
-        levels: {
-          view: 'knowledge_base_view',
-          manage: 'knowledge_base_manage',
-        },
-      },
-      {
         key: 'REPORTS',
         icon: 'i-lucide-chart-spline',
         levels: { view: 'report_manage' },
@@ -116,6 +125,8 @@ export const MODULE_GROUPS = [
         extras: [
           CRM_MOVE_CARDS,
           'crm_delete_cards',
+          // Valores de venda em R$ (#2075); as metas do mês (#1991) precisam dela.
+          SALES_VALUE_VIEW_PERMISSION,
           // Metas do mês de cada pessoa (#1991): o R$ dos colegas é número comercial (Decisão 1 do #1871).
           'crm_metas_manage',
           'crm_view_reports',
@@ -135,6 +146,12 @@ export const MODULE_GROUPS = [
         key: 'AUTONOMIA',
         icon: 'i-lucide-bot',
         levels: { view: 'autonomia_view', manage: 'autonomia_manage' },
+      },
+      {
+        // #2251 — painel de desempenho do agente e a exportação dele. Só ver; independente de Agentes.
+        key: 'DESEMPENHO',
+        icon: 'i-lucide-chart-line',
+        levels: { view: DESEMPENHO_VIEW_PERMISSION },
       },
       {
         key: 'PROSPECTING',
@@ -174,11 +191,22 @@ export const MODULE_GROUPS = [
         },
       },
       {
-        // Anúncios da Meta (#1794): só ver o painel. Conectar e configurar seguem do
-        // administrador até a chave protegida meta_ads_manage.
+        // Anúncios da Meta: ver o painel (#1794); editar conecta, configura e desconecta e age
+        // sobre o consultor (#2070). meta_ads_manage só o administrador entrega, ou quem tem o
+        // ajuste 'Pode entregar acima do próprio', que só o administrador liga (DELEGATION_KEYS).
         key: 'META_ADS',
         icon: 'i-lucide-chart-no-axes-combined',
-        levels: { view: 'meta_ads_view' },
+        levels: {
+          view: META_ADS_VIEW_PERMISSION,
+          manage: META_ADS_MANAGE_PERMISSION,
+        },
+      },
+      {
+        // Seus posts (#2302): ver os posts e os números do Instagram e da Página das caixas; editar (F2 #2305)
+        // responde, esconde, apaga e manda no privado. Os comentários só aparecem para quem vê a caixa.
+        key: 'POSTS',
+        icon: 'i-lucide-layout-grid',
+        levels: { view: 'posts_view', manage: 'posts_manage' },
       },
     ],
   },
@@ -190,6 +218,24 @@ export const MODULE_GROUPS = [
         icon: 'i-lucide-inbox',
         settings: true,
         levels: { view: 'inbox_view', manage: 'inbox_manage' },
+      },
+      {
+        // Integrações (#2027): conectar, configurar e desconectar integrações, webhooks, robôs e importações, e
+        // reconectar um canal que já existe. Criar caixa nova fica com inbox_manage. Ver e trocar os tokens que a
+        // plataforma gera é ajuste fino de quem cuida das integrações: as telas deles (robôs, webhooks, CRM/n8n)
+        // ficam aqui. Só o administrador entrega as duas chaves, ou quem tem o ajuste 'Pode entregar
+        // acima do próprio', que só o administrador liga (DELEGATION_KEYS).
+        key: 'INTEGRATIONS',
+        icon: 'i-lucide-plug',
+        settings: true,
+        levels: { manage: INTEGRATION_MANAGE_PERMISSION },
+        extras: [TOKEN_MANAGE_PERMISSION],
+        // Reconectar um canal acontece dentro das configurações da caixa.
+        suggests: {
+          level: LEVELS.MANAGE,
+          module: 'INBOXES',
+          targetLevel: LEVELS.VIEW,
+        },
       },
     ],
   },
@@ -265,7 +311,8 @@ export const MODULE_GROUPS = [
       {
         // Financeiro (#1969): ver os custos da conta em dinheiro (uso de IA) e a autorização de
         // cobranças da Meta; editar liga e desliga essa autorização. Plano e faturas ficam com o
-        // administrador. As duas chaves só o administrador entrega (DELEGATION_KEYS).
+        // administrador. As duas chaves só o administrador entrega, ou quem tem o ajuste 'Pode
+        // entregar acima do próprio', que só o administrador liga (DELEGATION_KEYS).
         key: 'FINANCE',
         icon: 'i-lucide-wallet',
         levels: {
@@ -281,7 +328,8 @@ export const MODULES = MODULE_GROUPS.flatMap(group => group.modules);
 
 export const moduleByKey = key => MODULES.find(module => module.key === key);
 
-const keysOf = module => [
+// As chaves de uma área: as dos níveis e os ajustes.
+export const keysOf = module => [
   ...Object.values(module.levels || {}),
   ...(module.extras || []),
 ];
@@ -291,12 +339,17 @@ const withoutKeys = (permissions, keys) =>
 
 const unique = permissions => [...new Set(permissions)];
 
-export const levelOptions = module => {
+// `current`: o nível que a função já tem. Um nível que a área ainda não oferece (laterLevels) só aparece para ela.
+export const levelOptions = (module, current = null) => {
   if (module.type === 'conversations')
     return Object.values(CONVERSATION_LEVELS);
+  const later = module.laterLevels || [];
   return [
     LEVELS.NONE,
-    ...[LEVELS.VIEW, LEVELS.MANAGE].filter(level => module.levels[level]),
+    ...[LEVELS.VIEW, LEVELS.MANAGE].filter(
+      level =>
+        module.levels[level] && (!later.includes(level) || level === current)
+    ),
   ];
 };
 
@@ -317,11 +370,11 @@ export const slotLevel = (module, level) =>
     ? LEVELS.MANAGE
     : level;
 
-export const levelSlots = module => {
+export const levelSlots = (module, current = null) => {
   if (module.type === 'conversations')
     return [LEVELS.NONE, LEVELS.VIEW, LEVELS.MANAGE];
   const slots = [null, null, null];
-  levelOptions(module).forEach(level => {
+  levelOptions(module, current).forEach(level => {
     slots[SLOT_BY_LEVEL[level]] = level;
   });
   return slots;
@@ -388,7 +441,7 @@ const setConversationLevel = (level, permissions) => {
 const setCrmLevel = (module, level, permissions) => {
   if (level === LEVELS.NONE) return withoutKeys(permissions, keysOf(module));
   const base = withoutKeys(permissions, [CRM_VIEW, CRM_MANAGE_CARDS]);
-  // The CRM backend checks each key on its own, so crm_view is always stored. Voltar para ver tira o que é só de quem mexe.
+  // Any CRM level stores crm_view; the backend adds it too for every editing key (#2124). Voltar para ver tira o que é só de quem mexe.
   if (level === LEVELS.VIEW)
     return unique([
       ...withoutKeys(base, module.manageOnlyExtras || []),
@@ -446,9 +499,17 @@ export const toggleExtra = (module, key, permissions) => {
   if (!permissions.includes(key)) {
     // Full CRM access switches every CRM option on, so the screen matches the backend.
     const implied = key === CRM_ADMIN ? CRM_EXTRAS_IMPLIED_BY_ADMIN : [];
-    return unique([...permissions, key, ...implied]);
+    // #2075: a meta do mês é dinheiro. Ligar as metas liga os valores em R$; desligar os valores desliga as metas.
+    const needed = KEY_DEPENDENCIES[key] ? [KEY_DEPENDENCIES[key]] : [];
+    return unique([...permissions, key, ...implied, ...needed]);
   }
-  const next = withoutKeys(permissions, [key]);
+  // Um dependente que o crm_admin trava continua ligado.
+  const dependents = Object.keys(KEY_DEPENDENCIES).filter(
+    dependent =>
+      KEY_DEPENDENCIES[dependent] === key &&
+      !isExtraLocked(dependent, permissions)
+  );
+  const next = withoutKeys(permissions, [key, ...dependents]);
   // A limited conversation level needs at least one scope. Só os dois alcances contam: desligar outro ajuste
   // (ler as outras, apagar mensagens) nunca é barrado por isso.
   const isScopeKey =
@@ -481,6 +542,15 @@ export const unmetSuggestion = (module, permissions) => {
 export const sensitiveExtrasOn = permissions =>
   SENSITIVE_EXTRAS.filter(key => permissions.includes(key));
 
+// As áreas que guardam alguma destas chaves (#2115): diz à pessoa onde um modelo ficou incompleto.
+export const modulesWithKeys = keys =>
+  MODULES.filter(module =>
+    [
+      ...keysOf(module),
+      ...(module.type === 'conversations' ? CONVERSATION_KEYS : []),
+    ].some(key => keys.includes(key))
+  );
+
 const build = levels =>
   Object.entries(levels).reduce(
     (permissions, [moduleKey, level]) =>
@@ -488,19 +558,21 @@ const build = levels =>
     []
   );
 
+// build() só guarda o nível de cada área; os ajustes finos que a frase do perfil promete entram à mão (#2115).
 export const PRESETS = {
-  AGENT: () =>
-    build({
+  AGENT: () => [
+    ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.LIMITED,
       CONTACTS: LEVELS.VIEW,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       CRM: LEVELS.MANAGE,
     }),
+    // "Pegar da fila".
+    CONVERSATION_UNASSIGNED,
+  ],
   SUPERVISOR: () => [
     ...build({
       CONVERSATIONS: CONVERSATION_LEVELS.ALL,
       CONTACTS: LEVELS.MANAGE,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       REPORTS: LEVELS.VIEW,
       CANNED_RESPONSES: LEVELS.MANAGE,
       CRM: LEVELS.MANAGE,
@@ -535,6 +607,9 @@ export const PRESETS = {
     'crm_manage_pipelines',
     'crm_export',
     'prospecting_view_all_searches',
+    // Dono da meta (#2115): valores em R$ e as metas do mês da equipe. Chaves protegidas, saem para quem não as entrega.
+    SALES_VALUE_VIEW_PERMISSION,
+    'crm_metas_manage',
   ],
   MARKETING: () => [
     ...build({
@@ -547,6 +622,8 @@ export const PRESETS = {
       WHATSAPP_TEMPLATES: LEVELS.MANAGE,
     }),
     'crm_view_reports',
+    'campaign_send',
+    'contact_export',
   ],
   FINANCE: () => [
     ...build({ REPORTS: LEVELS.VIEW, CRM: LEVELS.VIEW, FINANCE: LEVELS.VIEW }),
@@ -568,7 +645,6 @@ export const PRESETS = {
   READ_ONLY: () => [
     ...build({
       CONTACTS: LEVELS.VIEW,
-      KNOWLEDGE_BASE: LEVELS.VIEW,
       REPORTS: LEVELS.VIEW,
       CRM: LEVELS.VIEW,
       AUTONOMIA: LEVELS.VIEW,
@@ -577,6 +653,9 @@ export const PRESETS = {
       INBOXES: LEVELS.VIEW,
       AUTOMATIONS: LEVELS.VIEW,
       WHATSAPP_TEMPLATES: LEVELS.VIEW,
+      META_ADS: LEVELS.VIEW,
+      SCHEDULING: LEVELS.VIEW,
+      INSURANCE: LEVELS.VIEW,
     }),
     'crm_view_reports',
   ],
@@ -595,7 +674,12 @@ export const PROFILE_GROUPS = [
       },
       {
         key: 'SUPERVISOR',
-        can: ['ALL_CONVERSATIONS', 'EDIT_CONTACTS', 'REPORTS', 'TEAM_SETUP'],
+        can: [
+          'ALL_CONVERSATIONS',
+          'EDIT_IMPORT_CONTACTS',
+          'REPORTS',
+          'TEAM_SETUP',
+        ],
         cannot: ['DELETE_DATA', 'BILLING_INTEGRATIONS'],
       },
     ],
@@ -615,6 +699,7 @@ export const PROFILE_GROUPS = [
           'EDIT_PIPELINES',
           'EXPORT_CRM',
           'ALL_SEARCHES',
+          'SET_GOALS',
         ],
         cannot: ['SEND_CAMPAIGNS', 'SETTINGS'],
       },

@@ -844,6 +844,47 @@ describe('#mutations', () => {
   });
 
   describe('#UPDATE_CONVERSATION', () => {
+    // #2067: o evento ao vivo não traz de qual IA a conversa veio; a tela guarda o que sabia.
+    describe('veio_da_ia', () => {
+      const comAna = { assignee: { id: 9 }, assignee_type: 'User' };
+      const veio = { tipo: 'ia', id: 30, name: 'Lia' };
+      const estado = () => ({
+        allConversations: [
+          { id: 1, updated_at: 100, meta: { ...comAna, veio_da_ia: veio } },
+        ],
+      });
+
+      it('o evento sem a chave, com o mesmo dono, mantém o que já se sabia', () => {
+        const state = estado();
+        mutations[types.UPDATE_CONVERSATION](state, {
+          id: 1,
+          updated_at: 200,
+          meta: { ...comAna },
+        });
+        expect(state.allConversations[0].meta.veio_da_ia).toEqual(veio);
+      });
+
+      it('o dono mudou sem dizer de onde veio: esquece', () => {
+        const state = estado();
+        mutations[types.UPDATE_CONVERSATION](state, {
+          id: 1,
+          updated_at: 200,
+          meta: { assignee: { id: 10 }, assignee_type: 'User' },
+        });
+        expect(state.allConversations[0].meta).not.toHaveProperty('veio_da_ia');
+      });
+
+      it('a troca de dono diz (mesmo null): vale o que ela diz', () => {
+        const state = estado();
+        mutations[types.UPDATE_CONVERSATION](state, {
+          id: 1,
+          updated_at: 200,
+          meta: { ...comAna, veio_da_ia: null },
+        });
+        expect(state.allConversations[0].meta.veio_da_ia).toBeNull();
+      });
+    });
+
     it('should update existing conversation', () => {
       const state = {
         allConversations: [

@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { formatToTitleCase } from 'dashboard/helper/commons';
 
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -29,7 +29,7 @@ const inboxes = computed(() => {
       name: inbox.name,
       id: inbox.id,
       icon: getInboxIconByType(
-        inbox.channelType,
+        tipoDoIconeDaCaixa(inbox),
         inbox.medium,
         'line',
         inbox.voiceEnabled

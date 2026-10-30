@@ -1768,12 +1768,12 @@
       "components": [
         {
           "type": "BODY",
-          "text": "Hello, {{1}}! This is {{2}}. Glad to have you with us. Whenever you need anything, just send us a message here.",
+          "text": "Hello, {{1}}! This is {{2}}. Glad to have you with us. Whenever you need a quote, a copy of your bill or help with your plan, just send us a message here.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Your Company"
+                "Your Brokerage"
               ]
             ]
           }
@@ -1809,12 +1809,12 @@
       "components": [
         {
           "type": "BODY",
-          "text": "Hello, {{1}}! A reminder of your appointment at {{2}}: on {{3}}, at {{4}}. Do you confirm? Tap one of the options below.",
+          "text": "Hello, {{1}}! A reminder of your appointment with {{2}}: on {{3}}, at {{4}}. Do you confirm? Tap one of the options below.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Your Company",
+                "Your Brokerage",
                 "10/15",
                 "2:30 PM"
               ]
@@ -1863,7 +1863,7 @@
             "body_text": [
               [
                 "Ana",
-                "Your Company",
+                "Your Brokerage",
                 "10/15"
               ]
             ]
@@ -1902,21 +1902,21 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "promotion",
+      "name": "plan_offer",
       "language": "en",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Hi, {{1}}! Until {{2}}, you get {{3}} off at {{4}}. Want to take it? See the offers in the button below.",
+          "text": "Hi, {{1}}! Until {{2}}, {{3}} has a campaign with {{4}} off health plans, under the plan provider's rules. Want a quote? Tap the button below.",
           "example": {
             "body_text": [
               [
                 "Ana",
                 "10/15",
-                "20%",
-                "Your Company"
+                "Your Brokerage",
+                "20%"
               ]
             ]
           }
@@ -1932,12 +1932,12 @@
           ]
         }
       ],
-      "friendly_name": "Promotion",
+      "friendly_name": "Plan offer",
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "data",
-        "3": "desconto",
-        "4": "minha_empresa.nome"
+        "3": "minha_empresa.nome",
+        "4": "desconto"
       }
     }
   },
@@ -1948,19 +1948,19 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "payment_reminder",
+      "name": "bill_due",
       "language": "en",
       "category": "UTILITY",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Hello, {{1}}. A reminder from {{2}}: the payment of {{3}} is due on {{4}}. If you have already paid, please disregard. If you need a copy of the bill, tap the button below.",
+          "text": "Hello, {{1}}. A reminder from {{2}}: your health plan bill of {{3}} is due on {{4}}. If you have already paid, please disregard. Check that the bill is in the plan provider's name. If you need a copy, tap the button below.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Your Company",
+                "Your Brokerage",
                 "R$ 189.90",
                 "10/15"
               ]
@@ -1981,7 +1981,7 @@
           ]
         }
       ],
-      "friendly_name": "Payment reminder",
+      "friendly_name": "Bill due",
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "minha_empresa.nome",
@@ -1997,19 +1997,19 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "resume_conversation",
+      "name": "resume_the_quote",
       "language": "en",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Hi, {{1}}! This is {{2}}. Any questions left from our last conversation? Just reply here and we will pick it up.",
+          "text": "Hi, {{1}}! This is {{2}}. Any questions left about your health plan quote? Just reply here and we will pick it up.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Your Company"
+                "Your Brokerage"
               ]
             ]
           }
@@ -2024,7 +2024,7 @@
           ]
         }
       ],
-      "friendly_name": "Resume conversation",
+      "friendly_name": "Resume the quote",
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "minha_empresa.nome"
@@ -2050,7 +2050,7 @@
             "body_text": [
               [
                 "Ana",
-                "Your Company",
+                "Your Brokerage",
                 "10/15"
               ]
             ]
@@ -2085,19 +2085,19 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "reimbursement_update",
+      "name": "proposal_update",
       "language": "en",
       "category": "UTILITY",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Hello, {{1}}. An update from {{2}}: your reimbursement request has moved forward. Want to know the details? Tap the button below.",
+          "text": "Hello, {{1}}. An update from {{2}}: your proposal has moved forward at the health plan company. Want to know the details? Tap the button below.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Your Company"
+                "Your Brokerage"
               ]
             ]
           }
@@ -2112,7 +2112,7 @@
           ]
         }
       ],
-      "friendly_name": "Reimbursement update",
+      "friendly_name": "Proposal update",
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "minha_empresa.nome"
@@ -2126,14 +2126,14 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "news",
+      "name": "our_plans",
       "language": "en",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Hi, {{1}}! We picked some news for you:",
+          "text": "Hi, {{1}}! Here are some plans we can quote for you:",
           "example": {
             "body_text": [
               [
@@ -2158,14 +2158,14 @@
                 },
                 {
                   "type": "BODY",
-                  "text": "This week’s news, with fast delivery."
+                  "text": "Health plan: we get quotes from several plan providers."
                 },
                 {
                   "type": "BUTTONS",
                   "buttons": [
                     {
                       "type": "URL",
-                      "text": "See product",
+                      "text": "Get a quote",
                       "url": "https://sualoja.com.br"
                     }
                   ]
@@ -2185,14 +2185,14 @@
                 },
                 {
                   "type": "BODY",
-                  "text": "The month’s best seller, at a special price."
+                  "text": "Dental plan: a quote with no commitment."
                 },
                 {
                   "type": "BUTTONS",
                   "buttons": [
                     {
                       "type": "URL",
-                      "text": "See product",
+                      "text": "Get a quote",
                       "url": "https://sualoja.com.br"
                     }
                   ]
@@ -2202,7 +2202,7 @@
           ]
         }
       ],
-      "friendly_name": "News",
+      "friendly_name": "Our plans",
       "fields": {
         "1": "cliente.primeiro_nome"
       }
@@ -4108,12 +4108,12 @@
       "components": [
         {
           "type": "BODY",
-          "text": "Olá, {{1}}! Aqui é da {{2}}. Que bom ter você com a gente. Quando precisar de alguma coisa, é só mandar mensagem por aqui.",
+          "text": "Olá, {{1}}! Aqui é da {{2}}. Que bom ter você com a gente. Quando precisar de cotação, segunda via do boleto ou ajuda com o seu plano, é só mandar mensagem por aqui.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Sua Empresa"
+                "Sua Corretora"
               ]
             ]
           }
@@ -4149,12 +4149,12 @@
       "components": [
         {
           "type": "BODY",
-          "text": "Olá, {{1}}! Lembrete do seu horário na {{2}}: dia {{3}}, às {{4}}. Você confirma? Toque em uma das opções abaixo.",
+          "text": "Olá, {{1}}! Lembrete do seu horário com {{2}}: dia {{3}}, às {{4}}. Você confirma? Toque em uma das opções abaixo.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Sua Empresa",
+                "Sua Corretora",
                 "15/10",
                 "14h30"
               ]
@@ -4203,7 +4203,7 @@
             "body_text": [
               [
                 "Ana",
-                "Sua Empresa",
+                "Sua Corretora",
                 "15/10"
               ]
             ]
@@ -4242,21 +4242,21 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "promocao",
+      "name": "oferta_de_plano",
       "language": "pt_BR",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Oi, {{1}}! Até {{2}}, você tem {{3}} de desconto na {{4}}. Quer aproveitar? Veja as ofertas no botão abaixo.",
+          "text": "Oi, {{1}}! Até {{2}}, a {{3}} tem uma campanha com {{4}} de desconto em planos, pelas regras da operadora. Quer uma cotação? Toque no botão abaixo.",
           "example": {
             "body_text": [
               [
                 "Ana",
                 "15/10",
-                "20%",
-                "Sua Empresa"
+                "Sua Corretora",
+                "20%"
               ]
             ]
           }
@@ -4272,12 +4272,12 @@
           ]
         }
       ],
-      "friendly_name": "Promoção",
+      "friendly_name": "Oferta de plano",
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "data",
-        "3": "desconto",
-        "4": "minha_empresa.nome"
+        "3": "minha_empresa.nome",
+        "4": "desconto"
       }
     }
   },
@@ -4288,19 +4288,19 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "lembrete_de_pagamento",
+      "name": "boleto_a_vencer",
       "language": "pt_BR",
       "category": "UTILITY",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Olá, {{1}}. Lembrete da {{2}}: o pagamento de {{3}} vence em {{4}}. Se já pagou, pode desconsiderar. Se precisar da segunda via, toque no botão abaixo.",
+          "text": "Olá, {{1}}. Lembrete da {{2}}: o boleto do seu plano, de {{3}}, vence em {{4}}. Se já pagou, pode desconsiderar. Confira se o boleto está no nome da operadora. Se precisar da segunda via, toque no botão abaixo.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Sua Empresa",
+                "Sua Corretora",
                 "R$ 189,90",
                 "15/10"
               ]
@@ -4321,7 +4321,7 @@
           ]
         }
       ],
-      "friendly_name": "Lembrete de pagamento",
+      "friendly_name": "Boleto a vencer",
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "minha_empresa.nome",
@@ -4337,19 +4337,19 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "retomar_conversa",
+      "name": "retomar_a_cotacao",
       "language": "pt_BR",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Oi, {{1}}! Aqui é da {{2}}. Ficou alguma dúvida da nossa última conversa? É só responder aqui que a gente continua.",
+          "text": "Oi, {{1}}! Aqui é da {{2}}. Ficou alguma dúvida sobre a cotação do seu plano? É só responder aqui que a gente continua.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Sua Empresa"
+                "Sua Corretora"
               ]
             ]
           }
@@ -4364,7 +4364,7 @@
           ]
         }
       ],
-      "friendly_name": "Retomar conversa",
+      "friendly_name": "Retomar a cotação",
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "minha_empresa.nome"
@@ -4390,7 +4390,7 @@
             "body_text": [
               [
                 "Ana",
-                "Sua Empresa",
+                "Sua Corretora",
                 "15/10"
               ]
             ]
@@ -4425,19 +4425,19 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "andamento_do_reembolso",
+      "name": "andamento_da_proposta",
       "language": "pt_BR",
       "category": "UTILITY",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Olá, {{1}}. Atualização de {{2}}: o seu pedido de reembolso teve andamento. Quer saber os detalhes? Toque no botão abaixo.",
+          "text": "Olá, {{1}}. Atualização de {{2}}: a sua proposta teve andamento na operadora. Quer saber os detalhes? Toque no botão abaixo.",
           "example": {
             "body_text": [
               [
                 "Ana",
-                "Sua Empresa"
+                "Sua Corretora"
               ]
             ]
           }
@@ -4452,7 +4452,7 @@
           ]
         }
       ],
-      "friendly_name": "Andamento do reembolso",
+      "friendly_name": "Andamento da proposta",
       "fields": {
         "1": "cliente.primeiro_nome",
         "2": "minha_empresa.nome"
@@ -4466,14 +4466,14 @@
     "pacote": "seguros.saude_beneficios",
     "pode_ir_em_campanha": true,
     "corpo": {
-      "name": "novidades",
+      "name": "nossos_planos",
       "language": "pt_BR",
       "category": "MARKETING",
       "parameter_format": "positional",
       "components": [
         {
           "type": "BODY",
-          "text": "Oi, {{1}}! Separamos algumas novidades para você:",
+          "text": "Oi, {{1}}! Veja alguns planos que a gente cota para você:",
           "example": {
             "body_text": [
               [
@@ -4498,14 +4498,14 @@
                 },
                 {
                   "type": "BODY",
-                  "text": "Novidade da semana, com entrega rápida."
+                  "text": "Plano de saúde: a gente cota em várias operadoras."
                 },
                 {
                   "type": "BUTTONS",
                   "buttons": [
                     {
                       "type": "URL",
-                      "text": "Ver produto",
+                      "text": "Quero cotar",
                       "url": "https://sualoja.com.br"
                     }
                   ]
@@ -4525,14 +4525,14 @@
                 },
                 {
                   "type": "BODY",
-                  "text": "O mais pedido do mês, com preço especial."
+                  "text": "Plano odonto: cotação sem compromisso."
                 },
                 {
                   "type": "BUTTONS",
                   "buttons": [
                     {
                       "type": "URL",
-                      "text": "Ver produto",
+                      "text": "Quero cotar",
                       "url": "https://sualoja.com.br"
                     }
                   ]
@@ -4542,7 +4542,7 @@
           ]
         }
       ],
-      "friendly_name": "Novidades",
+      "friendly_name": "Nossos planos",
       "fields": {
         "1": "cliente.primeiro_nome"
       }

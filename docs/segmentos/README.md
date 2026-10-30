@@ -1,9 +1,12 @@
 # Palavras por segmento (pacotes de tradução por conta, #1550)
 
 Cada conta pode falar a língua do seu negócio. Uma corretora vê "Seguro ativo"
-onde o painel geral diz "Ganho"; uma operadora de saúde vê "Plano ativo". O
+onde o painel geral diz "Ganho"; uma corretora de planos de saúde vê "Implantado". O
 catálogo geral não muda: o pacote da conta é composto por cima dele, só nas
 chaves que o pacote traz.
+
+Para pôr um tipo novo no ar, do vocabulário à conta de verdade, siga
+[`novo-segmento.md`](novo-segmento.md).
 
 ## Camadas
 
@@ -62,7 +65,12 @@ Fora do i18n, com as mesmas camadas (#1802, lote 6; detalhes em
 - Central de Ajuda: `lib/central_de_ajuda_pacotes/<camada>/<cap>/<id>-<slug>.md`,
   só as seções que mudam; a troca é feita na leitura da conta.
 - Agentes: `config/agentes_por_pacote/seguros/<tipo>/agentes.md`, o bloco de
-  segmento (`Autonomia::Segmentos::Bloco`).
+  segmento (`Autonomia::Segmentos::Bloco`). Ao lado dele, `versoes.yml` (a data em
+  que cada versão do texto entrou no ar: quem edita o `agentes.md` registra a
+  versão nova com a data prevista do deploy) e `perguntas.yml` (as 3 perguntas,
+  em `pt_BR` e `en`, do antes e depois de "Atualizar com a nova base", #1429 F3).
+  Mudar o `agentes.md` muda a versão, e o spec do bloco falha até a versão nova
+  ter data.
 
 Essas camadas trocam o campo ou a seção inteira: mudança no texto geral de um
 trecho que a camada sobrepõe precisa ser repetida nela.
@@ -91,21 +99,22 @@ divergirem.
 
 Conta de seguros não "ganha" nem "perde" negócio: o seguro fecha ou não fecha.
 A camada `seguros` troca todo texto do resultado de venda; a camada
-`seguros/saude_beneficios` só troca o que diz "seguro" (vira "plano"). O resto
-a saúde herda.
+`seguros/saude_beneficios` troca o desfecho que deu certo por "Implantado" e
+o que diz "seguro" por "plano" (vocabulário em `funis-saude.md`). O resto a
+saúde herda, inclusive "Não fechou".
 
 ### Regras do texto
 
 1. **Selo, aba, filtro, legenda de status e condição de automação:** "Seguro
-   ativo" / "Não fechou" (saúde: "Plano ativo"; en: "Active policy" / "Not
-   closed" / "Active plan").
+   ativo" / "Não fechou" (en: "Active policy" / "Not closed"; saúde:
+   "Implantado").
 2. **Botão, histórico, evento e selo de evento enviado à Meta:** "Fechou o
-   seguro" / "Não fechou" (saúde: "Fechou o plano"; en: "Policy closed" / "Not
-   closed" / "Plan closed").
+   seguro" / "Não fechou" (en: "Policy closed" / "Not closed"; saúde:
+   "Marcar como implantado", nunca "fechou o plano").
 3. **Confirmação:** "Marcar: fechou o seguro" / "Marcar: não fechou". **Aviso:**
    "Marcado: fechou o seguro." / "Marcado: não fechou."
 4. **Números do painel:** título do KPI "Seguros fechados" (saúde "Planos
-   fechados") / "Não fecharam"; colunas e legendas "Fecharam" / "Não
+   implantados") / "Não fecharam"; colunas e legendas "Fecharam" / "Não
    fecharam"; "Taxa de fechamento"; "Valor fechado" / "Valor que não fechou".
 5. **"Fechar" quer dizer só que deu certo.** Texto que fala dos dois
    resultados, ou que também aparece no funil de atendimento, usa "terminou".

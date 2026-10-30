@@ -9,6 +9,7 @@
 #   Crm::Passagens.encerrar_aberta!(conversation, por:)
 #     Só nosso, em dois casos: a desatribuição sem destino (sem pessoa e sem IA) e a conversa resolvida.
 #   Crm::Passagens.ultima_aberta(conversation) -> Crm::Passagem | nil
+#   Crm::Passagens.ultimas_abertas(conversation_ids) -> { conversation_id => Crm::Passagem } (a mesma, em lote)
 #     de e para respondem tipo (:pessoa | :ia), classe, id (na tabela da classe) e nome; mais em e devolvida_em.
 #   Crm::Passagens.recentes(conversation, limite: 5) -> String (vazia sem passagem), cercada como dado para a IA.
 #
@@ -102,7 +103,18 @@ module Crm::Passagens
   end
 
   def ultima_aberta(conversation)
-    Crm::Passagem.where(conversation_id: conversation.id).abertas.em_ordem.first
+    ultimas_abertas([conversation.id])[conversation.id]
+  end
+
+  # #2067: a mais recente em aberto de cada conversa, numa consulta só (o índice parcial das abertas), para as listas.
+  # -> { conversation_id => Crm::Passagem }
+  def ultimas_abertas(conversation_ids)
+    return {} if conversation_ids.blank?
+
+    Crm::Passagem.abertas.where(conversation_id: conversation_ids)
+                 .select('DISTINCT ON (crm_passagens.conversation_id) crm_passagens.*')
+                 .reorder(:conversation_id, id: :desc)
+                 .index_by(&:conversation_id)
   end
 
   def aberta?(conversation)

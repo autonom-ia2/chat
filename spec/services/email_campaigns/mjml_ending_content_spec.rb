@@ -20,13 +20,15 @@ RSpec.describe EmailCampaigns::MjmlEndingContent, :aggregate_failures do
     expect(cut.restore(cut.skeleton).encoding).to eq(Encoding::UTF_8)
   end
 
-  it 'reads a long design with accented text in time proportional to its size' do
+  # Reading a character by its index in accented text costs a scan from the start each time, which made long designs
+  # quadratic (#1099). The cut reads the source by byte offsets only; this checks it, without timing it (#2241).
+  it 'reads a long design with accented text by byte offsets, never by character index' do
     long = "<mjml><mj-body><mj-section><mj-column>#{'<mj-text>Promoção de ação · já</mj-text>' * 6_000}</mj-column></mj-section></mj-body></mjml>"
-    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    %i[[] slice each_char chars].each { |reader| allow(long).to receive(reader).and_call_original }
     cut = described_class.new(long)
     cut.skeleton
 
-    expect(Process.clock_gettime(Process::CLOCK_MONOTONIC) - started).to be < 1
+    %i[[] slice each_char chars].each { |reader| expect(long).not_to have_received(reader) }
     expect(cut.slots.size).to eq(6_000)
   end
 end

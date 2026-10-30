@@ -6,7 +6,8 @@ import { idiomaDoNavegador } from '../../utils/pagina';
 
 // #1709 — "Quando {nome} não respondeu" na página do agente (mockup aprovado pelo Rodrigo, 17/10/2026): as vezes, esta
 // semana, em que o agente não respondeu de propósito (eventos skipped_* do Analytics, `silences` de
-// GET /autonomia/agents/:id/analytics na janela de 7 dias, a mesma dos números da semana). Sem clique para as conversas.
+// GET /autonomia/agents/:id/analytics na janela de 7 dias do Desempenho, que começa à meia-noite no fuso do servidor; os
+// números da semana começam no fuso da conta, Autonomia::ContaDaIa, #2000). Sem clique para as conversas.
 // O bloco some quando:
 // - o agente não fala com o cliente (`falaComCliente`, decidido pela página: ajudante, interno, cotação);
 // - não houve conversa esta semana (`numeros`, o mesmo dado do AgenteSemana: null ou zero e zero);
@@ -117,4 +118,6 @@ const titulo = computed(() => `silencios-${props.agentId}`);
       </li>
     </ul>
   </section>
+  <!-- Agente que não fala com o cliente, semana sem conversa ou leitura sem resposta: o bloco não aparece. -->
+  <template v-else />
 </template>

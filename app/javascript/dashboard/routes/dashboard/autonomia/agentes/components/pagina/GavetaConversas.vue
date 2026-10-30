@@ -9,14 +9,15 @@ import AgenteErro from '../AgenteErro.vue';
 import { idiomaDoNavegador, quandoFoi } from '../../utils/pagina';
 
 // #1181 PR3 (protótipo t07-conversas) — "Conversas desta semana": as conversas por trás dos números,
-// nas abas Respondidas e Passadas para a equipe. Lê o drilldown que já existe
-// (`analytics/conversations`, 7 dias, até 50, as mais recentes): "passadas" = handed_off; "respondidas"
-// = handled, a lista de conversas tratadas pelo agente que o backend tem hoje. Cada linha abre a
-// conversa numa aba nova do painel.
+// nas abas Respondidas, Passadas para a equipe e Resolvidas sem a equipe. Lê o drilldown
+// (`analytics/conversations`, a semana, até 50, as mais recentes). Cada linha abre a conversa numa aba
+// nova do painel.
 // #1369 — a hora de cada linha é a última atividade da conversa (`conversation.last_activity_at`),
 // não o `occurred_at`: em linha de conversa o drilldown manda ali a data de criação (uma conversa de
 // 28/09 aparecia como "seg., 20:59"). Fora dos últimos 7 dias, a hora vem com a data. Sem a última
 // atividade (o backend manda 0 quando ela falta), a linha fica sem hora: nunca a data de criação.
+// #2000 — cada aba lê a conta única da IA (Autonomia::ContaDaIa), a mesma do número do cartão que a
+// abriu: o cartão "respondidas" e a lista "Respondidas" contam as mesmas conversas.
 const props = defineProps({
   agentId: { type: Number, required: true },
   aba: { type: String, default: 'respondidas' },
@@ -27,7 +28,11 @@ const emit = defineEmits(['fechar']);
 const { t, locale } = useI18n();
 const router = useRouter();
 const NS = 'AGENTS.JORNADA.PAGINA.CONVERSAS';
-const METRICA = { respondidas: 'handled', passadas: 'handed_off' };
+const METRICA = {
+  respondidas: 'respondidas',
+  passadas: 'passadas',
+  resolvidas: 'resolvidas_sozinha',
+};
 
 const atual = ref(props.aba);
 const estado = ref('carregando');
@@ -75,6 +80,7 @@ const linkDa = linha =>
 const abas = computed(() => [
   { chave: 'respondidas', texto: t(`${NS}.RESPONDIDAS`) },
   { chave: 'passadas', texto: t(`${NS}.PASSADAS`) },
+  { chave: 'resolvidas', texto: t(`${NS}.RESOLVIDAS`) },
 ]);
 </script>
 

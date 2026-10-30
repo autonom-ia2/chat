@@ -8,11 +8,17 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import SelectMenu from 'dashboard/components-next/selectmenu/SelectMenu.vue';
 import ComboBox from 'dashboard/components-next/combobox/ComboBox.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
+import { useAvisoDeReuniao } from '../../composables/useAvisoDeReuniao';
 
 const props = defineProps({
   count: {
     type: Number,
     default: 0,
+  },
+  // Os cards escolhidos: o aviso de reunião marcada ao arquivar (#2091).
+  ids: {
+    type: Array,
+    default: () => [],
   },
   stages: {
     type: Array,
@@ -110,11 +116,20 @@ const handleStatus = value => {
   statusValue.value = '';
 };
 
+// Arquivar espera o aviso chegar (carregando, com teto em useAvisoDeReuniao).
+const {
+  aviso: avisoDeReuniao,
+  carregando: carregandoAviso,
+  consultar: consultarReuniao,
+} = useAvisoDeReuniao();
+
 const requestArchive = () => {
+  consultarReuniao(props.ids);
   confirmDialogRef.value?.open();
 };
 
 const confirmArchive = () => {
+  if (carregandoAviso.value) return;
   emit('archive');
   confirmDialogRef.value?.close();
 };
@@ -222,7 +237,15 @@ onBeforeUnmount(() => {
     :title="t('CRM_KANBAN.BULK.DELETE')"
     :description="archiveConfirmLabel"
     :confirm-button-label="t('CRM_KANBAN.BULK.DELETE')"
-    :is-loading="isBusy"
+    :is-loading="isBusy || carregandoAviso"
     @confirm="confirmArchive"
-  />
+  >
+    <p
+      v-if="avisoDeReuniao"
+      data-aviso-reuniao
+      class="mb-0 text-sm text-n-amber-11"
+    >
+      {{ avisoDeReuniao }}
+    </p>
+  </Dialog>
 </template>

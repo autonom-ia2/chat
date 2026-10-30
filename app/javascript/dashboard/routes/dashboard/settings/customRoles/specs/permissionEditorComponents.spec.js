@@ -43,6 +43,18 @@ describe('PermissionRow', () => {
     expect(checked(wrapper).text()).toBe('CUSTOM_ROLE.MATRIX.BASELINE.USE');
   });
 
+  // Seus posts oferece editar desde a F2 (#2305): responder, esconder, apagar e o privado.
+  it('offers posts edit to a new role', () => {
+    expect(radios(mountRow('POSTS', ['posts_view']))).toHaveLength(3);
+  });
+
+  it('marks posts edit for a role that has it', () => {
+    const wrapper = mountRow('POSTS', ['posts_manage']);
+
+    expect(radios(wrapper)).toHaveLength(3);
+    expect(checked(wrapper).text()).toBe('CUSTOM_ROLE.MATRIX.LEVELS.MANAGE');
+  });
+
   it('emits the chosen level', async () => {
     const wrapper = mountRow('INBOXES', []);
 
@@ -234,5 +246,42 @@ describe('ProfilePicker', () => {
     await wrapper.find('[role="radiogroup"]').trigger('keydown.down');
 
     expect(checked(wrapper).attributes('data-profile')).toBe('SUPERVISOR');
+  });
+
+  // #2115: a prévia conta só o que o modelo vai aplicar para quem está montando.
+  it('counts only the areas and sensitive keys within reach', () => {
+    const counted = {
+      mocks: {
+        $t: (key, count) =>
+          typeof count === 'number' ? `${key}#${count}` : key,
+      },
+    };
+    const full = mount(ProfilePicker, {
+      props: { initialProfile: 'SALES_MANAGER' },
+      global: counted,
+    });
+    const reduced = mount(ProfilePicker, {
+      props: {
+        initialProfile: 'SALES_MANAGER',
+        reach: keys =>
+          keys.filter(
+            key => !['sales_value_view', 'crm_metas_manage'].includes(key)
+          ),
+      },
+      global: counted,
+    });
+    const finance = mount(ProfilePicker, {
+      props: {
+        initialProfile: 'FINANCE',
+        reach: keys => keys.filter(key => key !== 'financial_view'),
+      },
+      global: counted,
+    });
+
+    expect(full.text()).toContain('CUSTOM_ROLE.SUMMARY.SENSITIVE#3');
+    expect(reduced.text()).toContain('CUSTOM_ROLE.SUMMARY.SENSITIVE#1');
+    expect(finance.text()).toContain('CUSTOM_ROLE.PICKER.AREAS#2');
+    expect(full.text()).not.toContain('CUSTOM_ROLE.PICKER.LEFT_OUT');
+    expect(reduced.text()).toContain('CUSTOM_ROLE.PICKER.LEFT_OUT');
   });
 });

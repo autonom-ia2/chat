@@ -46,7 +46,7 @@ en:
     reacoes:
       emoji_invalido: 'Pick a single emoji.'
       mensagem_invalida: 'This message does not accept reactions.'
-      caixa_sem_reacao: 'Reactions are only available in WhatsApp inboxes.'
+      caixa_sem_reacao: 'Reactions are only available in WhatsApp and Instagram inboxes.'
       sem_identificacao: 'This message does not have its WhatsApp id yet. Try again in a moment.'
       so_recebida: 'On the official WhatsApp you can only react to messages from the customer.'
       fora_da_janela: 'More than 24 hours have passed since the customer last wrote. The official WhatsApp only accepts reactions while the conversation is open.'
@@ -54,6 +54,12 @@ en:
       provedor_recusou: 'WhatsApp did not accept the reaction: %{motivo}'
       waha_recusou: 'WhatsApp did not accept the reaction. Check the inbox connection and try again.'
       provedor_fora: 'WhatsApp did not answer right now. Try again in a moment.'
+      instagram:
+        sem_identificacao: 'This message does not have its Instagram id yet. Try again in a moment.'
+        so_recebida: 'On Instagram you can only react to messages from the customer.'
+        fora_da_janela: 'The customer has not written within the allowed time. Instagram only accepts reactions while the conversation is open.'
+        provedor_recusou: 'Instagram did not accept the reaction: %{motivo}'
+        provedor_fora: 'Instagram did not answer right now. Try again in a moment.'
     encaminhar:
       sem_mensagem: 'Select at least one message to forward.'
       sem_destino: 'Choose at least one conversation to forward to.'
@@ -71,6 +77,8 @@ en:
       nao_e_email: 'Only invitations received in an email inbox can be answered.'
       nao_convidada: 'This inbox is not on the guest list of this meeting.'
       ja_passou: 'This meeting has already ended.'
+      substituido: 'The organizer changed or canceled this meeting in a newer email.'
+      em_andamento: 'Someone is answering this invitation right now. Wait a moment and reload the conversation.'
       sem_envio: 'This inbox cannot send email (forwarding only). Connect it by IMAP/SMTP, Google or Microsoft to answer.'
       falhou: 'Could not send your answer to the organizer. Try again in a moment.'
       assunto:

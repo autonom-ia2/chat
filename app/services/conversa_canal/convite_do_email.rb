@@ -16,6 +16,13 @@ class ConversaCanal::ConviteDoEmail
   # conhecido: o botão "Entrar" não leva a endereço qualquer que veio no convite.
   CAMPOS_DO_LINK = %w[x_microsoft_skypeteamsmeetingurl x_google_conference].freeze
   APLICATIVOS = %w[teams.microsoft.com teams.live.com meet.google.com zoom.us].freeze
+  PERIODOS = { 'SECONDLY' => 1.second, 'MINUTELY' => 1.minute, 'HOURLY' => 1.hour, 'DAILY' => 1.day, 'WEEKLY' => 1.week,
+               'MONTHLY' => 1.month, 'YEARLY' => 1.year }.freeze
+  # Partes da RRULE que podem deixar um período inteiro sem ocorrência (o dia 31 no mês de 30, a 5ª segunda): com elas, o
+  # limite do COUNT por períodos não vale.
+  PARTES_QUE_PULAM = %i[by_second by_minute by_hour by_month_day by_year_day by_week_number by_month by_set_position].freeze
+  # Até onde um horário "flutuante" pode estar à frente de UTC (o fuso mais a oeste é UTC-12).
+  FUSO_MAIS_A_OESTE = 12.hours
 
   def self.ler(mail)
     new(mail).ler
@@ -71,6 +78,8 @@ class ConversaCanal::ConviteDoEmail
     {
       uid: evento.uid.to_s,
       sequencia: evento.sequence.to_i,
+      # Quando o organizador gerou esta versão (DTSTAMP): desempata o CANCEL e o REQUEST de mesma SEQUENCE (#1995).
+      carimbo: segundos(evento.dtstamp),
       metodo: metodo,
       titulo: evento.summary.to_s.strip,
       local: evento.location.to_s.strip.presence,
@@ -87,8 +96,81 @@ class ConversaCanal::ConviteDoEmail
       inicio: segundos(evento.dtstart),
       fim: fim(evento),
       recorrente: (true if evento.rrule.present?),
-      ocorrencia: segundos(evento.recurrence_id)
+      fim_da_serie: fim_da_serie(evento),
+      ocorrencia: segundos(evento.recurrence_id),
+      ocorrencia_original: ocorrencia_original(evento.recurrence_id)
     }
+  end
+
+  # Fim da série que acaba (RRULE com UNTIL ou COUNT, #1995): depois dele o convite não se responde. É um limite por
+  # cima, calculado sem percorrer as ocorrências (uma regra de minuto em minuto até 2099 não pode travar o recebimento):
+  # o cartão pode perguntar um pouco além do fim real, nunca parar antes dele. Regra que o limite não cobre (mais de uma
+  # RRULE, partes que pulam períodos) fica sem fim_da_serie e segue respondível, como série sem fim.
+  def fim_da_serie(evento)
+    regra = evento.rrule.first if evento.rrule.size == 1
+    return if regra.nil?
+
+    ultima = regra.until ? limite_do_until(regra.until.to_s) : limite_do_count(regra, evento.dtstart)
+    return if ultima.nil?
+
+    # O DTSTART sempre é uma ocorrência (RFC 5545), mesmo com um UNTIL anterior a ele.
+    [ultima, segundos(evento.dtstart)].max + duracao(evento)
+  rescue StandardError => e
+    Rails.logger.warn("[ConviteDoEmail] fim da série ilegível no e-mail #{@mail.message_id}: #{e.class}")
+    nil
+  end
+
+  def duracao(evento)
+    (fim(evento).to_i - segundos(evento.dtstart)).clamp(0..)
+  end
+
+  # Nenhuma ocorrência começa depois do UNTIL (RFC 5545 §3.3.10). Só com data, vale o dia inteiro; sem fuso (sem o Z),
+  # pode ser de qualquer fuso: os dois casos contam até onde o dia ou o horário termina no fuso mais a oeste.
+  def limite_do_until(texto)
+    utc = ActiveSupport::TimeZone['UTC']
+    return (utc.strptime(texto, '%Y%m%d') + 1.day + FUSO_MAIS_A_OESTE).to_i - 1 unless texto.include?('T')
+    return utc.strptime(texto, '%Y%m%dT%H%M%SZ').to_i if texto.end_with?('Z')
+
+    (utc.strptime(texto, '%Y%m%dT%H%M%S') + FUSO_MAIS_A_OESTE).to_i
+  end
+
+  # COUNT: cada período (dia, semana, mês…) tem pelo menos uma ocorrência; o limite é o começo mais COUNT períodos (um
+  # a mais que o necessário). Semanal com vários dias (BYDAY=MO,WE) junta as ocorrências por semana.
+  def limite_do_count(regra, dtstart)
+    periodo = PERIODOS[regra.frequency.to_s.upcase]
+    return if periodo.nil? || regra.count.nil? || pula_periodo?(regra, dtstart)
+
+    limite = (comeco_da_serie(dtstart) + (periodo * (periodos(regra) * [regra.interval.to_i, 1].max))).to_i
+    # Horário flutuante foi lido como UTC: no fuso mais a oeste, a série acaba até 12 h depois (pesa na de hora em hora).
+    fuso_conhecido?(dtstart) ? limite : limite + FUSO_MAIS_A_OESTE.to_i
+  end
+
+  def periodos(regra)
+    dias = Array(regra.by_day).size
+    dias > 1 ? (regra.count.to_f / dias).ceil + 1 : regra.count.to_i
+  end
+
+  # BYDAY fora do semanal (2ª terça do mês, só dias úteis num diário) e o dia 29 em diante num mês ou ano (o mês sem
+  # esse dia fica sem ocorrência) também pulam períodos.
+  def pula_periodo?(regra, dtstart)
+    return true if PARTES_QUE_PULAM.any? { |parte| Array(regra.public_send(parte)).any? }
+    return true if Array(regra.by_day).any? && regra.frequency.to_s.upcase != 'WEEKLY'
+
+    %w[MONTHLY YEARLY].include?(regra.frequency.to_s.upcase) && comeco_da_serie(dtstart).day > 28
+  end
+
+  # O horário com a diferença do fuso do convite (o VTIMEZONE do Outlook incluído). Dia inteiro, ao meio-dia UTC, como
+  # no resto do convite.
+  def comeco_da_serie(valor)
+    dia_inteiro?(valor) ? Time.zone.at(segundos(valor)).utc : valor.to_time
+  end
+
+  # RECURRENCE-ID sem fuso conhecido (horário flutuante ou nome que ninguém resolve, #1995): a resposta devolve o valor
+  # como veio, e o organizador acha a ocorrência pelo mesmo texto. Com fuso conhecido, os segundos em UTC bastam.
+  def ocorrencia_original(valor)
+    return if valor.nil? || fuso_conhecido?(valor)
+
+    { valor: valor.value_ical, tzid: valor.ical_params['tzid']&.first.presence }.compact
   end
 
   def convidados(evento)

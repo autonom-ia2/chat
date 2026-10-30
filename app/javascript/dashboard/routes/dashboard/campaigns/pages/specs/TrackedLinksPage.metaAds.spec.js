@@ -1,16 +1,14 @@
 import { flushPromises, shallowMount } from '@vue/test-utils';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import TrackedLinksPage from '../TrackedLinksPage.vue';
 
-// The "Meta campaign names" block (#1034) is for account administrators only.
-const isAdmin = ref(true);
+// The "Meta campaign names" block (#1034) is for who connects Meta ads: administrator or meta_ads_manage (#2070).
+const granted = ref(['meta_ads_manage']);
 // Anúncios da Meta (#1047): com a flag meta_ads_hub, o bloco vira atalho para a página nova.
 const metaAdsHub = ref(false);
-vi.mock('dashboard/composables/useAdmin', () => ({
-  useAdmin: () => ({ isAdmin }),
-}));
 vi.mock('dashboard/composables/useCanManage', () => ({
   useCanManage: () => ref(true),
+  usePermissionGranted: key => computed(() => granted.value.includes(key)),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
 vi.mock('dashboard/composables/store', () => ({
@@ -42,8 +40,8 @@ describe('TrackedLinksPage · Meta campaign names block', () => {
     metaAdsHub.value = false;
   });
 
-  it('shows the block to an administrator', async () => {
-    isAdmin.value = true;
+  it('shows the block to who holds meta_ads_manage', async () => {
+    granted.value = ['meta_ads_manage'];
     const wrapper = await mountPage();
 
     expect(wrapper.findComponent({ name: 'MetaAdsNamesCard' }).exists()).toBe(
@@ -51,8 +49,8 @@ describe('TrackedLinksPage · Meta campaign names block', () => {
     );
   });
 
-  it('hides the block from anyone else', async () => {
-    isAdmin.value = false;
+  it('hides the block from who only views Meta ads', async () => {
+    granted.value = ['meta_ads_view'];
     const wrapper = await mountPage();
 
     expect(wrapper.findComponent({ name: 'MetaAdsNamesCard' }).exists()).toBe(
@@ -61,7 +59,7 @@ describe('TrackedLinksPage · Meta campaign names block', () => {
   });
 
   it('with Anúncios da Meta on, swaps the block for a shortcut to the new page', async () => {
-    isAdmin.value = true;
+    granted.value = ['meta_ads_manage'];
     metaAdsHub.value = true;
     const wrapper = await mountPage();
 

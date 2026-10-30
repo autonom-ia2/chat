@@ -2,7 +2,8 @@
 #
 # Não depende de caixa de e-mail: é uma pessoa da conta que consegue VER o card que a reserva cria. Mesmo critério
 # do `Enterprise::Crm::CardPolicy#index?` (`CrmPermissions#crm_permission?('crm_view')`): administrador e agente
-# sem função personalizada sempre podem; com função, só se ela tiver `crm_view` ou `crm_admin`. As chaves
+# sem função personalizada sempre podem; com função, só se ela tiver `crm_view` ou `crm_admin`. Quem tem uma chave de
+# editar o CRM tem `crm_view` gravado junto (`CustomRole::CRM_EDITING_KEYS`, #2124). As chaves
 # `agendamento_*` sozinhas NÃO bastam: dão acesso às páginas, não aos cards. Membro de integração (token de API)
 # nunca atende reunião.
 #

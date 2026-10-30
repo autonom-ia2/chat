@@ -5,7 +5,8 @@
 #   1. the campaign's "Respostas vão para a caixa X" (reply_to_inbox) → that inbox's address;
 #   2. the campaign's typed reply_to address (old side form);
 #   3. the verified domain's reply-to inbox (sender identity reply_to_inbox_id, SES only);
-#   4. the sender address (domain from_email, or the inbox address in direct mode).
+#   4. the sender address: the campaign's own From ("A mesma do remetente"). Only when the campaign
+#      has none, the domain's default from_email — the same order the From header uses (#2237).
 #
 # A reply to the inbox address reaches Chatwoot through that email inbox (forwarding or IMAP) and
 # becomes a conversation there, with the contact found by the sender's email.
@@ -28,7 +29,7 @@ class EmailCampaigns::ReplyTo
     identity = @campaign.sender_identity
     return if @campaign.direct_inbox? || identity&.reply_to_inbox_id.blank?
 
-    inbox_address(@campaign.account.inboxes.find_by(id: identity.reply_to_inbox_id))
+    inbox_address(identity.reply_to_inbox)
   end
 
   def inbox_address(inbox)
@@ -39,8 +40,6 @@ class EmailCampaigns::ReplyTo
   end
 
   def sender_address
-    return @campaign.from_email.presence if @campaign.direct_inbox?
-
-    @campaign.sender_identity&.from_email.presence
+    @campaign.sender_address
   end
 end

@@ -21,6 +21,8 @@ export function useChatListKeyboardEvents(listRef) {
   };
 
   const handleConversationNavigation = direction => {
+    // #2211: com a busca da lista aberta, a lista fica escondida (v-show) e não é navegada.
+    if (listRef.value?.style.display === 'none') return;
     const { allConversations, activeConversationIndex, lastConversationIndex } =
       getKeyboardListenerParams();
 

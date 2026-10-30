@@ -7,7 +7,8 @@ import { P, comMaiuscula, nomeDoMes } from './numerosTextos';
 
 // Os números "Só eu" de um mês (#1897): o mês vem do endereço (?mes=AAAA-MM) e
 // só a última resposta vale (trocar de mês depressa não deixa a antiga por cima).
-export function useNumerosDoMes({ t, locale }) {
+// `visao`: 'equipe' pede a visão "Equipe" (#1992); vazia, a "Só eu".
+export function useNumerosDoMes({ t, locale, visao }) {
   const route = useRoute();
   const router = useRouter();
   const { currentAccount } = useAccount();
@@ -24,7 +25,7 @@ export function useNumerosDoMes({ t, locale }) {
     carregando.value = true;
     falhou.value = false;
     try {
-      const { data } = await CrmNumerosAPI.show({ mes: mes.value });
+      const { data } = await CrmNumerosAPI.show({ mes: mes.value, visao });
       if (este === pedido) dados.value = data;
     } catch {
       if (este === pedido) falhou.value = true;

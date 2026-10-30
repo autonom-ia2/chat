@@ -4,7 +4,7 @@
 # Escrever na Meta (criar, editar, apagar, subir mídia) só com a flag `whatsapp_templates_journey` na conta:
 # sem ela, 404 antes de qualquer outra coisa. Listar e "onde está em uso" seguem abertos.
 class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Accounts::BaseController
-  WRITE_ACTIONS = %i[create update destroy media].freeze
+  WRITE_ACTIONS = %i[create update destroy media media_status].freeze
 
   before_action :ensure_journey_enabled, only: WRITE_ACTIONS
   before_action :fetch_inbox
@@ -40,10 +40,23 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
     head :no_content
   end
 
+  # Vídeo que precisa de conversão (#2370) volta 202 com `poll_url`; a tela consulta `media_status` até o resultado.
   def media
     return render_error('media_invalid') unless params[:file].respond_to?(:original_filename)
 
-    render json: manager.upload(params[:file]), status: :created
+    result = manager.upload(params[:file])
+    return render json: result, status: :created unless result[:conversion_id]
+
+    render json: { status: 'pending', poll_url: media_poll_url(result[:conversion_id]) }, status: :accepted
+  end
+
+  # Mesmo formato do `pollAiRequest` da tela: `done` com `result` (o da subida) ou `failed` com `error` e `message`.
+  def media_status
+    data = Whatsapp::Templates::VideoConversion.read(params[:conversion_id])
+    return head :not_found unless data && data['inbox_id'] == @inbox.id && data['account_user_id'] == Current.account_user&.id
+
+    render json: { status: data['status'], result: data['result'], error: data['error'],
+                   message: data['error'] && I18n.t("whatsapp_templates.errors.#{data['error']}") }
   end
 
   def usage
@@ -74,6 +87,10 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
     authorize(WhatsappTemplateProfile, :"#{action_name}?", policy_class: WhatsappTemplatePolicy)
   end
 
+  def media_poll_url(conversion_id)
+    "/api/v1/accounts/#{Current.account.id}/inboxes/#{@inbox.id}/whatsapp_templates/media/#{conversion_id}"
+  end
+
   def manager
     @manager ||= Whatsapp::Templates::Manager.new(inbox: @inbox, user: Current.user, account_user: Current.account_user,
                                                   visible_cards: policy_scope(::Crm::Card))
@@ -92,32 +109,26 @@ class Api::V1::Accounts::Inboxes::WhatsappTemplatesController < Api::V1::Account
     permitted.to_h.merge('components' => Array(components).grep(ActionController::Parameters).map { |item| item.permit!.to_h })
   end
 
-  # Os quatro abaixo respondem pelo `rescue_from`, que o Rails roda fora dos `around_action`: quando chegam aqui, o
-  # `I18n.with_locale` do `switch_locale_using_account_locale` já terminou e o idioma voltou ao padrão (#1419). Por isso
-  # cada um reabre o idioma da pessoa (ou da conta) antes de montar a mensagem.
+  # Os quatro abaixo respondem pelo `rescue_from`; o idioma da pessoa (ou da conta) vem do BaseController (#1419, #2110).
   def template_not_found
-    switch_locale_using_account_locale { render_error('template_not_found', :not_found) }
+    render_error('template_not_found', :not_found)
   end
 
   def meta_unreachable
-    switch_locale_using_account_locale { render_error('meta_unreachable', :service_unavailable) }
+    render_error('meta_unreachable', :service_unavailable)
   end
 
   # A tela nunca recebe o texto cru da Meta (#1394): sem texto nosso, vai o genérico e o `code` (`meta_text`). Com texto
   # nosso, o `code` é a chave dele: traduzimos aqui, no idioma da pessoa, em vez do `message` que o serviço montou no
   # idioma da conta (o mesmo serviço roda fora de pedido, no sync).
   def meta_refused(error)
-    switch_locale_using_account_locale do
-      message = I18n.t("whatsapp_templates.errors.#{error.own_text ? error.code : 'meta_text'}")
-      render json: { error: 'meta_refused', code: error.code, message: message }, status: :unprocessable_entity
-    end
+    message = I18n.t("whatsapp_templates.errors.#{error.own_text ? error.code : 'meta_text'}")
+    render json: { error: 'meta_refused', code: error.code, message: message }, status: :unprocessable_entity
   end
 
   def refused(error)
-    switch_locale_using_account_locale do
-      render json: { error: error.code, message: I18n.t("whatsapp_templates.errors.#{error.code}") }.merge(error.details),
-             status: :unprocessable_entity
-    end
+    render json: { error: error.code, message: I18n.t("whatsapp_templates.errors.#{error.code}") }.merge(error.details),
+           status: :unprocessable_entity
   end
 
   def render_sync_failure(code)

@@ -672,82 +672,42 @@ describe('#crmKanban board filters', () => {
     );
   });
 
-  it('upserts a card whose campaigns include a selected source_id in any touch position', () => {
-    const commit = vi.fn();
-    const card = {
-      id: 1,
-      pipeline_id: 7,
-      campaigns: [
-        { source_id: '111', headline: 'Primeiro anúncio' },
-        { source_id: '120247112194560621', headline: 'Anúncio filtrado' },
-      ],
-    };
-    actions.handleRealtimeCardEvent(
-      {
-        commit,
-        state: {
-          board: { pipeline: { id: 7 } },
-          filters: {
-            ...defaultFilters(),
-            campaignSourceIds: ['120247112194560621'],
+  // #2271: sem meta_ads_view o toque de anúncio chega sem source_id
+  // (ad_hidden), e o cliente não sabe mais dizer se o card bate com o filtro
+  // de anúncio. O servidor decide: o filtro é server-only e força o refetch.
+  it.each([
+    [
+      'a hidden ad touch (no source_id)',
+      [{ source: 'meta_ctwa', source_id: null, ad_hidden: true }],
+    ],
+    ['a visible touch', [{ source_id: '120247112194560621' }]],
+    ['a touch that misses the filter', [{ source_id: '111' }]],
+    ['no campaigns payload', undefined],
+  ])(
+    'refetches instead of judging the card when the campaign filter is active (%s)',
+    (_label, campaigns) => {
+      const commit = vi.fn();
+      actions.handleRealtimeCardEvent(
+        {
+          commit,
+          state: {
+            board: { pipeline: { id: 7 } },
+            filters: {
+              ...defaultFilters(),
+              campaignSourceIds: ['120247112194560621'],
+            },
           },
         },
-      },
-      { event: 'crm.card.updated', card }
-    );
+        {
+          event: 'crm.card.updated',
+          card: { id: 1, pipeline_id: 7, campaigns },
+        }
+      );
 
-    expect(emitter.emit).not.toHaveBeenCalled();
-    expect(commit).toHaveBeenCalledWith(types.UPSERT_CRM_KANBAN_CARD, card);
-  });
-
-  it('removes a card whose campaigns miss every selected source_id', () => {
-    const commit = vi.fn();
-    actions.handleRealtimeCardEvent(
-      {
-        commit,
-        state: {
-          board: { pipeline: { id: 7 } },
-          filters: {
-            ...defaultFilters(),
-            campaignSourceIds: ['120247112194560621'],
-          },
-        },
-      },
-      {
-        event: 'crm.card.updated',
-        card: { id: 1, pipeline_id: 7, campaigns: [{ source_id: '111' }] },
-      }
-    );
-
-    expect(commit).toHaveBeenCalledWith(types.REMOVE_CRM_KANBAN_CARD, 1);
-    expect(commit).not.toHaveBeenCalledWith(
-      types.UPSERT_CRM_KANBAN_CARD,
-      expect.anything()
-    );
-  });
-
-  it('removes a card without a campaigns payload when the campaign filter is active', () => {
-    const commit = vi.fn();
-    actions.handleRealtimeCardEvent(
-      {
-        commit,
-        state: {
-          board: { pipeline: { id: 7 } },
-          filters: {
-            ...defaultFilters(),
-            campaignSourceIds: ['120247112194560621'],
-          },
-        },
-      },
-      { event: 'crm.card.updated', card: { id: 1, pipeline_id: 7 } }
-    );
-
-    expect(commit).toHaveBeenCalledWith(types.REMOVE_CRM_KANBAN_CARD, 1);
-    expect(commit).not.toHaveBeenCalledWith(
-      types.UPSERT_CRM_KANBAN_CARD,
-      expect.anything()
-    );
-  });
+      expect(emitter.emit).toHaveBeenCalledWith(BUS_EVENTS.CRM_BOARD_REFETCH);
+      expect(commit).not.toHaveBeenCalled();
+    }
+  );
 
   // #1883: "ganhos do mês" do Números. O mês é calculado no servidor, no fuso da conta.
   it('sends closed_in to the list and never to the board', async () => {

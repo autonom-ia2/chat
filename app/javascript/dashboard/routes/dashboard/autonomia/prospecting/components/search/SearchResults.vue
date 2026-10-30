@@ -21,6 +21,7 @@ const {
   showFilters,
   activeFiltersCount,
   googleMapsApiKey,
+  canManage,
   exportLeads,
   isExporting,
   researchProgress,
@@ -28,7 +29,8 @@ const {
 
 const formatSearchArea = search => formatters.formatSearchArea(search, t);
 
-// Exportação (#682): o botão de download abre a escolha entre CSV e Excel.
+// Exportação (#682): o botão de download abre a escolha entre CSV e Excel. Só
+// aparece com prospecting_manage, que o servidor exige para exportar (#2147).
 const showExportMenu = ref(false);
 const exportMenuItems = computed(() => [
   {
@@ -123,6 +125,7 @@ const selectedSearchMapRadius = computed(() =>
           </span>
         </button>
         <button
+          v-if="canManage"
           type="button"
           class="flex size-9 items-center justify-center rounded-md border border-n-weak text-n-slate-12 hover:bg-n-solid-2 disabled:cursor-not-allowed disabled:opacity-60"
           :disabled="!sortedLeads.length || isExporting"

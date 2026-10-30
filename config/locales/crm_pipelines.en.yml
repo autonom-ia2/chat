@@ -2,3 +2,5 @@ en:
   crm:
     pipelines:
       outcome_labels_invalid: "Outcome names must be an object with success and/or failure as text, up to 30 characters each."
+      archive_last_active: "This is the only active pipeline in the account. Create another pipeline before archiving this one."
+      archive_only_default: "This is the main pipeline. Make another pipeline the main one before archiving this one."

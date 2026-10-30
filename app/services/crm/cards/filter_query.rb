@@ -1,5 +1,7 @@
 class Crm::Cards::FilterQuery
   include Crm::Cards::SharedFilters
+  # Lista nova "o que fazer agora" (#2283): sort=acao, waiting, follow_up_status=due, mine e action_group.
+  include Crm::Cards::ActionGroups
 
   FILTER_ATTRIBUTES = %i[pipeline_id inbox_id owner_id priority external_id].freeze
   # List-view-only "Resultado" filter. Uses a DISTINCT param key (`result`) so it
@@ -25,12 +27,15 @@ class Crm::Cards::FilterQuery
 
   # #1883: "fechado neste mês" (`closed_in=this_month`), para os links do Números. List-only, como o `result`.
   CLOSED_IN_THIS_MONTH = 'this_month'.freeze
+  # #2001 (F6): o "Ver" de Números › "De onde vieram os clientes".
+  ORIGENS_PARAMS = %i[entrou_em origem anuncio].freeze
 
-  def initialize(scope:, params:, conversation_visibility:, account: Current.account)
+  def initialize(scope:, params:, conversation_visibility:, account: Current.account, account_user: Current.account_user)
     @scope = scope
     @params = params
     @conversation_visibility = conversation_visibility
     @account = account
+    @account_user = account_user
   end
 
   def perform
@@ -38,7 +43,8 @@ class Crm::Cards::FilterQuery
     cards = apply_shared_filters(cards)
     cards = apply_standalone_filter(cards)
     cards = apply_search(apply_follow_up_filter(apply_closed_in_filter(apply_result_filter(cards))))
-    apply_sort(cards)
+    cards = apply_origens_filter(cards)
+    apply_sort(apply_action_groups(cards))
   end
 
   private
@@ -53,8 +59,11 @@ class Crm::Cards::FilterQuery
   # mesmo updated_at trocam de posição entre consultas e somem ou duplicam entre páginas.
   def apply_sort(cards)
     return cards.order(score: :desc, updated_at: :desc, id: :desc) if @params[:sort].blank?
+    return apply_action_sort(cards) if Crm::Cards::ActionGroups.sort?(@params)
 
     column = SORTABLE[@params[:sort].to_s] || :updated_at
+    # Valor de venda (#2075): ordenar por valor revelaria o valor; sem `sales_value_view`, vale o padrão.
+    column = :updated_at if column == :value_cents && !Crm::ValorDeVenda.ve?(@account_user)
     direction = @params[:direction].to_s == 'asc' ? :asc : :desc
     cards.order(column => direction).order(updated_at: :desc, id: :desc)
   end
@@ -65,6 +74,9 @@ class Crm::Cards::FilterQuery
                     contact: Crm::Cards::CompanyResolver.contact_preload,
                     primary_conversation: [:conversation_participants, { applied_sla: :sla_policy }])
           .preload(primary_conversation: :ai_assignee) # robô responsável (#1377), sem N+1 por card
+          # Quem cuida (responsible e current_responsible, #2283): o atendente e o robô ativo da caixa, sem N+1 por card.
+          .preload(primary_conversation: [:assignee, { inbox: { agent_bot_inbox: :agent_bot } }],
+                   inbox: { agent_bot_inbox: :agent_bot }, account: [])
   end
 
   def apply_filters(cards)
@@ -112,6 +124,35 @@ class Crm::Cards::FilterQuery
 
     month_start = Crm::Timezone::Resolver.new(account: @account).zone_or_default.now.beginning_of_month
     cards.where(closed_at: month_start..)
+  end
+
+  # Números › "De onde vieram os clientes" (#2001, F6): o "Ver" abre a Lista com `entrou_em=AAAA-MM` (quem entrou ou
+  # foi ganho no mês, no fuso da conta) e, dentro disso, `origem` (o grupo da origem de primeiro toque) ou `anuncio`
+  # (o id do anúncio do primeiro toque). A seleção e a origem são as mesmas da tela (Crm::Numeros::Origens::Cards e
+  # Classificador), então a lista tem o tamanho que a tela mostra. List-only, como o `closed_in`. Origem e anúncio só
+  # valem junto do mês (sem ele a classificação leria o funil inteiro): link com mês inválido, fora do limite de meses ou
+  # com origem/anúncio sem mês mostra a lista vazia, nunca o funil inteiro sem filtro.
+  def apply_origens_filter(cards)
+    return cards if ORIGENS_PARAMS.all? { |chave| @params[chave].blank? }
+
+    range = entrou_em_range
+    return cards.none if range.nil?
+
+    cards = Crm::Numeros::Origens::Cards.do_mes(cards, range, account: @account)
+    origem = Crm::Numeros::Origens::Classificador::ORIGENS.find { |grupo| grupo == @params[:origem].to_s }
+    anuncio = @params[:anuncio].to_s.presence
+    return cards if origem.nil? && anuncio.nil?
+
+    cards.where(id: Crm::Numeros::Origens::Classificador.new(cards, range).ids_de(origem: origem, anuncio: anuncio))
+  end
+
+  def entrou_em_range
+    return if @params[:entrou_em].blank?
+
+    inicio = Crm::Numeros::Mes.new(account: @account, chave: @params[:entrou_em].to_s).inicio
+    inicio..inicio.end_of_month
+  rescue Crm::Numeros::Mes::Invalido
+    nil
   end
 
   def apply_search(cards)

@@ -46,11 +46,12 @@ class Autonomia::Guide::Acoes
   # 02/10/2026: o que sai da plataforma (mensagem, ligação, campanha — inclusive
   # o WhatsApp oficial, que a Meta cobra do cliente), o que troca credencial em
   # uso e o que grava em lote fora da requisição (importação, ação em massa,
-  # macro), onde o caderno não chega. Apagar caixa, empresa, contato, conversa,
+  # macro), onde o caderno não chega. Apagar caixa, empresa, conversa,
   # time, portal, SLA ou etiqueta também entra: a plataforma termina essas
   # exclusões num job (`DeleteObjectJob`, `dependent: :destroy_async`,
   # `Labels::RemoveAssociationsJob`), e o desfazer só traria de volta metade.
-  # Para estas, a pessoa confirma antes.
+  # Para estas, a pessoa confirma antes. Apagar contato saiu daqui para
+  # SO_NA_TELA (#2096, 23/10).
   SEM_DESFAZER = [
     'POST conversations',
     'POST conversations/:conversation_id/messages',
@@ -79,7 +80,6 @@ class Autonomia::Guide::Acoes
     'POST macros/:id/execute',
     'DELETE inboxes/:id',
     'DELETE companies/:id',
-    'DELETE contacts/:id',
     'DELETE conversations/:id',
     'DELETE teams/:id', 'DELETE portals/:id',
     'DELETE sla_policies/:id',
@@ -96,14 +96,22 @@ class Autonomia::Guide::Acoes
     # #1069 — entrar com o Facebook grava uma credencial nova da Meta e troca de onde a plataforma lê.
     'POST crm/meta_ads_connection/facebook_login',
     # #1809 — "Excluir para sempre" da Lixeira do e-mail apaga a conversa pelo DeleteObjectJob, como o DELETE da conversa.
-    'DELETE conversa_canal/pastas_do_email/:conversation_id'
+    'DELETE conversa_canal/pastas_do_email/:conversation_id',
+    # #2084 — "Este contato é" fora do funil expira as sugestões de card do contato e, com arquivar_cards, arquiva os
+    # cards abertos dele em lote: o desfazer do Guia não alcança isso.
+    'PUT crm/contacts/:contact_id/relacao'
   ].freeze
 
   # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono
   # para o sistema criar modelos da Meta vale pelo texto exato do aviso que a tela mostra e o registro grava; uma
   # proposta do Guia não mostra esse texto. Vale para o catálogo e para o formato (`Formatos::RotasDeEscrita`).
   # A chave é a resposta que o Guia dá ao pedido (autonomia.guide.only_on_screen.*), com o caminho da tela.
-  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent' }.freeze
+  # #2096: excluir de vez (card, funil e os cards do contato) exige que a pessoa digite a confirmação; uma proposta do Guia
+  # a preencheria sozinha. Excluir o contato também só na tela (decisão do Rodrigo, 23/10): com a flag crm_arquivados,
+  # ela anonimiza os cards dele e cancela as reuniões futuras, com aviso ao cliente.
+  SO_NA_TELA = { 'POST whatsapp_template_consent' => 'whatsapp_template_consent', 'DELETE contacts/:id' => 'contact_delete' }
+               .merge(['POST crm/cards/permanent_delete', 'POST crm/pipelines/:id/permanent_delete',
+                       'POST crm/contacts/:contact_id/permanent_delete'].index_with('crm_permanent_delete')).freeze
 
   # O que é encanamento do painel, não ação de quem usa: nem entra no catálogo nem tem formato. #1841: o registro
   # de erro do navegador; o Guia chamando isso só gravaria linha falsa no log de diagnóstico.
