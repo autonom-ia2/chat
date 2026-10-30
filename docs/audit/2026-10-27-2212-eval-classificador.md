@@ -21,6 +21,7 @@ Arquivo: `spec/services/crm/meta_ads/comentarios_ia/classificador_eval_spec.rb`.
 | r2 | 36/40 | 4 | **0** | 0 | US$ 0,000961 |
 | r3, r4 | 36/40 | 4 | 0 | 0 | US$ 0,000961 cada |
 | r5 (30/10, +10 do dono) | 44/50 | 6 | **0** | 0 | US$ 0,001211 |
+| r6 (30/10, +10 do resumo) | 53/60 | 7 | **0** | 0 | US$ 0,001493 |
 
 - **Entre a r1 e a r2:** a descrição de "esconder" passou a dizer que crítica, grosseria ou reclamação nunca se escondem. Na r2, a crítica caiu em "sem decisão" (certeza < 0,7) e ficou para a pessoa.
 - **Os 4 sem decisão da r2:**
@@ -54,4 +55,18 @@ link do e-book de bolos"), e 10 casos novos.
 - **Asserção nova:** `privado_fora_do_caso`, o comentário que não é o caso do dono e recebeu privado. Deu **0**.
 - **Os 40 casos de antes:** 35 acertos e 5 sem decisão, nenhuma errada. O piso passou a ser 42 de 50.
 - **Gasto do #2212:** US$ 0,0050 de US$ 5.
+
+## r6 (30/10/2026): o resumo "O que tem nos comentários" (A2)
+
+O resumo conta os comentários sem resposta antes de existir um cuidado. Usa o mesmo Classificador, com um critério
+fixo no lugar do "para quem" do dono: quem pede informação, preço ou como comprar o que o post mostra
+(Crm::MetaAds::ComentariosIa::Resumo::CRITERIO). A r6 soma 10 casos com esse critério e já usa o "para quem" entre
+aspas, como critério e nunca como instrução, que entrou depois da revisão do PR A.
+
+- **Resumo:** 9 de 10. As perguntas foram para privado ou preço, as reclamações para a pessoa, o elogio e a marcação
+  para "não responder", e a propaganda foi escondida. "Me chama no direct" ficou sem decisão e não entra na conta.
+- **Dono:** 8 de 10. "Comprei o e-book e não recebi o link", que na r5 foi para a pessoa, agora ficou sem decisão: ninguém recebeu privado,
+  e o comentário fica com o dono.
+- **Sem decisão errada.** `privado_em_reclamacao` e `privado_fora_do_caso` deram 0. O piso passou a ser 50 de 60.
+- **Gasto do #2212:** US$ 0,0065 de US$ 5.
 
