@@ -1044,8 +1044,9 @@
 # Só vale com agente_so_informa (#2154) também ligada: o bloco manda marcar should_handoff, e só com ela o sinal vira
 # registro para a IA de Atribuição decidir. Desligada: o prompt fica byte a byte o de antes. Copiloto, Guia e Lia não
 # mudam. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
-# meta_ads_comentarios_ia (#2399, posição 16): posição 17 (valor 65536, 1 << 16), provisória. A posição real é a ordem
-# na main na hora da fila, e a Orquestração confirma antes de enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
+# seus_posts_comentarios: posição 16 (valor 32768, 1 << 15), provisória; vira 17 (65536) se o #2399
+# (meta_ads_comentarios_ia) entrar antes. A posição real é a ordem na main na hora da fila, e a Orquestração confirma
+# antes de enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: agente_diz_quando_nao_sabe
   display_name: Agentes › mensagem de quando não souber vai ao modelo
   enabled: false
