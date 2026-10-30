@@ -259,7 +259,8 @@
       "CARE_HERO": {
         "on": "Taking care of comments",
         "paused": "Paused: you answer the new ones"
-      }
+      },
+      "CARE_ERROR": "I couldn't check right now whether I'm taking care of this post's comments."
     },
     "VS_NORMAL": {
       "TIMES": "{times} times the usual",
