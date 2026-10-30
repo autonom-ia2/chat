@@ -22,9 +22,6 @@ module Crm::Cards::ActionGroups
   VISIBLE = 'acao_visivel'.freeze
   # Caixas com robô ativo, num LEFT JOIN: um EXISTS no CASE se repetia como SubPlan no SELECT, no ORDER e no WHERE.
   ACTIVE_BOT = 'acao_robo'.freeze
-  ACTIVE_BOT_JOIN = 'LEFT JOIN (SELECT DISTINCT agent_bot_inboxes.inbox_id FROM agent_bot_inboxes ' \
-                    "WHERE agent_bot_inboxes.status = #{AgentBotInbox.statuses[:active]}) " \
-                    "#{ACTIVE_BOT} ON #{ACTIVE_BOT}.inbox_id = COALESCE(#{CONVERSATION}.inbox_id, crm_cards.inbox_id)".freeze
 
   def self.sort?(params)
     params[:sort].to_s == SORT
@@ -41,7 +38,8 @@ module Crm::Cards::ActionGroups
     # e liga o eager_load do includes da base (JOIN das conversas vinculadas, linhas repetidas, select descartado).
     cards = cards.joins(action_conversation_join)
     cards = cards.joins(action_visibility_join) unless @conversation_visibility.all_conversations?
-    cards = cards.joins(action_follow_up_join).joins(ACTIVE_BOT_JOIN).joins(action_group_lateral)
+    cards = cards.joins(action_follow_up_join).joins(active_bot_join).joins(action_group_lateral)
+    cards = apply_organizar_joins(cards)
     cards = cards.where("#{GROUP_SQL} = 1") if boolean_param(:waiting)
     cards = cards.where('acao.retorno_em <= ?', end_of_today) if @params[:follow_up_status].to_s == FOLLOW_UP_DUE
     cards = apply_action_group_filter(cards)
@@ -58,7 +56,8 @@ module Crm::Cards::ActionGroups
 
   def action_groups_needed?
     Crm::Cards::ActionGroups.sort?(@params) || @params[:group_by].to_s == SORT || boolean_param(:waiting) ||
-      boolean_param(:mine) || @params[:follow_up_status].to_s == FOLLOW_UP_DUE || @params[:action_group].present?
+      boolean_param(:mine) || @params[:follow_up_status].to_s == FOLLOW_UP_DUE || @params[:action_group].present? ||
+      organizar_needed?
   end
 
   # "Só meus" (#2283, decisão 6): o card é meu (dono) ou, sem dono, a conversa visível é minha; a conversa minha que
@@ -80,6 +79,10 @@ module Crm::Cards::ActionGroups
   # 4 parado há mais tempo · 5 próximo retorno da pessoa, sem retorno no fim. Desempate: score desc, id desc (paginação
   # estável). Nós Arel, não texto: texto que começa com "acao." viraria references_values (ver apply_action_groups).
   def apply_action_sort(cards)
+    cards.reorder(*action_sort_terms)
+  end
+
+  def action_sort_terms
     terms = [asc('acao.grupo')]
     terms << asc(sla_order_sql).nulls_last if sla_order?
     terms.push(asc("CASE WHEN acao.grupo = 1 THEN #{CONVERSATION}.waiting_since END"),
@@ -88,11 +91,19 @@ module Crm::Cards::ActionGroups
                asc("CASE WHEN acao.grupo = 4 THEN #{Crm::Cards::SharedFilters::STALE_SQL} END").nulls_first,
                asc('CASE WHEN acao.grupo = 5 THEN acao.retorno_em END').nulls_last,
                Arel::Nodes::Descending.new(Arel.sql('crm_cards.score')), Arel::Nodes::Descending.new(Arel.sql('crm_cards.id')))
-    cards.reorder(*terms)
   end
 
   def asc(sql)
     Arel::Nodes::Ascending.new(Arel.sql(sql))
+  end
+
+  # Uma linha por caixa da conta, só com robô que existe (Crm::Card#active_inbox_bot devolve nil para robô apagado; o
+  # vínculo some depois, por destroy_async). O agent_bot_id é o robô de "Quem cuida" (Crm::Cards::OrganizarPor).
+  def active_bot_join
+    'LEFT JOIN (SELECT agent_bot_inboxes.inbox_id, MIN(agent_bot_inboxes.agent_bot_id) AS agent_bot_id ' \
+      'FROM agent_bot_inboxes INNER JOIN agent_bots ON agent_bots.id = agent_bot_inboxes.agent_bot_id ' \
+      "WHERE agent_bot_inboxes.status = #{AgentBotInbox.statuses[:active]} AND agent_bot_inboxes.account_id = #{Integer(@account.id)} " \
+      "GROUP BY agent_bot_inboxes.inbox_id) #{ACTIVE_BOT} ON #{ACTIVE_BOT}.inbox_id = COALESCE(#{CONVERSATION}.inbox_id, crm_cards.inbox_id)"
   end
 
   def action_conversation_join

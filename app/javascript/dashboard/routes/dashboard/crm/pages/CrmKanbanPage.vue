@@ -2009,8 +2009,17 @@ const onSavedViewApply = async ({ view }) => {
     });
     await store.dispatch('crmKanban/setFilters', filters.value);
   }
-  await loadCurrentList();
+  // Lista nova (#2379): ela recarrega sozinha com os filtros novos; a ordem e
+  // o que aparece ela mesma aplica.
+  if (!listaAcao.value) await loadCurrentList();
   if (valorIgnorado) useAlert(t('CRM_KANBAN.LIST.SAVED_VIEWS.VALUE_IGNORED'));
+};
+
+// Lista nova (#2379): "Lista antiga: só os mais quentes" → "Mostrar todos" tira
+// a nota da IA da lista guardada (o filtro saiu da gaveta).
+const tirarNotaDaListaAcao = async () => {
+  filters.value = { ...filters.value, scoreMin: '', scoreMax: '' };
+  await store.dispatch('crmKanban/setFilters', filters.value);
 };
 
 const onSavedViewCreate = async payload => {
@@ -3137,12 +3146,21 @@ onUnmounted(() => {
         :pode-marcar="canBulkAct"
         :pode-configurar="podeConfigurar"
         :selecionados="listSelection"
+        :pode-ver-valor="canSeeSalesValues"
+        :listas="savedViews"
+        :config-atual="currentSavedViewConfig"
+        :eh-admin="currentRole === 'administrator'"
         @filtros="showFiltersDrawer = true"
         @configurar="abrirConfiguracao"
         @abrir="openCardFromBoard"
         @conversa="openCardConversation"
         @selecionar="ids => store.dispatch('crmKanban/setListSelection', ids)"
         @limpar-filtros="clearFilters"
+        @abrir-lista="view => onSavedViewApply({ view })"
+        @guardar-lista="onSavedViewCreate"
+        @mudar-lista="onSavedViewUpdate"
+        @apagar-lista="onSavedViewDelete"
+        @tirar-nota="tirarNotaDaListaAcao"
       />
       <CrmBulkActionBar
         :count="listSelection.length"

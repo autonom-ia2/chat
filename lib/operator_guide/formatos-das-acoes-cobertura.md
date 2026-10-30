@@ -246,7 +246,7 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 - `GET contacts/active` — lê params em código de fora do repositório (Sift#filtrate)
 - `GET contacts/search` — lê params em código de fora do repositório (Sift#filtrate)
 - `GET crm/calendar/events` — params inteiro repassado a ::Crm::Cards::CalendarQuery.new; params inteiro repassado a ::Crm::FollowUps::FilterQuery.new
-- `GET crm/cards` — params inteiro repassado a ::Crm::Cards::FilterQuery.new; params inteiro repassado a ::Crm::Cards::ActionGroups.sort?
+- `GET crm/cards` — params inteiro repassado a ::Crm::Cards::FilterQuery.new; params inteiro repassado a ::Crm::Cards::OrganizarPor.lista_nova?
 - `GET crm/cards/export` — params inteiro repassado a ::Crm::Cards::FilterQuery.new
 - `GET crm/cards/summaries` — params inteiro repassado a ::Crm::Cards::GroupSummary.new
 - `GET crm/follow_ups` — params inteiro repassado a ::Crm::FollowUps::FilterQuery.new

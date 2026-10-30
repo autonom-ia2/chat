@@ -2,6 +2,8 @@ class Crm::Cards::FilterQuery
   include Crm::Cards::SharedFilters
   # Lista nova "o que fazer agora" (#2283): sort=acao, waiting, follow_up_status=due, mine e action_group.
   include Crm::Cards::ActionGroups
+  # "Mais → Organizar por" (#2379): etapa, quem cuida, retorno, valor, parado e nome.
+  include Crm::Cards::OrganizarPor
 
   FILTER_ATTRIBUTES = %i[pipeline_id inbox_id owner_id priority external_id].freeze
   # List-view-only "Resultado" filter. Uses a DISTINCT param key (`result`) so it
@@ -59,7 +61,7 @@ class Crm::Cards::FilterQuery
   # mesmo updated_at trocam de posição entre consultas e somem ou duplicam entre páginas.
   def apply_sort(cards)
     return cards.order(score: :desc, updated_at: :desc, id: :desc) if @params[:sort].blank?
-    return apply_action_sort(cards) if Crm::Cards::ActionGroups.sort?(@params)
+    return apply_lista_nova_sort(cards) if Crm::Cards::OrganizarPor.lista_nova?(@params)
 
     column = SORTABLE[@params[:sort].to_s] || :updated_at
     # Valor de venda (#2075): ordenar por valor revelaria o valor; sem `sales_value_view`, vale o padrão.

@@ -7515,7 +7515,8 @@
       "MARCAR_TODOS": "Select the ones shown",
       "MARCAR": "Select {nome}",
       "MOSTRAR_MAIS": "Show more",
-      "VER_CLIENTE": "See client {nome}: {sobre}"
+      "VER_CLIENTE": "See client {nome}: {sobre}",
+      "DETALHES": "Details"
     },
     "GRUPOS": {
       "ESPERANDO": "Waiting for a reply",
@@ -7622,7 +7623,10 @@
     },
     "MAIS_MENU": {
       "BAIXAR": "Download spreadsheet",
-      "MARCAR_VARIOS": "Select several"
+      "MARCAR_VARIOS": "Select several",
+      "ORGANIZAR": "Sort by",
+      "ESCOLHER": "Choose what shows",
+      "LISTAS": "Saved lists"
     },
     "FAIXA": {
       "FEITO": "Follow-up with {nome} done.",
@@ -7659,6 +7663,64 @@
       "NINGUEM": "Nobody here yet.",
       "SEM_RESULTADO": "Nobody with these filters.",
       "LIMPAR": "Clear filters"
+    },
+    "ORGANIZAR": {
+      "TITULO": "Sort by",
+      "DICA": "The first three split the list into groups.",
+      "FECHAR": "Close",
+      "VOCE": "You",
+      "OPCOES": {
+        "ACAO": "What to do first (default)",
+        "ETAPA": "Stage",
+        "QUEM_CUIDA": "Who takes care",
+        "RETORNO": "Nearest follow-up",
+        "VALOR": "Highest value",
+        "PARADO": "Idle the longest",
+        "NOME": "Name"
+      }
+    },
+    "CAMPOS": {
+      "TITULO": "Choose what shows",
+      "DICA": "Client and next step always show.",
+      "PRONTO": "Done",
+      "PADRAO": "Back to default",
+      "SUBIR": "Move {nome} up",
+      "DESCER": "Move {nome} down",
+      "CONVERSANDO": "{nome} is talking",
+      "PRIORIDADE": "Priority: {valor}",
+      "NOMES": {
+        "SITUACAO": "Status",
+        "ETAPA": "Stage",
+        "QUEM_CUIDA": "Who takes care",
+        "VALOR": "Value",
+        "CONVERSANDO": "Who is talking",
+        "NOVIDADE": "Latest news",
+        "PRIORIDADE": "Priority"
+      }
+    },
+    "LISTAS": {
+      "TITULO": "Saved lists",
+      "FECHAR": "Close",
+      "NENHUMA": "No saved list yet.",
+      "ABRIR": "Open the list {nome}",
+      "ABERTA": "List {nome} opened.",
+      "APAGAR": "Delete the list {nome}",
+      "APAGAR_PERGUNTA": "Delete “{nome}”?",
+      "APAGAR_SIM": "Delete",
+      "APAGAR_NAO": "Keep",
+      "GUARDAR_TITULO": "Save this list as it is now",
+      "NOME": "Name",
+      "NOME_EXEMPLO": "Example: My clients this week",
+      "GUARDAR": "Save list",
+      "SO_QUENTES": "Old list: only the hottest",
+      "TIRAR_QUENTES": "Show everyone",
+      "QUEM_VE": {
+        "TITULO": "Who sees it",
+        "ROTULO_DA": "Who sees the list {nome}",
+        "SO_EU": "Only me",
+        "EQUIPE": "My team",
+        "TODOS": "Everyone"
+      }
     }
   }
 }
