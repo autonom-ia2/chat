@@ -174,17 +174,20 @@ RSpec.describe AvaliacaoDoRoteiro do
              AvaliacaoDoRoteiro::VEREDITO_DA_INSTRUCAO)
     end
 
-    def julgar_resposta(conta, tipo, mensagem, resposta)
-      julgar(conta, "Tipo da empresa: #{AvaliacaoDoRoteiro::TIPOS_DO_JUIZ.fetch(tipo)}\n\nO que o dono contou ao criar o " \
-                    "agente (vale como fato): #{AvaliacaoDoRoteiro::PEDIDO}\n\nMensagem do cliente: #{mensagem}" \
-                    "\n\nResposta do agente: #{resposta}", AvaliacaoDoRoteiro::VEREDITO_DA_RESPOSTA)
+    # A base do ramo que o agente recebeu também vale como fato: sem ela o juiz marca "a proposta depende da análise
+    # da seguradora" como inventado (C30 do tester, 30/10).
+    def julgar_resposta(agente, tipo, mensagem, resposta)
+      julgar(agente.account, "Tipo da empresa: #{AvaliacaoDoRoteiro::TIPOS_DO_JUIZ.fetch(tipo)}\n\nO que o dono contou " \
+                             "ao criar o agente (vale como fato): #{AvaliacaoDoRoteiro::PEDIDO}\n\nO que o agente sabe " \
+                             "do ramo (vale como fato): #{agente.config.dig('base', 'texto')}\n\nMensagem do cliente: " \
+                             "#{mensagem}\n\nResposta do agente: #{resposta}", AvaliacaoDoRoteiro::VEREDITO_DA_RESPOSTA)
     end
 
     def respostas(agente, tipo)
       agent_inbox = vinculo(agente)
       AvaliacaoDoRoteiro::MENSAGENS.fetch(tipo).map do |mensagem|
         resposta = responder(agent_inbox, mensagem)
-        veredito = julgar_resposta(agente.account, tipo, mensagem, resposta)
+        veredito = julgar_resposta(agente, tipo, mensagem, resposta)
         { mensagem: mensagem, resposta: resposta, veredito: veredito,
           aprovada: veredito['atende_bem'] && AvaliacaoDoRoteiro::RUINS_DA_RESPOSTA.none? { |campo| veredito[campo] } }
       end
@@ -245,6 +248,7 @@ RSpec.describe AvaliacaoDoRoteiro do
       end
 
       total = tipos_escolhidos.size * AvaliacaoDoRoteiro::VARIANTES.size
+      expect(total).to be_positive, 'ROTEIRO_EVAL_VARIANTE ou ROTEIRO_EVAL_TIPO sem valor válido'
       expect(relatorio.size).to eq(total), "teto de custo atingido: #{relatorio.size} de #{total} criações"
     end
   end

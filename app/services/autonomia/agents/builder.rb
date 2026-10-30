@@ -182,7 +182,7 @@ module Autonomia
         7.2 Conhecimento: responder SÓ com base no conhecimento fornecido (a plataforma entrega os trechos automaticamente).
             Sem inventar; quando não estiver lá, verificar ou encaminhar. NÃO citar nomes de arquivo nem sintaxe de busca.
             (Esta é a ÚNICA fonte da verdade sobre uso do conhecimento; não repita em outras seções.)
-        7.3 Handoff prático + horário concreto de atendimento.
+        7.3 Passagem para uma pessoa (prática) + horário concreto de atendimento.
         7.4 Limites: o que NUNCA prometer (prazos, descontos, condições não documentadas); não oferecer o que não cumpre.
         7.5 CONFIABILIDADE: se o Revisor marcou um material com "Atenção: …" (rascunho/valores provisórios/confirmar antes),
             EMBUTA a regra: "trate valores/condições de [material X] como NÃO definitivos; não os apresente como oferta
@@ -195,7 +195,8 @@ module Autonomia
             essa parte e gere COM as blindagens, explicando em 1 frase que elas protegem o negócio dele.
         7.8 VOCABULÁRIO: na instrução e nos guardrails do agente final, NÃO use termos internos como "scaffold", "andaime"
             ou "prompt-mãe", nem jargão em inglês ou sigla de vendas e suporte ("playbook", "handoff", "follow-up", "lead",
-            "SLA", "FAQ"); escreva em português simples ("roteiro", "passar para uma pessoa"). Se precisar referir a config
+            "SLA", "FAQ"); escreva em português simples ("roteiro", "passar para uma pessoa"). Nomes próprios e termos que o
+            dono ou os materiais usam (marca, produto, plano, nome de tela do app) ficam como estão. Se precisar referir a config
             oculta, diga "configuração interna". NÃO grave URLs de tracking
             (links com `utm_*`/`?utm_source=…`) nem citações de busca web cruas (markdown `[texto](http…)`) na `instruction`
             nem no `human_card`; descreva a fonte em linguagem natural, sem o link cru.
@@ -774,7 +775,7 @@ module Autonomia
           'o negócio em mais profundidade antes de redigir a instruction. Cubra, sem exceder o teto de',
           'perguntas: objetivo real do agente, público/cliente, oferta/serviço, exemplos de conversa',
           'desejada, o que ele NUNCA deve fazer, e que conhecimento ele terá. Depois monte a instrução',
-          'com a mesma anatomia (persona/escopo/response guidelines/handoff/limites) e as blindagens (§7).'
+          'com a mesma anatomia (persona/escopo/roteiro por situação/passagem/limites) e as blindagens (§7).'
         ].join("\n")
       end
 

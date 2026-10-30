@@ -28,6 +28,16 @@ Variantes: `roteiro` (o esqueleto do segmento da conta, F2) e `geral` (o esquele
 - Nenhuma instrução com "playbook".
 - A resposta reprovada (insurtech, "quero cancelar") diz que o cancelamento "precisa ser feito pela equipe" e pede qual seguro. É o que o roteiro manda quando não há caminho no app; o juiz leu como regra inventada.
 
+## Rodada 3 (só `geral`, corretora, depois da revisão)
+
+O revisor apontou que a instrução-mãe ainda dizia "Handoff" na §7.3 e na anatomia do agente "Começar do zero", e que a proibição de jargão podia apagar nome de produto ou marca do dono. Corrigido; a rodada mede o caminho das contas fora do piloto, que a rodada 2 não cobriu.
+
+| Variante | Criadas | Instrução aprovada | Respostas aprovadas |
+|---|---|---|---|
+| geral | 1/1 | **1/1** | **3/3** |
+
+**Régua ajustada de novo**: o juiz da resposta passa a receber também a base do ramo que o agente recebeu. Sem ela, "a proposta depende da análise da seguradora" (corretora) era marcada como fato inventado.
+
 ## Gasto
 
 | Rodada | US$ |
@@ -35,4 +45,5 @@ Variantes: `roteiro` (o esqueleto do segmento da conta, F2) e `geral` (o esquele
 | 1ª tentativa, parada por erro do spec (o agente era ativado antes de ganhar canal) | ~0,11 (estimado: o rollback apagou o consumo; 1 criação) |
 | Rodada 1 | 0,8938 |
 | Rodada 2 | 0,4433 |
-| **Total** | **~1,45 de 2,00** |
+| Rodada 3 | 0,1167 |
+| **Total** | **~1,57 de 2,00** |
