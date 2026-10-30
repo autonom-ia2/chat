@@ -268,4 +268,48 @@ RSpec.describe Autonomia::Agents::Source do
       expect(source.reviewed_at).to be_present
     end
   end
+
+  # #1426 (t4e) — o índice por seção é desta leitura: a leitura nova o tira no fim, e só o job vigente grava o novo.
+  describe 'the summary by section' do
+    let(:account) { create(:account) }
+    let(:agent) { Autonomia::Agents::Agent.create!(account: account, name: 'Clara', agent_type: 'support') }
+    let(:source) { described_class.create!(account: account, agent: agent, source_type: 'pdf', status: :ready) }
+    let(:indice) { [{ 'paginas' => [1, 25], 'resumo' => 'Coberturas.', 'temas' => [] }] }
+
+    it 'drops the index of the previous reading when the new one is ready' do
+      source.update!(metadata: { described_class::RESUMO_POR_SECAO => indice })
+      token = source.begin_ingestion!
+
+      source.mark_ready!(token, chunk_count: 1)
+
+      expect(source.reload.metadata).not_to have_key(described_class::RESUMO_POR_SECAO)
+    end
+
+    it 'records the index only for the current reading' do
+      token = source.begin_ingestion!
+      source.mark_ready!(token, chunk_count: 1)
+
+      expect(source.anotar_resumo_por_secao!('outro', indice)).to be(false)
+      expect(source.anotar_resumo_por_secao!(token, indice)).to be(true)
+      expect(source.reload.metadata[described_class::RESUMO_POR_SECAO]).to eq(indice)
+    end
+
+    it 'summarizes the sections after the reading and before the review' do
+      token = source.begin_ingestion!
+      ordem = []
+      ingestor = instance_double(Autonomia::Agents::Knowledge::Ingestor, perform: 1)
+      resumo = instance_double(Autonomia::Agents::Knowledge::ResumoPorSecao)
+      revisor = instance_double(Autonomia::Agents::Knowledge::Reviewer)
+      allow(Autonomia::Agents::Knowledge::Ingestor).to receive(:new).and_return(ingestor)
+      allow(Autonomia::Agents::Knowledge::ResumoPorSecao).to receive(:new).with(source: anything, token: token).and_return(resumo)
+      allow(resumo).to receive(:gravar!) { ordem << :resumo }
+      allow(Autonomia::Agents::Knowledge::Reviewer).to receive(:new).and_return(revisor)
+      allow(revisor).to receive(:review_source!) { ordem << :revisao }
+      allow(Autonomia::Agents::Knowledge::Reviewer).to receive(:recompute_overall!)
+
+      Autonomia::Agents::Knowledge::ProcessJob.perform_now(source.id, token)
+
+      expect(ordem).to eq(%i[resumo revisao])
+    end
+  end
 end

@@ -585,4 +585,29 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(builder.send(:booking_context)).to eq('')
     end
   end
+
+  # #1426 (t4e) — material grande: o Construtor recebe, junto do resumo, o índice por seção (páginas e o que cada parte cobre).
+  describe 'knowledge context with the summary by section' do
+    let(:agent) { Autonomia::Agents::Agent.create!(account: account, name: 'Clara', agent_type: 'support') }
+
+    before do
+      thread.update!(agent: agent)
+      Autonomia::Agents::Source.create!(
+        account: account, agent: agent, source_type: 'pdf', status: :ready, reference: 'condicoes.pdf',
+        review_status: 'accepted', review_summary: 'Condições gerais do seguro auto.',
+        metadata: { Autonomia::Agents::Source::RESUMO_POR_SECAO => [
+          { 'paginas' => [1, 25], 'resumo' => 'Coberturas basicas.', 'temas' => ['Coberturas'] },
+          { 'paginas' => [201, 225], 'resumo' => 'Assistencia 24 horas.', 'temas' => ['Guincho'] }
+        ] }
+      )
+    end
+
+    it 'lists the index of the material under its summary' do
+      context = builder.send(:knowledge_context)
+
+      expect(context).to include('- condicoes.pdf: Condições gerais do seguro auto.')
+      expect(context).to include('  Índice: págs. 1–25: Coberturas basicas.')
+      expect(context).to include('  págs. 201–225: Assistencia 24 horas.')
+    end
+  end
 end

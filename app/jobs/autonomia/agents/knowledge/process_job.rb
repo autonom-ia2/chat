@@ -14,11 +14,7 @@ module Autonomia
 
           count = Ingestor.new(source: source, token: token).perform
           source.mark_ready!(token, chunk_count: count)
-          # Revisor v2: avalia a fonte recém-ingerida (nota/confiança/resumo) e recomputa o MAPA DE
-          # TEMAS + confiança geral. Guardados pelo mesmo token (anti-supersede) e best-effort: o
-          # Reviewer faz rescue interno → nunca derruba a ingestão que já gravou o conhecimento.
-          Reviewer.new(source: source, token: token).review_source!
-          Reviewer.recompute_overall!(source.agent)
+          revisar(source, token)
         rescue Ingestor::Superseded
           # Outra ingestão (re-sync) venceu o token enquanto extraíamos: este job vira no-op e NÃO
           # toca o conhecimento (que já pertence à geração nova). Nada a marcar.
@@ -38,6 +34,16 @@ module Autonomia
         end
 
         private
+
+        # #1426 (t4e) — material grande: o índice por seção antes do parecer, que o lê. Best-effort, como o Revisor.
+        # Revisor v2: avalia a fonte recém-ingerida (nota/confiança/resumo) e recomputa o MAPA DE
+        # TEMAS + confiança geral. Guardados pelo mesmo token (anti-supersede) e best-effort: o
+        # Reviewer faz rescue interno → nunca derruba a ingestão que já gravou o conhecimento.
+        def revisar(source, token)
+          ResumoPorSecao.new(source: source, token: token).gravar!
+          Reviewer.new(source: source, token: token).review_source!
+          Reviewer.recompute_overall!(source.agent)
+        end
 
         def active?(source, token)
           source.processing? && source.sync_token == token

@@ -123,6 +123,9 @@ module Autonomia
       # #1427 — "Lendo a página X de N…": a página que o OCR do PDF está lendo agora e quantas ele vai ler, só durante a
       # leitura (sai quando ela termina, falha ou é superada).
       PROGRESSO = 'progresso'.freeze
+      # #1426 (t4e) — o índice do material grande ([{ paginas, resumo, temas }], Knowledge::ResumoPorSecao), desta leitura:
+      # o fim da leitura nova tira o da anterior, e o resumo da nova grava o dela.
+      RESUMO_POR_SECAO = 'resumo_por_secao'.freeze
       # #1426 — teto da releitura, o mesmo do painel (TETO_DA_RELEITURA_MS em autonomiaSources.js).
       TETO_DA_RELEITURA = 10.minutes
       attr_accessor :paginas_de_fora
@@ -201,6 +204,17 @@ module Autonomia
         rows.positive?
       end
 
+      # #1426 (t4e) — o índice por seção, sob a guarda do token (como o parecer: depois do mark_ready!, sem exigir
+      # `processing`): um job superado não escreve. Escreve só esta chave; o resto do metadata fica.
+      def anotar_resumo_por_secao!(token, indice)
+        return false if token.blank?
+
+        rows = self.class.where(id: id, sync_token: token)
+                   .update_all(["metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{#{RESUMO_POR_SECAO}}', ?::jsonb), " \
+                                'updated_at = ?', indice.to_json, Time.current])
+        rows.positive?
+      end
+
       # #1426 — lendo agora, e não parado: começou há menos que o teto da releitura (o mesmo TETO_DA_RELEITURA_MS do painel,
       # depois do qual a tela libera "Ler de novo" num material parado).
       def lendo_agora?
@@ -272,7 +286,7 @@ module Autonomia
 
       # O metadata com o que ficou de fora NESTA leitura (Source#paginas_de_fora): a marca da leitura anterior sai sempre.
       def metadata_desta_leitura
-        base = (metadata || {}).except(PAGINAS_DE_FORA, PROGRESSO)
+        base = (metadata || {}).except(PAGINAS_DE_FORA, PROGRESSO, RESUMO_POR_SECAO)
         paginas_de_fora.present? ? base.merge(PAGINAS_DE_FORA => paginas_de_fora) : base
       end
 

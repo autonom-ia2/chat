@@ -1717,7 +1717,7 @@ module Autonomia
           summary = s.review_summary.to_s.strip
           next if summary.blank?
 
-          "- #{source_reference(s)}: #{summary}"
+          ["- #{source_reference(s)}: #{summary}", indice_do_material(s)].compact.join("\n")
         end
         [
           'CONTEXTO INTERNO (não é fala do usuário). CONHECIMENTO REVISADO E APROVADO PELA IA REVISORA',
@@ -1725,6 +1725,16 @@ module Autonomia
           ('Resumo por material aprovado:' if lines.any?), lines.join("\n").presence,
           ('MAPA DE TEMAS da base:' if topic_map.any?), (topic_map.map { |t| "- #{t}" }.join("\n").presence)
         ].compact.join("\n")
+      end
+
+      # #1426 (t4e) — material grande: o índice por seção (Knowledge::ResumoPorSecao) logo abaixo do resumo, para o
+      # Construtor saber o que cada faixa de páginas cobre, inclusive o fim do material. nil sem seções.
+      def indice_do_material(source)
+        indice = Array((source.metadata || {})[Autonomia::Agents::Source::RESUMO_POR_SECAO])
+        return if indice.empty?
+
+        linhas = indice.map { |secao| "págs. #{Array(secao['paginas']).first}–#{Array(secao['paginas']).last}: #{secao['resumo']}" }
+        "  Índice: #{linhas.join("\n  ")}"
       end
 
       # GAP (A) — MÍDIAS DE ENVIO (kind=media): o que o agente pode ENVIAR ao cliente (catálogo,
