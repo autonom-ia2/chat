@@ -206,6 +206,44 @@ describe('CuidarComentarios (#2212)', () => {
     );
   });
 
+  it('"pode ter saído" e "não cuidei" ficam em "Esperando você", com o porquê; o primeiro em destaque', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        para_quem: 'Quem pedir o link',
+        to_see: [
+          {
+            id: 'c-5',
+            network: 'instagram',
+            author: 'bia',
+            text: 'Preço?',
+            kind: 'unsure',
+          },
+          {
+            id: 'c-6',
+            network: 'instagram',
+            author: 'leo',
+            text: 'Hmm',
+            kind: 'unread',
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar();
+    const esperando = wrapper.find('[data-ia-to-see="waiting"]');
+
+    expect(esperando.text()).toContain(
+      'Não sei se o privado saiu: a Meta não respondeu.'
+    );
+    expect(esperando.text()).toContain('Não cuidei deste comentário.');
+    expect(
+      wrapper.find('[data-ia-to-see-row="unsure"] .text-n-amber-11').exists()
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-ia-to-see-row="unread"] .text-n-amber-11').exists()
+    ).toBe(false);
+  });
+
   it('ligado: resultado, pausar e, no grupo dos antigos, ler e mandar', async () => {
     ComentariosIaAPI.getCuidado.mockResolvedValue({
       data: painel({

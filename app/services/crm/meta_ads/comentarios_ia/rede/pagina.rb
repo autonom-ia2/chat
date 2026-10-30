@@ -6,6 +6,9 @@
 # superfície Meta, e o erro da Meta passa pela limpeza de trechos com cara de segredo antes de ir para log ou tela.
 class Crm::MetaAds::ComentariosIa::Rede::Pagina
   TIMEOUT_SECONDS = 8
+  # A chamada saiu e a resposta não voltou: a Meta pode ter entregado. Erro de código não entra aqui: sobe.
+  SEM_RESPOSTA = [HTTParty::Error, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, SocketError, SystemCallError,
+                  OpenSSL::SSL::SSLError, EOFError].freeze
 
   def initialize(channel)
     @channel = channel
@@ -32,7 +35,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Pagina
                              body: corpo.to_json, timeout: TIMEOUT_SECONDS,
                              headers: { 'Authorization' => "Bearer #{@channel.page_access_token}", 'Content-Type' => 'application/json' })
     envio(response)
-  rescue StandardError => e
+  rescue *SEM_RESPOSTA => e
     falha("#{e.class}: #{e.message}", talvez_entregue: true)
   end
 

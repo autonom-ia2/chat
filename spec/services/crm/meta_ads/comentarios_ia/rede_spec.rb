@@ -55,6 +55,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, talvez_entregue: true)
     end
 
+    it 'erro de código (não de rede) sobe: não vira "pode ter saído"' do
+      stub_request(:post, "#{graph}/555/messages").to_raise(NoMethodError)
+
+      expect { pagina.private_reply('555_777', { text: 'Oi!' }) }.to raise_error(NoMethodError)
+    end
+
     it 'id com cara de caminho não chega à Graph' do
       expect(pagina.private_reply('1/../me?x=1', { text: 'oi' })).to have_attributes(ok: false, erro: 'id_invalido')
       expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
@@ -110,6 +116,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(rede.privado(care).ok).to be(false)
       expect(registro).not_to have_received(:soltar!)
       expect(reivindicacao).not_to have_received(:confirm!)
+    end
+
+    it 'privado que outra requisição já está mandando (attempt! falso): não chama a Meta de novo' do
+      allow(reivindicacao).to receive(:attempt!).and_return(false)
+      allow(pagina).to receive(:private_reply)
+
+      expect(rede.privado(care).erro).to eq(described_class::JA_FEITO)
+      expect(pagina).not_to have_received(:private_reply)
     end
 
     it 'privado já reivindicado: não chama a Meta' do
@@ -184,8 +198,6 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     let(:recusa) { Struct.new(:ok).new(false) }
 
     before do
-      stub_const('Crm::MetaAds::InstagramPrivateReply', Class.new { def initialize(_channel); end })
-      stub_const('Crm::MetaAds::InstagramPrivateReply::Error', Class.new(StandardError) { def code = 'meta_refused' })
       stub_const('Instagram::CommentsClient', Class.new { def initialize(_channel); end })
       allow(Crm::MetaAds::InstagramPrivateReply).to receive(:new).with(channel).and_return(privado)
       allow(Instagram::CommentsClient).to receive(:new).with(channel).and_return(cliente)
@@ -206,10 +218,26 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(care.texto_do_privado).to start_with(care.message).and(include('(automatic message'))
     end
 
-    it 'erro do serviço vira envio sem sucesso com o código' do
-      allow(privado).to receive(:perform!).and_raise(Crm::MetaAds::InstagramPrivateReply::Error)
+    it 'recusa do serviço (4xx) vira envio sem sucesso com o código, sem "pode ter saído"' do
+      allow(privado).to receive(:perform!).and_raise(Crm::MetaAds::InstagramPrivateReply::Error.new('meta_refused'))
 
-      expect(rede.privado(care)).to have_attributes(ok: false, erro: 'meta_refused')
+      expect(rede.privado(care)).to have_attributes(ok: false, erro: 'meta_refused', talvez_entregue: false)
+    end
+
+    it 'a Meta não respondeu (o serviço marcou failed_at): pode ter saído' do
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: '555_777', action: 'private_reply',
+                                        actor: 'ai', attempted_at: Time.current, failed_at: Time.current)
+      allow(privado).to receive(:perform!).and_raise(Crm::MetaAds::InstagramPrivateReply::Error.new('meta_unavailable'))
+
+      expect(rede.privado(care)).to have_attributes(ok: false, erro: 'meta_unavailable', talvez_entregue: true)
+    end
+
+    it 'privado já feito ou saindo em outra requisição: já feito, nada a mostrar' do
+      %w[private_reply_done private_reply_retry].each do |codigo|
+        allow(privado).to receive(:perform!).and_raise(Crm::MetaAds::InstagramPrivateReply::Error.new(codigo))
+
+        expect(rede.privado(care).erro).to eq(described_class::JA_FEITO)
+      end
     end
 
     describe 'ler (o evento leva só ids, #2327)' do
@@ -221,6 +249,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
                                                                                     'from' => { 'id' => 7, 'username' => 'carla' } }))
 
         expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'carla', from_id: '7')
+      end
+
+      it 'comentário de outro post (o evento não bate com a Graph): nil, como o of_post? do Facebook' do
+        allow(cliente).to receive(:comment).and_return(result.new(ok: true, data: { 'text' => 'oi', 'media' => { 'id' => '999' },
+                                                                                    'from' => { 'id' => 7 } }))
+        expect(rede.ler).to be_nil
+
+        allow(cliente).to receive(:comment).and_return(result.new(ok: true, data: { 'text' => 'oi', 'media' => { 'id' => '555_888' },
+                                                                                    'from' => { 'id' => 7 } }))
+        expect(rede.ler).to include(text: 'oi')
       end
 
       it 'comentário apagado: nil' do

@@ -11,12 +11,16 @@
 # As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
 # Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
-# passada à pessoa), private_reply_failed (o privado que a Meta recusou), kept_for_owner (a pergunta que era o caso do
-# privado, mas ele não sai ali) e ai_unread (a Meta ou o Jev não responderam em nenhuma tentativa: o comentário fica
-# com a pessoa). As quatro últimas formam o "Esperando você".
+# passada à pessoa), private_reply_failed (o privado que a Meta recusou), private_reply_unsure (a Meta não respondeu ao
+# privado: pode ter saído), kept_for_owner (a pergunta que era o caso do privado, mas ele não sai ali) e ai_unread (a
+# IA não cuidou: a Meta ou o Jev fora do ar em todas as tentativas, teto do dia, sem certeza, ou sem saber quem
+# comentou). As cinco últimas formam o "Esperando você".
+#
+# O privado por pessoa em cada post (Crm::MetaAdsCommentPerson) é reservado aqui também, antes da Meta.
 module Crm::MetaAds::ComentariosIa::Registro
   ACTOR = 'ai'.freeze
   LIDO = 'ai_seen'.freeze
+  NAO_CUIDOU = 'ai_unread'.freeze
 
   module_function
 
@@ -45,6 +49,24 @@ module Crm::MetaAds::ComentariosIa::Registro
   def gravar!(comentario, acao, conversation: nil)
     registrar!(comentario, acao, conversation: conversation)
     true
+  end
+
+  # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só.
+  def reservar_pessoa!(comentario)
+    Crm::MetaAdsCommentPerson.create!(pessoa(comentario).merge(comment_id: comentario.comment_id.to_s))
+    true
+  rescue ActiveRecord::RecordNotUnique
+    false
+  end
+
+  # A Meta recusou o privado: a pessoa pode receber pelo próximo comentário. Só a reserva deste comentário sai.
+  def soltar_pessoa!(comentario)
+    Crm::MetaAdsCommentPerson.where(pessoa(comentario)).where(comment_id: comentario.comment_id.to_s).delete_all
+  end
+
+  def pessoa(comentario)
+    { account_id: comentario.account_id, network: comentario.network, post_id: comentario.post_id.to_s,
+      from_id: comentario.from_id.to_s }
   end
 
   # A reserva do privado cuja chamada nunca saiu (o processo morreu antes), de qualquer autor, como no #2196.

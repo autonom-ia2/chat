@@ -59,11 +59,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(painel.payload[:results]).to eq(sent: 2, replied: 1, skipped: 1)
   end
 
-  it 'a Meta ou o Jev fora do ar em todas as tentativas: "não consegui ler", não "não era o caso"' do
+  it 'a IA não cuidou (Meta ou Jev fora do ar, teto, sem certeza): "não cuidei", não "não era o caso"' do
     acao('3', 'ai_seen')
     acao('3', 'ai_unread')
 
     expect(painel.payload[:to_see].find { |item| item[:id] == '3' }[:kind]).to eq('unread')
+  end
+
+  it 'o privado que a Meta não confirmou: "pode ter saído", para o dono conferir no direct' do
+    acao('3', 'ai_seen')
+    acao('3', 'private_reply_unsure', conversation: conversa(private_reply: nil))
+
+    expect(painel.payload[:to_see].find { |item| item[:id] == '3' }).to include(kind: 'unsure', conversation_path: be_present)
   end
 
   it 'o que a IA fez em outra conta, com o mesmo id de comentário, não entra' do

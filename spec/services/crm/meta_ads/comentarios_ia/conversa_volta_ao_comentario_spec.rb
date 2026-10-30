@@ -49,4 +49,40 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
     expect(Messages::Instagram::BaseMessageBuilder.ancestors).to include(Crm::MetaAds::ComentariosIa::VoltaAoComentario)
     expect(Messages::Facebook::MessageBuilder.ancestors).to include(Crm::MetaAds::ComentariosIa::VoltaAoComentario)
   end
+
+  describe 'no builder' do
+    let(:builder_base) do
+      Class.new do
+        def initialize(inbox, params)
+          @inbox = inbox
+          @params = params
+        end
+
+        def busca = find_or_build_for_multiple_conversations
+
+        private
+
+        def conversation_params = @params
+        def find_or_build_for_multiple_conversations = :nova
+      end
+    end
+    let(:builder) { Class.new(builder_base) { prepend Crm::MetaAds::ComentariosIa::VoltaAoComentario } }
+    let(:params) { { account_id: account.id, inbox_id: inbox.id, contact_id: contact.id } }
+
+    it 'com a flag ligada, a resposta volta para a conversa do comentário' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+      do_comentario = conversa(status: :resolved)
+
+      expect(builder.new(inbox, params).busca).to eq(do_comentario)
+    end
+
+    it 'com a flag desligada, o builder segue como sempre, sem nem consultar' do
+      account.disable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+      conversa(status: :resolved)
+      allow(described_class).to receive(:para_reabrir)
+
+      expect(builder.new(inbox, params).busca).to eq(:nova)
+      expect(described_class).not_to have_received(:para_reabrir)
+    end
+  end
 end

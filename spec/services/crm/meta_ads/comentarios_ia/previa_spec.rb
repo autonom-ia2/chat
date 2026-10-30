@@ -54,4 +54,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
 
     expect(previa.call).to eq(status: 'meta_unavailable')
   end
+
+  it 'com a flag desligada, o Classificador de verdade barra o Jev e a prévia diz que a IA não está disponível' do
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_call_original
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Me passa a receita?')] })
+    allow(TypesafeAi::Decisor).to receive(:new).and_return(instance_double(TypesafeAi::Decisor))
+
+    expect(previa.call).to eq(status: 'ai_unavailable')
+  end
 end

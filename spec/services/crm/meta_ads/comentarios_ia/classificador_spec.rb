@@ -6,6 +6,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
   let(:jev) { instance_double(TypesafeAi::Decisor) }
   let(:classificador) { described_class.new(care: care, jev: jev) }
 
+  before { account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG) }
+
   def jev_responde(resposta, certeza)
     allow(jev).to receive(:decidir).and_return(TypesafeAi::Decisor::Resultado.new(resposta: resposta, certeza: certeza, modelo: 'jev'))
   end
@@ -86,5 +88,33 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
 
     expect(decisao).to eq('price')
     expect(Crm::Ai::UsageRecorder).to have_received(:record).with(hash_including(account: account, feature: 'meta_ads_comentarios_ia'))
+  end
+
+  describe 'o Jev é custo nosso' do
+    before { allow(jev).to receive(:decidir) }
+
+    it 'com a flag desligada, Bloqueado sem chamar o Jev' do
+      account.disable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+
+      expect { classificador.decidir!('Quanto custa?') }
+        .to raise_error(described_class::Bloqueado) { |erro| expect(erro.code).to eq('feature_disabled') }
+      expect(jev).not_to have_received(:decidir)
+    end
+
+    it 'no teto do dia da conta, Bloqueado sem chamar o Jev; outra conta e o dia anterior não contam' do
+      evento = { feature: described_class::FEATURE, model: 'jev', input_tokens: 1, output_tokens: 0 }
+      create_list(:crm_ai_usage_event, 2, account: account, **evento)
+      create(:crm_ai_usage_event, account: account, created_at: 1.day.ago, **evento)
+      create(:crm_ai_usage_event, account: create(:account), **evento)
+      stub_const("#{described_class}::TETO_DIARIO", 2)
+
+      expect { classificador.decidir!('Quanto custa?') }
+        .to raise_error(described_class::Bloqueado) { |erro| expect(erro.code).to eq('daily_limit') }
+      expect(jev).not_to have_received(:decidir)
+    end
+
+    it 'Bloqueado é um erro do Jev: a prévia e o resumo já o mostram como IA indisponível' do
+      expect(described_class::Bloqueado.ancestors).to include(TypesafeAi::Decisor::Error)
+    end
   end
 end
