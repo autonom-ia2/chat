@@ -799,8 +799,8 @@
     "modelo": "CustomRole",
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:41",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:82",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:83",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:116"
     ],
     "sem_corpo": false
   },
@@ -1307,8 +1307,8 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
       "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:78",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:72",
       "app/controllers/api/v1/accounts/agents_controller.rb:60",
       "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
@@ -6597,7 +6597,7 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
       "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:116"
     ],
     "sem_corpo": false
   },
@@ -8519,8 +8519,8 @@
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:68",
       "app/controllers/api/v1/accounts/agents_controller.rb:95",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:78",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:72",
       "app/controllers/api/v1/accounts/agents_controller.rb:70"
     ],
     "sem_corpo": false
@@ -20428,8 +20428,8 @@
       "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:10",
       "app/controllers/api/v1/accounts/agents_controller.rb:91",
       "custom/app/controllers/custom/api/v1/accounts/agents_controller.rb:64",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:67",
-      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:61",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:78",
+      "enterprise/app/controllers/enterprise/api/v1/accounts/agents_controller.rb:72",
       "app/controllers/api/v1/accounts/agents_controller.rb:60",
       "app/controllers/api/v1/accounts/agents_controller.rb:75"
     ],
@@ -25635,7 +25635,7 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
       "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:116"
     ],
     "sem_corpo": false
   },

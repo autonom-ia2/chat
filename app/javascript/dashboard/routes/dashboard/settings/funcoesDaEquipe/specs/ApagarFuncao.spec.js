@@ -578,7 +578,91 @@ describe('Funções da equipe: apagar', () => {
     expect(wrapper.findComponent(ChoiceSelect).props('options')).toEqual([
       { value: 1, label: 'Atendente' },
       { value: 99, label: 'Gerente da loja' },
-      { value: 'none', label: 'Sem função' },
+      {
+        value: 'none',
+        label: 'Sem função',
+        disabled: true,
+        hint: 'Só o administrador tira esta pessoa da função',
+      },
     ]);
+  });
+
+  // #2317: deixar alguém sem função segue a régua de dar uma função. Quem não alcança as chaves do "Sem função" vê a
+  // opção travada, com o motivo, e não consegue escolhê-la; quem tem grant_above_own (ou é administrador) escolhe.
+  describe('"Sem função" como destino (#2317)', () => {
+    const alvo = { id: 3, name: 'Alvo', permissions: ['contact_view'] };
+    const doisNoAlvo = [
+      { id: 10, name: 'Ana', role: 'agent', custom_role_id: 3 },
+      { id: 11, name: 'Bia', role: 'agent', custom_role_id: 3 },
+    ];
+    const opcaoSemFuncao = wrapper =>
+      wrapper
+        .findComponent(ChoiceSelect)
+        .props('options')
+        .find(opcao => opcao.value === 'none');
+    // A lista aberta rola até a opção ativa; o jsdom não tem scrollIntoView.
+    beforeAll(() => {
+      Element.prototype.scrollIntoView = vi.fn();
+    });
+    afterAll(() => {
+      delete Element.prototype.scrollIntoView;
+    });
+
+    it('travada para quem não alcança, com o motivo no plural, e não deixa apagar', async () => {
+      const apagar = vi.fn();
+      const wrapper = await montar({
+        admin: false,
+        funcoes: [ATENDENTE, alvo],
+        agentes: doisNoAlvo,
+        apagar,
+      });
+
+      await pedirApagar(wrapper.findAll('[data-cartao-funcao]')[1]);
+      expect(opcaoSemFuncao(wrapper)).toEqual({
+        value: 'none',
+        label: 'Sem função',
+        disabled: true,
+        hint: 'Só o administrador tira estas pessoas da função',
+      });
+      await wrapper.find('[role="combobox"]').trigger('click');
+      const opcao = wrapper
+        .findAll('[role="option"]')
+        .find(item => item.text().includes('Sem função'));
+      expect(opcao.attributes('aria-disabled')).toBe('true');
+      expect(opcao.text()).toContain(
+        'Só o administrador tira estas pessoas da função'
+      );
+      await opcao.trigger('click');
+      expect(
+        dialogo(wrapper).find('[data-acao]').attributes('disabled')
+      ).toBeDefined();
+      expect(apagar).not.toHaveBeenCalled();
+    });
+
+    it('livre para quem tem grant_above_own e para o administrador', async () => {
+      const comAlcance = await montar({
+        admin: false,
+        extras: ['grant_above_own'],
+        funcoes: [ATENDENTE, alvo],
+        agentes: doisNoAlvo,
+      });
+      await pedirApagar(comAlcance.findAll('[data-cartao-funcao]')[1]);
+      expect(opcaoSemFuncao(comAlcance)).toEqual({
+        value: 'none',
+        label: 'Sem função',
+      });
+      comAlcance.unmount();
+      document.body.innerHTML = '';
+
+      const admin = await montar({
+        funcoes: [ATENDENTE, alvo],
+        agentes: doisNoAlvo,
+      });
+      await pedirApagar(admin.findAll('[data-cartao-funcao]')[1]);
+      expect(opcaoSemFuncao(admin)).toEqual({
+        value: 'none',
+        label: 'Sem função',
+      });
+    });
   });
 });

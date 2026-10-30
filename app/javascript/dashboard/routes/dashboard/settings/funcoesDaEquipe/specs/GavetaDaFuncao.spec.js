@@ -20,6 +20,19 @@ vi.mock('dashboard/store/utils/api', async importOriginal => ({
   clearCookiesOnLogout,
 }));
 
+// #2317: a Carla não alcança as chaves do "Sem função" (sales_value_view é de delegação), então "Tirar desta função"
+// fica travado para ela. Os testes do salvar usam o tirar só para deixar uma mudança pendente: neles, o alcance do
+// "Sem função" fica liberado. O bloco do #2317 liga a régua de verdade (`alcance.real`).
+const alcance = vi.hoisted(() => ({ real: false }));
+vi.mock('../semFuncao', async importOriginal => {
+  const original = await importOriginal();
+  return {
+    ...original,
+    alcancaSemFuncao: (...args) =>
+      !alcance.real || original.alcancaSemFuncao(...args),
+  };
+});
+
 // O corpo de verdade do 401 do agents/update: o GrantGuard::Denied cai no handler genérico
 // (request_exception_handler.rb), sem código; a store põe a frase em `code`.
 const CORPO_DO_401 = 'You are not authorized to do this action';
@@ -745,6 +758,63 @@ describe('GavetaDaFuncao', () => {
 // Rodadas 7 e 8: a tabela de desfechos do salvar (useSalvarGaveta.js), pessoa por pessoa e misturada. Por padrão,
 // Gabriel (21) sai do Vendedor e Íris (23) passa a ser Vendedor; `agir` troca isso. Em toda linha, `salvando` volta a
 // false. As funções são reativas como na store de verdade: a gaveta lê a função dela da lista, pelo id (rodada 8).
+describe('GavetaDaFuncao: tirar da função segue a régua de dar uma função (#2317)', () => {
+  beforeEach(() => {
+    alcance.real = true;
+  });
+  afterEach(() => {
+    alcance.real = false;
+  });
+
+  it('para quem não alcança o "Sem função", "Tirar desta função" aparece travado, com o motivo', async () => {
+    const { wrapper } = montar();
+    const gabriel = linha(wrapper, 21);
+    const tirar = gabriel.find('[data-acao="TIRAR"]');
+    const estado = gabriel.find('[data-estado]');
+
+    expect(estado.text()).toBe('Só o administrador tira esta pessoa da função');
+    expect(estado.find('.i-lucide-lock').exists()).toBe(true);
+    expect(tirar.attributes('disabled')).toBeDefined();
+    expect(tirar.attributes('aria-describedby')).toBe(estado.attributes('id'));
+
+    await tirar.trigger('click');
+    expect(gabriel.find('[data-estado]').text()).toBe(
+      'Só o administrador tira esta pessoa da função'
+    );
+    expect(wrapper.findAll('[data-frase-rodape]')).toHaveLength(0);
+  });
+
+  it('pôr outra pessoa nesta função continua livre', async () => {
+    const { wrapper } = montar();
+
+    const porComo = linha(wrapper, 23).find('[data-acao="POR_COMO"]');
+    expect(porComo.attributes('disabled')).toBeUndefined();
+    await porComo.trigger('click');
+    expect(linha(wrapper, 23).find('[data-estado]').text()).toBe(
+      'Hoje é Atendente. Vai passar a ser Vendedor.'
+    );
+  });
+
+  it('com grant_above_own, tira sem trava', async () => {
+    const giver = {
+      ...CARLA,
+      permissions: [...CARLA.permissions, 'grant_above_own'],
+    };
+    const { wrapper } = montar({ giver });
+    const tirar = linha(wrapper, 21).find('[data-acao="TIRAR"]');
+
+    expect(linha(wrapper, 21).text()).not.toContain(
+      'Só o administrador tira esta pessoa da função'
+    );
+    expect(tirar.attributes('disabled')).toBeUndefined();
+    expect(tirar.attributes('aria-describedby')).toBeUndefined();
+    await tirar.trigger('click');
+    expect(linha(wrapper, 21).find('[data-estado]').text()).toBe(
+      'Vai ficar sem função'
+    );
+  });
+});
+
 describe('GavetaDaFuncao: desfechos do salvar', () => {
   const SALVA_GABRIEL = 'A função de Gabriel Souza foi salva.';
   const SALVA_IRIS = 'A função de Íris Lopes foi salva.';

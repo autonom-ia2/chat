@@ -44,11 +44,14 @@ export const montar = async ({
   lentes = false,
   pessoasDaConta = vi.fn(),
   agentes = AGENTES,
+  // Chaves a mais de quem monta, quando não é administrador (ex.: grant_above_own).
+  extras = [],
 } = {}) => {
   const permissoes = [
     'custom_role_manage',
     ...ATENDENTE.permissions,
     ...(pessoas ? ['people_manage'] : []),
+    ...extras,
   ];
   const store = createStore({
     getters: {

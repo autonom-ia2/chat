@@ -822,6 +822,7 @@
       "HOJE_E": "Hoje é {atual}. Vai passar a ser {nova}.",
       "HOJE_SEM": "Hoje está sem função. Vai passar a ser {nova}.",
       "VAI_SER": "Vai ser {nova}.",
+      "SO_ADMIN_TIRA": "Só o administrador tira esta pessoa da função",
       "TRAVA": {
         "SELF": "Ninguém muda a própria função",
         "ADMIN": "Já pode tudo: tem acesso de administrador",
@@ -879,6 +880,7 @@
       "NOVA_FUNCAO": "Nova função",
       "ESCOLHA": "Escolha a nova função",
       "SEM_FUNCAO": "Sem função",
+      "SEM_FUNCAO_TRAVADA": "Só o administrador tira esta pessoa da função | Só o administrador tira estas pessoas da função",
       "MANTER_FUNCAO": "Manter a função",
       "MOVER": "Mover as pessoas e apagar",
       "APAGANDO": "Apagando…",

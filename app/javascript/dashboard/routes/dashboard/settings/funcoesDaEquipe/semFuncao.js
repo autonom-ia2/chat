@@ -1,5 +1,9 @@
 import { DELEGATION_KEYS } from 'dashboard/constants/permissions';
-import { holdsKey } from 'dashboard/helper/peopleAccess';
+import {
+  holdsKey,
+  reachesKeys,
+  withImpliedPermissions,
+} from 'dashboard/helper/peopleAccess';
 import { modulesWithKeys } from '../customRoles/permissionMatrix';
 import { DONO_DAS_CHAVES } from './areasDaFuncao';
 import { ALCANCES_DE_CONVERSA, valeNoServidor } from './chavesDaFuncao';
@@ -38,6 +42,28 @@ export const capacidadesSemFuncao = (estaLigada, contrato = contratoGerado) =>
     pode,
     chaves,
   }));
+
+// As chaves que deixar alguém sem função entrega (#2317), espelho de CustomRoles::SemFuncaoCapacidades.chaves: as das
+// capacidades que o sem função pode, com a flag resolvida, sem os extras e sem os alcances de conversa (o servidor
+// confere só estas). Quem dá precisa alcançá-las, como ao dar qualquer função (GrantGuard#no_role!): sales_value_view
+// é de delegação, então só o administrador ou quem tem grant_above_own tira alguém da função.
+export const chavesQueOSemFuncaoRecebe = (
+  estaLigada,
+  contrato = contratoGerado
+) =>
+  itensDo({ capacidades: contrato.capacidades }, estaLigada)
+    .filter(item => item.pode)
+    .flatMap(item => item.chaves);
+
+export const alcancaSemFuncao = (
+  giver,
+  estaLigada,
+  contrato = contratoGerado
+) =>
+  reachesKeys(
+    giver,
+    withImpliedPermissions(chavesQueOSemFuncaoRecebe(estaLigada, contrato))
+  );
 
 // O que só vale num pedaço da conta (nos canais em que a pessoa está, nas colunas de que participa), pelas premissas
 // do contrato: [{ premissa, ids }].

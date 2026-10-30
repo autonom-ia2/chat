@@ -32,7 +32,18 @@ module Enterprise::Api::V1::Accounts::AgentsController
     return if custom_role_id_param.to_s == account_user.custom_role_id.to_s
 
     access_guard.touch_access!(account_user)
-    custom_role_guard.role_to_grant!(custom_role_id_param)
+    return custom_role_guard.role_to_grant!(custom_role_id_param) if custom_role_id_param.present?
+
+    refuse_no_role_out_of_reach
+  end
+
+  # Taking someone out of their role leaves them with the "Sem função" keys, which the giver must reach (#2317). The
+  # refusal carries the reason code of /custom_roles, so the role screen can say why.
+  def refuse_no_role_out_of_reach
+    custom_role_guard.no_role!
+  rescue CustomRoles::GrantGuard::Denied => e
+    log_handled_error(e)
+    render json: { error: e.code, message: I18n.t("errors.custom_role.#{e.code}") }, status: :unauthorized
   end
 
   def guard_agent_removal!

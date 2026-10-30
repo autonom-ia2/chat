@@ -32,7 +32,7 @@ const { t } = useI18n();
 const { lista } = useTextos();
 const { canManagePeople, memberLockReason, roleLockReason, reachesRole } =
   usePeopleAccess();
-const { efeitoDe } = useSemFuncao();
+const { efeitoDe, semFuncaoTravado } = useSemFuncao();
 const agentes = useMapGetter('agents/getAgents');
 const funcoes = useMapGetter('customRole/getCustomRoles');
 
@@ -127,6 +127,7 @@ const linha = pessoa => ({
   salvando: salvando.value,
   opcoes: opcoes.value,
   alvo: funcaoAtual.value,
+  semFuncaoTravado: semFuncaoTravado.value,
 });
 
 const nomeDe = id => agentes.value.find(item => item.id === id)?.name;

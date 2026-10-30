@@ -100,6 +100,15 @@ module CustomRoles::SemFuncaoCapacidades
       extras: EXTRAS.map { |capacidade| item(capacidade, custom_role) } }
   end
 
+  # As chaves que o "Sem função" tem nesta conta, com as flags dela (#2317): deixar alguém sem função entrega essas chaves,
+  # e quem não é administrador precisa alcançá-las (CustomRoles::GrantGuard#no_role!). Os extras ficam de fora, como em
+  # semFuncao.js: a chave de um extra abre mais do que o sem função tem (meta_ads_view abre a página de Anúncios).
+  def chaves(account)
+    ligadas = FLAGS.select { |flag| account.feature_enabled?(flag) }
+    CAPACIDADES.select { |capacidade| capacidade[:pergunta].call(contexto(ligadas, nil)) }
+               .flat_map { |capacidade| capacidade[:chaves] }
+  end
+
   def json
     "#{JSON.pretty_generate(gerar)}\n"
   end
