@@ -5554,7 +5554,7 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:272"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:273"
     ],
     "sem_corpo": false
   },
@@ -5626,10 +5626,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:164",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:268",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:168",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:167"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:165",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:269",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:169",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:168"
     ],
     "sem_corpo": false
   },
@@ -16061,7 +16061,7 @@
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:140",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:142",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:141",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:203"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:204"
     ],
     "sem_corpo": false
   },
@@ -16099,9 +16099,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:178",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:182",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:181"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:179",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:183",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:182"
     ],
     "sem_corpo": false
   },
@@ -24626,7 +24626,7 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:272"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:273"
     ],
     "sem_corpo": false
   },

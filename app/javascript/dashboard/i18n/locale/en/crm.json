@@ -2539,7 +2539,11 @@
             "TEXT": "We are bringing the spend of {name}. In a few minutes it shows on your panel, next to conversations and sales.",
             "CTA": "See my panel",
             "PIXEL_CANCEL": "Cancel",
-            "PIXEL_FAILED": "We could not read the website code (Pixel) now. The account is already connected; choose the code later in the Connection tab."
+            "PIXEL_FAILED": "We could not read the website code (Pixel) now. The account is already connected; choose the code later in the Connection tab.",
+            "DESTINATION_LATER": "Choose later",
+            "DESTINATION_LATER_HINT": "The account is connected. Choose where your ads lead in the Connection tab.",
+            "PAGE_MISSING": "The website page is not linked yet. Link it so we count the visits from your ads.",
+            "PAGE_LINK": "Link"
           },
           "GUIDE": {
             "LABEL": "Where to tap on Meta",
