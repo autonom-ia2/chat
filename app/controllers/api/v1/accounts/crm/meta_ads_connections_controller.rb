@@ -153,7 +153,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     bool = ActiveModel::Type::Boolean.new
     values = ::Crm::MetaAdsConnection::DESTINATIONS.index_with { |key| bool.cast(params.dig(:destinations, key)) == true }
-    connection.update!(destinations: connection.destinations_with_no_site(values, connection.no_site?))
+    # Marcar o site desfaz o "Não tenho site" (#2338): a escolha mais recente vale e a lista volta a pedir o código.
+    connection.update!(destinations: connection.destinations_with_no_site(values, connection.no_site? && !values['site']))
     render json: payload
   end
 

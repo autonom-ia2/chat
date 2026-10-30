@@ -53,8 +53,9 @@ RSpec.describe Crm::Subjects::Identifier do
   context 'with the flag on' do
     before { account.enable_features!(Crm::Ai::FecharCard::FLAG) }
 
-    # Pega: o "adiou" da IA virar trava, e o cliente que volta com pedido novo ganhar só uma sugestão.
-    it 'card fechado pela IA há pouco: o pedido novo vira card' do
+    # Pega: o "adiou" da IA virar trava, e o cliente que volta com pedido novo ganhar só uma sugestão. Legado: desde o
+    # #2389 a IA não fecha mais card; o caso cobre os fechamentos de antes do deploy, nas 24 h seguintes.
+    it 'card fechado pela IA há pouco (legado, antes do #2389): o pedido novo vira card' do
       fechado(por: nil)
 
       expect { identify }.to change(Crm::Card, :count).by(1)

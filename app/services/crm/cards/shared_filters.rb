@@ -7,7 +7,7 @@
 #     score_min/score_max,
 #     stale_days, standalone, team_id, priority, inbox_id, owner_id, search, follow_up.
 #   * server-only + refetch-on-realtime (cannot be derived from a single upsert payload):
-#     responsible_kind (bot/none rely on the agent_bot_inbox join + conversation assignee),
+#     responsible_kind (bot/none rely on the active inbox bot join + conversation assignee),
 #     ai_pending (the pending-suggestion set is computed per board load) and label_ids
 #     (matches taggings of the primary conversation, source of truth for labels) and campaign_source_ids (without
 #     meta_ads_view the ad touch comes without source_id, #2271).
@@ -17,6 +17,13 @@ module Crm::Cards::SharedFilters
   RESPONSIBLE_KINDS = %w[agent bot none].freeze
   # Parado: sem mensagem real e sem mudar de etapa (GREATEST ignora o NULL). Também é o grupo "Parados" da Lista nova.
   STALE_SQL = 'GREATEST(crm_cards.last_message_at, crm_cards.entered_stage_at)'.freeze
+  # Caixas com robô ativo, uma linha por caixa: sem índice único por inbox_id (#2298), duas linhas ativas na mesma
+  # caixa repetiam o card na Lista e nas contas do resumo. Mesma subconsulta do ActionGroups::ACTIVE_BOT_JOIN.
+  RESPONSIBLE_BOT = 'responsavel_robo'.freeze
+  RESPONSIBLE_BOT_JOIN = 'LEFT JOIN (SELECT DISTINCT agent_bot_inboxes.inbox_id FROM agent_bot_inboxes ' \
+                         "WHERE agent_bot_inboxes.status = #{AgentBotInbox.statuses[:active]}) " \
+                         "#{RESPONSIBLE_BOT} ON #{RESPONSIBLE_BOT}.inbox_id = " \
+                         'COALESCE(conversations.inbox_id, crm_cards.inbox_id)'.freeze
 
   def apply_stage_ids_filter(cards)
     ids = parse_stage_ids
@@ -71,8 +78,7 @@ module Crm::Cards::SharedFilters
 
     scoped = cards
              .joins('LEFT JOIN conversations ON conversations.id = crm_cards.conversation_id')
-             .joins('LEFT JOIN agent_bot_inboxes ON agent_bot_inboxes.inbox_id = ' \
-                    'COALESCE(conversations.inbox_id, crm_cards.inbox_id) AND agent_bot_inboxes.status = 0')
+             .joins(RESPONSIBLE_BOT_JOIN)
     case kind
     when 'agent'
       scoped.where(human_responsible_sql)
@@ -148,8 +154,8 @@ module Crm::Cards::SharedFilters
   end
 
   # Robô responsável: o atribuído à conversa (#1377) ou o robô ativo da caixa. Mirrors Crm::Card#responsible_agent_bot.
-  # `inbox_bot` diz como a consulta acha o robô ativo da caixa (aqui, pelo LEFT JOIN em agent_bot_inboxes).
-  def bot_responsible_sql(conversation = 'conversations', inbox_bot = 'agent_bot_inboxes.id IS NOT NULL')
+  # `inbox_bot` diz como a consulta acha o robô ativo da caixa (aqui, pelo RESPONSIBLE_BOT_JOIN).
+  def bot_responsible_sql(conversation = 'conversations', inbox_bot = "#{RESPONSIBLE_BOT}.inbox_id IS NOT NULL")
     "(#{conversation}.assignee_agent_bot_id IS NOT NULL AND COALESCE(#{conversation}.ai_assignee_type, '') = 'AgentBot') " \
       "OR #{inbox_bot}"
   end

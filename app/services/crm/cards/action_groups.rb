@@ -22,6 +22,9 @@ module Crm::Cards::ActionGroups
   VISIBLE = 'acao_visivel'.freeze
   # Caixas com robô ativo, num LEFT JOIN: um EXISTS no CASE se repetia como SubPlan no SELECT, no ORDER e no WHERE.
   ACTIVE_BOT = 'acao_robo'.freeze
+  ACTIVE_BOT_JOIN = 'LEFT JOIN (SELECT DISTINCT agent_bot_inboxes.inbox_id FROM agent_bot_inboxes ' \
+                    "WHERE agent_bot_inboxes.status = #{AgentBotInbox.statuses[:active]}) " \
+                    "#{ACTIVE_BOT} ON #{ACTIVE_BOT}.inbox_id = COALESCE(#{CONVERSATION}.inbox_id, crm_cards.inbox_id)".freeze
 
   def self.sort?(params)
     params[:sort].to_s == SORT
@@ -38,7 +41,7 @@ module Crm::Cards::ActionGroups
     # e liga o eager_load do includes da base (JOIN das conversas vinculadas, linhas repetidas, select descartado).
     cards = cards.joins(action_conversation_join)
     cards = cards.joins(action_visibility_join) unless @conversation_visibility.all_conversations?
-    cards = cards.joins(action_follow_up_join).joins(active_bot_join).joins(action_group_lateral)
+    cards = cards.joins(action_follow_up_join).joins(ACTIVE_BOT_JOIN).joins(action_group_lateral)
     cards = apply_organizar_joins(cards)
     cards = cards.where("#{GROUP_SQL} = 1") if boolean_param(:waiting)
     cards = cards.where('acao.retorno_em <= ?', end_of_today) if @params[:follow_up_status].to_s == FOLLOW_UP_DUE
@@ -95,15 +98,6 @@ module Crm::Cards::ActionGroups
 
   def asc(sql)
     Arel::Nodes::Ascending.new(Arel.sql(sql))
-  end
-
-  # Uma linha por caixa da conta, só com robô que existe (Crm::Card#active_inbox_bot devolve nil para robô apagado; o
-  # vínculo some depois, por destroy_async). O agent_bot_id é o robô de "Quem cuida" (Crm::Cards::OrganizarPor).
-  def active_bot_join
-    'LEFT JOIN (SELECT agent_bot_inboxes.inbox_id, MIN(agent_bot_inboxes.agent_bot_id) AS agent_bot_id ' \
-      'FROM agent_bot_inboxes INNER JOIN agent_bots ON agent_bots.id = agent_bot_inboxes.agent_bot_id ' \
-      "WHERE agent_bot_inboxes.status = #{AgentBotInbox.statuses[:active]} AND agent_bot_inboxes.account_id = #{Integer(@account.id)} " \
-      "GROUP BY agent_bot_inboxes.inbox_id) #{ACTIVE_BOT} ON #{ACTIVE_BOT}.inbox_id = COALESCE(#{CONVERSATION}.inbox_id, crm_cards.inbox_id)"
   end
 
   def action_conversation_join

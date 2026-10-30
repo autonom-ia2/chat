@@ -118,6 +118,21 @@ RSpec.describe Crm::Cards::OrganizarPor do
       expect(groups[nil]).to include(count: 1)
     end
 
+    # Sem índice único por caixa (#2298): o robô é o do has_one ordenado (InboxBotStatus), a linha ativa de menor id.
+    it 'com várias linhas de robô na caixa, escolhe o mesmo robô que a linha' do
+      paused, first, second = %w[Pausado Primeiro Segundo].map { |name| create(:agent_bot, account: account, name: name) }
+      AgentBotInbox.create!(inbox: other_inbox, agent_bot: paused, status: :inactive)
+      AgentBotInbox.create!(inbox: other_inbox, agent_bot: second, status: :active)
+      AgentBotInbox.create!(inbox: other_inbox, agent_bot: first, status: :active)
+      record = card('Duas linhas ativas', inbox: other_inbox)
+
+      expected = line_responsible(Crm::Card.find(record.id))
+      row = quem_cuida_rows.find { |item| item.id == record.id }
+      expect([row[:quem_tipo], row[:quem_id]]).to eq([expected&.dig(:type), expected&.dig(:id)])
+      expect(row[:quem_id]).to eq(second.id)
+      expect(summary('quem_cuida').pluck(:key)).to eq(["bot:#{second.id}"])
+    end
+
     it 'ordena pessoas e robôs por nome, ninguém no fim, com o grupo inteiro e páginas estáveis' do
       bot_inbox!
       zelia = create(:user, account: account, role: :agent, name: 'Zélia')

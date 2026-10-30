@@ -11,7 +11,7 @@
 # Dentro de cada etapa ou pessoa, o que fazer primeiro (a ordem de sort=acao); o desempate final é o id, para a página
 # seguinte continuar de onde parou, sem grupo pela metade.
 #
-# Incluído no Crm::Cards::FilterQuery, depois de ActionGroups (usa CONVERSATION, ACTIVE_BOT e a visibilidade de lá).
+# Incluído no Crm::Cards::FilterQuery, depois de ActionGroups (usa CONVERSATION e a visibilidade de lá).
 module Crm::Cards::OrganizarPor
   SORTS = %w[etapa quem_cuida retorno valor parado nome].freeze
   QUEM_CUIDA = 'quem_cuida'.freeze
@@ -93,6 +93,10 @@ module Crm::Cards::OrganizarPor
     conversation_bot = '(SELECT agent_bots.id FROM agent_bots WHERE agent_bots.id = ' \
                        "#{Crm::Cards::ActionGroups::CONVERSATION}.assignee_agent_bot_id AND " \
                        "COALESCE(#{Crm::Cards::ActionGroups::CONVERSATION}.ai_assignee_type, '') = 'AgentBot')"
+    # O robô da caixa como o has_one :agent_bot_inbox (InboxBotStatus, #2298): a linha ativa de menor id; robô apagado é nil.
+    inbox_bot = '(SELECT agent_bots.id FROM agent_bot_inboxes LEFT JOIN agent_bots ON agent_bots.id = agent_bot_inboxes.agent_bot_id ' \
+                "WHERE agent_bot_inboxes.inbox_id = COALESCE(#{Crm::Cards::ActionGroups::CONVERSATION}.inbox_id, crm_cards.inbox_id) " \
+                "AND agent_bot_inboxes.status = #{AgentBotInbox.statuses[:active]} ORDER BY agent_bot_inboxes.id LIMIT 1)"
     <<~SQL.squish
       LEFT JOIN LATERAL (
         SELECT CASE WHEN quem.pessoa IS NOT NULL THEN 'agent' WHEN quem.robo IS NOT NULL THEN 'bot' END AS tipo,
@@ -100,7 +104,7 @@ module Crm::Cards::OrganizarPor
         FROM (SELECT
           COALESCE(crm_cards.owner_id,
             CASE WHEN #{visible_action_conversation_sql} THEN #{Crm::Cards::ActionGroups::CONVERSATION}.assignee_id END) AS pessoa,
-          COALESCE(#{conversation_bot}, #{Crm::Cards::ActionGroups::ACTIVE_BOT}.agent_bot_id) AS robo) quem
+          COALESCE(#{conversation_bot}, #{inbox_bot}) AS robo) quem
       ) #{QUEM} ON TRUE
     SQL
   end

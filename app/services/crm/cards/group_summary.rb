@@ -12,9 +12,6 @@
 # `quem_cuida` (Lista nova, "Organizar por", #2379) conta por quem cuida, a mesma regra da linha (Crm::Cards::OrganizarPor):
 # key "agent:ID" ou "bot:ID", type e label com o nome; quem ninguém cuida vem com key, type e label nil.
 #
-# Uma linha por card: a contagem tira o includes/preload da base (o pluck com includes faria o eager_load das conversas
-# vinculadas e repetiria o card com várias conversas).
-#
 # `key` is the stage_id / owner_id (or nil for "no owner"); `label` is the
 # human-readable stage/agent name resolved in one batched lookup.
 # Valor de venda (#2075): sem `sales_value_view`, sum_cents vem nil (a contagem fica).
@@ -59,10 +56,14 @@ class Crm::Cards::GroupSummary
     ::Crm::Cards::FilterQuery.new(scope: @scope, params: @params, conversation_visibility: @conversation_visibility).perform
   end
 
+  # Sem includes/preload (#2293): com eles o pluck liga o eager_load e o JOIN das conversas vinculadas repete o card,
+  # que contaria e somaria uma vez por conversa. `reorder(nil)` tira a ordem para o GROUP BY não exigir as colunas dela.
+  def aggregate_scope
+    filtered_scope.except(:includes, :preload, :eager_load, :references).reorder(nil)
+  end
+
   def build_groups
-    # `reorder(nil)` drops any default ordering so the GROUP BY aggregate is not
-    # forced to also select non-aggregated ordering columns.
-    rows = card_rows_scope
+    rows = aggregate_scope
            .group("crm_cards.#{column}")
            .pluck(
              Arel.sql("crm_cards.#{column}"),
@@ -84,11 +85,6 @@ class Crm::Cards::GroupSummary
     end
   end
 
-  # Sem includes/preload: a contagem é só dos cards, uma linha por card (nada de JOIN de associação no meio).
-  def card_rows_scope
-    filtered_scope.except(:includes, :preload, :eager_load, :references).reorder(nil)
-  end
-
   def aggregate_columns
     [Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(crm_cards.value_cents), 0)'),
      Arel.sql('MODE() WITHIN GROUP (ORDER BY crm_cards.currency)')]
@@ -97,7 +93,7 @@ class Crm::Cards::GroupSummary
   def build_quem_cuida_groups
     tipo = Arel.sql(Crm::Cards::OrganizarPor::QUEM_TIPO)
     id = Arel.sql(Crm::Cards::OrganizarPor::QUEM_ID)
-    rows = card_rows_scope.group(tipo, id).pluck(tipo, id, *aggregate_columns)
+    rows = aggregate_scope.group(tipo, id).pluck(tipo, id, *aggregate_columns)
     names = quem_cuida_names(rows)
 
     rows.map do |type, key_id, count, sum_value_cents, currency|
@@ -119,8 +115,7 @@ class Crm::Cards::GroupSummary
   end
 
   def build_action_groups
-    scope = card_rows_scope
-    rows = scope.group(Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL)).pluck(
+    rows = aggregate_scope.group(Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL)).pluck(
       Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL), Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(crm_cards.value_cents), 0)'),
       Arel.sql('MODE() WITHIN GROUP (ORDER BY crm_cards.currency)')
     ).index_by(&:first)
