@@ -289,4 +289,59 @@ RSpec.describe Crm::Ai::NaoENegocio do
 
     expect(card.reload).to have_attributes(status: 'open', closed_at: nil, stage_id: stage.id)
   end
+
+  # #2395: a conversa cujo card mais novo a IA arquivou como "fora_do_negocio" não recria card sozinha (CardSyncer).
+  describe '.conversa_fora_do_negocio?' do
+    def arquivar(card, actor: nil, **payload)
+      Crm::Cards::Archiver.new(card: card, actor: actor, payload: payload).perform
+    end
+
+    def pela_ia(card) = arquivar(card, by: 'ai', motivo: 'fora_do_negocio')
+
+    it 'vale para o card ligado à conversa só pelo vínculo (crm_card_conversations)' do
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Lead', currency: 'BRL')
+      Crm::CardConversation.create!(account: account, card: card, conversation: conversa)
+      pela_ia(card)
+
+      expect(described_class.conversa_fora_do_negocio?(conversa)).to be(true)
+    end
+
+    # Intencional: o bloqueio é da conversa, não do funil. O card mais novo, de qualquer funil, decide.
+    it 'vale para a conversa inteira quando ela tem cards em dois funis' do
+      outro_funil, outra_etapa = create_crm_pipeline(account: account, user: admin, name: 'Pós-venda')
+      novo_card(status: :lost, closed_at: 1.day.ago)
+      pela_ia(account.crm_cards.create!(pipeline: outro_funil, stage: outra_etapa, title: 'Lead', currency: 'BRL',
+                                        primary_conversation: conversa))
+
+      expect(described_class.conversa_fora_do_negocio?(conversa)).to be(true)
+    end
+
+    # Prazo do bloqueio (decisão do Rodrigo, 30/10): 30 dias a contar do arquivamento da IA.
+    def arquivado_ha(tempo)
+      card = novo_card
+      pela_ia(card)
+      Crm::Activity.where(card: card, event_type: 'archive').update_all(created_at: tempo.ago) # rubocop:disable Rails/SkipsModelValidations
+    end
+
+    it 'bloqueia com o arquivamento da IA dentro dos 30 dias' do
+      arquivado_ha(described_class::BLOQUEIO_DA_RECRIACAO - 1.hour)
+
+      expect(described_class.conversa_fora_do_negocio?(conversa)).to be(true)
+    end
+
+    it 'libera com o arquivamento da IA de mais de 30 dias' do
+      arquivado_ha(described_class::BLOQUEIO_DA_RECRIACAO + 1.hour)
+
+      expect(described_class.conversa_fora_do_negocio?(conversa)).to be(false)
+    end
+
+    it 'libera quando uma pessoa reabriu e arquivou o card depois da IA' do
+      card = novo_card
+      pela_ia(card)
+      card.update!(status: :open)
+      arquivar(card, actor: admin)
+
+      expect(described_class.conversa_fora_do_negocio?(conversa)).to be(false)
+    end
+  end
 end
