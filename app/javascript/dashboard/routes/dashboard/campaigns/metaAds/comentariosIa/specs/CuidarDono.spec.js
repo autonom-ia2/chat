@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/metaAdsComentariosIa.json';
+import en from 'dashboard/i18n/locale/en/metaAdsComentariosIa.json';
 import CuidarDono from '../CuidarDono.vue';
 
 // #2212: o jeito do dono em três passos. A mensagem do privado (até 1000 bytes UTF-8 com a frase automática), para
@@ -17,7 +18,9 @@ const painel = (extra = {}) => ({
 });
 
 const montadas = [];
-const montar = ({ data = painel(), preview, ...props } = {}) => {
+const i18nPtBR = () =>
+  createI18n({ legacy: false, locale: 'pt_BR', messages: { pt_BR: ptBR } });
+const montar = ({ data = painel(), preview, i18n, ...props } = {}) => {
   const wrapper = mount(CuidarDono, {
     props: {
       data,
@@ -25,13 +28,7 @@ const montar = ({ data = painel(), preview, ...props } = {}) => {
       ...props,
     },
     global: {
-      plugins: [
-        createI18n({
-          legacy: false,
-          locale: 'pt_BR',
-          messages: { pt_BR: ptBR },
-        }),
-      ],
+      plugins: [i18n || i18nPtBR()],
     },
   });
   montadas.push(wrapper);
@@ -186,6 +183,26 @@ describe('CuidarDono (#2212)', () => {
     const recebe = wrapper.find('[data-ia-dono-example="recebe"]').text();
     expect(recebe).toContain('@nova');
     expect(recebe).not.toContain('@velha');
+  });
+
+  it('frase padrão acompanha o idioma que chega depois de abrir a tela, enquanto o dono não a troca', async () => {
+    const i18n = createI18n({
+      legacy: false,
+      locale: 'en',
+      messages: { en, pt_BR: ptBR },
+    });
+    const wrapper = montar({
+      i18n,
+      data: painel({ message: 'Oi!', para_quem: 'Quem pedir', phrases: [] }),
+    });
+    i18n.global.locale.value = 'pt_BR';
+    await proximo(wrapper).trigger('click');
+    await proximo(wrapper).trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-ia-dono-phrase]').text()).toBe(
+      'Te chamei no privado 😊'
+    );
   });
 
   it('cuidado novo (o servidor manda frases vazias): vem a frase padrão e dá para ligar', async () => {
