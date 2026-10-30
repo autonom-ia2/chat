@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 676 |
+| No catálogo | 679 |
 | Sem corpo | 198 |
-| Com corpo | 478 |
-| Com corpo e formato completo | 393 (82,2%) |
-| Com corpo e formato incompleto | 85 |
+| Com corpo | 481 |
+| Com corpo e formato completo | 394 (81,9%) |
+| Com corpo e formato incompleto | 87 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 190 de 284 |
+| Leituras cruas tipadas | 197 de 295 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 71 |
+| leitura crua sem tipo | 73 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -106,6 +106,7 @@ Uma ação pode ter mais de um motivo.
 - `POST portals` — leitura crua sem tipo: portal.config.analytics
 - `POST portals/:portal_id/articles/reorder` — leitura crua sem tipo: positions_hash (repassada a Article.update_positions)
 - `POST portals/:portal_id/categories/reorder` — leitura crua sem tipo: positions_hash (repassada a Category.update_positions)
+- `POST seus_posts/posts/:post_id/cuidado/previa` — leitura crua sem tipo: para_quem
 - `POST tiktok/authorization` — leitura crua sem tipo: return_to
 - `POST whatsapp_calls/:id/accept` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/reject` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
@@ -118,6 +119,7 @@ Uma ação pode ter mais de um motivo.
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PUT relationships/configuration` — leitura crua sem tipo: configuration
+- `PUT seus_posts/posts/:post_id/cuidado` — leitura crua sem tipo: message, para_quem, phrases
 
 ## Leituras cruas sem tipo
 
@@ -209,6 +211,10 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/portals#update` portal.config.analytics — o código não converte nem compara o valor
 - `api/v1/accounts/relationships/configurations#update` configuration — o código não converte nem compara o valor
 - `api/v1/accounts/relationships/values#update` field — o código não converte nem compara o valor
+- `api/v1/accounts/seus_posts_cuidado#previa` para_quem — o código não converte nem compara o valor
+- `api/v1/accounts/seus_posts_cuidado#update` message — o código não converte nem compara o valor
+- `api/v1/accounts/seus_posts_cuidado#update` para_quem — o código não converte nem compara o valor
+- `api/v1/accounts/seus_posts_cuidado#update` phrases — o código não converte nem compara o valor
 - `api/v1/accounts/tiktok/authorizations#create` return_to — o código não converte nem compara o valor
 - `api/v1/accounts/whatsapp_calls#accept` sdp_answer — repassada a Whatsapp::CallService.new
 - `api/v1/accounts/whatsapp_calls#initiate` sdp_offer — repassada a provider_service.initiate_call
@@ -222,8 +228,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 417 |
-| Com parâmetros conhecidos | 366 |
+| No catálogo | 420 |
+| Com parâmetros conhecidos | 369 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

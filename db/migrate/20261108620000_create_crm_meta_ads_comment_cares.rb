@@ -19,6 +19,8 @@ class CreateCrmMetaAdsCommentCares < ActiveRecord::Migration[7.2]
       t.jsonb :phrases, null: false, default: []
       t.text :price_reply
       t.string :handoff, null: false, default: 'assignment'
+      # Quando o dono mandou ler os comentários que chegaram antes de ligar ("Ler e mandar"): uma vez por cuidado.
+      t.datetime :read_old_at
       t.references :created_by, foreign_key: { to_table: :users, on_delete: :nullify }
       t.datetime :started_at, null: false
       t.timestamps

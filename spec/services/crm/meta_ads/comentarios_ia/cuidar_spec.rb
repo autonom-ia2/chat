@@ -48,6 +48,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(classificador).to have_received(:decidir).with('Quanto custa?').ordered
   end
 
+  it 'comentário vindo da lista (sem o id de quem comentou): usa o lido na Meta' do
+    decide('private')
+    allow(rede).to receive(:ler).and_return({ text: 'Quanto custa?', from_name: 'carla.mendes', from_id: 'igsid-9' })
+
+    cuidar(comentario(from_id: nil))
+
+    expect(conversa).to have_received(:anotar!).with(conversation, an_object_having_attributes(from_id: 'igsid-9'), care, nova: true)
+  end
+
   it 'a Meta diz que não dá para ler (apagado, sem permissão): descartado, sem Jev e sem soltar a leitura' do
     allow(classificador).to receive(:decidir)
     allow(rede).to receive(:ler).and_return(nil)
