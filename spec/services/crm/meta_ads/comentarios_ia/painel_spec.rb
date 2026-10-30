@@ -151,6 +151,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
       expect(payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 waiting], %w[3 skipped], %w[4 older]])
       expect(payload).to include(unanswered: 1, older: 1)
     end
+
+    it 'cuidado pausado: o que chegou depois de ligar e a IA não leu fica com o dono (paused), não some' do
+      care.update!(status: 'paused')
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', dias: 1)], escondidas: [] })
+
+      expect(painel.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 waiting], %w[2 paused]])
+    end
   end
 
   describe '#salvar!' do

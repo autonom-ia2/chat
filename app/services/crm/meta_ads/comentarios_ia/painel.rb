@@ -7,8 +7,9 @@
 #   (Crm::MetaAdsCommentAction, actor 'ai'). Recebeu no privado e respondeu: pelas conversas que nasceram do cuidado.
 # - "Esperando você" (`to_see`) é o que ficou com o dono, com o porquê: reclamação, privado recusado, privado que pode
 #   ter saído (a Meta não respondeu), não cuidei (Meta ou Jev fora do ar, teto do dia, sem certeza), mais de 7 dias,
-#   não era o caso (a IA leu e não agiu) ou chegou antes de ligar (`started_at`). O que chegou depois de ligar e a IA
-#   ainda não leu está na fila dela: não entra. "Escondi" (`hidden`): o que a IA escondeu.
+#   não era o caso (a IA leu e não agiu), chegou antes de ligar (`started_at`) ou chegou com o cuidado pausado
+#   (`paused`). O que chegou depois de ligar, com o cuidado ligado, e a IA ainda não leu está na fila dela: não entra.
+#   "Escondi" (`hidden`): o que a IA escondeu.
 # - "Ler e mandar": uma vez por cuidado ligado (trava atômica em `read_old_at`), o LerAntigosJob põe os comentários de
 #   até 7 dias que chegaram antes de ligar na fila do motor, como comentários novos. Quem não é o caso fica com o dono.
 class Crm::MetaAds::ComentariosIa::Painel
@@ -175,12 +176,14 @@ class Crm::MetaAds::ComentariosIa::Painel
     comentario(linha).merge(kind: kind, conversation_path: caminho(acoes.values.compact.first))
   end
 
-  # nil: chegou depois de ligar e a IA ainda não leu (está na fila dela), então não fica com o dono.
+  # nil: chegou depois de ligar, com o cuidado ligado, e a IA ainda não leu (está na fila dela): não fica com o dono.
+  # Com o cuidado pausado, a IA não lê: fica com o dono (`paused`).
   def tipo_sem_acao(linha, acoes)
     return 'older' unless recente?(linha)
     return 'skipped' if acoes.key?(Crm::MetaAds::ComentariosIa::Registro::LIDO)
+    return 'waiting' if antes_de_ligar?(linha)
 
-    'waiting' if antes_de_ligar?(linha)
+    'paused' if cuidado.status == 'paused'
   end
 
   # Sem cuidado, tudo é de antes de ligar.

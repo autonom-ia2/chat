@@ -9,6 +9,12 @@
       "HIDE": "Close list",
       "PAUSE_ALL": "Pause all",
       "RESUME_ALL": "Resume all",
+      "RESUME_CONFIRM": {
+        "TITLE": "Resume {count} post? | Resume {count} posts?",
+        "DESCRIPTION": "I'll read new comments and send DMs again, like before you paused.",
+        "CONFIRM": "Resume",
+        "CANCEL": "Not now"
+      },
       "LIST_LABEL": "Posts I take care of",
       "ERROR": "Couldn't change it now. Try again."
     },
@@ -66,6 +72,7 @@
         "failed": "I couldn't send the DM. Reply yourself, if you want.",
         "unread": "I didn't handle this comment. Reply yourself, if you want.",
         "unsure": "I'm not sure the DM went out: Meta didn't answer. Check the inbox before you reply.",
+        "paused": "Came in while paused. Reply in the comment if you want.",
         "waiting": "Came in before you turned it on. Reply in the comment if you want.",
         "older": "Older than 7 days: I can't send a DM anymore. Reply in the comment.",
         "skipped": "Doesn't apply · I didn't send. It stays with you: reply in the comment if you want."

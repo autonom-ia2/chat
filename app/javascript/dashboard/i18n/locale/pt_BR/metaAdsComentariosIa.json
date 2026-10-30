@@ -9,6 +9,12 @@
       "HIDE": "Fechar lista",
       "PAUSE_ALL": "Pausar todos",
       "RESUME_ALL": "Voltar a cuidar de todos",
+      "RESUME_CONFIRM": {
+        "TITLE": "Voltar a cuidar de {count} post? | Voltar a cuidar de {count} posts?",
+        "DESCRIPTION": "Eu volto a ler os comentários novos e a mandar no privado, como antes de pausar.",
+        "CONFIRM": "Voltar a cuidar",
+        "CANCEL": "Agora não"
+      },
       "LIST_LABEL": "Posts que eu cuido",
       "ERROR": "Não consegui mudar agora. Tente de novo."
     },
@@ -66,6 +72,7 @@
         "failed": "Não consegui mandar no privado. Responda você, se quiser.",
         "unread": "Não cuidei deste comentário. Responda você, se quiser.",
         "unsure": "Não sei se o privado saiu: a Meta não respondeu. Confira no direct antes de responder.",
+        "paused": "Chegou com o cuidado pausado. Responda no comentário, se quiser.",
         "waiting": "Chegou antes de você ligar. Responda no comentário, se quiser.",
         "older": "Mais de 7 dias: não dá mais para mandar no privado. Responda no comentário.",
         "skipped": "Não se aplica · não mandei. Fica com você: responda no comentário, se quiser."
