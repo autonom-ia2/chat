@@ -3,7 +3,7 @@
 #
 # GET  meta_ads_connection/cuidados                     → { cuidados: [{ ad_id, care }] }: o estado do cuidado de cada
 #      anúncio (só banco), para o selo "Cuidando" no detalhe do anúncio.
-# GET  meta_ads_connection/ads/:ad_id/cuidado           → o Painel (Crm::MetaAds::ComentariosIa::Painel).
+# GET  meta_ads_connection/ads/:ad_id/cuidado           → o Painel (Crm::MetaAds::ComentariosIa::Painel) e `inbox_id`.
 # GET  meta_ads_connection/ads/:ad_id/resumo            → "O que tem nos comentários" (Resumo; 'reading' enquanto conta).
 #      Ver: administrador ou `meta_ads_view`.
 # PUT  meta_ads_connection/ads/:ad_id/cuidado           message, para_quem, phrases[], status → o Painel.
@@ -40,7 +40,7 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   end
 
   def show
-    render json: painel.payload
+    render json: payload
   end
 
   def resumo
@@ -51,7 +51,7 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
     painel.salvar!(message: texto(params[:message], 'message'), para_quem: texto(params[:para_quem], 'para_quem'),
                    phrases: frases(params[:phrases]), status: params[:status].to_s, user: Current.user)
     audit_care!('save')
-    render json: painel.payload
+    render json: payload
   end
 
   def previa
@@ -98,6 +98,12 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
     return render_error_code(@anuncio.post? ? 'no_inbox' : 'no_post') if @anuncio.redes.empty?
 
     render_error_code('not_inbox_member') unless @anuncio.redes.values.all? { |rede| Pundit.policy!(pundit_user, rede[:inbox]).show? }
+  end
+
+  # O Painel e a caixa do "Ver na caixa": a do Instagram, por onde sai o privado, quando o anúncio roda nele.
+  def payload
+    rede = @anuncio.redes['instagram'] || @anuncio.redes.values.first
+    painel.payload.merge(inbox_id: rede[:inbox].id)
   end
 
   def painel

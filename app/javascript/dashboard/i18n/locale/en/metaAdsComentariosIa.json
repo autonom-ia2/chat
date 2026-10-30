@@ -20,7 +20,9 @@
       "BACK_POST": "Back to the post",
       "BACK_AD": "Back to the ad",
       "FROM_POST": "Instagram post",
-      "FROM_AD": "Ad on Instagram and Facebook",
+      "FROM_AD": "Ad on Instagram",
+      "FROM_AD_FACEBOOK": "Ad on Facebook",
+      "FROM_AD_BOTH": "Ad on Instagram and Facebook",
       "FROM_PAGE": "Facebook Page post",
       "READING": "I'm reading your post…",
       "ERROR": "I couldn't read the post right now.",
@@ -141,6 +143,13 @@
         "CONFIRM": "Read and send",
         "BACK": "Not now"
       }
+    },
+    "ENTRY": {
+      "TITLE": "AI takes care of the comments",
+      "TEXT": "It replies to whoever comments, sends the private message where the network allows it and hides spam. What isn't its call stays with you.",
+      "START": "Take care of comments",
+      "CHANGE": "See and change",
+      "SEE": "See"
     }
   }
 }

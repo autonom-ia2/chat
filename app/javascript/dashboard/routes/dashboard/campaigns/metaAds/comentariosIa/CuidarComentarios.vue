@@ -26,6 +26,8 @@ const props = defineProps({
   canManage: { type: Boolean, default: false },
   // A caixa da rede, para "Ver na caixa".
   inboxPath: { type: String, default: '' },
+  // No anúncio (B2), a caixa vem do servidor (Painel `inbox_id`): a página diz como vira endereço.
+  inboxPathOf: { type: Function, default: null },
 });
 
 const emit = defineEmits(['back']);
@@ -63,7 +65,7 @@ const NETWORK_ICON = {
   both: 'i-woot-instagram-color',
 };
 const fromKey = computed(() => {
-  if (props.origin === 'anuncio') return 'FROM_AD';
+  if (props.origin === 'anuncio') return porRede('FROM_AD', network.value);
   return network.value === 'facebook' ? 'FROM_PAGE' : 'FROM_POST';
 });
 
@@ -144,8 +146,13 @@ const resume = async () => {
 };
 
 // Um item de "Esperando você" abre a conversa dele (conversation_path do servidor); "Ver na caixa", a caixa da rede.
+const inboxDoPainel = computed(() =>
+  props.inboxPathOf && painel.value?.inbox_id
+    ? props.inboxPathOf(painel.value.inbox_id)
+    : ''
+);
 const openInbox = path => {
-  const destino = path || props.inboxPath;
+  const destino = path || props.inboxPath || inboxDoPainel.value;
   if (destino) router.push(destino);
 };
 </script>

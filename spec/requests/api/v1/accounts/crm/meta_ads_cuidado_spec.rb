@@ -66,7 +66,7 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
 
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to include('status' => 'ready', 'network' => 'instagram', 'private_available' => true,
-                                            'care' => 'off', 'unanswered' => 2, 'older' => 1)
+                                            'care' => 'off', 'unanswered' => 2, 'older' => 1, 'inbox_id' => canal.inbox.id)
     expect(response.parsed_body['to_see'].map { |item| [item['id'], item['kind']] }).to eq([%w[101 waiting], %w[102 waiting], %w[103 older]])
   end
 

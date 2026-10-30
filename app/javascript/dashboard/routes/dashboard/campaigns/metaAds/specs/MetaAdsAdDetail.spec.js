@@ -8,6 +8,7 @@ import { lerGestao } from '../gestaoDoAnuncio';
 import comentariosInstagram from '../components/comentarios/comentariosInstagram';
 import MetaAdsAdStatus from '../components/MetaAdsAdStatus.vue';
 import MetaAdsComments from '../components/comentarios/MetaAdsComments.vue';
+import CuidarAnuncioEntrada from '../comentariosIa/CuidarAnuncioEntrada.vue';
 
 // Permissões negadas no teste; o resto passa (administrador).
 const { negadas } = vi.hoisted(() => ({ negadas: new Set() }));
@@ -25,6 +26,14 @@ vi.mock('dashboard/composables/useCanManage', () => ({
   usePermissionGranted: key => computed(() => !negadas.has(key)),
 }));
 vi.mock('../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
+// IA cuida dos comentários (#2212, B2): a entrada lê só o estado guardado.
+vi.mock('dashboard/api/comentariosIa', () => ({
+  default: {
+    getCuidadosDosAnuncios: vi.fn(() =>
+      Promise.resolve({ data: { cuidados: [] } })
+    ),
+  },
+}));
 // Comentários (#2196): o adaptador do Instagram responde sem chamar a API.
 vi.mock('../components/comentarios/comentariosInstagram', async () => {
   const real = await vi.importActual(
@@ -411,6 +420,31 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     const on = await mountDetail();
     expect(on.find('[data-ad-comments]').exists()).toBe(true);
     expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
+  });
+
+  it('shows the AI comment care entry only with meta_ads_comentarios_ia, next to the comments (#2212)', async () => {
+    lerGestao.mockResolvedValue(null);
+    comentariosInstagram.listar.mockResolvedValue({
+      status: 'ready',
+      account: { username: 'lojaexemplo' },
+      comments: [],
+      total: 0,
+      next_cursor: null,
+    });
+    flags.value = {
+      meta_ads_gestao: true,
+      meta_ads_comentarios_instagram: true,
+    };
+    const off = await mountDetail();
+    expect(off.findComponent(CuidarAnuncioEntrada).exists()).toBe(false);
+    off.unmount();
+
+    flags.value = { ...flags.value, meta_ads_comentarios_ia: true };
+    const on = await mountDetail();
+    expect(on.findComponent(CuidarAnuncioEntrada).props()).toMatchObject({
+      adId: '1',
+      canManage: true,
+    });
   });
 
   // #2358: entrar de novo com o Instagram pede integration_manage e inbox_manage; a aba recebe essa régua ligada às

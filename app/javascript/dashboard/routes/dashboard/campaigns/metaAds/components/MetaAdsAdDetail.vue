@@ -26,6 +26,7 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { lerGestao } from '../gestaoDoAnuncio';
 import MetaAdsComments from './comentarios/MetaAdsComments.vue';
+import CuidarAnuncioEntrada from '../comentariosIa/CuidarAnuncioEntrada.vue';
 import comentariosInstagram from './comentarios/comentariosInstagram';
 import comentariosFacebook from './comentarios/comentariosFacebook';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
@@ -344,6 +345,16 @@ const showComments = computed(
     Boolean(gestao.value || (ad.value && !withoutSpend.value))
 );
 
+// IA cuida dos comentários (#2212, B2, flag meta_ads_comentarios_ia): a entrada fica onde os comentários ficam.
+const showCare = computed(
+  () =>
+    showComments.value &&
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.META_ADS_COMENTARIOS_IA
+    )
+);
+
 const loadGestao = async () => {
   gestao.value = null;
   if (!gestaoOn.value) return;
@@ -471,6 +482,11 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         @changed="budget = $event"
       />
       <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
+      <CuidarAnuncioEntrada
+        v-if="showCare"
+        :ad-id="adId"
+        :can-manage="canManage"
+      />
       <MetaAdsComments
         v-if="showComments"
         :ad-id="adId"
@@ -829,6 +845,11 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         </details>
       </div>
 
+      <CuidarAnuncioEntrada
+        v-if="showCare"
+        :ad-id="adId"
+        :can-manage="canManage"
+      />
       <MetaAdsComments
         v-if="showComments"
         :ad-id="adId"

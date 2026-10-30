@@ -20,7 +20,9 @@
       "BACK_POST": "Voltar para o post",
       "BACK_AD": "Voltar para o anúncio",
       "FROM_POST": "Post do Instagram",
-      "FROM_AD": "Anúncio no Instagram e no Facebook",
+      "FROM_AD": "Anúncio no Instagram",
+      "FROM_AD_FACEBOOK": "Anúncio no Facebook",
+      "FROM_AD_BOTH": "Anúncio no Instagram e no Facebook",
       "FROM_PAGE": "Post da Página no Facebook",
       "READING": "Estou lendo o seu post…",
       "ERROR": "Não consegui ler o post agora.",
@@ -141,6 +143,13 @@
         "CONFIRM": "Ler e mandar",
         "BACK": "Agora não"
       }
+    },
+    "ENTRY": {
+      "TITLE": "A IA cuida dos comentários",
+      "TEXT": "Ela responde quem comenta, manda o privado onde a rede deixa e esconde propaganda. O que não for com ela fica com você.",
+      "START": "Cuidar dos comentários",
+      "CHANGE": "Ver e mudar",
+      "SEE": "Ver"
     }
   }
 }
