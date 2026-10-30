@@ -20,6 +20,7 @@ import horarioDoCanal from './horarioDoCanal.json';
 import sidebarFork from './sidebarFork.json';
 import telaInicial from './telaInicial.json';
 import seusPosts from './seusPosts.json';
+import metaAdsComentariosIa from './metaAdsComentariosIa.json';
 import painelDoContato from './painelDoContato.json';
 import listaDeConversas from './listaDeConversas.json';
 import metaAdsOrganico from './metaAdsOrganico.json';
@@ -98,6 +99,7 @@ export default {
   ...sidebarFork,
   ...telaInicial,
   ...seusPosts,
+  ...metaAdsComentariosIa,
   ...painelDoContato,
   ...listaDeConversas,
   ...metaAdsOrganico,

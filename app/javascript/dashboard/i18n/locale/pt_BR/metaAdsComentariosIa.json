@@ -1,0 +1,146 @@
+{
+  "META_ADS_COMMENTS_AI": {
+    "BADGE_ON": "Cuidando dos comentários",
+    "BADGE_PAUSED": "Pausado",
+    "BAND": {
+      "TITLE": "Cuidando dos comentários de {count} post | Cuidando dos comentários de {count} posts",
+      "PAUSED": "Pausado em {count} post | Pausado em {count} posts",
+      "SHOW": "Ver posts",
+      "HIDE": "Fechar lista",
+      "PAUSE_ALL": "Pausar todos",
+      "RESUME_ALL": "Voltar a cuidar de todos",
+      "RESULT": "{sent} receberam no privado · {replied} responderam",
+      "LIST_LABEL": "Posts que eu cuido",
+      "RESULT_FACEBOOK": "{sent} receberam no Messenger · {replied} responderam",
+      "RESULT_BOTH": "{sent} receberam mensagem · {replied} responderam"
+    },
+    "SCREEN": {
+      "TITLE": "Cuidar dos comentários",
+      "BACK_POSTS": "Voltar para Seus posts",
+      "BACK_POST": "Voltar para o post",
+      "BACK_AD": "Voltar para o anúncio",
+      "FROM_POST": "Post do Instagram",
+      "FROM_AD": "Anúncio no Instagram e no Facebook",
+      "FROM_PAGE": "Post da Página no Facebook",
+      "READING": "Estou lendo o seu post…",
+      "ERROR": "Não consegui ler o post agora.",
+      "RETRY": "Tentar de novo",
+      "NO_ACCESS": "Você não tem acesso ao cuidado dos comentários deste post.",
+      "SAVE_ERROR": "Não consegui guardar agora. Tente de novo.",
+      "OFF_READONLY": {
+        "TITLE": "Eu ainda não cuido dos comentários deste post.",
+        "TEXT": "Quem cuida dos posts da conta pode ligar."
+      }
+    },
+    "PRIVATE": {
+      "AUTOMATIC": "(mensagem automática · se não quiser receber, me avisa)"
+    },
+    "OLD_DIALOG": {
+      "OLDER": "Outro comentário tem mais de 7 dias e não recebe mensagem no privado. Ele fica com você: responda no comentário. | Outros {count} comentários têm mais de 7 dias e não recebem mensagem no privado. Eles ficam com você: responda no comentário.",
+      "OLDER_FACEBOOK": "Outro comentário tem mais de 7 dias e não recebe mensagem no Messenger. Ele fica com você: responda no comentário. | Outros {count} comentários têm mais de 7 dias e não recebem mensagem no Messenger. Eles ficam com você: responda no comentário.",
+      "OLDER_BOTH": "Outro comentário tem mais de 7 dias e não recebe mensagem. Ele fica com você: responda no comentário. | Outros {count} comentários têm mais de 7 dias e não recebem mensagem. Eles ficam com você: responda no comentário."
+    },
+    "ON": {
+      "STARTED": "Pronto. Agora eu cuido dos comentários novos.",
+      "STARTED_DONO": "Pronto. Vou mandar a sua mensagem para: {who}.",
+      "RESULT": "{sent} receberam no privado",
+      "RESULT_FACEBOOK": "{sent} receberam no Messenger",
+      "RESULT_BOTH": "{sent} receberam mensagem",
+      "RESULT_ONE": "1 recebeu no privado",
+      "RESULT_FACEBOOK_ONE": "1 recebeu no Messenger",
+      "RESULT_BOTH_ONE": "1 recebeu mensagem",
+      "REPLIED": "{replied} responderam",
+      "REPLIED_ONE": "1 respondeu",
+      "NO_RESULT": "Ainda não chegou comentário novo. Os números aparecem aqui.",
+      "PAUSED_TEXT": "Os comentários novos ficam com você na caixa.",
+      "PAUSE": "Pausar",
+      "RESUME": "Voltar a cuidar",
+      "INBOX": "Ver na caixa",
+      "TO_SEE": "Esperando você ({count})",
+      "TO_SEE_TITLE": "Esperando você",
+      "TO_SEE_EMPTY": "Por enquanto, nada precisa de você.",
+      "BEFORE": "Chegaram antes de você ligar ({count})",
+      "BEFORE_TITLE": "Chegaram antes de você ligar",
+      "HIDDEN": "Escondi ({count})",
+      "KIND": {
+        "complaint": "Reclamação. Não respondi. Está na sua caixa, como urgente.",
+        "hidden": "Propaganda ou golpe. Escondi do post.",
+        "failed": "Não consegui mandar no privado. Responda você, se quiser.",
+        "waiting": "Chegou antes de você ligar. Responda no comentário, se quiser.",
+        "older": "Mais de 7 dias: não dá mais para mandar no privado. Responda no comentário.",
+        "skipped": "Não se aplica · não mandei. Fica com você: responda no comentário, se quiser."
+      },
+      "OPEN_INBOX": "Abrir na caixa",
+      "REPLY_COMMENT": "Responder no comentário",
+      "CHANGE": "Mudar o que eu respondo",
+      "SAVE_CHANGES": "Guardar mudanças",
+      "LEAVE_CHANGES": "Sair sem mudar",
+      "SAVED": "Pronto, guardei as mudanças.",
+      "RESOLVED_HINT": "As conversas que eu resolvi sozinho já entram como resolvidas.",
+      "READ_OLD": "Ler e mandar",
+      "STARTED_OLD_QUEUED": "Pronto. Estou lendo os comentários que já estavam aqui e mando só para quem for o caso. O resultado aparece aqui."
+    },
+    "DONO": {
+      "STEP": "Passo {step} de {total}",
+      "NEXT": "Continuar",
+      "START": "Ligar",
+      "WHAT": {
+        "TITLE": "O que mandar no privado?",
+        "TEXT": "Escreva a mensagem que a pessoa recebe. Pode ter link, catálogo, cupom ou preço.",
+        "PLACEHOLDER": "Ex.: Oi! Aqui está o catálogo com os preços: studioacme.com.br/catalogo. Use o cupom POST10 e tenha 10% de desconto.",
+        "HINT": "No fim, eu ponho sozinho: “{automatic}”.",
+        "TOO_LONG": "A mensagem ficou longa demais para a Meta. Tire um pouco do texto.",
+        "ALL_IN_ONE": "Ponha tudo nesta mensagem: a próxima só sai se a pessoa responder."
+      },
+      "WHO": {
+        "TITLE": "Para quem?",
+        "TEXT": "Eu leio cada comentário e mando só para quem for o caso. Toque em um ou escreva do seu jeito.",
+        "PLACEHOLDER": "Ex.: quem pedir o link ou o preço",
+        "SUGGESTIONS": {
+          "PRICE": "Quem perguntar o preço",
+          "LINK": "Quem pedir o link",
+          "CATALOG": "Quem quiser ver o catálogo"
+        },
+        "OWN": "Ou escreva do seu jeito:",
+        "TOO_LONG": "Ficou longo demais. Use até {max} letras."
+      },
+      "SEE": {
+        "TITLE": "Veja como fica",
+        "GETS": "É o caso",
+        "IN_DM": "Quem comentar assim recebe no privado:",
+        "IN_COMMENT": "No comentário, eu respondo",
+        "SKIPS": "Não se aplica",
+        "SKIPS_WHY": "Não é o que você pediu. Não mando nada.",
+        "SAMPLE": "Exemplo: ninguém pediu isso ainda neste post",
+        "SAMPLE_TEXT": "Quando alguém comentar o que você pediu, recebe isto:",
+        "YOU_ASKED": "Você pediu:",
+        "PHRASE_EDIT": "Mudar a frase",
+        "PHRASE_DONE": "Pronto",
+        "GETS_BEFORE": "É o caso · chegou antes",
+        "LOADING": "Estou lendo os comentários do post…",
+        "PREVIEW_ERROR": "Não consegui ler os comentários do post agora. Este é um exemplo: você pode ligar assim mesmo."
+      },
+      "RULES": {
+        "ONCE": "Cada pessoa recebe uma mensagem só neste post.",
+        "SEVEN_DAYS": "Comentário com mais de 7 dias não recebe mensagem no privado.",
+        "COMPLAINT": "Reclamação não recebe a mensagem: fica com você, na caixa.",
+        "MORE": "Como funciona",
+        "LIVE": "Em live, só enquanto ela estiver no ar.",
+        "REQUESTS": "Quem não te segue recebe a mensagem em “Solicitações”, no Direct."
+      },
+      "SOON": {
+        "BADGE": "Em breve",
+        "TITLE": "Mandar no Messenger ainda não está liberado",
+        "TEXT": "No Facebook, a mensagem no privado depende de uma liberação da Meta. Assim que ela liberar, você liga por aqui."
+      },
+      "PREVIOUS": "Passo anterior",
+      "OLD_NOTE": "O que já está aqui: pergunto depois de ligar. | Os {count} que já estão aqui: pergunto depois de ligar.",
+      "OLD_DIALOG": {
+        "TITLE": "Ler também o comentário que já está aqui? | Ler também os {count} comentários que já estão aqui?",
+        "TEXT": "Eu leio e mando a mensagem só se for o caso. | Eu leio as {count} e mando a mensagem só para quem for o caso.",
+        "CONFIRM": "Ler e mandar",
+        "BACK": "Agora não"
+      }
+    }
+  }
+}

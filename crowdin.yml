@@ -33,6 +33,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/telaInicial.json
       - /app/javascript/dashboard/i18n/locale/en/listaDeConversas.json
       - /app/javascript/dashboard/i18n/locale/en/seusPosts.json
+      - /app/javascript/dashboard/i18n/locale/en/metaAdsComentariosIa.json
     translation: >-
       /app/javascript/dashboard/i18n/locale/%two_letters_code%/%original_file_name%
   - source: /config/locales/en.yml
