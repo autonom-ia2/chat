@@ -123,9 +123,18 @@ module Autonomia
       # #1427 — "Lendo a página X de N…": a página que o OCR do PDF está lendo agora e quantas ele vai ler, só durante a
       # leitura (sai quando ela termina, falha ou é superada).
       PROGRESSO = 'progresso'.freeze
+      # #1426 (t4e) — o índice do material grande ([{ paginas, resumo, temas }], Knowledge::ResumoPorSecao), desta leitura:
+      # o mark_ready! grava o da leitura nova (ou tira o da anterior, se a nova não tem). A falha e a volta à geração anterior
+      # mantêm o da anterior, que descreve os trechos que continuam servidos.
+      RESUMO_POR_SECAO = 'resumo_por_secao'.freeze
       # #1426 — teto da releitura, o mesmo do painel (TETO_DA_RELEITURA_MS em autonomiaSources.js).
       TETO_DA_RELEITURA = 10.minutes
       attr_accessor :paginas_de_fora
+      # #1426 (t4e) — o PDF grande dividido em seções por faixa de páginas ([{ 'paginas' => [ini, fim], 'texto' }]), posto
+      # pelo Processors::Pdf só durante a leitura. O Ingestor corta cada seção à parte e grava as páginas em cada trecho.
+      attr_accessor :secoes
+      # #1426 (t4e) — o índice por seção desta leitura (Knowledge::ResumoPorSecao), gravado pelo mark_ready! com o "pronto".
+      attr_accessor :resumo_por_secao
 
       before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
 
@@ -269,7 +278,8 @@ module Autonomia
 
       # O metadata com o que ficou de fora NESTA leitura (Source#paginas_de_fora): a marca da leitura anterior sai sempre.
       def metadata_desta_leitura
-        base = (metadata || {}).except(PAGINAS_DE_FORA, PROGRESSO)
+        base = (metadata || {}).except(PAGINAS_DE_FORA, PROGRESSO, RESUMO_POR_SECAO)
+        base = base.merge(RESUMO_POR_SECAO => resumo_por_secao) if resumo_por_secao.present?
         paginas_de_fora.present? ? base.merge(PAGINAS_DE_FORA => paginas_de_fora) : base
       end
 

@@ -121,4 +121,31 @@ RSpec.describe Autonomia::Agents::Knowledge::Reviewer do
       expect(text).to include('CHUNK-399 ')
     end
   end
+
+  # #1426 (t4e) — PDF grande: o Revisor lê também o índice por seção do material inteiro, não só a amostra.
+  describe '#review_input_text with the summary by section' do
+    let(:account) { conta_da_fase2 }
+    let(:agent) { Autonomia::Agents::Agent.create!(account: account, name: 'Agente Teste', agent_type: 'support') }
+
+    it 'lists the pages and the summary of every section' do
+      source = Autonomia::Agents::Source.create!(
+        account: account, agent: agent, source_type: 'pdf', status: :ready,
+        metadata: { Autonomia::Agents::Source::RESUMO_POR_SECAO => [
+          { 'paginas' => [1, 25], 'resumo' => 'Coberturas basicas.', 'temas' => ['Coberturas'] },
+          { 'paginas' => [201, 225], 'resumo' => 'Assistencia 24 horas.', 'temas' => ['Guincho'] }
+        ] }
+      )
+
+      text = described_class.new(source: source, token: 'tok').send(:review_input_text)
+
+      expect(text).to include('Páginas 1–25: Coberturas basicas. (temas: Coberturas)')
+      expect(text).to include('Páginas 201–225: Assistencia 24 horas. (temas: Guincho)')
+    end
+
+    it 'leaves the index out when the material has no sections' do
+      source = Autonomia::Agents::Source.create!(account: account, agent: agent, source_type: 'pdf', status: :ready)
+
+      expect(described_class.new(source: source, token: 'tok').send(:review_input_text)).not_to include('Páginas')
+    end
+  end
 end
