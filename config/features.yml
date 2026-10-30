@@ -1038,3 +1038,13 @@
   display_name: Seus posts › comentários de cada post
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: a mensagem de quando não souber vai ao modelo (#2381, D2 do tema 6 #1428). Ligada: no atendimento ao cliente,
+# o PromptBuilder leva o texto do dono como orientação ("diga isto com as suas palavras"), sem obrigar a cópia literal.
+# Desligada: o prompt fica byte a byte o de antes. Copiloto, Guia e Lia não mudam. Rollback: desligar a flag na conta.
+# Sem migration. Fim da feature_flags_ext_2, depois de seus_posts_comentarios: posição provisória; a real é a ordem na
+# main na hora da fila, e a Orquestração confirma antes de enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: agente_diz_quando_nao_sabe
+  display_name: Agentes › mensagem de quando não souber vai ao modelo
+  enabled: false
+  column: feature_flags_ext_2
