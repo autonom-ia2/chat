@@ -15,17 +15,21 @@
 class Crm::MetaAds::ComentariosIa::Anuncio
   FLAGS = { 'instagram' => 'meta_ads_comentarios_instagram', 'facebook' => 'meta_ads_comentarios_facebook' }.freeze
 
-  attr_reader :connection, :ad_id
+  # `management`: a AdManagement que já leu o anúncio (ela guarda a leitura). A Fonte a passa aos leitores dos
+  # comentários, para o criativo não ser lido de novo na Meta.
+  attr_reader :connection, :ad_id, :management
 
   def self.ler(connection, ad_id)
-    ad = Crm::MetaAds::AdManagement.new(connection).ad(ad_id.to_s)
-    ad && new(connection, ad_id.to_s, ad['creative'].to_h)
+    management = Crm::MetaAds::AdManagement.new(connection)
+    ad = management.ad(ad_id.to_s)
+    ad && new(connection, ad_id.to_s, ad['creative'].to_h, management: management)
   end
 
-  def initialize(connection, ad_id, creative)
+  def initialize(connection, ad_id, creative, management: nil)
     @connection = connection
     @ad_id = ad_id
     @creative = creative
+    @management = management
   end
 
   # { rede => { post_id:, inbox: } }, só as redes em que a IA pode cuidar.

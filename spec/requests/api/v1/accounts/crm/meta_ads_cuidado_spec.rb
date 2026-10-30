@@ -117,7 +117,68 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:not_found)
-    expect(a_request(:get, /graph\.instagram\.com/)).not_to have_been_made
+    # Só a leitura do anúncio: nenhum comentário lido, em nenhuma rede.
+    expect(meta_call).to have_been_made.once
+  end
+
+  it 'lê o criativo do anúncio uma vez só por tela, mesmo passando pela leitura dos comentários' do
+    get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(a_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))).to have_been_made.once
+  end
+
+  it 'anúncio só no Facebook: o Painel é da rede facebook, sem o privado liberado (F4), com a caixa da Página' do
+    page_id = story_id.split('_').first
+    account.disable_features!('meta_ads_comentarios_instagram')
+    account.enable_features!('meta_ads_comentarios_facebook')
+    simulate_meta_ads_comment_pieces(account: account, page_id: page_id)
+    pagina = create(:inbox, account: account, channel: build(:channel_facebook_page, account: account, page_id: page_id))
+    stub_anuncio({ effective_object_story_id: story_id })
+    stub_request(:get, meta_graph_url('me/permissions'))
+      .to_return(status: 200, headers: json, body: { data: %w[pages_read_user_content pages_manage_engagement]
+        .map { |name| { permission: name, status: 'granted' } } }.to_json)
+    stub_request(:get, meta_graph_url(page_id)).with(query: { fields: 'access_token,name' })
+                                               .to_return(status: 200, body: { access_token: 'PAGETOKEN123' }.to_json, headers: json)
+    stub_request(:get, meta_graph_url(story_id)).with(query: hash_including({}))
+                                                .to_return(status: 200, headers: json, body: {
+                                                  comments: { data: [{ id: '555_1', from: { id: '5', name: 'Mariana' }, message: 'Valor?',
+                                                                       created_time: 1.hour.ago.iso8601 }],
+                                                              summary: { total_count: 1 } }
+                                                }.to_json)
+
+    get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to include('status' => 'ready', 'network' => 'facebook', 'private_available' => false,
+                                            'inbox_id' => pagina.id)
+    expect(response.parsed_body['to_see'].map { |item| [item['id'], item['kind']] }).to eq([%w[555_1 waiting]])
+  end
+
+  it 'pausa: o cuidado fica pausado, com o que o dono escreveu' do
+    put "#{base}/cuidado", params: corpo, headers: admin.create_new_auth_token, as: :json
+    put "#{base}/cuidado", params: corpo.merge(status: 'paused'), headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to include('care' => 'paused', 'para_quem' => 'Quem pedir o e-book')
+    expect(Crm::MetaAdsCommentCare.sole.status).to eq('paused')
+  end
+
+  it 'status que não é on nem paused: 422 invalid_status, sem gravar' do
+    put "#{base}/cuidado", params: corpo.merge(status: 'off'), headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body['error']).to eq('invalid_status')
+    expect(Crm::MetaAdsCommentCare.count).to eq(0)
+  end
+
+  it 'a Meta fora do ar ao ler o anúncio: 422 meta_unavailable' do
+    stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({})).to_return(status: 500, headers: json, body: '{}')
+
+    get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body['error']).to eq('meta_unavailable')
   end
 
   it '"Ler e mandar": põe os comentários de até 7 dias na fila do motor com a caixa, o post e o anúncio' do
@@ -190,7 +251,8 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
 
       expect(response).to have_http_status(:forbidden)
       expect(response.parsed_body['error']).to eq('not_inbox_member')
-      expect(a_request(:get, /graph\.instagram\.com/)).not_to have_been_made
+      # Só a leitura do criativo (de onde vêm as caixas): nenhum comentário lido.
+      expect(meta_call).to have_been_made.once
     end
   end
 
