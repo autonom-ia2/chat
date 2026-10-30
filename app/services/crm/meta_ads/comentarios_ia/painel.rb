@@ -6,8 +6,8 @@
 # - O resto é lido na hora: os comentários do alvo (Fonte, ao vivo, nunca gravados) e o que a IA fez com cada um
 #   (Crm::MetaAdsCommentAction, actor 'ai'). Recebeu no privado e respondeu: pelas conversas que nasceram do cuidado.
 # - "Esperando você" (`to_see`) é o que ficou com o dono, com o porquê: reclamação, privado recusado, privado que pode
-#   ter saído (a Meta não respondeu), não cuidei (Meta ou Jev fora do ar, teto do dia, sem certeza), mais de 7 dias, não era o caso (a IA leu e não agiu) ou chegou
-#   antes de ligar (`started_at`). O que chegou depois de ligar e a IA
+#   ter saído (a Meta não respondeu), não cuidei (Meta ou Jev fora do ar, teto do dia, sem certeza), mais de 7 dias,
+#   não era o caso (a IA leu e não agiu) ou chegou antes de ligar (`started_at`). O que chegou depois de ligar e a IA
 #   ainda não leu está na fila dela: não entra. "Escondi" (`hidden`): o que a IA escondeu.
 # - "Ler e mandar": uma vez por cuidado ligado (trava atômica em `read_old_at`), o LerAntigosJob põe os comentários de
 #   até 7 dias que chegaram antes de ligar na fila do motor, como comentários novos. Quem não é o caso fica com o dono.
