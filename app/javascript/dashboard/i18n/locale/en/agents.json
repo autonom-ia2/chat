@@ -418,7 +418,6 @@
         "ALWAYS_ASK": "Always offer a human",
         "NEVER": "Never"
       },
-      "CONFIDENCE_THRESHOLD": "Confidence threshold",
       "SAVE": "Save changes",
       "SAVE_SUCCESS": "Changes saved.",
       "SAVE_ERROR": "We couldn't save your changes. Please try again.",
@@ -429,9 +428,6 @@
         "INTERNAL": "Internal (team copilot)",
         "BOTH": "Both"
       },
-      "CONFIDENCE_LOW": "Low (hands off rarely)",
-      "CONFIDENCE_HIGH": "High (hands off often)",
-      "CONFIDENCE_HINT": "Below {pct}% confidence, the agent hands the conversation to a human instead of guessing.",
       "HISTORY": {
         "TITLE": "Agent history",
         "HINT": "The whole agent (instruction, tone, greeting and the rest) is saved when you change it by chatting, edit the instruction or go back to a version, and when the files update it. Restore a previous version if something goes wrong.",

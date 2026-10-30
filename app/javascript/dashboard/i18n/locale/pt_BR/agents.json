@@ -418,7 +418,6 @@
         "ALWAYS_ASK": "Sempre oferecer um humano",
         "NEVER": "Nunca"
       },
-      "CONFIDENCE_THRESHOLD": "Limite de confiança",
       "SAVE": "Salvar alterações",
       "SAVE_SUCCESS": "Alterações salvas.",
       "SAVE_ERROR": "Não foi possível salvar suas alterações. Tente novamente.",
@@ -429,9 +428,6 @@
         "INTERNAL": "Interno (copiloto da equipe)",
         "BOTH": "Ambos"
       },
-      "CONFIDENCE_LOW": "Baixa (transfere pouco)",
-      "CONFIDENCE_HIGH": "Alta (transfere com frequência)",
-      "CONFIDENCE_HINT": "Abaixo de {pct}% de confiança, o agente transfere a conversa para um humano em vez de arriscar.",
       "HISTORY": {
         "TITLE": "Histórico do agente",
         "HINT": "O agente inteiro (instrução, tom, saudação e o resto) fica salvo quando você muda conversando, edita a instrução ou volta a uma versão, e quando os arquivos o atualizam. Se algo sair errado, volte para uma versão anterior.",

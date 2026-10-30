@@ -1091,7 +1091,7 @@
 - intent: "Como testo o agente?"; "Como vejo desempenho?"; "Como ajusto tom, handoff ou instrução?"
 - onde_fica: Sidebar > Agentes de IA > Meus agentes > abrir agente > Testar, Desempenho ou Ajustar
 - pre_requisitos: agente existente; para métricas, conversas/respostas já registradas.
-- passos: Use Testar para conversar e ver confiança, transferência para humano e fontes usadas; use Desempenho para período 7d/30d, respostas, transferências e taxa de conhecimento; use Ajustar para primeira mensagem, mensagem quando não souber responder, tom, quando transferir para um humano, limite de confiança e atuação; em modo guiado, use Ajustar com IA.
+- passos: Use Testar para conversar e ver se o agente avisaria que chama alguém da equipe e as fontes usadas; use Desempenho para período 7d/30d, respostas, transferências e taxa de conhecimento; use Ajustar para primeira mensagem, mensagem quando não souber responder, tom, quando transferir para um humano e atuação; em modo guiado, use Ajustar com IA.
 - gotchas: testar agente não finalizado mostra aviso; histórico de teste fica em `sessionStorage` por agente; modo manual expõe instrução, mas não permite salvar instrução vazia; Performance pode ficar vazia até o agente operar de verdade.
 
 ### ver_o_desempenho_do_agente
