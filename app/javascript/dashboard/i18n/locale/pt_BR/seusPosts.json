@@ -116,7 +116,9 @@
       "WAITING": "{count} comentário esperando você | {count} comentários esperando você",
       "OR_MORE": "{count} ou mais",
       "SEE_POST": "Ver post",
-      "SEE_POST_LABEL": "Ver o post: {name}"
+      "SEE_POST_LABEL": "Ver o post: {name}",
+      "CARING": "Cuidando",
+      "PAUSED": "Pausado"
     },
     "POST": {
       "OPEN": {
@@ -229,6 +231,34 @@
           "private_reply_not_pending": "Este privado já foi resolvido.",
           "not_inbox_member": "Você não está na caixa deste perfil."
         }
+      },
+      "CARE_OFFER": {
+        "TITLE": "O que tem nos comentários",
+        "QUESTIONS": "{count} pergunta: posso responder no privado | {count} perguntas: posso responder no privado",
+        "QUESTIONS_OLD": "{count} pergunta com mais de 7 dias: fica com você | {count} perguntas com mais de 7 dias: ficam com você",
+        "QUESTIONS_YOU": "{count} pergunta: fica com você | {count} perguntas: ficam com você",
+        "COMPLAINTS": "{count} reclamação: fica com você | {count} reclamações: ficam com você",
+        "TEXT": "Se você ligar, eu respondo as perguntas no privado e aviso no comentário. Você escolhe se respondo as que já estão aqui.",
+        "TEXT_MIXED": "Se você ligar, eu respondo no privado as perguntas que chegarem. Das que já estão aqui, posso responder a mais recente, se você quiser. | Se você ligar, eu respondo no privado as perguntas que chegarem. Das que já estão aqui, posso responder as {count} mais recentes, se você quiser.",
+        "TEXT_ONLY_NEW": "Se você ligar, eu respondo no privado as perguntas que chegarem. As que já estão aqui passaram de 7 dias: responda no comentário.",
+        "TEXT_FUTURE": "Se você ligar, eu respondo no privado as perguntas que chegarem.",
+        "BUTTON": "Cuidar dos comentários",
+        "TEXT_SOON": "Mandar no privado pelo Messenger ainda não está liberado. Assim que a Meta liberar, você liga por aqui.",
+        "LOADING": "Estou lendo os comentários…",
+        "NEEDS_PERMISSION": "Para eu dizer o que tem nos comentários, preciso do acesso a eles.",
+        "UNAVAILABLE": "Não consegui ler os comentários agora.",
+        "MORE": "Li os {count} mais recentes sem resposta."
+      },
+      "CARE_ON": {
+        "PAUSE": "Pausar",
+        "RESUME": "Voltar a cuidar",
+        "CHANGE": "Mudar o que eu respondo",
+        "ERROR": "Não consegui mudar agora. Tente de novo.",
+        "SEE": "Ver como está"
+      },
+      "CARE_HERO": {
+        "on": "Cuidando dos comentários",
+        "paused": "Pausado: você responde os novos"
       }
     },
     "VS_NORMAL": {

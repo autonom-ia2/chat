@@ -2,6 +2,7 @@ import {
   routes,
   ensureSeusPostsEnabled,
   ensureSeusPostsComentariosEnabled,
+  ensureCuidarEnabled,
 } from '../seusPosts.routes';
 import store from 'dashboard/store';
 
@@ -68,5 +69,44 @@ describe('seusPosts.routes', () => {
     const next = vi.fn();
     await ensureSeusPostsComentariosEnabled(para, {}, next);
     expect(next).toHaveBeenCalledWith({ name: 'home', params: para.params });
+  });
+
+  // #2212 (B1): cuidar dos comentários pede as três flags e as permissões do post.
+  describe('cuidar dos comentários', () => {
+    const comFlags = ligadas => {
+      store.getters['accounts/getAccount'] = () => ({ id: 9 });
+      store.getters['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
+        ligadas.includes(flag);
+    };
+    const TODAS = [
+      'seus_posts',
+      'seus_posts_comentarios',
+      'meta_ads_comentarios_ia',
+    ];
+
+    it('a rota fica no endereço do post, com o guarda e as permissões do post', () => {
+      const cuidar = routes.find(rota => rota.name === 'seus_posts_cuidar');
+      const post = routes.find(rota => rota.name === 'seus_posts_post');
+      expect(cuidar.path).toBe(
+        '/app/accounts/:accountId/seus-posts/:postId/cuidar'
+      );
+      expect(cuidar.beforeEnter).toBe(ensureCuidarEnabled);
+      expect(cuidar.meta.featureFlag).toBe('meta_ads_comentarios_ia');
+      expect(cuidar.meta.permissions).toEqual(post.meta.permissions);
+    });
+
+    it('com as três flags: abre', async () => {
+      comFlags(TODAS);
+      const next = vi.fn();
+      await ensureCuidarEnabled(para, {}, next);
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    it.each(TODAS)('sem %s: vai para home', async flag => {
+      comFlags(TODAS.filter(ligada => ligada !== flag));
+      const next = vi.fn();
+      await ensureCuidarEnabled(para, {}, next);
+      expect(next).toHaveBeenCalledWith({ name: 'home', params: para.params });
+    });
   });
 });

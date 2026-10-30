@@ -16,6 +16,8 @@ const props = defineProps({
   veredito: { type: Object, default: null },
   // O post sem anúncio que mais apareceu no período.
   destaque: { type: Boolean, default: false },
+  // O cuidado dos comentários (#2212): 'on', 'paused' ou null. Opcional: a lista ainda não tem de onde ler.
+  cuidado: { type: String, default: null },
 });
 
 const { locale, t } = useI18n();
@@ -37,6 +39,23 @@ const COR_DO_NIVEL = {
   BELOW: 'bg-n-amber-3 text-n-amber-11',
   BOOSTED: 'bg-n-amber-3 text-n-amber-11',
 };
+
+// Cuidando e pausado vão na linha da data, para os números começarem na mesma altura em todos os cartões.
+const CUIDADO = {
+  on: {
+    chave: 'CARING',
+    icone: 'i-lucide-sparkles',
+    cor: 'text-n-teal-11',
+    data: { 'data-seus-posts-selo-cuidando': '' },
+  },
+  paused: {
+    chave: 'PAUSED',
+    icone: 'i-lucide-pause',
+    cor: 'text-n-slate-11',
+    data: { 'data-seus-posts-selo-pausado': '' },
+  },
+};
+const seloDoCuidado = computed(() => CUIDADO[props.cuidado] || null);
 
 const selo = computed(() => {
   if (!props.veredito) return null;
@@ -213,6 +232,19 @@ const nome = computed(
       <p
         class="m-0 flex flex-wrap items-center gap-x-2 text-xs font-normal tabular-nums text-n-slate-11"
       >
+        <span
+          v-if="seloDoCuidado"
+          v-bind="seloDoCuidado.data"
+          class="inline-flex items-center gap-1 font-medium"
+          :class="seloDoCuidado.cor"
+        >
+          <span
+            :class="seloDoCuidado.icone"
+            class="size-3"
+            aria-hidden="true"
+          />
+          {{ $t(`SEUS_POSTS.CARD.${seloDoCuidado.chave}`) }}
+        </span>
         <span
           v-if="destaque"
           data-seus-posts-destaque
