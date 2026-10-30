@@ -26,6 +26,8 @@ class Crm::Ai::NaoENegocio
   # contar como perda; a pessoa aceita num clique. Só com a flag `crm_ia_fecha_card` (Crm::Ai::FecharCard::TESTE); as
   # guardas do arquivamento são as mesmas.
   MOTIVO_TESTE = 'teste'.freeze
+  # #2395: por quanto tempo o "fora_do_negocio" da IA segura a recriação do card da conversa (decisão do Rodrigo, 30/10).
+  BLOQUEIO_DA_RECRIACAO = 30.days
 
   # O campo da avaliação de etapa (a regra está em ClassifierPrompt::NAO_E_NEGOCIO).
   CAMPO = {
@@ -43,6 +45,29 @@ class Crm::Ai::NaoENegocio
 
   def self.ligada?(account)
     account.present? && account.feature_enabled?(FLAG)
+  end
+
+  # Os arquivamentos que a IA fez (a atividade `archive` do sistema com `by: 'ai'`, Crm::Cards::Archiver); motivo: só os
+  # daquele motivo.
+  def self.arquivamentos(account_id, motivo: nil)
+    Crm::Activity.where(account_id: account_id, event_type: 'archive', actor_type: 'system')
+                 .where('payload @> ?', { by: 'ai', motivo: motivo }.compact.to_json)
+  end
+
+  # #2395: o card mais novo da conversa foi arquivado pela IA como "fora_do_negocio" (e ninguém o reabriu e arquivou
+  # depois). A mensagem seguinte não recria card sozinha (Crm::Conversations::CardSyncer): sem isto, cada mensagem
+  # recriava o card e a IA o arquivava de novo. O pedido novo ainda vira card pela IA de assunto (Crm::Subjects::Applier),
+  # quando ela está ligada na caixa; ou pela mão de uma pessoa. Vale para a conversa inteira (todos os funis), por
+  # BLOQUEIO_DA_RECRIACAO a contar do arquivamento; depois, a mensagem nova cria card como sempre.
+  def self.conversa_fora_do_negocio?(conversation)
+    vinculados = Crm::CardConversation.where(account_id: conversation.account_id, conversation_id: conversation.id).select(:card_id)
+    cards = Crm::Card.where(account_id: conversation.account_id)
+    ultimo = cards.where(conversation_id: conversation.id).or(cards.where(id: vinculados)).order(:id).last
+    return false unless ultimo&.archived?
+
+    ultimo_arquivamento = Crm::Activity.where(account_id: ultimo.account_id, card_id: ultimo.id, event_type: 'archive').order(:id).last
+    recentes = arquivamentos(ultimo.account_id, motivo: 'fora_do_negocio').where(created_at: BLOQUEIO_DA_RECRIACAO.ago..)
+    recentes.exists?(id: ultimo_arquivamento&.id)
   end
 
   # Os motivos aceitos na conta: com a flag da F3, também o "teste".

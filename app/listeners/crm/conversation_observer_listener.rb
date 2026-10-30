@@ -99,10 +99,12 @@ class Crm::ConversationObserverListener < BaseListener
     Crm::Ai::HandoffPickupJob.perform_later(conversation.id, conversation.assignee_id, event.timestamp.iso8601)
   end
 
+  # #2395: a conversa do conector do WhatsApp (avisos de QR e de vínculo, Waha::IntegracaoDoConector) não é de cliente.
   def ignored_message?(message)
     message.blank? ||
       message.conversation_id.blank? ||
       message.activity? ||
-      message.private?
+      message.private? ||
+      Waha::IntegracaoDoConector.da_integracao?(message.conversation)
   end
 end

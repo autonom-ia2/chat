@@ -14,6 +14,8 @@ class Crm::Conversations::CardSyncer
     return unless Crm::Config.enabled?
     return unless load_conversation
     return if @conversation.inbox_id.blank?
+    # #2395: a conversa do conector do WhatsApp (avisos de QR e de vínculo) não é de cliente: nem cria, nem liga card.
+    return if Waha::IntegracaoDoConector.da_integracao?(@conversation)
 
     # Cliente com card aberto que escreve por outra caixa (#1150, R13): liga ao card antes de pensar em criar outro.
     Crm::Conversations::OutroCanal.new(conversation: @conversation, message: @message).perform
@@ -169,7 +171,7 @@ class Crm::Conversations::CardSyncer
   # #2084: contato fora do funil (parceiro, não é negócio) não ganha card sozinho. A reutilização do card aberto que já
   # existe (o feito à mão, o de outra caixa) continua: ele segue a conversa.
   def create_card(pipeline_inbox)
-    return if Crm::Relacao.fora_do_funil?(@conversation.contact)
+    return unless cria_card_sozinho?
 
     stage = default_stage_for(pipeline_inbox)
     return if stage.blank?
@@ -184,6 +186,14 @@ class Crm::Conversations::CardSyncer
         metadata: auto_sync_metadata
       }
     ).perform
+  end
+
+  # #2395: a conversa cujo card a IA arquivou como "não é negócio" não recria card por mensagem nenhuma (do cliente, da
+  # equipe ou do robô): espera a IA de assunto decidir um pedido novo, ou uma pessoa.
+  def cria_card_sozinho?
+    return false if Crm::Relacao.fora_do_funil?(@conversation.contact)
+
+    !Crm::Ai::NaoENegocio.conversa_fora_do_negocio?(@conversation)
   end
 
   def refresh_card(card, auto_sync: true)
