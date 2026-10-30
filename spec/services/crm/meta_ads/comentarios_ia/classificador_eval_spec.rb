@@ -91,6 +91,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
   before do
     skip 'eval pago: rode com CRM_EVAL_PAGO=1 e TYPESAFE_API_KEY' unless ENV['CRM_EVAL_PAGO'] == '1' && ENV['TYPESAFE_API_KEY'].present?
 
+    account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
     WebMock.allow_net_connect!
   end
 

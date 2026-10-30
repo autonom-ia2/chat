@@ -23,6 +23,12 @@ class Crm::MetaAds::ComentariosIa::Classificador
   }.freeze
   PERGUNTA = 'What should be done with this comment left on a social media post?'.freeze
 
+  # Perguntas ao Jev por conta, por dia.
+  TETO_DIARIO = 1_000
+  # A pergunta não vai ao Jev (flag desligada ou teto do dia): o motor deixa o comentário com o dono, a tela diz que a
+  # IA não está disponível.
+  class Bloqueado < TypesafeAi::Decisor::Error; end
+
   def initialize(care:, jev: TypesafeAi::Decisor.new(feature: FEATURE))
     @care = care
     @jev = jev
@@ -33,11 +39,22 @@ class Crm::MetaAds::ComentariosIa::Classificador
   def decidir!(texto)
     return if texto.to_s.strip.empty?
 
+    liberado!
     resultado = @jev.decidir(decisor: decisor, estado: Autonomia::Decisores::Estado.new(texto: texto, leituras: []))
     resultado.resposta if resultado.certeza >= CERTEZA_MINIMA
   end
 
   private
+
+  # O Jev é custo nosso: por conta, só com a flag ligada e até TETO_DIARIO perguntas no dia (motor, prévia e resumo
+  # juntos, pelo uso gravado com a FEATURE). Fora disso, Bloqueado.
+  def liberado!
+    conta = @care.account
+    raise Bloqueado, 'feature_disabled' unless conta&.feature_enabled?(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+
+    usadas = Crm::AiUsageEvent.where(account_id: conta.id, feature: FEATURE, created_at: Time.current.all_day).count
+    raise Bloqueado, 'daily_limit' if usadas >= TETO_DIARIO
+  end
 
   def decisor
     @decisor ||= Autonomia::Decisor.new(account: @care.account, nome: FEATURE, pergunta: PERGUNTA, instrucoes: instrucoes,

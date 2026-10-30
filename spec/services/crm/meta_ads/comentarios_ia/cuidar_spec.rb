@@ -34,8 +34,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
   before do
     account.enable_features!(described_class::FLAG)
-    allow(registro).to receive_messages(reservar!: true, hoje: 0, vez: 0, gravar!: true, vincular!: 1, soltar!: 1)
-    allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation, ja_mandou?: false)
+    allow(registro).to receive_messages(reservar!: true, hoje: 1, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
+                                        reservar_pessoa!: true, soltar_pessoa!: 1)
+    allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
     allow(rede).to receive_messages(privado: enviado, ler: { text: 'Quanto custa?', from_name: 'carla.mendes' })
   end
 
@@ -87,14 +88,24 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).to have_received(:responder).with('Te mandei os detalhes no privado!')
   end
 
-  it 'mesma pessoa comentando de novo no post: um privado só, sem resposta pública' do
+  it 'mesma pessoa comentando de novo no post (a reserva dela já existe): um privado só, sem resposta pública' do
     decide('private')
-    allow(conversa).to receive(:ja_mandou?).with(lido).and_return(true)
+    allow(registro).to receive(:reservar_pessoa!).with(lido).and_return(false)
 
     cuidar
 
     expect(rede).not_to have_received(:privado)
     expect(rede).not_to have_received(:responder)
+  end
+
+  it 'sem saber quem comentou: não manda privado, fica com o dono' do
+    decide('private')
+    allow(rede).to receive(:ler).and_return({ text: 'Quanto custa?', from_name: 'carla' })
+
+    cuidar(comentario(from_id: nil))
+
+    expect(rede).not_to have_received(:privado)
+    expect(registro).to have_received(:gravar!).with(anything, 'ai_unread')
   end
 
   it 'conversa que a pessoa já tinha aberta na caixa não conta como nova' do
@@ -130,18 +141,57 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   it 'erro antes de reservar não solta a leitura de outro job' do
-    allow(registro).to receive(:hoje).and_raise(ActiveRecord::ConnectionTimeoutError)
+    allow(registro).to receive(:reservar!).and_raise(ActiveRecord::ConnectionTimeoutError)
 
     expect { cuidar }.to raise_error(ActiveRecord::ConnectionTimeoutError)
     expect(registro).not_to have_received(:soltar!)
   end
 
-  it 'erro depois do privado não solta a leitura: o reenvio não manda de novo' do
+  it 'falha ao anotar a conversa depois do privado: vai ao rastreador, a resposta pública sai e nada é solto' do
     decide('private')
     allow(conversa).to receive(:anotar!).and_raise(ActiveRecord::StatementInvalid)
+    rastreador = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
 
-    expect { cuidar }.to raise_error(ActiveRecord::StatementInvalid)
+    cuidar
+
+    expect(rastreador).to have_received(:capture_exception)
+    expect(rede).to have_received(:responder)
     expect(registro).not_to have_received(:soltar!)
+    expect(registro).not_to have_received(:soltar_pessoa!)
+  end
+
+  it 'a Meta aceitou, mas a conversa não foi gravada: avisa no log com ids e responde em público' do
+    decide('private')
+    allow(rede).to receive(:privado).and_return(Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: nil))
+    allow(Rails.logger).to receive(:warn)
+
+    cuidar
+
+    expect(Rails.logger).to have_received(:warn).with(include('privado sem conversa gravada', 'comment=c-1'))
+    expect(rede).to have_received(:responder)
+  end
+
+  it 'a Meta recusou a resposta pública: avisa no log com ids' do
+    decide('private')
+    allow(rede).to receive(:responder).and_return(false)
+    allow(Rails.logger).to receive(:warn)
+
+    cuidar
+
+    expect(Rails.logger).to have_received(:warn).with(include('recusou reply', 'comment=c-1'))
+  end
+
+  it 'privado sem resposta da Meta (pode ter saído): a reserva da pessoa fica, e a conversa vai para conferir' do
+    decide('private')
+    allow(rede).to receive(:privado)
+      .and_return(Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: 'meta_unavailable', talvez_entregue: true))
+
+    cuidar
+
+    expect(registro).not_to have_received(:soltar_pessoa!)
+    expect(conversa).to have_received(:para_voce!).with(lido, care, 'private_reply_unsure')
+    expect(registro).to have_received(:gravar!).with(lido, 'private_reply_unsure', conversation: conversation)
   end
 
   it 'responde o preço em público quando a pessoa perguntou o preço e a chave está ligada' do
@@ -159,6 +209,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(rede).not_to have_received(:responder)
+    expect(registro).to have_received(:soltar_pessoa!).with(lido)
     expect(conversa).to have_received(:para_voce!).with(lido, care, 'private_reply_failed')
     expect(registro).to have_received(:gravar!).with(lido, 'private_reply_failed', conversation: conversation)
   end
@@ -172,6 +223,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     expect(rede).not_to have_received(:responder)
     expect(conversa).not_to have_received(:para_voce!)
+    expect(registro).not_to have_received(:soltar_pessoa!)
   end
 
   it 'reclamação: não responde, abre a conversa urgente para a pessoa' do
@@ -191,6 +243,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(rede).to have_received(:esconder)
+  end
+
+  it 'a Meta recusou o esconder: avisa no log com ids' do
+    decide('hide')
+    allow(rede).to receive(:esconder).and_return(false)
+    allow(Rails.logger).to receive(:warn)
+
+    cuidar
+
+    expect(Rails.logger).to have_received(:warn).with(include('recusou hide', 'comment=c-1'))
   end
 
   it 'marcação de amigo ou elogio: não faz nada além de ler' do
@@ -231,13 +293,43 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).not_to have_received(:responder)
   end
 
-  it 'sem certeza do Jev, não faz nada' do
+  it 'sem certeza do Jev: não age, e o comentário fica com o dono como "não cuidei"' do
     decide(nil)
 
     cuidar
 
     expect(rede).not_to have_received(:privado)
     expect(conversa).not_to have_received(:para_voce!)
+    expect(registro).to have_received(:gravar!).with(lido, 'ai_unread')
+  end
+
+  it 'Jev barrado (teto do dia ou flag): não sobe, fica com o dono como "não cuidei"' do
+    allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Bloqueado.new('daily_limit'))
+
+    cuidar
+
+    expect(registro).to have_received(:gravar!).with(lido, 'ai_unread')
+    expect(registro).not_to have_received(:soltar!)
+  end
+
+  it 'teto do dia, contado depois da reserva (ela conta): o comentário fica com o dono, sem ir ao Jev' do
+    allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO + 1)
+    allow(classificador).to receive(:decidir!)
+
+    cuidar
+
+    expect(classificador).not_to have_received(:decidir!)
+    expect(rede).not_to have_received(:ler)
+    expect(registro).to have_received(:gravar!).with(comentario, 'ai_unread')
+  end
+
+  it 'no teto exato (o 200º do dia), ainda cuida' do
+    allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO)
+    decide('no_reply')
+
+    cuidar
+
+    expect(classificador).to have_received(:decidir!)
   end
 
   describe 'o que não chega ao Jev' do
@@ -264,12 +356,6 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     it 'resposta a outro comentário' do
       cuidar(comentario(parent_id: 'c-0'))
-      expect(registro).not_to have_received(:reservar!)
-    end
-
-    it 'teto do dia atingido: os próximos ficam para a pessoa' do
-      allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO)
-      cuidar
       expect(registro).not_to have_received(:reservar!)
     end
 
