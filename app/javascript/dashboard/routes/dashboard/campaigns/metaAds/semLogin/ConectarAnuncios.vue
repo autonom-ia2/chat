@@ -183,6 +183,14 @@ const destinationSaved = data => {
   savedDestination.value = data;
   go('done');
 };
+// No celular o aviso nasce abaixo do botão, fora da tela: rola até ele.
+const destinationNotSaved = async () => {
+  destinationFailed.value = true;
+  await nextTick();
+  root.value
+    ?.querySelector('[data-conectar-escolher-depois]')
+    ?.scrollIntoView?.({ block: 'nearest' });
+};
 const chooseLater = () => {
   destinationLater.value = true;
   go('done');
@@ -947,7 +955,7 @@ onBeforeUnmount(stopRecheck);
         :destinations="destinations"
         :heading-level="2"
         @saved="destinationSaved"
-        @failed="destinationFailed = true"
+        @failed="destinationNotSaved"
       />
       <p
         v-if="destinationFailed"
