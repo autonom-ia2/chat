@@ -19781,6 +19781,55 @@
     ],
     "sem_corpo": false
   },
+  "POST seus_posts/posts/:post_id/cuidado/ler_antigos": {
+    "campos": {
+      "comment_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_cuidado#ler_antigos",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:52",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/cuidado/previa": {
+    "campos": {
+      "comment_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "para_quem": {},
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/seus_posts_cuidado#previa",
+    "motivos": [
+      "leitura crua sem tipo: para_quem"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:45",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:46",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
   "POST sla_policies": {
     "campos": {
       "ai_skip_natural_pause": {
@@ -27130,6 +27179,40 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:18",
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:39"
+    ],
+    "sem_corpo": false
+  },
+  "PUT seus_posts/posts/:post_id/cuidado": {
+    "campos": {
+      "comment_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "message": {},
+      "para_quem": {},
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "phrases": {},
+      "status": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/seus_posts_cuidado#update",
+    "motivos": [
+      "leitura crua sem tipo: message, para_quem, phrases"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:38",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:40",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:39",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
     ],
     "sem_corpo": false
   },
