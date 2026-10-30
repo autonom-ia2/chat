@@ -238,6 +238,47 @@ describe('UmProblemaPorVez', () => {
     expect(wrapper.emitted('resolver')).toEqual([['autoteste-r-0', 'certa']]);
   });
 
+  // #1426 (t4d): "De onde o agente tirou" — os trechos usados na resposta, com o arquivo e as páginas.
+  it('autoteste: mostra de onde o agente tirou a resposta, ou que não usou trecho nenhum', () => {
+    const ERRADA = {
+      id: 'autoteste-r-0',
+      tipo: 'autoteste',
+      fontes: [],
+      pergunta: 'Tem carro reserva?',
+      resposta: 'Não tem.',
+    };
+    const comTrechos = montarProblemas([
+      {
+        ...ERRADA,
+        trechos: [
+          {
+            onde: 'condicoes.pdf',
+            paginas: [226, 250],
+            texto: 'Carro reserva por 7 dias.',
+          },
+          { onde: 'tabela.xlsx', texto: 'Plano básico: sem carro reserva.' },
+        ],
+      },
+    ]);
+
+    expect(comTrechos.text()).toContain('De onde Bia tirou');
+    expect(comTrechos.findAll('[data-onde]').map(o => o.text())).toEqual([
+      'condicoes.pdf, páginas 226 a 250',
+      'tabela.xlsx',
+    ]);
+    expect(no(comTrechos, '[data-trechos]').text()).toContain(
+      'Carro reserva por 7 dias.'
+    );
+
+    const semTrecho = montarProblemas([{ ...ERRADA, trechos: [] }]);
+    expect(no(semTrecho, '[data-sem-trecho]').text()).toBe(
+      'Bia não usou nenhum trecho do material para responder.'
+    );
+
+    const rodadaAntiga = montarProblemas([ERRADA]);
+    expect(rodadaAntiga.text()).not.toContain('De onde Bia tirou');
+  });
+
   it('autoteste de fora: a resposta inventada vira cartão com as mesmas saídas', () => {
     const wrapper = montarProblemas([
       {

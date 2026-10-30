@@ -14,7 +14,8 @@
 #   feitas, total, gasto_usd, hash_da_base, ultima_automatica,
 #   rodada_dos_itens (a rodada que produziu os itens: o id dos cartões não muda quando outra rodada começa),
 #   itens: o ÚLTIMO resultado completo — [{ pergunta, origem (material | fora), esperado, fonte, resposta, equipe,
-#          veredito (certo | errado | recusou | inventou), confirmada }]
+#          trechos (t4d: até 3 trechos usados, { fonte, paginas, texto }), veredito (certo | errado | recusou | inventou),
+#          confirmada }]
 # Os itens só são trocados quando a rodada termina: a rodada que para no meio não apaga o resultado anterior (nem os
 # problemas que ele mostra).
 class Autonomia::Agents::Material::Autoteste
@@ -26,6 +27,9 @@ class Autonomia::Agents::Material::Autoteste
   INTERVALO_AUTOMATICO = 30.minutes
   # Base mudou com uma rodada rodando: confere de novo depois disto (a rodada leva 1 a 3 min).
   ESPERA_DA_RODADA_VIVA = 5.minutes
+  # "De onde {agente} tirou" (t4d): quantos trechos usados a rodada guarda por pergunta e até onde vai o texto de cada.
+  TRECHOS_POR_RESPOSTA = 3
+  TRECHO_MAX_CHARS = 240
   FALHAS_DA_IA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, *Crm::Ai::ResponsesClient::NETWORK_ERRORS,
                   OpenSSL::SSL::SSLError, Errno::EHOSTUNREACH, Errno::ENETUNREACH].freeze
 
@@ -170,7 +174,17 @@ class Autonomia::Agents::Material::Autoteste
     equipe = resultado.handoff[:should] == true
     return if resultado.error.present? || (texto.nil? && !equipe)
 
-    { 'resposta' => texto, 'equipe' => equipe }
+    { 'resposta' => texto, 'equipe' => equipe, 'trechos' => trechos_usados(resultado.used_knowledge) }
+  end
+
+  # Só trechos do material deste agente (a imagem da mensagem e o que não é dele ficam de fora), na ordem do Answerer.
+  def trechos_usados(usados)
+    ids = Array(usados).filter_map { |usado| usado[:id] }
+    por_id = @agent.knowledge_entries.where(id: ids).index_by(&:id)
+    ids.filter_map { |id| por_id[id] }.first(TRECHOS_POR_RESPOSTA).map do |trecho|
+      { 'fonte' => trecho.source_id, 'paginas' => trecho.metadata.to_h['paginas'],
+        'texto' => trecho.content.to_s.squish.truncate(TRECHO_MAX_CHARS) }.compact
+    end
   end
 
   # O prazo da rodada conta do começo do job, não do pedido: com a fila atrasada, a rodada não nasce vencida. Só a

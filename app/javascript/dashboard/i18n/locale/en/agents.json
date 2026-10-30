@@ -1677,6 +1677,11 @@
             "TESTAR": "Test now",
             "TENTAR_DE_NOVO": "Try again",
             "DE_NOVO": "Test again",
+            "TIROU": {
+              "TITULO": "Where {agente} got it from",
+              "NENHUM": "{agente} did not use any part of the material to answer.",
+              "ONDE_PAGINAS": "{onde}, pages {de} to {ate}"
+            },
             "AMOSTRA": "The test is a sample; check the answers."
           },
           "TUDO_CERTO": "All good. {nome} uses all the material with your customers."

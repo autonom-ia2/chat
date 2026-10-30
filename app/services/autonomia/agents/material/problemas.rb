@@ -93,7 +93,8 @@ class Autonomia::Agents::Material::Problemas
       fonte = @por_id[item['fonte']]
       { 'id' => "autoteste-#{estado['rodada_dos_itens']}-#{indice}", 'tipo' => item['origem'] == 'fora' ? 'autoteste_fora' : 'autoteste',
         'fontes' => [], 'pergunta' => item['pergunta'], 'resposta' => item['resposta'], 'equipe' => item['equipe'] == true,
-        'esperado' => item['esperado'], 'onde' => fonte && nome(fonte) }.compact
+        'esperado' => item['esperado'], 'onde' => fonte && nome(fonte),
+        'trechos' => Autonomia::Agents::Material::TrechosUsados.da_tela(item, @por_id) }.compact
     end
   end
 

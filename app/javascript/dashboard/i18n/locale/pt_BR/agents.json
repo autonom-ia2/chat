@@ -1677,6 +1677,11 @@
             "TESTAR": "Testar agora",
             "TENTAR_DE_NOVO": "Tentar de novo",
             "DE_NOVO": "Testar de novo",
+            "TIROU": {
+              "TITULO": "De onde {agente} tirou",
+              "NENHUM": "{agente} não usou nenhum trecho do material para responder.",
+              "ONDE_PAGINAS": "{onde}, páginas {de} a {ate}"
+            },
             "AMOSTRA": "O teste é uma amostra; confira as respostas."
           },
           "TUDO_CERTO": "Tudo certo. {nome} usa todo o material com seus clientes."
