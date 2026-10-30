@@ -52,11 +52,14 @@ class Crm::Cards::GroupSummary
     ::Crm::Cards::FilterQuery.new(scope: @scope, params: @params, conversation_visibility: @conversation_visibility).perform
   end
 
+  # Sem includes/preload (#2293): com eles o pluck liga o eager_load e o JOIN das conversas vinculadas repete o card,
+  # que contaria e somaria uma vez por conversa. `reorder(nil)` tira a ordem para o GROUP BY não exigir as colunas dela.
+  def aggregate_scope
+    filtered_scope.except(:includes, :preload, :eager_load, :references).reorder(nil)
+  end
+
   def build_groups
-    # `reorder(nil)` drops any default ordering so the GROUP BY aggregate is not
-    # forced to also select non-aggregated ordering columns.
-    rows = filtered_scope
-           .reorder(nil)
+    rows = aggregate_scope
            .group("crm_cards.#{column}")
            .pluck(
              Arel.sql("crm_cards.#{column}"),
@@ -78,10 +81,8 @@ class Crm::Cards::GroupSummary
     end
   end
 
-  # Sem includes/preload: a contagem é só dos cards, uma linha por card (nada de JOIN de associação no meio).
   def build_action_groups
-    scope = filtered_scope.except(:includes, :preload, :eager_load, :references).reorder(nil)
-    rows = scope.group(Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL)).pluck(
+    rows = aggregate_scope.group(Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL)).pluck(
       Arel.sql(Crm::Cards::ActionGroups::GROUP_SQL), Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(crm_cards.value_cents), 0)'),
       Arel.sql('MODE() WITHIN GROUP (ORDER BY crm_cards.currency)')
     ).index_by(&:first)
