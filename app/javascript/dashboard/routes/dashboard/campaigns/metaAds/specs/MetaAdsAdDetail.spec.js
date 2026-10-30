@@ -447,6 +447,15 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     });
   });
 
+  it('without any network comment flag, no AI comment care entry, like the server (#2212)', async () => {
+    lerGestao.mockResolvedValue(null);
+    flags.value = { meta_ads_gestao: true, meta_ads_comentarios_ia: true };
+
+    const wrapper = await mountDetail();
+
+    expect(wrapper.findComponent(CuidarAnuncioEntrada).exists()).toBe(false);
+  });
+
   // #2358: entrar de novo com o Instagram pede integration_manage e inbox_manage; a aba recebe essa régua ligada às
   // permissões reais.
   it('wires the Instagram login rule to integration_manage and inbox_manage (#2358)', async () => {

@@ -345,7 +345,8 @@ const showComments = computed(
     Boolean(gestao.value || (ad.value && !withoutSpend.value))
 );
 
-// IA cuida dos comentários (#2212, B2, flag meta_ads_comentarios_ia): a entrada fica onde os comentários ficam.
+// IA cuida dos comentários (#2212, B2, flag meta_ads_comentarios_ia): a entrada fica onde os comentários ficam, e só
+// com eles (showComments já pede a gestão e a flag dos comentários de ao menos uma rede, como o servidor).
 const showCare = computed(
   () =>
     showComments.value &&

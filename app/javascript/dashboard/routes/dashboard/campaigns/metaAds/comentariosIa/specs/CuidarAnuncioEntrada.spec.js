@@ -81,11 +81,35 @@ describe('CuidarAnuncioEntrada', () => {
     expect(wrapper.find('[data-ia-ad-entry-open]').text()).toBe('Ver');
   });
 
-  it('falha ao ler o estado: a entrada fica, sem selo', async () => {
-    ComentariosIaAPI.getCuidadosDosAnuncios.mockRejectedValue(new Error('x'));
+  it('enquanto lê o estado: neutra, sem botão nem selo', async () => {
+    ComentariosIaAPI.getCuidadosDosAnuncios.mockReturnValue(
+      new Promise(() => {})
+    );
     const wrapper = await montar();
 
+    expect(wrapper.find('[data-ia-ad-entry]').attributes('data-care')).toBe(
+      'loading'
+    );
+    expect(wrapper.find('[data-ia-ad-entry-open]').exists()).toBe(false);
     expect(wrapper.find('[data-ia-ad-entry-badge]').exists()).toBe(false);
-    expect(wrapper.find('[data-ia-ad-entry-open]').exists()).toBe(true);
+  });
+
+  it('falha ao ler o estado: aviso curto e "Tentar de novo", sem chamar para cuidar', async () => {
+    ComentariosIaAPI.getCuidadosDosAnuncios
+      .mockRejectedValueOnce(new Error('x'))
+      .mockResolvedValueOnce({
+        data: { cuidados: [{ ad_id: '120', care: 'on' }] },
+      });
+    const wrapper = await montar();
+
+    expect(wrapper.find('[data-ia-ad-entry-error]').text()).toBe(
+      'Não consegui ver se eu já cuido deste anúncio.'
+    );
+    expect(wrapper.find('[data-ia-ad-entry-open]').exists()).toBe(false);
+
+    await wrapper.find('[data-ia-ad-entry-retry]').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-ia-ad-entry-badge]').exists()).toBe(true);
+    expect(wrapper.find('[data-ia-ad-entry-open]').text()).toBe('Ver e mudar');
   });
 });

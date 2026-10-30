@@ -7,7 +7,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CuidarLigado from './CuidarLigado.vue';
 import CuidarDono from './CuidarDono.vue';
-import { FOR_WHOM_LIMIT, useCuidado } from './useCuidado';
+import { FOR_WHOM_LIMIT, MOTIVOS, useCuidado } from './useCuidado';
 import { porRede } from './redes';
 
 // Comentários que viram cliente (#2212): "Cuidar dos comentários" de um post (Seus posts, B1) ou de um anúncio (B2).
@@ -40,6 +40,7 @@ const {
   painel,
   carregando,
   erro,
+  motivo,
   salvando,
   falhaAoSalvar,
   carregar,
@@ -69,6 +70,25 @@ const fromKey = computed(() => {
   if (props.origin === 'anuncio') return porRede('FROM_AD', network.value);
   return network.value === 'facebook' ? 'FROM_PAGE' : 'FROM_POST';
 });
+
+// Por que não deu para ler: o código do servidor, no erro da leitura (motivo) ou no `status` do Painel que veio sem a
+// lista (needs_login, meta_unavailable…). Com texto próprio quando a tela conhece o código; "Tentar de novo" só no que
+// passa sozinho (a Meta fora do ar, a rede): o resto (sem post, sem caixa, sem login) não cura tentando.
+const PASSAGEIROS = ['meta_unavailable'];
+const genericError = computed(() =>
+  t(`${KEY}.SCREEN.${props.origin === 'anuncio' ? 'ERROR_AD' : 'ERROR'}`)
+);
+const problemText = code =>
+  MOTIVOS.includes(code)
+    ? t(`${KEY}.SCREEN.PROBLEM.${code}`)
+    : genericError.value;
+const canRetry = code =>
+  !code || !MOTIVOS.includes(code) || PASSAGEIROS.includes(code);
+const painelStatus = computed(() =>
+  painel.value?.status && painel.value.status !== 'ready'
+    ? painel.value.status
+    : null
+);
 
 const focusHeading = async () => {
   await nextTick();
@@ -254,9 +274,10 @@ const openInbox = path => {
       class="flex flex-col items-start gap-3 rounded-2xl bg-n-solid-1 p-6 ring-1 ring-inset ring-n-weak"
     >
       <p class="m-0 text-base font-semibold text-n-slate-12">
-        {{ $t(`${KEY}.SCREEN.ERROR`) }}
+        {{ problemText(motivo) }}
       </p>
       <Button
+        v-if="canRetry(motivo)"
         icon="i-lucide-refresh-cw"
         :label="$t(`${KEY}.SCREEN.RETRY`)"
         class="!min-h-11 !rounded-xl"
@@ -265,6 +286,31 @@ const openInbox = path => {
     </div>
 
     <template v-else-if="painel">
+      <div
+        v-if="painelStatus"
+        role="status"
+        data-ia-painel-problem
+        :data-status="painelStatus"
+        class="flex flex-col items-start gap-3 rounded-2xl bg-n-amber-2 p-5 ring-1 ring-inset ring-n-amber-6"
+      >
+        <p
+          class="m-0 flex items-start gap-2 text-sm font-medium leading-6 text-n-amber-12"
+        >
+          <span
+            class="i-lucide-triangle-alert mt-1 size-4 shrink-0"
+            aria-hidden="true"
+          />
+          {{ problemText(painelStatus) }}
+        </p>
+        <Button
+          v-if="canRetry(painelStatus)"
+          icon="i-lucide-refresh-cw"
+          :label="$t(`${KEY}.SCREEN.RETRY`)"
+          :is-loading="carregando"
+          class="!min-h-11 !rounded-xl"
+          @click="carregar"
+        />
+      </div>
       <CuidarLigado
         v-if="on && !changing"
         :data="painel"

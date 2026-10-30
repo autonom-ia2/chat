@@ -70,7 +70,36 @@ describe('useCuidado (#2212)', () => {
     await flushPromises();
 
     expect(cuidado.erro.value).toBe(erro);
+    expect(cuidado.motivo.value).toBeNull();
     expect(cuidado.painel.value).toBeNull();
+  });
+
+  it.each([
+    [422, 'no_post'],
+    [422, 'no_inbox'],
+    [422, 'meta_unavailable'],
+    [422, 'needs_login'],
+    [404, 'not_connected'],
+    [404, 'ad_not_found'],
+  ])('erro %s com %s: o motivo vem do servidor', async (status, codigo) => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(
+      falha(status, { error: codigo })
+    );
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(cuidado.motivo.value).toBe(codigo);
+  });
+
+  it('código que a tela não explica fica sem motivo', async () => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(
+      falha(403, { error: 'not_inbox_member' })
+    );
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(cuidado.erro.value).toBe('acesso');
+    expect(cuidado.motivo.value).toBeNull();
   });
 
   it('sem alvo (flag desligada), não lê nada', async () => {

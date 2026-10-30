@@ -9,6 +9,21 @@ const ERRO_POR_STATUS = { 403: 'acesso', 404: 'sumiu' };
 export const erroDaResposta = error =>
   ERRO_POR_STATUS[error?.response?.status] || 'rede';
 
+// Os códigos que o servidor manda quando não deu para ler (no erro da leitura ou no `status` do Painel) e que a tela
+// explica com texto próprio (CuidarComentarios). Os outros ficam sem motivo: a tela diz o genérico.
+export const MOTIVOS = [
+  'no_post',
+  'no_inbox',
+  'needs_login',
+  'needs_permission',
+  'not_connected',
+  'ad_not_found',
+  'meta_unavailable',
+];
+const conhecido = codigo => (MOTIVOS.includes(codigo) ? codigo : null);
+export const motivoDaResposta = error =>
+  conhecido(error?.response?.data?.error);
+
 // O "para quem" do dono vai inteiro ao classificador: até 500 letras (o servidor recusa mais).
 export const FOR_WHOM_LIMIT = 500;
 
@@ -29,6 +44,8 @@ export function useCuidado(alvo) {
   const carregando = ref(false);
   // 'acesso' (403), 'sumiu' (404: sem a flag ou o post saiu do perfil) ou 'rede'.
   const erro = ref(null);
+  // O código do servidor quando a leitura falhou por um motivo que a tela explica (MOTIVOS); senão, null.
+  const motivo = ref(null);
   const salvando = ref(false);
   // Por que a última escrita falhou (ver falhaDaEscrita); null quando valeu.
   const falhaAoSalvar = ref(null);
@@ -50,11 +67,15 @@ export function useCuidado(alvo) {
     }
     carregando.value = true;
     erro.value = null;
+    motivo.value = null;
     try {
       const { data } = await ComentariosIaAPI.getCuidado(target());
       if (minha === leitura) painel.value = data;
     } catch (error) {
-      if (minha === leitura) erro.value = erroDaResposta(error);
+      if (minha === leitura) {
+        erro.value = erroDaResposta(error);
+        motivo.value = motivoDaResposta(error);
+      }
     } finally {
       if (minha === leitura) carregando.value = false;
     }
@@ -127,6 +148,7 @@ export function useCuidado(alvo) {
     painel,
     carregando,
     erro,
+    motivo,
     salvando,
     falhaAoSalvar,
     carregar,

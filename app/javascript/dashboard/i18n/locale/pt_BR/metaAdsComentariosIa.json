@@ -27,7 +27,17 @@
       "FROM_PAGE": "Post da Página no Facebook",
       "READING": "Estou lendo o seu post…",
       "ERROR": "Não consegui ler o post agora.",
+      "ERROR_AD": "Não consegui ler o anúncio agora.",
       "RETRY": "Tentar de novo",
+      "PROBLEM": {
+        "no_post": "Este anúncio não aparece numa rede em que eu cuido dos comentários.",
+        "no_inbox": "Conecte a caixa da rede deste anúncio (a conta do Instagram ou a Página do Facebook) para eu cuidar dos comentários.",
+        "needs_login": "A conexão com a Meta venceu. Entre de novo na Meta para eu ler os comentários.",
+        "needs_permission": "Falta uma permissão da Meta para eu ler os comentários.",
+        "not_connected": "A conta de anúncios da Meta não está conectada.",
+        "ad_not_found": "Não achei este anúncio na sua conta de anúncios.",
+        "meta_unavailable": "A Meta não respondeu agora."
+      },
       "NO_ACCESS": "Você não tem acesso ao cuidado dos comentários deste post.",
       "SAVE_ERROR": "Não consegui guardar agora. Tente de novo.",
       "OFF_READONLY": {
@@ -69,6 +79,7 @@
         "complaint": "Reclamação. Não respondi. Está na sua caixa, como urgente.",
         "hidden": "Propaganda ou golpe. Escondi do post.",
         "failed": "Não consegui mandar no privado. Responda você, se quiser.",
+        "no_private": "Pergunta. Mandar no privado ainda não dá aqui: responda no comentário.",
         "waiting": "Chegou antes de você ligar. Responda no comentário, se quiser.",
         "older": "Mais de 7 dias: não dá mais para mandar no privado. Responda no comentário.",
         "skipped": "Não se aplica · não mandei. Fica com você: responda no comentário, se quiser."
@@ -150,7 +161,8 @@
       "TEXT": "Ela responde quem comenta, manda o privado onde a rede deixa e esconde propaganda. O que não for com ela fica com você.",
       "START": "Cuidar dos comentários",
       "CHANGE": "Ver e mudar",
-      "SEE": "Ver"
+      "SEE": "Ver",
+      "ERROR": "Não consegui ver se eu já cuido deste anúncio."
     }
   }
 }
