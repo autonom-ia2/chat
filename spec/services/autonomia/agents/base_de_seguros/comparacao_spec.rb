@@ -36,6 +36,7 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     expect(resultado[:perguntas].pluck(:hoje)).to all(eq('com a antiga'))
     expect(resultado[:perguntas].pluck(:nova)).to all(eq('com a nova'))
     expect(chamadas.size).to eq(6)
+    expect(chamadas).to all(include(prova: true, trust_instruction: true))
     expect(resultado[:versao]).to eq(bloco.versao('seguros/corretora'))
   end
 

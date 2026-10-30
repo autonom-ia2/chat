@@ -221,11 +221,13 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
     it 'a descrição: prova sem ferramenta e com a base, fato escrito nos campos sem vir na mensagem, 2 tipos para forma' do
       descricao = described_class::PERGUNTAS_DESCRIPTION
       expect(descricao).to include('A prova roda sem ferramenta, como no Testar', 'e pela base de conhecimento, quando ligada',
-                                   'a falta de dado vira a mensagem fixa', 'um fato ESCRITO nos campos do agente',
+                                   'um fato ESCRITO nos campos do agente',
                                    'prefira o human_card, a saudacao e os guardrails', 'a mensagem nao traz o fato',
                                    'nao so o nome do assunto', '2 mensagens de tipos diferentes', 'um cumprimento',
                                    'algo que nao esta em nenhum campo do agente nem na base')
       expect(descricao).not_to include('sem base de conhecimento')
+      # Tema 6: a prova roda como o atendimento, sem o portão; a falta de dado não vira mais a mensagem fixa.
+      expect(descricao).not_to include('mensagem fixa')
     end
 
     # Série 2 do t6d anulada (escola): "Qual é o nome da escola?" tem resposta quase igual antes e depois do pedido e não
@@ -256,7 +258,7 @@ RSpec.describe Autonomia::Agents::ProvaDoAjuste do
       provar!
 
       expect(perguntados.pluck(:query)).to eq(perguntas)
-      expect(perguntados).to all(include(prova: true, feature: 'agente_prova_do_ajuste', agent: agent))
+      expect(perguntados).to all(include(prova: true, trust_instruction: true, feature: 'agente_prova_do_ajuste', agent: agent))
       expect(estado['prova']).to include('status' => 'pronta', 'ok' => 1, 'total' => 2, 'versao_id' => versao_aplicada,
                                          'completa' => true)
       expect(estado['prova']['perguntas']).to eq(

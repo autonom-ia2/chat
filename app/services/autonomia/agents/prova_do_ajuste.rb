@@ -27,15 +27,16 @@ class Autonomia::Agents::ProvaDoAjuste
 
   # O campo do schema do ajuste (AjustePorLista): na mesma chamada do Construtor, sem chamada a mais. Forense do t6d
   # (P1): a escola perguntou do "teste de nivelamento", que não está escrito em campo nenhum, e o agente respondeu a
-  # mensagem fixa, que não mostra tom nenhum. A prova roda como no Testar: sem ferramenta, mas com a base, quando ligada.
+  # mensagem fixa, que não mostra tom nenhum. Causa raiz (22/10): a prova rodava com o portão de confiança, que o
+  # atendimento não tem; agora roda como o atendimento (Playground.como_no_atendimento?), sem ferramenta, com a base.
   # Série 2 do t6d anulada: "Qual é o nome da escola?" tem resposta quase igual antes e depois do pedido; em pedido de
   # forma, a mensagem puxa uma resposta em que a forma aparece.
   PERGUNTAS_DESCRIPTION =
     'Quando mudancas nao esta vazia: ate 3 mensagens curtas que um cliente de verdade mandaria, escritas como o cliente ' \
     'escreve, cada uma com o pedido (o texto de pedido em mudancas) que ela testa (ex.: pedido "preco passa para a ' \
     'equipe", mensagem "Quanto custa o seguro auto?"). A prova roda sem ferramenta, como no Testar: o agente responde ' \
-    'pelo que esta escrito nos campos dele e pela base de conhecimento, quando ligada, e a falta de dado vira a mensagem ' \
-    'fixa, que nao mostra forma nenhuma. Cada mensagem cria a situacao exata em que o pedido vale. Para um pedido de ' \
+    'pelo que esta escrito nos campos dele e pela base de conhecimento, quando ligada. Cada mensagem cria a situacao ' \
+    'exata em que o pedido vale. Para um pedido de ' \
     'forma (tamanho, tom, tratamento, emoji, formato): 2 mensagens de tipos diferentes, um cumprimento e uma pergunta ' \
     'cuja resposta e um fato ESCRITO nos campos do agente (prefira o human_card, a saudacao e os guardrails; o fato ' \
     'presente la, nao so o nome do assunto), e a mensagem nao traz o fato: o cliente pergunta, o agente responde; ' \
@@ -52,7 +53,7 @@ class Autonomia::Agents::ProvaDoAjuste
     properties: { mensagem: { type: 'string', description: 'A mensagem do cliente.' },
                   pedido: { type: 'string', description: 'O pedido que ela testa, com o mesmo texto de pedido em mudancas.' } }
   }.freeze
-  # Os campos do agente que o juiz lê para julgar (o que ele tem escrito, a forma e a mensagem fixa).
+  # Os campos do agente que o juiz lê para julgar (o que ele tem escrito e a forma).
   CAMPOS_PARA_O_JUIZ = %w[instruction tone greeting fallback_message handoff_rule guardrails].freeze
   PERGUNTAS_MAX = 3
   # Os trechos da base que a resposta usou vão ao juiz (revisão do t6d, ALTO 1), com teto de quantidade e de tamanho. O
@@ -178,9 +179,10 @@ class Autonomia::Agents::ProvaDoAjuste
   end
 
   # A resposta do agente, pelo mesmo caminho do Testar, sem ferramenta. nil quando a IA falhou. `equipe`: o agente
-  # passaria a conversa para a equipe (a tela mostra isso quando não há texto).
+  # avisou que chamaria alguém da equipe (o sinal da instrução, com a fala dele).
   def responder(pergunta)
-    resultado = Autonomia::Agents::Answerer.new(agent: @thread.agent, query: pergunta, feature: FEATURE, prova: true).answer
+    resultado = Autonomia::Agents::Answerer.new(agent: @thread.agent, query: pergunta, feature: FEATURE, prova: true,
+                                                trust_instruction: Autonomia::Agents::Playground.como_no_atendimento?(@thread.agent)).answer
     texto = resultado.reply.to_s.strip.presence
     equipe = resultado.handoff[:should] == true
     return if resultado.error.present? || (texto.nil? && !equipe)
@@ -195,7 +197,7 @@ class Autonomia::Agents::ProvaDoAjuste
                                    .first(TRECHOS_MAX).map { |texto| texto.truncate(TRECHO_MAX_CHARS) }
   end
 
-  # O que o agente tem escrito, para o juiz julgar "quando não souber", a forma e a mensagem fixa (forense do t6d, P2).
+  # O que o agente tem escrito, para o juiz julgar "quando não souber" e a forma (forense do t6d, P2).
   def campos_para_o_juiz
     Autonomia::Agents::Builder::AjustePorLista.retrato(@thread.agent).slice(*CAMPOS_PARA_O_JUIZ)
   end

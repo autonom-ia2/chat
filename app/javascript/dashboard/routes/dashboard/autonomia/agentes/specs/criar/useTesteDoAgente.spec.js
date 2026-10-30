@@ -214,6 +214,21 @@ describe('useTesteDoAgente', () => {
     }
   );
 
+  // Tema 6 (#1428): sem o portão, a IA que falhou volta 200 com `error` e sem texto, não com a mensagem fixa.
+  it('shows the failure state, not an empty bubble, when the agent answers with an error and no text', async () => {
+    responde({
+      reply: null,
+      error: 'ai_unavailable',
+      handoff: { should: false },
+    });
+    const { teste } = montar();
+    await teste.enviar('Oi');
+    expect(teste.aviso.value).toEqual({ tipo: 'falha', pergunta: 'Oi' });
+    expect(teste.mensagens.value.filter(m => m.de === 'agente')).toEqual([]);
+    expect(teste.respondidas.value).toBe(0);
+    expect(teste.digitando.value).toBe(false);
+  });
+
   it('says offline when the browser has no internet, whatever the error', async () => {
     vi.stubGlobal('navigator', { onLine: false });
     store.dispatch.mockRejectedValue(http(500));

@@ -164,7 +164,8 @@ class Autonomia::Agents::Material::Autoteste
 
   # A resposta do agente pelo caminho do Testar, sem ferramenta. nil quando a IA falhou.
   def responder(pergunta)
-    resultado = Autonomia::Agents::Answerer.new(agent: @agent, query: pergunta, feature: RESPOSTA_FEATURE, prova: true).answer
+    resultado = Autonomia::Agents::Answerer.new(agent: @agent, query: pergunta, feature: RESPOSTA_FEATURE, prova: true,
+                                                trust_instruction: Autonomia::Agents::Playground.como_no_atendimento?(@agent)).answer
     texto = resultado.reply.to_s.strip.presence
     equipe = resultado.handoff[:should] == true
     return if resultado.error.present? || (texto.nil? && !equipe)

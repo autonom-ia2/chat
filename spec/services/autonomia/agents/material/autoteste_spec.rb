@@ -87,7 +87,7 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     pedir_e_rodar
 
     expect(perguntados.size).to eq(10)
-    expect(perguntados).to all(include(prova: true, feature: 'agente_autoteste_resposta', agent: agent))
+    expect(perguntados).to all(include(prova: true, trust_instruction: true, feature: 'agente_autoteste_resposta', agent: agent))
   end
 
   it 'nunca mais de 10, mesmo que o gerador mande mais' do
