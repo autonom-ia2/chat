@@ -46,6 +46,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::LerAntigosJob do
     expect(care.reload.read_old_at).to be_nil
   end
 
+  it 'solta mesmo o cuidado que não passaria na validação de hoje' do
+    care.update_column(:message, 'ã' * 600) # rubocop:disable Rails/SkipsModelValidations
+    allow(fonte).to receive(:ler).and_return({ status: 'needs_permission', linhas: [], escondidas: [] })
+
+    described_class.perform_now(account.id, alvo)
+
+    expect(care.reload.read_old_at).to be_nil
+  end
+
   it 'o perfil, a conexão ou o anúncio não existem mais: solta na hora, sem tentar de novo' do
     allow(Crm::MetaAds::ComentariosIa::Fonte).to receive(:do_alvo).and_return(nil)
 

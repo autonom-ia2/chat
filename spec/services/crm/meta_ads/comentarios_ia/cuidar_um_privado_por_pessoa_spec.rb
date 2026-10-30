@@ -72,6 +72,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(Crm::MetaAdsCommentPerson.sole.comment_id).to eq('c-2')
   end
 
+  it 'a pessoa já recebeu o privado de alguém na tela (#2196): a IA não manda outro e o painel diz por quê' do
+    Crm::MetaAdsCommentPerson.create!(account: account, network: 'instagram', post_id: '1790', from_id: 'igsid-1', comment_id: 'c-0')
+
+    cuidar(comentario('c-1'))
+
+    expect(rede).not_to have_received(:privado)
+    expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c-1', action: 'private_reply_already')).to be_present
+  end
+
   it 'outra pessoa no mesmo post recebe o seu' do
     cuidar(comentario('c-1'))
     cuidar(comentario('c-2', from_id: 'igsid-2'))

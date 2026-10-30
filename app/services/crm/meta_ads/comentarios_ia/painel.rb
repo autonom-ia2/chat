@@ -27,7 +27,7 @@ class Crm::MetaAds::ComentariosIa::Painel
   PRIVADO_LIBERADO = %w[instagram].freeze
   MOTIVO_DA_ACAO = {
     'to_you' => 'complaint', 'private_reply_failed' => 'failed', 'private_reply_unsure' => 'unsure',
-    'kept_for_owner' => 'no_private', 'ai_unread' => 'unread'
+    'kept_for_owner' => 'no_private', 'ai_unread' => 'unread', 'private_reply_already' => 'already_sent'
   }.freeze
 
   CARE_ID = Arel.sql("conversations.additional_attributes -> 'meta_ads_comment' ->> 'care_id'")
@@ -138,6 +138,7 @@ class Crm::MetaAds::ComentariosIa::Painel
   def gravar!(atributos, user, de_novo: false)
     registro = cuidado || novo_cuidado(user)
     registro.assign_attributes(atributos)
+    religar!(registro)
     registro.save!
     @cuidado = registro
   rescue ActiveRecord::RecordNotUnique
@@ -148,6 +149,14 @@ class Crm::MetaAds::ComentariosIa::Painel
     return reler_e_gravar!(atributos, user) if !de_novo && e.record.new_record? && e.record.errors.of_kind?(:target_id, :taken)
 
     raise Error, "invalid_#{e.record.errors.attribute_names.first}"
+  end
+
+  # Voltar a cuidar recomeça a contar daqui: o que chegou com o cuidado pausado passa a ser "antes de ligar" (`waiting`)
+  # e o "Ler e mandar" volta, para a IA cuidar dele. Sem isso, ele sumiria do painel ao religar.
+  def religar!(registro)
+    return unless registro.persisted? && registro.status_changed?(from: 'paused', to: 'on')
+
+    registro.assign_attributes(started_at: Time.current, read_old_at: nil)
   end
 
   def reler_e_gravar!(atributos, user)
@@ -165,7 +174,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     {
       network: rede_do_cuidado, private_available: @networks.intersect?(PRIVADO_LIBERADO), care: cuidado ? escrito.status : 'off',
       message: escrito.message.to_s, para_quem: escrito.para_quem.to_s, phrases: Array(escrito.phrases),
-      read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0)
+      read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0),
+      automatic_note: Crm::MetaAdsCommentCare.new(account: @account).sufixo_do_privado
     }
   end
 

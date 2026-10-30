@@ -111,7 +111,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     case decisao
     when 'private', 'price' then privado(decisao)
     when 'to_you' then para_voce('to_you')
-    when 'hide' then recusou('hide') unless rede.esconder
+    when 'hide' then esconder
     when FICA_COM_O_DONO then @registro.gravar!(@comentario, FICA_COM_O_DONO)
     end
   end
@@ -120,7 +120,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # deste post (outro comentário dela) não recebe outro.
   def privado(decisao)
     return nao_cuidou('sem_quem_comentou') if @comentario.from_id.blank?
-    return unless @registro.reservar_pessoa!(@comentario)
+    return ja_tem_privado unless @registro.reservar_pessoa!(@comentario)
 
     inicio = Time.current
     envio = rede.privado(care)
@@ -133,7 +133,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # Já feito (pela pessoa, na tela do #2196, ou por outro job): nada a mostrar. Sem resposta da Meta, pode ter saído: a
   # reserva da pessoa fica. Recusa: a reserva sai.
   def nao_saiu(envio)
-    return if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
+    return ja_tem_privado if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
     return para_voce('private_reply_unsure') if envio.talvez_entregue
 
     @registro.soltar_pessoa!(@comentario)
@@ -153,6 +153,19 @@ class Crm::MetaAds::ComentariosIa::Cuidar
 
   def recusou(acao)
     Rails.logger.warn("[comentarios_ia] a Meta recusou #{acao} #{ids}")
+  end
+
+  # A Meta não escondeu: a propaganda segue no post, e o dono vê "não cuidei".
+  def esconder
+    return if rede.esconder
+
+    recusou('hide')
+    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+  end
+
+  # O Painel mostra "já recebeu o privado" em vez de "não se aplica".
+  def ja_tem_privado
+    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::JA_TEM_PRIVADO)
   end
 
   # Uma vez só por comentário: o `ai_seen` já deixou um job só cuidando dele.

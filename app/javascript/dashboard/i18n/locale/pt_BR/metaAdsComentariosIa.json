@@ -82,6 +82,7 @@
         "complaint": "Reclamação. Não respondi. Está na sua caixa, como urgente.",
         "hidden": "Propaganda ou golpe. Escondi do post.",
         "failed": "Não consegui mandar no privado. Responda você, se quiser.",
+        "already_sent": "Esta pessoa já recebeu o privado deste post. Continue pela caixa.",
         "unread": "Não cuidei deste comentário. Responda você, se quiser.",
         "unsure": "Não sei se o privado saiu: a Meta não respondeu. Confira no direct antes de responder.",
         "no_private": "Pergunta. Mandar no privado ainda não dá aqui: responda no comentário.",

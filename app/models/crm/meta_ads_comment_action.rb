@@ -29,7 +29,7 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
 
   NETWORKS = %w[instagram facebook].freeze
   ACTIONS = %w[private_reply reply page_reply hide show delete ai_seen to_you private_reply_failed private_reply_unsure
-               kept_for_owner ai_unread].freeze
+               kept_for_owner ai_unread private_reply_already].freeze
   ONCE = %w[private_reply ai_seen].freeze
   ACTORS = %w[user ai].freeze
   RESERVED_TTL = 2.minutes

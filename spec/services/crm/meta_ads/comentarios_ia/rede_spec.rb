@@ -185,6 +185,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
         expect(rede.ler).to be_nil
       end
+
+      it 'login caído ou permissão tirada: Indisponivel, como no Instagram (não descarta o comentário)' do
+        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('needs_login'))
+
+        expect { rede.ler }.to raise_error(described_class::Indisponivel)
+      end
     end
   end
 

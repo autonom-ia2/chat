@@ -24,7 +24,8 @@ class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
     care = Crm::MetaAds::ComentariosIa::Painel.cuidado_do(account_id, alvo)
     return if care.nil?
 
-    care.update!(read_old_at: nil)
+    # Sem validar: um cuidado que não passaria na validação de hoje não pode deixar o "Ler e mandar" travado.
+    care.update_columns(read_old_at: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     Rails.logger.warn("[comentarios_ia] ler_antigos solto account=#{account_id} care=#{care.id} status=#{status}")
   end
 

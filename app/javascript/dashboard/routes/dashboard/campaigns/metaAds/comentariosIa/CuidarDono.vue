@@ -54,9 +54,11 @@ const loadingExamples = ref(false);
 const examplesFailed = ref(false);
 
 const soon = computed(() => props.data.private_available === false);
-const dm = computed(
-  () => `${message.value.trim()} ${t('META_ADS_COMMENTS_AI.PRIVATE.AUTOMATIC')}`
+// O aviso no idioma da conta, que é o que sai no privado (o servidor manda); sem ele, o da tela.
+const automatic = computed(
+  () => props.data.automatic_note || t('META_ADS_COMMENTS_AI.PRIVATE.AUTOMATIC')
 );
+const dm = computed(() => `${message.value.trim()} ${automatic.value}`);
 const tooLong = computed(
   () => new TextEncoder().encode(dm.value).length > LIMIT_BYTES
 );
@@ -206,7 +208,7 @@ const FIELD =
         <p v-else class="m-0 text-sm text-n-slate-11">
           {{
             $t(`${KEY}.WHAT.HINT`, {
-              automatic: $t('META_ADS_COMMENTS_AI.PRIVATE.AUTOMATIC'),
+              automatic,
             })
           }}
         </p>

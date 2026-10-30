@@ -82,6 +82,7 @@
         "complaint": "Complaint. I didn't reply. It's in your inbox, marked urgent.",
         "hidden": "Spam. I hid it from the post.",
         "failed": "I couldn't send the DM. Reply yourself, if you want.",
+        "already_sent": "This person already got the DM for this post. Continue in the inbox.",
         "unread": "I didn't handle this comment. Reply yourself, if you want.",
         "unsure": "I'm not sure the DM went out: Meta didn't answer. Check the inbox before you reply.",
         "no_private": "A question. Sending a private message doesn't work here yet: reply in the comment.",
