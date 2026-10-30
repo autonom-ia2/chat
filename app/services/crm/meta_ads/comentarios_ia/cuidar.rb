@@ -106,28 +106,42 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     @comentario.momento.present? && @comentario.momento >= JANELA.ago
   end
 
+  # `@agiu` marca o ponto sem volta: daqui em diante algo já saiu (Meta chamada, conversa aberta), e um erro não solta a
+  # leitura. Antes dele (reserva da pessoa, por exemplo), o erro solta, e o job tenta de novo.
   def executar(decisao)
-    @agiu = %w[private price to_you hide].include?(decisao)
     case decisao
     when 'private', 'price' then privado(decisao)
-    when 'to_you' then para_voce('to_you')
+    when 'to_you' then agir { para_voce('to_you') }
     when 'hide' then esconder
     when FICA_COM_O_DONO then @registro.gravar!(@comentario, FICA_COM_O_DONO)
     end
   end
 
+  def agir
+    @agiu = true
+    yield
+  end
+
   # Sem saber quem comentou, não dá para garantir um privado por pessoa: fica com o dono. A pessoa que já tem o privado
   # deste post (outro comentário dela) não recebe outro.
   def privado(decisao)
-    return nao_cuidou('sem_quem_comentou') if @comentario.from_id.blank?
+    return nao_cuidou('sem_quem_comentou') if @comentario.from_id.blank? || @comentario.post_id.blank?
     return ja_tem_privado unless @registro.reservar_pessoa!(@comentario)
 
     inicio = Time.current
-    envio = rede.privado(care)
+    envio = agir { rede.privado(care) }
     return nao_saiu(envio) unless envio.ok
 
     na_conversa(envio.conversation, inicio)
-    recusou('reply') unless rede.responder(care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
+    responder(decisao)
+  end
+
+  # A frase pública depois do privado. A Meta recusou: o dono vê "não cuidei" e responde ele.
+  def responder(decisao)
+    return if rede.responder(care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
+
+    recusou('reply')
+    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   # Já feito (pela pessoa, na tela do #2196, ou por outro job): nada a mostrar. Sem resposta da Meta, pode ter saído: a
@@ -157,7 +171,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
 
   # A Meta não escondeu: a propaganda segue no post, e o dono vê "não cuidei".
   def esconder
-    return if rede.esconder
+    return if agir { rede.esconder }
 
     recusou('hide')
     @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)

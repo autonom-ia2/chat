@@ -74,9 +74,9 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(Crm::MetaAdsCommentCare.sole.status).to eq('paused')
   end
 
-  it 'recusa sem "para quem", com status desconhecido, mensagem longa demais ou texto que não é texto' do
-    [corpo.merge(para_quem: ' '), corpo.merge(status: 'off'), corpo.merge(message: 'a' * 1001), corpo.merge(message: ['x']),
-     corpo.merge(phrases: [])].each do |errado|
+  it 'recusa sem "para quem", "para quem" longo demais, status desconhecido, mensagem longa demais ou texto que não é texto' do
+    [corpo.merge(para_quem: ' '), corpo.merge(para_quem: 'a' * (Crm::MetaAdsCommentCare::NOTE_LIMIT + 1)), corpo.merge(status: 'off'),
+     corpo.merge(message: 'a' * 1001), corpo.merge(message: ['x']), corpo.merge(phrases: [])].each do |errado|
       put "#{base}/cuidado", params: errado, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:unprocessable_content)
