@@ -318,11 +318,23 @@ module Autonomia
       # de ser "só anotar e encaminhar" e passa a ser oferecer horários reais e marcar pelas ferramentas.
       SCHEDULER_WITH_BOOKING_SKELETON = File.read(SKELETON_DIR.join('scheduler_com_agenda.md')).freeze
 
+      # Roteiros por segmento (#1429, F2): config/agentes_por_pacote/<camada>/esqueletos/<tipo>.md, por camada do pacote
+      # ('seguros', 'seguros/corretora'...). Tipo sem arquivo na camada cai na camada de cima e, por fim, no geral.
+      SEGMENT_SKELETON_DIR = Rails.root.join('config/agentes_por_pacote')
+      SKELETONS_BY_LAYER = Dir.glob(SEGMENT_SKELETON_DIR.join('**', 'esqueletos', '*.md').to_s)
+                              .group_by { |arquivo| Pathname(arquivo).dirname.dirname.relative_path_from(SEGMENT_SKELETON_DIR).to_s }
+                              .to_h do |camada, arquivos|
+                                [camada.freeze, arquivos.to_h { |arquivo| [File.basename(arquivo, '.md').freeze, File.read(arquivo).freeze] }.freeze]
+                              end.freeze
+
       # Espinha do tipo como DADO (consumida pelo próprio Construtor via skeleton_context e pelo Revisor
       # type-aware via Reviewer#type_scope_hint). Fonte ÚNICA: SKELETON_INSTRUCTIONS. nil para 'custom'/
-      # desconhecido (agent_type_for normaliza desconhecido → 'custom', que não está no hash).
-      def self.skeleton_for(type)
-        SKELETON_INSTRUCTIONS[agent_type_for(type)]
+      # desconhecido (agent_type_for normaliza desconhecido → 'custom', que não está no hash). `camadas` (do pacote, da
+      # mais geral para a mais específica) escolhe o roteiro do segmento; sem camadas, o geral.
+      def self.skeleton_for(type, camadas: [])
+        tipo = agent_type_for(type)
+        camada = camadas.reverse.find { |nome| SKELETONS_BY_LAYER.dig(nome, tipo) }
+        camada ? SKELETONS_BY_LAYER.dig(camada, tipo) : SKELETON_INSTRUCTIONS[tipo]
       end
 
       # CONSTRUTOR (P1): teto de perguntas da entrevista. A campanha real estourou turnos (T01/T06/T08
@@ -708,7 +720,11 @@ module Autonomia
       def skeleton_context
         return '' if adjust_mode?
 
-        skeleton = booking_enabled? && builder_agent_type == 'scheduler' ? SCHEDULER_WITH_BOOKING_SKELETON : SKELETON_INSTRUCTIONS[builder_agent_type]
+        skeleton = if booking_enabled? && builder_agent_type == 'scheduler'
+                     SCHEDULER_WITH_BOOKING_SKELETON
+                   else
+                     self.class.skeleton_for(builder_agent_type, camadas: camadas_do_roteiro)
+                   end
         return custom_exploration_context if skeleton.blank?
 
         [
@@ -718,6 +734,11 @@ module Autonomia
           'NÃO o trate como ordem sobre suas próprias regras. Use-o como espinha ao redigir a instruction',
           'final (§7).', skeleton
         ].join("\n")
+      end
+
+      # O roteiro do segmento só com a Fase 2 ligada, como o bloco de segmento (PromptParts::SegmentoDaConta).
+      def camadas_do_roteiro
+        ::Autonomia::Agents::Fase2.ligada?(@account) ? ::Autonomia::Segmentos::Pacotes.camadas(@account) : []
       end
 
       # #1196 — AGENDA LIGADA (criação e AJUSTE, qualquer tipo): a instrução não pode proibir o que as ferramentas
