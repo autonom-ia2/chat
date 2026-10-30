@@ -106,7 +106,15 @@ class Crm::MetaAds::ComentariosIa::Painel
     raise Error, 'already_read' unless marcou == 1
 
     cuidado.reload
+    enfileirar_ler_antigos!
+  end
+
+  # A fila recusou: a marca sai, para o botão voltar e o dono tentar de novo.
+  def enfileirar_ler_antigos!
     Crm::MetaAds::ComentariosIa::LerAntigosJob.perform_later(@account.id, @alvo)
+  rescue StandardError
+    cuidado.update_columns(read_old_at: nil, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    raise
   end
 
   def cuidado

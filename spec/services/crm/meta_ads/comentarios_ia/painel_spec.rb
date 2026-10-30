@@ -221,6 +221,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
   end
 
   describe '#ler_antigos!' do
+    it 'a fila recusou o job: a marca sai e o erro sobe, para o dono tentar de novo' do
+      allow(Crm::MetaAds::ComentariosIa::LerAntigosJob).to receive(:perform_later).and_raise(RedisClient::CannotConnectError)
+
+      expect { painel.ler_antigos! }.to raise_error(RedisClient::CannotConnectError)
+      expect(care.reload.read_old_at).to be_nil
+    end
+
     it 'trava atômica: duas chamadas ao mesmo tempo põem um job só' do
       outra_aba = described_class.new(account: account, alvo: alvo, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
       painel.cuidado
