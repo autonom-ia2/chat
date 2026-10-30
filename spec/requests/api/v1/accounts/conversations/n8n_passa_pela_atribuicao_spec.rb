@@ -3,6 +3,8 @@ require 'rails_helper'
 # #1593 — ponta a ponta n8n → Atribuição → área. O robô de outro sistema (n8n) passa a conversa como sempre passou
 # (toggle_status open, com o token dele) e quem decide para onde ela vai é a regra da Atribuição do funil: com
 # "A mesma pessoa" num agente de IA, a área assume. Nenhum agente nosso dispara passagem (#2154). Tudo real, pelo HTTP.
+# Pré-requisito em produção: a chave AgenteIaPorCaixa ligada na conta; sem ela a área não se vincula à caixa do robô
+# externo e a regra cai sempre na pessoa. Pessoa no nome da conversa já está em toggle_status_entrega_spec.
 # Cada cenário diz que falha pega.
 RSpec.describe 'n8n passa a conversa pela Atribuição', type: :request do
   include_context 'with crm responsible agent'
@@ -56,6 +58,7 @@ RSpec.describe 'n8n passa a conversa pela Atribuição', type: :request do
   it '"A mesma pessoa" na área: a área assume, sem pessoa e sem espera, e a passagem sai do agente externo',
      :aggregate_failures do
     regra_na_area!
+    allow(Rails.configuration.dispatcher).to receive(:dispatch).and_call_original
 
     expect { n8n_passa! }.to change(Crm::Passagem, :count).by(1)
 
@@ -66,10 +69,35 @@ RSpec.describe 'n8n passa a conversa pela Atribuição', type: :request do
     passagem = Crm::Passagens.ultima_aberta(conversa)
     expect([passagem.de.classe, passagem.de.id]).to eq(['AgentBot', n8n.id])
     expect([passagem.para.classe, passagem.para.id]).to eq(['Autonomia::Agents::Agent', area.id])
+    # A equipe não é avisada de uma passagem que a área já assumiu.
+    expect(Rails.configuration.dispatcher).not_to have_received(:dispatch)
+      .with(Events::Types::CONVERSATION_BOT_HANDOFF, anything, anything)
   end
 
-  # Pega: o n8n continuar respondendo depois de passar. O filtro dele (FiltraSomenteNaoAtribuido) só cala quando o
-  # dono é outro robô; e a área precisa saber de quem recebeu ("agente externo").
+  # Pega: a passagem para a área depender de alguém online (a noite, sem ninguém na equipe) e cair em "à espera".
+  it 'ninguém online: a área assume do mesmo jeito, sem espera de pessoa', :aggregate_failures do
+    regra_na_area!
+    allow(OnlineStatusTracker).to receive(:get_available_users).and_return({})
+
+    n8n_passa!
+
+    expect(conversa.reload).to have_attributes(ai_assignee: espelho, assignee_id: nil)
+    expect(conversa.bot_handoff_waiting?).to be(false)
+    expect(conversa.crm_delivery_pending?).to be(false)
+  end
+
+  # Pega: o outro ramo do pedido do n8n (conversa pendente) não chegar à regra da etapa.
+  it 'conversa pendente: a área assume e a conversa abre', :aggregate_failures do
+    regra_na_area!
+    conversa.update!(status: :pending)
+
+    n8n_passa!
+
+    expect(conversa.reload).to have_attributes(ai_assignee: espelho, assignee_id: nil, status: 'open')
+  end
+
+  # Pega: o n8n continuar respondendo depois de passar. O filtro do workflow do n8n (nó FiltraSomenteNaoAtribuido) só
+  # cala quando o dono é outro robô; e a área precisa saber de quem recebeu ("agente externo").
   it 'depois da passagem o n8n vê outro dono e a área sabe que veio do agente externo', :aggregate_failures do
     regra_na_area!
 
@@ -77,7 +105,7 @@ RSpec.describe 'n8n passa a conversa pela Atribuição', type: :request do
 
     meta = conversa.reload.push_event_data[:meta]
     expect(meta[:assignee_type]).to eq('AgentBot')
-    expect(meta.dig(:assignee, :name)).not_to eq(n8n.name)
+    expect(meta.dig(:assignee, :id)).to eq(espelho.id)
     expect(Crm::Passagens.recentes(conversa)).to include('agente externo').and include('Robô n8n')
     expect(Autonomia::Agents::QuemResponde.agent_inbox(conversa)&.agent).to eq(area)
   end
@@ -99,17 +127,6 @@ RSpec.describe 'n8n passa a conversa pela Atribuição', type: :request do
     n8n_passa!
 
     expect(conversa.reload).to have_attributes(assignee_id: ana.id, ai_assignee: nil)
-  end
-
-  # Pega: o pedido do robô tirar a conversa da pessoa que está atendendo (pessoa no nome vence).
-  it 'pessoa no nome: a conversa fica com ela, sem passagem', :aggregate_failures do
-    regra_na_area!
-    conversa.update!(assignee: ana)
-
-    expect { n8n_passa! }.not_to change(Crm::Passagem, :count)
-
-    expect(conversa.reload).to have_attributes(assignee_id: ana.id)
-    expect(conversa.ai_assignee).not_to eq(espelho)
   end
 
   # Pega (limite conhecido): a regra é do funil. Conversa sem card não tem regra e vai só para pessoas.
