@@ -98,6 +98,21 @@ describe('#ComentariosIaAPI', () => {
     );
   });
 
+  it('lists the cares of a profile and changes all of them', () => {
+    comentariosIa.getCuidados('instagram-7');
+    comentariosIa.mudarTodos('instagram-7', 'paused');
+
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/seus_posts/cuidados',
+      { params: { perfil: 'instagram-7' } }
+    );
+    expect(axiosMock.put).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/seus_posts/cuidados',
+      { status: 'paused' },
+      { params: { perfil: 'instagram-7' } }
+    );
+  });
+
   it('refuses an unknown target', () => {
     expect(() => comentariosIa.getCuidado({ kind: 'story', id: '1' })).toThrow(
       'unknown target'

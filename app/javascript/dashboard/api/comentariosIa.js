@@ -63,6 +63,21 @@ class ComentariosIaAPI extends ApiClient {
     });
   }
 
+  // Seus posts: os cuidados do perfil, para o selo e a faixa.
+  // { cuidados: [{ post_id, care, network, results: { sent, replied } }] }
+  getCuidados(perfil) {
+    return axios.get(`${this.url}seus_posts/cuidados`, { params: { perfil } });
+  }
+
+  // "Pausar todos" / "Retomar todos" do perfil → a mesma lista.
+  mudarTodos(perfil, status) {
+    return axios.put(
+      `${this.url}seus_posts/cuidados`,
+      { status },
+      { params: { perfil } }
+    );
+  }
+
   // { status, questions, questions_old, complaints, read, more }
   getResumo(target) {
     return axios.get(`${this.targetUrl(target)}/resumo`, {

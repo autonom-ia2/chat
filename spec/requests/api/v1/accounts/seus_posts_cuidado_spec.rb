@@ -62,7 +62,8 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body).to include('care' => 'on', 'para_quem' => 'Quem pedir o e-book', 'phrases' => ['Te chamei no privado'])
     expect(Crm::MetaAdsCommentCare.sole).to have_attributes(target_kind: 'post', target_id: post_id, network: 'instagram',
-                                                            status: 'on', created_by_id: admin.id, offer: nil)
+                                                            status: 'on', created_by_id: admin.id, offer: nil,
+                                                            inbox_id: canal.inbox.id)
   end
 
   it 'pausa e volta' do
@@ -123,7 +124,34 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
 
     get "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 
-    expect(response.parsed_body['cuidados']).to eq([{ 'post_id' => post_id, 'care' => 'on' }])
+    expect(response.parsed_body['cuidados']).to eq([{ 'post_id' => post_id, 'care' => 'on', 'network' => 'instagram',
+                                                      'results' => { 'sent' => 0, 'replied' => 0 } }])
+  end
+
+  it 'a lista é só do perfil: o cuidado de outro perfil da conta não aparece nem é pausado' do
+    outro = create(:channel_instagram, account: account, instagram_id: '17841400000000002', provider_name: 'outraloja')
+    create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '17900000000000009', network: 'instagram',
+                                       inbox: outro.inbox, message: 'Oi', status: 'on')
+    put "#{base}/cuidado", params: corpo, headers: admin.create_new_auth_token, as: :json
+
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'paused' },
+                                                              headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['cuidados'].map { |item| [item['post_id'], item['care']] }).to eq([[post_id, 'paused']])
+    expect(Crm::MetaAdsCommentCare.find_by(target_id: '17900000000000009').status).to eq('on')
+  end
+
+  it '"Pausar todos": recusa status desconhecido e agente sem posts_manage' do
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'off' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+
+    agente = create(:user, account: account, role: :agent)
+    create(:inbox_member, user: agente, inbox: canal.inbox)
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'paused' },
+                                                              headers: agente.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:forbidden)
   end
 
   it 'agente que vê a caixa, sem posts_manage: vê o painel, mas não liga' do

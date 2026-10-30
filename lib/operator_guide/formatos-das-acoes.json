@@ -19795,7 +19795,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:52",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:63",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -19821,9 +19821,9 @@
       "leitura crua sem tipo: para_quem"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:45",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:56",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:46",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:57",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
@@ -27182,6 +27182,31 @@
     ],
     "sem_corpo": false
   },
+  "PUT seus_posts/cuidados": {
+    "campos": {
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "status": {
+        "padrao": "on",
+        "tipo": "string",
+        "um_de": [
+          "on",
+          "paused"
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_cuidado#mudar_todos",
+    "modelo": "Crm::MetaAdsCommentCare",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:31",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:32",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
   "PUT seus_posts/posts/:post_id/cuidado": {
     "campos": {
       "comment_id": {
@@ -27206,10 +27231,10 @@
       "leitura crua sem tipo: message, para_quem, phrases"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:38",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:49",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:40",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:39",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:51",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:50",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"

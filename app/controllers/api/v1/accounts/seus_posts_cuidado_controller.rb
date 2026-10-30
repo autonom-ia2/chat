@@ -1,6 +1,8 @@
 # IA cuida dos comentários (#2212, B1) num post do Seus posts. O contrato está em docs/audit/2026-10-30-2212-contrato-api.md.
 #
-# GET  seus_posts/cuidados                              → { cuidados: [{ post_id, care }] }: o selo "Cuidando" da lista.
+# GET  seus_posts/cuidados                              → { cuidados: [{ post_id, care, network, results }] }: o selo
+#      "Cuidando" e a faixa da lista, só os do perfil (?perfil=).
+# PUT  seus_posts/cuidados                              status → "Pausar todos" / "Retomar todos" do perfil; a lista.
 # GET  seus_posts/posts/:post_id/cuidado                → o Painel (Crm::MetaAds::ComentariosIa::Painel).
 # GET  seus_posts/posts/:post_id/resumo                 → "O que tem nos comentários" (Resumo; 'reading' enquanto conta).
 #      Ver: administrador ou `posts_view`.
@@ -17,14 +19,23 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   FLAGS = (Api::V1::Accounts::SeusPostsComentariosController::FLAGS + [Crm::MetaAds::ComentariosIa::Cuidar::FLAG]).freeze
 
   skip_before_action :ensure_manage
-  before_action :ensure_manage, only: [:update, :previa, :ler_antigos]
-  skip_before_action :ensure_ids, :load_post, only: [:cuidados]
+  before_action :ensure_manage, only: [:update, :previa, :ler_antigos, :mudar_todos]
+  skip_before_action :ensure_ids, :load_post, only: [:cuidados, :mudar_todos]
 
   rescue_from Crm::MetaAds::ComentariosIa::Painel::Error, with: :render_error
 
   def cuidados
-    estados = Crm::MetaAdsCommentCare.where(account_id: Current.account.id, target_kind: 'post').pluck(:target_id, :status)
-    render json: { cuidados: estados.map { |post_id, care| { post_id: post_id, care: care } } }
+    render json: { cuidados: cuidados_do_perfil.map { |care| item_da_lista(care) } }
+  end
+
+  def mudar_todos
+    status = params[:status].to_s
+    return render_error_code('invalid_status') unless Crm::MetaAds::ComentariosIa::Painel::STATUSES.include?(status)
+
+    mudados = cuidados_do_perfil.where.not(status: status)
+    audit_all!(status, mudados.pluck(:target_id))
+    mudados.find_each { |care| care.update!(status: status) }
+    cuidados
   end
 
   def show
@@ -71,7 +82,17 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   end
 
   def alvo
-    { 'kind' => 'post', 'perfil' => SeusPosts::Perfil.id_do(@canal), 'post_id' => post_id, 'networks' => [SeusPosts::Perfil.rede(@canal)] }
+    { 'kind' => 'post', 'perfil' => SeusPosts::Perfil.id_do(@canal), 'post_id' => post_id, 'networks' => [SeusPosts::Perfil.rede(@canal)],
+      'inbox_id' => @canal.inbox.id }
+  end
+
+  def cuidados_do_perfil
+    Crm::MetaAdsCommentCare.where(account_id: Current.account.id, target_kind: 'post', inbox_id: @canal.inbox.id).order(:id)
+  end
+
+  def item_da_lista(care)
+    { post_id: care.target_id, care: care.status, network: care.network,
+      results: Crm::MetaAds::ComentariosIa::Painel.resultados(Current.account, care) }
   end
 
   # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327).
@@ -85,6 +106,16 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_phrases' unless value.is_a?(Array) && value.all?(String)
 
     value
+  end
+
+  def audit_all!(status, post_ids)
+    Audited.audit_class.create!(
+      auditable: Current.account, user: Current.user, action: AUDIT_ACTION,
+      audited_changes: { 'network' => SeusPosts::Perfil.rede(@canal), 'perfil' => SeusPosts::Perfil.id_do(@canal), 'post_ids' => post_ids,
+                         'action' => 'all', 'status' => status }
+    )
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: Current.account).capture_exception
   end
 
   def audit_care!(action)
