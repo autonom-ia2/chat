@@ -23,6 +23,12 @@ RSpec.describe Crm::MetaAdsCommentCare do
     expect(build(:crm_meta_ads_comment_care, account: account, message: 'a' * 1001)).not_to be_valid
   end
 
+  it 'conta o limite da mensagem em bytes, como a Meta: acento e emoji pesam mais de um' do
+    expect(build(:crm_meta_ads_comment_care, account: account, message: 'ã' * 500)).to be_valid
+    expect(build(:crm_meta_ads_comment_care, account: account, message: 'ã' * 501)).not_to be_valid
+    expect(build(:crm_meta_ads_comment_care, account: account, message: '😀' * 251)).not_to be_valid
+  end
+
   it 'exige de uma a três frases públicas curtas' do
     expect(build(:crm_meta_ads_comment_care, account: account, phrases: [])).not_to be_valid
     expect(build(:crm_meta_ads_comment_care, account: account, phrases: %w[a b c d])).not_to be_valid
