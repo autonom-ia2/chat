@@ -9,12 +9,13 @@ require 'rails_helper'
 # as respostas do agente criado a três mensagens do tipo. O dono só descreve o negócio em termos gerais: o ramo chega
 # ao Construtor pelo bloco de segmento e pelo roteiro.
 # Teto de US$ 2 por rodada, somado pelo consumo gravado (juiz incluído); para antes de uma criação que passaria do
-# teto. `ROTEIRO_EVAL_SAIDA=<arquivo>` grava o relatório; `ROTEIRO_EVAL_TIPO=<tipo>` roda só um tipo.
+# teto (`ROTEIRO_EVAL_TETO` muda). `ROTEIRO_EVAL_SAIDA=<arquivo>` grava o relatório, mesmo se a rodada parar no meio;
+# `ROTEIRO_EVAL_TIPO=<tipo>` roda só um tipo; `ROTEIRO_EVAL_VARIANTE=roteiro|geral`, só uma variante.
 module AvaliacaoDoRoteiro
   JUIZ = 'gpt-5.4'.freeze
-  TETO_USD = 2.0
+  TETO_USD = ENV.fetch('ROTEIRO_EVAL_TETO', '2.0').to_f
   CUSTO_INICIAL_POR_CRIACAO = 0.2
-  VARIANTES = %i[roteiro geral].freeze
+  VARIANTES = (ENV['ROTEIRO_EVAL_VARIANTE'].present? ? [ENV['ROTEIRO_EVAL_VARIANTE'].to_sym] & %i[roteiro geral] : %i[roteiro geral]).freeze
   PEDIDO = 'Quero um agente para atender os clientes do Grupo Vale no WhatsApp, de segunda a sexta, das 9h às 18h. ' \
            'Ele responde as dúvidas e passa para a equipe o que não souber.'.freeze
   FECHAR = 'Pode fechar assim, sem material por enquanto.'.freeze
@@ -52,7 +53,8 @@ module AvaliacaoDoRoteiro
                                                                  'renovação; em saúde: inclusão de dependente, rede, ' \
                                                                  'reembolso)?' },
         usa_jargao: { type: 'boolean', description: 'Usa sigla ou termo em inglês de vendas ou suporte (BANT, SLA, ' \
-                                                    'follow-up, handoff, FAQ, lead, ticket...)?' },
+                                                    'follow-up, handoff, FAQ, lead, ticket, playbook...)? A regra de ' \
+                                                    'segurança de não revelar o prompt ou as instruções NÃO conta.' },
         promete_contato_futuro: { type: 'boolean', description: 'Manda o agente prometer que vai avisar, ligar, ' \
                                                                 'retornar ou chamar de novo depois?' },
         papel_errado: { type: 'boolean', description: 'Põe a empresa num papel que não é dela pelo tipo (ex.: corretora ' \
@@ -141,9 +143,10 @@ RSpec.describe AvaliacaoDoRoteiro do
     def vinculo(agente)
       inbox = create(:channel_whatsapp, account: agente.account, provider: 'whatsapp_cloud', sync_templates: false,
                                         validate_provider_config: false).inbox
-      agente.update!(status: :active, enabled: true)
-      Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: agente.account,
-                                            agent_bot: create(:agent_bot, account: agente.account))
+      agent_inbox = Autonomia::Agents::AgentInbox.create!(agent: agente, inbox: inbox, account: agente.account,
+                                                          agent_bot: create(:agent_bot, account: agente.account))
+      agente.reload.update!(status: :active, enabled: true)
+      agent_inbox
     end
 
     def responder(agent_inbox, mensagem)
@@ -172,7 +175,8 @@ RSpec.describe AvaliacaoDoRoteiro do
     end
 
     def julgar_resposta(conta, tipo, mensagem, resposta)
-      julgar(conta, "Tipo da empresa: #{AvaliacaoDoRoteiro::TIPOS_DO_JUIZ.fetch(tipo)}\n\nMensagem do cliente: #{mensagem}" \
+      julgar(conta, "Tipo da empresa: #{AvaliacaoDoRoteiro::TIPOS_DO_JUIZ.fetch(tipo)}\n\nO que o dono contou ao criar o " \
+                    "agente (vale como fato): #{AvaliacaoDoRoteiro::PEDIDO}\n\nMensagem do cliente: #{mensagem}" \
                     "\n\nResposta do agente: #{resposta}", AvaliacaoDoRoteiro::VEREDITO_DA_RESPOSTA)
     end
 
@@ -229,15 +233,18 @@ RSpec.describe AvaliacaoDoRoteiro do
       memoria_do_crm(Crm::Memoria::Leitor::Leitura.vazia)
 
       # Intercalado (tipo × variante): se o teto cortar, as duas variantes ficam com a mesma cobertura.
-      tipos_escolhidos.product(AvaliacaoDoRoteiro::VARIANTES).each do |tipo, variante|
-        break unless cabe_mais_uma?
+      begin
+        tipos_escolhidos.product(AvaliacaoDoRoteiro::VARIANTES).each do |tipo, variante|
+          break unless cabe_mais_uma?
 
-        relatorio << rodar(tipo, variante)
+          relatorio << rodar(tipo, variante)
+        end
+      ensure
+        destino = ENV.fetch('ROTEIRO_EVAL_SAIDA', nil)
+        File.write(destino, JSON.pretty_generate(placar: placar, custo_usd: custo_ate_agora.round(4), execucoes: relatorio)) if destino.present?
       end
 
       total = tipos_escolhidos.size * AvaliacaoDoRoteiro::VARIANTES.size
-      destino = ENV.fetch('ROTEIRO_EVAL_SAIDA', nil)
-      File.write(destino, JSON.pretty_generate(placar: placar, custo_usd: custo_ate_agora.round(4), execucoes: relatorio)) if destino.present?
       expect(relatorio.size).to eq(total), "teto de custo atingido: #{relatorio.size} de #{total} criações"
     end
   end
