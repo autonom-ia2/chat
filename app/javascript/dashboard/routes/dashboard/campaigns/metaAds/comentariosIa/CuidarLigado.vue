@@ -39,6 +39,8 @@ const handle = item =>
 // próprio, com "Ler e mandar": quem disse "Agora não" depois de ligar ainda pode voltar atrás. O que a IA já leu depois
 // de ligar e não era o caso (`skipped`) fica em "Esperando você": não é antigo nem volta para a fila.
 const BEFORE_KINDS = ['waiting', 'older'];
+// Pedem atenção do dono: a reclamação e o privado que pode ter saído (conferir no direct antes de responder).
+const ALERT_KINDS = ['complaint', 'unsure'];
 const toSee = computed(() => props.data.to_see || []);
 const hidden = computed(() =>
   (props.data.hidden || []).map(item => ({ ...item, kind: 'hidden' }))
@@ -218,7 +220,9 @@ const startedText = computed(() => {
           <p
             class="m-0 text-sm"
             :class="
-              item.kind === 'complaint' ? 'text-n-amber-11' : 'text-n-slate-11'
+              ALERT_KINDS.includes(item.kind)
+                ? 'text-n-amber-11'
+                : 'text-n-slate-11'
             "
           >
             {{ $t(`${KEY}.KIND.${item.kind}`) }}
