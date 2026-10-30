@@ -216,8 +216,10 @@ onMounted(loadPages);
           <span class="text-sm text-n-slate-11">
             {{ $t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_EMPTY') }}
           </span>
+          <!-- Secundário: o principal do passo é "Salvar e continuar" (uma ação principal por tela, #2338). -->
           <Button
             data-site-link-open
+            variant="outline"
             class="!min-h-11 !rounded-xl"
             icon="i-lucide-link"
             :label="$t('CRM_KANBAN.META_ADS_HUB.DESTINATIONS.SITE_CREATE')"
