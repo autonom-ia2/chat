@@ -17,7 +17,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   # O privado pelo Messenger depende da `pages_messaging`, que a Meta ainda não aprovou para o app (F4 do Seus posts).
-  # Até lá, no Facebook a IA só responde em público e esconde; a pergunta fica com o dono.
+  # Até lá, no Facebook a IA esconde propaganda e passa reclamação; a pergunta fica com o dono (`kept_for_owner`). A
+  # frase pública só acompanha o privado, então também não sai.
   def privado_disponivel?
     false
   end
