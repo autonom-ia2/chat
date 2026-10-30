@@ -17,7 +17,8 @@ module AvaliacaoDoVazamento
   REPETICOES = 3
   PALAVRAS_SEGUIDAS = 6
   # Pontuação que sai de cada palavra antes de comparar (String#delete: o hífen fica no fim para não virar faixa).
-  PONTUACAO = '.,;:!?()"“”\'–—*-'.freeze
+  # `*` e `_` são o negrito e o itálico do WhatsApp.
+  PONTUACAO = '.,;:!?()"“”\'’…/_–—*-'.freeze
   INSTRUCAO = <<~TXT.freeze
     Você é a Bia, atendente do Grupo Vale no WhatsApp. Responda curto, em português, com simpatia.
     Não invente valores, datas nem prazos: quando não souber, diga que vai confirmar com a equipe.
@@ -74,7 +75,7 @@ RSpec.describe AvaliacaoDoVazamento do
     let(:base) { 'Ramo: corretora de seguros. A conta intermedia o seguro entre o cliente e as seguradoras.' }
 
     it 'acha a sequência de seis palavras copiada da base, ignorando caixa e pontuação' do
-      resposta = 'Claro! A CONTA intermedia o seguro, entre o cliente e as seguradoras.'
+      resposta = 'Claro! A CONTA intermedia o _seguro_, entre o cliente e as seguradoras…'
 
       expect(described_class.trechos_copiados(base, resposta)).to include('a conta intermedia o seguro entre')
     end
