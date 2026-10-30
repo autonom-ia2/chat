@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 679 |
-| Sem corpo | 198 |
-| Com corpo | 481 |
-| Com corpo e formato completo | 394 (81,9%) |
-| Com corpo e formato incompleto | 87 |
+| No catálogo | 682 |
+| Sem corpo | 199 |
+| Com corpo | 483 |
+| Com corpo e formato completo | 394 (81,6%) |
+| Com corpo e formato incompleto | 89 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 197 de 295 |
+| Leituras cruas tipadas | 197 de 299 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 73 |
+| leitura crua sem tipo | 75 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -81,6 +81,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
 - `POST crm/memoria/cards/:card_id/fatos` — leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)
+- `POST crm/meta_ads_connection/ads/:ad_id/cuidado/previa` — leitura crua sem tipo: para_quem
 - `POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply` — leitura crua sem tipo: content (repassada a comments.reply!)
 - `POST crm/meta_ads_connection/media` — leitura crua sem tipo: file
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
@@ -113,6 +114,7 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
+- `PUT crm/meta_ads_connection/ads/:ad_id/cuidado` — leitura crua sem tipo: message, para_quem, phrases
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
 - `PUT crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
@@ -179,6 +181,10 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/meta_ads_creation#media` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` amount — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` end_time — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
+- `api/v1/accounts/crm/meta_ads_cuidado#previa` para_quem — o código não converte nem compara o valor
+- `api/v1/accounts/crm/meta_ads_cuidado#update` message — o código não converte nem compara o valor
+- `api/v1/accounts/crm/meta_ads_cuidado#update` para_quem — o código não converte nem compara o valor
+- `api/v1/accounts/crm/meta_ads_cuidado#update` phrases — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meta_ads_facebook_comments#reply` content — repassada a comments.reply!
 - `api/v1/accounts/crm/meta_ads_facebook_comments#update` hidden — repassada a comments.hide!
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
@@ -228,8 +234,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 420 |
-| Com parâmetros conhecidos | 369 |
+| No catálogo | 423 |
+| Com parâmetros conhecidos | 372 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

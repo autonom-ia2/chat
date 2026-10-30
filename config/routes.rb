@@ -461,6 +461,13 @@ Rails.application.routes.draw do
               post 'ads/:ad_id/facebook_comments/:comment_id/reply', to: 'meta_ads_facebook_comments#reply'
               patch 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#update'
               delete 'ads/:ad_id/facebook_comments/:comment_id', to: 'meta_ads_facebook_comments#destroy'
+              # IA cuida dos comentários do anúncio (#2212, B2): o mesmo cuidado do post do Seus posts.
+              get :cuidados, to: 'meta_ads_cuidado#cuidados'
+              get 'ads/:ad_id/cuidado', to: 'meta_ads_cuidado#show'
+              put 'ads/:ad_id/cuidado', to: 'meta_ads_cuidado#update'
+              post 'ads/:ad_id/cuidado/previa', to: 'meta_ads_cuidado#previa'
+              post 'ads/:ad_id/cuidado/ler_antigos', to: 'meta_ads_cuidado#ler_antigos'
+              get 'ads/:ad_id/resumo', to: 'meta_ads_cuidado#resumo'
             end
             # Formulários dos anúncios (#2195): Páginas, formulários e para onde vai quem preenche.
             get 'meta_ads_lead_forms', to: 'meta_ads_lead_forms#index'
