@@ -55,6 +55,24 @@ describe('PanelTest', () => {
     wrapper.unmount();
   });
 
+  // Tema 6 (#1428): sem o portão, a IA que falhou volta 200 com `error` e sem texto.
+  it.each([
+    [{ reply: null, error: 'ai_unavailable', handoff: { should: false } }],
+    [{ reply: '', handoff: { should: false } }],
+  ])(
+    'shows the error, not an empty bubble, when the answer has no text (%o)',
+    async dados => {
+      store.dispatch.mockResolvedValueOnce(dados);
+      const wrapper = montar();
+
+      await enviar(wrapper);
+
+      expect(alerta).toHaveBeenCalledWith('AGENTS.TEST.ERROR');
+      expect(wrapper.findAllComponents(ChatBubble)).toHaveLength(1);
+      wrapper.unmount();
+    }
+  );
+
   it('keeps the generic error for any other failure', async () => {
     store.dispatch.mockRejectedValueOnce(
       Object.assign(new Error('500'), { response: { status: 500 } })

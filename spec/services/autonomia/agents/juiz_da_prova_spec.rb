@@ -115,6 +115,14 @@ RSpec.describe Autonomia::Agents::JuizDaProva do
     expect(instrucao).not_to include('aparece em qualquer resposta que o agente escreve com as proprias palavras', 'escola')
   end
 
+  # Tema 6: a prova roda como o atendimento; a mensagem fixa saiu, e a resposta vazia (só passagem) não testa forma.
+  it 'a instrução tira de testes a forma na resposta vazia e não fala mais da mensagem fixa' do
+    instrucao = described_class::INSTRUCAO.squish
+    expect(instrucao).to include('Resposta vazia (o agente so passaria para a equipe, sem escrever nada) nao mostra forma ' \
+                                 'nenhuma: nela, a mudanca de forma nao entra em testes.')
+    expect(instrucao).not_to include('mensagem fixa')
+  end
+
   # Revisão do t6d (MÉDIO 1): assunto ou gatilho só entra em testes quando a mensagem traz o assunto.
   it 'a instrução separa forma de assunto ou gatilho (só quando a mensagem traz o assunto)' do
     expect(described_class::INSTRUCAO.squish).to include(

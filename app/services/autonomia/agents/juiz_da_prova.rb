@@ -53,7 +53,8 @@ class Autonomia::Agents::JuizDaProva
     cliente por senhora; "Temos no tamanho M." nao mostra nem uma forma nem a outra, entao o pedido fica fora de
     testes; "Temos sim, senhora, no tamanho M." mostra a forma pedida). Tamanho sempre aparece em qualquer resposta
     que o agente escreve: e sempre ok ou nao. Emoji tambem sempre aparece: resposta sem emoji e ok para "sem emoji", e
-    resposta com emoji e nao.
+    resposta com emoji e nao. Resposta vazia (o agente so passaria para a equipe, sem escrever nada) nao mostra forma
+    nenhuma: nela, a mudanca de forma nao entra em testes.
     Um pedido de assunto ou de gatilho (ex.: "preco passa para a equipe") so entra em testes quando a mensagem do
     cliente traz esse assunto: uma resposta curta sobre horario nao testa o pedido do preco. Um pedido de gatilho por
     situacao (ex.: "quando nao souber, passe para a equipe") entra em testes quando a mensagem cria essa situacao: o

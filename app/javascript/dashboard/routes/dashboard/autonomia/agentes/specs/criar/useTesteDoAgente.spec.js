@@ -229,6 +229,14 @@ describe('useTesteDoAgente', () => {
     expect(teste.digitando.value).toBe(false);
   });
 
+  it('shows the failure state when the agent comes back with no text and no handoff', async () => {
+    responde({ reply: '', handoff: { should: false } });
+    const { teste } = montar();
+    await teste.enviar('Oi');
+    expect(teste.aviso.value).toEqual({ tipo: 'falha', pergunta: 'Oi' });
+    expect(teste.respondidas.value).toBe(0);
+  });
+
   it('says offline when the browser has no internet, whatever the error', async () => {
     vi.stubGlobal('navigator', { onLine: false });
     store.dispatch.mockRejectedValue(http(500));

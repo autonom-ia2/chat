@@ -145,6 +145,15 @@ const sleep = ms =>
 // LAST bubble (`meta: true`); intermediate chunks are plain bubbles. Without
 // chunks (handoff / humanize off) it falls back to a single bubble.
 const pushAssistantTurn = async (data, requestId) => {
+  // Tema 6 (#1428): o Testar roda como o atendimento, sem a mensagem fixa no lugar da falha. Sem texto e sem passagem
+  // (a IA falhou ou voltou vazia), é o aviso de erro, nunca um balão vazio.
+  const temTexto =
+    Boolean(data?.reply) ||
+    (data?.humanized && data.chunks?.some(chunk => chunk?.text));
+  if (!temTexto && data?.handoff?.should !== true) {
+    if (requestId === requestSequence) useAlert(t('AGENTS.TEST.ERROR'));
+    return;
+  }
   const meta = {
     confidence: data.confidence,
     handoff: data.handoff,

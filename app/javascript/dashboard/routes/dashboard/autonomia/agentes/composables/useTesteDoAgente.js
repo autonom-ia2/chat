@@ -140,9 +140,9 @@ export function useTesteDoAgente(
 
   const tocar = async (dados, minha, pergunta) => {
     const partes = partesDaResposta(dados);
-    // Tema 6 (#1428): o Testar roda como o atendimento, sem a mensagem fixa no lugar da falha. A IA que não respondeu
-    // volta com `error` e sem texto: é o aviso de falha (com "Tentar de novo"), nunca um balão vazio.
-    if (dados?.error && !partes.length) {
+    // Tema 6 (#1428): o Testar roda como o atendimento, sem a mensagem fixa no lugar da falha. Sem texto e sem passagem
+    // (a IA falhou, com `error`, ou voltou vazia): é o aviso de falha (com "Tentar de novo"), nunca um balão vazio.
+    if (!partes.length && dados?.handoff?.should !== true) {
       aviso.value = { tipo: AVISO_TESTE.FALHA, pergunta };
       return;
     }

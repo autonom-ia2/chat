@@ -152,7 +152,7 @@ Nenhum artigo foi redigido — apenas o mapa. Fonte de dados: `docs/central-de-a
 - **11.07** — O painel do agente: abas e estados. Circular pelas abas do agente, entender Rascunho/Ativo/Pausado e testar sem risco.
 - **11.08** — Aba Conhecimento e aba Canais. Manter a base do agente viva depois de publicado, e conectar/desconectar caixas de entrada.
 - **11.09** — Aba Desempenho e configurações rápidas. Ler as métricas de 7/30 dias e mudar imagem, atuação, mensagens e tom sem refazer o agente.
-- **11.10** — Quando o agente chama um humano e como ajustar a instrução. Configurar a transferência e o limite de confiança, e escolher entre ajustar com IA ou escrever a instrução.
+- **11.10** — Quando o agente chama um humano e como ajustar a instrução. Dizer quando o agente chama a equipe, e escolher entre ajustar com IA ou escrever a instrução.
 - **11.11** — Pausar, reativar, apagar e usar como copiloto. Tirar o agente do ar, colocá-lo de volta, removê-lo em definitivo, ou usar o interno como copiloto na conversa.
 - **11.12** — Robôs (integração por webhook): o terceiro 'agente' da plataforma. Reconhecer os Robôs, ligados em todas as contas, e não confundir com as pessoas do time nem com os agentes de IA.
 
