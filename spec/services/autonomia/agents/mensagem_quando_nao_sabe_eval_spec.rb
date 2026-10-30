@@ -126,6 +126,7 @@ RSpec.describe 'Avaliação paga da mensagem de quando não souber (#2381)', :ev
   end
 
   def rodar(flag:, casos:)
+    conta.enable_features!(Autonomia::Agents::AgenteSoInforma::FLAG)
     flag ? conta.enable_features!(AvaliacaoDaMensagemDoDono::FLAG) : conta.disable_features!(AvaliacaoDaMensagemDoDono::FLAG)
     AvaliacaoDaMensagemDoDono::DONOS.flat_map do |nome, dono|
       agent = agente(dono)
