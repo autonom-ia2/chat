@@ -59,6 +59,7 @@ describe('PanelTest', () => {
   it.each([
     [{ reply: null, error: 'ai_unavailable', handoff: { should: false } }],
     [{ reply: '', handoff: { should: false } }],
+    [{ reply: null, error: 'ai_unavailable', handoff: { should: true } }],
   ])(
     'shows the error, not an empty bubble, when the answer has no text (%o)',
     async dados => {

@@ -237,6 +237,29 @@ describe('useTesteDoAgente', () => {
     expect(teste.respondidas.value).toBe(0);
   });
 
+  it('a handoff with no text shows only the handoff note: no bubble, no failure, counted as answered', async () => {
+    responde({ reply: '', handoff: { should: true } });
+    const { teste } = montar();
+    await teste.enviar('Quero falar com uma pessoa');
+    expect(teste.mensagens.value.filter(m => m.de === 'agente')).toEqual([]);
+    expect(teste.ultima.value.passaria).toBe(true);
+    expect(teste.respondidas.value).toBe(1);
+    expect(teste.aviso.value).toBeNull();
+  });
+
+  // A Lia segue no portão: a IA fora do ar volta com passagem, `error` e sem texto. A falha ganha.
+  it('an error with no text is a failure even when it comes with a handoff', async () => {
+    responde({
+      reply: null,
+      error: 'ai_unavailable',
+      handoff: { should: true },
+    });
+    const { teste } = montar();
+    await teste.enviar('Oi');
+    expect(teste.aviso.value).toEqual({ tipo: 'falha', pergunta: 'Oi' });
+    expect(teste.respondidas.value).toBe(0);
+  });
+
   it('says offline when the browser has no internet, whatever the error', async () => {
     vi.stubGlobal('navigator', { onLine: false });
     store.dispatch.mockRejectedValue(http(500));

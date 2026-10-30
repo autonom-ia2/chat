@@ -150,7 +150,7 @@ const pushAssistantTurn = async (data, requestId) => {
   const temTexto =
     Boolean(data?.reply) ||
     (data?.humanized && data.chunks?.some(chunk => chunk?.text));
-  if (!temTexto && data?.handoff?.should !== true) {
+  if (!temTexto && (data?.error || data?.handoff?.should !== true)) {
     if (requestId === requestSequence) useAlert(t('AGENTS.TEST.ERROR'));
     return;
   }
