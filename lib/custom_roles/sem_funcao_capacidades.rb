@@ -103,6 +103,9 @@ module CustomRoles::SemFuncaoCapacidades
   # As chaves que o "Sem função" tem nesta conta, com as flags dela (#2317): deixar alguém sem função entrega essas chaves,
   # e quem não é administrador precisa alcançá-las (CustomRoles::GrantGuard#no_role!). Os extras ficam de fora, como em
   # semFuncao.js: a chave de um extra abre mais do que o sem função tem (meta_ads_view abre a página de Anúncios).
+  # A resposta é por capacidade, não por chave: uma pergunta com OU (planilha_de_clientes: contatos ou vendas) daria as
+  # duas chaves se passasse. Hoje ela não passa com a flag nem sem ela, e o spec "não pode" segura isso; se mudar,
+  # a capacidade precisa ser dividida por chave antes, no contrato, no JSON e na tela.
   def chaves(account)
     ligadas = FLAGS.select { |flag| account.feature_enabled?(flag) }
     CAPACIDADES.select { |capacidade| capacidade[:pergunta].call(contexto(ligadas, nil)) }

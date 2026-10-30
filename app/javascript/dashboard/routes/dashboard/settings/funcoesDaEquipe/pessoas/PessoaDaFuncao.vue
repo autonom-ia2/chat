@@ -31,15 +31,19 @@ const { t } = useI18n();
 const mudou = computed(() => props.destino !== undefined);
 const ficaSem = computed(() => props.destino === null);
 const livre = computed(() => !props.trava && !props.somenteLeitura);
-const tirarTravado = computed(
-  () =>
-    livre.value && props.semFuncaoTravado && props.modo === 'ja' && !mudou.value
+// "Sem função" fora do alcance (#2317): o "Tirar" fica travado e, se a saída já estava pendente (o alcance caiu
+// depois), a linha mostra o mesmo motivo; o "Desfazer" continua livre e o salvar não manda o pedido.
+const semFuncaoPresa = computed(
+  () => livre.value && props.semFuncaoTravado && props.modo === 'ja'
 );
+const tirarTravado = computed(() => semFuncaoPresa.value && !mudou.value);
+const saidaPresa = computed(() => semFuncaoPresa.value && ficaSem.value);
 const idDoEstado = useId();
 
 const estado = computed(() => {
   if (props.trava) return t(`FUNCOES_EQUIPE.PESSOA.TRAVA.${props.trava}`);
-  if (tirarTravado.value) return t('FUNCOES_EQUIPE.PESSOA.SO_ADMIN_TIRA');
+  if (tirarTravado.value || saidaPresa.value)
+    return t('FUNCOES_EQUIPE.PESSOA.SO_ADMIN_TIRA');
   if (ficaSem.value) return t('FUNCOES_EQUIPE.PESSOA.VAI_FICAR_SEM');
   const nova = props.nomeDoDestino;
   if (mudou.value && props.modo === 'sem')
@@ -58,7 +62,7 @@ const ICONE = {
   mudou: 'i-lucide-repeat text-n-amber-11',
 };
 const icone = computed(() => {
-  if (props.trava || tirarTravado.value) return ICONE.trava;
+  if (props.trava || tirarTravado.value || saidaPresa.value) return ICONE.trava;
   if (ficaSem.value) return ICONE.ficaSem;
   return mudou.value ? ICONE.mudou : '';
 });

@@ -23,18 +23,23 @@ vi.mock('dashboard/store/utils/api', async importOriginal => ({
 // #2317: a Carla não alcança as chaves do "Sem função" (sales_value_view é de delegação), então "Tirar desta função"
 // fica travado para ela. Os testes do salvar usam o tirar só para deixar uma mudança pendente: neles, o alcance do
 // "Sem função" fica liberado. O bloco do #2317 liga a régua de verdade (`alcance.real`).
-const alcance = vi.hoisted(() => ({ real: false }));
+const alcance = vi.hoisted(() => ({ real: false, estaLigada: null }));
 vi.mock('../semFuncao', async importOriginal => {
   const original = await importOriginal();
   return {
     ...original,
-    alcancaSemFuncao: (...args) =>
-      !alcance.real || original.alcancaSemFuncao(...args),
+    alcancaSemFuncao: (giver, estaLigada, ...resto) => {
+      alcance.estaLigada = estaLigada;
+      return (
+        !alcance.real || original.alcancaSemFuncao(giver, estaLigada, ...resto)
+      );
+    },
   };
 });
 
-// O corpo de verdade do 401 do agents/update: o GrantGuard::Denied cai no handler genérico
-// (request_exception_handler.rb), sem código; a store põe a frase em `code`.
+// O corpo de verdade do 401 do agents/update quando a recusa não é do GrantGuard (administrador, o próprio acesso, quem
+// perdeu Pessoas): cai no handler genérico (request_exception_handler.rb), sem código; a store põe a frase em `code`.
+// A recusa do GrantGuard leva o código (out_of_reach), como no /custom_roles (#2317).
 const CORPO_DO_401 = 'You are not authorized to do this action';
 
 const ATENDENTE = { id: 1, name: 'Atendente', permissions: PRESETS.AGENT() };
@@ -793,6 +798,76 @@ describe('GavetaDaFuncao: tirar da função segue a régua de dar uma função (
     expect(linha(wrapper, 23).find('[data-estado]').text()).toBe(
       'Hoje é Atendente. Vai passar a ser Vendedor.'
     );
+  });
+
+  const CARLA_ACIMA = {
+    ...CARLA,
+    permissions: [...CARLA.permissions, 'grant_above_own'],
+  };
+  const FORA_GABRIEL =
+    'Não deu para mudar a função de Gabriel Souza: está fora do que você pode dar.';
+
+  it('o servidor recusa a saída com out_of_reach: a linha fica pendente e a gaveta diz por quê', async () => {
+    const atualizar = vi.fn(() =>
+      Promise.reject(
+        Object.assign(new Error('Request failed'), {
+          status: 401,
+          code: 'out_of_reach',
+        })
+      )
+    );
+    const { wrapper } = montar({ giver: CARLA_ACIMA, atualizar });
+
+    await linha(wrapper, 21).find('[data-acao="TIRAR"]').trigger('click');
+    await salvar(wrapper);
+
+    expect(atualizar).toHaveBeenCalledTimes(1);
+    expect(aviso(wrapper)).toBe(FORA_GABRIEL);
+    expect(linha(wrapper, 21).find('[data-estado]').text()).toBe(
+      'Vai ficar sem função'
+    );
+    expect(linha(wrapper, 21).find('[data-acao]').attributes('data-acao')).toBe(
+      'DESFAZER'
+    );
+  });
+
+  it('o alcance cai com a saída pendente: a linha mostra a trava, o Desfazer fica livre e o salvar nem manda', async () => {
+    const atualizar = vi.fn();
+    const { wrapper } = montar({ giver: CARLA_ACIMA, atualizar });
+
+    await linha(wrapper, 21).find('[data-acao="TIRAR"]').trigger('click');
+    wrapper.vm.$store.commit('SET_CURRENT_USER', {
+      id: CARLA.userId,
+      accounts: [{ id: 1, permissions: CARLA.permissions }],
+    });
+    await flushPromises();
+
+    const gabriel = linha(wrapper, 21);
+    expect(gabriel.find('[data-estado]').text()).toBe(
+      'Só o administrador tira esta pessoa da função'
+    );
+    expect(gabriel.find('.i-lucide-lock').exists()).toBe(true);
+    const desfazer = gabriel.find('[data-acao="DESFAZER"]');
+    expect(desfazer.attributes('disabled')).toBeUndefined();
+
+    await salvar(wrapper);
+    expect(atualizar).not.toHaveBeenCalled();
+    expect(aviso(wrapper)).toBe(FORA_GABRIEL);
+    expect(
+      linha(wrapper, 21).find('[data-acao="TIRAR"]').attributes('disabled')
+    ).toBeDefined();
+  });
+
+  it('lê crm_numeros_lentes da conta para o alcance do "Sem função"', () => {
+    const { wrapper } = montar({ flags: ['crm_numeros_lentes'] });
+
+    expect(alcance.estaLigada('crm_numeros_lentes')).toBe(true);
+    expect(linha(wrapper, 21).find('[data-estado]').text()).toBe(
+      'Só o administrador tira esta pessoa da função'
+    );
+
+    montar();
+    expect(alcance.estaLigada('crm_numeros_lentes')).toBe(false);
   });
 
   it('com grant_above_own, tira sem trava', async () => {

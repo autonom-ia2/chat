@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import { useTextos } from '../guiada/useTextos';
+import { useSemFuncao } from '../useSemFuncao';
 import { explicar401ComQuemMonta } from '../salvarFuncao';
 
 // O "Salvar" da gaveta de pessoas (#2308, especificação 5.D). Manda só custom_role_id (null para sem função): reenviar
@@ -23,7 +24,7 @@ import { explicar401ComQuemMonta } from '../salvarFuncao';
 // | a pessoa saiu da lista visível (já tem função)     | SAIU_DA_LISTA                             | não       |
 // | 401 com Pessoas, sem trava (ou com código)         | FORA_DO_ALCANCE (recarrega as funções)    | fica      |
 // | 401 e o destino escolhido saiu do alcance          | FORA_DO_ALCANCE (recarrega as funções)    | não       |
-// | destino já fora do alcance antes do pedido         | FORA_DO_ALCANCE, sem mandar o pedido      | não       |
+// | destino (ou "Sem função") já fora do alcance antes | FORA_DO_ALCANCE, sem mandar o pedido      | não       |
 // | 4xx e a função escolhida sumiu                     | FUNCAO_SUMIU (recarrega as funções)       | não       |
 // | 4xx com pessoa e função ainda lá                   | NAO_MUDOU (recarrega as funções)          | fica      |
 // | 429 (muitos pedidos seguidos)                      | ERRO_PARCIAL + ESPERE                     | fica      |
@@ -61,15 +62,18 @@ export function useSalvarGaveta(
   const agentes = useMapGetter('agents/getAgents');
   const funcoes = useMapGetter('customRole/getCustomRoles');
   const { canManagePeople, reachesRole } = usePeopleAccess();
+  const { semFuncaoTravado } = useSemFuncao();
   const salvando = ref(false);
   const aviso = ref(SEM_AVISO);
 
   const agenteDe = id => agentes.value.find(item => item.id === id);
   const funcaoDe = id => agenteDe(id)?.custom_role_id ?? null;
   const acharFuncao = id => funcoes.value.find(funcao => funcao.id === id);
-  // Sem função sempre se dá; uma função fora da lista, o servidor decide.
+  // Sem função segue a régua de dar uma função (#2317): só com as chaves do "Sem função" ao alcance. Uma função fora
+  // da lista, o servidor decide.
   const alcanca = ([, destino]) => {
-    const funcao = destino === null ? null : acharFuncao(destino);
+    if (destino === null) return !semFuncaoTravado.value;
+    const funcao = acharFuncao(destino);
     return !funcao || reachesRole(funcao);
   };
 
