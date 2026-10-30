@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { intlLocale } from '../metaAdsHelpers';
-import { porRede } from './redes';
+import { linhaDoResultado } from './redes';
 
 // Comentários que viram cliente (#2212): a faixa no topo de "Seus posts", "Cuidando dos comentários de 3 posts". Abre
 // a lista desses posts (cada um leva à tela dele) e tem "Pausar todos", com um toque, como o "Pausar" de cada post.
@@ -16,7 +16,7 @@ const props = defineProps({
 
 const emit = defineEmits(['open', 'pause-all', 'resume-all']);
 
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 const KEY = 'META_ADS_COMMENTS_AI';
 const open = ref(false);
 
@@ -141,10 +141,7 @@ const format = value =>
             >
               {{
                 post.status === 'on'
-                  ? $t(porRede(`${KEY}.BAND.RESULT`, post.network), {
-                      sent: format(post.results.sent),
-                      replied: format(post.results.replied),
-                    })
+                  ? linhaDoResultado(t, post.network, post.results, format)
                   : $t(`${KEY}.BADGE_PAUSED`)
               }}
             </span>

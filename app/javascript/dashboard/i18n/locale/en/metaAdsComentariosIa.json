@@ -9,10 +9,7 @@
       "HIDE": "Close list",
       "PAUSE_ALL": "Pause all",
       "RESUME_ALL": "Resume all",
-      "RESULT": "{sent} got a DM · {replied} replied",
       "LIST_LABEL": "Posts I take care of",
-      "RESULT_FACEBOOK": "{sent} got a Messenger message · {replied} replied",
-      "RESULT_BOTH": "{sent} got a message · {replied} replied",
       "ERROR": "Couldn't change it now. Try again."
     },
     "SCREEN": {
