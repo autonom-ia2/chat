@@ -2874,6 +2874,17 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
     t.index ["post_ids"], name: "index_crm_meta_ads_comment_cares_on_post_ids", using: :gin
   end
 
+  create_table "crm_meta_ads_comment_people", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "network", null: false
+    t.string "post_id", null: false
+    t.string "from_id", null: false
+    t.string "comment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "network", "post_id", "from_id"], name: "idx_crm_meta_ads_comment_people_once", unique: true
+  end
+
   create_table "crm_meta_ads_connections", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.text "access_token"
@@ -4774,6 +4785,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
   add_foreign_key "crm_meta_ads_comment_cares", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_comment_cares", "inboxes", on_delete: :cascade
   add_foreign_key "crm_meta_ads_comment_cares", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_comment_people", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_created_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_lead_forms", "accounts", on_delete: :cascade

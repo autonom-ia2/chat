@@ -49,15 +49,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
     end
   end
 
-  describe '.ja_mandou?' do
-    it 'só vale para o privado já mandado à mesma pessoa no mesmo post, na mesma caixa' do
-      described_class.anotar!(conversa_do_privado, comentario, care, nova: true)
-      described_class.para_voce!(comentario(from_id: 'igsid-2', comment_id: 'c-2'), care, 'to_you')
+  it 'para_voce!: a Atribuição falhou, a conversa continua aberta na caixa e o erro vai ao rastreador' do
+    entrega = instance_double(Crm::Entrega)
+    allow(Crm::Entrega).to receive(:new).and_return(entrega)
+    allow(entrega).to receive(:call).and_raise(ActiveRecord::StatementInvalid)
+    rastreador = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
 
-      expect(described_class.ja_mandou?(comentario(comment_id: 'c-9'))).to be(true)
-      expect(described_class.ja_mandou?(comentario(post_id: '1791'))).to be(false)
-      expect(described_class.ja_mandou?(comentario(from_id: 'igsid-2'))).to be(false)
-    end
+    conversation = described_class.para_voce!(comentario, care, 'to_you')
+
+    expect(conversation).to be_persisted.and(have_attributes(status: 'open'))
+    expect(rastreador).to have_received(:capture_exception)
   end
 
   describe '.no_messenger!' do
@@ -118,6 +120,34 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
 
       expect(conversation).not_to be_urgent
       expect(conversation.messages.order(:id).last.content).to eq('Não consegui mandar a mensagem. Responda você, se quiser.')
+    end
+  end
+
+  describe '.passar_se_preciso!' do
+    let(:conversation) do
+      create(:conversation, account: account, inbox: inbox,
+                            additional_attributes: { 'meta_ads_comment' => { 'care_id' => care.id, 'private_reply' => true } })
+    end
+
+    it 'a pessoa respondeu: com o cuidado em "você ou sua equipe", vai à Atribuição' do
+      described_class.passar_se_preciso!(conversation)
+
+      expect(Crm::Entrega).to have_received(:new).with(conversation: conversation, motivo: 'comentario', origem: 'comentarios_ia')
+    end
+
+    it 'segurada pela Atribuição (ninguém online) ou com convite: não roda de novo a cada mensagem' do
+      allow(Crm::Entrega::Marca).to receive(:presente?).with(conversation).and_return(true)
+
+      described_class.passar_se_preciso!(conversation)
+
+      expect(Crm::Entrega).not_to have_received(:new)
+    end
+
+    it 'já tem alguém no nome, ou o cuidado é do agente: não passa' do
+      care.update!(handoff: 'agent')
+      described_class.passar_se_preciso!(conversation)
+
+      expect(Crm::Entrega).not_to have_received(:new)
     end
   end
 end
