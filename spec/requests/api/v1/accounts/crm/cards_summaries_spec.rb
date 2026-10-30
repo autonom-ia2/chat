@@ -21,9 +21,9 @@ RSpec.describe 'CRM resumo por etapa e por dono', type: :request do
                               value_cents: value_cents, primary_conversation: conversation)
   end
 
-  def groups(group_by)
-    get "/api/v1/accounts/#{account.id}/crm/cards/summaries", params: { group_by: group_by, pipeline_id: pipeline_and_stage.first.id },
-                                                              headers: auth_headers(admin)
+  def groups(group_by, params = {})
+    get "/api/v1/accounts/#{account.id}/crm/cards/summaries",
+        params: { group_by: group_by, pipeline_id: pipeline_and_stage.first.id }.merge(params), headers: auth_headers(admin)
     expect(response).to have_http_status(:ok)
     response.parsed_body.dig('payload', 'groups')
   end
@@ -39,5 +39,18 @@ RSpec.describe 'CRM resumo por etapa e por dono', type: :request do
 
     expect(groups('stage')).to contain_exactly(include('key' => stage.id, 'count' => 2, 'sum_cents' => 15_000))
     expect(groups('owner')).to contain_exactly(include('key' => admin.id, 'count' => 2, 'sum_cents' => 15_000))
+  end
+
+  # Sem índice único por inbox_id, a caixa pode ter dois robôs ativos: o filtro de responsável não repete o card.
+  it 'conta o card uma vez com o filtro de responsável quando a caixa tem dois robôs ativos' do
+    2.times { AgentBotInbox.create!(inbox: inbox, agent_bot: create(:agent_bot, account: account), status: :active) }
+    filter = { responsible_kind: 'agent' }
+
+    expect(groups('stage', filter)).to contain_exactly(include('key' => pipeline_and_stage.last.id, 'count' => 2, 'sum_cents' => 15_000))
+    get "/api/v1/accounts/#{account.id}/crm/cards", params: filter.merge(pipeline_id: pipeline_and_stage.first.id), headers: auth_headers(admin)
+    expect(response).to have_http_status(:ok)
+    ids = response.parsed_body['payload'].pluck('id')
+    expect(ids.size).to eq(2)
+    expect(ids.uniq.size).to eq(2)
   end
 end
