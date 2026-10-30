@@ -111,6 +111,21 @@ RSpec.describe Crm::MetaAdsCommentCare do
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '555_999', ad_id: nil)).to be_nil
     end
 
+    it 'o anúncio vence o post também quando chega só pelo post do criativo' do
+      anuncio.update!(post_ids: %w[179])
+
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: nil)).to eq(anuncio)
+    end
+
+    it 'vários anúncios com o mesmo post: vale o mais antigo, sempre' do
+      anuncio.update!(post_ids: %w[17900])
+      create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '121', post_ids: %w[17900])
+      # O UPDATE leva a linha do mais antigo para o fim da tabela: sem ordem, a leitura acharia o mais novo primeiro.
+      anuncio.update!(message: 'Oi! Mudei a mensagem.')
+
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '17900', ad_id: nil)).to eq(anuncio)
+    end
+
     it 'só vale na rede do cuidado; o anúncio das duas redes vale nas duas' do
       expect(described_class.cuidando(network: 'facebook', account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
 

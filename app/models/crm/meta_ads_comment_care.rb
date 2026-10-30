@@ -44,9 +44,10 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   scope :on, -> { where(status: 'on') }
 
   # O cuidado que vale para um comentário: o do anúncio, quando ele veio de um (pelo id do anúncio ou por um dos posts
-  # do criativo), senão o do post. Só o da rede do comentário (ou das duas).
+  # do criativo), senão o do post. Só o da rede do comentário (ou das duas). Vários anúncios com o mesmo post: vale o
+  # mais antigo (menor id), sempre o mesmo.
   def self.cuidando(account_id:, network:, post_id:, ad_id:)
-    escopo = on.where(account_id: account_id, network: [network.to_s, 'both'])
+    escopo = on.where(account_id: account_id, network: [network.to_s, 'both']).order(:id)
     do_anuncio(escopo, post_id, ad_id) || (post_id.present? && escopo.find_by(target_kind: 'post', target_id: post_id.to_s)) || nil
   end
 
