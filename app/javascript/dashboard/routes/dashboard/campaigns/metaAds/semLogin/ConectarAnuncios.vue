@@ -106,11 +106,17 @@ const broken = computed(() => props.resume?.state === 'broken');
 // Quem conecta a partir do WhatsApp mede o WhatsApp: conta sem destino nenhum (o servidor manda os dois falsos)
 // ganha o WhatsApp marcado; conta que já escolheu segue com a escolha.
 const WHATSAPP_ONLY = { whatsapp: true, site: false };
+const NONE = { whatsapp: false, site: false };
+// Gravar o WhatsApp antes falhou: o passo 3 mostra a conta como ela está (nada marcado) e pede a escolha.
+const preWriteFailed = ref(false);
 const chosenDestinations = computed(() => {
   const current = props.connection.destinations;
   return current?.whatsapp || current?.site ? current : null;
 });
-const destinations = computed(() => chosenDestinations.value || WHATSAPP_ONLY);
+const destinations = computed(() => {
+  if (chosenDestinations.value) return chosenDestinations.value;
+  return preWriteFailed.value ? NONE : WHATSAPP_ONLY;
+});
 // Depois de conectar, voltar sairia do passo a passo com a conta já ligada: o "Voltar" some.
 const canGoBack = computed(
   () => screen.value !== 'destino' && screen.value !== 'done'
@@ -278,13 +284,14 @@ const save = async ({ noSite = false } = {}) => {
     go('notyet');
     return;
   }
-  // Conta sem destino nenhum ganha o WhatsApp já aqui: quem sair no passo 3 fica como antes (#2054). Falhar não
-  // impede seguir; o passo 3 grava a escolha.
+  // Conta sem destino nenhum ganha o WhatsApp já aqui: quem sair no passo 3 fica como antes (#2054). Se falhar,
+  // o passo 3 abre sem nada marcado e só segue com uma escolha gravada.
   if (!chosenDestinations.value) {
     try {
       await CrmMetaAdsConnectionAPI.updateDestinations(WHATSAPP_ONLY);
+      preWriteFailed.value = false;
     } catch {
-      // O passo 3 grava de novo.
+      preWriteFailed.value = true;
     }
   }
   go('destino');

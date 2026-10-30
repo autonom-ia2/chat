@@ -460,6 +460,25 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     expect(CrmMetaAdsConnectionAPI.updateDestinations).not.toHaveBeenCalled();
   });
 
+  it('when saving WhatsApp beforehand fails, step 3 starts with nothing marked, as the account really is', async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    CrmMetaAdsConnectionAPI.updateDestinations.mockRejectedValue(new Error());
+    const wrapper = await mountConnect();
+
+    await wrapper.find('[data-conectar-facebook]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-conectar]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.attributes('data-screen')).toBe('destino');
+    expect(
+      wrapper
+        .findComponent({ name: 'MetaAdsDestinationsStep' })
+        .props('destinations')
+    ).toEqual({ whatsapp: false, site: false });
+  });
+
   it('sharing as partner also goes through step 3', async () => {
     accountsReply([ACCOUNT]);
     const wrapper = await mountConnect({
