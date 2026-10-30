@@ -124,7 +124,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Reviewer do
 
   # #1426 (t4e) — PDF grande: o Revisor lê também o índice por seção do material inteiro, não só a amostra.
   describe '#review_input_text with the summary by section' do
-    let(:account) { create(:account) }
+    let(:account) { conta_da_fase2 }
     let(:agent) { Autonomia::Agents::Agent.create!(account: account, name: 'Agente Teste', agent_type: 'support') }
 
     it 'lists the pages and the summary of every section' do

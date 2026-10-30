@@ -13,6 +13,8 @@ module Autonomia
           return if source.blank? || !active?(source, token)
 
           count = Ingestor.new(source: source, token: token).perform
+          # #1426 (t4e) — material grande: o índice por seção ainda na leitura, gravado pelo mark_ready! com o "pronto".
+          ResumoPorSecao.new(source: source, token: token).resumir!
           source.mark_ready!(token, chunk_count: count)
           revisar(source, token)
         rescue Ingestor::Superseded
@@ -35,12 +37,10 @@ module Autonomia
 
         private
 
-        # #1426 (t4e) — material grande: o índice por seção antes do parecer, que o lê. Best-effort, como o Revisor.
         # Revisor v2: avalia a fonte recém-ingerida (nota/confiança/resumo) e recomputa o MAPA DE
         # TEMAS + confiança geral. Guardados pelo mesmo token (anti-supersede) e best-effort: o
         # Reviewer faz rescue interno → nunca derruba a ingestão que já gravou o conhecimento.
         def revisar(source, token)
-          ResumoPorSecao.new(source: source, token: token).gravar!
           Reviewer.new(source: source, token: token).review_source!
           Reviewer.recompute_overall!(source.agent)
         end

@@ -49,7 +49,8 @@ module Autonomia
         private
 
         # #1426 (t4e) — PDF grande em seções (Source#secoes, posto pelo processador): cada seção é cortada à parte e os
-        # trechos levam as páginas dela. Sem seções, o texto inteiro vai ao Chunker, como antes.
+        # trechos levam as páginas dela (o `char_span` de cada trecho continua sendo o tamanho dele). Sem seções, o texto
+        # inteiro vai ao Chunker, como antes.
         def trechos(text)
           secoes = @source.respond_to?(:secoes) ? @source.secoes : nil
           return Chunker.new(text, source_type: @source.source_type).chunks_with_metadata if secoes.blank?

@@ -6,7 +6,8 @@ require 'rails_helper'
 # repositório). A leitura roda de ponta a ponta, como na produção: extração, seções, embeddings, resumo por seção,
 # classificação, parecer da Revisora e o contexto que o Construtor recebe.
 # Termo t4e: "num PDF de 300 páginas, o resumo cita temas que aparecem depois da página 200". Um juiz (outro modelo) lê
-# trechos de páginas depois da 200 e o contexto do Construtor, e diz se o contexto cita algum tema desses trechos.
+# trechos de páginas depois da 200 e o contexto do Construtor (resumo + índice por seção), e diz se o contexto cita algum
+# tema desses trechos sem contradizê-los. O resumo geral da Revisora é julgado à parte e só vai para o relatório.
 # Opcional: `MATERIAL_GRANDE_EVAL_SAIDA=<arquivo>` grava o relatório.
 module AvaliacaoDoMaterialGrande
   TETO_USD = 2.0
@@ -66,7 +67,7 @@ RSpec.describe 'Avaliação paga do material grande (#1426, t4e)', :eval_pago do
   def trechos_do_fim
     paginas = PDF::Reader.new(pdf).pages
     AvaliacaoDoMaterialGrande::PAGINAS_DO_JUIZ.map do |numero|
-      "PAGINA #{numero}:\n#{paginas[numero - 1].text.gsub(/\s+/, ' ').strip.first(AvaliacaoDoMaterialGrande::TRECHO_DO_JUIZ_CHARS)}"
+      "PAGINA #{numero}:\n#{paginas[numero - 1].text.squish.first(AvaliacaoDoMaterialGrande::TRECHO_DO_JUIZ_CHARS)}"
     end.join("\n\n")
   end
 
@@ -95,13 +96,16 @@ RSpec.describe 'Avaliação paga do material grande (#1426, t4e)', :eval_pago do
     indice = Array(fonte.metadata[Autonomia::Agents::Source::RESUMO_POR_SECAO])
     contexto = contexto_do_construtor(agent)
     veredito = julgar(contexto)
+    # O resumo geral da Revisora (1 a 3 frases) é medido à parte, só para o relatório: o termo vale pelo índice por seção.
+    veredito_do_resumo_geral = fonte.review_summary.present? ? julgar(fonte.review_summary) : nil
 
     relatorio = {
       custo_usd: custo_ate_agora.round(4), custo_por_rotulo: custo_por_rotulo, segundos: (Time.current - inicio).round,
       status: fonte.status, review_status: fonte.review_status, trechos: fonte.knowledge_entries.count,
       paginas_de_fora: fonte.metadata[Autonomia::Agents::Source::PAGINAS_DE_FORA], secoes: indice.pluck('paginas'),
       review_label: fonte.review_label, review_reason: fonte.review_reason, conferencia: fonte.metadata['conferencia'],
-      review_summary: fonte.review_summary, indice: indice, contexto_do_construtor: contexto, juiz: veredito
+      review_summary: fonte.review_summary, indice: indice, contexto_do_construtor: contexto, juiz: veredito,
+      juiz_do_resumo_geral: veredito_do_resumo_geral
     }
     destino = ENV.fetch('MATERIAL_GRANDE_EVAL_SAIDA', nil)
     File.write(destino, JSON.pretty_generate(relatorio)) if destino.present?

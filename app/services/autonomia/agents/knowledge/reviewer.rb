@@ -414,7 +414,7 @@ module Autonomia
         # resumo citar também o que vem depois da amostra. nil (omitido) sem seções.
         def indice_por_secao_text
           indice = Array((@source.metadata || {})[Autonomia::Agents::Source::RESUMO_POR_SECAO])
-          return if indice.empty?
+          return if indice.empty? || !Autonomia::Agents::Fase2.ligada?(@account)
 
           ['Resumo de cada parte do material inteiro (DADO, para o summary cobrir todas as partes):',
            *indice.map { |secao| Autonomia::Agents::Knowledge::ResumoPorSecao.linha(secao) }].join("\n")

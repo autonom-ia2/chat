@@ -269,14 +269,24 @@ RSpec.describe Autonomia::Agents::Source do
     end
   end
 
-  # #1426 (t4e) — o índice por seção é desta leitura: a leitura nova o tira no fim, e só o job vigente grava o novo.
+  # #1426 (t4e) — o índice por seção é desta leitura: o resumo o monta ainda na leitura e o mark_ready! o grava junto com o
+  # "pronto". A leitura nova sem índice tira o da anterior; a leitura que falha mantém o da geração anterior (os trechos ficam).
   describe 'the summary by section' do
-    let(:account) { create(:account) }
+    let(:account) { conta_da_fase2 }
     let(:agent) { Autonomia::Agents::Agent.create!(account: account, name: 'Clara', agent_type: 'support') }
     let(:source) { described_class.create!(account: account, agent: agent, source_type: 'pdf', status: :ready) }
     let(:indice) { [{ 'paginas' => [1, 25], 'resumo' => 'Coberturas.', 'temas' => [] }] }
 
-    it 'drops the index of the previous reading when the new one is ready' do
+    it 'records the index of this reading with the ready mark' do
+      token = source.begin_ingestion!
+      source.resumo_por_secao = indice
+
+      source.mark_ready!(token, chunk_count: 1)
+
+      expect(source.reload.metadata[described_class::RESUMO_POR_SECAO]).to eq(indice)
+    end
+
+    it 'drops the index of the previous reading when the new one has none' do
       source.update!(metadata: { described_class::RESUMO_POR_SECAO => indice })
       token = source.begin_ingestion!
 
@@ -285,41 +295,62 @@ RSpec.describe Autonomia::Agents::Source do
       expect(source.reload.metadata).not_to have_key(described_class::RESUMO_POR_SECAO)
     end
 
-    it 'records the index only for the current reading' do
+    it 'keeps the index of the previous generation when the new reading fails' do
+      source.update!(metadata: { described_class::RESUMO_POR_SECAO => indice })
       token = source.begin_ingestion!
-      source.mark_ready!(token, chunk_count: 1)
 
-      expect(source.anotar_resumo_por_secao!('outro', indice)).to be(false)
-      expect(source.anotar_resumo_por_secao!(token, indice)).to be(true)
+      source.mark_failed!(token, 'embedding_down')
+
       expect(source.reload.metadata[described_class::RESUMO_POR_SECAO]).to eq(indice)
     end
 
-    # Eval de 30/10: o Revisor lê e regrava o metadata do mesmo objeto; sem o índice em memória, ele não o lia e o apagava.
-    it 'keeps the index in memory for the review that comes next' do
-      token = source.begin_ingestion!
-      source.mark_ready!(token, chunk_count: 1)
+    describe 'in the reading job' do
+      let(:token) { source.begin_ingestion! }
 
-      source.anotar_resumo_por_secao!(token, indice)
+      before do
+        allow(Autonomia::Agents::Knowledge::Ingestor).to receive(:new)
+          .and_return(instance_double(Autonomia::Agents::Knowledge::Ingestor, perform: 1))
+      end
 
-      expect(source.metadata[described_class::RESUMO_POR_SECAO]).to eq(indice)
-    end
+      def stub_resumo(&)
+        allow(Autonomia::Agents::Knowledge::ResumoPorSecao).to receive(:new) do |source:, token:|
+          instance_double(Autonomia::Agents::Knowledge::ResumoPorSecao).tap do |resumo|
+            allow(resumo).to receive(:resumir!) { yield(source, token) }
+          end
+        end
+      end
 
-    it 'summarizes the sections after the reading and before the review' do
-      token = source.begin_ingestion!
-      ordem = []
-      ingestor = instance_double(Autonomia::Agents::Knowledge::Ingestor, perform: 1)
-      resumo = instance_double(Autonomia::Agents::Knowledge::ResumoPorSecao)
-      revisor = instance_double(Autonomia::Agents::Knowledge::Reviewer)
-      allow(Autonomia::Agents::Knowledge::Ingestor).to receive(:new).and_return(ingestor)
-      allow(Autonomia::Agents::Knowledge::ResumoPorSecao).to receive(:new).with(source: anything, token: token).and_return(resumo)
-      allow(resumo).to receive(:gravar!) { ordem << :resumo }
-      allow(Autonomia::Agents::Knowledge::Reviewer).to receive(:new).and_return(revisor)
-      allow(revisor).to receive(:review_source!) { ordem << :revisao }
-      allow(Autonomia::Agents::Knowledge::Reviewer).to receive(:recompute_overall!)
+      # Revisão de 30/10: com o resumo depois do "pronto", um deploy no meio deixava o material pronto e sem parecer.
+      it 'summarizes while the material is still being read, before the ready mark and the review' do
+        ordem = []
+        stub_resumo { |fonte, _| ordem << [:resumo, described_class.find(fonte.id).status] }
+        revisor = instance_double(Autonomia::Agents::Knowledge::Reviewer)
+        allow(Autonomia::Agents::Knowledge::Reviewer).to receive(:new).and_return(revisor)
+        allow(revisor).to receive(:review_source!) { ordem << [:revisao, described_class.find(source.id).status] }
+        allow(Autonomia::Agents::Knowledge::Reviewer).to receive(:recompute_overall!)
 
-      Autonomia::Agents::Knowledge::ProcessJob.perform_now(source.id, token)
+        Autonomia::Agents::Knowledge::ProcessJob.perform_now(source.id, token)
 
-      expect(ordem).to eq(%i[resumo revisao])
+        expect(ordem).to eq([[:resumo, 'processing'], [:revisao, 'ready']])
+      end
+
+      # Eval de 30/10: o Revisor regravava o metadata do objeto em memória e apagava o índice (conferência ligada).
+      it 'keeps the index through the review and the check of the material' do
+        stub_resumo { |fonte, _| fonte.resumo_por_secao = indice }
+        parecer = { 'recommendation' => 'aceitar', 'confidence' => 'alta', 'label' => 'boa', 'quality_score' => 90,
+                    'summary' => 'Condições gerais.', 'reason' => 'ok' }
+        allow_any_instance_of(Autonomia::Agents::Knowledge::Reviewer).to receive(:request_review).and_return(parecer) # rubocop:disable RSpec/AnyInstance
+        allow_any_instance_of(Autonomia::Agents::Material::ConferenciaDoMaterial).to receive(:conferir) # rubocop:disable RSpec/AnyInstance
+          .and_return('problema' => nil, 'amostra' => [])
+        allow(Autonomia::Agents::Knowledge::Reviewer).to receive(:recompute_overall!)
+
+        Autonomia::Agents::Knowledge::ProcessJob.perform_now(source.id, token)
+
+        source.reload
+        expect(source.review_status).to eq('accepted')
+        expect(source.metadata[described_class::RESUMO_POR_SECAO]).to eq(indice)
+        expect(source.metadata).to have_key('conferencia')
+      end
     end
   end
 end
