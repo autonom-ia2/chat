@@ -34,6 +34,13 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
     expect(saida).to include(conferido: true, faltou_fora: false, desfeito: false, desfeito_sozinho: false)
   end
 
+  # Revisão do t6d (MÉDIO): o mesmo pedido, com e sem ponto final, é uma linha só (o grupo que a prova também usa).
+  it 'o mesmo pedido com e sem ponto final é uma linha só' do
+    saida = resultado('itens' => [item('tone', '2 frases', 'Respostas curtas.'), item('instruction', '2 frases.', 'No máximo 2 frases.')])
+
+    expect(saida[:itens]).to eq([{ estado: 'aplicado', texto: 'Respostas curtas.' }])
+  end
+
   it 'o destino secundário pela tabela entra no grupo do pedido principal' do
     saida = resultado('itens' => [item('tone', 'mais curto', 'Respostas curtas.'),
                                   item('instruction', 'regra de tamanho', 'No máximo 2 frases.', atendido: false,
@@ -189,6 +196,89 @@ RSpec.describe Autonomia::Agents::ResultadoDoAjuste do
 
     it 'sem a chave: nil' do
       expect(resultado(conferencia)[:prova]).to be_nil
+    end
+
+    # Revisão do t6d (MÉDIO): o ✓ só sai quando cada pedido teve uma pergunta que o testou.
+    it 'pronta: diz se a prova cobriu cada pedido (a prova gravada antes da regra conta como completa)' do
+      perguntas = [{ 'pergunta' => 'Oi?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'ok', 'pedido' => 0 }]
+
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'completa' => false, 'perguntas' => perguntas))
+        .to include(completa: false)
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => perguntas)).to include(completa: true)
+    end
+
+    # Cartão da prova incompleta (texto aprovado pelo Rodrigo, 22/10): a tela diz quais pedidos não deu para ver. Só os
+    # textos dos pedidos que a prova numerou (os aplicados, na ordem do cartão), nunca o state cru nem a instrução.
+    it 'pronta e incompleta: os textos dos pedidos sem teste, na ordem do cartão; completa ou sem testes gravados, sem a lista' do
+      conferencia['itens'] = [item('tone', 'mais curto', 'Respostas curtas.'), item('greeting', 'saudação nova', 'Oi.', atendido: false),
+                              item('handoff_rule', 'preço com a equipe.', 'Preço vai à equipe.'), item('guardrails', 'sem gíria', 'Sem gíria.')]
+      perguntas = [{ 'pergunta' => 'Oi?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'ok',
+                     'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }] }]
+      dados = { 'status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => perguntas }
+
+      expect(prova_com(dados.merge('completa' => false))).to include(pedidos_sem_teste: ['preço com a equipe', 'sem gíria'])
+      expect(prova_com(dados.merge('completa' => true))).not_to have_key(:pedidos_sem_teste)
+      sem_testes = perguntas.map { |pergunta| pergunta.except('testes') }
+      expect(prova_com(dados.merge('completa' => false, 'perguntas' => sem_testes))).not_to have_key(:pedidos_sem_teste)
+    end
+
+    # Cartão (aprovado pelo Rodrigo, 22/10): o ✓ de "mudei" não pode vir junto de "não deu para ver". Cada linha aplicada
+    # diz o que a prova viu dela, e a contagem do título é em mudanças (pedidos), não em perguntas.
+    describe 'o que a prova viu de cada mudança' do
+      before do
+        conferencia['itens'] = [item('tone', 'mais curto', 'Respostas curtas.'), item('greeting', 'saudação nova', 'Oi.', atendido: false),
+                                item('handoff_rule', 'preço com a equipe', 'Preço vai à equipe.'), item('guardrails', 'sem gíria', 'Sem gíria.')]
+      end
+
+      let(:perguntas) do
+        [{ 'pergunta' => 'Oi?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'ok', 'testes' => [{ 'pedido' => 0, 'veredito' => 'ok' }] },
+         { 'pergunta' => 'Preço?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'nao',
+           'testes' => [{ 'pedido' => 1, 'veredito' => 'nao' }, { 'pedido' => 0, 'veredito' => 'ok' }] }]
+      end
+
+      def com_testes(dados, extra = {})
+        resultado(conferencia, { 'prova' => { 'versao_id' => ultimo['versao_id'], 'status' => 'pronta', 'ok' => 1, 'total' => 2,
+                                              'completa' => false, 'perguntas' => perguntas }.merge(dados) }.merge(extra))
+      end
+
+      it 'cada linha aplicada: ok, nao ou sem_teste; a contagem em mudanças' do
+        saida = com_testes({})
+
+        expect(saida[:itens].map { |linha| linha[:prova] }).to eq(['ok', nil, 'nao', 'sem_teste'])
+        expect(saida[:prova]).to include(mudancas: { testadas: 2, total: 3, contraditas: 1 })
+      end
+
+      it 'prova antiga, sem testes gravados, ou ainda pendente: sem marca nas linhas e sem a contagem' do
+        sem_testes = com_testes('perguntas' => perguntas.map { |pergunta| pergunta.except('testes') })
+        pendente = com_testes('status' => 'pendente', 'desde' => Time.current.iso8601)
+
+        [sem_testes, pendente].each do |saida|
+          expect(saida[:itens]).to all(satisfy { |linha| !linha.key?(:prova) })
+          expect(saida[:prova]).not_to have_key(:mudancas)
+        end
+      end
+
+      it 'cartão de outra conferência que não a da prova: sem marca nas linhas' do
+        outra = { 'itens' => [item('tone', 'mais curto', 'Respostas curtas.')] }
+        saida = com_testes({}, 'ultimo_ajuste' => ultimo.merge('conferencia' => outra))
+
+        expect(saida[:itens]).to all(satisfy { |linha| !linha.key?(:prova) })
+      end
+    end
+
+    # A troca para `testes` (revisão do t6d) não mexe na prova já gravada: a tela lê só a `completa` gravada e a
+    # pergunta, a resposta e o `veredito` gravado de cada item. Sem campo, com `pedido` ou com `pedidos`, igual a antes.
+    it 'prova gravada antes da troca (sem campo, com pedido ou com pedidos) continua igual' do
+      sem_campo = [{ 'pergunta' => 'Oi?', 'resposta' => 'r', 'equipe' => false, 'veredito' => 'ok' }]
+      antigo = [sem_campo.first.merge('pedido' => 0)]
+      da_branch = [sem_campo.first.merge('pedidos' => [0, 1])]
+      igual = { status: 'pronta', total: 1, ok: 1, completa: true, perguntas: [{ pergunta: 'Oi?', resposta: 'r', equipe: false, ok: true }] }
+
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => sem_campo)).to eq(igual)
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'perguntas' => antigo)).to eq(igual)
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'completa' => true, 'perguntas' => da_branch)).to eq(igual)
+      expect(prova_com('status' => 'pronta', 'ok' => 1, 'total' => 1, 'completa' => false, 'perguntas' => antigo))
+        .to eq(igual.merge(completa: false))
     end
   end
 end

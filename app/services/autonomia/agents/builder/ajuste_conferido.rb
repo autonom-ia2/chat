@@ -60,6 +60,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     @campos_truncados = []
     @explicacao_da_correcao = nil
     @opcoes_da_correcao = []
+    @itens_descartados = 0
     @pendencia_anterior = pending_question
     @turnos_da_pendencia = @thread.state.to_h['pendencia_turnos'].to_i
     # O "tira isso" só vai enquanto o Desfazer do último ajuste ainda vale, decidido no começo do turno, antes da escrita
@@ -165,7 +166,7 @@ module Autonomia::Agents::Builder::AjusteConferido
     # próximo ajuste aplicado ou o Desfazer (#1428, parte 3).
     estado = estado_do_ajuste(parsed.merge('needs_more_info' => true, 'next_question' => mensagens.last.to_s))
              .merge('applied' => false, 'conferencia' => nil, 'ajuste_em_curso' => nil, 'parcial' => false,
-                    'opcoes_de_resposta' => [])
+                    'opcoes_de_resposta' => [], 'pergunta_na_tela' => nil)
              .merge(extra)
     mensagens.each { |mensagem| persist_assistant_turn!(mensagem) } if @thread.mark_ready!(token, state: estado)
   end

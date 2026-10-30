@@ -27,6 +27,31 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
+  # Série do t6d anulada (c_opcoes_passagem_vaga): com o pedido vago de passagem, o Construtor ofereceu como opção a regra
+  # que o agente já tem. A causa raiz é o pedido ao modelo: cada opção muda algo de fato, contra a configuração atual que
+  # ele recebe no mesmo turno. Quem decide se a opção repete a regra é o modelo, nunca o código.
+  describe 'as opções mudam algo de fato' do
+    it 'a descrição: opção que muda algo não repete a regra atual; a mesma direção vale; deixar como está, quando faz sentido' do
+      descricao = described_class::OpcoesDeResposta::DESCRIPTION
+      expect(descricao).to include('Uma opcao que muda algo nunca repete a regra atual tal como esta',
+                                   'compare com a CONFIGURACAO ATUAL DO AGENTE', 'o tom de hoje nao entra como opcao',
+                                   'ir na mesma direcao de hoje vale se muda algo (ex.: mais curto que hoje)',
+                                   'Uma opcao de deixar como esta vale quando fizer sentido')
+      expect(descricao).not_to include('passa para a equipe, e a regra de hoje')
+    end
+
+    it 'o turno do ajuste leva a regra de passagem atual na configuração atual, junto com o schema das opções' do
+      respostas << saida('needs_more_info' => true, 'next_question' => 'Em que situações passar?', 'opcoes_de_resposta' => opcoes)
+
+      run_turn
+
+      contexto = calls.first[:input].flat_map { |item| Array(item[:content]) }.pluck(:text).join("\n")
+      expect(contexto).to include('CONFIGURAÇÃO ATUAL DO AGENTE:', "handoff_rule: #{agent.handoff_rule}")
+      expect(calls.first[:schema][:schema][:properties][:opcoes_de_resposta][:description])
+        .to eq(described_class::OpcoesDeResposta::DESCRIPTION)
+    end
+  end
+
   describe 'OpcoesDeResposta.filtrar' do
     def opcoes_de(valor)
       described_class::OpcoesDeResposta.filtrar('opcoes_de_resposta' => valor)

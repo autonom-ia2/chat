@@ -71,17 +71,13 @@ const ACTUATION_OPTIONS = computed(() =>
   }))
 );
 
-// handoff_strategy/confidence_threshold are jsonb `config` store-accessors on
+// handoff_strategy is a jsonb `config` store-accessor on
 // the backend — read them from agent.config, never the top level.
 const form = reactive({
   greeting: props.agent.greeting || '',
   fallback_message: props.agent.fallback_message || '',
   tone: props.agent.tone || 'friendly',
   handoff_strategy: props.agent.config?.handoff_strategy || 'low_confidence',
-  confidence_threshold:
-    props.agent.config?.confidence_threshold != null
-      ? props.agent.config.confidence_threshold
-      : 0.6,
   instruction: props.agent.instruction || '',
   actuation: props.agent.actuation || 'external',
 });
@@ -93,10 +89,6 @@ watch(
     form.fallback_message = agent.fallback_message || '';
     form.tone = agent.tone || 'friendly';
     form.handoff_strategy = agent.config?.handoff_strategy || 'low_confidence';
-    form.confidence_threshold =
-      agent.config?.confidence_threshold != null
-        ? agent.config.confidence_threshold
-        : 0.6;
     form.instruction = agent.instruction || '';
     form.actuation = agent.actuation || 'external';
     advancedMode.value = agent.mode === 'manual';
@@ -111,7 +103,7 @@ const avatarSource = computed(
   () => avatarPreviewUrl.value || props.agent.avatar_url || ''
 );
 
-// handoff_strategy/confidence_threshold MUST be nested under `config` — the
+// handoff_strategy MUST be nested under `config` — the
 // controller's strong params only permit `config: {}` for these virtuals and
 // would silently drop them at the top level.
 // Always stamp the current `mode` so saving the simple block never drops the
@@ -125,7 +117,6 @@ const buildPayload = (extra = {}) => ({
   mode: advancedMode.value ? 'manual' : 'guided',
   config: {
     handoff_strategy: form.handoff_strategy,
-    confidence_threshold: Number(form.confidence_threshold),
   },
   ...extra,
 });
@@ -528,39 +519,6 @@ onMounted(loadHistory);
           :aria-label="t('AGENTS.TUNE.HANDOFF_STRATEGY')"
           class="w-full"
         />
-      </div>
-
-      <div class="flex flex-col gap-1">
-        <div class="flex items-center justify-between">
-          <label class="text-sm font-medium text-n-slate-12">
-            {{ t('AGENTS.TUNE.CONFIDENCE_THRESHOLD') }}
-          </label>
-          <span class="text-xs tabular-nums text-n-slate-11">
-            {{ `${Math.round(Number(form.confidence_threshold) * 100)}%` }}
-          </span>
-        </div>
-        <input
-          v-model="form.confidence_threshold"
-          type="range"
-          min="0"
-          max="1"
-          step="0.05"
-          class="w-full accent-n-brand"
-          :aria-label="t('AGENTS.TUNE.CONFIDENCE_THRESHOLD')"
-          :aria-valuetext="`${Math.round(Number(form.confidence_threshold) * 100)}%`"
-        />
-        <!-- Legenda: o slider puro não dizia o que 0.63 significa. -->
-        <div class="flex items-center justify-between text-xs text-n-slate-10">
-          <span>{{ t('AGENTS.TUNE.CONFIDENCE_LOW') }}</span>
-          <span>{{ t('AGENTS.TUNE.CONFIDENCE_HIGH') }}</span>
-        </div>
-        <p class="m-0 text-xs text-n-slate-11">
-          {{
-            t('AGENTS.TUNE.CONFIDENCE_HINT', {
-              pct: Math.round(Number(form.confidence_threshold) * 100),
-            })
-          }}
-        </p>
       </div>
 
       <NextButton

@@ -1021,7 +1021,7 @@ module Autonomia
 
       # #1428 — o que o ajuste do piloto guarda no state entre turnos.
       CHAVES_DO_PILOTO = %w[pergunta_pendente pendencia_turnos pendencia_no_teto nao_pedido_anterior so_pergunta conferencia
-                            parcial opcoes_de_resposta].freeze
+                            parcial opcoes_de_resposta pergunta_na_tela].freeze
       # As que protegem a idempotência de um ajuste do piloto em voo (o re-run do mesmo token só confere e fecha).
       CHAVES_DO_AJUSTE_EM_CURSO = %w[ajuste_em_curso aplicado_em_token].freeze
 

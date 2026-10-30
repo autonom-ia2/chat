@@ -42,7 +42,7 @@ RSpec.describe 'Autonomia agent config exposure', type: :request do
       expect(response).to have_http_status(:success)
       config = response.parsed_body['config']
       expect(config.keys).to match_array(
-        %w[handoff_strategy handoff_target_id confidence_threshold with_knowledge knowledge_confidence knowledge_summary]
+        %w[handoff_strategy handoff_target_id with_knowledge knowledge_confidence knowledge_summary]
       )
     end
 

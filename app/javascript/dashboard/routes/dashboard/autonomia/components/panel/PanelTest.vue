@@ -145,6 +145,15 @@ const sleep = ms =>
 // LAST bubble (`meta: true`); intermediate chunks are plain bubbles. Without
 // chunks (handoff / humanize off) it falls back to a single bubble.
 const pushAssistantTurn = async (data, requestId) => {
+  // Tema 6 (#1428): o Testar roda como o atendimento, sem a mensagem fixa no lugar da falha. Sem texto e sem passagem
+  // (a IA falhou ou voltou vazia), é o aviso de erro, nunca um balão vazio.
+  const temTexto =
+    Boolean(data?.reply) ||
+    (data?.humanized && data.chunks?.some(chunk => chunk?.text));
+  if (!temTexto && (data?.error || data?.handoff?.should !== true)) {
+    if (requestId === requestSequence) useAlert(t('AGENTS.TEST.ERROR'));
+    return;
+  }
   const meta = {
     confidence: data.confidence,
     handoff: data.handoff,
@@ -267,7 +276,12 @@ onBeforeUnmount(() => {
         </div>
 
         <template v-for="(message, index) in messages" :key="index">
-          <ChatBubble :role="message.role" :content="message.content" />
+          <!-- Tema 6 (#1428): só a passagem, sem texto, mostra a marca sem balão vazio. -->
+          <ChatBubble
+            v-if="message.content"
+            :role="message.role"
+            :content="message.content"
+          />
 
           <div
             v-if="message.role === 'assistant' && message.meta"

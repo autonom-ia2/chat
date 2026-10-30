@@ -3034,7 +3034,7 @@
     {
      "id": "11.10",
      "titulo": "Quando o agente chama um humano e como ajustar a instrução",
-     "para_que_serve": "Configurar a transferência e o limite de confiança, e escolher entre ajustar com IA ou escrever a instrução.",
+     "para_que_serve": "Dizer quando o agente chama a equipe, e escolher entre ajustar com IA ou escrever a instrução.",
      "publico": "admin",
      "prioridade": "P1",
      "assuntos": [

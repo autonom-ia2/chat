@@ -189,15 +189,15 @@ RSpec.describe 'Base de seguros do agente (#1429 F3)', type: :request do
       expect(agente.reload.config['base']).to eq(seguradora)
     end
 
-    # O portão de confiança decide quando o agente passa para a equipe: muda a resposta, mas não entra na versão.
-    it 'o portão de confiança mudou depois de comparar: 422 (comparar_antes)' do
+    # Tema 6 (#1428, D3): a comparação roda como o atendimento, sem o portão; um limite de confiança antigo gravado no
+    # agente não muda a resposta nem pede outra comparação.
+    it 'um limite de confiança antigo gravado depois de comparar não pede outra comparação' do
       comparou
       agente.update!(config: agente.config.merge('confidence_threshold' => 0.9))
 
       pedir(:post, 'atualizar', params: { versao: bloco.versao('seguros/corretora') })
 
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body['code']).to eq('comparar_antes')
+      expect(response).to have_http_status(:ok)
     end
 
     # O modelo e a temperatura do agente não chegam à resposta (o Answerer usa o modelo fixo dele): não pedem outra.

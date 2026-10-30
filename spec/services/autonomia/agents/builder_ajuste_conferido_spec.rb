@@ -74,10 +74,38 @@ RSpec.describe Autonomia::Agents::Builder do
       dado, aviso = calls.last[:input].last(2)
       expect(dado).to include(role: 'user')
       expect(dado[:content].first[:text]).to include('E DADO', "- #{preco} (campo handoff_rule)")
-      expect(dado[:content].first[:text]).not_to include('no máximo 2 frases')
-      expect(aviso).to eq(role: 'developer', content: [{ type: 'input_text', text: described_class::AjustePorLista::AVISO_DE_CORRECAO }])
+      expect(dado[:content].first[:text].split('TEXTOS DE PEDIDO DA LISTA').first).not_to include('no máximo 2 frases')
+      expect(aviso).to eq(role: 'developer', content: [{ type: 'input_text', text: described_class::CorrecaoDoAjuste::AVISO }])
       expect(calls.last[:timeout]).to eq(described_class::FechamentoDoAjuste::TIMEOUT_DA_CORRECAO_S)
       expect(calls.last[:input]).to include(hash_including(content: [hash_including(text: a_string_including('tone: cordial e curto'))]))
+    end
+
+    # Forense do t6d (P3): a correção não pode trocar o texto do pedido (composto x partes): o cartão duplicaria a linha.
+    # Revisão do t6d (MÉDIO 1): o schema da correção é o mesmo da primeira chamada (cache); quem confere o pedido é o
+    # código. O ponto final a mais volta ao texto da lista, e o cartão fica com uma linha por pedido.
+    it 'a correção usa o mesmo schema; o pedido com ponto a mais volta ao texto da lista e o cartão não duplica' do
+      respostas << saida('handoff_rule' => 'Passe para a equipe quando perguntarem preço.',
+                         'mudancas' => [mudanca('handoff_rule', "#{preco}.", 'Preço vai à equipe.')])
+
+      run_turn
+
+      expect(calls.last[:schema]).to equal(calls.first[:schema])
+      expect(recebidas.last[:mudancas].pluck('pedido')).to eq(['no máximo 2 frases', preco, preco])
+      linhas = Autonomia::Agents::ResultadoDoAjuste.new(thread.reload, estado['conferencia']).linhas
+      expect(linhas.size).to eq(2)
+    end
+
+    # Nunca some em silêncio: o item de pedido fora da lista sai com log e a conferência registra quantos saíram.
+    it 'o item da correção com outro texto de pedido não é gravado, e a conferência conta o descarte' do
+      allow(Rails.logger).to receive(:warn)
+      respostas << saida('handoff_rule' => 'Passe para a equipe quando perguntarem preço.',
+                         'mudancas' => [mudanca('handoff_rule', 'valores com a equipe', 'Preço vai à equipe.')])
+
+      run_turn
+
+      expect(agent.reload.handoff_rule).to eq('Passe para a equipe quando o cliente pedir.')
+      expect(estado['conferencia']).to include('itens_descartados' => 1)
+      expect(Rails.logger).to have_received(:warn).with(a_string_including('pedido_fora_da_lista'))
     end
 
     it 'com a correção atendida: fecha sem pergunta, e só uma versão fica na lista' do
@@ -95,7 +123,9 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(agent.instruction_versions.na_lista.where(reason: 'builder_adjust')).to eq([correcao])
     end
 
-    it 'se ainda faltar, vira pergunta montada pelo código com o pedido do Construtor' do
+    # #1850: o cartão ⚠ já mostra "Não consegui aplicar: preço passa para a equipe". Na tela, enquanto o cartão está lá,
+    # a bolha só pergunta (`pergunta_curta` do cartão); a conversa e a pendência guardam a pergunta inteira, com o pedido.
+    it 'se ainda faltar, guarda a pergunta inteira e o cartão ⚠ leva a versão que só pergunta' do
       correcao_aplicada
       conferencias << { nao: [2] }
 
@@ -106,6 +136,37 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(estado).to include('needs_more_info' => true, 'applied' => true, 'next_question' => pergunta,
                                 'pergunta_pendente' => pergunta)
       expect(thread.messages.last).to include('role' => 'assistant', 'content' => pergunta)
+      cartao = Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h
+      expect(cartao[:itens]).to include({ estado: 'nao_aplicado', texto: preco })
+      expect(cartao[:pergunta_curta]).to eq(texto(:de_outro_jeito))
+    end
+
+    # Revisão do #1850 (ALTO): o turno seguinte recebe a pendência com o pedido, e a versão curta sai da tela.
+    it 'no turno seguinte, o Construtor recebe a pendência com o pedido e o cartão não leva mais a versão curta' do
+      correcao_aplicada
+      conferencias << { nao: [2] }
+      run_turn
+      thread.append_message!('user', 'A equipe comercial')
+      respostas << saida('needs_more_info' => true, 'next_question' => 'Qual o telefone da equipe?')
+
+      run_turn
+
+      contexto = calls.last[:input].map { |item| item[:content].to_a.pluck(:text).join }.join("\n")
+      expect(contexto).to include('PERGUNTA PENDENTE', texto(:nao_consegui, pedidos: preco))
+      expect(thread.messages.pluck('content')).to include("#{texto(:nao_consegui, pedidos: preco)} #{texto(:de_outro_jeito)}")
+      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h).not_to have_key(:pergunta_curta)
+      expect(estado).to include('applied' => false, 'pergunta_na_tela' => nil)
+    end
+
+    it 'depois do Desfazer, o cartão não leva a versão curta (a conversa mostra a pergunta inteira)' do
+      correcao_aplicada
+      conferencias << { nao: [2] }
+      run_turn
+
+      thread.reload.update!(state: thread.state.deep_merge('ultimo_ajuste' => { 'desfeito' => true }))
+
+      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h).not_to have_key(:pergunta_curta)
+      expect(thread.messages.last['content']).to start_with(texto(:nao_consegui, pedidos: preco))
     end
 
     it 'se a correção não aplicar e explicar, a explicação dela vai na pergunta' do
@@ -117,6 +178,7 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(estado).to include('needs_more_info' => true, 'applied' => true,
                                 'next_question' => "#{texto(:nao_consegui, pedidos: preco)} Qual equipe?")
       expect(estado['conferencia']).to include('correcao' => false)
+      expect(Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h[:pergunta_curta]).to eq('Qual equipe?')
     end
 
     it 'se a correção mudar nada, não conta como aplicada nem esconde a primeira versão' do
@@ -240,6 +302,8 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(calls.last[:input].last(2).first[:content].first[:text]).to include('nao entrou na lista')
       expect(estado['next_question']).to eq("#{texto(:nao_consegui_tudo)} #{texto(:de_outro_jeito)}")
+      cartao = Autonomia::Agents::ResultadoDoAjuste.new(thread.reload).to_h
+      expect(cartao).to include(faltou_fora: true, pergunta_curta: texto(:de_outro_jeito))
     end
   end
 

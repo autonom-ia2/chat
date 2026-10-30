@@ -120,7 +120,7 @@ describe('cópia da criação em pt_BR', () => {
       'Duda passa a responder as mensagens dos seus clientes.'
     );
     expect(respondida.get('[data-aviso]').text()).toBe(
-      'Aqui Duda passaria a conversa para a equipe.'
+      'Aqui Duda avisaria que vai chamar alguém da equipe.'
     );
     expect(respondida.get('[data-ajustes]').text()).toContain(
       'Fazer ajustes avançados'
