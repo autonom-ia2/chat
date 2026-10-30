@@ -38,7 +38,13 @@ RSpec.describe Autonomia::Agents::Material::Problemas do
                                                                    'aviso' => true } })
 
     expect(do_tipo('sem_cabecalho').sole).to include('id' => "sem_cabecalho-#{manual.id}", 'fontes' => [manual.id],
-                                                     'amostra' => ['Cláusula 63'])
+                                                     'amostra' => ['Cláusula 63'], 'aviso' => true)
+  end
+
+  it 'tabela sem cabeçalho que reprovou o material não vem marcada como aviso' do
+    material('bebidas.xlsx', review_status: 'needs_resend', metadata: { 'conferencia' => { 'problema' => 'sem_cabecalho' } })
+
+    expect(do_tipo('sem_cabecalho').sole).not_to have_key('aviso')
   end
 
   it 'duplicado: fica o mais antigo; o par mantido pela pessoa não volta', :aggregate_failures do
