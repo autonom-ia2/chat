@@ -362,7 +362,7 @@ module Autonomia
       def montar_prompt(snippets)
         PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets, images: @images,
                           documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno,
-                          memoria: @memoria, interacao: @interacao == true)
+                          memoria: @memoria, interacao: @interacao == true, mensagem_do_dono: @trust_instruction == true)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
