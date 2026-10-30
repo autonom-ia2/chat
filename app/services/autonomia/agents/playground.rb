@@ -11,6 +11,7 @@ module Autonomia
       # que atende o cliente: sem o portão de confiança, como o Responder (`trust_instruction`). Com o portão, a resposta
       # do modelo era trocada pela mensagem fixa, e o dono testava um agente que o cliente nunca vê. A Lia
       # (insurance_quote) fica no portão (decisão do Rodrigo de 30/10, D6).
+      # TODO(#2382): desvio por tipo de agente, temporário; o Testar da Lia também deve medir o motor do atendimento.
       def self.como_no_atendimento?(agent)
         agent.agent_type != 'insurance_quote'
       end
