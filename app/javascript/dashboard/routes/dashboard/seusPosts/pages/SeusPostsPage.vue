@@ -302,13 +302,16 @@ const postsCuidados = computed(() =>
     };
   })
 );
+// Trocou de perfil enquanto pausava: a lista que voltou é do perfil anterior e não entra na faixa do novo.
 const mudarTodos = async status => {
+  const perfilMudado = perfil.value.id;
   mudandoTodos.value = true;
   try {
-    const { data } = await ComentariosIaAPI.mudarTodos(perfil.value.id, status);
-    cuidados.value = data.cuidados;
+    const { data } = await ComentariosIaAPI.mudarTodos(perfilMudado, status);
+    if (perfil.value?.id === perfilMudado) cuidados.value = data.cuidados;
   } catch {
-    useAlert(t('META_ADS_COMMENTS_AI.BAND.ERROR'));
+    if (perfil.value?.id === perfilMudado)
+      useAlert(t('META_ADS_COMMENTS_AI.BAND.ERROR'));
   } finally {
     mudandoTodos.value = false;
   }

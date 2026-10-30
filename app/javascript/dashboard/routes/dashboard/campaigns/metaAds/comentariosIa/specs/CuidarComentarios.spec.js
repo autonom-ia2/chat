@@ -118,6 +118,61 @@ describe('CuidarComentarios (#2212)', () => {
     expect(wrapper.find('[data-ia-dono]').exists()).toBe(true);
   });
 
+  it.each([
+    [403, null, 'Você não tem acesso ao cuidado dos comentários deste post.'],
+    [
+      422,
+      'invalid_message',
+      'A mensagem ficou longa demais para a Meta. Tire um pouco do texto.',
+    ],
+    [422, 'invalid_para_quem', 'Ficou longo demais. Use até 500 letras.'],
+    [500, null, 'Não consegui guardar agora. Tente de novo.'],
+  ])(
+    'ligar que falha com %s %s diz o porquê',
+    async (status, codigo, aviso) => {
+      ComentariosIaAPI.getCuidado.mockResolvedValue({
+        data: painel({ message: 'Oi!', para_quem: 'Quem pedir o link' }),
+      });
+      ComentariosIaAPI.previa.mockResolvedValue({ data: null });
+      ComentariosIaAPI.saveCuidado.mockRejectedValue(
+        Object.assign(new Error('x'), {
+          response: { status, data: codigo ? { error: codigo } : {} },
+        })
+      );
+      const wrapper = await montar();
+      await wrapper.find('[data-ia-dono-next]').trigger('click');
+      await wrapper.find('[data-ia-dono-next]').trigger('click');
+      await flushPromises();
+      await wrapper.find('[data-ia-dono-start]').trigger('click');
+      await flushPromises();
+
+      expect(useAlert).toHaveBeenCalledWith(aviso);
+    }
+  );
+
+  it('ligado: um comentário sem conversa leva de volta ao post, e o botão diz isso', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        to_see: [
+          {
+            id: 'c-1',
+            network: 'instagram',
+            author: 'ana',
+            text: 'Péssimo',
+            kind: 'complaint',
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar();
+    const botao = wrapper.find('[data-ia-reply-comment]');
+
+    expect(botao.text()).toBe('Ver no post');
+    await botao.trigger('click');
+    expect(wrapper.emitted('back')).toHaveLength(1);
+  });
+
   it('ligado: resultado, pausar e, no grupo dos antigos, ler e mandar', async () => {
     ComentariosIaAPI.getCuidado.mockResolvedValue({
       data: painel({

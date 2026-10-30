@@ -357,6 +357,7 @@ pt_BR:
         commented_ad: 'Comentou no anúncio: “%{text}”'
         to_you: 'Reclamação: não respondi e passei para você.'
         private_reply_failed: 'Não consegui mandar a mensagem. Responda você, se quiser.'
+        private_reply_suffix: '(mensagem automática · se não quiser receber, me avisa)'
       captain:
         resolved: 'A conversa foi marcada como resolvida por %{user_name} por inatividade'
         resolved_with_reason: 'A conversa foi marcada como resolvida por %{user_name} (%{reason})'

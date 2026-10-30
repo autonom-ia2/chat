@@ -201,8 +201,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(rede.privado(care)).to have_attributes(ok: true, conversation: conversation)
       expect(privado).to have_received(:perform!).with(
         comment: { 'id' => '555_777', 'timestamp' => '2026-10-27T10:00:00Z', 'from' => { 'id' => 'igsid-1', 'username' => 'carla' } },
-        text: care.message, actor: 'ai', ad_id: nil
+        text: care.texto_do_privado, actor: 'ai', ad_id: nil
       )
+      expect(care.texto_do_privado).to start_with(care.message).and(include('(automatic message'))
     end
 
     it 'erro do serviço vira envio sem sucesso com o código' do

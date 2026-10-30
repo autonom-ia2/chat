@@ -42,6 +42,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
     expect(described_class.new({ 'instagram' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
   end
 
+  it 'erro da leitura do Facebook (anúncio e Página do Seus posts) também vira o status, sem subir' do
+    [Crm::MetaAds::FacebookComments::Error, SeusPosts::ComentariosPagina::Error].each do |erro|
+      leitura = -> { raise erro, 'meta_unavailable' }
+
+      expect(described_class.new({ 'facebook' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
+    end
+  end
+
   describe '.anuncio (#2212, B2)' do
     let(:connection) { instance_double(Crm::MetaAdsConnection) }
     let(:ig_inbox) { instance_double(Inbox, id: 11) }

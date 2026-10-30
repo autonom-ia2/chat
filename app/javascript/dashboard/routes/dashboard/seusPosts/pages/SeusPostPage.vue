@@ -56,6 +56,9 @@ const alvoDoCuidado = computed(() =>
 );
 const {
   painel: cuidado,
+  carregando: lendoCuidado,
+  erro: erroDoCuidado,
+  carregar: lerCuidado,
   salvando: mudandoCuidado,
   pausar: pausarCuidado,
   voltar: voltarACuidar,
@@ -344,8 +347,19 @@ const { podeLiberar, liberar } = useLiberarAcesso({
 });
 
 const podeMudar = computed(() => Boolean(dados.value?.can_manage));
-const situacaoDoCuidado = computed(() =>
-  ['on', 'paused'].includes(cuidado.value?.care) ? cuidado.value.care : 'off'
+// 'on' ou 'paused' (o herói diz), 'off' (o bloco do resumo oferece cuidar), 'loading' (nada ainda: sem o Painel, a
+// tela não sabe se a IA cuida, e não oferece "Cuidar" a quem já liga) ou 'error' (falha de rede: aviso curto com
+// tentar de novo no lugar do bloco). Sem acesso ao cuidado (403) ou sem ele no servidor (404), nada aparece.
+const situacaoDoCuidado = computed(() => {
+  if (erroDoCuidado.value === 'rede') return 'error';
+  if (erroDoCuidado.value) return 'none';
+  if (!cuidado.value) return lendoCuidado.value ? 'loading' : 'off';
+  return ['on', 'paused'].includes(cuidado.value.care)
+    ? cuidado.value.care
+    : 'off';
+});
+const cuidando = computed(() =>
+  ['on', 'paused'].includes(situacaoDoCuidado.value)
 );
 // O privado no Facebook espera a pages_messaging (F4): o resumo não promete privado.
 const privadoLiberado = computed(
@@ -522,7 +536,7 @@ const BOTAO_DE_BORDA =
           </div>
           <!-- Cuidando ou pausado (#2212): o selo diz o estado; pausar e voltar a cuidar com um toque, sem confirmação. -->
           <div
-            v-if="situacaoDoCuidado !== 'off'"
+            v-if="cuidando"
             data-seus-posts-cuidado-heroi
             :data-situacao="situacaoDoCuidado"
             class="relative flex flex-wrap items-center gap-3 pt-2"
@@ -687,6 +701,26 @@ const BOTAO_DE_BORDA =
               >
                 {{ ladoDoAnuncio }}
               </p>
+            </section>
+            <!-- O cuidado não veio (rede): sem ele, a tela não sabe se a IA cuida, e não oferece "Cuidar" no escuro. -->
+            <section
+              v-if="comCuidado && situacaoDoCuidado === 'error'"
+              data-seus-posts-cuidado-erro
+              role="alert"
+              class="flex flex-col items-start gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
+            >
+              <p class="m-0 text-sm text-n-slate-11">
+                {{ $t('SEUS_POSTS.POST.CARE_ERROR') }}
+              </p>
+              <Button
+                data-seus-posts-cuidado-de-novo
+                variant="faded"
+                color="slate"
+                icon="i-lucide-refresh-cw"
+                :label="$t('SEUS_POSTS.ERROR.RETRY')"
+                class="!min-h-11 !rounded-xl"
+                @click="lerCuidado"
+              />
             </section>
             <!-- O que tem nos comentários (#2212, A2): antes de cuidar, o que eu faria. Lido à parte, sem travar a página. -->
             <section

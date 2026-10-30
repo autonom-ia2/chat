@@ -250,8 +250,8 @@ const startedText = computed(() => {
           data-ia-reply-comment
           variant="faded"
           color="slate"
-          icon="i-lucide-reply"
-          :label="$t(`${KEY}.REPLY_COMMENT`)"
+          icon="i-lucide-image"
+          :label="$t(`${KEY}.SEE_ON_POST`)"
           class="!min-h-11 shrink-0 !rounded-xl"
           @click="emit('reply')"
         />

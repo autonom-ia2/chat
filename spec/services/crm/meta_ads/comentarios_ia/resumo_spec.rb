@@ -20,7 +20,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
     allow(Rails).to receive(:cache).and_return(cache)
     allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas })
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
-    allow(classificador).to receive(:decidir) do |texto|
+    allow(classificador).to receive(:decidir!) do |texto|
       { 'Quanto custa?' => 'price', 'Tem no M?' => 'private', 'Ninguém me responde' => 'to_you', 'Lindo!' => 'no_reply',
         'Valor?' => 'price' }[texto]
     end
@@ -29,7 +29,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
   it 'na primeira vez, conta fora do pedido e diz que está lendo, com um job só' do
     expect { 2.times { expect(resumo.call).to eq(status: 'reading') } }
       .to have_enqueued_job(Crm::MetaAds::ComentariosIa::ResumoJob).with(account.id, alvo).exactly(:once)
-    expect(classificador).not_to have_received(:decidir)
+    expect(classificador).not_to have_received(:decidir!)
   end
 
   it 'conta os pedidos de até 7 dias, os mais velhos e as reclamações, e devolve do cache depois' do
@@ -59,14 +59,41 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
     resumo.contar!
 
     expect(resumo.call).to include(read: described_class::LIMITE, more: true)
-    expect(classificador).to have_received(:decidir).exactly(described_class::LIMITE).times
+    expect(classificador).to have_received(:decidir!).exactly(described_class::LIMITE).times
   end
 
   it 'leitura que não ficou pronta: devolve o status, sem contar' do
     allow(fonte).to receive(:ler).and_return({ status: 'needs_permission', linhas: [] })
 
     expect(resumo.call).to eq(status: 'needs_permission')
-    expect(classificador).not_to have_received(:decidir)
+    expect(classificador).not_to have_received(:decidir!)
+  end
+
+  describe 'com o Jev fora do ar' do
+    before do
+      allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_unavailable'))
+    end
+
+    it 'não grava conta zerada como pronta: diz ai_unavailable uma vez e, na próxima, conta de novo' do
+      expect(resumo.call).to eq(status: 'reading')
+      resumo.contar!
+
+      expect(resumo.call).to eq(status: 'ai_unavailable')
+      expect { expect(resumo.call).to eq(status: 'reading') }.to have_enqueued_job(Crm::MetaAds::ComentariosIa::ResumoJob)
+    end
+
+    it 'para no primeiro erro, sem gastar as outras chamadas' do
+      resumo.contar!
+
+      expect(classificador).to have_received(:decidir!).once
+    end
+  end
+
+  it 'a trava do "contando" dura mais que o job mais lento: uma chamada ao Jev por comentário, com as tentativas' do
+    cliente = TypesafeAi::Client
+    por_comentario = (cliente::OPEN_TIMEOUT + cliente::READ_TIMEOUT) * (cliente::MAX_RETRIES + 1)
+
+    expect(described_class::CONTANDO).to be >= (described_class::LIMITE * por_comentario).seconds
   end
 
   it 'perfil ou conexão que não existem mais: not_found' do

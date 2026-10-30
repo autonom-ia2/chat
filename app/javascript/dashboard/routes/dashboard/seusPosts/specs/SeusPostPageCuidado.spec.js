@@ -231,6 +231,123 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     ).toBe(true);
   });
 
+  it('reading (a primeira contagem): segue carregando e lê de novo até ficar pronto', async () => {
+    vi.useFakeTimers();
+    try {
+      ComentariosIaAPI.getResumo
+        .mockResolvedValueOnce({ data: { status: 'reading' } })
+        .mockResolvedValueOnce({ data: { status: 'reading' } })
+        .mockResolvedValueOnce({ data: resumoPronto() });
+      const wrapper = await montar();
+
+      expect(bloco(wrapper).attributes('data-status')).toBe('loading');
+      expect(bloco(wrapper).text()).toContain('Estou lendo os comentários');
+      expect(
+        bloco(wrapper).find('[data-seus-posts-o-que-tem-de-novo]').exists()
+      ).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(bloco(wrapper).attributes('data-status')).toBe('loading');
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(3);
+      expect(bloco(wrapper).attributes('data-status')).toBe('ready');
+      expect(bloco(wrapper).text()).toContain('3 perguntas');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reading que não acaba: para no teto e oferece tentar de novo', async () => {
+    vi.useFakeTimers();
+    try {
+      ComentariosIaAPI.getResumo.mockResolvedValue({
+        data: { status: 'reading' },
+      });
+      const wrapper = await montar();
+      await vi.advanceTimersByTimeAsync(3000 * 30);
+
+      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(10);
+      expect(bloco(wrapper).attributes('data-status')).toBe('error');
+      expect(bloco(wrapper).text()).toContain(
+        'Não consegui ler os comentários agora.'
+      );
+      expect(
+        bloco(wrapper).find('[data-seus-posts-o-que-tem-de-novo]').exists()
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('sair da página com o resumo lendo para de perguntar', async () => {
+    vi.useFakeTimers();
+    try {
+      ComentariosIaAPI.getResumo.mockResolvedValue({
+        data: { status: 'reading' },
+      });
+      const wrapper = await montar();
+      wrapper.unmount();
+      montadas.splice(montadas.indexOf(wrapper), 1);
+      await vi.advanceTimersByTimeAsync(3000 * 5);
+
+      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ai_unavailable (a IA fora): diz que não deu e oferece tentar de novo', async () => {
+    ComentariosIaAPI.getResumo
+      .mockResolvedValueOnce({ data: { status: 'ai_unavailable' } })
+      .mockResolvedValueOnce({ data: resumoPronto() });
+    const wrapper = await montar();
+
+    expect(bloco(wrapper).text()).toContain(
+      'Não consegui ler os comentários agora.'
+    );
+    await bloco(wrapper)
+      .find('[data-seus-posts-o-que-tem-de-novo]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(bloco(wrapper).attributes('data-status')).toBe('ready');
+  });
+
+  it('o cuidado não veio (rede): aviso com tentar de novo, sem oferecer cuidar', async () => {
+    ComentariosIaAPI.getCuidado
+      .mockRejectedValueOnce(
+        Object.assign(new Error('x'), { response: { status: 500 } })
+      )
+      .mockResolvedValueOnce({ data: painel({ care: 'on' }) });
+    const wrapper = await montar();
+    const aviso = wrapper.find('[data-seus-posts-cuidado-erro]');
+
+    expect(aviso.text()).toContain(
+      'Não consegui ver agora se estou cuidando dos comentários deste post.'
+    );
+    expect(bloco(wrapper).exists()).toBe(false);
+    expect(wrapper.find('[data-seus-posts-cuidar]').exists()).toBe(false);
+
+    await aviso.find('[data-seus-posts-cuidado-de-novo]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-seus-posts-cuidado-erro]').exists()).toBe(false);
+    expect(
+      wrapper
+        .find('[data-seus-posts-cuidado-heroi]')
+        .attributes('data-situacao')
+    ).toBe('on');
+  });
+
+  it('o cuidado ainda lendo: não oferece cuidar', async () => {
+    ComentariosIaAPI.getCuidado.mockReturnValue(new Promise(() => {}));
+    const wrapper = await montar();
+
+    expect(bloco(wrapper).exists()).toBe(false);
+    expect(wrapper.find('[data-seus-posts-cuidar]').exists()).toBe(false);
+  });
+
   it('Facebook sem privado liberado: não promete privado', async () => {
     comPost({ network: 'facebook' });
     ComentariosIaAPI.getCuidado.mockResolvedValue({

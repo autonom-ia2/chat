@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import SeusPostsAPI from 'dashboard/api/seusPosts';
+import Button from 'dashboard/components-next/button/Button.vue';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import CuidarComentarios from '../../campaigns/metaAds/comentariosIa/CuidarComentarios.vue';
 
@@ -19,18 +20,27 @@ const target = computed(() => ({
   perfil: perfilId.value,
 }));
 
+const KEY = 'META_ADS_COMMENTS_AI.SCREEN';
 const dados = ref(null);
-// Sem o post (falhou a leitura), a tela de cuidar ainda mostra o estado, sem os botões de escrita.
+// 'acesso' (403) ou 'rede' (o resto). A tela de cuidar só abre com o post lido: sem ele não há `can_manage`, e quem
+// pode mudar veria só leitura, sem explicação. Falhou, a tela diz e oferece tentar de novo.
+const erro = ref(null);
+// Trocar de post no meio de uma leitura: só a resposta da leitura mais nova vale.
+let leitura = 0;
 const lerPost = async () => {
+  leitura += 1;
+  const minha = leitura;
   dados.value = null;
+  erro.value = null;
   try {
     const { data } = await SeusPostsAPI.getPost({
       perfil: perfilId.value,
       postId: postId.value,
     });
-    dados.value = data;
-  } catch {
-    dados.value = null;
+    if (minha === leitura) dados.value = data;
+  } catch (error) {
+    if (minha === leitura)
+      erro.value = error?.response?.status === 403 ? 'acesso' : 'rede';
   }
 };
 watch(() => [perfilId.value, postId.value], lerPost, { immediate: true });
@@ -68,11 +78,52 @@ const voltar = () =>
     <div
       class="mx-auto flex w-full max-w-3xl flex-col gap-5 p-4 pb-24 sm:p-5 lg:p-8"
     >
+      <template v-if="!dados">
+        <button
+          type="button"
+          data-seus-posts-cuidar-voltar
+          class="inline-flex min-h-11 items-center gap-2 self-start rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 ring-1 ring-inset ring-n-weak transition hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          @click="voltar"
+        >
+          <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
+          {{ $t(`${KEY}.BACK_POST`) }}
+        </button>
+        <div
+          v-if="erro"
+          data-seus-posts-cuidar-erro
+          role="alert"
+          class="flex flex-col items-start gap-3 rounded-2xl bg-n-solid-1 p-6 ring-1 ring-inset ring-n-weak"
+        >
+          <p class="m-0 text-base font-semibold text-n-slate-12">
+            {{
+              erro === 'acesso' ? $t(`${KEY}.NO_ACCESS`) : $t(`${KEY}.ERROR`)
+            }}
+          </p>
+          <Button
+            v-if="erro !== 'acesso'"
+            data-seus-posts-cuidar-de-novo
+            icon="i-lucide-refresh-cw"
+            :label="$t(`${KEY}.RETRY`)"
+            class="!min-h-11 !rounded-xl"
+            @click="lerPost"
+          />
+        </div>
+        <p
+          v-else
+          data-seus-posts-cuidar-lendo
+          role="status"
+          aria-busy="true"
+          class="m-0 text-sm text-n-slate-11"
+        >
+          {{ $t(`${KEY}.READING`) }}
+        </p>
+      </template>
       <CuidarComentarios
+        v-else
         :target="target"
         :post="cabecalho"
         origin="post"
-        :can-manage="Boolean(dados?.can_manage)"
+        :can-manage="Boolean(dados.can_manage)"
         :inbox-path="caixa"
         @back="voltar"
       />
