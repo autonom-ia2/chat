@@ -21,6 +21,8 @@ class CreateCrmMetaAdsCommentCares < ActiveRecord::Migration[7.2]
       t.string :handoff, null: false, default: 'assignment'
       # Quando o dono mandou ler os comentários que chegaram antes de ligar ("Ler e mandar"): uma vez por cuidado.
       t.datetime :read_old_at
+      # No post do Seus posts, a caixa do perfil: a lista "Cuidando" e o "Pausar todos" ficam no perfil de quem abre.
+      t.references :inbox, foreign_key: { on_delete: :cascade }
       t.references :created_by, foreign_key: { to_table: :users, on_delete: :nullify }
       t.datetime :started_at, null: false
       t.timestamps
