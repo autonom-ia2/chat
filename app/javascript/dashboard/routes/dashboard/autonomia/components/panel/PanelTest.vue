@@ -276,7 +276,12 @@ onBeforeUnmount(() => {
         </div>
 
         <template v-for="(message, index) in messages" :key="index">
-          <ChatBubble :role="message.role" :content="message.content" />
+          <!-- Tema 6 (#1428): só a passagem, sem texto, mostra a marca sem balão vazio. -->
+          <ChatBubble
+            v-if="message.content"
+            :role="message.role"
+            :content="message.content"
+          />
 
           <div
             v-if="message.role === 'assistant' && message.meta"

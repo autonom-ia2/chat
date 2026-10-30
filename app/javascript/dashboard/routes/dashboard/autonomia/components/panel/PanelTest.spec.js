@@ -73,6 +73,23 @@ describe('PanelTest', () => {
     }
   );
 
+  // Teste do PR #2386 (C26): sem texto e com passagem, fica só a marca da passagem, sem balão vazio e sem erro.
+  it('shows only the handoff note, without an empty bubble, when the answer is a handoff with no text', async () => {
+    store.dispatch.mockResolvedValueOnce({
+      reply: '',
+      confidence: 0.3,
+      handoff: { should: true, reason: 'human_requested' },
+    });
+    const wrapper = montar();
+
+    await enviar(wrapper);
+
+    expect(alerta).not.toHaveBeenCalled();
+    expect(wrapper.findAllComponents(ChatBubble)).toHaveLength(1);
+    expect(wrapper.text()).toContain('AGENTS.TEST.HANDOFF_NOTICE');
+    wrapper.unmount();
+  });
+
   it('keeps the generic error for any other failure', async () => {
     store.dispatch.mockRejectedValueOnce(
       Object.assign(new Error('500'), { response: { status: 500 } })
