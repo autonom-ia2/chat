@@ -11,16 +11,22 @@
 # POST seus_posts/posts/:post_id/cuidado/ler_antigos    → "Ler e mandar" (uma vez por cuidado ligado).
 #      Mudar: administrador ou `posts_manage`.
 #
-# As mesmas guardas do post (SeusPostsComentariosController): ?perfil=, ver a caixa do perfil e o post ser do perfil,
-# mais a flag `meta_ads_comentarios_ia`. O texto do dono vai só em `message` e `para_quem`; o dos comentários só na
-# resposta, nunca gravado. Ligar, pausar, mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
+# As mesmas guardas do post (SeusPostsComentariosController): ?perfil=, ver a caixa do perfil e o post ser do perfil
+# (inclusive no GET do painel, que o pai pula), mais a flag `meta_ads_comentarios_ia`. A chave de mudar vem antes de
+# conferir o post: quem só vê recebe 403 sem chamada à Meta. Prévia e resumo com o Jev fora do ar: 422 `ai_unavailable`.
+# O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,
+# mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
 class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPostsComentariosController
   AUDIT_ACTION = 'seus_posts_comment_care'.freeze
+  AI_UNAVAILABLE = 'ai_unavailable'.freeze
   FLAGS = (Api::V1::Accounts::SeusPostsComentariosController::FLAGS + [Crm::MetaAds::ComentariosIa::Cuidar::FLAG]).freeze
 
-  skip_before_action :ensure_manage
+  # O pai confere a chave de mudar em todas as escritas e pula o post no `show`. Aqui as duas voltam na ordem certa: a
+  # chave antes de ler o post na Meta, e o post em toda ação de um post (o painel também).
+  skip_before_action :ensure_manage, :load_post
   before_action :ensure_manage, only: [:update, :previa, :ler_antigos, :mudar_todos]
-  skip_before_action :ensure_ids, :load_post, only: [:cuidados, :mudar_todos]
+  before_action :load_post, except: [:cuidados, :mudar_todos]
+  skip_before_action :ensure_ids, only: [:cuidados, :mudar_todos]
 
   rescue_from Crm::MetaAds::ComentariosIa::Painel::Error, with: :render_error
 
@@ -32,9 +38,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     status = params[:status].to_s
     return render_error_code('invalid_status') unless Crm::MetaAds::ComentariosIa::Painel::STATUSES.include?(status)
 
-    mudados = cuidados_do_perfil.where.not(status: status)
-    audit_all!(status, mudados.pluck(:target_id))
-    mudados.find_each { |care| care.update!(status: status) }
+    audit_all!(status, mudar_status!(status))
     cuidados
   end
 
@@ -43,7 +47,10 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   end
 
   def resumo
-    render json: Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
+    resultado = Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
+    return render_error_code(AI_UNAVAILABLE) if resultado[:status] == AI_UNAVAILABLE
+
+    render json: resultado
   end
 
   def update
@@ -55,9 +62,13 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   def previa
     para_quem = texto(params[:para_quem], 'para_quem')
-    return render_error_code('invalid_para_quem') if para_quem.strip.empty?
+    return render_error_code('invalid_para_quem') if para_quem.strip.empty? || para_quem.strip.length > Crm::MetaAdsCommentCare::NOTE_LIMIT
 
-    render json: Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
+    resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
+    # A tela trata qualquer resposta de erro como "não deu para ler": só a prévia pronta vai como prévia.
+    return render_error_code(resultado[:status]) unless resultado[:status] == 'ready'
+
+    render json: resultado
   end
 
   def ler_antigos
@@ -106,6 +117,16 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_phrases' unless value.is_a?(Array) && value.all?(String)
 
     value
+  end
+
+  # Tudo de uma vez, numa transação: o status muda sem regravar o resto (um cuidado antigo que não passaria na validação
+  # de hoje não trava os outros). Devolve os posts mudados, para a Auditoria depois de mudar.
+  def mudar_status!(status)
+    Crm::MetaAdsCommentCare.transaction do
+      mudados = cuidados_do_perfil.where.not(status: status).lock.pluck(:id, :target_id)
+      Crm::MetaAdsCommentCare.where(id: mudados.map(&:first)).update_all(status: status, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      mudados.map(&:last)
+    end
   end
 
   def audit_all!(status, post_ids)

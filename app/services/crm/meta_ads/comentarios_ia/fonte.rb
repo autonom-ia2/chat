@@ -46,6 +46,8 @@ class Crm::MetaAds::ComentariosIa::Fonte
   end
 
   # leituras: { rede => { ler: -> { payload da tela }, inbox_id:, post_id: } }.
+  # Erro da Meta vira o status. AdManagement::Error cobre também o FacebookComments::Error (do anúncio e da Página do
+  # Seus posts), que é filho dele.
   def ler
     lidas = @leituras.map { |network, leitura| [network, leitura, leitura[:ler].call] }
     falha = lidas.map { |_network, _leitura, payload| payload[:status] }.find { |status| status != 'ready' }

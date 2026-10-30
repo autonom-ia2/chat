@@ -8,15 +8,15 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 680 |
 | Sem corpo | 198 |
 | Com corpo | 482 |
-| Com corpo e formato completo | 395 (82,0%) |
-| Com corpo e formato incompleto | 87 |
+| Com corpo e formato completo | 396 (82,2%) |
+| Com corpo e formato incompleto | 86 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 198 de 296 |
+| Leituras cruas tipadas | 198 de 295 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 73 |
+| leitura crua sem tipo | 72 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -106,7 +106,6 @@ Uma ação pode ter mais de um motivo.
 - `POST portals` — leitura crua sem tipo: portal.config.analytics
 - `POST portals/:portal_id/articles/reorder` — leitura crua sem tipo: positions_hash (repassada a Article.update_positions)
 - `POST portals/:portal_id/categories/reorder` — leitura crua sem tipo: positions_hash (repassada a Category.update_positions)
-- `POST seus_posts/posts/:post_id/cuidado/previa` — leitura crua sem tipo: para_quem
 - `POST tiktok/authorization` — leitura crua sem tipo: return_to
 - `POST whatsapp_calls/:id/accept` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/reject` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
@@ -211,7 +210,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/portals#update` portal.config.analytics — o código não converte nem compara o valor
 - `api/v1/accounts/relationships/configurations#update` configuration — o código não converte nem compara o valor
 - `api/v1/accounts/relationships/values#update` field — o código não converte nem compara o valor
-- `api/v1/accounts/seus_posts_cuidado#previa` para_quem — o código não converte nem compara o valor
 - `api/v1/accounts/seus_posts_cuidado#update` message — o código não converte nem compara o valor
 - `api/v1/accounts/seus_posts_cuidado#update` para_quem — o código não converte nem compara o valor
 - `api/v1/accounts/seus_posts_cuidado#update` phrases — o código não converte nem compara o valor

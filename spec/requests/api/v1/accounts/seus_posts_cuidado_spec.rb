@@ -106,11 +106,83 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
   it 'prévia: decide com o "para quem" do dono' do
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
-    allow(classificador).to receive(:decidir) { |texto| { 'Quero o e-book' => 'private', 'Lindo!' => 'no_reply' }[texto] }
+    allow(classificador).to receive(:decidir!) { |texto| { 'Quero o e-book' => 'private', 'Lindo!' => 'no_reply' }[texto] }
 
     post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
 
     expect(response.parsed_body).to include('recebe' => include('text' => 'Quero o e-book'), 'nao' => include('text' => 'Lindo!'))
+  end
+
+  it 'prévia: Jev fora do ar é falha (422 ai_unavailable), nunca uma prévia vazia' do
+    classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
+    allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_unavailable'))
+
+    post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
+  end
+
+  it 'prévia: "para quem" acima do limite do cuidado é recusado antes de perguntar à IA' do
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new)
+    longo = 'a' * (Crm::MetaAdsCommentCare::NOTE_LIMIT + 1)
+
+    post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: longo }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'invalid_para_quem')
+    expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
+  end
+
+  it 'resumo: Jev fora do ar é falha (422 ai_unavailable)' do
+    allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
+      .and_return(instance_double(Crm::MetaAds::ComentariosIa::Resumo, call: { status: 'ai_unavailable' }))
+
+    get "#{base}/resumo", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
+  end
+
+  it 'o painel também confere que o post é do perfil: post de outro perfil é 404, sem ler os comentários dele' do
+    outro_post = "/api/v1/accounts/#{account.id}/seus_posts/posts/17900000000000002/cuidado"
+    get outro_post, params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
+    expect(response.parsed_body).to eq('error' => 'post_not_found')
+  end
+
+  it 'agente sem posts_manage recebe 403 antes de qualquer leitura na Meta' do
+    agente = create(:user, account: account, role: :agent)
+    create(:inbox_member, user: agente, inbox: canal.inbox)
+    allow(Pundit).to receive(:policy!).and_call_original
+    allow(Pundit).to receive(:policy!).with(anything, :seus_posts).and_return(instance_double(SeusPostsPolicy, index?: true, manage?: false))
+
+    put "#{base}/cuidado", params: corpo, headers: agente.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:forbidden)
+    post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: 'x' }, headers: agente.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:forbidden)
+    post "#{base}/cuidado/ler_antigos", params: { perfil: perfil }, headers: agente.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:forbidden)
+
+    expect(SeusPosts::Posts).not_to have_received(:para)
+  end
+
+  it '"Pausar todos" muda tudo de uma vez, mesmo cuidado antigo que não passaria na validação de hoje, e audita depois' do
+    put "#{base}/cuidado", params: corpo, headers: admin.create_new_auth_token, as: :json
+    antigo = create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '17900000000000008',
+                                                network: 'instagram', inbox: canal.inbox, status: 'on')
+    antigo.update_column(:message, 'ã' * 600) # rubocop:disable Rails/SkipsModelValidations
+
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'paused' },
+                                                              headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentCare.pluck(:status)).to all(eq('paused'))
+    auditoria = Audited.audit_class.where(action: 'seus_posts_comment_care').order(:id).last
+    expect(auditoria.audited_changes).to include('action' => 'all', 'status' => 'paused',
+                                                 'post_ids' => contain_exactly(post_id, '17900000000000008'))
   end
 
   it 'resumo: na primeira vez, está lendo' do

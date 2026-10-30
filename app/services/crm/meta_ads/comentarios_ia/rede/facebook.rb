@@ -59,7 +59,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
   # O privado já saiu: uma falha ao abrir a conversa não pode soltar a reivindicação (o reenvio mandaria de novo).
   def na_caixa(envio, care)
-    Crm::MetaAds::ComentariosIa::Conversa.no_messenger!(@comentario, envio, care.message)
+    Crm::MetaAds::ComentariosIa::Conversa.no_messenger!(@comentario, envio, care.texto_do_privado)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
     nil
@@ -77,9 +77,9 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
   def mensagem(care)
     button = care.button
-    return { text: care.message } if button.blank?
+    return { text: care.texto_do_privado } if button.blank?
 
-    { attachment: { type: 'template', payload: { template_type: 'button', text: care.message,
+    { attachment: { type: 'template', payload: { template_type: 'button', text: care.texto_do_privado,
                                                  buttons: [{ type: 'web_url', url: button['url'], title: button['title'] }] } } }
   end
 

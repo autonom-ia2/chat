@@ -16,7 +16,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
 
   def privado(care)
     resultado = Crm::MetaAds::InstagramPrivateReply.new(@inbox.channel)
-                                                   .perform!(comment: comment, text: care.message, actor: REGISTRO::ACTOR, ad_id: @comentario.ad_id)
+                                                   .perform!(comment: comment, text: care.texto_do_privado, actor: REGISTRO::ACTOR,
+                                                             ad_id: @comentario.ad_id)
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: resultado[:conversation])
   rescue Crm::MetaAds::InstagramPrivateReply::Error => e
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: e.code)

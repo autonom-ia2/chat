@@ -12,7 +12,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
 
   before do
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
-    allow(classificador).to receive(:decidir) do |texto|
+    allow(classificador).to receive(:decidir!) do |texto|
       { 'Me passa a receita?' => 'private', 'Que lindo!' => 'no_reply', 'Ninguém responde' => 'to_you' }[texto]
     end
   end
@@ -25,7 +25,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
                               nao: { author: 'pessoa.2', text: 'Que lindo!', network: 'instagram' })
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
       .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'))
-    expect(classificador).to have_received(:decidir).exactly(3).times
+    expect(classificador).to have_received(:decidir!).exactly(3).times
   end
 
   it 'sem comentário que receberia: um exemplo dito como exemplo; sem "não se aplica": nil' do
@@ -39,7 +39,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
 
     previa.call
 
-    expect(classificador).to have_received(:decidir).exactly(described_class::LIMITE).times
+    expect(classificador).to have_received(:decidir!).exactly(described_class::LIMITE).times
+  end
+
+  it 'Jev fora do ar: ai_unavailable, nunca uma prévia vazia que parece "ninguém recebe"' do
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Me passa a receita?')] })
+    allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_unavailable'))
+
+    expect(previa.call).to eq(status: 'ai_unavailable')
   end
 
   it 'leitura que não ficou pronta: devolve o status' do

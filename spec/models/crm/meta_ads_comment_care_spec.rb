@@ -23,6 +23,20 @@ RSpec.describe Crm::MetaAdsCommentCare do
     expect(build(:crm_meta_ads_comment_care, account: account, message: 'a' * 1001)).not_to be_valid
   end
 
+  it 'conta o limite em bytes, como a Meta, com o aviso do fim: acento e emoji pesam mais de um' do
+    livre = 1000 - build(:crm_meta_ads_comment_care, account: account, message: '').texto_do_privado.bytesize
+    expect(build(:crm_meta_ads_comment_care, account: account, message: 'ã' * (livre / 2))).to be_valid
+    expect(build(:crm_meta_ads_comment_care, account: account, message: 'ã' * ((livre / 2) + 1))).not_to be_valid
+    expect(build(:crm_meta_ads_comment_care, account: account, message: '😀' * ((livre / 4) + 1))).not_to be_valid
+  end
+
+  it 'manda no privado a mensagem do dono com o aviso de automática, no idioma da conta' do
+    account.update!(locale: 'pt_BR')
+    care = build(:crm_meta_ads_comment_care, account: account, message: ' Oi! O catálogo: loja.com ')
+
+    expect(care.texto_do_privado).to eq('Oi! O catálogo: loja.com (mensagem automática · se não quiser receber, me avisa)')
+  end
+
   it 'exige de uma a três frases públicas curtas' do
     expect(build(:crm_meta_ads_comment_care, account: account, phrases: [])).not_to be_valid
     expect(build(:crm_meta_ads_comment_care, account: account, phrases: %w[a b c d])).not_to be_valid
