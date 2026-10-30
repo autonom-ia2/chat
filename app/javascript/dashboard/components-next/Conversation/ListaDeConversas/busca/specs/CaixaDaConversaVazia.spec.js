@@ -154,13 +154,10 @@ describe('CaixaDaConversaVazia', () => {
     expect(wrapper.emitted('enviar')).toHaveLength(1);
   });
 
-  it('WhatsApp: anexo e microfone; pelo número reserva (só texto), nenhum dos dois', async () => {
+  it('WhatsApp: anexo e microfone (pelo número reserva também)', () => {
     const wrapper = montar({ tipo: 'whatsapp_livre', caixaDoWhatsapp: true });
-    const barra = () => wrapper.find('[data-barra-falsa]');
-    expect(barra().attributes('data-arquivo')).toBe('true');
-    expect(barra().attributes('data-microfone')).toBe('true');
-    await wrapper.setProps({ soTexto: true });
-    expect(barra().attributes('data-arquivo')).toBe('false');
-    expect(barra().attributes('data-microfone')).toBe('false');
+    const barra = wrapper.find('[data-barra-falsa]');
+    expect(barra.attributes('data-arquivo')).toBe('true');
+    expect(barra.attributes('data-microfone')).toBe('true');
   });
 });

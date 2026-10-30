@@ -83,10 +83,10 @@ describe('MaisDoWhatsapp: Documento e Fotos e vídeos (#1702)', () => {
     expect(itens).toEqual(['documento', 'fotos_e_videos']);
   });
 
-  it('no número reserva (só texto) Documento e Fotos e vídeos somem', async () => {
+  it('no número reserva Documento e Fotos e vídeos continuam (o WAHA manda arquivo)', async () => {
     const wrapper = montar({ conversa: { whatsapp_api_reply: true } });
     await abrirMenu(wrapper);
-    expect(wrapper.find('[data-item="documento"]').exists()).toBe(false);
-    expect(wrapper.find('[data-item="fotos_e_videos"]').exists()).toBe(false);
+    expect(wrapper.find('[data-item="documento"]').exists()).toBe(true);
+    expect(wrapper.find('[data-item="fotos_e_videos"]').exists()).toBe(true);
   });
 });

@@ -41,7 +41,6 @@ const props = defineProps({
   tipo: { type: String, required: true },
   comModelo: { type: Boolean, default: false },
   caixaDoWhatsapp: { type: Boolean, default: false },
-  soTexto: { type: Boolean, default: false },
   assinatura: { type: String, default: '' },
   comAssinatura: { type: Boolean, default: false },
   podeEnviar: { type: Boolean, default: false },
@@ -93,14 +92,14 @@ const {
   progresso,
 } = useVozNaNovaConversa({ anexos, gravador, aoAnexar: () => emit('enviar') });
 
-// Anexo e microfone onde a conversa nova aceita: no WhatsApp (menos pelo número reserva) e
+// Anexo e microfone onde a conversa nova aceita: no WhatsApp (pelo número reserva também) e
 // nos canais que mandam arquivo na criação (aceitaAnexo).
 const comArquivo = computed(
   () =>
-    (props.caixaDoWhatsapp && !props.soTexto) ||
+    props.caixaDoWhatsapp ||
     (!props.caixaDoWhatsapp && aceitaAnexo(props.canal))
 );
-const comMicrofone = computed(() => props.caixaDoWhatsapp && !props.soTexto);
+const comMicrofone = computed(() => props.caixaDoWhatsapp);
 const alternarGravacao = () => (gravando.value ? cancelar() : gravar());
 
 // O emoji entra no ponto do cursor do editor, como na resposta.
