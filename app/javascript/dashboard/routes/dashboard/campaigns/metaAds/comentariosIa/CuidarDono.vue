@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { FOR_WHOM_LIMIT } from './useCuidado';
@@ -42,6 +42,11 @@ const message = ref(props.data.message || '');
 const forWhom = ref(props.data.para_quem || '');
 const phrase = ref(phrases.value[0] || '');
 const editingPhrase = ref(!phrase.value);
+// A padrão muda com o idioma, que pode chegar depois de abrir a tela (endereço aberto direto): enquanto o dono não a
+// trocou, a frase acompanha.
+watch(phrases, (novas, antigas) => {
+  if (phrase.value === antigas[0]) phrase.value = novas[0] || '';
+});
 const heading = ref(null);
 // A Prévia do passo 3, lida de novo a cada vez que o passo abre (o "para quem" pode ter mudado).
 const examples = ref(null);
