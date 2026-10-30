@@ -11,6 +11,7 @@ import Auth from '../../../../api/auth';
 import wootConstants from 'dashboard/constants/globals';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { useAgentRoleChoices } from './useAgentRoleChoices';
+import { agentUpdateErrorKey } from './agentUpdateError';
 import CrmScheduleEditor from 'dashboard/routes/dashboard/crm/components/sla/CrmScheduleEditor.vue';
 import CrmServiceSchedulesAPI from 'dashboard/api/crmServiceSchedules';
 
@@ -117,7 +118,9 @@ const onScheduleSaved = saved => {
   showScheduleEditor.value = false;
 };
 
-const { roles, roleChoices } = useAgentRoleChoices();
+const { roles, roleChoices } = useAgentRoleChoices({
+  currentCustomRoleId: props.customRoleId,
+});
 
 const selectedRole = computed(() =>
   roles.value.find(
@@ -164,7 +167,7 @@ const editAgent = async () => {
     useAlert(t('AGENT_MGMT.EDIT.API.SUCCESS_MESSAGE'));
     emit('close');
   } catch (error) {
-    useAlert(t('AGENT_MGMT.EDIT.API.ERROR_MESSAGE'));
+    useAlert(t(agentUpdateErrorKey(error)));
   }
 };
 

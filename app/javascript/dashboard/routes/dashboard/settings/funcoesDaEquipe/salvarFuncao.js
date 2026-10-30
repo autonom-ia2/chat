@@ -8,9 +8,10 @@ import { nomeEmUso, primeiroNomeLivre } from './nomeDisponivel';
 // FUNCOES_EQUIPE.SALVAR; `sugestao` vai para o campo do nome. Nunca reenvia sozinho.
 const NAO_AUTORIZADO = 401;
 
-// Código que o servidor manda no corpo do 401 (decisão 11, custom_roles_controller.rb) → frase. Sem código (a
-// recusa do check_authorization, ou o agents/update, que nunca manda código) com a sessão boa, quem recusou foi o
-// acesso de quem monta: SEM_ACESSO. INDISPONIVEL é só a flag da conta desligada (feature_off).
+// Código que o servidor manda no corpo do 401 (decisão 11, custom_roles_controller.rb; no agents, toda recusa do
+// GrantGuard também, #2317) → frase. Sem código (a recusa do check_authorization, ou do agents/update por outro motivo:
+// administrador, o próprio acesso) com a sessão boa, quem recusou foi o acesso de quem monta: SEM_ACESSO. INDISPONIVEL
+// é só a flag da conta desligada (feature_off).
 export const FRASE_DO_401 = {
   out_of_reach: 'FORA_DO_ALCANCE',
   feature_off: 'INDISPONIVEL',

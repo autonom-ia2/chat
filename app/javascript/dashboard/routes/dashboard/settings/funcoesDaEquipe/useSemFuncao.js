@@ -1,8 +1,10 @@
 import { computed } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
+import { usePeopleAccess } from 'dashboard/composables/usePeopleAccess';
 import { modulesWithKeys } from '../customRoles/permissionMatrix';
 import { useTextos } from './guiada/useTextos';
 import {
+  alcancaSemFuncao,
   capacidadesSemFuncao,
   diffEntre,
   porPeso,
@@ -18,6 +20,7 @@ export function useSemFuncao() {
   const accountId = useMapGetter('getCurrentAccountId');
   const estaLigada = flag =>
     Boolean(ligadaNaConta.value?.(accountId.value, flag));
+  const { giver } = usePeopleAccess();
 
   const nomeDaArea = key => t(`FUNCOES_EQUIPE.AREAS.${key}.NOME`);
 
@@ -97,6 +100,11 @@ export function useSemFuncao() {
     ),
     diff,
     efeitoDe,
+    // Quem monta não alcança as chaves do "Sem função" (#2317): tirar alguém da função e apagar com destino "Sem
+    // função" ficam travados, com o motivo, antes do envio. O servidor recusa do mesmo jeito (out_of_reach).
+    semFuncaoTravado: computed(
+      () => !alcancaSemFuncao(giver.value, estaLigada)
+    ),
     textoDa,
     notas,
   };

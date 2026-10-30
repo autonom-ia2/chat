@@ -30,7 +30,7 @@ const SEM_FUNCAO = 'none';
 
 const { t } = useI18n();
 const { reachesRole } = usePeopleAccess();
-const { diff } = useSemFuncao();
+const { diff, semFuncaoTravado } = useSemFuncao();
 const funcoes = useMapGetter('customRole/getCustomRoles');
 
 const dialogo = ref(null);
@@ -57,7 +57,19 @@ const opcoes = computed(() => [
   ...funcoes.value
     .filter(item => item.id !== funcao.value?.id && reachesRole(item))
     .map(item => ({ value: item.id, label: item.name })),
-  { value: SEM_FUNCAO, label: t('FUNCOES_EQUIPE.APAGAR.SEM_FUNCAO') },
+  // "Sem função" segue a mesma régua de dar uma função (#2317): fora do alcance, aparece travada, com o motivo.
+  {
+    value: SEM_FUNCAO,
+    label: t('FUNCOES_EQUIPE.APAGAR.SEM_FUNCAO'),
+    ...(semFuncaoTravado.value && {
+      disabled: true,
+      hint: t(
+        'FUNCOES_EQUIPE.APAGAR.SEM_FUNCAO_TRAVADA',
+        { n: quantas.value },
+        quantas.value
+      ),
+    }),
+  },
 ]);
 
 const mudanca = computed(() => diff(funcao.value?.permissions));

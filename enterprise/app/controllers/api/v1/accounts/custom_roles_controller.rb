@@ -78,10 +78,15 @@ class Api::V1::Accounts::CustomRolesController < Api::V1::Accounts::EnterpriseAc
 
   # Outra função da conta, que quem exclui poderia entregar (a mesma regra de dar função a uma pessoa), ou 'none':
   # sem função, agente comum. Administrador nunca é destino. Sem destino, ou com um que não serve, responde 422.
+  # 'none' segue a mesma régua (#2317): quem exclui precisa alcançar as chaves do "Sem função", senão 401 out_of_reach.
   def destination_role_id
     value = params[:destination_role_id]
     return refuse('destination_required') if value.blank?
-    return if value == NO_ROLE_DESTINATION
+
+    if value == NO_ROLE_DESTINATION
+      grant_guard.no_role!
+      return
+    end
 
     role = destination_candidates.find_by(id: value) if value.is_a?(String) || value.is_a?(Integer)
     # Fora do alcance de quem exclui também é destino inválido (422), como na Issue: a tela só oferece os que alcança.

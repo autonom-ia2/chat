@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -19,6 +19,8 @@ const props = defineProps({
   trava: { type: String, default: '' },
   somenteLeitura: { type: Boolean, default: false },
   opcoes: { type: Array, default: () => [] },
+  // Quem monta não alcança as chaves do "Sem função" (#2317): "Tirar desta função" aparece travado, com o motivo.
+  semFuncaoTravado: { type: Boolean, default: false },
   // Enquanto a gaveta salva, a linha não muda: o fim do salvar troca as mudanças pelo que não gravou (rodada 4).
   salvando: { type: Boolean, default: false },
 });
@@ -29,9 +31,19 @@ const { t } = useI18n();
 const mudou = computed(() => props.destino !== undefined);
 const ficaSem = computed(() => props.destino === null);
 const livre = computed(() => !props.trava && !props.somenteLeitura);
+// "Sem função" fora do alcance (#2317): o "Tirar" fica travado e, se a saída já estava pendente (o alcance caiu
+// depois), a linha mostra o mesmo motivo; o "Desfazer" continua livre e o salvar não manda o pedido.
+const semFuncaoPresa = computed(
+  () => livre.value && props.semFuncaoTravado && props.modo === 'ja'
+);
+const tirarTravado = computed(() => semFuncaoPresa.value && !mudou.value);
+const saidaPresa = computed(() => semFuncaoPresa.value && ficaSem.value);
+const idDoEstado = useId();
 
 const estado = computed(() => {
   if (props.trava) return t(`FUNCOES_EQUIPE.PESSOA.TRAVA.${props.trava}`);
+  if (tirarTravado.value || saidaPresa.value)
+    return t('FUNCOES_EQUIPE.PESSOA.SO_ADMIN_TIRA');
   if (ficaSem.value) return t('FUNCOES_EQUIPE.PESSOA.VAI_FICAR_SEM');
   const nova = props.nomeDoDestino;
   if (mudou.value && props.modo === 'sem')
@@ -50,7 +62,7 @@ const ICONE = {
   mudou: 'i-lucide-repeat text-n-amber-11',
 };
 const icone = computed(() => {
-  if (props.trava) return ICONE.trava;
+  if (props.trava || tirarTravado.value || saidaPresa.value) return ICONE.trava;
   if (ficaSem.value) return ICONE.ficaSem;
   return mudou.value ? ICONE.mudou : '';
 });
@@ -99,6 +111,7 @@ const valores = computed(() => ({
           </span>
           <span
             v-if="estado"
+            :id="idDoEstado"
             data-estado
             class="inline-flex items-start gap-1.5 text-sm text-n-slate-11"
             :class="{ 'font-medium text-n-slate-12': mudou }"
@@ -120,7 +133,8 @@ const valores = computed(() => ({
         :aria-label="$t(`FUNCOES_EQUIPE.PESSOA.${acao.chave}_ROTULO`, valores)"
         slate
         faded
-        :disabled="salvando"
+        :disabled="salvando || tirarTravado"
+        :aria-describedby="tirarTravado ? idDoEstado : undefined"
         class="min-h-11 sm:min-w-[11.5rem] max-sm:w-full"
         @click="acao.emitir"
       />

@@ -81,6 +81,24 @@ RSpec.describe CustomRoles::SemFuncaoCapacidades do
       .to all(satisfy { |_id, pode| pode == false })
   end
 
+  # #2317: deixar alguém sem função entrega estas chaves; quem não é administrador precisa alcançá-las.
+  describe '.chaves' do
+    it 'traz as chaves das capacidades que o sem função pode, sem os extras', :aggregate_failures do
+      chaves = described_class.chaves(Account.new)
+
+      expect(chaves).to match_array(%w[conversation_manage contact_view contact_manage canned_response_manage
+                                       conversation_message_delete crm_manage_cards crm_move_cards crm_delete_cards
+                                       crm_view_reports sales_value_view])
+      expect(chaves).not_to include('meta_ads_view')
+    end
+
+    it 'segue a flag da conta: com crm_numeros_lentes, os relatórios das vendas saem' do
+      account = Account.new.tap { |conta| conta.enable_features('crm_numeros_lentes') }
+
+      expect(described_class.chaves(account)).not_to include('crm_view_reports')
+    end
+  end
+
   it 'recusa fonte que não é do dono citado (método herdado ou sobrescrito por outro módulo)' do
     expect { described_class.arquivo_da('Crm::CardPolicy#update?') }
       .to raise_error(ArgumentError, 'Crm::CardPolicy não tem update? próprio (é de Enterprise::Crm::CardPolicy)')

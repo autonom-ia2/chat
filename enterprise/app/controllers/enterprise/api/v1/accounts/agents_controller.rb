@@ -18,7 +18,7 @@ module Enterprise::Api::V1::Accounts::AgentsController
 
   def guard_new_agent!
     super
-    custom_role_guard.role_to_grant!(custom_role_id_param)
+    refuse_with_code { custom_role_guard.role_to_grant!(custom_role_id_param) }
   end
 
   # Someone whose current role is out of the giver's reach is not edited at all, as the screen shows (#1931).
@@ -26,18 +26,34 @@ module Enterprise::Api::V1::Accounts::AgentsController
   # the giver's reach too. Runs before any write.
   def guard_agent_update!
     super
-    account_user = @agent.current_account_user
+    refuse_with_code { guard_custom_role_change!(@agent.current_account_user) }
+  end
+
+  # Taking someone out of their role leaves them with the "Sem função" keys, which the giver must reach (#2317). With
+  # custom roles off (a downgraded account), clearing a stale role stays allowed, as associate_agent_with_custom_role says.
+  def guard_custom_role_change!(account_user)
     custom_role_guard.reach_current!(account_user)
     return unless custom_role_id_given?
     return if custom_role_id_param.to_s == account_user.custom_role_id.to_s
 
     access_guard.touch_access!(account_user)
-    custom_role_guard.role_to_grant!(custom_role_id_param)
+    return custom_role_guard.role_to_grant!(custom_role_id_param) if custom_role_id_param.present?
+
+    custom_role_guard.no_role! if Current.account.feature_enabled?('custom_roles')
   end
 
   def guard_agent_removal!
     super
-    custom_role_guard.reach_current!(@agent.current_account_user)
+    refuse_with_code { custom_role_guard.reach_current!(@agent.current_account_user) }
+  end
+
+  # Every custom role refusal here carries its reason code, in the body /custom_roles uses (#2308, #2317), so the screens
+  # can say why. Other refusals (administrators, one's own access) keep the generic 401.
+  def refuse_with_code
+    yield
+  rescue CustomRoles::GrantGuard::Denied => e
+    log_handled_error(e)
+    render json: { error: e.code, message: I18n.t("errors.custom_role.#{e.code}") }, status: :unauthorized
   end
 
   def custom_role_guard

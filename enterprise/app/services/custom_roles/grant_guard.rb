@@ -3,7 +3,8 @@
 #   someone whose role has grant_above_own, reaches every role.
 # - Nobody but an administrator edits or deletes the role they hold.
 # - Roles behind integration tokens are never handed out (CustomRole.for_people).
-# A plain agent (no custom role) is always allowed: rule 2 covers custom roles only (Rodrigo, 20/10).
+# - Leaving someone without a role hands out what the "Sem função" has (#2317): the giver must reach those keys, as for
+#   any other role. A new person added as a plain agent is still always allowed (Rodrigo, 20/10).
 class CustomRoles::GrantGuard
   OUT_OF_REACH = 'out_of_reach'.freeze
   OWN_ROLE = 'own_role'.freeze
@@ -41,6 +42,12 @@ class CustomRoles::GrantGuard
   # Changing or removing someone's current role is also handing out access: the current role must be in reach too.
   def reach_current!(target)
     deny! if target.custom_role.present? && !reach?(target.custom_role.permissions)
+  end
+
+  # Removing someone's role, or deleting a role with destination "none", gives them the "Sem função" keys (#2317). Their
+  # source is CustomRoles::SemFuncaoCapacidades, with the account's flags.
+  def no_role!
+    deny! unless reach?(CustomRoles::SemFuncaoCapacidades.chaves(@actor.account))
   end
 
   def write!(role, permissions)

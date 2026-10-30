@@ -830,6 +830,7 @@
       "HOJE_E": "Today is {atual}. Will become {nova}.",
       "HOJE_SEM": "Has no role today. Will become {nova}.",
       "VAI_SER": "Will be {nova}.",
+      "SO_ADMIN_TIRA": "Only the administrator takes this person out of the role",
       "TRAVA": {
         "SELF": "Nobody changes their own role",
         "ADMIN": "Can already do everything: has administrator access",
@@ -887,6 +888,7 @@
       "NOVA_FUNCAO": "New role",
       "ESCOLHA": "Choose the new role",
       "SEM_FUNCAO": "No role",
+      "SEM_FUNCAO_TRAVADA": "Only the administrator takes this person out of the role | Only the administrator takes these people out of the role",
       "MANTER_FUNCAO": "Keep the role",
       "MOVER": "Move the people and delete",
       "APAGANDO": "Deleting…",

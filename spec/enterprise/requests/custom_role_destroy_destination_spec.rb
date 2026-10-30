@@ -78,10 +78,12 @@ RSpec.describe 'Deleting a custom role with people (#2185)', :aggregate_failures
     expect(CustomRole.exists?(role.id)).to be(true)
     expect(holder.reload.custom_role_id).to eq(role.id)
 
+    # 'none' segue a mesma régua (#2317): quem exclui não alcança as chaves do "Sem função".
     delete_role(as: builder, destination_role_id: 'none')
 
-    expect(response).to have_http_status(:ok)
-    expect(holder.reload.custom_role_id).to be_nil
+    expect(response).to have_http_status(:unauthorized)
+    expect(response.parsed_body['error']).to eq('out_of_reach')
+    expect(holder.reload.custom_role_id).to eq(role.id)
   end
 
   # Alguém ganha a função enquanto ela é excluída: sem a releitura travada, o `dependent: :nullify` deixaria essa pessoa

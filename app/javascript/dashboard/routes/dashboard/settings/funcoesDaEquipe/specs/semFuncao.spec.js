@@ -6,7 +6,13 @@ import {
   setLevel,
 } from '../../customRoles/permissionMatrix';
 import { escolherNivelDeVendas } from '../nivelDeVendas';
-import { capacidadesSemFuncao, diffEntre } from '../semFuncao';
+import {
+  alcancaSemFuncao,
+  capacidadesSemFuncao,
+  chavesQueOSemFuncaoRecebe,
+  diffEntre,
+} from '../semFuncao';
+import { CARLA } from './quemMonta';
 import contrato from '../semFuncaoCapacidades.json';
 
 // #2308, especificação 5.E, 7.9 e 14: o diff "Vão passar a poder / Vão deixar de" sai do contrato gerado das
@@ -296,6 +302,68 @@ describe('semFuncao', () => {
         expect(catalogo.FUNCOES_EQUIPE.SEM_FUNCAO[id].LISTA).toBeTruthy();
         expect(catalogo.FUNCOES_EQUIPE.SEM_FUNCAO[id].CURTO).toBeTruthy();
       });
+    });
+  });
+
+  // #2317: deixar alguém sem função entrega estas chaves; o servidor confere as mesmas
+  // (CustomRoles::SemFuncaoCapacidades.chaves, coberto no sem_funcao_capacidades_spec.rb com a mesma lista).
+  describe('alcance do "Sem função" (#2317)', () => {
+    const DO_SEM_FUNCAO = [
+      'conversation_manage',
+      'contact_view',
+      'contact_manage',
+      'canned_response_manage',
+      'conversation_message_delete',
+      'crm_manage_cards',
+      'crm_move_cards',
+      'crm_delete_cards',
+      'crm_view_reports',
+      'sales_value_view',
+    ];
+
+    it('as chaves são as das capacidades que ele pode, sem os extras, com a flag da conta', () => {
+      expect(chavesQueOSemFuncaoRecebe(desligada)).toEqual(DO_SEM_FUNCAO);
+      expect(chavesQueOSemFuncaoRecebe(ligada)).toEqual(
+        DO_SEM_FUNCAO.filter(chave => chave !== 'crm_view_reports')
+      );
+    });
+
+    it('a Carla não alcança: sales_value_view é de delegação, e ela também não o tem', () => {
+      expect(alcancaSemFuncao(CARLA, desligada)).toBe(false);
+      const comTudo = {
+        ...CARLA,
+        permissions: [...CARLA.permissions, ...DO_SEM_FUNCAO, 'crm_view'],
+      };
+      expect(alcancaSemFuncao(comTudo, desligada)).toBe(false);
+    });
+
+    it('o administrador e quem tem grant_above_own alcançam', () => {
+      expect(alcancaSemFuncao({ isAdmin: true }, desligada)).toBe(true);
+      expect(
+        alcancaSemFuncao(
+          { ...CARLA, permissions: [...CARLA.permissions, 'grant_above_own'] },
+          desligada
+        )
+      ).toBe(true);
+    });
+
+    it('conta as implicadas, como o GrantGuard: sem crm_view, editar as vendas fica fora', () => {
+      const soEditarVendas = {
+        capacidades: [
+          { id: 'x', chaves: ['crm_manage_cards'], premissas: [], pode: true },
+        ],
+      };
+      const semCrmView = { permissions: ['crm_manage_cards'] };
+      expect(alcancaSemFuncao(semCrmView, desligada, soEditarVendas)).toBe(
+        false
+      );
+      expect(
+        alcancaSemFuncao(
+          { permissions: ['crm_manage_cards', 'crm_view'] },
+          desligada,
+          soEditarVendas
+        )
+      ).toBe(true);
     });
   });
 });
