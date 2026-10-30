@@ -50,4 +50,4 @@ A régua não muda: o FAIL de R1 fica registrado. Opções levadas ao Rodrigo:
 2. Apertar o prompt para nunca negar.
 3. Medir sem a flag no caso "fora do escopo".
 
-Decisão: _pendente_.
+Decisão: aceito pelo Rodrigo em 30/10 (opção 1); a régua não muda, o FAIL do R1 fica escrito.
