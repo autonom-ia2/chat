@@ -122,7 +122,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       custo = Crm::AiUsageEvent.where(account_id: account.id).sum(:cost_estimate).to_f
       break if custo > ClassificadorComentariosEval::TETO_USD
 
-      decisao = described_class.new(care: cuidados.fetch(ramo), jev: jev).decidir(texto)
+      decisao = described_class.new(care: cuidados.fetch(ramo), jev: jev).decidir!(texto)
       itens << { caso: indice, ramo: ramo, esperado: aceitas, decisao: decisao, acertou: aceitas.include?(decisao) }
     end
 
