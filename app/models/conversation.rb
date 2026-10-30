@@ -164,6 +164,14 @@ class Conversation < ApplicationRecord
     Conversations::MessageWindowService.new(self).can_reply?
   end
 
+  # Janela de um envio automático (#2259). Só o Instagram e o Messenger mudam (sem os 7 dias da tag HUMAN_AGENT); nos
+  # outros canais é a mesma do can_reply?, inclusive o WhatsApp Híbrido.
+  def can_reply_automatically?
+    return can_reply? unless inbox&.channel_type.in?(%w[Channel::FacebookPage Channel::Instagram])
+
+    Conversations::MessageWindowService.new(self, automatic: true).can_reply?
+  end
+
   def language
     additional_attributes&.dig('conversation_language')
   end

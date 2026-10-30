@@ -34,39 +34,60 @@ class Crm::Cards::PayloadBuilder
   # truth for the shape — Crm::Kanban::CardPayloadBuilder delegates here so board,
   # list and websocket payloads never drift. Legacy touches without touched_at sort
   # first via to_s -> '' (they are the origin touch, so oldest-first stays correct).
-  def self.aggregated_campaigns_for(card, conversation_visibility:)
+  # ad_visible: Crm::AnuncioDeOrigem.ve? de quem lê (#2271); false tira do toque de anúncio o que identifica o anúncio.
+  def self.aggregated_campaigns_for(card, conversation_visibility:, ad_visible:)
     conversations = (card.linked_conversations.to_a + [card.primary_conversation]).compact.uniq(&:id)
     conversations.select { |conversation| conversation_visibility.visible?(conversation) }
-                 .flat_map { |conversation| campaign_touches_for(conversation) }
+                 .flat_map { |conversation| campaign_touches_for(conversation, ad_visible: ad_visible) }
                  .sort_by { |touch| touch[:touched_at].to_s }
   end
 
-  def self.campaign_touches_for(conversation)
+  def self.campaign_touches_for(conversation, ad_visible:)
     touches = conversation.additional_attributes&.dig('campaign_touches')
     return [] unless touches.is_a?(Array)
 
     touches.filter_map do |touch|
       next unless touch.is_a?(Hash)
 
-      CAMPAIGN_TOUCH_FIELDS.to_h { |field| [field.to_sym, touch[field]] }.merge(conversation_id: conversation.id)
+      item = CAMPAIGN_TOUCH_FIELDS.to_h { |field| [field.to_sym, touch[field]] }.merge(conversation_id: conversation.id)
+      ad_visible ? item : Crm::AnuncioDeOrigem.para_quem_nao_ve(touch, item)
     end
   end
 
-  UNRESOLVED_COMPANY = Object.new.freeze
+  # Quem cuida sem o atendente da conversa principal (#2283): para quem não vê essa conversa, o nome do atendente não vai;
+  # vale o dono do card, senão o robô (a mesma ordem de Crm::Card#current_responsible). O Quadro usa o mesmo.
+  def self.responsible_without_conversation_agent(card)
+    return { type: 'agent', id: card.owner.id, name: card.owner.name } if card.owner.present?
 
-  def initialize(card, user: nil, account_user: nil, conversation_visibility: nil, company: UNRESOLVED_COMPANY)
+    bot = card.responsible_agent_bot
+    { type: 'bot', id: bot.id, name: bot.name } if bot.present?
+  end
+
+  UNRESOLVED_COMPANY = Object.new.freeze
+  UNRESOLVED_FOLLOW_UP = Object.new.freeze
+  # Lista legada e planilha não usam o retorno da pessoa: next_follow_up_id e next_follow_up_due_at vão nil e a consulta
+  # não roda.
+  SKIP_FOLLOW_UP = Object.new.freeze
+
+  # next_follow_up: o retorno da pessoa (id e due_at); a página da Lista nova manda o de todos os cards de uma vez
+  # (Crm::FollowUp.proximos_retornos_da_pessoa); sem ele, um card só (detalhe e tempo real) faz a consulta.
+  def initialize(card, user: nil, account_user: nil, conversation_visibility: nil, company: UNRESOLVED_COMPANY, # rubocop:disable Metrics/ParameterLists
+                 next_follow_up: UNRESOLVED_FOLLOW_UP)
     @card = card
     @user = user
     @account_user = account_user
     @conversation_visibility = conversation_visibility
     @company = company.equal?(UNRESOLVED_COMPANY) ? Crm::Cards::CompanyResolver.for_card(card) : company
+    @next_follow_up = next_follow_up
   end
 
   def perform
     ATTRIBUTES.index_with { |attribute| @card.public_send(attribute) }
               .merge(timestamp_payload)
-              .tap { |payload| sanitize_hidden_conversation!(payload) }
               .tap { |payload| append_nested_payloads(payload) }
+              .tap { |payload| append_action_list_payload(payload) }
+              .tap { |payload| sanitize_hidden_conversation!(payload) }
+              .tap { |payload| sanitize_lead_form_answers!(payload) }
               .tap { |payload| Crm::ValorDeVenda.oculta_card!(payload) unless value_visible? }
   end
 
@@ -77,11 +98,29 @@ class Crm::Cards::PayloadBuilder
     Crm::ValorDeVenda.ve_o_card?(@account_user, @card)
   end
 
+  # Respostas do formulário do anúncio da Meta (#2195) trazem nome, telefone e e-mail: só para quem vê o contato inteiro.
+  def sanitize_lead_form_answers!(payload)
+    payload[:metadata] = Crm::MetaAds::LeadForms::Answers.without(payload[:metadata]) unless full_contact?
+  end
+
+  # Conversa que a pessoa não vê (#2283, item 7): o nome de quem atende essa conversa não vai, nem como responsável nem
+  # como quem cuida. No lugar dele, o próximo da ordem: o dono do card, senão o robô.
   def sanitize_hidden_conversation!(payload)
     return if primary_conversation_visible?
 
+    # A Lista nova (#2283, decisão 2) diz "Outra pessoa está conversando", sem nome: só quando alguém atende a conversa.
+    payload[:conversation_hidden] = hidden_conversation_assignee?
     payload[:conversation_id] = nil
     payload[:metadata] = sanitized_metadata(payload[:metadata])
+    return unless hidden_conversation_assignee?
+
+    fallback = self.class.responsible_without_conversation_agent(@card)
+    fallback ? payload[:responsible] = fallback : payload.delete(:responsible)
+    payload[:current_responsible] = fallback
+  end
+
+  def hidden_conversation_assignee?
+    primary_conversation.present? && primary_conversation.assignee_id.present?
   end
 
   def append_nested_payloads(payload)
@@ -98,6 +137,24 @@ class Crm::Cards::PayloadBuilder
       value = send(method_name)
       payload[key] = value if value.present?
     end
+  end
+
+  # Lista nova (#2283): quem cuida (dono -> pessoa da conversa -> robô, Crm::Card#current_responsible), o retorno da
+  # pessoa mais perto (o "Feito" usa o id; a hora dá a situação e a cor) e, com sort=acao, o grupo do card
+  # (Crm::Cards::ActionGroups).
+  def append_action_list_payload(payload)
+    payload[:current_responsible] = @card.current_responsible
+    retorno = next_follow_up
+    payload[:next_follow_up_id] = retorno&.id
+    payload[:next_follow_up_due_at] = retorno&.due_at&.iso8601
+    payload[:action_group] = Crm::Cards::ActionGroups::KEYS[@card[:acao_grupo]] if @card.has_attribute?(:acao_grupo)
+  end
+
+  def next_follow_up
+    return if @next_follow_up.equal?(SKIP_FOLLOW_UP)
+    return @next_follow_up unless @next_follow_up.equal?(UNRESOLVED_FOLLOW_UP)
+
+    Crm::FollowUp.proximos_retornos_da_pessoa([@card.id], conversation_visibility: visibility)[@card.id]
   end
 
   # Label titles (strings) of the PRIMARY conversation only, in cached_label_list
@@ -124,8 +181,9 @@ class Crm::Cards::PayloadBuilder
 
   # Each campaign uses the permission of its own source conversation. A hidden
   # primary must not hide an authorized secondary that the same filters match.
+  # Anúncio de origem (#2271): sem `meta_ads_view`, o toque de anúncio sai sem título, nomes, prévia e miniatura.
   def campaigns_payload
-    self.class.aggregated_campaigns_for(@card, conversation_visibility: visibility)
+    self.class.aggregated_campaigns_for(@card, conversation_visibility: visibility, ad_visible: visibility.anuncio_visivel?)
   end
 
   # Typed AI summary surfaced to the card drawer. Gated on conversation

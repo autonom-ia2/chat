@@ -55,6 +55,13 @@ class Instagram::BaseSendService < Base::SendOnChannelService
     ChatwootExceptionTracker.new(error, account: message.account, user: message.sender).capture_exception
   end
 
+  # Uma decisão por mensagem (#2259): texto e cada anexo saem com a mesma tag, sem refazer as consultas.
+  def human_agent_tag?(config_key)
+    return @human_agent_tag if defined?(@human_agent_tag)
+
+    @human_agent_tag = Meta::HumanAgentTag.apply?(message, config_key)
+  end
+
   def message_params
     params = {
       recipient: { id: contact.get_source_id(inbox.id) },

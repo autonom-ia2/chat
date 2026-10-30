@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMessageFormatter } from 'shared/composables/useMessageFormatter';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 
 import CardLayout from 'dashboard/components-next/CardLayout.vue';
@@ -89,12 +89,13 @@ const campaignStatus = computed(() => {
 const inboxName = computed(() => props.inbox?.name || '');
 
 const inboxIcon = computed(() => {
-  const {
+  const { medium, voice_enabled: voiceEnabled } = props.inbox;
+  return getInboxIconByType(
+    tipoDoIconeDaCaixa(props.inbox),
     medium,
-    channel_type: type,
-    voice_enabled: voiceEnabled,
-  } = props.inbox;
-  return getInboxIconByType(type, medium, 'fill', voiceEnabled);
+    'fill',
+    voiceEnabled
+  );
 });
 </script>
 

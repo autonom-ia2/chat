@@ -63,9 +63,12 @@ pt_BR:
   errors:
     custom_role:
       unknown_permissions: 'tem chaves desconhecidas: %{unknown}. Chaves válidas: %{valid}'
-      destination_required: 'Esta função tem pessoas. Escolha para onde elas vão: outra função ou sem função (agente comum).'
-      destination_invalid: 'As pessoas desta função não podem ir para essa função. Escolha outra função desta conta ou sem função.'
-      changed_meanwhile: 'Alguém mudou esta função ou as pessoas dela enquanto você excluía. Nada foi alterado. Tente de novo.'
+      destination_required: 'Esta função ainda tem pessoas. Escolha para onde vão: outra função ou sem função.'
+      destination_invalid: 'As pessoas desta função não podem ir para a função escolhida. Escolha outra ou sem função.'
+      changed_meanwhile: 'Alguém mudou esta função ou as pessoas dela enquanto você apagava. Nada mudou. Tente de novo.'
+      out_of_reach: 'Você não pode dar parte desta função. Peça ao administrador.'
+      own_role: 'Ninguém muda a própria função.'
+      feature_off: 'As funções da equipe não estão disponíveis nesta conta agora.'
     account:
       not_authorized: Você não está autorizado a acessar esta conta
       email_limit_exceeded: O limite diário de envio de e-mails desta conta foi atingido
@@ -294,6 +297,19 @@ pt_BR:
         feedback: Comentário de Feedback
         recorded_at: Data de gravação
         review_notes: Notas de Avaliação
+  campaign_import:
+    people_sheet:
+      sheet: Público
+      name: Nome
+      phone: Telefone
+      email: E-mail
+      company: Empresa
+  conversation_audience:
+    columns:
+      city: Cidade
+      country: País
+      'yes': Sim
+      'no': Não
   notifications:
     notification_title:
       conversation_creation: 'A conversa (#%{display_id}) foi criada em %{inbox_name}'
@@ -305,8 +321,13 @@ pt_BR:
       sla_missed_next_response: 'Meta de SLA de Próxima Resposta não alcançada para a conversa (#%{display_id})'
       sla_missed_resolution: 'Meta de SLA de Resolução não alcançada para a conversa (#%{display_id})'
       guide_alert: 'O Guia tem um aviso urgente para você'
+      conversation_audience_ready: 'Seu público pelas conversas terminou'
     attachment: 'Anexo'
     no_content: 'Sem conteúdo'
+    conversation_audience:
+      done: "a lista está pronta para revisar"
+      ceiling: "parou no custo combinado e espera você"
+      failed: "parou porque a IA da conta não respondeu"
   conversations:
     captain:
       handoff: 'Transferindo para que outro agente dê assistência.'

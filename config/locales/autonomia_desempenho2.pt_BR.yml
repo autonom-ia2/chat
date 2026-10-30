@@ -1,0 +1,482 @@
+pt_BR:
+  autonomia:
+    desempenho2:
+      api:
+        formato_invalido: O arquivo sai em PDF ou planilha (xlsx).
+        sem_leitura: Este agente ainda não tem conversas lidas para o painel.
+      c:
+        sem_nome: Sem nome
+        agente: o agente de IA
+        vazio: Nada neste período.
+        sim: sim
+        nao: não
+        conversa: "Conversa #%{numero} · %{quando}"
+        dias: [Segunda, Terça, Quarta, Quinta, Sexta, Sábado, Domingo]
+        dias_curtos: [Seg, Ter, Qua, Qui, Sex, Sáb, Dom]
+        formato:
+          milhar: "."
+          decimal: ","
+          segundos: "%{n} s"
+          minutos: "%{n} min"
+          minutos_e_segundos: "%{m} min %{s} s"
+          horas: "%{n} h"
+          fuso_da_conta: "fuso da sua conta (%{fuso})"
+          lista:
+            virgula: ", "
+            dois: " e "
+            ultimo: " e "
+          periodo: "%{inicio} a %{fim}"
+          intervalo: "%{inicio} a %{fim}"
+          duracao_dias:
+            one: "%{n} dia"
+            other: "%{n} dias"
+          duracao_meses:
+            one: "%{n} mês"
+            other: "%{n} meses"
+        grupos:
+          fechou: Fechou
+          avancou: Avançou
+          parou: Parou
+          resolveu: Resolveu
+          passou: Passou para uma pessoa
+          sem_negocio: Sem negócio
+        secoes:
+          kpis: os números
+          funil: o funil
+          temas: os temas
+          cortes: o que pediram
+          origem: a origem
+          horarios: os horários
+          qualidade: a qualidade das respostas
+          pessoa: a passagem para uma pessoa
+          quem: quem procura
+          perdas: as perdas
+          acoes: as sugestões
+          confianca: a conferência (“Quanto confiar”)
+          ticket: o valor típico de uma venda
+        avisos:
+          dia_parcial: "O último dia (%{dia}) ainda está em andamento."
+          so_periodo_todo: "Esta parte usa o período todo: %{secoes}."
+          pouco_dado: Pouco dado neste período. Leia os números com cuidado.
+          instrucao_mudou: "A instrução da IA mudou em %{data}. Antes e depois não se comparam direto."
+          lido_por_amostra: Lemos as conversas por amostra neste período.
+          sem_anuncio: Esta conta não tem anúncio ligado.
+          leitura_teto: A última leitura automática parou no limite diário de gasto com IA. O resto entra na próxima leitura.
+          leitura_sem_ia: A leitura automática não está funcionando nesta conta, porque falta conectar a chave de IA.
+          leitura_chave_recusada: A IA recusou a chave desta conta. A leitura automática só volta depois de conferir a chave.
+          leitura_erro: A última leitura automática parou por um erro. Os números mostram o que já foi lido.
+          leitura_pendentes: "Conversas esperando a próxima leitura da IA: %{n}. Os números param antes delas."
+          leitura_nao_lidas: "Conversas que a IA não conseguiu ler: %{n}. Se já tinham sido lidas antes, os números são dessa leitura; se nunca foram, ficam de fora."
+          leitura_instrucao: A instrução do agente mudou depois que a leitura foi preparada. A IA segue lendo com os critérios de antes até o suporte atualizar a leitura.
+        kpi:
+          procuras: Procuras
+          conversas: Conversas
+          compra: Pedidos de compra
+          fecharam: Fecharam
+          duvidas_resolvidas: Dúvidas resolvidas
+          sem_pessoa: Ficaram sem uma pessoa
+          perdas_evitaveis: Vendas perdidas por causa corrigível
+          tempo_resposta: "Tempo para %{nome} responder"
+        kpi_explicacao:
+          procuras: Pedidos reais. Uma conversa pode ter vários. Testes fora.
+          conversas: Pessoas diferentes que escreveram no período
+          compra: "%{pct} das procuras · %{explicacao}"
+          fecharam: "%{pct} de %{m} · %{composicao}"
+          duvidas_resolvidas: "%{n} de %{m} dúvidas, sem precisar de pessoa"
+          sem_pessoa: "de %{m} que precisavam de alguém da equipe"
+          perdas_evitaveis: "%{pct} de %{m} %{compra}"
+          tempo_resposta: "9 em cada 10 em até %{p90}"
+        delta:
+          mais: "▲ %{n} a mais que no período anterior"
+          menos: "▼ %{n} a menos que no período anterior"
+          igual: Igual ao período anterior
+          pontos_mais: "▲ %{n} pontos a mais que no período anterior"
+          pontos_menos: "▼ %{n} pontos a menos que no período anterior"
+        leituras:
+          volume_titulo: Volume
+          volume: "%{nome} mandou %{agente} mensagens e a equipe, %{equipe}, em %{conversas} conversas. Quem da equipe escreve pela conta de %{nome} conta como %{nome}."
+          trava_titulo: Maior trava
+          trava: "%{nome}: %{n} de %{base} %{compra} (%{pct})."
+          sem_trava: Nenhuma procura de compra parada neste período.
+          decisao_titulo: Por onde começar
+          decisao: "%{titulo}."
+          decisao_com_ganho: "%{titulo}. Ganho estimado: %{ganho}."
+        indice:
+          evolucao: Evolução
+          funil: Funil
+          temas: Temas
+          origem: Origem
+          horarios: Horários
+          qualidade: Qualidade
+          pessoa: Pessoa e quem
+          perdas: Perdas
+          acoes: Ações
+          como_ler: Como ler
+          tabelas: Tabelas
+        pdf:
+          desempenho: Desempenho
+          marca: Chat2You
+          cabecalho_direita: "%{periodo} · Dados até %{dados_ate}"
+          rodape_marca: "%{marca} · Painel de desempenho"
+          rodape_fonte: "Fonte: leitura das conversas"
+          rodape_pagina: "Página %{n} de %{total}"
+        capa:
+          titulo: Resumo do período
+          subtitulo: "Os números principais, o que eles querem dizer e onde achar cada parte neste arquivo. Datas e horários no %{fuso}."
+          indice: Neste arquivo
+          so_no_excel: A lista de todas as procuras, uma por linha, está só na planilha (Excel).
+        evolucao:
+          titulo: Como o movimento mudou
+          subtitulo_dia: Por dia. As bolinhas embaixo mostram quando aconteceu cada coisa, na mesma escala.
+          subtitulo_semana: Por semana. As bolinhas embaixo mostram quando aconteceu cada coisa, na mesma escala.
+          procuras: Procuras
+          total: Procuras no período
+          pico_dia: "Pico · dia %{data}"
+          pico_semana: "Pico · semana de %{data}"
+          media_dia: Média por dia
+          media_semana: Média por semana
+          evento_fecharam: Fecharam
+          evento_pessoa: Passaram para uma pessoa
+          evento_sem_pessoa: Ficaram sem pessoa
+          parcial_dia: "* dia ainda em andamento"
+          parcial_semana: "* semana ainda em andamento"
+        funil:
+          titulo: Até onde as procuras chegam
+          subtitulo: Uma procura conta numa etapa se chegou a ela. Embaixo, por que o último passo e o resultado não batem e o que muda o resultado.
+          do_inicio: "%{pct} do início"
+          da_anterior: "%{pct} da etapa anterior"
+          conciliacao: "Por que “%{etapa}” (%{a}) e “%{fechou}” (%{b}) não dão o mesmo número: %{partes}."
+          conciliacao_nao_fecharam:
+            one: "%{n} chegou a este passo e não terminou em “%{fechou}”"
+            other: "%{n} chegaram a este passo e não terminaram em “%{fechou}”"
+          conciliacao_fora:
+            one: "%{n} terminou em “%{fechou}” sem passar por este passo"
+            other: "%{n} terminaram em “%{fechou}” sem passar por este passo"
+          conciliacao_igual: "“%{etapa}” e “%{fechou}” dão o mesmo número neste período."
+          sem_comparar: Poucos casos para comparar
+          comparacoes_titulo: O que muda o resultado
+          comparacoes_descricao: Aparecem juntos, não quer dizer que um causou o outro.
+          n_de_m: "%{n} de %{m} fecham"
+          vezes: "%{n}× mais"
+          igual: Igual
+          pontos_a_mais: "%{n} pontos a mais"
+          pontos_a_menos: "%{n} pontos a menos"
+          recorte:
+            marco: Por passo
+            horario: Por horário
+            origem: Por origem
+            quem: Por quem procura
+            outro: Outro recorte
+        temas:
+          titulo: Do que as pessoas falam e o que pediram
+          subtitulo: Cada barra mostra quantas procuras e, embaixo, quantas fecharam.
+          temas_titulo: Do que as pessoas falam
+          temas_descricao: Cada procura tem um tema principal.
+          corte_descricao: Detalhe do pedido, com quanto fechou.
+          unidade: "Unidade: procuras. Cada procura tem um tema principal."
+          fecharam: "%{pct} %{fechou} (%{n} de %{m})"
+          fecharam_poucos: "%{fechou}: %{n} de %{m} (poucos casos)"
+          erro_grave: "%{pct} de erro grave"
+          mais_trava: "mais trava: %{nome}"
+          trava_geral: a mais comum do período
+          mais_que_antes: "▲ %{n} a mais que antes"
+          menos_que_antes: "▼ %{n} a menos que antes"
+          igual_antes: igual a antes
+        origem:
+          titulo: De onde vêm as procuras
+          subtitulo: A origem é o que se sabe de cada procura. Mesma conta dos dois lados.
+          como_chegaram: Como chegaram
+          fecham: "%{pct} %{fechou} (%{n} de %{m})"
+          fecham_poucos: "%{fechou}: %{n} de %{m} (poucos casos)"
+          sem_anuncio_frase: Esta conta não tem anúncio ligado. Tudo aqui chegou sem anúncio.
+          veio_de_anuncio: Veio de anúncio
+          chegou_sem_anuncio: Chegou sem anúncio
+          lado_procuras: "%{n} procuras · %{pct}"
+          lado_compra: "%{compra} %{nome} · %{fecharam} fecharam"
+          lado_taxa: "%{pct} fecham"
+          vezes: "%{n}×"
+          por_anuncio: Por anúncio
+          sem_anuncio_como: Sem anúncio, como chegaram
+          sem_saber_qual: "Veio de anúncio sem saber qual: %{n}"
+          fecharam: "%{n} fecharam"
+          custo_por_fechou: "%{valor} por fechamento"
+          direct: Anúncios que abrem o Direct do Instagram ainda não aparecem aqui.
+        horarios:
+          titulo: Quando chegam as procuras
+          subtitulo: Dia da semana e hora. Os números dentro das células substituem a consulta pelo mouse.
+          pico: "Pico · %{dia} %{hora}h"
+          total: Total
+          fora_do_horario: Fora do horário
+          menos: Menos
+          mais: "Mais · máximo %{maximo}"
+          faixa: Quando
+          sem_pessoa: Ficaram sem pessoa
+          comercial: "Horário comercial: %{dias}, %{inicio}h às %{fim}h"
+          faixas:
+            dentro: No horário comercial
+            fora: Fora do horário
+            fim_de_semana: Fim de semana
+            noite: Noite (18h às 23h)
+        qualidade:
+          titulo: "Como %{nome} atende"
+          subtitulo: "Em cada procura: se %{nome} acertou, quanto demora para responder e quais regras mais quebra."
+          como_atuou: "Como %{nome} atuou"
+          como_atuou_descricao: "Base: %{n} procuras em que %{nome} atuou. «Não atuou» fica fora da base."
+          fora_da_base: fora da base
+          acertou: Acertou
+          erro_leve: Erro leve
+          erro_grave: Erro grave
+          nao_atuou: Não atuou
+          mediana: Resposta típica (metade responde antes disso)
+          nove_em_dez: 9 em cada 10 respondidas em até
+          acima_5_min: Respostas acima de 5 min
+          mensagens_por_mensagem: "Mensagens de %{nome} para cada mensagem da pessoa"
+          otimista: "Estes números saíram otimistas na conferência (%{pct} de acerto). Os erros reais são maiores."
+          regras_titulo: Regras mais quebradas
+          regras_descricao: "Quantas procuras quebraram cada regra da instrução de %{nome}."
+          sistemica: Em metade ou mais
+          pontos_fortes: Pontos fortes
+          piores: Onde mais erra
+          frase_acerto: "%{acerto} de acerto em %{procuras} procuras"
+          frase_erro: "%{erro} de erro grave em %{procuras} procuras"
+        pessoa:
+          titulo: Passagem para uma pessoa e quem procura
+          subtitulo: Quem precisava de alguém da equipe, se teve, e quem são as pessoas que procuram.
+          precisavam: Precisavam de uma pessoa
+          tiveram: Tiveram uma pessoa
+          ficaram_sem: Ficaram sem uma pessoa
+          sem_valor: "%{n} (%{pct})"
+          n_de_m: "%{n} de %{m}"
+          prometeu: Prometeu passar e ninguém veio
+          sobre_o_que: Sobre o que era
+          como_terminou: Como terminou
+          fora_do_horario: "%{n} delas chegaram fora do horário comercial."
+          quem_titulo: Quem procura
+          quem_descricao: Com quanto cada grupo fecha.
+          fecham: "%{pct} %{fechou} (%{n} de %{m})"
+          fecham_poucos: "%{fechou}: %{n} de %{m} (poucos casos)"
+          conta_do_agente: "Quem da equipe escreve pela conta de %{nome} conta como %{nome}, não como equipe."
+          concentracao: Concentração
+          com_compra: "conversas com %{compra}"
+          com_fechamento: conversas fecharam algo
+          uma_vez: conversas com um pedido só
+          top10: dos pedidos de compra vêm das 10 conversas que mais pedem
+        perdas:
+          titulo: Vendas perdidas por causa corrigível
+          subtitulo: Procuras que pararam por algo que a empresa pode corrigir. Ao lado, onde travam todas as procuras.
+          parte: "%{pct} de %{m} %{compra}"
+          explicacao: Não conta quem desistiu por preço ou só pesquisou.
+          por_que: Por quê
+          por_que_descricao: Uma perda pode ter mais de um motivo.
+          exemplos: Exemplos
+          onde_travam: Onde travam todas as procuras
+          onde_travam_descricao: "Motivos anotados na leitura. A base aqui é outra (todas as procuras, não só %{compra}); por isso o número não bate com a “Maior trava” do resumo. Uma procura pode ter mais de um."
+          base_motivos: "Base: %{n} de %{m} procuras com motivo anotado. Uma procura pode ter mais de um."
+        acoes:
+          titulo: Do sinal à ação
+          subtitulo: Cada sugestão traz o número e as conversas que a provam. O ganho é uma estimativa.
+          subtitulo_de_outras_datas: "Sugestões de %{inicio} a %{fim}. Cada uma traz o número e as conversas que a provam."
+          a_prova: A prova
+          o_que_mudar: O que mudar
+          na_instrucao: "Na instrução: %{texto}"
+          no_sistema: "No sistema: %{texto}"
+          na_equipe: "Na equipe: %{texto}"
+          ganho_sem_conta: ainda não dá para estimar
+          ganho_no_periodo: "%{ganho} em %{duracao} (%{inicio} a %{fim})"
+          ganho_do_historico: "neste período ainda não dá para estimar; no histórico completo (%{duracao}, %{inicio} a %{fim}): %{ganho}"
+          ganho: "Ganho estimado: %{texto}"
+          ganho_fechamentos:
+            one: "≈ %{n} venda"
+            other: "≈ %{n} vendas"
+          ganho_valor: "≈ %{valor}"
+          como_calculamos: "Como calculamos: %{conta}"
+          ja_da: Já dá para usar
+          falta_dado: Precisa de mais dado
+          frente:
+            instrucao: "Ensinar %{nome}"
+            sistema: Ferramenta e sistema
+            equipe: Equipe
+            anuncio: Anúncios e retomada
+        como_ler:
+          titulo: Como ler este painel
+          subtitulo: O que cada número mede, o que ele não prova e quanto dá para confiar.
+          como_ler: Como ler
+          nao_provam: O que estes números não provam
+          ressalva_do_campo: "%{campo} · leitura %{leitura} (%{pct} de acerto na conferência): %{nota}"
+          testes: "Testes da equipe ficam fora (%{n})."
+          quanto_confiar: Quanto confiar
+          conferimos: "Conferimos %{n} procuras lendo a conversa inteira."
+          campo: Campo
+          acertos: Acertos
+          acerto: "% de acerto"
+          leitura_coluna: Leitura
+          certos: "%{n} de %{m}"
+          leitura:
+            firme: Firme
+            otimista: Otimista
+            fraca: Fraca
+          nao_prova:
+            assunto: Assunto não é o motivo da compra. Mostra o que se fala, não por que se compra.
+            venda_fora: Só sabemos do que aparece na conversa. Venda fechada fora daqui não aparece.
+            anuncio: Só contamos quem veio de anúncio identificado.
+            audio: Áudio sem transcrição e imagem sem leitura não foram lidos.
+            andamento: Conversas ainda em andamento ficam de fora até terminarem.
+        tabelas:
+          procuras: Procuras
+          conversas_novas: Conversas novas
+          pct_fechou: "% fechou"
+          precisavam: Precisavam de pessoa
+          tiveram: Tiveram pessoa
+          com_anuncio: Com anúncio
+          sem_anuncio: Sem anúncio
+          total_do_trecho: Total do trecho
+          do_total: "% do total"
+          tema: Tema
+          acerto: "%{nome} acertou"
+          erro_grave: Erro grave
+          mais_trava: O que mais trava
+          vs_anterior: Vs. período anterior
+          regra: Regra
+          quase_sempre: Em metade ou mais
+          exemplo: Exemplo
+          quando: Quando
+          conversa: Conversa
+          por_que: Por quê
+          como_terminou: Como terminou
+          motivos: Motivos
+          resumo: Resumo
+          primeiro: Primeiro contato
+          ultimo: Último contato
+          tema_frequente: Tema mais frequente
+          unidade:
+            dia: Dia
+            semana: Semana
+          unidade_no_texto:
+            dia: dia
+            semana: semana
+          tabela_periodo:
+            titulo: Números por período
+            subtitulo: "Uma linha por %{unidade}, com o total de cada página."
+          tabela_tema:
+            titulo: Números por tema
+            subtitulo: "Procuras, quanto fechou e quanto %{nome} acertou em cada tema."
+          tabela_regras:
+            titulo: Regras quebradas
+            subtitulo: Cada regra da instrução, quantas vezes foi quebrada e um exemplo.
+          tabela_perdas:
+            titulo: Vendas perdidas por causa corrigível
+            subtitulo: Uma linha por procura, com o porquê.
+            so_as_primeiras: "Mostramos as primeiras %{n} de %{total}. A lista completa está na planilha (Excel)."
+          tabela_ativas:
+            titulo: Conversas que mais pedem
+            subtitulo: "As 20 conversas com mais pedidos de compra somam %{pct} dos pedidos de compra."
+        planilha:
+          contexto: "%{agente} · %{periodo} · dados até %{dados_ate}"
+          resumo_titulo: "Painel de desempenho · %{agente}"
+          recomendacoes_de: "sugestões de %{inicio} a %{fim}"
+          nota_grupo: "A coluna Grupo inclui fechamentos fora de %{compra}. Para bater com o resumo, filtre também %{compra} = sim."
+          nota_fixos: Conversas, tempo de resposta e mensagens são valores do período (não são soma simples das linhas).
+          taxa_fechou: "% que fechou"
+          testes_fora: Testes da equipe (fora das contas)
+          testes_ficam_fora: "Testes da equipe ficam fora de todas as contas (%{n})."
+          mensagens_pessoas: Mensagens das pessoas
+          mensagens_agente: "Mensagens de %{nome}"
+          mensagens_equipe: Mensagens da equipe
+          os_numeros: Os números do painel
+          leituras: Leituras rápidas
+          definicoes: Definições
+          total: Total
+          inicio: Início
+          fim: Fim
+          observacao: Observação
+          por_periodo_titulo: "Números por %{unidade}"
+          por_tema_titulo: Números por tema
+          periodo_anterior: Procuras no período anterior
+          diferenca: Diferença
+          funil_titulo: Até onde as procuras chegam
+          etapa: Etapa
+          do_inicio: "% do início"
+          da_anterior: "% da etapa anterior"
+          origem_titulo: De onde vêm as procuras
+          grupo: Origem
+          tipo: Tipo
+          pct_fecham: "% fecham"
+          anuncios_titulo: Por anúncio
+          anuncio: Anúncio
+          campanha: Campanha
+          gasto: Gasto
+          custo_por_fechou: Custo por fechamento
+          horarios_titulo: "Procuras por dia da semana e hora · horários no %{fuso}"
+          dia: Dia
+          faixas_titulo: Quando chega e quando fecha
+          procuras_titulo: Todas as procuras do período (sem testes)
+          regras_titulo: Regras quebradas
+          descricao: Descrição
+          exemplo_conversa: Exemplo
+          exemplo_resumo: Resumo do exemplo
+          recomendacoes_titulo: Do sinal à ação
+          ganho_periodo: "%{duracao} (%{inicio} a %{fim})"
+          ganho_periodo_historico: "Neste período ainda não dá para estimar. Histórico completo: %{duracao} (%{inicio} a %{fim})"
+          como_ler_titulo: Como ler e quanto confiar
+          certos: Certos
+          afeta: Onde pesa
+          tipo_origem:
+            anuncio: Veio de anúncio
+            sem_anuncio: Sem anúncio
+          pronto:
+            ja_da: Já dá para usar
+            falta_dado: Precisa de mais dado
+          perdas_titulo: Vendas perdidas por causa corrigível (lista completa)
+          cortes_titulo: Detalhes do pedido
+          corte: Detalhe
+          valor_do_corte: Resposta
+          abas:
+            resumo: Resumo
+            perdas: Vendas perdidas
+            cortes: Detalhes do pedido
+            por_dia: Por dia
+            por_semana: Por semana
+            por_tema: Por tema
+            funil: Funil
+            origem: Origem
+            anuncios: Anúncios
+            horarios: Horários
+            procuras: Procuras
+            regras: Regras quebradas
+            recomendacoes: Recomendações
+            como_ler: Como ler
+          procura:
+            quando: Quando
+            conversa: Conversa
+            procura: Procura
+            tema: Tema
+            marco: Até onde chegou
+            marcos: Marcos
+            resultado: Como terminou
+            grupo: Grupo
+            motivos: Motivos
+            qualidade: "Como %{nome} foi"
+            regras: Regras quebradas
+            quem: Quem
+            origem: Origem
+            anuncio: Anúncio
+            perda: Perda evitável
+            precisava: Precisava de pessoa
+            teve: Teve pessoa
+            compra: Pedido de compra
+            resumo: Resumo
+          recomendacao:
+            titulo: Sugestão
+            frente: Frente
+            problema: Problema
+            numeros: Números
+            conversas: Conversas
+            instrucao: Na instrução
+            sistema: No sistema
+            equipe: Na equipe
+            ganho_fechamentos: Ganho (vendas)
+            ganho_valor: Ganho (valor)
+            ganho_periodo: De que período é o ganho
+            conta: Como calculamos
+            pronto: Pronto?
+            falta: O que falta

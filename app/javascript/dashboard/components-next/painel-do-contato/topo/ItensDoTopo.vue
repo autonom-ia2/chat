@@ -4,21 +4,28 @@
 // e "Acompanhar esta conversa" / "Deixar de acompanhar". Fica ao lado do
 // MoreActions.vue (do Chatwoot), que só soma `itens` à lista dele e passa a ação
 // para `agir`. O diálogo de time e prioridade é desenhado aqui.
+// #2202 (PR 3): "Etiquetas desta conversa", para todas as contas (sem a chave do
+// painel novo), só para quem opera a conversa — a mesma regra do painel antigo.
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useMapGetter, useStore } from 'dashboard/composables/store';
 import { useAlert } from 'dashboard/composables';
+import { useCanOperateConversation } from 'dashboard/composables/useCanOperateConversation';
 import CrmMeuAcessoAPI from 'dashboard/api/crmMeuAcesso';
 import { usePainelNovo } from '../usePainelNovo';
 import { mudarAcompanhar } from './acompanhar';
 import TimeEPrioridadeDialog from './TimeEPrioridadeDialog.vue';
+import EtiquetasDaConversaDialog from '../etiquetas/EtiquetasDaConversaDialog.vue';
 
 const props = defineProps({
   conversa: { type: Object, required: true },
+  // Devolve o foco ao ⋯ quando a escolha de etiquetas fecha.
+  voltarFoco: { type: Function, default: null },
 });
 
 const ACAO_TIME = 'painel_novo_time_e_prioridade';
 const ACAO_ACOMPANHAR = 'painel_novo_acompanhar';
+const ACAO_ETIQUETAS = 'etiquetas_da_conversa';
 
 const { t } = useI18n();
 const store = useStore();
@@ -29,6 +36,8 @@ const acompanhantesDe = useMapGetter(
   'conversationWatchers/getByConversationId'
 );
 const dialogo = ref(null);
+const etiquetas = ref(null);
+const podeOperar = useCanOperateConversation(computed(() => props.conversa));
 const caixasRestritas = ref([]);
 
 const temTime = computed(() => (times.value || []).length > 0);
@@ -43,7 +52,20 @@ const naoPodeSeIncluir = computed(() =>
   caixasRestritas.value.includes(Number(props.conversa?.inbox_id))
 );
 
-const itens = computed(() => {
+const itemDeEtiquetas = computed(() =>
+  podeOperar.value
+    ? [
+        {
+          icon: 'i-lucide-tags',
+          label: t('PAINEL_DO_CONTATO.MENU_DO_TOPO.ETIQUETAS'),
+          action: ACAO_ETIQUETAS,
+          value: ACAO_ETIQUETAS,
+        },
+      ]
+    : []
+);
+
+const itensDoPainelNovo = computed(() => {
   if (!ligado.value) return [];
   const lista = [
     {
@@ -67,6 +89,11 @@ const itens = computed(() => {
   }
   return lista;
 });
+
+const itens = computed(() => [
+  ...itensDoPainelNovo.value,
+  ...itemDeEtiquetas.value,
+]);
 
 const MENSAGENS_DE_ERRO = {
   'participants.self_add_restricted': () =>
@@ -101,6 +128,10 @@ const alternarAcompanhar = async () => {
 
 // true quando a ação é daqui (quem chama não faz mais nada).
 const agir = action => {
+  if (action === ACAO_ETIQUETAS && podeOperar.value) {
+    etiquetas.value?.abrir(props.voltarFoco);
+    return true;
+  }
   if (!ligado.value) return false;
   if (action === ACAO_TIME) {
     dialogo.value?.abrir();
@@ -156,5 +187,6 @@ defineExpose({ itens, agir });
       :conversa="conversa"
       :times="times || []"
     />
+    <EtiquetasDaConversaDialog v-if="podeOperar" ref="etiquetas" />
   </div>
 </template>

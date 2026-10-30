@@ -16,6 +16,7 @@ import CrmConversationStageChip from './CrmConversationStageChip.vue';
 import { useCrmPermissions } from 'dashboard/routes/dashboard/crm/composables/useCrmPermissions';
 import { useCrmConversationStage } from 'dashboard/routes/dashboard/crm/composables/useCrmConversationStages';
 import CustomerBadge from 'dashboard/components-next/customer-badge/CustomerBadge.vue';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 const props = defineProps({
   chat: { type: Object, required: true },
@@ -180,7 +181,7 @@ const selectedModel = computed({
         <h4
           class="text-heading-3 my-0 capitalize truncate max-w-full text-n-slate-12 font-medium"
         >
-          {{ currentContact.name }}
+          {{ nomeDoContatoNaTela(currentContact) }}
         </h4>
         <!-- Selo "Cliente" (#1258): na coluna estreita do modo expandido, vai abaixo do nome. -->
         <CustomerBadge :contact="currentContact" />

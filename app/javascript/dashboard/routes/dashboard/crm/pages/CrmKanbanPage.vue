@@ -60,6 +60,9 @@ import CrmResultTabs from '../components/list/CrmResultTabs.vue';
 import CrmBulkActionBar from '../components/list/CrmBulkActionBar.vue';
 import CrmCalendar from '../components/calendar/CrmCalendar.vue';
 import CrmAbaNumeros from '../components/numeros/CrmAbaNumeros.vue';
+import ListaAcao from '../components/lista-acao/ListaAcao.vue';
+import { fusoDaConta } from 'dashboard/helper/fusoDaConta';
+import { accountTimeZone } from 'dashboard/components-next/CampaignJourney/scheduleTime';
 import { useMenuNovo } from 'dashboard/components-next/sidebar/fork/useMenuNovo';
 import CalendarioOuro from '../components/calendario/CalendarioOuro.vue';
 import CrmCalendarQuickAdd from '../components/calendar/CrmCalendarQuickAdd.vue';
@@ -346,6 +349,25 @@ const arquivadosLigado = computed(
       FEATURE_FLAGS.CRM_ARQUIVADOS
     ] === true
 );
+// #2283: Lista nova "o que fazer agora" (flag de conta). Desligada: a Lista de sempre, igual.
+const listaAcaoLigada = computed(
+  () =>
+    getAccount.value(currentAccountId.value)?.features?.[
+      FEATURE_FLAGS.CRM_LISTA_ACAO
+    ] === true
+);
+const listaAcao = computed(
+  () => listaAcaoLigada.value && viewMode.value === 'list'
+);
+const listaAcaoRef = ref(null);
+// Datas da Lista nova no fuso da conta (o mesmo padrão do servidor), nunca no do navegador.
+const fusoDaListaAcao = computed(() => {
+  const conta = getAccount.value(currentAccountId.value);
+  return fusoDaConta(conta) || accountTimeZone(conta);
+});
+// No celular, as abas Quadro/Lista/Calendário/Números viram 4 colunas com o ícone em cima.
+const ABA_DA_LISTA_ACAO =
+  'max-md:min-h-14 max-md:flex-col max-md:justify-center max-md:gap-0.5 max-md:px-1 max-md:text-[13px]';
 const arquivados = useArquivadosNaPagina({
   t,
   ligado: arquivadosLigado,
@@ -850,11 +872,21 @@ const activeFilterChips = computed(() => {
 });
 
 const activeFilterCount = computed(() => activeFilterChips.value.length);
+// #2283: na Lista nova, aba e busca são dela; conta só o que veio da gaveta.
+const filtrosDaListaAcao = computed(
+  () =>
+    activeFilterChips.value.filter(
+      chip => !['result', 'search'].includes(chip.key)
+    ).length
+);
 
 const viewModeOptions = computed(() => [
   {
     id: 'kanban',
-    label: t('CRM_KANBAN.VIEWS.KANBAN'),
+    // #2283: com a Lista nova, "Quadro" (a palavra que a pessoa entende).
+    label: listaAcaoLigada.value
+      ? t('CRM_LISTA_ACAO.VISTAS.QUADRO')
+      : t('CRM_KANBAN.VIEWS.KANBAN'),
     icon: 'i-lucide-kanban',
   },
   { id: 'list', label: t('CRM_KANBAN.VIEWS.LIST'), icon: 'i-lucide-list' },
@@ -971,7 +1003,9 @@ const loadCurrentCalendar = async () => {
 };
 
 const loadActiveView = async (includeCounts = false) => {
-  if (viewMode.value === 'list') return loadCurrentList();
+  // #2283: a Lista nova busca sozinha (funil, filtros, aba) e não pula linha no tempo real.
+  if (viewMode.value === 'list')
+    return listaAcao.value ? null : loadCurrentList();
   if (viewMode.value === 'calendar') return loadCurrentCalendar();
   return loadCurrentBoard(includeCounts);
 };
@@ -1308,6 +1342,19 @@ const isCaixasNoCrm = computed(
 const canOpenInboxSettings = computed(() =>
   isCaixasNoCrm.value ? canAdminCrm.value : canManagePipelines.value
 );
+// Há o que configurar neste funil: o botão do topo e, na Lista nova abaixo de
+// 1024 px, o item "Configurar" do "Mais" (#2283).
+const podeConfigurar = computed(
+  () =>
+    canManagePipelines.value ||
+    canOpenInboxSettings.value ||
+    (!isCalendarOnly.value && canManageAi.value) ||
+    (!isCalendarOnly.value && arquivadosLigado.value)
+);
+// O "Mais" fecha no mesmo clique; o popover abre depois, para o clique não o
+// fechar de volta.
+const abrirConfiguracao = () =>
+  setTimeout(() => configurationPopover.value?.show(), 0);
 
 const openInboxSettingsDrawer = async () => {
   if (isCaixasNoCrm.value) {
@@ -2001,6 +2048,10 @@ const runBulkAction = async (action, payload = {}) => {
       payload,
     });
     useAlert(t('CRM_KANBAN.BULK.DONE', { count: listSelection.value.length }));
+    if (listaAcao.value) {
+      store.dispatch('crmKanban/setListSelection', []);
+      listaAcaoRef.value?.recarregar();
+    }
   } catch {
     useAlert(t('CRM_KANBAN.EDIT.ERROR'));
   }
@@ -2570,8 +2621,24 @@ onUnmounted(() => {
       v-if="!calendarioOuro"
       class="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-n-weak px-6 py-3 sm:px-8"
     >
-      <div class="flex min-w-0 flex-wrap items-center gap-4">
-        <h1 class="mb-0 text-2xl font-semibold text-n-slate-12">
+      <div
+        class="flex min-w-0 flex-wrap items-center gap-4"
+        :class="{ 'max-md:contents': listaAcao }"
+      >
+        <h1 v-if="listaAcao" class="mb-0 max-md:order-1">
+          <ChoiceSelect
+            :model-value="currentPipelineId"
+            :options="pipelineGroups.length ? [] : pipelineOptions"
+            :groups="pipelineGroups"
+            :aria-label="t('CRM_LISTA_ACAO.FUNIL')"
+            :disabled="!hasPipelines"
+            fit-selected
+            data-lista-acao-funil
+            class="[&>button]:!h-11 [&>button]:!rounded-xl [&>button]:!bg-transparent [&>button]:!text-2xl [&>button]:!font-semibold [&>button]:!outline-0 hover:[&>button]:!bg-n-alpha-2"
+            @update:model-value="escolherFunil"
+          />
+        </h1>
+        <h1 v-else class="mb-0 text-2xl font-semibold text-n-slate-12">
           {{
             isCalendarOnly ? t('SIDEBAR.CRM_CALENDAR') : t('CRM_KANBAN.TITLE')
           }}
@@ -2579,7 +2646,11 @@ onUnmounted(() => {
         <div
           v-if="!isCalendarOnly"
           class="flex items-center rounded-xl bg-n-alpha-2 p-1"
-          :class="{ 'flex-wrap': menuNovo }"
+          :class="
+            listaAcao
+              ? 'max-md:order-3 max-md:grid max-md:w-full max-md:grid-cols-4'
+              : { 'flex-wrap': menuNovo }
+          "
           role="group"
           :aria-label="t('CRM_KANBAN.VIEWS.LABEL')"
         >
@@ -2588,23 +2659,28 @@ onUnmounted(() => {
             :key="mode.id"
             type="button"
             class="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-n-slate-11 transition-colors hover:bg-n-alpha-2 hover:text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand"
-            :class="
+            :class="[
               viewMode === mode.id
                 ? '!font-bold bg-n-surface-2 text-n-slate-12 shadow-sm'
-                : ''
-            "
+                : '',
+              listaAcao ? ABA_DA_LISTA_ACAO : '',
+            ]"
             :aria-pressed="viewMode === mode.id"
             @click="setViewMode(mode.id)"
           >
             <span :class="mode.icon" class="size-3.5" aria-hidden="true" />
             {{ mode.label }}
           </button>
-          <CrmAbaNumeros />
+          <CrmAbaNumeros :class="listaAcao ? ABA_DA_LISTA_ACAO : ''" />
         </div>
       </div>
 
-      <div class="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+      <div
+        class="flex min-w-0 flex-wrap items-center gap-2 sm:w-auto"
+        :class="listaAcao ? 'ms-auto max-md:order-2' : 'w-full'"
+      >
         <Button
+          v-if="!listaAcao"
           icon="i-lucide-refresh-cw"
           slate
           outline
@@ -2618,15 +2694,22 @@ onUnmounted(() => {
           v-if="canManageCards && viewMode !== 'calendar'"
           :label="
             t(
-              funilDeVenda
-                ? 'CRM_KANBAN.ACTIONS.NEW_CARD'
-                : 'CRM_KANBAN.ACTIONS.NEW_CARD_ATENDER'
+              listaAcao && funilDeVenda
+                ? 'CRM_LISTA_ACAO.NOVO_CLIENTE'
+                : funilDeVenda
+                  ? 'CRM_KANBAN.ACTIONS.NEW_CARD'
+                  : 'CRM_KANBAN.ACTIONS.NEW_CARD_ATENDER'
             )
           "
           icon="i-lucide-plus"
           data-crm-new-card
           :disabled="!hasPipelines || isLoading"
           class="order-2 !rounded-lg min-h-11 !font-bold"
+          :class="
+            listaAcao
+              ? '!rounded-xl !bg-n-solid-1 !text-n-slate-12 !outline-n-weak hover:enabled:!bg-n-alpha-2'
+              : ''
+          "
           @click="openCreateDrawer"
         />
         <Button
@@ -2641,12 +2724,7 @@ onUnmounted(() => {
           @click="openBooking"
         />
         <Popover
-          v-if="
-            canManagePipelines ||
-            canOpenInboxSettings ||
-            (!isCalendarOnly && canManageAi) ||
-            (!isCalendarOnly && arquivadosLigado)
-          "
+          v-if="podeConfigurar"
           ref="configurationPopover"
           align="end"
           class="order-1"
@@ -2657,13 +2735,21 @@ onUnmounted(() => {
               icon="i-lucide-settings-2"
               slate
               outline
+              data-crm-configurar
               class="!rounded-lg min-h-11 !font-bold !outline-n-weak bg-n-surface-1"
+              :class="
+                listaAcao
+                  ? 'max-lg:invisible max-lg:!w-0 max-lg:!min-w-0 max-lg:!p-0 max-lg:!outline-0 max-lg:overflow-hidden'
+                  : ''
+              "
+              :aria-label="t('CRM_KANBAN.ACTIONS.CONFIGURE')"
             />
           </template>
           <template #content>
             <div class="grid w-72 gap-1 p-2">
               <p
-                class="mb-1 px-2 py-1 text-xs font-medium uppercase tracking-wide text-n-slate-10"
+                class="mb-1 px-2 py-1 text-xs font-medium text-n-slate-10"
+                :class="listaAcao ? 'text-sm' : 'uppercase tracking-wide'"
               >
                 {{ t('CRM_KANBAN.ACTIONS.CONFIGURE') }}
               </p>
@@ -2730,7 +2816,7 @@ onUnmounted(() => {
     </header>
 
     <section
-      v-if="viewMode !== 'calendar'"
+      v-if="viewMode !== 'calendar' && !listaAcao"
       class="flex shrink-0 flex-col gap-3 border-b border-n-weak bg-n-surface-1 px-6 py-3 sm:px-8"
     >
       <div class="flex flex-wrap items-end gap-3">
@@ -3029,6 +3115,50 @@ onUnmounted(() => {
           </template>
         </Draggable>
       </article>
+    </section>
+
+    <section
+      v-else-if="listaAcao"
+      class="flex min-h-0 flex-1 flex-col overflow-y-auto"
+    >
+      <ListaAcao
+        ref="listaAcaoRef"
+        :pipeline-id="currentPipelineId"
+        :pipeline="selectedPipeline"
+        :filtros="storedFilters"
+        :filtros-ativos="filtrosDaListaAcao"
+        :meu-id="currentUser?.id"
+        :meu-nome="currentUser?.name || ''"
+        :pessoas="agents"
+        :fuso="fusoDaListaAcao"
+        :pode-passar="canManageCards"
+        :pode-mexer="canManageCards"
+        :pode-baixar="canExportCrm"
+        :pode-marcar="canBulkAct"
+        :pode-configurar="podeConfigurar"
+        :selecionados="listSelection"
+        @filtros="showFiltersDrawer = true"
+        @configurar="abrirConfiguracao"
+        @abrir="openCardFromBoard"
+        @conversa="openCardConversation"
+        @selecionar="ids => store.dispatch('crmKanban/setListSelection', ids)"
+        @limpar-filtros="clearFilters"
+      />
+      <CrmBulkActionBar
+        :count="listSelection.length"
+        :ids="listSelection"
+        :permissions="bulkPermissions"
+        :stages="stages"
+        :owners="agents"
+        :blocked-owner-ids="[]"
+        :pipeline="selectedPipeline"
+        :is-busy="uiFlags.isBulkActing"
+        @move="onBulkMove"
+        @assign="onBulkAssign"
+        @status="onBulkStatus"
+        @archive="onBulkArchive"
+        @clear="onBulkClear"
+      />
     </section>
 
     <section

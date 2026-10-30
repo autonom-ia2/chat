@@ -286,7 +286,7 @@ describe('WhatsappHybridPage (chat#1487, gold standard)', () => {
     await flushPromises();
 
     expect(wrapper.find('[data-situacao]').text()).toContain(
-      `${KEY}.CONNECTED_HELP|+55 (11) 4000-1487`
+      `${KEY}.CONNECTED_HELP|+55 11 4000-1487`
     );
   });
 

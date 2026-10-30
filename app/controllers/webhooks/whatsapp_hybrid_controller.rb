@@ -61,13 +61,24 @@ class Webhooks::WhatsappHybridController < ActionController::API
   end
 
   # Só o que o job usa: nada de dado pessoal sobrando na fila. `me` (o número conectado) vem no topo do evento.
+  # `from_me` e `aparelho` (#2246): o ack de mensagem RECEBIDA lida no celular; do `_data.Sender` vai só o número do
+  # aparelho que leu e, do `id`, só o id físico (o chat é o telefone do cliente), nunca o telefone.
   def used_fields(body)
     payload = body['payload'].is_a?(Hash) ? body['payload'] : {}
     me = body['me'].is_a?(Hash) ? body['me'].slice('id') : nil
     capping = payload.dig('data', 'messageCapping')
     capping = capping.slice(*CAPPING_FIELDS) if capping.is_a?(Hash)
-    { 'status' => payload['status'], 'ack' => payload['ack'], 'id' => payload['id'], 'me' => me, 'capping' => capping,
-      'timelock' => reachout_timelock(body) }.compact
+    { 'status' => payload['status'], 'ack' => payload['ack'], 'id' => ack_id(payload), 'me' => me, 'capping' => capping,
+      'timelock' => reachout_timelock(body), 'from_me' => payload['fromMe'], 'aparelho' => reading_device(payload) }.compact
+  end
+
+  def ack_id(payload)
+    payload['fromMe'] == false ? WhatsappHybrid::LeituraNoCelular.id_fisico(payload['id']) : payload['id']
+  end
+
+  def reading_device(payload)
+    data = payload['_data']
+    WhatsappHybrid::LeituraNoCelular.aparelho(data['Sender']) if data.is_a?(Hash)
   end
 
   # Limite de conversas novas que o motor manda em `me.reachoutTimelock` (chat#1486).

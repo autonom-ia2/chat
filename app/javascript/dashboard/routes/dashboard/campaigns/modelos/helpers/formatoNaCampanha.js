@@ -29,10 +29,11 @@ const botoes = template => componente(template, 'BUTTONS')?.buttons || [];
 
 // O envio do Chatwoot recusa cupom com mais de 15 caracteres (o teto da oferta).
 export const CODIGO_MAXIMO = 15;
-// O que o seletor de arquivo aceita no topo e em cada cartão (tipos da Meta).
+// O que o seletor de arquivo aceita no topo e em cada cartão (tipos da Meta;
+// o vídeo .mov ou fora do H.264 é convertido no servidor, #2370).
 export const ACEITA = {
   foto: 'image/jpeg,image/png',
-  video: 'video/mp4',
+  video: 'video/mp4,video/quicktime,.mp4,.mov',
   documento: 'application/pdf',
 };
 // Topo de mídia do modelo → o tipo da tela.

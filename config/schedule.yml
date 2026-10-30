@@ -391,3 +391,11 @@ whatsapp_hybrid_foto_do_contato_backfill_job:
   cron: '*/15 * * * *'
   class: 'WhatsappHybrid::FotoDoContatoBackfillJob'
   queue: scheduled_jobs
+
+# executed every day at 07:00 UTC; a leitura automática do painel de desempenho (#2301): espalha um job por conta com o
+# painel ligado, e cada conta lê as conversas que ganharam mensagem desde a última leitura. Desligada pela ENV
+# AUTONOMIA_DESEMPENHO_LEITURA_AUTOMATICA (padrão: desligada).
+autonomia_desempenho_leitura_automatica_job:
+  cron: '0 7 * * *'
+  class: 'Autonomia::Desempenho::LeituraAutomaticaJob'
+  queue: scheduled_jobs

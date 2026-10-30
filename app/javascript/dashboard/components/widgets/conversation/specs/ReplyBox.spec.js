@@ -605,6 +605,40 @@ describe('ReplyBox CRM subject', () => {
   });
 });
 
+// #2249: o repasse do assunto recebe só a pessoa responsável; robô com o meu id não conta.
+describe('ReplyBox CRM subject: responsável do repasse (#2249)', () => {
+  const globalConfigAntes = window.globalConfig;
+  beforeEach(() => {
+    window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+  });
+  afterEach(() => {
+    window.globalConfig = globalConfigAntes;
+  });
+
+  it.each([
+    ['AgentBot', null],
+    ['Captain::Assistant', null],
+    ['User', 7],
+  ])(
+    'responsável %s com o id do usuário: assignee-id %s',
+    (assigneeType, esperado) => {
+      const { wrapper } = mountWith({
+        inbox: { channel_type: 'Channel::Api' },
+        chat: {
+          meta: {
+            sender: { id: 2 },
+            assignee: { id: 7 },
+            assignee_type: assigneeType,
+          },
+        },
+      });
+      const repasse = wrapper.findComponent({ name: 'CrmRepasseDoAssunto' });
+      expect(repasse.exists()).toBe(true);
+      expect(repasse.props('assigneeId')).toBe(esperado);
+    }
+  );
+});
+
 // #2067: o ícone "ficar com a conversa ao enviar" ao lado do Enviar; quem atribui é o servidor.
 describe('ReplyBox ficar com a conversa (#2067)', () => {
   const FLAG = 'ficar_com_a_conversa_ao_enviar';

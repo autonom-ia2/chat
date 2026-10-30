@@ -101,7 +101,7 @@ const STYLE_CONFIG = {
   colors: {
     blue: {
       solid:
-        'bg-n-brand text-white hover:enabled:brightness-110 focus-visible:brightness-110 outline-transparent',
+        'bg-n-blue-11 text-white hover:enabled:bg-n-blue-12 focus-visible:bg-n-blue-12 dark:bg-n-blue-9 dark:text-n-slate-1 dark:hover:enabled:bg-n-blue-11 dark:focus-visible:bg-n-blue-11 outline-transparent',
       faded:
         'bg-n-brand/10 text-n-blue-11 hover:enabled:bg-n-brand/20 focus-visible:bg-n-brand/20 outline-transparent',
       outline: 'text-n-blue-11 outline-n-brand',
@@ -111,7 +111,7 @@ const STYLE_CONFIG = {
     },
     ruby: {
       solid:
-        'bg-n-ruby-9 text-white hover:enabled:bg-n-ruby-10 focus-visible:bg-n-ruby-10 outline-transparent',
+        'bg-n-ruby-11 text-white hover:enabled:bg-n-ruby-12 focus-visible:bg-n-ruby-12 dark:bg-n-ruby-9 dark:text-n-slate-1 dark:hover:enabled:bg-n-ruby-11 dark:focus-visible:bg-n-ruby-11 outline-transparent',
       faded:
         'bg-n-ruby-9/10 text-n-ruby-11 hover:enabled:bg-n-ruby-9/20 focus-visible:bg-n-ruby-9/20 outline-transparent',
       outline:
@@ -144,7 +144,7 @@ const STYLE_CONFIG = {
     },
     teal: {
       solid:
-        'bg-n-teal-9 text-white hover:enabled:bg-n-teal-10 focus-visible:bg-n-teal-10 outline-transparent',
+        'bg-n-teal-11 text-white hover:enabled:bg-n-teal-12 focus-visible:bg-n-teal-12 dark:bg-n-teal-9 dark:text-n-slate-1 dark:hover:enabled:bg-n-teal-11 dark:focus-visible:bg-n-teal-11 outline-transparent',
       faded:
         'bg-n-teal-9/10 text-n-teal-11 hover:enabled:bg-n-teal-9/20 focus-visible:bg-n-teal-9/20 outline-transparent',
       outline:

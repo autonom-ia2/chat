@@ -107,6 +107,35 @@ RSpec.describe Crm::Subjects::Identifier do
       expect(account.crm_cards.count).to eq(1)
     end
 
+    # A pessoa marca enquanto o Jev pensa: o Identifier já tinha conferido, o Applier confere de novo dentro da trava.
+    def marcar_parceiro_enquanto_pensa(choice)
+      stub_request(:post, 'https://api.typesafe.ai/v1/systemone').to_return do
+        contact.update!(relacao: :parceiro)
+        body = { model: 'jev-1.13.0', usage: { input_tokens: 300, output_tokens: 5 },
+                 answers: { decisao: { type: 'choice', choice: choice, confidence: 0.95 } } }
+        { status: 200, body: body.to_json }
+      end
+    end
+
+    it 'marcado parceiro enquanto a IA pensa: o card não nasce' do
+      marcar_parceiro_enquanto_pensa("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      expect(identify(incoming('E o Chat2You, quanto custa?'))).to have_attributes(state: 'kept', reason: 'fora_do_funil')
+      expect(account.crm_cards.count).to eq(0)
+    end
+
+    it 'marcado parceiro enquanto a IA pensa, em Sugerir: nenhuma sugestão fica esperando' do
+      account.crm_inbox_settings.find_by(inbox: inbox).update!(subject_ai_mode: :suggest)
+      marcar_parceiro_enquanto_pensa("novo_#{comercial.id}")
+      stub_review(resposta: "novo_#{comercial.id}", titulo: 'Chat2You')
+
+      identify(incoming('Queria também o plano anual'))
+
+      expect(Crm::SubjectDecision.where(state: 'suggested')).to be_empty
+      expect(account.crm_cards.count).to eq(0)
+    end
+
     it 'com a flag desligada, a marca não muda nada' do
       account.disable_features!('contato_relacao')
       contact.update!(relacao: :parceiro)

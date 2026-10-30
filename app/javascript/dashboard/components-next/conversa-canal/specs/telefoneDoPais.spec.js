@@ -9,6 +9,7 @@ import {
   telefoneLegivel,
   nomeOuTelefone,
   nomeEhTelefone,
+  nomeDoContatoNaTela,
 } from '../mais/telefoneDoPais';
 
 describe('telefone do contato com país (#1702)', () => {
@@ -119,4 +120,31 @@ describe('nome que é só telefone (#2202)', () => {
   it.each(['Maria', 'Loja 24 horas', '+1', '', null])('%s não é', nome =>
     expect(nomeEhTelefone(nome)).toBe(false)
   );
+});
+
+describe('nome do contato na tela (#2255)', () => {
+  it('nome que é o próprio número sai legível, com o telefone em snake_case ou camelCase', () => {
+    expect(
+      nomeDoContatoNaTela({
+        name: '5511955554444',
+        phone_number: '+5511955554444',
+      })
+    ).toBe('+55 11 95555-4444');
+    expect(
+      nomeDoContatoNaTela({
+        name: '+5511955554444',
+        phoneNumber: '+5511955554444',
+      })
+    ).toBe('+55 11 95555-4444');
+  });
+
+  it('nome normal não muda; sem nome, o telefone legível; sem nada, vazio', () => {
+    expect(
+      nomeDoContatoNaTela({ name: 'Joana', phone_number: '+5511955554444' })
+    ).toBe('Joana');
+    expect(nomeDoContatoNaTela({ phone_number: '+5511955554444' })).toBe(
+      '+55 11 95555-4444'
+    );
+    expect(nomeDoContatoNaTela(null)).toBe('');
+  });
 });

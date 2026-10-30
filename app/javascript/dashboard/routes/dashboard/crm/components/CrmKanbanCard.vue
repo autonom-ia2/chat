@@ -288,6 +288,16 @@ const followUp = computed(() => {
 // (mesmo padrão da lista de Conversas), evitando prop-drilling pelo board.
 const accountLabels = useMapGetter('labels/getLabels');
 
+// #2255: o card só traz id, nome e tipo da caixa; a caixa da conta (store) diz se é o
+// WhatsApp do celular (WAHA), para o ícone ser o do WhatsApp e não o "{ }" da API.
+const caixaPorId = useMapGetter('inboxes/getInbox');
+const caixaDoCard = computed(() => ({
+  channel_type: props.card.inbox?.channel_type,
+  waha_provider: Boolean(
+    caixaPorId.value?.(props.card.inbox?.id)?.waha_provider
+  ),
+}));
+
 // Etiquetas de CAMPANHA vivem só no Contato (CampaignImports::Importer), nunca
 // sincronizadas para a conversa — mescladas aqui (mesmo chip do CardLabels,
 // deduplicadas) para ficarem visíveis no card sem tocar no LabelBox da conversa.
@@ -522,10 +532,7 @@ const canOpenConversation = computed(
 
         <CrmCardPill v-if="card.inbox?.channel_type" tone="default">
           <template #lead>
-            <ChannelIcon
-              :inbox="{ channel_type: card.inbox.channel_type }"
-              class="size-3 shrink-0"
-            />
+            <ChannelIcon :inbox="caixaDoCard" class="size-3 shrink-0" />
           </template>
           {{ card.inbox.name }}
         </CrmCardPill>

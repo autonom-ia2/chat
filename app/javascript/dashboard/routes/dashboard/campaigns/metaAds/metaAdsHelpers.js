@@ -37,6 +37,14 @@ export const periodRange = (from, to, locale) => {
   }).formatRange(start, end);
 };
 
+// Código do site (Pixel) usado mais recentemente; undefined com a lista vazia.
+export const latestPixel = list =>
+  [...list].sort((a, b) =>
+    String(b.last_fired_time || '').localeCompare(
+      String(a.last_fired_time || '')
+    )
+  )[0];
+
 // "há 2 horas", do próprio timestamp; null quando não há data válida.
 export const relativeTime = (value, locale) => {
   const date = new Date(value || '');

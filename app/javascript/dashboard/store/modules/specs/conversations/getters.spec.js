@@ -233,6 +233,52 @@ describe('#getters', () => {
       ).toEqual([waiting]);
     });
   });
+
+  describe('#getMineChats', () => {
+    const conversationList = [
+      {
+        id: 1,
+        status: 'open',
+        meta: { assignee: { id: 5 }, assignee_type: 'User' },
+      },
+      {
+        id: 2,
+        status: 'open',
+        meta: { assignee: { id: 5 }, assignee_type: 'AgentBot' },
+      },
+      {
+        id: 3,
+        status: 'open',
+        meta: { assignee: { id: 5 }, assignee_type: 'Captain::Assistant' },
+      },
+      {
+        id: 4,
+        status: 'open',
+        meta: { assignee: { id: 6 }, assignee_type: 'User' },
+      },
+      { id: 5, status: 'open', meta: { assignee: { id: 5 } } },
+      { id: 6, status: 'open', meta: {} },
+    ];
+    const mine = () =>
+      getters
+        .getMineChats(
+          { allConversations: conversationList },
+          {},
+          {},
+          { getCurrentUser: { id: 5 } }
+        )({ status: 'open' })
+        .map(c => c.id);
+
+    it('keeps only conversations assigned to the current user as a person (#2249)', () => {
+      expect(mine()).toEqual([1, 5]);
+    });
+
+    it('does not count a bot that shares the user id as mine (#2249)', () => {
+      expect(mine()).not.toContain(2);
+      expect(mine()).not.toContain(3);
+    });
+  });
+
   describe('#getParticipatingChats', () => {
     const conversationList = [
       { id: 1, inbox_id: 2, status: 1, meta: { assignee: { id: 1 } } },

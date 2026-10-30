@@ -29,3 +29,22 @@ en:
   email_campaigns:
     ai:
       vocabulario: 'Line of business: insurance. Talk about insurance, policy, coverage and renewal in plain language; policyholder only for someone who already has a policy; customer only for someone who already bought.'
+  # Painel de desempenho do agente (#2226): o PDF e a planilha dizem "não fechou", nunca "perda".
+  autonomia:
+    desempenho2:
+      c:
+        kpi:
+          perdas_evitaveis: 'Did not close for a fixable reason'
+        secoes:
+          perdas: 'what did not close'
+        indice:
+          perdas: 'Did not close'
+        perdas:
+          titulo: 'Did not close for a fixable reason'
+          por_que_descricao: 'Each request that did not close, by its main cause.'
+        tabelas:
+          tabela_perdas:
+            titulo: 'Did not close for a fixable reason'
+        planilha:
+          procura:
+            perda: 'Did not close, avoidable'

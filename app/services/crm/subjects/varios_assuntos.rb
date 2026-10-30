@@ -84,7 +84,8 @@ module Crm::Subjects::VariosAssuntos
     resultado = nil
     @entradas = []
     Crm::Conversations::SyncLock.new(account: @account, conversation: @conversation).perform do
-      next if mensagem_mais_nova?
+      # #2084: o contato que saiu do funil enquanto a IA pensava também não ganha o card do outro pedido.
+      next if mensagem_mais_nova? || saiu_do_funil?
       # Sugerir, ou a pessoa a respeitar: o pedido novo que não é o principal não vira card nem sugestão (só cabe uma
       # sugestão por conversa, e ela é do principal). Fica no log.
       if modo_efetivo('create', { pipeline: pipeline }) != 'auto'

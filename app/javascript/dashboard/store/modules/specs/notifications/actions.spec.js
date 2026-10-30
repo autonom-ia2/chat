@@ -84,6 +84,23 @@ describe('#actions', () => {
         [types.SET_NOTIFICATIONS_UI_FLAG, { isUpdating: false }],
       ]);
     });
+    it('reads an audience search notification by its own id', async () => {
+      axios.patch.mockResolvedValue({});
+      await actions.read(
+        { commit },
+        {
+          id: 7,
+          unreadCount: 2,
+          primaryActorType: 'ConversationAudienceSearch',
+          primaryActorId: 3,
+        }
+      );
+      expect(axios.patch).toHaveBeenCalledWith('/api/v1/notifications/7');
+      expect(commit.mock.calls[2]).toEqual([
+        types.READ_NOTIFICATION,
+        { id: 7, read_at: expect.any(Date) },
+      ]);
+    });
   });
 
   describe('#unread', () => {

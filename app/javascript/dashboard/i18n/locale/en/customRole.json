@@ -131,12 +131,6 @@
           "LEVEL_VIEW": "Opens and reads contacts. Does not change them.",
           "LEVEL_MANAGE": "Creates, edits and imports contacts."
         },
-        "KNOWLEDGE_BASE": {
-          "NAME": "Knowledge base",
-          "HINT": "Portals and articles",
-          "LEVEL_VIEW": "Reads portals and articles.",
-          "LEVEL_MANAGE": "Writes and publishes articles."
-        },
         "REPORTS": {
           "NAME": "Reports",
           "HINT": "Overview, CSAT, SLA, bots and teams",
@@ -158,6 +152,11 @@
           "HINT": "Your AI agents",
           "LEVEL_VIEW": "Opens the agents and chats in the playground.",
           "LEVEL_MANAGE": "Creates, trains and publishes agents."
+        },
+        "DESEMPENHO": {
+          "NAME": "Agent performance",
+          "HINT": "What people look for, results and exports",
+          "LEVEL_VIEW": "Opens the performance panel, with the numbers of the inboxes they see. Downloading the PDF and spreadsheet also needs Export contacts."
         },
         "PROSPECTING": {
           "NAME": "Prospecting",
@@ -187,8 +186,14 @@
         "META_ADS": {
           "NAME": "Meta ads",
           "HINT": "Facebook and Instagram ads panel",
-          "LEVEL_VIEW": "Sees the ads panel and its results. Connecting and configuring need Edit.",
-          "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, and acts on the advisor."
+          "LEVEL_VIEW": "Sees the ads panel, its results and each ad's budget and dates. Creating, connecting and configuring need Edit.",
+          "LEVEL_MANAGE": "Also connects, configures and disconnects the ad account, where ads lead, the sales signal in the pipeline and the WhatsApp report, acts on the advisor, creates ads (always paused), activates them and changes their budget and dates."
+        },
+        "POSTS": {
+          "NAME": "Your posts",
+          "HINT": "Instagram and Page posts, with their numbers",
+          "LEVEL_VIEW": "Sees the posts and numbers of the Instagram and Page inboxes they see.",
+          "LEVEL_MANAGE": "For now, the same as View. Once the page has comments, also replies, hides and sends the private reply, on the inboxes they see."
         },
         "INBOXES": {
           "NAME": "Inboxes",

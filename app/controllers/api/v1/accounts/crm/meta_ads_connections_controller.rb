@@ -138,7 +138,8 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
   end
 
   def selection
-    setup.select!(mode: params[:mode], ad_account_id: params[:ad_account_id].to_s, pixel_id: params[:pixel_id].presence&.to_s)
+    setup.select!(mode: params[:mode], ad_account_id: params[:ad_account_id].to_s, pixel_id: params[:pixel_id].presence&.to_s,
+                  no_site: ActiveModel::Type::Boolean.new.cast(params[:no_site]) == true)
     render json: payload
   rescue Crm::MetaAds::Setup::Error => e
     render_unprocessable(e.code)
@@ -152,7 +153,7 @@ class Api::V1::Accounts::Crm::MetaAdsConnectionsController < Api::V1::Accounts::
 
     bool = ActiveModel::Type::Boolean.new
     values = ::Crm::MetaAdsConnection::DESTINATIONS.index_with { |key| bool.cast(params.dig(:destinations, key)) == true }
-    connection.update!(destinations: values)
+    connection.update!(destinations: connection.destinations_with_no_site(values, connection.no_site?))
     render json: payload
   end
 

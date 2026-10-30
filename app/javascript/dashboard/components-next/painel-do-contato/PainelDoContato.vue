@@ -22,6 +22,7 @@ import BlocoCombinado from './BlocoCombinado.vue';
 import BlocoAssunto from './BlocoAssunto.vue';
 import BlocoOrigem from './BlocoOrigem.vue';
 import BlocoRelacao from './BlocoRelacao.vue';
+import BlocoEtiquetas from './etiquetas/BlocoEtiquetas.vue';
 import { useRelacaoLigada } from 'dashboard/components-next/contato-relacao/useRelacaoLigada';
 import BlocoDoPainel from './BlocoDoPainel.vue';
 import LinhaQueAbre from './LinhaQueAbre.vue';
@@ -60,6 +61,10 @@ const crmLigado = computed(
 );
 
 const editando = ref(false);
+// Quando o bloco das etiquetas some com o foco dentro (tirou a última), o foco
+// vai para o título do bloco de cima ("Quem cuida"), não para o <body>.
+const quemCuida = ref(null);
+const focarAoSumir = () => quemCuida.value?.focarTitulo();
 const aberta = ref(null);
 watch(
   () => props.conversation.id,
@@ -210,9 +215,15 @@ const verPagina = () =>
       />
       <div class="flex flex-col border-t border-n-weak">
         <BlocoQuemCuida
+          ref="quemCuida"
           :conversation="conversation"
           :pode-operar="podeOperar"
           :fase2="fase2"
+        />
+        <!-- #2202 (PR 3): as etiquetas da conversa, só quando ela tem alguma. -->
+        <BlocoEtiquetas
+          :pode-operar="podeOperar"
+          :focar-ao-sumir="focarAoSumir"
         />
         <BlocoCombinado v-if="crmLigado" :contact-id="contact.id" />
         <BlocoRelacao

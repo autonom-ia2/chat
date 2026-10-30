@@ -18,7 +18,7 @@ json.payload do
         json.partial! 'agent', formats: [:json], agent: conversation.assignee if conversation.try(:assignee).present?
       end
 
-      json.additional_attributes conversation.additional_attributes
+      json.additional_attributes Crm::AnuncioDeOrigem.atributos_para(Current.user, Current.account_user, conversation.additional_attributes) # #2271
     end
   end
 end

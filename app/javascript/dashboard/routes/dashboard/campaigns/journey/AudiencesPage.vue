@@ -22,7 +22,6 @@ import AudienceSidePanel from 'dashboard/components-next/CampaignJourney/Audienc
 import AudienceChannelBadges from 'dashboard/components-next/CampaignJourney/AudienceChannelBadges.vue';
 import { buildAudienceRow } from 'dashboard/components-next/CampaignJourney/audienceRows';
 import { campaignsUsingAudience } from 'dashboard/components-next/CampaignJourney/journeyErrors';
-import { LEGACY_QUERY } from 'dashboard/components-next/CampaignJourney/campaignChannels';
 
 const NS = 'CAMPAIGN_JOURNEY.AUDIENCES';
 
@@ -247,17 +246,16 @@ useOnEnter(fetchAudiences);
                 :data-delete="row.id"
                 @click="askDelete(row)"
               />
-              <router-link
-                :to="{
-                  name: 'contacts_campaign_imports',
-                  query: { [LEGACY_QUERY]: '1' },
-                }"
+              <button
+                type="button"
                 class="flex min-h-11 items-center gap-1 rounded-xl px-2 text-sm font-medium text-n-blue-11 hover:bg-n-alpha-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
                 :aria-label="t(`${NS}.DETAILS_ARIA`, { name: row.name })"
+                :data-details="row.id"
+                @click="openAudienceId = row.id"
               >
                 {{ t(`${NS}.DETAILS`) }}
                 <span class="i-lucide-arrow-right size-4" aria-hidden="true" />
-              </router-link>
+              </button>
             </div>
           </li>
         </ul>

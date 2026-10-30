@@ -80,6 +80,15 @@
     },
     {
       "file": "listaDeConversas.json"
+    },
+    {
+      "file": "metaAdsOrganico.json"
+    },
+    {
+      "file": "seusPosts.json"
+    },
+    {
+      "file": "funcoesDaEquipe.json"
     }
   ],
   "pacotes": {

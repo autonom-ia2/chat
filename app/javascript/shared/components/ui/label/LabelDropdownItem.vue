@@ -42,6 +42,7 @@ export default {
       blue
       trailing-icon
       :icon="selected ? 'i-lucide-circle-check' : ''"
+      :aria-pressed="selected ? 'true' : 'false'"
       class="w-full !px-2.5 justify-between"
       :class="{ '!flex-row': !selected }"
       @click="onClick"

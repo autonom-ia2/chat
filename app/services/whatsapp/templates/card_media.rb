@@ -40,7 +40,7 @@ module Whatsapp::Templates::CardMedia
     raise Invalid, 'carousel_media_invalid'
   end
 
-  # { índice => { 'media_url', 'media_name' } } dos cartões com arquivo (escolhido ou aprovado); {} sem nenhum;
+  # { índice => { 'media_url', 'media_name', 'media_signed_id', 'media_id'? } } dos cartões com arquivo (escolhido ou aprovado); {} sem nenhum;
   # nil quando um arquivo sumiu (a campanha para com template_media_missing).
   def for_dispatch(processed, template, inbox)
     headers = headers_of(processed)
@@ -51,13 +51,13 @@ module Whatsapp::Templates::CardMedia
     files = pending.index_with { |index| file_for(headers[index], profile, index) }
     return if files.values.any?(&:nil?)
 
-    files.transform_values { |file| dispatch_media(file) }
+    files.transform_values { |file| dispatch_media(file, inbox) }
   end
 
-  # O link assinado vai à Meta e a referência assinada fica para a foto do envio (#1717): `HeaderMedia.dispatch_file`.
-  # A Meta não a recebe (`SendComponents#card_payload`).
-  def dispatch_media(file)
-    Whatsapp::Templates::HeaderMedia.dispatch_file(file.is_a?(ActiveStorage::Blob) ? file : file.blob)
+  # O id da mídia (ou, sem ele, o link assinado) vai à Meta e a referência assinada fica para a foto do envio (#1717):
+  # `HeaderMedia.dispatch_file`. A Meta não a recebe (`SendComponents#card_payload`).
+  def dispatch_media(file, inbox)
+    Whatsapp::Templates::HeaderMedia.dispatch_file(file.is_a?(ActiveStorage::Blob) ? file : file.blob, inbox)
   end
 
   # Os arquivos guardados no perfil do modelo, na ordem dos cartões, para a lista de Modelos (#1334). Foto também leva a

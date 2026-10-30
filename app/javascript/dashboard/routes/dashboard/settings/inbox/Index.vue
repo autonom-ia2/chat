@@ -163,6 +163,7 @@ const openDelete = inbox => {
                   :channel-type="inbox.channel_type"
                   :medium="inbox.medium"
                   :voice-enabled="inbox.voice_enabled"
+                  :waha-provider="inbox.waha_provider"
                   class="shrink-0"
                 />
                 <template v-if="inbox.channel_identifier">

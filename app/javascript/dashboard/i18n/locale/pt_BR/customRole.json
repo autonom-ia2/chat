@@ -131,12 +131,6 @@
           "LEVEL_VIEW": "Abre e consulta contatos. Não altera.",
           "LEVEL_MANAGE": "Cria, edita e importa contatos."
         },
-        "KNOWLEDGE_BASE": {
-          "NAME": "Base de conhecimento",
-          "HINT": "Portais e artigos",
-          "LEVEL_VIEW": "Lê portais e artigos.",
-          "LEVEL_MANAGE": "Escreve e publica artigos."
-        },
         "REPORTS": {
           "NAME": "Relatórios",
           "HINT": "Visão geral, CSAT, SLA, robôs e times",
@@ -158,6 +152,11 @@
           "HINT": "Seus agentes de IA",
           "LEVEL_VIEW": "Abre os agentes e conversa no playground.",
           "LEVEL_MANAGE": "Cria, treina e publica agentes."
+        },
+        "DESEMPENHO": {
+          "NAME": "Desempenho do agente",
+          "HINT": "O que as pessoas procuram, resultados e exportação",
+          "LEVEL_VIEW": "Abre o painel de desempenho, com os números das caixas que vê. Baixar o PDF e a planilha pede também Exportar contatos."
         },
         "PROSPECTING": {
           "NAME": "Prospecção",
@@ -187,8 +186,14 @@
         "META_ADS": {
           "NAME": "Anúncios da Meta",
           "HINT": "Painel dos anúncios do Facebook e do Instagram",
-          "LEVEL_VIEW": "Vê o painel dos anúncios e os resultados. Conectar e configurar pede Editar.",
-          "LEVEL_MANAGE": "Também conecta, configura e desconecta a conta de anúncios, para onde os anúncios levam, o aviso de vendas no funil e o resumo no WhatsApp, e age sobre o consultor."
+          "LEVEL_VIEW": "Vê o painel dos anúncios, os resultados e o orçamento e as datas de cada anúncio. Criar, conectar e configurar pede Editar.",
+          "LEVEL_MANAGE": "Também conecta, configura e desconecta a conta de anúncios, para onde os anúncios levam, o aviso de vendas no funil e o resumo no WhatsApp, age sobre o consultor, cria anúncios (sempre pausados), ativa e muda o orçamento e as datas."
+        },
+        "POSTS": {
+          "NAME": "Seus posts",
+          "HINT": "Posts do Instagram e da Página, com os números",
+          "LEVEL_VIEW": "Vê os posts e os números do Instagram e da Página das caixas que vê.",
+          "LEVEL_MANAGE": "Por agora, igual a Ver. Quando a página tiver os comentários, também responde, esconde e manda no privado, nas caixas que vê."
         },
         "INBOXES": {
           "NAME": "Caixas de entrada",

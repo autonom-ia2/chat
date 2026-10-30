@@ -1302,5 +1302,22 @@
         "PLAN": "Subscription"
       }
     }
+  },
+  "PAINEL_DO_CONTATO": {
+    "RELACAO": {
+      "OPCOES": {
+        "INTERESSADO": {
+          "DICA": "Wants or may want a health plan from you."
+        },
+        "PARCEIRO": {
+          "DICA": "Health insurer, sales agency or another broker."
+        }
+      }
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Mark as implemented or not closed"
+    }
   }
 }

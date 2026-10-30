@@ -25,8 +25,13 @@ import { useMetaAdsLive } from '../useMetaAdsLive';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { lerGestao } from '../gestaoDoAnuncio';
+import MetaAdsComments from './comentarios/MetaAdsComments.vue';
+import comentariosInstagram from './comentarios/comentariosInstagram';
+import comentariosFacebook from './comentarios/comentariosFacebook';
 import MetaAdsAdStatus from './MetaAdsAdStatus.vue';
 import MetaAdsAdPost from './MetaAdsAdPost.vue';
+import MetaAdsBudget from './MetaAdsBudget.vue';
+import { lerOrcamento } from '../criacaoNaMeta';
 
 // Anúncios da Meta (#1088, F3b): o anúncio por dentro, passos 3 e 4 da jornada "O painel do dia a dia". A
 // imagem no formato dela, o veredito com o porquê em números, o custo por venda ao lado da média da conta, o
@@ -291,7 +296,53 @@ const gestaoOn = computed(() =>
   )
 );
 const canManage = usePermissionGranted('meta_ads_manage');
+const loginPermissions = Object.fromEntries(
+  comentariosInstagram.PERMISSOES_PARA_ENTRAR.map(key => [
+    key,
+    usePermissionGranted(key),
+  ])
+);
+// Conectar a Página como caixa do Messenger, quando a conta não tem (comentários do Facebook, #2359).
+const canCreateInbox = loginPermissions.inbox_manage;
+
+// Comentários do anúncio, uma aba por rede, cada uma atrás da própria flag: Instagram (#2196) e Facebook (#2197).
+// Sem nenhuma aba ligada, a seção não aparece.
+// O botão de entrar no Instagram segue as permissões do caminho (comentariosInstagram.podeEntrar, #2358). O do
+// Facebook leva à Conexão, que já é de quem gere os anúncios, ou a conectar a caixa da Página (canCreateInbox, #2359).
+const COMMENT_TABS = [
+  {
+    key: 'INSTAGRAM',
+    flag: FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+    adaptador: comentariosInstagram,
+    podeEntrar: status =>
+      comentariosInstagram.podeEntrar(
+        status,
+        key => loginPermissions[key].value
+      ),
+  },
+  {
+    key: 'FACEBOOK',
+    flag: FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK,
+    adaptador: comentariosFacebook,
+  },
+];
+const commentTabs = computed(() =>
+  COMMENT_TABS.filter(tab =>
+    isFeatureEnabledonAccount.value(Number(route.params.accountId), tab.flag)
+  )
+);
 const gestao = ref(null);
+
+// Comentários só com conexão, que é quem tem token para ler na Meta (#2196). O sinal é a gestão, que leu o anúncio
+// ao vivo agora, ou o gasto, que só vem de anúncio sincronizado por uma conexão (sem login, #1960, ele é nil). A
+// gestão sozinha não basta: uma falha passageira na leitura dela tiraria os comentários de um anúncio com números. O
+// gasto sozinho também não: anúncio que nunca rodou, ou parou antes do período, não tem número nenhum (#2335).
+const showComments = computed(
+  () =>
+    gestaoOn.value &&
+    commentTabs.value.length > 0 &&
+    Boolean(gestao.value || (ad.value && !withoutSpend.value))
+);
 
 const loadGestao = async () => {
   gestao.value = null;
@@ -300,6 +351,34 @@ const loadGestao = async () => {
   const data = await lerGestao(asked);
   if (asked === props.adId) gestao.value = data;
 };
+
+// Orçamento e datas (#2198, flag meta_ads_criar): de quem guarda o dinheiro (grupo ou campanha). `budgetState`: ''
+// (flag desligada), 'loading', 'failed' ou 'ok'. Sem orçamento o cartão some e o "Ativar" espera; na falha, diz e
+// deixa tentar de novo.
+const budgetOn = computed(() =>
+  isFeatureEnabledonAccount.value(
+    Number(route.params.accountId),
+    FEATURE_FLAGS.META_ADS_CRIAR
+  )
+);
+const budget = ref(null);
+const budgetState = ref('');
+const loadBudget = async () => {
+  budget.value = null;
+  budgetState.value = '';
+  if (!budgetOn.value) return;
+  budgetState.value = 'loading';
+  const asked = props.adId;
+  try {
+    const data = await lerOrcamento(asked);
+    if (asked !== props.adId) return;
+    budget.value = data;
+    budgetState.value = data ? 'ok' : 'failed';
+  } catch {
+    if (asked === props.adId) budgetState.value = 'failed';
+  }
+};
+watch(() => props.adId, loadBudget);
 
 watch(() => props.adId, loadGestao);
 
@@ -314,6 +393,7 @@ const statusChanged = async status => {
 onMounted(() => {
   live.start();
   loadGestao();
+  loadBudget();
 });
 
 // Link de imagem da Meta vencido: mostra o quadro de reserva (guarda a URL que falhou, então um link novo volta
@@ -357,13 +437,48 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       </button>
     </div>
 
-    <p
-      v-else-if="!ad"
-      data-ad-detail-empty
-      class="m-0 rounded-2xl bg-n-solid-1 p-6 text-sm text-n-slate-11 ring-1 ring-inset ring-n-weak"
-    >
-      {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.EMPTY') }}
-    </p>
+    <!-- Sem números no período (nunca rodou, ou parou antes): o aviso fica, e o que a conexão lê ao vivo na Meta
+    (situação, orçamento, post e comentários) continua aqui (#2335). -->
+    <template v-else-if="!ad">
+      <p
+        data-ad-detail-empty
+        class="m-0 rounded-2xl bg-n-solid-1 p-6 text-sm text-n-slate-11 ring-1 ring-inset ring-n-weak"
+      >
+        {{ $t('CRM_KANBAN.META_ADS_HUB.AD_DETAIL.EMPTY') }}
+      </p>
+      <div
+        v-if="gestao"
+        data-ad-detail-gestao
+        class="rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
+      >
+        <MetaAdsAdStatus
+          :ad-id="adId"
+          :ad-name="gestao.name || ''"
+          :gestao="gestao"
+          :can-manage="canManage"
+          :budget="budget"
+          :budget-state="budgetState"
+          tone="light"
+          @retry-budget="loadBudget"
+          @changed="statusChanged"
+        />
+      </div>
+      <MetaAdsBudget
+        v-if="budget"
+        :ad-id="adId"
+        :budget="budget"
+        :can-manage="canManage"
+        @changed="budget = $event"
+      />
+      <MetaAdsAdPost v-if="gestao?.post" :post="gestao.post" />
+      <MetaAdsComments
+        v-if="showComments"
+        :ad-id="adId"
+        :abas="commentTabs"
+        :can-manage="canManage"
+        :can-create-inbox="canCreateInbox"
+      />
+    </template>
 
     <template v-else>
       <header
@@ -407,6 +522,9 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           :ad-name="ad.name || ''"
           :gestao="gestao"
           :can-manage="canManage"
+          :budget="budget"
+          :budget-state="budgetState"
+          @retry-budget="loadBudget"
           @changed="statusChanged"
         />
       </header>
@@ -459,6 +577,14 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
         </div>
 
         <div class="flex flex-col gap-5">
+          <!-- Orçamento e datas (#2198) no topo: é o que a pessoa muda depois de ver o resultado. -->
+          <MetaAdsBudget
+            v-if="budget"
+            :ad-id="adId"
+            :budget="budget"
+            :can-manage="canManage"
+            @changed="budget = $event"
+          />
           <span
             v-if="ad.verdict"
             :data-verdict="ad.verdict"
@@ -702,6 +828,14 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
           </table>
         </details>
       </div>
+
+      <MetaAdsComments
+        v-if="showComments"
+        :ad-id="adId"
+        :abas="commentTabs"
+        :can-manage="canManage"
+        :can-create-inbox="canCreateInbox"
+      />
 
       <div
         v-if="withoutSpend"

@@ -76,9 +76,12 @@ en:
   errors:
     custom_role:
       unknown_permissions: 'has unknown keys: %{unknown}. Valid keys: %{valid}'
-      destination_required: 'This role has people. Choose where they go: another role or no role (plain agent).'
-      destination_invalid: 'People of this role cannot go to that role. Choose another role of this account or no role.'
-      changed_meanwhile: 'Someone changed this role or its people while you were deleting it. Nothing was changed. Try again.'
+      destination_required: 'This role still has people. Choose where they go: another role or no role.'
+      destination_invalid: 'People of this role cannot go to the chosen role. Choose another one or no role.'
+      changed_meanwhile: 'Someone changed this role or its people while you were deleting it. Nothing changed. Try again.'
+      out_of_reach: "You can't give part of this role. Ask the administrator."
+      own_role: 'Nobody changes their own role.'
+      feature_off: 'Team roles are not available on this account right now.'
     crm:
       contact_already_linked: 'is already linked to this card. Use the existing contact or change the link explicitly.'
       contact_idempotency_required: 'An Idempotency-Key is required to create a contact for this card.'
@@ -307,6 +310,19 @@ en:
         feedback: Feedback Comment
         recorded_at: Recorded date
         review_notes: Review Notes
+  campaign_import:
+    people_sheet:
+      sheet: Audience
+      name: Name
+      phone: Phone
+      email: E-mail
+      company: Company
+  conversation_audience:
+    columns:
+      city: City
+      country: Country
+      'yes': 'Yes'
+      'no': 'No'
   notifications:
     notification_title:
       conversation_creation: 'A conversation (#%{display_id}) has been created in %{inbox_name}'
@@ -318,8 +334,13 @@ en:
       sla_missed_next_response: 'SLA target next response missed for conversation (#%{display_id})'
       sla_missed_resolution: 'SLA target resolution missed for conversation (#%{display_id})'
       guide_alert: 'The Guide has an urgent warning for you'
+      conversation_audience_ready: 'Your audience from conversations is done'
     attachment: 'Attachment'
     no_content: 'No content'
+    conversation_audience:
+      done: "the list is ready to review"
+      ceiling: "stopped at the agreed cost and waits for you"
+      failed: "stopped because the account's AI did not answer"
   conversations:
     captain:
       handoff: 'Transferring to another agent for further assistance.'

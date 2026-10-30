@@ -20,7 +20,7 @@ class Crm::BookingV2::InviteResender
 
   def perform
     raise Crm::BookingV2::InviteError, 'no_conversation' if conversation.blank?
-    raise Crm::BookingV2::InviteError, 'cannot_reply' unless conversation.can_reply?
+    raise Crm::BookingV2::InviteError, 'cannot_reply' unless conversation.can_reply_automatically?
 
     ActiveRecord::Base.transaction do
       fresh = Crm::BookingV2::InviteCreator.new(

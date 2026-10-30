@@ -2067,6 +2067,730 @@
         "ERRO": "Não deu para conectar agora. Tente de novo."
       },
       "ESCOLHER_FOTO": "Escolher foto"
+    },
+    "DESEMPENHO": {
+      "VER_TUDO": "Ver tudo de {nome}",
+      "CARREGANDO": "Carregando o desempenho",
+      "MIGALHA": {
+        "ROTULO": "Onde você está",
+        "AGENTES": "Agentes",
+        "DESEMPENHO": "Desempenho"
+      },
+      "DE_FORA": "Agente de outro sistema: só vemos o que ele manda.",
+      "ESTADO": {
+        "SEM_CONVERSAS": "{nome} não atendeu ninguém neste período.",
+        "SEM_CONVERSAS_BOTAO": "Ver outro período",
+        "LEITURA_DESLIGADA": "Ligue a leitura das conversas para ver do que as pessoas falam.",
+        "LEITURA_DESLIGADA_BOTAO": "Ligar",
+        "LEITURA_DESLIGADA_SEM_ACESSO": "A leitura das conversas está desligada. Quem cuida da conta pode ligar.",
+        "LENDO": "A IA lê as conversas dos últimos 30 dias na leitura automática, que roda uma vez por dia. Os números aparecem quando ela terminar.",
+        "TETO": "A última leitura parou no limite diário de gasto com IA. O resto entra na próxima leitura.",
+        "TETO_BOTAO": "Ver o que já temos",
+        "SEM_IA": "A leitura não está funcionando nesta conta: falta conectar a chave de IA.",
+        "SEM_IA_BOTAO": "Conectar a chave",
+        "SEM_IA_SEM_ACESSO": "A leitura não está funcionando nesta conta agora. Peça a quem cuida da conta para conectar a chave de IA.",
+        "SEM_IA_SEM_ACESSO_BOTAO": "Ver os números",
+        "ERRO": "A leitura automática parou por um erro. O que já foi lido continua guardado. Se continuar, fale com o suporte.",
+        "CHAVE_RECUSADA": "A IA recusou a chave desta conta. Confira a chave de IA. O que já foi lido continua guardado.",
+        "CHAVE_RECUSADA_BOTAO": "Conferir a chave",
+        "CHAVE_RECUSADA_SEM_ACESSO": "A IA recusou a chave desta conta. Peça a quem cuida da conta para conferir a chave. O que já foi lido continua guardado.",
+        "CHAVE_RECUSADA_SEM_ACESSO_BOTAO": "Ver os números",
+        "SEM_RESULTADO": "Ainda não sabemos o que conta como resultado para {nome}.",
+        "CONFERENCIA_BAIXA": "Os assuntos podem estar imprecisos. Estamos revisando."
+      },
+      "INSTRUCAO": {
+        "COLADA": "Instrução colada por {autor} em {data}",
+        "AVISO": "É o texto que foi colado aqui, não necessariamente o que o outro sistema usa."
+      },
+      "ALTERAR": "Alterar"
+    },
+    "DESEMPENHO2": {
+      "A": {
+        "FORMATO": {
+          "PONTOS": "{n} ponto | {n} pontos",
+          "SEGUNDOS": "{n} s",
+          "MINUTOS": "{n} min",
+          "HORAS": "{n} h",
+          "DIA_CURTO": {
+            "SEG": "Seg",
+            "TER": "Ter",
+            "QUA": "Qua",
+            "QUI": "Qui",
+            "SEX": "Sex",
+            "SAB": "Sáb",
+            "DOM": "Dom"
+          },
+          "DIA_LONGO": {
+            "SEG": "Segunda",
+            "TER": "Terça",
+            "QUA": "Quarta",
+            "QUI": "Quinta",
+            "SEX": "Sexta",
+            "SAB": "Sábado",
+            "DOM": "Domingo"
+          },
+          "PERIODO": "{inicio} a {fim}",
+          "DURACAO_DIAS": "{n} dias | {n} dia | {n} dias",
+          "DURACAO_MESES": "{n} meses | {n} mês | {n} meses",
+          "MINUTOS_E_SEGUNDOS": "{m} min {s} s"
+        },
+        "COMUM": {
+          "CONVERSA": "Conversa #{numero}",
+          "NOVA_ABA": "(abre em outra aba)",
+          "SEM_NOME": "Sem nome",
+          "NADA_NO_PERIODO": "Nada neste período.",
+          "VER_EXEMPLOS": "Ver exemplos ({n})",
+          "VER_TODOS": "Ver todos os {n}",
+          "VER_MENOS": "Ver menos",
+          "AGENTE": "o agente de IA",
+          "POUCOS_CASOS": "Poucos casos: compare com cuidado",
+          "HISTORICO_COMPLETO": "Histórico completo",
+          "EXEMPLOS": "Exemplos ({n})",
+          "SEPARADOR": "·",
+          "SEM_VALOR": "—",
+          "MARCA_PARCIAL": "*",
+          "ROTULO_E_VALOR": "{rotulo}: {valor}"
+        },
+        "DELTA": {
+          "DIAS_ANTES": "nos {dias} dias antes",
+          "ANTES": "no período anterior",
+          "IGUAL": "Mesmo número que {quando}",
+          "MAIS": "{valor} a mais que {quando}",
+          "MENOS": "{valor} a menos que {quando}"
+        },
+        "KPI": {
+          "PROCURAS": {
+            "ROTULO": "Procuras",
+            "EXPLICA": "Pedidos reais. Uma conversa pode ter vários. Testes fora."
+          },
+          "CONVERSAS": {
+            "ROTULO": "Conversas",
+            "EXPLICA": "Pessoas diferentes que escreveram no período"
+          },
+          "COMPRA": {
+            "EXPLICA": "{pct} das procuras · {explicacao}"
+          },
+          "FECHARAM": {
+            "EXPLICA": "{pct} de {m} {compra}"
+          },
+          "DUVIDAS_RESOLVIDAS": {
+            "ROTULO": "Dúvidas resolvidas",
+            "EXPLICA": "{n} de {m} dúvidas, sem precisar de pessoa"
+          },
+          "SEM_PESSOA": {
+            "ROTULO": "Ficaram sem uma pessoa",
+            "EXPLICA": "de {m} que precisavam de alguém da equipe"
+          },
+          "PERDAS_EVITAVEIS": {
+            "ROTULO": "Vendas perdidas por causa corrigível",
+            "EXPLICA": "{pct} de {m} {compra}"
+          },
+          "TEMPO_RESPOSTA": {
+            "ROTULO": "Tempo para {nome} responder",
+            "EXPLICA": "Tempo típico. 9 em cada 10 em até {p90}"
+          }
+        },
+        "LEITURA": {
+          "VOLUME": {
+            "TITULO": "Volume",
+            "FRASE": "{nome} mandou {agente} mensagens e a equipe, {equipe}, em {conversas} conversas.",
+            "NOTA": "Quem da equipe escreve pela conta de {nome} conta como {nome}, não como equipe."
+          },
+          "TRAVA": {
+            "TITULO": "Maior trava",
+            "FRASE": "{motivo}: {n} de {total} {compra} ({pct})."
+          },
+          "RITMO": {
+            "TITULO": "Ritmo",
+            "FRASE": "{compra} por semana: {antes} no começo e {depois} no fim (média das {k} primeiras e das {k} últimas semanas inteiras).",
+            "FRASE_DIA": "{compra} por semana: {antes} na primeira semana inteira e {depois} na última."
+          },
+          "DECISAO": {
+            "TITULO": "Por onde começar",
+            "FRASE": "{titulo}.",
+            "FRASE_COM_GANHO": "{titulo}. Ganho estimado: {ganho}.",
+            "VER": "Ver a sugestão"
+          }
+        },
+        "NUMEROS": {
+          "SOBRE": "Resumo do período",
+          "TITULO": "Os números do período",
+          "DESCRICAO": "Cada número diz o que conta. A seta compara com o mesmo número de dias logo antes.",
+          "FECHOU_CONTA": "Aqui, “{fechou}” quer dizer: {explicacao}.",
+          "DESCRICAO_SEM_ANTERIOR": "Cada número diz o que conta. Este período não tem um período anterior do mesmo tamanho para comparar, então não há seta."
+        },
+        "EVOLUCAO": {
+          "TITULO": "Como o movimento mudou",
+          "DESCRICAO": {
+            "DIA": "Por dia",
+            "SEMANA": "Por semana (começa na segunda)"
+          },
+          "VISAO": {
+            "ROTULO": "O que ver no gráfico",
+            "GERAL": "Geral",
+            "RESULTADO": "Resultado",
+            "ORIGEM": "Origem"
+          },
+          "SERIE": {
+            "PROCURAS": "Procuras",
+            "COM_ANUNCIO": "Veio de anúncio",
+            "SEM_ANUNCIO": "Chegou sem anúncio"
+          },
+          "FAIXA": {
+            "TIVERAM_PESSOA": "Passaram para uma pessoa",
+            "SEM_PESSOA": "Ficaram sem pessoa"
+          },
+          "TOTAL": "{serie} no período",
+          "PICO": {
+            "DIA": "Pico · dia {data}",
+            "SEMANA": "Pico · semana de {data}"
+          },
+          "MEDIA": "Média por {unidade}",
+          "UNIDADE": {
+            "DIA": "dia",
+            "SEMANA": "semana"
+          },
+          "SEMANA_DE": "Semana de {data}",
+          "LEITURA_DA_SERIE": "{serie} por {unidade}: {valores}",
+          "FAIXA_TOTAL": "{nome}: {n} no período",
+          "PARCIAL": {
+            "DIA": "* O último dia ainda está em andamento.",
+            "SEMANA": "* A última semana ainda está em andamento."
+          }
+        },
+        "FUNIL": {
+          "SOBRE": "Até onde chegam",
+          "TITULO": "Do pedido ao resultado",
+          "DESCRICAO": "Quantas procuras chegaram a cada passo. Não precisa ser na ordem.",
+          "MARCOS": "Passos do caminho",
+          "MARCOS_DESCRICAO": "Base: {n} procuras",
+          "DO_INICIO": "{pct} do início",
+          "DA_ANTERIOR": "{pct} da etapa anterior",
+          "VEZES": "{x}× mais",
+          "IGUAL": "Iguais",
+          "PONTOS_A_MAIS": "{pontos} a mais",
+          "PONTOS_A_MENOS": "{pontos} a menos",
+          "RECORTE": {
+            "MARCO": "Por passo",
+            "HORARIO": "Por horário",
+            "ORIGEM": "Por origem",
+            "QUEM": "Por quem procura",
+            "OUTRO": "Outro recorte"
+          },
+          "COMPARA_DESCRICAO": "Quantos chegaram a “{fechou}” em cada grupo",
+          "N_DE_M": "{n} de {m}",
+          "NAO_CAUSA": "Aparecem juntos, não quer dizer que um causou o outro.",
+          "SEM_COMPARAR": "Poucos casos para comparar",
+          "COMPARACOES": "O que muda o resultado",
+          "CONCILIACAO": "Por que “{etapa}” ({a}) e “{fechou}” ({b}) não dão o mesmo número: {partes}.",
+          "CONCILIACAO_NAO_FECHARAM": "{n} chegaram a este passo e não terminaram em “{fechou}” | {n} chegou a este passo e não terminou em “{fechou}” | {n} chegaram a este passo e não terminaram em “{fechou}”",
+          "CONCILIACAO_FORA": "{n} terminaram em “{fechou}” sem passar por este passo | {n} terminou em “{fechou}” sem passar por este passo | {n} terminaram em “{fechou}” sem passar por este passo"
+        },
+        "TEMAS": {
+          "SOBRE": "Assuntos e pedidos",
+          "TITULO": "Do que falam e o que pedem",
+          "DESCRICAO": "Toque num item para ver as procuras dele na aba Detalhe.",
+          "FALAM": "Do que as pessoas falam",
+          "FALAM_DESCRICAO": "O tema principal de cada procura",
+          "UNIDADE_TEMAS": "Unidade: procuras. Cada procura tem um tema principal.",
+          "FECHARAM": "{pct} {fechou} ({n} de {m})",
+          "SEM_COMPRA": "Sem {compra}",
+          "MAIS_TRAVA": "mais trava: {motivo}",
+          "SUBIU": "{n} a mais que antes",
+          "DESCEU": "{n} a menos que antes",
+          "PEDIRAM": "O que pediram",
+          "PEDIRAM_DESCRICAO": "Base: {n} procuras",
+          "UNIDADE_CORTES": "Unidade: procuras. Os detalhes que a pessoa deu ao pedir.",
+          "ESCOLHER_CORTE": "Escolher o detalhe",
+          "FECHARAM_POUCOS": "{fechou}: {n} de {m} (poucos casos)",
+          "ERRO_GRAVE": "{pct} de erro grave"
+        },
+        "ORIGEM": {
+          "SOBRE": "Origem",
+          "TITULO": "De onde vêm as procuras",
+          "DESCRICAO": "A mesma conta para quem veio de anúncio e para quem chegou sem anúncio.",
+          "LADO": {
+            "ANUNCIO": "Veio de anúncio",
+            "SEM_ANUNCIO": "Chegou sem anúncio"
+          },
+          "PROCURAS_PCT": "procuras · {pct}",
+          "COMPRA_E_FECHARAM": "{compra} {nome} · {fecharam} {fechou}",
+          "TAXA": "{fechou}",
+          "VEZES": "{x}× a taxa sem anúncio",
+          "POR_ANUNCIO": "Por anúncio",
+          "POR_ANUNCIO_DESCRICAO": "Procuras que vieram de cada anúncio",
+          "UNIDADE": "Unidade: procuras.",
+          "FECHARAM": "{n} {fechou}",
+          "CUSTO_POR_FECHOU": "{valor} por resultado",
+          "SEM_SABER_QUAL": "Veio de anúncio, sem saber qual: {n}",
+          "SEM_ANUNCIO_CHEGARAM": "Sem anúncio, como chegaram",
+          "DIRECT_FORA": "Anúncios que abrem o Direct do Instagram ainda não aparecem aqui.",
+          "COMO_CHEGARAM": "Como chegaram",
+          "COMO_CHEGARAM_DESCRICAO": "O que a pessoa contou na conversa",
+          "FECHAM": "{pct} {fechou} ({n} de {m} {compra})",
+          "SEM_COMPRA": "Sem {compra}",
+          "SEM_ANUNCIO_FRASE": "Esta conta não tem anúncio ligado. Tudo aqui chegou sem anúncio.",
+          "LIGAR_ANUNCIOS": "Ligar anúncios para comparar ›",
+          "MAIORIA_NAO_DISSE": "A maioria não disse de onde veio. A origem é o que a pessoa contou na conversa.",
+          "FECHAM_POUCOS": "{fechou}: {n} de {m} {compra} (poucos casos)"
+        },
+        "HORARIOS": {
+          "SOBRE": "Quando chega",
+          "TITULO": "Horários de maior entrada",
+          "DESCRICAO": "Para saber quando ter gente da equipe por perto.",
+          "MAPA_TITULO": "Procuras por dia e hora",
+          "FUSO": "Horários no fuso da sua conta ({fuso})",
+          "UNIDADE": "Unidade: procuras. Os números nas células substituem o mouse.",
+          "PICO": "Pico · {dia}, {hora}h",
+          "TOTAL_PROCURAS": "Procuras no período",
+          "FORA_DO_HORARIO": "Fora do horário comercial",
+          "CELULA": "{dia}, {hora}h: {n} procuras",
+          "MAPA_ROTULO": "Procuras por dia da semana e hora",
+          "DIA": "Dia",
+          "TOTAL": "Total",
+          "MENOS": "Menos",
+          "MAIS": "Mais",
+          "MAXIMO": "máximo {n}",
+          "N_DE_M": "{n} de {m}",
+          "PROCURAS_DO_TOTAL": "{n} procuras ({pct} do total)",
+          "FAIXAS_TITULO": "Quando chega e quanto dá resultado",
+          "FAIXAS_DESCRICAO": "Uma procura pode estar em mais de uma linha (ex.: fim de semana à noite).",
+          "COL": {
+            "QUANDO": "Quando",
+            "PROCURAS": "Procuras",
+            "DO_TOTAL": "% do total",
+            "TAXA": "Taxa",
+            "SEM_PESSOA": "Sem pessoa"
+          },
+          "FAIXA": {
+            "DENTRO": "No horário comercial",
+            "FORA": "Fora do horário",
+            "FIM_DE_SEMANA": "Fim de semana",
+            "NOITE": "Noite (18h às 23h)"
+          },
+          "FAIXAS_NOTA": "Taxa = parte de {compra} que terminou em “{fechou}”. A maior aparece em verde quando a faixa tem pelo menos {minimo} casos.",
+          "HORARIO_COMERCIAL": "Horário comercial: {dias}, {inicio}h às {fim}h",
+          "DIAS_SEGUIDOS": "{de} a {ate}",
+          "ARRASTAR": "Arraste para o lado para ver todas as horas.",
+          "VISAO": {
+            "ROTULO": "O que mostrar no mapa",
+            "PROCURAS": "Todas as procuras",
+            "SEM_PESSOA": "Ficaram sem pessoa"
+          },
+          "MAPA_SEM_PESSOA": "Quem ficou sem uma pessoa, por dia e hora",
+          "UNIDADE_SEM_PESSOA": "Unidade: procuras que precisavam de alguém da equipe e ficaram sem.",
+          "TOTAL_SEM_PESSOA": "Ficaram sem pessoa no período",
+          "FILA": {
+            "TITULO": "Onde a equipe não chegou",
+            "DESCRICAO": "Quem precisava de uma pessoa e ficou sem.",
+            "SEM": "de {m} que precisavam ficaram sem",
+            "FORA": "{n} chegaram fora do horário comercial",
+            "PICO": "pico: {dia}, {hora}h"
+          }
+        },
+        "QUALIDADE": {
+          "SOBRE": "Qualidade",
+          "TITULO": "Como {nome} se saiu",
+          "DESCRICAO": "Lemos cada procura em que {nome} respondeu e marcamos se acertou, errou pouco ou errou feio.",
+          "COMO_SE_SAIU": "Acertos e erros",
+          "COMO_SE_SAIU_DESCRICAO": "Base: {n} procuras em que {nome} atuou",
+          "DIST": {
+            "ACERTOU": "Acertou",
+            "ERRO_LEVE": "Erro leve",
+            "ERRO_GRAVE": "Erro grave",
+            "NAO_ATUOU": "Não atuou"
+          },
+          "ACIMA_5_MIN": "Respostas acima de 5 min",
+          "MENSAGENS": "mensagens de {nome} por mensagem da pessoa",
+          "OTIMISTA": "Estes números saíram otimistas na conferência ({pct} de acerto).",
+          "OTIMISTA_ERROS": "Os erros reais são maiores.",
+          "REGRAS": "Regras mais quebradas",
+          "REGRAS_DESCRICAO": "Regras da instrução que {nome} deixou de seguir",
+          "REGRAS_UNIDADE": "Unidade: procuras. Uma procura pode quebrar mais de uma regra.",
+          "SISTEMICA": "Em metade ou mais",
+          "LISTA": {
+            "FORTES": "Pontos fortes",
+            "PIORES": "Onde mais erra"
+          },
+          "ACERTO_EM": "{pct} de acerto em {n} procuras",
+          "ERRO_GRAVE_EM": "{pct} de erro grave · {acerto} de acerto em {n} procuras",
+          "FORA_DA_BASE": "fora da base"
+        },
+        "PESSOA": {
+          "SOBRE": "Passagem para a equipe",
+          "TITULO": "Quem precisava de uma pessoa",
+          "DESCRICAO": "Procuras em que só alguém da equipe podia resolver.",
+          "PRECISAVAM": "Precisavam de uma pessoa",
+          "TIVERAM": "Tiveram uma pessoa",
+          "FICARAM_SEM": "Ficaram sem",
+          "N_DE_M": "{n} de {m}",
+          "PROMETEU": "Prometeu passar para a equipe e ninguém veio",
+          "SOBRE_O_QUE": "Sobre o que era",
+          "COMO_TERMINOU": "Como terminou",
+          "UNIDADE": "Unidade: procuras que ficaram sem uma pessoa.",
+          "FORA_DO_HORARIO": "{n} de {m} que ficaram sem uma pessoa chegaram fora do horário comercial.",
+          "EXEMPLOS": "Conversas de exemplo",
+          "EQUIPE_POR_MES": "Mensagens da equipe por mês",
+          "EQUIPE_POR_MES_DESCRICAO": "Quanto a equipe escreveu nas conversas, mês a mês.",
+          "UNIDADE_EQUIPE": "Unidade: mensagens escritas por pessoas da equipe.",
+          "CONTA_DO_AGENTE": "Quem da equipe escreve pela conta de {nome} conta como {nome}, não como equipe. Por isso pode haver procura atendida por uma pessoa num mês com 0 mensagens da equipe."
+        },
+        "QUEM": {
+          "SOBRE": "Quem procura",
+          "TITULO": "Quem são e quanto voltam",
+          "DESCRICAO": "Que tipo de pessoa procura e quanto o uso se concentra em poucas conversas.",
+          "QUEM_E": "Quem procura",
+          "UNIDADE": "Unidade: procuras.",
+          "FECHAM": "{pct} {fechou} ({n} de {m})",
+          "CONCENTRACAO": "Concentração",
+          "CONCENTRACAO_DESCRICAO": "Quanto o uso se concentra em poucas conversas",
+          "CONVERSAS_COM_COMPRA": "conversas com {compra}",
+          "CONVERSAS_FECHARAM": "conversas que chegaram ao resultado",
+          "UMA_VEZ": "conversas com um pedido só",
+          "TOP10": "do total de {compra} vem das 10 conversas que mais pedem",
+          "VER_ATIVAS": "Ver as conversas que mais pedem",
+          "MAIS_PEDEM": "Quem mais pede {compra}, e quantos {fechou}",
+          "MAIS_PEDEM_DESCRICAO": "Quem pede muito e não fecha aqui pode estar fechando por outro caminho.",
+          "COL": {
+            "CONVERSA": "Conversa",
+            "O_QUE_FAZER": "O que fazer"
+          },
+          "ACAO_OK": "Já fecha por aqui",
+          "ACAO_CONFERIR": "Conferir se {fechou} por outro caminho",
+          "FECHAM_POUCOS": "{fechou}: {n} de {m} (poucos casos)"
+        },
+        "PERDAS": {
+          "SOBRE": "Perdas",
+          "TITULO": "Vendas perdidas que dava para evitar",
+          "DESCRICAO": "Procuras que pararam por algo que a empresa pode corrigir (não conta quem desistiu pelo preço ou só pesquisou).",
+          "DA_COMPRA": "{pct} de {m} {compra}",
+          "VER_NA_TABELA": "Ver as {n} na tabela",
+          "POR_QUE": "Por quê",
+          "UNIDADE_POR_QUE": "Unidade: procuras. Uma perda pode ter mais de um motivo.",
+          "ONDE_TRAVAM": "Onde travam todas as procuras",
+          "BASE_TRAVAS": "Base: {n} procuras com motivo anotado. Uma procura pode ter mais de um.",
+          "POR_QUE_DESCRICAO": "Uma perda pode ter mais de um motivo.",
+          "ONDE_TRAVAM_DESCRICAO": "{n} de {m} procuras tinham o motivo anotado. A base aqui é outra (todas as procuras, não só {compra}); por isso o número não bate com a “Maior trava” do resumo."
+        },
+        "ACOES": {
+          "SOBRE": "O que fazer",
+          "TITULO": "Do sinal à ação",
+          "DESCRICAO": "Cada sugestão traz o número e as conversas que a provam. O ganho é uma estimativa.",
+          "NENHUMA": "Nenhuma sugestão neste período.",
+          "DE_OUTRAS_DATAS": "Sugestões de {inicio} a {fim}.",
+          "FRENTE": {
+            "INSTRUCAO": "Ensinar {nome}",
+            "SISTEMA": "Ferramenta e sistema",
+            "EQUIPE": "Equipe",
+            "ANUNCIO": "Anúncios e retomada"
+          },
+          "PROVA": "A prova",
+          "O_QUE_MUDAR": "O que mudar",
+          "NA_INSTRUCAO": "Na instrução:",
+          "NO_SISTEMA": "No sistema:",
+          "GANHO": "Ganho estimado:",
+          "GANHO_FECHAMENTOS": "≈ {n} vendas a mais | ≈ {n} venda a mais | ≈ {n} vendas a mais",
+          "GANHO_VALOR": "≈ {valor}",
+          "GANHO_SEM_CONTA": "ainda não dá para estimar",
+          "GANHO_NO_PERIODO": "{ganho} em {duracao} ({inicio} a {fim})",
+          "GANHO_DO_HISTORICO": "neste período ainda não dá para estimar; no histórico completo ({duracao}, {inicio} a {fim}): {ganho}",
+          "COMO_CALCULAMOS": "Como calculamos",
+          "COLUNA": {
+            "FALTA_DADO": "Precisa de mais dado"
+          },
+          "FALTA": "Falta: {falta}",
+          "NA_EQUIPE": "Na equipe:",
+          "BASE_DO_TICKET": "O ganho em dinheiro usa {valor} por venda: o valor típico de uma venda, de {n} vendas com valor no histórico completo."
+        },
+        "COMO_LER": {
+          "SOBRE": "Como ler",
+          "TITULO": "Como ler e o que o dado não prova",
+          "DESCRICAO": "O que cada número mede, onde não exagerar e quanto confiar.",
+          "COMO_LER": "Como ler",
+          "TESTES": "Testes da equipe ficam fora ({n} procuras).",
+          "NAO_PROVAM": "O que estes números não provam",
+          "FRASE": {
+            "ASSUNTO": "Assunto não é o motivo da compra. Mostra o que se fala, não por que se compra.",
+            "FORA_DA_CONVERSA": "Só sabemos do que aparece na conversa. O que se resolve fora dela não entra.",
+            "ANUNCIO": "Só contamos como anúncio quem veio de um anúncio identificado.",
+            "AUDIO": "Áudio sem transcrição e imagem sem leitura não foram lidos.",
+            "ANDAMENTO": "Conversas ainda em andamento ficam de fora até terminarem.",
+            "JUNTOS": "Quando dois números aparecem juntos, não quer dizer que um causou o outro."
+          },
+          "AVISO": {
+            "DIA_PARCIAL": "O dia {dia} ainda está em andamento.",
+            "SO_PERIODO_TODO": "Usam o histórico completo, não só este período: {secoes}.",
+            "POUCO_DADO": "Pouco dado neste período: leia com cuidado.",
+            "INSTRUCAO_MUDOU": "A instrução mudou em {data}. Antes e depois não se comparam direto.",
+            "LIDO_POR_AMOSTRA": "Lemos por amostra neste período.",
+            "SEM_ANUNCIO": "Sem anúncio rastreado, não dá para comparar quem veio de anúncio com quem chegou sem."
+          },
+          "CONFIAR": "Quanto confiar",
+          "CONFERIMOS": "Conferimos {n} procuras lendo a conversa inteira.",
+          "COL": {
+            "CAMPO": "O que conferimos",
+            "ACERTOS": "Certos",
+            "PCT": "Acerto",
+            "BARRA": "Barra do acerto",
+            "LEITURA": "Leitura"
+          },
+          "DE": "{n} de {m}",
+          "LEITURA": {
+            "FIRME": "Firme",
+            "OTIMISTA": "Otimista",
+            "FRACA": "Fraca"
+          },
+          "RESSALVA_DO_CAMPO": "{campo} · leitura {leitura} ({pct} de acerto na conferência):",
+          "SECAO": {
+            "CONFIANCA": "a conferência (“Quanto confiar”)",
+            "TICKET": "o valor típico de uma venda (usado no ganho estimado das sugestões)",
+            "KPIS": "o tempo de resposta e as mensagens",
+            "QUALIDADE": "a qualidade das respostas",
+            "PESSOA": "a passagem para uma pessoa",
+            "ACOES": "as sugestões"
+          }
+        },
+        "FAIXA": {
+          "DADOS_ATE": "Dados até {quando}",
+          "LIDO_ATE": "Lido até {quando}",
+          "EXPORTANDO": "Preparando…",
+          "EXPORTAR": {
+            "PDF": "Exportar PDF",
+            "XLSX": "Exportar Excel"
+          },
+          "SEM_EXPORTACAO": "A exportação deste período ainda não foi gerada.",
+          "EXPORTAR_FALHOU": "Não deu para baixar o arquivo agora. Tente de novo.",
+          "PERIODO": {
+            "7": "Últimos 7 dias ({datas})",
+            "30": "Últimos 30 dias ({datas})",
+            "90": "Últimos 90 dias ({datas})",
+            "TUDO": "Todo o período ({datas})"
+          }
+        },
+        "BARRA": {
+          "ABAS": "Abas do painel",
+          "ABA": {
+            "RESUMO": "Resumo",
+            "DETALHE": "Detalhe"
+          },
+          "PERIODOS": "Período",
+          "PERIODO": {
+            "7": "7 dias",
+            "30": "30 dias",
+            "90": "90 dias",
+            "TUDO": "Tudo"
+          },
+          "BASE": "Base: {procuras} procuras · {conversas} conversas",
+          "CONFERIMOS": "Conferimos {n} procuras"
+        },
+        "FONTE": {
+          "CAIXAS_TITULO": "Números só das suas caixas.",
+          "CAIXAS_TEXTO": "Os números e as listas contam só as caixas que você vê. {n} procuras de outras caixas ficam de fora, e as sugestões, feitas com a conta inteira, não aparecem.",
+          "LISTA_TITULO": "Só as procuras mais recentes.",
+          "LISTA_TEXTO": "O Detalhe lista as {mostradas} procuras mais recentes de {total}. Os números de cima contam todas.",
+          "INSTRUCAO_TITULO": "A instrução do agente mudou.",
+          "INSTRUCAO_TEXTO": "A IA segue lendo as conversas com os critérios de antes. Para ela ler com a instrução nova, fale com o suporte.",
+          "PENDENTES_TITULO": "1 conversa espera a próxima leitura da IA. | {n} conversas esperam a próxima leitura da IA.",
+          "PENDENTES_TEXTO": "Os números param antes delas, no “Lido até”. Elas entram na próxima leitura.",
+          "NAO_LIDAS_TITULO": "1 conversa não pôde ser lida pela IA. | {n} conversas não puderam ser lidas pela IA.",
+          "NAO_LIDAS_TEXTO": "Elas são grandes demais ou a leitura falhou várias vezes. Se já tinham sido lidas antes, os números são dessa leitura; se nunca foram lidas, ficam de fora. Tentamos de novo quando chegar mensagem nova.",
+          "DEMO_TITULO": "Dados inventados.",
+          "DEMO_TEXTO": "Estes números são de um exemplo, para mostrar como o painel funciona. Não são da sua conta.",
+          "FALHOU_TITULO": "Não conseguimos ler os dados reais.",
+          "FALHOU": {
+            "SEM_ARQUIVO": "O arquivo dos dados reais não está nesta máquina. Mostramos o exemplo no lugar.",
+            "FORMATO": "O arquivo dos dados reais está num formato que o painel não entende. Mostramos o exemplo no lugar.",
+            "LEITURA": "A leitura do arquivo falhou. Mostramos o exemplo no lugar.",
+            "API": "O painel não carregou agora. Tente de novo em alguns minutos."
+          }
+        }
+      },
+      "B": {
+        "SOBRE": "Detalhe",
+        "TITULO": "Os números exatos",
+        "TITULO_COM_NOME": "Os números exatos de {nome}",
+        "DESCRICAO": "Todo número da aba Resumo, em tabelas para buscar, filtrar e ordenar. Clique numa conversa para abrir em outra aba.",
+        "ESCOLHA": "Qual tabela",
+        "SEM_NOME": "Sem nome",
+        "TABELAS": {
+          "PROCURAS": "Procuras",
+          "PERIODO": "Por período",
+          "TEMA": "Por tema",
+          "ATIVAS": "Conversas mais ativas",
+          "REGRAS": "Regras quebradas"
+        },
+        "TABELA": {
+          "VAZIO": "Nada para mostrar aqui."
+        },
+        "PAGINACAO": {
+          "ROTULO": "Páginas da tabela",
+          "FAIXA": "{de}–{ate} de {total}",
+          "TAMANHO": "Linhas por página",
+          "POR_PAGINA": "{n} por página",
+          "ANTERIOR": "Anterior",
+          "PROXIMA": "Próxima"
+        },
+        "FILTROS": {
+          "TODOS": "Todos",
+          "TODO_O_GRUPO": "Todos de {grupo}",
+          "GRUPO": {
+            "FECHOU": "Fecharam",
+            "AVANCOU": "Avançaram",
+            "PAROU": "Pararam",
+            "RESOLVEU": "Resolveram",
+            "PASSOU": "Passaram para uma pessoa",
+            "SEM_NEGOCIO": "Sem negócio"
+          },
+          "QUALIDADE": {
+            "ROTULO": "Como {nome} foi",
+            "ACERTOU": "Acertou",
+            "ERRO_LEVE": "Erro leve",
+            "ERRO_GRAVE": "Erro grave",
+            "NAO_ATUOU": "Não atuou"
+          },
+          "BUSCA": "Buscar",
+          "BUSCA_DICA": "Resumo, número da conversa ou tema",
+          "TEMA": "Tema",
+          "RESULTADO": "Como terminou",
+          "MARCO": "Etapa alcançada",
+          "ORIGEM": "De onde veio",
+          "CORTE": "O que pediram",
+          "SO_PERDAS": "Só vendas perdidas por causa corrigível",
+          "SO_PESSOA": "Só quem precisava de uma pessoa",
+          "MOSTRAR_TESTES": "Mostrar testes da equipe",
+          "LIMPAR": "Limpar filtros"
+        },
+        "PROCURAS": {
+          "TITULO": "Todas as procuras",
+          "DESCRICAO": "Uma linha por procura. Uma conversa pode ter mais de uma. As mais novas primeiro.",
+          "UNIDADE": "Unidade: procuras. Os testes da equipe ficam fora, a não ser que você ligue.",
+          "CONTADOR": "{n} procuras com estes filtros",
+          "CONTADOR_FECHARAM": "{fechou}: {n} de {m} {compra} ({pct})",
+          "VAZIO": "Nenhuma procura com estes filtros. Tente limpar algum filtro.",
+          "ABRIR_CONVERSA": "Abrir a conversa {n} em outra aba",
+          "OUTRA_EQUIPE": "Conversa de outra caixa",
+          "TESTE": "Teste da equipe",
+          "MAIS": "mais",
+          "MENOS": "menos",
+          "COL": {
+            "QUANDO": "Quando",
+            "CONVERSA": "Conversa",
+            "TEMA": "Tema",
+            "PEDIDO": "O que pediram",
+            "MARCO": "Até onde chegou",
+            "RESULTADO": "Como terminou",
+            "AGENTE": "{nome}",
+            "ORIGEM": "De onde veio",
+            "RESUMO": "Resumo"
+          },
+          "NUMERO": "#{n}",
+          "NUMERO_E_PROCURA": "#{n}·{procura}",
+          "EXPLICA_NUMERO": "O número “#312·2” quer dizer: conversa 312, segundo pedido dela.",
+          "TEMA_COMPLETO": "Tema: {tema}"
+        },
+        "PERIODO": {
+          "TITULO_DIA": "Dia a dia",
+          "TITULO_SEMANA": "Semana a semana",
+          "DESCRICAO": "O número exato de cada ponto do gráfico de movimento.",
+          "UNIDADE": "Unidade: procuras, menos em conversas novas.",
+          "TOTAL": "Total do período",
+          "SEMANA_DE": "Semana de {data}",
+          "PARCIAL_DIA": "* dia ainda em andamento",
+          "PARCIAL_SEMANA": "* semana ainda em andamento",
+          "COL": {
+            "DIA": "Dia",
+            "SEMANA": "Semana",
+            "PROCURAS": "Procuras",
+            "CONVERSAS_NOVAS": "Conversas novas",
+            "COMPRA": "Pedidos de compra",
+            "FECHARAM": "Fecharam",
+            "TAXA": "% fechou",
+            "PRECISAVAM": "Precisavam de pessoa",
+            "TIVERAM": "Tiveram pessoa",
+            "COM_ANUNCIO": "Com anúncio",
+            "SEM_ANUNCIO": "Sem anúncio"
+          }
+        },
+        "TEMA": {
+          "TITULO": "Por tema",
+          "DESCRICAO": "Cada tema com quanto fecha, como {nome} foi e o que mais trava. Clique num tema para ver as procuras dele.",
+          "UNIDADE": "Unidade: procuras. Cada procura tem um tema principal.",
+          "VER_PROCURAS": "Ver as procuras de {tema}",
+          "DELTA_MAIS": "{n} a mais",
+          "DELTA_MENOS": "{n} a menos",
+          "DELTA_IGUAL": "igual",
+          "COL": {
+            "TEMA": "Tema",
+            "PROCURAS": "Procuras",
+            "PCT": "% do total",
+            "COMPRA": "Pedidos de compra",
+            "FECHARAM": "Fecharam",
+            "TAXA": "% fechou",
+            "ACERTO": "{nome} acertou",
+            "ERRO_GRAVE": "Erro grave",
+            "TRAVA": "O que mais trava",
+            "DELTA": "vs. período anterior"
+          }
+        },
+        "ATIVAS": {
+          "TITULO": "Conversas que mais pedem",
+          "DESCRICAO": "As conversas com mais pedidos de compra no período.",
+          "UNIDADE": "Unidade: conversas. Primeiro e último contato no fuso da conta.",
+          "SOMA": "Estas {n} conversas somam {procuras} de {m} {compra} ({pct}).",
+          "COL": {
+            "CONVERSA": "Conversa",
+            "PROCURAS": "Procuras",
+            "COMPRA": "Pedidos de compra",
+            "FECHARAM": "Fecharam",
+            "PRIMEIRA": "Primeiro contato",
+            "ULTIMA": "Último contato",
+            "TEMA": "Tema mais frequente"
+          }
+        },
+        "REGRAS": {
+          "TITULO": "Regras quebradas",
+          "DESCRICAO": "Regras da instrução de {nome} que não foram seguidas, com as conversas que mostram isso.",
+          "UNIDADE": "Unidade: procuras. Uma procura pode quebrar mais de uma regra.",
+          "VAZIO": "Nenhuma regra quebrada neste período.",
+          "SIM": "Quase sempre",
+          "VER_EXEMPLOS": "Ver exemplos ({n})",
+          "ESCONDER_EXEMPLOS": "Esconder exemplos",
+          "COL": {
+            "REGRA": "Regra",
+            "PROCURAS": "Procuras",
+            "PCT": "% das procuras",
+            "QUASE_SEMPRE": "Em metade ou mais",
+            "EXEMPLOS": "Exemplos"
+          }
+        }
+      },
+      "D": {
+        "SEM_NOME": "Sem nome",
+        "DEMO": {
+          "TITULO": "De onde vêm estes números",
+          "TEXTO_DEMO": "Dados inventados, só para ver como a tela fica.",
+          "TEXTO_VIDA_REAL": "Dados reais, lidos das conversas. Só existem neste computador.",
+          "FONTE": "Números",
+          "FONTE_VIDA_REAL": "Conversas reais",
+          "FONTE_DEMO": "Demonstração",
+          "SEM_VIDA_REAL": "O arquivo dos dados reais não está neste computador",
+          "ANUNCIOS": "Anúncios",
+          "COM_ANUNCIOS": "Com anúncios",
+          "SEM_ANUNCIOS": "Sem anúncios",
+          "SITUACAO": "Situação",
+          "NORMAL": "Tudo funcionando",
+          "SITUACAO_SEM_CONVERSAS": "Sem conversas",
+          "SITUACAO_LEITURA_DESLIGADA": "Leitura desligada",
+          "SITUACAO_LENDO": "Lendo pela primeira vez",
+          "SITUACAO_TETO": "Leitura parou no limite de gasto",
+          "SITUACAO_ERRO": "Leitura parou por erro",
+          "SITUACAO_CHAVE_RECUSADA": "Chave de IA recusada",
+          "SITUACAO_SEM_IA": "Sem chave de IA",
+          "SITUACAO_SEM_RESULTADO": "Sem resultado definido",
+          "SITUACAO_CONFERENCIA_BAIXA": "Conferência baixa",
+          "SITUACAO_POUCO": "Poucas conversas"
+        }
+      }
     }
   }
 }

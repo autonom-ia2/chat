@@ -99,14 +99,31 @@ describe Facebook::SendOnFacebookService do
         expect(bot).not_to have_received(:deliver).with(hash_including(:tag), anything)
       end
 
-      it 'sends with HUMAN_AGENT tag when ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT is enabled' do
-        with_modified_env ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT: 'true' do
-          message = create(:message, message_type: 'outgoing', inbox: facebook_inbox, account: account, conversation: conversation)
-          described_class.new(message: message).perform
-          expect(bot).to have_received(:deliver).with(
-            hash_including(messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT'),
-            { page_id: facebook_channel.page_id }
-          )
+      context 'when ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT is enabled and the customer wrote 30 hours ago (#2259)' do
+        let(:agent) { create(:user, account: account, role: :agent) }
+        let(:conversation) { create(:conversation, account: account, contact: contact, inbox: facebook_inbox, contact_inbox: contact_inbox) }
+
+        before { conversation.messages.incoming.each { |incoming| incoming.update!(created_at: 30.hours.ago) } }
+
+        it 'sends with HUMAN_AGENT tag when a person of the team replies' do
+          with_modified_env ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT: 'true' do
+            message = create(:message, message_type: 'outgoing', inbox: facebook_inbox, account: account, conversation: conversation, sender: agent)
+            described_class.new(message: message).perform
+            expect(bot).to have_received(:deliver).with(
+              hash_including(messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT'),
+              { page_id: facebook_channel.page_id }
+            )
+          end
+        end
+
+        it 'sends a bot reply without the tag' do
+          with_modified_env ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT: 'true' do
+            message = create(:message, message_type: 'outgoing', inbox: facebook_inbox, account: account, conversation: conversation,
+                                       sender: create(:agent_bot, account: account))
+            described_class.new(message: message).perform
+            expect(bot).to have_received(:deliver).with(hash_including(messaging_type: 'RESPONSE'), { page_id: facebook_channel.page_id })
+            expect(bot).not_to have_received(:deliver).with(hash_including(:tag), anything)
+          end
         end
       end
 

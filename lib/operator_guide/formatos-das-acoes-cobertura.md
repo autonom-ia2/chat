@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 647 |
-| Sem corpo | 189 |
-| Com corpo | 458 |
-| Com corpo e formato completo | 378 (82,5%) |
-| Com corpo e formato incompleto | 80 |
+| No catálogo | 676 |
+| Sem corpo | 198 |
+| Com corpo | 478 |
+| Com corpo e formato completo | 393 (82,2%) |
+| Com corpo e formato incompleto | 85 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
-| Campos aninhados com vocabulário | 17 de 206 |
-| Leituras cruas tipadas | 175 de 263 |
+| Campos aninhados com vocabulário | 17 de 208 |
+| Leituras cruas tipadas | 190 de 284 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 66 |
+| leitura crua sem tipo | 71 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -35,6 +35,8 @@ Uma ação pode ter mais de um motivo.
 
 - `DELETE assignment_policies/:assignment_policy_id/inboxes/:id` — a rota não tem a action no controller: a chamada dá erro
 - `DELETE inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
+- `PATCH crm/meta_ads_connection/ads/:ad_id/budget` — leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)
+- `PATCH crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id` — leitura crua sem tipo: hidden (repassada a comments.hide!)
 - `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
 - `PATCH crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
@@ -79,6 +81,8 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
 - `POST crm/memoria/cards/:card_id/fatos` — leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)
+- `POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply` — leitura crua sem tipo: content (repassada a comments.reply!)
+- `POST crm/meta_ads_connection/media` — leitura crua sem tipo: file
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
 - `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
@@ -96,6 +100,7 @@ Uma ação pode ter mais de um motivo.
 - `POST inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
 - `POST inboxes/:inbox_id/whatsapp_conversation_assets/media` — leitura crua sem tipo: file
 - `POST inboxes/:inbox_id/whatsapp_templates/media` — leitura crua sem tipo: file (repassada a manager.upload)
+- `POST instagram/authorization` — leitura crua sem tipo: purpose (repassada a REAUTH_PURPOSES.[])
 - `POST integrations/hooks/:id/process_event` — leitura crua sem tipo: event (repassada a @hook.process_event)
 - `POST integrations/slack` — leitura crua sem tipo: code (repassada a Integrations::Slack::HookBuilder.new)
 - `POST portals` — leitura crua sem tipo: portal.config.analytics
@@ -169,6 +174,11 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/memoria_fatos#create` chave — o código não converte nem compara o valor
 - `api/v1/accounts/crm/memoria_fatos#create` item_ref — repassada a ::Crm::Memoria::Correcao.corrigir!
 - `api/v1/accounts/crm/memoria_fatos#create` valor — repassada a ::Crm::Memoria::Correcao.corrigir!
+- `api/v1/accounts/crm/meta_ads_creation#media` file — o código não converte nem compara o valor
+- `api/v1/accounts/crm/meta_ads_creation#update_budget` amount — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
+- `api/v1/accounts/crm/meta_ads_creation#update_budget` end_time — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
+- `api/v1/accounts/crm/meta_ads_facebook_comments#reply` content — repassada a comments.reply!
+- `api/v1/accounts/crm/meta_ads_facebook_comments#update` hidden — repassada a comments.hide!
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#create` outcome_labels — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` goal — o código não converte nem compara o valor
@@ -192,6 +202,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/inboxes#set_agent_bot` agent_bot — repassada a AgentBot.accessible_to(Current.account).find
 - `api/v1/accounts/inboxes/whatsapp_conversation_assets#media` file — o código não converte nem compara o valor
 - `api/v1/accounts/inboxes/whatsapp_templates#media` file — repassada a manager.upload
+- `api/v1/accounts/instagram/authorizations#create` purpose — repassada a REAUTH_PURPOSES.[]
 - `api/v1/accounts/integrations/hooks#process_event` event — repassada a @hook.process_event
 - `api/v1/accounts/integrations/slack#create` code — repassada a Integrations::Slack::HookBuilder.new
 - `api/v1/accounts/portals#create` portal.config.analytics — o código não converte nem compara o valor
@@ -211,8 +222,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 398 |
-| Com parâmetros conhecidos | 347 |
+| No catálogo | 417 |
+| Com parâmetros conhecidos | 366 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos
@@ -235,7 +246,7 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 - `GET contacts/active` — lê params em código de fora do repositório (Sift#filtrate)
 - `GET contacts/search` — lê params em código de fora do repositório (Sift#filtrate)
 - `GET crm/calendar/events` — params inteiro repassado a ::Crm::Cards::CalendarQuery.new; params inteiro repassado a ::Crm::FollowUps::FilterQuery.new
-- `GET crm/cards` — params inteiro repassado a ::Crm::Cards::FilterQuery.new
+- `GET crm/cards` — params inteiro repassado a ::Crm::Cards::FilterQuery.new; params inteiro repassado a ::Crm::Cards::ActionGroups.sort?
 - `GET crm/cards/export` — params inteiro repassado a ::Crm::Cards::FilterQuery.new
 - `GET crm/cards/summaries` — params inteiro repassado a ::Crm::Cards::GroupSummary.new
 - `GET crm/follow_ups` — params inteiro repassado a ::Crm::FollowUps::FilterQuery.new

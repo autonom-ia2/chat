@@ -37,7 +37,7 @@ const escolherTopo = tipo => mudar('topo', { tipo, arquivo: '' });
 
 const ACEITA = {
   foto: 'image/jpeg,image/png',
-  video: 'video/mp4',
+  video: 'video/mp4,video/quicktime,.mp4,.mov',
   documento: 'application/pdf',
 };
 

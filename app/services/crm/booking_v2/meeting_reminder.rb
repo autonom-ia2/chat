@@ -57,7 +57,7 @@ class Crm::BookingV2::MeetingReminder
   def reachable_conversation!
     conversation = client.reply_conversation
     refuse!('no_conversation', url: client.invite.url) if conversation.blank?
-    refuse!('cannot_reply', url: client.invite.url) unless conversation.can_reply?
+    refuse!('cannot_reply', url: client.invite.url) unless conversation.can_reply_automatically?
     conversation
   end
 

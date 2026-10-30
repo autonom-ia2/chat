@@ -9,7 +9,13 @@ import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 // aviso de lista vazia são os de sempre.
 const Vazio = { render: () => null };
 
-const montar = async ({ chaveLigada, status = 'open', filtros = [] }) => {
+const montar = async ({
+  chaveLigada,
+  status = 'open',
+  filtros = [],
+  conversationType = '',
+  participando = [],
+}) => {
   const router = createRouter({
     history: createMemoryHistory(),
     routes: [{ path: '/app/accounts/:accountId/dashboard', name: 'home' }].map(
@@ -26,7 +32,7 @@ const montar = async ({ chaveLigada, status = 'open', filtros = [] }) => {
     getMineChats: () => () => [],
     getAllStatusChats: () => () => [],
     getUnAssignedChats: () => () => [],
-    getParticipatingChats: () => [],
+    getParticipatingChats: () => () => participando,
     getChatListLoadingStatus: () => false,
     getSelectedInbox: () => null,
     'conversationStats/getStats': () => ({}),
@@ -60,6 +66,7 @@ const montar = async ({ chaveLigada, status = 'open', filtros = [] }) => {
 
   const i18n = createI18n({ legacy: false, locale: 'en', missingWarn: false });
   const wrapper = shallowMount(ChatList, {
+    props: { conversationType },
     global: { plugins: [router, store, i18n] },
   });
   if (status !== 'open') {
@@ -182,5 +189,27 @@ describe('ChatList: busca na lista (#2211)', () => {
     expect(lista.exists()).toBe(true);
     expect(lista.attributes('style')).toContain('display: none');
     expect(wrapper.find('[data-lista-vazia]').exists()).toBe(false);
+  });
+});
+
+// #2249 — em Participando, a aba "Minhas" filtra no próprio painel. Robô com o meu id não é meu.
+describe('ChatList: aba Minhas de Participando (#2249)', () => {
+  it('robô (AgentBot) com o mesmo id do usuário fica de fora; a pessoa com o meu id fica', async () => {
+    const conversa = (id, assigneeType) => ({
+      id,
+      status: 'open',
+      inbox_id: 1,
+      labels: [],
+      timestamp: 100 - id,
+      meta: { assignee: { id: 5 }, assignee_type: assigneeType },
+    });
+    const wrapper = await montar({
+      chaveLigada: false,
+      conversationType: 'participating',
+      participando: [conversa(1, 'AgentBot'), conversa(2, 'User')],
+    });
+
+    const lista = wrapper.findComponent({ name: 'ConversationList' });
+    expect(lista.props('conversationList').map(c => c.id)).toEqual([2]);
   });
 });

@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
+import { phoneLabel } from 'dashboard/routes/dashboard/campaigns/metaAds/semLogin/anunciosSemLogin';
 
 // #1423 — o que o cliente preencheu na página (VC-05), como chegou: os mesmos
 // campos da CrmCardLeadForm, sem o título técnico.
@@ -14,6 +15,10 @@ const campos = computed(() =>
     campo => campo && String(campo.value ?? '').trim()
   )
 );
+// Telefone do formulário do anúncio da Meta (#2195) chega cru ("+5511987651201"): o mesmo formato da lista de
+// quem chegou pelos formulários ("(11) 98765-1201" no Brasil).
+const valorDe = campo =>
+  campo.key === 'phone_number' ? phoneLabel(campo.value) : campo.value;
 const quando = computed(() =>
   relativeTimeFromISO(props.formulario?.captured_at, locale.value)
 );
@@ -33,13 +38,13 @@ const quando = computed(() =>
         <div
           v-for="(campo, indice) in campos"
           :key="`${campo.key}-${indice}`"
-          class="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-3 py-2.5"
+          class="grid grid-cols-1 gap-0.5 py-2.5 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] sm:gap-3"
         >
           <dt class="break-words text-sm text-n-slate-11">
             {{ campo.label || campo.key }}
           </dt>
           <dd class="m-0 break-words text-[0.9375rem] text-n-slate-12">
-            {{ campo.value }}
+            {{ valorDe(campo) }}
           </dd>
         </div>
       </dl>

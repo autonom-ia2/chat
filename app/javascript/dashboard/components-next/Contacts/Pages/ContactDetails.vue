@@ -9,6 +9,7 @@ import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 
 import RelationshipFields from 'dashboard/components-next/Relationships/RelationshipFields.vue';
 import Avatar from 'dashboard/components-next/avatar/Avatar.vue';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ContactLabels from 'dashboard/components-next/Contacts/ContactLabels/ContactLabels.vue';
 import ContactsForm from 'dashboard/components-next/Contacts/ContactsForm/ContactsForm.vue';
@@ -191,7 +192,7 @@ const handleAvatarDelete = async () => {
       />
       <div class="flex flex-col gap-1">
         <h3 class="text-base font-medium text-n-slate-12">
-          {{ selectedContact?.name }}
+          {{ nomeDoContatoNaTela(selectedContact) }}
         </h3>
         <div class="flex flex-col gap-1.5">
           <span

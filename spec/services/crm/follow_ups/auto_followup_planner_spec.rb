@@ -262,6 +262,18 @@ RSpec.describe Crm::FollowUps::AutoFollowupPlanner do
     expect(card.reload.follow_ups.count).to eq(0)
   end
 
+  # #2084: parceiro do mercado ou não é negócio, com a flag, também fica fora do follow-up de IA.
+  it 'contato marcado parceiro NÃO recebe o toque 1' do
+    account, user = create_account_and_user
+    account.enable_features!('contato_relacao')
+    pipeline, stage = setup_pipeline(account: account, user: user, config: eligible_config)
+    card, conversation = build_card_with_exchange(stage: stage, anchor_at: 21.hours.ago)
+    conversation.contact.update!(relacao: :parceiro)
+
+    expect(described_class.new(pipeline: pipeline).perform).to eq(0)
+    expect(card.reload.follow_ups.count).to eq(0)
+  end
+
   # Uma mensagem por vez por card (#1589): lembrete de Atender pendente ou enviado há menos de 24 h segura o início.
   describe 'com lembrete de Atender no mesmo card' do
     def lembrete_de_atender(card, conversation, due_at:, enviado_em: nil)

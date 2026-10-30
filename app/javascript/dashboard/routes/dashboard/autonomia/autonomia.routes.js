@@ -1,10 +1,12 @@
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import {
   AUTONOMIA_PERMISSIONS,
+  DESEMPENHO_VIEW_PERMISSION,
   PROSPECTING_PERMISSIONS,
   INSURANCE_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import { contaDaRota, ensureProspectingEnabled } from './contaDaRota';
+import { painelDesempenhoLigado } from './agentes/composables/usePainelDesempenho';
 
 // Lazy-loaded pages (owned by HUB / CONSTRUTOR / PAINEL implementers).
 // Dynamic imports keep this NAV module self-contained and code-split the
@@ -17,6 +19,8 @@ const AgentesCriarEntrada = () =>
   import('./agentes/entrada/AgentesCriarEntrada.vue');
 const AgentePaginaEntrada = () =>
   import('./agentes/entrada/AgentePaginaEntrada.vue');
+// #2226 — painel de desempenho do agente (PR 1: protótipo com dados inventados).
+const DesempenhoPage = () => import('./agentes/pages/DesempenhoPage.vue');
 const ProspectingSearchPage = () =>
   import('./prospecting/pages/ProspectingSearchPage.vue');
 const ProspectingListsPage = () =>
@@ -43,6 +47,10 @@ const agentsMeta = {
 const agentsManageMeta = {
   permissions: ['administrator', 'autonomia_manage'],
 };
+// #2251 — o painel de desempenho tem chave própria (só ver), independente de ver os agentes.
+const desempenhoMeta = {
+  permissions: ['administrator', DESEMPENHO_VIEW_PERMISSION],
+};
 
 // Gate POR CONTA (aditivo, ISOLADO): mantém o ENV master (kill-switch global,
 // exposto como window.globalConfig.AUTONOMIA_AGENTS_ENABLED) como pré-condição E
@@ -58,6 +66,19 @@ const ensureAutonomiaEnabled = async (to, _from, next) => {
   const accountEnabled = account?.autonomia_agents_enabled === true;
 
   if (masterEnabled && accountEnabled) {
+    next();
+    return;
+  }
+  next({ name: 'home', params: to.params });
+};
+
+// #2226 — o painel de desempenho, além do ENV master, exige a nova jornada e a flag
+// agentes_painel_desempenho na conta. Quem abre: administrador ou função com desempenho_view (#2251).
+const ensureDesempenhoEnabled = async (to, _from, next) => {
+  const masterEnabled =
+    window.globalConfig?.AUTONOMIA_AGENTS_ENABLED === 'true';
+  const account = masterEnabled ? await contaDaRota(to) : null;
+  if (painelDesempenhoLigado(account)) {
     next();
     return;
   }
@@ -116,6 +137,15 @@ export const routes = [
       agentId: route.params.agentId,
       tab: route.params.tab || 'test',
     }),
+  },
+  {
+    // Agente nosso e de outro sistema (`?origem=webhook`), como a página do agente (#1648).
+    path: frontendURL('accounts/:accountId/agents/:agentId/desempenho'),
+    name: 'autonomia_agent_desempenho',
+    meta: desempenhoMeta,
+    beforeEnter: ensureDesempenhoEnabled,
+    component: DesempenhoPage,
+    props: route => ({ agentId: route.params.agentId }),
   },
   {
     path: frontendURL('accounts/:accountId/autonomia/prospecting/search'),

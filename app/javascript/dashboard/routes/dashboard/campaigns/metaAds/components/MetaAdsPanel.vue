@@ -28,6 +28,10 @@ import MetaAdsDailyAction from './MetaAdsDailyAction.vue';
 import MetaAdsPathList from './MetaAdsPathList.vue';
 import MetaAdsQuoteMessage from './MetaAdsQuoteMessage.vue';
 import MetaAdsReportButton from './MetaAdsReportButton.vue';
+import MetaAdsCreate from './MetaAdsCreate.vue';
+import MetaAdsPausedAds from './MetaAdsPausedAds.vue';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { useMapGetter } from 'dashboard/composables/store';
 
 // Anúncios da Meta (#1088, F3a): o painel do dia a dia do mockup aprovado. Uma frase com o dinheiro, a ação do
 // dia com o porquê, o caminho investido → conversas → propostas → vendas, cada anúncio por venda com o veredito
@@ -88,6 +92,45 @@ const focusCard = adId =>
   nextTick(() =>
     document.querySelector(`[data-panel-ad-open="${adId}"]`)?.focus()
   );
+
+// Criar anúncio (#2198, flag meta_ads_criar), lembrado no endereço (?criar=) como o anúncio aberto. Só com a conexão
+// (não no painel sem login) e para quem pode mexer (administrador ou meta_ads_manage).
+const isFeatureEnabledonAccount = useMapGetter(
+  'accounts/isFeatureEnabledonAccount'
+);
+// ?criar=novo abre a escolha (ou entra direto no único tipo que o servidor oferece); anuncio e post (impulsionar,
+// #2339) já escolhem.
+const CREATE_KINDS = {
+  novo: null,
+  anuncio: 'ad',
+  post: 'post',
+};
+const creatingFromRoute = () =>
+  Object.hasOwn(CREATE_KINDS, route.query.criar) ? route.query.criar : null;
+const creating = computed(creatingFromRoute);
+const canCreate = computed(
+  () =>
+    !props.readOnly &&
+    !props.sample &&
+    panel.value?.source !== 'whatsapp' &&
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.META_ADS_CRIAR
+    )
+);
+const showCreate = computed(() => Boolean(creating.value && canCreate.value));
+const startCreating = kind => {
+  router.replace({ query: { ...route.query, criar: kind } });
+};
+const stopCreating = () => {
+  const query = { ...route.query };
+  delete query.criar;
+  router.replace({ query });
+};
+// Sem a flag, o topo e o botão do relatório ficam com a marcação de antes (o v-else-if do relatório); com ela, o
+// "Criar anúncio" entra ao lado do relatório.
+// Pausados à espera (#2198): com eles à vista, o "Ativar anúncio" é o primário e o "Criar anúncio" vira contorno.
+const pausedCount = ref(0);
 
 watch(anuncioFromRoute, value => {
   const closed = openAd.value;
@@ -365,7 +408,7 @@ onMounted(() => {
   <section data-meta-ads-panel class="flex flex-col gap-5">
     <!-- Período (#2011): a escolha numa linha fixa e, embaixo, o que os números contam. O texto muda de tamanho com o
          período; numa linha só, ele empurraria os botões de lugar a cada troca. -->
-    <div class="flex flex-col gap-2">
+    <div v-if="!showCreate" class="flex flex-col gap-2">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-2">
           <div
@@ -406,8 +449,29 @@ onMounted(() => {
             />
           </div>
         </div>
+        <div v-if="canCreate" class="flex flex-wrap items-center gap-2">
+          <button
+            v-if="!openAd"
+            type="button"
+            data-panel-create
+            class="inline-flex min-h-11 items-center gap-2 rounded-xl px-4 text-sm font-520 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand focus-visible:ring-offset-2"
+            :class="
+              pausedCount
+                ? 'border border-solid border-n-brand bg-transparent text-n-brand hover:bg-n-brand/10'
+                : 'border-0 bg-n-brand text-white hover:bg-n-brand/90'
+            "
+            @click="startCreating('novo')"
+          >
+            <span class="i-lucide-plus size-4" aria-hidden="true" />
+            {{ $t('CRM_KANBAN.META_ADS_HUB.CRIAR.BUTTON') }}
+          </button>
+          <MetaAdsReportButton
+            v-if="!sample && panel"
+            :period="panel.period || period"
+          />
+        </div>
         <MetaAdsReportButton
-          v-if="!sample && panel"
+          v-else-if="!sample && panel"
           :period="panel.period || period"
         />
       </div>
@@ -431,8 +495,14 @@ onMounted(() => {
       </p>
     </div>
 
+    <MetaAdsCreate
+      v-if="showCreate"
+      :kind="CREATE_KINDS[creating]"
+      @back="stopCreating"
+    />
+
     <MetaAdsAdDetail
-      v-if="openAd"
+      v-else-if="openAd"
       :key="openAd"
       :ad-id="openAd"
       :period="period"
@@ -450,6 +520,7 @@ onMounted(() => {
       :class="{ 'pointer-events-none opacity-50': switchingPeriod }"
       :aria-busy="switchingPeriod"
     >
+      <MetaAdsPausedAds v-if="canCreate" @count="pausedCount = $event" />
       <!-- Período sem ninguém de anúncio (painel sem gasto, #2011): uma frase e o caminho para o histórico, em vez de
            zeros que parecem defeito. Com gasto, o painel segue: o dinheiro investido sem conversa é o recado. -->
       <div

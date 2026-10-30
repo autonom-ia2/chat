@@ -34,6 +34,7 @@
       "TENTAR": "Try again",
       "CANAL": {
         "WHATSAPP": "WhatsApp",
+        "WHATSAPP_CELULAR": "WhatsApp on the phone",
         "EMAIL": "Email",
         "SMS": "SMS",
         "SITE": "Website",
@@ -120,6 +121,7 @@
       "TITULO_SEM_NOME": "Message on its way",
       "PELO": {
         "WHATSAPP": "Through WhatsApp · {caixa}",
+        "WHATSAPP_CELULAR": "Through WhatsApp on the phone · {caixa}",
         "EMAIL": "By email · {caixa}",
         "SMS": "By SMS · {caixa}",
         "SITE": "Through the website · {caixa}",

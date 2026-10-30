@@ -8,9 +8,98 @@ import {
   getInboxWarningIconClass,
   getVoiceCallIcon,
   searchInboxes,
+  ehWhatsappDoCelular,
+  tipoDoIconeDaCaixa,
 } from '../inbox';
 
 describe('#Inbox Helpers', () => {
+  describe('WhatsApp pelo celular (#2255)', () => {
+    it('reconhece a caixa API ligada ao WAHA, em snake_case e camelCase', () => {
+      expect(
+        ehWhatsappDoCelular({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+        })
+      ).toBe(true);
+      expect(
+        ehWhatsappDoCelular({
+          channelType: INBOX_TYPES.API,
+          wahaProvider: true,
+        })
+      ).toBe(true);
+    });
+
+    it('caixa API comum, outro canal ou nada não é', () => {
+      expect(ehWhatsappDoCelular({ channel_type: INBOX_TYPES.API })).toBe(
+        false
+      );
+      expect(
+        ehWhatsappDoCelular({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: false,
+        })
+      ).toBe(false);
+      expect(
+        ehWhatsappDoCelular({
+          channel_type: INBOX_TYPES.SMS,
+          waha_provider: true,
+        })
+      ).toBe(false);
+      expect(ehWhatsappDoCelular(null)).toBe(false);
+    });
+
+    it('escolhe o ícone do WhatsApp pela caixa inteira, não só pelo tipo', () => {
+      expect(
+        tipoDoIconeDaCaixa({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+        })
+      ).toBe(INBOX_TYPES.WHATSAPP);
+      expect(
+        tipoDoIconeDaCaixa({ channelType: INBOX_TYPES.API, wahaProvider: true })
+      ).toBe(INBOX_TYPES.WHATSAPP);
+      expect(tipoDoIconeDaCaixa({ channelType: INBOX_TYPES.API })).toBe(
+        INBOX_TYPES.API
+      );
+      expect(tipoDoIconeDaCaixa({ channel_type: INBOX_TYPES.EMAIL })).toBe(
+        INBOX_TYPES.EMAIL
+      );
+      expect(tipoDoIconeDaCaixa(null)).toBe('');
+      expect(
+        getInboxIconByType(
+          tipoDoIconeDaCaixa({
+            channel_type: INBOX_TYPES.API,
+            waha_provider: true,
+          })
+        )
+      ).toBe('i-ri-whatsapp-fill');
+    });
+
+    it('mostra o número da sessão legível no lugar do token da API', () => {
+      expect(
+        getInboxIdentifier({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+          waha_phone_number: '+5511900003303',
+          inbox_identifier: 'token-da-api',
+        })
+      ).toBe('+55 11 90000-3303');
+      expect(
+        getInboxIdentifier({
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+          inbox_identifier: 'token-da-api',
+        })
+      ).toBe('');
+      expect(
+        getInboxIdentifier({
+          channel_type: INBOX_TYPES.API,
+          inbox_identifier: 'token-da-api',
+        })
+      ).toBe('token-da-api');
+    });
+  });
+
   describe('getInboxIdentifier', () => {
     it.each([
       [
@@ -23,8 +112,12 @@ describe('#Inbox Helpers', () => {
         { email: 'support@example.com' },
         'support@example.com',
       ],
-      [INBOX_TYPES.WHATSAPP, { phone_number: '+15555550100' }, '+15555550100'],
-      [INBOX_TYPES.SMS, { phone_number: '+15555550101' }, '+15555550101'],
+      [
+        INBOX_TYPES.WHATSAPP,
+        { phone_number: '+5511900000100' },
+        '+55 11 90000-0100',
+      ],
+      [INBOX_TYPES.SMS, { phone_number: '+551140000101' }, '+55 11 4000-0101'],
       [INBOX_TYPES.TELEGRAM, { bot_name: 'support_bot' }, '@support_bot'],
       [INBOX_TYPES.LINE, { line_channel_id: 'line-123' }, 'line-123'],
       [INBOX_TYPES.API, { inbox_identifier: 'api-123' }, 'api-123'],
@@ -34,13 +127,19 @@ describe('#Inbox Helpers', () => {
       ).toBe(expected);
     });
 
-    it('normalizes the Twilio WhatsApp prefix', () => {
+    it('normalizes the Twilio WhatsApp prefix and shows the phone readable', () => {
       expect(
         getInboxIdentifier({
           channel_type: INBOX_TYPES.TWILIO,
-          phone_number: 'whatsapp:+15555550102',
+          phone_number: 'whatsapp:+5511900000102',
         })
-      ).toBe('+15555550102');
+      ).toBe('+55 11 90000-0102');
+      expect(
+        getInboxIdentifier({
+          channel_type: INBOX_TYPES.TWILIO,
+          phone_number: '+551140000103',
+        })
+      ).toBe('+55 11 4000-0103');
     });
 
     it('falls back to the Twilio messaging service SID', () => {
@@ -116,6 +215,41 @@ describe('#Inbox Helpers', () => {
     it('adds identifier matches without duplicating primary matches', () => {
       expect(searchInboxes(inboxes, 'team@example.com')).toEqual([inboxes[1]]);
       expect(searchInboxes(inboxes, 'Billing')).toEqual([inboxes[0]]);
+    });
+
+    // #2255 — a lista mostra o telefone legível; quem digita o número cru ou só os dígitos
+    // continua achando a caixa (do WhatsApp oficial e do celular).
+    it('finds a phone inbox by the raw number, the digits or the readable phone', () => {
+      const telefones = [
+        {
+          id: 3,
+          name: 'Vendas',
+          channel_type: INBOX_TYPES.WHATSAPP,
+          phone_number: '+5511900000104',
+        },
+        {
+          id: 4,
+          name: 'Celular',
+          channel_type: INBOX_TYPES.API,
+          waha_provider: true,
+          waha_phone_number: '+5541900000105',
+        },
+      ].map(inbox => ({
+        ...inbox,
+        channel_identifier: getInboxIdentifier(inbox),
+      }));
+
+      [
+        '+5511900000104',
+        '5511900000104',
+        '900000104',
+        '+55 11 90000-0104',
+      ].forEach(termo =>
+        expect(searchInboxes(telefones, termo)).toEqual([telefones[0]])
+      );
+      ['+5541900000105', '5541900000105', '+55 41 90000-0105'].forEach(termo =>
+        expect(searchInboxes(telefones, termo)).toEqual([telefones[1]])
+      );
     });
   });
 

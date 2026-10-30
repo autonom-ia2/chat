@@ -114,7 +114,9 @@ class Api::V1::Accounts::CampaignImportsController < Api::V1::Accounts::BaseCont
     return render_bad_request('campaign_import.download_not_available') unless attachment&.attached?
 
     blob = attachment.blob
-    send_data attachment.download,
+    # The files this app wrote go out as Excel opens them (#2332); the person's own upload goes out as it came.
+    data = params[:file].to_s == 'original' ? attachment.download : CampaignImports::ExcelCsv.from_stored(attachment.download)
+    send_data data,
               filename: blob.filename.to_s,
               type: blob.content_type || 'application/octet-stream',
               disposition: 'attachment'

@@ -1139,6 +1139,28 @@ RSpec.describe Conversation do
     end
   end
 
+  describe '#can_reply_automatically? (#2259)' do
+    it 'is the same as can_reply? outside Instagram and Messenger, so the WhatsApp Hybrid override still applies' do
+      conversation = create(:conversation)
+      allow(conversation).to receive(:can_reply?).and_return(true)
+
+      expect(conversation.can_reply_automatically?).to be true
+      expect(conversation).to have_received(:can_reply?)
+    end
+
+    it 'keeps 24 hours on Instagram even with HUMAN_AGENT on (automatic sends never carry the tag)' do
+      channel = create(:channel_instagram)
+      inbox = create(:inbox, channel: channel, account: channel.account)
+      conversation = create(:conversation, inbox: inbox, account: channel.account)
+      create(:message, account: channel.account, inbox: inbox, conversation: conversation, created_at: 3.days.ago)
+
+      with_modified_env ENABLE_INSTAGRAM_CHANNEL_HUMAN_AGENT: 'true' do
+        expect(conversation.can_reply?).to be true
+        expect(conversation.can_reply_automatically?).to be false
+      end
+    end
+  end
+
   describe 'reply time calculation flows' do
     include ActiveJob::TestHelper
 

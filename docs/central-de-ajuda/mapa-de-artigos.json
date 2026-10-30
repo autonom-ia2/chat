@@ -894,6 +894,29 @@
      "fontes": [],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "04.08",
+     "titulo": "Dar, tirar e criar as funções da equipe",
+     "para_que_serve": "Ver o que cada função pode, dar e tirar função das pessoas e criar funções respondendo perguntas, na tela nova das funções.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "funcoes_equipe_list",
+      "funcoes_equipe_new",
+      "funcoes_equipe_edit",
+      "funcoes_equipe_duplicate"
+     ],
+     "me_leve_ate_la": {
+      "rota": "funcoes_equipe_list",
+      "destaque": null
+     },
+     "requer": "funcoes_guiadas",
+     "prints": [],
+     "fontes": [],
+     "revisar": false,
+     "nota": "Tela nova das funções (#2308), só com a flag funcoes_guiadas ligada; sem ela vale o 04.06."
     }
    ]
   },
@@ -3076,6 +3099,28 @@
      ],
      "revisar": false,
      "nota": "Zero cobertura no estudo — 11.17-relatorios-do-bot (capítulo 14) já lia o resultado sem nunca apresentar a tela de configuração."
+    },
+    {
+     "id": "11.13",
+     "titulo": "Ver o desempenho do agente de IA: procuras, resultados e origem",
+     "para_que_serve": "Ler o que as pessoas pedem ao agente, quantos pedidos viraram resultado, de onde vieram e quanto confiar nos números; exportar o período em PDF ou Excel.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_agent_desempenho"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "autonomia_agents",
+     "prints": [],
+     "fontes": [
+      "porques: Ver o desempenho do agente"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },
@@ -3889,6 +3934,50 @@
      "prints": [],
      "fontes": [
       "porques: autorizar_sistema_a_criar_modelos_do_whatsapp"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.30",
+     "titulo": "Ver se seus posts do Instagram e da Página estão dando resultado",
+     "para_que_serve": "Ler quantas vezes os posts apareceram sem anúncio, o que cada número conta e como cada post foi contra o normal do perfil.",
+     "publico": "admin",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "seus_posts_index"
+     ],
+     "me_leve_ate_la": {
+      "rota": "seus_posts_index",
+      "destaque": null
+     },
+     "requer": "seus_posts",
+     "prints": [],
+     "fontes": [
+      "porques: ver_como_seus_posts_estao_indo"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "13.31",
+     "titulo": "Responder os comentários dos seus posts sem sair da plataforma",
+     "para_que_serve": "Achar os comentários que esperam você em cada post e responder, esconder, apagar ou mandar no privado sem abrir o Instagram ou o Facebook.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "seus_posts_post"
+     ],
+     "me_leve_ate_la": {
+      "rota": "seus_posts_post",
+      "destaque": null
+     },
+     "requer": "seus_posts_comentarios",
+     "prints": [],
+     "fontes": [
+      "porques: responder_comentarios_dos_seus_posts"
      ],
      "revisar": false,
      "nota": null

@@ -10,6 +10,10 @@
 #
 # Erros de `change!`: `invalid_status`, `cannot_change` (modo ou permissão), `ad_not_found`, `meta_unavailable`
 # (rede, 5xx, limite) e `meta_refused` (qualquer outra recusa da Meta).
+#
+# `in_review` (#2354): anúncio pausado que a Meta ainda analisa (`effective_status` PENDING_REVIEW ou IN_PROCESS). A doc
+# do Ad não diz se dá para ligar um anúncio durante a análise: a tela não oferece o Ativar, em nenhum lugar, e o
+# servidor recusa ligar (`in_review`), aqui e no anúncio criado pelo Chat2You (Crm::MetaAds::Creation::Activation).
 class Crm::MetaAds::AdManagement
   class Error < StandardError
     attr_reader :code
@@ -21,7 +25,12 @@ class Crm::MetaAds::AdManagement
   end
 
   STATUSES = %w[ACTIVE PAUSED].freeze
+  IN_REVIEW = %w[PENDING_REVIEW IN_PROCESS].freeze
   ADS_MANAGEMENT = 'ads_management'.freeze
+
+  def self.in_review?(status, effective_status)
+    status == 'PAUSED' && IN_REVIEW.include?(effective_status)
+  end
 
   def initialize(connection)
     @connection = connection
@@ -32,7 +41,8 @@ class Crm::MetaAds::AdManagement
     return if ad.nil?
 
     {
-      status: ad['status'], effective_status: ad['effective_status'], mode: @connection.mode,
+      name: ad['name'], status: ad['status'], effective_status: ad['effective_status'],
+      in_review: self.class.in_review?(ad['status'], ad['effective_status']), mode: @connection.mode,
       can_change: can_change?, needs_login: @connection.own_token? && !ads_management?,
       post: post_payload(ad.dig('creative', 'effective_object_story_id'))
     }
@@ -42,12 +52,17 @@ class Crm::MetaAds::AdManagement
     raise Error, 'invalid_status' unless STATUSES.include?(status)
     raise Error, 'ad_not_found' unless numeric_id?(ad_id)
     raise Error, 'cannot_change' unless can_change?
-    raise Error, 'ad_not_found' if read_ad(ad_id).nil?
 
+    ensure_switchable!(read_ad(ad_id), status)
     result = client.update_ad_status(ad_id, status)
     return status if result.ok
 
     raise Error, result.transient? ? 'meta_unavailable' : 'meta_refused'
+  end
+
+  # O anúncio como a Meta devolve (com o criativo), só se for da conta de anúncios da conexão; senão nil.
+  def ad(ad_id)
+    read_ad(ad_id)
   end
 
   # Nome do anúncio pelo cache de nomes (para a Auditoria); nil se ainda não foi lido.
@@ -88,6 +103,11 @@ class Crm::MetaAds::AdManagement
   # O anúncio só vale se for da conta de anúncios da conexão e se a Meta devolver o mesmo id. Recusa por objeto, por
   # permissão ou de outra conta: nil. Falha passageira vira `meta_unavailable`, para a tela dizer "tente de novo" em
   # vez de sumir com o anúncio.
+  def ensure_switchable!(meta_ad, status)
+    raise Error, 'ad_not_found' if meta_ad.nil?
+    raise Error, 'in_review' if status == 'ACTIVE' && self.class.in_review?(meta_ad['status'], meta_ad['effective_status'])
+  end
+
   def read_ad(ad_id)
     return unless numeric_id?(ad_id)
 

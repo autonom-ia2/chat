@@ -148,7 +148,9 @@ class Conversations::UnreadCounts::FilteredCounter
     ::Conversations::UnreadCounts::FilterQueryCounter.new(
       account: account,
       user: user,
-      query: custom_filter.query
+      query: custom_filter.query,
+      # O dono é o mesmo em todos os filtros: o AccountUser dele (anúncio de origem, #2271) é buscado uma vez.
+      account_user: (@owner_account_user ||= account.account_users.find_by(user: user))
     ).perform
   end
 

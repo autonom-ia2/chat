@@ -97,6 +97,13 @@ const linhas = computed(() => {
         >
           <q>{{ linha.nome }}</q>
         </p>
+        <p
+          v-if="linha.origem.adHidden"
+          class="mb-0 text-sm text-n-slate-11"
+          data-crm-origin-ad-hidden
+        >
+          {{ t('CRM_CARD.ORIGEM.ANUNCIO_OCULTO') }}
+        </p>
         <dl
           v-if="linha.niveis.length"
           class="m-0 mt-1 grid grid-cols-[minmax(0,8rem)_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm"

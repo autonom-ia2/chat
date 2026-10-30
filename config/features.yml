@@ -897,8 +897,145 @@
 # Minhas, Para pegar e Todas. Desligada: a lista de sempre, idêntica. Só frontend, sem migration. Fim da
 # feature_flags_ext_2, posição pela ordem de chegada à main; hoje 3 (valor 4, 1 << 2), confirmada pela Orquestração.
 # Se outra flag da ext_2 entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+# Ligada em todas as contas em 27/10 (Orquestração, psql, com backup). Padrão das contas novas: ligada desde o #2253
+# (migration 20261108560000).
 - name: lista_quem_espera
   display_name: Lista de conversas › quem está esperando
+  enabled: true
+  column: feature_flags_ext_2
+
+# Painel de desempenho do agente (#2226 protótipo, #2251 leitura guardada no banco). Ligada: a página Agentes › {nome} ›
+# Desempenho, o link "Ver tudo de {nome}" na página do agente (nosso e de outro sistema) e a API do painel e da
+# exportação (PDF/planilha). Desligada: nada aparece, a rota volta para o início e a API responde 404. Ver o painel
+# pede desempenho_view (função personalizada) ou admin; baixar o arquivo pede também contact_export. No fim da
+# feature_flags_ext_2, depois de lista_quem_espera: posição 4 (valor 8, 1 << 3), confirmada pela Orquestração (27/10).
+- name: agentes_painel_desempenho
+  display_name: Agentes IA › painel de desempenho do agente
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta: resultados orgânicos (#2199). Ligada: a página de Anúncios da Meta ganha a aba "Seus posts", ao
+# lado do Resultado, com quem viu os posts da Página do Facebook (read_insights) e do Instagram
+# (instagram_business_manage_insights), quem mandou mensagem por ali e os posts com mais curtidas e comentários.
+# Desligada: Resultado e Conexão de sempre. Fim da feature_flags_ext_2, posição pela ordem de chegada à main; hoje 5
+# (valor 16, 1 << 4), depois de agentes_painel_desempenho. Se outra flag da ext_2 entrar antes, esta vai para depois
+# dela (a Orquestração confere antes de enfileirar).
+- name: meta_ads_organico
+  display_name: Anúncios da Meta - resultados orgânicos da Página e do Instagram
+  enabled: false
+  column: feature_flags_ext_2
+
+# Leitura no celular apaga a bolinha (#2246, opção C). Ligada: quando o celular do negócio lê as mensagens do cliente,
+# o "visto" do agente anda até elas e a bolinha de não lida apaga, sem sino (ConversaCanal::VistaNoCelular). Hoje só
+# na caixa oficial com WhatsApp Híbrido, pela sessão auxiliar (WhatsappHybrid::LeituraNoCelular); a caixa WhatsApp API
+# (WAHA comum) depende de patch no conector e a Cloud sem Híbrido não recebe o sinal da Meta. Desligada: a bolinha só
+# apaga pelo painel ou pela resposta de uma pessoa, como antes. Sem migration. Fim da feature_flags_ext_2, depois de
+# meta_ads_organico: posição 6 (valor 32, 1 << 5), confirmada pela Orquestração (27/10). Nasce desligada em todas;
+# primeiro liga só numa conta de teste com Híbrido, para medir (Orquestração, com OK do Rodrigo).
+- name: leitura_no_celular
+  display_name: Conversas › leitura no celular apaga a bolinha
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta › Formulários (#2195). Ligada: a aba Formulários mostra as Páginas que a pessoa concedeu ao entrar com
+# o Facebook e os formulários instantâneos de cada uma; escolher o funil e a etapa de um formulário liga o recebimento
+# da Página (assina o campo leadgen, pages_manage_metadata), e quem preenche vira contato e card ali, com o anúncio de
+# origem e as respostas no card (leads_retrieval). Também traz quem preencheu nos últimos 90 dias. Desligada: a aba
+# some, a API responde 404 e o webhook leadgen não cria nada. Com migration (20261108590000). Fim da
+# feature_flags_ext_2: posição 7 (valor 64, 1 << 6), depois da leitura_no_celular (#2246), que chegou antes à main
+# (27/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+- name: meta_ads_formularios
+  display_name: Anúncios da Meta › Formulários (leads no funil)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada (com meta_ads_gestao): o detalhe
+# do anúncio ganha a aba Instagram dos comentários (ver, responder, ocultar, apagar e responder no privado), e a caixa
+# do Instagram pode pedir de novo o login com instagram_business_manage_comments, voltando ao anúncio. Desligada: a aba
+# não aparece e a API responde 404. Migration 20261108550000 (crm_meta_ads_comment_actions). Fim da
+# feature_flags_ext_2, depois de meta_ads_formularios (#2195): posição 8 (valor 128, 1 << 7). Se outra flag da ext_2
+# entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+- name: meta_ads_comentarios_instagram
+  display_name: Anúncios da Meta › comentários do anúncio no Instagram
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta: o Gerenciador simples (#2198, PR 1). Ligada: "Criar anúncio" no Resultado abre o anúncio novo
+# (WhatsApp ou site, só os destinos e lugares que a chamada real confirmou), o detalhe do anúncio mostra o orçamento e
+# as datas com "Mudar", e os anúncios criados aqui que seguem pausados aparecem no topo. Tudo nasce pausado: nada gasta
+# até a pessoa tocar em "Ativar anúncio". Desligada: o painel de sempre; nenhuma rota de criar chama a Meta (404).
+# Migration 20261108580000 (tabela nova crm_meta_ads_created_objects). Fim da feature_flags_ext_2, posição pela ordem
+# na main, confirmada pela Orquestração na hora da fila (hoje 9, valor 256, 1 << 8, depois do meta_ads_comentarios_instagram).
+- name: meta_ads_criar
+  display_name: Anúncios da Meta › criar anúncio, orçamento e datas
+  enabled: false
+  column: feature_flags_ext_2
+
+# Seus posts (#2302, F1 #2304): página própria no grupo Crescer, com os números do perfil e todos os posts do Instagram
+# e da Página das caixas da conta (sem conexão de anúncios). Ligada: a API GET seus_posts responde (PR 1a); o item no
+# menu, a rota e os links antigos da aba "Seus posts" de Anúncios chegam no PR 1b. Desligada: a API responde 404. Sem
+# migration. Fim da feature_flags_ext_2 da main: posição 10 (valor 512, 1 << 9), válida contra a main de 27/10
+# (Orquestração). Se outra flag entrar antes, a Orquestração pede o ajuste antes da fila. Nasce ligada no piloto
+# (contas 1, 16 e 18).
+- name: seus_posts
+  display_name: Seus posts (Instagram e Página)
+  enabled: false
+  column: feature_flags_ext_2
+
+# Novo público pedindo em palavras (#2277). Ligada: em Campanhas › Público › Novo público, além da planilha, a pessoa
+# pede o público com as próprias palavras e a plataforma lê as conversas da conta (com a IA da própria conta) e monta a
+# lista para revisar e salvar. Desligada: só a planilha, como sempre, e a API responde 404. Migration 20261108600000
+# (conversation_audience_*). Fim da feature_flags_ext_2, depois de seus_posts (#2304): posição 11 (valor 1024,
+# 1 << 10), a confirmar pela Orquestração antes da fila.
+- name: campanhas_publico_por_conversa
+  display_name: Campanhas › Novo público pedindo em palavras
+  enabled: false
+  column: feature_flags_ext_2
+
+# Anúncios da Meta › comentários do anúncio no Facebook (#2197, épico #2194). Ligada: o detalhe do anúncio ganha a aba
+# Facebook dos comentários (ler, responder como a Página, ocultar e apagar, ao vivo na Meta) e a API responde; o
+# webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
+# feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2303): posição 12 (valor 2048, 1 << 11), dada pela
+# Orquestração (28/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+- name: meta_ads_comentarios_facebook
+  display_name: Anúncios da Meta › comentários do anúncio no Facebook
+  enabled: false
+  column: feature_flags_ext_2
+
+# Lista nova do CRM "o que fazer agora" (#2283, frontend; o servidor entrou no #2292). Ligada: a visão Lista do CRM vira
+# os grupos Esperando resposta, Retornos de hoje e atrasados, Ninguém cuidando, Parados há 7 dias ou mais e Os demais,
+# contados pelo servidor (sort=acao e summaries?group_by=acao), com a ação de cada linha. Desligada: a Lista de sempre,
+# intacta. Só frontend, sem migration. Fim da feature_flags_ext_2, depois de meta_ads_comentarios_facebook (#2325):
+# posição 13 (valor 4096, 1 << 12). A posição real é a ordem na main na hora da fila, e a Orquestração confirma antes de
+# enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: crm_lista_acao
+  display_name: CRM › Lista nova "o que fazer agora"
+  enabled: false
+  column: feature_flags_ext_2
+
+# Funções da equipe guiadas (#2308, épico #1784). Ligada: Funções da equipe abre a tela nova inteira: a lista
+# (cartões com a frase do que cada função pode, quem está sem função e as duas fixas), a conversa guiada de criar,
+# alterar e duplicar (Escolha, Ajustes, perguntas, Confira e o aviso de perda de acesso), a gaveta de pôr e tirar
+# pessoas e o apagar com destino. Desligada: a tela de hoje, intacta. Rollback: desligar a flag na conta (a tela de
+# hoje volta na hora; as funções gravadas são as mesmas). Sem migration. O servidor muda para as duas telas, com a flag
+# ligada ou desligada: o 401 de /custom_roles diz o motivo no corpo (out_of_reach, own_role, feature_off), a autorização
+# vem antes da conferência do plano e o feature_off fica no log. Fim da feature_flags_ext_2: posição 14
+# (valor 8192, 1 << 13), depois de crm_lista_acao (#2324). A posição real é a ordem na main na hora da fila, e a
+# Orquestração confirma antes de enfileirar.
+- name: funcoes_guiadas
+  display_name: Funções da equipe › lista e criação guiadas
+  enabled: false
+  column: feature_flags_ext_2
+
+# Seus posts F2 (#2305, épico #2302): os comentários de cada post do Instagram e da Página, com responder, mandar no
+# privado (só Instagram), esconder, mostrar de novo e apagar, e "esperando você" em cada post da lista. Ligada: o servidor
+# abre seus_posts/posts/:post_id e as ações (com a flag seus_posts também ligada). Desligada: 404 nesses endereços e a
+# lista sem "esperando você", como no F1. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2,
+# depois de funcoes_guiadas (#2308): posição 15 (valor 16384, 1 << 14), provisória. A posição real é a ordem na main na
+# hora da fila, e a Orquestração confirma antes de enfileirar. Nasce ligada no piloto (contas 1, 16 e 18), com OK do
+# Rodrigo.
+- name: seus_posts_comentarios
+  display_name: Seus posts › comentários de cada post
   enabled: false
   column: feature_flags_ext_2
 

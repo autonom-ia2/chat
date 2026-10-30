@@ -1,0 +1,919 @@
+{
+  "FUNCOES_EQUIPE": {
+    "TITULO": "Team roles",
+    "SUBTITULO": "Say what each person can see and do. Everything else leaves their menu.",
+    "CARREGANDO": "Opening the roles",
+    "CONTAGEM": {
+      "FUNCOES": "{n} role created | {n} roles created",
+      "PESSOAS": "no one with a role | {n} person with a role | {n} people with a role",
+      "SEPARADOR": "·",
+      "PESSOAS_ERRO": "We couldn't see who has each role."
+    },
+    "CRIAR": "Create role",
+    "FAIXA": {
+      "TITULO": "{n} person has no role. | {n} people have no role.",
+      "TEXTO": "They see their teammates' conversations. Give them a role to show less. | They see their teammates' conversations. Give them a role to show less.",
+      "TITULO_CURTO": "{n} person without a role. | {n} people without a role.",
+      "TEXTO_CURTO": "Sees teammates' conversations. | See teammates' conversations.",
+      "VER_QUEM_SAO": "See who"
+    },
+    "CARTAO": {
+      "ALTERAR": "Change",
+      "ALTERAR_ROTULO": "Change the role {nome}",
+      "MAIS": "More",
+      "MAIS_ROTULO": "More actions for the role {nome}",
+      "DUPLICAR": "Duplicate",
+      "APAGAR": "Delete",
+      "TRAVADO": "Only the administrator changes this role.",
+      "PESSOAS": "{n} person | {n} people",
+      "OUTRAS_PESSOAS": "+{n}",
+      "NINGUEM": "No one uses it yet",
+      "ESCOLHER_PESSOAS": "Choose people",
+      "ESCOLHER_PESSOAS_ROTULO": "Choose people for the role {nome}",
+      "SELO": "Can {coisas}",
+      "VER_PESSOAS_ROTULO": "See the person who is {nome} | See the {n} people who are {nome}",
+      "PROPRIA": "No one changes their own role."
+    },
+    "FRASE": {
+      "NAO_ATENDE": "Does not handle conversations.",
+      "SO_OLHA_CONVERSAS": "Only looks at conversations.",
+      "VE_CONVERSAS": "Sees conversations.",
+      "PROPRIAS": "Handles their own conversations.",
+      "PROPRIAS_E_NOVAS": "Handles their own conversations and picks up new ones nobody has taken.",
+      "TODAS": "Reads and handles every conversation.",
+      "VENDAS_SO_OLHA": "Only looks at sales.",
+      "VENDAS_VE": "Sees sales.",
+      "VENDAS_OLHA_E_MOVE": "Looks at and moves sales.",
+      "VENDAS_MEXE": "Creates and moves sales in progress.",
+      "VENDAS_TUDO": "Takes care of everything in sales.",
+      "CONTATOS_SO_OLHA": "Only looks at contacts.",
+      "CONTATOS_VE": "Sees contacts.",
+      "CONTATOS_MEXE": "Creates and changes contacts.",
+      "CAMPANHAS_DISPARA": "Creates and sends campaigns.",
+      "CAMPANHAS_CRIA": "Creates campaigns."
+    },
+    "CUIDADO": {
+      "crm_manage_ai": "ask the AI for help in sales",
+      "crm_export": "take sales to a spreadsheet",
+      "crm_metas_manage": "set the monthly goals",
+      "sales_value_view": "see the amounts in R$",
+      "crm_admin": "take care of everything in sales",
+      "contact_export": "take the customer list to a spreadsheet",
+      "contact_delete": "delete contacts and companies",
+      "conversation_message_delete": "delete messages",
+      "campaign_send": "send campaigns",
+      "custom_role_manage": "change the roles",
+      "grant_above_own": "give more than they have"
+    },
+    "FIXAS": {
+      "TITULO": "Roles that come with the account",
+      "PESSOAS": "no one · does not change | {n} person · does not change | {n} people · does not change",
+      "ADMIN": {
+        "NOME": "Administrator",
+        "TEXTO": "Can do everything, including changing the roles."
+      },
+      "SEM_FUNCAO": {
+        "NOME": "No role",
+        "TEXTO": "Sees and handles teammates' conversations, in the channels they are in. Works with all contacts and canned responses.",
+        "CHAMADA": "Give them a role to show less.",
+        "VER_TUDO": "See everything they can do"
+      }
+    },
+    "VAZIO": {
+      "TITULO": "Each person sees only what they need.",
+      "TEXTO": "Start from a ready-made role. It takes a minute.",
+      "CRIAR": "Create the first role",
+      "DESTAQUE": "Or start from one of these",
+      "CRIAR_PRONTA": "Create {nome}"
+    },
+    "PRONTAS": {
+      "AGENT": {
+        "NOME": "Agent",
+        "DESCRICAO": "Whoever answers WhatsApp day to day."
+      },
+      "SDR": {
+        "NOME": "Salesperson",
+        "DESCRICAO": "Whoever sells and looks for new customers."
+      },
+      "SUPERVISOR": {
+        "NOME": "Supervisor",
+        "DESCRICAO": "Whoever follows the team and every conversation."
+      },
+      "SALES_MANAGER": {
+        "NOME": "Sales manager",
+        "DESCRICAO": "Whoever takes care of the team's sales."
+      },
+      "MARKETING": {
+        "NOME": "Marketing",
+        "DESCRICAO": "Whoever takes care of campaigns."
+      },
+      "OPERATIONS": {
+        "NOME": "Operations",
+        "DESCRICAO": "Whoever sets up channels, bots and rules."
+      },
+      "READ_ONLY": {
+        "NOME": "Read only",
+        "DESCRICAO": "Whoever only needs to look, without changing anything."
+      },
+      "FINANCE": {
+        "NOME": "Finance",
+        "DESCRICAO": "Whoever takes care of the account costs."
+      }
+    },
+    "ERRO": {
+      "TITULO": "We couldn't open the roles right now.",
+      "TEXTO": "Your roles are still there. Check the internet and try again.",
+      "TENTAR": "Try again"
+    },
+    "PAYWALL": {
+      "TITLE": "Change plans to create roles",
+      "AVAILABLE_ON": "Team roles are part of the Business and Enterprise plans.",
+      "UPGRADE_PROMPT": "With them, each person sees only what they need.",
+      "UPGRADE_NOW": "Change plan",
+      "CANCEL_ANYTIME": "You can change or cancel the plan whenever you need."
+    },
+    "ENTERPRISE_PAYWALL": {
+      "AVAILABLE_ON": "Team roles are part of the paid plans.",
+      "UPGRADE_PROMPT": "With them, each person sees only what they need.",
+      "ASK_ADMIN": "Talk to the administrator to change the plan."
+    },
+    "FRASE_INICIO": {
+      "NAO_ATENDE": "does not handle conversations.",
+      "SO_OLHA_CONVERSAS": "only looks at conversations.",
+      "VE_CONVERSAS": "sees conversations.",
+      "PROPRIAS": "handles their own conversations.",
+      "PROPRIAS_E_NOVAS": "handles their own conversations and picks up new ones nobody has taken.",
+      "TODAS": "reads and handles every conversation."
+    },
+    "PREVIA": {
+      "TITULO": "How it will look",
+      "SALVA": "Saved",
+      "ABRE": "With the {nome} role, the person {comeco}",
+      "ABRE_SEM_NOME": "With this role, the person {comeco}",
+      "PODE": "Can",
+      "NAO_PODE": "Cannot",
+      "NOVO": "new",
+      "MENU": "The menu will show: {itens}."
+    },
+    "PODE": {
+      "LER_E_ATENDER_TODAS": "Read and handle every conversation",
+      "RESPONDER_ENTREGUES": "Reply to their own conversations",
+      "PEGAR_NOVAS": "Pick up new conversations nobody has taken",
+      "AJUDAR_PELO_LINK": "Help when a colleague sends the conversation link",
+      "LER_COLEGAS": "Read colleagues' conversations",
+      "ATENDER_CONVERSAS": "Handle conversations",
+      "APAGAR_MENSAGENS": "Delete messages",
+      "QUEM_RECEBE": "Choose who gets each new conversation",
+      "CRIAR_MOVER_VENDAS": "Create and move sales in progress",
+      "MOVER_VENDAS": "Move sales between the columns",
+      "ARQUIVAR_VENDAS": "Archive sales",
+      "MONTAR_COLUNAS": "Set up the sales columns",
+      "RELATORIOS_DAS_VENDAS": "See the sales reports",
+      "VALORES_EM_RS": "See sales amounts in R$",
+      "METAS_DO_MES": "Set each person's monthly goals",
+      "EXPORTAR_VENDAS": "Take sales to a spreadsheet",
+      "IA_NAS_VENDAS": "Ask the AI for help in sales",
+      "PROCURAR_CLIENTES": "Look for new customers",
+      "BUSCAS_DE_TODOS": "See everyone's new-customer searches",
+      "AGENDA": "Create and change the booking pages",
+      "MUDAR_CONTATOS": "Change contact details",
+      "EXPORTAR_CONTATOS": "Take the customer list to a spreadsheet",
+      "APAGAR_CONTATOS": "Delete contacts and companies",
+      "CAMPOS_EXTRAS": "Create and change the extra fields",
+      "REPORT_MANAGE": "See the service reports",
+      "DESEMPENHO_VIEW": "See the team performance",
+      "CANNED_RESPONSE_MANAGE": "Create and change canned responses",
+      "CAMPAIGN_MANAGE": "Create and change campaigns",
+      "CAMPAIGN_SEND": "Send campaigns",
+      "WHATSAPP_TEMPLATES_MANAGE": "Create and change WhatsApp templates",
+      "META_ADS_MANAGE": "Connect and change the ads",
+      "POSTS_MANAGE": "Reply to, hide and delete the comments on the posts",
+      "INBOX_MANAGE": "Set up the channels",
+      "AUTONOMIA_MANAGE": "Create and train the AI bots",
+      "AUTOMATION_MANAGE": "Create and change the automatic rules",
+      "LABEL_MANAGE": "Create and change labels",
+      "MACRO_MANAGE": "Create and change message shortcuts",
+      "SLA_MANAGE": "Create and change response deadlines",
+      "INSURANCE_MANAGE": "Make quotes",
+      "INTEGRATION_MANAGE": "Connect integrations",
+      "TOKEN_MANAGE": "See and change access keys",
+      "PEOPLE_MANAGE": "Add and remove team members",
+      "CUSTOM_ROLE_MANAGE": "Change the roles",
+      "GRANT_ABOVE_OWN": "Give more than they have",
+      "FINANCIAL_VIEW": "See the account costs",
+      "FINANCIAL_MANAGE": "Authorize Meta charges"
+    },
+    "MENU": {
+      "CONVERSAS": "Conversations",
+      "CONTATOS": "Contacts",
+      "VENDAS": "Sales",
+      "CLIENTES_NOVOS": "New customers",
+      "SEUS_POSTS": "Your posts",
+      "CAMPANHAS": "Campaigns",
+      "ANUNCIOS": "Ads",
+      "ROBOS": "AI bots",
+      "COTACOES": "Quotes",
+      "RELATORIOS": "Reports",
+      "CONFIGURACOES": "Settings"
+    },
+    "CURTO": {
+      "TODAS": "Reads and handles every conversation",
+      "PROPRIAS": "Handles their own conversations",
+      "SO_OLHA_CONVERSAS": "Only looks at conversations",
+      "VE_CONVERSAS": "Sees conversations",
+      "CAMPANHAS_DISPARA": "Creates and sends campaigns",
+      "CAMPANHAS": "Creates campaigns",
+      "VENDAS_E_COLUNAS": "Works on sales and sets up the columns",
+      "CONTATOS_E_VENDAS": "Works on contacts and sales",
+      "VENDAS": "Creates and moves sales",
+      "ARRUMA": "Sets up channels, bots and rules",
+      "CONTATOS": "Works on contacts",
+      "SO_OLHA_CONTATOS": "Only looks at contacts",
+      "VE_CONTATOS": "Sees contacts",
+      "RELATORIOS": "Sees the reports",
+      "PROCURA": "Looks for new customers",
+      "NAO_ATENDE": "Does not handle conversations",
+      "SO_OLHA_AREAS": "Only looks at {areas}",
+      "VE_AREAS": "Sees {areas}"
+    },
+    "AREAS": {
+      "CONVERSATIONS": {
+        "NOME": "Conversations",
+        "NA_FRASE": "conversations"
+      },
+      "CONTACTS": {
+        "NOME": "Contacts",
+        "CURTO": "contacts",
+        "NA_FRASE": "contacts"
+      },
+      "REPORTS": {
+        "NOME": "Reports",
+        "CURTO": "reports",
+        "NA_FRASE": "reports"
+      },
+      "CANNED_RESPONSES": {
+        "NOME": "Canned responses",
+        "NA_FRASE": "canned responses"
+      },
+      "CRM": {
+        "NOME": "Sales",
+        "CURTO": "sales",
+        "NA_FRASE": "sales"
+      },
+      "AUTONOMIA": {
+        "NOME": "AI bots",
+        "NA_FRASE": "AI bots"
+      },
+      "DESEMPENHO": {
+        "NOME": "Team performance",
+        "NA_FRASE": "team performance"
+      },
+      "PROSPECTING": {
+        "NOME": "Look for new customers",
+        "NA_FRASE": "the new-customer search"
+      },
+      "INSURANCE": {
+        "NOME": "Quotes",
+        "NA_FRASE": "quotes"
+      },
+      "CAMPAIGNS": {
+        "NOME": "Campaigns",
+        "CURTO": "campaigns",
+        "NA_FRASE": "campaigns"
+      },
+      "WHATSAPP_TEMPLATES": {
+        "NOME": "WhatsApp templates",
+        "NA_FRASE": "WhatsApp templates"
+      },
+      "META_ADS": {
+        "NOME": "Ads",
+        "NA_FRASE": "ads"
+      },
+      "POSTS": {
+        "NOME": "Your posts",
+        "NA_FRASE": "the posts"
+      },
+      "INBOXES": {
+        "NOME": "Channels (WhatsApp numbers, Instagram, email)",
+        "NA_FRASE": "channels"
+      },
+      "INTEGRATIONS": {
+        "NOME": "Integrations",
+        "NA_FRASE": "integrations"
+      },
+      "AUTOMATIONS": {
+        "NOME": "Automatic rules",
+        "NA_FRASE": "automatic rules"
+      },
+      "SCHEDULING": {
+        "NOME": "Booking",
+        "NA_FRASE": "booking"
+      },
+      "LABELS": {
+        "NOME": "Labels",
+        "NA_FRASE": "labels"
+      },
+      "ATTRIBUTES": {
+        "NOME": "Extra fields",
+        "NA_FRASE": "extra fields"
+      },
+      "MACROS": {
+        "NOME": "Message shortcuts",
+        "NA_FRASE": "message shortcuts"
+      },
+      "SLA": {
+        "NOME": "Response deadlines",
+        "NA_FRASE": "response deadlines"
+      },
+      "ASSIGNMENT": {
+        "NOME": "Who gets each new conversation",
+        "NA_FRASE": "who gets each new conversation"
+      },
+      "PEOPLE": {
+        "NOME": "Team (who joins and leaves)",
+        "NA_FRASE": "the team"
+      },
+      "FINANCE": {
+        "NOME": "Finance",
+        "NA_FRASE": "the account costs"
+      },
+      "CUIDADO": {
+        "NOME": "Actions that need care"
+      }
+    },
+    "TRAVA": {
+      "SO_ADMIN": "Only the administrator gives this.",
+      "NAO_TEM": "You don't have this, so you can't give it.",
+      "CARTAO": {
+        "NAO_TEM": "Without {coisas}: you don't have this.",
+        "SO_ADMIN": "Without {coisas}: only the administrator gives it."
+      },
+      "E_SEM": " and without ",
+      "SEM": {
+        "crm_export": "taking sales to a spreadsheet",
+        "crm_metas_manage": "the monthly goals",
+        "sales_value_view": "the amounts in R$",
+        "insurance_view": "seeing quotes",
+        "insurance_manage": "making quotes",
+        "campaign_send": "sending campaigns",
+        "report_manage": "seeing the service reports"
+      },
+      "SEM_AREA": "changing {area}",
+      "SEM_AREA_VER": "seeing {area}"
+    },
+    "ESCOLHA": {
+      "TITULO": "Who is this role for?",
+      "DICA": "Tap the closest one. You see and change everything before saving.",
+      "CRIAR": "Create {nome}",
+      "JA_TEM": "You already have this role · nobody uses it | You already have this role · {n} person | You already have this role · {n} people",
+      "TRAVA_PESSOA": {
+        "ABOVE": "Only the administrator puts people in it.",
+        "MINE": "Nobody changes their own role."
+      },
+      "POR_PESSOA": "Put a person in it",
+      "CRIAR_A_PARTIR": "Create another from the ready-made one",
+      "VER_MAIS": "See {n} more ready-made roles",
+      "ZERO": "Start from scratch, with everything off",
+      "FORA": "Only the administrator creates the {nome} role.",
+      "POR_PESSOA_ROTULO": "Put a person in it: {nome}",
+      "CRIAR_A_PARTIR_ROTULO": "Create another from the ready-made one: {nome}"
+    },
+    "GUIADA": {
+      "VOCE_MUDOU": "you changed",
+      "ANTES_DE": "· before: {antes}",
+      "ALTERAR": "Change",
+      "ALTERAR_ROTULO": "Change {area}",
+      "ABRIR": "Open",
+      "FECHAR": "Close",
+      "PRONTO": "Done",
+      "CONTINUAR": "Continue",
+      "AGORA_NAO": "Not now",
+      "DESFAZER": "Undo",
+      "PASSOS": "Steps to build the role",
+      "ETAPA": {
+        "ESCOLHA": "Choose",
+        "AJUSTES": "Adjust",
+        "CONFIRA": "Review"
+      },
+      "VOLTAR": {
+        "VOLTAR_LISTA": "Back to the list",
+        "TROCAR_PRONTA": "Change the ready-made role",
+        "VOLTAR_AJUSTES": "Back to adjustments",
+        "FAZER_DEPOIS": "Do it later and go back to the list"
+      },
+      "VOLTAR_LISTA": "Back to the list",
+      "NIVEL": {
+        "NAO_VE": "Doesn't see",
+        "SO_OLHA": "Only looks",
+        "VE": "Sees",
+        "PODE_MEXER": "Can change",
+        "BASE_USE": "Only uses",
+        "BASE_APPLY": "Only applies",
+        "BASE_FILL": "Only fills in",
+        "BASE_PERSONAL": "Only their own"
+      },
+      "ANTES": {
+        "NAO_VE": "didn't see",
+        "SO_OLHA": "only looked",
+        "VE": "saw",
+        "PODE_MEXER": "could change",
+        "BASE_USE": "only used",
+        "BASE_APPLY": "only applied",
+        "BASE_FILL": "only filled in",
+        "BASE_PERSONAL": "only had their own"
+      },
+      "TROCAR": {
+        "TITULO": "Change the ready-made role?",
+        "TEXTO": "What you changed will be lost.",
+        "CONTINUAR": "Keep adjusting",
+        "TROCAR": "Change"
+      },
+      "COM_A_FUNCAO": "With the {nome} role",
+      "COM_ESTA_FUNCAO": "With this role"
+    },
+    "AJUSTES": {
+      "TITULO": "Want to change anything?",
+      "TITULO_ALTERAR": "Change {nome}",
+      "DICA_PRONTA": "The ready-made {nome} role comes like this. If it looks good, tap \"Continue\".",
+      "DICA_ZERO": "Everything starts off. Turn on what this role needs and tap \"Continue\".",
+      "DICA_ALTERAR": "Change what is different and tap \"Continue\".",
+      "CONVERSAS": {
+        "NENHUMA": "None",
+        "SO_OLHA": "Only looks",
+        "TODAS": "Handles all",
+        "PROPRIAS_TUDO": "Handles their own, picks up new ones and helps when a colleague calls",
+        "PROPRIAS_NOVAS": "Handles their own and picks up new ones",
+        "PROPRIAS_AJUDA": "Handles their own and helps when a colleague calls"
+      },
+      "CUIDADO_NENHUMA": "None on · deleting, spreadsheets, campaigns and AI",
+      "ANTES": {
+        "CONVERSAS": {
+          "NENHUMA": "didn't handle any",
+          "SO_OLHA": "only looked",
+          "TODAS": "handled all",
+          "PROPRIAS": "handled only their own"
+        },
+        "VENDAS": {
+          "NAO_VE": "didn't see",
+          "SO_OLHA": "only looked",
+          "PODE_MEXER": "created and moved sales",
+          "TUDO": "took care of everything in sales"
+        }
+      },
+      "RECOLHIDA": {
+        "TITULO": "{areas} and {n} more area | {areas} and {n} more areas",
+        "NADA": "Today they are all off.",
+        "N_AREAS": "{n} area | {n} areas",
+        "MEXE_E_OLHA": "Changes {mexe} and only looks at one more. | Changes {mexe} and only looks at {olha} more.",
+        "MEXE_E_VE": "Changes {mexe} and sees one more. | Changes {mexe} and sees {olha} more.",
+        "MEXE_E_OLHA_NOMES": "Changes {mexe} and only looks at {olha}.",
+        "MEXE_E_VE_NOMES": "Changes {mexe} and sees {olha}.",
+        "SO_MEXE": "Changes {mexe}.",
+        "SO_OLHA": "Only looks at {olha}.",
+        "VE": "Sees {olha}.",
+        "UMA_OLHA": "Today only looks at {area}.",
+        "UMA_VE": "Today sees {area}.",
+        "UMA_MEXE": "Today changes {area}.",
+        "OUTRAS": "The rest stay off."
+      },
+      "SO_DO_ADMIN": "Account, security and billing always stay with the administrator.",
+      "CUIDADO_NENHUMA_CURTO": "none on"
+    },
+    "CONVERSAS": {
+      "TITULO": "{com}, which conversations does the person handle?",
+      "DICA": "Only the channels the person is in count: WhatsApp numbers, Instagram, email.",
+      "NENHUMA": {
+        "TITULO": "None",
+        "DICA": "Conversations disappear from the menu"
+      },
+      "SO_OLHA": {
+        "TITULO": "Only looks",
+        "DICA": "Reads conversations, without replying"
+      },
+      "PROPRIAS": {
+        "TITULO": "Handles their own",
+        "DICA": "The ones they got and the ones they took"
+      },
+      "TODAS": {
+        "TITULO": "Handles all",
+        "DICA": "Also the ones with colleagues"
+      },
+      "EXTRAS": {
+        "conversation_unassigned_manage": {
+          "TITULO": "Also picks up new ones nobody has taken",
+          "TEXTO": "Conversations nobody has taken yet"
+        },
+        "conversation_participating_manage": {
+          "TITULO": "Also helps when a colleague calls",
+          "TEXTO": "The colleague calls the person into the conversation and sends the link"
+        },
+        "conversation_view": {
+          "TITULO": "Also reads colleagues' conversations",
+          "TEXTO": "Without replying in them"
+        }
+      },
+      "QUEM_RECEBE": {
+        "TITULO": "Who gets each new conversation",
+        "NAO_MEXE": "Today doesn't change this",
+        "MEXE": "Today changes this"
+      },
+      "PELO_MENOS_UMA": "At least one stays on."
+    },
+    "CONTATOS": {
+      "TITULO": "{com}, what does the person do with contacts?",
+      "DICA": {
+        "NAO_VE": "Contacts disappear from the menu",
+        "SO_OLHA": "Sees contacts, without changing",
+        "PODE_MEXER": "Creates and changes contact details"
+      },
+      "MAIS": "Extra fields"
+    },
+    "VENDAS": {
+      "TITULO": "{com}, what does the person do in sales?",
+      "NAO_VE": {
+        "TITULO": "Doesn't see",
+        "DICA": "Sales disappear from the menu",
+        "ESTADO": "Doesn't see"
+      },
+      "SO_OLHA": {
+        "TITULO": "Only looks",
+        "DICA": "Sees sales, without changing",
+        "ESTADO": "Only looks"
+      },
+      "PODE_MEXER": {
+        "TITULO": "Can change",
+        "DICA": "Creates and moves sales in progress",
+        "ESTADO": "Creates and moves sales in progress"
+      },
+      "TUDO": {
+        "TITULO": "Takes care of everything in sales",
+        "DICA": "Also sets up the columns, archives and sees the sales reports",
+        "ESTADO": "Takes care of everything in sales"
+      },
+      "AVISO_TUDO": {
+        "TITULO": "{com}, will the person take care of everything in sales?",
+        "TEXTO": "They will be able to set up the sales columns, archive sales, see the sales reports, take sales to a spreadsheet and ask the AI for help in sales.",
+        "RISCO": "Each request for AI help costs money on your account.",
+        "LIGAR": "Turn everything on"
+      },
+      "MAIS": "More",
+      "MAIS_NADA": "Nothing else on",
+      "MAIS_AREAS": "Along with sales",
+      "VEM_COM_TUDO": "Comes with \"Takes care of everything in sales\"."
+    },
+    "EXTRAS": {
+      "crm_delete_cards": "Archive sales",
+      "crm_move_cards": "Move sales between the columns",
+      "crm_manage_pipelines": "Set up the sales columns",
+      "crm_view_reports": "See the sales reports",
+      "sales_value_view": "See the amounts in R$",
+      "prospecting_view_all_searches": "See everyone's searches",
+      "token_manage": "Access keys",
+      "custom_role_manage": "Change the roles",
+      "grant_above_own": "Give more than they have"
+    },
+    "CUIDADO_TELA": {
+      "TITULO": "{com}, can the person do any of these things?",
+      "DICA": "Everything is off today. If not needed, tap \"Done\".",
+      "DICA_CURTA": "Everything off. If not needed, tap \"Done\".",
+      "DICA_LIGADA": "If nothing else is needed, tap \"Done\".",
+      "CADEADO": "{n} more thing you can't give | {n} more things you can't give",
+      "LINHA": {
+        "contact_export": {
+          "TITULO": "Take the customer list to a spreadsheet",
+          "TEXTO": "The list leaves the platform, with name and phone"
+        },
+        "conversation_message_delete": {
+          "TITULO": "Delete messages",
+          "TEXTO": "The message shows as deleted in the conversation"
+        },
+        "crm_manage_ai": {
+          "TITULO": "Ask the AI for help in sales",
+          "TEXTO": "Each request costs money on your account."
+        },
+        "contact_delete": {
+          "TITULO": "Delete contacts and companies",
+          "TEXTO": "They disappear for everyone, for good"
+        },
+        "campaign_send": {
+          "TITULO": "Send campaigns",
+          "TEXTO": "Sends a message to many people at once"
+        },
+        "crm_export": {
+          "TITULO": "Take sales to a spreadsheet",
+          "TEXTO": "The sales list leaves the platform"
+        },
+        "crm_metas_manage": {
+          "TITULO": "Set each person's monthly goals",
+          "TEXTO": "Sees each team member's goal"
+        }
+      },
+      "JUNTO": {
+        "CONTATOS": {
+          "NOTA": "When turned on, the person also starts changing contacts.",
+          "TITULO": "Turn contacts on too?",
+          "TEXTO": "To delete, the person will also change contact details.",
+          "RISCO": "Deleting a contact removes it for everyone, for good.",
+          "LIGAR": "Turn both on",
+          "AGORA": "Now the person changes and deletes contacts."
+        },
+        "CAMPANHAS": {
+          "NOTA": "When turned on, the person also starts creating campaigns.",
+          "TITULO": "Turn campaigns on too?",
+          "TEXTO": "To send, the person will also create and change campaigns.",
+          "RISCO": "Sending messages many people at once.",
+          "LIGAR": "Turn both on",
+          "AGORA": "Now the person creates, changes and sends campaigns."
+        },
+        "METAS": {
+          "NOTA": "When turned on, the person also starts seeing sales values in R$.",
+          "TITULO": "Also turn on the values in R$?",
+          "TEXTO": "To set the goals, the person will also see the whole team's sales values in R$.",
+          "RISCO": "The values in R$ show how much each person sells.",
+          "LIGAR": "Turn on both",
+          "AGORA": "Now the person sets the goals and sees the values in R$."
+        }
+      }
+    },
+    "CONFIRA": {
+      "TITULO": "Is this right?",
+      "TITULO_COPIA": "Review the copy",
+      "VAI_SE_CHAMAR": "It will be called",
+      "TROCAR": "Change",
+      "NOME": "What will it be called?",
+      "PARA_QUEM": "Who it is for (if needed)",
+      "DICA_NOME": "You already have a {base} role. You can change this name.",
+      "NOTA_CANAIS": "The person only sees conversations from the channels they are in.",
+      "VER_CANAIS": "See the channels",
+      "DEPOIS": "After saving, you choose who will be {nome}.",
+      "SALVAR": "Save role",
+      "SALVAR_ALTERACOES": "Save changes",
+      "NO_MENU": "In the menu: {itens}",
+      "AVISO_COPIA": "Left out what you can't give: {coisas}.",
+      "COPIA": {
+        "VALORES_E_METAS": "seeing sales amounts in R$ and, with it, the monthly goals",
+        "crm_export": "taking sales to a spreadsheet",
+        "insurance_view": "seeing quotes",
+        "insurance_manage": "making quotes"
+      },
+      "CANAIS": {
+        "FECHAR": "Close",
+        "DA_CONTA": {
+          "TITULO": "The account's channels",
+          "TEXTO": "The person only sees conversations from the channels they are in. These are the account's channels:",
+          "VAZIO": "The account has no channels yet."
+        },
+        "SEUS": {
+          "TITULO": "The channels you are in",
+          "TEXTO": "The person only sees conversations from the channels they are in. These are the channels you are in:",
+          "VAZIO": "You aren't in any channel yet."
+        }
+      },
+      "DAR_NOME": "Give the role a name",
+      "DEPOIS_SEM_NOME": "After saving, you choose who gets this role.",
+      "MENU_VAZIO": "Nothing shows in the menu yet"
+    },
+    "SALVAR": {
+      "NOME_CURTO": "Give a name with at least 2 letters.",
+      "NOME_EM_USO": "You already have a {nome} role. Give another name.",
+      "NOME_REPETIDO": "A role with this name already exists. Choose another.",
+      "NOME_DE_INTEGRACAO": "This name is already used by an integration. How about {sugestao}?",
+      "NADA_LIGADO": "Turn on at least one thing before saving.",
+      "TRAVA": "You can't give part of this. Ask the administrator.",
+      "FORA_DO_ALCANCE": "You can't give part of this. Ask the administrator.",
+      "PROPRIA_FUNCAO": "Nobody changes their own role.",
+      "INDISPONIVEL": "Team roles are not available right now. Talk to the administrator.",
+      "REDE": "Couldn't save right now. Check the internet and try again.",
+      "ALTERADA": "{nome} role saved.",
+      "SEM_ACESSO": "You can no longer change roles. Talk to the administrator."
+    },
+    "SUCESSO": {
+      "CRIADA": "{nome} role created.",
+      "QUEM": "Who will be {nome}?",
+      "DICA": "Choose now or do it later, from the list.",
+      "ESCOLHER": "Choose people",
+      "PECA_AO_ADMIN": "Ask the administrator to put people in it."
+    },
+    "GUARDA": {
+      "TITULO": "Leave without saving?",
+      "TEXTO": "What you changed will be lost.",
+      "CONTINUAR": "Keep adjusting",
+      "SAIR": "Leave"
+    },
+    "SEM_FUNCAO": {
+      "conversas_dos_colegas": {
+        "LISTA": "Read and handle teammates' conversations, in the channels they are in",
+        "CURTO": "read and handle teammates' conversations"
+      },
+      "contatos": {
+        "LISTA": "Create and change contacts",
+        "CURTO": "create and change contacts"
+      },
+      "respostas_prontas": {
+        "LISTA": "Create and change canned responses",
+        "CURTO": "create and change canned responses"
+      },
+      "apagar_mensagens": {
+        "LISTA": "Delete messages",
+        "CURTO": "delete messages"
+      },
+      "vendas_das_colunas": {
+        "LISTA": "Create and move sales in the columns they take part in",
+        "CURTO": "create and move sales"
+      },
+      "arquivar_vendas": {
+        "LISTA": "Archive sales",
+        "CURTO": "archive sales"
+      },
+      "relatorios_das_vendas": {
+        "LISTA": "See the sales reports",
+        "CURTO": "see the sales reports"
+      },
+      "procurar_clientes_novos": {
+        "LISTA": "Look for new customers",
+        "CURTO": "look for new customers"
+      },
+      "planilha_de_clientes": {
+        "LISTA": "Take the customer list to a spreadsheet",
+        "CURTO": "take the customer list to a spreadsheet"
+      },
+      "valores_das_vendas": {
+        "LISTA": "See the sales amounts in R$",
+        "CURTO": "see the sales amounts in R$"
+      },
+      "montar_colunas": {
+        "LISTA": "Set up the sales columns",
+        "CURTO": "set up the sales columns"
+      },
+      "ia_das_vendas": {
+        "LISTA": "Ask the AI for help in sales",
+        "CURTO": "ask the AI for help in sales"
+      },
+      "cuidar_de_tudo_nas_vendas": {
+        "LISTA": "Take care of everything in sales",
+        "CURTO": "take care of everything in sales"
+      },
+      "metas_do_mes": {
+        "LISTA": "Set each person's monthly goals",
+        "CURTO": "set each person's monthly goals"
+      },
+      "anuncio_de_origem": {
+        "LISTA": "See which ad each customer came from",
+        "CURTO": "see which ad each customer came from"
+      },
+      "AREA": {
+        "MEXER": {
+          "LISTA": "Change {area}",
+          "CURTO": "change {area}"
+        },
+        "VER": {
+          "LISTA": "See {area}",
+          "CURTO": "see {area}"
+        }
+      },
+      "OUTRA": {
+        "LISTA": "Do some things in {area}",
+        "CURTO": "do some things in {area}"
+      },
+      "ALGO": {
+        "LISTA": "Do something in {area}",
+        "CURTO": "do something in {area}"
+      },
+      "OUTRA_SEM_AREA": {
+        "LISTA": "Use another part of the platform",
+        "CURTO": "use another part of the platform"
+      },
+      "PREMISSA": {
+        "na_caixa": "Only in the channels the person is in: {coisas}.",
+        "participa_da_coluna": "Only in the sales columns the person takes part in: {coisas}."
+      },
+      "NOTA_RESTO": "Everything else applies to the whole account."
+    },
+    "DIFF": {
+      "GANHAR_E_PERDER": "They will gain some things and lose others. | They will gain some things and lose others.",
+      "SO_GANHAR": "They will be able to do more. | They will be able to do more.",
+      "SO_PERDER": "They will lose some things. | They will lose some things.",
+      "NADA": "Nothing changes in what they can do. | Nothing changes in what they can do.",
+      "PASSAM": "Will be able to | Will be able to",
+      "DEIXAM": "Will no longer | Will no longer",
+      "MAIS_DETALHES": "More details"
+    },
+    "EFEITO": {
+      "PASSA_E_DEIXA": "Without a role, they will {ganho}. They will no longer {perda}.",
+      "SO_PASSA": "Without a role, they will {ganho}.",
+      "SO_DEIXA": "Without a role, they will no longer {perda}.",
+      "NADA": "Without a role, they can still do the same.",
+      "VER_TUDO": "See everything that changes",
+      "TAMBEM": "They will also {ganho}."
+    },
+    "PESSOA": {
+      "TIRAR": "Remove from this role",
+      "TIRAR_ROTULO": "Remove from this role: {pessoa}",
+      "POR_COMO": "Make {funcao}",
+      "POR_COMO_ROTULO": "Make {funcao}: {pessoa}",
+      "DESFAZER": "Undo",
+      "DESFAZER_ROTULO": "Undo the change for {pessoa}",
+      "OUTRA_FUNCAO": "Move to another role",
+      "OUTRA_FUNCAO_ROTULO": "Move to another role: {pessoa}",
+      "ESCOLHER_FUNCAO": "Choose a role",
+      "ESCOLHER_FUNCAO_ROTULO": "Choose a role: {pessoa}",
+      "SEM_FUNCAO": "No role",
+      "VAI_FICAR_SEM": "Will have no role",
+      "HOJE_E": "Today is {atual}. Will become {nova}.",
+      "HOJE_SEM": "Has no role today. Will become {nova}.",
+      "VAI_SER": "Will be {nova}.",
+      "TRAVA": {
+        "SELF": "Nobody changes their own role",
+        "ADMIN": "Can already do everything: has administrator access",
+        "ABOVE": "Only the administrator changes this person's role"
+      }
+    },
+    "GAVETA": {
+      "TITULO": "Who will be {nome}?",
+      "TITULO_SEM_FUNCAO": "Who has no role",
+      "JA_SAO": "Already {nome} ({n})",
+      "OUTRAS": "Other people",
+      "SO_LEITURA": "Only someone who can add and remove team members changes who has this role.",
+      "ESCONDIDAS": "The {nomes} role is not in the list: only the administrator gives it. | The {nomes} roles are not in the list: only the administrator gives them.",
+      "CANCELAR": "Cancel",
+      "FECHAR": "Close",
+      "SALVAR": "Save",
+      "SALVANDO": "Saving…",
+      "SALVO": "Done. People's roles were saved.",
+      "ERRO_PARCIAL": "{nomes}'s role was not saved. {motivo} | These people's roles were not saved: {nomes}. {motivo}",
+      "RODAPE": {
+        "PASSA_A_SER": "{pessoa} becomes {funcao}.",
+        "FICA_SEM": "{pessoa} will have no role and will {ganho}.",
+        "FICA_SEM_E_DEIXA": "{pessoa} will have no role and will {ganho}. They will no longer {perda}.",
+        "FICA_SEM_DEIXA": "{pessoa} will have no role and will no longer {perda}.",
+        "FICA_SEM_SO": "{pessoa} will have no role."
+      },
+      "TENTE": "Check the internet and try again.",
+      "ESPERE": "Too many attempts in a row: wait a moment and try again.",
+      "CONTINUAR": "Keep choosing",
+      "SO_LEITURA_ABOVE": "Only the administrator puts people in and takes them out of this role.",
+      "SO_LEITURA_MINE": "No one changes their own role: this one is yours.",
+      "SO_LEITURA_APAGADA": "The {nome} role was deleted.",
+      "NINGUEM_AINDA": "No one has this role yet.",
+      "FORA_DO_ALCANCE": "Couldn't change the role of {nomes}: it's beyond what you can give.",
+      "TRAVADA": {
+        "ABOVE": "{nomes}'s role did not change: only the administrator changes it. | These people's roles did not change: {nomes}. Only the administrator changes them.",
+        "ADMIN": "{nomes}'s role did not change: they already have administrator access and can do everything. | These people's roles did not change: {nomes}. They already have administrator access and can do everything."
+      },
+      "SEM_ACESSO": "You can no longer add or remove people from roles. Talk to the administrator.",
+      "SALVA": "{nomes}'s role was saved. | These people's roles were saved: {nomes}.",
+      "SAIU_DA_CONTA": "{nomes} is no longer in this account. | These people are no longer in this account: {nomes}.",
+      "FUNCAO_SUMIU": "The role chosen for {nomes} no longer exists. Choose another. | The role chosen for these people no longer exists: {nomes}. Choose another.",
+      "NAO_MUDOU": "The role of {nomes} didn't change. Try again; if it keeps happening, talk to the administrator. | The role of these people didn't change: {nomes}. Try again; if it keeps happening, talk to the administrator.",
+      "CONTINUA": "{nomes}'s role stays as it was. | These people's roles stay as they were: {nomes}.",
+      "SAIU_DA_LISTA": "{nomes} already has a role and left this list. | These people already have a role and left this list: {nomes}.",
+      "NAO_CONFIRMOU": "Couldn't confirm what was saved. Try again."
+    },
+    "APAGAR": {
+      "TITULO": "Delete the {nome} role?",
+      "TEXTO": "Nobody uses this role. It disappears from the list.",
+      "MANTER": "Keep",
+      "APAGAR": "Delete",
+      "PARA_ONDE": "Where does this person go? | Where do the {n} people go?",
+      "PARA_ONDE_TEXTO": "The {nome} role will be deleted. Choose this person's new role. | The {nome} role will be deleted. Choose these people's new role.",
+      "NOVA_FUNCAO": "New role",
+      "ESCOLHA": "Choose the new role",
+      "SEM_FUNCAO": "No role",
+      "MANTER_FUNCAO": "Keep the role",
+      "MOVER": "Move the people and delete",
+      "APAGANDO": "Deleting…",
+      "VENDO_QUEM": "Checking who uses this role…",
+      "SEM_PESSOAS": "Could not check who uses this role.",
+      "APAGADA": "{nome} role deleted.",
+      "MUDOU": "Someone just changed this role. Check again.",
+      "INDISPONIVEL": "That role is no longer available. Choose another.",
+      "ERRO": "Could not delete right now. Check your internet and try again.",
+      "RECUSA": {
+        "FORA_DO_ALCANCE": "You can't delete this role. Ask the administrator.",
+        "TEM_GENTE": "This role still has people. Choose where they go.",
+        "TEM_GENTE_SEM_VER": "This role still has people, but we couldn't check who.",
+        "INDISPONIVEL": "Team roles aren't available right now. Talk to the administrator.",
+        "PROPRIA_FUNCAO": "No one deletes their own role.",
+        "SEM_ACESSO": "You can no longer change roles. Talk to the administrator.",
+        "REDE": "Couldn't delete right now. Check the internet and try again."
+      }
+    },
+    "PERDA": {
+      "TEXTO": "This person has the {nome} role. From now on, they can no longer: | These people have the {nome} role. From now on, they can no longer:",
+      "TEXTO_UMA": "This person has the {nome} role. | These people have the {nome} role.",
+      "FICA": {
+        "OLHA": "From now on, they will only look at {area}. | From now on, they will only look at {area}.",
+        "PROPRIAS": "From now on, they will only handle their own conversations. | From now on, they will only handle their own conversations.",
+        "PROPRIAS_E_NOVAS": "From now on, they will handle their own conversations and pick up new ones nobody has taken. | From now on, they will handle their own conversations and pick up new ones nobody has taken.",
+        "PROPRIAS_E_LINK": "From now on, they will handle their own conversations and help when a colleague sends the conversation link. | From now on, they will handle their own conversations and help when a colleague sends the conversation link.",
+        "PROPRIAS_NOVAS_E_LINK": "From now on, they will handle their own conversations, pick up new ones nobody has taken and help when a colleague sends the link. | From now on, they will handle their own conversations, pick up new ones nobody has taken and help when a colleague sends the link."
+      },
+      "VOLTAR": "Back",
+      "SALVAR": "Save anyway",
+      "TITULO_UMA": "{n} person will no longer {coisa} | {n} people will no longer {coisa}",
+      "TITULO_VARIAS": "{n} person will lose {coisas} things | {n} people will lose {coisas} things",
+      "VER_AREA": "See {area}",
+      "NOMES_E_MAIS": "{nomes} and {n} more person | {nomes} and {n} more people"
+    }
+  }
+}

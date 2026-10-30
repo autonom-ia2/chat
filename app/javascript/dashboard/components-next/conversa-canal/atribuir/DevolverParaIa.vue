@@ -15,6 +15,7 @@ import ConversationApi from 'dashboard/api/inbox/conversation';
 import PassarParaAPI from 'dashboard/api/passarPara';
 import { useAlert } from 'dashboard/composables';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { isAssignedToUser } from 'dashboard/helper/assigneeHelper';
 
 const props = defineProps({
   conversation: { type: Object, required: true },
@@ -50,16 +51,12 @@ const veioDe = computed(() =>
     ? t('CONVERSA_CANAL.DEVOLVER.VEIO_DE', { nome: ia.value.name })
     : t('CONVERSA_CANAL.DEVOLVER.VEIO_DA_IA')
 );
-const visivel = computed(() => {
-  const meta = props.conversation?.meta;
-  return (
+const visivel = computed(
+  () =>
     ligado.value &&
-    meta?.assignee_type === 'User' &&
-    Boolean(eu.value?.id) &&
-    meta?.assignee?.id === eu.value.id &&
+    isAssignedToUser(props.conversation, eu.value?.id) &&
     Boolean(ia.value?.id)
-  );
-});
+);
 
 const devolverPeloPassarPara = async conversationId => {
   const { data } = await PassarParaAPI.passar(conversationId, {
@@ -116,24 +113,27 @@ const devolver = async () => {
 </script>
 
 <template>
-  <p
-    v-if="visivel"
-    class="flex flex-wrap items-center gap-x-2 mx-2 mb-1 text-xs leading-5 text-n-slate-11"
-    data-devolver-para-ia
-  >
-    <span
-      class="i-lucide-sparkles size-3.5 flex-shrink-0 text-n-iris-11"
-      aria-hidden="true"
-    />
-    <span>{{ veioDe }}</span>
-    <button
-      v-tooltip.top="t('CONVERSA_CANAL.DEVOLVER.DICA', { nome })"
-      type="button"
-      :disabled="devolvendo"
-      class="inline-flex items-center px-2 -mx-2 -my-3 text-xs font-medium rounded outline-none min-h-11 text-n-iris-11 hover:underline disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-n-iris-8"
-      @click="devolver"
+  <!-- Raiz fixa (contents: sem caixa no layout) para o v-if não ficar na raiz (vue/no-root-v-if). -->
+  <div class="contents">
+    <p
+      v-if="visivel"
+      class="flex flex-wrap items-center gap-x-2 mx-2 mb-1 text-xs leading-5 text-n-slate-11"
+      data-devolver-para-ia
     >
-      {{ t('CONVERSA_CANAL.DEVOLVER.PARA', { nome }) }}
-    </button>
-  </p>
+      <span
+        class="i-lucide-sparkles size-3.5 flex-shrink-0 text-n-iris-11"
+        aria-hidden="true"
+      />
+      <span>{{ veioDe }}</span>
+      <button
+        v-tooltip.top="t('CONVERSA_CANAL.DEVOLVER.DICA', { nome })"
+        type="button"
+        :disabled="devolvendo"
+        class="inline-flex items-center px-2 -mx-2 -my-3 text-xs font-medium rounded outline-none min-h-11 text-n-iris-11 hover:underline disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-n-iris-8"
+        @click="devolver"
+      >
+        {{ t('CONVERSA_CANAL.DEVOLVER.PARA', { nome }) }}
+      </button>
+    </p>
+  </div>
 </template>

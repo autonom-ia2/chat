@@ -147,10 +147,19 @@ const trocar = async () => {
       : t('PAINEL_DO_CONTATO.QUEM_CUIDA.AGORA_NINGUEM')
   );
 };
+
+// #2202 (PR 3): o título recebe o foco quando o bloco das etiquetas, logo
+// abaixo, some com o foco dentro (tirou a última etiqueta).
+const bloco = ref(null);
+defineExpose({ focarTitulo: () => bloco.value?.focarTitulo() });
 </script>
 
 <template>
-  <BlocoDoPainel :titulo="t('PAINEL_DO_CONTATO.QUEM_CUIDA.TITULO')">
+  <BlocoDoPainel
+    ref="bloco"
+    :titulo="t('PAINEL_DO_CONTATO.QUEM_CUIDA.TITULO')"
+    focavel
+  >
     <p class="m-0 text-sm text-n-slate-12" data-test-id="quem-cuida">
       {{ fraseDeQuem }}
     </p>

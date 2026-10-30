@@ -56,9 +56,16 @@ module Whatsapp::Templates::SendComponents
     [{ type: 'carousel', cards: cards.each_with_index.map { |card, index| card_payload(template, card.is_a?(Hash) ? card : {}, index) } }]
   end
 
+  # Topo com o arquivo subido no disparo (`media_id`, #2367): vai pelo id; sem id, o Chatwoot manda o link.
+  def build_media_header_params(header_data)
+    media = Whatsapp::Templates::MetaMediaId.parameter(header_data)
+    media ? [media] : super
+  end
+
   def card_payload(template, card, index)
     header = card['header'].is_a?(Hash) ? card['header'] : {}
-    media = parameter_builder.build_media_parameter(header['media_url'], header['media_type'].to_s, header['media_name'])
+    media = Whatsapp::Templates::MetaMediaId.parameter(header) ||
+            parameter_builder.build_media_parameter(header['media_url'], header['media_type'].to_s, header['media_name'])
     components = []
     components << { type: 'header', parameters: [media] } if media
     body = card_body(template, card['body'])

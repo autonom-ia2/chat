@@ -16,9 +16,20 @@ const props = defineProps({
   numeros: { type: Object, default: null },
   nome: { type: String, required: true },
   podeAbrir: { type: Boolean, default: false },
+  // #2226 — o endereço do painel de desempenho; vazio (flag desligada), o link não aparece.
+  hrefDesempenho: { type: String, default: '' },
 });
 
-const emit = defineEmits(['abrir']);
+const emit = defineEmits(['abrir', 'desempenho']);
+
+// Clique simples navega dentro do painel; Ctrl/Cmd/Shift abre em outra aba pelo href.
+const aoVerTudo = evento => {
+  if (evento.metaKey || evento.ctrlKey || evento.shiftKey || evento.button) {
+    return;
+  }
+  evento.preventDefault();
+  emit('desempenho');
+};
 
 const { t, locale } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA.SEMANA';
@@ -69,7 +80,18 @@ const cartoes = computed(() => {
     class="flex items-start gap-3 p-5 text-sm shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak dark:ring-n-slate-6 text-n-slate-11"
   >
     <span class="i-lucide-clock size-5 shrink-0" aria-hidden="true" />
-    <p class="m-0">{{ t(`${NS}.VAZIA`, { nome }) }}</p>
+    <div class="flex flex-col gap-1">
+      <p class="m-0">{{ t(`${NS}.VAZIA`, { nome }) }}</p>
+      <a
+        v-if="hrefDesempenho"
+        data-ver-tudo
+        :href="hrefDesempenho"
+        class="inline-flex items-center gap-1 font-semibold min-h-11 w-fit text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+        @click="aoVerTudo"
+      >
+        {{ t('AGENTS.DESEMPENHO.VER_TUDO', { nome }) }}
+      </a>
+    </div>
   </section>
   <section
     v-else-if="numeros"
@@ -120,5 +142,18 @@ const cartoes = computed(() => {
         </span>
       </component>
     </div>
+    <a
+      v-if="hrefDesempenho"
+      data-ver-tudo
+      :href="hrefDesempenho"
+      class="inline-flex items-center gap-1 text-sm font-semibold min-h-11 w-fit text-n-blue-11 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
+      @click="aoVerTudo"
+    >
+      {{ t('AGENTS.DESEMPENHO.VER_TUDO', { nome }) }}
+      <span
+        class="i-lucide-arrow-right size-4 rtl:rotate-180"
+        aria-hidden="true"
+      />
+    </a>
   </section>
 </template>

@@ -3,12 +3,14 @@ import * as MutationHelpers from 'shared/helpers/vuex/mutationHelpers';
 import * as types from '../mutation-types';
 import CustomRoleAPI from '../../api/customRole';
 
-// Guarda os campos recusados e o código do erro (#2185): o editor mostra o nome repetido ao lado do campo, e a
-// lista abre a pergunta do destino quando o servidor diz que a função tem gente.
+// Guarda os campos recusados, o código do erro e o status (#2185, #2308): o editor mostra o nome repetido ao lado
+// do campo, a lista abre a pergunta do destino quando o servidor diz que a função tem gente, e a conversa guiada
+// separa o 401 (alcance, flag ou a própria função, pelo código no corpo) da sessão vencida.
 const throwWithAttributes = error => {
   const failure = new Error(parseAPIErrorResponse(error));
   failure.attributes = error?.response?.data?.attributes || [];
   failure.code = error?.response?.data?.error;
+  failure.status = error?.response?.status;
   throw failure;
 };
 
@@ -16,6 +18,8 @@ export const state = {
   records: [],
   uiFlags: {
     fetchingList: false,
+    // A lista nova de Funções (#2308) mostra o erro de rede em vez de uma lista vazia.
+    fetchingListFailed: false,
     creatingItem: false,
     updatingItem: false,
     deletingItem: false,
@@ -37,9 +41,15 @@ export const actions = {
     try {
       const response = await CustomRoleAPI.get();
       commit(types.default.SET_CUSTOM_ROLE, response.data);
-      commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: false });
+      commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, {
+        fetchingList: false,
+        fetchingListFailed: false,
+      });
     } catch (error) {
-      commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, { fetchingList: false });
+      commit(types.default.SET_CUSTOM_ROLE_UI_FLAG, {
+        fetchingList: false,
+        fetchingListFailed: true,
+      });
     }
   },
 

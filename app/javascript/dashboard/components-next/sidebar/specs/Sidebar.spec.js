@@ -324,3 +324,39 @@ describe('Sidebar: busca e lápis com a lista nova (#2211)', () => {
     expect(lapis(wrapper).exists()).toBe(false);
   });
 });
+
+describe('Sidebar: Seus posts em Crescer (#2304)', () => {
+  const temSeusPosts = wrapper =>
+    wrapper
+      .findAllComponents({ name: 'SidebarGroup' })
+      .some(item => item.props('name') === 'SeusPosts');
+  const comFlag = ligada => {
+    getters['accounts/isFeatureEnabledonAccount'] = ref(
+      (_id, flag) => ligada && flag === 'seus_posts'
+    );
+  };
+
+  it('administrador com a flag vê o item', () => {
+    seat({});
+    comFlag(true);
+    expect(temSeusPosts(mountSidebar())).toBe(true);
+  });
+
+  it('função com posts_view e a flag vê o item', () => {
+    seat({ role: 'agent', customRoleId: 3, keys: ['posts_view'] });
+    comFlag(true);
+    expect(temSeusPosts(mountSidebar())).toBe(true);
+  });
+
+  it('flag desligada: nem o administrador vê o item', () => {
+    seat({});
+    comFlag(false);
+    expect(temSeusPosts(mountSidebar())).toBe(false);
+  });
+
+  it('sem a chave de posts: o item não aparece, mesmo com a flag', () => {
+    seat({ role: 'agent', customRoleId: 3, keys: ['crm_view'] });
+    comFlag(true);
+    expect(temSeusPosts(mountSidebar())).toBe(false);
+  });
+});

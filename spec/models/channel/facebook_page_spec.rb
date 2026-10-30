@@ -38,16 +38,57 @@ RSpec.describe Channel::FacebookPage do
 
   describe '#subscribe' do
     let(:channel) { build(:channel_facebook_page) }
+    let(:subscription) { instance_double(Crm::MetaAds::PageSubscription, add!: true, remove!: true) }
 
-    it 'subscribes to messaging postbacks' do
-      expect(Facebook::Messenger::Subscriptions).to receive(:subscribe).with(
-        hash_including(
-          access_token: channel.page_access_token,
-          subscribed_fields: include('messaging_postbacks')
-        )
-      )
+    before do
+      allow(Crm::MetaAds::PageSubscription).to receive(:new).and_return(subscription)
+    end
 
+    it 'adds the messenger fields without replacing the other fields of the page' do
       channel.subscribe
+
+      expect(Crm::MetaAds::PageSubscription).to have_received(:new)
+        .with(page_id: channel.page_id, access_token: channel.page_access_token)
+      expect(subscription).to have_received(:add!).with(include('messages', 'messaging_postbacks'))
+    end
+
+    it 'removes only the messenger fields on unsubscribe, keeping leadgen and feed' do
+      channel.unsubscribe
+
+      expect(subscription).to have_received(:remove!).with(Channel::FacebookPage::MESSENGER_FIELDS)
+    end
+
+    it 'keeps the messenger fields when the page is still an inbox of another account' do
+      create(:channel_facebook_page, page_id: channel.page_id)
+
+      channel.unsubscribe
+
+      expect(subscription).not_to have_received(:remove!)
+    end
+  end
+
+  describe 'connecting a page inbox over the real subscription (#2200)' do
+    let(:graph) { "https://graph.facebook.com/#{Meta::ConversionsApiClient::DEFAULT_API_VERSION}" }
+    let(:page_id) { '987654321' }
+    let(:json) { { 'Content-Type' => 'application/json' } }
+
+    before do
+      stub_request(:get, "#{graph}/app").to_return(status: 200, headers: json, body: { id: '544' }.to_json)
+    end
+
+    it 'keeps leadgen and feed of the page when the inbox subscribes the messenger fields' do
+      wanted = %w[leadgen feed] + Channel::FacebookPage::MESSENGER_FIELDS
+      stub_request(:get, "#{graph}/#{page_id}/subscribed_apps").to_return(
+        { status: 200, headers: json, body: { data: [{ id: '544', subscribed_fields: %w[leadgen feed] }] }.to_json },
+        { status: 200, headers: json, body: { data: [{ id: '544', subscribed_fields: wanted }] }.to_json }
+      )
+      post = stub_request(:post, "#{graph}/#{page_id}/subscribed_apps")
+             .with(body: { subscribed_fields: wanted.join(',') })
+             .to_return(status: 200, headers: json, body: { success: true }.to_json)
+
+      create(:channel_facebook_page, page_id: page_id)
+
+      expect(post).to have_been_requested
     end
   end
 end

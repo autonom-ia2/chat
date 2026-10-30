@@ -16,7 +16,7 @@ RSpec.describe Crm::MetaAds::AdManagement do
 
   def stub_ad(account_id: connection.ad_account_id, status: 'ACTIVE', effective: 'ACTIVE', story: post_id, http: 200)
     body = if http == 200
-             { id: ad_id, account_id: account_id, status: status, effective_status: effective,
+             { id: ad_id, name: 'Capa', account_id: account_id, status: status, effective_status: effective,
                creative: { id: '9', effective_object_story_id: story }.compact }
            else
              meta_graph_error(http == 500 ? 1 : 100)
@@ -39,16 +39,36 @@ RSpec.describe Crm::MetaAds::AdManagement do
   end
 
   describe '#payload' do
+    it 'pede o nome do anúncio à Meta (o detalhe sem números não tem outro lugar de onde tirar, #2335)' do
+      expect(Meta::AdsGraphClient::AD_MANAGEMENT_FIELDS.split(',')).to include('name')
+    end
+
     it 'traz a situação, a entrega, o post da Página e se pode mudar' do
       stub_permissions('ads_read', 'ads_management')
       stub_ad(effective: 'ADSET_PAUSED')
       stub_post
 
       expect(described_class.new(connection).payload(ad_id)).to eq(
-        status: 'ACTIVE', effective_status: 'ADSET_PAUSED', mode: 'token', can_change: true, needs_login: false,
+        name: 'Capa', status: 'ACTIVE', effective_status: 'ADSET_PAUSED', in_review: false, mode: 'token', can_change: true,
+        needs_login: false,
         post: { message: 'Seu orçamento em 2 minutos.', created_time: '2026-10-01T17:20:00+0000',
                 permalink_url: 'https://www.facebook.com/p/1', page_name: 'Loja Exemplo', reactions: 128, comments: 14, shares: 6 }
       )
+    end
+
+    # #2354: o topo do detalhe usa o mesmo in_review da lista de pausados para não oferecer um Ativar que o servidor recusa.
+    it 'anúncio pausado em análise da Meta vem com in_review; ligado em análise, não' do
+      stub_permissions('ads_read', 'ads_management')
+      stub_post
+
+      stub_ad(status: 'PAUSED', effective: 'PENDING_REVIEW')
+      expect(described_class.new(connection).payload(ad_id)).to include(in_review: true)
+      stub_ad(status: 'PAUSED', effective: 'IN_PROCESS')
+      expect(described_class.new(connection).payload(ad_id)).to include(in_review: true)
+      stub_ad(status: 'ACTIVE', effective: 'IN_PROCESS')
+      expect(described_class.new(connection).payload(ad_id)).to include(in_review: false)
+      stub_ad(status: 'PAUSED', effective: 'PAUSED')
+      expect(described_class.new(connection).payload(ad_id)).to include(in_review: false)
     end
 
     it 'sem ads_management no token: não muda e pede para entrar de novo' do
@@ -137,6 +157,19 @@ RSpec.describe Crm::MetaAds::AdManagement do
 
       expect(described_class.new(connection).change!(ad_id, 'PAUSED')).to eq('PAUSED')
       expect(update).to have_been_requested.once
+    end
+
+    # #2354: anúncio de fora do Chat2You segue a mesma regra do criado aqui.
+    it 'recusa ligar anúncio pausado em análise da Meta, sem chamar a Meta para mudar; pausar segue' do
+      stub_permissions('ads_management')
+      stub_ad(status: 'PAUSED', effective: 'IN_PROCESS')
+
+      expect { described_class.new(connection).change!(ad_id, 'ACTIVE') }.to raise_error(described_class::Error, 'in_review')
+      expect(a_request(:post, meta_graph_url(ad_id))).not_to have_been_made
+
+      stub_ad(status: 'ACTIVE', effective: 'IN_PROCESS')
+      update
+      expect(described_class.new(connection).change!(ad_id, 'PAUSED')).to eq('PAUSED')
     end
 
     it 'recusa situação fora de ACTIVE/PAUSED, token sem permissão e anúncio de outra conta, sem chamar a Meta para mudar' do

@@ -37,7 +37,10 @@ const mudarTopo = tipo => {
   };
 };
 
-const ACEITA = { foto: 'image/jpeg,image/png', video: 'video/mp4' };
+const ACEITA = {
+  foto: 'image/jpeg,image/png',
+  video: 'video/mp4,video/quicktime,.mp4,.mov',
+};
 
 const aoEscolherArquivo = ({ arquivo, local }) => {
   rascunho.value = {

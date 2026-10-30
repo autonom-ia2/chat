@@ -15,6 +15,8 @@ const routing = vi.hoisted(() => ({
   route: { params: { accountId: '18' }, query: {} },
   replace: vi.fn(),
 }));
+// Flags ligadas na conta; nenhuma por padrão.
+const accountFlags = vi.hoisted(() => new Set());
 
 vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
   default: {
@@ -26,13 +28,19 @@ vi.mock('dashboard/api/crmMetaAdsConnection', () => ({
     acceptAdvice: vi.fn(),
     dismissAdvice: vi.fn(),
     quoteMessage: vi.fn(),
+    pausedAds: vi.fn(),
+    createOptions: vi.fn(),
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-// O anúncio por dentro lê a flag meta_ads_gestao (#2161): desligada aqui.
+// O anúncio por dentro lê a flag meta_ads_gestao (#2161) e o painel a meta_ads_criar (#2198): desligadas, salvo
+// quando o teste liga.
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
-  return { useMapGetter: () => computed(() => () => false) };
+  return {
+    useMapGetter: () =>
+      computed(() => (_accountId, flag) => accountFlags.has(flag)),
+  };
 });
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
@@ -191,6 +199,62 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     mounted?.unmount();
     mounted = null;
     vi.useRealTimers();
+  });
+
+  // A marcação gravada no arquivo saiu do MetaAdsPanel.vue da main de antes do #2198. Sem comentários (os do template
+  // e os marcadores <!--v-if--> do Vue), que não aparecem na tela.
+  it('with meta_ads_criar off, renders exactly the markup of the panel before #2198', async () => {
+    // Relógio parado: "há 26 dias" e "agora" não mudam com o dia em que o teste roda.
+    const now = new Date('2026-10-27T12:00:00Z');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(now);
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: { panel: { ...PANEL, synced_at: now.toISOString() } },
+    });
+    const wrapper = await mountPanel();
+    const clone = wrapper.element.cloneNode(true);
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
+    const comments = [];
+    while (walker.nextNode()) comments.push(walker.currentNode);
+    comments.forEach(node => node.remove());
+
+    await expect(clone.outerHTML).toMatchFileSnapshot(
+      './__snapshots__/MetaAdsPanel.semCriar.txt'
+    );
+  });
+
+  it('with meta_ads_criar off, the panel has no "Create ad" and no paused list (#2198)', async () => {
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-create]').exists()).toBe(false);
+    expect(CrmMetaAdsConnectionAPI.pausedAds).not.toHaveBeenCalled();
+  });
+
+  it('with meta_ads_criar on, offers "Create ad" and reads the paused ads (#2198)', async () => {
+    accountFlags.add('meta_ads_criar');
+    CrmMetaAdsConnectionAPI.pausedAds.mockResolvedValue({ data: { ads: [] } });
+    try {
+      const wrapper = await mountPanel();
+
+      expect(wrapper.find('[data-panel-create]').exists()).toBe(true);
+      expect(CrmMetaAdsConnectionAPI.pausedAds).toHaveBeenCalledTimes(1);
+
+      await wrapper.find('[data-panel-create]').trigger('click');
+      expect(routing.route.query.criar).toBe('novo');
+    } finally {
+      accountFlags.clear();
+    }
+  });
+
+  it('read-only (meta_ads_view only) never offers "Create ad", even with the flag (#2198)', async () => {
+    accountFlags.add('meta_ads_criar');
+    try {
+      const wrapper = await mountPanel({ props: { readOnly: true } });
+
+      expect(wrapper.find('[data-panel-create]').exists()).toBe(false);
+    } finally {
+      accountFlags.clear();
+    }
   });
 
   it('offers the report of the period next to the period choice (#1960)', async () => {

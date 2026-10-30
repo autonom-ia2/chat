@@ -16,6 +16,9 @@ const props = defineProps({
   // Opcional: devolve false quando fechar agora perderia trabalho (ex.: formulário aberto dentro
   // da gaveta). Vale para Esc e clique no fundo; o botão X do formulário de dentro continua dele.
   podeFechar: { type: Function, default: null },
+  // Opcional: o X também passa pelo podeFechar (a gaveta de Funções da equipe, #2308). Desligado, o X fecha direto,
+  // como sempre foi nas outras telas.
+  guardaNoX: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['fechar']);
@@ -75,7 +78,7 @@ useModalFocus({
           type="button"
           :aria-label="t('AGENTS.JORNADA.COMUM.FECHAR')"
           class="grid rounded-xl place-items-center size-11 shrink-0 text-n-slate-11 hover:bg-n-alpha-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-blue-11"
-          @click="emit('fechar')"
+          @click="guardaNoX ? pedirFechar() : emit('fechar')"
         >
           <span class="i-lucide-x size-5" aria-hidden="true" />
         </button>

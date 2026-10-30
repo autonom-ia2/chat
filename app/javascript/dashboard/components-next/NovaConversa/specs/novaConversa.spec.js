@@ -76,14 +76,31 @@ describe('chaveDoCanal e linhaDoCanal', () => {
     expect(chaveDoCanal(null)).toBe('OUTRO');
   });
 
+  it('a caixa API ligada ao WAHA é o WhatsApp do celular (#2255)', () => {
+    expect(chaveDoCanal({ ...api, wahaProvider: true })).toBe(
+      'WHATSAPP_CELULAR'
+    );
+    expect(chaveDoCanal({ ...api, wahaProvider: false })).toBe('OUTRO');
+  });
+
   it('mostra o e-mail ou o número legível, sem o prefixo do Twilio', () => {
     expect(linhaDoCanal(email)).toBe('oi@loja.com');
     expect(linhaDoCanal({ ...whatsapp, phoneNumber: '+5511988887777' })).toBe(
-      '+55 (11) 98888-7777'
+      '+55 11 98888-7777'
     );
-    expect(linhaDoCanal(twilioWhatsapp)).toBe('+55 (11) 99999-0000');
+    expect(linhaDoCanal(twilioWhatsapp)).toBe('+55 11 99999-0000');
     expect(linhaDoCanal(site)).toBe('');
     expect(linhaDoCanal(null)).toBe('');
+  });
+
+  it('WhatsApp pelo celular (caixa API do WAHA): o número da sessão, legível (#2255)', () => {
+    const celular = {
+      channelType: INBOX_TYPES.API,
+      wahaProvider: true,
+      wahaPhoneNumber: '+5511900003303',
+    };
+    expect(linhaDoCanal(celular)).toBe('+55 11 90000-3303');
+    expect(linhaDoCanal({ channelType: INBOX_TYPES.API })).toBe('');
   });
 });
 
@@ -118,6 +135,22 @@ describe('ordenarCanais', () => {
     ];
 
     expect(nomes(canais)).toEqual(['Oficial', 'Twilio', 'E-mail']);
+  });
+
+  it('o WhatsApp do celular vem logo depois do oficial e antes do e-mail (#2255)', () => {
+    const canais = [
+      { ...api, name: 'API comum' },
+      { ...email, name: 'E-mail' },
+      { ...api, wahaProvider: true, name: 'Celular' },
+      { ...whatsapp, name: 'Oficial' },
+    ];
+
+    expect(nomes(canais)).toEqual([
+      'Oficial',
+      'Celular',
+      'E-mail',
+      'API comum',
+    ]);
   });
 
   it('ordena por nome dentro do mesmo tipo e não mexe na lista recebida', () => {
@@ -221,12 +254,12 @@ describe('oQueFalta', () => {
 
 describe('telefoneLegivel e contatoLegivel', () => {
   it('mostra fixo e celular do Brasil com país, DDD e hífen', () => {
-    expect(telefoneLegivel('+551140000001')).toBe('+55 (11) 4000-0001');
-    expect(telefoneLegivel('+5511988887777')).toBe('+55 (11) 98888-7777');
+    expect(telefoneLegivel('+551140000001')).toBe('+55 11 4000-0001');
+    expect(telefoneLegivel('+5511988887777')).toBe('+55 11 98888-7777');
   });
 
   it('escreve o número de outro país do jeito daquele país', () => {
-    expect(telefoneLegivel('+14155552671')).toBe('+1 (415) 555-2671');
+    expect(telefoneLegivel('+14155552671')).toBe('+1 415 555 2671');
     expect(telefoneLegivel('+351912345678')).toBe('+351 912 345 678');
   });
 
@@ -241,7 +274,7 @@ describe('telefoneLegivel e contatoLegivel', () => {
   it('prefere o telefone ao e-mail na linha da pessoa', () => {
     expect(
       contatoLegivel({ phoneNumber: '+551140000001', email: 'a@b.com' })
-    ).toBe('+55 (11) 4000-0001');
+    ).toBe('+55 11 4000-0001');
     expect(contatoLegivel({ email: 'a@b.com' })).toBe('a@b.com');
     expect(contatoLegivel({})).toBe('');
     expect(contatoLegivel(null)).toBe('');
@@ -262,6 +295,10 @@ describe('primeiroNome', () => {
     expect(primeiroNome('Ana')).toBe('Ana');
     expect(primeiroNome('')).toBe('');
     expect(primeiroNome()).toBe('');
+  });
+
+  it('nome que é só telefone vai inteiro, não "+55" (#2255)', () => {
+    expect(primeiroNome('+55 11 95555-4444')).toBe('+55 11 95555-4444');
   });
 });
 

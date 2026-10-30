@@ -5,7 +5,7 @@ import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import { dynamicTime } from 'shared/helpers/timeHelper';
 import { useExactTimestamp } from 'shared/composables/useExactTimestamp';
 import { useInbox } from 'dashboard/composables/useInbox';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 
 import CardLayout from 'dashboard/components-next/CardLayout.vue';
 import Icon from 'dashboard/components-next/icon/Icon.vue';
@@ -93,8 +93,13 @@ const inboxName = computed(() => props.inbox?.name);
 
 const inboxIcon = computed(() => {
   if (!inbox.value) return null;
-  const { channelType, medium, voiceEnabled } = inbox.value;
-  return getInboxIconByType(channelType, medium, 'fill', voiceEnabled);
+  const { medium, voiceEnabled } = inbox.value;
+  return getInboxIconByType(
+    tipoDoIconeDaCaixa(inbox.value),
+    medium,
+    'fill',
+    voiceEnabled
+  );
 });
 </script>
 

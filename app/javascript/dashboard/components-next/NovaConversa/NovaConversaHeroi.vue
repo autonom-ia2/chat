@@ -2,16 +2,26 @@
 // #1459 — o cabeçalho escuro da gaveta, com a mesma anatomia do herói do
 // funil (#1384): anéis decorativos, migalha, rótulo com ícone, título e uma
 // frase. A migalha só diz de onde a pessoa veio.
-defineProps({
+import { computed } from 'vue';
+import { I18nT } from 'vue-i18n';
+import { nomeEhTelefone } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
+
+const props = defineProps({
   tituloId: { type: String, required: true },
   migalha: { type: String, default: '' },
-  titulo: { type: String, required: true },
+  // { chave, nome }: o nome entra por slot do <I18nT> (#2255).
+  titulo: { type: Object, required: true },
   texto: { type: String, default: '' },
   // #1505 — "Enviar mensagem" quando a mensagem entra numa conversa que já existe.
   naExistente: { type: Boolean, default: false },
 });
 
 defineEmits(['fechar']);
+
+// #2255: o telefone não quebra a linha no hífen; nome com espaços quebra normal.
+const classeDoNome = computed(() =>
+  nomeEhTelefone(props.titulo.nome) ? 'whitespace-nowrap' : ''
+);
 </script>
 
 <template>
@@ -58,7 +68,12 @@ defineEmits(['fechar']);
           tabindex="-1"
           class="mb-0 break-words text-2xl font-bold leading-tight tracking-tight text-white outline-none"
         >
-          {{ titulo }}
+          <I18nT v-if="titulo.nome" :keypath="titulo.chave" tag="span">
+            <template #nome>
+              <span :class="classeDoNome">{{ titulo.nome }}</span>
+            </template>
+          </I18nT>
+          <template v-else>{{ $t(titulo.chave) }}</template>
         </h2>
         <p
           v-if="texto"

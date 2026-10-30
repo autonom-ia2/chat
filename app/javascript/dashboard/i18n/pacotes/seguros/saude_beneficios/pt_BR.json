@@ -1302,5 +1302,22 @@
         "PLAN": "Assinatura"
       }
     }
+  },
+  "PAINEL_DO_CONTATO": {
+    "RELACAO": {
+      "OPCOES": {
+        "INTERESSADO": {
+          "DICA": "Quer ou pode querer um plano com você."
+        },
+        "PARCEIRO": {
+          "DICA": "Operadora, assessoria ou outro corretor."
+        }
+      }
+    }
+  },
+  "CRM_LISTA_ACAO": {
+    "ALTERAR": {
+      "DESFECHO": "Marcar como implantado ou não fechou"
+    }
   }
 }

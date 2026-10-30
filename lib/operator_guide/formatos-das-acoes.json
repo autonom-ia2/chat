@@ -239,7 +239,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:33",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:139"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
     ],
     "sem_corpo": true
   },
@@ -548,8 +548,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:129",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:133",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": true
   },
@@ -588,6 +588,51 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:92"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#destroy",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:101"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#destroy",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:54",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/meta_ads_lead_forms/forms/:form_id/destination": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#remove_destination",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:56",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:58",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:57",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:105"
+    ],
+    "sem_corpo": true
+  },
+  "DELETE crm/meta_ads_lead_forms/pages/:page_id/receive": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#stop",
+    "modelo": "Crm::Pipeline",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:42",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:43"
     ],
     "sem_corpo": true
   },
@@ -692,8 +737,8 @@
     "controller": "api/v1/accounts/ctwa_tracked_links#destroy",
     "modelo": "Campaign",
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:34",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:29",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:43"
     ],
     "sem_corpo": true
   },
@@ -753,9 +798,9 @@
     "controller": "api/v1/accounts/custom_roles#destroy",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:30",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:68",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:41",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:82",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },
@@ -922,7 +967,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:38",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:39",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:82"
     ],
     "sem_corpo": true
   },
@@ -1078,6 +1123,25 @@
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:26"
     ],
     "sem_corpo": true
+  },
+  "DELETE seus_posts/posts/:post_id/comments/:comment_id": {
+    "campos": {
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#destroy",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:82",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
   },
   "DELETE sla_policies/:id": {
     "completo": true,
@@ -4081,8 +4145,8 @@
     "controller": "api/v1/accounts/campaign_import_audiences#channels",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:42",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:141",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:122"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:158",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:139"
     ],
     "sem_corpo": false
   },
@@ -4097,8 +4161,8 @@
     "controller": "api/v1/accounts/campaign_import_audiences#columns",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:15",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:136",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:122"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:153",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:139"
     ],
     "sem_corpo": false
   },
@@ -4111,7 +4175,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:28",
       "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:29",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:122"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:139"
     ],
     "sem_corpo": false
   },
@@ -4771,6 +4835,24 @@
     ],
     "sem_corpo": false
   },
+  "PATCH conversations/:conversation_id/labels/alterar": {
+    "campos": {
+      "por": {
+        "tipo": "lista"
+      },
+      "tirar": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/conversations/alterar_etiquetas#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:15",
+      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:68",
+      "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
+    ],
+    "sem_corpo": false
+  },
   "PATCH conversations/:conversation_id/messages/:id": {
     "campos": {
       "external_error": {},
@@ -5187,9 +5269,9 @@
     "envelope": "card",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:635",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:117",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:639",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": false
   },
@@ -5472,7 +5554,44 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:271"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:272"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH crm/meta_ads_connection/ads/:ad_id/budget": {
+    "campos": {
+      "amount": {},
+      "end_time": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#update_budget",
+    "motivos": [
+      "leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:55",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:57"
+    ],
+    "sem_corpo": false
+  },
+  "PATCH crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id": {
+    "campos": {
+      "hidden": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#update",
+    "modelo": "Crm::MetaAdsConnection",
+    "motivos": [
+      "leitura crua sem tipo: hidden (repassada a comments.hide!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:49",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:101",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:52",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:50"
     ],
     "sem_corpo": false
   },
@@ -5481,7 +5600,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#destinations",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:149"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:150"
     ],
     "sem_corpo": true
   },
@@ -5507,10 +5626,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#funnel",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:163",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:267",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:167",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:166"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:164",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:268",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:168",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:167"
     ],
     "sem_corpo": false
   },
@@ -6316,9 +6435,9 @@
       "leitura crua sem tipo: ctwa_tracked_link"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:26",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:21",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:47",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:43"
     ],
     "sem_corpo": false
   },
@@ -6432,6 +6551,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "desempenho_view",
           "campaign_view",
           "campaign_manage",
           "campaign_send",
@@ -6451,6 +6571,8 @@
           "whatsapp_templates_manage",
           "meta_ads_view",
           "meta_ads_manage",
+          "posts_view",
+          "posts_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -6473,9 +6595,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:21",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },
@@ -7046,11 +7168,11 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:102",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:106",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:35",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:82",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -12315,9 +12437,9 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:20",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:188",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:190",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:25",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:172",
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:174",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:22",
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:21"
     ],
@@ -12329,7 +12451,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:58",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:139"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
     ],
     "sem_corpo": true
   },
@@ -12339,7 +12461,7 @@
     "modelo": "CampaignImport",
     "origem": [
       "app/controllers/api/v1/accounts/campaign_imports_controller.rb:79",
-      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:139"
+      "app/controllers/api/v1/accounts/campaign_imports_controller.rb:141"
     ],
     "sem_corpo": true
   },
@@ -12347,8 +12469,8 @@
     "completo": true,
     "controller": "api/v1/accounts/campaign_import_audiences#variable_coverage",
     "origem": [
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:105",
-      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:122"
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:116",
+      "app/controllers/api/v1/accounts/campaign_import_audiences_controller.rb:139"
     ],
     "sem_corpo": true
   },
@@ -12492,6 +12614,100 @@
       "app/controllers/api/v1/accounts/campaign_journey/conversa_aberta_controller.rb:57"
     ],
     "sem_corpo": false
+  },
+  "POST campaign_journey/conversation_audiences": {
+    "campos": {
+      "period": {
+        "tipo": "string",
+        "um_de": [
+          "7d",
+          "30d",
+          "3m",
+          "12m",
+          "all"
+        ]
+      },
+      "request": {
+        "max_caracteres": 1000,
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#create",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:44",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:47"
+    ],
+    "sem_corpo": false
+  },
+  "POST campaign_journey/conversation_audiences/:id/answer": {
+    "campos": {
+      "answer": {
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#answer",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:52",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:55",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:122"
+    ],
+    "sem_corpo": false
+  },
+  "POST campaign_journey/conversation_audiences/:id/resume": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#resume",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:68",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:122"
+    ],
+    "sem_corpo": true
+  },
+  "POST campaign_journey/conversation_audiences/:id/save": {
+    "campos": {
+      "name": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "person_ids": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#save",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:100",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:104",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:103",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:122"
+    ],
+    "sem_corpo": false
+  },
+  "POST campaign_journey/conversation_audiences/:id/start": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#start",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:64",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:122"
+    ],
+    "sem_corpo": true
+  },
+  "POST campaign_journey/conversation_audiences/:id/stop": {
+    "completo": true,
+    "controller": "api/v1/accounts/campaign_journey/conversation_audiences#stop",
+    "modelo": "ConversationAudienceSearch",
+    "origem": [
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:81",
+      "app/controllers/api/v1/accounts/campaign_journey/conversation_audiences_controller.rb:122"
+    ],
+    "sem_corpo": true
   },
   "POST campaign_journey/drafts": {
     "campos": {
@@ -14700,9 +14916,9 @@
     },
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:80",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:571",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:467",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:84",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:575",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:471",
       "app/controllers/concerns/crm/opportunity_registration.rb:7"
     ],
     "sem_corpo": false
@@ -14754,14 +14970,14 @@
       "leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:147",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:157",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:156",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:155",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:154",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:170",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:414",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:151",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:161",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:160",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:159",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:158",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:174",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:418",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": false
   },
@@ -14769,8 +14985,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#evaluate_ai",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:221",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:225",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": true
   },
@@ -14784,9 +15000,9 @@
     "controller": "api/v1/accounts/crm/cards#link_contact",
     "modelo": "Contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:203",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:204",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:207",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:208",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": false
   },
@@ -14804,10 +15020,10 @@
     "controller": "api/v1/accounts/crm/cards#link_conversation",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:178",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:189",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:179",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:182",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:193",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:183",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": false
   },
@@ -14822,9 +15038,9 @@
     "controller": "api/v1/accounts/crm/cards#move",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:134",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:136",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:138",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:140",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": false
   },
@@ -14832,8 +15048,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#reset_auto_followup",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:245",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:249",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": true
   },
@@ -14847,9 +15063,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#restore",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:169",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:170",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:173",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:174",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": false
   },
@@ -14857,8 +15073,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#summarize",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:225",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:229",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": true
   },
@@ -14866,8 +15082,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/cards#unlink_contact",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:210",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:214",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": true
   },
@@ -14881,9 +15097,9 @@
     "controller": "api/v1/accounts/crm/cards#unlink_conversation",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:195",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:196",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:199",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:200",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": false
   },
@@ -15032,11 +15248,11 @@
     },
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:102",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:571",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:545",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:422",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:420"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:106",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:575",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:549",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:426",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:424"
     ],
     "sem_corpo": false
   },
@@ -15563,6 +15779,148 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/meta_ads_connection/ads": {
+    "campos": {
+      "age_max": {},
+      "age_min": {},
+      "cards": {
+        "campos": {
+          "hash": {},
+          "image_hash": {},
+          "kind": {},
+          "video_id": {}
+        },
+        "tipo": "objeto"
+      },
+      "daily_amount": {},
+      "destination": {},
+      "end_date": {},
+      "headline": {},
+      "idempotency_key": {},
+      "kind": {},
+      "media": {
+        "campos": {
+          "hash": {},
+          "image_hash": {},
+          "kind": {},
+          "video_id": {}
+        },
+        "tipo": "objeto"
+      },
+      "name": {},
+      "page_id": {},
+      "placement": {},
+      "post_id": {},
+      "post_source": {},
+      "ready_message": {},
+      "recreate_unconfirmed": {},
+      "region": {},
+      "site_action": {},
+      "site_url": {},
+      "special_category": {},
+      "start_date": {},
+      "states": {
+        "tipo": "lista"
+      },
+      "text": {},
+      "whatsapp_number": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#create",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:44",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:73"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply": {
+    "campos": {
+      "content": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "motivos": [
+      "leitura crua sem tipo: content (repassada a comments.reply!)"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:101",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/meta_ads_facebook_comments_controller.rb:39"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/hide": {
+    "campos": {
+      "hidden": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#hide",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:45",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:46",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/private_reply": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#private_reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:60",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/private_reply/release": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#release_private_reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/instagram_comments/:comment_id/reply": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_instagram_comments#reply",
+    "modelo": "Crm::MetaAdsConnection",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:39",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:123",
+      "app/controllers/api/v1/accounts/crm/meta_ads_instagram_comments_controller.rb:94"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/ads/:ad_id/status": {
     "campos": {
       "status": {
@@ -15573,6 +15931,7 @@
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#status",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:27",
+      "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:82",
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:29",
       "app/controllers/api/v1/accounts/crm/meta_ads_ad_management_controller.rb:28"
     ],
@@ -15641,6 +16000,21 @@
     ],
     "sem_corpo": true
   },
+  "POST crm/meta_ads_connection/media": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#media",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:37",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:38"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/quote_message": {
     "campos": {
       "card_id": {
@@ -15672,6 +16046,10 @@
           "facebook_login"
         ]
       },
+      "no_site": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
       "pixel_id": {
         "tipo": "string"
       }
@@ -15681,8 +16059,32 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:140",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:142",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:141",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:202"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:203"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/site_pages": {
+    "campos": {
+      "allowed_origins": {
+        "tipo": "lista"
+      },
+      "inbox_id": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "inteiro"
+      },
+      "name": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_site_pages#create",
+    "modelo": "Ctwa::TrackedLink",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_site_pages_controller.rb:22",
+      "app/controllers/api/v1/accounts/crm/meta_ads_site_pages_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -15697,9 +16099,9 @@
     "controller": "api/v1/accounts/crm/meta_ads_connections#suggest_stages",
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:177",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:181",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:180"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:178",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:182",
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:181"
     ],
     "sem_corpo": false
   },
@@ -15709,6 +16111,37 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_whatsapp_reports_controller.rb:39"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/meta_ads_lead_forms/forms/:form_id/bring_past": {
+    "campos": {
+      "pipeline_id": {
+        "tipo": "inteiro"
+      },
+      "stage_id": {
+        "tipo": "inteiro"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#bring_past",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:161",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:113",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_lead_forms/pages/:page_id/receive": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#receive",
+    "modelo": "Crm::Pipeline",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:36",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:38",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:37"
     ],
     "sem_corpo": true
   },
@@ -16483,8 +16916,8 @@
       "leitura crua sem tipo: ctwa_tracked_link"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:17",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:12",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:47"
     ],
     "sem_corpo": false
   },
@@ -16615,6 +17048,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "desempenho_view",
           "campaign_view",
           "campaign_manage",
           "campaign_send",
@@ -16634,6 +17068,8 @@
           "whatsapp_templates_manage",
           "meta_ads_view",
           "meta_ads_manage",
+          "posts_view",
+          "posts_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -16656,8 +17092,8 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:14",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:19",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -17984,10 +18420,10 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:30",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:102",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:106",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:82",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76"
     ],
     "sem_corpo": false
   },
@@ -18002,35 +18438,48 @@
       "leitura crua sem tipo: file (repassada a manager.upload)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:43",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:46",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:44",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:47",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:45",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:82"
     ],
     "sem_corpo": false
   },
   "POST instagram/authorization": {
     "campos": {
+      "ad_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
       "inbox_id": {
         "tipo": "id",
         "tipo_pela_leitura": "nome"
       },
+      "purpose": {},
       "return_to": {},
       "tester_authorization_attestation": {},
       "tester_selection_token": {}
     },
-    "completo": true,
+    "completo": false,
     "controller": "api/v1/accounts/instagram/authorizations#create",
     "modelo": "Inbox",
+    "motivos": [
+      "leitura crua sem tipo: purpose (repassada a REAUTH_PURPOSES.[])"
+    ],
     "origem": [
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:9",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:54",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:72",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:96",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:15",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:14",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:13",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:60",
-      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:59",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:89",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:87",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:62",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:56",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:71",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:83",
+      "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:70",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:52",
       "app/controllers/api/v1/accounts/instagram/authorizations_controller.rb:43"
     ],
@@ -19238,6 +19687,97 @@
     "origem": [
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:9",
       "enterprise/app/controllers/api/v1/accounts/saml_settings_controller.rb:39"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/comments/:comment_id/hide": {
+    "campos": {
+      "hidden": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#hide",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:73",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:74",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/comments/:comment_id/private_reply": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#private_reply",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:57",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:181",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/comments/:comment_id/private_reply/release": {
+    "campos": {
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#release_private_reply",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:65",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
+  "POST seus_posts/posts/:post_id/comments/:comment_id/reply": {
+    "campos": {
+      "content": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_comentarios#reply",
+    "modelo": "Channel::Instagram",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:51",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:181",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
     ],
     "sem_corpo": false
   },
@@ -23856,9 +24396,9 @@
     "envelope": "card",
     "modelo": "Crm::Card",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:113",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:635",
-      "app/controllers/api/v1/accounts/crm/cards_controller.rb:402"
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:117",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:639",
+      "app/controllers/api/v1/accounts/crm/cards_controller.rb:406"
     ],
     "sem_corpo": false
   },
@@ -24086,7 +24626,36 @@
     "modelo": "Crm::MetaAdsConnection",
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
-      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:271"
+      "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:272"
+    ],
+    "sem_corpo": false
+  },
+  "PUT crm/meta_ads_lead_forms/forms/:form_id/destination": {
+    "campos": {
+      "import_past": {
+        "tipo": "booleano",
+        "tipo_pela_leitura": "uso"
+      },
+      "pipeline_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      },
+      "stage_id": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "inteiro"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_lead_forms#save_destination",
+    "modelo": "Crm::Card",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:161",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:118",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:51",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:105",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:113",
+      "app/controllers/api/v1/accounts/crm/meta_ads_lead_forms_controller.rb:112"
     ],
     "sem_corpo": false
   },
@@ -24904,9 +25473,9 @@
       "leitura crua sem tipo: ctwa_tracked_link"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:26",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:52",
-      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:48"
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:21",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:47",
+      "app/controllers/api/v1/accounts/ctwa_tracked_links_controller.rb:43"
     ],
     "sem_corpo": false
   },
@@ -25020,6 +25589,7 @@
           "knowledge_base_view",
           "autonomia_view",
           "autonomia_manage",
+          "desempenho_view",
           "campaign_view",
           "campaign_manage",
           "campaign_send",
@@ -25039,6 +25609,8 @@
           "whatsapp_templates_manage",
           "meta_ads_view",
           "meta_ads_manage",
+          "posts_view",
+          "posts_manage",
           "label_manage",
           "attribute_manage",
           "macro_manage",
@@ -25061,9 +25633,9 @@
     "envelope": "custom_role",
     "modelo": "CustomRole",
     "origem": [
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:21",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:62",
-      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:95"
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:29",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:76",
+      "enterprise/app/controllers/api/v1/accounts/custom_roles_controller.rb:111"
     ],
     "sem_corpo": false
   },
@@ -25628,11 +26200,11 @@
     "modelo": "Crm::Card",
     "origem": [
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:34",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:85",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:89",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:102",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:106",
       "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:35",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:69",
-      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:63"
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:82",
+      "app/controllers/api/v1/accounts/inboxes/whatsapp_templates_controller.rb:76"
     ],
     "sem_corpo": false
   },

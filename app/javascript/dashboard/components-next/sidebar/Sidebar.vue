@@ -30,6 +30,7 @@ import {
   SLA_MANAGE_PERMISSION,
   META_ADS_VIEW_PERMISSION,
   META_ADS_MANAGE_PERMISSION,
+  POSTS_PERMISSIONS,
 } from 'dashboard/constants/permissions.js';
 import { canViewRelationshipRecordsFrom } from 'dashboard/composables/useRelationshipPermissions';
 
@@ -143,6 +144,10 @@ const whatsappApiCampaignsEnabled = computed(
 // (#2070; a função guarda só a chave mais alta).
 const metaAdsHubEnabled = computed(() =>
   isFeatureEnabledonAccount.value(accountId.value, FEATURE_FLAGS.META_ADS_HUB)
+);
+// Seus posts (#2302): por conta, flag seus_posts. Vê o item o administrador ou quem tem posts_view/posts_manage.
+const seusPostsEnabled = computed(() =>
+  isFeatureEnabledonAccount.value(accountId.value, FEATURE_FLAGS.SEUS_POSTS)
 );
 
 const crmKanbanEnabled = computed(
@@ -1113,6 +1118,18 @@ const menuItems = computed(() => {
         },
       ],
     },
+    ...(seusPostsEnabled.value &&
+    (isAdministrator.value || hasAnyPermission(POSTS_PERMISSIONS))
+      ? [
+          {
+            name: 'SeusPosts',
+            label: t('SEUS_POSTS.TITLE'),
+            icon: 'i-lucide-layout-grid',
+            to: accountScopedRoute('seus_posts_index'),
+            activeOn: ['seus_posts_index'],
+          },
+        ]
+      : []),
     {
       name: 'Campaigns',
       label: t('SIDEBAR.CAMPAIGNS'),
@@ -1383,6 +1400,14 @@ const menuItems = computed(() => {
           label: t('SIDEBAR.CUSTOM_ROLES'),
           icon: 'i-lucide-shield-plus',
           to: accountScopedRoute('custom_roles_list'),
+          // Com funcoes_guiadas ligada, a lista nova (#2308) e a conversa guiada ficam marcadas no menu. Nomes de
+          // listaPelaFlag.js, escritos aqui porque importar aquele arquivo traz a store para o menu.
+          activeOn: [
+            'funcoes_equipe_list',
+            'funcoes_equipe_new',
+            'funcoes_equipe_edit',
+            'funcoes_equipe_duplicate',
+          ],
         },
         {
           name: 'Conversation Workflow',

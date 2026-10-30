@@ -94,8 +94,15 @@ class Facebook::SendOnFacebookService < Base::SendOnChannelService
     merge_human_agent_tag(params)
   end
 
+  # Uma decisão por mensagem (#2259): texto e cada anexo saem com a mesma tag, sem refazer as consultas.
+  def human_agent_tag?
+    return @human_agent_tag if defined?(@human_agent_tag)
+
+    @human_agent_tag = Meta::HumanAgentTag.apply?(message, 'ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT')
+  end
+
   def merge_human_agent_tag(params)
-    unless GlobalConfigService.load('ENABLE_MESSENGER_CHANNEL_HUMAN_AGENT', nil)
+    unless human_agent_tag?
       params[:messaging_type] = 'RESPONSE'
       return params
     end

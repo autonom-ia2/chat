@@ -29,3 +29,22 @@ pt_BR:
   email_campaigns:
     ai:
       vocabulario: 'Ramo da conta: seguros. Fale de seguro, apólice, cobertura e renovação em linguagem simples; segurado só para quem já tem apólice; cliente só para quem já comprou.'
+  # Painel de desempenho do agente (#2226): o PDF e a planilha dizem "não fechou", nunca "perda".
+  autonomia:
+    desempenho2:
+      c:
+        kpi:
+          perdas_evitaveis: 'Não fecharam por causa corrigível'
+        secoes:
+          perdas: 'o que não fechou'
+        indice:
+          perdas: 'Não fecharam'
+        perdas:
+          titulo: 'Não fecharam por causa corrigível'
+          por_que_descricao: 'Cada procura que não fechou, pela causa principal.'
+        tabelas:
+          tabela_perdas:
+            titulo: 'Não fecharam por causa corrigível'
+        planilha:
+          procura:
+            perda: 'Não fechou, dava para evitar'

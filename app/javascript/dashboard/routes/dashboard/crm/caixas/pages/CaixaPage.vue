@@ -302,7 +302,11 @@ const salvar = async () => {
 
         <template v-else>
           <header class="flex items-center gap-3">
-            <CaixaIcone :canal="form.inbox.channel_type" grande />
+            <CaixaIcone
+              :canal="form.inbox.channel_type"
+              :caixa-id="form.inbox.id"
+              grande
+            />
             <h1
               class="mb-0 min-w-0 truncate text-2xl font-bold tracking-tight text-n-slate-12 md:text-3xl"
             >

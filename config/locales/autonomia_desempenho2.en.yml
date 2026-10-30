@@ -1,0 +1,482 @@
+en:
+  autonomia:
+    desempenho2:
+      api:
+        formato_invalido: The file is available as PDF or spreadsheet (xlsx).
+        sem_leitura: This agent has no read conversations for the panel yet.
+      c:
+        sem_nome: No name
+        agente: the AI agent
+        vazio: Nothing in this period.
+        sim: "yes"
+        nao: "no"
+        conversa: "Conversation #%{numero} · %{quando}"
+        dias: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+        dias_curtos: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+        formato:
+          milhar: ","
+          decimal: "."
+          segundos: "%{n} s"
+          minutos: "%{n} min"
+          minutos_e_segundos: "%{m} min %{s} s"
+          horas: "%{n} h"
+          fuso_da_conta: "your account's time zone (%{fuso})"
+          lista:
+            virgula: ", "
+            dois: " and "
+            ultimo: ", and "
+          periodo: "%{inicio} to %{fim}"
+          intervalo: "%{inicio} to %{fim}"
+          duracao_dias:
+            one: "%{n} day"
+            other: "%{n} days"
+          duracao_meses:
+            one: "%{n} month"
+            other: "%{n} months"
+        grupos:
+          fechou: Closed
+          avancou: Moved forward
+          parou: Stopped
+          resolveu: Solved
+          passou: Handed to a person
+          sem_negocio: No business
+        secoes:
+          kpis: the numbers
+          funil: the funnel
+          temas: the topics
+          cortes: what was asked
+          origem: the origin
+          horarios: the hours
+          qualidade: the quality of the answers
+          pessoa: the hand-off to a person
+          quem: who reaches out
+          perdas: the losses
+          acoes: the suggestions
+          confianca: the check (“How much to trust”)
+          ticket: the typical value of a sale
+        avisos:
+          dia_parcial: "The last day (%{dia}) is still in progress."
+          so_periodo_todo: "This part uses the whole period: %{secoes}."
+          pouco_dado: Little data in this period. Read the numbers with care.
+          instrucao_mudou: "The AI instruction changed on %{data}. Before and after don't compare directly."
+          lido_por_amostra: We read a sample of the conversations in this period.
+          sem_anuncio: This account has no ads connected.
+          leitura_teto: The last automatic reading stopped at the daily AI spending limit. The rest goes into the next reading.
+          leitura_sem_ia: The automatic reading is not working on this account because the AI key is not connected.
+          leitura_chave_recusada: The AI rejected this account's key. The automatic reading only comes back after the key is checked.
+          leitura_erro: The last automatic reading stopped because of an error. The numbers show what was already read.
+          leitura_pendentes: "Conversations waiting for the next AI reading: %{n}. The numbers stop before them."
+          leitura_nao_lidas: "Conversations the AI could not read: %{n}. If they were read before, their numbers come from that reading; if they never were, they are left out."
+          leitura_instrucao: The agent's instruction changed after the reading was set up. The AI keeps reading with the old criteria until support updates the reading.
+        kpi:
+          procuras: Requests
+          conversas: Conversations
+          compra: Purchase requests
+          fecharam: Closed
+          duvidas_resolvidas: Questions solved
+          sem_pessoa: Left without a person
+          perdas_evitaveis: Sales lost to a fixable cause
+          tempo_resposta: "Time for %{nome} to reply"
+        kpi_explicacao:
+          procuras: Real requests. A conversation can have several. Tests excluded.
+          conversas: Different people who wrote in the period
+          compra: "%{pct} of requests · %{explicacao}"
+          fecharam: "%{pct} of %{m} · %{composicao}"
+          duvidas_resolvidas: "%{n} of %{m} questions, without needing a person"
+          sem_pessoa: "of %{m} who needed someone from the team"
+          perdas_evitaveis: "%{pct} of %{m} %{compra}"
+          tempo_resposta: "9 in 10 within %{p90}"
+        delta:
+          mais: "▲ %{n} more than the previous period"
+          menos: "▼ %{n} fewer than the previous period"
+          igual: Same as the previous period
+          pontos_mais: "▲ %{n} points more than the previous period"
+          pontos_menos: "▼ %{n} points less than the previous period"
+        leituras:
+          volume_titulo: Volume
+          volume: "%{nome} sent %{agente} messages and the team, %{equipe}, in %{conversas} conversations. Team members who write through %{nome}'s account count as %{nome}."
+          trava_titulo: Biggest blocker
+          trava: "%{nome}: %{n} of %{base} %{compra} (%{pct})."
+          sem_trava: No stalled purchase request in this period.
+          decisao_titulo: Where to start
+          decisao: "%{titulo}."
+          decisao_com_ganho: "%{titulo}. Estimated gain: %{ganho}."
+        indice:
+          evolucao: Trend
+          funil: Funnel
+          temas: Topics
+          origem: Origin
+          horarios: Hours
+          qualidade: Quality
+          pessoa: Person and who
+          perdas: Losses
+          acoes: Actions
+          como_ler: How to read
+          tabelas: Tables
+        pdf:
+          desempenho: Performance
+          marca: Chat2You
+          cabecalho_direita: "%{periodo} · Data up to %{dados_ate}"
+          rodape_marca: "%{marca} · Performance dashboard"
+          rodape_fonte: "Source: reading of the conversations"
+          rodape_pagina: "Page %{n} of %{total}"
+        capa:
+          titulo: Period summary
+          subtitulo: "The main numbers, what they mean and where to find each part in this file. Dates and times in %{fuso}."
+          indice: In this file
+          so_no_excel: The list of every request, one per row, is only in the spreadsheet (Excel).
+        evolucao:
+          titulo: How activity changed
+          subtitulo_dia: Per day. The dots below show when each thing happened, on the same scale.
+          subtitulo_semana: Per week. The dots below show when each thing happened, on the same scale.
+          procuras: Requests
+          total: Requests in the period
+          pico_dia: "Peak · day %{data}"
+          pico_semana: "Peak · week of %{data}"
+          media_dia: Average per day
+          media_semana: Average per week
+          evento_fecharam: Closed
+          evento_pessoa: Handed to a person
+          evento_sem_pessoa: Left without a person
+          parcial_dia: "* day still in progress"
+          parcial_semana: "* week still in progress"
+        funil:
+          titulo: How far requests get
+          subtitulo: A request counts in a step if it reached it. Below, why the last step and the result do not match, and what changes the result.
+          do_inicio: "%{pct} of the start"
+          da_anterior: "%{pct} of the previous step"
+          conciliacao: "Why “%{etapa}” (%{a}) and “%{fechou}” (%{b}) are not the same number: %{partes}."
+          conciliacao_nao_fecharam:
+            one: "%{n} reached this step and did not end in “%{fechou}”"
+            other: "%{n} reached this step and did not end in “%{fechou}”"
+          conciliacao_fora:
+            one: "%{n} ended in “%{fechou}” without this step"
+            other: "%{n} ended in “%{fechou}” without this step"
+          conciliacao_igual: "“%{etapa}” and “%{fechou}” give the same number in this period."
+          sem_comparar: Too few cases to compare
+          comparacoes_titulo: What changes the result
+          comparacoes_descricao: They show up together; it does not mean one caused the other.
+          n_de_m: "%{n} of %{m} close"
+          vezes: "%{n}× more"
+          igual: Same
+          pontos_a_mais: "%{n} points more"
+          pontos_a_menos: "%{n} points less"
+          recorte:
+            marco: By step
+            horario: By time
+            origem: By origin
+            quem: By who reaches out
+            outro: Other cut
+        temas:
+          titulo: What people talk about and what they asked for
+          subtitulo: Each bar shows how many requests and, below, how many closed.
+          temas_titulo: What people talk about
+          temas_descricao: Each request has one main topic.
+          corte_descricao: Request detail, with how much closed.
+          unidade: "Unit: requests. Each request has one main topic."
+          fecharam: "%{pct} %{fechou} (%{n} of %{m})"
+          fecharam_poucos: "%{fechou}: %{n} of %{m} (few cases)"
+          erro_grave: "%{pct} serious mistakes"
+          mais_trava: "main blocker: %{nome}"
+          trava_geral: the most common in the period
+          mais_que_antes: "▲ %{n} more than before"
+          menos_que_antes: "▼ %{n} fewer than before"
+          igual_antes: same as before
+        origem:
+          titulo: Where requests come from
+          subtitulo: The origin is what we know about each request. Same math on both sides.
+          como_chegaram: How they arrived
+          fecham: "%{pct} %{fechou} (%{n} of %{m})"
+          fecham_poucos: "%{fechou}: %{n} of %{m} (few cases)"
+          sem_anuncio_frase: This account has no ads connected. Everything here arrived without an ad.
+          veio_de_anuncio: Came from an ad
+          chegou_sem_anuncio: Arrived without an ad
+          lado_procuras: "%{n} requests · %{pct}"
+          lado_compra: "%{compra} %{nome} · %{fecharam} closed"
+          lado_taxa: "%{pct} close"
+          vezes: "%{n}×"
+          por_anuncio: By ad
+          sem_anuncio_como: Without an ad, how they arrived
+          sem_saber_qual: "Came from an ad, unknown which: %{n}"
+          fecharam: "%{n} closed"
+          custo_por_fechou: "%{valor} per close"
+          direct: Ads that open Instagram Direct don't show up here yet.
+        horarios:
+          titulo: When requests arrive
+          subtitulo: Day of the week and hour. The numbers inside the cells replace hovering with the mouse.
+          pico: "Peak · %{dia} %{hora}h"
+          total: Total
+          fora_do_horario: Outside business hours
+          menos: Less
+          mais: "More · max %{maximo}"
+          faixa: When
+          sem_pessoa: Left without a person
+          comercial: "Business hours: %{dias}, %{inicio}h to %{fim}h"
+          faixas:
+            dentro: During business hours
+            fora: Outside business hours
+            fim_de_semana: Weekend
+            noite: Evening (6pm to 11pm)
+        qualidade:
+          titulo: "How %{nome} serves"
+          subtitulo: "In each request: whether %{nome} got it right, how long it takes to reply and which rules it breaks most."
+          como_atuou: "How %{nome} handled it"
+          como_atuou_descricao: "Base: %{n} requests where %{nome} acted. “Did not act” is outside the base."
+          fora_da_base: outside the base
+          acertou: Got it right
+          erro_leve: Minor error
+          erro_grave: Serious error
+          nao_atuou: Did not act
+          mediana: Typical reply (half reply faster)
+          nove_em_dez: 9 in 10 replied within
+          acima_5_min: Replies over 5 min
+          mensagens_por_mensagem: "Messages from %{nome} for each message from the person"
+          otimista: "These numbers came out optimistic in the check (%{pct} correct). Real errors are higher."
+          regras_titulo: Most broken rules
+          regras_descricao: "How many requests broke each rule of the instruction of %{nome}."
+          sistemica: Half or more
+          pontos_fortes: Strengths
+          piores: Where it errs most
+          frase_acerto: "%{acerto} correct in %{procuras} requests"
+          frase_erro: "%{erro} serious errors in %{procuras} requests"
+        pessoa:
+          titulo: Hand-off to a person and who reaches out
+          subtitulo: Who needed someone from the team, whether they got one, and who the people reaching out are.
+          precisavam: Needed a person
+          tiveram: Got a person
+          ficaram_sem: Left without a person
+          sem_valor: "%{n} (%{pct})"
+          n_de_m: "%{n} of %{m}"
+          prometeu: Promised a hand-off and nobody came
+          sobre_o_que: What it was about
+          como_terminou: How it ended
+          fora_do_horario: "%{n} of them arrived outside business hours."
+          quem_titulo: Who reaches out
+          quem_descricao: How much each group closes.
+          fecham: "%{pct} %{fechou} (%{n} of %{m})"
+          fecham_poucos: "%{fechou}: %{n} of %{m} (few cases)"
+          conta_do_agente: "Team members who write through %{nome}'s account count as %{nome}, not as the team."
+          concentracao: Concentration
+          com_compra: "conversations with %{compra}"
+          com_fechamento: conversations closed something
+          uma_vez: conversations with a single request
+          top10: of purchase requests come from the 10 conversations that ask the most
+        perdas:
+          titulo: Sales lost to a fixable cause
+          subtitulo: Requests that stopped because of something the business can fix. Beside it, where all requests get stuck.
+          parte: "%{pct} of %{m} %{compra}"
+          explicacao: Does not count people who gave up over price or were only browsing.
+          por_que: Why
+          por_que_descricao: A loss can have more than one reason.
+          exemplos: Examples
+          onde_travam: Where all requests get stuck
+          onde_travam_descricao: "Reasons noted while reading. The base here is different (all requests, not only %{compra}), so the number does not match the “Biggest blocker” at the top. A request can have more than one."
+          base_motivos: "Base: %{n} of %{m} requests with a noted reason. A request can have more than one."
+        acoes:
+          titulo: From signal to action
+          subtitulo: Each suggestion brings the number and the conversations that prove it. The gain is an estimate.
+          subtitulo_de_outras_datas: "Suggestions from %{inicio} to %{fim}. Each brings the number and the conversations that prove it."
+          a_prova: The proof
+          o_que_mudar: What to change
+          na_instrucao: "In the instruction: %{texto}"
+          no_sistema: "In the system: %{texto}"
+          na_equipe: "In the team: %{texto}"
+          ganho_sem_conta: not possible to estimate yet
+          ganho_no_periodo: "%{ganho} in %{duracao} (%{inicio} to %{fim})"
+          ganho_do_historico: "not enough data in this period yet; in the full history (%{duracao}, %{inicio} to %{fim}): %{ganho}"
+          ganho: "Estimated gain: %{texto}"
+          ganho_fechamentos:
+            one: "≈ %{n} sale"
+            other: "≈ %{n} sales"
+          ganho_valor: "≈ %{valor}"
+          como_calculamos: "How we calculated: %{conta}"
+          ja_da: Ready to use
+          falta_dado: Needs more data
+          frente:
+            instrucao: "Teach %{nome}"
+            sistema: Tools and system
+            equipe: Team
+            anuncio: Ads and follow-up
+        como_ler:
+          titulo: How to read this dashboard
+          subtitulo: What each number measures, what it does not prove and how much to trust it.
+          como_ler: How to read
+          nao_provam: What these numbers do not prove
+          ressalva_do_campo: "%{campo} · %{leitura} reading (%{pct} correct in the check): %{nota}"
+          testes: "Team tests are excluded (%{n})."
+          quanto_confiar: How much to trust
+          conferimos: "We checked %{n} requests by reading the whole conversation."
+          campo: Field
+          acertos: Correct
+          acerto: "% correct"
+          leitura_coluna: Reading
+          certos: "%{n} of %{m}"
+          leitura:
+            firme: Solid
+            otimista: Optimistic
+            fraca: Weak
+          nao_prova:
+            assunto: A topic is not the reason for buying. It shows what is talked about, not why people buy.
+            venda_fora: We only know what shows up in the conversation. A sale closed elsewhere does not show up.
+            anuncio: We only count people who came from an identified ad.
+            audio: Audio without transcription and images without reading were not read.
+            andamento: Conversations still in progress are left out until they end.
+        tabelas:
+          procuras: Requests
+          conversas_novas: New conversations
+          pct_fechou: "% closed"
+          precisavam: Needed a person
+          tiveram: Got a person
+          com_anuncio: With ad
+          sem_anuncio: Without ad
+          total_do_trecho: Total of this page
+          do_total: "% of total"
+          tema: Topic
+          acerto: "%{nome} got it right"
+          erro_grave: Serious error
+          mais_trava: Main blocker
+          vs_anterior: Vs. previous period
+          regra: Rule
+          quase_sempre: Half or more
+          exemplo: Example
+          quando: When
+          conversa: Conversation
+          por_que: Why
+          como_terminou: How it ended
+          motivos: Reasons
+          resumo: Summary
+          primeiro: First contact
+          ultimo: Last contact
+          tema_frequente: Most frequent topic
+          unidade:
+            dia: Day
+            semana: Week
+          unidade_no_texto:
+            dia: day
+            semana: week
+          tabela_periodo:
+            titulo: Numbers by period
+            subtitulo: "One row per %{unidade}, with the total of each page."
+          tabela_tema:
+            titulo: Numbers by topic
+            subtitulo: "Requests, how much closed and how often %{nome} got it right in each topic."
+          tabela_regras:
+            titulo: Broken rules
+            subtitulo: Each rule of the instruction, how often it was broken and an example.
+          tabela_perdas:
+            titulo: Sales lost to a fixable cause
+            subtitulo: One row per request, with the reason.
+            so_as_primeiras: "Showing the first %{n} of %{total}. The full list is in the spreadsheet (Excel)."
+          tabela_ativas:
+            titulo: Conversations that ask the most
+            subtitulo: "The 20 conversations with the most purchase requests add up to %{pct} of purchase requests."
+        planilha:
+          contexto: "%{agente} · %{periodo} · data up to %{dados_ate}"
+          resumo_titulo: "Performance dashboard · %{agente}"
+          recomendacoes_de: "suggestions from %{inicio} to %{fim}"
+          nota_grupo: "The Group column includes closings outside %{compra}. To match the summary, also filter %{compra} = yes."
+          nota_fixos: Conversations, response time and messages are period values (not a simple sum of the rows).
+          taxa_fechou: "% that closed"
+          testes_fora: Team tests (left out of the math)
+          testes_ficam_fora: "Team tests are left out of every number (%{n})."
+          mensagens_pessoas: Messages from people
+          mensagens_agente: "Messages from %{nome}"
+          mensagens_equipe: Team messages
+          os_numeros: The dashboard numbers
+          leituras: Quick reads
+          definicoes: Definitions
+          total: Total
+          inicio: Start
+          fim: End
+          observacao: Note
+          por_periodo_titulo: "Numbers per %{unidade}"
+          por_tema_titulo: Numbers by topic
+          periodo_anterior: Requests in the previous period
+          diferenca: Difference
+          funil_titulo: How far requests get
+          etapa: Step
+          do_inicio: "% of the start"
+          da_anterior: "% of the previous step"
+          origem_titulo: Where requests come from
+          grupo: Origin
+          tipo: Type
+          pct_fecham: "% close"
+          anuncios_titulo: By ad
+          anuncio: Ad
+          campanha: Campaign
+          gasto: Spend
+          custo_por_fechou: Cost per close
+          horarios_titulo: "Requests by day of the week and hour · times in %{fuso}"
+          dia: Day
+          faixas_titulo: When it arrives and when it closes
+          procuras_titulo: Every request in the period (no tests)
+          regras_titulo: Broken rules
+          descricao: Description
+          exemplo_conversa: Example
+          exemplo_resumo: Example summary
+          recomendacoes_titulo: From signal to action
+          ganho_periodo: "%{duracao} (%{inicio} to %{fim})"
+          ganho_periodo_historico: "Not enough data in this period yet. Full history: %{duracao} (%{inicio} to %{fim})"
+          como_ler_titulo: How to read and how much to trust
+          certos: Correct
+          afeta: Where it matters
+          tipo_origem:
+            anuncio: Came from an ad
+            sem_anuncio: Without an ad
+          pronto:
+            ja_da: Ready to use
+            falta_dado: Needs more data
+          perdas_titulo: Sales lost to a fixable cause (full list)
+          cortes_titulo: Request details
+          corte: Detail
+          valor_do_corte: Answer
+          abas:
+            resumo: Summary
+            perdas: Lost sales
+            cortes: Request details
+            por_dia: Per day
+            por_semana: Per week
+            por_tema: By topic
+            funil: Funnel
+            origem: Origin
+            anuncios: Ads
+            horarios: Hours
+            procuras: Requests
+            regras: Broken rules
+            recomendacoes: Suggestions
+            como_ler: How to read
+          procura:
+            quando: When
+            conversa: Conversation
+            procura: Request
+            tema: Topic
+            marco: How far it got
+            marcos: Milestones
+            resultado: How it ended
+            grupo: Group
+            motivos: Reasons
+            qualidade: "How %{nome} did"
+            regras: Broken rules
+            quem: Who
+            origem: Origin
+            anuncio: Ad
+            perda: Avoidable loss
+            precisava: Needed a person
+            teve: Got a person
+            compra: Purchase request
+            resumo: Summary
+          recomendacao:
+            titulo: Suggestion
+            frente: Area
+            problema: Problem
+            numeros: Numbers
+            conversas: Conversations
+            instrucao: In the instruction
+            sistema: In the system
+            equipe: In the team
+            ganho_fechamentos: Gain (sales)
+            ganho_valor: Gain (value)
+            ganho_periodo: Period of the gain
+            conta: How we calculated
+            pronto: Ready?
+            falta: What is missing

@@ -78,6 +78,11 @@ module Events::Types
   CRM_FOLLOW_UP_DUE = 'crm.follow_up.due'
   # leitura do gasto de hoje dos anúncios da Meta terminou (#1073) — a tela troca os números
   CRM_META_ADS_INSIGHTS_UPDATED = 'crm.meta_ads.insights_updated'
+  # comentário novo num post da Meta, Instagram (#2196) ou Página (#2197), para quem cuida dos comentários (#2212).
+  # Payload só com ids (#2327): network, account_id, inbox_id, instagram_id|page_id, media_id|post_id, ad_id, comment_id,
+  # parent_id, from_id, created_time. O texto e o nome de quem comentou ficam fora (o payload vai aos argumentos do
+  # EventDispatcherJob, no Redis e no log): quem consome lê na Graph. Ninguém grava o comentário (dado de terceiro).
+  META_ADS_COMMENT_RECEIVED = 'meta_ads.comment_received'
 
   # geração de e-mail por IA (assíncrona) concluída/falhou — toast + selo na lista
   EMAIL_CAMPAIGN_AI_READY = 'email_campaign.ai.ready'

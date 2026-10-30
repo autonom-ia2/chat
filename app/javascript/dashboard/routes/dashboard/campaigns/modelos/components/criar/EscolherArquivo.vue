@@ -23,15 +23,27 @@ const MB = 1024 * 1024;
 const LIMITES = {
   'image/jpeg': { maximo: 5 * MB, tipo: 'foto' },
   'image/png': { maximo: 5 * MB, tipo: 'foto' },
-  'video/mp4': { maximo: 16 * MB, tipo: 'video' },
+  // Vídeo .mp4 ou .mov de qualquer formato: o servidor converte para o que o
+  // WhatsApp entrega (H.264, até 16 MB) antes de subir (#2370).
+  'video/mp4': { maximo: 100 * MB, tipo: 'video' },
+  'video/quicktime': { maximo: 100 * MB, tipo: 'video' },
   'application/pdf': { maximo: 100 * MB, tipo: 'documento' },
 };
 
+// Sistema sem o tipo do .mov registrado (Windows) manda o tipo vazio: vale a
+// extensão. O servidor confere de novo pelos bytes.
+const PELA_EXTENSAO = { mp4: 'video/mp4', mov: 'video/quicktime' };
+const tipoDo = arquivo =>
+  arquivo.type ||
+  PELA_EXTENSAO[arquivo.name.split('.').pop().toLowerCase()] ||
+  '';
+
 const problemaDo = (arquivo, aceita) => {
   const tipos = aceita.split(',');
-  const limite = LIMITES[arquivo.type];
+  const tipo = tipoDo(arquivo);
+  const limite = LIMITES[tipo];
   const tipoAceito = LIMITES[tipos[0]]?.tipo || 'foto';
-  if (!tipos.includes(arquivo.type) || !limite) {
+  if (!tipos.includes(tipo) || !limite) {
     return t(`MODELOS_WHATSAPP.EXTRAS.ARQUIVO_ERRADO.${tipoAceito}`);
   }
   if (arquivo.size > limite.maximo) {

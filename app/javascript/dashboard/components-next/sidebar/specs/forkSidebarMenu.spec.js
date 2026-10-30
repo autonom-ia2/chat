@@ -581,6 +581,7 @@ const MENU_DE_SEMPRE = [
       'Reports Bot',
     ],
   },
+  { name: 'SeusPosts', children: [] },
   {
     name: 'Campaigns',
     children: [
@@ -652,7 +653,7 @@ describe('camada do fork contra o Sidebar.vue de verdade', () => {
     expect(menu.grupos.map(grupo => [grupo.id, nomes(grupo.itens)])).toEqual([
       ['ATENDER', ['Conversation', 'Inbox', 'Calls', 'Prazos']],
       ['ACOMPANHAR', ['CRM', 'Prospecting', 'Contacts', 'Companies', 'Agenda']],
-      ['CRESCER', ['Campaigns', 'Insurance']],
+      ['CRESCER', ['SeusPosts', 'Campaigns', 'Insurance']],
       ['AUTOMATICO', ['Agents', 'Automacoes']],
       ['RESULTADOS', ['Reports']],
     ]);

@@ -91,7 +91,7 @@ const frase = cartao =>
         class="flex flex-col gap-3 rounded-2xl border border-n-weak bg-n-solid-1 p-5"
       >
         <header class="flex items-start gap-3">
-          <CaixaIcone :canal="cartao.canal" />
+          <CaixaIcone :canal="cartao.canal" :caixa-id="cartao.id" />
           <h5
             class="mb-0 min-w-0 flex-1 truncate pt-2 text-base font-semibold text-n-slate-12"
           >

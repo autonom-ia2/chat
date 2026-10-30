@@ -2,6 +2,7 @@
 import { computed, useSlots, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
+import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { vOnClickOutside } from '@vueuse/components';
 import { useEventListener } from '@vueuse/core';
 
@@ -32,9 +33,10 @@ const isContactSidebarOpen = ref(false);
 
 const contactId = computed(() => route.params.contactId);
 
-const selectedContactName = computed(() => {
-  return props.selectedContact?.name;
-});
+// Nome que é só telefone sai legível na trilha (#2255); só exibição.
+const selectedContactName = computed(() =>
+  nomeDoContatoNaTela(props.selectedContact)
+);
 
 const breadcrumbItems = computed(() => {
   const items = [

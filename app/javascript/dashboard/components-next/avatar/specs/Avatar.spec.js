@@ -45,6 +45,30 @@ describe('Avatar', () => {
       expect(wrapper.find(INITIALS).exists()).toBe(false);
     });
 
+    it('shows the user icon when the name is only a phone number (#2255)', () => {
+      ['+55 11 95555-4444', '5511955554444', '(11) 95555-4444'].forEach(
+        name => {
+          const wrapper = createAvatar({ name });
+          expect(wrapper.find('.i-lucide-user').exists()).toBe(true);
+          expect(wrapper.find(INITIALS).exists()).toBe(false);
+        }
+      );
+    });
+
+    it('drops the "not available" hint when the phone is the name (#2255)', () => {
+      const comTelefone = createAvatar({ name: '+5511955554444' });
+      expect(
+        comTelefone.find('.i-lucide-user').attributes('title')
+      ).toBeUndefined();
+    });
+
+    it('keeps initials for names with digits that are not a phone (#2255)', () => {
+      expect(
+        createAvatar({ name: 'Loja 24 horas' }).find(INITIALS).text()
+      ).toBe('L2');
+      expect(createAvatar({ name: '1234' }).find(INITIALS).text()).toBe('1');
+    });
+
     it('prefers a custom icon over initials', () => {
       const wrapper = createAvatar({ iconName: 'i-lucide-bot' });
 
@@ -67,6 +91,21 @@ describe('Avatar', () => {
 
       expect(wrapper.find('img').exists()).toBe(false);
       expect(wrapper.find(INITIALS).text()).toBe('JD');
+    });
+
+    it('shows the photo of a contact whose name is a phone number (#2255)', () => {
+      const wrapper = createAvatar({ name: '+5511955554444', src: 'foto.png' });
+
+      expect(wrapper.find('img').exists()).toBe(true);
+      expect(wrapper.find('.i-lucide-user').exists()).toBe(false);
+    });
+
+    it('falls back to the user icon, not "+5", when that photo fails (#2255)', async () => {
+      const wrapper = createAvatar({ name: '+5511955554444', src: 'x.png' });
+      await wrapper.find('img').trigger('error');
+
+      expect(wrapper.find('.i-lucide-user').exists()).toBe(true);
+      expect(wrapper.find(INITIALS).exists()).toBe(false);
     });
 
     it('retries when the src changes after a failure', async () => {

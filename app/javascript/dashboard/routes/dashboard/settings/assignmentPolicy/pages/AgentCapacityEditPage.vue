@@ -5,7 +5,7 @@ import { useStore, useMapGetter } from 'dashboard/composables/store';
 import { useRoute, useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
 import camelcaseKeys from 'camelcase-keys';
-import { getInboxIconByType } from 'dashboard/helper/inbox';
+import { getInboxIconByType, tipoDoIconeDaCaixa } from 'dashboard/helper/inbox';
 
 import Breadcrumb from 'dashboard/components-next/breadcrumb/Breadcrumb.vue';
 import SettingsLayout from 'dashboard/routes/dashboard/settings/SettingsLayout.vue';
@@ -64,23 +64,21 @@ const allInboxes = computed(
     inboxes.value
       ?.slice()
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map(
-        ({
+      .map(inbox => {
+        const { name, id, email, phoneNumber, medium, voiceEnabled } = inbox;
+        return {
           name,
           id,
           email,
           phoneNumber,
-          channelType,
-          medium,
-          voiceEnabled,
-        }) => ({
-          name,
-          id,
-          email,
-          phoneNumber,
-          icon: getInboxIconByType(channelType, medium, 'line', voiceEnabled),
-        })
-      ) || []
+          icon: getInboxIconByType(
+            tipoDoIconeDaCaixa(inbox),
+            medium,
+            'line',
+            voiceEnabled
+          ),
+        };
+      }) || []
 );
 
 const formData = computed(() => ({
