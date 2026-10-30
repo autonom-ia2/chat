@@ -111,8 +111,21 @@ export const acaoDoCard = (card, { meuId, podePassar, podeMexer }) => {
 
 const URGENTES = ['responder', 'feito', 'combinar', 'passar', 'ficar'];
 
-// Junta as linhas em grupos, na ordem. Azul cheio só no primeiro cliente meu
-// com ação; contorno no resto. Grupo com 0 no servidor não aparece.
+// A ação de cada linha. Azul cheio só no primeiro cliente meu com ação, na
+// tela inteira; contorno no resto.
+const linhasComAcao = ({ meuId, opcoes }) => {
+  let cheioUsado = false;
+  return cards =>
+    cards.map(card => {
+      const acao = acaoDoCard(card, { meuId, ...opcoes });
+      const cheio =
+        !cheioUsado && ehMeu(card, meuId) && URGENTES.includes(acao);
+      if (cheio) cheioUsado = true;
+      return { card, acao, cheio };
+    });
+};
+
+// Junta as linhas em grupos, na ordem. Grupo com 0 no servidor não aparece.
 export const montarGrupos = ({
   cards,
   contagem,
@@ -121,28 +134,64 @@ export const montarGrupos = ({
   opcoes,
   tomDaLinha,
 }) => {
-  let cheioUsado = false;
+  const comAcao = linhasComAcao({ meuId, opcoes });
   return ORDEM_DOS_GRUPOS.filter(grupo => !grupoSo || grupo === grupoSo)
     .map(grupo => {
       const doGrupo = cards.filter(card => grupoDoCard(card) === grupo);
-      const linhas = doGrupo.map(card => {
-        const acao = acaoDoCard(card, { meuId, ...opcoes });
-        const cheio =
-          !cheioUsado && ehMeu(card, meuId) && URGENTES.includes(acao);
-        if (cheio) cheioUsado = true;
-        return { card, acao, cheio };
-      });
       const vermelho = doGrupo.some(card => tomDaLinha(card) === 'vermelho');
       return {
         chave: grupo,
+        cabecalho: true,
         conta: contagem[grupo] ?? doGrupo.length,
         deAcao: GRUPOS_DE_ACAO.includes(grupo),
         tom: TONS[vermelho ? 'vermelho' : GRUPOS[grupo].tom],
         icone: GRUPOS[grupo].icone,
-        linhas,
+        linhas: comAcao(doGrupo),
       };
     })
     .filter(grupo => grupo.linhas.length && grupo.conta > 0);
+};
+
+// "Organizar por" (#2379) Etapa e Quem cuida: os grupos na ordem em que o
+// servidor manda as linhas (os grupos vêm inteiros); o número e a soma vêm do
+// resumo, nunca do que carregou. As outras ordens: uma lista só, sem cabeçalho.
+export const montarGruposPor = ({
+  cards,
+  chaveDoGrupo,
+  resumo,
+  meuId,
+  opcoes,
+}) => {
+  const comAcao = linhasComAcao({ meuId, opcoes });
+  if (!chaveDoGrupo)
+    return cards.length
+      ? [{ chave: 'todos', cabecalho: false, linhas: comAcao(cards) }]
+      : [];
+  const ordem = [];
+  const porChave = new Map();
+  cards.forEach(card => {
+    const chave = chaveDoGrupo(card) ?? '';
+    if (!porChave.has(chave)) {
+      porChave.set(chave, []);
+      ordem.push(chave);
+    }
+    porChave.get(chave).push(card);
+  });
+  return ordem.map(chave => {
+    const doGrupo = porChave.get(chave);
+    const doResumo = resumo[chave] || {};
+    return {
+      chave,
+      cabecalho: true,
+      conta: doResumo.conta ?? doGrupo.length,
+      soma: doResumo.soma ?? null,
+      moeda: doResumo.moeda || doGrupo[0].currency || 'BRL',
+      rotulo: doResumo.rotulo || '',
+      deAcao: false,
+      tom: TONS.cinza,
+      linhas: comAcao(doGrupo),
+    };
+  });
 };
 
 // Contagem do servidor ({ groups: [{ key, count }] }) → { esperando: 3, … }.

@@ -5,13 +5,16 @@ import {
   POR_PAGINA,
   parametrosDaContagem,
   parametrosDaLista,
+  parametrosDoResumo,
 } from './parametros';
+import { comGrupoDaCarga, resumoPorChave } from './organizar';
 
 // #2283 — os dados da Lista nova: a página de cards (sort=acao), "Mostrar
 // mais" e a contagem dos grupos (summaries?group_by=acao). Tempo real sem
 // pular linha: o card que já está na tela muda no lugar (o grupo fica o que
 // era até "Atualizar"); o que não está soma na faixa "Chegaram N novidades.".
-// Só a contagem recarrega sozinha.
+// Só a contagem recarrega sozinha. Em "Organizar por → Etapa" e "→ Quem cuida"
+// (#2379), o número e a soma de cada grupo vêm de summaries com o mesmo recorte.
 const REALTIME_ACTION = 'crmKanban/handleRealtimeCardEvent';
 const ESPERA_DA_CONTAGEM = 600;
 
@@ -19,6 +22,7 @@ export const useListaAcaoDados = ({ store, estado }) => {
   const cards = ref([]);
   const total = ref(0);
   const contagem = ref({});
+  const resumo = ref({});
   const pagina = ref(1);
   const carregando = ref(false);
   const erro = ref(false);
@@ -43,6 +47,24 @@ export const useListaAcaoDados = ({ store, estado }) => {
     }
   };
 
+  // Sem resumo (outras ordens), nada a pedir; com erro, o grupo mostra o que
+  // carregou e a lista segue funcionando.
+  const atualizarResumo = async () => {
+    const atual = pedido;
+    const params = parametrosDoResumo(estado());
+    if (!params) {
+      resumo.value = {};
+      return;
+    }
+    try {
+      const resposta = await CrmKanbanAPI.cardsGroupSummary(params);
+      if (atual === pedido)
+        resumo.value = resumoPorChave(resposta.data?.payload);
+    } catch {
+      // A soma que já está na tela fica.
+    }
+  };
+
   const buscarPagina = async numero => {
     const resposta = await CrmKanbanAPI.getCards({
       ...parametrosDaLista(estado()),
@@ -50,7 +72,7 @@ export const useListaAcaoDados = ({ store, estado }) => {
       per_page: POR_PAGINA,
     });
     return {
-      linhas: resposta.data?.payload || [],
+      linhas: (resposta.data?.payload || []).map(comGrupoDaCarga),
       contados: resposta.data?.meta?.count || 0,
     };
   };
@@ -65,6 +87,7 @@ export const useListaAcaoDados = ({ store, estado }) => {
       const [{ linhas, contados }] = await Promise.all([
         buscarPagina(1),
         atualizarContagem(),
+        atualizarResumo(),
       ]);
       if (atual !== pedido) return;
       cards.value = linhas;
@@ -115,7 +138,10 @@ export const useListaAcaoDados = ({ store, estado }) => {
   let relogioDaContagem = null;
   const contarDepois = () => {
     clearTimeout(relogioDaContagem);
-    relogioDaContagem = setTimeout(atualizarContagem, ESPERA_DA_CONTAGEM);
+    relogioDaContagem = setTimeout(() => {
+      atualizarContagem();
+      atualizarResumo();
+    }, ESPERA_DA_CONTAGEM);
   };
 
   const aoTempoReal = ({ card }) => {
@@ -145,13 +171,17 @@ export const useListaAcaoDados = ({ store, estado }) => {
     cards,
     total,
     contagem,
+    resumo,
     carregando,
     erro,
     novidades,
     temMais,
     carregar,
     mostrarMais,
-    atualizarContagem,
+    // Depois de uma ação ("Feito", "Passar"): os números dos grupos de ação e,
+    // em Etapa e Quem cuida, os do grupo.
+    atualizarContagem: () =>
+      Promise.all([atualizarContagem(), atualizarResumo()]),
     trocarLinha,
     tirarLinha,
   };

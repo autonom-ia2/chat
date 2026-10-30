@@ -7521,7 +7521,8 @@
       "MARCAR_TODOS": "Marcar os que aparecem",
       "MARCAR": "Marcar {nome}",
       "MOSTRAR_MAIS": "Mostrar mais",
-      "VER_CLIENTE": "Ver cliente {nome}: {sobre}"
+      "VER_CLIENTE": "Ver cliente {nome}: {sobre}",
+      "DETALHES": "Detalhes"
     },
     "GRUPOS": {
       "ESPERANDO": "Esperando resposta",
@@ -7628,7 +7629,10 @@
     },
     "MAIS_MENU": {
       "BAIXAR": "Baixar planilha",
-      "MARCAR_VARIOS": "Marcar vários"
+      "MARCAR_VARIOS": "Marcar vários",
+      "ORGANIZAR": "Organizar por",
+      "ESCOLHER": "Escolher o que aparece",
+      "LISTAS": "Listas guardadas"
     },
     "FAIXA": {
       "FEITO": "Retorno de {nome} feito.",
@@ -7665,6 +7669,64 @@
       "NINGUEM": "Ainda não tem ninguém aqui.",
       "SEM_RESULTADO": "Ninguém com esses filtros.",
       "LIMPAR": "Limpar filtros"
+    },
+    "ORGANIZAR": {
+      "TITULO": "Organizar por",
+      "DICA": "As três primeiras separam a lista em grupos.",
+      "FECHAR": "Fechar",
+      "VOCE": "Você",
+      "OPCOES": {
+        "ACAO": "O que fazer primeiro (padrão)",
+        "ETAPA": "Etapa",
+        "QUEM_CUIDA": "Quem cuida",
+        "RETORNO": "Retorno mais perto",
+        "VALOR": "Maior valor",
+        "PARADO": "Parado há mais tempo",
+        "NOME": "Nome"
+      }
+    },
+    "CAMPOS": {
+      "TITULO": "Escolher o que aparece",
+      "DICA": "Cliente e próximo passo aparecem sempre.",
+      "PRONTO": "Pronto",
+      "PADRAO": "Voltar ao padrão",
+      "SUBIR": "Subir {nome}",
+      "DESCER": "Descer {nome}",
+      "CONVERSANDO": "{nome} está conversando",
+      "PRIORIDADE": "Prioridade: {valor}",
+      "NOMES": {
+        "SITUACAO": "Situação",
+        "ETAPA": "Etapa",
+        "QUEM_CUIDA": "Quem cuida",
+        "VALOR": "Valor",
+        "CONVERSANDO": "Quem está conversando",
+        "NOVIDADE": "Última novidade",
+        "PRIORIDADE": "Prioridade"
+      }
+    },
+    "LISTAS": {
+      "TITULO": "Listas guardadas",
+      "FECHAR": "Fechar",
+      "NENHUMA": "Nenhuma lista guardada ainda.",
+      "ABRIR": "Abrir a lista {nome}",
+      "ABERTA": "Lista {nome} aberta.",
+      "APAGAR": "Apagar a lista {nome}",
+      "APAGAR_PERGUNTA": "Apagar “{nome}”?",
+      "APAGAR_SIM": "Apagar",
+      "APAGAR_NAO": "Manter",
+      "GUARDAR_TITULO": "Guardar esta lista como está agora",
+      "NOME": "Nome",
+      "NOME_EXEMPLO": "Exemplo: Meus clientes da semana",
+      "GUARDAR": "Guardar lista",
+      "SO_QUENTES": "Lista antiga: só os mais quentes",
+      "TIRAR_QUENTES": "Mostrar todos",
+      "QUEM_VE": {
+        "TITULO": "Quem vê",
+        "ROTULO_DA": "Quem vê a lista {nome}",
+        "SO_EU": "Só eu",
+        "EQUIPE": "Minha equipe",
+        "TODOS": "Todos da conta"
+      }
     }
   }
 }

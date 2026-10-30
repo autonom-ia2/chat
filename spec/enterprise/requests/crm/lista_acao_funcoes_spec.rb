@@ -78,4 +78,34 @@ RSpec.describe 'CRM Lista nova com função personalizada (linha de base #2299)'
       end
     end
   end
+
+  # "Mais → Organizar por → Quem cuida" (#2379): o grupo de cada linha é o current_responsible que ela mostra, e nem a
+  # linha nem a contagem trazem quem atende a conversa que a função não vê. Sem `sales_value_view`, sem soma de valor.
+  describe 'organizar por quem cuida' do
+    before { give_role(%w[crm_view]) }
+
+    it 'agrupa igual à linha, sem o atendente da conversa oculta e sem somar valor' do
+      bot = create(:agent_bot, account: account, name: 'Assistente Bia')
+      AgentBotInbox.create!(inbox: hidden_inbox, agent_bot: bot, status: :active)
+      card_with_overdue_follow_up('Colega', conversation(inbox: inbox, assignee: admin))
+      hidden, = card_with_overdue_follow_up('Oculta com robô', conversation(inbox: hidden_inbox, assignee: admin))
+
+      get "#{api}/cards", params: { sort: 'quem_cuida', per_page: 100 }, headers: auth_headers(person)
+      expect(response).to have_http_status(:ok)
+      line_keys = response.parsed_body['payload'].map do |row|
+        responsible = row['current_responsible']
+        responsible && "#{responsible['type']}:#{responsible['id']}"
+      end
+      expect(response.parsed_body['payload'].find { |row| row['id'] == hidden.id }['current_responsible'])
+        .to include('type' => 'bot', 'id' => bot.id)
+
+      get "#{api}/cards/summaries", params: { group_by: 'quem_cuida' }, headers: auth_headers(person)
+      expect(response).to have_http_status(:ok)
+      groups = response.parsed_body.dig('payload', 'groups')
+      expect(groups.pluck('key')).to match_array(line_keys.uniq)
+      expect(groups.pluck('label')).to contain_exactly('Gestora Ana', 'Assistente Bia')
+      expect(groups.pluck('sum_cents')).to all(be_nil)
+      expect(groups.sum { |group| group['count'] }).to eq(line_keys.size)
+    end
+  end
 end

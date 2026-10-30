@@ -6,7 +6,8 @@ import Checkbox from 'dashboard/components-next/checkbox/Checkbox.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import MenuDeAcoes from './MenuDeAcoes.vue';
 import { TONS, grupoDoCard } from './grupos';
-import { situacaoDoCard } from './situacao';
+import { paraData, quandoPassado, situacaoDoCard } from './situacao';
+import { camposPadrao, camposVisiveis } from './campos';
 
 // #2283 — uma linha da Lista nova. Tabela quando a lista é larga (`larga`),
 // cartão abaixo. Três vagas fixas: ação principal · "Ver conversa" ·
@@ -27,6 +28,12 @@ const props = defineProps({
   marcavel: { type: Boolean, default: false },
   // No cartão (celular), as caixas só aparecem com "Mais → Marcar vários".
   marcando: { type: Boolean, default: false },
+  // "Escolher o que aparece" (#2379): as chaves visíveis, na ordem escolhida.
+  campos: { type: Array, default: () => camposVisiveis(camposPadrao()) },
+  // "Organizar por" (#2379): em Etapa e Quem cuida o cabeçalho do grupo já diz.
+  organizar: { type: String, default: 'acao' },
+  // id → nome, para "Quem está conversando".
+  nomesDasPessoas: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits([
   'acao',
@@ -64,14 +71,17 @@ const textoDaSituacao = computed(() => {
     : t(`${L}.${chave}`, valores);
 });
 
-const etapa = computed(() => props.card.stage || null);
-// Sem "quem cuida": conversa escondida (não sugere nome), "Ninguém cuidando"
-// e "Só meus" (o título e a chave já dizem).
+const etapa = computed(() =>
+  props.organizar === 'etapa' ? null : props.card.stage || null
+);
+// Sem "quem cuida": conversa escondida (não sugere nome), "Ninguém cuidando",
+// "Só meus" e "Organizar por → Quem cuida" (o título e a chave já dizem).
 const mostraQuem = computed(
   () =>
     !oculta.value &&
     grupoDoCard(props.card) !== 'ninguem' &&
-    props.quem !== 'meus'
+    props.quem !== 'meus' &&
+    props.organizar !== 'quem_cuida'
 );
 const quemCuida = computed(() => {
   const quem = props.card.current_responsible;
@@ -81,6 +91,32 @@ const quemCuida = computed(() => {
   return t(`${L}.QUEM_CUIDA.PESSOA`, { nome: quem.name });
 });
 const robo = computed(() => props.card.current_responsible?.type === 'bot');
+// Quem está conversando: só da conversa que a pessoa vê (o servidor manda
+// conversation só nesse caso).
+const conversando = computed(() => {
+  const id = props.card.conversation?.assignee_id;
+  const nomeDaPessoa = id != null && props.nomesDasPessoas[id];
+  return nomeDaPessoa
+    ? t(`${L}.CAMPOS.CONVERSANDO`, { nome: nomeDaPessoa })
+    : '';
+});
+const novidade = computed(() => {
+  const data = paraData(props.card.last_message_at);
+  if (!data) return '';
+  const { tipo, valores } = quandoPassado(data, props.contexto);
+  const chave = `${L}.SITUACAO.ULTIMA_MENSAGEM.${tipo}`;
+  return typeof valores.n === 'number'
+    ? t(chave, valores, valores.n)
+    : t(chave, valores);
+});
+const PRIORIDADES = ['low', 'medium', 'high', 'urgent'];
+const prioridade = computed(() =>
+  PRIORIDADES.includes(props.card.priority)
+    ? t(`${L}.CAMPOS.PRIORIDADE`, {
+        valor: t(`CRM_KANBAN.PRIORITY.${props.card.priority.toUpperCase()}`),
+      })
+    : ''
+);
 const valor = computed(() => {
   const centavos = Number(props.card.value_cents);
   if (!centavos) return '';
@@ -191,47 +227,80 @@ const passarPara = pessoaId => {
       </span>
     </button>
 
-    <span class="flex min-w-0 flex-col items-start gap-1">
-      <span
-        data-lista-acao-situacao
-        :data-tom="situacao.tom"
-        class="inline-flex max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-medium text-n-slate-12"
-        :class="tom.fundo"
-      >
+    <!-- "Escolher o que aparece" (#2379): cada informação na sua linha, na ordem
+         escolhida, sem "·" solto e sem duas coisas lidas como uma (revisão
+         leiga do #2324). -->
+    <span
+      class="flex min-w-0 flex-col items-start gap-1"
+      data-lista-acao-campos-da-linha
+    >
+      <template v-for="campo in campos" :key="campo">
         <span
-          :class="[situacao.icone, tom.icone]"
-          class="size-4 shrink-0"
-          aria-hidden="true"
-        />
-        <span>{{ textoDaSituacao }}</span>
-      </span>
-      <!-- Etapa, quem cuida e valor, cada um na sua linha: sem "·" solto, sem
-           corte e sem duas coisas lidas como uma (revisão leiga do #2324). -->
-      <span class="flex flex-col gap-0.5 text-sm text-n-slate-11">
-        <span v-if="etapa || mostraQuem" class="flex flex-col items-start">
+          v-if="campo === 'situacao'"
+          data-lista-acao-situacao
+          :data-tom="situacao.tom"
+          class="inline-flex max-w-full items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-medium text-n-slate-12"
+          :class="tom.fundo"
+        >
           <span
-            v-if="etapa"
-            class="inline-flex items-center gap-1.5 whitespace-nowrap"
-          >
-            <span
-              v-if="etapa.color"
-              class="size-2.5 rounded-full ring-1 ring-black/10 dark:ring-white/40"
-              :style="{ backgroundColor: etapa.color }"
-              aria-hidden="true"
-            />{{ etapa.name }}
-          </span>
-          <span v-if="mostraQuem" class="whitespace-nowrap">
-            <span
-              v-if="robo"
-              class="i-lucide-bot me-1 inline-block size-4 align-[-3px] text-n-slate-11"
-              aria-hidden="true"
-            />{{ quemCuida }}
-          </span>
+            :class="[situacao.icone, tom.icone]"
+            class="size-4 shrink-0"
+            aria-hidden="true"
+          />
+          <span>{{ textoDaSituacao }}</span>
         </span>
-        <span v-if="valor" class="tabular-nums text-n-slate-12">
+        <span
+          v-else-if="campo === 'etapa' && etapa"
+          data-campo-linha="etapa"
+          class="inline-flex items-center gap-1.5 whitespace-nowrap text-sm text-n-slate-11"
+        >
+          <span
+            v-if="etapa.color"
+            class="size-2.5 rounded-full ring-1 ring-black/10 dark:ring-white/40"
+            :style="{ backgroundColor: etapa.color }"
+            aria-hidden="true"
+          />{{ etapa.name }}
+        </span>
+        <span
+          v-else-if="campo === 'quem_cuida' && mostraQuem"
+          data-campo-linha="quem_cuida"
+          class="whitespace-nowrap text-sm text-n-slate-11"
+        >
+          <span
+            v-if="robo"
+            class="i-lucide-bot me-1 inline-block size-4 align-[-3px] text-n-slate-11"
+            aria-hidden="true"
+          />{{ quemCuida }}
+        </span>
+        <span
+          v-else-if="campo === 'valor' && valor"
+          data-campo-linha="valor"
+          class="text-sm tabular-nums text-n-slate-12"
+        >
           {{ valor }}
         </span>
-      </span>
+        <span
+          v-else-if="campo === 'conversando' && conversando"
+          data-campo-linha="conversando"
+          class="text-sm text-n-slate-11"
+        >
+          {{ conversando }}
+        </span>
+        <span
+          v-else-if="campo === 'novidade' && novidade"
+          data-campo-linha="novidade"
+          class="text-sm text-n-slate-11"
+        >
+          {{ novidade }}
+        </span>
+        <span
+          v-else-if="campo === 'prioridade' && prioridade"
+          data-campo-linha="prioridade"
+          class="text-sm text-n-slate-11"
+        >
+          {{ prioridade }}
+        </span>
+      </template>
     </span>
 
     <span

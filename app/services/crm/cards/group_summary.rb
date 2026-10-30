@@ -4,10 +4,13 @@
 # the rows the user sees), then runs a single grouped SQL aggregate.
 #
 # Contract (consumed by the list group headers / store getGroupSummary):
-#   { group_by: 'stage'|'owner'|'acao', groups: [{ key, label, count, sum_cents, currency }] }
+#   { group_by: 'stage'|'owner'|'acao'|'quem_cuida', groups: [{ key, label, count, sum_cents, currency }] }
 #
 # `acao` (Lista nova, #2283) conta os grupos de Crm::Cards::ActionGroups pelo mesmo CASE da lista (sort=acao), com o
 # mesmo filtro, escopo e `mine`: as cinco chaves sempre, na ordem, com 0 quando vazio; label nil (o texto é do painel).
+#
+# `quem_cuida` (Lista nova, "Organizar por", #2379) conta por quem cuida, a mesma regra da linha (Crm::Cards::OrganizarPor):
+# key "agent:ID" ou "bot:ID", type e label com o nome; quem ninguém cuida vem com key, type e label nil.
 #
 # `key` is the stage_id / owner_id (or nil for "no owner"); `label` is the
 # human-readable stage/agent name resolved in one batched lookup.
@@ -30,6 +33,7 @@ class Crm::Cards::GroupSummary
 
   def perform
     return { group_by: @group_by, groups: build_action_groups } if @group_by == Crm::Cards::ActionGroups::SORT
+    return { group_by: @group_by, groups: build_quem_cuida_groups } if @group_by == Crm::Cards::OrganizarPor::QUEM_CUIDA
     return empty_result unless GROUP_COLUMNS.key?(@group_by)
 
     { group_by: @group_by, groups: build_groups }
@@ -79,6 +83,35 @@ class Crm::Cards::GroupSummary
         currency: currency.presence || DEFAULT_CURRENCY
       }
     end
+  end
+
+  def aggregate_columns
+    [Arel.sql('COUNT(*)'), Arel.sql('COALESCE(SUM(crm_cards.value_cents), 0)'),
+     Arel.sql('MODE() WITHIN GROUP (ORDER BY crm_cards.currency)')]
+  end
+
+  def build_quem_cuida_groups
+    tipo = Arel.sql(Crm::Cards::OrganizarPor::QUEM_TIPO)
+    id = Arel.sql(Crm::Cards::OrganizarPor::QUEM_ID)
+    rows = aggregate_scope.group(tipo, id).pluck(tipo, id, *aggregate_columns)
+    names = quem_cuida_names(rows)
+
+    rows.map do |type, key_id, count, sum_value_cents, currency|
+      { key: (type && "#{type}:#{key_id}"), type: type, label: names[[type, key_id]], count: count.to_i,
+        sum_cents: (sum_value_cents.to_i if @value_visible), currency: currency.presence || DEFAULT_CURRENCY }
+    end
+  end
+
+  # Os nomes numa consulta por tipo. Sem filtro de conta: o id vem de um card da conta, e o dono que saiu da conta
+  # continua no card (a linha mostra o nome dele, Crm::Card#current_responsible).
+  def quem_cuida_names(rows)
+    people = User.where(id: ids_of(rows, 'agent')).pluck(:id, :name).to_h.transform_keys { |pid| ['agent', pid] }
+    bots = AgentBot.where(id: ids_of(rows, 'bot')).pluck(:id, :name).to_h.transform_keys { |bid| ['bot', bid] }
+    people.merge(bots)
+  end
+
+  def ids_of(rows, type)
+    rows.select { |row| row.first == type }.map(&:second)
   end
 
   def build_action_groups

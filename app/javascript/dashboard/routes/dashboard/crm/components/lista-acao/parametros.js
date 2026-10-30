@@ -3,6 +3,7 @@
 // a chave "De todos | Só meus", o "Ver só estes" e a busca são da Lista nova.
 import { listQueryParams } from 'dashboard/store/modules/crmKanban';
 import { resultadoDaAba } from './grupos';
+import { PADRAO, RESUMO } from './organizar';
 
 export const POR_PAGINA = 50;
 
@@ -10,6 +11,15 @@ export const emAndamento = aba => aba === 'aberto' || aba === 'tudo';
 
 const filtrosDaGaveta = (filtros, pipelineId) =>
   listQueryParams({ ...filtros, result: '', search: '' }, { pipelineId });
+
+// "Organizar por" (#2379). O padrão: o que fazer primeiro em Em andamento e
+// Tudo; nas abas de desfecho, o mais recente primeiro.
+const ordemDaLista = (organizar, aba) => {
+  if (organizar && organizar !== PADRAO) return { sort: organizar };
+  return emAndamento(aba)
+    ? { sort: 'acao' }
+    : { sort: 'updated_at', direction: 'desc' };
+};
 
 export const parametrosDaLista = ({
   filtros,
@@ -19,19 +29,19 @@ export const parametrosDaLista = ({
   quem,
   grupoSo,
   busca,
+  organizar,
 }) => {
   const resultado = resultadoDaAba(aba, statuses);
   const termo = String(busca || '').trim();
   return {
     ...filtrosDaGaveta(filtros, pipelineId),
     ...(resultado ? { result: resultado } : {}),
-    // Em andamento e Tudo: o que fazer primeiro. Ganhos, Perdidos e
-    // Arquivados: o mais recente primeiro.
-    ...(emAndamento(aba)
-      ? { sort: 'acao' }
-      : { sort: 'updated_at', direction: 'desc' }),
+    ...ordemDaLista(organizar, aba),
     ...(quem === 'meus' ? { mine: true } : {}),
-    ...(grupoSo && emAndamento(aba) ? { action_group: grupoSo } : {}),
+    // "Ver só estes" é dos grupos de ação (o padrão de "Organizar por").
+    ...(grupoSo && emAndamento(aba) && (!organizar || organizar === PADRAO)
+      ? { action_group: grupoSo }
+      : {}),
     ...(termo ? { search: termo } : {}),
   };
 };
@@ -47,4 +57,14 @@ export const parametrosDaContagem = ({ filtros, pipelineId, quem, busca }) => {
     ...(quem === 'meus' ? { mine: true } : {}),
     ...(termo ? { search: termo } : {}),
   };
+};
+
+// A contagem dos grupos de "Etapa" e "Quem cuida": o mesmo recorte da lista
+// (aba, chave, filtros e busca), agrupado no servidor.
+export const parametrosDoResumo = estado => {
+  const groupBy = RESUMO[estado.organizar];
+  if (!groupBy) return null;
+  // Sem a ordem: a contagem não precisa dela (e o servidor pularia os JOINs dela).
+  const { sort, direction, ...lista } = parametrosDaLista(estado);
+  return { ...lista, group_by: groupBy };
 };
