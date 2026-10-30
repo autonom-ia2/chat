@@ -77,10 +77,27 @@ const accountsReply = rows =>
 const mountConnect = async props => {
   const wrapper = mount(ConectarAnuncios, {
     props: { connection: CONNECTION, ...props },
-    global: { stubs: { Spinner: true, MetaTelaGuia: true } },
+    global: {
+      stubs: {
+        Spinner: true,
+        MetaTelaGuia: true,
+        MetaAdsDestinationsStep: {
+          name: 'MetaAdsDestinationsStep',
+          props: ['destinations'],
+          emits: ['saved'],
+          template: '<div data-destino-stub />',
+        },
+      },
+    },
   });
   await flushPromises();
   return wrapper;
+};
+
+// Passo 3 (#2338): o destino é gravado pelo próprio passo de destinos, que avisa "saved".
+const saveDestination = async wrapper => {
+  wrapper.findComponent({ name: 'MetaAdsDestinationsStep' }).vm.$emit('saved');
+  await flushPromises();
 };
 
 describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
@@ -107,7 +124,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     vi.useRealTimers();
   });
 
-  it('with Facebook: signs in, finds the only account, connects it measuring WhatsApp and goes to the panel (no Pixel: asks nothing)', async () => {
+  it('with Facebook: signs in, finds the only account, connects it, asks where the ads lead and goes to the panel (no Pixel: asks nothing)', async () => {
     facebook.connect.mockResolvedValue({ ok: true });
     accountsReply([ACCOUNT]);
     const wrapper = await mountConnect();
@@ -134,12 +151,24 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
       noSite: false,
     });
     expect(wrapper.find('[data-conectar-pixel-pergunta]').exists()).toBe(false);
-    expect(CrmMetaAdsConnectionAPI.updateDestinations).toHaveBeenCalledWith({
-      whatsapp: true,
-      site: false,
-    });
+    // Passo 3: a pessoa escolhe o destino; nada é marcado por ela.
+    expect(wrapper.attributes('data-screen')).toBe('destino');
+    expect(CrmMetaAdsConnectionAPI.updateDestinations).not.toHaveBeenCalled();
+    expect(
+      wrapper
+        .findComponent({ name: 'MetaAdsDestinationsStep' })
+        .props('destinations')
+    ).toEqual({ whatsapp: true, site: false });
+    expect(
+      wrapper.find('[data-conectar-faixa] [aria-current="step"]').text()
+    ).toContain('Escolha o destino');
+    expect(wrapper.find('[data-conectar-voltar]').exists()).toBe(false);
+
+    await saveDestination(wrapper);
     expect(wrapper.attributes('data-screen')).toBe('done');
-    expect(wrapper.find('[data-conectar-destino-falhou]').exists()).toBe(false);
+    expect(
+      wrapper.find('[data-conectar-faixa] [aria-current="step"]').text()
+    ).toContain('Veja seus gastos');
 
     await wrapper.find('[data-conectar-ver-painel]').trigger('click');
     expect(wrapper.emitted('connected')).toHaveLength(1);
@@ -195,6 +224,9 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
       .trigger('click');
     await wrapper.find('[data-conectar-pixel-continuar]').trigger('click');
     await flushPromises();
+    if (wrapper.attributes('data-screen') === 'destino') {
+      await saveDestination(wrapper);
+    }
   };
 
   it('with more than one Pixel, asks which one before saving anything', async () => {
@@ -361,6 +393,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith(
       expect.objectContaining({ pixelId: null })
     );
+    await saveDestination(wrapper);
     expect(wrapper.attributes('data-screen')).toBe('done');
     expect(wrapper.find('[data-conectar-pixel-falhou]').exists()).toBe(true);
   });
@@ -397,20 +430,40 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     expect(wrapper.find('[data-conectar-de-novo]').exists()).toBe(true);
   });
 
-  it('the account is connected even when marking WhatsApp as destination fails', async () => {
+  it('the destination step starts from what the account already chose', async () => {
     facebook.connect.mockResolvedValue({ ok: true });
     accountsReply([ACCOUNT]);
-    CrmMetaAdsConnectionAPI.updateDestinations.mockRejectedValue(new Error());
-    const wrapper = await mountConnect();
+    const wrapper = await mountConnect({
+      connection: {
+        ...CONNECTION,
+        destinations: { whatsapp: true, site: true },
+      },
+    });
 
     await wrapper.find('[data-conectar-facebook]').trigger('click');
     await flushPromises();
     await wrapper.find('[data-conectar-conectar]').trigger('click');
     await flushPromises();
 
-    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledTimes(1);
-    expect(wrapper.attributes('data-screen')).toBe('done');
-    expect(wrapper.find('[data-conectar-destino-falhou]').exists()).toBe(true);
+    expect(
+      wrapper
+        .findComponent({ name: 'MetaAdsDestinationsStep' })
+        .props('destinations')
+    ).toEqual({ whatsapp: true, site: true });
+  });
+
+  it('shows the four steps before signing in', async () => {
+    const wrapper = await mountConnect();
+
+    expect(wrapper.text()).toContain('Escolha o destino');
+    expect(
+      wrapper.findAll('[data-conectar-como] > li').map(item => item.text())
+    ).toEqual([
+      '1Entre com o Facebook',
+      '2Confirme a sua conta',
+      '3Escolha o destino',
+      '4Veja seus gastos',
+    ]);
   });
 
   it('sharing as partner: copy, open Meta, mark, and it checks again by itself while it has not arrived', async () => {
