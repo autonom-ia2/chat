@@ -35,6 +35,7 @@ const CONNECTION = {
   facebook_login: { available: true, app_id: '1', configuration_id: '2' },
   partner: { business_id: '1455428945005668', business_name: 'Autonom.ia' },
   client_portfolio_id: null,
+  destinations: { whatsapp: false, site: false },
 };
 const ACCOUNT = {
   id: 'act_1',
@@ -151,9 +152,13 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
       noSite: false,
     });
     expect(wrapper.find('[data-conectar-pixel-pergunta]').exists()).toBe(false);
-    // Passo 3: a pessoa escolhe o destino; nada é marcado por ela.
+    // Passo 3: conta sem destino nenhum ganha o WhatsApp (quem sai aqui fica como antes) e a pessoa escolhe.
     expect(wrapper.attributes('data-screen')).toBe('destino');
-    expect(CrmMetaAdsConnectionAPI.updateDestinations).not.toHaveBeenCalled();
+    expect(CrmMetaAdsConnectionAPI.updateDestinations).toHaveBeenCalledTimes(1);
+    expect(CrmMetaAdsConnectionAPI.updateDestinations).toHaveBeenCalledWith({
+      whatsapp: true,
+      site: false,
+    });
     expect(
       wrapper
         .findComponent({ name: 'MetaAdsDestinationsStep' })
@@ -224,9 +229,11 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
       .trigger('click');
     await wrapper.find('[data-conectar-pixel-continuar]').trigger('click');
     await flushPromises();
-    if (wrapper.attributes('data-screen') === 'destino') {
-      await saveDestination(wrapper);
-    }
+  };
+  const answerAndSave = async (wrapper, value) => {
+    await answer(wrapper, value);
+    expect(wrapper.attributes('data-screen')).toBe('destino');
+    await saveDestination(wrapper);
   };
 
   it('with more than one Pixel, asks which one before saving anything', async () => {
@@ -245,7 +252,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     ).toBeDefined();
 
     // O mais antigo, de propósito: nada escolhe pelo disparo mais recente.
-    await answer(wrapper, SEGUROS.id);
+    await answerAndSave(wrapper, SEGUROS.id);
 
     expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledTimes(1);
     expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith({
@@ -264,7 +271,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
   it('with more than one Pixel, "I have no website" saves no Pixel on purpose', async () => {
     const wrapper = await connectWithTwo();
 
-    await answer(wrapper, 'none');
+    await answerAndSave(wrapper, 'none');
 
     expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith({
       mode: 'facebook_login',
@@ -291,7 +298,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
 
   const connectAndChange = async () => {
     const wrapper = await connectWithTwo();
-    await answer(wrapper, MEDICO.id);
+    await answerAndSave(wrapper, MEDICO.id);
     await wrapper.find('[data-conectar-pixel-alterar]').trigger('click');
     return wrapper;
   };
@@ -430,7 +437,7 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     expect(wrapper.find('[data-conectar-de-novo]').exists()).toBe(true);
   });
 
-  it('the destination step starts from what the account already chose', async () => {
+  it('an account that already chose its destination keeps it, with nothing saved before step 3', async () => {
     facebook.connect.mockResolvedValue({ ok: true });
     accountsReply([ACCOUNT]);
     const wrapper = await mountConnect({
@@ -450,6 +457,58 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
         .findComponent({ name: 'MetaAdsDestinationsStep' })
         .props('destinations')
     ).toEqual({ whatsapp: true, site: true });
+    expect(CrmMetaAdsConnectionAPI.updateDestinations).not.toHaveBeenCalled();
+  });
+
+  it('sharing as partner also goes through step 3', async () => {
+    accountsReply([ACCOUNT]);
+    const wrapper = await mountConnect({
+      connection: { ...CONNECTION, facebook_login: { available: false } },
+    });
+
+    await wrapper.find('[data-conectar-copiar]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-abrir-meta]').trigger('click');
+    await wrapper.find('[data-conectar-liberei]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-conectar]').trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.select).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'partner' })
+    );
+    expect(wrapper.attributes('data-screen')).toBe('destino');
+    await saveDestination(wrapper);
+    expect(wrapper.attributes('data-screen')).toBe('done');
+  });
+
+  it('on step 3 the focus goes to the question, for screen readers', async () => {
+    facebook.connect.mockResolvedValue({ ok: true });
+    accountsReply([ACCOUNT]);
+    const wrapper = mount(ConectarAnuncios, {
+      props: { connection: CONNECTION },
+      attachTo: document.body,
+      global: {
+        stubs: {
+          Spinner: true,
+          MetaTelaGuia: true,
+          MetaAdsDestinationsStep: {
+            name: 'MetaAdsDestinationsStep',
+            props: ['destinations'],
+            template:
+              '<section data-meta-ads-destinations><h3>Para onde?</h3></section>',
+          },
+        },
+      },
+    });
+    await flushPromises();
+    await wrapper.find('[data-conectar-facebook]').trigger('click');
+    await flushPromises();
+    await wrapper.find('[data-conectar-conectar]').trigger('click');
+    await flushPromises();
+
+    expect(document.activeElement?.textContent).toBe('Para onde?');
+    wrapper.unmount();
   });
 
   it('shows the four steps before signing in', async () => {

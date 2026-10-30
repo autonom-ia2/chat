@@ -103,10 +103,14 @@ const facebookStep = computed(() =>
   mode.value === 'facebook_login' ? FACEBOOK_SCREENS[screen.value] || 0 : 0
 );
 const broken = computed(() => props.resume?.state === 'broken');
-// Quem conecta a partir do WhatsApp mede o WhatsApp: ele vem marcado, a não ser que a conta já tenha escolhido.
-const destinations = computed(
-  () => props.connection.destinations || { whatsapp: true, site: false }
-);
+// Quem conecta a partir do WhatsApp mede o WhatsApp: conta sem destino nenhum (o servidor manda os dois falsos)
+// ganha o WhatsApp marcado; conta que já escolheu segue com a escolha.
+const WHATSAPP_ONLY = { whatsapp: true, site: false };
+const chosenDestinations = computed(() => {
+  const current = props.connection.destinations;
+  return current?.whatsapp || current?.site ? current : null;
+});
+const destinations = computed(() => chosenDestinations.value || WHATSAPP_ONLY);
 // Depois de conectar, voltar sairia do passo a passo com a conta já ligada: o "Voltar" some.
 const canGoBack = computed(
   () => screen.value !== 'destino' && screen.value !== 'done'
@@ -144,7 +148,13 @@ const pixelChoices = computed(() => [
 // A tela trocou inteira: o foco vai para o título dela, para o leitor de tela anunciar onde a pessoa está.
 watch(screen, async () => {
   await nextTick();
-  root.value?.querySelector('[data-conectar-titulo]')?.focus();
+  // O passo de destinos é da aba Conexão e não tem o marcador: o foco vai para a pergunta dele.
+  const title =
+    root.value?.querySelector('[data-conectar-titulo]') ||
+    root.value?.querySelector('[data-meta-ads-destinations] h3');
+  if (!title) return;
+  title.setAttribute('tabindex', '-1');
+  title.focus();
 });
 
 const go = value => {
@@ -267,6 +277,15 @@ const save = async ({ noSite = false } = {}) => {
     errorCode.value = error?.response?.data?.error || 'generic';
     go('notyet');
     return;
+  }
+  // Conta sem destino nenhum ganha o WhatsApp já aqui: quem sair no passo 3 fica como antes (#2054). Falhar não
+  // impede seguir; o passo 3 grava a escolha.
+  if (!chosenDestinations.value) {
+    try {
+      await CrmMetaAdsConnectionAPI.updateDestinations(WHATSAPP_ONLY);
+    } catch {
+      // O passo 3 grava de novo.
+    }
   }
   go('destino');
 };
@@ -401,10 +420,8 @@ onBeforeUnmount(stopRecheck);
           <template v-else>{{ index + 1 }}</template>
         </span>
         <span
-          class="truncate"
-          :class="
-            index + 1 === facebookStep ? 'text-n-slate-12' : 'text-n-slate-11'
-          "
+          class="min-w-0 leading-tight"
+          :class="index + 1 === facebookStep ? 'text-n-slate-12' : 'sr-only'"
         >
           {{ $t(`${C}.START.STEPS.${item}`) }}
         </span>
