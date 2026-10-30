@@ -1039,14 +1039,25 @@
   enabled: false
   column: feature_flags_ext_2
 
+# IA cuida dos comentários (#2212, épico #2194). Ligada: nos posts e anúncios em que a pessoa ligou o cuidado, a IA lê
+# cada comentário novo (evento `meta_ads.comment_received`, do #2196 e do #2197). Quem pede informação recebe o
+# privado (Private Reply no Instagram Direct ou no Messenger) e uma frase no comentário. Reclamação vai urgente para a
+# pessoa, propaganda some do post, e o resto fica sem resposta. Teto de 200 comentários por conta por dia. O custo do
+# Jev é nosso (eval de 27/10: ~US$ 0,000024 por comentário). Desligada: nenhum comentário é lido. Sem tela neste PR.
+# Migration 20261108620000 (crm_meta_ads_comment_cares). Fim da feature_flags_ext_2, depois de seus_posts_comentarios:
+# posição 16 (valor 32768, 1 << 15), reservada pela Orquestração em 30/10 e confirmada por ela na hora da fila.
+- name: meta_ads_comentarios_ia
+  display_name: Anúncios › IA cuida dos comentários
+  enabled: false
+  column: feature_flags_ext_2
+
 # Agentes: a mensagem de quando não souber vai ao modelo (#2381, D2 do tema 6 #1428). Ligada: no atendimento ao cliente,
 # o PromptBuilder leva o texto do dono como orientação ("diga isto com as suas palavras"), sem obrigar a cópia literal.
 # Só vale com agente_so_informa (#2154) também ligada: o bloco manda marcar should_handoff, e só com ela o sinal vira
 # registro para a IA de Atribuição decidir. Desligada: o prompt fica byte a byte o de antes. Copiloto, Guia e Lia não
 # mudam. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
-# seus_posts_comentarios: posição 16 (valor 32768, 1 << 15), provisória; vira 17 (65536) se o #2399
-# (meta_ads_comentarios_ia) entrar antes. A posição real é a ordem na main na hora da fila, e a Orquestração confirma
-# antes de enfileirar. Nasce ligada no piloto (contas 1, 16 e 18).
+# meta_ads_comentarios_ia (#2399): posição 17 (valor 65536, 1 << 16), provisória da Orquestração e confirmada por ela
+# na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: agente_diz_quando_nao_sabe
   display_name: Agentes › mensagem de quando não souber vai ao modelo
   enabled: false
