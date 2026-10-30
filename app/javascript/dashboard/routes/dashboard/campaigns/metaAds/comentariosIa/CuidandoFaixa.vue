@@ -2,11 +2,13 @@
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import { intlLocale } from '../metaAdsHelpers';
 import { linhaDoResultado } from './redes';
 
 // Comentários que viram cliente (#2212): a faixa no topo de "Seus posts", "Cuidando dos comentários de 3 posts". Abre
 // a lista desses posts (cada um leva à tela dele) e tem "Pausar todos", com um toque, como o "Pausar" de cada post.
+// "Voltar a cuidar de todos" pergunta antes, com a contagem: religa a IA em vários posts de uma vez.
 const props = defineProps({
   posts: { type: Array, required: true },
   // Pausar e retomar todos: só quem pode mudar (posts_manage). Ver a lista é de todos.
@@ -14,11 +16,12 @@ const props = defineProps({
   busy: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['open', 'pause-all', 'resume-all']);
+const emit = defineEmits(['open', 'pauseAll', 'resumeAll']);
 
 const { locale, t } = useI18n();
 const KEY = 'META_ADS_COMMENTS_AI';
 const open = ref(false);
+const resumeDialog = ref(null);
 
 const active = computed(() => props.posts.filter(post => post.status === 'on'));
 const paused = computed(() =>
@@ -26,6 +29,11 @@ const paused = computed(() =>
 );
 const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
+
+const confirmResume = () => {
+  resumeDialog.value?.close();
+  emit('resumeAll');
+};
 </script>
 
 <template>
@@ -90,7 +98,7 @@ const format = value =>
           :label="$t(`${KEY}.BAND.PAUSE_ALL`)"
           :is-loading="busy"
           class="!min-h-11 !rounded-xl"
-          @click="emit('pause-all')"
+          @click="emit('pauseAll')"
         />
         <Button
           v-else-if="canManage"
@@ -99,10 +107,27 @@ const format = value =>
           :label="$t(`${KEY}.BAND.RESUME_ALL`)"
           :is-loading="busy"
           class="!min-h-11 !rounded-xl"
-          @click="emit('resume-all')"
+          @click="resumeDialog?.open()"
         />
       </div>
     </div>
+
+    <Dialog
+      v-if="canManage"
+      ref="resumeDialog"
+      width="md"
+      :title="
+        $t(
+          `${KEY}.BAND.RESUME_CONFIRM.TITLE`,
+          { count: paused.length },
+          paused.length
+        )
+      "
+      :description="$t(`${KEY}.BAND.RESUME_CONFIRM.DESCRIPTION`)"
+      :confirm-button-label="$t(`${KEY}.BAND.RESUME_CONFIRM.CONFIRM`)"
+      :cancel-button-label="$t(`${KEY}.BAND.RESUME_CONFIRM.CANCEL`)"
+      @confirm="confirmResume"
+    />
 
     <!-- v-show: a lista fica no DOM fechada, e o aria-controls do botão sempre aponta para ela. -->
     <ul

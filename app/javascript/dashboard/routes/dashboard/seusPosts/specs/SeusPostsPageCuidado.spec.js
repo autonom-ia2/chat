@@ -117,6 +117,10 @@ const montar = async () => {
       ],
       stubs: {
         ChoiceSelect: true,
+        Dialog: {
+          template: '<div><slot /></div>',
+          methods: { open() {}, close() {} },
+        },
         RouterLink: {
           props: ['to'],
           template: '<a :data-para="JSON.stringify(to)"><slot /></a>',
