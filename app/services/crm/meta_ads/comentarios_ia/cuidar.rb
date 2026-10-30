@@ -1,17 +1,20 @@
 # IA cuida dos comentários (#2212): o que acontece com um comentário novo num post ou anúncio de que a IA cuida.
 #
 # 1. Filtra o que não é dela: flag desligada, caixa de outra conta ou de outro canal, resposta a outro comentário, post
-#    sem cuidado ou pausado, teto do dia atingido ou comentário com mais de 7 dias (o privado não sai mais).
+#    sem cuidado ou pausado, ou comentário com mais de 7 dias (o privado não sai mais).
 # 2. Reivindica o comentário (Registro, `ai_seen`) ANTES do Jev: o webhook reenviado, ou outro job do mesmo comentário,
-#    sai aqui sem gastar nada.
+#    sai aqui sem gastar nada. O teto do dia é contado depois da reserva (ela conta), para a concorrência não passar
+#    dele; passou, o comentário fica com o dono.
 # 3. Lê o comentário na Meta (o evento leva só ids, #2327). Se a Meta diz que não dá (apagado, sem permissão), ele fica
 #    descartado; se ela não responde, o job tenta de novo (CuidarJob, com teto).
-#    Depois, pergunta ao Jev o que fazer (Classificador). Sem certeza, não faz nada: o comentário fica para a pessoa.
-#    Jev fora do ar: como a Meta, o job tenta de novo.
+#    Depois, pergunta ao Jev o que fazer (Classificador). Jev fora do ar: como a Meta, o job tenta de novo.
+#    A IA que não cuidou (sem certeza, teto do dia, Jev barrado pelo teto ou pela flag) grava `ai_unread`: o comentário
+#    fica com o dono, no "Esperando você", nunca some.
 # 4. Faz:
-#    - privado ou preço: manda o privado e põe o comentário no topo da conversa. Depois responde no comentário com a
-#      frase da vez, ou com o preço, se a pessoa ligou essa chave. Privado recusado: nada em público, e a conversa fica
-#      para a pessoa;
+#    - privado ou preço: reserva a pessoa no post (um privado por pessoa, antes da Meta), manda o privado e põe o
+#      comentário no topo da conversa. Depois responde no comentário com a frase da vez, ou com o preço, se a pessoa
+#      ligou essa chave. Privado recusado: a reserva da pessoa sai, nada em público, e a conversa fica para a pessoa.
+#      Sem resposta da Meta (pode ter saído): a reserva fica, e a conversa vai para a pessoa conferir no direct;
 #    - reclamação: não responde, e a conversa abre urgente para a pessoa;
 #    - propaganda: esconde;
 #    - o resto: nada (a reivindicação já registra que a IA leu).
@@ -44,12 +47,16 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # Depois da reserva: um erro antes de agir na Meta solta a leitura, para o job tentar de novo. Depois de agir, não.
   # O comentário que a Meta diz que não dá para ler (apagado, sem permissão) fica com a reserva: descartado, não volta.
   def cuidar
+    return nao_cuidou('teto') if @registro.hoje(@comentario.account_id) > TETO_DIARIO
+
     lido = rede.ler
     return descartar if lido.nil?
 
     @comentario = @comentario.lido(**lido)
     decisao = decidir
-    executar(decisao) if decisao
+    decisao ? executar(decisao) : nao_cuidou('sem_certeza')
+  rescue Crm::MetaAds::ComentariosIa::Classificador::Bloqueado => e
+    nao_cuidou(e.code)
   rescue StandardError
     soltar_leitura unless @agiu
     raise
@@ -70,6 +77,16 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     ChatwootExceptionTracker.new(e, account: Account.find_by(id: @comentario.account_id)).capture_exception
   end
 
+  # O comentário fica com o dono, com o porquê só no log (ids, nunca o texto).
+  def nao_cuidou(motivo)
+    Rails.logger.info("[comentarios_ia] não cuidou motivo=#{motivo} #{ids}")
+    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+  end
+
+  def ids
+    "account=#{@comentario.account_id} network=#{@comentario.network} comment=#{@comentario.comment_id}"
+  end
+
   def descartar
     Rails.logger.info("[comentarios_ia] comentário não lido, descartado: account=#{@comentario.account_id} " \
                       "network=#{@comentario.network} comment=#{@comentario.comment_id}")
@@ -79,7 +96,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     return false if inbox.nil? || @comentario.resposta? || care.nil? || rede.nil?
     return false unless inbox.account.feature_enabled?(FLAG)
 
-    na_janela? && @registro.hoje(@comentario.account_id) < TETO_DIARIO
+    na_janela?
   end
 
   def na_janela?
@@ -91,28 +108,47 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     case decisao
     when 'private', 'price' then privado(decisao)
     when 'to_you' then para_voce('to_you')
-    when 'hide' then rede.esconder
+    when 'hide' then recusou('hide') unless rede.esconder
     end
   end
 
+  # Sem saber quem comentou, não dá para garantir um privado por pessoa: fica com o dono. A pessoa que já tem o privado
+  # deste post (outro comentário dela) não recebe outro.
   def privado(decisao)
-    return if @conversa.ja_mandou?(@comentario)
+    return nao_cuidou('sem_quem_comentou') if @comentario.from_id.blank?
+    return unless @registro.reservar_pessoa!(@comentario)
 
     inicio = Time.current
     envio = rede.privado(care)
-    return if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
-    return para_voce('private_reply_failed') unless envio.ok
+    return nao_saiu(envio) unless envio.ok
 
     na_conversa(envio.conversation, inicio)
-    rede.responder(care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
+    recusou('reply') unless rede.responder(care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
   end
 
-  # O comentário no topo da conversa do privado, e o id dela na linha do privado.
+  # Já feito (pela pessoa, na tela do #2196, ou por outro job): nada a mostrar. Sem resposta da Meta, pode ter saído: a
+  # reserva da pessoa fica. Recusa: a reserva sai.
+  def nao_saiu(envio)
+    return if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
+    return para_voce('private_reply_unsure') if envio.talvez_entregue
+
+    @registro.soltar_pessoa!(@comentario)
+    para_voce('private_reply_failed')
+  end
+
+  # O comentário no topo da conversa do privado, e o id dela na linha do privado. O privado já saiu: uma falha aqui vai
+  # para o rastreador e não impede a resposta pública (a reserva da pessoa já marca o envio).
   def na_conversa(conversation, inicio)
-    return if conversation.nil?
+    return Rails.logger.warn("[comentarios_ia] privado sem conversa gravada #{ids}") if conversation.nil?
 
     @conversa.anotar!(conversation, @comentario, care, nova: conversation.created_at >= inicio)
     @registro.vincular!(@comentario, 'private_reply', conversation)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
+  end
+
+  def recusou(acao)
+    Rails.logger.warn("[comentarios_ia] a Meta recusou #{acao} #{ids}")
   end
 
   # Uma vez só por comentário: o `ai_seen` já deixou um job só cuidando dele.

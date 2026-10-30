@@ -23,9 +23,9 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
   def privado(care)
     reivindicacao = reivindicar
-    return Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: Crm::MetaAds::ComentariosIa::Rede::JA_FEITO) unless reivindicacao
+    # Sem a linha, ou com o envio dela já saindo em outra requisição: o privado não sai duas vezes.
+    return Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: Crm::MetaAds::ComentariosIa::Rede::JA_FEITO) unless enviando?(reivindicacao)
 
-    reivindicacao.attempt!
     envio = Crm::MetaAds::ComentariosIa::Rede::Pagina.new(@inbox.channel).private_reply(@comentario.comment_id, mensagem(care))
     return falhou(envio) unless envio.ok
 
@@ -63,6 +63,10 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
     nil
+  end
+
+  def enviando?(reivindicacao)
+    reivindicacao.present? && reivindicacao.attempt!
   end
 
   def reivindicar

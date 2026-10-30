@@ -1,7 +1,7 @@
 # IA cuida dos comentários (#2212): a conversa que nasce de um comentário, na caixa do Instagram ou do Messenger da
 # rede dele, com o comentário no topo (mensagem de atividade). A conversa guarda de onde veio em
 # `additional_attributes.meta_ads_comment`: rede, comentário, post, anúncio, quem comentou e o cuidado; a do privado
-# marca também `private_reply`, e ja_mandou? a usa para mandar um privado só por pessoa em cada post.
+# marca também `private_reply`. Um privado só por pessoa em cada post: Crm::MetaAdsCommentPerson, reservado antes da Meta.
 #
 # - Depois do privado: no Instagram, a conversa vem do InstagramPrivateReply do #2196; no Messenger, de no_messenger!.
 #   Nos dois, o privado que saiu está gravado com o id da Meta (source_id): o envio ao canal não o manda de novo, e o
@@ -27,16 +27,6 @@ module Crm::MetaAds::ComentariosIa::Conversa
     conversation
   end
 
-  # A Meta não diz se o Private Reply é um por comentário ou por pessoa: até a chamada real dizer, a mesma pessoa
-  # comentando de novo no mesmo post não recebe outro privado.
-  def ja_mandou?(comentario)
-    Conversation.where(account_id: comentario.account_id, inbox_id: comentario.inbox_id)
-                .where("additional_attributes -> 'meta_ads_comment' ->> 'post_id' = ?", comentario.post_id.to_s)
-                .where("additional_attributes -> 'meta_ads_comment' ->> 'from_id' = ?", comentario.from_id.to_s)
-                .where("additional_attributes -> 'meta_ads_comment' ->> 'private_reply' = 'true'")
-                .exists?
-  end
-
   # O privado que saiu pelo Messenger entra na caixa, no contato da resposta da Meta (o PSID): na conversa que a pessoa
   # já tem aberta, ou numa nova. Igual ao que o #2196 faz no Instagram.
   def no_messenger!(comentario, envio, texto)
@@ -51,8 +41,15 @@ module Crm::MetaAds::ComentariosIa::Conversa
     conversation.update!(additional_attributes: { 'meta_ads_comment' => origem(comentario, care) })
     atividade!(conversation, comentou(comentario))
     atividade!(conversation, traduzir(comentario, motivo))
-    Crm::Entrega.new(conversation: conversation, motivo: MOTIVO, origem: ORIGEM).call
+    entregar(conversation)
     conversation
+  end
+
+  # A conversa já existe, aberta na caixa: uma falha da Atribuição vai para o rastreador e não desfaz o resto.
+  def entregar(conversation)
+    Crm::Entrega.new(conversation: conversation, motivo: MOTIVO, origem: ORIGEM).call
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: conversation.account).capture_exception
   end
 
   # A conversa do comentário para onde a resposta da pessoa volta: a mais recente do contato na caixa, se nasceu de
@@ -70,7 +67,8 @@ module Crm::MetaAds::ComentariosIa::Conversa
   # agente, nada muda: o agente da caixa já responde. Só na conversa do comentário sem pessoa no nome.
   def passar_se_preciso!(conversation)
     origem = conversation.additional_attributes.to_h['meta_ads_comment']
-    return if origem.nil? || conversation.assignee_id.present?
+    # Segurada (ninguém online) ou com convite: o HandoffDrainJob já tenta de novo; não roda a cada mensagem.
+    return if origem.nil? || conversation.assignee_id.present? || Crm::Entrega::Marca.presente?(conversation)
     return unless Crm::MetaAdsCommentCare.find_by(id: origem['care_id'], account_id: conversation.account_id)&.handoff == 'assignment'
 
     Crm::Entrega.new(conversation: conversation, motivo: MOTIVO, origem: ORIGEM).call
