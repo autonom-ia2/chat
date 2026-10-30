@@ -15,9 +15,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   def comentario(**mudancas)
     Crm::MetaAds::ComentariosIa::Comentario.new(
       network: 'instagram', account_id: account.id, inbox_id: inbox.id, owner_id: 'ig-1', post_id: '1790', ad_id: nil,
-      comment_id: 'c-1', parent_id: nil, from_id: 'igsid-1', from_name: 'carla.mendes', text: 'Quanto custa?',
-      created_time: agora, **mudancas
+      comment_id: 'c-1', parent_id: nil, from_id: 'igsid-1', created_time: agora, **mudancas
     )
+  end
+
+  # O comentário depois da leitura na Meta: o evento leva só ids (#2327).
+  def lido(**mudancas)
+    comentario(**mudancas).lido(text: 'Quanto custa?', from_name: 'carla.mendes')
   end
 
   def cuidar(item = comentario)
@@ -32,7 +36,34 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     account.enable_features!(described_class::FLAG)
     allow(registro).to receive_messages(reservar!: true, hoje: 0, vez: 0, gravar!: true, vincular!: 1, soltar!: 1)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation, ja_mandou?: false)
-    allow(rede).to receive(:privado).and_return(enviado)
+    allow(rede).to receive_messages(privado: enviado, ler: { text: 'Quanto custa?', from_name: 'carla.mendes' })
+  end
+
+  it 'lê o comentário na Meta antes de perguntar ao Jev' do
+    decide('no_reply')
+
+    cuidar
+
+    expect(rede).to have_received(:ler).ordered
+    expect(classificador).to have_received(:decidir).with('Quanto custa?').ordered
+  end
+
+  it 'a Meta diz que não dá para ler (apagado, sem permissão): descartado, sem Jev e sem soltar a leitura' do
+    allow(classificador).to receive(:decidir)
+    allow(rede).to receive(:ler).and_return(nil)
+
+    cuidar
+
+    expect(classificador).not_to have_received(:decidir)
+    expect(registro).to have_received(:reservar!).with(comentario)
+    expect(registro).not_to have_received(:soltar!)
+  end
+
+  it 'a Meta não responde à leitura: solta a leitura e sobe, para o job tentar de novo' do
+    allow(rede).to receive(:ler).and_raise(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+
+    expect { cuidar }.to raise_error(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+    expect(registro).to have_received(:soltar!).with(comentario, 'ai_seen')
   end
 
   it 'manda o privado, põe o comentário no topo da conversa e responde no comentário com a frase da vez' do
@@ -42,14 +73,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(rede).to have_received(:privado).with(care)
-    expect(conversa).to have_received(:anotar!).with(conversation, comentario, care, nova: true)
-    expect(registro).to have_received(:vincular!).with(comentario, 'private_reply', conversation)
+    expect(conversa).to have_received(:anotar!).with(conversation, lido, care, nova: true)
+    expect(registro).to have_received(:vincular!).with(lido, 'private_reply', conversation)
     expect(rede).to have_received(:responder).with('Te mandei os detalhes no privado!')
   end
 
   it 'mesma pessoa comentando de novo no post: um privado só, sem resposta pública' do
     decide('private')
-    allow(conversa).to receive(:ja_mandou?).with(comentario).and_return(true)
+    allow(conversa).to receive(:ja_mandou?).with(lido).and_return(true)
 
     cuidar
 
@@ -63,14 +94,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar
 
-    expect(conversa).to have_received(:anotar!).with(conversation, comentario, care, nova: false)
+    expect(conversa).to have_received(:anotar!).with(conversation, lido, care, nova: false)
   end
 
   it 'erro antes de agir na Meta solta a leitura, para o job tentar de novo' do
     allow(classificador).to receive(:decidir).and_raise(ActiveRecord::ConnectionTimeoutError)
 
     expect { cuidar }.to raise_error(ActiveRecord::ConnectionTimeoutError)
-    expect(registro).to have_received(:soltar!).with(comentario, 'ai_seen')
+    expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
   end
 
   it 'erro antes de reservar não solta a leitura de outro job' do
@@ -103,8 +134,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(rede).not_to have_received(:responder)
-    expect(conversa).to have_received(:para_voce!).with(comentario, care, 'private_reply_failed')
-    expect(registro).to have_received(:gravar!).with(comentario, 'private_reply_failed', conversation: conversation)
+    expect(conversa).to have_received(:para_voce!).with(lido, care, 'private_reply_failed')
+    expect(registro).to have_received(:gravar!).with(lido, 'private_reply_failed', conversation: conversation)
   end
 
   it 'privado que já tinha saído (pela pessoa ou outro job): não faz mais nada' do
@@ -125,8 +156,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     expect(rede).not_to have_received(:privado)
     expect(rede).not_to have_received(:responder)
-    expect(conversa).to have_received(:para_voce!).with(comentario, care, 'to_you')
-    expect(registro).to have_received(:gravar!).with(comentario, 'to_you', conversation: conversation)
+    expect(conversa).to have_received(:para_voce!).with(lido, care, 'to_you')
+    expect(registro).to have_received(:gravar!).with(lido, 'to_you', conversation: conversation)
   end
 
   it 'propaganda: esconde o comentário' do

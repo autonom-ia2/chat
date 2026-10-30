@@ -15,8 +15,7 @@ RSpec.describe Crm::MetaAdsComentariosIaListener do
   describe '#meta_ads_comment_received' do
     let(:dados) do
       { network: 'instagram', account_id: account.id, inbox_id: inbox.id, instagram_id: 'ig-1', media_id: '1790', ad_id: nil,
-        comment_id: 'c-1', parent_id: nil, from_id: 'igsid-1', from_name: 'carla', text: 'Quanto custa?',
-        created_time: Time.zone.parse('2026-10-27 10:00') }
+        comment_id: 'c-1', parent_id: nil, from_id: 'igsid-1', created_time: Time.zone.parse('2026-10-27 10:00') }
     end
 
     def evento(dados)
@@ -27,6 +26,12 @@ RSpec.describe Crm::MetaAdsComentariosIaListener do
       expect { listener.meta_ads_comment_received(evento(dados)) }
         .to have_enqueued_job(Crm::MetaAds::ComentariosIa::CuidarJob)
         .with(hash_including('comment_id' => 'c-1', 'owner_id' => 'ig-1', 'post_id' => '1790', 'created_time' => '2026-10-27T10:00:00Z'))
+    end
+
+    # #2327: o job guarda os argumentos em claro no Redis. Texto e nome, se viessem, não vão para lá.
+    it 'enfileira só ids, mesmo se o evento trouxer texto e nome' do
+      expect { listener.meta_ads_comment_received(evento(dados.merge(text: 'Quanto custa?', from_name: 'carla'))) }
+        .to have_enqueued_job(Crm::MetaAds::ComentariosIa::CuidarJob).with(hash_excluding('text', 'from_name'))
     end
 
     it 'aceita a hora como texto' do

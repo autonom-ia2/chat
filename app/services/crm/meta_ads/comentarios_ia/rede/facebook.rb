@@ -3,10 +3,14 @@
 #   abandonada, reserva, `attempt!` logo antes da chamada, `confirm!` quando a Meta aceita, e abre a conversa na caixa
 #   do Messenger com a mensagem que saiu (Conversa.no_messenger!). Recusado (4xx), a linha sai; sem resposta ou 5xx, a
 #   Meta pode ter entregado: a linha fica sem confirmação e travada;
-# - resposta e esconder: Crm::MetaAds::FacebookComments do #2197, com a conexão de anúncios da conta. Ele confere que o
-#   comentário é do post e que a Página é da conta, e grava a ação com actor 'ai'.
+# - leitura, resposta e esconder: Crm::MetaAds::FacebookComments do #2197, com a conexão de anúncios da conta. Ele
+#   confere que o comentário é do post e que a Página é da conta (leitura) ou tem a caixa do Messenger nela (ações), e
+#   grava a ação com actor 'ai'. Aqui não há pessoa abrindo a tela: a IA age pela caixa da Página, sem conferir quem a vê.
 class Crm::MetaAds::ComentariosIa::Rede::Facebook
   REGISTRO = Crm::MetaAds::ComentariosIa::Registro
+  SEM_PESSOA = ->(_inbox) { true }
+  # Como a ação fica gravada: pela IA, sem pessoa e sem anúncio (o comentário chegou pelo post).
+  POR_IA = { actor: REGISTRO::ACTOR, user: nil, ad_id: nil }.freeze
 
   def initialize(inbox, comentario)
     @inbox = inbox
@@ -26,14 +30,21 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     envio
   end
 
+  def ler
+    dados = comentarios&.comment(@comentario.post_id, @comentario.comment_id)
+    dados && { text: dados['message'], from_name: dados.dig('from', 'name') }
+  rescue Crm::MetaAds::FacebookComments::Error
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+  end
+
   def responder(texto)
-    comentarios&.reply_on_post!(@comentario.post_id, @comentario.comment_id, texto, actor: REGISTRO::ACTOR).present?
+    comentarios&.reply_to(@comentario.post_id, @comentario.comment_id, texto, POR_IA).present?
   rescue Crm::MetaAds::FacebookComments::Error
     false
   end
 
   def esconder
-    comentarios&.hide_on_post!(@comentario.post_id, @comentario.comment_id, true, actor: REGISTRO::ACTOR) == true
+    comentarios&.hide_in(@comentario.post_id, @comentario.comment_id, true, POR_IA) == true
   rescue Crm::MetaAds::FacebookComments::Error
     false
   end
@@ -68,6 +79,6 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
   def comentarios
     conexao = Crm::MetaAdsConnection.find_by(account_id: @comentario.account_id)
-    conexao && Crm::MetaAds::FacebookComments.new(conexao)
+    conexao && Crm::MetaAds::FacebookComments.new(conexao, inbox_access: SEM_PESSOA)
   end
 end

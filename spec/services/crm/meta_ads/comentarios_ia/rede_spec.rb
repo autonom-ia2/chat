@@ -68,7 +68,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook')) }
 
     before do
-      stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao); end })
+      stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao, inbox_access:); end })
       stub_const('Crm::MetaAds::FacebookComments::Error', Class.new(StandardError))
       allow(Crm::MetaAds::FacebookComments).to receive(:new).and_return(servico)
       allow(Crm::MetaAdsConnection).to receive(:find_by).with(account_id: account.id).and_return(instance_double(Crm::MetaAdsConnection))
@@ -118,18 +118,53 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     end
 
     it 'responde e esconde pelo serviço do #2197, como IA' do
-      allow(servico).to receive_messages(reply_on_post!: { id: 'c-2' }, hide_on_post!: true)
+      allow(servico).to receive_messages(reply_to: { id: 'c-2' }, hide_in: true)
 
       expect(rede.responder('Te chamei no Messenger')).to be(true)
       expect(rede.esconder).to be(true)
-      expect(servico).to have_received(:reply_on_post!).with('555_888', '555_777', 'Te chamei no Messenger', actor: 'ai')
-      expect(servico).to have_received(:hide_on_post!).with('555_888', '555_777', true, actor: 'ai')
+      expect(servico).to have_received(:reply_to).with('555_888', '555_777', 'Te chamei no Messenger', { actor: 'ai', user: nil, ad_id: nil })
+      expect(servico).to have_received(:hide_in).with('555_888', '555_777', true, { actor: 'ai', user: nil, ad_id: nil })
     end
 
     it 'recusa do serviço vira false' do
-      allow(servico).to receive(:reply_on_post!).and_raise(Crm::MetaAds::FacebookComments::Error)
+      allow(servico).to receive(:reply_to).and_raise(Crm::MetaAds::FacebookComments::Error)
 
       expect(rede.responder('oi')).to be(false)
+    end
+
+    it 'age pela caixa da Página, sem pessoa abrindo a tela' do
+      allow(servico).to receive(:hide_in).and_return(true)
+
+      rede.esconder
+
+      expect(Crm::MetaAds::FacebookComments).to have_received(:new).with(anything, inbox_access: described_class::Facebook::SEM_PESSOA)
+    end
+
+    describe 'ler (o evento leva só ids, #2327)' do
+      it 'o texto e o nome como a Graph devolve' do
+        allow(servico).to receive(:comment).with('555_888', '555_777')
+                                           .and_return({ 'message' => 'Quanto custa?', 'from' => { 'id' => '9', 'name' => 'Ana' } })
+
+        expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'Ana')
+      end
+
+      it 'a Meta diz que não dá para ler (apagado, sem permissão, Página de outra conta): nil' do
+        allow(servico).to receive(:comment).and_return(nil)
+
+        expect(rede.ler).to be_nil
+      end
+
+      it 'sem conexão de anúncios na conta: nil' do
+        allow(Crm::MetaAdsConnection).to receive(:find_by).and_return(nil)
+
+        expect(rede.ler).to be_nil
+      end
+
+      it 'a Meta fora do ar: Indisponivel, para o job tentar de novo' do
+        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error)
+
+        expect { rede.ler }.to raise_error(described_class::Indisponivel)
+      end
     end
   end
 
@@ -164,6 +199,33 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       allow(privado).to receive(:perform!).and_raise(Crm::MetaAds::InstagramPrivateReply::Error)
 
       expect(rede.privado(care)).to have_attributes(ok: false, erro: 'meta_refused')
+    end
+
+    describe 'ler (o evento leva só ids, #2327)' do
+      let(:result) { Meta::AdsGraphClient::Result }
+
+      it 'o texto e o username como a Graph devolve' do
+        allow(cliente).to receive(:comment).with('555_777')
+                                           .and_return(result.new(ok: true, data: { 'text' => 'Quanto custa?', 'from' => { 'username' => 'carla' } }))
+
+        expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'carla')
+      end
+
+      it 'comentário apagado ou sem permissão: nil' do
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 400, error_code: 100))
+        expect(rede.ler).to be_nil
+
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 403, error_code: 10))
+        expect(rede.ler).to be_nil
+      end
+
+      it 'a Meta fora do ar (rede, 5xx, limite): Indisponivel, para o job tentar de novo' do
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: nil))
+        expect { rede.ler }.to raise_error(described_class::Indisponivel)
+
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 500, error_code: 2))
+        expect { rede.ler }.to raise_error(described_class::Indisponivel)
+      end
     end
 
     it 'responde e esconde; só grava o que a Meta aceitou' do

@@ -8,10 +8,16 @@
 #
 # Todo adaptador responde `privado(care)` com um Envio (ok, conversation, erro) e `responder(texto)` e `esconder` com
 # true ou false. Nada levanta para o job: a recusa da Meta é um resultado.
+#
+# E `ler`: o texto e o nome de quem comentou, lidos na Meta na hora, porque o evento leva só ids (#2327). Devolve
+# `{ text:, from_name: }`, ou nil quando a Meta diz que não dá para ler (comentário apagado, sem permissão, Página de
+# outra conta): esse não volta. Meta fora do ar levanta Indisponivel, e o CuidarJob tenta de novo, com teto.
 module Crm::MetaAds::ComentariosIa::Rede
   Envio = Struct.new(:ok, :recipient_id, :message_id, :conversation, :erro, :talvez_entregue, keyword_init: true)
   # O privado já tinha saído (pela pessoa, na tela do #2196, ou por outro job): nada a fazer, nem falha a mostrar.
   JA_FEITO = 'private_reply_done'.freeze
+  # A Meta não respondeu à leitura do comentário (rede, 5xx, limite).
+  class Indisponivel < StandardError; end
 
   module_function
 

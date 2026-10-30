@@ -18,6 +18,15 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: e.code)
   end
 
+  def ler
+    resultado = cliente.comment(@comentario.comment_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient?
+    return unless resultado.ok
+
+    dados = resultado.data.to_h
+    { text: dados['text'], from_name: dados.dig('from', 'username') }
+  end
+
   def responder(texto)
     acao('reply') { cliente.reply(@comentario.comment_id, texto) }
   end

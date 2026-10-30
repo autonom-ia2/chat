@@ -109,12 +109,9 @@ class Crm::MetaAds::FacebookComments
     nil
   end
 
-  private
-
-  def by_user(ad_id, user)
-    { actor: 'user', user: user, ad_id: ad_id }
-  end
-
+  # Pelo post, e não pelo anúncio: a tela (reply!/hide!) e a IA que cuida dos comentários (#2212), que age no comentário
+  # que chegou pelo evento, sem pessoa. As mesmas regras: comentário do post, caixa do Messenger da Página na conta e
+  # pages_manage_engagement. `by`: { actor:, user:, ad_id: }, gravado na ação.
   def reply_to(post_id, comment_id, message, by)
     text = message.to_s.strip
     raise Error, 'invalid_text' if text.empty? || text.length > MESSAGE_MAX
@@ -125,6 +122,12 @@ class Crm::MetaAds::FacebookComments
   def hide_in(post_id, comment_id, hidden, by)
     act!(post_id, comment_id, hidden ? 'hide' : 'show', by) { |client| client.hide_comment(comment_id, hidden) }
     hidden
+  end
+
+  private
+
+  def by_user(ad_id, user)
+    { actor: 'user', user: user, ad_id: ad_id }
   end
 
   def empty(status)
