@@ -28,9 +28,14 @@ module Crm
       private
 
       # IA entende a conversa F3: a sugestão de fechar aceita fecha o card (Crm::Ai::FecharCard.aceitar!) com a pessoa
-      # como autora; nunca é automática (a IA que fecha sozinha não passa por aqui).
+      # como autora. Nunca é automática (a IA nunca fecha sozinha, #2389): sem pessoa, ou no automático, a sugestão expira
+      # e nada fecha.
       def fechar
-        @suggestion.fechar_desligado? ? @suggestion.update!(status: :expired) : Crm::Ai::FecharCard.aceitar!(@suggestion, ator: @actor)
+        if @auto || @actor.blank? || @suggestion.fechar_desligado?
+          @suggestion.update!(status: :expired)
+        else
+          Crm::Ai::FecharCard.aceitar!(@suggestion, ator: @actor)
+        end
         @card.reload
       end
 

@@ -62,7 +62,6 @@ module Crm
         result = apply_classification(classification)
         # Card arquivado como "não é negócio" (#1922): o resto (pedido de atendente, retorno, campos) era do card aberto.
         return result.tap { Crm::Memoria::Pendente.descartar!(@card) } if @pipeline_mudou || result.status == :archived
-        return depois_de_fechar(classification, result) if result.status == :closed
 
         refresh_post_classification_context!
         classification = refresh_handoff_classification_if_needed(classification, result, regra)
@@ -313,9 +312,9 @@ module Crm
 
       # IA entende a conversa F3: o modelo disse que o pedido deste card terminou. Só com a flag `crm_ia_fecha_card`; nem
       # no "Avaliar agora" nem na avaliação do card parado (silêncio nunca fecha). Com pedido ou promessa de pessoa neste
-      # card, ele fica: fechar pularia a passagem. Fecha sozinho só no automático do funil e com a confiança alta; senão,
-      # vira sugestão de fechar. As guardas do card são do Crm::Ai::FecharCard. A leitura nova da conversa tira da tela a
-      # sugestão de fechar que esperava (a mesma leitura grava outra, se ainda for o caso).
+      # card, ele fica: fechar pularia a passagem. Nunca fecha sozinho (decisão do Rodrigo, 30/10, #2389): vira sugestão de
+      # fechar, que a pessoa aceita. As guardas do card são do Crm::Ai::FecharCard. A leitura nova da conversa tira da tela
+      # a sugestão de fechar que esperava (a mesma leitura grava outra, se ainda for o caso).
       def fechar_card!(classification)
         return false unless FecharCard.ligada?(@account)
         return false if FecharCard::GATILHOS_SEM_FECHAMENTO.include?(@trigger)
@@ -324,15 +323,14 @@ module Crm
         return false if classification[:fechar_card].blank?
         return false if HandoffIntent.requested?(classification[:handoff]) || FatosDaConversa.promessa?(classification[:handoff])
 
-        FecharCard.new(card: @card, decisao: classification[:fechar_card], lido_em: @lido_em, sozinho: auto_move_allowed?,
-                       origem: origem(classification)).aplicar!
+        FecharCard.new(card: @card, decisao: classification[:fechar_card], lido_em: @lido_em, origem: origem(classification)).aplicar!
       end
 
-      # true (arquivado), :fechado ou a sugestão de fechar (Crm::AiStageSuggestion).
+      # true (arquivado) ou a sugestão de fechar (Crm::AiStageSuggestion).
       def fim_do_card(fim)
         return Result.new(status: :suggested, suggestion: fim) if fim.is_a?(Crm::AiStageSuggestion)
 
-        Result.new(status: fim == :fechado ? :closed : :archived)
+        Result.new(status: :archived)
       end
 
       # Para a sugestão de fechar: quem leu, quando e a data de retorno que a mesma leitura achou (Retorno).
@@ -340,16 +338,6 @@ module Crm
         pedido = classification[:callback_request]
         pedido = pedido.is_a?(Hash) ? pedido.with_indifferent_access.slice(:detected, :requested_at).presence : nil
         { model_used: classification[:model_used], trigger: @trigger, pedido_de_retorno: pedido }
-      end
-
-      # O card que a IA fechou não passa a conversa nem pontua (isso é de card aberto). Os campos e a memória seguem, e o
-      # "adiou" ganha o lembrete de retorno.
-      def depois_de_fechar(classification, result)
-        refresh_post_classification_context!
-        FecharCard.agendar_retorno(@card, classification[:fechar_card], classification[:callback_request])
-        attribute_extraction.apply(classification[:extracted_attributes])
-        Crm::Memoria::Pendente.aplicar!(@card)
-        result
       end
 
       # IA entende a conversa F3 (revisões adversariais): com a flag, perder é fechar (Crm::Ai::FecharCard), nunca uma
