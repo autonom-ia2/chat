@@ -59,6 +59,24 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(painel.payload[:results]).to eq(sent: 2, replied: 1, skipped: 1)
   end
 
+  it 'a Meta ou o Jev fora do ar em todas as tentativas: "não consegui ler", não "não era o caso"' do
+    acao('3', 'ai_seen')
+    acao('3', 'ai_unread')
+
+    expect(painel.payload[:to_see].find { |item| item[:id] == '3' }[:kind]).to eq('unread')
+  end
+
+  it 'o que a IA fez em outra conta, com o mesmo id de comentário, não entra' do
+    outra = create(:account)
+    Crm::MetaAdsCommentAction.record!(account: outra, network: 'instagram', comment_id: '1', action: 'to_you', actor: 'ai')
+    Crm::MetaAdsCommentAction.record!(account: outra, network: 'instagram', comment_id: '6', action: 'hide', actor: 'ai')
+
+    payload = painel.payload
+
+    expect(payload[:to_see].find { |item| item[:id] == '1' }[:kind]).to eq('waiting')
+    expect(payload[:hidden]).to be_empty
+  end
+
   it 'sem ver a conversa, sem o caminho dela' do
     acao('1', 'to_you', conversation: conversa(private_reply: nil))
     sem_ver = described_class.new(account: account, alvo: alvo, fonte: fonte, conversation_access: ->(_c) { false })

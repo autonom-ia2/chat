@@ -64,6 +64,7 @@
         "complaint": "Reclamação. Não respondi. Está na sua caixa, como urgente.",
         "hidden": "Propaganda ou golpe. Escondi do post.",
         "failed": "Não consegui mandar no privado. Responda você, se quiser.",
+        "unread": "Não consegui ler este comentário. Responda você, se quiser.",
         "waiting": "Chegou antes de você ligar. Responda no comentário, se quiser.",
         "older": "Mais de 7 dias: não dá mais para mandar no privado. Responda no comentário.",
         "skipped": "Não se aplica · não mandei. Fica com você: responda no comentário, se quiser."

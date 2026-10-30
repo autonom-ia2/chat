@@ -64,6 +64,7 @@
         "complaint": "Complaint. I didn't reply. It's in your inbox, marked urgent.",
         "hidden": "Spam. I hid it from the post.",
         "failed": "I couldn't send the DM. Reply yourself, if you want.",
+        "unread": "I couldn't read this comment. Reply yourself, if you want.",
         "waiting": "Came in before you turned it on. Reply in the comment if you want.",
         "older": "Older than 7 days: I can't send a DM anymore. Reply in the comment.",
         "skipped": "Doesn't apply · I didn't send. It stays with you: reply in the comment if you want."
