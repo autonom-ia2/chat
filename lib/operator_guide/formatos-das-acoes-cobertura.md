@@ -8,15 +8,15 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 683 |
 | Sem corpo | 199 |
 | Com corpo | 484 |
-| Com corpo e formato completo | 396 (81,8%) |
-| Com corpo e formato incompleto | 88 |
+| Com corpo e formato completo | 399 (82,4%) |
+| Com corpo e formato incompleto | 85 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 198 de 299 |
+| Leituras cruas tipadas | 197 de 291 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 74 |
+| leitura crua sem tipo | 71 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -81,7 +81,6 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/meetings/:id/sync` — leitura crua sem tipo: force
 - `POST crm/meetings/suggest_times` — leitura crua sem tipo: date, duration_minutes
 - `POST crm/memoria/cards/:card_id/fatos` — leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)
-- `POST crm/meta_ads_connection/ads/:ad_id/cuidado/previa` — leitura crua sem tipo: para_quem
 - `POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply` — leitura crua sem tipo: content (repassada a comments.reply!)
 - `POST crm/meta_ads_connection/media` — leitura crua sem tipo: file
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
@@ -113,14 +112,12 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
-- `PUT crm/meta_ads_connection/ads/:ad_id/cuidado` — leitura crua sem tipo: message, para_quem, phrases
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
 - `PUT crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PUT relationships/configuration` — leitura crua sem tipo: configuration
-- `PUT seus_posts/posts/:post_id/cuidado` — leitura crua sem tipo: message, para_quem, phrases
 
 ## Leituras cruas sem tipo
 
@@ -180,10 +177,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/meta_ads_creation#media` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` amount — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` end_time — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
-- `api/v1/accounts/crm/meta_ads_cuidado#previa` para_quem — o código não converte nem compara o valor
-- `api/v1/accounts/crm/meta_ads_cuidado#update` message — o código não converte nem compara o valor
-- `api/v1/accounts/crm/meta_ads_cuidado#update` para_quem — o código não converte nem compara o valor
-- `api/v1/accounts/crm/meta_ads_cuidado#update` phrases — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meta_ads_facebook_comments#reply` content — repassada a comments.reply!
 - `api/v1/accounts/crm/meta_ads_facebook_comments#update` hidden — repassada a comments.hide!
 - `api/v1/accounts/crm/pipelines#create` goal — o código não converte nem compara o valor
@@ -216,9 +209,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/portals#update` portal.config.analytics — o código não converte nem compara o valor
 - `api/v1/accounts/relationships/configurations#update` configuration — o código não converte nem compara o valor
 - `api/v1/accounts/relationships/values#update` field — o código não converte nem compara o valor
-- `api/v1/accounts/seus_posts_cuidado#update` message — o código não converte nem compara o valor
-- `api/v1/accounts/seus_posts_cuidado#update` para_quem — o código não converte nem compara o valor
-- `api/v1/accounts/seus_posts_cuidado#update` phrases — o código não converte nem compara o valor
 - `api/v1/accounts/tiktok/authorizations#create` return_to — o código não converte nem compara o valor
 - `api/v1/accounts/whatsapp_calls#accept` sdp_answer — repassada a Whatsapp::CallService.new
 - `api/v1/accounts/whatsapp_calls#initiate` sdp_offer — repassada a provider_service.initiate_call

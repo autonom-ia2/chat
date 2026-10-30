@@ -15837,24 +15837,40 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:66",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:77",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
     ],
     "sem_corpo": true
   },
   "POST crm/meta_ads_connection/ads/:ad_id/cuidado/previa": {
     "campos": {
-      "para_quem": {}
+      "message": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      },
+      "para_quem": {
+        "max_caracteres": 500,
+        "tipo": "string"
+      },
+      "phrases": {
+        "tipo": "lista"
+      },
+      "status": {
+        "padrao": "on",
+        "tipo": "string",
+        "um_de": [
+          "on",
+          "paused"
+        ]
+      }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#previa",
-    "motivos": [
-      "leitura crua sem tipo: para_quem"
-    ],
+    "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:59",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:60",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:141",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
     ],
     "sem_corpo": false
   },
@@ -24724,21 +24740,17 @@
     "campos": {
       "message": {},
       "para_quem": {},
-      "phrases": {},
-      "status": {
-        "tipo": "string"
-      }
+      "phrases": {
+        "tipo": "lista"
+      },
+      "status": {}
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#update",
-    "motivos": [
-      "leitura crua sem tipo: message, para_quem, phrases"
-    ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:52",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:54",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:53",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:98"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:141",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
     ],
     "sem_corpo": false
   },

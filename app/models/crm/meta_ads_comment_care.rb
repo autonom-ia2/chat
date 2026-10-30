@@ -45,16 +45,25 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
 
   # O cuidado que vale para um comentário: o do anúncio, quando ele veio de um (pelo id do anúncio ou por um dos posts
   # do criativo), senão o do post. Só o da rede do comentário (ou das duas). Vários anúncios com o mesmo post: vale o
-  # mais antigo (menor id), sempre o mesmo.
+  # mais antigo (menor id) que está ligado, sempre o mesmo. O anúncio pausado também conta: a IA não cuida (nil), e o
+  # cuidado do post não entra no lugar dele.
   def self.cuidando(account_id:, network:, post_id:, ad_id:)
-    escopo = on.where(account_id: account_id, network: [network.to_s, 'both']).order(:id)
-    do_anuncio(escopo, post_id, ad_id) || (post_id.present? && escopo.find_by(target_kind: 'post', target_id: post_id.to_s)) || nil
+    escopo = where(account_id: account_id, network: [network.to_s, 'both']).order(:id)
+    anuncio = do_anuncio(escopo, post_id, ad_id)
+    return (anuncio if anuncio.status == 'on') if anuncio
+
+    (post_id.present? && escopo.on.find_by(target_kind: 'post', target_id: post_id.to_s)) || nil
   end
 
+  # Pelo id do anúncio, o dele (ligado ou não). Pelo post do criativo, o ligado; sem nenhum ligado, um pausado.
   def self.do_anuncio(escopo, post_id, ad_id)
     anuncios = escopo.where(target_kind: 'ad')
-    (ad_id.present? && anuncios.find_by(target_id: ad_id.to_s)) ||
-      (post_id.present? && anuncios.find_by('post_ids @> ?', [post_id.to_s].to_json)) || nil
+    pelo_id = ad_id.present? && anuncios.find_by(target_id: ad_id.to_s)
+    return pelo_id if pelo_id
+    return if post_id.blank?
+
+    do_post = anuncios.where('post_ids @> ?', [post_id.to_s].to_json)
+    do_post.on.first || do_post.first
   end
 
   # Post sem produto: a IA só esconde propaganda e avisa reclamação.

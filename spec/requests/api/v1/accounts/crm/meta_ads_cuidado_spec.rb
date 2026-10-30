@@ -208,6 +208,40 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(response.parsed_body).to include('recebe' => include('text' => 'Quero o e-book'), 'nao' => include('text' => 'Lindo!'))
   end
 
+  it 'prévia e resumo com o Jev fora do ar: 422 ai_unavailable, como no post (o passo "como fica" não fica em branco)' do
+    classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
+    allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('timeout'))
+
+    post "#{base}/cuidado/previa", params: { para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
+
+    allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
+      .and_return(instance_double(Crm::MetaAds::ComentariosIa::Resumo, call: { status: 'ai_unavailable' }))
+    get "#{base}/resumo", headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
+  end
+
+  it 'prévia: "para quem" acima do limite do cuidado é recusado antes de perguntar à IA' do
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new)
+
+    post "#{base}/cuidado/previa", params: { para_quem: 'a' * (Crm::MetaAdsCommentCare::NOTE_LIMIT + 1) },
+                                   headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'invalid_para_quem')
+    expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
+  end
+
+  it 'texto em forma errada é recusado, não vira vazio' do
+    put "#{base}/cuidado", params: corpo.merge(para_quem: ['Quem pedir']), headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body).to eq('error' => 'invalid_para_quem')
+    expect(Crm::MetaAdsCommentCare.count).to eq(0)
+  end
+
   it 'resumo: na primeira vez, está lendo' do
     get "/api/v1/accounts/#{account.id}/crm/meta_ads_connection/ads/#{ad_id}/resumo", headers: admin.create_new_auth_token, as: :json
 

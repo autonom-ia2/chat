@@ -119,13 +119,18 @@ class Crm::MetaAds::ComentariosIa::Painel
   private
 
   # O anúncio cujo criativo trocou de post (ou de redes): o cuidado passa a ter os de agora, lidos na hora (Anuncio), para
-  # o motor achar o comentário que chega só com o id do post novo. Grava só essas colunas (o que o dono escreveu não muda,
-  # e um cuidado antigo que não passasse numa validação nova não pode derrubar a tela). Sem mudança, nada é gravado.
+  # o motor achar o comentário que chega só com o id do post novo. É registro do que a Meta diz, não escolha de quem
+  # abre a tela: por isso vale também para quem só vê. Grava só essas colunas (o que o dono escreveu não muda, e um
+  # cuidado antigo que não passasse numa validação nova não pode derrubar a tela), e só se a linha ainda tem o que foi
+  # lido (compare-and-set): um `salvar!` ao mesmo tempo não é atropelado. Sem mudança, nada é gravado.
   def acompanhar_o_criativo!
     return unless target_kind == 'ad' && cuidado && @networks.any?
     return if cuidado.post_ids == @post_ids && cuidado.network == rede_do_cuidado
 
-    cuidado.update_columns(post_ids: @post_ids, network: rede_do_cuidado, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    Crm::MetaAdsCommentCare.where(id: cuidado.id, network: cuidado.network)
+                           .where('post_ids = ?::jsonb', cuidado.post_ids.to_json)
+                           .update_all(post_ids: @post_ids, network: rede_do_cuidado, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    cuidado.reload
   end
 
   # Duas abas ligando o mesmo post ao mesmo tempo: a segunda esbarra no cuidado que a primeira acabou de criar (na

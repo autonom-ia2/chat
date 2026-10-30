@@ -126,6 +126,20 @@ RSpec.describe Crm::MetaAdsCommentCare do
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '17900', ad_id: nil)).to eq(anuncio)
     end
 
+    it 'anúncio pausado: a IA não cuida, e o cuidado do post ligado não entra no lugar dele' do
+      anuncio.update!(status: 'paused', post_ids: %w[179])
+
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: '120')).to be_nil
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
+    end
+
+    it 'dois anúncios com o mesmo post, o mais antigo pausado: vale o ligado' do
+      anuncio.update!(status: 'paused', post_ids: %w[17900])
+      ligado = create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '121', post_ids: %w[17900])
+
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '17900', ad_id: nil)).to eq(ligado)
+    end
+
     it 'só vale na rede do cuidado; o anúncio das duas redes vale nas duas' do
       expect(described_class.cuidando(network: 'facebook', account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
 

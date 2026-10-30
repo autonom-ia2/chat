@@ -20,10 +20,14 @@
 # os comentários na Meta; o criativo já foi lido (uma vez só por chamada: é ele que diz as caixas, e a Fonte reusa a
 # leitura).
 #
+# Prévia e resumo respondem como no post: o que não está pronto vai como erro (422; `ai_unavailable` com o Jev fora do
+# ar), e a tela não mostra o passo "como fica" em branco com "Ligar" ativo.
+#
 # O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,
 # mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
 class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm::BaseController
   AUDIT_ACTION = 'meta_ads_comment_care'.freeze
+  AI_UNAVAILABLE = 'ai_unavailable'.freeze
   FLAGS = ['meta_ads_gestao', Crm::MetaAds::ComentariosIa::Cuidar::FLAG].freeze
   REDE_FLAGS = Crm::MetaAds::ComentariosIa::Anuncio::FLAGS.values.freeze
   STATUS = { 'ad_not_found' => :not_found, 'not_connected' => :not_found, 'not_inbox_member' => :forbidden }.freeze
@@ -46,21 +50,28 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   end
 
   def resumo
-    render json: Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
+    resultado = Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
+    return render_error_code(AI_UNAVAILABLE) if resultado[:status] == AI_UNAVAILABLE
+
+    render json: resultado
   end
 
   def update
-    painel.salvar!(message: texto(params[:message], 'message'), para_quem: texto(params[:para_quem], 'para_quem'),
-                   phrases: frases(params[:phrases]), status: params[:status].to_s, user: Current.user)
+    painel.salvar!(message: texto(:message), para_quem: texto(:para_quem), phrases: frases,
+                   status: cuidado_params[:status].to_s, user: Current.user)
     audit_care!('save')
     render json: payload
   end
 
   def previa
-    para_quem = texto(params[:para_quem], 'para_quem')
-    return render_error_code('invalid_para_quem') if para_quem.strip.empty?
+    para_quem = texto(:para_quem)
+    return render_error_code('invalid_para_quem') if para_quem.strip.empty? || para_quem.strip.length > Crm::MetaAdsCommentCare::NOTE_LIMIT
 
-    render json: Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
+    resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
+    # A tela trata qualquer resposta de erro como "não deu para ler": só a prévia pronta vai como prévia.
+    return render_error_code(resultado[:status]) unless resultado[:status] == 'ready'
+
+    render json: resultado
   end
 
   def ler_antigos
@@ -110,7 +121,7 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
 
   def painel
     @painel ||= Crm::MetaAds::ComentariosIa::Painel.new(account: Current.account, alvo: alvo, fonte: fonte,
-                                                        conversation_access: method(:conversa_visivel?))
+                                                        conversation_access: method(:conversa_visivel?), viewer: Current.user)
   end
 
   def fonte
@@ -126,14 +137,20 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
     Pundit.policy!(pundit_user, conversation).view?
   end
 
-  # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327).
-  def texto(value, campo)
-    raise Crm::MetaAds::ComentariosIa::Painel::Error, "invalid_#{campo}" unless value.nil? || value.is_a?(String)
-
-    value.to_s
+  def cuidado_params
+    @cuidado_params ||= params.permit(:status, :message, :para_quem, phrases: [])
   end
 
-  def frases(value)
+  # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327). O que chegou e os strong params tiraram veio
+  # na forma errada: recusa, em vez de seguir com vazio.
+  def texto(campo)
+    raise Crm::MetaAds::ComentariosIa::Painel::Error, "invalid_#{campo}" if params.key?(campo) && !cuidado_params.key?(campo)
+
+    cuidado_params[campo].to_s
+  end
+
+  def frases
+    value = cuidado_params[:phrases]
     raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_phrases' unless value.is_a?(Array) && value.all?(String)
 
     value
