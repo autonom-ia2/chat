@@ -771,8 +771,8 @@
 # Atender, com confirmação do cliente; nunca Ganho; silêncio nunca fecha (a avaliação do card parado não fecha); (b)
 # "era teste" vira sugestão de arquivar como não é negócio (com a flag crm_ia_arquiva_lixo); (c) uma pessoa escolheu a etapa há
 # pouco e a IA quer voltar o card: vira sugestão; (d) o card fechado pela IA não segura o pedido novo pelo respeito de
-# 24 h; (e) fechar é sugestão por padrão, que a pessoa aceita num clique; sozinha, só com confiança de 0,95
-# (Crm::Ai::Config::AUTO_CLOSE_THRESHOLD). Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
+# 24 h; (e) fechar é sempre sugestão, que a pessoa aceita num clique: a IA nunca fecha sozinha (decisão de 30/10, #2389).
+# Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
 # Posição 55 na feature_flags_ext_1 (1 << 54), definitiva da Orquestração (22/10).
 - name: crm_ia_fecha_card
   display_name: CRM › IA fecha o card (perdido com motivo, resolvido)
