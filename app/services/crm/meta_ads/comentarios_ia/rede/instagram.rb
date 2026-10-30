@@ -10,6 +10,10 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     @comentario = comentario
   end
 
+  def privado_disponivel?
+    true
+  end
+
   def privado(care)
     resultado = Crm::MetaAds::InstagramPrivateReply.new(@inbox.channel)
                                                    .perform!(comment: comment, text: care.message, actor: REGISTRO::ACTOR, ad_id: @comentario.ad_id)
@@ -20,7 +24,9 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
 
   def ler
     resultado = cliente.comment(@comentario.comment_id)
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient?
+    # Token caído ou permissão tirada também tentam de novo: um problema da caixa não descarta, um a um, os comentários
+    # da conta. Só o comentário que não existe mais (ou outra recusa dele) é descartado.
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
     return unless resultado.ok
 
     dados = resultado.data.to_h

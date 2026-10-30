@@ -6,6 +6,7 @@
 # - Facebook (Rede::Facebook): o privado pelo Messenger é nosso (Rede::Pagina, token da caixa); a resposta e o
 #   esconder pelo Crm::MetaAds::FacebookComments, que grava a ação.
 #
+# `privado_disponivel?` diz se a rede já deixa a IA mandar o privado (o Facebook espera a pages_messaging, F4).
 # Todo adaptador responde `privado(care)` com um Envio (ok, conversation, erro) e `responder(texto)` e `esconder` com
 # true ou false. Nada levanta para o job: a recusa da Meta é um resultado.
 #

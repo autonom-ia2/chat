@@ -9,12 +9,16 @@
 class Crm::MetaAds::ComentariosIa::Rede::Facebook
   REGISTRO = Crm::MetaAds::ComentariosIa::Registro
   SEM_PESSOA = ->(_inbox) { true }
-  # Como a ação fica gravada: pela IA, sem pessoa e sem anúncio (o comentário chegou pelo post).
-  POR_IA = { actor: REGISTRO::ACTOR, user: nil, ad_id: nil }.freeze
 
   def initialize(inbox, comentario)
     @inbox = inbox
     @comentario = comentario
+  end
+
+  # O privado pelo Messenger depende da `pages_messaging`, que a Meta ainda não aprovou para o app (F4 do Seus posts).
+  # Até lá, no Facebook a IA só responde em público e esconde; a pergunta fica com o dono.
+  def privado_disponivel?
+    false
   end
 
   def privado(care)
@@ -33,18 +37,20 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   def ler
     dados = comentarios&.comment(@comentario.post_id, @comentario.comment_id)
     dados && { text: dados['message'], from_name: dados.dig('from', 'name') }
-  rescue Crm::MetaAds::FacebookComments::Error
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+  rescue Crm::MetaAds::FacebookComments::Error => e
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if e.code == 'meta_unavailable'
+
+    nil
   end
 
   def responder(texto)
-    comentarios&.reply_to(@comentario.post_id, @comentario.comment_id, texto, POR_IA).present?
+    comentarios&.reply_as_ai(@comentario.post_id, @comentario.comment_id, texto).present?
   rescue Crm::MetaAds::FacebookComments::Error
     false
   end
 
   def esconder
-    comentarios&.hide_in(@comentario.post_id, @comentario.comment_id, true, POR_IA) == true
+    comentarios&.hide_as_ai(@comentario.post_id, @comentario.comment_id, true) == true
   rescue Crm::MetaAds::FacebookComments::Error
     false
   end

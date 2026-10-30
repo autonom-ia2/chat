@@ -4,7 +4,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
   let!(:care) { create(:crm_meta_ads_comment_care, account: account, target_id: '1790') }
-  let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true) }
+  let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true, privado_disponivel?: true) }
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa) }
   let(:registro) { class_double(Crm::MetaAds::ComentariosIa::Registro) }
@@ -104,6 +104,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
   end
 
+  it 'falha ao soltar a leitura não troca o erro que faz o job tentar de novo' do
+    allow(rede).to receive(:ler).and_raise(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+    allow(registro).to receive(:soltar!).and_raise(ActiveRecord::ConnectionTimeoutError)
+    allow(ChatwootExceptionTracker).to receive(:new).and_return(instance_double(ChatwootExceptionTracker, capture_exception: true))
+
+    expect { cuidar }.to raise_error(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+  end
+
   it 'erro antes de reservar não solta a leitura de outro job' do
     allow(registro).to receive(:hoje).and_raise(ActiveRecord::ConnectionTimeoutError)
 
@@ -194,6 +202,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(rede).to have_received(:privado).with(care)
+  end
+
+  it 'rede em que o privado ainda não está liberado (Facebook, até a pages_messaging): a pergunta fica com o dono' do
+    allow(rede).to receive(:privado_disponivel?).and_return(false)
+    decide('price')
+
+    cuidar
+
+    expect(rede).not_to have_received(:privado)
+    expect(rede).not_to have_received(:responder)
   end
 
   it 'sem certeza do Jev, não faz nada' do

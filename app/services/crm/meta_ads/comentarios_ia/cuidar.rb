@@ -14,7 +14,8 @@
 #    - reclamação: não responde, e a conversa abre urgente para a pessoa;
 #    - propaganda: esconde;
 #    - o resto: nada (a reivindicação já registra que a IA leu).
-#    Sem oferta na ficha nem "para quem" do dono, nunca manda privado.
+#    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado ainda não está liberado (Facebook, F4),
+#    nunca manda privado: a pergunta fica com o dono.
 #
 # Erro antes de a IA agir na Meta solta a reivindicação e sobe: o job tenta de novo. Depois de agir, a reivindicação
 # fica, para o reenvio não mandar o privado de novo.
@@ -46,14 +47,26 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     return descartar if lido.nil?
 
     @comentario = @comentario.lido(**lido)
-    decisao = classificador.decidir(@comentario.text)
-    return if decisao.nil?
-
-    decisao = 'no_reply' if %w[private price].include?(decisao) && !care.privado?
-    executar(decisao)
+    decisao = decidir
+    executar(decisao) if decisao
   rescue StandardError
-    @registro.soltar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::LIDO) unless @agiu
+    soltar_leitura unless @agiu
     raise
+  end
+
+  # O privado só sai com o que mandar (oferta ou "para quem") e na rede que já o libera; senão, fica com o dono.
+  def decidir
+    decisao = classificador.decidir(@comentario.text)
+    return decisao unless %w[private price].include?(decisao)
+
+    care.privado? && rede.privado_disponivel? ? decisao : 'no_reply'
+  end
+
+  # Uma falha ao soltar não pode trocar o erro original: é ele que diz ao job se tenta de novo.
+  def soltar_leitura
+    @registro.soltar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::LIDO)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: Account.find_by(id: @comentario.account_id)).capture_exception
   end
 
   def descartar

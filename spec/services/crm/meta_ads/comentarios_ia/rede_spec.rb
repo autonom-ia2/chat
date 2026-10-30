@@ -69,11 +69,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
     before do
       stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao, inbox_access:); end })
-      stub_const('Crm::MetaAds::FacebookComments::Error', Class.new(StandardError))
+      stub_const('Crm::MetaAds::FacebookComments::Error', Class.new(StandardError) { def code = message })
       allow(Crm::MetaAds::FacebookComments).to receive(:new).and_return(servico)
       allow(Crm::MetaAdsConnection).to receive(:find_by).with(account_id: account.id).and_return(instance_double(Crm::MetaAdsConnection))
       allow(described_class::Pagina).to receive(:new).and_return(pagina)
       allow(Crm::MetaAds::ComentariosIa::Conversa).to receive(:no_messenger!).and_return(conversation)
+    end
+
+    it 'o privado pelo Messenger ainda não está liberado (pages_messaging, F4)' do
+      expect(rede.privado_disponivel?).to be(false)
     end
 
     it 'reivindica, manda o privado com o botão do WhatsApp e abre a conversa no Messenger' do
@@ -118,22 +122,22 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     end
 
     it 'responde e esconde pelo serviço do #2197, como IA' do
-      allow(servico).to receive_messages(reply_to: { id: 'c-2' }, hide_in: true)
+      allow(servico).to receive_messages(reply_as_ai: { id: 'c-2' }, hide_as_ai: true)
 
       expect(rede.responder('Te chamei no Messenger')).to be(true)
       expect(rede.esconder).to be(true)
-      expect(servico).to have_received(:reply_to).with('555_888', '555_777', 'Te chamei no Messenger', { actor: 'ai', user: nil, ad_id: nil })
-      expect(servico).to have_received(:hide_in).with('555_888', '555_777', true, { actor: 'ai', user: nil, ad_id: nil })
+      expect(servico).to have_received(:reply_as_ai).with('555_888', '555_777', 'Te chamei no Messenger')
+      expect(servico).to have_received(:hide_as_ai).with('555_888', '555_777', true)
     end
 
     it 'recusa do serviço vira false' do
-      allow(servico).to receive(:reply_to).and_raise(Crm::MetaAds::FacebookComments::Error)
+      allow(servico).to receive(:reply_as_ai).and_raise(Crm::MetaAds::FacebookComments::Error)
 
       expect(rede.responder('oi')).to be(false)
     end
 
     it 'age pela caixa da Página, sem pessoa abrindo a tela' do
-      allow(servico).to receive(:hide_in).and_return(true)
+      allow(servico).to receive(:hide_as_ai).and_return(true)
 
       rede.esconder
 
@@ -160,10 +164,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.ler).to be_nil
       end
 
-      it 'a Meta fora do ar: Indisponivel, para o job tentar de novo' do
-        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error)
-
+      it 'a Meta fora do ar: Indisponivel, para o job tentar de novo; outra recusa: nil' do
+        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
         expect { rede.ler }.to raise_error(described_class::Indisponivel)
+
+        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
+        expect(rede.ler).to be_nil
       end
     end
   end
@@ -183,6 +189,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       stub_const('Instagram::CommentsClient', Class.new { def initialize(_channel); end })
       allow(Crm::MetaAds::InstagramPrivateReply).to receive(:new).with(channel).and_return(privado)
       allow(Instagram::CommentsClient).to receive(:new).with(channel).and_return(cliente)
+    end
+
+    it 'o privado está liberado' do
+      expect(rede.privado_disponivel?).to be(true)
     end
 
     it 'manda o privado pelo serviço do #2196, como IA, com o comentário no formato do webhook' do
@@ -211,12 +221,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'carla')
       end
 
-      it 'comentário apagado ou sem permissão: nil' do
+      it 'comentário apagado: nil' do
         allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 400, error_code: 100))
+
         expect(rede.ler).to be_nil
+      end
+
+      it 'token caído ou permissão tirada: Indisponivel, sem descartar o comentário' do
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 400, error_code: 190))
+        expect { rede.ler }.to raise_error(described_class::Indisponivel)
 
         allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 403, error_code: 10))
-        expect(rede.ler).to be_nil
+        expect { rede.ler }.to raise_error(described_class::Indisponivel)
       end
 
       it 'a Meta fora do ar (rede, 5xx, limite): Indisponivel, para o job tentar de novo' do

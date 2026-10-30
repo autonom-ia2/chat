@@ -346,10 +346,9 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       stub_request(:post, meta_graph_url(comment_id)).with(body: { is_hidden: 'true' })
                                                      .to_return(status: 200, body: { success: true }.to_json, headers: json)
       service = described_class.new(connection, inbox_access: ->(_inbox) { true })
-      ia = { actor: 'ai', user: nil, ad_id: nil }
 
-      expect(service.reply_to(post_id, comment_id, 'Te chamei no Messenger', ia)).to eq(id: '200000000000002_800')
-      expect(service.hide_in(post_id, comment_id, true, ia)).to be(true)
+      expect(service.reply_as_ai(post_id, comment_id, 'Te chamei no Messenger')).to eq(id: '200000000000002_800')
+      expect(service.hide_as_ai(post_id, comment_id, true)).to be(true)
       expect(Crm::MetaAdsCommentAction.order(:id).pluck(:action, :actor, :ad_id, :user_id))
         .to eq([['reply', 'ai', nil, nil], ['hide', 'ai', nil, nil]])
     end
@@ -357,9 +356,8 @@ RSpec.describe Crm::MetaAds::FacebookComments do
     it 'pela IA, sem a caixa do Messenger da Página na conta: no_inbox, sem chamar a Meta' do
       Channel::FacebookPage.where(id: page_inbox.channel_id).delete_all
       service = described_class.new(connection, inbox_access: ->(_inbox) { true })
-      ia = { actor: 'ai', user: nil, ad_id: nil }
 
-      expect { service.hide_in(post_id, comment_id, true, ia) }.to raise_error(described_class::Error, 'no_inbox')
+      expect { service.hide_as_ai(post_id, comment_id, true) }.to raise_error(described_class::Error, 'no_inbox')
       expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
     end
 
