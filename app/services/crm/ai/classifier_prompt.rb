@@ -249,22 +249,23 @@ module Crm::Ai::ClassifierPrompt
   # `crm_ia_arquiva_lixo` (ClassifierPrompt.para), logo depois do aviso de dados e antes do VARIOS e da memória: o texto
   # antes daqui não muda, e as contas sem a flag seguem com o prefixo e o cache de antes. Com a flag, o schema também
   # ganha o campo, e cada variante perde o cache uma vez, na primeira chamada; depois o prefixo volta a ser estável.
-  NAO_E_NEGOCIO = <<~NEGOCIO.strip
+  NAO_E_NEGOCIO_MODELO = <<~NEGOCIO.strip
     NÃO É NEGÓCIO ("nao_e_negocio"):
     Preencha só quando ESTE card não é um pedido de cliente e não deveria estar no funil:
-    - "fora_do_negocio": ninguém quer nada da empresa. Exemplos: alguém oferecendo produto, serviço ou parceria PARA a
-      empresa; mensagem que era para outra pessoa e veio a este número por engano; só robôs dos dois lados (o nosso e
-      uma resposta automática do outro lado), sem nenhuma pessoa pedindo nada. "duplicado_de": null.
+    - "fora_do_negocio": ninguém quer da empresa nada do que ela vende ou atende, neste funil ou em outro. Exemplos:
+      alguém oferecendo produto, serviço ou parceria PARA a empresa; candidato a vaga de emprego; pedido de doação ou de
+      patrocínio; pesquisa ou questionário; mensagem que era para outra pessoa e veio a este número por engano; só robôs
+      dos dois lados (o nosso e uma resposta automática do outro lado), sem nenhuma pessoa pedindo nada.
+      "duplicado_de": null.
     - "duplicado": outro card aberto, em "other_subjects" ou em "cards", do MESMO funil deste, é o MESMO pedido deste,
       do mesmo cliente, e nada separa os dois. Em "duplicado_de", o "id" desse outro card, o que fica (o mais antigo).
       Pedidos parecidos em funis diferentes, ou do mesmo funil sobre coisas diferentes, não são duplicados.
     NUNCA preencha quando: o cliente pediu, perguntou ou mostrou interesse em algo que vendemos ou atendemos, mesmo pouco,
-    vago ou fora do nosso perfil; a pessoa quer algo da EMPRESA que não é o que este funil atende ("pipeline.when_to_use"),
-    como conhecer a empresa, ver uma demonstração, testar o serviço, outro produto ou serviço, uma visita, ou um contato
-    que começou num evento ou numa indicação (é contato para a empresa: o card fica, e uma pessoa da equipe o encaminha);
-    ele desistiu, recusou, fechou com outro, disse que não tem mais interesse ou que chegou até nós sem querer (clicou no
-    anúncio, mandou a mensagem pronta ou preencheu o formulário por engano): isso é perda, siga a regra da perda, nunca
-    este campo; a conversa está começando (um "oi" é começo de conversa); a pessoa mandou só um link, o texto de um
+    vago ou fora do nosso perfil; a pessoa quer algo que a EMPRESA vende ou atende, mas que não é o que este funil atende
+    ("pipeline.when_to_use"), como conhecer a empresa e o que ela oferece, ver uma demonstração, testar o serviço, outro
+    produto ou serviço, uma visita, ou um contato que começou num evento ou numa indicação (é contato para a empresa: o
+    card fica, e uma pessoa da equipe o encaminha);
+    %<perda>s; a conversa está começando (um "oi" é começo de conversa); a pessoa mandou só um link, o texto de um
     anúncio, uma foto, um áudio, uma figurinha ou um caractere, mesmo sem escrever mais nada depois (pode ser quem
     chegou por um anúncio ou começou mostrando o que quer); só nós escrevemos e o cliente ainda não respondeu
     (prospecção, retorno ou follow-up sem resposta é silêncio, não lixo); é cliente de um pedido já feito pedindo
@@ -272,6 +273,16 @@ module Crm::Ai::ClassifierPrompt
     Com "nao_e_negocio" preenchido, mantenha o estágio atual (suggested_stage_id = current_stage_id). "confidence" segue
     a escala de CONFIANÇA; "reasoning" cita o fato da conversa. Em todos os outros casos, "nao_e_negocio": null.
   NEGOCIO
+  # A desistência: sem a flag do fechar (`crm_ia_fecha_card`), a perda é a etapa de perda, como antes do #2396. Com ela,
+  # quem desistiu ou chegou sem querer pela nossa divulgação vai no "fechar_card", que só sugere (uma pessoa confere).
+  NAO_E_NEGOCIO = format(NAO_E_NEGOCIO_MODELO,
+                         perda: 'ele desistiu, recusou ou fechou com outro (isso é perda: use a etapa de perda, nunca este campo)').freeze
+  NAO_E_NEGOCIO_COM_FECHAR = format(
+    NAO_E_NEGOCIO_MODELO,
+    perda: 'ele desistiu, recusou, fechou com outro, disse que não tem mais interesse ou que chegou até nós sem querer ' \
+           'pela nossa divulgação (clicou no anúncio, mandou a mensagem pronta ou preencheu o formulário por engano): ' \
+           'isso é perda, vai em "fechar_card", nunca neste campo'
+  ).freeze
 
   PARTES = [
     ROLE_AND_TASK,
@@ -375,7 +386,7 @@ module Crm::Ai::ClassifierPrompt
   def self.para(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false, pedido_anterior: false, # rubocop:disable Metrics/ParameterLists
                 fatos: false, fecha_card: false)
     base = Array(eligible_agents).any? { |nome| Crm::AgentesIa.rotulo_de_agente?(nome) } ? TEXT_COM_AGENTES_IA : TEXT
-    base = "#{base}\n\n#{NAO_E_NEGOCIO}" if nao_e_negocio
+    base = "#{base}\n\n#{nao_e_negocio_para(fecha_card)}" if nao_e_negocio
     com_fecha_card(com_fatos(montar(base, memoria, pedido_anterior, email_autoria), fatos), fecha_card, nao_e_negocio)
   end
 
@@ -383,9 +394,11 @@ module Crm::Ai::ClassifierPrompt
   def self.para_varios(eligible_agents, memoria: false, email_autoria: false, nao_e_negocio: false, pedido_anterior: false, # rubocop:disable Metrics/ParameterLists
                        fatos: false, fecha_card: false)
     base = para(eligible_agents).equal?(TEXT) ? TEXT_VARIOS : TEXT_VARIOS_COM_AGENTES_IA
-    base = "#{para(eligible_agents, nao_e_negocio: true)}\n\n#{VARIOS}" if nao_e_negocio
+    base = "#{para(eligible_agents)}\n\n#{nao_e_negocio_para(fecha_card)}\n\n#{VARIOS}" if nao_e_negocio
     com_fecha_card(com_fatos(montar(base, memoria, pedido_anterior, email_autoria), fatos), fecha_card, nao_e_negocio)
   end
+
+  def self.nao_e_negocio_para(fecha_card) = fecha_card ? NAO_E_NEGOCIO_COM_FECHAR : NAO_E_NEGOCIO
 
   def self.com_fatos(prefixo, fatos)
     fatos ? "#{prefixo}\n\n#{Crm::Ai::FatosDaConversa::ORDEM}" : prefixo

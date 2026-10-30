@@ -228,6 +228,53 @@ RSpec.describe Crm::Ai::Evaluator do
 
       expect(card.reload).to be_archived
     end
+
+    # Pega (revisão do #2412): o lixo ficar aberto, sem ninguém saber, quando o pedido de fechar veio mas não virou
+    # sugestão. A guarda é pelo resultado do fechar, não pela presença do campo.
+    it 'o pedido de fechar abaixo do limiar de sugestão: arquiva' do
+      ia_responde(os_dois.deep_merge(fechar_card: { confidence: 0.3 }))
+
+      avaliar
+
+      expect(card.reload).to be_archived
+    end
+
+    it 'na avaliação do card parado (fechar nunca sugere): arquiva' do
+      ia_responde(os_dois)
+
+      avaliar(trigger: Crm::Ai::FecharCard::TRIGGER_CARD_PARADO)
+
+      expect(card.reload).to be_archived
+    end
+
+    it 'sem a flag do fechar: arquiva' do
+      account.disable_features!(Crm::Ai::FecharCard::FLAG)
+      ia_responde(os_dois)
+
+      avaliar
+
+      expect(card.reload).to be_archived
+    end
+
+    # Pega: um "era teste" virar perda. Segue a sugestão de arquivar, como antes do #2396.
+    it '"teste" com fechar: segue a sugestão de arquivar como teste', :aggregate_failures do
+      ia_responde(os_dois.deep_merge(nao_e_negocio: { motivo: 'teste' }))
+
+      resultado = avaliar
+
+      expect(resultado.suggestion.fechar).to eq('resultado' => 'arquivado', 'motivo' => 'teste')
+      expect(Crm::AiStageSuggestion.where(card: card).filter_map(&:fechar).pluck('resultado')).not_to include('perdido')
+    end
+
+    # Pega: o repetido contar a perda duas vezes (no card que fica e neste).
+    it '"duplicado" com fechar: arquiva o repetido' do
+      account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Pedido', currency: 'BRL', primary_conversation: conversa)
+      ia_responde(os_dois.deep_merge(nao_e_negocio: { motivo: 'duplicado', duplicado_de: account.crm_cards.order(:id).first.id }))
+
+      avaliar
+
+      expect(card.reload).to be_archived
+    end
   end
 
   describe 'voltar de etapa com uma pessoa mexendo há pouco (regra h, D1)' do

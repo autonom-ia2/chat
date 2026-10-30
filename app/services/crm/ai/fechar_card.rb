@@ -66,8 +66,8 @@ class Crm::Ai::FecharCard
         ("YYYY-MM-DD", resolvida a partir de "now_local"); sem data dita por ele, null.
       - "recusou": o cliente recusou de forma clara e final o que oferecemos ou o atendimento, desistiu do pedido, disse
         que não tem mais interesse ou que chegou até nós sem querer pela nossa divulgação (clicou no anúncio, mandou a
-        mensagem pronta ou preencheu o formulário por engano): esse lead é perda. Mensagem que era para outra pessoa e
-        caiu neste número não é lead: não é perda.
+        mensagem pronta ou preencheu o formulário por engano): esse lead é perda. Não é lead, e por isso não é perda:
+        mensagem que era para outra pessoa e caiu neste número, quem oferece algo à empresa, golpe ou robô.
       - "fechou_com_outra": o cliente disse que fechou ou resolveu com outra empresa ou pessoa.
     - "resultado": "resolvido", só em "pipeline.kind" = "serve": o CLIENTE confirmou com clareza que o problema DESTE
       card foi resolvido, e nenhum texto do funil, das etapas ou do handoff_trigger diz que quem encerra o atendimento

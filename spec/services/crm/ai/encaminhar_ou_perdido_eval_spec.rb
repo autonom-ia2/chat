@@ -1,12 +1,16 @@
 require 'rails_helper'
 
 # AVALIAÇÃO PAGA, DESLIGADA POR PADRÃO (CLAUDE.md do repo: eval com provedor pago só com execução explícita).
-# Roda com `CRM_EVAL_PAGO=1` e `OPENAI_API_KEY`. A rodada para ao passar de TETO_USD, somado pelo evento de custo da IA do
-# CRM (Crm::Ai::UsageRecorder::EVENT_NAME). Teto da Issue: US$ 3 somando todas as rodadas (#2396).
+# Roda com `CRM_EVAL_PAGO=1` e `OPENAI_API_KEY`. TETO_USD vale POR RODADA (uma execução deste spec): ela para ao passar
+# dele, somado pelo evento de custo da IA do CRM (Crm::Ai::UsageRecorder::EVENT_NAME). O teto da Issue (US$ 3) soma todas
+# as rodadas e é conferido por quem roda, com o `custo_usd` de cada saída.
+# `EVAL_SO_NAO_E_NEGOCIO=1`: só a flag do "não é negócio" (conta sem o fechar). Aí a desistência certa é a etapa de perda,
+# sem arquivar, como antes do #2396.
 #
 # #2396: a IA de etapa REAL (Crm::Ai::Evaluator, gatilho de mensagem, movimento automático ligado, com as flags do "não é
 # negócio" e do "fechar o card") avalia cards de cinco tipos, cada um REPETICOES vezes, num card novo:
-# - lixo: ninguém pede nada à empresa (fornecedor vendendo, engano de número, golpe, robô). Esperado: arquivado.
+# - lixo: ninguém quer nada do que a empresa vende ou atende (fornecedor vendendo, engano de número, golpe, robô,
+#   candidato a vaga, pedido de patrocínio). Esperado: arquivado, sem pedido de fechar.
 # - funil_estreito: a pessoa quer algo DA EMPRESA que não é o que este funil atende (conhecer a empresa, testar o
 #   serviço, outro produto, contato de um evento). Esperado: o card fica aberto para uma pessoa encaminhar; nada de
 #   arquivar nem de sugerir perdido.
@@ -46,6 +50,12 @@ module EncaminharOuPerdidoEval
       [:cliente, 'Mensagem automática: obrigado pelo contato! Retornaremos em breve.', 40],
       [:nos, 'Olá! Sou a assistente virtual. Como posso ajudar?', 39],
       [:cliente, 'Mensagem automática: obrigado pelo contato! Retornaremos em breve.', 39]
+    ] },
+    { nome: 'candidato_a_vaga', funil: 'Venda de planos de internet', mensagens: [
+      [:cliente, 'Boa tarde! Vi que vocês estão contratando. Queria me candidatar à vaga de técnico, posso mandar meu currículo?', 22]
+    ] },
+    { nome: 'pedido_de_patrocinio', funil: 'Venda de móveis planejados', mensagens: [
+      [:cliente, 'Olá! Organizo um campeonato de futebol do bairro e queria saber se a loja pode patrocinar os uniformes.', 18]
     ] },
     { nome: 'oferece_parceria', funil: 'Venda de pacotes de viagem', mensagens: [
       [:cliente, 'Oi! Tenho uma empresa de cobrança e quero oferecer nossos serviços para recuperar inadimplentes de vocês.', 26]
@@ -163,7 +173,8 @@ RSpec.describe 'Eval pago #2396: funil estreito encaminha, desistência vira sug
   let(:admin) { create(:user, account: account, role: :administrator, name: 'Adm') }
   let(:inbox) { create(:inbox, account: account, enable_auto_assignment: false) }
   let(:bot) { create(:agent_bot, account: account, name: 'Assistente') }
-  let(:repeticoes) { ENV.fetch('EVAL_REPETICOES', '3').to_i }
+  let(:repeticoes) { ENV.fetch('EVAL_REPETICOES', '5').to_i }
+  let(:so_nao_e_negocio) { ENV['EVAL_SO_NAO_E_NEGOCIO'] == '1' }
 
   around do |example|
     WebMock.allow_net_connect!
@@ -176,7 +187,8 @@ RSpec.describe 'Eval pago #2396: funil estreito encaminha, desistência vira sug
     skip 'eval pago: rode com CRM_EVAL_PAGO=1 e OPENAI_API_KEY' unless ENV['CRM_EVAL_PAGO'] == '1' && ENV['OPENAI_API_KEY'].present?
 
     allow(Crm::Config).to receive(:enabled?).and_return(true)
-    account.enable_features!(Crm::Ai::NaoENegocio::FLAG, Crm::Ai::FecharCard::FLAG)
+    account.enable_features!(Crm::Ai::NaoENegocio::FLAG)
+    account.enable_features!(Crm::Ai::FecharCard::FLAG) unless so_nao_e_negocio
     InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_API_KEY').update!(value: ENV.fetch('OPENAI_API_KEY'))
     allow(Crm::Cards::CurrentSubject).to receive(:card?).and_return(true)
     allow_any_instance_of(Crm::Ai::ContextBuilder).to receive(:platform_bot_ids).and_return(Set[bot.id]) # rubocop:disable RSpec/AnyInstance
@@ -257,14 +269,23 @@ RSpec.describe 'Eval pago #2396: funil estreito encaminha, desistência vira sug
 
   def perdido_sugerido?(linha) = linha[:sugestao_fechar].to_h['resultado'] == 'perdido'
 
-  # Certo por categoria: lixo arquivado; desistência com sugestão de perdido e sem arquivar; o resto aberto, sem arquivar
-  # nem sugerir perdido (o "agora não" do controle é o adiou: sugestão de perdido é o certo dele).
+  # Certo por categoria: lixo arquivado, sem pedido de fechar; desistência com sugestão de perdido e sem arquivar (só com o
+  # "não é negócio": na etapa de perda, sem arquivar); o resto aberto, sem arquivar nem sugerir perdido (o "agora não" do
+  # controle é o adiou: com o fechar, sugestão de perdido é o certo dele).
   def certo?(linha)
     case linha[:categoria]
-    when :lixo then arquivado?(linha)
-    when :desistiu, :clicou_engano then perdido_sugerido?(linha) && !arquivado?(linha)
-    else !arquivado?(linha) && linha[:card_status] == 'open' && (linha[:esperado_fechar] ? perdido_sugerido?(linha) : !perdido_sugerido?(linha))
+    when :lixo then arquivado?(linha) && linha[:fechar_card].blank?
+    when :desistiu, :clicou_engano then !arquivado?(linha) && perda_certa?(linha)
+    else !arquivado?(linha) && linha[:card_status] == 'open' && fechar_esperado?(linha)
     end
+  end
+
+  def perda_certa?(linha) = so_nao_e_negocio ? linha[:etapa] == 'Perdido' : perdido_sugerido?(linha)
+
+  def fechar_esperado?(linha)
+    return true if so_nao_e_negocio
+
+    linha[:esperado_fechar] ? perdido_sugerido?(linha) : !perdido_sugerido?(linha)
   end
 
   def placar(linhas)

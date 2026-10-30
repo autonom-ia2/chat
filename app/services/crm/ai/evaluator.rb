@@ -209,7 +209,7 @@ module Crm
 
         return voltar_como_sugestao(classification) || pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
 
-        fim = nao_e_negocio!(classification) || fechar_card!(classification)
+        fim = fim_decidido(classification)
         return fim_do_card(fim) if fim
 
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
@@ -293,17 +293,28 @@ module Crm
         Result.new(status: :skipped, error: 'pessoa_mexeu_na_etapa')
       end
 
+      # #2396: "fora do negócio" com pedido de fechar na mesma resposta (quem desistiu ou chegou sem querer): primeiro a
+      # sugestão de fechar, e só sem ela o arquivamento; arquivar tiraria da contagem o lead que é perda, sem ninguém
+      # conferir. O fechar que não vira sugestão (abaixo do limiar, card parado, pedido de pessoa) deixa o lixo sair como
+      # antes. "Teste" e "duplicado" seguem o arquivamento: um teste não é perda, e o repetido contaria a perda duas vezes.
+      def fim_decidido(classification)
+        return nao_e_negocio!(classification) || fechar_card!(classification) unless fora_do_negocio_com_fechar?(classification)
+
+        fechar_card!(classification) || nao_e_negocio!(classification)
+      end
+
+      def fora_do_negocio_com_fechar?(classification)
+        classification[:fechar_card].present? && classification.dig(:nao_e_negocio, :motivo) == NaoENegocio::FORA_DO_NEGOCIO
+      end
+
       # #1922: o modelo disse que o card não é negócio. Só com a flag da conta (`crm_ia_arquiva_lixo`) e no automático do
       # funil, como mover sozinho; "Avaliar agora" é a pessoa olhando o card, e ela mesma arquiva se quiser. As guardas do
       # card são do Crm::Ai::NaoENegocio. Com pedido de atendente neste card, ele fica: arquivar pularia a passagem. O "era
       # teste" (F3) é sempre sugestão: vale também sem o movimento automático, e a promessa de pessoa também o barra.
-      # #2396: com o pedido de fechar na mesma resposta (quem desistiu ou chegou sem querer), vale a sugestão de fechar:
-      # arquivar tiraria da contagem o lead que é perda, e sem ninguém conferir.
       def nao_e_negocio!(classification)
         return false if @trigger == 'manual' || classification[:nao_e_negocio].blank?
         return false unless NaoENegocio.ligada?(@card.account)
         return false if HandoffIntent.requested?(classification[:handoff])
-        return false if FecharCard.ligada?(@account) && classification[:fechar_card].present?
 
         teste = classification.dig(:nao_e_negocio, :motivo) == NaoENegocio::MOTIVO_TESTE
         # Nem na avaliação do card parado: o silêncio não diz que era teste.
