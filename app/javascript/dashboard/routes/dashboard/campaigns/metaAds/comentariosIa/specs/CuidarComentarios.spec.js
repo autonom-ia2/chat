@@ -13,6 +13,7 @@ vi.mock('dashboard/api/comentariosIa', () => ({
     getCuidado: vi.fn(),
     saveCuidado: vi.fn(),
     previa: vi.fn(),
+    rascunho: vi.fn(),
     lerAntigos: vi.fn(),
     getResumo: vi.fn(),
   },
@@ -97,6 +98,23 @@ describe('CuidarComentarios (#2212)', () => {
     expect(wrapper.find('[data-ia-started]').text()).toContain(
       'Quem pedir o link'
     );
+  });
+
+  it('passo 1: o post pede o começo da mensagem à IA; o anúncio abre vazio, sem "Estou escrevendo"', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.rascunho.mockResolvedValue({
+      data: { status: 'ready', message: 'Oi! Sai por R$ 29.' },
+    });
+    const post = await montar();
+    expect(post.find('[data-ia-dono-message]').element.value).toBe(
+      'Oi! Sai por R$ 29.'
+    );
+
+    ComentariosIaAPI.rascunho.mockClear();
+    const anuncio = await montar({ target: { kind: 'ad', id: '120' } });
+    expect(anuncio.find('[data-ia-dono-writing]').exists()).toBe(false);
+    expect(anuncio.find('[data-ia-dono-message]').element.value).toBe('');
+    expect(ComentariosIaAPI.rascunho).not.toHaveBeenCalled();
   });
 
   it('ligar que falha avisa e fica nos passos', async () => {

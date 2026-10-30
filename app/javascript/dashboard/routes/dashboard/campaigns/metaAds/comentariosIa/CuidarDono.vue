@@ -15,8 +15,8 @@ const props = defineProps({
   data: { type: Object, required: true },
   // async paraQuem => Prévia ({ recebe, nao }) ou null quando não deu para ler.
   preview: { type: Function, required: true },
-  // async () => o começo da mensagem escrito pela IA a partir da legenda do post, ou '' (Rascunho). Sem ele, o passo 1
-  // abre vazio.
+  // async () => o começo da mensagem escrito pela IA a partir da legenda do post, ou '' (Rascunho). Só no post do Seus
+  // posts; sem ele (o anúncio), o passo 1 abre vazio.
   draft: { type: Function, default: null },
   changing: { type: Boolean, default: false },
   canSendOld: { type: Boolean, default: false },
@@ -42,10 +42,15 @@ const phrases = computed(() =>
 );
 const step = ref(1);
 const message = ref(props.data.message || '');
-// Como no mockup aprovado, o cuidado novo já começa no atalho mais comum; o dono troca com um toque.
-const forWhom = ref(
-  props.data.para_quem || t('META_ADS_COMMENTS_AI.DONO.WHO.SUGGESTIONS.PRICE')
+// Como no mockup aprovado, o cuidado novo já começa no atalho mais comum; o dono troca com um toque. Como a frase
+// padrão, ele acompanha o idioma que chega depois, enquanto o dono não o trocou.
+const priceSuggestion = computed(() =>
+  t('META_ADS_COMMENTS_AI.DONO.WHO.SUGGESTIONS.PRICE')
 );
+const forWhom = ref(props.data.para_quem || priceSuggestion.value);
+watch(priceSuggestion, (nova, antiga) => {
+  if (forWhom.value === antiga) forWhom.value = nova;
+});
 const phrase = ref(phrases.value[0] || '');
 const editingPhrase = ref(!phrase.value);
 // A padrão muda com o idioma, que pode chegar depois de abrir a tela (endereço aberto direto): enquanto o dono não a
@@ -55,26 +60,24 @@ watch(phrases, (novas, antigas) => {
 });
 const heading = ref(null);
 // Passo 1 do cuidado novo, como no mockup aprovado: a mensagem já vem com um começo escrito a partir do post. Enquanto a
-// IA escreve, o campo espera; o que o dono digitar nesse meio tempo não é trocado. Sem começo, o campo fica vazio, com
-// o texto de sempre.
+// IA escreve, o campo espera; o que o dono digitar nesse meio tempo não é trocado. Sem começo, ou sem resposta em
+// DRAFT_TIMEOUT_MS, o campo fica vazio, com o texto de sempre.
+const DRAFT_TIMEOUT_MS = 15000;
 const writing = ref(false);
 const suggested = ref(false);
-// O campo cresce com a mensagem (mesmo jeito do TextArea do design system): no celular o começo inteiro aparece, sem
-// rolar dentro do campo; acima do teto (max-h), ele rola.
-const messageField = ref(null);
-const fitMessage = async () => {
-  await nextTick();
-  const field = messageField.value;
-  if (!field) return;
-  field.style.height = 'auto';
-  field.style.height = `${field.scrollHeight}px`;
+const draftOrTimeout = () => {
+  let timer;
+  const timeout = new Promise(resolve => {
+    timer = setTimeout(() => resolve(''), DRAFT_TIMEOUT_MS);
+  });
+  return Promise.race([props.draft(), timeout]).finally(() =>
+    clearTimeout(timer)
+  );
 };
-watch([message, step], fitMessage);
 onMounted(async () => {
-  fitMessage();
   if (!props.draft || props.changing || message.value.trim()) return;
   writing.value = true;
-  const texto = await props.draft();
+  const texto = await draftOrTimeout();
   writing.value = false;
   if (!texto || message.value.trim()) return;
   message.value = texto;
@@ -230,9 +233,9 @@ const FIELD =
           />
           {{ $t(`${KEY}.WHAT.WRITING`) }}
         </p>
+        <!-- O campo cresce com a mensagem (field-sizing): no celular o começo inteiro aparece; acima do teto, rola. -->
         <textarea
           id="ia-dono-message"
-          ref="messageField"
           v-model="message"
           data-ia-dono-message
           :aria-label="$t(`${KEY}.WHAT.TITLE`)"
@@ -240,7 +243,7 @@ const FIELD =
           :aria-busy="writing"
           :placeholder="writing ? '' : $t(`${KEY}.WHAT.PLACEHOLDER`)"
           :class="[FIELD, { 'animate-pulse bg-n-alpha-1': writing }]"
-          class="max-h-96 min-h-[8.5rem] overflow-y-auto"
+          class="max-h-96 min-h-[8.5rem] overflow-y-auto [field-sizing:content]"
         />
         <p
           v-if="tooLong"

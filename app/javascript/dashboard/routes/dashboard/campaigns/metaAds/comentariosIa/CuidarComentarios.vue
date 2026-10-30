@@ -344,7 +344,7 @@ const openInbox = path => {
         :key="`${target.id}-${changing}`"
         :data="painel"
         :preview="previa"
-        :draft="rascunho"
+        :draft="target.kind === 'post' ? rascunho : null"
         :changing="changing"
         :can-send-old="canSendOld"
         :saving="salvando"

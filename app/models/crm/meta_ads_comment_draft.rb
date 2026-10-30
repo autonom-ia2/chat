@@ -3,5 +3,9 @@
 class Crm::MetaAdsCommentDraft < ApplicationRecord
   self.table_name = 'crm_meta_ads_comment_drafts'
 
+  STATUSES = %w[writing ready no_offer invalid failed].freeze
+
   belongs_to :account
+
+  validates :status, inclusion: { in: STATUSES }
 end

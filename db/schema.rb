@@ -2879,6 +2879,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_630000) do
     t.string "target_kind", null: false
     t.string "target_id", null: false
     t.string "caption_digest", null: false
+    t.string "status", null: false
     t.text "message"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

@@ -110,6 +110,19 @@ describe('CuidarDono (#2212)', () => {
       );
     });
 
+    it('a IA sem resposta em 15 s: o campo fica vazio, com o texto de sempre', async () => {
+      vi.useFakeTimers();
+      try {
+        const wrapper = montar({ draft: () => new Promise(() => {}) });
+        await vi.advanceTimersByTimeAsync(15000);
+
+        expect(wrapper.find('[data-ia-dono-writing]').exists()).toBe(false);
+        expect(wrapper.find('[data-ia-dono-message]').element.value).toBe('');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('cuidado já escrito ou mudando: não pede começo à IA', async () => {
       const draft = vi.fn().mockResolvedValue('Oi! Da IA.');
       montar({ draft, data: painel({ message: 'A do dono' }) });
@@ -280,6 +293,21 @@ describe('CuidarDono (#2212)', () => {
 
     expect(wrapper.find('[data-ia-dono-phrase]').text()).toBe(
       'Te chamei no privado 😊'
+    );
+  });
+
+  it('o "para quem" do cuidado novo também acompanha o idioma que chega depois', async () => {
+    const i18n = createI18n({
+      legacy: false,
+      locale: 'en',
+      messages: { en, pt_BR: ptBR },
+    });
+    const wrapper = montar({ i18n, data: painel({ message: 'Oi!' }) });
+    i18n.global.locale.value = 'pt_BR';
+    await proximo(wrapper).trigger('click');
+
+    expect(wrapper.find('[data-ia-dono-who]').element.value).toBe(
+      'Quem perguntar o preço'
     );
   });
 
