@@ -4,7 +4,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import { useAutomation } from 'dashboard/composables/useAutomation';
 import { useEditableAutomation } from 'dashboard/composables/useEditableAutomation';
 import AutomationRuleForm from './AutomationRuleForm.vue';
-import { AUTOMATION_ACTION_TYPES } from './constants';
+import { useOfferedActionTypes } from './useOfferedActionTypes';
 import { crmAutomationOptionsReady } from 'dashboard/composables/useCrmAutomationOptions';
 
 const props = defineProps({
@@ -34,6 +34,7 @@ const {
 } = useAutomation();
 
 const { formatAutomation } = useEditableAutomation();
+const { offeredActionTypes } = useOfferedActionTypes();
 
 const syncAutomationFromSelected = (source = props.selectedResponse) => {
   if (!source?.conditions) return;
@@ -43,7 +44,7 @@ const syncAutomationFromSelected = (source = props.selectedResponse) => {
     source,
     allCustomAttributes.value,
     automationTypes,
-    AUTOMATION_ACTION_TYPES
+    offeredActionTypes.value
   );
 };
 

@@ -251,6 +251,10 @@
       "RESOLVED": "Resolved",
       "CANCELLED": "Cancelled"
     },
-    "CRM_OPTIONS_ERROR": "Could not load CRM pipelines."
+    "CRM_OPTIONS_ERROR": "Could not load CRM pipelines.",
+    "LOCKED_ACTION": {
+      "HINT": "This step can't be edited here. It stays in the rule when you save.",
+      "REMOVE": "Remove step"
+    }
   }
 }
