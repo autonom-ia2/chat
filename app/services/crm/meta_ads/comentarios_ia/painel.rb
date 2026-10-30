@@ -30,16 +30,31 @@ class Crm::MetaAds::ComentariosIa::Painel
     'kept_for_owner' => 'no_private', 'ai_unread' => 'unread'
   }.freeze
 
-  # Recebeu no privado e respondeu, pelas conversas que nasceram do cuidado: a tela do cuidado e a lista do Seus posts.
-  def self.resultados(account, care)
-    enviadas = Conversation.where(account_id: account.id)
-                           .where("additional_attributes -> 'meta_ads_comment' ->> 'care_id' = ?", care.id.to_s)
-                           .where("additional_attributes -> 'meta_ads_comment' ->> 'private_reply' = 'true'")
-    # EXISTS por conversa enviada: o índice de messages.conversation_id, sem varrer as mensagens da conta.
-    respondeu = Message.unscope(:order).where(message_type: :incoming)
-                       .where(Message.arel_table[:conversation_id].eq(Conversation.arel_table[:id]))
-    { sent: enviadas.count, replied: enviadas.where(respondeu.arel.exists).count }
+  CARE_ID = Arel.sql("conversations.additional_attributes -> 'meta_ads_comment' ->> 'care_id'")
+  SEM_RESULTADO = { sent: 0, replied: 0 }.freeze
+
+  # Recebeu no privado e respondeu, pelas conversas que nasceram do cuidado e que `user` vê
+  # (Conversations::PermissionFilterService, como a contagem do Seus posts): a tela do cuidado e a lista do Seus posts.
+  # Uma consulta por número, agrupada por cuidado: { care_id => { sent:, replied: } }, com zero para quem não tem nada.
+  def self.resultados(account, cares, user)
+    ids = Array(cares).map { |care| care.id.to_s }
+    enviadas = enviadas_vistas(account, ids, user)
+    sent = enviadas.group(CARE_ID).count
+    replied = enviadas.where(respondeu.arel.exists).group(CARE_ID).count
+    ids.to_h { |id| [id.to_i, { sent: sent.fetch(id, 0), replied: replied.fetch(id, 0) }] }
   end
+
+  def self.enviadas_vistas(account, ids, user)
+    Conversations::PermissionFilterService.new(account.conversations, user, account, for_reading: true).perform
+                                          .unscope(:order).where(CARE_ID.in(ids))
+                                          .where("conversations.additional_attributes -> 'meta_ads_comment' ->> 'private_reply' = 'true'")
+  end
+
+  # EXISTS por conversa enviada: o índice de messages.conversation_id, sem varrer as mensagens da conta.
+  def self.respondeu
+    Message.unscope(:order).where(message_type: :incoming).where(Message.arel_table[:conversation_id].eq(Conversation.arel_table[:id]))
+  end
+  private_class_method :enviadas_vistas, :respondeu
 
   # O cuidado do alvo (Fonte.do_alvo), ou nil. O LerAntigosJob também o acha por aqui.
   def self.cuidado_do(account_id, alvo)
@@ -53,9 +68,11 @@ class Crm::MetaAds::ComentariosIa::Painel
 
   # alvo: { 'kind' => 'post', 'perfil', 'post_id', 'networks', 'inbox_id' } ou { 'kind' => 'ad', 'ad_id', 'networks', 'post_ids' }
   # (Fonte.do_alvo). `post_ids`: no anúncio, os posts do criativo (por onde chega o comentário sem o id do anúncio).
-  # conversation_access: se quem abre a tela enxerga a conversa (o "Ver conversa" só vai quando sim).
-  def initialize(account:, alvo:, fonte:, conversation_access:)
+  # conversation_access: se quem abre a tela enxerga a conversa (o "Ver conversa" só vai quando sim). viewer: quem abre a
+  # tela; os números contam só as conversas que ele vê.
+  def initialize(account:, alvo:, fonte:, conversation_access:, viewer:)
     @account = account
+    @viewer = viewer
     @alvo = alvo.to_h.stringify_keys
     @networks = Array(@alvo['networks'])
     @post_ids = Array(@alvo['post_ids']).map(&:to_s)
@@ -198,7 +215,7 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   def resultados
-    cuidado ? self.class.resultados(@account, cuidado) : { sent: 0, replied: 0 }
+    cuidado ? self.class.resultados(@account, [cuidado], @viewer).fetch(cuidado.id) : SEM_RESULTADO
   end
 
   def caminho(conversation)

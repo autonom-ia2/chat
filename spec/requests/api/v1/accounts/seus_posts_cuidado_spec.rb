@@ -185,6 +185,50 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
                                                  'post_ids' => contain_exactly(post_id, '17900000000000008'))
   end
 
+  it '"Voltar a cuidar de todos" só liga o cuidado que passa na validação de hoje; o outro fica pausado na lista' do
+    put "#{base}/cuidado", params: corpo.merge(status: 'paused'), headers: admin.create_new_auth_token, as: :json
+    antigo = create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '17900000000000008',
+                                                network: 'instagram', inbox: canal.inbox, status: 'paused')
+    antigo.update_column(:message, 'ã' * 600) # rubocop:disable Rails/SkipsModelValidations
+
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'on' },
+                                                              headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body['cuidados'].to_h { |item| [item['post_id'], item['care']] })
+      .to eq(post_id => 'on', '17900000000000008' => 'paused')
+    auditoria = Audited.audit_class.where(action: 'seus_posts_comment_care').order(:id).last
+    expect(auditoria.audited_changes).to include('status' => 'on', 'post_ids' => [post_id])
+  end
+
+  it 'texto em forma errada (objeto no lugar de texto, frases que não são lista) é recusado, não vira vazio' do
+    put "#{base}/cuidado", params: corpo.merge(message: { 'texto' => 'oi' }), headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body).to eq('error' => 'invalid_message')
+
+    put "#{base}/cuidado", params: corpo.merge(phrases: 'Te chamei'), headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body).to eq('error' => 'invalid_phrases')
+
+    expect(Crm::MetaAdsCommentCare.count).to eq(0)
+  end
+
+  it 'a lista conta só as conversas que quem abre vê' do
+    put "#{base}/cuidado", params: corpo, headers: admin.create_new_auth_token, as: :json
+    care = Crm::MetaAdsCommentCare.sole
+    outra_caixa = create(:inbox, account: account)
+    create(:conversation, account: account, inbox: outra_caixa,
+                          additional_attributes: { 'meta_ads_comment' => { 'care_id' => care.id, 'private_reply' => true } })
+    agente = create(:user, account: account, role: :agent)
+    create(:inbox_member, user: agente, inbox: canal.inbox)
+    allow(Pundit).to receive(:policy!).and_call_original
+    allow(Pundit).to receive(:policy!).with(anything, :seus_posts).and_return(instance_double(SeusPostsPolicy, index?: true, manage?: false))
+
+    get "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil }, headers: agente.create_new_auth_token, as: :json
+    expect(response.parsed_body['cuidados'].sole['results']).to eq('sent' => 0, 'replied' => 0)
+
+    get "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body['cuidados'].sole['results']).to eq('sent' => 1, 'replied' => 0)
+  end
+
   it 'resumo: na primeira vez, está lendo' do
     get "#{base}/resumo", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 

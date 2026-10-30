@@ -31,11 +31,13 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   rescue_from Crm::MetaAds::ComentariosIa::Painel::Error, with: :render_error
 
   def cuidados
-    render json: { cuidados: cuidados_do_perfil.map { |care| item_da_lista(care) } }
+    cares = cuidados_do_perfil.to_a
+    resultados = Crm::MetaAds::ComentariosIa::Painel.resultados(Current.account, cares, Current.user)
+    render json: { cuidados: cares.map { |care| item_da_lista(care, resultados.fetch(care.id)) } }
   end
 
   def mudar_todos
-    status = params[:status].to_s
+    status = cuidado_params[:status].to_s
     return render_error_code('invalid_status') unless Crm::MetaAds::ComentariosIa::Painel::STATUSES.include?(status)
 
     audit_all!(status, mudar_status!(status))
@@ -54,14 +56,14 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   end
 
   def update
-    painel.salvar!(message: texto(params[:message], 'message'), para_quem: texto(params[:para_quem], 'para_quem'),
-                   phrases: frases(params[:phrases]), status: params[:status].to_s, user: Current.user)
+    painel.salvar!(message: texto(:message), para_quem: texto(:para_quem),
+                   phrases: frases, status: cuidado_params[:status].to_s, user: Current.user)
     audit_care!('save')
     render json: painel.payload
   end
 
   def previa
-    para_quem = texto(params[:para_quem], 'para_quem')
+    para_quem = texto(:para_quem)
     return render_error_code('invalid_para_quem') if para_quem.strip.empty? || para_quem.strip.length > Crm::MetaAdsCommentCare::NOTE_LIMIT
 
     resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
@@ -85,7 +87,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   def painel
     @painel ||= Crm::MetaAds::ComentariosIa::Painel.new(account: Current.account, alvo: alvo, fonte: fonte,
-                                                        conversation_access: method(:conversa_visivel?))
+                                                        conversation_access: method(:conversa_visivel?), viewer: Current.user)
   end
 
   def fonte
@@ -101,31 +103,39 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     Crm::MetaAdsCommentCare.where(account_id: Current.account.id, target_kind: 'post', inbox_id: @canal.inbox.id).order(:id)
   end
 
-  def item_da_lista(care)
-    { post_id: care.target_id, care: care.status, network: care.network,
-      results: Crm::MetaAds::ComentariosIa::Painel.resultados(Current.account, care) }
+  def item_da_lista(care, resultados)
+    { post_id: care.target_id, care: care.status, network: care.network, results: resultados }
   end
 
-  # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327).
-  def texto(value, campo)
-    raise Crm::MetaAds::ComentariosIa::Painel::Error, "invalid_#{campo}" unless value.nil? || value.is_a?(String)
-
-    value.to_s
+  def cuidado_params
+    @cuidado_params ||= params.permit(:status, :message, :para_quem, phrases: [])
   end
 
-  def frases(value)
+  # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327). O que chegou e os strong params tiraram veio
+  # na forma errada: recusa, em vez de seguir com vazio.
+  def texto(campo)
+    raise Crm::MetaAds::ComentariosIa::Painel::Error, "invalid_#{campo}" if params.key?(campo) && !cuidado_params.key?(campo)
+
+    cuidado_params[campo].to_s
+  end
+
+  def frases
+    value = cuidado_params[:phrases]
     raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_phrases' unless value.is_a?(Array) && value.all?(String)
 
     value
   end
 
   # Tudo de uma vez, numa transação: o status muda sem regravar o resto (um cuidado antigo que não passaria na validação
-  # de hoje não trava os outros). Devolve os posts mudados, para a Auditoria depois de mudar.
+  # de hoje não trava os outros). Pausar vale para todos. Voltar a cuidar só liga o cuidado que passa na validação de
+  # hoje: o que não passa fica pausado, e a lista devolvida mostra isso post a post. Devolve os posts mudados, para a
+  # Auditoria depois de mudar.
   def mudar_status!(status)
     Crm::MetaAdsCommentCare.transaction do
-      mudados = cuidados_do_perfil.where.not(status: status).lock.pluck(:id, :target_id)
-      Crm::MetaAdsCommentCare.where(id: mudados.map(&:first)).update_all(status: status, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
-      mudados.map(&:last)
+      mudados = cuidados_do_perfil.where.not(status: status).lock.to_a
+      mudados = mudados.select { |care| care.tap { |novo| novo.status = status }.valid? } if status == 'on'
+      Crm::MetaAdsCommentCare.where(id: mudados.map(&:id)).update_all(status: status, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      mudados.map(&:target_id)
     end
   end
 

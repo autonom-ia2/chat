@@ -6,7 +6,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
   let(:alvo) { { 'kind' => 'post', 'perfil' => 'instagram-1', 'post_id' => '1790', 'networks' => ['instagram'] } }
   let(:fonte) { instance_double(Crm::MetaAds::ComentariosIa::Fonte) }
   let(:ve_tudo) { ->(_conversation) { true } }
-  let(:painel) { described_class.new(account: account, alvo: alvo, fonte: fonte, conversation_access: ve_tudo) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:painel) { described_class.new(account: account, alvo: alvo, fonte: fonte, conversation_access: ve_tudo, viewer: admin) }
   let!(:care) do
     create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '1790', offer: nil, para_quem: 'Quem pedir o e-book')
   end
@@ -86,13 +87,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
 
   it 'sem ver a conversa, sem o caminho dela' do
     acao('1', 'to_you', conversation: conversa(private_reply: nil))
-    sem_ver = described_class.new(account: account, alvo: alvo, fonte: fonte, conversation_access: ->(_c) { false })
+    sem_ver = described_class.new(account: account, alvo: alvo, fonte: fonte, conversation_access: ->(_c) { false },
+                                  viewer: admin)
 
     expect(sem_ver.payload[:to_see].first[:conversation_path]).to be_nil
   end
 
   it 'no Facebook, o privado ainda não está liberado (pages_messaging, F4)' do
-    facebook = described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo)
+    facebook = described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo,
+                                   viewer: admin)
 
     expect(facebook.payload[:private_available]).to be(false)
   end
@@ -114,11 +117,37 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     consultas = []
     contar = ->(*, payload) { consultas << payload[:sql] if payload[:sql].include?('messages') }
 
-    ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { described_class.resultados(account, care) }
+    ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { described_class.resultados(account, [care], admin) }
 
     expect(consultas).to all(include('EXISTS'))
     expect(consultas.join).not_to include('IN (SELECT "messages"."conversation_id"')
-    expect(described_class.resultados(account, care)).to eq(sent: 1, replied: 1)
+    expect(described_class.resultados(account, [care], admin)).to eq(care.id => { sent: 1, replied: 1 })
+  end
+
+  it 'vários cuidados em duas consultas (enviadas e respondidas), com zero para quem não tem nada' do
+    conversa(private_reply: true, respondeu: true)
+    outro = create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '1791', offer: nil, para_quem: 'Quem pedir')
+    consultas = []
+    contar = ->(*, payload) { consultas << payload[:sql] if payload[:sql].include?('conversations') }
+
+    resultado = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
+      described_class.resultados(account, [care, outro], admin)
+    end
+
+    expect(resultado).to eq(care.id => { sent: 1, replied: 1 }, outro.id => { sent: 0, replied: 0 })
+    expect(consultas.size).to eq(2)
+  end
+
+  it 'conta só as conversas que quem abre a tela vê' do
+    conversa(private_reply: true, respondeu: true)
+    agente = create(:user, account: account, role: :agent)
+    outra_caixa = create(:inbox, account: account)
+    create(:inbox_member, user: agente, inbox: outra_caixa)
+
+    expect(described_class.resultados(account, [care], agente)).to eq(care.id => { sent: 0, replied: 0 })
+
+    create(:inbox_member, user: agente, inbox: inbox)
+    expect(described_class.resultados(account, [care], agente)).to eq(care.id => { sent: 1, replied: 1 })
   end
 
   describe 'chegaram antes de ligar' do
@@ -141,8 +170,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     let(:corpo) { { message: 'Oi', para_quem: 'Quem pedir', phrases: ['Te chamei'], status: 'on', user: nil } }
 
     it 'duas abas ligando o mesmo post ao mesmo tempo: a segunda relê o cuidado e aplica por cima, sem erro' do
-      aba1 = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo)
-      aba2 = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo)
+      aba1 = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
+      aba2 = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
       aba2.cuidado # a aba 2 leu antes de a aba 1 gravar
       aba1.salvar!(**corpo)
 
@@ -151,7 +180,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     end
 
     it 'a corrida que passa da validação e para no índice único (RecordNotUnique) também relê e aplica' do
-      aba = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo)
+      aba = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
       outra = create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '1791')
       chamadas = 0
       allow(Crm::MetaAdsCommentCare).to receive(:find_by).and_wrap_original do |original, *args, **kwargs|
@@ -168,7 +197,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
 
   describe '#ler_antigos!' do
     it 'trava atômica: duas chamadas ao mesmo tempo põem um job só' do
-      outra_aba = described_class.new(account: account, alvo: alvo, fonte: fonte, conversation_access: ve_tudo)
+      outra_aba = described_class.new(account: account, alvo: alvo, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
       painel.cuidado
       outra_aba.cuidado
       painel.ler_antigos!
