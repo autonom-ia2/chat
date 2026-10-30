@@ -683,6 +683,9 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     await flushPromises();
 
     expect(wrapper.attributes('data-screen')).toBe('destino');
+    expect(
+      wrapper.find('[data-conectar-destino-falhou]').attributes('role')
+    ).toBe('alert');
     await wrapper.find('[data-conectar-escolher-depois]').trigger('click');
     await flushPromises();
 
@@ -716,17 +719,25 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
     expect(wrapper.find('[data-conectar-falta-pagina]').exists()).toBe(false);
   });
 
-  it('done says nothing about the page when one is linked or the site is not marked', async () => {
-    facebook.connect.mockResolvedValue({ ok: true });
-    accountsReply([ACCOUNT]);
-    const wrapper = await mountConnect();
-    await toStepThree(wrapper);
-    await saveDestination(wrapper, {
-      destinations: { whatsapp: false, site: true },
-      site_pages_count: 1,
-    });
+  it.each([
+    ['a page is linked', { whatsapp: false, site: true }, 1],
+    ['the site is not marked', { whatsapp: true, site: false }, 0],
+  ])(
+    'done says nothing about the page when %s',
+    async (_, destinations, pages) => {
+      facebook.connect.mockResolvedValue({ ok: true });
+      accountsReply([ACCOUNT]);
+      const wrapper = await mountConnect();
+      await toStepThree(wrapper);
+      await saveDestination(wrapper, {
+        destinations,
+        site_pages_count: pages,
+      });
 
-    expect(wrapper.find('[data-conectar-falta-pagina]').exists()).toBe(false);
-    expect(wrapper.find('[data-conectar-destino-depois]').exists()).toBe(false);
-  });
+      expect(wrapper.find('[data-conectar-falta-pagina]').exists()).toBe(false);
+      expect(wrapper.find('[data-conectar-destino-depois]').exists()).toBe(
+        false
+      );
+    }
+  );
 });

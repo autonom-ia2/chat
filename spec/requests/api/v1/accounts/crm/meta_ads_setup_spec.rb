@@ -309,7 +309,7 @@ RSpec.describe 'CRM meta_ads_connection setup API', type: :request do
       expect(connection.reload.destinations).to eq('whatsapp' => true, 'site' => false)
     end
 
-    it 'trocar os destinos sem marcar o site mantém o "Não tenho site" escolhido (#2343)' do
+    it 'trocar os destinos sem marcar o site mantém o "Não tenho site" escolhido (#2338)' do
       connection.update!(pixel_id: nil, destinations: { 'whatsapp' => true, 'no_site' => true })
 
       patch "#{base}/destinations", params: { destinations: { whatsapp: false, site: false } }, headers: auth_headers(admin), as: :json

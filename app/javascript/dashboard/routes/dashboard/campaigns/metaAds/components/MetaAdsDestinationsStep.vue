@@ -17,7 +17,11 @@ import MetaAdsDestinationArt from './MetaAdsDestinationArt.vue';
 const props = defineProps({
   destinations: { type: Object, default: () => ({}) },
   // Embutido no passo a passo do "Conectar anúncios" (#2338) a pergunta é o título da tela: nível 2.
-  headingLevel: { type: Number, default: 3 },
+  headingLevel: {
+    type: Number,
+    default: 3,
+    validator: value => [2, 3].includes(value),
+  },
 });
 
 const emit = defineEmits(['saved', 'failed', 'pageLinked']);

@@ -949,6 +949,14 @@ onBeforeUnmount(stopRecheck);
         @saved="destinationSaved"
         @failed="destinationFailed = true"
       />
+      <p
+        v-if="destinationFailed"
+        data-conectar-destino-falhou
+        role="alert"
+        class="m-0 rounded-xl bg-n-ruby-2 p-4 text-sm text-n-ruby-12 ring-1 ring-inset ring-n-ruby-6"
+      >
+        {{ $t(`${C}.DONE.DESTINATION_NOT_SAVED`) }}
+      </p>
       <button
         v-if="destinationFailed"
         type="button"
