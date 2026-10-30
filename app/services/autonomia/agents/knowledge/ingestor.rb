@@ -27,7 +27,7 @@ module Autonomia
           text = Processors::Dispatcher.for(@source).extract
           # B2.1/B2.2 — chunker ADAPTATIVO (janela por tipo/estilo via source_type + assinatura) já
           # devolvendo a metadata determinística por chunk (heading/material_type/keywords/char_span).
-          entries = Chunker.new(text, source_type: @source.source_type).chunks_with_metadata
+          entries = trechos(text)
           # DATA-LOSS GUARD: extração vazia (PDF escaneado, página em branco, só espaços, tudo abaixo
           # do MIN_CHUNK) NÃO pode virar replace_knowledge([],[]) — isso apagaria o conhecimento bom
           # anterior num re-sync ruim/transitório. Levanta ANTES de qualquer delete → o job marca a
@@ -47,6 +47,18 @@ module Autonomia
         end
 
         private
+
+        # #1426 (t4e) — PDF grande em seções (Source#secoes, posto pelo processador): cada seção é cortada à parte e os
+        # trechos levam as páginas dela. Sem seções, o texto inteiro vai ao Chunker, como antes.
+        def trechos(text)
+          secoes = @source.respond_to?(:secoes) ? @source.secoes : nil
+          return Chunker.new(text, source_type: @source.source_type).chunks_with_metadata if secoes.blank?
+
+          secoes.flat_map do |secao|
+            Chunker.new(secao['texto'], source_type: @source.source_type).chunks_with_metadata
+                   .map { |entry| entry.merge(paginas: secao['paginas']) }
+          end
+        end
 
         # Apaga os entries antigos da fonte e cria os novos numa transação (re-sync idempotente).
         # Token-guard (padrão Fase C): trava a row da fonte e SÓ substitui se o sync_token desta
@@ -113,7 +125,7 @@ module Autonomia
             char_span: chunk_meta[:char_span],
             chunk_index: index,
             doc: doc_metadata
-          }
+          }.merge(entry[:paginas] ? { paginas: entry[:paginas] } : {})
         end
 
         # Sub-hash da classificação do documento (B2.3), com chaves de string (jsonb) e à prova de nil.

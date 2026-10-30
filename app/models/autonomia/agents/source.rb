@@ -126,6 +126,9 @@ module Autonomia
       # #1426 — teto da releitura, o mesmo do painel (TETO_DA_RELEITURA_MS em autonomiaSources.js).
       TETO_DA_RELEITURA = 10.minutes
       attr_accessor :paginas_de_fora
+      # #1426 (t4e) — o PDF grande dividido em seções por faixa de páginas ([{ 'paginas' => [ini, fim], 'texto' }]), posto
+      # pelo Processors::Pdf só durante a leitura. O Ingestor corta cada seção à parte e grava as páginas em cada trecho.
+      attr_accessor :secoes
 
       before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
 
