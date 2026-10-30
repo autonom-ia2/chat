@@ -59,7 +59,19 @@ const heading = ref(null);
 // o texto de sempre.
 const writing = ref(false);
 const suggested = ref(false);
+// O campo cresce com a mensagem (mesmo jeito do TextArea do design system): no celular o começo inteiro aparece, sem
+// rolar dentro do campo; acima do teto (max-h), ele rola.
+const messageField = ref(null);
+const fitMessage = async () => {
+  await nextTick();
+  const field = messageField.value;
+  if (!field) return;
+  field.style.height = 'auto';
+  field.style.height = `${field.scrollHeight}px`;
+};
+watch([message, step], fitMessage);
 onMounted(async () => {
+  fitMessage();
   if (!props.draft || props.changing || message.value.trim()) return;
   writing.value = true;
   const texto = await props.draft();
@@ -220,6 +232,7 @@ const FIELD =
         </p>
         <textarea
           id="ia-dono-message"
+          ref="messageField"
           v-model="message"
           data-ia-dono-message
           :aria-label="$t(`${KEY}.WHAT.TITLE`)"
@@ -227,7 +240,7 @@ const FIELD =
           :aria-busy="writing"
           :placeholder="writing ? '' : $t(`${KEY}.WHAT.PLACEHOLDER`)"
           :class="[FIELD, { 'animate-pulse bg-n-alpha-1': writing }]"
-          class="min-h-[8.5rem]"
+          class="max-h-96 min-h-[8.5rem] overflow-y-auto"
         />
         <p
           v-if="tooLong"
