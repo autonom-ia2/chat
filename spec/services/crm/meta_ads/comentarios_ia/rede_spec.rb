@@ -149,7 +149,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         allow(servico).to receive(:comment).with('555_888', '555_777')
                                            .and_return({ 'message' => 'Quanto custa?', 'from' => { 'id' => '9', 'name' => 'Ana' } })
 
-        expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'Ana')
+        expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'Ana', from_id: '9')
       end
 
       it 'a Meta diz que não dá para ler (apagado, sem permissão, Página de outra conta): nil' do
@@ -216,9 +216,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       it 'o texto e o username como a Graph devolve' do
         allow(cliente).to receive(:comment).with('555_777')
-                                           .and_return(result.new(ok: true, data: { 'text' => 'Quanto custa?', 'from' => { 'username' => 'carla' } }))
+                                           .and_return(result.new(ok: true, data: { 'text' => 'Quanto custa?',
+                                                                                    'from' => { 'id' => 7, 'username' => 'carla' } }))
 
-        expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'carla')
+        expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'carla', from_id: '7')
       end
 
       it 'comentário apagado: nil' do

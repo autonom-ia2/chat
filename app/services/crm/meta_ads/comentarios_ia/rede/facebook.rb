@@ -36,7 +36,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
   def ler
     dados = comentarios&.comment(@comentario.post_id, @comentario.comment_id)
-    dados && { text: dados['message'], from_name: dados.dig('from', 'name') }
+    dados && { text: dados['message'], from_name: dados.dig('from', 'name'), from_id: dados.dig('from', 'id')&.to_s }
   rescue Crm::MetaAds::FacebookComments::Error => e
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if e.code == 'meta_unavailable'
 

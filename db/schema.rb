@@ -2862,6 +2862,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
     t.jsonb "phrases", default: [], null: false
     t.text "price_reply"
     t.string "handoff", default: "assignment", null: false
+    t.datetime "read_old_at"
     t.bigint "created_by_id"
     t.datetime "started_at", null: false
     t.datetime "created_at", null: false

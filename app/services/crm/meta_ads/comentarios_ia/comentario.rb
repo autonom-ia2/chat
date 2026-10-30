@@ -22,9 +22,10 @@ Crm::MetaAds::ComentariosIa::Comentario = Struct.new(
     to_h.except(:text, :from_name).merge(created_time: momento&.iso8601)
   end
 
-  # O mesmo comentário, com o texto e o nome lidos na Meta.
-  def lido(text:, from_name:)
-    self.class.new(**to_h, text: text, from_name: from_name)
+  # O mesmo comentário, com o texto e o nome lidos na Meta. O id de quem comentou só preenche o que faltava: o
+  # "Ler e mandar" parte da lista de comentários, que não o traz.
+  def lido(text:, from_name:, from_id: nil)
+    self.class.new(**to_h, text: text, from_name: from_name, from_id: self.from_id.presence || from_id)
   end
 
   def resposta?

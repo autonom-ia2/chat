@@ -30,7 +30,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     return unless resultado.ok
 
     dados = resultado.data.to_h
-    { text: dados['text'], from_name: dados.dig('from', 'username') }
+    { text: dados['text'], from_name: dados.dig('from', 'username'), from_id: dados.dig('from', 'id')&.to_s }
   end
 
   def responder(texto)
