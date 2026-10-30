@@ -133,7 +133,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # Já feito (pela pessoa, na tela do #2196, ou por outro job): nada a mostrar. Sem resposta da Meta, pode ter saído: a
   # reserva da pessoa fica. Recusa: a reserva sai.
   def nao_saiu(envio)
-    return ja_tem_privado if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
+    return outro_envio if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
     return para_voce('private_reply_unsure') if envio.talvez_entregue
 
     @registro.soltar_pessoa!(@comentario)
@@ -161,6 +161,21 @@ class Crm::MetaAds::ComentariosIa::Cuidar
 
     recusou('hide')
     @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+  end
+
+  # Outro envio deste comentário (a pessoa na tela, ou outro job). Confirmado pela Meta: "já recebeu". Ainda saindo, ou
+  # recusado depois: não dá para dizer que recebeu; a reserva da pessoa sai (quem enviar marca de novo) e fica com o
+  # dono como "não cuidei".
+  def outro_envio
+    return ja_tem_privado if privado_confirmado?
+
+    @registro.soltar_pessoa!(@comentario)
+    nao_cuidou('outro_envio_sem_confirmacao')
+  end
+
+  def privado_confirmado?
+    Crm::MetaAdsCommentAction.where(account_id: @comentario.account_id, network: @comentario.network, comment_id: @comentario.comment_id.to_s,
+                                    action: 'private_reply').where.not(confirmed_at: nil).exists?
   end
 
   # O Painel mostra "já recebeu o privado" em vez de "não se aplica".
