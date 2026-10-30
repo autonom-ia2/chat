@@ -179,8 +179,7 @@ class Crm::Subjects::Applier # rubocop:disable Metrics/ClassLength -- o nome pro
   # O card que a IA de etapa tirou do funil como "não é negócio" (#1922) não é fechamento de uma pessoa: o cliente que
   # volta ganha card, não só sugestão.
   def arquivados_pela_ia(desde)
-    Crm::Activity.where(account_id: @account.id, event_type: 'archive', actor_type: 'system', created_at: desde..)
-                 .where('payload @> ?', { by: 'ai' }.to_json).select(:card_id)
+    Crm::Ai::NaoENegocio.arquivamentos(@account.id).where(created_at: desde..).select(:card_id)
   end
 
   def executar(action, atributos)

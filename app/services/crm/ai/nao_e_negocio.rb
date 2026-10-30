@@ -45,6 +45,27 @@ class Crm::Ai::NaoENegocio
     account.present? && account.feature_enabled?(FLAG)
   end
 
+  # Os arquivamentos que a IA fez (a atividade `archive` do sistema com `by: 'ai'`, Crm::Cards::Archiver); motivo: só os
+  # daquele motivo.
+  def self.arquivamentos(account_id, motivo: nil)
+    Crm::Activity.where(account_id: account_id, event_type: 'archive', actor_type: 'system')
+                 .where('payload @> ?', { by: 'ai', motivo: motivo }.compact.to_json)
+  end
+
+  # #2395: o card mais novo da conversa foi arquivado pela IA como "fora_do_negocio" (e ninguém o reabriu e arquivou
+  # depois). A mensagem seguinte não recria card sozinha (Crm::Conversations::CardSyncer): sem isto, cada mensagem
+  # recriava o card e a IA o arquivava de novo. O pedido novo ainda vira card pela IA de assunto (Crm::Subjects::Applier),
+  # quando ela está ligada na caixa; ou pela mão de uma pessoa.
+  def self.conversa_fora_do_negocio?(conversation)
+    vinculados = Crm::CardConversation.where(account_id: conversation.account_id, conversation_id: conversation.id).select(:card_id)
+    cards = Crm::Card.where(account_id: conversation.account_id)
+    ultimo = cards.where(conversation_id: conversation.id).or(cards.where(id: vinculados)).order(:id).last
+    return false unless ultimo&.archived?
+
+    ultimo_arquivamento = Crm::Activity.where(account_id: ultimo.account_id, card_id: ultimo.id, event_type: 'archive').order(:id).last
+    arquivamentos(ultimo.account_id, motivo: 'fora_do_negocio').exists?(id: ultimo_arquivamento&.id)
+  end
+
   # Os motivos aceitos na conta: com a flag da F3, também o "teste".
   def self.motivos(account)
     Crm::Ai::FecharCard.ligada?(account) ? [*MOTIVOS, MOTIVO_TESTE] : MOTIVOS

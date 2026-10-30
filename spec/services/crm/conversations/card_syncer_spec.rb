@@ -83,6 +83,97 @@ RSpec.describe Crm::Conversations::CardSyncer do
     end
   end
 
+  # #2395: quem cria card sozinho é a mensagem do cliente; o "não é negócio" da IA não volta a cada mensagem; e a conversa
+  # do conector do WhatsApp (avisos de QR, vínculo) não vira card.
+  describe 'o que não cria card sozinho (#2395)' do
+    let(:account) { create_account_and_user.first }
+    let(:admin) { account.users.first }
+    let(:inbox) { create_crm_inbox(account: account, members: [admin]) }
+    let(:contact) { account.contacts.create!(name: 'Lead', phone_number: '+5511987654321') }
+    let(:conversation) { create_crm_conversation(account: account, inbox: inbox, contact: contact) }
+    let!(:pipeline_e_etapa) do
+      pipeline, stage = create_crm_pipeline(account: account, user: admin)
+      account.crm_pipeline_inboxes.create!(pipeline: pipeline, inbox: inbox, default_stage: stage, auto_create_card: true, created_by: admin)
+      [pipeline, stage]
+    end
+
+    def sincronizar(message)
+      described_class.new(conversation: conversation, message: message).perform
+    end
+
+    def arquivar(card, payload)
+      Crm::Cards::Archiver.new(card: card, actor: payload.delete(:actor), payload: payload).perform
+    end
+
+    def card_arquivado(**payload)
+      card = sincronizar(create_crm_message(conversation: conversation, sender: contact))
+      arquivar(card, payload)
+      card
+    end
+
+    it 'não recria o card que a IA arquivou como "não é negócio", nem com a mensagem do cliente' do
+      card_arquivado(by: 'ai', motivo: 'fora_do_negocio')
+
+      expect { sincronizar(create_crm_message(conversation: conversation, sender: contact)) }.not_to change(Crm::Card, :count)
+    end
+
+    it 'cria de novo quando quem arquivou foi uma pessoa' do
+      card_arquivado(actor: admin)
+
+      expect { sincronizar(create_crm_message(conversation: conversation, sender: contact)) }.to change(Crm::Card, :count).by(1)
+    end
+
+    it 'cria de novo quando a IA arquivou por repetido (o motivo é outro)' do
+      card_arquivado(by: 'ai', motivo: 'duplicado')
+
+      expect { sincronizar(create_crm_message(conversation: conversation, sender: contact)) }.to change(Crm::Card, :count).by(1)
+    end
+
+    it 'cria de novo quando a pessoa reabriu e arquivou o card depois da IA' do
+      card = card_arquivado(by: 'ai', motivo: 'fora_do_negocio')
+      card.update!(status: :open)
+      arquivar(card, { actor: admin })
+
+      expect { sincronizar(create_crm_message(conversation: conversation, sender: contact)) }.to change(Crm::Card, :count).by(1)
+    end
+
+    it 'segue o card que nasceu depois do arquivamento (o do assunto novo), sem travar a conversa' do
+      card_arquivado(by: 'ai', motivo: 'fora_do_negocio')
+      pipeline, stage = pipeline_e_etapa
+      novo = Crm::Cards::Creator.new(account: account, user: nil, conversation: conversation,
+                                     params: { pipeline_id: pipeline.id, stage_id: stage.id }).perform
+      novo.update!(status: :lost, closed_at: Time.current)
+
+      expect { sincronizar(create_crm_message(conversation: conversation, sender: contact)) }.to change(Crm::Card, :count).by(1)
+    end
+
+    it 'não cria card pela mensagem da equipe nem pela do robô' do
+      da_equipe = create_crm_message(conversation: conversation, sender: admin, message_type: :outgoing)
+      robo = AgentBot.create!(name: 'Robô', account: account)
+      do_robo = create_crm_message(conversation: conversation, sender: robo, message_type: :outgoing)
+
+      expect do
+        sincronizar(da_equipe)
+        sincronizar(do_robo)
+      end.not_to change(Crm::Card, :count)
+    end
+
+    it 'a mensagem da equipe ainda atualiza o card que já existe' do
+      card = sincronizar(create_crm_message(conversation: conversation, sender: contact))
+
+      resultado = sincronizar(create_crm_message(conversation: conversation, sender: admin, message_type: :outgoing))
+
+      expect(resultado).to eq(card)
+      expect(account.crm_cards.count).to eq(1)
+    end
+
+    it 'não cria card na conversa do conector do WhatsApp (avisos de QR e de vínculo)' do
+      contact.update!(identifier: Waha::IntegracaoDoConector::IDENTIFIER)
+
+      expect { sincronizar(create_crm_message(conversation: conversation, sender: contact)) }.not_to change(Crm::Card, :count)
+    end
+  end
+
   it 'does not create cards for inboxes without auto-create binding' do
     account, admin = create_account_and_user
     inbox = create_crm_inbox(account: account, members: [admin])
