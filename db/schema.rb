@@ -2857,6 +2857,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
     t.jsonb "offer"
     t.text "note"
     t.text "message", null: false
+    t.text "para_quem"
     t.jsonb "button"
     t.jsonb "phrases", default: [], null: false
     t.text "price_reply"

@@ -187,6 +187,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).not_to have_received(:privado)
   end
 
+  it 'post sem oferta, com o "para quem" do dono: manda o privado a quem é o caso' do
+    care.update!(offer: nil, para_quem: 'Quem pedir o link do e-book')
+    decide('private')
+
+    cuidar
+
+    expect(rede).to have_received(:privado).with(care)
+  end
+
   it 'sem certeza do Jev, não faz nada' do
     decide(nil)
 

@@ -61,6 +61,16 @@ RSpec.describe Crm::MetaAdsCommentCare do
     expect(build(:crm_meta_ads_comment_care, account: account).offer?).to be(true)
   end
 
+  it 'manda privado só com a ficha da oferta ou com o "para quem" do dono' do
+    expect(build(:crm_meta_ads_comment_care, account: account).privado?).to be(true)
+    expect(build(:crm_meta_ads_comment_care, account: account, offer: nil).privado?).to be(false)
+    expect(build(:crm_meta_ads_comment_care, account: account, offer: nil, para_quem: 'Quem pedir o link').privado?).to be(true)
+  end
+
+  it 'limita o "para quem" do dono' do
+    expect(build(:crm_meta_ads_comment_care, account: account, para_quem: 'a' * 501)).not_to be_valid
+  end
+
   it 'separa os cuidados ativos dos pausados' do
     ativo = create(:crm_meta_ads_comment_care, account: account)
     create(:crm_meta_ads_comment_care, account: account, status: 'paused')

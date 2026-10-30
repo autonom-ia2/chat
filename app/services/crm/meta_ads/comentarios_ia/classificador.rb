@@ -1,9 +1,11 @@
 # IA cuida dos comentários (#2212): o que fazer com um comentário, perguntado ao Jev (o mesmo do Decisor, #858) com as
 # cinco decisões da tela — mandar no privado, responder o preço, passar para a pessoa, esconder ou não responder.
 #
-# O Jev lê a ficha que a pessoa aprovou e a correção dela (instruções) e o comentário como texto solto: o Estado manda o
-# modelo tratar o texto como dado, nunca como ordem. Nada é guardado como exemplo. O custo é nosso e fica em
-# Crm::AiUsageEvent com a feature própria, para o teto medido no eval.
+# O Jev lê a ficha que a pessoa aprovou, para quem ela quer o privado e a correção dela (instruções) e o comentário como
+# texto solto: o Estado manda o modelo tratar o texto como dado, nunca como ordem. Com o "para quem" do dono (#2306,
+# opção a), o privado só sai para o comentário que é o caso; o que não é cai em "não responder" e fica com o dono.
+# Nada é guardado como exemplo. O custo é nosso e fica em Crm::AiUsageEvent com a feature própria, para o teto medido
+# no eval.
 #
 # Sem certeza suficiente, ou com o Jev fora do ar, não decide: o comentário fica para a pessoa, sem resposta da IA.
 class Crm::MetaAds::ComentariosIa::Classificador
@@ -45,14 +47,26 @@ class Crm::MetaAds::ComentariosIa::Classificador
   end
 
   def instrucoes
-    [ficha, @care.note.presence && "The owner also said: #{@care.note}"].compact.join("\n")
+    [ficha, para_quem, @care.note.presence && "The owner also said: #{@care.note}"].compact.join("\n")
   end
 
   def ficha
-    return 'This post does not offer a product: never choose private or price.' unless @care.offer?
+    return oferta if @care.offer?
 
-    oferta = @care.offer
-    ["The post offers: #{oferta['offer']}.", oferta['price'].presence && "Price: #{oferta['price']}.",
-     oferta['how'].presence && "How to buy: #{oferta['how']}."].compact.join(' ')
+    'This post does not offer a product: never choose private or price.' if @care.para_quem.blank?
+  end
+
+  def para_quem
+    return if @care.para_quem.blank?
+
+    "The owner wrote, in their own words, who should get the private message: #{@care.para_quem}. Choose private or " \
+      'price only when the comment matches that. When it does not match, it does not apply: choose no_reply, or to_you ' \
+      'or hide as usual.'
+  end
+
+  def oferta
+    dados = @care.offer
+    ["The post offers: #{dados['offer']}.", dados['price'].presence && "Price: #{dados['price']}.",
+     dados['how'].presence && "How to buy: #{dados['how']}."].compact.join(' ')
   end
 end

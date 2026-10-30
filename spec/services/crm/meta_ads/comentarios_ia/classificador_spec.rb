@@ -47,6 +47,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
     end
   end
 
+  it 'com o "para quem" do dono: o privado só para quem é o caso, e o resto não se aplica' do
+    care.update!(offer: nil, para_quem: 'Quem pedir o link do e-book de receitas')
+    jev_responde('no_reply', 0.9)
+
+    classificador.decidir('Que lindo!')
+
+    expect(jev).to have_received(:decidir) do |decisor:, **|
+      expect(decisor.instrucoes).to include('Quem pedir o link do e-book de receitas', 'it does not apply: choose no_reply')
+      expect(decisor.instrucoes).not_to include('does not offer a product')
+    end
+  end
+
   it 'comentário vazio não gasta chamada' do
     allow(jev).to receive(:decidir)
 

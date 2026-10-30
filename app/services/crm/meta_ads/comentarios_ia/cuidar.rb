@@ -14,7 +14,7 @@
 #    - reclamação: não responde, e a conversa abre urgente para a pessoa;
 #    - propaganda: esconde;
 #    - o resto: nada (a reivindicação já registra que a IA leu).
-#    Post sem oferta nunca manda privado.
+#    Sem oferta na ficha nem "para quem" do dono, nunca manda privado.
 #
 # Erro antes de a IA agir na Meta solta a reivindicação e sobe: o job tenta de novo. Depois de agir, a reivindicação
 # fica, para o reenvio não mandar o privado de novo.
@@ -49,7 +49,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     decisao = classificador.decidir(@comentario.text)
     return if decisao.nil?
 
-    decisao = 'no_reply' if %w[private price].include?(decisao) && !care.offer?
+    decisao = 'no_reply' if %w[private price].include?(decisao) && !care.privado?
     executar(decisao)
   rescue StandardError
     @registro.soltar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::LIDO) unless @agiu

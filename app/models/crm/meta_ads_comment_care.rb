@@ -1,7 +1,8 @@
 # IA cuida dos comentários (#2212): o cuidado de um post (Instagram ou Página do Facebook) ou de um anúncio (as duas
 # redes). Guarda o que a pessoa aprovou na tela: a ficha do que o post oferece, a correção dela, a mensagem do privado,
-# o botão do WhatsApp, as frases públicas, a resposta do preço (nil: a chave do preço desligada) e quem continua a
-# conversa quando a pessoa responde. Os textos ficam como a tela mostrou, no idioma de quem aprovou: o servidor não
+# para quem ele vai (`para_quem`, nas palavras do dono: a IA decide comentário a comentário se é o caso), o botão do
+# WhatsApp, as frases públicas, a resposta do preço (nil: a chave do preço desligada) e quem continua a conversa quando
+# a pessoa responde. Os textos ficam como a tela mostrou, no idioma de quem aprovou: o servidor não
 # monta frase.
 #
 # O comentário não fica aqui (dado de terceiro, lido ao vivo); o que a IA fez com cada um fica nas ações do #2196.
@@ -32,6 +33,7 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   validates :handoff, inclusion: { in: HANDOFFS }
   validates :message, presence: true, length: { maximum: MESSAGE_LIMIT }
   validates :note, length: { maximum: NOTE_LIMIT }
+  validates :para_quem, length: { maximum: NOTE_LIMIT }
   validates :price_reply, length: { maximum: PHRASE_LIMIT }
   validate :phrases_validas
   validate :botao_do_whatsapp
@@ -54,6 +56,12 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   # Post sem produto: a IA só esconde propaganda e avisa reclamação.
   def offer?
     offer.to_h['offer'].present?
+  end
+
+  # A IA só manda privado se sabe o que o post oferece ou para quem o dono quer mandar. Sem nenhum dos dois, ela só
+  # esconde propaganda e avisa reclamação.
+  def privado?
+    offer? || para_quem.present?
   end
 
   # A frase do comentário depois do privado. `vez` reveza as frases, para a IA não repetir a mesma em seguida.

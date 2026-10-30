@@ -13,6 +13,8 @@ class CreateCrmMetaAdsCommentCares < ActiveRecord::Migration[7.2]
       t.jsonb :offer
       t.text :note
       t.text :message, null: false
+      # Para quem vai o privado, nas palavras do dono (#2306, opção a): a IA decide comentário a comentário se é o caso.
+      t.text :para_quem
       t.jsonb :button
       t.jsonb :phrases, null: false, default: []
       t.text :price_reply
