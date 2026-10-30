@@ -172,6 +172,14 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(Crm::MetaAdsCommentCare.count).to eq(0)
   end
 
+  it '"para quem" acima do limite do cuidado: 422, sem gravar' do
+    put "#{base}/cuidado", params: corpo.merge(para_quem: 'a' * (Crm::MetaAdsCommentCare::NOTE_LIMIT + 1)),
+                           headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(Crm::MetaAdsCommentCare.count).to eq(0)
+  end
+
   it 'a Meta fora do ar ao ler o anúncio: 422 meta_unavailable' do
     stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({})).to_return(status: 500, headers: json, body: '{}')
 
