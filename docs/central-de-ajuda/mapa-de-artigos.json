@@ -3981,6 +3981,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.32",
+     "titulo": "Deixar a IA cuidar dos comentários de um post seu",
+     "para_que_serve": "Escrever a mensagem do privado e dizer para quem ela vai; a IA lê cada comentário novo e manda só para quem for o caso.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "seus_posts_cuidar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "seus_posts_cuidar",
+      "destaque": null
+     },
+     "requer": "meta_ads_comentarios_ia",
+     "prints": [],
+     "fontes": [
+      "porques: ia_cuida_dos_comentarios_de_um_post"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

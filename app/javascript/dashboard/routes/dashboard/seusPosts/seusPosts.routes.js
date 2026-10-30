@@ -30,6 +30,12 @@ export const ensureSeusPostsComentariosEnabled = comFlags(
   FEATURE_FLAGS.SEUS_POSTS,
   FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS
 );
+// Cuidar dos comentários de um post (#2212, B1): também com a flag do cuidado.
+export const ensureCuidarEnabled = comFlags(
+  FEATURE_FLAGS.SEUS_POSTS,
+  FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS,
+  FEATURE_FLAGS.META_ADS_COMENTARIOS_IA
+);
 
 // Seus posts (#2302): página própria em Crescer, atrás da flag seus_posts. Administrador ou posts_view/posts_manage
 // (parecer da Funções, 27/10). O post, com os comentários, é da F2 (#2305): o perfil vai em ?perfil=.
@@ -53,5 +59,15 @@ export const routes = [
     },
     beforeEnter: ensureSeusPostsComentariosEnabled,
     component: () => import('./pages/SeusPostPage.vue'),
+  },
+  {
+    path: frontendURL('accounts/:accountId/seus-posts/:postId/cuidar'),
+    name: 'seus_posts_cuidar',
+    meta: {
+      featureFlag: FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
+      permissions: ['administrator', 'posts_view', 'posts_manage'],
+    },
+    beforeEnter: ensureCuidarEnabled,
+    component: () => import('./pages/CuidarComentariosPage.vue'),
   },
 ];

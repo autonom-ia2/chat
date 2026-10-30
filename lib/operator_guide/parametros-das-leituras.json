@@ -2247,6 +2247,12 @@
       "perfil"
     ]
   },
+  "seus_posts/cuidados": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#cuidados",
+    "parametros": [
+      "perfil"
+    ]
+  },
   "seus_posts/posts/:post_id": {
     "controller": "api/v1/accounts/seus_posts_comentarios#show",
     "parametros": [
@@ -2258,6 +2264,20 @@
     "controller": "api/v1/accounts/seus_posts_comentarios#index",
     "parametros": [
       "after",
+      "comment_id",
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id/cuidado": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#show",
+    "parametros": [
+      "comment_id",
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id/resumo": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#resumo",
+    "parametros": [
       "comment_id",
       "perfil"
     ]

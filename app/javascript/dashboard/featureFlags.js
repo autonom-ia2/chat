@@ -74,6 +74,7 @@ export const FEATURE_FLAGS = {
   META_ADS_CRIAR: 'meta_ads_criar',
   SEUS_POSTS: 'seus_posts',
   SEUS_POSTS_COMENTARIOS: 'seus_posts_comentarios',
+  META_ADS_COMENTARIOS_IA: 'meta_ads_comentarios_ia',
   CONTATO_RELACAO: 'contato_relacao',
   META_ADS_ORGANICO: 'meta_ads_organico',
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',

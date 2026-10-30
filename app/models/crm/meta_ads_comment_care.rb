@@ -70,8 +70,12 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   # O que a pessoa recebe no privado: a mensagem do dono e, no fim, o aviso de que é automática (a tela mostra o mesmo
   # texto, "No fim, eu ponho sozinho"), no idioma da conta.
   def texto_do_privado
-    sufixo = I18n.t('conversations.activity.meta_ads_comment.private_reply_suffix', locale: account&.locale.presence || I18n.default_locale)
-    "#{message.to_s.strip} #{sufixo}"
+    "#{message.to_s.strip} #{sufixo_do_privado}"
+  end
+
+  # O aviso de mensagem automática no idioma da conta (não o da tela de quem escreve): a tela conta os bytes com ele.
+  def sufixo_do_privado
+    I18n.t('conversations.activity.meta_ads_comment.private_reply_suffix', locale: account&.locale.presence || I18n.default_locale)
   end
 
   # A frase do comentário depois do privado. `vez` reveza as frases, para a IA não repetir a mesma em seguida.

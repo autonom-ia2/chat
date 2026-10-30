@@ -201,6 +201,14 @@ Rails.application.routes.draw do
           post 'seus_posts/posts/:post_id/comments/:comment_id/private_reply/release', to: 'seus_posts_comentarios#release_private_reply'
           post 'seus_posts/posts/:post_id/comments/:comment_id/hide', to: 'seus_posts_comentarios#hide'
           delete 'seus_posts/posts/:post_id/comments/:comment_id', to: 'seus_posts_comentarios#destroy'
+          # IA cuida dos comentários do post (#2212, B1).
+          get 'seus_posts/cuidados', to: 'seus_posts_cuidado#cuidados'
+          put 'seus_posts/cuidados', to: 'seus_posts_cuidado#mudar_todos'
+          get 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#show'
+          put 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#update'
+          post 'seus_posts/posts/:post_id/cuidado/previa', to: 'seus_posts_cuidado#previa'
+          post 'seus_posts/posts/:post_id/cuidado/ler_antigos', to: 'seus_posts_cuidado#ler_antigos'
+          get 'seus_posts/posts/:post_id/resumo', to: 'seus_posts_cuidado#resumo'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member

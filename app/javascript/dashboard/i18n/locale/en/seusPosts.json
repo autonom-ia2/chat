@@ -116,7 +116,9 @@
       "WAITING": "{count} comment waiting for you | {count} comments waiting for you",
       "OR_MORE": "{count} or more",
       "SEE_POST": "See post",
-      "SEE_POST_LABEL": "See the post: {name}"
+      "SEE_POST_LABEL": "See the post: {name}",
+      "CARING": "Taking care",
+      "PAUSED": "Paused"
     },
     "POST": {
       "OPEN": {
@@ -229,7 +231,36 @@
           "private_reply_not_pending": "This private message was already handled.",
           "not_inbox_member": "You are not in this profile’s inbox."
         }
-      }
+      },
+      "CARE_OFFER": {
+        "TITLE": "What's in the comments",
+        "QUESTIONS": "{count} question: I can answer privately | {count} questions: I can answer privately",
+        "QUESTIONS_OLD": "{count} question older than 7 days: yours to answer | {count} questions older than 7 days: yours to answer",
+        "QUESTIONS_YOU": "{count} question: left for you | {count} questions: left for you",
+        "COMPLAINTS": "{count} complaint: left for you | {count} complaints: left for you",
+        "TEXT": "If you turn it on, I answer questions privately and say so on the comment. You choose whether I answer the ones already here.",
+        "TEXT_MIXED": "If you turn it on, I answer new questions privately. Of the ones already here, I can answer the most recent one, if you want. | If you turn it on, I answer new questions privately. Of the ones already here, I can answer the {count} most recent ones, if you want.",
+        "TEXT_ONLY_NEW": "If you turn it on, I answer new questions privately. The ones already here are older than 7 days: answer them on the comment.",
+        "TEXT_FUTURE": "If you turn it on, I answer new questions privately.",
+        "BUTTON": "Take care of comments",
+        "TEXT_SOON": "Sending it privately on Messenger isn't available yet. As soon as Meta allows it, you turn it on here.",
+        "LOADING": "I'm reading the comments…",
+        "NEEDS_PERMISSION": "To tell you what's in the comments, I need access to them.",
+        "UNAVAILABLE": "I couldn't read the comments right now.",
+        "MORE": "I read the {count} most recent ones without a reply."
+      },
+      "CARE_ON": {
+        "PAUSE": "Pause",
+        "RESUME": "Resume",
+        "CHANGE": "Change what I reply",
+        "ERROR": "I couldn't change it right now. Try again.",
+        "SEE": "See how it's going"
+      },
+      "CARE_HERO": {
+        "on": "Taking care of comments",
+        "paused": "Paused: you answer the new ones"
+      },
+      "CARE_ERROR": "I couldn't check right now whether I'm taking care of this post's comments."
     },
     "VS_NORMAL": {
       "TIMES": "{times} times the usual",

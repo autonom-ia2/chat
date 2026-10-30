@@ -7,7 +7,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
   end
 
   def fonte(**leituras)
-    described_class.new(leituras.transform_keys(&:to_s).transform_values { |payload| -> { payload } })
+    described_class.new(leituras.transform_keys(&:to_s).transform_values { |payload| { ler: -> { payload }, inbox_id: 3, post_id: '1790' } })
   end
 
   it 'só os comentários que esperam o dono: de outra pessoa, à mostra, sem resposta da conta e sem privado' do
@@ -20,7 +20,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
 
     expect(lido[:status]).to eq('ready')
     expect(lido[:linhas].pluck(:id)).to eq(%w[1 7])
-    expect(lido[:linhas].first).to include(network: 'instagram', author: 'pessoa.1', text: 'Quanto custa?')
+    expect(lido[:linhas].first).to include(network: 'instagram', author: 'pessoa.1', text: 'Quanto custa?', inbox_id: 3, post_id: '1790')
+    expect(lido[:linhas].first.keys).not_to include(:espera, :escondida)
+    expect(lido[:escondidas].pluck(:id)).to eq(%w[3])
   end
 
   it 'anúncio nas duas redes: junta as listas, do mais novo para o mais velho' do
@@ -31,20 +33,20 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
   end
 
   it 'leitura que não ficou pronta: devolve o status, sem linhas' do
-    expect(fonte(instagram: { status: 'needs_permission', comments: [] }).ler).to eq(status: 'needs_permission', linhas: [])
+    expect(fonte(instagram: { status: 'needs_permission', comments: [] }).ler).to eq(status: 'needs_permission', linhas: [], escondidas: [])
   end
 
   it 'erro da Meta vira o status do erro' do
     leitura = -> { raise Crm::MetaAds::InstagramPrivateReply::Error, 'meta_unavailable' }
 
-    expect(described_class.new({ 'instagram' => leitura }).ler).to eq(status: 'meta_unavailable', linhas: [])
+    expect(described_class.new({ 'instagram' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
   end
 
   it 'erro da leitura do Facebook (anúncio e Página do Seus posts) também vira o status, sem subir' do
     [Crm::MetaAds::FacebookComments::Error, SeusPosts::ComentariosPagina::Error].each do |erro|
       leitura = -> { raise erro, 'meta_unavailable' }
 
-      expect(described_class.new({ 'facebook' => leitura }).ler).to eq(status: 'meta_unavailable', linhas: [])
+      expect(described_class.new({ 'facebook' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
     end
   end
 end

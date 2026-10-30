@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import SeusPostsAPI from 'dashboard/api/seusPosts';
 import Button from 'dashboard/components-next/button/Button.vue';
 import EstadoVazio from '../components/EstadoVazio.vue';
@@ -11,6 +13,10 @@ import ComentarioLinha from '../components/ComentarioLinha.vue';
 import { comentarioParaTela, postParaTela } from '../seusPostsDados';
 import { formatar, intlLocale, vereditoDoPost } from '../seusPostsHelpers';
 import { useLiberarAcesso } from '../useLiberarAcesso';
+import {
+  useCuidado,
+  useResumo,
+} from '../../campaigns/metaAds/comentariosIa/useCuidado';
 
 // Seus posts F2 (#2305): um post do perfil e os comentários dele, montado como o detalhe de um anúncio: o voltar, o
 // herói (nome, como foi e quem espera você), a foto e o post à esquerda, os números à direita e os comentários
@@ -18,6 +24,7 @@ import { useLiberarAcesso } from '../useLiberarAcesso';
 // o post sai da mesma lista da página de Seus posts. Cada ação vai à Meta e a lista de comentários é lida de novo.
 const { t, locale } = useI18n();
 const route = useRoute();
+const { isCloudFeatureEnabled } = useAccount();
 
 const dados = ref(null);
 const carregando = ref(true);
@@ -35,6 +42,33 @@ const ocupado = ref(null);
 
 const perfilId = computed(() => route.query.perfil);
 const postId = computed(() => route.params.postId);
+
+// Comentários que viram cliente (#2212, B1), atrás da flag meta_ads_comentarios_ia: o cuidado do post (Painel) e o
+// resumo "O que tem nos comentários" (A2), lidos ao lado do post, sem travar a página. Sem a flag, nada é lido nem
+// aparece. Ver é de quem já vê o post; ligar, pausar e voltar, só com `can_manage` (o mesmo do F2).
+const comCuidado = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+);
+const alvoDoCuidado = computed(() =>
+  comCuidado.value
+    ? { kind: 'post', id: postId.value, perfil: perfilId.value }
+    : null
+);
+const {
+  painel: cuidado,
+  carregando: lendoCuidado,
+  erro: erroDoCuidado,
+  carregar: lerCuidado,
+  salvando: mudandoCuidado,
+  pausar: pausarCuidado,
+  voltar: voltarACuidar,
+} = useCuidado(alvoDoCuidado);
+const {
+  resumo: oQueTem,
+  carregando: lendoResumo,
+  falhou: resumoFalhou,
+  carregar: lerResumo,
+} = useResumo(alvoDoCuidado);
 
 const guardarComentarios = (dadosDosComentarios, juntar = false) => {
   const lidos = (dadosDosComentarios?.comments || []).map(comentarioParaTela);
@@ -268,6 +302,8 @@ const agir = async (comentario, chamada, sucesso, pronto = () => {}) => {
   }
   pronto();
   useAlert(t(`SEUS_POSTS.POST.COMMENTS.DONE.${sucesso}`));
+  // Quem espera mudou: o resumo do servidor também (o cache dele cai junto).
+  lerResumo();
   try {
     await lerPost();
   } catch {
@@ -309,6 +345,57 @@ const { podeLiberar, liberar } = useLiberarAcesso({
   precisa: semPermissao,
   reler: carregar,
 });
+
+const podeMudar = computed(() => Boolean(dados.value?.can_manage));
+// 'on' ou 'paused' (o herói diz), 'off' (o bloco do resumo oferece cuidar), 'loading' (nada ainda: sem o Painel, a
+// tela não sabe se a IA cuida, e não oferece "Cuidar" a quem já liga) ou 'error' (falha de rede: aviso curto com
+// tentar de novo no lugar do bloco). Sem acesso ao cuidado (403) ou sem ele no servidor (404), nada aparece.
+const situacaoDoCuidado = computed(() => {
+  if (erroDoCuidado.value === 'rede') return 'error';
+  if (erroDoCuidado.value) return 'none';
+  if (!cuidado.value) return lendoCuidado.value ? 'loading' : 'off';
+  return ['on', 'paused'].includes(cuidado.value.care)
+    ? cuidado.value.care
+    : 'off';
+});
+const cuidando = computed(() =>
+  ['on', 'paused'].includes(situacaoDoCuidado.value)
+);
+// O privado no Facebook espera a pages_messaging (F4): o resumo não promete privado.
+const privadoLiberado = computed(
+  () => cuidado.value?.private_available ?? rede.value !== 'facebook'
+);
+const cuidar = computed(() => ({
+  name: 'seus_posts_cuidar',
+  params: { accountId: route.params.accountId, postId: postId.value },
+  query: { perfil: perfilId.value, dias: route.query.dias },
+}));
+const mudarCuidado = async () => {
+  const valeu =
+    situacaoDoCuidado.value === 'on'
+      ? await pausarCuidado()
+      : await voltarACuidar();
+  if (!valeu) useAlert(t('SEUS_POSTS.POST.CARE_ON.ERROR'));
+};
+// O que o botão de cuidar faz, logo abaixo dele. Sem pergunta que ainda dá para mandar no privado, a frase não
+// oferece responder "as que já estão aqui".
+const textoDoCuidar = computed(() => {
+  if (!privadoLiberado.value) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT_SOON');
+  const perguntas = oQueTem.value?.questions || 0;
+  const velhas = oQueTem.value?.questions_old || 0;
+  if (!perguntas) {
+    return velhas
+      ? t('SEUS_POSTS.POST.CARE_OFFER.TEXT_ONLY_NEW')
+      : t('SEUS_POSTS.POST.CARE_OFFER.TEXT_FUTURE');
+  }
+  if (!velhas) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT');
+  return t(
+    'SEUS_POSTS.POST.CARE_OFFER.TEXT_MIXED',
+    { count: perguntas },
+    perguntas
+  );
+});
+const resumoPronto = computed(() => oQueTem.value?.status === 'ready');
 
 const ICONE_DO_TIPO = {
   foto: 'i-lucide-image',
@@ -447,6 +534,66 @@ const BOTAO_DE_BORDA =
               {{ $t('SEUS_POSTS.POST.SEE_WAITING') }}
             </button>
           </div>
+          <!-- Cuidando ou pausado (#2212): o selo diz o estado; pausar e voltar a cuidar com um toque, sem confirmação. -->
+          <div
+            v-if="cuidando"
+            data-seus-posts-cuidado-heroi
+            :data-situacao="situacaoDoCuidado"
+            class="relative flex flex-wrap items-center gap-3 pt-2"
+          >
+            <span
+              class="inline-flex min-h-8 items-center gap-2 rounded-full px-3 text-sm font-medium"
+              :class="
+                situacaoDoCuidado === 'on'
+                  ? 'bg-n-teal-9/20 text-white'
+                  : 'bg-white/10 text-white/80'
+              "
+            >
+              <span
+                class="size-2 rounded-full"
+                :class="
+                  situacaoDoCuidado === 'on' ? 'bg-n-teal-9' : 'bg-white/50'
+                "
+                aria-hidden="true"
+              />
+              {{ $t(`SEUS_POSTS.POST.CARE_HERO.${situacaoDoCuidado}`) }}
+            </span>
+            <button
+              v-if="podeMudar"
+              type="button"
+              data-seus-posts-pausar
+              :disabled="mudandoCuidado"
+              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border-0 bg-transparent px-4 text-sm font-520 text-white ring-1 ring-inset ring-white/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-60 max-sm:w-full"
+              @click="mudarCuidado"
+            >
+              <span
+                :class="
+                  situacaoDoCuidado === 'on'
+                    ? 'i-lucide-pause'
+                    : 'i-lucide-play'
+                "
+                class="size-4"
+                aria-hidden="true"
+              />
+              {{
+                situacaoDoCuidado === 'on'
+                  ? $t('SEUS_POSTS.POST.CARE_ON.PAUSE')
+                  : $t('SEUS_POSTS.POST.CARE_ON.RESUME')
+              }}
+            </button>
+            <router-link
+              :to="cuidar"
+              data-seus-posts-cuidar
+              class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-520 text-white no-underline ring-1 ring-inset ring-white/30 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white max-sm:w-full"
+            >
+              <span class="i-lucide-sparkles size-4" aria-hidden="true" />
+              {{
+                podeMudar
+                  ? $t('SEUS_POSTS.POST.CARE_ON.CHANGE')
+                  : $t('SEUS_POSTS.POST.CARE_ON.SEE')
+              }}
+            </router-link>
+          </div>
         </header>
 
         <div
@@ -554,6 +701,141 @@ const BOTAO_DE_BORDA =
               >
                 {{ ladoDoAnuncio }}
               </p>
+            </section>
+            <!-- O cuidado não veio (rede): sem ele, a tela não sabe se a IA cuida, e não oferece "Cuidar" no escuro. -->
+            <section
+              v-if="comCuidado && situacaoDoCuidado === 'error'"
+              data-seus-posts-cuidado-erro
+              role="alert"
+              class="flex flex-col items-start gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
+            >
+              <p class="m-0 text-sm text-n-slate-11">
+                {{ $t('SEUS_POSTS.POST.CARE_ERROR') }}
+              </p>
+              <Button
+                data-seus-posts-cuidado-de-novo
+                variant="faded"
+                color="slate"
+                icon="i-lucide-refresh-cw"
+                :label="$t('SEUS_POSTS.ERROR.RETRY')"
+                class="!min-h-11 !rounded-xl"
+                @click="lerCuidado"
+              />
+            </section>
+            <!-- O que tem nos comentários (#2212, A2): antes de cuidar, o que eu faria. Lido à parte, sem travar a página. -->
+            <section
+              v-if="comCuidado && situacaoDoCuidado === 'off'"
+              data-seus-posts-o-que-tem
+              :data-status="
+                lendoResumo && !oQueTem
+                  ? 'loading'
+                  : resumoFalhou
+                    ? 'error'
+                    : oQueTem?.status
+              "
+              class="flex flex-col gap-2 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak"
+            >
+              <h2 class="m-0 text-sm font-semibold text-n-slate-11">
+                {{ $t('SEUS_POSTS.POST.CARE_OFFER.TITLE') }}
+              </h2>
+              <div
+                v-if="lendoResumo && !oQueTem"
+                role="status"
+                aria-busy="true"
+                class="flex flex-col gap-2"
+              >
+                <p class="m-0 text-sm text-n-slate-11">
+                  {{ $t('SEUS_POSTS.POST.CARE_OFFER.LOADING') }}
+                </p>
+                <div class="h-12 animate-pulse rounded-xl bg-n-alpha-2" />
+              </div>
+              <p
+                v-else-if="oQueTem?.status === 'needs_permission'"
+                class="m-0 text-sm text-n-slate-11"
+              >
+                {{ $t('SEUS_POSTS.POST.CARE_OFFER.NEEDS_PERMISSION') }}
+              </p>
+              <div
+                v-else-if="resumoFalhou || !resumoPronto"
+                role="alert"
+                class="flex flex-col items-start gap-2"
+              >
+                <p class="m-0 text-sm text-n-slate-11">
+                  {{ $t('SEUS_POSTS.POST.CARE_OFFER.UNAVAILABLE') }}
+                </p>
+                <Button
+                  data-seus-posts-o-que-tem-de-novo
+                  variant="faded"
+                  color="slate"
+                  icon="i-lucide-refresh-cw"
+                  :label="$t('SEUS_POSTS.ERROR.RETRY')"
+                  class="!min-h-11 !rounded-xl"
+                  @click="lerResumo"
+                />
+              </div>
+              <template v-else>
+                <!-- Um item por linha: no celular, " · " quebrava e deixava o ponto no começo da linha. -->
+                <ul
+                  v-if="
+                    oQueTem.questions ||
+                    oQueTem.questions_old ||
+                    oQueTem.complaints
+                  "
+                  class="m-0 flex list-none flex-col gap-1 p-0 text-base font-medium text-n-slate-12"
+                >
+                  <li v-if="oQueTem.questions" data-seus-posts-perguntas>
+                    {{
+                      $t(
+                        privadoLiberado
+                          ? 'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS'
+                          : 'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS_YOU',
+                        { count: num(oQueTem.questions) },
+                        oQueTem.questions
+                      )
+                    }}
+                  </li>
+                  <li v-if="oQueTem.questions_old">
+                    {{
+                      $t(
+                        'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS_OLD',
+                        { count: num(oQueTem.questions_old) },
+                        oQueTem.questions_old
+                      )
+                    }}
+                  </li>
+                  <li v-if="oQueTem.complaints">
+                    {{
+                      $t(
+                        'SEUS_POSTS.POST.CARE_OFFER.COMPLAINTS',
+                        { count: num(oQueTem.complaints) },
+                        oQueTem.complaints
+                      )
+                    }}
+                  </li>
+                </ul>
+                <p v-if="oQueTem.more" class="m-0 text-sm text-n-slate-11">
+                  {{
+                    $t('SEUS_POSTS.POST.CARE_OFFER.MORE', {
+                      count: num(oQueTem.read),
+                    })
+                  }}
+                </p>
+                <p
+                  data-seus-posts-o-que-faco
+                  class="m-0 text-sm text-n-slate-11"
+                >
+                  {{ textoDoCuidar }}
+                </p>
+              </template>
+              <router-link
+                v-if="podeMudar"
+                :to="cuidar"
+                data-seus-posts-cuidar
+                class="mt-1 inline-flex min-h-11 items-center gap-2 self-start rounded-xl bg-n-brand px-4 text-sm font-medium text-white no-underline hover:bg-n-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand focus-visible:ring-offset-2"
+              >
+                <span class="i-lucide-sparkles size-4" aria-hidden="true" />
+                {{ $t('SEUS_POSTS.POST.CARE_OFFER.BUTTON') }}
+              </router-link>
             </section>
           </div>
         </div>

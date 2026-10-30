@@ -1,0 +1,155 @@
+{
+  "META_ADS_COMMENTS_AI": {
+    "BADGE_ON": "Taking care of comments",
+    "BADGE_PAUSED": "Paused",
+    "BAND": {
+      "TITLE": "Taking care of comments on {count} post | Taking care of comments on {count} posts",
+      "PAUSED": "Comments paused on {count} post | Comments paused on {count} posts",
+      "SHOW": "See posts",
+      "HIDE": "Close list",
+      "PAUSE_ALL": "Pause all",
+      "RESUME_ALL": "Resume all",
+      "RESUME_CONFIRM": {
+        "TITLE": "Resume {count} post? | Resume {count} posts?",
+        "DESCRIPTION": "I'll read new comments and send DMs again, like before you paused.",
+        "CONFIRM": "Resume",
+        "CANCEL": "Not now"
+      },
+      "LIST_LABEL": "Posts I take care of",
+      "ERROR": "Couldn't change it now. Try again."
+    },
+    "SCREEN": {
+      "TITLE": "Take care of comments",
+      "BACK_POSTS": "Back to Your posts",
+      "BACK_POST": "Back to the post",
+      "BACK_AD": "Back to the ad",
+      "FROM_POST": "Instagram post",
+      "FROM_AD": "Ad on Instagram and Facebook",
+      "FROM_PAGE": "Facebook Page post",
+      "READING": "I'm reading your post…",
+      "ERROR": "I couldn't read the post right now.",
+      "RETRY": "Try again",
+      "NO_ACCESS": "You don't have access to comment care on this post.",
+      "SAVE_ERROR": "I couldn't save it right now. Try again.",
+      "OFF_READONLY": {
+        "TITLE": "I'm not taking care of this post's comments yet.",
+        "TEXT": "Someone who manages the account's posts can turn it on."
+      }
+    },
+    "PRIVATE": {
+      "AUTOMATIC": "(automatic message · if you'd rather not get these, just tell me)"
+    },
+    "OLD_DIALOG": {
+      "OLDER": "1 more comment is older than 7 days and can't get a DM. It stays with you: reply in the comment. | {count} more comments are older than 7 days and can't get a DM. They stay with you: reply in the comment.",
+      "OLDER_FACEBOOK": "1 more comment is older than 7 days and can't get a Messenger message. It stays with you: reply in the comment. | {count} more comments are older than 7 days and can't get a Messenger message. They stay with you: reply in the comment.",
+      "OLDER_BOTH": "1 more comment is older than 7 days and can't get a message. It stays with you: reply in the comment. | {count} more comments are older than 7 days and can't get a message. They stay with you: reply in the comment."
+    },
+    "ON": {
+      "STARTED": "Done. I take care of new comments from now on.",
+      "STARTED_DONO": "Done. I'll send your message to: {who}.",
+      "RESULT": "{sent} got a DM",
+      "RESULT_FACEBOOK": "{sent} got a Messenger message",
+      "RESULT_BOTH": "{sent} got a message",
+      "RESULT_ONE": "1 got a DM",
+      "RESULT_FACEBOOK_ONE": "1 got a Messenger message",
+      "RESULT_BOTH_ONE": "1 got a message",
+      "REPLIED": "{replied} replied",
+      "REPLIED_ONE": "1 replied",
+      "NO_RESULT": "No new comments yet. The numbers show up here.",
+      "PAUSED_TEXT": "New comments stay with you in the inbox.",
+      "PAUSE": "Pause",
+      "RESUME": "Resume",
+      "INBOX": "See in inbox",
+      "TO_SEE": "Waiting for you ({count})",
+      "TO_SEE_TITLE": "Waiting for you",
+      "TO_SEE_EMPTY": "Nothing needs you right now.",
+      "BEFORE": "Came in before you turned it on ({count})",
+      "BEFORE_TITLE": "Came in before you turned it on",
+      "HIDDEN": "Hidden by me ({count})",
+      "KIND": {
+        "complaint": "Complaint. I didn't reply. It's in your inbox, marked urgent.",
+        "hidden": "Spam. I hid it from the post.",
+        "failed": "I couldn't send the DM. Reply yourself, if you want.",
+        "already_sent": "This person already got the DM for this post. Continue in the inbox.",
+        "unread": "I didn't handle this comment. Reply yourself, if you want.",
+        "unsure": "I'm not sure the DM went out: Meta didn't answer. Check the inbox before you reply.",
+        "paused": "Came in while paused. Reply in the comment if you want.",
+        "waiting": "Came in before you turned it on. Reply in the comment if you want.",
+        "older": "Older than 7 days: I can't send a DM anymore. Reply in the comment.",
+        "skipped": "Doesn't apply · I didn't send. It stays with you: reply in the comment if you want."
+      },
+      "OPEN_INBOX": "Open in inbox",
+      "SEE_ON_POST": "See it on the post",
+      "CHANGE": "Change what I reply",
+      "SAVE_CHANGES": "Save changes",
+      "LEAVE_CHANGES": "Leave without changes",
+      "SAVED": "Done, I saved your changes.",
+      "RESOLVED_HINT": "Conversations I handled myself come in already resolved.",
+      "READ_OLD": "Read and send",
+      "STARTED_OLD_QUEUED": "Done. I'm reading the comments that were already here and I'll send it only to the right people. The result shows up here."
+    },
+    "DONO": {
+      "STEP": "Step {step} of {total}",
+      "NEXT": "Continue",
+      "START": "Turn on",
+      "WHAT": {
+        "TITLE": "What should I send by DM?",
+        "TEXT": "Write the message people get. It can have a link, catalog, coupon or price.",
+        "PLACEHOLDER": "E.g.: Hi! Here is the catalog with prices: studioacme.com/catalog. Use the coupon POST10 for 10% off.",
+        "HINT": "At the end, I add: “{automatic}”.",
+        "TOO_LONG": "The message is too long for Meta. Make it a bit shorter.",
+        "ALL_IN_ONE": "Put everything in this message: the next one only goes out if the person replies."
+      },
+      "WHO": {
+        "TITLE": "Who gets it?",
+        "TEXT": "I read each comment and send it only when it fits. Tap one or write it your way.",
+        "PLACEHOLDER": "E.g.: people who ask for the link or the price",
+        "SUGGESTIONS": {
+          "PRICE": "People who ask the price",
+          "LINK": "People who ask for the link",
+          "CATALOG": "People who want the catalog"
+        },
+        "OWN": "Or write it your way:",
+        "TOO_LONG": "That's too long. Use up to {max} characters."
+      },
+      "SEE": {
+        "TITLE": "See how it looks",
+        "GETS": "It fits",
+        "IN_DM": "Whoever comments like this gets by DM:",
+        "IN_COMMENT": "In the comment, I reply",
+        "SKIPS": "Doesn't apply",
+        "SKIPS_WHY": "Not what you asked for. I don't send anything.",
+        "SAMPLE": "Example: nobody asked for this on this post yet",
+        "SAMPLE_TEXT": "When someone comments what you asked for, they get this:",
+        "YOU_ASKED": "You asked for:",
+        "PHRASE_EDIT": "Change the reply",
+        "PHRASE_DONE": "Done",
+        "PHRASE_DEFAULT": "I sent you a DM 😊",
+        "GETS_BEFORE": "It fits · came in before",
+        "LOADING": "I'm reading the post's comments…",
+        "PREVIEW_ERROR": "I couldn't read the post's comments right now. This is an example: you can turn it on anyway."
+      },
+      "RULES": {
+        "ONCE": "Each person gets one message only on this post.",
+        "SEVEN_DAYS": "Comments older than 7 days can't get a DM.",
+        "COMPLAINT": "Complaints don't get the message: they stay with you, in the inbox.",
+        "MORE": "How it works",
+        "LIVE": "On a live, only while it's on air.",
+        "REQUESTS": "People who don't follow you get it in “Requests”, in Direct."
+      },
+      "SOON": {
+        "BADGE": "Coming soon",
+        "TITLE": "Sending on Messenger isn't available yet",
+        "TEXT": "On Facebook, private messages need Meta's approval. As soon as Meta approves it, you can turn it on here."
+      },
+      "PREVIOUS": "Previous step",
+      "OLD_NOTE": "The one already here: I'll ask after you turn it on. | The {count} already here: I'll ask after you turn it on.",
+      "OLD_DIALOG": {
+        "TITLE": "Also read the comment already here? | Also read the {count} comments already here?",
+        "TEXT": "I'll read it and send the message only if it fits. | I'll read the {count} and send the message only when it fits.",
+        "CONFIRM": "Read and send",
+        "BACK": "Not now"
+      }
+    }
+  }
+}
