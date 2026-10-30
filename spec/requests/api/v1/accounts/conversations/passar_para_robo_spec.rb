@@ -102,7 +102,43 @@ RSpec.describe 'Passar para… pelo robô de outro sistema', type: :request do
       expect(conversation.reload.ai_assignee).to eq(espelho_da_porta)
     end
 
-    # Pega: o robô de outra conta chegar à conversa.
+    # Pega: o espelho de vínculo arquivado (o AgentBotInbox da porta continua na caixa) passar a conversa.
+    it 'espelho de vínculo arquivado, ainda ligado à caixa: 401', :aggregate_failures do
+      espelho_da_porta = vinculo_da_porta.agent_bot
+      area_sumiu!(agente_da_porta)
+      conversation.update!(ai_assignee: espelho_da_porta)
+      url_da_porta = "/api/v1/accounts/#{account.id}/conversations/#{conversation.display_id}/passar_para"
+
+      post url_da_porta, params: { destino: { tipo: 'ia', id: area.id } }, headers: token(espelho_da_porta), as: :json
+
+      expect(inbox.reload.agent_bot).to eq(espelho_da_porta)
+      expect(response).to have_http_status(:unauthorized)
+    end
+
+    # Pega: o robô tirar a conversa de outro agente (o filtro do n8n só age sem dono ou quando ele é o dono).
+    it 'conversa com outro agente: recusa outro_agente_com_a_conversa', :aggregate_failures do
+      outra_area = criar_agente('Área Vendas')
+      espelho_outra = Autonomia::Agents::Areas.vincular!(agent: outra_area, inbox: caixa_n8n).agent_bot
+      conversa.update!(ai_assignee: espelho_outra)
+
+      expect { passar({ tipo: 'ia', id: area.id }) }.not_to change(Crm::Passagem, :count)
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body).to eq('codigo' => 'outro_agente_com_a_conversa')
+      expect(conversa.reload.ai_assignee).to eq(espelho_outra)
+    end
+
+    # Pega: a conversa sem dono (o n8n responde nela) não poder ser passada.
+    it 'conversa sem dono: o robô da caixa passa' do
+      conversa.update!(ai_assignee: nil)
+
+      passar({ tipo: 'ia', id: area.id })
+
+      expect(conversa.reload.ai_assignee).to eq(espelho_na_caixa_n8n)
+    end
+
+    # Pega: o robô de outra conta chegar à conversa. Quem barra é o acesso à conta (EnsureCurrentAccountHelper), antes
+    # da guarda da caixa: é regressão dele.
     it 'robô de outra conta: 401' do
       de_fora = create(:agent_bot, account: create(:account), name: 'Robô de fora')
 
@@ -156,6 +192,27 @@ RSpec.describe 'Passar para… pelo robô de outro sistema', type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body['agentes']).to include(include('id' => area.id, 'name' => 'Área Suporte'))
+      expect(response.parsed_body['pessoas']).to eq([])
+    end
+
+    # Pega: a equipe (nome da pessoa) vazando ao robô pela origem da passagem.
+    it 'origem pessoa: o robô vê só o tipo, sem nome nem id' do
+      conversa.update!(ai_assignee: espelho_na_caixa_n8n)
+      Crm::Passagens.registrar!(conversation: conversa, de: ana, para: area, pedida_por: ana, motivo: 'passar_para')
+
+      get url, headers: token
+
+      expect(response.parsed_body['origem']).to eq('tipo' => 'pessoa', 'classe' => 'User')
+    end
+
+    # Pega: a guarda da caixa valer só no POST (um only: :create futuro).
+    it 'robô de outra caixa: 401 também no GET' do
+      outro = create(:agent_bot, account: account, name: 'Outro n8n')
+      create(:agent_bot_inbox, inbox: create(:inbox, account: account), agent_bot: outro)
+
+      get url, headers: token(outro)
+
+      expect(response).to have_http_status(:unauthorized)
     end
   end
 

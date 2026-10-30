@@ -10,7 +10,9 @@
 # - Agente de IA: o serviço dos Agentes (Crm::Entrega::ParaIa.passar!), que troca o dono, solta a pessoa e grava a
 #   passagem ele mesmo. A recusa volta com o código, e a tela diz o porquê em linguagem simples.
 # - Quem pede pode ser o robô de outro sistema da caixa (o n8n, pelo token dele; a rota confere a caixa): só para agente
-#   de IA (`por: :ia`, e a pessoa no nome vence). Para pessoa ele tem o handoff, que passa pela Atribuição.
+#   de IA (`por: :ia`, e a pessoa no nome vence), e só a conversa que é dele ou sem dono (a mesma condição do filtro do
+#   n8n): não tira a conversa de outro agente. Para pessoa ele tem o handoff, que passa pela Atribuição. No retrato ele
+#   não recebe a equipe (nomes e disponibilidade), que não usa.
 #
 # A origem (quem passou para o agente que está com a conversa) vem da última passagem aberta: é o selo "Com Lia ·
 # passada por Ana" e o "Devolver para Ana" no topo da lista.
@@ -33,7 +35,7 @@ class Crm::PassarPara
     {
       fase2: ligado,
       sem_robo: ligado && ::Autonomia::Agents::QuemResponde.porta_da_caixa(@inbox).blank?,
-      pessoas: pessoas_da_caixa.map { |user| pessoa(user) },
+      pessoas: pessoas_do_retrato,
       agentes: Crm::AgentesIa.destinos(@conversation).map { |agente| item(agente, dono) },
       com_ia: dono && { id: dono.id, name: dono.name, bot_id: @conversation.assignee_agent_bot_id },
       origem: dono && origem_de(dono)
@@ -61,6 +63,8 @@ class Crm::PassarPara
     return if de.nil? || !para_este_agente?(passagem.para, agente)
 
     pessoa = de.classe.to_s == 'User'
+    return { tipo: de.tipo.to_s, classe: de.classe.to_s } if pessoa && robo?
+
     { tipo: de.tipo.to_s, classe: de.classe.to_s, id: de.id, name: de.nome, pode_receber: pessoa && pessoa_da_caixa(de.id).present? }
   end
 
@@ -88,6 +92,7 @@ class Crm::PassarPara
   def para_ia(agent_id)
     agente = ::Autonomia::Agents::Agent.kept.find_by(account_id: @conversation.account_id, id: agent_id)
     return recusa('destino_invalido') if agente.nil?
+    return recusa('outro_agente_com_a_conversa') if robo? && com_outro_agente?(agente)
 
     codigo = Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: robo? ? :ia : :pessoa, motivo: MOTIVO,
                                           origem: quem_esta_agora, pedida_por: @usuario)
@@ -105,6 +110,11 @@ class Crm::PassarPara
     pessoas_da_caixa.find { |user| user.id == user_id.to_i }
   end
 
+  # O robô não recebe a equipe: só passa para agente de IA.
+  def pessoas_do_retrato
+    robo? ? [] : pessoas_da_caixa.map { |user| pessoa(user) }
+  end
+
   def pessoa(user)
     { id: user.id, name: user.name, thumbnail: user.avatar_url, availability_status: user.availability_status }
   end
@@ -116,6 +126,12 @@ class Crm::PassarPara
 
   def robo?
     @usuario.is_a?(AgentBot)
+  end
+
+  # Outro robô ou agente com a conversa, que não é o robô que pede nem já o destino (a retentativa segue e volta ok).
+  def com_outro_agente?(agente)
+    dono = @conversation.ai_assignee
+    dono.present? && dono != @usuario && Crm::AgentesIa.dono(@conversation)&.id != agente.id
   end
 
   def recusa(codigo)
