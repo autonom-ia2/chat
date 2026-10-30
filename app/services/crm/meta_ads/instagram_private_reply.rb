@@ -16,8 +16,10 @@
 #
 # Só comentário de primeiro nível: resposta a comentário (com `parent_id`) não recebe o privado.
 #
-# O privado de uma pessoa (actor `user`) também marca quem comentou naquele post (Crm::MetaAdsCommentPerson, #2212):
-# a IA não manda outro privado à mesma pessoa no mesmo post. A IA reserva a sua marca antes, no Registro.
+# O privado de uma pessoa (actor `user`) também marca quem comentou naquele post (Crm::MetaAdsCommentPerson, #2212),
+# antes de chamar a Meta: enquanto o envio sai, a IA não manda outro privado à mesma pessoa no mesmo post. A marca não
+# trava a pessoa da equipe: se já existe (a IA ou outro privado chegou antes), o envio segue e a marca de antes fica.
+# Recusa 4xx apaga só a marca deste envio; "pode ter saído" a mantém. A IA reserva a sua marca no Registro.
 #
 # `comment` vem como a Graph ou o webhook mandam: { 'id', 'timestamp', 'parent_id', 'from' => { 'id', 'username' },
 # 'media' => { 'id' } }.
@@ -43,16 +45,14 @@ class Crm::MetaAds::InstagramPrivateReply
     validate_comment!(comment)
     release_abandoned!(comment['id'])
     action = claim!(comment['id'], actor, user, ad_id)
-    raise Error, 'private_reply_retry' unless action.attempt!
-
-    result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
-    unless result.ok
-      maybe_delivered?(result) ? action.fail! : action.destroy!
-      raise Error, error_code(result)
+    person_id = mark_person!(action, comment) unless actor == Crm::MetaAds::ComentariosIa::Registro::ACTOR
+    unless action.attempt!
+      release_person!(person_id)
+      raise Error, 'private_reply_retry'
     end
 
+    result = send!(action, comment, text, person_id)
     confirm_safely!(action)
-    remember_person_safely!(comment) unless actor == Crm::MetaAds::ComentariosIa::Registro::ACTOR
     record_safely!(action, comment, text, result.data, user)
   end
 
@@ -71,18 +71,37 @@ class Crm::MetaAds::InstagramPrivateReply
     end
   end
 
-  # A Meta já aceitou: falha ao marcar a pessoa vai para o rastreador. Sem post ou sem quem comentou, não há o que marcar.
-  def remember_person_safely!(comment)
+  def send!(action, comment, text, person_id)
+    result = Instagram::CommentsClient.new(@channel).private_reply(comment['id'], text)
+    return result if result.ok
+
+    if maybe_delivered?(result)
+      action.fail!
+    else
+      action.destroy!
+      release_person!(person_id)
+    end
+    raise Error, error_code(result)
+  end
+
+  # Devolve o id da marca quando ela é deste envio; nil quando já existia ou falta post ou quem comentou. Nada saiu
+  # ainda: erro ao gravar solta a reserva do comentário e sobe.
+  def mark_person!(action, comment)
     post_id = comment.dig('media', 'id').to_s
     from_id = comment.dig('from', 'id').to_s
     return if post_id.empty? || from_id.empty?
 
     Crm::MetaAdsCommentPerson.insert_all( # rubocop:disable Rails/SkipsModelValidations
       [{ account_id: @channel.account_id, network: 'instagram', post_id: post_id, from_id: from_id, comment_id: comment['id'].to_s }],
-      unique_by: :idx_crm_meta_ads_comment_people_once
-    )
-  rescue StandardError => e
-    ChatwootExceptionTracker.new(e, account: @channel.account).capture_exception
+      unique_by: :idx_crm_meta_ads_comment_people_once, returning: %i[id]
+    ).rows.first&.first
+  rescue StandardError
+    action.destroy!
+    raise
+  end
+
+  def release_person!(person_id)
+    Crm::MetaAdsCommentPerson.where(id: person_id).delete_all if person_id
   end
 
   def valid_text!(text)

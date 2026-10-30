@@ -145,7 +145,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     end
 
     it 'recusa do serviço vira false' do
-      allow(servico).to receive(:reply_as_ai).and_raise(Crm::MetaAds::FacebookComments::Error)
+      allow(servico).to receive(:reply_as_ai).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
 
       expect(rede.responder('oi')).to be(false)
     end
