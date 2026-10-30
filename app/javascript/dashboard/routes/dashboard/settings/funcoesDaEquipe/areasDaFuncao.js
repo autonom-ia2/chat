@@ -9,11 +9,7 @@ import {
   setLevel,
 } from '../customRoles/permissionMatrix';
 import { reachesKeys } from 'dashboard/helper/peopleAccess';
-import {
-  ALCANCES_DE_CONVERSA,
-  dependenciaDe,
-  valeNoServidor,
-} from './chavesDaFuncao';
+import { dependenciaDe, valeNoServidor } from './chavesDaFuncao';
 import { comImplicadas } from './comImplicadas';
 import { motivoDasChaves, motivoDaTrava } from './motivoDaTrava';
 
@@ -123,35 +119,11 @@ export const emManage = (module, permissions) =>
     ? ATENDE.includes(getLevel(module, permissions))
     : getLevel(module, permissions) === LEVELS.MANAGE;
 
-// "Atende as próprias" grava um alcance, e o setLevel começa pelas conversas de que a pessoa participa. Quem dá sem
-// esse alcance, mas com o das novas sem ninguém, dá as próprias por ele: o servidor confere chave a chave
-// (GrantGuard#reach?), e um alcance basta (toggleExtra). Sem isso, as próprias ficavam com cadeado para quem só tem
-// conversation_unassigned_manage (#2403). Um alcance que a função já tinha não sai.
-const [ALCANCE_DAS_NOVAS, ALCANCE_DE_QUEM_PARTICIPA] = ALCANCES_DE_CONVERSA;
-const pelasNovas = (giver, antes, chaves) =>
-  chaves.includes(ALCANCE_DE_QUEM_PARTICIPA) &&
-  !antes.includes(ALCANCE_DE_QUEM_PARTICIPA) &&
-  !reachesKeys(giver, [ALCANCE_DE_QUEM_PARTICIPA]) &&
-  reachesKeys(giver, [ALCANCE_DAS_NOVAS]);
-
-export const nivelar = (giver, module, nivel, permissions) => {
-  const chaves = setLevel(module, nivel, permissions);
-  if (module.type !== 'conversations' || nivel !== CONVERSATION_LEVELS.LIMITED)
-    return chaves;
-  if (!pelasNovas(giver, permissions, chaves)) return chaves;
-  return [
-    ...new Set([
-      ...chaves.filter(chave => chave !== ALCANCE_DE_QUEM_PARTICIPA),
-      ALCANCE_DAS_NOVAS,
-    ]),
-  ];
-};
-
 // Um nível nunca grava chave travada: a trava do nível é a das chaves que ele grava sozinho.
 export const travaDoNivel = (giver, module, nivel) =>
   nivel === LEVELS.NONE
     ? null
-    : motivoDasChaves(giver, nivelar(giver, module, nivel, []));
+    : motivoDasChaves(giver, setLevel(module, nivel, []));
 
 // Área inteira fora do alcance: todo nível acima de "Não vê" travado.
 export const areaTravada = (giver, module) =>

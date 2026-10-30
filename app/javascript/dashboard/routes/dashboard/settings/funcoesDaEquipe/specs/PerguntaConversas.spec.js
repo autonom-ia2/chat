@@ -73,9 +73,10 @@ describe('PerguntaConversas', () => {
     expect(wrapper.props('permissions')).toEqual(entrada);
   });
 
-  // #2403: quem monta só com as novas sem ninguém dá "Atende as próprias" por esse alcance (GrantGuard#reach? confere
-  // chave a chave); antes, a opção aparecia com cadeado.
-  it('quem dá só com conversation_unassigned_manage escolhe "Atende as próprias", sem cadeado, pelo alcance que tem', async () => {
+  // #2403: o cadeado de "Atende as próprias" é verdadeiro. O nível grava conversation_participating_manage (atribuídas
+  // ou de que participa), e conversation_unassigned_manage é outro alcance (esperando alguém ou atribuídas), na
+  // Enterprise::ConversationPolicy. Quem monta só com ele vê o cadeado com o motivo de verdade, e o toque não grava nada.
+  it('quem monta só com conversation_unassigned_manage vê "Atende as próprias" com cadeado e o motivo', async () => {
     const soNovas = {
       userId: 20,
       isAdmin: false,
@@ -84,20 +85,12 @@ describe('PerguntaConversas', () => {
     };
     const wrapper = montar([], soNovas);
     const proprias = wrapper.find('[data-nivel="limited"]');
-    expect(proprias.attributes('aria-disabled')).toBe('false');
-    expect(proprias.find('.i-lucide-lock').exists()).toBe(false);
-    expect(wrapper.find('[data-nivel="all"]').attributes('aria-disabled')).toBe(
-      'true'
-    );
+    expect(proprias.attributes('aria-disabled')).toBe('true');
+    expect(proprias.find('.i-lucide-lock').exists()).toBe(true);
+    expect(proprias.text()).toContain('Você não tem isto, então não pode dar.');
 
     await proprias.trigger('click');
-    expect(wrapper.emitted('update:permissions')[0][0]).toEqual([
-      'conversation_unassigned_manage',
-    ]);
-    const participa = wrapper.find(
-      '[data-subescolha="conversation_participating_manage"]'
-    );
-    expect(participa.find('.i-lucide-lock').exists()).toBe(true);
+    expect(wrapper.emitted('update:permissions')).toBeUndefined();
   });
 
   // Só "Atende as próprias" tem o bloco de dentro; nas outras, nada de linha vazia dentro do cartão.

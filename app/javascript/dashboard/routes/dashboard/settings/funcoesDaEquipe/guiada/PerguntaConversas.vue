@@ -6,9 +6,10 @@ import {
   getLevel,
   levelOptions,
   moduleByKey,
+  setLevel,
   toggleExtra,
 } from '../../customRoles/permissionMatrix';
-import { areasDentroDe, nivelar, travaDoNivel } from '../areasDaFuncao';
+import { areasDentroDe, travaDoNivel } from '../areasDaFuncao';
 import { ALCANCES_DE_CONVERSA } from '../chavesDaFuncao';
 import { TEXTO_DA_TRAVA, motivoDaTrava } from '../motivoDaTrava';
 import { devolverFoco } from './focoQueFica';
@@ -92,7 +93,7 @@ const escolher = valor =>
   atualizar(
     memoria.trocarNivel(conversas, {
       permissions: props.permissions,
-      nivelar: chaves => nivelar(props.giver, conversas, valor, chaves),
+      nivelar: chaves => setLevel(conversas, valor, chaves),
     })
   );
 // "Também lê as dos colegas" some ao desligar: o foco volta ao nível escolhido.

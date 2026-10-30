@@ -297,6 +297,18 @@
   ],
   "extras": [
     {
+      "id": "responsavel_de_agendamento",
+      "chaves": [],
+      "premissas": [],
+      "pode": true,
+      "fontes": [
+        {
+          "regra": "Crm::BookingV2::HostEligibility.sees_cards?",
+          "arquivo": "app/services/crm/booking_v2/host_eligibility.rb"
+        }
+      ]
+    },
+    {
       "id": "anuncio_de_origem",
       "chaves": [
         "meta_ads_view"

@@ -15,8 +15,8 @@ import contratoGerado from './semFuncaoCapacidades.json';
 // 'area' (o que a função dava numa área e o "Sem função" não dá). `jeito` diz o tamanho da perda: 'MEXER' ou 'VER' quando
 // a área inteira some; 'PARTE' quando o "Sem função" ainda usa a área (as vendas das colunas) e só um pedaço sai;
 // 'PROPRIOS' quando a área é de quem cria (baseline PERSONAL, os atalhos de mensagens): sem função, a pessoa continua
-// criando, mudando e usando os próprios e usando os da equipe (MacroPolicy, Macro#set_visibility), e só os da equipe
-// saem (#2403).
+// criando, mudando e usando os pessoais (Macro#set_visibility grava pessoal) e só usa os da equipe; mudar ou apagar um
+// da equipe, mesmo um que ela criou, pede macro_manage (MacroPolicy#update?/destroy?) (#2403).
 const CHAVES_DE_VENDAS = Object.values(DONO_DAS_CHAVES)
   .flat()
   .filter(chave => chave.startsWith('crm_'));

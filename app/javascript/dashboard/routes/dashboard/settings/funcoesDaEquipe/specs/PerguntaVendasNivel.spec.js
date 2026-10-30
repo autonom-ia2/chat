@@ -250,7 +250,7 @@ describe('PerguntaVendas › R$ e as metas do mês', () => {
     expect(linhaDoRs(wrapper).text()).toContain(LIGAR);
   });
 
-  it('com "Cuida de tudo" e R$, avisa que desligar o R$ deixa as metas sem efeito', async () => {
+  it('com "Cuida de tudo" e R$, avisa que, ao desligar o R$, a pessoa deixa de definir as metas', async () => {
     const tudoComRs = [...PRESETS.AGENT(), 'crm_admin', 'sales_value_view'];
     const wrapper = await abrir(ADMIN, tudoComRs);
     expect(linhaDoRs(wrapper).text()).toContain(DESLIGAR);

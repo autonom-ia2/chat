@@ -775,8 +775,8 @@
           "CURTO": "ver {area}"
         },
         "PROPRIOS": {
-          "LISTA": "Mudar {area} da equipe (os próprios continuam)",
-          "CURTO": "mudar {area} da equipe (os próprios continuam)"
+          "LISTA": "Mudar {area} da equipe (os seus pessoais continuam)",
+          "CURTO": "mudar {area} da equipe (os seus pessoais continuam)"
         }
       },
       "OUTRA": {

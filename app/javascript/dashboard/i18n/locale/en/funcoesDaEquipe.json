@@ -775,8 +775,8 @@
           "CURTO": "see {area}"
         },
         "PROPRIOS": {
-          "LISTA": "Change the team's {area} (their own stay)",
-          "CURTO": "change the team's {area} (their own stay)"
+          "LISTA": "Change the team's {area} (their personal ones stay)",
+          "CURTO": "change the team's {area} (their personal ones stay)"
         }
       },
       "OUTRA": {
