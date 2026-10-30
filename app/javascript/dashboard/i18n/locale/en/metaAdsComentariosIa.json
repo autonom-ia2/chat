@@ -48,9 +48,6 @@
         "TEXT": "Someone who manages the account's posts can turn it on."
       }
     },
-    "PRIVATE": {
-      "AUTOMATIC": "(automatic message · if you'd rather not get these, just tell me)"
-    },
     "OLD_DIALOG": {
       "OLDER": "1 more comment is older than 7 days and can't get a DM. It stays with you: reply in the comment. | {count} more comments are older than 7 days and can't get a DM. They stay with you: reply in the comment.",
       "OLDER_FACEBOOK": "1 more comment is older than 7 days and can't get a Messenger message. It stays with you: reply in the comment. | {count} more comments are older than 7 days and can't get a Messenger message. They stay with you: reply in the comment.",
@@ -108,6 +105,8 @@
       "WHAT": {
         "TITLE": "What should I send by DM?",
         "TEXT": "Write the message people get. It can have a link, catalog, coupon or price.",
+        "SUGGESTED": "I wrote a start based on the post. Change anything you want: it can have a link, catalog, coupon or price.",
+        "WRITING": "I’m writing a start based on the post…",
         "PLACEHOLDER": "E.g.: Hi! Here is the catalog with prices: studioacme.com/catalog. Use the coupon POST10 for 10% off.",
         "TOO_LONG": "The message is too long for Meta. Make it a bit shorter.",
         "ALL_IN_ONE": "Put everything in this message: the next one only goes out if the person replies."

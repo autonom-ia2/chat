@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { FOR_WHOM_LIMIT } from './useCuidado';
@@ -15,6 +15,9 @@ const props = defineProps({
   data: { type: Object, required: true },
   // async paraQuem => Prévia ({ recebe, nao }) ou null quando não deu para ler.
   preview: { type: Function, required: true },
+  // async () => o começo da mensagem escrito pela IA a partir da legenda do post, ou '' (Rascunho). Sem ele, o passo 1
+  // abre vazio.
+  draft: { type: Function, default: null },
   changing: { type: Boolean, default: false },
   canSendOld: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
@@ -24,8 +27,8 @@ const emit = defineEmits(['done', 'leave']);
 
 const { t } = useI18n();
 const KEY = 'META_ADS_COMMENTS_AI.DONO';
-// A Meta aceita até 1000 bytes (UTF-8) no texto do privado, com a frase "(mensagem automática…)" no fim: acento e
-// emoji ocupam mais de um byte, então a conta é em bytes, não em letras.
+// A Meta aceita até 1000 bytes (UTF-8) no texto do privado: acento e emoji ocupam mais de um byte, então a conta é em
+// bytes, não em letras. O privado é só a mensagem do dono: nada é acrescentado no fim.
 const LIMIT_BYTES = 1000;
 const PHRASE_LIMIT = 120;
 const RULES_MORE = ['SEVEN_DAYS', 'LIVE', 'REQUESTS', 'COMPLAINT'];
@@ -51,17 +54,27 @@ watch(phrases, (novas, antigas) => {
   if (phrase.value === antigas[0]) phrase.value = novas[0] || '';
 });
 const heading = ref(null);
+// Passo 1 do cuidado novo, como no mockup aprovado: a mensagem já vem com um começo escrito a partir do post. Enquanto a
+// IA escreve, o campo espera; o que o dono digitar nesse meio tempo não é trocado. Sem começo, o campo fica vazio, com
+// o texto de sempre.
+const writing = ref(false);
+const suggested = ref(false);
+onMounted(async () => {
+  if (!props.draft || props.changing || message.value.trim()) return;
+  writing.value = true;
+  const texto = await props.draft();
+  writing.value = false;
+  if (!texto || message.value.trim()) return;
+  message.value = texto;
+  suggested.value = true;
+});
 // A Prévia do passo 3, lida de novo a cada vez que o passo abre (o "para quem" pode ter mudado).
 const examples = ref(null);
 const loadingExamples = ref(false);
 const examplesFailed = ref(false);
 
 const soon = computed(() => props.data.private_available === false);
-// O aviso no idioma da conta, que é o que sai no privado (o servidor manda); sem ele, o da tela.
-const automatic = computed(
-  () => props.data.automatic_note || t('META_ADS_COMMENTS_AI.PRIVATE.AUTOMATIC')
-);
-const dm = computed(() => `${message.value.trim()} ${automatic.value}`);
+const dm = computed(() => message.value.trim());
 const tooLong = computed(
   () => new TextEncoder().encode(dm.value).length > LIMIT_BYTES
 );
@@ -186,18 +199,34 @@ const FIELD =
           >
             {{ $t(`${KEY}.WHAT.TITLE`) }}
           </h3>
-          <p class="m-0 text-base leading-6 text-n-slate-11">
-            {{ $t(`${KEY}.WHAT.TEXT`) }}
+          <p
+            data-ia-dono-what-text
+            class="m-0 text-base leading-6 text-n-slate-11"
+          >
+            {{ $t(`${KEY}.WHAT.${suggested ? 'SUGGESTED' : 'TEXT'}`) }}
           </p>
         </div>
+        <p
+          v-if="writing"
+          data-ia-dono-writing
+          role="status"
+          class="m-0 flex items-center gap-2 text-sm font-medium text-n-slate-11"
+        >
+          <span
+            class="i-lucide-sparkles size-4 animate-pulse text-n-violet-11"
+            aria-hidden="true"
+          />
+          {{ $t(`${KEY}.WHAT.WRITING`) }}
+        </p>
         <textarea
           id="ia-dono-message"
           v-model="message"
           data-ia-dono-message
           :aria-label="$t(`${KEY}.WHAT.TITLE`)"
           :aria-invalid="tooLong"
-          :placeholder="$t(`${KEY}.WHAT.PLACEHOLDER`)"
-          :class="FIELD"
+          :aria-busy="writing"
+          :placeholder="writing ? '' : $t(`${KEY}.WHAT.PLACEHOLDER`)"
+          :class="[FIELD, { 'animate-pulse bg-n-alpha-1': writing }]"
           class="min-h-[8.5rem]"
         />
         <p

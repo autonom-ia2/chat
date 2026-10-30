@@ -8,6 +8,9 @@
 #      Ver: administrador ou `posts_view`.
 # PUT  seus_posts/posts/:post_id/cuidado                message, para_quem, phrases[], status → o Painel.
 # POST seus_posts/posts/:post_id/cuidado/previa         para_quem → os exemplos do passo "como fica" (Previa).
+# POST seus_posts/posts/:post_id/cuidado/rascunho       → o começo da mensagem do passo 1, escrito pela IA a partir da
+#      legenda do post lida na Meta (Rascunho; uma vez por legenda). { status: 'ready', message } | 'no_offer' |
+#      'no_caption'; a IA fora do ar é 422 `ai_unavailable`.
 # POST seus_posts/posts/:post_id/cuidado/ler_antigos    → "Ler e mandar" (uma vez por cuidado ligado).
 #      Mudar: administrador ou `posts_manage`.
 #
@@ -24,7 +27,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   # O pai confere a chave de mudar em todas as escritas e pula o post no `show`. Aqui as duas voltam na ordem certa: a
   # chave antes de ler o post na Meta, e o post em toda ação de um post (o painel também).
   skip_before_action :ensure_manage, :load_post
-  before_action :ensure_manage, only: [:update, :previa, :ler_antigos, :mudar_todos]
+  before_action :ensure_manage, only: [:update, :previa, :rascunho, :ler_antigos, :mudar_todos]
   before_action :load_post, except: [:cuidados, :mudar_todos]
   skip_before_action :ensure_ids, only: [:cuidados, :mudar_todos]
 
@@ -69,6 +72,14 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
     # A tela trata qualquer resposta de erro como "não deu para ler": só a prévia pronta vai como prévia.
     return render_error_code(resultado[:status]) unless resultado[:status] == 'ready'
+
+    render json: resultado
+  end
+
+  def rascunho
+    resultado = Crm::MetaAds::ComentariosIa::Rascunho.new(account: Current.account, target_kind: 'post', target_id: post_id,
+                                                          legenda: @post_lido.to_h[:text]).call
+    return render_error_code(AI_UNAVAILABLE) if resultado[:status] == AI_UNAVAILABLE
 
     render json: resultado
   end

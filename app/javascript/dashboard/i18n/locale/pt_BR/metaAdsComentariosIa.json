@@ -48,9 +48,6 @@
         "TEXT": "Quem cuida dos posts da conta pode ligar."
       }
     },
-    "PRIVATE": {
-      "AUTOMATIC": "(mensagem automática · se não quiser receber, me avisa)"
-    },
     "OLD_DIALOG": {
       "OLDER": "Outro comentário tem mais de 7 dias e não recebe mensagem no privado. Ele fica com você: responda no comentário. | Outros {count} comentários têm mais de 7 dias e não recebem mensagem no privado. Eles ficam com você: responda no comentário.",
       "OLDER_FACEBOOK": "Outro comentário tem mais de 7 dias e não recebe mensagem no Messenger. Ele fica com você: responda no comentário. | Outros {count} comentários têm mais de 7 dias e não recebem mensagem no Messenger. Eles ficam com você: responda no comentário.",
@@ -108,6 +105,8 @@
       "WHAT": {
         "TITLE": "O que mandar no privado?",
         "TEXT": "Escreva a mensagem que a pessoa recebe. Pode ter link, catálogo, cupom ou preço.",
+        "SUGGESTED": "Escrevi um começo com base no post. Mude o que quiser: pode ter link, catálogo, cupom ou preço.",
+        "WRITING": "Estou escrevendo um começo com base no post…",
         "PLACEHOLDER": "Ex.: Oi! Aqui está o catálogo com os preços: studioacme.com.br/catalogo. Use o cupom POST10 e tenha 10% de desconto.",
         "TOO_LONG": "A mensagem ficou longa demais para a Meta. Tire um pouco do texto.",
         "ALL_IN_ONE": "Ponha tudo nesta mensagem: a próxima só sai se a pessoa responder."

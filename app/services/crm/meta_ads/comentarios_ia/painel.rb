@@ -182,8 +182,7 @@ class Crm::MetaAds::ComentariosIa::Painel
     {
       network: rede_do_cuidado, private_available: @networks.intersect?(PRIVADO_LIBERADO), care: cuidado ? escrito.status : 'off',
       message: escrito.message.to_s, para_quem: escrito.para_quem.to_s, phrases: Array(escrito.phrases),
-      read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0),
-      automatic_note: Crm::MetaAdsCommentCare.new(account: @account).sufixo_do_privado
+      read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0)
     }
   end
 

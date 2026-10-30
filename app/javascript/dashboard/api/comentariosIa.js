@@ -56,6 +56,15 @@ class ComentariosIaAPI extends ApiClient {
     );
   }
 
+  // Seus posts: o começo da mensagem do passo 1, escrito pela IA a partir da
+  // legenda (uma vez por legenda). { status: 'ready', message } | 'no_offer' |
+  // 'no_caption'; 422 ai_unavailable.
+  rascunho(target) {
+    return axios.post(`${this.targetUrl(target)}/cuidado/rascunho`, null, {
+      params: ComentariosIaAPI.params(target),
+    });
+  }
+
   // { queued }
   lerAntigos(target) {
     return axios.post(`${this.targetUrl(target)}/cuidado/ler_antigos`, null, {

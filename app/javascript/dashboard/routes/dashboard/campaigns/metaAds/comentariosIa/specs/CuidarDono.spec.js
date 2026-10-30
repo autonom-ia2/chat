@@ -4,7 +4,7 @@ import ptBR from 'dashboard/i18n/locale/pt_BR/metaAdsComentariosIa.json';
 import en from 'dashboard/i18n/locale/en/metaAdsComentariosIa.json';
 import CuidarDono from '../CuidarDono.vue';
 
-// #2212: o jeito do dono em três passos. A mensagem do privado (até 1000 bytes UTF-8 com a frase automática), para
+// #2212: o jeito do dono em três passos. A mensagem do privado (até 1000 bytes UTF-8, sem nada no fim), para
 // quem (até 500 letras), e como fica, com a Prévia do servidor. "Ligar" devolve { message, paraQuem, phrase }.
 const painel = (extra = {}) => ({
   network: 'instagram',
@@ -57,33 +57,86 @@ describe('CuidarDono (#2212)', () => {
     expect(passo(wrapper)).toBe('2');
   });
 
+  describe('passo 1 com o começo escrito pela IA (mockup aprovado)', () => {
+    const pendente = () => {
+      let resolver;
+      const promessa = new Promise(resolve => {
+        resolver = resolve;
+      });
+      return [promessa, valor => resolver(valor)];
+    };
+
+    it('o cuidado novo abre com o começo da IA e o texto "Escrevi um começo"', async () => {
+      const draft = vi.fn().mockResolvedValue('Oi! O e-book sai por R$ 29.');
+      const wrapper = montar({ draft });
+      await flushPromises();
+
+      expect(draft).toHaveBeenCalledTimes(1);
+      expect(wrapper.find('[data-ia-dono-message]').element.value).toBe(
+        'Oi! O e-book sai por R$ 29.'
+      );
+      expect(wrapper.find('[data-ia-dono-what-text]').text()).toContain(
+        'Escrevi um começo com base no post'
+      );
+      expect(proximo(wrapper).element.disabled).toBe(false);
+    });
+
+    it('enquanto a IA escreve, avisa; sem começo, o campo fica vazio com o texto de sempre', async () => {
+      const [promessa, resolver] = pendente();
+      const wrapper = montar({ draft: () => promessa });
+      await flushPromises();
+      expect(wrapper.find('[data-ia-dono-writing]').exists()).toBe(true);
+
+      resolver('');
+      await flushPromises();
+
+      expect(wrapper.find('[data-ia-dono-writing]').exists()).toBe(false);
+      expect(wrapper.find('[data-ia-dono-message]').element.value).toBe('');
+      expect(wrapper.find('[data-ia-dono-what-text]').text()).toContain(
+        'Escreva a mensagem que a pessoa recebe'
+      );
+    });
+
+    it('o que o dono digitou enquanto a IA escrevia não é trocado', async () => {
+      const [promessa, resolver] = pendente();
+      const wrapper = montar({ draft: () => promessa });
+      await wrapper.find('[data-ia-dono-message]').setValue('A minha');
+
+      resolver('Oi! Da IA.');
+      await flushPromises();
+
+      expect(wrapper.find('[data-ia-dono-message]').element.value).toBe(
+        'A minha'
+      );
+    });
+
+    it('cuidado já escrito ou mudando: não pede começo à IA', async () => {
+      const draft = vi.fn().mockResolvedValue('Oi! Da IA.');
+      montar({ draft, data: painel({ message: 'A do dono' }) });
+      montar({ draft, changing: true });
+      await flushPromises();
+
+      expect(draft).not.toHaveBeenCalled();
+    });
+  });
+
   it('passo 1 não explica a frase automática: o dono só escreve a mensagem (pedido do Rodrigo no teste real)', () => {
     const wrapper = montar();
     expect(wrapper.text()).not.toContain('No fim');
     expect(wrapper.text()).not.toContain('mensagem automática');
   });
 
-  it('o limite da mensagem é em bytes, com a frase automática no fim', async () => {
+  it('o limite da mensagem é em bytes, como a Meta conta', async () => {
     const wrapper = montar();
-    // 480 letras com acento: 960 bytes. Com a frase automática, passa de 1000 bytes, com menos de 1000 letras.
-    await wrapper.find('[data-ia-dono-message]').setValue('é'.repeat(480));
+    // 501 letras com acento: 1002 bytes, com menos de 1000 letras.
+    await wrapper.find('[data-ia-dono-message]').setValue('é'.repeat(501));
 
     expect(wrapper.find('[data-ia-dono-too-long]').exists()).toBe(true);
     expect(proximo(wrapper).element.disabled).toBe(true);
 
-    await wrapper.find('[data-ia-dono-message]').setValue('e'.repeat(480));
+    await wrapper.find('[data-ia-dono-message]').setValue('é'.repeat(500));
     expect(wrapper.find('[data-ia-dono-too-long]').exists()).toBe(false);
     expect(proximo(wrapper).element.disabled).toBe(false);
-  });
-
-  it('conta os bytes com o aviso no idioma da conta, que é o que sai no privado', async () => {
-    // Aviso da conta com 100 bytes: 900 + 1 + 100 passa de 1000; com o aviso da tela (58 bytes), não passaria.
-    const wrapper = montar({
-      data: painel({ automatic_note: 'x'.repeat(100) }),
-    });
-    await wrapper.find('[data-ia-dono-message]').setValue('e'.repeat(900));
-
-    expect(wrapper.find('[data-ia-dono-too-long]').exists()).toBe(true);
   });
 
   it('passo 2: o cuidado novo começa em "Quem perguntar o preço", como no mockup; vazio ou mais de 500 letras não continua', async () => {
@@ -128,7 +181,8 @@ describe('CuidarDono (#2212)', () => {
     expect(wrapper.find('[data-ia-dono-example="recebe"]').text()).toContain(
       '@carla'
     );
-    expect(wrapper.find('[data-ia-dono-bubble]').text()).toContain('Oi!');
+    // O balão é o privado inteiro: a mensagem do dono, sem nada no fim.
+    expect(wrapper.find('[data-ia-dono-bubble]').text()).toBe('Oi!');
     expect(wrapper.find('[data-ia-dono-example="nao"]').text()).toContain(
       'Lindo!'
     );

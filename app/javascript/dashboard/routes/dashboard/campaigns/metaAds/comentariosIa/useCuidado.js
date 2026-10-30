@@ -132,6 +132,18 @@ export function useCuidado(alvo) {
     }
   };
 
+  // Passo 1: o começo da mensagem que a IA escreveu a partir da legenda do post. Só no post do Seus posts (o anúncio
+  // abre vazio). Sem começo (o post não oferece nada, sem legenda ou a IA fora do ar): ''.
+  const rascunho = async () => {
+    if (target()?.kind !== 'post') return '';
+    try {
+      const { data } = await ComentariosIaAPI.rascunho(target());
+      return data?.status === 'ready' ? data.message || '' : '';
+    } catch {
+      return '';
+    }
+  };
+
   // "Ler e mandar" os comentários que chegaram antes de ligar: o servidor põe na fila e o Painel é lido de novo.
   const lerAntigos = async () => {
     const valeu = await escrever(async () => {
@@ -156,6 +168,7 @@ export function useCuidado(alvo) {
     pausar,
     voltar,
     previa,
+    rascunho,
     lerAntigos,
   };
 }
