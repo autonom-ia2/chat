@@ -424,11 +424,20 @@ module Autonomia
         # Usado SÓ para o summary descrever cobertura/lacuna vs o escopo do tipo; NÃO altera a nota técnica
         # (§6.5 da REVIEWER_INSTRUCTION). nil (omitido) quando não há esqueleto do tipo ('custom'/sem agente).
         def type_scope_hint
-          skel = Autonomia::Agents::Builder.skeleton_for(@agent&.agent_type)
+          skel = Autonomia::Agents::Builder.skeleton_for(@agent&.agent_type, camadas: camadas_da_marca)
           return nil if skel.blank?
 
           "Escopo esperado para este tipo de agente (use só para comentar cobertura no summary, " \
             "não para mudar a nota):\n#{skel}"
+        end
+
+        # As camadas do segmento gravado na marca de base do agente (#1429): 'seguros/corretora' → [seguros, seguros/corretora].
+        # O roteiro lido é o arquivo de hoje (não um texto gravado como a marca): é só dica de cobertura, não muda a nota.
+        def camadas_da_marca
+          segmento = @agent&.config.to_h.dig('base', 'segmento').to_s
+          return [] if segmento.blank?
+
+          [segmento.split('/').first, segmento].uniq
         end
 
         # §2 do doc: o propósito do agente serve para julgar relevância/cobertura.
