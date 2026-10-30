@@ -109,7 +109,6 @@
         "TITLE": "What should I send by DM?",
         "TEXT": "Write the message people get. It can have a link, catalog, coupon or price.",
         "PLACEHOLDER": "E.g.: Hi! Here is the catalog with prices: studioacme.com/catalog. Use the coupon POST10 for 10% off.",
-        "HINT": "At the end, I add: “{automatic}”.",
         "TOO_LONG": "The message is too long for Meta. Make it a bit shorter.",
         "ALL_IN_ONE": "Put everything in this message: the next one only goes out if the person replies."
       },

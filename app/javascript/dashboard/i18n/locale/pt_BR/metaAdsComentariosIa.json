@@ -109,7 +109,6 @@
         "TITLE": "O que mandar no privado?",
         "TEXT": "Escreva a mensagem que a pessoa recebe. Pode ter link, catálogo, cupom ou preço.",
         "PLACEHOLDER": "Ex.: Oi! Aqui está o catálogo com os preços: studioacme.com.br/catalogo. Use o cupom POST10 e tenha 10% de desconto.",
-        "HINT": "No fim, eu ponho sozinho: “{automatic}”.",
         "TOO_LONG": "A mensagem ficou longa demais para a Meta. Tire um pouco do texto.",
         "ALL_IN_ONE": "Ponha tudo nesta mensagem: a próxima só sai se a pessoa responder."
       },

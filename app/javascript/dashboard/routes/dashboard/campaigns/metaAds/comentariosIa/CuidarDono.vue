@@ -39,7 +39,10 @@ const phrases = computed(() =>
 );
 const step = ref(1);
 const message = ref(props.data.message || '');
-const forWhom = ref(props.data.para_quem || '');
+// Como no mockup aprovado, o cuidado novo já começa no atalho mais comum; o dono troca com um toque.
+const forWhom = ref(
+  props.data.para_quem || t('META_ADS_COMMENTS_AI.DONO.WHO.SUGGESTIONS.PRICE')
+);
 const phrase = ref(phrases.value[0] || '');
 const editingPhrase = ref(!phrase.value);
 // A padrão muda com o idioma, que pode chegar depois de abrir a tela (endereço aberto direto): enquanto o dono não a
@@ -204,13 +207,6 @@ const FIELD =
           class="m-0 text-sm font-medium text-n-ruby-11"
         >
           {{ $t(`${KEY}.WHAT.TOO_LONG`) }}
-        </p>
-        <p v-else class="m-0 text-sm text-n-slate-11">
-          {{
-            $t(`${KEY}.WHAT.HINT`, {
-              automatic,
-            })
-          }}
         </p>
         <p class="m-0 text-sm text-n-slate-11">
           {{ $t(`${KEY}.WHAT.ALL_IN_ONE`) }}

@@ -57,6 +57,12 @@ describe('CuidarDono (#2212)', () => {
     expect(passo(wrapper)).toBe('2');
   });
 
+  it('passo 1 não explica a frase automática: o dono só escreve a mensagem (pedido do Rodrigo no teste real)', () => {
+    const wrapper = montar();
+    expect(wrapper.text()).not.toContain('No fim');
+    expect(wrapper.text()).not.toContain('mensagem automática');
+  });
+
   it('o limite da mensagem é em bytes, com a frase automática no fim', async () => {
     const wrapper = montar();
     // 480 letras com acento: 960 bytes. Com a frase automática, passa de 1000 bytes, com menos de 1000 letras.
@@ -80,14 +86,22 @@ describe('CuidarDono (#2212)', () => {
     expect(wrapper.find('[data-ia-dono-too-long]').exists()).toBe(true);
   });
 
-  it('passo 2: o atalho preenche o para quem; mais de 500 letras não continua', async () => {
+  it('passo 2: o cuidado novo começa em "Quem perguntar o preço", como no mockup; vazio ou mais de 500 letras não continua', async () => {
     const wrapper = montar({ data: painel({ message: 'Oi!' }) });
     await proximo(wrapper).trigger('click');
-    expect(proximo(wrapper).element.disabled).toBe(true);
-
-    await wrapper.findAll('[data-ia-dono-suggestion]')[0].trigger('click');
+    const atalhos = wrapper.findAll('[data-ia-dono-suggestion]');
     expect(wrapper.find('[data-ia-dono-who]').element.value).toBe(
       'Quem perguntar o preço'
+    );
+    expect(atalhos[0].attributes('aria-pressed')).toBe('true');
+    expect(proximo(wrapper).element.disabled).toBe(false);
+
+    await wrapper.find('[data-ia-dono-who]').setValue('  ');
+    expect(proximo(wrapper).element.disabled).toBe(true);
+
+    await atalhos[1].trigger('click');
+    expect(wrapper.find('[data-ia-dono-who]').element.value).toBe(
+      'Quem pedir o link'
     );
     expect(proximo(wrapper).element.disabled).toBe(false);
 
