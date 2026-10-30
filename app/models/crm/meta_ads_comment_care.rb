@@ -25,6 +25,7 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
 
   belongs_to :account
   belongs_to :created_by, class_name: 'User', optional: true
+  belongs_to :inbox, optional: true
 
   validates :target_kind, inclusion: { in: TARGET_KINDS }
   validates :target_id, presence: true, uniqueness: { scope: [:account_id, :target_kind] }

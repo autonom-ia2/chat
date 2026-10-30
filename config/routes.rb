@@ -203,6 +203,7 @@ Rails.application.routes.draw do
           delete 'seus_posts/posts/:post_id/comments/:comment_id', to: 'seus_posts_comentarios#destroy'
           # IA cuida dos comentários do post (#2212, B1).
           get 'seus_posts/cuidados', to: 'seus_posts_cuidado#cuidados'
+          put 'seus_posts/cuidados', to: 'seus_posts_cuidado#mudar_todos'
           get 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#show'
           put 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#update'
           post 'seus_posts/posts/:post_id/cuidado/previa', to: 'seus_posts_cuidado#previa'

@@ -9,6 +9,9 @@ import { porRede } from './redes';
 // a lista desses posts (cada um leva à tela dele) e tem "Pausar todos", com um toque, como o "Pausar" de cada post.
 const props = defineProps({
   posts: { type: Array, required: true },
+  // Pausar e retomar todos: só quem pode mudar (posts_manage). Ver a lista é de todos.
+  canManage: { type: Boolean, default: false },
+  busy: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['open', 'pause-all', 'resume-all']);
@@ -79,20 +82,22 @@ const format = value =>
           @click="open = !open"
         />
         <Button
-          v-if="active.length"
+          v-if="canManage && active.length"
           data-ia-pause-all
           variant="faded"
           color="slate"
           icon="i-lucide-pause"
           :label="$t(`${KEY}.BAND.PAUSE_ALL`)"
+          :is-loading="busy"
           class="!min-h-11 !rounded-xl"
           @click="emit('pause-all')"
         />
         <Button
-          v-else
+          v-else-if="canManage"
           data-ia-resume-all
           icon="i-lucide-play"
           :label="$t(`${KEY}.BAND.RESUME_ALL`)"
+          :is-loading="busy"
           class="!min-h-11 !rounded-xl"
           @click="emit('resume-all')"
         />
@@ -113,9 +118,15 @@ const format = value =>
           @click="emit('open', post.id)"
         >
           <img
+            v-if="post.image_url"
             :src="post.image_url"
             alt=""
             class="size-12 shrink-0 rounded-lg object-cover"
+          />
+          <span
+            v-else
+            class="size-12 shrink-0 rounded-lg bg-n-alpha-2"
+            aria-hidden="true"
           />
           <span class="flex min-w-0 flex-1 flex-col gap-0.5">
             <span class="line-clamp-1 text-sm text-n-slate-12">

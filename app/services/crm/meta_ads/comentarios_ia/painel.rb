@@ -24,7 +24,16 @@ class Crm::MetaAds::ComentariosIa::Painel
   PRIVADO_LIBERADO = %w[instagram].freeze
   MOTIVO_DA_ACAO = { 'to_you' => 'complaint', 'private_reply_failed' => 'failed' }.freeze
 
-  # alvo: { 'kind' => 'post', 'perfil', 'post_id', 'networks' } ou { 'kind' => 'ad', 'ad_id', 'networks', 'post_ids' }
+  # Recebeu no privado e respondeu, pelas conversas que nasceram do cuidado: a tela do cuidado e a lista do Seus posts.
+  def self.resultados(account, care)
+    enviadas = Conversation.where(account_id: account.id)
+                           .where("additional_attributes -> 'meta_ads_comment' ->> 'care_id' = ?", care.id.to_s)
+                           .where("additional_attributes -> 'meta_ads_comment' ->> 'private_reply' = 'true'")
+    { sent: enviadas.count,
+      replied: enviadas.where(id: Message.where(account_id: account.id, message_type: :incoming).select(:conversation_id)).count }
+  end
+
+  # alvo: { 'kind' => 'post', 'perfil', 'post_id', 'networks', 'inbox_id' } ou { 'kind' => 'ad', 'ad_id', 'networks', 'post_ids' }
   # (Fonte.do_alvo). `post_ids`: no anúncio, os posts do criativo (por onde chega o comentário sem o id do anúncio).
   # conversation_access: se quem abre a tela enxerga a conversa (o "Ver conversa" só vai quando sim).
   def initialize(account:, alvo:, fonte:, conversation_access:)
@@ -47,9 +56,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     raise Error, 'invalid_status' unless STATUSES.include?(status)
     raise Error, 'invalid_para_quem' if para_quem.to_s.strip.empty?
 
-    registro = cuidado || Crm::MetaAdsCommentCare.new(account: @account, target_kind: target_kind, target_id: target_id,
-                                                      started_at: Time.current, created_by: user)
-    registro.assign_attributes(network: rede_do_cuidado, post_ids: @post_ids, message: message.to_s.strip,
+    registro = cuidado || novo_cuidado(user)
+    registro.assign_attributes(network: rede_do_cuidado, post_ids: @post_ids, inbox_id: @alvo['inbox_id'], message: message.to_s.strip,
                                para_quem: para_quem.to_s.strip, phrases: Array(phrases).map(&:to_s), status: status)
     registro.save!
     @cuidado = registro
@@ -72,6 +80,11 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   private
+
+  def novo_cuidado(user)
+    Crm::MetaAdsCommentCare.new(account: @account, target_kind: target_kind, target_id: target_id, started_at: Time.current,
+                                created_by: user)
+  end
 
   def cuidado_payload
     escrito = cuidado || Crm::MetaAdsCommentCare.new
@@ -120,13 +133,7 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   def resultados
-    return { sent: 0, replied: 0 } if cuidado.nil?
-
-    enviadas = Conversation.where(account_id: @account.id)
-                           .where("additional_attributes -> 'meta_ads_comment' ->> 'care_id' = ?", cuidado.id.to_s)
-                           .where("additional_attributes -> 'meta_ads_comment' ->> 'private_reply' = 'true'")
-    { sent: enviadas.count,
-      replied: enviadas.where(id: Message.where(account_id: @account.id, message_type: :incoming).select(:conversation_id)).count }
+    cuidado ? self.class.resultados(@account, cuidado) : { sent: 0, replied: 0 }
   end
 
   def caminho(conversation)

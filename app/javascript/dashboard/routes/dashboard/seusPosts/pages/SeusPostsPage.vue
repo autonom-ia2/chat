@@ -4,7 +4,12 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { useAlert } from 'dashboard/composables';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import SeusPostsAPI from 'dashboard/api/seusPosts';
+import ComentariosIaAPI from 'dashboard/api/comentariosIa';
+import CuidandoFaixa from 'dashboard/routes/dashboard/campaigns/metaAds/comentariosIa/CuidandoFaixa.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import EstadoVazio from '../components/EstadoVazio.vue';
@@ -27,7 +32,8 @@ import {
 // conexão própria. De cima para baixo: perfil e período, a frase do período, os números e a grade dos posts do
 // período. Uma ação principal: abrir um post. Com os comentários (F2, #2305, flag seus_posts_comentarios), cada
 // cartão diz quantos comentários esperam você e abre o post aqui dentro; uma faixa e um filtro levam aos posts com
-// gente esperando. O cuidado da IA chega na F3.
+// gente esperando. Com o cuidado da IA (#2212, flag meta_ads_comentarios_ia), o selo "Cuidando" em cada cartão e a
+// faixa "Cuidando dos comentários de N posts", com "Pausar todos".
 //
 // Os dados vêm de GET seus_posts (SeusPosts::Leitura). Perfil e período ficam no endereço (?perfil=, ?dias=).
 const { t, locale } = useI18n();
@@ -259,6 +265,61 @@ const verEsperando = () => {
   filtro.value = 'waiting';
   grade.value?.scrollIntoView({ behavior: 'smooth' });
 };
+// O cuidado da IA (#2212): os cuidados do perfil, lidos ao lado da página, sem travar. Falha vira lista vazia: o selo
+// e a faixa são um atalho, a tela de cada post continua dizendo o estado.
+const { isCloudFeatureEnabled } = useAccount();
+const comCuidado = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+);
+const podeMudarCuidado = usePermissionGranted('posts_manage');
+const cuidados = ref([]);
+const mudandoTodos = ref(false);
+const lerCuidados = async perfilLido => {
+  cuidados.value = [];
+  if (!comCuidado.value || !perfilLido) return;
+  try {
+    const { data } = await ComentariosIaAPI.getCuidados(perfilLido);
+    if (perfil.value?.id === perfilLido) cuidados.value = data.cuidados;
+  } catch {
+    cuidados.value = [];
+  }
+};
+watch(() => perfil.value?.id, lerCuidados, { immediate: true });
+const cuidadoDe = post =>
+  cuidados.value.find(item => item.post_id === String(post.id))?.care || null;
+const postsCuidados = computed(() =>
+  cuidados.value.map(item => {
+    const post = (perfil.value?.posts || []).find(
+      lido => String(lido.id) === item.post_id
+    );
+    return {
+      id: item.post_id,
+      status: item.care,
+      network: item.network,
+      results: item.results,
+      image_url: post?.imagem || '',
+      text: post?.legenda || t(`SEUS_POSTS.CARD.NO_TEXT.${perfil.value?.rede}`),
+    };
+  })
+);
+const mudarTodos = async status => {
+  mudandoTodos.value = true;
+  try {
+    const { data } = await ComentariosIaAPI.mudarTodos(perfil.value.id, status);
+    cuidados.value = data.cuidados;
+  } catch {
+    useAlert(t('META_ADS_COMMENTS_AI.BAND.ERROR'));
+  } finally {
+    mudandoTodos.value = false;
+  }
+};
+const abrirCuidado = postId =>
+  router.push({
+    name: 'seus_posts_cuidar',
+    params: { accountId: route.params.accountId, postId },
+    query: { perfil: perfil.value.id },
+  });
+
 const linkDoPost = post =>
   comComentarios.value
     ? {
@@ -715,6 +776,16 @@ const { podeLiberar, liberar } = useLiberarAcesso({
             />
           </div>
 
+          <CuidandoFaixa
+            v-if="postsCuidados.length"
+            :posts="postsCuidados"
+            :can-manage="podeMudarCuidado"
+            :busy="mudandoTodos"
+            @open="abrirCuidado"
+            @pause-all="mudarTodos('paused')"
+            @resume-all="mudarTodos('on')"
+          />
+
           <!-- A grade num painel, como a lista de anúncios do painel de Anúncios. -->
           <section
             ref="grade"
@@ -819,6 +890,7 @@ const { podeLiberar, liberar } = useLiberarAcesso({
                   :com-esperando="perfil.esperandoStatus === 'ok'"
                   :veredito="vereditoDe(post)"
                   :destaque="post.id === melhorPost?.id"
+                  :cuidado="cuidadoDe(post)"
                   class="w-full"
                 />
               </li>

@@ -12,7 +12,8 @@
       "RESULT": "{sent} receberam no privado · {replied} responderam",
       "LIST_LABEL": "Posts que eu cuido",
       "RESULT_FACEBOOK": "{sent} receberam no Messenger · {replied} responderam",
-      "RESULT_BOTH": "{sent} receberam mensagem · {replied} responderam"
+      "RESULT_BOTH": "{sent} receberam mensagem · {replied} responderam",
+      "ERROR": "Não consegui mudar agora. Tente de novo."
     },
     "SCREEN": {
       "TITLE": "Cuidar dos comentários",
