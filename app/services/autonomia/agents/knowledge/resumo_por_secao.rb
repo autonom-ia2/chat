@@ -10,7 +10,8 @@
 class Autonomia::Agents::Knowledge::ResumoPorSecao
   FEATURE = 'kb_resumo_por_secao'.freeze
   MODELO = Crm::Ai::Config::MODEL_SUMMARY
-  SECAO_MAX_CHARS = 60_000
+  # Seção de 25 páginas de condições gerais passa de 80 mil caracteres; o modelo barato lê isso inteiro (~30 mil tokens).
+  SECAO_MAX_CHARS = 120_000
   RESUMO_MAX_CHARS = 300
   TEMAS_POR_SECAO = 5
   TEMA_MAX_CHARS = 60
@@ -51,7 +52,9 @@ class Autonomia::Agents::Knowledge::ResumoPorSecao
     credencial = Crm::Ai::CredentialResolver.new(account: @source.account).resolve
     return if credencial.blank?
 
-    @client = Crm::Ai::ResponsesClient.new(credential: credencial, feature: FEATURE, account: @source.account, max_retries: 0)
+    # Com as retentativas padrão do cliente: a leitura roda em segundo plano, e uma falha passageira não deve tirar uma
+    # seção do índice (eval de 30/10: 1 de 12 seções falhou sem retentativa).
+    @client = Crm::Ai::ResponsesClient.new(credential: credencial, feature: FEATURE, account: @source.account)
     indice = resumir(secoes)
     @source.anotar_resumo_por_secao!(@token, indice) if indice.any?
   # O material já está lido e gravado: falha inesperada aqui não pode impedir o parecer (o ProcessJob o chama em seguida).
@@ -82,7 +85,9 @@ class Autonomia::Agents::Knowledge::ResumoPorSecao
     resultado = @client.create(model: MODELO, instructions: INSTRUCAO, input: entrada(paginas, texto), schema: SCHEMA)
     normalizar(JSON.parse(resultado[:text].to_s))
   rescue *FALHAS_DA_IA => e
-    Rails.logger.warn("[autonomia][resumo_por_secao] secao_falhou source=#{@source.id} paginas=#{paginas.join('-')} #{e.class}")
+    status = e.respond_to?(:status) ? e.status : nil
+    Rails.logger.warn("[autonomia][resumo_por_secao] secao_falhou source=#{@source.id} paginas=#{paginas.join('-')} #{e.class} " \
+                      "status=#{status}")
     nil
   end
 

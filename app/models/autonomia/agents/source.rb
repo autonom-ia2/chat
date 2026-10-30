@@ -205,13 +205,15 @@ module Autonomia
       end
 
       # #1426 (t4e) — o índice por seção, sob a guarda do token (como o parecer: depois do mark_ready!, sem exigir
-      # `processing`): um job superado não escreve. Escreve só esta chave; o resto do metadata fica.
+      # `processing`): um job superado não escreve. Escreve só esta chave; o resto do metadata fica. Recarrega, como o
+      # review_guard: o Revisor, que vem logo depois com este mesmo objeto, lê o índice e regrava o metadata a partir dele.
       def anotar_resumo_por_secao!(token, indice)
         return false if token.blank?
 
         rows = self.class.where(id: id, sync_token: token)
                    .update_all(["metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{#{RESUMO_POR_SECAO}}', ?::jsonb), " \
                                 'updated_at = ?', indice.to_json, Time.current])
+        reload if rows.positive?
         rows.positive?
       end
 

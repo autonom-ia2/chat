@@ -294,6 +294,16 @@ RSpec.describe Autonomia::Agents::Source do
       expect(source.reload.metadata[described_class::RESUMO_POR_SECAO]).to eq(indice)
     end
 
+    # Eval de 30/10: o Revisor lê e regrava o metadata do mesmo objeto; sem o índice em memória, ele não o lia e o apagava.
+    it 'keeps the index in memory for the review that comes next' do
+      token = source.begin_ingestion!
+      source.mark_ready!(token, chunk_count: 1)
+
+      source.anotar_resumo_por_secao!(token, indice)
+
+      expect(source.metadata[described_class::RESUMO_POR_SECAO]).to eq(indice)
+    end
+
     it 'summarizes the sections after the reading and before the review' do
       token = source.begin_ingestion!
       ordem = []
