@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import DeOndeTirou from './DeOndeTirou.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import EscolhaRadio from '../EscolhaRadio.vue';
 
@@ -273,6 +274,11 @@ const corrigirResposta = () =>
             }}
           </dd>
         </template>
+        <DeOndeTirou
+          v-if="atual.trechos"
+          :trechos="atual.trechos"
+          :nome="nome"
+        />
       </dl>
 
       <EscolhaRadio

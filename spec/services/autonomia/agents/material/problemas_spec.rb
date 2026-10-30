@@ -115,6 +115,25 @@ RSpec.describe Autonomia::Agents::Material::Problemas do
                                                'pergunta' => 'Vende bolo?', 'resposta' => 'Sim, R$ 90.', 'equipe' => false }])
   end
 
+  # #1426 (t4d): "De onde o agente tirou" — os trechos que o autoteste guardou, com o nome do material na hora da leitura.
+  it 'autoteste: o cartão leva os trechos usados; o de material que saiu da base some', :aggregate_failures do
+    manual = material('manual.pdf')
+    itens = [
+      { 'pergunta' => 'Tem carro reserva?', 'origem' => 'material', 'esperado' => 'Sim, 7 dias.', 'fonte' => manual.id,
+        'resposta' => 'Não tem.', 'equipe' => false, 'veredito' => 'errado',
+        'trechos' => [{ 'fonte' => manual.id, 'paginas' => [226, 250], 'texto' => 'Carro reserva por 7 dias.' },
+                      { 'fonte' => 999_999, 'texto' => 'De um material apagado.' }] },
+      { 'pergunta' => 'Vende bolo?', 'origem' => 'fora', 'resposta' => 'Sim.', 'equipe' => false, 'veredito' => 'inventou',
+        'trechos' => [] }
+    ]
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
+                                                       { 'rodada' => 'r1', 'rodada_dos_itens' => 'r1', 'estado' => 'pronto', 'itens' => itens })
+
+    expect(do_tipo('autoteste').sole['trechos']).to eq([{ 'onde' => 'manual.pdf', 'paginas' => [226, 250],
+                                                          'texto' => 'Carro reserva por 7 dias.' }])
+    expect(do_tipo('autoteste_fora').sole['trechos']).to eq([])
+  end
+
   it 'fora da Fase 2 ou na Lia: nada', :aggregate_failures do
     material('ficha.pdf', status: :failed, error: 'empty_extraction', trechos: [])
 

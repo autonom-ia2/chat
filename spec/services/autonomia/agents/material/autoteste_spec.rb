@@ -83,6 +83,39 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     expect(itens.last['veredito']).to eq('recusou')
   end
 
+  # t4d: "De onde {agente} tirou". Só trechos deste agente; no máximo 3; o texto vai curto; páginas do material grande.
+  it 'guarda até 3 trechos que o agente usou, com material, páginas e texto curto', :aggregate_failures do
+    grande = material('manual.pdf', trechos: [])
+    usados = Array.new(4) do |indice|
+      Autonomia::Agents::KnowledgeEntry.create!(account: account, agent: agent, source: grande, status: :ready, chunk_index: indice,
+                                                content: "  Cobertura #{indice}  #{'x' * 400}", metadata: { paginas: [201, 225] })
+    end
+    alheio = material('alheio.pdf', dono: Autonomia::Agents::Agent.create!(account: account, name: 'Outro', agent_type: 'support',
+                                                                           status: :active, human_card: 'Outro.'))
+    conhecimento = [{ id: alheio.knowledge_entries.first.id, content: 'alheio', source: 'alheio.pdf' },
+                    { id: nil, content: '<imagem enviada>', source: 'imagem da mensagem' }] +
+                   usados.map { |trecho| { id: trecho.id, content: trecho.content, source: 'manual.pdf' } }
+    agente_responde(Autonomia::Agents::AnswerResult.new(reply: 'Cobre.', confidence: 0.9, handoff: { should: false, reason: nil },
+                                                        used_knowledge: conhecimento))
+
+    pedir_e_rodar
+
+    trechos = estado['itens'].first['trechos']
+    expect(trechos.size).to eq(3)
+    expect(trechos.first).to include('fonte' => grande.id, 'paginas' => [201, 225])
+    expect(trechos.first['texto']).to start_with('Cobertura 0 x')
+    expect(trechos.first['texto'].size).to be <= described_class::TRECHO_MAX_CHARS
+  end
+
+  it 'resposta sem trecho do material guarda a lista vazia (a tela diz que não usou nenhum)' do
+    agente_responde(Autonomia::Agents::AnswerResult.new(reply: 'Não sei.', confidence: 0.2, handoff: { should: false, reason: nil },
+                                                        used_knowledge: []))
+
+    pedir_e_rodar
+
+    expect(estado['itens'].map { |item| item['trechos'] }).to all(eq([]))
+  end
+
   it 'o agente responde em modo prova (sem ferramenta), com o rótulo de custo do autoteste' do
     pedir_e_rodar
 
