@@ -328,6 +328,19 @@ RSpec.describe 'CRM Lista nova (sort=acao)', type: :request do
       expect(response.body).not_to include('Gestora Ana')
     end
 
+    # Sem índice único por caixa (#2298): com uma linha inativa e outra ativa, a lista mostra o robô ativo, como o SQL conta.
+    it 'mostra o robô ativo da caixa que tem também uma linha de robô inativa' do
+      AgentBotInbox.create!(inbox: inbox, agent_bot: create(:agent_bot, account: account, name: 'Robô desligado'), status: :inactive)
+      AgentBotInbox.create!(inbox: inbox, agent_bot: create(:agent_bot, account: account, name: 'Assistente Bia'), status: :active)
+      by_bot = card('Robô da caixa', inbox: inbox, conversation: conversation(inbox: inbox))
+
+      row = list(agent)['payload'].find { |item| item['id'] == by_bot.id }
+
+      expect(row['current_responsible']).to include('type' => 'bot', 'name' => 'Assistente Bia')
+      expect(counts(agent)[row['action_group']]).to eq(1)
+      expect(board_row(by_bot)['responsible']).to include('type' => 'bot', 'name' => 'Assistente Bia')
+    end
+
     it 'mostra o robô da caixa quando ninguém atende a conversa oculta' do
       AgentBotInbox.create!(inbox: hidden_inbox, agent_bot: create(:agent_bot, account: account, name: 'Assistente Bia'), status: :active)
       by_bot = card('Robô cuida', inbox: inbox, conversation: conversation(inbox: hidden_inbox))

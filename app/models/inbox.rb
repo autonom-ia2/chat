@@ -78,7 +78,9 @@ class Inbox < ApplicationRecord
 
   has_one :inbox_assignment_policy, dependent: :destroy
   has_one :assignment_policy, through: :inbox_assignment_policy
-  has_one :agent_bot_inbox, dependent: :destroy_async
+  # Sem índice único por inbox_id (#2298): com uma linha inativa e outra ativa na caixa, fica a ativa (active = 0), como
+  # o SQL da Lista ("qualquer ativa"); o id desempata. A ordem vale também para o agent_bot (through) e para o preload.
+  has_one :agent_bot_inbox, -> { order(:status, :id) }, dependent: :destroy_async, inverse_of: :inbox
   has_one :agent_bot, through: :agent_bot_inbox
   # Conserto "caixa deletada" (Autonomia Agents): a FK autonomia_agent_inboxes.inbox_id (sem
   # ON DELETE CASCADE) barrava o Inbox#destroy quando havia agente conectado. dependent: :destroy
