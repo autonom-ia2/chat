@@ -73,6 +73,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
     expect(classificador.decidir('Quanto custa?')).to be_nil
   end
 
+  it 'decidir! deixa o erro do Jev subir, para separar "sem certeza" de "não deu para perguntar"' do
+    allow(jev).to receive(:decidir).and_raise(TypesafeAi::Decisor::Error.new('typesafe_timeout'))
+
+    expect { classificador.decidir!('Quanto custa?') }.to raise_error(TypesafeAi::Decisor::Error)
+  end
+
   it 'registra o custo do Jev com a feature própria' do
     cliente = instance_double(TypesafeAi::Client)
     allow(cliente).to receive(:evaluate).and_return(

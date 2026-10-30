@@ -5,13 +5,21 @@
 # - Quem decide é o Classificador, com um critério fixo no lugar do "para quem" do dono (ainda não há cuidado): pede
 #   informação, preço ou como comprar o que o post mostra. Nada de lista de palavras.
 # - Até LIMITE comentários, os mais recentes. Passou disso, `more: true`: a conta é "pelo menos".
-# - O Jev leva alguns segundos por lista: a conta roda no ResumoJob e fica no cache só com os números (nunca o texto),
-#   por CACHE. A chave leva os ids que esperam: quando a lista muda (alguém respondeu, chegou comentário), conta de novo.
-#   Enquanto conta, `status: 'reading'`, e a tela pergunta de novo.
+# - O Jev leva alguns segundos por comentário: a conta roda no ResumoJob e fica no cache só com os números (nunca o
+#   texto), por CACHE. A chave leva os ids que esperam: quando a lista muda (alguém respondeu, chegou comentário), conta
+#   de novo. Enquanto conta, `status: 'reading'`, e a tela pergunta de novo.
+# - Jev fora do ar não é "nenhum pedido": a conta para no primeiro erro, nada vai para o cache como pronto e a tela
+#   recebe `ai_unavailable` uma vez (FALHOU); a pergunta seguinte conta de novo.
 class Crm::MetaAds::ComentariosIa::Resumo
   LIMITE = 30
   CACHE = 1.hour
-  CONTANDO = 2.minutes
+  # O teto do job: uma chamada ao Jev por comentário, cada uma com as tentativas do TypesafeAi::Client (até 2 s de
+  # espera entre elas), mais a leitura da Meta. A trava de um job só por lista não pode vencer antes dele.
+  POR_COMENTARIO = ((TypesafeAi::Client::OPEN_TIMEOUT + TypesafeAi::Client::READ_TIMEOUT) * (TypesafeAi::Client::MAX_RETRIES + 1)) +
+                   (2 * TypesafeAi::Client::MAX_RETRIES)
+  CONTANDO = ((LIMITE * POR_COMENTARIO) + 60).seconds
+  # Quanto o aviso "Jev fora do ar" espera a tela perguntar: lido uma vez, ele sai e a próxima pergunta conta de novo.
+  FALHOU = 10.minutes
   CRITERIO = 'Anyone who asks for information about what the post shows, its price, or how to get or buy it.'.freeze
   PEDIDOS = %w[private price].freeze
 
@@ -30,7 +38,7 @@ class Crm::MetaAds::ComentariosIa::Resumo
 
     linhas = recentes(lido[:linhas])
     chave = chave(linhas)
-    Rails.cache.read(chave) || contar_depois(chave)
+    Rails.cache.read(chave) || falhou(chave) || contar_depois(chave)
   end
 
   # No ResumoJob: lê de novo e grava a conta no cache.
@@ -39,10 +47,22 @@ class Crm::MetaAds::ComentariosIa::Resumo
     return unless lido[:status] == 'ready'
 
     linhas = recentes(lido[:linhas])
-    Rails.cache.write(chave(linhas), contar(linhas, more: lido[:linhas].size > LIMITE), expires_in: CACHE)
+    chave = chave(linhas)
+    Rails.cache.write(chave, contar(linhas, more: lido[:linhas].size > LIMITE), expires_in: CACHE)
+  rescue TypesafeAi::Decisor::Error => e
+    Rails.logger.warn("[comentarios_ia] resumo account=#{@account.id} jev=#{e.code}")
+    Rails.cache.write("#{chave}:falhou", 1, expires_in: FALHOU)
+    Rails.cache.delete("#{chave}:contando")
   end
 
   private
+
+  # O aviso sai na primeira leitura: a tela mostra a falha e o "tentar de novo" conta outra vez.
+  def falhou(chave)
+    return unless Rails.cache.delete("#{chave}:falhou")
+
+    { status: 'ai_unavailable' }
+  end
 
   def contar_depois(chave)
     # Um job só por lista: a tela pergunta de novo a cada poucos segundos enquanto conta.
@@ -54,7 +74,7 @@ class Crm::MetaAds::ComentariosIa::Resumo
   def contar(linhas, more:)
     contagem = { status: 'ready', questions: 0, questions_old: 0, complaints: 0, read: linhas.size, more: more }
     linhas.each do |linha|
-      decisao = classificador.decidir(linha[:text])
+      decisao = classificador.decidir!(linha[:text])
       if PEDIDOS.include?(decisao)
         contagem[recente?(linha) ? :questions : :questions_old] += 1
       elsif decisao == 'to_you'
