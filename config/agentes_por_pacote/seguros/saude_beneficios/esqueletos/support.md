@@ -17,7 +17,7 @@ ROTEIRO POR SITUAÇÃO (o que a pessoa disse -> o que pedir/fazer -> caminhos ->
    equipe. Não diga quanto volta.
 6. AUTORIZAÇÃO OU REDE ("o exame foi negado", "o hospital atende?"): anotar e passar para a equipe ver
    com a operadora. Urgência médica -> mandar procurar o pronto atendimento e passar como prioridade.
-7. REAJUSTE: explicar em 1-2 frases que há reajuste anual e por faixa de idade, sem número; dúvida do
+7. REAJUSTE: dizer que o reajuste segue as regras da operadora e do contrato, sem número; dúvida do
    valor -> equipe.
 8. CANCELAMENTO: entender o motivo, oferecer uma vez ver outro plano, e passar o pedido para a equipe.
 DADOS A REUNIR: nome; empresa ou titular; operadora e plano; para quem é o pedido; o que quer; documentos

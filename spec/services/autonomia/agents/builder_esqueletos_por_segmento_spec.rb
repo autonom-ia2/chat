@@ -54,6 +54,18 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(contexto).to include('ESQUELETO SAÚDE SUPPORT')
     end
 
+    it 'mantém o esqueleto da agenda para o tipo scheduler com agenda ligada, mesmo com roteiro no segmento' do
+      stub_const("#{described_class}::SKELETONS_BY_LAYER", por_camada.merge('seguros' => { 'scheduler' => "ESQUELETO SEGUROS AGENDA\n" }))
+      allow(Autonomia::Agents::Fase2).to receive(:ligada?).with(account).and_return(true)
+      thread.persist_start_options!(type: 'scheduler', with_knowledge: false)
+      thread.save!
+      builder = described_class.new(account: account, build_thread: thread)
+      allow(builder).to receive(:booking_enabled?).and_return(true)
+
+      expect(builder.send(:skeleton_context)).to include(described_class::SCHEDULER_WITH_BOOKING_SKELETON)
+      expect(builder.send(:skeleton_context)).not_to include('ESQUELETO SEGUROS AGENDA')
+    end
+
     it 'fica no esqueleto geral com a Fase 2 desligada' do
       allow(Autonomia::Agents::Fase2).to receive(:ligada?).with(account).and_return(false)
 

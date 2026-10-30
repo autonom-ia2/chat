@@ -421,6 +421,7 @@ module Autonomia
         end
 
         # As camadas do segmento gravado na marca de base do agente (#1429): 'seguros/corretora' → [seguros, seguros/corretora].
+        # O roteiro lido é o arquivo de hoje (não um texto gravado como a marca): é só dica de cobertura, não muda a nota.
         def camadas_da_marca
           segmento = @agent&.config.to_h.dig('base', 'segmento').to_s
           return [] if segmento.blank?
