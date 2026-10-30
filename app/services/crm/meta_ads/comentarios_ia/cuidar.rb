@@ -7,6 +7,7 @@
 # 3. Lê o comentário na Meta (o evento leva só ids, #2327). Se a Meta diz que não dá (apagado, sem permissão), ele fica
 #    descartado; se ela não responde, o job tenta de novo (CuidarJob, com teto).
 #    Depois, pergunta ao Jev o que fazer (Classificador). Sem certeza, não faz nada: o comentário fica para a pessoa.
+#    Jev fora do ar: como a Meta, o job tenta de novo.
 # 4. Faz:
 #    - privado ou preço: manda o privado e põe o comentário no topo da conversa. Depois responde no comentário com a
 #      frase da vez, ou com o preço, se a pessoa ligou essa chave. Privado recusado: nada em público, e a conversa fica
@@ -59,7 +60,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # O privado só sai com o que mandar (oferta ou "para quem") e na rede que já o libera; senão, a pergunta fica com o
   # dono (FICA_COM_O_DONO: o Painel a mostra em "Esperando você", não como "não se aplica").
   def decidir
-    decisao = classificador.decidir(@comentario.text)
+    decisao = classificador.decidir!(@comentario.text)
     return decisao unless %w[private price].include?(decisao)
 
     care.privado? && rede.privado_disponivel? ? decisao : FICA_COM_O_DONO

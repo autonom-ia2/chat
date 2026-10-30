@@ -58,6 +58,21 @@ describe('MetaAdsDestinationsStep · página do site', () => {
     expect(wrapper.find('a[href*="links"]').exists()).toBe(false);
   });
 
+  // Uma ação principal por tela (#2338): o principal é "Salvar e continuar"; ligar a página é secundário.
+  it('keeps "Save and continue" as the only main button', async () => {
+    CrmMetaAdsConnectionAPI.sitePages.mockResolvedValue({
+      data: { payload: [] },
+    });
+    const wrapper = await mountStep();
+
+    expect(
+      wrapper.findComponent('[data-site-link-open]').props('variant')
+    ).toBe('outline');
+    expect(
+      wrapper.findComponent('[data-save-destinations]').props('variant')
+    ).not.toBe('outline');
+  });
+
   it('shows the new page in the list and tells the page it was linked', async () => {
     CrmMetaAdsConnectionAPI.sitePages.mockResolvedValue({
       data: { payload: [] },

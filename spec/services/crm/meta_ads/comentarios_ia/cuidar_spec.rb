@@ -29,7 +29,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   def decide(decisao)
-    allow(classificador).to receive(:decidir).and_return(decisao)
+    allow(classificador).to receive(:decidir!).and_return(decisao)
   end
 
   before do
@@ -45,7 +45,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(rede).to have_received(:ler).ordered
-    expect(classificador).to have_received(:decidir).with('Quanto custa?').ordered
+    expect(classificador).to have_received(:decidir!).with('Quanto custa?').ordered
   end
 
   it 'comentário vindo da lista (sem o id de quem comentou): usa o lido na Meta' do
@@ -58,12 +58,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   it 'a Meta diz que não dá para ler (apagado, sem permissão): descartado, sem Jev e sem soltar a leitura' do
-    allow(classificador).to receive(:decidir)
+    allow(classificador).to receive(:decidir!)
     allow(rede).to receive(:ler).and_return(nil)
 
     cuidar
 
-    expect(classificador).not_to have_received(:decidir)
+    expect(classificador).not_to have_received(:decidir!)
     expect(registro).to have_received(:reservar!).with(comentario)
     expect(registro).not_to have_received(:soltar!)
   end
@@ -107,10 +107,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   it 'erro antes de agir na Meta solta a leitura, para o job tentar de novo' do
-    allow(classificador).to receive(:decidir).and_raise(ActiveRecord::ConnectionTimeoutError)
+    allow(classificador).to receive(:decidir!).and_raise(ActiveRecord::ConnectionTimeoutError)
 
     expect { cuidar }.to raise_error(ActiveRecord::ConnectionTimeoutError)
     expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
+  end
+
+  it 'Jev fora do ar: solta a leitura e sobe o erro, para o job tentar de novo' do
+    allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_timeout'))
+
+    expect { cuidar }.to raise_error(TypesafeAi::Decisor::Error)
+    expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
+    expect(rede).not_to have_received(:privado)
   end
 
   it 'falha ao soltar a leitura não troca o erro que faz o job tentar de novo' do
@@ -244,18 +252,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   describe 'o que não chega ao Jev' do
-    before { allow(classificador).to receive(:decidir) }
+    before { allow(classificador).to receive(:decidir!) }
 
     it 'comentário já reivindicado (a Meta reenvia o webhook, ou outro job pegou antes)' do
       allow(registro).to receive(:reservar!).and_return(false)
       cuidar
-      expect(classificador).not_to have_received(:decidir)
+      expect(classificador).not_to have_received(:decidir!)
     end
 
     it 'flag desligada' do
       account.disable_features!(described_class::FLAG)
       cuidar
-      expect(classificador).not_to have_received(:decidir)
+      expect(classificador).not_to have_received(:decidir!)
       expect(registro).not_to have_received(:reservar!)
     end
 

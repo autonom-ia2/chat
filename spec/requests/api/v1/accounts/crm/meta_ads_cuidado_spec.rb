@@ -254,6 +254,17 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
       # Só a leitura do criativo (de onde vêm as caixas): nenhum comentário lido.
       expect(meta_call).to have_been_made.once
     end
+
+    it 'anúncio nas duas redes: vê a caixa do Instagram, não a da Página, 403 not_inbox_member' do
+      account.enable_features!('meta_ads_comentarios_facebook')
+      create(:inbox, account: account, channel: build(:channel_facebook_page, account: account, page_id: '555000111'))
+      create(:inbox_member, user: agente, inbox: canal.inbox)
+
+      get "#{base}/cuidado", headers: agente.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body['error']).to eq('not_inbox_member')
+    end
   end
 
   it 'agente comum, sem meta_ads_view: 403' do
