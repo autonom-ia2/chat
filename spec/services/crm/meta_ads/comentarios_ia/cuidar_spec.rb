@@ -96,6 +96,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     expect(rede).not_to have_received(:privado)
     expect(rede).not_to have_received(:responder)
+    expect(registro).to have_received(:gravar!).with(lido, 'private_reply_already')
   end
 
   it 'sem saber quem comentou: não manda privado, fica com o dono' do
@@ -224,6 +225,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).not_to have_received(:responder)
     expect(conversa).not_to have_received(:para_voce!)
     expect(registro).not_to have_received(:soltar_pessoa!)
+    expect(registro).to have_received(:gravar!).with(lido, 'private_reply_already')
   end
 
   it 'reclamação: não responde, abre a conversa urgente para a pessoa' do
@@ -253,6 +255,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(Rails.logger).to have_received(:warn).with(include('recusou hide', 'comment=c-1'))
+    expect(registro).to have_received(:gravar!).with(lido, 'ai_unread')
   end
 
   it 'marcação de amigo ou elogio: não faz nada além de ler' do

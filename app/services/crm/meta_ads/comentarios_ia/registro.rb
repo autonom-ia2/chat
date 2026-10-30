@@ -12,14 +12,17 @@
 #
 # Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
 # passada à pessoa), private_reply_failed (o privado que a Meta recusou), private_reply_unsure (a Meta não respondeu ao
-# privado: pode ter saído) e ai_unread (a IA não cuidou: a Meta ou o Jev fora do ar em todas as tentativas, teto do
-# dia, sem certeza, ou sem saber quem comentou). As quatro últimas formam o "Esperando você".
+# privado: pode ter saído), ai_unread (a IA não cuidou: a Meta ou o Jev fora do ar em todas as tentativas, teto do
+# dia, sem certeza, sem saber quem comentou, ou a Meta não escondeu) e private_reply_already (era o caso do privado, mas
+# a pessoa já tem um deste post). As cinco últimas formam o "Esperando você".
 #
 # O privado por pessoa em cada post (Crm::MetaAdsCommentPerson) é reservado aqui também, antes da Meta.
 module Crm::MetaAds::ComentariosIa::Registro
   ACTOR = 'ai'.freeze
   LIDO = 'ai_seen'.freeze
   NAO_CUIDOU = 'ai_unread'.freeze
+  # Era o caso do privado, mas a pessoa já tem um deste post (outro comentário dela, ou o que alguém mandou na tela).
+  JA_TEM_PRIVADO = 'private_reply_already'.freeze
 
   module_function
 

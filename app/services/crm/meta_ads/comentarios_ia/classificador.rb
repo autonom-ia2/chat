@@ -10,6 +10,9 @@
 # Sem certeza suficiente, ou com o Jev fora do ar, não decide: o comentário fica para a pessoa, sem resposta da IA.
 class Crm::MetaAds::ComentariosIa::Classificador
   FEATURE = 'meta_ads_comentarios_ia'.freeze
+  # Prévia e resumo (a tela do dono) gravam o uso com outra feature e têm teto próprio: repetir a prévia não esgota o
+  # teto do motor, que deixaria os comentários reais com o dono.
+  FEATURE_DA_TELA = 'meta_ads_comentarios_ia_tela'.freeze
   CERTEZA_MINIMA = 0.7
   DECISOES = {
     'private' => 'The person asks for information about what the post offers (details, how to buy, availability, ' \
@@ -23,15 +26,19 @@ class Crm::MetaAds::ComentariosIa::Classificador
   }.freeze
   PERGUNTA = 'What should be done with this comment left on a social media post?'.freeze
 
-  # Perguntas ao Jev por conta, por dia.
+  # Perguntas ao Jev por conta, por dia: o motor e a tela, cada um com o seu.
   TETO_DIARIO = 1_000
+  TETO_DIARIO_DA_TELA = 300
   # A pergunta não vai ao Jev (flag desligada ou teto do dia): o motor deixa o comentário com o dono, a tela diz que a
   # IA não está disponível.
   class Bloqueado < TypesafeAi::Decisor::Error; end
 
-  def initialize(care:, jev: TypesafeAi::Decisor.new(feature: FEATURE))
+  # tela: true na prévia e no resumo.
+  def initialize(care:, tela: false, jev: nil)
     @care = care
-    @jev = jev
+    @feature = tela ? FEATURE_DA_TELA : FEATURE
+    @teto = tela ? TETO_DIARIO_DA_TELA : TETO_DIARIO
+    @jev = jev || TypesafeAi::Decisor.new(feature: @feature)
   end
 
   # A chave da decisão ('private', 'price', 'to_you', 'hide', 'no_reply') ou nil (sem certeza). O Jev fora do ar
@@ -46,14 +53,14 @@ class Crm::MetaAds::ComentariosIa::Classificador
 
   private
 
-  # O Jev é custo nosso: por conta, só com a flag ligada e até TETO_DIARIO perguntas no dia (motor, prévia e resumo
-  # juntos, pelo uso gravado com a FEATURE). Fora disso, Bloqueado.
+  # O Jev é custo nosso: por conta, só com a flag ligada e até o teto do dia (o do motor ou o da tela, pelo uso gravado
+  # com a feature de cada um). Fora disso, Bloqueado.
   def liberado!
     conta = @care.account
     raise Bloqueado, 'feature_disabled' unless conta&.feature_enabled?(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
 
-    usadas = Crm::AiUsageEvent.where(account_id: conta.id, feature: FEATURE, created_at: Time.current.all_day).count
-    raise Bloqueado, 'daily_limit' if usadas >= TETO_DIARIO
+    usadas = Crm::AiUsageEvent.where(account_id: conta.id, feature: @feature, created_at: Time.current.all_day).count
+    raise Bloqueado, 'daily_limit' if usadas >= @teto
   end
 
   def decisor
