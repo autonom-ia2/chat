@@ -25,19 +25,21 @@ const nome = computed(() => nomeDaAcao(props.actionName, t));
 </script>
 
 <template>
-  <li class="list-none py-2 first:pt-0 last:pb-0">
+  <li class="list-none min-w-0 py-2 first:pt-0 last:pb-0">
     <div class="flex items-center gap-2">
       <div
-        class="flex items-center flex-1 min-w-0 gap-2 px-3 py-1.5 rounded-lg bg-n-alpha-1 outline outline-1 outline-n-weak dark:outline-n-strong"
+        class="flex items-start flex-1 min-w-0 gap-2 px-3 py-1.5 rounded-lg bg-n-alpha-1 outline outline-1 outline-n-weak dark:outline-n-strong"
       >
         <span
-          class="i-lucide-lock size-4 flex-shrink-0 text-n-slate-10"
+          class="i-lucide-lock size-4 mt-0.5 flex-shrink-0 text-n-slate-10"
           aria-hidden="true"
         />
-        <span class="text-sm truncate text-n-slate-12">{{ nome }}</span>
-        <span class="text-xs truncate text-n-slate-10">
-          {{ $t('AUTOMATION.LOCKED_ACTION.HINT') }}
-        </span>
+        <div class="flex flex-col min-w-0">
+          <span class="text-sm text-n-slate-12">{{ nome }}</span>
+          <span class="text-xs text-n-slate-10">
+            {{ $t('AUTOMATION.LOCKED_ACTION.HINT') }}
+          </span>
+        </div>
       </div>
       <NextButton
         sm
