@@ -9,12 +9,12 @@ const PROPRIAS = [
   'conversation_unassigned_manage',
 ];
 
-const montar = permissions => {
+const montar = (permissions, giver = CARLA) => {
   const wrapper = mount(PerguntaConversas, {
     props: {
       permissions,
       inicial: PROPRIAS,
-      giver: CARLA,
+      giver,
       nome: 'Atendente',
       'onUpdate:permissions': novas => wrapper.setProps({ permissions: novas }),
     },
@@ -71,6 +71,33 @@ describe('PerguntaConversas', () => {
 
     await radios()[proprias].trigger('click');
     expect(wrapper.props('permissions')).toEqual(entrada);
+  });
+
+  // #2403: quem monta só com as novas sem ninguém dá "Atende as próprias" por esse alcance (GrantGuard#reach? confere
+  // chave a chave); antes, a opção aparecia com cadeado.
+  it('quem dá só com conversation_unassigned_manage escolhe "Atende as próprias", sem cadeado, pelo alcance que tem', async () => {
+    const soNovas = {
+      userId: 20,
+      isAdmin: false,
+      customRoleId: 21,
+      permissions: ['custom_role_manage', 'conversation_unassigned_manage'],
+    };
+    const wrapper = montar([], soNovas);
+    const proprias = wrapper.find('[data-nivel="limited"]');
+    expect(proprias.attributes('aria-disabled')).toBe('false');
+    expect(proprias.find('.i-lucide-lock').exists()).toBe(false);
+    expect(wrapper.find('[data-nivel="all"]').attributes('aria-disabled')).toBe(
+      'true'
+    );
+
+    await proprias.trigger('click');
+    expect(wrapper.emitted('update:permissions')[0][0]).toEqual([
+      'conversation_unassigned_manage',
+    ]);
+    const participa = wrapper.find(
+      '[data-subescolha="conversation_participating_manage"]'
+    );
+    expect(participa.find('.i-lucide-lock').exists()).toBe(true);
   });
 
   // Só "Atende as próprias" tem o bloco de dentro; nas outras, nada de linha vazia dentro do cartão.

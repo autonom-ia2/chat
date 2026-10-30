@@ -1,6 +1,10 @@
 <script setup>
 import { computed } from 'vue';
-import { CRM_MOVE_CARDS_PERMISSION } from 'dashboard/constants/permissions';
+import {
+  CRM_METAS_MANAGE_PERMISSION,
+  CRM_MOVE_CARDS_PERMISSION,
+  SALES_VALUE_VIEW_PERMISSION,
+} from 'dashboard/constants/permissions';
 import {
   LEVELS,
   isExtraLocked,
@@ -12,6 +16,7 @@ import { DONO_DAS_CHAVES, areasDentroDe } from '../areasDaFuncao';
 import { soOlhaEMove } from '../fraseDaFuncao';
 import { TEXTO_DA_TRAVA, motivoDaTrava } from '../motivoDaTrava';
 import { nivelDeVendas } from '../nivelDeVendas';
+import { chavesDoServidor } from '../semFuncao';
 import { useTextos } from './useTextos';
 import AreaEmLinha from './AreaEmLinha.vue';
 import InterruptorDaLinha from './InterruptorDaLinha.vue';
@@ -57,6 +62,20 @@ const travaDoExtra = chave => {
   return motivo ? t(`FUNCOES_EQUIPE.TRAVA.${TEXTO_DA_TRAVA[motivo]}`) : '';
 };
 
+// As metas do mês só valem com os valores em R$ (KEY_DEPENDENCIES): desligar o R$ tira as metas (toggleExtra) ou, com
+// "Cuida de tudo", as deixa sem efeito; ligar o R$ faz valer as que a função já tem. Sem esta nota, a linha do R$
+// mudava as metas calada (#2403). Linha travada não diz nada: o toque não muda nada.
+const notaDoExtra = chave => {
+  if (chave !== SALES_VALUE_VIEW_PERMISSION || travaDoExtra(chave)) return '';
+  const comMetas = chavesDoServidor(props.permissions).includes(
+    CRM_METAS_MANAGE_PERMISSION
+  );
+  if (!comMetas) return '';
+  return props.permissions.includes(chave)
+    ? t('FUNCOES_EQUIPE.VENDAS.METAS_COM_O_RS.DESLIGAR')
+    : t('FUNCOES_EQUIPE.VENDAS.METAS_COM_O_RS.LIGAR');
+};
+
 const ligados = computed(() =>
   extras.value.filter(chave => props.permissions.includes(chave))
 );
@@ -96,6 +115,8 @@ const alternar = chave =>
           v-for="chave in extras"
           :key="chave"
           :titulo="$t(`FUNCOES_EQUIPE.EXTRAS.${chave}`)"
+          :data-extra="chave"
+          :nota="notaDoExtra(chave)"
           :ligado="permissions.includes(chave)"
           :trava="travaDoExtra(chave)"
           @alternar="alternar(chave)"

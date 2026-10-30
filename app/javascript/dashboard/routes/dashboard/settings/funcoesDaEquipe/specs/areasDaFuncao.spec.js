@@ -19,6 +19,7 @@ import {
   gruposDoCuidado,
   ligaAgora,
   ligaJunto,
+  nivelar,
   resumoDaRecolhida,
   travaDoNivel,
 } from '../areasDaFuncao';
@@ -130,6 +131,59 @@ describe('recolhida de Ajustes (Carla + Atendente)', () => {
     expect(travaDoNivel(CARLA, cotacoes, 'view')).toBe('MISSING');
     expect(travaDoNivel(CARLA, cotacoes, 'manage')).toBe('MISSING');
     expect(travaDoNivel(ADMIN, anuncios, 'manage')).toBeNull();
+  });
+});
+
+// #2403: o servidor confere chave a chave (GrantGuard#reach?), e um alcance basta para "Atende as próprias". Quem dá
+// só com conversation_unassigned_manage dá as próprias por esse alcance; o cadeado só fica para quem não tem nenhum.
+describe('"Atende as próprias" e o alcance de quem dá', () => {
+  const conversas = moduleByKey('CONVERSATIONS');
+  const quemDa = permissions => ({
+    userId: 20,
+    isAdmin: false,
+    customRoleId: 21,
+    permissions: ['custom_role_manage', ...permissions],
+  });
+  const SO_NOVAS = quemDa(['conversation_unassigned_manage']);
+  const SO_PARTICIPA = quemDa(['conversation_participating_manage']);
+  const NENHUM = quemDa(['contact_manage']);
+
+  it('sem cadeado para quem só tem as novas sem ninguém; com cadeado para quem não tem alcance nenhum', () => {
+    expect(travaDoNivel(SO_NOVAS, conversas, 'limited')).toBeNull();
+    expect(travaDoNivel(SO_PARTICIPA, conversas, 'limited')).toBeNull();
+    expect(travaDoNivel(NENHUM, conversas, 'limited')).toBe('MISSING');
+    expect(travaDoNivel(SO_NOVAS, conversas, 'all')).toBe('MISSING');
+  });
+
+  it('grava o alcance que quem dá tem, e nunca tira um que a função já tinha', () => {
+    expect(nivelar(SO_NOVAS, conversas, 'limited', [])).toEqual([
+      'conversation_unassigned_manage',
+    ]);
+    expect(nivelar(SO_PARTICIPA, conversas, 'limited', [])).toEqual([
+      'conversation_participating_manage',
+    ]);
+    expect(nivelar(ADMIN, conversas, 'limited', [])).toEqual([
+      'conversation_participating_manage',
+    ]);
+    expect(
+      nivelar(SO_NOVAS, conversas, 'limited', ['conversation_view'])
+    ).toEqual(['conversation_view', 'conversation_unassigned_manage']);
+    const comAmbos = [
+      'conversation_manage',
+      'conversation_unassigned_manage',
+      'conversation_participating_manage',
+    ];
+    expect(nivelar(SO_NOVAS, conversas, 'limited', comAmbos)).toEqual([
+      'conversation_unassigned_manage',
+      'conversation_participating_manage',
+    ]);
+  });
+
+  it('as outras áreas seguem o setLevel', () => {
+    const contatos = moduleByKey('CONTACTS');
+    expect(nivelar(SO_NOVAS, contatos, 'manage', [])).toEqual(
+      setLevel(contatos, 'manage', [])
+    );
   });
 });
 

@@ -79,11 +79,9 @@ module CustomRoles::SemFuncaoCapacidades
       pergunta: ->(c) { c.pode?(Crm::MetasPolicy, :metas, :manage?) } }
   ].freeze
 
-  # Sem chave só deles: seguem do "sem função"; a chave que a função usa (quando há) abre mais que isso.
+  # Sem chave só deles: seguem do "sem função"; a chave que a função usa (quando há) abre mais que isso. Extra sem chave
+  # nenhuma não entra: a tela só lê os que têm chave (semFuncao.js), e um sem leitor só fica de enfeite no JSON (#2403).
   EXTRAS = [
-    { id: 'responsavel_de_agendamento', chaves: [], premissas: [],
-      fontes: %w[Crm::BookingV2::HostEligibility.sees_cards?],
-      pergunta: ->(c) { Crm::BookingV2::HostEligibility.send(:sees_cards?, c.account_user) } },
     # Com função, vê a origem do anúncio só com meta_ads_view; segue extra porque a chave também abre a página de
     # Anúncios, que o sem função não tem.
     { id: 'anuncio_de_origem', chaves: %w[meta_ads_view], premissas: [],

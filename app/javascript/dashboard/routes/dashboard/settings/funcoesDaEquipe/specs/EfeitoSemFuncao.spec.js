@@ -75,13 +75,21 @@ describe('EfeitoSemFuncao', () => {
       'Ver os relatórios',
       'Ver as campanhas',
     ]);
+    // #2403: dos atalhos de mensagens, só os da equipe saem; os próprios continuam.
     expect(await deixam(['label_manage', 'macro_manage'])).toContain(
-      'Mudar os atalhos de mensagens'
+      'Mudar os atalhos de mensagens da equipe (os próprios continuam)'
     );
     // Rodada 5: "Vão deixar de" fecha a frase ("fazer algumas coisas em Vendas").
     expect(await deixam(['crm_manage_pipelines'])).toEqual([
       'Fazer algumas coisas em Vendas',
     ]);
+  });
+
+  it('#2403: na frase curta, os atalhos de mensagens dizem que os próprios continuam', () => {
+    const texto = montar(['macro_manage']).find('[data-efeito] p').text();
+    expect(texto).toContain(
+      'Deixa de mudar os atalhos de mensagens da equipe (os próprios continuam).'
+    );
   });
 
   it('a parte que sai da área também fecha a frase curta da linha', () => {

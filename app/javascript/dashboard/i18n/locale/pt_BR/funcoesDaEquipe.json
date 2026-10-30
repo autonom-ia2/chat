@@ -559,7 +559,11 @@
       "MAIS": "Mais",
       "MAIS_NADA": "Nada a mais ligado",
       "MAIS_AREAS": "Junto com as vendas",
-      "VEM_COM_TUDO": "Vem com \"Cuida de tudo nas vendas\"."
+      "VEM_COM_TUDO": "Vem com \"Cuida de tudo nas vendas\".",
+      "METAS_COM_O_RS": {
+        "DESLIGAR": "Ao desligar, a pessoa também deixa de definir as metas do mês.",
+        "LIGAR": "Ao ligar, a pessoa também passa a definir as metas do mês."
+      }
     },
     "EXTRAS": {
       "crm_delete_cards": "Arquivar vendas",
@@ -769,6 +773,10 @@
         "VER": {
           "LISTA": "Ver {area}",
           "CURTO": "ver {area}"
+        },
+        "PROPRIOS": {
+          "LISTA": "Mudar {area} da equipe (os próprios continuam)",
+          "CURTO": "mudar {area} da equipe (os próprios continuam)"
         }
       },
       "OUTRA": {

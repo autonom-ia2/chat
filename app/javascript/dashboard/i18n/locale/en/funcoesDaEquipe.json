@@ -559,7 +559,11 @@
       "MAIS": "More",
       "MAIS_NADA": "Nothing else on",
       "MAIS_AREAS": "Along with sales",
-      "VEM_COM_TUDO": "Comes with \"Takes care of everything in sales\"."
+      "VEM_COM_TUDO": "Comes with \"Takes care of everything in sales\".",
+      "METAS_COM_O_RS": {
+        "DESLIGAR": "When turned off, the person also stops setting the monthly goals.",
+        "LIGAR": "When turned on, the person also starts setting the monthly goals."
+      }
     },
     "EXTRAS": {
       "crm_delete_cards": "Archive sales",
@@ -769,6 +773,10 @@
         "VER": {
           "LISTA": "See {area}",
           "CURTO": "see {area}"
+        },
+        "PROPRIOS": {
+          "LISTA": "Change the team's {area} (their own stay)",
+          "CURTO": "change the team's {area} (their own stay)"
         }
       },
       "OUTRA": {

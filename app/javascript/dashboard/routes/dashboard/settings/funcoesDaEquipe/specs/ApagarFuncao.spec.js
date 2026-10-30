@@ -46,7 +46,8 @@ const DEIXAM_DO_SUPERVISOR = [
   'Ver os canais',
   'Ver as regras automáticas',
   'Mudar as etiquetas',
-  'Mudar os atalhos de mensagens',
+  // #2403: os próprios atalhos continuam; só os da equipe saem.
+  'Mudar os atalhos de mensagens da equipe (os próprios continuam)',
 ];
 
 let espiao = null;
