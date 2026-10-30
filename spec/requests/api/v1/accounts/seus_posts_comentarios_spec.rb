@@ -140,5 +140,66 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body['conversation_path']).to start_with("/app/accounts/#{account.id}/conversations/")
     expect(Crm::MetaAdsCommentAction.find_by(comment_id: comment_id, action: 'private_reply', ad_id: nil)).to be_present
+    # A IA não manda outro privado à mesma pessoa neste post (#2212).
+    expect(Crm::MetaAdsCommentPerson.sole).to have_attributes(account_id: account.id, network: 'instagram', post_id: post_id, from_id: '501',
+                                                              comment_id: comment_id)
+  end
+
+  describe 'a marca da pessoa no post (#2212): nasce antes da Meta' do
+    def mandar
+      post "#{base}/comments/#{comment_id}/private_reply", params: { perfil: perfil, content: 'Oi, Carla!' }, headers: headers, as: :json
+    end
+
+    before { stub_comentario }
+
+    it 'já existe durante a chamada à Meta, para a IA não mandar outro ao mesmo tempo' do
+      marcada = nil
+      stub_request(:post, %r{#{ig}/#{ig_id}/messages}).to_return do
+        marcada = Crm::MetaAdsCommentPerson.exists?(post_id: post_id, from_id: '501', comment_id: comment_id)
+        { status: 200, headers: json, body: { recipient_id: '7001', message_id: 'mid.1' }.to_json }
+      end
+
+      mandar
+
+      expect(marcada).to be(true)
+    end
+
+    it 'a Meta recusou (4xx): a marca deste envio sai' do
+      stub_request(:post, %r{#{ig}/#{ig_id}/messages}).to_return(status: 400, headers: json, body: { error: { code: 100 } }.to_json)
+
+      mandar
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(Crm::MetaAdsCommentPerson.count).to eq(0)
+    end
+
+    it 'a Meta não respondeu (pode ter saído): a marca fica' do
+      stub_request(:post, %r{#{ig}/#{ig_id}/messages}).to_timeout
+
+      mandar
+
+      expect(Crm::MetaAdsCommentPerson.sole.comment_id).to eq(comment_id)
+    end
+
+    it 'a IA marcou antes: o envio da equipe segue e, recusado, não apaga a marca da IA' do
+      Crm::MetaAdsCommentPerson.create!(account: account, network: 'instagram', post_id: post_id, from_id: '501', comment_id: 'c-ia')
+      stub_request(:post, %r{#{ig}/#{ig_id}/messages}).to_return(status: 400, headers: json, body: { error: { code: 100 } }.to_json)
+
+      mandar
+
+      expect(a_request(:post, %r{#{ig}/#{ig_id}/messages})).to have_been_made.once
+      expect(Crm::MetaAdsCommentPerson.sole.comment_id).to eq('c-ia')
+    end
+
+    it 'erro ao gravar a marca: nada sai para a Meta e o comentário fica livre para tentar de novo' do
+      allow(Crm::MetaAdsCommentPerson).to receive(:insert_all).and_raise(ActiveRecord::ConnectionFailed)
+      stub_request(:post, %r{#{ig}/#{ig_id}/messages})
+
+      mandar
+
+      expect(response).not_to have_http_status(:ok)
+      expect(a_request(:post, %r{#{ig}/#{ig_id}/messages})).not_to have_been_made
+      expect(Crm::MetaAdsCommentAction.where(comment_id: comment_id)).to be_empty
+    end
   end
 end

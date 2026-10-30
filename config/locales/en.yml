@@ -364,6 +364,14 @@ en:
       delivery_status:
         error_code: 'Error code: %{error_code}'
     activity:
+      meta_ads_comment:
+        commented_post: 'Commented on the post: “%{text}”'
+        commented_page_post: 'Commented on the Page post: “%{text}”'
+        commented_ad: 'Commented on the ad: “%{text}”'
+        to_you: "Complaint: I didn't reply and passed it to you."
+        private_reply_failed: "I couldn't send the message. Reply yourself, if you want."
+        private_reply_unsure: "I'm not sure the message went out: Meta didn't answer. Check the inbox before you reply."
+        private_reply_suffix: "(automatic message · if you'd rather not get these, just tell me)"
       captain:
         resolved: 'Conversation was marked resolved by %{user_name} due to inactivity'
         resolved_with_reason: 'Conversation was marked resolved by %{user_name} (%{reason})'
