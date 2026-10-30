@@ -7,7 +7,7 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CuidarLigado from './CuidarLigado.vue';
 import CuidarDono from './CuidarDono.vue';
-import { useCuidado } from './useCuidado';
+import { FOR_WHOM_LIMIT, useCuidado } from './useCuidado';
 import { porRede } from './redes';
 
 // Comentários que viram cliente (#2212): "Cuidar dos comentários" de um post (Seus posts, B1) ou de um anúncio (B2).
@@ -39,6 +39,7 @@ const {
   carregando,
   erro,
   salvando,
+  falhaAoSalvar,
   carregar,
   salvar,
   pausar,
@@ -82,7 +83,17 @@ const canSendOld = computed(
     painel.value?.unanswered > 0
 );
 
-const avisarFalha = () => useAlert(t(`${KEY}.SCREEN.SAVE_ERROR`));
+// O aviso diz por que não gravou: sem acesso (403), o texto que o servidor recusou (422) ou o resto (rede, servidor).
+const AVISO_DA_FALHA = {
+  acesso: () => t(`${KEY}.SCREEN.NO_ACCESS`),
+  invalid_message: () => t(`${KEY}.DONO.WHAT.TOO_LONG`),
+  invalid_para_quem: () =>
+    t(`${KEY}.DONO.WHO.TOO_LONG`, { max: FOR_WHOM_LIMIT }),
+};
+const avisarFalha = () => {
+  const aviso = AVISO_DA_FALHA[falhaAoSalvar.value];
+  useAlert(aviso ? aviso() : t(`${KEY}.SCREEN.SAVE_ERROR`));
+};
 
 // A frase escolhida no passo 3 vai primeiro; as outras do servidor seguem, sem repetir.
 const phrasesWith = phrase => {

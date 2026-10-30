@@ -126,6 +126,68 @@ describe('CuidarDono (#2212)', () => {
     expect(wrapper.find('[data-ia-dono-start]').element.disabled).toBe(false);
   });
 
+  it('prévia sem resposta em 20 s: para de girar e cai no aviso de falha', async () => {
+    vi.useFakeTimers();
+    try {
+      const wrapper = montar({
+        data: painel({ message: 'Oi!', para_quem: 'Quem pedir o link' }),
+        preview: vi.fn().mockReturnValue(new Promise(() => {})),
+      });
+      await proximo(wrapper).trigger('click');
+      await proximo(wrapper).trigger('click');
+      await flushPromises();
+      expect(wrapper.find('[data-ia-dono-examples-loading]').exists()).toBe(
+        true
+      );
+
+      await vi.advanceTimersByTimeAsync(20000);
+
+      expect(wrapper.find('[data-ia-dono-examples-loading]').exists()).toBe(
+        false
+      );
+      expect(wrapper.find('[data-ia-dono-examples-failed]').exists()).toBe(
+        true
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('prévia velha que chega depois não cobre a nova', async () => {
+    let velha;
+    const preview = vi
+      .fn()
+      .mockReturnValueOnce(
+        new Promise(resolve => {
+          velha = resolve;
+        })
+      )
+      .mockResolvedValueOnce({
+        recebe: { author: 'nova', text: 'Tem link?', network: 'instagram' },
+        nao: null,
+      });
+    const wrapper = montar({
+      data: painel({ message: 'Oi!', para_quem: 'Quem pedir o preço' }),
+      preview,
+    });
+    await proximo(wrapper).trigger('click');
+    await proximo(wrapper).trigger('click');
+    await wrapper.find('[data-ia-dono-previous]').trigger('click');
+    await wrapper.find('[data-ia-dono-who]').setValue('Quem pedir o link');
+    await proximo(wrapper).trigger('click');
+    await flushPromises();
+    velha({
+      recebe: { author: 'velha', text: 'Quanto?', network: 'instagram' },
+      nao: null,
+    });
+    await flushPromises();
+
+    expect(preview).toHaveBeenLastCalledWith('Quem pedir o link');
+    const recebe = wrapper.find('[data-ia-dono-example="recebe"]').text();
+    expect(recebe).toContain('@nova');
+    expect(recebe).not.toContain('@velha');
+  });
+
   it('ligar emite done com a mensagem, o para quem e a frase mudada', async () => {
     const preview = vi.fn().mockResolvedValue({
       recebe: { sample: true },

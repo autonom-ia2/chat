@@ -2,6 +2,7 @@
 import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { FOR_WHOM_LIMIT } from './useCuidado';
 
 // Comentários que viram cliente (#2212, opção (a) do Rodrigo): o jeito escrito pelo dono, em três passos, uma ação em
 // cada: o que mandar no privado → para quem, nas palavras dele → como fica, com dois comentários do post (a Prévia do
@@ -26,8 +27,6 @@ const KEY = 'META_ADS_COMMENTS_AI.DONO';
 // A Meta aceita até 1000 bytes (UTF-8) no texto do privado, com a frase "(mensagem automática…)" no fim: acento e
 // emoji ocupam mais de um byte, então a conta é em bytes, não em letras.
 const LIMIT_BYTES = 1000;
-// O "para quem" do dono vai inteiro ao classificador: até 500 letras.
-const FOR_WHOM_LIMIT = 500;
 const PHRASE_LIMIT = 120;
 const RULES_MORE = ['SEVEN_DAYS', 'LIVE', 'REQUESTS', 'COMPLAINT'];
 const SUGGESTIONS = ['PRICE', 'LINK', 'CATALOG'];
@@ -69,11 +68,27 @@ const values = () => ({
   phrase: phrase.value.trim() || phrases.value[0] || '',
 });
 
+// A Prévia classifica comentários com a IA: sem resposta em PREVIEW_TIMEOUT_MS, o passo 3 cai no "não deu para ler", em
+// vez de girar para sempre. Voltar e abrir o passo de novo lê outra vez: só a resposta da leitura mais nova vale.
+const PREVIEW_TIMEOUT_MS = 20000;
+let examplesRead = 0;
+const previewOrTimeout = paraQuem => {
+  let timer;
+  const timeout = new Promise(resolve => {
+    timer = setTimeout(() => resolve(null), PREVIEW_TIMEOUT_MS);
+  });
+  return Promise.race([props.preview(paraQuem), timeout]).finally(() =>
+    clearTimeout(timer)
+  );
+};
 const loadExamples = async () => {
+  examplesRead += 1;
+  const mine = examplesRead;
   examples.value = null;
   examplesFailed.value = false;
   loadingExamples.value = true;
-  const result = await props.preview(forWhom.value.trim());
+  const result = await previewOrTimeout(forWhom.value.trim());
+  if (mine !== examplesRead) return;
   loadingExamples.value = false;
   examples.value = result;
   examplesFailed.value = !result;
