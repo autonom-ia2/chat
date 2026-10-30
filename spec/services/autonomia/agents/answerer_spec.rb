@@ -24,6 +24,22 @@ RSpec.describe Autonomia::Agents::Answerer do
     )
   end
 
+  describe 'mensagem de quando não souber (#2381)' do
+    it 'pede o bloco do dono só quando a fala sai como está (trust_instruction)' do
+      agent = create_agent('with_knowledge' => false)
+      expect(Autonomia::Agents::PromptBuilder).to receive(:new).with(hash_including(mensagem_do_dono: true)).and_call_original
+
+      described_class.new(agent: agent, query: 'oi', trust_instruction: true).answer
+    end
+
+    it 'não pede o bloco no caminho com portão (copiloto e Guia)' do
+      agent = create_agent('with_knowledge' => false)
+      expect(Autonomia::Agents::PromptBuilder).to receive(:new).with(hash_including(mensagem_do_dono: false)).and_call_original
+
+      described_class.new(agent: agent, query: 'oi').answer
+    end
+  end
+
   describe 'knowledge retrieval skip (C3)' do
     it 'never instantiates the Retriever for an agent with with_knowledge=false and still answers' do
       # Arrange
