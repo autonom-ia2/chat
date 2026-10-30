@@ -72,6 +72,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(facebook.payload[:private_available]).to be(false)
   end
 
+  it 'no Facebook, a pergunta que era o caso fica com o dono (no_private), não como "não se aplica"' do
+    facebook = described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo)
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1').merge(network: 'facebook')], escondidas: [] })
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'facebook', comment_id: '1', action: 'ai_seen', actor: 'ai')
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'facebook', comment_id: '1', action: 'kept_for_owner', actor: 'ai')
+
+    payload = facebook.payload
+
+    expect(payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 no_private]])
+    expect(payload[:results][:skipped]).to eq(0)
+  end
+
   it '"respondeu" olha só as conversas enviadas (EXISTS), sem varrer as mensagens da conta' do
     conversa(private_reply: true, respondeu: true)
     consultas = []

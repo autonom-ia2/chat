@@ -4,8 +4,9 @@
 #   `page_reply`, `comment_id` é a resposta que a conta publicou pelo painel, não o comentário respondido (que é o
 #   `comment_id` de `reply`): a Graph do Instagram devolve essa resposta sem `from`, e é esta linha que a mostra como da
 #   conta (#2313).
-# - `action`: o que a pessoa (#2196, #2197) ou a IA dos comentários (#2212) fez. `ai_seen`, `to_you` e
-#   `private_reply_failed` são só da IA: a leitura do comentário, a reclamação passada à pessoa e o privado recusado.
+# - `action`: o que a pessoa (#2196, #2197) ou a IA dos comentários (#2212) fez. `ai_seen`, `to_you`,
+#   `private_reply_failed` e `kept_for_owner` são só da IA: a leitura do comentário, a reclamação passada à pessoa, o
+#   privado recusado e a pergunta que era o caso do privado, mas ficou com o dono (o privado não sai ali).
 # - `actor`: `user` (com `user_id`) ou `ai`.
 # - `conversation_id`: na resposta no privado, a conversa da caixa onde ela continua.
 #
@@ -27,7 +28,7 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   self.table_name = 'crm_meta_ads_comment_actions'
 
   NETWORKS = %w[instagram facebook].freeze
-  ACTIONS = %w[private_reply reply page_reply hide show delete ai_seen to_you private_reply_failed].freeze
+  ACTIONS = %w[private_reply reply page_reply hide show delete ai_seen to_you private_reply_failed kept_for_owner].freeze
   ONCE = %w[private_reply ai_seen].freeze
   ACTORS = %w[user ai].freeze
   RESERVED_TTL = 2.minutes

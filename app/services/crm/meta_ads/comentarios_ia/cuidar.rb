@@ -15,7 +15,7 @@
 #    - propaganda: esconde;
 #    - o resto: nada (a reivindicação já registra que a IA leu).
 #    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado ainda não está liberado (Facebook, F4),
-#    nunca manda privado: a pergunta fica com o dono.
+#    nunca manda privado: a pergunta fica com o dono (`kept_for_owner`, "Esperando você" no Painel).
 #
 # Erro antes de a IA agir na Meta solta a reivindicação e sobe: o job tenta de novo. Depois de agir, a reivindicação
 # fica, para o reenvio não mandar o privado de novo.
@@ -24,6 +24,8 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   TETO_DIARIO = 200
   # Até quando o comentário aceita o Private Reply.
   JANELA = 7.days
+  # Era o caso do privado, mas ele não sai aqui (sem o que mandar, ou a rede ainda não o libera).
+  FICA_COM_O_DONO = 'kept_for_owner'.freeze
 
   def initialize(comentario, rede: nil, classificador: nil, conversa: Crm::MetaAds::ComentariosIa::Conversa,
                  registro: Crm::MetaAds::ComentariosIa::Registro)
@@ -54,12 +56,13 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     raise
   end
 
-  # O privado só sai com o que mandar (oferta ou "para quem") e na rede que já o libera; senão, fica com o dono.
+  # O privado só sai com o que mandar (oferta ou "para quem") e na rede que já o libera; senão, a pergunta fica com o
+  # dono (FICA_COM_O_DONO: o Painel a mostra em "Esperando você", não como "não se aplica").
   def decidir
     decisao = classificador.decidir(@comentario.text)
     return decisao unless %w[private price].include?(decisao)
 
-    care.privado? && rede.privado_disponivel? ? decisao : 'no_reply'
+    care.privado? && rede.privado_disponivel? ? decisao : FICA_COM_O_DONO
   end
 
   # Uma falha ao soltar não pode trocar o erro original: é ele que diz ao job se tenta de novo.
@@ -91,6 +94,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     when 'private', 'price' then privado(decisao)
     when 'to_you' then para_voce('to_you')
     when 'hide' then rede.esconder
+    when FICA_COM_O_DONO then @registro.gravar!(@comentario, FICA_COM_O_DONO)
     end
   end
 
