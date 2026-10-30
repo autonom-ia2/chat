@@ -85,9 +85,10 @@ module Crm::MetaAds::ComentariosIa::Conversa
                                    contact_inbox: contact_inbox, status: status, priority: priority)
   end
 
+  # Sem `antes_de`, o created_at nil fica com a hora de agora (o Rails só preenche o que veio vazio).
   def atividade!(conversation, texto, antes_de: nil)
     Message.create!(account_id: conversation.account_id, inbox_id: conversation.inbox_id, conversation: conversation,
-                    message_type: :activity, content: texto, **(antes_de ? { created_at: antes_de } : {}))
+                    message_type: :activity, content: texto, created_at: antes_de)
   end
 
   def comentou(comentario)
