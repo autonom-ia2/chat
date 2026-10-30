@@ -8,15 +8,15 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 | No catálogo | 680 |
 | Sem corpo | 198 |
 | Com corpo | 482 |
-| Com corpo e formato completo | 396 (82,2%) |
-| Com corpo e formato incompleto | 86 |
+| Com corpo e formato completo | 397 (82,4%) |
+| Com corpo e formato incompleto | 85 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 198 de 295 |
+| Leituras cruas tipadas | 197 de 291 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 72 |
+| leitura crua sem tipo | 71 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -118,7 +118,6 @@ Uma ação pode ter mais de um motivo.
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PUT relationships/configuration` — leitura crua sem tipo: configuration
-- `PUT seus_posts/posts/:post_id/cuidado` — leitura crua sem tipo: message, para_quem, phrases
 
 ## Leituras cruas sem tipo
 
@@ -210,9 +209,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/portals#update` portal.config.analytics — o código não converte nem compara o valor
 - `api/v1/accounts/relationships/configurations#update` configuration — o código não converte nem compara o valor
 - `api/v1/accounts/relationships/values#update` field — o código não converte nem compara o valor
-- `api/v1/accounts/seus_posts_cuidado#update` message — o código não converte nem compara o valor
-- `api/v1/accounts/seus_posts_cuidado#update` para_quem — o código não converte nem compara o valor
-- `api/v1/accounts/seus_posts_cuidado#update` phrases — o código não converte nem compara o valor
 - `api/v1/accounts/tiktok/authorizations#create` return_to — o código não converte nem compara o valor
 - `api/v1/accounts/whatsapp_calls#accept` sdp_answer — repassada a Whatsapp::CallService.new
 - `api/v1/accounts/whatsapp_calls#initiate` sdp_offer — repassada a provider_service.initiate_call

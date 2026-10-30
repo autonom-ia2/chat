@@ -45,4 +45,29 @@ RSpec.describe Crm::MetaAds::ComentariosIa::LerAntigosJob do
     expect(fonte).to have_received(:ler).once
     expect(care.reload.read_old_at).to be_nil
   end
+
+  it 'o perfil, a conexão ou o anúncio não existem mais: solta na hora, sem tentar de novo' do
+    allow(Crm::MetaAds::ComentariosIa::Fonte).to receive(:do_alvo).and_return(nil)
+
+    perform_enqueued_jobs { described_class.perform_later(account.id, alvo) }
+
+    expect(Crm::MetaAds::ComentariosIa::Fonte).to have_received(:do_alvo).once
+    expect(care.reload.read_old_at).to be_nil
+  end
+
+  it 'a leitura do anúncio falha antes dos comentários: Meta fora do ar tenta de novo; o resto solta na hora' do
+    allow(Crm::MetaAds::ComentariosIa::Fonte).to receive(:do_alvo).and_raise(Crm::MetaAds::AdManagement::Error.new('meta_unavailable'))
+
+    perform_enqueued_jobs { described_class.perform_later(account.id, alvo) }
+
+    expect(Crm::MetaAds::ComentariosIa::Fonte).to have_received(:do_alvo).exactly(described_class::TENTATIVAS).times
+    expect(care.reload.read_old_at).to be_nil
+
+    care.update!(read_old_at: Time.current)
+    allow(Crm::MetaAds::ComentariosIa::Fonte).to receive(:do_alvo).and_raise(Crm::MetaAds::AdManagement::Error.new('needs_login'))
+
+    perform_enqueued_jobs { described_class.perform_later(account.id, alvo) }
+
+    expect(care.reload.read_old_at).to be_nil
+  end
 end

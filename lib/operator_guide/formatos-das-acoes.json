@@ -19795,7 +19795,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:74",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:76",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -19809,6 +19809,10 @@
         "tipo": "string",
         "tipo_pela_leitura": "uso"
       },
+      "message": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      },
       "para_quem": {
         "max_caracteres": 500,
         "tipo": "string"
@@ -19816,15 +19820,26 @@
       "perfil": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
+      },
+      "phrases": {
+        "tipo": "lista"
+      },
+      "status": {
+        "padrao": "on",
+        "tipo": "string",
+        "um_de": [
+          "on",
+          "paused"
+        ]
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#previa",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:63",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:65",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:111",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:64",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
@@ -27185,9 +27200,20 @@
   },
   "PUT seus_posts/cuidados": {
     "campos": {
+      "message": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      },
+      "para_quem": {
+        "max_caracteres": 500,
+        "tipo": "string"
+      },
       "perfil": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
+      },
+      "phrases": {
+        "tipo": "lista"
       },
       "status": {
         "padrao": "on",
@@ -27202,8 +27228,8 @@
     "controller": "api/v1/accounts/seus_posts_cuidado#mudar_todos",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:37",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:38",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:39",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:111",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
     ],
     "sem_corpo": false
@@ -27220,22 +27246,17 @@
         "tipo": "string",
         "tipo_pela_leitura": "uso"
       },
-      "phrases": {},
-      "status": {
-        "tipo": "string",
-        "tipo_pela_leitura": "uso"
-      }
+      "phrases": {
+        "tipo": "lista"
+      },
+      "status": {}
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#update",
-    "motivos": [
-      "leitura crua sem tipo: message, para_quem, phrases"
-    ],
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:56",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:58",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:57",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:111",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:172",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:176",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
