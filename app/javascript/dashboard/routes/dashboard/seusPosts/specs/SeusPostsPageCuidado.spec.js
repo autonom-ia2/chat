@@ -206,6 +206,48 @@ describe('Seus posts: o cuidado da IA (#2212)', () => {
     expect(wrapper.find('[data-ia-resume-all]').exists()).toBe(true);
   });
 
+  it('trocar de perfil enquanto pausa: a lista que volta não entra no perfil novo', async () => {
+    responder(instagram());
+    cuidados([item('a', 'on')]);
+    let pausou;
+    ComentariosIaAPI.mudarTodos.mockReturnValue(
+      new Promise(resolve => {
+        pausou = resolve;
+      })
+    );
+    const wrapper = await montar();
+    await wrapper.find('[data-ia-pause-all]').trigger('click');
+
+    responder(instagram({ id: 'instagram-2' }));
+    cuidados([]);
+    route.query = { perfil: 'instagram-2' };
+    await flushPromises();
+    expect(ComentariosIaAPI.getCuidados).toHaveBeenLastCalledWith(
+      'instagram-2'
+    );
+    pausou({ data: { cuidados: [item('a', 'paused')] } });
+    await flushPromises();
+
+    expect(wrapper.find('[data-ia-band]').exists()).toBe(false);
+    expect(useAlert).not.toHaveBeenCalled();
+  });
+
+  it('a lista da faixa fica no DOM fechada: o aria-controls sempre aponta para ela', async () => {
+    responder(instagram());
+    cuidados([item('a', 'on')]);
+    const wrapper = await montar();
+    const botao = wrapper.find('[data-ia-band-toggle]');
+    const id = botao.attributes('aria-controls');
+    const lista = wrapper.find(`#${id}`);
+
+    // Montada fora do documento, isVisible não serve: o v-show é o display do elemento.
+    expect(lista.exists()).toBe(true);
+    expect(lista.element.style.display).toBe('none');
+    await botao.trigger('click');
+    expect(botao.attributes('aria-expanded')).toBe('true');
+    expect(lista.element.style.display).toBe('');
+  });
+
   it('falha ao pausar avisa e não muda a lista', async () => {
     responder(instagram());
     cuidados([item('a', 'on')]);

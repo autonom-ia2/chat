@@ -104,8 +104,9 @@ const format = value =>
       </div>
     </div>
 
+    <!-- v-show: a lista fica no DOM fechada, e o aria-controls do botão sempre aponta para ela. -->
     <ul
-      v-if="open"
+      v-show="open"
       id="ia-band-list"
       :aria-label="$t(`${KEY}.BAND.LIST_LABEL`)"
       class="m-0 flex list-none flex-col gap-1 p-0"
