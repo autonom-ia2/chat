@@ -134,6 +134,18 @@ RSpec.describe Autonomia::Agents::Material::Problemas do
     expect(do_tipo('autoteste_fora').sole['trechos']).to eq([])
   end
 
+  # Todos os trechos eram de material que saiu: o agente usou o material, então a tela não pode dizer que não usou nada.
+  it 'autoteste: com todos os trechos de material que saiu da base, o cartão vai sem o bloco' do
+    manual = material('manual.pdf')
+    item = { 'pergunta' => 'Tem carro reserva?', 'origem' => 'material', 'esperado' => 'Sim, 7 dias.', 'fonte' => manual.id,
+             'resposta' => 'Não tem.', 'equipe' => false, 'veredito' => 'errado',
+             'trechos' => [{ 'fonte' => 999_999, 'texto' => 'De um material apagado.' }] }
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste',
+                                                       { 'rodada' => 'r1', 'rodada_dos_itens' => 'r1', 'estado' => 'pronto', 'itens' => [item] })
+
+    expect(do_tipo('autoteste').sole).not_to have_key('trechos')
+  end
+
   it 'fora da Fase 2 ou na Lia: nada', :aggregate_failures do
     material('ficha.pdf', status: :failed, error: 'empty_extraction', trechos: [])
 
