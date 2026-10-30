@@ -380,11 +380,15 @@ const corrigirResposta = () =>
       </div>
 
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <p class="m-0 text-xs text-n-slate-11">
+        <p data-continua class="m-0 text-xs text-n-slate-11">
           {{
-            t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.CONTINUA', {
-              agente: nome,
-            })
+            atual.aviso
+              ? t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.CONTINUA_AVISO', {
+                  agente: nome,
+                })
+              : t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.CONTINUA', {
+                  agente: nome,
+                })
           }}
         </p>
         <button

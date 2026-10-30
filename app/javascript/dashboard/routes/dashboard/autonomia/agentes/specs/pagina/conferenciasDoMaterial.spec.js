@@ -144,6 +144,29 @@ describe('UmProblemaPorVez', () => {
     ]);
   });
 
+  // #1426 (t4e): no material grande a tabela sem cabeçalho é só aviso; o material continua em uso.
+  it('aviso do material grande diz que o agente já usa o material', () => {
+    const tabela = {
+      id: 'sem_cabecalho-6',
+      tipo: 'sem_cabecalho',
+      fontes: [6],
+      nome: 'manual.pdf',
+      amostra: ['Cláusula 63'],
+    };
+
+    expect(no(montarProblemas([tabela]), '[data-continua]').text()).toBe(
+      'Bia continua atendendo com o resto do material.'
+    );
+    expect(
+      no(
+        montarProblemas([{ ...tabela, aviso: true }]),
+        '[data-continua]'
+      ).text()
+    ).toBe(
+      'Bia já usa este material; o aviso só ajuda a deixar a tabela mais clara.'
+    );
+  });
+
   it('páginas de fora: quantas foram lidas, do total, de qual arquivo e por quê, sem código', async () => {
     const wrapper = montarProblemas([
       {

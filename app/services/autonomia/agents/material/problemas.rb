@@ -34,12 +34,20 @@ class Autonomia::Agents::Material::Problemas
       conferencia = fonte.metadata.to_h['conferencia'].to_h
       problema = conferencia['problema']
       next unless fonte.ready? && REPROVADOS.include?(problema)
-      next unless fonte.review_status == 'needs_resend' || (fonte.review_status == 'accepted' && conferencia['aviso'] == true)
 
-      { 'id' => "#{problema}-#{fonte.id}", 'tipo' => problema, 'fontes' => [fonte.id], 'nome' => nome(fonte),
-        'foto' => fonte.source_type == Autonomia::Agents::Source::FOTO,
-        'amostra' => Array(fonte.metadata.to_h.dig('conferencia', 'amostra')) }
+      aviso = fonte.review_status == 'accepted' && conferencia['aviso'] == true
+      next unless fonte.review_status == 'needs_resend' || aviso
+
+      reprovado(fonte, problema, aviso)
     end
+  end
+
+  # No aviso, a tela troca o rodapé: o material continua em uso.
+  def reprovado(fonte, problema, aviso)
+    item = { 'id' => "#{problema}-#{fonte.id}", 'tipo' => problema, 'fontes' => [fonte.id], 'nome' => nome(fonte),
+             'foto' => fonte.source_type == Autonomia::Agents::Source::FOTO,
+             'amostra' => Array(fonte.metadata.to_h.dig('conferencia', 'amostra')) }
+    aviso ? item.merge('aviso' => true) : item
   end
 
   # Mesmo texto (resumo exato do texto lido): fica o mais antigo, o outro é o candidato a sair.

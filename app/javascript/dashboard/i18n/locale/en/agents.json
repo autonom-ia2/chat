@@ -1594,6 +1594,7 @@
             "ROTULO": "What needs you in the material",
             "CONTAGEM": "Needs you · {atual} of {total}",
             "CONTINUA": "{agente} keeps answering with the rest of the material.",
+            "CONTINUA_AVISO": "{agente} already uses this material; this notice only helps make the table clearer.",
             "PULAR": "Skip for now",
             "VAZIO": {
               "TITULO": "{nome} is empty",

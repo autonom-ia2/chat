@@ -1594,6 +1594,7 @@
             "ROTULO": "O que precisa de você no material",
             "CONTAGEM": "Precisa de você · {atual} de {total}",
             "CONTINUA": "{agente} continua atendendo com o resto do material.",
+            "CONTINUA_AVISO": "{agente} já usa este material; o aviso só ajuda a deixar a tabela mais clara.",
             "PULAR": "Pular por agora",
             "VAZIO": {
               "TITULO": "{nome} está vazio",
