@@ -25,15 +25,36 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     expect(response).to have_http_status(:ok)
     document = Nokogiri::HTML(response.body)
     campo = document.at_css('[data-agents-niche-form]')
-    expect(radios(document, 'nicho').pluck('value')).to eq(%w[geral seguros])
+    expect(radios(document, 'nicho').pluck('value')).to eq(%w[padrao geral seguros])
     expect(radios(document, 'perfil').pluck('value')).to eq(%w[corretora seguradora insurtech saude_beneficios])
-    expect(radios(document, 'nicho').find { |radio| radio['checked'] }['value']).to eq('seguros')
+    expect(radios(document, 'nicho').find { |radio| radio['checked'] }['value']).to eq('padrao')
     expect(campo.css('select')).to be_empty
-    expect(campo.text.squish).to include('Default for this installation: Insurance · Broker')
+    expect(document.at_css('label:has(#agents-niche-padrao)').text.squish).to eq(
+      'Default for this installation Today: Insurance · Broker. Follows the installation if the default changes.'
+    )
     expect(campo.text.squish).to include(
       'The change shows the next time the team opens the dashboard. Funnels already created do not change. ' \
       'Existing agents only change through the Update with the new base button.'
     )
+  end
+
+  # Voltar ao padrão (#1429): a conta que escolheu mostra a própria escolha marcada, e não o cartão do padrão.
+  it 'marca a escolha da conta quando ela já escolheu' do
+    account.update!(internal_attributes: account.internal_attributes.merge(nicho_key => 'geral'))
+
+    with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:corretora') { get "#{path}/edit" }
+
+    expect(radios(Nokogiri::HTML(response.body), 'nicho').find { |radio| radio['checked'] }['value']).to eq('geral')
+  end
+
+  it 'mostra na prévia do padrão o texto do perfil padrão da instalação' do
+    account.update!(locale: 'pt_BR')
+
+    with_modified_env(AUTONOMIA_NICHO_PADRAO: 'seguros:saude_beneficios') { get "#{path}/edit" }
+
+    previa = Nokogiri::HTML(response.body).at_css('[data-agents-niche-preview="padrao"]')
+    expect(previa.css('[data-agents-niche-preview-chip]').map { |chip| chip.text.squish }).to eq(['Implantado', 'Não fechou'])
+    expect(previa['class']).to include('group-has-[#agents-niche-padrao:checked]/nicho:flex')
   end
 
   it 'explica o que a escolha muda' do
@@ -66,7 +87,7 @@ RSpec.describe 'Super Admin agents niche', type: :request do
     expect(previas).to eq(
       'corretora' => ['Seguro ativo', 'Não fechou'], 'seguradora' => ['Seguro ativo', 'Não fechou'],
       'insurtech' => ['Seguro ativo', 'Não fechou'], 'saude_beneficios' => ['Implantado', 'Não fechou'],
-      'geral' => %w[Ganho Perdido]
+      'geral' => %w[Ganho Perdido], 'padrao' => %w[Ganho Perdido]
     )
     expect(document.css('[data-agents-niche-profile] [data-agents-niche-preview]').size).to eq(4)
     expect(document.at_css('[data-agents-niche-preview="saude_beneficios"]')['class'])
@@ -82,7 +103,7 @@ RSpec.describe 'Super Admin agents niche', type: :request do
       classe = previa['class'].split.find { |nome| nome.start_with?('group-has-[#') }
       classe.delete_prefix('group-has-[#').split(':checked').first
     end
-    expect(alvos.size).to eq(5)
+    expect(alvos.size).to eq(6)
     expect(alvos).to all(satisfy { |id| id.exclude?('_') && document.at_css("##{id}").present? })
   end
 
@@ -186,6 +207,16 @@ RSpec.describe 'Super Admin agents niche', type: :request do
 
     expect(response).to have_http_status(:redirect)
     expect(account.reload.internal_attributes).to eq('unrelated' => 'preserved', 'autonomia_insurance_enabled' => true, nicho_key => 'geral')
+  end
+
+  it 'volta a conta ao padrão da instalação, mantendo as outras chaves' do
+    account.update!(internal_attributes: account.internal_attributes.merge(nicho_key => 'seguros', perfil_key => 'insurtech',
+                                                                           canal_key => 'parceiros'))
+
+    patch path, params: { account: { name: account.name, agents_niche: { nicho: 'padrao', perfil: 'insurtech', canal: 'parceiros' } } }
+
+    expect(response).to have_http_status(:redirect)
+    expect(account.reload.internal_attributes).to eq('unrelated' => 'preserved', 'autonomia_insurance_enabled' => true)
   end
 
   it 'não grava nicho fora da lista' do
