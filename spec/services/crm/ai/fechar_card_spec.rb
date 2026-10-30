@@ -500,6 +500,20 @@ RSpec.describe Crm::Ai::FecharCard do
       expect(sugestao.reload).to be_expired
     end
 
+    # Pega (#2389): um aceite sem pessoa (ator nil) ou pelo automático fechar o card como sistema.
+    it 'sem pessoa ou pelo automático: não fecha, e a sugestão expira', :aggregate_failures do
+      [{ actor: nil, auto: false }, { actor: admin, auto: true }].each do |modo|
+        card = novo_card
+        sugestao = sugerir(card, fim(confidence: 0.99))
+
+        Crm::Ai::SuggestionApplier.new(card: card, suggestion: sugestao, **modo).perform
+
+        expect(card.reload).to be_open
+        expect(sugestao.reload).to be_expired
+        expect(Crm::Activity.where(card: card, event_type: described_class::EVENTOS_DE_FECHAMENTO)).to be_empty
+      end
+    end
+
     it 'mensagem da equipe depois da leitura não impede o aceite' do
       card = novo_card
       sugestao = sugerir(card, fim(confidence: 0.8))

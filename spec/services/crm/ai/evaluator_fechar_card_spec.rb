@@ -112,6 +112,25 @@ RSpec.describe Crm::Ai::Evaluator do
       expect(retornos).to be_empty
     end
 
+    # #2389: a sugestão de fechar segue o caminho de qualquer sugestão de hoje (abaixo de 0,95 já era assim): o pedido de
+    # retorno da mesma leitura vira o lembrete na hora, e o aceite troca a data dele pela do "adiou" (um pendente por card).
+    [0.86, 0.99].each do |confianca|
+      it "confiança #{confianca}, com pedido de retorno detectado: lembrete na hora pedida; o aceite move para as 9 h", :aggregate_failures do
+        dia = fuso.today + 10
+        pedido = { detected: true, confidence: 0.9, requested_at: "#{dia.iso8601}T14:00", requested_at_text: 'dia tal à tarde' }
+        ia_responde(adiou.deep_merge(fechar_card: { confidence: confianca }, callback_request: pedido))
+
+        sugestao = avaliar.suggestion
+
+        expect(card.reload).to be_open
+        expect(retornos.sole.due_at).to eq(fuso.parse("#{dia.iso8601} 14:00"))
+        Crm::Ai::SuggestionApplier.new(card: card, suggestion: sugestao, actor: admin).perform
+        expect(card.reload).to be_lost
+        expect(retornos.sole).to have_attributes(due_at: as_nove(dia))
+        expect(retornos.sole.metadata).to include('motivo' => 'adiou')
+      end
+    end
+
     it 'recusou aceito: fecha sem lembrete' do
       ia_responde(adiou.deep_merge(fechar_card: { motivo: 'recusou' }))
 

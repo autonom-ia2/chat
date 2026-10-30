@@ -99,7 +99,8 @@ class Crm::Ai::FecharCard
   end
 
   # Regra do respeito de 24 h (Crm::Subjects::Applier): os cards da conta fechados pela IA desde `desde`, que nenhuma
-  # pessoa fechou ou reabriu depois. O fechamento da IA não é fechamento de uma pessoa.
+  # pessoa fechou ou reabriu depois. Legado: desde o #2389 a IA não fecha mais card (o aceite grava a pessoa como ator e
+  # não casa aqui), então só acha fechamentos de antes do deploy e fica vazio 24 h depois dele.
   def self.fechados_pela_ia(account, desde)
     recentes = Crm::Activity.where(account_id: account.id, created_at: desde..)
     pela_ia = recentes.where(event_type: EVENTOS_DE_FECHAMENTO, actor_type: 'system').where('payload @> ?', { by: 'ai' }.to_json)

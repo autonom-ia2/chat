@@ -775,7 +775,7 @@
 # Desligada (padrão): prompt, schema e comportamento iguais aos de antes. Sem migration, sem tela.
 # Posição 55 na feature_flags_ext_1 (1 << 54), definitiva da Orquestração (22/10).
 - name: crm_ia_fecha_card
-  display_name: CRM › IA fecha o card (perdido com motivo, resolvido)
+  display_name: CRM › IA sugere encerrar o card (perdido com motivo, resolvido)
   enabled: false
   column: feature_flags_ext_1
 
