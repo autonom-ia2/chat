@@ -233,7 +233,8 @@ const FIELD =
           />
           {{ $t(`${KEY}.WHAT.WRITING`) }}
         </p>
-        <!-- O campo cresce com a mensagem (field-sizing): no celular o começo inteiro aparece; acima do teto, rola. -->
+        <!-- O campo cresce com a mensagem (field-sizing): no celular o começo inteiro aparece; acima do teto, rola.
+             h-auto: o CSS base do painel fixa textarea em 4rem, e com altura fixa o field-sizing não age. -->
         <textarea
           id="ia-dono-message"
           v-model="message"
@@ -243,7 +244,7 @@ const FIELD =
           :aria-busy="writing"
           :placeholder="writing ? '' : $t(`${KEY}.WHAT.PLACEHOLDER`)"
           :class="[FIELD, { 'animate-pulse bg-n-alpha-1': writing }]"
-          class="max-h-96 min-h-[8.5rem] overflow-y-auto [field-sizing:content]"
+          class="h-auto max-h-96 min-h-[8.5rem] overflow-y-auto [field-sizing:content]"
         />
         <p
           v-if="tooLong"
