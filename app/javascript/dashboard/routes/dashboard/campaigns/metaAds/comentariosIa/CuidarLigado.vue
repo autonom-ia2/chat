@@ -36,8 +36,9 @@ const format = value =>
 const handle = item =>
   item.network === 'facebook' ? item.author : `@${item.author}`;
 // "Esperando você" sempre; "Escondi" só quando escondi algum. As perguntas que chegaram antes de ligar ficam num grupo
-// próprio, com "Ler e mandar": quem disse "Agora não" depois de ligar ainda pode voltar atrás.
-const BEFORE_KINDS = ['waiting', 'older', 'skipped'];
+// próprio, com "Ler e mandar": quem disse "Agora não" depois de ligar ainda pode voltar atrás. O que a IA já leu depois
+// de ligar e não era o caso (`skipped`) fica em "Esperando você": não é antigo nem volta para a fila.
+const BEFORE_KINDS = ['waiting', 'older'];
 const toSee = computed(() => props.data.to_see || []);
 const hidden = computed(() =>
   (props.data.hidden || []).map(item => ({ ...item, kind: 'hidden' }))
