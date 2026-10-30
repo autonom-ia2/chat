@@ -117,6 +117,7 @@
         "YOU_ASKED": "You asked for:",
         "PHRASE_EDIT": "Change the reply",
         "PHRASE_DONE": "Done",
+        "PHRASE_DEFAULT": "I sent you a DM 😊",
         "GETS_BEFORE": "It fits · came in before",
         "LOADING": "I'm reading the post's comments…",
         "PREVIEW_ERROR": "I couldn't read the post's comments right now. This is an example: you can turn it on anyway."

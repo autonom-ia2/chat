@@ -31,7 +31,12 @@ const PHRASE_LIMIT = 120;
 const RULES_MORE = ['SEVEN_DAYS', 'LIVE', 'REQUESTS', 'COMPLAINT'];
 const SUGGESTIONS = ['PRICE', 'LINK', 'CATALOG'];
 
-const phrases = computed(() => props.data.phrases || []);
+// O servidor não monta frase: o cuidado novo vem sem nenhuma, e a tela começa com a padrão, no idioma dela.
+const phrases = computed(() =>
+  props.data.phrases?.length
+    ? props.data.phrases
+    : [t('META_ADS_COMMENTS_AI.DONO.SEE.PHRASE_DEFAULT')]
+);
 const step = ref(1);
 const message = ref(props.data.message || '');
 const forWhom = ref(props.data.para_quem || '');
