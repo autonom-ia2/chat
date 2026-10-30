@@ -9,6 +9,8 @@
 #   registro carimba a devolução quando a pessoa é a origem da passagem aberta.
 # - Agente de IA: o serviço dos Agentes (Crm::Entrega::ParaIa.passar!), que troca o dono, solta a pessoa e grava a
 #   passagem ele mesmo. A recusa volta com o código, e a tela diz o porquê em linguagem simples.
+# - Quem pede pode ser o robô de outro sistema da caixa (o n8n, pelo token dele; a rota confere a caixa): só para agente
+#   de IA (`por: :ia`, e a pessoa no nome vence). Para pessoa ele tem o handoff, que passa pela Atribuição.
 #
 # A origem (quem passou para o agente que está com a conversa) vem da última passagem aberta: é o selo "Com Lia ·
 # passada por Ana" e o "Devolver para Ana" no topo da lista.
@@ -40,6 +42,7 @@ class Crm::PassarPara
 
   def passar!(tipo:, id:)
     return recusa('destino_invalido') unless TIPOS.include?(tipo.to_s) && id.to_i.positive?
+    return recusa('destino_invalido') if robo? && tipo.to_s != 'ia'
 
     tipo.to_s == 'ia' ? para_ia(id.to_i) : para_pessoa(id.to_i)
   end
@@ -86,7 +89,7 @@ class Crm::PassarPara
     agente = ::Autonomia::Agents::Agent.kept.find_by(account_id: @conversation.account_id, id: agent_id)
     return recusa('destino_invalido') if agente.nil?
 
-    codigo = Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: :pessoa, motivo: MOTIVO,
+    codigo = Crm::Entrega::ParaIa.passar!(conversation: @conversation, agent: agente, por: robo? ? :ia : :pessoa, motivo: MOTIVO,
                                           origem: quem_esta_agora, pedida_por: @usuario)
     OK_DA_IA.include?(codigo) ? Resultado.new(ok: true) : recusa(codigo)
   end
@@ -109,6 +112,10 @@ class Crm::PassarPara
   # Quem estava com a conversa antes de passar: o agente de IA dono, a pessoa no nome ou o robô (externo).
   def quem_esta_agora
     Crm::AgentesIa.dono(@conversation) || @conversation.assignee || @conversation.ai_assignee
+  end
+
+  def robo?
+    @usuario.is_a?(AgentBot)
   end
 
   def recusa(codigo)

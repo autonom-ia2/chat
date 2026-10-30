@@ -14147,8 +14147,8 @@
     "corpo_plano": false,
     "envelope": "destino",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:13",
-      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:33",
+      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:16",
+      "app/controllers/api/v1/accounts/conversations/passar_para_controller.rb:52",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false

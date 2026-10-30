@@ -3,7 +3,9 @@ module AccessTokenAuthHelper
     'api/v1/accounts/conversations' => %w[show toggle_status toggle_typing_status toggle_priority create update custom_attributes],
     'api/v1/accounts/conversations/messages' => ['create'],
     'api/v1/accounts/conversations/assignments' => ['create'],
-    'api/v1/accounts/conversations/labels' => %w[index create]
+    'api/v1/accounts/conversations/labels' => %w[index create],
+    # #1593: o robô de outro sistema (n8n) da caixa passa a conversa para um agente de IA. A guarda é do controller.
+    'api/v1/accounts/conversations/passar_para' => %w[show create]
   }.freeze
 
   def ensure_access_token
