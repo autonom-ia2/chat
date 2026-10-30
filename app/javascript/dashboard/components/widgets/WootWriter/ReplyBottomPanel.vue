@@ -208,8 +208,7 @@ export default {
     useKeyboardEvents(keyboardEvents);
     // #1702: "+" e Enviar verde na conversa com a cara do WhatsApp.
     // #2079: na conversa do Instagram, a pílula do Direct e o Enviar com o aviãozinho.
-    const { ehWhatsapp, ehInstagram, soTexto, classesDaResposta } =
-      usePeleDaResposta();
+    const { ehWhatsapp, ehInstagram, classesDaResposta } = usePeleDaResposta();
     // #1786: Aa, Modelos e Descartar na resposta da conversa de e-mail nova.
     const emailNovo = useEmailDaConversa().ligado;
 
@@ -217,7 +216,6 @@ export default {
       ehWhatsapp,
       ehInstagram,
       emailNovo,
-      soTexto,
       classesDaResposta,
       anexarArquivos,
       setSignatureFlagForInbox,
@@ -232,13 +230,11 @@ export default {
       uiFlags: 'integrations/getUIFlags',
     }),
     // #1702: com o campo vazio, o botão redondo da direita é o microfone (como no app).
-    // No número reserva (fora das 24 h) áudio não vai: fica o Enviar.
     microfoneNaDireita() {
       return (
         this.ehWhatsapp &&
         !this.isNote &&
         !this.isEditorDisabled &&
-        !this.soTexto &&
         this.showAudioRecorderButton &&
         this.campoVazio
       );

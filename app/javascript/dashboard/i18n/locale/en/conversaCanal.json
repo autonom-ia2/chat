@@ -39,8 +39,7 @@
       "ENQUETE": "Poll",
       "FORMULARIO": "Form",
       "DOCUMENTO": "Document",
-      "FOTOS_E_VIDEOS": "Photos & videos",
-      "SO_TEXTO": "Outside the 24 hours the reply goes through the backup number, as text only. Photos, audio and documents don't go."
+      "FOTOS_E_VIDEOS": "Photos & videos"
     },
     "JANELA": {
       "PREVIA": "What the customer will see",

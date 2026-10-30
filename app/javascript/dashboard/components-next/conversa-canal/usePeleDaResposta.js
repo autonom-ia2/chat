@@ -3,7 +3,6 @@
 // duas, classes vazias e a caixa de sempre.
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useMapGetter } from 'dashboard/composables/store';
 import { PELES, usePele } from './pele';
 import { CAIXA_DE_RESPOSTA } from './visualWhatsapp';
 import { useInstagramDaConversa } from './instagram/useConversaDoInstagram';
@@ -28,14 +27,9 @@ export const usePeleDaResposta = () => {
   const { t } = useI18n();
   const ehWhatsapp = computed(() => pele.value === PELES.WHATSAPP);
   const { ligado: ehInstagram } = useInstagramDaConversa();
-  // Caixa híbrida fora das 24 h: a resposta sai pelo número reserva, só em texto.
-  const conversa = useMapGetter('getSelectedChat');
   return {
     ehWhatsapp,
     ehInstagram,
-    soTexto: computed(
-      () => ehWhatsapp.value && Boolean(conversa.value?.whatsapp_api_reply)
-    ),
     classesDaResposta: computed(() => {
       if (ehWhatsapp.value) return CAIXA_DE_RESPOSTA;
       return ehInstagram.value ? CAIXA_DO_INSTAGRAM : VAZIO;

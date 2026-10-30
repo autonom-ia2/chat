@@ -34,12 +34,13 @@ const ehOficial = computed(
     props.caixa.channel_type === INBOX_TYPES.WHATSAPP &&
     props.caixa.provider === 'whatsapp_cloud'
 );
-// Caixa híbrida fora das 24 h: sai pelo número reserva, só texto. O servidor já decide
+// Caixa híbrida fora das 24 h: sai pelo número reserva. Arquivo vai (sendFile/sendImage/
+// sendVoice do WAHA); os formatos próprios da Meta viram texto. O servidor já decide
 // isso em `whatsapp_api_reply`, o mesmo campo do aviso de hoje.
 const conversa = useMapGetter('getSelectedChat');
-const soTexto = computed(() => Boolean(conversa.value?.whatsapp_api_reply));
+const pelaReserva = computed(() => Boolean(conversa.value?.whatsapp_api_reply));
 // Em texto: WAHA, 360dialog (o envio do #1473 só é nativo na Cloud API) e número reserva.
-const viraTexto = computed(() => !ehOficial.value || soTexto.value);
+const viraTexto = computed(() => !ehOficial.value || pelaReserva.value);
 
 const contaAtual = useMapGetter('getCurrentAccountId');
 const flagDaConta = useMapGetter('accounts/isFeatureEnabledonAccount');
@@ -120,13 +121,12 @@ const ITENS = [
     separado: true,
   },
 ];
-// Formulário só sai nativo. No número reserva arquivo não vai: o item some e o menu avisa.
+// Formulário só sai nativo.
 const itens = computed(() =>
   ITENS.filter(
     item =>
       (!item.soOficial || !viraTexto.value) &&
       (!item.soComEnquete || Boolean(enquete.value)) &&
-      (!SELETORES[item.tipo] || !soTexto.value) &&
       (!props.soArquivos || Boolean(SELETORES[item.tipo]))
   )
 );
@@ -214,13 +214,6 @@ const aoTeclar = evento => {
       role="menu"
       class="absolute bottom-full mb-2 ltr:left-0 rtl:right-0 z-30 w-max min-w-[176px] py-2 px-1.5 rounded-2xl bg-white dark:bg-[#242626] shadow-[0_2px_8px_rgba(0,0,0,0.16)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/10"
     >
-      <p
-        v-if="soTexto"
-        class="px-3 pt-1 pb-2 text-[13px] leading-snug text-[#666666] dark:text-[#A7A8A8]"
-        data-so-texto
-      >
-        {{ t('CONVERSA_CANAL.MAIS.SO_TEXTO') }}
-      </p>
       <template v-for="item in itens" :key="item.chave">
         <hr
           v-if="item.separado"

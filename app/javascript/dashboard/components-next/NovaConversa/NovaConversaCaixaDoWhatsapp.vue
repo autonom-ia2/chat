@@ -18,7 +18,6 @@ defineProps({
   canal: { type: Object, required: true },
   assinatura: { type: String, default: '' },
   comAssinatura: { type: Boolean, default: false },
-  soTexto: { type: Boolean, default: false },
   comRotulo: { type: Boolean, default: true },
 });
 const emit = defineEmits(['enviar']);
@@ -158,7 +157,6 @@ const tirarVoz = voz => {
           v-model:anexos="anexos"
           :canal="canal"
           :com-assinatura="comAssinatura"
-          :so-texto="soTexto"
           @inserir="inserir"
           @gravar="gravar"
         />

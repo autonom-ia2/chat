@@ -66,7 +66,6 @@ const montar = ({ meta = COM_IA, canal = EMAIL, conversa = true } = {}) => {
     oculta: ref(false),
     assunto: ref(''),
     ultimoEmail: ref(null),
-    soTexto: ref(false),
     meta: ref({ sender: { id: 2 }, ...meta }),
     carregar: vi.fn(),
   };

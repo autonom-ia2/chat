@@ -2,7 +2,6 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
-import { INBOX_TYPES } from 'dashboard/helper/inbox';
 import { nomeDoContatoNaTela } from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 import { useUISettings } from 'dashboard/composables/useUISettings';
 import { ExceptionWithMessage } from 'shared/helpers/CustomErrors';
@@ -124,13 +123,6 @@ export function useNovaConversa({
       !comModelo.value &&
       usaCaixaDoWhatsapp({ canal: canal.value, tipo: tipo.value })
   );
-  // Só texto: a caixa híbrida responde pelo número reserva (fora das 24 h). Na conversa
-  // nova do oficial, o texto livre só existe por esse número (`whatsapp_api_start`).
-  const soTexto = computed(() => {
-    if (!caixaDoWhatsapp.value) return false;
-    if (canal.value?.channelType !== INBOX_TYPES.WHATSAPP) return false;
-    return destino.value ? Boolean(continuar?.soTexto?.value) : true;
-  });
   const comAssinatura = computed(
     () =>
       (tipo.value === TIPOS.EMAIL || caixaDoWhatsapp.value) &&
@@ -520,7 +512,6 @@ export function useNovaConversa({
     comAssinatura,
     assinatura,
     caixaDoWhatsapp,
-    soTexto,
     falta,
     previa,
     enviando,

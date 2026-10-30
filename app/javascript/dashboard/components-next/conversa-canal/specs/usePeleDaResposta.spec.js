@@ -45,7 +45,6 @@ describe('usePeleDaResposta (#1702)', () => {
     const r = usar({ pele: undefined });
     expect(r.ehWhatsapp.value).toBe(false);
     expect(r.textoDoCampo.value).toBe('');
-    expect(r.soTexto.value).toBe(false);
     expect(Object.values(r.classesDaResposta.value).every(v => v === '')).toBe(
       true
     );
@@ -56,14 +55,6 @@ describe('usePeleDaResposta (#1702)', () => {
     expect(r.ehWhatsapp.value).toBe(true);
     expect(r.textoDoCampo.value).toBe('Digite uma mensagem');
     expect(r.classesDaResposta.value.enviar).not.toBe('');
-  });
-
-  it('número reserva fora das 24 h: só texto', () => {
-    const r = usar({
-      pele: PELES.WHATSAPP,
-      conversa: { whatsapp_api_reply: true },
-    });
-    expect(r.soTexto.value).toBe(true);
   });
 });
 

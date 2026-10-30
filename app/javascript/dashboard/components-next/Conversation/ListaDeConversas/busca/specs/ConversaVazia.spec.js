@@ -75,7 +75,6 @@ const nova = {
   destino: ref(null),
   comModelo: ref(false),
   caixaDoWhatsapp: ref(false),
-  soTexto: ref(false),
   assinatura: ref(''),
   comAssinatura: ref(false),
   falta: ref(''),
