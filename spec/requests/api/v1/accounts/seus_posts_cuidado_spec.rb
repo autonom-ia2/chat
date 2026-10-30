@@ -106,7 +106,7 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
   it 'prévia: decide com o "para quem" do dono' do
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
-    allow(classificador).to receive(:decidir) { |texto| { 'Quero o e-book' => 'private', 'Lindo!' => 'no_reply' }[texto] }
+    allow(classificador).to receive(:decidir!) { |texto| { 'Quero o e-book' => 'private', 'Lindo!' => 'no_reply' }[texto] }
 
     post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
 
