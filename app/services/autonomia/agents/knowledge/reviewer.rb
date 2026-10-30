@@ -506,11 +506,29 @@ module Autonomia
         def com_conferencia(attrs)
           return attrs unless @source.kind_knowledge? && Autonomia::Agents::Material.conferir?(@agent)
 
-          conferencia = conferir_material if attrs[:review_status] == 'accepted'
+          conferencia = conferencia_do_parecer(attrs)
           conferido = attrs.merge(metadata: metadata_conferida(conferencia))
-          return conferido if conferencia.nil? || conferencia['problema'].nil?
+          return conferido unless reprova?(conferencia)
 
           conferido.merge(review_status: 'needs_resend', review_summary: nil)
+        end
+
+        def conferencia_do_parecer(attrs)
+          return unless attrs[:review_status] == 'accepted'
+
+          conferencia = conferir_material
+          aviso_no_material_grande?(conferencia) ? conferencia.merge('aviso' => true) : conferencia
+        end
+
+        def reprova?(conferencia)
+          conferencia.present? && conferencia['problema'].present? && !conferencia['aviso']
+        end
+
+        # #1426 (t4e, decisão do Rodrigo de 30/10): no material grande (o PDF lido em seções), uma tabela sem cabeçalho não
+        # tira o material inteiro da base. Vira aviso: o material segue aceito e o cartão aparece com "Pular por agora".
+        def aviso_no_material_grande?(conferencia)
+          conferencia.present? && conferencia['problema'] == 'sem_cabecalho' &&
+            @source.knowledge_entries.where("metadata ? 'paginas'").exists?
         end
 
         def metadata_conferida(conferencia)

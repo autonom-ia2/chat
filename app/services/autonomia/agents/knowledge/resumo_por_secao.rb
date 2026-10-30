@@ -8,9 +8,10 @@
 # o material nunca fica "pronto" sem parecer. Cada seção anota o progresso ("página X de N"), confere se a leitura ainda é
 # a vigente, e nenhuma seção nova começa depois do PRAZO (fica o que já foi resumido).
 #
-# CUSTO: sem teto por material (decisão do Rodrigo, 30/10: a leitura usa a chave de IA da conta e não é travada por
-# gasto). Uma chamada por seção (no máximo 12, no PDF de 300 páginas), uma vez por leitura (e de novo no "Ler de novo"). O
-# consumo vai para a Gestão IA com o rótulo `kb_resumo_por_secao`, pelo ResponsesClient.
+# CUSTO: sem teto por material (decisões do Rodrigo, 30/10: a leitura não é travada por gasto; usa a chave de IA da conta
+# e, sem ela, a da plataforma, como o Revisor e o classificador). Uma chamada por seção (no máximo 12, no PDF de 300
+# páginas), uma vez por leitura (e de novo no "Ler de novo"). O consumo vai para a Gestão IA com o rótulo
+# `kb_resumo_por_secao`, pelo ResponsesClient.
 # Best-effort: seção que falhou fica fora do índice, e a falta de IA nunca derruba a leitura. Material sem seções, fora
 # da Fase 2 ou da Lia: nada.
 class Autonomia::Agents::Knowledge::ResumoPorSecao

@@ -5,7 +5,9 @@
 # de imagem; texto corrido não tem tabela). Nunca lista de palavras nem regex (regra do Rodrigo, 20/09/2026).
 #
 # Leitura ruim ou tabela sem cabeçalho REPROVAM o material (needs_resend): o agente não o usa até a pessoa resolver.
-# A amostra da primeira linha da tabela só vale se for texto que está mesmo no material (conferido por `include?`).
+# A amostra da primeira linha da tabela só vale se for texto que está mesmo no material (conferido por `include?`). #1426
+# (t4e, decisão do Rodrigo de 30/10): sem nenhuma célula conferida não há prova de tabela, e o material não é reprovado
+# (no eval, um manual de 300 páginas era reprovado por uma tabela que o modelo não conseguia apontar).
 #
 # -> { 'problema' => 'ocr' | 'sem_cabecalho' | nil, 'amostra' => [...] }, ou nil quando a IA falhou (nada é reprovado
 # por falha nossa).
@@ -79,7 +81,10 @@ class Autonomia::Agents::Material::ConferenciaDoMaterial
     return { 'problema' => 'ocr', 'amostra' => [] } if saida['leitura'] == 'ruim'
     return { 'problema' => nil, 'amostra' => [] } unless saida['tabela'] == 'sem_cabecalho'
 
-    { 'problema' => 'sem_cabecalho', 'amostra' => amostra_conferida(saida['primeira_linha']) }
+    amostra = amostra_conferida(saida['primeira_linha'])
+    return { 'problema' => nil, 'amostra' => [] } if amostra.empty?
+
+    { 'problema' => 'sem_cabecalho', 'amostra' => amostra }
   end
 
   # Só célula que está mesmo no texto do material, curta, até 8.

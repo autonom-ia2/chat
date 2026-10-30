@@ -27,11 +27,14 @@ class Autonomia::Agents::Material::Problemas
            .map { |fonte| { 'id' => "vazio-#{fonte.id}", 'tipo' => 'vazio', 'fontes' => [fonte.id], 'nome' => nome(fonte) } }
   end
 
-  # Leitura ruim e tabela sem cabeçalho: só enquanto a reprovação for a da conferência vigente.
+  # Leitura ruim e tabela sem cabeçalho: só enquanto a reprovação for a da conferência vigente. #1426 (t4e): no material
+  # grande, a tabela sem cabeçalho é aviso (`aviso` na conferência) e o material segue aceito; o cartão aparece do mesmo jeito.
   def reprovados
     @fontes.filter_map do |fonte|
-      problema = fonte.metadata.to_h.dig('conferencia', 'problema')
-      next unless fonte.ready? && fonte.review_status == 'needs_resend' && REPROVADOS.include?(problema)
+      conferencia = fonte.metadata.to_h['conferencia'].to_h
+      problema = conferencia['problema']
+      next unless fonte.ready? && REPROVADOS.include?(problema)
+      next unless fonte.review_status == 'needs_resend' || (fonte.review_status == 'accepted' && conferencia['aviso'] == true)
 
       { 'id' => "#{problema}-#{fonte.id}", 'tipo' => problema, 'fontes' => [fonte.id], 'nome' => nome(fonte),
         'foto' => fonte.source_type == Autonomia::Agents::Source::FOTO,
