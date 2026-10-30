@@ -28,15 +28,13 @@ class Crm::MetaAds::ComentariosIa::Classificador
     @jev = jev
   end
 
-  # A chave da decisão ('private', 'price', 'to_you', 'hide', 'no_reply') ou nil.
-  def decidir(texto)
+  # A chave da decisão ('private', 'price', 'to_you', 'hide', 'no_reply') ou nil (sem certeza). O Jev fora do ar
+  # levanta TypesafeAi::Decisor::Error: "sem certeza" não é "não deu para perguntar". O motor tenta de novo (CuidarJob).
+  def decidir!(texto)
     return if texto.to_s.strip.empty?
 
     resultado = @jev.decidir(decisor: decisor, estado: Autonomia::Decisores::Estado.new(texto: texto, leituras: []))
     resultado.resposta if resultado.certeza >= CERTEZA_MINIMA
-  rescue TypesafeAi::Decisor::Error => e
-    Rails.logger.warn("[comentarios_ia] care=#{@care.id} jev=#{e.code}")
-    nil
   end
 
   private

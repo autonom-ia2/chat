@@ -11,7 +11,8 @@
 # As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
 # Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
-# passada à pessoa) e private_reply_failed (o privado que a Meta recusou). As duas últimas formam o "Para você ver".
+# passada à pessoa), private_reply_failed (o privado que a Meta recusou) e ai_unread (a Meta ou o Jev não responderam
+# em nenhuma tentativa: o comentário fica com a pessoa). As três últimas formam o "Para você ver".
 module Crm::MetaAds::ComentariosIa::Registro
   ACTOR = 'ai'.freeze
   LIDO = 'ai_seen'.freeze
