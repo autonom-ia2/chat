@@ -35,10 +35,13 @@ class Crm::MetaAds::FacebookComments
   # Limite de texto de comentário no Facebook.
   MESSAGE_MAX = 8000
 
-  def initialize(connection, inbox_access:, can_manage: false)
+  # management: a Crm::MetaAds::AdManagement que já leu o anúncio, quando quem chama já a tem (IA dos comentários,
+  # #2212): ela guarda a leitura, e o criativo não é lido de novo. Sem ela, uma nova.
+  def initialize(connection, inbox_access:, can_manage: false, management: nil)
     @connection = connection
     @inbox_access = inbox_access
     @can_manage = can_manage
+    @management = management || Crm::MetaAds::AdManagement.new(connection)
   end
 
   def list(ad_id)
@@ -162,12 +165,8 @@ class Crm::MetaAds::FacebookComments
     end
   end
 
-  def management
-    @management ||= Crm::MetaAds::AdManagement.new(@connection)
-  end
-
   def post_id_for(ad_id)
-    ad = management.ad(ad_id)
+    ad = @management.ad(ad_id)
     raise Error, 'ad_not_found' if ad.nil?
 
     ad.dig('creative', 'effective_object_story_id')

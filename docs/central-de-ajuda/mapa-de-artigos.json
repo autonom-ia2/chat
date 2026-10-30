@@ -4003,6 +4003,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.33",
+     "titulo": "Deixar a IA cuidar dos comentários de um anúncio",
+     "para_que_serve": "Escrever a mensagem do privado e dizer para quem ela vai; a IA lê cada comentário novo do anúncio e manda só para quem for o caso.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "campaigns_meta_ads_cuidar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "campaigns_meta_ads_cuidar",
+      "destaque": null
+     },
+     "requer": "meta_ads_comentarios_ia",
+     "prints": [],
+     "fontes": [
+      "porques: ia_cuida_dos_comentarios_de_um_anuncio"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

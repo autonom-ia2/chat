@@ -24,11 +24,23 @@
       "BACK_POST": "Back to the post",
       "BACK_AD": "Back to the ad",
       "FROM_POST": "Instagram post",
-      "FROM_AD": "Ad on Instagram and Facebook",
+      "FROM_AD": "Ad on Instagram",
+      "FROM_AD_FACEBOOK": "Ad on Facebook",
+      "FROM_AD_BOTH": "Ad on Instagram and Facebook",
       "FROM_PAGE": "Facebook Page post",
       "READING": "I'm reading your post…",
       "ERROR": "I couldn't read the post right now.",
+      "ERROR_AD": "I couldn't read the ad right now.",
       "RETRY": "Try again",
+      "PROBLEM": {
+        "no_post": "This ad doesn't run on a network where I look after comments.",
+        "no_inbox": "Connect the inbox of this ad's network (the Instagram account or the Facebook Page) so I can look after the comments.",
+        "needs_login": "The Meta connection expired. Sign in to Meta again so I can read the comments.",
+        "needs_permission": "Meta is missing a permission for me to read the comments.",
+        "not_connected": "The Meta ad account isn't connected.",
+        "ad_not_found": "I couldn't find this ad in your ad account.",
+        "meta_unavailable": "Meta didn't answer right now."
+      },
       "NO_ACCESS": "You don't have access to comment care on this post.",
       "SAVE_ERROR": "I couldn't save it right now. Try again.",
       "OFF_READONLY": {
@@ -73,6 +85,7 @@
         "already_sent": "This person already got the DM for this post. Continue in the inbox.",
         "unread": "I didn't handle this comment. Reply yourself, if you want.",
         "unsure": "I'm not sure the DM went out: Meta didn't answer. Check the inbox before you reply.",
+        "no_private": "A question. Sending a private message doesn't work here yet: reply in the comment.",
         "paused": "Came in while paused. Reply in the comment if you want.",
         "waiting": "Came in before you turned it on. Reply in the comment if you want.",
         "older": "Older than 7 days: I can't send a DM anymore. Reply in the comment.",
@@ -150,6 +163,14 @@
         "CONFIRM": "Read and send",
         "BACK": "Not now"
       }
+    },
+    "ENTRY": {
+      "TITLE": "AI takes care of the comments",
+      "TEXT": "It replies to whoever comments, sends the private message where the network allows it and hides spam. What isn't its call stays with you.",
+      "START": "Take care of comments",
+      "CHANGE": "See and change",
+      "SEE": "See",
+      "ERROR": "I couldn't check whether I already look after this ad."
     }
   }
 }

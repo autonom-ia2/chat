@@ -15833,6 +15833,47 @@
     ],
     "sem_corpo": false
   },
+  "POST crm/meta_ads_connection/ads/:ad_id/cuidado/ler_antigos": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#ler_antigos",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:77",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
+    ],
+    "sem_corpo": true
+  },
+  "POST crm/meta_ads_connection/ads/:ad_id/cuidado/previa": {
+    "campos": {
+      "message": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      },
+      "para_quem": {
+        "max_caracteres": 500,
+        "tipo": "string"
+      },
+      "phrases": {
+        "tipo": "lista"
+      },
+      "status": {
+        "padrao": "on",
+        "tipo": "string",
+        "um_de": [
+          "on",
+          "paused"
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#previa",
+    "modelo": "Crm::MetaAdsCommentCare",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:66",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:141",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
+    ],
+    "sem_corpo": false
+  },
   "POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply": {
     "campos": {
       "content": {}
@@ -24692,6 +24733,24 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:61",
       "app/controllers/api/v1/accounts/crm/meta_ads_connections_controller.rb:273"
+    ],
+    "sem_corpo": false
+  },
+  "PUT crm/meta_ads_connection/ads/:ad_id/cuidado": {
+    "campos": {
+      "message": {},
+      "para_quem": {},
+      "phrases": {
+        "tipo": "lista"
+      },
+      "status": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:59",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:141",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
     ],
     "sem_corpo": false
   },

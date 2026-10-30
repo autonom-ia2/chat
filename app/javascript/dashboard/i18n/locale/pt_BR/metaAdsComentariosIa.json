@@ -24,11 +24,23 @@
       "BACK_POST": "Voltar para o post",
       "BACK_AD": "Voltar para o anúncio",
       "FROM_POST": "Post do Instagram",
-      "FROM_AD": "Anúncio no Instagram e no Facebook",
+      "FROM_AD": "Anúncio no Instagram",
+      "FROM_AD_FACEBOOK": "Anúncio no Facebook",
+      "FROM_AD_BOTH": "Anúncio no Instagram e no Facebook",
       "FROM_PAGE": "Post da Página no Facebook",
       "READING": "Estou lendo o seu post…",
       "ERROR": "Não consegui ler o post agora.",
+      "ERROR_AD": "Não consegui ler o anúncio agora.",
       "RETRY": "Tentar de novo",
+      "PROBLEM": {
+        "no_post": "Este anúncio não aparece numa rede em que eu cuido dos comentários.",
+        "no_inbox": "Conecte a caixa da rede deste anúncio (a conta do Instagram ou a Página do Facebook) para eu cuidar dos comentários.",
+        "needs_login": "A conexão com a Meta venceu. Entre de novo na Meta para eu ler os comentários.",
+        "needs_permission": "Falta uma permissão da Meta para eu ler os comentários.",
+        "not_connected": "A conta de anúncios da Meta não está conectada.",
+        "ad_not_found": "Não achei este anúncio na sua conta de anúncios.",
+        "meta_unavailable": "A Meta não respondeu agora."
+      },
       "NO_ACCESS": "Você não tem acesso ao cuidado dos comentários deste post.",
       "SAVE_ERROR": "Não consegui guardar agora. Tente de novo.",
       "OFF_READONLY": {
@@ -73,6 +85,7 @@
         "already_sent": "Esta pessoa já recebeu o privado deste post. Continue pela caixa.",
         "unread": "Não cuidei deste comentário. Responda você, se quiser.",
         "unsure": "Não sei se o privado saiu: a Meta não respondeu. Confira no direct antes de responder.",
+        "no_private": "Pergunta. Mandar no privado ainda não dá aqui: responda no comentário.",
         "paused": "Chegou com o cuidado pausado. Responda no comentário, se quiser.",
         "waiting": "Chegou antes de você ligar. Responda no comentário, se quiser.",
         "older": "Mais de 7 dias: não dá mais para mandar no privado. Responda no comentário.",
@@ -150,6 +163,14 @@
         "CONFIRM": "Ler e mandar",
         "BACK": "Agora não"
       }
+    },
+    "ENTRY": {
+      "TITLE": "A IA cuida dos comentários",
+      "TEXT": "Ela responde quem comenta, manda o privado onde a rede deixa e esconde propaganda. O que não for com ela fica com você.",
+      "START": "Cuidar dos comentários",
+      "CHANGE": "Ver e mudar",
+      "SEE": "Ver",
+      "ERROR": "Não consegui ver se eu já cuido deste anúncio."
     }
   }
 }

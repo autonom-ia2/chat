@@ -346,4 +346,97 @@ describe('CuidarComentarios (#2212)', () => {
     await flushPromises();
     expect(wrapper.find('[data-ia-dono]').exists()).toBe(true);
   });
+
+  it('pergunta que era o caso, sem privado possível: em "Esperando você", com o porquê', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        network: 'facebook',
+        private_available: false,
+        para_quem: 'Quem pedir o e-book',
+        to_see: [
+          {
+            id: 'c-1',
+            network: 'facebook',
+            author: 'Carla',
+            text: 'Quanto custa?',
+            kind: 'no_private',
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    expect(wrapper.find('[data-ia-to-see-row="no_private"]').text()).toContain(
+      'Mandar no privado ainda não dá aqui: responda no comentário.'
+    );
+  });
+
+  const falhaCom = (status, error) =>
+    Object.assign(new Error('x'), { response: { status, data: { error } } });
+
+  it.each([
+    [422, 'no_post', 'não aparece numa rede'],
+    [422, 'no_inbox', 'Conecte a caixa'],
+    [422, 'needs_login', 'Entre de novo na Meta'],
+    [404, 'not_connected', 'não está conectada'],
+    [404, 'ad_not_found', 'Não achei este anúncio'],
+  ])(
+    'erro %s %s: diz o motivo, sem "Tentar de novo" (tentar não cura)',
+    async (status, codigo, texto) => {
+      ComentariosIaAPI.getCuidado.mockRejectedValue(falhaCom(status, codigo));
+      const wrapper = await montar({ origin: 'anuncio' });
+
+      expect(wrapper.find('[data-ia-error]').text()).toContain(texto);
+      expect(wrapper.find('[data-ia-error] button').exists()).toBe(false);
+    }
+  );
+
+  it('Meta fora do ar: diz e oferece tentar de novo', async () => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(
+      falhaCom(422, 'meta_unavailable')
+    );
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    expect(wrapper.find('[data-ia-error]').text()).toContain(
+      'A Meta não respondeu'
+    );
+    expect(wrapper.find('[data-ia-error] button').exists()).toBe(true);
+  });
+
+  it('no anúncio, o erro genérico não fala em "post"', async () => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(
+      Object.assign(new Error('x'), { response: { status: 500 } })
+    );
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    const texto = wrapper.find('[data-ia-error]').text();
+    expect(texto).toContain('Não consegui ler o anúncio agora.');
+    expect(texto).not.toContain('post');
+  });
+
+  it('Painel sem a lista (status needs_login): o aviso diz o motivo', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({ care: 'on', para_quem: 'x', status: 'needs_login' }),
+    });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    const aviso = wrapper.find('[data-ia-painel-problem]');
+    expect(aviso.text()).toContain('Entre de novo na Meta');
+    expect(aviso.find('button').exists()).toBe(false);
+    expect(wrapper.find('[data-ia-on]').exists()).toBe(true);
+  });
+
+  it('Painel sem a lista (Meta fora do ar): o aviso oferece tentar de novo', async () => {
+    ComentariosIaAPI.getCuidado
+      .mockResolvedValueOnce({
+        data: painel({ care: 'on', status: 'meta_unavailable' }),
+      })
+      .mockResolvedValueOnce({ data: painel({ care: 'on', status: 'ready' }) });
+    const wrapper = await montar({ origin: 'anuncio' });
+
+    await wrapper.find('[data-ia-painel-problem] button').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('[data-ia-painel-problem]').exists()).toBe(false);
+  });
 });

@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (245 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (246 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -1067,6 +1067,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra o post em Seus posts e veja O que tem nos comentários; 2. Clique em Cuidar dos comentários; 3. Escreva a mensagem que a pessoa recebe no privado (pode ter link, catálogo, cupom ou preço); 4. Em Para quem, toque numa sugestão ou escreva do seu jeito; 5. Veja como fica com os comentários do próprio post e, se quiser, mude a frase que vai no comentário; 6. Clique em Ligar; 7. Se houver comentários de antes, escolha Ler e mandar ou Agora não; 8. Para parar, use Pausar no post, ou Pausar todos na faixa de Seus posts.
 - gotchas: a IA lê cada comentário e manda só para quem for o caso do Para quem, e escreve no comentário que mandou no privado; quem não é o caso fica com você, como Não se aplica; reclamação nunca recebe a mensagem e vai para a caixa como urgente; propaganda ou golpe a IA esconde, em Escondi; cada pessoa recebe uma mensagem só por post; comentário com mais de 7 dias não recebe no privado; Ler e mandar roda uma vez por cuidado ligado e só alcança os comentários de até 7 dias; no Facebook, mandar no privado ainda não está liberado (Em breve) até a Meta liberar o Messenger; pausar faz os comentários novos ficarem com você na caixa; ligar, mudar, pausar e Ler e mandar ficam no histórico de auditoria da conta, sem o texto; o texto dos comentários não é guardado, é lido na hora.
 - nav_target: `seus_posts_cuidar`
+
+### Deixar a IA cuidar dos comentários de um anúncio
+- intent: Como faço a IA responder os comentários do meu anúncio?; Como mando no privado para quem comentar no anúncio pedindo o preço?; A IA pode cuidar dos comentários do anúncio no Instagram e no Facebook?; Como pauso a IA nos comentários do anúncio?; Por que não aparece Cuidar dos comentários no meu anúncio?; Por que diz que falta a caixa da Página?
+- onde_fica: Menu lateral > Campanhas > Anúncios > aba Resultado > abrir um anúncio > A IA cuida dos comentários (acima dos comentários do anúncio)
+- rota: `campaigns_meta_ads_cuidar` - `/app/accounts/:accountId/campaigns/meta-ads/anuncios/:adId/cuidar`
+- gate: feature flag `meta_ads_comentarios_ia`; papel `administrator` ou `meta_ads_view` ou `meta_ads_manage`
+- pre_requisitos: a conexão com a conta de anúncios; a conta com a gestão do anúncio, os comentários do anúncio (Instagram, Facebook ou os dois) e a IA nos comentários ligados; ver é de quem vê os anúncios; ligar, mudar, pausar e Ler e mandar pedem administrador ou uma função com Anúncios em Editar; a caixa do Instagram ou da Página do anúncio conectada na conta, e estar nela.
+- passos: 1. Em Anúncios, aba Resultado, abra o anúncio; 2. Em A IA cuida dos comentários, clique em Cuidar dos comentários; 3. Escreva a mensagem que a pessoa recebe no privado; 4. Em Para quem, toque numa sugestão ou escreva do seu jeito; 5. Veja como fica com os comentários do próprio anúncio e, se quiser, mude a frase que vai no comentário; 6. Clique em Ligar; 7. Se houver comentários de antes, escolha Ler e mandar ou Agora não; 8. Para parar, abra de novo e use Pausar.
+- gotchas: o mesmo cuidado vale para o anúncio no Instagram e no Facebook, nas redes em que ele roda e cuja caixa está na conta; no anúncio aberto, o selo mostra Cuidando dos comentários ou Pausado; a IA manda no privado só para quem for o caso do Para quem; reclamação nunca recebe a mensagem e vai para a caixa como urgente; propaganda ou golpe a IA esconde; cada pessoa recebe uma mensagem só por post; comentário com mais de 7 dias não recebe no privado; Ler e mandar roda uma vez por cuidado ligado; no Facebook, mandar no privado ainda não está liberado (Em breve); sem a caixa da Página ou do Instagram do anúncio na conta, a tela avisa e não liga; quem não está na caixa do anúncio não abre a tela; ligar, mudar, pausar e Ler e mandar ficam no histórico de auditoria da conta, sem o texto; o texto dos comentários não é guardado, é lido na hora.
+- nav_target: `campaigns_meta_ads_cuidar`
 
 ### Ver todas as origens de um contato no CRM
 - intent: O que é o +2 ao lado da origem no card do CRM?; Como vejo todas as campanhas que trouxeram este contato?; Onde vejo o primeiro e o último anúncio que o cliente clicou?; Por que a origem mostra ID e um número?

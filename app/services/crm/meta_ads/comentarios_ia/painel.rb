@@ -7,9 +7,9 @@
 #   (Crm::MetaAdsCommentAction, actor 'ai'). Recebeu no privado e respondeu: pelas conversas que nasceram do cuidado.
 # - "Esperando você" (`to_see`) é o que ficou com o dono, com o porquê: reclamação, privado recusado, privado que pode
 #   ter saído (a Meta não respondeu), não cuidei (Meta ou Jev fora do ar, teto do dia, sem certeza), mais de 7 dias,
-#   não era o caso (a IA leu e não agiu), chegou antes de ligar (`started_at`) ou chegou com o cuidado pausado
-#   (`paused`). O que chegou depois de ligar, com o cuidado ligado, e a IA ainda não leu está na fila dela: não entra.
-#   "Escondi" (`hidden`): o que a IA escondeu.
+#   era o caso do privado, mas ele não sai ali (`no_private`), não era o caso (a IA leu e não agiu), chegou antes de
+#   ligar (`started_at`) ou chegou com o cuidado pausado (`paused`). O que chegou depois de ligar, com o cuidado ligado,
+#   e a IA ainda não leu está na fila dela: não entra. "Escondi" (`hidden`): o que a IA escondeu.
 # - "Ler e mandar": uma vez por cuidado ligado (trava atômica em `read_old_at`), o LerAntigosJob põe os comentários de
 #   até 7 dias que chegaram antes de ligar na fila do motor, como comentários novos. Quem não é o caso fica com o dono.
 class Crm::MetaAds::ComentariosIa::Painel
@@ -26,8 +26,8 @@ class Crm::MetaAds::ComentariosIa::Painel
   # A rede que já deixa a IA mandar o privado (Rede#privado_disponivel?): o Facebook espera a pages_messaging (F4).
   PRIVADO_LIBERADO = %w[instagram].freeze
   MOTIVO_DA_ACAO = {
-    'to_you' => 'complaint', 'private_reply_failed' => 'failed', 'private_reply_unsure' => 'unsure', 'ai_unread' => 'unread',
-    'private_reply_already' => 'already_sent'
+    'to_you' => 'complaint', 'private_reply_failed' => 'failed', 'private_reply_unsure' => 'unsure',
+    'kept_for_owner' => 'no_private', 'ai_unread' => 'unread', 'private_reply_already' => 'already_sent'
   }.freeze
 
   CARE_ID = Arel.sql("conversations.additional_attributes -> 'meta_ads_comment' ->> 'care_id'")
@@ -81,6 +81,7 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   def payload
+    acompanhar_o_criativo!
     lido = @fonte.ler
     return cuidado_payload.merge(status: lido[:status], unanswered: 0, older: 0, to_see: [], hidden: []) unless lido[:status] == 'ready'
 
@@ -124,6 +125,21 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   private
+
+  # O anúncio cujo criativo trocou de post (ou de redes): o cuidado passa a ter os de agora, lidos na hora (Anuncio), para
+  # o motor achar o comentário que chega só com o id do post novo. É registro do que a Meta diz, não escolha de quem
+  # abre a tela: por isso vale também para quem só vê. Grava só essas colunas (o que o dono escreveu não muda, e um
+  # cuidado antigo que não passasse numa validação nova não pode derrubar a tela), e só se a linha ainda tem o que foi
+  # lido (compare-and-set): um `salvar!` ao mesmo tempo não é atropelado. Sem mudança, nada é gravado.
+  def acompanhar_o_criativo!
+    return unless target_kind == 'ad' && cuidado && @networks.any?
+    return if cuidado.post_ids == @post_ids && cuidado.network == rede_do_cuidado
+
+    Crm::MetaAdsCommentCare.where(id: cuidado.id, network: cuidado.network)
+                           .where('post_ids = ?::jsonb', cuidado.post_ids.to_json)
+                           .update_all(post_ids: @post_ids, network: rede_do_cuidado, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+    cuidado.reload
+  end
 
   # Duas abas ligando o mesmo post ao mesmo tempo: a segunda esbarra no cuidado que a primeira acabou de criar (na
   # validação de unicidade ou, na corrida, no índice único). Relê o cuidado e aplica por cima, uma vez.

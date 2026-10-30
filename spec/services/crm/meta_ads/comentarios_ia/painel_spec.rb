@@ -112,6 +112,19 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(facebook.payload[:private_available]).to be(false)
   end
 
+  it 'no Facebook, a pergunta que era o caso fica com o dono (no_private), não como "não se aplica"' do
+    facebook = described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo,
+                                   viewer: admin)
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1').merge(network: 'facebook')], escondidas: [] })
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'facebook', comment_id: '1', action: 'ai_seen', actor: 'ai')
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'facebook', comment_id: '1', action: 'kept_for_owner', actor: 'ai')
+
+    payload = facebook.payload
+
+    expect(payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 no_private]])
+    expect(payload[:results][:skipped]).to eq(0)
+  end
+
   it '"respondeu" olha só as conversas enviadas (EXISTS), sem varrer as mensagens da conta' do
     conversa(private_reply: true, respondeu: true)
     consultas = []
@@ -236,6 +249,38 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
 
       expect { outra_aba.ler_antigos! }.to raise_error(described_class::Error, 'already_read')
       expect(Crm::MetaAds::ComentariosIa::LerAntigosJob).to have_been_enqueued.once
+    end
+  end
+
+  describe 'o anúncio cujo criativo mudou de post' do
+    let(:alvo_do_anuncio) { { 'kind' => 'ad', 'ad_id' => '120', 'networks' => %w[instagram facebook], 'post_ids' => %w[17911 555_777] } }
+    let!(:do_anuncio) do
+      create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120', post_ids: %w[17900], network: 'instagram')
+    end
+
+    it 'ao ler, o cuidado passa a ter os posts e as redes de agora: o motor acha o comentário do post novo' do
+      described_class.new(account: account, alvo: alvo_do_anuncio, fonte: fonte, conversation_access: ve_tudo, viewer: admin).payload
+
+      expect(do_anuncio.reload).to have_attributes(post_ids: %w[17911 555_777], network: 'both')
+      expect(Crm::MetaAdsCommentCare.cuidando(account_id: account.id, network: 'instagram', post_id: '17911', ad_id: nil)).to eq(do_anuncio)
+    end
+
+    it 'o cuidado mudou depois de lido (um salvar! ao mesmo tempo): não sobrescreve' do
+      tela = described_class.new(account: account, alvo: alvo_do_anuncio, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
+      tela.cuidado
+      do_anuncio.update_columns(post_ids: %w[17922], network: 'instagram') # rubocop:disable Rails/SkipsModelValidations
+
+      tela.payload
+
+      expect(do_anuncio.reload.post_ids).to eq(%w[17922])
+    end
+
+    it 'sem mudança, não grava' do
+      do_anuncio.update!(post_ids: %w[17911 555_777], network: 'both')
+
+      expect do
+        described_class.new(account: account, alvo: alvo_do_anuncio, fonte: fonte, conversation_access: ve_tudo, viewer: admin).payload
+      end.not_to(change { do_anuncio.reload.updated_at })
     end
   end
 

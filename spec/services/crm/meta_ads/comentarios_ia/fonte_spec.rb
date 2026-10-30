@@ -49,4 +49,61 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
       expect(described_class.new({ 'facebook' => { ler: leitura } }).ler).to eq(status: 'meta_unavailable', linhas: [], escondidas: [])
     end
   end
+
+  describe '.anuncio (#2212, B2)' do
+    let(:connection) { instance_double(Crm::MetaAdsConnection) }
+    let(:ig_inbox) { instance_double(Inbox, id: 11) }
+    let(:fb_inbox) { instance_double(Inbox, id: 12) }
+    let(:management) { instance_double(Crm::MetaAds::AdManagement) }
+    let(:anuncio) do
+      instance_double(Crm::MetaAds::ComentariosIa::Anuncio, connection: connection, ad_id: '120', management: management,
+                                                            redes: { 'instagram' => { post_id: '1790', inbox: ig_inbox },
+                                                                     'facebook' => { post_id: '55_77', inbox: fb_inbox } })
+    end
+
+    before do
+      instagram = instance_double(Crm::MetaAds::InstagramComments, payload: { status: 'ready', comments: [row('ig')] })
+      facebook = instance_double(Crm::MetaAds::FacebookComments, list: { status: 'ready', comments: [row('55_9')] })
+      allow(Crm::MetaAds::InstagramComments).to receive(:new).and_return(instagram)
+      allow(Crm::MetaAds::FacebookComments).to receive(:new).and_return(facebook)
+    end
+
+    it 'cada linha leva a caixa e o post do criativo da rede dela, para o "Ler e mandar" pôr na fila do motor' do
+      linhas = described_class.anuncio(anuncio, %w[instagram facebook]).ler[:linhas]
+
+      expect(linhas.map { |linha| linha.slice(:id, :network, :inbox_id, :post_id) }).to contain_exactly(
+        { id: 'ig', network: 'instagram', inbox_id: 11, post_id: '1790' }, { id: '55_9', network: 'facebook', inbox_id: 12, post_id: '55_77' }
+      )
+    end
+
+    it 'os leitores usam o anúncio já lido (a mesma AdManagement): o criativo não é lido de novo' do
+      described_class.anuncio(anuncio, %w[instagram facebook]).ler
+
+      expect(Crm::MetaAds::InstagramComments).to have_received(:new).with(connection, hash_including(management: management))
+      expect(Crm::MetaAds::FacebookComments).to have_received(:new).with(connection, hash_including(management: management))
+    end
+
+    it 'anúncio que sumiu no meio da leitura (o leitor devolve nil): status ad_not_found, sem erro' do
+      allow(Crm::MetaAds::InstagramComments).to receive(:new).and_return(instance_double(Crm::MetaAds::InstagramComments, payload: nil))
+
+      expect(described_class.anuncio(anuncio, %w[instagram]).ler).to eq(status: 'ad_not_found', linhas: [], escondidas: [])
+    end
+
+    it 'só as redes pedidas no alvo' do
+      linhas = described_class.anuncio(anuncio, %w[instagram]).ler[:linhas]
+
+      expect(linhas.pluck(:network)).to eq(%w[instagram])
+      expect(Crm::MetaAds::FacebookComments).not_to have_received(:new)
+    end
+
+    it 'do alvo: lê o anúncio de novo pela conexão da conta; anúncio que sumiu, nil' do
+      account = create(:account)
+      allow(Crm::MetaAdsConnection).to receive(:find_by).with(account_id: account.id).and_return(connection)
+      allow(Crm::MetaAds::ComentariosIa::Anuncio).to receive(:ler).with(connection, '120').and_return(anuncio, nil)
+      alvo = { 'kind' => 'ad', 'ad_id' => '120', 'networks' => %w[facebook], 'post_ids' => %w[55_77] }
+
+      expect(described_class.do_alvo(account, alvo).ler[:linhas].pluck(:inbox_id)).to eq([12])
+      expect(described_class.do_alvo(account, alvo)).to be_nil
+    end
+  end
 end

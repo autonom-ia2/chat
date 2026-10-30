@@ -311,13 +311,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:reservar!).with(comentario)
   end
 
-  it 'post sem oferta nunca manda privado, mesmo se o Jev pedir' do
+  it 'post sem oferta nunca manda privado, mesmo se o Jev pedir: a pergunta fica com o dono' do
     care.update!(offer: nil)
     decide('price')
 
     cuidar
 
     expect(rede).not_to have_received(:privado)
+    expect(registro).to have_received(:gravar!).with(lido, 'kept_for_owner')
   end
 
   it 'post sem oferta, com o "para quem" do dono: manda o privado a quem é o caso' do
@@ -337,6 +338,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     expect(rede).not_to have_received(:privado)
     expect(rede).not_to have_received(:responder)
+    expect(registro).to have_received(:gravar!).with(lido, 'kept_for_owner')
+    expect(conversa).not_to have_received(:para_voce!)
+  end
+
+  it 'não era o caso (no_reply): só a leitura, sem ficar com o dono' do
+    decide('no_reply')
+
+    cuidar
+
+    expect(registro).not_to have_received(:gravar!)
   end
 
   it 'sem certeza do Jev: não age, e o comentário fica com o dono como "não cuidei"' do

@@ -12,7 +12,7 @@ describe('#ComentariosIaAPI', () => {
   const post = { kind: 'post', id: '1790/1', perfil: 'instagram-7' };
   const ad = { kind: 'ad', id: '120', perfil: 'ignored' };
   const postBase = '/api/v1/accounts/85/seus_posts/posts/1790%2F1';
-  const adBase = '/api/v1/accounts/85/crm/meta_ads/ads/120';
+  const adBase = '/api/v1/accounts/85/crm/meta_ads_connection/ads/120';
 
   beforeEach(() => {
     window.history.pushState({}, '', '/app/accounts/85/seus-posts/1');
@@ -95,6 +95,14 @@ describe('#ComentariosIaAPI', () => {
       `${adBase}/cuidado/ler_antigos`,
       null,
       { params: {} }
+    );
+  });
+
+  it('reads the care state of every ad', () => {
+    comentariosIa.getCuidadosDosAnuncios();
+
+    expect(axiosMock.get).toHaveBeenCalledWith(
+      '/api/v1/accounts/85/crm/meta_ads_connection/cuidados'
     );
   });
 

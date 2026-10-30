@@ -10,9 +10,10 @@
 class Crm::MetaAds::ComentariosIa::Fonte
   SEM_PESSOA = ->(_inbox) { true }
   NAO_VE_CONVERSA = ->(_conversation) { false }
+  SUMIU = { status: 'ad_not_found' }.freeze
 
   # O alvo só com ids (o que o ResumoJob recebe): `{ 'kind' => 'post', 'perfil' =>, 'post_id' => }` ou
-  # `{ 'kind' => 'ad', 'ad_id' =>, 'networks' => [] }`. nil quando o perfil ou a conexão não existem mais.
+  # `{ 'kind' => 'ad', 'ad_id' =>, 'networks' => [] }`. nil quando o perfil, a conexão ou o anúncio não existem mais.
   def self.do_alvo(account, alvo)
     alvo = alvo.to_h.stringify_keys
     if alvo['kind'] == 'post'
@@ -20,7 +21,8 @@ class Crm::MetaAds::ComentariosIa::Fonte
       canal && post(canal, alvo['post_id'].to_s)
     else
       connection = Crm::MetaAdsConnection.find_by(account_id: account.id)
-      connection && anuncio(connection, alvo['ad_id'].to_s, Array(alvo['networks']))
+      lido = connection && Crm::MetaAds::ComentariosIa::Anuncio.ler(connection, alvo['ad_id'].to_s)
+      lido && anuncio(lido, Array(alvo['networks']))
     end
   end
 
@@ -33,12 +35,19 @@ class Crm::MetaAds::ComentariosIa::Fonte
     new({ SeusPosts::Perfil.rede(canal) => { ler: -> { leitor.payload(post_id) }, inbox_id: canal.inbox.id, post_id: post_id } })
   end
 
-  def self.anuncio(connection, ad_id, networks)
-    leituras = {
-      'instagram' => { ler: -> { Crm::MetaAds::InstagramComments.new(connection, inbox_access: SEM_PESSOA, can_manage: false).payload(ad_id) } },
-      'facebook' => { ler: -> { Crm::MetaAds::FacebookComments.new(connection, inbox_access: SEM_PESSOA).list(ad_id) } }
+  # O anúncio (Anuncio) diz, por rede, o post do criativo e a caixa que recebe o comentário: o "Ler e mandar" põe cada
+  # um na fila do motor com eles, como o webhook faria. Só as redes pedidas em que a IA ainda pode cuidar. Os leitores
+  # recebem a AdManagement que já leu o anúncio: o criativo não é lido de novo na Meta.
+  def self.anuncio(anuncio, networks)
+    connection = anuncio.connection
+    ad_id = anuncio.ad_id
+    lido = { inbox_access: SEM_PESSOA, management: anuncio.management }
+    leitores = {
+      'instagram' => -> { Crm::MetaAds::InstagramComments.new(connection, **lido, can_manage: false).payload(ad_id) },
+      'facebook' => -> { Crm::MetaAds::FacebookComments.new(connection, **lido).list(ad_id) }
     }
-    new(leituras.slice(*networks))
+    redes = anuncio.redes.slice(*networks)
+    new(redes.to_h { |network, rede| [network, { ler: leitores[network], inbox_id: rede[:inbox].id, post_id: rede[:post_id] }] })
   end
 
   def initialize(leituras)
@@ -47,9 +56,9 @@ class Crm::MetaAds::ComentariosIa::Fonte
 
   # leituras: { rede => { ler: -> { payload da tela }, inbox_id:, post_id: } }.
   # Erro da Meta vira o status. AdManagement::Error cobre também o FacebookComments::Error (do anúncio e da Página do
-  # Seus posts), que é filho dele.
+  # Seus posts), que é filho dele. O leitor do Instagram devolve nil quando o anúncio sumiu da conta: `ad_not_found`.
   def ler
-    lidas = @leituras.map { |network, leitura| [network, leitura, leitura[:ler].call] }
+    lidas = ler_cada_rede
     falha = lidas.map { |_network, _leitura, payload| payload[:status] }.find { |status| status != 'ready' }
     return { status: falha, linhas: [], escondidas: [] } if falha
 
@@ -60,6 +69,10 @@ class Crm::MetaAds::ComentariosIa::Fonte
   end
 
   private
+
+  def ler_cada_rede
+    @leituras.map { |network, leitura| [network, leitura, leitura[:ler].call || SUMIU] }
+  end
 
   def de_outra_pessoa(network, leitura, comments)
     Array(comments).filter_map do |row|

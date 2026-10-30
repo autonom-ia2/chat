@@ -1,6 +1,7 @@
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper.js';
 import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
+import { comFlagsEAlguma } from 'dashboard/helper/comFlags';
 import {
   CRM_VIEW_PERMISSION,
   CRM_VIEW_REPORTS_PERMISSION,
@@ -63,6 +64,28 @@ const ensureCrmEnabled = (to, _from, next) => {
   next({ name: 'home', params: to.params });
 };
 
+// IA cuida dos comentários de um anúncio (#2212, B2): o CRM ligado, as flags do anúncio por dentro (meta_ads_hub), da
+// gestão (meta_ads_gestao, que abre os comentários) e do cuidado, e a dos comentários de ao menos uma rede, como o
+// servidor (MetaAdsCuidadoController#ensure_flags).
+const ensureCuidarAnuncioFlags = comFlagsEAlguma(
+  [
+    FEATURE_FLAGS.META_ADS_HUB,
+    FEATURE_FLAGS.META_ADS_GESTAO,
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
+  ],
+  [
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK,
+  ]
+);
+export const ensureCuidarAnuncio = (to, from, next) => {
+  if (!isCrmKanbanEnabled()) {
+    next({ name: 'home', params: to.params });
+    return undefined;
+  }
+  return ensureCuidarAnuncioFlags(to, from, next);
+};
+
 const ensureCrmAiEnabled = (to, _from, next) => {
   if (isCrmKanbanEnabled() && window.globalConfig?.CRM_AI_ENABLED === 'true') {
     next();
@@ -112,6 +135,21 @@ export const routes = [
     },
     beforeEnter: ensureCrmEnabled,
     component: () => import('../campaigns/metaAds/MetaAdsPage.vue'),
+  },
+  {
+    // IA cuida dos comentários do anúncio (#2212, B2): ver é o mesmo do anúncio por dentro; mudar, meta_ads_manage (a
+    // tela esconde a escrita sem ela, e o servidor recusa).
+    path: frontendURL(
+      'accounts/:accountId/campaigns/meta-ads/anuncios/:adId/cuidar'
+    ),
+    name: 'campaigns_meta_ads_cuidar',
+    meta: {
+      permissions: ['administrator', 'meta_ads_view', 'meta_ads_manage'],
+      featureFlag: FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
+    },
+    beforeEnter: ensureCuidarAnuncio,
+    component: () =>
+      import('../campaigns/metaAds/comentariosIa/CuidarAnuncioPage.vue'),
   },
   {
     path: frontendURL('accounts/:accountId/crm'),
