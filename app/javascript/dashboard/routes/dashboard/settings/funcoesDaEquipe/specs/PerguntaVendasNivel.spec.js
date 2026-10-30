@@ -202,3 +202,71 @@ describe('NivelDeVendas', () => {
     expect(semMover.text()).not.toContain('Mover as vendas entre as colunas');
   });
 });
+
+// #2403: as metas do mês só valem com os valores em R$ (KEY_DEPENDENCIES). A linha do R$ no "Mais" diz o que acontece
+// com as metas, em vez de mudá-las calada.
+describe('PerguntaVendas › R$ e as metas do mês', () => {
+  const DESLIGAR =
+    'Ao desligar, a pessoa também deixa de definir as metas do mês.';
+  const LIGAR = 'Ao ligar, a pessoa também passa a definir as metas do mês.';
+
+  const abrir = async (giver, permissions) => {
+    const wrapper = mount(PerguntaVendas, {
+      props: { permissions, inicial: permissions, giver, nome: 'Atendente' },
+      global: global(),
+    });
+    await wrapper.find('[data-recolhida]').trigger('click');
+    return wrapper;
+  };
+  const linhaDoRs = wrapper => wrapper.find('[data-extra="sales_value_view"]');
+
+  it('com metas e R$, avisa que desligar o R$ tira as metas, e desligar tira as duas', async () => {
+    const comMetas = [
+      ...PRESETS.AGENT(),
+      'sales_value_view',
+      'crm_metas_manage',
+    ];
+    const wrapper = await abrir(ADMIN, comMetas);
+    expect(linhaDoRs(wrapper).text()).toContain(DESLIGAR);
+
+    await linhaDoRs(wrapper).find('[role="switch"]').trigger('click');
+    const depois = ultimo(wrapper);
+    expect(depois).not.toContain('sales_value_view');
+    expect(depois).not.toContain('crm_metas_manage');
+  });
+
+  it('com "Cuida de tudo" e sem R$, avisa que ligar o R$ faz as metas valerem', async () => {
+    const tudoSemRs = [
+      ...PRESETS.AGENT(),
+      'crm_admin',
+      'crm_view_reports',
+      'crm_manage_pipelines',
+      'crm_manage_ai',
+      'crm_export',
+      'crm_delete_cards',
+      'crm_metas_manage',
+    ];
+    const wrapper = await abrir(ADMIN, tudoSemRs);
+    expect(linhaDoRs(wrapper).text()).toContain(LIGAR);
+  });
+
+  it('com "Cuida de tudo" e R$, avisa que, ao desligar o R$, a pessoa deixa de definir as metas', async () => {
+    const tudoComRs = [...PRESETS.AGENT(), 'crm_admin', 'sales_value_view'];
+    const wrapper = await abrir(ADMIN, tudoComRs);
+    expect(linhaDoRs(wrapper).text()).toContain(DESLIGAR);
+  });
+
+  it('sem metas, a linha do R$ não fala delas', async () => {
+    const wrapper = await abrir(ADMIN, [
+      ...PRESETS.AGENT(),
+      'sales_value_view',
+    ]);
+    expect(linhaDoRs(wrapper).text()).not.toContain('metas');
+  });
+
+  it('quem não pode dar o R$ vê só o cadeado, sem a nota', async () => {
+    const wrapper = await abrir(CARLA, [...PRESETS.AGENT(), 'crm_admin']);
+    expect(linhaDoRs(wrapper).text()).toContain('Só o administrador dá isto.');
+    expect(linhaDoRs(wrapper).text()).not.toContain('metas');
+  });
+});

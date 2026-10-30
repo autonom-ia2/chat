@@ -109,12 +109,19 @@ class Crm::MetaAds::FacebookComments
     nil
   end
 
+  # Pela IA que cuida dos comentários (#2212): age no comentário que chegou pelo evento, pelo post (não há anúncio) e sem
+  # pessoa, sempre gravado como 'ai'. As mesmas regras da tela: comentário do post, caixa do Messenger da Página na
+  # conta e pages_manage_engagement.
+  def reply_as_ai(post_id, comment_id, message) = reply_to(post_id, comment_id, message, { actor: 'ai', user: nil, ad_id: nil })
+  def hide_as_ai(post_id, comment_id, hidden) = hide_in(post_id, comment_id, hidden, { actor: 'ai', user: nil, ad_id: nil })
+
   private
 
   def by_user(ad_id, user)
     { actor: 'user', user: user, ad_id: ad_id }
   end
 
+  # `by`: { actor:, user:, ad_id: }, gravado na ação.
   def reply_to(post_id, comment_id, message, by)
     text = message.to_s.strip
     raise Error, 'invalid_text' if text.empty? || text.length > MESSAGE_MAX

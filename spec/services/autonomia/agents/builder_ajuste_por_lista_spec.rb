@@ -546,13 +546,109 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(described_class::AjustePorLista::TABELA_DE_DESTINO).to include('perguntas_de_prova')
     end
 
+    # Revisão do t6d (BAIXO): o mesmo schema estrito do juiz da prova vale para o schema do ajuste.
+    it 'o schema do ajuste é estrito: todo objeto lista todas as propriedades em required' do
+      expect_schema_estrito(described_class::AjustePorLista::SCHEMA[:schema])
+    end
+
     it 'as perguntas de prova: até 3, sem branco nem repetida, só texto, cada uma cortada em 200 caracteres' do
       lido = Autonomia::Agents::ProvaDoAjuste.perguntas(
         'perguntas_de_prova' => [' Quanto custa? ', 'Quanto custa?', '', 7, 'b' * 500, 'Tem vida?', 'Quarta']
       )
 
-      expect(lido).to eq(['Quanto custa?', "#{'b' * 197}...", 'Tem vida?'])
+      expect(lido).to eq([{ 'pergunta' => 'Quanto custa?' }, { 'pergunta' => "#{'b' * 197}..." }, { 'pergunta' => 'Tem vida?' }])
       expect(Autonomia::Agents::ProvaDoAjuste.perguntas({})).to eq([])
+    end
+
+    it 'perguntas_de_prova no schema do ajuste é uma lista de {mensagem, pedido}' do
+      campo = described_class::AjustePorLista::SCHEMA.dig(:schema, :properties, :perguntas_de_prova)
+      expect(campo).to include(type: 'array', items: Autonomia::Agents::ProvaDoAjuste::PERGUNTA_DE_PROVA)
+    end
+
+    # Forense do t6d (P3): "sem emoji e mais curto" virou um pedido só, e o cartão não separa o que entrou.
+    it 'a descrição do pedido separa os pedidos independentes e não repete o composto com as partes' do
+      descricao = described_class::AjustePorLista::MUDANCA.dig(:properties, :pedido, :description)
+      expect(descricao).to include('Um pedido independente e um item proprio: "sem emoji e mais curto" sao dois pedidos',
+                                   'Nunca liste o pedido composto junto com as partes')
+    end
+
+    # Revisão do t6d (ALTO 2): só a contradição literal e verificável leva a forma à saudação e à mensagem fixa; tom e
+    # tratamento nunca (o t6c: "mais formal" não reescreve a saudação). O comportamento é cena do eval do Construtor.
+    it 'a tabela só leva a forma à saudação e à mensagem fixa na contradição literal; tom e tratamento nunca' do
+      tabela = described_class::AjustePorLista::TABELA_DE_DESTINO.squish
+      expect(tabela).to include(
+        'e tambem greeting e fallback_message so quando o texto atual deles contradiz o pedido de forma literal e ' \
+        'verificavel: emoji quando o pedido e sem emoji; tamanho quando o pedido limita o tamanho.',
+        'Tom e tratamento NUNCA mudam greeting nem fallback_message.'
+      )
+      expect(tabela).not_to include('quando o texto atual deles contradiz o pedido (ex.:')
+    end
+
+    it 'o aviso da correção pede o mesmo texto de pedido da lista' do
+      expect(described_class::CorrecaoDoAjuste::AVISO.squish).to include('com o mesmo texto de pedido dos itens da lista')
+    end
+
+    # Revisão do t6d (MÉDIO 1 e BAIXO): schema fixo (cache), e o código confere o pedido. Sem o que o dono não pediu.
+    describe 'a correção confere o texto do pedido' do
+      let(:itens) do
+        [mudanca('tone', 'sem emoji'), mudanca('instruction', 'sem emoji'), mudanca('tone', 'mais curto'),
+         mudanca('greeting', 'saudação nova').merge('pedido_pelo_dono' => false)]
+      end
+      let(:correcao) { described_class::CorrecaoDoAjuste }
+
+      it 'os pedidos são os da lista, sem repetir e sem o que o dono não pediu, mesmo com pedido fora da lista' do
+        expect(correcao.pedidos('itens' => itens)).to eq(['sem emoji', 'mais curto'])
+        expect(correcao.pedidos('itens' => itens, 'faltou_fora_da_lista' => true)).to eq(['sem emoji', 'mais curto'])
+      end
+
+      it 'texto exato fica; só o ponto final diferente volta ao texto da lista; outro texto sai, com log' do
+        allow(Rails.logger).to receive(:warn)
+        lista = [mudanca('tone', 'sem emoji'), mudanca('greeting', 'mais curto.'), mudanca('fallback_message', 'sem emoji e mais curto')]
+
+        validos, descartados = correcao.conferir_pedidos(lista, 'itens' => itens)
+
+        expect(validos).to eq([mudanca('tone', 'sem emoji'), mudanca('greeting', 'mais curto')])
+        expect(descartados).to eq(1)
+        expect(Rails.logger).to have_received(:warn).with(a_string_including('pedido_fora_da_lista', 'campo=fallback_message'))
+      end
+
+      # Revisão 2 do t6d (BAIXO 5): um campo com item descartado não fica pela metade.
+      it 'um campo com item descartado perde os outros itens dele, e todos contam como descartados' do
+        allow(Rails.logger).to receive(:warn)
+        lista = [mudanca('tone', 'sem emoji'), mudanca('tone', 'outro texto'), mudanca('greeting', 'mais curto')]
+
+        expect(correcao.conferir_pedidos(lista, 'itens' => itens)).to eq([[mudanca('greeting', 'mais curto')], 2])
+      end
+
+      # Revisão 2 do t6d (BAIXO 6): o texto novo só vale num campo que a lista não tem.
+      it 'com pedido fora da lista, texto novo num campo da lista sai; num campo fora dela, fica' do
+        allow(Rails.logger).to receive(:warn)
+        lista = [mudanca('handoff_rule', 'preço vai para a equipe'), mudanca('tone', 'texto novo'),
+                 mudanca('instruction', 'sem emoji')]
+
+        validos, descartados = correcao.conferir_pedidos(lista, 'itens' => itens, 'faltou_fora_da_lista' => true)
+
+        expect(validos).to eq([mudanca('handoff_rule', 'preço vai para a equipe'), mudanca('instruction', 'sem emoji')])
+        expect(descartados).to eq(1)
+      end
+
+      it 'com pedido fora da lista, o texto novo fica (é o pedido que faltou)' do
+        validos, descartados = correcao.conferir_pedidos([mudanca('handoff_rule', 'preço vai para a equipe')],
+                                                         'itens' => itens, 'faltou_fora_da_lista' => true)
+
+        expect(validos).to eq([mudanca('handoff_rule', 'preço vai para a equipe')])
+        expect(descartados).to eq(0)
+      end
+
+      it 'o dado da correção lista os textos de pedido; com pedido fora da lista, manda repetir o texto exato dos outros' do
+        dado = correcao.itens('itens' => itens.map { |item| item.merge('atendido' => false) }).first[:content].first[:text]
+        expect(dado).to include("TEXTOS DE PEDIDO DA LISTA (em pedido, use exatamente um destes):\n- sem emoji\n- mais curto")
+        expect(dado.split('TEXTOS DE PEDIDO DA LISTA').last).not_to include('saudação nova')
+
+        fora = correcao.itens('itens' => itens, 'faltou_fora_da_lista' => true).first[:content].first[:text]
+        expect(fora).to include('Para o pedido que nao entrou na lista, escreva um texto novo; nos itens ja listados, ' \
+                                'repita o texto exato.')
+      end
     end
 
     it 'o turno do ajuste faz uma chamada só ao Construtor mesmo com as perguntas de prova' do

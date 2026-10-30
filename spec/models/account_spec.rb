@@ -303,7 +303,7 @@ RSpec.describe Account do
         feature_meta_ads_formularios: 64, feature_meta_ads_comentarios_instagram: 128, feature_meta_ads_criar: 256,
         feature_seus_posts: 512, feature_campanhas_publico_por_conversa: 1024,
         feature_meta_ads_comentarios_facebook: 2048, feature_crm_lista_acao: 4096, feature_funcoes_guiadas: 8192,
-        feature_seus_posts_comentarios: 16_384
+        feature_seus_posts_comentarios: 16_384, feature_meta_ads_comentarios_ia: 32_768
       )
     end
 

@@ -339,6 +339,28 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect { build_service.delete!(ad_id, comment_id) }.to raise_error(described_class::Error, 'meta_unavailable')
     end
 
+    # #2212: a IA age pelo post do comentário que chegou pelo evento, sem pessoa e sem anúncio.
+    it 'pela IA: responde e oculta pelo post, gravando o actor, sem pessoa nem anúncio' do
+      stub_request(:post, meta_graph_url("#{comment_id}/comments")).with(body: { message: 'Te chamei no Messenger' })
+                                                                   .to_return(status: 200, body: { id: '200000000000002_800' }.to_json, headers: json)
+      stub_request(:post, meta_graph_url(comment_id)).with(body: { is_hidden: 'true' })
+                                                     .to_return(status: 200, body: { success: true }.to_json, headers: json)
+      service = described_class.new(connection, inbox_access: ->(_inbox) { true })
+
+      expect(service.reply_as_ai(post_id, comment_id, 'Te chamei no Messenger')).to eq(id: '200000000000002_800')
+      expect(service.hide_as_ai(post_id, comment_id, true)).to be(true)
+      expect(Crm::MetaAdsCommentAction.order(:id).pluck(:action, :actor, :ad_id, :user_id))
+        .to eq([['reply', 'ai', nil, nil], ['hide', 'ai', nil, nil]])
+    end
+
+    it 'pela IA, sem a caixa do Messenger da Página na conta: no_inbox, sem chamar a Meta' do
+      Channel::FacebookPage.where(id: page_inbox.channel_id).delete_all
+      service = described_class.new(connection, inbox_access: ->(_inbox) { true })
+
+      expect { service.hide_as_ai(post_id, comment_id, true) }.to raise_error(described_class::Error, 'no_inbox')
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
     it 'falha ao gravar a ação não desfaz o que a Meta já fez' do
       stub_request(:delete, meta_graph_url(comment_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)
       allow(Crm::MetaAdsCommentAction).to receive(:record!).and_raise(ActiveRecord::RecordInvalid)

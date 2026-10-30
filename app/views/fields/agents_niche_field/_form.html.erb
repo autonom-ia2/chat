@@ -4,6 +4,7 @@
     AgentsNicheField.permitted_attribute. A prévia mostra como um card fechado aparece para a equipe na escolha marcada,
     também por CSS. %>
 <% base = "#{f.object_name}[#{field.attribute}]" %>
+<% nome_do_padrao = render('fields/agents_niche_field/name', escolha: field.padrao).strip %>
 <% idioma = f.object.locale.presence || I18n.default_locale %>
 <%# Desligado na instalação, a prévia diz que é o efeito de quando ligar (o painel ainda mostra o geral). %>
 <% rotulo_da_previa = field.pacotes_ligados? ? 'preview_label' : 'preview_label_off' %>
@@ -25,12 +26,13 @@
   <fieldset class="grid gap-3 p-0 m-0 border-0 sm:grid-cols-2">
     <legend class="sr-only"><%= t('autonomia_agents_niche.label') %></legend>
     <% field.nichos.each do |nicho| %>
-      <label class="<%= cartao %>">
+      <%# O padrão da instalação ocupa a linha inteira, acima de Geral e Seguros. %>
+      <label class="<%= cartao %> <%= 'sm:col-span-2' if nicho == Autonomia::Agents::Nicho::PADRAO %>">
         <input type="radio" id="agents-niche-<%= nicho %>" name="<%= base %>[nicho]" value="<%= nicho %>"
                class="mt-1 size-4 accent-n-iris-9" <%= 'checked' if field.nicho == nicho %>>
         <span class="flex flex-col gap-0.5">
           <span class="text-sm font-semibold text-n-slate-12"><%= t("autonomia_agents_niche.niches.#{nicho}.title") %></span>
-          <span class="text-sm text-n-slate-11"><%= t("autonomia_agents_niche.niches.#{nicho}.text") %></span>
+          <span class="text-sm text-n-slate-11"><%= t("autonomia_agents_niche.niches.#{nicho}.text", niche: nome_do_padrao) %></span>
         </span>
       </label>
     <% end %>
@@ -71,9 +73,8 @@
   </fieldset>
   <%= render 'fields/agents_niche_field/previa', textos: field.previa(idioma), alvo: 'geral', rotulo: rotulo_da_previa,
              classe: 'group-has-[#agents-niche-geral:checked]/nicho:flex' %>
-  <p class="mt-4 mb-0 text-sm text-n-slate-12">
-    <%= t('autonomia_agents_niche.installation_default', niche: render('fields/agents_niche_field/name', escolha: field.padrao).strip) %>
-  </p>
+  <%= render 'fields/agents_niche_field/previa', textos: field.previa(idioma, field.padrao.perfil), alvo: 'padrao',
+             rotulo: rotulo_da_previa, classe: 'group-has-[#agents-niche-padrao:checked]/nicho:flex' %>
   <p class="flex items-start gap-2 p-3 mt-2 mb-0 text-sm rounded-xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-n-slate-12" role="note">
     <%= t('autonomia_agents_niche.warning') %>
   </p>

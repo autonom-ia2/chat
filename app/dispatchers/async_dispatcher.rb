@@ -32,7 +32,9 @@ class AsyncDispatcher < BaseDispatcher
       # #1601: a memória das IAs (autoria das mensagens); só enfileira, atrás da flag `memoria_ia`.
       Crm::MemoriaListener.instance,
       # #1813: o e-mail recebido completa o contato; só enfileira, atrás da flag `contato_pelo_email`.
-      Autonomia::ContatoPeloEmailListener.instance
+      Autonomia::ContatoPeloEmailListener.instance,
+      # #2212: a IA cuida dos comentários; só enfileira, atrás da flag `meta_ads_comentarios_ia`.
+      Crm::MetaAdsComentariosIaListener.instance
     ]
   end
 end

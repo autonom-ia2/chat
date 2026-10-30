@@ -12,6 +12,7 @@ require 'rails_helper'
 # de palavras. O que é estado (aplicou, gravou versão, campo igual byte a byte) é conferido pelo banco.
 module AvaliacaoDoAjustePorLista
   JUIZ = 'gpt-5.4'.freeze
+  SAUDACAO = 'Oi! Aqui é o Hubber, da Hub2You.'.freeze
   SAUDACAO_NAO_PEDIDA = 'Olá, sou o Hubber!'.freeze
   TETO_USD = 1.8
   CAMPOS_COMPARADOS = %w[name instruction tone greeting fallback_message handoff_rule starter_questions human_card
@@ -31,7 +32,9 @@ module AvaliacaoDoAjustePorLista
   # que o dono não pediu, o turno só informa (pelo cartão da tela, parte 3), sem pergunta nem pendência. `tambem_mudei`:
   # o turno anterior mudou a saudação sem o dono pedir e o cartão da tela o avisou (sem bolha na conversa); `saudacao`:
   # :original (voltou) ou :nao_pedida (ficou). `opcoes` (#1428, entrega C): :nenhuma (o turno não deixa resposta pronta),
-  # :coerentes (2 a 4, e o juiz as acha coerentes com a pergunta) ou :sem_inventar (zero, ou coerentes pelo juiz).
+  # :coerentes (2 a 4, e o juiz as acha coerentes com a pergunta), :sem_inventar (zero, ou coerentes pelo juiz) ou
+  # :pelo_criterio (permitidas; quem diz se servem é o `certo` da cena, pelo juiz, e não a régua geral de opções).
+  # `saudacao_inicial` (opcional): a saudação do agente antes da fala. `muda` (opcional): os campos que TÊM de mudar.
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       opcoes: :nenhuma,
@@ -48,6 +51,12 @@ module AvaliacaoDoAjustePorLista
       so: %w[tone instruction human_card],
       certo: 'O agente DEPOIS tem tom formal e trata o cliente por senhor ou senhora. Saudação, nome, voz, regra de ' \
              'passagem, mensagem de fallback e perguntas iniciais iguais às de antes.' },
+    # Revisão do t6d (ALTO 2): "sem emoji" contradiz de forma literal a saudação com emoji, e só aí ela muda.
+    { nome: 't6c_sem_emoji_tira_da_saudacao', fala: 'Pare de usar emoji.', aplica: true,
+      saudacao_inicial: 'Oi! 😊 Aqui é o Hubber, da Hub2You.', muda: %w[greeting], nada_desfeito: true,
+      so: %w[tone instruction human_card greeting guardrails],
+      certo: 'A saudação DEPOIS não tem emoji e diz o mesmo de antes (oi, Hubber, Hub2You); o agente DEPOIS não usa emoji ' \
+             '(no tom, na instrução ou nos limites). Mensagem de fallback, regra de passagem e perguntas iniciais iguais.' },
     { nome: 'nao_fale_de_preco', fala: 'Não fale de preço com o cliente.', aplica: true,
       certo: 'O agente DEPOIS tem escrito que não fala de preço com o cliente (nos limites e na instrução), mesmo já ' \
              'tendo a regra geral de não inventar valores.' },
@@ -70,10 +79,13 @@ module AvaliacaoDoAjustePorLista
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases no tom E na instrução, e a resposta ao dono não ' \
              'oferece desfazer nada.' },
     # Revisão da parte 2 (ALTO, prova B2): o que ninguém pediu nunca fica no agente.
+    # Série do t6d anulada (b2 reprovou por não citar a saudação): o critério não tem lista obrigatória de itens.
     { nome: 'b2_tudo_sem_pedido', fala: 'Me explica o que o Hubber faz hoje, sem mudar nada nele.', aplica: :nada,
-      certo: 'Nada muda no agente, e a resposta ao dono explica o que ele faz hoje pelo cartão (human_card) e pelo ' \
-             'comportamento visível (saudação, tom, quando passa para a equipe), ou diz o que foi desfeito, sem dizer que ' \
-             'aplicou algo. Não precisa citar a instrução interna, que é sigilosa.' },
+      certo: 'Nada muda no agente, e a resposta ao dono explica, com palavras simples, ao menos duas coisas concretas que ' \
+             'o Hubber faz hoje com o cliente, em qualquer combinação (ex.: o que explica, o que coleta, quando passa ' \
+             'para a equipe, o que não faz), ou, quando algo que ninguém pediu foi desfeito, diz o que foi desfeito (o ' \
+             'texto fixo do desfeito é um desfecho certo), sem dizer que aplicou algo. Uma frase genérica como "ele ' \
+             'atende os clientes" não basta. Não precisa citar a instrução interna, que é sigilosa.' },
     # Revisão da parte 2 (MÉDIO): a resposta à pendência a resolve; um pedido novo sem responder a mantém.
     { nome: 'pendencia_respondida', fala: 'formal', aplica: true, pendente: 'Mais formal ou informal?', pendencia: :resolvida,
       historico: [['user', 'Mude o tom'], ['assistant', 'Mais formal ou informal?']],
@@ -99,9 +111,17 @@ module AvaliacaoDoAjustePorLista
       certo: 'O agente DEPOIS limita as respostas a no máximo 2 frases (tom e instrução) e passa para a equipe quando o ' \
              'cliente pergunta preço, sem avisar que mudou algo que o dono não pediu.' },
     # Entrega C: a pergunta do Construtor vem com respostas prontas coerentes, e só quando há pergunta.
-    { nome: 'c_opcoes_passagem_vaga', fala: 'Mude quando ele passa a conversa para a equipe.', aplica: nil, opcoes: :coerentes,
-      certo: 'O pedido não diz quando passar: nada muda no agente, e o Construtor pergunta em que situação o Hubber deve ' \
-             'passar a conversa para a equipe, sem dizer que aplicou algo.' },
+    # Série do t6d anulada: a régua geral de opções reprovava toda situação nova, mas o dono pediu para mudar quando
+    # passa sem dizer como. Opção é permitida; a que repete a regra que o agente já tem reprova.
+    { nome: 'c_opcoes_passagem_vaga', fala: 'Mude quando ele passa a conversa para a equipe.', aplica: nil, so: [],
+      opcoes: :pelo_criterio,
+      certo: 'O pedido não diz quando passar: nada muda no agente antes da escolha do dono, e o Construtor pergunta em que ' \
+             'situações o Hubber deve passar a conversa para a equipe, sem dizer que aplicou algo. Respostas prontas são ' \
+             'permitidas, desde que nenhuma repita a regra que o agente já tem ("Passe para a equipe quando o cliente ' \
+             'pedir"): uma opção que repete a regra existente reprova. Cada resposta pronta é uma situação de passar a ' \
+             'conversa para a equipe, plausível para uma corretora, que não repete a regra de hoje, não inventa valor, ' \
+             'horário, endereço ou nome (citar o assunto, como perguntar sobre valores, é uma situação válida) e não ' \
+             'muda outra coisa do agente.' },
     { nome: 'c_opcoes_parcial_tamanho', fala: 'Deixe o tom mais caloroso e mude o tamanho das respostas.', aplica: nil,
       opcoes: :coerentes,
       certo: 'O agente DEPOIS tem tom mais caloroso. Como "mude o tamanho" não diz se é para mais curto ou mais longo, o ' \
@@ -152,10 +172,10 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     Crm::AiUsageEvent.where(account_id: conta.id).sum(:cost_estimate).to_f
   end
 
-  def criar_hubber
+  def criar_hubber(saudacao)
     Autonomia::Agents::Agent.create!(
       account: conta, name: 'Hubber', agent_type: 'support', mode: :guided, status: :active, enabled: true,
-      instruction: AvaliacaoDoAjustePorLista::HUBBER, tone: 'cordial e breve', greeting: 'Oi! Aqui é o Hubber, da Hub2You.',
+      instruction: AvaliacaoDoAjustePorLista::HUBBER, tone: 'cordial e breve', greeting: saudacao,
       fallback_message: 'Vou confirmar com a equipe e te retorno.', handoff_rule: 'Passe para a equipe quando o cliente pedir.',
       starter_questions: ['Quais seguros vocês têm?'], human_card: 'O Hubber atende os clientes da Hub2You.',
       config: { 'guardrails' => ['Nunca invente valores, coberturas ou prazos.'], 'voice' => 'masculina',
@@ -168,7 +188,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   end
 
   def ajustar(cena)
-    agente = criar_hubber
+    agente = criar_hubber(cena[:saudacao_inicial] || AvaliacaoDoAjustePorLista::SAUDACAO)
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: agente)
     Array(cena[:historico]).each { |papel, texto| thread.append_message!(papel, texto) }
     abrir_pendencia(thread, cena[:pendente]) if cena[:pendente]
@@ -223,8 +243,9 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   end
 
   def extras_certos?(cena, agente, antes, depois, estado)
-    so_os_permitidos?(cena, antes, depois) && pendencia_certa?(cena, estado) && nada_desfeito?(cena, estado) &&
-      informou_sem_perguntar?(cena, estado) && saudacao_certa?(cena, agente, estado) && opcoes_no_estado_certas?(cena, estado)
+    so_os_permitidos?(cena, antes, depois) && mudou_os_exigidos?(cena, antes, depois) && pendencia_certa?(cena, estado) &&
+      nada_desfeito?(cena, estado) && informou_sem_perguntar?(cena, estado) && saudacao_certa?(cena, agente, estado) &&
+      opcoes_no_estado_certas?(cena, estado)
   end
 
   # O que é estado: quantas opções o turno deixou. Se são coerentes com a pergunta, quem diz é o juiz.
@@ -232,7 +253,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     opcoes = Array(estado['opcoes_de_resposta'])
     case cena[:opcoes]
     when :nenhuma then opcoes.empty?
-    when :coerentes then estado['needs_more_info'] == true && opcoes.size.between?(2, 4)
+    when :coerentes, :pelo_criterio then estado['needs_more_info'] == true && opcoes.size.between?(2, 4)
     else true
     end
   end
@@ -255,7 +276,7 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   def saudacao_certa?(cena, agente, estado)
     return true unless cena[:tambem_mudei]
 
-    esperada = cena[:saudacao] == :original ? 'Oi! Aqui é o Hubber, da Hub2You.' : AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA
+    esperada = cena[:saudacao] == :original ? AvaliacaoDoAjustePorLista::SAUDACAO : AvaliacaoDoAjustePorLista::SAUDACAO_NAO_PEDIDA
     estado['nao_pedido_anterior'].nil? && agente.reload.greeting == esperada
   end
 
@@ -283,6 +304,10 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     cena[:so].nil? || (AvaliacaoDoAjustePorLista::CAMPOS_COMPARADOS - cena[:so]).all? { |campo| antes[campo] == depois[campo] }
   end
 
+  def mudou_os_exigidos?(cena, antes, depois)
+    Array(cena[:muda]).all? { |campo| antes[campo] != depois[campo] }
+  end
+
   def rodar(cena)
     agente, antes, depois, estado = ajustar(cena)
     resposta = estado['next_question'].to_s
@@ -292,8 +317,13 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
       conferencia: estado['conferencia'], mudou: AvaliacaoDoAjustePorLista::CAMPOS_COMPARADOS.reject { |c| antes[c] == depois[c] },
       veredito: veredito, estado_certo: estado_certo?(cena, agente, antes, depois, estado),
       aprovada: estado_certo?(cena, agente, antes, depois, estado) && veredito['atende_o_certo'] &&
-        !veredito['diz_pronto_sem_ter_feito'] && (cena[:opcoes].nil? || veredito['opcoes_coerentes']),
+        !veredito['diz_pronto_sem_ter_feito'] && opcoes_aprovadas?(cena, veredito),
       custo_acumulado_usd: custo_ate_agora.round(4) }
+  end
+
+  # Em :pelo_criterio, as opções são julgadas pelo `certo` da cena (atende_o_certo), não pela régua geral de opções.
+  def opcoes_aprovadas?(cena, veredito)
+    cena[:opcoes].nil? || cena[:opcoes] == :pelo_criterio || veredito['opcoes_coerentes']
   end
 
   def teto_usd
@@ -325,5 +355,14 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     File.write(destino, JSON.pretty_generate(custo_usd: custo_ate_agora.round(4), execucoes: relatorio)) if destino.present?
     expect(relatorio.size).to eq(cenas_escolhidas.size), "teto de custo atingido: #{relatorio.size} de #{cenas_escolhidas.size}"
     expect(relatorio.reject { |linha| linha[:aprovada] }.pluck(:cena)).to eq([])
+  end
+
+  # Sem custo: o estado da cena com opções pelo critério exige pergunta aberta e de 2 a 4 opções.
+  it 'opções pelo critério: 0 ou 1 opção reprova; 2 a 4, com pergunta aberta, passa' do
+    cena = { opcoes: :pelo_criterio }
+    estado = ->(n) { { 'needs_more_info' => true, 'opcoes_de_resposta' => Array.new(n) { |i| "Opção #{i}" } } }
+
+    expect([0, 1, 2, 4, 5].map { |n| opcoes_no_estado_certas?(cena, estado.call(n)) }).to eq([false, false, true, true, false])
+    expect(opcoes_no_estado_certas?(cena, estado.call(2).merge('needs_more_info' => false))).to be(false)
   end
 end

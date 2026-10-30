@@ -90,4 +90,23 @@ RSpec.describe Autonomia::Agents::Knowledge::DocumentClassifier do
       expect(result).to eq(topics: [], entities: [], doc_style: nil)
     end
   end
+
+  # #1426 (t4e) — PDF grande: a amostra do classificador cobre todas as seções, não só os primeiros 8.000 caracteres.
+  describe 'the sample of a large PDF' do
+    it 'reads a piece of every section, including the last one' do
+      secoes = (0...12).map do |indice|
+        { 'paginas' => [(indice * 25) + 1, (indice + 1) * 25], 'texto' => "SECAO-#{indice} #{'palavra ' * 2_000}" }
+      end
+      source.secoes = secoes
+      enviado = nil
+      allow(client).to receive(:create) do |**args|
+        enviado = args[:input].to_json
+        { text: { topics: [], entities: [], doc_style: 'formal' }.to_json }
+      end
+
+      described_class.new(source: source, text: secoes.pluck('texto').join("\n")).classify
+
+      expect(enviado).to include('SECAO-0 ', 'SECAO-6 ', 'SECAO-11 ')
+    end
+  end
 end

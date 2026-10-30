@@ -702,8 +702,8 @@ module Autonomia
 
       # Cinto do conhecimento geral (Codex HIGH #118, 2ª rodada): reply que AFIRMA fato do negócio
       # sem estar ancorada (sem snippet usado, sem âncora, sem claim de conhecimento) força handoff
-      # DIRETO no portão — independente do confidence_threshold configurado no agente (um threshold
-      # <= 0.5 tornaria só o rebaixamento inócuo).
+      # DIRETO no portão — independente do limite de confiança (um limite <= 0.5 tornaria só o
+      # rebaixamento inócuo).
       def unanchored_business_claim?(parsed, used, reply_present, grounded_by_instruction)
         reply_present && parsed['answered_from_knowledge'] != true &&
           !grounded_by_instruction && used.empty? && !leu_a_conta? && !leu_dado_de_sistema? && business_claim?(parsed)
@@ -770,14 +770,10 @@ module Autonomia
           "trecho ##{snippet.id}"
       end
 
+      # Tema 6 (#1428, D3 de 30/10): o limite é o padrão, para todo agente. Ele só pesa no caminho com portão (copiloto,
+      # Guia e a Lia no Testar); o atendimento nunca o teve, e o campo saiu da tela e da Central.
       def threshold
-        raw = @agent.confidence_threshold.presence || Config::DEFAULT_CONFIDENCE_THRESHOLD
-        value = begin
-          Float(raw) # parse estrito: "abc" não vira 0.0 e desliga o portão; cai no DEFAULT.
-        rescue ArgumentError, TypeError
-          Config::DEFAULT_CONFIDENCE_THRESHOLD
-        end
-        clamp(value)
+        Config::DEFAULT_CONFIDENCE_THRESHOLD
       end
 
       def clamp(value)

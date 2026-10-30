@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_610000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2847,6 +2847,44 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_610000) do
     t.index ["user_id"], name: "idx_crm_meta_ads_comment_actions_user"
   end
 
+  create_table "crm_meta_ads_comment_cares", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "target_kind", null: false
+    t.string "target_id", null: false
+    t.jsonb "post_ids", default: [], null: false
+    t.string "network", null: false
+    t.string "status", default: "on", null: false
+    t.jsonb "offer"
+    t.text "note"
+    t.text "message", null: false
+    t.text "para_quem"
+    t.jsonb "button"
+    t.jsonb "phrases", default: [], null: false
+    t.text "price_reply"
+    t.string "handoff", default: "assignment", null: false
+    t.datetime "read_old_at"
+    t.bigint "inbox_id"
+    t.bigint "created_by_id"
+    t.datetime "started_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "target_kind", "target_id"], name: "idx_crm_meta_ads_comment_cares_target", unique: true
+    t.index ["created_by_id"], name: "index_crm_meta_ads_comment_cares_on_created_by_id"
+    t.index ["inbox_id"], name: "index_crm_meta_ads_comment_cares_on_inbox_id"
+    t.index ["post_ids"], name: "index_crm_meta_ads_comment_cares_on_post_ids", using: :gin
+  end
+
+  create_table "crm_meta_ads_comment_people", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "network", null: false
+    t.string "post_id", null: false
+    t.string "from_id", null: false
+    t.string "comment_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "network", "post_id", "from_id"], name: "idx_crm_meta_ads_comment_people_once", unique: true
+  end
+
   create_table "crm_meta_ads_connections", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.text "access_token"
@@ -4744,6 +4782,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_610000) do
   add_foreign_key "crm_meta_ads_comment_actions", "accounts"
   add_foreign_key "crm_meta_ads_comment_actions", "conversations", on_delete: :nullify
   add_foreign_key "crm_meta_ads_comment_actions", "users", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_comment_cares", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_comment_cares", "inboxes", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_comment_cares", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_comment_people", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_created_objects", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_lead_forms", "accounts", on_delete: :cascade

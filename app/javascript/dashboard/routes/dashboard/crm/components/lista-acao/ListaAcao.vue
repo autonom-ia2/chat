@@ -23,6 +23,9 @@ import BarraDaLista from './BarraDaLista.vue';
 import LinhaCliente from './LinhaCliente.vue';
 import CombinarRetorno from './CombinarRetorno.vue';
 import PassarPara from './PassarPara.vue';
+import OrganizarPor from './OrganizarPor.vue';
+import EscolherCampos from './EscolherCampos.vue';
+import ListasGuardadas from './ListasGuardadas.vue';
 import {
   cardStatusLabel,
   outcomeLabels,
@@ -35,9 +38,29 @@ import {
   GRUPOS_EM_ANDAMENTO,
   LARGURA_DA_TABELA,
   LARGURA_DA_TABELA_CHEIA,
+  TONS,
   montarGrupos,
+  montarGruposPor,
   somar,
 } from './grupos';
+import {
+  PADRAO,
+  chaveDoGrupo,
+  configDaLista,
+  opcoesDeOrganizar,
+  organizarDaLista,
+  organizarValido,
+} from './organizar';
+import {
+  alternarCampo,
+  camposDaLista,
+  camposPadrao,
+  camposVisiveis,
+  guardarPreferencias,
+  lerPreferencias,
+  moverCampo,
+  normalizarCampos,
+} from './campos';
 import { quandoFuturo, situacaoDoCard } from './situacao';
 import { emAndamento, parametrosDaLista } from './parametros';
 import { useFaixas } from './useFaixas';
@@ -61,6 +84,13 @@ const props = defineProps({
   podeMarcar: { type: Boolean, default: false },
   podeConfigurar: { type: Boolean, default: false },
   selecionados: { type: Array, default: () => [] },
+  // #2379: "Maior valor" e a soma dos grupos só para quem vê o valor de venda.
+  podeVerValor: { type: Boolean, default: false },
+  // "Listas guardadas": as visualizações salvas do funil e a lista como está
+  // agora na página (filtros e colunas da Lista de sempre).
+  listas: { type: Array, default: () => [] },
+  configAtual: { type: Object, default: () => ({}) },
+  ehAdmin: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'filtros',
@@ -69,6 +99,11 @@ const emit = defineEmits([
   'conversa',
   'selecionar',
   'limparFiltros',
+  'abrirLista',
+  'guardarLista',
+  'mudarLista',
+  'apagarLista',
+  'tirarNota',
 ]);
 
 const { t, locale } = useI18n();
@@ -85,6 +120,33 @@ const larga = ref(false);
 const colunas = ref(COLUNAS.cheia);
 const agora = ref(new Date());
 
+// "Organizar por" e "Escolher o que aparece" (#2379), guardados neste
+// navegador, por funil.
+const preferencias = () => lerPreferencias(props.pipelineId);
+const organizar = ref(
+  organizarValido(preferencias().organizar, {
+    podeVerValor: props.podeVerValor,
+  })
+);
+const campos = ref(normalizarCampos(preferencias().campos));
+const camposNaLinha = computed(() => camposVisiveis(campos.value));
+watch(
+  () => props.pipelineId,
+  () => {
+    const salvas = preferencias();
+    organizar.value = organizarValido(salvas.organizar, {
+      podeVerValor: props.podeVerValor,
+    });
+    campos.value = normalizarCampos(salvas.campos);
+  }
+);
+watch([organizar, campos], () =>
+  guardarPreferencias(props.pipelineId, {
+    organizar: organizar.value,
+    campos: campos.value,
+  })
+);
+
 const statuses = computed(() => outcomeStatuses(props.pipeline));
 const estado = () => ({
   filtros: props.filtros,
@@ -94,6 +156,7 @@ const estado = () => ({
   quem: quem.value,
   grupoSo: grupoSo.value,
   busca: busca.value,
+  organizar: organizar.value,
 });
 const dados = useListaAcaoDados({ store, estado });
 const faixas = useFaixas();
@@ -104,6 +167,9 @@ const nomeDe = card => card.contact?.name || card.title || '';
 const lista = useTemplateRef('lista');
 const combinar = useTemplateRef('combinar');
 const passarPara = useTemplateRef('passarPara');
+const organizarPor = useTemplateRef('organizarPor');
+const escolherCampos = useTemplateRef('escolherCampos');
+const listasGuardadas = useTemplateRef('listasGuardadas');
 useResizeObserver(lista, ([entrada]) => {
   const largura = entrada.contentRect.width;
   larga.value = largura >= LARGURA_DA_TABELA;
@@ -134,7 +200,10 @@ const totalAberto = computed(() =>
   somar(dados.contagem.value, GRUPOS_EM_ANDAMENTO)
 );
 const comHeroi = computed(() => emAndamento(aba.value));
-const separaEmGrupos = computed(() => comHeroi.value && !grupoSo.value);
+const porAcao = computed(() => organizar.value === PADRAO);
+const separaEmGrupos = computed(
+  () => porAcao.value && comHeroi.value && !grupoSo.value
+);
 // Nas abas de desfecho, o número é o total da própria lista.
 const contagemDaTela = computed(() =>
   comHeroi.value
@@ -153,16 +222,73 @@ const tituloDoGrupo = grupo => {
   if (grupo === 'perdido') return rotulos.value.failure;
   return t(`${L}.GRUPOS.${grupo.toUpperCase()}`);
 };
-const grupos = computed(() =>
+const opcoesDaLinha = computed(() => ({
+  podePassar: props.podePassar,
+  podeMexer: props.podeMexer,
+}));
+const gruposDeAcao = () =>
   montarGrupos({
     cards: dados.cards.value,
     contagem: contagemDaTela.value,
     grupoSo: grupoSo.value,
     meuId: props.meuId,
-    opcoes: { podePassar: props.podePassar, podeMexer: props.podeMexer },
+    opcoes: opcoesDaLinha.value,
     tomDaLinha: card => situacaoDoCard(card, contexto.value).tom,
-  }).map(grupo => ({ ...grupo, titulo: tituloDoGrupo(grupo.chave) }))
+  }).map(grupo => ({
+    ...grupo,
+    cabecalho: separaEmGrupos.value,
+    titulo: tituloDoGrupo(grupo.chave),
+  }));
+
+// Cabeçalho de "Etapa" e "Quem cuida": o nome vem da própria linha (a mesma
+// que o card mostra), senão do resumo; ninguém cuidando é "Ninguém cuidando".
+const cabecalhoPor = grupo => {
+  const card = grupo.linhas[0]?.card || {};
+  if (organizar.value === 'etapa')
+    return {
+      titulo: card.stage?.name || grupo.rotulo,
+      cor: card.stage?.color || '',
+      icone: '',
+    };
+  const responsavel = card.current_responsible;
+  if (!responsavel)
+    return { titulo: t(`${L}.GRUPOS.NINGUEM`), icone: 'i-lucide-user-round-x' };
+  const eu =
+    responsavel.type !== 'bot' &&
+    String(responsavel.id) === String(props.meuId);
+  return {
+    titulo: eu ? t(`${L}.ORGANIZAR.VOCE`) : responsavel.name || grupo.rotulo,
+    icone: responsavel.type === 'bot' ? 'i-lucide-bot' : 'i-lucide-user-round',
+  };
+};
+const gruposPorOrganizar = () =>
+  montarGruposPor({
+    cards: dados.cards.value,
+    chaveDoGrupo: ['etapa', 'quem_cuida'].includes(organizar.value)
+      ? card => chaveDoGrupo(organizar.value, card)
+      : null,
+    resumo: dados.resumo.value,
+    meuId: props.meuId,
+    opcoes: opcoesDaLinha.value,
+  }).map(grupo =>
+    grupo.cabecalho
+      ? { ...grupo, ...cabecalhoPor(grupo), tom: TONS.cinza }
+      : grupo
+  );
+const grupos = computed(() =>
+  porAcao.value ? gruposDeAcao() : gruposPorOrganizar()
 );
+const somaDoGrupo = grupo => {
+  if (grupo.soma == null || !props.podeVerValor) return '';
+  try {
+    return new Intl.NumberFormat(locale.value.replace('_', '-'), {
+      style: 'currency',
+      currency: grupo.moeda || 'BRL',
+    }).format(grupo.soma / 100);
+  } catch {
+    return '';
+  }
+};
 const semNinguem = computed(
   () =>
     !dados.carregando.value &&
@@ -175,6 +301,10 @@ const semNinguem = computed(
     !props.filtrosAtivos
 );
 
+const nomesDasPessoas = computed(() => ({
+  ...Object.fromEntries(props.pessoas.map(pessoa => [pessoa.id, pessoa.name])),
+  ...(props.meuId != null ? { [props.meuId]: props.meuNome } : {}),
+}));
 const pessoas = computed(() => [
   {
     value: props.meuId,
@@ -346,9 +476,56 @@ const baixarPlanilha = async () => {
 };
 const aoMais = chave => {
   if (chave === 'baixar') baixarPlanilha();
+  if (chave === 'organizar') organizarPor.value?.abrir();
+  if (chave === 'escolher') escolherCampos.value?.abrir();
+  if (chave === 'listas') listasGuardadas.value?.abrir();
   if (chave === 'marcar') marcando.value = !marcando.value;
   if (chave === 'configurar') emit('configurar');
 };
+
+// --- organizar, o que aparece e listas guardadas (#2379) ----------------------
+const opcoesDoOrganizar = computed(() =>
+  opcoesDeOrganizar({ podeVerValor: props.podeVerValor })
+);
+const trocarOrganizar = valor => {
+  organizar.value = valor;
+  grupoSo.value = null;
+};
+// A lista guardada traz filtros (a página aplica), a ordem e o que aparece.
+// A Lista de sempre não tinha "o que aparece": as colunas viram os campos.
+const abrirLista = guardada => {
+  const config = guardada?.config || {};
+  trocarOrganizar(
+    organizarDaLista(config, { podeVerValor: props.podeVerValor })
+  );
+  const daLista = camposDaLista(config);
+  if (daLista) campos.value = daLista;
+  emit('abrirLista', guardada);
+  anunciar(t(`${L}.LISTAS.ABERTA`, { nome: guardada?.name || '' }));
+};
+const guardarLista = ({ name, visibility }) =>
+  emit('guardarLista', {
+    name,
+    visibility,
+    pipeline_id: props.pipelineId,
+    config: configDaLista({
+      base: props.configAtual,
+      organizar: organizar.value,
+      campos: campos.value,
+    }),
+  });
+// Lista guardada com "Atenção da IA" (filtro que saiu da gaveta): continua
+// valendo, com a ficha que diz e o botão para tirar.
+const soOsMaisQuentes = computed(() =>
+  Boolean(
+    `${props.filtros?.scoreMin ?? ''}` || `${props.filtros?.scoreMax ?? ''}`
+  )
+);
+const rotuloDoMeio = computed(() =>
+  camposNaLinha.value[0] === 'situacao'
+    ? t(`${L}.LISTA.SITUACAO`)
+    : t(`${L}.LISTA.DETALHES`)
+);
 const atualizar = () => dados.carregar();
 
 // --- marcados (a barra de ações em lote é a da página) -----------------------
@@ -432,8 +609,9 @@ defineExpose({ recarregar: atualizar });
       @mais="aoMais"
     />
 
-    <div v-if="grupoSo" class="flex flex-wrap gap-2">
+    <div v-if="grupoSo || soOsMaisQuentes" class="flex flex-wrap gap-2">
       <span
+        v-if="grupoSo"
         class="inline-flex min-h-11 items-center gap-2 rounded-full bg-n-solid-1 pl-4 pr-1 font-medium text-n-slate-12 ring-1 ring-n-weak"
       >
         {{ t(`${L}.GRUPOS.MOSTRANDO_SO`, { grupo: tituloDoGrupo(grupoSo) }) }}
@@ -443,6 +621,24 @@ defineExpose({ recarregar: atualizar });
           @click="grupoSo = null"
         >
           {{ t(`${L}.GRUPOS.VER_TODOS`) }}
+        </button>
+      </span>
+      <span
+        v-if="soOsMaisQuentes"
+        data-lista-acao-ficha-nota
+        class="inline-flex min-h-11 items-center gap-2 rounded-full bg-n-solid-1 pl-4 pr-1 font-medium text-n-slate-12 ring-1 ring-n-weak"
+      >
+        <span
+          class="i-lucide-flame size-4 text-n-amber-11"
+          aria-hidden="true"
+        />
+        {{ t(`${L}.LISTAS.SO_QUENTES`) }}
+        <button
+          type="button"
+          class="min-h-11 rounded-full px-3 font-semibold text-n-blue-11 hover:bg-n-alpha-2"
+          @click="emit('tirarNota')"
+        >
+          {{ t(`${L}.LISTAS.TIRAR_QUENTES`) }}
         </button>
       </span>
     </div>
@@ -526,13 +722,13 @@ defineExpose({ recarregar: atualizar });
           </label>
           <span v-else aria-hidden="true" />
           <span>{{ t(`${L}.LISTA.CLIENTE`) }}</span>
-          <span>{{ t(`${L}.LISTA.SITUACAO`) }}</span>
+          <span>{{ rotuloDoMeio }}</span>
           <span>{{ t(`${L}.LISTA.PROXIMO_PASSO`) }}</span>
         </div>
 
         <template v-for="grupo in grupos" :key="grupo.chave">
           <div
-            v-if="separaEmGrupos"
+            v-if="grupo.cabecalho"
             :data-cab-grupo="grupo.chave"
             class="flex min-h-12 items-center gap-2 border-b border-n-weak bg-n-slate-2 pl-4 pr-2"
           >
@@ -544,9 +740,21 @@ defineExpose({ recarregar: atualizar });
                 class="grid size-7 shrink-0 place-items-center rounded-lg"
                 :class="[grupo.tom.fundo, grupo.tom.icone]"
               >
-                <span :class="grupo.icone" class="size-4" aria-hidden="true" />
+                <span
+                  v-if="grupo.icone"
+                  :class="grupo.icone"
+                  class="size-4"
+                  aria-hidden="true"
+                />
+                <span
+                  v-else
+                  class="size-3 rounded-full ring-1 ring-black/10 dark:ring-white/40"
+                  :class="{ 'bg-n-slate-9': !grupo.cor }"
+                  :style="grupo.cor ? { backgroundColor: grupo.cor } : {}"
+                  aria-hidden="true"
+                />
               </span>
-              {{ grupo.titulo }}
+              <span class="truncate">{{ grupo.titulo }}</span>
               <span
                 class="grid h-7 min-w-7 place-items-center rounded-full bg-n-solid-1 px-2 text-sm tabular-nums ring-1 ring-n-weak"
               >
@@ -554,6 +762,13 @@ defineExpose({ recarregar: atualizar });
                 <span class="sr-only">
                   {{ t(`${L}.GRUPOS.CONTA`, { n: grupo.conta }, grupo.conta) }}
                 </span>
+              </span>
+              <span
+                v-if="somaDoGrupo(grupo)"
+                data-lista-acao-soma
+                class="text-sm font-medium tabular-nums text-n-slate-11"
+              >
+                {{ somaDoGrupo(grupo) }}
               </span>
             </h2>
             <button
@@ -590,6 +805,9 @@ defineExpose({ recarregar: atualizar });
             :marcado="selecionados.includes(linha.card.id)"
             :marcavel="podeMarcar"
             :marcando="marcando"
+            :campos="camposNaLinha"
+            :organizar="organizar"
+            :nomes-das-pessoas="nomesDasPessoas"
             @acao="tipo => fazer(tipo, linha.card)"
             @alterar="chave => aoAlterar(linha.card, chave)"
             @passar="pessoa => passar(linha.card, pessoa)"
@@ -599,7 +817,7 @@ defineExpose({ recarregar: atualizar });
             @marcar="ligado => marcar(linha.card, ligado)"
           />
           <div
-            v-if="separaEmGrupos && grupo.deAcao"
+            v-if="grupo.cabecalho && grupo.deAcao"
             class="border-b border-n-weak px-2 sm:hidden"
           >
             <button
@@ -652,6 +870,29 @@ defineExpose({ recarregar: atualizar });
     </section>
 
     <CombinarRetorno ref="combinar" :ao-combinar="aoCombinar" />
+    <OrganizarPor
+      ref="organizarPor"
+      :model-value="organizar"
+      :opcoes="opcoesDoOrganizar"
+      @update:model-value="trocarOrganizar"
+    />
+    <EscolherCampos
+      ref="escolherCampos"
+      :campos="campos"
+      @alternar="chave => (campos = alternarCampo(campos, chave))"
+      @mover="(chave, passo) => (campos = moverCampo(campos, chave, passo))"
+      @padrao="campos = camposPadrao()"
+    />
+    <ListasGuardadas
+      ref="listasGuardadas"
+      :listas="listas"
+      :meu-id="meuId"
+      :eh-admin="ehAdmin"
+      @abrir="abrirLista"
+      @guardar="guardarLista"
+      @mudar="emit('mudarLista', $event)"
+      @apagar="emit('apagarLista', $event)"
+    />
     <PassarPara
       ref="passarPara"
       :pessoas="pessoas"

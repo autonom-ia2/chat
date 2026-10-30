@@ -81,6 +81,7 @@ module CustomRoles::SemFuncaoCapacidades
 
   # Sem chave só deles: seguem do "sem função"; a chave que a função usa (quando há) abre mais que isso.
   EXTRAS = [
+    # Quem lê: Crm::BookingV2::HostEligibility (eligible?/eligible_user_ids); a tela não mostra extra sem chave.
     { id: 'responsavel_de_agendamento', chaves: [], premissas: [],
       fontes: %w[Crm::BookingV2::HostEligibility.sees_cards?],
       pergunta: ->(c) { Crm::BookingV2::HostEligibility.send(:sees_cards?, c.account_user) } },

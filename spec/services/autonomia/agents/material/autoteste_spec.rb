@@ -87,7 +87,16 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     pedir_e_rodar
 
     expect(perguntados.size).to eq(10)
-    expect(perguntados).to all(include(prova: true, feature: 'agente_autoteste_resposta', agent: agent))
+    expect(perguntados).to all(include(prova: true, trust_instruction: true, feature: 'agente_autoteste_resposta', agent: agent))
+  end
+
+  # Tema 6 (D6): a exceção da Lia mora num lugar só (Playground.como_no_atendimento?); o autoteste segue o que ele diz.
+  it 'agente fora do motor do atendimento (a Lia) responde com o portão' do
+    allow(Autonomia::Agents::Playground).to receive(:como_no_atendimento?).with(agent).and_return(false)
+
+    pedir_e_rodar
+
+    expect(perguntados).to all(include(trust_instruction: false))
   end
 
   it 'nunca mais de 10, mesmo que o gerador mande mais' do

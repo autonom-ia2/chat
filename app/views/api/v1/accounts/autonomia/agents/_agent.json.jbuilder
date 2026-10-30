@@ -14,7 +14,7 @@ json.handoff_rule agent.handoff_rule
 json.starter_questions agent.starter_questions
 json.tone agent.tone
 # ALLOWLIST do jsonb `config`: só as chaves que o FE consome (PanelTune/PanelKnowledge/PanelPublish
-# leem handoff_strategy/confidence_threshold/knowledge_confidence; with_knowledge/knowledge_summary
+# leem handoff_strategy/knowledge_confidence; with_knowledge/knowledge_summary
 # acompanham por contrato). Chaves INTERNAS (knowledge_refresh_token, builder_active_thread_id,
 # system_key, guide_*, test_allowlist_phones, topic_map bruto...) NUNCA saem por aqui.
 # `audience`/`response_window` (#284 · Entrega 2a): público-alvo e horário de atuação (PanelTune).
@@ -23,7 +23,7 @@ json.tone agent.tone
 # `booking_agent_ids` (#1307): as pessoas da página liberadas para a IA, como gravadas (conferidas ao salvar; vazio =
 # todas). Id que deixou de ser da página depois continua aqui até o próximo salvar; a IA confere de novo a cada turno.
 # `booking_page_id` (#1196): a página de agendamento que liga a agenda da IA (PanelTune).
-json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id', 'confidence_threshold',
+json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id',
                                     'with_knowledge', 'knowledge_confidence', 'knowledge_summary',
                                     'audience', 'response_window', 'audience_unknown_contact',
                                     'faq_suggestions', 'booking_page_id', 'booking_agent_ids')

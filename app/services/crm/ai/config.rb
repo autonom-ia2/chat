@@ -5,11 +5,9 @@ module Crm
 
       AUTO_MOVE_THRESHOLD = 0.75
       SUGGESTION_THRESHOLD = 0.55
-      # IA entende a conversa F3 (decisão do Rodrigo, 22/10): fechar o card (Crm::Ai::FecharCard) é sugestão por padrão;
-      # sozinho, só com esta confiança. Escolhido na rodada paga F5 (160 cenários, 1 repetição): os 3 fechamentos errados
-      # vieram com 0,85–0,86; os 17 certos com 0,86–0,99 (mediana 0,93). 0,95 deixa 0,09 de folga acima do maior errado.
-      # A confiança do mesmo momento oscilou até 0,14 entre duas leituras: subir este número é o lado seguro.
-      AUTO_CLOSE_THRESHOLD = 0.95
+      # IA entende a conversa F3 (decisão do Rodrigo, 30/10, #2389): fechar o card (Crm::Ai::FecharCard) é sempre sugestão,
+      # a partir de SUGGESTION_THRESHOLD; a IA nunca fecha sozinha. Na semana, os fechamentos errados vieram com 0,95–0,99,
+      # na mesma faixa dos certos: nenhum limiar de confiança separa um do outro. Mover de etapa segue AUTO_MOVE_THRESHOLD.
       DEBOUNCE_SECONDS = 15
       MIN_EVALUATION_INTERVAL_SECONDS = 30
       AUTO_MOVE_COOLDOWN_SECONDS = DEBOUNCE_SECONDS

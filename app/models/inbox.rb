@@ -78,8 +78,7 @@ class Inbox < ApplicationRecord
 
   has_one :inbox_assignment_policy, dependent: :destroy
   has_one :assignment_policy, through: :inbox_assignment_policy
-  has_one :agent_bot_inbox, dependent: :destroy_async
-  has_one :agent_bot, through: :agent_bot_inbox
+  # agent_bot_inbox e agent_bot ficam em InboxBotStatus.
   # Conserto "caixa deletada" (Autonomia Agents): a FK autonomia_agent_inboxes.inbox_id (sem
   # ON DELETE CASCADE) barrava o Inbox#destroy quando havia agente conectado. dependent: :destroy
   # (síncrono, NÃO _async) remove o vínculo ANTES da deleção do Inbox → some a FK; e o

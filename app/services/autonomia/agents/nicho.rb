@@ -25,6 +25,8 @@ module Autonomia::Agents::Nicho
   SEGUROS = 'seguros'
   GERAL = 'geral'
   NICHOS = [SEGUROS, GERAL].freeze
+  # Valor do formulário para "seguir o padrão da instalação": não é nicho, só apaga a escolha da conta.
+  PADRAO = 'padrao'
   INSURTECH = 'insurtech'
   PERFIS = %w[corretora seguradora insurtech saude_beneficios].freeze
   PERFIL_PADRAO = 'corretora'
@@ -74,16 +76,21 @@ module Autonomia::Agents::Nicho
   private_class_method :partes_do_padrao
 
   # Atribui a escolha do super admin em internal_attributes, sem salvar e sem tocar nas outras chaves. Valor fora da
-  # lista não muda nada. Se a conta ainda não escolheu e recebe o próprio padrão da instalação (o formulário sempre
-  # manda o cartão marcado), nada é gravado: a conta continua seguindo o padrão.
+  # lista não muda nada. PADRAO apaga nicho, perfil e canal: a conta volta a seguir o padrão da instalação.
   def self.atribuir(account, nicho:, perfil:, canal: nil)
+    return voltar_ao_padrao(account) if nicho.to_s == PADRAO
+
     escolha = escolher(nicho, perfil, canal, padrao: false)
     return if escolha.nil?
-    return if account.internal_attributes.to_h[NICHO_KEY].blank? && mesma?(escolha, padrao_da_instalacao)
 
     escolhidas = { NICHO_KEY => escolha.nicho, PERFIL_KEY => escolha.perfil, CANAL_KEY => escolha.canal }.compact
     account.internal_attributes = account.internal_attributes.to_h.except(PERFIL_KEY, CANAL_KEY).merge(escolhidas)
   end
+
+  def self.voltar_ao_padrao(account)
+    account.internal_attributes = account.internal_attributes.to_h.except(NICHO_KEY, PERFIL_KEY, CANAL_KEY)
+  end
+  private_class_method :voltar_ao_padrao
 
   def self.escolher(nicho, perfil, canal, padrao:)
     nicho = nicho.to_s
@@ -101,9 +108,4 @@ module Autonomia::Agents::Nicho
     CANAIS.include?(canal.to_s) ? canal.to_s : CANAL_PADRAO
   end
   private_class_method :canal_do
-
-  def self.mesma?(uma, outra)
-    uma.nicho == outra.nicho && uma.perfil == outra.perfil && uma.canal == outra.canal
-  end
-  private_class_method :mesma?
 end

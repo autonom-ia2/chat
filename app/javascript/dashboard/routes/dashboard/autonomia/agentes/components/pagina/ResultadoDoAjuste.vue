@@ -18,7 +18,7 @@ const props = defineProps({
 
 const emit = defineEmits(['desfazer']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const NS = 'AGENTS.JORNADA.PAGINA.MUDAR_VISTA.CONFERIDO';
 
 const pedidos = computed(() =>
@@ -60,7 +60,80 @@ const cor = computed(() => {
 // (pergunta do cliente e resposta do agente; nunca trecho da instrução). Indisponível, ou nenhuma pergunta
 // que toque a mudança (`total` 0: o placar só conta essas): linha neutra, sem ✓.
 const prova = computed(() => props.resultado.prova || null);
-const provaOk = computed(() => prova.value?.ok === prova.value?.total);
+// Revisão do t6d: o ✓ só sai quando cada pedido teve uma pergunta que o testou (`completa`).
+const provaCompleta = computed(() => prova.value?.completa !== false);
+// Prova incompleta (texto aprovado pelo Rodrigo, 22/10): os pedidos que não deu para ver, juntos como o idioma
+// junta uma lista ("a, b e c"); sem a lista (prova antiga), o texto geral.
+// Sem o Intl.ListFormat (navegador antigo ou idioma que ele não conhece), vírgulas.
+const pedidosSemTeste = computed(() => {
+  const lista = prova.value?.pedidos_sem_teste || [];
+  if (!lista.length) return '';
+  try {
+    return new Intl.ListFormat(locale.value.replace('_', '-'), {
+      type: 'conjunction',
+    }).format(lista);
+  } catch {
+    return lista.join(', ');
+  }
+});
+const textoIncompleta = computed(() =>
+  pedidosSemTeste.value
+    ? t(`${NS}.PROVA_INCOMPLETA`, { pedidos: pedidosSemTeste.value })
+    : t(`${NS}.PROVA_SEM_TESTE`)
+);
+const contraditas = computed(() => prova.value?.mudancas?.contraditas || 0);
+const provaOk = computed(
+  () =>
+    prova.value?.ok === prova.value?.total &&
+    provaCompleta.value &&
+    !contraditas.value
+);
+// Ajuste aprovado pelo Rodrigo (22/10): o título conta mudanças (pedidos), não perguntas, e diz quantas a resposta
+// do teste contrariou. Prova antiga, sem `mudancas`, mantém o placar de perguntas.
+const contagemDaProva = mudancas => {
+  if (mudancas.testadas === mudancas.total) {
+    return t(`${NS}.PROVA_TESTEI_TODAS`, { n: mudancas.total }, mudancas.total);
+  }
+  return t(`${NS}.PROVA_TESTEI_PARTE`, {
+    x: mudancas.testadas,
+    n: mudancas.total,
+  });
+};
+const contradicao = mudancas => {
+  if (!contraditas.value) return '';
+  if (mudancas.total === 1) return t(`${NS}.PROVA_CONTRARIO_UMA`);
+  return t(
+    `${NS}.PROVA_CONTRARIO`,
+    { k: contraditas.value },
+    contraditas.value
+  );
+};
+const tituloDaProva = computed(() => {
+  const mudancas = prova.value?.mudancas;
+  if (!mudancas) {
+    return t(
+      `${NS}.PROVA`,
+      { ok: prova.value.ok, total: prova.value.total },
+      prova.value.total
+    );
+  }
+  return [contagemDaProva(mudancas), contradicao(mudancas)]
+    .filter(Boolean)
+    .join(' ');
+});
+// O que a prova viu de cada linha aplicada: o ✓ de "mudei" não vem junto de "não deu para ver". O ícone nunca é a
+// única informação: o leitor de tela ouve o rótulo. A prova antiga fica como antes.
+const ROTULO_DA_PROVA = {
+  ok: 'APLICADO_TESTADO',
+  nao: 'APLICADO_CONTRARIO',
+  sem_teste: 'APLICADO_SEM_TESTE',
+};
+const ICONE_DA_PROVA = {
+  nao: 'i-lucide-triangle-alert text-n-amber-11',
+  sem_teste: 'i-lucide-circle-dashed text-n-slate-10',
+};
+const rotuloAplicado = item =>
+  t(`${NS}.${ROTULO_DA_PROVA[item.prova] || 'APLICADO'}`);
 const verProva = ref(false);
 const listaDaProva = useId();
 
@@ -99,6 +172,7 @@ const podeDesfazer = computed(
         v-for="(item, indice) in pedidos"
         :key="indice"
         :data-item="item.estado"
+        :data-visto="item.prova"
         class="flex items-start gap-3 text-sm text-n-slate-12"
       >
         <template v-if="!conferido">
@@ -110,11 +184,15 @@ const podeDesfazer = computed(
         </template>
         <template v-else-if="item.estado === 'aplicado'">
           <span
-            class="i-lucide-circle-check size-5 shrink-0 text-n-teal-11"
+            class="size-5 shrink-0"
+            :class="
+              ICONE_DA_PROVA[item.prova] ||
+              'i-lucide-circle-check text-n-teal-11'
+            "
             aria-hidden="true"
           />
           <span class="relative">
-            <span class="sr-only">{{ t(`${NS}.APLICADO`) }}</span>
+            <span class="sr-only">{{ rotuloAplicado(item) }}</span>
             {{ item.texto }}
           </span>
         </template>
@@ -184,6 +262,7 @@ const podeDesfazer = computed(
         </p>
         <p
           v-else
+          data-titulo-prova
           class="flex items-center gap-3 m-0 text-sm font-semibold text-n-slate-12"
         >
           <span
@@ -195,9 +274,14 @@ const podeDesfazer = computed(
             "
             aria-hidden="true"
           />
-          {{
-            t(`${NS}.PROVA`, { ok: prova.ok, total: prova.total }, prova.total)
-          }}
+          {{ tituloDaProva }}
+        </p>
+        <p
+          v-if="prova.total && !provaCompleta"
+          data-prova-incompleta
+          class="m-0 text-sm text-n-slate-12 ps-8"
+        >
+          {{ textoIncompleta }}
         </p>
         <button
           data-ver-prova
@@ -241,7 +325,7 @@ const podeDesfazer = computed(
                 {{ t(`${NS}.CLIENTE`) }} {{ item.pergunta }}
               </span>
               <span class="text-n-slate-12">
-                <b class="font-semibold">{{ nome }}:</b>
+                <b class="font-semibold">{{ t(`${NS}.AGENTE`, { nome }) }}</b>
                 {{ item.resposta || t(`${NS}.PROVA_EQUIPE`) }}
               </span>
             </span>

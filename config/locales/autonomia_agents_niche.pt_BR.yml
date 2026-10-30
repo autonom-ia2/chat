@@ -6,7 +6,6 @@ pt_BR:
   autonomia_agents_niche:
     label: Segmento e nicho da conta
     help: Muda as palavras do painel, do Guia, da Central de Ajuda e dos agentes para o jeito de trabalhar desta conta.
-    installation_default: "Padrão desta instalação: %{niche}"
     is_default: (padrão desta instalação)
     warning: A troca aparece na próxima vez que a equipe abrir o painel. Funis já criados não mudam. Agentes que já existem só mudam pelo botão Atualizar com a nova base.
     switch_off: Enquanto as palavras por segmento estiverem desligadas nesta instalação, a escolha fica guardada e começa a valer quando forem ligadas.
@@ -16,6 +15,9 @@ pt_BR:
     preview_label_off: "Quando as palavras por segmento forem ligadas, um card fechado vai aparecer como"
     separator: " · "
     niches:
+      padrao:
+        title: Padrão desta instalação
+        text: "Hoje: %{niche}. Acompanha a instalação se o padrão mudar."
       seguros:
         title: Seguros
         text: Para empresas de seguros.

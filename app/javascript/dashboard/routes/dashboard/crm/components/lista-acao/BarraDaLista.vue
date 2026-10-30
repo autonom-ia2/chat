@@ -26,17 +26,9 @@ const busca = defineModel('busca', { type: String, default: '' });
 const { t } = useI18n();
 const L = 'CRM_LISTA_ACAO';
 const QUEM = ['todos', 'meus'];
+// A ordem do mockup aprovado (#2283, #2379): Baixar planilha · Organizar por ·
+// Escolher o que aparece · Listas guardadas · Marcar vários · Configurar.
 const itensMais = computed(() => [
-  ...(props.podeConfigurar
-    ? [
-        {
-          chave: 'configurar',
-          rotulo: t('CRM_KANBAN.ACTIONS.CONFIGURE'),
-          icone: 'i-lucide-settings-2',
-          classe: 'lg:hidden',
-        },
-      ]
-    : []),
   ...(props.podeBaixar
     ? [
         {
@@ -46,6 +38,21 @@ const itensMais = computed(() => [
         },
       ]
     : []),
+  {
+    chave: 'organizar',
+    rotulo: t(`${L}.MAIS_MENU.ORGANIZAR`),
+    icone: 'i-lucide-arrow-down-wide-narrow',
+  },
+  {
+    chave: 'escolher',
+    rotulo: t(`${L}.MAIS_MENU.ESCOLHER`),
+    icone: 'i-lucide-columns-2',
+  },
+  {
+    chave: 'listas',
+    rotulo: t(`${L}.MAIS_MENU.LISTAS`),
+    icone: 'i-lucide-bookmark',
+  },
   ...(props.podeMarcar
     ? [
         {
@@ -56,14 +63,17 @@ const itensMais = computed(() => [
         },
       ]
     : []),
+  ...(props.podeConfigurar
+    ? [
+        {
+          chave: 'configurar',
+          rotulo: t('CRM_KANBAN.ACTIONS.CONFIGURE'),
+          icone: 'i-lucide-settings-2',
+          classe: 'lg:hidden',
+        },
+      ]
+    : []),
 ]);
-// Sem "Baixar planilha", o "Mais" some onde nenhum item aparece: "Marcar
-// vários" só no celular, "Configurar" só abaixo de 1024 px.
-const classeDoMais = computed(() => {
-  if (props.podeBaixar) return {};
-  if (props.podeConfigurar) return { 'lg:hidden': true };
-  return { 'md:hidden': props.podeMarcar };
-});
 const rotuloDaAba = aba =>
   props.rotulosDasAbas[aba] || t(`${L}.ABAS.${aba.toUpperCase()}`);
 const classeDaAba = ativa =>
@@ -113,7 +123,6 @@ const mostraTotal = aba => aba === 'aberto' && props.aba === 'aberto';
       </button>
       <div
         class="flex min-w-0 rounded-xl bg-n-alpha-2 p-1 md:order-2"
-        :class="{ 'col-span-2': !itensMais.length }"
         role="group"
         :aria-label="t(`${L}.QUEM.ROTULO`)"
       >
@@ -130,12 +139,7 @@ const mostraTotal = aba => aba === 'aberto' && props.aba === 'aberto';
           {{ t(`${L}.QUEM.${opcao === 'todos' ? 'TODOS' : 'MEUS'}`) }}
         </button>
       </div>
-      <div
-        v-if="itensMais.length"
-        class="grid md:order-4"
-        :class="classeDoMais"
-        data-lista-acao-mais
-      >
+      <div class="grid md:order-4" data-lista-acao-mais>
         <MenuDeAcoes
           :rotulo-do-botao="t(`${L}.MAIS`)"
           :aria-label="t(`${L}.MAIS`)"

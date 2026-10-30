@@ -32,6 +32,21 @@ RSpec.describe Autonomia::Agents::Material::Problemas do
     expect(do_tipo('sem_cabecalho').sole).to include('fontes' => [planilha.id], 'amostra' => ['Coca 350', '6,00'], 'foto' => false)
   end
 
+  # #1426 (t4e): no material grande a tabela sem cabeçalho é aviso; o material segue aceito e o cartão aparece.
+  it 'tabela sem cabeçalho de material grande: aparece como aviso, com o material aceito' do
+    manual = material('manual.pdf', metadata: { 'conferencia' => { 'problema' => 'sem_cabecalho', 'amostra' => ['Cláusula 63'],
+                                                                   'aviso' => true } })
+
+    expect(do_tipo('sem_cabecalho').sole).to include('id' => "sem_cabecalho-#{manual.id}", 'fontes' => [manual.id],
+                                                     'amostra' => ['Cláusula 63'], 'aviso' => true)
+  end
+
+  it 'tabela sem cabeçalho que reprovou o material não vem marcada como aviso' do
+    material('bebidas.xlsx', review_status: 'needs_resend', metadata: { 'conferencia' => { 'problema' => 'sem_cabecalho' } })
+
+    expect(do_tipo('sem_cabecalho').sole).not_to have_key('aviso')
+  end
+
   it 'duplicado: fica o mais antigo; o par mantido pela pessoa não volta', :aggregate_failures do
     primeiro = material('horarios.pdf', metadata: { 'hash_do_texto' => 'abc' })
     segundo = material('horarios (1).pdf', metadata: { 'hash_do_texto' => 'abc' })

@@ -29,6 +29,13 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
     expect(conferir).to eq('problema' => 'sem_cabecalho', 'amostra' => ['Coca 350', '6,00', '12', 'S'])
   end
 
+  # #1426 (t4e, decisão do Rodrigo de 30/10): sem a 1ª linha da tabela no texto, não há prova; o material não é reprovado.
+  it 'tabela sem cabeçalho sem nenhuma célula que esteja no material: sem problema' do
+    modelo_diz(leitura: 'nao_se_aplica', tabela: 'sem_cabecalho', primeira_linha: ['Produto inventado', '99,00'])
+
+    expect(conferir).to eq('problema' => nil, 'amostra' => [])
+  end
+
   it 'leitura ruim: problema ocr' do
     modelo_diz(leitura: 'ruim', tabela: 'nao_se_aplica')
 
@@ -97,6 +104,18 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
       expect(fonte.reviewed_at).to be_present
       expect(fonte.metadata['conferencia']).to eq('problema' => 'sem_cabecalho', 'amostra' => ['Coca 350'])
       expect(fonte.metadata['hash_do_texto']).to eq(Digest::SHA256.hexdigest(amostra))
+    end
+
+    # #1426 (t4e, decisão do Rodrigo de 30/10): no material grande (o PDF lido em seções), a tabela sem cabeçalho vira aviso:
+    # o material continua na base e o cartão aparece com "Pular por agora".
+    it 'no material grande, tabela sem cabeçalho vira aviso e o material continua aceito', :aggregate_failures do
+      fonte.knowledge_entries.update_all(metadata: { 'paginas' => [1, 25] }) # rubocop:disable Rails/SkipsModelValidations
+
+      revisar
+
+      expect(fonte.review_status).to eq('accepted')
+      expect(fonte.review_summary).to eq('Preços.')
+      expect(fonte.metadata['conferencia']).to eq('problema' => 'sem_cabecalho', 'amostra' => ['Coca 350'], 'aviso' => true)
     end
 
     it 'sem problema, o parecer da revisão fica como veio' do

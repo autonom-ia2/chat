@@ -160,7 +160,6 @@ module Autonomia
       store_accessor :config, :native_tool_slugs
       # #1196 — a página de agendamento da agenda da IA; escolhê-la liga `horarios_disponiveis` e `agendar_reuniao`.
       store_accessor :config, :booking_page_id
-      store_accessor :config, :confidence_threshold # Fase B: portão de confiança (lido no Answerer)
       # Fase D: handoff real configurável por agente (jsonb `config`, sem migração).
       # handoff_strategy ∈ Operate::HANDOFF_STRATEGIES; default conservador = 'none'
       # (comportamento da Fase C: só mensagem graciosa + bot_handoff!, conversa fica unassigned).

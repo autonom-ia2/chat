@@ -36,7 +36,17 @@ RSpec.describe Autonomia::Agents::BaseDeSeguros::Comparacao do
     expect(resultado[:perguntas].pluck(:hoje)).to all(eq('com a antiga'))
     expect(resultado[:perguntas].pluck(:nova)).to all(eq('com a nova'))
     expect(chamadas.size).to eq(6)
+    expect(chamadas).to all(include(prova: true, trust_instruction: true))
     expect(resultado[:versao]).to eq(bloco.versao('seguros/corretora'))
+  end
+
+  # Tema 6 (D6): a exceção da Lia mora num lugar só (Playground.como_no_atendimento?); a comparação segue o que ele diz.
+  it 'agente fora do motor do atendimento (a Lia) compara com o portão' do
+    allow(Autonomia::Agents::Playground).to receive(:como_no_atendimento?).and_return(false)
+
+    described_class.new(agent, idioma: 'pt_BR', account_user: quem).rodar
+
+    expect(chamadas).to all(include(trust_instruction: false))
   end
 
   it 'ao terminar, guarda que esta pessoa viu esta versão e o resultado, para reabrir a gaveta' do
