@@ -153,6 +153,28 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     end
   end
 
+  describe 'o anúncio cujo criativo mudou de post' do
+    let(:alvo_do_anuncio) { { 'kind' => 'ad', 'ad_id' => '120', 'networks' => %w[instagram facebook], 'post_ids' => %w[17911 555_777] } }
+    let!(:do_anuncio) do
+      create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120', post_ids: %w[17900], network: 'instagram')
+    end
+
+    it 'ao ler, o cuidado passa a ter os posts e as redes de agora: o motor acha o comentário do post novo' do
+      described_class.new(account: account, alvo: alvo_do_anuncio, fonte: fonte, conversation_access: ve_tudo).payload
+
+      expect(do_anuncio.reload).to have_attributes(post_ids: %w[17911 555_777], network: 'both')
+      expect(Crm::MetaAdsCommentCare.cuidando(account_id: account.id, network: 'instagram', post_id: '17911', ad_id: nil)).to eq(do_anuncio)
+    end
+
+    it 'sem mudança, não grava' do
+      do_anuncio.update!(post_ids: %w[17911 555_777], network: 'both')
+
+      expect do
+        described_class.new(account: account, alvo: alvo_do_anuncio, fonte: fonte, conversation_access: ve_tudo).payload
+      end.not_to(change { do_anuncio.reload.updated_at })
+    end
+  end
+
   it 'leitura que não ficou pronta: o cuidado vem, sem a lista' do
     allow(fonte).to receive(:ler).and_return({ status: 'needs_permission', linhas: [], escondidas: [] })
 

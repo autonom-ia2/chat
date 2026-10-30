@@ -60,6 +60,7 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   def payload
+    acompanhar_o_criativo!
     lido = @fonte.ler
     return cuidado_payload.merge(status: lido[:status], unanswered: 0, older: 0, to_see: [], hidden: []) unless lido[:status] == 'ready'
 
@@ -95,6 +96,16 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   private
+
+  # O anúncio cujo criativo trocou de post (ou de redes): o cuidado passa a ter os de agora, lidos na hora (Anuncio), para
+  # o motor achar o comentário que chega só com o id do post novo. Grava só essas colunas (o que o dono escreveu não muda,
+  # e um cuidado antigo que não passasse numa validação nova não pode derrubar a tela). Sem mudança, nada é gravado.
+  def acompanhar_o_criativo!
+    return unless target_kind == 'ad' && cuidado && @networks.any?
+    return if cuidado.post_ids == @post_ids && cuidado.network == rede_do_cuidado
+
+    cuidado.update_columns(post_ids: @post_ids, network: rede_do_cuidado, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+  end
 
   # Duas abas ligando o mesmo post ao mesmo tempo: a segunda esbarra no cuidado que a primeira acabou de criar (na
   # validação de unicidade ou, na corrida, no índice único). Relê o cuidado e aplica por cima, uma vez.
