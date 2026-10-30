@@ -125,6 +125,33 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
   end
 
+  it 'erro ao reservar a pessoa (antes da Meta): solta a leitura e não chama a Meta, para o job tentar de novo' do
+    decide('private')
+    allow(registro).to receive(:reservar_pessoa!).and_raise(ActiveRecord::RecordInvalid)
+
+    expect { cuidar }.to raise_error(ActiveRecord::RecordInvalid)
+    expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
+    expect(rede).not_to have_received(:privado)
+  end
+
+  it 'erro depois de chamar a Meta não solta a leitura: o privado pode ter saído' do
+    decide('private')
+    allow(rede).to receive(:privado).and_raise(ActiveRecord::ConnectionTimeoutError)
+
+    expect { cuidar }.to raise_error(ActiveRecord::ConnectionTimeoutError)
+    expect(registro).not_to have_received(:soltar!)
+  end
+
+  it 'comentário do anúncio sem o post: não manda privado (a pessoa é por post), fica com o dono' do
+    create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120', network: 'both')
+    decide('private')
+
+    cuidar(comentario(post_id: nil, ad_id: '120'))
+
+    expect(rede).not_to have_received(:privado)
+    expect(registro).to have_received(:gravar!).with(anything, 'ai_unread')
+  end
+
   it 'Jev fora do ar: solta a leitura e sobe o erro, para o job tentar de novo' do
     allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_timeout'))
 
@@ -181,6 +208,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(Rails.logger).to have_received(:warn).with(include('recusou reply', 'comment=c-1'))
+    expect(registro).to have_received(:gravar!).with(lido, 'ai_unread')
   end
 
   it 'privado sem resposta da Meta (pode ter saído): a reserva da pessoa fica, e a conversa vai para conferir' do
