@@ -74,6 +74,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(painel.payload[:to_see].find { |item| item[:id] == '3' }).to include(kind: 'unsure', conversation_path: be_present)
   end
 
+  it 'a pessoa já tinha o privado deste post: "já recebeu", não "não se aplica"; e o aviso automático vem no idioma da conta' do
+    acao('3', 'ai_seen')
+    acao('3', 'private_reply_already')
+    account.update!(locale: 'pt_BR')
+
+    payload = painel.payload
+
+    expect(payload[:to_see].find { |item| item[:id] == '3' }[:kind]).to eq('already_sent')
+    expect(payload[:results][:skipped]).to eq(0)
+    expect(payload[:automatic_note]).to eq(I18n.t('conversations.activity.meta_ads_comment.private_reply_suffix', locale: 'pt_BR'))
+  end
+
   it 'o que a IA fez em outra conta, com o mesmo id de comentário, não entra' do
     outra = create(:account)
     Crm::MetaAdsCommentAction.record!(account: outra, network: 'instagram', comment_id: '1', action: 'to_you', actor: 'ai')
@@ -157,6 +169,24 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
       allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', dias: 1)], escondidas: [] })
 
       expect(painel.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 waiting], %w[2 paused]])
+    end
+
+    it 'religar recomeça a contar daqui: o que chegou com o cuidado pausado vira "antes de ligar" e o "Ler e mandar" volta' do
+      care.update!(status: 'paused', read_old_at: 1.day.ago)
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('2', dias: 1)], escondidas: [] })
+
+      painel.salvar!(message: care.message, para_quem: care.para_quem, phrases: care.phrases, status: 'on', user: nil)
+
+      expect(care.reload).to have_attributes(status: 'on', read_old_at: nil, started_at: be_within(5.seconds).of(Time.current))
+      expect(painel.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[2 waiting]])
+    end
+
+    it 'salvar com o cuidado já ligado não mexe no começo' do
+      inicio = care.started_at
+
+      painel.salvar!(message: care.message, para_quem: care.para_quem, phrases: care.phrases, status: 'on', user: nil)
+
+      expect(care.reload.started_at).to be_within(1.second).of(inicio)
     end
   end
 

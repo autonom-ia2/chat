@@ -70,6 +70,16 @@ describe('CuidarDono (#2212)', () => {
     expect(proximo(wrapper).element.disabled).toBe(false);
   });
 
+  it('conta os bytes com o aviso no idioma da conta, que é o que sai no privado', async () => {
+    // Aviso da conta com 100 bytes: 900 + 1 + 100 passa de 1000; com o aviso da tela (58 bytes), não passaria.
+    const wrapper = montar({
+      data: painel({ automatic_note: 'x'.repeat(100) }),
+    });
+    await wrapper.find('[data-ia-dono-message]').setValue('e'.repeat(900));
+
+    expect(wrapper.find('[data-ia-dono-too-long]').exists()).toBe(true);
+  });
+
   it('passo 2: o atalho preenche o para quem; mais de 500 letras não continua', async () => {
     const wrapper = montar({ data: painel({ message: 'Oi!' }) });
     await proximo(wrapper).trigger('click');

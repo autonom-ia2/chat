@@ -128,13 +128,15 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   # Tudo de uma vez, numa transação: o status muda sem regravar o resto (um cuidado antigo que não passaria na validação
   # de hoje não trava os outros). Pausar vale para todos. Voltar a cuidar só liga o cuidado que passa na validação de
-  # hoje: o que não passa fica pausado, e a lista devolvida mostra isso post a post. Devolve os posts mudados, para a
-  # Auditoria depois de mudar.
+  # hoje: o que não passa fica pausado, e a lista devolvida mostra isso post a post. Religado, recomeça a contar daqui
+  # (Painel#religar!). Devolve os posts mudados, para a Auditoria depois de mudar.
   def mudar_status!(status)
     Crm::MetaAdsCommentCare.transaction do
-      mudados = cuidados_do_perfil.where.not(status: status).lock.to_a
+      mudados = cuidados_do_perfil.where.not(status: status).includes(:account).lock.to_a
       mudados = mudados.select { |care| care.tap { |novo| novo.status = status }.valid? } if status == 'on'
-      Crm::MetaAdsCommentCare.where(id: mudados.map(&:id)).update_all(status: status, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      agora = Time.current
+      religados = status == 'on' ? { started_at: agora, read_old_at: nil } : {}
+      Crm::MetaAdsCommentCare.where(id: mudados.map(&:id)).update_all(status: status, updated_at: agora, **religados) # rubocop:disable Rails/SkipsModelValidations
       mudados.map(&:target_id)
     end
   end

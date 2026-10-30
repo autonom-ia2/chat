@@ -199,6 +199,7 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
       .to eq(post_id => 'on', '17900000000000008' => 'paused')
     auditoria = Audited.audit_class.where(action: 'seus_posts_comment_care').order(:id).last
     expect(auditoria.audited_changes).to include('status' => 'on', 'post_ids' => [post_id])
+    expect(Crm::MetaAdsCommentCare.find_by(target_id: post_id).started_at).to be_within(5.seconds).of(Time.current)
   end
 
   it 'texto em forma errada (objeto no lugar de texto, frases que não são lista) é recusado, não vira vazio' do
