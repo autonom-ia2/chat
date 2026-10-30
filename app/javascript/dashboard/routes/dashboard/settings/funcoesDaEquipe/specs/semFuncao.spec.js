@@ -79,7 +79,7 @@ describe('semFuncao', () => {
       'INBOXES:VER',
       'AUTOMATIONS:VER',
       'LABELS:MEXER',
-      'MACROS:MEXER',
+      'MACROS:PROPRIOS',
     ]);
     expect(diff(PRESETS.OPERATIONS()).perde).toEqual([
       'AUTONOMIA:MEXER',
@@ -87,9 +87,26 @@ describe('semFuncao', () => {
       'AUTOMATIONS:MEXER',
       'LABELS:MEXER',
       'ATTRIBUTES:MEXER',
-      'MACROS:MEXER',
+      'MACROS:PROPRIOS',
       'SLA:MEXER',
     ]);
+  });
+
+  // #2403: sem função, a pessoa continua com os atalhos pessoais (Macro#set_visibility); os da equipe, mesmo os que
+  // ela criou, ela só usa (MacroPolicy#update?/destroy?). A perda não pode parecer a área inteira.
+  it('macro_manage sai como "só os da equipe", nunca como a área inteira', () => {
+    expect(diff(['macro_manage']).perde).toEqual(['MACROS:PROPRIOS']);
+  });
+
+  // #2403: o extra sem chave (responsavel_de_agendamento, lido pelo HostEligibility no servidor) fica no contrato, mas a
+  // tela só mostra os extras com chave.
+  it('o extra sem chave fica fora do que a tela mostra', () => {
+    const ids = capacidadesSemFuncao(desligada).map(item => item.id);
+    expect(ids).not.toContain('responsavel_de_agendamento');
+    expect(ids).toContain('anuncio_de_origem');
+    capacidadesSemFuncao(desligada).forEach(item =>
+      expect(item.chaves.length).toBeGreaterThan(0)
+    );
   });
 
   // Rodada 4: o extra anuncio_de_origem (meta_ads_view) diz só o que o sem função ganha; a página de Anúncios ele

@@ -13,7 +13,10 @@ import contratoGerado from './semFuncaoCapacidades.json';
 //
 // Cada item do diff tem `chave` (para a tela) e `tipo`: 'capacidade' (texto em FUNCOES_EQUIPE.SEM_FUNCAO.<id>) ou
 // 'area' (o que a função dava numa área e o "Sem função" não dá). `jeito` diz o tamanho da perda: 'MEXER' ou 'VER' quando
-// a área inteira some; 'PARTE' quando o "Sem função" ainda usa a área (as vendas das colunas) e só um pedaço sai.
+// a área inteira some; 'PARTE' quando o "Sem função" ainda usa a área (as vendas das colunas) e só um pedaço sai;
+// 'PROPRIOS' quando a área é de quem cria (baseline PERSONAL, os atalhos de mensagens): sem função, a pessoa continua
+// criando, mudando e usando os pessoais (Macro#set_visibility grava pessoal) e só usa os da equipe; mudar ou apagar um
+// da equipe, mesmo um que ela criou, pede macro_manage (MacroPolicy#update?/destroy?) (#2403).
 const CHAVES_DE_VENDAS = Object.values(DONO_DAS_CHAVES)
   .flat()
   .filter(chave => chave.startsWith('crm_'));
@@ -105,10 +108,14 @@ const areasPerdidas = (perdidas, cobertas, semFuncao) =>
       );
       const mexia = daArea.some(chave => chave !== module.levels?.view);
       const ficaNaArea = modulesWithKeys(semFuncao).includes(module);
+      const soOsProprios = module.baseline === 'PERSONAL';
       return {
         chave: module.key,
         tipo: 'area',
-        jeito: (ficaNaArea && 'PARTE') || (mexia ? 'MEXER' : 'VER'),
+        jeito:
+          (ficaNaArea && 'PARTE') ||
+          (soOsProprios && 'PROPRIOS') ||
+          (mexia ? 'MEXER' : 'VER'),
       };
     });
 

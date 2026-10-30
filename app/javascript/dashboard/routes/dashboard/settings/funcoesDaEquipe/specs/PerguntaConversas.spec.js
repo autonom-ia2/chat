@@ -9,12 +9,12 @@ const PROPRIAS = [
   'conversation_unassigned_manage',
 ];
 
-const montar = permissions => {
+const montar = (permissions, giver = CARLA) => {
   const wrapper = mount(PerguntaConversas, {
     props: {
       permissions,
       inicial: PROPRIAS,
-      giver: CARLA,
+      giver,
       nome: 'Atendente',
       'onUpdate:permissions': novas => wrapper.setProps({ permissions: novas }),
     },
@@ -71,6 +71,26 @@ describe('PerguntaConversas', () => {
 
     await radios()[proprias].trigger('click');
     expect(wrapper.props('permissions')).toEqual(entrada);
+  });
+
+  // #2403: o cadeado de "Atende as próprias" é verdadeiro. O nível grava conversation_participating_manage (atribuídas
+  // ou de que participa), e conversation_unassigned_manage é outro alcance (esperando alguém ou atribuídas), na
+  // Enterprise::ConversationPolicy. Quem monta só com ele vê o cadeado com o motivo de verdade, e o toque não grava nada.
+  it('quem monta só com conversation_unassigned_manage vê "Atende as próprias" com cadeado e o motivo', async () => {
+    const soNovas = {
+      userId: 20,
+      isAdmin: false,
+      customRoleId: 21,
+      permissions: ['custom_role_manage', 'conversation_unassigned_manage'],
+    };
+    const wrapper = montar([], soNovas);
+    const proprias = wrapper.find('[data-nivel="limited"]');
+    expect(proprias.attributes('aria-disabled')).toBe('true');
+    expect(proprias.find('.i-lucide-lock').exists()).toBe(true);
+    expect(proprias.text()).toContain('Você não tem isto, então não pode dar.');
+
+    await proprias.trigger('click');
+    expect(wrapper.emitted('update:permissions')).toBeUndefined();
   });
 
   // Só "Atende as próprias" tem o bloco de dentro; nas outras, nada de linha vazia dentro do cartão.
