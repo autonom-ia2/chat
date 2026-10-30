@@ -55,7 +55,7 @@ class Crm::MetaAds::ComentariosIa::Previa
 
   def classificador
     @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(
-      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: @para_quem)
+      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: @para_quem), tela: true
     )
   end
 end

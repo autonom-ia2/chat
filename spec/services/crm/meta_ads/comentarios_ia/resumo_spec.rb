@@ -42,7 +42,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
     resumo.contar!
 
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
-      .with(care: an_object_having_attributes(account: account, para_quem: described_class::CRITERIO, offer: nil))
+      .with(care: an_object_having_attributes(account: account, para_quem: described_class::CRITERIO, offer: nil), tela: true)
   end
 
   it 'lista nova (alguém respondeu ou chegou comentário): conta de novo' do

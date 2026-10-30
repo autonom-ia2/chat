@@ -16,7 +16,11 @@
 #
 # Só comentário de primeiro nível: resposta a comentário (com `parent_id`) não recebe o privado.
 #
-# `comment` vem como a Graph ou o webhook mandam: { 'id', 'timestamp', 'parent_id', 'from' => { 'id', 'username' } }.
+# O privado de uma pessoa (actor `user`) também marca quem comentou naquele post (Crm::MetaAdsCommentPerson, #2212):
+# a IA não manda outro privado à mesma pessoa no mesmo post. A IA reserva a sua marca antes, no Registro.
+#
+# `comment` vem como a Graph ou o webhook mandam: { 'id', 'timestamp', 'parent_id', 'from' => { 'id', 'username' },
+# 'media' => { 'id' } }.
 class Crm::MetaAds::InstagramPrivateReply
   class Error < StandardError
     attr_reader :code
@@ -48,6 +52,7 @@ class Crm::MetaAds::InstagramPrivateReply
     end
 
     confirm_safely!(action)
+    remember_person_safely!(comment) unless actor == Crm::MetaAds::ComentariosIa::Registro::ACTOR
     record_safely!(action, comment, text, result.data, user)
   end
 
@@ -64,6 +69,20 @@ class Crm::MetaAds::InstagramPrivateReply
       retry if attempts < 2
       Rails.logger.error("[InstagramPrivateReply] confirm failed action_id=#{action.id} error=#{e.class.name}")
     end
+  end
+
+  # A Meta já aceitou: falha ao marcar a pessoa vai para o rastreador. Sem post ou sem quem comentou, não há o que marcar.
+  def remember_person_safely!(comment)
+    post_id = comment.dig('media', 'id').to_s
+    from_id = comment.dig('from', 'id').to_s
+    return if post_id.empty? || from_id.empty?
+
+    Crm::MetaAdsCommentPerson.insert_all( # rubocop:disable Rails/SkipsModelValidations
+      [{ account_id: @channel.account_id, network: 'instagram', post_id: post_id, from_id: from_id, comment_id: comment['id'].to_s }],
+      unique_by: :idx_crm_meta_ads_comment_people_once
+    )
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @channel.account).capture_exception
   end
 
   def valid_text!(text)

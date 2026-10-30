@@ -140,5 +140,8 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body['conversation_path']).to start_with("/app/accounts/#{account.id}/conversations/")
     expect(Crm::MetaAdsCommentAction.find_by(comment_id: comment_id, action: 'private_reply', ad_id: nil)).to be_present
+    # A IA não manda outro privado à mesma pessoa neste post (#2212).
+    expect(Crm::MetaAdsCommentPerson.sole).to have_attributes(account_id: account.id, network: 'instagram', post_id: post_id, from_id: '501',
+                                                              comment_id: comment_id)
   end
 end

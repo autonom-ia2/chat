@@ -24,7 +24,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
     expect(previa.call).to eq(status: 'ready', recebe: { author: 'pessoa.3', text: 'Me passa a receita?', network: 'instagram' },
                               nao: { author: 'pessoa.2', text: 'Que lindo!', network: 'instagram' })
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
-      .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'))
+      .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'), tela: true)
     expect(classificador).to have_received(:decidir!).exactly(3).times
   end
 

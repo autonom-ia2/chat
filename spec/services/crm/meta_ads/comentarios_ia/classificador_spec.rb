@@ -113,6 +113,27 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       expect(jev).not_to have_received(:decidir)
     end
 
+    it 'a tela (prévia e resumo) tem teto próprio: repetir a prévia não esgota o teto do motor' do
+      evento = { model: 'jev', input_tokens: 1, output_tokens: 0 }
+      create_list(:crm_ai_usage_event, 2, account: account, feature: described_class::FEATURE_DA_TELA, **evento)
+      stub_const("#{described_class}::TETO_DIARIO_DA_TELA", 2)
+      tela = described_class.new(care: care, tela: true, jev: jev)
+
+      expect { tela.decidir!('Quanto custa?') }
+        .to raise_error(described_class::Bloqueado) { |erro| expect(erro.code).to eq('daily_limit') }
+      allow(jev).to receive(:decidir).and_return(Struct.new(:resposta, :certeza).new('price', 0.9))
+      expect(classificador.decidir!('Quanto custa?')).to eq('price')
+      expect(jev).to have_received(:decidir).once
+    end
+
+    it 'a tela grava o uso com a feature dela' do
+      allow(TypesafeAi::Decisor).to receive(:new).and_call_original
+
+      described_class.new(care: care, tela: true)
+
+      expect(TypesafeAi::Decisor).to have_received(:new).with(feature: described_class::FEATURE_DA_TELA)
+    end
+
     it 'Bloqueado é um erro do Jev: a prévia e o resumo já o mostram como IA indisponível' do
       expect(described_class::Bloqueado.ancestors).to include(TypesafeAi::Decisor::Error)
     end

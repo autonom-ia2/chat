@@ -7,6 +7,7 @@
 #   confere que o comentário é do post e que a Página é da conta (leitura) ou tem a caixa do Messenger nela (ações), e
 #   grava a ação com actor 'ai'. Aqui não há pessoa abrindo a tela: a IA age pela caixa da Página, sem conferir quem a vê.
 class Crm::MetaAds::ComentariosIa::Rede::Facebook
+  TENTA_DE_NOVO = %w[meta_unavailable needs_login].freeze
   REGISTRO = Crm::MetaAds::ComentariosIa::Registro
   SEM_PESSOA = ->(_inbox) { true }
 
@@ -37,8 +38,10 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   def ler
     dados = comentarios&.comment(@comentario.post_id, @comentario.comment_id)
     dados && { text: dados['message'], from_name: dados.dig('from', 'name'), from_id: dados.dig('from', 'id')&.to_s }
+  # Como no Instagram: Meta fora do ar, login caído ou permissão tirada tentam de novo (um problema da Página não
+  # descarta os comentários um a um; esgotado, o CuidarJob deixa o comentário com o dono). O resto é descartado.
   rescue Crm::MetaAds::FacebookComments::Error => e
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if e.code == 'meta_unavailable'
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
 
     nil
   end

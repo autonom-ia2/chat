@@ -100,7 +100,7 @@ class Crm::MetaAds::ComentariosIa::Resumo
 
   def classificador
     @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(
-      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: CRITERIO)
+      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: CRITERIO), tela: true
     )
   end
 end
