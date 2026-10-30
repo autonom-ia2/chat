@@ -215,8 +215,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:gravar!).with(lido, 'private_reply_failed', conversation: conversation)
   end
 
-  it 'privado que já tinha saído (pela pessoa ou outro job): não faz mais nada' do
+  it 'privado que já tinha saído (pela pessoa ou outro job), confirmado pela Meta: "já recebeu", sem mais nada' do
     decide('private')
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: 'c-1', action: 'private_reply', actor: 'user')
+                             .update!(confirmed_at: Time.current)
     allow(rede).to receive(:privado)
       .and_return(Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: Crm::MetaAds::ComentariosIa::Rede::JA_FEITO))
 
@@ -226,6 +228,19 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(conversa).not_to have_received(:para_voce!)
     expect(registro).not_to have_received(:soltar_pessoa!)
     expect(registro).to have_received(:gravar!).with(lido, 'private_reply_already')
+  end
+
+  it 'outro envio ainda saindo (sem confirmação): não diz "já recebeu"; solta a pessoa e fica como "não cuidei"' do
+    decide('private')
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: 'c-1', action: 'private_reply', actor: 'user')
+    allow(rede).to receive(:privado)
+      .and_return(Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: Crm::MetaAds::ComentariosIa::Rede::JA_FEITO))
+
+    cuidar
+
+    expect(registro).to have_received(:soltar_pessoa!).with(lido)
+    expect(registro).to have_received(:gravar!).with(lido, 'ai_unread')
+    expect(registro).not_to have_received(:gravar!).with(lido, 'private_reply_already')
   end
 
   it 'reclamação: não responde, abre a conversa urgente para a pessoa' do
