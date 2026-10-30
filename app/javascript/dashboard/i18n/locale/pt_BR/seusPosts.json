@@ -66,7 +66,8 @@
       "LEGEND": "Pode incluir anúncio: {names}. O resto é sem anúncio.",
       "LEGEND_NONE": "Todos os números são sem anúncio.",
       "LEGEND_ALL": "Todos os números podem incluir anúncio.",
-      "WHAT_IS": "O que cada número conta"
+      "WHAT_IS": "O que cada número conta",
+      "HELP_TERM": "{name}:"
     },
     "MESSAGES": {
       "OPEN": "Ver conversas"

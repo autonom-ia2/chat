@@ -66,7 +66,8 @@
       "LEGEND": "May include ads: {names}. The rest is without ads.",
       "LEGEND_NONE": "All numbers are without ads.",
       "LEGEND_ALL": "All numbers may include ads.",
-      "WHAT_IS": "What each number counts"
+      "WHAT_IS": "What each number counts",
+      "HELP_TERM": "{name}:"
     },
     "MESSAGES": {
       "OPEN": "See conversations"

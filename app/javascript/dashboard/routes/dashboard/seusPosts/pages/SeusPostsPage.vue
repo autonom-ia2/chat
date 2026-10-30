@@ -620,7 +620,11 @@ const { podeLiberar, liberar } = useLiberarAcesso({
                 </summary>
                 <dl class="m-0 grid gap-x-6 gap-y-1 pb-1 ps-5 lg:grid-cols-3">
                   <div v-for="quadro in ajudas" :key="quadro.nome">
-                    <dt class="inline font-semibold">{{ quadro.label }}:</dt>
+                    <dt class="inline font-semibold">
+                      {{
+                        $t('SEUS_POSTS.TILES.HELP_TERM', { name: quadro.label })
+                      }}
+                    </dt>
                     {{ ' ' }}
                     <dd class="m-0 inline">{{ quadro.ajuda }}</dd>
                   </div>
