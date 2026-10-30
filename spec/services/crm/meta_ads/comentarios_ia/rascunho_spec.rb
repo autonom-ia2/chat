@@ -107,6 +107,25 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rascunho do
 
     expect(rascunho).to eq(status: 'ai_unavailable')
     expect(a_request(:post, url)).to have_been_made.once
+    expect(usos.count).to eq(1)
+  end
+
+  it 'recusa 4xx (chave ou modelo): não é cobrada e não conta no teto' do
+    stub_request(:post, url).to_return(status: 401, body: { error: { message: 'chave' } }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+    expect(rascunho).to eq(status: 'ai_unavailable')
+    expect(usos.count).to eq(0)
+    expect(Crm::MetaAdsCommentDraft.sole.status).to eq('failed')
+  end
+
+  it 'resposta vazia: o uso conta uma vez só (o ResponsesClient já gravou)' do
+    stub_request(:post, url).to_return(
+      status: 200, headers: { 'Content-Type' => 'application/json' },
+      body: { id: 'resp_1', output_text: '', output: [], usage: { input_tokens: 500, output_tokens: 0 } }.to_json
+    )
+
+    expect(rascunho).to eq(status: 'ai_unavailable')
+    expect(usos.count).to eq(1)
   end
 
   it 'outra abertura está escrevendo (reserva recente): não chama de novo; reserva parada há mais de 1 minuto é retomada' do
@@ -131,9 +150,27 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rascunho do
     # rubocop:disable Rails/SkipsModelValidations -- simula a outra abertura gravando direto, como o compare-and-set faz
     Crm::MetaAdsCommentDraft.where(id: lido.id).update_all(caption_digest: 'outra', status: 'writing', updated_at: 1.second.from_now)
     # rubocop:enable Rails/SkipsModelValidations
-    allow(Crm::MetaAdsCommentDraft).to receive(:find_by).and_return(lido)
+    # Só a primeira leitura vem antiga (a de antes da reserva); depois da reserva perdida, lê o banco.
+    leituras = 0
+    allow(Crm::MetaAdsCommentDraft).to(receive(:find_by).and_wrap_original { |original, *args| (leituras += 1) == 1 ? lido : original.call(*args) })
 
     expect(rascunho('Legenda nova')).to eq(status: 'ai_unavailable')
+    expect(a_request(:post, url)).to have_been_made.once
+  end
+
+  it 'duas aberturas juntas: quem perdeu a reserva usa o que a outra já escreveu para a mesma legenda' do
+    openai_responde
+    rascunho
+    lido = Crm::MetaAdsCommentDraft.sole
+    novo = described_class.new(account: account, target_kind: 'post', target_id: lido.target_id, legenda: 'Legenda nova')
+    # rubocop:disable Rails/SkipsModelValidations -- a outra abertura termina entre a leitura e a reserva desta
+    Crm::MetaAdsCommentDraft.where(id: lido.id).update_all(caption_digest: novo.send(:digest), status: 'ready', message: 'Da outra')
+    # rubocop:enable Rails/SkipsModelValidations
+    # Só a primeira leitura vem antiga (a de antes da reserva); depois da reserva perdida, lê o banco.
+    leituras = 0
+    allow(Crm::MetaAdsCommentDraft).to(receive(:find_by).and_wrap_original { |original, *args| (leituras += 1) == 1 ? lido : original.call(*args) })
+
+    expect(novo.call).to eq(status: 'ready', message: 'Da outra')
     expect(a_request(:post, url)).to have_been_made.once
   end
 

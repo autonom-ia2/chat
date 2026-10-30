@@ -8,7 +8,8 @@
 #   a outra abre o campo vazio. A IA que não respondeu (`failed`) só é chamada de novo depois de NOVA_TENTATIVA, e uma
 #   reserva parada (o processo morreu) vale até RESERVA.
 # - Conta no teto do dia da tela (Classificador::FEATURE_DA_TELA), com a flag do cuidado ligada. A tentativa conta
-#   mesmo quando a IA não responde: o tempo esgotado pode ter sido cobrado (ResponsesClient::Error#tempo_esgotado?).
+#   mesmo quando a IA não responde (rede, tempo esgotado, 5xx): pode ter sido cobrada. A resposta vazia o próprio
+#   ResponsesClient já grava, e a recusa 4xx (chave, modelo) não é cobrada: essas não contam de novo.
 # - Roda dentro da requisição: uma ida só, sem nova tentativa, com prazo de PRAZO segundos (o rack-timeout corta em 15).
 # - A legenda é do próprio dono, mas vai ao modelo como dado, nunca como ordem. O modelo só usa o que está nela: não
 #   inventa preço, link, cupom nem prazo.
@@ -42,7 +43,7 @@ class Crm::MetaAds::ComentariosIa::Rascunho
 
     guardado = Crm::MetaAdsCommentDraft.find_by(account_id: @account.id, target_kind: @target_kind, target_id: @target_id)
     return resposta(guardado) if guardado && !chamar_de_novo?(guardado)
-    return { status: 'ai_unavailable' } unless reservar!(guardado)
+    return da_outra_abertura unless reservar!(guardado)
 
     resposta(escrever!)
   end
@@ -66,6 +67,12 @@ class Crm::MetaAds::ComentariosIa::Rascunho
     when 'failed' then guardado.updated_at < NOVA_TENTATIVA.ago
     else false
     end
+  end
+
+  # Outra abertura reservou primeiro: se ela já escreveu para esta legenda, vale o dela; senão o campo abre vazio.
+  def da_outra_abertura
+    atual = Crm::MetaAdsCommentDraft.find_by(account_id: @account.id, target_kind: @target_kind, target_id: @target_id)
+    atual&.caption_digest == digest ? resposta(atual) : { status: 'ai_unavailable' }
   end
 
   # Só quem reservou chama a IA: a linha nova pelo índice único, a existente por compare-and-set do que foi lido.
@@ -113,7 +120,7 @@ class Crm::MetaAds::ComentariosIa::Rascunho
     JSON.parse(resposta.fetch(:text))
   rescue Crm::Ai::ResponsesClient::Error => e
     # A ida que não voltou não grava uso no cliente: conta aqui, para o teto da tela valer também na falha.
-    Crm::Ai::UsageRecorder.record(account: @account, feature: FEATURE, model: MODEL)
+    Crm::Ai::UsageRecorder.record(account: @account, feature: FEATURE, model: MODEL) if e.passageira?
     Rails.logger.warn("[comentarios_ia] rascunho account=#{@account.id} erro=#{e.class.name} tempo_esgotado=#{e.tempo_esgotado?}")
     nil
   rescue JSON::ParserError

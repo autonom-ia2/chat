@@ -77,8 +77,12 @@ const draftOrTimeout = () => {
 onMounted(async () => {
   if (!props.draft || props.changing || message.value.trim()) return;
   writing.value = true;
-  const texto = await draftOrTimeout();
-  writing.value = false;
+  let texto = '';
+  try {
+    texto = await draftOrTimeout();
+  } finally {
+    writing.value = false;
+  }
   if (!texto || message.value.trim()) return;
   message.value = texto;
   suggested.value = true;

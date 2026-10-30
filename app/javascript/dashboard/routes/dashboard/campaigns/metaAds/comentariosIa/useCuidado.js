@@ -133,7 +133,8 @@ export function useCuidado(alvo) {
   };
 
   // Passo 1: o começo da mensagem que a IA escreveu a partir da legenda do post. Só no post do Seus posts (o anúncio
-  // abre vazio). Sem começo (o post não oferece nada, sem legenda ou a IA fora do ar): ''.
+  // abre vazio). Sem começo (o post não oferece nada, sem legenda ou a IA fora do ar): ''. Erro na ida (rede, 403,
+  // 500) também dá '': o começo é ajuda, o campo vazio com o texto de sempre é o combinado, e o servidor registra a falha.
   const rascunho = async () => {
     if (target()?.kind !== 'post') return '';
     try {
