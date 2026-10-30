@@ -6,7 +6,9 @@
 # Roda AINDA NA LEITURA (material `processing`, antes do mark_ready!): o índice fica em Source#resumo_por_secao e o
 # mark_ready! o grava junto com o "pronto", sob a guarda do token. Se o worker cair no meio, o job volta e refaz a leitura;
 # o material nunca fica "pronto" sem parecer. Cada seção anota o progresso ("página X de N"), confere se a leitura ainda é
-# a vigente, e nenhuma seção nova começa depois do PRAZO (fica o que já foi resumido).
+# a vigente, e nenhuma seção nova começa depois do PRAZO (fica o que já foi resumido). A seção já aberta termina, com as
+# retentativas do cliente; se ela passar do teto da releitura sem progresso, o painel libera "Ler de novo", e a leitura
+# nova vence (a antiga não grava nada).
 #
 # CUSTO: sem teto por material (decisões do Rodrigo, 30/10: a leitura não é travada por gasto; usa a chave de IA da conta
 # e, sem ela, a da plataforma, como o Revisor e o classificador). Uma chamada por seção (no máximo 12, no PDF de 300

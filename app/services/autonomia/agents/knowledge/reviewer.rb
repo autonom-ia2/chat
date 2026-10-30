@@ -526,6 +526,8 @@ module Autonomia
 
         # #1426 (t4e, decisão do Rodrigo de 30/10): no material grande (o PDF lido em seções), uma tabela sem cabeçalho não
         # tira o material inteiro da base. Vira aviso: o material segue aceito e o cartão aparece com "Pular por agora".
+        # "Material grande" aqui é o que o Processors::Pdf dividiu em seções (trechos com `paginas`); a regra de quando dividir
+        # (PAGINAS_DE_MATERIAL_GRANDE, Fase 2, fora da Lia) mora lá. As duas andam juntas.
         def aviso_no_material_grande?(conferencia)
           conferencia.present? && conferencia['problema'] == 'sem_cabecalho' &&
             @source.knowledge_entries.where("metadata ? 'paginas'").exists?
