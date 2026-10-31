@@ -162,9 +162,12 @@ module Autonomia
       end
 
       def validate_headers_config
-        return if headers_config.all? { |header| header['key'].to_s.match?(/\A[A-Za-z0-9-]+\z/) }
+        nomes_validos = headers_config.all? { |header| header['key'].to_s.match?(/\A[A-Za-z0-9-]+\z/) }
+        errors.add(:headers_config, 'possui cabeçalhos inválidos') unless nomes_validos
+        # #1430: a plataforma manda o dela em toda chamada (`ChaveDeIdempotencia`).
+        return unless headers_config.any? { |header| header['key'].to_s.casecmp?('Idempotency-Key') }
 
-        errors.add(:headers_config, 'possui cabeçalhos inválidos')
+        errors.add(:headers_config, 'não pode ter Idempotency-Key: a plataforma já manda um em toda chamada')
       end
 
       # MESMA REGRA DAS FERRAMENTAS NATIVAS, e pelo mesmo motivo: em `strict: true` a OpenAI exige

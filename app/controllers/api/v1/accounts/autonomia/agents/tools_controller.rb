@@ -1,4 +1,8 @@
 class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts::Autonomia::BaseController
+  # #1430: o Testar roda dentro da requisição, e o `rack-timeout` de produção corta em 15 s. Espera no máximo isto; a
+  # resposta diz quanto o agente espera no atendimento (`timeout_seconds`).
+  SEGUNDOS_DO_TESTE = 12
+
   before_action :ensure_super_admin
   before_action :fetch_agent
   before_action :fetch_tool, only: %i[show update destroy test]
@@ -36,11 +40,13 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
   # recusa de atendimento). `error` continua com a mensagem do executor, que a tela traduz.
   def test
     bound = Autonomia::Agents::Tools::Bound.new(agent: @agent, record: @tool)
-    result = Autonomia::Agents::Tools::HttpExecutor.new(tool: @tool, params: test_params).call.to_s
-    render json: { status: 'ok', body: bound.cabendo(result),
+    segundos = [@tool.timeout_seconds, SEGUNDOS_DO_TESTE].min
+    result = Autonomia::Agents::Tools::HttpExecutor.new(tool: @tool, params: test_params, segundos: segundos).call.to_s
+    render json: { status: 'ok', body: bound.cabendo(result), segundos_do_teste: segundos,
                    cortada: result.length > Autonomia::Agents::Tools::Bound::MAX_OUTPUT_CHARS }
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
-    render json: { error: e.message, agente_recebe: bound.texto_da_recusa_http(e) }, status: :unprocessable_entity
+    render json: { error: e.message, agente_recebe: bound.texto_da_recusa_http(e), segundos_do_teste: segundos },
+           status: :unprocessable_entity
   end
 
   private

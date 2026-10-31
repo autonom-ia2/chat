@@ -115,20 +115,39 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
       expect(chave_enviada(0)).not_to eq(chave_enviada(2))
     end
 
+    # No retry o modelo escreve os argumentos de novo e pode mudar o tipo; o corpo enviado é o mesmo.
+    it 'sends the same key when the redone turn writes a number as text' do
+      chamar(turno, '{"sku":"T42","qtd":1}')
+      chamar(turno, '{"sku":"T42","qtd":"1"}')
+
+      expect(enviados.map(&:body).uniq.size).to eq(1)
+      expect(chave_enviada(0)).to eq(chave_enviada(1))
+    end
+
+    # O ajudante (tema 14) roda a ferramenta sem `delivery`; a chave vem do turno do principal.
+    it 'sends the same key when a helper agent redoes the call in the same turn' do
+      bound = Autonomia::Agents::Tools::Bound.new(agent: agent, record: tool)
+      call = { 'name' => tool.slug, 'arguments' => '{"sku":"T42","qtd":1}', 'call_id' => 'c' }
+      2.times { Autonomia::Agents::Specialists::LacoDoAjudante.new(vinculo: nil, delivery: turno).executar(bound, call) }
+
+      expect(enviados.size).to eq(2)
+      expect(chave_enviada(0)).to eq(chave_enviada(1))
+    end
+
     it 'sends different keys for two tools in the same turn' do
       outra = tool.dup.tap { |copia| copia.update!(name: 'Outro', slug: 'outro_pedido') }
 
-      expect(chave.para(tool: tool, delivery: turno, params: { 'sku' => 'T42' }))
-        .not_to eq(chave.para(tool: outra, delivery: turno, params: { 'sku' => 'T42' }))
+      expect(chave.para(tool: tool, turno: turno, params: { 'sku' => 'T42' }))
+        .not_to eq(chave.para(tool: outra, turno: turno, params: { 'sku' => 'T42' }))
     end
 
-    it 'keeps the key of the platform when the tool configures its own Idempotency-Key header' do
-      tool.update!(headers_config: [{ key: 'Idempotency-Key', value: 'fixa', secret: false }])
+    it 'refuses a tool that configures its own Idempotency-Key header, in any case' do
+      %w[Idempotency-Key idempotency-key].each do |nome|
+        tool.headers_config = [{ key: nome, value: 'fixa', secret: false }]
 
-      chamar(turno)
-
-      expect(chave_enviada).not_to eq('fixa')
-      expect(chave_enviada).to eq(chave.para(tool: tool, delivery: turno, params: { 'sku' => 'T42', 'qtd' => 1 }))
+        expect(tool).not_to be_valid, nome
+        expect(tool.errors[:headers_config].join).to include('Idempotency-Key')
+      end
     end
 
     it 'sends a fresh key on each call without a turn (test button)' do
@@ -138,11 +157,14 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
       expect(chave_enviada(0)).not_to eq(chave_enviada(1))
     end
 
-    it 'is a digest, without the arguments or the conversation in clear text' do
+    it 'is a keyed digest, without the arguments or the conversation in clear text' do
       chamar(turno, '{"sku":"SEGREDO-T42","qtd":1}')
 
       expect(chave_enviada.length).to eq(64)
       expect(chave_enviada.delete('0-9a-f')).to be_empty
+      sem_segredo = OpenSSL::Digest::SHA256.hexdigest(JSON.generate([account.id, conversation.id, turno.turno, tool.id,
+                                                                     { 'qtd' => 1, 'sku' => 'SEGREDO-T42' }]))
+      expect(chave_enviada).not_to eq(sem_segredo)
     end
   end
 end
