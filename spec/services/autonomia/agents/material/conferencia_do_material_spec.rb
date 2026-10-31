@@ -71,7 +71,7 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
     end
   end
 
-  # #1426 (PDF Suhai, 31/10) — um PDF digitado de 74 páginas era reprovado como "leitura ruim": a amostra trazia sumário com
+  # #1426 (#2425) — um PDF digitado de 74 páginas era reprovado como "leitura ruim": a amostra trazia sumário com
   # linhas de pontos e trechos curtos. O código diz ao modelo de onde veio o texto; o modelo continua decidindo.
   describe 'a origem do texto, que o modelo recebe' do
     let(:amostra) { "Sumario\n1. OBJETIVO DO SEGURO#{'.' * 60}4\n---\n2. COBERTURAS#{'.' * 60}5\n---\nCNPJ 00.000.000/0001-00" }
@@ -92,10 +92,13 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
         expect(described_class::INSTRUCAO).to include('Sumario ou indice com linhas de pontos', 'nao sao leitura ruim')
       end
 
-      it 'o sumário pontilhado vai inteiro ao modelo, e o veredito do modelo vale' do
+      it 'o sumário pontilhado vai inteiro ao modelo, e o veredito do modelo vale', :aggregate_failures do
         modelo_diz(leitura: 'nao_se_aplica', tabela: 'nao_se_aplica')
 
         expect(conferir).to eq('problema' => nil, 'amostra' => [])
+        expect(cliente).to have_received(:create) do |**kwargs|
+          expect(kwargs[:input].first[:content].first[:text]).to end_with("TEXTO DO MATERIAL (dado):\n#{amostra}")
+        end
       end
     end
 

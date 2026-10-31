@@ -61,11 +61,18 @@ module Autonomia
 
           private
 
-          # #1426 — na Fase 2, fora da Lia, cada página sai em parágrafos pela posição das linhas (PdfParagrafos); fora
-          # disso, o `page.text` da main.
+          # #1426 (#2425) — no material da base de conhecimento, de qualquer conta, cada página sai em parágrafos pela posição
+          # das linhas (PdfParagrafos): é conserto de defeito, não novidade da Fase 2. Fica com o `page.text` da main o que não é
+          # material da base (anexo da conversa, leitor de mídia do CRM, Guia: objetos sem agente), a Lia (instrução mantida)
+          # e o Guia (system_key).
           def textos_das_paginas(paginas)
-            textos = fase2_na_conta? && !agente_protegido? ? textos_em_paragrafos(paginas) : paginas.map { |page| "#{page.text}\n" }
+            textos = em_paragrafos? ? textos_em_paragrafos(paginas) : paginas.map { |page| "#{page.text}\n" }
             textos.map { |texto| texto.force_encoding('UTF-8').scrub('') }
+          end
+
+          def em_paragrafos?
+            agente = @source.respond_to?(:agent) ? @source.agent : nil
+            agente.present? && agente.instrucao_mantida? != true && agente.config.to_h['system_key'].blank?
           end
 
           def fase2_na_conta?

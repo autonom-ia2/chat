@@ -9,7 +9,7 @@
 # (t4e, decisão do Rodrigo de 30/10): sem nenhuma célula conferida não há prova de tabela, e o material não é reprovado
 # (no eval, um manual de 300 páginas era reprovado por uma tabela que o modelo não conseguia apontar).
 #
-# #1426 (PDF Suhai, 31/10) — o modelo recebe a origem do texto, que o código sabe: foto ou PDF escaneado lido pelo nosso OCR
+# #1426 (#2425) — o modelo recebe a origem do texto, que o código sabe: foto ou PDF escaneado lido pelo nosso OCR
 # (Source#leitura_de_imagem, posto pelo Processors::PdfOcr nesta leitura), camada de texto do PDF, ou arquivo de texto. Um
 # PDF digitado de 74 páginas era reprovado como "não consegui ler" porque a amostra trazia sumário pontilhado e trechos
 # curtos. A decisão continua do modelo: a camada de texto de um PDF pode ter vindo do OCR do próprio scanner e sair ruim.

@@ -109,7 +109,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         expect(source).not_to have_received(:paginas_de_fora=)
       end
 
-      # #1426 (PDF Suhai) — a conferência precisa saber que o texto veio de leitura de imagem.
+      # #1426 (#2425) — a conferência precisa saber que o texto veio de leitura de imagem.
       it 'marks the source as read by OCR when the OCR text is used' do
         allow(source).to receive(:leitura_de_imagem=)
         stub_pages([' '])
@@ -255,7 +255,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
 
       it 'runs the OCR for an agent of the Fase 2 that is not the Lia' do
-        bia = described_class.new(material(agent: instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false)))
+        bia = described_class.new(material(agent: instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false, config: {})))
         stub_pages([' '])
         stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
 

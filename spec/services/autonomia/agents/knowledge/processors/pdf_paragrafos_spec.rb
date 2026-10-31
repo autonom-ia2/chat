@@ -1,54 +1,59 @@
 require 'rails_helper'
 
-# #1426 (PDF Suhai, 31/10) — o texto do PDF digitado sai em parágrafos pela posição das linhas na página, não pela grade do
-# `page.text` (que punha linha em branco no meio do parágrafo e fazia o Chunker cortar a frase). PDF de verdade, montado
-# em memória, com texto posicionado como num "Print To PDF": linhas a 13,2 pt, parágrafos a 26,4 pt, rodapé corrido.
+# #1426 (#2425) — o texto do PDF da base de conhecimento sai em parágrafos pela posição das linhas na página, não pela grade
+# do `page.text` (que punha linha em branco no meio do parágrafo e fazia o Chunker cortar a frase). PDF de verdade, montado
+# em memória, com texto posicionado como num "Print To PDF": linhas a 13,2 pt, parágrafos a 26,4 pt, rodapé no pé.
 RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   let(:account) { create(:account) }
-  let(:bia) { instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false) }
+  let(:bia) { instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false, config: {}) }
   let(:file) { double('attachment', attached?: true, download: pdf) } # rubocop:disable RSpec/VerifiedDoubles
-  let(:source) do
-    double('source', reference: 'cg.pdf', source_type: 'pdf', file: file, account: account, agent: bia).tap do |fonte| # rubocop:disable RSpec/VerifiedDoubles
+  let(:source) { material(bia) }
+  let(:linha) { 13.2 }
+  let(:topo) { 780 }
+  let(:pdf) { pdf_com([pagina(sumario, 1), pagina(definicoes, 2), pagina(definicoes, 3), pagina(definicoes, 4)]) }
+
+  def material(agente)
+    double('source', reference: 'cg.pdf', source_type: 'pdf', file: file, account: account, agent: agente).tap do |fonte| # rubocop:disable RSpec/VerifiedDoubles
       allow(fonte).to receive(:paginas_de_fora=)
       allow(fonte).to receive(:secoes=)
     end
   end
-  let(:linha) { 13.2 }
-  let(:pdf) do
-    pdf_com([pagina(sumario(780), 1), pagina(definicao(780), 2), pagina(definicao(780), 3), pagina(definicao(780), 4)])
+
+  def extrair(fonte = source)
+    described_class.new(fonte).extract
   end
 
-  # Uma página: [texto, y] de cada linha, mais o rodapé corrido.
+  # Uma página: [texto, y] de cada linha do corpo, mais o pé (número da página e rodapé corrido), separado do corpo.
   def pagina(linhas, numero)
-    [*linhas, ['Versao SETEMBRO-2026', 15.6], [numero.to_s, 25.9]]
+    [*linhas, [numero.to_s, 25.9], ['Versao SETEMBRO-2026', 15.6]]
   end
 
-  # Termo e definição em linhas seguidas; entre um termo e outro, o espaço de duas linhas.
-  def definicao(topo)
-    [['Dano Moral', topo], ['Ofensa aos principios e valores de ordem moral, tais como honra e dignidade', topo - linha],
-     ['pessoal ou familiar. Cabe ao juiz do processo fixar o valor da reparacao.', topo - (2 * linha)],
-     ['Dano Material', topo - (4 * linha)], ['Dano causado exclusivamente a propriedade material de pessoas.', topo - (5 * linha)]]
+  # Linhas seguidas a partir de `inicio`; nil deixa uma linha em branco (o espaço de parágrafo).
+  def corpo(*textos, inicio: topo)
+    textos.each_with_index.filter_map { |texto, indice| [texto, inicio - (indice * linha)] if texto }
   end
 
-  def sumario(topo)
-    [['Sumario', topo], ["1. OBJETIVO DO SEGURO#{'.' * 60}4", topo - (2 * linha)], ["2. COBERTURAS#{'.' * 60}5", topo - (3 * linha)]]
+  def definicoes
+    corpo('Dano Moral', 'Ofensa aos principios e valores de ordem moral, tais como honra e dignidade',
+          'pessoal ou familiar. Cabe ao juiz do processo fixar o valor da reparacao.', nil,
+          'Dano Material', 'Dano causado exclusivamente a propriedade material de pessoas.')
+  end
+
+  def sumario
+    corpo('Sumario', nil, "1. OBJETIVO DO SEGURO#{'.' * 60}4", "2. COBERTURAS#{'.' * 60}5")
   end
 
   # PDF mínimo com Helvetica: cada linha é um "Td" na altura dada.
   def pdf_com(paginas)
-    fonte = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'
-    conteudos = paginas.map do |linhas|
-      corpo = linhas.map { |texto, y| "BT /F1 10 Tf 54 #{y} Td (#{texto}) Tj ET" }.join("\n")
-      "<< /Length #{corpo.bytesize} >>\nstream\n#{corpo}\nendstream"
-    end
-    n = paginas.size
-    paginas_ids = (0...n).map { |i| 4 + (2 * i) }
+    ids = paginas.each_index.map { |indice| 4 + (2 * indice) }
     objetos = ['<< /Type /Catalog /Pages 2 0 R >>',
-               "<< /Type /Pages /Kids [#{paginas_ids.map { |id| "#{id} 0 R" }.join(' ')}] /Count #{n} >>", fonte]
-    conteudos.each_with_index do |conteudo, i|
+               "<< /Type /Pages /Kids [#{ids.map { |id| "#{id} 0 R" }.join(' ')}] /Count #{paginas.size} >>",
+               '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>']
+    paginas.each_with_index do |linhas, indice|
+      conteudo = linhas.map { |texto, y| "BT /F1 10 Tf 54 #{y} Td (#{texto}) Tj ET" }.join("\n")
       objetos << '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> ' \
-                 "/Contents #{paginas_ids[i] + 1} 0 R >>"
-      objetos << conteudo
+                 "/Contents #{ids[indice] + 1} 0 R >>"
+      objetos << "<< /Length #{conteudo.bytesize} >>\nstream\n#{conteudo}\nendstream"
     end
     montar(objetos)
   end
@@ -61,50 +66,94 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       "trailer\n<< /Size #{posicoes.size + 1} /Root 1 0 R >>\nstartxref\n#{corpo.bytesize}\n%%EOF\n"
   end
 
-  context 'with the Fase 2 on' do
-    before { Autonomia::Agents::Fase2.ligar!(account) }
-
-    it 'junta as linhas do mesmo parágrafo e separa parágrafos pelo espaço entre eles', :aggregate_failures do
-      texto = described_class.new(source).extract
-
-      expect(texto).to include("Dano Moral\nOfensa aos principios e valores de ordem moral, tais como honra e dignidade\n" \
-                               "pessoal ou familiar. Cabe ao juiz do processo fixar o valor da reparacao.\n\nDano Material\n")
+  describe 'no material da base, com a Fase 2 desligada (conserto de defeito, vale para toda conta)' do
+    it 'junta as linhas do mesmo parágrafo e separa parágrafos pelo espaço entre eles' do
+      expect(extrair).to include("Dano Moral\nOfensa aos principios e valores de ordem moral, tais como honra e dignidade\n" \
+                                 "pessoal ou familiar. Cabe ao juiz do processo fixar o valor da reparacao.\n\nDano Material\n")
     end
 
-    it 'deixa o cabeçalho/rodapé corrido só na primeira página, e o resto do texto', :aggregate_failures do
-      texto = described_class.new(source).extract
+    it 'deixa o rodapé corrido só na primeira página e tira o número da página', :aggregate_failures do
+      texto = extrair
 
       expect(texto.scan('Versao SETEMBRO-2026').size).to eq(1)
+      expect(texto.lines.map(&:strip)).not_to include('2', '3', '4')
       expect(texto).to include('2. COBERTURAS')
     end
 
-    it 'linha repetida no topo das páginas (título de tabela) fica na primeira vez; repetida no meio do corpo, fica sempre' do
-      texto = described_class.new(source).extract
-
-      expect([texto.scan('Dano Moral').size, texto.scan('Dano Material').size]).to eq([1, 3])
+    it 'linha repetida no corpo de toda página fica em todas' do
+      expect([extrair.scan('Dano Moral').size, extrair.scan('Dano Material').size]).to eq([3, 3])
     end
 
     it 'o Chunker não corta mais a frase no meio: a definição inteira fica num trecho só' do
-      chunks = Autonomia::Agents::Knowledge::Chunker.new(described_class.new(source).extract, source_type: 'pdf').chunks
+      chunks = Autonomia::Agents::Knowledge::Chunker.new(extrair, source_type: 'pdf').chunks
 
       expect(chunks).to include(a_string_including('dignidade pessoal ou familiar. Cabe ao juiz'))
     end
+  end
 
-    it 'página que perderia texto na remontagem fica com o texto da main' do
-      allow_any_instance_of(PDF::Reader::Page).to receive(:runs).and_return([]) # rubocop:disable RSpec/AnyInstance
+  describe 'a virada de página' do
+    # As páginas vão até o mesmo pé; a frase da página 2 continua na 3.
+    let(:cheia) { corpo(*Array.new(8) { |n| "Linha corrida numero #{n} do texto." }) }
+    let(:pdf) do
+      pdf_com([pagina(cheia, 1), pagina(corpo(*Array.new(7) { 'Texto da pagina dois.' }, 'A frase comeca aqui e'), 2),
+               pagina(corpo('termina na pagina seguinte.', *Array.new(7) { 'Texto da pagina tres.' }), 3), pagina(cheia, 4)])
+    end
 
-      expect(described_class.new(source).extract.scan('Versao SETEMBRO-2026').size).to eq(4)
+    it 'continua o parágrafo quando a página vai até o pé do texto' do
+      chunks = Autonomia::Agents::Knowledge::Chunker.new(extrair, source_type: 'pdf').chunks
+
+      expect(chunks).to include(a_string_including('A frase comeca aqui e termina na pagina seguinte.'))
     end
   end
 
-  it 'fora da Fase 2, o texto é o da main (com o rodapé em toda página)' do
-    expect(described_class.new(source).extract.scan('Versao SETEMBRO-2026').size).to eq(4)
+  describe 'a tabela com o cabeçalho repetido no topo de cada página' do
+    let(:tabela) { corpo('Modelo Ano Franquia Premio', 'Uno 2020 1500 900', 'Gol 2021 1800 950', 'Onix 2022 2100 1000') }
+    let(:pdf) { pdf_com((1..4).map { |numero| pagina(tabela, numero) }) }
+
+    it 'mantém o cabeçalho em toda página (colado nas linhas, não é cabeçalho corrido)' do
+      expect(extrair.scan('Modelo Ano Franquia Premio').size).to eq(4)
+    end
   end
 
-  it 'na Lia, o texto é o da main' do
-    Autonomia::Agents::Fase2.ligar!(account)
-    allow(bia).to receive(:instrucao_mantida?).and_return(true)
+  describe 'a página curta' do
+    let(:pdf) { pdf_com([corpo('Titulo curto', nil, 'Primeira linha do texto', 'segunda linha do texto')]) }
 
-    expect(described_class.new(source).extract.scan('Versao SETEMBRO-2026').size).to eq(4)
+    it 'acha a quebra de parágrafo com só três linhas (a mediana de baixo)' do
+      expect(extrair).to include("Titulo curto\n\nPrimeira linha do texto\nsegunda linha do texto")
+    end
+  end
+
+  it 'PDF com menos de 4 páginas fica com o rodapé em toda página' do
+    pdf_curto = pdf_com([pagina(definicoes, 1), pagina(definicoes, 2), pagina(definicoes, 3)])
+    allow(file).to receive(:download).and_return(pdf_curto)
+
+    expect(extrair.scan('Versao SETEMBRO-2026').size).to eq(3)
+  end
+
+  it 'página sem trecho de texto fica com o texto da main' do
+    allow_any_instance_of(PDF::Reader::Page).to receive(:runs).and_return([]) # rubocop:disable RSpec/AnyInstance
+
+    expect(extrair.scan('Versao SETEMBRO-2026').size).to eq(4)
+  end
+
+  describe 'o que fica como na main' do
+    it 'a Lia (instrução mantida), mesmo com a Fase 2 ligada' do
+      Autonomia::Agents::Fase2.ligar!(account)
+      lia = instance_double(Autonomia::Agents::Agent, instrucao_mantida?: true, config: {})
+
+      expect(extrair(material(lia)).scan('Versao SETEMBRO-2026').size).to eq(4)
+    end
+
+    it 'o Guia (system_key)' do
+      guia = instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false, config: { 'system_key' => 'guia' })
+
+      expect(extrair(material(guia)).scan('Versao SETEMBRO-2026').size).to eq(4)
+    end
+
+    it 'o anexo da conversa, o CRM e o Guia (objeto sem agente)' do
+      anexo = Autonomia::Agents::Operate::MessageMedia::SourceLike.new(file, 'apolice.pdf', 'pdf')
+
+      expect(described_class.new(anexo, ocr: false).extract.scan('Versao SETEMBRO-2026').size).to eq(4)
+    end
   end
 end
