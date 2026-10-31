@@ -47,15 +47,17 @@ class Autonomia::Agents::Operate::HistoricoDaEquipe
 
   private
 
-  # #1775: o texto do cliente sem o rótulo da prévia forjado e, se a página foi lida, a linha da prévia embaixo.
+  # #1775: se a página foi lida, a linha da prévia embaixo do texto do cliente. `empty?`, não `blank?`: o texto do cliente
+  # pode ter byte inválido, e o `blank?` estoura nele.
   def com_previa(texto, message)
-    return texto unless previa?
+    linha = previa.linha(message, marca) if previa?
+    return texto unless linha
 
-    [previa.sem_rotulo(texto).presence, previa.linha(message, marca)].compact.join("\n")
+    texto.to_s.empty? ? linha : "#{texto}\n#{linha}"
   end
 
   def regra_da_previa(messages)
-    previa::REGRA if previa? && previa.na_janela?(messages, marca)
+    previa.regra(marca) if previa? && previa.na_janela?(messages, marca)
   end
 
   def previa?
