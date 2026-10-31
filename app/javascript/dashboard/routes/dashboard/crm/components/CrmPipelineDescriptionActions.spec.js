@@ -39,6 +39,8 @@ describe('pipeline description AI actions', () => {
       global: {
         stubs: {
           CrmStageAutomationsPanel: true,
+          // #2414 F1.3: o resumo das ações da etapa lê a chave da função no store, que este spec não monta.
+          FunilEtapaAcoes: true,
           CrmAiSettingsPanel: defineComponent({
             setup(_, { expose }) {
               expose({
