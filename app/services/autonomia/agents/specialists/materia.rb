@@ -96,7 +96,8 @@ class Autonomia::Agents::Specialists::Materia
     previa.regra(codigo) if conversa.any? { |item| com_cabecalho?(item, previa.cabecalho(codigo)) }
   end
 
-  # Item sem texto no conteúdo (imagem, documento, vazio) não traz a linha.
+  # Item sem texto no conteúdo (imagem, documento, vazio) não traz a linha. Hoje `Historico.mensagens` só monta itens de
+  # texto; a leitura não quebra a consulta ao ajudante se outro formato chegar (pedido da coordenadora, 31/10).
   def com_cabecalho?(item, cabecalho)
     Array(item[:content]).any? { |bloco| bloco.is_a?(Hash) && bloco[:text].to_s.include?(cabecalho) }
   end
