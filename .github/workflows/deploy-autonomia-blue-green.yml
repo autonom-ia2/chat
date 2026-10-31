@@ -748,7 +748,7 @@ jobs:
           EnvironmentFile=/opt/chatwoot/runtime.env
           ExecStartPre=-/usr/bin/docker rm -f chatwoot-worker
           ExecStart=/usr/bin/docker run --rm --name chatwoot-worker --env-file /opt/chatwoot/.env --env-file /opt/chatwoot/instagram-tester.env --env-file /opt/chatwoot/igcoord/redis.env --add-host ig-coord.internal:host-gateway --add-host ig-proxy.internal:host-gateway -v /opt/chatwoot/igcoord/ca.crt:/run/igcoord/ca.crt:ro $IMAGE_URI bundle exec sidekiq -C config/sidekiq.yml
-          ExecStop=/usr/bin/docker stop chatwoot-worker
+          ExecStop=/usr/bin/docker stop -t 30 chatwoot-worker
 
           [Install]
           WantedBy=multi-user.target
