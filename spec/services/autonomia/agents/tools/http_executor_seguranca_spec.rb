@@ -327,6 +327,13 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
         .to eq('https://api.loja.test/estoque/a%2Fb%3Fx%3D1%23y/itens')
     end
 
+    # A leitura mais permissiva do pedaço (decodificado, NFKC) só decide a recusa; o que vai é o valor codificado.
+    { 'v1.2' => 'v1.2', '.env' => '.env', '100%' => '100%25', '50%off' => '50%25off', 'café' => 'caf%C3%A9' }.each do |valor, codificado|
+      it "keeps the path value #{valor.inspect}, which does not climb the path" do
+        expect(url_chamada('https://api.loja.test/estoque/{{q}}', q: valor)).to eq("https://api.loja.test/estoque/#{codificado}")
+      end
+    end
+
     it 'encodes spaces and accents in the path' do
       expect(url_chamada('https://api.loja.test/estoque/{{q}}', q: 'freio ção'))
         .to eq('https://api.loja.test/estoque/freio%20%C3%A7%C3%A3o')
@@ -343,7 +350,8 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     it 'refuses . or .. inside a path value, split by slash and backslash' do
       tool.endpoint_url = 'https://api.loja.test/estoque/{{q}}/itens'
 
-      ['../admin', '..\admin', 'a/../b', 'a\.\b'].each do |valor|
+      ['../admin', '..\admin', 'a/../b', 'a\.\b', '...', '.. ', 'a/.../b', '%2e%2e/admin', '%2E%2E%2Fadmin',
+       "\uFF0E\uFF0E\uFF0Fadmin", "a\uFF0Fb/\uFF0E"].each do |valor|
         expect(erro_de(q: valor).message).to eq('tool_execution_error: endereco_invalido'), valor
       end
     end
@@ -353,6 +361,25 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
       tool.endpoint_url = 'https://api.loja.test/clientes/{{q}}'
 
       expect(erro_de(q: '').message).to eq('tool_execution_error: endereco_invalido')
+    end
+
+    # #1444: valor só de espaços viraria `/clientes/%20` — o mesmo pedaço vazio, disfarçado.
+    it 'refuses a path value made only of spaces' do
+      tool.endpoint_url = 'https://api.loja.test/clientes/{{q}}'
+
+      [' ', "  \t ", "\u0085", "\u00A0", "\u3000 \u200B", "\u2028\u2060", '/', '1/', 'a/ ', "a\\\u00A0"].each do |valor|
+        expect(erro_de(q: valor).message).to eq('tool_execution_error: endereco_invalido'), valor.inspect
+      end
+    end
+
+    # #1444: o Liquid engolia o erro de render e escrevia "Liquid error: ..." cru no endereço, sem
+    # escape. Agora o erro recusa a chamada, e nada sai pela rede.
+    it 'refuses, without calling, an address whose render fails' do
+      tool.endpoint_url = 'https://api.loja.test/estoque/{{ mapa[q] }}'
+      allow(SafeFetch).to receive(:fetch)
+
+      expect(erro_de(q: 'tenis').message).to eq('tool_execution_error: undefined_variable')
+      expect(SafeFetch).not_to have_received(:fetch)
     end
 
     # Revisão 4: `echo` com url_encode final também codifica uma vez só.
@@ -396,6 +423,38 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     responder_ok
 
     expect(erro_de(q: 'a"b').message).to eq('tool_execution_error: corpo_sem_escape')
+  end
+
+  # #1444: no corpo e no cabeçalho, o erro de render também recusa sem enviar — em JSON, no corpo fixo e
+  # no cabeçalho o texto "Liquid error: ..." ia direto para o sistema do dono.
+  describe 'erro de render do Liquid no corpo e no cabeçalho (#1444)' do
+    it 'refuses a JSON body whose render fails, sending nothing' do
+      tool.request_body_template = '{"q":"{{ inexistente }}"}'
+      responder_ok
+
+      expect(erro_de(q: 'x').message).to eq('tool_execution_error: undefined_variable')
+      expect(enviados).to be_empty
+    end
+
+    it 'refuses a fixed body whose render fails, sending nothing' do
+      tool.headers_config = [{ key: 'content-type', value: 'text/plain', secret: false }]
+      tool.request_body_template = 'pedido {{ inexistente }}'
+      responder_ok
+
+      expect(erro_de(q: 'x').message).to eq('tool_execution_error: undefined_variable')
+      expect(enviados).to be_empty
+    end
+
+    # O valor do cabeçalho passa pelo mesmo render e tinha o mesmo defeito.
+    it 'refuses a header whose render fails, sending nothing' do
+      tool.headers_config = headers_config + [{ key: 'x-cliente', value: '{{ inexistente }}', secret: false }]
+      responder_ok
+      erro = erro_de(q: 'x')
+
+      expect(erro.message).to eq('tool_execution_error: undefined_variable')
+      expect(erro.trecho).to be_nil
+      expect(enviados).to be_empty
+    end
   end
 
   describe 'valores que o JSON não representa' do

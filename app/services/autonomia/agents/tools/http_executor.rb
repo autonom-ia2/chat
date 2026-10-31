@@ -129,9 +129,9 @@ module Autonomia
           value
         end
 
+        # Erro de render recusa a chamada em vez de virar "Liquid error: ..." no cabeçalho (#1444).
         def render_template(template, global_filter: nil)
-          Liquid::Template.parse(template, error_mode: :strict)
-                          .render(params, strict_variables: true, strict_filters: true, global_filter: global_filter)
+          ModeloLiquid.renderizar(Liquid::Template.parse(template, error_mode: :strict), params, global_filter)
         end
 
         # Só de 4xx: é o que diz ao modelo o que o sistema recusou ("falta o CEP"). Um 5xx traz página

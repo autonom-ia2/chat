@@ -36,7 +36,6 @@ module Autonomia
     class Tool < ApplicationRecord
       self.table_name = 'autonomia_agent_tools'
 
-      MAX_PER_AGENT = 10
       MAX_SLUG_LENGTH = 64
       SLUG_FORMAT = /\A[a-zA-Z][a-zA-Z0-9_]{0,63}\z/
       HTTP_METHODS = %w[GET POST].freeze
@@ -52,7 +51,6 @@ module Autonomia
 
       before_validation :normalize_slug
       before_validation :normalize_collections
-      before_create :ensure_within_limit
 
       validates :name, presence: true
       validates :slug, presence: true, uniqueness: { scope: :autonomia_agent_id },
@@ -94,14 +92,6 @@ module Autonomia
       end
 
       private
-
-      def ensure_within_limit
-        Agent.lock.find(autonomia_agent_id)
-        return if agent.tools.count < MAX_PER_AGENT
-
-        errors.add(:base, "Limite de #{MAX_PER_AGENT} ferramentas por agente atingido")
-        throw(:abort)
-      end
 
       def normalize_slug
         self.slug = name.to_s.parameterize(separator: '_') if slug.blank? && name.present?
