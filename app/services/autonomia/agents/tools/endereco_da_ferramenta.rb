@@ -7,7 +7,7 @@
 # - esquema e host: variável recusada. Host vindo do modelo mandaria a chave para onde ele quisesse; o
 #   cadastro já não aceita esse endereço (`Tool#validate_endpoint_url`), e aqui a recusa é explícita;
 # - caminho: cada valor vira UM pedaço (`ERB::Util.url_encode`, que codifica também `/`, `?` e `#`).
-#   Valor vazio é recusado (cairia na coleção: `/clientes/`), e também valor que, partido em barra ou
+#   Valor vazio ou só de espaços é recusado (cairia na coleção: `/clientes/`), e também valor que, partido em barra ou
 #   barra invertida, tenha um pedaço "." ou ".." — um servidor que decodifica %2F antes de rotear
 #   resolveria o `../`;
 # - query: cada valor vira valor de campo (`URI.encode_www_form_component`);
@@ -57,8 +57,8 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
     barra ? caminho[0...barra] : caminho
   end
 
-  # Roda DENTRO do render do Liquid, que engole exceção: o valor inválido é marcado aqui e recusado
-  # depois do render.
+  # Roda DENTRO do render do Liquid, que troca qualquer exceção por um erro genérico: o valor inválido é
+  # marcado aqui e recusado depois do render, com o código certo.
   def no_caminho(valor)
     texto = Modelo.texto_de(valor)
     @caminho_invalido ||= caminho_invalido?(texto)
@@ -67,7 +67,7 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
 
   def caminho_invalido?(texto)
     pedacos = texto.split('/', -1).flat_map { |pedaco| pedaco.split(BARRA_INVERTIDA, -1) }
-    texto.empty? || pedacos.any? { |pedaco| ['.', '..'].include?(pedaco) }
+    texto.strip.empty? || pedacos.any? { |pedaco| ['.', '..'].include?(pedaco) }
   end
 
   def renderizar(texto, filtro)

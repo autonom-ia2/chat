@@ -85,8 +85,8 @@ class Autonomia::Agents::Tools::CorpoDaFerramenta
     raise Recusa, 'corpo_json_invalido'
   end
 
-  # Roda DENTRO do render do Liquid, que engole exceção (vira "Liquid error" no texto): o UTF-8 inválido
-  # é marcado aqui e recusado depois do render.
+  # Roda DENTRO do render do Liquid, que troca qualquer exceção por um erro genérico: o UTF-8 inválido
+  # é marcado aqui e recusado depois do render, com o código certo.
   def para_json(valor)
     case valor
     when nil, Numeric, true, false then valor

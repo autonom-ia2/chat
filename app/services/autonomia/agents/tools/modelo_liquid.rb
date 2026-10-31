@@ -23,8 +23,11 @@ module Autonomia::Agents::Tools::ModeloLiquid
     template
   end
 
+  # `render!`, e não `render`: o Liquid engole o erro de render e escreve "Liquid error: ..." cru no texto,
+  # sem passar pelo escape (#1444). Assim o erro sobe como `Liquid::Error` (variável ou chave que não
+  # existe vira `undefined_variable`), o `HttpExecutor` recusa e nada é enviado.
   def renderizar(template, params, filtro)
-    template.render(params, strict_variables: true, strict_filters: true, global_filter: filtro)
+    template.render!(params, strict_variables: true, strict_filters: true, global_filter: filtro)
   end
 
   # Há {{ }} ou {% %} no texto?

@@ -38,6 +38,16 @@ RSpec.describe Autonomia::Agents::Tool do
     expect(tool.masked_headers_config.first['value']).to eq(described_class.masked_header_value)
   end
 
+  # #1323: o limite é validação, e não `throw(:abort)` — `save!` levanta `RecordInvalid`, que a API trata.
+  it 'is invalid as the 11th tool of the agent' do
+    described_class::MAX_PER_AGENT.times do |indice|
+      described_class.create!(account: account, agent: agent, name: "Ferramenta #{indice}", endpoint_url: 'https://example.com/x')
+    end
+    tool = described_class.new(account: account, agent: agent, name: 'Mais uma', endpoint_url: 'https://example.com/x')
+
+    expect { tool.save! }.to raise_error(ActiveRecord::RecordInvalid, /Limite de 10 ferramentas/)
+  end
+
   it 'rejects unsafe endpoints' do
     tool = described_class.new(
       account: account,

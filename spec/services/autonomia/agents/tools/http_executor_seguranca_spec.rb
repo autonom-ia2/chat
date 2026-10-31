@@ -355,6 +355,25 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
       expect(erro_de(q: '').message).to eq('tool_execution_error: endereco_invalido')
     end
 
+    # #1444: valor só de espaços viraria `/clientes/%20` — o mesmo pedaço vazio, disfarçado.
+    it 'refuses a path value made only of spaces' do
+      tool.endpoint_url = 'https://api.loja.test/clientes/{{q}}'
+
+      [' ', "  \t "].each do |valor|
+        expect(erro_de(q: valor).message).to eq('tool_execution_error: endereco_invalido'), valor.inspect
+      end
+    end
+
+    # #1444: o Liquid engolia o erro de render e escrevia "Liquid error: ..." cru no endereço, sem
+    # escape. Agora o erro recusa a chamada, e nada sai pela rede.
+    it 'refuses, without calling, an address whose render fails' do
+      tool.endpoint_url = 'https://api.loja.test/estoque/{{ mapa[q] }}'
+      allow(SafeFetch).to receive(:fetch)
+
+      expect(erro_de(q: 'tenis').message).to eq('tool_execution_error: undefined_variable')
+      expect(SafeFetch).not_to have_received(:fetch)
+    end
+
     # Revisão 4: `echo` com url_encode final também codifica uma vez só.
     it 'encodes only once with echo and url_encode' do
       expect(url_chamada('https://api.loja.test/estoque/{% echo q | url_encode %}', q: 'a b'))
@@ -396,6 +415,36 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     responder_ok
 
     expect(erro_de(q: 'a"b').message).to eq('tool_execution_error: corpo_sem_escape')
+  end
+
+  # #1444: no corpo e no cabeçalho, o erro de render também recusa sem enviar — em JSON, no corpo fixo e
+  # no cabeçalho o texto "Liquid error: ..." ia direto para o sistema do dono.
+  describe 'erro de render do Liquid no corpo e no cabeçalho (#1444)' do
+    it 'refuses a JSON body whose render fails, sending nothing' do
+      tool.request_body_template = '{"q":"{{ inexistente }}"}'
+      responder_ok
+
+      expect(erro_de(q: 'x').message).to eq('tool_execution_error: undefined_variable')
+      expect(enviados).to be_empty
+    end
+
+    it 'refuses a fixed body whose render fails, sending nothing' do
+      tool.headers_config = [{ key: 'content-type', value: 'text/plain', secret: false }]
+      tool.request_body_template = 'pedido {{ inexistente }}'
+      responder_ok
+
+      expect(erro_de(q: 'x').message).to eq('tool_execution_error: undefined_variable')
+      expect(enviados).to be_empty
+    end
+
+    # O valor do cabeçalho passa pelo mesmo render e tinha o mesmo defeito.
+    it 'refuses a header whose render fails, sending nothing' do
+      tool.headers_config = headers_config + [{ key: 'x-cliente', value: '{{ inexistente }}', secret: false }]
+      responder_ok
+
+      expect(erro_de(q: 'x').message).to eq('tool_execution_error: undefined_variable')
+      expect(enviados).to be_empty
+    end
   end
 
   describe 'valores que o JSON não representa' do
