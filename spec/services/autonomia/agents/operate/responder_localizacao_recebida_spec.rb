@@ -169,6 +169,21 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
   end
 
+  it 'sem a flag, nem os robôs do agente nem as mensagens são consultados' do
+    account.disable_features!('agentes_pedir_localizacao')
+    do_agente
+    localizacao
+    expect(Autonomia::Agents::Interacao).not_to receive(:robos)
+    expect(contexto).not_to include('localizacao_recebida')
+  end
+
+  it 'com a flag e sem localização no turno, os robôs do agente não são consultados' do
+    do_agente
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'oi')
+    expect(Autonomia::Agents::Interacao).not_to receive(:robos)
+    expect(contexto).not_to include('localizacao_recebida')
+  end
+
   it 'a linha de telemetria leva só ids e a contagem, nunca coordenada' do
     do_agente
     recebida = localizacao

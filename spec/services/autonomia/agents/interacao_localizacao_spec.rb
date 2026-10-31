@@ -121,6 +121,7 @@ RSpec.describe Autonomia::Agents::Interacao do
       pedacos = [{ 'text' => 'Temos unidades.', 'type' => 'text', 'delay_ms' => 0 }]
       final = described_class.nos_pedacos(pedacos, localizacao, conversation: conversation)
       expect(final.size).to eq(2)
+      expect(final.last['marca']).to eq('autonomia_pedido_localizacao' => true)
       expect(final.last).to include('text' => 'Pode me mandar sua localização?', 'corpo' => 'Pode me mandar sua localização?',
                                     'rich_message' => { 'type' => 'location_request' })
     end

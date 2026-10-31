@@ -137,7 +137,7 @@ module Autonomia::Agents::Interacao
                    end
     final = mensagem(interacao, texto: ultimo['text'], conversation: conversation)
     com_formato = final[:rich_message] ? { 'corpo' => final[:content], 'rich_message' => final[:rich_message] } : {}
-    base + [ultimo.merge('text' => final[:em_texto]).merge(com_formato)]
+    base + [ultimo.merge('text' => final[:em_texto]).merge(com_formato).merge(PedidoDeLocalizacao.no_pedaco(interacao))]
   end
 
   # A interação com os textos que o cliente lê (cabeçalho, pergunta, botão da lista, título e descrição das opções,
@@ -219,9 +219,9 @@ module Autonomia::Agents::Interacao
   end
 
   # A mesma regra da criação pela API (`RichMessages.format_error`: canal que recusa o formato, como e-mail e chat do
-  # site, e entrada fora do contrato do tipo), numa mensagem montada em memória, que nunca é gravada. Opções e link têm
-  # versão em texto, então a janela não recusa nenhum dos dois: fechada, quem decide o caminho é o envio (texto na
-  # oficial, a rota do Híbrido).
+  # site, e entrada fora do contrato do tipo), numa mensagem montada em memória, que nunca é gravada. Opções, link e
+  # pedido de localização têm versão em texto, então a janela não recusa nenhum deles aqui: fechada, quem decide é o
+  # envio (a rota do Híbrido leva o texto; a oficial sem Híbrido falha qualquer mensagem livre, texto ou formato).
   def sai_o_formato?(formato, corpo, conversation)
     return false if formato['type'] == 'options' && formato['header'].blank?
 

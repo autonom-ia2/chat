@@ -38,6 +38,12 @@ module Autonomia::Agents::Interacao::PedidoDeLocalizacao
     interacao&.dig('tipo') == 'localizacao' ? { MARCA => true } : {}
   end
 
+  # A marca no pedaço da entrega humanizada (`Interacao.nos_pedacos`), que o ChunkedDeliveryJob grava na mensagem.
+  def no_pedaco(interacao)
+    marca = marca(interacao)
+    marca.empty? ? {} : { 'marca' => marca }
+  end
+
   def whatsapp?(inbox)
     inbox.channel_type == 'Channel::Whatsapp' || (inbox.channel_type == 'Channel::Api' && inbox.channel.try(:waha_provider?) == true)
   end
