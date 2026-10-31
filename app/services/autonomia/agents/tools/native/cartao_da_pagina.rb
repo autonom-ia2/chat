@@ -50,13 +50,14 @@ module Autonomia::Agents::Tools::Native::CartaoDaPagina
     ::Autonomia::Agents::Tools::Native::Agenda.pagina_de(agent).tap { |pagina| pedir_coordenada(pagina) }
   end
 
-  # Erro ao pedir não derruba o catálogo: o log leva só o id da página e a classe.
+  # Erro ao pedir não derruba o catálogo: o log leva só o id da página e a classe, e o erro vai ao tracker.
   def pedir_coordenada(pagina)
     return if pagina.nil? || pagina.enderecos_sem_coordenada.empty?
 
     ::Crm::BookingV2::GeocodificarLocaisJob.pedir(pagina)
   rescue StandardError => e
     Rails.logger.warn("[autonomia][cartao_da_pagina] geocodificar_nao_pedido page_id=#{pagina.id} #{e.class.name}")
+    ChatwootExceptionTracker.new(e, account: pagina.account).capture_exception
   end
 
   # Os locais presenciais da página que viram mapa: com endereço e coordenada válida, sem repetir endereço.

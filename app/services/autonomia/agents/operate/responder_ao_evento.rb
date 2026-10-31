@@ -54,6 +54,7 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
 
   def silencio(motivo)
     registrar_silencio(motivo)
+    descartar_cartoes(motivo) # #1479 F3: o cartão marcado num turno sem resposta não sai
     Result.new(status: :silenced, error: motivo)
   end
 

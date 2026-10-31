@@ -46,11 +46,14 @@ module Autonomia
           # Não postou (re-check no lock reprovou: humano assumiu / agente desligado / turno mudou / já
           # postado): ENCERRA a cadeia — não agenda o próximo pedaço nem deixa "digitando" pendurado. Só a troca de
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
-          return parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo) if motivo
+          if motivo
+            descartar_cartoes(conversation, agent_inbox, reply_to_message_id, chunks, motivo)
+            return parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
+          end
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
           primeiro_pedaco(agent_inbox.agent, conversation, meta, posted) if index.zero?
-          enfileirar_cartoes(posted)
+          ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(posted) # #1479 F3: o último pedaço é a âncora dos cartões
 
           schedule_next(conversation, agent_inbox, reply_to_message_id, chunks, index, meta, typing)
         end
@@ -111,15 +114,15 @@ module Autonomia
           fresh.present? && fresh.id != agent_inbox.id
         end
 
-        # #1479 F3: o pedaço que leva os cartões do turno (o último, `Responder#com_os_cartoes_no_ultimo`) acabou de ser
-        # postado, fora do lock: o job que os manda quando ele sair (`EnviarCartoesJob`). Erro ao enfileirar não para a
-        # cadeia (só os ids e a classe no log).
-        def enfileirar_cartoes(posted)
-          return if ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(posted).empty?
+        # #1479 F3: a cadeia parou antes de postar o pedaço que leva os cartões (o último): eles não saem. Registro com o
+        # motivo da parada, só quando o turno tinha cartão. O retry de um pedaço já postado (`ja_postado`) e o fim da cadeia
+        # (`sem_pedaco`) não descartam.
+        def descartar_cartoes(conversation, agent_inbox, reply_to_message_id, chunks, motivo)
+          return if %i[ja_postado sem_pedaco].include?(motivo)
+          return if Array(chunks.last.to_h.dig('marca', ::Autonomia::Agents::Operate::CartoesDoTurno::NA_ANCORA)).empty?
 
-          ::Autonomia::Agents::Operate::EnviarCartoesJob.perform_later(posted.id)
-        rescue StandardError => e
-          Rails.logger.warn("[autonomia][operate] cartoes_nao_enfileirados conv=#{posted.conversation_id} msg=#{posted.id} #{e.class.name}")
+          ::Autonomia::Agents::Operate::CartoesDoTurno.descartados(conversation_id: conversation.id, agent: agent_inbox.agent.id,
+                                                                   msg: reply_to_message_id, motivo: motivo)
         end
 
         # Agenda o próximo pedaço após sua pausa, mostrando "digitando" durante a espera.
@@ -192,6 +195,7 @@ module Autonomia
 
         # `rich_message` (#1479): só o último pedaço o traz, com a interação já decidida pelo Responder. Com ele, o conteúdo
         # é o `corpo`; o `text` desse pedaço é a versão em texto inteira, para o worker que ainda não conhece o formato.
+        # #1479 F3: a marca dele traz só as referências dos cartões; a mensagem grava os cartões resolvidos pela página.
         def build_message!(conversation, agent_inbox, reply_to_message_id, index, chunk)
           Messages::MessageBuilder.new(
             nil, conversation,
@@ -204,7 +208,10 @@ module Autonomia
                 autonomia_chunk_index: index,
                 autonomia_chunk_token: chunk_token(reply_to_message_id, index),
                 **{ RichMessages::KEY => chunk['rich_message'] }.compact,
-                **chunk['marca'].to_h # #1479 F2: a marca do pedido de localização (`Interacao.nos_pedacos`); F3: os cartões
+                # #1479 F2: a marca do pedido de localização (`Interacao.nos_pedacos`); F3: os cartões, resolvidos agora.
+                **::Autonomia::Agents::Operate::CartoesDoTurno.marca_resolvida(
+                  chunk['marca'].to_h, agent: agent_inbox.agent, conversation_id: conversation.id, msg: reply_to_message_id
+                )
               }
             )
           ).perform

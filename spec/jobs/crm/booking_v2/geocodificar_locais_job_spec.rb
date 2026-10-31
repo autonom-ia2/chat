@@ -155,6 +155,20 @@ RSpec.describe Crm::BookingV2::GeocodificarLocaisJob do
       expect(described_class.pedir(pagina.reload)).to be(false)
     end
 
+    it 'o enfileirar falhou: a trava sai, e o próximo pedido tenta de novo' do
+      allow(described_class).to receive(:perform_later).and_raise(Redis::CannotConnectError)
+      expect { described_class.pedir(pagina) }.to raise_error(Redis::CannotConnectError)
+
+      allow(described_class).to receive(:perform_later).and_call_original
+      expect(described_class.pedir(pagina)).to be(true)
+    end
+
+    it 'a falha conta com validade (incr e expire juntos)' do
+      described_class.contar_falha(pagina.id, 'Rua Direita, 100')
+      chave = "crm:booking_v2:geocodificar:falhas:#{pagina.id}:#{hash_de('Rua Direita, 100')}"
+      expect(Redis::Alfred.ttl(chave)).to be_within(60).of(7.days.to_i)
+    end
+
     it 'conta desligada: não enfileira' do
       account.disable_features!('agentes_enviar_local_e_contato')
       expect(described_class.pedir(pagina.reload)).to be(false)

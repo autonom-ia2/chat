@@ -1,25 +1,36 @@
 require 'rails_helper'
 
 # #1479 F3: o mapa e o cartão de contato que as ferramentas marcaram no turno ficam gravados na mensagem âncora do turno
-# (`autonomia_cartoes`): o texto no clássico, a última mensagem postada na voz, o último pedaço na entrega em pedaços. Eles
-# saem DEPOIS, pelo `EnviarCartoesJob`, quando a âncora já saiu para o canal. O retry do turno usa os cartões gravados
-# na âncora, nunca os do novo run, e nunca repete um cartão. Turno sem texto: o cartão é descartado com registro.
+# (`autonomia_cartoes`): o texto no clássico, o áudio na voz, o último pedaço na entrega em pedaços (que nos argumentos
+# do job leva só as referências e resolve o cartão pela página ao postar). Eles saem DEPOIS, pelo `EnviarCartoesJob`,
+# quando a âncora já saiu para o canal. O retry do turno usa os cartões gravados na âncora, nunca os do novo run, e nunca
+# repete um cartão. Turno sem texto, cadeia que parou antes do último pedaço: o cartão é descartado com registro.
 RSpec.describe Autonomia::Agents::Operate::Responder do
-  let(:account) { conta_da_fase2 }
+  let(:account) { conta_da_fase2.tap { |conta| conta.enable_features!('agentes_enviar_local_e_contato') } }
   let(:cloud) { create(:channel_whatsapp, account: account, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
   let(:inbox) { cloud.inbox }
   let(:contact_inbox) { create(:contact_inbox, inbox: inbox, source_id: '5511937016094') }
   let(:conversation) { create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, assignee: nil) }
   let(:agent_bot) { create(:agent_bot, account: account) }
-  let(:agent) { criar_principal(account) }
+  let(:pagina) do
+    create_booking_profile(account: account, host: create(:user, account: account, role: :agent), title: 'Clínica',
+                           locations: [{ 'type' => 'in_person', 'label' => 'Unidade Centro', 'address' => 'Rua Direita, 100' }],
+                           contact_phone: '+551140000473').tap do |gravada|
+      lista = gravada.locations.map { |item| item.merge('latitude' => -23.5489, 'longitude' => -46.6388) }
+      gravada.update_column(:locations, lista) # rubocop:disable Rails/SkipsModelValidations
+    end
+  end
+  let(:agent) { criar_principal(account, config: { 'with_knowledge' => false, 'booking_page_id' => pagina.id }) }
+  let(:linhas) { [] }
   let(:agent_inbox) { Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot) }
+  # Os cartões como as ferramentas os marcam: do dado da página.
   let(:mapa) do
-    { 'tipo' => 'location', 'chave' => 'a1b2c3d4',
-      'rich_message' => { 'type' => 'location', 'latitude' => -23.5489, 'longitude' => -46.6388, 'name' => 'Unidade Centro',
-                          'address' => 'Rua Direita, 100' } }
+    local = Autonomia::Agents::Tools::Native::CartaoDaPagina.locais(pagina.reload).sole
+    Autonomia::Agents::Tools::Native::CartaoDaPagina.cartao('location', local['id'], local['rich_message'])
   end
   let(:cartao_de_contato) do
-    { 'tipo' => 'contact', 'chave' => 'pagina', 'rich_message' => { 'type' => 'contact', 'name' => 'Clínica', 'phone' => '+551140000473' } }
+    Autonomia::Agents::Tools::Native::CartaoDaPagina.cartao('contact', 'pagina',
+                                                            Autonomia::Agents::Tools::Native::CartaoDaPagina.contato(pagina.reload))
   end
   let(:opcoes) do
     Autonomia::Agents::Interacao.do_modelo(
@@ -87,7 +98,17 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     Array(mensagem.reload.content_attributes['autonomia_cartoes'])
   end
 
-  before { ActiveJob::Base.queue_adapter.enqueued_jobs.clear }
+  def limpar_redis
+    Redis::Alfred.scan_each(match: 'crm:booking_v2:geocodificar:*') { |chave| Redis::Alfred.delete(chave) }
+  end
+
+  before do
+    ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+    allow(Rails.logger).to receive(:info).and_call_original
+    allow(Rails.logger).to receive(:info).with(a_string_including('cartao_descartado')) { |linha| linhas << linha }
+  end
+
+  after { limpar_redis }
 
   describe 'entrega clássica' do
     it 'o texto leva os cartões; nada sai junto, e o job da âncora é enfileirado' do
@@ -95,7 +116,7 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       perform
 
       texto = enviadas.sole
-      expect(gravados(texto)).to eq([mapa.merge('token' => "mensagem:#{pergunta.id}:cartao:location:a1b2c3d4")])
+      expect(gravados(texto)).to eq([mapa.merge('token' => "mensagem:#{pergunta.id}:cartao:location:#{mapa['chave']}")])
       expect(jobs_dos_cartoes.map { |item| item[:args] }).to eq([[texto.id]])
     end
 
@@ -134,13 +155,22 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(tipos).to eq(%w[texto location])
     end
 
-    it 'o retry depois do texto sem cartão (o modelo só o marcou na 2ª vez): nada a mais sai' do
+    it 'o retry depois do texto sem cartão (o modelo só o marcou na 2ª vez): nada a mais sai, e o descarte fica registrado' do
       responde('Fica no Centro.', [])
       perform
       responde('Fica no Centro.', [mapa])
       perform
       rodar_cartoes
       expect(tipos).to eq(%w[texto])
+      expect(linhas.sole).to include("msg=#{pergunta.id}", 'motivo=ja_respondido')
+    end
+
+    it 'falha no turno depois do texto postado, antes de enfileirar: o descarte fica registrado' do
+      allow(Autonomia::Agents::Operate::EventLogger).to receive(:replied).and_raise(StandardError)
+      responde('Fica no Centro.', [mapa])
+      perform
+      expect(jobs_dos_cartoes).to be_empty
+      expect(linhas.sole).to include('motivo=falha')
     end
 
     it 'o cartão já enviado não faz o retry pular o texto, nem sai de novo' do
@@ -163,9 +193,6 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     end
 
     it 'turno sem texto: o cartão não sai, e o descarte fica registrado (só ids)' do
-      linhas = []
-      allow(Rails.logger).to receive(:info).and_call_original
-      allow(Rails.logger).to receive(:info).with(a_string_including('cartao_descartado')) { |linha| linhas << linha }
       responde('', [mapa])
 
       expect(perform.status).to eq(:silenced)
@@ -206,16 +233,18 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       responde("Temos duas unidades.\n\nA do Centro abre às 8h.", [mapa], interacao: opcoes)
       perform
       pedacos = pedacos_agendados
-      expect(pedacos.last['marca']).to include('autonomia_cartoes' => [hash_including('tipo' => 'location')])
+      expect(pedacos.last['marca']['autonomia_cartoes']).to eq(
+        [{ 'tipo' => 'location', 'chave' => mapa['chave'], 'token' => "mensagem:#{pergunta.id}:cartao:location:#{mapa['chave']}" }]
+      )
       expect(pedacos.last).to include('rich_message' => hash_including('type' => 'options'))
       expect(pedacos[0...-1]).to all(satisfy { |pedaco| pedaco['marca'].to_h.exclude?('autonomia_cartoes') })
       expect(jobs_dos_cartoes).to be_empty
 
       entregar(pedacos)
       expect(jobs_dos_cartoes.map { |item| item[:args] }).to eq([[enviadas.last.id]])
+      expect(gravados(enviadas.last).sole).to include('rich_message' => mapa['rich_message'])
       rodar_cartoes
       expect(enviadas.map { |mensagem| mensagem.content_attributes.dig('rich_message', 'type') }.last(2)).to eq(%w[options location])
-      expect(enviadas.last.content).to eq('')
     end
 
     it 'o pedaço repetido (retry do job) não duplica o cartão' do
@@ -236,6 +265,38 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       perform
       rodar_cartoes
       expect(cartoes_enviados.map { |cartao| cartao.content_attributes.dig('rich_message', 'type') }).to eq(%w[location])
+    end
+
+    it 'os argumentos do job de pedaços não levam endereço, coordenada nem telefone' do
+      responde('Fica no Centro.', [mapa, cartao_de_contato])
+      perform
+      argumentos = pedacos_agendados.to_json
+      ['Rua Direita', '-23.5489', '-46.6388', '551140000473'].each { |dado| expect(argumentos).not_to include(dado) }
+    end
+
+    it 'a página mudou antes do último pedaço: o cartão que não resolve mais fica fora, com registro' do
+      responde('Fica no Centro.', [mapa, cartao_de_contato])
+      perform
+      pagina.update_column(:contact_phone, nil) # rubocop:disable Rails/SkipsModelValidations
+      entregar(pedacos_agendados)
+      expect(gravados(enviadas.last).map { |cartao| cartao['tipo'] }).to eq(%w[location])
+      expect(linhas.sole).to include("conv=#{conversation.id}", 'motivo=pagina_mudou')
+      rodar_cartoes
+      expect(tipos).to eq(%w[texto location])
+    end
+
+    it 'a cadeia parou antes do último pedaço (a pessoa respondeu): o cartão não sai, com registro' do
+      responde("Fica no Centro.\n\nPerto do metrô.", [mapa])
+      perform
+      pedacos = pedacos_agendados
+      entregar(pedacos[0...-1])
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: 'Sigo eu.',
+                       sender: create(:user, account: account, role: :agent))
+      Autonomia::Agents::Operate::ChunkedDeliveryJob.new.perform(conversation.id, agent_inbox.id, pergunta.id, pedacos,
+                                                                 pedacos.size - 1, {})
+
+      expect(jobs_dos_cartoes).to be_empty
+      expect(linhas.sole).to include('motivo=pessoa_respondeu')
     end
 
     it 'sem cartão marcado: os mesmos pedaços de antes' do
@@ -268,11 +329,11 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
       expect(enviadas.first.content_attributes['autonomia_voice']).to be(true)
     end
 
-    it 'com a interação, a âncora é ela (a última postada): áudio, interação, depois o cartão' do
+    it 'com a interação, a âncora continua o áudio: áudio, interação, depois o cartão' do
       responde('Temos vaga amanhã.', [mapa], interacao: opcoes)
       perform
-      expect(gravados(enviadas.first)).to be_empty
-      expect(gravados(enviadas.second)).not_to be_empty
+      expect(gravados(enviadas.first)).not_to be_empty
+      expect(gravados(enviadas.second)).to be_empty
       rodar_cartoes
       expect(enviadas.size).to eq(3)
       expect(enviadas.second.content_attributes['rich_message']).to include('type' => 'options')

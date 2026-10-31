@@ -7,8 +7,10 @@
 # (`enderecos_sem_coordenada`) e com menos de TETO_DE_FALHAS falhas passageiras. `pedir` só enfileira com a conta ligada
 # e algum pendente, e uma vez por TRAVA para a mesma página e os mesmos pendentes (SET NX); endereço novo, chave nova.
 #
-# Por endereço pendente: a primeira sugestão do Google Places da plataforma e o detalhe dela, na mesma sessão (`Busca`),
-# e só vale o lugar PRECISO, pelo tipo que o Google devolve (`preciso?`), nunca pelo texto. Grava relendo a página com a
+# Por endereço pendente: SÓ a primeira sugestão do Google Places da plataforma e o detalhe dela, na mesma sessão
+# (`Busca`). Risco conhecido: se a primeira não for o lugar certo e as outras fossem, o endereço fica "não achou" até
+# mudar (não comparamos as sugestões entre si, que seria decidir pelo texto).
+# Só vale o lugar PRECISO, pelo tipo que o Google devolve (`preciso?`), nunca pelo texto. Grava relendo a página com a
 # linha travada, no item `in_person` cujo endereço ainda é o mesmo, só as chaves dele, direto na coluna (`update_column`:
 # sem callbacks, sem `updated_at`, sem mexer no resto). O endereço que mudou enquanto o job rodava não ganha nada do antigo.
 #   - achou e é preciso: `latitude` e `longitude`;
@@ -53,10 +55,20 @@ class Crm::BookingV2::GeocodificarLocaisJob < ApplicationJob
 
       enderecos = pendentes(pagina)
       return false if enderecos.empty?
-      return false unless Redis::Alfred.set(chave_da_trava(pagina.id, enderecos), 1, nx: true, ex: TRAVA.to_i)
 
-      perform_later(pagina.id)
+      trava = chave_da_trava(pagina.id, enderecos)
+      return false unless Redis::Alfred.set(trava, 1, nx: true, ex: TRAVA.to_i)
+
+      enfileirar(pagina.id, trava)
+    end
+
+    # Erro ao enfileirar: a trava sai (senão a página ficaria uma hora sem pedido) e o erro sobe a quem chamou.
+    def enfileirar(page_id, trava)
+      perform_later(page_id)
       true
+    rescue StandardError
+      Redis::Alfred.delete(trava)
+      raise
     end
 
     def pendentes(pagina)
@@ -70,7 +82,13 @@ class Crm::BookingV2::GeocodificarLocaisJob < ApplicationJob
     # -> o total de falhas depois desta.
     def contar_falha(page_id, endereco)
       chave = chave_das_falhas(page_id, endereco)
-      Redis::Alfred.incr(chave).tap { Redis::Alfred.expire(chave, VALIDADE_DAS_FALHAS.to_i) }
+      # Juntos (MULTI): o contador nunca fica sem validade.
+      Redis::Alfred.with do |conn|
+        conn.multi do |transacao|
+          transacao.incr(chave)
+          transacao.expire(chave, VALIDADE_DAS_FALHAS.to_i)
+        end
+      end.first
     end
 
     private

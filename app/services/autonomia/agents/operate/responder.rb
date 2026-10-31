@@ -136,7 +136,7 @@ module Autonomia
         # que cotar e não ter como entregar.
         def falha_no_turno(error)
           Rails.logger.warn("[autonomia][operate] responder_failed agent=#{@agent.id} conv=#{@conversation.id} #{error.class}")
-          descartar_cartoes('falha') unless @ancora
+          descartar_cartoes('falha') unless @cartoes_enfileirados || @cadeia_agendada
           soltar_posse
           ::Autonomia::Agents::Tools::AsyncDispatcher.new(delivery: @delivery, agent: @agent).discard!
           Result.silenced
@@ -286,17 +286,27 @@ module Autonomia
         # #1479 F3: depois do lock e do commit, o job que manda os cartões quando a âncora sair. A âncora é a que este run
         # postou ou, quando a guarda disse "já respondido" (retry), a que já existe, com os cartões que ELA gravou. Na
         # entrega em pedaços agendada agora, quem enfileira é o ChunkedDeliveryJob, no último pedaço. A resposta nova sem
-        # cartão nem consulta a âncora. Erro ao enfileirar não muda o turno: a resposta já saiu (o log leva só os ids e a
-        # classe).
+        # cartão nem consulta a âncora. O retry cuja âncora não tem cartão, com cartão marcado neste run: o cartão novo não
+        # sai (`cartao_descartado` motivo=ja_respondido). Erro ao enfileirar não muda o turno, porque a resposta já saiu:
+        # log com os ids e a classe, tracker e `cartao_nao_enviado` motivo=erro_ao_enfileirar.
         def enfileirar_cartoes(outcome)
           return if @cadeia_agendada || (@ancora.nil? && outcome.message.present?)
 
           ancora = @ancora || ::Autonomia::Agents::Operate::CartoesDoTurno.ancora_do_turno(@conversation, @reply_to_message_id)
-          return if ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora).empty?
+          return descartar_cartoes('ja_respondido') if ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora).empty?
 
           ::Autonomia::Agents::Operate::EnviarCartoesJob.perform_later(ancora.id)
+          @cartoes_enfileirados = true
         rescue StandardError => e
-          Rails.logger.warn("[autonomia][operate] cartoes_nao_enfileirados agent=#{@agent.id} conv=#{@conversation.id} #{e.class.name}")
+          erro_ao_enfileirar(e, ancora)
+        end
+
+        def erro_ao_enfileirar(error, ancora)
+          @cartoes_enfileirados = true # o erro já ficou registrado; a falha do turno não registra de novo
+          Rails.logger.warn("[autonomia][operate] cartoes_nao_enfileirados agent=#{@agent.id} conv=#{@conversation.id} #{error.class.name}")
+          ChatwootExceptionTracker.new(error, account: @conversation.account).capture_exception
+          ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:cartao_nao_enviado, conversation_id: @conversation.id,
+                                                                                         msg: ancora&.id, motivo: 'erro_ao_enfileirar')
         end
 
         # #1479 F3: o turno não respondeu (silêncio, falha) e tinha cartão marcado: ele não sai, e o descarte fica no
@@ -363,10 +373,10 @@ module Autonomia
         end
 
         # #1479: o áudio e, logo depois, a interação numa mensagem própria (as opções com a pergunta; o link com o rótulo
-        # no corpo). -> a mensagem de áudio. #1479 F3: a última postada é a âncora dos cartões.
+        # no corpo). -> a mensagem de áudio. #1479 F3: o áudio é a âncora dos cartões, que esperam ele sair.
         def post_voz!(audio_bytes, interacao)
-          audio = post_audio_reply!(audio_bytes, interacao ? {} : marca_dos_cartoes)
-          post_reply!(nil, interacao, cartoes: marca_dos_cartoes) if interacao
+          audio = post_audio_reply!(audio_bytes, marca_dos_cartoes)
+          post_reply!(nil, interacao) if interacao
           audio
         end
 
@@ -429,13 +439,15 @@ module Autonomia
           Result.replied(nil)
         end
 
-        # #1479 F3: os cartões do turno vão na `marca` do ÚLTIMO pedaço (a âncora), que o ChunkedDeliveryJob grava na
-        # mensagem e de onde enfileira o EnviarCartoesJob. Sem cartão, os pedaços de sempre.
+        # #1479 F3: as REFERÊNCIAS dos cartões do turno (tipo, chave, token) vão na `marca` do ÚLTIMO pedaço (a âncora).
+        # Os argumentos do job vão ao log INFO, por isso nada do dado do cartão viaja: o ChunkedDeliveryJob resolve cada
+        # um pela página ao postar, grava na mensagem e enfileira o EnviarCartoesJob. Sem cartão, os pedaços de sempre.
         def com_os_cartoes_no_ultimo(chunks)
-          return chunks if marca_dos_cartoes.empty?
+          referencias = ::Autonomia::Agents::Operate::CartoesDoTurno.referencias(marca_dos_cartoes)
+          return chunks if referencias.empty?
 
           ultimo = chunks.last
-          chunks[0...-1] + [ultimo.merge('marca' => ultimo['marca'].to_h.merge(marca_dos_cartoes))]
+          chunks[0...-1] + [ultimo.merge('marca' => ultimo['marca'].to_h.merge(referencias))]
         end
 
         # #2154: a cadeia de pedaços assume a marca do turno (Operate::TurnoEmCurso), ANTES de ser agendada: renova com o

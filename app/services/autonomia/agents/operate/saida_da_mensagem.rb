@@ -15,12 +15,13 @@
 #   - WAHA (`Channel::Api` com `provider = 'waha'`): quem envia é o conector, pelo webhook `message_created` da caixa; o
 #     `SendReplyJob` só manda a notificação de e-mail. A volta é o PATCH `messages#update` com o status (delivered, read,
 #     failed); o conector não grava `source_id` nem um "aceito". Sem sinal positivo confiável: saiu com o ack, ou depois
-#     de ESPERA_SEM_SINAL (o conector manda na ordem dos webhooks, e a espera cobre a fila dele).
+#     de ESPERA_SEM_SINAL (o conector manda na ordem dos webhooks, e a espera cobre a fila dele). Risco conhecido: se o
+#     conector marcar `failed` DEPOIS da espera, o mapa pode já ter saído sem o texto.
 #   - Sem envio externo (chat do site, `Channel::Api` comum): a mensagem está na conversa ao gravar, e a ordem é a de
 #     criação. Saiu logo.
 #   - Os outros canais com envio externo (e-mail, Instagram, Facebook, Telegram, SMS...): o `source_id` que o serviço de
 #     envio grava depois do provedor; sem ele, depois de ESPERA_SEM_SINAL (nem todo serviço grava, e o cartão ali sai
-#     em texto).
+#     em texto). O mesmo risco: a falha marcada depois da espera não segura o cartão.
 module Autonomia::Agents::Operate::SaidaDaMensagem
   ESPERA_SEM_SINAL = 10.seconds
   PELO_CELULAR = 'web'.freeze

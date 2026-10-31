@@ -66,7 +66,8 @@ module Crm::BookingPageCoordenadas
 
   # { endereço => { 'latitude', 'longitude', NAO_ACHOU } } dos itens presenciais como estão NO BANCO agora.
   def dados_do_servidor
-    gravada = new_record? ? [] : self.class.where(id: id).pick(:locations)
+    # Com a linha travada (FOR UPDATE, dentro da transação do salvar): o job, que grava sob o mesmo lock, espera.
+    gravada = new_record? ? [] : self.class.lock.where(id: id).pick(:locations)
     Array(gravada).each_with_object({}) do |item, conhecidos|
       next unless presencial?(item) && item['address'].present?
 
