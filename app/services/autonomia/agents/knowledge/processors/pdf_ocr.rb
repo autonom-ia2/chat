@@ -55,7 +55,10 @@ module Autonomia::Agents::Knowledge::Processors::PdfOcr
     end
 
     ocr = ocr_pages(path, pages).force_encoding('UTF-8').scrub('').strip
-    ocr.length >= Autonomia::Agents::Knowledge::Processors::Pdf::OCR_MIN_CHARS ? ocr : text
+    return text if ocr.length < Autonomia::Agents::Knowledge::Processors::Pdf::OCR_MIN_CHARS
+
+    @source.leitura_de_imagem = true if @source.respond_to?(:leitura_de_imagem=)
+    ocr
   rescue Autonomia::Agents::Knowledge::Ingestor::Superseded
     raise
   rescue StandardError => e

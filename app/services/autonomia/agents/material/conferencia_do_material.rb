@@ -9,6 +9,11 @@
 # (t4e, decisão do Rodrigo de 30/10): sem nenhuma célula conferida não há prova de tabela, e o material não é reprovado
 # (no eval, um manual de 300 páginas era reprovado por uma tabela que o modelo não conseguia apontar).
 #
+# #1426 (#2425) — o modelo recebe a origem do texto, que o código sabe: foto ou PDF escaneado lido pelo nosso OCR
+# (Source#leitura_de_imagem, posto pelo Processors::PdfOcr nesta leitura), camada de texto do PDF, ou arquivo de texto. Um
+# PDF digitado de 74 páginas era reprovado como "não consegui ler" porque a amostra trazia sumário pontilhado e trechos
+# curtos. A decisão continua do modelo: a camada de texto de um PDF pode ter vindo do OCR do próprio scanner e sair ruim.
+#
 # -> { 'problema' => 'ocr' | 'sem_cabecalho' | nil, 'amostra' => [...] }, ou nil quando a IA falhou (nada é reprovado
 # por falha nossa).
 class Autonomia::Agents::Material::ConferenciaDoMaterial
@@ -26,7 +31,11 @@ class Autonomia::Agents::Material::ConferenciaDoMaterial
     Responda duas perguntas, pelo sentido do texto:
     1. leitura: o texto veio de leitura de imagem (foto, PDF escaneado) e saiu com erros que impedem entender o que
        esta escrito (letras trocadas, palavras sem sentido, numeros embaralhados)? "ruim" se sim; "legivel" se da para
-       entender; "nao_se_aplica" se o texto foi digitado e nao ha sinal de leitura de imagem.
+       entender; "nao_se_aplica" se o texto foi digitado e nao ha sinal de leitura de imagem. A origem do texto vem
+       informada antes dele: texto digitado e sempre digitado; a camada de texto de um PDF quase sempre e digitada, mas
+       pode ter vindo do OCR do scanner, e entao so e "ruim" se o proprio texto mostrar os erros de leitura acima.
+       Sumario ou indice com linhas de pontos ate o numero da pagina, cabecalho, rodape, numero de pagina e trechos
+       curtos ou cortados da amostra fazem parte de um documento digitado e nao sao leitura ruim.
     2. tabela: o material tem tabela (linhas com valores em colunas) em que as colunas nao dizem o que sao, de modo que
        nao da para saber se um numero e preco, quantidade ou codigo? "sem_cabecalho" se sim; "com_cabecalho" se as
        colunas tem nome ou se o proprio conteudo deixa claro o que cada coluna e (por exemplo, nomes de produto ao lado
@@ -72,7 +81,7 @@ class Autonomia::Agents::Material::ConferenciaDoMaterial
   private
 
   def entrada
-    texto = "Tipo do material: #{@source.source_type}\n\nTEXTO DO MATERIAL (dado):\n#{@amostra}"
+    texto = "Tipo do material: #{@source.source_type}\nOrigem do texto: #{origem}\n\nTEXTO DO MATERIAL (dado):\n#{@amostra}"
     [Autonomia::Agents::PromptParts::Mensagem.montar('user', texto)]
   end
 
@@ -85,6 +94,18 @@ class Autonomia::Agents::Material::ConferenciaDoMaterial
     return { 'problema' => nil, 'amostra' => [] } if amostra.empty?
 
     { 'problema' => 'sem_cabecalho', 'amostra' => amostra }
+  end
+
+  # Texto lido pelo modelo: sem travessão e sem crase.
+  def origem
+    return 'leitura de imagem por OCR (foto ou PDF escaneado)' if leitura_de_imagem?
+    return 'camada de texto do PDF, sem passar pelo nosso OCR' if @source.source_type.to_s == 'pdf'
+
+    'texto digitado (arquivo ou pagina da web)'
+  end
+
+  def leitura_de_imagem?
+    @source.source_type.to_s == 'foto' || (@source.respond_to?(:leitura_de_imagem) && @source.leitura_de_imagem == true)
   end
 
   # Só célula que está mesmo no texto do material, curta, até 8.

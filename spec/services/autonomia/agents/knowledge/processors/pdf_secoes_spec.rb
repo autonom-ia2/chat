@@ -6,7 +6,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   let(:account) { create(:account) }
   let(:file) { double('attachment', attached?: true, download: 'pdf-bytes') } # rubocop:disable RSpec/VerifiedDoubles
   let(:reader) { instance_double(PDF::Reader) }
-  let(:bia) { instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false) }
+  let(:bia) { instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false, config: {}) }
 
   def material(agent: bia)
     double('source', reference: 'doc.pdf', source_type: 'pdf', file: file, account: account, agent: agent).tap do |fonte| # rubocop:disable RSpec/VerifiedDoubles
@@ -18,6 +18,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   def stub_pages(total)
     pages = (1..total).map { |numero| instance_double(PDF::Reader::Page, text: "Texto da pagina #{numero}") }
     allow(PDF::Reader).to receive(:new).and_return(reader)
+    allow(Autonomia::Agents::Knowledge::Processors::PdfTrechos).to receive(:da_pagina).and_return([])
     allow(reader).to receive(:pages).and_return(pages)
   end
 
