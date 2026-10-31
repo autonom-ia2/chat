@@ -309,10 +309,12 @@ module Autonomia
         end
 
         # #1479: o turno pode ter gravado cartões (a conta com o envio do mapa e do contato) ou a interação depois do
-        # áudio (o agente com voz e a Fase 2). Fora disso, o retry não faz a busca (LIKE) da âncora.
+        # áudio (o agente com voz, e a interação ligada: `InteracaoDepoisDoAudio.ligada?`, o mesmo gate de quem a posta).
+        # Fora disso, o retry não faz a busca (LIKE) da âncora.
         def pode_ter_ancora?
           ::Autonomia::Agents::Tools::Native::CartaoDaPagina.ligado?(@conversation.account) ||
-            (::Autonomia::Agents::Config.voice_reply_enabled?(@agent) && ::Autonomia::Agents::Fase2.ligada?(@conversation.account))
+            (::Autonomia::Agents::Config.voice_reply_enabled?(@agent) &&
+             ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.ligada?(@conversation.account))
         end
 
         def erro_ao_enfileirar(error, ancora)
@@ -391,9 +393,7 @@ module Autonomia
         # áudio vai com 2 s de espera, e a interação postada junto chegava antes dele. -> a mensagem de áudio, a âncora
         # da interação e dos cartões (#1479 F3), que esperam ele sair.
         def post_voz!(audio_bytes, interacao)
-          depois = ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.marca(
-            interacao, turno: delivery.turno, conversation: @conversation, destinatarios: destinatarios_do_email
-          )
+          depois = ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.marca(interacao, turno: delivery.turno, conversation: @conversation)
           post_audio_reply!(audio_bytes, marca_dos_cartoes.merge(depois))
         end
 
@@ -981,9 +981,7 @@ module Autonomia
         # (Crm::Email::Destinatarios), sem quem pediu para sair. Sem a flag, ou fora do e-mail, nada muda: a resposta vai
         # só ao cliente, como antes. Também na resposta da passagem (ResponderAPassagem#post_reply!).
         def destinatarios_do_email
-          return {} unless @conversation.inbox&.email? && email_autoria.ligada?
-
-          ::Crm::Email::Destinatarios.new(@conversation).para_a_ia.to_h { |campo, enderecos| [:"#{campo}_emails", enderecos.join(',')] }
+          ::Crm::Email::Destinatarios.da_ia(@conversation)
         end
 
         # #1479: -> [o conteúdo, as chaves do formato]. O formato sai em `rich_message`; quando a caixa não o leva, o

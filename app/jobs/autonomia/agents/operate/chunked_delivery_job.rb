@@ -257,8 +257,7 @@ module Autonomia
         def bot_in_command?(conversation, agent_inbox = nil)
           # Revalida o CONTRATO INTEIRO com estado fresco, na MESMA caixa do agente (cada chunk):
           # sem responsável + agente ligado/ativo/não-interno/não-sistema + feature on + allowlist.
-          fresh = ::Autonomia::Agents::Operate.eligible_agent_inbox(conversation)
-          fresh.present? && fresh.id == agent_inbox&.id
+          ::Autonomia::Agents::Operate.no_comando?(conversation, agent_inbox)
         end
 
         def log_replied(agent, conversation, meta, message)

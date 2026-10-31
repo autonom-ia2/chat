@@ -265,4 +265,84 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     job = ActiveJob::Base.queue_adapter.enqueued_jobs.find { |item| item[:job] == Autonomia::Agents::Operate::EnviarCartoesJob }
     expect(job[:args]).to eq([audio.id])
   end
+
+  # r2 da revisão: o teto, as guardas de turno e de dono, o formato reconferido e os destinatários do e-mail na hora.
+  describe 'o áudio passou do teto ainda pendente' do
+    def teto = Autonomia::Agents::Operate::EnviarCartoesJob::TETO + 1.second
+
+    it 'a interação sai assim mesmo (a pergunta nunca se perde), com interacao_degradada; o mapa desiste e a âncora encerra' do
+      responde('Temos vaga amanhã.', opcoes, cartoes: [mapa])
+      perform
+      travel(teto) { rodar_jobs }
+
+      expect(tipos).to eq(%w[audio options])
+      expect(logs.join).to include('interacao_degradada', "msg=#{audio.id}", 'motivo=anterior_pendente')
+      expect(logs.join).to include('cartao_nao_enviado', 'motivo=anterior_pendente')
+      expect(audio.reload.content_attributes['autonomia_cartoes_encerrados']).to eq('anterior_pendente')
+      travel(teto) { ate_o_fim }
+      expect(tipos).to eq(%w[audio options])
+    end
+
+    it 'o áudio que falhou continua segurando tudo, mesmo depois do teto' do
+      responde('Temos vaga amanhã.', opcoes)
+      perform
+      audio.update!(status: :failed)
+      travel(teto) { rodar_jobs }
+
+      expect(tipos).to eq(%w[audio])
+      expect(logs.join).not_to include('interacao_degradada')
+    end
+  end
+
+  it 'turno superado: o robô já respondeu outra mensagem do cliente depois do áudio; nada sai, motivo=turno_superado' do
+    responde('Temos vaga amanhã.', opcoes, cartoes: [mapa])
+    perform
+    outra = create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: 'e sábado?')
+    create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :outgoing, content: 'Sábado não.',
+                     sender: agent_bot, content_attributes: { 'autonomia_agent_id' => agent.id, 'autonomia_reply_to_message_id' => outra.id })
+    ate_o_fim
+
+    expect(interacoes).to be_empty
+    expect(tipos.count('location')).to eq(0)
+    expect(logs.join).to include('interacao_nao_enviada', 'motivo=turno_superado')
+    expect(audio.reload.content_attributes['autonomia_cartoes_encerrados']).to eq('turno_superado')
+  end
+
+  it 'a conversa passou a uma pessoa (o robô não está mais no comando): nada sai, motivo=dono_mudou' do
+    responde('Temos vaga amanhã.', opcoes)
+    perform
+    conversation.update!(assignee: create(:user, account: account, role: :agent))
+    ate_o_fim
+
+    expect(interacoes).to be_empty
+    expect(logs.join).to include('interacao_nao_enviada', 'motivo=dono_mudou')
+  end
+
+  it 'o formato que a caixa recusa agora: sai a versão em texto, sem rich_message' do
+    responde('Temos vaga amanhã.', opcoes)
+    perform
+    allow(Autonomia::Agents::Interacao).to receive(:sai_o_formato?).and_return(false)
+    ate_o_fim
+
+    expect(interacoes.sole.content).to eq("Qual período?\n\n1. Manhã\n2. Tarde")
+    expect(interacoes.sole.content_attributes).not_to have_key('rich_message')
+  end
+
+  context 'when the inbox is e-mail' do
+    let(:inbox) { create(:channel_email, account: account).inbox }
+    let(:contact_inbox) { create(:contact_inbox, inbox: inbox) }
+
+    it 'os destinatários saem da conversa na hora de postar, e o áudio não os grava' do
+      account.enable_features!(Crm::Email::Autoria::FLAG)
+      copia = ['ana@familia.com.br']
+      allow_any_instance_of(Crm::Email::Destinatarios).to receive(:para_a_ia) { { to: ['joao@empresa.com.br'], cc: copia, bcc: [] } } # rubocop:disable RSpec/AnyInstance
+      responde('Temos vaga amanhã.', opcoes)
+      perform
+      expect(audio.content_attributes.to_json).not_to include('familia')
+
+      copia = ['rh@empresa.com.br']
+      ate_o_fim
+      expect(interacoes.sole.content_attributes['cc_emails']).to eq(['rh@empresa.com.br'])
+    end
+  end
 end

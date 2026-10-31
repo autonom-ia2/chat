@@ -2,7 +2,10 @@
 # (`Operate::CartoesDoTurno`: o que a âncora grava e quem enfileira). Fora do lock do texto: erro num cartão nunca
 # desfaz nem atrasa a resposta. Na voz, ANTES dos cartões sai a interação gravada no áudio
 # (`Operate::InteracaoDepoisDoAudio`), com as mesmas regras e o registro `interacao_nao_enviada`; o primeiro cartão
-# espera ela sair, e a desistência dela encerra a âncora (nenhum cartão sai sem a pergunta antes).
+# espera ela sair, e a desistência dela encerra a âncora (nenhum cartão sai sem a pergunta antes). Uma diferença: no
+# TETO com o áudio ainda pendente, a interação NÃO desiste. A pergunta nunca se perde (`Interacao.mensagem`): ela sai
+# assim mesmo, com o registro `interacao_degradada` motivo=anterior_pendente, e os cartões desistem como sempre
+# (`cartao_nao_enviado` motivo=anterior_pendente, âncora encerrada). Áudio que FALHOU continua segurando tudo.
 #
 # Por mensagem ainda não postada, na ordem (a interação, depois os cartões na ordem gravada), conferindo a mensagem que
 # ela espera (a âncora, a interação, ou o cartão anterior, para nada trocar de ordem no canal) pela regra de
@@ -79,10 +82,21 @@ class Autonomia::Agents::Operate::EnviarCartoesJob < ApplicationJob
   end
 
   def esperar(anterior)
+    return degradada if @etapa == :interacao && anterior.created_at <= TETO.ago
     return nao_enviado('anterior_pendente') if anterior.created_at <= TETO.ago
 
     self.class.set(wait: ESPERA).perform_later(@ancora.id)
     false
+  end
+
+  # O áudio passou do teto ainda pendente: a interação sai assim mesmo (as guardas do `postar!` valem), e os cartões
+  # desistem e a âncora encerra. -> false (nada mais sai nesta âncora).
+  def degradada
+    telemetria(:interacao_degradada, 'anterior_pendente')
+    return false unless postada_sem_erro?(@interacao.method(:postar!))
+
+    @etapa = nil
+    nao_enviado('anterior_pendente')
   end
 
   # Registra e grava a desistência na âncora. -> false. Na etapa da interação, os cartões que viriam depois dela também
