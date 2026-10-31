@@ -2,7 +2,7 @@
 # (crm_meta_ads_comment_actions, Crm::MetaAdsCommentAction), com actor 'ai'.
 #
 # Duas ações são únicas por comentário (índice único parcial do #2196) e servem de reivindicação, gravadas ANTES:
-# - `ai_seen`, antes do Jev: o webhook que a Meta reenvia, ou outro job do mesmo comentário, sai sem gastar nada. Com
+# - `ai_seen`, antes da IA: o webhook que a Meta reenvia, ou outro job do mesmo comentário, sai sem gastar nada. Com
 #   ela, só um job cuida de cada comentário, e as outras ações saem uma vez só;
 # - `private_reply`, antes da Meta, com os estados do #2196 (docs/meta/comentarios-instagram.md): reservado
 #   (record!), `attempt!` logo antes da chamada, `confirm!` quando a Meta aceita. Recusa 4xx: a linha sai (soltar!).
@@ -13,7 +13,7 @@
 # Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
 # passada à pessoa), private_reply_failed (o privado que a Meta recusou), private_reply_unsure (a Meta não respondeu ao
 # privado: pode ter saído), kept_for_owner (a pergunta que era o caso do privado, mas ele não sai ali), ai_unread (a
-# IA não cuidou: a Meta ou o Jev fora do ar em todas as tentativas, teto do dia, sem certeza, sem saber quem comentou,
+# IA não cuidou: a Meta ou a IA fora do ar em todas as tentativas, teto do dia, sem certeza, sem saber quem comentou,
 # ou a Meta não escondeu) e private_reply_already (era o caso do privado, mas a pessoa já tem um deste post). As seis
 # últimas formam o "Esperando você".
 #
@@ -24,12 +24,22 @@ module Crm::MetaAds::ComentariosIa::Registro
   NAO_CUIDOU = 'ai_unread'.freeze
   # Era o caso do privado, mas a pessoa já tem um deste post (outro comentário dela, ou o que alguém mandou na tela).
   JA_TEM_PRIVADO = 'private_reply_already'.freeze
+  # O motivo é uma frase curta; o que passar disso é cortado.
+  MOTIVO_MAXIMO = 500
 
   module_function
 
   # true só para quem gravou primeiro.
   def reservar!(comentario)
     reivindicar!(comentario, LIDO).present?
+  end
+
+  # O que a IA escolheu, com que certeza e por quê, na linha `ai_seen` do comentário (#2424): a auditoria de cada
+  # decisão, também da que não age (sem certeza).
+  def decisao!(comentario, avaliacao)
+    linha(comentario, LIDO).update_all( # rubocop:disable Rails/SkipsModelValidations
+      ai_decision: avaliacao.escolha, ai_confidence: avaliacao.certeza, ai_reason: avaliacao.motivo.to_s.first(MOTIVO_MAXIMO).presence
+    )
   end
 
   # Comentários que a IA leu hoje na conta, no fuso da plataforma.

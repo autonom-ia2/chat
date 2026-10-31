@@ -2,13 +2,16 @@
 #
 # 1. Filtra o que não é dela: flag desligada, caixa de outra conta ou de outro canal, resposta a outro comentário, post
 #    sem cuidado ou pausado, ou comentário com mais de 7 dias (o privado não sai mais).
-# 2. Reivindica o comentário (Registro, `ai_seen`) ANTES do Jev: o webhook reenviado, ou outro job do mesmo comentário,
+# 2. Reivindica o comentário (Registro, `ai_seen`) ANTES da IA: o webhook reenviado, ou outro job do mesmo comentário,
 #    sai aqui sem gastar nada. O teto do dia é contado depois da reserva (ela conta), para a concorrência não passar
 #    dele; passou, o comentário fica com o dono.
 # 3. Lê o comentário na Meta (o evento leva só ids, #2327). Se a Meta diz que não dá (apagado, sem permissão), ele fica
 #    descartado; se ela não responde, o job tenta de novo (CuidarJob, com teto).
-#    Depois, pergunta ao Jev o que fazer (Classificador). Jev fora do ar: como a Meta, o job tenta de novo.
-#    A IA que não cuidou (sem certeza, teto do dia, Jev barrado pelo teto ou pela flag) grava `ai_unread`: o comentário
+#    Depois, pergunta à IA o que fazer (Classificador), com a legenda do post. IA fora do ar, ou a legenda sem resposta
+#    da Meta: o job tenta de novo. Sem a legenda, "quanto custa esse?" pode ser decidido errado, e o motor não manda
+#    privado no escuro; esgotadas as tentativas, o comentário fica com o dono. O que a IA escolheu, a certeza e o motivo
+#    ficam na linha `ai_seen` (#2424), também quando ela age.
+#    A IA que não cuidou (sem certeza, teto do dia, IA barrada pelo teto ou pela flag) grava `ai_unread`: o comentário
 #    fica com o dono, no "Esperando você", nunca some.
 # 4. Faz:
 #    - privado ou preço: reserva a pessoa no post (um privado por pessoa, antes da Meta), manda o privado e põe o
@@ -67,7 +70,9 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # O privado só sai com o que mandar (oferta ou "para quem") e na rede que já o libera; senão, a pergunta fica com o
   # dono (FICA_COM_O_DONO: o Painel a mostra em "Esperando você", não como "não se aplica").
   def decidir
-    decisao = classificador.decidir!(@comentario.text)
+    avaliacao = classificador.avaliar!(@comentario.text)
+    @registro.decisao!(@comentario, avaliacao) if avaliacao
+    decisao = avaliacao&.chave
     return decisao unless %w[private price].include?(decisao)
 
     care.privado? && rede.privado_disponivel? ? decisao : FICA_COM_O_DONO
@@ -214,7 +219,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def classificador
-    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(care: care)
+    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(care: care, legenda: rede.legenda)
   end
 
   def rede

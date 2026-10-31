@@ -106,4 +106,31 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
       expect(described_class.do_alvo(account, alvo)).to be_nil
     end
   end
+
+  describe '#legenda (#2424)' do
+    let(:inbox) { create(:inbox) }
+    let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Instagram) }
+    let(:fonte) { described_class.new('instagram' => { ler: -> {}, inbox_id: inbox.id, post_id: '1790' }) }
+
+    before { allow(Crm::MetaAds::ComentariosIa::Rede).to receive(:para).and_return(rede) }
+
+    it 'lê o texto do post pela Rede, como o motor, com a caixa e o post da leitura' do
+      allow(rede).to receive(:legenda).and_return('Promo de verão')
+
+      expect(fonte.legenda).to eq('Promo de verão')
+      expect(Crm::MetaAds::ComentariosIa::Rede).to have_received(:para)
+        .with(inbox, have_attributes(network: 'instagram', account_id: inbox.account_id, inbox_id: inbox.id, post_id: '1790'))
+    end
+
+    it 'Meta fora do ar: a tela segue sem a legenda' do
+      allow(rede).to receive(:legenda).and_raise(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+
+      expect(fonte.legenda).to be_nil
+    end
+
+    it 'caixa que não existe mais: nil, sem chamar a Meta' do
+      expect(described_class.new('instagram' => { ler: -> {}, inbox_id: 0, post_id: '1790' }).legenda).to be_nil
+      expect(Crm::MetaAds::ComentariosIa::Rede).not_to have_received(:para)
+    end
+  end
 end

@@ -9,6 +9,8 @@
 #   privado recusado e a pergunta que era o caso do privado, mas ficou com o dono (o privado não sai ali).
 # - `actor`: `user` (com `user_id`) ou `ai`.
 # - `conversation_id`: na resposta no privado, a conversa da caixa onde ela continua.
+# - `ai_decision`, `ai_confidence` e `ai_reason` (#2424): só na linha `ai_seen`, o que a IA escolheu, com que certeza
+#   e por quê, inclusive quando a certeza não bastou para agir.
 #
 # ONCE (`private_reply`, `ai_seen`) é única por comentário (índice único parcial): quem age grava ANTES de chamar a
 # Meta e apaga se a Meta recusar com 4xx. Bater no índice quer dizer que outra pessoa, a IA ou um webhook reenviado já

@@ -192,6 +192,25 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect { rede.ler }.to raise_error(described_class::Indisponivel)
       end
     end
+
+    describe 'legenda (#2424)' do
+      it 'o texto do post da Página' do
+        allow(servico).to receive(:post_message).with('555_888').and_return('Seguro viagem com cobertura internacional')
+
+        expect(rede.legenda).to eq('Seguro viagem com cobertura internacional')
+      end
+
+      it 'a Meta fora do ar: Indisponivel; outra recusa ou sem conexão: nil' do
+        allow(servico).to receive(:post_message).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+        expect { rede.legenda }.to raise_error(described_class::Indisponivel)
+
+        allow(servico).to receive(:post_message).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
+        expect(rede.legenda).to be_nil
+
+        allow(Crm::MetaAdsConnection).to receive(:find_by).and_return(nil)
+        expect(rede.legenda).to be_nil
+      end
+    end
   end
 
   describe 'Instagram' do
@@ -243,6 +262,30 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         allow(privado).to receive(:perform!).and_raise(Crm::MetaAds::InstagramPrivateReply::Error.new(codigo))
 
         expect(rede.privado(care).erro).to eq(described_class::JA_FEITO)
+      end
+    end
+
+    describe 'legenda (#2424)' do
+      let(:result) { Meta::AdsGraphClient::Result }
+
+      it 'a legenda do post, lida pelo id da mídia' do
+        allow(cliente).to receive(:caption).with('555_888').and_return(result.new(ok: true, data: { 'caption' => 'Seguro viagem' }))
+
+        expect(rede.legenda).to eq('Seguro viagem')
+      end
+
+      it 'post sem legenda ou que não dá para ler: nil; Meta fora do ar ou token caído: Indisponivel' do
+        allow(cliente).to receive(:caption).and_return(result.new(ok: true, data: { 'id' => '555_888' }))
+        expect(rede.legenda).to be_nil
+
+        allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 400, error_code: 100))
+        expect(rede.legenda).to be_nil
+
+        allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 500, error_code: 2))
+        expect { rede.legenda }.to raise_error(described_class::Indisponivel)
+
+        allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 400, error_code: 190))
+        expect { rede.legenda }.to raise_error(described_class::Indisponivel)
       end
     end
 
