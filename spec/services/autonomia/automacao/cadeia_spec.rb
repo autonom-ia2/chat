@@ -44,10 +44,10 @@ RSpec.describe Autonomia::Automacao::Cadeia do
   end
 
   describe '.entrar' do
-    it 'sem a flag só anota, e a mesma automação de novo roda como antes da F1' do
-      rodou = described_class.entrar('regra:1', account) { described_class.entrar('regra:1', account) { :rodou } }
+    it 'sem a flag não entra na cadeia: roda o bloco como antes da F1, sem anotar nada' do
+      rodou = described_class.entrar('regra:1', account) { described_class.entrar('regra:1', account) { described_class.origens } }
 
-      expect(rodou).to eq(:rodou)
+      expect(rodou).to eq([])
     end
 
     it 'com a flag automacao_fundacao recusa o laço' do

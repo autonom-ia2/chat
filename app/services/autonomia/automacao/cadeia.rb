@@ -42,12 +42,12 @@ class Autonomia::Automacao::Cadeia
       restaurada(origens + [origem], &)
     end
 
-    # Porta de entrada dos motores. Com a flag, pode recusar. Sem ela, só anota quem rodou, e o comportamento de
-    # cada motor fica o de antes da F1 (F1.5).
+    # Porta de entrada dos motores. Com a flag, entra na cadeia e pode recusar. Sem ela, só roda o bloco: nada vai
+    # para o evento nem para o contexto dos jobs, e cada motor faz exatamente o de antes da F1 (F1.5).
     def entrar(origem, account, &)
       return com(origem, &) if vale_para?(account)
 
-      restaurada(origens | [origem], &)
+      yield
     end
 
     # Roda o bloco com a cadeia que veio de fora (evento, job). Lista vazia ou nil = sem cadeia.

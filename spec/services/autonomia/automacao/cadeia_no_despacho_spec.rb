@@ -16,6 +16,29 @@ RSpec.describe Autonomia::Automacao::CadeiaNoDespacho do
     expect(dados[:autonomia_cadeia]).to eq(['regra:7'])
   end
 
+  # F1.5: sem a flag, o evento disparado por uma regra sai exatamente como antes.
+  it 'sem a flag, o evento de dentro de uma regra sai sem a chave' do
+    rule = create(:automation_rule, account: conversation.account,
+                                    actions: [{ action_name: 'change_priority', action_params: ['high'] }])
+
+    AutomationRules::ActionService.new(rule, conversation.account, conversation.reload).perform
+
+    eventos = enqueued_jobs.select { |enfileirado| enfileirado['job_class'] == 'EventDispatcherJob' }
+    expect(eventos).not_to be_empty
+    expect(eventos.map { |job| ActiveJob::Arguments.deserialize(job['arguments']).last }).to all(satisfy { |dados| !dados.key?(:autonomia_cadeia) })
+  end
+
+  it 'com a flag, o evento de dentro de uma regra leva a regra na cadeia' do
+    conversation.account.enable_features!('automacao_fundacao')
+    rule = create(:automation_rule, account: conversation.account,
+                                    actions: [{ action_name: 'change_priority', action_params: ['high'] }])
+
+    AutomationRules::ActionService.new(rule, conversation.account, conversation.reload).perform
+
+    eventos = enqueued_jobs.select { |enfileirado| enfileirado['job_class'] == 'EventDispatcherJob' }
+    expect(eventos.map { |job| ActiveJob::Arguments.deserialize(job['arguments']).last[:autonomia_cadeia] }).to include(["regra:#{rule.id}"])
+  end
+
   it 'fora de uma cadeia o evento sai como sempre' do
     Rails.configuration.dispatcher.dispatch('conversation.updated', Time.zone.now, conversation: conversation)
 

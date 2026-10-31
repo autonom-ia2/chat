@@ -5,11 +5,12 @@
 module Autonomia::Automacao::CadeiaNoDespacho
   CHAVE = :autonomia_cadeia
 
+  # Só o despacho assíncrono: os listeners síncronos rodam na mesma thread, com a cadeia ainda no lugar.
   module Despacho
-    def dispatch(event_name, timestamp, data, *)
+    def dispatch(event_name, timestamp, data)
       return super unless Autonomia::Automacao::Cadeia.ativa? && data.is_a?(Hash)
 
-      super(event_name, timestamp, data.merge(CHAVE => Autonomia::Automacao::Cadeia.origens), *)
+      super(event_name, timestamp, data.merge(CHAVE => Autonomia::Automacao::Cadeia.origens))
     end
   end
 
