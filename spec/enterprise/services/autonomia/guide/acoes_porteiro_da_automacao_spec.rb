@@ -52,6 +52,30 @@ RSpec.describe Autonomia::Guide::Acoes do
       .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.admin_only'))
   end
 
+  it 'o ensaio só lê: basta ver as regras (automation_view), como na tela' do
+    so_ve = com_funcao(%w[automation_view])
+    regra_gravada = create(:automation_rule, account: account)
+
+    expect { para(so_ve).conferir!('POST automation_rules/:id/ensaio', { caminho: { id: regra_gravada.id }, corpo: {} }) }
+      .not_to raise_error
+    expect { para(so_ve).executar('POST automation_rules', { corpo: regra }) }
+      .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.automation_manage_only'))
+  end
+
+  it 'o Decisor segue a mesma chave: com automation_manage o Guia deixa passar' do
+    com_chave = com_funcao(%w[automation_view automation_manage])
+
+    expect(Autonomia::Guide::PorteiroDaAutomacao.recusa('POST autonomia/decisores', account.account_users.find_by(user: com_chave)))
+      .to be_nil
+    expect(Autonomia::Guide::PorteiroDaAutomacao.recusa('POST autonomia/decisores', account.account_users.find_by(user: com_funcao([]))))
+      .to eq('automation_manage_only')
+  end
+
+  # A cópia nasce ligada (o `active` vem junto), então passa a agir sozinha: o Guia pede confirmação.
+  it 'copiar regra pede confirmação, para qualquer perfil' do
+    expect(para(admin).desfazivel?('POST automation_rules/:automation_rule_id/clone')).to be(false)
+  end
+
   describe 'automação de etapa do CRM' do
     def etapa_pelo_guia(user)
       para(user).executar('POST crm/stages/:stage_id/stage_automations',

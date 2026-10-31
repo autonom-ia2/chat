@@ -27,7 +27,7 @@ class Autonomia::Agents::Tools::Native::GuiaAcao < Autonomia::Agents::Tools::Nat
       'Prepara, para a pessoa confirmar na tela, uma ação que NÃO tem desfazer: enviar mensagem a cliente, ' \
         'disparar campanha, trocar credencial, importar em lote. NÃO executa: a tela mostra o resumo com ' \
         'Confirmar e Cancelar logo abaixo da sua resposta. Todo o resto você faz direto com executar_acao. ' \
-        'Só funciona para quem administra a conta.'
+        'Só funciona para quem administra a conta; regras automáticas também para quem tem a permissão delas.'
     end
 
     def params
