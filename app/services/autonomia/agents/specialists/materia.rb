@@ -84,16 +84,21 @@ class Autonomia::Agents::Specialists::Materia
   private
 
   # #1775: a conversa do principal pode trazer a linha da prévia do link (texto de uma página pública). A mesma regra do
-  # turno do principal vem logo depois, para o ajudante também lê-la como dado e nunca como instrução. Só com a linha
-  # desta conversa (o cabeçalho com o código dela); sem ela, nada muda.
+  # turno do principal vem logo depois, para o ajudante também lê-la como dado e nunca como instrução. Só onde a prévia
+  # vale (`aplica?`: Fase 2, a flag e o principal, `@agent`, fora da Lia; sem principal, fecha) e com a linha desta
+  # conversa (o cabeçalho com o código dela); fora disso, nada daqui roda.
   def regra_da_previa(conversa)
     conversation = @delivery&.conversation
-    return if conversa.empty? || conversation.nil?
-
     previa = ::Autonomia::Agents::Operate::PreviaDoLink
+    return if conversa.empty? || conversation.nil? || !previa.aplica?(conversation, @agent)
+
     codigo = previa.codigo(conversation)
-    cabecalho = previa.cabecalho(codigo)
-    previa.regra(codigo) if conversa.any? { |item| item[:content].first[:text].to_s.include?(cabecalho) }
+    previa.regra(codigo) if conversa.any? { |item| com_cabecalho?(item, previa.cabecalho(codigo)) }
+  end
+
+  # Item sem texto no conteúdo (imagem, documento, vazio) não traz a linha.
+  def com_cabecalho?(item, cabecalho)
+    Array(item[:content]).any? { |bloco| bloco.is_a?(Hash) && bloco[:text].to_s.include?(cabecalho) }
   end
 
   # As entradas das últimas cotações desta conversa que chegaram ao portal, UMA POR BEM do ramo do especialista
