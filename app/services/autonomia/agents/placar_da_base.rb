@@ -9,12 +9,26 @@
 class Autonomia::Agents::PlacarDaBase
   KS = [1, 5, 12].freeze
 
-  Pergunta = Data.define(:texto, :ancoras, :fora)
+  # `esperado`: o que o material responde, em palavras de gente, para o juiz da resposta (PlacarDaResposta). Opcional.
+  Pergunta = Data.define(:texto, :ancoras, :fora, :esperado) do
+    def initialize(texto:, ancoras:, fora:, esperado: nil) = super
+  end
 
   def self.perguntas_do_arquivo(caminho)
     YAML.safe_load_file(caminho).fetch('perguntas').map do |item|
-      Pergunta.new(texto: item.fetch('pergunta'), ancoras: Array(item['ancoras']), fora: item['fora'] == true)
+      Pergunta.new(texto: item.fetch('pergunta'), ancoras: Array(item['ancoras']), fora: item['fora'] == true,
+                   esperado: item['esperado'])
     end
+  end
+
+  # O texto contém uma das âncoras, sem contar maiúscula, acento nem espaço.
+  def self.contem_ancora?(texto, ancoras)
+    procurado = normalizar(texto)
+    ancoras.any? { |ancora| procurado.include?(normalizar(ancora)) }
+  end
+
+  def self.normalizar(texto)
+    I18n.transliterate(texto.to_s.downcase).squish
   end
 
   def self.resumo(placar)
@@ -60,13 +74,8 @@ class Autonomia::Agents::PlacarDaBase
   end
 
   def posicao(trechos, ancoras)
-    procuradas = ancoras.map { |ancora| normalizar(ancora) }
-    indice = trechos.index { |trecho| procuradas.any? { |ancora| normalizar(trecho.content).include?(ancora) } }
+    indice = trechos.index { |trecho| self.class.contem_ancora?(trecho.content, ancoras) }
     indice && (indice + 1)
-  end
-
-  def normalizar(texto)
-    I18n.transliterate(texto.to_s.downcase).squish
   end
 
   def taxa(itens, &)

@@ -44,3 +44,33 @@ API (77 mil e 74 mil tokens, US$ 0,0015 cada). **Total da rodada: US$ 0,0164**, 
 Com o #2431, os erros que sobram com a âncora inteira num pedaço são da busca: "bater no carro de outra pessoa" fica
 fora do top 12; "parcelar", "cancelar", "200 km para 500 km" e "rastreador" chegam só entre a 5ª e a 12ª posição. Entram
 na F1a (pergunta reescrita), na F2 (busca combinada e cabeçalho de contexto) e na F3 (reordenação).
+
+## Etapa da resposta e do juiz (main, 31/10)
+
+Cada pergunta passa pelo `Answerer` como no atendimento (`trust_instruction: true`), e o juiz do autoteste
+(`JuizDoAutoteste`, gpt-6-luna) dá o veredito pelo sentido, comparando com a resposta esperada escrita no YAML
+(`PlacarDaResposta`).
+
+| | main |
+|---|---|
+| Acerto nas respondíveis | 10 de 17 (0,59) |
+| Recusa correta nas de fora da base | 5 de 5 (1,00), todas passando para a equipe |
+| "De onde veio": a resposta diz ter usado um trecho com a âncora | 9 de 17 (0,53) |
+| Custo real da rodada (ingestão + 22 respostas + juiz) | US$ 0,1437 |
+
+Leitura:
+- **A recusa funciona pelo modelo**: as 5 perguntas de fora voltaram com "vou confirmar com a equipe", mesmo com 12
+  trechos entregues. Isso confirma o achado 3: a recusa vem do modelo, não de limiar.
+- Das 7 erradas, 3 são de busca (a resposta não chegou: "200 km para 500 km", "pátio", "bater no carro de outra
+  pessoa"), e o agente passou para a equipe ou ficou vago. Elas devem melhorar com o #2431 e com a F1a e a F2.
+- Algumas "certas" aparecem com "de onde veio" falso: o agente usou o trecho certo, mas o trecho está com as palavras
+  coladas, e a âncora não casa. O "de onde veio" desta rodada subestima; o conserto das palavras coladas corrige a
+  medida junto.
+- O juiz é severo com resposta parcial (o "15 dias" e o "táxi" foram julgados errados por um detalhe a mais ou a menos
+  que o esperado). Para comparar versões, vale a diferença entre rodadas com o mesmo juiz e o mesmo YAML.
+
+## Decisão: a recalibração dos limites 0,75 e 0,45 sai do escopo
+
+Pelos números acima: as perguntas de fora da base ficam a 0,48–0,61 e as respondíveis a 0,27–0,50; as faixas se
+sobrepõem e nenhum limite de distância separa as duas. O teto de 0,75 nunca corta nada, e a recusa correta (5 de 5) já
+vem do modelo. Mudar os limites não melhoraria nada que o placar mede; o item sai do plano da RAG v2 (gestor, 31/10).

@@ -1,39 +1,57 @@
 # #1431 (F0) — perguntas de cliente sobre a Condição Geral Suhai Automóvel (documento público, versão set/2026).
-# Âncora = trecho do material que responde; vale qualquer uma. `fora: true` = a base não responde.
+# Âncora = trecho do material que responde; vale qualquer uma. `esperado` = a resposta certa, para o juiz.
+# `fora: true` = a base não responde.
 perguntas:
   - pergunta: "O seguro vale se eu viajar de carro pra Argentina?"
+    esperado: "Sim. A cobertura vale no Brasil e também na Argentina, no Uruguai e no Paraguai."
     ancoras: ["território brasileiro e nos países Argentina"]
   - pergunta: "Se o carro pegar fogo eu pago franquia?"
+    esperado: "Não. A franquia não se aplica em sinistro de incêndio (nem raio, explosão acidental ou indenização integral)."
     ancoras: ["explosão acidental, incêndio e indenização integral do veículo"]
   - pergunta: "Bati o carro agora, pra qual número eu ligo pra avisar?"
+    esperado: "Avisar a seguradora imediatamente: 3003-0335 em São Paulo e Rio de Janeiro, 0800-784-2410 nas demais regiões."
     ancoras: ["São Paulo e Rio de Janeiro 3003-0335"]
   - pergunta: "Depois que eu mando tudo, em quanto tempo vocês pagam a indenização?"
+    esperado: "A seguradora tem até 30 dias para pagar a indenização, contados da entrega dos documentos."
     ancoras: ["30 (trinta) dias para pagar a indenização"]
   - pergunta: "Posso fazer um acordo direto com o outro motorista depois da batida?"
+    esperado: "Não. O segurado não pode fazer acordo com os envolvidos sem autorização da seguradora."
     ancoras: ["NÃO FAZER NENHUM ACORDO COM OS DEMAIS ENVOLVIDOS"]
   - pergunta: "Se eu parcelar o seguro vou pagar alguma taxa a mais?"
+    esperado: "Não há cobrança de custo administrativo de fracionamento no parcelamento (se houver juros, pode antecipar parcelas com redução proporcional)."
     ancoras: ["custo administrativo de fracionamento"]
   - pergunta: "O boleto vence num domingo, posso pagar na segunda?"
+    esperado: "Sim. Se o vencimento cair em dia sem expediente bancário, pode pagar no primeiro dia útil seguinte."
     ancoras: ["dia útil subsequente a esta data"]
   - pergunta: "Quero cancelar o seguro, recebo alguma coisa de volta?"
+    esperado: "Pode cancelar a qualquer tempo; a seguradora retém o prêmio pela Tabela de Prazo Curto e devolve o restante."
     ancoras: ["a qualquer tempo, por iniciativa do Segurado", "Prêmio calculado de acordo com a Tabela de Prazo Curto"]
   - pergunta: "Quanto tempo vocês têm pra aceitar ou recusar minha proposta?"
+    esperado: "A seguradora tem 15 dias para analisar a proposta (o prazo fica suspenso se pedir documentos ou vistoria)."
     ancoras: ["o prazo de 15 (quinze) dias"]
   - pergunta: "Perdi a chave do carro, a assistência manda chaveiro?"
+    esperado: "Sim. A assistência envia chaveiro para abrir o veículo ou retirar chave quebrada."
     ancoras: ["um chaveiro para a abertura do veículo"]
   - pergunta: "Acabou a gasolina no meio da estrada, vocês ajudam?"
+    esperado: "Sim. A assistência 24 horas atende pane seca (falta de combustível)."
     ancoras: ["Pane Seca (Falta de Combustível)"]
   - pergunta: "Se eu trocar do plano de 200 km pro de 500 km já vale na hora?"
+    esperado: "Não. A mudança do Plano 1 (200 km) para o Plano 2 (500 km) tem carência de 3 dias úteis."
     ancoras: ["carência de 3 (três) dias úteis"]
   - pergunta: "Quais coberturas básicas eu posso contratar pro meu carro?"
+    esperado: "Cobertura 1 Compreensiva (colisão, incêndio e roubo/furto), Cobertura 2 (só roubo/furto total) ou Cobertura 4 (roubo/furto e colisão total)."
     ancoras: ["Colisão, Incêndio e Roubo/Furto (Compreensiva)"]
   - pergunta: "Roubaram meu carro e ele tem rastreador, o que eu faço?"
+    esperado: "Registrar na polícia e acionar logo a empresa do rastreador pelos telefones da seguradora para bloquear e localizar o veículo."
     ancoras: ["ACIONAR, TÃO LOGO POSSÍVEL, A EMPRESA PRESTADORA"]
   - pergunta: "O seguro cobre se eu bater no carro de outra pessoa?"
+    esperado: "Sim, se tiver contratado a RCF-V (responsabilidade civil), que cobre danos materiais, corporais e morais a terceiros."
     ancoras: ["para danos causados a terceiros"]
   - pergunta: "Meu carro foi pro pátio e não teve cobertura, quanto tempo eu tenho pra tirar ele de lá?"
+    esperado: "Até 7 dias da comunicação; depois a seguradora pode mandar o veículo para pátio público."
     ancoras: ["prazo de até 7 (sete) dias da comunicação"]
   - pergunta: "Se o carro quebrar longe, vocês pagam um táxi pra eu voltar pra casa?"
+    esperado: "Sim. A assistência disponibiliza táxi para o retorno do segurado, dentro do limite do plano."
     ancoras: ["será disponibilizado serviço de taxi"]
   - pergunta: "Quanto fica o seguro de um Onix 2022 pra mim?"
     fora: true
