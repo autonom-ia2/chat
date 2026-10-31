@@ -190,18 +190,13 @@ module Autonomia::Agents::Interacao
   end
 
   # O `rich_message` (chaves em texto) da interação. O botão da lista sem texto do modelo, ou com um texto que o tipo
-  # recusaria (`botao_cabe?`), sai no idioma da conta: o texto do botão nunca derruba a lista inteira para texto.
+  # recusaria (a régua dele, `Options.fits?`), sai no idioma da conta: o texto do botão nunca derruba a lista inteira.
   def rich_message(interacao, locale:)
     return { 'type' => 'link_button', 'label' => interacao['rotulo'], 'url' => interacao['url'] } if interacao['tipo'] == 'link'
 
-    botao = botao_cabe?(interacao['botao']) ? interacao['botao'] : I18n.t(BOTAO_PADRAO, locale: locale)
+    opcoes = RichMessages::Types::Options
+    botao = opcoes.fits?(interacao['botao'], opcoes::LIST_BUTTON_MAX) ? interacao['botao'] : I18n.t(BOTAO_PADRAO, locale: locale)
     { 'type' => 'options', 'header' => interacao['header'], 'button' => botao, 'options' => interacao['opcoes'].map(&:compact) }.compact
-  end
-
-  # A mesma régua do botão da lista no tipo `options` (texto preenchido, até 20, numa linha só).
-  def botao_cabe?(botao)
-    botao.is_a?(String) && botao.strip.present? && botao.length <= RichMessages::Types::Options::LIST_BUTTON_MAX &&
-      RichMessages::Types::Options::LINE_BREAKS.none? { |quebra| botao.include?(quebra) }
   end
 
   # A mesma regra da criação pela API (`RichMessages.format_error`: canal que recusa o formato, como e-mail e chat do

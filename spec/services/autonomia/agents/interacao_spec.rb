@@ -286,13 +286,14 @@ RSpec.describe Autonomia::Agents::Interacao do
       expect(final[:rich_message]['button']).to eq('Ver horários')
     end
 
-    it 'botão do modelo fora do limite (mais de 20, em duas linhas ou só espaço) cai no padrão e a lista continua saindo' do
-      janela_aberta
-      account.update!(locale: 'pt_BR')
-      quatro = tres + [{ 'id' => 'madrugada', 'titulo' => 'Madrugada', 'descricao' => nil }]
-      ['Escolha o melhor horário', "Ver\nhorários", '   '].each do |botao|
-        interacao = described_class.do_modelo(pedido.merge('opcoes' => quatro, 'botao' => botao), enderecos: Set.new)
-        final = described_class.mensagem(interacao, texto: nil, conversation: conversation.reload)
+    # Direto em `mensagem` (o `do_modelo` já tira o botão só de espaço; a limpeza da equipe pode deixá-lo assim depois).
+    { 'mais de 20' => 'Escolha o melhor horário', 'quebra de linha' => "Ver\nhorários",
+      'separador de linha' => "Ver\u2028horários", 'só espaço' => '   ' }.each do |caso, botao|
+      it "botão do modelo fora do limite (#{caso}) cai no padrão e a lista continua saindo" do
+        janela_aberta
+        account.update!(locale: 'pt_BR')
+        quatro = opcoes['opcoes'] + [{ 'id' => 'madrugada', 'title' => 'Madrugada', 'description' => nil }]
+        final = described_class.mensagem(opcoes.merge('opcoes' => quatro, 'botao' => botao), texto: nil, conversation: conversation.reload)
         expect(final[:rich_message]).to include('type' => 'options', 'button' => 'Ver opções')
         expect(final[:content]).to eq('Qual período?')
         expect(RichMessages.build(Message.new(content_attributes: { 'rich_message' => final[:rich_message] }))
