@@ -240,9 +240,12 @@ module Autonomia
       # lista do deploy (`QuoteAgent::Builder.ferramentas_mantidas`); para os demais, `native_tool_slugs`.
       # Quem monta o catálogo do turno (`Tools::Registry.for_agent`) lê daqui.
       # A agenda (#1196) liga junto com a escolha da página (`config['booking_page_id']`): escolher a página é ligar.
+      # O mapa e o contato da página (#1479 F3) ligam do mesmo jeito, com a flag da conta (`CartaoDaPagina.com_cartoes`).
       def ferramentas_nativas
         ::Autonomia::Insurance::QuoteAgent::Builder.ferramentas_mantidas(self) ||
-          ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
+          ::Autonomia::Agents::Tools::Native::CartaoDaPagina.com_cartoes(
+            self, ::Autonomia::Agents::Tools::Native::Agenda.com_agenda(self, native_tool_slugs)
+          )
       end
 
       # Aplica config gerada pelo Construtor (token-guarded — análogo a ai_guarded_update do

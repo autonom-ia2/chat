@@ -26,6 +26,10 @@ module TextoAoCliente
       { tipo: :nota_privada, motivo: 'o que a IA não conseguiu antes de encaminhar, para a equipe' },
     'app/services/autonomia/agents/operate/aviso_ao_atendente.rb::Autonomia::Agents::Operate::AvisoAoAtendente#postar_nota' =>
       { tipo: :nota_privada, motivo: 'o evento da cotação de que a IA não falou, para quem atende' },
+    'app/services/autonomia/agents/operate/cartoes_do_turno.rb::Autonomia::Agents::Operate::CartoesDoTurno#construir!' =>
+      { tipo: :outro, motivo: 'o mapa ou o cartão de contato da página que o modelo pediu pela ferramenta (#1479 F3): ' \
+                              'conteúdo vazio com o formato, ou só a versão em texto do cartão (nome, endereço, link do ' \
+                              'mapa; nome e telefone), feita do dado da página, sem frase nossa' },
     'app/services/autonomia/agents/operate/nao_suportada.rb::Autonomia::Agents::Operate::NaoSuportada#nota' =>
       { tipo: :nota_privada, motivo: 'a mensagem "não suportada" que o WhatsApp API não recuperou, para a equipe (#1489)' },
     'app/services/autonomia/agents/operate/reaction_materializer.rb::Autonomia::Agents::Operate::ReactionMaterializer#call' =>

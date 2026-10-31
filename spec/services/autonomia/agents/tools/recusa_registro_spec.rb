@@ -598,7 +598,52 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
             .execute({ 'name' => 'enviar_proposta_da_seguradora', 'arguments' => { seguradora: 'Porto' }.to_json })
         }
       }
-    }.merge(gatilhos_da_agenda)
+    }.merge(gatilhos_da_agenda).merge(gatilhos_dos_cartoes)
+  end
+
+  # #1479 F3: o mapa e o contato da página de agendamento, com a Fase 2 e a flag ligadas e a página escolhida no agente.
+  # `com_dado: false` deixa a página sem local com coordenada e sem telefone.
+  def cartoes_prontos(com_dado: true)
+    Autonomia::Agents::Fase2.ligar!(account)
+    account.enable_features!('agentes_enviar_local_e_contato')
+    host = create(:user, account: account, role: :agent)
+    centro = { 'type' => 'in_person', 'label' => 'Centro', 'address' => 'Rua Direita, 100' }
+    paulista = { 'type' => 'in_person', 'label' => 'Paulista', 'address' => 'Av. Paulista, 1000' }
+    pagina = create_booking_profile(account: account, host: host, locations: [centro, paulista])
+    ponto = { 'latitude' => -23.55, 'longitude' => -46.63 }
+    pagina.update_columns(locations: [centro.merge(ponto), paulista.merge(ponto)], contact_phone: '+551140000473') if com_dado # rubocop:disable Rails/SkipsModelValidations
+    agent.update!(config: agent.config.merge('booking_page_id' => pagina.id))
+  end
+
+  def no_cartao(native, argumentos, entrega: delivery)
+    bound_para(native).execute({ 'name' => native.slug, 'arguments' => argumentos.to_json }, delivery: entrega)
+  end
+
+  def gatilhos_dos_cartoes # rubocop:disable Metrics/MethodLength -- um gatilho por saída dos cartões
+    localizacao = Autonomia::Agents::Tools::Native::EnviarLocalizacao
+    contato = Autonomia::Agents::Tools::Native::EnviarContato
+    {
+      'enviar_localizacao.rb#call#1' => {
+        espera: { motivo: 'cartao_sem_conversa', slug: 'enviar_localizacao', conversa: '-' },
+        dispara: -> { cartoes_prontos && no_cartao(localizacao, { local_id: 'x' }, entrega: nil) }
+      },
+      'enviar_localizacao.rb#call#2' => {
+        espera: { motivo: 'cartao_sem_dado', slug: 'enviar_localizacao' },
+        dispara: -> { cartoes_prontos(com_dado: false) && no_cartao(localizacao, {}) }
+      },
+      'enviar_localizacao.rb#call#3' => {
+        espera: { motivo: 'cartao_local_invalido', slug: 'enviar_localizacao' },
+        dispara: -> { cartoes_prontos && no_cartao(localizacao, { local_id: 'nao-existe' }) }
+      },
+      'enviar_contato.rb#call#1' => {
+        espera: { motivo: 'cartao_sem_conversa', slug: 'enviar_contato', conversa: '-' },
+        dispara: -> { cartoes_prontos && no_cartao(contato, {}, entrega: nil) }
+      },
+      'enviar_contato.rb#call#2' => {
+        espera: { motivo: 'cartao_sem_dado', slug: 'enviar_contato' },
+        dispara: -> { cartoes_prontos(com_dado: false) && no_cartao(contato, {}) }
+      }
+    }
   end
 
   # A agenda da IA (#1196): página escolhida no agente, agenda ligada na conta, segunda-feira 08:00 em São Paulo.

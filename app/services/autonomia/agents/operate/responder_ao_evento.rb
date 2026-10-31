@@ -34,7 +34,10 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
     return silencio(motivo) if motivo.present?
 
     outcome = classic_deliver(result)
-    handoff_if_signaled(result) if outcome.status == :replied
+    return outcome unless outcome.status == :replied
+
+    enfileirar_cartoes(outcome) # #1479 F3: os cartões marcados no turno, depois que a mensagem sair
+    handoff_if_signaled(result)
     outcome
   rescue StandardError => e
     Rails.logger.warn("[autonomia][evento] turno falhou agent=#{@agent.id} conv=#{@conversation.id} #{e.class}")
@@ -51,6 +54,7 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
 
   def silencio(motivo)
     registrar_silencio(motivo)
+    descartar_cartoes(motivo) # #1479 F3: o cartão marcado num turno sem resposta não sai
     Result.new(status: :silenced, error: motivo)
   end
 
@@ -75,16 +79,19 @@ class Autonomia::Agents::Operate::ResponderAoEvento < Autonomia::Agents::Operate
     @evento.publicado?(@conversation)
   end
 
-  # `interacao` (#1479): a mesma do turno do cliente (`com_interacao`).
-  def post_reply!(text, interacao = nil)
+  # `interacao` (#1479): a mesma do turno do cliente (`com_interacao`). `cartoes` (#1479 F3): os do turno, que fazem desta
+  # mensagem a âncora deles (`Responder#ancora!`).
+  def post_reply!(text, interacao = nil, cartoes: {})
     content, formato = com_interacao(text, interacao)
-    Messages::MessageBuilder.new(
+    mensagem = Messages::MessageBuilder.new(
       nil, @conversation,
       ActionController::Parameters.new(
         content: content, message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: @agent_inbox.agent_bot_id, private: false,
-        content_attributes: { 'autonomia_agent_id' => @agent.id, ::Autonomia::Agents::Tools::Evento::CHAVE => @evento.marca }.merge(formato)
+        content_attributes: { 'autonomia_agent_id' => @agent.id, ::Autonomia::Agents::Tools::Evento::CHAVE => @evento.marca }
+                              .merge(formato).merge(cartoes)
       )
     ).perform
+    ancora!(mensagem, cartoes)
   end
 end

@@ -27,7 +27,10 @@ module Autonomia::Agents::Tools::Registry
     Autonomia::Agents::Tools::Native::InsuranceGeneralConditions,
     # #1196 — a agenda da IA: ligadas ao escolher a página de agendamento do agente (`config['booking_page_id']`).
     Autonomia::Agents::Tools::Native::HorariosDisponiveis,
-    Autonomia::Agents::Tools::Native::AgendarReuniao
+    Autonomia::Agents::Tools::Native::AgendarReuniao,
+    # #1479 F3 — o mapa e o cartão de contato da mesma página, ligados sozinhos com a flag (`CartaoDaPagina`).
+    Autonomia::Agents::Tools::Native::EnviarLocalizacao,
+    Autonomia::Agents::Tools::Native::EnviarContato
   ].freeze
 
   DO_GUIA = [
