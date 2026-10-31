@@ -558,7 +558,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_640000) do
     t.jsonb "response_mapping", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "timeout_seconds", default: 10, null: false
+    t.integer "timeout_seconds", default: 30, null: false
     t.index ["account_id", "enabled"], name: "index_autonomia_agent_tools_on_account_id_and_enabled"
     t.index ["account_id"], name: "index_autonomia_agent_tools_on_account_id"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_tools_agent_slug", unique: true

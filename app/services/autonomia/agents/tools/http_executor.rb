@@ -20,7 +20,7 @@ class Autonomia::Agents::Tools::HttpExecutor
   # #1425: `total_timeout` é o prazo do corpo; `open_timeout`/`read_timeout` valem por operação, e um
   # servidor que pinga um byte por vez nunca estoura nenhum dos dois. O que o prazo do SafeFetch NÃO cobre
   # (DNS, cabeçalhos gotejando abaixo do teto por operação) está em `SafeFetch::Deadline`. #1430: os tetos
-  # saem do tempo da ferramenta (`Tool#timeout_seconds`, 10 a 60 s).
+  # saem do tempo da ferramenta (`Tool#timeout_seconds`, sem máximo).
   IDEMPOTENCY_HEADER = 'Idempotency-Key'.freeze
   # Saltos seguidos, todos na mesma origem (`cross_origin_redirects: false`).
   MAX_REDIRECTS = 3

@@ -13,7 +13,7 @@
 #  request_body_template :text
 #  response_mapping      :jsonb            not null
 #  slug                  :string           not null
-#  timeout_seconds       :integer          default(10), not null
+#  timeout_seconds       :integer          default(30), not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  account_id            :bigint           not null
@@ -40,7 +40,8 @@ class Autonomia::Agents::Tool < ApplicationRecord
   PARAM_TYPES = %w[string number integer boolean].freeze
   # #1430: o tempo de espera de uma ferramenta nova. Fica só aqui: trocar o padrão não pede migration (o default do
   # banco só valeu para as linhas que existiam quando a coluna nasceu).
-  TEMPO_PADRAO = 10
+  TEMPO_PADRAO = 30
+  ALCANCE_DO_INTEIRO = (2**31) - 1
 
   attribute :timeout_seconds, :integer, default: -> { TEMPO_PADRAO }
 
@@ -58,8 +59,9 @@ class Autonomia::Agents::Tool < ApplicationRecord
                    length: { maximum: MAX_SLUG_LENGTH }, format: { with: SLUG_FORMAT }
   validates :http_method, inclusion: { in: HTTP_METHODS }
   validates :endpoint_url, presence: true
-  # #1430: quanto o agente espera pela resposta. Sem máximo (decisão do Rodrigo, 31/10); zero ou negativo é defeito.
-  validates :timeout_seconds, numericality: { only_integer: true, greater_than: 0 }
+  # #1430: quanto o agente espera pela resposta. Sem máximo (decisão do Rodrigo, 31/10); zero ou negativo é defeito. O
+  # alcance da coluna `integer` não é teto: acima dele o save estouraria com 500.
+  validates :timeout_seconds, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: ALCANCE_DO_INTEIRO }
   validate :validate_endpoint_url
   validate :validate_param_schema
   validate :validate_headers_config

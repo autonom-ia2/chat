@@ -520,8 +520,8 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
 
       executar(q: 'freio')
 
-      expect(SafeFetch).to have_received(:fetch).with(endpoint, hash_including(total_timeout: 10))
-      expect(tool.timeout_seconds).to eq(10)
+      expect(SafeFetch).to have_received(:fetch).with(endpoint, hash_including(total_timeout: 30))
+      expect(tool.timeout_seconds).to eq(30)
     end
 
     context 'with a server that drips the body slowly' do
@@ -538,7 +538,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
       after { servidor.parar }
 
       it 'gives up when the deadline ends, not when the server wants' do
-        tool.timeout_seconds = 1 # só em memória: o cadastro aceita de 10 a 60 s; aqui é o prazo que se prova
+        tool.timeout_seconds = 1 # o menor tempo que o cadastro aceita; aqui é o prazo que se prova
         tool.endpoint_url = servidor.url('/lento')
         inicio = segundos_monotonicos
 

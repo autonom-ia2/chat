@@ -3543,7 +3543,8 @@
       },
       "timeout_seconds": {
         "maior_que": 0,
-        "padrao": 10,
+        "max": 2147483647,
+        "padrao": 30,
         "tipo": "inteiro"
       }
     },
@@ -22844,7 +22845,8 @@
       },
       "timeout_seconds": {
         "maior_que": 0,
-        "padrao": 10,
+        "max": 2147483647,
+        "padrao": 30,
         "tipo": "inteiro"
       }
     },

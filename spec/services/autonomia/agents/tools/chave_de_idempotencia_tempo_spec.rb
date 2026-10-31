@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# #1430 — tempo de espera por ferramenta (10 a 60 s, padrão 10) e `Idempotency-Key` em toda chamada.
+# #1430 — tempo de espera por ferramenta (sem máximo, padrão `Tool::TEMPO_PADRAO`) e `Idempotency-Key` em toda chamada.
 # A chave é estável no turno: refazer o turno (retry do ReplyJob, que pede a ferramenta de novo ao
 # modelo com outro `call_id`) manda a MESMA chave, e o sistema do dono não grava o pedido duas vezes.
 RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
@@ -60,9 +60,10 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
       opcoes
     end
 
-    it 'waits 10 s in total by default, as before' do
-      expect(Autonomia::Agents::Tool::TEMPO_PADRAO).to eq(10)
-      expect(opcoes_do_fetch).to include(total_timeout: 10, open_timeout: 2, read_timeout: 8)
+    # Decisão do Rodrigo (31/10, "tempo: recomendado"): padrão de 30 s.
+    it 'waits 30 s in total by default' do
+      expect(Autonomia::Agents::Tool::TEMPO_PADRAO).to eq(30)
+      expect(opcoes_do_fetch).to include(total_timeout: 30, open_timeout: 2, read_timeout: 28)
     end
 
     it 'waits the time chosen for the tool' do
@@ -73,11 +74,11 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
 
     # Decisão do Rodrigo (31/10, "9. B tirar"): sem máximo nosso. Só zero, negativo ou vazio são recusados (defeito).
     it 'refuses only zero, negative or empty times, with no maximum' do
-      [0, -1, nil, 1.5].each do |segundos|
+      [0, -1, nil, 1.5, 2**31].each do |segundos|
         tool.timeout_seconds = segundos
         expect(tool).not_to be_valid, segundos.inspect
       end
-      [1, 10, 60, 600, 3600].each do |segundos|
+      [1, 10, 60, 600, 3600, (2**31) - 1].each do |segundos|
         tool.timeout_seconds = segundos
         expect(tool).to be_valid, segundos.inspect
       end
