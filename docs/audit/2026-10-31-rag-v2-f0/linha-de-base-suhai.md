@@ -34,9 +34,10 @@ API (77 mil e 74 mil tokens, US$ 0,0015 cada). **Total da rodada: US$ 0,0164**, 
    `poppler-utils` já está na imagem de produção (`docker/Dockerfile`). É defeito da extração (`Processors::Pdf`, área da
    #1426); provável causa: o PDF justifica o texto pelo espaçamento entre caracteres, e o `pdf-reader` não transforma
    esse espaçamento em espaço.
-3. **A distância não separa "tem resposta" de "não tem".** As perguntas de fora da base ficam a 0,48–0,61, e as
-   respondíveis a 0,27–0,50: as faixas se sobrepõem. O teto de 0,75 nunca corta nada, e toda pergunta de fora volta
-   com 12 trechos. A recusa correta não pode vir de um limite de distância; tem de vir do modelo, que lê os trechos
+3. **A distância não separa "tem resposta" de "não tem".** Medida só pela busca vetorial, na main as perguntas de fora
+   da base ficam a 0,49–0,55 e as respondíveis a 0,27–0,49 (as faixas se encostam); no c7cf171d83, fora a 0,45–0,55 e
+   respondíveis a 0,26–0,47 (se sobrepõem). O teto de 0,75 nunca corta nada, e toda pergunta de fora volta com 12
+   trechos; por isso `fora_sem_trecho` dá 0 por construção, não por medida. A recusa correta não pode vir de um limite de distância; tem de vir do modelo, que lê os trechos
    e diz que a base não responde (medido na etapa de resposta e juiz, abaixo).
 4. A quarta âncora que não cabe ("prazo de até 7 (sete) dias da comunicação") foi cortada pela janela no meio da
    frase: defeito do corte por tamanho, que a F2 (seção inteira) resolve.
@@ -71,8 +72,9 @@ Leitura:
 
 ## Proposta: a recalibração dos limites 0,75 e 0,45 sai do escopo
 
-Pelos números acima: as perguntas de fora da base ficam a 0,45–0,61 e as respondíveis a 0,26–0,50; as faixas se
-sobrepõem e nenhum limite de distância separa as duas. O teto de 0,75 nunca corta nada, e a recusa correta (5 de 5) já
+Pelos números acima (busca vetorial, c7cf171d83): as perguntas de fora da base ficam a 0,45–0,55 e as respondíveis a
+0,26–0,47; as faixas se sobrepõem e nenhum limite de distância separa as duas. São só 5 perguntas de fora: a linha de
+base por formato (30 a 40 perguntas cada) traz a amostra para confirmar ou desmentir. O teto de 0,75 nunca corta nada, e a recusa correta (5 de 5) já
 vem do modelo. Mudar os limites não melhoraria nada que o placar mede. A frente propôs tirar o item da F2; o gestor levou
 ao Rodrigo junto com o plano (31/10).
 
@@ -95,7 +97,7 @@ c7cf171d83: o reforço por palavra não entrou em nenhuma pergunta.
 
 - Fidelidade estrita (cada afirmação da resposta apoiada nos trechos usados): o juiz de hoje confere o fato esperado, não
   frase a frase. Entra com a conferência em modo sombra (F4).
-- Bases de cliente (seguros e GTA): esperam decisão do Rodrigo sobre onde guardar o gabarito.
+- Bases de cliente: esperam decisão do Rodrigo sobre onde guardar o gabarito.
 
 As medidas do "#2431" (272b641b1c e c7cf171d83) são commits do PR #2431 (`fix/1426-corte-pdf`), medidos num checkout à
 parte com o placar deste PR; não estão no histórico deste PR.

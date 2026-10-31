@@ -29,12 +29,12 @@ RSpec.describe Autonomia::Agents::PlacarDaResposta do
     )
   end
 
-  def medir(*perguntas, vereditos:, teto_usd: 10.0)
+  def medir(*perguntas, vereditos:, medidor: Autonomia::Agents::Material::MedidorDeCusto.new(teto: 10.0))
     allow(juiz).to receive(:julgar) do |itens|
       itens_julgados.concat(itens)
       vereditos
     end
-    described_class.new(agent: agent, perguntas: perguntas, juiz: juiz, teto_usd: teto_usd,
+    described_class.new(agent: agent, perguntas: perguntas, juiz: juiz, medidor: medidor,
                         responder: ->(texto) { respostas.fetch(texto) }).medir
   end
 
@@ -72,12 +72,13 @@ RSpec.describe Autonomia::Agents::PlacarDaResposta do
     expect(placar[:itens].map { |item| item[:veredito] }).to eq([nil, nil])
   end
 
-  it 'answers like the test of the agent: no tools, no web search, as in the real service' do
+  it 'answers in the test mode of the agent (prova: true) with the instruction trusted as in the service' do
     answerer = instance_double(Autonomia::Agents::Answerer, answer: resultado('Cobre.'))
     allow(Autonomia::Agents::Answerer).to receive(:new).and_return(answerer)
     allow(juiz).to receive(:julgar).and_return(%w[certo])
 
-    described_class.new(agent: agent, perguntas: [vidro], juiz: juiz).medir
+    described_class.new(agent: agent, perguntas: [vidro], juiz: juiz,
+                        medidor: Autonomia::Agents::Material::MedidorDeCusto.new(teto: 10.0)).medir
 
     expect(Autonomia::Agents::Answerer).to have_received(:new)
       .with(hash_including(agent: agent, query: 'cobre o vidro?', prova: true, trust_instruction: true))
@@ -94,10 +95,34 @@ RSpec.describe Autonomia::Agents::PlacarDaResposta do
   end
 
   it 'stops before the cost ceiling and says the round was cut short' do
-    placar = medir(vidro, reboque, vida, vereditos: %w[certo], teto_usd: 0.15)
+    placar = medir(vidro, reboque, vida, vereditos: %w[certo], medidor: Autonomia::Agents::Material::MedidorDeCusto.new(teto: 0.15))
 
     expect(placar).to include(interrompido: true, respondidas: 1)
     expect(itens_julgados.size).to eq(1)
+  end
+
+  it 'holds one ceiling for the whole run, across agents' do
+    medidor = Autonomia::Agents::Material::MedidorDeCusto.new(teto: 0.2)
+    primeiro = medir(vidro, vereditos: %w[certo], medidor: medidor)
+    segundo = medir(vidro, reboque, vereditos: %w[certo], medidor: medidor)
+
+    expect(primeiro).to include(interrompido: false, respondidas: 1, gasto_usd: 0.13)
+    expect(segundo).to include(interrompido: true, respondidas: 0, julgado: false, gasto_usd: 0.0)
+  end
+
+  it 'reports not judged when no answer was valid' do
+    respostas['cobre o vidro?'] = resultado(nil, error: 'ai_unavailable')
+
+    placar = medir(vidro, vereditos: %w[certo])
+
+    expect(placar).to include(julgado: false, acerto: nil, erros: 1)
+    expect(itens_julgados).to be_empty
+  end
+
+  it 'gives each copy of a repeated question its own verdict' do
+    placar = medir(vidro, vidro, vereditos: %w[certo errado])
+
+    expect(placar[:itens].map { |item| item[:veredito] }).to eq(%w[certo errado])
   end
 
   it 'keeps question and answer text out of the summary' do

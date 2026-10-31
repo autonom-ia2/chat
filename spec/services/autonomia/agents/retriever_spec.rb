@@ -49,6 +49,23 @@ RSpec.describe Autonomia::Agents::Retriever do
     end
   end
 
+  describe 'embedding failure' do
+    before do
+      service = instance_double(Autonomia::Agents::EmbeddingService)
+      allow(service).to receive(:embed).and_raise(Autonomia::Agents::EmbeddingService::EmbeddingError, 'ai_not_configured')
+      allow(Autonomia::Agents::EmbeddingService).to receive(:new).and_return(service)
+    end
+
+    it 'degrades to no passages in the service path' do
+      expect(described_class.new(agent: agent).retrieve('frete')).to eq([])
+    end
+
+    it 'raises in the measuring path, so a failure never reads as "found nothing"' do
+      expect { described_class.new(agent: agent).retrieve!('frete') }
+        .to raise_error(Autonomia::Agents::EmbeddingService::EmbeddingError, /ai_not_configured/)
+    end
+  end
+
   # B1 — modelo 3-small ATIVO (default): NN pela coluna legada `embedding` via gem neighbor. Guarda a
   # não-regressão do caminho vetorial atual com um vizinho REAL no banco (não só o short-circuit da C1).
   describe 'small embedding path (default 3-small / neighbor gem)' do

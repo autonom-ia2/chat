@@ -131,6 +131,13 @@ RSpec.describe Autonomia::Agents::PlacarDaBase do
       expect { described_class.pasta_de_saida(File.join(outra_caixa, 'tmp', 'placar-x')) }.to raise_error(ArgumentError)
     end
 
+    it 'refuses a folder under any git checkout or worktree, found by its .git' do
+      Dir.mktmpdir do |fora|
+        File.write(File.join(fora, '.git'), "gitdir: /outro/repo/.git/worktrees/x\n")
+        expect { described_class.pasta_de_saida(File.join(fora, 'a', 'b')) }.to raise_error(ArgumentError)
+      end
+    end
+
     it 'accepts a folder outside any git checkout' do
       Dir.mktmpdir do |fora|
         expect(described_class.pasta_de_saida(File.join(fora, 'novo'))).to eq(Pathname(File.realpath(fora)).join('novo'))

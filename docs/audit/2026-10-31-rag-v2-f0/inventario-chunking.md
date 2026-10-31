@@ -63,8 +63,8 @@ compositor da criação) e a API recusa o tipo (`Source::SOURCE_TYPES`). **Não 
 
 **PDF digitado — 3 hoje, 5 com o #2431.** Extração pelo `pdf-reader`; na `main` o `page.text` põe linha em branco falsa
 no meio do parágrafo e o Suhai vira 1.206 pedaços (mediana 186, mínimo 27). O #2431 remonta os parágrafos pela posição
-das linhas e tira o rodapé corrido: 762 pedaços (mediana 232, máximo 932), e das 18 âncoras do placar, 14 cabem inteiras
-num pedaço (13 na main). Defeitos que continuam, medidos no Suhai com o #2431:
+das linhas e tira o rodapé corrido: 762 pedaços (mediana 232, máximo 932), e das 17 perguntas respondíveis do placar,
+14 têm a âncora inteira num pedaço (13 na main; 17 de 17 no c7cf171d83). Defeitos que continuam, medidos no Suhai com o #2431:
 - **Título errado**: o título "9 – TABELA PARA CÁLCULO… INVALIDEZ" fica no meio de um parágrafo e não é reconhecido; os
   pedaços da tabela herdam "4 – PERDA DE DIREITOS" (96 pedaços com esse título). Com o #2431, os títulos distintos caem de
   116 para 58, porque mais títulos ficam colados no texto ao lado.

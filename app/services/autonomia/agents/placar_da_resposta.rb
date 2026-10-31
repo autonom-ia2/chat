@@ -4,8 +4,10 @@
 # - acerto: nas perguntas que a base responde, a resposta traz o fato esperado ("certo");
 # - recusa correta: nas de fora da base, o agente disse que não sabe ou passou para a equipe ("recusou"), sem inventar;
 # - de onde veio: a resposta diz ter usado um trecho que contém a âncora (os `used_snippet_ids` que o modelo devolve).
-# Resposta que falhou (IA fora) não vai ao juiz nem entra nas taxas: é contada em `erros`. Juiz indisponível: a rodada sai
-# como não julgada (nil), nunca como tudo errado. É IA paga: o MedidorDeCusto do autoteste para a rodada antes do teto.
+# Resposta que falhou (IA fora) não vai ao juiz nem entra nas taxas: é contada em `erros`. Juiz indisponível, ou nenhuma
+# resposta válida: a rodada sai como não julgada (nil), nunca como tudo errado. Falha da BUSCA no meio da resposta não
+# chega aqui (no atendimento o Answerer a degrada para "sem trecho") e sai como resposta: por isso os "errados" do juiz
+# são revistos à mão. É IA paga: um MedidorDeCusto por execução, dividido entre os agentes, para antes do teto.
 class Autonomia::Agents::PlacarDaResposta
   FEATURE = 'agente_placar_resposta'.freeze
 
@@ -13,27 +15,32 @@ class Autonomia::Agents::PlacarDaResposta
     placar.except(:itens)
   end
 
-  def initialize(agent:, perguntas:, juiz: nil, responder: nil, teto_usd: Autonomia::Agents::Material::MedidorDeCusto::TETO_USD)
+  def initialize(agent:, perguntas:, medidor:, juiz: nil, responder: nil)
     @agent = agent
     @perguntas = perguntas
+    @medidor = medidor
     @juiz = juiz || Autonomia::Agents::Material::JuizDoAutoteste.new(account: agent.account)
     @responder = responder || method(:responder_do_autoteste)
-    @medidor = Autonomia::Agents::Material::MedidorDeCusto.new(teto: teto_usd)
   end
 
   def medir
+    gasto_antes = @medidor.gasto
     respondidas = responder_no_teto
-    validas = respondidas.reject { |_, resposta| resposta.error.present? }
-    vereditos = julgar(validas)
-    itens = respondidas.map { |pergunta, resposta| item(pergunta, resposta, vereditos&.dig(pergunta)) }
-    {
-      agente: @agent.id, perguntas: @perguntas.size, respondidas: respondidas.size,
-      interrompido: respondidas.size < @perguntas.size, erros: respondidas.size - validas.size,
-      julgado: !vereditos.nil?, **taxas(itens, julgado: !vereditos.nil?), gasto_usd: @medidor.gasto.round(4), itens: itens
-    }
+    validas = respondidas.each_index.reject { |indice| respondidas[indice].last.error.present? }
+    vereditos = julgar(respondidas, validas)
+    itens = respondidas.each_with_index.map { |(pergunta, resposta), indice| item(pergunta, resposta, vereditos&.dig(indice)) }
+    contagem(respondidas.size, validas.size, itens, julgado: !vereditos.nil?)
+      .merge(gasto_usd: (@medidor.gasto - gasto_antes).round(4), itens: itens)
   end
 
   private
+
+  def contagem(respondidas, validas, itens, julgado:)
+    {
+      agente: @agent.id, perguntas: @perguntas.size, respondidas: respondidas, interrompido: respondidas < @perguntas.size,
+      erros: respondidas - validas, julgado: julgado, **taxas(itens, julgado: julgado)
+    }
+  end
 
   def responder_do_autoteste(texto)
     Autonomia::Agents::Answerer.new(agent: @agent, query: texto, feature: FEATURE, prova: true,
@@ -48,13 +55,13 @@ class Autonomia::Agents::PlacarDaResposta
     end
   end
 
-  # { pergunta => veredito }, ou nil quando o juiz não julgou (falhou, ou não coube no teto).
-  def julgar(validas)
-    return {} if validas.empty?
-    return unless @medidor.cabe?(:juiz)
+  # { índice da resposta => veredito } (pelo índice: a mesma pergunta pode vir duas vezes no gabarito), ou nil quando o
+  # juiz não julgou (nenhuma resposta válida, juiz falhou, ou não coube no teto).
+  def julgar(respondidas, validas)
+    return if validas.empty? || !@medidor.cabe?(:juiz)
 
-    vereditos = @medidor.medir(:juiz) { @juiz.julgar(validas.map { |pergunta, resposta| item_do_juiz(pergunta, resposta) }) }
-    vereditos && validas.map(&:first).zip(vereditos).to_h
+    vereditos = @medidor.medir(:juiz) { @juiz.julgar(validas.map { |indice| item_do_juiz(*respondidas[indice]) }) }
+    vereditos && validas.zip(vereditos).to_h
   end
 
   def taxas(itens, julgado:)

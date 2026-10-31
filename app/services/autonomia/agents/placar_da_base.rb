@@ -5,11 +5,13 @@
 # - fora da base: a pergunta que a base não responde deveria voltar sem trecho.
 # - distância: a menor distância VETORIAL de cada pergunta, por classe. O trecho que entra pelo reforço por palavra
 #   tem uma distância fixa no Retriever, não medida: fica fora da distância e é contado à parte (`lexicais`).
-# Só a busca, sem IA paga: o custo é o embedding das perguntas. Pergunta que não vira embedding PARA a rodada
-# (BuscaFalhou): o Retriever devolveria [], e o placar leria a falha como "não achou". `resumo` tira o texto das
-# perguntas, para o placar de uma base de cliente poder ir para docs/audit sem o material.
+# Só a busca, sem IA paga: o custo é o embedding das perguntas. A busca vai pelo `retrieve!`, que não degrada:
+# pergunta que não vira embedding ou banco fora PARA a rodada (BuscaFalhou), em vez de contar como "não achou".
+# `fora_sem_trecho` só acusa algo quando o teto de distância do Retriever corta; com o teto atual (0,75) nenhuma
+# pergunta passa dele, e o sinal de fora da base é a distância por classe. `resumo` tira o texto das perguntas, para o
+# placar de uma base de cliente poder ir para docs/audit sem o material.
 class Autonomia::Agents::PlacarDaBase
-  KS = [1, 5, 12].freeze
+  KS = [1, 5, Autonomia::Agents::Config::RETRIEVER_TOP_K].freeze
 
   class BuscaFalhou < StandardError; end
 
@@ -35,14 +37,13 @@ class Autonomia::Agents::PlacarDaBase
   end
 
   # A pasta do detalhe por pergunta, que carrega o material da base: nunca dentro de um checkout git (o repo é público).
-  # Confere pelo caminho real da pasta existente mais próxima (resolve symlink, caminho relativo e maiúscula) e pelo
-  # próprio git, que acha o repositório de qualquer checkout ou worktree.
+  # Confere pelo caminho real da pasta existente mais próxima (resolve symlink, caminho relativo e maiúscula) e procura
+  # um `.git` (pasta no checkout, arquivo na worktree) nela e acima dela. Sem chamar o git: nada a falhar aberto.
   def self.pasta_de_saida(caminho)
     pasta = Pathname(caminho).expand_path
     existente = pasta.ascend.find(&:exist?)
     real = existente.realpath
-    dentro_de_git = system('git', '-C', real.to_s, 'rev-parse', '--is-inside-work-tree', out: File::NULL, err: File::NULL)
-    raise ArgumentError, 'SAIDA precisa ficar fora de qualquer repositório git' if dentro_de_git
+    raise ArgumentError, 'SAIDA precisa ficar fora de qualquer repositório git' if real.ascend.any? { |acima| acima.join('.git').exist? }
 
     real.join(pasta.relative_path_from(existente))
   end
@@ -89,9 +90,8 @@ class Autonomia::Agents::PlacarDaBase
   end
 
   def medir_pergunta(pergunta)
-    conferir_embedding!(pergunta.texto)
     inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-    trechos = Autonomia::Agents::Retriever.new(agent: @agent).retrieve(pergunta.texto, top_k: KS.max)
+    trechos = buscar(pergunta.texto)
     ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - inicio) * 1000).round
     vetoriais = trechos.select { |trecho| trecho.has_attribute?(:neighbor_distance) }
     {
@@ -101,10 +101,9 @@ class Autonomia::Agents::PlacarDaBase
     }
   end
 
-  def conferir_embedding!(texto)
-    @embedding ||= Autonomia::Agents::EmbeddingService.new(account: @agent.account)
-    raise BuscaFalhou, 'embedding_vazio' if @embedding.embed(texto).blank?
-  rescue Autonomia::Agents::EmbeddingService::EmbeddingError => e
+  def buscar(texto)
+    Autonomia::Agents::Retriever.new(agent: @agent).retrieve!(texto, top_k: KS.max)
+  rescue Autonomia::Agents::EmbeddingService::EmbeddingError, Autonomia::Agents::Retriever::RetrievalError => e
     raise BuscaFalhou, e.message
   end
 

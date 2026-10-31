@@ -77,7 +77,7 @@ Hoje cada processor devolve texto puro, e o Chunker adivinha título e tabela po
 1. **Unidade:** seção inteira até ~400 tokens; tabela pela regra das tabelas.
 2. **Estrutura, pela geometria do PDF** (o PdfParagrafos do #2431 já lê linha a linha, com o tamanho da letra):
    - **título** = linha cuja letra é maior que a do corpo da página, ou negrito curto seguido de corpo. O nível sai do
-     tamanho da letra (maior = nível 1). Isso substitui o `Chunker.titulo?` por texto, que o gestor pediu para trocar;
+     tamanho da letra (maior = nível 1). Isso substitui o `Chunker#heading?` por padrão de texto, que o gestor pediu para trocar;
    - **parágrafo** = linhas na mesma letra com espaço normal entre elas (já feito no #2431);
    - **sumário** = página em que a maioria das linhas termina num número alinhado à direita: sai inteira. Hoje são 39
      pedaços de ruído no Suhai;
