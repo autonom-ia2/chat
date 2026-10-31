@@ -1692,7 +1692,7 @@
           "ADICIONAR": "Adicionar",
           "ALTERAR_ARIA": "Alterar endereço e telefone",
           "GAVETA_TITULO": "Endereço e telefone de {nome}",
-          "GAVETA_DICA": "{nome} já sabe estes dados e manda ao cliente quando ele pedir. Pode deixar em branco.",
+          "GAVETA_DICA": "{nome} manda estes dados ao cliente quando ele pedir. Pode deixar em branco.",
           "SALVAR": "Salvar",
           "SALVANDO": "Salvando…",
           "SALVO": "Endereço e telefone salvos.",

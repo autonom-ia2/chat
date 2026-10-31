@@ -1692,7 +1692,7 @@
           "ADICIONAR": "Add",
           "ALTERAR_ARIA": "Change address and phone",
           "GAVETA_TITULO": "Address and phone for {nome}",
-          "GAVETA_DICA": "{nome} knows these details and sends them when the customer asks. You can leave them blank.",
+          "GAVETA_DICA": "{nome} sends these details to the customer when they ask. You can leave them blank.",
           "SALVAR": "Save",
           "SALVANDO": "Saving…",
           "SALVO": "Address and phone saved.",
