@@ -92,6 +92,22 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
       expect(chave_enviada(0)).to eq(chave_enviada(1))
     end
 
+    # Decisão (A) do Rodrigo: "1 T42" e depois "mais um igual" no mesmo turno são DOIS pedidos. A chave leva o número
+    # da ocorrência da chamada idêntica no turno (1ª = 0, 2ª = 1); refazer o turno conta de novo do zero.
+    it 'sends two keys for the same call made twice in one turn, and the same two when the turn is redone' do
+      primeira_passada = turno
+      chamar(primeira_passada, call_id: 'call_1')
+      chamar(primeira_passada, '{"sku":"T99","qtd":3}', call_id: 'call_2')
+      chamar(primeira_passada, call_id: 'call_3')
+      refeita = turno
+      chamar(refeita, call_id: 'call_4')
+      chamar(refeita, call_id: 'call_5')
+
+      expect(enviados.size).to eq(5)
+      expect(chave_enviada(0)).not_to eq(chave_enviada(2))
+      expect([chave_enviada(3), chave_enviada(4)]).to eq([chave_enviada(0), chave_enviada(2)])
+    end
+
     it 'sends different keys for two conversations with the same arguments' do
       chamar(turno(conversation))
       chamar(turno(outra_conversa))

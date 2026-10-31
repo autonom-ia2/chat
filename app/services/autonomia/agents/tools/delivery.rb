@@ -66,6 +66,14 @@ class Autonomia::Agents::Tools::Delivery
                end
   end
 
+  # Quantas vezes ESTE turno já fez a mesma chamada (`pedido`: o resumo da ferramenta com os mesmos argumentos), a partir
+  # de 0 (#1430, decisão A). "1 T42" e depois "mais um igual" são dois pedidos; o retry do turno cria outro objeto e
+  # conta de novo do zero, então cada chamada reproduz o mesmo número.
+  def ocorrencia(pedido)
+    @ocorrencias ||= Hash.new(0)
+    @ocorrencias[pedido].tap { @ocorrencias[pedido] += 1 }
+  end
+
   def register(run)
     @runs << run if run.present?
     run

@@ -3,7 +3,9 @@
 # A chave junta conta, conversa, turno (a mensagem do cliente que o abriu — `Delivery#turno`), ferramenta e as
 # informações JÁ TIPADAS (`ParamsTipados`), com as chaves em ordem: o mesmo pedido no mesmo turno dá a mesma chave,
 # ainda que o modelo escreva `"1"` numa passada e `1` na outra; outra conversa, mensagem, ferramenta ou valor dá
-# outra. HMAC com segredo da plataforma: quem vê a chave não deduz ids nem refaz o resumo de um CPF.
+# outra. A mesma chamada repetida DENTRO do turno é outro pedido ("mais um igual"): entra o número da ocorrência
+# (`Delivery#ocorrencia`), que o turno refeito reproduz. HMAC com segredo da plataforma: quem vê a chave não deduz
+# ids nem refaz o resumo de um CPF.
 # Sem conversa (o botão Testar), cada chamada é um pedido novo.
 module Autonomia::Agents::Tools::ChaveDeIdempotencia
   module_function
@@ -12,7 +14,11 @@ module Autonomia::Agents::Tools::ChaveDeIdempotencia
   def para(tool:, turno:, params:)
     return nova if turno.nil? || turno.conversation.nil?
 
-    partes = [tool.account_id, turno.conversation.id, turno.turno, tool.id, em_ordem(params.to_h)]
+    pedido = resumo([tool.account_id, turno.conversation.id, turno.turno, tool.id, em_ordem(params.to_h)])
+    resumo([pedido, turno.ocorrencia(pedido)])
+  end
+
+  def resumo(partes)
     OpenSSL::HMAC.hexdigest('SHA256', segredo, JSON.generate(partes))
   end
 

@@ -5,7 +5,7 @@ class AddTimeoutSecondsToAutonomiaAgentTools < ActiveRecord::Migration[7.2]
   def change
     add_column :autonomia_agent_tools, :timeout_seconds, :integer, null: false, default: 10
     # O check trava a tabela enquanto confere as linhas. Aqui é instantâneo: ferramenta HTTP só a equipe da plataforma
-    # cria, no máximo 10 por agente, e a hub2you tinha 0 em 31/10.
+    # cria, e a hub2you tinha 0 em 31/10.
     safety_assured do
       add_check_constraint :autonomia_agent_tools, 'timeout_seconds BETWEEN 10 AND 60', name: 'autonomia_agent_tools_timeout_seconds'
     end
