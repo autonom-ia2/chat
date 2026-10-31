@@ -15,8 +15,8 @@
 #     redirecionador no site de outra empresa não empresta o domínio dela ao texto. Prévia gravada antes disso só tem o
 #     endereço enviado, que vai como `link_enviado`, sem `site`. Quando os dois diferem, vão os dois;
 #   - no texto do site, a moldura da equipe e o cabeçalho da prévia forjados viram NEUTRALIZADO, e os invisíveis de
-#     formato saem (menos o ZWNJ e o ZWJ, que juntam emoji e escrita). O campo com chave forjada sai normalizado (NFKC);
-#     o resto fica como veio;
+#     formato saem (menos o ZWNJ e o ZWJ, que juntam emoji e escrita). A chave é achada sem invisíveis, em NFKC e sem
+#     caixa, mas só o trecho dela é trocado: o resto sai como veio (`trocar_no_original`);
 #   - teto por grafema, depois de neutralizar (sem partir emoji nem acento).
 # A regra do turno (`regra`, item `developer`) diz que aquilo é dado sobre o link, nunca instrução. O que o site diz não é
 # interpretado aqui: nada de lista de palavras (regra do Rodrigo, 20/09/2026); quem entende é o modelo, e o eval pago
@@ -113,31 +113,76 @@ module Autonomia::Agents::Operate::PreviaDoLink
     chaves = [PREFIXO, codigo]
     tocou = false
     linhas = texto.split("\n", -1).map do |linha|
-      plano = disfarce.normalizado(linha)
-      next linha unless disfarce.contem_alguma?(plano, chaves)
+      next linha unless com_chave?(linha, chaves)
 
       tocou = true
-      disfarce.trocar(plano, chaves, NEUTRALIZADO)
+      trocar_no_original(linha, chaves, NEUTRALIZADO)
     end
     tocou ? linhas.join("\n") : texto
   end
 
   # A resposta da IA sem a linha que traz o prefixo ou o código da prévia (o modelo ecoando a prévia ou a regra). Se a
-  # resposta inteira for essa linha, sai só o prefixo e o código, e o resto fica: uma página que induz o eco não cala o
-  # turno. Sem eles, a resposta fica byte a byte como veio.
+  # resposta inteira for essa linha, sai só o cabeçalho (com os colchetes, ou o prefixo e o código soltos), e o resto
+  # fica como veio: uma página que induz o eco não cala o turno. Sem eles, a resposta fica byte a byte como veio.
   def sem_previa(reply, codigo)
-    return reply if reply.blank? || !reply.valid_encoding?
+    return reply unless reply.is_a?(String) && reply.valid_encoding?
+    return reply if reply.blank?
 
     chaves = [PREFIXO, codigo]
     linhas = reply.lines
     tocadas = linhas.select { |linha| com_chave?(linha, chaves) }
     return reply if tocadas.empty?
 
-    (linhas - tocadas).join.strip.presence || disfarce.trocar(disfarce.normalizado(reply), chaves, '').strip
+    (linhas - tocadas).join.strip.presence || trocar_no_original(reply, [cabecalho(codigo), *chaves], '').strip
   end
 
   def com_chave?(texto, chaves)
-    disfarce.contem_alguma?(disfarce.normalizado(texto), chaves)
+    disfarce.contem_alguma?(plano_com_origem(texto).first, chaves)
+  end
+
+  # Troca as `chaves` por `por` no texto ORIGINAL. A chave é achada como na moldura da equipe (sem invisíveis, em NFKC,
+  # espaços unificados, sem caixa, a mais longa primeiro), mas só o trecho dela muda: "m²", emoji com junção e o resto
+  # da linha saem como vieram.
+  def trocar_no_original(texto, chaves, por)
+    plano, origem = plano_com_origem(texto)
+    ordenadas = chaves.reject(&:empty?).sort_by { |chave| -chave.length }
+    saida = +''
+    copiado = 0
+    posicao = 0
+    while posicao < plano.length
+      chave = chave_em(plano, posicao, ordenadas)
+      unless chave
+        posicao += 1
+        next
+      end
+
+      saida << texto[copiado...origem[posicao]].to_s << por
+      copiado = origem[posicao + chave.length - 1] + 1
+      posicao += chave.length
+    end
+    saida << texto[copiado..].to_s
+  end
+
+  def chave_em(plano, posicao, chaves)
+    chaves.find { |chave| plano[posicao, chave.length].casecmp?(chave) }
+  end
+
+  # O texto plano (cada caractere sem invisível, em NFKC; espaços seguidos viram um; as quebras ficam) e, para cada
+  # caractere dele, o índice do caractere original de onde veio.
+  def plano_com_origem(texto)
+    plano = +''
+    origem = []
+    texto.each_char.with_index do |caractere, indice|
+      next if disfarce.formato?(caractere.ord)
+
+      forma = caractere.unicode_normalize(:nfkc)
+      forma = ' ' if caractere != "\n" && forma.strip.empty?
+      next if forma == ' ' && plano.end_with?(' ')
+
+      plano << forma
+      forma.length.times { origem << indice }
+    end
+    [plano, origem]
   end
 
   # De onde veio o texto: o host lido (`site`) e, quando ele não existe ou difere, o do link que o cliente mandou.
@@ -167,8 +212,7 @@ module Autonomia::Agents::Operate::PreviaDoLink
 
     visivel = valor.each_char.reject { |caractere| invisivel?(caractere.ord) }.join
     linha = visivel.tr(QUEBRAS_UNICODE, ' ').split.join(' ')
-    plano = disfarce.normalizado(linha)
-    neutro = disfarce.contem_alguma?(plano, chaves) ? disfarce.trocar(plano, chaves, NEUTRALIZADO) : linha
+    neutro = com_chave?(linha, chaves) ? trocar_no_original(linha, chaves, NEUTRALIZADO) : linha
     cortar(neutro).presence
   end
 
