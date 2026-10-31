@@ -5,7 +5,7 @@ import { useStore } from 'vuex';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 
 const props = defineProps({
   stage: { type: Object, required: true },
@@ -18,7 +18,7 @@ const props = defineProps({
 const { t } = useI18n();
 const store = useStore();
 // #2414 F1.3: mexer em automação de etapa pede também a chave das regras automáticas (a API recusa sem ela).
-const podeMontar = useCanManage('automation_manage');
+const podeMontar = usePermissionGranted('automation_manage');
 
 function emptyStep() {
   return {

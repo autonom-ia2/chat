@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useStore } from 'vuex';
 import { I18nT } from 'vue-i18n';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import FunilResumoCartao from './FunilResumoCartao.vue';
 
 // #1384 — as ações automáticas de uma etapa já salva, numa frase com
@@ -16,7 +16,7 @@ defineEmits(['alterar']);
 
 const store = useStore();
 // #2414 F1.3: sem a chave das regras automáticas, as ações da etapa só se veem.
-const podeMontar = useCanManage('automation_manage');
+const podeMontar = usePermissionGranted('automation_manage');
 const acoes = ref(null);
 
 watch(

@@ -62,6 +62,14 @@ RSpec.describe Autonomia::Guide::Acoes do
       .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.automation_manage_only'))
   end
 
+  it 'sem automation_view, o ensaio ouve que falta ver as regras, não montar' do
+    sem_chave = com_funcao(%w[conversation_manage])
+    regra_gravada = create(:automation_rule, account: account)
+
+    expect { para(sem_chave).conferir!('POST automation_rules/:id/ensaio', { caminho: { id: regra_gravada.id }, corpo: {} }) }
+      .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.automation_view_only'))
+  end
+
   it 'o Decisor segue a mesma chave: com automation_manage o Guia deixa passar' do
     com_chave = com_funcao(%w[automation_view automation_manage])
 
@@ -83,14 +91,22 @@ RSpec.describe Autonomia::Guide::Acoes do
     end
 
     it 'só com crm_manage_pipelines, o Guia recusa' do
-      expect { etapa_pelo_guia(com_funcao(%w[crm_manage_pipelines])) }.to raise_error(described_class::Recusada)
+      expect { etapa_pelo_guia(com_funcao(%w[crm_manage_pipelines])) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.stage_automation_manage_only'))
     end
 
-    it 'só com automation_manage, a plataforma recusa (falta a chave do funil)' do
-      resultado = etapa_pelo_guia(com_funcao(%w[automation_view automation_manage]))
-
-      expect(resultado.ok).to be(false)
+    # O Guia não propõe o que a plataforma vai recusar: a policy da etapa pede também a chave do funil.
+    it 'só com automation_manage, o próprio Guia recusa (falta a chave do funil)' do
+      expect { etapa_pelo_guia(com_funcao(%w[automation_view automation_manage])) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.stage_automation_manage_only'))
       expect(account.crm_stage_automations.count).to eq(0)
+    end
+
+    it 'crm_admin vale pela chave do funil, como no CrmPermissions' do
+      resultado = etapa_pelo_guia(com_funcao(%w[automation_view automation_manage crm_admin]))
+
+      expect(resultado.ok).to be(true)
+      expect(account.crm_stage_automations.count).to eq(1)
     end
 
     def politicas(user)

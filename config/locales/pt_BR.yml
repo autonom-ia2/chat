@@ -1009,6 +1009,8 @@ pt_BR:
         contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
       automation_manage_only: 'Para isso você precisa da permissão das regras automáticas na sua função.'
+      stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'
+      automation_view_only: 'Para isso você precisa da permissão de ver as regras automáticas na sua função.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'

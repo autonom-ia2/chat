@@ -7,7 +7,7 @@ import FunilEtapaAcoes from './funil/FunilEtapaAcoes.vue';
 // chave, a pessoa vê as automações, mas sem criar, editar ou apagar; no resumo da etapa, "Ver" no lugar de "Alterar".
 const podeMontar = ref(true);
 vi.mock('dashboard/composables/useCanManage', () => ({
-  useCanManage: () => podeMontar,
+  usePermissionGranted: () => podeMontar,
 }));
 
 const automacao = {
