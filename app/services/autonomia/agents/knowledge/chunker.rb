@@ -80,27 +80,6 @@ module Autonomia
           end
         end
 
-        # #2425 — a mesma regra de título vale para quem monta o texto antes (Processors::PdfParagrafos põe a linha de
-        # título num bloco próprio, para ela continuar sendo título aqui).
-        def self.titulo?(text)
-          return false if text.length > HEADING_MAX
-          return true if text.match?(MARKDOWN_HEADING)
-          # Numeração ("47-", "12.") só é título se NÃO terminar em pontuação de
-          # frase — senão item de lista/instrução ("1. Escolha a opção.") viraria
-          # falso título e poluiria os chunks seguintes com prefixo errado.
-          return true if text.match?(NUMBERED_HEADING) && !text.match?(TERMINAL_PUNCT)
-
-          shouted_line?(text)
-        end
-
-        # Linha "gritada" (sem minúsculas, sem pontuação final) tem cara de título de seção de
-        # PDF/apólice. Linha curta em caixa normal NÃO é título — segue sendo seção mono-tópico
-        # própria (frete/troca/parcelamento), preservando a calibração do MERGE_FLOOR.
-        def self.shouted_line?(text)
-          text.match?(/[[:alpha:]]/) && !text.match?(/[[:lower:]]/) && !text.match?(TERMINAL_PUNCT)
-        end
-        private_class_method :shouted_line?
-
         private
 
         # Pipeline estrutural único (fonte de verdade p/ chunks e chunks_with_metadata). Devolve
@@ -208,9 +187,21 @@ module Autonomia
           # pergunta em todo chunk (inclusive respostas longas fatiadas), e section_heading deixa de sair
           # vazio. Era o recall-miss do estilo P+R: janela cega cortava resposta longe da sua pergunta.
           return true if record == :question
-          return false if record
+          return false if record || text.length > HEADING_MAX
+          return true if text.match?(MARKDOWN_HEADING)
+          # Numeração ("47-", "12.") só é título se NÃO terminar em pontuação de
+          # frase — senão item de lista/instrução ("1. Escolha a opção.") viraria
+          # falso título e poluiria os chunks seguintes com prefixo errado.
+          return true if text.match?(NUMBERED_HEADING) && !text.match?(TERMINAL_PUNCT)
 
-          self.class.titulo?(text)
+          shouted_line?(text)
+        end
+
+        # Linha "gritada" (sem minúsculas, sem pontuação final) tem cara de título de seção de
+        # PDF/apólice. Linha curta em caixa normal NÃO é título — segue sendo seção mono-tópico
+        # própria (frete/troca/parcelamento), preservando a calibração do MERGE_FLOOR.
+        def shouted_line?(text)
+          text.match?(/[[:alpha:]]/) && !text.match?(/[[:lower:]]/) && !text.match?(TERMINAL_PUNCT)
         end
 
         # Unidades estruturais primárias como pares [texto, record?]: parágrafos (\n\n); dentro de um

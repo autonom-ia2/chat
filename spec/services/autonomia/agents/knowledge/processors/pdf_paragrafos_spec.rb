@@ -46,13 +46,14 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   # PDF mínimo com Helvetica: cada linha é um "Td" na altura dada (e na margem esquerda dada; padrão 54). O quarto item,
   # quando há, troca o "(texto) Tj" pelo operador cru (ex.: TJ com espaçamento entre letras).
   def pdf_com(paginas)
-    ids = paginas.each_index.map { |indice| 4 + (2 * indice) }
+    ids = paginas.each_index.map { |indice| 5 + (2 * indice) }
     objetos = ['<< /Type /Catalog /Pages 2 0 R >>',
                "<< /Type /Pages /Kids [#{ids.map { |id| "#{id} 0 R" }.join(' ')}] /Count #{paginas.size} >>",
-               '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>']
+               '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+               '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>']
     paginas.each_with_index do |linhas, indice|
       conteudo = linhas.map { |texto, y, x = 54, cru = nil| "BT /F1 10 Tf #{x} #{y} Td #{cru || "(#{texto}) Tj"} ET" }.join("\n")
-      objetos << '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> ' \
+      objetos << '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> ' \
                  "/Contents #{ids[indice] + 1} 0 R >>"
       objetos << "<< /Length #{conteudo.bytesize} >>\nstream\n#{conteudo}\nendstream"
     end
@@ -173,13 +174,32 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     end
   end
 
-  describe 'o título colado ao texto (sem espaço de parágrafo antes do corpo)' do
-    let(:pdf) { pdf_com([corpo('1. OBJETIVO DO SEGURO', 'Este seguro garante o veiculo segurado.', 'Vale em todo o territorio.')]) }
+  describe 'o título em outra fonte, colado ao texto (sem espaço de parágrafo antes do corpo)' do
+    let(:pdf) do
+      pdf_com([[['1. OBJETIVO DO SEGURO', topo, 54, '/F2 10 Tf (1. OBJETIVO DO SEGURO) Tj'],
+                *corpo('Este seguro garante o veiculo segurado.', 'Vale em todo o territorio.', inicio: topo - linha)]])
+    end
 
     it 'fica num bloco próprio, e o Chunker o reconhece como título' do
       meta = Autonomia::Agents::Knowledge::Chunker.new(extrair, source_type: 'pdf').chunks_with_metadata
 
       expect(meta).to include(a_hash_including(metadata: a_hash_including(section_heading: '1. OBJETIVO DO SEGURO')))
+    end
+  end
+
+  describe 'a cláusula em caixa alta de várias linhas, na fonte do texto' do
+    let(:pdf) { pdf_com([corpo('O SEGURADO DEVERA COMUNICAR O SINISTRO EM', 'ATE SETE DIAS UTEIS CONTADOS DA DATA', 'DO EVENTO')]) }
+
+    it 'fica num parágrafo só (não vira um título por linha)' do
+      expect(extrair).to include("O SEGURADO DEVERA COMUNICAR O SINISTRO EM\nATE SETE DIAS UTEIS CONTADOS DA DATA\nDO EVENTO")
+    end
+  end
+
+  describe 'o título com as letras um pouco espaçadas' do
+    let(:pdf) { pdf_com([[['', topo, 54, '0.5 Tc (COBERTURAS) Tj']]]) }
+
+    it 'fica numa palavra só (folga entre letras abaixo de 10% da letra)' do
+      expect(extrair).to include('COBERTURAS')
     end
   end
 
@@ -218,7 +238,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   end
 
   it 'página sem trecho de texto fica com o texto da main' do
-    allow_any_instance_of(PDF::Reader::Page).to receive(:runs).and_return([]) # rubocop:disable RSpec/AnyInstance
+    allow(Autonomia::Agents::Knowledge::Processors::PdfTrechos).to receive(:da_pagina).and_return([])
 
     expect(extrair.scan('Versao SETEMBRO-2026').size).to eq(4)
   end

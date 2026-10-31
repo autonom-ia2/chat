@@ -18,8 +18,9 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     objetos = instance_double(PDF::Reader::ObjectHash)
     allow(objetos).to receive(:deref) { |valor| valor }
     atributos = { MediaBox: caixa }.merge(attributes)
-    pages = page_texts.map { |text| instance_double(PDF::Reader::Page, runs: [], text: text, attributes: atributos, objects: objetos) }
+    pages = page_texts.map { |text| instance_double(PDF::Reader::Page, text: text, attributes: atributos, objects: objetos) }
     allow(PDF::Reader).to receive(:new).and_return(reader)
+    allow(Autonomia::Agents::Knowledge::Processors::PdfTrechos).to receive(:da_pagina).and_return([])
     allow(reader).to receive(:pages).and_return(pages)
   end
 

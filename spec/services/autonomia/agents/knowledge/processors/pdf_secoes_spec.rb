@@ -16,8 +16,9 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   end
 
   def stub_pages(total)
-    pages = (1..total).map { |numero| instance_double(PDF::Reader::Page, runs: [], text: "Texto da pagina #{numero}") }
+    pages = (1..total).map { |numero| instance_double(PDF::Reader::Page, text: "Texto da pagina #{numero}") }
     allow(PDF::Reader).to receive(:new).and_return(reader)
+    allow(Autonomia::Agents::Knowledge::Processors::PdfTrechos).to receive(:da_pagina).and_return([])
     allow(reader).to receive(:pages).and_return(pages)
   end
 
