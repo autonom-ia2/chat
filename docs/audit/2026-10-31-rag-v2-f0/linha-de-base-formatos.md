@@ -162,28 +162,51 @@ com "errado se falta o fato"). O mesmo defeito atinge o autoteste que o dono vê
 
 ### O juiz do placar
 
-O `JuizDoPlacar` roda só em dev e test, pela rake. Tem a mesma saída do juiz do autoteste, com outra régua escrita, e
-recebe os trechos que o agente usou. A régua está em `app/services/autonomia/agents/juiz_do_placar.rb`, sha256
-`83582093fe0ac2f4…`.
+O `JuizDoPlacar` roda só em dev e test, pela rake. Tem a mesma saída do juiz do autoteste (um veredito por índice,
+válido para a origem) e recebe os trechos que o agente usou. Ele é a base proposta para corrigir o juiz do autoteste
+(#2444).
+
+**v2, a que vale (decisão do Rodrigo, 31/10):** o juiz julga como uma pessoa sensata, não por lista de regras. A
+instrução dá o objetivo ("a resposta atende o que o cliente perguntou, com o que o material diz, sem inventar?") e oito
+exemplos inventados (lava-rápido, oficina, assinatura, caixa), nenhum tirado das bases medidas. Detalhe secundário que
+falta ou fato verdadeiro a mais ficam a critério dele. Texto em `app/services/autonomia/agents/juiz_do_placar.rb`,
+sha256 `cb705c0614f6012c…`.
+
+A v1 (régua escrita, item por item, sha256 `83582093fe0ac2f4…`) foi medida antes e fica registrada abaixo para
+comparação.
 
 Protocolo contra régua circular:
 - **Sorteio fixo:** os 318 itens rotulados à mão foram divididos em duas metades de 159 (`random.Random(1431)` sobre
   a lista ordenada de pares (formato, índice)).
-- **Metade A, para ajuste:** a régua v1 discordou de 1 rótulo em 159 (0,6%). Não houve ajuste.
-- **Metade B, para teste:** medida uma vez, com a régua fixada antes: **4/159 (2,5%)**. O juiz do autoteste, nessa
-  mesma metade, erra 8/159 (5,0%).
-- **Reserva:** os dois documentos reais novos, que ficaram fora do sorteio (74 itens): 4/74 (5,4%). Todos os erros
-  são para o lado estrito.
-- **Rotulador cego:** um subagente novo, que não viu nenhum rótulo, rotulou 40 itens da metade B (21 do PDF, 15 do
-  JSON, 3 da foto e 1 do DOCX), com a mesma régua escrita.
-  - **cego × eu:** 39/40 concordam.
-  - **cego × juiz do placar:** 37/40.
-  - **cego × juiz do autoteste:** 36/40.
-- **Variação entre rodadas:** o mesmo juiz deu "certo" e depois "errado" para uma pergunta do PDF Mapfre (#28). A
+- **Metade A, para ajuste:** a v2 discordou de 4/159 na primeira medida. Uma rodada de ajuste acrescentou três
+  exemplos inventados (conselho prudente a mais, condição secundária que faltou, pergunta para ajudar numa recusa):
+  3/159 (1,9%). Aí a instrução foi congelada.
+- **Metade B, para teste:** medida uma vez com a v2 congelada: **3/159 (1,9%)**.
+- **Reserva:** os dois documentos reais novos, fora do sorteio (74 itens), medidos uma vez: **2/74 (2,7%)**.
+- **Ressalva:** a metade B e a reserva já tinham sido medidas uma vez com a v1, e eu vi aquelas discordâncias. Os
+  exemplos da v2 não vêm delas, mas a metade B deixou de ser inteiramente inédita para quem escreveu a instrução.
+- **Rotulador cego:** um subagente novo, que não viu nenhum rótulo nem a instrução do juiz, rotulou 40 itens da
+  metade B (21 do PDF, 15 do JSON, 3 da foto e 1 do DOCX) só com o objetivo, sem régua.
+  - **cego × eu:** 40/40 concordam.
+  - **cego × juiz v2:** 38/40 (PDF #29, gabarito ambíguo; JSON #25).
+  - **cego × juiz do autoteste:** 37/40.
+
+| juiz | metade A | metade B | reserva | cego × juiz |
+|---|---|---|---|---|
+| autoteste (produção hoje) | — | 8/159 (5,0%) | — | 37/40 |
+| placar v1 (régua escrita) | 1/159 (0,6%) | 4/159 (2,5%) | 4/74 (5,4%) | 37/40 (cego com régua) |
+| **placar v2 (objetivo + exemplos)** | 3/159 (1,9%) | **3/159 (1,9%)** | **2/74 (2,7%)** | **38/40** |
+
+As discordâncias da v2 se dividem: na metade B, dois "errado" onde o rótulo é "certo" (PDF #29, cuja pergunta tem duas
+respostas certas no material; JSON #25) e um "inventou" onde o rótulo é "recusou" (escaneado #32). Na reserva, dois
+"errado" onde o rótulo é "certo" (PDF real #30; XLSX real #0, de gabarito ambíguo). Não houve caso de aprovar
+resposta ruim.
+
+- **Variação entre rodadas:** o mesmo juiz já deu "certo" e depois "errado" para uma pergunta do PDF Mapfre (#28). A
   margem de ±5% vale também para isso.
 
-**Conclusão:** o juiz do placar fica dentro da meta na metade de teste (2,5%) e na borda dela nos documentos reais
-(5,4%). Ele serve para comparar F1/F2 com a linha de base desde que:
+**Conclusão:** a v2 fica dentro da meta na metade de teste (1,9%) e nos documentos reais (2,7%), melhor que a v1
+neles. Ela serve para comparar F1/F2 com a linha de base desde que:
 - uma diferença menor que 5 pontos de acerto não decida nada;
 - em decisão perto de um limite, os "errados" sejam revistos à mão (são poucos e baratos de ler).
 
@@ -197,9 +220,10 @@ citam os textos das bases, e o protocolo cabe neste documento.
 | Linha de base do Suhai (antes desta rodada) | US$ 0,34 |
 | Busca nos 11 formatos e 4 tamanhos (42 rodadas, com repetições) | US$ 0,38 |
 | Resposta + juiz nos 11 formatos (11 rodadas, com a ingestão) | US$ 1,95 |
-| Calibração do juiz (A, B, reserva) | US$ 0,06 |
+| Calibração do juiz v1 (A, B, reserva) | US$ 0,06 |
+| Calibração do juiz v2 (A duas vezes, B, reserva) | US$ 0,09 |
 | Rodadas que caíram (paralelas sem chave, log do Faraday) | cerca de US$ 0,03 |
-| **total da frente** | **cerca de US$ 2,76 de US$ 5** |
+| **total da frente** | **cerca de US$ 2,85 de US$ 5** |
 
 ## Achados à parte
 

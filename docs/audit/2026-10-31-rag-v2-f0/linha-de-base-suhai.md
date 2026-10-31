@@ -104,19 +104,27 @@ parte com o placar deste PR; não estão no histórico deste PR.
 
 ## Régua do #2431 no head c7cf171d83 (palavras coladas e títulos)
 
-| | main | 272b641b1c | **c7cf171d83** |
-|---|---|---|---|
-| Pedaços | 1.207 | 762 | 799 |
-| hit@1 | 0,29 | 0,47 | 0,47 |
-| hit@5 | 0,41 | 0,59 | **0,76** |
-| hit@12 | 0,59 | 0,76 | **0,88** |
-| MRR | 0,36 | 0,53 | **0,62** |
-| Pedaços com palavra colada | 10,3% | 10,0% | **0,0%** |
-| Títulos distintos | 117 | 58 | 157 |
-| Pedaços que herdam "4 – PERDA DE DIREITOS" | 58 | 96 | 22 |
-| Âncora inteira num pedaço | 13/17 | 14/17 | **17/17** |
-| Acerto (juiz) | 10/17 | — | **14/17** |
-| Recusa correta | 5/5 | — | 5/5 |
+| | main | 272b641b1c | **c7cf171d83** | **7ac65acad9 (#2425)** |
+|---|---|---|---|---|
+| Pedaços | 1.207 | 762 | 799 | 817 |
+| hit@1 | 0,29 | 0,47 | 0,47 | 0,41 |
+| hit@5 | 0,41 | 0,59 | **0,76** | **0,76** |
+| hit@12 | 0,59 | 0,76 | **0,88** | **0,94** |
+| MRR | 0,36 | 0,53 | **0,62** | 0,57 |
+| Pedaços com palavra colada | 10,3% | 10,0% | **0,0%** | **0,0%** |
+| Títulos distintos | 117 | 58 | 157 | 123 |
+| Pedaços que herdam "4 – PERDA DE DIREITOS" | 58 | 96 | 22 | 29 |
+| Âncora inteira num pedaço | 13/17 | 14/17 | **17/17** | **17/17** |
+| Acerto (juiz) | 10/17 | — | **14/17** | — |
+| Recusa correta | 5/5 | — | 5/5 | — |
+
+No 7ac65acad9 o título vem da geometria (espaço entre linhas medido no documento inteiro, troca de fonte fecha o
+parágrafo), sem regex. Só a busca foi medida (US$ 0,01). Uma pergunta vale 0,06 em hit@k: contra o c7cf171d83, hit@1
+perdeu uma e hit@12 ganhou uma.
+
+**Caso para o PR de seção (depois do #2431):** a tabela 9 do Suhai tem um título de 2 linhas, na mesma fonte do
+texto, que montado certo passa do `HEADING_MAX` de 80 do Chunker e deixa de ser título. O PR de seção usa a fonte e
+a posição que o `PdfTrechos` do #2431 entrega, sem regex, e põe esse caso no gabarito.
 | De onde veio | 9/17 | — | **14/17** |
 | Custo da rodada | US$ 0,1437 | US$ 0,0084 (só busca) | US$ 0,1643 |
 

@@ -45,14 +45,14 @@ RSpec.describe Autonomia::Agents::JuizDoPlacar do
     expect(julgar).to be_nil
   end
 
-  it 'sends the written rule and the passages the agent used, to a model other than the agent' do
+  it 'sends the goal and the passages the agent used, to a model other than the agent' do
     juiz_diz({ indice: 0, veredito: 'certo' }, { indice: 1, veredito: 'recusou' })
 
     julgar
 
     expect(cliente).to have_received(:create) do |**kwargs|
       expect(kwargs[:model]).not_to eq(Autonomia::Agents::Config::ANSWERER_MODEL)
-      expect(kwargs[:instructions]).to include('detalhe secundario', 'outro fato')
+      expect(kwargs[:instructions]).to include('atende o que o cliente perguntou', 'discernimento')
       expect(kwargs[:input].first[:content].first[:text]).to include('"trechos_que_o_agente_usou"', 'Combo da casa: R$ 25')
     end
   end
