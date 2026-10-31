@@ -1319,5 +1319,24 @@
     "ALTERAR": {
       "DESFECHO": "Marcar como implantado ou não fechou"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "PASSOS": {
+      "FECHAR_GANHO": "Marcar como implantado"
+    },
+    "METAS": {
+      "CARTAO_GANHO": "Para quando o plano for implantado"
+    },
+    "SELETOR": {
+      "TIPOS": {
+        "FECHAR_CARTAO": "Marcar como implantado ou não fechou"
+      }
+    },
+    "CAMPOS": {
+      "RESULTADO_GANHO": "Implantado"
+    },
+    "REGISTROS": {
+      "PAROU_META_GANHO": "Parei: o plano foi implantado"
+    }
   }
 }

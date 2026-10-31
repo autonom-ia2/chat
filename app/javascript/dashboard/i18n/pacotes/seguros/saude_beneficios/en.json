@@ -1319,5 +1319,24 @@
     "ALTERAR": {
       "DESFECHO": "Mark as implemented or not closed"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "PASSOS": {
+      "FECHAR_GANHO": "Mark as implemented"
+    },
+    "METAS": {
+      "CARTAO_GANHO": "Stop when the plan is implemented"
+    },
+    "SELETOR": {
+      "TIPOS": {
+        "FECHAR_CARTAO": "Mark as implemented or not closed"
+      }
+    },
+    "CAMPOS": {
+      "RESULTADO_GANHO": "Implemented"
+    },
+    "REGISTROS": {
+      "PAROU_META_GANHO": "Stopped: the plan was implemented"
+    }
   }
 }

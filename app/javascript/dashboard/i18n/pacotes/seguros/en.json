@@ -266,5 +266,35 @@
     "ALTERAR": {
       "DESFECHO": "Mark as active policy or not closed"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "RECEITAS": {
+      "ORCAMENTO_PARADO": {
+        "TEXTO": "A quote with no answer for 2 days gets a reminder. If the customer doesn't come back, the card ends as not closed."
+      }
+    },
+    "CONTE": {
+      "PEDIDO_EXEMPLO": "When a quote is stalled for 2 days, send the follow-up. If there's no answer in 2 days, mark it as not closed."
+    },
+    "PASSOS": {
+      "FECHAR_PERDIDO": "Mark the card as not closed, with the reason “{motivo}”",
+      "FECHAR_GANHO": "Mark: policy closed"
+    },
+    "METAS": {
+      "CARTAO_GANHO": "Stop when the policy closes",
+      "CARTAO_PERDIDO": "Stop when the card ends without closing"
+    },
+    "SELETOR": {
+      "TIPOS": {
+        "FECHAR_CARTAO": "Mark as closed or not closed"
+      }
+    },
+    "CAMPOS": {
+      "RESULTADO_PERDIDO": "Not closed",
+      "RESULTADO_GANHO": "Policy closed"
+    },
+    "REGISTROS": {
+      "PAROU_META_GANHO": "Stopped: the policy closed"
+    }
   }
 }

@@ -266,5 +266,35 @@
     "ALTERAR": {
       "DESFECHO": "Marcar como seguro ativo ou não fechou"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "RECEITAS": {
+      "ORCAMENTO_PARADO": {
+        "TEXTO": "Orçamento sem resposta há 2 dias recebe um lembrete. Se o cliente não voltar, o card termina como não fechou."
+      }
+    },
+    "CONTE": {
+      "PEDIDO_EXEMPLO": "Quando o orçamento ficar parado 2 dias, manda a retomada. Se não responder em 2 dias, marca como não fechou."
+    },
+    "PASSOS": {
+      "FECHAR_PERDIDO": "Marcar o card como não fechou, com o motivo “{motivo}”",
+      "FECHAR_GANHO": "Marcar: fechou o seguro"
+    },
+    "METAS": {
+      "CARTAO_GANHO": "Para quando o seguro fechar",
+      "CARTAO_PERDIDO": "Para quando o card terminar sem fechar"
+    },
+    "SELETOR": {
+      "TIPOS": {
+        "FECHAR_CARTAO": "Marcar como fechou ou não fechou"
+      }
+    },
+    "CAMPOS": {
+      "RESULTADO_PERDIDO": "Não fechou",
+      "RESULTADO_GANHO": "Fechou o seguro"
+    },
+    "REGISTROS": {
+      "PAROU_META_GANHO": "Parei: o seguro fechou"
+    }
   }
 }

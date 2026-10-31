@@ -1,5 +1,6 @@
 import { FEATURE_FLAGS } from '../../../featureFlags';
 import { frontendURL } from '../../../helper/URLHelper';
+import { routes as livreRoutes } from './livre/livre.routes';
 
 const AutomacoesPage = () => import('./pages/AutomacoesPage.vue');
 const AutomacaoConversaPage = () => import('./pages/AutomacaoConversaPage.vue');
@@ -13,6 +14,8 @@ const VER = ['administrator', 'automation_view', 'automation_manage'];
 const MUDAR = ['administrator', 'automation_manage'];
 
 export const routes = [
+  // #2414 F0 — protótipo da Automação livre (só desta branch).
+  ...livreRoutes,
   {
     path: frontendURL('accounts/:accountId/automacoes'),
     name: 'automacoes_lista',

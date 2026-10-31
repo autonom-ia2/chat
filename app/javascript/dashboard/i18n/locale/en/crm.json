@@ -7727,5 +7727,532 @@
         "TODOS": "Everyone"
       }
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "LIGADA": "On",
+    "DESLIGADA": "Off",
+    "LIGOU": "Turned on. From now on it works by itself.",
+    "DESLIGOU": "Turned off. Nothing else happens through it.",
+    "ALTERAR": "Change",
+    "ALTERAR_ROTULO": "Change: {frase}",
+    "SELO_SEM_VOLTA": "Sends to the customer; can't be undone",
+    "CUSTO": "AI: about {custo} each time",
+    "VOLTAR": "Back",
+    "VOLTAR_LISTA": "Back to Automations",
+    "TRAZER": "Bring to the new way",
+    "ORIGEM": {
+      "CONVERSA": "From conversations",
+      "FUNIL": "From the pipeline",
+      "ANTIGO": "The old way",
+      "PACOTE": "{pacote} pack recipe"
+    },
+    "LISTA": {
+      "TITULO": "Automations",
+      "SUBTITULO": "Everything that happens by itself in your account, in one place.",
+      "NOVA": "New automation",
+      "VAZIO": "Nothing happens by itself yet. Why not start with a ready one?",
+      "COMECAR": "Start",
+      "LIGADAS": "1 on | {n} on",
+      "ANTIGAS": "1 still the old way | {n} still the old way",
+      "MAIS_PASSOS": "and 1 more step | and {n} more steps",
+      "FATO_NADA": "Hasn't run yet",
+      "FATO_RODOU": "Ran once this week | Ran {n} times this week",
+      "FATO_PAROU": "1 stopped | {n} stopped",
+      "ABRIR": "Open",
+      "ABRIR_ROTULO": "Open {nome}",
+      "INTERRUPTOR": "Turn {nome} on or off"
+    },
+    "PORTAS": {
+      "TITULO": "How do you want to start?",
+      "SUBTITULO": "All three lead to the same screen. You check everything before turning it on.",
+      "CONTE": {
+        "TITULO": "Tell it in your own words",
+        "TEXTO": "Say what you want to happen by itself. The Guide builds it for you.",
+        "BOTAO": "Tell"
+      },
+      "RECEITAS": {
+        "TITULO": "Recipes for your business",
+        "TEXTO": "Start from a ready automation and adjust what you want.",
+        "BOTAO": "See recipes"
+      },
+      "ZERO": {
+        "TITULO": "Build from scratch",
+        "TEXTO": "Pick each step yourself, one at a time.",
+        "BOTAO": "Build"
+      }
+    },
+    "RECEITAS": {
+      "TITULO": "Recipes for your business",
+      "SUBTITULO": "Pick one. It opens ready and off, for you to check.",
+      "GRUPO_GERAIS": "For any business",
+      "GRUPO_PACOTE": "From your segment pack: {pacote}",
+      "USAR": "Use this one",
+      "MANDA": "Sends a message",
+      "USA_IA": "Uses AI",
+      "ORCAMENTO_PARADO": {
+        "TITULO": "Follow up on a stalled quote",
+        "TEXTO": "A quote with no answer for 2 days gets a reminder. If the customer doesn't come back, the card is closed as lost."
+      },
+      "LEAD_FORMULARIO": {
+        "TITULO": "Sort leads from the ad form",
+        "TEXTO": "The AI reads the form, saves what the customer wants and sends the card to the right queue."
+      },
+      "AGRADECER": {
+        "TITULO": "Say thanks when closing",
+        "TEXTO": "The customer gets a thank-you when the conversation ends."
+      },
+      "BOAS_VINDAS": {
+        "TITULO": "Welcome on WhatsApp",
+        "TEXTO": "Anyone reaching out for the first time gets a hello right away."
+      }
+    },
+    "CONTE": {
+      "GUIA": "Guide",
+      "PEDIDO_EXEMPLO": "When a quote is stalled for 2 days, send the follow-up. If there's no answer in 2 days, close it as lost.",
+      "MONTEI": "Got it. Here's what I built:",
+      "CONFIRA": "Check each step before turning it on. Nothing turns on by itself.",
+      "CONFERIR": "Check",
+      "CONTEXTO_ETAPA": "The Guide already knows it's for the “{etapa}” stage."
+    },
+    "EDITOR": {
+      "NOVA": "New automation",
+      "NOVA_NA_ETAPA": "New automation in “{etapa}”",
+      "VERSAO": "Version {n}, by {autor}",
+      "AVISO_GUIA": "The Guide built it like this. Check each step; nothing turns on by itself.",
+      "AVISO_RECEITA": "Started from the “{nome}” recipe. Adjust what you want and turn it on.",
+      "AVISO_ETAPA": "It already starts with: {frase}.",
+      "AVISO_ANTIGO": "This automation still runs the old way. You can see it; to change it, bring it to the new way.",
+      "ABAS": {
+        "CONFIRA": "Check",
+        "ENSAIAR": "Rehearse",
+        "HISTORICO": "What happened",
+        "DADO": "View as data"
+      },
+      "MOSTRAR_TUDO": "Show everything",
+      "MOSTRAR_MENOS": "Show less",
+      "DADO_EXPLICA": "The same automation, written the way the system stores it. Read only.",
+      "DICA_ENSAIO": "Before turning it on, use “Rehearse” to see what it would do with a customer from your account.",
+      "SALVOU": "Change saved.",
+      "GUARDOU": "Saved, turned off.",
+      "TROUXE": "Done. The new one is off and the old one stopped."
+    },
+    "CONFIRA": {
+      "QUANDO": "When",
+      "SO_SE": "Only if",
+      "FACA": "Do",
+      "META": "Stop when…",
+      "FREIO": "Brake",
+      "ESCOLHER": "Choose",
+      "SEM_CONDICAO": "Always, no condition.",
+      "ADICIONAR_CONDICAO": "Add a condition",
+      "PRIMEIRO_PASSO": "Add the first step",
+      "NADA": "Nothing happens here.",
+      "INSERIR": "Add a step here",
+      "PASSOS_NO_GALHO": "(1 step) | ({n} steps)",
+      "DECISOR_DUVIDA": "If the AI is unsure, the Guide asks someone on the team and the automation waits up to 2 days.",
+      "FREIO_MAIS": "and 1 more safeguard | and {n} more safeguards"
+    },
+    "GATILHOS": {
+      "FALTA": "Choose when it starts",
+      "CONVERSA_NOVA": "When a new conversation arrives",
+      "MENSAGEM_RECEBIDA": "When the customer sends a message",
+      "CONVERSA_RESOLVIDA": "When the conversation is closed",
+      "CARTAO_ENTROU": "When the card enters “{etapa}”",
+      "CARTAO_PARADO": "When the card sits for 1 day in “{etapa}” | When the card sits for {n} days in “{etapa}”",
+      "CAMPO_DATA": "When there is 1 day left until “{campo}” | When there are {n} days left until “{campo}”",
+      "CARTAO_CRIADO_FORMULARIO": "When a card arrives from the ad form"
+    },
+    "CONDICOES": {
+      "CARTAO_NA_ETAPA": "the card is open and in “{etapa}”",
+      "VALOR_MAIOR": "the card value is more than {valor}",
+      "CAIXA": "the conversation came through the {caixa} inbox",
+      "FORA_DO_HORARIO": "it is outside business hours"
+    },
+    "PASSOS": {
+      "MANDAR_MENSAGEM": "Send a message to the customer",
+      "MANDAR_MODELO": "Send the “{modelo}” template on WhatsApp",
+      "AVISAR_EQUIPE": "Notify {para}",
+      "ATRIBUIR_EQUIPE": "Hand the card and the conversation to {equipe}",
+      "MOVER_CARTAO": "Move the card to “{etapa}”",
+      "ATUALIZAR_CARTAO": "Save on the card: {campos}",
+      "FECHAR_PERDIDO": "Mark the card as lost, with the reason “{motivo}”",
+      "FECHAR_GANHO": "Mark the card as won",
+      "ETIQUETAR_CONTATO": "Add the “{etiqueta}” label to the contact",
+      "CRIAR_TAREFA": "Create the task “{titulo}” for {para}",
+      "OFERECER_HORARIOS": "Send the customer the free times on the calendar",
+      "EXTRAIR_IA": "Ask the AI to find in the conversation: {campos}",
+      "DECISOR": "Ask the AI to decide: “{pergunta}”",
+      "RESUMIR_IA": "Ask the AI for a conversation summary for the owner",
+      "ESPERAR": "Wait 1 day | Wait {n} days",
+      "ESPERAR_RESPOSTA": "Wait for the customer to answer, up to 1 day | Wait for the customer to answer, up to {n} days",
+      "SE": "Check if {condicao}",
+      "PARAR": "Stop here"
+    },
+    "CAMINHOS": {
+      "RESPONDEU": "If they answered",
+      "VENCEU": "If time ran out with no answer",
+      "SIM": "If yes",
+      "NAO": "If no",
+      "NENHUMA": "None applies"
+    },
+    "METAS": {
+      "NENHUMA": "Runs to the last step",
+      "CARTAO_GANHO": "Stop when the card is won",
+      "CARTAO_PERDIDO": "Stop when the card is lost"
+    },
+    "FREIO": {
+      "NAO_REPETIR": "Doesn't repeat for the same customer for 1 day | Doesn't repeat for the same customer for {n} days",
+      "POR_HORA": "At most once an hour | At most {n} times an hour",
+      "MENSAGEM": "At most 1 automatic message per conversation every minute | At most 1 automatic message per conversation every {n} minutes",
+      "IA_POR_DIA": "Up to 1 AI request a day | Up to {n} AI requests a day"
+    },
+    "PESSOAS": {
+      "RESPONSAVEL": "the card owner",
+      "DONO": "the account owner"
+    },
+    "VARIAVEIS": {
+      "CONTATO_NOME": "Contact name",
+      "CARD_VALOR": "Card value",
+      "CARD_RESPONSAVEL": "Owner",
+      "OUTRA": "Information"
+    },
+    "GRUPOS": {
+      "CONVERSA": "Conversation",
+      "CARTAO": "Card",
+      "CONTATO": "Contact",
+      "RETORNO": "Follow-up",
+      "AGENDA": "Calendar",
+      "IA": "Ask the AI",
+      "CONTROLE": "Wait, decide or stop",
+      "PLATAFORMA": "All platform actions"
+    },
+    "PLATAFORMA": {
+      "AVANCADA": "Advanced action",
+      "NOTA_PRIVADA": "Write a note for the team in the conversation",
+      "RESOLVER_CONVERSA": "Close the conversation",
+      "ADIAR_CONVERSA": "Snooze the conversation until tomorrow",
+      "PRIORIDADE_ALTA": "Mark the conversation as urgent",
+      "ATRIBUIR_RODIZIO": "Hand the conversation to someone on the team, in turns",
+      "ETIQUETA_CONVERSA": "Add a label to the conversation",
+      "TIRAR_ETIQUETA": "Remove a label from the conversation",
+      "CAMPO_CONTATO": "Change a contact detail",
+      "EMPRESA_CONTATO": "Link the contact to a company",
+      "CRIAR_CARTAO": "Create a card in the pipeline",
+      "ARQUIVAR_CARTAO": "Archive the card",
+      "PRODUTO_CARTAO": "Add a product to the card",
+      "CRIAR_EVENTO": "Book an appointment on the calendar",
+      "CANCELAR_EVENTO": "Cancel a calendar appointment",
+      "MANDAR_EMAIL": "Send an email to the customer",
+      "PESQUISA_SATISFACAO": "Send the satisfaction survey",
+      "LINK_PAGAMENTO": "Send a payment link"
+    },
+    "SELETOR": {
+      "TITULO": "Choose the next step",
+      "TEXTO": "It goes where the “+” you tapped is.",
+      "BUSCA_ROTULO": "Search for an action",
+      "BUSCA": "For example: label, calendar, email",
+      "NADA": "Nothing with those words. Try others.",
+      "TIPOS": {
+        "MANDAR_MENSAGEM": "Send a message",
+        "MANDAR_MODELO": "Send a WhatsApp template",
+        "AVISAR_EQUIPE": "Notify someone on the team",
+        "ATRIBUIR_EQUIPE": "Hand to a team",
+        "MOVER_CARTAO": "Move the card",
+        "ATUALIZAR_CARTAO": "Save a detail on the card",
+        "FECHAR_CARTAO": "Mark as won or lost",
+        "ETIQUETAR_CONTATO": "Add a label to the contact",
+        "CRIAR_TAREFA": "Create a task",
+        "OFERECER_HORARIOS": "Offer calendar times",
+        "EXTRAIR_IA": "Find details in the conversation",
+        "DECISOR": "Decide the path",
+        "RESUMIR_IA": "Summarize the conversation",
+        "ESPERAR": "Wait for a while",
+        "ESPERAR_RESPOSTA": "Wait for the customer to answer",
+        "SE": "Continue only if…",
+        "PARAR": "Stop",
+        "ACAO_PLATAFORMA": "Platform action"
+      }
+    },
+    "CAMPOS": {
+      "ETAPA": "Stage",
+      "MODELO": "WhatsApp template",
+      "PARA": "For whom",
+      "EQUIPE": "Team",
+      "TITULO": "Task name",
+      "MOTIVO": "Reason",
+      "RESULTADO": "Result",
+      "RESULTADO_PERDIDO": "Lost",
+      "RESULTADO_GANHO": "Won",
+      "ETIQUETA": "Label",
+      "CAMPOS": "What to save",
+      "PERGUNTA": "The question for the AI",
+      "DIAS": "How many days",
+      "VALOR": "Minimum value, in reais",
+      "CAIXA": "Inbox",
+      "CAMPO": "Card date field",
+      "TEXTO": "Message",
+      "CONDICAO": "Continue only if",
+      "MENSAGEM_DICA": "To change the text, ask the Guide. The highlighted parts change for each customer."
+    },
+    "ALTERAR_PAINEL": {
+      "PASSO": "Change the step",
+      "GATILHO": "Change when it starts",
+      "CONDICAO": "Change the condition",
+      "META": "Change when it stops",
+      "FREIO": "Change the brake",
+      "TIPO_GATILHO": "When it starts",
+      "TIPO_META": "Stop when",
+      "META_DICA": "When this happens, the automation stops midway, even if steps are left.",
+      "CAMINHOS": "The paths the AI can choose",
+      "CAMINHO_N": "Path {n}",
+      "NENHUMA_SEMPRE": "“None applies” always exists. It's for when the AI isn't sure.",
+      "FREIO_NAO_REPETIR_DIAS": "Don't repeat for the same customer for how many days",
+      "FREIO_POR_HORA": "At most how many times an hour",
+      "FREIO_MENSAGEM_MINUTOS": "One automatic message per conversation every how many minutes",
+      "FREIO_IA_POR_DIA": "At most how many AI requests a day",
+      "SALVAR": "Save",
+      "TIRAR": "Remove"
+    },
+    "ENSAIO": {
+      "EXPLICA": "Pick a customer. We show what the automation would do, step by step. Nothing is really done.",
+      "ESCOLHA": "Rehearse with",
+      "FARIA": "Would: {frase}",
+      "SEGUIRIA": "Would follow: {caminho}",
+      "CELULAR_VAZIO": "No message to the customer on this path.",
+      "CELULAR_LEGENDA": "This is what the customer would see. Nothing was sent.",
+      "CARTAO_DETALHE": "In “{etapa}” for {dias} days, {valor}",
+      "CARTAO_DATA": "{campo}: {data}",
+      "CARTAO_FORMULARIO": "Wrote on the form: “{texto}”",
+      "CONVERSA_DETALHE": "Conversation in the {caixa} inbox",
+      "NAO_COMECA_VALOR": "Wouldn't start: the value is {valor} and needs to be over {minimo}."
+    },
+    "HISTORICO": {
+      "VAZIO": "It hasn't run yet.",
+      "LINHA": "{alvo}: {frase}"
+    },
+    "REGISTROS": {
+      "ESPERANDO_RESPOSTA": "Waiting for an answer until {ate}",
+      "MANDOU_MODELO": "Sent the “{modelo}” template",
+      "MANDOU_MENSAGEM": "Sent the message to the customer",
+      "PULOU_SAIU_DA_ETAPA": "Skipped: the card left the stage first",
+      "NAO_COMECOU_VALOR": "Didn't start: the value is {valor}, below the minimum",
+      "PAROU_LOOPING": "Stopped so it wouldn't repeat in a loop",
+      "CRIOU_TAREFA": "Created the task “{titulo}”",
+      "FALHOU_MODELO": "Couldn't send: WhatsApp rejected the template",
+      "PAROU_META_GANHO": "Stopped: the card was won",
+      "PULOU_REPETIR": "Skipped: already sent to this customer in the last {dias} days",
+      "AVISOU": "Notified {pessoa}",
+      "PULOU_TETO_MENSAGEM": "Skipped: the conversation already got an automatic message in the last {minutos} minutes",
+      "PAROU_POR_PESSOA": "Stopped for this card by {pessoa}"
+    },
+    "LIGAR": {
+      "TITULO": "Turn this automation on?",
+      "CONFIRMA_TUDO": "It sends messages to the customer, which can't be undone, and uses AI for about {custo} each time.",
+      "CONFIRMA_IA": "It uses your account's AI for about {custo} each time.",
+      "CONFIRMA_MENSAGEM": "It sends messages to the customer, and that can't be undone.",
+      "SIM": "Turn on",
+      "AINDA_NAO": "Not yet",
+      "BOTAO": "Turn on",
+      "DESLIGADA": "It's off. Nothing happens until you turn it on.",
+      "FALTA_GATILHO": "You still need to choose when it starts.",
+      "FALTA_PASSO": "You still need to add at least one step.",
+      "GUARDAR": "Save without turning on",
+      "LIGADA_AVISO": "It's working by itself.",
+      "NO_MEIO": "1 person is midway now | {n} people are midway now",
+      "DESLIGAR": "Turn off",
+      "SO_LEITURA": "You can see this automation. To change it, ask whoever manages automations."
+    },
+    "NO_MEIO": {
+      "TITULO": "1 person is midway. Keep the old way or stop now? | {n} people are midway. Keep the old way or stop now?",
+      "TERMINAM": "Finish the old way",
+      "TERMINAM_TEXTO": "Whoever already started goes to the end as it was. Whoever comes in now gets the change.",
+      "PARAM": "Stop now",
+      "PARAM_TEXTO": "Whoever is midway stops here. Nothing else is done for them.",
+      "SALVAR": "Save change",
+      "CANCELAR": "Cancel",
+      "SALVOU_TERMINAM": "Version {n} saved. Whoever was midway finishes the old way.",
+      "SALVOU_PARAM": "Version {n} saved. Whoever was midway stopped."
+    },
+    "TRAZER_DIALOGO": {
+      "TITULO": "Bring it to the new way?",
+      "TEXTO": "We create the new one, the same and turned off, and stop the old one. Nothing is deleted."
+    },
+    "ETAPA": {
+      "TITULO": "Automations in this stage: {etapa}",
+      "EXPLICA": "What happens by itself to the cards in “{etapa}”.",
+      "NOVA": "Automation in this stage",
+      "GUIA": "Ask the Guide",
+      "VAZIA": "No automations in this stage yet.",
+      "NAO_DISPARA": "Moving many cards at once or archiving in bulk doesn't make these automations run."
+    },
+    "CARTAO": {
+      "TITULO": "Automations on this card",
+      "NADA": "No automation is taking care of this card right now.",
+      "ESTADO_ESPERANDO_RESPOSTA": "Waiting for an answer until {ate}",
+      "ESTADO_ESPERANDO": "Waiting until {ate}",
+      "PARAR": "Stop for this card",
+      "PAROU": "Stopped for this card. Everything else stays the same.",
+      "ULTIMAS": "What happened",
+      "ETAPA": "Stage",
+      "VALOR": "Value"
+    },
+    "FUNIL": {
+      "QUAL": "Pipeline",
+      "FUNIS_DO_CRM": "CRM pipelines",
+      "ETAPA": "Stage",
+      "GAVETA_ETAPA": "What this pipeline does today. The automations of each stage live here.",
+      "GAVETA_CARTAO": "Where this customer stands now and what to do next.",
+      "SELO": "Automation running"
+    },
+    "JORNADA": {
+      "TITULO": "Journey",
+      "EXPLICA": "Prototype with sample data. Nothing here is really saved. Tap a step to go there.",
+      "O_QUE_MUDA": "What changes compared to today",
+      "COMECAR": {
+        "TITULO": "Start from a recipe",
+        "VAZIA": {
+          "NOME": "Account with no automations",
+          "NOTA": "Today: big hero with a field and six templates. Now: one sentence and one button."
+        },
+        "PORTAS": {
+          "NOME": "Three doors",
+          "NOTA": "Today the Guide is the main door and manual mode is hidden. Now: Guide, recipes and from scratch, side by side, leading to the same editor."
+        },
+        "RECEITAS": {
+          "NOME": "Recipes",
+          "NOTA": "Today: six fixed templates, conversations only. Now: general recipes and segment pack recipes, already with pipeline steps."
+        },
+        "CONFIRA": {
+          "NOME": "Check",
+          "NOTA": "Today the summary is read only and changing means asking the Guide. Now: a numbered When, Only if, Do list, with “Change” on each item and “+” between steps."
+        },
+        "ENSAIAR": {
+          "NOME": "Rehearse",
+          "NOTA": "Today the rehearsal only says whether it would run. Now: step by step, with the message on a simulated phone."
+        },
+        "LIGAR": {
+          "NOME": "Turn on",
+          "NOTA": "Today it turns on right away. Now: if it sends to the customer or uses AI, it asks for confirmation in one sentence."
+        },
+        "LISTA": {
+          "NOME": "Single list",
+          "NOTA": "Today there are two lists (Automations and manual mode) and the pipeline is separate. Now: everything in one list, with the origin and what happened this week."
+        }
+      },
+      "RENOVACAO": {
+        "TITULO": "Renewal (Insurance pack recipe)",
+        "RECEITA": {
+          "NOME": "Pack recipe",
+          "NOTA": "Today there are no recipes per segment. Now: the pack brings its own recipes, apart from the general ones."
+        },
+        "CONFIRA": {
+          "NOME": "Check with branches",
+          "NOTA": "Today there's no waiting for an answer or deciding midway. Now: paths show as branches, with the first level open."
+        },
+        "SELETOR": {
+          "NOME": "Add a step",
+          "NOTA": "Today each engine has its own hand-written list. Now: step groups and all platform actions, with search."
+        },
+        "ALTERAR": {
+          "NOME": "Change a step",
+          "NOTA": "Today changing a step means redoing it in the Guide or the old form. Now: “Change” opens only that step's fields."
+        },
+        "ENSAIAR": {
+          "NOME": "Rehearse with a customer",
+          "NOTA": "Today the rehearsal doesn't follow paths. Now: it shows which path the customer would take."
+        },
+        "LIGAR": {
+          "NOME": "Turn on with a message",
+          "NOTA": "A step that sends to the customer asks for confirmation before turning on."
+        }
+      },
+      "LEAD": {
+        "TITULO": "Form lead with AI",
+        "CONFIRA": {
+          "NOME": "Check",
+          "NOTA": "Today AI only comes in as the Decider in a pipeline stage. Now: find details, decide and wait in the same flow, with the cost next to it."
+        },
+        "TUDO": {
+          "NOME": "Show everything",
+          "NOTA": "For those who want more: opens every branch and every brake safeguard."
+        },
+        "DADO": {
+          "NOME": "View as data",
+          "NOTA": "New: the same automation as the system stores it. Read only."
+        },
+        "ENSAIAR": {
+          "NOME": "Rehearse",
+          "NOTA": "Shows the path the AI would choose with this sample lead and the message that would go out."
+        },
+        "LIGAR": {
+          "NOME": "Turn on with AI",
+          "NOTA": "It uses AI and sends messages: the confirmation says both and the cost."
+        }
+      },
+      "ORCAMENTO": {
+        "TITULO": "Stalled quote, with people midway",
+        "CONFIRA": {
+          "NOME": "On",
+          "NOTA": "Today the stage automation only counts time since entry. Now: it waits for the answer and decides what to do."
+        },
+        "HISTORICO": {
+          "NOME": "What happened",
+          "NOTA": "Today there's no history for users. Now: one line per step, with the reason for each skip."
+        },
+        "NO_MEIO": {
+          "NOME": "Change with people midway",
+          "NOTA": "New: changing an automation that is on asks what happens to whoever is midway."
+        }
+      },
+      "FUNIL": {
+        "TITULO": "In the pipeline",
+        "FUNIL": {
+          "NOME": "Pipeline board",
+          "NOTA": "This is today’s CRM Board. Nothing changes on the board: a card only gets a badge when an automation is running for it."
+        },
+        "ETAPA": {
+          "NOME": "Stage automations",
+          "NOTA": "Same path as today: Configure › Edit pipeline › stage. Where the stage’s automatic actions live today (only three step types), “Automations of this stage” now shows the new and the old ones, and opens the same editor."
+        },
+        "NOVA": {
+          "NOME": "New in this stage",
+          "NOTA": "It already opens with “When the card enters” this stage."
+        },
+        "ANTIGA": {
+          "NOME": "Stage with an old one",
+          "NOTA": "Today's stage automations show with the badge and the “Bring to the new way” button."
+        },
+        "CARTAO": {
+          "NOME": "Card automations",
+          "NOTA": "New: when you open the card, today’s drawer gains “Automations of this card”, with what is running, how long it waits and “Stop for this card”."
+        }
+      },
+      "GUIA": {
+        "TITULO": "Tell it in your own words",
+        "CONTE": {
+          "NOME": "Tell",
+          "NOTA": "Same as today: the same Guide field."
+        },
+        "MONTOU": {
+          "NOME": "The Guide built it",
+          "NOTA": "Today the Guide creates an old-engine rule. Now: it builds on the new engine, with pipeline and AI steps."
+        },
+        "CONFIRA": {
+          "NOME": "Check",
+          "NOTA": "What the Guide built lands in the same editor, to check before turning on."
+        }
+      },
+      "ANTIGA": {
+        "TITULO": "Bring from the old way",
+        "ABRIR": {
+          "NOME": "Open an old one",
+          "NOTA": "Today's rules show in the same list, view only."
+        },
+        "TRAZER": {
+          "NOME": "Bring to the new way",
+          "NOTA": "Creates the new one turned off and stops the old one. Nothing is deleted."
+        }
+      }
+    }
   }
 }

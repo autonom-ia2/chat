@@ -7728,5 +7728,532 @@
         "TODOS": "Todos da conta"
       }
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "LIGADA": "Ligada",
+    "DESLIGADA": "Desligada",
+    "LIGOU": "Ligada. A partir de agora ela trabalha sozinha.",
+    "DESLIGOU": "Desligada. Nada mais acontece por ela.",
+    "ALTERAR": "Alterar",
+    "ALTERAR_ROTULO": "Alterar: {frase}",
+    "SELO_SEM_VOLTA": "Manda para o cliente; não dá para desfazer",
+    "CUSTO": "IA: cerca de {custo} por vez",
+    "VOLTAR": "Voltar",
+    "VOLTAR_LISTA": "Voltar para Automações",
+    "TRAZER": "Trazer para o novo",
+    "ORIGEM": {
+      "CONVERSA": "Da conversa",
+      "FUNIL": "Do funil",
+      "ANTIGO": "Do jeito antigo",
+      "PACOTE": "Receita do pacote {pacote}"
+    },
+    "LISTA": {
+      "TITULO": "Automações",
+      "SUBTITULO": "Tudo o que acontece sozinho na sua conta, num lugar só.",
+      "NOVA": "Nova automação",
+      "VAZIO": "Nada acontece sozinho ainda. Que tal começar por uma pronta?",
+      "COMECAR": "Começar",
+      "LIGADAS": "1 ligada | {n} ligadas",
+      "ANTIGAS": "1 ainda no jeito antigo | {n} ainda no jeito antigo",
+      "MAIS_PASSOS": "e mais 1 passo | e mais {n} passos",
+      "FATO_NADA": "Ainda não rodou",
+      "FATO_RODOU": "Rodou 1 vez esta semana | Rodou {n} vezes esta semana",
+      "FATO_PAROU": "1 parou | {n} pararam",
+      "ABRIR": "Abrir",
+      "ABRIR_ROTULO": "Abrir {nome}",
+      "INTERRUPTOR": "Ligar ou desligar {nome}"
+    },
+    "PORTAS": {
+      "TITULO": "Como você quer começar?",
+      "SUBTITULO": "Os três caminhos levam à mesma tela. Você confere tudo antes de ligar.",
+      "CONTE": {
+        "TITULO": "Conte com suas palavras",
+        "TEXTO": "Diga o que quer que aconteça sozinho. O Guia monta para você.",
+        "BOTAO": "Contar"
+      },
+      "RECEITAS": {
+        "TITULO": "Receitas do seu negócio",
+        "TEXTO": "Comece por uma automação pronta e ajuste o que quiser.",
+        "BOTAO": "Ver receitas"
+      },
+      "ZERO": {
+        "TITULO": "Montar do zero",
+        "TEXTO": "Escolha você cada passo, um por vez.",
+        "BOTAO": "Montar"
+      }
+    },
+    "RECEITAS": {
+      "TITULO": "Receitas do seu negócio",
+      "SUBTITULO": "Escolha uma. Ela abre pronta e desligada, para você conferir.",
+      "GRUPO_GERAIS": "Para qualquer negócio",
+      "GRUPO_PACOTE": "Do pacote do seu segmento: {pacote}",
+      "USAR": "Usar esta",
+      "MANDA": "Manda mensagem",
+      "USA_IA": "Usa a IA",
+      "ORCAMENTO_PARADO": {
+        "TITULO": "Retomar orçamento parado",
+        "TEXTO": "Orçamento sem resposta há 2 dias recebe um lembrete. Se o cliente não voltar, o cartão é fechado como perdido."
+      },
+      "LEAD_FORMULARIO": {
+        "TITULO": "Organizar lead do formulário do anúncio",
+        "TEXTO": "A IA lê o formulário, guarda o que o cliente quer e manda o cartão para a fila certa."
+      },
+      "AGRADECER": {
+        "TITULO": "Agradecer ao encerrar",
+        "TEXTO": "O cliente recebe um obrigado quando o atendimento termina."
+      },
+      "BOAS_VINDAS": {
+        "TITULO": "Dar boas-vindas no WhatsApp",
+        "TEXTO": "Quem chama pela primeira vez já recebe um oi."
+      }
+    },
+    "CONTE": {
+      "GUIA": "Guia",
+      "PEDIDO_EXEMPLO": "Quando o orçamento ficar parado 2 dias, manda a retomada. Se não responder em 2 dias, fecha como perdido.",
+      "MONTEI": "Entendi. Montei assim:",
+      "CONFIRA": "Confira cada passo antes de ligar. Nada liga sozinho.",
+      "CONFERIR": "Conferir",
+      "CONTEXTO_ETAPA": "O Guia já sabe que é para a etapa “{etapa}”."
+    },
+    "EDITOR": {
+      "NOVA": "Nova automação",
+      "NOVA_NA_ETAPA": "Nova automação em “{etapa}”",
+      "VERSAO": "Versão {n}, por {autor}",
+      "AVISO_GUIA": "O Guia montou assim. Confira cada passo; nada liga sozinho.",
+      "AVISO_RECEITA": "Começou pela receita “{nome}”. Ajuste o que quiser e ligue.",
+      "AVISO_ETAPA": "Já começa com: {frase}.",
+      "AVISO_ANTIGO": "Esta automação ainda está no jeito antigo. Dá para ver; para mudar, traga para o novo.",
+      "ABAS": {
+        "CONFIRA": "Confira",
+        "ENSAIAR": "Ensaiar",
+        "HISTORICO": "O que aconteceu",
+        "DADO": "Ver como dado"
+      },
+      "MOSTRAR_TUDO": "Mostrar tudo",
+      "MOSTRAR_MENOS": "Mostrar menos",
+      "DADO_EXPLICA": "É a mesma automação, escrita do jeito que o sistema guarda. Só leitura.",
+      "DICA_ENSAIO": "Antes de ligar, use “Ensaiar” para ver o que ela faria com um cliente da sua conta.",
+      "SALVOU": "Mudança salva.",
+      "GUARDOU": "Guardada desligada.",
+      "TROUXE": "Pronto. A nova está desligada e a antiga parou."
+    },
+    "CONFIRA": {
+      "QUANDO": "Quando",
+      "SO_SE": "Só se",
+      "FACA": "Faça",
+      "META": "Para quando…",
+      "FREIO": "Freio",
+      "ESCOLHER": "Escolher",
+      "SEM_CONDICAO": "Sempre, sem condição.",
+      "ADICIONAR_CONDICAO": "Pôr uma condição",
+      "PRIMEIRO_PASSO": "Pôr o primeiro passo",
+      "NADA": "Aqui não faz nada.",
+      "INSERIR": "Pôr um passo aqui",
+      "PASSOS_NO_GALHO": "(1 passo) | ({n} passos)",
+      "DECISOR_DUVIDA": "Se a IA ficar em dúvida, o Guia pergunta a alguém da equipe e a automação espera até 2 dias.",
+      "FREIO_MAIS": "e mais 1 cuidado | e mais {n} cuidados"
+    },
+    "GATILHOS": {
+      "FALTA": "Escolha quando ela começa",
+      "CONVERSA_NOVA": "Quando chegar uma conversa nova",
+      "MENSAGEM_RECEBIDA": "Quando o cliente mandar mensagem",
+      "CONVERSA_RESOLVIDA": "Quando o atendimento for encerrado",
+      "CARTAO_ENTROU": "Quando o cartão entrar em “{etapa}”",
+      "CARTAO_PARADO": "Quando o cartão ficar parado 1 dia em “{etapa}” | Quando o cartão ficar parado {n} dias em “{etapa}”",
+      "CAMPO_DATA": "Quando faltar 1 dia para “{campo}” | Quando faltarem {n} dias para “{campo}”",
+      "CARTAO_CRIADO_FORMULARIO": "Quando chegar um cartão do formulário do anúncio"
+    },
+    "CONDICOES": {
+      "CARTAO_NA_ETAPA": "o cartão está aberto e em “{etapa}”",
+      "VALOR_MAIOR": "o valor do cartão é maior que {valor}",
+      "CAIXA": "a conversa chegou pela caixa {caixa}",
+      "FORA_DO_HORARIO": "é fora do horário de atendimento"
+    },
+    "PASSOS": {
+      "MANDAR_MENSAGEM": "Mandar uma mensagem ao cliente",
+      "MANDAR_MODELO": "Mandar o modelo “{modelo}” no WhatsApp",
+      "AVISAR_EQUIPE": "Avisar {para}",
+      "ATRIBUIR_EQUIPE": "Passar o cartão e a conversa para {equipe}",
+      "MOVER_CARTAO": "Mover o cartão para “{etapa}”",
+      "ATUALIZAR_CARTAO": "Guardar no cartão: {campos}",
+      "FECHAR_PERDIDO": "Marcar o cartão como perdido, com o motivo “{motivo}”",
+      "FECHAR_GANHO": "Marcar o cartão como ganho",
+      "ETIQUETAR_CONTATO": "Pôr a etiqueta “{etiqueta}” no contato",
+      "CRIAR_TAREFA": "Criar a tarefa “{titulo}” para {para}",
+      "OFERECER_HORARIOS": "Mandar ao cliente os horários livres da agenda",
+      "EXTRAIR_IA": "Pedir à IA para achar na conversa: {campos}",
+      "DECISOR": "Pedir à IA para decidir: “{pergunta}”",
+      "RESUMIR_IA": "Pedir à IA um resumo da conversa para o responsável",
+      "ESPERAR": "Esperar 1 dia | Esperar {n} dias",
+      "ESPERAR_RESPOSTA": "Esperar o cliente responder, no máximo 1 dia | Esperar o cliente responder, no máximo {n} dias",
+      "SE": "Ver se {condicao}",
+      "PARAR": "Parar aqui"
+    },
+    "CAMINHOS": {
+      "RESPONDEU": "Se respondeu",
+      "VENCEU": "Se passou o prazo sem resposta",
+      "SIM": "Se sim",
+      "NAO": "Se não",
+      "NENHUMA": "Nenhuma se aplica"
+    },
+    "METAS": {
+      "NENHUMA": "Vai até o último passo",
+      "CARTAO_GANHO": "Para quando o cartão for ganho",
+      "CARTAO_PERDIDO": "Para quando o cartão for perdido"
+    },
+    "FREIO": {
+      "NAO_REPETIR": "Não repete para o mesmo cliente por 1 dia | Não repete para o mesmo cliente por {n} dias",
+      "POR_HORA": "No máximo 1 vez por hora | No máximo {n} vezes por hora",
+      "MENSAGEM": "No máximo 1 mensagem automática por conversa a cada minuto | No máximo 1 mensagem automática por conversa a cada {n} minutos",
+      "IA_POR_DIA": "Até 1 pedido à IA por dia | Até {n} pedidos à IA por dia"
+    },
+    "PESSOAS": {
+      "RESPONSAVEL": "o responsável pelo cartão",
+      "DONO": "o dono da conta"
+    },
+    "VARIAVEIS": {
+      "CONTATO_NOME": "Nome do contato",
+      "CARD_VALOR": "Valor do cartão",
+      "CARD_RESPONSAVEL": "Responsável",
+      "OUTRA": "Informação"
+    },
+    "GRUPOS": {
+      "CONVERSA": "Conversa",
+      "CARTAO": "Cartão",
+      "CONTATO": "Contato",
+      "RETORNO": "Retorno",
+      "AGENDA": "Agenda",
+      "IA": "Pedir à IA",
+      "CONTROLE": "Esperar, decidir ou parar",
+      "PLATAFORMA": "Todas as ações da plataforma"
+    },
+    "PLATAFORMA": {
+      "AVANCADA": "Ação avançada",
+      "NOTA_PRIVADA": "Escrever uma nota para a equipe na conversa",
+      "RESOLVER_CONVERSA": "Encerrar o atendimento",
+      "ADIAR_CONVERSA": "Adiar a conversa para amanhã",
+      "PRIORIDADE_ALTA": "Marcar a conversa como urgente",
+      "ATRIBUIR_RODIZIO": "Passar a conversa para alguém do time, em rodízio",
+      "ETIQUETA_CONVERSA": "Pôr uma etiqueta na conversa",
+      "TIRAR_ETIQUETA": "Tirar uma etiqueta da conversa",
+      "CAMPO_CONTATO": "Mudar uma informação do contato",
+      "EMPRESA_CONTATO": "Ligar o contato a uma empresa",
+      "CRIAR_CARTAO": "Criar um cartão no funil",
+      "ARQUIVAR_CARTAO": "Arquivar o cartão",
+      "PRODUTO_CARTAO": "Pôr um produto no cartão",
+      "CRIAR_EVENTO": "Marcar um compromisso na agenda",
+      "CANCELAR_EVENTO": "Cancelar um compromisso da agenda",
+      "MANDAR_EMAIL": "Mandar um e-mail ao cliente",
+      "PESQUISA_SATISFACAO": "Mandar a pesquisa de satisfação",
+      "LINK_PAGAMENTO": "Mandar um link de pagamento"
+    },
+    "SELETOR": {
+      "TITULO": "Escolha o próximo passo",
+      "TEXTO": "Ele entra no lugar do “+” que você tocou.",
+      "BUSCA_ROTULO": "Procurar uma ação",
+      "BUSCA": "Por exemplo: etiqueta, agenda, e-mail",
+      "NADA": "Nada com essas palavras. Tente outras.",
+      "TIPOS": {
+        "MANDAR_MENSAGEM": "Mandar uma mensagem",
+        "MANDAR_MODELO": "Mandar um modelo do WhatsApp",
+        "AVISAR_EQUIPE": "Avisar alguém da equipe",
+        "ATRIBUIR_EQUIPE": "Passar para uma equipe",
+        "MOVER_CARTAO": "Mover o cartão",
+        "ATUALIZAR_CARTAO": "Guardar uma informação no cartão",
+        "FECHAR_CARTAO": "Marcar como ganho ou perdido",
+        "ETIQUETAR_CONTATO": "Pôr uma etiqueta no contato",
+        "CRIAR_TAREFA": "Criar uma tarefa",
+        "OFERECER_HORARIOS": "Oferecer horários da agenda",
+        "EXTRAIR_IA": "Achar informações na conversa",
+        "DECISOR": "Decidir o caminho",
+        "RESUMIR_IA": "Resumir a conversa",
+        "ESPERAR": "Esperar um tempo",
+        "ESPERAR_RESPOSTA": "Esperar o cliente responder",
+        "SE": "Seguir só se…",
+        "PARAR": "Parar",
+        "ACAO_PLATAFORMA": "Ação da plataforma"
+      }
+    },
+    "CAMPOS": {
+      "ETAPA": "Etapa",
+      "MODELO": "Modelo do WhatsApp",
+      "PARA": "Para quem",
+      "EQUIPE": "Equipe",
+      "TITULO": "Nome da tarefa",
+      "MOTIVO": "Motivo",
+      "RESULTADO": "Resultado",
+      "RESULTADO_PERDIDO": "Perdido",
+      "RESULTADO_GANHO": "Ganho",
+      "ETIQUETA": "Etiqueta",
+      "CAMPOS": "O que guardar",
+      "PERGUNTA": "A pergunta para a IA",
+      "DIAS": "Quantos dias",
+      "VALOR": "Valor mínimo, em reais",
+      "CAIXA": "Caixa",
+      "CAMPO": "Campo de data do cartão",
+      "TEXTO": "Mensagem",
+      "CONDICAO": "Seguir só se",
+      "MENSAGEM_DICA": "Para mudar o texto, peça ao Guia. Os pedaços em destaque mudam para cada cliente."
+    },
+    "ALTERAR_PAINEL": {
+      "PASSO": "Alterar o passo",
+      "GATILHO": "Alterar quando começa",
+      "CONDICAO": "Alterar a condição",
+      "META": "Alterar quando para",
+      "FREIO": "Alterar o freio",
+      "TIPO_GATILHO": "Quando começa",
+      "TIPO_META": "Para quando",
+      "META_DICA": "Quando isso acontecer, a automação para no meio, mesmo que falte passo.",
+      "CAMINHOS": "Os caminhos que a IA pode escolher",
+      "CAMINHO_N": "Caminho {n}",
+      "NENHUMA_SEMPRE": "“Nenhuma se aplica” sempre existe. É para quando a IA não tem certeza.",
+      "FREIO_NAO_REPETIR_DIAS": "Não repetir para o mesmo cliente por quantos dias",
+      "FREIO_POR_HORA": "No máximo quantas vezes por hora",
+      "FREIO_MENSAGEM_MINUTOS": "Uma mensagem automática por conversa a cada quantos minutos",
+      "FREIO_IA_POR_DIA": "No máximo quantos pedidos à IA por dia",
+      "SALVAR": "Salvar",
+      "TIRAR": "Tirar"
+    },
+    "ENSAIO": {
+      "EXPLICA": "Escolha um cliente. Mostramos o que a automação faria, passo a passo. Nada é feito de verdade.",
+      "ESCOLHA": "Ensaiar com",
+      "FARIA": "Faria: {frase}",
+      "SEGUIRIA": "Seguiria por: {caminho}",
+      "CELULAR_VAZIO": "Nenhuma mensagem para o cliente neste caminho.",
+      "CELULAR_LEGENDA": "Assim o cliente veria. Nada foi enviado.",
+      "CARTAO_DETALHE": "Em “{etapa}” há {dias} dias, {valor}",
+      "CARTAO_DATA": "{campo}: {data}",
+      "CARTAO_FORMULARIO": "Escreveu no formulário: “{texto}”",
+      "CONVERSA_DETALHE": "Conversa na caixa {caixa}",
+      "NAO_COMECA_VALOR": "Não começaria: o valor é {valor} e precisa passar de {minimo}."
+    },
+    "HISTORICO": {
+      "VAZIO": "Ainda não rodou nenhuma vez.",
+      "LINHA": "{alvo}: {frase}"
+    },
+    "REGISTROS": {
+      "ESPERANDO_RESPOSTA": "Esperando resposta até {ate}",
+      "MANDOU_MODELO": "Mandei o modelo “{modelo}”",
+      "MANDOU_MENSAGEM": "Mandei a mensagem ao cliente",
+      "PULOU_SAIU_DA_ETAPA": "Pulei: o cartão saiu da etapa antes",
+      "NAO_COMECOU_VALOR": "Não comecei: o valor é {valor}, abaixo do mínimo",
+      "PAROU_LOOPING": "Parei para não repetir em looping",
+      "CRIOU_TAREFA": "Criei a tarefa “{titulo}”",
+      "FALHOU_MODELO": "Não consegui mandar: o WhatsApp recusou o modelo",
+      "PAROU_META_GANHO": "Parei: o cartão foi ganho",
+      "PULOU_REPETIR": "Pulei: já mandei para este cliente nos últimos {dias} dias",
+      "AVISOU": "Avisei {pessoa}",
+      "PULOU_TETO_MENSAGEM": "Pulei: a conversa já recebeu uma mensagem automática nos últimos {minutos} minutos",
+      "PAROU_POR_PESSOA": "Parado para este cartão por {pessoa}"
+    },
+    "LIGAR": {
+      "TITULO": "Ligar esta automação?",
+      "CONFIRMA_TUDO": "Ela manda mensagem ao cliente, que não dá para desfazer, e usa a IA por cerca de {custo} por vez.",
+      "CONFIRMA_IA": "Ela usa a IA da sua conta por cerca de {custo} por vez.",
+      "CONFIRMA_MENSAGEM": "Ela manda mensagem ao cliente, e isso não dá para desfazer.",
+      "SIM": "Ligar",
+      "AINDA_NAO": "Ainda não",
+      "BOTAO": "Ligar",
+      "DESLIGADA": "Está desligada. Nada acontece até você ligar.",
+      "FALTA_GATILHO": "Falta escolher quando ela começa.",
+      "FALTA_PASSO": "Falta pôr pelo menos um passo.",
+      "GUARDAR": "Guardar sem ligar",
+      "LIGADA_AVISO": "Ela está trabalhando sozinha.",
+      "NO_MEIO": "1 pessoa está no meio agora | {n} pessoas estão no meio agora",
+      "DESLIGAR": "Desligar",
+      "SO_LEITURA": "Você pode ver esta automação. Para mudar, peça a quem cuida das automações."
+    },
+    "NO_MEIO": {
+      "TITULO": "1 pessoa está no meio. Segue pelo jeito antigo ou para agora? | {n} pessoas estão no meio. Seguem pelo jeito antigo ou param agora?",
+      "TERMINAM": "Terminam no jeito antigo",
+      "TERMINAM_TEXTO": "Quem já começou vai até o fim como estava. Quem entrar agora já pega a mudança.",
+      "PARAM": "Param agora",
+      "PARAM_TEXTO": "Quem está no meio para aqui. Nada mais é feito para essas pessoas.",
+      "SALVAR": "Salvar mudança",
+      "CANCELAR": "Cancelar",
+      "SALVOU_TERMINAM": "Versão {n} salva. Quem estava no meio termina no jeito antigo.",
+      "SALVOU_PARAM": "Versão {n} salva. Quem estava no meio parou."
+    },
+    "TRAZER_DIALOGO": {
+      "TITULO": "Trazer para o novo?",
+      "TEXTO": "Criamos a nova, igual e desligada, e paramos a antiga. Nada é apagado."
+    },
+    "ETAPA": {
+      "TITULO": "Automações desta etapa: {etapa}",
+      "EXPLICA": "O que acontece sozinho com os cartões de “{etapa}”.",
+      "NOVA": "Automação nesta etapa",
+      "GUIA": "Pedir ao Guia",
+      "VAZIA": "Nenhuma automação nesta etapa ainda.",
+      "NAO_DISPARA": "Mover vários cartões de uma vez ou arquivar em lote não faz estas automações rodarem."
+    },
+    "CARTAO": {
+      "TITULO": "Automações deste cartão",
+      "NADA": "Nenhuma automação está cuidando deste cartão agora.",
+      "ESTADO_ESPERANDO_RESPOSTA": "Esperando resposta até {ate}",
+      "ESTADO_ESPERANDO": "Esperando até {ate}",
+      "PARAR": "Parar para este cartão",
+      "PAROU": "Parou para este cartão. O resto continua igual.",
+      "ULTIMAS": "O que aconteceu",
+      "ETAPA": "Etapa",
+      "VALOR": "Valor"
+    },
+    "FUNIL": {
+      "QUAL": "Funil",
+      "FUNIS_DO_CRM": "Funis do CRM",
+      "ETAPA": "Etapa",
+      "GAVETA_ETAPA": "O que este funil faz hoje. Aqui ficam as automações de cada etapa.",
+      "GAVETA_CARTAO": "Como está este cliente agora e o que fazer em seguida.",
+      "SELO": "Automação em andamento"
+    },
+    "JORNADA": {
+      "TITULO": "Jornada",
+      "EXPLICA": "Protótipo com dados de exemplo. Nada aqui é salvo de verdade. Toque numa etapa para ir até ela.",
+      "O_QUE_MUDA": "O que muda em relação a hoje",
+      "COMECAR": {
+        "TITULO": "Começar por uma receita",
+        "VAZIA": {
+          "NOME": "Conta sem automação",
+          "NOTA": "Hoje: herói grande com campo e seis modelos. Agora: uma frase e um botão."
+        },
+        "PORTAS": {
+          "NOME": "Três portas",
+          "NOTA": "Hoje o Guia é a porta principal e o manual fica escondido. Agora: Guia, receitas e do zero, lado a lado, levando ao mesmo editor."
+        },
+        "RECEITAS": {
+          "NOME": "Receitas",
+          "NOTA": "Hoje: seis modelos fixos, só de conversa. Agora: receitas gerais e as do pacote do segmento, já com passos do funil."
+        },
+        "CONFIRA": {
+          "NOME": "Confira",
+          "NOTA": "Hoje o resumo é só leitura e mudar é pedir ao Guia. Agora: lista numerada Quando, Só se, Faça, com “Alterar” em cada item e “+” entre os passos."
+        },
+        "ENSAIAR": {
+          "NOME": "Ensaiar",
+          "NOTA": "Hoje o ensaio diz só se rodaria ou não. Agora: passo a passo, com a mensagem no celular simulado."
+        },
+        "LIGAR": {
+          "NOME": "Ligar",
+          "NOTA": "Hoje liga direto. Agora: se manda ao cliente ou usa a IA, pede confirmação numa frase."
+        },
+        "LISTA": {
+          "NOME": "Lista única",
+          "NOTA": "Hoje há duas listas (Automações e o modo manual) e o funil fica à parte. Agora: tudo numa lista, com a origem e o que aconteceu na semana."
+        }
+      },
+      "RENOVACAO": {
+        "TITULO": "Renovação (receita do pacote Seguros)",
+        "RECEITA": {
+          "NOME": "Receita do pacote",
+          "NOTA": "Hoje não existe receita por segmento. Agora: o pacote traz receitas próprias, separadas das gerais."
+        },
+        "CONFIRA": {
+          "NOME": "Confira com galhos",
+          "NOTA": "Hoje não há espera por resposta nem decisão no meio. Agora: os caminhos aparecem como galhos, com o primeiro nível aberto."
+        },
+        "SELETOR": {
+          "NOME": "Pôr um passo",
+          "NOTA": "Hoje cada motor tem a sua lista escrita à mão. Agora: grupos de passo e todas as ações da plataforma, com busca."
+        },
+        "ALTERAR": {
+          "NOME": "Alterar um passo",
+          "NOTA": "Hoje mudar um passo é refazer no Guia ou no formulário antigo. Agora: “Alterar” abre só os campos daquele passo."
+        },
+        "ENSAIAR": {
+          "NOME": "Ensaiar com um cliente",
+          "NOTA": "Hoje o ensaio não segue caminhos. Agora: mostra por qual caminho o cliente iria."
+        },
+        "LIGAR": {
+          "NOME": "Ligar com mensagem",
+          "NOTA": "Passo que manda ao cliente pede confirmação antes de ligar."
+        }
+      },
+      "LEAD": {
+        "TITULO": "Lead do formulário com IA",
+        "CONFIRA": {
+          "NOME": "Confira",
+          "NOTA": "Hoje a IA só entra como Decisor na etapa do funil. Agora: achar informação, decidir e esperar no mesmo fluxo, com o custo ao lado."
+        },
+        "TUDO": {
+          "NOME": "Mostrar tudo",
+          "NOTA": "Para quem quer mais: abre todos os galhos e todos os cuidados do freio."
+        },
+        "DADO": {
+          "NOME": "Ver como dado",
+          "NOTA": "Novo: a mesma automação como o sistema guarda. Só leitura."
+        },
+        "ENSAIAR": {
+          "NOME": "Ensaiar",
+          "NOTA": "Mostra o caminho que a IA escolheria com este lead de exemplo e a mensagem que sairia."
+        },
+        "LIGAR": {
+          "NOME": "Ligar com IA",
+          "NOTA": "Usa a IA e manda mensagem: a confirmação diz as duas coisas e o custo."
+        }
+      },
+      "ORCAMENTO": {
+        "TITULO": "Orçamento parado, com gente no meio",
+        "CONFIRA": {
+          "NOME": "Ligada",
+          "NOTA": "Hoje a automação de etapa só conta o tempo desde a entrada. Agora: espera a resposta e decide o que fazer."
+        },
+        "HISTORICO": {
+          "NOME": "O que aconteceu",
+          "NOTA": "Hoje não há histórico para quem usa. Agora: uma linha por passo, com o motivo de cada pulo."
+        },
+        "NO_MEIO": {
+          "NOME": "Mudar com gente no meio",
+          "NOTA": "Novo: mudar uma automação ligada pergunta o que acontece com quem já está no meio."
+        }
+      },
+      "FUNIL": {
+        "TITULO": "No funil",
+        "FUNIL": {
+          "NOME": "Quadro do funil",
+          "NOTA": "É o Quadro do CRM de hoje. Nada muda no quadro: o cartão só ganha um selo quando tem automação em andamento."
+        },
+        "ETAPA": {
+          "NOME": "Automações da etapa",
+          "NOTA": "Mesmo caminho de hoje: Configurar › Editar funil › etapa. Onde hoje ficam as ações automáticas da etapa (só três tipos de passo), agora aparece “Automações desta etapa”, com as novas e as antigas, e abre o mesmo editor."
+        },
+        "NOVA": {
+          "NOME": "Nova nesta etapa",
+          "NOTA": "Já abre com “Quando o cartão entrar” nesta etapa."
+        },
+        "ANTIGA": {
+          "NOME": "Etapa com uma antiga",
+          "NOTA": "As automações de etapa de hoje aparecem com o selo e o botão “Trazer para o novo”."
+        },
+        "CARTAO": {
+          "NOME": "Automações do cartão",
+          "NOTA": "Novo: ao abrir o cartão, a gaveta de hoje ganha “Automações deste cartão”, com o que está em andamento, até quando espera e “Parar para este cartão”."
+        }
+      },
+      "GUIA": {
+        "TITULO": "Conte com suas palavras",
+        "CONTE": {
+          "NOME": "Contar",
+          "NOTA": "Igual a hoje: o mesmo campo do Guia."
+        },
+        "MONTOU": {
+          "NOME": "O Guia montou",
+          "NOTA": "Hoje o Guia cria regra do motor antigo. Agora: monta no motor novo, com passos do funil e da IA."
+        },
+        "CONFIRA": {
+          "NOME": "Conferir",
+          "NOTA": "O que o Guia montou cai no mesmo editor, para conferir antes de ligar."
+        }
+      },
+      "ANTIGA": {
+        "TITULO": "Trazer do jeito antigo",
+        "ABRIR": {
+          "NOME": "Abrir uma antiga",
+          "NOTA": "As regras de hoje aparecem na mesma lista, só para ver."
+        },
+        "TRAZER": {
+          "NOME": "Trazer para o novo",
+          "NOTA": "Cria a nova desligada e para a antiga. Nada é apagado."
+        }
+      }
+    }
   }
 }
