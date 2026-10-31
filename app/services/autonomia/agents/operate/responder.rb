@@ -262,7 +262,7 @@ module Autonomia
         # ROLLBACK e descartaria a mensagem recém-postada. Computa-se o Result numa variável.
         def classic_deliver(result)
           outcome = @conversation.with_lock do
-            parada_na_hora_de_postar || Result.replied(post_reply!(result.reply, result.interacao))
+            com_os_cartoes(parada_na_hora_de_postar || Result.replied(post_reply!(result.reply, result.interacao)))
           end
 
           # Fase F (ADITIVO/best-effort): só registra quando uma resposta NOVA foi postada
@@ -275,6 +275,19 @@ module Autonomia
             )
           end
           outcome
+        end
+
+        # #1479 F3: o mapa e o contato marcados no turno saem depois do texto, no mesmo lock, quando o turno respondeu —
+        # também quando a guarda diz que um settle anterior já respondeu (o cartão que faltou sai; o que saiu não repete).
+        # -> o mesmo Result.
+        def com_os_cartoes(outcome)
+          cartoes_do_turno.postar! if outcome.status == :replied
+          outcome
+        end
+
+        def cartoes_do_turno
+          @cartoes_do_turno ||= ::Autonomia::Agents::Operate::CartoesDoTurno.new(conversation: @conversation, agent_inbox: @agent_inbox,
+                                                                                 agent: @agent, delivery: @delivery)
         end
 
         # As guardas da hora de postar, na ordem de sempre, chamadas DENTRO do lock (estado fresco). -> o Result de quem
@@ -300,8 +313,8 @@ module Autonomia
           audio = synthesize_audio(result.reply) # fora do lock; nil em falha
           outcome = @conversation.with_lock do
             # Sem áudio (falha na síntese) -> fallback texto.
-            parada_na_hora_de_postar ||
-              Result.replied(audio.present? ? post_voz!(audio, result.interacao) : post_reply!(result.reply, result.interacao))
+            com_os_cartoes(parada_na_hora_de_postar ||
+              Result.replied(audio.present? ? post_voz!(audio, result.interacao) : post_reply!(result.reply, result.interacao)))
           end
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result,
@@ -368,13 +381,16 @@ module Autonomia
           # #1479: a interação vai no último pedaço (as opções, num pedaço a mais).
           chunks = ::Autonomia::Agents::Interacao.nos_pedacos(::Autonomia::Agents::Operate::ReplyChunker.call(result.reply),
                                                               result.interacao, conversation: @conversation)
+          # Nada a quebrar (ex.: resposta só com invisíveis) -> caminho clássico (paridade com OFF),
+          # nunca engole a resposta silenciosamente.
+          return classic_deliver(result) if chunks.empty?
+
+          # #1479 F3: o mapa e o contato do turno, um pedaço cada, depois de todos os da resposta e da interação.
+          chunks += cartoes_do_turno.pedacos
           # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
           # antes de publicar, para não se intercalar no meio da frase que o agente ainda está
           # "digitando" (a cadeia pode durar até 90s).
           @expected_chunks = chunks.length
-          # Nada a quebrar (ex.: resposta só com invisíveis) -> caminho clássico (paridade com OFF),
-          # nunca engole a resposta silenciosamente.
-          return classic_deliver(result) if chunks.empty?
 
           passar_o_turno_a_cadeia
           ::Autonomia::Agents::Operate::TypingIndicator.new(conversation: @conversation, agent_inbox: @agent_inbox).on

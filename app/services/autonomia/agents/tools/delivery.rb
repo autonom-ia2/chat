@@ -94,4 +94,17 @@ class Autonomia::Agents::Tools::Delivery
   def registrar_resultado(dados)
     @resultado_do_turno = @resultado_do_turno ? @resultado_do_turno + dados : dados
   end
+
+  # O MAPA E O CARTÃO DE CONTATO DO TURNO (#1479 F3): `enviar_localizacao` e `enviar_contato` marcam aqui, e o Responder
+  # manda cada um numa mensagem própria depois do texto (`Operate::CartoesDoTurno`). Idempotente pelo tipo e pela chave:
+  # o modelo que chama duas vezes no turno marca um cartão só. -> { 'tipo', 'chave', 'rich_message' }
+  def marcar_cartao(cartao)
+    @cartoes ||= {}
+    @cartoes["#{cartao['tipo']}:#{cartao['chave']}"] ||= cartao
+  end
+
+  # Os cartões marcados no turno, na ordem em que foram marcados.
+  def cartoes
+    @cartoes.to_h.values
+  end
 end

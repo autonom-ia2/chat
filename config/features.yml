@@ -1086,3 +1086,27 @@
   display_name: Agentes › pedir a localização do cliente
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: ferramentas geridas pela conta (#1430, tema 9 do épico #1424). Ligada: o administrador da conta e quem tem a
+# chave `autonomia_tools_manage` (protegida, só o administrador entrega) criam, editam, testam, ligam e apagam as
+# ferramentas HTTP dos agentes. Desligada: como antes, só a equipe da plataforma. Sem migration. Rollback: desligar a
+# flag na conta. feature_flags_ext_2, posição 20 (valor 524288, 1 << 19), reservada pela Orquestração em 31/10: entra
+# depois de ia_previa_de_link (#1775, 18) e agentes_pedir_localizacao (#1479, 19). Nasce ligada no piloto (contas 1,
+# 16 e 18), com OK do Rodrigo.
+- name: agente_ferramentas_delegadas
+  display_name: Agentes › ferramentas geridas pela conta
+  enabled: false
+  column: feature_flags_ext_2
+
+# Agentes: o agente manda o mapa e o cartão de contato da página de agendamento (#1479 F3, épico #1424). Ligada (com a
+# Fase 2): o agente que tem página de agendamento ganha, sem configuração, `enviar_localizacao` (o mapa de um local
+# presencial da página, quando o endereço já tem coordenada) e `enviar_contato` (o cartão com o telefone de contato da
+# página); o cartão sai numa mensagem própria, logo depois da resposta. O endereço novo ou mudado da página é
+# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. Desligada: nada muda, nem
+# o catálogo nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
+# agente_ferramentas_delegadas: posição 21 (valor 1048576, 1 << 20), dada pela Orquestração em 31/10. Nasce ligada no
+# piloto (contas 1, 16 e 18).
+- name: agentes_enviar_local_e_contato
+  display_name: Agentes › enviar o mapa e o contato da página
+  enabled: false
+  column: feature_flags_ext_2
