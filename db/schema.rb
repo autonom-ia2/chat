@@ -558,10 +558,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.jsonb "response_mapping", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "timeout_seconds", default: 30, null: false
     t.index ["account_id", "enabled"], name: "index_autonomia_agent_tools_on_account_id_and_enabled"
     t.index ["account_id"], name: "index_autonomia_agent_tools_on_account_id"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_tools_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_tools_on_autonomia_agent_id"
+    t.check_constraint "timeout_seconds > 0", name: "autonomia_agent_tools_timeout_seconds"
   end
 
   create_table "autonomia_agents", force: :cascade do |t|
