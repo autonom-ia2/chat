@@ -63,6 +63,8 @@
 5. **F3.5** Conversa marcada como Spam não roda nenhum passo.
 6. **F3.6** Erro permanente (ex.: etiqueta apagada) para aquele cliente com motivo claro; erro passageiro tenta 3 vezes.
 7. **F3.7** Quem ligou perdeu acesso à caixa: a automação pausa e aparece “Assumir e religar”.
+8. **F3.8** A automação cria e altera configuração da conta (etiqueta, atributo do card, contato, empresa ou conversa, etapa, atribuição, agente na caixa). Cada mudança aparece no histórico e pode ser desfeita, como no Guia.
+9. **F3.9** Apagar funil, etapa, caixa, agente, etiqueta ou atributo não vira passo: fica só no Guia, com confirmação.
 
 **Exemplo.** Conversa resolvida numa sexta. No sábado ela ganha a etiqueta “pós-venda” e entra no funil de pós-venda, sem ninguém clicar.
 

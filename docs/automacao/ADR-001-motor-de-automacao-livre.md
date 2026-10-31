@@ -122,6 +122,7 @@ Variáveis são valores estruturados (`{"$valor":"card.valor"}`), não Liquid. O
 | D10 | Edição com gente no meio | Por padrão, quem está no meio termina na versão antiga. Passo sem volta alterado pede OK de novo. |
 | D11 | Flags | Uma por fase (motor/ações, card, IA, editor), nascendo ligadas no piloto 1, 16 e 18. O bit é dado pela Orquestração Deploy. |
 | D12 | Motores antigos | A conversão é obrigatória, conta a conta, com OK. O antigo é desligado, nunca apagado. Depois de um prazo, fecha a criação nova nos motores antigos (a API é preservada). |
+| D13 | Configuração da conta | Decidido em 31/10: criar e alterar configuração (etiqueta, atributo, etapa, atribuição, agente na caixa) vira passo, com histórico e desfazer. Apagar estrutura (funil, etapa, caixa, agente, etiqueta, atributo) fica só no Guia, com confirmação: a automação roda sem ninguém olhando, e um erro de montagem que apaga repetidamente é defeito, não uso. |
 
 **Também:**
 - O anti-loop vive numa cadeia própria do fork, fora do `Current`, para sobreviver aos `Current.reset`. Os motores ignoram o que o outro fez.
