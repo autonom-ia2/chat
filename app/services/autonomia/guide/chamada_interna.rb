@@ -16,7 +16,7 @@
 class Autonomia::Guide::ChamadaInterna
   Resposta = Struct.new(:codigo, :corpo, keyword_init: true)
 
-  CAMPOS_DO_CURRENT = %i[user account account_user contact inbox].freeze
+  CAMPOS_DO_CURRENT = %i[user account account_user contact inbox executed_by].freeze
 
   def initialize(user:)
     @user = user
@@ -24,6 +24,9 @@ class Autonomia::Guide::ChamadaInterna
 
   def chamar(metodo, caminho, corpo: nil, filtros: {})
     preservado = estado_do_current
+    # O pedido de dentro age como a pessoa do token (D1 do #2414): quem chamou por fora (uma regra, uma automação)
+    # não pode assinar o que ela fez. Volta no `ensure`, junto com o resto.
+    ::Current.executed_by = nil
     status, _cabecalhos, corpo_resposta = ::Rails.application.call(ambiente(metodo, caminho, corpo, filtros))
 
     Resposta.new(codigo: status.to_s, corpo: ler(corpo_resposta))
