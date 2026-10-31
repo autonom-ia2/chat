@@ -48,9 +48,30 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect(pedidos.last[:instructions]).not_to include(Autonomia::Agents::Interacao::PedidoDeLocalizacao::INSTRUCAO)
   end
 
-  it 'a Lia (insurance_quote) não recebe o pedido nem com a flag' do
+  it 'sem a flag, o tipo devolvido fora do schema não vira pedido' do
+    modelo_responde(pede_localizacao)
+    expect(atender.interacao).to be_nil
+  end
+
+  it 'caixa que não é de WhatsApp (API comum): o pedido de localização não é oferecido, nem com a flag' do
+    account.enable_features!('agentes_pedir_localizacao')
+    api = create(:channel_api, account: account)
+    conversa = create(:conversation, account: account, inbox: api.inbox)
+    vinculo = Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: api.inbox, account: account, agent_bot: create(:agent_bot, account: account))
+    entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversa, agent_inbox: vinculo, origin_message_id: nil)
+    modelo_responde(pede_localizacao)
+    resultado = described_class.new(agent: agent, query: 'oi', trust_instruction: true, delivery: entrega).answer
+    expect(pedidos.last[:schema]).to equal(Autonomia::Agents::PromptBuilder::ANSWER_SCHEMA_COM_INTERACAO)
+    expect(resultado.interacao).to be_nil
+  end
+
+  it 'a Lia (insurance_quote), ponta a ponta com a flag: nem o schema nem a regra do pedido' do
     account.enable_features!('agentes_pedir_localizacao')
     lia = criar_principal(account, agent_type: 'insurance_quote')
-    expect(Autonomia::Agents::Interacao.disponivel?(agent: lia, delivery: delivery, audience: :customer)).to be(false)
+    modelo_responde(pede_localizacao)
+    resultado = described_class.new(agent: lia, query: 'oi', trust_instruction: true, delivery: delivery).answer
+    expect(pedidos.last[:schema]).not_to eq(Autonomia::Agents::PromptBuilder::ANSWER_SCHEMA_COM_LOCALIZACAO)
+    expect(pedidos.last[:instructions]).not_to include(Autonomia::Agents::Interacao::PedidoDeLocalizacao::INSTRUCAO)
+    expect(resultado.interacao).to be_nil
   end
 end

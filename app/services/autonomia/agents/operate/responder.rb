@@ -801,7 +801,7 @@ module Autonomia
           return @contexto_da_localizacao if defined?(@contexto_da_localizacao)
 
           @contexto_da_localizacao = ::Autonomia::Agents::Interacao::LocalizacaoRecebida.contexto(
-            conversation: @conversation, agent: @agent, recebidas: current_turn_incoming, robos: robos_do_agente
+            conversation: @conversation, agent: @agent, recebidas: current_turn_incoming, robos: -> { robos_do_agente }
           )
         end
 
@@ -902,7 +902,8 @@ module Autonomia
           return [text, {}] if interacao.nil?
 
           final = ::Autonomia::Agents::Interacao.mensagem(interacao, texto: text, conversation: @conversation)
-          [final[:content], { RichMessages::KEY => final[:rich_message] }.compact]
+          marca = ::Autonomia::Agents::Interacao::PedidoDeLocalizacao.marca(interacao)
+          [final[:content], { RichMessages::KEY => final[:rich_message] }.compact.merge(marca)]
         end
       end
     end

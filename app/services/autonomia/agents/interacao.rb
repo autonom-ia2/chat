@@ -79,15 +79,15 @@ module Autonomia::Agents::Interacao
 
   # A interação pedida pelo modelo, com chaves em texto e só os campos do tipo; nil quando não pediu, quando o tipo
   # não existe ou quando o link não é http(s) com host IGUAL a um dos `enderecos` do dono (`Enderecos.dos_textos`).
-  # O link recusado não sai nem em texto: a resposta segue sem ele. O pedido de localização sem `pergunta` também não
-  # sai (o botão do WhatsApp precisa de texto). Quem oferece o tipo `localizacao` é o schema (`SCHEMA_COM_LOCALIZACAO`).
-  def do_modelo(valor, enderecos:)
+  # O link recusado não sai nem em texto: a resposta segue sem ele. O pedido de localização só vale com `localizacao:`
+  # (o turno o ofereceu, `PedidoDeLocalizacao.no_turno?`) e com `pergunta` (o botão do WhatsApp precisa de texto).
+  def do_modelo(valor, enderecos:, localizacao: false)
     return unless valor.is_a?(Hash)
 
     case valor['tipo']
     when 'opcoes' then opcoes(valor)
     when 'link' then link(valor['link'], enderecos)
-    when 'localizacao' then { 'tipo' => 'localizacao', 'pergunta' => valor['pergunta'].strip } if valor['pergunta'].to_s.strip.present?
+    when 'localizacao' then PedidoDeLocalizacao.do_modelo(valor) if localizacao
     end
   end
 

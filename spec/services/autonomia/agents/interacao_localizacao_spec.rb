@@ -12,7 +12,7 @@ RSpec.describe Autonomia::Agents::Interacao do
   let(:pedido) do
     { 'tipo' => 'localizacao', 'header' => nil, 'pergunta' => 'Pode me mandar sua localização?', 'opcoes' => [], 'botao' => nil, 'link' => nil }
   end
-  let(:localizacao) { described_class.do_modelo(pedido, enderecos: Set.new) }
+  let(:localizacao) { described_class.do_modelo(pedido, enderecos: Set.new, localizacao: true) }
 
   def janela_aberta(conversa = conversation)
     create(:message, message_type: :incoming, content: 'oi', conversation: conversa, inbox: conversa.inbox, account: account)
@@ -24,8 +24,29 @@ RSpec.describe Autonomia::Agents::Interacao do
     end
 
     it 'sem pergunta não há pedido (o botão do WhatsApp precisa de um texto)' do
-      expect(described_class.do_modelo(pedido.merge('pergunta' => ' '), enderecos: Set.new)).to be_nil
-      expect(described_class.do_modelo(pedido.merge('pergunta' => nil), enderecos: Set.new)).to be_nil
+      expect(described_class.do_modelo(pedido.merge('pergunta' => ' '), enderecos: Set.new, localizacao: true)).to be_nil
+      expect(described_class.do_modelo(pedido.merge('pergunta' => nil), enderecos: Set.new, localizacao: true)).to be_nil
+    end
+
+    it 'turno que não ofereceu o pedido: nil, mesmo que o modelo o devolva fora do schema' do
+      expect(described_class.do_modelo(pedido, enderecos: Set.new)).to be_nil
+    end
+  end
+
+  describe 'PedidoDeLocalizacao.marca' do
+    it 'o pedido de localização leva a marca própria; opções, link e nenhuma interação, não' do
+      marca = described_class::PedidoDeLocalizacao.method(:marca)
+      expect(marca.call(localizacao)).to eq('autonomia_pedido_localizacao' => true)
+      expect([marca.call({ 'tipo' => 'opcoes' }), marca.call(nil)]).to eq([{}, {}])
+    end
+  end
+
+  describe 'PedidoDeLocalizacao.no_turno?' do
+    it 'só em caixa de WhatsApp: a oficial e a WAHA sim; outra caixa API e Instagram/Telegram, não' do
+      api = create(:channel_api, account: account)
+      waha = create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' })
+      conversas = [inbox, waha.inbox, api.inbox].map { |caixa| create(:conversation, account: account, inbox: caixa) }
+      expect(conversas.map { |conversa| described_class::PedidoDeLocalizacao.no_turno?(conversa) }).to eq([true, true, false])
     end
   end
 
@@ -87,6 +108,14 @@ RSpec.describe Autonomia::Agents::Interacao do
   end
 
   describe '.nos_pedacos' do
+    it 'último pedaço que já termina com a pergunta leva o pedido nele, sem pedaço a mais' do
+      janela_aberta
+      pedacos = [{ 'text' => 'Certo! Pode me mandar sua localização?', 'type' => 'text', 'delay_ms' => 0 }]
+      final = described_class.nos_pedacos(pedacos, localizacao, conversation: conversation)
+      expect(final.size).to eq(1)
+      expect(final.last).to include('corpo' => 'Certo! Pode me mandar sua localização?', 'rich_message' => { 'type' => 'location_request' })
+    end
+
     it 'a pergunta vai num pedaço a mais, com o pedido de localização' do
       janela_aberta
       pedacos = [{ 'text' => 'Temos unidades.', 'type' => 'text', 'delay_ms' => 0 }]
