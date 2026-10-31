@@ -79,8 +79,6 @@ export const MODELOS_WHATSAPP = [
 
 const FREIO_PADRAO = {
   nao_repetir_dias: 7,
-  por_hora: 30,
-  mensagem_minutos: 60,
 };
 
 const RECEITA_RENOVACAO = {
@@ -287,7 +285,7 @@ const RECEITA_LEAD = {
     },
   ],
   meta: null,
-  freio: { ...FREIO_PADRAO, ia_por_dia: 1000 },
+  freio: FREIO_PADRAO,
 };
 
 const RECEITA_AGRADECER = {

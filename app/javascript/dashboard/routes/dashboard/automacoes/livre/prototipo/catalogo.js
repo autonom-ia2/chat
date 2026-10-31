@@ -242,6 +242,4 @@ export const PADROES_DE_CONDICAO = {
 
 export const FREIO_PADRAO = {
   nao_repetir_dias: 7,
-  por_hora: 30,
-  mensagem_minutos: 60,
 };

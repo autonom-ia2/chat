@@ -133,12 +133,7 @@ export const fraseDaMeta = (meta, t) =>
 
 // Só as linhas preenchidas, na ordem em que a pessoa lê.
 export const frasesDoFreio = (freio, t) =>
-  [
-    ['nao_repetir_dias', 'NAO_REPETIR'],
-    ['por_hora', 'POR_HORA'],
-    ['mensagem_minutos', 'MENSAGEM'],
-    ['ia_por_dia', 'IA_POR_DIA'],
-  ]
+  [['nao_repetir_dias', 'NAO_REPETIR']]
     .filter(([campo]) => freio?.[campo])
     .map(([campo, chave]) =>
       t(`${P}.FREIO.${chave}`, { n: freio[campo] }, freio[campo])

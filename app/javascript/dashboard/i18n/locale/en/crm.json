@@ -7841,7 +7841,7 @@
       "SO_SE": "Only if",
       "FACA": "Do",
       "META": "Stop when…",
-      "FREIO": "Brake",
+      "FREIO": "Repetition",
       "ESCOLHER": "Choose",
       "SEM_CONDICAO": "Always, no condition.",
       "ADICIONAR_CONDICAO": "Add a condition",
@@ -7901,10 +7901,7 @@
       "CARTAO_PERDIDO": "Stop when the card is lost"
     },
     "FREIO": {
-      "NAO_REPETIR": "Doesn't repeat for the same customer for 1 day | Doesn't repeat for the same customer for {n} days",
-      "POR_HORA": "At most once an hour | At most {n} times an hour",
-      "MENSAGEM": "At most 1 automatic message per conversation every minute | At most 1 automatic message per conversation every {n} minutes",
-      "IA_POR_DIA": "Up to 1 AI request a day | Up to {n} AI requests a day"
+      "NAO_REPETIR": "Doesn't repeat for the same customer for 1 day | Doesn't repeat for the same customer for {n} days"
     },
     "PESSOAS": {
       "RESPONSAVEL": "the card owner",
@@ -7999,7 +7996,7 @@
       "GATILHO": "Change when it starts",
       "CONDICAO": "Change the condition",
       "META": "Change when it stops",
-      "FREIO": "Change the brake",
+      "FREIO": "Change the repetition",
       "TIPO_GATILHO": "When it starts",
       "TIPO_META": "Stop when",
       "META_DICA": "When this happens, the automation stops midway, even if steps are left.",
@@ -8007,9 +8004,6 @@
       "CAMINHO_N": "Path {n}",
       "NENHUMA_SEMPRE": "“None applies” always exists. It's for when the AI isn't sure.",
       "FREIO_NAO_REPETIR_DIAS": "Don't repeat for the same customer for how many days",
-      "FREIO_POR_HORA": "At most how many times an hour",
-      "FREIO_MENSAGEM_MINUTOS": "One automatic message per conversation every how many minutes",
-      "FREIO_IA_POR_DIA": "At most how many AI requests a day",
       "SALVAR": "Save",
       "TIRAR": "Remove"
     },
@@ -8174,7 +8168,7 @@
         },
         "TUDO": {
           "NOME": "Show everything",
-          "NOTA": "For those who want more: opens every branch and every brake safeguard."
+          "NOTA": "For those who want more: opens every branch and the repetition rule."
         },
         "DADO": {
           "NOME": "View as data",

@@ -53,7 +53,7 @@ Um **motor novo, pequeno, do fork**, `Autonomia::Automacao`, em arquivos própri
 - **Passos nativos**, para o que o catálogo não faz bem:
   - esperar e esperar até, com prazo e caminho "se vencer";
   - se e parar;
-  - mensagem ao cliente: sai como "Automação" e conta no teto por conversa;
+  - mensagem ao cliente: sai como "Automação";
   - avisar a equipe;
   - Decisor com N caminhos mais "nenhuma se aplica";
   - IA de texto, extração e resumo pela chave da conta;
@@ -72,7 +72,7 @@ Um **motor novo, pequeno, do fork**, `Autonomia::Automacao`, em arquivos própri
 - Passo sem frase aparece como "Ação avançada" e nunca some.
 
 ### 2.3 Dados (uma migration, sozinha na fila)
-- `autonomia_automacoes`: conta, nome, ativa (padrão `false`), origem (guia, manual, receita ou conversão), versão ativa, quem ligou, tetos.
+- `autonomia_automacoes`: conta, nome, ativa (padrão `false`), origem (guia, manual, receita ou conversão), versão ativa, quem ligou.
 - `autonomia_automacao_versoes`:
   - receita em jsonb, validada por JSON Schema;
   - digest e autor;
@@ -88,7 +88,7 @@ Variáveis são valores estruturados (`{"$valor":"card.valor"}`), não Liquid. O
 1. **Escuta:** prepend no despacho assíncrono, com um gate barato: "há automação ligada para esse gatilho nesta conta?" (cache por conta).
 2. **Partida:**
    - acha o alvo e as pontes: card, conversa principal, contato;
-   - confere filtros, Spam, freio por hora, "não repetir por N dias", acesso de quem ligou e profundidade.
+   - confere filtros, Spam, "não repetir por N dias" (quando o cliente escolhe), acesso de quem ligou e profundidade.
 3. **Avançar:** do cursor até uma espera, um Decisor ou o fim, gravando um registro por passo.
 4. **Varredura:**
    - a cada minuto, com trava atômica em lote, acorda quem espera;
@@ -115,9 +115,9 @@ Variáveis são valores estruturados (`{"$valor":"card.valor"}`), não Liquid. O
 | D2/D4 | Quem monta | `automation_manage` monta e liga, no Guia e no manual. Gatilho ou passo de funil exige também `crm_manage_pipelines` (EE). |
 | D3 | O que vira passo | Allowlist por recurso, "fora" como padrão, o CI cobra a classificação. |
 | D5 | Caixas | Quem não é admin só automatiza as caixas de que é membro. O resto é pulado com motivo. |
-| D6 | Cascata | Automações diferentes encadeiam até a profundidade 3, contada nos três motores, com teto por hora. Nunca a si mesma. |
+| D6 | Cascata | Automações diferentes encadeiam até a profundidade 3, contada nos três motores. Nunca a si mesma. É proteção contra laço infinito por defeito, não limite de uso. |
 | D7 | Desfazer | A execução não entra no desfazer do Guia. O histórico é a trilha. Desligar sempre funciona. |
-| D8 | IA na chave do cliente | Teto padrão de 1.000 chamadas/dia por automação e 10.000/dia por conta, ajustável, com custo visível no passo. O Decisor segue no limite atual. |
+| D8 | IA na chave do cliente | Sem teto de uso (regra de 31/10, abaixo). O custo fica visível no passo e no histórico. |
 | D9 | Autor da mensagem | "Automação", nunca a pessoa. |
 | D10 | Edição com gente no meio | Por padrão, quem está no meio termina na versão antiga. Passo sem volta alterado pede OK de novo. |
 | D11 | Flags | Uma por fase (motor/ações, card, IA, editor), nascendo ligadas no piloto 1, 16 e 18. O bit é dado pela Orquestração Deploy. |
@@ -125,7 +125,7 @@ Variáveis são valores estruturados (`{"$valor":"card.valor"}`), não Liquid. O
 
 **Também:**
 - O anti-loop vive numa cadeia própria do fork, fora do `Current`, para sobreviver aos `Current.reset`. Os motores ignoram o que o outro fez.
-- Há um teto de 1 mensagem automática por conversa a cada X minutos, somando todas as automações.
+- **Sem freio no uso (Rodrigo, 31/10/2026):** o cliente paga e usa quanto quiser. Nenhum teto de mensagens por conversa, de execuções por hora ou de chamadas de IA. Ficam só as proteções contra defeito: anti-loop (D6), Spam e falha que não se repete.
 - Passo sem volta leva selo na tela e confirmação ao ligar.
 
 ## 4. Alternativas consideradas
@@ -141,11 +141,11 @@ Variáveis são valores estruturados (`{"$valor":"card.valor"}`), não Liquid. O
 | F0 | Este ADR + jornada navegável em tela real, com 3 exemplos, aprovada pelo Rodrigo | não |
 | F1 | Anti-loop em cadeia própria, `executed_by` preservado na `ChamadaInterna`, profundidade comum, porteiro do Guia por `automation_manage` (PR de auth), upsert de card pelo Mover | não |
 | F2 | As 4 tabelas | sim |
-| F3 | Motor + passos esperar/se/parar + passo de ação do catálogo + allowlist + CI + freios + Spam | não |
-| F4 | Passos mensagem e avisar + teto por conversa | não |
+| F3 | Motor + passos esperar/se/parar + passo de ação do catálogo + allowlist + CI + anti-loop + Spam | não |
+| F4 | Passos mensagem e avisar | não |
 | F5 | Catálogo de passos, editor gerado, lista única, ensaio, histórico, ferramenta do Guia, receitas, Guia e Central | não |
 | F6 | Gatilhos de card, tempo, retorno, painéis da etapa e do card, receitas por pacote | não |
-| F7 | IA como passo (Decisor com N caminhos, extrator, texto, resumo, tetos), com eval com orçamento | não |
+| F7 | IA como passo (Decisor com N caminhos, extrator, texto, resumo, custo visível), com eval com orçamento | não |
 | F8 | Recorrente, falha de entrega, troca de responsável e de time, reunião, webhook de saída | não |
 | F9 | Conversor dos motores antigos | não (escrita por script com backup) |
 
@@ -153,7 +153,7 @@ Variáveis são valores estruturados (`{"$valor":"card.valor"}`), não Liquid. O
 
 1. A perda de `executed_by` na `ChamadaInterna` ainda não foi testada. A F1 começa por um spec ponta a ponta.
 2. Abrir o emissor do card aumenta o volume da fila `critical`. Medir no piloto.
-3. Três motores mais as IAs do CRM convivendo trazem risco de mensagem dupla. As proteções são o teto por conversa, a profundidade comum e a conversão com prazo.
+3. Três motores mais as IAs do CRM convivendo trazem risco de mensagem dupla. As proteções são a profundidade comum, o histórico que mostra quem mandou cada mensagem e a conversão com prazo. Não há teto de envio: o cliente decide quanto usa.
 4. "Quem ligou" pode parar uma automação em silêncio. O aviso vai pelo canal de avisos do Guia, com desligamento automático no 2º erro.
 5. Uma classificação errada no yml libera ação perigosa. Por isso "fora" é o padrão e a revisão é recurso a recurso.
 6. Enviar modelo de WhatsApp fora do follow-up ainda não foi confirmado. A saída alternativa é criar o retorno com envio automático, um caminho já validado.

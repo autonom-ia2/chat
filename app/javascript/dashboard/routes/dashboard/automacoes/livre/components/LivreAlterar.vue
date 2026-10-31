@@ -28,12 +28,7 @@ const idTipo = useId();
 const alvo = ref(null);
 const rascunho = ref(null);
 
-const CAMPOS_DO_FREIO = [
-  'nao_repetir_dias',
-  'por_hora',
-  'mensagem_minutos',
-  'ia_por_dia',
-];
+const CAMPOS_DO_FREIO = ['nao_repetir_dias'];
 
 const campos = computed(() => {
   if (!alvo.value) return [];

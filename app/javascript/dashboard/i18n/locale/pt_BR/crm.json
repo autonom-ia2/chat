@@ -7842,7 +7842,7 @@
       "SO_SE": "Só se",
       "FACA": "Faça",
       "META": "Para quando…",
-      "FREIO": "Freio",
+      "FREIO": "Repetição",
       "ESCOLHER": "Escolher",
       "SEM_CONDICAO": "Sempre, sem condição.",
       "ADICIONAR_CONDICAO": "Pôr uma condição",
@@ -7902,10 +7902,7 @@
       "CARTAO_PERDIDO": "Para quando o cartão for perdido"
     },
     "FREIO": {
-      "NAO_REPETIR": "Não repete para o mesmo cliente por 1 dia | Não repete para o mesmo cliente por {n} dias",
-      "POR_HORA": "No máximo 1 vez por hora | No máximo {n} vezes por hora",
-      "MENSAGEM": "No máximo 1 mensagem automática por conversa a cada minuto | No máximo 1 mensagem automática por conversa a cada {n} minutos",
-      "IA_POR_DIA": "Até 1 pedido à IA por dia | Até {n} pedidos à IA por dia"
+      "NAO_REPETIR": "Não repete para o mesmo cliente por 1 dia | Não repete para o mesmo cliente por {n} dias"
     },
     "PESSOAS": {
       "RESPONSAVEL": "o responsável pelo cartão",
@@ -8000,7 +7997,7 @@
       "GATILHO": "Alterar quando começa",
       "CONDICAO": "Alterar a condição",
       "META": "Alterar quando para",
-      "FREIO": "Alterar o freio",
+      "FREIO": "Alterar a repetição",
       "TIPO_GATILHO": "Quando começa",
       "TIPO_META": "Para quando",
       "META_DICA": "Quando isso acontecer, a automação para no meio, mesmo que falte passo.",
@@ -8008,9 +8005,6 @@
       "CAMINHO_N": "Caminho {n}",
       "NENHUMA_SEMPRE": "“Nenhuma se aplica” sempre existe. É para quando a IA não tem certeza.",
       "FREIO_NAO_REPETIR_DIAS": "Não repetir para o mesmo cliente por quantos dias",
-      "FREIO_POR_HORA": "No máximo quantas vezes por hora",
-      "FREIO_MENSAGEM_MINUTOS": "Uma mensagem automática por conversa a cada quantos minutos",
-      "FREIO_IA_POR_DIA": "No máximo quantos pedidos à IA por dia",
       "SALVAR": "Salvar",
       "TIRAR": "Tirar"
     },
@@ -8175,7 +8169,7 @@
         },
         "TUDO": {
           "NOME": "Mostrar tudo",
-          "NOTA": "Para quem quer mais: abre todos os galhos e todos os cuidados do freio."
+          "NOTA": "Para quem quer mais: abre todos os galhos e a regra de repetição."
         },
         "DADO": {
           "NOME": "Ver como dado",
