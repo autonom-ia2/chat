@@ -34,7 +34,7 @@ volta pelo texto**. Onde a adivinhação falha, o pedaço perde o contexto.
 | DOCX | sim | 3 | XML, parágrafo e tabela | estilos de título ignorados | linhas juntam no parágrafo | — | **4** | estilo Título → seção; parágrafo separado; tabela com cabeçalho | P | F1 |
 | DOC (antigo) | **não** | — | — | — | — | — | — | fora (pedir DOCX/PDF) | — | — |
 | JSON | sim | 0 | 1 objeto = 1 linha | — | objeto filho perde o pai | — | **6** | levar o nome do pai ao objeto filho | P | F1 |
-| MD | sim | 12 (9+3), corte antigo | tira `#`, `*`, `_`, links | **apagados** | cabeçalho à parte | — | **2** | manter `#` como seção; não apagar `_`; tabela com cabeçalho; recortar as 12 bases | P | F1 |
+| MD | sim | 12 (9+3), corte antigo | tira `#`, `*`, `_` e o endereço dos links | **apagados** | cabeçalho à parte | — | **2** | manter `#` como seção; não apagar `_` nem a URL do link; tabela com cabeçalho; recortar as 12 bases | P | F1 |
 | TXT | sim | 0 | bytes | só se numerado/maiúsculo | — | — | **6** | juntar parágrafos da seção | P | F2 |
 | Foto / imagem | sim (só na criação do agente) | 0 | tesseract | se a foto tem texto | linhas soltas | — | **4** | imagem sem texto (foto de produto) não vira nada; descrição pelo modelo | M | F3 |
 | Site / URL | sim | 8 (3+5) | 1 página, Nokogiri `text` | **perdidos** | **células coladas** | — | **2** | bloco por bloco; h1–h6 como seção; tabela; acento; página JS | M | F1 |
@@ -101,7 +101,7 @@ produto). Para 10: o filho leva o nome do pai. P, F1.
 
 **MD — 2.** O processor apaga os `#` dos títulos ANTES do corte, e o Chunker deixa de reconhecê-los: 0 de 9 pedaços com
 título na amostra. Ele também apaga `_` e `*` dentro das palavras: o e-mail `contato_loja@exemplo.com.br` virou
-`contatoloja@exemplo.com.br` (**dado corrompido**). Itens de lista viram pedaços de 20 caracteres; a tabela fica com o
+`contatoloja@exemplo.com.br` (**dado corrompido**). Ele também troca `[texto](url)` por `texto`: **todo link de uma base MD perde o endereço**. Isso derruba o botão de link da #1479, que só sai quando a URL está escrita na base (achado do gestor, conferido em `text.rb`). Itens de lista viram pedaços de 20 caracteres; a tabela fica com o
 cabeçalho num pedaço à parte. Em produção, as 12 bases MD estão no corte antigo: média de 1.702
 caracteres e nenhum título. Para 10: manter os títulos como seção, não apagar caracteres dentro de palavras, lista e
 tabela juntas na seção, e reprocessar as 12. P, F1.
