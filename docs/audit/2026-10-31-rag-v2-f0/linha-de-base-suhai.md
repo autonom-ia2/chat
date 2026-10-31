@@ -74,3 +74,27 @@ Leitura:
 Pelos números acima: as perguntas de fora da base ficam a 0,48–0,61 e as respondíveis a 0,27–0,50; as faixas se
 sobrepõem e nenhum limite de distância separa as duas. O teto de 0,75 nunca corta nada, e a recusa correta (5 de 5) já
 vem do modelo. Mudar os limites não melhoraria nada que o placar mede; o item sai do plano da RAG v2 (gestor, 31/10).
+
+## Régua do #2431 no head c7cf171d83 (palavras coladas e títulos)
+
+| | main | 272b641b1c | **c7cf171d83** |
+|---|---|---|---|
+| Pedaços | 1.207 | 762 | 799 |
+| hit@1 | 0,29 | 0,47 | 0,47 |
+| hit@5 | 0,41 | 0,59 | **0,76** |
+| hit@12 | 0,59 | 0,76 | **0,88** |
+| MRR | 0,36 | 0,53 | **0,62** |
+| Pedaços com palavra colada | 10,3% | 10,0% | **0,0%** |
+| Títulos distintos | 117 | 58 | 157 |
+| Pedaços que herdam "4 – PERDA DE DIREITOS" | 58 | 96 | 22 |
+| Âncora inteira num pedaço | 13/17 | 14/17 | **17/17** |
+| Acerto (juiz) | 10/17 | — | **14/17** |
+| Recusa correta | 5/5 | — | 5/5 |
+| De onde veio | 9/17 | — | **14/17** |
+| Custo da rodada | US$ 0,1437 | US$ 0,0084 (só busca) | US$ 0,1643 |
+
+Gasto total do D3 até aqui: US$ 0,324 de US$ 2.
+
+As 3 erradas no c7cf171d83: "cancelar" (resposta certa, mas passou para a equipe), "bater no carro de outra pessoa"
+(a busca não traz a RCF-V: assunto da F1a e da F2) e "táxi" (o juiz cobra o táxi; o agente respondeu com outro
+serviço da assistência). Os 22 pedaços que ainda herdam "4 – PERDA DE DIREITOS" ficam para o PR de seção e cabeçalho.
