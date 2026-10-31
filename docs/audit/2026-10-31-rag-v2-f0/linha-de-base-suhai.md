@@ -1,7 +1,7 @@
 # Linha de base da busca — Suhai (#1431 F0, 31/10/2026)
 
 Base: Condição Geral Suhai Automóvel (PDF público, 74 páginas). Perguntas: `perguntas-suhai.yml` (17 respondíveis, 5 de
-fora). Banco local de teste, conta com a Fase 2 ligada (como a conta 1). Ingestão pelo `Ingestor` real: extração,
+fora). Banco local de teste, conta com a Fase 2 ligada (como nas contas piloto). Ingestão pelo `Ingestor` real: extração,
 Chunker, classificador da fonte e embedding text-embedding-3-small. Busca pelo `Retriever` real, top 12.
 
 ## Placar
