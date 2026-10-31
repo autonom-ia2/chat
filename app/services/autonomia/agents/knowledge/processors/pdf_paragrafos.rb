@@ -131,8 +131,9 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   def continua?(atual, seguinte)
     return false if seguinte.nil? || seguinte[:linhas].empty?
 
+    # Conteúdo que ficou no pé (preço, total) depois de sair rodapé e número fecha o parágrafo da página.
     ultima = atual[:corpo].last
-    return false if ultima.nil?
+    return false if ultima.nil? || !atual[:linhas].last.equal?(ultima)
 
     na_faixa?(atual, ultima[:y], PE_DA_FOLHA) && (ultima[:letra] - seguinte[:linhas].first[:letra]).abs <= ultima[:letra] * TROCA_DE_LETRA
   end

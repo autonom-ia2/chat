@@ -126,6 +126,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       texto = extrair
 
       expect((1..4).map { |numero| texto.include?("R$ #{numero}.299,00") }).to all(be(true))
+      expect(texto).to include("R$ 2.299,00\n\nProduto 3")
       expect(texto.lines.map(&:strip)).not_to include('1', '2', '3', '4')
     end
   end
