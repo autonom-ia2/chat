@@ -12,10 +12,11 @@
 #   folga bem acima da folga comum entre as letras do trecho (texto justificado aperta as letras e o `page.text` colava as
 #   palavras: "NÃOFAZERNENHUMACORDO");
 # - o espaço normal entre linhas é a mediana (de baixo) dos espaços do documento inteiro; espaço bem maior que ele,
-#   troca do tamanho de letra ou troca de fonte (nenhuma fonte em comum entre as duas linhas: o título em outra fonte,
-#   colado ao texto), fecha o parágrafo ("\n\n"); o resto continua o parágrafo ("\n"). Com o normal de cada página, a
+#   troca do tamanho de letra, ou troca de fonte com uma linha curta fora da fonte do corpo (o título em outra fonte,
+#   colado ao texto) fecha o parágrafo ("\n\n"); o resto continua o parágrafo ("\n"). Com o normal de cada página, a
 #   página de títulos e parágrafos curtos tinha o espaço de parágrafo como normal, e o título entrava no parágrafo e
-#   deixava de ser título para o Chunker (116 títulos distintos na main viravam 58 no PDF de 74 páginas da #2425);
+#   deixava de ser título para o Chunker (116 títulos distintos na main viravam 58 no PDF de 74 páginas da #2425). Linha
+#   em negrito que vai até a margem, no meio do parágrafo, continua o parágrafo;
 # - a virada de página continua o parágrafo só quando o corpo da página (sem o bloco do pé) chega ao último quarto da
 #   folha e a letra e a fonte seguem as mesmas. A geometria não distingue "frase cortada" de "parágrafo novo no topo da
 #   página seguinte"; nesse caso os dois ficam no mesmo parágrafo, e o Chunker ainda corta por tamanho;
@@ -32,10 +33,12 @@
 module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   # Duas linhas na mesma altura: diferença de até metade do tamanho da letra.
   MESMA_LINHA = 0.5
-  # Espaço entre linhas acima de 1,5 vez o normal da página fecha o parágrafo.
+  # Espaço entre linhas acima de 1,5 vez o normal do documento fecha o parágrafo.
   QUEBRA_DE_PARAGRAFO = 1.5
   # Letra 10% maior ou menor que a da linha anterior é outro bloco (título).
   TROCA_DE_LETRA = 0.1
+  # Linha que termina mais de 2 letras antes da margem direita é linha curta (título ou fim de parágrafo).
+  MARGEM_DIREITA = 2
   # Rodapé corrido e número de página: valem num PDF de 4 páginas ou mais, quando aparecem em pelo menos metade delas.
   CORRIDO_MIN_PAGINAS = 4
   CORRIDO_FRACAO = 0.5
@@ -50,8 +53,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   # O texto de cada página, em parágrafos, terminando com a ligação à página seguinte ("\n" continua, "\n\n" fecha).
   def textos_em_paragrafos(pages)
     linhas = pages.map { |page| linhas_da_pagina(page) }
-    normal = espaco_normal(linhas)
-    paginas = sem_rodape(pages.each_with_index.map { |page, indice| pagina_lida(page, linhas[indice], normal) })
+    documento = { normal: espaco_normal(linhas), fonte_do_corpo: fonte_do_corpo(linhas) }
+    paginas = sem_rodape(pages.each_with_index.map { |page, indice| pagina_lida(page, linhas[indice], documento) })
     pages.each_with_index.map do |page, indice|
       atual = paginas[indice]
       next "#{page.text}\n" if atual[:linhas].empty?
@@ -60,9 +63,9 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     end
   end
 
-  # A página lida: as linhas, o espaço normal entre elas, o bloco do pé (índices) e o corpo (as linhas fora do pé).
-  def pagina_lida(page, linhas, normal)
-    pagina = { linhas: linhas, normal: normal, folha: linhas.empty? ? nil : folha(page) }
+  # A página lida: as linhas, o espaço normal e a fonte do corpo (do documento), o bloco do pé (índices) e o corpo (as linhas fora do pé).
+  def pagina_lida(page, linhas, documento)
+    pagina = documento.merge(linhas: linhas, folha: linhas.empty? ? nil : folha(page))
     pe = pe(pagina)
     pagina.merge(pe: pe, corpo: linhas.reject.with_index { |_, indice| pe.include?(indice) })
   end
@@ -88,7 +91,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   # mesma altura): palavras diferentes, separadas por espaço.
   def linha(trechos)
     texto = Autonomia::Agents::Knowledge::Processors::PdfTrechos.juntar(trechos, sobreposto: true).strip
-    { y: trechos.first.y, letra: letra_da_linha(trechos), fonte: fonte_da_linha(trechos), texto: texto }
+    { y: trechos.first.y, direita: trechos.map { |trecho| trecho.x + trecho.width }.max, letra: letra_da_linha(trechos),
+      fonte: fonte_da_linha(trechos), texto: texto }
   end
 
   # A letra da linha é a que cobre mais texto nela: uma palavra maior no meio não faz da linha um título.
@@ -96,8 +100,9 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     trechos.group_by { |trecho| letra_do(trecho) }.max_by { |_, mesmos| mesmos.sum { |trecho| texto_do(trecho).length } }.first
   end
 
+  # As fontes da linha: a que cobre mais caracteres em cada trecho (o acento ou a pontuação noutra fonte não conta).
   def fonte_da_linha(trechos)
-    trechos.to_set(&:fonte)
+    trechos.to_set { |trecho| trecho.fontes.max_by(&:last).first }
   end
 
   def letra_do(trecho)
@@ -113,11 +118,17 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     linhas.each_with_index.map do |atual, indice|
       next atual[:texto] if indice.zero?
 
-      "#{quebra?(linhas[indice - 1], atual, pagina[:normal]) ? "\n\n" : "\n"}#{atual[:texto]}"
+      "#{quebra?(linhas[indice - 1], atual, pagina) ? "\n\n" : "\n"}#{atual[:texto]}"
     end.join
   end
 
-  # A mediana de baixo dos espaços entre linhas seguidas, no documento todo: o espaço de linha do corpo do texto.
+  # A fonte que mais aparece nas linhas do documento.
+  def fonte_do_corpo(linhas_por_pagina)
+    linhas_por_pagina.flatten.flat_map { |linha| linha[:fonte].to_a }.tally.max_by(&:last)&.first
+  end
+
+  # A mediana de baixo dos espaços entre linhas seguidas, no documento todo: o espaço de linha do corpo do texto. Em
+  # pontos, não em múltiplos da letra: medido em múltiplos, o PDF de 74 páginas da #2425 perdia títulos (122 para 115).
   def espaco_normal(linhas_por_pagina)
     espacos = linhas_por_pagina.flat_map do |linhas|
       linhas.each_cons(2).map { |de_cima, de_baixo| de_cima[:y] - de_baixo[:y] }
@@ -125,13 +136,28 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     espacos.empty? ? 0 : espacos[(espacos.size - 1) / 2]
   end
 
-  # Fecha o parágrafo: espaço de parágrafo, ou outra letra (tamanho ou fonte).
-  def quebra?(anterior, atual, normal)
-    separado?(anterior, atual, normal) || !mesma_letra?(anterior, atual)
+  # Fecha o parágrafo: espaço de parágrafo, outro tamanho de letra, ou outra fonte quando a linha de cima termina antes da
+  # margem direita (título, ou fim de parágrafo). Linha cheia até a margem com outra fonte (trecho em negrito no meio do
+  # parágrafo) continua.
+  def quebra?(anterior, atual, pagina)
+    separado?(anterior, atual, pagina[:normal]) || !mesmo_tamanho?(anterior, atual) ||
+      (!anterior[:fonte].intersect?(atual[:fonte]) && [anterior, atual].any? { |linha| titulo_curto?(linha, pagina) })
   end
 
-  def mesma_letra?(anterior, atual)
-    anterior[:fonte].intersect?(atual[:fonte]) && (anterior[:letra] - atual[:letra]).abs <= anterior[:letra] * TROCA_DE_LETRA
+  def mesmo_tamanho?(anterior, atual)
+    (anterior[:letra] - atual[:letra]).abs <= anterior[:letra] * TROCA_DE_LETRA
+  end
+
+  # Linha curta fora da fonte do corpo do documento: tem cara de título. A última linha curta de um parágrafo, na fonte do
+  # corpo, depois de uma linha em negrito, não é.
+  def titulo_curto?(linha, pagina)
+    linha[:fonte].exclude?(pagina[:fonte_do_corpo]) && antes_da_margem?(linha, pagina)
+  end
+
+  # A linha termina antes da margem direita da página (a linha do corpo que vai mais longe) em mais de MARGEM_DIREITA letras.
+  def antes_da_margem?(linha, pagina)
+    margem = pagina[:corpo].pluck(:direita).max
+    linha[:direita] < margem - (linha[:letra] * MARGEM_DIREITA)
   end
 
   def separado?(de_cima, de_baixo, normal)
@@ -147,7 +173,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     ultima = atual[:corpo].last
     return false if ultima.nil? || !atual[:linhas].last.equal?(ultima)
 
-    na_faixa?(atual, ultima[:y], PE_DA_FOLHA) && mesma_letra?(ultima, seguinte[:linhas].first)
+    primeira = seguinte[:linhas].first
+    na_faixa?(atual, ultima[:y], PE_DA_FOLHA) && mesmo_tamanho?(ultima, primeira) && ultima[:fonte].intersect?(primeira[:fonte])
   end
 
   # A altura está na faixa de baixo da folha (fração da altura, contando de baixo).

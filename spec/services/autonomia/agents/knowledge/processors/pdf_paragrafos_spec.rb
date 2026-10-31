@@ -44,7 +44,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   end
 
   # PDF mínimo com Helvetica: cada linha é um "Td" na altura dada (e na margem esquerda dada; padrão 54). O quarto item,
-  # quando há, troca o "(texto) Tj" pelo operador cru (ex.: TJ com espaçamento entre letras).
+  # quando há, troca o "(texto) Tj" pelo operador cru (ex.: TJ com espaçamento entre letras); o quinto, a linha inteira.
   def pdf_com(paginas)
     ids = paginas.each_index.map { |indice| 5 + (2 * indice) }
     objetos = ['<< /Type /Catalog /Pages 2 0 R >>',
@@ -52,7 +52,9 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
                '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
                '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>']
     paginas.each_with_index do |linhas, indice|
-      conteudo = linhas.map { |texto, y, x = 54, cru = nil| "BT /F1 10 Tf #{x} #{y} Td #{cru || "(#{texto}) Tj"} ET" }.join("\n")
+      conteudo = linhas.map do |texto, y, x = 54, cru = nil, inteiro = nil|
+        inteiro || "BT /F1 10 Tf #{x} #{y} Td #{cru || "(#{texto}) Tj"} ET"
+      end.join("\n")
       objetos << '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> ' \
                  "/Contents #{ids[indice] + 1} 0 R >>"
       objetos << "<< /Length #{conteudo.bytesize} >>\nstream\n#{conteudo}\nendstream"
@@ -200,6 +202,33 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
 
     it 'fica numa palavra só (folga entre letras abaixo de 10% da letra)' do
       expect(extrair).to include('COBERTURAS')
+    end
+  end
+
+  describe 'a linha com palavras em negrito no meio do parágrafo' do
+    let(:pdf) do
+      meio = 'BT /F1 10 Tf 54 766.8 Td (em ) Tj /F2 10 Tf (ATE SETE DIAS UTEIS CONTADOS DA DATA) Tj ET'
+      pdf_com([[['O segurado deve comunicar o sinistro a seguradora', topo], ['', topo - linha, 54, nil, meio], ['do evento.', topo - (2 * linha)]]])
+    end
+
+    it 'continua o parágrafo (as linhas vão até a margem: não é título)' do
+      expect(extrair).to include("seguradora\nem ATE SETE DIAS UTEIS CONTADOS DA DATA\ndo evento.")
+    end
+  end
+
+  describe 'o corpo com as letras expandidas (Tc positivo abaixo de 20% da letra)' do
+    let(:pdf) { pdf_com([[['', topo, 54, '1.2 Tc (Este seguro garante o veiculo) Tj']]]) }
+
+    it 'mantém as palavras inteiras' do
+      expect(extrair).to include('Este seguro garante o veiculo')
+    end
+  end
+
+  describe 'a fonte embutida em subconjunto' do
+    it 'é a mesma fonte com prefixos diferentes ("AAAAAA+Arial" e "BBBBBB+Arial")' do
+      leitor = Autonomia::Agents::Knowledge::Processors::PdfTrechos::Leitor.new
+
+      expect(%i[AAAAAA+Arial BBBBBB+Arial Arial].map { |nome| leitor.send(:sem_subconjunto, nome) }).to eq(%w[Arial Arial Arial])
     end
   end
 
