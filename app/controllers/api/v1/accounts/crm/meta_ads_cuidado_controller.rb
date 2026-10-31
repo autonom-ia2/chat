@@ -20,7 +20,7 @@
 # os comentários na Meta; o criativo já foi lido (uma vez só por chamada: é ele que diz as caixas, e a Fonte reusa a
 # leitura).
 #
-# Prévia e resumo respondem como no post: o que não está pronto vai como erro (422; `ai_unavailable` com o Jev fora do
+# Prévia e resumo respondem como no post: o que não está pronto vai como erro (422; `ai_unavailable` com a IA fora do
 # ar), e a tela não mostra o passo "como fica" em branco com "Ligar" ativo.
 #
 # O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,

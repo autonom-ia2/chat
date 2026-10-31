@@ -26,6 +26,8 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     stub_request(:get, %r{#{ig}/#{post_id}/comments}).to_return(status: 200, headers: json, body: { data: data }.to_json)
     stub_request(:get, %r{#{ig}/#{post_id}\?.*fields=comments_count})
       .to_return(status: 200, headers: json, body: { comments_count: data.size }.to_json)
+    stub_request(:get, %r{#{ig}/#{post_id}\?.*fields=caption})
+      .to_return(status: 200, headers: json, body: { caption: 'E-book de bolos por R$ 29' }.to_json)
   end
 
   before do
@@ -103,7 +105,7 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response.parsed_body['error']).to eq('already_read')
   end
 
-  it 'prévia: decide com o "para quem" do dono' do
+  it 'prévia: decide com o "para quem" do dono e a legenda do post (#2424)' do
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
     allow(classificador).to receive(:decidir!) { |texto| { 'Quero o e-book' => 'private', 'Lindo!' => 'no_reply' }[texto] }
@@ -111,12 +113,13 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
 
     expect(response.parsed_body).to include('recebe' => include('text' => 'Quero o e-book'), 'nao' => include('text' => 'Lindo!'))
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(hash_including(legenda: 'E-book de bolos por R$ 29'))
   end
 
-  it 'prévia: Jev fora do ar é falha (422 ai_unavailable), nunca uma prévia vazia' do
+  it 'prévia: IA fora do ar é falha (422 ai_unavailable), nunca uma prévia vazia' do
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
-    allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_unavailable'))
+    allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('ai_unavailable'))
 
     post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
 
@@ -161,7 +164,7 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response.parsed_body).to eq('error' => 'ai_unavailable')
   end
 
-  it 'resumo: Jev fora do ar é falha (422 ai_unavailable)' do
+  it 'resumo: IA fora do ar é falha (422 ai_unavailable)' do
     allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
       .and_return(instance_double(Crm::MetaAds::ComentariosIa::Resumo, call: { status: 'ai_unavailable' }))
 

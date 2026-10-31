@@ -13,6 +13,20 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
     expect(described_class.reservar!(comentario('c-1', network: 'facebook'))).to be(true)
   end
 
+  it 'grava na linha ai_seen o que a IA escolheu, a certeza e o motivo, também sem certeza para agir (#2424)' do
+    described_class.reservar!(comentario)
+    described_class.gravar!(comentario, 'ai_unread')
+    avaliacao = Crm::MetaAds::ComentariosIa::Classificador::Avaliacao.new(chave: nil, escolha: 'private', certeza: 0.41,
+                                                                          motivo: 'Pergunta sobre a empresa, fora do critério.')
+
+    described_class.decisao!(comentario, avaliacao)
+
+    acoes = Crm::MetaAdsCommentAction.where(comment_id: 'c-1')
+    expect(acoes.find_by(action: 'ai_seen'))
+      .to have_attributes(ai_decision: 'private', ai_confidence: BigDecimal('0.41'), ai_reason: 'Pergunta sobre a empresa, fora do critério.')
+    expect(acoes.find_by(action: 'ai_unread')).to have_attributes(ai_decision: nil, ai_reason: nil)
+  end
+
   it 'grava como IA, com o anúncio e a conversa' do
     conversation = create(:conversation, account: account)
 

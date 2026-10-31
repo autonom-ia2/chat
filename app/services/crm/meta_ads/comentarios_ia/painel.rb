@@ -6,7 +6,7 @@
 # - O resto é lido na hora: os comentários do alvo (Fonte, ao vivo, nunca gravados) e o que a IA fez com cada um
 #   (Crm::MetaAdsCommentAction, actor 'ai'). Recebeu no privado e respondeu: pelas conversas que nasceram do cuidado.
 # - "Esperando você" (`to_see`) é o que ficou com o dono, com o porquê: reclamação, privado recusado, privado que pode
-#   ter saído (a Meta não respondeu), não cuidei (Meta ou Jev fora do ar, teto do dia, sem certeza), mais de 7 dias,
+#   ter saído (a Meta não respondeu), não cuidei (Meta ou IA fora do ar, teto do dia, sem certeza), mais de 7 dias,
 #   era o caso do privado, mas ele não sai ali (`no_private`), não era o caso (a IA leu e não agiu), chegou antes de
 #   ligar (`started_at`) ou chegou com o cuidado pausado (`paused`). O que chegou depois de ligar, com o cuidado ligado,
 #   e a IA ainda não leu está na fila dela: não entra. "Escondi" (`hidden`): o que a IA escondeu.

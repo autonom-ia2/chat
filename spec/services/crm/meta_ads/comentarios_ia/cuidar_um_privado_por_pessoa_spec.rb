@@ -6,7 +6,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
   let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Instagram, responder: true, privado_disponivel?: true) }
-  let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador, decidir!: 'private') }
+  let(:avaliacao) { Crm::MetaAds::ComentariosIa::Classificador::Avaliacao.new(chave: 'private', escolha: 'private', certeza: 0.91) }
+  let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador, avaliar!: avaliacao) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa, anotar!: nil) }
   let(:conversation) { create(:conversation, account: account, inbox: inbox) }
   let(:enviado) { Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: conversation) }
@@ -43,6 +44,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(Crm::MetaAdsCommentPerson.sole).to have_attributes(account_id: account.id, post_id: '1790', from_id: 'igsid-1', comment_id: 'c-1')
   end
 
+  it 'a escolha da IA, a certeza e o motivo ficam na linha ai_seen do comentário, e só nela (#2424)' do
+    cuidar(comentario('c-1'))
+
+    acoes = Crm::MetaAdsCommentAction.where(account_id: account.id, comment_id: 'c-1')
+    expect(acoes.find_by(action: 'ai_seen')).to have_attributes(ai_decision: 'private', ai_confidence: BigDecimal('0.91'))
+    expect(acoes.where.not(action: 'ai_seen').pluck(:ai_decision)).to all(be_nil)
+  end
+
   it 'a Meta aceitou e a conversa não foi gravada: o próximo comentário da pessoa não recebe outro privado' do
     allow(rede).to receive(:privado).and_return(Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: nil))
 
@@ -52,12 +61,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).to have_received(:privado).once
   end
 
-  it 'o reenvio do mesmo comentário (webhook repetido, job de novo) não manda de novo nem pergunta ao Jev' do
+  it 'o reenvio do mesmo comentário (webhook repetido, job de novo) não manda de novo nem pergunta à IA' do
     cuidar(comentario('c-1'))
     cuidar(comentario('c-1'))
 
     expect(rede).to have_received(:privado).once
-    expect(classificador).to have_received(:decidir!).once
+    expect(classificador).to have_received(:avaliar!).once
   end
 
   it 'privado recusado pela Meta: a reserva sai, e o próximo comentário da pessoa pode receber' do
