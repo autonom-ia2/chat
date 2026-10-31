@@ -48,6 +48,7 @@ module Autonomia
           # dono refaz o turno (nunca "já postado", o retry de um pedaço que entrou).
           if motivo
             descartar_cartoes(conversation, agent_inbox, reply_to_message_id, chunks, motivo)
+            reenfileirar_cartoes(conversation, reply_to_message_id, index, chunk) if motivo == :ja_postado
             return parou(conversation, agent_inbox, reply_to_message_id, index, meta, motivo)
           end
 
@@ -123,6 +124,15 @@ module Autonomia
 
           ::Autonomia::Agents::Operate::CartoesDoTurno.descartados(conversation_id: conversation.id, agent: agent_inbox.agent.id,
                                                                    msg: reply_to_message_id, motivo: motivo)
+        end
+
+        # #1479 F3: o retry do pedaço que leva os cartões e já entrou (`ja_postado`). O job anterior pode ter morrido entre
+        # postar o pedaço e enfileirar os cartões: enfileira de novo para o pedaço gravado. O job dos cartões é idempotente
+        # (token e desistência gravada), então o cartão sai uma vez só.
+        def reenfileirar_cartoes(conversation, reply_to_message_id, index, chunk)
+          return if Array(chunk.to_h.dig('marca', ::Autonomia::Agents::Operate::CartoesDoTurno::NA_ANCORA)).empty?
+
+          ::Autonomia::Agents::Operate::CartoesDoTurno.enfileirar(chunk_message(conversation, reply_to_message_id, index))
         end
 
         # Agenda o próximo pedaço após sua pausa, mostrando "digitando" durante a espera.
@@ -221,10 +231,15 @@ module Autonomia
         # por LIKE (barato, token distintivo) e confirma em Ruby no hash parseado (sem adivinhar o
         # escape do JSON-string dentro da coluna json).
         def chunk_posted?(conversation, reply_to_message_id, index)
+          chunk_message(conversation, reply_to_message_id, index).present?
+        end
+
+        # A mensagem já postada deste pedaço, ou nil.
+        def chunk_message(conversation, reply_to_message_id, index)
           token = chunk_token(reply_to_message_id, index)
           conversation.messages.outgoing.where(sender_type: 'AgentBot')
                       .where('content_attributes::text LIKE ?', "%#{token}%")
-                      .any? { |m| m.content_attributes.to_h['autonomia_chunk_token'].to_s == token }
+                      .find { |m| m.content_attributes.to_h['autonomia_chunk_token'].to_s == token }
         end
 
         def chunk_token(reply_to_message_id, index)

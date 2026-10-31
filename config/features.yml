@@ -1102,10 +1102,12 @@
 # Fase 2): o agente que tem página de agendamento ganha, sem configuração, `enviar_localizacao` (o mapa de um local
 # presencial da página, quando o endereço já tem coordenada) e `enviar_contato` (o cartão com o telefone de contato da
 # página); o cartão sai numa mensagem própria, logo depois da resposta. O endereço novo ou mudado da página é
-# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. Desligada: nada muda, nem
-# o catálogo nem a página. Rollback: desligar a flag na conta. Sem migration. Fim da feature_flags_ext_2, depois de
-# agente_ferramentas_delegadas: posição 21 (valor 1048576, 1 << 20), dada pela Orquestração em 31/10. Nasce ligada no
-# piloto (contas 1, 16 e 18).
+# convertido em coordenada por um job (Google Places), sem travar o salvar. A Lia fica fora. Desligada: o agente não
+# ganha nada (o catálogo fica como antes) e nenhum endereço é convertido; a coordenada do local continua sendo só do
+# servidor (quem chama a API não grava latitude, longitude nem a marca "não achou", com a flag ligada ou não, para um
+# ponto forjado não ser usado quando ela ligar). Rollback: desligar a flag na conta. Sem migration. Fim da
+# feature_flags_ext_2, depois de agente_ferramentas_delegadas: posição 21 (valor 1048576, 1 << 20), dada pela
+# Orquestração em 31/10. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: agentes_enviar_local_e_contato
   display_name: Agentes › enviar o mapa e o contato da página
   enabled: false

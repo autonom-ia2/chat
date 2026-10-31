@@ -5,7 +5,7 @@ module Autonomia::Agents::Operate::TelemetriaDoTurno
   EVENTOS = %w[assunto_esperou assunto_atrasou turno_reenfileirado reenfileiramento_barrado turno_em_curso claim_barrado
                devolucao passagem passagem_recusada turno_da_passagem sinal_na_passagem
                turno_da_passagem_descartado turno_da_passagem_rodou link_recusado opcao_tocada
-               localizacao_recebida cartao_nao_enviado cartao_descartado].freeze
+               localizacao_recebida cartao_nao_enviado cartao_descartado interacao_nao_enviada].freeze
 
   module_function
 

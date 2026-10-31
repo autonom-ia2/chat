@@ -3,7 +3,8 @@
 #
 # A ÂNCORA GRAVA OS CARTÕES (`autonomia_cartoes`: tipo, chave, rich_message e token), na hora em que é postada:
 #   - clássico: a mensagem de texto (`Responder#post_reply!`);
-#   - voz: o áudio (a ordem da interação, que sai sem anexo e pode passar à frente dele, fica para o PR próprio);
+#   - voz: o áudio, que também grava a interação do turno (`InteracaoDepoisDoAudio`): ela sai pelo mesmo job, antes dos
+#     cartões, e o primeiro cartão espera ela sair;
 #   - em pedaços: o ÚLTIMO pedaço. Os cartões não viram pedaço. Na `marca` dele vão SÓ as referências (tipo, chave,
 #     token, `referencias`): os argumentos do job vão ao log INFO, e endereço, coordenada e telefone não. O
 #     `ChunkedDeliveryJob#build_message!` resolve cada cartão pela página na hora de postar (`resolver`); o que não
@@ -62,10 +63,10 @@ class Autonomia::Agents::Operate::CartoesDoTurno
                                                                                     msg: msg, motivo: motivo)
     end
 
-    # O job dos cartões da âncora recém-postada, quando ela os tem. Erro ao enfileirar não sobe: log com os ids e a
-    # classe, tracker e `cartao_nao_enviado` motivo=erro_ao_enfileirar.
+    # O job dos cartões da âncora recém-postada, quando ela tem o que enviar. Erro ao enfileirar não sobe: log com os ids
+    # e a classe, tracker e `cartao_nao_enviado` motivo=erro_ao_enfileirar.
     def enfileirar(ancora)
-      return if da_ancora(ancora).empty?
+      return unless algo_a_enviar?(ancora)
 
       ::Autonomia::Agents::Operate::EnviarCartoesJob.perform_later(ancora.id)
     rescue StandardError => e
@@ -100,15 +101,21 @@ class Autonomia::Agents::Operate::CartoesDoTurno
       Array(message&.content_attributes.to_h[NA_ANCORA]).select { |cartao| cartao.is_a?(Hash) && cartao['token'].present? }
     end
 
-    # A âncora já postada deste turno (a resposta do robô à mensagem do cliente que leva os cartões), ou nil. Prefiltra
-    # por LIKE (chave distintiva) e confirma no hash, como `ChunkedDeliveryJob#chunk_posted?`.
+    # A mensagem leva cartões ou a interação depois do áudio (`InteracaoDepoisDoAudio`)?
+    def algo_a_enviar?(message)
+      da_ancora(message).any? || ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.da_ancora(message).present?
+    end
+
+    # A âncora já postada deste turno (a resposta do robô à mensagem do cliente que leva os cartões ou a interação depois
+    # do áudio), ou nil. Prefiltra por LIKE (chaves distintivas) e confirma no hash, como `ChunkedDeliveryJob#chunk_posted?`.
     def ancora_do_turno(conversation, reply_to_message_id)
       return if reply_to_message_id.blank?
 
       conversation.messages.outgoing.where(sender_type: 'AgentBot')
-                  .where('content_attributes::text LIKE ?', "%#{NA_ANCORA}%").reorder(:id)
+                  .where('content_attributes::text LIKE ? OR content_attributes::text LIKE ?', "%#{NA_ANCORA}%",
+                         "%#{::Autonomia::Agents::Operate::InteracaoDepoisDoAudio::NA_ANCORA}%").reorder(:id)
                   .select { |message| message.content_attributes.to_h['autonomia_reply_to_message_id'].to_s == reply_to_message_id.to_s }
-                  .reverse.find { |message| da_ancora(message).any? }
+                  .reverse.find { |message| algo_a_enviar?(message) }
     end
   end
 
