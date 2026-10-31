@@ -1,0 +1,47 @@
+# #1431 (F0) — perguntas de cliente sobre a Condição Geral Suhai Automóvel (documento público, versão set/2026).
+# Âncora = trecho do material que responde; vale qualquer uma. `fora: true` = a base não responde.
+perguntas:
+  - pergunta: "O seguro vale se eu viajar de carro pra Argentina?"
+    ancoras: ["território brasileiro e nos países Argentina"]
+  - pergunta: "Se o carro pegar fogo eu pago franquia?"
+    ancoras: ["explosão acidental, incêndio e indenização integral do veículo"]
+  - pergunta: "Bati o carro agora, pra qual número eu ligo pra avisar?"
+    ancoras: ["São Paulo e Rio de Janeiro 3003-0335"]
+  - pergunta: "Depois que eu mando tudo, em quanto tempo vocês pagam a indenização?"
+    ancoras: ["30 (trinta) dias para pagar a indenização"]
+  - pergunta: "Posso fazer um acordo direto com o outro motorista depois da batida?"
+    ancoras: ["NÃO FAZER NENHUM ACORDO COM OS DEMAIS ENVOLVIDOS"]
+  - pergunta: "Se eu parcelar o seguro vou pagar alguma taxa a mais?"
+    ancoras: ["custo administrativo de fracionamento"]
+  - pergunta: "O boleto vence num domingo, posso pagar na segunda?"
+    ancoras: ["dia útil subsequente a esta data"]
+  - pergunta: "Quero cancelar o seguro, recebo alguma coisa de volta?"
+    ancoras: ["a qualquer tempo, por iniciativa do Segurado", "Prêmio calculado de acordo com a Tabela de Prazo Curto"]
+  - pergunta: "Quanto tempo vocês têm pra aceitar ou recusar minha proposta?"
+    ancoras: ["o prazo de 15 (quinze) dias"]
+  - pergunta: "Perdi a chave do carro, a assistência manda chaveiro?"
+    ancoras: ["um chaveiro para a abertura do veículo"]
+  - pergunta: "Acabou a gasolina no meio da estrada, vocês ajudam?"
+    ancoras: ["Pane Seca (Falta de Combustível)"]
+  - pergunta: "Se eu trocar do plano de 200 km pro de 500 km já vale na hora?"
+    ancoras: ["carência de 3 (três) dias úteis"]
+  - pergunta: "Quais coberturas básicas eu posso contratar pro meu carro?"
+    ancoras: ["Colisão, Incêndio e Roubo/Furto (Compreensiva)"]
+  - pergunta: "Roubaram meu carro e ele tem rastreador, o que eu faço?"
+    ancoras: ["ACIONAR, TÃO LOGO POSSÍVEL, A EMPRESA PRESTADORA"]
+  - pergunta: "O seguro cobre se eu bater no carro de outra pessoa?"
+    ancoras: ["para danos causados a terceiros"]
+  - pergunta: "Meu carro foi pro pátio e não teve cobertura, quanto tempo eu tenho pra tirar ele de lá?"
+    ancoras: ["prazo de até 7 (sete) dias da comunicação"]
+  - pergunta: "Se o carro quebrar longe, vocês pagam um táxi pra eu voltar pra casa?"
+    ancoras: ["será disponibilizado serviço de taxi"]
+  - pergunta: "Quanto fica o seguro de um Onix 2022 pra mim?"
+    fora: true
+  - pergunta: "Vocês fazem seguro residencial também?"
+    fora: true
+  - pergunta: "Qual o horário de atendimento da loja de vocês?"
+    fora: true
+  - pergunta: "Vocês fazem seguro pra celular?"
+    fora: true
+  - pergunta: "Qual o endereço da corretora em Campinas?"
+    fora: true
