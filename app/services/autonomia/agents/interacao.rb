@@ -17,8 +17,13 @@
 #   tem de fazer sentido sozinho se o botão não sair (link recusado: `TelemetriaDoTurno` `:link_recusado`);
 # - opções sem nenhuma opção com título viram nenhuma interação;
 # - uma interação por resposta, sempre na última mensagem.
+# - localização (F2, flag `agentes_pedir_localizacao` por cima da Fase 2): a `pergunta` é o corpo, como nas opções; sai
+#   como o botão "Enviar localização" (`location_request`) na oficial com a janela aberta e como a pergunta em texto nos
+#   outros canais. A localização que o cliente manda depois vai ao turno como dado (`LocalizacaoRecebida`).
 module Autonomia::Agents::Interacao
-  TIPO_DO_FORMATO = { 'opcoes' => 'options', 'link' => 'link_button' }.freeze
+  TIPO_DO_FORMATO = { 'opcoes' => 'options', 'link' => 'link_button', 'localizacao' => 'location_request' }.freeze
+  # Os tipos que levam `pergunta` como corpo.
+  COM_PERGUNTA = %w[opcoes localizacao].freeze
   BOTAO_PADRAO = 'autonomia.agents.botao_das_opcoes'.freeze
 
   TEXTO_OU_NULO = { type: %w[string null] }.freeze
@@ -33,14 +38,18 @@ module Autonomia::Agents::Interacao
       { type: 'null' }
     ]
   }.freeze
-  SCHEMA = {
-    anyOf: [
-      { type: 'object', additionalProperties: false, required: %w[tipo header pergunta opcoes botao link],
-        properties: { tipo: { type: 'string', enum: TIPO_DO_FORMATO.keys }, header: TEXTO_OU_NULO, pergunta: TEXTO_OU_NULO,
-                      opcoes: { type: 'array', items: OPCAO }, botao: TEXTO_OU_NULO, link: LINK } },
-      { type: 'null' }
-    ]
-  }.freeze
+  def self.schema(tipos)
+    {
+      anyOf: [
+        { type: 'object', additionalProperties: false, required: %w[tipo header pergunta opcoes botao link],
+          properties: { tipo: { type: 'string', enum: tipos }, header: TEXTO_OU_NULO, pergunta: TEXTO_OU_NULO,
+                        opcoes: { type: 'array', items: OPCAO }, botao: TEXTO_OU_NULO, link: LINK } },
+        { type: 'null' }
+      ]
+    }.freeze
+  end
+  SCHEMA = schema(%w[opcoes link])
+  SCHEMA_COM_LOCALIZACAO = schema(%w[opcoes link localizacao])
 
   INSTRUCAO = <<~TEXTO.strip.freeze
     # Opções e link (campo `interacao`)
@@ -63,15 +72,22 @@ module Autonomia::Agents::Interacao
     inbox.present? && RichMessages.delivery_mode(inbox: inbox, type: TIPO_DO_FORMATO['opcoes']) != :refused
   end
 
+  # A conta pode receber o pedido de localização (F2)? A Fase 2 e a flag dela (`PedidoDeLocalizacao`).
+  def localizacao?(account)
+    PedidoDeLocalizacao.ligado?(account)
+  end
+
   # A interação pedida pelo modelo, com chaves em texto e só os campos do tipo; nil quando não pediu, quando o tipo
   # não existe ou quando o link não é http(s) com host IGUAL a um dos `enderecos` do dono (`Enderecos.dos_textos`).
-  # O link recusado não sai nem em texto: a resposta segue sem ele.
+  # O link recusado não sai nem em texto: a resposta segue sem ele. O pedido de localização sem `pergunta` também não
+  # sai (o botão do WhatsApp precisa de texto). Quem oferece o tipo `localizacao` é o schema (`SCHEMA_COM_LOCALIZACAO`).
   def do_modelo(valor, enderecos:)
     return unless valor.is_a?(Hash)
 
     case valor['tipo']
     when 'opcoes' then opcoes(valor)
     when 'link' then link(valor['link'], enderecos)
+    when 'localizacao' then { 'tipo' => 'localizacao', 'pergunta' => valor['pergunta'].strip } if valor['pergunta'].to_s.strip.present?
     end
   end
 
@@ -91,9 +107,10 @@ module Autonomia::Agents::Interacao
     { content: em_texto, rich_message: nil, em_texto: em_texto }
   end
 
-  # Opções: o texto e a pergunta, sem ela quando o texto já termina com ela (comparadas depois de strip). Link: o texto.
+  # Opções e localização: o texto e a pergunta, sem ela quando o texto já termina com ela (comparadas depois de strip).
+  # Link: o texto.
   def corpo(interacao, texto)
-    return texto.to_s unless interacao['tipo'] == 'opcoes'
+    return texto.to_s unless COM_PERGUNTA.include?(interacao['tipo'])
 
     pergunta = interacao['pergunta'] unless repetida?(texto, interacao['pergunta'])
     [texto, pergunta].compact_blank.join("\n\n")
@@ -112,7 +129,7 @@ module Autonomia::Agents::Interacao
   def nos_pedacos(pedacos, interacao, conversation:)
     return pedacos if interacao.nil? || pedacos.empty?
 
-    base, ultimo = if interacao['tipo'] == 'opcoes' && !repetida?(pedacos.last['text'], interacao['pergunta'])
+    base, ultimo = if COM_PERGUNTA.include?(interacao['tipo']) && !repetida?(pedacos.last['text'], interacao['pergunta'])
                      [pedacos, { 'text' => nil, 'type' => 'text',
                                  'delay_ms' => ::Autonomia::Agents::Operate::ReplyChunker.delay_seguinte(interacao['pergunta']) }]
                    else
@@ -131,6 +148,7 @@ module Autonomia::Agents::Interacao
 
     limpar = ->(texto) { texto.is_a?(String) ? yield(texto) : texto }
     return interacao.merge('rotulo' => limpar.call(interacao['rotulo'])) if interacao['tipo'] == 'link'
+    return interacao.merge('pergunta' => limpar.call(interacao['pergunta'])) if interacao['tipo'] == 'localizacao'
 
     opcoes = interacao['opcoes'].map do |opcao|
       opcao.merge('title' => limpar.call(opcao['title']), 'description' => limpar.call(opcao['description']))
@@ -193,6 +211,7 @@ module Autonomia::Agents::Interacao
   # recusaria (a régua dele, `Options.fits?`), sai no idioma da conta: o texto do botão nunca derruba a lista inteira.
   def rich_message(interacao, locale:)
     return { 'type' => 'link_button', 'label' => interacao['rotulo'], 'url' => interacao['url'] } if interacao['tipo'] == 'link'
+    return { 'type' => 'location_request' } if interacao['tipo'] == 'localizacao'
 
     opcoes = RichMessages::Types::Options
     botao = opcoes.fits?(interacao['botao'], opcoes::LIST_BUTTON_MAX) ? interacao['botao'] : I18n.t(BOTAO_PADRAO, locale: locale)
