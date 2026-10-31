@@ -127,14 +127,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       expect(Crm::AiUsageEvent.where(account_id: account.id).count).to eq(1)
     end
 
-    it 'IA desligada na instalação ou sem credencial: Indisponivel, sem chamar' do
+    it 'IA desligada na instalação ou sem credencial: Bloqueado, sem chamar (tentar de novo não resolve)' do
       allow(Crm::Ai::Config).to receive(:enabled?).and_return(false)
-      expect { classificador.avaliar!('Oi') }.to raise_error(described_class::Indisponivel) { |erro| expect(erro.code).to eq('ai_disabled') }
+      expect { classificador.avaliar!('Oi') }.to raise_error(described_class::Bloqueado) { |erro| expect(erro.code).to eq('ai_disabled') }
 
       allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
       allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: nil))
       expect { described_class.new(care: care).avaliar!('Oi') }
-        .to raise_error(described_class::Indisponivel) { |erro| expect(erro.code).to eq('no_credential') }
+        .to raise_error(described_class::Bloqueado) { |erro| expect(erro.code).to eq('no_credential') }
     end
   end
 

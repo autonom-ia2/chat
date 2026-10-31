@@ -9,10 +9,13 @@
 # e `price`, e o "não é o caso" entra em `no_reply`. Nada genérico compete com o critério (no teste real de 31/10,
 # "quero saber mais sobre a empresa" caiu no "interesse" fixo do privado, com o critério "Quem perguntar o preço").
 # Sem o "para quem", vale a ficha do post, com as decisões de sempre (DECISOES). A legenda diz do que o comentário fala
-# ("quanto custa esse?"). O critério é lido pela intenção do dono, não ao pé da letra: perguntar o preço é querer
-# contratar (decisão do Rodrigo no #2424). No eval pago do #2424 este caminho venceu o do Jev com uma 2ª chamada para o
-# motivo (79 de 79 contra 67, todos os cenários do critério do dono), com uma chamada por comentário em vez de duas.
-# Nada é guardado como exemplo. O custo é nosso e fica em Crm::AiUsageEvent com a feature própria, para o teto diário.
+# ("quanto custa esse?"). O critério é lido pela intenção do dono, não ao pé da letra: num critério de comprar ou
+# contratar, perguntar o preço é querer contratar (decisão do Rodrigo no #2424); num de outra coisa (revenda), não é.
+# No eval pago do #2424 este caminho venceu o do Jev com uma 2ª chamada para o motivo (84 de 84; o Jev, 67 de 79), com
+# uma chamada por comentário em vez de duas.
+# Nada é guardado como exemplo. A credencial é a da IA do CRM da conta (Crm::Ai::CredentialResolver: o hook
+# crm_kanban_ai, senão a da instalação), como no Rascunho; o uso fica em Crm::AiUsageEvent com a feature própria, para o
+# teto diário.
 #
 # Sem certeza suficiente, ou com o modelo fora do ar, não decide: o comentário fica para a pessoa, sem resposta da IA.
 class Crm::MetaAds::ComentariosIa::Classificador
@@ -39,7 +42,8 @@ class Crm::MetaAds::ComentariosIa::Classificador
   DECISOES_COM_CRITERIO = {
     'private' => 'The comment matches owner_criterion. Only owner_criterion decides who gets a private message: a ' \
                  'question about anything else is not private. Read owner_criterion by what the owner wants to reach, ' \
-                 'not word by word: asking the price of what it is about is a step toward buying or hiring it.',
+                 'not word by word: when it is about buying, hiring or getting what the post offers, asking its price ' \
+                 'is a step toward that. When it is about something else (becoming a reseller, a job), it is not.',
     'price' => 'The comment matches owner_criterion and asks the price or how much it costs.',
     'no_reply' => 'The comment does not match owner_criterion, even if it is a question or shows interest in the ' \
                   'business; or it is tagging a friend, praise or an emoji.'
@@ -75,9 +79,10 @@ class Crm::MetaAds::ComentariosIa::Classificador
     end
   end
 
-  # Flag desligada ou teto do dia: a pergunta não vai ao modelo.
+  # Flag desligada, teto do dia, IA desligada na instalação ou conta sem credencial: a pergunta não vai ao modelo, e
+  # tentar de novo não resolve. O comentário vai direto para o dono.
   Bloqueado = Class.new(Erro)
-  # O modelo não respondeu, ou respondeu fora do formato.
+  # O modelo não respondeu, ou respondeu fora do formato: passa sozinho, o job tenta de novo.
   Indisponivel = Class.new(Erro)
 
   # tela: true na prévia e no resumo. legenda: o texto do post, lido na Meta.
@@ -127,7 +132,7 @@ class Crm::MetaAds::ComentariosIa::Classificador
 
   # A ida que não voltou não grava uso no cliente: conta aqui, para o teto valer também na falha.
   def perguntar(texto)
-    raise Indisponivel, 'ai_disabled' unless Crm::Ai::Config.enabled?
+    raise Bloqueado, 'ai_disabled' unless Crm::Ai::Config.enabled?
 
     resposta = cliente.create(model: MODEL, instructions: instrucoes, input: dados(texto).to_json, schema: esquema,
                               reasoning_effort: 'low', timeout: PRAZO)
@@ -145,7 +150,7 @@ class Crm::MetaAds::ComentariosIa::Classificador
   def cliente
     @cliente ||= begin
       credencial = Crm::Ai::CredentialResolver.new(account: @care.account).resolve
-      raise Indisponivel, 'no_credential' if credencial.blank?
+      raise Bloqueado, 'no_credential' if credencial.blank?
 
       Crm::Ai::ResponsesClient.new(credential: credencial, feature: @feature, account: @care.account, max_retries: 0)
     end
