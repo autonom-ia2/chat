@@ -207,6 +207,7 @@ Rails.application.routes.draw do
           get 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#show'
           put 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#update'
           post 'seus_posts/posts/:post_id/cuidado/previa', to: 'seus_posts_cuidado#previa'
+          post 'seus_posts/posts/:post_id/cuidado/rascunho', to: 'seus_posts_cuidado#rascunho'
           post 'seus_posts/posts/:post_id/cuidado/ler_antigos', to: 'seus_posts_cuidado#ler_antigos'
           get 'seus_posts/posts/:post_id/resumo', to: 'seus_posts_cuidado#resumo'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do

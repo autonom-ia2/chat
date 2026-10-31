@@ -603,8 +603,10 @@ const BOTAO_DE_BORDA =
           <div
             class="flex flex-col gap-5 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto lg:overscroll-contain"
           >
+            <!-- shrink-0: a coluna tem altura de uma tela e o overflow-hidden zera o mínimo do flex; sem ele, legenda longa
+                 espremia a moldura e a foto aparecia cortada ao abrir o post (#2212). -->
             <figure
-              class="m-0 flex flex-col gap-2 overflow-hidden rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
+              class="m-0 flex shrink-0 flex-col gap-2 overflow-hidden rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
             >
               <div class="relative flex justify-center bg-n-alpha-1">
                 <img

@@ -48,6 +48,7 @@ const {
   pausar,
   voltar,
   previa,
+  rascunho,
   lerAntigos,
 } = useCuidado(() => props.target);
 
@@ -343,6 +344,7 @@ const openInbox = path => {
         :key="`${target.id}-${changing}`"
         :data="painel"
         :preview="previa"
+        :draft="target.kind === 'post' ? rascunho : null"
         :changing="changing"
         :can-send-old="canSendOld"
         :saving="salvando"

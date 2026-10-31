@@ -221,7 +221,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         comment: { 'id' => '555_777', 'timestamp' => '2026-10-27T10:00:00Z', 'from' => { 'id' => 'igsid-1', 'username' => 'carla' } },
         text: care.texto_do_privado, actor: 'ai', ad_id: nil
       )
-      expect(care.texto_do_privado).to start_with(care.message).and(include('(automatic message'))
+      expect(care.texto_do_privado).to eq(care.message.strip)
     end
 
     it 'recusa do serviço (4xx) vira envio sem sucesso com o código, sem "pode ter saído"' do

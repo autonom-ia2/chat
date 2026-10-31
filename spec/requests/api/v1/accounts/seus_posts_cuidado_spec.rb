@@ -135,6 +135,32 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
   end
 
+  it 'rascunho: o começo da mensagem sai da legenda do post lida na Meta, não do que a tela mandar' do
+    allow(SeusPosts::Posts).to receive(:para).and_return(
+      instance_double(SeusPosts::PostsInstagram, perform: { status: 'ok', normal: {},
+                                                            posts: [{ id: post_id, created_time: 1.day.ago.iso8601, text: 'E-book por R$ 29' }] })
+    )
+    rascunho = instance_double(Crm::MetaAds::ComentariosIa::Rascunho, call: { status: 'ready', message: 'Oi! Sai por R$ 29.' })
+    allow(Crm::MetaAds::ComentariosIa::Rascunho).to receive(:new).and_return(rascunho)
+
+    post "#{base}/cuidado/rascunho", params: { perfil: perfil, legenda: 'plantada' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to eq('status' => 'ready', 'message' => 'Oi! Sai por R$ 29.')
+    expect(Crm::MetaAds::ComentariosIa::Rascunho).to have_received(:new)
+      .with(account: account, target_kind: 'post', target_id: post_id, legenda: 'E-book por R$ 29')
+  end
+
+  it 'rascunho: a IA fora do ar é 422 ai_unavailable (a tela abre o campo vazio)' do
+    allow(Crm::MetaAds::ComentariosIa::Rascunho).to receive(:new)
+      .and_return(instance_double(Crm::MetaAds::ComentariosIa::Rascunho, call: { status: 'ai_unavailable' }))
+
+    post "#{base}/cuidado/rascunho", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
+  end
+
   it 'resumo: Jev fora do ar é falha (422 ai_unavailable)' do
     allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
       .and_return(instance_double(Crm::MetaAds::ComentariosIa::Resumo, call: { status: 'ai_unavailable' }))
@@ -162,6 +188,8 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     put "#{base}/cuidado", params: corpo, headers: agente.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)
     post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: 'x' }, headers: agente.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:forbidden)
+    post "#{base}/cuidado/rascunho", params: { perfil: perfil }, headers: agente.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)
     post "#{base}/cuidado/ler_antigos", params: { perfil: perfil }, headers: agente.create_new_auth_token, as: :json
     expect(response).to have_http_status(:forbidden)

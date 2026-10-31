@@ -74,7 +74,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(painel.payload[:to_see].find { |item| item[:id] == '3' }).to include(kind: 'unsure', conversation_path: be_present)
   end
 
-  it 'a pessoa já tinha o privado deste post: "já recebeu", não "não se aplica"; e o aviso automático vem no idioma da conta' do
+  it 'a pessoa já tinha o privado deste post: "já recebeu", não "não se aplica"; e não há aviso automático para a tela' do
     acao('3', 'ai_seen')
     acao('3', 'private_reply_already')
     account.update!(locale: 'pt_BR')
@@ -83,7 +83,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
 
     expect(payload[:to_see].find { |item| item[:id] == '3' }[:kind]).to eq('already_sent')
     expect(payload[:results][:skipped]).to eq(0)
-    expect(payload[:automatic_note]).to eq(I18n.t('conversations.activity.meta_ads_comment.private_reply_suffix', locale: 'pt_BR'))
+    expect(payload).not_to have_key(:automatic_note)
   end
 
   it 'o que a IA fez em outra conta, com o mesmo id de comentário, não entra' do

@@ -15,7 +15,7 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   # assignment: você ou sua equipe, pela Atribuição; agent: o agente de IA da caixa.
   HANDOFFS = %w[assignment agent].freeze
   # Texto de uma mensagem do Instagram (a mais curta das duas redes), em bytes UTF-8, como a Meta conta: acento e emoji
-  # ocupam mais de um byte. Conta com o aviso do fim (texto_do_privado), como a tela (CuidarDono).
+  # ocupam mais de um byte. A tela (CuidarDono) conta igual.
   MESSAGE_LIMIT = 1_000
   NOTE_LIMIT = 500
   PHRASES = (1..3)
@@ -77,15 +77,10 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
     offer? || para_quem.present?
   end
 
-  # O que a pessoa recebe no privado: a mensagem do dono e, no fim, o aviso de que é automática (a tela mostra o mesmo
-  # texto, "No fim, eu ponho sozinho"), no idioma da conta.
+  # O que a pessoa recebe no privado: só a mensagem do dono, como a tela mostra. Nada é acrescentado (decisão do Rodrigo
+  # no teste real de 30/10: o aviso de mensagem automática saiu).
   def texto_do_privado
-    "#{message.to_s.strip} #{sufixo_do_privado}"
-  end
-
-  # O aviso de mensagem automática no idioma da conta (não o da tela de quem escreve): a tela conta os bytes com ele.
-  def sufixo_do_privado
-    I18n.t('conversations.activity.meta_ads_comment.private_reply_suffix', locale: account&.locale.presence || I18n.default_locale)
+    message.to_s.strip
   end
 
   # A frase do comentário depois do privado. `vez` reveza as frases, para a IA não repetir a mesma em seguida.
