@@ -64,6 +64,8 @@ class Autonomia::Agents::Specialists::Materia
     conversa = ::Autonomia::Agents::PromptParts::Historico.mensagens(@history)
     partes << ::Autonomia::Agents::PromptParts::Mensagem.montar('user', CONVERSA) if conversa.any?
     partes.concat(conversa)
+    regra = regra_da_previa(conversa)
+    partes << ::Autonomia::Agents::PromptParts::Mensagem.montar('developer', regra) if regra
     docs = documentos
     partes << ::Autonomia::Agents::PromptParts::Documentos.mensagem(docs) if docs.any?
     base = base_da_ultima_cotacao
@@ -80,6 +82,19 @@ class Autonomia::Agents::Specialists::Materia
   end
 
   private
+
+  # #1775: a conversa do principal pode trazer a linha da prévia do link (texto de uma página pública). A mesma regra do
+  # turno do principal vem logo depois, para o ajudante também lê-la como dado e nunca como instrução. Só com a linha
+  # desta conversa (o cabeçalho com o código dela); sem ela, nada muda.
+  def regra_da_previa(conversa)
+    conversation = @delivery&.conversation
+    return if conversa.empty? || conversation.nil?
+
+    previa = ::Autonomia::Agents::Operate::PreviaDoLink
+    codigo = previa.codigo(conversation)
+    cabecalho = previa.cabecalho(codigo)
+    previa.regra(codigo) if conversa.any? { |item| item[:content].first[:text].to_s.include?(cabecalho) }
+  end
 
   # As entradas das últimas cotações desta conversa que chegaram ao portal, UMA POR BEM do ramo do especialista
   # (chat#612), cercadas como dado. Cada entrada leva o nome do bem (`item`), que o especialista repete para
