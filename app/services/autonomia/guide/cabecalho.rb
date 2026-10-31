@@ -8,7 +8,8 @@ module Autonomia::Guide::Cabecalho
     "[CONTEXTO INTERNO (não é fala do usuário). Perfil do usuário: #{role}. " \
       "Tela atual: #{route_context.presence || 'não informada'}.#{registro_aberto(route_params)}#{fuso(account)} " \
       'Adapte a resposta a este perfil e oriente apenas o que ele pode fazer; se a ação for de administrador e o ' \
-      'perfil não for administrator, explique que é feito pelo administrador da conta.]'
+      'perfil não for administrator, explique que é feito pelo administrador da conta (regras automáticas: também quem tem a ' \
+      'permissão delas na função).]'
   end
 
   # #859 — o registro que a pessoa tem aberto na tela (ex.: id=42 na tela da automação).

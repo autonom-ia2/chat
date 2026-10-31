@@ -99,7 +99,8 @@ class Autonomia::Guide::Acoes
     'DELETE conversa_canal/pastas_do_email/:conversation_id',
     # #2084 — "Este contato é" fora do funil expira as sugestões de card do contato e, com arquivar_cards, arquiva os
     # cards abertos dele em lote: o desfazer do Guia não alcança isso.
-    'PUT crm/contacts/:contact_id/relacao'
+    # #2414 F1.3 — a cópia de uma regra nasce ligada (o `active` vem junto), então passa a agir sozinha: confirma.
+    'PUT crm/contacts/:contact_id/relacao', 'POST automation_rules/:automation_rule_id/clone'
   ].freeze
 
   # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono
@@ -240,12 +241,13 @@ class Autonomia::Guide::Acoes
   def garantir_permitida!(acao)
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
-    raise Recusada, traduzir('admin_only') unless administrador?
+
+    # #2414 F1.3: quem não administra ainda monta automação com automation_manage (Autonomia::Guide::PorteiroDaAutomacao).
+    recusa = ::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user) unless administrador?
+    raise Recusada, traduzir(recusa) if recusa
   end
 
-  def administrador?
-    @account_user&.role.to_s == 'administrator'
-  end
+  def administrador? = @account_user&.role.to_s == 'administrator'
 
   def verbo_de(acao) = acao.to_s.split(' ', 2).first
 

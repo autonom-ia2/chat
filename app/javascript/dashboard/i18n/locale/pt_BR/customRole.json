@@ -324,7 +324,7 @@
       "CONVERSATION_PARTICIPATING_MANAGE": "Vê as conversas em que participa, mesmo atribuídas a outra pessoa.",
       "CRM_MOVE_CARDS": "Arrasta cards entre etapas sem editar o resto.",
       "CRM_VIEW_REPORTS": "Painel do funil e custo de IA.",
-      "CRM_MANAGE_PIPELINES": "Etapas, automações e caixas do funil.",
+      "CRM_MANAGE_PIPELINES": "Etapas, automações e caixas do funil. Mexer nas automações da etapa também pede a permissão das regras automáticas.",
       "CRM_MANAGE_AI": "Configura e aceita sugestões da IA. Gera custo.",
       "CRM_EXPORT": "Baixa a lista com dados de clientes.",
       "CRM_DELETE_CARDS": "Arquiva cards, um a um ou vários de uma vez.",

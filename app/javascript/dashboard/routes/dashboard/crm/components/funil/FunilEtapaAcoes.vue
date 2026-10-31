@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { useStore } from 'vuex';
 import { I18nT } from 'vue-i18n';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import FunilResumoCartao from './FunilResumoCartao.vue';
 
 // #1384 — as ações automáticas de uma etapa já salva, numa frase com
@@ -14,6 +15,8 @@ const props = defineProps({
 defineEmits(['alterar']);
 
 const store = useStore();
+// #2414 F1.3: sem a chave das regras automáticas, as ações da etapa só se veem.
+const podeMontar = usePermissionGranted('automation_manage');
 const acoes = ref(null);
 
 watch(
@@ -40,6 +43,7 @@ const ligadas = computed(
     icone="i-lucide-zap"
     tom="bg-n-iris-3 text-n-iris-11"
     :titulo="$t('CRM_FUNIL.ETAPA.ACOES')"
+    :so-ver="!podeMontar"
     @alterar="$emit('alterar')"
   >
     <template v-if="acoes === null">{{ $t('CRM_FUNIL.CARREGANDO') }}</template>
