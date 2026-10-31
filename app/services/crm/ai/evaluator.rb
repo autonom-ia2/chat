@@ -209,7 +209,7 @@ module Crm
 
         return voltar_como_sugestao(classification) || pessoa_mexeu_na_etapa! if pessoa_mexeu_na_etapa?
 
-        fim = nao_e_negocio!(classification) || fechar_card!(classification)
+        fim = fim_decidido(classification)
         return fim_do_card(fim) if fim
 
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
@@ -291,6 +291,20 @@ module Crm
         pendentes.each { |sugestao| sugestao.update!(status: :expired) }
         Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_UPDATED) if pendentes.any?
         Result.new(status: :skipped, error: 'pessoa_mexeu_na_etapa')
+      end
+
+      # #2396: "fora do negócio" com pedido de fechar na mesma resposta (quem desistiu ou chegou sem querer): primeiro a
+      # sugestão de fechar, e só sem ela o arquivamento; arquivar tiraria da contagem o lead que é perda, sem ninguém
+      # conferir. O fechar que não vira sugestão (abaixo do limiar, card parado, pedido de pessoa) deixa o lixo sair como
+      # antes. "Teste" e "duplicado" seguem o arquivamento: um teste não é perda, e o repetido contaria a perda duas vezes.
+      def fim_decidido(classification)
+        return nao_e_negocio!(classification) || fechar_card!(classification) unless fora_do_negocio_com_fechar?(classification)
+
+        fechar_card!(classification) || nao_e_negocio!(classification)
+      end
+
+      def fora_do_negocio_com_fechar?(classification)
+        classification[:fechar_card].present? && classification.dig(:nao_e_negocio, :motivo) == NaoENegocio::FORA_DO_NEGOCIO
       end
 
       # #1922: o modelo disse que o card não é negócio. Só com a flag da conta (`crm_ia_arquiva_lixo`) e no automático do

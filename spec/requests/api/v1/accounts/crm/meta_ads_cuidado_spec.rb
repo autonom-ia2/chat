@@ -206,7 +206,9 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(response.parsed_body['error']).to eq('already_read')
   end
 
-  it 'prévia: decide com o "para quem" do dono' do
+  it 'prévia: decide com o "para quem" do dono e a legenda do post do anúncio (#2424)' do
+    stub_request(:get, %r{#{ig}/#{media_id}\?.*fields=caption})
+      .to_return(status: 200, headers: json, body: { caption: 'E-book de bolos por R$ 29' }.to_json)
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
     allow(classificador).to receive(:decidir!) { |texto| { 'Quero o e-book' => 'private', 'Lindo!' => 'no_reply' }[texto] }
@@ -214,12 +216,13 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     post "#{base}/cuidado/previa", params: { para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
 
     expect(response.parsed_body).to include('recebe' => include('text' => 'Quero o e-book'), 'nao' => include('text' => 'Lindo!'))
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(hash_including(legenda: 'E-book de bolos por R$ 29'))
   end
 
-  it 'prévia e resumo com o Jev fora do ar: 422 ai_unavailable, como no post (o passo "como fica" não fica em branco)' do
+  it 'prévia e resumo com a IA fora do ar: 422 ai_unavailable, como no post (o passo "como fica" não fica em branco)' do
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
-    allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('timeout'))
+    allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('timeout'))
 
     post "#{base}/cuidado/previa", params: { para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:unprocessable_content)

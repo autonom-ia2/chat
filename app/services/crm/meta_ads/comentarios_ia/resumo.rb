@@ -3,22 +3,22 @@
 # velhos) e quantas são reclamações, para o dono decidir se liga a IA.
 #
 # - Quem decide é o Classificador, com um critério fixo no lugar do "para quem" do dono (ainda não há cuidado): pede
-#   informação, preço ou como comprar o que o post mostra. Nada de lista de palavras.
+#   informação, preço ou como comprar o que o post mostra, com a legenda do post (Fonte#legenda, #2424). Nada de lista
+#   de palavras.
 # - Até LIMITE comentários, os mais recentes. Passou disso, `more: true`: a conta é "pelo menos".
-# - O Jev leva alguns segundos por comentário: a conta roda no ResumoJob e fica no cache só com os números (nunca o
+# - A IA leva alguns segundos por comentário: a conta roda no ResumoJob e fica no cache só com os números (nunca o
 #   texto), por CACHE. A chave leva os ids que esperam: quando a lista muda (alguém respondeu, chegou comentário), conta
 #   de novo. Enquanto conta, `status: 'reading'`, e a tela pergunta de novo.
-# - Jev fora do ar não é "nenhum pedido": a conta para no primeiro erro, nada vai para o cache como pronto e a tela
+# - IA fora do ar não é "nenhum pedido": a conta para no primeiro erro, nada vai para o cache como pronto e a tela
 #   recebe `ai_unavailable` uma vez (FALHOU); a pergunta seguinte conta de novo.
 class Crm::MetaAds::ComentariosIa::Resumo
   LIMITE = 30
   CACHE = 1.hour
-  # O teto do job: uma chamada ao Jev por comentário, cada uma com as tentativas do TypesafeAi::Client (até 2 s de
-  # espera entre elas), mais a leitura da Meta. A trava de um job só por lista não pode vencer antes dele.
-  POR_COMENTARIO = ((TypesafeAi::Client::OPEN_TIMEOUT + TypesafeAi::Client::READ_TIMEOUT) * (TypesafeAi::Client::MAX_RETRIES + 1)) +
-                   (2 * TypesafeAi::Client::MAX_RETRIES)
+  # O teto do job: uma chamada à IA por comentário, sem nova tentativa, até o prazo do Classificador. A trava de um job
+  # só por lista não pode vencer antes dele.
+  POR_COMENTARIO = Crm::MetaAds::ComentariosIa::Classificador::PRAZO
   CONTANDO = ((LIMITE * POR_COMENTARIO) + 60).seconds
-  # Quanto o aviso "Jev fora do ar" espera a tela perguntar: lido uma vez, ele sai e a próxima pergunta conta de novo.
+  # Quanto o aviso "IA fora do ar" espera a tela perguntar: lido uma vez, ele sai e a próxima pergunta conta de novo.
   FALHOU = 10.minutes
   CRITERIO = 'Anyone who asks for information about what the post shows, its price, or how to get or buy it.'.freeze
   PEDIDOS = %w[private price].freeze
@@ -49,8 +49,8 @@ class Crm::MetaAds::ComentariosIa::Resumo
     linhas = recentes(lido[:linhas])
     chave = chave(linhas)
     Rails.cache.write(chave, contar(linhas, more: lido[:linhas].size > LIMITE), expires_in: CACHE)
-  rescue TypesafeAi::Decisor::Error => e
-    Rails.logger.warn("[comentarios_ia] resumo account=#{@account.id} jev=#{e.code}")
+  rescue Crm::MetaAds::ComentariosIa::Classificador::Erro => e
+    Rails.logger.warn("[comentarios_ia] resumo account=#{@account.id} ia=#{e.code}")
     Rails.cache.write("#{chave}:falhou", 1, expires_in: FALHOU)
     Rails.cache.delete("#{chave}:contando")
   end
@@ -100,7 +100,7 @@ class Crm::MetaAds::ComentariosIa::Resumo
 
   def classificador
     @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(
-      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: CRITERIO), tela: true
+      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: CRITERIO), legenda: @fonte.legenda, tela: true
     )
   end
 end

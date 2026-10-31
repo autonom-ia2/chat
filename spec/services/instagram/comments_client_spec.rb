@@ -22,6 +22,13 @@ RSpec.describe Instagram::CommentsClient do
     expect(request.with(query: hash_including('fields' => described_class::COMMENT_FIELDS))).to have_been_made
   end
 
+  it 'lê a legenda da mídia, para a IA saber do que o comentário fala (#2424)' do
+    stub_request(:get, "#{base}/1790000000000001").with(query: hash_including('fields' => 'caption'))
+                                                  .to_return(status: 200, headers: json, body: { caption: 'Promo de verão', id: '1' }.to_json)
+
+    expect(client.caption('1790000000000001').data).to include('caption' => 'Promo de verão')
+  end
+
   it 'responde em público, oculta, apaga e manda a resposta no privado pelo id do comentário' do
     reply = stub_request(:post, "#{base}/1/replies").with(query: { 'access_token' => channel.access_token },
                                                           body: 'message=Temos%20sim',

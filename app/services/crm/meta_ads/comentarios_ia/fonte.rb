@@ -7,6 +7,8 @@
 # resposta da conta e sem privado, do mais novo para o mais velho. `escondidas` são os de outra pessoa que estão
 # escondidos. Cada linha: `{ id:, network:, author:, text:, momento:, inbox_id:, post_id: }` (a caixa e o post de onde
 # veio, para o "Ler e mandar" cuidar dele como um comentário novo). O anúncio que roda nas duas redes junta as listas.
+#
+# `legenda` (#2424): o texto do post, lido pela Rede como no motor, para a prévia e o resumo decidirem com o mesmo dado.
 class Crm::MetaAds::ComentariosIa::Fonte
   SEM_PESSOA = ->(_inbox) { true }
   NAO_VE_CONVERSA = ->(_conversation) { false }
@@ -66,6 +68,20 @@ class Crm::MetaAds::ComentariosIa::Fonte
     { status: 'ready', linhas: so(linhas, :espera), escondidas: so(linhas, :escondida) }
   rescue Crm::MetaAds::InstagramPrivateReply::Error, Crm::MetaAds::AdManagement::Error => e
     { status: e.code, linhas: [], escondidas: [] }
+  end
+
+  # A legenda do primeiro post (o anúncio nas duas redes é o mesmo criativo), ou nil. Na tela, a Meta fora do ar não
+  # derruba a prévia nem o resumo: seguem sem a legenda.
+  def legenda
+    network, leitura = @leituras.first
+    inbox = leitura && Inbox.find_by(id: leitura[:inbox_id])
+    return if inbox.nil? || leitura[:post_id].blank?
+
+    comentario = Crm::MetaAds::ComentariosIa::Comentario.new(network: network, account_id: inbox.account_id, inbox_id: inbox.id,
+                                                             post_id: leitura[:post_id])
+    Crm::MetaAds::ComentariosIa::Rede.para(inbox, comentario)&.legenda
+  rescue Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+    nil
   end
 
   private

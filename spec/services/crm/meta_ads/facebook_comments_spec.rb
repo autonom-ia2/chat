@@ -403,4 +403,37 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect(a_request(:get, meta_graph_url(comment_id))).not_to have_been_made
     end
   end
+
+  describe '#post_message (a legenda do post, para a IA que cuida dos comentários, #2424)' do
+    before do
+      stub_permissions(*all_permissions)
+      stub_page_token
+    end
+
+    it 'lê o texto do post com o token da Página' do
+      stub_request(:get, meta_graph_url(post_id)).with(query: hash_including('fields' => 'message'),
+                                                       headers: { 'Authorization' => "Bearer #{page_token}" })
+                                                 .to_return(status: 200, headers: json, body: { id: post_id, message: 'Bolo novo' }.to_json)
+
+      expect(build_service.post_message(post_id)).to eq('Bolo novo')
+    end
+
+    it 'Página de outra conta: nil, sem chamar a Meta pelo post' do
+      allow(Crm::MetaAdsPage).to receive(:account_ids_for).and_return([account.id + 1])
+
+      expect(build_service.post_message(post_id)).to be_nil
+      expect(a_request(:get, meta_graph_url(post_id))).not_to have_been_made
+    end
+
+    it 'Meta fora do ar sobe, para o job tentar de novo; recusa vira nil com o motivo no log' do
+      stub_request(:get, meta_graph_url(post_id)).with(query: hash_including({})).to_return(status: 503, headers: json, body: '{}')
+      expect { build_service.post_message(post_id) }.to raise_error(described_class::Error) { |erro| expect(erro.code).to eq('meta_unavailable') }
+
+      allow(Rails.logger).to receive(:warn)
+      stub_request(:get, meta_graph_url(post_id)).with(query: hash_including({}))
+                                                 .to_return(status: 400, headers: json, body: { error: { code: 100, message: 'x' } }.to_json)
+      expect(build_service.post_message(post_id)).to be_nil
+      expect(Rails.logger).to have_received(:warn).with(include('post do Facebook', post_id))
+    end
+  end
 end

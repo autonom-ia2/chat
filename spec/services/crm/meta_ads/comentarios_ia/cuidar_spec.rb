@@ -28,25 +28,28 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     described_class.new(item, rede: rede, classificador: classificador, conversa: conversa, registro: registro).call
   end
 
-  def decide(decisao)
-    allow(classificador).to receive(:decidir!).and_return(decisao)
+  # Sem certeza (decisao nil), a IA escolheu algo com certeza baixa: a decisão não vale, mas fica gravada.
+  def decide(decisao, escolha: decisao || 'private', certeza: decisao ? 0.9 : 0.4)
+    avaliacao = Crm::MetaAds::ComentariosIa::Classificador::Avaliacao.new(chave: decisao, escolha: escolha, certeza: certeza)
+    allow(classificador).to receive(:avaliar!).and_return(avaliacao)
+    avaliacao
   end
 
   before do
     account.enable_features!(described_class::FLAG)
     allow(registro).to receive_messages(reservar!: true, hoje: 1, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
-                                        reservar_pessoa!: true, soltar_pessoa!: 1)
+                                        reservar_pessoa!: true, soltar_pessoa!: 1, decisao!: 1)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
     allow(rede).to receive_messages(privado: enviado, ler: { text: 'Quanto custa?', from_name: 'carla.mendes' })
   end
 
-  it 'lê o comentário na Meta antes de perguntar ao Jev' do
+  it 'lê o comentário na Meta antes de perguntar à IA' do
     decide('no_reply')
 
     cuidar
 
     expect(rede).to have_received(:ler).ordered
-    expect(classificador).to have_received(:decidir!).with('Quanto custa?').ordered
+    expect(classificador).to have_received(:avaliar!).with('Quanto custa?').ordered
   end
 
   it 'comentário vindo da lista (sem o id de quem comentou): usa o lido na Meta' do
@@ -58,13 +61,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(conversa).to have_received(:anotar!).with(conversation, an_object_having_attributes(from_id: 'igsid-9'), care, nova: true)
   end
 
-  it 'a Meta diz que não dá para ler (apagado, sem permissão): descartado, sem Jev e sem soltar a leitura' do
-    allow(classificador).to receive(:decidir!)
+  it 'a Meta diz que não dá para ler (apagado, sem permissão): descartado, sem IA e sem soltar a leitura' do
+    allow(classificador).to receive(:avaliar!)
     allow(rede).to receive(:ler).and_return(nil)
 
     cuidar
 
-    expect(classificador).not_to have_received(:decidir!)
+    expect(classificador).not_to have_received(:avaliar!)
     expect(registro).to have_received(:reservar!).with(comentario)
     expect(registro).not_to have_received(:soltar!)
   end
@@ -119,7 +122,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   it 'erro antes de agir na Meta solta a leitura, para o job tentar de novo' do
-    allow(classificador).to receive(:decidir!).and_raise(ActiveRecord::ConnectionTimeoutError)
+    allow(classificador).to receive(:avaliar!).and_raise(ActiveRecord::ConnectionTimeoutError)
 
     expect { cuidar }.to raise_error(ActiveRecord::ConnectionTimeoutError)
     expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
@@ -152,10 +155,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:gravar!).with(anything, 'ai_unread')
   end
 
-  it 'Jev fora do ar: solta a leitura e sobe o erro, para o job tentar de novo' do
-    allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_timeout'))
+  it 'IA fora do ar: solta a leitura e sobe o erro, para o job tentar de novo' do
+    allow(classificador).to receive(:avaliar!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('ai_timeout'))
 
-    expect { cuidar }.to raise_error(TypesafeAi::Decisor::Error)
+    expect { cuidar }.to raise_error(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel)
     expect(registro).to have_received(:soltar!).with(lido, 'ai_seen')
     expect(rede).not_to have_received(:privado)
   end
@@ -311,7 +314,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).to have_received(:reservar!).with(comentario)
   end
 
-  it 'post sem oferta nunca manda privado, mesmo se o Jev pedir: a pergunta fica com o dono' do
+  it 'post sem oferta nunca manda privado, mesmo se a IA pedir: a pergunta fica com o dono' do
     care.update!(offer: nil)
     decide('price')
 
@@ -350,18 +353,39 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).not_to have_received(:gravar!)
   end
 
-  it 'sem certeza do Jev: não age, e o comentário fica com o dono como "não cuidei"' do
-    decide(nil)
+  it 'sem certeza da IA: não age, e o comentário fica com o dono como "não cuidei"' do
+    avaliacao = decide(nil)
 
     cuidar
 
     expect(rede).not_to have_received(:privado)
     expect(conversa).not_to have_received(:para_voce!)
     expect(registro).to have_received(:gravar!).with(lido, 'ai_unread')
+    expect(registro).to have_received(:decisao!).with(lido, avaliacao)
   end
 
-  it 'Jev barrado (teto do dia ou flag): não sobe, fica com o dono como "não cuidei"' do
-    allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Bloqueado.new('daily_limit'))
+  it 'pergunta com a legenda do post, lida na Meta depois do comentário (#2424)' do
+    avaliacao = Crm::MetaAds::ComentariosIa::Classificador::Avaliacao.new(chave: 'no_reply', escolha: 'no_reply', certeza: 0.9)
+    allow(rede).to receive(:legenda).and_return('Seguro viagem com cobertura internacional')
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
+    allow(classificador).to receive(:avaliar!).and_return(avaliacao)
+
+    described_class.new(comentario, rede: rede, conversa: conversa, registro: registro).call
+
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(care: care, legenda: 'Seguro viagem com cobertura internacional')
+  end
+
+  it 'grava o que a IA escolheu, a certeza e o motivo também quando ela age, antes de mandar o privado (#2424)' do
+    avaliacao = decide('private')
+
+    cuidar
+
+    expect(registro).to have_received(:decisao!).with(lido, avaliacao).ordered
+    expect(rede).to have_received(:privado).with(care).ordered
+  end
+
+  it 'IA barrada (teto do dia ou flag): não sobe, fica com o dono como "não cuidei"' do
+    allow(classificador).to receive(:avaliar!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Bloqueado.new('daily_limit'))
 
     cuidar
 
@@ -369,13 +393,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).not_to have_received(:soltar!)
   end
 
-  it 'teto do dia, contado depois da reserva (ela conta): o comentário fica com o dono, sem ir ao Jev' do
+  it 'teto do dia, contado depois da reserva (ela conta): o comentário fica com o dono, sem ir à IA' do
     allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO + 1)
-    allow(classificador).to receive(:decidir!)
+    allow(classificador).to receive(:avaliar!)
 
     cuidar
 
-    expect(classificador).not_to have_received(:decidir!)
+    expect(classificador).not_to have_received(:avaliar!)
     expect(rede).not_to have_received(:ler)
     expect(registro).to have_received(:gravar!).with(comentario, 'ai_unread')
   end
@@ -386,22 +410,22 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar
 
-    expect(classificador).to have_received(:decidir!)
+    expect(classificador).to have_received(:avaliar!)
   end
 
-  describe 'o que não chega ao Jev' do
-    before { allow(classificador).to receive(:decidir!) }
+  describe 'o que não chega à IA' do
+    before { allow(classificador).to receive(:avaliar!) }
 
     it 'comentário já reivindicado (a Meta reenvia o webhook, ou outro job pegou antes)' do
       allow(registro).to receive(:reservar!).and_return(false)
       cuidar
-      expect(classificador).not_to have_received(:decidir!)
+      expect(classificador).not_to have_received(:avaliar!)
     end
 
     it 'flag desligada' do
       account.disable_features!(described_class::FLAG)
       cuidar
-      expect(classificador).not_to have_received(:decidir!)
+      expect(classificador).not_to have_received(:avaliar!)
       expect(registro).not_to have_received(:reservar!)
     end
 

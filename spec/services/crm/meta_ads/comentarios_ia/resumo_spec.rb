@@ -3,7 +3,7 @@ require 'rails_helper'
 RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
   let(:account) { create(:account) }
   let(:alvo) { { 'kind' => 'post', 'perfil' => 'ig-1', 'post_id' => '1790' } }
-  let(:fonte) { instance_double(Crm::MetaAds::ComentariosIa::Fonte) }
+  let(:fonte) { instance_double(Crm::MetaAds::ComentariosIa::Fonte, legenda: 'Vestido midi de linho') }
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:cache) { ActiveSupport::Cache::MemoryStore.new }
   let(:resumo) { described_class.new(account: account, alvo: alvo, fonte: fonte) }
@@ -38,11 +38,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
     expect(resumo.call).to eq(status: 'ready', questions: 2, questions_old: 1, complaints: 1, read: 5, more: false)
   end
 
-  it 'com o critério fixo do resumo no lugar do "para quem" do dono' do
+  it 'com o critério fixo do resumo no lugar do "para quem" do dono, e a legenda do post (#2424)' do
     resumo.contar!
 
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
-      .with(care: an_object_having_attributes(account: account, para_quem: described_class::CRITERIO, offer: nil), tela: true)
+      .with(care: an_object_having_attributes(account: account, para_quem: described_class::CRITERIO, offer: nil),
+            legenda: 'Vestido midi de linho', tela: true)
   end
 
   it 'lista nova (alguém respondeu ou chegou comentário): conta de novo' do
@@ -69,9 +70,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
     expect(classificador).not_to have_received(:decidir!)
   end
 
-  describe 'com o Jev fora do ar' do
+  describe 'com a IA fora do ar' do
     before do
-      allow(classificador).to receive(:decidir!).and_raise(TypesafeAi::Decisor::Error.new('typesafe_unavailable'))
+      allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('ai_unavailable'))
     end
 
     it 'não grava conta zerada como pronta: diz ai_unavailable uma vez e, na próxima, conta de novo' do
@@ -89,9 +90,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
     end
   end
 
-  it 'a trava do "contando" dura mais que o job mais lento: uma chamada ao Jev por comentário, com as tentativas' do
-    cliente = TypesafeAi::Client
-    por_comentario = (cliente::OPEN_TIMEOUT + cliente::READ_TIMEOUT) * (cliente::MAX_RETRIES + 1)
+  it 'a trava do "contando" dura mais que o job mais lento: uma chamada à IA por comentário, até o prazo dela' do
+    por_comentario = Crm::MetaAds::ComentariosIa::Classificador::PRAZO
 
     expect(described_class::CONTANDO).to be >= (described_class::LIMITE * por_comentario).seconds
   end
