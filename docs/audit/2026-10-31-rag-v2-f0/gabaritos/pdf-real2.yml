@@ -1,0 +1,153 @@
+perguntas:
+  - pergunta: "cancelei meu seguro anual com 20 dias de vigencia, quanto do premio eu perco?"
+    tipo: tabela_valor
+    esperado: "Retém 20% do prêmio (plano anual, faixa de 16 a 30 dias da Tabela de Prazo Curto)."
+    ancoras: ["calculado de acordo com a Tabela de Prazo Curto", "período estabelecido na Tabela de Prazo Curto acima"]
+  - pergunta: "tava com o seguro anual ha uns 110 dias qdo cancelei, fica com qnto %?"
+    tipo: tabela_valor
+    esperado: "50% do prêmio (plano anual, 106 a 120 dias)."
+    ancoras: ["período estabelecido na Tabela de Prazo Curto acima"]
+  - pergunta: "cancelei o anual faltando poucos dias pra acabar (350 dias), devolvem algo?"
+    tipo: tabela_valor
+    esperado: "Não: de 346 a 365 dias a retenção é de 100% do prêmio (plano anual)."
+    ancoras: ["período estabelecido na Tabela de Prazo Curto acima"]
+  - pergunta: "meu plano é bianual e cancelei com 100 dias, qual a % retida?"
+    tipo: tabela_valor
+    esperado: "30% do prêmio (plano bianual, faixa de 91 a 120 dias)."
+    ancoras: ["período estabelecido na Tabela de Prazo Curto acima"]
+  - pergunta: "notebook de 3 anos queimou, desconta quanto de depreciação?"
+    tipo: tabela_valor
+    esperado: "40% (equipamentos de informática, tempo de uso até 04 anos), salvo se contratado Valor de Novo."
+    ancoras: ["levando-se em consideração o tempo de uso e a especificação do item"]
+  - pergunta: "minha geladeira tem 7 anos, quanto é descontado por idade num sinistro?"
+    tipo: tabela_valor
+    esperado: "50% (eletrodomésticos e demais equipamentos, acima de 06 anos), salvo Valor de Novo."
+    ancoras: ["Acima de 06 anos"]
+  - pergunta: "tv led de 5 anos, quanto abate de depreciação?"
+    tipo: tabela_valor
+    esperado: "40% (televisores de plasma, LED, LCD, tempo de uso até 06 anos)."
+    ancoras: ["levando-se em consideração o tempo de uso e a especificação do item"]
+  - pergunta: "na cobertura de hole in one, quanto reembolsa se foi em torneio aberto do clube?"
+    tipo: tabela_valor
+    esperado: "Até R$ 2.000,00 (Torneio Aberto do Clube)."
+    ancoras: ["Torneio Aberto do Clube"]
+  - pergunta: "vou ficar 90 dias fora de casa sem ninguem, o seguro cobre se acontecer algo?"
+    tipo: cruza_secoes
+    esperado: "Na regra geral não: imóvel desocupado por mais de 60 dias é excluído. Só cobre com a cobertura adicional de Desocupação Temporária, para desocupação entre 60 e 180 dias consecutivos por vigência, avisando por endosso até 3 dias úteis antes."
+    ancoras: ["danos causados ao imóvel enquanto este se encontrar desocupado", "entre 60 (sessenta) e 180 (cento e oitenta)"]
+  - pergunta: "o vento levou parte do telhado, o seguro paga?"
+    tipo: cruza_secoes
+    esperado: "Vendaval é excluído da cobertura básica; só paga se a cobertura adicional de Vendaval, Granizo e Impacto de Veículos foi contratada, e o vento precisa ter velocidade superior a 54 km/h, comprovada por laudo meteorológico ou divulgação pela imprensa."
+    ancoras: ["vendaval, furacão, ciclone, tornado, granizo e impacto de", "ventos fortes com velocidade superior a 54 km/h"]
+  - pergunta: "roubaram minhas joias de casa, o seguro paga?"
+    tipo: cruza_secoes
+    esperado: "Roubo/furto mediante arrombamento é excluído da básica; só com a cobertura adicional de Roubo ou Furto mediante Arrombamento. Na modalidade Verba Separada, joias têm limite total de R$ 15.000,00 por vigência, precisam estar relacionadas na apólice e guardadas em cofre fechado com chave e segredo."
+    ancoras: ["roubo ou furto mediante arrombamento, extorsão, furto simples", "limitados a uma indenização total de R$15.000,00"]
+  - pergunta: "caiu um raio na rua e queimou minha tv e o computador, cobre?"
+    tipo: cruza_secoes
+    esperado: "A cobertura básica exclui danos por raio fora do terreno e curto-circuito; só cobre com a cobertura adicional de Danos Elétricos e Queda de Raio fora do Terreno Segurado, que cobre variações anormais de tensão, curto-circuito etc., mas não lâmpadas, fusíveis e peças de troca periódica."
+    ancoras: ["inclusive em consequência de queda de raio fora do terreno", "calor gerado acidentalmente por eletricidade"]
+  - pergunta: "gastei com bombeiro e tirar entulho depois do incendio, o seguro devolve tudo?"
+    tipo: cruza_secoes
+    esperado: "As despesas de salvamento e desentulho entram dentro do Limite Máximo de Indenização da cobertura, e o reembolso das despesas de salvamento é limitado a 5% desse limite, a menos que a seguradora autorize por escrito valor maior."
+    ancoras: ["estão incluídas no Limite Máximo de Indenização da cobertura", "equivalente a 5% (cinco por cento) do Limite Máximo de"]
+  - pergunta: "mandei toda a documentacao do sinistro e a seguradora demorou 45 dias pra pagar, tenho direito a algo?"
+    tipo: cruza_secoes
+    esperado: "O prazo é de 30 dias após o último documento pendente; passando disso há multa de 2%, correção monetária e juros (1% ao mês mais IPCA)."
+    ancoras: ["contado da data em que lhe tiver sido entregue o último documento", "O índice de juros aplicado será de 1% (um por cento) ao mês"]
+  - pergunta: "o seguro vale pra casa de praia que tenho no Uruguai?"
+    tipo: fato_simples
+    esperado: "Não. Vale só para sinistros ocorridos em território brasileiro, salvo disposição em contrário nas condições especiais."
+    ancoras: ["exclusivamente para Sinistros ocorridos no território brasileiro"]
+  - pergunta: "quantos dias a seguradora tem pra aceitar ou recusar a proposta?"
+    tipo: fato_simples
+    esperado: "25 dias corridos a contar do recebimento da proposta; sem resposta por escrito nesse prazo, a proposta é aceita tacitamente."
+    ancoras: ["A Seguradora terá o prazo de 25 (vinte e cinco) dias corridos"]
+  - pergunta: "perdi meus documentos no incendio, o seguro ajuda a tirar segunda via?"
+    tipo: fato_simples
+    esperado: "Sim, paga as despesas de reposição de documentos de uso pessoal (do segurado, cônjuge e filhos) e sustação de cheques, até R$ 5.000,00 destacados do limite da cobertura."
+    ancoras: ["até o limite de R$ 5.000,00 (cinco mil reais), destacados do"]
+  - pergunta: "se atrasar uma parcela do seguro tem multa?"
+    tipo: fato_simples
+    esperado: "Sim: nas parcelas posteriores à primeira, multa de 2% aplicada de uma só vez, mais juros legais."
+    ancoras: ["haverá cobrança de multa equivalente a 2% (dois por cento)"]
+  - pergunta: "o carro na garagem da casa entra no seguro? quando é perda total?"
+    tipo: fato_simples
+    esperado: "Só com a cobertura Veículo em Garagem (imóvel tipo casa). A perda total ocorre quando o custo de reparação superar 75% do valor de reposição."
+    ancoras: ["caracterizada quando o custo de reparação do automóvel superar 75%"]
+  - pergunta: "se minha casa ficar inabitavel o seguro paga aluguel por quanto tempo?"
+    tipo: fato_simples
+    esperado: "Com a cobertura de Perda e/ou Pagamento de Aluguel: no máximo 6 meses a contar do evento, e o valor do aluguel é de no máximo 1/6 do limite da cobertura."
+    ancoras: ["O período máximo de indenização será de 6 (seis) meses"]
+  - pergunta: "qual o telefone do SAC 24 horas da seguradora?"
+    tipo: fato_simples
+    esperado: "SAC 24 Horas: 0800 775 1000."
+    ancoras: ["SAC 24 Horas – 0800 775 1000"]
+  - pergunta: "em quantos dias o perito vai na minha casa depois que aviso o sinistro?"
+    tipo: fato_simples
+    esperado: "A seguradora deve enviar o perito em até 7 dias da comunicação do evento, salvo força maior."
+    ancoras: ["deverá enviar seus peritos para o local do sinistro em até 7"]
+  - pergunta: "se eu cancelar o seguro no meio da vigencia como fica o reembolso?"
+    tipo: secao_longa
+    esperado: "Se o cancelamento é pedido pelo segurado, a seguradora retém emolumentos e o prêmio conforme a Tabela de Prazo Curto (prazo fora da tabela usa o percentual do prazo imediatamente inferior). Se a iniciativa é da seguradora, retém só a fração proporcional ao tempo decorrido."
+    ancoras: ["Para os prazos não previstos na Tabela, deverá ser utilizado o", "fração do Prêmio proporcional ao tempo decorrido"]
+  - pergunta: "parei de pagar a partir da 3a parcela do seguro, o que acontece?"
+    tipo: secao_longa
+    esperado: "Multa de 2% e juros legais; a vigência é reduzida proporcionalmente ao prêmio pago (Tabela de Prazo Curto); a seguradora notifica com 15 dias corridos para regularizar, sob pena de suspensão da garantia, e pode cancelar se o atraso persistir por mais de 30 dias após a suspensão."
+    ancoras: ["concedendo prazo de 15 (quinze) dias corridos para purgação da mora", "caso o inadimplemento persista por mais de 30 (trinta) dias"]
+  - pergunta: "vendi o imovel segurado, e o seguro?"
+    tipo: secao_longa
+    esperado: "Se a seguradora não for avisada da venda/cessão, a apólice é cancelada sem devolução de prêmio. Se avisada, pode resolver a apólice (responde em 15 dias) ou aceitar; a transferência exige anuência quando o novo ocupante aumenta o risco."
+    ancoras: ["sobre a venda, alienação ou cessão do bem"]
+  - pergunta: "posso alugar a casa pelo airbnb e continuar coberto?"
+    tipo: secao_longa
+    esperado: "Só se for contratada a modalidade compatível com atividade comercial e o uso como hospedagem estiver comprovadamente registrado no site/aplicativo ou formalizado por contrato de locação."
+    ancoras: ["haverá cobertura somente se for contratada a modalidade compatível"]
+  - pergunta: "moro de aluguel, quem recebe a indenizacao da casa se pegar fogo?"
+    tipo: secao_longa
+    esperado: "A perda é apurada separadamente: a indenização do prédio é creditada ao proprietário/locador, e a do conteúdo (móveis e utensílios) ao segurado ou locatário, conforme cláusula beneficiária e comprovação da propriedade."
+    ancoras: ["O pagamento de indenização referente ao prédio deverá ser creditado"]
+  - pergunta: "ja estou coberto assim que mando a proposta?"
+    tipo: parafrase
+    esperado: "Em regra não: durante os 25 dias de análise não há cobertura, salvo cobertura provisória prevista (por exemplo, quando há pagamento antecipado do prêmio)."
+    ancoras: ["Durante o prazo de 25 (vinte e cinco) dias corridos para análise"]
+  - pergunta: "meu seguro renova sozinho no fim do ano?"
+    tipo: parafrase
+    esperado: "Sim, a renovação é automática por igual período, salvo se a seguradora avisar por escrito, com até 30 dias de antecedência, que não quer renovar."
+    ancoras: ["renovada automaticamente, por igual período"]
+  - pergunta: "recuperei o que levaram antes de receber a indenizacao, e agora?"
+    tipo: parafrase
+    esperado: "O segurado deve receber o bem, comunicar imediatamente a seguradora e não pode dispor dele sem autorização expressa dela."
+    ancoras: ["deverá recebê-lo e comunicar, imediatamente à seguradora"]
+  - pergunta: "a seguradora e eu discordamos do valor do prejuizo, como resolve?"
+    tipo: parafrase
+    esperado: "Pode ser formada uma junta com 2 representantes (um do segurado, outro da seguradora); sem acordo, escolhem um terceiro para desempatar. Isso não impede o segurado de ir à Justiça."
+    ancoras: ["poderá ser proposta a formação de uma junta"]
+  - pergunta: "da pra aumentar o valor segurado no meio do contrato?"
+    tipo: parafrase
+    esperado: "Sim, a qualquer momento da vigência, por solicitação escrita do segurado; a seguradora decide a aceitação e pode alterar o prêmio."
+    ancoras: ["alterado a qualquer tempo durante a Vigência do contrato"]
+  - pergunta: "quanto fica o seguro por mes pra um apartamento de 60 metros?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem desconto pra quem nunca usou o seguro?"
+    tipo: fora
+    fora: true
+  - pergunta: "posso pagar o seguro no pix?"
+    tipo: fora
+    fora: true
+  - pergunta: "o seguro inclui encanador ou eletricista 24h?"
+    tipo: fora
+    fora: true
+  - pergunta: "cobre tratamento veterinario do meu cachorro?"
+    tipo: fora
+    fora: true
+  - pergunta: "onde fica a agencia de voces em Recife?"
+    tipo: fora
+    fora: true
+  - pergunta: "qual a taxa de juros pra parcelar o seguro em 10x?"
+    tipo: fora
+    fora: true
+  - pergunta: "qual o valor da franquia do meu seguro?"
+    tipo: fora
+    fora: true

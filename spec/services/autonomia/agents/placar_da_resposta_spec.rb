@@ -19,7 +19,7 @@ RSpec.describe Autonomia::Agents::PlacarDaResposta do
       'fazem seguro de vida?' => resultado('Não tenho essa informação.')
     }
   end
-  let(:juiz) { instance_double(Autonomia::Agents::Material::JuizDoAutoteste) }
+  let(:juiz) { instance_double(Autonomia::Agents::JuizDoPlacar) }
   let(:itens_julgados) { [] }
 
   def resultado(reply, usados: [], handoff: false, error: nil)
@@ -51,15 +51,21 @@ RSpec.describe Autonomia::Agents::PlacarDaResposta do
     expect(placar[:itens].map { |item| item[:usou_a_ancora] }).to eq([true, false])
   end
 
-  it 'gives the judge the expected answer, falling back to the anchors, and the handoff' do
+  it 'keeps the passages used in the detail, for a later review' do
+    placar = medir(vidro, vereditos: %w[certo])
+
+    expect(placar[:itens].first[:trechos_usados]).to eq(['Cobertura de VIDROS: para-brisa e vigias.'])
+  end
+
+  it 'gives the judge the expected answer, falling back to the anchors, the handoff and the passages used' do
     medir(vidro, reboque, vida, vereditos: %w[certo errado recusou])
     esperados = [
       { 'origem' => 'material', 'pergunta' => 'cobre o vidro?', 'esperado' => 'Cobre para-brisa.',
-        'resposta' => 'Sim, cobre o para-brisa.', 'equipe' => false },
+        'resposta' => 'Sim, cobre o para-brisa.', 'equipe' => false, 'trechos' => ['Cobertura de VIDROS: para-brisa e vigias.'] },
       { 'origem' => 'material', 'pergunta' => 'tem reboque?', 'esperado' => 'guincho até 200 km',
-        'resposta' => 'Não sei.', 'equipe' => true },
+        'resposta' => 'Não sei.', 'equipe' => true, 'trechos' => [] },
       { 'origem' => 'fora', 'pergunta' => 'fazem seguro de vida?', 'esperado' => nil,
-        'resposta' => 'Não tenho essa informação.', 'equipe' => false }
+        'resposta' => 'Não tenho essa informação.', 'equipe' => false, 'trechos' => [] }
     ]
 
     expect(itens_julgados).to eq(esperados)

@@ -1,6 +1,7 @@
 # #1431 (F0) — o placar da RESPOSTA do agente, ao lado do placar da busca (PlacarDaBase). Cada pergunta passa pelo
 # Answerer como no autoteste do material (`prova: true`: sem ferramentas do agente, sem busca na web, nada sai para
-# fora), com a instrução tratada como no atendimento. O juiz do autoteste (outro modelo) dá o veredito pelo sentido:
+# fora), com a instrução tratada como no atendimento. O juiz do placar (JuizDoPlacar, outro modelo, que recebe os trechos
+# usados) dá o veredito pelo sentido:
 # - acerto: nas perguntas que a base responde, a resposta traz o fato esperado ("certo");
 # - recusa correta: nas de fora da base, o agente disse que não sabe ou passou para a equipe ("recusou"), sem inventar;
 # - de onde veio: a resposta diz ter usado um trecho que contém a âncora (os `used_snippet_ids` que o modelo devolve).
@@ -19,7 +20,7 @@ class Autonomia::Agents::PlacarDaResposta
     @agent = agent
     @perguntas = perguntas
     @medidor = medidor
-    @juiz = juiz || Autonomia::Agents::Material::JuizDoAutoteste.new(account: agent.account)
+    @juiz = juiz || Autonomia::Agents::JuizDoPlacar.new(account: agent.account)
     @responder = responder || method(:responder_do_autoteste)
   end
 
@@ -78,17 +79,21 @@ class Autonomia::Agents::PlacarDaResposta
     {
       'origem' => pergunta.fora ? 'fora' : 'material', 'pergunta' => pergunta.texto,
       'esperado' => pergunta.fora ? nil : (pergunta.esperado.presence || pergunta.ancoras.join(' / ')),
-      'resposta' => resposta.reply.to_s, 'equipe' => resposta.handoff.to_h[:should] == true
+      'resposta' => resposta.reply.to_s, 'equipe' => resposta.handoff.to_h[:should] == true, 'trechos' => trechos_usados(resposta)
     }
   end
 
   def item(pergunta, resposta, veredito)
-    usados = Array(resposta.used_knowledge).pluck(:content)
+    usados = trechos_usados(resposta)
     {
       pergunta: pergunta.texto, fora: pergunta.fora, resposta: resposta.reply.to_s, veredito: veredito,
-      erro: resposta.error.presence, equipe: resposta.handoff.to_h[:should] == true,
+      erro: resposta.error.presence, equipe: resposta.handoff.to_h[:should] == true, trechos_usados: usados,
       usou_a_ancora: usados.any? { |texto| Autonomia::Agents::PlacarDaBase.contem_ancora?(texto, pergunta.ancoras) }
     }
+  end
+
+  def trechos_usados(resposta)
+    Array(resposta.used_knowledge).pluck(:content)
   end
 
   def taxa(itens, &)

@@ -1,0 +1,150 @@
+perguntas:
+  - pergunta: "vcs abrem sabado?"
+    tipo: fato_simples
+    esperado: "Abrimos, das 8h às 13h."
+    ancoras: ["Sábado: das 8h às 13h."]
+  - pergunta: "tem estacionamento aí?"
+    tipo: fato_simples
+    esperado: "Tem, 6 vagas gratuitas na frente da oficina para quem aguarda o serviço."
+    ancoras: ["temos 6 vagas gratuitas na frente da oficina"]
+  - pergunta: "aceita cheque?"
+    tipo: fato_simples
+    esperado: "Não. Aceitamos Pix, dinheiro, débito e crédito."
+    ancoras: ["Não aceitamos cheque."]
+  - pergunta: "vcs cobram pra fazer orçamento?"
+    tipo: fato_simples
+    esperado: "Não, o orçamento é gratuito e vale por 7 dias."
+    ancoras: ["O orçamento é gratuito e vale por 7 dias"]
+  - pergunta: "atendem caminhão tb?"
+    tipo: fato_simples
+    esperado: "Não. Atendemos veículos leves e utilitários de até 3,5 toneladas; caminhões e veículos pesados não."
+    ancoras: ["Caminhões e veículos pesados não são atendidos"]
+  - pergunta: "tem leva e traz?"
+    tipo: fato_simples
+    esperado: "Tem, de graça, em até 5 km da oficina, de segunda a sexta, com agendamento de 1 dia de antecedência."
+    ancoras: ["gratuitamente, em até 5 km da oficina, de segunda a sexta-feira"]
+  - pergunta: "fecha na hora do almoço?"
+    tipo: fato_simples
+    esperado: "Sim, de segunda a sexta há pausa para almoço das 12h às 13h30."
+    ancoras: ["com pausa para almoço das 12h às 13h30"]
+  - pergunta: "vcs mexem em carro da ford?"
+    tipo: fato_simples
+    esperado: "Sim, Ford está entre as marcas atendidas."
+    ancoras: ["Chevrolet, Volkswagen, Fiat, Ford, Hyundai, Toyota"]
+  - pergunta: "quanto é a troca de óleo sintético?"
+    tipo: valor
+    esperado: "R$ 289,00 com óleo sintético 5W30 em até 4 litros e filtro de óleo novo."
+    ancoras: ["Troca de óleo sintético 5W30 em até 4 litros"]
+  - pergunta: "qnto custa o alinhamento?"
+    tipo: valor
+    esperado: "R$ 90,00. O combo com balanceamento das 4 rodas sai por R$ 150,00."
+    ancoras: ["Alinhamento de direção: R$ 90,00."]
+  - pergunta: "o scanner é quanto?"
+    tipo: valor
+    esperado: "O diagnóstico com scanner custa R$ 110,00, valor abatido do serviço se você aprovar o conserto no mesmo dia."
+    ancoras: ["O diagnóstico com scanner custa R$ 110,00"]
+  - pergunta: "bateria nova sai quanto com instalação?"
+    tipo: valor
+    esperado: "R$ 520,00 a bateria de 60 Ah, com instalação e descarte da antiga, e 12 meses de garantia."
+    ancoras: ["A troca por bateria nova de 60 Ah sai por R$ 520,00"]
+  - pergunta: "qual a garantia do serviço?"
+    tipo: valor
+    esperado: "90 dias ou 5.000 km, o que vencer primeiro."
+    ancoras: ["Garantia de 90 dias ou 5.000 km em todos os serviços"]
+  - pergunta: "tem desconto no pix?"
+    tipo: valor
+    esperado: "Tem, 5% de desconto pagando em Pix ou dinheiro em serviços acima de R$ 300,00."
+    ancoras: ["ganha 5% de desconto"]
+  - pergunta: "dá pra parcelar em qts vezes?"
+    tipo: valor
+    esperado: "Em até 6 vezes sem juros no crédito, para serviços a partir de R$ 300,00."
+    ancoras: ["parcelamos em até 6 vezes sem juros"]
+  - pergunta: "se eu deixar o carro lá depois de pronto cobram algo?"
+    tipo: valor
+    esperado: "Até 2 dias úteis depois do aviso é sem custo; depois disso cobram diária de R$ 30,00."
+    ancoras: ["cobramos uma diária de estadia de R$ 30,00"]
+  - pergunta: "revisao de 20 mil do onix fica quanto"
+    tipo: tabela_linha
+    esperado: "R$ 590,00 para o Chevrolet Onix 1.0 flex (2019 em diante)."
+    ancoras: ["Chevrolet Onix 1.0 flex (2019 em diante)"]
+  - pergunta: "e a hilux na revisão de 40 mil?"
+    tipo: tabela_linha
+    esperado: "R$ 1.590,00 na Toyota Hilux 2.8 diesel (2018 em diante)."
+    ancoras: ["Toyota Hilux 2.8 diesel (2018 em diante)"]
+  - pergunta: "preço da primeira revisão do argo"
+    tipo: tabela_linha
+    esperado: "R$ 410,00 a revisão de 10 mil km do Fiat Argo 1.3 flex (2018 em diante)."
+    ancoras: ["Fiat Argo 1.3 flex (2018 em diante)"]
+  - pergunta: "pacote viagem inclui o que e custa qnto?"
+    tipo: tabela_linha
+    esperado: "Revisão de segurança com 18 itens (pneus, freios, fluidos, bateria, luzes, palhetas e suspensão) por R$ 149,00."
+    ancoras: ["Revisão de segurança com 18 itens"]
+  - pergunta: "revisão de 30 mil no gol, qual o valor?"
+    tipo: tabela_linha
+    esperado: "R$ 390,00 para o Volkswagen Gol 1.0 flex (2013 a 2023)."
+    ancoras: ["Volkswagen Gol 1.0 flex (2013 a 2023)"]
+  - pergunta: "meu volante tá tremendo qnd pego estrada, o q pode ser?"
+    tipo: parafrase
+    esperado: "Pode ser desbalanceamento das rodas ou desgaste de peças da suspensão; vale passar para avaliação."
+    ancoras: ["pode ser desbalanceamento das rodas ou desgaste de peças da suspensão"]
+  - pergunta: "trabalho de uber, vcs tem algum desconto?"
+    tipo: parafrase
+    esperado: "Motoristas de aplicativo têm 10% de desconto na mão de obra, de segunda a quinta, com comprovação do cadastro."
+    ancoras: ["Motoristas de aplicativo têm 10% de desconto na mão de obra"]
+  - pergunta: "se eu levar a peça de fora a garantia vale?"
+    tipo: parafrase
+    esperado: "Só para a mão de obra; a peça trazida de fora fica sem a garantia da oficina."
+    ancoras: ["a garantia de 90 dias vale somente para o serviço"]
+  - pergunta: "acendeu a luz da injeção, posso continuar andando?"
+    tipo: parafrase
+    esperado: "Se a luz estiver fixa e o carro normal, dá para ir até a oficina com cuidado. Se estiver piscando, pare e chame, porque pode danificar o catalisador."
+    ancoras: ["Se estiver piscando, o motor falha e pode danificar o catalisador"]
+  - pergunta: "fazendo a revisão com vcs eu perco a garantia da concessionária?"
+    tipo: parafrase
+    esperado: "Seguem o plano de manutenção do manual e entregam relatório e nota fiscal, que são os comprovantes para a garantia de fábrica."
+    ancoras: ["Seguimos o plano de manutenção do manual, com peças e fluidos"]
+  - pergunta: "a revisão de 30 mil leva quanto tempo? preciso marcar?"
+    tipo: secao_longa
+    esperado: "Leva o dia inteiro, com o carro na oficina das 8h até o fim da tarde, e por isso precisa de agendamento."
+    ancoras: ["levam o dia inteiro, e o carro fica conosco das 8h até o fim da tarde"]
+  - pergunta: "preciso desmarcar, vão me cobrar alguma coisa?"
+    tipo: secao_longa
+    esperado: "Não cobram taxa. Só pedem aviso pelo WhatsApp com pelo menos 2 horas de antecedência."
+    ancoras: ["Não cobramos taxa pelo cancelamento ou pela troca do dia"]
+  - pergunta: "de qto em qto tempo troco o óleo semi?"
+    tipo: secao_longa
+    esperado: "No semissintético, a cada 7.500 km ou 6 meses (no sintético, a cada 10 mil km ou 12 meses); antecipe se o uso for pesado."
+    ancoras: ["Para o semissintético, a cada 7.500 quilômetros ou 6 meses"]
+  - pergunta: "tenho 4 vans na empresa, tem condição especial?"
+    tipo: secao_longa
+    esperado: "Para empresas com 3 ou mais veículos cadastrados há 8% de desconto na mão de obra, calendário de revisões e pagamento faturado em até 28 dias mediante análise."
+    ancoras: ["têm 8% de desconto na mão de obra"]
+  - pergunta: "qual dos carros da tabela tem a revisão de 10 mil mais barata?"
+    tipo: agregacao
+    esperado: "O Volkswagen Gol 1.0 flex, R$ 360,00."
+    ancoras: ["Volkswagen Gol 1.0 flex (2013 a 2023)"]
+  - pergunta: "qual carro é o mais caro pra fazer a revisão de 40 mil?"
+    tipo: agregacao
+    esperado: "A Toyota Hilux 2.8 diesel, R$ 1.590,00."
+    ancoras: ["Toyota Hilux 2.8 diesel (2018 em diante)"]
+  - pergunta: "vcs fazem funilaria e pintura?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem guincho 24h?"
+    tipo: fora
+    fora: true
+  - pergunta: "consertam moto?"
+    tipo: fora
+    fora: true
+  - pergunta: "quanto é pra trocar a embreagem?"
+    tipo: fora
+    fora: true
+  - pergunta: "emprestam carro reserva enquanto o meu fica aí?"
+    tipo: fora
+    fora: true
+  - pergunta: "instalam película e som no carro?"
+    tipo: fora
+    fora: true
+  - pergunta: "fazem laudo cautelar pra eu comprar um usado?"
+    tipo: fora
+    fora: true
