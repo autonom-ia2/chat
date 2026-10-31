@@ -137,4 +137,12 @@ RSpec.describe Crm::BookingPageCoordenadas do
       expect(pagina.enderecos_sem_coordenada).to eq(['Rua B, 2'])
     end
   end
+
+  # #1479 (LOW c da F3): com a flag desligada, a coordenada continua sendo só do servidor. Um ponto forjado agora seria
+  # usado pelo mapa quando a flag ligar.
+  it 'sem a flag, quem chama a API também não grava coordenada nem a marca' do
+    account.disable_features!('agentes_enviar_local_e_contato')
+    forjado = centro.merge('latitude' => 1.0, 'longitude' => 2.0, 'geo_nao_achou' => marca)
+    expect(criar([video, forjado]).reload.locations.last).to eq(centro)
+  end
 end

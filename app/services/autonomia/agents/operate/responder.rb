@@ -283,22 +283,38 @@ module Autonomia
           @marca_dos_cartoes ||= ::Autonomia::Agents::Operate::CartoesDoTurno.marca(@delivery)
         end
 
-        # #1479 F3: depois do lock e do commit, o job que manda os cartões quando a âncora sair. A âncora é a que este run
-        # postou ou, quando a guarda disse "já respondido" (retry), a que já existe, com os cartões que ELA gravou. Na
-        # entrega em pedaços agendada agora, quem enfileira é o ChunkedDeliveryJob, no último pedaço. A resposta nova sem
-        # cartão nem consulta a âncora. O retry cuja âncora não tem cartão, com cartão marcado neste run: o cartão novo não
-        # sai (`cartao_descartado` motivo=ja_respondido). Erro ao enfileirar não muda o turno, porque a resposta já saiu:
-        # log com os ids e a classe, tracker e `cartao_nao_enviado` motivo=erro_ao_enfileirar.
+        # #1479 F3: depois do lock e do commit, o job que manda os cartões (e, na voz, a interação gravada no áudio) quando
+        # a âncora sair. A âncora é a que este run postou ou, quando a guarda disse "já respondido" (retry), a que já
+        # existe, com o que ELA gravou. Na entrega em pedaços agendada agora, quem enfileira é o ChunkedDeliveryJob, no
+        # último pedaço. A resposta nova sem nada a enviar nem consulta a âncora; o retry só a procura quando o turno pode
+        # ter cartão ou interação depois do áudio (`pode_ter_ancora?`). O retry cuja âncora não tem nada, com cartão
+        # marcado neste run: o cartão novo não sai (`cartao_descartado` motivo=ja_respondido). Erro ao enfileirar não muda
+        # o turno, porque a resposta já saiu: log com os ids e a classe, tracker e `cartao_nao_enviado`
+        # motivo=erro_ao_enfileirar.
         def enfileirar_cartoes(outcome)
           return if @cadeia_agendada || (@ancora.nil? && outcome.message.present?)
 
-          ancora = @ancora || ::Autonomia::Agents::Operate::CartoesDoTurno.ancora_do_turno(@conversation, @reply_to_message_id)
-          return descartar_cartoes('ja_respondido') if ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora).empty?
+          ancora = @ancora || ancora_do_retry
+          return descartar_cartoes('ja_respondido') unless ::Autonomia::Agents::Operate::CartoesDoTurno.algo_a_enviar?(ancora)
 
           ::Autonomia::Agents::Operate::EnviarCartoesJob.perform_later(ancora.id)
           @cartoes_enfileirados = true
         rescue StandardError => e
           erro_ao_enfileirar(e, ancora)
+        end
+
+        # A âncora que um run anterior deste turno postou, ou nil. A busca (LIKE) só roda quando o turno pode tê-la.
+        def ancora_do_retry
+          ::Autonomia::Agents::Operate::CartoesDoTurno.ancora_do_turno(@conversation, @reply_to_message_id) if pode_ter_ancora?
+        end
+
+        # #1479: o turno pode ter gravado cartões (a conta com o envio do mapa e do contato) ou a interação depois do
+        # áudio (o agente com voz, e a interação ligada: `InteracaoDepoisDoAudio.ligada?`, o mesmo gate de quem a posta).
+        # Fora disso, o retry não faz a busca (LIKE) da âncora.
+        def pode_ter_ancora?
+          ::Autonomia::Agents::Tools::Native::CartaoDaPagina.ligado?(@conversation.account) ||
+            (::Autonomia::Agents::Config.voice_reply_enabled?(@agent) &&
+             ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.ligada?(@conversation.account))
         end
 
         def erro_ao_enfileirar(error, ancora)
@@ -372,16 +388,18 @@ module Autonomia
           nil
         end
 
-        # #1479: o áudio e, logo depois, a interação numa mensagem própria (as opções com a pergunta; o link com o rótulo
-        # no corpo). -> a mensagem de áudio. #1479 F3: o áudio é a âncora dos cartões, que esperam ele sair.
+        # #1479: só o áudio. A interação (as opções com a pergunta; o link com o rótulo no corpo) fica gravada nele e sai
+        # numa mensagem própria DEPOIS que ele saiu para o canal (`InteracaoDepoisDoAudio`, pelo `EnviarCartoesJob`): o
+        # áudio vai com 2 s de espera, e a interação postada junto chegava antes dele. -> a mensagem de áudio, a âncora
+        # da interação e dos cartões (#1479 F3), que esperam ele sair.
         def post_voz!(audio_bytes, interacao)
-          audio = post_audio_reply!(audio_bytes, marca_dos_cartoes)
-          post_reply!(nil, interacao) if interacao
-          audio
+          depois = ::Autonomia::Agents::Operate::InteracaoDepoisDoAudio.marca(interacao, turno: delivery.turno, conversation: @conversation)
+          post_audio_reply!(audio_bytes, marca_dos_cartoes.merge(depois))
         end
 
         # Mensagem outgoing SÓ-ÁUDIO (espelhamento): mesmo sender/anti-loop do post_reply!, com o anexo de
         # áudio construído ANTES do save (o envio por canal dispara nos callbacks da Message outgoing).
+        # `cartoes`: os cartões e a interação que o áudio grava (`post_voz!`).
         def post_audio_reply!(audio_bytes, cartoes = {})
           message = @conversation.messages.new(
             content: '',
@@ -404,7 +422,8 @@ module Autonomia
           ancora!(message, cartoes)
         end
 
-        # #1479 F3: a mensagem que gravou os cartões é a âncora do turno (`enfileirar_cartoes`). -> a mensagem.
+        # #1479 F3: a mensagem que gravou os cartões (ou, na voz, a interação) é a âncora do turno (`enfileirar_cartoes`).
+        # -> a mensagem.
         def ancora!(message, cartoes)
           @ancora = message if cartoes.present?
           message
@@ -962,9 +981,7 @@ module Autonomia
         # (Crm::Email::Destinatarios), sem quem pediu para sair. Sem a flag, ou fora do e-mail, nada muda: a resposta vai
         # só ao cliente, como antes. Também na resposta da passagem (ResponderAPassagem#post_reply!).
         def destinatarios_do_email
-          return {} unless @conversation.inbox&.email? && email_autoria.ligada?
-
-          ::Crm::Email::Destinatarios.new(@conversation).para_a_ia.to_h { |campo, enderecos| [:"#{campo}_emails", enderecos.join(',')] }
+          ::Crm::Email::Destinatarios.da_ia(@conversation)
         end
 
         # #1479: -> [o conteúdo, as chaves do formato]. O formato sai em `rich_message`; quando a caixa não o leva, o

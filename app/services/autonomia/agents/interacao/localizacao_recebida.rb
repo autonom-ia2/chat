@@ -8,7 +8,9 @@
 #
 # Vale quando uma das localizações do turno cita o pedido (`in_reply_to`, oficial) ou quando a última mensagem do agente
 # na conversa, antes delas, é o pedido (WAHA e Híbrido: o cliente manda pelo clipe, sem citar). O pedido é a mensagem
-# deste agente com `location_request` ou com a marca `PedidoDeLocalizacao::MARCA` (o formato não saiu). Pedido de outro
+# deste agente com `location_request` ou com a marca `PedidoDeLocalizacao::MARCA` (o formato não saiu). O mapa e o
+# cartão de contato (#1479 F3, `CartoesDoTurno::TOKEN`) não são fala: saem depois da resposta do mesmo turno e não tiram
+# o pedido do lugar de última fala. Na voz, o pedido é a interação que o job posta depois do áudio, e conta. Pedido de outro
 # agente, pedido antigo já seguido de outra fala do agente, localização sem pedido, a Lia ou a conta sem a flag: nil.
 # As consultas (robôs do agente, mensagem citada, última fala) só rodam com a flag e com localização válida no turno.
 # Telemetria `localizacao_recebida` só com ids e a contagem.
@@ -16,6 +18,9 @@ module Autonomia::Agents::Interacao::LocalizacaoRecebida
   KEY = 'shared_location'.freeze
   PEDIDO = 'location_request'.freeze
   FAIXAS = { 'latitude' => 90, 'longitude' => 180 }.freeze
+  # A mensagem de cartão leva a chave do token em `content_attributes` (coluna json, gravada como texto JSON). O COALESCE
+  # mantém a fala com a coluna nula: no `NOT`, um LIKE nulo a tiraria da busca.
+  CARTAO = "COALESCE(content_attributes::text, '') LIKE ?".freeze
 
   module_function
 
@@ -59,12 +64,17 @@ module Autonomia::Agents::Interacao::LocalizacaoRecebida
     valor.is_a?(Numeric) && valor.to_f.finite? && valor.abs <= limite
   end
 
+  def cartao
+    ActiveRecord::Base.sanitize_sql_like(::Autonomia::Agents::Operate::CartoesDoTurno::TOKEN)
+  end
+
   def pedida?(mensagens, conversation, agent, robos)
     citadas = mensagens.filter_map { |message| message.content_attributes.to_h['in_reply_to'] }
     return true if citadas.any? && conversation.messages.chat.where(id: citadas).any? { |citada| pedido?(citada, agent, robos) }
 
     ultima = conversation.messages.chat.outgoing.where(sender_type: 'AgentBot', sender_id: robos.to_a)
-                         .where(created_at: ...mensagens.first.created_at).reorder(created_at: :desc, id: :desc).first
+                         .where(created_at: ...mensagens.first.created_at).where.not(CARTAO, "%#{cartao}%")
+                         .reorder(created_at: :desc, id: :desc).first
     pedido?(ultima, agent, robos)
   end
 
