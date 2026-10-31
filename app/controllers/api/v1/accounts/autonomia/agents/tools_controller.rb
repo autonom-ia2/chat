@@ -63,7 +63,7 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
 
   def tool_params
     params.require(:tool).permit(
-      :name, :slug, :description, :enabled, :http_method, :endpoint_url, :request_body_template,
+      :name, :slug, :description, :enabled, :http_method, :endpoint_url, :request_body_template, :timeout_seconds,
       headers_config: %i[key value secret],
       param_schema: %i[name type description required],
       response_mapping: {}

@@ -246,7 +246,8 @@ class Autonomia::Agents::Tools::Bound
   end
 
   def run_http(args, delivery)
-    Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args).call
+    chave = Autonomia::Agents::Tools::ChaveDeIdempotencia.para(tool: @record, delivery: delivery, params: args)
+    Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args, idempotency_key: chave).call
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
     recusa_http(e, delivery)
   end

@@ -20,20 +20,22 @@ module Autonomia
 
         MAX_RESPONSE_BYTES = 256.kilobytes
         OPEN_TIMEOUT = 2
-        READ_TIMEOUT = 8
-        # #1425: teto da transferência inteira. `open_timeout`/`read_timeout` valem por operação, e um
-        # servidor que pinga um byte por vez nunca estoura nenhum dos dois. O que o prazo do SafeFetch
-        # não cobre (DNS, cabeçalhos gotejando abaixo do teto por operação) está em `SafeFetch::Deadline`.
-        TOTAL_TIMEOUT = 10
+        # #1425: o teto é da transferência inteira (`total_timeout`). `open_timeout`/`read_timeout` valem por
+        # operação, e um servidor que pinga um byte por vez nunca estoura nenhum dos dois. O que o prazo do
+        # SafeFetch não cobre (DNS, cabeçalhos gotejando abaixo do teto por operação) está em
+        # `SafeFetch::Deadline`. #1430: o teto é o tempo da ferramenta (`Tool#timeout_seconds`, 10 a 60 s).
+        IDEMPOTENCY_HEADER = 'Idempotency-Key'.freeze
         # Saltos seguidos, todos na mesma origem (`cross_origin_redirects: false`).
         MAX_REDIRECTS = 3
         # O que se lê do corpo de um erro, e o que chega ao modelo depois de higienizado.
         ERROR_BODY_BYTES = 2.kilobytes
         MAX_TRECHO_DO_ERRO = 500
 
-        def initialize(tool:, params: {})
+        # `idempotency_key`: a do turno (`ChaveDeIdempotencia`); sem ela (o botão Testar), uma nova por chamada.
+        def initialize(tool:, params: {}, idempotency_key: nil)
           @tool = tool
           @params_do_modelo = params.to_h.deep_stringify_keys
+          @idempotency_key = idempotency_key.presence || ChaveDeIdempotencia.nova
         end
 
         def call
@@ -68,8 +70,8 @@ module Autonomia
             headers: headers,
             max_bytes: MAX_RESPONSE_BYTES,
             open_timeout: OPEN_TIMEOUT,
-            read_timeout: READ_TIMEOUT,
-            total_timeout: TOTAL_TIMEOUT,
+            read_timeout: [@tool.timeout_seconds - OPEN_TIMEOUT, 1].max,
+            total_timeout: @tool.timeout_seconds,
             max_redirects: MAX_REDIRECTS,
             cross_origin_redirects: false,
             # Defesa em profundidade: o salto para outra origem já é recusado; se um dia for seguido,
@@ -111,7 +113,12 @@ module Autonomia
           end
           headers['Content-Type'] ||= 'application/json' if body.present?
           headers['Accept'] ||= 'application/json'
-          headers
+          com_chave_da_plataforma(headers)
+        end
+
+        # A chave é da plataforma: um `Idempotency-Key` do cadastro, em qualquer caixa, sai.
+        def com_chave_da_plataforma(headers)
+          headers.reject { |key, _| key.casecmp?(IDEMPOTENCY_HEADER) }.merge(IDEMPOTENCY_HEADER => @idempotency_key)
         end
 
         # Quebra de linha num valor de cabeçalho abriria um cabeçalho novo. O Net::HTTP recusa com

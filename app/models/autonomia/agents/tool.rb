@@ -13,6 +13,7 @@
 #  request_body_template :text
 #  response_mapping      :jsonb            not null
 #  slug                  :string           not null
+#  timeout_seconds       :integer          default(10), not null
 #  created_at            :datetime         not null
 #  updated_at            :datetime         not null
 #  account_id            :bigint           not null
@@ -40,6 +41,8 @@ module Autonomia
       SLUG_FORMAT = /\A[a-zA-Z][a-zA-Z0-9_]{0,63}\z/
       HTTP_METHODS = %w[GET POST].freeze
       PARAM_TYPES = %w[string number integer boolean].freeze
+      # #1430: quanto o agente espera pela resposta. Acima de 60 s é o webhook que aguarda retorno (#1435).
+      TIMEOUT_SECONDS = (10..60)
 
       belongs_to :account
       belongs_to :agent, class_name: 'Autonomia::Agents::Agent', foreign_key: :autonomia_agent_id,
@@ -56,6 +59,7 @@ module Autonomia
                        length: { maximum: MAX_SLUG_LENGTH }, format: { with: SLUG_FORMAT }
       validates :http_method, inclusion: { in: HTTP_METHODS }
       validates :endpoint_url, presence: true
+      validates :timeout_seconds, numericality: { only_integer: true, in: TIMEOUT_SECONDS }
       validate :validate_endpoint_url
       validate :validate_param_schema
       validate :validate_headers_config

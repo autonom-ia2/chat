@@ -3540,6 +3540,10 @@
         "padrao_do_texto": "\\A[a-zA-Z][a-zA-Z0-9_]{0,63}\\z",
         "tipo": "string",
         "unico": true
+      },
+      "timeout_seconds": {
+        "padrao": 10,
+        "tipo": "inteiro"
       }
     },
     "completo": true,
@@ -11064,7 +11068,8 @@
       "response_mapping": {
         "tipo": "objeto_livre"
       },
-      "slug": {}
+      "slug": {},
+      "timeout_seconds": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/tools#create",
@@ -22835,6 +22840,10 @@
         "padrao_do_texto": "\\A[a-zA-Z][a-zA-Z0-9_]{0,63}\\z",
         "tipo": "string",
         "unico": true
+      },
+      "timeout_seconds": {
+        "padrao": 10,
+        "tipo": "inteiro"
       }
     },
     "completo": true,
