@@ -78,16 +78,19 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
 
   def merged_tool_params
     attrs = tool_params.to_h
-    return attrs unless attrs['headers_config'].present?
+    return attrs if attrs['headers_config'].blank?
 
-    attrs['headers_config'] = attrs['headers_config'].map do |header|
-      next header unless header['secret'] == true || header['secret'] == 'true'
-      next header unless header['value'] == Autonomia::Agents::Tool.masked_header_value
-
-      existing = @tool.headers_config.find { |item| item['key'] == header['key'] }
-      existing ? header.merge('value' => existing['value']) : header
-    end
+    attrs['headers_config'] = attrs['headers_config'].map { |header| segredo_guardado(header) }
     attrs
+  end
+
+  # O segredo volta mascarado para a tela; mascarado de novo no envio quer dizer "não mudou".
+  def segredo_guardado(header)
+    return header unless ActiveModel::Type::Boolean.new.cast(header['secret'])
+    return header unless header['value'] == Autonomia::Agents::Tool.masked_header_value
+
+    existing = @tool.headers_config.find { |item| item['key'] == header['key'] }
+    existing ? header.merge('value' => existing['value']) : header
   end
 
   def test_params

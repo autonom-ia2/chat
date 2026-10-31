@@ -3542,6 +3542,7 @@
         "unico": true
       },
       "timeout_seconds": {
+        "maior_que": 0,
         "padrao": 10,
         "tipo": "inteiro"
       }
@@ -11093,7 +11094,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:41",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:94",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
       "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
     ],
@@ -22842,6 +22843,7 @@
         "unico": true
       },
       "timeout_seconds": {
+        "maior_que": 0,
         "padrao": 10,
         "tipo": "inteiro"
       }

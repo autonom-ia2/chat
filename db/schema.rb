@@ -563,7 +563,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_640000) do
     t.index ["account_id"], name: "index_autonomia_agent_tools_on_account_id"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_tools_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_tools_on_autonomia_agent_id"
-    t.check_constraint "timeout_seconds >= 10 AND timeout_seconds <= 60", name: "autonomia_agent_tools_timeout_seconds"
+    t.check_constraint "timeout_seconds > 0", name: "autonomia_agent_tools_timeout_seconds"
   end
 
   create_table "autonomia_agents", force: :cascade do |t|

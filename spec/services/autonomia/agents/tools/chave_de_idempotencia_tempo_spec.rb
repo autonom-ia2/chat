@@ -61,6 +61,7 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
     end
 
     it 'waits 10 s in total by default, as before' do
+      expect(Autonomia::Agents::Tool::TEMPO_PADRAO).to eq(10)
       expect(opcoes_do_fetch).to include(total_timeout: 10, open_timeout: 2, read_timeout: 8)
     end
 
@@ -70,15 +71,36 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
       expect(opcoes_do_fetch).to include(total_timeout: 45, open_timeout: 2, read_timeout: 43)
     end
 
-    it 'accepts only 10 to 60 seconds' do
-      [9, 61, nil].each do |segundos|
+    # Decisão do Rodrigo (31/10, "9. B tirar"): sem máximo nosso. Só zero, negativo ou vazio são recusados (defeito).
+    it 'refuses only zero, negative or empty times, with no maximum' do
+      [0, -1, nil, 1.5].each do |segundos|
         tool.timeout_seconds = segundos
         expect(tool).not_to be_valid, segundos.inspect
       end
-      [10, 60].each do |segundos|
+      [1, 10, 60, 600, 3600].each do |segundos|
         tool.timeout_seconds = segundos
         expect(tool).to be_valid, segundos.inspect
       end
+    end
+
+    it 'waits a long time when the tool asks for it' do
+      tool.update!(timeout_seconds: 600)
+
+      expect(opcoes_do_fetch).to include(total_timeout: 600, read_timeout: 598)
+    end
+
+    # Pula a validação de propósito: é o CHECK do banco que está sob teste.
+    it 'keeps zero out of the database too' do
+      expect { tool.update_column(:timeout_seconds, 600) }.not_to raise_error # rubocop:disable Rails/SkipsModelValidations
+      expect { tool.update_column(:timeout_seconds, 0) }.to raise_error(ActiveRecord::StatementInvalid) { |erro| # rubocop:disable Rails/SkipsModelValidations
+        expect(erro.message).to include('autonomia_agent_tools_timeout_seconds')
+      }
+    end
+
+    it 'takes the default from a single constant, for new tools' do
+      stub_const('Autonomia::Agents::Tool::TEMPO_PADRAO', 30)
+
+      expect(Autonomia::Agents::Tool.new.timeout_seconds).to eq(30)
     end
   end
 
