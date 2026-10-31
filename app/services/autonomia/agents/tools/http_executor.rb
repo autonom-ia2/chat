@@ -46,6 +46,7 @@ module Autonomia
           headers = request_headers(body)
           SafeFetch.fetch(rendered_url, **fetch_options(body, headers)) do |result|
             response = result.tempfile.read.to_s
+            ChaveDeIdempotencia.concluir(tool: @tool, turno: @turno, params: params)
             log_success(started_at, response.bytesize)
             return format_response(response)
           end

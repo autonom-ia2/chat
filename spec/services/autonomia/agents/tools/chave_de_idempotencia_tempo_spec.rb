@@ -108,6 +108,44 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
       expect([chave_enviada(3), chave_enviada(4)]).to eq([chave_enviada(0), chave_enviada(2)])
     end
 
+    # Repetir depois de uma falha é a MESMA tentativa, não "mais um igual": sem resposta 2xx o número não avança. Sem isso,
+    # o dono gravaria o pedido no tempo esgotado (que chegou lá) e de novo na repetição, com outra chave.
+    it 'keeps the key when the same call is repeated after a timeout or an error, in the turn and when it is redone' do
+      tentativas = 0
+      stub_request(:post, endpoint).to_return do |request|
+        enviados << request
+        tentativas += 1
+        raise Net::ReadTimeout if tentativas == 1
+
+        { status: tentativas == 2 ? 503 : 200, body: '{"ok":true}', headers: { 'Content-Type' => 'application/json' } }
+      end
+      passada = turno
+      3.times { |indice| chamar(passada, call_id: "call_#{indice}") }
+      chamar(turno, call_id: 'retry')
+
+      expect(enviados.size).to eq(4)
+      expect(enviados.map { |pedido| pedido.headers['Idempotency-Key'] }.uniq.size).to eq(1)
+    end
+
+    it 'does not spend the number on a call refused before it leaves' do
+      passada = turno
+      recusou = false
+      allow(SafeFetch).to receive(:fetch).and_wrap_original do |original, *args, **opcoes, &bloco|
+        unless recusou
+          recusou = true
+          raise SafeFetch::UnsafeUrlError, 'dns'
+        end
+
+        original.call(*args, **opcoes, &bloco)
+      end
+      chamar(passada, call_id: 'recusada')
+      chamar(passada, call_id: 'repetida')
+      chamar(turno, call_id: 'retry')
+
+      expect(enviados.size).to eq(2)
+      expect(chave_enviada(0)).to eq(chave_enviada(1))
+    end
+
     it 'sends different keys for two conversations with the same arguments' do
       chamar(turno(conversation))
       chamar(turno(outra_conversa))
@@ -148,6 +186,18 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
 
       expect(enviados.size).to eq(2)
       expect(chave_enviada(0)).to eq(chave_enviada(1))
+    end
+
+    # O ajudante e o principal dividem o turno: o mesmo pedido feito pelos dois, um depois do outro, é "mais um igual".
+    it 'counts the calls of the main agent and of the helper together' do
+      passada = turno
+      chamar(passada, call_id: 'principal')
+      bound = Autonomia::Agents::Tools::Bound.new(agent: agent, record: tool)
+      call = { 'name' => tool.slug, 'arguments' => '{"sku":"T42","qtd":1}', 'call_id' => 'ajudante' }
+      Autonomia::Agents::Specialists::LacoDoAjudante.new(vinculo: nil, delivery: passada).executar(bound, call)
+
+      expect(enviados.size).to eq(2)
+      expect(chave_enviada(0)).not_to eq(chave_enviada(1))
     end
 
     it 'sends different keys for two tools in the same turn' do
