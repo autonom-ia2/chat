@@ -19,9 +19,9 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
   Modelo = Autonomia::Agents::Tools::ModeloLiquid
   RECUSA = 'endereco_invalido'.freeze
   BARRA_INVERTIDA = 92.chr.freeze
-  # Espaços que o `String#strip` não tira (sem quebra, finos, ideográfico, sem largura, separadores de linha e
+  # Espaços que o `String#strip` não tira (próxima linha, sem quebra, finos, ideográfico, sem largura, separadores de linha e
   # parágrafo): um valor só deles também é um pedaço vazio disfarçado (#1444).
-  ESPACOS_UNICODE = "\u00A0\u1680\u180E\u2000-\u200B\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF".freeze
+  ESPACOS_UNICODE = "\u0085\u00A0\u1680\u180E\u2000-\u200B\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF".freeze
   NA_QUERY = ->(valor) { valor.nil? ? nil : URI.encode_www_form_component(Modelo.texto_de(valor)) }
 
   def initialize(tool:, params:)
@@ -69,14 +69,26 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
   end
 
   # Um servidor que decodifica %2F antes de rotear vê cada pedaço: "1/" ou "a/ " têm um pedaço vazio e cairiam na
-  # coleção, como o valor vazio.
+  # coleção, como o valor vazio. O pedaço é lido como o servidor mais permissivo o leria: decodificado mais uma vez
+  # (`%2e%2e`), com largura total e compatíveis normalizados (`．．／`, NFKC) e sem espaços nas pontas. Pedaço só
+  # de pontos (`...`, `.. `) também é recusado: há servidor que tira os pontos finais e veria `..`.
   def caminho_invalido?(texto)
-    pedacos = texto.tr(BARRA_INVERTIDA, '/').split('/', -1)
-    vazio?(texto) || pedacos.any? { |pedaco| vazio?(pedaco) || ['.', '..'].include?(pedaco) }
+    pedacos = como_o_servidor_le(texto).tr(BARRA_INVERTIDA, '/').split('/', -1)
+    vazio?(texto) || pedacos.any? { |pedaco| sem_espacos(pedaco).delete('.').empty? }
+  end
+
+  def como_o_servidor_le(texto)
+    URI.decode_uri_component(texto).unicode_normalize(:nfkc)
+  rescue ArgumentError
+    texto.unicode_normalize(:nfkc)
   end
 
   def vazio?(texto)
-    texto.tr(ESPACOS_UNICODE, ' ').strip.empty?
+    sem_espacos(texto).empty?
+  end
+
+  def sem_espacos(texto)
+    texto.tr(ESPACOS_UNICODE, ' ').strip
   end
 
   def renderizar(texto, filtro)

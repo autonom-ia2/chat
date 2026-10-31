@@ -327,6 +327,13 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
         .to eq('https://api.loja.test/estoque/a%2Fb%3Fx%3D1%23y/itens')
     end
 
+    # A leitura mais permissiva do pedaço (decodificado, NFKC) só decide a recusa; o que vai é o valor codificado.
+    { 'v1.2' => 'v1.2', '.env' => '.env', '100%' => '100%25', '50%off' => '50%25off', 'café' => 'caf%C3%A9' }.each do |valor, codificado|
+      it "keeps the path value #{valor.inspect}, which does not climb the path" do
+        expect(url_chamada('https://api.loja.test/estoque/{{q}}', q: valor)).to eq("https://api.loja.test/estoque/#{codificado}")
+      end
+    end
+
     it 'encodes spaces and accents in the path' do
       expect(url_chamada('https://api.loja.test/estoque/{{q}}', q: 'freio ção'))
         .to eq('https://api.loja.test/estoque/freio%20%C3%A7%C3%A3o')
@@ -343,7 +350,8 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     it 'refuses . or .. inside a path value, split by slash and backslash' do
       tool.endpoint_url = 'https://api.loja.test/estoque/{{q}}/itens'
 
-      ['../admin', '..\admin', 'a/../b', 'a\.\b'].each do |valor|
+      ['../admin', '..\admin', 'a/../b', 'a\.\b', '...', '.. ', 'a/.../b', '%2e%2e/admin', '%2E%2E%2Fadmin',
+       "\uFF0E\uFF0E\uFF0Fadmin", "a\uFF0Fb/\uFF0E"].each do |valor|
         expect(erro_de(q: valor).message).to eq('tool_execution_error: endereco_invalido'), valor
       end
     end
@@ -359,7 +367,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     it 'refuses a path value made only of spaces' do
       tool.endpoint_url = 'https://api.loja.test/clientes/{{q}}'
 
-      [' ', "  \t ", "\u00A0", "\u3000 \u200B", "\u2028\u2060", '/', '1/', 'a/ ', "a\\\u00A0"].each do |valor|
+      [' ', "  \t ", "\u0085", "\u00A0", "\u3000 \u200B", "\u2028\u2060", '/', '1/', 'a/ ', "a\\\u00A0"].each do |valor|
         expect(erro_de(q: valor).message).to eq('tool_execution_error: endereco_invalido'), valor.inspect
       end
     end
