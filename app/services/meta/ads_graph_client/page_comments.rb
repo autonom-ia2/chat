@@ -26,6 +26,11 @@ module Meta::AdsGraphClient::PageComments
                                limit: COMMENTS_PAGE_SIZE, after: after)
   end
 
+  # O texto do post, para a IA que cuida dos comentários (#2424) saber do que o comentário fala.
+  def page_post_message(post_id)
+    get(post_id.to_s, fields: 'message')
+  end
+
   # Um comentário, para o webhook `feed`, que chega só com os ids.
   def page_comment(comment_id)
     get(comment_id.to_s, fields: COMMENT_FIELDS)

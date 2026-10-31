@@ -10,7 +10,6 @@ import PassoOQueFaz from './PassoOQueFaz.vue';
 import PassoParaOnde from './PassoParaOnde.vue';
 import PassoPreenche from './PassoPreenche.vue';
 import {
-  MAX_FERRAMENTAS,
   PASSOS,
   conteudoDoRascunho,
   paraRascunho,
@@ -238,12 +237,6 @@ const passosDoErro = computed(() =>
         :acao="t('AGENTS.JORNADA.COMUM.TENTAR_DE_NOVO')"
         :carregando="salvando"
         @acao="salvar(ultimaTentativa)"
-      />
-      <AgenteErro
-        v-else-if="erroAoSalvar?.tipo === 'LIMITE'"
-        data-erro-salvar
-        :titulo="t(`${NS}.PASSOS.LIMITE`, { max: MAX_FERRAMENTAS })"
-        :garantia="garantia"
       />
       <div
         v-else-if="erroAoSalvar"

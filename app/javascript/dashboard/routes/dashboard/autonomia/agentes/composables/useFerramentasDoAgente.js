@@ -10,7 +10,6 @@ import { paraApi } from '../utils/ferramentas';
 // O ToolsController levanta Pundit::NotAuthorizedError, que o core responde com 401
 // (render_unauthorized); 403 fica por garantia.
 const STATUS_SEM_PERMISSAO = [401, 403];
-const LIMITE_DO_BACKEND = 'Limite de'; // "Limite de 10 ferramentas por agente atingido"
 
 // O que deu errado, em categorias que a tela sabe dizer. `mensagem` é o texto do 422 (full_messages).
 export const motivoDoErro = erro => {
@@ -20,8 +19,6 @@ export const motivoDoErro = erro => {
     return { tipo: 'SEM_PERMISSAO', mensagem: '' };
   }
   const mensagem = String(resposta.data?.error ?? '');
-  if (mensagem.startsWith(LIMITE_DO_BACKEND))
-    return { tipo: 'LIMITE', mensagem };
   // #1425: o teste da ferramenta manda também o que o agente recebe nessa falha.
   const agenteRecebe = String(resposta.data?.agente_recebe ?? '');
   return { tipo: 'API', mensagem, agenteRecebe };
