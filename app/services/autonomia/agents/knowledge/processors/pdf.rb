@@ -8,6 +8,7 @@ module Autonomia
         # de texto), a extração normal volta vazia; nesse caso cai p/ OCR (PdfOcr: Rasterizacao + Ocr).
         class Pdf < Base
           include PdfOcr
+          include PdfParagrafos
 
           # Abaixo deste tamanho (após strip) a extração é "quase vazia" (PDF escaneado / só imagem):
           # vale tentar OCR em vez de marcar a fonte como falha por texto ausente.
@@ -45,7 +46,7 @@ module Autonomia
               todas = PDF::Reader.new(path).pages
               @paginas_total = todas.size
               paginas = paginas_do_texto(todas)
-              textos = paginas.map { |page| "#{page.text}\n".force_encoding('UTF-8').scrub('') }
+              textos = textos_das_paginas(paginas)
               text = textos.join
               next ocr_fallback(text, path, paginas) if @ocr && text.strip.length < OCR_MIN_CHARS
 
@@ -59,6 +60,13 @@ module Autonomia
           end
 
           private
+
+          # #1426 — na Fase 2, fora da Lia, cada página sai em parágrafos pela posição das linhas (PdfParagrafos); fora
+          # disso, o `page.text` da main.
+          def textos_das_paginas(paginas)
+            textos = fase2_na_conta? && !agente_protegido? ? textos_em_paragrafos(paginas) : paginas.map { |page| "#{page.text}\n" }
+            textos.map { |texto| texto.force_encoding('UTF-8').scrub('') }
+          end
 
           def fase2_na_conta?
             @source.respond_to?(:account) && Autonomia::Agents::Fase2.ligada?(@source.account)

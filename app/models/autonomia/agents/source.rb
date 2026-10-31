@@ -135,6 +135,9 @@ module Autonomia
       attr_accessor :secoes
       # #1426 (t4e) — o índice por seção desta leitura (Knowledge::ResumoPorSecao), gravado pelo mark_ready! com o "pronto".
       attr_accessor :resumo_por_secao
+      # #1426 — o texto desta leitura veio de OCR (PDF escaneado), posto pelo Processors::PdfOcr. Só em memória, lido pela
+      # conferência (Material::ConferenciaDoMaterial) no mesmo job: "leitura ruim" só existe quando houve leitura de imagem.
+      attr_accessor :leitura_de_imagem
 
       before_destroy :soltar_foto_da_conversa, prepend: true # antes do has_one_attached apagar o anexo
 

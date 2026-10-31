@@ -18,7 +18,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     objetos = instance_double(PDF::Reader::ObjectHash)
     allow(objetos).to receive(:deref) { |valor| valor }
     atributos = { MediaBox: caixa }.merge(attributes)
-    pages = page_texts.map { |text| instance_double(PDF::Reader::Page, text: text, attributes: atributos, objects: objetos) }
+    pages = page_texts.map { |text| instance_double(PDF::Reader::Page, runs: [], text: text, attributes: atributos, objects: objetos) }
     allow(PDF::Reader).to receive(:new).and_return(reader)
     allow(reader).to receive(:pages).and_return(pages)
   end
@@ -107,6 +107,17 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         expect(ocr).to have_received(:ler).with('/tmp/pagina-1.png', tempo: 60)
         expect(file).to have_received(:download).once
         expect(source).not_to have_received(:paginas_de_fora=)
+      end
+
+      # #1426 (PDF Suhai) — a conferência precisa saber que o texto veio de leitura de imagem.
+      it 'marks the source as read by OCR when the OCR text is used' do
+        allow(source).to receive(:leitura_de_imagem=)
+        stub_pages([' '])
+        stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
+
+        processor.extract
+
+        expect(source).to have_received(:leitura_de_imagem=).with(true)
       end
 
       # X2 — página que a 300 DPI passaria de 40 MP (A0) nem é rasterizada.

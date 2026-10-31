@@ -71,6 +71,55 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
     end
   end
 
+  # #1426 (PDF Suhai, 31/10) — um PDF digitado de 74 páginas era reprovado como "leitura ruim": a amostra trazia sumário com
+  # linhas de pontos e trechos curtos. O código diz ao modelo de onde veio o texto; o modelo continua decidindo.
+  describe 'a origem do texto, que o modelo recebe' do
+    let(:amostra) { "Sumario\n1. OBJETIVO DO SEGURO#{'.' * 60}4\n---\n2. COBERTURAS#{'.' * 60}5\n---\nCNPJ 00.000.000/0001-00" }
+
+    def origem_enviada
+      modelo_diz(leitura: 'nao_se_aplica', tabela: 'nao_se_aplica')
+      conferir
+      texto = nil
+      expect(cliente).to have_received(:create) { |**kwargs| texto = kwargs[:input].first[:content].first[:text] }
+      texto.lines.find { |linha| linha.start_with?('Origem do texto:') }.to_s.strip
+    end
+
+    context 'with the typed PDF (dotted table of contents in the sample)' do
+      let(:fonte) { material('cg.pdf', source_type: 'pdf') }
+
+      it 'diz que é a camada de texto do PDF, e a instrução diz que sumário pontilhado não é leitura ruim', :aggregate_failures do
+        expect(origem_enviada).to eq('Origem do texto: camada de texto do PDF, sem passar pelo nosso OCR')
+        expect(described_class::INSTRUCAO).to include('Sumario ou indice com linhas de pontos', 'nao sao leitura ruim')
+      end
+
+      it 'o sumário pontilhado vai inteiro ao modelo, e o veredito do modelo vale' do
+        modelo_diz(leitura: 'nao_se_aplica', tabela: 'nao_se_aplica')
+
+        expect(conferir).to eq('problema' => nil, 'amostra' => [])
+      end
+    end
+
+    context 'with the scanned PDF read by our OCR in this reading' do
+      let(:fonte) { material('scan.pdf', source_type: 'pdf').tap { |f| f.leitura_de_imagem = true } }
+
+      it 'diz que é leitura de imagem, e leitura ruim reprova como antes', :aggregate_failures do
+        expect(origem_enviada).to eq('Origem do texto: leitura de imagem por OCR (foto ou PDF escaneado)')
+        modelo_diz(leitura: 'ruim', tabela: 'nao_se_aplica')
+        expect(conferir).to eq('problema' => 'ocr', 'amostra' => [])
+      end
+    end
+
+    context 'with the photo' do
+      let(:fonte) { material('cardapio.jpg', source_type: 'foto') }
+
+      it('diz que é leitura de imagem') { expect(origem_enviada).to eq('Origem do texto: leitura de imagem por OCR (foto ou PDF escaneado)') }
+    end
+
+    it 'com a planilha, diz que é texto digitado' do
+      expect(origem_enviada).to eq('Origem do texto: texto digitado (arquivo ou pagina da web)')
+    end
+  end
+
   describe 'no parecer da revisão (Reviewer)' do
     let(:fonte) do
       material('precos-bebidas.xlsx', trechos: [amostra], status: :processing, review_status: 'needs_review', reviewed_at: nil,
