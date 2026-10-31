@@ -792,8 +792,17 @@ module Autonomia
         # #1630: o item `developer` do turno: o contexto de sempre e, se uma pessoa passou a conversa a este agente e ele
         # ainda não falou depois disso, o da passagem (AoReceberPassagem, com gate próprio e sem a Lia). nil sem nenhum.
         # #1479 PR-C: e, se o cliente tocou numa opção que este agente ofereceu, o dado do toque (`contexto_do_toque`).
+        # #1479 F2: e, se o cliente mandou a localização que este agente pediu, o dado dela (`Interacao::LocalizacaoRecebida`).
         def contexto_do_turno_com_passagem
-          [contexto_do_turno, contexto_da_passagem, contexto_do_toque].compact.join("\n\n").presence
+          [contexto_do_turno, contexto_da_passagem, contexto_do_toque, contexto_da_localizacao].compact.join("\n\n").presence
+        end
+
+        def contexto_da_localizacao
+          return @contexto_da_localizacao if defined?(@contexto_da_localizacao)
+
+          @contexto_da_localizacao = ::Autonomia::Agents::Interacao::LocalizacaoRecebida.contexto(
+            conversation: @conversation, agent: @agent, recebidas: current_turn_incoming, robos: -> { robos_do_agente }
+          )
         end
 
         # #1479 PR-C: a última mensagem do cliente NESTE turno é o toque numa opção que este agente ofereceu (in_reply_to
@@ -893,7 +902,8 @@ module Autonomia
           return [text, {}] if interacao.nil?
 
           final = ::Autonomia::Agents::Interacao.mensagem(interacao, texto: text, conversation: @conversation)
-          [final[:content], { RichMessages::KEY => final[:rich_message] }.compact]
+          marca = ::Autonomia::Agents::Interacao::PedidoDeLocalizacao.marca(interacao)
+          [final[:content], { RichMessages::KEY => final[:rich_message] }.compact.merge(marca)]
         end
       end
     end
