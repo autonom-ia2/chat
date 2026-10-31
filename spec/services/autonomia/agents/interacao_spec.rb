@@ -286,6 +286,26 @@ RSpec.describe Autonomia::Agents::Interacao do
       expect(final[:rich_message]['button']).to eq('Ver horários')
     end
 
+    it 'botão do modelo fora do limite (mais de 20, em duas linhas ou só espaço) cai no padrão e a lista continua saindo' do
+      janela_aberta
+      account.update!(locale: 'pt_BR')
+      quatro = tres + [{ 'id' => 'madrugada', 'titulo' => 'Madrugada', 'descricao' => nil }]
+      ['Escolha o melhor horário', "Ver\nhorários", '   '].each do |botao|
+        interacao = described_class.do_modelo(pedido.merge('opcoes' => quatro, 'botao' => botao), enderecos: Set.new)
+        final = described_class.mensagem(interacao, texto: nil, conversation: conversation.reload)
+        expect(final[:rich_message]).to include('type' => 'options', 'button' => 'Ver opções')
+        expect(final[:content]).to eq('Qual período?')
+        expect(RichMessages.build(Message.new(content_attributes: { 'rich_message' => final[:rich_message] }))
+                 .whatsapp_cloud_payload('x')[:interactive][:type]).to eq('list')
+      end
+    end
+
+    it 'botão do modelo com exatamente 20 caracteres fica como o modelo escreveu' do
+      janela_aberta
+      final = described_class.mensagem(opcoes.merge('botao' => 'a' * 20), texto: nil, conversation: conversation)
+      expect(final[:rich_message]['button']).to eq('a' * 20)
+    end
+
     it 'mais de 3 opções sai como lista, até 10' do
       janela_aberta
       dez = (1..10).map { |n| { 'id' => "o#{n}", 'titulo' => "Opção #{n}", 'descricao' => nil } }
