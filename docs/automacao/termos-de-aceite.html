@@ -1,0 +1,277 @@
+<title>Aceite da Automação livre</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: caderno de entrega — linha das fases no topo, uma ficha por fase (entrega à esquerda, aceite numerado à direita), exemplos com IA no fim. */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --ink:#18202b; --muted:#5a6577; --line:#dde1e8;
+  --accent:#1f5fd1; --accent-soft:#e6eefc; --ia:#7a3fd1; --ia-soft:#f1e9fc;
+  --ok:#1d7a4a; --ok-soft:#e3f4ea; --warn:#9a5b00; --warn-soft:#fdf1dc;
+  --display:"Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151b; --surface:#181e26; --ink:#e7ebf1; --muted:#9aa5b6; --line:#2a323e;
+  --accent:#7aa7ff; --accent-soft:#1c2a44; --ia:#b996f5; --ia-soft:#2a2040;
+  --ok:#5fcf93; --ok-soft:#163224; --warn:#f0b35a; --warn-soft:#3a2a12; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151b; --surface:#181e26; --ink:#e7ebf1; --muted:#9aa5b6; --line:#2a323e;
+  --accent:#7aa7ff; --accent-soft:#1c2a44; --ia:#b996f5; --ia-soft:#2a2040;
+  --ok:#5fcf93; --ok-soft:#163224; --warn:#f0b35a; --warn-soft:#3a2a12; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--body);
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+a{color:var(--accent)} a:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.eyebrow{font:600 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.topo{display:flex;flex-direction:column;gap:14px}
+.topo h1{font-size:clamp(30px,5vw,46px);font-weight:800;letter-spacing:-.01em}
+.topo p{margin:0;max-width:68ch;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:8px 18px;font:500 13px/1.4 var(--mono);color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+.regra{border:1px solid var(--line);border-left:4px solid var(--ok);background:var(--surface);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.regra h2{font-size:17px}
+.regra p{margin:0;max-width:75ch}
+.como{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.como div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:14px}
+.como b{display:block;font-family:var(--display);font-size:15px;margin-bottom:2px}
+nav.linha{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+nav.linha ol{list-style:none;margin:0;padding:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}
+nav.linha li a{display:flex;flex-direction:column;gap:1px;min-width:92px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);text-decoration:none;color:var(--ink);font-size:12px;line-height:1.25}
+nav.linha li a b{font:600 13px/1 var(--mono);color:var(--accent)}
+nav.linha li.done a{background:var(--ok-soft);border-color:transparent}
+nav.linha li.done a b{color:var(--ok)}
+nav.linha li.ex a b{color:var(--ia)}
+.fases{display:flex;flex-direction:column;gap:22px}
+.fase{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;scroll-margin-top:90px}
+.fase-head{display:flex;gap:16px;align-items:center;padding:18px 20px;border-bottom:1px solid var(--line)}
+.fid{font:600 22px/1 var(--mono);color:var(--accent);background:var(--accent-soft);border-radius:10px;padding:12px 12px;flex-shrink:0}
+.fase-tit{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fase-tit h2{font-size:22px;font-weight:800}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font:500 11.5px/1 var(--body);padding:5px 8px;border-radius:99px;background:var(--bg);color:var(--muted);border:1px solid var(--line);white-space:nowrap}
+.tag-mig{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.tag-estado{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.tag-ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.tag-prop{background:var(--warn-soft);color:var(--warn);border-color:transparent;font-weight:600;margin-right:4px}
+.fase-corpo{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr)}
+.fase-corpo > div{padding:18px 20px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.col-aceite{border-left:1px solid var(--line)}
+h3{font-size:14px;font-weight:600;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:8px;align-items:baseline}
+.count{font-weight:500;letter-spacing:0;text-transform:none}
+ul.entrega{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+ol.aceite{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+ol.aceite li{display:grid;grid-template-columns:44px 18px minmax(0,1fr);gap:8px;align-items:start;padding:8px 6px;border-radius:8px;scroll-margin-top:100px}
+ol.aceite li:target{background:var(--accent-soft)}
+.cid{font:600 12.5px/1.6 var(--mono);color:var(--accent);font-variant-numeric:tabular-nums}
+.box{width:16px;height:16px;border:1.5px solid var(--muted);border-radius:4px;margin-top:3px}
+.exemplo{margin:4px 0 0;background:var(--bg);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.exemplo figcaption{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.exemplo p{margin:0}
+.f0{display:flex;gap:16px;align-items:center;padding:16px 20px}
+.f0 .fid{color:var(--ok);background:var(--ok-soft)}
+.f0 p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.secao-ex{display:flex;flex-direction:column;gap:14px;scroll-margin-top:90px}
+.secao-ex > p{margin:0;color:var(--muted);max-width:70ch}
+.secao-ex h2{font-size:28px;font-weight:800}
+.exs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr));gap:16px}
+.ex{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:90px}
+.ex header{display:flex;gap:12px;align-items:center}
+.exn{font:600 16px/1 var(--mono);color:var(--ia);background:var(--ia-soft);border-radius:8px;width:34px;height:34px;display:grid;place-items:center;flex-shrink:0}
+.ex h3{font:800 18px/1.2 var(--display);letter-spacing:0;text-transform:none;color:var(--ink)}
+.quando,.usa{margin:0;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:14px}
+.lbl{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.quando{font-weight:600}
+ol.passos{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
+.ia{font:600 12.5px/1 var(--mono);color:var(--ia);background:var(--ia-soft);padding:3px 6px;border-radius:5px;white-space:nowrap}
+.fref{font:600 12px/1 var(--mono);padding:4px 7px;border-radius:6px;background:var(--accent-soft);text-decoration:none}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:16px;display:flex;flex-direction:column;gap:4px}
+footer p{margin:0}
+code{font:500 12.5px var(--mono);background:var(--bg);padding:1px 5px;border-radius:4px}
+@media (max-width:760px){
+  .fase-corpo{grid-template-columns:1fr}
+  .col-aceite{border-left:0;border-top:1px solid var(--line)}
+  .fase-head{padding:14px 16px}.fase-corpo>div{padding:16px}
+  ol.aceite li{grid-template-columns:40px 16px minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+
+<div class="wrap">
+  <header class="topo">
+    <span class="eyebrow">Épico #2414 · referência de entrega</span>
+    <h1>Aceite da Automação livre</h1>
+    <p>O que cada fase entrega, o que precisa funcionar para ela ser aceita e um exemplo do dia a dia. No fim, cinco automações complexas com IA que o cliente vai poder montar quando tudo estiver no ar.</p>
+    <div class="meta"><span>Base <b>ADR-001</b></span><span>Rascunho de <b>31/10/2026</b></span><span><b>48</b> itens de aceite</span><span>Piloto <b>contas 1, 16 e 18</b></span></div>
+  </header>
+
+  <aside class="regra" aria-labelledby="t-regra">
+    <span class="eyebrow">Vale para todas as fases · Rodrigo, 31/10</span>
+    <h2 id="t-regra">Sem freio no uso do cliente</h2>
+    <p>O cliente paga e usa quanto quiser. Não há limite de mensagens por conversa, de execuções por hora nem de chamadas de IA. Ficam só as proteções contra defeito: uma automação nunca dispara a si mesma em laço, Spam corta tudo e erro permanente não é repetido sem fim.</p>
+  </aside>
+
+  <div class="como">
+    <div><b>Quando uma fase está pronta</b>Todos os itens de aceite passam no painel e, depois do deploy, nas contas piloto 1, 16 e 18.</div>
+    <div><b>Como citar um item</b>Cada item tem código, como <code>F3.4</code>. O PR diz quais itens cobre, e o link da página com <code>#f3-4</code> abre direto nele.</div>
+    <div><b>O que está marcado “proposta”</b>Não estava no ADR. Precisa do OK do Rodrigo antes de virar regra.</div>
+  </div>
+
+  <nav class="linha" aria-label="Fases">
+    <ol><li class="done"><a href="#f0"><b>F0</b><span>Desenho e protótipo</span></a></li><li><a href="#f1"><b>F1</b><span>Fundação segura</span></a></li><li><a href="#f2"><b>F2</b><span>Onde guardar</span></a></li><li><a href="#f3"><b>F3</b><span>O motor</span></a></li><li><a href="#f4"><b>F4</b><span>Falar com pessoas</span></a></li><li><a href="#f5"><b>F5</b><span>A tela</span></a></li><li><a href="#f6"><b>F6</b><span>Funil e card</span></a></li><li><a href="#f7"><b>F7</b><span>IA como passo</span></a></li><li><a href="#f8"><b>F8</b><span>Gatilhos extras</span></a></li><li><a href="#f9"><b>F9</b><span>Migrar o antigo</span></a></li><li class="ex"><a href="#exemplos"><b>IA</b><span>5 exemplos</span></a></li></ol>
+  </nav>
+
+  <div class="fases">
+    <section class="fase" id="f0" aria-labelledby="t-f0">
+      <div class="f0"><span class="fid">F0</span>
+        <div><h2 id="t-f0" style="font-size:20px">Desenho e protótipo</h2>
+          <p>ADR-001 aceito em 30/10 e protótipo navegável aprovado em 31/10. <span class="tag tag-ok">aprovada</span></p></div></div>
+    </section>
+    
+<section class="fase" id="f1" aria-labelledby="t-f1">
+  <header class="fase-head">
+    <span class="fid">F1</span>
+    <div class="fase-tit"><h2 id="t-f1">Fundação segura</h2><div class="tags"><span class="tag">Sem tela nova</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Anti-loop próprio, que não se perde quando o sistema limpa o contexto entre uma ação e outra.</li><li>Cada ação feita pela automação fica registrada em nome de quem a ligou.</li><li>A mesma contagem de cascata vale para os três motores: Regras, etapas do CRM e o novo.</li><li>O Guia só cria ou liga automação para quem tem a permissão de gerenciar automações (PR de autorização, separado).</li><li>Quando uma ação move o cliente para uma etapa, o card dele é criado ou atualizado.</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>A Juliana liga a automação “lead novo vai para o Rafael”. Seis meses depois, o histórico do card mostra “movido pela automação de Juliana Prado”, e não “sistema”.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">5 itens</span></h3><ol class="aceite"><li id="f1-1"><span class="cid">F1.1</span><span class="box" aria-hidden="true"></span><span class="ctext">Uma regra que muda a conversa e dispara outra regra que a muda de volta para no segundo passo, e o histórico diz por quê.</span></li><li id="f1-2"><span class="cid">F1.2</span><span class="box" aria-hidden="true"></span><span class="ctext">Uma ação feita pela automação aparece no registro com o nome de quem a ligou, não “sistema”.</span></li><li id="f1-3"><span class="cid">F1.3</span><span class="box" aria-hidden="true"></span><span class="ctext">Uma pessoa sem a permissão de gerenciar automações pede ao Guia “cria uma automação” e ouve que não tem acesso. Com a permissão, funciona.</span></li><li id="f1-4"><span class="cid">F1.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Mover pela automação um contato sem card cria o card na etapa certa, sem duplicar.</span></li><li id="f1-5"><span class="cid">F1.5</span><span class="box" aria-hidden="true"></span><span class="ctext">As regras de hoje das contas 6, 16 e 17 continuam funcionando igual.</span></li></ol></div>
+  </div>
+</section>
+<section class="fase" id="f2" aria-labelledby="t-f2">
+  <header class="fase-head">
+    <span class="fid">F2</span>
+    <div class="fase-tit"><h2 id="t-f2">Onde guardar</h2><div class="tags"><span class="tag">Sem tela nova</span><span class="tag tag-mig">com migration</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>As 4 tabelas novas: automações, versões, execuções e registros.</li><li>Uma migration, sozinha na fila.</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>Alguém troca o lembrete de “2 dias” para “3 dias”. Quem já estava esperando segue com o texto antigo; quem entrar depois recebe o novo.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">5 itens</span></h3><ol class="aceite"><li id="f2-1"><span class="cid">F2.1</span><span class="box" aria-hidden="true"></span><span class="ctext">A migration sobe e desce sem erro numa cópia do banco.</span></li><li id="f2-2"><span class="cid">F2.2</span><span class="box" aria-hidden="true"></span><span class="ctext">Salvar uma automação duas vezes cria a versão 1 e a versão 2; a versão 1 nunca muda.</span></li><li id="f2-3"><span class="cid">F2.3</span><span class="box" aria-hidden="true"></span><span class="ctext">Toda automação nasce desligada.</span></li><li id="f2-4"><span class="cid">F2.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Os registros com mais de 30 dias são apagados sozinhos.</span></li><li id="f2-5"><span class="cid">F2.5</span><span class="box" aria-hidden="true"></span><span class="ctext">Não podem existir duas execuções iguais ao mesmo tempo (mesma automação, mesmo cliente, mesmo gatilho).</span></li></ol></div>
+  </div>
+</section>
+<section class="fase" id="f3" aria-labelledby="t-f3">
+  <header class="fase-head">
+    <span class="fid">F3</span>
+    <div class="fase-tit"><h2 id="t-f3">O motor</h2><div class="tags"><span class="tag">Roda por trás</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Passos esperar, esperar até, se e parar.</li><li>Passo “fazer uma ação da plataforma”, liberado pela lista de ações permitidas.</li><li>O arquivo que diz quais ações podem virar passo, com o CI cobrando que nenhuma fique sem classificação.</li><li>Spam corta tudo.</li><li>Acordar quem está esperando, a cada minuto, e checar os gatilhos de tempo, a cada hora.</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>Conversa resolvida numa sexta. No sábado ela ganha a etiqueta “pós-venda” e entra no funil de pós-venda, sem ninguém clicar.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">7 itens</span></h3><ol class="aceite"><li id="f3-1"><span class="cid">F3.1</span><span class="box" aria-hidden="true"></span><span class="ctext">“Quando a conversa for resolvida, espere 1 dia e adicione a etiqueta pós-venda” roda sozinha na conta piloto.</span></li><li id="f3-2"><span class="cid">F3.2</span><span class="box" aria-hidden="true"></span><span class="ctext">Uma ação fora da lista permitida (ex.: apagar usuário) não aparece como passo e é recusada se alguém tentar por fora.</span></li><li id="f3-3"><span class="cid">F3.3</span><span class="box" aria-hidden="true"></span><span class="ctext">A espera sobrevive a um deploy no meio: quem estava esperando continua depois.</span></li><li id="f3-4"><span class="cid">F3.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Desligar a automação no meio de uma espera para tudo; ninguém recebe nada depois.</span></li><li id="f3-5"><span class="cid">F3.5</span><span class="box" aria-hidden="true"></span><span class="ctext">Conversa marcada como Spam não roda nenhum passo.</span></li><li id="f3-6"><span class="cid">F3.6</span><span class="box" aria-hidden="true"></span><span class="ctext">Erro permanente (ex.: etiqueta apagada) para aquele cliente com motivo claro; erro passageiro tenta 3 vezes.</span></li><li id="f3-7"><span class="cid">F3.7</span><span class="box" aria-hidden="true"></span><span class="ctext">Quem ligou perdeu acesso à caixa: a automação pausa e aparece “Assumir e religar”.</span></li></ol></div>
+  </div>
+</section>
+<section class="fase" id="f4" aria-labelledby="t-f4">
+  <header class="fase-head">
+    <span class="fid">F4</span>
+    <div class="fase-tit"><h2 id="t-f4">Falar com pessoas</h2><div class="tags"><span class="tag">Novos passos</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Mandar mensagem ao cliente, assinada como “Automação”, com as variáveis do cliente e do card (nome, valor, etapa).</li><li>Avisar alguém da equipe: o responsável, um time ou uma pessoa.</li><li>Sem limite de quantidade: o cliente manda quantas mensagens quiser.</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>Orçamento enviado. Dois dias sem resposta: o cliente recebe “Oi, Maria, conseguiu ver a proposta do seguro auto?”. Mais 2 dias sem resposta, e o corretor recebe “Maria não respondeu à retomada”.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">5 itens</span></h3><ol class="aceite"><li id="f4-1"><span class="cid">F4.1</span><span class="box" aria-hidden="true"></span><span class="ctext">A mensagem chega no WhatsApp do cliente com o nome dele no lugar da variável.</span></li><li id="f4-2"><span class="cid">F4.2</span><span class="box" aria-hidden="true"></span><span class="ctext">Na conversa, a mensagem aparece como enviada por “Automação”, não por uma pessoa.</span></li><li id="f4-3"><span class="cid">F4.3</span><span class="box" aria-hidden="true"></span><span class="ctext">Variável vazia (cliente sem nome) pula o passo e o histórico diz “faltou o nome”; nunca sai “Olá, ,” para o cliente.</span></li><li id="f4-4"><span class="cid">F4.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Fora da janela de 24 h do WhatsApp, o passo usa o caminho já validado (retorno com envio automático do modelo aprovado) ou para com o motivo; nunca falha calado. Mandar o modelo direto, fora do follow-up, ainda precisa ser confirmado (risco 6 do ADR).</span></li><li id="f4-5"><span class="cid">F4.5</span><span class="box" aria-hidden="true"></span><span class="ctext">O aviso à equipe chega no sino do responsável, com o link da conversa.</span></li></ol></div>
+  </div>
+</section>
+<section class="fase" id="f5" aria-labelledby="t-f5">
+  <header class="fase-head">
+    <span class="fid">F5</span>
+    <div class="fase-tit"><h2 id="t-f5">A tela</h2><div class="tags"><span class="tag">Tela nova</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>A Automação livre aprovada no protótipo da F0, agora de verdade.</li><li>Lista única com as automações novas e as antigas.</li><li>Editor passo a passo e receitas prontas.</li><li>“Conte o que você quer”: o Guia monta a partir do texto.</li><li>Ensaio (“e se acontecesse agora com este cliente?”), sem enviar nada.</li><li>Histórico de cada execução.</li><li>Guia e editor usam o mesmo catálogo de passos, gerado do código, para nunca ficarem diferentes.</li><li>Artigo da Central atualizado.</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>O dono escreve “quando o lead do anúncio chegar, manda boas-vindas e passa para o Rafael”. O Guia mostra a automação pronta, ele clica em “Ensaiar com Maria”, vê exatamente o que a Maria receberia, e liga.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">6 itens</span></h3><ol class="aceite"><li id="f5-1"><span class="cid">F5.1</span><span class="box" aria-hidden="true"></span><span class="ctext">Tudo o que o Guia monta abre no editor e pode ser alterado; nada fica travado.</span></li><li id="f5-2"><span class="cid">F5.2</span><span class="box" aria-hidden="true"></span><span class="ctext">Tudo o que o editor oferece, o Guia também sabe montar.</span></li><li id="f5-3"><span class="cid">F5.3</span><span class="box" aria-hidden="true"></span><span class="ctext">O ensaio mostra cada passo com o valor real do cliente escolhido e não envia nada.</span></li><li id="f5-4"><span class="cid">F5.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Ligar uma automação que manda mensagem ou usa IA pede confirmação, dizendo isso e o custo.</span></li><li id="f5-5"><span class="cid">F5.5</span><span class="box" aria-hidden="true"></span><span class="ctext">Sem &lt;select&gt; nativo, funciona no celular, textos em português.</span></li><li id="f5-6"><span class="cid">F5.6</span><span class="box" aria-hidden="true"></span><span class="ctext">O CI falha se um passo novo não tiver frase em português ou tela no editor.</span></li></ol></div>
+  </div>
+</section>
+<section class="fase" id="f6" aria-labelledby="t-f6">
+  <header class="fase-head">
+    <span class="fid">F6</span>
+    <div class="fase-tit"><h2 id="t-f6">Funil e card</h2><div class="tags"><span class="tag">CRM</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Gatilhos do card: criado, entrou ou saiu da etapa, ganhou, perdeu, arquivado, campo mudou.</li><li>Tempo: “parado há X dias na etapa” e “N dias antes de uma data do card” (ex.: vencimento da apólice).</li><li>Retorno: criar retorno com envio automático.</li><li>Em Configurar › Editar funil › etapa: “Automações desta etapa”, com as antigas (selo “jeito antigo”) e as novas.</li><li>No card: “Automações deste cartão”, com o que está rodando, o histórico e “Parar para este cartão”.</li><li>Receitas por tipo de negócio, começando por seguros e saúde e benefícios.</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>Corretora: 30 dias antes do vencimento da apólice, o card vai para “Renovação”, o cliente recebe a mensagem de renovação e o corretor ganha um retorno para ligar em 5 dias, se não houver resposta.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">6 itens</span></h3><ol class="aceite"><li id="f6-1"><span class="cid">F6.1</span><span class="box" aria-hidden="true"></span><span class="ctext">Card parado 3 dias em “Orçamento enviado” dispara a automação uma vez, não todo dia.</span></li><li id="f6-2"><span class="cid">F6.2</span><span class="box" aria-hidden="true"></span><span class="ctext">“30 dias antes do vencimento” roda no fuso da conta, no dia certo.</span></li><li id="f6-3"><span class="cid">F6.3</span><span class="box" aria-hidden="true"></span><span class="ctext">“Parar para este cartão” para só aquele card; os outros seguem.</span></li><li id="f6-4"><span class="cid">F6.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Arquivar em massa não dispara “saiu da etapa”, e a tela avisa isso.</span></li><li id="f6-5"><span class="cid">F6.5</span><span class="box" aria-hidden="true"></span><span class="ctext">As automações de etapa de hoje continuam funcionando e aparecem no mesmo painel.</span></li><li id="f6-6"><span class="cid">F6.6</span><span class="box" aria-hidden="true"></span><span class="ctext">Só quem pode mexer no funil cria automação de funil.</span></li></ol></div>
+  </div>
+</section>
+<section class="fase" id="f7" aria-labelledby="t-f7">
+  <header class="fase-head">
+    <span class="fid">F7</span>
+    <div class="fase-tit"><h2 id="t-f7">IA como passo</h2><div class="tags"><span class="tag">Novos passos</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Decidir: escolhe entre vários caminhos, com “nenhum se aplica”.</li><li>Extrair: tira dados da conversa (placa, CPF, data, valor) e grava no contato ou no card.</li><li>Escrever: gera um texto personalizado para mandar.</li><li>Resumir: resume a conversa para a equipe.</li><li>Usa a chave de IA da própria conta. O custo aparece na tela e no histórico, sem teto.</li><li>Testes com IA paga só rodam com orçamento combinado antes.</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>O cliente manda “bati o carro ontem, e agora?”. A IA decide “sinistro”, extrai a placa e a data, cria o card no funil de Sinistros e avisa o time de sinistro com um resumo de 3 linhas.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">5 itens</span></h3><ol class="aceite"><li id="f7-1"><span class="cid">F7.1</span><span class="box" aria-hidden="true"></span><span class="ctext"><span class="tag tag-prop">proposta · a aprovar</span> Com 20 conversas reais anonimizadas, o Decidir acerta o caminho em pelo menos 18 e usa “nenhum se aplica” quando é o caso, em vez de chutar.</span></li><li id="f7-2"><span class="cid">F7.2</span><span class="box" aria-hidden="true"></span><span class="ctext">O Extrair grava o campo certo; quando o dado não está na conversa, deixa vazio e diz isso, sem inventar.</span></li><li id="f7-3"><span class="cid">F7.3</span><span class="box" aria-hidden="true"></span><span class="ctext">O texto do Escrever passa pelo ensaio antes de ligar. <span class="tag tag-prop">proposta · a aprovar</span> Opção de exigir aprovação humana antes de enviar.</span></li><li id="f7-4"><span class="cid">F7.4</span><span class="box" aria-hidden="true"></span><span class="ctext">O histórico mostra o que a IA decidiu, por quê e quanto custou.</span></li><li id="f7-5"><span class="cid">F7.5</span><span class="box" aria-hidden="true"></span><span class="ctext">As IAs do CRM de hoje não mudam.</span></li></ol></div>
+  </div>
+</section>
+<section class="fase" id="f8" aria-labelledby="t-f8">
+  <header class="fase-head">
+    <span class="fid">F8</span>
+    <div class="fase-tit"><h2 id="t-f8">Gatilhos extras</h2><div class="tags"><span class="tag">Novos gatilhos</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Recorrente: todo dia, toda semana, todo mês, no fuso da conta.</li><li>Mensagem que falhou na entrega (o WhatsApp recusou).</li><li>Troca de responsável ou de time.</li><li>Reunião marcada, remarcada ou cancelada.</li><li>Webhook de saída: mandar dados para outro sistema (planilha, n8n, ERP).</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>Toda segunda às 8h, cada corretor recebe a lista dos seus cards parados há mais de 7 dias. E quando o WhatsApp recusa uma mensagem de cobrança, ela sai por e-mail e o financeiro é avisado.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">4 itens</span></h3><ol class="aceite"><li id="f8-1"><span class="cid">F8.1</span><span class="box" aria-hidden="true"></span><span class="ctext">“Toda segunda às 8h” roda uma vez por segunda, no fuso da conta, mesmo com deploy no domingo.</span></li><li id="f8-2"><span class="cid">F8.2</span><span class="box" aria-hidden="true"></span><span class="ctext">Mensagem que falhou dispara a automação, por exemplo para tentar por e-mail quando o contato tem e-mail.</span></li><li id="f8-3"><span class="cid">F8.3</span><span class="box" aria-hidden="true"></span><span class="ctext">Trocar o responsável de uma conversa dispara o aviso ao novo responsável.</span></li><li id="f8-4"><span class="cid">F8.4</span><span class="box" aria-hidden="true"></span><span class="ctext">O webhook de saída manda os campos escolhidos e mostra no histórico se o outro sistema respondeu.</span></li></ol></div>
+  </div>
+</section>
+<section class="fase" id="f9" aria-labelledby="t-f9">
+  <header class="fase-head">
+    <span class="fid">F9</span>
+    <div class="fase-tit"><h2 id="t-f9">Migrar o antigo</h2><div class="tags"><span class="tag">Conta a conta</span><span class="tag">escrita por script, com backup</span><span class="tag tag-estado">a entregar</span></div></div>
+  </header>
+  <div class="fase-corpo">
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Converte as Regras de automação e as automações de etapa do CRM para o motor novo, conta a conta, com o OK do Rodrigo.</li><li>Backup antes. O antigo é desligado, nunca apagado.</li><li>Depois de um prazo, fecha a criação de regra nova nos motores antigos.</li></ul>
+      <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>As 26 regras “caixa X vai para a dona” da conta 17 viram 26 automações novas. A dona não percebe diferença nenhuma, e passa a ver o histórico de cada atribuição.</p></figure></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">5 itens</span></h3><ol class="aceite"><li id="f9-1"><span class="cid">F9.1</span><span class="box" aria-hidden="true"></span><span class="ctext">Para cada conta, um relatório antes: “estas 26 regras viram estas 26 automações”.</span></li><li id="f9-2"><span class="cid">F9.2</span><span class="box" aria-hidden="true"></span><span class="ctext">Depois da conversão, um mês de comportamento igual: as mesmas atribuições e os mesmos retornos.</span></li><li id="f9-3"><span class="cid">F9.3</span><span class="box" aria-hidden="true"></span><span class="ctext">Nenhuma mensagem dupla durante a troca: antigo e novo nunca ligados ao mesmo tempo para a mesma coisa.</span></li><li id="f9-4"><span class="cid">F9.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Reverter uma conta religa o antigo e desliga o novo em minutos.</span></li><li id="f9-5"><span class="cid">F9.5</span><span class="box" aria-hidden="true"></span><span class="ctext">Ao fim, existe um motor só, e a lista mostra tudo nele.</span></li></ol></div>
+  </div>
+</section>
+  </div>
+
+  <section class="secao-ex" id="exemplos" aria-labelledby="t-ex">
+    <span class="eyebrow">Quando F1 a F9 estiverem no ar</span>
+    <h2 id="t-ex">Cinco automações complexas com IA</h2>
+    <p>Todas usam só o que as fases acima entregam. O próprio cliente monta cada uma, no editor ou pedindo ao Guia. As etiquetas roxas são os passos de IA da F7.</p>
+    <div class="exs">
+<article class="ex" id="exemplo-1">
+  <header><span class="exn">1</span><h3>Triagem completa do WhatsApp da corretora</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>Chega a primeira mensagem de um contato novo</p>
+  <ol class="passos"><li>A IA <span class="ia">decide</span> o assunto: cotação nova, sinistro, segunda via, renovação, reclamação ou nenhum.</li><li>Em cotação, a IA <span class="ia">extrai</span> o tipo de seguro, a placa ou o CEP e a data de nascimento, e grava no contato.</li><li>Cria o card no funil certo e passa para o corretor daquele ramo.</li><li>Manda ao cliente: “Recebi, Maria. O João, especialista em seguro auto, vai te responder”.</li><li>Se faltar dado, a IA <span class="ia">escreve</span> a pergunta só do que faltou.</li><li>Em reclamação, avisa o gerente na hora, com um <span class="ia">resumo</span>.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f3">F3</a> <a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a></p>
+</article>
+<article class="ex" id="exemplo-2">
+  <header><span class="exn">2</span><h3>Recuperar orçamento parado sem parecer robô</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>O card fica 2 dias em “Orçamento enviado”</p>
+  <ol class="passos"><li>A IA <span class="ia">lê</span> a conversa e <span class="ia">escreve</span> uma retomada que cita a dúvida do cliente (“você tinha perguntado da franquia…”).</li><li>O texto sai sozinho. <span class="tag tag-prop">proposta · a aprovar</span> Se a aprovação humana da F7 for aceita, o corretor pode aprovar com um clique antes.</li><li>Espera até o cliente responder, com prazo de 3 dias.</li><li>Se ele responde, a IA <span class="ia">decide</span>: <b>quer fechar</b> → move para Fechamento e avisa o corretor; <b>quer desconto</b> → cria retorno para ligar hoje; <b>desistiu</b> → marca como perdido, com o motivo tirado da conversa; <b>outra coisa</b> → avisa o corretor.</li><li>Se não responde: marca como “não fechou, sem resposta”.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f3">F3</a> <a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a></p>
+</article>
+<article class="ex" id="exemplo-3">
+  <header><span class="exn">3</span><h3>Renovação de apólice de ponta a ponta</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>30 dias antes do vencimento gravado no card</p>
+  <ol class="passos"><li>Move para “Renovação” e manda a mensagem de renovação pelo modelo aprovado do WhatsApp.</li><li>Se a mensagem falhar na entrega e o contato tiver e-mail, manda por e-mail.</li><li>Espera até a resposta, com prazo de 10 dias.</li><li>A IA <span class="ia">extrai</span> da resposta se houve mudança (carro novo, endereço novo, condutor novo) e atualiza o card.</li><li>Com mudança: cria o retorno “recotar” para o corretor. Sem mudança: move para “Renovar igual”.</li><li>5 dias antes do vencimento, sem resposta: avisa o corretor e o gerente com um <span class="ia">resumo</span> do histórico.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a> <a class="fref" href="#f8">F8</a></p>
+</article>
+<article class="ex" id="exemplo-4">
+  <header><span class="exn">4</span><h3>Pós-venda que gera indicação</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>O card é ganho</p>
+  <ol class="passos"><li>Espera 7 dias e manda: “Como foi a experiência, de 0 a 10?”.</li><li>A IA <span class="ia">extrai</span> a nota e o comentário e grava no contato.</li><li>Nota 9 ou 10: espera 2 dias e pede indicação, com um texto que a IA <span class="ia">escreve</span> citando o que o cliente elogiou.</li><li>Nota 6 ou menos: avisa o gerente com o <span class="ia">resumo</span> da conversa e cria um retorno urgente.</li><li>Cada indicação que chega com o nome do cliente cria um card novo no funil Comercial, com a origem “indicação de Maria”.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f3">F3</a> <a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a></p>
+</article>
+<article class="ex" id="exemplo-5">
+  <header><span class="exn">5</span><h3>Relatório semanal e integração com outro sistema</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>Toda segunda às 8h</p>
+  <ol class="passos"><li>Para cada corretor, a IA <span class="ia">resume</span> a semana: cards novos, ganhos, perdidos e os principais motivos de perda.</li><li>Manda esse resumo ao corretor e ao gerente.</li><li>Os cards ganhos na semana vão pelo webhook de saída para a planilha financeira ou o ERP.</li><li>Cards parados há mais de 15 dias ganham a etiqueta “esfriando” e um retorno para o responsável.</li><li>Quando o responsável de um card muda, o novo dono recebe o <span class="ia">resumo</span> da conversa e o que já foi prometido ao cliente.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a> <a class="fref" href="#f8">F8</a></p>
+</article></div>
+  </section>
+
+  <footer>
+    <p>Fonte: <code>docs/automacao/termos-de-aceite-F1-F9.md</code> e <code>docs/automacao/ADR-001-motor-de-automacao-livre.md</code>, na branch do épico #2414.</p>
+    <p>Mudou uma regra ou um item? Atualize o documento e esta página juntos.</p>
+  </footer>
+</div>
