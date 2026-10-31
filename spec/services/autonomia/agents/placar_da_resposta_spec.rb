@@ -22,19 +22,20 @@ RSpec.describe Autonomia::Agents::PlacarDaResposta do
   let(:juiz) { instance_double(Autonomia::Agents::Material::JuizDoAutoteste) }
   let(:itens_julgados) { [] }
 
-  def resultado(reply, usados: [], handoff: false)
+  def resultado(reply, usados: [], handoff: false, error: nil)
     Autonomia::Agents::AnswerResult.new(
-      reply: reply, confidence: 'high', handoff: { should: handoff, reason: nil },
+      reply: reply, confidence: 'high', handoff: { should: handoff, reason: nil }, error: error,
       used_knowledge: usados.each_with_index.map { |content, id| { id: id, content: content, source: 'pdf' } }
     )
   end
 
-  def medir(*perguntas, vereditos:)
+  def medir(*perguntas, vereditos:, teto_usd: 10.0)
     allow(juiz).to receive(:julgar) do |itens|
       itens_julgados.concat(itens)
       vereditos
     end
-    described_class.new(agent: agent, perguntas: perguntas, juiz: juiz, responder: ->(texto) { respostas.fetch(texto) }).medir
+    described_class.new(agent: agent, perguntas: perguntas, juiz: juiz, teto_usd: teto_usd,
+                        responder: ->(texto) { respostas.fetch(texto) }).medir
   end
 
   it 'scores correct answers among the answerable and correct refusals among the out-of-base' do
@@ -71,9 +72,37 @@ RSpec.describe Autonomia::Agents::PlacarDaResposta do
     expect(placar[:itens].map { |item| item[:veredito] }).to eq([nil, nil])
   end
 
+  it 'answers like the test of the agent: no tools, no web search, as in the real service' do
+    answerer = instance_double(Autonomia::Agents::Answerer, answer: resultado('Cobre.'))
+    allow(Autonomia::Agents::Answerer).to receive(:new).and_return(answerer)
+    allow(juiz).to receive(:julgar).and_return(%w[certo])
+
+    described_class.new(agent: agent, perguntas: [vidro], juiz: juiz).medir
+
+    expect(Autonomia::Agents::Answerer).to have_received(:new)
+      .with(hash_including(agent: agent, query: 'cobre o vidro?', prova: true, trust_instruction: true))
+  end
+
+  it 'keeps a failed answer out of the judge and of the rates, and counts it' do
+    respostas['tem reboque?'] = resultado(nil, error: 'ai_unavailable')
+
+    placar = medir(vidro, reboque, vida, vereditos: %w[certo recusou])
+
+    expect(itens_julgados.map { |item| item['pergunta'] }).to eq(['cobre o vidro?', 'fazem seguro de vida?'])
+    expect(placar).to include(erros: 1, acerto: 1.0, recusa_correta: 1.0)
+    expect(placar[:itens].map { |item| item[:veredito] }).to eq(['certo', nil, 'recusou'])
+  end
+
+  it 'stops before the cost ceiling and says the round was cut short' do
+    placar = medir(vidro, reboque, vida, vereditos: %w[certo], teto_usd: 0.15)
+
+    expect(placar).to include(interrompido: true, respondidas: 1)
+    expect(itens_julgados.size).to eq(1)
+  end
+
   it 'keeps question and answer text out of the summary' do
     placar = medir(vidro, vereditos: %w[certo])
-    resumo = Autonomia::Agents::PlacarDaBase.resumo(placar)
+    resumo = described_class.resumo(placar)
 
     expect(resumo.to_json).not_to include('cobre o vidro', 'para-brisa')
   end

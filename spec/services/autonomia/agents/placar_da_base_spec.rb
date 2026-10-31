@@ -64,6 +64,7 @@ RSpec.describe Autonomia::Agents::PlacarDaBase do
   end
 
   it 'keeps out-of-base questions apart from the hit rate and reports whether the search came back empty' do
+    stub_const('Autonomia::Agents::Config::RETRIEVAL_HARD_CEILING', 0.75)
     placar = medir(
       pergunta('cobre o vidro?', ancoras: ['para-brisa']),
       pergunta('vocês fazem seguro de vida?', fora: true, eixo: 2)
@@ -85,6 +86,58 @@ RSpec.describe Autonomia::Agents::PlacarDaBase do
     expect(placar[:itens].last).to include(fora: true, trechos: 0, menor_distancia: nil)
   end
 
+  it 'measures distance from vector hits only, never from the fixed value of lexical hits' do
+    agent.knowledge_entries.create!(account: account, content: 'Desconto de bônus na renovação.', status: :ready,
+                                    chunk_index: 2, metadata: {}, embedding: vetor(3 => 0.4, 4 => Math.sqrt(1 - 0.16)))
+    agent.knowledge_entries.create!(account: account, content: 'A franquia reduzida custa mais.', status: :ready,
+                                    chunk_index: 3, metadata: {}, embedding: vetor(5 => 1.0))
+
+    item = medir(pergunta('qual a franquia?', ancoras: ['franquia reduzida'], eixo: 3))[:itens].first
+
+    expect(item).to include(posicao: 2, trechos: 2, lexicais: 1)
+    expect(item[:menor_distancia]).to be_within(0.001).of(0.6)
+  end
+
+  it 'stops the run when the question cannot be embedded, instead of scoring a silent miss' do
+    allow(embedding_service).to receive(:embed).and_raise(Autonomia::Agents::EmbeddingService::EmbeddingError, 'ai_not_configured')
+
+    expect { medir(pergunta('cobre o vidro?', ancoras: ['para-brisa'])) }
+      .to raise_error(described_class::BuscaFalhou, /ai_not_configured/)
+  end
+
+  it 'refuses a question with a blank anchor, an answerable one without anchors and a non-boolean fora' do
+    expect { described_class::Pergunta.new(texto: 'a?', ancoras: ['  '], fora: false) }.to raise_error(ArgumentError)
+    expect { described_class::Pergunta.new(texto: 'a?', ancoras: [nil], fora: false) }.to raise_error(ArgumentError)
+    expect { described_class::Pergunta.new(texto: 'a?', ancoras: [], fora: false) }.to raise_error(ArgumentError)
+    expect { described_class::Pergunta.new(texto: 'a?', ancoras: [], fora: 'true') }.to raise_error(ArgumentError)
+    expect { described_class::Pergunta.new(texto: ' ', ancoras: [], fora: true) }.to raise_error(ArgumentError)
+  end
+
+  describe '.pasta_de_saida' do
+    it 'refuses a folder inside a git checkout, also when relative or reached through a symlink' do
+      expect { described_class.pasta_de_saida(Rails.root.join('tmp/placar-x').to_s) }.to raise_error(ArgumentError)
+      expect { described_class.pasta_de_saida('tmp/placar-x') }.to raise_error(ArgumentError)
+      Dir.mktmpdir do |fora|
+        link = File.join(fora, 'link')
+        File.symlink(Rails.root.join('tmp').to_s, link)
+        expect { described_class.pasta_de_saida(File.join(link, 'placar-x')) }.to raise_error(ArgumentError)
+      end
+    end
+
+    it 'refuses the checkout written with another case when the disk ignores case' do
+      outra_caixa = Rails.root.to_s.swapcase
+      skip 'disco diferencia maiúscula de minúscula' unless File.exist?(outra_caixa)
+
+      expect { described_class.pasta_de_saida(File.join(outra_caixa, 'tmp', 'placar-x')) }.to raise_error(ArgumentError)
+    end
+
+    it 'accepts a folder outside any git checkout' do
+      Dir.mktmpdir do |fora|
+        expect(described_class.pasta_de_saida(File.join(fora, 'novo'))).to eq(Pathname(File.realpath(fora)).join('novo'))
+      end
+    end
+  end
+
   it 'keeps question text out of the summary' do
     placar = medir(pergunta('cobre o vidro?', ancoras: ['para-brisa']))
     resumo = described_class.resumo(placar)
@@ -97,7 +150,7 @@ RSpec.describe Autonomia::Agents::PlacarDaBase do
   it 'loads questions from a YAML file' do
     arquivo = Tempfile.new(['perguntas', '.yml'])
     arquivo.write({ 'perguntas' => [
-      { 'pergunta' => 'cobre o vidro?', 'ancoras' => ['para-brisa'] },
+      { 'pergunta' => 'cobre o vidro?', 'ancoras' => ['para-brisa'], 'esperado' => 'Cobre.' },
       { 'pergunta' => 'seguro de vida?', 'fora' => true }
     ] }.to_yaml)
     arquivo.close
@@ -107,6 +160,7 @@ RSpec.describe Autonomia::Agents::PlacarDaBase do
     expect(perguntas.map(&:texto)).to eq(['cobre o vidro?', 'seguro de vida?'])
     expect(perguntas.map(&:fora)).to eq([false, true])
     expect(perguntas.first.ancoras).to eq(['para-brisa'])
+    expect(perguntas.map(&:esperado)).to eq(['Cobre.', nil])
   ensure
     arquivo&.unlink
   end

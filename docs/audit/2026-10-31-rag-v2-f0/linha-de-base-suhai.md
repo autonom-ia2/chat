@@ -37,7 +37,7 @@ API (77 mil e 74 mil tokens, US$ 0,0015 cada). **Total da rodada: US$ 0,0164**, 
 3. **A distância não separa "tem resposta" de "não tem".** As perguntas de fora da base ficam a 0,48–0,61, e as
    respondíveis a 0,27–0,50: as faixas se sobrepõem. O teto de 0,75 nunca corta nada, e toda pergunta de fora volta
    com 12 trechos. A recusa correta não pode vir de um limite de distância; tem de vir do modelo, que lê os trechos
-   e diz que a base não responde. Isso se mede na etapa de resposta e juiz do placar (próxima, com IA paga).
+   e diz que a base não responde (medido na etapa de resposta e juiz, abaixo).
 4. A quarta âncora que não cabe ("prazo de até 7 (sete) dias da comunicação") foi cortada pela janela no meio da
    frase: defeito do corte por tamanho, que a F2 (seção inteira) resolve.
 
@@ -69,11 +69,36 @@ Leitura:
 - O juiz é severo com resposta parcial (o "15 dias" e o "táxi" foram julgados errados por um detalhe a mais ou a menos
   que o esperado). Para comparar versões, vale a diferença entre rodadas com o mesmo juiz e o mesmo YAML.
 
-## Decisão: a recalibração dos limites 0,75 e 0,45 sai do escopo
+## Proposta: a recalibração dos limites 0,75 e 0,45 sai do escopo
 
-Pelos números acima: as perguntas de fora da base ficam a 0,48–0,61 e as respondíveis a 0,27–0,50; as faixas se
+Pelos números acima: as perguntas de fora da base ficam a 0,45–0,61 e as respondíveis a 0,26–0,50; as faixas se
 sobrepõem e nenhum limite de distância separa as duas. O teto de 0,75 nunca corta nada, e a recusa correta (5 de 5) já
-vem do modelo. Mudar os limites não melhoraria nada que o placar mede; o item sai do plano da RAG v2 (gestor, 31/10).
+vem do modelo. Mudar os limites não melhoraria nada que o placar mede. A frente propôs tirar o item da F2; o gestor levou
+ao Rodrigo junto com o plano (31/10).
+
+A distância foi medida de novo só pelos trechos da busca vetorial (o trecho que entra pelo reforço por palavra tem
+distância fixa de 0,45 no Retriever e passou a ficar de fora). No Suhai, os números não mudaram, na main e no
+c7cf171d83: o reforço por palavra não entrou em nenhuma pergunta.
+
+## Produção (só leitura, 31/10)
+
+- Modelo de embedding ativo: `text-embedding-3-small` (`AUTONOMIA_EMBEDDING_MODEL` não definido; a coluna do 3-large
+  está vazia em todas as linhas).
+- PostgreSQL 18.3, pgvector 0.8.1, pg_trgm 1.6; `unaccent` disponível e não instalado (a busca combinada da F2 precisa
+  de migration).
+- EXPLAIN da busca de um agente com cerca de 2,1 mil pedaços: varredura pelo índice do agente e ordenação exata,
+  108 ms. O índice ivfflat foi criado sem classe de operador (distância L2) e a busca usa cosseno: o índice nunca é
+  usado. O HNSW do 3-large é da tabela inteira; se o 3-large for ligado, o planejador pode filtrar o agente depois e
+  perder trechos.
+
+## O que da F0 fica para depois
+
+- Fidelidade estrita (cada afirmação da resposta apoiada nos trechos usados): o juiz de hoje confere o fato esperado, não
+  frase a frase. Entra com a conferência em modo sombra (F4).
+- Bases de cliente (seguros e GTA): esperam decisão do Rodrigo sobre onde guardar o gabarito.
+
+As medidas do "#2431" (272b641b1c e c7cf171d83) são commits do PR #2431 (`fix/1426-corte-pdf`), medidos num checkout à
+parte com o placar deste PR; não estão no histórico deste PR.
 
 ## Régua do #2431 no head c7cf171d83 (palavras coladas e títulos)
 
