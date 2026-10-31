@@ -7,9 +7,9 @@
 # - esquema e host: variável recusada. Host vindo do modelo mandaria a chave para onde ele quisesse; o
 #   cadastro já não aceita esse endereço (`Tool#validate_endpoint_url`), e aqui a recusa é explícita;
 # - caminho: cada valor vira UM pedaço (`ERB::Util.url_encode`, que codifica também `/`, `?` e `#`).
-#   Valor vazio é recusado (cairia na coleção: `/clientes/`), e também valor que, partido em barra ou
-#   barra invertida, tenha um pedaço "." ou ".." — um servidor que decodifica %2F antes de rotear
-#   resolveria o `../`;
+#   Valor vazio ou só de espaços é recusado (cairia na coleção: `/clientes/`). Partido em barra ou
+#   barra invertida, também é recusado se tiver um pedaço assim, ou um pedaço "." ou ".." — um
+#   servidor que decodifica %2F antes de rotear veria esses pedaços e resolveria o `../`;
 # - query: cada valor vira valor de campo (`URI.encode_www_form_component`);
 # - fragmento: variável recusada (não vai ao servidor; só confundiria).
 # Um `| url_encode` já escrito no fim da variável sai: codifica uma vez só. Endereço sem {{ }} sai
@@ -19,6 +19,9 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
   Modelo = Autonomia::Agents::Tools::ModeloLiquid
   RECUSA = 'endereco_invalido'.freeze
   BARRA_INVERTIDA = 92.chr.freeze
+  # Espaços que o `String#strip` não tira (próxima linha, sem quebra, finos, ideográfico, sem largura, separadores de linha e
+  # parágrafo): um valor só deles também é um pedaço vazio disfarçado (#1444).
+  ESPACOS_UNICODE = "\u0085\u00A0\u1680\u180E\u2000-\u200B\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF".freeze
   NA_QUERY = ->(valor) { valor.nil? ? nil : URI.encode_www_form_component(Modelo.texto_de(valor)) }
 
   def initialize(tool:, params:)
@@ -57,17 +60,35 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
     barra ? caminho[0...barra] : caminho
   end
 
-  # Roda DENTRO do render do Liquid, que engole exceção: o valor inválido é marcado aqui e recusado
-  # depois do render.
+  # Roda DENTRO do render do Liquid, que troca qualquer exceção por um erro genérico: o valor inválido é
+  # marcado aqui e recusado depois do render, com o código certo.
   def no_caminho(valor)
     texto = Modelo.texto_de(valor)
     @caminho_invalido ||= caminho_invalido?(texto)
     ERB::Util.url_encode(texto)
   end
 
+  # Um servidor que decodifica %2F antes de rotear vê cada pedaço: "1/" ou "a/ " têm um pedaço vazio e cairiam na
+  # coleção, como o valor vazio. O pedaço é lido como o servidor mais permissivo o leria: decodificado mais uma vez
+  # (`%2e%2e`), com largura total e compatíveis normalizados (`．．／`, NFKC) e sem espaços nas pontas. Pedaço só
+  # de pontos (`...`, `.. `) também é recusado: há servidor que tira os pontos finais e veria `..`.
   def caminho_invalido?(texto)
-    pedacos = texto.split('/', -1).flat_map { |pedaco| pedaco.split(BARRA_INVERTIDA, -1) }
-    texto.empty? || pedacos.any? { |pedaco| ['.', '..'].include?(pedaco) }
+    pedacos = como_o_servidor_le(texto).tr(BARRA_INVERTIDA, '/').split('/', -1)
+    vazio?(texto) || pedacos.any? { |pedaco| sem_espacos(pedaco).delete('.').empty? }
+  end
+
+  def como_o_servidor_le(texto)
+    URI.decode_uri_component(texto).unicode_normalize(:nfkc)
+  rescue ArgumentError
+    texto.unicode_normalize(:nfkc)
+  end
+
+  def vazio?(texto)
+    sem_espacos(texto).empty?
+  end
+
+  def sem_espacos(texto)
+    texto.tr(ESPACOS_UNICODE, ' ').strip
   end
 
   def renderizar(texto, filtro)

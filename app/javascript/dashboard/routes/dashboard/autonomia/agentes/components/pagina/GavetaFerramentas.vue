@@ -12,7 +12,6 @@ import FerramentaPassos from './ferramentas/FerramentaPassos.vue';
 import FerramentaTeste from './ferramentas/FerramentaTeste.vue';
 import FerramentasLista from './ferramentas/FerramentasLista.vue';
 import { useFerramentasDoAgente } from '../../composables/useFerramentasDoAgente';
-import { MAX_FERRAMENTAS } from '../../utils/ferramentas';
 
 // #1301 (Fase 2, protótipo ferramentas.html) — gaveta de Ferramentas, só SuperAdmin (a página só
 // a oferece a ele e o ToolsController recusa os outros com 403). Uma gaveta, várias vistas: lista
@@ -74,12 +73,10 @@ const titulo = computed(() => {
 const temRodape = computed(() => {
   if (api.semPermissao.value) return false;
   if (vista.value.tipo !== 'lista') return true;
-  const total = api.ferramentas.value.length;
   return (
     !api.carregando.value &&
     !api.erroAoCarregar.value &&
-    total > 0 &&
-    total < MAX_FERRAMENTAS
+    api.ferramentas.value.length > 0
   );
 });
 
