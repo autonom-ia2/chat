@@ -64,8 +64,9 @@
 6. **F3.6** Erro permanente (ex.: etiqueta apagada) para aquele cliente com motivo claro; erro passageiro tenta 3 vezes.
 7. **F3.7** Quem ligou perdeu acesso à caixa: a automação pausa e aparece “Assumir e religar”.
 8. **F3.8** A automação cria e altera configuração da conta (etiqueta, atributo do card, contato, empresa ou conversa, etapa, atribuição, agente na caixa). Cada mudança aparece no histórico e pode ser desfeita, como no Guia.
-9. **F3.9** Etiqueta e atributo criados pela automação levam descrição. Hoje só a descrição do atributo chega à IA do funil; a IA ler a descrição da etiqueta e o atributo poder ficar escondido estão na Issue #2435, fora deste épico.
-10. **F3.10** Apagar funil, etapa, caixa, agente, etiqueta ou atributo não vira passo: fica só no Guia, com confirmação.
+9. **F3.9** Cada ação aparece com o nome de quem ligou a automação, e a auditoria da conta também mostra que foi a automação, com o id dela. Se quem ligou perdeu a permissão ou saiu da conta, a chamada falha e a automação pausa: nunca roda em nome de outra pessoa.
+10. **F3.10** Etiqueta e atributo criados pela automação levam descrição. Hoje só a descrição do atributo chega à IA do funil; a IA ler a descrição da etiqueta e o atributo poder ficar escondido estão na Issue #2435, fora deste épico.
+11. **F3.11** Apagar funil, etapa, caixa, agente, etiqueta ou atributo não vira passo: fica só no Guia, com confirmação.
 
 **Exemplo.** Conversa resolvida numa sexta. No sábado ela ganha a etiqueta “pós-venda” e entra no funil de pós-venda, sem ninguém clicar.
 
