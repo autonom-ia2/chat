@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # #1430 (decisão do Rodrigo, 31/10): ferramenta de agente não tem limite de quantidade. Antes eram 10, e a 11ª
-# respondia 500 (#1323). Nenhum teto técnico oficial na API do modelo; o guia da OpenAI só sugere poucas funções
-# por turno para a precisão.
+# respondia 500 (#1323). O guia de function calling da OpenAI (Responses API) não traz teto de funções por pedido;
+# só sugere poucas por turno, para a precisão.
 RSpec.describe 'Autonomia agent tools without a quantity limit', type: :request do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:super_admin) { create(:super_admin) }

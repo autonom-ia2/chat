@@ -27,15 +27,16 @@ module Autonomia::Agents::Tools::ModeloLiquid
   # sem passar pelo escape (#1444). Assim o erro sobe como `Liquid::Error` (variável ou chave que não
   # existe vira `undefined_variable`), o `HttpExecutor` recusa e nada é enviado. O `render!` relança a
   # exceção ORIGINAL quando ela não é do Liquid (um filtro que levanta `ArgumentError`), e ela escaparia do
-  # tratamento da ferramenta: vira `Liquid::InternalError`, que o executor recusa como as outras. A classe original
-  # vai para o log (sem a mensagem, que pode ter valor da conversa): um defeito nosso num filtro não some no código.
+  # tratamento da ferramenta: vira `Liquid::InternalError`, que o executor recusa como as outras. A classe original e a
+  # linha onde quebrou vão para o log, sem a mensagem, que pode ter valor da conversa: um defeito nosso num filtro não
+  # some no código. `cause: nil` para a mensagem também não seguir pendurada no erro novo.
   def renderizar(template, params, filtro)
     template.render!(params, strict_variables: true, strict_filters: true, global_filter: filtro)
   rescue Liquid::Error
     raise
   rescue StandardError => e
-    Rails.logger.warn("[autonomia][agent_tool] erro fora do Liquid no render original=#{e.class}")
-    raise Liquid::InternalError, 'internal'
+    Rails.logger.warn("[autonomia][agent_tool] erro fora do Liquid no render original=#{e.class} em=#{e.backtrace&.first}")
+    raise Liquid::InternalError, 'internal', cause: nil
   end
 
   # Há {{ }} ou {% %} no texto?

@@ -15,7 +15,10 @@ RSpec.describe Autonomia::Agents::Tools::ModeloLiquid do
     allow(Rails.logger).to receive(:warn)
 
     expect { described_class.renderizar(modelo, { 'q' => 'x' }, filtro) }
-      .to raise_error(Liquid::InternalError) { |erro| expect(erro.message).not_to include('segredo-123') }
+      .to raise_error(Liquid::InternalError) { |erro|
+        expect(erro.message).not_to include('segredo-123')
+        expect(erro.cause).to be_nil
+      }
     expect(Rails.logger).to have_received(:warn).with(include('original=ArgumentError'))
     expect(Rails.logger).not_to have_received(:warn).with(include('segredo-123'))
   end

@@ -359,7 +359,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpExecutor do
     it 'refuses a path value made only of spaces' do
       tool.endpoint_url = 'https://api.loja.test/clientes/{{q}}'
 
-      [' ', "  \t ", "\u00A0", "\u3000 \u200B", "\u2028\u2060"].each do |valor|
+      [' ', "  \t ", "\u00A0", "\u3000 \u200B", "\u2028\u2060", '/', '1/', 'a/ ', "a\\\u00A0"].each do |valor|
         expect(erro_de(q: valor).message).to eq('tool_execution_error: endereco_invalido'), valor.inspect
       end
     end
