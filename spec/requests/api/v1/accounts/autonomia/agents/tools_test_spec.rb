@@ -33,6 +33,17 @@ RSpec.describe 'Autonomia agent tool test', type: :request do
     post path, headers: super_admin.create_new_auth_token, params: { params: {} }, as: :json
   end
 
+  # #1430: o `rack-timeout` de produção corta a requisição em 15 s. O Testar espera no máximo 12 s e diz quanto esperou.
+  it 'waits at most 12 seconds in the test, even when the tool waits longer in the conversation' do
+    tool.update!(timeout_seconds: 45)
+    allow(SafeFetch).to receive(:fetch)
+
+    testar
+
+    expect(SafeFetch).to have_received(:fetch).with(endpoint, hash_including(total_timeout: 12))
+    expect(response.parsed_body['segundos_do_teste']).to eq(12)
+  end
+
   it 'shows the same cut text the agent reads, with the cut warning' do
     resposta = "texto #{'x' * 20_000}"
     stub_request(:get, endpoint).to_return(status: 200, body: resposta, headers: { 'Content-Type' => 'text/plain' })

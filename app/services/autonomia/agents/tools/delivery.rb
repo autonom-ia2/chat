@@ -66,6 +66,19 @@ class Autonomia::Agents::Tools::Delivery
                end
   end
 
+  # Quantas vezes ESTE turno já fez a mesma chamada COM SUCESSO (`pedido`: o resumo da ferramenta com os mesmos
+  # argumentos), a partir de 0 (#1430, decisão A). "1 T42" e depois "mais um igual" são dois pedidos; o retry do turno
+  # cria outro objeto e conta de novo do zero, então cada chamada reproduz o mesmo número. Só a resposta 2xx avança
+  # (`concluir`): repetir depois de tempo esgotado, erro ou recusa é a MESMA tentativa, e leva a mesma chave — o tempo
+  # esgotado pode ter gravado o pedido lá.
+  def ocorrencia(pedido)
+    ocorrencias[pedido]
+  end
+
+  def concluir(pedido)
+    ocorrencias[pedido] += 1
+  end
+
   def register(run)
     @runs << run if run.present?
     run
@@ -93,5 +106,11 @@ class Autonomia::Agents::Tools::Delivery
 
   def registrar_resultado(dados)
     @resultado_do_turno = @resultado_do_turno ? @resultado_do_turno + dados : dados
+  end
+
+  private
+
+  def ocorrencias
+    @ocorrencias ||= Hash.new(0)
   end
 end
