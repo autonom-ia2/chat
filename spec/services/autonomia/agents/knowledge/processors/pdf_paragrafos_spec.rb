@@ -216,11 +216,19 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     end
   end
 
-  describe 'o corpo com as letras expandidas (Tc positivo abaixo de 20% da letra)' do
-    let(:pdf) { pdf_com([[['', topo, 54, '1.2 Tc (Este seguro garante o veiculo) Tj']]]) }
+  describe 'os números de tabela posicionados sem espaço (folga entre 10% e 20% da letra)' do
+    let(:pdf) { pdf_com([[['', topo, 54, '[(1) -180 (2) -180 (3) -180 (4) -180 (5)] TJ']]]) }
 
-    it 'mantém as palavras inteiras' do
-      expect(extrair).to include('Este seguro garante o veiculo')
+    it 'ficam separados' do
+      expect(extrair).to include('1 2 3 4 5')
+    end
+  end
+
+  describe 'a palavra com kerning forte entre duas letras' do
+    let(:pdf) { pdf_com([[['', topo, 54, '[(T) 120 (otal)] TJ']]]) }
+
+    it 'fica inteira' do
+      expect(extrair).to include('Total')
     end
   end
 

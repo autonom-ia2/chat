@@ -16,9 +16,6 @@ class Autonomia::Agents::Knowledge::Processors::PdfTrechos
   # O pdf-reader junta o caractere que começa até 3 pt antes do fim do anterior; trecho de mais de um caractere que começa
   # antes disso é sobreposto (um acento desenhado à parte, sobre a letra, é um caractere só e fica colado).
   SOBREPOSTO = 3
-  # Letras expandidas (folga comum positiva) só contam até a folga com que o pdf-reader já põe espaço (20% da letra): acima
-  # disso a folga comum é o próprio espaço entre palavras (números de uma tabela, "1 2 3 4").
-  EXPANSAO_MAX = 0.2
 
   class << self
     # Os trechos de texto da página, juntados dos caracteres pela mesma regra do `runs(merge: true)` do pdf-reader (mesma
@@ -67,17 +64,13 @@ class Autonomia::Agents::Knowledge::Processors::PdfTrechos
       folga(anterior, trecho) < -SOBREPOSTO && [anterior, trecho].all? { |um| texto_do(um).length > 1 }
     end
 
-    # A folga comum entre as letras do trecho: o texto justificado que aperta as letras (no PDF de 74 páginas da #2425,
-    # -0,75 pt entre letras e +1,75 pt entre palavras) ou o que as expande (Tc positivo). Com 4 folgas ou mais, o quartil de
-    # baixo (as folgas entre letras são a maioria); com menos, a mediana de baixo e só negativa (num trecho de duas palavras
-    # a folga positiva seria o próprio espaço entre elas). Positiva, vale só abaixo de EXPANSAO_MAX da letra.
+    # A folga comum entre as letras do trecho (a mediana de baixo), só quando negativa: o texto justificado que aperta as
+    # letras (no PDF de 74 páginas da #2425, -0,75 pt entre letras e +1,75 pt entre palavras). Folga positiva não conta: num
+    # trecho de duas palavras ou de números de tabela ("1 2 3", posicionados sem espaço) ela seria o próprio espaço entre
+    # eles. Limite conhecido: texto com as letras expandidas (Tc positivo acima de 10% da letra) sai com as letras separadas.
     def aperto(caracteres)
       folgas = caracteres.each_cons(2).map { |anterior, caractere| folga(anterior, caractere) }.sort
-      return 0 if folgas.empty?
-      return [folgas[(folgas.size - 1) / 2], 0].min if folgas.size < 4
-
-      comum = folgas[(folgas.size - 1) / 4]
-      comum > letra_do(caracteres.first) * EXPANSAO_MAX ? 0 : comum
+      folgas.empty? ? 0 : [folgas[(folgas.size - 1) / 2], 0].min
     end
 
     def folga(anterior, trecho)

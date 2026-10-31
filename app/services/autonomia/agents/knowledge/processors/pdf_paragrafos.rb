@@ -122,9 +122,11 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     end.join
   end
 
-  # A fonte que mais aparece nas linhas do documento.
+  # A fonte que cobre mais texto no documento (por caracteres: muitos rótulos curtos em negrito não a tornam a do corpo).
   def fonte_do_corpo(linhas_por_pagina)
-    linhas_por_pagina.flatten.flat_map { |linha| linha[:fonte].to_a }.tally.max_by(&:last)&.first
+    linhas_por_pagina.flatten.each_with_object(Hash.new(0)) do |linha, soma|
+      linha[:fonte].each { |fonte| soma[fonte] += linha[:texto].length }
+    end.max_by(&:last)&.first
   end
 
   # A mediana de baixo dos espaços entre linhas seguidas, no documento todo: o espaço de linha do corpo do texto. Em
@@ -141,15 +143,21 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   # parágrafo) continua.
   def quebra?(anterior, atual, pagina)
     separado?(anterior, atual, pagina[:normal]) || !mesmo_tamanho?(anterior, atual) ||
-      (!anterior[:fonte].intersect?(atual[:fonte]) && [anterior, atual].any? { |linha| titulo_curto?(linha, pagina) })
+      (!anterior[:fonte].intersect?(atual[:fonte]) && troca_de_bloco?(anterior, atual, pagina))
   end
 
   def mesmo_tamanho?(anterior, atual)
     (anterior[:letra] - atual[:letra]).abs <= anterior[:letra] * TROCA_DE_LETRA
   end
 
-  # Linha curta fora da fonte do corpo do documento: tem cara de título. A última linha curta de um parágrafo, na fonte do
-  # corpo, depois de uma linha em negrito, não é.
+  # Na troca de fonte, o título é a linha curta fora da fonte do corpo, em cima ou embaixo. Linha cheia em negrito no meio
+  # do parágrafo continua. Limites conhecidos: a última linha do parágrafo, em negrito e curta, sai em parágrafo próprio
+  # (exigir também a linha de cima curta derrubava títulos reais: 122 para 109 no PDF de 74 páginas da #2425); e no texto
+  # alinhado à esquerda a linha em negrito raramente chega à margem e o parágrafo fecha ali.
+  def troca_de_bloco?(anterior, atual, pagina)
+    titulo_curto?(anterior, pagina) || titulo_curto?(atual, pagina)
+  end
+
   def titulo_curto?(linha, pagina)
     linha[:fonte].exclude?(pagina[:fonte_do_corpo]) && antes_da_margem?(linha, pagina)
   end
