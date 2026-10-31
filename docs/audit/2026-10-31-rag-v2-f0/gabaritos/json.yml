@@ -1,0 +1,134 @@
+perguntas:
+  - pergunta: "vcs abrem sabado?"
+    tipo: fato_simples
+    esperado: "Sim, aos sábados das 8h às 14h."
+    ancoras: ["sabado 8h às 14h"]
+  - pergunta: "abre domingo?"
+    tipo: fato_simples
+    esperado: "Não, a clínica fica fechada aos domingos e feriados."
+    ancoras: ["domingo_e_feriados fechado"]
+  - pergunta: "qual o endereço de vcs?"
+    tipo: fato_simples
+    esperado: "Avenida das Camélias, 1000, sala 12, Jardim Aurora, Cidade Exemplo/SP."
+    ancoras: ["Avenida das Camélias, 1000, sala 12, Jardim Aurora"]
+  - pergunta: "aceita o convenio previna saude?"
+    tipo: fato_simples
+    esperado: "Sim, a Previna Saúde é aceita, mas só para fisioterapia e acupuntura, com guia e pedido médico."
+    ancoras: ["SaúdeMais Vida, Previna Saúde, Amparo Saúde", "cobrem apenas fisioterapia e acupuntura, com guia e pedido médico"]
+  - pergunta: "preciso levar algum exame na avaliação?"
+    tipo: fato_simples
+    esperado: "Sim: exames de imagem, laudos e a lista de medicamentos em uso."
+    ancoras: ["Trazer exames de imagem, laudos e lista de medicamentos em uso"]
+  - pergunta: "qual o telefone da clínica?"
+    tipo: fato_simples
+    esperado: "O telefone é (11) 90000-0000."
+    ancoras: ["telefone (11) 90000-0000"]
+  - pergunta: "quanto é a avaliação fisio?"
+    tipo: valor
+    esperado: "A avaliação fisioterapêutica custa R$ 180,00 e dura 50 minutos."
+    ancoras: ["duracao_min 50 | preco 180 | sessoes_recomendadas 1"]
+  - pergunta: "quanto custa a limpeza de pele funda?"
+    tipo: valor
+    esperado: "A limpeza de pele profunda custa R$ 190,00 e dura 90 minutos."
+    ancoras: ["duracao_min 90 | preco 190 | sessoes_recomendadas 1"]
+  - pergunta: "o pacote noivas sai por quanto?"
+    tipo: valor
+    esperado: "O Pacote Noivas custa R$ 2.650,00, com 16 sessões e validade de 150 dias."
+    ancoras: ["total_sessoes 16 | preco 2650 | validade_dias 150"]
+  - pergunta: "a massagem com pedras quentes dura qto tempo?"
+    tipo: valor
+    esperado: "75 minutos, a R$ 190,00."
+    ancoras: ["duracao_min 75 | preco 190 | sessoes_recomendadas 1"]
+  - pergunta: "pra fisio ortopedica quantas sessoes vcs recomendam?"
+    tipo: valor
+    esperado: "A recomendação é de 10 sessões (R$ 160,00 cada, 50 minutos)."
+    ancoras: ["duracao_min 50 | preco 160 | sessoes_recomendadas 10"]
+  - pergunta: "o pacote de pilates mensal vale por quantos dias?"
+    tipo: valor
+    esperado: "Tem validade de 45 dias, com 12 aulas, por R$ 980,00."
+    ancoras: ["total_sessoes 12 | preco 980 | validade_dias 45"]
+  - pergunta: "quanto é uma aula de pilates em grupo?"
+    tipo: valor
+    esperado: "Pilates solo em grupo custa R$ 70,00 a aula de 50 minutos."
+    ancoras: ["duracao_min 50 | preco 70 | sessoes_recomendadas 8"]
+  - pergunta: "criolipolise é quanto?"
+    tipo: valor
+    esperado: "R$ 450,00 por região, em sessão de 60 minutos, com 2 sessões recomendadas."
+    ancoras: ["duracao_min 60 | preco 450 | sessoes_recomendadas 2"]
+  - pergunta: "a dra Letícia atende em quais dias?"
+    tipo: tabela_linha
+    esperado: "De segunda a sábado, das 7h às 13h."
+    ancoras: ["dias_atendimento segunda a sábado, das 7h às 13h"]
+  - pergunta: "quem faz depilação a laser aí?"
+    tipo: tabela_linha
+    esperado: "A esteticista Thaís Oliveira Brandão, que também faz laser fracionado e clareamento."
+    ancoras: ["nome Thaís Oliveira Brandão | funcao Esteticista"]
+  - pergunta: "o que vem no pacote gestante?"
+    tipo: tabela_linha
+    esperado: "Fisioterapia para gestantes, Pilates para gestantes e Massagem para gestantes, 12 sessões por R$ 1.450,00; exige liberação do obstetra."
+    ancoras: ["Fisioterapia para gestantes, Pilates para gestantes"]
+  - pergunta: "criolipolise tem alguma contraindicação?"
+    tipo: tabela_linha
+    esperado: "Sim: hérnia na região tratada, alergia ao frio e gestação."
+    ancoras: ["contraindicacoes hérnia na região, alergia ao frio, gestação"]
+  - pergunta: "microagulhamento precisa de preparo?"
+    tipo: tabela_linha
+    esperado: "Sim: evitar sol por 7 dias antes e avisar sobre uso de anticoagulantes."
+    ancoras: ["Evitar sol por 7 dias antes e avisar sobre uso de anticoagulantes"]
+  - pergunta: "meu plano de saude paga limpeza de pele?"
+    tipo: parafrase
+    esperado: "Não. Os convênios cobrem só fisioterapia e acupuntura; estética, depilação, massoterapia e podologia são particulares."
+    ancoras: ["Estética, depilação, massoterapia e podologia são sempre particulares"]
+  - pergunta: "faz massagem pra grávida?"
+    tipo: parafrase
+    esperado: "Faz, a Massagem para gestantes (50 minutos, R$ 150,00); precisa da liberação do obstetra."
+    ancoras: ["Massagem para gestantes | categoria Massoterapia"]
+  - pergunta: "tem laser pra tirar pelo da perna toda?"
+    tipo: parafrase
+    esperado: "Tem: Depilação a laser perna inteira, 40 minutos, R$ 220,00, com 8 sessões recomendadas."
+    ancoras: ["Depilação a laser perna inteira | categoria Depilação a laser"]
+  - pergunta: "vcs fazem agulha chinesa?"
+    tipo: parafrase
+    esperado: "Fazemos acupuntura: sessão de 40 minutos por R$ 130,00, com a Dra. Patrícia Mendes Salgado."
+    ancoras: ["nome Acupuntura | categoria Fisioterapia"]
+  - pergunta: "desmarquei 3 horas antes, quanto vão me cobrar?"
+    tipo: secao_longa
+    esperado: "Cancelando com menos de 12 horas de antecedência a clínica cobra 50% do valor da sessão. Com 12 horas ou mais não há custo."
+    ancoras: ["Com menos de 12 horas, cobramos 50% do valor da sessão", "pelo menos 12 horas de antecedência não têm custo"]
+  - pergunta: "faltei ontem sem avisar, vão cobrar? tenho atestado"
+    tipo: secao_longa
+    esperado: "Falta sem aviso é cobrada por inteiro, mas se o paciente apresentar atestado médico em até 48 horas, não cobra."
+    ancoras: ["Faltas sem aviso são cobradas por inteiro", "atestado médico em até 48 horas"]
+  - pergunta: "se eu perder uma sessão do pacote eles devolvem?"
+    tipo: secao_longa
+    esperado: "Não. Nos pacotes, a sessão perdida é descontada do total e não é devolvida nem reposta."
+    ancoras: ["a sessão perdida é descontada do total e não é devolvida nem reposta"]
+  - pergunta: "qual o servico mais caro de vcs?"
+    tipo: agregacao
+    esperado: "O mais caro é o Rejuvenescimento com laser fracionado, R$ 480,00 a sessão (45 minutos, 3 sessões recomendadas)."
+    ancoras: ["duracao_min 45 | preco 480 | sessoes_recomendadas 3"]
+  - pergunta: "e o mais barato?"
+    tipo: agregacao
+    esperado: "O mais barato é a Depilação a laser do buço, R$ 50,00 (10 minutos)."
+    ancoras: ["duracao_min 10 | preco 50 | sessoes_recomendadas 8"]
+  - pergunta: "vcs fazem botox ou preenchimento?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem estacionamento aí?"
+    tipo: fora
+    fora: true
+  - pergunta: "aceita pix?"
+    tipo: fora
+    fora: true
+  - pergunta: "vcs atendem criança, fisio pediátrica?"
+    tipo: fora
+    fora: true
+  - pergunta: "quanto é uma consulta com dermatologista?"
+    tipo: fora
+    fora: true
+  - pergunta: "fazem micropigmentação de sobrancelha?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem desconto pra estudante?"
+    tipo: fora
+    fora: true

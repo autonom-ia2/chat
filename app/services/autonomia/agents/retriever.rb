@@ -12,6 +12,27 @@ class Autonomia::Agents::Retriever
   # Escopo SEMPRE por agente (isolamento de conta/agente). Cada record expõe
   # .neighbor_distance. Retorna [] se o embedding vier vazio.
   def retrieve(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
+    retrieve!(query, top_k: top_k)
+  rescue RetrievalError
+    raise
+  rescue Autonomia::Agents::EmbeddingService::EmbeddingError => e
+    # RESILIÊNCIA (Testar/operate): erro de embedding/credencial/provider/timeout NÃO pode quebrar o
+    # fluxo. Degrada para [] → o Answerer responde pela personalidade/instrução ou faz handoff seguro.
+    Rails.logger.warn("[autonomia][retriever] degraded agent=#{@agent.id} #{e.class}")
+    []
+  rescue StandardError => e
+    # NÃO mascarar BUG de programação como "sem KB": um typo/const errado (achado no B1: NameError no
+    # SQL halfvec) virava [] silencioso e resposta ungrounded. Erro de programação SOBE (visível em
+    # teste/monitoramento p/ corrigir); só erro operacional inesperado degrada para [] (resiliência).
+    raise if e.is_a?(NameError) || e.is_a?(ArgumentError) || e.is_a?(TypeError)
+
+    Rails.logger.warn("[autonomia][retriever] degraded agent=#{@agent.id} #{e.class}")
+    []
+  end
+
+  # #1431 (F0) — a mesma busca, sem degradar: a falha do embedding SOBE. É o caminho de quem MEDE a busca
+  # (PlacarDaBase), onde uma falha lida como [] viraria "não achou" no placar.
+  def retrieve!(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
     # C1 (custo) — teto da query ANTES do embedding: sem isso, uma mensagem colada gigante viraria um
     # embedding igualmente gigante (custo por token / limite do provider) mesmo com o PromptBuilder
     # capando depois. Defesa CENTRAL aqui (único funil): cobre Answerer (Testar/copiloto/operate),
@@ -33,22 +54,8 @@ class Autonomia::Agents::Retriever
     # instrução-dirigido, degrada para [] (não silenciar o bot por uma falha transitória de banco).
     Rails.logger.error("[autonomia][retriever] db_failure agent=#{@agent.id} #{e.class}")
     raise RetrievalError, 'retrieval_unavailable'
-  rescue Autonomia::Agents::EmbeddingService::EmbeddingError => e
-    # RESILIÊNCIA (Testar/operate): erro de embedding/credencial/provider/timeout NÃO pode quebrar o
-    # fluxo. Degrada para [] → o Answerer responde pela personalidade/instrução ou faz handoff seguro.
-    Rails.logger.warn("[autonomia][retriever] degraded agent=#{@agent.id} #{e.class}")
-    []
-  rescue StandardError => e
-    # NÃO mascarar BUG de programação como "sem KB": um typo/const errado (achado no B1: NameError no
-    # SQL halfvec) virava [] silencioso e resposta ungrounded. Erro de programação SOBE (visível em
-    # teste/monitoramento p/ corrigir); só erro operacional inesperado degrada para [] (resiliência).
-    raise if e.is_a?(NameError) || e.is_a?(ArgumentError) || e.is_a?(TypeError)
-
-    Rails.logger.warn("[autonomia][retriever] degraded agent=#{@agent.id} #{e.class}")
-    []
   end
 
-  # Conveniência p/ Fase B: trechos de texto já formatados.
   def context_for(query, top_k: Autonomia::Agents::Config::RETRIEVER_TOP_K)
     retrieve(query, top_k: top_k).map(&:content)
   end

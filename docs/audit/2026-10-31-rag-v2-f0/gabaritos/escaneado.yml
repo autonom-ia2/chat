@@ -1,0 +1,179 @@
+perguntas:
+- pergunta: as aulas duram qnto tempo?
+  tipo: fato_simples
+  esperado: Cada aula dura 50 minutos.
+  ancoras:
+  - As aulas têm duração de 50 minutos cada
+  - duração de 50 minutos cada
+- pergunta: aceita pix pra pagar?
+  tipo: fato_simples
+  esperado: Sim. A mensalidade pode ser paga por boleto, Pix ou cartão de crédito.
+  ancoras:
+  - boleto bancário, Pix ou cartão de crédito
+  - O pagamento pode ser feito por boleto bancário
+- pergunta: tem teste de nivel antes de começar? é pago?
+  tipo: fato_simples
+  esperado: Tem prova de nivelamento gratuita, agendada na secretaria, de uns 40 minutos.
+  ancoras:
+  - prova de nivelamento gratuita, agendada na secretaria
+  - duração aproximada de 40 minutos
+- pergunta: dá pra trancar o curso? por quanto tempo?
+  tipo: fato_simples
+  esperado: Sim, uma vez por ano, por até 60 dias, avisando por escrito na secretaria.
+  ancoras:
+  - pode trancar a matrícula uma vez por ano, por até 60 dias
+  - avisando por escrito na secretaria antes do vencimento
+- pergunta: o certificado eu tenho q pagar?
+  tipo: fato_simples
+  esperado: Não. O certificado de conclusão é emitido sem custo, em até 10 dias úteis depois do fim do semestre.
+  ancoras:
+  - O certificado de conclusão é emitido sem custo
+  - emitido sem custo em até 10 dias úteis
+- pergunta: meu filho tem 15 anos, quem assina o contrato?
+  tipo: fato_simples
+  esperado: O responsável legal assina o contrato e responde pelo pagamento das mensalidades.
+  ancoras:
+  - o responsável legal assina este contrato
+  - responde pelo pagamento das mensalidades
+- pergunta: qual o valor da matricula?
+  tipo: valor
+  esperado: A taxa de matrícula é R$ 150,00, mas quem se matricula até 15 dias antes da turma não paga.
+  ancoras:
+  - A taxa de matrícula é de R$ 150,00
+  - fica isento dessa taxa
+- pergunta: se eu atrasar a mensalidade quanto cobra de multa?
+  tipo: valor
+  esperado: Multa de 2% sobre a mensalidade, mais juros de 1% ao mês proporcionais aos dias de atraso.
+  ancoras:
+  - multa de 2% sobre o valor da mensalidade
+  - juros de mora de 1% ao mês
+- pergunta: tem desconto pagando em dia?
+  tipo: valor
+  esperado: Sim, 10% de desconto de pontualidade na mensalidade paga até o vencimento.
+  ancoras:
+  - desconto de pontualidade de 10%
+  - paga até a data de vencimento tem desconto
+- pergunta: quanto custa a segunda via do certificado
+  tipo: valor
+  esperado: R$ 45,00, entregue em até 5 dias úteis.
+  ancoras:
+  - entregue em até 5 dias úteis
+- pergunta: qual nota preciso pra passar?
+  tipo: valor
+  esperado: A nota mínima é 7,0 na média das duas provas do semestre.
+  ancoras:
+  - A nota mínima para aprovação é 7,0
+  - na média das duas provas
+- pergunta: quantas faltas posso ter? tem minimo de presença?
+  tipo: valor
+  esperado: Precisa de frequência mínima de 75% das aulas do semestre para receber o certificado.
+  ancoras:
+  - frequência mínima de 75% das aulas do semestre
+  - deve ter frequência mínima de 75%
+- pergunta: se eu trancar quanto pago por mes?
+  tipo: valor
+  esperado: Durante o trancamento paga 50% da mensalidade, para manter a vaga na turma.
+  ancoras:
+  - paga 50% da mensalidade para manter a vaga na turma
+  - Durante o trancamento, o CONTRATANTE paga 50%
+- pergunta: o ingles kids é em que dia?
+  tipo: tabela_linha
+  esperado: As aulas do Inglês Kids são aos sábados pela manhã (R$ 249,00 por mês).
+  ancoras:
+  - Aulas aos sábados pela manhã, 2 aulas
+- pergunta: que horas é a aula de frances?
+  tipo: tabela_linha
+  esperado: O Francês Básico tem turmas às segundas e quartas, das 10h às 11h40.
+  ancoras:
+  - Segundas e quartas, das 10h às 11h40
+- pergunta: o preparatorio pro toefl tem simulado?
+  tipo: tabela_linha
+  esperado: Sim, tem simulado mensal aos sábados (60 horas-aula, R$ 429,00).
+  ancoras:
+  - Com simulado mensal aos sábados
+- pergunta: qnto é a aula particular avulsa?
+  tipo: tabela_linha
+  esperado: A aula particular avulsa custa R$ 95,00 por hora-aula de 50 minutos.
+  ancoras:
+  - Por hora-aula de 50 minutos
+  - Aula particular avulsa
+- pergunta: se eu faltar perco a aula?
+  tipo: parafrase
+  esperado: 'Não precisa perder: avisando a secretaria com pelo menos 4 horas de antecedência dá para repor em outra turma do mesmo nível.'
+  ancoras:
+  - avisar a secretaria com pelo menos 4 horas de antecedência
+  - pode repor a aula em outra turma do mesmo nível
+- pergunta: tem desconto pra 2 irmãos matriculando juntos?
+  tipo: parafrase
+  esperado: Sim, 15% de desconto na mensalidade do segundo matriculado.
+  ancoras:
+  - Irmãos ou cônjuges matriculados ao mesmo tempo recebem 15% de desconto
+  - 15% de desconto na mensalidade do segundo matriculado
+- pergunta: a escola fecha no natal e nas ferias de julho?
+  tipo: parafrase
+  esperado: Há recesso de 20 de dezembro a 5 de janeiro e na segunda quinzena de julho; sem aulas e sem mudar a mensalidade.
+  ancoras:
+  - Há recesso de 20 de dezembro a 5 de janeiro
+  - durante a segunda quinzena de julho
+- pergunta: o preço da mensalidade sobe todo ano?
+  tipo: parafrase
+  esperado: Sim, uma vez por ano, em janeiro, pelo IPCA dos 12 meses anteriores, com aviso por e-mail de 30 dias.
+  ancoras:
+  - reajustadas uma vez por ano, em janeiro, pelo IPCA
+  - pelo IPCA acumulado nos 12 meses anteriores
+- pergunta: como faço pra cancelar? preciso pagar multa?
+  tipo: secao_longa
+  esperado: Precisa avisar por escrito na secretaria com 30 dias de antecedência; as mensalidades seguem nesse período, mas não há multa de rescisão. Nos primeiros 7 dias após assinar dá para desistir e
+    receber de volta (exceto matrícula e material retirado).
+  ancoras:
+  - o cancelamento exige aviso por escrito entregue na secretaria
+  - A CONTRATADA não cobra multa de rescisão
+  - Nos primeiros 7 dias corridos depois da assinatura
+- pergunta: eu e minha irma pagando em dia ganha os 15 e mais os 10?
+  tipo: secao_longa
+  esperado: Não. O desconto de 15% de irmãos não se acumula com o de pontualidade de 10%; vale só o maior, o de 15%.
+  ancoras:
+  - não se acumula com o de pontualidade de 10%
+  - aplica-se apenas o maior, ou seja, o de 15%
+- pergunta: e se a turma nao fechar o minimo de gente?
+  tipo: secao_longa
+  esperado: A escola avisa com 15 dias de antecedência e oferece outro horário ou a devolução integral do que foi pago, inclusive a matrícula. A turma só abre com 6 alunos.
+  ancoras:
+  - A turma só abre com pelo menos 6 alunos matriculados
+  - oferece outro horário ou a devolução integral do que foi pago
+- pergunta: qual o curso mais barato de vcs?
+  tipo: agregacao
+  esperado: A Conversação em Inglês, R$ 219,00 por mês (uma aula por semana, até 8 alunos).
+  ancoras:
+  - Uma aula por semana, até 8 alunos
+  - Conversação em Inglês
+- pergunta: e o mais caro?
+  tipo: agregacao
+  esperado: O Preparatório TOEFL e IELTS, R$ 429,00 por mês.
+  ancoras:
+  - Com simulado mensal aos sábados
+  - Preparatório TOEFL e IELTS
+- pergunta: vcs tem curso de japones?
+  tipo: fora
+  fora: true
+- pergunta: que horas a secretaria atende?
+  tipo: fora
+  fora: true
+- pergunta: tem estacionamento ai?
+  tipo: fora
+  fora: true
+- pergunta: tem bolsa de estudo?
+  tipo: fora
+  fora: true
+- pergunta: os professores são nativos?
+  tipo: fora
+  fora: true
+- pergunta: vocês dão aula na minha empresa? in company
+  tipo: fora
+  fora: true
+- pergunta: posso pagar com cheque?
+  tipo: fora
+  fora: true
+- pergunta: tem curso intensivo nas férias?
+  tipo: fora
+  fora: true

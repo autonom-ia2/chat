@@ -1,0 +1,130 @@
+perguntas:
+  - pergunta: "Quais dias dá pra escolher pro vencimento da fatura?"
+    tipo: fato_simples
+    esperado: "Os vencimentos disponíveis são os dias 5, 10, 15, 20 e 25."
+    ancoras: ["vencimentos nos dias 5, 10, 15, 20 e 25"]
+  - pergunta: "o roteador é meu ou da empresa?"
+    tipo: fato_simples
+    esperado: "É da Conecta: ONU e roteador ficam com o cliente em comodato enquanto o contrato estiver ativo."
+    ancoras: ["ONU e roteador são da Conecta e ficam com o cliente em comodato"]
+  - pergunta: "minha esposa pode pedir o cancelamento no meu nome?"
+    tipo: fato_simples
+    esperado: "Não. O cancelamento só pode ser pedido pelo titular do contrato, por qualquer canal de atendimento."
+    ancoras: ["O cancelamento só pode ser pedido pelo titular do contrato"]
+  - pergunta: "depois q eu pago a fatura atrasada em quanto tempo volta a net?"
+    tipo: fato_simples
+    esperado: "Em até 24 horas após o pagamento, com cobrança da taxa de religação."
+    ancoras: ["religação em até 24 horas após o pagamento", "o serviço volta em até 24 horas e a taxa de religação é cobrada"]
+  - pergunta: "o plano estudante precisa de qual documento?"
+    tipo: fato_simples
+    esperado: "Comprovante de matrícula, renovado a cada semestre."
+    ancoras: ["exige comprovante de matrícula renovado a cada semestre"]
+  - pergunta: "a fatura digital eu pago pra receber?"
+    tipo: fato_simples
+    esperado: "Não, a fatura digital é sempre grátis. Só o boleto impresso entregue em casa custa R$ 5,00."
+    ancoras: ["a fatura digital é sempre grátis"]
+  - pergunta: "o gamer de 700 mega quanto sai por mes?"
+    tipo: valor
+    esperado: "O Fibra Gamer 700 custa R$ 159,90 por mês, com fidelidade de 12 meses."
+    ancoras: ["Fibra Gamer 700 | Residencial | 700 | 159.9"]
+  - pergunta: "quanto é a instalação se eu não quiser fidelidade"
+    tipo: valor
+    esperado: "R$ 150,00, cobrados na primeira fatura (plano Livre, sem fidelidade)."
+    ancoras: ["Instalação residencial em fibra (plano Livre, sem fidelidade) | 150"]
+  - pergunta: "qto custa um ponto extra de internet?"
+    tipo: valor
+    esperado: "R$ 80,00 por ponto de rede extra instalado (cabo de até 15 metros)."
+    ancoras: ["Ponto de rede extra (cabo até 15 m) | 80"]
+  - pergunta: "o técnico cobra pra vir aqui em casa?"
+    tipo: valor
+    esperado: "Depende: a visita é grátis quando o defeito é na rede da Conecta e custa R$ 90,00 se o problema está dentro da casa ou é equipamento do cliente."
+    ancoras: ["Visita técnica sem defeito na rede | 90", "Visita técnica com defeito na rede da Conecta | 0"]
+  - pergunta: "em quantos dias vcs instalam no Alto da Serra?"
+    tipo: valor
+    esperado: "7 dias úteis, por fibra óptica."
+    ancoras: ["Alto da Serra | Fibra óptica | 7"]
+  - pergunta: "com 10 dias de atraso o que acontece com a velocidade?"
+    tipo: valor
+    esperado: "A velocidade cai para 10 Mbps."
+    ancoras: ["Com 10 dias de atraso a velocidade cai para 10 Mbps"]
+  - pergunta: "pagando em dia tem quanto de desconto no plano de casa?"
+    tipo: valor
+    esperado: "R$ 10,00 de desconto na mensalidade dos planos residenciais, para quem paga até o vencimento."
+    ancoras: ["ganha R$ 10,00 de desconto na mensalidade dos planos residenciais"]
+  - pergunta: "o de 500 mega da familia tem franquia?"
+    tipo: tabela_linha
+    esperado: "Não, o Fibra Família 500 é sem franquia, com Wi-Fi 6 e 1 ponto de rede extra grátis."
+    ancoras: ["Sem franquia; Wi-Fi 6; 1 ponto de rede extra grátis"]
+  - pergunta: "o combo com tv plus de 500 vem com quantos canais?"
+    tipo: tabela_linha
+    esperado: "110 canais ao vivo, com aplicativo de TV em até 4 telas e 1 ponto de TV grátis."
+    ancoras: ["110 canais ao vivo, aplicativo de TV em até 4 telas"]
+  - pergunta: "no distrito de pedra branca chega que tipo de internet?"
+    tipo: tabela_linha
+    esperado: "Chega por rádio, com prazo de instalação de 10 dias úteis."
+    ancoras: ["Distrito de Pedra Branca | Rádio | 10"]
+  - pergunta: "o dedicado de 200 vem com quantos ip fixo?"
+    tipo: tabela_linha
+    esperado: "O Dedicado 200 vem com um bloco de 8 IPs fixos, link simétrico 200/200 e reparo em até 4 horas corridas."
+    ancoras: ["Link simétrico 200/200; bloco de 8 IPs fixos"]
+  - pergunta: "vcs chegam no morro do cruzeiro?"
+    tipo: tabela_linha
+    esperado: "Não, o Morro do Cruzeiro está sem cobertura e sem previsão de instalação."
+    ancoras: ["Morro do Cruzeiro | Sem cobertura | sem previsão"]
+  - pergunta: "se minha net ficar um dia inteiro fora do ar eu tenho desconto?"
+    tipo: parafrase
+    esperado: "Sim, se a queda passar de 24 horas seguidas por falha da rede da Conecta, o desconto proporcional vem na fatura seguinte sem precisar pedir. Não vale para falha de equipamento do cliente, falta de energia ou obra de terceiros."
+    ancoras: ["desconto proporcional aos dias sem serviço na fatura seguinte"]
+  - pergunta: "posso baixar pra um plano mais barato?"
+    tipo: parafrase
+    esperado: "Pode, mas a redução de velocidade custa R$ 50,00 e só é permitida depois de 6 meses de contrato."
+    ancoras: ["Permitido só depois de 6 meses de contrato", "Redução de velocidade (downgrade) | 50"]
+  - pergunta: "meu nome vai pro spc se eu ficar sem pagar?"
+    tipo: parafrase
+    esperado: "Pode ir. Com 60 dias de atraso o contrato é rescindido e o nome pode ser enviado aos órgãos de proteção ao crédito, depois de aviso por escrito com 10 dias de antecedência."
+    ancoras: ["nome do titular pode ser enviado aos órgãos de proteção ao crédito"]
+  - pergunta: "tem plano pra sitio?"
+    tipo: parafrase
+    esperado: "Tem: Rádio Campo 20 (20 Mbps, R$ 89,90) e Rádio Campo 40 (40 Mbps, R$ 119,90), com antena externa inclusa, para a zona rural."
+    ancoras: ["Rádio Campo 20 | Residencial rural | 20 | 89.9", "Rádio Campo 40 | Residencial rural | 40 | 119.9"]
+  - pergunta: "se eu cancelar antes do fim do contrato quanto pago de multa?"
+    tipo: secao_longa
+    esperado: "R$ 12,00 por mês que faltar para a fidelidade acabar, com teto de R$ 150,00. Não há multa se a pessoa se mudar para endereço sem cobertura (comprovando) ou se a Conecta não entregar a velocidade contratada depois de duas visitas técnicas."
+    ancoras: ["paga multa de R$ 12,00 por mês que faltar para a fidelidade acabar", "limitada a R$ 150,00 no total"]
+  - pergunta: "fiquei 35 dias sem pagar, o que acontece com a internet?"
+    tipo: secao_longa
+    esperado: "Aos 10 dias de atraso a velocidade cai para 10 Mbps; aos 30 dias o serviço é suspenso por completo, então aos 35 dias está suspenso. Aos 60 dias o contrato é rescindido. Pago o débito, volta em até 24 horas com taxa de religação."
+    ancoras: ["Com 30 dias de atraso o serviço é suspenso por completo", "Com 60 dias de atraso o contrato é rescindido"]
+  - pergunta: "moro em apartamento, a instalação demora mais?"
+    tipo: secao_longa
+    esperado: "Pode demorar: em prédio ou condomínio a instalação depende da autorização da administração, e o prazo só começa a contar depois dela."
+    ancoras: ["depende da autorização da administração", "o prazo só começa a contar depois dela"]
+  - pergunta: "qual o plano mais barato de vcs?"
+    tipo: agregacao
+    esperado: "O mais barato é o Fibra Estudante 150, R$ 69,90 por mês (exige comprovante de matrícula). Sem condição especial, o mais barato é o Fibra Essencial 100, a R$ 79,90."
+    ancoras: ["Fibra Estudante 150 | Residencial | 150 | 69.9"]
+  - pergunta: "qual o plano mais caro que vcs tem?"
+    tipo: agregacao
+    esperado: "O mais caro é o Dedicado 500 (link simétrico 500/500), R$ 2.790,00 por mês, com fidelidade de 36 meses."
+    ancoras: ["Dedicado 500 | Empresarial dedicado | 500 | 2790"]
+  - pergunta: "qual o horário da loja de vcs?"
+    tipo: fora
+    fora: true
+  - pergunta: "dá pra pagar a fatura no cartão de crédito?"
+    tipo: fora
+    fora: true
+  - pergunta: "vcs tem plano de celular, chip?"
+    tipo: fora
+    fora: true
+  - pergunta: "vcs instalam camera de segurança?"
+    tipo: fora
+    fora: true
+  - pergunta: "qual o endereço da loja física?"
+    tipo: fora
+    fora: true
+  - pergunta: "se eu indicar um amigo ganho desconto?"
+    tipo: fora
+    fora: true
+  - pergunta: "o plano gamer garante ping de quantos ms?"
+    tipo: fora
+    fora: true

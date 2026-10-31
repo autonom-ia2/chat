@@ -1,0 +1,134 @@
+perguntas:
+  - pergunta: "vcs abrem no sabado?"
+    tipo: fato_simples
+    esperado: "Sim. A musculação abre das 8h às 14h, a piscina das 8h às 13h e a recepção das 8h às 13h."
+    ancoras: ["aberta das 8h às 14h", "aberta das 8h às 13h"]
+  - pergunta: "qual o endereço da academia?"
+    tipo: fato_simples
+    esperado: "Avenida Beira-Rio, 1200, Jardim das Águas, Vila Marinha."
+    ancoras: ["Avenida Beira-Rio, 1200, Jardim das Águas"]
+  - pergunta: "que idade minima pra musculação?"
+    tipo: fato_simples
+    esperado: "14 anos, sempre com autorização escrita do responsável."
+    ancoras: ["A musculação aceita alunos a partir de 14 anos"]
+  - pergunta: "precisa levar cadeado pro armario?"
+    tipo: fato_simples
+    esperado: "Sim, cada aluno leva o próprio cadeado; os armários são de uso diário."
+    ancoras: ["Cada aluno leva o próprio cadeado"]
+  - pergunta: "pode fazer aula experimental de graça?"
+    tipo: fato_simples
+    esperado: "Sim, uma aula ou treino experimental gratuito por pessoa, com agendamento de um dia antes, termo de responsabilidade e PAR-Q; atestado não é exigido."
+    ancoras: ["uma aula experimental gratuita de natação"]
+  - pergunta: "a touca é obrigatoria na piscina?"
+    tipo: fato_simples
+    esperado: "Sim, para todos, sem exceção. Quem esquecer compra na recepção."
+    ancoras: ["O uso da touca de natação é obrigatório para todos"]
+  - pergunta: "quantas raias tem a piscina e quantos metros?"
+    tipo: fato_simples
+    esperado: "Seis raias de 25 metros."
+    ancoras: ["A piscina tem seis raias de 25 metros"]
+  - pergunta: "quanto custa a mensalidade da natação 2x por semana?"
+    tipo: valor
+    esperado: "R$ 189,90 por mês."
+    ancoras: ["R$ 189,90 por mês"]
+  - pergunta: "qto é a matricula?"
+    tipo: valor
+    esperado: "A taxa de matrícula é R$ 80,00, cobrada uma única vez; é isenta nos planos semestral e anual."
+    ancoras: ["R$ 80,00 (uma única vez)"]
+  - pergunta: "se eu pagar o plano anual tenho desconto?"
+    tipo: valor
+    esperado: "Sim, 15% sobre o valor mensal da tabela."
+    ancoras: ["O plano anual, pago de uma vez ou em doze parcelas"]
+  - pergunta: "qual a multa se eu atrasar a mensalidade?"
+    tipo: valor
+    esperado: "Multa de 2% mais juros de 1% ao mês sobre o valor em atraso, calculados dia a dia."
+    ancoras: ["multa de 2% mais juros de 1% ao mês", "são cobrados multa de 2% e juros de 1% ao mês"]
+  - pergunta: "quanto custa levar um amigo pra treinar?"
+    tipo: valor
+    esperado: "A diária de convidado é R$ 35,00 por visita, exceto a visita gratuita do mês para alunos com frequência Livre."
+    ancoras: ["R$ 35,00 por visita"]
+  - pergunta: "e se eu perder a carteirinha, paga quanto?"
+    tipo: valor
+    esperado: "A segunda via custa R$ 15,00."
+    ancoras: ["R$ 15,00 por carteirinha"]
+  - pergunta: "com quantos dias de atraso a catraca trava?"
+    tipo: valor
+    esperado: "Depois de 10 dias de atraso."
+    ancoras: ["Depois de 10 dias de atraso a catraca é bloqueada"]
+  - pergunta: "tem aula de natação pra gestante? que dia e hora?"
+    tipo: tabela_linha
+    esperado: "Sim, turma Gestante às terças e quintas, das 9h00 às 9h50."
+    ancoras: ["Gestante | terças e quintas | das 9h00 às 9h50"]
+  - pergunta: "a turma baby é pra que idade e quantas vagas tem?"
+    tipo: tabela_linha
+    esperado: "De 4 a 6 anos, com 8 vagas, terças e quintas das 16h00 às 16h45."
+    ancoras: ["Baby (4 a 6 anos) | terças e quintas"]
+  - pergunta: "quanto fica o combinado livre?"
+    tipo: tabela_linha
+    esperado: "R$ 359,90 por mês."
+    ancoras: ["R$ 359,90 por mês"]
+  - pergunta: "a recepção abre que horas de segunda a sexta?"
+    tipo: tabela_linha
+    esperado: "Das 7h às 21h."
+    ancoras: ["aberta das 7h às 21h"]
+  - pergunta: "posso congelar meu plano quando for viajar?"
+    tipo: parafrase
+    esperado: "Sim, trancamento de até 90 dias a cada 12 meses (períodos de no mínimo 15 dias), pedido com 5 dias de antecedência, taxa de R$ 30,00, com mensalidades em dia."
+    ancoras: ["Cada aluno pode trancar o plano por até 90 dias a cada 12 meses"]
+  - pergunta: "fui na aula e a piscina estava interditada por causa de tempestade, perco a aula?"
+    tipo: parafrase
+    esperado: "Não. A aula cancelada pela academia, inclusive por tempestade, é reposta sem limite e sem contar nas reposições do mês."
+    ancoras: ["essa aula é reposta sem limite e sem contar nas duas reposições do mês"]
+  - pergunta: "meu filho de 10 anos pode ficar sozinho na aula enquanto vou no mercado?"
+    tipo: parafrase
+    esperado: "Não. Responsáveis por crianças de até 11 anos devem permanecer nas dependências da academia, na área de espera, durante toda a aula."
+    ancoras: ["devem permanecer nas dependências da academia, na área de espera"]
+  - pergunta: "esqueci minha carteirinha, consigo entrar?"
+    tipo: parafrase
+    esperado: "Sim, mostrando um documento com foto na recepção, até três vezes por mês; depois disso é preciso a segunda via."
+    ancoras: ["pode entrar mostrando um documento com foto na recepção"]
+  - pergunta: "faltei na aula de natação por gripe, como faço pra repor?"
+    tipo: secao_longa
+    esperado: "Com atestado entregue em até 5 dias depois da falta, a reposição não tem limite mensal e pode ser feita em até 60 dias, em turma do mesmo nível com vaga."
+    ancoras: ["a reposição não tem limite mensal e pode ser feita em até 60 dias"]
+  - pergunta: "posso cancelar o plano semestral sem multa se eu me mudar?"
+    tipo: secao_longa
+    esperado: "Sim, se a mudança for para cidade a mais de 50 km de Vila Marinha, comprovada com comprovante de residência novo. Também sem multa em caso de doença grave por mais de 180 dias. Nos demais casos, a multa é de 20% das mensalidades restantes."
+    ancoras: ["mudança comprovada para outra cidade a mais de 50 quilômetros"]
+  - pergunta: "sou gestante, até quando posso trancar?"
+    tipo: secao_longa
+    esperado: "Até 180 dias a cada 12 meses, sem taxa de trancamento e sem exigência das 3 mensalidades pagas, com atestado do obstetra ou cartão da gestante."
+    ancoras: ["pode trancar por até 180 dias a cada 12 meses, sem a taxa"]
+  - pergunta: "qual a mensalidade mais barata de todas?"
+    tipo: agregacao
+    esperado: "Musculação 2x por semana, R$ 119,90 por mês."
+    ancoras: ["R$ 119,90 por mês"]
+  - pergunta: "qual turma de natação tem mais vagas?"
+    tipo: agregacao
+    esperado: "O Sábado Misto, com 15 vagas."
+    ancoras: ["Sábado Misto | sábados"]
+  - pergunta: "qual o plano mais caro?"
+    tipo: agregacao
+    esperado: "Combinado (natação e musculação) na frequência Livre, R$ 359,90 por mês."
+    ancoras: ["R$ 359,90 por mês"]
+  - pergunta: "tem estacionamento?"
+    tipo: fora
+    fora: true
+  - pergunta: "vcs tem aula de pilates ou yoga?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem nutricionista na academia?"
+    tipo: fora
+    fora: true
+  - pergunta: "vende suplemento, whey essas coisas?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem hidroginastica pra idoso?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem sauna depois do treino?"
+    tipo: fora
+    fora: true
+  - pergunta: "aceita gympass ou wellhub?"
+    tipo: fora
+    fora: true
