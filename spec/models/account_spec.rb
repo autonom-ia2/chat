@@ -309,7 +309,7 @@ RSpec.describe Account do
         feature_meta_ads_comentarios_facebook: 2048, feature_crm_lista_acao: 4096, feature_funcoes_guiadas: 8192,
         feature_seus_posts_comentarios: 16_384, feature_meta_ads_comentarios_ia: 32_768,
         feature_agente_diz_quando_nao_sabe: 65_536, feature_ia_previa_de_link: 131_072,
-        feature_agentes_pedir_localizacao: 262_144
+        feature_agentes_pedir_localizacao: 262_144, feature_automacao_fundacao: 524_288
       )
     end
 
