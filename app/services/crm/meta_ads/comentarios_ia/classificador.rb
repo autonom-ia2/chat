@@ -13,9 +13,10 @@
 # contratar, perguntar o preço é querer contratar (decisão do Rodrigo no #2424); num de outra coisa (revenda), não é.
 # No eval pago do #2424 este caminho venceu o do Jev com uma 2ª chamada para o motivo (84 de 84; o Jev, 67 de 79), com
 # uma chamada por comentário em vez de duas.
-# Nada é guardado como exemplo. A credencial é a da IA do CRM da conta (Crm::Ai::CredentialResolver: o hook
-# crm_kanban_ai, senão a da instalação), como no Rascunho; o uso fica em Crm::AiUsageEvent com a feature própria, para o
-# teto diário.
+# Nada é guardado como exemplo. A chave é sempre a da própria conta (decisão do Rodrigo no #2424: "Sempre a chave de
+# cada conta"): Crm::Ai::CredentialResolver, pelo hook crm_kanban_ai, como no Rascunho. Hook desligado ou sem chave não
+# cai na chave da instalação: é `no_credential`, e o comentário vai para o dono. O uso fica em Crm::AiUsageEvent com a
+# feature própria, para o teto diário.
 #
 # Sem certeza suficiente, ou com o modelo fora do ar, não decide: o comentário fica para a pessoa, sem resposta da IA.
 class Crm::MetaAds::ComentariosIa::Classificador
