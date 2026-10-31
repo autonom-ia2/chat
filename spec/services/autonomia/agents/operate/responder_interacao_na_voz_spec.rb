@@ -147,6 +147,39 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(pedidos.last[:contexto_do_turno].to_s).to include('"localizacao_recebida"')
   end
 
+  # O cliente manda a localização sem citar (WAHA e Híbrido, pelo clipe): vale quando a última fala do agente é o pedido.
+  # O mapa do mesmo turno sai depois do pedido e não é fala: não tira o pedido do lugar (`LocalizacaoRecebida#pedida?`).
+  describe 'pedido de localização seguido do mapa do mesmo turno' do
+    def localizacao_sem_citar
+      create(:message, account: account, inbox: inbox, conversation: conversation, message_type: :incoming, content: nil,
+                       content_attributes: { 'shared_location' => { 'latitude' => -23.5505, 'longitude' => -46.6333 } })
+    end
+
+    def turno_seguinte_le_a_localizacao
+      local = localizacao_sem_citar
+      responde('Certo.', nil)
+      perform(local)
+      pedidos.last[:contexto_do_turno].to_s
+    end
+
+    it 'voz: áudio, pedido, mapa; a localização sem citar vai ao turno' do
+      responde('Vou ver a unidade mais perto.', pedido_de_localizacao, cartoes: [mapa])
+      perform
+      ate_o_fim
+      expect(tipos).to eq(%w[audio location_request location])
+      expect(turno_seguinte_le_a_localizacao).to include('"localizacao_recebida"')
+    end
+
+    it 'clássico: o texto com o pedido, depois o mapa; a localização sem citar vai ao turno' do
+      allow_any_instance_of(described_class).to receive(:voice_reply_applies?).and_return(false) # rubocop:disable RSpec/AnyInstance
+      responde('Vou ver a unidade mais perto.', pedido_de_localizacao, cartoes: [mapa])
+      perform
+      ate_o_fim
+      expect(enviadas.map { |mensagem| mensagem.content_attributes.dig('rich_message', 'type') }).to eq(%w[location_request location])
+      expect(turno_seguinte_le_a_localizacao).to include('"localizacao_recebida"')
+    end
+  end
+
   it 'interação e cartão: áudio, interação, mapa, cada um esperando o anterior sair' do
     responde('Temos vaga amanhã.', opcoes, cartoes: [mapa])
     perform
