@@ -240,12 +240,13 @@ class Autonomia::Guide::Acoes
   def garantir_permitida!(acao)
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
-    raise Recusada, traduzir('admin_only') unless administrador?
+
+    # #2414 F1.3: quem não administra ainda monta automação com automation_manage (Autonomia::Guide::PorteiroDaAutomacao).
+    recusa = ::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user) unless administrador?
+    raise Recusada, traduzir(recusa) if recusa
   end
 
-  def administrador?
-    @account_user&.role.to_s == 'administrator'
-  end
+  def administrador? = @account_user&.role.to_s == 'administrator'
 
   def verbo_de(acao) = acao.to_s.split(' ', 2).first
 

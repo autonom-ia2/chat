@@ -519,6 +519,7 @@ en:
         crm_permanent_delete: 'Permanent deletion is only done on screen, typing the confirmation: CRM › Archived, or when deleting the contact.'
         contact_delete: 'Deleting a contact is only done on screen: Contacts › open the contact › Delete contact.'
       admin_only: 'Only an account admin can do this.'
+      automation_manage_only: 'You need the "Manage automations" permission for this.'
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
       irreversible: 'This deletes the record and cannot be undone.'

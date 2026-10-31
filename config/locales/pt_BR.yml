@@ -1008,6 +1008,7 @@ pt_BR:
         crm_permanent_delete: 'Excluir de vez só se faz na tela, digitando a confirmação: no CRM, em Arquivados, ou ao excluir o contato.'
         contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
+      automation_manage_only: 'Para montar ou ligar automação, você precisa da permissão de gerenciar automações.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
