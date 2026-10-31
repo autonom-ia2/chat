@@ -78,7 +78,7 @@ FASES = [
             "Arquivar em massa não dispara “saiu da etapa”, e a tela avisa isso.",
             "As automações de etapa de hoje continuam funcionando e aparecem no mesmo painel.",
             "Só quem pode mexer no funil cria automação de funil.",
-            "Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte, mesmo com “Mover automaticamente” ligado. Decidido em 31/10: a IA do funil passa a respeitar o movimento da automação como respeita o de uma pessoa. O ajuste é um PR separado do Multifunnel, com spec, antes do F6, e conserta também as regras antigas que movem card.",
+            "Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte, mesmo com “Mover automaticamente” ligado. Decidido em 31/10: a IA do funil passa a respeitar o movimento da automação como respeita o de uma pessoa. O ajuste é um PR separado do Multifunnel (Issue #2428), com spec, antes do F6, e conserta também as regras antigas que movem card. A automação grava a origem do movimento (“automação”, com o id) para a IA do funil saber quem moveu.",
             "Card criado pela automação respeita a trava de 30 dias do “não é negócio”: contato arquivado pela IA como fornecedor, engano ou duplicado não ganha card de novo."],
     exemplo="Corretora: 30 dias antes do vencimento da apólice, o card vai para “Renovação”, o cliente recebe a mensagem de renovação e o corretor ganha um retorno para ligar em 5 dias, se não houver resposta."),
   dict(id="F7", nome="IA como passo", tela="Novos passos", mig=False,
