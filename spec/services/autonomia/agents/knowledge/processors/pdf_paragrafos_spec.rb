@@ -43,14 +43,15 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     corpo('Sumario', nil, "1. OBJETIVO DO SEGURO#{'.' * 60}4", "2. COBERTURAS#{'.' * 60}5")
   end
 
-  # PDF mínimo com Helvetica: cada linha é um "Td" na altura dada (e na margem esquerda dada; padrão 54).
+  # PDF mínimo com Helvetica: cada linha é um "Td" na altura dada (e na margem esquerda dada; padrão 54). O quarto item,
+  # quando há, troca o "(texto) Tj" pelo operador cru (ex.: TJ com espaçamento entre letras).
   def pdf_com(paginas)
     ids = paginas.each_index.map { |indice| 4 + (2 * indice) }
     objetos = ['<< /Type /Catalog /Pages 2 0 R >>',
                "<< /Type /Pages /Kids [#{ids.map { |id| "#{id} 0 R" }.join(' ')}] /Count #{paginas.size} >>",
                '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>']
     paginas.each_with_index do |linhas, indice|
-      conteudo = linhas.map { |texto, y, x = 54| "BT /F1 10 Tf #{x} #{y} Td (#{texto}) Tj ET" }.join("\n")
+      conteudo = linhas.map { |texto, y, x = 54, cru = nil| "BT /F1 10 Tf #{x} #{y} Td #{cru || "(#{texto}) Tj"} ET" }.join("\n")
       objetos << '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> ' \
                  "/Contents #{ids[indice] + 1} 0 R >>"
       objetos << "<< /Length #{conteudo.bytesize} >>\nstream\n#{conteudo}\nendstream"
@@ -169,6 +170,35 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
 
     it 'mantém o cabeçalho em toda página (colado nas linhas, não é cabeçalho corrido)' do
       expect(extrair.scan('Modelo Ano Franquia Premio').size).to eq(4)
+    end
+  end
+
+  describe 'o título colado ao texto (sem espaço de parágrafo antes do corpo)' do
+    let(:pdf) { pdf_com([corpo('1. OBJETIVO DO SEGURO', 'Este seguro garante o veiculo segurado.', 'Vale em todo o territorio.')]) }
+
+    it 'fica num bloco próprio, e o Chunker o reconhece como título' do
+      meta = Autonomia::Agents::Knowledge::Chunker.new(extrair, source_type: 'pdf').chunks_with_metadata
+
+      expect(meta).to include(a_hash_including(metadata: a_hash_including(section_heading: '1. OBJETIVO DO SEGURO')))
+    end
+  end
+
+  describe 'o texto justificado que aperta as letras' do
+    # Letras a -0,7 pt (Tc) e a palavra seguinte 2,5 pt adiante (TJ -250): a folga entre palavras fica em 1,8 pt, abaixo
+    # dos 20% da letra com que o pdf-reader põe espaço, e o page.text colava "NAOFAZERNENHUMACORDO".
+    let(:pdf) { pdf_com([[['', topo, 54, '-0.7 Tc [(NAO) -250 (FAZER) -250 (NENHUM) -250 (ACORDO)] TJ']]]) }
+
+    it 'separa as palavras pela folga comum entre as letras', :aggregate_failures do
+      expect(PDF::Reader.new(StringIO.new(pdf)).pages.first.text).to include('NAOFAZERNENHUMACORDO')
+      expect(extrair).to include('NAO FAZER NENHUM ACORDO')
+    end
+  end
+
+  describe 'duas linhas sobrepostas na mesma altura (célula de tabela)' do
+    let(:pdf) { pdf_com([[['Comprovante de pagamento', topo, 54], ['instrumento.', topo + 2, 47]]]) }
+
+    it 'não intercala as letras: cada uma fica inteira, separada por espaço' do
+      expect(extrair).to include('instrumento. Comprovante de pagamento')
     end
   end
 

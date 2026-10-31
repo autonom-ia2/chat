@@ -7,10 +7,14 @@
 # amostra da conferência só via fragmentos e reprovava o material como "leitura ruim".
 #
 # Como remonta, só pela geometria do PDF (nada de idioma, palavra ou regex), com os mesmos trechos que o `page.text` usa
-# (no pdf-reader 2.16, Page#text é o PageLayout sobre `runs`):
-# - as linhas são os trechos de texto na mesma altura da página, da esquerda para a direita;
-# - o espaço normal entre linhas é a mediana (de baixo) dos espaços da página; espaço bem maior que ele, ou troca do
-#   tamanho de letra da linha (título), fecha o parágrafo ("\n\n"); o resto continua o parágrafo ("\n");
+# (no pdf-reader 2.16, Page#text é o PageLayout sobre `runs`), juntados aqui dos caracteres:
+# - as linhas são os trechos de texto na mesma altura da página, da esquerda para a direita; o espaço entre palavras é a
+#   folga bem acima da folga comum entre as letras do trecho (texto justificado aperta as letras e o `page.text` colava as
+#   palavras: "NÃOFAZERNENHUMACORDO");
+# - o espaço normal entre linhas é a mediana (de baixo) dos espaços da página; espaço bem maior que ele, troca do
+#   tamanho de letra da linha, ou linha de título (a mesma regra do Chunker), fecha o parágrafo ("\n\n"); o resto
+#   continua o parágrafo ("\n"). Sem a regra de título, o título colado ao texto entrava no parágrafo e deixava de ser
+#   título para o Chunker (116 títulos distintos na main viravam 58 no PDF de 74 páginas da #2425);
 # - a virada de página continua o parágrafo só quando o corpo da página (sem o bloco do pé) chega ao último quarto da
 #   folha e a letra segue a mesma. A geometria não distingue "frase cortada" de "parágrafo novo no topo da
 #   página seguinte"; nesse caso os dois ficam no mesmo parágrafo, e o Chunker ainda corta por tamanho;
@@ -31,8 +35,10 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   QUEBRA_DE_PARAGRAFO = 1.5
   # Letra 10% maior ou menor que a da linha anterior é outro bloco (título).
   TROCA_DE_LETRA = 0.1
-  # Entre dois trechos da mesma linha, uma folga acima de 10% do tamanho da letra é espaço entre palavras.
+  # Entre dois caracteres ou trechos da mesma linha, uma folga 10% da letra acima da folga comum é espaço entre palavras.
   FOLGA_DE_PALAVRA = 0.1
+  # O pdf-reader junta o caractere que começa até 3 pt antes do fim do anterior; trecho que começa antes disso é sobreposto.
+  SOBREPOSTO = 3
   # Rodapé corrido e número de página: valem num PDF de 4 páginas ou mais, quando aparecem em pelo menos metade delas.
   CORRIDO_MIN_PAGINAS = 4
   CORRIDO_FRACAO = 0.5
@@ -72,22 +78,61 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     nil
   end
 
-  # Linhas da página de cima para baixo: { y:, letra:, texto: }. Trechos seguidos (por altura) na mesma altura são uma linha.
+  # Linhas da página de cima para baixo: { y:, letra:, titulo:, texto: }. Trechos seguidos (por altura) na mesma altura são
+  # uma linha.
   def linhas_da_pagina(page)
-    trechos = page.runs(merge: true).reject { |trecho| texto_do(trecho).strip.empty? }.sort_by { |trecho| [-trecho.y, trecho.x] }
+    trechos = trechos_da_pagina(page).sort_by { |trecho| [-trecho.y, trecho.x] }
     trechos.slice_when { |anterior, trecho| (anterior.y - trecho.y).abs > letra_do(trecho) * MESMA_LINHA }
            .map { |grupo| linha(grupo.sort_by(&:x)) }
   end
 
-  def linha(trechos)
-    texto = trechos.each_with_index.map do |trecho, indice|
-      indice.positive? && separa?(trechos[indice - 1], trecho) ? " #{texto_do(trecho)}" : texto_do(trecho)
+  # Os trechos de texto da página, juntados dos caracteres pela mesma regra do `runs(merge: true)` do pdf-reader (mesma
+  # altura, mesma letra, o seguinte começa até 3 pt antes ou uma letra depois do fim do anterior), mas com o espaço entre
+  # palavras pela folga comum do trecho: a junção do pdf-reader só põe espaço com folga acima de 20% da letra, e o texto
+  # justificado que aperta as letras colava as palavras.
+  def trechos_da_pagina(page)
+    caracteres = page.runs(merge: false).reject { |caractere| texto_do(caractere).strip.empty? }
+    caracteres.group_by { |caractere| caractere.y.to_i }.flat_map do |_, mesma_altura|
+      mesma_altura.sort_by(&:x).slice_when { |anterior, caractere| !anterior.mergable?(caractere) }.map { |grupo| trecho(grupo) }
     end
-    { y: trechos.first.y, letra: letra_da_linha(trechos), texto: texto.join.strip }
   end
 
-  def separa?(anterior, trecho)
-    trecho.x - (anterior.x + anterior.width) > letra_do(trecho) * FOLGA_DE_PALAVRA
+  def trecho(caracteres)
+    ultimo = caracteres.last
+    PDF::Reader::TextRun.new(caracteres.first.x, caracteres.first.y, ultimo.x + ultimo.width - caracteres.first.x,
+                             ultimo.font_size, juntar(caracteres, aperto(caracteres)))
+  end
+
+  # Entre trechos, folga negativa além do que o pdf-reader junta (3 pt) é texto sobreposto (duas linhas da mesma célula na
+  # mesma altura): palavras diferentes, separadas por espaço.
+  def linha(trechos)
+    texto = juntar(trechos, 0, sobreposto: true).strip
+    { y: trechos.first.y, letra: letra_da_linha(trechos), texto: texto, titulo: Autonomia::Agents::Knowledge::Chunker.titulo?(texto) }
+  end
+
+  def juntar(trechos, aperto, sobreposto: false)
+    trechos.each_with_index.map do |trecho, indice|
+      anterior = indice.positive? && trechos[indice - 1]
+      espaco = anterior && (separa?(anterior, trecho, aperto) || (sobreposto && folga(anterior, trecho) < -SOBREPOSTO))
+      espaco ? " #{texto_do(trecho)}" : texto_do(trecho)
+    end.join
+  end
+
+  # Espaço entre palavras: a folga passa a folga comum (o aperto) em mais de FOLGA_DE_PALAVRA da letra.
+  def separa?(anterior, trecho, aperto)
+    folga(anterior, trecho) - aperto > letra_do(trecho) * FOLGA_DE_PALAVRA
+  end
+
+  # A folga comum entre as letras do trecho (a mediana de baixo), só quando negativa: o texto justificado que aperta as
+  # letras (no PDF de 74 páginas da #2425, -0,75 pt entre letras e +1,75 pt entre palavras). Folga positiva não conta: num
+  # trecho de duas palavras a mediana seria o próprio espaço entre elas.
+  def aperto(caracteres)
+    folgas = caracteres.each_cons(2).map { |anterior, caractere| folga(anterior, caractere) }.sort
+    folgas.empty? ? 0 : [folgas[(folgas.size - 1) / 2], 0].min
+  end
+
+  def folga(anterior, trecho)
+    trecho.x - (anterior.x + anterior.width)
   end
 
   # A letra da linha é a que cobre mais texto nela: uma palavra maior no meio não faz da linha um título.
@@ -118,8 +163,11 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     espacos.empty? ? 0 : espacos[(espacos.size - 1) / 2]
   end
 
+  # Fecha o parágrafo: espaço de parágrafo, troca de letra, ou linha de título antes ou depois (pela mesma regra de título
+  # do Chunker, que só reconhece o título quando ele está num bloco próprio).
   def quebra?(anterior, atual, normal)
-    separado?(anterior, atual, normal) || (anterior[:letra] - atual[:letra]).abs > anterior[:letra] * TROCA_DE_LETRA
+    separado?(anterior, atual, normal) || (anterior[:letra] - atual[:letra]).abs > anterior[:letra] * TROCA_DE_LETRA ||
+      anterior[:titulo] || atual[:titulo]
   end
 
   def separado?(de_cima, de_baixo, normal)
