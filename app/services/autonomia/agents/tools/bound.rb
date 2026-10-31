@@ -52,10 +52,10 @@ class Autonomia::Agents::Tools::Bound
     @native.present?
   end
 
-  # A ferramenta é assíncrona? Só nativa pode ser: a HTTP cadastrada pelo dono da conta não tem como
-  # declarar o contrato start/poll.
+  # A ferramenta é assíncrona? A nativa declara (contrato start/poll); a HTTP cadastrada, pelo tempo dela (#1430,
+  # `Tool#assincrona?`: acima de `Tool::LIMIAR_ASSINCRONO`). Na HTTP é modo, não teto: o tempo nunca é recusado.
   def async?
-    native? && @native.async?
+    native? ? @native.async? : @record.assincrona?
   end
 
   # Só nativa pode passar a conversa (Native::Base.passa_a_conversa?); a HTTP do dono da conta não tem como.
@@ -71,12 +71,7 @@ class Autonomia::Agents::Tools::Bound
   # `turno`: só para o `Idempotency-Key` da ferramenta HTTP, quando ela roda sem `delivery` (o ajudante, #1430).
   def execute(call, delivery: nil, operador: nil, turno: nil)
     args = JSON.parse(call['arguments'].presence || '{}')
-    output = if async?
-               accept_async(args, delivery)
-             else
-               native? ? run_native(args, delivery, operador) : run_http(args, delivery, turno)
-             end
-    cabendo(output)
+    cabendo(executar(args, delivery, operador, turno))
   rescue JSON::ParserError
     recusar('invalid_tool_arguments', delivery)
   end
@@ -100,7 +95,20 @@ class Autonomia::Agents::Tools::Bound
     ::Autonomia::Agents::Tools::Recusa.saida(categoria, detalhe: status, resposta: erro.try(:trecho))
   end
 
+  # A categoria da mesma recusa (`tool_http_error`, `tool_execution_error`): o código com que a consulta assíncrona fecha
+  # a linha (#1430, `HttpAssincronaJob`).
+  def categoria_da_recusa_http(erro)
+    http_error_code(erro.message).first
+  end
+
   private
+
+  def executar(args, delivery, operador, turno)
+    return accept_async(args, delivery) if async? && native?
+    return aceitar_consulta(args, delivery) if async?
+
+    native? ? run_native(args, delivery, operador) : run_http(args, delivery, turno)
+  end
 
   # ASSÍNCRONA: não executa nada aqui. Registra a execução como `pending` e devolve ao modelo uma
   # confirmação curta, para ele avisar o cliente na MESMA resposta. Depois da última rodada de
@@ -145,6 +153,33 @@ class Autonomia::Agents::Tools::Bound
     delivery.marcar_cotacao_existente if EXECUCAO_EXISTENTE.include?(codigo) && delivery.respond_to?(:marcar_cotacao_existente)
     ::Autonomia::Agents::Tools::Recusa.para_modelo(codigo, slug: slug, delivery: delivery,
                                                            agente: @agent, detalhe: detalhe, resposta: resposta)
+  end
+
+  # A HTTP ASSÍNCRONA (#1430): as mesmas portas da nativa — sem conversa, turno de evento, desligada; o mesmo pedido
+  # duas vezes no turno; o índice único — e o aceite neutro. Quem monta e abre é `ConsultaAssincrona`. O mesmo pedido
+  # de uma mensagem nova, com a consulta rodando, não abre outra: o modelo lê que ela já está em andamento.
+  def aceitar_consulta(args, delivery)
+    refusal = async_refusal(delivery)
+    return recusar(refusal, delivery) if refusal
+
+    consulta = ::Autonomia::Agents::Tools::ConsultaAssincrona.new(tool: @record, agent: @agent, delivery: delivery, args: args)
+    return recusar('execucao_ja_aberta_neste_turno', delivery) if mesmo_pedido_no_turno?(delivery, consulta.faixa, consulta.pedido)
+
+    abrir_consulta(consulta, delivery)
+  rescue ::Autonomia::Agents::Tools::HttpExecutor::ValorRecusado => e
+    recusa_http(::Autonomia::Agents::Tools::HttpExecutor::Error.new("tool_execution_error: #{e.message}"), delivery)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][tool] consulta assincrona nao aceita slug=#{slug} #{e.class}")
+    recusar('tool_execution_error', delivery)
+  end
+
+  def abrir_consulta(consulta, delivery)
+    run, repetida = consulta.abrir
+    return consulta.em_andamento if repetida
+    return recusar('execucao_ja_em_andamento', delivery) if run.blank?
+
+    delivery.register(run)
+    ::Autonomia::Agents::Tools::ConsultaAssincrona::ACEITE
   end
 
   # A recusa da conferência tem forma própria: o modelo recebe TEXTO (o que perguntar ao cliente),

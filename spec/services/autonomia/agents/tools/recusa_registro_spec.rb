@@ -96,13 +96,25 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
     bound_para(native)
   end
 
+  # Síncrona (#1430: até `Tool::LIMIAR_ASSINCRONO`): é a chamada no turno que falha.
   def bound_http_que_falha_com(mensagem)
     record = Autonomia::Agents::Tool.create!(account: account, agent: agent, name: 'Estoque', slug: 'consultar_estoque',
-                                             endpoint_url: 'https://exemplo.test/estoque', param_schema: [])
+                                             endpoint_url: 'https://exemplo.test/estoque', param_schema: [],
+                                             timeout_seconds: Autonomia::Agents::Tool::LIMIAR_ASSINCRONO)
     allow(Autonomia::Agents::Tools::HttpExecutor).to receive(:new)
       .and_raise(Autonomia::Agents::Tools::HttpExecutor::Error, mensagem)
     Autonomia::Agents::Tools::Bound.new(agent: agent, record: record)
   end
+
+  # #1430: a HTTP acima de `Tool::LIMIAR_ASSINCRONO`, que o turno só aceita.
+  def bound_http_assincrono
+    record = Autonomia::Agents::Tool.create!(account: account, agent: agent, name: 'Pedido', slug: 'consultar_pedido',
+                                             endpoint_url: 'https://exemplo.test/pedido', timeout_seconds: 60,
+                                             param_schema: [{ name: 'numero', type: 'integer', description: 'Número', required: true }])
+    Autonomia::Agents::Tools::Bound.new(agent: agent, record: record)
+  end
+
+  def consulta(numero = 42) = { 'name' => 'consultar_pedido', 'call_id' => 'h1', 'arguments' => { numero: numero }.to_json }
 
   def criar_especialista
     Autonomia::Agents::Specialist.create!(agent: agent, name: 'Auto', slug: 'auto', description: 'cotação de automóvel',
@@ -225,6 +237,44 @@ onde=#{e[:onde]} motivo=#{motivo} faltando=#{campos} detalhe=#{Regexp.escape(e[:
         espera: { motivo: 'tool_http_error', slug: 'consultar_estoque', detalhe: '503' },
         dispara: lambda {
           bound_http_que_falha_com('tool_http_error: 503 Service Unavailable').execute({ 'arguments' => '{}' }, delivery: delivery)
+        }
+      },
+      # #1430: a HTTP assíncrona passa pelas mesmas portas da nativa.
+      'bound.rb#aceitar_consulta#1' => {
+        espera: { motivo: 'async_indisponivel_nesta_superficie', slug: 'consultar_pedido', conversa: '-' },
+        dispara: -> { bound_http_assincrono.execute(consulta) }
+      },
+      'bound.rb#aceitar_consulta#2' => {
+        espera: { motivo: 'execucao_ja_aberta_neste_turno', slug: 'consultar_pedido' },
+        dispara: lambda {
+          ferramenta = bound_http_assincrono
+          ferramenta.execute(consulta, delivery: delivery)
+          ferramenta.execute(consulta, delivery: delivery)
+        }
+      },
+      'bound.rb#aceitar_consulta#3' => {
+        espera: { motivo: 'tool_execution_error', slug: 'consultar_pedido' },
+        dispara: lambda {
+          allow(Autonomia::Agents::ToolRun).to receive(:abrir_ou_repetida).and_raise('X-Amz-Signature=abc')
+          bound_http_assincrono.execute(consulta, delivery: delivery)
+        }
+      },
+      'bound.rb#abrir_consulta#1' => {
+        espera: { motivo: 'execucao_ja_em_andamento', slug: 'consultar_pedido' },
+        dispara: lambda {
+          allow(Autonomia::Agents::ToolRun).to receive(:create!).and_raise(ActiveRecord::RecordNotUnique, 'idx_active')
+          bound_http_assincrono.execute(consulta, delivery: delivery)
+        }
+      },
+      # O mesmo pedido numa mensagem nova, com a consulta rodando: "já estou consultando", sem abrir outra.
+      'consulta_assincrona.rb#em_andamento#1' => {
+        espera: { motivo: 'pedido_repetido', slug: 'consultar_pedido', onde: 'aceite' },
+        dispara: lambda {
+          ferramenta = bound_http_assincrono
+          ferramenta.execute(consulta, delivery: delivery)
+          delivery.runs.sole.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+          outra = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 78)
+          ferramenta.execute(consulta, delivery: outra)
         }
       },
       'bound.rb#run_native#1' => {

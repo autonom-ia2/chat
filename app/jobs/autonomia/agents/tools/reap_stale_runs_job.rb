@@ -96,7 +96,11 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   # RECARREGA antes de decidir: o lote tem até 500 linhas processadas em sequência, e a que chega
   # aqui pode ter recebido preço (ou número) desde a consulta. Decidir pela leitura velha dispararia a
   # falha ao lado do preço, ou a incerteza de uma cotação já registrada.
+  #
+  # A CONSULTA HTTP (#1430) não passa pelo catálogo (o slug pode ser o de uma nativa): `fechar_consulta`.
   def close(run)
+    return fechar_consulta(run.reload) if run.consulta_http?
+
     native = ::Autonomia::Agents::Tools::Registry.find(run.slug)
     run.reload
     encerrar(run, native) if native.present?
@@ -104,6 +108,16 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] reap failed run=#{run.id} #{e.class}")
     nil
+  end
+
+  # A CONSULTA HTTP VENCIDA (#1430): o worker morreu num deploy (SIGKILL) e o job não volta. Ao contrário da cotação,
+  # retomar aqui é seguro: a passada reenfileirada manda a mesma Idempotency-Key, e o sistema de fora reconhece o pedido.
+  # Uma vez só; na segunda, a consulta fecha como falha e o agente diz que não conseguiu.
+  def fechar_consulta(run)
+    http = ::Autonomia::Agents::Tools::HttpAssincronaJob
+    return if !run.running? || http.reenfileirar(run)
+
+    http.abandonar(run) if run.reload.handle.to_h[::Autonomia::Agents::ToolRun::REENFILEIRADA]
   end
 
   # O MESMO ENCERRAMENTO DO MOTOR (`Tools::Encerramento`, entrega 8): as entregas que a ferramenta tem PRONTAS e

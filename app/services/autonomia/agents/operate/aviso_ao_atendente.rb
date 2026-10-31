@@ -73,9 +73,14 @@ class Autonomia::Agents::Operate::AvisoAoAtendente
     ).perform
   end
 
+  # A da consulta HTTP (#1430) não fala em cotação, e os fatos dela são o resultado: é o que quem atende precisa ver.
+  def descricao
+    ::Autonomia::Agents::Tools::Evento::DESCRICOES.fetch(@evento.tipo, @evento.tipo)
+  end
+
   def texto(motivo)
     [
-      "Aviso da cotação (execução #{@run.id}): #{::Autonomia::Agents::Tools::Evento::DESCRICOES.fetch(@evento.tipo, @evento.tipo)}",
+      "Aviso da #{@evento.consulta? ? 'consulta' : 'cotação'} (execução #{@run.id}): #{descricao}",
       (@evento.fatos if @evento.fatos),
       MOTIVOS.fetch(motivo, MOTIVOS['inelegivel'])
     ].compact.join("\n")

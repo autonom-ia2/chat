@@ -40,8 +40,10 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   def ferramenta_http(slug)
+    # Síncrona (#1430: até `Tool::LIMIAR_ASSINCRONO`): o dado volta no mesmo turno.
     Autonomia::Agents::Tool.create!(account: account, agent: agent, name: slug.humanize, slug: slug,
-                                    endpoint_url: "https://api.example.com/#{slug}", param_schema: [])
+                                    endpoint_url: "https://api.example.com/#{slug}", param_schema: [],
+                                    timeout_seconds: Autonomia::Agents::Tool::LIMIAR_ASSINCRONO)
   end
 
   def http_devolve(saida)

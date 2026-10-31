@@ -22,10 +22,15 @@ class Autonomia::Agents::Tools::Evento
   FECHO_KEY = 'autonomia_evento_fecho'.freeze
 
   COMECO = 'cotacao_comecou'.freeze
+  # #1430: os desfechos da ferramenta HTTP assíncrona (`HttpAssincronaJob`). Genéricos: a ferramenta é do dono da conta,
+  # e o resultado pode ser de qualquer assunto. Os fatos são o que o job gravou na linha, não o catálogo das nativas.
+  CONSULTA_CONCLUIDA = 'consulta_concluida'.freeze
+  CONSULTA_FALHOU = 'consulta_falhou'.freeze
+  CONSULTAS = [CONSULTA_CONCLUIDA, CONSULTA_FALHOU].freeze
   # A lista fechada. `falta_dado` e `ramo_desconhecido` são as recusas do envio; `concluida`, `valores_guardados`,
   # `falhou`, `incerta`, `encerrada_por_prazo` e `sem_aceitacao` são os desfechos que `Tools::Encerramento` escolhe.
   TIPOS = [COMECO, 'falta_dado', 'ramo_desconhecido', 'concluida', 'valores_guardados', 'falhou', 'incerta',
-           'encerrada_por_prazo', 'sem_aceitacao'].freeze
+           'encerrada_por_prazo', 'sem_aceitacao', *CONSULTAS].freeze
 
   # O que o modelo lê sobre cada tipo, antes dos fatos da ferramenta. Texto para o MODELO: nenhuma palavra daqui
   # chega ao cliente como está.
@@ -39,7 +44,10 @@ class Autonomia::Agents::Tools::Evento
     'incerta' => 'não foi possível confirmar se a consulta chegou a ser feita, e nada chegou à pessoa.',
     'encerrada_por_prazo' => 'a consulta terminou, e o resultado já foi enviado nesta conversa.',
     # chat#612: nada falhou; nenhuma seguradora trouxe proposta. O motivo fica com a equipe (`Tools::NotaInterna`).
-    'sem_aceitacao' => 'a consulta terminou e nenhuma seguradora trouxe proposta; nada chegou à pessoa.'
+    'sem_aceitacao' => 'a consulta terminou e nenhuma seguradora trouxe proposta; nada chegou à pessoa.',
+    CONSULTA_CONCLUIDA => 'a consulta que a pessoa pediu terminou. O resultado está nos fatos abaixo e ainda não foi dito a ela.',
+    CONSULTA_FALHOU => 'a consulta que a pessoa pediu não pôde ser concluída (erro ou tempo esgotado), e nada chegou a ela. ' \
+                       'Diga que não conseguiu agora.'
   }.freeze
 
   attr_reader :run, :tipo
@@ -93,6 +101,10 @@ class Autonomia::Agents::Tools::Evento
     tipo == COMECO
   end
 
+  def consulta?
+    CONSULTAS.include?(tipo)
+  end
+
   def marca
     "#{run.id}:#{tipo}"
   end
@@ -111,8 +123,10 @@ class Autonomia::Agents::Tools::Evento
   end
 
   # Os fatos da ferramenta para este tipo. NUNCA levanta: sem ferramenta, ou com ela falhando, sai só a descrição.
+  # A consulta HTTP (#1430) traz o que o job gravou; o slug dela pode ser o de uma nativa, e o catálogo não é lido.
   def fatos
     return @fatos if defined?(@fatos)
+    return @fatos = run.resultado_da_consulta.to_s.strip.presence if run.consulta_http?
 
     @fatos = ::Autonomia::Agents::Tools::Registry.find(run.slug)&.fatos_do_evento(tipo, run).to_s.strip.presence
   rescue StandardError => e
@@ -121,10 +135,11 @@ class Autonomia::Agents::Tools::Evento
   end
 
   # O que o modelo recebe no lugar da mensagem do cliente: claramente do sistema, com o que aconteceu e os fatos.
+  # A da consulta HTTP (#1430) não fala em cotação: o assunto é o da ferramenta do dono da conta.
   def nota_do_sistema
     [
-      'AVISO DO SISTEMA SOBRE A COTAÇÃO DESTA CONVERSA. Isto não é mensagem da pessoa: é o sistema contando o ' \
-      'que aconteceu, para você falar com ela agora, na sua voz.',
+      "AVISO DO SISTEMA SOBRE #{consulta? ? 'UMA CONSULTA' : 'A COTAÇÃO'} DESTA CONVERSA. Isto não é mensagem da pessoa: é " \
+      'o sistema contando o que aconteceu, para você falar com ela agora, na sua voz.',
       "O que aconteceu: #{DESCRICOES.fetch(tipo, tipo)}",
       ("Fatos: #{fatos}" if fatos)
     ].compact.join("\n")

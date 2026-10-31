@@ -99,6 +99,8 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # A lista do ACEITE (`ENTREGAS_ACEITAS`) e a da ferramenta moram em `ListasDeEntrega`, junto com
   # quem as escreve — outro assunto, e a classe estava no teto de linhas.
   include ListasDeEntrega
+  # #1430: a execução de uma ferramenta HTTP assíncrona (a ferramenta da linha, a chave e o resultado gravados).
+  include ConsultaHttp
 
   # Por quanto tempo uma consulta ENCERRADA com entrega ainda conta como "este pedido já foi feito".
   # Depois disso, repetir os mesmos dados é um pedido novo (o preço muda; a cotação do portal vence).
@@ -113,6 +115,8 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # (vazia quando a ferramenta não tem).
   # `pedido` é a identidade do pedido (entrega 10), gravada como marca do handle; nil quando a
   # conferência não pôde dizer (o conferente não é portão).
+  # #1430: `scope[:autonomia_agent_tool_id]` é a ferramenta HTTP da consulta (nil nas nativas), e `marcas` vão ao handle
+  # na criação (a Idempotency-Key da consulta).
   #
   # Duas escritas numa transação: supersede a anterior e insere a nova. O índice único parcial é
   # quem garante de verdade — duas chamadas concorrentes fazem a segunda estourar `RecordNotUnique`,
@@ -120,14 +124,14 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   #
   # A FAIXA separa o que não se substitui (migration 20260923090000): em `cotar_seguro`, o produto. O pedido de
   # residencial não troca a cotação de auto que está correndo na mesma conversa; um auto novo troca o auto.
-  def self.open!(agent:, slug:, arguments:, scope:, pedido: nil)
+  def self.open!(agent:, slug:, arguments:, scope:, pedido: nil, marcas: {}) # rubocop:disable Metrics/ParameterLists
     faixa = scope[:faixa].to_s
     transaction(requires_new: true) do
       active.for_conversation(scope[:conversation_id]).where(slug: slug, faixa: faixa)
             .update_all(status: 'superseded', updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       create!(account: agent.account, agent: agent, slug: slug, faixa: faixa, status: 'pending',
-              conversation_id: scope[:conversation_id], agent_inbox_id: scope[:agent_inbox_id],
-              origin_message_id: scope[:origin_message_id], handle: pedido ? { PEDIDO => pedido } : {},
+              **scope.slice(:conversation_id, :agent_inbox_id, :origin_message_id, :autonomia_agent_tool_id),
+              handle: marcas.to_h.merge(pedido ? { PEDIDO => pedido } : {}),
               # Memória das IAs (#1601, W5): o card em foco na abertura recebe o resultado (só com a flag).
               card_id: Crm::Memoria::DaFerramenta.card_da_abertura(agent.account, scope[:conversation_id]),
               execution_key: SecureRandom.uuid, arguments: arguments.to_h.deep_stringify_keys)
@@ -141,14 +145,14 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # simultâneos com o mesmo pedido comparam com nada, um abre, o outro supersede, e se o primeiro já
   # foi promovido e submetido há duas cotações no portal. A conferência (HTTP) fica fora da seção.
   # -> [execução aberta, nil] ou [nil, execução repetida]; [nil, nil] quando o índice único recusou.
-  def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil)
+  def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil, marcas: {}) # rubocop:disable Metrics/ParameterLists
     faixa = scope[:faixa].to_s
     transaction do
       travar!(scope[:conversation_id], slug, faixa)
       repetida = pedido_repetido(scope[:conversation_id], slug, pedido, faixa)
       next [nil, repetida] if repetida
 
-      [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido), nil]
+      [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido, marcas: marcas), nil]
     end
   end
 
@@ -203,9 +207,9 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   end
 
   # -> a ferramenta desta execução diz que o handle tem resultado guardado (`Native::Base.resultado_guardado?`).
-  # Slug fora do catálogo responde falso.
+  # Slug fora do catálogo responde falso. A consulta HTTP (#1430) também: o slug dela pode ser o de uma nativa.
   def resultado_obtido?
-    ::Autonomia::Agents::Tools::Registry.find(slug)&.resultado_guardado?(handle.to_h) || false
+    !consulta_http? && (::Autonomia::Agents::Tools::Registry.find(slug)&.resultado_guardado?(handle.to_h) || false)
   end
 
   # O instante do encerramento. Linhas anteriores a esta marca (encerradas antes da entrega 10) caem

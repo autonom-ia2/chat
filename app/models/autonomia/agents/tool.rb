@@ -41,6 +41,10 @@ class Autonomia::Agents::Tool < ApplicationRecord
   # #1430: o tempo de espera de uma ferramenta nova. Fica só aqui: trocar o padrão não pede migration (o default do
   # banco só valeu para as linhas que existiam quando a coluna nasceu).
   TEMPO_PADRAO = 30
+  # #1430: acima disto a ferramenta roda ASSÍNCRONA (`assincrona?`): o turno aceita, o `HttpAssincronaJob` chama, e o
+  # agente fala do resultado num turno de evento. É modo, não teto: nenhum tempo é recusado. Até 25 s, a espera cabe no
+  # turno como sempre coube.
+  LIMIAR_ASSINCRONO = 25
   ALCANCE_DO_INTEIRO = (2**31) - 1
 
   attribute :timeout_seconds, :integer, default: -> { TEMPO_PADRAO }
@@ -85,6 +89,10 @@ class Autonomia::Agents::Tool < ApplicationRecord
       },
       strict: true
     }
+  end
+
+  def assincrona?
+    timeout_seconds.to_i > LIMIAR_ASSINCRONO
   end
 
   def masked_headers_config

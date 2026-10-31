@@ -103,10 +103,18 @@ class Autonomia::Agents::Operate::EventoJob < ApplicationJob
   def esperar?(evento, conversation, passo)
     adiamentos = passo[:adiamentos]
     cadeia_aberta = adiamentos < AsyncConfig::MAX_PUBLISH_DEFERRALS && ::Autonomia::Agents::Tools::CadeiaDoTurno.aberta?(evento.run, conversation)
-    return true if cadeia_aberta
+    return true if cadeia_aberta || turno_do_cliente_em_curso?(evento, conversation, adiamentos)
     return false if evento.comeco? || adiamentos >= AsyncConfig::MAX_DEPENDENCY_DEFERRALS
 
     comeco_sem_palavra?(evento.run, conversation) || arquivo_a_caminho?(evento.run, conversation, passo[:depois_de])
+  end
+
+  # #1430: O RESULTADO DA CONSULTA HTTP NÃO ATRAVESSA O TURNO DO CLIENTE. A pessoa escreveu de novo enquanto a consulta
+  # corria, e o agente está respondendo (`Operate::TurnoEmCurso`, a marca que só existe com a flag `agente_so_informa`):
+  # o evento espera esse turno terminar, com o teto da dependência. Só nos eventos da consulta: a Lia segue como era.
+  def turno_do_cliente_em_curso?(evento, conversation, adiamentos)
+    evento.consulta? && adiamentos < AsyncConfig::MAX_DEPENDENCY_DEFERRALS &&
+      ::Autonomia::Agents::Operate::TurnoEmCurso.em_curso?(conversation.id)
   end
 
   # O "ESTOU CUIDANDO" DEPOIS DO RESULTADO NÃO SAI (revisão da chat#588). O começo que atrasou (nova tentativa,

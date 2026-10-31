@@ -19,7 +19,9 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
   let(:endpoint) { 'https://api.loja.test/pedidos' }
   let(:tool) do
     Autonomia::Agents::Tool.create!(
+      # Síncrona (#1430: até `Tool::LIMIAR_ASSINCRONO`): a chave do turno é a da chamada no turno.
       account: account, agent: agent, name: 'Pedido', slug: 'criar_pedido', endpoint_url: endpoint,
+      timeout_seconds: Autonomia::Agents::Tool::LIMIAR_ASSINCRONO,
       request_body_template: '{"sku":"{{sku}}","qtd":{{qtd}}}',
       param_schema: [{ name: 'sku', type: 'string', description: 'SKU' }, { name: 'qtd', type: 'integer', description: 'Qtd' }]
     )
@@ -63,6 +65,7 @@ RSpec.describe Autonomia::Agents::Tools::ChaveDeIdempotencia do
     # Decisão do Rodrigo (31/10, "tempo: recomendado"): padrão de 30 s.
     it 'waits 30 s in total by default' do
       expect(Autonomia::Agents::Tool::TEMPO_PADRAO).to eq(30)
+      tool.update!(timeout_seconds: Autonomia::Agents::Tool.new.timeout_seconds)
       expect(opcoes_do_fetch).to include(total_timeout: 30, open_timeout: 2, read_timeout: 28)
     end
 

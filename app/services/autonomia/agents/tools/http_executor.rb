@@ -30,11 +30,13 @@ class Autonomia::Agents::Tools::HttpExecutor
 
   # `turno`: o `Delivery` de onde sai o `Idempotency-Key` (`ChaveDeIdempotencia`); sem ele, uma chave nova por
   # chamada. `segundos`: o teto desta chamada; sem ele, o tempo da ferramenta (`Tool#timeout_seconds`).
-  def initialize(tool:, params: {}, turno: nil, segundos: nil)
+  # `chave`: o `Idempotency-Key` já calculado (a consulta assíncrona o grava no aceite, com o turno, e o job não tem turno).
+  def initialize(tool:, params: {}, turno: nil, segundos: nil, chave: nil)
     @tool = tool
     @params_do_modelo = params.to_h.deep_stringify_keys
     @turno = turno
     @segundos = segundos || tool.timeout_seconds
+    @chave = chave
   end
 
   def call
@@ -65,15 +67,9 @@ class Autonomia::Agents::Tools::HttpExecutor
 
   def fetch_options(body, headers)
     {
-      method: @tool.http_method.downcase.to_sym,
-      body: body,
-      headers: headers,
-      max_bytes: MAX_RESPONSE_BYTES,
-      open_timeout: OPEN_TIMEOUT,
-      read_timeout: [@segundos - OPEN_TIMEOUT, 1].max,
-      total_timeout: @segundos,
-      max_redirects: MAX_REDIRECTS,
-      cross_origin_redirects: false,
+      method: @tool.http_method.downcase.to_sym, body: body, headers: headers, max_bytes: MAX_RESPONSE_BYTES,
+      open_timeout: OPEN_TIMEOUT, read_timeout: [@segundos - OPEN_TIMEOUT, 1].max, total_timeout: @segundos,
+      max_redirects: MAX_REDIRECTS, cross_origin_redirects: false,
       # Defesa em profundidade: o salto para outra origem já é recusado; se um dia for seguido,
       # nenhum cabeçalho configurado vai junto.
       sensitive_headers: headers.keys,
@@ -114,8 +110,13 @@ class Autonomia::Agents::Tools::HttpExecutor
     headers['Content-Type'] ||= 'application/json' if body.present?
     headers['Accept'] ||= 'application/json'
     # O cadastro não aceita um `Idempotency-Key` próprio (`Tool#validate_headers_config`): a chave é da plataforma.
-    headers[IDEMPOTENCY_HEADER] = Autonomia::Agents::Tools::ChaveDeIdempotencia.para(tool: @tool, turno: @turno, params: params)
+    headers[IDEMPOTENCY_HEADER] = idempotency_key
     headers
+  end
+
+  # A chave pronta (a da consulta assíncrona, #1430) ou a do turno.
+  def idempotency_key
+    @chave.presence || Autonomia::Agents::Tools::ChaveDeIdempotencia.para(tool: @tool, turno: @turno, params: params)
   end
 
   # Quebra de linha num valor de cabeçalho abriria um cabeçalho novo. O Net::HTTP recusa com

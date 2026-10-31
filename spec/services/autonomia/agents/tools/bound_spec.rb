@@ -11,8 +11,9 @@ RSpec.describe Autonomia::Agents::Tools::Bound do
 
   def create_http_tool(slug)
     Autonomia::Agents::Tool.create!(
+      # Síncrona (#1430: até `Tool::LIMIAR_ASSINCRONO`).
       account: account, agent: agent, name: slug.humanize, slug: slug,
-      endpoint_url: "https://exemplo.test/#{slug}", param_schema: []
+      endpoint_url: "https://exemplo.test/#{slug}", param_schema: [], timeout_seconds: Autonomia::Agents::Tool::LIMIAR_ASSINCRONO
     )
   end
 
