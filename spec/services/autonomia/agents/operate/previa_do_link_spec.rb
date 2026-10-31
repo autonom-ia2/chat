@@ -180,6 +180,13 @@ RSpec.describe Autonomia::Agents::Operate::PreviaDoLink do
       expect(described_class.sem_previa("Código #{codigo.upcase} aqui\nok", codigo)).to eq('ok')
     end
 
+    # Pega: a página induzir o eco do cabeçalho numa resposta de uma linha só e o turno calar (resposta vazia vira silêncio).
+    it 'resposta de uma linha só com o cabeçalho perde só o cabeçalho', :aggregate_failures do
+      expect(described_class.sem_previa("[PREVIA##{codigo}] É um apartamento em Pinheiros.", codigo))
+        .to eq('[] É um apartamento em Pinheiros.')
+      expect(described_class.sem_previa('previa#2 quartos', codigo)).to eq('2 quartos')
+    end
+
     it 'resposta sem cabeçalho fica byte a byte igual' do
       reply = "Sim, esse apartamento em Pinheiros tem seguro.\n"
       expect(described_class.sem_previa(reply, codigo)).to equal(reply)

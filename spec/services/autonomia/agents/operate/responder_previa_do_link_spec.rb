@@ -197,6 +197,26 @@ RSpec.describe Autonomia::Agents::Operate::Responder do
     expect(passagem.send(:query)).to end_with(linha_do_apto)
   end
 
+  # Pega: o teto do item do histórico (4.000) cortar o JSON da prévia de uma mensagem longa do cliente.
+  it 'mensagem longa do cliente é cortada antes, e a linha da prévia cabe inteira', :aggregate_failures do
+    longo = "https://imoveis.exemplo.com.br/apto-42 #{'a' * 3_990}"
+    escreve(:incoming, longo, link_preview: apto)
+    item = pedido[:history].last[:content]
+
+    expect(item.length).to be <= Autonomia::Agents::Config::MAX_HISTORY_ITEM_CHARS
+    expect(item).to end_with("…\n#{linha_do_apto}")
+  end
+
+  # #1431 lê a prévia à parte (busca na base): a linha sozinha, igual à que vai na pergunta, e nil fora do piloto.
+  it 'a linha da prévia sai sozinha para quem a lê à parte', :aggregate_failures do
+    cliente_manda_o_apto
+    mensagem = conversation.messages.incoming.last
+
+    expect(turno.send(:equipe).linha_da_previa(mensagem)).to eq(linha_do_apto)
+    account.disable_features!(previa::FLAG)
+    expect(turno.send(:equipe).linha_da_previa(mensagem)).to be_nil
+  end
+
   describe 'fora do piloto, o pedido é byte a byte o da main' do
     # O pedido com a prévia gravada e o mesmo cenário sem ela (a "main", que não lê `link_preview`).
     def pedidos_com_e_sem_previa

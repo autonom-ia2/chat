@@ -41,6 +41,12 @@ class Autonomia::Agents::Operate::HistoricoDaEquipe
     message ? com_previa(neutra, message) : neutra
   end
 
+  # #1775: só a linha da prévia do link da mensagem do cliente, ou nil (fora da flag, da Fase 2, na Lia ou sem prévia).
+  # Para quem precisa dela à parte da pergunta (a busca na base, #1431), sem recortar o texto colado.
+  def linha_da_previa(message)
+    previa.linha(message, marca: marca, codigo: codigo_da_previa) if previa?
+  end
+
   # #1775: com a prévia, também sem a linha que ecoa o cabeçalho dela.
   def resposta(reply)
     limpa = moldura.sem_marca(reply, marca)
@@ -55,10 +61,18 @@ class Autonomia::Agents::Operate::HistoricoDaEquipe
     return texto unless previa?
 
     proprio = previa.no_texto_do_cliente(texto, codigo_da_previa)
-    linha = previa.linha(message, marca: marca, codigo: codigo_da_previa)
+    linha = linha_da_previa(message)
     return proprio unless linha
+    return linha if proprio.to_s.empty?
 
-    proprio.to_s.empty? ? linha : "#{proprio}\n#{linha}"
+    "#{caber(proprio, linha)}\n#{linha}"
+  end
+
+  # O teto do item do histórico (MAX_HISTORY_ITEM_CHARS) corta do fim: o texto do cliente é cortado antes, para a linha
+  # da prévia caber inteira (sem JSON pela metade).
+  def caber(texto, linha)
+    config = ::Autonomia::Agents::Config
+    config.truncate_text(texto, config::MAX_HISTORY_ITEM_CHARS - linha.length - 1)
   end
 
   def regra_da_previa(messages)

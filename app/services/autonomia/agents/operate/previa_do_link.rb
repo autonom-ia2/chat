@@ -29,7 +29,7 @@
 # segura a soma.
 # Ajudante (tema 14): recebe o histórico com a linha, mas não a regra do turno; o cabeçalho e o JSON seguram o dado.
 # O turno da passagem (ResponderAPassagem < Responder) responde ao mesmo cliente com a mesma pergunta: lê a prévia também.
-# Defeito aqui nunca cala o turno: a mensagem segue sem a linha (log só com a classe do erro).
+# Defeito ao montar a linha nunca cala o turno: a mensagem segue sem ela (log só com a classe do erro).
 # Só com a Fase 2, a flag `ia_previa_de_link` e fora da Lia (`insurance_quote`); sem isso, nada daqui é chamado.
 module Autonomia::Agents::Operate::PreviaDoLink
   FLAG = 'ia_previa_de_link'.freeze
@@ -120,15 +120,22 @@ module Autonomia::Agents::Operate::PreviaDoLink
     tocou ? linhas.join("\n") : texto
   end
 
-  # A resposta da IA sem a linha que traz o prefixo ou o código da prévia (o modelo ecoando a prévia ou a regra). Sem
-  # eles, a resposta fica byte a byte como veio.
+  # A resposta da IA sem a linha que traz o prefixo ou o código da prévia (o modelo ecoando a prévia ou a regra). Se a
+  # resposta inteira for essa linha, sai só o prefixo e o código, e o resto fica: uma página que induz o eco não cala o
+  # turno. Sem eles, a resposta fica byte a byte como veio.
   def sem_previa(reply, codigo)
     return reply if reply.blank? || !reply.valid_encoding?
 
     chaves = [PREFIXO, codigo]
     linhas = reply.lines
-    restantes = linhas.reject { |linha| disfarce.contem_alguma?(disfarce.normalizado(linha), chaves) }
-    restantes.size == linhas.size ? reply : restantes.join.strip
+    tocadas = linhas.select { |linha| com_chave?(linha, chaves) }
+    return reply if tocadas.empty?
+
+    (linhas - tocadas).join.strip.presence || disfarce.trocar(disfarce.normalizado(reply), chaves, '').strip
+  end
+
+  def com_chave?(texto, chaves)
+    disfarce.contem_alguma?(disfarce.normalizado(texto), chaves)
   end
 
   # De onde veio o texto: o host lido (`site`) e, quando ele não existe ou difere, o do link que o cliente mandou.
