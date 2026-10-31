@@ -127,7 +127,7 @@
 4. **F6.4** Arquivar em massa não dispara “saiu da etapa”, e a tela avisa isso.
 5. **F6.5** As automações de etapa de hoje continuam funcionando e aparecem no mesmo painel.
 6. **F6.6** Só quem pode mexer no funil cria automação de funil.
-7. **F6.7** *(Proposta, a aprovar.)*  Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte. Hoje a IA só respeita movimento feito por pessoa. Decisão do Rodrigo: ajustar a IA do funil ou só deixar automação mover card em funil com “Mover automaticamente” desligado.
+7. **F6.7** Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte, mesmo com “Mover automaticamente” ligado. Decidido em 31/10: a IA do funil passa a respeitar o movimento da automação como respeita o de uma pessoa. O ajuste é um PR separado do Multifunnel, com spec, antes do F6, e conserta também as regras antigas que movem card.
 8. **F6.8** Card criado pela automação respeita a trava de 30 dias do “não é negócio”: contato arquivado pela IA como fornecedor, engano ou duplicado não ganha card de novo.
 
 **Exemplo.** Corretora: 30 dias antes do vencimento da apólice, o card vai para “Renovação”, o cliente recebe a mensagem de renovação e o corretor ganha um retorno para ligar em 5 dias, se não houver resposta.
@@ -191,6 +191,9 @@
 3. **F9.3** Nenhuma mensagem dupla durante a troca: antigo e novo nunca ligados ao mesmo tempo para a mesma coisa.
 4. **F9.4** Reverter uma conta religa o antigo e desliga o novo em minutos.
 5. **F9.5** Ao fim, existe um motor só, e a lista mostra tudo nele.
+6. **F9.6** Fechamento do épico: os 20 exemplos desta página rodam de ponta a ponta no ambiente de testes, montados do jeito que o dono montaria, cada um com teste automático que confere o resultado prometido.
+7. **F9.7** Nesse teste, o que sai para fora (WhatsApp oficial e Híbrido, Instagram, e-mail, webhook para outro sistema) é chamado de verdade, com o mesmo pedido que iria para produção, num receptor de teste que grava a chamada. O teste confere o destino, o modelo aprovado e os campos.
+8. **F9.8** As esperas de dias e meses rodam com o relógio adiantado, e os passos de IA rodam uma vez com a IA de verdade, com orçamento combinado antes. Exemplo que não passar volta para a fase que falhou; o épico só fecha com os 20 passando.
 
 **Exemplo.** As 26 regras “caixa X vai para a dona” da conta 17 viram 26 automações novas. A dona não percebe diferença nenhuma, e passa a ver o histórico de cada atribuição.
 
@@ -202,7 +205,7 @@ Confirmado com o chat Multifunnel em 31/10, na origin/main 2ad360cf5c.
 
 - **Triagem do assunto:** já é da IA de assunto, configurada por caixa. Uma triagem pela Automação livre só roda na caixa com a IA de assunto desligada.
 - **Retomar conversa parada:** já é dos Retornos automáticos, por funil. Uma automação que fale com cliente parado só roda no funil com eles desligados.
-- **Mover card:** a IA do funil hoje só respeita movimento feito por pessoa. Falta decidir: ajustar a IA para respeitar a automação, ou só deixar a automação mover card em funil com "Mover automaticamente" desligado (item F6.7).
+- **Mover card:** a IA do funil hoje só respeita movimento feito por pessoa. Decidido: a IA do funil passa a respeitar o card movido pela automação, num PR do Multifunnel antes do F6 (item F6.7).
 - **As IAs do CRM não mudam de comportamento.** A Automação livre cobre o que nenhuma delas faz.
 
 ## 20 automações que nenhuma IA do CRM faz hoje

@@ -78,7 +78,7 @@ FASES = [
             "Arquivar em massa não dispara “saiu da etapa”, e a tela avisa isso.",
             "As automações de etapa de hoje continuam funcionando e aparecem no mesmo painel.",
             "Só quem pode mexer no funil cria automação de funil.",
-            PROP+" Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte. Hoje a IA só respeita movimento feito por pessoa. Decisão do Rodrigo: ajustar a IA do funil ou só deixar automação mover card em funil com “Mover automaticamente” desligado.",
+            "Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte, mesmo com “Mover automaticamente” ligado. Decidido em 31/10: a IA do funil passa a respeitar o movimento da automação como respeita o de uma pessoa. O ajuste é um PR separado do Multifunnel, com spec, antes do F6, e conserta também as regras antigas que movem card.",
             "Card criado pela automação respeita a trava de 30 dias do “não é negócio”: contato arquivado pela IA como fornecedor, engano ou duplicado não ganha card de novo."],
     exemplo="Corretora: 30 dias antes do vencimento da apólice, o card vai para “Renovação”, o cliente recebe a mensagem de renovação e o corretor ganha um retorno para ligar em 5 dias, se não houver resposta."),
   dict(id="F7", nome="IA como passo", tela="Novos passos", mig=False,
@@ -117,7 +117,10 @@ FASES = [
             "Depois da conversão, um mês de comportamento igual: as mesmas atribuições e os mesmos retornos.",
             "Nenhuma mensagem dupla durante a troca: antigo e novo nunca ligados ao mesmo tempo para a mesma coisa.",
             "Reverter uma conta religa o antigo e desliga o novo em minutos.",
-            "Ao fim, existe um motor só, e a lista mostra tudo nele."],
+            "Ao fim, existe um motor só, e a lista mostra tudo nele.",
+            "Fechamento do épico: os 20 exemplos desta página rodam de ponta a ponta no ambiente de testes, montados do jeito que o dono montaria, cada um com teste automático que confere o resultado prometido.",
+            "Nesse teste, o que sai para fora (WhatsApp oficial e Híbrido, Instagram, e-mail, webhook para outro sistema) é chamado de verdade, com o mesmo pedido que iria para produção, num receptor de teste que grava a chamada. O teste confere o destino, o modelo aprovado e os campos.",
+            "As esperas de dias e meses rodam com o relógio adiantado, e os passos de IA rodam uma vez com a IA de verdade, com orçamento combinado antes. Exemplo que não passar volta para a fase que falhou; o épico só fecha com os 20 passando."],
     exemplo="As 26 regras “caixa X vai para a dona” da conta 17 viram 26 automações novas. A dona não percebe diferença nenhuma, e passa a ver o histórico de cada atribuição."),
 ]
 

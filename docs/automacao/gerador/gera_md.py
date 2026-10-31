@@ -20,7 +20,7 @@ for f in g['FASES']:
 L+=['## Convive com as IAs do CRM, não refaz','','Confirmado com o chat Multifunnel em 31/10, na origin/main 2ad360cf5c.','',
 '- **Triagem do assunto:** já é da IA de assunto, configurada por caixa. Uma triagem pela Automação livre só roda na caixa com a IA de assunto desligada.',
 '- **Retomar conversa parada:** já é dos Retornos automáticos, por funil. Uma automação que fale com cliente parado só roda no funil com eles desligados.',
-'- **Mover card:** a IA do funil hoje só respeita movimento feito por pessoa. Falta decidir: ajustar a IA para respeitar a automação, ou só deixar a automação mover card em funil com "Mover automaticamente" desligado (item F6.7).',
+'- **Mover card:** a IA do funil hoje só respeita movimento feito por pessoa. Decidido: a IA do funil passa a respeitar o card movido pela automação, num PR do Multifunnel antes do F6 (item F6.7).',
 '- **As IAs do CRM não mudam de comportamento.** A Automação livre cobre o que nenhuma delas faz.','',
 f'## {len(g["EXEMPLOS"])} automações que nenhuma IA do CRM faz hoje','',
 'Cada exemplo começa pelo pedido como o dono do negócio fala, sem termo técnico. O Guia transforma o pedido na automação, e a pessoa confere no ensaio antes de ligar. Todos cobrem um buraco que as IAs do CRM deixam hoje e usam só o que as fases acima entregam. "Pelo modelo aprovado" = mensagem fora da janela de 24 h do WhatsApp.','',
