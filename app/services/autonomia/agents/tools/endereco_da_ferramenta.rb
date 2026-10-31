@@ -19,9 +19,9 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
   Modelo = Autonomia::Agents::Tools::ModeloLiquid
   RECUSA = 'endereco_invalido'.freeze
   BARRA_INVERTIDA = 92.chr.freeze
-  # Espaços que o `String#strip` não tira (sem quebra, finos, ideográfico, sem largura): um valor só deles
-  # também é um pedaço vazio disfarçado (#1444).
-  ESPACOS_UNICODE = "\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF".freeze
+  # Espaços que o `String#strip` não tira (sem quebra, finos, ideográfico, sem largura, separadores de linha e
+  # parágrafo): um valor só deles também é um pedaço vazio disfarçado (#1444).
+  ESPACOS_UNICODE = "\u00A0\u1680\u180E\u2000-\u200B\u2028\u2029\u202F\u205F\u2060\u3000\uFEFF".freeze
   NA_QUERY = ->(valor) { valor.nil? ? nil : URI.encode_www_form_component(Modelo.texto_de(valor)) }
 
   def initialize(tool:, params:)

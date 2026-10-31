@@ -35,7 +35,6 @@ module Autonomia
     class Tool < ApplicationRecord
       self.table_name = 'autonomia_agent_tools'
 
-      MAX_PER_AGENT = 10
       MAX_SLUG_LENGTH = 64
       SLUG_FORMAT = /\A[a-zA-Z][a-zA-Z0-9_]{0,63}\z/
       HTTP_METHODS = %w[GET POST].freeze
@@ -58,7 +57,6 @@ module Autonomia
       validate :validate_endpoint_url
       validate :validate_param_schema
       validate :validate_headers_config
-      validate :ensure_within_limit, on: :create
 
       scope :enabled, -> { where(enabled: true) }
 
@@ -90,18 +88,6 @@ module Autonomia
       end
 
       private
-
-      # #1323: validação, e não `throw(:abort)` num `before_create` — assim o `save!` levanta `RecordInvalid`
-      # e a API responde 422 com a mensagem. A validação roda dentro da transação do `save`, então a trava
-      # no agente segura duas criações ao mesmo tempo.
-      def ensure_within_limit
-        return if autonomia_agent_id.blank?
-
-        Agent.lock.find(autonomia_agent_id)
-        return if agent.tools.count < MAX_PER_AGENT
-
-        errors.add(:base, "Limite de #{MAX_PER_AGENT} ferramentas por agente atingido")
-      end
 
       def normalize_slug
         self.slug = name.to_s.parameterize(separator: '_') if slug.blank? && name.present?
