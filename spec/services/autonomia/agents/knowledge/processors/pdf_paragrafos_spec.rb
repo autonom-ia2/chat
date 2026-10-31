@@ -43,14 +43,14 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     corpo('Sumario', nil, "1. OBJETIVO DO SEGURO#{'.' * 60}4", "2. COBERTURAS#{'.' * 60}5")
   end
 
-  # PDF mínimo com Helvetica: cada linha é um "Td" na altura dada.
+  # PDF mínimo com Helvetica: cada linha é um "Td" na altura dada (e na margem esquerda dada; padrão 54).
   def pdf_com(paginas)
     ids = paginas.each_index.map { |indice| 4 + (2 * indice) }
     objetos = ['<< /Type /Catalog /Pages 2 0 R >>',
                "<< /Type /Pages /Kids [#{ids.map { |id| "#{id} 0 R" }.join(' ')}] /Count #{paginas.size} >>",
                '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>']
     paginas.each_with_index do |linhas, indice|
-      conteudo = linhas.map { |texto, y| "BT /F1 10 Tf 54 #{y} Td (#{texto}) Tj ET" }.join("\n")
+      conteudo = linhas.map { |texto, y, x = 54| "BT /F1 10 Tf #{x} #{y} Td (#{texto}) Tj ET" }.join("\n")
       objetos << '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> ' \
                  "/Contents #{ids[indice] + 1} 0 R >>"
       objetos << "<< /Length #{conteudo.bytesize} >>\nstream\n#{conteudo}\nendstream"
@@ -92,17 +92,63 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
   end
 
   describe 'a virada de página' do
-    # As páginas vão até o mesmo pé; a frase da página 2 continua na 3.
-    let(:cheia) { corpo(*Array.new(8) { |n| "Linha corrida numero #{n} do texto." }) }
+    # O texto vai até o último quarto da folha (842 pt de altura): a última linha fica perto de y = 100.
+    let(:pe_da_folha) { 100 + (7 * linha) }
+    let(:cheia) { corpo(*Array.new(8) { |n| "Linha corrida numero #{n} do texto." }, inicio: pe_da_folha) }
     let(:pdf) do
-      pdf_com([pagina(cheia, 1), pagina(corpo(*Array.new(7) { 'Texto da pagina dois.' }, 'A frase comeca aqui e'), 2),
-               pagina(corpo('termina na pagina seguinte.', *Array.new(7) { 'Texto da pagina tres.' }), 3), pagina(cheia, 4)])
+      pdf_com([pagina(cheia, 1), pagina(corpo(*Array.new(7) { 'Texto da pagina dois.' }, 'A frase comeca aqui e', inicio: pe_da_folha), 2),
+               pagina(corpo('termina na pagina seguinte.', *Array.new(7) { 'Texto da pagina tres.' }, inicio: pe_da_folha), 3),
+               pagina(cheia, 4)])
     end
 
-    it 'continua o parágrafo quando a página vai até o pé do texto' do
+    it 'continua o parágrafo quando o texto da página chega ao pé da folha' do
       chunks = Autonomia::Agents::Knowledge::Chunker.new(extrair, source_type: 'pdf').chunks
 
       expect(chunks).to include(a_string_including('A frase comeca aqui e termina na pagina seguinte.'))
+    end
+
+    it 'não continua quando a página termina no meio da folha (um item por página)' do
+      itens = (1..4).map { |numero| pagina(corpo("Item #{numero}", "Descricao do item #{numero} em uma linha."), numero) }
+      allow(file).to receive(:download).and_return(pdf_com(itens))
+
+      expect(extrair).to include("Descricao do item 2 em uma linha.\n\nItem 3")
+    end
+  end
+
+  describe 'o pé da página com conteúdo (catálogo com o preço no pé)' do
+    let(:pdf) do
+      pdf_com((1..4).map do |numero|
+        [*corpo("Produto #{numero}", "Descricao do produto #{numero}."), ["R$ #{numero}.299,00", 60], [numero.to_s, 25.9]]
+      end)
+    end
+
+    it 'mantém o preço em toda página e tira só o número da página', :aggregate_failures do
+      texto = extrair
+
+      expect((1..4).map { |numero| texto.include?("R$ #{numero}.299,00") }).to all(be(true))
+      expect(texto.lines.map(&:strip)).not_to include('1', '2', '3', '4')
+    end
+  end
+
+  describe 'o topo da página' do
+    let(:pdf) { pdf_com((1..4).map { |numero| pagina([['CONDICAO GERAL', 810], *definicoes], numero) }) }
+
+    it 'não é mexido: o cabeçalho do topo fica em toda página' do
+      expect(extrair.scan('CONDICAO GERAL').size).to eq(4)
+    end
+  end
+
+  describe 'duas colunas' do
+    let(:pdf) do
+      esquerda = corpo('Coluna um primeira linha', 'coluna um segunda linha')
+      direita = corpo('Coluna dois primeira linha', 'coluna dois segunda linha')
+      pdf_com([esquerda + direita.map { |texto, y| [texto, y, 320] }])
+    end
+
+    it 'tem as mesmas palavras do page.text (a remontagem não perde nem inventa texto)' do
+      original = PDF::Reader.new(StringIO.new(pdf)).pages.first.text
+
+      expect(extrair.split.sort).to eq(original.split.sort)
     end
   end
 

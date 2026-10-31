@@ -170,6 +170,17 @@ RSpec.describe Autonomia::Agents::Material::ConferenciaDoMaterial do
       expect(fonte.metadata['conferencia']).to eq('problema' => 'sem_cabecalho', 'amostra' => ['Coca 350'], 'aviso' => true)
     end
 
+    # #2425 — a marca do OCR vai da leitura à conferência na mesma Source (o ProcessJob passa o mesmo objeto).
+    it 'a Source lida pelo OCR nesta leitura chega à conferência como leitura de imagem' do
+      fonte.leitura_de_imagem = true
+
+      revisar
+
+      expect(cliente).to have_received(:create).with(hash_including(input: [hash_including(
+        content: [hash_including(text: a_string_including('Origem do texto: leitura de imagem por OCR'))]
+      )]))
+    end
+
     it 'sem problema, o parecer da revisão fica como veio' do
       allow(cliente).to receive(:create) do |**kwargs|
         next resposta_do_modelo(parecer) if kwargs[:schema][:name] == 'autonomia_source_review'
