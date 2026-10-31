@@ -15,7 +15,8 @@
 #   folha e a letra segue a mesma. A geometria não distingue "frase cortada" de "parágrafo novo no topo da
 #   página seguinte"; nesse caso os dois ficam no mesmo parágrafo, e o Chunker ainda corta por tamanho;
 # - no pé da página (bloco de até MARGEM_LINHAS linhas separado do corpo por espaço de parágrafo):
-#   - o rodapé corrido (mesmo texto, mesma altura em boa parte das páginas) fica só na primeira página;
+#   - o rodapé corrido (mesmo texto, mesma altura em boa parte das páginas, nos 10% de baixo da folha) fica só na
+#     primeira página;
 #   - o número da página sai: a linha cujo texto é o número daquela página (o índice mais um deslocamento que vale para
 #     o documento todo). Preço, total ou outra linha curta do pé ficam;
 # - o topo da página não é mexido: ali pode estar o cabeçalho de uma tabela ou o título de uma seção.
@@ -38,6 +39,8 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
   MARGEM_LINHAS = 2
   # A virada de página só continua o parágrafo quando o texto da página chega ao último quarto da folha.
   PE_DA_FOLHA = 0.25
+  # Rodapé corrido só nos 10% de baixo da folha: uma linha de conteúdo repetida mais acima (preço igual em todo item) fica.
+  FAIXA_DO_RODAPE = 0.1
 
   private
 
@@ -48,16 +51,25 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
       atual = paginas[indice]
       next "#{page.text}\n" if atual[:linhas].empty?
 
-      "#{paragrafos(atual)}#{continua?(page, atual, paginas[indice + 1]) ? "\n" : "\n\n"}"
+      "#{paragrafos(atual)}#{continua?(atual, paginas[indice + 1]) ? "\n" : "\n\n"}"
     end
   end
 
   # A página lida: as linhas, o espaço normal entre elas, o bloco do pé (índices) e o corpo (as linhas fora do pé).
   def pagina_lida(page)
     linhas = linhas_da_pagina(page)
-    pagina = { linhas: linhas, normal: espaco_normal(linhas) }
+    pagina = { linhas: linhas, normal: espaco_normal(linhas), folha: linhas.empty? ? nil : folha(page) }
     pe = pe(pagina)
     pagina.merge(pe: pe, corpo: linhas.reject.with_index { |_, indice| pe.include?(indice) })
+  end
+
+  # [baixo, altura] da folha, já girada pelo pdf-reader (/Rotate), como os trechos. Folha ilegível: nil, e nada que dependa
+  # dela acontece (não continua o parágrafo, não tira rodapé); o `page.text` da main lê a mesma caixa e trata do erro.
+  def folha(page)
+    caixa = page.rectangles[:MediaBox]
+    [caixa.bottom_left.y, caixa.height]
+  rescue PDF::Reader::MalformedPDFError
+    nil
   end
 
   # Linhas da página de cima para baixo: { y:, letra:, texto: }. Trechos seguidos (por altura) na mesma altura são uma linha.
@@ -116,23 +128,21 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
 
   # Liga à página seguinte quando o corpo desta (sem o bloco do pé: rodapé, número, preço) chega ao pé da folha e a letra
   # segue. A última linha pode abrir parágrafo: o termo no fim da página continua na definição da página seguinte.
-  def continua?(page, atual, seguinte)
+  def continua?(atual, seguinte)
     return false if seguinte.nil? || seguinte[:linhas].empty?
 
     ultima = atual[:corpo].last
     return false if ultima.nil?
 
-    no_pe_da_folha?(page, ultima[:y]) && (ultima[:letra] - seguinte[:linhas].first[:letra]).abs <= ultima[:letra] * TROCA_DE_LETRA
+    na_faixa?(atual, ultima[:y], PE_DA_FOLHA) && (ultima[:letra] - seguinte[:linhas].first[:letra]).abs <= ultima[:letra] * TROCA_DE_LETRA
   end
 
-  # A altura está no último quarto da folha (MediaBox), contando de baixo.
-  def no_pe_da_folha?(page, altura)
-    caixa = page.objects.deref(page.attributes[:MediaBox])
-    caixa = caixa.is_a?(Array) ? caixa.map { |valor| page.objects.deref(valor) } : []
-    return false unless caixa.size == 4 && caixa.all?(Numeric)
+  # A altura está na faixa de baixo da folha (fração da altura, contando de baixo).
+  def na_faixa?(pagina, altura, fracao)
+    return false if pagina[:folha].nil?
 
-    _, baixo, _, cima = caixa
-    altura - [baixo, cima].min <= (cima - baixo).abs * PE_DA_FOLHA
+    baixo, tamanho = pagina[:folha]
+    altura - baixo <= tamanho.abs * fracao
   end
 
   # Tira do pé de cada página o rodapé corrido (depois da primeira vez) e o número da página.
@@ -153,9 +163,11 @@ module Autonomia::Agents::Knowledge::Processors::PdfParagrafos
     !contexto[:deslocamento].nil? && pagina[:linhas][indice][:texto] == (numero + contexto[:deslocamento]).to_s
   end
 
-  # Mesmo texto na mesma altura, no pé de pelo menos CORRIDO_FRACAO das páginas.
+  # Mesmo texto na mesma altura, no pé (na faixa do rodapé) de pelo menos CORRIDO_FRACAO das páginas.
   def corridos(paginas)
-    repetidos(paginas, paginas.map { |pagina| pagina[:pe].map { |indice| chave(pagina, indice) } })
+    repetidos(paginas, paginas.map do |pagina|
+      pagina[:pe].select { |indice| na_faixa?(pagina, pagina[:linhas][indice][:y], FAIXA_DO_RODAPE) }.map { |indice| chave(pagina, indice) }
+    end)
   end
 
   # Quanto somar ao índice da página para ter o número impresso nela ("6" na 6ª página: 1). Vale quando o mesmo

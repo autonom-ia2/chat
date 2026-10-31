@@ -130,6 +130,16 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     end
   end
 
+  describe 'a linha de conteúdo repetida no pé, acima da faixa do rodapé (preço igual em todo item)' do
+    let(:pdf) do
+      pdf_com((1..4).map { |numero| [*corpo("Produto #{numero}", 'Descricao do produto.'), ['Preco sob consulta', 600]] })
+    end
+
+    it 'fica em toda página' do
+      expect(extrair.scan('Preco sob consulta').size).to eq(4)
+    end
+  end
+
   describe 'o topo da página' do
     let(:pdf) { pdf_com((1..4).map { |numero| pagina([['CONDICAO GERAL', 810], *definicoes], numero) }) }
 
