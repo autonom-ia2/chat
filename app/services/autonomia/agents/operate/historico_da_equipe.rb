@@ -41,23 +41,32 @@ class Autonomia::Agents::Operate::HistoricoDaEquipe
     message ? com_previa(neutra, message) : neutra
   end
 
+  # #1775: com a prévia, também sem a linha que ecoa o cabeçalho dela.
   def resposta(reply)
-    moldura.sem_marca(reply, marca)
+    limpa = moldura.sem_marca(reply, marca)
+    previa? ? previa.sem_previa(limpa, codigo_da_previa) : limpa
   end
 
   private
 
-  # #1775: se a página foi lida, a linha da prévia embaixo do texto do cliente. `empty?`, não `blank?`: o texto do cliente
-  # pode ter byte inválido, e o `blank?` estoura nele.
+  # #1775: o texto do cliente sem o cabeçalho da prévia forjado e, se a página foi lida, a linha da prévia embaixo.
+  # `empty?`, não `blank?`: o texto do cliente pode ter byte inválido, e o `blank?` estoura nele.
   def com_previa(texto, message)
-    linha = previa.linha(message, marca) if previa?
-    return texto unless linha
+    return texto unless previa?
 
-    texto.to_s.empty? ? linha : "#{texto}\n#{linha}"
+    proprio = previa.no_texto_do_cliente(texto, codigo_da_previa)
+    linha = previa.linha(message, marca: marca, codigo: codigo_da_previa)
+    return proprio unless linha
+
+    proprio.to_s.empty? ? linha : "#{proprio}\n#{linha}"
   end
 
   def regra_da_previa(messages)
-    previa.regra(marca) if previa? && previa.na_janela?(messages, marca)
+    previa.regra(codigo_da_previa) if previa? && previa.na_janela?(messages, marca: marca, codigo: codigo_da_previa)
+  end
+
+  def codigo_da_previa
+    @codigo_da_previa ||= previa.codigo(@conversation)
   end
 
   def previa?
