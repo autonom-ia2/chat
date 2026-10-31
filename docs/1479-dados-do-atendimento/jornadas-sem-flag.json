@@ -1,14 +1,57 @@
 {
-  "pasta": "docs/1479-dados-do-atendimento/prints-sem-flag",
+  "pasta": "docs/1479-dados-do-atendimento/prints-b-sem-flag",
   "conta": 1,
-  "larguras": [1440, 390],
-  "temas": ["light"],
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
   "jornadas": [
     {
       "nome": "sem-flag",
       "etapas": [
-        { "nome": "pagina-do-agente", "url": "/app/accounts/{conta}/agents/1", "esperar": "[data-alterar=\"instrucoes\"]", "pausa": 5000 },
-        { "nome": "instrucoes-como-hoje", "passos": [{ "clicar": "[data-alterar=\"instrucoes\"]" }, { "esperar": "[data-instrucao]" }, { "clicar": "[data-instrucao] + span" }], "pausa": 1500 }
+        {
+          "nome": "manual-pagina-sem-bloco",
+          "url": "/app/accounts/{conta}/agents/1",
+          "esperar": "[data-alterar=\"instrucoes\"]",
+          "passos": [
+            {
+              "esperar": "[data-linha=\"jeito\"]"
+            },
+            {
+              "clicar": "[data-linha=\"jeito\"] h3"
+            }
+          ],
+          "pausa": 4000
+        },
+        {
+          "nome": "instrucoes-como-hoje",
+          "passos": [
+            {
+              "clicar": "[data-alterar=\"instrucoes\"]"
+            },
+            {
+              "esperar": "[data-instrucao]"
+            },
+            {
+              "clicar": "[data-instrucao] + span"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "conversando-pagina-sem-bloco",
+          "url": "/app/accounts/{conta}/agents/2",
+          "esperar": "[data-linha=\"jeito\"]",
+          "passos": [
+            {
+              "clicar": "[data-linha=\"jeito\"] h3"
+            }
+          ],
+          "pausa": 4000
+        }
       ]
     }
   ]

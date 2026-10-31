@@ -26,47 +26,66 @@
 <body>
 <header>
   <h1>Endereço e telefone do atendimento</h1>
-  <p>Protótipo em tela real (#1479, épico #1424). Os dois campos ficam nas instruções do agente e só aparecem com a flag agentes_enviar_local_e_contato. Os dados ainda não vão ao servidor: é um adaptador falso.</p>
+  <p>Protótipo em tela real, opção B (#1479, épico #1424). Bloco próprio na página do agente, nos dois modos, só com a flag agentes_enviar_local_e_contato. Os dados ainda não vão ao servidor: é um adaptador falso.</p>
 </header>
 <nav>
-  <a href="#jornada-1">1. Campos vazios</a>
-  <a href="#jornada-2">2. Telefone incompleto</a>
-  <a href="#jornada-3">3. Preenchidos e salvos</a>
-  <a href="#jornada-4">4. Flag desligada</a>
+  <a href="#jornada-1">1. Bloco vazio (agente manual)</a>
+  <a href="#jornada-2">2. Gaveta curta, vazia</a>
+  <a href="#jornada-3">3. Telefone incompleto</a>
+  <a href="#jornada-4">4. Salvo, bloco preenchido</a>
+  <a href="#jornada-5">5. Agente no modo conversando</a>
+  <a href="#jornada-6">6. Flag desligada</a>
 </nav>
 <main>
   <section id="jornada-1">
-    <h2>1. Campos vazios</h2>
-    <p class="nota">Novo: abaixo do texto das instruções, um bloco "Endereço e telefone do atendimento", opcional, com o endereço e o telefone (bandeira, Brasil por padrão). A dica de cada campo diz o que o agente faz com ele e que, vazio, vale o da página de agendamento.</p>
+    <h2>1. Bloco vazio (agente manual)</h2>
+    <p class="nota">Novo: um bloco próprio "Endereço e telefone" na página, logo abaixo de "Nome e jeito de falar". Vazio, uma frase e o botão Adicionar.</p>
     <div class="prints">
-      <figure class="largo"><img src="prints/com-flag/02-campos-vazios-light-1440.png" alt="Instruções com os dois campos vazios, computador"><figcaption>Computador</figcaption></figure>
-      <figure class="estreito"><img src="prints/com-flag/02-campos-vazios-light-390.png" alt="Instruções com os dois campos vazios, celular"><figcaption>Celular</figcaption></figure>
+      <figure class="largo"><img src="prints-b/manual/01-pagina-bloco-vazio-light-1440.png" alt="Página da Ana com o bloco vazio"><figcaption>Computador</figcaption></figure>
+      <figure class="estreito"><img src="prints-b/manual/01-pagina-bloco-vazio-light-390.png" alt="Página da Ana com o bloco vazio, celular"><figcaption>Celular</figcaption></figure>
     </div>
   </section>
   <section id="jornada-2">
-    <h2>2. Telefone incompleto</h2>
-    <p class="nota">Novo: com o número pela metade, Salvar não grava e leva ao campo com o aviso "O número está incompleto. Confira os dígitos ou apague o campo." Hoje não existe esse campo.</p>
+    <h2>2. Gaveta curta, vazia</h2>
+    <p class="nota">Novo: Adicionar abre uma gaveta só com os dois campos, Salvar e Cancelar. A dica do endereço lembra que, vazio, vale o da página de agendamento. A do telefone só diz o que o agente faz.</p>
     <div class="prints">
-      <figure class="largo"><img src="prints/com-flag/03-telefone-incompleto-light-1440.png" alt="Telefone incompleto com aviso, computador"><figcaption>Computador</figcaption></figure>
-      <figure class="estreito"><img src="prints/com-flag/03-telefone-incompleto-light-390.png" alt="Telefone incompleto com aviso, celular"><figcaption>Celular</figcaption></figure>
+      <figure class="largo"><img src="prints-b/manual/02-gaveta-vazia-light-1440.png" alt="Gaveta vazia"><figcaption>Computador</figcaption></figure>
+      <figure class="estreito"><img src="prints-b/manual/02-gaveta-vazia-light-390.png" alt="Gaveta vazia, celular"><figcaption>Celular</figcaption></figure>
     </div>
   </section>
   <section id="jornada-3">
-    <h2>3. Preenchidos e salvos</h2>
-    <p class="nota">Novo: com o número completo, Salvar grava tudo junto ("Instruções salvas."). Na página, a linha "Nome e jeito de falar" passa a mostrar o endereço e o telefone. Ao abrir de novo, os campos voltam preenchidos.</p>
+    <h2>3. Telefone incompleto</h2>
+    <p class="nota">Com o número pela metade, Salvar não grava e leva ao campo com o aviso.</p>
     <div class="prints">
-      <figure class="largo"><img src="prints/com-flag/04-telefone-completo-light-1440.png" alt="Campos preenchidos antes de salvar, computador"><figcaption>Antes de salvar</figcaption></figure>
-      <figure class="largo"><img src="prints/com-flag/05-salvo-light-1440.png" alt="Página do agente com endereço e telefone, computador"><figcaption>Depois de salvar</figcaption></figure>
-      <figure class="largo"><img src="prints/com-flag/06-reaberto-light-1440.png" alt="Instruções reabertas com os campos preenchidos, computador"><figcaption>Aberto de novo</figcaption></figure>
-      <figure class="estreito"><img src="prints/com-flag/05-salvo-light-390.png" alt="Página do agente com endereço e telefone, celular"><figcaption>Celular, depois de salvar</figcaption></figure>
+      <figure class="largo"><img src="prints-b/manual/03-telefone-incompleto-light-1440.png" alt="Telefone incompleto com aviso"><figcaption>Computador</figcaption></figure>
+      <figure class="estreito"><img src="prints-b/manual/03-telefone-incompleto-light-390.png" alt="Telefone incompleto com aviso, celular"><figcaption>Celular</figcaption></figure>
     </div>
   </section>
   <section id="jornada-4">
-    <h2>4. Flag desligada</h2>
-    <p class="nota">Igual a hoje: só o texto das instruções, sem os campos, e a página sem as linhas de endereço e telefone.</p>
+    <h2>4. Salvo, bloco preenchido</h2>
+    <p class="nota">Com o número completo, Salvar grava ("Endereço e telefone salvos.") e o bloco mostra o endereço e o telefone, com a frase de que o agente já sabe esses dados. O botão vira Alterar.</p>
     <div class="prints">
-      <figure class="largo"><img src="prints-sem-flag/sem-flag/02-instrucoes-como-hoje-light-1440.png" alt="Instruções sem os campos, computador"><figcaption>Computador</figcaption></figure>
-      <figure class="estreito"><img src="prints-sem-flag/sem-flag/02-instrucoes-como-hoje-light-390.png" alt="Instruções sem os campos, celular"><figcaption>Celular</figcaption></figure>
+      <figure class="largo"><img src="prints-b/manual/04-telefone-completo-light-1440.png" alt="Campos preenchidos antes de salvar"><figcaption>Antes de salvar</figcaption></figure>
+      <figure class="largo"><img src="prints-b/manual/05-salvo-bloco-preenchido-light-1440.png" alt="Bloco preenchido"><figcaption>Depois de salvar</figcaption></figure>
+      <figure class="estreito"><img src="prints-b/manual/05-salvo-bloco-preenchido-light-390.png" alt="Bloco preenchido, celular"><figcaption>Celular</figcaption></figure>
+    </div>
+  </section>
+  <section id="jornada-5">
+    <h2>5. Agente no modo conversando</h2>
+    <p class="nota">O mesmo bloco aparece para o agente montado conversando (Bia), que não tem gaveta de instruções.</p>
+    <div class="prints">
+      <figure class="largo"><img src="prints-b/conversando/01-pagina-bloco-vazio-light-1440.png" alt="Bia com o bloco vazio"><figcaption>Vazio</figcaption></figure>
+      <figure class="largo"><img src="prints-b/conversando/02-salvo-bloco-preenchido-light-1440.png" alt="Bia com o bloco preenchido"><figcaption>Preenchido</figcaption></figure>
+      <figure class="estreito"><img src="prints-b/conversando/02-salvo-bloco-preenchido-light-390.png" alt="Bia com o bloco preenchido, celular"><figcaption>Celular</figcaption></figure>
+    </div>
+  </section>
+  <section id="jornada-6">
+    <h2>6. Flag desligada</h2>
+    <p class="nota">Igual a hoje: sem o bloco, nos dois modos, e a gaveta de Instruções só com o texto.</p>
+    <div class="prints">
+      <figure class="estreito"><img src="prints-b-sem-flag/sem-flag/01-manual-pagina-sem-bloco-light-390.png" alt="Ana sem o bloco, celular"><figcaption>Ana (manual)</figcaption></figure>
+      <figure class="estreito"><img src="prints-b-sem-flag/sem-flag/03-conversando-pagina-sem-bloco-light-390.png" alt="Bia sem o bloco, celular"><figcaption>Bia (conversando)</figcaption></figure>
+      <figure class="largo"><img src="prints-b-sem-flag/sem-flag/02-instrucoes-como-hoje-light-1440.png" alt="Instruções como hoje"><figcaption>Instruções como hoje</figcaption></figure>
     </div>
   </section>
 </main>

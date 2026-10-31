@@ -1,5 +1,5 @@
 {
-  "pasta": "docs/1479-dados-do-atendimento/prints",
+  "pasta": "docs/1479-dados-do-atendimento/prints-b",
   "conta": 1,
   "larguras": [
     1440,
@@ -10,28 +10,30 @@
   ],
   "jornadas": [
     {
-      "nome": "com-flag",
+      "nome": "manual",
       "etapas": [
         {
-          "nome": "pagina-do-agente",
+          "nome": "pagina-bloco-vazio",
           "url": "/app/accounts/{conta}/agents/1",
-          "esperar": "[data-alterar=\"instrucoes\"]",
-          "pausa": 5000
-        },
-        {
-          "nome": "campos-vazios",
+          "esperar": "[data-alterar=\"atendimento\"]",
           "passos": [
             {
-              "clicar": "[data-alterar=\"instrucoes\"]"
+              "esperar": "[data-alterar=\"atendimento\"]"
+            },
+            {
+              "clicar": "[data-atendimento-vazio]"
+            }
+          ],
+          "pausa": 4000
+        },
+        {
+          "nome": "gaveta-vazia",
+          "passos": [
+            {
+              "clicar": "[data-alterar=\"atendimento\"]"
             },
             {
               "esperar": "[data-dados-do-atendimento]"
-            },
-            {
-              "clicar": "[data-campo-telefone-atendimento] input[data-numero-do-telefone]"
-            },
-            {
-              "clicar": "[data-campo-telefone-atendimento] p[aria-live]"
             }
           ],
           "pausa": 1500
@@ -67,16 +69,13 @@
               ]
             },
             {
-              "clicar": "[data-campo-telefone-atendimento] input[data-numero-do-telefone]"
-            },
-            {
               "clicar": "[data-campo-telefone-atendimento] p[aria-live]"
             }
           ],
           "pausa": 1500
         },
         {
-          "nome": "salvo",
+          "nome": "salvo-bloco-preenchido",
           "passos": [
             {
               "clicar": "[data-salvar]"
@@ -89,24 +88,55 @@
             }
           ],
           "pausa": 800
-        },
+        }
+      ]
+    },
+    {
+      "nome": "conversando",
+      "etapas": [
         {
-          "nome": "reaberto",
+          "nome": "pagina-bloco-vazio",
+          "url": "/app/accounts/{conta}/agents/2",
+          "esperar": "[data-alterar=\"atendimento\"]",
           "passos": [
             {
-              "clicar": "[data-alterar=\"instrucoes\"]"
+              "clicar": "[data-atendimento-vazio]"
+            }
+          ],
+          "pausa": 4000
+        },
+        {
+          "nome": "salvo-bloco-preenchido",
+          "passos": [
+            {
+              "clicar": "[data-alterar=\"atendimento\"]"
             },
             {
               "esperar": "[data-dados-do-atendimento]"
             },
             {
-              "clicar": "[data-campo-telefone-atendimento] input[data-numero-do-telefone]"
+              "preencher": [
+                "input[data-campo-endereco]",
+                "Avenida Brasil, 500, Sala 3, Curitiba"
+              ]
             },
             {
-              "clicar": "[data-campo-telefone-atendimento] p[aria-live]"
+              "preencher": [
+                "[data-campo-telefone-atendimento] input[data-numero-do-telefone]",
+                "41998887777"
+              ]
+            },
+            {
+              "clicar": "[data-salvar]"
+            },
+            {
+              "esperar": "[data-resumo-telefone]"
+            },
+            {
+              "clicar": "[data-resumo-telefone]"
             }
           ],
-          "pausa": 1500
+          "pausa": 800
         }
       ]
     }

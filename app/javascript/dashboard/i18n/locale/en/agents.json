@@ -1125,9 +1125,7 @@
           "TITULO": "Name and way of talking",
           "TEXTO": "It is called {nome}. To hear how it talks, run a test.",
           "ALTERAR_ARIA": "Change name and way of talking",
-          "MANUAL": "To change the way of talking, edit the instructions.",
-          "ENDERECO": "Address: {endereco}",
-          "TELEFONE": "Phone: {telefone}"
+          "MANUAL": "To change the way of talking, edit the instructions."
         },
         "BLOCO_PASSA": {
           "TITULO": "When it hands off to the team",
@@ -1511,18 +1509,7 @@
           "SALVANDO": "Saving…",
           "SALVO": "Instructions saved.",
           "ERRO": "Could not save.",
-          "ERRO_GARANTIA": "Nothing changed.",
-          "ATENDIMENTO": {
-            "TITULO": "Service address and phone",
-            "DICA": "Optional. {nome} knows these details and sends them when the customer asks.",
-            "ENDERECO": "Service address",
-            "ENDERECO_EXEMPLO": "E.g.: 120 Flower Street, Downtown, Springfield",
-            "ENDERECO_DICA": "{nome} sends this address as a map when the customer asks where you are. If empty, the booking page address is used, if there is one.",
-            "TELEFONE": "Contact phone",
-            "PAIS": "Phone country",
-            "TELEFONE_DICA": "{nome} sends this number as a contact card when the customer asks for a phone. If empty, the booking page phone is used, if there is one.",
-            "TELEFONE_INCOMPLETO": "The number is incomplete. Check the digits or clear the field."
-          }
+          "ERRO_GARANTIA": "Nothing changed."
         },
         "PARAR": {
           "TITULO": "Stop {nome}?",
@@ -1695,6 +1682,31 @@
             "AMOSTRA": "The test is a sample; check the answers."
           },
           "TUDO_CERTO": "All good. {nome} uses all the material with your customers."
+        },
+        "ATENDIMENTO": {
+          "TITULO": "Address and phone",
+          "TEXTO": "{nome} knows these details and sends them when the customer asks.",
+          "VAZIO": "{nome} has no address or phone to send to customers yet.",
+          "ENDERECO": "Address: {endereco}",
+          "TELEFONE": "Phone: {telefone}",
+          "ADICIONAR": "Add",
+          "ALTERAR_ARIA": "Change address and phone",
+          "GAVETA_TITULO": "Address and phone for {nome}",
+          "GAVETA_DICA": "{nome} knows these details and sends them when the customer asks. You can leave them blank.",
+          "SALVAR": "Save",
+          "SALVANDO": "Saving…",
+          "SALVO": "Address and phone saved.",
+          "ERRO": "Could not save.",
+          "ERRO_GARANTIA": "Nothing changed.",
+          "CAMPOS": {
+            "ENDERECO": "Service address",
+            "ENDERECO_EXEMPLO": "E.g.: 120 Flower Street, Downtown, Springfield",
+            "ENDERECO_DICA": "{nome} sends this address as a map when the customer asks where you are. If empty, the booking page address is used, if there is one.",
+            "TELEFONE": "Contact phone",
+            "PAIS": "Phone country",
+            "TELEFONE_DICA": "{nome} sends this number as a contact card when the customer asks for a phone.",
+            "TELEFONE_INCOMPLETO": "The number is incomplete. Check the digits or clear the field."
+          }
         }
       },
       "CRIAR": {

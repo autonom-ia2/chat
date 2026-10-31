@@ -61,6 +61,7 @@ const emit = defineEmits([
   'escolherCanal',
   'mudarEquipe',
   'mudarAjuda',
+  'alterarAtendimento',
 ]);
 
 const { t } = useI18n();
@@ -71,11 +72,11 @@ const NS = 'AGENTS.JORNADA.PAGINA';
 const base = `blocos-${useId()}`;
 const pergunta = ref('');
 
-// #1479 (opção A): com a flag, a linha "Nome e jeito de falar" mostra o endereço e o telefone que o agente manda.
-// Protótipo: lidos do adaptador falso (useDadosDoAtendimento).
+// #1479 (opção B): com a flag, bloco próprio "Endereço e telefone", nos dois modos (manual e conversando). Fica fora
+// da cotação (a Lia não recebe as ferramentas). Protótipo: lidos do adaptador falso (useDadosDoAtendimento).
 const comAtendimento = useDadosDoAtendimentoLigado();
 const atendimento = computed(() => {
-  if (!comAtendimento.value || !props.manual) return null;
+  if (!comAtendimento.value || props.cotacao) return null;
   const { endereco, telefone } = lerAtendimento(props.agente);
   const separado = telefone ? separarTelefone(telefone) : null;
   return {
@@ -524,36 +525,6 @@ onMounted(() => {
               />
               {{ t(`${NS}.BLOCO_JEITO.MANUAL`) }}
             </p>
-            <p
-              v-if="atendimento?.endereco"
-              data-resumo-endereco
-              class="flex items-start gap-1 m-0 text-sm text-n-slate-11"
-            >
-              <span
-                class="i-lucide-map-pin size-4 shrink-0 mt-0.5"
-                aria-hidden="true"
-              />
-              {{
-                t(`${NS}.BLOCO_JEITO.ENDERECO`, {
-                  endereco: atendimento.endereco,
-                })
-              }}
-            </p>
-            <p
-              v-if="atendimento?.telefone"
-              data-resumo-telefone
-              class="flex items-start gap-1 m-0 text-sm text-n-slate-11"
-            >
-              <span
-                class="i-lucide-phone size-4 shrink-0 mt-0.5"
-                aria-hidden="true"
-              />
-              {{
-                t(`${NS}.BLOCO_JEITO.TELEFONE`, {
-                  telefone: atendimento.telefone,
-                })
-              }}
-            </p>
           </div>
         </div>
         <template v-if="podeGerenciar">
@@ -577,6 +548,87 @@ onMounted(() => {
             {{ t(`${NS}.ALTERAR`) }}
           </AgenteBotao>
         </template>
+      </div>
+
+      <div
+        v-if="atendimento"
+        data-linha="atendimento"
+        role="group"
+        :aria-labelledby="`${base}-atendimento`"
+        class="flex flex-col gap-3 p-5 sm:flex-row sm:items-start"
+      >
+        <div class="flex items-start flex-1 min-w-0 gap-3">
+          <span
+            class="grid rounded-lg place-items-center size-9 shrink-0 bg-n-alpha-2"
+            aria-hidden="true"
+          >
+            <span class="i-lucide-contact size-5 text-n-slate-11" />
+          </span>
+          <div class="flex flex-col flex-1 min-w-0 gap-1">
+            <h3
+              :id="`${base}-atendimento`"
+              class="m-0 text-sm font-semibold text-n-slate-11"
+            >
+              {{ t(`${NS}.ATENDIMENTO.TITULO`) }}
+            </h3>
+            <template v-if="atendimento.endereco || atendimento.telefone">
+              <p class="m-0 text-sm text-n-slate-12">
+                {{ t(`${NS}.ATENDIMENTO.TEXTO`, { nome }) }}
+              </p>
+              <p
+                v-if="atendimento.endereco"
+                data-resumo-endereco
+                class="flex items-start gap-1 m-0 text-sm text-n-slate-11"
+              >
+                <span
+                  class="i-lucide-map-pin size-4 shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                {{
+                  t(`${NS}.ATENDIMENTO.ENDERECO`, {
+                    endereco: atendimento.endereco,
+                  })
+                }}
+              </p>
+              <p
+                v-if="atendimento.telefone"
+                data-resumo-telefone
+                class="flex items-start gap-1 m-0 text-sm text-n-slate-11"
+              >
+                <span
+                  class="i-lucide-phone size-4 shrink-0 mt-0.5"
+                  aria-hidden="true"
+                />
+                {{
+                  t(`${NS}.ATENDIMENTO.TELEFONE`, {
+                    telefone: atendimento.telefone,
+                  })
+                }}
+              </p>
+            </template>
+            <p
+              v-else
+              data-atendimento-vazio
+              class="m-0 text-sm text-n-slate-12"
+            >
+              {{ t(`${NS}.ATENDIMENTO.VAZIO`, { nome }) }}
+            </p>
+          </div>
+        </div>
+        <AgenteBotao
+          v-if="podeGerenciar"
+          data-alterar="atendimento"
+          class="max-sm:w-full max-sm:ring-1 max-sm:ring-inset max-sm:ring-n-blue-9 shrink-0"
+          variante="fantasma"
+          :aria-label="t(`${NS}.ATENDIMENTO.ALTERAR_ARIA`)"
+          @click="emit('alterarAtendimento')"
+        >
+          {{
+            atendimento.endereco || atendimento.telefone
+              ? t(`${NS}.ALTERAR`)
+              : t(`${NS}.ATENDIMENTO.ADICIONAR`)
+          }}
+        </AgenteBotao>
       </div>
 
       <!-- #1429 F3: a linha "Base de seguros" (BaseDoAgenteLinha), quando a página a manda. -->

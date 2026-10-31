@@ -2,8 +2,8 @@ import { computed, reactive } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
-// #1479 (opção A do Rodrigo, 01/11) — "Endereço do atendimento" e "Telefone de contato" do agente, ao lado das
-// instruções. O agente manda o endereço como mapa (`enviar_localizacao`) e o telefone como cartão de contato
+// #1479 (opção B do Rodrigo, 01/11) — "Endereço do atendimento" e "Telefone de contato" do agente, num bloco próprio
+// da página ("Endereço e telefone"), nos dois modos (manual e conversando). O agente manda o endereço como mapa (`enviar_localizacao`) e o telefone como cartão de contato
 // (`enviar_contato`), e os dois entram na instrução. Vazio: vale o da página de agendamento, como hoje.
 // Só com a flag `agentes_enviar_local_e_contato` (ext_2, posição 21).
 //

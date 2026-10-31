@@ -20,6 +20,7 @@ import GavetaConversas from '../components/pagina/GavetaConversas.vue';
 import GavetaFotoNome from '../components/pagina/GavetaFotoNome.vue';
 import GavetaVersoes from '../components/pagina/GavetaVersoes.vue';
 import GavetaInstrucoes from '../components/pagina/GavetaInstrucoes.vue';
+import GavetaAtendimento from '../components/pagina/GavetaAtendimento.vue';
 import GavetaAgenda from '../components/pagina/GavetaAgenda.vue';
 import GavetaFerramentas from '../components/pagina/GavetaFerramentas.vue';
 import MudarConversando from '../components/pagina/MudarConversando.vue';
@@ -151,6 +152,8 @@ const tambemRecebeEm = computed(() =>
 const salvarEquipe = useSalvarEquipe();
 const EQUIPE = 'equipe';
 const AJUDA = 'ajuda';
+// #1479 (opção B): gaveta do bloco "Endereço e telefone" (só com a flag; o bloco só aparece com ela).
+const ATENDIMENTO = 'atendimento';
 const ajudante = computed(() => ehAjudante(agente.value));
 const ajudaDoAgente = useAjudaDoAgente();
 // Tema 14: ligar e parar o ajudante falam de ajudar outros agentes, nunca de atender nem de passar conversas
@@ -558,6 +561,10 @@ const escrever = () => {
 
 const escolherCanal = () => abrir(gavetaDoCanal());
 
+const alterarAtendimento = () => {
+  if (podeGerenciar.value) aberta.value = ATENDIMENTO;
+};
+
 // #1433: "Mudar" de "Onde {nome} trabalha" do agente da equipe.
 const mudarEquipe = () => {
   if (!podeGerenciar.value) return;
@@ -923,6 +930,7 @@ const tirarPergunta = id => {
           @escolher-canal="escolherCanal"
           @mudar-equipe="mudarEquipe"
           @mudar-ajuda="mudarAjuda"
+          @alterar-atendimento="alterarAtendimento"
         >
           <template #base>
             <BaseDoAgenteLinha
@@ -1098,6 +1106,12 @@ const tirarPergunta = id => {
       />
       <GavetaInstrucoes
         v-else-if="aberta === GAVETA.INSTRUCOES"
+        :agente="agente"
+        :nome="nome"
+        @fechar="fechar"
+      />
+      <GavetaAtendimento
+        v-else-if="aberta === ATENDIMENTO"
         :agente="agente"
         :nome="nome"
         @fechar="fechar"

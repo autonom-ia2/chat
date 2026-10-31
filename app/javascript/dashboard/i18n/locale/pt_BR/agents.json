@@ -1125,9 +1125,7 @@
           "TITULO": "Nome e jeito de falar",
           "TEXTO": "Chama-se {nome}. Para ouvir como fala, faça um teste.",
           "ALTERAR_ARIA": "Alterar nome e jeito de falar",
-          "MANUAL": "Para mudar o jeito de falar, edite as instruções.",
-          "ENDERECO": "Endereço: {endereco}",
-          "TELEFONE": "Telefone: {telefone}"
+          "MANUAL": "Para mudar o jeito de falar, edite as instruções."
         },
         "BLOCO_PASSA": {
           "TITULO": "Quando passa para a equipe",
@@ -1511,18 +1509,7 @@
           "SALVANDO": "Salvando…",
           "SALVO": "Instruções salvas.",
           "ERRO": "Não deu para salvar.",
-          "ERRO_GARANTIA": "Nada mudou.",
-          "ATENDIMENTO": {
-            "TITULO": "Endereço e telefone do atendimento",
-            "DICA": "Opcional. {nome} já sabe estes dados e manda ao cliente quando ele pedir.",
-            "ENDERECO": "Endereço do atendimento",
-            "ENDERECO_EXEMPLO": "Ex.: Rua das Flores, 120, Centro, Campinas",
-            "ENDERECO_DICA": "{nome} manda este endereço como mapa quando o cliente perguntar onde fica. Vazio, vale o da página de agendamento, se houver.",
-            "TELEFONE": "Telefone de contato",
-            "PAIS": "País do telefone",
-            "TELEFONE_DICA": "{nome} manda este número como contato quando o cliente pedir um telefone. Vazio, vale o da página de agendamento, se houver.",
-            "TELEFONE_INCOMPLETO": "O número está incompleto. Confira os dígitos ou apague o campo."
-          }
+          "ERRO_GARANTIA": "Nada mudou."
         },
         "PARAR": {
           "TITULO": "Parar {nome}?",
@@ -1695,6 +1682,31 @@
             "AMOSTRA": "O teste é uma amostra; confira as respostas."
           },
           "TUDO_CERTO": "Tudo certo. {nome} usa todo o material com seus clientes."
+        },
+        "ATENDIMENTO": {
+          "TITULO": "Endereço e telefone",
+          "TEXTO": "{nome} já sabe estes dados e manda ao cliente quando ele pedir.",
+          "VAZIO": "{nome} ainda não tem endereço nem telefone para mandar ao cliente.",
+          "ENDERECO": "Endereço: {endereco}",
+          "TELEFONE": "Telefone: {telefone}",
+          "ADICIONAR": "Adicionar",
+          "ALTERAR_ARIA": "Alterar endereço e telefone",
+          "GAVETA_TITULO": "Endereço e telefone de {nome}",
+          "GAVETA_DICA": "{nome} já sabe estes dados e manda ao cliente quando ele pedir. Pode deixar em branco.",
+          "SALVAR": "Salvar",
+          "SALVANDO": "Salvando…",
+          "SALVO": "Endereço e telefone salvos.",
+          "ERRO": "Não deu para salvar.",
+          "ERRO_GARANTIA": "Nada mudou.",
+          "CAMPOS": {
+            "ENDERECO": "Endereço do atendimento",
+            "ENDERECO_EXEMPLO": "Ex.: Rua das Flores, 120, Centro, Campinas",
+            "ENDERECO_DICA": "{nome} manda este endereço como mapa quando o cliente perguntar onde fica. Vazio, vale o da página de agendamento, se houver.",
+            "TELEFONE": "Telefone de contato",
+            "PAIS": "País do telefone",
+            "TELEFONE_DICA": "{nome} manda este número como contato quando o cliente pedir um telefone.",
+            "TELEFONE_INCOMPLETO": "O número está incompleto. Confira os dígitos ou apague o campo."
+          }
         }
       },
       "CRIAR": {
