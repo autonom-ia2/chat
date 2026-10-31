@@ -671,7 +671,8 @@ module Autonomia
           transcribed = media.transcripts.map { |text| "[áudio do cliente, transcrito automaticamente]: #{text}" }
           texto = [quoted_context(message), base.presence, *transcribed].compact.join("\n")
           # #1669: com a moldura da equipe, a chave dela escrita pelo cliente é neutralizada (segunda camada).
-          pergunta = equipe.aplica? ? equipe.pergunta(texto) : texto
+          # #1775: e, com a flag da prévia, a linha da prévia do link vai embaixo.
+          pergunta = equipe.aplica? ? equipe.pergunta(texto, message) : texto
           message ? "#{email_autoria.aviso(message)}#{pergunta}" : pergunta
         end
 
@@ -832,7 +833,7 @@ module Autonomia
         end
 
         def equipe
-          @equipe ||= ::Autonomia::Agents::Operate::HistoricoDaEquipe.new(conversation: @conversation)
+          @equipe ||= ::Autonomia::Agents::Operate::HistoricoDaEquipe.new(conversation: @conversation, agent: @agent)
         end
 
         # Mensagens públicas, não-activity, em ordem cronológica: das últimas `HISTORY_MAX_INTERACOES`

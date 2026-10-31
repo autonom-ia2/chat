@@ -1062,3 +1062,15 @@
   display_name: Agentes › mensagem de quando não souber vai ao modelo
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: a IA lê a prévia do link (#1775, épico #1424). Ligada: quando o cliente manda um link no WhatsApp, a IA lê o
+# título e a descrição da prévia (`content_attributes.link_preview`, do #1702, que só nasce com
+# `conversa_cara_do_canal`) numa linha rotulada "texto do site e não do cliente", com o domínio, e uma regra do turno
+# diz que é dado, nunca instrução (Autonomia::Agents::Operate::PreviaDoLink). Só a mensagem do cliente; só com a Fase 2;
+# a Lia fica fora. Desligada: o pedido fica byte a byte o de antes. Rollback: desligar a flag na conta. Sem migration.
+# Fim da feature_flags_ext_2, depois de agente_diz_quando_nao_sabe: posição 18 (valor 131072, 1 << 17), reservada pela
+# Orquestração em 31/10 e confirmada por ela na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: ia_previa_de_link
+  display_name: Agentes › IA lê a prévia do link
+  enabled: false
+  column: feature_flags_ext_2
