@@ -1,75 +1,103 @@
-# O MAPA E O CARTÃO DE CONTATO DO TURNO (#1479 F3), na entrega do Responder: cada cartão que `enviar_localizacao` e
-# `enviar_contato` marcaram (`Delivery#cartoes`) sai numa mensagem própria, DEPOIS do texto, nos três caminhos.
+# O MAPA E O CARTÃO DE CONTATO DO TURNO (#1479 F3): cada cartão que `enviar_localizacao` e `enviar_contato` marcaram
+# (`Delivery#cartoes`) sai numa mensagem própria, DEPOIS da mensagem âncora do turno e só quando ela saiu para o canal.
 #
-#   - clássico e áudio (`postar!`): dentro do mesmo lock da resposta, depois dela (e da interação, no áudio). O cartão
-#     já enviado não sai de novo: cada mensagem leva um token próprio (`autonomia_cartao_token`, o turno + o tipo + a
-#     chave), conferido antes de postar. Ela NÃO leva `autonomia_reply_to_message_id`: o `already_replied?` continua
-#     olhando só o texto, então o cartão nunca faz o retry pular o texto, e o texto já enviado não pula o cartão (quem
-#     chama posta os cartões também quando a guarda diz "já respondido").
-#   - em pedaços (`pedacos`): cada cartão é um pedaço a mais NO FIM, depois do texto e da interação. A idempotência é a
-#     do pedaço (`autonomia_chunk_token`). `text` é a versão em texto do cartão, que um worker antigo manda como está;
-#     `corpo` é o conteúdo vazio que vai junto do formato (`ChunkedDeliveryJob#build_message!`).
+# A ÂNCORA GRAVA OS CARTÕES (`autonomia_cartoes`: tipo, chave, rich_message e token), na hora em que é postada:
+#   - clássico: a mensagem de texto (`Responder#post_reply!`);
+#   - voz: a última mensagem postada do turno (o áudio, ou a interação quando ela existe);
+#   - em pedaços: o ÚLTIMO pedaço, pela `marca` dele (`ChunkedDeliveryJob#build_message!`). Os cartões não viram pedaço.
+# Quem posta é o `EnviarCartoesJob`, enfileirado depois do lock e do commit (pelo Responder; nos pedaços, pelo
+# ChunkedDeliveryJob logo depois do pedaço que os leva). O retry do turno que acha a resposta já postada usa os cartões
+# GRAVADOS na âncora (`ancora_do_turno`), nunca os do novo run: o retry nunca manda um cartão diferente do primeiro.
 #
-# O conteúdo vai vazio (o formato da Meta não tem corpo). Na caixa que não leva o formato (e-mail, chat do site), a mesma
-# regra da interação (`Interacao.sai_o_formato?`): sai a versão em texto, sem `rich_message`. Nada aqui é logado.
+# O cartão já postado não sai de novo: cada mensagem leva o token dele (`autonomia_cartao_token`: o turno + o tipo + a
+# chave), conferido sob o lock da conversa antes de postar. Ela NÃO leva `autonomia_reply_to_message_id`: o
+# `already_replied?` continua olhando só a resposta. O conteúdo vai vazio (o formato da Meta não tem corpo); na caixa
+# que não leva o formato (e-mail, chat do site), a mesma regra da interação (`Interacao.sai_o_formato?`): sai a versão
+# em texto, sem `rich_message`. Nada aqui é logado.
 class Autonomia::Agents::Operate::CartoesDoTurno
   TOKEN = 'autonomia_cartao_token'.freeze
+  NA_ANCORA = 'autonomia_cartoes'.freeze
+  CAMPOS = %w[tipo chave rich_message].freeze
 
-  def initialize(conversation:, agent_inbox:, agent:, delivery:)
-    @conversation = conversation
-    @agent_inbox = agent_inbox
-    @agent = agent
-    @delivery = delivery
+  class << self
+    # Os cartões marcados no turno, com o token, para gravar na âncora. {} sem cartão: a âncora fica como sempre.
+    def marca(delivery)
+      cartoes = Array(delivery&.cartoes)
+      return {} if cartoes.empty?
+
+      { NA_ANCORA => cartoes.map { |cartao| cartao.slice(*CAMPOS).merge('token' => token(delivery.turno, cartao)) } }
+    end
+
+    def token(turno, cartao)
+      "#{turno}:cartao:#{cartao['tipo']}:#{cartao['chave']}"
+    end
+
+    def da_ancora(message)
+      Array(message&.content_attributes.to_h[NA_ANCORA]).select { |cartao| cartao.is_a?(Hash) && cartao['token'].present? }
+    end
+
+    # A âncora já postada deste turno (a resposta do robô à mensagem do cliente que leva os cartões), ou nil. Prefiltra
+    # por LIKE (chave distintiva) e confirma no hash, como `ChunkedDeliveryJob#chunk_posted?`.
+    def ancora_do_turno(conversation, reply_to_message_id)
+      return if reply_to_message_id.blank?
+
+      conversation.messages.outgoing.where(sender_type: 'AgentBot')
+                  .where('content_attributes::text LIKE ?', "%#{NA_ANCORA}%").reorder(:id)
+                  .select { |message| message.content_attributes.to_h['autonomia_reply_to_message_id'].to_s == reply_to_message_id.to_s }
+                  .reverse.find { |message| da_ancora(message).any? }
+    end
+  end
+
+  def initialize(ancora)
+    @ancora = ancora
+    @conversation = ancora.conversation
   end
 
   def cartoes
-    @cartoes ||= Array(@delivery&.cartoes)
+    @cartoes ||= self.class.da_ancora(@ancora)
   end
 
-  def vazio?
-    cartoes.empty?
+  # A mensagem que o cartão espera sair: a do cartão anterior da lista (já postado, a ordem é a da lista) ou a âncora.
+  def anterior_de(cartao)
+    indice = cartoes.index(cartao)
+    return @ancora if indice.nil? || indice.zero?
+
+    postada(cartoes[indice - 1]['token']) || @ancora
   end
 
-  # Clássico e áudio: posta, dentro do lock de quem chama, cada cartão que ainda não saiu neste turno. -> as mensagens.
-  def postar!
-    cartoes.filter_map { |cartao| postar_cartao!(cartao) unless postado?(token(cartao)) }
+  def postado?(cartao)
+    postada(cartao['token']).present?
   end
 
-  # Em pedaços: um pedaço por cartão, para ir depois de todos os da resposta.
-  def pedacos
-    cartoes.map do |cartao|
-      em_texto = em_texto(cartao)
-      formato = sai_o_formato?(cartao) ? { 'corpo' => '', 'rich_message' => cartao['rich_message'] } : {}
-      { 'text' => em_texto, 'type' => 'text',
-        'delay_ms' => ::Autonomia::Agents::Operate::ReplyChunker.delay_seguinte(em_texto) }.merge(formato)
+  # Posta o cartão sob o lock da conversa, conferindo de novo que ele não saiu (dois jobs da mesma âncora). -> a
+  # mensagem, ou nil quando outro job já o postou. Erro sobe para quem chama.
+  def postar!(cartao)
+    @conversation.with_lock do
+      postado?(cartao) ? nil : construir!(cartao)
     end
   end
 
   private
 
-  def postar_cartao!(cartao)
+  def construir!(cartao)
     formato = sai_o_formato?(cartao)
     Messages::MessageBuilder.new(
       nil, @conversation,
       ActionController::Parameters.new(
         content: formato ? '' : em_texto(cartao), message_type: 'outgoing', sender_type: 'AgentBot',
-        sender_id: @agent_inbox.agent_bot_id, private: false,
+        sender_id: @ancora.sender_id, private: false,
         content_attributes: {
-          'autonomia_agent_id' => @agent.id, TOKEN => token(cartao), **(formato ? { RichMessages::KEY => cartao['rich_message'] } : {})
+          'autonomia_agent_id' => @ancora.content_attributes.to_h['autonomia_agent_id'], TOKEN => cartao['token'],
+          **(formato ? { RichMessages::KEY => cartao['rich_message'] } : {})
         }
       )
     ).perform
   end
 
-  def token(cartao)
-    "#{@delivery.turno}:cartao:#{cartao['tipo']}:#{cartao['chave']}"
-  end
-
-  # Prefiltra por LIKE (token distintivo) e confirma no hash, como `ChunkedDeliveryJob#chunk_posted?`.
-  def postado?(token)
+  def postada(token)
     @conversation.messages.outgoing.where(sender_type: 'AgentBot')
                  .where('content_attributes::text LIKE ?', "%#{ActiveRecord::Base.sanitize_sql_like(token)}%")
-                 .any? { |message| message.content_attributes.to_h[TOKEN].to_s == token }
+                 .find { |message| message.content_attributes.to_h[TOKEN].to_s == token }
   end
 
   def sai_o_formato?(cartao)

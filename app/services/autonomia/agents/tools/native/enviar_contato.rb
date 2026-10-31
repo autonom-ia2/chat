@@ -1,6 +1,6 @@
 # O CARTÃO DE CONTATO DA PÁGINA DE AGENDAMENTO (#1479 F3), numa mensagem própria logo depois da resposta.
 #
-# Manda SÓ o `contact_phone` da página, com o título dela (ou o nome público) como nome do cartão
+# Manda SÓ o `contact_phone` da página, com o título dela (ou o nome da conta) como nome do cartão
 # (`CartaoDaPagina.contato`); nunca o telefone de uma pessoa da equipe. Como `enviar_localizacao`: marca o cartão no
 # contexto do turno, um só por turno, e sem contexto de entrega devolve o erro nomeado `cartao_sem_conversa`. Só entra
 # no turno quando o telefone da página serve para o cartão ("+" e 8 a 15 dígitos).

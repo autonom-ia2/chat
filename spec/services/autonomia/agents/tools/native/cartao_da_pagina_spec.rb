@@ -66,6 +66,38 @@ RSpec.describe Autonomia::Agents::Tools::Native::CartaoDaPagina do
       expect(catalogo).to include(contato)
     end
 
+    context 'when the page predates the flag (address without coordinate)' do
+      include ActiveJob::TestHelper
+
+      let(:busca) { instance_double(Crm::BookingV2::GeocodificarLocaisJob::Busca) }
+      let(:lugar) { { latitude: -23.5489, longitude: -46.6388, tipos: %w[street_address], tipo_principal: nil } }
+
+      def limpar_redis
+        Redis::Alfred.scan_each(match: 'crm:booking_v2:geocodificar:*') { |chave| Redis::Alfred.delete(chave) }
+      end
+
+      before do
+        limpar_redis
+        pagina.update_column(:locations, [centro]) # rubocop:disable Rails/SkipsModelValidations
+        clear_enqueued_jobs
+        allow(Crm::BookingV2::GeocodificarLocaisJob::Busca).to receive_messages(configurada?: true, para: busca)
+        allow(busca).to receive_messages(suggestions: [{ text: centro['address'], place_id: 'ChIJ123' }], details: lugar)
+      end
+
+      after { limpar_redis }
+
+      it 'o 1º turno pede a coordenada (uma vez) e o 2º turno já tem enviar_localizacao' do
+        expect(catalogo).not_to include(localizacao)
+        expect(catalogo).not_to include(localizacao)
+        expect(enqueued_jobs.count { |item| item[:job] == Crm::BookingV2::GeocodificarLocaisJob }).to eq(1)
+
+        perform_enqueued_jobs
+
+        expect(catalogo).to include(localizacao)
+        expect(busca).to have_received(:suggestions).once
+      end
+    end
+
     it 'coordenada fora do mapa ou em texto não conta' do
       com_coordenadas(centro['address'] => [-123.0, -46.6])
       expect(catalogo).not_to include(localizacao)
@@ -202,9 +234,10 @@ RSpec.describe Autonomia::Agents::Tools::Native::CartaoDaPagina do
       expect(delivery.cartoes.sole['rich_message']['phone']).to eq('+551140000473')
     end
 
-    it 'sem título: o nome público da página, até 100 caracteres' do
+    it 'sem título: o nome da conta, até 100 caracteres (nunca o nome de uma pessoa da equipe)' do
       pagina.update_columns(title: nil) # rubocop:disable Rails/SkipsModelValidations
-      host.update!(name: 'C' * 150)
+      host.update!(name: 'Pessoa da equipe')
+      account.update!(name: 'C' * 150)
       chamar(contato)
       expect(delivery.cartoes.sole['rich_message']['name']).to eq('C' * 100)
     end

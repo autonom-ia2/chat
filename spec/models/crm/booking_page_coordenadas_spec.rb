@@ -11,6 +11,14 @@ RSpec.describe Crm::BookingPageCoordenadas do
   let(:centro) { { 'type' => 'in_person', 'label' => 'Unidade Centro', 'address' => 'Rua Direita, 100', 'extra' => 'fica' } }
   let(:video) { { 'type' => 'whatsapp_video', 'label' => 'Vídeo' } }
   let(:job) { Crm::BookingV2::GeocodificarLocaisJob }
+  let(:marca) { Digest::SHA256.hexdigest('Rua Direita, 100').first(16) }
+
+  def limpar_redis
+    Redis::Alfred.scan_each(match: 'crm:booking_v2:geocodificar:*') { |chave| Redis::Alfred.delete(chave) }
+  end
+
+  before { limpar_redis }
+  after { limpar_redis }
 
   def criar(locations)
     create_booking_profile(account: account, host: host, locations: locations)
@@ -88,10 +96,45 @@ RSpec.describe Crm::BookingPageCoordenadas do
       expect(pagina.locations.second).to include('latitude' => -23.5489)
     end
 
+    it 'a coordenada gravada pelo job DEPOIS de a página ser carregada não se perde no salvar' do
+      carregada = Crm::AgentBookingProfile.find(pagina.id)
+      com_coordenada(pagina, centro['address'], [-1.5, -2.5])
+      carregada.update!(title: 'Outro', locations: [video, centro.except('extra')])
+      expect(carregada.reload.locations.last).to include('latitude' => -1.5, 'longitude' => -2.5)
+    end
+
     it 'outros campos da página ficam como estão' do
       pagina.update!(title: 'Novo', locations: [video, centro.merge('address' => 'Rua Nova, 1')])
       expect(pagina.reload.title).to eq('Novo')
       expect(pagina.locations.first).to eq(video)
+    end
+  end
+
+  describe 'a marca "não achou" segue o endereço' do
+    let!(:pagina) do
+      criar([video, centro]).tap do |gravada|
+        lista = gravada.reload.locations.map { |item| item['address'] ? item.merge('geo_nao_achou' => marca) : item }
+        gravada.update_column(:locations, lista) # rubocop:disable Rails/SkipsModelValidations
+        gravada.reload
+      end
+    end
+
+    it 'o formulário salva o mesmo endereço: a marca fica, e ele não é mais pendente' do
+      pagina.update!(locations: [video, centro.except('extra')])
+      expect(pagina.reload.locations.last).to include('geo_nao_achou' => marca)
+      expect(pagina.enderecos_sem_coordenada).to be_empty
+    end
+
+    it 'endereço mudado: a marca sai e ele volta a ser pendente' do
+      expect { pagina.update!(locations: [video, centro.merge('address' => 'Rua Nova, 1')]) }.to have_enqueued_job(job).with(pagina.id)
+      expect(pagina.reload.locations.last).not_to have_key('geo_nao_achou')
+    end
+
+    it 'quem chama a API não forja a marca para um endereço novo' do
+      forjado = { 'type' => 'in_person', 'address' => 'Rua B, 2', 'geo_nao_achou' => Digest::SHA256.hexdigest('Rua B, 2').first(16) }
+      pagina.update!(locations: [video, centro, forjado])
+      expect(pagina.reload.locations.last).not_to have_key('geo_nao_achou')
+      expect(pagina.enderecos_sem_coordenada).to eq(['Rua B, 2'])
     end
   end
 end

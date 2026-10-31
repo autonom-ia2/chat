@@ -124,17 +124,19 @@ class Autonomia::Agents::Operate::ResponderAPassagem < Autonomia::Agents::Operat
                  .any? { |message| message.content_attributes.to_h[CHAVE].to_s == @passagem.id.to_s }
   end
 
-  # #1479: as mesmas opções e o mesmo link do turno normal (Responder#com_interacao), com a chave da passagem.
-  def post_reply!(text, interacao = nil)
+  # #1479: as mesmas opções e o mesmo link do turno normal (Responder#com_interacao), com a chave da passagem. F3: e os
+  # cartões do turno, que fazem desta mensagem a âncora deles (`Responder#ancora!`).
+  def post_reply!(text, interacao = nil, cartoes: {})
     content, formato = com_interacao(text, interacao)
-    Messages::MessageBuilder.new(
+    mensagem = Messages::MessageBuilder.new(
       nil, @conversation,
       ActionController::Parameters.new(
         content: content, message_type: 'outgoing', sender_type: 'AgentBot',
         sender_id: @agent_inbox.agent_bot_id, private: false,
-        content_attributes: { 'autonomia_agent_id' => @agent.id, CHAVE => @passagem.id }.merge(formato),
+        content_attributes: { 'autonomia_agent_id' => @agent.id, CHAVE => @passagem.id }.merge(formato).merge(cartoes),
         **destinatarios_do_email # #1828: no e-mail, a resposta da passagem também mantém a cópia.
       )
     ).perform
+    ancora!(mensagem, cartoes)
   end
 end

@@ -41,11 +41,22 @@ module Autonomia::Agents::Tools::Native::CartaoDaPagina
     (Array(slugs) + SLUGS).uniq
   end
 
-  # A página do agente, só com a conta ligada e fora da Lia; senão nil.
+  # A página do agente, só com a conta ligada e fora da Lia; senão nil. Quem monta o catálogo passa por aqui: a página
+  # com endereço presencial ainda sem coordenada (a que existia antes da flag) pede o job (`GeocodificarLocaisJob.pedir`,
+  # uma vez por página e pendentes), e o mapa entra no catálogo de um turno seguinte. Sem pendente, nem o Redis é lido.
   def pagina(agent)
     return if agent.agent_type == LIA || !ligado?(agent.account)
 
-    ::Autonomia::Agents::Tools::Native::Agenda.pagina_de(agent)
+    ::Autonomia::Agents::Tools::Native::Agenda.pagina_de(agent).tap { |pagina| pedir_coordenada(pagina) }
+  end
+
+  # Erro ao pedir não derruba o catálogo: o log leva só o id da página e a classe.
+  def pedir_coordenada(pagina)
+    return if pagina.nil? || pagina.enderecos_sem_coordenada.empty?
+
+    ::Crm::BookingV2::GeocodificarLocaisJob.pedir(pagina)
+  rescue StandardError => e
+    Rails.logger.warn("[autonomia][cartao_da_pagina] geocodificar_nao_pedido page_id=#{pagina.id} #{e.class.name}")
   end
 
   # Os locais presenciais da página que viram mapa: com endereço e coordenada válida, sem repetir endereço.
@@ -75,13 +86,14 @@ module Autonomia::Agents::Tools::Native::CartaoDaPagina
     Digest::SHA256.hexdigest(endereco).first(TAMANHO_DO_ID)
   end
 
-  # O cartão de contato da página: o nome (título ou nome público, até 100) e o `contact_phone` com "+" e só os dígitos.
-  # nil quando o telefone ou o nome não servem para o tipo.
+  # O cartão de contato da página: o nome (o título da página ou o nome da conta, até 100; nunca o nome público, que pode
+  # ser o de uma pessoa da equipe) e o `contact_phone` com "+" e só os dígitos. nil quando o telefone ou o nome não servem
+  # para o tipo.
   def contato(pagina)
     return if pagina.nil?
 
     telefone = telefone(pagina.contact_phone)
-    nome = (pagina.title.presence || pagina.public_agent_name).to_s.squish.first(::RichMessages::Types::Contact::NAME_MAX)
+    nome = (pagina.title.presence || pagina.account.name).to_s.squish.first(::RichMessages::Types::Contact::NAME_MAX)
     formato = { 'type' => 'contact', 'name' => nome, 'phone' => telefone }
     formato if telefone && ::RichMessages::Types::Contact.new(formato).error_for('').nil?
   end

@@ -50,6 +50,7 @@ module Autonomia
 
           # Fase F: registra "respondido" só uma vez, quando o 1º pedaço entra de fato (message_id = 1º pedaço).
           primeiro_pedaco(agent_inbox.agent, conversation, meta, posted) if index.zero?
+          enfileirar_cartoes(posted)
 
           schedule_next(conversation, agent_inbox, reply_to_message_id, chunks, index, meta, typing)
         end
@@ -108,6 +109,17 @@ module Autonomia
 
           fresh = ::Autonomia::Agents::Operate.eligible_agent_inbox(conversation.reload)
           fresh.present? && fresh.id != agent_inbox.id
+        end
+
+        # #1479 F3: o pedaço que leva os cartões do turno (o último, `Responder#com_os_cartoes_no_ultimo`) acabou de ser
+        # postado, fora do lock: o job que os manda quando ele sair (`EnviarCartoesJob`). Erro ao enfileirar não para a
+        # cadeia (só os ids e a classe no log).
+        def enfileirar_cartoes(posted)
+          return if ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(posted).empty?
+
+          ::Autonomia::Agents::Operate::EnviarCartoesJob.perform_later(posted.id)
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] cartoes_nao_enfileirados conv=#{posted.conversation_id} msg=#{posted.id} #{e.class.name}")
         end
 
         # Agenda o próximo pedaço após sua pausa, mostrando "digitando" durante a espera.
@@ -192,7 +204,7 @@ module Autonomia
                 autonomia_chunk_index: index,
                 autonomia_chunk_token: chunk_token(reply_to_message_id, index),
                 **{ RichMessages::KEY => chunk['rich_message'] }.compact,
-                **chunk['marca'].to_h # #1479 F2: a marca do pedido de localização (`Interacao.nos_pedacos`)
+                **chunk['marca'].to_h # #1479 F2: a marca do pedido de localização (`Interacao.nos_pedacos`); F3: os cartões
               }
             )
           ).perform

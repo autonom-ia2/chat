@@ -136,6 +136,7 @@ module Autonomia
         # que cotar e não ter como entregar.
         def falha_no_turno(error)
           Rails.logger.warn("[autonomia][operate] responder_failed agent=#{@agent.id} conv=#{@conversation.id} #{error.class}")
+          descartar_cartoes('falha') unless @ancora
           soltar_posse
           ::Autonomia::Agents::Tools::AsyncDispatcher.new(delivery: @delivery, agent: @agent).discard!
           Result.silenced
@@ -262,7 +263,7 @@ module Autonomia
         # ROLLBACK e descartaria a mensagem recém-postada. Computa-se o Result numa variável.
         def classic_deliver(result)
           outcome = @conversation.with_lock do
-            com_os_cartoes(parada_na_hora_de_postar || Result.replied(post_reply!(result.reply, result.interacao)))
+            parada_na_hora_de_postar || Result.replied(post_reply!(result.reply, result.interacao, cartoes: marca_dos_cartoes))
           end
 
           # Fase F (ADITIVO/best-effort): só registra quando uma resposta NOVA foi postada
@@ -277,17 +278,35 @@ module Autonomia
           outcome
         end
 
-        # #1479 F3: o mapa e o contato marcados no turno saem depois do texto, no mesmo lock, quando o turno respondeu —
-        # também quando a guarda diz que um settle anterior já respondeu (o cartão que faltou sai; o que saiu não repete).
-        # -> o mesmo Result.
-        def com_os_cartoes(outcome)
-          cartoes_do_turno.postar! if outcome.status == :replied
-          outcome
+        # #1479 F3: os cartões marcados no turno, para a âncora gravar (`CartoesDoTurno.marca`). {} sem cartão.
+        def marca_dos_cartoes
+          @marca_dos_cartoes ||= ::Autonomia::Agents::Operate::CartoesDoTurno.marca(@delivery)
         end
 
-        def cartoes_do_turno
-          @cartoes_do_turno ||= ::Autonomia::Agents::Operate::CartoesDoTurno.new(conversation: @conversation, agent_inbox: @agent_inbox,
-                                                                                 agent: @agent, delivery: @delivery)
+        # #1479 F3: depois do lock e do commit, o job que manda os cartões quando a âncora sair. A âncora é a que este run
+        # postou ou, quando a guarda disse "já respondido" (retry), a que já existe, com os cartões que ELA gravou. Na
+        # entrega em pedaços agendada agora, quem enfileira é o ChunkedDeliveryJob, no último pedaço. A resposta nova sem
+        # cartão nem consulta a âncora. Erro ao enfileirar não muda o turno: a resposta já saiu (o log leva só os ids e a
+        # classe).
+        def enfileirar_cartoes(outcome)
+          return if @cadeia_agendada || (@ancora.nil? && outcome.message.present?)
+
+          ancora = @ancora || ::Autonomia::Agents::Operate::CartoesDoTurno.ancora_do_turno(@conversation, @reply_to_message_id)
+          return if ::Autonomia::Agents::Operate::CartoesDoTurno.da_ancora(ancora).empty?
+
+          ::Autonomia::Agents::Operate::EnviarCartoesJob.perform_later(ancora.id)
+        rescue StandardError => e
+          Rails.logger.warn("[autonomia][operate] cartoes_nao_enfileirados agent=#{@agent.id} conv=#{@conversation.id} #{e.class.name}")
+        end
+
+        # #1479 F3: o turno não respondeu (silêncio, falha) e tinha cartão marcado: ele não sai, e o descarte fica no
+        # registro (só ids e o motivo), para não sumir calado.
+        def descartar_cartoes(motivo)
+          return if Array(@delivery&.cartoes).empty?
+
+          ::Autonomia::Agents::Operate::TelemetriaDoTurno.registrar(:cartao_descartado, conversation_id: @conversation.id,
+                                                                                        agent: @agent.id, msg: @reply_to_message_id,
+                                                                                        motivo: motivo)
         end
 
         # As guardas da hora de postar, na ordem de sempre, chamadas DENTRO do lock (estado fresco). -> o Result de quem
@@ -313,14 +332,20 @@ module Autonomia
           audio = synthesize_audio(result.reply) # fora do lock; nil em falha
           outcome = @conversation.with_lock do
             # Sem áudio (falha na síntese) -> fallback texto.
-            com_os_cartoes(parada_na_hora_de_postar ||
-              Result.replied(audio.present? ? post_voz!(audio, result.interacao) : post_reply!(result.reply, result.interacao)))
+            parada_na_hora_de_postar || Result.replied(post_voz_ou_texto!(audio, result))
           end
           if outcome.status == :replied && outcome.message.present?
             ::Autonomia::Agents::Operate::EventLogger.replied(agent: @agent, conversation: @conversation, result: result,
                                                               message: outcome.message, metadata: metadata_da_memoria)
           end
           outcome
+        end
+
+        # Sem áudio (falha na síntese) -> o texto, que vira a âncora dos cartões. -> a mensagem de áudio ou a de texto.
+        def post_voz_ou_texto!(audio, result)
+          return post_voz!(audio, result.interacao) if audio.present?
+
+          post_reply!(result.reply, result.interacao, cartoes: marca_dos_cartoes)
         end
 
         # -> bytes (opus) ou nil. NUNCA loga o texto. Fail-safe (qualquer erro -> nil -> fallback texto).
@@ -338,16 +363,16 @@ module Autonomia
         end
 
         # #1479: o áudio e, logo depois, a interação numa mensagem própria (as opções com a pergunta; o link com o rótulo
-        # no corpo). -> a mensagem de áudio.
+        # no corpo). -> a mensagem de áudio. #1479 F3: a última postada é a âncora dos cartões.
         def post_voz!(audio_bytes, interacao)
-          audio = post_audio_reply!(audio_bytes)
-          post_reply!(nil, interacao) if interacao
+          audio = post_audio_reply!(audio_bytes, interacao ? {} : marca_dos_cartoes)
+          post_reply!(nil, interacao, cartoes: marca_dos_cartoes) if interacao
           audio
         end
 
         # Mensagem outgoing SÓ-ÁUDIO (espelhamento): mesmo sender/anti-loop do post_reply!, com o anexo de
         # áudio construído ANTES do save (o envio por canal dispara nos callbacks da Message outgoing).
-        def post_audio_reply!(audio_bytes)
+        def post_audio_reply!(audio_bytes, cartoes = {})
           message = @conversation.messages.new(
             content: '',
             account_id: @agent_inbox.account_id,
@@ -356,9 +381,7 @@ module Autonomia
             sender_type: 'AgentBot',
             sender_id: @agent_inbox.agent_bot_id,
             content_attributes: {
-              autonomia_agent_id: @agent.id,
-              autonomia_reply_to_message_id: @reply_to_message_id,
-              autonomia_voice: true
+              autonomia_agent_id: @agent.id, autonomia_reply_to_message_id: @reply_to_message_id, autonomia_voice: true, **cartoes
             }
           )
           # meta['is_voice_message']=true -> os provedores (WhatsApp Cloud etc.) enviam como ÁUDIO DE VOZ
@@ -368,6 +391,12 @@ module Autonomia
             att.file.attach(io: StringIO.new(audio_bytes), filename: 'resposta.ogg', content_type: 'audio/ogg')
           end
           message.save!
+          ancora!(message, cartoes)
+        end
+
+        # #1479 F3: a mensagem que gravou os cartões é a âncora do turno (`enfileirar_cartoes`). -> a mensagem.
+        def ancora!(message, cartoes)
+          @ancora = message if cartoes.present?
           message
         end
 
@@ -385,8 +414,7 @@ module Autonomia
           # nunca engole a resposta silenciosamente.
           return classic_deliver(result) if chunks.empty?
 
-          # #1479 F3: o mapa e o contato do turno, um pedaço cada, depois de todos os da resposta e da interação.
-          chunks += cartoes_do_turno.pedacos
+          chunks = com_os_cartoes_no_ultimo(chunks)
           # Quantos pedaços a cadeia vai postar. A entrega ASSÍNCRONA espera esse número aparecer
           # antes de publicar, para não se intercalar no meio da frase que o agente ainda está
           # "digitando" (a cadeia pode durar até 90s).
@@ -397,7 +425,17 @@ module Autonomia
           ::Autonomia::Agents::Operate::ChunkedDeliveryJob
             .set(wait: (chunks.first['delay_ms'].to_i / 1000.0).clamp(0.1, 30.0).seconds)
             .perform_later(@conversation.id, @agent_inbox.id, @reply_to_message_id, chunks, 0, meta_dos_pedacos(result))
+          @cadeia_agendada = true
           Result.replied(nil)
+        end
+
+        # #1479 F3: os cartões do turno vão na `marca` do ÚLTIMO pedaço (a âncora), que o ChunkedDeliveryJob grava na
+        # mensagem e de onde enfileira o EnviarCartoesJob. Sem cartão, os pedaços de sempre.
+        def com_os_cartoes_no_ultimo(chunks)
+          return chunks if marca_dos_cartoes.empty?
+
+          ultimo = chunks.last
+          chunks[0...-1] + [ultimo.merge('marca' => ultimo['marca'].to_h.merge(marca_dos_cartoes))]
         end
 
         # #2154: a cadeia de pedaços assume a marca do turno (Operate::TurnoEmCurso), ANTES de ser agendada: renova com o
@@ -489,6 +527,7 @@ module Autonomia
         # cliente pediu a consulta e vai receber o aviso e o resultado pelo job.
         def silence_with_async(_result, motivo)
           registrar_silencio(motivo)
+          descartar_cartoes(motivo)
           if SILENCIOS_DE_FALHA.include?(motivo)
             soltar_posse
             refazer_pelo_dono_novo
@@ -554,6 +593,7 @@ module Autonomia
         # cliente (`replied: true` = não avisa): o aviso seria a IA falando por cima da pessoa. E o handoff pedido pela IA
         # não roda: passar a conversa para "humanos" com a pessoa já nela abriria a fila de espera à toa.
         def depois_da_entrega(result, outcome)
+          outcome.status == :replied ? enfileirar_cartoes(outcome) : descartar_cartoes(@ultimo_silencio || outcome.status)
           dispatch_async(replied: outcome.status == :replied || @calou_pela_pessoa.present?)
           @entrega = outcome # #2154: a fala que saiu, para o aviso (avisou_que_chama_alguem)
           handoff_if_signaled(result) unless @calou_pela_pessoa
@@ -608,6 +648,7 @@ module Autonomia
         # O único lugar que escreve a linha. Campos: dois ids nossos e um rótulo de lista fechada —
         # nada do que o cliente escreveu, nada do que o modelo respondeu.
         def registrar_silencio(motivo)
+          @ultimo_silencio = motivo
           Rails.logger.info("[autonomia][operate] silencio agent=#{@agent.id} conv=#{@conversation.id} motivo=#{motivo}")
         end
 
@@ -882,9 +923,10 @@ module Autonomia
         # por canal (WhatsApp/Instagram/email/webchat) é feita pelos jobs de canal do
         # Chatwoot disparados nos callbacks da Message outgoing. Nada por-canal aqui.
         # `interacao` (#1479): opções ou link pedidos pelo modelo (ver `com_interacao`). nil: a mensagem de sempre.
-        def post_reply!(text, interacao = nil)
+        # #1479 F3: `cartoes` (`marca_dos_cartoes`) faz desta mensagem a âncora dos cartões do turno.
+        def post_reply!(text, interacao = nil, cartoes: {})
           content, formato = com_interacao(text, interacao)
-          Messages::MessageBuilder.new(
+          mensagem = Messages::MessageBuilder.new(
             nil,
             @conversation,
             ActionController::Parameters.new(
@@ -896,11 +938,12 @@ module Autonomia
               content_attributes: {
                 autonomia_agent_id: @agent.id,
                 autonomia_reply_to_message_id: @reply_to_message_id,
-                **formato
+                **formato, **cartoes
               },
               **destinatarios_do_email
             )
           ).perform
+          ancora!(mensagem, cartoes)
         end
 
         # #1828 (flag `email_autoria`): no e-mail, a resposta da IA mantém a cópia como o "Responder a todos" do painel
