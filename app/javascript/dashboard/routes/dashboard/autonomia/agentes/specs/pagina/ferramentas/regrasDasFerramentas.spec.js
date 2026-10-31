@@ -378,6 +378,9 @@ describe('regras das Ferramentas', () => {
         'ENDERECO',
         false,
       ],
+      ['tool_execution_error: argument_error', 'VALOR', 'PREENCHE', false],
+      ['tool_execution_error: zero_division_error', 'VALOR', 'PREENCHE', false],
+      ['tool_execution_error: internal_error', 'GENERICO', null, false],
       ['outra coisa', 'GENERICO', null, false],
     ])('%s → %s', (erro, chave, corrigir, ambar) => {
       expect(traduzirErroDoTeste(erro)).toEqual({

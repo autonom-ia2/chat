@@ -19,6 +19,9 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
   Modelo = Autonomia::Agents::Tools::ModeloLiquid
   RECUSA = 'endereco_invalido'.freeze
   BARRA_INVERTIDA = 92.chr.freeze
+  # Espaços que o `String#strip` não tira (sem quebra, finos, ideográfico, sem largura): um valor só deles
+  # também é um pedaço vazio disfarçado (#1444).
+  ESPACOS_UNICODE = "\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000\uFEFF".freeze
   NA_QUERY = ->(valor) { valor.nil? ? nil : URI.encode_www_form_component(Modelo.texto_de(valor)) }
 
   def initialize(tool:, params:)
@@ -67,7 +70,7 @@ class Autonomia::Agents::Tools::EnderecoDaFerramenta
 
   def caminho_invalido?(texto)
     pedacos = texto.split('/', -1).flat_map { |pedaco| pedaco.split(BARRA_INVERTIDA, -1) }
-    texto.strip.empty? || pedacos.any? { |pedaco| ['.', '..'].include?(pedaco) }
+    texto.tr(ESPACOS_UNICODE, ' ').strip.empty? || pedacos.any? { |pedaco| ['.', '..'].include?(pedaco) }
   end
 
   def renderizar(texto, filtro)

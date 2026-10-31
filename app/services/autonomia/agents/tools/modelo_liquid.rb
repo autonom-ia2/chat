@@ -25,9 +25,15 @@ module Autonomia::Agents::Tools::ModeloLiquid
 
   # `render!`, e não `render`: o Liquid engole o erro de render e escreve "Liquid error: ..." cru no texto,
   # sem passar pelo escape (#1444). Assim o erro sobe como `Liquid::Error` (variável ou chave que não
-  # existe vira `undefined_variable`), o `HttpExecutor` recusa e nada é enviado.
+  # existe vira `undefined_variable`), o `HttpExecutor` recusa e nada é enviado. O `render!` relança a
+  # exceção ORIGINAL quando ela não é do Liquid (um filtro que levanta `ArgumentError`), e ela escaparia do
+  # tratamento da ferramenta: vira `Liquid::InternalError`, que o executor recusa como as outras.
   def renderizar(template, params, filtro)
     template.render!(params, strict_variables: true, strict_filters: true, global_filter: filtro)
+  rescue Liquid::Error
+    raise
+  rescue StandardError
+    raise Liquid::InternalError, 'internal'
   end
 
   # Há {{ }} ou {% %} no texto?
