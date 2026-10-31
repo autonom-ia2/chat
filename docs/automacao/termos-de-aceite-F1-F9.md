@@ -68,14 +68,14 @@
 ## F4 · Falar com pessoas
 
 **O que entrega.** Dois passos novos:
-- mandar mensagem ao cliente, assinada como "Automação", com as variáveis do cliente e do card (nome, valor, etapa);
+- mandar mensagem ao cliente, com as variáveis do cliente e do card (nome, valor, etapa); o cliente recebe uma mensagem normal da empresa, e só dentro da plataforma ela fica marcada como enviada pela Automação;
 - avisar alguém da equipe (o responsável, um time ou uma pessoa).
 
 Sem limite de quantidade: o cliente manda quantas mensagens quiser.
 
 **Aceite.**
 1. A mensagem chega no WhatsApp do cliente com o nome dele no lugar da variável.
-2. Na conversa, a mensagem aparece como enviada por "Automação", não por uma pessoa.
+2. O cliente recebe a mensagem como qualquer mensagem da empresa: nada no texto diz "Automação". A marcação "enviada pela Automação" existe só dentro da plataforma, para a equipe saber de onde veio.
 3. Variável vazia (cliente sem nome) pula o passo e o histórico diz "faltou o nome"; nunca sai "Olá, ," para o cliente.
 4. Fora da janela de 24 h do WhatsApp, o passo usa o caminho já validado (criar retorno com envio automático do modelo aprovado) ou para com o motivo; nunca falha calado. Mandar modelo direto, fora do follow-up, ainda precisa ser confirmado (risco 6 do ADR).
 5. O aviso à equipe chega no sino do responsável com o link da conversa.
@@ -124,6 +124,7 @@ Sem limite de quantidade: o cliente manda quantas mensagens quiser.
 4. Arquivar em massa não dispara "saiu da etapa", e a tela avisa isso.
 5. As automações de etapa de hoje continuam funcionando e aparecem no mesmo painel.
 6. Só quem pode mexer no funil cria automação de funil.
+7. *(Proposta, a aprovar.)* Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte. Hoje a IA só respeita movimento feito por pessoa. Decisão do Rodrigo: ajustar a IA do funil ou só deixar automação mover card em funil com "Mover automaticamente" desligado.
 
 **Exemplo.** Corretora: 30 dias antes do vencimento da apólice, o card vai para "Renovação", o cliente recebe a mensagem de renovação e o corretor ganha um retorno para ligar em 5 dias se não houver resposta.
 
@@ -184,51 +185,119 @@ O custo de cada passo aparece na tela e no histórico, sem teto. Os testes com I
 
 ---
 
-## Cinco exemplos complexos que a Automação livre com IA vai permitir
+## Convive com as IAs do CRM, não refaz
 
-Todos usam só o que as fases acima entregam. Cada um é uma automação que o próprio cliente monta, pelo editor ou pedindo ao Guia.
+Confirmado com o chat Multifunnel em 31/10, na origin/main 2ad360cf5c.
 
-### 1. Triagem completa do WhatsApp da corretora
-**Quando** chega a primeira mensagem de um contato novo:
-1. a IA **decide** o assunto: cotação nova, sinistro, segunda via, renovação, reclamação ou nenhum;
-2. em cotação, a IA **extrai** o tipo de seguro, a placa ou o CEP e a data de nascimento, e grava no contato;
-3. cria o card no funil certo e passa para o corretor daquele ramo;
-4. manda ao cliente: "Recebi, Maria. O João, especialista em seguro auto, vai te responder";
-5. se faltar dado, a IA **escreve** a pergunta só do que faltou;
-6. em reclamação, avisa o gerente na hora, com um **resumo**.
+- **Triagem do assunto:** já é da IA de assunto, configurada por caixa. Uma triagem pela Automação livre só roda na caixa com a IA de assunto desligada.
+- **Retomar conversa parada:** já é dos Retornos automáticos, por funil. Uma automação que fale com cliente parado só roda no funil com eles desligados.
+- **Mover card:** a IA do funil hoje só respeita movimento feito por pessoa. Falta decidir: ajustar a IA para respeitar a automação, ou só deixar a automação mover card em funil com "Mover automaticamente" desligado (item F6.7).
+- **As IAs do CRM não mudam de comportamento.** A Automação livre cobre o que nenhuma delas faz.
 
-### 2. Recuperar orçamento parado sem parecer robô
-**Quando** o card fica 2 dias em "Orçamento enviado":
-1. a IA **lê** a conversa e **escreve** uma retomada que cita a dúvida do cliente ("você tinha perguntado da franquia…");
-2. o texto sai sozinho; *(se a aprovação humana da F7 for aceita, o corretor pode aprovar com um clique antes)*;
-3. **espera até** o cliente responder, com prazo de 3 dias;
-4. se ele responde, a IA **decide**: "quer fechar", "quer desconto", "desistiu" ou "outra coisa";
-   - "quer fechar": move para Fechamento e avisa o corretor;
-   - "quer desconto": cria um retorno para o corretor ligar hoje;
-   - "desistiu": marca o card como perdido, com o motivo que a IA tirou da conversa;
-5. se não responde: marca como "não fechou — sem resposta".
+## Dez automações que nenhuma IA do CRM faz hoje
 
-### 3. Renovação de apólice de ponta a ponta
-**30 dias antes** do vencimento gravado no card:
-1. move para "Renovação" e manda a mensagem de renovação pelo modelo aprovado do WhatsApp;
-2. se a mensagem falhar na entrega e o contato tiver e-mail, manda por e-mail;
-3. **espera até** a resposta, com prazo de 10 dias;
-4. a IA **extrai** da resposta se houve mudança (carro novo, endereço novo, condutor novo) e atualiza o card;
-5. com mudança: cria o retorno "recotar" para o corretor; sem mudança: move para "Renovar igual";
+Cada uma cobre um buraco que as IAs do CRM deixam hoje, conferido no código. Todas usam só o que as fases acima entregam, e o próprio cliente monta cada uma, no editor ou pedindo ao Guia.
+
+### 1. Renovação de apólice de ponta a ponta
+**Quando:** 30 dias antes da data de vencimento gravada no card.
+**Por que é novo:** Nenhuma IA do CRM lê um campo personalizado de data, como o vencimento da apólice. A cobrança do funil de Atender usa só a data prevista de fechamento.
+
+1. Move o card para “Renovação” e manda a mensagem de renovação pelo modelo aprovado do WhatsApp.
+2. Se o WhatsApp recusar a mensagem e o contato tiver e-mail, manda por e-mail.
+3. Espera até a resposta, com prazo de 10 dias.
+4. A IA **extrai** da resposta se algo mudou (carro novo, endereço, condutor) e atualiza o card.
+5. Mudou: cria o retorno “recotar” para o corretor. Não mudou: move para “Renovar igual”.
 6. 5 dias antes do vencimento, sem resposta: avisa o corretor e o gerente com um **resumo** do histórico.
+*Usa: F4, F6, F7, F8.*
 
-### 4. Pós-venda que gera indicação
-**Quando** o card é ganho:
-1. espera 7 dias e manda: "Como foi a experiência, de 0 a 10?";
-2. a IA **extrai** a nota e o comentário e grava no contato;
-3. nota de 9 ou 10: espera 2 dias e pede indicação, com um texto que a IA **escreve** citando o que o cliente elogiou;
-4. nota de 6 ou menos: avisa o gerente com o **resumo** da conversa e cria um retorno urgente;
-5. cada indicação que chega com o nome do cliente cria um card novo no funil Comercial, com a origem "indicação de Maria".
+### 2. Reativar quem não fechou há 11 meses
+**Quando:** Todo dia 1º do mês.
+**Por que é novo:** Só o “adiou” agenda retorno, em até 180 dias. Quem recusou ou fechou com outro nunca mais é procurado.
 
-### 5. Relatório semanal e integração com outro sistema
-**Toda segunda às 8h:**
-1. para cada corretor, a IA **resume** a semana: cards novos, ganhos, perdidos e os principais motivos de perda;
-2. manda esse resumo ao corretor e ao gerente;
-3. os cards ganhos na semana vão pelo **webhook de saída** para a planilha financeira ou o ERP;
-4. cards parados há mais de 15 dias ganham a etiqueta "esfriando" e um retorno para o responsável;
-5. **quando o responsável de um card muda**, o novo dono recebe o **resumo** da conversa e o que já foi prometido ao cliente.
+1. Acha os cards perdidos há 11 meses com o motivo “fechou com outro” ou “achou caro”: o seguro feito em outro lugar está perto de vencer.
+2. A IA **lê** o motivo da perda (“achou caro”, “fechou com o banco”) e **escreve** uma oferta que responde a esse motivo.
+3. Cria um card novo no funil Comercial, com a origem “reativação”, e manda a mensagem.
+4. Cliente respondeu: passa para o corretor que atendeu da primeira vez.
+5. Sem resposta em 15 dias: arquiva o card novo, sem mais mensagens.
+*Usa: F4, F6, F7, F8.*
+
+### 3. Pós-venda que gera indicação
+**Quando:** O card é ganho.
+**Por que é novo:** No funil de Vender, o card ganho não recebe nada, e não existe pedido de indicação. O “deu tudo certo?” é só do funil de Atender.
+
+1. Espera 7 dias e pergunta: “Como foi a experiência, de 0 a 10?”.
+2. A IA **extrai** a nota e o comentário e grava no contato.
+3. Nota 9 ou 10: espera 2 dias e pede indicação, com um texto que a IA **escreve** citando o que o cliente elogiou.
+4. Nota 6 ou menos: avisa o gerente com o **resumo** da conversa e cria um retorno urgente.
+5. Cada indicação que chega com o nome do cliente vira um card no funil Comercial, com a origem “indicação de Maria”.
+*Usa: F3, F4, F6, F7.*
+
+### 4. Documentação que falta para emitir
+**Quando:** O card entra na etapa “Documentação”.
+**Por que é novo:** O leitor de mídia lê foto e PDF com texto, mas nada confere a lista do que falta para emitir nem cobra só o que falta.
+
+1. Manda ao cliente a lista do que precisa para aquele ramo (ex.: CNH, CRLV, comprovante de endereço).
+2. A cada anexo que chega, a IA **extrai** do texto lido qual documento é e se está legível, e marca no card.
+3. Faltando algo, a IA **escreve** o pedido só do que falta (“só falta o comprovante de endereço”).
+4. Tudo recebido: move para “Emissão” e avisa o corretor.
+5. 3 dias sem novo documento: cria um retorno para o corretor ligar.
+*Usa: F3, F4, F6, F7.*
+
+### 5. Cliente de alto valor
+**Quando:** Card criado ou atualizado com valor acima de R$ 50 mil.
+**Por que é novo:** A passagem para a equipe escolhe por caixa, pessoa, rodízio ou quem está online, mas nenhuma regra olha o valor do card.
+
+1. Passa o card para o corretor sênior, em vez do rodízio.
+2. Adiciona a etiqueta “alto valor” no contato e na conversa.
+3. Aplica a política de SLA de 1 hora.
+4. Avisa o gerente com o link do card.
+5. Se o card ficar 24 h sem resposta da equipe, avisa o gerente de novo.
+*Usa: F3, F4, F6.*
+
+### 6. Mensagem que não chega
+**Quando:** O WhatsApp recusa uma mensagem para o cliente.
+**Por que é novo:** Só o erro 131047 é reenviado pela API oficial. A mensagem comum que falha fica só no balão, sem aviso e sem outro canal.
+
+1. Contato tem e-mail: manda o mesmo conteúdo por e-mail.
+2. Adiciona a etiqueta “número com problema” no contato.
+3. Avisa o responsável: “A mensagem para a Maria não chegou. Confira o número”.
+4. Na segunda falha seguida, cria um retorno para alguém ligar ao cliente.
+*Usa: F4, F8.*
+
+### 7. Troca de responsável sem perder nada
+**Quando:** O responsável do card muda (férias, saída, redistribuição).
+**Por que é novo:** O resumo por IA só existe como botão no card. O novo dono não recebe nada sozinho, e a nota da passagem não diz o que foi prometido.
+
+1. A IA **resume** a conversa para o novo dono: o que o cliente quer, o que já foi prometido e o próximo passo.
+2. Manda ao cliente: “Oi, Maria. A partir de hoje quem te atende é o Rafael, e ele já está a par de tudo”.
+3. Passa os retornos abertos do antigo para o novo responsável.
+*Usa: F4, F7, F8.*
+
+### 8. Reunião cancelada não some
+**Quando:** O cliente cancela ou remarca a reunião.
+**Por que é novo:** O pós-reunião só age em “Aconteceu”. Cancelar ou remarcar grava a atividade e avisa o responsável, mas o card fica em “Reunião marcada”.
+
+1. Cancelou: move o card de volta para “Qualificado” e manda o link para escolher outro horário.
+2. Remarcou: atualiza a data no card e avisa o responsável.
+3. 2 dias sem novo horário: cria um retorno para o responsável ligar.
+4. A IA **escreve** ao responsável o contexto da reunião que caiu, para ele não começar do zero.
+*Usa: F4, F6, F7, F8.*
+
+### 9. Venda fechada vai para o outro sistema
+**Quando:** O card é ganho.
+**Por que é novo:** O ganho já vai para a Meta e o Google Ads (Resultados dos anúncios), mas não para ERP, planilha ou outro CRM. Alguém redigita os dados.
+
+1. A IA **extrai** da conversa os dados que faltam no card (CPF, placa, forma de pagamento).
+2. Manda os campos escolhidos pelo webhook de saída para a planilha, o n8n ou o ERP.
+3. O outro sistema respondeu com erro: avisa o financeiro com o motivo.
+4. Deu certo: grava no card o número que o outro sistema devolveu.
+*Usa: F6, F7, F8.*
+
+### 10. Relatório semanal de cada corretor
+**Quando:** Toda segunda às 8h.
+**Por que é novo:** Não existe resumo por pessoa. Só há o resumo diário de anúncios no WhatsApp, por conta.
+
+1. Para cada corretor, a IA **resume** a semana: cards novos, ganhos, perdidos e os principais motivos de perda.
+2. Manda o resumo ao corretor e ao gerente.
+3. Cards parados há mais de 15 dias ganham a etiqueta “esfriando” e um retorno para o responsável.
+*Usa: F4, F6, F7, F8.*

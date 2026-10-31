@@ -118,7 +118,7 @@ Variáveis são valores estruturados (`{"$valor":"card.valor"}`), não Liquid. O
 | D6 | Cascata | Automações diferentes encadeiam até a profundidade 3, contada nos três motores. Nunca a si mesma. É proteção contra laço infinito por defeito, não limite de uso. |
 | D7 | Desfazer | A execução não entra no desfazer do Guia. O histórico é a trilha. Desligar sempre funciona. |
 | D8 | IA na chave do cliente | Sem teto de uso (regra de 31/10, abaixo). O custo fica visível no passo e no histórico. |
-| D9 | Autor da mensagem | "Automação", nunca a pessoa. |
+| D9 | Autor da mensagem | Dentro da plataforma, a mensagem fica marcada como enviada pela "Automação", nunca por uma pessoa. O cliente recebe uma mensagem normal da empresa, sem "Automação" no texto. |
 | D10 | Edição com gente no meio | Por padrão, quem está no meio termina na versão antiga. Passo sem volta alterado pede OK de novo. |
 | D11 | Flags | Uma por fase (motor/ações, card, IA, editor), nascendo ligadas no piloto 1, 16 e 18. O bit é dado pela Orquestração Deploy. |
 | D12 | Motores antigos | A conversão é obrigatória, conta a conta, com OK. O antigo é desligado, nunca apagado. Depois de um prazo, fecha a criação nova nos motores antigos (a API é preservada). |

@@ -86,6 +86,9 @@ ol.aceite li:target{background:var(--accent-soft)}
 .quando,.usa{margin:0;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:14px}
 .lbl{font:600 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .quando{font-weight:600}
+.novo{margin:0;font-size:13.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px;border-left:3px solid var(--line);padding-left:10px}
+.conv{border-left-color:var(--accent)}
+.conv ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;max-width:80ch}
 ol.passos{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14.5px}
 .ia{font:600 12.5px/1 var(--mono);color:var(--ia);background:var(--ia-soft);padding:3px 6px;border-radius:5px;white-space:nowrap}
 .fref{font:600 12px/1 var(--mono);padding:4px 7px;border-radius:6px;background:var(--accent-soft);text-decoration:none}
@@ -105,8 +108,8 @@ code{font:500 12.5px var(--mono);background:var(--bg);padding:1px 5px;border-rad
   <header class="topo">
     <span class="eyebrow">Épico #2414 · referência de entrega</span>
     <h1>Aceite da Automação livre</h1>
-    <p>O que cada fase entrega, o que precisa funcionar para ela ser aceita e um exemplo do dia a dia. No fim, cinco automações complexas com IA que o cliente vai poder montar quando tudo estiver no ar.</p>
-    <div class="meta"><span>Base <b>ADR-001</b></span><span>Rascunho de <b>31/10/2026</b></span><span><b>48</b> itens de aceite</span><span>Piloto <b>contas 1, 16 e 18</b></span></div>
+    <p>O que cada fase entrega, o que precisa funcionar para ela ser aceita e um exemplo do dia a dia. No fim, dez automações que nenhuma IA do CRM faz hoje que o cliente vai poder montar quando tudo estiver no ar.</p>
+    <div class="meta"><span>Base <b>ADR-001</b></span><span>Rascunho de <b>31/10/2026</b></span><span><b>49</b> itens de aceite</span><span>Piloto <b>contas 1, 16 e 18</b></span></div>
   </header>
 
   <aside class="regra" aria-labelledby="t-regra">
@@ -122,7 +125,7 @@ code{font:500 12.5px var(--mono);background:var(--bg);padding:1px 5px;border-rad
   </div>
 
   <nav class="linha" aria-label="Fases">
-    <ol><li class="done"><a href="#f0"><b>F0</b><span>Desenho e protótipo</span></a></li><li><a href="#f1"><b>F1</b><span>Fundação segura</span></a></li><li><a href="#f2"><b>F2</b><span>Onde guardar</span></a></li><li><a href="#f3"><b>F3</b><span>O motor</span></a></li><li><a href="#f4"><b>F4</b><span>Falar com pessoas</span></a></li><li><a href="#f5"><b>F5</b><span>A tela</span></a></li><li><a href="#f6"><b>F6</b><span>Funil e card</span></a></li><li><a href="#f7"><b>F7</b><span>IA como passo</span></a></li><li><a href="#f8"><b>F8</b><span>Gatilhos extras</span></a></li><li><a href="#f9"><b>F9</b><span>Migrar o antigo</span></a></li><li class="ex"><a href="#exemplos"><b>IA</b><span>5 exemplos</span></a></li></ol>
+    <ol><li class="done"><a href="#f0"><b>F0</b><span>Desenho e protótipo</span></a></li><li><a href="#f1"><b>F1</b><span>Fundação segura</span></a></li><li><a href="#f2"><b>F2</b><span>Onde guardar</span></a></li><li><a href="#f3"><b>F3</b><span>O motor</span></a></li><li><a href="#f4"><b>F4</b><span>Falar com pessoas</span></a></li><li><a href="#f5"><b>F5</b><span>A tela</span></a></li><li><a href="#f6"><b>F6</b><span>Funil e card</span></a></li><li><a href="#f7"><b>F7</b><span>IA como passo</span></a></li><li><a href="#f8"><b>F8</b><span>Gatilhos extras</span></a></li><li><a href="#f9"><b>F9</b><span>Migrar o antigo</span></a></li><li class="ex"><a href="#exemplos"><b>IA</b><span>10 exemplos</span></a></li></ol>
   </nav>
 
   <div class="fases">
@@ -171,9 +174,9 @@ code{font:500 12.5px var(--mono);background:var(--bg);padding:1px 5px;border-rad
     <div class="fase-tit"><h2 id="t-f4">Falar com pessoas</h2><div class="tags"><span class="tag">Novos passos</span><span class="tag tag-estado">a entregar</span></div></div>
   </header>
   <div class="fase-corpo">
-    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Mandar mensagem ao cliente, assinada como “Automação”, com as variáveis do cliente e do card (nome, valor, etapa).</li><li>Avisar alguém da equipe: o responsável, um time ou uma pessoa.</li><li>Sem limite de quantidade: o cliente manda quantas mensagens quiser.</li></ul>
+    <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Mandar mensagem ao cliente, com as variáveis do cliente e do card (nome, valor, etapa). O cliente recebe uma mensagem normal da empresa; só dentro da plataforma ela fica marcada como enviada pela Automação.</li><li>Avisar alguém da equipe: o responsável, um time ou uma pessoa.</li><li>Sem limite de quantidade: o cliente manda quantas mensagens quiser.</li></ul>
       <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>Orçamento enviado. Dois dias sem resposta: o cliente recebe “Oi, Maria, conseguiu ver a proposta do seguro auto?”. Mais 2 dias sem resposta, e o corretor recebe “Maria não respondeu à retomada”.</p></figure></div>
-    <div class="col-aceite"><h3>Aceite <span class="count">5 itens</span></h3><ol class="aceite"><li id="f4-1"><span class="cid">F4.1</span><span class="box" aria-hidden="true"></span><span class="ctext">A mensagem chega no WhatsApp do cliente com o nome dele no lugar da variável.</span></li><li id="f4-2"><span class="cid">F4.2</span><span class="box" aria-hidden="true"></span><span class="ctext">Na conversa, a mensagem aparece como enviada por “Automação”, não por uma pessoa.</span></li><li id="f4-3"><span class="cid">F4.3</span><span class="box" aria-hidden="true"></span><span class="ctext">Variável vazia (cliente sem nome) pula o passo e o histórico diz “faltou o nome”; nunca sai “Olá, ,” para o cliente.</span></li><li id="f4-4"><span class="cid">F4.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Fora da janela de 24 h do WhatsApp, o passo usa o caminho já validado (retorno com envio automático do modelo aprovado) ou para com o motivo; nunca falha calado. Mandar o modelo direto, fora do follow-up, ainda precisa ser confirmado (risco 6 do ADR).</span></li><li id="f4-5"><span class="cid">F4.5</span><span class="box" aria-hidden="true"></span><span class="ctext">O aviso à equipe chega no sino do responsável, com o link da conversa.</span></li></ol></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">5 itens</span></h3><ol class="aceite"><li id="f4-1"><span class="cid">F4.1</span><span class="box" aria-hidden="true"></span><span class="ctext">A mensagem chega no WhatsApp do cliente com o nome dele no lugar da variável.</span></li><li id="f4-2"><span class="cid">F4.2</span><span class="box" aria-hidden="true"></span><span class="ctext">O cliente recebe a mensagem como qualquer mensagem da empresa: nada no texto diz “Automação”. A marcação “enviada pela Automação” existe só dentro da plataforma, para a equipe saber de onde veio.</span></li><li id="f4-3"><span class="cid">F4.3</span><span class="box" aria-hidden="true"></span><span class="ctext">Variável vazia (cliente sem nome) pula o passo e o histórico diz “faltou o nome”; nunca sai “Olá, ,” para o cliente.</span></li><li id="f4-4"><span class="cid">F4.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Fora da janela de 24 h do WhatsApp, o passo usa o caminho já validado (retorno com envio automático do modelo aprovado) ou para com o motivo; nunca falha calado. Mandar o modelo direto, fora do follow-up, ainda precisa ser confirmado (risco 6 do ADR).</span></li><li id="f4-5"><span class="cid">F4.5</span><span class="box" aria-hidden="true"></span><span class="ctext">O aviso à equipe chega no sino do responsável, com o link da conversa.</span></li></ol></div>
   </div>
 </section>
 <section class="fase" id="f5" aria-labelledby="t-f5">
@@ -195,7 +198,7 @@ code{font:500 12.5px var(--mono);background:var(--bg);padding:1px 5px;border-rad
   <div class="fase-corpo">
     <div class="col-entrega"><h3>O que entrega</h3><ul class="entrega"><li>Gatilhos do card: criado, entrou ou saiu da etapa, ganhou, perdeu, arquivado, campo mudou.</li><li>Tempo: “parado há X dias na etapa” e “N dias antes de uma data do card” (ex.: vencimento da apólice).</li><li>Retorno: criar retorno com envio automático.</li><li>Em Configurar › Editar funil › etapa: “Automações desta etapa”, com as antigas (selo “jeito antigo”) e as novas.</li><li>No card: “Automações deste cartão”, com o que está rodando, o histórico e “Parar para este cartão”.</li><li>Receitas por tipo de negócio, começando por seguros e saúde e benefícios.</li></ul>
       <figure class="exemplo"><figcaption>Exemplo do dia a dia</figcaption><p>Corretora: 30 dias antes do vencimento da apólice, o card vai para “Renovação”, o cliente recebe a mensagem de renovação e o corretor ganha um retorno para ligar em 5 dias, se não houver resposta.</p></figure></div>
-    <div class="col-aceite"><h3>Aceite <span class="count">6 itens</span></h3><ol class="aceite"><li id="f6-1"><span class="cid">F6.1</span><span class="box" aria-hidden="true"></span><span class="ctext">Card parado 3 dias em “Orçamento enviado” dispara a automação uma vez, não todo dia.</span></li><li id="f6-2"><span class="cid">F6.2</span><span class="box" aria-hidden="true"></span><span class="ctext">“30 dias antes do vencimento” roda no fuso da conta, no dia certo.</span></li><li id="f6-3"><span class="cid">F6.3</span><span class="box" aria-hidden="true"></span><span class="ctext">“Parar para este cartão” para só aquele card; os outros seguem.</span></li><li id="f6-4"><span class="cid">F6.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Arquivar em massa não dispara “saiu da etapa”, e a tela avisa isso.</span></li><li id="f6-5"><span class="cid">F6.5</span><span class="box" aria-hidden="true"></span><span class="ctext">As automações de etapa de hoje continuam funcionando e aparecem no mesmo painel.</span></li><li id="f6-6"><span class="cid">F6.6</span><span class="box" aria-hidden="true"></span><span class="ctext">Só quem pode mexer no funil cria automação de funil.</span></li></ol></div>
+    <div class="col-aceite"><h3>Aceite <span class="count">7 itens</span></h3><ol class="aceite"><li id="f6-1"><span class="cid">F6.1</span><span class="box" aria-hidden="true"></span><span class="ctext">Card parado 3 dias em “Orçamento enviado” dispara a automação uma vez, não todo dia.</span></li><li id="f6-2"><span class="cid">F6.2</span><span class="box" aria-hidden="true"></span><span class="ctext">“30 dias antes do vencimento” roda no fuso da conta, no dia certo.</span></li><li id="f6-3"><span class="cid">F6.3</span><span class="box" aria-hidden="true"></span><span class="ctext">“Parar para este cartão” para só aquele card; os outros seguem.</span></li><li id="f6-4"><span class="cid">F6.4</span><span class="box" aria-hidden="true"></span><span class="ctext">Arquivar em massa não dispara “saiu da etapa”, e a tela avisa isso.</span></li><li id="f6-5"><span class="cid">F6.5</span><span class="box" aria-hidden="true"></span><span class="ctext">As automações de etapa de hoje continuam funcionando e aparecem no mesmo painel.</span></li><li id="f6-6"><span class="cid">F6.6</span><span class="box" aria-hidden="true"></span><span class="ctext">Só quem pode mexer no funil cria automação de funil.</span></li><li id="f6-7"><span class="cid">F6.7</span><span class="box" aria-hidden="true"></span><span class="ctext"><span class="tag tag-prop">proposta · a aprovar</span> Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte. Hoje a IA só respeita movimento feito por pessoa. Decisão do Rodrigo: ajustar a IA do funil ou só deixar automação mover card em funil com “Mover automaticamente” desligado.</span></li></ol></div>
   </div>
 </section>
 <section class="fase" id="f7" aria-labelledby="t-f7">
@@ -233,39 +236,90 @@ code{font:500 12.5px var(--mono);background:var(--bg);padding:1px 5px;border-rad
 </section>
   </div>
 
+  <aside class="regra conv" aria-labelledby="t-conv">
+    <span class="eyebrow">Confirmado com o chat Multifunnel · 31/10</span>
+    <h2 id="t-conv">Convive com as IAs do CRM, não refaz</h2>
+    <ul>
+      <li><b>Triagem do assunto:</b> já é da IA de assunto, configurada por caixa. Uma triagem pela Automação livre só roda na caixa com a IA de assunto desligada.</li>
+      <li><b>Retomar conversa parada:</b> já é dos Retornos automáticos, por funil. Uma automação que fale com cliente parado só roda no funil com eles desligados.</li>
+      <li><b>Mover card:</b> a IA do funil hoje só respeita movimento feito por pessoa. Falta decidir: ajustar a IA para respeitar a automação, ou só deixar a automação mover card em funil com “Mover automaticamente” desligado (item <a href="#f6-7">F6.7</a>).</li>
+      <li><b>As IAs do CRM não mudam de comportamento.</b> A Automação livre cobre o que nenhuma delas faz.</li>
+    </ul>
+  </aside>
+
   <section class="secao-ex" id="exemplos" aria-labelledby="t-ex">
     <span class="eyebrow">Quando F1 a F9 estiverem no ar</span>
-    <h2 id="t-ex">Cinco automações complexas com IA</h2>
-    <p>Todas usam só o que as fases acima entregam. O próprio cliente monta cada uma, no editor ou pedindo ao Guia. As etiquetas roxas são os passos de IA da F7.</p>
+    <h2 id="t-ex">Dez automações que nenhuma IA do CRM faz hoje</h2>
+    <p>Cada uma cobre um buraco que as IAs do CRM deixam hoje, conferido no código. Todas usam só o que as fases acima entregam, e o próprio cliente monta cada uma, no editor ou pedindo ao Guia. As etiquetas roxas são os passos de IA da F7.</p>
     <div class="exs">
 <article class="ex" id="exemplo-1">
-  <header><span class="exn">1</span><h3>Triagem completa do WhatsApp da corretora</h3></header>
-  <p class="quando"><span class="lbl">Quando</span>Chega a primeira mensagem de um contato novo</p>
-  <ol class="passos"><li>A IA <span class="ia">decide</span> o assunto: cotação nova, sinistro, segunda via, renovação, reclamação ou nenhum.</li><li>Em cotação, a IA <span class="ia">extrai</span> o tipo de seguro, a placa ou o CEP e a data de nascimento, e grava no contato.</li><li>Cria o card no funil certo e passa para o corretor daquele ramo.</li><li>Manda ao cliente: “Recebi, Maria. O João, especialista em seguro auto, vai te responder”.</li><li>Se faltar dado, a IA <span class="ia">escreve</span> a pergunta só do que faltou.</li><li>Em reclamação, avisa o gerente na hora, com um <span class="ia">resumo</span>.</li></ol>
-  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f3">F3</a> <a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a></p>
-</article>
-<article class="ex" id="exemplo-2">
-  <header><span class="exn">2</span><h3>Recuperar orçamento parado sem parecer robô</h3></header>
-  <p class="quando"><span class="lbl">Quando</span>O card fica 2 dias em “Orçamento enviado”</p>
-  <ol class="passos"><li>A IA <span class="ia">lê</span> a conversa e <span class="ia">escreve</span> uma retomada que cita a dúvida do cliente (“você tinha perguntado da franquia…”).</li><li>O texto sai sozinho. <span class="tag tag-prop">proposta · a aprovar</span> Se a aprovação humana da F7 for aceita, o corretor pode aprovar com um clique antes.</li><li>Espera até o cliente responder, com prazo de 3 dias.</li><li>Se ele responde, a IA <span class="ia">decide</span>: <b>quer fechar</b> → move para Fechamento e avisa o corretor; <b>quer desconto</b> → cria retorno para ligar hoje; <b>desistiu</b> → marca como perdido, com o motivo tirado da conversa; <b>outra coisa</b> → avisa o corretor.</li><li>Se não responde: marca como “não fechou, sem resposta”.</li></ol>
-  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f3">F3</a> <a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a></p>
-</article>
-<article class="ex" id="exemplo-3">
-  <header><span class="exn">3</span><h3>Renovação de apólice de ponta a ponta</h3></header>
-  <p class="quando"><span class="lbl">Quando</span>30 dias antes do vencimento gravado no card</p>
-  <ol class="passos"><li>Move para “Renovação” e manda a mensagem de renovação pelo modelo aprovado do WhatsApp.</li><li>Se a mensagem falhar na entrega e o contato tiver e-mail, manda por e-mail.</li><li>Espera até a resposta, com prazo de 10 dias.</li><li>A IA <span class="ia">extrai</span> da resposta se houve mudança (carro novo, endereço novo, condutor novo) e atualiza o card.</li><li>Com mudança: cria o retorno “recotar” para o corretor. Sem mudança: move para “Renovar igual”.</li><li>5 dias antes do vencimento, sem resposta: avisa o corretor e o gerente com um <span class="ia">resumo</span> do histórico.</li></ol>
+  <header><span class="exn">1</span><h3>Renovação de apólice de ponta a ponta</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>30 dias antes da data de vencimento gravada no card</p>
+  <p class="novo"><span class="lbl">Por que é novo</span>Nenhuma IA do CRM lê um campo personalizado de data, como o vencimento da apólice. A cobrança do funil de Atender usa só a data prevista de fechamento.</p>
+  <ol class="passos"><li>Move o card para “Renovação” e manda a mensagem de renovação pelo modelo aprovado do WhatsApp.</li><li>Se o WhatsApp recusar a mensagem e o contato tiver e-mail, manda por e-mail.</li><li>Espera até a resposta, com prazo de 10 dias.</li><li>A IA <span class="ia">extrai</span> da resposta se algo mudou (carro novo, endereço, condutor) e atualiza o card.</li><li>Mudou: cria o retorno “recotar” para o corretor. Não mudou: move para “Renovar igual”.</li><li>5 dias antes do vencimento, sem resposta: avisa o corretor e o gerente com um <span class="ia">resumo</span> do histórico.</li></ol>
   <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a> <a class="fref" href="#f8">F8</a></p>
 </article>
-<article class="ex" id="exemplo-4">
-  <header><span class="exn">4</span><h3>Pós-venda que gera indicação</h3></header>
+<article class="ex" id="exemplo-2">
+  <header><span class="exn">2</span><h3>Reativar quem não fechou há 11 meses</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>Todo dia 1º do mês</p>
+  <p class="novo"><span class="lbl">Por que é novo</span>Só o “adiou” agenda retorno, em até 180 dias. Quem recusou ou fechou com outro nunca mais é procurado.</p>
+  <ol class="passos"><li>Acha os cards perdidos há 11 meses com o motivo “fechou com outro” ou “achou caro”: o seguro feito em outro lugar está perto de vencer.</li><li>A IA <span class="ia">lê</span> o motivo da perda (“achou caro”, “fechou com o banco”) e <span class="ia">escreve</span> uma oferta que responde a esse motivo.</li><li>Cria um card novo no funil Comercial, com a origem “reativação”, e manda a mensagem.</li><li>Cliente respondeu: passa para o corretor que atendeu da primeira vez.</li><li>Sem resposta em 15 dias: arquiva o card novo, sem mais mensagens.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a> <a class="fref" href="#f8">F8</a></p>
+</article>
+<article class="ex" id="exemplo-3">
+  <header><span class="exn">3</span><h3>Pós-venda que gera indicação</h3></header>
   <p class="quando"><span class="lbl">Quando</span>O card é ganho</p>
-  <ol class="passos"><li>Espera 7 dias e manda: “Como foi a experiência, de 0 a 10?”.</li><li>A IA <span class="ia">extrai</span> a nota e o comentário e grava no contato.</li><li>Nota 9 ou 10: espera 2 dias e pede indicação, com um texto que a IA <span class="ia">escreve</span> citando o que o cliente elogiou.</li><li>Nota 6 ou menos: avisa o gerente com o <span class="ia">resumo</span> da conversa e cria um retorno urgente.</li><li>Cada indicação que chega com o nome do cliente cria um card novo no funil Comercial, com a origem “indicação de Maria”.</li></ol>
+  <p class="novo"><span class="lbl">Por que é novo</span>No funil de Vender, o card ganho não recebe nada, e não existe pedido de indicação. O “deu tudo certo?” é só do funil de Atender.</p>
+  <ol class="passos"><li>Espera 7 dias e pergunta: “Como foi a experiência, de 0 a 10?”.</li><li>A IA <span class="ia">extrai</span> a nota e o comentário e grava no contato.</li><li>Nota 9 ou 10: espera 2 dias e pede indicação, com um texto que a IA <span class="ia">escreve</span> citando o que o cliente elogiou.</li><li>Nota 6 ou menos: avisa o gerente com o <span class="ia">resumo</span> da conversa e cria um retorno urgente.</li><li>Cada indicação que chega com o nome do cliente vira um card no funil Comercial, com a origem “indicação de Maria”.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f3">F3</a> <a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a></p>
+</article>
+<article class="ex" id="exemplo-4">
+  <header><span class="exn">4</span><h3>Documentação que falta para emitir</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>O card entra na etapa “Documentação”</p>
+  <p class="novo"><span class="lbl">Por que é novo</span>O leitor de mídia lê foto e PDF com texto, mas nada confere a lista do que falta para emitir nem cobra só o que falta.</p>
+  <ol class="passos"><li>Manda ao cliente a lista do que precisa para aquele ramo (ex.: CNH, CRLV, comprovante de endereço).</li><li>A cada anexo que chega, a IA <span class="ia">extrai</span> do texto lido qual documento é e se está legível, e marca no card.</li><li>Faltando algo, a IA <span class="ia">escreve</span> o pedido só do que falta (“só falta o comprovante de endereço”).</li><li>Tudo recebido: move para “Emissão” e avisa o corretor.</li><li>3 dias sem novo documento: cria um retorno para o corretor ligar.</li></ol>
   <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f3">F3</a> <a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a></p>
 </article>
 <article class="ex" id="exemplo-5">
-  <header><span class="exn">5</span><h3>Relatório semanal e integração com outro sistema</h3></header>
+  <header><span class="exn">5</span><h3>Cliente de alto valor</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>Card criado ou atualizado com valor acima de R$ 50 mil</p>
+  <p class="novo"><span class="lbl">Por que é novo</span>A passagem para a equipe escolhe por caixa, pessoa, rodízio ou quem está online, mas nenhuma regra olha o valor do card.</p>
+  <ol class="passos"><li>Passa o card para o corretor sênior, em vez do rodízio.</li><li>Adiciona a etiqueta “alto valor” no contato e na conversa.</li><li>Aplica a política de SLA de 1 hora.</li><li>Avisa o gerente com o link do card.</li><li>Se o card ficar 24 h sem resposta da equipe, avisa o gerente de novo.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f3">F3</a> <a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a></p>
+</article>
+<article class="ex" id="exemplo-6">
+  <header><span class="exn">6</span><h3>Mensagem que não chega</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>O WhatsApp recusa uma mensagem para o cliente</p>
+  <p class="novo"><span class="lbl">Por que é novo</span>Só o erro 131047 é reenviado pela API oficial. A mensagem comum que falha fica só no balão, sem aviso e sem outro canal.</p>
+  <ol class="passos"><li>Contato tem e-mail: manda o mesmo conteúdo por e-mail.</li><li>Adiciona a etiqueta “número com problema” no contato.</li><li>Avisa o responsável: “A mensagem para a Maria não chegou. Confira o número”.</li><li>Na segunda falha seguida, cria um retorno para alguém ligar ao cliente.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f4">F4</a> <a class="fref" href="#f8">F8</a></p>
+</article>
+<article class="ex" id="exemplo-7">
+  <header><span class="exn">7</span><h3>Troca de responsável sem perder nada</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>O responsável do card muda (férias, saída, redistribuição)</p>
+  <p class="novo"><span class="lbl">Por que é novo</span>O resumo por IA só existe como botão no card. O novo dono não recebe nada sozinho, e a nota da passagem não diz o que foi prometido.</p>
+  <ol class="passos"><li>A IA <span class="ia">resume</span> a conversa para o novo dono: o que o cliente quer, o que já foi prometido e o próximo passo.</li><li>Manda ao cliente: “Oi, Maria. A partir de hoje quem te atende é o Rafael, e ele já está a par de tudo”.</li><li>Passa os retornos abertos do antigo para o novo responsável.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f4">F4</a> <a class="fref" href="#f7">F7</a> <a class="fref" href="#f8">F8</a></p>
+</article>
+<article class="ex" id="exemplo-8">
+  <header><span class="exn">8</span><h3>Reunião cancelada não some</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>O cliente cancela ou remarca a reunião</p>
+  <p class="novo"><span class="lbl">Por que é novo</span>O pós-reunião só age em “Aconteceu”. Cancelar ou remarcar grava a atividade e avisa o responsável, mas o card fica em “Reunião marcada”.</p>
+  <ol class="passos"><li>Cancelou: move o card de volta para “Qualificado” e manda o link para escolher outro horário.</li><li>Remarcou: atualiza a data no card e avisa o responsável.</li><li>2 dias sem novo horário: cria um retorno para o responsável ligar.</li><li>A IA <span class="ia">escreve</span> ao responsável o contexto da reunião que caiu, para ele não começar do zero.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a> <a class="fref" href="#f8">F8</a></p>
+</article>
+<article class="ex" id="exemplo-9">
+  <header><span class="exn">9</span><h3>Venda fechada vai para o outro sistema</h3></header>
+  <p class="quando"><span class="lbl">Quando</span>O card é ganho</p>
+  <p class="novo"><span class="lbl">Por que é novo</span>O ganho já vai para a Meta e o Google Ads (Resultados dos anúncios), mas não para ERP, planilha ou outro CRM. Alguém redigita os dados.</p>
+  <ol class="passos"><li>A IA <span class="ia">extrai</span> da conversa os dados que faltam no card (CPF, placa, forma de pagamento).</li><li>Manda os campos escolhidos pelo webhook de saída para a planilha, o n8n ou o ERP.</li><li>O outro sistema respondeu com erro: avisa o financeiro com o motivo.</li><li>Deu certo: grava no card o número que o outro sistema devolveu.</li></ol>
+  <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a> <a class="fref" href="#f8">F8</a></p>
+</article>
+<article class="ex" id="exemplo-10">
+  <header><span class="exn">10</span><h3>Relatório semanal de cada corretor</h3></header>
   <p class="quando"><span class="lbl">Quando</span>Toda segunda às 8h</p>
-  <ol class="passos"><li>Para cada corretor, a IA <span class="ia">resume</span> a semana: cards novos, ganhos, perdidos e os principais motivos de perda.</li><li>Manda esse resumo ao corretor e ao gerente.</li><li>Os cards ganhos na semana vão pelo webhook de saída para a planilha financeira ou o ERP.</li><li>Cards parados há mais de 15 dias ganham a etiqueta “esfriando” e um retorno para o responsável.</li><li>Quando o responsável de um card muda, o novo dono recebe o <span class="ia">resumo</span> da conversa e o que já foi prometido ao cliente.</li></ol>
+  <p class="novo"><span class="lbl">Por que é novo</span>Não existe resumo por pessoa. Só há o resumo diário de anúncios no WhatsApp, por conta.</p>
+  <ol class="passos"><li>Para cada corretor, a IA <span class="ia">resume</span> a semana: cards novos, ganhos, perdidos e os principais motivos de perda.</li><li>Manda o resumo ao corretor e ao gerente.</li><li>Cards parados há mais de 15 dias ganham a etiqueta “esfriando” e um retorno para o responsável.</li></ol>
   <p class="usa"><span class="lbl">Usa</span><a class="fref" href="#f4">F4</a> <a class="fref" href="#f6">F6</a> <a class="fref" href="#f7">F7</a> <a class="fref" href="#f8">F8</a></p>
 </article></div>
   </section>
