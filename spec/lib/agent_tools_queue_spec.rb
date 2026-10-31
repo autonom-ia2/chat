@@ -22,6 +22,12 @@ RSpec.describe AgentToolsQueue do
     end
   end
 
+  it 'ENV que nao e inteiro nao derruba o boot: cai no padrao e avisa' do
+    with_modified_env(AGENT_TOOLS_CONCURRENCY: 'dez', SIDEKIQ_CONCURRENCY: '3O') do
+      expect { expect(described_class.pool_do_sidekiq).to eq(20) }.to output(a_string_including('AGENT_TOOLS_CONCURRENCY')).to_stderr
+    end
+  end
+
   it 'o pool do worker soma as threads do processo principal e as do capsule' do
     with_modified_env(SIDEKIQ_CONCURRENCY: '30', AGENT_TOOLS_CONCURRENCY: nil) do
       expect(described_class.pool_do_sidekiq).to eq(40)

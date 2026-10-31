@@ -1,7 +1,8 @@
 require 'rails_helper'
 
-# #1430: a passada da ferramenta HTTP assíncrona. Uma chamada, com a chave gravada no aceite e o tempo da ferramenta;
-# o resultado fica na execução e o agente fala num turno de evento. Cada exemplo cobre um modo de falha.
+# #1430, desenho D: a passada da consulta HTTP em segundo plano. Uma chamada, com a chave gravada na abertura e o tempo
+# gravado na abertura; o resultado é gravado uma vez, higienizado, e só a desistência do turno faz o agente falar por
+# evento. Cada exemplo cobre um modo de falha apontado na revisão.
 RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account) }
@@ -9,156 +10,142 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
   let(:agent_bot) { create(:agent_bot, account: account) }
   let(:agent) do
     Autonomia::Agents::Agent.create!(account: account, name: 'Bot', agent_type: 'custom',
-                                     status: :active, enabled: true, instruction: 'Atenda o cliente.')
+                                     status: :active, enabled: true, instruction: 'Atenda o cliente.',
+                                     config: { 'with_knowledge' => false })
   end
   let(:agent_inbox) do
     Autonomia::Agents::AgentInbox.create!(agent: agent, inbox: inbox, account: account, agent_bot: agent_bot)
   end
   let(:tool) do
     Autonomia::Agents::Tool.create!(
-      account: account, agent: agent, name: 'Cotar seguro', slug: 'cotar_seguro', timeout_seconds: 90,
+      account: account, agent: agent, name: 'Consultar pedido', slug: 'consultar_pedido', timeout_seconds: 90,
       endpoint_url: 'https://erp.exemplo.test/pedidos',
+      headers_config: [{ key: 'x-api-key', value: 'segredo-da-conta-123', secret: true }],
       param_schema: [{ name: 'numero', type: 'integer', description: 'Número do pedido', required: true }]
     )
   end
   let(:runs) { Autonomia::Agents::ToolRun }
-  let(:evento) { Autonomia::Agents::Tools::Evento }
   let(:chaves) { [] }
 
   around { |example| with_modified_env(AUTONOMIA_AGENTS_ENABLED: 'true') { example.run } }
 
-  before { inbox && agent_inbox }
+  before do
+    agent_inbox
+    ligar_consulta_em_segundo_plano
+  end
 
-  # O aceite de verdade (o `Bound`) e o despacho de verdade (o `AsyncDispatcher`): a linha nasce como em produção.
-  def consulta_rodando
+  # A abertura de verdade (o turno que desiste sem o resultado): a linha nasce como em produção.
+  def consulta_aberta(desistiu: true)
+    relogio_do_turno
     entrega = Autonomia::Agents::Tools::Delivery.new(conversation: conversation, agent_inbox: agent_inbox, origin_message_id: 77)
-    Autonomia::Agents::Tools::Bound.new(agent: agent, record: tool)
-                                   .execute({ 'name' => tool.slug, 'arguments' => '{"numero":"42"}' }, delivery: entrega)
-    Autonomia::Agents::Tools::AsyncDispatcher.new(delivery: entrega, agent: agent).dispatch!(replied: true)
-    entrega.runs.sole.reload
-  end
-
-  def responder(corpo)
-    allow(SafeFetch).to receive(:fetch) do |_url, **opcoes, &bloco|
-      chaves << opcoes[:headers]['Idempotency-Key']
-      arquivo = Tempfile.new('resposta')
-      arquivo.write(corpo)
-      arquivo.rewind
-      bloco.call(SafeFetch::Result.new(tempfile: arquivo, filename: 'r.json', content_type: 'application/json'))
+    Autonomia::Agents::Tools::ConsultaNoTurno.new(tool: tool, agente: agent, turno: entrega, args: { 'numero' => '42' }).tap do |consulta|
+      desistiu ? consulta.resultado : consulta.disparar
     end
+    runs.sole
   end
 
-  it 'roda na fila propria agent_tools' do
+  it 'roda na fila propria agent_tools, sem retry do Sidekiq' do
     expect(described_class.new.queue_name).to eq('agent_tools')
-    expect(described_class::FILA).to eq(:agent_tools)
+    expect(described_class.get_sidekiq_options['retry']).to be(false)
   end
 
   describe 'sucesso' do
-    it 'chama uma vez com a chave do aceite e o tempo da ferramenta, grava a resposta, fecha done e dispara o evento' do
-      run = consulta_rodando
-      responder('{"status":"enviado"}')
+    it 'chama uma vez com a chave e o tempo da abertura, grava higienizado e a telemetria, fecha e dispara' do
+      run = consulta_aberta
+      sistema_responde('{"status":"enviado","eco":"segredo-da-conta-123"}', chaves: chaves)
 
       described_class.new.perform(run.id)
 
       expect(SafeFetch).to have_received(:fetch).once.with(tool.endpoint_url, hash_including(total_timeout: 90))
-      expect(chaves).to eq([run.handle[runs::CHAVE_DA_CONSULTA]])
-      expect(run.reload).to have_attributes(status: 'done')
-      expect(run.handle[runs::RESULTADO_DA_CONSULTA]).to eq('{"status":"enviado"}')
+      expect(chaves).to eq([run.handle.fetch(runs::CHAVE_DA_CONSULTA)])
+      run.reload
+      expect(run.status).to eq('done')
+      expect(run.resultado_da_consulta).to include('enviado').and include('[oculto]')
+      expect(run.resultado_da_consulta).not_to include('segredo-da-conta-123')
+      expect(run.handle).to include(runs::FILA_MS => a_kind_of(Integer), runs::API_MS => a_kind_of(Integer))
       expect(eventos_disparados(run)).to eq(['consulta_concluida'])
     end
 
-    it 'a resposta grande e gravada com o mesmo teto e aviso de corte que o modelo le no sincrono' do
-      run = consulta_rodando
-      responder({ texto: 'x' * 9_000 }.to_json)
+    it 'o prazo da linha e renovado no comeco com o tempo gravado na abertura' do
+      run = consulta_aberta
+      tool.update!(timeout_seconds: 5) # mudar o cadastro depois da abertura não muda esta consulta
+      sistema_responde('{}', antes: -> { chaves << runs.find(run.id).expires_at })
 
-      described_class.new.perform(run.id)
+      freeze_time do
+        described_class.new.perform(run.id)
 
-      gravado = run.reload.handle[runs::RESULTADO_DA_CONSULTA]
-      expect(gravado.length).to eq(Autonomia::Agents::Tools::Bound::MAX_OUTPUT_CHARS)
-      expect(gravado).to end_with(Autonomia::Agents::Tools::Bound::AVISO_DE_CORTE)
+        expect(chaves.last).to eq(90.seconds.from_now + described_class::FOLGA)
+      end
     end
 
-    it 'o slug cotar_seguro e resolvido pela ferramenta da linha, nunca pelo catalogo da Lia' do
-      run = consulta_rodando
-      responder('{"ok":true}')
-      allow(Autonomia::Agents::Tools::Registry).to receive(:find).and_call_original
+    it 'nao segura a conexao do banco durante a chamada HTTP' do
+      run = consulta_aberta
+      conexoes = []
+      sistema_responde('{}', antes: -> { conexoes << ActiveRecord::Base.connection_pool.active_connection? })
 
       described_class.new.perform(run.id)
 
-      expect(Autonomia::Agents::Tools::Registry).not_to have_received(:find)
+      expect(conexoes).to eq([nil])
       expect(run.reload.status).to eq('done')
-    end
-
-    it 'solta a conexao do banco antes da chamada HTTP' do
-      run = consulta_rodando
-      ordem = []
-      allow(ActiveRecord::Base.connection_handler).to receive(:clear_active_connections!).and_wrap_original do |original, *args|
-        ordem << :soltou
-        original.call(*args)
-      end
-      allow(SafeFetch).to receive(:fetch) do
-        ordem << :chamou
-        raise SafeFetch::FetchError, 'x'
-      end
-
-      described_class.new.perform(run.id)
-
-      expect(ordem).to eq(%i[soltou chamou])
     end
   end
 
-  describe 'falha' do
-    it 'erro HTTP grava a saida de recusa do sincrono, fecha failed e dispara consulta_falhou' do
-      run = consulta_rodando
-      erro = SafeFetch::HttpError.new('503 Service Unavailable', status: 503)
-      allow(SafeFetch).to receive(:fetch).and_raise(erro)
-
-      described_class.new.perform(run.id)
-
-      erro_do_executor = Autonomia::Agents::Tools::HttpExecutor::Error.new('tool_http_error: 503', status: 503)
-      esperado = Autonomia::Agents::Tools::Bound.new(agent: agent, record: tool).texto_da_recusa_http(erro_do_executor)
-      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'tool_http_error')
-      expect(run.handle[runs::RESULTADO_DA_CONSULTA]).to eq(esperado)
-      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
-    end
-
-    it 'tempo esgotado tambem e consulta_falhou' do
-      run = consulta_rodando
-      allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::FetchError, 'execution expired')
-
-      described_class.new.perform(run.id)
-
-      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'tool_execution_error')
-      expect(JSON.parse(run.handle[runs::RESULTADO_DA_CONSULTA])).to eq('error' => 'tool_execution_error')
-      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
-    end
-
-    it 'ferramenta desligada depois do aceite: falha ferramenta_indisponivel com evento, sem chamar' do
-      run = consulta_rodando
-      tool.update!(enabled: false)
+  describe 'retry sem nova chamada' do
+    it 'reentrada com a chamada feita e sem resultado nao chama de novo' do
+      run = consulta_aberta
+      run.merge_handle!({ runs::CHAMADA_FEITA => true })
       allow(SafeFetch).to receive(:fetch)
 
       described_class.new.perform(run.id)
 
       expect(SafeFetch).not_to have_received(:fetch)
-      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'ferramenta_indisponivel')
-      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
+      expect(run.reload.status).to eq('running')
     end
 
-    it 'ferramenta apagada depois do aceite: mesma falha' do
-      run = consulta_rodando
-      tool.destroy!
+    it 'reentrada com o resultado gravado so fecha e dispara' do
+      run = consulta_aberta
+      run.merge_handle!({ runs::CHAMADA_FEITA => true })
+      run.gravar_resultado!('{"ok":1}', sucesso: true, codigo: nil, api_ms: 5)
       allow(SafeFetch).to receive(:fetch)
 
       described_class.new.perform(run.id)
 
       expect(SafeFetch).not_to have_received(:fetch)
-      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'ferramenta_indisponivel')
-      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
+      expect(run.reload.status).to eq('done')
+      expect(eventos_disparados(run)).to eq(['consulta_concluida'])
+    end
+
+    it 'o resultado e gravado uma vez so' do
+      run = consulta_aberta
+
+      expect(run.gravar_resultado!('primeiro', sucesso: true, codigo: nil, api_ms: 1)).to be(true)
+      expect(run.gravar_resultado!('segundo', sucesso: true, codigo: nil, api_ms: 1)).to be(false)
+      expect(run.reload.resultado_da_consulta).to eq('primeiro')
+    end
+
+    it 'chave ausente no handle falha alto, sem gerar outra' do
+      run = consulta_aberta
+      run.merge_handle!({}, remover: [runs::CHAVE_DA_CONSULTA])
+      allow(SafeFetch).to receive(:fetch)
+
+      expect { described_class.new.perform(run.id) }.to raise_error(KeyError)
+      expect(SafeFetch).not_to have_received(:fetch)
+    end
+  end
+
+  describe 'conferir antes de chamar' do
+    it 'consulta superada antes de comecar nao chama' do
+      run = consulta_aberta
+      runs.where(id: run.id).update_all(status: 'superseded') # rubocop:disable Rails/SkipsModelValidations
+      allow(SafeFetch).to receive(:fetch)
+
+      described_class.new.perform(run.id)
+
+      expect(SafeFetch).not_to have_received(:fetch)
     end
 
     it 'operador puxou o freio (agente desligado): bloqueia sem chamar e sem evento' do
-      run = consulta_rodando
+      run = consulta_aberta
       agent.update!(enabled: false)
       allow(SafeFetch).to receive(:fetch)
 
@@ -168,34 +155,74 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
       expect(run.reload).to have_attributes(status: 'blocked', failure_code: 'nao_autorizado')
       expect(eventos_disparados(run)).to be_empty
     end
-  end
 
-  describe 'consulta trocada no meio' do
-    it 'o resultado da supersedida fica gravado na linha e nao e falado' do
-      run = consulta_rodando
-      allow(SafeFetch).to receive(:fetch) do |_url, **_opcoes, &bloco|
-        runs.where(id: run.id).update_all(status: 'superseded') # rubocop:disable Rails/SkipsModelValidations -- o cliente pediu outra coisa
-        arquivo = Tempfile.new('resposta')
-        arquivo.write('{"status":"antigo"}')
-        arquivo.rewind
-        bloco.call(SafeFetch::Result.new(tempfile: arquivo, filename: 'r.json', content_type: 'application/json'))
-      end
-
-      described_class.new.perform(run.id)
-
-      expect(run.reload.status).to eq('superseded')
-      expect(run.handle[runs::RESULTADO_DA_CONSULTA]).to eq('{"status":"antigo"}')
-      expect(eventos_disparados(run)).to be_empty
-    end
-
-    it 'linha que ja nao roda nao chama' do
-      run = consulta_rodando
-      run.finish!('done')
+    it 'ferramenta desligada depois da abertura: falha ferramenta_indisponivel com evento, sem chamar' do
+      run = consulta_aberta
+      tool.update!(enabled: false)
       allow(SafeFetch).to receive(:fetch)
 
       described_class.new.perform(run.id)
 
       expect(SafeFetch).not_to have_received(:fetch)
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'ferramenta_indisponivel')
+      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
+    end
+  end
+
+  describe 'falha' do
+    it 'erro HTTP grava a saida de recusa do sincrono, fecha failed e dispara consulta_falhou' do
+      run = consulta_aberta
+      allow(SafeFetch).to receive(:fetch).and_raise(SafeFetch::HttpError.new('503 Service Unavailable', status: 503))
+
+      described_class.new.perform(run.id)
+
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'tool_http_error')
+      expect(JSON.parse(run.resultado_da_consulta)).to eq('error' => 'tool_http_error: 503')
+      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
+    end
+
+    it 'erro de programacao sobe para o rastreador, sem virar consulta_falhou' do
+      run = consulta_aberta
+      allow(SafeFetch).to receive(:fetch).and_raise(NoMethodError, 'defeito')
+      rastreador = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(rastreador)
+
+      expect { described_class.new.perform(run.id) }.to raise_error(NoMethodError)
+      expect(rastreador).to have_received(:capture_exception)
+      expect(eventos_disparados(run)).to be_empty
+    end
+  end
+
+  describe 'consulta superada' do
+    it 'a superada que conclui 2xx grava o resultado e avisa o atendente em nota privada, sem falar' do
+      run = consulta_aberta
+      sistema_responde('{"status":"antigo"}', antes: lambda {
+        runs.where(id: run.id).update_all(status: 'superseded') # rubocop:disable Rails/SkipsModelValidations
+      })
+
+      described_class.new.perform(run.id)
+
+      expect(run.reload.status).to eq('superseded')
+      expect(run.resultado_da_consulta).to eq('{"status":"antigo"}')
+      expect(eventos_disparados(run)).to be_empty
+      nota = conversation.messages.where(private: true).sole
+      expect(nota.content).to include('trocada por uma mais nova', '{"status":"antigo"}')
+    end
+  end
+
+  describe 'ponta a ponta' do
+    it 'pessoa atribuida quando o resultado chega: nota privada com o resultado, e o agente nao fala' do
+      run = consulta_aberta
+      sistema_responde('{"status":"enviado"}')
+      lia_responde('não deveria falar')
+      conversation.update!(assignee: create(:user, account: account, role: :agent))
+
+      described_class.new.perform(run.id)
+      rodar_eventos
+
+      nota = conversation.messages.reload.where(private: true).sole
+      expect(nota.content).to include('{"status":"enviado"}', Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO)
+      expect(conversation.messages.where(private: false, sender_type: 'AgentBot')).to be_empty
     end
   end
 end

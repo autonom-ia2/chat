@@ -40,10 +40,8 @@ RSpec.describe Autonomia::Agents::Answerer do
   end
 
   def ferramenta_http(slug)
-    # Síncrona (#1430: até `Tool::LIMIAR_ASSINCRONO`): o dado volta no mesmo turno.
     Autonomia::Agents::Tool.create!(account: account, agent: agent, name: slug.humanize, slug: slug,
-                                    endpoint_url: "https://api.example.com/#{slug}", param_schema: [],
-                                    timeout_seconds: Autonomia::Agents::Tool::LIMIAR_ASSINCRONO)
+                                    endpoint_url: "https://api.example.com/#{slug}", param_schema: [])
   end
 
   def http_devolve(saida)
@@ -54,7 +52,7 @@ RSpec.describe Autonomia::Agents::Answerer do
   # Uma ferramenta nativa no catálogo do agente, sem a página de agendamento de verdade: o que se testa é o
   # portão, não a agenda. `execute` faz o que a nativa faria: devolve o texto e, numa recusa, registra.
   def nativa(slug, async: false, &execucao)
-    bound = instance_double(Autonomia::Agents::Tools::Bound, slug: slug, async?: async,
+    bound = instance_double(Autonomia::Agents::Tools::Bound, slug: slug, async?: async, disparar: nil, consulta_em_andamento?: false,
                                                              openai_schema: { type: 'function', name: slug, parameters: {} })
     allow(bound).to receive(:execute, &execucao)
     allow(Autonomia::Agents::Tools::Bound).to receive(:for_agent).and_return([bound])

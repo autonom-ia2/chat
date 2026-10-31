@@ -17,8 +17,17 @@ class Autonomia::Agents::Operate::AvisoAoAtendente
                     'responder agora.',
     'silencio' => 'A IA decidiu não falar com o cliente sobre isto agora. Confira a conversa se precisar retomar.',
     'ia_falhou' => 'A IA tentou falar com o cliente sobre isto duas vezes e não conseguiu. A conversa foi passada para a ' \
-                   'equipe.'
+                   'equipe.',
+    'consulta_antiga' => 'Esta consulta foi trocada por uma mais nova, mas também concluiu. O cliente não recebeu este ' \
+                         'resultado; confira se o sistema da conta registrou o pedido duas vezes.'
   }.freeze
+
+  # #1430: a consulta HTTP superada que concluiu (2xx) mesmo assim. O sistema de fora fez o pedido, e quem atende precisa
+  # saber, com o resultado; o cliente não ouve nada. Pelo mesmo `notar` (a marca do evento evita a nota em dobro).
+  def self.consulta_antiga(run)
+    new(evento: ::Autonomia::Agents::Tools::Evento.new(run: run, tipo: ::Autonomia::Agents::Tools::Evento::CONSULTA_CONCLUIDA))
+      .notar('consulta_antiga')
+  end
 
   def initialize(evento:)
     @evento = evento

@@ -34,15 +34,11 @@ class Autonomia::Agents::Tools::AsyncDispatcher
   # Rescue POR EXECUÇÃO: uma falha ao enfileirar (Redis fora) não pode deixar as demais paradas em
   # `pending` para sempre. A que falhou é fechada aqui mesmo — uma linha `running` sem job é uma
   # cotação que o cliente espera e ninguém vai fazer.
-  #
-  # A CONSULTA HTTP (#1430) tem prazo e job próprios: o tempo da ferramenta com folga, e o `HttpAssincronaJob`, que a
-  # resolve pela ferramenta da linha — o `AsyncRunJob` resolve pelo catálogo das nativas, e o slug pode ser o da Lia.
   def promote_and_enqueue(run, replied, expected_chunks, deadline)
-    http = ::Autonomia::Agents::Tools::HttpAssincronaJob
     return false unless run.promote!(expected_chunks: expected_chunks, notify_customer: !replied,
-                                     expires_at: run.consulta_http? ? http.vence_em(run.ferramenta) : deadline)
+                                     expires_at: deadline)
 
-    run.consulta_http? ? http.perform_later(run.id) : ::Autonomia::Agents::Tools::AsyncRunJob.perform_later(run.id, 0)
+    ::Autonomia::Agents::Tools::AsyncRunJob.perform_later(run.id, 0)
     true
   rescue StandardError => e
     Rails.logger.warn("[autonomia][tool][async] enqueue failed run=#{run.id} #{e.class}")

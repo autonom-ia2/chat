@@ -30,9 +30,9 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
   def consulta(resultado)
     run = Autonomia::Agents::ToolRun.open!(agent: agent, slug: tool.slug, arguments: {},
                                            scope: { conversation_id: conversation.id, agent_inbox_id: agent_inbox.id,
-                                                    autonomia_agent_tool_id: tool.id, faixa: 'http' })
+                                                    autonomia_agent_tool_id: tool.id, faixa: 'consulta_http' })
     run.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
-    run.gravar_resultado!(resultado)
+    run.gravar_resultado!(resultado, sucesso: true, codigo: nil, api_ms: 1)
     run
   end
 

@@ -436,6 +436,7 @@ module Autonomia
         @ferramentas_no_turno = @ferramentas_no_turno.to_i + Array(calls).size
         tools_by_slug = enabled_agent_tools.index_by(&:slug)
         specialists_by_function = enabled_specialists.index_by(&:function_name)
+        disparar_consultas(calls, tools_by_slug, specialists_by_function)
         Array(calls).map do |call|
           inicio = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           recusas_antes = Tools::Recusa.registradas
@@ -461,7 +462,7 @@ module Autonomia
       # ou com erro também não. A busca na web não passa por aqui: quem a executa é a OpenAI.
       def anotar_leitura(tool, output, recusou:)
         @recusa_no_turno = true if recusou
-        return if recusou || tool&.async? || saida_sem_dado?(output)
+        return if recusou || tool&.async? || tool&.consulta_em_andamento?(output) || saida_sem_dado?(output)
 
         @dado_de_sistema = true
       end
@@ -476,6 +477,15 @@ module Autonomia
         dado.blank? || (dado.is_a?(Hash) && dado.key?('error'))
       rescue JSON::ParserError
         false
+      end
+
+      # #1430 (desenho D): as consultas HTTP em segundo plano da rodada saem TODAS antes de o turno esperar qualquer uma
+      # (`Tools::Bound#disparar`); a execução de cada chamada reusa a sua. O especialista tem a precedência do despacho.
+      def disparar_consultas(calls, tools_by_slug, specialists_by_function)
+        Array(calls).each do |call|
+          nome = call['name'].to_s
+          tools_by_slug[nome]&.disparar(call, turno: @delivery) unless specialists_by_function.key?(nome)
+        end
       end
 
       # O turno se apoia em dado que um sistema devolveu agora (agenda, estoque, especialista, HTTP) e nenhuma

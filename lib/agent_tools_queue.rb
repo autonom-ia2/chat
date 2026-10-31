@@ -22,11 +22,21 @@ module AgentToolsQueue
   module_function
 
   def concorrencia
-    Integer(ENV.fetch('AGENT_TOOLS_CONCURRENCY', CONCORRENCIA_PADRAO).to_s, 10)
+    inteiro('AGENT_TOOLS_CONCURRENCY', CONCORRENCIA_PADRAO)
   end
 
   def pool_do_sidekiq
-    Integer(ENV.fetch('SIDEKIQ_CONCURRENCY', CONCORRENCIA_PRINCIPAL_PADRAO).to_s, 10) + concorrencia
+    inteiro('SIDEKIQ_CONCURRENCY', CONCORRENCIA_PRINCIPAL_PADRAO) + concorrencia
+  end
+
+  # ENV que não é inteiro positivo não derruba o boot (o database.yml lê isto antes de tudo): cai no padrão e avisa no
+  # stderr, que é o que existe antes do logger.
+  def inteiro(nome, padrao)
+    valor = Integer(ENV.fetch(nome, padrao).to_s, 10, exception: false)
+    return valor if valor&.positive?
+
+    warn("[agent_tools_queue] #{nome}=#{ENV.fetch(nome, nil).inspect} não é inteiro positivo; usando #{padrao}")
+    padrao
   end
 
   # Chamado pelo `Sidekiq.configure_server` do initializer.

@@ -41,10 +41,6 @@ class Autonomia::Agents::Tool < ApplicationRecord
   # #1430: o tempo de espera de uma ferramenta nova. Fica só aqui: trocar o padrão não pede migration (o default do
   # banco só valeu para as linhas que existiam quando a coluna nasceu).
   TEMPO_PADRAO = 30
-  # #1430: acima disto a ferramenta roda ASSÍNCRONA (`assincrona?`): o turno aceita, o `HttpAssincronaJob` chama, e o
-  # agente fala do resultado num turno de evento. É modo, não teto: nenhum tempo é recusado. Até 25 s, a espera cabe no
-  # turno como sempre coube.
-  LIMIAR_ASSINCRONO = 25
   ALCANCE_DO_INTEIRO = (2**31) - 1
 
   attribute :timeout_seconds, :integer, default: -> { TEMPO_PADRAO }
@@ -69,6 +65,7 @@ class Autonomia::Agents::Tool < ApplicationRecord
   validate :validate_endpoint_url
   validate :validate_param_schema
   validate :validate_headers_config
+  validate :validate_slug_livre
 
   scope :enabled, -> { where(enabled: true) }
 
@@ -89,10 +86,6 @@ class Autonomia::Agents::Tool < ApplicationRecord
       },
       strict: true
     }
-  end
-
-  def assincrona?
-    timeout_seconds.to_i > LIMIAR_ASSINCRONO
   end
 
   def masked_headers_config
@@ -167,6 +160,12 @@ class Autonomia::Agents::Tool < ApplicationRecord
     return unless headers_config.any? { |header| header['key'].to_s.casecmp?('Idempotency-Key') }
 
     errors.add(:headers_config, 'não pode ter Idempotency-Key: a plataforma já manda um em toda chamada')
+  end
+
+  # #1430: o nome de uma nativa é reservado. Pelo nome, a execução desta cairia em quem lê as nativas pelo slug (a
+  # cotação da Lia, a medida, a memória), e o modelo veria duas ferramentas com o mesmo nome.
+  def validate_slug_livre
+    errors.add(:slug, 'é o nome de uma ferramenta da plataforma') if Autonomia::Agents::Tools::Registry.slugs.include?(slug)
   end
 
   # MESMA REGRA DAS FERRAMENTAS NATIVAS, e pelo mesmo motivo: em `strict: true` a OpenAI exige

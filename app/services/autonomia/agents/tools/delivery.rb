@@ -79,6 +79,18 @@ class Autonomia::Agents::Tools::Delivery
     ocorrencias[pedido] += 1
   end
 
+  # #1430 (desenho D): A JANELA DAS CONSULTAS HTTP EM SEGUNDO PLANO É DO TURNO. Conta do primeiro disparo
+  # (`ConsultaNoTurno#disparar`) e vale para todas as consultas dele: duas ferramentas esperam juntas, sem somar.
+  # `agora` e `espera` vêm de quem dispara (o relógio monotônico e `ConsultaNoTurno::ESPERA_DO_TURNO`).
+  def prazo_das_consultas(agora, espera)
+    @prazo_das_consultas ||= agora + espera
+  end
+
+  # As consultas que este turno já disparou, pela Idempotency-Key: a mesma chamada, na mesma passada, reusa a execução.
+  def consultas
+    @consultas ||= {}
+  end
+
   def register(run)
     @runs << run if run.present?
     run

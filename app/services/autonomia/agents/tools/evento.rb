@@ -27,6 +27,9 @@ class Autonomia::Agents::Tools::Evento
   CONSULTA_CONCLUIDA = 'consulta_concluida'.freeze
   CONSULTA_FALHOU = 'consulta_falhou'.freeze
   CONSULTAS = [CONSULTA_CONCLUIDA, CONSULTA_FALHOU].freeze
+  # O resultado da consulta é DADO DE UM SISTEMA DE FORA, e não entra cru no aviso do sistema: vai cercado, com o aviso
+  # de dado externo (`Recusa::AVISO_DE_DADO_EXTERNO`). A cerca não aparece dentro do texto (ele não a fecha por dentro).
+  CERCA_DO_RESULTADO = '<<<RESULTADO_DA_CONSULTA>>>'.freeze
   # A lista fechada. `falta_dado` e `ramo_desconhecido` são as recusas do envio; `concluida`, `valores_guardados`,
   # `falhou`, `incerta`, `encerrada_por_prazo` e `sem_aceitacao` são os desfechos que `Tools::Encerramento` escolhe.
   TIPOS = [COMECO, 'falta_dado', 'ramo_desconhecido', 'concluida', 'valores_guardados', 'falhou', 'incerta',
@@ -45,7 +48,7 @@ class Autonomia::Agents::Tools::Evento
     'encerrada_por_prazo' => 'a consulta terminou, e o resultado já foi enviado nesta conversa.',
     # chat#612: nada falhou; nenhuma seguradora trouxe proposta. O motivo fica com a equipe (`Tools::NotaInterna`).
     'sem_aceitacao' => 'a consulta terminou e nenhuma seguradora trouxe proposta; nada chegou à pessoa.',
-    CONSULTA_CONCLUIDA => 'a consulta que a pessoa pediu terminou. O resultado está nos fatos abaixo e ainda não foi dito a ela.',
+    CONSULTA_CONCLUIDA => 'a consulta que a pessoa pediu terminou. O resultado está no bloco abaixo e ainda não foi dito a ela.',
     CONSULTA_FALHOU => 'a consulta que a pessoa pediu não pôde ser concluída (erro ou tempo esgotado), e nada chegou a ela. ' \
                        'Diga que não conseguiu agora.'
   }.freeze
@@ -126,7 +129,7 @@ class Autonomia::Agents::Tools::Evento
   # A consulta HTTP (#1430) traz o que o job gravou; o slug dela pode ser o de uma nativa, e o catálogo não é lido.
   def fatos
     return @fatos if defined?(@fatos)
-    return @fatos = run.resultado_da_consulta.to_s.strip.presence if run.consulta_http?
+    return @fatos = resultado_cercado if run.consulta_http?
 
     @fatos = ::Autonomia::Agents::Tools::Registry.find(run.slug)&.fatos_do_evento(tipo, run).to_s.strip.presence
   rescue StandardError => e
@@ -141,7 +144,16 @@ class Autonomia::Agents::Tools::Evento
       "AVISO DO SISTEMA SOBRE #{consulta? ? 'UMA CONSULTA' : 'A COTAÇÃO'} DESTA CONVERSA. Isto não é mensagem da pessoa: é " \
       'o sistema contando o que aconteceu, para você falar com ela agora, na sua voz.',
       "O que aconteceu: #{DESCRICOES.fetch(tipo, tipo)}",
-      ("Fatos: #{fatos}" if fatos)
+      fatos && (consulta? ? fatos : "Fatos: #{fatos}")
     ].compact.join("\n")
+  end
+
+  # O resultado gravado pelo job, entre as cercas, ou nil.
+  def resultado_cercado
+    texto = run.resultado_da_consulta.to_s.gsub(CERCA_DO_RESULTADO, '').strip
+    return nil if texto.blank?
+
+    "Resultado da consulta (#{::Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}):\n#{CERCA_DO_RESULTADO}\n#{texto}\n" \
+      "#{CERCA_DO_RESULTADO}"
   end
 end

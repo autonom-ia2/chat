@@ -99,7 +99,7 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # A lista do ACEITE (`ENTREGAS_ACEITAS`) e a da ferramenta moram em `ListasDeEntrega`, junto com
   # quem as escreve — outro assunto, e a classe estava no teto de linhas.
   include ListasDeEntrega
-  # #1430: a execução de uma ferramenta HTTP assíncrona (a ferramenta da linha, a chave e o resultado gravados).
+  # #1430: a execução de uma consulta HTTP em segundo plano (a ferramenta da linha, a chave, o resultado e quem entrega).
   include ConsultaHttp
 
   # Por quanto tempo uma consulta ENCERRADA com entrega ainda conta como "este pedido já foi feito".
@@ -116,7 +116,7 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # `pedido` é a identidade do pedido (entrega 10), gravada como marca do handle; nil quando a
   # conferência não pôde dizer (o conferente não é portão).
   # #1430: `scope[:autonomia_agent_tool_id]` é a ferramenta HTTP da consulta (nil nas nativas), e `marcas` vão ao handle
-  # na criação (a Idempotency-Key da consulta).
+  # na criação (a Idempotency-Key, o tempo e a abertura da consulta).
   #
   # Duas escritas numa transação: supersede a anterior e insere a nova. O índice único parcial é
   # quem garante de verdade — duas chamadas concorrentes fazem a segunda estourar `RecordNotUnique`,
@@ -145,14 +145,14 @@ class Autonomia::Agents::ToolRun < ApplicationRecord
   # simultâneos com o mesmo pedido comparam com nada, um abre, o outro supersede, e se o primeiro já
   # foi promovido e submetido há duas cotações no portal. A conferência (HTTP) fica fora da seção.
   # -> [execução aberta, nil] ou [nil, execução repetida]; [nil, nil] quando o índice único recusou.
-  def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil, marcas: {}) # rubocop:disable Metrics/ParameterLists
+  def self.abrir_ou_repetida(agent:, slug:, arguments:, scope:, pedido: nil)
     faixa = scope[:faixa].to_s
     transaction do
       travar!(scope[:conversation_id], slug, faixa)
       repetida = pedido_repetido(scope[:conversation_id], slug, pedido, faixa)
       next [nil, repetida] if repetida
 
-      [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido, marcas: marcas), nil]
+      [open!(agent: agent, slug: slug, arguments: arguments, scope: scope, pedido: pedido), nil]
     end
   end
 
