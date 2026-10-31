@@ -9,8 +9,8 @@
 # Regras do formato (decisões do Rodrigo na Issue):
 # - opções: `header` obrigatório (até 60, uma linha), a `pergunta` é o corpo; até 3 viram botões, mais de 3 (ou com
 #   descrição) viram lista, até 10. O texto do botão da lista vem do modelo (até 20), padrão no idioma da conta
-#   (`autonomia.agents.botao_das_opcoes`). Sem `header`, ou fora do contrato do tipo, sai em texto: a pergunta e as
-#   opções numeradas;
+#   (`autonomia.agents.botao_das_opcoes`); botão do modelo fora desse limite também sai com o padrão, e a lista
+#   continua saindo. Sem `header`, ou fora do contrato do tipo, sai em texto: a pergunta e as opções numeradas;
 # - link: o endereço só vale se é IGUAL a um que está escrito na instrução do agente ou na base de conhecimento, ou
 #   a um que uma ferramenta do sistema devolveu neste turno dentro de um desses endereços (`Enderecos.do_dono`).
 #   Endereço trazido pelo cliente, montado pelo modelo ou de mensagem já gravada não sai. O `reply` não fala do botão:
@@ -189,12 +189,14 @@ module Autonomia::Agents::Interacao
       atributos['autonomia_agent_id'] == agent.id && formato.is_a?(Hash) && TIPO_DO_FORMATO.value?(formato['type'])
   end
 
-  # O `rich_message` (chaves em texto) da interação. O botão da lista sem texto do modelo sai no idioma da conta.
+  # O `rich_message` (chaves em texto) da interação. O botão da lista sem texto do modelo, ou com um texto que o tipo
+  # recusaria (a régua dele, `Options.fits?`), sai no idioma da conta: o texto do botão nunca derruba a lista inteira.
   def rich_message(interacao, locale:)
     return { 'type' => 'link_button', 'label' => interacao['rotulo'], 'url' => interacao['url'] } if interacao['tipo'] == 'link'
 
-    { 'type' => 'options', 'header' => interacao['header'], 'button' => interacao['botao'] || I18n.t(BOTAO_PADRAO, locale: locale),
-      'options' => interacao['opcoes'].map(&:compact) }.compact
+    opcoes = RichMessages::Types::Options
+    botao = opcoes.fits?(interacao['botao'], opcoes::LIST_BUTTON_MAX) ? interacao['botao'] : I18n.t(BOTAO_PADRAO, locale: locale)
+    { 'type' => 'options', 'header' => interacao['header'], 'button' => botao, 'options' => interacao['opcoes'].map(&:compact) }.compact
   end
 
   # A mesma regra da criação pela API (`RichMessages.format_error`: canal que recusa o formato, como e-mail e chat do
