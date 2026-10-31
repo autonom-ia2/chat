@@ -3,12 +3,10 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteBotao from '../../AgenteBotao.vue';
 import AgenteErro from '../../AgenteErro.vue';
-import FerramentaFaixa from './FerramentaFaixa.vue';
 import FerramentaInterruptor from './FerramentaInterruptor.vue';
-import { MAX_FERRAMENTAS } from '../../../utils/ferramentas';
 
 // #1301 (protótipo F01) — lista das ferramentas do agente: frase do que cada uma faz, o
-// interruptor Ligada/Desligada e o contador do limite de 10. A linha inteira abre a ferramenta.
+// interruptor Ligada/Desligada. Sem limite de quantidade (#1430). A linha inteira abre a ferramenta.
 // Ligar sempre passa pelo teste e desligar pede confirmação: quem decide é a gaveta.
 // O bloco "Prontas da plataforma" (F02) exige backend (catálogo das nativas) e fica de fora.
 const props = defineProps({
@@ -25,9 +23,8 @@ const NS = 'AGENTS.JORNADA.PAGINA.FERRAMENTAS';
 const { t } = useI18n();
 
 const vazia = computed(() => !props.ferramentas.length);
-const noLimite = computed(() => props.ferramentas.length >= MAX_FERRAMENTAS);
 const mostraRodape = computed(
-  () => !props.carregando && !props.erro && !vazia.value && !noLimite.value
+  () => !props.carregando && !props.erro && !vazia.value
 );
 const iconeDoMetodo = ferramenta =>
   ferramenta.http_method === 'POST' ? 'i-lucide-send' : 'i-lucide-search';
@@ -79,27 +76,12 @@ const iconeDoMetodo = ferramenta =>
     </div>
 
     <template v-else>
-      <div class="flex items-baseline justify-between gap-3">
-        <h3
-          id="ferramentas-feitas"
-          class="m-0 text-base font-semibold text-n-slate-12"
-        >
-          {{ t(`${NS}.LISTA.FEITAS`) }}
-        </h3>
-        <span data-contador class="text-sm tabular-nums text-n-slate-11">
-          {{
-            t(`${NS}.LISTA.CONTADOR`, {
-              n: ferramentas.length,
-              max: MAX_FERRAMENTAS,
-            })
-          }}
-        </span>
-      </div>
-      <FerramentaFaixa v-if="noLimite" data-limite tom="ambar">
-        <p class="m-0">
-          {{ t(`${NS}.LISTA.LIMITE`, { max: MAX_FERRAMENTAS }) }}
-        </p>
-      </FerramentaFaixa>
+      <h3
+        id="ferramentas-feitas"
+        class="m-0 text-base font-semibold text-n-slate-12"
+      >
+        {{ t(`${NS}.LISTA.FEITAS`) }}
+      </h3>
       <ul
         aria-labelledby="ferramentas-feitas"
         class="flex flex-col p-0 m-0 list-none divide-y shadow-sm rounded-2xl bg-n-solid-1 ring-1 ring-inset ring-n-weak divide-n-weak"

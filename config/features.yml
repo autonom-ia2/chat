@@ -1074,3 +1074,15 @@
   display_name: Agentes › IA lê a prévia do link
   enabled: false
   column: feature_flags_ext_2
+
+# Agentes: o agente pede a localização do cliente (#1479 F2, épico #1424). Ligada (com a Fase 2): o modelo pode pedir,
+# no campo `interacao`, a localização (`tipo: localizacao`), que sai como o botão "Enviar localização" no WhatsApp
+# oficial com a janela aberta e como a pergunta em texto nos outros canais. A localização que o cliente manda em
+# seguida vai ao turno como dado (latitude e longitude); o histórico continua sem coordenadas (decisão de 17/10). A Lia
+# fica fora. Desligada: o pedido ao modelo fica o da F1. Rollback: desligar a flag na conta. Sem migration. Fim da
+# feature_flags_ext_2, depois de ia_previa_de_link: posição 19 (valor 262144, 1 << 18), dada pela Orquestração em
+# 31/10 e confirmada por ela na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: agentes_pedir_localizacao
+  display_name: Agentes › pedir a localização do cliente
+  enabled: false
+  column: feature_flags_ext_2

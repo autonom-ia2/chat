@@ -300,6 +300,7 @@ RSpec.describe Account do
       # #2212: meta_ads_comentarios_ia depois dela, 16 (1 << 15 = 32768), dada pela Orquestração (30/10).
       # #2381: agente_diz_quando_nao_sabe depois dela, 17 (1 << 16 = 65536), provisória da Orquestração (30/10).
       # #1775: ia_previa_de_link depois dela, 18 (1 << 17 = 131072), reservada pela Orquestração (31/10).
+      # #1479 F2: agentes_pedir_localizacao depois dela, 19 (1 << 18 = 262144), dada pela Orquestração (31/10).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
@@ -307,7 +308,8 @@ RSpec.describe Account do
         feature_seus_posts: 512, feature_campanhas_publico_por_conversa: 1024,
         feature_meta_ads_comentarios_facebook: 2048, feature_crm_lista_acao: 4096, feature_funcoes_guiadas: 8192,
         feature_seus_posts_comentarios: 16_384, feature_meta_ads_comentarios_ia: 32_768,
-        feature_agente_diz_quando_nao_sabe: 65_536, feature_ia_previa_de_link: 131_072
+        feature_agente_diz_quando_nao_sabe: 65_536, feature_ia_previa_de_link: 131_072,
+        feature_agentes_pedir_localizacao: 262_144
       )
     end
 
