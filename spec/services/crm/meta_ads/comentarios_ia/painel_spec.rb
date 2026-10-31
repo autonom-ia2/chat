@@ -60,7 +60,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(painel.payload[:results]).to eq(sent: 2, replied: 1, skipped: 1)
   end
 
-  it 'a IA não cuidou (Meta ou Jev fora do ar, teto, sem certeza): "não cuidei", não "não era o caso"' do
+  it 'a IA não cuidou (Meta ou IA fora do ar, teto, sem certeza): "não cuidei", não "não era o caso"' do
     acao('3', 'ai_seen')
     acao('3', 'ai_unread')
 

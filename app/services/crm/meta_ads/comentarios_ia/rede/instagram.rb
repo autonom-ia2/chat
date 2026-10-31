@@ -40,6 +40,16 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     { text: dados['text'], from_name: dados.dig('from', 'username'), from_id: dados.dig('from', 'id')&.to_s }
   end
 
+  # A legenda do post (#2424), ou nil. Meta fora do ar levanta Indisponivel, como o `ler`.
+  def legenda
+    return if @comentario.post_id.blank?
+
+    resultado = cliente.caption(@comentario.post_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
+
+    resultado.data.to_h['caption'] if resultado.ok
+  end
+
   def responder(texto)
     acao('reply') { cliente.reply(@comentario.comment_id, texto) }
   end

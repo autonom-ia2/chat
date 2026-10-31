@@ -47,6 +47,15 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     nil
   end
 
+  # O texto do post (#2424), ou nil. As mesmas regras do `ler`.
+  def legenda
+    @comentario.post_id.present? ? comentarios&.post_message(@comentario.post_id) : nil
+  rescue Crm::MetaAds::FacebookComments::Error => e
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
+
+    nil
+  end
+
   def responder(texto)
     comentarios&.reply_as_ai(@comentario.post_id, @comentario.comment_id, texto).present?
   rescue Crm::MetaAds::FacebookComments::Error
