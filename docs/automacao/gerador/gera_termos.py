@@ -39,6 +39,7 @@ FASES = [
             "Erro permanente (ex.: etiqueta apagada) para aquele cliente com motivo claro; erro passageiro tenta 3 vezes.",
             "Quem ligou perdeu acesso à caixa: a automação pausa e aparece “Assumir e religar”.",
             "A automação cria e altera configuração da conta (etiqueta, atributo do card, contato, empresa ou conversa, etapa, atribuição, agente na caixa). Cada mudança aparece no histórico e pode ser desfeita, como no Guia.",
+            "Etiqueta e atributo criados pela automação levam descrição. Hoje só a descrição do atributo chega à IA do funil; a IA ler a descrição da etiqueta e o atributo poder ficar escondido estão na Issue #2435, fora deste épico.",
             "Apagar funil, etapa, caixa, agente, etiqueta ou atributo não vira passo: fica só no Guia, com confirmação."],
     exemplo="Conversa resolvida numa sexta. No sábado ela ganha a etiqueta “pós-venda” e entra no funil de pós-venda, sem ninguém clicar."),
   dict(id="F4", nome="Falar com pessoas", tela="Novos passos", mig=False,
