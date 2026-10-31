@@ -50,12 +50,41 @@ RSpec.describe Autonomia::Automacao::Cadeia do
       expect(rodou).to eq([])
     end
 
+    it 'com a flag, a cadeia guarda a conta, para quem a leva adiante conferir a flag na volta' do
+      account.enable_features!('automacao_fundacao')
+
+      conta = described_class.entrar('regra:1', account) { described_class.conta_id }
+
+      expect(conta).to eq(account.id)
+      expect(described_class.conta_id).to be_nil
+    end
+
     it 'com a flag automacao_fundacao recusa o laço' do
       account.enable_features!('automacao_fundacao')
 
       recusa = described_class.entrar('regra:1', account) { described_class.entrar('regra:1', account) { :rodou } }
 
       expect(recusa).to be_a(described_class::Recusa)
+    end
+  end
+
+  # Desligar a flag é o rollback: o que foi enfileirado com ela ligada volta a rodar sem cadeia.
+  describe '.retomar' do
+    it 'com a flag, devolve a cadeia guardada' do
+      account.enable_features!('automacao_fundacao')
+
+      dentro = described_class.retomar(%w[regra:1 etapa:2], account) { [described_class.origens, described_class.conta_id] }
+
+      expect(dentro).to eq([%w[regra:1 etapa:2], account.id])
+      expect(described_class.origens).to eq([])
+    end
+
+    it 'sem a flag, roda o bloco sem cadeia' do
+      expect(described_class.retomar(%w[regra:1], account) { described_class.ativa? }).to be(false)
+    end
+
+    it 'sem conta, roda o bloco sem cadeia' do
+      expect(described_class.retomar(%w[regra:1], nil) { described_class.ativa? }).to be(false)
     end
   end
 end

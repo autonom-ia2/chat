@@ -70,6 +70,7 @@ RSpec.describe Autonomia::Automacao::CadeiaNosMotores do
   end
 
   it 'a cadeia viaja com o passo de etapa que roda em job' do
+    account.enable_features!('automacao_fundacao')
     vista = nil
     allow(Crm::StageAutomations::StepExecutor).to receive(:new).and_wrap_original do |original, **args|
       vista = Autonomia::Automacao::Cadeia.origens
@@ -82,5 +83,97 @@ RSpec.describe Autonomia::Automacao::CadeiaNosMotores do
 
     expect(vista).to eq(['regra:5', "etapa:#{passo.stage_automation_id}"])
     expect(Autonomia::Automacao::Cadeia.origens).to eq([])
+  end
+
+  def contextos_das_sequencias
+    contextos = []
+    allow(Crm::StageAutomations::StepSequence).to receive(:new).and_wrap_original do |original, **args|
+      contextos << args[:automation_context].to_h
+      original.call(**args)
+    end
+    contextos
+  end
+
+  it 'sem a flag, o contexto das automações de etapa não leva a cadeia (passos em job e espera do Decisor)' do
+    ao_entrar(etapas[0], mover_para: etapas[1])
+    contextos = contextos_das_sequencias
+
+    Crm::Cards::Mover.new(card: card, actor: admin, target_stage: etapas[0]).perform
+
+    expect(contextos).not_to be_empty
+    expect(contextos).to all(satisfy { |contexto| !contexto.key?('cadeia') })
+  end
+
+  it 'com a flag, o contexto das automações de etapa leva a cadeia' do
+    account.enable_features!('automacao_fundacao')
+    automacao = ao_entrar(etapas[0], mover_para: etapas[1])
+    contextos = contextos_das_sequencias
+
+    Crm::Cards::Mover.new(card: card, actor: admin, target_stage: etapas[0]).perform
+
+    expect(contextos.first['cadeia']).to eq(["etapa:#{automacao.id}"])
+  end
+
+  # Rollback: o passo entrou na fila com a flag ligada e roda depois de ela ser desligada.
+  it 'o passo em job enfileirado com a cadeia, rodando sem a flag, roda sem cadeia' do
+    vista = :nao_rodou
+    allow(Crm::StageAutomations::StepExecutor).to receive(:new).and_wrap_original do |original, **args|
+      vista = Autonomia::Automacao::Cadeia.ativa?
+      original.call(**args)
+    end
+    passo = ao_entrar(etapas[0], mover_para: etapas[1]).steps.first
+
+    Crm::StageAutomationStepJob.perform_now(card_id: card.id, step_id: passo.id, automation_context: { 'cadeia' => ['regra:5'] })
+
+    expect(vista).to be(false)
+  end
+
+  # A volta do Decisor de uma regra (PerguntarJob) segue na mesma cadeia: a profundidade não volta a zero.
+  describe 'o job do Decisor da regra' do
+    include ActiveJob::TestHelper
+
+    let(:rule) { create(:automation_rule, account: account) }
+
+    def enfileirar_dentro_da_cadeia
+      Autonomia::Automacao::Cadeia.com('etapa:1', account.id) do
+        Autonomia::Decisores::PerguntarJob.perform_later(rule.id, conversation.id, 0, 0)
+      end
+      enqueued_jobs.find { |job| job['job_class'] == 'Autonomia::Decisores::PerguntarJob' }
+    end
+
+    def cadeia_ao_rodar(job_data)
+      vista = :nao_rodou
+      allow(AutomationRule).to receive(:find_by).and_wrap_original do |original, *args, **kwargs|
+        vista = Autonomia::Automacao::Cadeia.origens
+        original.call(*args, **kwargs)
+      end
+      ActiveJob::Base.execute(job_data)
+      vista
+    end
+
+    it 'leva a cadeia no job e a devolve ao rodar' do
+      account.enable_features!('automacao_fundacao')
+      job_data = enfileirar_dentro_da_cadeia
+
+      expect(job_data['autonomia_cadeia']).to eq('conta' => account.id, 'origens' => ['etapa:1'])
+      expect(cadeia_ao_rodar(job_data)).to eq(['etapa:1'])
+      expect(Autonomia::Automacao::Cadeia.origens).to eq([])
+    end
+
+    it 'a nova tentativa do job leva a cadeia de novo' do
+      job = Autonomia::Decisores::PerguntarJob.deserialize(enfileirar_dentro_da_cadeia)
+
+      expect(job.serialize['autonomia_cadeia']).to eq('conta' => account.id, 'origens' => ['etapa:1'])
+    end
+
+    it 'enfileirado com a cadeia e rodando sem a flag, roda sem cadeia' do
+      expect(cadeia_ao_rodar(enfileirar_dentro_da_cadeia)).to eq([])
+    end
+
+    it 'fora de uma cadeia, o job sai como sempre' do
+      Autonomia::Decisores::PerguntarJob.perform_later(rule.id, conversation.id, 0, 0)
+
+      expect(enqueued_jobs.last).not_to have_key('autonomia_cadeia')
+    end
   end
 end

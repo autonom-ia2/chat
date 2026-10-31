@@ -8,6 +8,7 @@ Rails.application.config.to_prepare do
     AutomationRules::ActionService => Autonomia::Automacao::CadeiaNosMotores::Regra,
     Crm::StageAutomations::Runner => Autonomia::Automacao::CadeiaNosMotores::Etapa,
     Crm::StageAutomations::StepSequence => Autonomia::Automacao::CadeiaNosMotores::SequenciaDeEtapa,
-    Crm::StageAutomationStepJob => Autonomia::Automacao::CadeiaNosMotores::PassoDeEtapa
+    Crm::StageAutomationStepJob => Autonomia::Automacao::CadeiaNosMotores::PassoDeEtapa,
+    Autonomia::Decisores::PerguntarJob => Autonomia::Automacao::CadeiaNosMotores::PerguntaDaRegra
   }.each { |alvo, modulo| alvo.prepend(modulo) unless alvo <= modulo }
 end
