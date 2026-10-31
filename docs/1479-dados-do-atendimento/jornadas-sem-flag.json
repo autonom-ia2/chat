@@ -1,0 +1,15 @@
+{
+  "pasta": "docs/1479-dados-do-atendimento/prints-sem-flag",
+  "conta": 1,
+  "larguras": [1440, 390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "sem-flag",
+      "etapas": [
+        { "nome": "pagina-do-agente", "url": "/app/accounts/{conta}/agents/1", "esperar": "[data-alterar=\"instrucoes\"]", "pausa": 5000 },
+        { "nome": "instrucoes-como-hoje", "passos": [{ "clicar": "[data-alterar=\"instrucoes\"]" }, { "esperar": "[data-instrucao]" }, { "clicar": "[data-instrucao] + span" }], "pausa": 1500 }
+      ]
+    }
+  ]
+}

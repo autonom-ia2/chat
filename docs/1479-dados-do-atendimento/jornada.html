@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Endereço e telefone do atendimento</title>
+<style>
+  :root { --fundo:#f6f7f9; --texto:#1c2024; --suave:#60646c; --linha:#e0e1e6; --azul:#0d2344; }
+  body { margin:0; font-family: Inter, system-ui, sans-serif; background:var(--fundo); color:var(--texto); }
+  header { background:var(--azul); color:#fff; padding:24px 16px; }
+  header h1 { margin:0 0 6px; font-size:22px; }
+  header p { margin:0; opacity:.85; max-width:760px; }
+  nav { display:flex; gap:8px; flex-wrap:wrap; padding:12px 16px; background:#fff; border-bottom:1px solid var(--linha); position:sticky; top:0; }
+  nav a { padding:8px 12px; border-radius:8px; background:#eef1f6; color:var(--azul); text-decoration:none; font-size:14px; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  section { scroll-margin-top:64px; background:#fff; border:1px solid var(--linha); border-radius:14px; padding:20px; margin:20px 0; }
+  section h2 { margin:0 0 8px; font-size:18px; }
+  .nota { color:var(--suave); margin:0 0 14px; max-width:760px; line-height:1.5; }
+  .prints { display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+  figure { margin:0; }
+  figure img { display:block; border:1px solid var(--linha); border-radius:10px; max-width:100%; }
+  figure.largo { flex:1 1 640px; } figure.estreito { flex:0 0 260px; }
+  figcaption { font-size:13px; color:var(--suave); margin-top:6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Endereço e telefone do atendimento</h1>
+  <p>Protótipo em tela real (#1479, épico #1424). Os dois campos ficam nas instruções do agente e só aparecem com a flag agentes_enviar_local_e_contato. Os dados ainda não vão ao servidor: é um adaptador falso.</p>
+</header>
+<nav>
+  <a href="#jornada-1">1. Campos vazios</a>
+  <a href="#jornada-2">2. Telefone incompleto</a>
+  <a href="#jornada-3">3. Preenchidos e salvos</a>
+  <a href="#jornada-4">4. Flag desligada</a>
+</nav>
+<main>
+  <section id="jornada-1">
+    <h2>1. Campos vazios</h2>
+    <p class="nota">Novo: abaixo do texto das instruções, um bloco "Endereço e telefone do atendimento", opcional, com o endereço e o telefone (bandeira, Brasil por padrão). A dica de cada campo diz o que o agente faz com ele e que, vazio, vale o da página de agendamento.</p>
+    <div class="prints">
+      <figure class="largo"><img src="prints/com-flag/02-campos-vazios-light-1440.png" alt="Instruções com os dois campos vazios, computador"><figcaption>Computador</figcaption></figure>
+      <figure class="estreito"><img src="prints/com-flag/02-campos-vazios-light-390.png" alt="Instruções com os dois campos vazios, celular"><figcaption>Celular</figcaption></figure>
+    </div>
+  </section>
+  <section id="jornada-2">
+    <h2>2. Telefone incompleto</h2>
+    <p class="nota">Novo: com o número pela metade, Salvar não grava e leva ao campo com o aviso "O número está incompleto. Confira os dígitos ou apague o campo." Hoje não existe esse campo.</p>
+    <div class="prints">
+      <figure class="largo"><img src="prints/com-flag/03-telefone-incompleto-light-1440.png" alt="Telefone incompleto com aviso, computador"><figcaption>Computador</figcaption></figure>
+      <figure class="estreito"><img src="prints/com-flag/03-telefone-incompleto-light-390.png" alt="Telefone incompleto com aviso, celular"><figcaption>Celular</figcaption></figure>
+    </div>
+  </section>
+  <section id="jornada-3">
+    <h2>3. Preenchidos e salvos</h2>
+    <p class="nota">Novo: com o número completo, Salvar grava tudo junto ("Instruções salvas."). Na página, a linha "Nome e jeito de falar" passa a mostrar o endereço e o telefone. Ao abrir de novo, os campos voltam preenchidos.</p>
+    <div class="prints">
+      <figure class="largo"><img src="prints/com-flag/04-telefone-completo-light-1440.png" alt="Campos preenchidos antes de salvar, computador"><figcaption>Antes de salvar</figcaption></figure>
+      <figure class="largo"><img src="prints/com-flag/05-salvo-light-1440.png" alt="Página do agente com endereço e telefone, computador"><figcaption>Depois de salvar</figcaption></figure>
+      <figure class="largo"><img src="prints/com-flag/06-reaberto-light-1440.png" alt="Instruções reabertas com os campos preenchidos, computador"><figcaption>Aberto de novo</figcaption></figure>
+      <figure class="estreito"><img src="prints/com-flag/05-salvo-light-390.png" alt="Página do agente com endereço e telefone, celular"><figcaption>Celular, depois de salvar</figcaption></figure>
+    </div>
+  </section>
+  <section id="jornada-4">
+    <h2>4. Flag desligada</h2>
+    <p class="nota">Igual a hoje: só o texto das instruções, sem os campos, e a página sem as linhas de endereço e telefone.</p>
+    <div class="prints">
+      <figure class="largo"><img src="prints-sem-flag/sem-flag/02-instrucoes-como-hoje-light-1440.png" alt="Instruções sem os campos, computador"><figcaption>Computador</figcaption></figure>
+      <figure class="estreito"><img src="prints-sem-flag/sem-flag/02-instrucoes-como-hoje-light-390.png" alt="Instruções sem os campos, celular"><figcaption>Celular</figcaption></figure>
+    </div>
+  </section>
+</main>
+</body>
+</html>

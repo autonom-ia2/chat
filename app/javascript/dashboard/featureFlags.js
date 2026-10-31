@@ -91,6 +91,7 @@ export const FEATURE_FLAGS = {
   CRM_ARQUIVADOS: 'crm_arquivados',
   CRM_LISTA_ACAO: 'crm_lista_acao',
   AGENTES_PAINEL_DESEMPENHO: 'agentes_painel_desempenho',
+  AGENTES_ENVIAR_LOCAL_E_CONTATO: 'agentes_enviar_local_e_contato',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   CHANNEL_TIKTOK: 'channel_tiktok',

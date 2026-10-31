@@ -1,0 +1,114 @@
+{
+  "pasta": "docs/1479-dados-do-atendimento/prints",
+  "conta": 1,
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
+  "jornadas": [
+    {
+      "nome": "com-flag",
+      "etapas": [
+        {
+          "nome": "pagina-do-agente",
+          "url": "/app/accounts/{conta}/agents/1",
+          "esperar": "[data-alterar=\"instrucoes\"]",
+          "pausa": 5000
+        },
+        {
+          "nome": "campos-vazios",
+          "passos": [
+            {
+              "clicar": "[data-alterar=\"instrucoes\"]"
+            },
+            {
+              "esperar": "[data-dados-do-atendimento]"
+            },
+            {
+              "clicar": "[data-campo-telefone-atendimento] input[data-numero-do-telefone]"
+            },
+            {
+              "clicar": "[data-campo-telefone-atendimento] p[aria-live]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "telefone-incompleto",
+          "passos": [
+            {
+              "preencher": [
+                "input[data-campo-endereco]",
+                "Rua das Flores, 120, Centro, Campinas"
+              ]
+            },
+            {
+              "preencher": [
+                "[data-campo-telefone-atendimento] input[data-numero-do-telefone]",
+                "1998765"
+              ]
+            },
+            {
+              "clicar": "[data-salvar]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "telefone-completo",
+          "passos": [
+            {
+              "preencher": [
+                "[data-campo-telefone-atendimento] input[data-numero-do-telefone]",
+                "19987654321"
+              ]
+            },
+            {
+              "clicar": "[data-campo-telefone-atendimento] input[data-numero-do-telefone]"
+            },
+            {
+              "clicar": "[data-campo-telefone-atendimento] p[aria-live]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "salvo",
+          "passos": [
+            {
+              "clicar": "[data-salvar]"
+            },
+            {
+              "esperar": "[data-resumo-telefone]"
+            },
+            {
+              "clicar": "[data-resumo-telefone]"
+            }
+          ],
+          "pausa": 800
+        },
+        {
+          "nome": "reaberto",
+          "passos": [
+            {
+              "clicar": "[data-alterar=\"instrucoes\"]"
+            },
+            {
+              "esperar": "[data-dados-do-atendimento]"
+            },
+            {
+              "clicar": "[data-campo-telefone-atendimento] input[data-numero-do-telefone]"
+            },
+            {
+              "clicar": "[data-campo-telefone-atendimento] p[aria-live]"
+            }
+          ],
+          "pausa": 1500
+        }
+      ]
+    }
+  ]
+}

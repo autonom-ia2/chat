@@ -8,6 +8,14 @@ import ResumoOndeTrabalha from '../onde/ResumoOndeTrabalha.vue';
 import { usePermissoesDaJornada } from '../../composables/usePermissoesDaJornada';
 import { useAgendaDoAgente } from '../../composables/useAgendaDoAgente';
 import { useAgendaNovaNaConta } from '../../composables/useAgendaNovaNaConta';
+import {
+  lerAtendimento,
+  useDadosDoAtendimentoLigado,
+} from '../../composables/useDadosDoAtendimento';
+import {
+  formatarNoPais,
+  separarTelefone,
+} from 'dashboard/components-next/conversa-canal/mais/telefoneDoPais';
 
 // #1181 PR3 (protótipo T07, blocksT07) — os blocos claros da página do agente:
 // - Testar: a pergunta vai para a gaveta Testar;
@@ -62,6 +70,19 @@ const { podeEscolherQuemRecebe, podeAbrirAgendamento, crmLigado } =
 const NS = 'AGENTS.JORNADA.PAGINA';
 const base = `blocos-${useId()}`;
 const pergunta = ref('');
+
+// #1479 (opção A): com a flag, a linha "Nome e jeito de falar" mostra o endereço e o telefone que o agente manda.
+// Protótipo: lidos do adaptador falso (useDadosDoAtendimento).
+const comAtendimento = useDadosDoAtendimentoLigado();
+const atendimento = computed(() => {
+  if (!comAtendimento.value || !props.manual) return null;
+  const { endereco, telefone } = lerAtendimento(props.agente);
+  const separado = telefone ? separarTelefone(telefone) : null;
+  return {
+    endereco,
+    telefone: separado ? formatarNoPais(separado.digitos, separado.pais) : '',
+  };
+});
 
 const linkQuemRecebe = computed(
   () => router.resolve({ name: 'crm_handoff_settings_index' }).href
@@ -502,6 +523,36 @@ onMounted(() => {
                 aria-hidden="true"
               />
               {{ t(`${NS}.BLOCO_JEITO.MANUAL`) }}
+            </p>
+            <p
+              v-if="atendimento?.endereco"
+              data-resumo-endereco
+              class="flex items-start gap-1 m-0 text-sm text-n-slate-11"
+            >
+              <span
+                class="i-lucide-map-pin size-4 shrink-0 mt-0.5"
+                aria-hidden="true"
+              />
+              {{
+                t(`${NS}.BLOCO_JEITO.ENDERECO`, {
+                  endereco: atendimento.endereco,
+                })
+              }}
+            </p>
+            <p
+              v-if="atendimento?.telefone"
+              data-resumo-telefone
+              class="flex items-start gap-1 m-0 text-sm text-n-slate-11"
+            >
+              <span
+                class="i-lucide-phone size-4 shrink-0 mt-0.5"
+                aria-hidden="true"
+              />
+              {{
+                t(`${NS}.BLOCO_JEITO.TELEFONE`, {
+                  telefone: atendimento.telefone,
+                })
+              }}
             </p>
           </div>
         </div>

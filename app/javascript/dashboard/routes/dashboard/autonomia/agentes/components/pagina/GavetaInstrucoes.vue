@@ -6,6 +6,12 @@ import { useAlert } from 'dashboard/composables';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import AgenteBotao from '../AgenteBotao.vue';
 import AgenteErro from '../AgenteErro.vue';
+import DadosDoAtendimento from './DadosDoAtendimento.vue';
+import {
+  lerAtendimento,
+  salvarAtendimento,
+  useDadosDoAtendimentoLigado,
+} from '../../composables/useDadosDoAtendimento';
 import { MAX_INSTRUCAO, ehManual, idiomaDoNavegador } from '../../utils/pagina';
 
 // #1181 PR3 (protótipo T14) — "Instruções de {nome}": o editor do agente escrito à mão.
@@ -31,6 +37,15 @@ const vazio = ref(false);
 const falhou = ref(false);
 const salvando = ref(false);
 const campo = ref(null);
+
+// #1479 (opção A): endereço e telefone do atendimento, salvos junto com as instruções. Protótipo: adaptador falso
+// (useDadosDoAtendimento), sem backend ainda.
+const comAtendimento = useDadosDoAtendimentoLigado();
+const atendimento = ref(null);
+const inicial = lerAtendimento(props.agente);
+const endereco = ref(inicial.endereco);
+const telefone = ref(inicial.telefone);
+const conferirTelefone = ref(false);
 
 onMounted(() => campo.value?.focus());
 
@@ -58,6 +73,11 @@ const salvar = async () => {
     campo.value?.focus();
     return;
   }
+  if (comAtendimento.value && atendimento.value?.incompleto) {
+    conferirTelefone.value = true;
+    atendimento.value.focarTelefone();
+    return;
+  }
   falhou.value = false;
   salvando.value = true;
   try {
@@ -66,6 +86,12 @@ const salvar = async () => {
       mode: 'manual',
       instruction: texto.value,
     });
+    if (comAtendimento.value) {
+      await salvarAtendimento(props.agente, {
+        endereco: endereco.value,
+        telefone: telefone.value,
+      });
+    }
     useAlert(t(`${NS}.SALVO`));
     emit('fechar');
   } catch {
@@ -114,6 +140,15 @@ const salvar = async () => {
         {{ t(`${NS}.VAZIO`) }}
       </p>
     </div>
+    <DadosDoAtendimento
+      v-if="comAtendimento"
+      ref="atendimento"
+      v-model:endereco="endereco"
+      v-model:telefone="telefone"
+      :nome="nome"
+      :conferir="conferirTelefone"
+      :bloqueado="salvando"
+    />
     <template #rodape>
       <AgenteErro
         v-if="falhou"
