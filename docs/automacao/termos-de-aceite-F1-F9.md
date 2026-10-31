@@ -125,6 +125,7 @@ Sem limite de quantidade: o cliente manda quantas mensagens quiser.
 5. As automações de etapa de hoje continuam funcionando e aparecem no mesmo painel.
 6. Só quem pode mexer no funil cria automação de funil.
 7. *(Proposta, a aprovar.)* Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte. Hoje a IA só respeita movimento feito por pessoa. Decisão do Rodrigo: ajustar a IA do funil ou só deixar automação mover card em funil com "Mover automaticamente" desligado.
+8. Card criado pela automação respeita a trava de 30 dias do "não é negócio": contato arquivado pela IA como fornecedor, engano ou duplicado não ganha card de novo.
 
 **Exemplo.** Corretora: 30 dias antes do vencimento da apólice, o card vai para "Renovação", o cliente recebe a mensagem de renovação e o corretor ganha um retorno para ligar em 5 dias se não houver resposta.
 
