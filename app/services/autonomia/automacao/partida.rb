@@ -14,11 +14,13 @@
 class Autonomia::Automacao::Partida
   Cadeia = ::Autonomia::Automacao::Cadeia
 
-  def initialize(definicao:, alvo:, chave_gatilho:)
+  # `mensagem`: a que disparou o gatilho mensagem.criada, para o filtro (mensagem.tipo).
+  def initialize(definicao:, alvo:, chave_gatilho:, mensagem: nil)
     @definicao = definicao
     @account = definicao.account
     @alvo = alvo
     @chave_gatilho = chave_gatilho
+    @mensagem = mensagem
   end
 
   # A execução aberta, ou nil quando não começou.
@@ -48,7 +50,7 @@ class Autonomia::Automacao::Partida
   end
 
   def no_filtro?
-    valores = ::Autonomia::Automacao::Valores.new(conversa: @alvo)
+    valores = ::Autonomia::Automacao::Valores.new(conversa: @alvo, mensagem: @mensagem)
     Array(@definicao.versao_ativa.receita.dig('gatilho', 'filtros')).all? do |condicao|
       ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
     end

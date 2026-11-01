@@ -97,6 +97,18 @@ RSpec.describe Autonomia::Automacao::Versao do
     end
   end
 
+  describe 'a mensagem do gatilho' do
+    let(:recebida) { { 'campo' => { '$valor' => 'mensagem.tipo' }, 'op' => 'igual', 'valor' => 'recebida' } }
+
+    it 'só se lê no filtro do gatilho "mensagem criada"', :aggregate_failures do
+      expect(versao(receita(esperar, gatilho: { 'tipo' => 'mensagem.criada', 'filtros' => [recebida] }))).to be_valid
+      expect(erros(receita(esperar, gatilho: { 'tipo' => 'conversa.resolvida', 'filtros' => [recebida] })))
+        .to include('Passo gatilho: mensagem.tipo só existe no filtro do gatilho "mensagem criada"')
+      se = { 'id' => 's1', 'tipo' => 'se', 'condicao' => recebida, 'entao' => [esperar('p2')] }
+      expect(erros(receita(se, gatilho: { 'tipo' => 'mensagem.criada' }))).to include('Passo s1: mensagem.tipo só existe')
+    end
+  end
+
   describe 'atributo personalizado' do
     let(:condicao) { { 'campo' => { '$valor' => 'contato.atributos.placa' }, 'op' => 'preenchido' } }
 

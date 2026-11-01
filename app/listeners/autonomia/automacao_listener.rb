@@ -16,7 +16,7 @@ class Autonomia::AutomacaoListener < BaseListener
     message = event.data[:message]
     return if message.activity? || !::Autonomia::Automacao::Motor.ligado?(message.account)
 
-    escuta.comecar(message.conversation, 'mensagem.criada')
+    escuta.comecar(message.conversation, 'mensagem.criada', mensagem: message)
     escuta.acordar(message.account, [message.conversation_id])
   end
 

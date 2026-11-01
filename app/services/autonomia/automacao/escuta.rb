@@ -20,11 +20,11 @@
 module Autonomia::Automacao::Escuta
   module_function
 
-  def comecar(conversa, tipo)
+  def comecar(conversa, tipo, mensagem: nil)
     return unless conversa && ::Autonomia::Automacao::Motor.ligado?(conversa.account)
 
     automacoes_do_gatilho(conversa.account_id, tipo).includes(:account, :versao_ativa, :ligada_por).find_each do |definicao|
-      ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: tipo).call
+      ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: tipo, mensagem: mensagem).call
     rescue StandardError => e
       Rails.logger.error("[automacao][escuta] não começou automacao=#{definicao.id} alvo=conversa:#{conversa.id} #{e.class}: #{e.message}")
     end

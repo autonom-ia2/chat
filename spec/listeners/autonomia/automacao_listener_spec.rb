@@ -64,6 +64,21 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
       expect(execucoes.where(automacao: definicao).count).to eq(1)
     end
 
+    it 'o filtro "só recebida" ignora a nota privada e a resposta do atendente', :aggregate_failures do
+      so_recebida = { 'campo' => { '$valor' => 'mensagem.tipo' }, 'op' => 'igual', 'valor' => 'recebida' }
+      definicao = automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: { 'tipo' => 'mensagem.criada', 'filtros' => [so_recebida] })
+      mensagem = lambda do |tipo, privada = false|
+        create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: tipo, private: privada)
+      end
+
+      listener.message_created(evento('message.created', message: mensagem.call(:outgoing, true)))
+      listener.message_created(evento('message.created', message: mensagem.call(:outgoing)))
+      expect(execucoes.count).to eq(0)
+
+      listener.message_created(evento('message.created', message: mensagem.call(:incoming)))
+      expect(execucoes.where(automacao: definicao).count).to eq(1)
+    end
+
     it 'uma automação que quebra não impede as outras' do
       quebra = resolvida
       segue = resolvida

@@ -10,8 +10,15 @@
       "additionalProperties": false,
       "required": ["tipo"],
       "properties": {
-        "tipo": { "enum": ["conversa.criada", "conversa.aberta", "conversa.resolvida", "mensagem.criada"] },
-        "filtros": { "type": "array", "items": { "$ref": "#/definitions/condicao" } }
+        "tipo": {
+          "enum": ["conversa.criada", "conversa.aberta", "conversa.resolvida", "mensagem.criada"],
+          "description": "conversa.criada: a conversa nasceu, inclusive a que já nasce aberta. conversa.aberta: a conversa voltou a ficar aberta (reaberta ou saiu de pendente/adiada); não dispara na criação. conversa.resolvida: a conversa foi resolvida. mensagem.criada: chegou ou saiu uma mensagem, inclusive nota privada (a atividade da plataforma fica de fora); filtre por mensagem.tipo (recebida, enviada, nota)."
+        },
+        "filtros": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/condicao" },
+          "description": "Só aqui a receita lê mensagem.tipo e mensagem.privada, e só no gatilho mensagem.criada."
+        }
       }
     },
     "passos": { "$ref": "#/definitions/passos" }
