@@ -142,7 +142,7 @@ entradas existentes e os metadados do parâmetro:
 | Variável Rails | Valor por stack |
 | --- | --- |
 | `INSTAGRAM_TESTER_RUNTIME_STACK` | `hub2you` ou `autonomia`, conforme a conta AWS |
-| `INSTAGRAM_TESTER_OPERATOR_BROWSER_URL` | `https://srv707880-claudete.tail0c0b18.ts.net/STACK/`, substituindo `STACK` pelo nome exato e preservando a barra final |
+| `INSTAGRAM_TESTER_OPERATOR_BROWSER_URL` | `https://srv707880-claudete.tail0c0b18.ts.net:8443/STACK/`, substituindo `STACK` pelo nome exato e preservando a barra final. A porta `:8443` é obrigatória: o preflight recusa a 443 (ver "Porta 443 é do Traefik") |
 | `INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY` | A chave exclusiva da mesma stack provisionada em `gateway.env`; nunca registrar o valor |
 
 O bootstrap já lê esse overlay, valida seus nomes e instala o arquivo local
@@ -247,8 +247,8 @@ rollback, mantendo publisher/manager inativos.
 Publicação privada HTTPS proposta para revisão do Serve da versão instalada:
 
 ```sh
-sudo tailscale serve --bg --https=443 --set-path=/hub2you/ http://127.0.0.1:18441/hub2you/
-sudo tailscale serve --bg --https=443 --set-path=/autonomia/ http://127.0.0.1:18442/autonomia/
+sudo tailscale serve --bg --https=8443 --set-path=/hub2you/ http://127.0.0.1:18441/hub2you/
+sudo tailscale serve --bg --https=8443 --set-path=/autonomia/ http://127.0.0.1:18442/autonomia/
 ```
 
 O destino inclui o mesmo prefixo porque o gateway exige `/STACK/`; validar a
@@ -257,6 +257,38 @@ de abrir login. Não servir arquivos/dirs noVNC diretamente. Sem Funnel, mount d
 raiz, HTTP público ou proxy VNC cru. Serve existente só pode ganhar estes mounts;
 se houver conflito, parar e revisar, não usar `tailscale serve reset`.
 A referência oficial é [Tailscale Serve](https://tailscale.com/docs/reference/tailscale-cli/serve).
+
+### Porta 443 é do Traefik
+
+A porta 443 desta VPS pertence ao `easypanel-traefik`, que a publica em modo host
+para **todos** os sites do Easypanel (n8n, sell, MinIO...). O Serve do operador
+fica sempre na **8443**, nunca na 443.
+
+Por quê ([#1751](https://github.com/autonom-ia2/chat/issues/1751)): o runbook
+mandava usar a 443. Os dois conviviam por ordem de inicialização até o reboot da
+Hostinger em 16/10/2026: o `tailscaled` subiu antes do Docker, ocupou
+`100.78.34.82:443`, o Traefik entrou em loop (`driver failed programming external
+connectivity`), a overlay `easypanel` ficou sem namespace e todo site respondeu
+502. Naquela recuperação o `tailscale serve reset` foi usado porque o único Serve
+da máquina era o da 443 e os sites estavam fora; em seguida veio
+`systemctl restart docker` para recriar a overlay. Fora de uma emergência assim, a
+regra acima vale: retire só os mounts com `off` (ver Rollback), nunca `reset`,
+que derruba também o Serve da 8443.
+
+A 8443 foi conferida livre no host em 16/10/2026 (`ss -ltnp`). Antes de trocar a
+porta de novo, confira que nenhum contêiner publica a escolhida em modo host: a
+mesma corrida de bind volta com qualquer porta compartilhada.
+
+Três guardas impedem a repetição:
+
+- `env/check.py` e `gateway-auth.mjs` recusam `INSTAGRAM_TESTER_OPERATOR_BROWSER_URL`
+  sem `:8443`, então o gateway não sobe apontando para a 443;
+- `vps_release.py` falha no preflight (`serve_not_on_443`) se existir qualquer
+  Serve na 443;
+- a URL do lado Rails (`INSTAGRAM_TESTER_OPERATOR_BROWSER_URL` nos dois stacks)
+  precisa ser a mesma, com `:8443`, senão o ticket aponta para a porta errada.
+
+Para conferir à mão: `sudo tailscale serve status --json` não pode conter `"443":`.
 
 Aceitação precisa demonstrar, sem registrar dados privados:
 
@@ -316,8 +348,8 @@ runtime não equivale à autorização/saúde Meta ou ao recebimento da publica�
    restante do Serve. Remover os mounts com os mesmos flags da ativação:
 
    ```sh
-   sudo tailscale serve --https=443 --set-path=/hub2you/ off
-   sudo tailscale serve --https=443 --set-path=/autonomia/ off
+   sudo tailscale serve --https=8443 --set-path=/hub2you/ off
+   sudo tailscale serve --https=8443 --set-path=/autonomia/ off
    ```
 
 2. Parar **somente** `instagram-vps-gateway@STACK`, `instagram-vps-manager@STACK`,

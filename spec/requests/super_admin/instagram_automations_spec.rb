@@ -252,14 +252,14 @@ RSpec.describe 'Super Admin Instagram automation', type: :request do
           control: { 'id' => id, 'actor_id' => super_admin.id, 'state' => 'running', 'created_at' => Time.current.utc.iso8601(3) }
         )
         with_modified_env('INSTAGRAM_TESTER_SESSION_SOURCE' => 'managed', 'INSTAGRAM_TESTER_RUNTIME_STACK' => 'hub2you',
-                          'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid/hub2you/',
+                          'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL' => 'https://gateway.invalid:8443/hub2you/',
                           'INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY' => 'ab' * 32, 'FRONTEND_URL' => 'https://hub.invalid') do
           session.post("#{path}/browser", headers: { 'ACCEPT' => 'text/html', 'X-CSRF-Token' => token })
         end
         expect(session.response).to have_http_status(:ok)
         form = Nokogiri::HTML(session.response.body).at_css('form')
         expect(form['method']).to eq('post')
-        expect(form['action']).to eq('https://gateway.invalid/hub2you/grant')
+        expect(form['action']).to eq('https://gateway.invalid:8443/hub2you/grant')
         claims = JWT.decode(form.at_css('input[name="ticket"]')['value'], ['ab' * 32].pack('H*'), true, algorithm: 'HS256').first
         expect(claims).to include('sub' => super_admin.id.to_s, 'request_id' => id)
       end

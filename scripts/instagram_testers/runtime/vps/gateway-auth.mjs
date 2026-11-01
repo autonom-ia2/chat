@@ -18,6 +18,8 @@ const CLAIMS = [
   'stack',
 ];
 const HEX = '0123456789abcdef';
+// 443 belongs to the Easypanel Traefik on the VPS; a Serve there takes every site down on reboot (#1751).
+const OPERATOR_SERVE_PORT = '8443';
 const COOKIE_CHARS =
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
@@ -98,6 +100,7 @@ export async function configFromEnv(
   const port = stack === 'hub2you' ? 18441 : 18442;
   if (
     !cleanHttps(base) ||
+    base.port !== OPERATOR_SERVE_PORT ||
     base.pathname !== `/${stack}/` ||
     base.href !== env.INSTAGRAM_TESTER_OPERATOR_BROWSER_URL ||
     !cleanHttps(issuer) ||

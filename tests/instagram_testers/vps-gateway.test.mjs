@@ -85,7 +85,7 @@ async function fixture(t, { marker = true, wire = false } = {}) {
   await mkdir(stateDir, { mode: 0o700 });
   const config = {
     stack: 'hub2you',
-    base: new URL('https://gateway.example/hub2you/'),
+    base: new URL('https://gateway.example:8443/hub2you/'),
     issuer: 'https://rails.example',
     key: KEY,
     gatewayUid: 2101,
@@ -404,7 +404,7 @@ async function deniedWs(ws) {
 test('configuration requires stack-specific paths, isolated identities and canonical HTTPS/key', async () => {
   const env = {
     INSTAGRAM_TESTER_RUNTIME_STACK: 'hub2you',
-    INSTAGRAM_TESTER_OPERATOR_BROWSER_URL: 'https://gateway.example/hub2you/',
+    INSTAGRAM_TESTER_OPERATOR_BROWSER_URL: 'https://gateway.example:8443/hub2you/',
     INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY: '42'.repeat(32),
     INSTAGRAM_TESTER_OPERATOR_ISSUER: 'https://rails.example',
     INSTAGRAM_TESTER_OPERATOR_REQUEST_FILE:
@@ -475,6 +475,14 @@ test('configuration requires stack-specific paths, isolated identities and canon
     [
       'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL',
       'https://gateway.example/autonomia/',
+    ],
+    [
+      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL',
+      'https://gateway.example/hub2you/',
+    ],
+    [
+      'INSTAGRAM_TESTER_OPERATOR_BROWSER_URL',
+      'https://gateway.example:443/hub2you/',
     ],
     ['INSTAGRAM_TESTER_OPERATOR_ISSUER', 'https://rails.example/'],
     ['INSTAGRAM_TESTER_OPERATOR_BROWSER_SIGNING_KEY', 'g'.repeat(64)],
