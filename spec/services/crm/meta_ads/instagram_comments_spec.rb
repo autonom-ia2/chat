@@ -501,6 +501,13 @@ RSpec.describe Crm::MetaAds::InstagramComments do
                                 meta_message_id: nil)
         end
 
+        it 'recusa 4xx sem código da Meta: a linha sai, e nenhuma linha de recusa é gravada' do
+          stub_request(:post, mensagens).with(query: hash_including({})).to_return(status: 400, headers: json, body: 'recusado')
+
+          expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }.to raise_error(described_class::Error)
+          expect(Crm::MetaAdsCommentAction.where(comment_id: 'c9')).to be_empty
+        end
+
         it 'falha passageira segue a regra de hoje: sem confirmação, travada, e sem linha de recusa' do
           stub_request(:post, mensagens).with(query: hash_including({})).to_timeout
 

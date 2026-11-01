@@ -17,8 +17,8 @@
 # Só comentário de primeiro nível: resposta a comentário (com `parent_id`) não recebe o privado. Com a flag
 # meta_ads_comentarios_ia_conversa (#2454), a resposta também vai à Meta, que decide; o teste real é do próprio produto,
 # na conta piloto. O resultado de cada envio de 2º nível fica consultável, sem texto de terceiro: aceito, a linha
-# private_reply guarda o `meta_message_id`; recusado (4xx), a linha sai como sempre e uma `private_reply_failed` guarda o
-# código e o subcódigo da Meta (`meta_error_code`, `meta_error_subcode`), que também vão no Error. Falha passageira segue
+# private_reply guarda o `meta_message_id`; recusado (4xx com código da Meta), a linha sai como sempre e uma
+# `private_reply_failed` guarda o código e o subcódigo (`meta_error_code`, `meta_error_subcode`), que também vão no Error. Falha passageira segue
 # a regra de sempre (sem confirmação e travada). Sem a flag, `private_reply_top_only`, como antes.
 #
 # O privado de uma pessoa (actor `user`) também marca quem comentou naquele post (Crm::MetaAdsCommentPerson, #2212),
@@ -92,7 +92,7 @@ class Crm::MetaAds::InstagramPrivateReply
     else
       action.destroy!
       release_person!(person_id)
-      refused_safely!(action, result) if second_level?(comment)
+      refused_safely!(action, result) if second_level?(comment) && result.error_code
     end
     raise Error.new(error_code(result), meta_code: result.error_code, meta_subcode: result.error_subcode)
   end

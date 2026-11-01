@@ -146,6 +146,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(registro).to have_received(:recusa_do_privado!).once
       end
 
+      it 'recusa sem código da Meta: a reivindicação sai, mas nada é gravado como recusa (igual ao motor)' do
+        allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: 'HTTP 400'))
+
+        rede.privado(care)
+
+        expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
+        expect(registro).not_to have_received(:recusa_do_privado!)
+      end
+
       it 'o comentário de primeiro nível fica como antes: sem id da mensagem nem recusa gravada' do
         allow(reivindicacao).to receive(:update!)
         allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: true, message_id: 'mid-1'),

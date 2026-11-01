@@ -115,7 +115,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     return envio if envio.talvez_entregue
 
     REGISTRO.soltar!(@comentario, 'private_reply')
-    REGISTRO.recusa_do_privado!(@comentario, codigo: envio.codigo, subcodigo: envio.subcodigo) if @comentario.resposta?
+    # Como o motor: só a recusa com código da Meta fica gravada.
+    REGISTRO.recusa_do_privado!(@comentario, codigo: envio.codigo, subcodigo: envio.subcodigo) if @comentario.resposta? && envio.codigo
     envio
   end
 
