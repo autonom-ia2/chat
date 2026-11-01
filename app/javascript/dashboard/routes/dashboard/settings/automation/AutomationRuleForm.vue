@@ -454,10 +454,10 @@ defineExpose({ open, close });
       />
     </div>
     <template #footer>
-      <div class="flex flex-row items-center justify-end w-full gap-2">
-        <p v-if="salvarTravado" class="mr-auto text-sm text-n-amber-11">
-          {{ $t('AUTOMATION.EXTERNAL_ACTIONS_LOCKED') }}
-        </p>
+      <p v-if="salvarTravado" class="w-full mb-3 text-sm text-n-amber-11">
+        {{ $t('AUTOMATION.EXTERNAL_ACTIONS_LOCKED') }}
+      </p>
+      <div class="flex flex-row justify-end w-full gap-2">
         <NextButton
           faded
           slate
