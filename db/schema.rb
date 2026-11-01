@@ -2846,6 +2846,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_680000) do
     t.string "ai_decision"
     t.decimal "ai_confidence", precision: 4, scale: 3
     t.text "ai_reason"
+    t.string "meta_message_id"
+    t.integer "meta_error_code"
+    t.integer "meta_error_subcode"
     t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
     t.index ["conversation_id"], name: "idx_crm_meta_ads_comment_actions_conversation"
     t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY (ARRAY['private_reply'::text, 'ai_seen'::text]))"
