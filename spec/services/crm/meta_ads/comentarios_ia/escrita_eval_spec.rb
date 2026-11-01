@@ -39,6 +39,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Escrita do
 
     account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG, described_class::FLAG)
     allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+    allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
     WebMock.allow_net_connect!
     create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
                                settings: { 'api_key' => ENV.fetch('OPENAI_API_KEY') })

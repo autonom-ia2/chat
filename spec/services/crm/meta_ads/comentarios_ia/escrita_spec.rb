@@ -33,6 +33,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Escrita do
   end
 
   before do
+    allow(Autonomia::Agents::Config).to receive(:enabled?).and_call_original
+    allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(true)
     allow(Rails.logger).to receive(:info)
     allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
       chamadas << kwargs
@@ -81,11 +83,22 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Escrita do
       expect(escrita.textos('private', comentario: 'Tem para Marte?')).to eq(dono: 'no_knowledge')
     end
 
-    it 'a resposta fora do formato (longa, com o código) fica com o dono' do
+    it 'a resposta fora do formato (longa, com o código) fica com o dono, e o log diz por quê', :aggregate_failures do
       allow(resultado).to receive(:reply).and_return('a' * 301)
 
       expect(escrita.escrever(formato::PUBLICO, comentario: 'Quanto custa?')).to have_attributes(status: :fica_com_o_dono,
                                                                                                  motivo: 'reply_out_of_format')
+      expect(Rails.logger).to have_received(:info)
+        .with("[comentarios_ia] fica com o dono motivo=reply_out_of_format formato=#{formato::PUBLICO} account=#{account.id} care=#{care.id}")
+    end
+
+    it 'o pedido de passagem do agente vai ao log só com ids, sem o motivo escrito pelo modelo' do
+      allow(resultado).to receive_messages(reply: 'fallback', handoff: { should: true, reason: 'Carla quer falar com gente' })
+
+      escrita.escrever(formato::PRIVADO, comentario: 'Quero falar com alguém')
+
+      expect(Rails.logger).to have_received(:info)
+        .with("[comentarios_ia] fica com o dono motivo=agent_handoff formato=#{formato::PRIVADO} account=#{account.id} care=#{care.id}")
     end
 
     it 'IA fora do ar: Indisponivel, para o job tentar de novo antes de qualquer envio' do
@@ -141,6 +154,26 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Escrita do
       com_chave!
       na_porta(agente).update!(enabled: false)
       expect_frases_fixas('porta_parada')
+    end
+
+    it 'agentes desligados na conta' do
+      com_chave!
+      na_porta(agente)
+      allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(false)
+      expect_frases_fixas('agentes_desligados')
+    end
+
+    it 'agente de outra conta na porta (vínculo corrompido)' do
+      com_chave!
+      de_fora = Autonomia::Agents::Agent.new(account_id: create(:account).id, agent_type: 'custom')
+      allow(Autonomia::Agents::QuemResponde).to receive(:porta_da_caixa).and_return(instance_double(Autonomia::Agents::AgentInbox, agent: de_fora))
+      expect_frases_fixas('outra_conta')
+    end
+
+    it 'agente em piloto, só para telefones de teste: quem comenta nunca está na lista' do
+      com_chave!
+      na_porta(agente(config: { 'test_allowlist_phones' => ['+55 11 99999-0000'] }))
+      expect_frases_fixas('piloto')
     end
 
     it 'agente da porta interno (copiloto): não fala com cliente' do

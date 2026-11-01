@@ -72,14 +72,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).to have_received(:responder).with(care.price_reply)
   end
 
-  it 'o agente não sabe: fica com o dono, sem privado e sem frase', :aggregate_failures do
+  it 'o agente não sabe: fica com o dono, sem privado e sem frase, e a reserva da pessoa sai', :aggregate_failures do
     decide('private')
     allow(escrita).to receive(:textos).and_return(dono: 'no_knowledge')
 
     cuidar
 
     expect(registro).to have_received(:gravar!).with(an_object_having_attributes(comment_id: 'c-1'), described_class::FICA_COM_O_DONO)
-    expect(registro).not_to have_received(:reservar_pessoa!)
+    expect(registro).to have_received(:soltar_pessoa!)
     expect(rede).not_to have_received(:privado)
     expect(rede).not_to have_received(:responder)
   end
@@ -110,7 +110,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     expect { cuidar }.to raise_error(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel)
     expect(rede).not_to have_received(:privado)
-    expect(registro).not_to have_received(:reservar_pessoa!)
+    expect(registro).to have_received(:soltar_pessoa!)
+  end
+
+  it 'quem já tem o privado deste post não gasta IA', :aggregate_failures do
+    decide('private')
+    allow(registro).to receive(:reservar_pessoa!).and_return(false)
+
+    cuidar
+
+    expect(Crm::MetaAds::ComentariosIa::Escrita).not_to have_received(:new)
+    expect(registro).to have_received(:gravar!)
+      .with(an_object_having_attributes(comment_id: 'c-1'), Crm::MetaAds::ComentariosIa::Registro::JA_TEM_PRIVADO)
   end
 
   it 'flag da escrita desligada: as frases fixas, sem chamar a Escrita', :aggregate_failures do

@@ -70,7 +70,7 @@ describe('#ComentariosIaAPI', () => {
       phrases: ['Te mandei no privado!'],
       status: 'on',
       escrita: {
-        temas: ['pedir o link'],
+        temas: ['link'],
         assuntoProibido: 'reembolso',
         tom: '',
       },
@@ -87,7 +87,7 @@ describe('#ComentariosIaAPI', () => {
         para_quem: 'Quem pedir o link',
         phrases: ['Te mandei no privado!'],
         status: 'on',
-        temas: ['pedir o link'],
+        temas: ['link'],
         assunto_proibido: 'reembolso',
         tom: '',
       },

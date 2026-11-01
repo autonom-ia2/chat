@@ -175,8 +175,10 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   end
 
   # #2458: o passo 2 com a escrita, só os campos que vieram (pausar e retomar não mexem neles). Os temas, só lista de
-  # textos.
+  # textos. Sem a flag, o passo 2 nem é lido: o pedido de antes não ganha um 422 novo.
   def escrita
+    return {} unless Crm::MetaAds::ComentariosIa::Escrita.ligada?(Current.account)
+
     temas = cuidado_params[:temas]
     raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_temas' if params.key?(:temas) && !(temas.is_a?(Array) && temas.all?(String))
 

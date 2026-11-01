@@ -70,6 +70,23 @@ describe('CuidarDono com a IA escrevendo (#2458)', () => {
     );
   });
 
+  it('passo 2: ao reabrir, os chips gravados (pela chave) voltam marcados', async () => {
+    const wrapper = montar({
+      data: painel({ para_quem: 'Quem pedir o link', temas: ['link'] }),
+    });
+    await irAoPasso2(wrapper);
+
+    expect(chips(wrapper).map(chip => chip.attributes('aria-pressed'))).toEqual(
+      ['false', 'true', 'false']
+    );
+
+    await chips(wrapper)[0].trigger('click');
+
+    expect(wrapper.find('[data-ia-dono-who]').element.value).toBe(
+      'Quem perguntar o preço ou pedir o link'
+    );
+  });
+
   it('passo 2: a frase reescrita pelo dono não é trocada pelos chips', async () => {
     const wrapper = montar();
     await irAoPasso2(wrapper);
@@ -170,7 +187,7 @@ describe('CuidarDono com a IA escrevendo (#2458)', () => {
       paraQuem: 'Quem perguntar o preço',
       phrase: 'Te mandei no privado!',
       escrita: {
-        temas: ['perguntar o preço'],
+        temas: ['price'],
         assuntoProibido: '',
         tom: 'mais formal',
       },

@@ -55,12 +55,19 @@ class Crm::MetaAds::ComentariosIa::Previa
   def exemplos(linhas)
     achados = {}
     linhas.each do |linha|
-      break if achados.key?(:recebe) && achados.key?(:nao)
+      break if completos?(achados)
 
       anotar(achados, linha)
     end
     previa = { status: 'ready', recebe: achados[:recebe] || AMOSTRA, nao: achados[:nao] }
     escreve? ? previa.merge(dono: achados[:dono]) : previa
+  end
+
+  # Com a escrita e o assunto proibido, a prévia também procura um comentário sobre ele, até o LIMITE.
+  def completos?(achados)
+    return false unless achados.key?(:recebe) && achados.key?(:nao)
+
+    achados.key?(:dono) || !escreve? || care.assunto_proibido.blank?
   end
 
   # O primeiro comentário de cada tipo vira o exemplo.

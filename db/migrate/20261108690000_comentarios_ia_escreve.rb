@@ -2,26 +2,18 @@
 #
 # O que o dono diz no passo 2, além do "para quem" de hoje:
 # - `temas`: os temas que recebem o privado, cada um nas palavras da tela (os chips somam). O `para_quem` continua sendo a
-#   frase que a tela mostra com eles, e é ela que o Classificador lê: o motor de hoje não muda. O `para_quem` que já existe
-#   vira o primeiro tema.
+#   frase que a tela mostra com eles, e é ela que o Classificador lê: o motor de hoje não muda. O cuidado que já existe
+#   começa sem tema marcado e com o `para_quem` dele no campo: a frase antiga não é um chip, e copiá-la para `temas`
+#   deixaria um tema que a tela não mostra nem desmarca.
 # - `assunto_proibido`: sobre o que a IA não fala; o comentário sobre isso fica com o dono, com o motivo.
 # - `tom`: o pedido de tom, numa frase, para todas as respostas escritas pela IA.
 #
-# Reversível: o down tira as três colunas; o `para_quem` nunca é apagado nem reescrito, então nada se perde.
+# Reversível: o down tira as três colunas; o `para_quem` não é tocado, então nada se perde.
 class ComentariosIaEscreve < ActiveRecord::Migration[7.2]
   def up
     add_column :crm_meta_ads_comment_cares, :temas, :jsonb, null: false, default: []
     add_column :crm_meta_ads_comment_cares, :assunto_proibido, :string
     add_column :crm_meta_ads_comment_cares, :tom, :string
-
-    # Seguro: só preenche a coluna nova, numa tabela pequena (um cuidado por post ou anúncio), sem trava longa.
-    safety_assured do
-      execute <<~SQL.squish
-        UPDATE crm_meta_ads_comment_cares
-           SET temas = jsonb_build_array(btrim(para_quem))
-         WHERE btrim(coalesce(para_quem, '')) <> ''
-      SQL
-    end
   end
 
   def down

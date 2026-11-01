@@ -37,7 +37,7 @@
 #
 # Erro antes de a IA agir na Meta solta a reivindicação e sobe: o job tenta de novo. Depois de agir, a reivindicação
 # fica, para o reenvio não mandar o privado de novo.
-class Crm::MetaAds::ComentariosIa::Cuidar
+class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength -- no teto antes do #2458; a escrita fica entre a reserva e o envio
   FLAG = 'meta_ads_comentarios_ia'.freeze
   # Até quando o comentário aceita o Private Reply.
   JANELA = 7.days
@@ -169,10 +169,11 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   def privado(decisao)
     return nao_cuidou('sem_quem_comentou') if @comentario.from_id.blank? || @comentario.post_id.blank?
 
-    textos = Crm::MetaAds::ComentariosIa::Escrita.ligada?(inbox.account) ? textos_escritos(decisao) : {}
+    return ja_tem_privado unless @registro.reservar_pessoa!(@comentario)
+
+    textos = textos_reservados(decisao)
     # O agente não soube escrever: fica com o dono, no "Esperando você".
     return @registro.gravar!(@comentario, FICA_COM_O_DONO) if textos.key?(:dono)
-    return ja_tem_privado unless @registro.reservar_pessoa!(@comentario)
 
     inicio = Time.current
     envio = agir { rede.privado(care, texto: textos[:privado]) }
@@ -183,7 +184,19 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   # #2458: com a escrita ligada, a mensagem do privado e a frase do comentário escritas pela IA (Escrita#textos), as duas
-  # antes de qualquer envio.
+  # antes de qualquer envio e depois da reserva da pessoa: quem já tem o privado deste post não gasta IA. Nada saiu
+  # (fica com o dono, ou a IA fora do ar): a reserva sai.
+  def textos_reservados(decisao)
+    return {} unless Crm::MetaAds::ComentariosIa::Escrita.ligada?(inbox.account)
+
+    textos = textos_escritos(decisao)
+    @registro.soltar_pessoa!(@comentario) if textos.key?(:dono)
+    textos
+  rescue Crm::MetaAds::ComentariosIa::Classificador::Erro
+    @registro.soltar_pessoa!(@comentario)
+    raise
+  end
+
   def textos_escritos(decisao)
     Crm::MetaAds::ComentariosIa::Escrita.new(care: care, inbox: inbox, legenda: rede.legenda, foto: texto_da_foto)
                                         .textos(decisao, comentario: @comentario.text, pai: rede.ler_pai)

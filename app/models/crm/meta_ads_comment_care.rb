@@ -5,8 +5,9 @@
 # a pessoa responde. Os textos ficam como a tela mostrou, no idioma de quem aprovou: o servidor não
 # monta frase.
 #
-# #2458 (a IA escreve as respostas): `temas` são os temas do privado, cada um nas palavras da tela (os chips somam); o
-# `para_quem` segue sendo a frase que a tela mostra com eles. `assunto_proibido` é sobre o que a IA não fala, e `tom` o
+# #2458 (a IA escreve as respostas): `temas` são os chips marcados no passo 2 (os chips somam), pela chave estável de
+# cada um (TEMAS), nunca pelo texto no idioma de quem salvou; o `para_quem` segue sendo a frase que a tela mostra com
+# eles. `assunto_proibido` é sobre o que a IA não fala, e `tom` o
 # pedido de tom para as respostas escritas pela IA.
 #
 # O comentário não fica aqui (dado de terceiro, lido ao vivo); o que a IA fez com cada um fica nas ações do #2196.
@@ -27,8 +28,8 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   # O botão só abre conversa no WhatsApp: nenhum outro endereço sai na mensagem automática.
   WHATSAPP_URL = 'https://wa.me/'.freeze
   BUTTON_TITLE_LIMIT = 20
-  TEMAS_LIMIT = 10
-  TEMA_LIMIT = 120
+  # Os chips do passo 2 (#2458): perguntar o preço, pedir o link, pedir o catálogo.
+  TEMAS = %w[price link catalog].freeze
   # O assunto proibido e o tom: uma frase cada.
   FRASE_DO_DONO_LIMIT = 300
 
@@ -114,8 +115,7 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
 
   def temas_validos
     lista = temas
-    valida = lista.is_a?(Array) && lista.size <= TEMAS_LIMIT &&
-             lista.all? { |tema| tema.is_a?(String) && tema.strip.length.between?(1, TEMA_LIMIT) }
+    valida = lista.is_a?(Array) && lista.all? { |tema| TEMAS.include?(tema) } && lista.uniq.size == lista.size
     errors.add(:temas, :invalid) unless valida
   end
 

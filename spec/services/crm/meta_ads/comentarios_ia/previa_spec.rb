@@ -136,6 +136,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
       expect(previa.call[:recebe]).to include(kept_for_owner: true)
     end
 
+    it 'com o assunto proibido, segue procurando o exemplo do dono depois dos outros dois' do
+      allow(escrita).to receive(:textos).and_return({})
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('2', 'Que lindo!'), linha('3', 'Me passa a receita?'),
+                                                                           linha('1', 'E o reembolso?')] })
+
+      expect(previa.call[:dono]).to include(id: '1')
+    end
+
     it 'nas frases fixas (sem agente que possa escrever), o exemplo fica como antes' do
       allow(escrita).to receive(:textos).and_return({})
 

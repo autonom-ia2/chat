@@ -5,9 +5,10 @@
 # ferramenta, sem busca na web e com o portão de confiança: o que o agente não sabe fica com o dono.
 #
 # - Só com a flag FLAG (quem chama confere `ligada?`). Desligada, as frases fixas de hoje.
-# - Recuo para as frases fixas, nunca mudo: sem caixa, caixa de outra conta, sem agente na porta, a Lia
-#   (`insurance_quote` não fala em comentário público) ou agente que não pode falar com cliente agora (Agent#atende_cliente?,
-#   o mesmo do QuemResponde). O motivo vai ao log só com ids (`recuo`), e o resultado diz qual foi.
+# - Recuo para as frases fixas, nunca mudo: sem caixa, caixa ou agente de outra conta, agentes desligados na conta, sem
+#   agente na porta, a Lia (`insurance_quote` não fala em comentário público), agente que não pode falar com cliente agora
+#   (Agent#atende_cliente?, o mesmo do QuemResponde) ou agente em piloto só para telefones de teste (o mesmo contrato do
+#   Operate.authorized_agent_inbox). O motivo vai ao log só com ids (`recuo`), e o resultado diz qual foi.
 # - O comentário, o de cima e o que se vê na foto são dado de terceiro: vão numa linha só, com o código do cuidado
 #   (FormatoDoComentario.linha). O que o dono escreveu (a ficha, a nota, o tom) vai na regra do turno, como do dono.
 # - A chave é sempre a da própria conta (ChaveDaConta, como o Classificador): sem ela, as frases fixas.
@@ -92,10 +93,20 @@ class Crm::MetaAds::ComentariosIa::Escrita
     return 'sem_caixa' if @inbox.nil?
     return 'outra_conta' unless @inbox.account_id == @care.account_id
     return 'sem_chave' if Crm::MetaAds::ComentariosIa::ChaveDaConta.de(@care.account).nil?
-    return 'sem_porta' if agente.nil?
-    return 'lia' if agente.agent_type == LIA
+    return 'agentes_desligados' unless Autonomia::Agents::Config.enabled?(@care.account)
 
-    'porta_parada' unless agente.atende_cliente?
+    motivo_do_agente
+  end
+
+  # O mesmo contrato do Operate.authorized_agent_inbox: agente da conta, que fala com cliente, fora do piloto.
+  def motivo_do_agente
+    return 'sem_porta' if agente.nil?
+    return 'outra_conta' unless agente.account_id == @care.account_id
+    return 'lia' if agente.agent_type == LIA
+    return 'porta_parada' unless agente.atende_cliente?
+
+    # Agente em piloto, só para os telefones de teste: quem comenta não tem telefone, então nunca está na lista.
+    'piloto' unless Autonomia::Agents::Operate.test_allowlist_permits?(nil, agente)
   end
 
   def agente
@@ -105,7 +116,8 @@ class Crm::MetaAds::ComentariosIa::Escrita
   end
 
   def responder(formato, comentario, pai)
-    codigo = FORMATO.codigo(@care.id)
+    # Na prévia o cuidado ainda não tem id: o código sai da conta, nunca o mesmo para todas.
+    codigo = FORMATO.codigo(@care.id || "previa-#{@care.account_id}")
     resultado = Autonomia::Agents::Answerer.new(
       agent: agente, query: FORMATO.linha(dado(comentario, pai), codigo), retrieval_query: comentario.to_s,
       allow_web_search: false, trust_instruction: false, audience: :customer, delivery: nil, feature: FEATURE,
@@ -117,12 +129,18 @@ class Crm::MetaAds::ComentariosIa::Escrita
   end
 
   def desfecho(resultado, formato, codigo)
-    return Resultado.new(status: :fica_com_o_dono, motivo: resultado.handoff[:reason].presence || 'agent_handoff') if resultado.handoff[:should]
+    return com_o_dono('agent_handoff', formato, resultado.handoff[:reason].presence) if resultado.handoff[:should]
 
     texto = FORMATO.publicavel(resultado.reply, formato, codigo)
-    return Resultado.new(status: :fica_com_o_dono, motivo: 'reply_out_of_format') if texto.nil?
+    return com_o_dono('reply_out_of_format', formato) if texto.nil?
 
     Resultado.new(status: :escrito, texto: texto)
+  end
+
+  # Nunca mudo: o log diz por que ficou com o dono, só com ids (o motivo escrito pelo modelo não vai ao log).
+  def com_o_dono(tipo, formato, motivo = nil)
+    Rails.logger.info("[comentarios_ia] fica com o dono motivo=#{tipo} formato=#{formato} account=#{@care.account_id} care=#{@care.id}")
+    Resultado.new(status: :fica_com_o_dono, motivo: motivo || tipo)
   end
 
   # O que é de terceiro (ou pode copiar texto de terceiro): o comentário, o de cima, a foto. A legenda é do dono, mas vai

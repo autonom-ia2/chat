@@ -84,9 +84,9 @@ RSpec.describe Crm::MetaAdsCommentCare do
     expect(build(:crm_meta_ads_comment_care, account: account, para_quem: 'a' * 501)).not_to be_valid
   end
 
-  it 'aceita os temas só como lista curta de textos, e o assunto proibido e o tom numa frase (#2458)', :aggregate_failures do
-    expect(build(:crm_meta_ads_comment_care, account: account, temas: ['pedir o link', 'perguntar o preço'])).to be_valid
-    [['a' * 121], [''], [1], 'pedir o link', Array.new(11) { |i| "tema #{i}" }].each do |temas|
+  it 'aceita os temas só pelas chaves dos chips, sem repetir, e o assunto proibido e o tom numa frase (#2458)', :aggregate_failures do
+    expect(build(:crm_meta_ads_comment_care, account: account, temas: %w[link price])).to be_valid
+    [['pedir o link'], [''], [1], 'link', %w[price price]].each do |temas|
       expect(build(:crm_meta_ads_comment_care, account: account, temas: temas)).not_to be_valid
     end
     expect(build(:crm_meta_ads_comment_care, account: account, assunto_proibido: 'a' * 301)).not_to be_valid

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { FOR_WHOM_LIMIT, FRASE_DO_DONO_LIMIT } from './useCuidado';
 
@@ -9,21 +9,19 @@ import { FOR_WHOM_LIMIT, FRASE_DO_DONO_LIMIT } from './useCuidado';
 // assunto fica com o dono, mesmo que a IA saiba responder. Quem decide se o comentário é o caso é o modelo, nunca uma
 // lista de palavras (regra do Rodrigo, 20/09/2026).
 const forWhom = defineModel('forWhom', { type: String, required: true });
-// As partes da frase marcadas, nas palavras da tela (WHO.PARTS).
+// Os chips marcados, pela chave estável (price, link, catalog): o texto de cada um vem do idioma de quem abre a tela.
 const temas = defineModel('temas', { type: Array, required: true });
 const naoFalo = defineModel('naoFalo', { type: String, required: true });
 
 const { t, locale } = useI18n();
 const KEY = 'META_ADS_COMMENTS_AI.DONO';
-const PARTES = ['PRICE', 'LINK', 'CATALOG'];
+const TEMAS = ['price', 'link', 'catalog'];
 const CHIP_ON = 'bg-n-blue-3 text-n-blue-11 ring-1 ring-inset ring-n-blue-8';
 const CHIP_OFF = 'bg-n-alpha-2 text-n-slate-12 hover:bg-n-alpha-1';
 const FIELD =
   '!mb-0 w-full resize-none rounded-xl bg-n-solid-1 px-3 py-2 text-base leading-6 text-n-slate-12 ring-1 ring-inset ring-n-weak focus:outline-none focus:ring-2 focus:ring-n-brand';
 
-const partes = computed(() =>
-  PARTES.map(parte => t(`${KEY}.WHO.PARTS.${parte}`))
-);
+const parte = tema => t(`${KEY}.WHO.PARTS.${tema.toUpperCase()}`);
 const frase = lista =>
   lista.length
     ? t(`${KEY}.WHO.CHIP`, {
@@ -33,26 +31,19 @@ const frase = lista =>
       })
     : '';
 // Os marcados na ordem dos chips, para a frase não mudar com a ordem dos toques.
-const marcados = lista => partes.value.filter(parte => lista.includes(parte));
+const marcados = lista => TEMAS.filter(tema => lista.includes(tema)).map(parte);
 // A lista nova é calculada aqui: o modelo só muda depois que o pai a repassa.
-const marcar = parte => {
+const marcar = tema => {
   const antes = frase(marcados(temas.value));
-  const novos = temas.value.includes(parte)
-    ? temas.value.filter(item => item !== parte)
-    : [...temas.value, parte];
+  const novos = temas.value.includes(tema)
+    ? temas.value.filter(item => item !== tema)
+    : [...temas.value, tema];
   temas.value = novos;
   // O campo acompanha os chips enquanto o dono não o reescreveu.
   if (!forWhom.value.trim() || forWhom.value === antes) {
     forWhom.value = frase(marcados(novos));
   }
 };
-// O idioma pode chegar depois de abrir a tela: as partes guardadas no idioma anterior seguem a troca.
-watch(partes, (novas, antigas) => {
-  temas.value = temas.value.map(tema => {
-    const indice = antigas.indexOf(tema);
-    return indice === -1 ? tema : novas[indice];
-  });
-});
 
 const forWhomTooLong = computed(
   () => forWhom.value.trim().length > FOR_WHOM_LIMIT
@@ -66,21 +57,21 @@ const naoFaloTooLong = computed(
   <div data-ia-dono-para-quem class="flex flex-col gap-5">
     <div class="flex flex-wrap gap-2">
       <button
-        v-for="parte in partes"
-        :key="parte"
+        v-for="tema in TEMAS"
+        :key="tema"
         type="button"
         data-ia-dono-suggestion
-        :aria-pressed="temas.includes(parte)"
+        :aria-pressed="temas.includes(tema)"
         class="inline-flex min-h-11 items-center gap-1.5 rounded-full border-0 px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-        :class="temas.includes(parte) ? CHIP_ON : CHIP_OFF"
-        @click="marcar(parte)"
+        :class="temas.includes(tema) ? CHIP_ON : CHIP_OFF"
+        @click="marcar(tema)"
       >
         <span
-          v-if="temas.includes(parte)"
+          v-if="temas.includes(tema)"
           class="i-lucide-check size-4"
           aria-hidden="true"
         />
-        {{ $t(`${KEY}.WHO.CHIP`, { parte }) }}
+        {{ $t(`${KEY}.WHO.CHIP`, { parte: parte(tema) }) }}
       </button>
     </div>
     <label

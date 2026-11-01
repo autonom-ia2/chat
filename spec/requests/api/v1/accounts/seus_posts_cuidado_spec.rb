@@ -106,7 +106,7 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
   end
 
   describe 'o passo 2 com a IA escrevendo as respostas (#2458)' do
-    let(:passo_2) { corpo.merge(temas: ['pedir o link', 'perguntar o preço'], assunto_proibido: 'reembolso', tom: 'mais formal') }
+    let(:passo_2) { corpo.merge(temas: %w[link price], assunto_proibido: 'reembolso', tom: 'mais formal') }
 
     it 'com a flag: grava os temas, o assunto proibido e o tom, e o painel os devolve' do
       account.enable_features!(Crm::MetaAds::ComentariosIa::Escrita::FLAG)
@@ -114,9 +114,9 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
       put "#{base}/cuidado", params: passo_2, headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
-      expect(response.parsed_body).to include('writes' => true, 'temas' => ['pedir o link', 'perguntar o preço'],
+      expect(response.parsed_body).to include('writes' => true, 'temas' => %w[link price],
                                               'assunto_proibido' => 'reembolso', 'tom' => 'mais formal')
-      expect(Crm::MetaAdsCommentCare.sole).to have_attributes(temas: ['pedir o link', 'perguntar o preço'], assunto_proibido: 'reembolso',
+      expect(Crm::MetaAdsCommentCare.sole).to have_attributes(temas: %w[link price], assunto_proibido: 'reembolso',
                                                               tom: 'mais formal')
     end
 
@@ -128,21 +128,22 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
       expect(Crm::MetaAdsCommentCare.sole).to have_attributes(status: 'paused', assunto_proibido: 'reembolso', tom: 'mais formal')
 
       put "#{base}/cuidado", params: corpo.merge(assunto_proibido: '', tom: ''), headers: admin.create_new_auth_token, as: :json
-      expect(Crm::MetaAdsCommentCare.sole).to have_attributes(assunto_proibido: nil, tom: nil, temas: ['pedir o link', 'perguntar o preço'])
+      expect(Crm::MetaAdsCommentCare.sole).to have_attributes(assunto_proibido: nil, tom: nil, temas: %w[link price])
     end
 
-    it 'sem a flag: nada do passo 2 é gravado nem devolvido' do
-      put "#{base}/cuidado", params: passo_2, headers: admin.create_new_auth_token, as: :json
+    it 'sem a flag: nada do passo 2 é gravado nem devolvido, nem o passo 2 malformado vira erro' do
+      put "#{base}/cuidado", params: passo_2.merge(temas: 'preço'), headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:ok)
       expect(response.parsed_body.keys).not_to include('writes', 'temas', 'assunto_proibido', 'tom')
       expect(Crm::MetaAdsCommentCare.sole).to have_attributes(temas: [], assunto_proibido: nil, tom: nil)
     end
 
-    it 'recusa temas que não são lista de textos, assunto ou tom longo demais' do
+    it 'recusa temas que não são chips, assunto ou tom longo demais' do
       account.enable_features!(Crm::MetaAds::ComentariosIa::Escrita::FLAG)
       longo = 'a' * (Crm::MetaAdsCommentCare::FRASE_DO_DONO_LIMIT + 1)
-      [passo_2.merge(temas: 'preço'), passo_2.merge(temas: [{ a: 1 }]), passo_2.merge(assunto_proibido: longo),
+      [passo_2.merge(temas: 'preço'), passo_2.merge(temas: [{ a: 1 }]), passo_2.merge(temas: ['pedir o link']),
+       passo_2.merge(assunto_proibido: longo),
        passo_2.merge(tom: longo), passo_2.merge(tom: ['x'])].each do |errado|
         put "#{base}/cuidado", params: errado, headers: admin.create_new_auth_token, as: :json
 

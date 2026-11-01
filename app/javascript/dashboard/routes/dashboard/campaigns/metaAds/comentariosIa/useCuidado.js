@@ -34,6 +34,7 @@ export const FRASE_DO_DONO_LIMIT = 300;
 const ESCRITA_INVALIDA = [
   'invalid_message',
   'invalid_para_quem',
+  'invalid_temas',
   'invalid_assunto_proibido',
   'invalid_tom',
 ];

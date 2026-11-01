@@ -15901,8 +15901,8 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:69",
       "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:159",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:184",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:181",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:186",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:183",
       "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": false
@@ -19947,8 +19947,8 @@
     "origem": [
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:74",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:168",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:165",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:170",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:167",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -24854,8 +24854,8 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:62",
       "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:159",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:184",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:181",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:186",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:183",
       "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": false
@@ -27469,8 +27469,8 @@
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:67",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:168",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:165",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:170",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:167",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"

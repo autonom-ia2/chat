@@ -68,7 +68,7 @@ const writes = computed(() => Boolean(props.data.writes));
 // O cuidado novo começa com o preço marcado, como a frase do campo; o que já tem "para quem" começa com os temas dele.
 const temasIniciais = () => {
   if (props.data.temas?.length) return [...props.data.temas];
-  return props.data.para_quem ? [] : [t(`${KEY}.WHO.PARTS.PRICE`)];
+  return props.data.para_quem ? [] : ['price'];
 };
 const temas = ref(temasIniciais());
 const naoFalo = ref(props.data.assunto_proibido || '');
