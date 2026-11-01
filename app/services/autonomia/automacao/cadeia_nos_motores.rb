@@ -13,8 +13,49 @@ module Autonomia::Automacao::CadeiaNosMotores
       resultado = Cadeia.entrar("regra:#{@rule.id}", @account) { super }
       return resultado unless resultado.is_a?(Cadeia::Recusa)
 
-      Cadeia.registrar_recusa(resultado, account_id: @account.id, alvo: "conversa:#{@conversation.id}")
+      Cadeia.registrar_recusa(resultado, account_id: @account.id, alvo: "conversa:#{@conversation.id}",
+                                         conversa: @conversation, nome: @rule.name)
       nil
+    end
+  end
+
+  # AutomationRuleListener: hoje uma regra nunca dispara outra (o evento com `performed_by` igual a uma regra é
+  # ignorado). Com a flag, a mudança feita por uma regra dispara as outras, e quem segura laço e cascata é a cadeia,
+  # que veio com o evento. Cadeia ativa aqui implica a flag: `retomar` só a devolve para a conta que tem.
+  # A regra com atraso fica de fora: ela roda depois, num job sem a cadeia, e um laço entre duas regras com atraso não
+  # teria quem o parasse. Disparada por outra regra, ela segue ignorada, como hoje.
+  module RegraDisparaRegra
+    thread_mattr_accessor :vinda_de_regra, instance_accessor: false
+
+    def message_created(event)
+      pelo_evento(event) { super }
+    end
+
+    private
+
+    def process_conversation_event(event, event_name)
+      pelo_evento(event) { super }
+    end
+
+    # Guarda, enquanto o evento é tratado, se ele veio de uma regra dentro da cadeia: só esse caso é novo.
+    def pelo_evento(event)
+      anterior = RegraDisparaRegra.vinda_de_regra
+      RegraDisparaRegra.vinda_de_regra = Cadeia.ativa? && event.data[:performed_by].instance_of?(AutomationRule)
+      yield
+    ensure
+      RegraDisparaRegra.vinda_de_regra = anterior
+    end
+
+    def performed_by_automation?(event)
+      return false if Cadeia.ativa?
+
+      super
+    end
+
+    def execute_rule(rule, account, conversation, message: nil)
+      return if RegraDisparaRegra.vinda_de_regra && rule.execution_delay.present?
+
+      super
     end
   end
 
@@ -32,7 +73,8 @@ module Autonomia::Automacao::CadeiaNosMotores
       end
       return resultado unless resultado.is_a?(Cadeia::Recusa)
 
-      Cadeia.registrar_recusa(resultado, account_id: @card.account_id, alvo: "card:#{@card.id}")
+      Cadeia.registrar_recusa(resultado, account_id: @card.account_id, alvo: "card:#{@card.id}",
+                                         conversa: @card.primary_conversation, nome: automation.name)
       nil
     end
   end

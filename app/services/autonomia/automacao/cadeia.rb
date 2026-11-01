@@ -81,10 +81,23 @@ class Autonomia::Automacao::Cadeia
       Autonomia::Automacao.fundacao?(account)
     end
 
-    def registrar_recusa(recusa, account_id:, alvo:)
+    # O motivo vai para o log. A cascata cortada vai também para o histórico da conversa, como atividade (só a equipe
+    # vê): quem montou as automações entende por que a quarta não rodou. O laço fica só no log: uma regra que muda a
+    # conversa e casaria de novo com a própria mudança é o caso comum, e uma nota a cada vez seria ruído.
+    def registrar_recusa(recusa, account_id:, alvo:, conversa: nil, nome: nil)
       Rails.logger.info(
         "[automacao][cadeia] recusada origem=#{recusa.origem} motivo=#{recusa.motivo} " \
         "cadeia=#{recusa.origens.join('>')} conta=#{account_id} alvo=#{alvo}"
+      )
+      registrar_no_historico(conversa, nome) if conversa && recusa.motivo == :profundidade
+    end
+
+    private
+
+    def registrar_no_historico(conversa, nome)
+      conteudo = I18n.with_locale(conversa.account.locale) { I18n.t('conversations.activity.automacao.cadeia_profundidade', nome: nome) }
+      ::Conversations::ActivityMessageJob.perform_later(
+        conversa, account_id: conversa.account_id, inbox_id: conversa.inbox_id, message_type: :activity, content: conteudo
       )
     end
   end
