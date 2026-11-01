@@ -29,21 +29,23 @@ RSpec.describe 'Regras de automação de hoje com a F1' do # rubocop:disable RSp
       before { account.enable_features!('automacao_fundacao') if ligada }
 
       # Forma da conta 6: atributo da conversa igual a um valor põe etiquetas. Com a flag, a mudança da própria regra
-      # casa de novo com ela: a cadeia recusa (laço) e deixa uma nota só.
+      # casa de novo com ela: a cadeia recusa (auto-disparo), só no log, e a regra roda uma vez.
       it 'conversa atualizada com o atributo põe as etiquetas' do
         create(:custom_attribute_definition, account: account, attribute_key: 'categoria', attribute_model: 'conversation_attribute',
                                              attribute_display_type: 'list', attribute_values: %w[sinistro renovacao])
-        create(:automation_rule, account: account, event_name: 'conversation_updated',
-                                 conditions: [{ attribute_key: 'categoria', filter_operator: 'equal_to', values: ['sinistro'],
-                                                custom_attribute_type: 'conversation_attribute', query_operator: nil }],
-                                 actions: [{ action_name: 'add_label', action_params: %w[pos-venda sinistro] }])
+        regra = create(:automation_rule, account: account, event_name: 'conversation_updated',
+                                         conditions: [{ attribute_key: 'categoria', filter_operator: 'equal_to', values: ['sinistro'],
+                                                        custom_attribute_type: 'conversation_attribute', query_operator: nil }],
+                                         actions: [{ action_name: 'add_label', action_params: %w[pos-venda sinistro] }])
         conversation
         clear_enqueued_jobs
+        allow(AutomationRules::Disparos).to receive(:registrar).and_call_original
 
         ate_o_fim { conversation.update!(custom_attributes: { 'categoria' => 'sinistro' }) }
 
         expect(conversation.reload.label_list).to contain_exactly('pos-venda', 'sinistro')
-        expect(notas_da_cadeia).to eq(ligada ? 1 : 0)
+        expect(AutomationRules::Disparos).to have_received(:registrar).with(regra.id).once
+        expect(notas_da_cadeia).to eq(0)
       end
 
       # Forma da conta 17: conversa nova na caixa vai para a dona da caixa.

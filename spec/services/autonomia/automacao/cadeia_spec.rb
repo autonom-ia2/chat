@@ -10,12 +10,18 @@ RSpec.describe Autonomia::Automacao::Cadeia do
     expect(described_class.origens).to eq([])
   end
 
-  it 'recusa a mesma automação de novo na sequência (laço) e não roda o bloco' do
+  it 'recusa a automação que casou com a própria mudança (auto-disparo) e não roda o bloco' do
     rodou = false
     recusa = described_class.com('regra:1') { described_class.com('regra:1') { rodou = true } }
 
     expect(rodou).to be(false)
-    expect(recusa).to have_attributes(origem: 'regra:1', motivo: :laco, origens: ['regra:1'])
+    expect(recusa).to have_attributes(origem: 'regra:1', motivo: :auto_disparo, origens: ['regra:1'])
+  end
+
+  it 'recusa a mesma automação de novo depois de outra no ramo (laço)' do
+    recusa = described_class.com('regra:1') { described_class.com('etapa:2') { described_class.com('regra:1') { :rodou } } }
+
+    expect(recusa).to have_attributes(origem: 'regra:1', motivo: :laco, origens: %w[regra:1 etapa:2])
   end
 
   it 'deixa 3 automações diferentes encadearem e recusa a quarta (D6)' do
