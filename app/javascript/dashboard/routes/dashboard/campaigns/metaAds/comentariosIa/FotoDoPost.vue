@@ -72,77 +72,88 @@ const FIELD =
 </script>
 
 <template>
-  <div
-    v-if="estado !== 'sem_foto'"
-    data-ia-foto
-    :data-estado="estado"
-    class="flex flex-col gap-2 rounded-xl bg-n-alpha-1 p-4"
-  >
-    <p
-      v-if="estado === 'lendo'"
-      role="status"
-      class="m-0 flex items-center gap-2 text-sm font-medium text-n-slate-11"
+  <!-- Sem foto no post, o bloco some: o invólucro sem caixa (contents) não ocupa espaço no passo. -->
+  <div class="contents">
+    <div
+      v-if="estado !== 'sem_foto'"
+      data-ia-foto
+      :data-estado="estado"
+      class="flex flex-col gap-2 rounded-xl bg-n-alpha-1 p-4"
     >
-      <span
-        class="i-lucide-scan-eye size-4 animate-pulse text-n-violet-11"
-        aria-hidden="true"
-      />
-      {{ $t(`${KEY}.LOOKING`) }}
-    </p>
-    <template v-else-if="corrigindo">
-      <label for="ia-foto-campo" class="text-sm font-semibold text-n-slate-12">
-        {{ $t(`${KEY}.SEEN`) }}
-      </label>
-      <textarea
-        id="ia-foto-campo"
-        v-model="rascunho"
-        data-ia-foto-campo
-        rows="3"
-        :class="FIELD"
-      />
       <p
-        v-if="naoGuardou"
-        data-ia-foto-erro
-        role="alert"
-        class="m-0 text-sm font-medium text-n-ruby-11"
+        v-if="estado === 'lendo'"
+        role="status"
+        class="m-0 flex items-center gap-2 text-sm font-medium text-n-slate-11"
       >
-        {{ $t(`${KEY}.SAVE_ERROR`) }}
-      </p>
-      <div class="flex flex-wrap items-center gap-2">
-        <Button
-          data-ia-foto-guardar
-          variant="faded"
-          color="slate"
-          :label="$t(`${KEY}.SAVE`)"
-          :disabled="!podeGuardar"
-          :is-loading="guardando"
-          class="!min-h-11 !rounded-xl"
-          @click="guardar"
+        <span
+          class="i-lucide-scan-eye size-4 animate-pulse text-n-violet-11"
+          aria-hidden="true"
         />
+        {{ $t(`${KEY}.LOOKING`) }}
+      </p>
+      <template v-else-if="corrigindo">
+        <label
+          for="ia-foto-campo"
+          class="text-sm font-semibold text-n-slate-12"
+        >
+          {{ $t(`${KEY}.SEEN`) }}
+        </label>
+        <textarea
+          id="ia-foto-campo"
+          v-model="rascunho"
+          data-ia-foto-campo
+          rows="3"
+          :class="FIELD"
+        />
+        <p
+          v-if="naoGuardou"
+          data-ia-foto-erro
+          role="alert"
+          class="m-0 text-sm font-medium text-n-ruby-11"
+        >
+          {{ $t(`${KEY}.SAVE_ERROR`) }}
+        </p>
+        <div class="flex flex-wrap items-center gap-2">
+          <Button
+            data-ia-foto-guardar
+            variant="faded"
+            color="slate"
+            :label="$t(`${KEY}.SAVE`)"
+            :disabled="!podeGuardar"
+            :is-loading="guardando"
+            class="!min-h-11 !rounded-xl"
+            @click="guardar"
+          />
+          <button
+            type="button"
+            data-ia-foto-cancelar
+            :class="LINK"
+            @click="cancelar"
+          >
+            {{ $t(`${KEY}.CANCEL`) }}
+          </button>
+        </div>
+      </template>
+      <div v-else class="flex flex-wrap items-center gap-x-2">
+        <p
+          v-if="estado === 'falhou'"
+          class="m-0 text-sm leading-6 text-n-slate-12"
+        >
+          {{ $t(`${KEY}.FAILED`) }}
+        </p>
+        <p v-else class="m-0 text-sm leading-6 text-n-slate-12">
+          <span class="font-semibold">{{ $t(`${KEY}.SEEN`) }}</span>
+          {{ texto }}
+        </p>
         <button
           type="button"
-          data-ia-foto-cancelar
+          data-ia-foto-corrigir
           :class="LINK"
-          @click="cancelar"
+          @click="abrir"
         >
-          {{ $t(`${KEY}.CANCEL`) }}
+          {{ $t(`${KEY}.${estado === 'falhou' ? 'WRITE' : 'FIX'}`) }}
         </button>
       </div>
-    </template>
-    <div v-else class="flex flex-wrap items-center gap-x-2">
-      <p
-        v-if="estado === 'falhou'"
-        class="m-0 text-sm leading-6 text-n-slate-12"
-      >
-        {{ $t(`${KEY}.FAILED`) }}
-      </p>
-      <p v-else class="m-0 text-sm leading-6 text-n-slate-12">
-        <span class="font-semibold">{{ $t(`${KEY}.SEEN`) }}</span>
-        {{ texto }}
-      </p>
-      <button type="button" data-ia-foto-corrigir :class="LINK" @click="abrir">
-        {{ $t(`${KEY}.${estado === 'falhou' ? 'WRITE' : 'FIX'}`) }}
-      </button>
     </div>
   </div>
 </template>
