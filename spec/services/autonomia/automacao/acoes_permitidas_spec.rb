@@ -37,6 +37,10 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     expect(liberadas.select { |acao| Autonomia::Guide::Acoes.fora_do_catalogo?(acao) }).to be_empty
   end
 
+  it 'nenhum DELETE vira passo, de recurso nenhum' do
+    expect(permitidas.acoes.keys.select { |acao| acao.start_with?('DELETE ') }).to be_empty
+  end
+
   it 'nunca libera apagar funil, etapa, caixa, agente, etiqueta ou atributo (F3.11)' do
     apagar_estrutura = formatos.keys.select do |acao|
       acao.start_with?('DELETE ') && permitidas::ESTRUTURA.include?(permitidas.recurso_de(acao))

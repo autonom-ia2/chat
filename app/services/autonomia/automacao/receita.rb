@@ -51,8 +51,17 @@ class Autonomia::Automacao::Receita
   end
 
   def caminhos_desconhecidos(id, condicao)
-    ::Autonomia::Automacao::Condicao.caminhos(condicao).reject { |caminho| ::Autonomia::Automacao::Valores.caminho_valido?(caminho) }
-                                    .map { |caminho| texto(:valor_desconhecido, passo: id, caminho: caminho) }
+    ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map { |caminho| problemas_do_caminho(id, caminho) }
+  end
+
+  # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
+  # vazio no motor, com o motivo no registro.
+  def problemas_do_caminho(id, caminho)
+    valores = ::Autonomia::Automacao::Valores
+    return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
+    return [texto(:atributo_inexistente, passo: id, caminho: caminho)] unless valores.atributo_definido?(caminho, @conta)
+
+    []
   end
 
   def problemas_da_acao(passo)
@@ -67,8 +76,7 @@ class Autonomia::Automacao::Receita
     faltando = parametros(passo['acao']).reject { |nome| valores[nome].present? }
                                         .map { |nome| texto(:caminho_faltando, passo: passo['id'], campo: nome) }
     lidos = valores.values.filter_map { |valor| valor['$valor'] if valor.is_a?(Hash) }
-    faltando + lidos.reject { |caminho| ::Autonomia::Automacao::Valores.caminho_valido?(caminho) }
-                    .map { |caminho| texto(:valor_desconhecido, passo: passo['id'], caminho: caminho) }
+    faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho) }
   end
 
   def corpo_da_acao(passo)

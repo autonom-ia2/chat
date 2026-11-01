@@ -16,6 +16,13 @@ RSpec.describe Autonomia::Automacao::Condicao do
     expect(verdadeira?(campo('conversa.status', 'diferente', 'resolved'))).to be(false)
   end
 
+  it 'compara igual e diferente como número quando os dois lados são números', :aggregate_failures do
+    expect(verdadeira?(campo('contato.atributos.renda', 'igual', 3500))).to be(true)
+    expect(verdadeira?(campo('contato.atributos.renda', 'igual', '3500.0'))).to be(true)
+    expect(verdadeira?(campo('contato.atributos.renda', 'diferente', '3500.00'))).to be(false)
+    expect(verdadeira?(campo('contato.atributos.placa', 'igual', 'ABC1D23'))).to be(true)
+  end
+
   it 'procura na lista de etiquetas' do
     expect(verdadeira?(campo('conversa.etiquetas', 'contem', 'vip'))).to be(true)
     expect(verdadeira?(campo('conversa.etiquetas', 'nao_contem', 'vip'))).to be(false)

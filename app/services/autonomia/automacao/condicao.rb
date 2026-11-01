@@ -2,10 +2,11 @@
 # `{"campo": {"$valor": "conversa.status"}, "op": "igual", "valor": "resolved"}`, ou `todas`/`alguma` de outras.
 #
 # Valor ausente não é erro: "vazio" e "preenchido" respondem por ele. As comparações o tratam como texto vazio
-# ("diferente" e "não contém" dão verdadeiro) e, para "maior" e "menor", dão falso.
+# ("diferente" e "não contém" dão verdadeiro) e, para "maior" e "menor", dão falso. "Igual" com os dois lados
+# números compara como número (10 é igual a "10.0"); senão, como texto.
 class Autonomia::Automacao::Condicao
   OPERACOES = {
-    'igual' => ->(atual, valor) { !atual.is_a?(Array) && atual.to_s == valor.to_s },
+    'igual' => ->(atual, valor) { !atual.is_a?(Array) && igual?(atual, valor) },
     'diferente' => ->(atual, valor) { !OPERACOES['igual'].call(atual, valor) },
     'contem' => ->(atual, valor) { Array(atual).map(&:to_s).include?(valor.to_s) },
     'nao_contem' => ->(atual, valor) { !OPERACOES['contem'].call(atual, valor) },
@@ -14,6 +15,12 @@ class Autonomia::Automacao::Condicao
     'maior' => ->(atual, valor) { comparar(atual, valor) { |esquerda, direita| esquerda > direita } },
     'menor' => ->(atual, valor) { comparar(atual, valor) { |esquerda, direita| esquerda < direita } }
   }.freeze
+
+  def self.igual?(atual, valor)
+    esquerda = numero(atual)
+    direita = numero(valor)
+    esquerda && direita ? esquerda == direita : atual.to_s == valor.to_s
+  end
 
   def self.comparar(atual, valor)
     esquerda = numero(atual)

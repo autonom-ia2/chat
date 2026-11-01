@@ -7,7 +7,7 @@ RSpec.describe Autonomia::Automacao::Valores do
   let(:valores) { described_class.new(conversa: conversa) }
 
   it 'lê campos da conversa e do contato' do
-    expect(valores.ler('conversa.id')).to eq(conversa.id)
+    expect(valores.ler('conversa.id')).to eq(conversa.display_id)
     expect(valores.ler('conversa.caixa_id')).to eq(conversa.inbox_id)
     expect(valores.ler('contato.nome')).to eq('Maria')
   end

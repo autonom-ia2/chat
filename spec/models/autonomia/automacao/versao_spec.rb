@@ -65,6 +65,46 @@ RSpec.describe Autonomia::Automacao::Versao do
     expect(erros(receita(alterar))).to include('Passo p1: a automação não muda custom_attribute_definition.attribute_key')
   end
 
+  it 'recusa ação fora da lista dentro do senão e do se_vencer' do
+    apagar = ->(id) { { 'id' => id, 'tipo' => 'acao', 'acao' => 'DELETE agents/:id', 'caminho' => { 'id' => 7 }, 'descricao' => 'Apagar' } }
+    condicao = { 'campo' => { '$valor' => 'conversa.status' }, 'op' => 'igual', 'valor' => 'open' }
+    se = { 'id' => 's1', 'tipo' => 'se', 'condicao' => condicao, 'entao' => [esperar('p2')], 'senao' => [apagar.call('p3')] }
+    ate = { 'id' => 'e1', 'tipo' => 'esperar_ate', 'condicao' => condicao, 'prazo' => { 'valor' => 1, 'unidade' => 'dias' },
+            'se_vencer' => [apagar.call('p4')] }
+
+    expect(erros(receita(se, ate))).to include('Passo p3: DELETE agents/:id', 'Passo p4: DELETE agents/:id')
+  end
+
+  describe 'contato e empresa' do
+    def alterar(acao, corpo)
+      { 'id' => 'p1', 'tipo' => 'acao', 'acao' => acao, 'caminho' => { 'id' => 9 }, 'descricao' => 'Alterar', 'corpo' => corpo }
+    end
+
+    it 'não troca a foto (buscaria uma URL de fora) nem bloqueia o contato', :aggregate_failures do
+      expect(erros(receita(alterar('PATCH contacts/:id', { 'avatar_url' => 'https://exemplo.test/a.png' })))).to include('muda avatar_url')
+      expect(erros(receita(alterar('PUT contacts/:id', { 'blocked' => true })))).to include('muda blocked')
+      expect(erros(receita(alterar('PATCH companies/:id', { 'company' => { 'avatar' => 'x' } })))).to include('muda avatar')
+      expect(erros(receita(alterar('PUT companies/:id', { 'avatar' => 'x' })))).to include('muda avatar')
+      expect(versao(receita(alterar('PATCH contacts/:id', { 'name' => 'Ana Souza' })))).to be_valid
+    end
+  end
+
+  describe 'atributo personalizado' do
+    let(:condicao) { { 'campo' => { '$valor' => 'contato.atributos.placa' }, 'op' => 'preenchido' } }
+
+    it 'recusa a chave que a conta não tem, e aceita depois de criar o atributo', :aggregate_failures do
+      se = { 'id' => 's1', 'tipo' => 'se', 'condicao' => condicao, 'entao' => [esperar('p2')] }
+
+      expect(erros(receita(se))).to include('Passo s1: a conta não tem o atributo de contato.atributos.placa')
+
+      create(:custom_attribute_definition, account: automacao.account, attribute_model: 'conversation_attribute', attribute_key: 'placa')
+      expect(versao(receita(se))).not_to be_valid
+
+      create(:custom_attribute_definition, account: automacao.account, attribute_model: 'contact_attribute', attribute_key: 'placa')
+      expect(versao(receita(se))).to be_valid
+    end
+  end
+
   it 'recusa variável no corpo da ação (chega com a mensagem, F4)' do
     expect(erros(receita(por_etiqueta(corpo: { 'por' => [{ '$valor' => 'contato.nome' }] }))))
       .to include('o corpo da ação ainda não aceita variável')

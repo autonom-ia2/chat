@@ -4,8 +4,9 @@
 # nem texto livre; cada caminho é um campo do modelo. Os atributos personalizados entram pela chave
 # (`contato.atributos.placa`). Card entra com os gatilhos de card (F6).
 class Autonomia::Automacao::Valores
+  # `conversa.id` é o número que a pessoa vê (#123) e o que as rotas da conversa recebem, não o id do banco.
   CAMPOS = {
-    'conversa.id' => ->(conversa) { conversa.id },
+    'conversa.id' => ->(conversa) { conversa.display_id },
     'conversa.status' => ->(conversa) { conversa.status },
     'conversa.prioridade' => ->(conversa) { conversa.priority },
     'conversa.caixa_id' => ->(conversa) { conversa.inbox_id },
@@ -25,9 +26,18 @@ class Autonomia::Automacao::Valores
     'contato.atributos' => ->(conversa) { conversa.contact&.custom_attributes }
   }.freeze
 
+  # O modelo do atributo personalizado de cada base, para conferir ao salvar que a chave existe na conta.
+  MODELOS = { 'conversa.atributos' => 'conversation_attribute', 'contato.atributos' => 'contact_attribute' }.freeze
+
   class << self
     def caminho_valido?(caminho)
       CAMPOS.key?(caminho.to_s) || atributo(caminho).present?
+    end
+
+    # O atributo da conta que o caminho lê existe? Caminho que não é atributo responde true.
+    def atributo_definido?(caminho, conta)
+      base, chave = atributo(caminho)
+      base.nil? || conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave)
     end
 
     # "contato.atributos.placa" => ["contato.atributos", "placa"]. A chave do atributo pode ter ponto.

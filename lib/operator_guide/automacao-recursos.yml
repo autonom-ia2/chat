@@ -38,15 +38,17 @@ passo:
       PATCH custom_attribute_definitions/:id: { proibe: [custom_attribute_definition.attribute_key, custom_attribute_definition.attribute_model] }
       PUT custom_attribute_definitions/:id: { proibe: [custom_attribute_definition.attribute_key, custom_attribute_definition.attribute_model] }
   contacts:
-    motivo: Alterar o contato e os atributos dele.
+    motivo: >-
+      Alterar o contato e os atributos dele. A foto fica de fora (a plataforma buscaria uma URL de fora), e bloquear
+      também: corta a conversa com o cliente.
     acoes:
-      PATCH contacts/:id: {}
-      PUT contacts/:id: {}
+      PATCH contacts/:id: { proibe: [avatar, avatar_url, blocked] }
+      PUT contacts/:id: { proibe: [avatar, avatar_url, blocked] }
   companies:
-    motivo: Alterar a empresa e os atributos dela.
+    motivo: Alterar a empresa e os atributos dela. A foto fica de fora (a plataforma buscaria uma URL de fora).
     acoes:
-      PATCH companies/:id: {}
-      PUT companies/:id: {}
+      PATCH companies/:id: { proibe: [avatar] }
+      PUT companies/:id: { proibe: [avatar] }
   conversations:
     motivo: Atributo, prioridade e status da conversa.
     acoes:
