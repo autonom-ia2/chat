@@ -39,6 +39,24 @@ RSpec.describe Autonomia::Automacao::Execucao do
     expect(outra_igual.tap { |nova| nova.account = alheia.account }).not_to be_valid
   end
 
+  it 'recusa alvo de outra conta' do
+    expect(outra_igual.tap { |nova| nova.alvo = create(:conversation) }).not_to be_valid
+  end
+
+  it 'o banco recusa estado terminal sem finalizada_em e finalizada_em em estado aberto' do
+    # Cada tentativa num savepoint: o erro do banco aborta a transação do exemplo. update_all de propósito: é o caminho
+    # que pula o callback.
+    linha = described_class.where(id: execucao.id)
+    gravar = lambda do |campos|
+      described_class.transaction(requires_new: true) { linha.update_all(campos) } # rubocop:disable Rails/SkipsModelValidations
+    end
+    pelo_check = ->(erro) { expect(erro.cause).to be_a(PG::CheckViolation) }
+
+    expect { gravar.call(estado: 'concluida') }.to raise_error(ActiveRecord::StatementInvalid, &pelo_check)
+    expect { gravar.call(finalizada_em: Time.current) }.to raise_error(ActiveRecord::StatementInvalid, &pelo_check)
+    expect { gravar.call(estado: 'concluida', finalizada_em: Time.current) }.to change { linha.pick(:estado) }.to('concluida')
+  end
+
   it 'o registro recusa execução de outra conta' do
     alheia = create(:autonomia_automacao_execucao)
 

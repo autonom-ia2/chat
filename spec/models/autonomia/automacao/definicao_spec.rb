@@ -12,6 +12,12 @@ RSpec.describe Autonomia::Automacao::Definicao do
     expect(build(:autonomia_automacao, origem: 'outra')).not_to be_valid
   end
 
+  it 'recusa versão ativa de outra automação' do
+    alheia = create(:autonomia_automacao_versao)
+
+    expect(automacao.tap { |definicao| definicao.versao_ativa = alheia }).not_to be_valid
+  end
+
   describe '#salvar_versao! (F2.2)' do
     let(:autor) { create(:user, account: automacao.account) }
 

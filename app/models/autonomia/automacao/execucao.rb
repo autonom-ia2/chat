@@ -2,7 +2,8 @@
 #
 # Só pode haver uma aberta por automação, alvo e gatilho: o índice único do banco vale enquanto `finalizada_em` é nula.
 # Por isso `finalizada_em` sai daqui, a cada gravação, a partir do estado: nula num estado terminal travaria aquele
-# alvo para sempre. Quem grava sem callback (`update_columns`, `update_all`) tem de preencher as duas juntas.
+# alvo para sempre. Quem grava sem callback (`update_columns`, `update_all`) tem de preencher as duas juntas; o CHECK
+# do banco recusa o par desencontrado. A lista de TERMINAIS é a mesma do CHECK da migration.
 class Autonomia::Automacao::Execucao < ApplicationRecord
   self.table_name = 'autonomia_automacao_execucoes'
 
@@ -26,10 +27,12 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
 
   private
 
-  # Versão e automação de outra conta prenderiam a exclusão daquela conta nesta chave estrangeira.
+  # Versão e automação de outra conta prenderiam a exclusão daquela conta nesta chave estrangeira; alvo de outra conta
+  # faria o motor agir fora da conta.
   def da_mesma_automacao
     errors.add(:versao, :invalid) if versao && versao.automacao_id != automacao_id
     errors.add(:automacao, :invalid) if automacao && automacao.account_id != account_id
+    errors.add(:alvo, :invalid) if alvo && alvo.account_id != account_id
   end
 
   def marcar_finalizada

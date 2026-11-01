@@ -18,6 +18,7 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
 
   validates :nome, presence: true
   validates :origem, inclusion: { in: ORIGENS }
+  validate :versao_ativa_desta_automacao
 
   def salvar_versao!(receita:, autor: nil)
     with_lock do
@@ -25,5 +26,11 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
       update!(versao_ativa: versao)
       versao
     end
+  end
+
+  private
+
+  def versao_ativa_desta_automacao
+    errors.add(:versao_ativa, :invalid) if versao_ativa && (versao_ativa.automacao_id != id || versao_ativa.account_id != account_id)
   end
 end

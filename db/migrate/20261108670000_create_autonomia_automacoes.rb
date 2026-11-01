@@ -3,9 +3,14 @@
 # - automacoes: a automação da conta. Nasce desligada; `ligada_por_id` é quem ligou (D1: o motor age como essa pessoa).
 # - versoes: a receita de cada salvamento. Imutável: salvar cria a próxima, e quem já está no meio segue na antiga.
 # - execucoes: uma automação rodando para um alvo (conversa, card ou contato). Uma só aberta por automação, alvo e
-#   gatilho: o índice único vale enquanto `finalizada_em` é nula.
+#   gatilho: o índice único vale enquanto `finalizada_em` é nula, e um CHECK amarra `finalizada_em` ao estado terminal.
 # - registros: uma linha por passo, para o histórico. Retenção de 30 dias (Autonomia::Automacao::LimparRegistrosJob).
 class CreateAutonomiaAutomacoes < ActiveRecord::Migration[7.2]
+  ABERTA = 'finalizada_em IS NULL'.freeze
+  # Estado terminal e finalizada_em andam juntos também fora do modelo (update_all): terminal sem finalizada_em deixaria a
+  # execução aberta para o índice único e travaria o alvo. Mesma lista de Autonomia::Automacao::Execucao::TERMINAIS.
+  FINALIZADA = "(estado IN ('concluida', 'falhou', 'interrompida', 'parada')) = (finalizada_em IS NOT NULL)".freeze
+
   def change
     criar_automacoes
     criar_versoes
@@ -68,9 +73,9 @@ class CreateAutonomiaAutomacoes < ActiveRecord::Migration[7.2]
       t.integer :tentativas, null: false, default: 0
       t.datetime :travada_em
       t.timestamps
-      t.index [:automacao_id, :alvo_type, :alvo_id, :chave_gatilho],
-              unique: true, where: 'finalizada_em IS NULL', name: 'idx_autonomia_automacao_execucoes_abertas'
-      t.index :due_at, where: 'finalizada_em IS NULL', name: 'idx_autonomia_automacao_execucoes_esperando'
+      t.index [:automacao_id, :alvo_type, :alvo_id, :chave_gatilho], unique: true, where: ABERTA, name: 'idx_autonomia_automacao_execucoes_abertas'
+      t.index :due_at, where: ABERTA, name: 'idx_autonomia_automacao_execucoes_esperando'
+      t.check_constraint FINALIZADA, name: 'chk_autonomia_automacao_execucoes_finalizada'
     end
   end
 
