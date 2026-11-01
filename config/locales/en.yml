@@ -523,6 +523,7 @@ en:
       admin_only: 'Only an account admin can do this.'
       automation_manage_only: 'For this you need the automatic rules permission in your role.'
       stage_automation_manage_only: 'For this you need the automatic rules and the pipeline settings permissions in your role.'
+      rule_funnel_manage_only: 'A rule that changes the pipeline also needs the pipeline settings permission in your role.'
       automation_view_only: 'For this you need permission to see the automatic rules in your role.'
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'

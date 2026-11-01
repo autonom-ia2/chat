@@ -49,6 +49,21 @@ RSpec.describe Autonomia::Guide::Acoes do
     expect(resultado.ok).to be(true)
   end
 
+  it 'regra que mexe no funil pede também a chave de funis' do
+    so_automacao = com_funcao(%w[automation_view automation_manage])
+    move_card = regra.merge(actions: [{ action_name: 'crm_move_card_stage', action_params: [stage.id] }])
+
+    expect { para(so_automacao).executar('POST automation_rules', { corpo: move_card }) }
+      .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.rule_funnel_manage_only'))
+  end
+
+  it 'com a chave de funis, monta a regra que move card' do
+    com_funil = com_funcao(%w[automation_view automation_manage crm_manage_pipelines])
+    move_card = regra.merge(actions: [{ action_name: 'crm_move_card_stage', action_params: [stage.id] }])
+
+    expect { para(com_funil).executar('POST automation_rules', { corpo: move_card }) }.to change(AutomationRule, :count).by(1)
+  end
+
   it 'automation_manage não abre o resto do catálogo' do
     com_chave = com_funcao(%w[automation_view automation_manage])
 

@@ -31,15 +31,28 @@ class Autonomia::Guide::PorteiroDaAutomacao
                           .merge(ETAPA.index_with('stage_automation_manage_only'))
                           .merge('POST automation_rules/:id/ensaio' => 'automation_view_only').freeze
 
+  # Criar e mudar regra: com ação ou condição de funil, pede também a chave de funis (RegraDoFunil). A cópia e a
+  # mudança sem as ações no corpo ficam com o controller, que olha a regra gravada.
+  REGRA_COM_CORPO = ['POST automation_rules', 'PATCH automation_rules/:id', 'PUT automation_rules/:id'].freeze
+
   # nil quando pode; senão a chave i18n da recusa. Sem a flag `automacao_fundacao`, o Guia segue só para quem administra.
-  def self.recusa(acao, account_user)
+  def self.recusa(acao, account_user, corpo = {})
     return 'admin_only' unless Autonomia::Automacao.fundacao?(account_user&.account)
 
     recusa = RECUSA_POR_ACAO[acao.to_s]
     return 'admin_only' if recusa.nil?
     return recusa if account_user.blank?
+    return recusa unless cumpre?(recusa, account_user)
 
-    recusa unless cumpre?(recusa, account_user)
+    'rule_funnel_manage_only' if mexe_no_funil_sem_chave?(acao, account_user, corpo)
+  end
+
+  def self.mexe_no_funil_sem_chave?(acao, account_user, corpo)
+    return false unless REGRA_COM_CORPO.include?(acao.to_s)
+
+    corpo = corpo.to_h.with_indifferent_access
+    funil = Autonomia::Automacao::RegraDoFunil
+    funil.mexe?(corpo[:actions], corpo[:conditions]) && !funil.pode?(account_user)
   end
 
   def self.cumpre?(recusa, account_user)

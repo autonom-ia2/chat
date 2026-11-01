@@ -157,7 +157,7 @@ class Autonomia::Guide::Acoes
   # caminho que execute pelo turno passa por este ponto, e a confirmação não
   # pode depender de quem chamou lembrar dela.
   def conferir!(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     raise Recusada, traduzir('needs_confirmation') unless desfazivel?(acao, dados)
 
     montar_caminho(acao, dados)
@@ -185,7 +185,7 @@ class Autonomia::Guide::Acoes
   # ação sem o identificador, e essa recusa tem que acontecer ANTES do botão
   # aparecer, não depois do clique.
   def descrever(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     montar_caminho(acao, dados)
     conferencia = conferir_corpo!(acao, dados)
 
@@ -202,7 +202,7 @@ class Autonomia::Guide::Acoes
   # Executa pela API da conta, como o usuário: se a
   # plataforma não deixa ele fazer, não deixa o Guia fazer.
   def executar(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     caminho = montar_caminho(acao, dados)
     conferencia = conferir_corpo!(acao, dados)
     resposta = requisitar(verbo_de(acao), caminho, conferencia.corpo)
@@ -238,12 +238,12 @@ class Autonomia::Guide::Acoes
   def conferir_corpo!(acao, dados) = conferencia(acao, dados).conferida!
   def conferencia(acao, dados) = ::Autonomia::Guide::Formatos::Conferencia.new(acao, corpo_de(dados), conta: @account)
 
-  def garantir_permitida!(acao)
+  def garantir_permitida!(acao, dados = nil)
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
 
     # #2414 F1.3: quem não administra ainda monta automação com automation_manage (Autonomia::Guide::PorteiroDaAutomacao).
-    recusa = ::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user) unless administrador?
+    recusa = ::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user, dados ? corpo_de(dados) : {}) unless administrador?
     raise Recusada, traduzir(recusa) if recusa
   end
 
