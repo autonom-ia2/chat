@@ -1,12 +1,7 @@
 import { flushPromises } from '@vue/test-utils';
-import { effectScope, ref } from 'vue';
+import { ref } from 'vue';
 import ComentariosIaAPI from 'dashboard/api/comentariosIa';
-import {
-  ESPERA_LENDO_MS,
-  MAX_LEITURAS,
-  useCuidado,
-  useResumo,
-} from '../useCuidado';
+import { useCuidado, useResumo } from '../useCuidado';
 
 // #2212: o cuidado de um post vem do Painel do servidor; as escritas regravam e devolvem o Painel novo.
 vi.mock('dashboard/api/comentariosIa', () => ({
@@ -335,17 +330,24 @@ describe('useCuidado (#2212)', () => {
   });
 });
 
-describe('useResumo (#2212)', () => {
+describe('useResumo (#2212, #2454)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('lê o resumo e marca a falha', async () => {
+  it('lê os números do código (esperam e cabem no privado) e marca a falha', async () => {
     ComentariosIaAPI.getResumo
-      .mockResolvedValueOnce({ data: { status: 'ready', questions: 2 } })
+      .mockResolvedValueOnce({
+        data: { status: 'ready', waiting: 17, private_window: 12 },
+      })
       .mockRejectedValueOnce(falha(500));
     const resumo = useResumo(alvo);
     await flushPromises();
 
-    expect(resumo.resumo.value.questions).toBe(2);
+    expect(resumo.resumo.value).toEqual({
+      status: 'ready',
+      waiting: 17,
+      private_window: 12,
+    });
+    expect(resumo.carregando.value).toBe(false);
     expect(resumo.falhou.value).toBe(false);
 
     await resumo.carregar();
@@ -353,102 +355,34 @@ describe('useResumo (#2212)', () => {
     expect(resumo.carregando.value).toBe(false);
   });
 
-  describe('lendo (a primeira contagem roda num job)', () => {
-    beforeEach(() => vi.useFakeTimers());
-    afterEach(() => vi.useRealTimers());
-
-    it('reading segue carregando e pergunta de novo até vir pronto', async () => {
-      ComentariosIaAPI.getResumo
-        .mockResolvedValueOnce({ data: { status: 'reading' } })
-        .mockResolvedValueOnce({ data: { status: 'reading' } })
-        .mockResolvedValueOnce({ data: { status: 'ready', questions: 2 } });
-      const resumo = useResumo(alvo);
-      await flushPromises();
-
-      expect(resumo.resumo.value).toBeNull();
-      expect(resumo.carregando.value).toBe(true);
-      expect(resumo.falhou.value).toBe(false);
-
-      await vi.advanceTimersByTimeAsync(ESPERA_LENDO_MS);
-      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(2);
-      expect(resumo.carregando.value).toBe(true);
-
-      await vi.advanceTimersByTimeAsync(ESPERA_LENDO_MS);
-      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(3);
-      expect(resumo.resumo.value.questions).toBe(2);
-      expect(resumo.carregando.value).toBe(false);
+  it('uma leitura só: sem IA, o servidor responde na hora e a tela não pergunta de novo', async () => {
+    vi.useFakeTimers();
+    ComentariosIaAPI.getResumo.mockResolvedValue({
+      data: { status: 'ready', waiting: 3, private_window: 2 },
     });
+    useResumo(alvo);
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(60000);
+    vi.useRealTimers();
 
-    it('reading sem fim: para no teto e vira falha, com tentar de novo', async () => {
-      ComentariosIaAPI.getResumo.mockResolvedValue({
-        data: { status: 'reading' },
-      });
-      const resumo = useResumo(alvo);
-      await flushPromises();
-      await vi.advanceTimersByTimeAsync(ESPERA_LENDO_MS * MAX_LEITURAS * 2);
-
-      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(MAX_LEITURAS);
-      expect(resumo.falhou.value).toBe(true);
-      expect(resumo.carregando.value).toBe(false);
-
-      ComentariosIaAPI.getResumo.mockResolvedValueOnce({
-        data: { status: 'ready', questions: 1 },
-      });
-      await resumo.carregar();
-      expect(resumo.falhou.value).toBe(false);
-      expect(resumo.resumo.value.questions).toBe(1);
-    });
-
-    it('trocar de alvo para as perguntas do anterior', async () => {
-      ComentariosIaAPI.getResumo
-        .mockResolvedValueOnce({ data: { status: 'reading' } })
-        .mockResolvedValue({ data: { status: 'ready', questions: 5 } });
-      const atual = ref(alvo);
-      const resumo = useResumo(atual);
-      await flushPromises();
-
-      atual.value = { ...alvo, id: '1791' };
-      await flushPromises();
-      await vi.advanceTimersByTimeAsync(ESPERA_LENDO_MS * 3);
-
-      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(2);
-      expect(ComentariosIaAPI.getResumo).toHaveBeenLastCalledWith({
-        ...alvo,
-        id: '1791',
-      });
-      expect(resumo.resumo.value.questions).toBe(5);
-    });
-
-    it('sair da tela para as perguntas', async () => {
-      ComentariosIaAPI.getResumo.mockResolvedValue({
-        data: { status: 'reading' },
-      });
-      const escopo = effectScope();
-      escopo.run(() => useResumo(alvo));
-      await flushPromises();
-      escopo.stop();
-      await vi.advanceTimersByTimeAsync(ESPERA_LENDO_MS * 3);
-
-      expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(1);
-    });
+    expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(1);
   });
 
-  it('ai_unavailable (a IA fora) chega como resumo, sem esperar', async () => {
+  it('leitura que não ficou pronta (sem acesso) chega como resumo', async () => {
     ComentariosIaAPI.getResumo.mockResolvedValue({
-      data: { status: 'ai_unavailable' },
+      data: { status: 'needs_permission' },
     });
     const resumo = useResumo(alvo);
     await flushPromises();
 
-    expect(resumo.resumo.value.status).toBe('ai_unavailable');
+    expect(resumo.resumo.value.status).toBe('needs_permission');
     expect(resumo.carregando.value).toBe(false);
-    expect(ComentariosIaAPI.getResumo).toHaveBeenCalledTimes(1);
   });
 
   it('trocar de alvo tira o resumo do anterior da tela', async () => {
     const [segunda] = pendente();
     ComentariosIaAPI.getResumo
-      .mockResolvedValueOnce({ data: { status: 'ready', questions: 2 } })
+      .mockResolvedValueOnce({ data: { status: 'ready', waiting: 2 } })
       .mockReturnValueOnce(segunda);
     const atual = ref(alvo);
     const resumo = useResumo(atual);
@@ -457,6 +391,37 @@ describe('useResumo (#2212)', () => {
     atual.value = { ...alvo, id: '1791' };
     await flushPromises();
     expect(resumo.resumo.value).toBeNull();
+    expect(resumo.carregando.value).toBe(true);
+  });
+
+  it('só a leitura mais nova vale: a resposta atrasada do alvo anterior não entra', async () => {
+    const [primeira, responderPrimeira] = pendente();
+    ComentariosIaAPI.getResumo
+      .mockReturnValueOnce(primeira)
+      .mockResolvedValueOnce({ data: { status: 'ready', waiting: 5 } });
+    const atual = ref(alvo);
+    const resumo = useResumo(atual);
+    await flushPromises();
+
+    atual.value = { ...alvo, id: '1791' };
+    await flushPromises();
+    responderPrimeira({ data: { status: 'ready', waiting: 1 } });
+    await flushPromises();
+
+    expect(resumo.resumo.value.waiting).toBe(5);
+  });
+
+  it('o mesmo alvo pronto fica na tela enquanto é relido', async () => {
+    const [segunda] = pendente();
+    ComentariosIaAPI.getResumo
+      .mockResolvedValueOnce({ data: { status: 'ready', waiting: 4 } })
+      .mockReturnValueOnce(segunda);
+    const resumo = useResumo(alvo);
+    await flushPromises();
+
+    resumo.carregar();
+    await flushPromises();
+    expect(resumo.resumo.value.waiting).toBe(4);
     expect(resumo.carregando.value).toBe(true);
   });
 });

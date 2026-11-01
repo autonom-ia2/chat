@@ -302,7 +302,7 @@ const agir = async (comentario, chamada, sucesso, pronto = () => {}) => {
   }
   pronto();
   useAlert(t(`SEUS_POSTS.POST.COMMENTS.DONE.${sucesso}`));
-  // Quem espera mudou: o resumo do servidor também (o cache dele cai junto).
+  // Quem espera mudou: o resumo do servidor conta de novo.
   lerResumo();
   try {
     await lerPost();
@@ -377,23 +377,18 @@ const mudarCuidado = async () => {
       : await voltarACuidar();
   if (!valeu) useAlert(t('SEUS_POSTS.POST.CARE_ON.ERROR'));
 };
-// O que o botão de cuidar faz, logo abaixo dele. Sem pergunta que ainda dá para mandar no privado, a frase não
-// oferece responder "as que já estão aqui".
+// Os números do bloco (#2454): só o que o servidor conta, sem IA. Quantos esperam resposta e, desses, quantos ainda
+// cabem no privado (até 7 dias).
+const esperam = computed(() => oQueTem.value?.waiting || 0);
+const cabemNoPrivado = computed(() => oQueTem.value?.private_window || 0);
+// O que o botão de cuidar faz, logo abaixo dele. Sem comentário que ainda cabe no privado, a frase não oferece
+// responder "as que já estão aqui".
 const textoDoCuidar = computed(() => {
   if (!privadoLiberado.value) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT_SOON');
-  const perguntas = oQueTem.value?.questions || 0;
-  const velhas = oQueTem.value?.questions_old || 0;
-  if (!perguntas) {
-    return velhas
-      ? t('SEUS_POSTS.POST.CARE_OFFER.TEXT_ONLY_NEW')
-      : t('SEUS_POSTS.POST.CARE_OFFER.TEXT_FUTURE');
-  }
-  if (!velhas) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT');
-  return t(
-    'SEUS_POSTS.POST.CARE_OFFER.TEXT_MIXED',
-    { count: perguntas },
-    perguntas
-  );
+  if (cabemNoPrivado.value) return t('SEUS_POSTS.POST.CARE_OFFER.TEXT');
+  return esperam.value
+    ? t('SEUS_POSTS.POST.CARE_OFFER.TEXT_ONLY_NEW')
+    : t('SEUS_POSTS.POST.CARE_OFFER.TEXT_FUTURE');
 });
 const resumoPronto = computed(() => oQueTem.value?.status === 'ready');
 
@@ -778,50 +773,32 @@ const BOTAO_DE_BORDA =
               <template v-else>
                 <!-- Um item por linha: no celular, " · " quebrava e deixava o ponto no começo da linha. -->
                 <ul
-                  v-if="
-                    oQueTem.questions ||
-                    oQueTem.questions_old ||
-                    oQueTem.complaints
-                  "
                   class="m-0 flex list-none flex-col gap-1 p-0 text-base font-medium text-n-slate-12"
                 >
-                  <li v-if="oQueTem.questions" data-seus-posts-perguntas>
+                  <li data-seus-posts-esperam>
                     {{
-                      $t(
-                        privadoLiberado
-                          ? 'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS'
-                          : 'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS_YOU',
-                        { count: num(oQueTem.questions) },
-                        oQueTem.questions
-                      )
+                      esperam
+                        ? $t(
+                            'SEUS_POSTS.POST.CARE_OFFER.WAITING',
+                            { count: num(esperam) },
+                            esperam
+                          )
+                        : $t('SEUS_POSTS.POST.CARE_OFFER.NONE_WAITING')
                     }}
                   </li>
-                  <li v-if="oQueTem.questions_old">
+                  <li
+                    v-if="privadoLiberado && cabemNoPrivado"
+                    data-seus-posts-cabem-no-privado
+                  >
                     {{
                       $t(
-                        'SEUS_POSTS.POST.CARE_OFFER.QUESTIONS_OLD',
-                        { count: num(oQueTem.questions_old) },
-                        oQueTem.questions_old
-                      )
-                    }}
-                  </li>
-                  <li v-if="oQueTem.complaints">
-                    {{
-                      $t(
-                        'SEUS_POSTS.POST.CARE_OFFER.COMPLAINTS',
-                        { count: num(oQueTem.complaints) },
-                        oQueTem.complaints
+                        'SEUS_POSTS.POST.CARE_OFFER.PRIVATE_WINDOW',
+                        { count: num(cabemNoPrivado) },
+                        cabemNoPrivado
                       )
                     }}
                   </li>
                 </ul>
-                <p v-if="oQueTem.more" class="m-0 text-sm text-n-slate-11">
-                  {{
-                    $t('SEUS_POSTS.POST.CARE_OFFER.MORE', {
-                      count: num(oQueTem.read),
-                    })
-                  }}
-                </p>
                 <p
                   data-seus-posts-o-que-faco
                   class="m-0 text-sm text-n-slate-11"

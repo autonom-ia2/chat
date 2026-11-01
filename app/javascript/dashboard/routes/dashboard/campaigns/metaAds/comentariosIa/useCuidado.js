@@ -174,14 +174,10 @@ export function useCuidado(alvo) {
   };
 }
 
-// O resumo "O que tem nos comentários" (A2) do mesmo alvo: { status, questions, questions_old, complaints, read, more }.
-// Na primeira visita o servidor conta num job e responde `reading`: a tela segue "carregando" e pergunta de novo a cada
-// ESPERA_LENDO_MS, até MAX_LEITURAS; passou disso, `falhou`, e a tela oferece tentar de novo. Falha de rede ou do
-// servidor também é `falhou`. `ai_unavailable` (a IA fora) e `meta_unavailable` vêm no `resumo`, e a tela diz que não
-// deu. Trocar de alvo ou sair da tela para as perguntas. Sem alvo, nada é lido.
-export const ESPERA_LENDO_MS = 3000;
-export const MAX_LEITURAS = 10;
-
+// O resumo "O que tem nos comentários" (A2) do mesmo alvo: { status, waiting, private_window }. Desde o #2454 o servidor
+// só conta (sem IA) e responde na hora: uma leitura por alvo, sem perguntar de novo. Falha de rede ou do servidor é
+// `falhou`; o que a Meta não deixou ler (`needs_permission`, `meta_unavailable`) vem no `resumo`, e a tela diz que não
+// deu. Trocar de alvo descarta a leitura anterior. Sem alvo, nada é lido.
 export function useResumo(alvo) {
   const resumo = ref(null);
   const carregando = ref(false);
@@ -191,40 +187,11 @@ export function useResumo(alvo) {
 
   let leitura = 0;
   let lido = '';
-  let espera = null;
-  const parar = () => {
-    clearTimeout(espera);
-    espera = null;
-  };
-
-  const ler = async (minha, tentativa) => {
-    let data;
-    try {
-      ({ data } = await ComentariosIaAPI.getResumo(target()));
-    } catch {
-      if (minha !== leitura) return;
-      falhou.value = true;
-      carregando.value = false;
-      return;
-    }
-    if (minha !== leitura) return;
-    if (data?.status !== 'reading') {
-      resumo.value = data;
-      carregando.value = false;
-      return;
-    }
-    if (tentativa >= MAX_LEITURAS) {
-      falhou.value = true;
-      carregando.value = false;
-      return;
-    }
-    espera = setTimeout(() => ler(minha, tentativa + 1), ESPERA_LENDO_MS);
-  };
 
   const carregar = async () => {
-    parar();
     if (!target()) return;
     leitura += 1;
+    const minha = leitura;
     // Outro alvo, ou um resumo que não ficou pronto: some, e a tela mostra "carregando" de novo. O mesmo alvo pronto
     // fica na tela enquanto é relido (depois de responder um comentário, por exemplo).
     if (chaveDo(target()) !== lido || resumo.value?.status !== 'ready') {
@@ -233,14 +200,21 @@ export function useResumo(alvo) {
     }
     carregando.value = true;
     falhou.value = false;
-    await ler(leitura, 1);
+    try {
+      const { data } = await ComentariosIaAPI.getResumo(target());
+      if (minha !== leitura) return;
+      resumo.value = data;
+    } catch {
+      if (minha !== leitura) return;
+      falhou.value = true;
+    }
+    carregando.value = false;
   };
 
   watch(target, carregar, { immediate: true, deep: true });
   if (getCurrentScope()) {
     onScopeDispose(() => {
       leitura += 1;
-      parar();
     });
   }
 

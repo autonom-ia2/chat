@@ -92,7 +92,7 @@ class ComentariosIaAPI extends ApiClient {
     );
   }
 
-  // { status, questions, questions_old, complaints, read, more }
+  // { status, waiting, private_window }: só o que o servidor conta, sem IA (#2454).
   getResumo(target) {
     return axios.get(`${this.targetUrl(target)}/resumo`, {
       params: ComentariosIaAPI.params(target),
