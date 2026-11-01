@@ -116,7 +116,7 @@ Variáveis são valores estruturados (`{"$valor":"card.valor"}`), não Liquid. O
 | D3 | O que vira passo | Allowlist por recurso, "fora" como padrão, o CI cobra a classificação. |
 | D5 | Caixas | Quem não é admin só automatiza as caixas de que é membro. O resto é pulado com motivo. |
 | D6 | Cascata | Automações diferentes encadeiam até a profundidade 3, contada nos três motores. Nunca a si mesma. É proteção contra laço infinito por defeito, não limite de uso. |
-| D7 | Desfazer | A execução não entra no desfazer do Guia. O histórico é a trilha. Desligar sempre funciona. |
+| D7 | Desfazer | Revisto em 01/11 (F3.8): cada ação da execução grava no desfazer do Guia, no caderno de quem ligou, com a mesma janela de 5 dias. O histórico continua sendo a trilha. Desligar sempre funciona. |
 | D8 | IA na chave do cliente | Sem teto de uso (regra de 31/10, abaixo). O custo fica visível no passo e no histórico. |
 | D9 | Autor da mensagem | Dentro da plataforma, a mensagem fica marcada como enviada pela "Automação", nunca por uma pessoa. O cliente recebe uma mensagem normal da empresa, sem "Automação" no texto. |
 | D10 | Edição com gente no meio | Por padrão, quem está no meio termina na versão antiga. Passo sem volta alterado pede OK de novo. |
