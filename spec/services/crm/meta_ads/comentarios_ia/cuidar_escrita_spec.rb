@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# #2458 (PR 2 do #2436): com a flag meta_ads_comentarios_ia_escreve, o privado e a frase do comentário são escritos pela
+# #2458 (PR 2 do #2436): com a flag meta_ads_comentarios_ia, o privado e a frase do comentário são escritos pela
 # IA (Escrita), os dois antes de qualquer envio. O que o agente não sabe, e o assunto proibido do dono, ficam com o dono.
 # Sem agente que possa escrever, as frases fixas de hoje.
 RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
@@ -35,7 +35,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   before do
-    account.enable_features!(described_class::FLAG, Crm::MetaAds::ComentariosIa::Escrita::FLAG)
+    account.enable_features!(described_class::FLAG)
     allow(registro).to receive_messages(reservar!: true, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
                                         reservar_pessoa!: true, soltar_pessoa!: 1, decisao!: 1)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
@@ -124,13 +124,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
       .with(an_object_having_attributes(comment_id: 'c-1'), Crm::MetaAds::ComentariosIa::Registro::JA_TEM_PRIVADO)
   end
 
-  it 'flag da escrita desligada: as frases fixas, sem chamar a Escrita', :aggregate_failures do
-    account.disable_features!(Crm::MetaAds::ComentariosIa::Escrita::FLAG)
+  it 'meta_ads_comentarios_ia desligada: nada é escrito e nenhum comentário é lido', :aggregate_failures do
+    account.disable_features!(described_class::FLAG)
     decide('private')
 
     cuidar
 
     expect(Crm::MetaAds::ComentariosIa::Escrita).not_to have_received(:new)
-    expect(rede).to have_received(:privado).with(care, texto: nil)
+    expect(rede).not_to have_received(:ler)
+    expect(rede).not_to have_received(:privado)
+    expect(rede).not_to have_received(:responder)
   end
 end

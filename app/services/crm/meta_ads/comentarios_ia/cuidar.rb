@@ -28,7 +28,7 @@
 #    - reclamação: não responde, e a conversa abre urgente para a pessoa;
 #    - propaganda: esconde;
 #    - o resto: nada (a reivindicação já registra que a IA leu).
-#    - #2458, com a flag meta_ads_comentarios_ia_escreve: a frase do comentário e a do privado são escritas pela IA
+#    - #2458: a frase do comentário e a do privado são escritas pela IA
 #      para este comentário (Escrita), as duas ANTES de qualquer envio. O que o agente não sabe, e o comentário sobre o
 #      assunto proibido do dono (`owner_topic`), ficam com o dono (`kept_for_owner`). O preço que o dono escreveu vale
 #      no lugar da frase escrita. Sem agente que possa escrever, as frases fixas (o motivo vai ao log).

@@ -108,7 +108,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
     end
 
     before do
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Escrita::FLAG)
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
       allow(Crm::MetaAds::ComentariosIa::Escrita).to receive(:new).and_return(escrita)
       allow(classificador).to receive(:decidir!) do |texto|
         { 'Me passa a receita?' => 'private', 'Que lindo!' => 'no_reply', 'E o reembolso?' => 'owner_topic' }[texto]

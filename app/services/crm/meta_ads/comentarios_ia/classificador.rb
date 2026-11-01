@@ -49,8 +49,8 @@ class Crm::MetaAds::ComentariosIa::Classificador
     'no_reply' => 'The comment does not match owner_criterion, even if it is a question or shows interest in the ' \
                   'business; or it is tagging a friend, praise or an emoji.'
   }.freeze
-  # #2458: o assunto sobre o qual o dono não quer que a IA fale. Só com a flag meta_ads_comentarios_ia_escreve e o assunto
-  # escrito; sem isso, o pedido fica o de antes.
+  # #2458: o assunto sobre o qual o dono não quer que a IA fale. Só com o assunto escrito; sem ele, o
+  # pedido fica o de antes.
   DONO = 'owner_topic'.freeze
   ASSUNTO_DO_DONO = {
     DONO => 'The comment is about owner_forbidden_topic, the subject the owner does not want answered ' \
@@ -186,11 +186,11 @@ class Crm::MetaAds::ComentariosIa::Classificador
     @foto.present?
   end
 
-  # #2458: o assunto proibido do dono, só com a flag da escrita ligada.
+  # #2458: o assunto proibido do dono, com a mesma flag da escrita (a do cuidado).
   def proibido
     return @proibido if defined?(@proibido)
 
-    escreve = @care.account&.feature_enabled?(Crm::MetaAds::ComentariosIa::Escrita::FLAG)
+    escreve = Crm::MetaAds::ComentariosIa::Escrita.ligada?(@care.account)
     @proibido = (@care.assunto_proibido.to_s.strip.presence if escreve)
   end
 

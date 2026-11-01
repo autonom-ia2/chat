@@ -8,7 +8,7 @@
 #      sem IA (#2454): { status, waiting, private_window }.
 #      Ver: administrador ou `meta_ads_view`.
 # PUT  meta_ads_connection/ads/:ad_id/cuidado           message, para_quem, phrases[], status → o Painel.
-#      Com a flag meta_ads_comentarios_ia_escreve (#2458), também temas[], assunto_proibido e tom do passo 2.
+#      Com a IA escrevendo (#2458), também temas[], assunto_proibido e tom do passo 2.
 # POST meta_ads_connection/ads/:ad_id/cuidado/previa    para_quem → os exemplos do passo "como fica" (Previa).
 #      Com a escrita (#2458), também assunto_proibido e tom: o que a IA escreveria.
 # POST meta_ads_connection/ads/:ad_id/cuidado/foto      → "O que eu vi na foto" do passo 1 (#2454, flag

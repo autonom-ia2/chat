@@ -38,7 +38,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Escrita do
   before do
     skip 'eval pago: rode com CRM_EVAL_PAGO=1 e OPENAI_API_KEY' unless ENV['CRM_EVAL_PAGO'] == '1' && ENV['OPENAI_API_KEY'].present?
 
-    account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG, described_class::FLAG)
+    account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
     allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
     allow(Autonomia::Agents::Config).to receive(:enabled?).and_return(true)
     WebMock.allow_net_connect!

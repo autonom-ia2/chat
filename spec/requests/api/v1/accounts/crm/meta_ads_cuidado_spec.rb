@@ -71,8 +71,6 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
   end
 
   it 'com a IA escrevendo (#2458): grava o passo 2 do anúncio, e pausar não o apaga' do
-    account.enable_features!(Crm::MetaAds::ComentariosIa::Escrita::FLAG)
-
     put "#{base}/cuidado", params: corpo.merge(temas: ['link'], assunto_proibido: 'reembolso', tom: 'formal'),
                            headers: admin.create_new_auth_token, as: :json
     put "#{base}/cuidado", params: corpo.merge(status: 'paused'), headers: admin.create_new_auth_token, as: :json

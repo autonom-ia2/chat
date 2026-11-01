@@ -14,7 +14,7 @@ import { FOR_WHOM_LIMIT, FRASE_DO_DONO_LIMIT } from './useCuidado';
 // caso, diz "aqui não se aplica" e não manda nada (nunca lista de palavras, regra do Rodrigo de 20/09).
 // No Facebook, o privado pelo Messenger espera a Meta liberar pages_messaging (F4): com `private_available` false, a
 // tela diz "em breve" no lugar dos passos.
-// #2458 (PR 2 do #2436), com a IA escrevendo as respostas (Painel `writes`, flag meta_ads_comentarios_ia_escreve): o
+// #2458 (PR 2 do #2436), com a IA escrevendo as respostas (Painel `writes`): o
 // passo 2 soma temas e pede o assunto em que a IA não toca (PassoParaQuem); o passo 3 mostra o que a IA escreveria para
 // o comentário, no comentário e no privado, e aceita o pedido de tom (PedidoDeTom). A mensagem do passo 1 e a frase
 // continuam: são o que vai quando o agente da caixa não pode escrever.

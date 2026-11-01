@@ -4,7 +4,8 @@
 # Autonomia::Agents::Answerer no formato do comentário (Answerer::FormatoDoComentario), com a base dele (Retriever), sem
 # ferramenta, sem busca na web e com o portão de confiança: o que o agente não sabe fica com o dono.
 #
-# - Só com a flag FLAG (quem chama confere `ligada?`). Desligada, as frases fixas de hoje.
+# - Atrás da flag do cuidado (Cuidar::FLAG, meta_ads_comentarios_ia): sem chave nova, decisão do Rodrigo (01/11). Quem
+#   chama confere `ligada?`.
 # - Recuo para as frases fixas, nunca mudo: sem caixa, caixa ou agente de outra conta, agentes desligados na conta, sem
 #   agente na porta, a Lia (`insurance_quote` não fala em comentário público), agente que não pode falar com cliente agora
 #   (Agent#atende_cliente?, o mesmo do QuemResponde) ou agente em piloto só para telefones de teste (o mesmo contrato do
@@ -14,7 +15,7 @@
 # - A chave é sempre a da própria conta (ChaveDaConta, como o Classificador): sem ela, as frases fixas.
 # - IA fora do ar: Classificador::Indisponivel, e o motor tenta de novo pelo job, antes de qualquer envio.
 class Crm::MetaAds::ComentariosIa::Escrita
-  FLAG = 'meta_ads_comentarios_ia_escreve'.freeze
+  # Só a etiqueta de custo da IA; a flag é a do cuidado.
   FEATURE = 'meta_ads_comentarios_ia_escreve'.freeze
   LIA = 'insurance_quote'.freeze
   FORMATO = Autonomia::Agents::Answerer::FormatoDoComentario
@@ -27,11 +28,11 @@ class Crm::MetaAds::ComentariosIa::Escrita
   end
 
   def self.ligada?(account)
-    account&.feature_enabled?(FLAG) == true
+    account&.feature_enabled?(Crm::MetaAds::ComentariosIa::Cuidar::FLAG) == true
   end
 
   # O passo 2 da tela, no Painel: o que gravar do que veio ({ temas:, assunto_proibido:, tom: }, só os que vieram:
-  # pausar não apaga), e o que devolver (`writes`: a IA escreve as respostas). Sem a flag, nada.
+  # pausar não apaga), e o que devolver (`writes`: a IA escreve as respostas). Sem a flag do cuidado, nada.
   def self.do_passo_2(account, escrita)
     return {} unless ligada?(account)
 

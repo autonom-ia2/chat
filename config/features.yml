@@ -1046,6 +1046,8 @@
 # Jev é nosso (eval de 27/10: ~US$ 0,000024 por comentário). Desligada: nenhum comentário é lido. Sem tela neste PR.
 # Migration 20261108620000 (crm_meta_ads_comment_cares). Fim da feature_flags_ext_2, depois de seus_posts_comentarios:
 # posição 16 (valor 32768, 1 << 15), reservada pela Orquestração em 30/10 e confirmada por ela na hora da fila.
+# #2458, sem chave nova (decisão do Rodrigo, 01/11): ligada, a IA também escreve o privado e a frase do comentário, pelo
+# agente da porta da caixa; sem agente que possa falar com cliente, as frases fixas. Desligar desliga o cuidado inteiro.
 - name: meta_ads_comentarios_ia
   display_name: Anúncios › IA cuida dos comentários
   enabled: false
@@ -1084,18 +1086,5 @@
 # 31/10 e confirmada por ela na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: agentes_pedir_localizacao
   display_name: Agentes › pedir a localização do cliente
-  enabled: false
-  column: feature_flags_ext_2
-
-# IA cuida dos comentários: a IA escreve as respostas (#2458, PR 2 do #2436). Ligada: no post ou anúncio cuidado, a
-# frase do comentário e a do privado são escritas pela IA para cada comentário (Autonomia::Agents::Answerer no formato
-# do comentário), pelo agente da porta da caixa em que o comentário chegou, com a legenda, o que se vê na foto, o tom e o assunto
-# proibido do dono. O comentário sobre o assunto proibido, ou o que a IA não sabe, fica com o dono, com o motivo. Sem
-# agente que possa falar com cliente na porta (ou com a Lia), continuam as frases fixas. Desligada: as frases fixas de
-# hoje, e o pedido ao Classificador fica o de antes. Rollback: desligar a flag na conta. Migration 20261108690000
-# (temas, assunto proibido e tom em crm_meta_ads_comment_cares). Fim da feature_flags_ext_2: posição 24 (8388608,
-# 1 << 23), dada pela Orquestração em 01/11, depois de 20–23. Nasce desligada; a Orquestração liga no piloto.
-- name: meta_ads_comentarios_ia_escreve
-  display_name: Anúncios › IA cuida dos comentários › a IA escreve as respostas
   enabled: false
   column: feature_flags_ext_2

@@ -16,7 +16,7 @@
 #   comentário de cima em `parent`. nil quando não há resposta ou a decisão não é nenhuma das duas. A tela não promete
 #   o privado a ela: a Meta decide se aceita o privado em resposta. Cada exemplo leva também o `id` do
 #   comentário: a tela põe a resposta dentro do cartão do comentário de cima quando ele é um dos exemplos.
-# - #2458, com a flag meta_ads_comentarios_ia_escreve: o exemplo que recebe leva o que a IA escreveria para ele
+# - #2458: o exemplo que recebe leva o que a IA escreveria para ele
 #   (`written: { dm:, comment: }`, Escrita#textos, a mesma do motor; `comment` nil quando vale o preço do dono), ou
 #   `kept_for_owner: true` quando o agente não saberia responder. Nas frases fixas (sem agente que possa escrever),
 #   nenhum dos dois: a tela mostra a mensagem e a frase do dono. O assunto proibido do dono (`assunto_proibido`) dá o

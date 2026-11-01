@@ -1,4 +1,4 @@
-# #2458 — IA cuida dos comentários: a IA escreve as respostas (PR 2 do #2436, flag meta_ads_comentarios_ia_escreve).
+# #2458 — IA cuida dos comentários: a IA escreve as respostas (PR 2 do #2436, atrás de meta_ads_comentarios_ia).
 #
 # O que o dono diz no passo 2, além do "para quem" de hoje:
 # - `temas`: os temas que recebem o privado, cada um nas palavras da tela (os chips somam). O `para_quem` continua sendo a

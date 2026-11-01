@@ -237,16 +237,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       responde('owner_topic', 0.9)
     end
 
-    it 'com a flag da escrita: vai no campo próprio, como dado do dono, e a decisão owner_topic entra por último', :aggregate_failures do
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Escrita::FLAG)
-
+    it 'vai no campo próprio, como dado do dono, e a decisão owner_topic entra por último', :aggregate_failures do
       expect(classificador.decidir!('E o meu reembolso?')).to eq('owner_topic')
       expect(pedido[:entrada]).to include('owner_forbidden_topic' => 'reembolso em andamento', 'comment' => 'E o meu reembolso?')
       expect(pedido[:schema][:schema][:properties][:decision][:enum]).to eq(%w[private price to_you hide no_reply owner_topic])
       expect(pedido[:instructions]).to include(described_class::PROIBIDO, described_class::ASSUNTO_DO_DONO['owner_topic'])
     end
 
-    it 'sem a flag da escrita: o pedido fica o de antes, sem o assunto nem a decisão', :aggregate_failures do
+    it 'sem o assunto escrito: o pedido fica o de antes, sem o assunto nem a decisão', :aggregate_failures do
+      care.update!(assunto_proibido: nil)
       responde('private', 0.9)
 
       classificador.decidir!('E o meu reembolso?')

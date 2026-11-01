@@ -88,8 +88,7 @@ class Crm::MetaAds::ComentariosIa::Painel
     cuidado_payload.merge(lista(lido))
   end
 
-  # escrita (#2458, só com a flag meta_ads_comentarios_ia_escreve): { temas:, assunto_proibido:, tom: } do passo 2, só os
-  # que vieram. Sem a flag, nada disso é gravado; o que já estava fica.
+  # escrita (#2458): { temas:, assunto_proibido:, tom: } do passo 2, só os que vieram: o que não veio fica como estava.
   def salvar!(message:, para_quem:, phrases:, status:, user:, escrita: {}) # rubocop:disable Metrics/ParameterLists -- passo 2 (#2458)
     raise Error, 'invalid_status' unless STATUSES.include?(status)
     raise Error, 'invalid_para_quem' if para_quem.to_s.strip.empty?

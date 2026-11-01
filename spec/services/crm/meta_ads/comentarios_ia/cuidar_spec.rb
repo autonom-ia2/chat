@@ -4,7 +4,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
   let!(:care) { create(:crm_meta_ads_comment_care, account: account, target_id: '1790') }
-  let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true, privado_disponivel?: true) }
+  # Com a flag do cuidado, a Escrita (#2458) lê a legenda e o comentário de cima; sem chave da conta, as frases fixas.
+  let(:rede) do
+    instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true, privado_disponivel?: true,
+                                                                 legenda: nil, ler_pai: nil)
+  end
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa) }
   let(:registro) { class_double(Crm::MetaAds::ComentariosIa::Registro) }
