@@ -18,7 +18,8 @@
 # comentário de primeiro nível ou quando não dá para ler o de cima.
 # E `imagens` (#2454): os endereços das imagens do post, para a leitura da foto (Foto); [] quando não dá para ler.
 module Crm::MetaAds::ComentariosIa::Rede
-  Envio = Struct.new(:ok, :recipient_id, :message_id, :conversation, :erro, :talvez_entregue, keyword_init: true)
+  # `codigo` e `subcodigo`: os da Meta na recusa (#2454), para decidir e gravar sem ler a mensagem dela.
+  Envio = Struct.new(:ok, :recipient_id, :message_id, :conversation, :erro, :talvez_entregue, :codigo, :subcodigo, keyword_init: true)
   # O privado já tinha saído (pela pessoa, na tela do #2196, ou por outro job): nada a fazer, nem falha a mostrar.
   JA_FEITO = 'private_reply_done'.freeze
   # A Meta não respondeu à leitura do comentário (rede, 5xx, limite).

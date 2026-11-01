@@ -84,7 +84,7 @@ class Instagram::CommentsClient
     return Result.new(ok: true, http_code: response.code, data: body) if response.success? && body.is_a?(Hash)
 
     error = body.is_a?(Hash) ? body['error'].to_h : {}
-    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'],
+    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'], error_subcode: error['error_subcode'],
                error_message: sanitize(error['message'].presence || "HTTP #{response.code}"))
   rescue JSON::ParserError
     Result.new(ok: false, http_code: response.code, data: nil, error_code: nil, error_message: "HTTP #{response.code}")

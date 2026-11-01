@@ -43,7 +43,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Pagina
   def envio(response)
     talvez = response.code.to_i >= 500
     dados = JSON.parse(response.body.to_s)
-    return falha(erro(dados), talvez_entregue: talvez) unless response.success? && dados.is_a?(Hash) && dados['error'].blank?
+    return falha(erro(dados), talvez_entregue: talvez, **codigos(dados)) unless response.success? && dados.is_a?(Hash) && dados['error'].blank?
 
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, recipient_id: dados['recipient_id'], message_id: dados['message_id'])
   rescue JSON::ParserError
@@ -55,10 +55,17 @@ class Crm::MetaAds::ComentariosIa::Rede::Pagina
     "#{detalhe['code']} - #{detalhe['message']}"
   end
 
-  def falha(texto, talvez_entregue: false)
+  # O código e o subcódigo da recusa (#2454): quem decide olha só para eles, nunca para a mensagem.
+  def codigos(dados)
+    detalhe = dados.is_a?(Hash) ? dados['error'].to_h : {}
+    { codigo: Integer(detalhe['code'].to_s, exception: false), subcodigo: Integer(detalhe['error_subcode'].to_s, exception: false) }
+  end
+
+  def falha(texto, talvez_entregue: false, codigo: nil, subcodigo: nil)
     limpo = texto.to_s.gsub(Meta::ConversionsApiClient::SENSITIVE_PATTERN, '<REDACTED>')
     Rails.logger.warn("[comentarios_ia][pagina] page=#{@channel.page_id} erro=#{limpo}")
-    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: limpo, talvez_entregue: talvez_entregue)
+    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: limpo, talvez_entregue: talvez_entregue, codigo: codigo,
+                                                 subcodigo: subcodigo)
   end
 
   def versao

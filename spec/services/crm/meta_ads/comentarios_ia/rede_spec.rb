@@ -47,6 +47,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, talvez_entregue: true)
     end
 
+    it 'a recusa traz o código e o subcódigo da Meta (#2454), para decidir sem ler a mensagem' do
+      stub_request(:post, "#{graph}/555/messages")
+        .to_return(status: 400, body: { error: { code: 10, error_subcode: 2_018_278, message: 'Fora' } }.to_json)
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, codigo: 10, subcodigo: 2_018_278)
+
+      stub_request(:post, "#{graph}/555/messages").to_return(status: 503, body: 'indisponível')
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(codigo: nil, subcodigo: nil)
+    end
+
     it 'só a recusa explícita (4xx) é certa; 5xx e rede podem ter entregado' do
       stub_request(:post, "#{graph}/555/messages").to_return(status: 400, body: { error: { code: 10, message: 'Fora' } }.to_json)
       expect(pagina.private_reply('555_777', { text: 'Oi!' }).talvez_entregue).to be_falsey

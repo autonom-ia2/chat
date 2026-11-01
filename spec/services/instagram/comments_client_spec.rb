@@ -71,6 +71,15 @@ RSpec.describe Instagram::CommentsClient do
     expect(Rails.logger).to have_received(:warn).with('[InstagramComments] POST 1/replies http=400 code=100')
   end
 
+  # #2454: a recusa do privado em resposta é decidida e gravada pelo código e pelo subcódigo, nunca pela mensagem.
+  it 'recusa da Meta vem com o código e o subcódigo' do
+    error = { error: { code: 10, error_subcode: 2_534_023, message: 'Fora da janela' } }
+    stub_request(:post, "#{base}/#{channel.instagram_id}/messages").with(query: hash_including({}))
+                                                                   .to_return(status: 400, headers: json, body: error.to_json)
+
+    expect(client.private_reply('1', 'Oi')).to have_attributes(ok: false, error_code: 10, error_subcode: 2_534_023)
+  end
+
   it 'falha de rede vira resultado passageiro, sem levantar' do
     stub_request(:get, %r{#{base}/1790000000000001/comments}).to_raise(Errno::ECONNRESET)
 
