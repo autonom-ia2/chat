@@ -273,6 +273,85 @@ describe('CuidarDono (#2212)', () => {
       );
     });
 
+    const abrirNoFio = async parentId => {
+      const preview = vi.fn().mockResolvedValue({
+        recebe: {
+          id: 'c-1',
+          author: 'ana',
+          text: 'Quanto custa esse?',
+          network: 'instagram',
+        },
+        nao: {
+          id: 'c-2',
+          author: 'carla',
+          text: 'Lindo!',
+          network: 'instagram',
+        },
+        resposta: {
+          author: 'bia',
+          text: 'Também quero saber!',
+          network: 'instagram',
+          kind: 'recebe',
+          parent: {
+            id: parentId,
+            author: 'ana',
+            text: 'Quanto custa esse?',
+            network: 'instagram',
+          },
+        },
+      });
+      const wrapper = montar({
+        data: painel({ message: 'Oi!', para_quem: 'Quem perguntar o preço' }),
+        preview,
+      });
+      await proximo(wrapper).trigger('click');
+      await proximo(wrapper).trigger('click');
+      await flushPromises();
+      return wrapper;
+    };
+    const vezes = (texto, trecho) => texto.split(trecho).length - 1;
+
+    it('o de cima é um dos exemplos: a resposta fica dentro do cartão dele, e ele aparece uma vez só', async () => {
+      const wrapper = await abrirNoFio('c-1');
+      const cartao = wrapper.find('[data-ia-dono-example="recebe"]');
+
+      expect(cartao.find('[data-ia-dono-reply]').text()).toContain(
+        'Também quero saber!'
+      );
+      expect(cartao.find('[data-ia-dono-reply-kind]').text()).toBe(
+        'Tento mandar no privado; se a rede não deixar, respondo só aqui'
+      );
+      expect(wrapper.find('[data-ia-dono-example="resposta"]').exists()).toBe(
+        false
+      );
+      expect(
+        wrapper
+          .find('[data-ia-dono-example="nao"]')
+          .find('[data-ia-dono-reply]')
+          .exists()
+      ).toBe(false);
+      expect(vezes(wrapper.text(), 'Quanto custa esse?')).toBe(1);
+    });
+
+    it('o de cima não está na prévia: aparece como contexto, sem selo, com a resposta abaixo', async () => {
+      const wrapper = await abrirNoFio('c-9');
+      const cartao = wrapper.find('[data-ia-dono-example="resposta"]');
+
+      expect(cartao.find('[data-ia-dono-reply-parent]').text()).toContain(
+        '@ana'
+      );
+      expect(cartao.findAll('[data-ia-dono-reply-kind]')).toHaveLength(1);
+      expect(cartao.find('[data-ia-dono-reply-group]').text()).toContain(
+        'Também quero saber!'
+      );
+      expect(
+        wrapper
+          .find('[data-ia-dono-example="recebe"]')
+          .find('[data-ia-dono-reply]')
+          .exists()
+      ).toBe(false);
+    });
+
     it('sem resposta na prévia (flag desligada): nada aparece', async () => {
       const preview = vi.fn().mockResolvedValue({
         recebe: {

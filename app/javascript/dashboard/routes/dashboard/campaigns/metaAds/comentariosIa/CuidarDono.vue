@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import FotoDoPost from './FotoDoPost.vue';
+import RespostaDoFio from './RespostaDoFio.vue';
 import { FOR_WHOM_LIMIT } from './useCuidado';
 
 // Comentários que viram cliente (#2212, opção (a) do Rodrigo): o jeito escrito pelo dono, em três passos, uma ação em
@@ -115,6 +116,14 @@ const nao = computed(() => examples.value?.nao || null);
 // tela não o promete.
 const resposta = computed(() => examples.value?.resposta || null);
 const sample = computed(() => Boolean(recebe.value?.sample));
+// O comentário de cima aparece uma vez só: quando ele é um dos exemplos, a resposta vai dentro do cartão dele ('recebe'
+// ou 'nao'); senão (null), num cartão próprio, com o de cima como contexto, sem selo.
+const respostaDentroDe = computed(() => {
+  const id = resposta.value?.parent?.id;
+  if (!id) return null;
+  if (!sample.value && recebe.value?.id === id) return 'recebe';
+  return nao.value?.id === id ? 'nao' : null;
+});
 const handle = comment =>
   comment.network === 'facebook' ? comment.author : `@${comment.author}`;
 const values = () => ({
@@ -401,6 +410,10 @@ const FIELD =
               <span class="i-lucide-send size-4" aria-hidden="true" />
               {{ $t(`${KEY}.SEE.${sample ? 'GETS' : 'GETS_BEFORE'}`) }}
             </span>
+            <RespostaDoFio
+              v-if="respostaDentroDe === 'recebe'"
+              :resposta="resposta"
+            />
             <div class="flex flex-col gap-1.5">
               <p class="m-0 text-sm font-semibold text-n-slate-11">
                 {{ $t(`${KEY}.SEE.IN_DM`) }}
@@ -474,12 +487,16 @@ const FIELD =
               <span class="i-lucide-minus size-4" aria-hidden="true" />
               {{ $t(`${KEY}.SEE.SKIPS`) }}
             </span>
+            <RespostaDoFio
+              v-if="respostaDentroDe === 'nao'"
+              :resposta="resposta"
+            />
             <p class="m-0 text-sm leading-6 text-n-slate-11">
               {{ $t(`${KEY}.SEE.SKIPS_WHY`) }}
             </p>
           </li>
           <li
-            v-if="resposta"
+            v-if="resposta && !respostaDentroDe"
             data-ia-dono-example="resposta"
             class="flex flex-col gap-3 rounded-xl p-4 ring-1 ring-inset ring-n-weak"
           >
@@ -492,36 +509,7 @@ const FIELD =
               </span>
               {{ resposta.parent.text }}
             </p>
-            <div
-              class="ms-4 flex flex-col gap-2 border-s-2 border-n-weak ps-4"
-              :aria-label="$t(`${KEY}.SEE.REPLY`)"
-              role="group"
-            >
-              <p
-                data-ia-dono-reply
-                class="m-0 text-base leading-6 text-n-slate-12"
-              >
-                <span class="block text-sm font-semibold text-n-slate-11">
-                  {{ handle(resposta) }}
-                </span>
-                {{ resposta.text }}
-              </p>
-              <span
-                data-ia-dono-reply-kind
-                class="inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold"
-                :class="
-                  resposta.kind === 'recebe'
-                    ? 'bg-n-teal-3 text-n-teal-11'
-                    : 'bg-n-alpha-2 text-n-slate-11'
-                "
-              >
-                {{
-                  $t(
-                    `${KEY}.SEE.${resposta.kind === 'recebe' ? 'REPLY_TRIES' : 'SKIPS'}`
-                  )
-                }}
-              </span>
-            </div>
+            <RespostaDoFio :resposta="resposta" />
           </li>
         </ol>
 

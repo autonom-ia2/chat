@@ -54,9 +54,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
     it 'com a flag da conversa: uma resposta, decidida com o comentário de cima, aparece dentro dele' do
       account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::CONVERSA)
 
-      expect(previa.call[:resposta]).to eq(author: 'pessoa.9', text: 'Me passa a receita?', network: 'instagram', kind: 'recebe',
-                                           parent: { author: 'pessoa.1', text: 'Que lindo!', network: 'instagram' })
+      resultado = previa.call
+
+      expect(resultado[:resposta]).to eq(author: 'pessoa.9', text: 'Me passa a receita?', network: 'instagram', kind: 'recebe',
+                                         parent: { id: '1', author: 'pessoa.1', text: 'Que lindo!', network: 'instagram' })
       expect(classificador).to have_received(:decidir!).with('Me passa a receita?', pai: 'Que lindo!')
+      # Com o id, a tela põe a resposta dentro do cartão do comentário de cima, sem repetir o de cima.
+      expect(resultado[:nao]).to eq(id: '1', author: 'pessoa.1', text: 'Que lindo!', network: 'instagram')
+      expect(resultado[:recebe]).to include(id: '2')
     end
 
     it 'sem a flag: a prévia fica a de antes, sem a resposta' do
