@@ -145,6 +145,30 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
     end
   end
 
+  # #2454: a fixture é o que o Classificador do origin/main (8610e30a04, antes da foto e da resposta) mandava ao modelo em
+  # cada cenário. Sem a flag da conversa, o de agora manda o mesmo, byte a byte, mesmo recebendo a foto e o de cima.
+  describe 'sem a flag da conversa, o pedido de antes do #2454 (fixture)' do
+    fixture = JSON.parse(Rails.root.join('spec/fixtures/crm_meta_ads_classificador_antes_2454.json').read)
+
+    fixture.each do |nome, caso|
+      it nome do
+        c = caso['cenario']
+        care.update!(offer: c['offer'], note: c['note'], para_quem: c['para_quem'])
+        responde('no_reply', 0.9)
+
+        described_class.new(care: care, legenda: c['legenda'], tela: c['tela'], cliente: cliente,
+                            foto: 'Um vestido azul de linho num cabide.')
+                       .decidir!(c['comment'], pai: 'Tem em azul?')
+
+        enviado = nil
+        expect(cliente).to have_received(:create) { |**argumentos| enviado = argumentos }
+        expect(enviado[:instructions]).to eq(caso['pedido']['instructions'])
+        expect(enviado[:input]).to eq(caso['pedido']['input'])
+        expect(JSON.parse(enviado.to_json)).to eq(caso['pedido'])
+      end
+    end
+  end
+
   it 'sem certeza: a decisão não vale, mas a escolha, a certeza e o motivo voltam para a auditoria' do
     responde('private', 0.4, 'Talvez queira saber da empresa.')
 
