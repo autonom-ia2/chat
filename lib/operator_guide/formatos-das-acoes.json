@@ -15847,8 +15847,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#foto",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:78",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:124"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": true
   },
@@ -15856,13 +15856,17 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:124"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:95",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": true
   },
   "POST crm/meta_ads_connection/ads/:ad_id/cuidado/previa": {
     "campos": {
+      "assunto_proibido": {
+        "max_caracteres": 300,
+        "tipo": "string"
+      },
       "correction": {},
       "message": {
         "nao_pode_ficar_vazio": true,
@@ -15882,15 +15886,24 @@
           "on",
           "paused"
         ]
+      },
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {
+        "max_caracteres": 300,
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#previa",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:67",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:156",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:124"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:69",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:159",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:184",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:181",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -19856,7 +19869,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#foto",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:91",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:94",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -19878,7 +19891,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:105",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:108",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -19888,6 +19901,10 @@
   },
   "POST seus_posts/posts/:post_id/cuidado/previa": {
     "campos": {
+      "assunto_proibido": {
+        "max_caracteres": 300,
+        "tipo": "string"
+      },
       "comment_id": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
@@ -19915,14 +19932,23 @@
           "on",
           "paused"
         ]
+      },
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {
+        "max_caracteres": 300,
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#previa",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:72",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:140",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:74",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:168",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:165",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -19944,7 +19970,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#rascunho",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:83",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:86",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -24810,25 +24836,33 @@
   },
   "PUT crm/meta_ads_connection/ads/:ad_id/cuidado": {
     "campos": {
+      "assunto_proibido": {},
       "correction": {},
       "message": {},
       "para_quem": {},
       "phrases": {
         "tipo": "lista"
       },
-      "status": {}
+      "status": {},
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#update",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:60",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:156",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:124"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:159",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:184",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:181",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": false
   },
   "PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto": {
     "campos": {
+      "assunto_proibido": {},
       "correction": {
         "max_caracteres": 1000,
         "tipo": "string"
@@ -24838,16 +24872,20 @@
       "phrases": {
         "tipo": "lista"
       },
-      "status": {}
+      "status": {},
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#corrigir_foto",
     "modelo": "Crm::MetaAdsPostReading",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:83",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:156",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:84",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:124"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:86",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:159",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -27356,6 +27394,10 @@
   },
   "PUT seus_posts/cuidados": {
     "campos": {
+      "assunto_proibido": {
+        "max_caracteres": 300,
+        "tipo": "string"
+      },
       "correction": {},
       "message": {
         "nao_pode_ficar_vazio": true,
@@ -27379,20 +27421,28 @@
           "on",
           "paused"
         ]
+      },
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {
+        "max_caracteres": 300,
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#mudar_todos",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:49",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:140",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:51",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
     ],
     "sem_corpo": false
   },
   "PUT seus_posts/posts/:post_id/cuidado": {
     "campos": {
+      "assunto_proibido": {},
       "comment_id": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
@@ -27407,14 +27457,20 @@
       "phrases": {
         "tipo": "lista"
       },
-      "status": {}
+      "status": {},
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#update",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:65",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:140",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:67",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:168",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:165",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
@@ -27423,6 +27479,7 @@
   },
   "PUT seus_posts/posts/:post_id/cuidado/foto": {
     "campos": {
+      "assunto_proibido": {},
       "comment_id": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
@@ -27440,16 +27497,20 @@
       "phrases": {
         "tipo": "lista"
       },
-      "status": {}
+      "status": {},
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#corrigir_foto",
     "modelo": "Crm::MetaAdsPostReading",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:96",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:140",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:99",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:97",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:100",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"

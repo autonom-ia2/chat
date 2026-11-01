@@ -38,22 +38,40 @@ class ComentariosIaAPI extends ApiClient {
     });
   }
 
-  // { message, para_quem, phrases, status } → Painel
-  saveCuidado(target, { message, paraQuem, phrases, status }) {
+  // { message, para_quem, phrases, status } → Painel. Com a escrita (#2458), também `escrita`: { temas,
+  // assuntoProibido, tom } do passo 2; sem ela, o servidor não mexe nesses campos.
+  saveCuidado(target, { message, paraQuem, phrases, status, escrita }) {
     return axios.put(
       `${this.targetUrl(target)}/cuidado`,
-      { message, para_quem: paraQuem, phrases, status },
+      {
+        message,
+        para_quem: paraQuem,
+        phrases,
+        status,
+        ...ComentariosIaAPI.escrita(escrita),
+      },
       { params: ComentariosIaAPI.params(target) }
     );
   }
 
-  // { recebe: { author, text, network } | { sample: true }, nao: { author, text } | null }
-  previa(target, { paraQuem }) {
+  // { recebe: { author, text, network, written?, kept_for_owner? } | { sample: true }, nao: { author, text } | null,
+  // dono: { author, text } | null }. `escrita` (#2458): { assuntoProibido, tom }.
+  previa(target, { paraQuem, escrita }) {
     return axios.post(
       `${this.targetUrl(target)}/cuidado/previa`,
-      { para_quem: paraQuem },
+      { para_quem: paraQuem, ...ComentariosIaAPI.escrita(escrita) },
       { params: ComentariosIaAPI.params(target) }
     );
+  }
+
+  static escrita(escrita) {
+    if (!escrita) return {};
+    const { temas, assuntoProibido, tom } = escrita;
+    return {
+      ...(temas ? { temas } : {}),
+      assunto_proibido: assuntoProibido || '',
+      tom: tom || '',
+    };
   }
 
   // Seus posts: o começo da mensagem do passo 1, escrito pela IA a partir da

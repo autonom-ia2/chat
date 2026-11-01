@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_680000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_690000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -2944,6 +2944,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_680000) do
     t.datetime "started_at", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "temas", default: [], null: false
+    t.string "assunto_proibido"
+    t.string "tom"
     t.index ["account_id", "target_kind", "target_id"], name: "idx_crm_meta_ads_comment_cares_target", unique: true
     t.index ["created_by_id"], name: "index_crm_meta_ads_comment_cares_on_created_by_id"
     t.index ["inbox_id"], name: "index_crm_meta_ads_comment_cares_on_inbox_id"

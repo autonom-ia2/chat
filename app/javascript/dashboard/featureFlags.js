@@ -75,6 +75,7 @@ export const FEATURE_FLAGS = {
   SEUS_POSTS: 'seus_posts',
   SEUS_POSTS_COMENTARIOS: 'seus_posts_comentarios',
   META_ADS_COMENTARIOS_IA: 'meta_ads_comentarios_ia',
+  META_ADS_COMENTARIOS_IA_ESCREVE: 'meta_ads_comentarios_ia_escreve',
   CONTATO_RELACAO: 'contato_relacao',
   META_ADS_ORGANICO: 'meta_ads_organico',
   EMAIL_LIDO_SINCRONIZADO: 'email_lido_sincronizado',

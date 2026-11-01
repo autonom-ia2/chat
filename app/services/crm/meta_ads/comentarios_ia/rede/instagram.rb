@@ -17,9 +17,10 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   # Outro envio deste comentário (já feito, ou saindo agora em outra requisição): nada a fazer.
   OUTRO_ENVIO = %w[private_reply_done private_reply_retry].freeze
 
-  def privado(care)
+  # texto: a mensagem escrita pela IA para este comentário (#2458); sem ela, a do dono.
+  def privado(care, texto: nil)
     resultado = Crm::MetaAds::InstagramPrivateReply.new(@inbox.channel)
-                                                   .perform!(comment: comment, text: care.texto_do_privado, actor: REGISTRO::ACTOR,
+                                                   .perform!(comment: comment, text: texto || care.texto_do_privado, actor: REGISTRO::ACTOR,
                                                              ad_id: @comentario.ad_id)
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: resultado[:conversation])
   rescue Crm::MetaAds::InstagramPrivateReply::Error => e
@@ -37,20 +38,24 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
 
   # O texto do comentário que esta resposta responde (#2454), lido na Meta pelo id, como o `ler`. nil no comentário de
   # primeiro nível ou quando não dá para ler o de cima.
+  # Lido uma vez por comentário (#2458): o Classificador e a Escrita leem o mesmo.
   def ler_pai
+    return @ler_pai if defined?(@ler_pai)
     return if @comentario.parent_id.blank?
 
-    na_meta(@comentario.parent_id)&.dig('text')
+    @ler_pai = na_meta(@comentario.parent_id)&.dig('text')
   end
 
-  # A legenda do post (#2424), ou nil. Meta fora do ar levanta Indisponivel, como o `ler`.
+  # A legenda do post (#2424), ou nil. Meta fora do ar levanta Indisponivel, como o `ler`. Lida uma vez por comentário
+  # (#2458): o Classificador e a Escrita leem a mesma.
   def legenda
+    return @legenda if defined?(@legenda)
     return if @comentario.post_id.blank?
 
     resultado = cliente.caption(@comentario.post_id)
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
 
-    resultado.data.to_h['caption'] if resultado.ok
+    @legenda = (resultado.data.to_h['caption'] if resultado.ok)
   end
 
   # As imagens do post (#2454): a foto, as do carrossel ou a capa do vídeo (Imagens). Nenhuma quando não dá para ler; Meta

@@ -26,10 +26,17 @@ export const motivoDaResposta = error =>
 
 // O "para quem" do dono vai inteiro ao classificador: até 500 letras (o servidor recusa mais).
 export const FOR_WHOM_LIMIT = 500;
+// #2458: o assunto proibido e o pedido de tom, cada um numa frase (Crm::MetaAdsCommentCare::FRASE_DO_DONO_LIMIT).
+export const FRASE_DO_DONO_LIMIT = 300;
 
 // Por que uma escrita falhou, para a tela dizer o certo: 'acesso' (403), 'invalid_message' ou 'invalid_para_quem' (422
 // do servidor, o texto não serve) ou 'rede' (o resto).
-const ESCRITA_INVALIDA = ['invalid_message', 'invalid_para_quem'];
+const ESCRITA_INVALIDA = [
+  'invalid_message',
+  'invalid_para_quem',
+  'invalid_assunto_proibido',
+  'invalid_tom',
+];
 export const falhaDaEscrita = error => {
   if (error?.response?.status === 403) return 'acesso';
   const codigo = error?.response?.data?.error;
@@ -99,13 +106,14 @@ export function useCuidado(alvo) {
   };
 
   // Grava a mensagem, o "para quem" e as frases; `status` liga ('on') ou mantém o atual.
-  const salvar = ({ message, paraQuem, phrases, status }) =>
+  const salvar = ({ message, paraQuem, phrases, status, escrita }) =>
     escrever(() =>
       ComentariosIaAPI.saveCuidado(target(), {
         message,
         paraQuem,
         phrases,
         status: status || painel.value?.care,
+        escrita,
       })
     );
 
@@ -123,9 +131,13 @@ export function useCuidado(alvo) {
   const voltar = () => mudarStatus('on');
 
   // Passo 3 do jeito do dono: dois comentários do post, um que é o caso e um que não é. Falha: null.
-  const previa = async paraQuem => {
+  // `escrita` (#2458): { assuntoProibido, tom }, só com a IA escrevendo.
+  const previa = async (paraQuem, escrita) => {
     try {
-      const { data } = await ComentariosIaAPI.previa(target(), { paraQuem });
+      const { data } = await ComentariosIaAPI.previa(target(), {
+        paraQuem,
+        escrita,
+      });
       return data;
     } catch {
       return null;

@@ -8,7 +8,9 @@
 #      sem IA (#2454): { status, waiting, private_window }.
 #      Ver: administrador ou `meta_ads_view`.
 # PUT  meta_ads_connection/ads/:ad_id/cuidado           message, para_quem, phrases[], status → o Painel.
+#      Com a flag meta_ads_comentarios_ia_escreve (#2458), também temas[], assunto_proibido e tom do passo 2.
 # POST meta_ads_connection/ads/:ad_id/cuidado/previa    para_quem → os exemplos do passo "como fica" (Previa).
+#      Com a escrita (#2458), também assunto_proibido e tom: o que a IA escreveria.
 # POST meta_ads_connection/ads/:ad_id/cuidado/foto      → "O que eu vi na foto" do passo 1 (#2454, flag
 #      meta_ads_comentarios_ia), do post do criativo; o mesmo contrato do post do Seus posts.
 # PUT  meta_ads_connection/ads/:ad_id/cuidado/foto      correction → a correção do dono. Sem a chave `correction`, 422
@@ -59,7 +61,7 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
 
   def update
     painel.salvar!(message: texto(:message), para_quem: texto(:para_quem), phrases: frases,
-                   status: cuidado_params[:status].to_s, user: Current.user)
+                   status: cuidado_params[:status].to_s, user: Current.user, escrita: escrita)
     audit_care!('save')
     render json: payload
   end
@@ -68,7 +70,8 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
     para_quem = texto(:para_quem)
     return render_error_code('invalid_para_quem') if para_quem.strip.empty? || para_quem.strip.length > Crm::MetaAdsCommentCare::NOTE_LIMIT
 
-    resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
+    resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem,
+                                                        base: painel.cuidado, escrita: escrita).call
     # A tela trata qualquer resposta de erro como "não deu para ler": só a prévia pronta vai como prévia.
     return render_error_code(resultado[:status]) unless resultado[:status] == 'ready'
 
@@ -153,7 +156,7 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   end
 
   def cuidado_params
-    @cuidado_params ||= params.permit(:status, :message, :para_quem, :correction, phrases: [])
+    @cuidado_params ||= params.permit(:status, :message, :para_quem, :correction, :assunto_proibido, :tom, phrases: [], temas: [])
   end
 
   # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327). O que chegou e os strong params tiraram veio
@@ -169,6 +172,16 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
     raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_phrases' unless value.is_a?(Array) && value.all?(String)
 
     value
+  end
+
+  # #2458: o passo 2 com a escrita, só os campos que vieram (pausar e retomar não mexem neles). Os temas, só lista de
+  # textos.
+  def escrita
+    temas = cuidado_params[:temas]
+    raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_temas' if params.key?(:temas) && !(temas.is_a?(Array) && temas.all?(String))
+
+    campos = %i[assunto_proibido tom].select { |campo| params.key?(campo) }.index_with { |campo| texto(campo) }
+    params.key?(:temas) ? campos.merge(temas: temas) : campos
   end
 
   def render_error(error)

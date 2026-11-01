@@ -85,7 +85,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar
 
-    expect(rede).to have_received(:privado).with(care)
+    expect(rede).to have_received(:privado).with(care, texto: nil)
     expect(conversa).to have_received(:anotar!).with(conversation, lido, care, nova: true)
     expect(registro).to have_received(:vincular!).with(lido, 'private_reply', conversation)
     expect(rede).to have_received(:responder).with('Te mandei os detalhes no privado!')
@@ -330,7 +330,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar
 
-    expect(rede).to have_received(:privado).with(care)
+    expect(rede).to have_received(:privado).with(care, texto: nil)
   end
 
   it 'rede em que o privado ainda não está liberado (Facebook, até a pages_messaging): a pergunta fica com o dono' do
@@ -394,7 +394,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(registro).to have_received(:decisao!).with(lido, avaliacao).ordered
-    expect(rede).to have_received(:privado).with(care).ordered
+    expect(rede).to have_received(:privado).with(care, texto: nil).ordered
   end
 
   it 'IA barrada (flag desligada ou sem chave): não sobe, fica com o dono como "não cuidei"' do
@@ -463,6 +463,6 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar(comentario(ad_id: '120'))
 
-    expect(rede).to have_received(:privado).with(anuncio)
+    expect(rede).to have_received(:privado).with(anuncio, texto: nil)
   end
 end

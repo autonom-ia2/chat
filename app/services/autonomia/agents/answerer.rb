@@ -77,7 +77,7 @@ module Autonomia
       def initialize(agent:, query:, history: [], images: [], documents: [], allow_web_search: true,
                      trust_instruction: false, audience: :customer, retrieval_query: nil, delivery: nil,
                      operador: nil, max_rodadas: 1, max_segundos: nil, feature: 'agente_resposta',
-                     fixos: [], contexto_do_turno: nil, memoria: nil, prova: false)
+                     fixos: [], contexto_do_turno: nil, memoria: nil, prova: false, formato: FormatoDoComentario::CONVERSA)
         @agent = agent
         # #1428 (parte 3, entrega B): a PROVA DO AJUSTE. Nenhuma ferramenta vai ao modelo (nem a busca na web, nem
         # especialista ou ajudante): sem `tools`, o ResponsesClient faz uma chamada só e nada pode ser executado. Teto
@@ -87,7 +87,11 @@ module Autonomia
         @memoria = memoria
         # Regra do sistema para ESTE turno, repassada ao PromptBuilder (#1669: a equipe escreveu na conversa). nil:
         # nada muda.
-        @contexto_do_turno = contexto_do_turno
+        # #2458: a resposta a um comentário de post (FormatoDoComentario; formato desconhecido é ArgumentError). Na
+        # conversa (padrão), nada muda; no comentário, a regra do formato vai junto da regra do turno e nenhuma
+        # ferramenta vai ao modelo.
+        @formato = FormatoDoComentario.conferido(formato)
+        @contexto_do_turno = FormatoDoComentario.contexto_do_turno(contexto_do_turno, @formato)
         @query = query.to_s
         # Quando a query composta embute contexto ANTES da pergunta real (ex.: copiloto chat com
         # transcrição), o truncamento do Retriever (que preserva o começo) cortaria a pergunta fora
@@ -386,7 +390,7 @@ module Autonomia
       end
 
       def answer_tools
-        return if @prova
+        return if @prova || FormatoDoComentario.comentario?(@formato)
 
         tools = []
         tools.concat(Array(Crm::Ai::WebSearch.tools)) if web_search_permitida?

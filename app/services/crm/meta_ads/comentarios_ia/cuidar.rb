@@ -28,6 +28,10 @@
 #    - reclamação: não responde, e a conversa abre urgente para a pessoa;
 #    - propaganda: esconde;
 #    - o resto: nada (a reivindicação já registra que a IA leu).
+#    - #2458, com a flag meta_ads_comentarios_ia_escreve: a frase do comentário e a do privado são escritas pela IA
+#      para este comentário (Escrita), as duas ANTES de qualquer envio. O que o agente não sabe, e o comentário sobre o
+#      assunto proibido do dono (`owner_topic`), ficam com o dono (`kept_for_owner`). O preço que o dono escreveu vale
+#      no lugar da frase escrita. Sem agente que possa escrever, as frases fixas (o motivo vai ao log).
 #    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado ainda não está liberado (Facebook, F4),
 #    nunca manda privado: a pergunta fica com o dono (`kept_for_owner`, "Esperando você" no Painel).
 #
@@ -151,7 +155,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     when 'private', 'price' then privado(decisao)
     when 'to_you' then agir { para_voce('to_you') }
     when 'hide' then esconder
-    when FICA_COM_O_DONO then @registro.gravar!(@comentario, FICA_COM_O_DONO)
+    when FICA_COM_O_DONO, Crm::MetaAds::ComentariosIa::Classificador::DONO then @registro.gravar!(@comentario, FICA_COM_O_DONO)
     end
   end
 
@@ -164,19 +168,31 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # deste post (outro comentário dela) não recebe outro.
   def privado(decisao)
     return nao_cuidou('sem_quem_comentou') if @comentario.from_id.blank? || @comentario.post_id.blank?
+
+    textos = Crm::MetaAds::ComentariosIa::Escrita.ligada?(inbox.account) ? textos_escritos(decisao) : {}
+    # O agente não soube escrever: fica com o dono, no "Esperando você".
+    return @registro.gravar!(@comentario, FICA_COM_O_DONO) if textos.key?(:dono)
     return ja_tem_privado unless @registro.reservar_pessoa!(@comentario)
 
     inicio = Time.current
-    envio = agir { rede.privado(care) }
+    envio = agir { rede.privado(care, texto: textos[:privado]) }
     return nao_saiu(envio, decisao) unless envio.ok
 
     na_conversa(envio.conversation, inicio)
-    responder(decisao)
+    responder(decisao, textos[:publico])
   end
 
-  # A frase pública depois do privado. A Meta recusou: o dono vê "não cuidei" e responde ele.
-  def responder(decisao)
-    return if rede.responder(care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
+  # #2458: com a escrita ligada, a mensagem do privado e a frase do comentário escritas pela IA (Escrita#textos), as duas
+  # antes de qualquer envio.
+  def textos_escritos(decisao)
+    Crm::MetaAds::ComentariosIa::Escrita.new(care: care, inbox: inbox, legenda: rede.legenda, foto: texto_da_foto)
+                                        .textos(decisao, comentario: @comentario.text, pai: rede.ler_pai)
+  end
+
+  # A frase pública depois do privado (a escrita pela IA, ou a do dono). A Meta recusou: o dono vê "não cuidei" e
+  # responde ele.
+  def responder(decisao, escrita = nil)
+    return if rede.responder(escrita || care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
 
     recusou('reply')
     @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)

@@ -5,6 +5,10 @@
 # a pessoa responde. Os textos ficam como a tela mostrou, no idioma de quem aprovou: o servidor não
 # monta frase.
 #
+# #2458 (a IA escreve as respostas): `temas` são os temas do privado, cada um nas palavras da tela (os chips somam); o
+# `para_quem` segue sendo a frase que a tela mostra com eles. `assunto_proibido` é sobre o que a IA não fala, e `tom` o
+# pedido de tom para as respostas escritas pela IA.
+#
 # O comentário não fica aqui (dado de terceiro, lido ao vivo); o que a IA fez com cada um fica nas ações do #2196.
 class Crm::MetaAdsCommentCare < ApplicationRecord
   self.table_name = 'crm_meta_ads_comment_cares'
@@ -23,6 +27,10 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   # O botão só abre conversa no WhatsApp: nenhum outro endereço sai na mensagem automática.
   WHATSAPP_URL = 'https://wa.me/'.freeze
   BUTTON_TITLE_LIMIT = 20
+  TEMAS_LIMIT = 10
+  TEMA_LIMIT = 120
+  # O assunto proibido e o tom: uma frase cada.
+  FRASE_DO_DONO_LIMIT = 300
 
   belongs_to :account
   belongs_to :created_by, class_name: 'User', optional: true
@@ -37,9 +45,11 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   validates :note, length: { maximum: NOTE_LIMIT }
   validates :para_quem, length: { maximum: NOTE_LIMIT }
   validates :price_reply, length: { maximum: PHRASE_LIMIT }
+  validates :assunto_proibido, :tom, length: { maximum: FRASE_DO_DONO_LIMIT }
   validate :message_no_limite
   validate :phrases_validas
   validate :botao_do_whatsapp
+  validate :temas_validos
 
   scope :on, -> { where(status: 'on') }
 
@@ -100,6 +110,13 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
     lista = Array(phrases)
     valida = PHRASES.cover?(lista.size) && lista.all? { |frase| frase.is_a?(String) && frase.strip.length.between?(1, PHRASE_LIMIT) }
     errors.add(:phrases, :invalid) unless valida
+  end
+
+  def temas_validos
+    lista = temas
+    valida = lista.is_a?(Array) && lista.size <= TEMAS_LIMIT &&
+             lista.all? { |tema| tema.is_a?(String) && tema.strip.length.between?(1, TEMA_LIMIT) }
+    errors.add(:temas, :invalid) unless valida
   end
 
   def botao_do_whatsapp
