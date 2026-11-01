@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import { isCrmAutomationKey } from 'dashboard/composables/useCrmAutomationOptions';
+import { SAIDA_EXTERNA, useSaidaExterna } from './saidaExterna';
 import { useOperators } from 'dashboard/components-next/filter/operators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
@@ -89,6 +90,30 @@ const isCrmEnabled = computed(
   () => globalConfig.value?.crmKanbanEnabled === true
 );
 const isAvailableKey = key => isCrmEnabled.value || !isCrmAutomationKey(key);
+// #2448: webhook e transcrição por e-mail só aparecem para quem tem integration_manage (admin sempre); numa regra que
+// já as usa, continuam à vista para a regra se ler inteira, e salvar fica travado com o motivo.
+const { podeIntegrar, travada } = useSaidaExterna();
+// As ações com que a regra chegou: tirar o webhook também é mexer na integração. Guardadas quando chega outra regra
+// (o objeto troca); editar mexe dentro do mesmo objeto.
+const acoesAoAbrir = ref([]);
+watch(
+  () => automation.value,
+  regra => {
+    acoesAoAbrir.value = (regra?.actions || []).map(({ action_name }) => ({
+      action_name,
+    }));
+  },
+  { immediate: true }
+);
+const salvarTravado = computed(() =>
+  travada(automation.value?.actions, acoesAoAbrir.value)
+);
+const isAllowedAction = key =>
+  podeIntegrar.value ||
+  !SAIDA_EXTERNA.includes(key) ||
+  (automation.value?.actions || []).some(
+    ({ action_name }) => action_name === key
+  );
 const { operators } = useOperators();
 
 provideDropdownTeleport();
@@ -291,7 +316,7 @@ const automationActionTypes = computed(() => {
     : AUTOMATION_ACTION_TYPES.filter(({ key }) => key !== 'add_sla');
 
   return actionTypes
-    .filter(({ key }) => isAvailableKey(key))
+    .filter(({ key }) => isAvailableKey(key) && isAllowedAction(key))
     .map(action => ({
       ...action,
       label: t(`AUTOMATION.ACTIONS.${action.label}`),
@@ -343,6 +368,7 @@ const close = () => {
 };
 
 const emitSaveAutomation = () => {
+  if (salvarTravado.value) return;
   syncCustomAttributeTypes();
   const conditionsValid = isConditionsValid();
   errors.value = validateAutomation(automation.value);
@@ -428,6 +454,9 @@ defineExpose({ open, close });
       />
     </div>
     <template #footer>
+      <p v-if="salvarTravado" class="w-full mb-3 text-sm text-n-amber-11">
+        {{ $t('AUTOMATION.EXTERNAL_ACTIONS_LOCKED') }}
+      </p>
       <div class="flex flex-row justify-end w-full gap-2">
         <NextButton
           faded
@@ -441,6 +470,7 @@ defineExpose({ open, close });
           blue
           type="button"
           :label="$t(submitKey)"
+          :disabled="salvarTravado"
           @click="emitSaveAutomation"
         />
       </div>
