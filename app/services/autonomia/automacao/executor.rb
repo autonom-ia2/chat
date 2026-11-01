@@ -169,8 +169,11 @@ class Autonomia::Automacao::Executor
     end
   end
 
+  # A ação mudou o alvo: o passo seguinte ("se", "esperar até") lê o valor de agora, não o de antes dela.
   def seguir_depois_da_acao(passo, resultado)
     @tentativas = 0
+    @alvo = nil
+    @valores = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
     @roteiro.seguinte(passo['id'])
   end

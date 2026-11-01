@@ -130,6 +130,17 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(registros(execucao)).to eq([%w[e1 ok] + [nil], %w[e1 pulado prazo_vencido], %w[v1 ok] + [nil]])
     end
 
+    it 'o passo depois de uma ação lê o alvo já mudado por ela', :aggregate_failures do
+      prioridade = ->(valor) { { 'campo' => { '$valor' => 'conversa.prioridade' }, 'op' => 'igual', 'valor' => valor } }
+      passos = [prioridade_passo('a1', 'urgent'),
+                { 'id' => 's1', 'tipo' => 'se', 'condicao' => prioridade.call('urgent'), 'entao' => [prioridade_passo('a2', 'high')] },
+                { 'id' => 'e1', 'tipo' => 'esperar_ate', 'condicao' => prioridade.call('high'), 'prazo' => { 'valor' => 2, 'unidade' => 'dias' } }]
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, passos)).reload
+
+      expect(execucao.estado).to eq('concluida')
+      expect(registros(execucao)).to eq([%w[a1 ok] + [nil], %w[s1 ok] + [nil], %w[a2 ok] + [nil], %w[e1 ok] + [nil]])
+    end
+
     it '"esperar até" com a condição já cumprida segue sem esperar' do
       conversa.update!(priority: :urgent)
       passos = [{ 'id' => 'e1', 'tipo' => 'esperar_ate',
