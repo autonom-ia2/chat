@@ -14,6 +14,9 @@ const props = defineProps({
   comentario: { type: Object, required: true },
   // Uma ação deste comentário está indo para a Meta: os botões esperam.
   ocupado: { type: Boolean, default: false },
+  // #2454, flag meta_ads_comentarios_ia_conversa: o fio conta. Cada resposta de cliente mostra o próprio selo; na aba
+  // em que o comentário só aparece por uma resposta (`comentario.contexto`), o selo dele some para não contradizer a aba.
+  fio: { type: Boolean, default: false },
 });
 const emit = defineEmits([
   'responder',
@@ -126,8 +129,12 @@ const ACAO =
         <span class="text-n-slate-11">{{
           haQuanto(comentario.quando, locale)
         }}</span>
-        <span v-if="ESTADOS[comentario.estado]" class="max-sm:basis-full">
+        <span
+          v-if="ESTADOS[comentario.estado] && !comentario.contexto"
+          class="max-sm:basis-full"
+        >
           <span
+            data-seus-posts-selo
             class="inline-block rounded-full px-2 py-0.5 text-xs font-semibold"
             :class="ESTADOS[comentario.estado]"
           >
@@ -163,6 +170,7 @@ const ACAO =
         <li
           v-for="resposta in comentario.respostas"
           :key="resposta.id"
+          :data-seus-posts-resposta="resposta.id"
           :data-seus-posts-resposta-do-dono="resposta.daConta || undefined"
           class="flex items-start gap-1.5 rounded-lg bg-n-alpha-1 px-3 py-2 text-sm text-n-slate-12"
         >
@@ -177,6 +185,14 @@ const ACAO =
                 : resposta.autor || $t('SEUS_POSTS.POST.COMMENTS.SOMEONE')
             }}</span>
             {{ resposta.texto }}
+            <span
+              v-if="fio && ESTADOS[resposta.estado]"
+              data-seus-posts-resposta-estado
+              class="ms-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold"
+              :class="ESTADOS[resposta.estado]"
+            >
+              {{ $t(`SEUS_POSTS.POST.COMMENTS.STATE.${resposta.estado}`) }}
+            </span>
           </span>
         </li>
       </ul>

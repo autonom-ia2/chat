@@ -10,7 +10,12 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import EstadoVazio from '../components/EstadoVazio.vue';
 import NumeroQuadro from '../components/NumeroQuadro.vue';
 import ComentarioLinha from '../components/ComentarioLinha.vue';
-import { comentarioParaTela, postParaTela } from '../seusPostsDados';
+import {
+  comentarioParaTela,
+  comentariosDaAba,
+  contarComentarios,
+  postParaTela,
+} from '../seusPostsDados';
 import { formatar, intlLocale, vereditoDoPost } from '../seusPostsHelpers';
 import { useLiberarAcesso } from '../useLiberarAcesso';
 import {
@@ -238,15 +243,17 @@ const FILTROS = [
   ['privado', 'privado'],
   ['escondido', 'escondido'],
 ];
-const contagem = computed(() => {
-  const conta = { all: comentarios.value.lista.length };
-  FILTROS.slice(1).forEach(([chave, estado]) => {
-    conta[chave] = comentarios.value.lista.filter(
-      comentario => comentario.estado === estado
-    ).length;
-  });
-  return conta;
-});
+// #2454: com a flag da conversa, o fio conta: as respostas de cliente entram nas abas, como no Resumo.
+const comFio = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA_CONVERSA)
+);
+const contagem = computed(() =>
+  contarComentarios(
+    comentarios.value.lista,
+    FILTROS.slice(1).map(([, estado]) => estado),
+    comFio.value
+  )
+);
 const filtros = computed(() =>
   FILTROS.filter(([chave]) => chave === 'all' || contagem.value[chave])
 );
@@ -255,12 +262,13 @@ const filtro = ref('all');
 watch(filtros, lista => {
   if (!lista.some(([chave]) => chave === filtro.value)) filtro.value = 'all';
 });
-const visiveis = computed(() => {
-  const estado = FILTROS.find(([chave]) => chave === filtro.value)[1];
-  return estado
-    ? comentarios.value.lista.filter(comentario => comentario.estado === estado)
-    : comentarios.value.lista;
-});
+const visiveis = computed(() =>
+  comentariosDaAba(
+    comentarios.value.lista,
+    FILTROS.find(([chave]) => chave === filtro.value)[1],
+    comFio.value
+  )
+);
 // Quem espera no herói é a contagem do servidor, a mesma do cartão da lista (até 50 comentários, depois "ou mais"); as
 // abas contam só os comentários já carregados.
 const esperandoNoHeroi = computed(() => {
@@ -901,6 +909,7 @@ const BOTAO_DE_BORDA =
                 v-for="comentario in visiveis"
                 :key="comentario.id"
                 :comentario="comentario"
+                :fio="comFio"
                 :ocupado="ocupado === comentario.id"
                 @responder="
                   (texto, pronto) => responder(comentario, texto, pronto)
