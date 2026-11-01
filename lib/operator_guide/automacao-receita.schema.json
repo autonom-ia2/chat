@@ -21,11 +21,12 @@
     "passos_opcionais": { "type": "array", "items": { "$ref": "#/definitions/passo" } },
     "id": { "type": "string", "minLength": 1, "maxLength": 40 },
     "duracao": {
+      "description": "Teto de 3650 de cada unidade (10 anos em dias): proteção contra erro de digitação que travaria a execução, não limite de uso.",
       "type": "object",
       "additionalProperties": false,
       "required": ["valor", "unidade"],
       "properties": {
-        "valor": { "type": "integer", "minimum": 1 },
+        "valor": { "type": "integer", "minimum": 1, "maximum": 3650 },
         "unidade": { "enum": ["minutos", "horas", "dias"] }
       }
     },
@@ -43,7 +44,16 @@
           "required": ["campo", "op"],
           "properties": {
             "campo": { "$ref": "#/definitions/valor" },
-            "op": { "enum": ["igual", "diferente", "contem", "nao_contem", "vazio", "preenchido", "maior", "menor"] },
+            "op": { "enum": ["vazio", "preenchido"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["campo", "op", "valor"],
+          "properties": {
+            "campo": { "$ref": "#/definitions/valor" },
+            "op": { "enum": ["igual", "diferente", "contem", "nao_contem", "maior", "menor"] },
             "valor": { "type": ["string", "number", "boolean"] }
           }
         },

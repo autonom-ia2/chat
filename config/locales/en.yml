@@ -515,6 +515,9 @@ en:
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
         corpo: 'Step %{passo}: %{problema}'
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
+        fixo: 'Step %{passo}: %{campo} must be %{valor}.'
+        proibido: 'Step %{passo}: the automation cannot change %{campo}.'
+        valor_no_corpo: 'Step %{passo}: the action body cannot use variables yet.'
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'

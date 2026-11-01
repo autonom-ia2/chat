@@ -30,7 +30,7 @@ class Autonomia::Automacao::Versao < ApplicationRecord
   end
 
   def receita_executavel
-    return unless ::Autonomia::Automacao::Receita.no_esquema?(receita)
+    return unless ::Autonomia::Automacao::Receita.esquema_valido?(receita)
 
     ::Autonomia::Automacao::Receita.new(receita, conta: account).problemas.each { |problema| errors.add(:receita, problema) }
   end

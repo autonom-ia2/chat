@@ -8,6 +8,12 @@
 #
 # `exige`: campos que a receita tem de preencher além do que a plataforma pede. Etiqueta e atributo criados pela
 # automação levam descrição (F3.10).
+# `fixos`: campo que a receita manda sempre com este valor (o atributo da conversa sem `merge` apagaria os outros).
+# `proibe`: campo que a receita não pode mandar; o ponto entra no campo de dentro (`objeto.campo`).
+#
+# Liberar uma ação vale pelo que ela faz quando uma pessoa clica: resolver a conversa dispara a pesquisa de satisfação
+# da caixa e as regras da conta; mover o card dispara as automações da etapa. É a cascata da D6, contada na cadeia
+# comum (F1), não um passo escondido.
 #
 # Liberar uma ação nova: ler o controller, conferir que o desfazer do Guia a alcança e que ela não fala com o cliente
 # nem sai da plataforma (isso é passo nativo, F4/F8), e só então pôr aqui.
@@ -24,11 +30,13 @@ passo:
     acoes:
       PATCH conversations/:conversation_id/labels/alterar: {}
   custom_attribute_definitions:
-    motivo: Criar e alterar atributo de conversa, contato, empresa ou card (D13). Apagar fica só no Guia (F3.11).
+    motivo: >-
+      Criar e alterar atributo de conversa, contato, empresa ou card (D13). Trocar a chave ou o modelo deixaria os
+      valores já gravados órfãos, então fica fora. Apagar fica só no Guia (F3.11).
     acoes:
       POST custom_attribute_definitions: { exige: [attribute_description] }
-      PATCH custom_attribute_definitions/:id: {}
-      PUT custom_attribute_definitions/:id: {}
+      PATCH custom_attribute_definitions/:id: { proibe: [custom_attribute_definition.attribute_key, custom_attribute_definition.attribute_model] }
+      PUT custom_attribute_definitions/:id: { proibe: [custom_attribute_definition.attribute_key, custom_attribute_definition.attribute_model] }
   contacts:
     motivo: Alterar o contato e os atributos dele.
     acoes:
@@ -42,7 +50,7 @@ passo:
   conversations:
     motivo: Atributo, prioridade e status da conversa.
     acoes:
-      POST conversations/:id/custom_attributes: {}
+      POST conversations/:id/custom_attributes: { fixos: { merge: true } }
       POST conversations/:id/toggle_priority: {}
       POST conversations/:id/toggle_status: {}
   conversations/assignments:
@@ -62,6 +70,7 @@ passo:
 
 fora:
   - motivo: Usuários, funções, conta, segurança, integrações, credenciais, tokens e canais. Sempre fora (ADR-001 2.1).
+    sempre: true
     recursos:
       - agents
       - agent_bots
@@ -97,6 +106,7 @@ fora:
       - waha_inboxes
       - whatsapp_hybrid_connections
   - motivo: Rotas de IA, do CRM e dos agentes. Sempre fora (ADR-001 2.1); a IA como passo é nativa, na F7.
+    sempre: true
     recursos:
       - crm/ai_settings
       - crm/ai_suggestions

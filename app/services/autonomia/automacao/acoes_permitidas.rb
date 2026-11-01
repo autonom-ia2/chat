@@ -23,6 +23,21 @@ module Autonomia::Automacao::AcoesPermitidas
     Array(acoes.dig(acao.to_s, 'exige'))
   end
 
+  # Campos que a receita manda sempre com este valor: { 'merge' => true }.
+  def fixos(acao)
+    acoes.dig(acao.to_s, 'fixos').to_h
+  end
+
+  # Campos que a receita não pode mandar.
+  def proibe(acao)
+    Array(acoes.dig(acao.to_s, 'proibe'))
+  end
+
+  # Os recursos que nunca viram passo (ADR-001 2.1), para o CI cobrar.
+  def sempre_fora
+    lista['fora'].select { |grupo| grupo['sempre'] }.flat_map { |grupo| grupo['recursos'] }
+  end
+
   # { 'POST labels' => { 'exige' => ['description'] }, ... }
   def acoes
     @acoes ||= lista['passo'].values.reduce({}) { |todas, bloco| todas.merge(bloco['acoes']) }.freeze

@@ -1004,6 +1004,9 @@ pt_BR:
         valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
         corpo: 'Passo %{passo}: %{problema}'
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
+        fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
+        proibido: 'Passo %{passo}: a automação não muda %{campo}.'
+        valor_no_corpo: 'Passo %{passo}: o corpo da ação ainda não aceita variável.'
     automacoes:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'

@@ -1,7 +1,8 @@
 # A condição de um "se", de um "esperar até" ou de um filtro do gatilho (#2414 F3). Estruturada, nunca texto:
 # `{"campo": {"$valor": "conversa.status"}, "op": "igual", "valor": "resolved"}`, ou `todas`/`alguma` de outras.
 #
-# Valor ausente não é erro: "vazio" e "preenchido" respondem por ele, e as comparações dão falso.
+# Valor ausente não é erro: "vazio" e "preenchido" respondem por ele. As comparações o tratam como texto vazio
+# ("diferente" e "não contém" dão verdadeiro) e, para "maior" e "menor", dão falso.
 class Autonomia::Automacao::Condicao
   OPERACOES = {
     'igual' => ->(atual, valor) { !atual.is_a?(Array) && atual.to_s == valor.to_s },

@@ -50,6 +50,35 @@ RSpec.describe Autonomia::Automacao::Versao do
     end
   end
 
+  it 'manda o atributo da conversa sempre com merge, para não apagar os outros' do
+    atributo = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Origem',
+                 'caminho' => { 'id' => { '$valor' => 'conversa.id' } }, 'corpo' => { 'custom_attributes' => { 'origem' => 'site' } } }
+
+    expect(erros(receita(atributo))).to include('Passo p1: merge tem de ser true')
+    expect(versao(receita(atributo.deep_merge('corpo' => { 'merge' => true })))).to be_valid
+  end
+
+  it 'não troca a chave nem o modelo de um atributo' do
+    alterar = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'PATCH custom_attribute_definitions/:id', 'caminho' => { 'id' => 4 },
+                'descricao' => 'Renomear', 'corpo' => { 'custom_attribute_definition' => { 'attribute_key' => 'outra' } } }
+
+    expect(erros(receita(alterar))).to include('Passo p1: a automação não muda custom_attribute_definition.attribute_key')
+  end
+
+  it 'recusa variável no corpo da ação (chega com a mensagem, F4)' do
+    expect(erros(receita(por_etiqueta(corpo: { 'por' => [{ '$valor' => 'contato.nome' }] }))))
+      .to include('o corpo da ação ainda não aceita variável')
+  end
+
+  it 'pede o valor da comparação e põe teto na espera' do
+    sem_valor = { 'id' => 'p1', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'conversa.status' }, 'op' => 'igual' },
+                  'entao' => [esperar('p2')] }
+    longa = { 'id' => 'p1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 3651, 'unidade' => 'dias' } }
+
+    expect(versao(receita(sem_valor))).not_to be_valid
+    expect(versao(receita(longa))).not_to be_valid
+  end
+
   it 'recusa corpo fora do formato da ação, como o Guia' do
     expect(erros(receita(por_etiqueta(corpo: { 'labels' => ['x'] })))).to include('campo que esta ação não tem: labels')
   end

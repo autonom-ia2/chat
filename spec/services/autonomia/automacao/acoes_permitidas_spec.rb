@@ -46,17 +46,17 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     expect(apagar_estrutura.select { |acao| permitidas.permitida?(acao) }).to be_empty
   end
 
-  it 'deixa fora usuários, funções, conta, integrações, webhooks e tokens (ADR-001 2.1)' do
-    sempre_fora = %w[agents custom_roles api/v1/accounts saml_settings webhooks integrations/hooks crm/integration_tokens
-                     email_oauth_apps crm/ai_settings]
-
-    expect(permitidas.lista['passo'].keys & sempre_fora).to be_empty
+  it 'deixa fora usuários, funções, conta, integrações, webhooks, tokens e as IAs (ADR-001 2.1)' do
+    expect(permitidas.sempre_fora).to include('agents', 'custom_roles', 'api/v1/accounts', 'webhooks', 'integrations/slack',
+                                              'whatsapp/authorizations', 'crm/integration_tokens', 'crm/ai_settings')
+    expect(permitidas.lista['passo'].keys & permitidas.sempre_fora).to be_empty
     expect(permitidas.permitida?('DELETE agents/:id')).to be(false)
   end
 
-  it 'só exige campo que a ação aceita' do
+  it 'só exige, fixa ou proíbe campo que a ação aceita' do
     permitidas.acoes.each do |acao, opcoes|
-      expect(Array(opcoes['exige']) - formatos[acao]['campos'].keys).to be_empty, acao
+      campos = Array(opcoes['exige']) + opcoes.fetch('fixos', {}).keys + Array(opcoes['proibe']).map { |campo| campo.split('.').first }
+      expect(campos - formatos[acao]['campos'].keys).to be_empty, acao
     end
   end
 
