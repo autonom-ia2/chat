@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import { isCrmAutomationKey } from 'dashboard/composables/useCrmAutomationOptions';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { useOperators } from 'dashboard/components-next/filter/operators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
@@ -89,6 +90,16 @@ const isCrmEnabled = computed(
   () => globalConfig.value?.crmKanbanEnabled === true
 );
 const isAvailableKey = key => isCrmEnabled.value || !isCrmAutomationKey(key);
+// #2414: webhook e transcrição por e-mail mandam a conversa para fora, como uma integração. Só aparecem para quem
+// tem integration_manage (admin sempre); numa regra que já as usa, continuam à vista para a regra se ler inteira.
+const SAIDA_EXTERNA = ['send_webhook_event', 'send_email_transcript'];
+const podeIntegrar = usePermissionGranted('integration_manage');
+const isAllowedAction = key =>
+  podeIntegrar.value ||
+  !SAIDA_EXTERNA.includes(key) ||
+  (automation.value?.actions || []).some(
+    ({ action_name }) => action_name === key
+  );
 const { operators } = useOperators();
 
 provideDropdownTeleport();
@@ -291,7 +302,7 @@ const automationActionTypes = computed(() => {
     : AUTOMATION_ACTION_TYPES.filter(({ key }) => key !== 'add_sla');
 
   return actionTypes
-    .filter(({ key }) => isAvailableKey(key))
+    .filter(({ key }) => isAvailableKey(key) && isAllowedAction(key))
     .map(action => ({
       ...action,
       label: t(`AUTOMATION.ACTIONS.${action.label}`),

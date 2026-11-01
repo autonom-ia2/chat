@@ -211,7 +211,7 @@
           "NAME": "Automações",
           "HINT": "Regras de automação",
           "LEVEL_VIEW": "Vê as regras.",
-          "LEVEL_MANAGE": "Cria e altera regras."
+          "LEVEL_MANAGE": "Cria e altera regras. Regra com webhook ou transcrição por e-mail pede também Integrações."
         },
         "SCHEDULING": {
           "NAME": "Agendamento",
