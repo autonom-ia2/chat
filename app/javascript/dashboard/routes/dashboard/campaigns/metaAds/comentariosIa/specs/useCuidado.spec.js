@@ -12,6 +12,8 @@ vi.mock('dashboard/api/comentariosIa', () => ({
     rascunho: vi.fn(),
     lerAntigos: vi.fn(),
     getResumo: vi.fn(),
+    foto: vi.fn(),
+    corrigirFoto: vi.fn(),
   },
 }));
 
@@ -327,6 +329,43 @@ describe('useCuidado (#2212)', () => {
 
     expect(await cuidado.lerAntigos()).toBe(false);
     expect(ComentariosIaAPI.getCuidado).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useCuidado: a foto do post no passo 1 (#2454)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+  });
+
+  it('pede a leitura da foto e devolve o que o servidor viu', async () => {
+    const lida = { status: 'ready', text: 'Um bolo', corrected: false };
+    ComentariosIaAPI.foto.mockResolvedValue({ data: lida });
+    const cuidado = useCuidado(alvo);
+
+    expect(await cuidado.foto()).toEqual(lida);
+    expect(ComentariosIaAPI.foto).toHaveBeenCalledWith(alvo);
+  });
+
+  it('corrige com o texto do dono', async () => {
+    const corrigida = { status: 'ready', text: 'Bolo de vó', corrected: true };
+    ComentariosIaAPI.corrigirFoto.mockResolvedValue({ data: corrigida });
+    const cuidado = useCuidado(alvo);
+
+    expect(await cuidado.corrigirFoto('Bolo de vó')).toEqual(corrigida);
+    expect(ComentariosIaAPI.corrigirFoto).toHaveBeenCalledWith(
+      alvo,
+      'Bolo de vó'
+    );
+  });
+
+  it('falha na ida (rede, 404 sem a flag, 403): null, sem quebrar o passo 1', async () => {
+    ComentariosIaAPI.foto.mockRejectedValue(falha(500));
+    ComentariosIaAPI.corrigirFoto.mockRejectedValue(falha(403));
+    const cuidado = useCuidado(alvo);
+
+    expect(await cuidado.foto()).toBeNull();
+    expect(await cuidado.corrigirFoto('x')).toBeNull();
   });
 });
 

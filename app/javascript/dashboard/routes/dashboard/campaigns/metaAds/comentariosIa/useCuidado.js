@@ -145,6 +145,20 @@ export function useCuidado(alvo) {
     }
   };
 
+  // Passo 1 (#2454): "O que eu vi na foto". A leitura e a correção do dono; falha na ida (rede, 403, 404 sem a flag): null,
+  // e a tela diz que não conseguiu ver ou guardar, sem travar o passo.
+  const lerOuNull = async chamada => {
+    try {
+      const { data } = await chamada();
+      return data;
+    } catch {
+      return null;
+    }
+  };
+  const foto = () => lerOuNull(() => ComentariosIaAPI.foto(target()));
+  const corrigirFoto = texto =>
+    lerOuNull(() => ComentariosIaAPI.corrigirFoto(target(), texto));
+
   // "Ler e mandar" os comentários que chegaram antes de ligar: o servidor põe na fila e o Painel é lido de novo.
   const lerAntigos = async () => {
     const valeu = await escrever(async () => {
@@ -170,6 +184,8 @@ export function useCuidado(alvo) {
     voltar,
     previa,
     rascunho,
+    foto,
+    corrigirFoto,
     lerAntigos,
   };
 }

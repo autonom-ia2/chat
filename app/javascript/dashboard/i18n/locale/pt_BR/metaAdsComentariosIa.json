@@ -102,6 +102,16 @@
       "STEP": "Passo {step} de {total}",
       "NEXT": "Continuar",
       "START": "Ligar",
+      "PHOTO": {
+        "LOOKING": "Olhando a foto…",
+        "SEEN": "O que eu vi na foto:",
+        "FAILED": "Não consegui ver a foto agora.",
+        "FIX": "Corrigir",
+        "WRITE": "Escrever",
+        "SAVE": "Guardar",
+        "CANCEL": "Cancelar",
+        "SAVE_ERROR": "Não consegui guardar agora. Tente de novo."
+      },
       "WHAT": {
         "TITLE": "O que mandar no privado?",
         "TEXT": "Escreva a mensagem que a pessoa recebe. Pode ter link, catálogo, cupom ou preço.",

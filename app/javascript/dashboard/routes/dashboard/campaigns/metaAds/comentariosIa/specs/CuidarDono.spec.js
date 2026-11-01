@@ -57,6 +57,29 @@ describe('CuidarDono (#2212)', () => {
     expect(passo(wrapper)).toBe('2');
   });
 
+  describe('passo 1: o que eu vi na foto (#2454)', () => {
+    it('com a leitura da foto (flag ligada): o bloco aparece no passo 1 e pede a leitura', async () => {
+      const photo = vi.fn().mockResolvedValue({
+        status: 'ready',
+        text: 'Um bolo de cenoura',
+        corrected: false,
+      });
+      const wrapper = montar({ photo, fixPhoto: vi.fn() });
+      await flushPromises();
+
+      expect(wrapper.find('[data-ia-foto]').text()).toContain(
+        'Um bolo de cenoura'
+      );
+      expect(photo).toHaveBeenCalledTimes(1);
+    });
+
+    it('sem ela (flag desligada): nada da foto, nada pedido', () => {
+      const wrapper = montar();
+
+      expect(wrapper.find('[data-ia-foto]').exists()).toBe(false);
+    });
+  });
+
   describe('passo 1 com o começo escrito pela IA (mockup aprovado)', () => {
     const pendente = () => {
       let resolver;

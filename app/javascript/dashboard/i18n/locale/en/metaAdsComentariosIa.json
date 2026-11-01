@@ -102,6 +102,16 @@
       "STEP": "Step {step} of {total}",
       "NEXT": "Continue",
       "START": "Turn on",
+      "PHOTO": {
+        "LOOKING": "Looking at the photo…",
+        "SEEN": "What I saw in the photo:",
+        "FAILED": "I couldn't see the photo right now.",
+        "FIX": "Fix",
+        "WRITE": "Write",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "SAVE_ERROR": "I couldn't save it right now. Try again."
+      },
       "WHAT": {
         "TITLE": "What should I send by DM?",
         "TEXT": "Write the message people get. It can have a link, catalog, coupon or price.",

@@ -3,6 +3,8 @@ import { computed, nextTick, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CuidarLigado from './CuidarLigado.vue';
@@ -49,8 +51,15 @@ const {
   voltar,
   previa,
   rascunho,
+  foto,
+  corrigirFoto,
   lerAntigos,
 } = useCuidado(() => props.target);
+// #2454: "O que eu vi na foto" no passo 1, só com a flag da conversa.
+const { isCloudFeatureEnabled } = useAccount();
+const comFoto = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA_CONVERSA)
+);
 
 const heading = ref(null);
 const started = ref(null);
@@ -345,6 +354,8 @@ const openInbox = path => {
         :data="painel"
         :preview="previa"
         :draft="target.kind === 'post' ? rascunho : null"
+        :photo="comFoto ? foto : null"
+        :fix-photo="comFoto ? corrigirFoto : null"
         :changing="changing"
         :can-send-old="canSendOld"
         :saving="salvando"

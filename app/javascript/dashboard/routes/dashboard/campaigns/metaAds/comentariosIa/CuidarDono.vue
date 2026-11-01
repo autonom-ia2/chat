@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import FotoDoPost from './FotoDoPost.vue';
 import { FOR_WHOM_LIMIT } from './useCuidado';
 
 // Comentários que viram cliente (#2212, opção (a) do Rodrigo): o jeito escrito pelo dono, em três passos, uma ação em
@@ -18,6 +19,10 @@ const props = defineProps({
   // async () => o começo da mensagem escrito pela IA a partir da legenda do post, ou '' (Rascunho). Só no post do Seus
   // posts; sem ele (o anúncio), o passo 1 abre vazio.
   draft: { type: Function, default: null },
+  // #2454, com a flag meta_ads_comentarios_ia_conversa: async () => a leitura da foto do post ("O que eu vi na foto") e
+  // async texto => a correção do dono. Sem elas, o passo 1 fica como antes.
+  photo: { type: Function, default: null },
+  fixPhoto: { type: Function, default: null },
   changing: { type: Boolean, default: false },
   canSendOld: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
@@ -225,6 +230,7 @@ const FIELD =
             {{ $t(`${KEY}.WHAT.${suggested ? 'SUGGESTED' : 'TEXT'}`) }}
           </p>
         </div>
+        <FotoDoPost v-if="photo && fixPhoto" :read="photo" :fix="fixPhoto" />
         <p
           v-if="writing"
           data-ia-dono-writing

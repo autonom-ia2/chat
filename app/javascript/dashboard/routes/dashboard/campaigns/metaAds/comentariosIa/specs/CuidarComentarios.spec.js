@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import { ref } from 'vue';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/metaAdsComentariosIa.json';
 import ComentariosIaAPI from 'dashboard/api/comentariosIa';
@@ -16,7 +17,15 @@ vi.mock('dashboard/api/comentariosIa', () => ({
     rascunho: vi.fn(),
     lerAntigos: vi.fn(),
     getResumo: vi.fn(),
+    foto: vi.fn(),
+    corrigirFoto: vi.fn(),
   },
+}));
+const flags = ref([]);
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    isCloudFeatureEnabled: flag => flags.value.includes(flag),
+  }),
 }));
 const push = vi.fn();
 vi.mock('vue-router', () => ({ useRouter: () => ({ push }) }));
@@ -115,6 +124,27 @@ describe('CuidarComentarios (#2212)', () => {
     expect(anuncio.find('[data-ia-dono-writing]').exists()).toBe(false);
     expect(anuncio.find('[data-ia-dono-message]').element.value).toBe('');
     expect(ComentariosIaAPI.rascunho).not.toHaveBeenCalled();
+  });
+
+  it('passo 1 (#2454): com a flag da conversa, pede "o que eu vi na foto"; sem ela, nada', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.rascunho.mockResolvedValue({
+      data: { status: 'no_offer' },
+    });
+    ComentariosIaAPI.foto.mockResolvedValue({
+      data: { status: 'ready', text: 'Um bolo de cenoura', corrected: false },
+    });
+
+    const sem = await montar();
+    expect(sem.find('[data-ia-foto]').exists()).toBe(false);
+    expect(ComentariosIaAPI.foto).not.toHaveBeenCalled();
+
+    flags.value = ['meta_ads_comentarios_ia_conversa'];
+    const com = await montar();
+    flags.value = [];
+
+    expect(com.find('[data-ia-foto]').text()).toContain('Um bolo de cenoura');
+    expect(ComentariosIaAPI.foto).toHaveBeenCalledWith(target);
   });
 
   it('ligar que falha avisa e fica nos passos', async () => {
