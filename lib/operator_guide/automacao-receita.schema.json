@@ -1,0 +1,138 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "A receita de uma automação da Automação livre (#2414 F3). Conferida ao salvar a versão; o que o esquema não diz (ação permitida, formato do corpo, caminho de valor) é conferido por Autonomia::Automacao::Receita.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["gatilho", "passos"],
+  "properties": {
+    "gatilho": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tipo"],
+      "properties": {
+        "tipo": { "enum": ["conversa.criada", "conversa.aberta", "conversa.resolvida", "mensagem.criada"] },
+        "filtros": { "type": "array", "items": { "$ref": "#/definitions/condicao" } }
+      }
+    },
+    "passos": { "$ref": "#/definitions/passos" }
+  },
+  "definitions": {
+    "passos": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/passo" } },
+    "passos_opcionais": { "type": "array", "items": { "$ref": "#/definitions/passo" } },
+    "id": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "duracao": {
+      "description": "Teto de 3650 de cada unidade (10 anos em dias): proteção contra erro de digitação que travaria a execução, não limite de uso.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valor", "unidade"],
+      "properties": {
+        "valor": { "type": "integer", "minimum": 1, "maximum": 3650 },
+        "unidade": { "enum": ["minutos", "horas", "dias"] }
+      }
+    },
+    "valor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["$valor"],
+      "properties": { "$valor": { "type": "string", "minLength": 1 } }
+    },
+    "condicao": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["campo", "op"],
+          "properties": {
+            "campo": { "$ref": "#/definitions/valor" },
+            "op": { "enum": ["vazio", "preenchido"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["campo", "op", "valor"],
+          "properties": {
+            "campo": { "$ref": "#/definitions/valor" },
+            "op": { "enum": ["igual", "diferente", "contem", "nao_contem", "maior", "menor"] },
+            "valor": { "type": ["string", "number", "boolean"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["todas"],
+          "properties": { "todas": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/condicao" } } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["alguma"],
+          "properties": { "alguma": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/condicao" } } }
+        }
+      ]
+    },
+    "passo": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "duracao"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "esperar" },
+            "duracao": { "$ref": "#/definitions/duracao" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "condicao", "prazo"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "esperar_ate" },
+            "condicao": { "$ref": "#/definitions/condicao" },
+            "prazo": { "$ref": "#/definitions/duracao" },
+            "se_vencer": { "$ref": "#/definitions/passos_opcionais" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "condicao", "entao"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "se" },
+            "condicao": { "$ref": "#/definitions/condicao" },
+            "entao": { "$ref": "#/definitions/passos" },
+            "senao": { "$ref": "#/definitions/passos_opcionais" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "parar" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "acao", "descricao"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "acao" },
+            "acao": { "type": "string", "minLength": 1 },
+            "descricao": { "type": "string", "minLength": 1 },
+            "caminho": {
+              "type": "object",
+              "additionalProperties": { "oneOf": [{ "type": ["string", "integer"] }, { "$ref": "#/definitions/valor" }] }
+            },
+            "corpo": { "type": "object" }
+          }
+        }
+      ]
+    }
+  }
+}

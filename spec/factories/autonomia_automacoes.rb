@@ -9,7 +9,10 @@ FactoryBot.define do
     automacao { association :autonomia_automacao }
     account { automacao.account }
     sequence(:numero) { |n| n }
-    receita { { 'passos' => [] } }
+    receita do
+      { 'gatilho' => { 'tipo' => 'conversa.resolvida' },
+        'passos' => [{ 'id' => 'p1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }] }
+    end
   end
 
   factory :autonomia_automacao_execucao, class: 'Autonomia::Automacao::Execucao' do
