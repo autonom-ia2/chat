@@ -507,6 +507,14 @@ en:
       short_description: 'Sync your contacts and conversations with LeadSquared CRM.'
       description: 'Sync your contacts and conversations with LeadSquared CRM. This integration automatically creates leads in LeadSquared when new contacts are added, and logs conversation activity to provide your sales team with complete context.'
   autonomia:
+    automacao:
+      receita:
+        id_repetido: 'Step %{passo}: the id is used by another step.'
+        acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
+        caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
+        valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
+        corpo: 'Step %{passo}: %{problema}'
+        exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'
