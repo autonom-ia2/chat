@@ -620,7 +620,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_670000) do
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
     t.index ["due_at"], name: "idx_autonomia_automacao_execucoes_esperando", where: "(finalizada_em IS NULL)"
     t.index ["versao_id"], name: "index_autonomia_automacao_execucoes_on_versao_id"
-    t.check_constraint "(estado::text = ANY (ARRAY['concluida'::character varying, 'falhou'::character varying, 'interrompida'::character varying, 'parada'::character varying]::text[])) = (finalizada_em IS NOT NULL)", name: "chk_autonomia_automacao_execucoes_finalizada"
+    t.check_constraint "(estado::text = ANY (ARRAY['concluida'::text, 'falhou'::text, 'interrompida'::text, 'parada'::text])) = (finalizada_em IS NOT NULL)", name: "chk_autonomia_automacao_execucoes_finalizada"
   end
 
   create_table "autonomia_automacao_registros", force: :cascade do |t|

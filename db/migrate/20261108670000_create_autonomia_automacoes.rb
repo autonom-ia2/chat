@@ -9,7 +9,10 @@ class CreateAutonomiaAutomacoes < ActiveRecord::Migration[7.2]
   ABERTA = 'finalizada_em IS NULL'.freeze
   # Estado terminal e finalizada_em andam juntos também fora do modelo (update_all): terminal sem finalizada_em deixaria a
   # execução aberta para o índice único e travaria o alvo. Mesma lista de Autonomia::Automacao::Execucao::TERMINAIS.
-  FINALIZADA = "(estado IN ('concluida', 'falhou', 'interrompida', 'parada')) = (finalizada_em IS NOT NULL)".freeze
+  # Escrita na forma que o Postgres devolve, com literais text: `estado IN (...)` sai do dump com cast de varchar, e esse
+  # texto, carregado de novo pelo schema.rb, vira outra expressão (a CI das migrations compara as duas).
+  FINALIZADA = "((estado)::text = ANY (ARRAY['concluida'::text, 'falhou'::text, 'interrompida'::text, 'parada'::text])) " \
+               '= (finalizada_em IS NOT NULL)'.freeze
 
   def change
     criar_automacoes
