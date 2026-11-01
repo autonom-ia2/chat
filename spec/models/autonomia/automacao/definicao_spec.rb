@@ -21,27 +21,30 @@ RSpec.describe Autonomia::Automacao::Definicao do
   describe '#salvar_versao! (F2.2)' do
     let(:autor) { create(:user, account: automacao.account) }
 
+    def esperar(dias) = { 'id' => 'p1', 'tipo' => 'esperar', 'duracao' => { 'valor' => dias, 'unidade' => 'dias' } }
+    def receita(dias) = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [esperar(dias)] }
+
     it 'salvar duas vezes cria a versão 1 e a 2, e a 1 nunca muda' do
-      v1 = automacao.salvar_versao!(receita: { 'espera' => '2 dias' }, autor: autor)
-      v2 = automacao.salvar_versao!(receita: { 'espera' => '3 dias' }, autor: autor)
+      v1 = automacao.salvar_versao!(receita: receita(2), autor: autor)
+      v2 = automacao.salvar_versao!(receita: receita(3), autor: autor)
 
       expect([v1.numero, v2.numero]).to eq([1, 2])
       expect(automacao.reload.versao_ativa).to eq(v2)
-      expect(v1.reload.receita).to eq({ 'espera' => '2 dias' })
+      expect(v1.reload.receita).to eq(receita(2))
       expect(v1.digest).not_to eq(v2.digest)
     end
 
     it 'não deixa alterar nem apagar a versão gravada' do
-      v1 = automacao.salvar_versao!(receita: { 'espera' => '2 dias' })
+      v1 = automacao.salvar_versao!(receita: receita(2))
 
-      expect { v1.update!(receita: { 'espera' => '3 dias' }) }.to raise_error(ActiveRecord::ReadOnlyRecord)
+      expect { v1.update!(receita: receita(3)) }.to raise_error(ActiveRecord::ReadOnlyRecord)
       expect { v1.destroy! }.to raise_error(ActiveRecord::ReadOnlyRecord)
-      expect(v1.reload.receita).to eq({ 'espera' => '2 dias' })
+      expect(v1.reload.receita).to eq(receita(2))
     end
 
     it 'calcula o mesmo digest para a mesma receita em outra ordem' do
-      v1 = automacao.salvar_versao!(receita: { 'a' => 1, 'b' => { 'c' => 2, 'd' => 3 } })
-      v2 = automacao.salvar_versao!(receita: { 'b' => { 'd' => 3, 'c' => 2 }, 'a' => 1 })
+      v1 = automacao.salvar_versao!(receita: receita(2))
+      v2 = automacao.salvar_versao!(receita: { 'passos' => [esperar(2).to_a.reverse.to_h], 'gatilho' => { 'tipo' => 'conversa.resolvida' } })
 
       expect(v1.digest).to eq(v2.digest)
     end
