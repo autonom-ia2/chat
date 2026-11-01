@@ -66,6 +66,14 @@ RSpec.describe 'Pôr e tirar etiquetas do contato uma a uma', type: :request do
       expect(de_outra.reload.label_list).to eq(['dela'])
     end
 
+    it 'conta de que a pessoa não é membro: 401' do
+      outra_conta = create(:account)
+
+      patch rota(create(:contact, account: outra_conta), outra_conta), params: { por: ['boleto'] }, headers: headers, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+
     [
       [{}, 'sem nada'],
       [{ por: 'boleto' }, 'texto em vez de lista'],
