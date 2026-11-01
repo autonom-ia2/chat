@@ -22,6 +22,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     allow(objetos).to receive(:deref) { |valor| valor }
     pagina = instance_double(PDF::Reader::Page, text: ' ', attributes: { MediaBox: [0, 0, 595, 842] }, objects: objetos)
     allow(PDF::Reader).to receive(:new).and_return(instance_double(PDF::Reader, pages: [pagina] * quantas))
+    allow(Autonomia::Agents::Knowledge::Processors::PdfTrechos).to receive(:da_pagina).and_return([])
   end
 
   def progresso_no_banco
