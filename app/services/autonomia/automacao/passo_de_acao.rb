@@ -6,10 +6,13 @@
 # - :ok segue;
 # - :pulado segue, com o motivo (faltou um valor do alvo);
 # - :permanente para a execução (4xx: a etiqueta não existe, o corpo não serve);
-# - :sem_acesso pausa a automação (401/403: quem ligou não alcança mais);
-# - :passageiro tenta de novo (5xx, erro sem resposta).
+# - :sem_acesso pausa a automação (401/403, ou quem ligou perdeu a chave de automações);
+# - :passageiro tenta de novo (5xx, 408, 425, 429, erro sem resposta), menos quando o caderno mostra que a ação já
+#   gravou alguma coisa: repetir faria de novo (criaria a etiqueta duas vezes), então fecha como permanente.
 class Autonomia::Automacao::PassoDeAcao
   Resultado = Struct.new(:tipo, :motivo, :dados, keyword_init: true)
+  # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
+  PASSAGEIROS = [408, 425, 429].freeze
 
   def initialize(execucao:, passo:, valores:, acesso:)
     @execucao = execucao
@@ -26,6 +29,8 @@ class Autonomia::Automacao::PassoDeAcao
     acoes = ::Autonomia::Automacao::AcoesDoMotor.new(execucao: @execucao, account_user: @acesso.account_user)
     resultado = no_caderno(caderno) { acoes.executar(@passo['acao'], dados(caminho)) }
     classificar(resultado, acoes.codigo, caderno)
+  rescue ::Autonomia::Automacao::AcoesDoMotor::SemPermissao
+    Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_permissao', dados: {})
   rescue ::Autonomia::Guide::Acoes::Recusada => e
     Rails.logger.info("[automacao][passo] recusado execucao=#{@execucao.id} passo=#{@passo['id']} #{e.class}: #{e.message}")
     Resultado.new(tipo: :permanente, motivo: 'acao_recusada', dados: {})
@@ -53,8 +58,13 @@ class Autonomia::Automacao::PassoDeAcao
     dados = { 'acao' => @passo['acao'], 'codigo' => codigo, 'registro' => resultado.registro, 'caderno_id' => caderno.id }
     return Resultado.new(tipo: :ok, dados: dados) if resultado.ok
     return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: dados) if [401, 403].include?(codigo)
-    return Resultado.new(tipo: :permanente, motivo: 'erro_permanente', dados: dados) if codigo.to_i.between?(400, 499)
+    return Resultado.new(tipo: :permanente, motivo: 'erro_permanente', dados: dados) if permanente?(codigo)
+    return Resultado.new(tipo: :permanente, motivo: 'erro_depois_de_gravar', dados: dados) if caderno.mudancas.exists?
 
     Resultado.new(tipo: :passageiro, motivo: 'erro_passageiro', dados: dados)
+  end
+
+  def permanente?(codigo)
+    codigo.to_i.between?(400, 499) && PASSAGEIROS.exclude?(codigo)
   end
 end

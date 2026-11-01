@@ -1,9 +1,16 @@
 # Uma rodada de uma execução (#2414 F3, ADR-001 2.4): do cursor até uma espera, um "parar" ou o fim, com um registro
 # por passo. A execução fica na versão em que entrou (D10).
 #
-# Antes de andar, reconfere tudo, porque o mundo mudou durante a espera: o motor ligado, a automação ligada (F3.4), o
-# alvo ainda existe e é da conta, o Spam (F3.5) e quem ligou (D1, F3.7, F3.9). Problema com quem ligou pausa a
-# automação, sem nunca trocar de pessoa.
+# A rodada começa tomando a execução: troca a marca da reserva (`travada_em`) pela do início, numa gravação só, e
+# limpa o `due_at`. Só um job ganha essa troca; um repetido (Sidekiq devolvendo o job no desligamento, reenvio
+# manual) chega com a marca velha e não anda. `due_at` vazio numa execução andando quer dizer "começou": se ela
+# ficar presa, a varredura a fecha como interrompida e nunca a repete. Reservada e não começada (due_at preenchido),
+# a varredura a reenfileira.
+#
+# Antes de andar, e de novo antes de cada ação, reconfere tudo, porque o mundo muda durante a espera e durante a
+# rodada: o motor ligado, a automação ligada (F3.4), o alvo ainda existe e é da conta, o Spam (F3.5) e quem ligou (D1,
+# F3.7, F3.9). Problema com quem ligou pausa a automação, sem nunca trocar de pessoa. Toda gravação da execução é
+# condicionada à rodada: se alguém a desligou no meio, a rodada para sem passar por cima.
 #
 # Cada rodada roda dentro da cadeia comum (F1) com as origens e a profundidade guardadas na execução e uma raiz nova:
 # a raiz recomeça depois de cada espera. Sem isso, a marca "já rodou nesta raiz" da cadeia recusaria o passo que vem
@@ -20,51 +27,44 @@ class Autonomia::Automacao::Executor
   UNIDADES = { 'minutos' => :minutes, 'horas' => :hours, 'dias' => :days }.freeze
 
   Cadeia = ::Autonomia::Automacao::Cadeia
+  Execucao = ::Autonomia::Automacao::Execucao
 
-  # Chamado pelo AvancarJob. `travada_em` é a marca de quem reservou a execução (Partida ou VarreduraJob): só a rodada
-  # com a marca certa anda, e um job repetido não anda duas vezes.
+  # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
+  # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
   def self.rodar(execucao_id, travada_em, raiz = nil)
-    execucao = ::Autonomia::Automacao::Execucao.find_by(id: execucao_id, estado: 'andando', travada_em: Time.zone.parse(travada_em))
-    new(execucao, raiz).rodar if execucao
+    reserva = Time.zone.parse(travada_em)
+    execucao = Execucao.find_by(id: execucao_id, estado: 'andando', travada_em: reserva)
+    return unless execucao
+
+    inicio = Time.current.floor(6)
+    tomada = Execucao.where(id: execucao_id, estado: 'andando', travada_em: reserva)
+                     .update_all(travada_em: inicio, due_at: nil, updated_at: inicio) == 1 # rubocop:disable Rails/SkipsModelValidations
+    new(execucao, inicio, raiz).rodar if tomada
   end
 
-  def initialize(execucao, raiz = nil)
+  def initialize(execucao, marca, raiz = nil)
     @execucao = execucao
+    @marca = marca
     @definicao = execucao.automacao
     @account = execucao.account
     @raiz = raiz || SecureRandom.uuid
     @roteiro = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita)
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao)
+    @tentativas = execucao.tentativas
   end
 
   def rodar
-    estado, motivo = impedimento
-    return encerrar(@execucao.cursor || 'inicio', estado, motivo) if estado
+    return if impedida?(@execucao.cursor || 'inicio')
 
     Cadeia.retomar(@execucao.cadeia, @account, @raiz) { andar }
   end
 
   private
 
-  # [estado final, motivo] quando a execução não pode andar agora; nil quando pode.
-  def impedimento
-    return %w[parada motor_desligado] unless ::Autonomia::Automacao::Motor.ligado?(@account)
-    return %w[parada desligada] unless @definicao.ativa
-    return %w[interrompida alvo_sumiu] unless alvo_da_conta?
-    return %w[parada spam] if ::ConversaCanal::PastaDoEmail.no_spam?(alvo)
-
-    motivo = motivo_de_quem_ligou
-    ['parada', pausar(motivo)] if motivo
-  end
-
-  def alvo_da_conta? = alvo.present? && alvo.account_id == @account.id
-
-  def motivo_de_quem_ligou = @acesso.motivo || ('quem_ligou_sem_acesso' unless @acesso.alcanca?(alvo))
-
   def andar
     passo = @execucao.cursor.blank? ? @roteiro.primeiro : @roteiro.passo(@execucao.cursor)
     @retomando = @execucao.cursor.present?
-    while passo
+    while passo && !@parou
       passo = dar(passo)
       @retomando = false
     end
@@ -82,6 +82,37 @@ class Autonomia::Automacao::Executor
     end
   end
 
+  # Fecha a execução e devolve true quando ela não pode andar agora.
+  def impedida?(passo_id)
+    estado, motivo = impedimento
+    encerrar(passo_id, estado, motivo) if estado
+    estado.present?
+  end
+
+  # [estado final, motivo] quando a execução não pode andar agora; nil quando pode.
+  def impedimento
+    return %w[parada motor_desligado] unless ::Autonomia::Automacao::Motor.ligado?(@account)
+    return %w[parada desligada] unless @definicao.ativa
+    return %w[interrompida alvo_sumiu] unless alvo_da_conta?
+    return %w[parada spam] if ::ConversaCanal::PastaDoEmail.no_spam?(alvo)
+
+    motivo = motivo_de_quem_ligou
+    ['parada', pausar(motivo)] if motivo
+  end
+
+  def alvo_da_conta? = alvo.present? && alvo.account_id == @account.id
+
+  def motivo_de_quem_ligou = @acesso.motivo || ('quem_ligou_sem_acesso' unless @acesso.alcanca?(alvo))
+
+  # Antes de cada ação: a automação, o motor, o alvo e quem ligou podem ter mudado desde o começo da rodada.
+  def reconferir
+    @definicao.reload
+    @account.reload
+    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao)
+    @alvo = nil
+    @valores = nil
+  end
+
   def esperar(passo)
     return @roteiro.seguinte(passo['id']) if @retomando
 
@@ -94,7 +125,7 @@ class Autonomia::Automacao::Executor
       return @roteiro.seguinte(passo['id'])
     end
     return aguardar(passo, Time.current + duracao(passo['prazo'])) unless @retomando
-    return aguardar(passo, @execucao.due_at) if @execucao.due_at.future?
+    return aguardar(passo, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
 
     registrar(passo['id'], 'pulado', 'prazo_vencido')
     @roteiro.entrar(passo, 'se_vencer')
@@ -107,6 +138,9 @@ class Autonomia::Automacao::Executor
   end
 
   def acao(passo)
+    reconferir
+    return if impedida?(passo['id'])
+
     resultado = ::Autonomia::Automacao::PassoDeAcao.new(execucao: @execucao, passo: passo, valores: valores, acesso: @acesso).executar
     case resultado.tipo
     when :ok, :pulado then seguir_depois_da_acao(passo, resultado)
@@ -117,25 +151,24 @@ class Autonomia::Automacao::Executor
   end
 
   def seguir_depois_da_acao(passo, resultado)
-    @execucao.tentativas = 0
+    @tentativas = 0
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
     @roteiro.seguinte(passo['id'])
   end
 
   def tentar_de_novo(passo, resultado)
-    tentativa = @execucao.tentativas + 1
+    tentativa = @tentativas + 1
     dados = resultado.dados.merge('tentativa' => tentativa)
     return encerrar(passo['id'], 'falhou', resultado.motivo, 'falhou', dados) if tentativa >= TENTATIVAS
 
     registrar(passo['id'], 'falhou', resultado.motivo, dados)
-    @execucao.tentativas = tentativa
+    @tentativas = tentativa
     aguardar(passo, Time.current + INTERVALOS[tentativa - 1], registrar: false)
   end
 
   def aguardar(passo, ate, registrar: true)
     registrar(passo['id'], 'ok', nil, 'ate' => ate.iso8601) if registrar
-    @execucao.update!(estado: 'esperando', cursor: passo['id'], due_at: ate, travada_em: nil)
-    @parou = true
+    gravar(estado: 'esperando', cursor: passo['id'], due_at: ate, travada_em: nil, tentativas: @tentativas)
     nil
   end
 
@@ -146,10 +179,13 @@ class Autonomia::Automacao::Executor
     nil
   end
 
-  # Sem validar: a execução cujo alvo sumiu (ou mudou de conta) não passa no `belongs_to`, e fechar só muda o estado.
   def finalizar(estado)
-    @execucao.assign_attributes(estado: estado, travada_em: nil)
-    @execucao.save!(validate: false)
+    gravar(estado: estado, travada_em: nil)
+  end
+
+  # Só grava na rodada que tomou a execução: se alguém a desligou no meio, nada muda e a rodada para do mesmo jeito.
+  def gravar(**atributos)
+    Execucao.gravar_na_rodada(@execucao.id, @marca, **atributos)
     @parou = true
   end
 
@@ -173,8 +209,9 @@ class Autonomia::Automacao::Executor
     duracao['valor'].public_send(UNIDADES.fetch(duracao['unidade']))
   end
 
+  # Lido do banco a cada reconferência: o alvo pode ter sido apagado no meio da rodada.
   def alvo
-    @alvo ||= @execucao.alvo
+    @alvo ||= @execucao.alvo_type.constantize.find_by(id: @execucao.alvo_id)
   end
 
   def valores

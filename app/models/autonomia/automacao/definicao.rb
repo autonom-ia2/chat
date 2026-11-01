@@ -22,15 +22,20 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
 
   # Desligar sempre funciona (D7, F3.4): quem está no meio para agora, e a próxima rodada de quem já estava na fila
   # também para (o executor confere `ativa`).
+  #
+  # Sem callback de propósito: a execução órfã (alvo apagado) não passa no `belongs_to`, e desligar não pode falhar por
+  # ela. Leva a finalizada_em junto, como o CHECK pede.
   def desligar!
     transaction do
       update!(ativa: false)
-      execucoes.abertas.find_each { |execucao| execucao.update!(estado: 'parada', travada_em: nil) }
+      agora = Time.current
+      execucoes.abertas.update_all(estado: 'parada', travada_em: nil, finalizada_em: agora, updated_at: agora) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 
   # "Assumir e religar" (F3.7): a automação passa a agir como `usuario`, se ele pode. Nunca liga em nome de quem não
-  # pode: devolve o motivo e não muda nada.
+  # pode: devolve o motivo e não muda nada. `usuario` é sempre quem está pedindo (o usuário logado): a tela não escolhe
+  # outra pessoa, senão alguém com a chave poria o administrador como quem ligou.
   def assumir_e_religar!(usuario)
     self.ligada_por = usuario
     motivo = ::Autonomia::Automacao::Acesso.new(self).motivo
@@ -43,10 +48,13 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
     nil
   end
 
+  # A automação roda com os direitos de quem a ligou (D1). Se outra pessoa salva uma versão nova, a automação pausa até
+  # alguém assumir e religar: senão quem tem menos direitos faria passos com os direitos de quem ligou (parecer do
+  # Funções, #2462).
   def salvar_versao!(receita:, autor: nil)
     with_lock do
       versao = versoes.create!(account: account, numero: versoes.maximum(:numero).to_i + 1, receita: receita, autor: autor)
-      update!(versao_ativa: versao)
+      update!(versao_ativa: versao, ativa: ativa && autor.present? && autor.id == ligada_por_id)
       versao
     end
   end

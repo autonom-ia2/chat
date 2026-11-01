@@ -15,13 +15,34 @@ RSpec.describe Autonomia::Automacao::VarreduraJob, :automacao_motor do
 
   def motivo(execucao) = Autonomia::Automacao::Registro.find_by(execucao: execucao)&.motivo
 
-  it 'fecha como interrompida a que anda há mais de 15 minutos, sem repetir' do
+  it 'fecha como interrompida a que começou e anda há mais de 15 minutos, sem repetir', :aggregate_failures do
     travada = execucao(estado: 'andando', travada_em: 16.minutes.ago)
     andando = execucao(estado: 'andando', travada_em: 1.minute.ago, chave_gatilho: 'outra')
 
     described_class.perform_now
 
     expect([travada.reload.estado, motivo(travada), andando.reload.estado]).to eq(%w[interrompida travada andando])
+    expect(Autonomia::Automacao::AvancarJob).not_to have_been_enqueued
+  end
+
+  it 'reenfileira, com marca nova, a reservada há mais de 15 minutos que nunca começou (fila atrasada)' do
+    reservada = execucao(estado: 'andando', travada_em: 16.minutes.ago, due_at: 16.minutes.ago)
+
+    freeze_time do
+      described_class.perform_now
+
+      expect([reservada.reload.estado, reservada.travada_em]).to eq(['andando', Time.current])
+      expect(Autonomia::Automacao::AvancarJob).to have_been_enqueued.with(reservada.id, Time.current.iso8601(6))
+    end
+  end
+
+  it 'um erro ao fechar uma não para as outras nem o acordar' do
+    vencida = execucao(estado: 'esperando', due_at: 1.minute.ago, chave_gatilho: 'vencida')
+    allow(Autonomia::Automacao::Registro).to receive(:create!).and_raise(ActiveRecord::StatementInvalid)
+    execucao(estado: 'andando', travada_em: 16.minutes.ago)
+
+    expect { described_class.perform_now }.not_to raise_error
+    expect(vencida.reload.estado).to eq('andando')
   end
 
   it 'fecha como interrompida a aberta cujo alvo foi apagado' do

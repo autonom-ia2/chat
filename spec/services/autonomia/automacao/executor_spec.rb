@@ -58,18 +58,30 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(execucao.reload.profundidade).to eq(1)
     end
 
-    it 'só a rodada com a marca de quem reservou anda; um job velho repetido não', :aggregate_failures do
+    # Sidekiq devolve o job em voo quando o processo é derrubado, e o Dead set reenvia com os mesmos argumentos.
+    it 'o mesmo job entregue duas vezes anda uma vez só', :aggregate_failures do
       execucao = comecar_e_rodar(definicao)
-      marca_velha = execucao.reload.created_at.floor(6).iso8601(6)
 
       travel(1.day + 1.minute) do
         Autonomia::Automacao::VarreduraJob.perform_now
-        described_class.rodar(execucao.id, marca_velha)
-        expect(execucao.reload.estado).to eq('andando')
-
-        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob)
-        expect(execucao.reload.estado).to eq('concluida')
+        argumentos = enqueued_jobs.find { |job| job['job_class'] == Autonomia::Automacao::AvancarJob.name }['arguments']
+        2.times { Autonomia::Automacao::AvancarJob.perform_now(*argumentos) }
       end
+
+      expect(execucao.reload.estado).to eq('concluida')
+      expect(Autonomia::Automacao::Registro.where(execucao: execucao, passo: 'p2').count).to eq(1)
+      expect(Audited.audit_class.where(action: 'automacao_action').count).to eq(1)
+    end
+
+    it 'a rodada que começou e quebrou no meio fica para a varredura fechar, sem repetir', :aggregate_failures do
+      execucao = comecar_e_rodar(definicao)
+      allow(Autonomia::Automacao::PassoDeAcao).to receive(:new).and_raise(Redis::CannotConnectError)
+
+      travel(1.day + 1.minute) { varrer }
+      expect([execucao.reload.estado, execucao.due_at]).to eq(['andando', nil])
+
+      travel(1.day + 17.minutes) { varrer }
+      expect([execucao.reload.estado, registros(execucao).last]).to eq(['interrompida', %w[p1 falhou travada]])
     end
   end
 
@@ -135,6 +147,40 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
   describe 'desligar no meio (F3.4)' do
     let(:definicao) { automacao_ligada(account, admin, [esperar_passo('p1'), prioridade_passo('p2')]) }
 
+    it 'desligada entre duas ações da mesma rodada, a segunda não roda', :aggregate_failures do
+      duas = automacao_ligada(account, admin, [prioridade_passo('a1', 'high'), prioridade_passo('a2', 'urgent')])
+      allow(Autonomia::Automacao::PassoDeAcao).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap do |passo|
+          allow(passo).to(receive(:executar).and_wrap_original { |executar| executar.call.tap { duas.desligar! } })
+        end
+      end
+
+      execucao = comecar_e_rodar(duas)
+
+      expect(conversa.reload.priority).to eq('high')
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[a1 ok] + [nil], %w[a2 pulado desligada]]])
+    end
+
+    it 'desligar fecha a execução cujo alvo já foi apagado' do
+      execucao = comecar_e_rodar(definicao)
+      conversa.delete
+
+      definicao.desligar!
+
+      expect([definicao.reload.ativa, execucao.reload.estado]).to eq([false, 'parada'])
+    end
+
+    it 'outra pessoa salvar uma versão nova pausa a automação; quem ligou salvar, não (parecer do Funções)', :aggregate_failures do
+      outro_admin = create(:user, account: account, role: :administrator)
+      receita = definicao.versao_ativa.receita
+
+      definicao.salvar_versao!(receita: receita, autor: admin)
+      expect(definicao.reload.ativa).to be(true)
+
+      definicao.salvar_versao!(receita: receita, autor: outro_admin)
+      expect([definicao.reload.ativa, definicao.ligada_por]).to eq([false, admin])
+    end
+
     it 'quem espera para, e a varredura não acorda', :aggregate_failures do
       execucao = comecar_e_rodar(definicao)
 
@@ -183,6 +229,32 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
   end
 
   describe 'erros da ação (F3.6)' do
+    def responder(codigo, &antes)
+      chamada = instance_double(Autonomia::Guide::ChamadaInterna)
+      allow(chamada).to receive(:chamar) do
+        antes&.call
+        Autonomia::Guide::ChamadaInterna::Resposta.new(codigo: codigo, corpo: '{}')
+      end
+      allow(Autonomia::Guide::ChamadaInterna).to receive(:new).and_return(chamada)
+    end
+
+    it 'limite de pedidos (429) é passageiro: tenta de novo' do
+      responder('429')
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [prioridade_passo('p1')])).reload
+
+      expect([execucao.estado, execucao.tentativas, registros(execucao)]).to eq(['esperando', 1, [%w[p1 falhou erro_passageiro]]])
+    end
+
+    it 'erro depois de gravar parte da ação não repete, para não fazer duas vezes', :aggregate_failures do
+      responder('500') { account.labels.create!(title: 'criada-antes-do-erro') }
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [prioridade_passo('p1')])).reload
+
+      expect([execucao.estado, registros(execucao)]).to eq(['falhou', [%w[p1 falhou erro_depois_de_gravar]]])
+      expect(account.labels.where(title: 'criada-antes-do-erro').count).to eq(1)
+    end
+
     it 'erro permanente (404) fecha a execução como falhou, sem tentar de novo', :aggregate_failures do
       definicao = automacao_ligada(account, admin, [prioridade_passo('p1', conversa_id: 999_999)])
       execucao = comecar_e_rodar(definicao).reload

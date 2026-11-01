@@ -515,6 +515,7 @@ en:
         acao_recusada: 'The platform refused this action as it was set up.'
         alvo_sumiu: 'The conversation no longer exists.'
         desligada: 'The automation was turned off.'
+        erro_depois_de_gravar: 'The platform failed after saving part of the action. The automation does not repeat it, so it is not done twice; check and undo if needed.'
         erro_passageiro: 'The platform did not respond; the automation will try again.'
         erro_permanente: 'The platform refused this action (for example, the label no longer exists).'
         faltou_valor: 'A value this step needs was empty, so the step was skipped.'

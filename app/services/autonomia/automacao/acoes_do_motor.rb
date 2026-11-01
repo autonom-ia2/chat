@@ -8,6 +8,9 @@
 class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
   AUDITORIA = 'automacao_action'.freeze
 
+  # Quem ligou perdeu a chave de automações no meio da rodada: o executor pausa a automação, não só a execução.
+  SemPermissao = Class.new(Recusada)
+
   attr_reader :codigo
 
   def initialize(execucao:, account_user:)
@@ -17,9 +20,11 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
 
   private
 
+  # A lista já deixa de fora o que só se faz na tela; a conferência aqui é a rede, caso a lista erre.
   def garantir_permitida!(acao)
+    raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, I18n.t('autonomia.automacao.motivos.acao_fora') unless ::Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
-    raise Recusada, I18n.t('autonomia.automacao.motivos.quem_ligou_sem_permissao') unless @account_user&.permission_granted?(
+    raise SemPermissao, I18n.t('autonomia.automacao.motivos.quem_ligou_sem_permissao') unless @account_user&.permission_granted?(
       ::Autonomia::Automacao::Acesso::PERMISSAO
     )
   end

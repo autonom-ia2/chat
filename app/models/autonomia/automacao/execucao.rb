@@ -29,6 +29,15 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
 
   scope :abertas, -> { where(finalizada_em: nil) }
 
+  # Grava só se a execução ainda está na rodada de `marca` (andando, com essa travada_em). Quem desligou no meio, ou
+  # outra rodada, vence: devolve false e nada muda. Sem callback, então leva a finalizada_em junto (ver acima).
+  def self.gravar_na_rodada(id, marca, **atributos)
+    agora = Time.current
+    final = TERMINAIS.include?(atributos.fetch(:estado)) ? agora : nil
+    where(id: id, estado: 'andando', travada_em: marca)
+      .update_all(atributos.merge(finalizada_em: final, updated_at: agora)) == 1 # rubocop:disable Rails/SkipsModelValidations
+  end
+
   private
 
   # Versão e automação de outra conta prenderiam a exclusão daquela conta nesta chave estrangeira; alvo de outra conta

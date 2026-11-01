@@ -1004,6 +1004,7 @@ pt_BR:
         acao_recusada: 'A plataforma recusou esta ação do jeito que ela foi montada.'
         alvo_sumiu: 'A conversa não existe mais.'
         desligada: 'A automação foi desligada.'
+        erro_depois_de_gravar: 'A plataforma deu erro depois de gravar parte da ação. A automação não repete, para não fazer duas vezes; confira e desfaça se precisar.'
         erro_passageiro: 'A plataforma não respondeu; a automação vai tentar de novo.'
         erro_permanente: 'A plataforma recusou esta ação (por exemplo, a etiqueta não existe mais).'
         faltou_valor: 'Um valor de que este passo precisa estava vazio, e o passo foi pulado.'

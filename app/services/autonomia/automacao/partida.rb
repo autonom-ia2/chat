@@ -8,9 +8,9 @@
 # - os filtros do gatilho;
 # - a cadeia comum (D6: laço, profundidade, repetida).
 #
-# Passou: grava a execução reservada (estado "andando", com a marca `travada_em`) e enfileira a primeira rodada, na
-# mesma raiz do evento que a disparou. Já existe uma aberta para a mesma automação, alvo e gatilho? Não abre outra
-# (índice único, F2.5).
+# Passou: grava a execução reservada (estado "andando", com a marca `travada_em` e o `due_at` preenchido, que quer
+# dizer "ainda não começou": ver Executor) e enfileira a primeira rodada, na mesma raiz do evento que a disparou. Já
+# existe uma aberta para a mesma automação, alvo e gatilho? Não abre outra (índice único, F2.5).
 class Autonomia::Automacao::Partida
   Cadeia = ::Autonomia::Automacao::Cadeia
 
@@ -57,7 +57,7 @@ class Autonomia::Automacao::Partida
 
   def abrir
     marca = Time.current.floor(6)
-    execucao = criar(estado: 'andando', travada_em: marca, cadeia: Cadeia.origens, profundidade: Cadeia.origens.size)
+    execucao = criar(estado: 'andando', travada_em: marca, due_at: marca, cadeia: Cadeia.origens, profundidade: Cadeia.origens.size)
     ::Autonomia::Automacao::AvancarJob.perform_later(execucao.id, marca.iso8601(6), Cadeia.raiz)
     execucao
   rescue ActiveRecord::RecordNotUnique
