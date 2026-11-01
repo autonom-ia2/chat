@@ -50,6 +50,17 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     resultado.data.to_h['caption'] if resultado.ok
   end
 
+  # As imagens do post (#2454): a foto, as do carrossel ou a capa do vídeo (Imagens). Nenhuma quando não dá para ler; Meta
+  # fora do ar levanta Indisponivel, como a `legenda`.
+  def imagens
+    return [] if @comentario.post_id.blank?
+
+    resultado = cliente.media(@comentario.post_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
+
+    resultado.ok ? Crm::MetaAds::ComentariosIa::Imagens.do_instagram(resultado.data.to_h) : []
+  end
+
   def responder(texto)
     acao('reply') { cliente.reply(@comentario.comment_id, texto) }
   end

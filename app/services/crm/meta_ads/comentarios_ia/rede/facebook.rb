@@ -56,6 +56,16 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     nil
   end
 
+  # As imagens do post (#2454), pelos anexos (Imagens). As mesmas regras da `legenda`; sem nada, nenhuma.
+  def imagens
+    dados = @comentario.post_id.present? ? comentarios&.post_media(@comentario.post_id) : nil
+    Crm::MetaAds::ComentariosIa::Imagens.do_facebook(dados.to_h)
+  rescue Crm::MetaAds::FacebookComments::Error => e
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
+
+    []
+  end
+
   def responder(texto)
     comentarios&.reply_as_ai(@comentario.post_id, @comentario.comment_id, texto).present?
   rescue Crm::MetaAds::FacebookComments::Error

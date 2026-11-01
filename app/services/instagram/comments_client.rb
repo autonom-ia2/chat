@@ -38,6 +38,12 @@ class Instagram::CommentsClient
     request(:get, media_id.to_s, { fields: 'caption' })
   end
 
+  # A mídia do post, para a leitura da foto da IA que cuida dos comentários (#2454): a imagem, a capa do vídeo e os
+  # filhos do carrossel.
+  def media(media_id)
+    request(:get, media_id.to_s, { fields: 'media_type,media_url,thumbnail_url,children{media_type,media_url,thumbnail_url}' })
+  end
+
   # Um comentário só, com a mídia dele: quem age confere que ele é do anúncio; o webhook lê o texto aqui.
   def comment(comment_id)
     request(:get, comment_id.to_s, { fields: 'id,text,timestamp,parent_id,from{id,username},media{id}' })

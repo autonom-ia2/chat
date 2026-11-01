@@ -211,6 +211,26 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.legenda).to be_nil
       end
     end
+
+    describe 'imagens (#2454)' do
+      it 'as imagens do post da Página' do
+        dados = { 'attachments' => { 'data' => [{ 'media' => { 'image' => { 'src' => 'https://fb.exemplo/1.jpg' } } }] } }
+        allow(servico).to receive(:post_media).with('555_888').and_return(dados)
+
+        expect(rede.imagens).to eq(['https://fb.exemplo/1.jpg'])
+      end
+
+      it 'a Meta fora do ar: Indisponivel; outra recusa ou sem conexão: nenhuma' do
+        allow(servico).to receive(:post_media).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+        expect { rede.imagens }.to raise_error(described_class::Indisponivel)
+
+        allow(servico).to receive(:post_media).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
+        expect(rede.imagens).to eq([])
+
+        allow(Crm::MetaAdsConnection).to receive(:find_by).and_return(nil)
+        expect(rede.imagens).to eq([])
+      end
+    end
   end
 
   describe 'Instagram' do
@@ -286,6 +306,31 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
         allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 400, error_code: 190))
         expect { rede.legenda }.to raise_error(described_class::Indisponivel)
+      end
+    end
+
+    describe 'imagens (#2454)' do
+      let(:result) { Meta::AdsGraphClient::Result }
+
+      it 'as imagens do post, lidas pelo id da mídia (carrossel incluído)' do
+        dados = { 'media_type' => 'CAROUSEL_ALBUM', 'children' => { 'data' => [
+          { 'media_type' => 'IMAGE', 'media_url' => 'https://cdn.exemplo/1.jpg' },
+          { 'media_type' => 'VIDEO', 'thumbnail_url' => 'https://cdn.exemplo/2.jpg' }
+        ] } }
+        allow(cliente).to receive(:media).with('555_888').and_return(result.new(ok: true, data: dados))
+
+        expect(rede.imagens).to eq(%w[https://cdn.exemplo/1.jpg https://cdn.exemplo/2.jpg])
+      end
+
+      it 'que não dá para ler: nenhuma; Meta fora do ar ou token caído: Indisponivel' do
+        allow(cliente).to receive(:media).and_return(result.new(ok: false, http_code: 400, error_code: 100))
+        expect(rede.imagens).to eq([])
+
+        allow(cliente).to receive(:media).and_return(result.new(ok: false, http_code: 500, error_code: 2))
+        expect { rede.imagens }.to raise_error(described_class::Indisponivel)
+
+        allow(cliente).to receive(:media).and_return(result.new(ok: false, http_code: 400, error_code: 190))
+        expect { rede.imagens }.to raise_error(described_class::Indisponivel)
       end
     end
 

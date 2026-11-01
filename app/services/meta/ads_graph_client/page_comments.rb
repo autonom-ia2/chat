@@ -31,6 +31,12 @@ module Meta::AdsGraphClient::PageComments
     get(post_id.to_s, fields: 'message')
   end
 
+  # As imagens do post, para a leitura da foto da IA que cuida dos comentários (#2454): os anexos (com os de dentro do
+  # álbum) e a full_picture.
+  def page_post_media(post_id)
+    get(post_id.to_s, fields: 'full_picture,attachments{media,subattachments{media}}')
+  end
+
   # Um comentário, para o webhook `feed`, que chega só com os ids.
   def page_comment(comment_id)
     get(comment_id.to_s, fields: COMMENT_FIELDS)

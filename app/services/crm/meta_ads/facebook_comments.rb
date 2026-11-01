@@ -28,7 +28,7 @@
 class Crm::MetaAds::FacebookComments
   class Error < Crm::MetaAds::AdManagement::Error; end
 
-  # `comment` e `post_message`: a leitura pelo evento do webhook, sem pessoa.
+  # `comment`, `post_message` e `post_media`: a leitura sem pessoa (o evento do webhook e a leitura da foto, #2454).
   include Crm::MetaAds::FacebookPageReading
 
   READ = 'pages_read_user_content'.freeze
