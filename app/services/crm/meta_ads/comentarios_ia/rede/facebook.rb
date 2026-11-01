@@ -70,9 +70,11 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     nil
   end
 
-  # As imagens do post (#2454), pelos anexos (Imagens). As mesmas regras da `legenda`; sem nada, nenhuma.
-  def imagens
-    dados = @comentario.post_id.present? ? comentarios&.post_media(@comentario.post_id) : nil
+  # As imagens do post (#2454), pelos anexos (Imagens). As mesmas regras da `legenda`; sem nada, nenhuma. prazo: segundos
+  # para todas as idas à Graph desta leitura (a leitura da foto roda dentro da requisição); passou dele, Indisponivel.
+  def imagens(prazo: nil)
+    limite = prazo && (Process.clock_gettime(Process::CLOCK_MONOTONIC) + prazo)
+    dados = @comentario.post_id.present? ? comentarios(prazo: limite)&.post_media(@comentario.post_id) : nil
     Crm::MetaAds::ComentariosIa::Imagens.do_facebook(dados.to_h)
   rescue Crm::MetaAds::FacebookComments::Error => e
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
@@ -136,8 +138,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
                                                  buttons: [{ type: 'web_url', url: button['url'], title: button['title'] }] } } }
   end
 
-  def comentarios
+  def comentarios(prazo: nil)
     conexao = Crm::MetaAdsConnection.find_by(account_id: @comentario.account_id)
-    conexao && Crm::MetaAds::FacebookComments.new(conexao, inbox_access: SEM_PESSOA)
+    conexao && Crm::MetaAds::FacebookComments.new(conexao, inbox_access: SEM_PESSOA, prazo: prazo)
   end
 end

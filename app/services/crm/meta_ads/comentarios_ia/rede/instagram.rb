@@ -54,11 +54,13 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   end
 
   # As imagens do post (#2454): a foto, as do carrossel ou a capa do vídeo (Imagens). Nenhuma quando não dá para ler; Meta
-  # fora do ar levanta Indisponivel, como a `legenda`.
-  def imagens
+  # fora do ar levanta Indisponivel, como a `legenda`. prazo: segundos da ida à Graph (a leitura da foto roda dentro da
+  # requisição); a Meta que não responde nele também é Indisponivel.
+  def imagens(prazo: nil)
     return [] if @comentario.post_id.blank?
 
-    resultado = cliente.media(@comentario.post_id)
+    leitor = prazo ? Instagram::CommentsClient.new(@inbox.channel, timeout: prazo) : cliente
+    resultado = leitor.media(@comentario.post_id)
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
 
     resultado.ok ? Crm::MetaAds::ComentariosIa::Imagens.do_instagram(resultado.data.to_h) : []

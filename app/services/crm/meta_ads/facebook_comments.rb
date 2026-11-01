@@ -40,11 +40,14 @@ class Crm::MetaAds::FacebookComments
 
   # management: a Crm::MetaAds::AdManagement que já leu o anúncio, quando quem chama já a tem (IA dos comentários,
   # #2212): ela guarda a leitura, e o criativo não é lido de novo. Sem ela, uma nova.
-  def initialize(connection, inbox_access:, can_manage: false, management: nil)
+  # prazo: o relógio monotônico até o qual quem chama espera (Meta::AdsGraphClient::Prazo), para quem roda dentro da
+  # requisição com prazo curto (a leitura da foto, #2454). Vale para cada ida à Graph deste serviço. Sem ele, o de sempre.
+  def initialize(connection, inbox_access:, can_manage: false, management: nil, prazo: nil)
     @connection = connection
     @inbox_access = inbox_access
     @can_manage = can_manage
     @management = management || Crm::MetaAds::AdManagement.new(connection)
+    @prazo = prazo
   end
 
   def list(ad_id)
@@ -134,7 +137,7 @@ class Crm::MetaAds::FacebookComments
   # Só este serviço usa as chamadas de comentário: cada cliente ganha Meta::AdsGraphClient::PageComments para si, sem
   # crescer a classe comum.
   def graph_client(token)
-    Meta::AdsGraphClient.new(access_token: token).extend(Meta::AdsGraphClient::PageComments)
+    Meta::AdsGraphClient.new(access_token: token, prazo: @prazo).extend(Meta::AdsGraphClient::PageComments)
   end
 
   def granted?(permission)

@@ -21,8 +21,11 @@ class Instagram::CommentsClient
   NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Net::ProtocolError, Timeout::Error, EOFError,
                     SocketError, SystemCallError, OpenSSL::SSL::SSLError, Zlib::Error, HTTParty::Error].freeze
 
-  def initialize(channel)
+  # timeout: segundos de cada ida à Graph. Quem roda dentro da requisição com prazo curto passa um menor (a leitura da foto,
+  # #2454: Crm::MetaAds::ComentariosIa::Foto::PRAZO_DA_META).
+  def initialize(channel, timeout: TIMEOUT_SECONDS)
     @channel = channel
+    @timeout = timeout
   end
 
   def comments(media_id, after: nil)
@@ -73,7 +76,7 @@ class Instagram::CommentsClient
 
   def request(verb, path, query, **)
     response = HTTParty.public_send(verb, "#{base_uri}/#{path}", query: query.merge(access_token: @channel.access_token),
-                                                                 timeout: TIMEOUT_SECONDS, **)
+                                                                 timeout: @timeout, **)
     log_failure(verb, path, build_result(response))
   rescue *NETWORK_ERRORS => e
     log_failure(verb, path, Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: e.class.name))

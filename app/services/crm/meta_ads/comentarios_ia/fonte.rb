@@ -102,10 +102,15 @@ class Crm::MetaAds::ComentariosIa::Fonte
 
     inbox, comentario = rede.values_at(:inbox, :comentario)
     Crm::MetaAds::ComentariosIa::Foto.new(account: inbox.account, network: comentario.network, post_id: comentario.post_id,
-                                          imagens: -> { Crm::MetaAds::ComentariosIa::Rede.para(inbox, comentario)&.imagens || [] })
+                                          imagens: -> { imagens_do_post(inbox, comentario) })
   end
 
   private
+
+  # A leitura da foto roda dentro da requisição: a Meta tem o prazo da Foto.
+  def imagens_do_post(inbox, comentario)
+    Crm::MetaAds::ComentariosIa::Rede.para(inbox, comentario)&.imagens(prazo: Crm::MetaAds::ComentariosIa::Foto::PRAZO_DA_META) || []
+  end
 
   # O primeiro post (o anúncio nas duas redes é o mesmo criativo): a caixa e um comentário só com ids, para a Rede.
   def rede_do_post

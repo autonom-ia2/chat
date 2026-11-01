@@ -86,7 +86,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook')) }
 
     before do
-      stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao, inbox_access:); end })
+      stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao, inbox_access:, prazo: nil); end })
       stub_const('Crm::MetaAds::FacebookComments::Error', Class.new(StandardError) { def code = message })
       allow(Crm::MetaAds::FacebookComments).to receive(:new).and_return(servico)
       allow(Crm::MetaAdsConnection).to receive(:find_by).with(account_id: account.id).and_return(instance_double(Crm::MetaAdsConnection))
@@ -216,7 +216,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       rede.esconder
 
-      expect(Crm::MetaAds::FacebookComments).to have_received(:new).with(anything, inbox_access: described_class::Facebook::SEM_PESSOA)
+      expect(Crm::MetaAds::FacebookComments).to have_received(:new).with(anything, inbox_access: described_class::Facebook::SEM_PESSOA, prazo: nil)
     end
 
     describe 'ler (o evento leva só ids, #2327)' do
@@ -312,6 +312,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         allow(Crm::MetaAdsConnection).to receive(:find_by).and_return(nil)
         expect(rede.imagens).to eq([])
       end
+
+      it 'com prazo (a leitura da foto, dentro da requisição): o serviço lê com o prazo, contado de agora' do
+        allow(servico).to receive(:post_media).and_return({})
+        antes = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+        rede.imagens(prazo: 3)
+
+        expect(Crm::MetaAds::FacebookComments).to have_received(:new)
+          .with(anything, inbox_access: described_class::Facebook::SEM_PESSOA, prazo: be_between(antes + 3, antes + 4))
+      end
     end
   end
 
@@ -325,7 +335,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     let(:recusa) { Struct.new(:ok).new(false) }
 
     before do
-      stub_const('Instagram::CommentsClient', Class.new { def initialize(_channel); end })
+      stub_const('Instagram::CommentsClient', Class.new { def initialize(_channel, timeout: nil); end })
       allow(Crm::MetaAds::InstagramPrivateReply).to receive(:new).with(channel).and_return(privado)
       allow(Instagram::CommentsClient).to receive(:new).with(channel).and_return(cliente)
     end
@@ -423,6 +433,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
         allow(cliente).to receive(:media).and_return(result.new(ok: false, http_code: 400, error_code: 190))
         expect { rede.imagens }.to raise_error(described_class::Indisponivel)
+      end
+
+      it 'com prazo (a leitura da foto, dentro da requisição): um cliente com esse prazo; sem resposta nele, Indisponivel' do
+        lento = double
+        allow(Instagram::CommentsClient).to receive(:new).with(channel, timeout: 3).and_return(lento)
+        allow(lento).to receive(:media).and_return(result.new(ok: false, http_code: nil, error_message: 'Net::ReadTimeout'))
+
+        expect { rede.imagens(prazo: 3) }.to raise_error(described_class::Indisponivel)
       end
     end
 

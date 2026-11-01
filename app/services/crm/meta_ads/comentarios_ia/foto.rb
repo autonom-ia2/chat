@@ -11,6 +11,8 @@
 # - A chave é sempre a da conta (ChaveDaConta, hook crm_kanban_ai). Sem ela, nem com a da instalação: `no_credential`,
 #   nada gravado, e a tela diz que não conseguiu ver.
 # - Meta ou IA fora do ar não quebra a tela: `unavailable`, nada gravado, e a próxima abertura tenta de novo.
+# - Roda dentro da requisição do passo 1, que o rack-timeout corta em 15 s: a Meta tem PRAZO_DA_META e a IA PRAZO, e a
+#   soma fica bem abaixo disso. A reserva vem antes das duas: a Meta ou a IA que não responde no prazo solta a reserva.
 # - O uso fica em Crm::AiUsageEvent com a feature FEATURE.
 #
 # `ler` e `corrigir!` devolvem `{ status: 'ready', text:, corrected: }`, `{ status: 'no_image' }` (o post não tem
@@ -19,8 +21,10 @@ class Crm::MetaAds::ComentariosIa::Foto
   FLAG = 'meta_ads_comentarios_ia_conversa'.freeze
   FEATURE = 'meta_ads_comentarios_ia_foto'.freeze
   MODEL = Crm::Ai::Config::VISION_MODEL
-  # Roda dentro da requisição do passo 1: uma ida só, sem nova tentativa (o rack-timeout corta em 15).
-  PRAZO = 10
+  # Roda dentro da requisição do passo 1 (o rack-timeout corta em 15 s): uma ida a cada uma, sem nova tentativa. Os
+  # dois prazos são do cliente HTTP (cada etapa da ida), não um relógio da soma; 3 + 8 deixa folga para o resto.
+  PRAZO_DA_META = 3
+  PRAZO = 8
   # Até quando a reserva sem texto vale: passado isso, o processo que a fez morreu, e a próxima abertura lê.
   RESERVA = 1.minute
   INSTRUCOES = <<~TEXTO.freeze
@@ -44,7 +48,7 @@ class Crm::MetaAds::ComentariosIa::Foto
     Crm::MetaAdsPostReading.find_by(account_id: account.id, network: network.to_s, post_id: post_id.to_s)&.texto_para_ia
   end
 
-  # imagens: -> [urls] (Rede#imagens), chamado só quando ainda não há leitura.
+  # imagens: -> [urls] (Rede#imagens com PRAZO_DA_META), chamado só quando ainda não há leitura e depois da reserva.
   def initialize(account:, network:, post_id:, imagens:, cliente: nil)
     @account = account
     @network = network.to_s
@@ -55,19 +59,20 @@ class Crm::MetaAds::ComentariosIa::Foto
 
   def ler
     return pronto(leitura) if leitura&.texto_para_ia
+    return { status: 'no_credential' } if cliente.nil?
+    return INDISPONIVEL unless reservar!
 
-    urls = @imagens.call
-    return { status: 'no_image' } if urls.blank?
-
-    ler_na_ia(urls)
-  rescue Crm::MetaAds::ComentariosIa::Rede::Indisponivel
-    INDISPONIVEL
+    ler_reservado
   end
 
-  # Texto vazio apaga a correção: volta a valer a leitura da IA.
+  # Texto vazio apaga a correção: volta a valer a leitura da IA. Sem leitura da IA, a linha não fica (nem nasce): uma
+  # linha vazia nunca pode prender a reserva.
   def corrigir!(texto, user:)
+    correcao = texto.to_s.strip.presence
+    return apagar_correcao_sem_leitura if correcao.nil? && leitura&.description.nil?
+
     registro = leitura || Crm::MetaAdsPostReading.new(account: @account, network: @network, post_id: @post_id)
-    registro.update!(correction: texto.to_s.strip.presence, corrected_by: user)
+    registro.update!(correction: correcao, corrected_by: user)
     registro.texto_para_ia ? pronto(registro) : INDISPONIVEL
   end
 
@@ -77,12 +82,23 @@ class Crm::MetaAds::ComentariosIa::Foto
     @leitura ||= Crm::MetaAdsPostReading.find_by(account_id: @account.id, network: @network, post_id: @post_id)
   end
 
-  def ler_na_ia(urls)
-    return { status: 'no_credential' } if cliente.nil?
-    return INDISPONIVEL unless reservar!
+  # Com a reserva: a Meta (as imagens) e a IA. Sem imagem, Meta ou IA fora do prazo: a reserva sai.
+  def ler_reservado
+    urls = @imagens.call
+    return soltar_reserva.merge(status: 'no_image') if urls.blank?
 
     descricao = descrever(urls)
     descricao ? pronto(gravar!(descricao)) : soltar_reserva
+  rescue Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+    soltar_reserva
+  end
+
+  # Só a linha que tem a correção: a reserva de uma leitura em andamento (sem texto nenhum) fica com quem lê.
+  def apagar_correcao_sem_leitura
+    Crm::MetaAdsPostReading.where(account_id: @account.id, network: @network, post_id: @post_id, description: nil)
+                           .where.not(correction: nil).delete_all
+    @leitura = nil
+    INDISPONIVEL
   end
 
   # Só quem reservou chama a IA.

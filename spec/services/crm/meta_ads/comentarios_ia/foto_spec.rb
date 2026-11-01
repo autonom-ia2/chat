@@ -105,6 +105,50 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Foto do
     end
   end
 
+  # Revisão da Agentes IA: a leitura roda dentro da requisição do passo 1, que o rack-timeout corta em 15 s.
+  describe 'o prazo da Meta e o da IA, dentro da requisição' do
+    def reservada?
+      Crm::MetaAdsPostReading.exists?(account_id: account.id, network: 'instagram', post_id: '1790')
+    end
+
+    it 'a Meta e a IA somadas ficam bem abaixo dos 15 s; a IA vai com o prazo dela' do
+      responde
+
+      foto.ler
+
+      expect(described_class::PRAZO_DA_META + described_class::PRAZO).to be <= 11
+      expect(pedido[:timeout]).to eq(described_class::PRAZO)
+    end
+
+    it 'a Meta estoura o prazo: não consegui ver agora, a reserva do post sai e a próxima abertura tenta de novo' do
+      durante = nil
+      lenta = lambda do
+        durante = reservada?
+        raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+      end
+      allow(cliente).to receive(:create)
+
+      expect(foto(ler: lenta).ler).to eq(status: 'unavailable')
+      expect(durante).to be(true)
+      expect(reservada?).to be(false)
+      expect(cliente).not_to have_received(:create)
+
+      responde
+      expect(foto.ler).to include(status: 'ready')
+    end
+
+    it 'a IA estoura o prazo: não consegui ver agora, a reserva do post sai e a próxima abertura tenta de novo' do
+      tempo = Crm::Ai::ResponsesClient::Error.new('network_timeout: read_timeout', rede: true, tempo_esgotado: true)
+      allow(cliente).to receive(:create).and_raise(tempo)
+
+      expect(foto.ler).to eq(status: 'unavailable')
+      expect(reservada?).to be(false)
+
+      responde
+      expect(foto.ler).to include(status: 'ready')
+    end
+  end
+
   it 'a correção do dono vence a leitura, e quem corrigiu fica gravado' do
     responde
     foto.ler
@@ -130,6 +174,31 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Foto do
     foto.corrigir!('Outra coisa', user: nil)
 
     expect(foto.corrigir!('  ', user: nil)).to include(text: 'Um vestido azul de linho num cabide.', corrected: false)
+  end
+
+  # Revisão da Agentes IA: uma linha vazia nunca pode prender a reserva da leitura.
+  describe 'corrigir com texto vazio, sem leitura da IA' do
+    it 'não cria a linha' do
+      expect(foto.corrigir!('  ', user: nil)).to eq(status: 'unavailable')
+      expect(Crm::MetaAdsPostReading.count).to eq(0)
+    end
+
+    it 'a linha só com a correção, sem leitura, sai: a próxima abertura lê a foto' do
+      foto.corrigir!('Bolo de cenoura', user: nil)
+
+      expect(foto.corrigir!('', user: nil)).to eq(status: 'unavailable')
+      expect(Crm::MetaAdsPostReading.count).to eq(0)
+
+      responde
+      expect(foto.ler).to include(status: 'ready', corrected: false)
+    end
+
+    it 'a reserva de uma leitura em andamento fica com quem lê' do
+      Crm::MetaAdsPostReading.create!(account: account, network: 'instagram', post_id: '1790')
+
+      expect(foto.corrigir!('', user: nil)).to eq(status: 'unavailable')
+      expect(Crm::MetaAdsPostReading.count).to eq(1)
+    end
   end
 
   it 'correção acima do limite é recusada' do
