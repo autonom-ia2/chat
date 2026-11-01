@@ -12,7 +12,7 @@ module Autonomia::Automacao::CadeiaNoDespacho
       cadeia = Autonomia::Automacao::Cadeia
       return super unless cadeia.ativa? && data.is_a?(Hash)
 
-      super(event_name, timestamp, data.merge(CHAVE => { 'conta' => cadeia.conta_id, 'origens' => cadeia.origens }))
+      super(event_name, timestamp, data.merge(CHAVE => { 'conta' => cadeia.conta_id, 'origens' => cadeia.origens, 'raiz' => cadeia.raiz }))
     end
   end
 
@@ -21,7 +21,7 @@ module Autonomia::Automacao::CadeiaNoDespacho
       return super unless data.is_a?(Hash) && data.key?(CHAVE)
 
       cadeia = data[CHAVE].to_h
-      Autonomia::Automacao::Cadeia.retomar(cadeia['origens'], Account.find_by(id: cadeia['conta'])) do
+      Autonomia::Automacao::Cadeia.retomar(cadeia['origens'], Account.find_by(id: cadeia['conta']), cadeia['raiz']) do
         super(event_name, timestamp, data.except(CHAVE))
       end
     end

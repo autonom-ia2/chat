@@ -422,7 +422,7 @@ en:
       muted: '%{user_name} has muted the conversation'
       unmuted: '%{user_name} has unmuted the conversation'
       automacao:
-        cadeia_profundidade: 'Automation stopped: “%{nome}” would be the 4th automation in a row, and the limit is 3.'
+        cadeia_parada: 'Automations stopped at “%{nome}” to avoid repetition: each automation runs once per change, and at most 3 run in a row.'
       auto_resolution_message: 'Resolving the conversation as it has been inactive for a while. Please start a new conversation if you need further assistance.'
     templates:
       greeting_message_body: '%{account_name} typically replies in a few hours.'
