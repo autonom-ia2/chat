@@ -14,7 +14,7 @@
 # No eval pago do #2424 este caminho venceu o do Jev com uma 2ª chamada para o motivo (84 de 84; o Jev, 67 de 79), com
 # uma chamada por comentário em vez de duas.
 # Nada é guardado como exemplo. A chave é sempre a da própria conta (decisão do Rodrigo no #2424: "Sempre a chave de
-# cada conta"): Crm::Ai::CredentialResolver, pelo hook crm_kanban_ai, como no Rascunho. Hook desligado ou sem chave não
+# cada conta"): ChaveDaConta, só o hook crm_kanban_ai, como no Rascunho e na Foto. Hook desligado ou sem chave não
 # cai na chave da instalação: é `no_credential`, e o comentário vai para o dono. O uso fica em Crm::AiUsageEvent com a
 # feature própria. Não há teto de uso (decisão do Rodrigo, #2454).
 #
@@ -146,7 +146,7 @@ class Crm::MetaAds::ComentariosIa::Classificador
 
   def cliente
     @cliente ||= begin
-      credencial = Crm::Ai::CredentialResolver.new(account: @care.account).resolve
+      credencial = Crm::MetaAds::ComentariosIa::ChaveDaConta.de(@care.account)
       raise Bloqueado, 'no_credential' if credencial.blank?
 
       Crm::Ai::ResponsesClient.new(credential: credencial, feature: @feature, account: @care.account, max_retries: 0)

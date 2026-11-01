@@ -38,12 +38,14 @@ class Crm::MetaAds::ComentariosIa::Rascunho
     @legenda = legenda.to_s.strip
   end
 
-  # { status: 'ready', message: } | { status: 'no_offer' } | { status: 'no_caption' } | { status: 'ai_unavailable' }
+  # { status: 'ready', message: } | { status: 'no_offer' } | { status: 'no_caption' } | { status: 'ai_unavailable' } |
+  # { status: 'no_credential' } (a conta sem a chave dela: nada vai ao modelo nem é guardado; a da instalação não serve).
   def call
     return { status: 'no_caption' } if @legenda.empty?
 
     guardado = Crm::MetaAdsCommentDraft.find_by(account_id: @account.id, target_kind: @target_kind, target_id: @target_id)
     return resposta(guardado) if guardado && !chamar_de_novo?(guardado)
+    return { status: 'no_credential' } if credencial.nil?
     return da_outra_abertura unless reservar!(guardado)
 
     resposta(escrever!)
@@ -104,13 +106,17 @@ class Crm::MetaAds::ComentariosIa::Rascunho
     return { status: 'failed' } unless Crm::Ai::Config.enabled?
 
     Crm::MetaAds::ComentariosIa::Classificador.liberado!(@account)
-    credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve
-    return { status: 'failed' } if credencial.blank?
-
     aceito(chamar(credencial))
   rescue Crm::MetaAds::ComentariosIa::Classificador::Bloqueado => e
     Rails.logger.warn("[comentarios_ia] rascunho account=#{@account.id} bloqueado=#{e.message}")
     { status: 'failed' }
+  end
+
+  # Só a chave da conta (ChaveDaConta).
+  def credencial
+    return @credencial if defined?(@credencial)
+
+    @credencial = Crm::MetaAds::ComentariosIa::ChaveDaConta.de(@account)
   end
 
   def chamar(credencial)

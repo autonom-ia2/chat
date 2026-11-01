@@ -5,13 +5,13 @@
 # - Uma chamada por post, com detalhe baixo. A leitura fica em Crm::MetaAdsPostReading: abrir de novo lê do banco, sem
 #   a Meta nem a IA. A correção do dono vale no lugar da leitura (texto_para_ia).
 # - A imagem é dado, nunca instrução: o modelo descreve o que vê e não segue texto escrito nela.
-# - A chave é sempre a da conta (Crm::Ai::CredentialResolver, hook crm_kanban_ai). Sem ela, nem com a da instalação:
-#   fica vazio e a tela diz que não conseguiu ver.
+# - A chave é sempre a da conta (ChaveDaConta, hook crm_kanban_ai). Sem ela, nem com a da instalação: `no_credential`,
+#   nada gravado, e a tela diz que não conseguiu ver.
 # - Meta ou IA fora do ar não quebra a tela: `unavailable`, nada gravado, e a próxima abertura tenta de novo.
 # - O uso fica em Crm::AiUsageEvent com a feature FEATURE.
 #
 # `ler` e `corrigir!` devolvem `{ status: 'ready', text:, corrected: }`, `{ status: 'no_image' }` (o post não tem
-# imagem: a tela não mostra o bloco) ou `{ status: 'unavailable' }`.
+# imagem: a tela não mostra o bloco), `{ status: 'no_credential' }` ou `{ status: 'unavailable' }`.
 class Crm::MetaAds::ComentariosIa::Foto
   FLAG = 'meta_ads_comentarios_ia_conversa'.freeze
   FEATURE = 'meta_ads_comentarios_ia_foto'.freeze
@@ -53,6 +53,7 @@ class Crm::MetaAds::ComentariosIa::Foto
 
     urls = @imagens.call
     return { status: 'no_image' } if urls.blank?
+    return { status: 'no_credential' } if cliente.nil?
 
     descricao = descrever(urls)
     descricao ? pronto(gravar!(descricao)) : INDISPONIVEL
@@ -89,7 +90,6 @@ class Crm::MetaAds::ComentariosIa::Foto
 
   def descrever(urls)
     return unless Crm::Ai::Config.enabled?
-    return if cliente.nil?
 
     resposta = cliente.create(model: MODEL, instructions: INSTRUCOES, input: entrada(urls), schema: SCHEMA, reasoning_effort: 'low',
                               timeout: PRAZO)
@@ -108,12 +108,12 @@ class Crm::MetaAds::ComentariosIa::Foto
     [{ role: 'user', content: [{ type: 'input_text', text: PEDIDO }, *imagens] }]
   end
 
-  # Só a chave da conta: a da instalação (`source: :system`) não serve.
+  # Só a chave da conta (ChaveDaConta): a da instalação não serve.
   def cliente
     return @cliente if @cliente
 
-    credencial = Crm::Ai::CredentialResolver.new(account: @account).resolve
-    return unless credencial.present? && credencial[:source] == :hook
+    credencial = Crm::MetaAds::ComentariosIa::ChaveDaConta.de(@account)
+    return if credencial.nil?
 
     @cliente = Crm::Ai::ResponsesClient.new(credential: credencial, feature: FEATURE, account: @account, max_retries: 0)
   end

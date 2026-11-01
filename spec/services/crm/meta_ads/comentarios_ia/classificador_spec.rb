@@ -197,7 +197,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
     end
 
     it 'a tela pergunta com a feature dela, sem nova tentativa' do
-      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k' }))
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', source: :hook }))
       allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
       responde('price', 0.9)
 

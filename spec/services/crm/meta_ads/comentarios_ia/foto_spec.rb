@@ -123,7 +123,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Foto do
       [nil, { api_key: 'k', source: :system }].each do |credencial|
         allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: credencial))
 
-        expect(foto(com_cliente: nil).ler).to eq(status: 'unavailable')
+        expect(foto(com_cliente: nil).ler).to eq(status: 'no_credential')
       end
       expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
       expect(Crm::MetaAdsPostReading.count).to eq(0)
