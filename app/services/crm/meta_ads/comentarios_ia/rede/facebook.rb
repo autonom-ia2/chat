@@ -2,7 +2,8 @@
 # - privado pelo Messenger: nosso (Rede::Pagina, com o token da caixa), com os estados do #2196: solta a reserva
 #   abandonada, reserva, `attempt!` logo antes da chamada, `confirm!` quando a Meta aceita, e abre a conversa na caixa
 #   do Messenger com a mensagem que saiu (Conversa.no_messenger!). Recusado (4xx), a linha sai; sem resposta ou 5xx, a
-#   Meta pode ter entregado: a linha fica sem confirmação e travada;
+#   Meta pode ter entregado: a linha fica sem confirmação e travada. Na resposta a comentário (2º nível, #2454), nada
+#   recusa antes da Meta, e o resultado fica gravado como no Instagram (meta_message_id, ou a recusa com o código);
 # - leitura, resposta e esconder: Crm::MetaAds::FacebookComments do #2197, com a conexão de anúncios da conta. Ele
 #   confere que o comentário é do post e que a Página é da conta (leitura) ou tem a caixa do Messenger nela (ações), e
 #   grava a ação com actor 'ai'. Aqui não há pessoa abrindo a tela: a IA age pela caixa da Página, sem conferir quem a vê.
@@ -32,6 +33,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     return falhou(envio) unless envio.ok
 
     reivindicacao.confirm!
+    aceito_em_resposta(reivindicacao, envio)
     envio.conversation = na_caixa(envio, care)
     envio
   end
@@ -110,8 +112,19 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   def falhou(envio)
-    REGISTRO.soltar!(@comentario, 'private_reply') unless envio.talvez_entregue
+    return envio if envio.talvez_entregue
+
+    REGISTRO.soltar!(@comentario, 'private_reply')
+    REGISTRO.recusa_do_privado!(@comentario, codigo: envio.codigo, subcodigo: envio.subcodigo) if @comentario.resposta?
     envio
+  end
+
+  # O resultado do privado em resposta (2º nível, #2454), como no InstagramPrivateReply. Só registro: o privado já saiu,
+  # e uma falha ao gravar vai para o rastreador.
+  def aceito_em_resposta(reivindicacao, envio)
+    reivindicacao.update!(meta_message_id: envio.message_id) if @comentario.resposta?
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
   end
 
   def mensagem(care)

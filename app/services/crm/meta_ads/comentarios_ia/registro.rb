@@ -59,6 +59,14 @@ module Crm::MetaAds::ComentariosIa::Registro
     true
   end
 
+  # O privado em resposta a comentário (2º nível, #2454) que a Meta recusou: o código e o subcódigo dela, sem texto, para
+  # consulta (o InstagramPrivateReply grava a mesma linha no Instagram).
+  def recusa_do_privado!(comentario, codigo:, subcodigo:)
+    Crm::MetaAdsCommentAction.record!(account: Account.find(comentario.account_id), network: comentario.network,
+                                      comment_id: comentario.comment_id, action: 'private_reply_failed', actor: ACTOR,
+                                      ad_id: comentario.ad_id, meta_error_code: codigo, meta_error_subcode: subcodigo)
+  end
+
   # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só.
   def reservar_pessoa!(comentario)
     Crm::MetaAdsCommentPerson.create!(pessoa(comentario).merge(comment_id: comentario.comment_id.to_s))

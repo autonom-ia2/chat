@@ -24,7 +24,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: resultado[:conversation])
   rescue Crm::MetaAds::InstagramPrivateReply::Error => e
     erro = OUTRO_ENVIO.include?(e.code) ? Crm::MetaAds::ComentariosIa::Rede::JA_FEITO : e.code
-    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: erro, talvez_entregue: sem_confirmacao?)
+    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: erro, talvez_entregue: sem_confirmacao?, codigo: e.meta_code,
+                                                 subcodigo: e.meta_subcode)
   end
 
   def ler
@@ -101,10 +102,12 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     REGISTRO.gravar!(@comentario, nome)
   end
 
-  # O comentário no formato do webhook e da Graph, que o serviço do #2196 recebe.
+  # O comentário no formato do webhook e da Graph, que o serviço do #2196 recebe. O `parent_id` diz a ele que é resposta
+  # (2º nível, #2454).
   def comment
-    { 'id' => @comentario.comment_id, 'timestamp' => @comentario.momento&.iso8601,
-      'from' => { 'id' => @comentario.from_id, 'username' => @comentario.from_name } }
+    dados = { 'id' => @comentario.comment_id, 'timestamp' => @comentario.momento&.iso8601,
+              'from' => { 'id' => @comentario.from_id, 'username' => @comentario.from_name } }
+    @comentario.resposta? ? dados.merge('parent_id' => @comentario.parent_id) : dados
   end
 
   def cliente

@@ -27,6 +27,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
     expect(acoes.find_by(action: 'ai_unread')).to have_attributes(ai_decision: nil, ai_reason: nil)
   end
 
+  it 'a recusa do privado em resposta (#2454) fica com o código e o subcódigo da Meta, como IA' do
+    described_class.recusa_do_privado!(comentario, codigo: 100, subcodigo: 2_534_023)
+
+    expect(Crm::MetaAdsCommentAction.sole).to have_attributes(action: 'private_reply_failed', actor: 'ai', ad_id: '120',
+                                                              meta_error_code: 100, meta_error_subcode: 2_534_023)
+  end
+
   it 'grava como IA, com o anúncio e a conversa' do
     conversation = create(:conversation, account: account)
 

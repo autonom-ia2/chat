@@ -119,6 +119,46 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(Crm::MetaAds::ComentariosIa::Conversa).not_to have_received(:no_messenger!)
     end
 
+    describe 'na resposta a comentário (2º nível, #2454): o resultado fica consultável, sem texto de terceiro' do
+      let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook', parent_id: '555_666')) }
+
+      before { allow(registro).to receive(:recusa_do_privado!) }
+
+      it 'aceito: a linha do privado guarda o id da mensagem' do
+        allow(reivindicacao).to receive(:update!)
+        allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: true, recipient_id: 'psid-1', message_id: 'mid-1'))
+
+        expect(rede.privado(care).ok).to be(true)
+        expect(reivindicacao).to have_received(:update!).with(meta_message_id: 'mid-1')
+      end
+
+      it 'recusado (4xx): a reivindicação sai e a recusa fica com o código e o subcódigo; talvez saiu: nada' do
+        recusa = described_class::Envio.new(ok: false, erro: '100 - Fora', codigo: 100, subcodigo: 33)
+        allow(pagina).to receive(:private_reply).and_return(recusa)
+
+        rede.privado(care)
+
+        expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
+        expect(registro).to have_received(:recusa_do_privado!).with(an_object_having_attributes(comment_id: '555_777'), codigo: 100, subcodigo: 33)
+
+        allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, talvez_entregue: true))
+        rede.privado(care)
+        expect(registro).to have_received(:recusa_do_privado!).once
+      end
+
+      it 'o comentário de primeiro nível fica como antes: sem id da mensagem nem recusa gravada' do
+        allow(reivindicacao).to receive(:update!)
+        allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: true, message_id: 'mid-1'),
+                                                            described_class::Envio.new(ok: false, codigo: 100))
+        primeiro = described_class::Facebook.new(inbox, comentario(network: 'facebook'))
+
+        2.times { primeiro.privado(care) }
+
+        expect(reivindicacao).not_to have_received(:update!)
+        expect(registro).not_to have_received(:recusa_do_privado!)
+      end
+    end
+
     it 'privado que talvez saiu (rede, 5xx): a reivindicação fica, sem confirmar' do
       allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: 'HTTP 503', talvez_entregue: true))
 
@@ -291,6 +331,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         text: care.texto_do_privado, actor: 'ai', ad_id: nil
       )
       expect(care.texto_do_privado).to eq(care.message.strip)
+    end
+
+    it 'na resposta a comentário (#2454), o serviço recebe o parent_id; a recusa traz o código e o subcódigo da Meta' do
+      erro = Crm::MetaAds::InstagramPrivateReply::Error.new('meta_refused', meta_code: 100, meta_subcode: 2_534_023)
+      allow(privado).to receive(:perform!).and_raise(erro)
+
+      envio = described_class::Instagram.new(inbox, comentario(parent_id: '555_666')).privado(care)
+
+      expect(envio).to have_attributes(ok: false, erro: 'meta_refused', codigo: 100, subcodigo: 2_534_023)
+      expect(privado).to have_received(:perform!).with(hash_including(comment: hash_including('parent_id' => '555_666')))
     end
 
     it 'recusa do serviço (4xx) vira envio sem sucesso com o código, sem "pode ter saído"' do
