@@ -10,6 +10,19 @@ RSpec.describe Autonomia::Automacao::LimparRegistrosJob do
     expect(Autonomia::Automacao::Registro.where(id: [velho.id, novo.id])).to contain_exactly(novo)
   end
 
+  it 'apaga as execuções finalizadas há mais de 90 dias que já não têm registro (#2459)', :aggregate_failures do
+    velha = travel_to(91.days.ago) { create(:autonomia_automacao_execucao, estado: 'concluida') }
+    com_registro = travel_to(91.days.ago) { create(:autonomia_automacao_execucao, estado: 'falhou', chave_gatilho: 'b') }
+    create(:autonomia_automacao_registro, execucao: com_registro)
+    recente = travel_to(89.days.ago) { create(:autonomia_automacao_execucao, estado: 'concluida', chave_gatilho: 'c') }
+    aberta = travel_to(91.days.ago) { create(:autonomia_automacao_execucao, estado: 'esperando', chave_gatilho: 'd') }
+
+    described_class.perform_now
+
+    expect(Autonomia::Automacao::Execucao.where(id: [velha, com_registro, recente, aberta].map(&:id)))
+      .to contain_exactly(com_registro, recente, aberta)
+  end
+
   it 'está agendado uma vez por dia' do
     agenda = YAML.load_file(Rails.root.join('config/schedule.yml'))
 

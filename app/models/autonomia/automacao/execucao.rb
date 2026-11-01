@@ -10,6 +10,10 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
   ABERTAS = %w[andando esperando].freeze
   TERMINAIS = %w[concluida falhou interrompida parada].freeze
   ESTADOS = (ABERTAS + TERMINAIS).freeze
+  # Quanto tempo a execução finalizada fica, depois que os registros dela já saíram (30 dias): 90 dias cabe um "não
+  # repetir por N dias" e a pergunta "esse cliente já passou por aqui?" sem guardar o histórico passo a passo
+  # (#2459, decisão da Automação em 01/11).
+  RETENCAO = 90.days
 
   belongs_to :account
   belongs_to :automacao, class_name: 'Autonomia::Automacao::Definicao', inverse_of: :execucoes

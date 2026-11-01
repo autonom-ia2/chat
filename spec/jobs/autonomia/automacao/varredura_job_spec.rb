@@ -1,0 +1,55 @@
+require 'rails_helper'
+
+# A varredura de minuto em minuto (#2414 F3, ADR-001 2.4 passo 4).
+RSpec.describe Autonomia::Automacao::VarreduraJob, :automacao_motor do
+  include ActiveJob::TestHelper
+
+  let(:account) { create(:account) }
+  let(:admin) { create(:user, account: account, role: :administrator) }
+  let(:conversa) { create(:conversation, account: account) }
+  let(:definicao) { automacao_ligada(account, admin, [esperar_passo('p1')]) }
+
+  def execucao(**atributos)
+    create(:autonomia_automacao_execucao, versao: definicao.versao_ativa, alvo: conversa, **atributos)
+  end
+
+  def motivo(execucao) = Autonomia::Automacao::Registro.find_by(execucao: execucao)&.motivo
+
+  it 'fecha como interrompida a que anda há mais de 15 minutos, sem repetir' do
+    travada = execucao(estado: 'andando', travada_em: 16.minutes.ago)
+    andando = execucao(estado: 'andando', travada_em: 1.minute.ago, chave_gatilho: 'outra')
+
+    described_class.perform_now
+
+    expect([travada.reload.estado, motivo(travada), andando.reload.estado]).to eq(%w[interrompida travada andando])
+  end
+
+  it 'fecha como interrompida a aberta cujo alvo foi apagado' do
+    orfa = execucao(estado: 'esperando', due_at: 1.day.from_now)
+    conversa.delete
+
+    described_class.perform_now
+
+    expect([orfa.reload.estado, motivo(orfa)]).to eq(%w[interrompida alvo_sumiu])
+  end
+
+  it 'acorda só quem venceu, com a marca da reserva, uma vez só', :aggregate_failures do
+    vencida = execucao(estado: 'esperando', due_at: 1.minute.ago)
+    futura = execucao(estado: 'esperando', due_at: 1.minute.from_now, chave_gatilho: 'outra')
+
+    freeze_time do
+      described_class.perform_now
+      described_class.perform_now
+
+      expect(vencida.reload).to have_attributes(estado: 'andando', travada_em: Time.current)
+      expect(futura.reload.estado).to eq('esperando')
+      expect(Autonomia::Automacao::AvancarJob).to have_been_enqueued.once.with(vencida.id, Time.current.iso8601(6))
+    end
+  end
+
+  it 'está agendada a cada minuto' do
+    agenda = YAML.load_file(Rails.root.join('config/schedule.yml'))
+
+    expect(agenda['autonomia_automacao_varredura_job']).to include('class' => described_class.name, 'cron' => '* * * * *')
+  end
+end

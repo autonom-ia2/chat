@@ -20,6 +20,29 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   validates :origem, inclusion: { in: ORIGENS }
   validate :versao_ativa_desta_automacao
 
+  # Desligar sempre funciona (D7, F3.4): quem está no meio para agora, e a próxima rodada de quem já estava na fila
+  # também para (o executor confere `ativa`).
+  def desligar!
+    transaction do
+      update!(ativa: false)
+      execucoes.abertas.find_each { |execucao| execucao.update!(estado: 'parada', travada_em: nil) }
+    end
+  end
+
+  # "Assumir e religar" (F3.7): a automação passa a agir como `usuario`, se ele pode. Nunca liga em nome de quem não
+  # pode: devolve o motivo e não muda nada.
+  def assumir_e_religar!(usuario)
+    self.ligada_por = usuario
+    motivo = ::Autonomia::Automacao::Acesso.new(self).motivo
+    if motivo
+      restore_attributes([:ligada_por_id])
+      return motivo
+    end
+
+    update!(ativa: true)
+    nil
+  end
+
   def salvar_versao!(receita:, autor: nil)
     with_lock do
       versao = versoes.create!(account: account, numero: versoes.maximum(:numero).to_i + 1, receita: receita, autor: autor)

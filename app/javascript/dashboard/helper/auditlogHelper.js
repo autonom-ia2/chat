@@ -48,6 +48,8 @@ const translationKeys = {
   'conversation:destroy': `AUDIT_LOGS.CONVERSATION.DELETE`,
   // Ação feita pelo Guia da Plataforma, depois da confirmação na tela (#536).
   'account:guide_action': `AUDIT_LOGS.GUIDE.ACTION`,
+  // Ação feita por uma automação da Automação livre, em nome de quem a ligou (#2459, F3.9).
+  'account:automacao_action': `AUDIT_LOGS.AUTOMACAO.ACTION`,
   'message:destroy': `AUDIT_LOGS.MESSAGE.DELETE`,
   // Excluir de vez no CRM (#2096): uma frase por alvo; o contato tem uma para cada escolha dos cards.
   'account:crm_hard_delete:cards': `AUDIT_LOGS.CRM_EXCLUIR.CARDS`,
@@ -230,6 +232,13 @@ export function generateTranslationPayload(auditLogItem, agentList) {
   // que mudou, em português, sem rota nem jargão.
   if (auditableType === 'account' && action === 'guide_action') {
     translationPayload.frase = auditLogItem.audited_changes?.frase || '';
+  }
+
+  // A automação diz o passo (a frase dele) e o número dela, para achar qual foi.
+  if (auditableType === 'account' && action === 'automacao_action') {
+    translationPayload.frase = auditLogItem.audited_changes?.frase || '';
+    translationPayload.automacaoId =
+      auditLogItem.audited_changes?.automacao_id ?? '';
   }
 
   // Só ids e contagens: o que foi apagado não volta pela Auditoria (#2096).

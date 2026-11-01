@@ -249,9 +249,7 @@ class Autonomia::Guide::Acoes
 
   def verbo_de(acao) = acao.to_s.split(' ', 2).first
 
-  def recurso_de(acao)
-    acao.to_s.split(' ', 2).last
-  end
+  def recurso_de(acao) = acao.to_s.split(' ', 2).last
 
   # Troca cada `:id` pelo valor que veio no pedido. Sem valor, não executa: uma
   # rota com parâmetro em branco atingiria o registro errado ou nenhum.
@@ -306,9 +304,9 @@ class Autonomia::Guide::Acoes
   # não pode ouvir que não deu certo — deu. O erro vai inteiro para o log.
   def auditar(acao, dados, registro)
     Audited.audit_class.create!(
-      auditable: @account, user: @user, action: AUDITORIA,
+      auditable: @account, user: @user, action: self.class::AUDITORIA,
       comment: dados[:descricao].to_s,
-      audited_changes: { 'acao' => acao.to_s, 'frase' => dados[:descricao].to_s, 'registro' => registro }
+      audited_changes: { 'acao' => acao.to_s, 'frase' => dados[:descricao].to_s, 'registro' => registro }.merge(trilha)
     )
   rescue StandardError => e
     Rails.logger.error(
@@ -316,6 +314,9 @@ class Autonomia::Guide::Acoes
       "#{e.class}: #{e.message}"
     )
   end
+
+  # O que a auditoria leva além da ação: a Automação livre põe o id dela (#2459).
+  def trilha = {}
 
   # O erro que volta é o da própria plataforma: é ele que diz a verdade sobre o
   # que faltou ou o que não foi permitido. Quando não há motivo legível, devolve
