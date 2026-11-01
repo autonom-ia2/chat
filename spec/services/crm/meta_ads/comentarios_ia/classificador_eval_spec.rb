@@ -145,8 +145,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
 
     account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
     allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
-    InstallationConfig.find_or_initialize_by(name: 'CAPTAIN_OPEN_AI_API_KEY').update!(value: ENV.fetch('OPENAI_API_KEY'))
     WebMock.allow_net_connect!
+    # #2454: o Classificador só usa a chave da própria conta (hook crm_kanban_ai), nunca a da instalação.
+    create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account,
+                               settings: { 'api_key' => ENV.fetch('OPENAI_API_KEY') })
   end
 
   after { WebMock.disable_net_connect!(allow_localhost: true) }
