@@ -1,0 +1,726 @@
+{
+  "_leia": "Conversas SINTÉTICAS (nomes fictícios) no estilo de corretora de seguros. O 'esperado' foi escrito ANTES de rodar e diz o que o produto deve fazer; 'motivo' diz qual falha a conversa pega. Etapas por chave (ver estrutura.json). Tipos de checagem em lib/conferencia.rb.",
+  "conversas": [
+    {
+      "id": "C01", "cenario": 1, "variacao": "informal", "modelo": "vendas_1funil", "cliente": "Marina Okada",
+      "motivo": "Falar do OUTRO card do mesmo funil tem de trocar o foco para ele, sem criar card e sem mexer em etapa.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "Oi, quero renovar o seguro do meu Corolla e fazer um seguro pro apartamento novo" },
+        { "de": "robo", "texto": "Oi Marina! Para o Corolla 2021 a melhor opção ficou R$ 3.180/ano na Porto. Já te mando a do apartamento." },
+        { "de": "cliente", "texto": "pode seguir com o do carro, gostei" },
+        { "de": "robo", "texto": "Ótimo! Vou gerar a proposta do Corolla para assinatura. Para o apartamento: R$ 690/ano com incêndio, roubo e danos elétricos." }
+      ],
+      "cards": [
+        { "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Corolla", "foco": true },
+        { "ref": "resid", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro residencial do apartamento" }
+      ],
+      "turnos": [{ "texto": "e aí, consegue baixar um pouco o valor do seguro do apê?" }],
+      "esperado": [
+        { "tipo": "foco", "ref": "resid" }, { "tipo": "sem_card_novo" },
+        { "tipo": "etapa", "ref": "resid", "valor": ["proposta"] }, { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] }
+      ]
+    },
+    {
+      "id": "C02", "cenario": 1, "variacao": "erro de digitação", "modelo": "vendas_1funil", "cliente": "Diego Fontes",
+      "motivo": "Mensagem com erros sobre o card em foco: ele anda para Fechamento; o outro card fica parado; nada novo nasce.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "Oi, quero renovar o seguro do meu Corolla e fazer um seguro pro apartamento novo" },
+        { "de": "robo", "texto": "Oi Diego! Para o Corolla 2021 a melhor opção ficou R$ 3.180/ano na Porto. Já te mando a do apartamento." },
+        { "de": "cliente", "texto": "vou ver o do carro e te falo" },
+        { "de": "robo", "texto": "Ótimo! Mandei o link da proposta do Corolla para assinatura e o boleto. Para o apartamento: R$ 690/ano com incêndio, roubo e danos elétricos." }
+      ],
+      "cards": [
+        { "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Corolla", "foco": true },
+        { "ref": "resid", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro residencial do apartamento" }
+      ],
+      "turnos": [{ "texto": "ja asinei a propsta do carro e paguei o bolto agr d manha" }],
+      "esperado": [
+        { "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] },
+        { "tipo": "etapa", "ref": "resid", "valor": ["proposta"] }
+      ]
+    },
+    {
+      "id": "C03", "cenario": 1, "variacao": "áudio transcrito", "modelo": "vendas_1funil", "cliente": "Luciana Prates",
+      "motivo": "Texto de áudio, sem pontuação, sobre o card que NÃO está em foco: troca o foco e não cria card.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "Oi, quero renovar o seguro do meu Corolla e fazer um seguro pro apartamento novo" },
+        { "de": "robo", "texto": "Oi Luciana! Para o Corolla 2021 a melhor opção ficou R$ 3.180/ano na Porto. Já te mando a do apartamento." },
+        { "de": "cliente", "texto": "pode seguir com o do carro, gostei" },
+        { "de": "robo", "texto": "Ótimo! Vou gerar a proposta do Corolla para assinatura. Para o apartamento: R$ 690/ano com incêndio, roubo e danos elétricos." }
+      ],
+      "cards": [
+        { "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Corolla", "foco": true },
+        { "ref": "resid", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro residencial do apartamento" }
+      ],
+      "turnos": [{ "texto": "oi então é eu tava olhando aqui a proposta do seguro do apartamento né e queria saber se dá pra colocar cobertura pra bicicleta e pros eletrônicos porque aqui em casa tem bastante coisa sabe" }],
+      "esperado": [
+        { "tipo": "foco", "ref": "resid" }, { "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "resid", "valor": ["proposta"] }
+      ]
+    },
+    {
+      "id": "C04", "cenario": 1, "variacao": "mensagem longa", "modelo": "vendas_1funil", "cliente": "Rafael Moura",
+      "motivo": "Mensagem longa sobre o card em foco que cita 'casa' de um parente: não pode trocar o foco nem criar card.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "Oi, quero renovar o seguro do meu Corolla e fazer um seguro pro apartamento novo" },
+        { "de": "robo", "texto": "Oi Rafael! Para o Corolla 2021 a melhor opção ficou R$ 3.180/ano na Porto. Já te mando a do apartamento." },
+        { "de": "cliente", "texto": "pode seguir com o do carro, gostei" },
+        { "de": "robo", "texto": "Ótimo! Mandei o link da proposta do Corolla para assinatura. Para o apartamento: R$ 690/ano com incêndio, roubo e danos elétricos." }
+      ],
+      "cards": [
+        { "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Corolla", "foco": true },
+        { "ref": "resid", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro residencial do apartamento" }
+      ],
+      "turnos": [{ "texto": "Bom dia! Desculpa a demora pra responder, essa semana foi muito corrida aqui no trabalho, tive auditoria e cheguei tarde todo dia. Sobre o seguro do carro: recebi o link da proposta mas não consegui abrir no celular, fica carregando e não vai. Dá pra mandar de novo por e-mail? Minha esposa comentou que o seguro da casa da irmã dela saiu mais barato numa outra corretora, mas isso a gente conversa outro dia, agora quero resolver o do carro." }],
+      "esperado": [
+        { "tipo": "foco", "ref": "auto" }, { "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] }
+      ]
+    },
+    {
+      "id": "C05", "cenario": 1, "variacao": "obrigado", "modelo": "vendas_1funil", "cliente": "Patrícia Leme",
+      "motivo": "Agradecimento não é assunto: nada muda (foco, cards, etapas).",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "Oi, quero renovar o seguro do meu Corolla e fazer um seguro pro apartamento novo" },
+        { "de": "robo", "texto": "Para o Corolla 2021 a melhor opção ficou R$ 3.180/ano. Para o apartamento: R$ 690/ano. Vou gerar a proposta do Corolla para assinatura." },
+        { "de": "cliente", "texto": "pode seguir com o do carro, gostei. o do ap eu vejo depois" }
+      ],
+      "cards": [
+        { "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Corolla", "foco": true },
+        { "ref": "resid", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro residencial do apartamento" }
+      ],
+      "turnos": [{ "texto": "valeu, obrigada pela ajuda de sempre 🙏" }],
+      "esperado": [
+        { "tipo": "foco", "ref": "auto" }, { "tipo": "sem_card_novo" },
+        { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] }, { "tipo": "etapa", "ref": "resid", "valor": ["proposta"] }
+      ]
+    },
+    {
+      "id": "C06", "cenario": 1, "variacao": "rajada de 3 mensagens", "modelo": "vendas_1funil", "cliente": "Otávio Brandão",
+      "motivo": "Rajada: só a última decide; o assunto é o card de fora do foco; pedir desconto não é perda.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "Oi, quero renovar o seguro do meu Corolla e fazer um seguro pro apartamento novo" },
+        { "de": "robo", "texto": "Para o Corolla 2021 a melhor opção ficou R$ 3.180/ano. Para o apartamento: R$ 690/ano com incêndio, roubo e danos elétricos." },
+        { "de": "cliente", "texto": "pode seguir com o do carro" }
+      ],
+      "cards": [
+        { "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Corolla", "foco": true },
+        { "ref": "resid", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro residencial do apartamento" }
+      ],
+      "turnos": [
+        { "texto": "oi", "rajada": true },
+        { "texto": "sobre o ap", "depois_s": 3, "rajada": true },
+        { "texto": "consegue um desconto? achei salgado", "depois_s": 4 }
+      ],
+      "esperado": [
+        { "tipo": "foco", "ref": "resid" }, { "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "resid", "valor": ["proposta"] }
+      ]
+    },
+    {
+      "id": "C07", "cenario": 2, "variacao": "frase base", "modelo": "vendas_1funil", "cliente": "Helena Vasques",
+      "motivo": "Dois assuntos numa mensagem: o auto fecha (Fechamento) E nasce o card do residencial. 100 mil é importância segurada, não valor do negócio.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "Boa tarde, quero fazer o seguro do meu HB20 2023" },
+        { "de": "robo", "texto": "Boa tarde Helena! Ficou R$ 2.640/ano na Tokio Marine, com carro reserva de 7 dias. Posso seguir?" },
+        { "de": "cliente", "texto": "gostei, só vou confirmar com meu marido" }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do HB20", "foco": true }],
+      "turnos": [{ "texto": "fecha o auto e quero cotação do residencial de 100 mil de incêndio" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["resid", "casa", "incend", "lar", "imovel", "apart"] },
+        { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] },
+        { "tipo": "valor", "funil": "vendas", "titulo_tem": ["resid", "casa", "incend", "lar", "imovel", "apart"], "nao": 10000000 }
+      ]
+    },
+    {
+      "id": "C08", "cenario": 2, "variacao": "informal", "modelo": "vendas_1funil", "cliente": "Caio Rezende",
+      "motivo": "Dois assuntos, escrita solta: auto fecha e nasce o card da casa.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "e ai, quero seguro pro meu civic" },
+        { "de": "robo", "texto": "Fala Caio! Para o Civic 2020 ficou R$ 3.400/ano na Allianz. Quer seguir?" },
+        { "de": "cliente", "texto": "deixa eu ver aqui" }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Civic", "foco": true }],
+      "turnos": [{ "texto": "blz pode fechar o do carro. e ve pra mim um seguro pra casa tbm, é uma casa de uns 300 mil" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["resid", "casa", "lar", "imovel"] },
+        { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] }
+      ]
+    },
+    {
+      "id": "C09", "cenario": 2, "variacao": "ordem invertida", "modelo": "vendas_1funil", "cliente": "Sílvia Amaral",
+      "motivo": "O pedido novo vem primeiro e o fechamento depois: os dois têm de acontecer.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "quero cotar seguro pro meu kicks" },
+        { "de": "robo", "texto": "Para o Kicks 2022 ficou R$ 2.980/ano na Porto, com assistência 24h. Posso seguir?" }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Kicks", "foco": true }],
+      "turnos": [{ "texto": "quero fazer um seguro de vida pra mim e pro meu marido. ah, e o do carro pode fechar sim" }],
+      "esperado": [
+        { "tipo": "sem_card_com_titulo", "funil": "vendas", "titulo_tem": ["vida"], "por_que": "gabarito final: não há funil de vida, então dúvida e sem card de vida" },
+        { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] }
+      ]
+    },
+    {
+      "id": "C10", "cenario": 2, "variacao": "rajada de 3 mensagens", "modelo": "vendas_1funil", "cliente": "Bruna Teixeira",
+      "motivo": "Dois assuntos espalhados numa rajada: o primeiro (fechar) não pode se perder porque a última mensagem fala do segundo.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "oi, seguro do meu T-Cross" },
+        { "de": "robo", "texto": "Para o T-Cross 2021 ficou R$ 3.050/ano na HDI. Posso seguir?" }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do T-Cross", "foco": true }],
+      "turnos": [
+        { "texto": "pode fechar o auto", "rajada": true },
+        { "texto": "ah", "depois_s": 3, "rajada": true },
+        { "texto": "e queria cotar o residencial tb, apto de 80m2 em pinheiros", "depois_s": 5 }
+      ],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["resid", "apart", "apto", "casa", "imovel"] },
+        { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] }
+      ]
+    },
+    {
+      "id": "C11", "cenario": 2, "variacao": "mudança de ideia", "modelo": "vendas_1funil", "cliente": "Renata Coelho",
+      "motivo": "Mandou fechar e voltou atrás na mesma mensagem: o auto NÃO pode ir para Fechamento; o residencial nasce.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "oi quero seguro do meu compass" },
+        { "de": "robo", "texto": "Para o Compass 2022 ficou R$ 4.120/ano na Porto. Posso seguir?" }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Compass", "foco": true }],
+      "turnos": [{ "texto": "fecha o auto. pensando bem espera, vou ver com meu marido antes de fechar. mas já me manda cotação do residencial da nossa casa" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["resid", "casa", "lar", "imovel"] },
+        { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }, { "tipo": "status", "ref": "auto", "valor": ["open"] }
+      ]
+    },
+    {
+      "id": "C12", "cenario": 3, "variacao": "frase base", "modelo": "vendas_e_sinistro", "cliente": "Fernando Lago",
+      "motivo": "Mensagem sobre o OUTRO funil: nasce card no Sinistro, o foco vai para ele e o card de Vendas fica parado.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "oi, quero cotar seguro pro meu carro novo, um Polo 2024" },
+        { "de": "robo", "texto": "Oi Fernando! Para o Polo 2024 ficou R$ 2.790/ano na Azul. Te mandei a proposta por e-mail." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Polo", "foco": true }],
+      "turnos": [{ "texto": "Bateram na traseira da minha moto hoje cedo, ela já é segurada com vocês. Como faço pra acionar o seguro?" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["moto", "batida", "colis", "sinistro", "traseira"] },
+        { "tipo": "foco", "funil": "sinistro" }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }, { "tipo": "cards_abertos", "valor": 2 }
+      ]
+    },
+    {
+      "id": "C13", "cenario": 3, "variacao": "informal com erro", "modelo": "vendas_e_sinistro", "cliente": "Igor Sampaio",
+      "motivo": "Outro funil com gíria e erro: nasce o card no Sinistro e o foco vai para ele.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "quero cotar seguro pro meu argo" },
+        { "de": "robo", "texto": "Para o Argo 2021 ficou R$ 2.350/ano na Azul. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Argo", "foco": true }],
+      "turnos": [{ "texto": "mano batero na minha moto no estacionamento do mercado, oq eu faço? ela tem seguro com vcs" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["moto", "batida", "colis", "sinistro"] },
+        { "tipo": "foco", "funil": "sinistro" }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }
+      ]
+    },
+    {
+      "id": "C14", "cenario": 3, "variacao": "áudio transcrito", "modelo": "vendas_e_sinistro", "cliente": "Vera Lúcia Campos",
+      "motivo": "Áudio sobre roubo em casa (sinistro residencial) com um card de Vendas aberto: vai para o Sinistro.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "bom dia quero fazer seguro do carro da minha filha" },
+        { "de": "robo", "texto": "Bom dia Vera! Para o Mobi 2020 ficou R$ 1.980/ano. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Mobi", "foco": true }],
+      "turnos": [{ "texto": "oi tudo bem é que assim ontem à noite entraram aqui em casa e levaram a televisão e o notebook e a casa tem seguro com vocês né então queria saber como faço pra acionar" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["roubo", "furto", "casa", "resid", "arromb", "sinistro"] },
+        { "tipo": "foco", "funil": "sinistro" }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }
+      ]
+    },
+    {
+      "id": "C15", "cenario": 3, "variacao": "pergunta que cabe em dois funis", "modelo": "vendas_e_sinistro", "cliente": "Gustavo Pires",
+      "motivo": "Renovar é venda (não sinistro), mesmo citando 'seguro que já tenho': o card nasce em Vendas.",
+      "online": ["ana", "bruno"],
+      "historico": [],
+      "cards": [],
+      "turnos": [{ "texto": "boa tarde, meu seguro residencial vence mês que vem e queria renovar. teve aquele problema do cano que estourou ano passado, isso muda alguma coisa?" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["resid", "renov", "casa"] }, { "tipo": "novos_no_funil", "funil": "sinistro", "valor": 0 }
+      ]
+    },
+    {
+      "id": "C16", "cenario": 3, "variacao": "cliente volta dias depois", "modelo": "vendas_e_sinistro", "cliente": "Tatiane Rocha",
+      "motivo": "Três dias de silêncio e a cliente retoma o mesmo assunto: nada novo, foco e etapa ficam.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "oi quero cotar seguro pro meu creta" },
+        { "de": "robo", "texto": "Oi Tatiane! Para o Creta 2022 ficou R$ 3.310/ano na Porto. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Creta", "foco": true }],
+      "turnos": [{ "texto": "oi, sumi né rs. ainda vale aquele valor do seguro?", "depois_s": 259200 }],
+      "esperado": [
+        { "tipo": "sem_card_novo" }, { "tipo": "foco", "ref": "auto" }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }
+      ]
+    },
+    {
+      "id": "C17", "cenario": 4, "variacao": "frase base", "modelo": "tres_funis", "cliente": "Marcelo Antunes",
+      "motivo": "Três assuntos em três funis numa mensagem: um card em cada funil.",
+      "online": ["ana", "bruno"],
+      "turnos": [{ "texto": "Oi! Preciso de três coisas: cotar seguro pro meu carro novo, abrir sinistro da batida que tive ontem com a moto e renovar o seguro residencial que vence dia 30." }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["carro", "auto"] },
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["moto", "batida", "colis", "sinistro"] },
+        { "tipo": "card_novo", "funil": "renovacao", "titulo_tem": ["resid", "casa", "renov"] },
+        { "tipo": "cards_abertos", "valor": 3 }
+      ]
+    },
+    {
+      "id": "C18", "cenario": 4, "variacao": "rajada em lista", "modelo": "tres_funis", "cliente": "Aline Ferraz",
+      "motivo": "Três assuntos em três funis, um por mensagem numa rajada: só a última decide hoje.",
+      "online": ["ana", "bruno"],
+      "turnos": [
+        { "texto": "preciso de 3 coisas", "rajada": true },
+        { "texto": "1 - cotar seguro do carro novo q comprei", "depois_s": 4, "rajada": true },
+        { "texto": "2 - abrir sinistro da moto, bati ontem", "depois_s": 5, "rajada": true },
+        { "texto": "3 - renovar o residencial, vence dia 30", "depois_s": 5 }
+      ],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["carro", "auto"] },
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["moto", "batida", "colis", "sinistro"] },
+        { "tipo": "card_novo", "funil": "renovacao", "titulo_tem": ["resid", "casa", "renov"] },
+        { "tipo": "cards_abertos", "valor": 3 }
+      ]
+    },
+    {
+      "id": "C19", "cenario": 4, "variacao": "mensagem longa", "modelo": "tres_funis", "cliente": "Eduardo Nogueira",
+      "motivo": "Três assuntos dentro de uma história comprida: um card em cada funil.",
+      "online": ["ana", "bruno"],
+      "turnos": [{ "texto": "Boa noite, tudo bem? Vou explicar tudo de uma vez pra não ficar mandando mil mensagens. Semana passada eu troquei de carro, peguei um Renegade 2023 e ainda tá sem seguro, então preciso de uma cotação urgente. Ontem, voltando do trabalho, um motoqueiro bateu na lateral da minha moto (a Fazer, que já é segurada com vocês) e amassou o tanque, quero abrir o sinistro. E aproveitando, o seguro do meu apartamento vence agora no fim do mês e eu queria renovar, de preferência com o mesmo valor." }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["renegade", "carro", "auto"] },
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["moto", "fazer", "batida", "colis", "sinistro"] },
+        { "tipo": "card_novo", "funil": "renovacao", "titulo_tem": ["resid", "apart", "renov"] },
+        { "tipo": "cards_abertos", "valor": 3 }
+      ]
+    },
+    {
+      "id": "C20", "cenario": 4, "variacao": "áudio transcrito", "modelo": "tres_funis", "cliente": "Sônia Barreto",
+      "motivo": "Três assuntos em fala corrida, sem pontuação: um card em cada funil.",
+      "online": ["ana", "bruno"],
+      "turnos": [{ "texto": "oi meu bem é a sônia então é o seguinte eu queria fazer o seguro do carro novo do meu filho que ele comprou um onix e também a minha casa vai vencer o seguro agora e eu quero renovar e outra coisa a geladeira queimou com aquela queda de luz de sábado e eu acho que o seguro da casa cobre né queria abrir isso aí" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["onix", "carro", "auto"] },
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["geladeira", "eletric", "danos", "sinistro"] },
+        { "tipo": "card_novo", "funil": "renovacao", "titulo_tem": ["resid", "casa", "renov"] },
+        { "tipo": "cards_abertos", "valor": 3 }
+      ]
+    },
+    {
+      "id": "C21", "cenario": 5, "variacao": "saudação", "modelo": "vendas_e_sinistro", "cliente": "Roberto Lins",
+      "motivo": "Só cumprimento: nenhum card ganha assunto e ninguém é chamado.",
+      "online": ["ana", "bruno"],
+      "turnos": [{ "texto": "oi boa tarde, tudo bem?" }],
+      "esperado": [{ "tipo": "nenhum_assunto_novo" }, { "tipo": "atendente", "valor": ["ninguem"] }]
+    },
+    {
+      "id": "C22", "cenario": 5, "variacao": "obrigado", "modelo": "vendas_e_sinistro", "cliente": "Cláudia Freitas",
+      "motivo": "Agradecimento num sinistro em análise: não é sinal de resolvido nem assunto novo.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "bateram no meu gol ontem, quero acionar" },
+        { "de": "robo", "texto": "Sinistro aberto, protocolo 4471. A seguradora vai analisar as fotos em até 3 dias úteis." }
+      ],
+      "cards": [{ "ref": "sin", "funil": "sinistro", "etapa": "analise", "titulo": "Sinistro colisão do Gol", "foco": true }],
+      "turnos": [{ "texto": "obrigada pela agilidade!" }],
+      "esperado": [
+        { "tipo": "sem_card_novo" }, { "tipo": "foco", "ref": "sin" }, { "tipo": "etapa", "ref": "sin", "valor": ["analise"] }
+      ]
+    },
+    {
+      "id": "C23", "cenario": 5, "variacao": "emoji sozinho", "modelo": "vendas_e_sinistro", "cliente": "André Paiva",
+      "motivo": "Um emoji depois da proposta não é aceite nem assunto: nada muda.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "quero cotar seguro do meu sandero" },
+        { "de": "robo", "texto": "Para o Sandero 2019 ficou R$ 2.150/ano. Enviei a proposta por e-mail, dá uma olhada." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Sandero", "foco": true }],
+      "turnos": [{ "texto": "👍" }],
+      "esperado": [{ "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }]
+    },
+    {
+      "id": "C24", "cenario": 5, "variacao": "alguém aí", "modelo": "vendas_e_sinistro", "cliente": "Jéssica Prado",
+      "motivo": "Conversa nova com 'alguém aí?': ainda não há assunto.",
+      "online": ["ana", "bruno"],
+      "turnos": [{ "texto": "alô? tem alguém aí?" }],
+      "esperado": [{ "tipo": "nenhum_assunto_novo" }]
+    },
+    {
+      "id": "C25", "cenario": 6, "variacao": "frase base", "modelo": "vendas_e_sinistro", "cliente": "Paulo Henrique Dias",
+      "motivo": "Dois assuntos em dois funis + pedido de pessoa: os dois cards nascem e alguém é atribuído (qual funil manda é a pergunta de produto).",
+      "online": ["ana", "bruno"],
+      "turnos": [{ "texto": "quero cotar o seguro da minha casa e também abrir um sinistro do carro que bateram ontem. me passa pra alguém por favor" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["casa", "resid", "lar"] },
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["carro", "batida", "colis", "sinistro", "auto"] },
+        { "tipo": "atendente", "valor": ["atribuido"] }
+      ]
+    },
+    {
+      "id": "C26", "cenario": 6, "variacao": "informal, pedido primeiro", "modelo": "vendas_e_sinistro", "cliente": "Larissa Melo",
+      "motivo": "Pedido de pessoa na frente e dois assuntos depois: os dois cards nascem e alguém é atribuído.",
+      "online": ["ana", "bruno"],
+      "turnos": [{ "texto": "preciso falar com uma pessoa. é sobre o sinistro do meu carro (bateram) e quero cotar residencial tb" }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["resid", "casa", "lar"] },
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["carro", "batida", "colis", "sinistro", "auto"] },
+        { "tipo": "atendente", "valor": ["atribuido"] }
+      ]
+    },
+    {
+      "id": "C27", "cenario": 6, "variacao": "rajada de 3 mensagens", "modelo": "vendas_e_sinistro", "cliente": "Mateus Queiroz",
+      "motivo": "Pedido de pessoa e dois assuntos em rajada: os dois cards nascem e alguém é atribuído.",
+      "online": ["ana", "bruno"],
+      "turnos": [
+        { "texto": "me passa pra um atendente", "rajada": true },
+        { "texto": "é pra cotar seguro de vida", "depois_s": 4, "rajada": true },
+        { "texto": "e tb abrir um sinistro do celular q foi roubado, ele tem seguro com vcs", "depois_s": 5 }
+      ],
+      "esperado": [
+        { "tipo": "sem_card_com_titulo", "funil": "vendas", "titulo_tem": ["vida"], "por_que": "gabarito final: não há funil de vida" },
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["celular", "roubo", "furto", "sinistro"] },
+        { "tipo": "atendente", "valor": ["atribuido"], "pessoa": "bruno" }
+      ]
+    },
+    {
+      "id": "C28", "cenario": 7, "variacao": "frase base", "modelo": "vendas_1funil", "cliente": "Beatriz Lacerda",
+      "motivo": "O mesmo assunto por várias mensagens até 'fechado, quero contratar': um card só, que anda até Fechamento.",
+      "online": ["ana"],
+      "turnos": [
+        { "texto": "oi, queria fazer seguro do meu carro" },
+        { "de": "robo", "texto": "Claro! Qual o modelo, o ano e o CEP onde ele dorme?", "depois_s": 10 },
+        { "texto": "é um onix 2022, uso pra trabalhar, moro em campinas, cep 13087-000" },
+        { "de": "robo", "texto": "Perfeito! Cotação: Porto R$ 2.890/ano ou Azul R$ 2.450/ano, as duas com assistência 24h.", "depois_s": 30 },
+        { "texto": "a azul cobre carro reserva?" },
+        { "de": "robo", "texto": "Cobre sim, 7 dias.", "depois_s": 10 },
+        { "texto": "fechado, quero contratar a azul" }
+      ],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["onix", "carro", "auto"] }, { "tipo": "novos_no_funil", "funil": "vendas", "valor": 1 },
+        { "tipo": "etapa", "funil": "vendas", "titulo_tem": ["onix", "carro", "auto"], "valor": ["fechamento"] },
+        { "tipo": "campo", "contato": true, "chave": "cidade", "contem": "campinas" }, { "tipo": "campo", "contato": true, "chave": "cep", "contem": "13087" }
+      ]
+    },
+    {
+      "id": "C29", "cenario": 7, "variacao": "informal com erros", "modelo": "vendas_1funil", "cliente": "Wesley Gomes",
+      "motivo": "Continuação escrita com erros: um card só, que chega a Fechamento.",
+      "online": ["ana"],
+      "turnos": [
+        { "texto": "opa queria fazer sguro pro meu carro" },
+        { "de": "robo", "texto": "Opa! Qual o modelo e o ano?", "depois_s": 10 },
+        { "texto": "e um gol g6 2015, fica na garagem de casa" },
+        { "de": "robo", "texto": "Para o Gol 2015 ficou R$ 1.790/ano na HDI, com guincho de 400 km.", "depois_s": 30 },
+        { "texto": "da pra parcelar?" },
+        { "de": "robo", "texto": "Dá sim, em até 10x sem juros no cartão.", "depois_s": 10 },
+        { "texto": "fexado entao, quero contratar em 10x" }
+      ],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["gol", "carro", "auto"] }, { "tipo": "novos_no_funil", "funil": "vendas", "valor": 1 },
+        { "tipo": "etapa", "funil": "vendas", "titulo_tem": ["gol", "carro", "auto"], "valor": ["fechamento"] }
+      ]
+    },
+    {
+      "id": "C30", "cenario": 7, "variacao": "volta dias depois para fechar", "modelo": "vendas_1funil", "cliente": "Natália Brito",
+      "motivo": "A cliente some 2 dias depois da proposta e volta para fechar: o card do assunto anda para Fechamento, sem card novo.",
+      "online": ["ana"],
+      "turnos": [
+        { "texto": "boa tarde, quero seguro pra minha moto, uma CG 160 2023" },
+        { "de": "robo", "texto": "Boa tarde Natália! Para a CG 160 2023 ficou R$ 1.120/ano na Porto, com roubo e furto.", "depois_s": 30 },
+        { "texto": "vou pensar e te falo" },
+        { "texto": "oi, pensei e quero fechar sim a da moto", "depois_s": 172800 }
+      ],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["moto", "cg"] }, { "tipo": "novos_no_funil", "funil": "vendas", "valor": 1 },
+        { "tipo": "etapa", "funil": "vendas", "titulo_tem": ["moto", "cg"], "valor": ["fechamento"] }
+      ]
+    },
+    {
+      "id": "C31", "cenario": 7, "variacao": "ironia e mudança de ideia", "modelo": "vendas_1funil", "cliente": "Ricardo Albuquerque",
+      "motivo": "Ironia no meio ('baratíssimo 🙄') não é perda; a troca de seguradora no fim ainda é fechar: Fechamento.",
+      "online": ["ana"],
+      "turnos": [
+        { "texto": "quero seguro pro meu corolla cross 2024" },
+        { "de": "robo", "texto": "Para o Corolla Cross 2024: Porto R$ 4.980/ano ou Bradesco R$ 4.450/ano.", "depois_s": 30 },
+        { "texto": "nossa, quase 5 mil? baratíssimo hein 🙄" },
+        { "de": "robo", "texto": "Entendo! A Bradesco tem franquia maior e sai R$ 4.450. Quer que eu tente um desconto?", "depois_s": 20 },
+        { "texto": "tenta. se não der, fecho a porto mesmo" },
+        { "de": "robo", "texto": "Consegui R$ 4.690 na Porto com o desconto de bom condutor.", "depois_s": 60 },
+        { "texto": "ok, então fecha a porto" }
+      ],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["corolla", "carro", "auto"] }, { "tipo": "novos_no_funil", "funil": "vendas", "valor": 1 },
+        { "tipo": "etapa", "funil": "vendas", "titulo_tem": ["corolla", "carro", "auto"], "valor": ["fechamento"] }
+      ]
+    },
+    {
+      "id": "C32", "cenario": 7, "variacao": "três funis, vida", "modelo": "tres_funis", "cliente": "Daniela Moraes",
+      "motivo": "Com três funis na caixa, um pedido de seguro de vida que vai até 'quero contratar' fica num card só, em Vendas, e chega a Fechamento.",
+      "online": ["ana", "bruno"],
+      "turnos": [
+        { "texto": "oi, quero fazer um seguro de vida" },
+        { "de": "robo", "texto": "Oi Daniela! Qual a sua idade e o capital que você quer deixar?", "depois_s": 10 },
+        { "texto": "tenho 38, queria uns 300 mil" },
+        { "de": "robo", "texto": "Para 38 anos e R$ 300 mil: R$ 59/mês na MAG, com invalidez inclusa.", "depois_s": 30 },
+        { "texto": "fechado, quero contratar" }
+      ],
+      "esperado": [
+        { "tipo": "sem_card_com_titulo", "funil": "vendas", "titulo_tem": ["vida"], "por_que": "gabarito final: não há funil de vida" }, { "tipo": "novos_no_funil", "funil": "vendas", "valor": 1 },
+        { "tipo": "novos_no_funil", "funil": "sinistro", "valor": 0 }, { "tipo": "novos_no_funil", "funil": "renovacao", "valor": 0 },
+        { "tipo": "etapa", "funil": "vendas", "valor": ["fechamento"], "por_que": "sem card de vida, o card da conversa (o da chegada) ainda tem de andar" }
+      ]
+    },
+    {
+      "id": "C33", "cenario": 7, "variacao": "retorno combinado", "modelo": "vendas_1funil", "cliente": "Hugo Martins",
+      "motivo": "'Me liga amanhã às 15h que eu fecho' não é Fechamento ainda, e tem de virar retorno marcado no card.",
+      "online": ["ana"],
+      "turnos": [
+        { "texto": "quero seguro do meu renegade 2021" },
+        { "de": "robo", "texto": "Para o Renegade 2021 ficou R$ 3.560/ano na Allianz. Posso mandar a proposta?", "depois_s": 30 },
+        { "texto": "pode mandar" },
+        { "de": "robo", "texto": "Enviei a proposta por e-mail.", "depois_s": 20 },
+        { "texto": "hoje não consigo ver direito, me liga amanhã às 15h que eu fecho" }
+      ],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["renegade", "carro", "auto"] },
+        { "tipo": "etapa", "funil": "vendas", "titulo_tem": ["renegade", "carro", "auto"], "valor": ["proposta", "fechamento"] },
+        { "tipo": "retorno", "funil": "vendas", "titulo_tem": ["renegade", "carro", "auto"], "valor": true }
+      ]
+    },
+    {
+      "id": "C34", "cenario": 8, "variacao": "frase base", "modelo": "vendas_1funil", "cliente": "Simone Carvalho",
+      "motivo": "Card ganho não é reaberto nem reaproveitado: o pedido novo nasce num card novo.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "paguei o boleto do seguro do carro" },
+        { "de": "robo", "texto": "Recebido! Sua apólice do Fit sai em até 5 dias úteis." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Fit", "status": "won", "fechado_ha_dias": 40 }],
+      "turnos": [{ "texto": "oi! agora quero fazer o seguro da minha casa", "depois_s": 3456000 }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["casa", "resid", "lar"] }, { "tipo": "status", "ref": "auto", "valor": ["won"] },
+        { "tipo": "cards_abertos", "valor": 1 }
+      ]
+    },
+    {
+      "id": "C35", "cenario": 8, "variacao": "informal", "modelo": "vendas_1funil", "cliente": "Thiago Ventura",
+      "motivo": "Cliente antigo (card ganho) pede moto: card novo de moto, o ganho fica intacto.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "pode fechar o seguro do carro" },
+        { "de": "robo", "texto": "Fechado! Apólice do Uno emitida." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Uno", "status": "won", "fechado_ha_dias": 90 }],
+      "turnos": [{ "texto": "lembra de mim? fiz o seguro do carro com vcs. comprei uma moto, quero segurar ela tb", "depois_s": 7776000 }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "vendas", "titulo_tem": ["moto"] }, { "tipo": "status", "ref": "auto", "valor": ["won"] },
+        { "tipo": "cards_abertos", "valor": 1 }
+      ]
+    },
+    {
+      "id": "C36", "cenario": 8, "variacao": "volta com sinistro", "modelo": "vendas_e_sinistro", "cliente": "Carla Siqueira",
+      "motivo": "Cliente com card ganho em Vendas volta com roubo do carro: card novo no Sinistro.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "paguei a primeira parcela" },
+        { "de": "robo", "texto": "Obrigado! Apólice do Tracker emitida e enviada por e-mail." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Tracker", "status": "won", "fechado_ha_dias": 60 }],
+      "turnos": [{ "texto": "roubaram meu carro hoje de madrugada 😭 o que eu faço?", "depois_s": 5184000 }],
+      "esperado": [
+        { "tipo": "card_novo", "funil": "sinistro", "titulo_tem": ["roubo", "furto", "carro", "tracker", "sinistro"] },
+        { "tipo": "status", "ref": "auto", "valor": ["won"] }, { "tipo": "novos_no_funil", "funil": "vendas", "valor": 0 }
+      ]
+    },
+    {
+      "id": "C37", "cenario": 8, "variacao": "obrigado depois do ganho", "modelo": "vendas_1funil", "cliente": "Mônica Arruda",
+      "motivo": "'Chegou a apólice, obrigado' depois do ganho não é pedido novo.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "paguei o pix do seguro" },
+        { "de": "robo", "texto": "Recebido! A apólice do Kwid chega por e-mail em alguns dias." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "fechamento", "titulo": "Seguro do Kwid", "status": "won", "fechado_ha_dias": 10 }],
+      "turnos": [{ "texto": "chegou a apólice aqui, obrigado!", "depois_s": 864000 }],
+      "esperado": [{ "tipo": "nenhum_assunto_novo" }, { "tipo": "status", "ref": "auto", "valor": ["won"] }]
+    },
+    {
+      "id": "C38", "cenario": 9, "variacao": "dúvida de cobertura parece sinistro", "modelo": "vendas_e_sinistro", "cliente": "Leandro Siqueira",
+      "motivo": "Pergunta sobre o que a apólice cobre, numa cotação, não é sinistro: nada novo, foco fica.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "acabei de comprar meu primeiro carro, um HB20, e nunca tive seguro. quanto fica?" },
+        { "de": "robo", "texto": "Parabéns! Para o HB20 2024 ficou R$ 2.480/ano na Azul. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do HB20", "foco": true }],
+      "turnos": [{ "texto": "e se o vidro trincar, o seguro cobre?" }],
+      "esperado": [{ "tipo": "sem_card_novo" }, { "tipo": "foco", "ref": "auto" }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }]
+    },
+    {
+      "id": "C39", "cenario": 9, "variacao": "carro reserva dentro do sinistro", "modelo": "vendas_e_sinistro", "cliente": "Priscila Mota",
+      "motivo": "Pergunta de produto ('carro reserva') dentro de um sinistro aberto é o mesmo sinistro, não venda.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "bateram no meu gol, quero acionar o seguro" },
+        { "de": "robo", "texto": "Sinistro aberto, protocolo 5582. A oficina vai avaliar o carro amanhã." }
+      ],
+      "cards": [{ "ref": "sin", "funil": "sinistro", "etapa": "analise", "titulo": "Sinistro colisão do Gol", "foco": true }],
+      "turnos": [{ "texto": "e o carro reserva, quantos dias eu tenho direito?" }],
+      "esperado": [{ "tipo": "sem_card_novo" }, { "tipo": "foco", "ref": "sin" }]
+    },
+    {
+      "id": "C40", "cenario": 9, "variacao": "assalto do vizinho", "modelo": "vendas_e_sinistro", "cliente": "Rogério Tavares",
+      "motivo": "Cita um assalto (do vizinho) para justificar a pressa: é a mesma venda, não um sinistro.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "quero seguro pra minha casa" },
+        { "de": "robo", "texto": "Para a sua casa ficou R$ 780/ano com roubo, incêndio e danos elétricos. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "resid", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro residencial da casa", "foco": true }],
+      "turnos": [{ "texto": "meu vizinho teve a casa assaltada semana passada, por isso quero fechar logo o meu" }],
+      "esperado": [{ "tipo": "sem_card_novo" }, { "tipo": "foco", "ref": "resid" }, { "tipo": "novos_no_funil", "funil": "sinistro", "valor": 0 }]
+    },
+    {
+      "id": "C41", "cenario": 9, "variacao": "ironia", "modelo": "vendas_e_sinistro", "cliente": "Fabiana Rios",
+      "motivo": "Ironia com o preço não é perda nem aceite: a etapa fica.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "quero seguro do meu jeep" },
+        { "de": "robo", "texto": "Para o Jeep Commander 2023 ficou R$ 4.020/ano na Porto. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Commander", "foco": true }],
+      "turnos": [{ "texto": "nossa, R$ 4 mil?? baratíssimo hein 🙄 vou pensar" }],
+      "esperado": [{ "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }]
+    },
+    {
+      "id": "C42", "cenario": 10, "variacao": "com regra, alguém online", "modelo": "vendas_1funil", "cliente": "Júlio César Neves",
+      "motivo": "Pedido claro de pessoa com a regra ligada e a Ana online: a conversa vai para a Ana.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "quero seguro do meu fusion" },
+        { "de": "robo", "texto": "Para o Fusion 2018 ficou R$ 3.900/ano. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Fusion", "foco": true }],
+      "turnos": [{ "texto": "quero falar com um corretor de verdade, por favor" }],
+      "esperado": [{ "tipo": "atendente", "valor": ["atribuido"], "pessoa": "ana" }, { "tipo": "sem_card_novo" }]
+    },
+    {
+      "id": "C43", "cenario": 10, "variacao": "com regra, ninguém online", "modelo": "vendas_1funil", "cliente": "Vanessa Cordeiro",
+      "motivo": "Pedido de pessoa com ninguém online: a conversa fica segurada esperando alguém (não atribui a quem está fora).",
+      "online": [],
+      "historico": [
+        { "de": "cliente", "texto": "quero seguro do meu cruze" },
+        { "de": "robo", "texto": "Para o Cruze 2019 ficou R$ 3.300/ano. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Cruze", "foco": true }],
+      "turnos": [{ "texto": "preciso falar com um atendente humano agora" }],
+      "esperado": [{ "tipo": "atendente", "valor": ["segurando"] }]
+    },
+    {
+      "id": "C44", "cenario": 10, "variacao": "sem regra", "modelo": "vendas_sem_regra", "cliente": "Alexandre Pinho",
+      "motivo": "Sem regra de Atribuição no funil, a IA do CRM não atribui ninguém (regra de hoje; ver relatório).",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "quero seguro do meu yaris" },
+        { "de": "robo", "texto": "Para o Yaris 2022 ficou R$ 2.700/ano. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Yaris", "foco": true }],
+      "turnos": [{ "texto": "quero falar com um atendente, por favor" }],
+      "esperado": [{ "tipo": "atendente", "valor": ["ninguem"] }]
+    },
+    {
+      "id": "C45", "cenario": 10, "variacao": "pedido indireto", "modelo": "vendas_1funil", "cliente": "Elaine Furtado",
+      "motivo": "Pedido de pessoa sem a palavra 'atendente': com a regra e a Ana online, vai para a Ana.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "quero seguro do meu city" },
+        { "de": "robo", "texto": "Para o City 2021 ficou R$ 2.950/ano. Qual a sua dúvida sobre a proposta?" }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do City", "foco": true }],
+      "turnos": [{ "texto": "prefiro resolver isso com uma pessoa, o robô não entende o que eu falo" }],
+      "esperado": [{ "tipo": "atendente", "valor": ["atribuido"], "pessoa": "ana" }]
+    },
+    {
+      "id": "C46", "cenario": 10, "variacao": "elogio citando a atendente", "modelo": "vendas_1funil", "cliente": "Gilberto Sá",
+      "motivo": "Elogiar a Ana não é pedir pessoa: ninguém é atribuído.",
+      "online": ["ana"],
+      "historico": [
+        { "de": "cliente", "texto": "quero seguro do meu onix plus" },
+        { "de": "robo", "texto": "Para o Onix Plus 2023 ficou R$ 2.580/ano. Te mandei a proposta." }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Onix Plus", "foco": true }],
+      "turnos": [{ "texto": "a Ana que me atendeu na loja ontem foi ótima, obrigado! vou pensar na proposta" }],
+      "esperado": [{ "tipo": "atendente", "valor": ["ninguem"] }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }]
+    },
+    {
+      "id": "C47", "cenario": 11, "variacao": "WhatsApp + e-mail: proposta assinada por e-mail", "modelo": "vendas_e_sinistro_email", "cliente": "Otília Fragoso",
+      "motivo": "O mesmo card em dois canais: a proposta saiu no WhatsApp e a assinatura e o pagamento chegam por e-mail. O card anda para Fechamento, sem card novo.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "oi, quero seguro do meu nivus 2023" },
+        { "de": "robo", "texto": "Oi Otília! Para o Nivus 2023 ficou R$ 3.020/ano na Porto. Te mandei a proposta para assinar." },
+        { "de": "cliente", "texto": "vou imprimir, assinar e te mando por e-mail com o comprovante" }
+      ],
+      "cards": [{ "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro do Nivus", "foco": true }],
+      "outro_canal": { "caixa": "email", "vincular": ["auto"] },
+      "turnos": [{ "canal": "email", "texto": "Boa tarde, segue a proposta do seguro do carro assinada e o comprovante de pagamento da primeira parcela. Att, Otília", "depois_s": 7200 }],
+      "esperado": [{ "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "auto", "valor": ["fechamento"] }]
+    },
+    {
+      "id": "C48", "cenario": 11, "variacao": "WhatsApp + e-mail: 'conforme conversamos'", "modelo": "vendas_e_sinistro_email", "cliente": "Severino Matos",
+      "motivo": "O e-mail só diz 'conforme conversamos no WhatsApp, pode fechar': a IA precisa ler o outro canal para saber o que fechar. O card do residencial anda para Fechamento e o do auto fica.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "quero seguro pra minha casa e depois vemos o do carro" },
+        { "de": "robo", "texto": "Para a casa: opção básica R$ 540/ano ou completa R$ 690/ano (com danos elétricos). Te mandei as duas." },
+        { "de": "cliente", "texto": "vou pensar e te respondo por e-mail" }
+      ],
+      "cards": [
+        { "ref": "resid", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro residencial da casa", "foco": true },
+        { "ref": "auto", "funil": "vendas", "etapa": "atendimento", "titulo": "Seguro do carro" }
+      ],
+      "outro_canal": { "caixa": "email", "vincular": ["resid"] },
+      "turnos": [{ "canal": "email", "texto": "Olá, conforme conversamos no WhatsApp, pode fechar a opção completa de R$ 690. Aguardo o boleto. Obrigado, Severino", "depois_s": 86400 }],
+      "esperado": [
+        { "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "resid", "valor": ["fechamento"] }, { "tipo": "etapa", "ref": "auto", "valor": ["atendimento"] }
+      ]
+    },
+    {
+      "id": "C49", "cenario": 11, "variacao": "WhatsApp + e-mail: documentos do sinistro", "modelo": "vendas_e_sinistro_email", "cliente": "Gláucia Nery",
+      "motivo": "O sinistro pediu BO e fotos no WhatsApp e eles chegam por e-mail: o sinistro sai de 'Aguardando cliente' para 'Em análise', sem card novo e sem mexer na venda.",
+      "online": ["ana", "bruno"],
+      "historico": [
+        { "de": "cliente", "texto": "bateram no meu carro ontem, quero acionar o seguro" },
+        { "de": "robo", "texto": "Sinistro aberto, protocolo 7781. Para a seguradora analisar, preciso do boletim de ocorrência e das fotos do carro. Pode mandar por e-mail." }
+      ],
+      "cards": [
+        { "ref": "sin", "funil": "sinistro", "etapa": "aguardando", "titulo": "Sinistro colisão do Sandero", "foco": true },
+        { "ref": "auto", "funil": "vendas", "etapa": "proposta", "titulo": "Seguro da moto" }
+      ],
+      "outro_canal": { "caixa": "email", "vincular": ["sin"] },
+      "turnos": [{ "canal": "email", "texto": "Bom dia, seguem em anexo o boletim de ocorrência e as fotos da batida, conforme pedido no WhatsApp. Protocolo 7781.", "depois_s": 14400 }],
+      "esperado": [
+        { "tipo": "sem_card_novo" }, { "tipo": "etapa", "ref": "sin", "valor": ["analise"] }, { "tipo": "etapa", "ref": "auto", "valor": ["proposta"] }
+      ]
+    }
+  ]
+}
