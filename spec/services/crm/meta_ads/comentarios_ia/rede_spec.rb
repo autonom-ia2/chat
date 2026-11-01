@@ -193,6 +193,27 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       end
     end
 
+    describe 'ler_pai (#2454: o comentário que a resposta responde)' do
+      let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook', parent_id: '555_666')) }
+
+      it 'só o texto do comentário de cima, lido na Meta pelo id' do
+        allow(servico).to receive(:comment).with('555_888', '555_666')
+                                           .and_return({ 'message' => 'Tem em azul?', 'from' => { 'id' => '8', 'name' => 'Bia' } })
+
+        expect(rede.ler_pai).to eq('Tem em azul?')
+      end
+
+      it 'comentário de primeiro nível, ou o de cima que não dá para ler: nil; a Meta fora do ar: Indisponivel' do
+        expect(described_class::Facebook.new(inbox, comentario(network: 'facebook')).ler_pai).to be_nil
+
+        allow(servico).to receive(:comment).and_return(nil)
+        expect(rede.ler_pai).to be_nil
+
+        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+        expect { rede.ler_pai }.to raise_error(described_class::Indisponivel)
+      end
+    end
+
     describe 'legenda (#2424)' do
       it 'o texto do post da Página' do
         allow(servico).to receive(:post_message).with('555_888').and_return('Seguro viagem com cobertura internacional')
@@ -375,6 +396,30 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
         allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 500, error_code: 2))
         expect { rede.ler }.to raise_error(described_class::Indisponivel)
+      end
+    end
+
+    describe 'ler_pai (#2454: o comentário que a resposta responde)' do
+      let(:result) { Meta::AdsGraphClient::Result }
+      let(:rede) { described_class::Instagram.new(inbox, comentario(parent_id: '555_666')) }
+
+      it 'só o texto do comentário de cima, lido na Meta pelo id' do
+        allow(cliente).to receive(:comment).with('555_666')
+                                           .and_return(result.new(ok: true, data: { 'text' => 'Tem em azul?', 'from' => { 'id' => 8 } }))
+
+        expect(rede.ler_pai).to eq('Tem em azul?')
+      end
+
+      it 'comentário de primeiro nível, ou o de cima apagado: nil; a Meta fora do ar: Indisponivel' do
+        allow(cliente).to receive(:comment)
+        expect(described_class::Instagram.new(inbox, comentario).ler_pai).to be_nil
+        expect(cliente).not_to have_received(:comment)
+
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 400, error_code: 100))
+        expect(rede.ler_pai).to be_nil
+
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 500, error_code: 2))
+        expect { rede.ler_pai }.to raise_error(described_class::Indisponivel)
       end
     end
 

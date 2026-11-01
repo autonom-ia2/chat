@@ -47,6 +47,18 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     nil
   end
 
+  # O texto do comentário que esta resposta responde (#2454), ou nil (primeiro nível, ou o de cima que não dá para ler).
+  # As mesmas regras do `ler`.
+  def ler_pai
+    return if @comentario.parent_id.blank?
+
+    comentarios&.comment(@comentario.post_id, @comentario.parent_id)&.dig('message')
+  rescue Crm::MetaAds::FacebookComments::Error => e
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
+
+    nil
+  end
+
   # O texto do post (#2424), ou nil. As mesmas regras do `ler`.
   def legenda
     @comentario.post_id.present? ? comentarios&.post_message(@comentario.post_id) : nil

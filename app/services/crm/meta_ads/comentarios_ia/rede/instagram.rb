@@ -28,16 +28,18 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   end
 
   def ler
-    resultado = cliente.comment(@comentario.comment_id)
-    # Token caído ou permissão tirada também tentam de novo: um problema da caixa não descarta, um a um, os comentários
-    # da conta. Só o comentário que não existe mais (ou outra recusa dele) é descartado.
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
-    return unless resultado.ok
-
-    dados = resultado.data.to_h
-    return if de_outro_post?(dados)
+    dados = na_meta(@comentario.comment_id)
+    return if dados.nil? || de_outro_post?(dados)
 
     { text: dados['text'], from_name: dados.dig('from', 'username'), from_id: dados.dig('from', 'id')&.to_s }
+  end
+
+  # O texto do comentário que esta resposta responde (#2454), lido na Meta pelo id, como o `ler`. nil no comentário de
+  # primeiro nível ou quando não dá para ler o de cima.
+  def ler_pai
+    return if @comentario.parent_id.blank?
+
+    na_meta(@comentario.parent_id)&.dig('text')
   end
 
   # A legenda do post (#2424), ou nil. Meta fora do ar levanta Indisponivel, como o `ler`.
@@ -70,6 +72,15 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   end
 
   private
+
+  # Token caído ou permissão tirada também tentam de novo: um problema da caixa não descarta, um a um, os comentários
+  # da conta. Só o comentário que não existe mais (ou outra recusa dele) é descartado (nil).
+  def na_meta(comment_id)
+    resultado = cliente.comment(comment_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
+
+    resultado.data.to_h if resultado.ok
+  end
 
   # O InstagramPrivateReply marca `failed_at` quando a Meta não respondeu (rede, 5xx): o privado pode ter saído.
   def sem_confirmacao?
