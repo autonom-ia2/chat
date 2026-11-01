@@ -38,6 +38,23 @@ RSpec.describe 'CRM critério padrão por modelo e posição (#1548)', type: :re
     expect(stage.metadata['ai_criteria']).to be_present
   end
 
+  # #2460: a posição só vale escrita como inteiro. Lista, objeto, "2abc" e "2.0" criam a etapa sem posição, como antes.
+  describe 'posição que não é inteiro' do
+    let(:criterio_e2) { I18n.t('crm.stage_criteria.cobranca.e2', locale: I18n.default_locale) }
+
+    it 'aceita a posição como texto de inteiro' do
+      expect(create_stage(serve_pipeline('COBRANCA'), { name: 'Boleto', template_position: '2' }).metadata['ai_criteria']).to eq(criterio_e2)
+    end
+
+    [[2], { 'n' => 2 }, '2abc', '2.0', '1e2'].each do |posicao|
+      it "cria a etapa sem posição com #{posicao.inspect}" do
+        stage = create_stage(serve_pipeline('COBRANCA'), { name: 'Etapa nova', template_position: posicao })
+
+        expect(stage.metadata['ai_criteria']).not_to eq(criterio_e2)
+      end
+    end
+  end
+
   it 'etapa avulsa, sem posição, continua achando pelo nome' do
     stage = create_stage(serve_pipeline('COBRANCA'), { name: 'Pago' })
 
