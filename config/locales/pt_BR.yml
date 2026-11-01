@@ -1005,6 +1005,7 @@ pt_BR:
         alvo_sumiu: 'A conversa não existe mais.'
         desligada: 'A automação foi desligada.'
         erro_depois_de_gravar: 'A plataforma deu erro depois de gravar parte da ação. A automação não repete, para não fazer duas vezes; confira e desfaça se precisar.'
+        erro_inesperado: 'A automação parou no meio deste passo por um erro inesperado. Ela não repete o passo; confira o que já foi feito.'
         erro_passageiro: 'A plataforma não respondeu; a automação vai tentar de novo.'
         erro_permanente: 'A plataforma recusou esta ação (por exemplo, a etiqueta não existe mais).'
         faltou_valor: 'Um valor de que este passo precisa estava vazio, e o passo foi pulado.'

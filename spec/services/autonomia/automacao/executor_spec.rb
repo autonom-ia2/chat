@@ -79,6 +79,9 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
 
       travel(1.day + 1.minute) { varrer }
       expect([execucao.reload.estado, execucao.due_at]).to eq(['andando', nil])
+      quebra = Autonomia::Automacao::Registro.where(execucao: execucao).order(:id).last
+      expect(quebra).to have_attributes(passo: 'p2', resultado: 'falhou', motivo: 'erro_inesperado',
+                                        dados: { 'erro' => 'Redis::CannotConnectError' })
 
       travel(1.day + 17.minutes) { varrer }
       expect([execucao.reload.estado, registros(execucao).last]).to eq(['interrompida', %w[p1 falhou travada]])
@@ -158,7 +161,25 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       execucao = comecar_e_rodar(duas)
 
       expect(conversa.reload.priority).to eq('high')
-      expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[a1 ok] + [nil], %w[a2 pulado desligada]]])
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[a1 ok] + [nil]]])
+    end
+
+    it 'fechada pela varredura no meio da rodada, a próxima ação não roda e nada é gravado por cima', :aggregate_failures do
+      duas = automacao_ligada(account, admin, [prioridade_passo('a1', 'high'), prioridade_passo('a2', 'urgent')])
+      allow(Autonomia::Automacao::PassoDeAcao).to receive(:new).and_wrap_original do |original, **argumentos|
+        original.call(**argumentos).tap do |passo|
+          allow(passo).to(receive(:executar).and_wrap_original do |executar|
+            executar.call.tap do
+              Autonomia::Automacao::Execucao.where(automacao: duas).update_all(estado: 'interrompida', finalizada_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
+            end
+          end)
+        end
+      end
+
+      execucao = comecar_e_rodar(duas)
+
+      expect(conversa.reload.priority).to eq('high')
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['interrompida', [%w[a1 ok] + [nil]]])
     end
 
     it 'desligar fecha a execução cujo alvo já foi apagado' do
@@ -312,6 +333,30 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
 
       expect(definicao.assumir_e_religar!(admin)).to be_nil
       expect([definicao.reload.ativa, definicao.ligada_por]).to eq([true, admin])
+    end
+
+    # Q1 da qualidade: a chave de automações não dá o que o endpoint nega (criar etiqueta pede label_manage).
+    it 'o endpoint nega a ação (401): pausa a automação e não cria nada', :aggregate_failures do
+      criar = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'POST labels', 'descricao' => 'Criar a etiqueta',
+                'corpo' => { 'title' => 'renovacao', 'description' => 'Cliente em renovação' } }
+      execucao = comecar_e_rodar(automacao_ligada(account, agente, [criar]))
+
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[p1 falhou quem_ligou_sem_acesso]]])
+      expect(Autonomia::Automacao::Definicao.where(ligada_por: agente).pluck(:ativa)).to eq([false])
+      expect(account.labels.count).to eq(0)
+    end
+
+    it 'perdeu a chave entre a reconferência e a chamada: pausa', :aggregate_failures do
+      definicao = automacao_ligada(account, agente, [prioridade_passo('p1')])
+      funcao.update!(permissions: %w[conversation_manage])
+      allow(Autonomia::Automacao::Acesso).to receive(:new).and_wrap_original do |original, *argumentos|
+        original.call(*argumentos).tap { |acesso| allow(acesso).to receive(:motivo).and_return(nil) }
+      end
+
+      execucao = comecar_e_rodar(definicao)
+
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[p1 falhou quem_ligou_sem_permissao]]])
+      expect([definicao.reload.ativa, conversa.reload.priority]).to eq([false, nil])
     end
 
     it 'assumir e religar recusa quem não tem a chave, sem mudar nada', :aggregate_failures do

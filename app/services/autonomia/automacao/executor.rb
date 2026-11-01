@@ -54,9 +54,13 @@ class Autonomia::Automacao::Executor
   end
 
   def rodar
-    return if impedida?(@execucao.cursor || 'inicio')
+    @passo_atual = @execucao.cursor || 'inicio'
+    return if impedida?(@passo_atual)
 
     Cadeia.retomar(@execucao.cadeia, @account, @raiz) { andar }
+  rescue StandardError => e
+    registrar_quebra(e)
+    raise
   end
 
   private
@@ -73,6 +77,7 @@ class Autonomia::Automacao::Executor
 
   # O próximo passo, ou nil quando a rodada parou (espera, fim, erro).
   def dar(passo)
+    @passo_atual = passo['id']
     case passo['tipo']
     when 'esperar' then esperar(passo)
     when 'esperar_ate' then esperar_ate(passo)
@@ -82,8 +87,11 @@ class Autonomia::Automacao::Executor
     end
   end
 
-  # Fecha a execução e devolve true quando ela não pode andar agora.
+  # Fecha a execução e devolve true quando ela não pode andar agora. A execução que já não é desta rodada (a varredura a
+  # fechou como travada, alguém a desligou) só para, sem gravar nada por cima.
   def impedida?(passo_id)
+    return @parou = true unless desta_rodada?
+
     estado, motivo = impedimento
     encerrar(passo_id, estado, motivo) if estado
     estado.present?
@@ -101,6 +109,17 @@ class Autonomia::Automacao::Executor
   end
 
   def alvo_da_conta? = alvo.present? && alvo.account_id == @account.id
+
+  def desta_rodada? = Execucao.exists?(id: @execucao.id, estado: 'andando', travada_em: @marca)
+
+  # A rodada quebrou no meio (erro inesperado): fica o passo e a classe do erro, e a execução continua andando para a
+  # varredura fechá-la como travada, sem repetir. A mensagem do erro vai só para o log: pode trazer dado do cliente.
+  def registrar_quebra(erro)
+    Rails.logger.error("[automacao][motor] quebrou execucao=#{@execucao.id} passo=#{@passo_atual} #{erro.class}: #{erro.message}")
+    registrar(@passo_atual, 'falhou', 'erro_inesperado', 'erro' => erro.class.name)
+  rescue StandardError => e
+    Rails.logger.error("[automacao][motor] não registrou a quebra execucao=#{@execucao.id} #{e.class}: #{e.message}")
+  end
 
   def motivo_de_quem_ligou = @acesso.motivo || ('quem_ligou_sem_acesso' unless @acesso.alcanca?(alvo))
 
