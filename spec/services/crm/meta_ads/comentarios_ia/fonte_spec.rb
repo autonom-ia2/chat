@@ -25,6 +25,54 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
     expect(lido[:escondidas].pluck(:id)).to eq(%w[3])
   end
 
+  it 'cada linha leva as respostas de outras pessoas dentro dela (#2454), só o autor e o texto, para a prévia' do
+    comments = [row('7', replies: [row('7r', text: 'Tem em azul?'), row('7v', text: ' ')])]
+
+    lido = fonte(instagram: { status: 'ready', comments: comments }).ler
+
+    expect(lido[:linhas].sole[:respostas]).to eq([{ author: 'pessoa.7r', text: 'Tem em azul?' }])
+  end
+
+  # #2454: o fio conta. A resposta de cliente espera o dono quando está à mostra, sem privado e sem a conta responder depois
+  # dela no mesmo fio, mesmo dentro do comentário da própria conta.
+  it 'as respostas de cliente que esperam o dono, cada uma com o id do comentário de cima' do
+    comments = [
+      row('1', replies: [row('1a', created: '2026-10-29T10:05:00+0000'), row('1b', page: true, created: '2026-10-29T10:10:00+0000'),
+                         row('1c', created: '2026-10-29T10:20:00+0000')]),
+      row('2', page: true, replies: [row('2a', created: '2026-10-29T11:00:00+0000')]),
+      row('3', replies: [row('3a', hidden: true), row('3b', private_reply: { sent_at: 'x' }), row('3c', text: '')])
+    ]
+
+    lido = fonte(instagram: { status: 'ready', comments: comments }).ler
+
+    expect(lido[:respostas_que_esperam].pluck(:id)).to eq(%w[2a 1c])
+    expect(lido[:respostas_que_esperam].last)
+      .to include(network: 'instagram', author: 'pessoa.1c', parent_id: '1', inbox_id: 3, post_id: '1790',
+                  momento: Time.zone.parse('2026-10-29T10:20:00+0000'))
+    expect(lido[:linhas].pluck(:id)).to eq(%w[3])
+  end
+
+  it 'a resposta sem hora, com a conta respondendo no fio: não espera (não dá para dizer que veio depois)' do
+    comments = [row('1', replies: [row('1a', created: nil), row('1b', page: true)])]
+
+    expect(fonte(instagram: { status: 'ready', comments: comments }).ler[:respostas_que_esperam]).to eq([])
+  end
+
+  describe '.que_esperam' do
+    let(:account) { create(:account) }
+    let(:lido) { { status: 'ready', linhas: [{ id: '1' }], escondidas: [], respostas_que_esperam: [{ id: '1a', parent_id: '1' }] } }
+
+    it 'sem a flag meta_ads_comentarios_ia: só os comentários de primeiro nível, como antes' do
+      expect(described_class.que_esperam(account, lido).pluck(:id)).to eq(%w[1])
+    end
+
+    it 'com a flag: também as respostas de cliente' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+
+      expect(described_class.que_esperam(account, lido).pluck(:id)).to eq(%w[1 1a])
+    end
+  end
+
   it 'anúncio nas duas redes: junta as listas, do mais novo para o mais velho' do
     lido = fonte(instagram: { status: 'ready', comments: [row('ig', created: '2026-10-28T10:00:00+0000')] },
                  facebook: { status: 'ready', comments: [row('fb', created: '2026-10-29T10:00:00+0000')] }).ler

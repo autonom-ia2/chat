@@ -2,12 +2,14 @@ require 'rails_helper'
 
 RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
   let(:account) { create(:account) }
-  let(:fonte) { instance_double(Crm::MetaAds::ComentariosIa::Fonte, legenda: 'Bolo de cenoura, receita no e-book') }
+  let(:fonte) do
+    instance_double(Crm::MetaAds::ComentariosIa::Fonte, legenda: 'Bolo de cenoura, receita no e-book')
+  end
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:previa) { described_class.new(account: account, fonte: fonte, para_quem: 'Quem pedir a receita') }
 
-  def linha(id, text)
-    { id: id, network: 'instagram', author: "pessoa.#{id}", text: text, momento: 1.day.ago }
+  def linha(id, text, network: 'instagram', post_id: '1790')
+    { id: id, network: network, author: "pessoa.#{id}", text: text, momento: 1.day.ago, post_id: post_id }
   end
 
   before do
@@ -21,17 +23,51 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
     allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Ninguém responde'), linha('2', 'Que lindo!'),
                                                                          linha('3', 'Me passa a receita?'), linha('4', 'Que lindo!')] })
 
-    expect(previa.call).to eq(status: 'ready', recebe: { author: 'pessoa.3', text: 'Me passa a receita?', network: 'instagram' },
-                              nao: { author: 'pessoa.2', text: 'Que lindo!', network: 'instagram' })
+    expect(previa.call).to eq(status: 'ready', resposta: nil,
+                              recebe: { id: '3', author: 'pessoa.3', text: 'Me passa a receita?', network: 'instagram' },
+                              nao: { id: '2', author: 'pessoa.2', text: 'Que lindo!', network: 'instagram' })
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
-      .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'), legenda: 'Bolo de cenoura, receita no e-book', tela: true)
+      .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'), legenda: 'Bolo de cenoura, receita no e-book',
+            foto: nil, tela: true)
     expect(classificador).to have_received(:decidir!).exactly(3).times
+  end
+
+  # #2454: no anúncio nas duas redes, cada comentário usa a leitura da foto do post da própria rede, como o motor.
+  it 'cada comentário decide com a leitura da foto do post da própria rede' do
+    Crm::MetaAdsPostReading.create!(account: account, network: 'instagram', post_id: '1790', description: 'Foto no Instagram')
+    Crm::MetaAdsPostReading.create!(account: account, network: 'facebook', post_id: '555_888', description: 'Foto no Facebook')
+    no_facebook = linha('2', 'Me passa a receita?', network: 'facebook', post_id: '555_888')
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Que lindo!'), no_facebook] })
+
+    previa.call
+
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(hash_including(foto: 'Foto no Instagram')).once
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(hash_including(foto: 'Foto no Facebook')).once
+  end
+
+  describe 'a resposta dentro de um comentário (#2454)' do
+    let(:com_resposta) do
+      linha('1', 'Que lindo!').merge(respostas: [{ author: 'pessoa.9', text: 'Me passa a receita?' }])
+    end
+
+    before { allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [com_resposta, linha('2', 'Me passa a receita?')] }) }
+
+    it 'uma resposta, decidida com o comentário de cima, aparece dentro dele' do
+      resultado = previa.call
+
+      expect(resultado[:resposta]).to eq(author: 'pessoa.9', text: 'Me passa a receita?', network: 'instagram', kind: 'recebe',
+                                         parent: { id: '1', author: 'pessoa.1', text: 'Que lindo!', network: 'instagram' })
+      expect(classificador).to have_received(:decidir!).with('Me passa a receita?', pai: 'Que lindo!')
+      # Com o id, a tela põe a resposta dentro do cartão do comentário de cima, sem repetir o de cima.
+      expect(resultado[:nao]).to eq(id: '1', author: 'pessoa.1', text: 'Que lindo!', network: 'instagram')
+      expect(resultado[:recebe]).to include(id: '2')
+    end
   end
 
   it 'sem comentário que receberia: um exemplo dito como exemplo; sem "não se aplica": nil' do
     allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Ninguém responde')] })
 
-    expect(previa.call).to eq(status: 'ready', recebe: { sample: true }, nao: nil)
+    expect(previa.call).to eq(status: 'ready', recebe: { sample: true }, nao: nil, resposta: nil)
   end
 
   it 'lê no máximo LIMITE comentários' do

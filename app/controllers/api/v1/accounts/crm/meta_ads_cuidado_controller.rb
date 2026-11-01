@@ -4,10 +4,15 @@
 # GET  meta_ads_connection/cuidados                     → { cuidados: [{ ad_id, care }] }: o estado do cuidado de cada
 #      anúncio (só banco), para o selo "Cuidando" no detalhe do anúncio.
 # GET  meta_ads_connection/ads/:ad_id/cuidado           → o Painel (Crm::MetaAds::ComentariosIa::Painel) e `inbox_id`.
-# GET  meta_ads_connection/ads/:ad_id/resumo            → "O que tem nos comentários" (Resumo; 'reading' enquanto conta).
+# GET  meta_ads_connection/ads/:ad_id/resumo            → "O que tem nos comentários" (Resumo): só o que o código conta,
+#      sem IA (#2454): { status, waiting, private_window }.
 #      Ver: administrador ou `meta_ads_view`.
 # PUT  meta_ads_connection/ads/:ad_id/cuidado           message, para_quem, phrases[], status → o Painel.
 # POST meta_ads_connection/ads/:ad_id/cuidado/previa    para_quem → os exemplos do passo "como fica" (Previa).
+# POST meta_ads_connection/ads/:ad_id/cuidado/foto      → "O que eu vi na foto" do passo 1 (#2454, flag
+#      meta_ads_comentarios_ia), do post do criativo; o mesmo contrato do post do Seus posts.
+# PUT  meta_ads_connection/ads/:ad_id/cuidado/foto      correction → a correção do dono. Sem a chave `correction`, 422
+#      `missing_correction`; `correction: ""` volta para a leitura da IA.
 # POST meta_ads_connection/ads/:ad_id/cuidado/ler_antigos → "Ler e mandar" (uma vez por cuidado ligado).
 #      Mudar: administrador ou `meta_ads_manage`.
 #
@@ -20,21 +25,20 @@
 # os comentários na Meta; o criativo já foi lido (uma vez só por chamada: é ele que diz as caixas, e a Fonte reusa a
 # leitura).
 #
-# Prévia e resumo respondem como no post: o que não está pronto vai como erro (422; `ai_unavailable` com a IA fora do
-# ar), e a tela não mostra o passo "como fica" em branco com "Ligar" ativo.
+# A prévia responde como no post: o que não está pronto vai como erro (422; `ai_unavailable` com a IA fora do ar), e a
+# tela não mostra o passo "como fica" em branco com "Ligar" ativo.
 #
 # O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,
 # mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
 class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm::BaseController
   AUDIT_ACTION = 'meta_ads_comment_care'.freeze
-  AI_UNAVAILABLE = 'ai_unavailable'.freeze
   FLAGS = ['meta_ads_gestao', Crm::MetaAds::ComentariosIa::Cuidar::FLAG].freeze
   REDE_FLAGS = Crm::MetaAds::ComentariosIa::Anuncio::FLAGS.values.freeze
   STATUS = { 'ad_not_found' => :not_found, 'not_connected' => :not_found, 'not_inbox_member' => :forbidden }.freeze
 
   before_action :ensure_flags
   before_action :ensure_view
-  before_action :ensure_manage, only: [:update, :previa, :ler_antigos]
+  before_action :ensure_manage, only: [:update, :previa, :foto, :corrigir_foto, :ler_antigos]
   before_action :load_connection
   before_action :load_anuncio, except: [:cuidados]
 
@@ -50,10 +54,7 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   end
 
   def resumo
-    resultado = Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
-    return render_error_code(AI_UNAVAILABLE) if resultado[:status] == AI_UNAVAILABLE
-
-    render json: resultado
+    render json: Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
   end
 
   def update
@@ -72,6 +73,20 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
     return render_error_code(resultado[:status]) unless resultado[:status] == 'ready'
 
     render json: resultado
+  end
+
+  def foto
+    render json: fonte.foto&.ler || { status: 'no_image' }
+  end
+
+  # A chave `correction` é obrigatória: sem ela, 422, sem mexer em nada. Apagar a correção só com `correction: ""`.
+  def corrigir_foto
+    return render_error_code('missing_correction') unless params.key?(:correction)
+
+    correcao = texto(:correction)
+    return render_error_code('invalid_correction') if correcao.strip.length > Crm::MetaAdsPostReading::TEXT_LIMIT
+
+    render json: fonte.foto&.corrigir!(correcao, user: Current.user) || { status: 'no_image' }
   end
 
   def ler_antigos
@@ -138,7 +153,7 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   end
 
   def cuidado_params
-    @cuidado_params ||= params.permit(:status, :message, :para_quem, phrases: [])
+    @cuidado_params ||= params.permit(:status, :message, :para_quem, :correction, phrases: [])
   end
 
   # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327). O que chegou e os strong params tiraram veio

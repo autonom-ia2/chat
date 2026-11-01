@@ -14,7 +14,12 @@
 # Confira no Direct." e a ação "Não foi enviado", que só quem gere os anúncios usa. Depois de a Meta aceitar, erro ao
 # abrir a conversa não vira falha: vai para o rastreador e a resposta diz que foi.
 #
-# Só comentário de primeiro nível: resposta a comentário (com `parent_id`) não recebe o privado.
+# Só comentário de primeiro nível: resposta a comentário (com `parent_id`) não recebe o privado. Com a flag
+# meta_ads_comentarios_ia (#2454), a resposta também vai à Meta, que decide; o teste real é do próprio produto,
+# na conta piloto. O resultado de cada envio de 2º nível fica consultável, sem texto de terceiro: aceito, a linha
+# private_reply guarda o `meta_message_id`; recusado (4xx com código da Meta), a linha sai como sempre e uma
+# `private_reply_failed` guarda o código e o subcódigo (`meta_error_code`, `meta_error_subcode`), que também vão no Error. Falha passageira segue
+# a regra de sempre (sem confirmação e travada). Sem a flag, `private_reply_top_only`, como antes.
 #
 # O privado de uma pessoa (actor `user`) também marca quem comentou naquele post (Crm::MetaAdsCommentPerson, #2212),
 # antes de chamar a Meta: enquanto o envio sai, a IA não manda outro privado à mesma pessoa no mesmo post. A marca não
@@ -24,14 +29,21 @@
 # `comment` vem como a Graph ou o webhook mandam: { 'id', 'timestamp', 'parent_id', 'from' => { 'id', 'username' },
 # 'media' => { 'id' } }.
 class Crm::MetaAds::InstagramPrivateReply
+  # `meta_code`, `meta_subcode` e `meta_http`: os da Meta na recusa, para quem chama decidir sem ler a mensagem dela.
   class Error < StandardError
-    attr_reader :code
+    attr_reader :code, :meta_code, :meta_subcode, :meta_http
 
-    def initialize(code)
+    def initialize(code, meta_code: nil, meta_subcode: nil, meta_http: nil)
       @code = code
+      @meta_code = meta_code
+      @meta_subcode = meta_subcode
+      @meta_http = meta_http
       super(code)
     end
   end
+
+  # A flag que deixa a resposta a comentário (2º nível) ir à Meta (#2454): a da IA cuida dos comentários.
+  RESPOSTAS = Crm::MetaAds::ComentariosIa::Cuidar::FLAG
 
   WINDOW = 7.days
   MAX_TEXT = 1000
@@ -53,6 +65,7 @@ class Crm::MetaAds::InstagramPrivateReply
 
     result = send!(action, comment, text, person_id)
     confirm_safely!(action)
+    accepted_safely!(action, result.data) if second_level?(comment)
     record_safely!(action, comment, text, result.data, user)
   end
 
@@ -80,8 +93,28 @@ class Crm::MetaAds::InstagramPrivateReply
     else
       action.destroy!
       release_person!(person_id)
+      refused_safely!(action, result) if second_level?(comment) && result.error_code
     end
-    raise Error, error_code(result)
+    raise Error.new(error_code(result), meta_code: result.error_code, meta_subcode: result.error_subcode, meta_http: result.http_code)
+  end
+
+  def second_level?(comment)
+    comment['parent_id'].present?
+  end
+
+  # O resultado do envio de 2º nível (#2454) é só registro: falha ao gravar vai para o rastreador e não muda o envio.
+  def accepted_safely!(action, sent)
+    action.update!(meta_message_id: sent['message_id'].presence&.to_s)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @channel.account).capture_exception
+  end
+
+  def refused_safely!(action, result)
+    Crm::MetaAdsCommentAction.record!(account: @channel.account, network: 'instagram', ad_id: action.ad_id, comment_id: action.comment_id,
+                                      action: 'private_reply_failed', actor: action.actor, user: action.user,
+                                      meta_error_code: result.error_code, meta_error_subcode: result.error_subcode)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @channel.account).capture_exception
   end
 
   # Devolve o id da marca quando ela é deste envio; nil quando já existia ou falta post ou quem comentou. Nada saiu
@@ -112,7 +145,7 @@ class Crm::MetaAds::InstagramPrivateReply
   end
 
   def validate_comment!(comment)
-    raise Error, 'private_reply_top_only' if comment['parent_id'].present?
+    raise Error, 'private_reply_top_only' if second_level?(comment) && !@channel.account.feature_enabled?(RESPOSTAS)
     raise Error, 'private_reply_expired' unless within_window?(comment['timestamp'])
   end
 

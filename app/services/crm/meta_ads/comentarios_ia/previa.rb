@@ -8,7 +8,14 @@
 #   comentário inventado como real. Sem exemplo de "não se aplica", `nao: nil`.
 # - O texto dos exemplos vai só na resposta à tela (dado de terceiro, lido ao vivo); nada é gravado.
 # - A legenda do post (#2424), lida pela Fonte, vai ao Classificador como no motor.
+# - A foto (#2454) é a leitura do post da rede de cada comentário, como no motor: no anúncio que roda no Instagram e no
+#   Facebook, cada comentário decide com a foto do post da própria rede (nil quando aquela rede ainda não tem leitura).
 # - IA fora do ar: `status: 'ai_unavailable'`, nunca uma prévia vazia que pareceria "ninguém recebe".
+# - Também `resposta` (#2454): a primeira resposta de outra pessoa dentro
+#   de um dos comentários lidos, decidida com o de cima (como o motor faz), com o `kind` ('recebe' ou 'nao') e o
+#   comentário de cima em `parent`. nil quando não há resposta ou a decisão não é nenhuma das duas. A tela não promete
+#   o privado a ela: a Meta decide se aceita o privado em resposta. Cada exemplo leva também o `id` do
+#   comentário: a tela põe a resposta dentro do cartão do comentário de cima quando ele é um dos exemplos.
 class Crm::MetaAds::ComentariosIa::Previa
   LIMITE = 10
   RECEBE = %w[private price].freeze
@@ -25,7 +32,9 @@ class Crm::MetaAds::ComentariosIa::Previa
     lido = @fonte.ler
     return { status: lido[:status] } unless lido[:status] == 'ready'
 
-    exemplos(lido[:linhas].first(LIMITE))
+    linhas = lido[:linhas].first(LIMITE)
+    previa = exemplos(linhas)
+    previa.merge(resposta: resposta(linhas))
   rescue Crm::MetaAds::ComentariosIa::Classificador::Erro => e
     Rails.logger.warn("[comentarios_ia] previa account=#{@account.id} ia=#{e.code}")
     { status: 'ai_unavailable' }
@@ -38,10 +47,19 @@ class Crm::MetaAds::ComentariosIa::Previa
     linhas.each do |linha|
       break if achados.key?(:recebe) && achados.key?(:nao)
 
-      tipo = tipo(classificador.decidir!(linha[:text]))
+      tipo = tipo(classificador(linha).decidir!(linha[:text]))
       achados[tipo] ||= exemplo(linha) if tipo
     end
     { status: 'ready', recebe: achados[:recebe] || AMOSTRA, nao: achados[:nao] }
+  end
+
+  def resposta(linhas)
+    linha = linhas.find { |candidata| candidata[:respostas].present? }
+    return if linha.nil?
+
+    resposta = linha[:respostas].first
+    tipo = tipo(classificador(linha).decidir!(resposta[:text], pai: linha[:text]))
+    tipo && { author: resposta[:author], text: resposta[:text], network: linha[:network], kind: tipo.to_s, parent: exemplo(linha) }
   end
 
   def tipo(decisao)
@@ -51,12 +69,19 @@ class Crm::MetaAds::ComentariosIa::Previa
   end
 
   def exemplo(linha)
-    { author: linha[:author], text: linha[:text], network: linha[:network] }
+    { id: linha[:id].to_s, author: linha[:author], text: linha[:text], network: linha[:network] }
   end
 
-  def classificador
-    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(
-      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: @para_quem), legenda: @fonte.legenda, tela: true
+  # Um por post (rede e id), para cada comentário decidir com a foto do próprio post.
+  def classificador(linha)
+    @classificadores ||= {}
+    @classificadores[[linha[:network], linha[:post_id]]] ||= Crm::MetaAds::ComentariosIa::Classificador.new(
+      care: care, legenda: @fonte.legenda, tela: true,
+      foto: Crm::MetaAds::ComentariosIa::Foto.texto_para_ia(@account, linha[:network], linha[:post_id])
     )
+  end
+
+  def care
+    @care ||= Crm::MetaAdsCommentCare.new(account: @account, para_quem: @para_quem)
   end
 end

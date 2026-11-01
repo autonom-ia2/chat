@@ -72,6 +72,30 @@ describe('#ComentariosIaAPI', () => {
     );
   });
 
+  it('asks the photo reading of the step 1 and saves the owner correction (#2454)', () => {
+    comentariosIa.foto(post);
+    comentariosIa.corrigirFoto(post, 'Bolo de cenoura');
+    comentariosIa.foto(ad);
+
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      `${postBase}/cuidado/foto`,
+      null,
+      { params: { perfil: 'instagram-7' } }
+    );
+    expect(axiosMock.put).toHaveBeenCalledWith(
+      `${postBase}/cuidado/foto`,
+      { correction: 'Bolo de cenoura' },
+      { params: { perfil: 'instagram-7' } }
+    );
+    expect(axiosMock.post).toHaveBeenCalledWith(
+      `${adBase}/cuidado/foto`,
+      null,
+      {
+        params: {},
+      }
+    );
+  });
+
   it('reads the summary of the comments', () => {
     comentariosIa.getResumo(post);
 

@@ -24,20 +24,23 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: resultado[:conversation])
   rescue Crm::MetaAds::InstagramPrivateReply::Error => e
     erro = OUTRO_ENVIO.include?(e.code) ? Crm::MetaAds::ComentariosIa::Rede::JA_FEITO : e.code
-    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: erro, talvez_entregue: sem_confirmacao?)
+    Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: erro, talvez_entregue: sem_confirmacao?, codigo: e.meta_code,
+                                                 subcodigo: e.meta_subcode, http: e.meta_http)
   end
 
   def ler
-    resultado = cliente.comment(@comentario.comment_id)
-    # Token caído ou permissão tirada também tentam de novo: um problema da caixa não descarta, um a um, os comentários
-    # da conta. Só o comentário que não existe mais (ou outra recusa dele) é descartado.
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
-    return unless resultado.ok
-
-    dados = resultado.data.to_h
-    return if de_outro_post?(dados)
+    dados = na_meta(@comentario.comment_id)
+    return if dados.nil? || de_outro_post?(dados)
 
     { text: dados['text'], from_name: dados.dig('from', 'username'), from_id: dados.dig('from', 'id')&.to_s }
+  end
+
+  # O texto do comentário que esta resposta responde (#2454), lido na Meta pelo id, como o `ler`. nil no comentário de
+  # primeiro nível ou quando não dá para ler o de cima.
+  def ler_pai
+    return if @comentario.parent_id.blank?
+
+    na_meta(@comentario.parent_id)&.dig('text')
   end
 
   # A legenda do post (#2424), ou nil. Meta fora do ar levanta Indisponivel, como o `ler`.
@@ -50,6 +53,19 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     resultado.data.to_h['caption'] if resultado.ok
   end
 
+  # As imagens do post (#2454): a foto, as do carrossel ou a capa do vídeo (Imagens). Nenhuma quando não dá para ler; Meta
+  # fora do ar levanta Indisponivel, como a `legenda`. prazo: segundos da ida à Graph (a leitura da foto roda dentro da
+  # requisição); a Meta que não responde nele também é Indisponivel.
+  def imagens(prazo: nil)
+    return [] if @comentario.post_id.blank?
+
+    leitor = prazo ? Instagram::CommentsClient.new(@inbox.channel, timeout: prazo) : cliente
+    resultado = leitor.media(@comentario.post_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
+
+    resultado.ok ? Crm::MetaAds::ComentariosIa::Imagens.do_instagram(resultado.data.to_h) : []
+  end
+
   def responder(texto)
     acao('reply') { cliente.reply(@comentario.comment_id, texto) }
   end
@@ -59,6 +75,15 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   end
 
   private
+
+  # Token caído ou permissão tirada também tentam de novo: um problema da caixa não descarta, um a um, os comentários
+  # da conta. Só o comentário que não existe mais (ou outra recusa dele) é descartado (nil).
+  def na_meta(comment_id)
+    resultado = cliente.comment(comment_id)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if resultado.transient? || resultado.token_invalid? || resultado.scope_error?
+
+    resultado.data.to_h if resultado.ok
+  end
 
   # O InstagramPrivateReply marca `failed_at` quando a Meta não respondeu (rede, 5xx): o privado pode ter saído.
   def sem_confirmacao?
@@ -79,10 +104,12 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
     REGISTRO.gravar!(@comentario, nome)
   end
 
-  # O comentário no formato do webhook e da Graph, que o serviço do #2196 recebe.
+  # O comentário no formato do webhook e da Graph, que o serviço do #2196 recebe. O `parent_id` diz a ele que é resposta
+  # (2º nível, #2454).
   def comment
-    { 'id' => @comentario.comment_id, 'timestamp' => @comentario.momento&.iso8601,
-      'from' => { 'id' => @comentario.from_id, 'username' => @comentario.from_name } }
+    dados = { 'id' => @comentario.comment_id, 'timestamp' => @comentario.momento&.iso8601,
+              'from' => { 'id' => @comentario.from_id, 'username' => @comentario.from_name } }
+    @comentario.resposta? ? dados.merge('parent_id' => @comentario.parent_id) : dados
   end
 
   def cliente

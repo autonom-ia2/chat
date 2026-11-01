@@ -21,6 +21,13 @@ module Crm::MetaAds::FacebookPageReading
     end
   end
 
+  # As imagens do post, como a Graph devolve (`full_picture`, `attachments`), para a leitura da foto (#2454).
+  def post_media(post_id)
+    read_from_page(post_id, 'post', "post=#{post_id}") do
+      page_client(post_id)&.then { |client| graph!(client.page_post_media(post_id)).to_h }
+    end
+  end
+
   private
 
   def read_from_page(post_id, what, ids)

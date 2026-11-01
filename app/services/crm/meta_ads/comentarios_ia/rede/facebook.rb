@@ -2,7 +2,8 @@
 # - privado pelo Messenger: nosso (Rede::Pagina, com o token da caixa), com os estados do #2196: solta a reserva
 #   abandonada, reserva, `attempt!` logo antes da chamada, `confirm!` quando a Meta aceita, e abre a conversa na caixa
 #   do Messenger com a mensagem que saiu (Conversa.no_messenger!). Recusado (4xx), a linha sai; sem resposta ou 5xx, a
-#   Meta pode ter entregado: a linha fica sem confirmação e travada;
+#   Meta pode ter entregado: a linha fica sem confirmação e travada. Na resposta a comentário (2º nível, #2454), nada
+#   recusa antes da Meta, e o resultado fica gravado como no Instagram (meta_message_id, ou a recusa com o código);
 # - leitura, resposta e esconder: Crm::MetaAds::FacebookComments do #2197, com a conexão de anúncios da conta. Ele
 #   confere que o comentário é do post e que a Página é da conta (leitura) ou tem a caixa do Messenger nela (ações), e
 #   grava a ação com actor 'ai'. Aqui não há pessoa abrindo a tela: a IA age pela caixa da Página, sem conferir quem a vê.
@@ -32,6 +33,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     return falhou(envio) unless envio.ok
 
     reivindicacao.confirm!
+    aceito_em_resposta(reivindicacao, envio)
     envio.conversation = na_caixa(envio, care)
     envio
   end
@@ -47,6 +49,18 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     nil
   end
 
+  # O texto do comentário que esta resposta responde (#2454), ou nil (primeiro nível, ou o de cima que não dá para ler).
+  # As mesmas regras do `ler`.
+  def ler_pai
+    return if @comentario.parent_id.blank?
+
+    comentarios&.comment(@comentario.post_id, @comentario.parent_id)&.dig('message')
+  rescue Crm::MetaAds::FacebookComments::Error => e
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
+
+    nil
+  end
+
   # O texto do post (#2424), ou nil. As mesmas regras do `ler`.
   def legenda
     @comentario.post_id.present? ? comentarios&.post_message(@comentario.post_id) : nil
@@ -54,6 +68,18 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
 
     nil
+  end
+
+  # As imagens do post (#2454), pelos anexos (Imagens). As mesmas regras da `legenda`; sem nada, nenhuma. prazo: segundos
+  # para todas as idas à Graph desta leitura (a leitura da foto roda dentro da requisição); passou dele, Indisponivel.
+  def imagens(prazo: nil)
+    limite = prazo && (Process.clock_gettime(Process::CLOCK_MONOTONIC) + prazo)
+    dados = @comentario.post_id.present? ? comentarios(prazo: limite)&.post_media(@comentario.post_id) : nil
+    Crm::MetaAds::ComentariosIa::Imagens.do_facebook(dados.to_h)
+  rescue Crm::MetaAds::FacebookComments::Error => e
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
+
+    []
   end
 
   def responder(texto)
@@ -88,8 +114,20 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   def falhou(envio)
-    REGISTRO.soltar!(@comentario, 'private_reply') unless envio.talvez_entregue
+    return envio if envio.talvez_entregue
+
+    REGISTRO.soltar!(@comentario, 'private_reply')
+    # Como o motor: só a recusa com código da Meta fica gravada.
+    REGISTRO.recusa_do_privado!(@comentario, codigo: envio.codigo, subcodigo: envio.subcodigo) if @comentario.resposta? && envio.codigo
     envio
+  end
+
+  # O resultado do privado em resposta (2º nível, #2454), como no InstagramPrivateReply. Só registro: o privado já saiu,
+  # e uma falha ao gravar vai para o rastreador.
+  def aceito_em_resposta(reivindicacao, envio)
+    reivindicacao.update!(meta_message_id: envio.message_id) if @comentario.resposta?
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
   end
 
   def mensagem(care)
@@ -100,8 +138,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
                                                  buttons: [{ type: 'web_url', url: button['url'], title: button['title'] }] } } }
   end
 
-  def comentarios
+  def comentarios(prazo: nil)
     conexao = Crm::MetaAdsConnection.find_by(account_id: @comentario.account_id)
-    conexao && Crm::MetaAds::FacebookComments.new(conexao, inbox_access: SEM_PESSOA)
+    conexao && Crm::MetaAds::FacebookComments.new(conexao, inbox_access: SEM_PESSOA, prazo: prazo)
   end
 end

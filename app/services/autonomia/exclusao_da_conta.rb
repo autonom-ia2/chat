@@ -41,6 +41,7 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Crm::MetaAdsCommentCare', :por_conta],
     ['Crm::MetaAdsCommentPerson', :por_conta],
     ['Crm::MetaAdsCommentDraft', :por_conta],
+    ['Crm::MetaAdsPostReading', :por_conta],
     ['Crm::MemoriaChave', :por_conta],
     # Card e o que pendura nele.
     ['Crm::StageAutomationExecution', :por_conta],

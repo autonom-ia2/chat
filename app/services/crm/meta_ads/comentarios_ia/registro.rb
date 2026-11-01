@@ -10,10 +10,10 @@
 #   chegou à chamada vence em Crm::MetaAdsCommentAction::RESERVED_TTL e sai antes da próxima (soltar_abandonada!).
 # As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
-# Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
+# Ações da IA: ai_seen (a IA leu o comentário), private_reply, reply, hide, to_you (reclamação
 # passada à pessoa), private_reply_failed (o privado que a Meta recusou), private_reply_unsure (a Meta não respondeu ao
 # privado: pode ter saído), kept_for_owner (a pergunta que era o caso do privado, mas ele não sai ali), ai_unread (a
-# IA não cuidou: a Meta ou a IA fora do ar em todas as tentativas, teto do dia, sem certeza, sem saber quem comentou,
+# IA não cuidou: a Meta ou a IA fora do ar em todas as tentativas, sem certeza, sem saber quem comentou,
 # ou a Meta não escondeu) e private_reply_already (era o caso do privado, mas a pessoa já tem um deste post). As seis
 # últimas formam o "Esperando você".
 #
@@ -42,11 +42,6 @@ module Crm::MetaAds::ComentariosIa::Registro
     )
   end
 
-  # Comentários que a IA leu hoje na conta, no fuso da plataforma.
-  def hoje(account_id)
-    acoes(account_id).where(action: LIDO, at: Time.current.all_day).count
-  end
-
   # Quantas respostas públicas a IA já deu na conta: escolhe a frase da vez, para não repetir a mesma em seguida.
   def vez(account_id)
     acoes(account_id).where(action: 'reply').count
@@ -64,12 +59,27 @@ module Crm::MetaAds::ComentariosIa::Registro
     true
   end
 
-  # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só.
+  # O privado em resposta a comentário (2º nível, #2454) que a Meta recusou: o código e o subcódigo dela, sem texto, para
+  # consulta (o InstagramPrivateReply grava a mesma linha no Instagram).
+  def recusa_do_privado!(comentario, codigo:, subcodigo:)
+    Crm::MetaAdsCommentAction.record!(account: Account.find(comentario.account_id), network: comentario.network,
+                                      comment_id: comentario.comment_id, action: 'private_reply_failed', actor: ACTOR,
+                                      ad_id: comentario.ad_id, meta_error_code: codigo, meta_error_subcode: subcodigo)
+  end
+
+  # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só. O mesmo comentário que já
+  # a reservou (o job tentando de novo depois de um limite da Meta, #2454) segue com ela.
   def reservar_pessoa!(comentario)
     Crm::MetaAdsCommentPerson.create!(pessoa(comentario).merge(comment_id: comentario.comment_id.to_s))
     true
   rescue ActiveRecord::RecordNotUnique
-    false
+    Crm::MetaAdsCommentPerson.exists?(pessoa(comentario).merge(comment_id: comentario.comment_id.to_s))
+  end
+
+  # A reserva da pessoa feita por este comentário, achada só pelo comentário (o job, esgotado, não tem o autor lido).
+  def soltar_pessoa_do_comentario!(comentario)
+    Crm::MetaAdsCommentPerson.where(account_id: comentario.account_id, network: comentario.network, post_id: comentario.post_id.to_s,
+                                    comment_id: comentario.comment_id.to_s).delete_all
   end
 
   # A Meta recusou o privado: a pessoa pode receber pelo próximo comentário. Só a reserva deste comentário sai.

@@ -102,6 +102,16 @@
       "STEP": "Step {step} of {total}",
       "NEXT": "Continue",
       "START": "Turn on",
+      "PHOTO": {
+        "LOOKING": "Looking at the photo…",
+        "SEEN": "What I saw in the photo:",
+        "FAILED": "I couldn't see the photo right now.",
+        "FIX": "Fix",
+        "WRITE": "Write",
+        "SAVE": "Save",
+        "CANCEL": "Cancel",
+        "SAVE_ERROR": "I couldn't save it right now. Try again."
+      },
       "WHAT": {
         "TITLE": "What should I send by DM?",
         "TEXT": "Write the message people get. It can have a link, catalog, coupon or price.",
@@ -138,7 +148,9 @@
         "PHRASE_DEFAULT": "I sent you a DM 😊",
         "GETS_BEFORE": "It fits · came in before",
         "LOADING": "I'm reading the post's comments…",
-        "PREVIEW_ERROR": "I couldn't read the post's comments right now. This is an example: you can turn it on anyway."
+        "PREVIEW_ERROR": "I couldn't read the post's comments right now. This is an example: you can turn it on anyway.",
+        "REPLY": "Reply inside this comment",
+        "REPLY_TRIES": "I try to send a DM; if the network doesn't allow it, I only reply here"
       },
       "RULES": {
         "ONCE": "Each person gets one message only on this post.",

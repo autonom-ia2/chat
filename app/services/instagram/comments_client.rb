@@ -21,8 +21,11 @@ class Instagram::CommentsClient
   NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, Net::ProtocolError, Timeout::Error, EOFError,
                     SocketError, SystemCallError, OpenSSL::SSL::SSLError, Zlib::Error, HTTParty::Error].freeze
 
-  def initialize(channel)
+  # timeout: segundos de cada ida à Graph. Quem roda dentro da requisição com prazo curto passa um menor (a leitura da foto,
+  # #2454: Crm::MetaAds::ComentariosIa::Foto::PRAZO_DA_META).
+  def initialize(channel, timeout: TIMEOUT_SECONDS)
     @channel = channel
+    @timeout = timeout
   end
 
   def comments(media_id, after: nil)
@@ -36,6 +39,12 @@ class Instagram::CommentsClient
   # A legenda do post, para a IA que cuida dos comentários (#2424).
   def caption(media_id)
     request(:get, media_id.to_s, { fields: 'caption' })
+  end
+
+  # A mídia do post, para a leitura da foto da IA que cuida dos comentários (#2454): a imagem, a capa do vídeo e os
+  # filhos do carrossel.
+  def media(media_id)
+    request(:get, media_id.to_s, { fields: 'media_type,media_url,thumbnail_url,children{media_type,media_url,thumbnail_url}' })
   end
 
   # Um comentário só, com a mídia dele: quem age confere que ele é do anúncio; o webhook lê o texto aqui.
@@ -67,7 +76,7 @@ class Instagram::CommentsClient
 
   def request(verb, path, query, **)
     response = HTTParty.public_send(verb, "#{base_uri}/#{path}", query: query.merge(access_token: @channel.access_token),
-                                                                 timeout: TIMEOUT_SECONDS, **)
+                                                                 timeout: @timeout, **)
     log_failure(verb, path, build_result(response))
   rescue *NETWORK_ERRORS => e
     log_failure(verb, path, Result.new(ok: false, http_code: nil, data: nil, error_code: nil, error_message: e.class.name))
@@ -78,7 +87,7 @@ class Instagram::CommentsClient
     return Result.new(ok: true, http_code: response.code, data: body) if response.success? && body.is_a?(Hash)
 
     error = body.is_a?(Hash) ? body['error'].to_h : {}
-    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'],
+    Result.new(ok: false, http_code: response.code, data: nil, error_code: error['code'], error_subcode: error['error_subcode'],
                error_message: sanitize(error['message'].presence || "HTTP #{response.code}"))
   rescue JSON::ParserError
     Result.new(ok: false, http_code: response.code, data: nil, error_code: nil, error_message: "HTTP #{response.code}")

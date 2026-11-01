@@ -65,6 +65,23 @@ class ComentariosIaAPI extends ApiClient {
     });
   }
 
+  // "O que eu vi na foto" do passo 1 (#2454): o servidor lê a foto do post uma
+  // vez. { status: 'ready', text, corrected } | 'no_image' | 'unavailable'.
+  foto(target) {
+    return axios.post(`${this.targetUrl(target)}/cuidado/foto`, null, {
+      params: ComentariosIaAPI.params(target),
+    });
+  }
+
+  // A correção do dono, que vale no lugar da leitura. Mesmo formato.
+  corrigirFoto(target, correction) {
+    return axios.put(
+      `${this.targetUrl(target)}/cuidado/foto`,
+      { correction },
+      { params: ComentariosIaAPI.params(target) }
+    );
+  }
+
   // { queued }
   lerAntigos(target) {
     return axios.post(`${this.targetUrl(target)}/cuidado/ler_antigos`, null, {
@@ -92,7 +109,7 @@ class ComentariosIaAPI extends ApiClient {
     );
   }
 
-  // { status, questions, questions_old, complaints, read, more }
+  // { status, waiting, private_window }: só o que o servidor conta, sem IA (#2454).
   getResumo(target) {
     return axios.get(`${this.targetUrl(target)}/resumo`, {
       params: ComentariosIaAPI.params(target),

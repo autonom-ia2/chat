@@ -121,6 +121,51 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(meta_call).to have_been_made.once
   end
 
+  describe 'o que eu vi na foto (#2454)' do
+    let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
+
+    before do
+      stub_request(:get, %r{#{ig}/#{media_id}\?.*fields=media_type})
+        .to_return(status: 200, headers: json, body: { media_type: 'IMAGE', media_url: 'https://cdn.exemplo/ebook.jpg' }.to_json)
+      allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', source: :hook }))
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
+      allow(cliente).to receive(:create).and_return({ text: { description: 'A capa de um e-book de bolos.' }.to_json })
+    end
+
+    it 'sem a flag meta_ads_comentarios_ia: 404' do
+      account.disable_features!('meta_ads_comentarios_ia')
+
+      post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(cliente).not_to have_received(:create)
+    end
+
+    it 'lê a foto do post do criativo e o dono corrige' do
+      post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('status' => 'ready', 'text' => 'A capa de um e-book de bolos.', 'corrected' => false)
+
+      put "#{base}/cuidado/foto", params: { correction: 'E-book de bolos caseiros' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('status' => 'ready', 'text' => 'E-book de bolos caseiros', 'corrected' => true)
+      expect(Crm::MetaAdsPostReading.sole).to have_attributes(network: 'instagram', post_id: media_id, corrected_by_id: admin.id)
+    end
+
+    it 'PUT sem a chave correction: 422, sem apagar a correção; só correction "" explícito volta para a leitura da IA' do
+      post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
+      put "#{base}/cuidado/foto", params: { correction: 'E-book de bolos caseiros' }, headers: admin.create_new_auth_token, as: :json
+
+      put "#{base}/cuidado/foto", params: {}, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body).to eq('error' => 'missing_correction')
+      expect(Crm::MetaAdsPostReading.sole.correction).to eq('E-book de bolos caseiros')
+
+      put "#{base}/cuidado/foto", params: { correction: '' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('status' => 'ready', 'text' => 'A capa de um e-book de bolos.', 'corrected' => false)
+    end
+  end
+
   it 'lê o criativo do anúncio uma vez só por tela, mesmo passando pela leitura dos comentários' do
     get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json
 
@@ -219,18 +264,12 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(hash_including(legenda: 'E-book de bolos por R$ 29'))
   end
 
-  it 'prévia e resumo com a IA fora do ar: 422 ai_unavailable, como no post (o passo "como fica" não fica em branco)' do
+  it 'prévia com a IA fora do ar: 422 ai_unavailable, como no post (o passo "como fica" não fica em branco)' do
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
     allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('timeout'))
 
     post "#{base}/cuidado/previa", params: { para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
-    expect(response).to have_http_status(:unprocessable_content)
-    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
-
-    allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
-      .and_return(instance_double(Crm::MetaAds::ComentariosIa::Resumo, call: { status: 'ai_unavailable' }))
-    get "#{base}/resumo", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.parsed_body).to eq('error' => 'ai_unavailable')
   end
@@ -253,10 +292,17 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(Crm::MetaAdsCommentCare.count).to eq(0)
   end
 
-  it 'resumo: na primeira vez, está lendo' do
-    get "/api/v1/accounts/#{account.id}/crm/meta_ads_connection/ads/#{ad_id}/resumo", headers: admin.create_new_auth_token, as: :json
+  it 'resumo: antes do clique, só o que o código conta, sem nenhuma IA (#2454)' do
+    allow(Crm::Ai::ResponsesClient).to receive(:new)
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new)
 
-    expect(response.parsed_body).to eq('status' => 'reading')
+    get "#{base}/resumo", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to eq('status' => 'ready', 'waiting' => 3, 'private_window' => 2)
+    expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    expect(Crm::AiUsageEvent.count).to eq(0)
   end
 
   it 'o selo: o estado do cuidado de cada anúncio, só do banco' do

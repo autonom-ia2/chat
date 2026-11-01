@@ -102,6 +102,16 @@
       "STEP": "Passo {step} de {total}",
       "NEXT": "Continuar",
       "START": "Ligar",
+      "PHOTO": {
+        "LOOKING": "Olhando a foto…",
+        "SEEN": "O que eu vi na foto:",
+        "FAILED": "Não consegui ver a foto agora.",
+        "FIX": "Corrigir",
+        "WRITE": "Escrever",
+        "SAVE": "Guardar",
+        "CANCEL": "Cancelar",
+        "SAVE_ERROR": "Não consegui guardar agora. Tente de novo."
+      },
       "WHAT": {
         "TITLE": "O que mandar no privado?",
         "TEXT": "Escreva a mensagem que a pessoa recebe. Pode ter link, catálogo, cupom ou preço.",
@@ -138,7 +148,9 @@
         "PHRASE_DEFAULT": "Te chamei no privado 😊",
         "GETS_BEFORE": "É o caso · chegou antes",
         "LOADING": "Estou lendo os comentários do post…",
-        "PREVIEW_ERROR": "Não consegui ler os comentários do post agora. Este é um exemplo: você pode ligar assim mesmo."
+        "PREVIEW_ERROR": "Não consegui ler os comentários do post agora. Este é um exemplo: você pode ligar assim mesmo.",
+        "REPLY": "Resposta dentro deste comentário",
+        "REPLY_TRIES": "Tento mandar no privado; se a rede não deixar, respondo só aqui"
       },
       "RULES": {
         "ONCE": "Cada pessoa recebe uma mensagem só neste post.",

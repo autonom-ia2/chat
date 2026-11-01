@@ -2,6 +2,8 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import FotoDoPost from './FotoDoPost.vue';
+import RespostaDoFio from './RespostaDoFio.vue';
 import { FOR_WHOM_LIMIT } from './useCuidado';
 
 // Comentários que viram cliente (#2212, opção (a) do Rodrigo): o jeito escrito pelo dono, em três passos, uma ação em
@@ -18,6 +20,10 @@ const props = defineProps({
   // async () => o começo da mensagem escrito pela IA a partir da legenda do post, ou '' (Rascunho). Só no post do Seus
   // posts; sem ele (o anúncio), o passo 1 abre vazio.
   draft: { type: Function, default: null },
+  // #2454, com a flag meta_ads_comentarios_ia: async () => a leitura da foto do post ("O que eu vi na foto") e
+  // async texto => a correção do dono. Sem elas, o passo 1 fica como antes.
+  photo: { type: Function, default: null },
+  fixPhoto: { type: Function, default: null },
   changing: { type: Boolean, default: false },
   canSendOld: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
@@ -106,7 +112,18 @@ const recebe = computed(() => {
   return examplesFailed.value ? { sample: true } : null;
 });
 const nao = computed(() => examples.value?.nao || null);
+// #2454: a resposta dentro de um comentário, com a flag meta_ads_comentarios_ia. A Meta decide se aceita o privado em resposta: a
+// tela não o promete.
+const resposta = computed(() => examples.value?.resposta || null);
 const sample = computed(() => Boolean(recebe.value?.sample));
+// O comentário de cima aparece uma vez só: quando ele é um dos exemplos, a resposta vai dentro do cartão dele ('recebe'
+// ou 'nao'); senão (null), num cartão próprio, com o de cima como contexto, sem selo.
+const respostaDentroDe = computed(() => {
+  const id = resposta.value?.parent?.id;
+  if (!id) return null;
+  if (!sample.value && recebe.value?.id === id) return 'recebe';
+  return nao.value?.id === id ? 'nao' : null;
+});
 const handle = comment =>
   comment.network === 'facebook' ? comment.author : `@${comment.author}`;
 const values = () => ({
@@ -225,6 +242,7 @@ const FIELD =
             {{ $t(`${KEY}.WHAT.${suggested ? 'SUGGESTED' : 'TEXT'}`) }}
           </p>
         </div>
+        <FotoDoPost v-if="photo && fixPhoto" :read="photo" :fix="fixPhoto" />
         <p
           v-if="writing"
           data-ia-dono-writing
@@ -392,6 +410,10 @@ const FIELD =
               <span class="i-lucide-send size-4" aria-hidden="true" />
               {{ $t(`${KEY}.SEE.${sample ? 'GETS' : 'GETS_BEFORE'}`) }}
             </span>
+            <RespostaDoFio
+              v-if="respostaDentroDe === 'recebe'"
+              :resposta="resposta"
+            />
             <div class="flex flex-col gap-1.5">
               <p class="m-0 text-sm font-semibold text-n-slate-11">
                 {{ $t(`${KEY}.SEE.IN_DM`) }}
@@ -465,9 +487,29 @@ const FIELD =
               <span class="i-lucide-minus size-4" aria-hidden="true" />
               {{ $t(`${KEY}.SEE.SKIPS`) }}
             </span>
+            <RespostaDoFio
+              v-if="respostaDentroDe === 'nao'"
+              :resposta="resposta"
+            />
             <p class="m-0 text-sm leading-6 text-n-slate-11">
               {{ $t(`${KEY}.SEE.SKIPS_WHY`) }}
             </p>
+          </li>
+          <li
+            v-if="resposta && !respostaDentroDe"
+            data-ia-dono-example="resposta"
+            class="flex flex-col gap-3 rounded-xl p-4 ring-1 ring-inset ring-n-weak"
+          >
+            <p
+              data-ia-dono-reply-parent
+              class="m-0 text-base leading-6 text-n-slate-12"
+            >
+              <span class="block text-sm font-semibold text-n-slate-11">
+                {{ handle(resposta.parent) }}
+              </span>
+              {{ resposta.parent.text }}
+            </p>
+            <RespostaDoFio :resposta="resposta" />
           </li>
         </ol>
 
