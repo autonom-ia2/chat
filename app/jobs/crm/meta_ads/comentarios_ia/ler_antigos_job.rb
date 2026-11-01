@@ -1,7 +1,8 @@
 # IA cuida dos comentários (#2212, B1/B2): o "Ler e mandar" do dono. Os comentários que chegaram antes de ligar o
 # cuidado (`started_at`), com até 7 dias (o privado não alcança os mais velhos), vão para a fila do motor como
 # comentários novos: cada um no seu CuidarJob, que lê o texto na Meta e decide se é o caso. O motor não repete o que já
-# fez (a reserva `ai_seen`). Os argumentos e os jobs levam só ids.
+# fez (a reserva `ai_seen`). Os argumentos e os jobs levam só ids. Com a flag meta_ads_comentarios_ia_conversa, também
+# as respostas de cliente dentro dos comentários (#2454, Fonte.que_esperam), com o id do de cima (`parent_id`).
 #
 # A Meta fora do ar tenta de novo poucas vezes (TENTATIVAS). Esgotado, ou com uma recusa que não passa com o tempo (sem
 # permissão), o job solta a marca `read_old_at` (Painel#ler_antigos!): o botão volta e o dono pode tentar de novo. O
@@ -35,7 +36,9 @@ class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
     return if care.nil?
 
     lido = ler(account, alvo)
-    return enfileirar_antigos(account, alvo.to_h.stringify_keys, care, lido[:linhas]) if lido[:status] == 'ready'
+    if lido[:status] == 'ready'
+      return enfileirar_antigos(account, alvo.to_h.stringify_keys, care, Crm::MetaAds::ComentariosIa::Fonte.que_esperam(account, lido))
+    end
     raise MetaIndisponivel if lido[:status] == PASSAGEIRO
 
     self.class.soltar!(account_id, alvo, lido[:status])
@@ -57,7 +60,8 @@ class Crm::MetaAds::ComentariosIa::LerAntigosJob < ApplicationJob
   def enfileirar(account, alvo, linha)
     comentario = Crm::MetaAds::ComentariosIa::Comentario.new(
       network: linha[:network], account_id: account.id, inbox_id: linha[:inbox_id], post_id: linha[:post_id],
-      ad_id: alvo['kind'] == 'ad' ? alvo['ad_id'] : nil, comment_id: linha[:id].to_s, created_time: linha[:momento]
+      ad_id: alvo['kind'] == 'ad' ? alvo['ad_id'] : nil, comment_id: linha[:id].to_s, parent_id: linha[:parent_id],
+      created_time: linha[:momento]
     )
     Crm::MetaAds::ComentariosIa::CuidarJob.perform_later(comentario.para_o_job.stringify_keys)
   end

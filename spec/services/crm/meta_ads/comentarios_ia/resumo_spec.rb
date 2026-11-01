@@ -24,6 +24,23 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
     expect(resumo.call).to eq(status: 'ready', waiting: 5, private_window: 3)
   end
 
+  describe 'as respostas de cliente dentro dos comentários (#2454)' do
+    before do
+      respostas = [linha('1a', dias: 1).merge(parent_id: '1'), linha('4a', dias: 9).merge(parent_id: '4')]
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas, escondidas: [], respostas_que_esperam: respostas })
+    end
+
+    it 'com a flag da conversa: o fio conta, nos que esperam e nos que cabem no privado' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+
+      expect(resumo.call).to eq(status: 'ready', waiting: 7, private_window: 4)
+    end
+
+    it 'sem a flag: como antes, só os de primeiro nível' do
+      expect(resumo.call).to eq(status: 'ready', waiting: 5, private_window: 3)
+    end
+  end
+
   it 'sem nenhuma IA: nem o Classificador, nem o cliente, nem uso gravado' do
     resumo.call
 

@@ -189,11 +189,13 @@ class Crm::MetaAds::ComentariosIa::Painel
   def lista(lido)
     acoes = acoes_da_ia((lido[:linhas] + lido[:escondidas]).pluck(:id))
     to_see = lido[:linhas].filter_map { |linha| item(linha, acoes[linha[:id].to_s]) }
-    contagens(lido[:linhas]).merge(status: 'ready', to_see: to_see, hidden: escondidas_pela_ia(lido[:escondidas], acoes),
-                                   results: resultados.merge(skipped: to_see.count { |linha| linha[:kind] == 'skipped' }))
+    esperam = Crm::MetaAds::ComentariosIa::Fonte.que_esperam(@account, lido)
+    contagens(esperam).merge(status: 'ready', to_see: to_see, hidden: escondidas_pela_ia(lido[:escondidas], acoes),
+                             results: resultados.merge(skipped: to_see.count { |linha| linha[:kind] == 'skipped' }))
   end
 
-  # unanswered: o que o "Ler e mandar" pode cuidar (até 7 dias e de antes de ligar); older: mais de 7 dias.
+  # unanswered: o que o "Ler e mandar" pode cuidar (até 7 dias e de antes de ligar); older: mais de 7 dias. Com a flag
+  # da conversa, contam também as respostas de cliente (#2454, Fonte.que_esperam), que o LerAntigosJob põe na fila.
   def contagens(linhas)
     { unanswered: linhas.count { |linha| recente?(linha) && antes_de_ligar?(linha) }, older: linhas.count { |linha| !recente?(linha) } }
   end

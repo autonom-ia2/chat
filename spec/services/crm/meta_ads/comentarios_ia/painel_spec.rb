@@ -177,6 +177,20 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
       expect(payload).to include(unanswered: 1, older: 1)
     end
 
+    # #2454: "Os N que já estão aqui" do Ligar conta também as respostas de cliente, só com a flag da conversa.
+    it 'as respostas de cliente entram no "Ler e mandar" só com a flag da conversa' do
+      respostas = [linha('1a', dias: 3).merge(parent_id: '1'), linha('2a', dias: 1).merge(parent_id: '2')]
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', dias: 1)], escondidas: [],
+                                                 respostas_que_esperam: respostas })
+
+      expect(painel.payload).to include(unanswered: 1, older: 0)
+
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+      payload = described_class.new(account: account.reload, alvo: alvo, fonte: fonte, conversation_access: ve_tudo, viewer: admin).payload
+      expect(payload).to include(unanswered: 2, older: 0)
+      expect(payload[:to_see].pluck(:id)).to eq(%w[1])
+    end
+
     it 'cuidado pausado: o que chegou depois de ligar e a IA não leu fica com o dono (paused), não some' do
       care.update!(status: 'paused')
       allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', dias: 1)], escondidas: [] })

@@ -26,6 +26,33 @@ RSpec.describe Crm::MetaAds::ComentariosIa::LerAntigosJob do
     expect(cuidar.map { |job| job['arguments'].first['comment_id'] }).to eq(%w[1])
   end
 
+  describe 'as respostas de cliente dentro dos comentários (#2454)' do
+    before do
+      respostas = [linha('1a', dias: 3).merge(parent_id: '1'), linha('1b', dias: 1).merge(parent_id: '1')]
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3)], escondidas: [],
+                                                 respostas_que_esperam: respostas })
+    end
+
+    def na_fila
+      enqueued_jobs.select { |job| job['job_class'] == 'Crm::MetaAds::ComentariosIa::CuidarJob' }.map { |job| job['arguments'].first }
+    end
+
+    it 'com a flag da conversa: vão para a fila do motor com o id do de cima, só ids, sem o texto' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+
+      described_class.perform_now(account.id, alvo)
+
+      expect(na_fila.map { |args| [args['comment_id'], args['parent_id']] }).to eq([['1', nil], %w[1a 1]])
+      expect(na_fila.to_json).not_to include('texto', 'pessoa')
+    end
+
+    it 'sem a flag: só os de primeiro nível, como antes' do
+      described_class.perform_now(account.id, alvo)
+
+      expect(na_fila.pluck('comment_id')).to eq(%w[1])
+    end
+  end
+
   it 'Meta fora do ar: tenta de novo poucas vezes e, esgotado, solta o "Ler e mandar" para o dono tentar de novo' do
     allow(fonte).to receive(:ler).and_return({ status: 'meta_unavailable', linhas: [], escondidas: [] })
     allow(Rails.logger).to receive(:warn)
