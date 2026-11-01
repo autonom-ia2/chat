@@ -3,15 +3,16 @@
 # 1. Filtra o que não é dela: flag desligada, caixa de outra conta ou de outro canal, resposta a outro comentário, post
 #    sem cuidado ou pausado, ou comentário com mais de 7 dias (o privado não sai mais).
 # 2. Reivindica o comentário (Registro, `ai_seen`) ANTES da IA: o webhook reenviado, ou outro job do mesmo comentário,
-#    sai aqui sem gastar nada. O teto do dia é contado depois da reserva (ela conta), para a concorrência não passar
-#    dele; passou, o comentário fica com o dono.
+#    sai aqui sem gastar nada. Não há teto de uso (decisão do Rodrigo, #2454): as guardas são contra defeito, não
+#    contra uso — o mesmo comentário não é decidido duas vezes (esta reserva) e um privado por pessoa em cada post
+#    (a reserva da pessoa, no passo 4).
 # 3. Lê o comentário na Meta (o evento leva só ids, #2327). Se a Meta diz que não dá (apagado, sem permissão), ele fica
 #    descartado; se ela não responde, o job tenta de novo (CuidarJob, com teto).
 #    Depois, pergunta à IA o que fazer (Classificador), com a legenda do post. IA fora do ar, ou a legenda sem resposta
 #    da Meta: o job tenta de novo. Sem a legenda, "quanto custa esse?" pode ser decidido errado, e o motor não manda
 #    privado no escuro; esgotadas as tentativas, o comentário fica com o dono. O que a IA escolheu, a certeza e o motivo
 #    ficam na linha `ai_seen` (#2424), também quando ela age.
-#    A IA que não cuidou (sem certeza, teto do dia, IA barrada pelo teto ou pela flag) grava `ai_unread`: o comentário
+#    A IA que não cuidou (sem certeza, IA barrada pela flag ou sem chave) grava `ai_unread`: o comentário
 #    fica com o dono, no "Esperando você", nunca some.
 # 4. Faz:
 #    - privado ou preço: reserva a pessoa no post (um privado por pessoa, antes da Meta), manda o privado e põe o
@@ -28,7 +29,6 @@
 # fica, para o reenvio não mandar o privado de novo.
 class Crm::MetaAds::ComentariosIa::Cuidar
   FLAG = 'meta_ads_comentarios_ia'.freeze
-  TETO_DIARIO = 200
   # Até quando o comentário aceita o Private Reply.
   JANELA = 7.days
   # Era o caso do privado, mas ele não sai aqui (sem o que mandar, ou a rede ainda não o libera).
@@ -52,8 +52,6 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   # Depois da reserva: um erro antes de agir na Meta solta a leitura, para o job tentar de novo. Depois de agir, não.
   # O comentário que a Meta diz que não dá para ler (apagado, sem permissão) fica com a reserva: descartado, não volta.
   def cuidar
-    return nao_cuidou('teto') if @registro.hoje(@comentario.account_id) > TETO_DIARIO
-
     lido = rede.ler
     return descartar if lido.nil?
 

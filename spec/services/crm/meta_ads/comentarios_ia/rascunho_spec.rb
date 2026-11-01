@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # IA cuida dos comentários (#2212): o começo da mensagem do passo 1, escrito pela IA uma vez por legenda (decisão do
 # Rodrigo no teste real de 30/10: abrir a tela de novo não pode custar outra chamada). O cliente da OpenAI é o de
-# verdade, com o HTTP simulado: o uso gravado e o teto são os reais.
+# verdade, com o HTTP simulado: o uso gravado é o real.
 RSpec.describe Crm::MetaAds::ComentariosIa::Rascunho do
   around do |example|
     with_modified_env CRM_KANBAN_ENABLED: 'true', CRM_AI_ENABLED: 'true' do
@@ -182,16 +182,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rascunho do
     expect(a_request(:post, url)).not_to have_been_made
   end
 
-  it 'no teto do dia da tela: não chama a IA; o já guardado continua valendo' do
+  it 'sem teto de uso (#2454): com o dia cheio de chamadas da tela, ainda escreve' do
     openai_responde
-    rascunho(post_id: '17900000000000009')
-    teto = Crm::MetaAds::ComentariosIa::Classificador::TETO_DIARIO_DA_TELA
-    # rubocop:disable Rails/SkipsModelValidations -- enche o teto do dia sem 300 chamadas
-    Crm::AiUsageEvent.insert_all(Array.new(teto) { { account_id: account.id, feature: feature, model: 'x', created_at: Time.current } })
+    # rubocop:disable Rails/SkipsModelValidations -- um dia cheio de uso sem mil chamadas
+    Crm::AiUsageEvent.insert_all(Array.new(1_000) { { account_id: account.id, feature: feature, model: 'x', created_at: Time.current } })
     # rubocop:enable Rails/SkipsModelValidations
 
-    expect(rascunho).to eq(status: 'ai_unavailable')
-    expect(rascunho(post_id: '17900000000000009')).to eq(status: 'ready', message: escrito)
+    expect(rascunho).to eq(status: 'ready', message: escrito)
     expect(a_request(:post, url)).to have_been_made.once
   end
 

@@ -5,7 +5,7 @@
 # O modelo lê, cada um no seu campo, a legenda do post, o que ele oferece (a ficha), a correção e o critério do dono e o
 # comentário. Tudo é dado escrito pelo dono ou por terceiro, nunca ordem.
 #
-# Quando mandar o privado (#2424): com o "para quem" (do dono, ou o fixo do Resumo), é ele o significado de `private`
+# Quando mandar o privado (#2424): com o "para quem" do dono, é ele o significado de `private`
 # e `price`, e o "não é o caso" entra em `no_reply`. Nada genérico compete com o critério (no teste real de 31/10,
 # "quero saber mais sobre a empresa" caiu no "interesse" fixo do privado, com o critério "Quem perguntar o preço").
 # Sem o "para quem", vale a ficha do post, com as decisões de sempre (DECISOES). A legenda diz do que o comentário fala
@@ -16,13 +16,13 @@
 # Nada é guardado como exemplo. A chave é sempre a da própria conta (decisão do Rodrigo no #2424: "Sempre a chave de
 # cada conta"): Crm::Ai::CredentialResolver, pelo hook crm_kanban_ai, como no Rascunho. Hook desligado ou sem chave não
 # cai na chave da instalação: é `no_credential`, e o comentário vai para o dono. O uso fica em Crm::AiUsageEvent com a
-# feature própria, para o teto diário.
+# feature própria. Não há teto de uso (decisão do Rodrigo, #2454).
 #
 # Sem certeza suficiente, ou com o modelo fora do ar, não decide: o comentário fica para a pessoa, sem resposta da IA.
 class Crm::MetaAds::ComentariosIa::Classificador
   FEATURE = 'meta_ads_comentarios_ia'.freeze
-  # Prévia, resumo e o começo da mensagem (a tela do dono) gravam o uso com outra feature e têm teto próprio: repetir a
-  # prévia não esgota o teto do motor, que deixaria os comentários reais com o dono.
+  # A prévia e o começo da mensagem (a tela do dono) gravam o uso com outra feature: o custo da tela fica separado do
+  # do motor.
   FEATURE_DA_TELA = 'meta_ads_comentarios_ia_tela'.freeze
   CERTEZA_MINIMA = 0.7
   MODEL = Crm::Ai::Config::MODEL_CLASSIFY
@@ -65,10 +65,6 @@ class Crm::MetaAds::ComentariosIa::Classificador
   # O que a IA escolheu (`escolha`), com que certeza e por quê; `chave` é a decisão que vale, nil sem certeza suficiente.
   Avaliacao = Struct.new(:chave, :escolha, :certeza, :motivo, keyword_init: true)
 
-  # Perguntas por conta, por dia: o motor e a tela, cada um com o seu.
-  TETO_DIARIO = 1_000
-  TETO_DIARIO_DA_TELA = 300
-
   # A pergunta não deu: o motor deixa o comentário com o dono (Bloqueado) ou tenta de novo pelo job (Indisponivel); a
   # tela diz que a IA não está disponível.
   class Erro < StandardError
@@ -80,28 +76,24 @@ class Crm::MetaAds::ComentariosIa::Classificador
     end
   end
 
-  # Flag desligada, teto do dia, IA desligada na instalação ou conta sem credencial: a pergunta não vai ao modelo, e
+  # Flag desligada, IA desligada na instalação ou conta sem credencial: a pergunta não vai ao modelo, e
   # tentar de novo não resolve. O comentário vai direto para o dono.
   Bloqueado = Class.new(Erro)
   # O modelo não respondeu, ou respondeu fora do formato: passa sozinho, o job tenta de novo.
   Indisponivel = Class.new(Erro)
 
-  # tela: true na prévia e no resumo. legenda: o texto do post, lido na Meta.
+  # tela: true na prévia. legenda: o texto do post, lido na Meta.
   def initialize(care:, legenda: nil, tela: false, cliente: nil)
     @care = care
     @legenda = legenda.to_s.strip.presence
     @feature = tela ? FEATURE_DA_TELA : FEATURE
-    @teto = tela ? TETO_DIARIO_DA_TELA : TETO_DIARIO
     @cliente = cliente
   end
 
-  # O modelo e a IA que escreve o começo da mensagem (Rascunho) são custo nosso: por conta, só com a flag ligada e até o
-  # teto do dia da feature (o uso gravado com ela). Fora disso, Bloqueado.
-  def self.liberado!(conta, feature:, teto:)
+  # O modelo e a IA que escreve o começo da mensagem (Rascunho) só com a flag do cuidado ligada na conta. Sem teto de
+  # uso (#2454). Fora disso, Bloqueado.
+  def self.liberado!(conta)
     raise Bloqueado, 'feature_disabled' unless conta&.feature_enabled?(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
-
-    usadas = Crm::AiUsageEvent.where(account_id: conta.id, feature: feature, created_at: Time.current.all_day).count
-    raise Bloqueado, 'daily_limit' if usadas >= teto
   end
 
   # A chave da decisão ('private', 'price', 'to_you', 'hide', 'no_reply') ou nil (sem certeza). O modelo fora do ar
@@ -126,12 +118,11 @@ class Crm::MetaAds::ComentariosIa::Classificador
 
   private
 
-  # O teto do motor ou o da tela, pelo uso gravado com a feature de cada um.
   def liberado!
-    self.class.liberado!(@care.account, feature: @feature, teto: @teto)
+    self.class.liberado!(@care.account)
   end
 
-  # A ida que não voltou não grava uso no cliente: conta aqui, para o teto valer também na falha.
+  # A ida que não voltou não grava uso no cliente: grava aqui, para o custo da falha também aparecer.
   def perguntar(texto)
     raise Bloqueado, 'ai_disabled' unless Crm::Ai::Config.enabled?
 

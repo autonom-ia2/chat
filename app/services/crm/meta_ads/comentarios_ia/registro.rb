@@ -10,10 +10,10 @@
 #   chegou à chamada vence em Crm::MetaAdsCommentAction::RESERVED_TTL e sai antes da próxima (soltar_abandonada!).
 # As outras são registro do que já aconteceu, gravadas depois (gravar!).
 #
-# Ações da IA: ai_seen (a IA leu o comentário; conta no teto do dia), private_reply, reply, hide, to_you (reclamação
+# Ações da IA: ai_seen (a IA leu o comentário), private_reply, reply, hide, to_you (reclamação
 # passada à pessoa), private_reply_failed (o privado que a Meta recusou), private_reply_unsure (a Meta não respondeu ao
 # privado: pode ter saído), kept_for_owner (a pergunta que era o caso do privado, mas ele não sai ali), ai_unread (a
-# IA não cuidou: a Meta ou a IA fora do ar em todas as tentativas, teto do dia, sem certeza, sem saber quem comentou,
+# IA não cuidou: a Meta ou a IA fora do ar em todas as tentativas, sem certeza, sem saber quem comentou,
 # ou a Meta não escondeu) e private_reply_already (era o caso do privado, mas a pessoa já tem um deste post). As seis
 # últimas formam o "Esperando você".
 #
@@ -40,11 +40,6 @@ module Crm::MetaAds::ComentariosIa::Registro
     linha(comentario, LIDO).update_all( # rubocop:disable Rails/SkipsModelValidations
       ai_decision: avaliacao.escolha, ai_confidence: avaliacao.certeza, ai_reason: avaliacao.motivo.to_s.first(MOTIVO_MAXIMO).presence
     )
-  end
-
-  # Comentários que a IA leu hoje na conta, no fuso da plataforma.
-  def hoje(account_id)
-    acoes(account_id).where(action: LIDO, at: Time.current.all_day).count
   end
 
   # Quantas respostas públicas a IA já deu na conta: escolhe a frase da vez, para não repetir a mesma em seguida.

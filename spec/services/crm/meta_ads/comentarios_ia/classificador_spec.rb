@@ -149,28 +149,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       expect(cliente).not_to have_received(:create)
     end
 
-    it 'no teto do dia da conta, Bloqueado sem chamar o modelo; outra conta e o dia anterior não contam' do
-      evento = { feature: described_class::FEATURE, model: 'gpt', input_tokens: 1, output_tokens: 0 }
-      create_list(:crm_ai_usage_event, 2, account: account, **evento)
-      create(:crm_ai_usage_event, account: account, created_at: 1.day.ago, **evento)
-      create(:crm_ai_usage_event, account: create(:account), **evento)
-      stub_const("#{described_class}::TETO_DIARIO", 2)
-
-      expect { classificador.decidir!('Quanto custa?') }
-        .to raise_error(described_class::Bloqueado) { |erro| expect(erro.code).to eq('daily_limit') }
-      expect(cliente).not_to have_received(:create)
-    end
-
-    it 'a tela (prévia e resumo) tem teto próprio: repetir a prévia não esgota o teto do motor' do
-      evento = { model: 'gpt', input_tokens: 1, output_tokens: 0 }
-      create_list(:crm_ai_usage_event, 2, account: account, feature: described_class::FEATURE_DA_TELA, **evento)
-      stub_const("#{described_class}::TETO_DIARIO_DA_TELA", 2)
-      tela = described_class.new(care: care, tela: true, cliente: cliente)
-
-      expect { tela.decidir!('Quanto custa?') }
-        .to raise_error(described_class::Bloqueado) { |erro| expect(erro.code).to eq('daily_limit') }
+    it 'sem teto de uso (#2454): com milhares de perguntas gravadas hoje, no motor e na tela, ainda pergunta' do
+      evento = { account_id: account.id, model: 'gpt', input_tokens: 1, output_tokens: 0, created_at: Time.current }
+      linhas = [described_class::FEATURE, described_class::FEATURE_DA_TELA].flat_map { |feature| Array.new(1_500) { evento.merge(feature: feature) } }
+      Crm::AiUsageEvent.insert_all(linhas) # rubocop:disable Rails/SkipsModelValidations -- uso de um dia cheio sem 3 mil chamadas
       responde('price', 0.9)
+
       expect(classificador.decidir!('Quanto custa?')).to eq('price')
+      expect(described_class.new(care: care, tela: true, cliente: cliente).decidir!('Quanto custa?')).to eq('price')
+      expect(cliente).to have_received(:create).twice
     end
 
     it 'a tela pergunta com a feature dela, sem nova tentativa' do
@@ -183,7 +170,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       expect(Crm::Ai::ResponsesClient).to have_received(:new).with(hash_including(feature: described_class::FEATURE_DA_TELA, max_retries: 0))
     end
 
-    it 'Bloqueado e Indisponivel são erros do Classificador, que a prévia, o resumo e o job tratam' do
+    it 'Bloqueado e Indisponivel são erros do Classificador, que a prévia e o job tratam' do
       expect([described_class::Bloqueado, described_class::Indisponivel]).to all(be < described_class::Erro)
     end
   end

@@ -37,7 +37,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
   before do
     account.enable_features!(described_class::FLAG)
-    allow(registro).to receive_messages(reservar!: true, hoje: 1, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
+    allow(registro).to receive_messages(reservar!: true, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
                                         reservar_pessoa!: true, soltar_pessoa!: 1, decisao!: 1)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
     allow(rede).to receive_messages(privado: enviado, ler: { text: 'Quanto custa?', from_name: 'carla.mendes' })
@@ -384,8 +384,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).to have_received(:privado).with(care).ordered
   end
 
-  it 'IA barrada (teto do dia ou flag): não sobe, fica com o dono como "não cuidei"' do
-    allow(classificador).to receive(:avaliar!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Bloqueado.new('daily_limit'))
+  it 'IA barrada (flag desligada ou sem chave): não sobe, fica com o dono como "não cuidei"' do
+    allow(classificador).to receive(:avaliar!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Bloqueado.new('feature_disabled'))
 
     cuidar
 
@@ -393,24 +393,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(registro).not_to have_received(:soltar!)
   end
 
-  it 'teto do dia, contado depois da reserva (ela conta): o comentário fica com o dono, sem ir à IA' do
-    allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO + 1)
-    allow(classificador).to receive(:avaliar!)
-
-    cuidar
-
-    expect(classificador).not_to have_received(:avaliar!)
-    expect(rede).not_to have_received(:ler)
-    expect(registro).to have_received(:gravar!).with(comentario, 'ai_unread')
-  end
-
-  it 'no teto exato (o 200º do dia), ainda cuida' do
-    allow(registro).to receive(:hoje).and_return(described_class::TETO_DIARIO)
+  it 'sem teto de uso (#2454): com centenas de comentários lidos hoje na conta, ainda cuida do próximo' do
+    250.times do |indice|
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: "lido-#{indice}", action: 'ai_seen', actor: 'ai')
+    end
     decide('no_reply')
 
-    cuidar
+    described_class.new(comentario, rede: rede, classificador: classificador, conversa: conversa).call
 
-    expect(classificador).to have_received(:avaliar!)
+    expect(classificador).to have_received(:avaliar!).with('Quanto custa?')
+    expect(Crm::MetaAdsCommentAction.where(account_id: account.id, comment_id: 'c-1', action: 'ai_unread')).not_to exist
   end
 
   describe 'o que não chega à IA' do

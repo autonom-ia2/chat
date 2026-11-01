@@ -47,15 +47,6 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
     expect(Crm::MetaAdsCommentAction.pluck(:action, :actor)).to eq([%w[reply user]])
   end
 
-  it 'conta o teto do dia pelos comentários que a IA leu hoje, na conta' do
-    described_class.reservar!(comentario('c-1'))
-    described_class.reservar!(comentario('c-2'))
-    travel_to(1.day.ago) { described_class.reservar!(comentario('c-3')) }
-    Crm::MetaAdsCommentAction.record!(account: create(:account), network: 'instagram', comment_id: 'c-9', action: 'ai_seen', actor: 'ai')
-
-    expect(described_class.hoje(account.id)).to eq(2)
-  end
-
   it 'a reivindicação devolve a linha, que o adaptador confirma quando a Meta aceita' do
     reivindicacao = described_class.reivindicar!(comentario, 'private_reply')
 
