@@ -13,19 +13,19 @@
 
 **O que entrega.**
 - Anti-loop próprio, que não se perde quando o sistema limpa o contexto entre uma ação e outra.
-- Cada ação feita pela automação fica registrada em nome de quem a ligou.
+- A base para cada ação da automação ficar registrada em nome de quem a ligou. As regras antigas não guardam quem as ligou e continuam como “sistema”; o nome aparece no motor novo (prova na F3.9).
 - A mesma contagem de cascata vale para os três motores: Regras, etapas do CRM e o novo.
 - O Guia só cria ou liga automação para quem tem a permissão de gerenciar automações (PR de autorização, separado).
 - Quando uma ação move o cliente para uma etapa, o card dele é criado ou atualizado.
 
 **Aceite.**
 1. **F1.1** Uma regra que muda a conversa e dispara outra regra que a muda de volta para no segundo passo, e o histórico diz por quê.
-2. **F1.2** Uma ação feita pela automação aparece no registro com o nome de quem a ligou, não “sistema”.
+2. **F1.2** A base pronta: o registro aceita o nome de quem ligou a automação, e as regras antigas seguem iguais (“sistema”). A prova com nome de verdade fica na F3.9, porque a regra antiga não guarda quem a ligou (Rodrigo, 01/11).
 3. **F1.3** Uma pessoa sem a permissão de gerenciar automações pede ao Guia “cria uma automação” e ouve que não tem acesso. Com a permissão, funciona.
 4. **F1.4** Mover pela automação um contato sem card cria o card na etapa certa, sem duplicar.
 5. **F1.5** As regras de hoje das contas 6, 16 e 17 continuam funcionando igual.
 
-**Exemplo.** A Juliana liga a automação “lead novo vai para o Rafael”. Seis meses depois, o histórico do card mostra “movido pela automação de Juliana Prado”, e não “sistema”.
+**Exemplo.** Uma regra pede uma decisão ao atendente. Ele responde “sim”, e a regra faz os passos seguintes uma vez só, sem mandar mensagem em dobro ao cliente, mesmo que outra regra seja disparada no caminho.
 
 ---
 
