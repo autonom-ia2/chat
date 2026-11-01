@@ -493,7 +493,7 @@ RSpec.describe Crm::MetaAds::InstagramComments do
           recusa({ code: 100, error_subcode: 2_534_023, message: 'Texto de terceiro' })
 
           expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }.to raise_error(described_class::Error) { |e|
-            expect(e).to have_attributes(code: 'meta_refused', meta_code: 100, meta_subcode: 2_534_023)
+            expect(e).to have_attributes(code: 'meta_refused', meta_code: 100, meta_subcode: 2_534_023, meta_http: 400)
           }
           expect(Crm::MetaAdsCommentAction.where(comment_id: 'c9', action: 'private_reply')).to be_empty
           expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c9', action: 'private_reply_failed'))

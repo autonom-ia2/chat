@@ -25,7 +25,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   rescue Crm::MetaAds::InstagramPrivateReply::Error => e
     erro = OUTRO_ENVIO.include?(e.code) ? Crm::MetaAds::ComentariosIa::Rede::JA_FEITO : e.code
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: erro, talvez_entregue: sem_confirmacao?, codigo: e.meta_code,
-                                                 subcodigo: e.meta_subcode)
+                                                 subcodigo: e.meta_subcode, http: e.meta_http)
   end
 
   def ler

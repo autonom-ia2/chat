@@ -27,6 +27,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
     expect(acoes.find_by(action: 'ai_unread')).to have_attributes(ai_decision: nil, ai_reason: nil)
   end
 
+  it 'a pessoa reservada pelo mesmo comentário (o job tentando de novo depois de um limite da Meta) segue reservada para ele' do
+    item = Crm::MetaAds::ComentariosIa::Comentario.new(network: 'instagram', account_id: account.id, comment_id: 'c-1', post_id: '1790',
+                                                       from_id: 'igsid-1')
+
+    expect(described_class.reservar_pessoa!(item)).to be(true)
+    expect(described_class.reservar_pessoa!(item)).to be(true)
+    expect(described_class.reservar_pessoa!(item.dup.tap { |outro| outro.comment_id = 'c-2' })).to be(false)
+
+    described_class.soltar_pessoa_do_comentario!(item.dup.tap { |sem_autor| sem_autor.from_id = nil })
+    expect(Crm::MetaAdsCommentPerson.count).to eq(0)
+  end
+
   it 'a recusa do privado em resposta (#2454) fica com o código e o subcódigo da Meta, como IA' do
     described_class.recusa_do_privado!(comentario, codigo: 100, subcodigo: 2_534_023)
 

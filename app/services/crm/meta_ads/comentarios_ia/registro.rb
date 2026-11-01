@@ -67,12 +67,19 @@ module Crm::MetaAds::ComentariosIa::Registro
                                       ad_id: comentario.ad_id, meta_error_code: codigo, meta_error_subcode: subcodigo)
   end
 
-  # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só.
+  # true só para quem reservou primeiro: a mesma pessoa, no mesmo post, recebe um privado só. O mesmo comentário que já
+  # a reservou (o job tentando de novo depois de um limite da Meta, #2454) segue com ela.
   def reservar_pessoa!(comentario)
     Crm::MetaAdsCommentPerson.create!(pessoa(comentario).merge(comment_id: comentario.comment_id.to_s))
     true
   rescue ActiveRecord::RecordNotUnique
-    false
+    Crm::MetaAdsCommentPerson.exists?(pessoa(comentario).merge(comment_id: comentario.comment_id.to_s))
+  end
+
+  # A reserva da pessoa feita por este comentário, achada só pelo comentário (o job, esgotado, não tem o autor lido).
+  def soltar_pessoa_do_comentario!(comentario)
+    Crm::MetaAdsCommentPerson.where(account_id: comentario.account_id, network: comentario.network, post_id: comentario.post_id.to_s,
+                                    comment_id: comentario.comment_id.to_s).delete_all
   end
 
   # A Meta recusou o privado: a pessoa pode receber pelo próximo comentário. Só a reserva deste comentário sai.

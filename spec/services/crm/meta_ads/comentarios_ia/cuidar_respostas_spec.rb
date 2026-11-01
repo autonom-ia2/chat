@@ -128,6 +128,35 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
       expect(conversa).not_to have_received(:para_voce!)
     end
 
+    # Graph API, "Rate Limiting" (developers.facebook.com/docs/graph-api/overview/rate-limiting): 4, 17, 32, 613 e os
+    # de caso de uso da Página, do Instagram e do Messenger (80001, 80002, 80006); mais o HTTP 429.
+    it 'limite de chamadas da Meta não é recusa: passageiro, o job tenta de novo, sem soltar a pessoa nem decidir pelo dono' do
+      decide('private')
+      envios = [4, 17, 32, 613, 80_001, 80_002, 80_006].map { |codigo| recusa(codigo) }
+      envios << Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: 'meta_refused', http: 429)
+
+      envios.each do |envio|
+        allow(rede).to receive(:privado).and_return(envio)
+
+        expect { cuidar }.to raise_error(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+      end
+
+      expect(registro).to have_received(:soltar!).with(anything, 'ai_seen').exactly(envios.size).times
+      expect(registro).not_to have_received(:soltar_pessoa!)
+      expect(registro).not_to have_received(:gravar!)
+      expect(rede).not_to have_received(:responder)
+      expect(conversa).not_to have_received(:para_voce!)
+    end
+
+    it 'no comentário de primeiro nível, o limite segue a regra de hoje (sem a flag nova, nada muda)' do
+      decide('private')
+      allow(rede).to receive(:privado).and_return(recusa(4))
+
+      cuidar(resposta(parent_id: nil))
+
+      expect(conversa).to have_received(:para_voce!).with(anything, care, 'private_reply_failed')
+    end
+
     it 'a Meta recusa e não há frase pública que não prometa o privado: fica com o dono, sem resposta' do
       decide('private')
       allow(rede).to receive(:privado).and_return(recusa(100, 33))

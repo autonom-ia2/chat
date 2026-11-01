@@ -198,10 +198,21 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     return outro_envio if envio.erro == Crm::MetaAds::ComentariosIa::Rede::JA_FEITO
     return para_voce('private_reply_unsure') if envio.talvez_entregue
 
+    return limite_em_resposta(envio) if @comentario.resposta? && Crm::MetaAds::ComentariosIa::LimiteDaMeta.do_envio?(envio)
+
     @registro.soltar_pessoa!(@comentario)
     return recusado_em_resposta(envio, decisao) if @comentario.resposta? && envio.codigo.present?
 
     para_voce('private_reply_failed')
+  end
+
+  # #2454: limite de chamadas da Meta no privado em resposta não é recusa. A leitura sai (para o job poder cuidar de
+  # novo) e o erro sobe como passageiro: o CuidarJob tenta mais tarde. A pessoa fica reservada para este comentário
+  # (Registro#reservar_pessoa! reconhece a dele), e nada é decidido pelo dono.
+  def limite_em_resposta(envio)
+    Rails.logger.info("[comentarios_ia] limite da Meta no privado em resposta codigo=#{envio.codigo} http=#{envio.http} #{ids}")
+    soltar_leitura
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel
   end
 
   # #2454: a Meta recusou o privado na resposta (2º nível), com código. É final: não volta para a fila. A pessoa recebe

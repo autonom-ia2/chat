@@ -29,14 +29,15 @@
 # `comment` vem como a Graph ou o webhook mandam: { 'id', 'timestamp', 'parent_id', 'from' => { 'id', 'username' },
 # 'media' => { 'id' } }.
 class Crm::MetaAds::InstagramPrivateReply
-  # `meta_code` e `meta_subcode`: os da Meta na recusa, para quem chama decidir sem ler a mensagem dela.
+  # `meta_code`, `meta_subcode` e `meta_http`: os da Meta na recusa, para quem chama decidir sem ler a mensagem dela.
   class Error < StandardError
-    attr_reader :code, :meta_code, :meta_subcode
+    attr_reader :code, :meta_code, :meta_subcode, :meta_http
 
-    def initialize(code, meta_code: nil, meta_subcode: nil)
+    def initialize(code, meta_code: nil, meta_subcode: nil, meta_http: nil)
       @code = code
       @meta_code = meta_code
       @meta_subcode = meta_subcode
+      @meta_http = meta_http
       super(code)
     end
   end
@@ -94,7 +95,7 @@ class Crm::MetaAds::InstagramPrivateReply
       release_person!(person_id)
       refused_safely!(action, result) if second_level?(comment) && result.error_code
     end
-    raise Error.new(error_code(result), meta_code: result.error_code, meta_subcode: result.error_subcode)
+    raise Error.new(error_code(result), meta_code: result.error_code, meta_subcode: result.error_subcode, meta_http: result.http_code)
   end
 
   def second_level?(comment)

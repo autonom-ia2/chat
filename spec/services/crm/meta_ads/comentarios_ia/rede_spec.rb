@@ -54,6 +54,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       stub_request(:post, "#{graph}/555/messages").to_return(status: 503, body: 'indisponível')
       expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(codigo: nil, subcodigo: nil)
+
+      stub_request(:post, "#{graph}/555/messages").to_return(status: 429, body: 'devagar')
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, http: 429, talvez_entregue: false)
     end
 
     it 'só a recusa explícita (4xx) é certa; 5xx e rede podem ter entregado' do
@@ -343,12 +346,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     end
 
     it 'na resposta a comentário (#2454), o serviço recebe o parent_id; a recusa traz o código e o subcódigo da Meta' do
-      erro = Crm::MetaAds::InstagramPrivateReply::Error.new('meta_refused', meta_code: 100, meta_subcode: 2_534_023)
+      erro = Crm::MetaAds::InstagramPrivateReply::Error.new('meta_refused', meta_code: 100, meta_subcode: 2_534_023, meta_http: 400)
       allow(privado).to receive(:perform!).and_raise(erro)
 
       envio = described_class::Instagram.new(inbox, comentario(parent_id: '555_666')).privado(care)
 
-      expect(envio).to have_attributes(ok: false, erro: 'meta_refused', codigo: 100, subcodigo: 2_534_023)
+      expect(envio).to have_attributes(ok: false, erro: 'meta_refused', codigo: 100, subcodigo: 2_534_023, http: 400)
       expect(privado).to have_received(:perform!).with(hash_including(comment: hash_including('parent_id' => '555_666')))
     end
 
