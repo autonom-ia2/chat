@@ -73,18 +73,41 @@ class Crm::MetaAds::ComentariosIa::Fonte
   # A legenda do primeiro post (o anúncio nas duas redes é o mesmo criativo), ou nil. Na tela, a Meta fora do ar não
   # derruba a prévia: ela segue sem a legenda.
   def legenda
+    rede = rede_do_post
+    rede && Crm::MetaAds::ComentariosIa::Rede.para(*rede.values_at(:inbox, :comentario))&.legenda
+  rescue Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+    nil
+  end
+
+  # "O que eu vi na foto" (#2454) do primeiro post, como a legenda: a Foto, que lê as imagens na Rede só quando ainda não
+  # há leitura. nil sem caixa ou sem post.
+  def foto
+    rede = rede_do_post
+    return if rede.nil?
+
+    inbox, comentario = rede.values_at(:inbox, :comentario)
+    Crm::MetaAds::ComentariosIa::Foto.new(account: inbox.account, network: comentario.network, post_id: comentario.post_id,
+                                          imagens: -> { Crm::MetaAds::ComentariosIa::Rede.para(inbox, comentario)&.imagens || [] })
+  end
+
+  # O que a foto mostra (a correção do dono ou a leitura da IA) do primeiro post, sem ler a Meta nem a IA, ou nil.
+  def texto_da_foto
+    rede = rede_do_post
+    rede && Crm::MetaAds::ComentariosIa::Foto.texto_para_ia(rede[:inbox].account, rede[:comentario].network, rede[:comentario].post_id)
+  end
+
+  private
+
+  # O primeiro post (o anúncio nas duas redes é o mesmo criativo): a caixa e um comentário só com ids, para a Rede.
+  def rede_do_post
     network, leitura = @leituras.first
     inbox = leitura && Inbox.find_by(id: leitura[:inbox_id])
     return if inbox.nil? || leitura[:post_id].blank?
 
     comentario = Crm::MetaAds::ComentariosIa::Comentario.new(network: network, account_id: inbox.account_id, inbox_id: inbox.id,
                                                              post_id: leitura[:post_id])
-    Crm::MetaAds::ComentariosIa::Rede.para(inbox, comentario)&.legenda
-  rescue Crm::MetaAds::ComentariosIa::Rede::Indisponivel
-    nil
+    { inbox: inbox, comentario: comentario }
   end
-
-  private
 
   def ler_cada_rede
     @leituras.map { |network, leitura| [network, leitura, leitura[:ler].call || SUMIU] }

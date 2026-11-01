@@ -121,6 +121,38 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(meta_call).to have_been_made.once
   end
 
+  describe 'o que eu vi na foto (#2454)' do
+    let(:cliente) { instance_double(Crm::Ai::ResponsesClient) }
+
+    before do
+      stub_request(:get, %r{#{ig}/#{media_id}\?.*fields=media_type})
+        .to_return(status: 200, headers: json, body: { media_type: 'IMAGE', media_url: 'https://cdn.exemplo/ebook.jpg' }.to_json)
+      allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+        .and_return(instance_double(Crm::Ai::CredentialResolver, resolve: { api_key: 'k', source: :hook }))
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(cliente)
+      allow(cliente).to receive(:create).and_return({ text: { description: 'A capa de um e-book de bolos.' }.to_json })
+    end
+
+    it 'sem a flag da conversa: 404' do
+      post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(cliente).not_to have_received(:create)
+    end
+
+    it 'com a flag: lê a foto do post do criativo e o dono corrige' do
+      account.enable_features!('meta_ads_comentarios_ia_conversa')
+
+      post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('status' => 'ready', 'text' => 'A capa de um e-book de bolos.', 'corrected' => false)
+
+      put "#{base}/cuidado/foto", params: { correction: 'E-book de bolos caseiros' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('status' => 'ready', 'text' => 'E-book de bolos caseiros', 'corrected' => true)
+      expect(Crm::MetaAdsPostReading.sole).to have_attributes(network: 'instagram', post_id: media_id, corrected_by_id: admin.id)
+    end
+  end
+
   it 'lê o criativo do anúncio uma vez só por tela, mesmo passando pela leitura dos comentários' do
     get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json
 
