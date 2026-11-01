@@ -30,8 +30,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Resumo do
       allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: linhas, escondidas: [], respostas_que_esperam: respostas })
     end
 
-    it 'com a flag da conversa: o fio conta, nos que esperam e nos que cabem no privado' do
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+    it 'com a flag meta_ads_comentarios_ia: o fio conta, nos que esperam e nos que cabem no privado' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
 
       expect(resumo.call).to eq(status: 'ready', waiting: 7, private_window: 4)
     end

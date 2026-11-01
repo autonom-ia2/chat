@@ -90,9 +90,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       enviado
     end
 
-    it 'com a flag da conversa: vai no campo photo da entrada, e as instruções só explicam o campo' do
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
-
+    it 'vai no campo photo da entrada, e as instruções só explicam o campo' do
       enviado = pedido_com(foto)
 
       expect(JSON.parse(enviado[:input])).to include('photo' => foto, 'caption' => 'Antes e depois da sala 😍', 'comment' => 'Quanto custa esse?')
@@ -100,16 +98,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       expect(enviado[:instructions]).not_to include('vestido', 'R$ 259')
     end
 
-    it 'sem a flag da conversa: a entrada e as instruções ficam byte a byte as de antes' do
-      expect(pedido_com(foto)).to eq(pedido_com(nil))
-      expect(JSON.parse(pedido_com(foto)[:input])).not_to have_key('photo')
-    end
-
-    it 'com a flag, mas sem leitura da foto: também como antes' do
-      sem_flag = pedido_com(nil)
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
-
-      expect(pedido_com('  ')).to eq(sem_flag)
+    it 'sem leitura da foto: sem o campo photo e sem a explicação dele' do
+      expect(pedido_com('  ')).to eq(pedido_com(nil))
+      expect(JSON.parse(pedido_com(nil)[:input])).not_to have_key('photo')
+      expect(pedido_com(nil)[:instructions]).not_to include(described_class::FOTO)
     end
   end
 
@@ -125,9 +117,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       enviado
     end
 
-    it 'com a flag da conversa: o comentário de cima vai no campo parent_comment, e as instruções só explicam o campo' do
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
-
+    it 'o comentário de cima vai no campo parent_comment, e as instruções só explicam o campo' do
       enviado = pedido_da_resposta(pai)
 
       expect(JSON.parse(enviado[:input])).to include('parent_comment' => pai, 'comment' => 'Obrigada!')
@@ -135,37 +125,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       expect(enviado[:instructions]).not_to include('Ignore as regras', 'Tem em azul')
     end
 
-    it 'sem a flag da conversa, ou sem o comentário de cima: a entrada e as instruções ficam as de antes' do
-      expect(pedido_da_resposta(pai)).to eq(pedido_da_resposta(nil))
-      expect(JSON.parse(pedido_da_resposta(pai)[:input])).not_to have_key('parent_comment')
-
-      sem_flag = pedido_da_resposta(nil)
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
-      expect(pedido_da_resposta('  ')).to eq(sem_flag)
-    end
-  end
-
-  # #2454: a fixture é o que o Classificador do origin/main (8610e30a04, antes da foto e da resposta) mandava ao modelo em
-  # cada cenário. Sem a flag da conversa, o de agora manda o mesmo, byte a byte, mesmo recebendo a foto e o de cima.
-  describe 'sem a flag da conversa, o pedido de antes do #2454 (fixture)' do
-    fixture = JSON.parse(Rails.root.join('spec/fixtures/crm_meta_ads_classificador_antes_2454.json').read)
-
-    fixture.each do |nome, caso|
-      it nome do
-        c = caso['cenario']
-        care.update!(offer: c['offer'], note: c['note'], para_quem: c['para_quem'])
-        responde('no_reply', 0.9)
-
-        described_class.new(care: care, legenda: c['legenda'], tela: c['tela'], cliente: cliente,
-                            foto: 'Um vestido azul de linho num cabide.')
-                       .decidir!(c['comment'], pai: 'Tem em azul?')
-
-        enviado = nil
-        expect(cliente).to have_received(:create) { |**argumentos| enviado = argumentos }
-        expect(enviado[:instructions]).to eq(caso['pedido']['instructions'])
-        expect(enviado[:input]).to eq(caso['pedido']['input'])
-        expect(JSON.parse(enviado.to_json)).to eq(caso['pedido'])
-      end
+    it 'sem o comentário de cima: sem o campo parent_comment e sem a explicação dele' do
+      expect(pedido_da_resposta('  ')).to eq(pedido_da_resposta(nil))
+      expect(JSON.parse(pedido_da_resposta(nil)[:input])).not_to have_key('parent_comment')
+      expect(pedido_da_resposta(nil)[:instructions]).not_to include(described_class::PAI)
     end
   end
 

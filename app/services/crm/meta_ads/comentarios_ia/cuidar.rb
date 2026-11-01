@@ -2,7 +2,7 @@
 #
 # 1. Filtra o que não é dela: flag desligada, caixa de outra conta ou de outro canal, resposta a outro comentário, post
 #    sem cuidado ou pausado, ou comentário com mais de 7 dias (o privado não sai mais).
-#    Com a flag meta_ads_comentarios_ia_conversa (#2454), a resposta dentro de um comentário entra: a de cliente é
+#    Com a flag meta_ads_comentarios_ia (#2454), a resposta dentro de um comentário entra: a de cliente é
 #    decidida como um comentário próprio, com o de cima (lido na Meta pelo id, Rede#ler_pai) à parte, como contexto. A
 #    da própria conta (o perfil ou a Página, inclusive a frase pública que a IA posta) nunca entra. O privado para
 #    resposta vai à Meta, que decide (o teste real é do próprio produto, na conta piloto). A recusa dela com código é
@@ -39,8 +39,6 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   JANELA = 7.days
   # Era o caso do privado, mas ele não sai aqui (sem o que mandar, ou a rede ainda não o libera).
   FICA_COM_O_DONO = 'kept_for_owner'.freeze
-  # #2454: a resposta dentro de um comentário (e a foto do post) só entram com esta flag.
-  CONVERSA = Crm::MetaAds::ComentariosIa::Foto::FLAG
 
   def initialize(comentario, rede: nil, classificador: nil, conversa: Crm::MetaAds::ComentariosIa::Conversa,
                  registro: Crm::MetaAds::ComentariosIa::Registro)
@@ -64,7 +62,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     return descartar if lido.nil?
 
     @comentario = @comentario.lido(**lido)
-    return da_conta_na_leitura if conversa_ligada? && da_conta?
+    return da_conta_na_leitura if da_conta?
 
     decisao = decidir
     decisao ? executar(decisao) : nao_cuidou('sem_certeza')
@@ -128,17 +126,9 @@ class Crm::MetaAds::ComentariosIa::Cuidar
     na_janela?
   end
 
-  # Sem a flag da conversa, só o comentário de primeiro nível; com ela, também a resposta, e nunca o da própria conta.
+  # O comentário de primeiro nível e a resposta dentro dele (#2454), nunca o da própria conta.
   def do_motor?
-    return !@comentario.resposta? unless conversa_ligada?
-
     !da_conta?
-  end
-
-  def conversa_ligada?
-    return @conversa_ligada if defined?(@conversa_ligada)
-
-    @conversa_ligada = inbox.account.feature_enabled?(CONVERSA)
   end
 
   # O perfil ou a Página da própria conta (o dono do evento ou o da caixa): a frase pública que a IA posta, ou a

@@ -10,7 +10,7 @@
 # PUT  meta_ads_connection/ads/:ad_id/cuidado           message, para_quem, phrases[], status → o Painel.
 # POST meta_ads_connection/ads/:ad_id/cuidado/previa    para_quem → os exemplos do passo "como fica" (Previa).
 # POST meta_ads_connection/ads/:ad_id/cuidado/foto      → "O que eu vi na foto" do passo 1 (#2454, flag
-#      meta_ads_comentarios_ia_conversa), do post do criativo; o mesmo contrato do post do Seus posts.
+#      meta_ads_comentarios_ia), do post do criativo; o mesmo contrato do post do Seus posts.
 # PUT  meta_ads_connection/ads/:ad_id/cuidado/foto      correction → a correção do dono. Sem a chave `correction`, 422
 #      `missing_correction`; `correction: ""` volta para a leitura da IA.
 # POST meta_ads_connection/ads/:ad_id/cuidado/ler_antigos → "Ler e mandar" (uma vez por cuidado ligado).
@@ -37,7 +37,6 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   STATUS = { 'ad_not_found' => :not_found, 'not_connected' => :not_found, 'not_inbox_member' => :forbidden }.freeze
 
   before_action :ensure_flags
-  before_action :ensure_conversa, only: [:foto, :corrigir_foto]
   before_action :ensure_view
   before_action :ensure_manage, only: [:update, :previa, :foto, :corrigir_foto, :ler_antigos]
   before_action :load_connection
@@ -101,10 +100,6 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   def ensure_flags
     ligado = ->(flag) { Current.account.feature_enabled?(flag) }
     head :not_found unless FLAGS.all?(&ligado) && REDE_FLAGS.any?(&ligado)
-  end
-
-  def ensure_conversa
-    head :not_found unless Current.account.feature_enabled?(Crm::MetaAds::ComentariosIa::Foto::FLAG)
   end
 
   def ensure_view

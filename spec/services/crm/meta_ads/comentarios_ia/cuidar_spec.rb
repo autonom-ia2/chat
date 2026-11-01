@@ -440,11 +440,6 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
       expect(registro).not_to have_received(:reservar!)
     end
 
-    it 'resposta a outro comentário' do
-      cuidar(comentario(parent_id: 'c-0'))
-      expect(registro).not_to have_received(:reservar!)
-    end
-
     it 'comentário com mais de 7 dias, que não aceita mais privado' do
       cuidar(comentario(created_time: 8.days.ago))
       expect(registro).not_to have_received(:reservar!)

@@ -243,9 +243,9 @@ const FILTROS = [
   ['privado', 'privado'],
   ['escondido', 'escondido'],
 ];
-// #2454: com a flag da conversa, o fio conta: as respostas de cliente entram nas abas, como no Resumo.
+// #2454: com a flag meta_ads_comentarios_ia, o fio conta: as respostas de cliente entram nas abas, como no Resumo.
 const comFio = computed(() =>
-  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA_CONVERSA)
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
 );
 const contagem = computed(() =>
   contarComentarios(

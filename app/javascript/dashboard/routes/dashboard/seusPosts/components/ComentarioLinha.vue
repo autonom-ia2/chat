@@ -14,7 +14,7 @@ const props = defineProps({
   comentario: { type: Object, required: true },
   // Uma ação deste comentário está indo para a Meta: os botões esperam.
   ocupado: { type: Boolean, default: false },
-  // #2454, flag meta_ads_comentarios_ia_conversa: o fio conta. Cada resposta de cliente mostra o próprio selo; na aba
+  // #2454, flag meta_ads_comentarios_ia: o fio conta. Cada resposta de cliente mostra o próprio selo; na aba
   // em que o comentário só aparece por uma resposta (`comentario.contexto`), o selo dele some para não contradizer a aba.
   fio: { type: Boolean, default: false },
 });

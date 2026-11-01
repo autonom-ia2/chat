@@ -131,7 +131,7 @@ const estadoDe = comentario => {
   return 'esperando';
 };
 
-// #2454 (flag meta_ads_comentarios_ia_conversa, o fio conta): o estado de uma resposta de cliente, com a régua da Fonte
+// #2454 (flag meta_ads_comentarios_ia, o fio conta): o estado de uma resposta de cliente, com a régua da Fonte
 // do servidor (a do Resumo). Espera quando está à mostra, com texto, sem privado e sem a conta responder no fio depois
 // dela; sem a hora de uma das duas, a resposta da conta conta como depois. Resposta da conta: sem estado (não conta).
 const hora = valor => {

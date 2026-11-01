@@ -12,7 +12,7 @@
 # `respostas_que_esperam` (#2454, o fio conta): as respostas de outra pessoa dentro de um comentário (até dentro de um
 # da própria conta) que esperam o dono: à mostra, com texto, sem privado e sem a conta responder no fio depois dela.
 # Sem a hora de uma das duas, a resposta da conta conta como depois. Cada uma como as linhas, com `parent_id` (o
-# comentário de cima) no lugar de `respostas`. Quem conta e cuida delas só com a flag da conversa: `que_esperam`.
+# comentário de cima) no lugar de `respostas`. Quem conta e cuida delas só com a flag meta_ads_comentarios_ia: `que_esperam`.
 #
 # `legenda` (#2424): o texto do post, lido pela Rede como no motor, para a prévia decidir com o mesmo dado.
 class Crm::MetaAds::ComentariosIa::Fonte
@@ -35,9 +35,9 @@ class Crm::MetaAds::ComentariosIa::Fonte
   end
 
   # O que espera o dono, para contar e cuidar: os comentários de primeiro nível e, com a flag
-  # meta_ads_comentarios_ia_conversa, também as respostas de cliente (#2454). Desligada, como antes.
+  # meta_ads_comentarios_ia, também as respostas de cliente (#2454). Desligada, como antes.
   def self.que_esperam(account, lido)
-    return lido[:linhas] unless account.feature_enabled?(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+    return lido[:linhas] unless account.feature_enabled?(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
 
     lido[:linhas] + Array(lido[:respostas_que_esperam])
   end

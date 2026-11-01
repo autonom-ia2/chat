@@ -18,7 +18,6 @@
 # `ler` e `corrigir!` devolvem `{ status: 'ready', text:, corrected: }`, `{ status: 'no_image' }` (o post não tem
 # imagem: a tela não mostra o bloco), `{ status: 'no_credential' }` ou `{ status: 'unavailable' }`.
 class Crm::MetaAds::ComentariosIa::Foto
-  FLAG = 'meta_ads_comentarios_ia_conversa'.freeze
   FEATURE = 'meta_ads_comentarios_ia_foto'.freeze
   MODEL = Crm::Ai::Config::VISION_MODEL
   # Roda dentro da requisição do passo 1 (o rack-timeout corta em 15 s): uma ida a cada uma, sem nova tentativa. Os

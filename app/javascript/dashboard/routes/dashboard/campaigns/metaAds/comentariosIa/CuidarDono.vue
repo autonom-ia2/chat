@@ -20,7 +20,7 @@ const props = defineProps({
   // async () => o começo da mensagem escrito pela IA a partir da legenda do post, ou '' (Rascunho). Só no post do Seus
   // posts; sem ele (o anúncio), o passo 1 abre vazio.
   draft: { type: Function, default: null },
-  // #2454, com a flag meta_ads_comentarios_ia_conversa: async () => a leitura da foto do post ("O que eu vi na foto") e
+  // #2454, com a flag meta_ads_comentarios_ia: async () => a leitura da foto do post ("O que eu vi na foto") e
   // async texto => a correção do dono. Sem elas, o passo 1 fica como antes.
   photo: { type: Function, default: null },
   fixPhoto: { type: Function, default: null },
@@ -112,7 +112,7 @@ const recebe = computed(() => {
   return examplesFailed.value ? { sample: true } : null;
 });
 const nao = computed(() => examples.value?.nao || null);
-// #2454: a resposta dentro de um comentário, com a flag da conversa. A Meta decide se aceita o privado em resposta: a
+// #2454: a resposta dentro de um comentário, com a flag meta_ads_comentarios_ia. A Meta decide se aceita o privado em resposta: a
 // tela não o promete.
 const resposta = computed(() => examples.value?.resposta || null);
 const sample = computed(() => Boolean(recebe.value?.sample));

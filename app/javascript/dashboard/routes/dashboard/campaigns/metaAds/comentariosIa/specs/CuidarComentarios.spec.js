@@ -126,7 +126,7 @@ describe('CuidarComentarios (#2212)', () => {
     expect(ComentariosIaAPI.rascunho).not.toHaveBeenCalled();
   });
 
-  it('passo 1 (#2454): com a flag da conversa, pede "o que eu vi na foto"; sem ela, nada', async () => {
+  it('passo 1 (#2454): com a flag meta_ads_comentarios_ia, pede "o que eu vi na foto"; sem ela, nada', async () => {
     ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
     ComentariosIaAPI.rascunho.mockResolvedValue({
       data: { status: 'no_offer' },
@@ -139,7 +139,7 @@ describe('CuidarComentarios (#2212)', () => {
     expect(sem.find('[data-ia-foto]').exists()).toBe(false);
     expect(ComentariosIaAPI.foto).not.toHaveBeenCalled();
 
-    flags.value = ['meta_ads_comentarios_ia_conversa'];
+    flags.value = ['meta_ads_comentarios_ia'];
     const com = await montar();
     flags.value = [];
 

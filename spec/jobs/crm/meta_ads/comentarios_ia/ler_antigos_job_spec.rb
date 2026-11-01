@@ -37,8 +37,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::LerAntigosJob do
       enqueued_jobs.select { |job| job['job_class'] == 'Crm::MetaAds::ComentariosIa::CuidarJob' }.map { |job| job['arguments'].first }
     end
 
-    it 'com a flag da conversa: vão para a fila do motor com o id do de cima, só ids, sem o texto' do
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+    it 'com a flag meta_ads_comentarios_ia: vão para a fila do motor com o id do de cima, só ids, sem o texto' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
 
       described_class.perform_now(account.id, alvo)
 

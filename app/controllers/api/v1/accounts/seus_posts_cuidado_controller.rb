@@ -13,7 +13,7 @@
 #      legenda do post lida na Meta (Rascunho; uma vez por legenda). { status: 'ready', message } | 'no_offer' |
 #      'no_caption'; a IA fora do ar é 422 `ai_unavailable`.
 # POST seus_posts/posts/:post_id/cuidado/foto           → "O que eu vi na foto" do passo 1 (#2454, flag
-#      meta_ads_comentarios_ia_conversa): a Foto lê a foto do post uma vez, só depois do clique. { status: 'ready', text,
+#      meta_ads_comentarios_ia): a Foto lê a foto do post uma vez, só depois do clique. { status: 'ready', text,
 #      corrected } | 'no_image' | 'no_credential' (a conta sem a chave dela) | 'unavailable' (IA ou Meta fora do ar),
 #      sempre 200.
 # PUT  seus_posts/posts/:post_id/cuidado/foto           correction → a correção do dono, que vale no lugar da leitura.
@@ -34,7 +34,6 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   # O pai confere a chave de mudar em todas as escritas e pula o post no `show`. Aqui as duas voltam na ordem certa: a
   # chave antes de ler o post na Meta, e o post em toda ação de um post (o painel também).
   skip_before_action :ensure_manage, :load_post
-  before_action :ensure_conversa, only: [:foto, :corrigir_foto]
   before_action :ensure_manage, only: [:update, :previa, :rascunho, :foto, :corrigir_foto, :ler_antigos, :mudar_todos]
   before_action :load_post, except: [:cuidados, :mudar_todos]
   skip_before_action :ensure_ids, only: [:cuidados, :mudar_todos]
@@ -113,10 +112,6 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   def ensure_flags
     head :not_found unless FLAGS.all? { |flag| Current.account.feature_enabled?(flag) }
-  end
-
-  def ensure_conversa
-    head :not_found unless Current.account.feature_enabled?(Crm::MetaAds::ComentariosIa::Foto::FLAG)
   end
 
   def painel

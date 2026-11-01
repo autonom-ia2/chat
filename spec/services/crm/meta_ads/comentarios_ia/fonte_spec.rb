@@ -62,12 +62,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
     let(:account) { create(:account) }
     let(:lido) { { status: 'ready', linhas: [{ id: '1' }], escondidas: [], respostas_que_esperam: [{ id: '1a', parent_id: '1' }] } }
 
-    it 'sem a flag da conversa: só os comentários de primeiro nível, como antes' do
+    it 'sem a flag meta_ads_comentarios_ia: só os comentários de primeiro nível, como antes' do
       expect(described_class.que_esperam(account, lido).pluck(:id)).to eq(%w[1])
     end
 
     it 'com a flag: também as respostas de cliente' do
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
 
       expect(described_class.que_esperam(account, lido).pluck(:id)).to eq(%w[1 1a])
     end

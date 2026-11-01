@@ -1,7 +1,6 @@
 require 'rails_helper'
 
-# #2454: a resposta dentro de um comentário, com a flag meta_ads_comentarios_ia_conversa. Sem ela, a resposta segue
-# fora do motor, como antes.
+# #2454: a resposta dentro de um comentário, com a flag meta_ads_comentarios_ia (a do cuidado).
 RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
@@ -34,7 +33,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   end
 
   before do
-    account.enable_features!(described_class::FLAG, described_class::CONVERSA)
+    account.enable_features!(described_class::FLAG)
     allow(registro).to receive_messages(reservar!: true, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
                                         reservar_pessoa!: true, soltar_pessoa!: 1, decisao!: 1)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
@@ -148,7 +147,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
       expect(conversa).not_to have_received(:para_voce!)
     end
 
-    it 'no comentário de primeiro nível, o limite segue a regra de hoje (sem a flag nova, nada muda)' do
+    it 'no comentário de primeiro nível, o limite segue a regra de hoje' do
       decide('private')
       allow(rede).to receive(:privado).and_return(recusa(4))
 
@@ -199,33 +198,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(conversa).to have_received(:para_voce!).with(anything, care, 'to_you')
   end
 
-  describe 'sem a flag da conversa: a resposta fica fora do motor, como antes' do
-    before { account.disable_features!(described_class::CONVERSA) }
-
-    it 'nada é reservado, lido nem decidido' do
-      allow(classificador).to receive(:avaliar!)
-
-      cuidar
-
-      expect(registro).not_to have_received(:reservar!)
-      expect(rede).not_to have_received(:ler)
-      expect(rede).not_to have_received(:ler_pai)
-      expect(classificador).not_to have_received(:avaliar!)
-    end
-
-    it 'o comentário de primeiro nível segue como antes: sem o comentário de cima e sem leitura dele' do
-      decide('no_reply')
-
-      cuidar(resposta(parent_id: nil))
-
-      expect(classificador).to have_received(:avaliar!).with('Quanto custa o azul?')
-      expect(rede).not_to have_received(:ler_pai)
-    end
-  end
-
   it 'a resposta numa caixa de outra conta: a conta não vê nada' do
     outra = create(:account)
-    outra.enable_features!(described_class::FLAG, described_class::CONVERSA)
+    outra.enable_features!(described_class::FLAG)
     allow(classificador).to receive(:avaliar!)
 
     cuidar(resposta(account_id: outra.id))

@@ -23,8 +23,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
     allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Ninguém responde'), linha('2', 'Que lindo!'),
                                                                          linha('3', 'Me passa a receita?'), linha('4', 'Que lindo!')] })
 
-    expect(previa.call).to eq(status: 'ready', recebe: { author: 'pessoa.3', text: 'Me passa a receita?', network: 'instagram' },
-                              nao: { author: 'pessoa.2', text: 'Que lindo!', network: 'instagram' })
+    expect(previa.call).to eq(status: 'ready', resposta: nil,
+                              recebe: { id: '3', author: 'pessoa.3', text: 'Me passa a receita?', network: 'instagram' },
+                              nao: { id: '2', author: 'pessoa.2', text: 'Que lindo!', network: 'instagram' })
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
       .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'), legenda: 'Bolo de cenoura, receita no e-book',
             foto: nil, tela: true)
@@ -51,9 +52,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
 
     before { allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [com_resposta, linha('2', 'Me passa a receita?')] }) }
 
-    it 'com a flag da conversa: uma resposta, decidida com o comentário de cima, aparece dentro dele' do
-      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::CONVERSA)
-
+    it 'uma resposta, decidida com o comentário de cima, aparece dentro dele' do
       resultado = previa.call
 
       expect(resultado[:resposta]).to eq(author: 'pessoa.9', text: 'Me passa a receita?', network: 'instagram', kind: 'recebe',
@@ -63,17 +62,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
       expect(resultado[:nao]).to eq(id: '1', author: 'pessoa.1', text: 'Que lindo!', network: 'instagram')
       expect(resultado[:recebe]).to include(id: '2')
     end
-
-    it 'sem a flag: a prévia fica a de antes, sem a resposta' do
-      expect(previa.call).not_to have_key(:resposta)
-      expect(classificador).not_to have_received(:decidir!).with(anything, pai: anything)
-    end
   end
 
   it 'sem comentário que receberia: um exemplo dito como exemplo; sem "não se aplica": nil' do
     allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Ninguém responde')] })
 
-    expect(previa.call).to eq(status: 'ready', recebe: { sample: true }, nao: nil)
+    expect(previa.call).to eq(status: 'ready', recebe: { sample: true }, nao: nil, resposta: nil)
   end
 
   it 'lê no máximo LIMITE comentários' do

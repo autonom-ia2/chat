@@ -2,7 +2,7 @@
 # dono ligar o cuidado. Só o que o código conta, sem IA (regra do #2436: antes do clique em "Cuidar dos comentários",
 # nenhuma chamada de IA):
 # - `waiting`: os comentários que esperam o dono (Fonte: de outra pessoa, não escondidos, sem resposta da conta e sem
-#   privado); com a flag meta_ads_comentarios_ia_conversa, também as respostas de cliente dentro deles (o fio conta,
+#   privado); com a flag meta_ads_comentarios_ia, também as respostas de cliente dentro deles (o fio conta,
 #   #2454; Fonte.que_esperam), para bater com o número de comentários que a Meta mostra;
 # - `private_window`: desses, os que ainda cabem no privado (até Cuidar::JANELA, 7 dias). Sem a data, não cabe.
 #

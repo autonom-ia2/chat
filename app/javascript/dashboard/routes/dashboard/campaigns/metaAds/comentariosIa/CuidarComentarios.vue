@@ -55,10 +55,10 @@ const {
   corrigirFoto,
   lerAntigos,
 } = useCuidado(() => props.target);
-// #2454: "O que eu vi na foto" no passo 1, só com a flag da conversa.
+// #2454: "O que eu vi na foto" no passo 1, só com a flag meta_ads_comentarios_ia.
 const { isCloudFeatureEnabled } = useAccount();
 const comFoto = computed(() =>
-  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA_CONVERSA)
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
 );
 
 const heading = ref(null);

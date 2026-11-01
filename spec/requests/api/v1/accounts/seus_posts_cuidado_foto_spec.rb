@@ -1,7 +1,7 @@
 require 'rails_helper'
 
 # #2454: "O que eu vi na foto" no passo 1 do "Cuidar dos comentários" do post. Só depois do clique (o passo 1 pede), só
-# com a flag meta_ads_comentarios_ia_conversa, só para quem pode mudar o cuidado, e cada conta só vê e corrige a dela.
+# com a flag meta_ads_comentarios_ia, só para quem pode mudar o cuidado, e cada conta só vê e corrige a dela.
 RSpec.describe 'Seus posts: o que eu vi na foto do post', type: :request do
   let(:account_and_user) { create_account_and_user }
   let(:account) { account_and_user.first }
@@ -20,7 +20,7 @@ RSpec.describe 'Seus posts: o que eu vi na foto do post', type: :request do
   def json = { 'Content-Type' => 'application/json' }
 
   def liga!(conta)
-    conta.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia', 'meta_ads_comentarios_ia_conversa')
+    conta.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia')
   end
 
   before do
@@ -36,8 +36,8 @@ RSpec.describe 'Seus posts: o que eu vi na foto do post', type: :request do
     allow(cliente).to receive(:create).and_return({ text: { description: 'Um bolo de cenoura com cobertura de chocolate.' }.to_json })
   end
 
-  it 'sem a flag da conversa: 404, sem ler a Meta nem chamar a IA' do
-    account.disable_features!('meta_ads_comentarios_ia_conversa')
+  it 'sem a flag meta_ads_comentarios_ia: 404, sem ler a Meta nem chamar a IA' do
+    account.disable_features!('meta_ads_comentarios_ia')
 
     post base, params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 

@@ -15,7 +15,7 @@
 # abrir a conversa não vira falha: vai para o rastreador e a resposta diz que foi.
 #
 # Só comentário de primeiro nível: resposta a comentário (com `parent_id`) não recebe o privado. Com a flag
-# meta_ads_comentarios_ia_conversa (#2454), a resposta também vai à Meta, que decide; o teste real é do próprio produto,
+# meta_ads_comentarios_ia (#2454), a resposta também vai à Meta, que decide; o teste real é do próprio produto,
 # na conta piloto. O resultado de cada envio de 2º nível fica consultável, sem texto de terceiro: aceito, a linha
 # private_reply guarda o `meta_message_id`; recusado (4xx com código da Meta), a linha sai como sempre e uma
 # `private_reply_failed` guarda o código e o subcódigo (`meta_error_code`, `meta_error_subcode`), que também vão no Error. Falha passageira segue
@@ -42,8 +42,8 @@ class Crm::MetaAds::InstagramPrivateReply
     end
   end
 
-  # A flag que deixa a resposta a comentário (2º nível) ir à Meta (#2454).
-  RESPOSTAS = Crm::MetaAds::ComentariosIa::Cuidar::CONVERSA
+  # A flag que deixa a resposta a comentário (2º nível) ir à Meta (#2454): a da IA cuida dos comentários.
+  RESPOSTAS = Crm::MetaAds::ComentariosIa::Cuidar::FLAG
 
   WINDOW = 7.days
   MAX_TEXT = 1000

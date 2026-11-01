@@ -134,16 +134,16 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
       allow(cliente).to receive(:create).and_return({ text: { description: 'A capa de um e-book de bolos.' }.to_json })
     end
 
-    it 'sem a flag da conversa: 404' do
+    it 'sem a flag meta_ads_comentarios_ia: 404' do
+      account.disable_features!('meta_ads_comentarios_ia')
+
       post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
 
       expect(response).to have_http_status(:not_found)
       expect(cliente).not_to have_received(:create)
     end
 
-    it 'com a flag: lê a foto do post do criativo e o dono corrige' do
-      account.enable_features!('meta_ads_comentarios_ia_conversa')
-
+    it 'lê a foto do post do criativo e o dono corrige' do
       post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
       expect(response.parsed_body).to eq('status' => 'ready', 'text' => 'A capa de um e-book de bolos.', 'corrected' => false)
 
@@ -153,7 +153,6 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     end
 
     it 'PUT sem a chave correction: 422, sem apagar a correção; só correction "" explícito volta para a leitura da IA' do
-      account.enable_features!('meta_ads_comentarios_ia_conversa')
       post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
       put "#{base}/cuidado/foto", params: { correction: 'E-book de bolos caseiros' }, headers: admin.create_new_auth_token, as: :json
 

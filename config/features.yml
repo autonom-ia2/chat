@@ -1042,7 +1042,7 @@
 # IA cuida dos comentários (#2212, épico #2194). Ligada: nos posts e anúncios em que a pessoa ligou o cuidado, a IA lê
 # cada comentário novo (evento `meta_ads.comment_received`, do #2196 e do #2197). Quem pede informação recebe o
 # privado (Private Reply no Instagram Direct ou no Messenger) e uma frase no comentário. Reclamação vai urgente para a
-# pessoa, propaganda some do post, e o resto fica sem resposta. Sem teto de uso (#2454). O custo do
+# pessoa, propaganda some do post, e o resto fica sem resposta. Teto de 200 comentários por conta por dia. O custo do
 # Jev é nosso (eval de 27/10: ~US$ 0,000024 por comentário). Desligada: nenhum comentário é lido. Sem tela neste PR.
 # Migration 20261108620000 (crm_meta_ads_comment_cares). Fim da feature_flags_ext_2, depois de seus_posts_comentarios:
 # posição 16 (valor 32768, 1 << 15), reservada pela Orquestração em 30/10 e confirmada por ela na hora da fila.
@@ -1084,16 +1084,5 @@
 # 31/10 e confirmada por ela na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: agentes_pedir_localizacao
   display_name: Agentes › pedir a localização do cliente
-  enabled: false
-  column: feature_flags_ext_2
-
-# IA cuida dos comentários: "O que eu vi na foto" (#2454, PR 1 do #2436). Ligada: no passo 1 do "Cuidar dos
-# comentários", depois do clique do dono, a IA lê a foto do post uma vez (carrossel numa chamada só) e mostra o que viu,
-# com Corrigir; a correção do dono vale no lugar da leitura. O Classificador recebe esse texto no campo `photo` da
-# entrada, como dado. Antes do clique, nenhuma IA. Desligada: nada é lido, e a entrada do Classificador fica byte a byte
-# a de antes. Rollback: desligar a flag na conta. Migration 20261108680000 (crm_meta_ads_post_readings). Fim da
-# feature_flags_ext_2: posição 24 (8388608, 1 << 23), dada pela Orquestração em 01/11, depois de 20–23. Nasce desligada.
-- name: meta_ads_comentarios_ia_conversa
-  display_name: Anúncios › IA cuida dos comentários › lê a foto e a conversa
   enabled: false
   column: feature_flags_ext_2

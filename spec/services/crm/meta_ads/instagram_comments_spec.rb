@@ -469,11 +469,11 @@ RSpec.describe Crm::MetaAds::InstagramComments do
         expect(a_request(:post, %r{/messages})).not_to have_been_made
       end
 
-      describe 'resposta a comentário, com a flag meta_ads_comentarios_ia_conversa (#2454)' do
+      describe 'resposta a comentário, com a flag meta_ads_comentarios_ia (#2454)' do
         let(:mensagens) { "#{ig}/#{ig_id}/messages" }
 
         before do
-          account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::CONVERSA)
+          account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
           stub_comment('c9', parent_id: 'c1')
         end
 

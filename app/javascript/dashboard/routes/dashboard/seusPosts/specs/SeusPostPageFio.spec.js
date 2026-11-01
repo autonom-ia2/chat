@@ -5,7 +5,7 @@ import ptBR from 'dashboard/i18n/locale/pt_BR/seusPosts.json';
 import SeusPostPage from '../pages/SeusPostPage.vue';
 import SeusPostsAPI from 'dashboard/api/seusPosts';
 
-// #2454: com a flag meta_ads_comentarios_ia_conversa, o fio conta na lista de comentários do post, como no Resumo: as
+// #2454: com a flag meta_ads_comentarios_ia, o fio conta na lista de comentários do post, como no Resumo: as
 // respostas de cliente contam nas abas e aparecem dentro do comentário de cima, cada uma com o próprio selo. As da
 // própria conta não contam. Sem a flag, nada muda. Dados sintéticos.
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
@@ -168,12 +168,9 @@ describe('Seus posts: o fio conta na lista do post (#2454)', () => {
     responder();
   });
 
-  describe('com a flag da conversa', () => {
+  describe('com a flag meta_ads_comentarios_ia', () => {
     beforeEach(() => {
-      flags.value = [
-        'seus_posts_comentarios',
-        'meta_ads_comentarios_ia_conversa',
-      ];
+      flags.value = ['seus_posts_comentarios', 'meta_ads_comentarios_ia'];
     });
 
     it('as abas contam as respostas de cliente, como o Resumo; as da conta não contam', async () => {
@@ -221,7 +218,7 @@ describe('Seus posts: o fio conta na lista do post (#2454)', () => {
     });
   });
 
-  describe('sem a flag da conversa', () => {
+  describe('sem a flag meta_ads_comentarios_ia', () => {
     beforeEach(() => {
       flags.value = ['seus_posts_comentarios'];
     });
