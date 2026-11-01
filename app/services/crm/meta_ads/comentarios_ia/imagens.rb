@@ -1,8 +1,11 @@
 # IA cuida dos comentários (#2454): os endereços das imagens de um post, na ordem, para a leitura da foto (Foto). Só a
 # imagem: o vídeo vai pela capa. Só endereço https, que é como a Meta entrega a mídia.
 # - Instagram (`media_type`, `media_url`, `thumbnail_url` e `children` no carrossel);
-# - Facebook (`attachments` com `subattachments` no álbum; sem anexo, a `full_picture`).
+# - Facebook (`attachments` com `subattachments` no álbum; sem anexo, a `full_picture`), até LIMITE, como o carrossel do
+#   Instagram: proteção contra defeito (um álbum enorme não vira uma chamada enorme à IA).
 module Crm::MetaAds::ComentariosIa::Imagens
+  LIMITE = 10
+
   module_function
 
   def do_instagram(dados)
@@ -15,7 +18,7 @@ module Crm::MetaAds::ComentariosIa::Imagens
       dentro = Array(anexo.dig('subattachments', 'data'))
       (dentro.presence || [anexo]).filter_map { |item| https(item.dig('media', 'image', 'src')) }
     end
-    urls.presence || [https(dados['full_picture'])].compact
+    (urls.presence || [https(dados['full_picture'])].compact).first(LIMITE)
   end
 
   def https(url)

@@ -33,6 +33,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Imagens do
   describe '.do_facebook' do
     def anexo(src) = { 'media' => { 'image' => { 'src' => src } } }
 
+    # Revisão da Agentes IA: proteção contra defeito, como o carrossel do Instagram (até 10).
+    it 'no máximo LIMITE imagens, na ordem' do
+      anexos = (1..12).map { |indice| anexo("https://fb.exemplo/#{indice}.jpg") }
+      dados = { 'attachments' => { 'data' => [{ 'subattachments' => { 'data' => anexos } }] } }
+
+      expect(described_class.do_facebook(dados)).to eq((1..10).map { |indice| "https://fb.exemplo/#{indice}.jpg" })
+      expect(described_class::LIMITE).to eq(10)
+    end
+
     it 'a imagem do anexo do post' do
       expect(described_class.do_facebook('attachments' => { 'data' => [anexo('https://fb.exemplo/1.jpg')] }))
         .to eq(['https://fb.exemplo/1.jpg'])
