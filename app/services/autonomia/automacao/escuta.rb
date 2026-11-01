@@ -1,0 +1,52 @@
+# O que a Automação livre ouve dos eventos da plataforma (#2414 F3, #2459). Quem chama é o AutomacaoListener.
+#
+# - `comecar`: o gatilho aconteceu (conversa criada, aberta, resolvida, mensagem criada). Cada automação ligada da
+#   conta com esse gatilho tenta começar para a conversa (Partida, que confere quem ligou, a caixa, os filtros e a
+#   cadeia).
+# - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela é reservado e confere a
+#   condição agora, em vez de esperar o prazo. Só o "esperar até": a ação que espera uma nova tentativa e o "esperar"
+#   de tempo seguem o relógio.
+#
+# O gate é a flag do motor, lida da conta que o evento já trouxe: conta sem o motor não faz consulta nenhuma. Com o
+# motor, uma consulta pela conta e pelo tipo do gatilho; não há cache, porque a lista muda a cada automação ligada
+# ou desligada, e uma lista velha ligaria o que já foi desligado.
+module Autonomia::Automacao::Escuta
+  module_function
+
+  def comecar(conversa, tipo)
+    return unless conversa && ::Autonomia::Automacao::Motor.ligado?(conversa.account)
+
+    automacoes_do_gatilho(conversa.account_id, tipo).find_each do |definicao|
+      ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: tipo).call
+    rescue StandardError => e
+      Rails.logger.error("[automacao][escuta] não começou automacao=#{definicao.id} alvo=conversa:#{conversa.id} #{e.class}: #{e.message}")
+    end
+  end
+
+  def acordar(account, conversa_ids)
+    return if conversa_ids.blank? || !::Autonomia::Automacao::Motor.ligado?(account)
+
+    ::Autonomia::Automacao::Execucao.where(account_id: account.id, alvo_type: 'Conversation', alvo_id: conversa_ids, estado: 'esperando')
+                                    .includes(:versao).find_each do |execucao|
+      reservar(execucao) if esperando_condicao?(execucao)
+    end
+  end
+
+  def automacoes_do_gatilho(account_id, tipo)
+    ::Autonomia::Automacao::Definicao.joins(:versao_ativa).where(account_id: account_id, ativa: true)
+                                     .where("autonomia_automacao_versoes.receita -> 'gatilho' ->> 'tipo' = ?", tipo)
+  end
+
+  def esperando_condicao?(execucao)
+    ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita).passo(execucao.cursor)&.fetch('tipo', nil) == 'esperar_ate'
+  end
+
+  # A mesma reserva da varredura (marca nova, só se continua esperando), mantendo o `due_at`: é o prazo do "esperar até",
+  # que a rodada usa se a condição ainda não estiver cumprida.
+  def reservar(execucao)
+    marca = Time.current.floor(6)
+    reservada = ::Autonomia::Automacao::Execucao.where(id: execucao.id, estado: 'esperando', due_at: execucao.due_at)
+                                                .update_all(estado: 'andando', travada_em: marca, updated_at: marca) == 1 # rubocop:disable Rails/SkipsModelValidations
+    ::Autonomia::Automacao::AvancarJob.perform_later(execucao.id, marca.iso8601(6)) if reservada
+  end
+end
