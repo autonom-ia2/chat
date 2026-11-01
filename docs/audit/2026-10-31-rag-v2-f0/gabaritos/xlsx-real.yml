@@ -1,0 +1,130 @@
+perguntas:
+  - pergunta: "quanto é o aluguel por mês do container de escritório 2,30 x 6?"
+    tipo: tabela_valor
+    esperado: "R$ 621,87 por mês (ALO-006, locação de container para escritório com 1 sanitário)."
+    ancoras: ["SANITÁRIO COMPLETO | MÊS | 621.87"]
+  - pergunta: "preço da placa de obra galvanizada por m2?"
+    tipo: tabela_valor
+    esperado: "R$ 406,21 por m² (ICO-001, placa de obra em chapa galvanizada com estrutura de madeira)."
+    ancoras: ["ESTRUTURA DE MADEIRA | M² | 406.21000000000004"]
+  - pergunta: "qto custa a entrada provisoria de energia na obra"
+    tipo: tabela_valor
+    esperado: "R$ 2.619,76 a unidade (ICO-012, entrada provisória de energia elétrica)."
+    ancoras: ["ENTRADA PROVISÓRIA DE ENERGIA ELÉTRICA | UD | 2619.7599999999998"]
+  - pergunta: "quanto vale a hora do pedreiro?"
+    tipo: tabela_valor
+    esperado: "R$ 28,38 por hora, já com encargos sociais e complementares."
+    ancoras: ["Pedreiro c/enc. sociais e complementares | 28.38 | hora"]
+  - pergunta: "e o mestre de obras, quanto fica por mês?"
+    tipo: tabela_valor
+    esperado: "R$ 9.738,20 por mês, com encargos sociais e complementares."
+    ancoras: ["Mestre de obras c/enc. sociais e complementares | 9738.2"]
+  - pergunta: "engenheiro civil sênior cobra quanto por hora na tabela?"
+    tipo: tabela_valor
+    esperado: "R$ 152,78 por hora, com encargos sociais e complementares."
+    ancoras: ["Engenheiro civil senior c/enc. sociais e complementares | 152.78"]
+  - pergunta: "escavadeira hidráulica de esteira: qual o custo horário produtivo e o improdutivo?"
+    tipo: tabela_valor
+    esperado: "CHP (produtivo) 260,1598 e CHI (improdutivo) 117,4427 por hora."
+    ancoras: ["Escavadeira hidráulica sobre esteiras | 260.1598 | 117.4427"]
+  - pergunta: "qual o CHI da fresadora a frio?"
+    tipo: tabela_valor
+    esperado: "CHI de 180,9446 (o CHP da fresadora a frio é 470,8254)."
+    ancoras: ["Fresadora a frio | 470.8254 | 180.9446"]
+  - pergunta: "concreto usinado de 25 mpa com bomba, quanto o m3?"
+    tipo: tabela_valor
+    esperado: "R$ 378,71 por m³ (concreto usinado Fck=25,0 MPa com serviço de bombeamento)."
+    ancoras: ["Fck=25,0 Mpa, com serviço de bombeamento | m³ | 378.71"]
+  - pergunta: "preço do kg do cimento cp2?"
+    tipo: tabela_valor
+    esperado: "R$ 0,60 por kg (Cimento Portland composto CP II-32)."
+    ancoras: ["Cimento Portland composto CP II-32 | kg | 0.6"]
+  - pergunta: "cap 50/70 posto usina é quanto a tonelada?"
+    tipo: tabela_valor
+    esperado: "R$ 6.794,33 por tonelada (cimento asfáltico de petróleo CAP 50/70, posto usina)."
+    ancoras: ["CAP 50/70 - posto usina | t | 6794.33"]
+  - pergunta: "transporte de terra em basculante de 10m3 até 5 km, quanto cobra por m3?"
+    tipo: tabela_valor
+    esperado: "R$ 6,45 por m³ (MOB-016, caminhão basculante 10 m³, DMT de 1001 m até 5000 m)."
+    ancoras: ["DMT DE 1001 M ATÉ 5000 M | M³ | 6.45"]
+  - pergunta: "qual a diferença de hora entre o pedreiro e o ajudante de pedreiro?"
+    tipo: cruza_secoes
+    esperado: "Pedreiro R$ 28,38/h e ajudante de pedreiro R$ 21,89/h, diferença de R$ 6,49 por hora."
+    ancoras: ["Pedreiro c/enc. sociais e complementares | 28.38 | hora", "Ajudante de pedreiro c/enc. sociais e complementares | 21.89 | hora"]
+  - pergunta: "pra levar uma escavadeira hidráulica na obra, quanto é a mobilização e quanto custa a hora dela trabalhando?"
+    tipo: cruza_secoes
+    esperado: "Mobilização (MOB-001): R$ 1.915,54 por viagem. Hora produtiva (CHP) da escavadeira hidráulica sobre esteiras: 260,1598."
+    ancoras: ["MOB-001 | MOBILIZAÇÃO INDIVIDUAL DE ESCAVADEIRA HIDRÁULICA", "Escavadeira hidráulica sobre esteiras | 260.1598 | 117.4427"]
+  - pergunta: "engenheiro pleno ou mestre de obras, quanto cada um custa por mês?"
+    tipo: cruza_secoes
+    esperado: "Engenheiro civil pleno R$ 19.680,37 por mês; mestre de obras R$ 9.738,20 por mês."
+    ancoras: ["Engenheiro civil pleno c/enc. sociais e complementares | 19680.37", "Mestre de obras c/enc. sociais e complementares | 9738.2"]
+  - pergunta: "concreto de 30 mpa é quanto mais caro que o de 20 (os dois bombeados)?"
+    tipo: cruza_secoes
+    esperado: "Fck 20 MPa bombeado R$ 367,06/m³ e Fck 30 MPa bombeado R$ 390,36/m³: diferença de R$ 23,30 por m³."
+    ancoras: ["Fck=20,0 Mpa, com serviço de bombeamento | m³ | 367.06", "Fck=30,0 Mpa, com serviço de bombeamento | m³ | 390.36"]
+  - pergunta: "CAP comum ou CAP com borracha, qual a diferença de preço por tonelada?"
+    tipo: cruza_secoes
+    esperado: "CAP 50/70 R$ 6.794,33/t e CAP modificado com borracha R$ 7.068,33/t: diferença de R$ 274,00 por tonelada."
+    ancoras: ["CAP 50/70 - posto usina | t | 6794.33", "CAP modificado com borracha - posto usina | t | 7068.33"]
+  - pergunta: "qual profissional tem a hora mais cara?"
+    tipo: agregacao
+    esperado: "Engenheiro civil sênior, R$ 152,78 por hora com encargos."
+    ancoras: ["Engenheiro civil senior c/enc. sociais e complementares | 152.78"]
+  - pergunta: "qual equipamento tem o maior custo horário produtivo?"
+    tipo: agregacao
+    esperado: "Cavalo mecânico com reboque de 6 eixos para até 207 t, CHP de 1.362,9578."
+    ancoras: ["Cavalo mecânico com reboque de 6 eixos para até 207 t | 1362.9578"]
+  - pergunta: "qual o equipamento mais barato por hora de trabalho?"
+    tipo: agregacao
+    esperado: "Esmerilhadeira angular elétrica com disco de 7\" (SMOP-003), CHP de cerca de 0,1206."
+    ancoras: ["Esmerilhadeira angular elétrica com disco de 7\" | 0.12064594499999999"]
+  - pergunta: "quantas cores de lajota de granito reconstituído 40x40 tem?"
+    tipo: agregacao
+    esperado: "Três: cinza (R$ 88,56/m²), preto (R$ 90,89/m²) e bege (R$ 92,85/m²)."
+    ancoras: ["40x40x3,0 cm na cor cinza | m² | 88.56", "40x40x3,0 cm na cor preto | m² | 90.89", "40x40x3,0 cm na cor bege | m² | 92.85"]
+  - pergunta: "essa tabela é de qual prefeitura e de que mês?"
+    tipo: fato_simples
+    esperado: "Prefeitura Municipal de Curitiba (Secretaria Municipal de Obras Públicas), tabela de custos unitários de abril de 2022."
+    ancoras: ["TABELA DE CUSTOS UNITÁRIOS - ABRIL/2022"]
+  - pergunta: "esses valores já vem com BDI?"
+    tipo: fato_simples
+    esperado: "Não, a tabela traz os custos com B.D.I. = 0,00%."
+    ancoras: ["CÓDIGO | DISCRIMINAÇÃO | UN | B.D.I=0,00%"]
+  - pergunta: "os salários seguem qual base do SINAPI?"
+    tipo: fato_simples
+    esperado: "A mão de obra usa data base abril/2022 com SINAPI de março/2022."
+    ancoras: ["Data base: | ABRIL/2022 | SINAPI - MARÇO/2022"]
+  - pergunta: "tá quanto o litro da gasolina pra obra"
+    tipo: parafrase
+    esperado: "R$ 6,96 por litro (gasolina comum)."
+    ancoras: ["4222 | Gasolina comum | l | 6.96"]
+  - pergunta: "hora de servente sai por quanto?"
+    tipo: parafrase
+    esperado: "R$ 21,87 por hora com encargos (R$ 3.917,30 por mês)."
+    ancoras: ["Servente c/enc. sociais e complementares | 21.87 | hora"]
+  - pergunta: "ter um vigia de noite no canteiro custa quanto no mês?"
+    tipo: parafrase
+    esperado: "Vigia noturno 12x36 h: cerca de R$ 4.924,33 por mês com encargos."
+    ancoras: ["4924.333581710753 | mês | 0.7183"]
+  - pergunta: "vocês montam o orçamento da minha obra inteira?"
+    tipo: fora
+    fora: true
+  - pergunta: "quanto alugo uma grua pra obra?"
+    tipo: fora
+    fora: true
+  - pergunta: "qual o preço do m2 de asfalto CBUQ aplicado?"
+    tipo: fora
+    fora: true
+  - pergunta: "quanto custa o alvará de construção?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem preço de tinta látex pva?"
+    tipo: fora
+    fora: true
+  - pergunta: "cimento CP V ARI, quanto o kg?"
+    tipo: fora
+    fora: true
+  - pergunta: "em quantos dias entregam o container?"
+    tipo: fora
+    fora: true

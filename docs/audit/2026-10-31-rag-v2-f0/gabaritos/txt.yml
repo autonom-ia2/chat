@@ -1,0 +1,134 @@
+perguntas:
+  - pergunta: "que horas é o check in?"
+    tipo: fato_simples
+    esperado: "A partir das 14h."
+    ancoras: ["O check-in é feito a partir das 14h."]
+  - pergunta: "ate q horas pode ficar no quarto no dia q vai embora"
+    tipo: fato_simples
+    esperado: "O check-out é até as 12h (meio-dia), com tolerância de 30 minutos, até as 12h30."
+    ancoras: ["O check-out deve ser feito até as 12h,"]
+  - pergunta: "o café da manhã vai até q horas no fds?"
+    tipo: fato_simples
+    esperado: "Aos sábados, domingos e feriados o café é servido até as 11h."
+    ancoras: ["Aos sábados, domingos e feriados, o café é"]
+  - pergunta: "a piscina fecha que horas?"
+    tipo: fato_simples
+    esperado: "A piscina funciona das 8h às 20h."
+    ancoras: ["A piscina funciona todos os dias, das 8h às 20h."]
+  - pergunta: "tem berço pra bebê?"
+    tipo: fato_simples
+    esperado: "Sim, gratuito, mediante pedido na reserva. São só 4 berços, por ordem de pedido."
+    ancoras: ["A pousada empresta berço gratuitamente, mediante pedido feito na"]
+  - pergunta: "pode fumar no quarto?"
+    tipo: fato_simples
+    esperado: "Não. É proibido fumar em qualquer ambiente fechado; só na área externa demarcada ao lado do estacionamento."
+    ancoras: ["É proibido fumar, inclusive cigarro eletrônico, em qualquer ambiente"]
+  - pergunta: "a partir de que horas tem que fazer silencio?"
+    tipo: fato_simples
+    esperado: "O silêncio vai das 22h às 8h."
+    ancoras: ["O horário de silêncio é das 22h às 8h."]
+  - pergunta: "quanto é a taxa pra levar cachorro?"
+    tipo: valor
+    esperado: "R$ 45,00 por animal por noite."
+    ancoras: ["A taxa de hospedagem de animal é de R$ 45,00 por animal por noite."]
+  - pergunta: "se eu levar um segundo carro quanto paga?"
+    tipo: valor
+    esperado: "R$ 25,00 por dia, se houver vaga livre."
+    ancoras: ["mediante o pagamento de R$ 25,00 por dia."]
+  - pergunta: "quanto tenho q pagar de sinal pra garantir a reserva"
+    tipo: valor
+    esperado: "30% do valor total da hospedagem."
+    ancoras: ["pagamento de um sinal de 30% do valor"]
+  - pergunta: "qual a multa se eu fumar dentro do quarto"
+    tipo: valor
+    esperado: "R$ 400,00, pela limpeza especial."
+    ancoras: ["f) fumar dentro do quarto, que exige limpeza especial, R$ 400,00."]
+  - pergunta: "tem caução? quanto?"
+    tipo: valor
+    esperado: "Pré-autorização de R$ 200,00 no cartão (ou o mesmo valor por PIX/dinheiro), devolvida/cancelada no check-out depois da vistoria."
+    ancoras: ["a pousada faz uma pré-autorização de R$ 200,00 no cartão de"]
+  - pergunta: "quanto custa o café no quarto?"
+    tipo: valor
+    esperado: "R$ 25,00 por pessoa, pedido até as 21h do dia anterior."
+    ancoras: ["mediante o pagamento de R$ 25,00 por pessoa, pelo serviço de"]
+  - pergunta: "criança de 8 anos paga quanto?"
+    tipo: valor
+    esperado: "50% da diária de adulto quando ocupa cama extra, com café incluído."
+    ancoras: ["Crianças de 6 a 12 anos pagam 50% do valor da diária de adulto"]
+  - pergunta: "se eu perder o controle da tv quanto cobram?"
+    tipo: tabela_linha
+    esperado: "R$ 80,00."
+    ancoras: ["c) controle remoto da televisão perdido ou quebrado, R$ 80,00;"]
+  - pergunta: "e o roupão se estragar?"
+    tipo: tabela_linha
+    esperado: "R$ 120,00."
+    ancoras: ["b) roupão perdido ou danificado, R$ 120,00;"]
+  - pergunta: "perdi a chave do quarto, quanto é"
+    tipo: tabela_linha
+    esperado: "R$ 40,00."
+    ancoras: ["d) chave do quarto perdida, R$ 40,00;"]
+  - pergunta: "lençol queimado de cigarro fica quanto?"
+    tipo: tabela_linha
+    esperado: "R$ 150,00 para lençol ou colcha queimado ou manchado de forma permanente."
+    ancoras: ["e) lençol ou colcha queimado ou manchado de forma permanente, R$"]
+  - pergunta: "aceita cachorro grande?"
+    tipo: parafrase
+    esperado: "Só até 15 kg, e apenas nos Chalés 1 a 6. Cão de assistência é exceção: aceito de qualquer peso."
+    ancoras: ["aceita apenas cães e gatos de até 15 kg"]
+  - pergunta: "meu amigo pode vir dar um mergulho na piscina comigo?"
+    tipo: parafrase
+    esperado: "Não. Visitantes não podem usar a piscina nem entrar nos quartos; ficam só na varanda do salão, entre 9h e 18h."
+    ancoras: ["Visitantes não podem entrar nos quartos nem usar a piscina"]
+  - pergunta: "se eu quiser ficar mais um pouco no quarto no dia da saida, dá?"
+    tipo: parafrase
+    esperado: "Há tolerância até as 12h30. Depois disso, a saída tardia, pedida na véspera, vai até as 15h por 30% da diária; depois das 15h cobra-se diária inteira."
+    ancoras: ["saída tardia custa 30% do valor da diária"]
+  - pergunta: "criança pequena paga hospedagem?"
+    tipo: parafrase
+    esperado: "Até 5 anos completos não paga, se ocupar a cama dos pais ou o berço e o quarto não passar da capacidade."
+    ancoras: ["Crianças de até 5 anos completos não pagam hospedagem"]
+  - pergunta: "cancelei 10 dias antes do check in, quanto devolvem?"
+    tipo: secao_longa
+    esperado: "Na baixa temporada, cancelamento de 14 a 7 dias antes devolve 70% do valor pago."
+    ancoras: ["14 a 7 dias antes do check-in, a pousada devolve 70% do valor pago"]
+  - pergunta: "vou em janeiro (alta temporada) e cancelei com 20 dias, tem reembolso?"
+    tipo: secao_longa
+    esperado: "Sim, 50%: na alta temporada, de 29 a 15 dias de antecedência devolve-se 50% do valor pago."
+    ancoras: ["de 29 a 15 dias de antecedência, a 50% do valor pago"]
+  - pergunta: "tenho um cão guia, aceitam? tem taxa?"
+    tipo: secao_longa
+    esperado: "Aceitam. Cães de assistência não pagam a taxa de animal, qualquer peso, em qualquer acomodação e em todas as áreas, inclusive café e piscina, com identificação e vacinação em dia."
+    ancoras: ["são aceitos sem a taxa de animal, qualquer que seja o"]
+  - pergunta: "qual a cobrança mais cara da lista de danos?"
+    tipo: agregacao
+    esperado: "Fumar dentro do quarto, R$ 400,00."
+    ancoras: ["f) fumar dentro do quarto, que exige limpeza especial, R$ 400,00."]
+  - pergunta: "qual o item mais barato da lista de danos?"
+    tipo: agregacao
+    esperado: "A chave do quarto perdida, R$ 40,00."
+    ancoras: ["d) chave do quarto perdida, R$ 40,00;"]
+  - pergunta: "qual o maior prazo de antecedência pra cancelar e receber tudo de volta?"
+    tipo: agregacao
+    esperado: "30 dias, na alta temporada (na baixa temporada são 15 dias)."
+    ancoras: ["o cancelamento com 30 dias ou mais de antecedência dá direito a 100%"]
+  - pergunta: "tem wifi na pousada?"
+    tipo: fora
+    fora: true
+  - pergunta: "vcs servem almoço ou jantar?"
+    tipo: fora
+    fora: true
+  - pergunta: "o quarto tem ar condicionado?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem transfer da rodoviária?"
+    tipo: fora
+    fora: true
+  - pergunta: "qual a distancia da pousada até a praia?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem passeio de barco?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem academia?"
+    tipo: fora
+    fora: true
