@@ -14,8 +14,10 @@
 #      'no_caption'; a IA fora do ar é 422 `ai_unavailable`.
 # POST seus_posts/posts/:post_id/cuidado/foto           → "O que eu vi na foto" do passo 1 (#2454, flag
 #      meta_ads_comentarios_ia_conversa): a Foto lê a foto do post uma vez, só depois do clique. { status: 'ready', text,
-#      corrected } | 'no_image' | 'unavailable' (sem chave da conta, IA ou Meta fora do ar), sempre 200.
+#      corrected } | 'no_image' | 'no_credential' (a conta sem a chave dela) | 'unavailable' (IA ou Meta fora do ar),
+#      sempre 200.
 # PUT  seus_posts/posts/:post_id/cuidado/foto           correction → a correção do dono, que vale no lugar da leitura.
+#      Sem a chave `correction`, 422 `missing_correction`; `correction: ""` volta para a leitura da IA.
 # POST seus_posts/posts/:post_id/cuidado/ler_antigos    → "Ler e mandar" (uma vez por cuidado ligado).
 #      Mudar: administrador ou `posts_manage`.
 #
@@ -91,7 +93,10 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     render json: fonte.foto&.ler || { status: 'no_image' }
   end
 
+  # A chave `correction` é obrigatória: sem ela, 422, sem mexer em nada. Apagar a correção só com `correction: ""`.
   def corrigir_foto
+    return render_error_code('missing_correction') unless params.key?(:correction)
+
     correcao = texto(:correction)
     return render_error_code('invalid_correction') if correcao.strip.length > Crm::MetaAdsPostReading::TEXT_LIMIT
 

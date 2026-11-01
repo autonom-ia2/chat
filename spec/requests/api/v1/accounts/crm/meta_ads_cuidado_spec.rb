@@ -151,6 +151,20 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
       expect(response.parsed_body).to eq('status' => 'ready', 'text' => 'E-book de bolos caseiros', 'corrected' => true)
       expect(Crm::MetaAdsPostReading.sole).to have_attributes(network: 'instagram', post_id: media_id, corrected_by_id: admin.id)
     end
+
+    it 'PUT sem a chave correction: 422, sem apagar a correção; só correction "" explícito volta para a leitura da IA' do
+      account.enable_features!('meta_ads_comentarios_ia_conversa')
+      post "#{base}/cuidado/foto", headers: admin.create_new_auth_token, as: :json
+      put "#{base}/cuidado/foto", params: { correction: 'E-book de bolos caseiros' }, headers: admin.create_new_auth_token, as: :json
+
+      put "#{base}/cuidado/foto", params: {}, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body).to eq('error' => 'missing_correction')
+      expect(Crm::MetaAdsPostReading.sole.correction).to eq('E-book de bolos caseiros')
+
+      put "#{base}/cuidado/foto", params: { correction: '' }, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body).to eq('status' => 'ready', 'text' => 'A capa de um e-book de bolos.', 'corrected' => false)
+    end
   end
 
   it 'lê o criativo do anúncio uma vez só por tela, mesmo passando pela leitura dos comentários' do

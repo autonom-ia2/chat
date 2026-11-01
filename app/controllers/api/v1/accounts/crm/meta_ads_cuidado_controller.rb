@@ -11,7 +11,8 @@
 # POST meta_ads_connection/ads/:ad_id/cuidado/previa    para_quem → os exemplos do passo "como fica" (Previa).
 # POST meta_ads_connection/ads/:ad_id/cuidado/foto      → "O que eu vi na foto" do passo 1 (#2454, flag
 #      meta_ads_comentarios_ia_conversa), do post do criativo; o mesmo contrato do post do Seus posts.
-# PUT  meta_ads_connection/ads/:ad_id/cuidado/foto      correction → a correção do dono.
+# PUT  meta_ads_connection/ads/:ad_id/cuidado/foto      correction → a correção do dono. Sem a chave `correction`, 422
+#      `missing_correction`; `correction: ""` volta para a leitura da IA.
 # POST meta_ads_connection/ads/:ad_id/cuidado/ler_antigos → "Ler e mandar" (uma vez por cuidado ligado).
 #      Mudar: administrador ou `meta_ads_manage`.
 #
@@ -79,7 +80,10 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
     render json: fonte.foto&.ler || { status: 'no_image' }
   end
 
+  # A chave `correction` é obrigatória: sem ela, 422, sem mexer em nada. Apagar a correção só com `correction: ""`.
   def corrigir_foto
+    return render_error_code('missing_correction') unless params.key?(:correction)
+
     correcao = texto(:correction)
     return render_error_code('invalid_correction') if correcao.strip.length > Crm::MetaAdsPostReading::TEXT_LIMIT
 

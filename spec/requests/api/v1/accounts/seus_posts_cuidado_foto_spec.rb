@@ -87,6 +87,20 @@ RSpec.describe 'Seus posts: o que eu vi na foto do post', type: :request do
     expect(Crm::MetaAdsPostReading.count).to eq(0)
   end
 
+  it 'PUT sem a chave correction: 422, sem apagar a correção; correction "" explícito volta para a leitura da IA' do
+    post base, params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+    put base, params: { perfil: perfil, correction: 'Bolo de cenoura do e-book' }, headers: admin.create_new_auth_token, as: :json
+
+    put base, params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'missing_correction')
+    expect(Crm::MetaAdsPostReading.sole.correction).to eq('Bolo de cenoura do e-book')
+
+    put base, params: { perfil: perfil, correction: '' }, headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body).to include('status' => 'ready', 'corrected' => false)
+    expect(Crm::MetaAdsPostReading.sole.correction).to be_nil
+  end
+
   it 'agente sem posts_manage: 403 antes de ler a Meta' do
     agente = create(:user, account: account, role: :agent)
     create(:inbox_member, user: agente, inbox: canal.inbox)
