@@ -180,6 +180,114 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
     end
   end
 
+  # O evento de verdade, pelo despacho da plataforma, com a cadeia indo junto. Um job por vez, como no Sidekiq: o job
+  # enfileirado dentro de outro só roda depois dele (o perform_enqueued_jobs com bloco os aninharia na mesma thread).
+  describe 'pela plataforma, um job depois do outro' do
+    let(:cadeia) { Autonomia::Automacao::Cadeia }
+
+    def drenar
+      drenados = [EventDispatcherJob, Autonomia::Automacao::AvancarJob]
+      30.times do
+        job = enqueued_jobs.find { |item| drenados.include?(item[:job]) }
+        return unless job
+
+        enqueued_jobs.delete(job)
+        job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
+      end
+      raise 'a fila não esvaziou em 30 jobs'
+    end
+
+    def status_passo(id, status)
+      { 'id' => id, 'tipo' => 'acao', 'acao' => 'POST conversations/:id/toggle_status', 'descricao' => 'Mudar o status',
+        'caminho' => { 'id' => { '$valor' => 'conversa.id' } }, 'corpo' => { 'status' => status } }
+    end
+
+    def recusas(motivo) = have_received(:registrar_recusa).with(having_attributes(motivo: motivo), any_args)
+
+    before { allow(cadeia).to receive(:registrar_recusa).and_call_original }
+
+    it 'A (aberta: resolver) e B (resolvida: abrir) param no laço', :aggregate_failures do
+      conversa.update!(status: :resolved)
+      clear_enqueued_jobs
+      resolve = automacao_ligada(account, admin, [status_passo('a1', 'resolved')], gatilho: { 'tipo' => 'conversa.aberta' })
+      reabre = automacao_ligada(account, admin, [status_passo('b1', 'open')])
+
+      conversa.update!(status: :open)
+      drenar
+
+      expect(execucoes.where(automacao: resolve).pluck(:estado)).to eq(['concluida'])
+      expect(execucoes.where(automacao: reabre).pluck(:estado)).to eq(['concluida'])
+      expect(cadeia).to recusas(:laco)
+      expect(conversa.reload.status).to eq('open')
+    end
+
+    it 'a automação que resolve e reabre a mesma conversa roda uma vez: a volta é auto-disparo', :aggregate_failures do
+      clear_enqueued_jobs
+      definicao = automacao_ligada(account, admin, [status_passo('c1', 'resolved'), status_passo('c2', 'open')],
+                                   gatilho: { 'tipo' => 'conversa.aberta' })
+      conversa.update!(status: :resolved)
+      conversa.update!(status: :open)
+      drenar
+
+      expect(execucoes.where(automacao: definicao).pluck(:estado)).to eq(['concluida'])
+      expect(cadeia).to recusas(:auto_disparo)
+      expect(conversa.reload.status).to eq('open')
+    end
+
+    it 'uma rajada de mensagens abre uma execução só' do
+      definicao = automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: { 'tipo' => 'mensagem.criada' })
+      clear_enqueued_jobs
+
+      3.times { create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: :incoming) }
+      drenar
+
+      expect(execucoes.where(automacao: definicao).count).to eq(1)
+    end
+
+    # Erro que sobe faz o EventDispatcherJob tentar de novo, e os outros listeners repetiriam webhooks e avisos.
+    it 'erro na consulta ou no Motor.ligado? não sobe para o evento', :aggregate_failures do
+      resolvida
+      mensagem = create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: :incoming)
+      clear_enqueued_jobs
+      allow(Autonomia::Automacao::Escuta).to receive(:automacoes_do_gatilho).and_raise(ActiveRecord::StatementInvalid, 'valor do cliente')
+      allow(ReportingEventListener.instance).to receive(:conversation_resolved)
+
+      conversa.update!(status: :resolved)
+      expect { drenar }.not_to raise_error
+      expect(ReportingEventListener.instance).to have_received(:conversation_resolved).once
+
+      allow(Autonomia::Automacao::Motor).to receive(:ligado?).and_raise(ActiveRecord::ConnectionNotEstablished)
+      expect do
+        listener.message_created(evento('message.created', message: mensagem))
+        listener.conversation_updated(evento('conversation.updated', conversation: conversa))
+        listener.contact_updated(evento('contact.updated', contact: conversa.contact))
+      end.not_to raise_error
+    end
+
+    it 'o log do erro não leva a mensagem dele' do
+      resolvida
+      allow(Autonomia::Automacao::Escuta).to receive(:automacoes_do_gatilho).and_raise(ActiveRecord::StatementInvalid, 'valor do cliente')
+      allow(Rails.logger).to receive(:error)
+
+      listener.conversation_resolved(evento('conversation.resolved', conversation: conversa))
+
+      sem_a_mensagem = satisfy { |linha| linha.include?('ActiveRecord::StatementInvalid') && linha.exclude?('valor do cliente') }
+      expect(Rails.logger).to have_received(:error).with(sem_a_mensagem)
+    end
+  end
+
+  # A ação da rodada passa pelo caderno do Guia, um por thread: a rodada nunca pode rodar dentro de quem disparou.
+  it 'a rodada nunca roda na thread do evento', :aggregate_failures do
+    resolvida
+    allow(Autonomia::Automacao::Executor).to receive(:rodar)
+
+    listener.conversation_resolved(evento('conversation.resolved', conversation: conversa))
+
+    expect(Autonomia::Automacao::Executor).not_to have_received(:rodar)
+    expect(Autonomia::Automacao::AvancarJob).to have_been_enqueued
+    expect(SyncDispatcher.new.listeners).not_to include(described_class.instance)
+  end
+
   it 'está na lista do despacho assíncrono' do
     expect(AsyncDispatcher.new.listeners).to include(described_class.instance)
   end

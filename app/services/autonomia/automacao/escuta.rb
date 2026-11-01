@@ -3,6 +3,8 @@
 # - `comecar`: o gatilho aconteceu (conversa criada, aberta, resolvida, mensagem criada). Cada automação ligada da
 #   conta com esse gatilho tenta começar para a conversa (Partida, que confere quem ligou, a caixa, os filtros e a
 #   cadeia).
+# - `mensagem_criada`: o gatilho "mensagem.criada" e o despertar da conversa dela. A flag vem antes de carregar a
+#   conversa: é o evento mais frequente da plataforma.
 # - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela é reservado e confere a
 #   condição agora, em vez de esperar o prazo. Só o "esperar até": a ação que espera uma nova tentativa e o "esperar"
 #   de tempo seguem o relógio.
@@ -12,8 +14,10 @@
 # que já foi desligado.
 #
 # Falha aqui vai para o log e não para as outras automações, nem o evento: o EventDispatcherJob tenta de novo, e
-# repetiria os webhooks e avisos dos outros listeners. A automação que não começou por erro não deixa registro (não
-# há execução onde pôr); o "esperar até" que não acordou segue pelo relógio.
+# repetiria os webhooks e avisos dos outros listeners. Vale para o método inteiro (o Motor.ligado? e as consultas
+# também) e, dentro dele, para cada automação e cada execução. O log leva a classe do erro e onde ele saiu, nunca a
+# mensagem: a de uma consulta traz os valores, que podem ser do cliente. A automação que não começou por erro não
+# deixa registro (não há execução onde pôr); o "esperar até" que não acordou segue pelo relógio.
 #
 # A execução acordada não herda a cadeia de quem a acordou: retoma a dela, gravada na Partida. A proteção contra
 # laço vale nas partidas; cada receita tem um número finito de esperas, então o despertar não gira sem fim.
@@ -26,20 +30,41 @@ module Autonomia::Automacao::Escuta
     automacoes_do_gatilho(conversa.account_id, tipo).includes(:account, :versao_ativa, :ligada_por).find_each do |definicao|
       ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: tipo, mensagem: mensagem).call
     rescue StandardError => e
-      Rails.logger.error("[automacao][escuta] não começou automacao=#{definicao.id} alvo=conversa:#{conversa.id} #{e.class}: #{e.message}")
+      registrar_erro("não começou automacao=#{definicao.id} alvo=conversa:#{conversa.id}", e)
     end
+  rescue StandardError => e
+    registrar_erro("não ouviu gatilho=#{tipo} alvo=conversa:#{conversa&.id}", e)
   end
 
+  # Atividade (o histórico que a própria plataforma escreve) não é mensagem de ninguém. Nota privada conta: é mensagem
+  # da equipe na conversa.
+  def mensagem_criada(mensagem)
+    return if mensagem.activity? || !::Autonomia::Automacao::Motor.ligado?(mensagem.account)
+
+    comecar(mensagem.conversation, 'mensagem.criada', mensagem: mensagem)
+    acordar(mensagem, [mensagem.conversation_id])
+  rescue StandardError => e
+    registrar_erro("não ouviu mensagem=#{mensagem&.id}", e)
+  end
+
+  # `registro`: o que mudou (conversa, contato ou mensagem); a conta sai dele aqui dentro, sob o rescue.
   # `conversa_ids`: lista ou subconsulta de ids das conversas.
-  def acordar(account, conversa_ids)
+  def acordar(registro, conversa_ids)
+    account = registro.account
     return unless ::Autonomia::Automacao::Motor.ligado?(account)
 
     ::Autonomia::Automacao::Execucao.where(account_id: account.id, alvo_type: 'Conversation', alvo_id: conversa_ids, estado: 'esperando')
                                     .includes(:versao).find_each do |execucao|
       reservar(execucao) if esperando_condicao?(execucao)
     rescue StandardError => e
-      Rails.logger.error("[automacao][escuta] não acordou execucao=#{execucao.id} #{e.class}: #{e.message}")
+      registrar_erro("não acordou execucao=#{execucao.id}", e)
     end
+  rescue StandardError => e
+    registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
+  end
+
+  def registrar_erro(contexto, erro)
+    Rails.logger.error("[automacao][escuta] #{contexto} #{erro.class} em #{erro.backtrace&.first}")
   end
 
   def automacoes_do_gatilho(account_id, tipo)
