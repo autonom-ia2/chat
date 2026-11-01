@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # #2414 F1.1: com a flag `automacao_fundacao`, a mudança feita por uma regra dispara as outras regras, e a cadeia
-# segura laço e cascata. Sem a flag, uma regra nunca dispara outra, como antes. A cascata cortada fica no histórico
-# da conversa; o laço, só no log.
+# segura laço, cascata e repetição na mesma raiz. Sem a flag, uma regra nunca dispara outra, como antes. Quando a
+# cadeia corta, fica uma nota só por raiz no histórico da conversa.
 RSpec.describe Autonomia::Automacao::CadeiaNosMotores::RegraDisparaRegra do
   include ActiveJob::TestHelper
 
@@ -22,8 +22,16 @@ RSpec.describe Autonomia::Automacao::CadeiaNosMotores::RegraDisparaRegra do
                      conversation: conversation, performed_by: regra_que_mudou, changed_attributes: { label_list: [[], ['lead']] })
   end
 
-  def tratar_na_cadeia(origens)
-    cadeia.restaurada(origens, account.id) { listener.conversation_updated(evento_da_regra) }
+  def tratar_na_cadeia(origens, raiz = SecureRandom.uuid)
+    cadeia.restaurada(origens, account.id, raiz) { listener.conversation_updated(evento_da_regra) }
+  end
+
+  def regra(nome, evento, condicoes, acoes)
+    create(:automation_rule, account: account, name: nome, event_name: evento, conditions: condicoes, actions: acoes)
+  end
+
+  def aberta
+    [{ attribute_key: 'status', filter_operator: 'equal_to', values: ['open'], query_operator: nil }]
   end
 
   def notas_de_atividade
@@ -56,11 +64,20 @@ RSpec.describe Autonomia::Automacao::CadeiaNosMotores::RegraDisparaRegra do
       expect { tratar_na_cadeia(["regra:#{regra_que_mudou.id}"]) }.not_to change(AutomationRulePendingExecution, :count)
     end
 
-    it 'a regra que já rodou na sequência é recusada (laço) e não deixa nota no histórico' do
+    it 'a regra que já rodou no ramo é recusada (laço) e deixa uma nota no histórico' do
       tratar_na_cadeia(["regra:#{regra_seguinte.id}"])
 
       expect(conversation.reload.label_list).not_to include('seguinte')
-      expect(notas_de_atividade).to be_empty
+      expect(notas_de_atividade.size).to eq(1)
+      expect(notas_de_atividade.first['arguments'].last['content']).to include('Etiqueta de quem abriu', 'to avoid repetition')
+    end
+
+    it 'deixa uma nota só por raiz, por mais que a cadeia corte' do
+      tratar_na_cadeia(["regra:#{regra_seguinte.id}"], 'raiz-1')
+      tratar_na_cadeia(%w[regra:1 etapa:2 regra:3], 'raiz-1')
+      tratar_na_cadeia(["regra:#{regra_seguinte.id}"], 'raiz-2')
+
+      expect(notas_de_atividade.size).to eq(2)
     end
 
     it 'a quarta automação seguida é recusada e o motivo vai para o histórico da conversa' do
@@ -68,9 +85,62 @@ RSpec.describe Autonomia::Automacao::CadeiaNosMotores::RegraDisparaRegra do
 
       expect(conversation.reload.label_list).not_to include('seguinte')
       expect(notas_de_atividade.size).to eq(1)
-      conteudo = notas_de_atividade.first['arguments'].last['content']
-      expect(conteudo).to include('Etiqueta de quem abriu')
+      expect(notas_de_atividade.first['arguments'].last['content']).to include('Etiqueta de quem abriu')
     end
+
+    it 'a regra recusada não deixa o Current preenchido para os próximos listeners' do
+      tratar_na_cadeia(["regra:#{regra_seguinte.id}"])
+
+      expect(Current.executed_by).to be_nil
+    end
+  end
+
+  # Ponta a ponta pelo EventDispatcherJob, como em produção: a regra A muda a conversa duas vezes, e cada mudança é um
+  # evento. A regra B casa com os dois, mas roda uma vez só por raiz.
+  describe 'duas mudanças da mesma regra' do
+    let(:agente) { create(:user, account: account, role: :agent) }
+    let(:regra_a) do
+      regra('A', 'conversation_created', [], [{ action_name: 'add_label', action_params: ['vip'] },
+                                              { action_name: 'assign_agent', action_params: [agente.id] }])
+    end
+
+    before do
+      create(:inbox_member, inbox: conversation.inbox, user: agente)
+      regra('B', 'conversation_updated', [{ attribute_key: 'labels', filter_operator: 'equal_to', values: ['vip'], query_operator: nil }],
+            [{ action_name: 'send_message', action_params: ['Olá! Bem-vindo'] }])
+    end
+
+    def mensagens_enviadas
+      perform_enqueued_jobs(only: EventDispatcherJob) { AutomationRules::ActionService.new(regra_a, account, conversation).perform }
+      conversation.messages.outgoing.where(content: 'Olá! Bem-vindo').count
+    end
+
+    it 'com a flag, a mensagem sai uma vez' do
+      account.enable_features!('automacao_fundacao')
+
+      expect(mensagens_enviadas).to eq(1)
+    end
+
+    it 'sem a flag, uma regra não dispara outra: nenhuma mensagem' do
+      expect(mensagens_enviadas).to eq(0)
+    end
+  end
+
+  it 'com a flag, A dispara B e B dispara A: cada uma roda uma vez e a sequência termina' do
+    account.enable_features!('automacao_fundacao')
+    regra_a = regra('A', 'conversation_updated', aberta, [{ action_name: 'add_label', action_params: ['x'] },
+                                                          { action_name: 'remove_label', action_params: ['y'] }])
+    regra('B', 'conversation_updated', aberta, [{ action_name: 'add_label', action_params: ['y'] },
+                                                { action_name: 'remove_label', action_params: ['x'] }])
+    execucoes = Hash.new(0)
+    allow(AutomationRules::Disparos).to receive(:registrar).and_wrap_original do |original, id|
+      execucoes[AutomationRule.find(id).name] += 1
+      original.call(id)
+    end
+
+    perform_enqueued_jobs(only: EventDispatcherJob) { AutomationRules::ActionService.new(regra_a, account, conversation).perform }
+
+    expect(execucoes).to include('A' => 1, 'B' => 1)
   end
 
   it 'sem a flag, o evento de uma regra segue ignorado' do

@@ -28,6 +28,24 @@ RSpec.describe Autonomia::Automacao::Cadeia do
     expect(recusa).to have_attributes(motivo: :profundidade, origens: %w[regra:1 etapa:2 automacao:3])
   end
 
+  # A regra com duas ações gera dois eventos; a seguinte casaria com os dois. Na mesma raiz, roda uma vez só.
+  it 'recusa a mesma automação de novo na mesma raiz, em outro ramo (repetida)' do
+    primeira, segunda = described_class.com('regra:1') do
+      [described_class.com('regra:2') { :rodou }, described_class.com('regra:2') { :rodou }]
+    end
+
+    expect(primeira).to eq(:rodou)
+    expect(segunda).to have_attributes(origem: 'regra:2', motivo: :repetida, origens: ['regra:1'])
+  end
+
+  it 'cada mudança de fora abre uma raiz nova: a mesma automação roda de novo' do
+    raizes = Array.new(2) { described_class.com('regra:1') { described_class.raiz } }
+
+    expect(raizes).to all(be_present)
+    expect(raizes.uniq.size).to eq(2)
+    expect(described_class.raiz).to be_nil
+  end
+
   # O ActionService das regras e o tratador de exceção dos controllers zeram o Current no meio da sequência.
   it 'não se perde com Current.reset' do
     origens = described_class.com('regra:1') do
@@ -73,10 +91,22 @@ RSpec.describe Autonomia::Automacao::Cadeia do
     it 'com a flag, devolve a cadeia guardada' do
       account.enable_features!('automacao_fundacao')
 
-      dentro = described_class.retomar(%w[regra:1 etapa:2], account) { [described_class.origens, described_class.conta_id] }
+      dentro = described_class.retomar(%w[regra:1 etapa:2], account, 'raiz-1') do
+        [described_class.origens, described_class.conta_id, described_class.raiz]
+      end
 
-      expect(dentro).to eq([%w[regra:1 etapa:2], account.id])
+      expect(dentro).to eq([%w[regra:1 etapa:2], account.id, 'raiz-1'])
       expect(described_class.origens).to eq([])
+      expect(described_class.raiz).to be_nil
+    end
+
+    it 'na raiz retomada, a automação que já rodou em outro job é recusada' do
+      account.enable_features!('automacao_fundacao')
+      described_class.retomar(%w[regra:1], account, 'raiz-2') { described_class.com('regra:2') { :rodou } }
+
+      recusa = described_class.retomar(%w[regra:1], account, 'raiz-2') { described_class.com('regra:2') { :rodou } }
+
+      expect(recusa).to have_attributes(motivo: :repetida)
     end
 
     it 'sem a flag, roda o bloco sem cadeia' do

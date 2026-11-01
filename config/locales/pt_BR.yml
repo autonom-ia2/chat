@@ -409,7 +409,7 @@ pt_BR:
       muted: '%{user_name} silenciou a conversa'
       unmuted: '%{user_name} reativou a conversa'
       automacao:
-        cadeia_profundidade: 'Automação parada: “%{nome}” seria a 4ª automação seguida, e o limite é 3.'
+        cadeia_parada: 'As automações pararam em “%{nome}” para evitar repetição: cada automação roda uma vez por mudança, e no máximo 3 seguidas.'
       auto_resolution_message: 'Resolvendo a conversa dado que está inativa por um tempo. Por favor, inicie uma nova conversa se precisar de mais ajuda.'
     templates:
       greeting_message_body: '%{account_name} normalmente responde em algumas horas.'
