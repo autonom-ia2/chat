@@ -29,6 +29,7 @@ class Autonomia::Automacao::Partida
     return pausar(acesso.motivo) if acesso.motivo
     return pular('fora_do_alcance') unless acesso.alcanca?(@alvo)
     return pular('fora_do_filtro') unless no_filtro?
+    return pular('ja_aberta') if aberta?
 
     comecar
   end
@@ -38,6 +39,12 @@ class Autonomia::Automacao::Partida
   def pode_comecar?
     ::Autonomia::Automacao::Motor.ligado?(@account) && @definicao.ativa && @definicao.versao_ativa &&
       @alvo.account_id == @account.id && !::ConversaCanal::PastaDoEmail.no_spam?(@alvo)
+  end
+
+  # A mensagem nova numa conversa que já tem a execução aberta é o caso comum: a consulta evita a cadeia e o INSERT
+  # que o índice único recusaria. O índice continua sendo a garantia (corrida entre dois eventos).
+  def aberta?
+    ::Autonomia::Automacao::Execucao.abertas.exists?(automacao_id: @definicao.id, alvo: @alvo, chave_gatilho: @chave_gatilho)
   end
 
   def no_filtro?
@@ -75,7 +82,7 @@ class Autonomia::Automacao::Partida
   end
 
   def pular(motivo)
-    Rails.logger.info("[automacao][motor] pulada automacao=#{@definicao.id} alvo=conversa:#{@alvo.id} motivo=#{motivo}")
+    Rails.logger.debug { "[automacao][motor] pulada automacao=#{@definicao.id} alvo=conversa:#{@alvo.id} motivo=#{motivo}" }
     nil
   end
 

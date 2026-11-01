@@ -31,12 +31,24 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
       expect([outra, desligada].map { |definicao| execucoes.exists?(automacao: definicao) }).to eq([false, false])
     end
 
-    it 'conta sem o motor não consulta automação nenhuma' do
+    # message.created é o evento mais frequente da plataforma: sem o motor, nenhum dos quatro toca as tabelas da
+    # automação, e a mensagem nem carrega a conversa.
+    it 'conta sem o motor não consulta automação nenhuma, em nenhum dos eventos', :aggregate_failures do
       resolvida
+      mensagem = create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: :incoming)
       account.disable_features!('automacao_motor')
 
-      expect(Autonomia::Automacao::Definicao).not_to receive(:joins)
-      listener.conversation_resolved(evento('conversation.resolved', conversation: conversa.reload))
+      consultas = []
+      contar = ->(*, dados) { consultas << dados[:sql] }
+      ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
+        listener.conversation_resolved(evento('conversation.resolved', conversation: Conversation.find(conversa.id)))
+        listener.conversation_updated(evento('conversation.updated', conversation: Conversation.find(conversa.id)))
+        listener.contact_updated(evento('contact.updated', contact: Contact.find(conversa.contact_id)))
+        listener.message_created(evento('message.created', message: Message.find(mensagem.id)))
+      end
+
+      expect(consultas.select { |sql| sql.include?('autonomia_automacao') }).to be_empty
+      expect(consultas.count { |sql| sql.include?('FROM "conversations"') }).to eq(2)
       expect(execucoes.count).to eq(0)
     end
 
@@ -108,6 +120,26 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
 
       expect([execucao.reload.estado, execucao.due_at]).to eq(['esperando', prazo])
       expect(Autonomia::Automacao::Registro.where(execucao: execucao).count).to eq(1)
+    end
+
+    it 'a reserva da escuta que não começou (Redis fora) é reenfileirada pela varredura, apesar do prazo à frente', :aggregate_failures do
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [esperar_urgente, prioridade_passo('p2', 'low')]))
+      conversa.update!(priority: :urgent)
+      allow(Autonomia::Automacao::AvancarJob).to receive(:perform_later).and_raise(Redis::CannotConnectError)
+      listener.conversation_updated(evento('conversation.updated', conversation: conversa))
+      expect([execucao.reload.estado, execucao.due_at.future?]).to eq(['andando', true])
+      allow(Autonomia::Automacao::AvancarJob).to receive(:perform_later).and_call_original
+
+      travel(16.minutes) { varrer }
+
+      expect(execucao.reload.estado).to eq('concluida')
+    end
+
+    it 'um erro ao acordar uma execução não sobe para o evento' do
+      comecar_e_rodar(automacao_ligada(account, admin, [esperar_urgente, prioridade_passo('p2', 'low')]))
+      allow(Autonomia::Automacao::AvancarJob).to receive(:perform_later).and_raise(Redis::CannotConnectError)
+
+      expect { listener.conversation_updated(evento('conversation.updated', conversation: conversa)) }.not_to raise_error
     end
 
     it 'o "esperar" de tempo não acorda com a mudança' do

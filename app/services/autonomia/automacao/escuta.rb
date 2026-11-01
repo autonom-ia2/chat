@@ -7,28 +7,38 @@
 #   condição agora, em vez de esperar o prazo. Só o "esperar até": a ação que espera uma nova tentativa e o "esperar"
 #   de tempo seguem o relógio.
 #
-# O gate é a flag do motor, lida da conta que o evento já trouxe: conta sem o motor não faz consulta nenhuma. Com o
-# motor, uma consulta pela conta e pelo tipo do gatilho; não há cache, porque a lista muda a cada automação ligada
-# ou desligada, e uma lista velha ligaria o que já foi desligado.
+# O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
+# tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
+# que já foi desligado.
+#
+# Falha aqui vai para o log e não para as outras automações, nem o evento: o EventDispatcherJob tenta de novo, e
+# repetiria os webhooks e avisos dos outros listeners. A automação que não começou por erro não deixa registro (não
+# há execução onde pôr); o "esperar até" que não acordou segue pelo relógio.
+#
+# A execução acordada não herda a cadeia de quem a acordou: retoma a dela, gravada na Partida. A proteção contra
+# laço vale nas partidas; cada receita tem um número finito de esperas, então o despertar não gira sem fim.
 module Autonomia::Automacao::Escuta
   module_function
 
   def comecar(conversa, tipo)
     return unless conversa && ::Autonomia::Automacao::Motor.ligado?(conversa.account)
 
-    automacoes_do_gatilho(conversa.account_id, tipo).find_each do |definicao|
+    automacoes_do_gatilho(conversa.account_id, tipo).includes(:account, :versao_ativa, :ligada_por).find_each do |definicao|
       ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: tipo).call
     rescue StandardError => e
       Rails.logger.error("[automacao][escuta] não começou automacao=#{definicao.id} alvo=conversa:#{conversa.id} #{e.class}: #{e.message}")
     end
   end
 
+  # `conversa_ids`: lista ou subconsulta de ids das conversas.
   def acordar(account, conversa_ids)
-    return if conversa_ids.blank? || !::Autonomia::Automacao::Motor.ligado?(account)
+    return unless ::Autonomia::Automacao::Motor.ligado?(account)
 
     ::Autonomia::Automacao::Execucao.where(account_id: account.id, alvo_type: 'Conversation', alvo_id: conversa_ids, estado: 'esperando')
                                     .includes(:versao).find_each do |execucao|
       reservar(execucao) if esperando_condicao?(execucao)
+    rescue StandardError => e
+      Rails.logger.error("[automacao][escuta] não acordou execucao=#{execucao.id} #{e.class}: #{e.message}")
     end
   end
 

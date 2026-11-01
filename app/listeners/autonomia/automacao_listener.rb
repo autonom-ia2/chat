@@ -10,10 +10,11 @@ class Autonomia::AutomacaoListener < BaseListener
     escuta.acordar(conversa.account, [conversa.id])
   end
 
-  # Atividade (o histórico que a própria plataforma escreve) não é mensagem de ninguém.
+  # Atividade (o histórico que a própria plataforma escreve) não é mensagem de ninguém. Nota privada conta: é mensagem
+  # da equipe na conversa. A flag vem antes de carregar a conversa: é o evento mais frequente da plataforma.
   def message_created(event)
     message = event.data[:message]
-    return if message.activity?
+    return if message.activity? || !::Autonomia::Automacao::Motor.ligado?(message.account)
 
     escuta.comecar(message.conversation, 'mensagem.criada')
     escuta.acordar(message.account, [message.conversation_id])
@@ -21,9 +22,7 @@ class Autonomia::AutomacaoListener < BaseListener
 
   def contact_updated(event)
     contact = event.data[:contact]
-    return unless ::Autonomia::Automacao::Motor.ligado?(contact.account)
-
-    escuta.acordar(contact.account, contact.conversations.pluck(:id))
+    escuta.acordar(contact.account, Conversation.where(contact_id: contact.id).select(:id))
   end
 
   private
