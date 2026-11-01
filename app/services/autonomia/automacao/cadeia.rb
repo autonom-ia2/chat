@@ -2,7 +2,8 @@
 #
 # Uma automação muda a conversa ou o card, isso dispara outra, que dispara outra. A cadeia guarda quem já rodou
 # nessa sequência ("regra:12", "etapa:4", "automacao:7") e recusa três coisas: a mesma automação de novo no mesmo
-# ramo (laço), uma quarta automação diferente (cascata) e a mesma automação de novo na mesma raiz (repetida). É
+# ramo (laço; auto-disparo quando ela casa com a própria mudança), uma quarta automação diferente (cascata) e a mesma
+# automação de novo na mesma raiz (repetida). É
 # proteção contra defeito de montagem, não limite de uso.
 #
 # A raiz é a mudança que começou tudo: um id novo no primeiro `com`, que segue com a cadeia. Uma regra com duas
@@ -47,8 +48,10 @@ class Autonomia::Automacao::Cadeia
       raiz_atual
     end
 
-    # nil quando pode entrar; senão o motivo: :laco (já rodou neste ramo) ou :profundidade.
+    # nil quando pode entrar; senão o motivo: :auto_disparo (a automação de agora casou com a própria mudança), :laco
+    # (já rodou antes neste ramo) ou :profundidade.
     def motivo_para_recusar(origem)
+      return :auto_disparo if origens.last == origem
       return :laco if origens.include?(origem)
 
       :profundidade if origens.size >= PROFUNDIDADE_MAXIMA
@@ -97,14 +100,16 @@ class Autonomia::Automacao::Cadeia
     end
 
     # O motivo vai para o log. Na conversa fica uma nota só por raiz, como atividade (só a equipe vê): quem montou as
-    # automações entende por que uma delas não rodou, e o laço comum (a regra que casa de novo com a própria mudança)
-    # não vira uma nota a cada passo.
+    # automações entende por que uma delas não rodou. O auto-disparo (a regra que casa de novo com a própria mudança) é
+    # o caso comum e fica só no log; o laço entre automações diferentes, a cascata e a repetida vão para a nota.
     def registrar_recusa(recusa, account_id:, alvo:, conversa: nil, nome: nil)
       Rails.logger.info(
         "[automacao][cadeia] recusada origem=#{recusa.origem} motivo=#{recusa.motivo} " \
         "cadeia=#{recusa.origens.join('>')} raiz=#{recusa.raiz} conta=#{account_id} alvo=#{alvo}"
       )
-      registrar_no_historico(conversa, nome) if conversa && primeira_vez?(recusa.raiz, "nota:#{conversa.id}")
+      return if conversa.nil? || recusa.motivo == :auto_disparo
+
+      registrar_no_historico(conversa, nome) if primeira_vez?(recusa.raiz, "nota:#{conversa.id}")
     end
 
     private

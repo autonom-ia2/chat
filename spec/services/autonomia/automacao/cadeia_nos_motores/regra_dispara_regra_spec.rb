@@ -2,7 +2,7 @@ require 'rails_helper'
 
 # #2414 F1.1: com a flag `automacao_fundacao`, a mudança feita por uma regra dispara as outras regras, e a cadeia
 # segura laço, cascata e repetição na mesma raiz. Sem a flag, uma regra nunca dispara outra, como antes. Quando a
-# cadeia corta, fica uma nota só por raiz no histórico da conversa.
+# cadeia corta, fica uma nota só por raiz no histórico da conversa; a regra que casa com a própria mudança fica só no log.
 RSpec.describe Autonomia::Automacao::CadeiaNosMotores::RegraDisparaRegra do
   include ActiveJob::TestHelper
 
@@ -64,8 +64,15 @@ RSpec.describe Autonomia::Automacao::CadeiaNosMotores::RegraDisparaRegra do
       expect { tratar_na_cadeia(["regra:#{regra_que_mudou.id}"]) }.not_to change(AutomationRulePendingExecution, :count)
     end
 
-    it 'a regra que já rodou no ramo é recusada (laço) e deixa uma nota no histórico' do
+    it 'a regra disparada pela própria mudança é recusada sem nota, só no log' do
       tratar_na_cadeia(["regra:#{regra_seguinte.id}"])
+
+      expect(conversation.reload.label_list).not_to include('seguinte')
+      expect(notas_de_atividade).to be_empty
+    end
+
+    it 'a regra que já rodou antes de outra no ramo é recusada (laço) e deixa uma nota no histórico' do
+      tratar_na_cadeia(["regra:#{regra_seguinte.id}", "regra:#{regra_que_mudou.id}"])
 
       expect(conversation.reload.label_list).not_to include('seguinte')
       expect(notas_de_atividade.size).to eq(1)
@@ -73,9 +80,10 @@ RSpec.describe Autonomia::Automacao::CadeiaNosMotores::RegraDisparaRegra do
     end
 
     it 'deixa uma nota só por raiz, por mais que a cadeia corte' do
-      tratar_na_cadeia(["regra:#{regra_seguinte.id}"], 'raiz-1')
+      laco = ["regra:#{regra_seguinte.id}", "regra:#{regra_que_mudou.id}"]
+      tratar_na_cadeia(laco, 'raiz-1')
       tratar_na_cadeia(%w[regra:1 etapa:2 regra:3], 'raiz-1')
-      tratar_na_cadeia(["regra:#{regra_seguinte.id}"], 'raiz-2')
+      tratar_na_cadeia(laco, 'raiz-2')
 
       expect(notas_de_atividade.size).to eq(2)
     end
@@ -89,7 +97,7 @@ RSpec.describe Autonomia::Automacao::CadeiaNosMotores::RegraDisparaRegra do
     end
 
     it 'a regra recusada não deixa o Current preenchido para os próximos listeners' do
-      tratar_na_cadeia(["regra:#{regra_seguinte.id}"])
+      tratar_na_cadeia(["regra:#{regra_seguinte.id}", "regra:#{regra_que_mudou.id}"])
 
       expect(Current.executed_by).to be_nil
     end
