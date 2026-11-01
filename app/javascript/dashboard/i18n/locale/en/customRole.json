@@ -211,7 +211,7 @@
           "NAME": "Automations",
           "HINT": "Automation rules",
           "LEVEL_VIEW": "Sees the rules.",
-          "LEVEL_MANAGE": "Creates and edits rules."
+          "LEVEL_MANAGE": "Creates and edits rules. A rule with a webhook or an email transcript also needs Integrations."
         },
         "SCHEDULING": {
           "NAME": "Scheduling",

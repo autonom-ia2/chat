@@ -1,9 +1,12 @@
 class Api::V1::Accounts::AutomationRulesController < Api::V1::Accounts::BaseController
   include AttachmentConcern
+  include Api::V1::Accounts::Concerns::AutomationExternalActionGuard
 
   before_action :check_authorization
   before_action :fetch_automation_rule, only: [:show, :update, :destroy, :clone, :ensaio]
   before_action :ensure_execution_delay_allowed, only: [:create, :update]
+  before_action :check_external_actions, only: [:create, :update]
+  before_action :check_external_actions_on_clone, only: :clone
 
   def index
     @automation_rules = Current.account.automation_rules
