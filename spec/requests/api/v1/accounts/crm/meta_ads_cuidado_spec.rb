@@ -219,18 +219,12 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(hash_including(legenda: 'E-book de bolos por R$ 29'))
   end
 
-  it 'prévia e resumo com a IA fora do ar: 422 ai_unavailable, como no post (o passo "como fica" não fica em branco)' do
+  it 'prévia com a IA fora do ar: 422 ai_unavailable, como no post (o passo "como fica" não fica em branco)' do
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
     allow(classificador).to receive(:decidir!).and_raise(Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('timeout'))
 
     post "#{base}/cuidado/previa", params: { para_quem: 'Quem pedir o e-book' }, headers: admin.create_new_auth_token, as: :json
-    expect(response).to have_http_status(:unprocessable_content)
-    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
-
-    allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
-      .and_return(instance_double(Crm::MetaAds::ComentariosIa::Resumo, call: { status: 'ai_unavailable' }))
-    get "#{base}/resumo", headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.parsed_body).to eq('error' => 'ai_unavailable')
   end
@@ -253,10 +247,17 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(Crm::MetaAdsCommentCare.count).to eq(0)
   end
 
-  it 'resumo: na primeira vez, está lendo' do
-    get "/api/v1/accounts/#{account.id}/crm/meta_ads_connection/ads/#{ad_id}/resumo", headers: admin.create_new_auth_token, as: :json
+  it 'resumo: antes do clique, só o que o código conta, sem nenhuma IA (#2454)' do
+    allow(Crm::Ai::ResponsesClient).to receive(:new)
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new)
 
-    expect(response.parsed_body).to eq('status' => 'reading')
+    get "#{base}/resumo", headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to eq('status' => 'ready', 'waiting' => 3, 'private_window' => 2)
+    expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    expect(Crm::AiUsageEvent.count).to eq(0)
   end
 
   it 'o selo: o estado do cuidado de cada anúncio, só do banco' do

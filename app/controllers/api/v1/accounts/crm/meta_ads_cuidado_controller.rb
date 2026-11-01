@@ -4,7 +4,8 @@
 # GET  meta_ads_connection/cuidados                     → { cuidados: [{ ad_id, care }] }: o estado do cuidado de cada
 #      anúncio (só banco), para o selo "Cuidando" no detalhe do anúncio.
 # GET  meta_ads_connection/ads/:ad_id/cuidado           → o Painel (Crm::MetaAds::ComentariosIa::Painel) e `inbox_id`.
-# GET  meta_ads_connection/ads/:ad_id/resumo            → "O que tem nos comentários" (Resumo; 'reading' enquanto conta).
+# GET  meta_ads_connection/ads/:ad_id/resumo            → "O que tem nos comentários" (Resumo): só o que o código conta,
+#      sem IA (#2454): { status, waiting, private_window }.
 #      Ver: administrador ou `meta_ads_view`.
 # PUT  meta_ads_connection/ads/:ad_id/cuidado           message, para_quem, phrases[], status → o Painel.
 # POST meta_ads_connection/ads/:ad_id/cuidado/previa    para_quem → os exemplos do passo "como fica" (Previa).
@@ -20,14 +21,13 @@
 # os comentários na Meta; o criativo já foi lido (uma vez só por chamada: é ele que diz as caixas, e a Fonte reusa a
 # leitura).
 #
-# Prévia e resumo respondem como no post: o que não está pronto vai como erro (422; `ai_unavailable` com a IA fora do
-# ar), e a tela não mostra o passo "como fica" em branco com "Ligar" ativo.
+# A prévia responde como no post: o que não está pronto vai como erro (422; `ai_unavailable` com a IA fora do ar), e a
+# tela não mostra o passo "como fica" em branco com "Ligar" ativo.
 #
 # O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,
 # mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
 class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm::BaseController
   AUDIT_ACTION = 'meta_ads_comment_care'.freeze
-  AI_UNAVAILABLE = 'ai_unavailable'.freeze
   FLAGS = ['meta_ads_gestao', Crm::MetaAds::ComentariosIa::Cuidar::FLAG].freeze
   REDE_FLAGS = Crm::MetaAds::ComentariosIa::Anuncio::FLAGS.values.freeze
   STATUS = { 'ad_not_found' => :not_found, 'not_connected' => :not_found, 'not_inbox_member' => :forbidden }.freeze
@@ -50,10 +50,7 @@ class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm:
   end
 
   def resumo
-    resultado = Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
-    return render_error_code(AI_UNAVAILABLE) if resultado[:status] == AI_UNAVAILABLE
-
-    render json: resultado
+    render json: Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
   end
 
   def update

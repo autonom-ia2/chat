@@ -4,7 +4,8 @@
 #      "Cuidando" e a faixa da lista, só os do perfil (?perfil=).
 # PUT  seus_posts/cuidados                              status → "Pausar todos" / "Retomar todos" do perfil; a lista.
 # GET  seus_posts/posts/:post_id/cuidado                → o Painel (Crm::MetaAds::ComentariosIa::Painel).
-# GET  seus_posts/posts/:post_id/resumo                 → "O que tem nos comentários" (Resumo; 'reading' enquanto conta).
+# GET  seus_posts/posts/:post_id/resumo                 → "O que tem nos comentários" (Resumo): só o que o código conta,
+#      sem IA (#2454): { status, waiting, private_window }.
 #      Ver: administrador ou `posts_view`.
 # PUT  seus_posts/posts/:post_id/cuidado                message, para_quem, phrases[], status → o Painel.
 # POST seus_posts/posts/:post_id/cuidado/previa         para_quem → os exemplos do passo "como fica" (Previa).
@@ -16,7 +17,7 @@
 #
 # As mesmas guardas do post (SeusPostsComentariosController): ?perfil=, ver a caixa do perfil e o post ser do perfil
 # (inclusive no GET do painel, que o pai pula), mais a flag `meta_ads_comentarios_ia`. A chave de mudar vem antes de
-# conferir o post: quem só vê recebe 403 sem chamada à Meta. Prévia e resumo com a IA fora do ar: 422 `ai_unavailable`.
+# conferir o post: quem só vê recebe 403 sem chamada à Meta. Prévia com a IA fora do ar: 422 `ai_unavailable`.
 # O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,
 # mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
 class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPostsComentariosController
@@ -52,10 +53,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   end
 
   def resumo
-    resultado = Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
-    return render_error_code(AI_UNAVAILABLE) if resultado[:status] == AI_UNAVAILABLE
-
-    render json: resultado
+    render json: Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
   end
 
   def update

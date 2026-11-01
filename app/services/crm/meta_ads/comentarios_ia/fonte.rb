@@ -8,13 +8,13 @@
 # escondidos. Cada linha: `{ id:, network:, author:, text:, momento:, inbox_id:, post_id: }` (a caixa e o post de onde
 # veio, para o "Ler e mandar" cuidar dele como um comentário novo). O anúncio que roda nas duas redes junta as listas.
 #
-# `legenda` (#2424): o texto do post, lido pela Rede como no motor, para a prévia e o resumo decidirem com o mesmo dado.
+# `legenda` (#2424): o texto do post, lido pela Rede como no motor, para a prévia decidir com o mesmo dado.
 class Crm::MetaAds::ComentariosIa::Fonte
   SEM_PESSOA = ->(_inbox) { true }
   NAO_VE_CONVERSA = ->(_conversation) { false }
   SUMIU = { status: 'ad_not_found' }.freeze
 
-  # O alvo só com ids (o que o ResumoJob recebe): `{ 'kind' => 'post', 'perfil' =>, 'post_id' => }` ou
+  # O alvo só com ids (o que o Resumo e o LerAntigosJob recebem): `{ 'kind' => 'post', 'perfil' =>, 'post_id' => }` ou
   # `{ 'kind' => 'ad', 'ad_id' =>, 'networks' => [] }`. nil quando o perfil, a conexão ou o anúncio não existem mais.
   def self.do_alvo(account, alvo)
     alvo = alvo.to_h.stringify_keys
@@ -71,7 +71,7 @@ class Crm::MetaAds::ComentariosIa::Fonte
   end
 
   # A legenda do primeiro post (o anúncio nas duas redes é o mesmo criativo), ou nil. Na tela, a Meta fora do ar não
-  # derruba a prévia nem o resumo: seguem sem a legenda.
+  # derruba a prévia: ela segue sem a legenda.
   def legenda
     network, leitura = @leituras.first
     inbox = leitura && Inbox.find_by(id: leitura[:inbox_id])

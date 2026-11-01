@@ -164,16 +164,6 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response.parsed_body).to eq('error' => 'ai_unavailable')
   end
 
-  it 'resumo: IA fora do ar é falha (422 ai_unavailable)' do
-    allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
-      .and_return(instance_double(Crm::MetaAds::ComentariosIa::Resumo, call: { status: 'ai_unavailable' }))
-
-    get "#{base}/resumo", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
-
-    expect(response).to have_http_status(:unprocessable_content)
-    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
-  end
-
   it 'o painel também confere que o post é do perfil: post de outro perfil é 404, sem ler os comentários dele' do
     outro_post = "/api/v1/accounts/#{account.id}/seus_posts/posts/17900000000000002/cuidado"
     get outro_post, params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
@@ -261,10 +251,17 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response.parsed_body['cuidados'].sole['results']).to eq('sent' => 1, 'replied' => 0)
   end
 
-  it 'resumo: na primeira vez, está lendo' do
+  it 'resumo: antes do clique, só o que o código conta, sem nenhuma IA (#2454)' do
+    allow(Crm::Ai::ResponsesClient).to receive(:new)
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new)
+
     get "#{base}/resumo", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 
-    expect(response.parsed_body).to eq('status' => 'reading')
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to eq('status' => 'ready', 'waiting' => 3, 'private_window' => 2)
+    expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    expect(Crm::AiUsageEvent.count).to eq(0)
   end
 
   it 'a lista: o estado do cuidado de cada post, para o selo "Cuidando"' do
