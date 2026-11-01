@@ -1086,3 +1086,14 @@
   display_name: Agentes › pedir a localização do cliente
   enabled: false
   column: feature_flags_ext_2
+
+# IA cuida dos comentários: "O que eu vi na foto" (#2454, PR 1 do #2436). Ligada: no passo 1 do "Cuidar dos
+# comentários", depois do clique do dono, a IA lê a foto do post uma vez (carrossel numa chamada só) e mostra o que viu,
+# com Corrigir; a correção do dono vale no lugar da leitura. O Classificador recebe esse texto no campo `photo` da
+# entrada, como dado. Antes do clique, nenhuma IA. Desligada: nada é lido, e a entrada do Classificador fica byte a byte
+# a de antes. Rollback: desligar a flag na conta. Migration 20261108680000 (crm_meta_ads_post_readings). Fim da
+# feature_flags_ext_2: posição 24 (8388608, 1 << 23), dada pela Orquestração em 01/11, depois de 20–23. Nasce desligada.
+- name: meta_ads_comentarios_ia_conversa
+  display_name: Anúncios › IA cuida dos comentários › lê a foto e a conversa
+  enabled: false
+  column: feature_flags_ext_2
