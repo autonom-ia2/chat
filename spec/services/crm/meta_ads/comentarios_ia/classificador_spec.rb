@@ -77,6 +77,42 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
     end
   end
 
+  describe 'o que a foto mostra (#2454)' do
+    let(:foto) { 'Um vestido azul de linho num cabide. Etiqueta: R$ 259.' }
+
+    def pedido_com(texto_da_foto)
+      cliente_novo = instance_double(Crm::Ai::ResponsesClient)
+      allow(cliente_novo).to receive(:create).and_return({ text: { decision: 'price', certainty: 0.9, reason: 'Preço.' }.to_json })
+      described_class.new(care: care, legenda: 'Antes e depois da sala 😍', foto: texto_da_foto, cliente: cliente_novo)
+                     .decidir!('Quanto custa esse?')
+      enviado = nil
+      expect(cliente_novo).to have_received(:create) { |**argumentos| enviado = argumentos }
+      enviado
+    end
+
+    it 'com a flag da conversa: vai no campo photo da entrada, e as instruções só explicam o campo' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+
+      enviado = pedido_com(foto)
+
+      expect(JSON.parse(enviado[:input])).to include('photo' => foto, 'caption' => 'Antes e depois da sala 😍', 'comment' => 'Quanto custa esse?')
+      expect(enviado[:instructions]).to include(described_class::FOTO)
+      expect(enviado[:instructions]).not_to include('vestido', 'R$ 259')
+    end
+
+    it 'sem a flag da conversa: a entrada e as instruções ficam byte a byte as de antes' do
+      expect(pedido_com(foto)).to eq(pedido_com(nil))
+      expect(JSON.parse(pedido_com(foto)[:input])).not_to have_key('photo')
+    end
+
+    it 'com a flag, mas sem leitura da foto: também como antes' do
+      sem_flag = pedido_com(nil)
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Foto::FLAG)
+
+      expect(pedido_com('  ')).to eq(sem_flag)
+    end
+  end
+
   it 'sem certeza: a decisão não vale, mas a escolha, a certeza e o motivo voltam para a auditoria' do
     responde('private', 0.4, 'Talvez queira saber da empresa.')
 

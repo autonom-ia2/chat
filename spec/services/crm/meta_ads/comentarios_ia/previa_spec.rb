@@ -2,7 +2,10 @@ require 'rails_helper'
 
 RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
   let(:account) { create(:account) }
-  let(:fonte) { instance_double(Crm::MetaAds::ComentariosIa::Fonte, legenda: 'Bolo de cenoura, receita no e-book') }
+  let(:fonte) do
+    instance_double(Crm::MetaAds::ComentariosIa::Fonte, legenda: 'Bolo de cenoura, receita no e-book',
+                                                        texto_da_foto: 'Um bolo de cenoura com cobertura')
+  end
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:previa) { described_class.new(account: account, fonte: fonte, para_quem: 'Quem pedir a receita') }
 
@@ -24,7 +27,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
     expect(previa.call).to eq(status: 'ready', recebe: { author: 'pessoa.3', text: 'Me passa a receita?', network: 'instagram' },
                               nao: { author: 'pessoa.2', text: 'Que lindo!', network: 'instagram' })
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
-      .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'), legenda: 'Bolo de cenoura, receita no e-book', tela: true)
+      .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'), legenda: 'Bolo de cenoura, receita no e-book',
+            foto: 'Um bolo de cenoura com cobertura', tela: true)
     expect(classificador).to have_received(:decidir!).exactly(3).times
   end
 

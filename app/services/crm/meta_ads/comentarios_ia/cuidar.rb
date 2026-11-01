@@ -217,7 +217,12 @@ class Crm::MetaAds::ComentariosIa::Cuidar
   end
 
   def classificador
-    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(care: care, legenda: rede.legenda)
+    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(care: care, legenda: rede.legenda, foto: texto_da_foto)
+  end
+
+  # O que a foto do post mostra (#2454), lido do banco: a leitura é feita no passo 1 da tela, nunca aqui.
+  def texto_da_foto
+    Crm::MetaAds::ComentariosIa::Foto.texto_para_ia(inbox.account, @comentario.network, @comentario.post_id)
   end
 
   def rede

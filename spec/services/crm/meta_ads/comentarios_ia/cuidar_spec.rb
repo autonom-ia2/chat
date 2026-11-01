@@ -372,7 +372,20 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     described_class.new(comentario, rede: rede, conversa: conversa, registro: registro).call
 
-    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(care: care, legenda: 'Seguro viagem com cobertura internacional')
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
+      .with(care: care, legenda: 'Seguro viagem com cobertura internacional', foto: nil)
+  end
+
+  it 'pergunta também com o que a foto do post mostra, lido do banco, sem chamar a Meta nem a IA da foto (#2454)' do
+    create(:crm_meta_ads_post_reading, account: account, network: 'instagram', post_id: '1790', description: 'Vestido azul',
+                                       correction: 'Vestido midi azul-marinho')
+    allow(rede).to receive(:legenda).and_return(nil)
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
+    decide('no_reply')
+
+    described_class.new(comentario, rede: rede, conversa: conversa, registro: registro).call
+
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(care: care, legenda: nil, foto: 'Vestido midi azul-marinho')
   end
 
   it 'grava o que a IA escolheu, a certeza e o motivo também quando ela age, antes de mandar o privado (#2424)' do
