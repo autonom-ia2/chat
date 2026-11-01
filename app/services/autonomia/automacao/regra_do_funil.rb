@@ -21,6 +21,11 @@ module Autonomia::Automacao::RegraDoFunil
   def self.nomes(lista, campo)
     lista = lista.to_unsafe_h.values if lista.respond_to?(:to_unsafe_h)
     lista = lista.values if lista.is_a?(Hash)
-    Array(lista).filter_map { |item| item.to_h.with_indifferent_access[campo]&.to_s }
+    Array(lista).filter_map { |item| hash_de(item).with_indifferent_access[campo]&.to_s }
+  end
+
+  # Item do pedido chega como ActionController::Parameters não permitido: aqui só se lê o nome.
+  def self.hash_de(item)
+    item.respond_to?(:to_unsafe_h) ? item.to_unsafe_h : item.to_h
   end
 end
