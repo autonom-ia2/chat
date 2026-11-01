@@ -3,14 +3,13 @@ require 'rails_helper'
 RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
   let(:account) { create(:account) }
   let(:fonte) do
-    instance_double(Crm::MetaAds::ComentariosIa::Fonte, legenda: 'Bolo de cenoura, receita no e-book',
-                                                        texto_da_foto: 'Um bolo de cenoura com cobertura')
+    instance_double(Crm::MetaAds::ComentariosIa::Fonte, legenda: 'Bolo de cenoura, receita no e-book')
   end
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:previa) { described_class.new(account: account, fonte: fonte, para_quem: 'Quem pedir a receita') }
 
-  def linha(id, text)
-    { id: id, network: 'instagram', author: "pessoa.#{id}", text: text, momento: 1.day.ago }
+  def linha(id, text, network: 'instagram', post_id: '1790')
+    { id: id, network: network, author: "pessoa.#{id}", text: text, momento: 1.day.ago, post_id: post_id }
   end
 
   before do
@@ -28,8 +27,21 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
                               nao: { author: 'pessoa.2', text: 'Que lindo!', network: 'instagram' })
     expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new)
       .with(care: an_object_having_attributes(para_quem: 'Quem pedir a receita'), legenda: 'Bolo de cenoura, receita no e-book',
-            foto: 'Um bolo de cenoura com cobertura', tela: true)
+            foto: nil, tela: true)
     expect(classificador).to have_received(:decidir!).exactly(3).times
+  end
+
+  # #2454: no anúncio nas duas redes, cada comentário usa a leitura da foto do post da própria rede, como o motor.
+  it 'cada comentário decide com a leitura da foto do post da própria rede' do
+    Crm::MetaAdsPostReading.create!(account: account, network: 'instagram', post_id: '1790', description: 'Foto no Instagram')
+    Crm::MetaAdsPostReading.create!(account: account, network: 'facebook', post_id: '555_888', description: 'Foto no Facebook')
+    no_facebook = linha('2', 'Me passa a receita?', network: 'facebook', post_id: '555_888')
+    allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Que lindo!'), no_facebook] })
+
+    previa.call
+
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(hash_including(foto: 'Foto no Instagram')).once
+    expect(Crm::MetaAds::ComentariosIa::Classificador).to have_received(:new).with(hash_including(foto: 'Foto no Facebook')).once
   end
 
   describe 'a resposta dentro de um comentário (#2454)' do

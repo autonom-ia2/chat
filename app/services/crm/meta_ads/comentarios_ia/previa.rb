@@ -8,6 +8,8 @@
 #   comentário inventado como real. Sem exemplo de "não se aplica", `nao: nil`.
 # - O texto dos exemplos vai só na resposta à tela (dado de terceiro, lido ao vivo); nada é gravado.
 # - A legenda do post (#2424), lida pela Fonte, vai ao Classificador como no motor.
+# - A foto (#2454) é a leitura do post da rede de cada comentário, como no motor: no anúncio que roda no Instagram e no
+#   Facebook, cada comentário decide com a foto do post da própria rede (nil quando aquela rede ainda não tem leitura).
 # - IA fora do ar: `status: 'ai_unavailable'`, nunca uma prévia vazia que pareceria "ninguém recebe".
 # - Com a flag meta_ads_comentarios_ia_conversa (#2454), também `resposta`: a primeira resposta de outra pessoa dentro
 #   de um dos comentários lidos, decidida com o de cima (como o motor faz), com o `kind` ('recebe' ou 'nao') e o
@@ -44,7 +46,7 @@ class Crm::MetaAds::ComentariosIa::Previa
     linhas.each do |linha|
       break if achados.key?(:recebe) && achados.key?(:nao)
 
-      tipo = tipo(classificador.decidir!(linha[:text]))
+      tipo = tipo(classificador(linha).decidir!(linha[:text]))
       achados[tipo] ||= exemplo(linha) if tipo
     end
     { status: 'ready', recebe: achados[:recebe] || AMOSTRA, nao: achados[:nao] }
@@ -59,7 +61,7 @@ class Crm::MetaAds::ComentariosIa::Previa
     return if linha.nil?
 
     resposta = linha[:respostas].first
-    tipo = tipo(classificador.decidir!(resposta[:text], pai: linha[:text]))
+    tipo = tipo(classificador(linha).decidir!(resposta[:text], pai: linha[:text]))
     tipo && { author: resposta[:author], text: resposta[:text], network: linha[:network], kind: tipo.to_s, parent: exemplo(linha) }
   end
 
@@ -73,10 +75,16 @@ class Crm::MetaAds::ComentariosIa::Previa
     { author: linha[:author], text: linha[:text], network: linha[:network] }
   end
 
-  def classificador
-    @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(
-      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: @para_quem), legenda: @fonte.legenda,
-      foto: @fonte.texto_da_foto, tela: true
+  # Um por post (rede e id), para cada comentário decidir com a foto do próprio post.
+  def classificador(linha)
+    @classificadores ||= {}
+    @classificadores[[linha[:network], linha[:post_id]]] ||= Crm::MetaAds::ComentariosIa::Classificador.new(
+      care: care, legenda: @fonte.legenda, tela: true,
+      foto: Crm::MetaAds::ComentariosIa::Foto.texto_para_ia(@account, linha[:network], linha[:post_id])
     )
+  end
+
+  def care
+    @care ||= Crm::MetaAdsCommentCare.new(account: @account, para_quem: @para_quem)
   end
 end

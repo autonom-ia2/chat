@@ -91,12 +91,6 @@ class Crm::MetaAds::ComentariosIa::Fonte
                                           imagens: -> { Crm::MetaAds::ComentariosIa::Rede.para(inbox, comentario)&.imagens || [] })
   end
 
-  # O que a foto mostra (a correção do dono ou a leitura da IA) do primeiro post, sem ler a Meta nem a IA, ou nil.
-  def texto_da_foto
-    rede = rede_do_post
-    rede && Crm::MetaAds::ComentariosIa::Foto.texto_para_ia(rede[:inbox].account, rede[:comentario].network, rede[:comentario].post_id)
-  end
-
   private
 
   # O primeiro post (o anúncio nas duas redes é o mesmo criativo): a caixa e um comentário só com ids, para a Rede.
