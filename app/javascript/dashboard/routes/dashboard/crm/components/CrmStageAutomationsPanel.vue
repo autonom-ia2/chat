@@ -232,6 +232,9 @@ watch(
         @click="startCreate"
       />
     </div>
+    <p v-if="!podeMontar" class="mb-0 text-sm text-n-amber-11">
+      {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.SO_VER') }}
+    </p>
 
     <div
       v-if="isLoading || uiFlags.isFetchingStageAutomations"

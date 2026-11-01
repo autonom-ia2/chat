@@ -49,6 +49,7 @@ describe('automação de etapa e a chave das regras automáticas', () => {
     expect(wrapper.find('button .i-lucide-plus').exists()).toBe(true);
     expect(wrapper.find('button .i-lucide-pencil').exists()).toBe(true);
     expect(wrapper.find('button .i-lucide-trash-2').exists()).toBe(true);
+    expect(wrapper.find('p.text-n-amber-11').exists()).toBe(false);
   });
 
   it('sem a chave, lista as automações sem criar, editar ou apagar', async () => {
@@ -59,6 +60,15 @@ describe('automação de etapa e a chave das regras automáticas', () => {
     expect(wrapper.find('button .i-lucide-plus').exists()).toBe(false);
     expect(wrapper.find('button .i-lucide-pencil').exists()).toBe(false);
     expect(wrapper.find('button .i-lucide-trash-2').exists()).toBe(false);
+  });
+
+  it('sem a chave, diz por que só pode ver', async () => {
+    podeMontar.value = false;
+    const wrapper = await montarPainel();
+
+    const aviso = wrapper.find('p.text-n-amber-11');
+    expect(aviso.exists()).toBe(true);
+    expect(aviso.text()).toContain('STAGE_AUTOMATIONS.SO_VER');
   });
 
   it('no resumo da etapa, sem a chave o botão é "Ver"', async () => {
