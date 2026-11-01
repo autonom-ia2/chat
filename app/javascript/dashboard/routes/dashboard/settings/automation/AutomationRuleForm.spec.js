@@ -5,6 +5,7 @@ import AutomationRuleForm from './AutomationRuleForm.vue';
 import AutomationRunTypeSelector from './components/AutomationRunTypeSelector.vue';
 import AutomationWaitCondition from './components/AutomationWaitCondition.vue';
 import AutomationActions from './components/AutomationActions.vue';
+import NextButton from 'dashboard/components-next/button/Button.vue';
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({ t: key => key }),
@@ -181,6 +182,56 @@ describe('AutomationRuleForm', () => {
     expect(actionKeys(wrapper)).not.toContain('send_webhook_event');
     expect(actionKeys(wrapper)).not.toContain('send_email_transcript');
     expect(actionKeys(wrapper)).toContain('assign_agent');
+  });
+
+  const botaoSalvar = wrapper => wrapper.findAllComponents(NextButton).at(-1);
+  const avisoTravada = wrapper => wrapper.find('p.text-n-amber-11');
+
+  it('sem integration_manage, a regra com webhook não salva e diz por quê', () => {
+    podeIntegrar = false;
+    const automation = buildAutomation();
+    automation.actions = [
+      { action_name: 'send_webhook_event', action_params: [] },
+    ];
+    const wrapper = mountComponent({ mode: 'edit', automation });
+
+    expect(botaoSalvar(wrapper).vm.$attrs.disabled).toBe(true);
+    expect(avisoTravada(wrapper).exists()).toBe(true);
+  });
+
+  it('sem integration_manage, tirar o webhook da regra também não salva', async () => {
+    podeIntegrar = false;
+    const automation = buildAutomation();
+    automation.actions = [
+      { action_name: 'send_webhook_event', action_params: [] },
+    ];
+    const wrapper = mountComponent({ mode: 'edit', automation });
+
+    automation.actions = [{ action_name: 'assign_agent', action_params: [] }];
+    await nextTick();
+
+    expect(botaoSalvar(wrapper).vm.$attrs.disabled).toBe(true);
+  });
+
+  it('sem integration_manage, a regra sem saída para fora salva', () => {
+    podeIntegrar = false;
+    const wrapper = mountComponent({
+      mode: 'create',
+      automation: buildAutomation(),
+    });
+
+    expect(botaoSalvar(wrapper).vm.$attrs.disabled).toBe(false);
+    expect(avisoTravada(wrapper).exists()).toBe(false);
+  });
+
+  it('com integration_manage, a regra com webhook salva', () => {
+    const automation = buildAutomation();
+    automation.actions = [
+      { action_name: 'send_webhook_event', action_params: [] },
+    ];
+    const wrapper = mountComponent({ mode: 'edit', automation });
+
+    expect(botaoSalvar(wrapper).vm.$attrs.disabled).toBe(false);
   });
 
   it('sem integration_manage, a regra que já manda webhook continua mostrando a ação', () => {

@@ -1,5 +1,6 @@
 {
   "AUTOMATION": {
+    "EXTERNAL_ACTIONS_LOCKED": "This rule sends the conversation outside the platform. To change it, turn it on or copy it, you need the Integrations permission.",
     "HEADER": "Automation",
     "DESCRIPTION": "Automation can replace and streamline existing processes that require manual effort, such as adding labels and assigning conversations to the most suitable agent. This allows the team to focus on their strengths while reducing time spent on routine tasks.",
     "LEARN_MORE": "Learn more about automation",
