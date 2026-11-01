@@ -142,10 +142,10 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     metadata['category'] = category if category
   end
 
-  # Os dois consumidores leem a posição como texto (`Integer(position.to_s, 10, exception: false)`); o `.to_s` aqui é o
-  # mesmo, e deixa o tipo do campo legível para o formato da ação (#2459).
+  # A posição da etapa no modelo (E1, E2...). Os dois consumidores só usam número positivo, então nil, vazio e texto
+  # viram 0 e caem no mesmo "sem posição" de antes; o `.to_i` deixa o tipo legível para o formato da ação (#2460).
   def template_position
-    params.dig(:stage, :template_position).to_s
+    params.dig(:stage, :template_position).to_i
   end
 
   def apply_default_ai_criteria!(stage)

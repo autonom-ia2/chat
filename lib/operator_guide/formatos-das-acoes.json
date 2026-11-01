@@ -16368,7 +16368,7 @@
         "tipo": "inteiro"
       },
       "template_position": {
-        "tipo": "string",
+        "tipo": "inteiro",
         "tipo_pela_leitura": "uso"
       },
       "win_probability": {
