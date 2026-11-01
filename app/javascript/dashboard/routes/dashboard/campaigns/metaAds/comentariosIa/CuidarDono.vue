@@ -111,6 +111,9 @@ const recebe = computed(() => {
   return examplesFailed.value ? { sample: true } : null;
 });
 const nao = computed(() => examples.value?.nao || null);
+// #2454: a resposta dentro de um comentário, com a flag da conversa. A Meta decide se aceita o privado em resposta: a
+// tela não o promete.
+const resposta = computed(() => examples.value?.resposta || null);
 const sample = computed(() => Boolean(recebe.value?.sample));
 const handle = comment =>
   comment.network === 'facebook' ? comment.author : `@${comment.author}`;
@@ -474,6 +477,51 @@ const FIELD =
             <p class="m-0 text-sm leading-6 text-n-slate-11">
               {{ $t(`${KEY}.SEE.SKIPS_WHY`) }}
             </p>
+          </li>
+          <li
+            v-if="resposta"
+            data-ia-dono-example="resposta"
+            class="flex flex-col gap-3 rounded-xl p-4 ring-1 ring-inset ring-n-weak"
+          >
+            <p
+              data-ia-dono-reply-parent
+              class="m-0 text-base leading-6 text-n-slate-12"
+            >
+              <span class="block text-sm font-semibold text-n-slate-11">
+                {{ handle(resposta.parent) }}
+              </span>
+              {{ resposta.parent.text }}
+            </p>
+            <div
+              class="ms-4 flex flex-col gap-2 border-s-2 border-n-weak ps-4"
+              :aria-label="$t(`${KEY}.SEE.REPLY`)"
+              role="group"
+            >
+              <p
+                data-ia-dono-reply
+                class="m-0 text-base leading-6 text-n-slate-12"
+              >
+                <span class="block text-sm font-semibold text-n-slate-11">
+                  {{ handle(resposta) }}
+                </span>
+                {{ resposta.text }}
+              </p>
+              <span
+                data-ia-dono-reply-kind
+                class="inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold"
+                :class="
+                  resposta.kind === 'recebe'
+                    ? 'bg-n-teal-3 text-n-teal-11'
+                    : 'bg-n-alpha-2 text-n-slate-11'
+                "
+              >
+                {{
+                  $t(
+                    `${KEY}.SEE.${resposta.kind === 'recebe' ? 'REPLY_TRIES' : 'SKIPS'}`
+                  )
+                }}
+              </span>
+            </div>
           </li>
         </ol>
 

@@ -9,6 +9,10 @@
 # - O texto dos exemplos vai só na resposta à tela (dado de terceiro, lido ao vivo); nada é gravado.
 # - A legenda do post (#2424), lida pela Fonte, vai ao Classificador como no motor.
 # - IA fora do ar: `status: 'ai_unavailable'`, nunca uma prévia vazia que pareceria "ninguém recebe".
+# - Com a flag meta_ads_comentarios_ia_conversa (#2454), também `resposta`: a primeira resposta de outra pessoa dentro
+#   de um dos comentários lidos, decidida com o de cima (como o motor faz), com o `kind` ('recebe' ou 'nao') e o
+#   comentário de cima em `parent`. nil quando não há resposta ou a decisão não é nenhuma das duas. A tela não promete
+#   o privado a ela: a Meta decide se aceita o privado em resposta.
 class Crm::MetaAds::ComentariosIa::Previa
   LIMITE = 10
   RECEBE = %w[private price].freeze
@@ -25,7 +29,9 @@ class Crm::MetaAds::ComentariosIa::Previa
     lido = @fonte.ler
     return { status: lido[:status] } unless lido[:status] == 'ready'
 
-    exemplos(lido[:linhas].first(LIMITE))
+    linhas = lido[:linhas].first(LIMITE)
+    previa = exemplos(linhas)
+    conversa? ? previa.merge(resposta: resposta(linhas)) : previa
   rescue Crm::MetaAds::ComentariosIa::Classificador::Erro => e
     Rails.logger.warn("[comentarios_ia] previa account=#{@account.id} ia=#{e.code}")
     { status: 'ai_unavailable' }
@@ -42,6 +48,19 @@ class Crm::MetaAds::ComentariosIa::Previa
       achados[tipo] ||= exemplo(linha) if tipo
     end
     { status: 'ready', recebe: achados[:recebe] || AMOSTRA, nao: achados[:nao] }
+  end
+
+  def conversa?
+    @account.feature_enabled?(Crm::MetaAds::ComentariosIa::Cuidar::CONVERSA)
+  end
+
+  def resposta(linhas)
+    linha = linhas.find { |candidata| candidata[:respostas].present? }
+    return if linha.nil?
+
+    resposta = linha[:respostas].first
+    tipo = tipo(classificador.decidir!(resposta[:text], pai: linha[:text]))
+    tipo && { author: resposta[:author], text: resposta[:text], network: linha[:network], kind: tipo.to_s, parent: exemplo(linha) }
   end
 
   def tipo(decisao)

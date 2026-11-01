@@ -25,6 +25,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Fonte do
     expect(lido[:escondidas].pluck(:id)).to eq(%w[3])
   end
 
+  it 'cada linha leva as respostas de outras pessoas dentro dela (#2454), só o autor e o texto, para a prévia' do
+    comments = [row('7', replies: [row('7r', text: 'Tem em azul?'), row('7v', text: ' ')])]
+
+    lido = fonte(instagram: { status: 'ready', comments: comments }).ler
+
+    expect(lido[:linhas].sole[:respostas]).to eq([{ author: 'pessoa.7r', text: 'Tem em azul?' }])
+  end
+
   it 'anúncio nas duas redes: junta as listas, do mais novo para o mais velho' do
     lido = fonte(instagram: { status: 'ready', comments: [row('ig', created: '2026-10-28T10:00:00+0000')] },
                  facebook: { status: 'ready', comments: [row('fb', created: '2026-10-29T10:00:00+0000')] }).ler

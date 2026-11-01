@@ -5,8 +5,9 @@
 # `ler` devolve `{ status:, linhas:, escondidas: }`. `status` é o da leitura ('ready', 'needs_permission' ou o erro da
 # Meta). `linhas` são só os comentários de primeiro nível que esperam o dono: de outra pessoa, não escondidos, sem
 # resposta da conta e sem privado, do mais novo para o mais velho. `escondidas` são os de outra pessoa que estão
-# escondidos. Cada linha: `{ id:, network:, author:, text:, momento:, inbox_id:, post_id: }` (a caixa e o post de onde
-# veio, para o "Ler e mandar" cuidar dele como um comentário novo). O anúncio que roda nas duas redes junta as listas.
+# escondidos. Cada linha: `{ id:, network:, author:, text:, momento:, inbox_id:, post_id:, respostas: }` (a caixa e o
+# post de onde veio, para o "Ler e mandar" cuidar dele como um comentário novo; `respostas`: as de outras pessoas dentro
+# dele, `{ author:, text: }`, para a prévia, #2454). O anúncio que roda nas duas redes junta as listas.
 #
 # `legenda` (#2424): o texto do post, lido pela Rede como no motor, para a prévia decidir com o mesmo dado.
 class Crm::MetaAds::ComentariosIa::Fonte
@@ -118,7 +119,16 @@ class Crm::MetaAds::ComentariosIa::Fonte
       next if row.dig(:author, :is_page) || row[:text].blank?
 
       { id: row[:id], network: network, author: autor(row), text: row[:text].to_s, momento: momento(row[:created_time]),
-        inbox_id: leitura[:inbox_id], post_id: leitura[:post_id], espera: espera?(row), escondida: row[:hidden] == true }
+        inbox_id: leitura[:inbox_id], post_id: leitura[:post_id], respostas: respostas(row), espera: espera?(row),
+        escondida: row[:hidden] == true }
+    end
+  end
+
+  def respostas(row)
+    Array(row[:replies]).filter_map do |reply|
+      next if reply.dig(:author, :is_page) || reply[:text].blank?
+
+      { author: autor(reply), text: reply[:text].to_s }
     end
   end
 

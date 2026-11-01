@@ -32,6 +32,27 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
     expect(classificador).to have_received(:decidir!).exactly(3).times
   end
 
+  describe 'a resposta dentro de um comentário (#2454)' do
+    let(:com_resposta) do
+      linha('1', 'Que lindo!').merge(respostas: [{ author: 'pessoa.9', text: 'Me passa a receita?' }])
+    end
+
+    before { allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [com_resposta, linha('2', 'Me passa a receita?')] }) }
+
+    it 'com a flag da conversa: uma resposta, decidida com o comentário de cima, aparece dentro dele' do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::CONVERSA)
+
+      expect(previa.call[:resposta]).to eq(author: 'pessoa.9', text: 'Me passa a receita?', network: 'instagram', kind: 'recebe',
+                                           parent: { author: 'pessoa.1', text: 'Que lindo!', network: 'instagram' })
+      expect(classificador).to have_received(:decidir!).with('Me passa a receita?', pai: 'Que lindo!')
+    end
+
+    it 'sem a flag: a prévia fica a de antes, sem a resposta' do
+      expect(previa.call).not_to have_key(:resposta)
+      expect(classificador).not_to have_received(:decidir!).with(anything, pai: anything)
+    end
+  end
+
   it 'sem comentário que receberia: um exemplo dito como exemplo; sem "não se aplica": nil' do
     allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'Ninguém responde')] })
 

@@ -224,6 +224,78 @@ describe('CuidarDono (#2212)', () => {
     );
   });
 
+  describe('passo 3: a resposta dentro de um comentário (#2454)', () => {
+    const abrirComResposta = async kind => {
+      const preview = vi.fn().mockResolvedValue({
+        recebe: {
+          author: 'carla',
+          text: 'Qual o preço?',
+          network: 'instagram',
+        },
+        nao: null,
+        resposta: {
+          author: 'bia',
+          text: 'Quanto custa o azul?',
+          network: 'instagram',
+          kind,
+          parent: { author: 'joao', text: 'Lindo!', network: 'instagram' },
+        },
+      });
+      const wrapper = montar({
+        data: painel({ message: 'Oi!', para_quem: 'Quem perguntar o preço' }),
+        preview,
+      });
+      await proximo(wrapper).trigger('click');
+      await proximo(wrapper).trigger('click');
+      await flushPromises();
+      return wrapper.find('[data-ia-dono-example="resposta"]');
+    };
+
+    it('a resposta aparece dentro do comentário de cima, sem prometer o privado', async () => {
+      const resposta = await abrirComResposta('recebe');
+
+      expect(resposta.find('[data-ia-dono-reply-parent]').text()).toContain(
+        '@joao'
+      );
+      expect(resposta.find('[data-ia-dono-reply]').text()).toContain(
+        'Quanto custa o azul?'
+      );
+      expect(resposta.find('[data-ia-dono-reply-kind]').text()).toBe(
+        'Tento mandar no privado; se a rede não deixar, respondo só aqui'
+      );
+    });
+
+    it('a resposta em que não se aplica diz "Não se aplica"', async () => {
+      const resposta = await abrirComResposta('nao');
+
+      expect(resposta.find('[data-ia-dono-reply-kind]').text()).toBe(
+        'Não se aplica'
+      );
+    });
+
+    it('sem resposta na prévia (flag desligada): nada aparece', async () => {
+      const preview = vi.fn().mockResolvedValue({
+        recebe: {
+          author: 'carla',
+          text: 'Qual o preço?',
+          network: 'instagram',
+        },
+        nao: null,
+      });
+      const wrapper = montar({
+        data: painel({ message: 'Oi!', para_quem: 'Quem perguntar o preço' }),
+        preview,
+      });
+      await proximo(wrapper).trigger('click');
+      await proximo(wrapper).trigger('click');
+      await flushPromises();
+
+      expect(wrapper.find('[data-ia-dono-example="resposta"]').exists()).toBe(
+        false
+      );
+    });
+  });
+
   it('prévia que falha: avisa e ainda deixa ligar', async () => {
     const wrapper = montar({
       data: painel({ message: 'Oi!', para_quem: 'Quem pedir o link' }),

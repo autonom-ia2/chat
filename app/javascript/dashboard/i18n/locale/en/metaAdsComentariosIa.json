@@ -148,7 +148,9 @@
         "PHRASE_DEFAULT": "I sent you a DM 😊",
         "GETS_BEFORE": "It fits · came in before",
         "LOADING": "I'm reading the post's comments…",
-        "PREVIEW_ERROR": "I couldn't read the post's comments right now. This is an example: you can turn it on anyway."
+        "PREVIEW_ERROR": "I couldn't read the post's comments right now. This is an example: you can turn it on anyway.",
+        "REPLY": "Reply inside this comment",
+        "REPLY_TRIES": "I try to send a DM; if the network doesn't allow it, I only reply here"
       },
       "RULES": {
         "ONCE": "Each person gets one message only on this post.",
