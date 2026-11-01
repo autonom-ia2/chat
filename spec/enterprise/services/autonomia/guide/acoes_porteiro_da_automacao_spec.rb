@@ -2,14 +2,18 @@ require 'rails_helper'
 
 # #2414 F1.3 (D2/D4): o Guia só monta ou liga automação para quem tem `automation_manage`. Com a função
 # personalizada que dá a chave, funciona sem ser admin; sem ela, a pessoa ouve que não tem acesso. Automação de etapa
-# do CRM pede também `crm_manage_pipelines`, no Guia e na tela.
+# do CRM pede também `crm_manage_pipelines`, no Guia e na tela. Tudo isso só com a flag `automacao_fundacao`: sem ela,
+# o Guia segue só para quem administra e a etapa segue só com a chave do funil.
 RSpec.describe Autonomia::Guide::Acoes do
   let(:account_and_admin) { create_account_and_user }
   let(:account) { account_and_admin.first }
   let(:admin) { account_and_admin.last }
   let(:stage) { create_crm_pipeline(account: account, user: admin).last }
 
-  before { account.labels.create!(title: 'lead') }
+  before do
+    account.labels.create!(title: 'lead')
+    account.enable_features!('automacao_fundacao')
+  end
 
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
 
@@ -128,6 +132,29 @@ RSpec.describe Autonomia::Guide::Acoes do
 
       expect(resultado.ok).to be(true)
       expect(account.crm_stage_automations.count).to eq(1)
+    end
+  end
+
+  describe 'sem a flag automacao_fundacao' do
+    before { account.disable_features!('automacao_fundacao') }
+
+    it 'o Guia segue só para quem administra, mesmo com automation_manage' do
+      com_chave = com_funcao(%w[automation_view automation_manage])
+
+      expect { para(com_chave).executar('POST automation_rules', { corpo: regra }) }
+        .to raise_error(described_class::Recusada, I18n.t('autonomia.guide.admin_only'))
+    end
+
+    it 'o admin segue criando pelo Guia' do
+      expect(para(admin).executar('POST automation_rules', { corpo: regra }).ok).to be(true)
+    end
+
+    it 'na tela, a chave do funil basta para montar a automação de etapa, como antes' do
+      account_user = account.account_users.find_by(user: com_funcao(%w[crm_manage_pipelines]))
+      contexto = { account: account, user: account_user.user, account_user: account_user }
+
+      expect(Crm::StageAutomationPolicy.new(contexto, Crm::StageAutomation).create?).to be(true)
+      expect(Crm::StageAutomationStepPolicy.new(contexto, Crm::StageAutomationStep).create?).to be(true)
     end
   end
 end

@@ -31,12 +31,18 @@ class Autonomia::Guide::PorteiroDaAutomacao
                           .merge(ETAPA.index_with('stage_automation_manage_only'))
                           .merge('POST automation_rules/:id/ensaio' => 'automation_view_only').freeze
 
-  # nil quando pode; senão a chave i18n da recusa.
+  # nil quando pode; senão a chave i18n da recusa. Sem a flag `automacao_fundacao`, o Guia segue só para quem administra.
   def self.recusa(acao, account_user)
+    return 'admin_only' unless Autonomia::Automacao.fundacao?(account_user&.account)
+
     recusa = RECUSA_POR_ACAO[acao.to_s]
     return 'admin_only' if recusa.nil?
     return recusa if account_user.blank?
 
-    recusa unless EXIGENCIAS.fetch(recusa).all? { |alternativas| alternativas.any? { |chave| account_user.permission_granted?(chave) } }
+    recusa unless cumpre?(recusa, account_user)
+  end
+
+  def self.cumpre?(recusa, account_user)
+    EXIGENCIAS.fetch(recusa).all? { |alternativas| alternativas.any? { |chave| account_user.permission_granted?(chave) } }
   end
 end

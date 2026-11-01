@@ -24,7 +24,10 @@ module Enterprise::Crm::StageAutomationPolicy
 
   private
 
+  # Sem a flag `automacao_fundacao`, a chave do funil basta, como antes.
   def monta_automacao?
+    return true unless Autonomia::Automacao.fundacao?(account)
+
     account_user.present? && account_user.permission_granted?('automation_manage')
   end
 end

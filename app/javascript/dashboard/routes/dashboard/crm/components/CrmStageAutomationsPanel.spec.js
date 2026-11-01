@@ -6,8 +6,8 @@ import FunilEtapaAcoes from './funil/FunilEtapaAcoes.vue';
 // #2414 F1.3: mexer em automação de etapa pede também a chave das regras automáticas (a API recusa sem ela). Sem a
 // chave, a pessoa vê as automações, mas sem criar, editar ou apagar; no resumo da etapa, "Ver" no lugar de "Alterar".
 const podeMontar = ref(true);
-vi.mock('dashboard/composables/useCanManage', () => ({
-  usePermissionGranted: () => podeMontar,
+vi.mock('dashboard/composables/usePodeMontarAutomacao', () => ({
+  usePodeMontarAutomacao: () => podeMontar,
 }));
 
 const automacao = {
