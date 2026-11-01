@@ -149,9 +149,10 @@ class Crm::MetaAds::ComentariosIa::Escrita
     { comentario: comentario, comentario_de_cima: pai, legenda_do_post: @legenda, o_que_se_ve_na_foto: @foto }.compact
   end
 
-  # O que o dono escreveu na tela: a ficha, a nota e o tom. Texto do dono, nunca do comentário.
+  # O que o dono escreveu na tela: a ficha, a nota, o tom e o assunto em que a IA não toca. Texto do dono, nunca do
+  # comentário.
   def do_dono
-    partes = [ficha, nota, tom].compact
+    partes = [ficha, nota, tom, proibido].compact
     return if partes.empty?
 
     "O QUE O DONO DO POST DISSE (vale como orientação dele): #{partes.join(' ')}"
@@ -171,5 +172,14 @@ class Crm::MetaAds::ComentariosIa::Escrita
 
   def tom
     "Tom pedido pelo dono para todas as respostas: #{@care.tom}." if @care.tom.present?
+  end
+
+  # O Classificador já deixa com o dono o comentário sobre esse assunto (owner_topic). Aqui é a segunda trava: se ele
+  # errar, o agente passa em vez de falar do assunto, inclusive em público.
+  def proibido
+    return if @care.assunto_proibido.blank?
+
+    "Assunto em que o dono não quer resposta automática: #{@care.assunto_proibido}. Não fale disso. Se o comentário " \
+      'for sobre esse assunto, should_handoff=true, e o dono responde.'
   end
 end

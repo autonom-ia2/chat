@@ -159,7 +159,7 @@
         "REPLY_TRIES": "Tento mandar no privado; se a rede não deixar, respondo só aqui",
         "WRITTEN_COMMENT": "No comentário, eu respondo:",
         "WRITTEN_DM": "No privado, eu mando:",
-        "KEPT": "Fica com você: eu não sei responder isso com o que a empresa me ensinou.",
+        "KEPT": "Eu não sei responder isso com o que a empresa me ensinou. Não respondo e deixo com você.",
         "OWNER": "Fica com você",
         "OWNER_WHY": "É sobre “{assunto}”. Não respondo e deixo com você."
       },

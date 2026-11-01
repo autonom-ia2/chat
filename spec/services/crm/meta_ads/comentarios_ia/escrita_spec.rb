@@ -63,6 +63,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Escrita do
       )
       expect(chamada[:contexto_do_turno]).to include(formato.regra_do_dado(codigo), 'Seguro viagem', 'R$ 39',
                                                      'Atendo de segunda a sexta', 'mais formal')
+      expect(chamada[:contexto_do_turno]).not_to include('should_handoff')
+    end
+
+    it 'o assunto proibido também vai ao agente: se o Classificador errar, o agente passa em vez de falar dele' do
+      care.update!(assunto_proibido: 'reembolso')
+
+      escrita.escrever(formato::PUBLICO, comentario: 'Quanto custa?')
+
+      expect(chamadas.sole[:contexto_do_turno]).to include('reembolso', 'Não fale disso', 'should_handoff=true')
     end
 
     it 'textos: o privado e o público, os dois escritos antes de qualquer envio' do

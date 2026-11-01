@@ -166,6 +166,12 @@ describe('CuidarDono com a IA escrevendo (#2458)', () => {
 
     expect(wrapper.find('[data-ia-dono-kept]').exists()).toBe(true);
     expect(wrapper.find('[data-ia-dono-bubble]').exists()).toBe(false);
+    // O selo diz que fica com o dono, nunca "É o caso".
+    const exemplo = wrapper.find('[data-ia-dono-example="recebe"]').text();
+    expect(wrapper.find('[data-ia-dono-kept-badge]').text()).toBe(
+      'Fica com você'
+    );
+    expect(exemplo).not.toContain('É o caso');
   });
 
   it('passo 3: o pedido de tom escreve a prévia de novo, e "Ligar" leva tudo', async () => {

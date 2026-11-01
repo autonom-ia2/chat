@@ -159,7 +159,7 @@
         "REPLY_TRIES": "I try to send a DM; if the network doesn't allow it, I only reply here",
         "WRITTEN_COMMENT": "In the comment, I reply:",
         "WRITTEN_DM": "In private, I send:",
-        "KEPT": "This stays with you: I can’t answer it with what the business taught me.",
+        "KEPT": "I can’t answer this with what the business taught me. I don’t reply and leave it with you.",
         "OWNER": "Stays with you",
         "OWNER_WHY": "It is about “{assunto}”. I don’t reply and leave it with you."
       },

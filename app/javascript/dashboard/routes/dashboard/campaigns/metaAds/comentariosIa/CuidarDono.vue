@@ -443,7 +443,17 @@ const FIELD =
               </span>
               {{ sample ? $t(`${KEY}.SEE.SAMPLE_TEXT`) : recebe.text }}
             </p>
+            <!-- Quando o agente não saberia, o selo diz que fica com o dono, nunca "É o caso". -->
             <span
+              v-if="keptForOwner"
+              data-ia-dono-kept-badge
+              class="inline-flex w-fit items-center gap-1.5 rounded-full bg-n-amber-3 px-3 py-1 text-sm font-semibold text-n-amber-11"
+            >
+              <span class="i-lucide-hand size-4" aria-hidden="true" />
+              {{ $t(`${KEY}.SEE.OWNER`) }}
+            </span>
+            <span
+              v-else
               class="inline-flex w-fit items-center gap-1.5 rounded-full bg-n-teal-3 px-3 py-1 text-sm font-semibold text-n-teal-11"
             >
               <span class="i-lucide-send size-4" aria-hidden="true" />
@@ -456,12 +466,8 @@ const FIELD =
             <p
               v-if="keptForOwner"
               data-ia-dono-kept
-              class="m-0 flex items-start gap-2 rounded-xl bg-n-amber-3 px-3 py-2 text-sm leading-6 text-n-amber-11"
+              class="m-0 text-sm leading-6 text-n-slate-11"
             >
-              <span
-                class="i-lucide-hand mt-1 size-4 shrink-0"
-                aria-hidden="true"
-              />
               {{ $t(`${KEY}.SEE.KEPT`) }}
             </p>
             <div v-if="written?.comment" class="flex flex-col gap-1.5">
