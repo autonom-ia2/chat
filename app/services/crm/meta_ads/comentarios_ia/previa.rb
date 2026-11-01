@@ -7,7 +7,8 @@
 # - Sem comentário que receberia, `recebe: { sample: true }`: a tela mostra um exemplo dito como exemplo, nunca um
 #   comentário inventado como real. Sem exemplo de "não se aplica", `nao: nil`.
 # - O texto dos exemplos vai só na resposta à tela (dado de terceiro, lido ao vivo); nada é gravado.
-# - Jev fora do ar: `status: 'ai_unavailable'`, nunca uma prévia vazia que pareceria "ninguém recebe".
+# - A legenda do post (#2424), lida pela Fonte, vai ao Classificador como no motor.
+# - IA fora do ar: `status: 'ai_unavailable'`, nunca uma prévia vazia que pareceria "ninguém recebe".
 class Crm::MetaAds::ComentariosIa::Previa
   LIMITE = 10
   RECEBE = %w[private price].freeze
@@ -25,8 +26,8 @@ class Crm::MetaAds::ComentariosIa::Previa
     return { status: lido[:status] } unless lido[:status] == 'ready'
 
     exemplos(lido[:linhas].first(LIMITE))
-  rescue TypesafeAi::Decisor::Error => e
-    Rails.logger.warn("[comentarios_ia] previa account=#{@account.id} jev=#{e.code}")
+  rescue Crm::MetaAds::ComentariosIa::Classificador::Erro => e
+    Rails.logger.warn("[comentarios_ia] previa account=#{@account.id} ia=#{e.code}")
     { status: 'ai_unavailable' }
   end
 
@@ -55,7 +56,7 @@ class Crm::MetaAds::ComentariosIa::Previa
 
   def classificador
     @classificador ||= Crm::MetaAds::ComentariosIa::Classificador.new(
-      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: @para_quem), tela: true
+      care: Crm::MetaAdsCommentCare.new(account: @account, para_quem: @para_quem), legenda: @fonte.legenda, tela: true
     )
   end
 end

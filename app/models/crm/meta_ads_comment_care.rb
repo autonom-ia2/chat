@@ -15,7 +15,7 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   # assignment: você ou sua equipe, pela Atribuição; agent: o agente de IA da caixa.
   HANDOFFS = %w[assignment agent].freeze
   # Texto de uma mensagem do Instagram (a mais curta das duas redes), em bytes UTF-8, como a Meta conta: acento e emoji
-  # ocupam mais de um byte. Conta com o aviso do fim (texto_do_privado), como a tela (CuidarDono).
+  # ocupam mais de um byte. A tela (CuidarDono) conta igual.
   MESSAGE_LIMIT = 1_000
   NOTE_LIMIT = 500
   PHRASES = (1..3)
@@ -44,16 +44,26 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   scope :on, -> { where(status: 'on') }
 
   # O cuidado que vale para um comentário: o do anúncio, quando ele veio de um (pelo id do anúncio ou por um dos posts
-  # do criativo), senão o do post. Só o da rede do comentário (ou das duas).
+  # do criativo), senão o do post. Só o da rede do comentário (ou das duas). Vários anúncios com o mesmo post: vale o
+  # mais antigo (menor id) que está ligado, sempre o mesmo. O anúncio pausado também conta: a IA não cuida (nil), e o
+  # cuidado do post não entra no lugar dele.
   def self.cuidando(account_id:, network:, post_id:, ad_id:)
-    escopo = on.where(account_id: account_id, network: [network.to_s, 'both'])
-    do_anuncio(escopo, post_id, ad_id) || (post_id.present? && escopo.find_by(target_kind: 'post', target_id: post_id.to_s)) || nil
+    escopo = where(account_id: account_id, network: [network.to_s, 'both']).order(:id)
+    anuncio = do_anuncio(escopo, post_id, ad_id)
+    return (anuncio if anuncio.status == 'on') if anuncio
+
+    (post_id.present? && escopo.on.find_by(target_kind: 'post', target_id: post_id.to_s)) || nil
   end
 
+  # Pelo id do anúncio, o dele (ligado ou não). Pelo post do criativo, o ligado; sem nenhum ligado, um pausado.
   def self.do_anuncio(escopo, post_id, ad_id)
     anuncios = escopo.where(target_kind: 'ad')
-    (ad_id.present? && anuncios.find_by(target_id: ad_id.to_s)) ||
-      (post_id.present? && anuncios.find_by('post_ids @> ?', [post_id.to_s].to_json)) || nil
+    pelo_id = ad_id.present? && anuncios.find_by(target_id: ad_id.to_s)
+    return pelo_id if pelo_id
+    return if post_id.blank?
+
+    do_post = anuncios.where('post_ids @> ?', [post_id.to_s].to_json)
+    do_post.on.first || do_post.first
   end
 
   # Post sem produto: a IA só esconde propaganda e avisa reclamação.
@@ -67,15 +77,10 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
     offer? || para_quem.present?
   end
 
-  # O que a pessoa recebe no privado: a mensagem do dono e, no fim, o aviso de que é automática (a tela mostra o mesmo
-  # texto, "No fim, eu ponho sozinho"), no idioma da conta.
+  # O que a pessoa recebe no privado: só a mensagem do dono, como a tela mostra. Nada é acrescentado (decisão do Rodrigo
+  # no teste real de 30/10: o aviso de mensagem automática saiu).
   def texto_do_privado
-    "#{message.to_s.strip} #{sufixo_do_privado}"
-  end
-
-  # O aviso de mensagem automática no idioma da conta (não o da tela de quem escreve): a tela conta os bytes com ele.
-  def sufixo_do_privado
-    I18n.t('conversations.activity.meta_ads_comment.private_reply_suffix', locale: account&.locale.presence || I18n.default_locale)
+    message.to_s.strip
   end
 
   # A frase do comentário depois do privado. `vez` reveza as frases, para a IA não repetir a mesma em seguida.

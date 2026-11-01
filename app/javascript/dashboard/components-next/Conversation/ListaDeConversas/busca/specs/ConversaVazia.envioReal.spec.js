@@ -63,7 +63,6 @@ vi.mock('dashboard/components-next/NovaConversa/useContinuarConversa', () => ({
     conversa: ref(null),
     oculta: ref(false),
     tipo: ref(''),
-    soTexto: ref(false),
     assunto: ref(''),
     ultimoEmail: ref(null),
     meta: ref(null),

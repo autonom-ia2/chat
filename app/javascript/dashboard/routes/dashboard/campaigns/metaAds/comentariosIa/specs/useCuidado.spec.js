@@ -14,6 +14,7 @@ vi.mock('dashboard/api/comentariosIa', () => ({
     getCuidado: vi.fn(),
     saveCuidado: vi.fn(),
     previa: vi.fn(),
+    rascunho: vi.fn(),
     lerAntigos: vi.fn(),
     getResumo: vi.fn(),
   },
@@ -70,7 +71,36 @@ describe('useCuidado (#2212)', () => {
     await flushPromises();
 
     expect(cuidado.erro.value).toBe(erro);
+    expect(cuidado.motivo.value).toBeNull();
     expect(cuidado.painel.value).toBeNull();
+  });
+
+  it.each([
+    [422, 'no_post'],
+    [422, 'no_inbox'],
+    [422, 'meta_unavailable'],
+    [422, 'needs_login'],
+    [404, 'not_connected'],
+    [404, 'ad_not_found'],
+  ])('erro %s com %s: o motivo vem do servidor', async (status, codigo) => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(
+      falha(status, { error: codigo })
+    );
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(cuidado.motivo.value).toBe(codigo);
+  });
+
+  it('código que a tela não explica fica sem motivo', async () => {
+    ComentariosIaAPI.getCuidado.mockRejectedValue(
+      falha(403, { error: 'not_inbox_member' })
+    );
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(cuidado.erro.value).toBe('acesso');
+    expect(cuidado.motivo.value).toBeNull();
   });
 
   it('sem alvo (flag desligada), não lê nada', async () => {
@@ -252,6 +282,32 @@ describe('useCuidado (#2212)', () => {
       paraQuem: 'Quem pedir o link',
     });
     expect(await cuidado.previa('Quem pedir o link')).toBeNull();
+  });
+
+  it('o começo da mensagem: o texto pronto, ou vazio quando o post não oferece nada ou a IA falha', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    ComentariosIaAPI.rascunho
+      .mockResolvedValueOnce({
+        data: { status: 'ready', message: 'Oi! Sai por R$ 29.' },
+      })
+      .mockResolvedValueOnce({ data: { status: 'no_offer' } })
+      .mockRejectedValueOnce(falha(422, { error: 'ai_unavailable' }));
+    const cuidado = useCuidado(alvo);
+    await flushPromises();
+
+    expect(await cuidado.rascunho()).toBe('Oi! Sai por R$ 29.');
+    expect(ComentariosIaAPI.rascunho).toHaveBeenCalledWith(alvo);
+    expect(await cuidado.rascunho()).toBe('');
+    expect(await cuidado.rascunho()).toBe('');
+  });
+
+  it('o começo da mensagem não é pedido no anúncio: ele abre vazio', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({ data: painel() });
+    const cuidado = useCuidado({ kind: 'ad', id: '120' });
+    await flushPromises();
+
+    expect(await cuidado.rascunho()).toBe('');
+    expect(ComentariosIaAPI.rascunho).not.toHaveBeenCalled();
   });
 
   it('ler e mandar põe na fila e lê o Painel de novo', async () => {

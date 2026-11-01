@@ -1406,6 +1406,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_creation#budget",
     "parametros": []
   },
+  "crm/meta_ads_connection/ads/:ad_id/cuidado": {
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#show",
+    "parametros": []
+  },
   "crm/meta_ads_connection/ads/:ad_id/facebook_comments": {
     "controller": "api/v1/accounts/crm/meta_ads_facebook_comments#index",
     "parametros": [
@@ -1423,6 +1427,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#show",
     "parametros": []
   },
+  "crm/meta_ads_connection/ads/:ad_id/resumo": {
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#resumo",
+    "parametros": []
+  },
   "crm/meta_ads_connection/boost_posts": {
     "controller": "api/v1/accounts/crm/meta_ads_creation#boost_posts",
     "parametros": [
@@ -1431,6 +1439,10 @@
   },
   "crm/meta_ads_connection/create_options": {
     "controller": "api/v1/accounts/crm/meta_ads_creation#options",
+    "parametros": []
+  },
+  "crm/meta_ads_connection/cuidados": {
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#cuidados",
     "parametros": []
   },
   "crm/meta_ads_connection/funnels": {

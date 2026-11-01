@@ -13,7 +13,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::ResumoJob do
     expect(resumo).to have_received(:contar!)
   end
 
-  it 'sem nova tentativa: repetir a conta gastaria de novo a Meta e o Jev' do
+  it 'sem nova tentativa: repetir a conta gastaria de novo a Meta e a IA' do
     expect(described_class.get_sidekiq_options['retry']).to be(false)
   end
 

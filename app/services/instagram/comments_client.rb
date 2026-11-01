@@ -33,6 +33,11 @@ class Instagram::CommentsClient
     request(:get, media_id.to_s, { fields: 'comments_count' })
   end
 
+  # A legenda do post, para a IA que cuida dos comentários (#2424).
+  def caption(media_id)
+    request(:get, media_id.to_s, { fields: 'caption' })
+  end
+
   # Um comentário só, com a mídia dele: quem age confere que ele é do anúncio; o webhook lê o texto aqui.
   def comment(comment_id)
     request(:get, comment_id.to_s, { fields: 'id,text,timestamp,parent_id,from{id,username},media{id}' })

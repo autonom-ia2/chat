@@ -28,6 +28,9 @@
 class Crm::MetaAds::FacebookComments
   class Error < Crm::MetaAds::AdManagement::Error; end
 
+  # `comment` e `post_message`: a leitura pelo evento do webhook, sem pessoa.
+  include Crm::MetaAds::FacebookPageReading
+
   READ = 'pages_read_user_content'.freeze
   MANAGE = 'pages_manage_engagement'.freeze
   NETWORK = 'facebook'.freeze
@@ -35,10 +38,13 @@ class Crm::MetaAds::FacebookComments
   # Limite de texto de comentário no Facebook.
   MESSAGE_MAX = 8000
 
-  def initialize(connection, inbox_access:, can_manage: false)
+  # management: a Crm::MetaAds::AdManagement que já leu o anúncio, quando quem chama já a tem (IA dos comentários,
+  # #2212): ela guarda a leitura, e o criativo não é lido de novo. Sem ela, uma nova.
+  def initialize(connection, inbox_access:, can_manage: false, management: nil)
     @connection = connection
     @inbox_access = inbox_access
     @can_manage = can_manage
+    @management = management || Crm::MetaAds::AdManagement.new(connection)
   end
 
   def list(ad_id)
@@ -90,23 +96,6 @@ class Crm::MetaAds::FacebookComments
   def delete!(ad_id, comment_id, user: nil)
     act!(post_id!(ad_id), comment_id, 'delete', by_user(ad_id, user)) { |client| client.delete_comment(comment_id) }
     true
-  end
-
-  # Para quem consome `meta_ads.comment_received` (#2212), que leva só ids: o comentário como a Graph devolve
-  # (`message`, `from`, `attachment`), lido com o token da Página. Só em post de Página da conta e com a leitura
-  # concedida; nil quando não dá para ler (a recusa vai ao log, só com ids). A Página já é da conta: aqui ela não é
-  # registrada de novo.
-  def comment(post_id, comment_id)
-    return unless granted?(READ) && own_page?(post_id)
-    raise Error, 'comment_not_found' unless Crm::MetaAds::FacebookCommentId.of_post?(comment_id, post_id)
-
-    client = page_client(post_id)
-    client && graph!(client.page_comment(comment_id))
-  rescue Error => e
-    raise if e.code == 'meta_unavailable'
-
-    Rails.logger.warn("[meta_ads] comentário do Facebook não lido: #{e.code} account=#{@connection.account_id} comment=#{comment_id}")
-    nil
   end
 
   # Pela IA que cuida dos comentários (#2212): age no comentário que chegou pelo evento, pelo post (não há anúncio) e sem
@@ -162,12 +151,8 @@ class Crm::MetaAds::FacebookComments
     end
   end
 
-  def management
-    @management ||= Crm::MetaAds::AdManagement.new(@connection)
-  end
-
   def post_id_for(ad_id)
-    ad = management.ad(ad_id)
+    ad = @management.ad(ad_id)
     raise Error, 'ad_not_found' if ad.nil?
 
     ad.dig('creative', 'effective_object_story_id')

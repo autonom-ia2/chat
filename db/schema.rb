@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -558,10 +558,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
     t.jsonb "response_mapping", default: {}, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "timeout_seconds", default: 30, null: false
     t.index ["account_id", "enabled"], name: "index_autonomia_agent_tools_on_account_id_and_enabled"
     t.index ["account_id"], name: "index_autonomia_agent_tools_on_account_id"
     t.index ["autonomia_agent_id", "slug"], name: "idx_autonomia_agent_tools_agent_slug", unique: true
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_tools_on_autonomia_agent_id"
+    t.check_constraint "timeout_seconds > 0", name: "autonomia_agent_tools_timeout_seconds"
   end
 
   create_table "autonomia_agents", force: :cascade do |t|
@@ -2841,6 +2843,9 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
     t.datetime "confirmed_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "ai_decision"
+    t.decimal "ai_confidence", precision: 4, scale: 3
+    t.text "ai_reason"
     t.index ["account_id", "network", "comment_id"], name: "idx_crm_meta_ads_comment_actions_lookup"
     t.index ["conversation_id"], name: "idx_crm_meta_ads_comment_actions_conversation"
     t.index ["network", "comment_id", "action"], name: "idx_crm_meta_ads_comment_actions_once", unique: true, where: "((action)::text = ANY (ARRAY['private_reply'::text, 'ai_seen'::text]))"
@@ -2872,6 +2877,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
     t.index ["created_by_id"], name: "index_crm_meta_ads_comment_cares_on_created_by_id"
     t.index ["inbox_id"], name: "index_crm_meta_ads_comment_cares_on_inbox_id"
     t.index ["post_ids"], name: "index_crm_meta_ads_comment_cares_on_post_ids", using: :gin
+  end
+
+  create_table "crm_meta_ads_comment_drafts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "target_kind", null: false
+    t.string "target_id", null: false
+    t.string "caption_digest", null: false
+    t.string "status", null: false
+    t.text "message"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "target_kind", "target_id"], name: "idx_crm_meta_ads_comment_drafts_target", unique: true
   end
 
   create_table "crm_meta_ads_comment_people", force: :cascade do |t|
@@ -4785,6 +4802,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_620000) do
   add_foreign_key "crm_meta_ads_comment_cares", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_comment_cares", "inboxes", on_delete: :cascade
   add_foreign_key "crm_meta_ads_comment_cares", "users", column: "created_by_id", on_delete: :nullify
+  add_foreign_key "crm_meta_ads_comment_drafts", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_comment_people", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_connections", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_ads_created_objects", "accounts", on_delete: :cascade

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { FOR_WHOM_LIMIT } from './useCuidado';
@@ -15,6 +15,9 @@ const props = defineProps({
   data: { type: Object, required: true },
   // async paraQuem => Prévia ({ recebe, nao }) ou null quando não deu para ler.
   preview: { type: Function, required: true },
+  // async () => o começo da mensagem escrito pela IA a partir da legenda do post, ou '' (Rascunho). Só no post do Seus
+  // posts; sem ele (o anúncio), o passo 1 abre vazio.
+  draft: { type: Function, default: null },
   changing: { type: Boolean, default: false },
   canSendOld: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
@@ -24,8 +27,8 @@ const emit = defineEmits(['done', 'leave']);
 
 const { t } = useI18n();
 const KEY = 'META_ADS_COMMENTS_AI.DONO';
-// A Meta aceita até 1000 bytes (UTF-8) no texto do privado, com a frase "(mensagem automática…)" no fim: acento e
-// emoji ocupam mais de um byte, então a conta é em bytes, não em letras.
+// A Meta aceita até 1000 bytes (UTF-8) no texto do privado: acento e emoji ocupam mais de um byte, então a conta é em
+// bytes, não em letras. O privado é só a mensagem do dono: nada é acrescentado no fim.
 const LIMIT_BYTES = 1000;
 const PHRASE_LIMIT = 120;
 const RULES_MORE = ['SEVEN_DAYS', 'LIVE', 'REQUESTS', 'COMPLAINT'];
@@ -39,7 +42,15 @@ const phrases = computed(() =>
 );
 const step = ref(1);
 const message = ref(props.data.message || '');
-const forWhom = ref(props.data.para_quem || '');
+// Como no mockup aprovado, o cuidado novo já começa no atalho mais comum; o dono troca com um toque. Como a frase
+// padrão, ele acompanha o idioma que chega depois, enquanto o dono não o trocou.
+const priceSuggestion = computed(() =>
+  t('META_ADS_COMMENTS_AI.DONO.WHO.SUGGESTIONS.PRICE')
+);
+const forWhom = ref(props.data.para_quem || priceSuggestion.value);
+watch(priceSuggestion, (nova, antiga) => {
+  if (forWhom.value === antiga) forWhom.value = nova;
+});
 const phrase = ref(phrases.value[0] || '');
 const editingPhrase = ref(!phrase.value);
 // A padrão muda com o idioma, que pode chegar depois de abrir a tela (endereço aberto direto): enquanto o dono não a
@@ -48,17 +59,41 @@ watch(phrases, (novas, antigas) => {
   if (phrase.value === antigas[0]) phrase.value = novas[0] || '';
 });
 const heading = ref(null);
+// Passo 1 do cuidado novo, como no mockup aprovado: a mensagem já vem com um começo escrito a partir do post. Enquanto a
+// IA escreve, o campo espera; o que o dono digitar nesse meio tempo não é trocado. Sem começo, ou sem resposta em
+// DRAFT_TIMEOUT_MS, o campo fica vazio, com o texto de sempre.
+const DRAFT_TIMEOUT_MS = 15000;
+const writing = ref(false);
+const suggested = ref(false);
+const draftOrTimeout = () => {
+  let timer;
+  const timeout = new Promise(resolve => {
+    timer = setTimeout(() => resolve(''), DRAFT_TIMEOUT_MS);
+  });
+  return Promise.race([props.draft(), timeout]).finally(() =>
+    clearTimeout(timer)
+  );
+};
+onMounted(async () => {
+  if (!props.draft || props.changing || message.value.trim()) return;
+  writing.value = true;
+  let texto = '';
+  try {
+    texto = await draftOrTimeout();
+  } finally {
+    writing.value = false;
+  }
+  if (!texto || message.value.trim()) return;
+  message.value = texto;
+  suggested.value = true;
+});
 // A Prévia do passo 3, lida de novo a cada vez que o passo abre (o "para quem" pode ter mudado).
 const examples = ref(null);
 const loadingExamples = ref(false);
 const examplesFailed = ref(false);
 
 const soon = computed(() => props.data.private_available === false);
-// O aviso no idioma da conta, que é o que sai no privado (o servidor manda); sem ele, o da tela.
-const automatic = computed(
-  () => props.data.automatic_note || t('META_ADS_COMMENTS_AI.PRIVATE.AUTOMATIC')
-);
-const dm = computed(() => `${message.value.trim()} ${automatic.value}`);
+const dm = computed(() => message.value.trim());
 const tooLong = computed(
   () => new TextEncoder().encode(dm.value).length > LIMIT_BYTES
 );
@@ -183,19 +218,37 @@ const FIELD =
           >
             {{ $t(`${KEY}.WHAT.TITLE`) }}
           </h3>
-          <p class="m-0 text-base leading-6 text-n-slate-11">
-            {{ $t(`${KEY}.WHAT.TEXT`) }}
+          <p
+            data-ia-dono-what-text
+            class="m-0 text-base leading-6 text-n-slate-11"
+          >
+            {{ $t(`${KEY}.WHAT.${suggested ? 'SUGGESTED' : 'TEXT'}`) }}
           </p>
         </div>
+        <p
+          v-if="writing"
+          data-ia-dono-writing
+          role="status"
+          class="m-0 flex items-center gap-2 text-sm font-medium text-n-slate-11"
+        >
+          <span
+            class="i-lucide-sparkles size-4 animate-pulse text-n-violet-11"
+            aria-hidden="true"
+          />
+          {{ $t(`${KEY}.WHAT.WRITING`) }}
+        </p>
+        <!-- O campo cresce com a mensagem (field-sizing): no celular o começo inteiro aparece; acima do teto, rola.
+             h-auto: o CSS base do painel fixa textarea em 4rem, e com altura fixa o field-sizing não age. -->
         <textarea
           id="ia-dono-message"
           v-model="message"
           data-ia-dono-message
           :aria-label="$t(`${KEY}.WHAT.TITLE`)"
           :aria-invalid="tooLong"
-          :placeholder="$t(`${KEY}.WHAT.PLACEHOLDER`)"
-          :class="FIELD"
-          class="min-h-[8.5rem]"
+          :aria-busy="writing"
+          :placeholder="writing ? '' : $t(`${KEY}.WHAT.PLACEHOLDER`)"
+          :class="[FIELD, { 'animate-pulse bg-n-alpha-1': writing }]"
+          class="h-auto max-h-96 min-h-[8.5rem] overflow-y-auto [field-sizing:content]"
         />
         <p
           v-if="tooLong"
@@ -204,13 +257,6 @@ const FIELD =
           class="m-0 text-sm font-medium text-n-ruby-11"
         >
           {{ $t(`${KEY}.WHAT.TOO_LONG`) }}
-        </p>
-        <p v-else class="m-0 text-sm text-n-slate-11">
-          {{
-            $t(`${KEY}.WHAT.HINT`, {
-              automatic,
-            })
-          }}
         </p>
         <p class="m-0 text-sm text-n-slate-11">
           {{ $t(`${KEY}.WHAT.ALL_IN_ONE`) }}

@@ -140,6 +140,8 @@ class Api::V1::Accounts::SeusPostsComentariosController < Api::V1::Accounts::Bas
     lido = leitura.post(post_id)
     return render_error_code('post_not_found') if lido.nil?
 
+    @post_lido = lido[:post]
+
     render_error_code(lido[:status] == 'needs_permission' ? 'needs_permission' : 'meta_unavailable') unless lido[:status] == 'ok'
   end
 

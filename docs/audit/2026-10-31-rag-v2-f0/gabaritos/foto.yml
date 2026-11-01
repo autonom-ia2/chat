@@ -1,0 +1,151 @@
+perguntas:
+- pergunta: vcs abrem domingo?
+  tipo: fato_simples
+  esperado: Não. Aos domingos e feriados a marmitaria fica fechada.
+  ancoras:
+  - 'Domingos e feriados: fechado'
+- pergunta: ate q horas posso pedir pra chegar na hora do almoço?
+  tipo: fato_simples
+  esperado: Pedidos pelo WhatsApp até 11h30 saem para entrega no almoço. Depois disso, só retirada no balcão, enquanto durar.
+  ancoras:
+  - Pedidos pelo WhatsApp até 11h30 saem para entrega no almoço
+  - só retirada no balcão, enquanto durar
+- pergunta: aceita vale refeição?
+  tipo: fato_simples
+  esperado: Não, não aceitamos vale-refeição nem cheque.
+  ancoras:
+  - Não aceitamos vale-refeição nem cheque
+- pergunta: tem marmita sem glúten?
+  tipo: fato_simples
+  esperado: Não, não temos opção sem glúten. Se tiver outra restrição alimentar, é só avisar no pedido.
+  ancoras:
+  - Não temos opção sem glúten
+  - Tem restrição alimentar? Avise no pedido
+- pergunta: posso passar meu cartão fidelidade pra minha mãe?
+  tipo: fato_simples
+  esperado: Não. O cartão é pessoal e não pode ser passado para outra pessoa.
+  ancoras:
+  - O cartão é pessoal e não pode ser passado para outra pessoa
+  - não pode ser passado para outra pessoa
+- pergunta: sabado vcs fecham que horas
+  tipo: fato_simples
+  esperado: No sábado funcionamos das 10h30 às 14h30.
+  ancoras:
+  - 'Sábado: 10h30 às 14h30'
+- pergunta: qnto é a marmita G?
+  tipo: valor
+  esperado: A Marmita G (800 g) custa R$ 29,90 nos dias comuns; nos pratos ESPECIAL, R$ 5,00 a mais.
+  ancoras:
+  - Marmita G, 800 gramas
+- pergunta: quanto é a entrega pro centro?
+  tipo: valor
+  esperado: A taxa de entrega para o Centro (até 2 km da loja) é R$ 6,00.
+  ancoras:
+  - Centro (até 2 km da loja)
+- pergunta: qual o pedido minimo pra entregarem?
+  tipo: valor
+  esperado: O pedido mínimo para entrega é R$ 25,00, sem contar a taxa.
+  ancoras:
+  - 'Pedido mínimo para entrega: R$ 25,00'
+  - sem contar a taxa
+- pergunta: quantos carimbos pra ganhar a marmita grátis?
+  tipo: valor
+  esperado: 10 carimbos. O cartão completo dá direito a 1 marmita M grátis.
+  ancoras:
+  - Cartão completo, com 10 carimbos, dá direito a 1 marmita M grátis
+  - com 10 carimbos, dá direito a 1 marmita M
+- pergunta: se eu encomendar 60 marmitas qual o desconto?
+  tipo: valor
+  esperado: A partir de 50 marmitas o desconto é de 15%.
+  ancoras:
+  - A partir de 50 marmitas, desconto de 15%
+  - desconto de 15%
+- pergunta: qnto é o sinal pra confirmar encomenda
+  tipo: valor
+  esperado: O sinal é de 30%, pago por Pix; o restante é pago na entrega.
+  ancoras:
+  - pagamos sinal de 30% por Pix
+  - O restante é pago na entrega
+- pergunta: quanto tá o suco?
+  tipo: tabela_linha
+  esperado: O suco natural de 500 ml (laranja ou limão) custa R$ 8,00.
+  ancoras:
+  - Suco natural 500 ml (laranja ou limão)
+- pergunta: entrega no parque das flores quanto fica
+  tipo: tabela_linha
+  esperado: A taxa para o Parque das Flores (até 4 km da loja) é R$ 9,00.
+  ancoras:
+  - Parque das Flores (até 4 km da loja)
+- pergunta: a marmita fit é de quantas gramas?
+  tipo: tabela_linha
+  esperado: A Marmita Fit (sem fritura) tem 450 g e custa R$ 27,90.
+  ancoras:
+  - Marmita Fit, 450 gramas, sem fritura
+- pergunta: ovo a mais quanto cobram
+  tipo: tabela_linha
+  esperado: O ovo frito extra custa R$ 2,50.
+  ancoras:
+  - Ovo frito extra
+- pergunta: se eu for buscar aí tem desconto?
+  tipo: parafrase
+  esperado: 'Sim: na retirada no balcão não paga taxa e tem 5% de desconto no pagamento em Pix.'
+  ancoras:
+  - Retirada no balcão não paga taxa
+  - tem 5% de desconto no pagamento em Pix
+- pergunta: perdi meu cartão de carimbo, vcs fazem outro?
+  tipo: parafrase
+  esperado: Não. Cartão perdido não é reposto.
+  ancoras:
+  - Cartão perdido não é reposto
+- pergunta: oq vem junto com a marmita?
+  tipo: parafrase
+  esperado: Toda marmita acompanha arroz, feijão carioca e a salada do dia.
+  ancoras:
+  - Toda marmita acompanha arroz, feijão carioca e a salada do dia
+  - acompanha arroz, feijão carioca
+- pergunta: no dia do meu niver ganho alguma coisa?
+  tipo: parafrase
+  esperado: 'Sim: no mês do aniversário, mostrando um documento, ganha uma sobremesa na compra de uma marmita.'
+  ancoras:
+  - No mês do aniversário, quem mostra um documento ganha uma sobremesa
+  - ganha uma sobremesa na compra de uma marmita
+- pergunta: usei o cartão cheio pra pegar feijoada, preciso pagar algo?
+  tipo: secao_longa
+  esperado: Como a feijoada é prato ESPECIAL, você paga só a diferença de R$ 5,00; a marmita M é grátis.
+  ancoras:
+  - Se escolher um prato ESPECIAL, paga só a diferença de R$ 5,00
+  - paga só a diferença de R$ 5,00
+- pergunta: se eu cancelar a encomenda perco o sinal?
+  tipo: secao_longa
+  esperado: Cancelando até 24 horas antes, devolvemos o sinal. Depois disso, o sinal não é devolvido.
+  ancoras:
+  - Cancelando até 24 horas antes, devolvemos o sinal
+  - o sinal não é devolvido
+- pergunta: qual o bairro mais caro pra entrega?
+  tipo: agregacao
+  esperado: O Distrito Industrial (até 6 km da loja), taxa de R$ 12,00.
+  ancoras:
+  - Distrito Industrial (até 6 km da loja)
+- pergunta: qual é a marmita mais barata?
+  tipo: agregacao
+  esperado: A Marmita Kids (250 g), R$ 14,90.
+  ancoras:
+  - Marmita Kids, 250 gramas
+- pergunta: quantas calorias tem a marmita?
+  tipo: fora
+  fora: true
+- pergunta: vcs vendem marmita congelada pra levar?
+  tipo: fora
+  fora: true
+- pergunta: tem estacionamento aí?
+  tipo: fora
+  fora: true
+- pergunta: fazem buffet completo com garçom pra festa?
+  tipo: fora
+  fora: true
+- pergunta: qual o instagram de vcs?
+  tipo: fora
+  fora: true
+- pergunta: tem desconto pra estudante?
+  tipo: fora
+  fora: true

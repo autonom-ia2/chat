@@ -23,8 +23,6 @@ const props = defineProps({
   podeCriarPronta: { type: Boolean, default: false },
   // #1505 — a mensagem entra numa conversa que já existe.
   continuando: { type: Boolean, default: false },
-  // #1988 — caixa híbrida pelo número reserva: só texto (sem "+" e sem microfone).
-  soTexto: { type: Boolean, default: false },
 });
 
 defineEmits([
@@ -127,7 +125,6 @@ defineExpose({ montar: () => pronta.value?.montar() ?? null });
       :canal="canal"
       :assinatura="assinatura"
       :com-assinatura="comAssinatura"
-      :so-texto="soTexto"
       :com-rotulo="!comEscolha"
       @enviar="$emit('enviar')"
     />

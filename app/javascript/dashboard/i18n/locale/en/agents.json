@@ -806,8 +806,6 @@
             "ERRO_GARANTIA": "Nothing changed in the agent.",
             "VAZIO": "This agent does not look anything up in other systems yet. Add a tool when it needs data from outside, like the stock.",
             "FEITAS": "Made for this agent",
-            "CONTADOR": "{n} of {max}",
-            "LIMITE": "This agent already has {max} tools, which is the limit. To add another one, delete one you no longer use.",
             "ABRIR_LIGADA": ", on. Open",
             "ABRIR_DESLIGADA": ", off. Open",
             "SEM_QUANDO": "No \"When to use\". The agent only has the name to decide.",
@@ -841,7 +839,6 @@
             "SISTEMA_DISSE": "The system said: “{mensagem}”.",
             "IR_PARA_PASSO": "Go to step {n}, {parte}",
             "SEM_REDE": "Could not reach the server.",
-            "LIMITE": "This agent already has {max} tools.",
             "SAIR": {
               "TITULO": "Leave without saving?",
               "TEXTO": "What you typed in this tool will be lost.",

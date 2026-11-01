@@ -191,7 +191,8 @@ module Autonomia
                 autonomia_reply_to_message_id: reply_to_message_id,
                 autonomia_chunk_index: index,
                 autonomia_chunk_token: chunk_token(reply_to_message_id, index),
-                **{ RichMessages::KEY => chunk['rich_message'] }.compact
+                **{ RichMessages::KEY => chunk['rich_message'] }.compact,
+                **chunk['marca'].to_h # #1479 F2: a marca do pedido de localização (`Interacao.nos_pedacos`)
               }
             )
           ).perform

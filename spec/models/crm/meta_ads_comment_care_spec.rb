@@ -23,18 +23,17 @@ RSpec.describe Crm::MetaAdsCommentCare do
     expect(build(:crm_meta_ads_comment_care, account: account, message: 'a' * 1001)).not_to be_valid
   end
 
-  it 'conta o limite em bytes, como a Meta, com o aviso do fim: acento e emoji pesam mais de um' do
-    livre = 1000 - build(:crm_meta_ads_comment_care, account: account, message: '').texto_do_privado.bytesize
-    expect(build(:crm_meta_ads_comment_care, account: account, message: 'ã' * (livre / 2))).to be_valid
-    expect(build(:crm_meta_ads_comment_care, account: account, message: 'ã' * ((livre / 2) + 1))).not_to be_valid
-    expect(build(:crm_meta_ads_comment_care, account: account, message: '😀' * ((livre / 4) + 1))).not_to be_valid
+  it 'conta o limite em bytes, como a Meta: acento e emoji pesam mais de um' do
+    expect(build(:crm_meta_ads_comment_care, account: account, message: 'ã' * 500)).to be_valid
+    expect(build(:crm_meta_ads_comment_care, account: account, message: 'ã' * 501)).not_to be_valid
+    expect(build(:crm_meta_ads_comment_care, account: account, message: '😀' * 251)).not_to be_valid
   end
 
-  it 'manda no privado a mensagem do dono com o aviso de automática, no idioma da conta' do
+  it 'manda no privado só a mensagem do dono, sem nada no fim (decisão do Rodrigo, 30/10)' do
     account.update!(locale: 'pt_BR')
     care = build(:crm_meta_ads_comment_care, account: account, message: ' Oi! O catálogo: loja.com ')
 
-    expect(care.texto_do_privado).to eq('Oi! O catálogo: loja.com (mensagem automática · se não quiser receber, me avisa)')
+    expect(care.texto_do_privado).to eq('Oi! O catálogo: loja.com')
   end
 
   it 'exige de uma a três frases públicas curtas' do
@@ -109,6 +108,35 @@ RSpec.describe Crm::MetaAdsCommentCare do
 
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '555_888', ad_id: nil)).to eq(anuncio)
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '555_999', ad_id: nil)).to be_nil
+    end
+
+    it 'o anúncio vence o post também quando chega só pelo post do criativo' do
+      anuncio.update!(post_ids: %w[179])
+
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: nil)).to eq(anuncio)
+    end
+
+    it 'vários anúncios com o mesmo post: vale o mais antigo, sempre' do
+      anuncio.update!(post_ids: %w[17900])
+      create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '121', post_ids: %w[17900])
+      # O UPDATE leva a linha do mais antigo para o fim da tabela: sem ordem, a leitura acharia o mais novo primeiro.
+      anuncio.update!(message: 'Oi! Mudei a mensagem.')
+
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '17900', ad_id: nil)).to eq(anuncio)
+    end
+
+    it 'anúncio pausado: a IA não cuida, e o cuidado do post ligado não entra no lugar dele' do
+      anuncio.update!(status: 'paused', post_ids: %w[179])
+
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: '120')).to be_nil
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
+    end
+
+    it 'dois anúncios com o mesmo post, o mais antigo pausado: vale o ligado' do
+      anuncio.update!(status: 'paused', post_ids: %w[17900])
+      ligado = create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '121', post_ids: %w[17900])
+
+      expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '17900', ad_id: nil)).to eq(ligado)
     end
 
     it 'só vale na rede do cuidado; o anúncio das duas redes vale nas duas' do

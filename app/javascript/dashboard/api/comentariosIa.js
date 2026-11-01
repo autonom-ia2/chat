@@ -6,13 +6,13 @@ import ApiClient from './ApiClient';
 // changes. Contract: docs/audit/2026-10-30-2212-contrato-api.md.
 //
 // - post: seus_posts/posts/:post_id/..., always with ?perfil=
-// - ad:   crm/meta_ads/ads/:ad_id/..., no perfil
+// - ad:   crm/meta_ads_connection/ads/:ad_id/..., no perfil
 //
 // Painel: { network, private_available, care, message, para_quem, phrases,
 // read_old, results, unanswered, older, to_see, hidden }.
 const BASE = {
   post: id => `seus_posts/posts/${encodeURIComponent(id)}`,
-  ad: id => `crm/meta_ads/ads/${encodeURIComponent(id)}`,
+  ad: id => `crm/meta_ads_connection/ads/${encodeURIComponent(id)}`,
 };
 
 class ComentariosIaAPI extends ApiClient {
@@ -56,11 +56,25 @@ class ComentariosIaAPI extends ApiClient {
     );
   }
 
+  // Seus posts: o começo da mensagem do passo 1, escrito pela IA a partir da
+  // legenda (uma vez por legenda). { status: 'ready', message } | 'no_offer' |
+  // 'no_caption'; 422 ai_unavailable.
+  rascunho(target) {
+    return axios.post(`${this.targetUrl(target)}/cuidado/rascunho`, null, {
+      params: ComentariosIaAPI.params(target),
+    });
+  }
+
   // { queued }
   lerAntigos(target) {
     return axios.post(`${this.targetUrl(target)}/cuidado/ler_antigos`, null, {
       params: ComentariosIaAPI.params(target),
     });
+  }
+
+  // { cuidados: [{ ad_id, care }] }: the care state of each ad (B2 badge).
+  getCuidadosDosAnuncios() {
+    return axios.get(`${this.url}crm/meta_ads_connection/cuidados`);
   }
 
   // Seus posts: os cuidados do perfil, para o selo e a faixa.

@@ -140,6 +140,8 @@ module Autonomia
         @conferencia_da_fala = conferencia_da_fala
         # #1479: opções e botão de link na resposta ao cliente. Desligado, o pedido ao modelo fica o de antes.
         @interacao = @trust_instruction && Interacao.disponivel?(agent: @agent, delivery: @delivery, audience: @audience)
+        # #1479 F2: e o pedido de localização, com a flag da conta.
+        @localizacao = @interacao && Interacao::PedidoDeLocalizacao.no_turno?(@delivery.conversation)
         # Tema 14: o relógio do prazo da resposta começa aqui, e não na primeira consulta ao ajudante.
         @orcamento_dos_ajudantes = Ajudantes::Orcamento.new
         snippets = retrieve_snippets
@@ -184,7 +186,7 @@ module Autonomia
         return unless @interacao
 
         pedido = parsed['interacao']
-        return Interacao.do_modelo(pedido, enderecos: Set.new) unless pedido.is_a?(Hash) && pedido['tipo'] == 'link'
+        return Interacao.do_modelo(pedido, enderecos: Set.new, localizacao: @localizacao) unless pedido.is_a?(Hash) && pedido['tipo'] == 'link'
 
         enderecos = Interacao::Enderecos.do_dono(dono: [@prompt.instructions, *snippets.map { |trecho| trecho.content.to_s }],
                                                  ferramentas: @saidas_do_turno.to_a)
@@ -362,7 +364,8 @@ module Autonomia
       def montar_prompt(snippets)
         PromptBuilder.new(agent: @agent, query: @query, history: @history, snippets: snippets, images: @images,
                           documents: @documents, audience: @audience, contexto_do_turno: @contexto_do_turno,
-                          memoria: @memoria, interacao: @interacao == true, mensagem_do_dono: @trust_instruction == true)
+                          memoria: @memoria, interacao: @interacao == true, mensagem_do_dono: @trust_instruction == true,
+                          localizacao: @localizacao == true)
       end
 
       # Só a classe: a mensagem pode ecoar o prompt (a da OpenAI repete trecho do pedido), e o
@@ -376,6 +379,8 @@ module Autonomia
       # O agente de cotação declara, na própria resposta, o que a fala diz (`ConferenciaDaFala::SCHEMA_DA_RESPOSTA`).
       def schema_da_resposta
         return ConferenciaDaFala::SCHEMA_DA_RESPOSTA if @conferencia_da_fala
+
+        return PromptBuilder::ANSWER_SCHEMA_COM_LOCALIZACAO if @localizacao
 
         @interacao ? PromptBuilder::ANSWER_SCHEMA_COM_INTERACAO : PromptBuilder::ANSWER_SCHEMA
       end

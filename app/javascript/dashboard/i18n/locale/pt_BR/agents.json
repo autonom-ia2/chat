@@ -806,8 +806,6 @@
             "ERRO_GARANTIA": "Nada mudou no agente.",
             "VAZIO": "Este agente ainda não consulta nenhum outro sistema. Adicione uma ferramenta quando ele precisar buscar um dado fora daqui, como o estoque.",
             "FEITAS": "Feitas para este agente",
-            "CONTADOR": "{n} de {max}",
-            "LIMITE": "Este agente já tem {max} ferramentas, que é o limite. Para adicionar outra, exclua uma que não usa mais.",
             "ABRIR_LIGADA": ", ligada. Abrir",
             "ABRIR_DESLIGADA": ", desligada. Abrir",
             "SEM_QUANDO": "Sem \"Quando usar\". O agente só tem o nome para decidir.",
@@ -841,7 +839,6 @@
             "SISTEMA_DISSE": "O sistema disse: “{mensagem}”.",
             "IR_PARA_PASSO": "Ir para o passo {n}, {parte}",
             "SEM_REDE": "Não consegui falar com o servidor.",
-            "LIMITE": "Este agente já tem {max} ferramentas.",
             "SAIR": {
               "TITULO": "Sair sem salvar?",
               "TEXTO": "O que você digitou nesta ferramenta será perdido.",

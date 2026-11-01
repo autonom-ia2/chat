@@ -37,6 +37,14 @@ module Autonomia
         )
       }.freeze
 
+      # #1479 F2: o mesmo, com o pedido de localização no `interacao` (flag `agentes_pedir_localizacao`).
+      ANSWER_SCHEMA_COM_LOCALIZACAO = {
+        name: 'autonomia_agent_answer_interacao_localizacao',
+        schema: ANSWER_SCHEMA_COM_INTERACAO[:schema].merge(
+          properties: ANSWER_SCHEMA_COM_INTERACAO[:schema][:properties].merge(interacao: ::Autonomia::Agents::Interacao::SCHEMA_COM_LOCALIZACAO)
+        )
+      }.freeze
+
       # KB-quality Bloco A (2026-07-03): 800→1500 para o trecho recuperado chegar mais INTEIRO ao LLM
       # (menos fato cortado no meio). No-op nos chunks atuais de ~600 chars; prepara o Bloco B (chunks
       # adaptativos maiores). A janela de contexto do modelo acomoda 12 trechos × 1500 com folga.
@@ -99,13 +107,15 @@ module Autonomia
       #           dito pelo sistema (`developer`) e os fatos (`user`, com cerca) logo antes da pergunta. Vazio (padrão):
       #           o input fica byte a byte o de antes.
       # interacao: true acrescenta às instruções a regra do campo `interacao` (#1479). false (padrão): nada muda.
+      # localizacao: true (só junto de `interacao`) acrescenta a regra do pedido de localização (#1479 F2).
       # mensagem_do_dono: true quando a fala do modelo vai ao cliente como está (o Answerer com `trust_instruction`):
       #           só aí a mensagem de quando não souber entra como orientação (#2381). No caminho com portão (copiloto,
       #           Guia) a mensagem já substitui a resposta inteira, e o prompt fica o de antes. false (padrão).
       def initialize(agent:, query:, history: [], snippets: [], images: [], documents: [], audience: :customer,
-                     contexto_do_turno: nil, memoria: nil, interacao: false, mensagem_do_dono: false)
+                     contexto_do_turno: nil, memoria: nil, interacao: false, mensagem_do_dono: false, localizacao: false)
         @agent = agent
         @interacao = interacao
+        @localizacao = interacao && localizacao
         @mensagem_do_dono = mensagem_do_dono
         @contexto_do_turno = contexto_do_turno.presence
         @memoria = memoria || PromptParts::Memoria::Blocos.vazio
@@ -138,7 +148,8 @@ module Autonomia
           handoff_block,
           fallback_block,
           output_format,
-          (::Autonomia::Agents::Interacao::INSTRUCAO if @interacao)
+          (::Autonomia::Agents::Interacao::INSTRUCAO if @interacao),
+          (::Autonomia::Agents::Interacao::PedidoDeLocalizacao::INSTRUCAO if @localizacao)
         ].compact_blank.join("\n\n")
       end
 

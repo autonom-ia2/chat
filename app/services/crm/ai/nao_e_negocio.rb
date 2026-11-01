@@ -21,7 +21,8 @@
 # other_subjects e nada é arquivado (tudo como antes do #1922).
 class Crm::Ai::NaoENegocio
   FLAG = 'crm_ia_arquiva_lixo'.freeze
-  MOTIVOS = %w[fora_do_negocio duplicado].freeze
+  FORA_DO_NEGOCIO = 'fora_do_negocio'.freeze
+  MOTIVOS = [FORA_DO_NEGOCIO, 'duplicado'].freeze
   # IA entende a conversa F3, regra k: "era teste" vira SUGESTÃO de arquivar como não é negócio (#sugerir_teste!), sem
   # contar como perda; a pessoa aceita num clique. Só com a flag `crm_ia_fecha_card` (Crm::Ai::FecharCard::TESTE); as
   # guardas do arquivamento são as mesmas.

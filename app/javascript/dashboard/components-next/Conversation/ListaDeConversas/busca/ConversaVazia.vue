@@ -464,7 +464,6 @@ watch(nova.erro, erro => {
           :com-modelo="nova.comModelo.value"
           :caixa-do-whatsapp="nova.caixaDoWhatsapp.value"
           :com-assunto="!nova.destino.value"
-          :so-texto="nova.soTexto.value"
           :assinatura="nova.assinatura.value || ''"
           :com-assinatura="nova.comAssinatura.value"
           :pode-enviar="!nova.falta.value"

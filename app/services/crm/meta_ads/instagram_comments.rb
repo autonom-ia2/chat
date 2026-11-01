@@ -28,10 +28,13 @@ class Crm::MetaAds::InstagramComments
 
   MAX_TEXT = 2200
 
-  def initialize(connection, inbox_access:, can_manage:)
+  # management: a Crm::MetaAds::AdManagement que já leu o anúncio, quando quem chama já a tem (IA dos comentários,
+  # #2212): ela guarda a leitura, e o criativo não é lido de novo. Sem ela, uma nova.
+  def initialize(connection, inbox_access:, can_manage:, management: nil)
     @connection = connection
     @inbox_access = inbox_access
     @can_manage = can_manage
+    @management = management || Crm::MetaAds::AdManagement.new(connection)
   end
 
   def payload(ad_id, after: nil)
@@ -97,7 +100,7 @@ class Crm::MetaAds::InstagramComments
   private
 
   def target(ad_id)
-    ad = management.ad(ad_id.to_s)
+    ad = @management.ad(ad_id.to_s)
     return if ad.nil?
 
     creative = ad['creative'].to_h
@@ -217,9 +220,5 @@ class Crm::MetaAds::InstagramComments
   def rows(channel)
     Crm::MetaAds::InstagramCommentRows.new(channel, account_id: @connection.account_id, can_manage: @can_manage,
                                                     conversation_access: Crm::MetaAds::InstagramCommentRows::EVERY_CONVERSATION)
-  end
-
-  def management
-    @management ||= Crm::MetaAds::AdManagement.new(@connection)
   end
 end

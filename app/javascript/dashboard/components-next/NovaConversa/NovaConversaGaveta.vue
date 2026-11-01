@@ -133,7 +133,6 @@ const {
   comAssinatura,
   assinatura,
   caixaDoWhatsapp,
-  soTexto,
   falta,
   previa,
   enviando,
@@ -479,7 +478,6 @@ useFixedPanelPresence(aberta);
                     :com-assinatura="comAssinatura"
                     :pode-criar-pronta="podeCriarPronta"
                     :continuando="continuando"
-                    :so-texto="soTexto"
                     @enviar="mandar"
                     @update:campos-prontos="form.camposProntos = $event"
                     @update:texto-do-modelo="form.textoDoModelo = $event"

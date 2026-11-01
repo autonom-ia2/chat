@@ -21,7 +21,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::CuidarJob do
 
   {
     'a Meta não responde à leitura do comentário' => Crm::MetaAds::ComentariosIa::Rede::Indisponivel,
-    'o Jev não responde à pergunta' => TypesafeAi::Decisor::Error.new('typesafe_timeout')
+    'a IA não responde à pergunta' => Crm::MetaAds::ComentariosIa::Classificador::Indisponivel.new('ai_timeout')
   }.each do |caso, erro|
     describe caso do
       before { allow(cuidar).to receive(:call).and_raise(erro) }
