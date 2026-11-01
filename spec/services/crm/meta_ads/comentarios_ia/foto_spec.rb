@@ -63,6 +63,46 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Foto do
     foto.ler
 
     expect(pedido[:instructions]).to include('data', 'never', 'Brazilian Portuguese')
+    expect(pedido[:instructions]).not_to include('cdn.exemplo', 'https://')
+    expect(pedido[:input].to_json).to include('https://cdn.exemplo/1.jpg')
+  end
+
+  describe 'duas aberturas juntas (a linha é reservada antes da IA)' do
+    it 'a segunda abertura, com a primeira lendo, não chama a IA' do
+      Crm::MetaAdsPostReading.create!(account: account, network: 'instagram', post_id: '1790')
+      allow(cliente).to receive(:create)
+
+      expect(foto.ler).to eq(status: 'unavailable')
+      expect(cliente).not_to have_received(:create)
+    end
+
+    it 'só uma das duas chama a IA, mesmo começando juntas' do
+      chamadas = 0
+      allow(cliente).to receive(:create) do
+        chamadas += 1
+        # A segunda abertura entra enquanto a primeira espera a IA.
+        foto.ler if chamadas == 1
+        { text: { description: 'Um vestido azul.' }.to_json }
+      end
+
+      expect(foto.ler).to include(status: 'ready', text: 'Um vestido azul.')
+      expect(chamadas).to eq(1)
+    end
+
+    it 'reserva parada (o processo morreu) vence: a próxima abertura lê' do
+      Crm::MetaAdsPostReading.create!(account: account, network: 'instagram', post_id: '1790', updated_at: 2.minutes.ago)
+      responde
+
+      expect(foto.ler).to include(status: 'ready')
+      expect(cliente).to have_received(:create).once
+    end
+
+    it 'a IA que não respondeu solta a reserva: a próxima abertura tenta de novo' do
+      allow(cliente).to receive(:create).and_return({ text: 'sem formato' })
+
+      expect(foto.ler).to eq(status: 'unavailable')
+      expect(Crm::MetaAdsPostReading.count).to eq(0)
+    end
   end
 
   it 'a correção do dono vence a leitura, e quem corrigiu fica gravado' do
