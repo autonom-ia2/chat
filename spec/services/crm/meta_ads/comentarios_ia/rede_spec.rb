@@ -270,8 +270,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         allow(servico).to receive(:comment).and_return(nil)
         expect(rede.ler_pai).to be_nil
 
+        # Lido uma vez por comentário (#2458): cada cenário com a sua Rede.
+        de_novo = described_class::Facebook.new(inbox, comentario(network: 'facebook', parent_id: '555_666'))
         allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
-        expect { rede.ler_pai }.to raise_error(described_class::Indisponivel)
+        expect { de_novo.ler_pai }.to raise_error(described_class::Indisponivel)
+      end
+
+      it 'lê o de cima uma vez só por comentário: o Classificador e a Escrita leem o mesmo (#2458)' do
+        allow(servico).to receive(:comment).and_return({ 'message' => 'Tem em azul?' })
+
+        2.times { expect(rede.ler_pai).to eq('Tem em azul?') }
+        expect(servico).to have_received(:comment).once
       end
     end
 
@@ -396,18 +405,27 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.legenda).to eq('Seguro viagem')
       end
 
+      # Lida uma vez por comentário (#2458): cada cenário com a sua Rede.
       it 'post sem legenda ou que não dá para ler: nil; Meta fora do ar ou token caído: Indisponivel' do
+        nova = -> { described_class::Instagram.new(inbox, comentario) }
         allow(cliente).to receive(:caption).and_return(result.new(ok: true, data: { 'id' => '555_888' }))
-        expect(rede.legenda).to be_nil
+        expect(nova.call.legenda).to be_nil
 
         allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 400, error_code: 100))
-        expect(rede.legenda).to be_nil
+        expect(nova.call.legenda).to be_nil
 
         allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 500, error_code: 2))
-        expect { rede.legenda }.to raise_error(described_class::Indisponivel)
+        expect { nova.call.legenda }.to raise_error(described_class::Indisponivel)
 
         allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 400, error_code: 190))
-        expect { rede.legenda }.to raise_error(described_class::Indisponivel)
+        expect { nova.call.legenda }.to raise_error(described_class::Indisponivel)
+      end
+
+      it 'lê a legenda uma vez só por comentário (#2458)' do
+        allow(cliente).to receive(:caption).and_return(result.new(ok: true, data: { 'caption' => 'Seguro viagem' }))
+
+        2.times { expect(rede.legenda).to eq('Seguro viagem') }
+        expect(cliente).to have_received(:caption).once
       end
     end
 
@@ -507,8 +525,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 400, error_code: 100))
         expect(rede.ler_pai).to be_nil
 
+        # Lido uma vez por comentário (#2458): o cenário seguinte com a sua Rede.
+        de_novo = described_class::Instagram.new(inbox, comentario(parent_id: '555_666'))
         allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 500, error_code: 2))
-        expect { rede.ler_pai }.to raise_error(described_class::Indisponivel)
+        expect { de_novo.ler_pai }.to raise_error(described_class::Indisponivel)
       end
     end
 

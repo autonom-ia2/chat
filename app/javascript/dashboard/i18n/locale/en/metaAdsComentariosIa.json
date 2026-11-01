@@ -131,7 +131,13 @@
           "CATALOG": "People who want the catalog"
         },
         "OWN": "Or write it your way:",
-        "TOO_LONG": "That's too long. Use up to {max} characters."
+        "TOO_LONG": "That's too long. Use up to {max} characters.",
+        "CHIP": "People who {parte}",
+        "PARTS": {
+          "PRICE": "ask the price",
+          "LINK": "ask for the link",
+          "CATALOG": "want the catalog"
+        }
       },
       "SEE": {
         "TITLE": "See how it looks",
@@ -150,7 +156,12 @@
         "LOADING": "I'm reading the post's comments…",
         "PREVIEW_ERROR": "I couldn't read the post's comments right now. This is an example: you can turn it on anyway.",
         "REPLY": "Reply inside this comment",
-        "REPLY_TRIES": "I try to send a DM; if the network doesn't allow it, I only reply here"
+        "REPLY_TRIES": "I try to send a DM; if the network doesn't allow it, I only reply here",
+        "WRITTEN_COMMENT": "In the comment, I reply:",
+        "WRITTEN_DM": "In private, I send:",
+        "KEPT": "I can’t answer this with what the business taught me. I don’t reply and leave it with you.",
+        "OWNER": "Stays with you",
+        "OWNER_WHY": "It is about “{assunto}”. I don’t reply and leave it with you."
       },
       "RULES": {
         "ONCE": "Each person gets one message only on this post.",
@@ -172,6 +183,20 @@
         "TEXT": "I'll read it and send the message only if it fits. | I'll read the {count} and send the message only when it fits.",
         "CONFIRM": "Read and send",
         "BACK": "Not now"
+      },
+      "NAO_FALO": {
+        "TITLE": "What don’t I talk about?",
+        "OPTIONAL": "(optional)",
+        "TEXT": "Even if I know it, I don’t reply and leave it with you.",
+        "PLACEHOLDER": "E.g.: a refund in progress"
+      },
+      "TONE": {
+        "LABEL": "Want it another way?",
+        "PLACEHOLDER": "E.g.: more formal, no emoji",
+        "BUTTON": "Adjust",
+        "DONE": "I write it like this: {tom}.",
+        "UNDO": "Back to how it was",
+        "TOO_LONG": "That’s too long. Use up to {max} characters."
       }
     },
     "ENTRY": {

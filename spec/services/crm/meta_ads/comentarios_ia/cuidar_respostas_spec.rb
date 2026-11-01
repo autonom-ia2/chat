@@ -7,7 +7,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let!(:care) { create(:crm_meta_ads_comment_care, account: account, target_id: '1790') }
   let(:rede) do
     instance_double(Crm::MetaAds::ComentariosIa::Rede::Instagram, responder: true, esconder: true, privado_disponivel?: true,
-                                                                  ler_pai: 'Tem em azul?')
+                                                                  ler_pai: 'Tem em azul?', legenda: nil)
   end
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa) }
@@ -107,7 +107,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
       cuidar
 
-      expect(rede).to have_received(:privado).with(care)
+      expect(rede).to have_received(:privado).with(care, texto: nil)
       expect(registro).to have_received(:reservar_pessoa!)
       expect(rede).to have_received(:responder).with(care.resposta_publica('private', 0))
     end

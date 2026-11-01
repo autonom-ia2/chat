@@ -230,4 +230,29 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Classificador do
       expect([described_class::Bloqueado, described_class::Indisponivel]).to all(be < described_class::Erro)
     end
   end
+
+  describe 'o assunto proibido do dono (#2458)' do
+    before do
+      care.update!(assunto_proibido: 'reembolso em andamento')
+      responde('owner_topic', 0.9)
+    end
+
+    it 'vai no campo próprio, como dado do dono, e a decisão owner_topic entra por último', :aggregate_failures do
+      expect(classificador.decidir!('E o meu reembolso?')).to eq('owner_topic')
+      expect(pedido[:entrada]).to include('owner_forbidden_topic' => 'reembolso em andamento', 'comment' => 'E o meu reembolso?')
+      expect(pedido[:schema][:schema][:properties][:decision][:enum]).to eq(%w[private price to_you hide no_reply owner_topic])
+      expect(pedido[:instructions]).to include(described_class::PROIBIDO, described_class::ASSUNTO_DO_DONO['owner_topic'])
+    end
+
+    it 'sem o assunto escrito: o pedido fica o de antes, sem o assunto nem a decisão', :aggregate_failures do
+      care.update!(assunto_proibido: nil)
+      responde('private', 0.9)
+
+      classificador.decidir!('E o meu reembolso?')
+
+      expect(pedido[:entrada]).not_to have_key('owner_forbidden_topic')
+      expect(pedido[:schema][:schema][:properties][:decision][:enum]).to eq(%w[private price to_you hide no_reply])
+      expect(pedido[:instructions]).not_to include(described_class::PROIBIDO)
+    end
+  end
 end

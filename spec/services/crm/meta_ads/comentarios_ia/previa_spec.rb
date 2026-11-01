@@ -97,4 +97,57 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Previa do
 
     expect(previa.call).to eq(status: 'ai_unavailable')
   end
+
+  describe 'com a IA escrevendo as respostas (#2458)' do
+    let(:base) { create(:crm_meta_ads_comment_care, account: account, note: 'Atendo até as 18h') }
+    let(:inbox) { create(:inbox, account: account) }
+    let(:escrita) { instance_double(Crm::MetaAds::ComentariosIa::Escrita) }
+    let(:previa) do
+      described_class.new(account: account, fonte: fonte, para_quem: 'Quem pedir a receita', base: base,
+                          escrita: { assunto_proibido: 'reembolso', tom: 'mais formal' })
+    end
+
+    before do
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+      allow(Crm::MetaAds::ComentariosIa::Escrita).to receive(:new).and_return(escrita)
+      allow(classificador).to receive(:decidir!) do |texto|
+        { 'Me passa a receita?' => 'private', 'Que lindo!' => 'no_reply', 'E o reembolso?' => 'owner_topic' }[texto]
+      end
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', 'E o reembolso?'), linha('2', 'Que lindo!'),
+                                                                           linha('3', 'Me passa a receita?').merge(inbox_id: inbox.id)] })
+    end
+
+    it 'o exemplo que recebe leva o que a IA escreveria, pela caixa do comentário e com o que o dono escreveu', :aggregate_failures do
+      allow(escrita).to receive(:textos).and_return(privado: 'Olá! A receita está no e-book.', publico: 'Enviei no direct.')
+
+      resultado = previa.call
+
+      expect(resultado[:recebe]).to include(id: '3', written: { dm: 'Olá! A receita está no e-book.', comment: 'Enviei no direct.' })
+      expect(resultado[:dono]).to eq(id: '1', author: 'pessoa.1', text: 'E o reembolso?', network: 'instagram')
+      expect(escrita).to have_received(:textos).with('private', comentario: 'Me passa a receita?')
+      expect(Crm::MetaAds::ComentariosIa::Escrita).to have_received(:new)
+        .with(care: an_object_having_attributes(note: 'Atendo até as 18h', assunto_proibido: 'reembolso', tom: 'mais formal'),
+              inbox: inbox, legenda: 'Bolo de cenoura, receita no e-book', foto: nil)
+    end
+
+    it 'o agente não saberia: o exemplo diz que fica com o dono' do
+      allow(escrita).to receive(:textos).and_return(dono: 'no_knowledge')
+
+      expect(previa.call[:recebe]).to include(kept_for_owner: true)
+    end
+
+    it 'com o assunto proibido, segue procurando o exemplo do dono depois dos outros dois' do
+      allow(escrita).to receive(:textos).and_return({})
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('2', 'Que lindo!'), linha('3', 'Me passa a receita?'),
+                                                                           linha('1', 'E o reembolso?')] })
+
+      expect(previa.call[:dono]).to include(id: '1')
+    end
+
+    it 'nas frases fixas (sem agente que possa escrever), o exemplo fica como antes' do
+      allow(escrita).to receive(:textos).and_return({})
+
+      expect(previa.call[:recebe]).to eq(id: '3', author: 'pessoa.3', text: 'Me passa a receita?', network: 'instagram')
+    end
+  end
 end

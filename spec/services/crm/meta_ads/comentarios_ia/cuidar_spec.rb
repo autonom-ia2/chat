@@ -4,7 +4,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
   let!(:care) { create(:crm_meta_ads_comment_care, account: account, target_id: '1790') }
-  let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true, privado_disponivel?: true) }
+  # Com a flag do cuidado, a Escrita (#2458) lê a legenda e o comentário de cima; sem chave da conta, as frases fixas.
+  let(:rede) do
+    instance_double(Crm::MetaAds::ComentariosIa::Rede::Facebook, responder: true, esconder: true, privado_disponivel?: true,
+                                                                 legenda: nil, ler_pai: nil)
+  end
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa) }
   let(:registro) { class_double(Crm::MetaAds::ComentariosIa::Registro) }
@@ -85,7 +89,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar
 
-    expect(rede).to have_received(:privado).with(care)
+    expect(rede).to have_received(:privado).with(care, texto: nil)
     expect(conversa).to have_received(:anotar!).with(conversation, lido, care, nova: true)
     expect(registro).to have_received(:vincular!).with(lido, 'private_reply', conversation)
     expect(rede).to have_received(:responder).with('Te mandei os detalhes no privado!')
@@ -330,7 +334,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar
 
-    expect(rede).to have_received(:privado).with(care)
+    expect(rede).to have_received(:privado).with(care, texto: nil)
   end
 
   it 'rede em que o privado ainda não está liberado (Facebook, até a pages_messaging): a pergunta fica com o dono' do
@@ -394,7 +398,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     cuidar
 
     expect(registro).to have_received(:decisao!).with(lido, avaliacao).ordered
-    expect(rede).to have_received(:privado).with(care).ordered
+    expect(rede).to have_received(:privado).with(care, texto: nil).ordered
   end
 
   it 'IA barrada (flag desligada ou sem chave): não sobe, fica com o dono como "não cuidei"' do
@@ -463,6 +467,6 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     cuidar(comentario(ad_id: '120'))
 
-    expect(rede).to have_received(:privado).with(anuncio)
+    expect(rede).to have_received(:privado).with(anuncio, texto: nil)
   end
 end

@@ -24,17 +24,19 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     false
   end
 
-  def privado(care)
+  # texto: a mensagem escrita pela IA para este comentário (#2458); sem ela, a do dono. O botão do dono vai junto.
+  def privado(care, texto: nil)
     reivindicacao = reivindicar
     # Sem a linha, ou com o envio dela já saindo em outra requisição: o privado não sai duas vezes.
     return Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: false, erro: Crm::MetaAds::ComentariosIa::Rede::JA_FEITO) unless enviando?(reivindicacao)
 
-    envio = Crm::MetaAds::ComentariosIa::Rede::Pagina.new(@inbox.channel).private_reply(@comentario.comment_id, mensagem(care))
+    texto ||= care.texto_do_privado
+    envio = Crm::MetaAds::ComentariosIa::Rede::Pagina.new(@inbox.channel).private_reply(@comentario.comment_id, mensagem(care, texto))
     return falhou(envio) unless envio.ok
 
     reivindicacao.confirm!
     aceito_em_resposta(reivindicacao, envio)
-    envio.conversation = na_caixa(envio, care)
+    envio.conversation = na_caixa(envio, texto)
     envio
   end
 
@@ -51,19 +53,23 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
   # O texto do comentário que esta resposta responde (#2454), ou nil (primeiro nível, ou o de cima que não dá para ler).
   # As mesmas regras do `ler`.
+  # Lido uma vez por comentário (#2458): o Classificador e a Escrita leem o mesmo.
   def ler_pai
+    return @ler_pai if defined?(@ler_pai)
     return if @comentario.parent_id.blank?
 
-    comentarios&.comment(@comentario.post_id, @comentario.parent_id)&.dig('message')
+    @ler_pai = comentarios&.comment(@comentario.post_id, @comentario.parent_id)&.dig('message')
   rescue Crm::MetaAds::FacebookComments::Error => e
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
 
     nil
   end
 
-  # O texto do post (#2424), ou nil. As mesmas regras do `ler`.
+  # O texto do post (#2424), ou nil. As mesmas regras do `ler`. Lido uma vez por comentário (#2458).
   def legenda
-    @comentario.post_id.present? ? comentarios&.post_message(@comentario.post_id) : nil
+    return @legenda if defined?(@legenda)
+
+    @legenda = @comentario.post_id.present? ? comentarios&.post_message(@comentario.post_id) : nil
   rescue Crm::MetaAds::FacebookComments::Error => e
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
 
@@ -97,8 +103,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   private
 
   # O privado já saiu: uma falha ao abrir a conversa não pode soltar a reivindicação (o reenvio mandaria de novo).
-  def na_caixa(envio, care)
-    Crm::MetaAds::ComentariosIa::Conversa.no_messenger!(@comentario, envio, care.texto_do_privado)
+  def na_caixa(envio, texto)
+    Crm::MetaAds::ComentariosIa::Conversa.no_messenger!(@comentario, envio, texto)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
     nil
@@ -130,11 +136,11 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
   end
 
-  def mensagem(care)
+  def mensagem(care, texto)
     button = care.button
-    return { text: care.texto_do_privado } if button.blank?
+    return { text: texto } if button.blank?
 
-    { attachment: { type: 'template', payload: { template_type: 'button', text: care.texto_do_privado,
+    { attachment: { type: 'template', payload: { template_type: 'button', text: texto,
                                                  buttons: [{ type: 'web_url', url: button['url'], title: button['title'] }] } } }
   end
 

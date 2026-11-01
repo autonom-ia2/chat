@@ -8,7 +8,9 @@
 #      sem IA (#2454): { status, waiting, private_window }.
 #      Ver: administrador ou `posts_view`.
 # PUT  seus_posts/posts/:post_id/cuidado                message, para_quem, phrases[], status → o Painel.
+#      Com a IA escrevendo (#2458), também temas[], assunto_proibido e tom do passo 2.
 # POST seus_posts/posts/:post_id/cuidado/previa         para_quem → os exemplos do passo "como fica" (Previa).
+#      Com a escrita (#2458), também assunto_proibido e tom: o que a IA escreveria.
 # POST seus_posts/posts/:post_id/cuidado/rascunho       → o começo da mensagem do passo 1, escrito pela IA a partir da
 #      legenda do post lida na Meta (Rascunho; uma vez por legenda). { status: 'ready', message } | 'no_offer' |
 #      'no_caption'; a IA fora do ar é 422 `ai_unavailable`.
@@ -64,7 +66,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   def update
     painel.salvar!(message: texto(:message), para_quem: texto(:para_quem),
-                   phrases: frases, status: cuidado_params[:status].to_s, user: Current.user)
+                   phrases: frases, status: cuidado_params[:status].to_s, user: Current.user, escrita: escrita)
     audit_care!('save')
     render json: painel.payload
   end
@@ -73,7 +75,8 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     para_quem = texto(:para_quem)
     return render_error_code('invalid_para_quem') if para_quem.strip.empty? || para_quem.strip.length > Crm::MetaAdsCommentCare::NOTE_LIMIT
 
-    resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
+    resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem,
+                                                        base: painel.cuidado, escrita: escrita).call
     # A tela trata qualquer resposta de erro como "não deu para ler": só a prévia pronta vai como prévia.
     return render_error_code(resultado[:status]) unless resultado[:status] == 'ready'
 
@@ -137,7 +140,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   end
 
   def cuidado_params
-    @cuidado_params ||= params.permit(:status, :message, :para_quem, :correction, phrases: [])
+    @cuidado_params ||= params.permit(:status, :message, :para_quem, :correction, :assunto_proibido, :tom, phrases: [], temas: [])
   end
 
   # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327). O que chegou e os strong params tiraram veio
@@ -153,6 +156,18 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_phrases' unless value.is_a?(Array) && value.all?(String)
 
     value
+  end
+
+  # #2458: o passo 2 com a escrita, só os campos que vieram (pausar e retomar não mexem neles). Os temas, só lista de
+  # textos. Sem a flag, o passo 2 nem é lido: o pedido de antes não ganha um 422 novo.
+  def escrita
+    return {} unless Crm::MetaAds::ComentariosIa::Escrita.ligada?(Current.account)
+
+    temas = cuidado_params[:temas]
+    raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_temas' if params.key?(:temas) && !(temas.is_a?(Array) && temas.all?(String))
+
+    campos = %i[assunto_proibido tom].select { |campo| params.key?(campo) }.index_with { |campo| texto(campo) }
+    params.key?(:temas) ? campos.merge(temas: temas) : campos
   end
 
   # Tudo de uma vez, numa transação: o status muda sem regravar o resto (um cuidado antigo que não passaria na validação

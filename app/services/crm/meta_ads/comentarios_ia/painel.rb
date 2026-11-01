@@ -88,12 +88,14 @@ class Crm::MetaAds::ComentariosIa::Painel
     cuidado_payload.merge(lista(lido))
   end
 
-  def salvar!(message:, para_quem:, phrases:, status:, user:)
+  # escrita (#2458): { temas:, assunto_proibido:, tom: } do passo 2, só os que vieram: o que não veio fica como estava.
+  def salvar!(message:, para_quem:, phrases:, status:, user:, escrita: {}) # rubocop:disable Metrics/ParameterLists -- passo 2 (#2458)
     raise Error, 'invalid_status' unless STATUSES.include?(status)
     raise Error, 'invalid_para_quem' if para_quem.to_s.strip.empty?
 
     gravar!({ network: rede_do_cuidado, post_ids: @post_ids, inbox_id: @alvo['inbox_id'], message: message.to_s.strip,
-              para_quem: para_quem.to_s.strip, phrases: Array(phrases).map(&:to_s), status: status }, user)
+              para_quem: para_quem.to_s.strip, phrases: Array(phrases).map(&:to_s), status: status,
+              **Crm::MetaAds::ComentariosIa::Escrita.do_passo_2(@account, escrita) }, user)
   end
 
   # Só uma chamada acha `read_old_at` vazio e o marca (duas abas, duplo clique): a outra recebe `already_read`. Se a Meta
@@ -183,7 +185,7 @@ class Crm::MetaAds::ComentariosIa::Painel
       network: rede_do_cuidado, private_available: @networks.intersect?(PRIVADO_LIBERADO), care: cuidado ? escrito.status : 'off',
       message: escrito.message.to_s, para_quem: escrito.para_quem.to_s, phrases: Array(escrito.phrases),
       read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0)
-    }
+    }.merge(Crm::MetaAds::ComentariosIa::Escrita.no_painel(@account, escrito))
   end
 
   def lista(lido)

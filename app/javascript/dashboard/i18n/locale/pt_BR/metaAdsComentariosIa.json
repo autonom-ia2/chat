@@ -131,7 +131,13 @@
           "CATALOG": "Quem quiser ver o catálogo"
         },
         "OWN": "Ou escreva do seu jeito:",
-        "TOO_LONG": "Ficou longo demais. Use até {max} letras."
+        "TOO_LONG": "Ficou longo demais. Use até {max} letras.",
+        "CHIP": "Quem {parte}",
+        "PARTS": {
+          "PRICE": "perguntar o preço",
+          "LINK": "pedir o link",
+          "CATALOG": "quiser ver o catálogo"
+        }
       },
       "SEE": {
         "TITLE": "Veja como fica",
@@ -150,7 +156,12 @@
         "LOADING": "Estou lendo os comentários do post…",
         "PREVIEW_ERROR": "Não consegui ler os comentários do post agora. Este é um exemplo: você pode ligar assim mesmo.",
         "REPLY": "Resposta dentro deste comentário",
-        "REPLY_TRIES": "Tento mandar no privado; se a rede não deixar, respondo só aqui"
+        "REPLY_TRIES": "Tento mandar no privado; se a rede não deixar, respondo só aqui",
+        "WRITTEN_COMMENT": "No comentário, eu respondo:",
+        "WRITTEN_DM": "No privado, eu mando:",
+        "KEPT": "Eu não sei responder isso com o que a empresa me ensinou. Não respondo e deixo com você.",
+        "OWNER": "Fica com você",
+        "OWNER_WHY": "É sobre “{assunto}”. Não respondo e deixo com você."
       },
       "RULES": {
         "ONCE": "Cada pessoa recebe uma mensagem só neste post.",
@@ -172,6 +183,20 @@
         "TEXT": "Eu leio e mando a mensagem só se for o caso. | Eu leio os {count} e mando a mensagem só para quem for o caso.",
         "CONFIRM": "Ler e mandar",
         "BACK": "Agora não"
+      },
+      "NAO_FALO": {
+        "TITLE": "Sobre o que eu não falo?",
+        "OPTIONAL": "(se quiser)",
+        "TEXT": "Mesmo que eu saiba, não respondo e deixo com você.",
+        "PLACEHOLDER": "Ex.: reembolso em andamento"
+      },
+      "TONE": {
+        "LABEL": "Quer de outro jeito?",
+        "PLACEHOLDER": "Ex.: mais formal, sem emoji",
+        "BUTTON": "Ajustar",
+        "DONE": "Escrevo assim: {tom}.",
+        "UNDO": "Voltar como era",
+        "TOO_LONG": "Ficou longo demais. Use até {max} letras."
       }
     },
     "ENTRY": {

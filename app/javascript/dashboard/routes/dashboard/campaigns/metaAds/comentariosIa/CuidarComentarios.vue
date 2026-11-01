@@ -9,7 +9,12 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import Dialog from 'dashboard/components-next/dialog/Dialog.vue';
 import CuidarLigado from './CuidarLigado.vue';
 import CuidarDono from './CuidarDono.vue';
-import { FOR_WHOM_LIMIT, MOTIVOS, useCuidado } from './useCuidado';
+import {
+  FOR_WHOM_LIMIT,
+  FRASE_DO_DONO_LIMIT,
+  MOTIVOS,
+  useCuidado,
+} from './useCuidado';
 import { porRede } from './redes';
 
 // Comentários que viram cliente (#2212): "Cuidar dos comentários" de um post (Seus posts, B1) ou de um anúncio (B2).
@@ -121,6 +126,10 @@ const AVISO_DA_FALHA = {
   invalid_message: () => t(`${KEY}.DONO.WHAT.TOO_LONG`),
   invalid_para_quem: () =>
     t(`${KEY}.DONO.WHO.TOO_LONG`, { max: FOR_WHOM_LIMIT }),
+  invalid_assunto_proibido: () =>
+    t(`${KEY}.DONO.WHO.TOO_LONG`, { max: FRASE_DO_DONO_LIMIT }),
+  invalid_tom: () =>
+    t(`${KEY}.DONO.WHO.TOO_LONG`, { max: FRASE_DO_DONO_LIMIT }),
 };
 const avisarFalha = () => {
   const aviso = AVISO_DA_FALHA[falhaAoSalvar.value];
@@ -133,7 +142,7 @@ const phrasesWith = phrase => {
   return phrase ? [phrase, ...others] : others;
 };
 
-const finishDono = async ({ message, paraQuem, phrase }) => {
+const finishDono = async ({ message, paraQuem, phrase, escrita }) => {
   const wasChanging = changing.value;
   // Pergunta dos antigos só depois de ligar, e só se havia o que perguntar antes de gravar.
   const askOld = canSendOld.value;
@@ -142,6 +151,7 @@ const finishDono = async ({ message, paraQuem, phrase }) => {
     paraQuem,
     phrases: phrasesWith(phrase),
     status: wasChanging ? undefined : 'on',
+    escrita,
   });
   if (!valeu) {
     avisarFalha();
