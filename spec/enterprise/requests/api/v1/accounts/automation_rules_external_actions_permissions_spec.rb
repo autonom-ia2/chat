@@ -57,6 +57,41 @@ RSpec.describe 'Regra com webhook e função personalizada', type: :request do
     expect(regra_com_webhook.reload.active).to be(true)
   end
 
+  it 'só com automation_manage, não liga a regra desligada que tem webhook' do
+    regra_com_webhook.update!(active: false)
+
+    patch "#{base}/#{regra_com_webhook.id}", params: { active: true }, headers: so_automacao.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(regra_com_webhook.reload.active).to be(false)
+  end
+
+  it 'só com automation_manage, actions nulo não fura a checagem' do
+    patch "#{base}/#{regra_com_webhook.id}", params: { active: false, actions: nil }, headers: so_automacao.create_new_auth_token,
+                                             as: :json
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(regra_com_webhook.reload.active).to be(true)
+  end
+
+  it 'só com automation_manage, não tira o webhook da regra (actions vazio ou trocado)' do
+    [[], etiqueta].each do |actions|
+      patch "#{base}/#{regra_com_webhook.id}", params: { actions: actions }, headers: so_automacao.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unauthorized)
+    end
+    expect(regra_com_webhook.reload.actions.first['action_name']).to eq('send_webhook_event')
+  end
+
+  it 'só com automation_manage, webhook mandado como formulário também é recusado' do
+    post base, params: { name: 'Avisa o sistema', event_name: 'conversation_created',
+                         conditions: { '0' => condicoes.first }, actions: { '0' => webhook.first } },
+               headers: so_automacao.create_new_auth_token
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(AutomationRule.count).to eq(0)
+  end
+
   it 'só com automation_manage, não troca a ação por um webhook' do
     regra = create(:automation_rule, account: account, event_name: 'conversation_created', conditions: condicoes, actions: etiqueta)
 
@@ -84,6 +119,13 @@ RSpec.describe 'Regra com webhook e função personalizada', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(regra_com_webhook.reload.active).to be(false)
+  end
+
+  it 'o administrador copia a regra que tem webhook' do
+    origem = regra_com_webhook
+    token = create(:user, account: account, role: :administrator).create_new_auth_token
+
+    expect { post "#{base}/#{origem.id}/clone", headers: token, as: :json }.to change(AutomationRule, :count).by(1)
   end
 
   it 'o administrador cria regra com webhook' do

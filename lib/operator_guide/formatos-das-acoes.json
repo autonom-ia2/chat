@@ -3467,7 +3467,7 @@
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:32",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:101",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
-      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:14"
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
     ],
     "sem_corpo": false
   },
@@ -10710,7 +10710,7 @@
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:23",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:18",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
-      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:14"
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
     ],
     "sem_corpo": false
   },
@@ -22726,7 +22726,7 @@
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:32",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:101",
       "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
-      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:14"
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
     ],
     "sem_corpo": false
   },
