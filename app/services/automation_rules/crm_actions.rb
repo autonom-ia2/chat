@@ -29,8 +29,11 @@ module AutomationRules::CrmActions
     Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_CREATED) if card.present?
   end
 
+  # #2414 F1.4: com a flag `automacao_fundacao`, contato sem card ganha o card na etapa (Autonomia::Automacao::CardNaEtapa).
   def crm_move_card_stage(params)
     stage = crm_stage(params)
+    return Autonomia::Automacao::CardNaEtapa.new(conversation: @conversation, stage: stage).perform if Autonomia::Automacao.fundacao?(@account)
+
     card = crm_card_for_pipeline(stage&.pipeline_id)
     # Como no Kanban (só cards abertos): mover card ganho/perdido reabriria eventos de etapa.
     return if card.blank? || stage.blank? || !card.open?

@@ -1086,3 +1086,13 @@
   display_name: Agentes › pedir a localização do cliente
   enabled: false
   column: feature_flags_ext_2
+# Automação livre F1, fundação segura (#2443, épico #2414). Ligada: os três motores de automação (regras, automações
+# de etapa do CRM e o motor novo) contam numa cadeia só, com profundidade 3 e nunca a mesma automação duas vezes (D6),
+# e "mover para a etapa" cria o card quando a conversa não tem nenhum. Desligada: cada motor faz o que fazia antes.
+# Rollback: desligar a flag na conta. Sem migration. Posição dada pela Orquestração em 31/10: feature_flags_ext_2,
+# posição 22 (valor 2097152, 1 << 21), depois de agentes_enviar_local_e_contato (#2442); até o #2442 entrar na main
+# ela ocupa a 20. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: automacao_fundacao
+  display_name: Automação › fundação (cadeia comum e mover cria o card)
+  enabled: false
+  column: feature_flags_ext_2
