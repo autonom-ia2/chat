@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_680000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -3004,6 +3004,21 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
     t.index ["page_id"], name: "index_crm_meta_ads_pages_on_page_id"
   end
 
+  create_table "crm_meta_ads_post_readings", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "network", null: false
+    t.string "post_id", null: false
+    t.text "description"
+    t.text "correction"
+    t.bigint "corrected_by_id"
+    t.string "model"
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "network", "post_id"], name: "idx_crm_meta_ads_post_readings_post", unique: true
+    t.index ["corrected_by_id"], name: "index_crm_meta_ads_post_readings_on_corrected_by_id"
+  end
+
   create_table "crm_meta_advisor_actions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "run_id"
@@ -4815,6 +4830,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_650000) do
   add_foreign_key "crm_meta_ads_leads", "contacts", on_delete: :nullify
   add_foreign_key "crm_meta_ads_leads", "crm_cards", column: "card_id", on_delete: :nullify
   add_foreign_key "crm_meta_ads_pages", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_post_readings", "accounts", on_delete: :cascade
+  add_foreign_key "crm_meta_ads_post_readings", "users", column: "corrected_by_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "accounts", on_delete: :cascade
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "last_run_id", on_delete: :nullify
   add_foreign_key "crm_meta_advisor_actions", "crm_meta_advisor_runs", column: "run_id", on_delete: :nullify
