@@ -109,7 +109,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     provided = params[:stage]&.key?(:funnel_stage_type)
     return unless provided || metadata.key?('funnel_stage_type')
 
-    type = (provided ? params.dig(:stage, :funnel_stage_type) : metadata['funnel_stage_type']).presence
+    type = (provided ? params.dig(:stage, :funnel_stage_type).to_s : metadata['funnel_stage_type'].to_s).presence
     if FUNNEL_STAGE_TYPES.include?(type)
       metadata['funnel_stage_type'] = type
     else
@@ -123,7 +123,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     provided = params[:stage]&.key?(:category)
     return unless provided || metadata.key?('category')
 
-    category = (provided ? params.dig(:stage, :category) : metadata['category']).to_s
+    category = provided ? params.dig(:stage, :category).to_s : metadata['category'].to_s
     if ::Crm::PipelineStage::CATEGORIES.include?(category)
       metadata['category'] = category
     else
@@ -137,9 +137,15 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     return if @pipeline.counts_as_sale?
 
     category = Crm::PipelineStages::TemplateVariant.category_for(
-      account: Current.account, template: @pipeline.metadata&.dig('template'), position: params.dig(:stage, :template_position)
+      account: Current.account, template: @pipeline.metadata&.dig('template'), position: template_position
     )
     metadata['category'] = category if category
+  end
+
+  # Os dois consumidores leem a posição como texto (`Integer(position.to_s, 10, exception: false)`); o `.to_s` aqui é o
+  # mesmo, e deixa o tipo do campo legível para o formato da ação (#2459).
+  def template_position
+    params.dig(:stage, :template_position).to_s
   end
 
   def apply_default_ai_criteria!(stage)
@@ -148,7 +154,7 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
     # #1548: a etapa que veio do modelo traz a posição dela no modelo (template_position); o modelo é o do funil.
     defaults = Crm::Ai::DefaultStageCriteria.metadata_for(
       stage.name, atender: !@pipeline.counts_as_sale?,
-                  template: @pipeline.metadata&.dig('template'), position: params.dig(:stage, :template_position)
+                  template: @pipeline.metadata&.dig('template'), position: template_position
     )
     return if defaults.blank?
 

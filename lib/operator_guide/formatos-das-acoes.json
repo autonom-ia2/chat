@@ -6353,14 +6353,20 @@
   },
   "PATCH crm/stages/:id": {
     "campos": {
-      "category": {},
+      "category": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "color": {
         "tipo": "string"
       },
       "description": {
         "tipo": "string"
       },
-      "funnel_stage_type": {},
+      "funnel_stage_type": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "is_lost_stage": {
         "padrao": false,
         "tipo": "booleano"
@@ -6396,14 +6402,11 @@
         "tipo": "inteiro"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/stages#update",
     "corpo_plano": true,
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
-    "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:33",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
@@ -16325,14 +16328,20 @@
   },
   "POST crm/pipelines/:pipeline_id/stages": {
     "campos": {
-      "category": {},
+      "category": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "color": {
         "tipo": "string"
       },
       "description": {
         "tipo": "string"
       },
-      "funnel_stage_type": {},
+      "funnel_stage_type": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "is_lost_stage": {
         "padrao": false,
         "tipo": "booleano"
@@ -16358,7 +16367,10 @@
       "sla_warning_seconds": {
         "tipo": "inteiro"
       },
-      "template_position": {},
+      "template_position": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "win_probability": {
         "max": 100,
         "min": 0,
@@ -16369,23 +16381,19 @@
         "tipo": "inteiro"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/stages#create",
     "corpo_plano": true,
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
-    "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:18",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:140",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:148",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:126",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:123",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:112",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:151",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
     ],
     "sem_corpo": false
@@ -25621,14 +25629,20 @@
   },
   "PUT crm/stages/:id": {
     "campos": {
-      "category": {},
+      "category": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "color": {
         "tipo": "string"
       },
       "description": {
         "tipo": "string"
       },
-      "funnel_stage_type": {},
+      "funnel_stage_type": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "is_lost_stage": {
         "padrao": false,
         "tipo": "booleano"
@@ -25664,14 +25678,11 @@
         "tipo": "inteiro"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/stages#update",
     "corpo_plano": true,
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
-    "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:33",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
