@@ -1784,6 +1784,7 @@
       "HIDE": "Hide automations",
       "RULES": "Automation rules",
       "ADD_RULE": "New rule",
+      "SO_VER": "You can see these rules. To create or change them, ask for the permission to manage automations.",
       "LOADING": "Loading automations...",
       "EMPTY": "No automations configured for this stage.",
       "NEW_RULE_NAME": "Automation — {stage}",
