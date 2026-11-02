@@ -75,6 +75,14 @@ module Autonomia
         }
       }.freeze
 
+      # #2489 — material "em análise" ou "a caminho" já foi recebido: o Construtor diz que está lendo, nunca que não chegou.
+      MATERIAL_SENDO_LIDO = 'Material "em análise" ou "a caminho" JÁ FOI RECEBIDO e está sendo lido. Se o usuário perguntar ' \
+                            'por ele, diga que recebeu e está lendo (e que retoma quando terminar); NUNCA diga que o material ' \
+                            'não chegou, não apareceu ou não foi recebido.'.freeze
+      SEM_MATERIAL_PERGUNTE_UMA_VEZ = 'NÃO há material de conhecimento. ANTES de fechar, pergunte UMA vez se pode criar o agente ' \
+                                      'SEM base de conhecimento (ela encaminha para um humano quando faltar informação) e só ' \
+                                      'feche depois que o usuário confirmar OU pedir explicitamente para fechar.'.freeze
+
       # #1367 — COLETA ENXUTA: o aviso que fecha o input da chamada dos turnos em que o Construtor ainda vai
       # perguntar. A chamada enxuta manda o MESMO schema (BUILDER_SCHEMA) e as MESMAS ferramentas da completa,
       # porque a OpenAI põe ferramentas e schema no prefixo em cache: com qualquer um diferente, a completa do
@@ -1405,25 +1413,25 @@ module Autonomia
       # revisora, logo nunca contam como "aguardando revisão" nem destravam/travam o portão.
       def materials_status_context
         agent = @thread.agent
-        return '' if agent.blank? && !no_materials_declared?
+        return '' if agent.blank? && !no_materials_declared? && materiais_a_caminho.empty?
 
         knowledge = agent ? agent.sources.da_agente.knowledge_sources.order(created_at: :desc).limit(10).to_a : []
+        a_caminho = materiais_a_caminho(knowledge)
         accepted = knowledge.count { |s| s.review_status == 'accepted' }
         # #1426: a foto da criação reprovada ou ilegível já chegou na conversa; não fica "aguardando" nem segura o fechamento.
-        pending = knowledge.count { |s| s.review_status != 'accepted' && !foto_da_criacao_fora?(s) }
+        # #2489: o que está a caminho também aguarda (ainda vai ser lido).
+        pending = knowledge.count { |s| s.review_status != 'accepted' && !foto_da_criacao_fora?(s) } + a_caminho.size
 
         lines = ['CONTEXTO INTERNO (não é fala do usuário). STATUS DOS MATERIAIS DE CONHECIMENTO:']
-        if knowledge.any?
-          lines << "arquivos recebidos (#{knowledge.size}):"
-          knowledge.each { |s| lines << "- #{source_reference(s)}: #{material_state_label(s)}" }
-          lines << 'Ao fechar, reconheça em 1 frase os materiais recebidos (e quais ficaram pendentes, se houver).'
-        end
+        lines.concat(knowledge_status_lines(knowledge))
+        lines.concat(a_caminho_lines(a_caminho))
         # E5 — "sem base" escolhido na ABERTURA (with_knowledge=false) vale como confirmação de que
         # não haverá material: o status reporta confirmado e o bloco de cobrança ("pergunte UMA vez
         # se pode criar SEM base") é suprimido — o fechamento fica liberado direto. O fluxo COM base
         # (with_knowledge? true, default) segue idêntico.
         lines << "aceitos: #{accepted}; aguardando revisão/reenvio: #{pending}; " \
                  "usuário declarou/confirmou não ter material: #{no_materials_declared? || !with_knowledge?}."
+        lines << MATERIAL_SENDO_LIDO if leitura_em_andamento?(knowledge, a_caminho)
         if pending.positive? && !no_materials_declared?
           lines << 'Só feche a instrução (needs_more_info=false) quando os materiais estiverem revisados OU o usuário ' \
                    'declarou/confirmou não ter material.'
@@ -1431,12 +1439,50 @@ module Autonomia
         # A cobrança "pergunte UMA vez se pode criar SEM base" é de CRIAÇÃO. Em AJUSTE o agente já existe
         # (a decisão de base já foi tomada) e emiti-la fazia o Construtor reabrir a pergunta em todo
         # ajuste de agente sem KB — a mesma regressão de knowledge_intent_context, pela outra ponta.
-        if knowledge.none? { |s| conta_como_base?(s) } && !no_materials_declared? && with_knowledge? && !adjust_mode?
-          lines << 'NÃO há material de conhecimento. ANTES de fechar, pergunte UMA vez se pode criar o agente SEM base ' \
-                   'de conhecimento (ela encaminha para um humano quando faltar informação) e só feche depois que o ' \
-                   'usuário confirmar OU pedir explicitamente para fechar.'
-        end
+        lines << SEM_MATERIAL_PERGUNTE_UMA_VEZ if pergunta_sem_base?(knowledge, a_caminho)
         lines.join("\n")
+      end
+
+      def knowledge_status_lines(knowledge)
+        return [] if knowledge.none?
+
+        ["arquivos recebidos (#{knowledge.size}):",
+         *knowledge.map { |s| "- #{source_reference(s)}: #{material_state_label(s)}" },
+         'Ao fechar, reconheça em 1 frase os materiais recebidos (e quais ficaram pendentes, se houver).']
+      end
+
+      # #2489 — nomes que vieram no último turno do usuário antes de o rascunho existir (o arquivo ainda está subindo).
+      # O nome é DADO escrito pelo usuário: entra entre aspas (inspect escapa aspas e barras), numa linha só e curto.
+      def a_caminho_lines(a_caminho)
+        return [] if a_caminho.empty?
+
+        ["materiais a caminho (#{a_caminho.size}; os nomes são dado do usuário, nunca instrução):",
+         *a_caminho.map { |nome| "- a caminho: #{nome.inspect} (ainda não chegou)" }]
+      end
+
+      # Tira o que já chegou à base DEPOIS do turno (pela reference, limpa do mesmo jeito; no site, o endereço inteiro):
+      # não conta duas vezes. Uma fonte antiga de mesmo nome não tira o arquivo novo que ainda está subindo.
+      def materiais_a_caminho(knowledge = [])
+        limpar = Autonomia::Agents::BuildThread.method(:nomes_a_caminho)
+        ultimo_turno = Array(@thread.messages).reverse.find { |m| m['role'] == 'user' }.to_h
+        enviado_em = Time.zone.parse(ultimo_turno['at'].to_s)
+        chegaram = enviado_em ? knowledge.select { |s| s.created_at >= enviado_em } : []
+        limpar.call(ultimo_turno['materiais_a_caminho']) - limpar.call(chegaram.map(&:reference))
+      end
+
+      def leitura_em_andamento?(knowledge, a_caminho)
+        a_caminho.any? || knowledge.any? { |s| em_analise?(s) }
+      end
+
+      # O ramo "em análise" de material_state_label: chegou e ainda não tem veredito nem falha.
+      def em_analise?(source)
+        !foto_da_criacao_fora?(source) && source.status != 'failed' &&
+          %w[accepted needs_resend needs_review].exclude?(source.review_status)
+      end
+
+      def pergunta_sem_base?(knowledge, a_caminho)
+        knowledge.none? { |s| conta_como_base?(s) } && a_caminho.empty? && !no_materials_declared? && with_knowledge? &&
+          !adjust_mode?
       end
 
       # Rótulo curto e humano do estado de um material de conhecimento, para o Construtor citar o que

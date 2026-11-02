@@ -113,6 +113,54 @@ RSpec.describe 'Autonomia agent build threads', type: :request do
     end
   end
 
+  # #2489 (1) — antes do rascunho, o turno leva os nomes dos arquivos que ainda vão subir.
+  describe 'POST /autonomia/build_threads/:id/messages (materials on the way)' do
+    it 'keeps the file names on the user turn, one line each' do
+      post_message(message: 'Segue a tabela', materiais_a_caminho: ["tabela\n.pdf", ''])
+
+      expect(response).to have_http_status(:accepted)
+      turn = Array(thread.reload.messages).reverse.find { |m| m['role'] == 'user' }
+      expect(turn['materiais_a_caminho']).to eq(['tabela .pdf'])
+    end
+
+    # Strong params descarta a lista inteira quando ela traz algo que não é texto (o front só manda nomes).
+    it 'drops a list that carries a hash or a nested list, so neither becomes a name' do
+      post_message(message: 'Segue', materiais_a_caminho: ['tabela.pdf', { 'nome' => 'x' }, ['y']])
+
+      expect(response).to have_http_status(:accepted)
+      turn = Array(thread.reload.messages).reverse.find { |m| m['role'] == 'user' }
+      expect(turn).not_to have_key('materiais_a_caminho')
+    end
+
+    it 'ignores a hash in place of the list' do
+      post_message(message: 'Segue', materiais_a_caminho: { 'nome' => 'tabela.pdf' })
+
+      expect(response).to have_http_status(:accepted)
+      turn = Array(thread.reload.messages).reverse.find { |m| m['role'] == 'user' }
+      expect(turn).not_to have_key('materiais_a_caminho')
+    end
+
+    it 'keeps the names on the first turn, when the thread opens with the message' do
+      post "/api/v1/accounts/#{account.id}/autonomia/build_threads",
+           params: { type: 'support', message: 'Vendo seguro viagem', materiais_a_caminho: ['tabela.pdf'] },
+           headers: administrator.create_new_auth_token,
+           as: :json
+
+      expect(response).to have_http_status(:accepted)
+      aberta = Autonomia::Agents::BuildThread.where(account: account).order(:id).last
+      turn = Array(aberta.messages).find { |m| m['role'] == 'user' }
+      expect(turn['content']).to eq('Vendo seguro viagem')
+      expect(turn['materiais_a_caminho']).to eq(['tabela.pdf'])
+    end
+
+    it 'leaves the turn as before when nothing is on the way' do
+      post_message(message: 'Atendo de seg a sex')
+
+      turn = Array(thread.reload.messages).reverse.find { |m| m['role'] == 'user' }
+      expect(turn).not_to have_key('materiais_a_caminho')
+    end
+  end
+
   describe 'POST /autonomia/build_threads/:id/retry (E2)' do
     it 're-enqueues the build for a failed thread with a fresh token' do
       # Arrange

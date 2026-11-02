@@ -155,6 +155,18 @@ RSpec.describe 'Material do post fora da base do agente (#2487)' do # rubocop:di
       expect(contexto).not_to include('tamanhos.txt')
     end
 
+    it 'materials_status_context (#2489): o material do post sendo lido não vira "material sendo lido" do agente',
+       :aggregate_failures do
+      material('horarios.txt')
+      do_post('tamanhos.txt', status: :processing, review_status: nil)
+
+      contexto = builder.send(:materials_status_context)
+
+      expect(contexto).to include('aceitos: 1; aguardando revisão/reenvio: 0')
+      expect(contexto).not_to include(described_class::MATERIAL_SENDO_LIDO)
+      expect(contexto).not_to include('tamanhos.txt')
+    end
+
     it 'materials_pending?: o material do post reprovado não segura o fechamento do agente', :aggregate_failures do
       do_post('tamanhos.txt', review_status: 'needs_resend')
       expect(builder.send(:materials_pending?, agent)).to be(false)

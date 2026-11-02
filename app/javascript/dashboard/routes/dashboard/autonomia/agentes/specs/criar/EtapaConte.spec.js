@@ -94,6 +94,17 @@ describe('EtapaConte', () => {
     expect(wrapper.find('[data-linha-anexo]').exists()).toBe(false);
   });
 
+  // #2489 — o arquivo não subiu enquanto o turno esperava: a conversa diz qual e o que fazer.
+  it('says which file did not upload, as an alert', async () => {
+    const wrapper = montar();
+    expect(wrapper.find('[data-falha-ao-subir]').exists()).toBe(false);
+
+    await wrapper.setProps({ falhaAoSubir: { nome: 'tabela.pdf' } });
+    const falha = wrapper.get('[data-falha-ao-subir]');
+    expect(falha.attributes('role')).toBe('alert');
+    expect(falha.text()).toBe('AGENTS.JORNADA.CRIAR.CONTE.NAO_SUBIU');
+  });
+
   it('shows "thinking", then "taking longer", and asks to wait while the AI answers', async () => {
     const wrapper = montar({ pensando: true });
     expect(wrapper.find('[data-pensando]').exists()).toBe(true);
