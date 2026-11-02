@@ -2819,13 +2819,13 @@
       },
       "MOTIVO_DA_PORTA": {
         "sem_caixa": "No {rede}, este post ou anúncio está sem caixa.",
-        "outra_conta": "No {rede}, a caixa {caixa} é de outra conta.",
+        "outra_conta": "A caixa {caixa} é de outra conta.",
         "sem_chave": "A conta ainda não tem a chave de IA.",
         "agentes_desligados": "Os agentes estão desligados nesta conta.",
-        "sem_porta": "No {rede}, a caixa {caixa} não tem agente atendendo.",
-        "lia": "No {rede}, quem atende a caixa {caixa} é a Lia, que faz cotação e não responde comentários.",
-        "porta_parada": "No {rede}, o agente da caixa {caixa} está parado.",
-        "piloto": "No {rede}, o agente da caixa {caixa} está em teste, só com telefones de teste.",
+        "sem_porta": "A caixa {caixa} não tem agente atendendo.",
+        "lia": "Quem atende a caixa {caixa} é a Lia, que faz cotação e não responde comentários.",
+        "porta_parada": "O agente da caixa {caixa} está parado.",
+        "piloto": "O agente da caixa {caixa} está em teste, só com telefones de teste.",
         "FRASES_FIXAS": "Ali, eu uso as frases fixas que você escreveu."
       },
       "CARTAO": {

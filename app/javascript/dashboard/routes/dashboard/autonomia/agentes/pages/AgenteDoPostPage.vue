@@ -304,8 +304,8 @@ const mudar = async status => {
           data-motivos-das-portas
           class="flex flex-col gap-1 p-4 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-sm leading-6 text-n-slate-12"
         >
-          <p v-for="motivo in motivos" :key="motivo" class="m-0">
-            {{ motivo }}
+          <p v-for="frase in motivos" :key="frase" class="m-0">
+            {{ frase }}
           </p>
           <p class="m-0 text-n-slate-11">
             {{ t(`${KEY}.MOTIVO_DA_PORTA.FRASES_FIXAS`) }}

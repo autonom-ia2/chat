@@ -2819,13 +2819,13 @@
       },
       "MOTIVO_DA_PORTA": {
         "sem_caixa": "On {rede}, this post or ad has no inbox.",
-        "outra_conta": "On {rede}, the {caixa} inbox belongs to another account.",
+        "outra_conta": "The {caixa} inbox belongs to another account.",
         "sem_chave": "The account doesn't have its AI key yet.",
         "agentes_desligados": "Agents are turned off in this account.",
-        "sem_porta": "On {rede}, no agent answers the {caixa} inbox.",
-        "lia": "On {rede}, the {caixa} inbox is answered by Lia, who makes quotes and doesn't reply to comments.",
-        "porta_parada": "On {rede}, the agent of the {caixa} inbox is stopped.",
-        "piloto": "On {rede}, the agent of the {caixa} inbox is in testing, only with test phones.",
+        "sem_porta": "No agent answers the {caixa} inbox.",
+        "lia": "The {caixa} inbox is answered by Lia, who makes quotes and doesn't reply to comments.",
+        "porta_parada": "The agent of the {caixa} inbox is stopped.",
+        "piloto": "The agent of the {caixa} inbox is in testing, only with test phones.",
         "FRASES_FIXAS": "There, I use the fixed phrases you wrote."
       },
       "CARTAO": {
