@@ -17,6 +17,7 @@ import commonHelpers, { isJSONValid } from 'dashboard/helper/commons';
 import { sync } from 'vuex-router-sync';
 import { createPinia } from 'pinia';
 import router, { initalizeRouter } from 'dashboard/routes';
+import { installStaleBundleRecovery } from 'dashboard/helper/staleBundle';
 import store from 'dashboard/store';
 import constants from 'dashboard/constants/globals';
 import * as Sentry from '@sentry/vue';
@@ -148,6 +149,7 @@ const startDashboard = async () => {
   initializeChatwootEvents();
   initializeAnalyticsEvents();
   initalizeRouter();
+  installStaleBundleRecovery(router);
 
   mountWhenReady(app);
 };
