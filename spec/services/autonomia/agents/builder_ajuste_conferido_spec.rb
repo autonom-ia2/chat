@@ -440,13 +440,33 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
-  # #2489 (tester T04/T04b) — com falta, nenhuma afirmação de sucesso do Construtor chega ao dono: decide o estado.
-  describe 'quando o turno fecha com falta e o Construtor escreveu resposta_ao_dono' do
+  # #2489 (tester T04/T04b e revisão do 14b8f7654e) — a resposta_ao_dono só vai quando o próprio Construtor marca
+  # dono_perguntou, haja falta ou não. Decide o campo do schema, nunca o texto.
+  describe 'a resposta_ao_dono no fechamento' do
     let(:fala) { 'Não colete dados neste canal' }
     let(:instrucao_nova) { 'Atenda o cliente da corretora com cordialidade. Não colete dados do cliente neste canal.' }
     let(:lista) { [mudanca('instruction', fala, 'Não coleta dados.')] }
 
-    it 'a resposta da 1ª chamada não vai, e só a pergunta do que faltou chega' do
+    def conteudos
+      thread.reload.messages.pluck('content')
+    end
+
+    it 'com falta e pergunta do dono: a resposta chega, junto da pergunta do que faltou' do
+      fala_com_pergunta = 'Não colete dados neste canal. E ele fala de preço hoje?'
+      thread.append_message!('user', fala_com_pergunta)
+      respostas << saida('instruction' => instrucao_nova, 'dono_perguntou' => true,
+                         'resposta_ao_dono' => 'Hoje ele não fala de preço.', 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+      conferencias.push({ roteiro: [0] }, { roteiro: [0] })
+
+      run_turn
+
+      expect(estado['conferencia']).to include('falta' => true)
+      expect(conteudos).to include('Hoje ele não fala de preço.')
+      expect(conteudos.last).to start_with(texto(:nao_consegui, pedidos: fala))
+    end
+
+    it 'com falta e sem pergunta: o "Pronto" da 1ª chamada não chega' do
       respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Pronto, tirei a coleta.', 'mudancas' => lista)
       respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
       conferencias << { roteiro: [0] }
@@ -454,11 +474,11 @@ RSpec.describe Autonomia::Agents::Builder do
       run_turn
 
       expect(estado['conferencia']).to include('falta' => true)
-      expect(thread.reload.messages.last(3).pluck('content')).not_to include('Pronto, tirei a coleta.')
-      expect(thread.messages.last).to include('role' => 'assistant', 'content' => a_string_starting_with(texto(:nao_consegui, pedidos: fala)))
+      expect(conteudos).not_to include('Pronto, tirei a coleta.')
+      expect(conteudos.last).to start_with(texto(:nao_consegui, pedidos: fala))
     end
 
-    it 'a resposta da correção também não vai quando a falta continua' do
+    it 'com falta e sem pergunta: o "Pronto" da correção também não chega' do
       respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
       respostas << saida('instruction' => instrucao_nova, 'human_card' => 'O Hubber atende sem pedir dados.',
                          'resposta_ao_dono' => 'Pronto, corrigi o roteiro.', 'mudancas' => lista)
@@ -468,17 +488,28 @@ RSpec.describe Autonomia::Agents::Builder do
 
       expect(calls.size).to eq(2)
       expect(estado['conferencia']).to include('correcao' => true, 'falta' => true)
-      expect(thread.reload.messages.pluck('content')).not_to include('Pronto, corrigi o roteiro.')
-      expect(thread.messages.last['content']).to start_with(texto(:nao_consegui, pedidos: fala))
+      expect(conteudos).not_to include('Pronto, corrigi o roteiro.')
+      expect(conteudos.last).to start_with(texto(:nao_consegui, pedidos: fala))
     end
 
-    it 'sem falta, a resposta_ao_dono continua indo' do
-      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Hoje ele atende os clientes.', 'mudancas' => lista)
+    # Decisão fixada: sem pergunta, a resposta_ao_dono não vai nem sem falta (a regra do schema diz vazia).
+    it 'sem falta e sem pergunta declarada: o texto da resposta_ao_dono não chega' do
+      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Pronto, tirei a coleta.', 'mudancas' => lista)
 
       run_turn
 
       expect(estado['conferencia']).to include('falta' => false)
-      expect(thread.reload.messages.pluck('content')).to include('Hoje ele atende os clientes.')
+      expect(conteudos).not_to include('Pronto, tirei a coleta.')
+    end
+
+    it 'sem falta e com pergunta: a resposta chega' do
+      respostas << saida('instruction' => instrucao_nova, 'dono_perguntou' => true,
+                         'resposta_ao_dono' => 'Hoje ele atende os clientes.', 'mudancas' => lista)
+
+      run_turn
+
+      expect(estado['conferencia']).to include('falta' => false)
+      expect(conteudos).to include('Hoje ele atende os clientes.')
     end
   end
 

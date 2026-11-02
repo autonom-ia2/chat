@@ -21,6 +21,12 @@ module AvaliacaoDoAjustePorLista
                        'pedido. 4. Passe para a equipe quando o cliente pedir.'.freeze
   CARTAO_COM_COLETA = 'O Hubber atende os clientes da Hub2You, explica os seguros e anota nome, cidade e o seguro de ' \
                       'interesse.'.freeze
+  # #2489: o agente que já começa com o roteiro e o cartão desatualizados (a instrução já não coleta; os dois coletam).
+  HUBBER_SEM_COLETA = <<~TXT.freeze
+    Você é o Hubber, assistente da Hub2You, uma corretora de seguros. Atenda pelo WhatsApp com cordialidade e seja
+    breve. Explique os tipos de seguro (auto, residencial e vida). Não peça nem colete dados do cliente neste canal.
+    Quando o cliente pedir para falar com uma pessoa, passe para a equipe. Nunca invente valores, coberturas ou prazos.
+  TXT
   ANDAIME_NEUTRO = 'Roteiro: 1. Cumprimente. 2. Explique o seguro pedido. 3. Passe para a equipe quando o cliente pedir.'.freeze
   CAMPOS_COMPARADOS = %w[name instruction tone greeting fallback_message handoff_rule starter_questions human_card
                          guardrails voice].freeze
@@ -44,6 +50,7 @@ module AvaliacaoDoAjustePorLista
   # `saudacao_inicial` (opcional): a saudação do agente antes da fala. `muda` (opcional): os campos que TÊM de mudar.
   # #2489: `andaime_inicial` e `cartao_inicial` (opcionais): o scaffold e o human_card antes da fala; `igual` (opcional):
   # os campos que NÃO podem mudar. O scaffold entra no retrato (`comparavel`) para `muda` e `igual`.
+  # `instrucao_inicial` (opcional): a instrução antes da fala (padrão: HUBBER).
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       opcoes: :nenhuma,
@@ -82,6 +89,14 @@ module AvaliacaoDoAjustePorLista
       certo: 'O agente DEPOIS tem tom mais formal E não pede nem coleta dados do cliente (nome, cidade ou outros) neste ' \
              'canal, escrito na instrução; nem o roteiro (scaffold) nem o cartão (human_card) DEPOIS mandam ou dizem que ' \
              'ele coleta dados.' },
+    # #2489 (revisão do 14b8f7654e): tenta o caminho da correção com o modelo real. O roteiro e o cartão já começam
+    # desatualizados (coletam, e a instrução não); o pedido muda a instrução, e o roteiro contradiz a instrução nova. O
+    # Construtor pode corrigir já na 1ª escrita: aí não há correção, e o relatório mostra isso.
+    { nome: 'roteiro_ja_desatualizado', fala: 'Não fale de preço com o cliente.', aplica: true,
+      instrucao_inicial: HUBBER_SEM_COLETA, andaime_inicial: ANDAIME_COM_COLETA, cartao_inicial: CARTAO_COM_COLETA,
+      muda: %w[instruction scaffold],
+      certo: 'O agente DEPOIS tem escrito que não fala de preço com o cliente; nem o roteiro (scaffold) nem o cartão ' \
+             '(human_card) DEPOIS mandam ou dizem que ele coleta dados do cliente, coerentes com a instrução.' },
     # #2489 (revisão do gestor): cartão e andaime que não falam de preço estão certos sem mudar; nada força mudança.
     { nome: 'nao_fale_de_preco_cartao_neutro', fala: 'Não fale de preço com o cliente.', aplica: true,
       andaime_inicial: ANDAIME_NEUTRO, igual: %w[human_card scaffold],
@@ -200,10 +215,11 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     Crm::AiUsageEvent.where(account_id: conta.id).sum(:cost_estimate).to_f
   end
 
-  def criar_hubber(saudacao, andaime: nil, cartao: AvaliacaoDoAjustePorLista::CARTAO)
+  def criar_hubber(saudacao, andaime: nil, cartao: AvaliacaoDoAjustePorLista::CARTAO,
+                   instrucao: AvaliacaoDoAjustePorLista::HUBBER)
     Autonomia::Agents::Agent.create!(
       account: conta, name: 'Hubber', agent_type: 'support', mode: :guided, status: :active, enabled: true,
-      instruction: AvaliacaoDoAjustePorLista::HUBBER, scaffold: andaime, tone: 'cordial e breve', greeting: saudacao,
+      instruction: instrucao, scaffold: andaime, tone: 'cordial e breve', greeting: saudacao,
       fallback_message: 'Vou confirmar com a equipe e te retorno.', handoff_rule: 'Passe para a equipe quando o cliente pedir.',
       starter_questions: ['Quais seguros vocês têm?'], human_card: cartao,
       config: { 'guardrails' => ['Nunca invente valores, coberturas ou prazos.'], 'voice' => 'masculina',
@@ -213,7 +229,8 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
 
   def hubber_da_cena(cena)
     saudacao = cena[:saudacao_inicial] || AvaliacaoDoAjustePorLista::SAUDACAO
-    criar_hubber(saudacao, andaime: cena[:andaime_inicial], cartao: cena[:cartao_inicial] || AvaliacaoDoAjustePorLista::CARTAO)
+    criar_hubber(saudacao, andaime: cena[:andaime_inicial], cartao: cena[:cartao_inicial] || AvaliacaoDoAjustePorLista::CARTAO,
+                           instrucao: cena[:instrucao_inicial] || AvaliacaoDoAjustePorLista::HUBBER)
   end
 
   def retrato(agente)
