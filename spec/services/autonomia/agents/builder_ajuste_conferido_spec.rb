@@ -272,9 +272,9 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
-  # #2489 — a instrução mudou e o andaime e o cartão voltaram com o texto de antes: o código dá o item da instrução
-  # como não atendido (só igualdade de texto), e a correção que já existe roda uma vez.
-  describe 'quando a instrução muda e o andaime e o cartão voltam como estavam' do
+  # #2489 — quem julga se o andaime e o cartão acompanharam a instrução é a conferência (o modelo). Ela lê os dois,
+  # antes e depois; o item que ela der como não atendido por eles aciona a correção que já existe, uma vez.
+  describe 'quando a instrução muda: andaime e cartão na conferência' do
     let(:fala) { 'Não colete dados neste canal' }
     let(:instrucao_nova) { 'Atenda o cliente da corretora com cordialidade. Não colete dados do cliente neste canal.' }
     let(:lista) { [mudanca('instruction', fala, 'Não coleta dados.')] }
@@ -284,7 +284,19 @@ RSpec.describe Autonomia::Agents::Builder do
 
     before { respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista) }
 
-    it 'pede a correção, e depois dela o agente fica com andaime e cartão novos' do
+    it 'a conferência recebe o andaime e o cartão, antes e depois' do
+      run_turn
+
+      expect(recebidas.first).to include(
+        antes: hash_including('scaffold' => 'andaime', 'human_card' => 'O Hubber atende os clientes.',
+                              'instruction' => 'Atenda o cliente da corretora com cordialidade.'),
+        depois: hash_including('scaffold' => 'andaime', 'human_card' => 'O Hubber atende os clientes.',
+                               'instruction' => instrucao_nova)
+      )
+    end
+
+    it 'não atendido pelo roteiro: UMA correção, com o aviso do roteiro, e o agente fica com andaime e cartão novos' do
+      conferencias << { roteiro: [0] }
       respostas << saida('instruction' => instrucao_nova, 'scaffold' => 'andaime sem coleta',
                          'human_card' => 'O Hubber atende os clientes sem pedir dados.', 'mudancas' => lista)
 
@@ -299,63 +311,90 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(estado['conferencia']).to include('correcao' => true, 'falta' => false)
     end
 
-    it 'se só o cartão mudar na correção, o item segue não atendido e vira pergunta ao dono' do
+    it 'ainda não atendido pelo roteiro depois da correção: segue o não atendido de sempre, sem 2ª correção' do
+      conferencias.push({ roteiro: [0] }, { roteiro: [0] })
       respostas << saida('instruction' => instrucao_nova, 'human_card' => 'O Hubber atende sem pedir dados.',
                          'mudancas' => lista)
 
       run_turn
 
       expect(calls.size).to eq(2)
-      expect(agent.reload).to have_attributes(scaffold: 'andaime', human_card: 'O Hubber atende sem pedir dados.')
       expect(estado).to include('needs_more_info' => true, 'applied' => true)
       expect(estado['conferencia']).to include('correcao' => true, 'falta' => true)
       expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: fala))
     end
 
-    it 'se a correção devolver os dois iguais de novo, segue o não atendido de sempre: pergunta ao dono' do
-      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
-
-      run_turn
-
-      expect(calls.size).to eq(2)
-      expect(agent.reload).to have_attributes(instruction: instrucao_nova, scaffold: 'andaime',
-                                              human_card: 'O Hubber atende os clientes.')
-      expect(estado).to include('needs_more_info' => true, 'applied' => true)
-      expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: fala))
-    end
-
-    it 'com andaime e cartão reescritos na primeira escrita, não há correção' do
-      respostas.clear
-      respostas << saida('instruction' => instrucao_nova, 'scaffold' => 'andaime sem coleta',
-                         'human_card' => 'O Hubber atende sem pedir dados.', 'mudancas' => lista)
+    it 'conferência indisponível: sem correção, o turno fecha como antes, e o log diz roteiro_nao_conferido só com ids' do
+      allow(Rails.logger).to receive(:warn)
+      conferencias << { erro: true }
 
       run_turn
 
       expect(calls.size).to eq(1)
+      expect(estado).to include('applied' => true)
+      expect(Rails.logger).to have_received(:warn).with("[autonomia][builder] roteiro_nao_conferido thread=#{thread.id}")
+    end
+
+    it 'versão de antes sem o agente no metadata: a conferência recebe o andaime e o cartão atuais, e o pulo vai ao log' do
+      allow(Rails.logger).to receive(:info)
+      allow(Autonomia::Agents::ConferenciaDoAjuste).to receive(:new) do
+        agent.instruction_versions.find_each { |versao| versao.update!(metadata: versao.metadata.to_h.except('agente')) }
+        conferente
+      end
+
+      run_turn
+
+      expect(recebidas.first[:depois]).to include('scaffold' => 'andaime', 'human_card' => 'O Hubber atende os clientes.')
+      expect(recebidas.first[:antes]).not_to have_key('scaffold')
+      expect(Rails.logger).to have_received(:info).with(a_string_including('[autonomia][builder] roteiro_sem_antes thread='))
+    end
+
+    it 'andaime em branco antes: fica fora dos dois lados, e nada se exige dele' do
+      agent.update!(scaffold: '')
+
+      run_turn
+
+      expect(recebidas.first[:antes]).not_to have_key('scaffold')
+      expect(recebidas.first[:depois]).not_to have_key('scaffold')
+      expect(recebidas.first[:depois]).to include('human_card' => 'O Hubber atende os clientes.')
+    end
+
+    it 'falta por outro motivo: a correção vai sem o aviso do roteiro' do
+      conferencias << { nao: [0] }
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(calls.last[:input]).not_to include(aviso_do_roteiro)
+    end
+  end
+
+  # O caso "não fale de preço" com cartão neutro: a conferência diz que andaime e cartão iguais estão certos, e nada
+  # força mudança (era a falha falsa da guarda de igualdade).
+  describe 'quando a instrução muda e a conferência dá andaime e cartão iguais como certos' do
+    let(:fala) { 'Não fale de preço com o cliente' }
+
+    it 'fecha sem correção, com o cartão e o andaime como estavam' do
+      respostas << saida('instruction' => 'Atenda com cordialidade. Não fale de preço.', 'guardrails' => ['Não fale de preço.'],
+                         'mudancas' => [mudanca('guardrails'), mudanca('instruction')])
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(agent.reload).to have_attributes(scaffold: 'andaime', human_card: 'O Hubber atende os clientes.')
+      expect(estado).to include('needs_more_info' => false, 'applied' => true)
       expect(estado['conferencia']).to include('falta' => false)
     end
   end
 
-  # Controle do #2489: pedido só de estilo (o mesmo pedido vai para o tom e a instrução) ou só de tom não força
-  # reescrever andaime e cartão.
-  describe 'quando o pedido é só de tom ou de estilo' do
-    it 'só de tom: não aciona a correção' do
+  describe 'quando o pedido é só de tom' do
+    it 'não aciona a correção' do
       respostas << saida('tone' => 'formal', 'mudancas' => [mudanca('tone', 'mais formal')])
 
       run_turn
 
       expect(calls.size).to eq(1)
       expect(agent.reload).to have_attributes(tone: 'formal', scaffold: 'andaime', human_card: 'O Hubber atende os clientes.')
-      expect(estado['conferencia']).to include('falta' => false)
-    end
-
-    it 'estilo no tom e na instrução, com andaime e cartão iguais: não aciona a correção' do
-      respostas << saida('tone' => 'cordial e curto', 'instruction' => 'Responda em no máximo 2 frases.',
-                         'mudancas' => [mudanca('tone', fala), mudanca('instruction', fala)])
-
-      run_turn
-
-      expect(calls.size).to eq(1)
       expect(estado['conferencia']).to include('falta' => false)
     end
   end

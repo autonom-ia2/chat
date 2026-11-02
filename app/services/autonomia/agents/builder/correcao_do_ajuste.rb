@@ -12,11 +12,12 @@ module Autonomia::Agents::Builder::CorrecaoDoAjuste
     needs_more_info=true.
   TXT
 
-  # #2489 — quando o item da instrução faltou porque o andaime e o cartão voltaram como estavam (AjustePorLista).
+  # #2489 — quando a conferência deu o item da instrução como não atendido pelo andaime ou pelo cartão.
   AVISO_DO_ROTEIRO = <<~TXT.freeze
-    ROTEIRO E CARTAO: a instruction mudou, mas o scaffold ou o human_card voltou com o texto de antes. Liste de novo o
-    item da instruction, com o mesmo texto de pedido, e reescreva scaffold e human_card a partir da instrucao atual,
-    coerentes com ela.
+    ROTEIRO E CARTAO: a instruction mudou, mas o scaffold ou o human_card ainda traz a regra antiga ou contradiz a
+    instrucao atual. Liste de novo o item da instruction, com o mesmo texto de pedido, e corrija nesses dois so os
+    trechos que trazem a regra antiga ou contradizem a instrucao atual, partindo do texto atual de cada um. O resto
+    deles fica igual. Nunca copie nem resuma a instruction ou o scaffold no human_card.
   TXT
 
   module_function
@@ -36,7 +37,7 @@ module Autonomia::Agents::Builder::CorrecaoDoAjuste
   end
 
   def aviso_do_roteiro(nao_atendidos)
-    return [] unless nao_atendidos.any? { |item| item['roteiro_parado'] == true }
+    return [] unless nao_atendidos.any? { |item| item['roteiro_desatualizado'] == true }
 
     [{ role: 'developer', content: [{ type: 'input_text', text: AVISO_DO_ROTEIRO }] }]
   end

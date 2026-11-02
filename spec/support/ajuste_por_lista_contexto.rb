@@ -1,6 +1,6 @@
 # #1428 (tema 6, parte 2) — montagem comum dos specs do "Mudar conversando" no piloto: o Hubber, a thread de ajuste,
 # o Construtor e a conferência dublados. `respostas` são as saídas do Construtor na ordem (`:falha` levanta erro do
-# provedor); `conferencias` são as marcas da conferência (`nao:`, `fora:`, `conflito:`, `erro:`), aplicadas à lista
+# provedor); `conferencias` são as marcas da conferência (`nao:`, `roteiro:`, `fora:`, `conflito:`, `erro:`), aplicadas à lista
 # que ela recebeu.
 RSpec.shared_context 'with ajuste por lista' do
   let(:account) { conta_da_fase2 }
@@ -39,11 +39,18 @@ RSpec.shared_context 'with ajuste por lista' do
   end
 
   # O que a conferência devolveria para esta lista, com as marcas dadas.
-  def conferencia_de(mudancas, nao: [], fora: false, conflito: false, erro: nil)
+  # `roteiro:` (#2489): os índices que a conferência deu como não atendidos pelo andaime ou pelo cartão.
+  def conferencia_de(mudancas, erro: nil, **marcas)
     return Autonomia::Agents::ConferenciaDoAjuste::INDISPONIVEL.merge('duracao_ms' => 1) if erro
 
-    itens = mudancas.each_with_index.map { |item, indice| item.merge('atendido' => nao.exclude?(indice), 'pedido_pelo_dono' => true) }
-    { 'itens' => itens, 'faltou_fora_da_lista' => fora, 'conflito' => conflito, 'falta' => nao.any? || fora,
+    roteiro = marcas.fetch(:roteiro, [])
+    nao = marcas.fetch(:nao, []) | roteiro
+    fora = marcas.fetch(:fora, false)
+    itens = mudancas.each_with_index.map do |item, indice|
+      do_item = { 'atendido' => nao.exclude?(indice), 'pedido_pelo_dono' => true }
+      item.merge(do_item, roteiro.include?(indice) ? { 'roteiro_desatualizado' => true } : {})
+    end
+    { 'itens' => itens, 'faltou_fora_da_lista' => fora, 'conflito' => marcas.fetch(:conflito, false), 'falta' => nao.any? || fora,
       'duracao_ms' => 5 }
   end
 

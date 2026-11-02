@@ -15,6 +15,13 @@ module AvaliacaoDoAjustePorLista
   SAUDACAO = 'Oi! Aqui é o Hubber, da Hub2You.'.freeze
   SAUDACAO_NAO_PEDIDA = 'Olá, sou o Hubber!'.freeze
   TETO_USD = 1.8
+  CARTAO = 'O Hubber atende os clientes da Hub2You.'.freeze
+  # #2489: o andaime e o cartão que falam da coleta, e um andaime que não fala de preço.
+  ANDAIME_COM_COLETA = 'Roteiro: 1. Cumprimente. 2. Colete nome, cidade e o seguro de interesse. 3. Explique o seguro ' \
+                       'pedido. 4. Passe para a equipe quando o cliente pedir.'.freeze
+  CARTAO_COM_COLETA = 'O Hubber atende os clientes da Hub2You, explica os seguros e anota nome, cidade e o seguro de ' \
+                      'interesse.'.freeze
+  ANDAIME_NEUTRO = 'Roteiro: 1. Cumprimente. 2. Explique o seguro pedido. 3. Passe para a equipe quando o cliente pedir.'.freeze
   CAMPOS_COMPARADOS = %w[name instruction tone greeting fallback_message handoff_rule starter_questions human_card
                          guardrails voice].freeze
 
@@ -35,6 +42,8 @@ module AvaliacaoDoAjustePorLista
   # :coerentes (2 a 4, e o juiz as acha coerentes com a pergunta), :sem_inventar (zero, ou coerentes pelo juiz) ou
   # :pelo_criterio (permitidas; quem diz se servem é o `certo` da cena, pelo juiz, e não a régua geral de opções).
   # `saudacao_inicial` (opcional): a saudação do agente antes da fala. `muda` (opcional): os campos que TÊM de mudar.
+  # #2489: `andaime_inicial` e `cartao_inicial` (opcionais): o scaffold e o human_card antes da fala; `igual` (opcional):
+  # os campos que NÃO podem mudar. O scaffold entra no retrato (`comparavel`) para `muda` e `igual`.
   CENAS = [
     { nome: 't6a_duas_frases_e_preco', fala: 'Responda em no máximo 2 frases e preço passa para a equipe.', aplica: true, itens: 2,
       opcoes: :nenhuma,
@@ -60,11 +69,17 @@ module AvaliacaoDoAjustePorLista
     { nome: 'nao_fale_de_preco', fala: 'Não fale de preço com o cliente.', aplica: true,
       certo: 'O agente DEPOIS tem escrito que não fala de preço com o cliente (nos limites e na instrução), mesmo já ' \
              'tendo a regra geral de não inventar valores.' },
-    # #2489: a instrução muda e o cartão (e o andaime) vem reescrito a partir dela, sem a regra antiga de coletar.
+    # #2489: a instrução muda e o andaime e o cartão, que falavam da coleta, são corrigidos junto.
     { nome: 'nao_coletar_neste_canal', fala: 'Não colete dados do cliente neste canal.', aplica: true, itens: 1,
-      muda: %w[instruction human_card],
+      andaime_inicial: ANDAIME_COM_COLETA, cartao_inicial: CARTAO_COM_COLETA, muda: %w[instruction human_card scaffold],
       certo: 'O agente DEPOIS não pede nem coleta dados do cliente (nome, cidade ou outros) neste canal, escrito na ' \
-             'instrução, e o cartão (human_card) DEPOIS não diz que ele coleta dados do cliente.' },
+             'instrução, e nem o roteiro (scaffold) nem o cartão (human_card) DEPOIS mandam ou dizem que ele coleta dados.' },
+    # #2489 (revisão do gestor): cartão e andaime que não falam de preço estão certos sem mudar; nada força mudança.
+    { nome: 'nao_fale_de_preco_cartao_neutro', fala: 'Não fale de preço com o cliente.', aplica: true,
+      andaime_inicial: ANDAIME_NEUTRO, igual: %w[human_card scaffold],
+      certo: 'O agente DEPOIS tem escrito que não fala de preço com o cliente (nos limites e na instrução); o cartão e o ' \
+             'roteiro, que não falavam de preço, ficam como estavam, e a resposta ao dono não diz que algo deixou de ser ' \
+             'aplicado.' },
     { nome: 'troca_a_saudacao', fala: 'Troque a saudação para: Olá! Aqui é o Hubber, da Hub2You. Em que posso ajudar?',
       aplica: true, so: %w[greeting],
       certo: 'Só a saudação muda, para a frase pedida. Todo o resto do agente fica igual.' },
@@ -177,23 +192,28 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
     Crm::AiUsageEvent.where(account_id: conta.id).sum(:cost_estimate).to_f
   end
 
-  def criar_hubber(saudacao)
+  def criar_hubber(saudacao, andaime: nil, cartao: AvaliacaoDoAjustePorLista::CARTAO)
     Autonomia::Agents::Agent.create!(
       account: conta, name: 'Hubber', agent_type: 'support', mode: :guided, status: :active, enabled: true,
-      instruction: AvaliacaoDoAjustePorLista::HUBBER, tone: 'cordial e breve', greeting: saudacao,
+      instruction: AvaliacaoDoAjustePorLista::HUBBER, scaffold: andaime, tone: 'cordial e breve', greeting: saudacao,
       fallback_message: 'Vou confirmar com a equipe e te retorno.', handoff_rule: 'Passe para a equipe quando o cliente pedir.',
-      starter_questions: ['Quais seguros vocês têm?'], human_card: 'O Hubber atende os clientes da Hub2You.',
+      starter_questions: ['Quais seguros vocês têm?'], human_card: cartao,
       config: { 'guardrails' => ['Nunca invente valores, coberturas ou prazos.'], 'voice' => 'masculina',
                 'with_knowledge' => false }
     )
   end
 
+  def hubber_da_cena(cena)
+    saudacao = cena[:saudacao_inicial] || AvaliacaoDoAjustePorLista::SAUDACAO
+    criar_hubber(saudacao, andaime: cena[:andaime_inicial], cartao: cena[:cartao_inicial] || AvaliacaoDoAjustePorLista::CARTAO)
+  end
+
   def retrato(agente)
-    Autonomia::Agents::Builder::AjustePorLista.retrato(agente.reload)
+    Autonomia::Agents::Builder::AjustePorLista.comparavel(agente.reload)
   end
 
   def ajustar(cena)
-    agente = criar_hubber(cena[:saudacao_inicial] || AvaliacaoDoAjustePorLista::SAUDACAO)
+    agente = hubber_da_cena(cena)
     thread = Autonomia::Agents::BuildThread.create!(account: conta, agent: agente)
     Array(cena[:historico]).each { |papel, texto| thread.append_message!(papel, texto) }
     abrir_pendencia(thread, cena[:pendente]) if cena[:pendente]
@@ -310,7 +330,11 @@ RSpec.describe 'Avaliação paga do Mudar conversando (#1428)', :eval_pago do # 
   end
 
   def mudou_os_exigidos?(cena, antes, depois)
-    Array(cena[:muda]).all? { |campo| antes[campo] != depois[campo] }
+    Array(cena[:muda]).all? { |campo| antes[campo] != depois[campo] } && iguais?(cena, antes, depois)
+  end
+
+  def iguais?(cena, antes, depois)
+    Array(cena[:igual]).all? { |campo| antes[campo] == depois[campo] }
   end
 
   def rodar(cena)

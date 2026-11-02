@@ -92,23 +92,42 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
     conferencia = Autonomia::Agents::ConferenciaDoAjuste.new(account: @account, credential: credential).conferir(
       pedido: Autonomia::Agents::ConferenciaDoAjuste.pedido_com_contexto(fala, mensagem_anterior), mudancas: mudancas,
       valores_antes: valores_antes_do_nao_pedido,
-      antes: retrato_de_antes(dados), depois: regras_do_ajuste.retrato(@thread.agent)
+      **retratos_da_conferencia(dados)
     )
-    roteiro = Autonomia::Agents::Builder::RoteiroDoAjuste
-    conferencia = roteiro.com_roteiro_conferido(conferencia, roteiro.roteiro_da_versao(versao_de_antes(dados)),
-                                                roteiro.roteiro(@thread.agent))
+    roteiro_nao_conferido(mudancas) if conferencia['erro']
     @conferencias_ms << conferencia['duracao_ms']
     anotar_versao(versao_id, fala, mudancas, conferencia)
     conferencia
   end
 
   def retrato_de_antes(dados)
-    versao = versao_de_antes(dados)
+    versao = @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
     versao ? retrato_da_versao(versao) : {}
   end
 
-  def versao_de_antes(dados)
-    @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
+  # #2489 — o antes e o depois que a conferência lê, com o andaime: ela julga se ele e o cartão acompanharam a instrução.
+  # Versão de antes sem o agente (anterior ao #1492): o antes vai sem os campos, com log, e o depois vai inteiro. Andaime
+  # em branco antes: fica fora dos dois lados, e nada se exige dele.
+  def retratos_da_conferencia(dados)
+    versao = @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
+    depois = regras_do_ajuste.comparavel(@thread.agent)
+    andaime = versao && versao.metadata.to_h['agente'].is_a?(Hash) ? versao.metadata['agente']['scaffold'].to_s : nil
+    return retratos_sem_o_antes(versao, depois, dados) if andaime.nil?
+    return { antes: retrato_da_versao(versao), depois: depois.except('scaffold') } if andaime.strip.blank?
+
+    { antes: retrato_da_versao(versao).merge('scaffold' => andaime), depois: depois }
+  end
+
+  def retratos_sem_o_antes(versao, depois, dados)
+    Rails.logger.info("[autonomia][builder] roteiro_sem_antes thread=#{@thread.id} versao=#{dados['versao_antes_id']}")
+    { antes: versao ? retrato_da_versao(versao) : {}, depois: depois }
+  end
+
+  # Conferência indisponível: o andaime e o cartão ficam sem conferir, e o turno segue como antes. Só ids no log.
+  def roteiro_nao_conferido(mudancas)
+    return unless mudancas.any? { |item| item['campo'] == 'instruction' }
+
+    Rails.logger.warn("[autonomia][builder] roteiro_nao_conferido thread=#{@thread.id}")
   end
 
   # O mesmo retrato, lido de uma versão (a de antes do ajuste): o state da thread não guarda a instrução crua.

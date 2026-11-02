@@ -94,7 +94,7 @@ module Autonomia::Agents::Builder::AjustePorLista
        cartao. Pela secao 11, nunca cite, parafraseie nem resuma a instruction ou o scaffold.
     2. Se ela pede mudancas: liste CADA pedido em mudancas, um item por campo de destino. So o que estiver listado e
        gravado. O que nao estiver listado fica exatamente como esta, mesmo que voce o reescreva. Devolva os outros
-       campos com o valor atual, menos scaffold e human_card quando a instruction muda (veja ROTEIRO E CARTAO).
+       campos com o valor atual, menos o que ROTEIRO E CARTAO manda revisar quando a instruction muda.
     3. Se ela traz pedido E pergunta: aplique o pedido (em mudancas) e responda a pergunta em resposta_ao_dono.
        Se havia PERGUNTA PENDENTE sua, diga em pendencia_resolvida se esta fala a resolveu.
     4. Se um pedido e impossivel, contraditorio ou vago demais para aplicar com seguranca, nao o liste: pergunte em
@@ -118,11 +118,12 @@ module Autonomia::Agents::Builder::AjustePorLista
     - o nome do agente: name. A voz (feminina ou masculina): voice.
     Ao mudar a instruction, mude so o trecho que o pedido exige; nao acrescente nem reescreva regras que o dono nao
     pediu.
-    ROTEIRO E CARTAO: o scaffold e o human_card acompanham a instruction. Quando a instruction muda, REESCREVA os dois
-    a partir da instrucao nova, coerentes com ela: nenhuma regra que o pedido mudou pode ficar com o texto antigo, e o
-    resto segue igual ao que ja diziam. Nesse caso nunca devolva o valor atual de nenhum dos dois. Excecao: pedido so
-    de tamanho, formato ou estilo da resposta (o que tambem vai para tone) muda scaffold e human_card so quando o texto
-    atual deles contradiz o pedido.
+    ROTEIRO E CARTAO: o scaffold e o human_card acompanham a instruction. Quando a instruction muda, revise os dois:
+    corrija todo trecho que traga a regra antiga ou contradiga a instrucao nova. O que nao fala daquilo fica igual.
+    Para o human_card, parta do cartao atual e troque so o trecho que o pedido mudou; nunca copie nem resuma a
+    instruction ou o scaffold no human_card (secao 11). Para o scaffold, parta do scaffold atual.
+    Excecao: pedido so de tamanho, formato ou estilo da resposta (o que tambem vai para tone) muda scaffold e
+    human_card so quando o texto atual deles contradiz o pedido.
     EXCECAO: um pedido do dono MAIS RESTRITO que o padrao, ou que uma regra geral que ja existe (ex.: "no maximo 2
     frases" quando a instrucao ja diz "seja breve"), SEMPRE e gravado nos campos acima. Nunca descarte um pedido por
     parecer coberto por outra regra.
