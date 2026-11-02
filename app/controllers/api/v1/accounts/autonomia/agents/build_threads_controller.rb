@@ -88,10 +88,12 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   end
 
   # Empilha a mensagem do usuário no turno atual (texto + imagens anexadas). Compartilhado por
-  # `create` (abertura com mensagem) e `messages` (continuação).
+  # `create` (abertura com mensagem) e `messages` (continuação). #2489: `materiais_a_caminho` são os nomes dos
+  # arquivos mandados com o turno antes de o rascunho existir (o model limpa e limita).
   def append_user_message!
     @thread.append_message!('user', params[:message], image_signed_ids: image_signed_ids_param,
-                                                      client_message_id: params[:client_message_id])
+                                                      client_message_id: params[:client_message_id],
+                                                      materiais_a_caminho: Array(params[:materiais_a_caminho]))
   end
 
   # Portão de materiais (instrução-mãe §13): o front sinaliza `no_materials: true` quando o usuário

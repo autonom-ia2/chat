@@ -235,6 +235,85 @@ describe('useConversaDeCriacao', () => {
     expect(conversa.materiais.value[0].fonteId).toBe(31);
   });
 
+  // #2489 (1): o turno saía antes do arquivo chegar à base, e o Construtor dizia que o material "não apareceu".
+  it('with a draft, sends the turn only after the file reached the knowledge base', async () => {
+    comThread(7, 90);
+    let criar;
+    store.dispatch.mockImplementation(acao =>
+      acao === 'autonomiaSources/create'
+        ? new Promise(resolve => {
+            criar = resolve;
+          })
+        : Promise.resolve(null)
+    );
+    const { conversa } = montar();
+    const envio = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await flushPromises();
+
+    expect(chamadas('autonomiaSources/create')).toHaveLength(1);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.pensando.value).toBe(true);
+
+    criar({ id: 31 });
+    expect(await envio).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+    expect(chamadas('autonomiaBuildThreads/send')[0][1].extra).toEqual({});
+    expect(conversa.materiais.value[0].fonteId).toBe(31);
+  });
+
+  it('with a draft, does not send the turn when the file failed to upload (the material shows it)', async () => {
+    comThread(7, 90);
+    store.dispatch.mockImplementation(acao =>
+      acao === 'autonomiaSources/create'
+        ? Promise.reject(new Error('500'))
+        : Promise.resolve(null)
+    );
+    const { conversa } = montar();
+    const entrou = await conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+
+    expect(entrou).toBe(false);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.estadoDoMaterial(conversa.materiais.value[0])).toBe(
+      'atencao'
+    );
+    expect(conversa.pensando.value).toBe(false);
+  });
+
+  it('before the draft exists, the turn says which files are on the way', async () => {
+    const { conversa } = montar();
+    await conversa.enviar({
+      texto: 'Vendo seguro viagem',
+      anexos: [
+        arquivo('tabela.pdf', 'application/pdf'),
+        arquivo('foto.png', 'image/png'),
+      ],
+    });
+
+    const [, inicio] = chamadas('autonomiaBuildThreads/start')[0];
+    expect(inicio.message).toBe('Vendo seguro viagem');
+    expect(inicio.materiais_a_caminho).toEqual(['tabela.pdf']);
+    expect(chamadas('autonomiaSources/create')).toHaveLength(0);
+  });
+
+  it('on the open thread without a draft yet, the turn also says which files are on the way', async () => {
+    store.state['autonomiaBuildThreads/getThread'] = { id: 7, agent_id: null };
+    const { conversa } = montar();
+    await conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+
+    expect(chamadas('autonomiaBuildThreads/send')[0][1].extra).toEqual({
+      materiais_a_caminho: ['tabela.pdf'],
+    });
+  });
+
   it('refuses a file over 25 MB before uploading it', async () => {
     comThread();
     const { conversa } = montar();

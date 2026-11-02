@@ -312,7 +312,8 @@ export function useConversaDeCriacao({
     }
   };
 
-  // `descritor` é { file } ou { url }, como a store espera.
+  // `descritor` é { file } ou { url }, como a store espera. true = a fonte foi criada (#2489: o turno
+  // espera por isso); false = não subiu e o material mostra a falha.
   const mandarParaBase = async (material, descritor) => {
     trocarMaterial(material.id, { estado: 'enviando' });
     try {
@@ -329,48 +330,65 @@ export function useConversaDeCriacao({
             fonteId: fonte.id,
           });
         }
-        return;
+        return true;
       }
       // A leitura da base pode ter trazido este mesmo arquivo antes da resposta: fica um só.
       materiais.value = materiais.value.filter(
         m => m.id === material.id || !fonte?.id || m.fonteId !== fonte.id
       );
       trocarMaterial(material.id, { estado: 'base', fonteId: fonte?.id });
+      return true;
     } catch {
       trocarMaterial(material.id, { estado: 'atencao' });
+      return false;
     }
   };
 
   // Arquivo ou site antes de existir o rascunho espera na fila ("Vou ler assim que começarmos").
+  // Devolve { material, subida }: `subida` é a promessa do create (null na fila ou sem subir).
   const filaDaBase = new Map();
   const paraBase = (dados, descritor) => {
     if (!agenteId.value) {
       const material = novoMaterial(dados, { estado: 'fila' });
       filaDaBase.set(material.id, descritor);
-      return material;
+      return { material, subida: null };
     }
     const material = novoMaterial(dados, { estado: 'enviando' });
-    mandarParaBase(material, descritor);
-    return material;
+    return { material, subida: mandarParaBase(material, descritor) };
   };
 
   const base = computed(() => materiais.value.filter(m => m.tipo !== 'foto'));
   const semVaga = () => base.value.filter(ocupaVaga).length >= MAX_FONTES;
 
   // Também pelo clipe da conversa: grande demais ou sem vaga não sobe (o material diz por quê).
-  const anexarArquivo = arquivo => {
+  const subirArquivo = arquivo => {
     if (arquivo.size > MAX_ARQUIVO_BYTES) {
-      return novoMaterial(doArquivo(arquivo), { estado: 'grande' });
+      return {
+        material: novoMaterial(doArquivo(arquivo), { estado: 'grande' }),
+        subida: null,
+      };
     }
     if (semVaga()) {
-      return novoMaterial(doArquivo(arquivo), { estado: 'limite' });
+      return {
+        material: novoMaterial(doArquivo(arquivo), { estado: 'limite' }),
+        subida: null,
+      };
     }
     return paraBase(doArquivo(arquivo), { file: arquivo });
   };
+  const anexarArquivo = arquivo => subirArquivo(arquivo).material;
 
   // `endereco` já conferido (enderecoDoSite): a caixa só manda endereço válido.
   const anexarSite = endereco =>
-    paraBase({ nome: nomeDoSite(endereco), tipo: 'site' }, { url: endereco });
+    paraBase({ nome: nomeDoSite(endereco), tipo: 'site' }, { url: endereco })
+      .material;
+
+  // #2489 — antes do rascunho, o que espera na fila vai pelo nome no turno: o Construtor sabe que o
+  // material está a caminho e não diz que não chegou.
+  const materiaisACaminho = () =>
+    materiais.value
+      .filter(m => m.estado === 'fila' && filaDaBase.has(m.id))
+      .map(m => m.nome);
 
   watch(agenteId, id => {
     if (!id) return;
@@ -424,7 +442,11 @@ export function useConversaDeCriacao({
       return false;
     }
     aviso.value = null;
-    anexos.filter(arquivo => !ehFoto(arquivo)).forEach(anexarArquivo);
+    const subidas = anexos
+      .filter(arquivo => !ehFoto(arquivo))
+      .map(subirArquivo)
+      .map(({ subida }) => subida)
+      .filter(Boolean);
     const fotos = anexos.filter(ehFoto);
     const conteudo =
       texto.trim() ||
@@ -433,10 +455,17 @@ export function useConversaDeCriacao({
 
     enviando.value = true;
     try {
+      // #2489 — com rascunho, o turno só sai depois de o arquivo chegar à base: o Construtor já o vê
+      // "em análise". Se não subiu, o material mostra a falha e o turno não sai como se tivesse chegado
+      // (o texto volta ao campo).
+      const subiram = await Promise.all(subidas);
+      if (subiram.includes(false)) return false;
       const fotosEnviadas = await enviarFotos(fotos);
-      const extra = fotosEnviadas.length
-        ? { image_signed_ids: fotosEnviadas }
-        : {};
+      const aCaminho = agenteId.value ? [] : materiaisACaminho();
+      const extra = {
+        ...(fotosEnviadas.length ? { image_signed_ids: fotosEnviadas } : {}),
+        ...(aCaminho.length ? { materiais_a_caminho: aCaminho } : {}),
+      };
       ultimoEnvio = { conteudo, extra, echo: true };
       await mandarTurno(ultimoEnvio);
       return true;

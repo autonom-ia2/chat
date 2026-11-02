@@ -113,6 +113,24 @@ RSpec.describe 'Autonomia agent build threads', type: :request do
     end
   end
 
+  # #2489 (1) — antes do rascunho, o turno leva os nomes dos arquivos que ainda vão subir.
+  describe 'POST /autonomia/build_threads/:id/messages (materials on the way)' do
+    it 'keeps the file names on the user turn, one line each' do
+      post_message(message: 'Segue a tabela', materiais_a_caminho: ["tabela\n.pdf", ''])
+
+      expect(response).to have_http_status(:accepted)
+      turn = Array(thread.reload.messages).reverse.find { |m| m['role'] == 'user' }
+      expect(turn['materiais_a_caminho']).to eq(['tabela .pdf'])
+    end
+
+    it 'leaves the turn as before when nothing is on the way' do
+      post_message(message: 'Atendo de seg a sex')
+
+      turn = Array(thread.reload.messages).reverse.find { |m| m['role'] == 'user' }
+      expect(turn).not_to have_key('materiais_a_caminho')
+    end
+  end
+
   describe 'POST /autonomia/build_threads/:id/retry (E2)' do
     it 're-enqueues the build for a failed thread with a fresh token' do
       # Arrange
