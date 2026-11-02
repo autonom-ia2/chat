@@ -208,7 +208,7 @@ const aviso = computed(() => {
             {{ t(`${KEY}.SEM_PUBLICAR`) }}
           </p>
           <div
-            v-else
+            v-if="resultado.formato === 'privado'"
             data-resposta-privado
             class="flex flex-col items-end gap-1"
           >

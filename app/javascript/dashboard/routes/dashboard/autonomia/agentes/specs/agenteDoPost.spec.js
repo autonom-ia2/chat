@@ -525,6 +525,23 @@ describe('#2469 · os comentários do post em Agentes', () => {
         expect(noBody('[data-resposta-privado]').textContent).toContain(
           'Te mandei no direct!'
         );
+        expect(noBody('[data-resposta-comentario]')).toBeNull();
+      });
+
+      it('post do Instagram no comentário: só o comentário, sem balão de privado nem aviso', async () => {
+        rota.query = { gaveta: 'testar' };
+        await pagina(detalhe());
+        api.testar.mockResolvedValue({
+          data: { status: 'escrito', texto: 'Te mandei no direct!' },
+        });
+
+        await perguntar('Quanto custa?');
+
+        expect(noBody('[data-resposta-comentario]').textContent).toContain(
+          'Te mandei no direct!'
+        );
+        expect(noBody('[data-resposta-privado]')).toBeNull();
+        expect(noBody('[data-resposta-sem-publicar]')).toBeNull();
       });
 
       it('anúncio nas duas redes: o dono escolhe a rede antes de perguntar', async () => {
@@ -556,10 +573,13 @@ describe('#2469 · os comentários do post em Agentes', () => {
         expect(noBody('[data-resposta-sem-publicar]').textContent).toContain(
           'AGENTS.AGENTE_DO_POST.TESTAR.SEM_PUBLICAR'
         );
+        expect(noBody('[data-resposta-privado]')).toBeNull();
 
         await clicar('[data-testar-rede="instagram"]');
         await clicar('[data-testar-perguntar]');
         expect(noBody('[data-resposta-sem-publicar]')).toBeNull();
+        expect(noBody('[data-resposta-privado]')).toBeNull();
+        expect(noBody('[data-resposta-comentario]')).not.toBeNull();
       });
 
       it('o privado do Facebook não sai: diz isso, sem balão de privado', async () => {
