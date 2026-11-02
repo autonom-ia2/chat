@@ -891,6 +891,25 @@ describe('AgenteCriarPage', () => {
     wrapper.unmount();
   });
 
+  // Achado do tester (#2489): uma livre e uma ocupada, as duas fora do alcance, abriam um Comece todo bloqueado.
+  it('with every inbox out of reach (one free, one busy), shows the notice and no empty button', async () => {
+    jornada.canaisOcupados.mockResolvedValue({
+      data: {
+        payload: [
+          { ...L2[0], alcanca: false },
+          { ...L2[1], alcanca: false },
+        ],
+      },
+    });
+    const wrapper = await montar({ query: { agente: '90' } });
+    await wrapper.get('[data-perguntas] button').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-comecar]').exists()).toBe(false);
+    expect(wrapper.find('[data-sem-canal]').exists()).toBe(true);
+    wrapper.unmount();
+  });
+
   it('with no inbox at all, the button becomes "connect a channel"', async () => {
     jornada.canaisOcupados.mockResolvedValue({ data: { payload: [] } });
     const wrapper = await montar({ query: { agente: '90' } });

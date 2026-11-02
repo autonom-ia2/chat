@@ -134,6 +134,15 @@ describe('canal sugerido no botão de começar', () => {
     expect(
       temCanalParaEscolher([{ ...livre(1), alcanca: false }, ocupada(3)], 5)
     ).toBe(true);
+    expect(
+      temCanalParaEscolher(
+        [
+          { ...livre(1), alcanca: false },
+          { ...ocupada(3), alcanca: false },
+        ],
+        5
+      )
+    ).toBe(false);
     expect(temCanalParaEscolher([], 5)).toBe(false);
   });
 

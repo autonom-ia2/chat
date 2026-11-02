@@ -15,15 +15,16 @@ export const canalSugerido = (canais, agenteId) => {
   return candidatas.length === 1 ? candidatas[0] : null;
 };
 
-// Há alguma caixa para escolher no Comece (livre e alcançável, como no canalSugerido, ou ocupada por
-// outro agente, que vira troca)? Sem nenhuma, a Confira mostra o aviso de conectar um canal em vez do
-// botão.
+// Há alguma caixa para escolher no Comece (livre, ou ocupada por outro agente, que vira troca), que
+// quem cria alcança? Sem nenhuma, a Confira mostra o aviso de conectar um canal em vez do botão.
 export const temCanalParaEscolher = (canais, agenteId) =>
-  (canais || []).some(canal => {
-    const tipo = tipoDoCanal(canal, agenteId);
-    if (tipo === TIPO_CANAL.LIVRE) return canal.alcanca !== false;
-    return tipo === TIPO_CANAL.OCUPADO;
-  });
+  (canais || []).some(
+    canal =>
+      canal.alcanca !== false &&
+      [TIPO_CANAL.LIVRE, TIPO_CANAL.OCUPADO].includes(
+        tipoDoCanal(canal, agenteId)
+      )
+  );
 
 // Como o botão chama o canal: pelo tipo (AGENTS.JORNADA.CRIAR.CANAL.<chave>) ou, num tipo sem nome
 // próprio (API, SMS…), pelo nome da caixa.
