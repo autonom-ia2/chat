@@ -421,6 +421,8 @@ en:
         not_sent_due_to_messaging_window: 'Auto-resolve message not sent due to outgoing message restrictions'
       muted: '%{user_name} has muted the conversation'
       unmuted: '%{user_name} has unmuted the conversation'
+      automacao:
+        cadeia_parada: 'Automations stopped at “%{nome}” to avoid repetition: each automation runs once per change, and at most 3 run in a row.'
       auto_resolution_message: 'Resolving the conversation as it has been inactive for a while. Please start a new conversation if you need further assistance.'
     templates:
       greeting_message_body: '%{account_name} typically replies in a few hours.'
@@ -531,6 +533,10 @@ en:
         crm_permanent_delete: 'Permanent deletion is only done on screen, typing the confirmation: CRM › Archived, or when deleting the contact.'
         contact_delete: 'Deleting a contact is only done on screen: Contacts › open the contact › Delete contact.'
       admin_only: 'Only an account admin can do this.'
+      automation_manage_only: 'For this you need the automatic rules permission in your role.'
+      stage_automation_manage_only: 'For this you need the automatic rules and the pipeline settings permissions in your role.'
+      rule_funnel_manage_only: 'A rule that changes the pipeline also needs the pipeline settings permission in your role.'
+      automation_view_only: 'For this you need permission to see the automatic rules in your role.'
       missing_param: 'I need to know which %{campo} first.'
       no_description: 'I could not explain what I was about to do, so I will not do it.'
       irreversible: 'This deletes the record and cannot be undone.'

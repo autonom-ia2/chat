@@ -408,6 +408,8 @@ pt_BR:
         not_sent_due_to_messaging_window: 'Auto-resolver mensagem não enviada devido a restrições de envio de mensagens'
       muted: '%{user_name} silenciou a conversa'
       unmuted: '%{user_name} reativou a conversa'
+      automacao:
+        cadeia_parada: 'As automações pararam em “%{nome}” para evitar repetição: cada automação roda uma vez por mudança, e no máximo 3 seguidas.'
       auto_resolution_message: 'Resolvendo a conversa dado que está inativa por um tempo. Por favor, inicie uma nova conversa se precisar de mais ajuda.'
     templates:
       greeting_message_body: '%{account_name} normalmente responde em algumas horas.'
@@ -1020,6 +1022,10 @@ pt_BR:
         crm_permanent_delete: 'Excluir de vez só se faz na tela, digitando a confirmação: no CRM, em Arquivados, ou ao excluir o contato.'
         contact_delete: 'Excluir contato só se faz na tela: Contatos › abra o contato › Excluir contato.'
       admin_only: 'Só quem administra a conta pode fazer isso.'
+      automation_manage_only: 'Para isso você precisa da permissão das regras automáticas na sua função.'
+      stage_automation_manage_only: 'Para isso você precisa das permissões das regras automáticas e de configurar funis na sua função.'
+      rule_funnel_manage_only: 'Regra que mexe no funil também precisa da permissão de configurar funis na sua função.'
+      automation_view_only: 'Para isso você precisa da permissão de ver as regras automáticas na sua função.'
       missing_param: 'Para isso eu preciso saber qual %{campo}.'
       no_description: 'Não consegui explicar o que ia fazer, então não vou fazer.'
       irreversible: 'Isto apaga o registro e não tem volta.'
