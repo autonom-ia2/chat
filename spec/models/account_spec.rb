@@ -301,6 +301,7 @@ RSpec.describe Account do
       # #2381: agente_diz_quando_nao_sabe depois dela, 17 (1 << 16 = 65536), provisória da Orquestração (30/10).
       # #1775: ia_previa_de_link depois dela, 18 (1 << 17 = 131072), reservada pela Orquestração (31/10).
       # #1479 F2: agentes_pedir_localizacao depois dela, 19 (1 << 18 = 262144), dada pela Orquestração (31/10).
+      # #2414 F5: automacao_editor depois de automacao_motor, 22 (1 << 21 = 2097152), pela ordem da main (02/11).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
