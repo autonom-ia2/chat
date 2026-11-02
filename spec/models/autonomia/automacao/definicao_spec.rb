@@ -95,12 +95,15 @@ RSpec.describe Autonomia::Automacao::Definicao do
       versao = automacao.salvar_versao!(receita: receita, autor: admin)
       placa.destroy!
 
-      expect(automacao.assumir_e_religar!(admin, versao_id: versao.id)).to eq('receita_com_problema')
+      recusa = automacao.assumir_e_religar!(admin, versao_id: versao.id)
+      expect(recusa.motivo).to eq('receita_com_problema')
+      problema = I18n.t('autonomia.automacao.receita.atributo_inexistente', passo: 's1', caminho: 'contato.atributos.placa')
+      expect(recusa.problemas).to eq([problema])
       expect([automacao.reload.ativa, automacao.ligada_por]).to eq([false, nil])
     end
 
     it 'sem versão salva: recusa', :aggregate_failures do
-      expect(automacao.assumir_e_religar!(admin, versao_id: nil)).to eq('sem_versao')
+      expect(automacao.assumir_e_religar!(admin, versao_id: nil).motivo).to eq('sem_versao')
       expect(automacao.reload.ativa).to be(false)
     end
   end
