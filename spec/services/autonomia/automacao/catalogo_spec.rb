@@ -97,6 +97,14 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end
 
+  it 'põe todo passo nativo do esquema no editor ou fora dele com motivo, uma vez' do
+    do_esquema = catalogo.esquema.dig('definitions', 'passo', 'oneOf').map { |forma| forma.dig('properties', 'tipo', 'const') } - ['acao']
+    fora = declarado['nativos_fora_do_editor'].to_h
+
+    expect((declarado['nativos'].keys + fora.keys).sort).to eq(do_esquema.sort)
+    expect(fora.values).to all(include('#2486'))
+  end
+
   it 'tem a frase de tudo em pt_BR e en' do
     chaves = []
     coletar = lambda do |valor|
