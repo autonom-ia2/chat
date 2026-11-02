@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import {
   ICONE_DA_REDE,
   agentesDasPortas,
+  motivosDasPortas,
   estadoDoCuidado,
   redesDoCuidado,
   tituloDaLegenda,
@@ -83,8 +84,10 @@ const usa = computed(() => {
   if (outro) {
     return t(`${KEY}.CARTAO.USA_DOIS`, { um: um.name, outro: outro.name });
   }
-  return um
-    ? t(`${KEY}.CARTAO.USA`, { nome: um.name })
+  if (um) return t(`${KEY}.CARTAO.USA`, { nome: um.name });
+  const motivos = motivosDasPortas(detalhe.value.portas, t);
+  return motivos.length
+    ? [...motivos, t(`${KEY}.MOTIVO_DA_PORTA.FRASES_FIXAS`)].join(' ')
     : t(`${KEY}.CARTAO.SEM_PORTA`);
 });
 

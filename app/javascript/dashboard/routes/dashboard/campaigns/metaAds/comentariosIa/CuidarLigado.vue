@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { intlLocale } from '../metaAdsHelpers';
 import { linhaDoResultado } from './redes';
+import MaterialDoPost from 'dashboard/routes/dashboard/autonomia/agentes/components/doPost/MaterialDoPost.vue';
 
 // Comentários que viram cliente (#2212): o post depois de ligado. O selo, o resultado (quem recebeu no privado e quem
 // respondeu), "Esperando você" com o que a IA deixou com você, "Chegaram antes de você ligar" com o "Ler e mandar", e
@@ -89,6 +90,26 @@ const startedText = computed(() => {
       <span class="i-lucide-check mt-0.5 size-4 shrink-0" aria-hidden="true" />
       {{ startedText }}
     </p>
+    <!-- #2487: logo depois de ligar, o material só deste post em destaque, com o aviso de que ele leva minutos para ser lido. -->
+    <section
+      v-if="started === 'new' && canManage && data.writes && data.care_id"
+      data-ia-anexar-agora
+      class="flex flex-col gap-3 rounded-2xl bg-n-blue-2 p-4 ring-1 ring-inset ring-n-blue-6 sm:p-5"
+    >
+      <h3
+        class="m-0 flex items-center gap-2 text-base font-semibold text-n-slate-12"
+      >
+        <span
+          class="i-lucide-paperclip size-5 shrink-0 text-n-blue-11"
+          aria-hidden="true"
+        />
+        {{ t('AGENTS.AGENTE_DO_POST.SABE.MATERIAL.ANEXAR_AGORA') }}
+      </h3>
+      <p class="m-0 text-sm leading-6 text-n-slate-12">
+        {{ t('AGENTS.AGENTE_DO_POST.SABE.MATERIAL.AVISO_AGORA') }}
+      </p>
+      <MaterialDoPost :care-id="data.care_id" pode-mudar />
+    </section>
 
     <span
       data-ia-badge

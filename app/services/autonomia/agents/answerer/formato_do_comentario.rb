@@ -71,6 +71,14 @@ module Autonomia::Agents::Answerer::FormatoDoComentario
     formato
   end
 
+  # #2487: o cuidado só vem explícito e só no comentário. Na conversa é ArgumentError: o formato não deduz o cuidado, nem
+  # o cuidado o formato.
+  def cuidado_conferido(care_id, formato)
+    raise ArgumentError, 'care_id só na resposta a um comentário' if care_id && !comentario?(formato)
+
+    care_id
+  end
+
   # A regra do turno com a do formato, no comentário; na conversa, a de sempre.
   def contexto_do_turno(contexto, formato)
     return contexto unless comentario?(formato)

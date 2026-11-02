@@ -55,4 +55,27 @@ RSpec.describe Autonomia::Agents::Answerer do
     expect { responder(formato: :story) }.to raise_error(ArgumentError, /formato desconhecido/)
     expect(corpos).to be_empty
   end
+
+  describe 'o material só do post (#2487)' do
+    let(:retriever) { instance_double(Autonomia::Agents::Retriever, retrieve: []) }
+
+    before { allow(Autonomia::Agents::Retriever).to receive(:new).and_return(retriever) }
+
+    it 'care_id na conversa é ArgumentError, antes de chamar o modelo', :aggregate_failures do
+      expect { responder(care_id: 7) }.to raise_error(ArgumentError, /care_id/)
+      expect(corpos).to be_empty
+    end
+
+    it 'no comentário, a busca recebe o cuidado, mesmo no agente sem base' do
+      responder(formato: formato::PRIVADO, care_id: 7)
+
+      expect(Autonomia::Agents::Retriever).to have_received(:new).with(agent: agent, care_id: 7)
+    end
+
+    it 'no comentário sem cuidado (a prévia), o agente sem base continua sem busca' do
+      responder(formato: formato::PUBLICO)
+
+      expect(Autonomia::Agents::Retriever).not_to have_received(:new)
+    end
+  end
 end

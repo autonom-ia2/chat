@@ -2817,6 +2817,17 @@
         "CUIDANDO": "Taking care",
         "PAUSADO": "Paused"
       },
+      "MOTIVO_DA_PORTA": {
+        "sem_caixa": "On {rede}, this post or ad has no inbox.",
+        "outra_conta": "On {rede}, the {caixa} inbox belongs to another account.",
+        "sem_chave": "The account doesn't have its AI key yet.",
+        "agentes_desligados": "Agents are turned off in this account.",
+        "sem_porta": "On {rede}, no agent answers the {caixa} inbox.",
+        "lia": "On {rede}, the {caixa} inbox is answered by Lia, who makes quotes and doesn't reply to comments.",
+        "porta_parada": "On {rede}, the agent of the {caixa} inbox is stopped.",
+        "piloto": "On {rede}, the agent of the {caixa} inbox is in testing, only with test phones.",
+        "FRASES_FIXAS": "There, I use the fixed phrases you wrote."
+      },
       "CARTAO": {
         "ESPERANDO": "None waiting for you | 1 waiting for you | {n} waiting for you",
         "USA": "Uses what {nome} knows.",
@@ -2884,7 +2895,21 @@
         "MUDAR_NO_CUIDADO": "Change it in the care",
         "PORTA": "On {rede}, {nome} writes.",
         "SEM_PORTA": "With no agent to write, I use the fixed phrases you wrote.",
-        "ENSINAR": "Create an agent"
+        "ENSINAR": "Create an agent",
+        "MATERIAL": {
+          "ANEXAR": "Attach for me to read",
+          "TEXTO": "A file with what applies only to this post or ad (size chart, delivery time, rules). I read it only to reply to its comments.",
+          "TIPOS": "PDF, Word, Excel, text or JSON.",
+          "VAZIO": "No file just for this post yet.",
+          "ENVIANDO": "Sending…",
+          "ERRO_ENVIO": "I couldn't receive the file. Try another one in PDF, Word, Excel or text.",
+          "SEM_AGENTE": "With no agent on the inbox, nobody reads the file. Create an agent first.",
+          "ERRO_TIRAR": "I couldn't remove the file. Try again.",
+          "ERRO_LISTA": "I can't see this post's files right now.",
+          "DEPOIS_DE_LIGAR": "Once it's on, you attach it here or in Agents → What it knows.",
+          "ANEXAR_AGORA": "Attach now",
+          "AVISO_AGORA": "Got a file just for this post or ad (chart, delivery time, rules)? Attach it now. It takes a few minutes to read: the first comments are answered without it."
+        }
       },
       "TESTAR": {
         "TITULO": "Test",
@@ -2913,7 +2938,8 @@
           "porta_parada": "This inbox's agent is stopped.",
           "piloto": "This inbox's agent is in testing, only with test phones."
         },
-        "SEM_PUBLICAR": "This is what I would write. On this network it isn't published yet: the phrase only goes out with the private message, which isn't enabled yet. The question stays with you."
+        "SEM_PUBLICAR": "This is what I would write. On this network it isn't published yet: the phrase only goes out with the private message, which isn't enabled yet. The question stays with you.",
+        "DO_MATERIAL": "From your material: {arquivos}"
       },
       "COMENTARIOS": {
         "TITULO": "Comments",

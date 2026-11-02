@@ -42,7 +42,8 @@ module Autonomia
         # Reviewer faz rescue interno → nunca derruba a ingestão que já gravou o conhecimento.
         def revisar(source, token)
           Reviewer.new(source: source, token: token).review_source!
-          Reviewer.recompute_overall!(source.agent)
+          # #2487: o material só de um post ou anúncio não mexe na base do agente (mapa de temas, instrução, conferências).
+          Reviewer.recompute_overall!(source.agent) if source.care_id.nil?
         end
 
         def active?(source, token)

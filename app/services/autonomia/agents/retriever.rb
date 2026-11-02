@@ -4,8 +4,11 @@ class Autonomia::Agents::Retriever
   # conhecimento) → handoff seguro no fluxo gateado (Guia/copiloto), em vez de responder ungrounded.
   class RetrievalError < StandardError; end
 
-  def initialize(agent:)
+  # #2487 — `care_id`: a resposta a um comentário do cuidado (Crm::MetaAdsCommentCare) lê também o material só daquele
+  # post ou anúncio. nil (todo turno que não é de comentário): só o material do agente, como sempre.
+  def initialize(agent:, care_id: nil)
     @agent = agent
+    @care_id = care_id
   end
 
   # query:String, top_k:Integer -> Array<Autonomia::Agents::KnowledgeEntry>
@@ -84,7 +87,7 @@ class Autonomia::Agents::Retriever
   # :embedding_large (halfvec 3072), pois neighbor 0.2.3 não conhece halfvec. Ambos expõem
   # `neighbor_distance` na MESMA escala (distância de cosseno) — os patamares 0.75/0.45 valem igual.
   def candidate_rows(vector, top_k, model)
-    scope = @agent.knowledge_entries.ready.where.not(source_id: rejected_source_ids)
+    scope = escopo_da_base
     if Autonomia::Agents::Config.embedding_large?(model)
       nearest_by_halfvec(scope, vector, top_k)
     else
@@ -104,6 +107,36 @@ class Autonomia::Agents::Retriever
          .limit(top_k * 4)
   end
 
+  # O que a busca lê, igual no vetorial e no lexical: os trechos prontos, sem os das fontes reprovadas.
+  # #2487 — a trava do material só de um post ou anúncio. No turno normal, só o material do agente (fonte sem care_id).
+  # Na resposta a um comentário, também o do cuidado `@care_id`, venha de que porta vier (no anúncio, o Instagram e o
+  # Facebook podem ter agentes diferentes), e sempre da conta do agente. O agente sem base (`with_knowledge=false`) lê só
+  # o do cuidado.
+  def escopo_da_base
+    base_da_busca.ready.where.not(source_id: rejected_source_ids)
+  end
+
+  def base_da_busca
+    return trechos_do_agente if @care_id.nil?
+    return trechos_do_cuidado if @agent.knowledge_disabled?
+
+    trechos_do_agente.or(trechos_do_cuidado)
+  end
+
+  # Os trechos sem fonte e os das fontes do agente que não são de um cuidado.
+  def trechos_do_agente
+    trechos = Autonomia::Agents::KnowledgeEntry.where(autonomia_agent_id: @agent.id)
+    trechos.where(source_id: nil).or(trechos.where(source_id: @agent.sources.da_agente.select(:id)))
+  end
+
+  def trechos_do_cuidado
+    Autonomia::Agents::KnowledgeEntry.where(account_id: @agent.account_id, source_id: fontes_do_cuidado.select(:id))
+  end
+
+  def fontes_do_cuidado
+    Autonomia::Agents::Source.where(care_id: @care_id, account_id: @agent.account_id)
+  end
+
   # Revisor v2 (§2.6): exclui do retrieval o conhecimento de fontes REPROVADAS pela IA Revisora
   # (needs_resend) ou não-avaliáveis sem IA (needs_review). Fontes 'accepted' E ainda-não-revisadas
   # (review_status nil — legado/sources pré-revisor) SEGUEM incluídas → sem regressão para
@@ -118,7 +151,8 @@ class Autonomia::Agents::Retriever
   # TIPO, mesmo negócio) que NÃO isola — ver scope_mismatched_source_ids. Salvaguarda anti-regressão
   # idêntica à do topic_map: só exclui mismatched quando RESTA conhecimento em escopo — nunca esvazia tudo.
   def rejected_source_ids
-    @agent.sources.where(review_status: %w[needs_resend needs_review]).pluck(:id) +
+    fontes = @care_id ? @agent.sources.or(fontes_do_cuidado) : @agent.sources
+    fontes.where(review_status: %w[needs_resend needs_review]).pluck(:id) +
       scope_mismatched_source_ids
   end
 
@@ -157,11 +191,10 @@ class Autonomia::Agents::Retriever
 
     seen = vector_hits.map(&:id)
     clause = terms.map { 'content ILIKE ?' }.join(' OR ')
-    lex = @agent.knowledge_entries.ready
-                .where.not(source_id: rejected_source_ids)
-                .where(clause, *terms.map { |t| "%#{t}%" })
-                .limit(top_k)
-                .reject { |e| seen.include?(e.id) }
+    lex = escopo_da_base
+          .where(clause, *terms.map { |t| "%#{t}%" })
+          .limit(top_k)
+          .reject { |e| seen.include?(e.id) }
     # Hit lexical não passou pelo nearest_neighbors → o atributo SQL `neighbor_distance` (alias do
     # SELECT) não existe nessas instâncias. Define um reader singleton com o patamar de match forte
     # p/ uniformizar com os hits vetoriais (P2.1 lê .neighbor_distance p/ ancorar confiança):

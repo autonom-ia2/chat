@@ -4,12 +4,16 @@ import { useI18n } from 'vue-i18n';
 import AutonomiaSourcesAPI from 'dashboard/api/autonomia/sources';
 import AgenteGaveta from '../AgenteGaveta.vue';
 import MaterialLinha from '../pagina/MaterialLinha.vue';
-import { agentesDasPortas } from '../../composables/useAgentesDoPost';
+import MaterialDoPost from './MaterialDoPost.vue';
+import {
+  agentesDasPortas,
+  motivosDasPortas,
+} from '../../composables/useAgentesDoPost';
 
 // #2469 (PR 3a do #2436) — "O que sabe" do cartão do post: a base do agente da porta (a mesma do atendimento; mudar
 // lá muda aqui), uma por agente quando o anúncio tem uma porta em cada rede, e o que é só deste post ou anúncio: o que
 // a IA viu na foto e o "algo a mais" do dono, gravados no cuidado (mudar é no próprio cuidado). Sem agente na porta,
-// diz que ficam as frases fixas. O material anexado só para o post entra no 3b.
+// diz que ficam as frases fixas. #2487 (3b): e os arquivos anexados só para este post ou anúncio (MaterialDoPost).
 const props = defineProps({
   detalhe: { type: Object, required: true },
   // A tela do cuidado (os passos), para "Mudar no cuidado"; null para quem só vê.
@@ -22,6 +26,7 @@ const { t } = useI18n();
 const KEY = 'AGENTS.AGENTE_DO_POST.SABE';
 
 const agentes = computed(() => agentesDasPortas(props.detalhe.portas));
+const motivos = computed(() => motivosDasPortas(props.detalhe.portas, t));
 // { agentId: [fontes] }, do mais novo para o mais antigo. Sem leitura, a lista fica vazia (o link continua).
 const fontes = ref({});
 onMounted(() => {
@@ -88,12 +93,24 @@ onMounted(() => {
         </p>
       </section>
       <div
-        v-if="!agentes.length"
+        v-if="!agentes.length || motivos.length"
         data-sem-porta
         class="flex flex-col gap-3 p-4 rounded-2xl bg-n-alpha-1"
       >
+        <p
+          v-for="motivo in motivos"
+          :key="motivo"
+          data-motivo-da-porta
+          class="m-0 text-sm leading-6 text-n-slate-12"
+        >
+          {{ motivo }}
+        </p>
         <p class="m-0 text-sm leading-6 text-n-slate-12">
-          {{ t(`${KEY}.SEM_PORTA`) }}
+          {{
+            motivos.length
+              ? t('AGENTS.AGENTE_DO_POST.MOTIVO_DA_PORTA.FRASES_FIXAS')
+              : t(`${KEY}.SEM_PORTA`)
+          }}
         </p>
         <router-link
           :to="{ name: 'autonomia_agents_builder' }"
@@ -132,6 +149,10 @@ onMounted(() => {
             {{ detalhe.nota }}
           </p>
         </div>
+        <MaterialDoPost
+          :care-id="detalhe.id"
+          :pode-mudar="!!detalhe.can_manage"
+        />
         <router-link
           v-if="rotaDoCuidado"
           data-mudar-no-cuidado

@@ -18,8 +18,9 @@ class Crm::MetaAds::ComentariosIa::Escrita
   FORMATO = Autonomia::Agents::Answerer::FormatoDoComentario
 
   # status: :escrito (texto), :fica_com_o_dono (motivo: o agente não sabe, ou a resposta fora do formato) ou
-  # :frases_fixas (motivo do recuo).
-  Resultado = Struct.new(:status, :texto, :motivo, keyword_init: true) do
+  # :frases_fixas (motivo do recuo). material (#2487): no escrito, o nome dos arquivos só deste post ou anúncio de que a
+  # resposta saiu ("Do seu material: …" no Testar).
+  Resultado = Struct.new(:status, :texto, :motivo, :material, keyword_init: true) do
     def escrito? = status == :escrito
     def fica_com_o_dono? = status == :fica_com_o_dono
   end
@@ -106,7 +107,7 @@ class Crm::MetaAds::ComentariosIa::Escrita
     resultado = Autonomia::Agents::Answerer.new(
       agent: agente, query: FORMATO.linha(dado(comentario, pai), codigo), retrieval_query: comentario.to_s,
       allow_web_search: false, trust_instruction: false, audience: :customer, delivery: nil, feature: FEATURE,
-      contexto_do_turno: [FORMATO.regra_do_dado(codigo), do_dono].compact.join("\n\n"), formato: formato
+      contexto_do_turno: [FORMATO.regra_do_dado(codigo), do_dono].compact.join("\n\n"), formato: formato, care_id: @care.id
     ).answer
     raise Crm::MetaAds::ComentariosIa::Classificador::Indisponivel, 'writing_unavailable' if resultado.error.present?
 
@@ -119,7 +120,17 @@ class Crm::MetaAds::ComentariosIa::Escrita
     texto = FORMATO.publicavel(resultado.reply, formato, codigo)
     return com_o_dono('reply_out_of_format', formato) if texto.nil?
 
-    Resultado.new(status: :escrito, texto: texto)
+    Resultado.new(status: :escrito, texto: texto, material: material_do_cuidado(resultado.used_knowledge))
+  end
+
+  # Dos trechos que a resposta usou, o nome dos arquivos que são só deste cuidado.
+  def material_do_cuidado(usados)
+    ids = Array(usados).filter_map { |usado| usado[:id] }
+    return [] if ids.empty? || @care.id.nil?
+
+    Autonomia::Agents::Source.where(care_id: @care.id, account_id: @care.account_id,
+                                    id: Autonomia::Agents::KnowledgeEntry.where(id: ids).select(:source_id))
+                             .order(:id).pluck(:reference).compact_blank.uniq
   end
 
   # Nunca mudo: o log diz por que ficou com o dono, só com ids (o motivo escrito pelo modelo não vai ao log).

@@ -12,7 +12,10 @@ import ApiClient from './ApiClient';
 // - estado: 'on' | 'paused' → o mesmo do get.
 // - testar: { pergunta, formato: 'publico' | 'privado', network } →
 //   { status: 'escrito', texto } | { status: 'fica_com_o_dono', motivo } |
-//   { status: 'frases_fixas', motivo } | { status: 'no_private' }.
+//   { status: 'frases_fixas', motivo } | { status: 'no_private' }; no escrito, `material`: os
+//   arquivos só deste post de que a resposta saiu (#2487).
+// - materiais / anexar / tirar (#2487): o material só deste post ou anúncio,
+//   { materiais: [{ id, reference, source_type, status, agente, review }] }.
 class AgentesDoPostAPI extends ApiClient {
   constructor() {
     super('agentes_do_post', { accountScoped: true });
@@ -36,6 +39,20 @@ class AgentesDoPostAPI extends ApiClient {
       formato,
       network,
     });
+  }
+
+  materiais(id) {
+    return axios.get(`${this.url}/${id}/materiais`);
+  }
+
+  anexar(id, arquivo) {
+    const corpo = new FormData();
+    corpo.append('file', arquivo);
+    return axios.post(`${this.url}/${id}/materiais`, corpo);
+  }
+
+  tirar(id, materialId) {
+    return axios.delete(`${this.url}/${id}/materiais/${materialId}`);
   }
 }
 

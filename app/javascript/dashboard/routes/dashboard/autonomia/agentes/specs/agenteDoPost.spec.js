@@ -2,7 +2,10 @@ import { flushPromises, mount } from '@vue/test-utils';
 import AgentePostCartao from '../components/AgentePostCartao.vue';
 import AgenteDoPostPage from '../pages/AgenteDoPostPage.vue';
 import CriarTipoDeAgente from '../components/criar/CriarTipoDeAgente.vue';
-import { tituloDaLegenda } from '../composables/useAgentesDoPost';
+import {
+  motivosDasPortas,
+  tituloDaLegenda,
+} from '../composables/useAgentesDoPost';
 
 // #2469 (PR 3a do #2436): o cartão de um post ou anúncio em Agentes, a página dele e as gavetas, nos 4 casos (post e
 // anúncio, Instagram e Facebook). O servidor manda os grupos e as portas prontos; a tela só mostra.
@@ -11,6 +14,9 @@ const api = vi.hoisted(() => ({
   get: vi.fn(),
   estado: vi.fn(),
   testar: vi.fn(),
+  materiais: vi.fn(),
+  anexar: vi.fn(),
+  tirar: vi.fn(),
 }));
 vi.mock('dashboard/api/agentesDoPost', () => ({ default: api }));
 const fontes = vi.hoisted(() => ({ get: vi.fn() }));
@@ -98,6 +104,7 @@ describe('#2469 · os comentários do post em Agentes', () => {
     rota.query = {};
     Object.values(api).forEach(fn => fn.mockReset());
     fontes.get.mockResolvedValue({ data: { payload: [] } });
+    api.materiais.mockResolvedValue({ data: { materiais: [] } });
   });
 
   afterEach(() => {
@@ -200,15 +207,32 @@ describe('#2469 · os comentários do post em Agentes', () => {
       );
     });
 
-    it('sem agente na porta: diz que ficam as frases fixas', async () => {
+    it('sem agente na porta: diz o motivo de verdade e que ficam as frases fixas', async () => {
       const wrapper = await cartao(
         { id: 7, kind: 'post', network: 'instagram', status: 'on' },
         detalhe({ portas: [porta('instagram', null)] })
       );
 
       expect(wrapper.get('[data-usa]').text()).toBe(
-        'AGENTS.AGENTE_DO_POST.CARTAO.SEM_PORTA'
+        'AGENTS.AGENTE_DO_POST.MOTIVO_DA_PORTA.sem_porta AGENTS.AGENTE_DO_POST.MOTIVO_DA_PORTA.FRASES_FIXAS'
       );
+    });
+
+    it('#2487 · o motivo leva a rede e o nome da caixa', () => {
+      const t = (chave, params) =>
+        params ? `${chave}|${params.rede}|${params.caixa}` : chave;
+
+      expect(
+        motivosDasPortas(
+          [
+            porta('instagram', ANA),
+            porta('facebook', null, { caixa: 'Loja (Facebook)' }),
+          ],
+          t
+        )
+      ).toEqual([
+        'AGENTS.AGENTE_DO_POST.MOTIVO_DA_PORTA.sem_porta|AGENTS.AGENTE_DO_POST.REDE.FACEBOOK|Loja (Facebook)',
+      ]);
     });
 
     it('a leitura falhou: o cartão continua, com o aviso no título', async () => {
@@ -490,11 +514,112 @@ describe('#2469 · os comentários do post em Agentes', () => {
       );
     });
 
+    describe('#2487 · o material só do post', () => {
+      const TABELA = {
+        id: 31,
+        reference: 'Tabela.txt',
+        source_type: 'txt',
+        status: 'ready',
+        agente: 'Ana',
+        review: { status: 'accepted', reviewed_at: '2026-11-02T10:00:00Z' },
+      };
+      const arquivo = new File(['P, M e G'], 'Tabela.txt', {
+        type: 'text/plain',
+      });
+      const escolher = async () => {
+        const seletor = noBody('[data-anexar-arquivo]');
+        Object.defineProperty(seletor, 'files', { value: [arquivo] });
+        seletor.dispatchEvent(new Event('change'));
+        await flushPromises();
+      };
+
+      it('lista o que é só deste post e anexa um arquivo para ler', async () => {
+        rota.query = { gaveta: 'sabe' };
+        api.materiais
+          .mockResolvedValueOnce({ data: { materiais: [] } })
+          .mockResolvedValue({ data: { materiais: [TABELA] } });
+        api.anexar.mockResolvedValue({ data: TABELA });
+        await pagina(detalhe());
+
+        expect(api.materiais).toHaveBeenCalledWith(7);
+        expect(noBody('[data-materiais-do-post]')).toBeNull();
+        await escolher();
+
+        expect(api.anexar).toHaveBeenCalledWith(7, arquivo);
+        expect(noBody('[data-materiais-do-post]').textContent).toContain(
+          'Tabela.txt'
+        );
+        expect(noBody('[data-material-erro]')).toBeNull();
+      });
+
+      it('sem agente na caixa, diz que ninguém lê o arquivo', async () => {
+        rota.query = { gaveta: 'sabe' };
+        api.anexar.mockRejectedValue({
+          response: { data: { error: 'no_agent' } },
+        });
+        await pagina(detalhe());
+
+        await escolher();
+
+        expect(noBody('[data-material-erro]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.SABE.MATERIAL.SEM_AGENTE'
+        );
+      });
+
+      it('quem só vê tem a lista, sem anexar', async () => {
+        rota.query = { gaveta: 'sabe' };
+        api.materiais.mockResolvedValue({ data: { materiais: [TABELA] } });
+        await pagina(detalhe({ can_manage: false }));
+
+        expect(noBody('[data-materiais-do-post]').textContent).toContain(
+          'Tabela.txt'
+        );
+        expect(noBody('[data-anexar]')).toBeNull();
+      });
+
+      it('agente parado na porta: a página diz o motivo de verdade', async () => {
+        await pagina(
+          detalhe({
+            portas: [porta('instagram', ANA, { motivo: 'porta_parada' })],
+          })
+        );
+
+        expect(noBody('[data-motivos-das-portas]').textContent).toContain(
+          'MOTIVO_DA_PORTA.porta_parada'
+        );
+      });
+
+      it('a resposta do Testar diz de que arquivo dele saiu', async () => {
+        rota.query = { gaveta: 'testar' };
+        await pagina(detalhe());
+        api.testar.mockResolvedValue({
+          data: {
+            status: 'escrito',
+            texto: 'Temos P, M e G!',
+            material: ['Tabela.txt'],
+          },
+        });
+
+        const campo = noBody('[data-testar-pergunta]');
+        campo.value = 'Tem G?';
+        campo.dispatchEvent(new Event('input'));
+        await flushPromises();
+        await clicar('[data-testar-perguntar]');
+
+        expect(noBody('[data-resposta-material]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.DO_MATERIAL'
+        );
+      });
+    });
+
     it('O que sabe sem agente na porta: as frases fixas e o caminho para criar um', async () => {
       rota.query = { gaveta: 'sabe' };
       await pagina(detalhe({ portas: [porta('instagram', null)] }));
 
       expect(noBody('[data-sem-porta]')).not.toBeNull();
+      expect(noBody('[data-motivo-da-porta]').textContent).toContain(
+        'MOTIVO_DA_PORTA.sem_porta'
+      );
       expect(fontes.get).not.toHaveBeenCalled();
     });
 

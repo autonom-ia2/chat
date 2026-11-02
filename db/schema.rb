@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_690000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_700000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -488,10 +488,12 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_690000) do
     t.text "review_reason"
     t.datetime "reviewed_at"
     t.integer "kind", default: 0, null: false
+    t.bigint "care_id"
     t.index ["account_id"], name: "index_autonomia_agent_sources_on_account_id"
     t.index ["autonomia_agent_id", "kind"], name: "index_autonomia_agent_sources_on_autonomia_agent_id_and_kind"
     t.index ["autonomia_agent_id", "status"], name: "index_autonomia_agent_sources_on_autonomia_agent_id_and_status"
     t.index ["autonomia_agent_id"], name: "index_autonomia_agent_sources_on_autonomia_agent_id"
+    t.index ["care_id"], name: "index_autonomia_agent_sources_on_care_id", where: "(care_id IS NOT NULL)"
   end
 
   create_table "autonomia_agent_specialists", force: :cascade do |t|
@@ -4683,6 +4685,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_690000) do
   add_foreign_key "autonomia_agent_knowledge", "autonomia_agents"
   add_foreign_key "autonomia_agent_sources", "accounts"
   add_foreign_key "autonomia_agent_sources", "autonomia_agents"
+  add_foreign_key "autonomia_agent_sources", "crm_meta_ads_comment_cares", column: "care_id", on_delete: :cascade, validate: false
   add_foreign_key "autonomia_agent_specialists", "accounts"
   add_foreign_key "autonomia_agent_specialists", "autonomia_agents", column: "delegate_agent_id", on_delete: :cascade
   add_foreign_key "autonomia_agent_tool_runs", "accounts"

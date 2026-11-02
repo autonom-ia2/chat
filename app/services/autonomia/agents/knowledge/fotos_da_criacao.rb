@@ -59,7 +59,7 @@ class Autonomia::Agents::Knowledge::FotosDaCriacao
 
   # A foto fica só na conversa. Registra quantos materiais o agente tem, sem conteúdo; o aviso ao dono vem no PR 2.
   def base_cheia?
-    total = @agent.sources.knowledge_sources.count
+    total = @agent.sources.da_agente.knowledge_sources.count
     return false if total < Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES
 
     Rails.logger.info("[autonomia][fotos_da_criacao] base_cheia agent=#{@agent.id} materiais=#{total}")
@@ -79,6 +79,6 @@ class Autonomia::Agents::Knowledge::FotosDaCriacao
 
   def ja_na_base?(blob)
     ActiveStorage::Attachment.exists?(record_type: Autonomia::Agents::Source.name, name: 'file', blob_id: blob.id,
-                                      record_id: @agent.sources.select(:id))
+                                      record_id: @agent.sources.da_agente.select(:id))
   end
 end

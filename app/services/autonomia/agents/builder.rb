@@ -1190,7 +1190,7 @@ module Autonomia
         agent = @thread.agent
         # #1426: na Fase 2, o que não conta como base (MateriaisDaFase2) não tira a pergunta "criar sem base?"; o aviso
         # "NÃO há material" usa a mesma conta.
-        agent.blank? || agent.sources.knowledge_sources.none? { |source| conta_como_base?(source) }
+        agent.blank? || agent.sources.da_agente.knowledge_sources.none? { |source| conta_como_base?(source) }
       end
 
       # E1 — anexa a pergunta do Construtor como mensagem `assistant` persistida, para o build_input
@@ -1387,7 +1387,7 @@ module Autonomia
         agent = @thread.agent
         return '' if agent.blank?
 
-        media = agent.sources.media_sources.where(status: Autonomia::Agents::Source.statuses[:ready]).limit(30).to_a
+        media = agent.sources.da_agente.media_sources.where(status: Autonomia::Agents::Source.statuses[:ready]).limit(30).to_a
         return '' if media.empty?
 
         lines = media.map { |s| "- #{source_reference(s)} (#{s.source_type})" }
@@ -1407,7 +1407,7 @@ module Autonomia
         agent = @thread.agent
         return '' if agent.blank? && !no_materials_declared?
 
-        knowledge = agent ? agent.sources.knowledge_sources.order(created_at: :desc).limit(10).to_a : []
+        knowledge = agent ? agent.sources.da_agente.knowledge_sources.order(created_at: :desc).limit(10).to_a : []
         accepted = knowledge.count { |s| s.review_status == 'accepted' }
         # #1426: a foto da criação reprovada ou ilegível já chegou na conversa; não fica "aguardando" nem segura o fechamento.
         pending = knowledge.count { |s| s.review_status != 'accepted' && !foto_da_criacao_fora?(s) }
@@ -1506,7 +1506,7 @@ module Autonomia
         # garantia/clareza.
         # #1426: a foto da CRIAÇÃO já chegou ao Construtor na conversa; a cópia dela na base não segura o fechamento. A
         # foto mandada pela gaveta segura, como qualquer material.
-        agent.sources.knowledge_sources.where(review_status: 'needs_resend').any? { |s| !foto_da_criacao_fora?(s) }
+        agent.sources.da_agente.knowledge_sources.where(review_status: 'needs_resend').any? { |s| !foto_da_criacao_fora?(s) }
       end
 
       # O rótulo de uso varia pela fase da CHAMADA; a chave de cache NÃO (#1367): uma só por conta, a mesma nas

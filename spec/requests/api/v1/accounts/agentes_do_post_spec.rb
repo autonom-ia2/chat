@@ -167,8 +167,8 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(response.parsed_body).to include(
         'kind' => 'post', 'legenda' => 'Seguro viagem para a Europa', 'capa' => 'https://cdn.exemplo/capa.jpg',
         'foto' => 'Uma mala e um avião', 'nota' => 'Atendo de segunda a sexta', 'can_manage' => true,
-        'portas' => [{ 'network' => 'instagram', 'inbox_id' => instagram.inbox.id, 'private' => true, 'motivo' => nil,
-                       'agente' => { 'id' => agente.id, 'name' => 'Ana' } }]
+        'portas' => [{ 'network' => 'instagram', 'inbox_id' => instagram.inbox.id, 'caixa' => instagram.inbox.name, 'private' => true,
+                       'motivo' => nil, 'agente' => { 'id' => agente.id, 'name' => 'Ana' } }]
       )
     end
 
@@ -219,7 +219,8 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
     it 'sem agente na porta: a porta vem sem agente e com o motivo' do
       get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
 
-      sem_agente = { 'network' => 'instagram', 'inbox_id' => instagram.inbox.id, 'private' => true, 'motivo' => 'sem_porta', 'agente' => nil }
+      sem_agente = { 'network' => 'instagram', 'inbox_id' => instagram.inbox.id, 'caixa' => instagram.inbox.name, 'private' => true,
+                     'motivo' => 'sem_porta', 'agente' => nil }
       expect(response.parsed_body['portas']).to eq([sem_agente])
     end
 
@@ -231,7 +232,7 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
 
       get "#{base}/#{care_fb.id}", headers: admin.create_new_auth_token, as: :json
 
-      da_pagina = { 'network' => 'facebook', 'inbox_id' => pagina.inbox.id, 'private' => false, 'motivo' => nil,
+      da_pagina = { 'network' => 'facebook', 'inbox_id' => pagina.inbox.id, 'caixa' => pagina.inbox.name, 'private' => false, 'motivo' => nil,
                     'agente' => { 'id' => agente.id, 'name' => 'Bia' } }
       expect(response.parsed_body['portas']).to eq([da_pagina])
     end
@@ -360,12 +361,11 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
 
       get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
 
-      expect(response.parsed_body['portas']).to eq([
-                                                     { 'network' => 'instagram', 'inbox_id' => instagram.inbox.id, 'private' => true,
-                                                       'motivo' => nil, 'agente' => { 'id' => ana.id, 'name' => 'Ana' } },
-                                                     { 'network' => 'facebook', 'inbox_id' => pagina.inbox.id, 'private' => false,
-                                                       'motivo' => nil, 'agente' => { 'id' => bia.id, 'name' => 'Bia' } }
-                                                   ])
+      ana_ig = { 'network' => 'instagram', 'inbox_id' => instagram.inbox.id, 'caixa' => instagram.inbox.name, 'private' => true,
+                 'motivo' => nil, 'agente' => { 'id' => ana.id, 'name' => 'Ana' } }
+      bia_fb = { 'network' => 'facebook', 'inbox_id' => pagina.inbox.id, 'caixa' => pagina.inbox.name, 'private' => false,
+                 'motivo' => nil, 'agente' => { 'id' => bia.id, 'name' => 'Bia' } }
+      expect(response.parsed_body['portas']).to eq([ana_ig, bia_fb])
     end
 
     it 'anúncio só no Instagram: uma porta só' do

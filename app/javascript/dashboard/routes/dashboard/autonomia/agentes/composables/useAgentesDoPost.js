@@ -55,6 +55,18 @@ export const agentesDasPortas = (portas = []) => {
     });
 };
 
+// #2487 — o motivo de verdade de cada porta que não escreve (o mesmo do recuo da Escrita), com a rede e o nome da
+// caixa: "No Instagram, a caixa X não tem agente atendendo.". Vazio quando todas escrevem.
+export const motivosDasPortas = (portas, t) =>
+  (portas || [])
+    .filter(porta => porta.motivo)
+    .map(porta =>
+      t(`AGENTS.AGENTE_DO_POST.MOTIVO_DA_PORTA.${porta.motivo}`, {
+        rede: t(`AGENTS.AGENTE_DO_POST.REDE.${porta.network.toUpperCase()}`),
+        caixa: porta.caixa || '',
+      })
+    );
+
 const useFlags = (...flags) => {
   const ligada = useMapGetter('accounts/isFeatureEnabledonAccount');
   const conta = useMapGetter('getCurrentAccountId');
