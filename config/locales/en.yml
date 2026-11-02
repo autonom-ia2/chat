@@ -553,7 +553,7 @@ en:
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
       nota:
-        laco: "Automation %{nome} stopped in this conversation: the other side replied in under %{segundos} seconds in %{trocas} exchanges in a row, like a bot. Check it before letting it continue here."
+        laco: "Automation %{nome} stopped in this conversation: the other side replied in under %{segundos} seconds to %{trocas} automation messages, with no pause and no one from the team in between, like a bot. Check it before letting it continue here."
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'

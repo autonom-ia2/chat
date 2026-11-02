@@ -142,14 +142,57 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
                        content_attributes: nossa ? { automacao_id: definicao.id } : {}, created_at: quando)
     end
 
-    it 'robô que responde com 2 balões a cada envio, em 12 s, é pego na 20ª troca' do
-      trocas(20, resposta_em: 12.seconds, intervalo: 3.seconds, por_troca: [1, 2])
+    # Execuções de verdade, uma por mensagem recebida, contra um robô que responde a cada envio nosso com `baloes`
+    # balões, `latencia` depois. Devolve a execução que parou, ou nil se a conversa passou de `ate` mensagens antes.
+    def contra_robo(baloes:, latencia:, ate:)
+      chegadas = [Time.current]
+      until chegadas.empty? || conversa.messages.count >= ate
+        quando = chegadas.shift
+        antes = publicas_da_automacao.size
+        execucao = travel_to(quando) do
+          recebida('deles', quando: quando)
+          comecar_e_rodar(definicao)
+        end
+        return execucao if execucao.reload.estado == 'parada'
 
-      expect(registros(comecar_e_rodar(definicao))).to eq([%w[p1 falhou laco_suspeito]])
+        chegadas = (chegadas + Array.new(baloes) { |n| quando + latencia + n.seconds }).sort if publicas_da_automacao.size > antes
+      end
+    end
+
+    it 'robô de 2 balões, uma execução por balão (o volume dobra a cada volta): para antes de 100 mensagens', :aggregate_failures do
+      parada = contra_robo(baloes: 2, latencia: 2.seconds, ate: 100)
+
+      expect(parada).to be_present
+      expect(registros(parada)).to eq([%w[p1 falhou laco_suspeito]])
+      expect(conversa.messages.where(private: false).count).to be < 100
+    end
+
+    it 'pessoa rápida com receita de 2 passos, 10 voltas: todas respondidas' do
+      dois = automacao_ligada(account, admin, [mensagem_passo('p1', 'Recebido.'), mensagem_passo('p2', 'Já te respondo.')])
+      10.times do |volta|
+        travel_to(5.minutes.ago + (volta * 10).seconds) do
+          recebida("pergunta #{volta}")
+          comecar_e_rodar(dois)
+        end
+      end
+
+      expect(publicas_da_automacao.size).to eq(20)
+    end
+
+    it 'cliente que manda 50 mensagens ao longo do dia, com pausas de mais de 30 min: todas respondidas' do
+      50.times do |vez|
+        travel_to(26.hours.ago + (vez * 31).minutes) do
+          recebida("mensagem #{vez}")
+          comecar_e_rodar(definicao)
+        end
+      end
+
+      expect(publicas_da_automacao.size).to eq(50)
     end
 
     it 'receita com 2 passos mensagem seguidos contra robô também é pega', :aggregate_failures do
       dois = automacao_ligada(account, admin, [mensagem_passo('p1', 'Recebido.'), mensagem_passo('p2', 'Já te respondo.')])
+      # 19 voltas de 2 envios respondidos = 38; a próxima volta manda os 2 e a resposta seguinte faz 40.
       trocas(19, resposta_em: 5.seconds, intervalo: 3.seconds, por_troca: [2, 1])
       primeira = comecar_e_rodar(dois)
       create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'deles', created_at: Time.current)
@@ -158,20 +201,31 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(registros(comecar_e_rodar(dois))).to eq([%w[p1 falhou laco_suspeito]])
     end
 
-    it 'robô com latência de 8 a 15 s é pego na 20ª troca: para só nesta conversa, com nota que menciona quem ligou', :aggregate_failures do
-      trocas(20, resposta_em: 12.seconds, intervalo: 3.seconds)
+    it 'robô com latência de 8 a 15 s é pego no 40º envio respondido: para só aqui, com nota que menciona quem ligou', :aggregate_failures do
+      trocas(40, resposta_em: 12.seconds, intervalo: 3.seconds)
 
       execucao = comecar_e_rodar(definicao)
 
-      expect(publicas.count).to eq(20)
+      expect(publicas.count).to eq(40)
       expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[p1 falhou laco_suspeito]]])
       expect(definicao.reload.ativa).to be(true)
       nota = conversa.messages.where(private: true).last
       expect(nota.content).to include(definicao.nome, "mention://user/#{admin.id}/")
     end
 
-    it 'com 19 trocas rápidas ainda manda' do
-      trocas(19, resposta_em: 8.seconds, intervalo: 3.seconds)
+    it 'com 39 envios respondidos rápido ainda manda' do
+      trocas(39, resposta_em: 8.seconds, intervalo: 3.seconds)
+
+      expect { comecar_e_rodar(definicao) }.to change(publicas, :count).by(1)
+    end
+
+    # Envios seguidos: gente demora de vez em quando, robô não. A conversa humana longa, sem pausa de 30 min, não junta
+    # respostas rápidas espalhadas.
+    it '39 respostas rápidas, 1 lenta e mais 39 rápidas não disparam: a lenta zera a conta' do
+      trocas(39, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 10.minutes.ago)
+      mandada(:outgoing, 9.minutes.ago)
+      mandada(:incoming, 9.minutes.ago + 25.seconds)
+      trocas(39, resposta_em: 2.seconds, intervalo: 3.seconds)
 
       expect { comecar_e_rodar(definicao) }.to change(publicas, :count).by(1)
     end
@@ -189,12 +243,12 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     end
 
     it 'mensagem de IA, de robô ou de outra automação no meio não conta nem zera', :aggregate_failures do
-      trocas(10, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 2.minutes.ago)
+      trocas(20, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 3.minutes.ago)
       create(:message, conversation: conversa, account: account, message_type: :outgoing, sender: create(:agent_bot, account: account),
                        content: 'sou a IA', created_at: 110.seconds.ago)
       create(:message, conversation: conversa, account: account, message_type: :outgoing, sender: nil, content: 'regra antiga',
                        content_attributes: { automation_rule_id: 9 }, created_at: 100.seconds.ago)
-      trocas(10, resposta_em: 2.seconds, intervalo: 3.seconds)
+      trocas(20, resposta_em: 2.seconds, intervalo: 3.seconds)
 
       execucao = comecar_e_rodar(definicao)
 
@@ -202,7 +256,7 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     end
 
     it 'volta quando uma pessoa da equipe escreve', :aggregate_failures do
-      trocas(20, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 1.minute.ago)
+      trocas(40, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 1.minute.ago)
       expect(registros(comecar_e_rodar(definicao))).to eq([%w[p1 falhou laco_suspeito]])
 
       create(:message, conversation: conversa, account: account, message_type: :outgoing, sender: admin, content: 'sou a Ana')
@@ -211,7 +265,7 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     end
 
     it 'volta quando a conversa fica 30 minutos sem mensagem' do
-      trocas(20, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 31.minutes.ago)
+      trocas(40, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 31.minutes.ago)
 
       expect { comecar_e_rodar(definicao) }.to change(publicas_da_automacao_count, :call).by(1)
     end

@@ -82,22 +82,29 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
 1. **Cadeia comum (F1, D6):** a mensagem sai dentro da cadeia da execução.
    - A escuta não dispara a própria automação e para na profundidade 3, contando os três motores.
    - A regra antiga que responde a toda mensagem de saída (o padrão das contas 6, 16 e 17) responde uma vez e para.
-2. **Robô do outro lado:** são **20 trocas seguidas** em que o contato responde em **menos de 20 s**.
-   - **Troca:** um envio do passo "mensagem" do motor novo seguido da mensagem recebida do contato. Mensagens seguidas
-     do mesmo lado formam um bloco: o robô que responde com 2 balões, ou a receita com 2 passos "mensagem" seguidos,
-     fazem uma troca. A resposta conta da primeira mensagem do bloco dela até a última do nosso envio.
+2. **Robô do outro lado:** são **40 envios respondidos seguidos** desde o último corte.
+   - **Envio respondido:** uma mensagem do passo "mensagem" do motor novo que recebe resposta do contato em **menos
+     de 20 s**. Cada envio conta, e não cada troca. Por isso a amplificação é pega: o robô que responde com 2 balões
+     dispara uma execução por balão, o volume dobra a cada volta, e a conta chega a 40 em poucas voltas.
+   - **Leitura:** as mensagens desde o último corte, no máximo as 1000 mais recentes. O 1000 é só limite da
+     consulta, não teto: passar dele não dispara nada.
    - **Fica de fora:** mensagem de IA, de robô (AgentBot), das automações antigas ou de campanha. Ela não conta nem
-     zera.
-   - **Zera:** quando uma pessoa da equipe escreve, ou quando a conversa fica 30 min sem mensagem.
+     corta.
+   - **Corte:** quando uma pessoa da equipe escreve, ou quando a conversa fica 30 min sem mensagem.
+   - **Zera:** a resposta que chega em 20 s ou mais depois do nosso último envio. Robô não demora; gente demora, e a
+     conversa humana longa, sem pausa de 30 min, não junta respostas rápidas espalhadas.
    - **Ao disparar:** a execução para com `laco_suspeito`, só nessa conversa, e a automação continua ligada. Fica uma
      nota para a equipe, que menciona quem ligou.
 
 Os números ficam em constantes (`AntiLaco`). As specs provam cada caso:
-- robô com latência de 12 s é pego na 20ª troca;
-- com 19 trocas, ainda manda;
-- cliente humano com 20 mensagens no próprio ritmo é respondido;
-- mensagem de IA ou de regra antiga no meio não zera;
-- a contagem zera com pessoa da equipe e com 30 min parada.
+- robô de 2 balões, com execuções de verdade (uma por balão), para antes de 100 mensagens;
+- robô com latência de 12 s é pego no 40º envio respondido; com 39, ainda manda;
+- 39 respostas rápidas, 1 lenta e mais 39 rápidas não disparam;
+- receita de 2 passos contra robô é pega;
+- passam: pessoa rápida com receita de 2 passos em 10 voltas, cliente humano com 20 mensagens no próprio ritmo, menu
+  errado 5 vezes e cliente com 50 mensagens ao longo do dia, com pausas de mais de 30 min;
+- mensagem de IA ou de regra antiga no meio não conta nem corta;
+- a conta recomeça com pessoa da equipe e com 30 min parada.
 
 ## Envio pelos canais (sem remetente)
 

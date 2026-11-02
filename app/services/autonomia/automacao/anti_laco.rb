@@ -4,22 +4,23 @@
 # Duas camadas:
 # 1. A cadeia comum (F1, D6) não é daqui: a mensagem sai dentro da cadeia da execução, e a escuta não dispara a
 #    própria automação nem passa da profundidade 3.
-# 2. Robô do outro lado, que a cadeia não vê (decisão da sessão Automação, 02/11). Uma troca é um envio do passo
-#    "mensagem" do motor novo seguido da resposta do contato. O sinal é TROCAS_DO_ROBO trocas seguidas com a resposta
-#    chegando em menos de RESPOSTA_DE_ROBO. Mensagem de IA, de robô (AgentBot), das automações antigas ou de campanha
-#    fica de fora: não conta nem zera. Zera quando uma pessoa da equipe escreve ou quando a conversa fica CONVERSA_PARADA
-#    sem mensagem. Gente não responde 20 vezes seguidas em menos de 20 segundos; o cliente que manda muitas mensagens
-#    no próprio ritmo, ou erra o menu várias vezes, passa.
+# 2. Robô do outro lado, que a cadeia não vê (decisões da sessão Automação, 02/11). Conta os envios respondidos: cada
+#    mensagem do passo "mensagem" do motor novo que recebe resposta do contato em menos de RESPOSTA_DE_ROBO soma 1. Com
+#    TROCAS_DO_ROBO envios respondidos seguidos desde o último corte, a execução para nesta conversa. O corte é uma
+#    pessoa da equipe escrevendo ou a conversa CONVERSA_PARADA sem mensagem; resposta lenta zera a conta. Mensagem de
+#    IA, de robô (AgentBot), das automações antigas ou de campanha fica de fora: não conta nem corta.
+#    Contar envios, e não trocas, pega a amplificação: o robô que responde com 2 balões dispara uma execução por balão,
+#    o volume dobra a cada volta e a contagem chega a 40 em poucas voltas. Gente não responde 40 vezes em menos de 20
+#    segundos sem pausa de meia hora; o cliente que manda muitas mensagens no próprio ritmo, ou erra o menu, passa.
 #
 # Não há camada de "texto repetido": responder o mesmo texto a cada mensagem do cliente é uso (o menu "responda 1 ou
 # 2"). A duplicidade de verdade é o mesmo evento chegando duas vezes, e quem a trata é a escuta, pelo evento.
 class Autonomia::Automacao::AntiLaco
-  TROCAS_DO_ROBO = 20
+  TROCAS_DO_ROBO = 40
   RESPOSTA_DE_ROBO = 20.seconds
   CONVERSA_PARADA = 30.minutes
-  # Quantas mensagens o cálculo lê: as trocas, com mais de um balão de cada lado, e folga para o que fica de fora (IA,
-  # campanha) no meio.
-  LEITURA = TROCAS_DO_ROBO * 8
+  # Limite técnico da consulta, não teto de uso: passar dele não dispara nada. O laço bate as 40 muito antes.
+  LEITURA = 1000
 
   def initialize(definicao, conversa)
     @definicao = definicao
@@ -27,7 +28,7 @@ class Autonomia::Automacao::AntiLaco
   end
 
   def robo_do_outro_lado?
-    trocas_seguidas >= TROCAS_DO_ROBO
+    envios_respondidos >= TROCAS_DO_ROBO
   end
 
   # A execução parou por robô do outro lado: fica uma nota na conversa para a equipe, que menciona quem ligou (se ela
@@ -43,50 +44,46 @@ class Autonomia::Automacao::AntiLaco
 
   private
 
-  # Da mais nova para a mais velha, em blocos: a resposta do contato e o nosso envio logo antes dela. A contagem para
-  # no primeiro par que não é "resposta depressa a um envio nosso": pessoa da equipe, resposta lenta ou conversa parada
-  # entre uma troca e outra.
-  def trocas_seguidas
-    mensagens = contadas
-    return 0 if mensagens.empty? || mensagens.first.created_at < CONVERSA_PARADA.ago
+  # Na ordem do tempo, desde o último corte: cada resposta do contato dá baixa nos nossos envios que esperavam e soma os
+  # que ela pegou em menos de RESPOSTA_DE_ROBO. Envios seguidos: a resposta que chega em RESPOSTA_DE_ROBO ou mais
+  # depois do nosso último envio zera a conta, como a pessoa da equipe. Robô não demora; gente demora, e a conversa
+  # humana longa, sem pausa de meia hora, não junta respostas rápidas espalhadas. Envio ainda sem resposta não conta.
+  def envios_respondidos
+    esperando = []
+    desde_o_ultimo_corte.reduce(0) do |conta, mensagem|
+      if nosso?(mensagem)
+        esperando << mensagem
+        next conta
+      end
 
-    trocas = 0
-    envio_seguinte = nil
-    blocos(mensagens).each_slice(2) do |resposta, envio|
-      break unless troca?(resposta, envio)
-      break if envio_seguinte && envio_seguinte.last.created_at - resposta.first.created_at > CONVERSA_PARADA
-
-      trocas += 1
-      envio_seguinte = envio
+      pegos = esperando
+      esperando = []
+      somar(conta, pegos, mensagem)
     end
-    trocas
   end
 
-  # Mensagens seguidas do mesmo lado viram um bloco, do mais novo ao mais velho. O robô que responde com dois balões e a
-  # receita com dois passos "mensagem" seguidos fazem uma troca, e a contagem não desalinha.
-  # O nosso envio mais novo, quando vem antes de qualquer resposta, é o passo anterior desta mesma execução: ainda
-  # não teve resposta e não conta.
-  def blocos(mensagens)
-    lista = mensagens.slice_when { |mais_nova, mais_velha| lado(mais_nova) != lado(mais_velha) }.to_a
-    lado(lista.first.first) == :envio ? lista.drop(1) : lista
+  def somar(conta, pegos, resposta)
+    return conta if pegos.empty?
+    return 0 if resposta.created_at - pegos.last.created_at >= RESPOSTA_DE_ROBO
+
+    conta + pegos.count { |envio| resposta.created_at - envio.created_at < RESPOSTA_DE_ROBO }
   end
 
-  def lado(mensagem)
-    return :resposta if mensagem.incoming?
-
-    nosso?(mensagem) ? :envio : :pessoa
+  # Da mais nova para trás, até o corte: pessoa da equipe, ou CONVERSA_PARADA sem mensagem (contando de agora até a
+  # mais nova, e entre uma e a anterior). Devolve na ordem do tempo.
+  def desde_o_ultimo_corte
+    seguinte = Time.current
+    contadas.take_while do |mensagem|
+      continua = !pessoa?(mensagem) && seguinte - mensagem.created_at <= CONVERSA_PARADA
+      seguinte = mensagem.created_at
+      continua
+    end.reverse
   end
 
   def contadas
     @conversa.messages.where(private: false, message_type: %i[incoming outgoing])
              .reorder(created_at: :desc, id: :desc).limit(LEITURA).to_a
              .select { |mensagem| mensagem.incoming? || nosso?(mensagem) || pessoa?(mensagem) }
-  end
-
-  # A resposta conta da primeira mensagem do bloco dela até a última do nosso envio.
-  def troca?(resposta, envio)
-    envio.present? && lado(resposta.first) == :resposta && lado(envio.first) == :envio &&
-      resposta.last.created_at - envio.first.created_at < RESPOSTA_DE_ROBO
   end
 
   def nosso?(mensagem)
