@@ -46,6 +46,9 @@ vi.mock('vue-router', () => ({ useRouter: () => router }));
 
 const api = vi.hoisted(() => ({ semana: vi.fn(), canaisOcupados: vi.fn() }));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: api }));
+// #2469: os cartões dos posts e anúncios com o cuidado dos comentários (só com a flag meta_ads_comentarios_ia).
+const doPost = vi.hoisted(() => ({ list: vi.fn(), get: vi.fn() }));
+vi.mock('dashboard/api/agentesDoPost', () => ({ default: doPost }));
 
 const agente = (id, extra = {}) => ({
   id,
@@ -769,6 +772,69 @@ describe('AgentesListaPage', () => {
 
       expect(wrapper.findAll('[data-outro-sistema]')).toHaveLength(2);
       expect(wrapper.find('[data-usar]').exists()).toBe(false);
+      wrapper.unmount();
+    });
+  });
+
+  describe('#2469 · os comentários do post e do anúncio', () => {
+    const CUIDADOS = [
+      { id: 7, kind: 'post', network: 'instagram', status: 'on' },
+      { id: 8, kind: 'post', network: 'facebook', status: 'on' },
+      { id: 9, kind: 'ad', network: 'instagram', status: 'paused' },
+      { id: 10, kind: 'ad', network: 'both', status: 'on' },
+    ];
+
+    beforeEach(() => {
+      store.state['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
+        flag === 'meta_ads_comentarios_ia';
+      store.state.getCurrentAccountId = 1;
+      doPost.list.mockResolvedValue({ data: { cuidados: CUIDADOS } });
+      doPost.get.mockReturnValue(new Promise(() => {}));
+    });
+
+    it('os 4 casos viram cartões no fim da lista, e o filtro mostra só eles', async () => {
+      const wrapper = await montar();
+
+      expect(wrapper.findAll('[data-post-comentarios]')).toHaveLength(4);
+      expect(wrapper.findAll('[data-cartao]')).toHaveLength(7);
+
+      await wrapper.get('[data-filtro-chip="posts"]').trigger('click');
+      expect(wrapper.findAll('[data-cartao]')).toHaveLength(4);
+      wrapper.unmount();
+    });
+
+    it('o cabeçalho conta os ligados à parte; o pausado soma nos parados', async () => {
+      const wrapper = await montar();
+
+      const contagem = wrapper.get('[data-contagem]').text();
+      expect(contagem).toContain('AGENTS.AGENTE_DO_POST.CONTAGEM');
+      expect(wrapper.vm.contagem.parados).toBe(2);
+      wrapper.unmount();
+    });
+
+    it('"Criar agente" pergunta o tipo antes', async () => {
+      const wrapper = await montar();
+
+      await wrapper.get('[data-criar]').trigger('click');
+
+      expect(document.body.querySelector('[data-criar-tipos]')).not.toBeNull();
+      expect(router.push).not.toHaveBeenCalledWith({
+        name: 'autonomia_agents_builder',
+      });
+      wrapper.unmount();
+    });
+
+    it('sem a flag do cuidado, nada é lido e o "Criar agente" é o de hoje', async () => {
+      store.state['accounts/isFeatureEnabledonAccount'] = () => false;
+      const wrapper = await montar();
+
+      await wrapper.get('[data-criar]').trigger('click');
+
+      expect(doPost.list).not.toHaveBeenCalled();
+      expect(wrapper.find('[data-filtro]').exists()).toBe(false);
+      expect(router.push).toHaveBeenCalledWith({
+        name: 'autonomia_agents_builder',
+      });
       wrapper.unmount();
     });
   });

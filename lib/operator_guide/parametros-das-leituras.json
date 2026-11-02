@@ -19,6 +19,14 @@
     "controller": "api/v1/accounts/agent_capacity_policies#show",
     "parametros": []
   },
+  "agentes_do_post": {
+    "controller": "api/v1/accounts/agentes_do_post#index",
+    "parametros": []
+  },
+  "agentes_do_post/:id": {
+    "controller": "api/v1/accounts/agentes_do_post#show",
+    "parametros": []
+  },
   "agents": {
     "controller": "api/v1/accounts/agents#index",
     "parametros": []

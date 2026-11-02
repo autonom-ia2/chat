@@ -6,10 +6,8 @@
 #
 # - Atrás da flag do cuidado (Cuidar::FLAG, meta_ads_comentarios_ia): sem chave nova, decisão do Rodrigo (01/11). Quem
 #   chama confere `ligada?`.
-# - Recuo para as frases fixas, nunca mudo: sem caixa, caixa ou agente de outra conta, agentes desligados na conta, sem
-#   agente na porta, a Lia (`insurance_quote` não fala em comentário público), agente que não pode falar com cliente agora
-#   (Agent#atende_cliente?, o mesmo do QuemResponde) ou agente em piloto só para telefones de teste (o mesmo contrato do
-#   Operate.authorized_agent_inbox). O motivo vai ao log só com ids (`recuo`), e o resultado diz qual foi.
+# - Recuo para as frases fixas, nunca mudo, pelos motivos da Porta (#2469: a mesma regra da tela de Agentes). O motivo
+#   vai ao log só com ids (`recuo`), e o resultado diz qual foi.
 # - O comentário, o de cima e o que se vê na foto são dado de terceiro: vão numa linha só, com o código do cuidado
 #   (FormatoDoComentario.linha). O que o dono escreveu (a ficha, a nota, o tom) vai na regra do turno, como do dono.
 # - A chave é sempre a da própria conta (ChaveDaConta, como o Classificador): sem ela, as frases fixas.
@@ -17,7 +15,6 @@
 class Crm::MetaAds::ComentariosIa::Escrita
   # Só a etiqueta de custo da IA; a flag é a do cuidado.
   FEATURE = 'meta_ads_comentarios_ia_escreve'.freeze
-  LIA = 'insurance_quote'.freeze
   FORMATO = Autonomia::Agents::Answerer::FormatoDoComentario
 
   # status: :escrito (texto), :fica_com_o_dono (motivo: o agente não sabe, ou a resposta fora do formato) ou
@@ -90,30 +87,17 @@ class Crm::MetaAds::ComentariosIa::Escrita
 
   private
 
+  # A regra de quem escreve é uma só, a da Porta (#2469): o motor e a tela de Agentes leem a mesma.
   def motivo_do_recuo
-    return 'sem_caixa' if @inbox.nil?
-    return 'outra_conta' unless @inbox.account_id == @care.account_id
-    return 'sem_chave' if Crm::MetaAds::ComentariosIa::ChaveDaConta.de(@care.account).nil?
-    return 'agentes_desligados' unless Autonomia::Agents::Config.enabled?(@care.account)
-
-    motivo_do_agente
-  end
-
-  # O mesmo contrato do Operate.authorized_agent_inbox: agente da conta, que fala com cliente, fora do piloto.
-  def motivo_do_agente
-    return 'sem_porta' if agente.nil?
-    return 'outra_conta' unless agente.account_id == @care.account_id
-    return 'lia' if agente.agent_type == LIA
-    return 'porta_parada' unless agente.atende_cliente?
-
-    # Agente em piloto, só para os telefones de teste: quem comenta não tem telefone, então nunca está na lista.
-    'piloto' unless Autonomia::Agents::Operate.test_allowlist_permits?(nil, agente)
+    porta.motivo
   end
 
   def agente
-    return @agente if defined?(@agente)
+    porta.agente
+  end
 
-    @agente = Autonomia::Agents::QuemResponde.porta_da_caixa(@inbox)&.agent
+  def porta
+    @porta ||= Crm::MetaAds::ComentariosIa::Porta.new(care: @care, inbox: @inbox)
   end
 
   def responder(formato, comentario, pai)

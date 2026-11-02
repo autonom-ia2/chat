@@ -1,0 +1,198 @@
+# IA cuida dos comentários em Agentes (#2469, PR 3a do #2436): o cartão de cada post ou anúncio com o cuidado, no
+# Instagram e no Facebook (Crm::MetaAds::ComentariosIa::NoAgentes).
+#
+# GET  agentes_do_post             → { cuidados: [{ id, kind, target_id, perfil, network, status }] }: a lista e a
+#      contagem do cabeçalho, só do banco. Só os alvos que quem abre pode ver.
+# GET  agentes_do_post/:id         → o cartão e a página: o item, mais legenda, capa, foto, nota, portas[] e
+#      comentarios { status, results, esperando[], nao_respondo[] }, lidos na Meta na hora, sem IA.
+# PUT  agentes_do_post/:id/estado  status ('on' | 'paused') → Pausar e Voltar a cuidar: só o estado (voltar recomeça a
+#      contar daqui), sem mexer no que o dono escreveu. Devolve o detalhe.
+# POST agentes_do_post/:id/testar  pergunta, formato ('publico' | 'privado'), network → { status: 'escrito', texto } |
+#      { status: 'fica_com_o_dono', motivo } | { status: 'frases_fixas', motivo } | { status: 'no_private' }. Nada é
+#      publicado nem gravado; IA fora do ar é 422 `ai_unavailable`.
+#
+# As guardas são as das telas do cuidado de cada alvo, para ninguém ver aqui o que não vê lá:
+# - todas: a flag `meta_ads_comentarios_ia` (404 sem ela);
+# - post (SeusPostsCuidadoController): as flags `seus_posts` e `seus_posts_comentarios`, ver (`posts_view`) ou mudar
+#   (`posts_manage`) e ver a caixa do perfil;
+# - anúncio (Crm::MetaAdsCuidadoController): a flag `meta_ads_gestao` e a dos comentários de ao menos uma rede, ver
+#   (`meta_ads_view`) ou mudar (`meta_ads_manage`), conexão ativa e ver a caixa de TODAS as redes do anúncio.
+# Mudar e Testar pedem a chave de mudar do alvo: a mesma de editar o cuidado. A lista mostra só o que a pessoa pode ver;
+# o anúncio cuja caixa ela não vê dá 403 `not_inbox_member` ao abrir.
+#
+# O texto do Testar vai só na resposta, nunca gravado nem no log. Pausar e voltar ficam na Auditoria da conta, sem texto,
+# com a ação de cada alvo.
+class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseController
+  FLAG = Crm::MetaAds::ComentariosIa::Cuidar::FLAG
+  POST_FLAGS = Api::V1::Accounts::SeusPostsComentariosController::FLAGS
+  AD_FLAGS = ['meta_ads_gestao'].freeze
+  REDE_FLAGS = Crm::MetaAds::ComentariosIa::Anuncio::FLAGS.values.freeze
+  AUDIT_ACTION = { 'post' => Api::V1::Accounts::SeusPostsCuidadoController::AUDIT_ACTION,
+                   'ad' => Api::V1::Accounts::Crm::MetaAdsCuidadoController::AUDIT_ACTION }.freeze
+  PERGUNTA_LIMIT = 1_000
+  # A policy de cada alvo, a mesma da tela do cuidado dele.
+  POLITICA = { 'post' => :seus_posts, 'ad' => ::Crm::MetaAdsConnection }.freeze
+  STATUS = { 'not_found' => :not_found, 'ad_not_found' => :not_found, 'not_connected' => :not_found, 'forbidden' => :forbidden,
+             'not_inbox_member' => :forbidden }.freeze
+
+  class Recusa < StandardError
+    attr_reader :code
+
+    def initialize(code)
+      @code = code
+      super
+    end
+  end
+
+  before_action :ensure_flag
+  before_action :load_care, except: [:index]
+  before_action :ensure_manage, only: [:estado, :testar]
+  before_action :load_alvo, except: [:index]
+
+  rescue_from Recusa, Crm::MetaAds::ComentariosIa::Painel::Error, Crm::MetaAds::AdManagement::Error, with: :render_error
+
+  def index
+    cares = Crm::MetaAdsCommentCare.where(account_id: Current.account.id).includes(inbox: :channel).order(:id)
+    render json: { cuidados: cares.select { |care| ve?(care) }.map { |care| Crm::MetaAds::ComentariosIa::NoAgentes.item(care) } }
+  end
+
+  def show
+    render json: detalhe
+  end
+
+  def estado
+    status = params[:status].to_s
+    raise Recusa, 'invalid_status' unless Crm::MetaAdsCommentCare::STATUSES.include?(status)
+
+    Crm::MetaAdsCommentCare.transaction { mudar_estado!(status) }
+    @care.reload
+    audit!(status)
+    render json: detalhe
+  end
+
+  def testar
+    pergunta = params[:pergunta]
+    raise Recusa, 'invalid_pergunta' unless pergunta.is_a?(String) && pergunta.strip.length.between?(1, PERGUNTA_LIMIT)
+    raise Recusa, 'invalid_formato' unless Crm::MetaAds::ComentariosIa::NoAgentes::FORMATOS.key?(params[:formato].to_s)
+
+    render json: no_agentes.testar(pergunta: pergunta.strip, formato: params[:formato].to_s, network: params[:network].to_s)
+  rescue Crm::MetaAds::ComentariosIa::Classificador::Indisponivel
+    render_error_code('ai_unavailable')
+  end
+
+  private
+
+  def ensure_flag
+    head :not_found unless Current.account.feature_enabled?(FLAG)
+  end
+
+  # Ver: as flags do alvo, a chave de ver e, no post, a caixa do perfil (no anúncio, a caixa só sai da Meta: ao abrir).
+  def ve?(care)
+    return false unless flags?(care.target_kind) && policy(care.target_kind).public_send(care.target_kind == 'post' ? :index? : :show?)
+
+    care.target_kind == 'ad' || (care.inbox.present? && SeusPosts::Caixa.new(inbox: care.inbox, viewer: pundit_user).ve?)
+  end
+
+  def flags?(kind)
+    ligada = ->(flag) { Current.account.feature_enabled?(flag) }
+    kind == 'post' ? POST_FLAGS.all?(&ligada) : AD_FLAGS.all?(&ligada) && REDE_FLAGS.any?(&ligada)
+  end
+
+  def policy(kind)
+    @policies ||= {}
+    @policies[kind] ||= Pundit.policy!(pundit_user, POLITICA.fetch(kind))
+  end
+
+  def manage?
+    kind = @care.target_kind
+    kind == 'post' ? policy(kind).manage? : policy(kind).update?
+  end
+
+  def load_care
+    @care = Crm::MetaAdsCommentCare.find_by(id: params[:id], account_id: Current.account.id)
+    raise Recusa, 'not_found' if @care.nil? || !flags?(@care.target_kind)
+    raise Recusa, 'forbidden' unless ve?(@care)
+  end
+
+  def ensure_manage
+    raise Recusa, 'forbidden' unless manage?
+  end
+
+  def load_alvo
+    @care.target_kind == 'post' ? alvo_do_post : alvo_do_anuncio
+  end
+
+  def alvo_do_post
+    canal = @care.inbox.channel
+    @fonte = Crm::MetaAds::ComentariosIa::Fonte.post(canal, @care.target_id)
+    @alvo = { 'kind' => 'post', 'perfil' => SeusPosts::Perfil.id_do(canal), 'post_id' => @care.target_id,
+              'networks' => [SeusPosts::Perfil.rede(canal)], 'inbox_id' => @care.inbox_id }
+  end
+
+  # O mesmo do Crm::MetaAdsCuidadoController#load_anuncio: o criativo diz as redes e as caixas.
+  def alvo_do_anuncio
+    anuncio = ler_anuncio
+    raise Recusa, anuncio.post? ? 'no_inbox' : 'no_post' if anuncio.redes.empty?
+    raise Recusa, 'not_inbox_member' unless anuncio.redes.values.all? { |rede| Pundit.policy!(pundit_user, rede[:inbox]).show? }
+
+    @alvo = anuncio.alvo
+    @fonte = Crm::MetaAds::ComentariosIa::Fonte.anuncio(anuncio, @alvo['networks'])
+  end
+
+  def ler_anuncio
+    connection = ::Crm::MetaAdsConnection.active.find_by(account_id: Current.account.id)
+    raise Recusa, 'not_connected' if connection&.ad_account_id.blank?
+
+    Crm::MetaAds::ComentariosIa::Anuncio.ler(connection, @care.target_id) || raise(Recusa, 'ad_not_found')
+  end
+
+  # Só o estado muda, como o "Pausar todos" do Seus posts (SeusPostsCuidadoController#mudar_status!): o que o dono
+  # escreveu não é regravado, e um cuidado antigo que não passaria na validação de hoje ainda pausa. Voltar a cuidar só
+  # liga o que passa nela (422 `invalid_care`), e recomeça a contar daqui (Painel#religar!).
+  # Dentro da transação da action, com a linha travada.
+  def mudar_estado!(status)
+    atual = Crm::MetaAdsCommentCare.lock.find(@care.id)
+    return if atual.status == status
+    raise Recusa, 'invalid_care' if status == 'on' && !atual.tap { |care| care.status = status }.valid?
+
+    agora = Time.current
+    religado = status == 'on' ? { started_at: agora, read_old_at: nil } : {}
+    Crm::MetaAdsCommentCare.where(id: atual.id).update_all(status: status, updated_at: agora, **religado) # rubocop:disable Rails/SkipsModelValidations
+  end
+
+  def painel
+    @painel ||= Crm::MetaAds::ComentariosIa::Painel.new(account: Current.account, alvo: @alvo, fonte: @fonte,
+                                                        conversation_access: method(:conversa_visivel?), viewer: Current.user)
+  end
+
+  def no_agentes
+    Crm::MetaAds::ComentariosIa::NoAgentes.new(care: @care, fonte: @fonte, painel: painel)
+  end
+
+  def detalhe
+    no_agentes.detalhe.merge(can_manage: manage?)
+  end
+
+  # "Ver conversa" só para quem enxerga a conversa (em caixa com restrição, só as dela).
+  def conversa_visivel?(conversation)
+    Pundit.policy!(pundit_user, conversation).view?
+  end
+
+  def audit!(status)
+    alvo = @care.target_kind == 'post' ? { 'perfil' => @alvo['perfil'], 'post_id' => @care.target_id } : { 'ad_id' => @care.target_id }
+    Audited.audit_class.create!(
+      auditable: Current.account, user: Current.user, action: AUDIT_ACTION.fetch(@care.target_kind),
+      audited_changes: alvo.merge('networks' => @alvo['networks'], 'action' => 'save', 'origin' => 'agents', 'status' => status)
+    )
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: Current.account).capture_exception
+  end
+
+  def render_error(error)
+    render_error_code(error.code)
+  end
+
+  def render_error_code(code)
+    render json: { error: code }, status: STATUS.fetch(code, :unprocessable_content)
+  end
+end

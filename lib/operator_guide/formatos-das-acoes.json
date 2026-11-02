@@ -8515,6 +8515,31 @@
     ],
     "sem_corpo": false
   },
+  "POST agentes_do_post/:id/testar": {
+    "campos": {
+      "formato": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "network": {
+        "tipo": "string"
+      },
+      "pergunta": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/agentes_do_post#testar",
+    "origem": [
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:73",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:78",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:76",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:74",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:112"
+    ],
+    "sem_corpo": false
+  },
   "POST agents": {
     "campos": {
       "auto_offline": {},
@@ -20623,6 +20648,27 @@
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies_controller.rb:15",
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies_controller.rb:27",
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies_controller.rb:35"
+    ],
+    "sem_corpo": false
+  },
+  "PUT agentes_do_post/:id/estado": {
+    "campos": {
+      "status": {
+        "padrao": "on",
+        "tipo": "string",
+        "um_de": [
+          "on",
+          "paused"
+        ]
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/agentes_do_post#estado",
+    "modelo": "Crm::MetaAdsCommentCare",
+    "origem": [
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:63",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:64",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:112"
     ],
     "sem_corpo": false
   },
