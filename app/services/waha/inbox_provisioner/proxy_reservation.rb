@@ -19,13 +19,18 @@ class Waha::InboxProvisioner::ProxyReservation
     @proxy ? @assigner.mark_applied!(@session, @proxy) : @assigner.mark_pending!(@session)
   end
 
-  # Volta ao estado gravado antes (já foi válido): sem validação, que conferiria vaga de IP contra o próprio registro.
+  # Volta à reserva de antes, sob a mesma trava e as mesmas validações do Assigner: se outra conta pegou o IP antigo
+  # nesse meio-tempo, a volta não acontece (o número fica com o IP novo) e o log diz por quê.
   def undo!(session_removed:)
     return unless @taken
     return @assigner.release!(@session) if session_removed || @before.nil?
 
-    record = WhatsappProxy::Assignment.find_or_initialize_by(session_name: @session)
-    record.assign_attributes(@before)
-    record.save!(validate: false)
+    WhatsappProxy::Assignment.exclusively do
+      record = WhatsappProxy::Assignment.find_or_initialize_by(session_name: @session)
+      record.assign_attributes(@before)
+      record.save!
+    end
+  rescue StandardError => e
+    Rails.logger.error("[Waha] proxy undo skipped session=***#{@session.last(4)}: #{e.class}")
   end
 end

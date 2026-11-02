@@ -43,6 +43,10 @@ module Waha
         if pending?(inbox)
           provision_remote(inbox)
           finish!(inbox)
+        elsif session_missing?
+          # Caixa pronta (inclusive de antes de PENDING_KEY) cuja sessão não está no motor: refaz o lado remoto. Se falhar,
+          # a caixa fica, porque já existia antes deste pedido.
+          provision_remote(inbox, keep_inbox: true)
         end
         result_for(inbox)
       end
@@ -103,7 +107,7 @@ module Waha
     end
 
     # A sessão já nasce com o IP próprio da Webshare (#1516). Sem IP disponível, nasce sem proxy em vez de travar.
-    def provision_remote(inbox)
+    def provision_remote(inbox, keep_inbox: false)
       app_ids = inbox.channel.additional_attributes.to_h.values_at('app_id', 'phone_numbers_app_id')
       remote = existing_session
       raise Error, 'phone_connected_elsewhere' if remote && !reusable?(remote)
@@ -112,10 +116,10 @@ module Waha
       setup_session(remote, SessionApps.for(inbox: inbox, account: @account, token: @api_access_token, config: @config))
       @proxy.confirm!
     rescue Error
-      rollback(inbox, app_ids)
+      rollback(inbox, app_ids, keep_inbox)
       raise
     rescue StandardError => e
-      rollback(inbox, app_ids)
+      rollback(inbox, app_ids, keep_inbox)
       log_failure(e)
       raise Error, error_code_for(e)
     end
@@ -152,12 +156,20 @@ module Waha
       nil
     end
 
+    # Motor sem resposta aqui não vira 200 com uma caixa que pode estar sem sessão: a pessoa tenta de novo depois.
+    def session_missing?
+      existing_session.nil?
+    rescue Waha::Client::Error => e
+      log_failure(e)
+      raise Error, error_code_for(e)
+    end
+
     # Só apaga a sessão se esta tentativa a criou. Sessão reaproveitada fica; saem só os apps postos agora.
-    def rollback(inbox, app_ids)
-      cleanup_inbox(inbox)
+    def rollback(inbox, app_ids, keep_inbox)
+      cleanup_inbox(inbox) unless keep_inbox
       app_ids.compact.each { |id| quietly { @client.delete_app(id) } } if @remote_state
       quietly { @client.delete_session(@phone) } if @remote_state == :created
-      quietly { @proxy.undo!(session_removed: @remote_state == :created) }
+      @proxy.undo!(session_removed: @remote_state == :created)
     end
 
     def error_code_for(error)
@@ -173,15 +185,13 @@ module Waha
       error.status.nil? || NO_ANSWER_STATUSES.include?(error.status)
     end
 
-    # A mensagem do cliente traz método, rota, status e o começo da resposta do motor (já sem a senha do proxy).
-    # O token da conta vai no corpo do pedido; se o motor o devolver, não chega ao log. O número vai mascarado.
+    # A mensagem do cliente traz método, rota, status e o começo da resposta do motor (o cliente já tira a credencial do
+    # proxy enviado). O token da conta vai no corpo do pedido; se o motor o devolver, não chega a esta linha. O número
+    # vai mascarado só nesta linha: o Assigner de proxy tem log próprio, com o número inteiro.
     def log_failure(error)
-      message = error.message.to_s.gsub(@api_access_token, '[FILTERED]').gsub(@phone, masked_phone)
-      Rails.logger.error("[Waha] provisioning failed account=#{@account.id} session=#{masked_phone}: #{error.class}: #{message}")
-    end
-
-    def masked_phone
-      "***#{@phone.last(4)}"
+      masked = "***#{@phone.last(4)}"
+      message = error.message.to_s.gsub(@api_access_token, '[FILTERED]').gsub(@phone, masked)
+      Rails.logger.error("[Waha] provisioning failed account=#{@account.id} session=#{masked}: #{error.class}: #{message}")
     end
 
     def create_inbox(callback, app_id, phone_numbers_app_id)

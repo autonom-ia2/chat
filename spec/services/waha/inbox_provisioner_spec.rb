@@ -31,11 +31,11 @@ RSpec.describe Waha::InboxProvisioner do
     end
 
     context 'when the account already has an inbox for the number (#2478)' do
-      it 'returns the finished inbox without touching the engine again' do
+      it 'returns the finished inbox when its session is in the engine, without writing to the engine' do
         first = provisioner.perform.inbox
+        allow(client).to receive(:get_session).and_return({ 'status' => 'SCAN_QR_CODE' })
 
         expect { expect(provisioner.perform.inbox).to eq(first) }.not_to change(Inbox, :count)
-        expect(client).to have_received(:get_session).once
         expect(client).to have_received(:create_session).once
         expect(channel_attrs(first)).not_to have_key('provisioning_pending')
       end
@@ -153,6 +153,58 @@ RSpec.describe Waha::InboxProvisioner do
         expect(reservation.reload).to have_attributes(account_id: reservation.account_id, proxy_address: '10.0.0.7',
                                                       webshare_proxy_id: '7')
         expect(Inbox.count).to eq(0)
+      end
+
+      it 'does not give the old IP back when another account took it meanwhile' do
+        allow(Waha::Client).to receive(:new).and_return(client)
+        reservation = WhatsappProxy::Assignment.create!(session_name: '5511999999999', account_id: create(:account).id,
+                                                        pool: 'datacenter', webshare_proxy_id: '7', proxy_address: '10.0.0.7',
+                                                        proxy_port: 6000, assigned_at: 1.day.ago)
+        assigner = instance_double(WhatsappProxy::Assigner, release!: 1)
+        allow(assigner).to receive(:for) do
+          reservation.update!(proxy_address: '10.0.0.9', webshare_proxy_id: '9')
+          WhatsappProxy::Assignment.create!(session_name: 'outra', account_id: create(:account).id, pool: 'datacenter',
+                                            webshare_proxy_id: '7', proxy_address: '10.0.0.7', proxy_port: 6000,
+                                            assigned_at: Time.current)
+          webshare_proxy(id: 9, address: '10.0.0.9')
+        end
+        allow(client).to receive(:update_session).and_raise(Waha::Client::Error.new('WAHA PUT -> 500', status: 500))
+
+        log = capture_log { expect { provisioner(assigner: assigner).perform }.to raise_error(described_class::Error) }
+
+        expect(log).to include('[Waha] proxy undo skipped session=***9999: ActiveRecord::RecordInvalid')
+        expect(reservation.reload.proxy_address).to eq('10.0.0.9')
+        expect(WhatsappProxy::Assignment.where(proxy_address: '10.0.0.7').count).to eq(1)
+      end
+    end
+
+    context 'when the account inbox was ready but its session is gone from the engine (#2478)' do
+      let!(:inbox) do
+        create(:channel_api, account: account, additional_attributes: {
+                 'provider' => 'waha', 'session' => '5511999999999', 'app_id' => 'app_old', 'phone_numbers_app_id' => 'br_old'
+               }).inbox
+      end
+
+      it 'sets the session up again for the same inbox' do
+        expect(provisioner.perform.inbox).to eq(inbox)
+
+        expect(client).to have_received(:create_session)
+          .with('5511999999999', start: true, config: anything,
+                                 apps: contain_exactly(hash_including(id: 'br_old'), hash_including(id: 'app_old')))
+      end
+
+      it 'keeps the inbox when setting the session up again fails' do
+        allow(client).to receive(:create_session).and_raise(Waha::Client::Error.new('WAHA POST -> 422', status: 422))
+
+        expect { provisioner.perform }.to raise_error(described_class::Error, 'remote_setup_failed')
+        expect(Inbox.exists?(inbox.id)).to be(true)
+      end
+
+      it 'answers engine_unavailable instead of the inbox when the engine does not answer' do
+        allow(client).to receive(:get_session).and_raise(Waha::Client::Timeout, 'WAHA GET sem resposta')
+
+        expect { provisioner.perform }.to raise_error(described_class::Error, 'engine_unavailable')
+        expect(client).not_to have_received(:create_session)
       end
     end
 

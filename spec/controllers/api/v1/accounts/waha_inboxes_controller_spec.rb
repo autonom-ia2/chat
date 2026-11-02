@@ -25,6 +25,7 @@ RSpec.describe 'WAHA inboxes API', type: :request do
 
     it 'answers with the inbox the account already has for the number, so the screen goes on to the QR' do
       existing = waha_channel(account).inbox
+      allow(client).to receive(:get_session).and_return({ 'status' => 'SCAN_QR_CODE' })
 
       expect do
         post path, params: params, headers: admin.create_new_auth_token, as: :json
