@@ -17,8 +17,9 @@ class Autonomia::Automacao::AntiLaco
   TROCAS_DO_ROBO = 20
   RESPOSTA_DE_ROBO = 20.seconds
   CONVERSA_PARADA = 30.minutes
-  # Quantas mensagens o cálculo lê: as trocas mais folga para o que fica de fora (IA, campanha) no meio.
-  LEITURA = TROCAS_DO_ROBO * 4
+  # Quantas mensagens o cálculo lê: as trocas, com mais de um balão de cada lado, e folga para o que fica de fora (IA,
+  # campanha) no meio.
+  LEITURA = TROCAS_DO_ROBO * 8
 
   def initialize(definicao, conversa)
     @definicao = definicao
@@ -42,23 +43,38 @@ class Autonomia::Automacao::AntiLaco
 
   private
 
-  # Da mais nova para a mais velha, aos pares: a resposta do contato e o nosso envio logo antes dela. A contagem para
-  # na primeira dupla que não é "resposta depressa a um envio nosso": pessoa da equipe, resposta lenta, conversa parada
-  # entre uma troca e outra, ou dois seguidos do mesmo lado.
+  # Da mais nova para a mais velha, em blocos: a resposta do contato e o nosso envio logo antes dela. A contagem para
+  # no primeiro par que não é "resposta depressa a um envio nosso": pessoa da equipe, resposta lenta ou conversa parada
+  # entre uma troca e outra.
   def trocas_seguidas
     mensagens = contadas
     return 0 if mensagens.empty? || mensagens.first.created_at < CONVERSA_PARADA.ago
 
     trocas = 0
     envio_seguinte = nil
-    mensagens.each_slice(2) do |resposta, envio|
+    blocos(mensagens).each_slice(2) do |resposta, envio|
       break unless troca?(resposta, envio)
-      break if envio_seguinte && envio_seguinte.created_at - resposta.created_at > CONVERSA_PARADA
+      break if envio_seguinte && envio_seguinte.last.created_at - resposta.first.created_at > CONVERSA_PARADA
 
       trocas += 1
       envio_seguinte = envio
     end
     trocas
+  end
+
+  # Mensagens seguidas do mesmo lado viram um bloco, do mais novo ao mais velho. O robô que responde com dois balões e a
+  # receita com dois passos "mensagem" seguidos fazem uma troca, e a contagem não desalinha.
+  # O nosso envio mais novo, quando vem antes de qualquer resposta, é o passo anterior desta mesma execução: ainda
+  # não teve resposta e não conta.
+  def blocos(mensagens)
+    lista = mensagens.slice_when { |mais_nova, mais_velha| lado(mais_nova) != lado(mais_velha) }.to_a
+    lado(lista.first.first) == :envio ? lista.drop(1) : lista
+  end
+
+  def lado(mensagem)
+    return :resposta if mensagem.incoming?
+
+    nosso?(mensagem) ? :envio : :pessoa
   end
 
   def contadas
@@ -67,8 +83,10 @@ class Autonomia::Automacao::AntiLaco
              .select { |mensagem| mensagem.incoming? || nosso?(mensagem) || pessoa?(mensagem) }
   end
 
+  # A resposta conta da primeira mensagem do bloco dela até a última do nosso envio.
   def troca?(resposta, envio)
-    envio.present? && resposta.incoming? && nosso?(envio) && resposta.created_at - envio.created_at < RESPOSTA_DE_ROBO
+    envio.present? && lado(resposta.first) == :resposta && lado(envio.first) == :envio &&
+      resposta.last.created_at - envio.first.created_at < RESPOSTA_DE_ROBO
   end
 
   def nosso?(mensagem)

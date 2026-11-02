@@ -124,13 +124,38 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
   describe 'robô do outro lado' do
     let(:definicao) { automacao_ligada(account, admin, [mensagem_passo('p1', 'Recebemos.')]) }
 
-    # Trocas que terminam agora: nosso envio e a resposta do outro lado `resposta_em` depois, com `intervalo` entre elas.
-    def trocas(quantas, resposta_em:, intervalo: 1.minute, fim: Time.current)
-      Array.new(quantas) { |vez| fim - ((quantas - vez) * (resposta_em + intervalo)) }.each do |envio|
-        create(:message, conversation: conversa, account: account, message_type: :outgoing, sender: nil, content: 'nosso',
-                         content_attributes: { automacao_id: definicao.id }, created_at: envio)
-        create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'deles', created_at: envio + resposta_em)
+    # Trocas que terminam agora: em cada uma, `por_troca` = [envios nossos, balões do outro lado]; os balões chegam
+    # `resposta_em` depois do último envio, e há `intervalo` entre uma troca e a seguinte. Cada mensagem do mesmo lado
+    # sai 1 s depois da anterior.
+    def trocas(quantas, resposta_em:, intervalo: 1.minute, fim: Time.current, por_troca: [1, 1])
+      envios, baloes = por_troca
+      duracao = resposta_em + intervalo + (envios + baloes).seconds
+      Array.new(quantas) { |vez| fim - ((quantas - vez) * duracao) }.each do |inicio|
+        envios.times { |n| mandada(:outgoing, inicio + n.seconds) }
+        baloes.times { |n| mandada(:incoming, inicio + (envios - 1).seconds + resposta_em + n.seconds) }
       end
+    end
+
+    def mandada(tipo, quando)
+      nossa = tipo == :outgoing
+      create(:message, conversation: conversa, account: account, message_type: tipo, sender: nil, content: nossa ? 'nosso' : 'deles',
+                       content_attributes: nossa ? { automacao_id: definicao.id } : {}, created_at: quando)
+    end
+
+    it 'robô que responde com 2 balões a cada envio, em 12 s, é pego na 20ª troca' do
+      trocas(20, resposta_em: 12.seconds, intervalo: 3.seconds, por_troca: [1, 2])
+
+      expect(registros(comecar_e_rodar(definicao))).to eq([%w[p1 falhou laco_suspeito]])
+    end
+
+    it 'receita com 2 passos mensagem seguidos contra robô também é pega', :aggregate_failures do
+      dois = automacao_ligada(account, admin, [mensagem_passo('p1', 'Recebido.'), mensagem_passo('p2', 'Já te respondo.')])
+      trocas(19, resposta_em: 5.seconds, intervalo: 3.seconds, por_troca: [2, 1])
+      primeira = comecar_e_rodar(dois)
+      create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'deles', created_at: Time.current)
+
+      expect(registros(primeira)).to eq([['p1', 'ok', nil], ['p2', 'ok', nil]])
+      expect(registros(comecar_e_rodar(dois))).to eq([%w[p1 falhou laco_suspeito]])
     end
 
     it 'robô com latência de 8 a 15 s é pego na 20ª troca: para só nesta conversa, com nota que menciona quem ligou', :aggregate_failures do
@@ -246,6 +271,21 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(conversa.messages.where(private: true)).to be_empty
       expect(registros(execucao)).to eq([%w[p1 pulado ninguem_para_avisar]])
       expect(dados_do(execucao)['fora']).to eq([{ 'id' => fora_da_caixa.id, 'motivo' => 'nao_ve_a_conversa' }])
+    end
+
+    # A menção só avisa administrador e membro da caixa (Messages::MentionService). Quem vê a conversa pelo time, sem ser
+    # da caixa, seria mencionado sem aviso: o registro diz isso, em vez de contá-lo como avisado.
+    it 'agente que vê a conversa pelo time, mas não é da caixa, fica de fora com nao_e_da_caixa', :aggregate_failures do
+      conversa.update!(team: time)
+      expect(Autonomia::Automacao::Acesso.alcanca?(fora_da_caixa, conversa)).to be(true)
+
+      passo = avisar_passo('p1', { 'times' => [time.id] }, 'Oi')
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [passo]))
+
+      nota = conversa.messages.where(private: true).last
+      expect(nota.content).not_to include("mention://user/#{fora_da_caixa.id}/")
+      expect(dados_do(execucao)['pessoas']).to eq([do_time.id])
+      expect(dados_do(execucao)['fora']).to eq([{ 'id' => fora_da_caixa.id, 'motivo' => 'nao_e_da_caixa' }])
     end
 
     it 'quem sai fica no registro com o motivo: não enxerga a conversa, ou saiu da conta depois do salvar', :aggregate_failures do

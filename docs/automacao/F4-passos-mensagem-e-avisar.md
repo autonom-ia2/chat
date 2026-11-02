@@ -63,8 +63,10 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
   - fica só quem passa no `ConversationPolicy#show?` de cada pessoa. Função personalizada e administrador mudam a
     resposta; não basta estar na caixa;
   - nunca menciona o time inteiro, só pessoas, cada uma conferida;
-  - quem sai fica no registro do passo (`fora`), com o motivo: `nao_ve_a_conversa` ou `fora_da_conta` (saiu da conta
-    depois do salvar);
+  - a menção só avisa administrador e membro da caixa: quem enxerga a conversa de outro jeito ficaria mencionado sem
+    aviso, e por isso sai;
+  - quem sai fica no registro do passo (`fora`), com o motivo: `nao_ve_a_conversa`, `nao_e_da_caixa` ou
+    `fora_da_conta` (saiu da conta depois do salvar);
   - o texto, com os valores, só chega a quem passou;
   - lista vazia pula com `ninguem_para_avisar`.
 - **No salvar:** time e pessoa de outra conta são recusados.
@@ -81,7 +83,9 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
    - A escuta não dispara a própria automação e para na profundidade 3, contando os três motores.
    - A regra antiga que responde a toda mensagem de saída (o padrão das contas 6, 16 e 17) responde uma vez e para.
 2. **Robô do outro lado:** são **20 trocas seguidas** em que o contato responde em **menos de 20 s**.
-   - **Troca:** um envio do passo "mensagem" do motor novo seguido da mensagem recebida do contato.
+   - **Troca:** um envio do passo "mensagem" do motor novo seguido da mensagem recebida do contato. Mensagens seguidas
+     do mesmo lado formam um bloco: o robô que responde com 2 balões, ou a receita com 2 passos "mensagem" seguidos,
+     fazem uma troca. A resposta conta da primeira mensagem do bloco dela até a última do nosso envio.
    - **Fica de fora:** mensagem de IA, de robô (AgentBot), das automações antigas ou de campanha. Ela não conta nem
      zera.
    - **Zera:** quando uma pessoa da equipe escreve, ou quando a conversa fica 30 min sem mensagem.

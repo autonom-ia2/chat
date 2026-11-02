@@ -26,14 +26,25 @@ class Autonomia::Automacao::PassoDeAviso
 
   private
 
-  # Quem recebe e quem saiu, cada um com o motivo: não é da conta, ou não enxerga a conversa.
+  # Quem recebe e quem saiu, cada um com o motivo: não é da conta, não enxerga a conversa, ou enxerga mas a menção não
+  # o avisaria (só administrador e membro da caixa recebem o aviso da menção).
   def destinatarios
     pedidos = ids.compact.uniq
     da_conta = @conversa.account.users.where(id: pedidos).to_a
-    pessoas, sem_acesso = da_conta.partition { |pessoa| ::Autonomia::Automacao::Acesso.alcanca?(pessoa, @conversa) }
-    fora = (pedidos - da_conta.map(&:id)).map { |id| { 'id' => id, 'motivo' => 'fora_da_conta' } } +
-           sem_acesso.map { |pessoa| { 'id' => pessoa.id, 'motivo' => 'nao_ve_a_conversa' } }
-    [pessoas, fora]
+    avisaveis = ::Autonomia::Automacao::Nota.avisaveis_ids(@conversa)
+    avaliadas = da_conta.map { |pessoa| [pessoa, motivo_de_fora(pessoa, avisaveis)] }
+    fora = avaliadas.filter_map { |pessoa, motivo| { 'id' => pessoa.id, 'motivo' => motivo } if motivo }
+    [avaliadas.filter_map { |pessoa, motivo| pessoa unless motivo }, fora_da_conta(pedidos, da_conta) + fora]
+  end
+
+  def fora_da_conta(pedidos, da_conta)
+    (pedidos - da_conta.map(&:id)).map { |id| { 'id' => id, 'motivo' => 'fora_da_conta' } }
+  end
+
+  def motivo_de_fora(pessoa, avisaveis)
+    return 'nao_ve_a_conversa' unless ::Autonomia::Automacao::Acesso.alcanca?(pessoa, @conversa)
+
+    'nao_e_da_caixa' unless avisaveis.include?(pessoa.id)
   end
 
   def ids
