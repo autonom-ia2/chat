@@ -5,16 +5,22 @@
 # `ler` devolve `{ status:, linhas:, escondidas: }`. `status` é o da leitura ('ready', 'needs_permission' ou o erro da
 # Meta). `linhas` são só os comentários de primeiro nível que esperam o dono: de outra pessoa, não escondidos, sem
 # resposta da conta e sem privado, do mais novo para o mais velho. `escondidas` são os de outra pessoa que estão
-# escondidos. Cada linha: `{ id:, network:, author:, text:, momento:, inbox_id:, post_id: }` (a caixa e o post de onde
-# veio, para o "Ler e mandar" cuidar dele como um comentário novo). O anúncio que roda nas duas redes junta as listas.
+# escondidos. Cada linha: `{ id:, network:, author:, text:, momento:, inbox_id:, post_id:, respostas: }` (a caixa e o
+# post de onde veio, para o "Ler e mandar" cuidar dele como um comentário novo; `respostas`: as de outras pessoas dentro
+# dele, `{ author:, text: }`, para a prévia, #2454). O anúncio que roda nas duas redes junta as listas.
 #
-# `legenda` (#2424): o texto do post, lido pela Rede como no motor, para a prévia e o resumo decidirem com o mesmo dado.
+# `respostas_que_esperam` (#2454, o fio conta): as respostas de outra pessoa dentro de um comentário (até dentro de um
+# da própria conta) que esperam o dono: à mostra, com texto, sem privado e sem a conta responder no fio depois dela.
+# Sem a hora de uma das duas, a resposta da conta conta como depois. Cada uma como as linhas, com `parent_id` (o
+# comentário de cima) no lugar de `respostas`. Quem conta e cuida delas só com a flag meta_ads_comentarios_ia: `que_esperam`.
+#
+# `legenda` (#2424): o texto do post, lido pela Rede como no motor, para a prévia decidir com o mesmo dado.
 class Crm::MetaAds::ComentariosIa::Fonte
   SEM_PESSOA = ->(_inbox) { true }
   NAO_VE_CONVERSA = ->(_conversation) { false }
   SUMIU = { status: 'ad_not_found' }.freeze
 
-  # O alvo só com ids (o que o ResumoJob recebe): `{ 'kind' => 'post', 'perfil' =>, 'post_id' => }` ou
+  # O alvo só com ids (o que o Resumo e o LerAntigosJob recebem): `{ 'kind' => 'post', 'perfil' =>, 'post_id' => }` ou
   # `{ 'kind' => 'ad', 'ad_id' =>, 'networks' => [] }`. nil quando o perfil, a conexão ou o anúncio não existem mais.
   def self.do_alvo(account, alvo)
     alvo = alvo.to_h.stringify_keys
@@ -26,6 +32,14 @@ class Crm::MetaAds::ComentariosIa::Fonte
       lido = connection && Crm::MetaAds::ComentariosIa::Anuncio.ler(connection, alvo['ad_id'].to_s)
       lido && anuncio(lido, Array(alvo['networks']))
     end
+  end
+
+  # O que espera o dono, para contar e cuidar: os comentários de primeiro nível e, com a flag
+  # meta_ads_comentarios_ia, também as respostas de cliente (#2454). Desligada, como antes.
+  def self.que_esperam(account, lido)
+    return lido[:linhas] unless account.feature_enabled?(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+
+    lido[:linhas] + Array(lido[:respostas_que_esperam])
   end
 
   def self.post(canal, post_id)
@@ -65,26 +79,49 @@ class Crm::MetaAds::ComentariosIa::Fonte
     return { status: falha, linhas: [], escondidas: [] } if falha
 
     linhas = lidas.flat_map { |network, leitura, payload| de_outra_pessoa(network, leitura, payload[:comments]) }
-    { status: 'ready', linhas: so(linhas, :espera), escondidas: so(linhas, :escondida) }
+    respostas = lidas.flat_map { |network, leitura, payload| respostas_que_esperam(network, leitura, payload[:comments]) }
+    { status: 'ready', linhas: so(linhas, :espera), escondidas: so(linhas, :escondida), respostas_que_esperam: mais_novos_antes(respostas) }
   rescue Crm::MetaAds::InstagramPrivateReply::Error, Crm::MetaAds::AdManagement::Error => e
     { status: e.code, linhas: [], escondidas: [] }
   end
 
   # A legenda do primeiro post (o anúncio nas duas redes é o mesmo criativo), ou nil. Na tela, a Meta fora do ar não
-  # derruba a prévia nem o resumo: seguem sem a legenda.
+  # derruba a prévia: ela segue sem a legenda.
   def legenda
+    rede = rede_do_post
+    rede && Crm::MetaAds::ComentariosIa::Rede.para(*rede.values_at(:inbox, :comentario))&.legenda
+  rescue Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+    nil
+  end
+
+  # "O que eu vi na foto" (#2454) do primeiro post, como a legenda: a Foto, que lê as imagens na Rede só quando ainda não
+  # há leitura. nil sem caixa ou sem post.
+  def foto
+    rede = rede_do_post
+    return if rede.nil?
+
+    inbox, comentario = rede.values_at(:inbox, :comentario)
+    Crm::MetaAds::ComentariosIa::Foto.new(account: inbox.account, network: comentario.network, post_id: comentario.post_id,
+                                          imagens: -> { imagens_do_post(inbox, comentario) })
+  end
+
+  private
+
+  # A leitura da foto roda dentro da requisição: a Meta tem o prazo da Foto.
+  def imagens_do_post(inbox, comentario)
+    Crm::MetaAds::ComentariosIa::Rede.para(inbox, comentario)&.imagens(prazo: Crm::MetaAds::ComentariosIa::Foto::PRAZO_DA_META) || []
+  end
+
+  # O primeiro post (o anúncio nas duas redes é o mesmo criativo): a caixa e um comentário só com ids, para a Rede.
+  def rede_do_post
     network, leitura = @leituras.first
     inbox = leitura && Inbox.find_by(id: leitura[:inbox_id])
     return if inbox.nil? || leitura[:post_id].blank?
 
     comentario = Crm::MetaAds::ComentariosIa::Comentario.new(network: network, account_id: inbox.account_id, inbox_id: inbox.id,
                                                              post_id: leitura[:post_id])
-    Crm::MetaAds::ComentariosIa::Rede.para(inbox, comentario)&.legenda
-  rescue Crm::MetaAds::ComentariosIa::Rede::Indisponivel
-    nil
+    { inbox: inbox, comentario: comentario }
   end
-
-  private
 
   def ler_cada_rede
     @leituras.map { |network, leitura| [network, leitura, leitura[:ler].call || SUMIU] }
@@ -95,8 +132,42 @@ class Crm::MetaAds::ComentariosIa::Fonte
       next if row.dig(:author, :is_page) || row[:text].blank?
 
       { id: row[:id], network: network, author: autor(row), text: row[:text].to_s, momento: momento(row[:created_time]),
-        inbox_id: leitura[:inbox_id], post_id: leitura[:post_id], espera: espera?(row), escondida: row[:hidden] == true }
+        inbox_id: leitura[:inbox_id], post_id: leitura[:post_id], respostas: respostas(row), espera: espera?(row),
+        escondida: row[:hidden] == true }
     end
+  end
+
+  def respostas(row)
+    Array(row[:replies]).filter_map do |reply|
+      next if reply.dig(:author, :is_page) || reply[:text].blank?
+
+      { author: autor(reply), text: reply[:text].to_s }
+    end
+  end
+
+  def respostas_que_esperam(network, leitura, comments)
+    Array(comments).flat_map do |row|
+      replies = Array(row[:replies])
+      replies.filter_map do |reply|
+        next unless resposta_espera?(reply, replies)
+
+        { id: reply[:id], network: network, author: autor(reply), text: reply[:text].to_s, momento: momento(reply[:created_time]),
+          inbox_id: leitura[:inbox_id], post_id: leitura[:post_id], parent_id: row[:id].to_s }
+      end
+    end
+  end
+
+  def resposta_espera?(reply, fio)
+    return false if reply.dig(:author, :is_page) || reply[:text].blank? || reply[:hidden] || !reply[:private_reply].nil?
+
+    fio.none? { |outra| outra.dig(:author, :is_page) && depois?(outra, reply) }
+  end
+
+  # A resposta da conta veio depois desta? Sem a hora de uma das duas, conta como depois: na dúvida, não insiste.
+  def depois?(da_conta, reply)
+    hora_da_conta = momento(da_conta[:created_time])
+    hora = momento(reply[:created_time])
+    hora_da_conta.nil? || hora.nil? || hora_da_conta >= hora
   end
 
   def espera?(row)

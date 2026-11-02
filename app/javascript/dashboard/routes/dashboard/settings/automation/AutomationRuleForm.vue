@@ -2,8 +2,6 @@
 import { ref, computed, h, shallowRef, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAccount } from 'dashboard/composables/useAccount';
-import { useMapGetter } from 'dashboard/composables/store';
-import { isCrmAutomationKey } from 'dashboard/composables/useCrmAutomationOptions';
 import { SAIDA_EXTERNA, useSaidaExterna } from './saidaExterna';
 import { useOperators } from 'dashboard/components-next/filter/operators';
 import NextButton from 'dashboard/components-next/button/Button.vue';
@@ -18,11 +16,8 @@ import { provideDropdownTeleport } from 'dashboard/components-next/dropdown-menu
 import { validateAutomation } from 'dashboard/helper/validations';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { DURATION_UNITS } from 'dashboard/components-next/input/constants';
-import {
-  AUTOMATION_RULE_EVENTS,
-  AUTOMATION_ACTION_TYPES,
-  DEFAULT_DELAY_MINUTES,
-} from './constants';
+import { AUTOMATION_RULE_EVENTS, DEFAULT_DELAY_MINUTES } from './constants';
+import { useOfferedActionTypes } from './useOfferedActionTypes';
 import AutomationRunTypeSelector from './components/AutomationRunTypeSelector.vue';
 import AutomationWaitCondition from './components/AutomationWaitCondition.vue';
 import AutomationInstantTrigger from './components/AutomationInstantTrigger.vue';
@@ -85,11 +80,7 @@ const INPUT_TYPE_MAP = {
 
 const { t } = useI18n();
 const { isCloudFeatureEnabled } = useAccount();
-const globalConfig = useMapGetter('globalConfig/get');
-const isCrmEnabled = computed(
-  () => globalConfig.value?.crmKanbanEnabled === true
-);
-const isAvailableKey = key => isCrmEnabled.value || !isCrmAutomationKey(key);
+const { isAvailableKey, offeredActionTypes } = useOfferedActionTypes();
 // #2448: webhook e transcrição por e-mail só aparecem para quem tem integration_manage (admin sempre); numa regra que
 // já as usa, continuam à vista para a regra se ler inteira, e salvar fica travado com o motivo.
 const { podeIntegrar, travada } = useSaidaExterna();
@@ -310,19 +301,15 @@ const hasAutomationMutated = computed(() => {
   );
 });
 
-const automationActionTypes = computed(() => {
-  const actionTypes = isCloudFeatureEnabled('sla')
-    ? AUTOMATION_ACTION_TYPES
-    : AUTOMATION_ACTION_TYPES.filter(({ key }) => key !== 'add_sla');
-
-  return actionTypes
-    .filter(({ key }) => isAvailableKey(key) && isAllowedAction(key))
+const automationActionTypes = computed(() =>
+  offeredActionTypes.value
+    .filter(({ key }) => isAllowedAction(key))
     .map(action => ({
       ...action,
       label: t(`AUTOMATION.ACTIONS.${action.label}`),
       icon: getActionIcon(action.key),
-    }));
-});
+    }))
+);
 
 watch(
   () => automation.value,

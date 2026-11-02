@@ -45,6 +45,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::CuidarJob do
     end
   end
 
+  it 'esgotado depois de limites da Meta no privado: a pessoa reservada por este comentário fica livre' do
+    allow(cuidar).to receive(:call).and_raise(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
+    Crm::MetaAdsCommentPerson.create!(account: account, network: 'instagram', post_id: '1790', from_id: 'igsid-1', comment_id: 'c-1')
+    Crm::MetaAdsCommentPerson.create!(account: account, network: 'instagram', post_id: '1790', from_id: 'igsid-2', comment_id: 'c-9')
+
+    perform_enqueued_jobs { described_class.perform_later(dados) }
+
+    expect(Crm::MetaAdsCommentPerson.pluck(:comment_id)).to eq(['c-9'])
+  end
+
   it 'esgotado, mas outro job já reservou o comentário: não grava o "não consegui ler" por cima' do
     allow(cuidar).to receive(:call).and_raise(Crm::MetaAds::ComentariosIa::Rede::Indisponivel)
     allow(Crm::MetaAds::ComentariosIa::Registro).to receive(:reservar!).and_return(false)

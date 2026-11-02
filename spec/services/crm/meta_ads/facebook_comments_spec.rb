@@ -71,6 +71,17 @@ RSpec.describe Crm::MetaAds::FacebookComments do
     stub_page_token
   end
 
+  # #2454, revisão da Agentes IA: a leitura da foto roda dentro da requisição; o prazo vale para cada ida à Graph.
+  it 'com prazo: cada cliente da Graph recebe o prazo de quem chama' do
+    allow(Meta::AdsGraphClient).to receive(:new).and_call_original
+    prazo = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+    stub_request(:get, %r{graph\.facebook\.com/.*/me/permissions}).to_return(status: 503, body: 'fora')
+
+    expect { described_class.new(connection, inbox_access: inbox_access, prazo: prazo).post_media(post_id) }
+      .to raise_error(described_class::Error, 'meta_unavailable')
+    expect(Meta::AdsGraphClient).to have_received(:new).with(hash_including(prazo: prazo))
+  end
+
   describe '#list' do
     it 'traz os comentários do post do anúncio, com uma camada de respostas, quem é a Página e o que dá para fazer' do
       ready!(*all_permissions)

@@ -1042,10 +1042,12 @@
 # IA cuida dos comentários (#2212, épico #2194). Ligada: nos posts e anúncios em que a pessoa ligou o cuidado, a IA lê
 # cada comentário novo (evento `meta_ads.comment_received`, do #2196 e do #2197). Quem pede informação recebe o
 # privado (Private Reply no Instagram Direct ou no Messenger) e uma frase no comentário. Reclamação vai urgente para a
-# pessoa, propaganda some do post, e o resto fica sem resposta. Teto de 200 comentários por conta por dia. O custo do
+# pessoa, propaganda some do post, e o resto fica sem resposta. Sem teto de uso (#2454). O custo do
 # Jev é nosso (eval de 27/10: ~US$ 0,000024 por comentário). Desligada: nenhum comentário é lido. Sem tela neste PR.
 # Migration 20261108620000 (crm_meta_ads_comment_cares). Fim da feature_flags_ext_2, depois de seus_posts_comentarios:
 # posição 16 (valor 32768, 1 << 15), reservada pela Orquestração em 30/10 e confirmada por ela na hora da fila.
+# #2458, sem chave nova (decisão do Rodrigo, 01/11): ligada, a IA também escreve o privado e a frase do comentário, pelo
+# agente da porta da caixa; sem agente que possa falar com cliente, as frases fixas. Desligar desliga o cuidado inteiro.
 - name: meta_ads_comentarios_ia
   display_name: Anúncios › IA cuida dos comentários
   enabled: false
@@ -1089,9 +1091,8 @@
 # Automação livre F1, fundação segura (#2443, épico #2414). Ligada: os três motores de automação (regras, automações
 # de etapa do CRM e o motor novo) contam numa cadeia só, com profundidade 3 e nunca a mesma automação duas vezes (D6),
 # e "mover para a etapa" cria o card quando a conversa não tem nenhum. Desligada: cada motor faz o que fazia antes.
-# Rollback: desligar a flag na conta. Sem migration. Posição dada pela Orquestração em 31/10: feature_flags_ext_2,
-# posição 22 (valor 2097152, 1 << 21), depois de agentes_enviar_local_e_contato (#2442); até o #2442 entrar na main
-# ela ocupa a 20. Nasce ligada no piloto (contas 1, 16 e 18).
+# Rollback: desligar a flag na conta. Sem migration. feature_flags_ext_2, posição 20 (valor 524288, 1 << 19), dada
+# pela Orquestração em 02/11. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: automacao_fundacao
   display_name: Automação › fundação (cadeia comum e mover cria o card)
   enabled: false
