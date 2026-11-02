@@ -235,10 +235,15 @@ fora:
   - motivo: Etapa do funil. A D13 a libera, mas o formato de criar e alterar etapa é incompleto (category, funnel_stage_type) e o ADR deixa fora a ação de formato incompleto. Entra quando o formato completar.
     recursos:
       - crm/stages
-  - motivo: Troca a lista inteira de etiquetas do contato e apaga a que outra pessoa pôs no meio-tempo. Entra quando houver uma rota de pôr e tirar, como a da conversa (#2202).
+  - motivo: >-
+      Troca a lista inteira de etiquetas e apaga a que outra pessoa pôs no meio-tempo. O passo usa a rota de pôr e
+      tirar uma a uma: conversations/alterar_etiquetas (#2202) e contacts/alterar_etiquetas (#2461).
     recursos:
       - contacts/labels
       - conversations/labels
+  - motivo: Pôr e tirar etiqueta do contato uma a uma (#2461). Fica fora até o PR-B do motor (#2459), que a libera.
+    recursos:
+      - contacts/alterar_etiquetas
   - motivo: Configuração e dados que a F3 não libera. A D13 cobre etiqueta, atributo, etapa, atribuição e agente na caixa; o resto entra quando um caso real pedir.
     recursos:
       - teams

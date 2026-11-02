@@ -4719,6 +4719,24 @@
     ],
     "sem_corpo": false
   },
+  "PATCH contacts/:contact_id/labels/alterar": {
+    "campos": {
+      "por": {
+        "tipo": "lista"
+      },
+      "tirar": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/contacts/alterar_etiquetas#update",
+    "origem": [
+      "app/controllers/concerns/alterar_etiquetas_concern.rb:17",
+      "app/controllers/concerns/alterar_etiquetas_concern.rb:70",
+      "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
+    ],
+    "sem_corpo": false
+  },
   "PATCH contacts/:contact_id/notes/:id": {
     "campos": {
       "content": {
@@ -4854,8 +4872,8 @@
     "completo": true,
     "controller": "api/v1/accounts/conversations/alterar_etiquetas#update",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:15",
-      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:68",
+      "app/controllers/concerns/alterar_etiquetas_concern.rb:17",
+      "app/controllers/concerns/alterar_etiquetas_concern.rb:70",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false

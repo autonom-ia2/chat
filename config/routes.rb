@@ -963,6 +963,7 @@ Rails.application.routes.draw do
               resources :conversations, only: [:index]
               resources :contact_inboxes, only: [:create]
               resources :labels, only: [:create, :index]
+              patch 'labels/alterar', to: 'alterar_etiquetas#update', as: :alterar_etiquetas # fork chat#2461: pôr/tirar uma a uma
               resources :notes
               resource :opt_out, only: [:create, :destroy]
               resource :customer, only: [:create, :destroy]
