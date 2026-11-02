@@ -1,0 +1,278 @@
+<script setup>
+import { computed, ref, useId } from 'vue';
+import { useI18n } from 'vue-i18n';
+import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
+import Button from 'dashboard/components-next/button/Button.vue';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import LivreCampo from './LivreCampo.vue';
+import LivreCondicao from './LivreCondicao.vue';
+import LivreDuracao from './LivreDuracao.vue';
+import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
+import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
+import { copiar } from '../receita';
+
+// #2414 F5 — o painel do "Alterar": os campos do item escolhido (o gatilho, uma
+// condição do "Só se" ou um passo), já preenchidos. Nada muda até "Salvar".
+// Passo que o editor não conhece (ação avançada) aparece em frase e só sai
+// inteiro: o editor nunca reescreve o que não sabe montar.
+const props = defineProps({
+  catalogo: { type: Object, required: true },
+  opcoes: { type: Object, required: true },
+  atributosDaPeca: { type: Function, required: true },
+  atributosDo: { type: Function, required: true },
+});
+
+const emit = defineEmits(['salvar', 'tirar', 'close']);
+
+const { t } = useI18n();
+const painel = ref(null);
+const idGatilho = useId();
+
+// { tipo: 'gatilho' | 'condicao' | 'passo', indice?, novo?, listaId?, valor }
+const alvo = ref(null);
+const rascunho = ref(null);
+
+const entrada = computed(() =>
+  alvo.value?.tipo === 'passo'
+    ? entradaDoPasso(rascunho.value, props.catalogo)
+    : null
+);
+const avancada = computed(() => alvo.value?.tipo === 'passo' && !entrada.value);
+
+// Os galhos ("então", "senão") ficam na própria lista do Confira, não aqui.
+const camposNativos = computed(() =>
+  entrada.value && entrada.value.tipo !== 'acao'
+    ? entrada.value.campos.filter(campo => campo.peca !== 'passos')
+    : []
+);
+const camposDaAcao = computed(() =>
+  entrada.value?.tipo === 'acao' ? entrada.value.campos : []
+);
+// A mesma etiqueta não vai em "Pôr" e em "Tirar": marcada numa lista, fica
+// bloqueada na outra.
+const bloqueadasDe = campo =>
+  campo.peca === 'etiquetas'
+    ? camposDaAcao.value
+        .filter(outro => outro.peca === 'etiquetas' && outro !== campo)
+        .flatMap(
+          outro => lerCampo(rascunho.value, entrada.value, outro.nome) || []
+        )
+    : [];
+const escolhasDoCaminho = computed(() =>
+  Object.entries(entrada.value?.caminho || {})
+    .filter(([, origem]) => origem.escolher)
+    .map(([param, origem]) => ({ param, ...origem }))
+);
+
+const titulo = computed(() =>
+  alvo.value
+    ? t(`AUTOMACAO_LIVRE.ALTERAR_PAINEL.${alvo.value.tipo.toUpperCase()}`)
+    : ''
+);
+
+const frase = computed(() => {
+  if (!alvo.value || !rascunho.value) return '';
+  if (alvo.value.tipo === 'passo')
+    return fraseDoPasso(rascunho.value, props.catalogo, t);
+  if (alvo.value.tipo === 'gatilho')
+    return fraseDoGatilho(rascunho.value, props.catalogo, t);
+  return fraseDaCondicao(rascunho.value, props.catalogo, t);
+});
+
+const opcoesDeGatilho = computed(() =>
+  props.catalogo.gatilhos.map(item => ({
+    value: item.tipo,
+    label: t(item.frase),
+  }))
+);
+const trocarGatilho = tipo => {
+  rascunho.value = { ...(rascunho.value || {}), tipo };
+};
+
+const mudarNativo = (nome, novo) => {
+  rascunho.value = { ...rascunho.value, [nome]: novo };
+};
+const mudarCampo = (nome, novo) => {
+  rascunho.value = gravarCampo(rascunho.value, entrada.value, nome, novo);
+};
+const mudarCaminho = (param, novo) => {
+  rascunho.value = {
+    ...rascunho.value,
+    caminho: { ...(rascunho.value.caminho || {}), [param]: novo },
+  };
+};
+
+const abrir = item => {
+  alvo.value = item;
+  rascunho.value = copiar(item.valor ?? null);
+  painel.value?.open();
+};
+
+// Quem usa fecha o painel quando a mudança deu certo; se a API recusou, o
+// painel fica aberto com o que a pessoa montou.
+const salvar = () => {
+  emit('salvar', { ...alvo.value, valor: copiar(rascunho.value) });
+};
+
+const tirar = () => {
+  emit('tirar', alvo.value);
+};
+
+const podeTirar = computed(
+  () =>
+    (alvo.value?.tipo === 'passo' && !alvo.value.novo) ||
+    (alvo.value?.tipo === 'condicao' && alvo.value.indice >= 0)
+);
+// O que o esquema recusaria não chega a "Salvar": a condição sem o que olhar, a
+// duração sem número, o alvo a escolher e o campo obrigatório vazios. O
+// obrigatório "pelo_modelo" depende de outro campo; quem confere é a API.
+const condicaoPronta = condicao =>
+  Boolean(condicao?.todas || condicao?.alguma || condicao?.campo?.$valor);
+const vazio = valor =>
+  valor === undefined ||
+  valor === null ||
+  valor === '' ||
+  (Array.isArray(valor) && !valor.length);
+const nativoPronto = campo => {
+  const valor = rascunho.value[campo.nome];
+  if (campo.peca === 'duracao') return Number.isInteger(valor?.valor);
+  if (campo.peca === 'condicao') return condicaoPronta(valor);
+  return true;
+};
+const acaoPronta = () =>
+  escolhasDoCaminho.value.every(
+    escolha => !vazio(rascunho.value.caminho?.[escolha.param])
+  ) &&
+  camposDaAcao.value
+    .filter(campo => campo.obrigatorio === true)
+    .every(
+      campo => !vazio(lerCampo(rascunho.value, entrada.value, campo.nome))
+    );
+
+const podeSalvar = computed(() => {
+  if (avancada.value || !rascunho.value) return false;
+  if (alvo.value?.tipo === 'gatilho') return Boolean(rascunho.value.tipo);
+  if (alvo.value?.tipo === 'condicao') return condicaoPronta(rascunho.value);
+  return camposNativos.value.every(nativoPronto) && acaoPronta();
+});
+
+const fechar = () => painel.value?.close();
+
+defineExpose({ abrir, fechar });
+</script>
+
+<template>
+  <SidePanel ref="painel" :title="titulo" width="lg" @close="emit('close')">
+    <div v-if="alvo" data-alterar class="flex flex-col gap-5">
+      <p
+        v-if="frase"
+        data-frase-alterar
+        class="px-4 py-3 mb-0 text-base font-medium rounded-xl bg-n-alpha-2 text-n-slate-12"
+      >
+        {{ frase }}
+      </p>
+
+      <p
+        v-if="avancada"
+        data-avancada-dica
+        class="mb-0 text-[0.9375rem] text-n-slate-11"
+      >
+        {{ $t('AUTOMACAO_LIVRE.CONFIRA.AVANCADA_DICA') }}
+      </p>
+
+      <div v-if="alvo.tipo === 'gatilho'" class="flex flex-col gap-1.5">
+        <label :for="idGatilho" class="text-sm font-medium text-n-slate-12">
+          {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TIPO_GATILHO') }}
+        </label>
+        <ChoiceSelect
+          :model-value="rascunho?.tipo || ''"
+          :trigger-id="idGatilho"
+          :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TIPO_GATILHO')"
+          :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+          :options="opcoesDeGatilho"
+          @update:model-value="trocarGatilho"
+        />
+      </div>
+
+      <LivreCondicao
+        v-if="alvo.tipo === 'condicao'"
+        :model-value="rascunho"
+        :catalogo="catalogo"
+        :atributos-do="atributosDo"
+        @update:model-value="novo => (rascunho = novo)"
+      />
+
+      <template v-for="campo in camposNativos" :key="campo.nome">
+        <LivreDuracao
+          v-if="campo.peca === 'duracao'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :unidades="catalogo.unidades"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreCondicao
+          v-else-if="campo.peca === 'condicao'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+      </template>
+
+      <div
+        v-for="escolha in escolhasDoCaminho"
+        :key="escolha.param"
+        class="flex flex-col gap-1.5"
+        :data-escolher="escolha.escolher"
+      >
+        <span class="text-sm font-medium text-n-slate-12">
+          {{ $t(escolha.rotulo) }}
+        </span>
+        <ChoiceSelect
+          :model-value="rascunho.caminho?.[escolha.param] ?? ''"
+          :aria-label="$t(escolha.rotulo)"
+          :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+          :options="opcoes[escolha.escolher] || []"
+          @update:model-value="novo => mudarCaminho(escolha.param, novo)"
+        />
+      </div>
+
+      <LivreCampo
+        v-for="campo in camposDaAcao"
+        :key="campo.nome"
+        :campo="campo"
+        :model-value="lerCampo(rascunho, entrada, campo.nome)"
+        :catalogo="catalogo"
+        :opcoes="opcoes"
+        :atributos="atributosDaPeca(campo.peca)"
+        :bloqueadas="bloqueadasDe(campo)"
+        @update:model-value="novo => mudarCampo(campo.nome, novo)"
+      />
+    </div>
+
+    <template #footer>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <Button
+          v-if="podeTirar"
+          data-tirar
+          :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TIRAR')"
+          icon="i-lucide-trash-2"
+          ruby
+          link
+          class="min-h-11"
+          @click="tirar"
+        />
+        <span v-else />
+        <Button
+          v-if="!avancada"
+          data-salvar
+          :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.SALVAR')"
+          class="min-h-11"
+          :disabled="!podeSalvar"
+          @click="salvar"
+        />
+      </div>
+    </template>
+  </SidePanel>
+</template>

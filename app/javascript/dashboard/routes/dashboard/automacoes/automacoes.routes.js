@@ -1,7 +1,8 @@
 import { FEATURE_FLAGS } from '../../../featureFlags';
 import { frontendURL } from '../../../helper/URLHelper';
 
-const AutomacoesPage = () => import('./pages/AutomacoesPage.vue');
+const AutomacoesInicio = () => import('./pages/AutomacoesInicio.vue');
+const LivreEditorPage = () => import('./livre/pages/LivreEditorPage.vue');
 const AutomacaoConversaPage = () => import('./pages/AutomacaoConversaPage.vue');
 
 // #859 — Automações no menu principal. As mesmas permissões do modo manual
@@ -12,11 +13,15 @@ const AutomacaoConversaPage = () => import('./pages/AutomacaoConversaPage.vue');
 const VER = ['administrator', 'automation_view', 'automation_manage'];
 const MUDAR = ['administrator', 'automation_manage'];
 
+// #2414 F5 — com automacao_editor ligada, a lista vira a lista única e as
+// automações novas abrem no editor gerado do catálogo. Desligada, tudo como hoje.
+const EDITOR = FEATURE_FLAGS.AUTOMACAO_EDITOR;
+
 export const routes = [
   {
     path: frontendURL('accounts/:accountId/automacoes'),
     name: 'automacoes_lista',
-    component: AutomacoesPage,
+    component: AutomacoesInicio,
     meta: { featureFlag: FEATURE_FLAGS.AUTOMATIONS, permissions: VER },
   },
   {
@@ -28,6 +33,18 @@ export const routes = [
       permissions: MUDAR,
       guiaEmbutido: true,
     },
+  },
+  {
+    path: frontendURL('accounts/:accountId/automacoes/livre/nova'),
+    name: 'automacoes_livre_nova',
+    component: LivreEditorPage,
+    meta: { featureFlag: EDITOR, permissions: MUDAR },
+  },
+  {
+    path: frontendURL('accounts/:accountId/automacoes/livre/:id'),
+    name: 'automacoes_livre_editar',
+    component: LivreEditorPage,
+    meta: { featureFlag: EDITOR, permissions: VER },
   },
   {
     path: frontendURL('accounts/:accountId/automacoes/:id'),

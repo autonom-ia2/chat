@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (246 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (247 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -367,6 +367,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Automacoes > Nova automacao; 2. Conte com suas palavras o que deve acontecer, ou escolha um modelo pronto; 3. O Guia cria a automacao e a tela passa a mostrar o resumo Quando > Se > Entao; 4. Clique em Testar com casos reais para ver o que ela faria nas conversas recentes; 5. Clique em Ligar automacao quando estiver como voce quer.
 - gotchas: nesta tela a automacao nasce DESLIGADA — ao criar, mande active false e diga que ela so comeca a valer quando a pessoa clicar em Ligar; so ligue (PATCH com active true) quando a pessoa pedir com todas as letras; o registro aberto na tela chega no contexto como id=N e e a automacao que a pessoa esta vendo, entao "esta", "ela" e "essa regra" falam dela; ajuste com PATCH automation_rules/:id na mesma automacao em vez de criar outra; o teste com casos reais nao envia nem muda nada e deixa de fora a condicao que depende de um campo mudar; Editar no modo manual abre a mesma automacao no formulario completo. Comece pronto: se a pessoa nao ditou o texto da mensagem, escreva um curto e cordial, ja crie a automacao desligada com ele e mostre o texto na resposta — ela troca conversando; nao pergunte o texto antes de criar.
 - nav_target: `automacoes_nova`
+
+### Montar uma automacao passo a passo no editor
+- intent: Quero montar a automacao eu mesmo, passo a passo; Como ponho uma espera de 2 dias antes de etiquetar?; Como faco a automacao seguir so se a conversa estiver aberta?; Como mudo um passo da automacao?; Por que a minha automacao desligou sozinha?; O que e "Acao avancada" na automacao?
+- onde_fica: Menu lateral > Automacoes > Nova automacao (com o editor ligado na conta a lista mostra as novas e as do jeito antigo juntas; as do jeito antigo abrem na tela de sempre)
+- rota: `automacoes_livre_nova` - `/app/accounts/:accountId/automacoes/livre/nova`
+- gate: feature flag `automacao_editor`; papel `administrator` ou `automation_manage`
+- cobre: automacoes_livre_editar
+- pre_requisitos: administrador ou funcao com Automacoes em Editar para montar, salvar, ligar e desligar; quem so ve abre a automacao sem os botoes; etiquetas, pessoas, times, caixas e campos personalizados usados ja precisam existir
+- passos: 1. Em Quando, toque em Escolher e diga quando ela comeca (conversa comeca, reaberta, resolvida ou chega mensagem); 2. Em So se, ponha as condicoes (o que olhar, como comparar e com o que) ou deixe sem condicao; 3. Em Faca, toque em Por o primeiro passo ou no "+" entre dois passos, escolha o passo e preencha no painel Alterar; 4. Na nova, use Guardar sem ligar ou Ligar; na que ja existe, cada Salvar do painel vira uma versao nova; 5. Ligar so funciona com quando e pelo menos um passo; Desligar sempre funciona.
+- gotchas: so aparecem os passos que a automacao ja sabe fazer (conversa, contato e empresa, etiquetas, campos personalizados, equipe, esperar, esperar ate, se/senao e parar) — passo de card do funil ainda nao entra aqui; passo que so o Guia monta aparece como Acao avancada, nao abre para editar e continua como esta quando outro passo muda; se outra pessoa salvou depois que a tela abriu, a tela avisa e mostra a versao nova antes de deixar salvar ou ligar; a automacao roda com os direitos de quem ligou, entao se outra pessoa salva uma versao nova ela pausa ate alguem ligar de novo; quem ja esta no meio termina na versao anterior; as automacoes das etapas do funil continuam em Editar funil.
+- nav_target: `automacoes_livre_nova`
 
 ### Criar respostas prontas
 - intent: Como crio uma resposta pronta?; Onde cadastro um texto padrao?; Como uso slash command no atendimento?

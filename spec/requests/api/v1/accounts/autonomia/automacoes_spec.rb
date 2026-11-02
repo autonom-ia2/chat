@@ -49,6 +49,17 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     expect(response.parsed_body['gatilhos'].pluck('tipo')).to include('conversa.criada')
   end
 
+  it 'lista cada automação com a receita, para a frase da lista' do
+    criar
+
+    get base, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    lista = response.parsed_body['automacoes']
+    expect(lista.pluck('nome')).to eq(['Lembrete'])
+    expect(lista.first.dig('versao', 'receita', 'gatilho', 'tipo')).to eq('conversa.resolvida')
+  end
+
   it 'cria a automação desligada, de origem manual, com a v1' do
     criar
 
@@ -90,6 +101,19 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
 
     post "#{base}/#{id}/desligar", headers: admin.create_new_auth_token, as: :json
     expect(response.parsed_body).to include('ativa' => false)
+  end
+
+  it 'liga como quem fez o pedido, mesmo com outro user_id no corpo (parecer do Funções no #2476)' do
+    outro = create(:user, account: account, role: :administrator)
+    criar
+    id = response.parsed_body['id']
+
+    post "#{base}/#{id}/ligar", params: { versao_id: versao_id_de(id), user_id: outro.id, ligada_por_id: outro.id },
+                                headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body.dig('ligada_por', 'id')).to eq(admin.id)
+    expect(Autonomia::Automacao::Definicao.find(id).ligada_por_id).to eq(admin.id)
   end
 
   describe 'versão que a tela viu (🔴1, 🟠2 e 🟠3 da qualidade)' do
@@ -204,6 +228,20 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
 
     expect(response).to have_http_status(:unprocessable_entity)
     expect(response.parsed_body['problemas'].join).to include('DELETE crm/stages/:id')
+  end
+
+  it 'recusa pela API trocar a lista inteira de etiquetas da conversa (fora), e aceita mudar a etiqueta da conta' do
+    etiqueta = create(:label, account: account)
+    fora = { id: 'p1', tipo: 'acao', acao: 'POST conversations/:conversation_id/labels', descricao: 'x',
+             caminho: { conversation_id: { '$valor' => 'conversa.id' } }, corpo: { labels: ['vip'] } }
+    criar(com: receita.merge(passos: [fora]))
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas'].join).to include('POST conversations/:conversation_id/labels')
+
+    permitida = { id: 'p1', tipo: 'acao', acao: 'PUT labels/:id', descricao: 'Mudar a descrição da etiqueta',
+                  caminho: { id: etiqueta.id }, corpo: { description: 'Revisada' } }
+    criar(com: receita.merge(passos: [permitida]))
+    expect(response).to have_http_status(:created)
   end
 
   it 'guarda idêntico o passo que o editor não sabe mostrar' do

@@ -3250,6 +3250,29 @@
      ],
      "revisar": false,
      "nota": "A aba 'Contato' era coberta no estudo; a aba 'Conversas' da mesma tela, não."
+    },
+    {
+     "id": "12.06",
+     "titulo": "Montar uma automação passo a passo",
+     "para_que_serve": "Montar a automação no editor: quando começa, só se, os passos, e ligar.",
+     "publico": "admin",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "automacoes_livre_nova",
+      "automacoes_livre_editar"
+     ],
+     "me_leve_ate_la": {
+      "rota": "automacoes_livre_nova",
+      "destaque": null
+     },
+     "requer": "automacao_editor",
+     "prints": [],
+     "fontes": [
+      "porques: Montar uma automacao passo a passo no editor"
+     ],
+     "revisar": false,
+     "nota": "#2414 F5 — editor da Automação livre, atrás da flag automacao_editor."
     }
    ]
   },

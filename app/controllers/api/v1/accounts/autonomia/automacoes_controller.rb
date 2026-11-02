@@ -26,9 +26,10 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     render json: ::Autonomia::Automacao::Catalogo.todos
   end
 
+  # A lista mostra cada automação em frase (Quando → primeiro passo), então leva a receita.
   def index
     automacoes = escopo.includes(:versao_ativa, :ligada_por).order(:id)
-    render json: { automacoes: automacoes.map { |automacao| para_tela(automacao) } }
+    render json: { automacoes: automacoes.map { |automacao| para_tela(automacao, receita: true) } }
   end
 
   def show
