@@ -564,7 +564,9 @@
         "ERROR": {
           "INVALID_PHONE": "Número inválido. Use o formato 55DDDNÚMERO.",
           "NOT_CONFIGURED": "A conexão de WhatsApp ainda não está configurada. Fale com o suporte.",
-          "GENERIC": "Não foi possível criar a caixa. Tente novamente."
+          "PHONE_IN_USE_ELSEWHERE": "Este número já está em uso em outro sistema. Peça ao administrador para liberá-lo antes de criar a caixa.",
+          "ENGINE_UNAVAILABLE": "O serviço de conexão do WhatsApp não respondeu. Espere alguns minutos e tente de novo.",
+          "GENERIC": "Não foi possível criar a caixa. Tente de novo em alguns minutos; se acontecer outra vez, fale com o suporte."
         }
       },
       "API_CHANNEL": {
