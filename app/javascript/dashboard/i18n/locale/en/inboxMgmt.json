@@ -564,6 +564,7 @@
           "INVALID_PHONE": "Invalid number. Use the format 55DDDNUMBER.",
           "NOT_CONFIGURED": "WhatsApp connection is not set up yet. Please contact support.",
           "PHONE_IN_USE_ELSEWHERE": "This number is already connected in another account. Disconnect it there first, or use another number.",
+          "PHONE_CONNECTED_ELSEWHERE": "This number is already connected in another system. Ask the administrator to disconnect it before creating the inbox.",
           "ENGINE_UNAVAILABLE": "The WhatsApp connection service did not answer. Wait a few minutes and try again.",
           "GENERIC": "We could not create the inbox. Try again in a few minutes; if it happens again, contact support."
         }

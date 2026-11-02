@@ -93,9 +93,9 @@ class Channel::Api < ApplicationRecord
   end
 
   def session_shared?(session)
-    Channel::Api.where.not(id: id)
-                .where("additional_attributes ->> 'provider' = 'waha'")
-                .exists?(["additional_attributes ->> 'session' = ?", session])
+    Channel::Api.joins(:inbox).where.not(id: id)
+                .where("channel_api.additional_attributes ->> 'provider' = 'waha'")
+                .exists?(["channel_api.additional_attributes ->> 'session' = ?", session])
   end
 
   def safe_waha_call

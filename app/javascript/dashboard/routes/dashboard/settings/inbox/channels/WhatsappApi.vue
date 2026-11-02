@@ -35,6 +35,7 @@ const errorMessageFor = code => {
     integration_not_configured: 'NOT_CONFIGURED',
     account_token_missing: 'NOT_CONFIGURED',
     phone_in_use_elsewhere: 'PHONE_IN_USE_ELSEWHERE',
+    phone_connected_elsewhere: 'PHONE_CONNECTED_ELSEWHERE',
     engine_unavailable: 'ENGINE_UNAVAILABLE',
   };
   const key = known[code];

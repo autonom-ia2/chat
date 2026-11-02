@@ -21,17 +21,37 @@ RSpec.describe Waha::InboxProvisioner do
       allow(client).to receive(:delete_session)
     end
 
-    def provisioner(target_account = account, token: 'account-token')
-      described_class.new(account: target_account, phone: '5511999999999', api_access_token: token,
-                          client: client, config: config)
+    def provisioner(target_account = account, assigner: WhatsappProxy::Assigner.new)
+      described_class.new(account: target_account, phone: '5511999999999', api_access_token: 'account-token',
+                          client: client, config: config, proxy_assigner: assigner)
+    end
+
+    def channel_attrs(inbox)
+      inbox.channel.reload.additional_attributes
     end
 
     context 'when the account already has an inbox for the number (#2478)' do
-      it 'returns the same inbox instead of creating another one' do
+      it 'returns the finished inbox without touching the engine again' do
         first = provisioner.perform.inbox
 
         expect { expect(provisioner.perform.inbox).to eq(first) }.not_to change(Inbox, :count)
+        expect(client).to have_received(:get_session).once
         expect(client).to have_received(:create_session).once
+        expect(channel_attrs(first)).not_to have_key('provisioning_pending')
+      end
+
+      it 'finishes the remote side of an inbox left pending by a rollback that could not remove it' do
+        allow(client).to receive(:create_session).and_raise(Waha::Client::Error.new('WAHA POST -> 422', status: 422))
+        allow_any_instance_of(Inbox).to receive(:destroy!).and_raise(ActiveRecord::RecordNotDestroyed) # rubocop:disable RSpec/AnyInstance
+
+        log = capture_log { expect { provisioner.perform }.to raise_error(described_class::Error, 'remote_setup_failed') }
+        left = account.inboxes.sole
+        expect(log).to include("[Waha] rollback kept inbox=#{left.id}")
+        expect(channel_attrs(left)['provisioning_pending']).to be(true)
+
+        allow(client).to receive(:create_session)
+        expect(provisioner.perform.inbox).to eq(left)
+        expect(channel_attrs(left)).not_to have_key('provisioning_pending')
       end
 
       it 'refuses a number that is already an inbox in another account' do
@@ -39,6 +59,13 @@ RSpec.describe Waha::InboxProvisioner do
 
         expect { provisioner.perform }.to raise_error(described_class::Error, 'phone_in_use_elsewhere')
         expect(account.inboxes.count).to eq(0)
+      end
+
+      it 'ignores a channel without inbox when looking for the owner of the number' do
+        create(:channel_api, account: create(:account),
+                             additional_attributes: { 'provider' => 'waha', 'session' => '5511999999999' }).inbox.delete
+
+        expect(provisioner.perform.inbox.account).to eq(account)
       end
     end
 
@@ -49,7 +76,7 @@ RSpec.describe Waha::InboxProvisioner do
         allow(client).to receive(:start_session)
       end
 
-      it 'reuses the session: swaps its apps and starts it again' do
+      it 'reuses a session that is not connected: swaps its apps and starts it again' do
         result = provisioner.perform
 
         expect(client).not_to have_received(:create_session)
@@ -61,22 +88,70 @@ RSpec.describe Waha::InboxProvisioner do
         expect(client).to have_received(:start_session).with('5511999999999')
       end
 
-      it 'does not start a session that is already running' do
+      it 'reuses a session waiting for the QR without starting it' do
         allow(client).to receive(:get_session).and_return({ 'status' => 'SCAN_QR_CODE' })
 
         provisioner.perform
 
+        expect(client).to have_received(:update_session)
         expect(client).not_to have_received(:start_session)
       end
 
-      it 'keeps the session on failure and removes only the apps sent now' do
+      [{ 'status' => 'WORKING' }, { 'status' => 'SOMETHING_NEW' }, {}].each do |remote|
+        it "refuses a session connected elsewhere (#{remote['status'] || 'no status'}) without touching the engine" do
+          allow(client).to receive(:get_session).and_return(remote)
+
+          expect { provisioner.perform }.to raise_error(described_class::Error, 'phone_connected_elsewhere')
+
+          expect(client).not_to have_received(:update_session)
+          expect(client).not_to have_received(:create_session)
+          expect(client).not_to have_received(:start_session)
+          expect(client).not_to have_received(:delete_app)
+          expect(client).not_to have_received(:delete_session)
+          expect(Inbox.count).to eq(0)
+        end
+      end
+
+      it 'keeps the proxy the session already had when there is no new IP' do
+        proxy = { 'server' => '10.0.0.7:6000', 'username' => 'u', 'password' => 'p' }
+        allow(client).to receive(:get_session).and_return({ 'status' => 'STOPPED', 'config' => { 'proxy' => proxy } })
+
+        provisioner.perform
+
+        expect(client).to have_received(:update_session)
+          .with('5511999999999', config: { ignore: hash_including(groups: true), proxy: proxy }, apps: anything)
+      end
+
+      it 'puts the new IP when the assigner has one' do
+        assigner = instance_double(WhatsappProxy::Assigner, for: webshare_proxy(id: 9, address: '10.0.0.9'), mark_applied!: 1)
+        allow(client).to receive(:get_session)
+          .and_return({ 'status' => 'STOPPED', 'config' => { 'proxy' => { 'server' => '10.0.0.7:6000' } } })
+
+        provisioner(assigner: assigner).perform
+
+        expect(client).to have_received(:update_session)
+          .with('5511999999999', config: hash_including(proxy: hash_including(server: '10.0.0.9:6000')), apps: anything)
+      end
+
+      it 'on failure keeps the session, removes only the apps sent now and restores the IP reservation' do
         allow(Waha::Client).to receive(:new).and_return(client)
+        reservation = WhatsappProxy::Assignment.create!(session_name: '5511999999999', account_id: create(:account).id,
+                                                        pool: 'datacenter', webshare_proxy_id: '7', proxy_address: '10.0.0.7',
+                                                        proxy_port: 6000, assigned_at: 1.day.ago)
+        assigner = instance_double(WhatsappProxy::Assigner, release!: 1)
+        allow(assigner).to receive(:for) do
+          reservation.update!(proxy_address: '10.0.0.9', webshare_proxy_id: '9')
+          webshare_proxy(id: 9, address: '10.0.0.9')
+        end
         allow(client).to receive(:update_session).and_raise(Waha::Client::Error.new('WAHA PUT -> 500', status: 500))
 
-        expect { provisioner.perform }.to raise_error(described_class::Error, 'remote_setup_failed')
+        expect { provisioner(assigner: assigner).perform }.to raise_error(described_class::Error, 'remote_setup_failed')
 
         expect(client).to have_received(:delete_app).twice
         expect(client).not_to have_received(:delete_session)
+        expect(assigner).not_to have_received(:release!)
+        expect(reservation.reload).to have_attributes(account_id: reservation.account_id, proxy_address: '10.0.0.7',
+                                                      webshare_proxy_id: '7')
         expect(Inbox.count).to eq(0)
       end
     end
@@ -84,12 +159,22 @@ RSpec.describe Waha::InboxProvisioner do
     context 'when the engine fails' do
       before { allow(Waha::Client).to receive(:new).and_return(client) }
 
-      it 'deletes a session created by this attempt only once' do
+      it 'deletes the session it may have created, once, when the engine did not answer' do
+        allow(client).to receive(:create_session).and_raise(Waha::Client::Timeout, 'WAHA POST /api/sessions sem resposta')
+
+        expect { provisioner.perform }.to raise_error(described_class::Error, 'engine_unavailable')
+
+        expect(client).to have_received(:delete_session).with('5511999999999').once
+        expect(Inbox.count).to eq(0)
+      end
+
+      it 'deletes nothing remote when the engine refused the session (4xx)' do
         allow(client).to receive(:create_session).and_raise(Waha::Client::Error.new('WAHA POST -> 422', status: 422))
 
         expect { provisioner.perform }.to raise_error(described_class::Error, 'remote_setup_failed')
 
-        expect(client).to have_received(:delete_session).with('5511999999999').once
+        expect(client).not_to have_received(:delete_session)
+        expect(client).not_to have_received(:delete_app)
         expect(Inbox.count).to eq(0)
       end
 
@@ -102,20 +187,24 @@ RSpec.describe Waha::InboxProvisioner do
         expect(client).not_to have_received(:delete_session)
       end
 
-      it 'answers engine_unavailable on timeout' do
-        allow(client).to receive(:create_session).and_raise(Waha::Client::Timeout, 'WAHA POST /api/sessions sem resposta')
+      [502, 503, 504].each do |status|
+        it "answers engine_unavailable when the gateway answers #{status}" do
+          allow(client).to receive(:create_session).and_raise(Waha::Client::Error.new("WAHA POST -> #{status}", status: status))
 
-        expect { provisioner.perform }.to raise_error(described_class::Error, 'engine_unavailable')
+          expect { provisioner.perform }.to raise_error(described_class::Error, 'engine_unavailable')
+        end
       end
 
-      it 'logs what the engine said, without the account token' do
-        allow(client).to receive(:create_session)
-          .and_raise(Waha::Client::Error.new('WAHA POST /api/sessions -> 422: session exists account-token', status: 422))
+      it 'logs what the engine said, without the account token or the whole number' do
+        allow(client).to receive(:create_session).and_raise(
+          Waha::Client::Error.new('WAHA POST /api/sessions/5511999999999 -> 422: session exists account-token', status: 422)
+        )
 
         log = capture_log { expect { provisioner.perform }.to raise_error(described_class::Error) }
 
-        expect(log).to include('Waha::Client::Error', '422: session exists')
+        expect(log).to include('Waha::Client::Error', '422: session exists', '***9999')
         expect(log).not_to include('account-token')
+        expect(log).not_to include('5511999999999')
       end
     end
 

@@ -48,6 +48,16 @@ RSpec.describe Channel::Api do
       expect(client).not_to have_received(:delete_session)
     end
 
+    it 'leaves the engine alone when the flagged channel goes with its inbox (#2478)' do
+      inbox = channel_api.inbox
+      inbox.channel.skip_waha_remote_cleanup = true
+
+      inbox.destroy!
+
+      expect(described_class.exists?(channel_api.id)).to be(false)
+      expect(client).not_to have_received(:delete_session)
+    end
+
     it 'takes the number off its Webshare IP (#1516)' do
       WhatsappProxy::Assignment.create!(session_name: '5511999999999', account_id: channel_api.account_id, pool: 'datacenter',
                                         webshare_proxy_id: '1', proxy_address: '10.0.0.1', proxy_port: 6000,
