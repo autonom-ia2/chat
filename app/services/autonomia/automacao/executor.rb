@@ -28,6 +28,8 @@ class Autonomia::Automacao::Executor
 
   Cadeia = ::Autonomia::Automacao::Cadeia
   Execucao = ::Autonomia::Automacao::Execucao
+  # Passos que falam com gente (F4): só com a flag da F4.
+  NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso }.freeze
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -83,6 +85,7 @@ class Autonomia::Automacao::Executor
     when 'esperar_ate' then esperar_ate(passo)
     when 'se' then se(passo)
     when 'acao' then acao(passo)
+    when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     end
   end
@@ -167,6 +170,20 @@ class Autonomia::Automacao::Executor
     when :sem_acesso then encerrar(passo['id'], 'parada', pausar(resultado.motivo), 'falhou', resultado.dados)
     else tentar_de_novo(passo, resultado)
     end
+  end
+
+  # "mensagem" e "avisar" (F4). Reconferem tudo como a ação e, sem a flag da F4, fecham sem mandar nada (rollback).
+  # Não repetem: a mensagem que deu erro no meio não é mandada de novo, porque o cliente poderia recebê-la duas vezes.
+  def passo_nativo(passo, classe)
+    reconferir
+    return if impedida?(passo['id'])
+    return encerrar(passo['id'], 'parada', 'mensagens_desligadas') unless ::Autonomia::Automacao::Motor.mensagens?(@account)
+
+    resultado = classe.new(execucao: @execucao, passo: passo, valores: valores, conversa: alvo).executar
+    # O outro lado parece um robô: para só nesta conversa, e a automação continua ligada (a nota já ficou).
+    return encerrar(passo['id'], 'parada', 'laco_suspeito', 'falhou') if resultado.tipo == :laco
+
+    seguir_depois_da_acao(passo, resultado)
   end
 
   # A ação mudou o alvo: o passo seguinte ("se", "esperar até") lê o valor de agora, não o de antes dela.

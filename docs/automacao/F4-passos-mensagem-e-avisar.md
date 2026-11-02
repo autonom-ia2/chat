@@ -1,0 +1,103 @@
+# F4: passos "mensagem" e "avisar" (#2414)
+
+Desenho com as decisões da sessão Automação de 02/11/2026, depois da rodada da qualidade.
+- **Branch:** `feat/2459-f4-mensagens`, empilhada no PR-B da F3 (#2459).
+- Sem migration.
+
+## Regra principal: sem freio no uso do cliente (Rodrigo, 31/10/2026)
+
+O cliente manda quantas mensagens quiser. A F4 **não tem teto de mensagens**: nem por conversa, nem por automação,
+nem por hora, nem por conta. A linha da F4 no épico ("teto de mensagem por conversa") virou **proteção anti-laço**,
+que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso vale também para texto repetido: o menu
+"responda 1 ou 2", errado 5 vezes em 2 minutos, responde as 5.
+
+## Flag `automacao_mensagens`
+
+- **Própria da F4.** Só vale com `automacao_motor` e `automacao_fundacao`: sem a fundação não há a cadeia comum contra
+  laço com as regras antigas.
+- **Bit:** sai da ordem no yml, logo depois de `automacao_motor` (posição 21). A posição é confirmada com a Orquestração
+  Deploy no merge da main.
+- **Piloto:** nasce ligada nas contas 1, 16 e 18.
+- **Desligada:**
+  - o salvar recusa o passo (`passo_desligado`);
+  - a execução que chega nele fecha como parada (`mensagens_desligadas`), sem mandar nada. É o rollback.
+
+## Passo `mensagem`
+
+```json
+{ "id": "p3", "tipo": "mensagem", "texto": ["Oi ", { "$valor": "contato.nome" }, ", seu pedido saiu."] }
+```
+
+- **Autor (D9):** sai como "Automação". O `sender` fica vazio, e `content_attributes` leva `automacao_id`,
+  `execucao_id` e `passo`.
+  - A marca `automacao_id` entrou na lista única de envios automáticos (`PessoaDaEquipe` e o espelho no front).
+  - Não conta como resposta de pessoa: `first_reply_created_at` e `waiting_since` ficam como estavam (spec).
+  - No Híbrido, a origem é `automation`.
+- **Pula, com motivo:**
+  - valor vazio: `faltou_valor`;
+  - texto em branco: `texto_vazio`;
+  - contato que pediu para não receber (`opted_out_at`, o campo das campanhas): `contato_nao_recebe`;
+  - tweet: `canal_sem_resposta`.
+- **Janela:** `MessageWindowService.new(conversa, automatic: true)`, para todo canal com janela (WhatsApp, Instagram,
+  Messenger, TikTok, Twilio, API com prazo).
+  - Como envio automático, a tag de agente humano da Meta não vale, e a janela é de 24 h.
+  - A caixa híbrida com o WhatsApp API pronto responde fora da janela.
+  - Fora da janela: `fora_da_janela`. É só texto livre; o modelo da Meta é a F4b, #2468.
+- **Resultado:** o passo dá `ok` quando a mensagem é criada. O passo que deu ok nunca reenvia.
+- **Duplicidade:** é tratada pelo evento de origem, nunca pelo texto. Uma execução por mensagem recebida e, no
+  máximo, uma resposta do passo por evento. A marca por evento fica na escuta (PR-C), que eu refaço sobre este PR.
+
+## Passo `avisar`
+
+```json
+{ "id": "p4", "tipo": "avisar", "para": { "responsavel": true, "times": [3], "pessoas": [12] },
+  "texto": ["Cliente ", { "$valor": "contato.nome" }, " pediu desconto"] }
+```
+
+- **Como:** uma nota privada da Automação na conversa, que menciona cada pessoa.
+  - O aviso é o da menção que a plataforma já tem (`conversation_mention`): sino, push e e-mail pela preferência de
+    cada pessoa.
+  - Nenhum tipo de notificação novo (o 13 e as flags dele deixaram de ser necessários).
+- **Para quem:**
+  - o responsável, os times (abertos pessoa a pessoa) e as pessoas escolhidas, só da conta;
+  - fica só quem passa no `ConversationPolicy#show?` de cada pessoa. Função personalizada e administrador mudam a
+    resposta; não basta estar na caixa;
+  - o texto, com os valores, só chega a quem passou;
+  - lista vazia pula com `ninguem_para_avisar`.
+- **No salvar:** time e pessoa de outra conta são recusados.
+- **Fora da F4:** o alvo card (sem conversa), que segue a política do card, entra com os gatilhos de card (F6).
+
+## Proteção anti-laço
+
+1. **Cadeia comum (F1, D6):** a mensagem sai dentro da cadeia da execução.
+   - A escuta não dispara a própria automação e para na profundidade 3, contando os três motores.
+   - A regra antiga que responde a toda mensagem de saída (o padrão das contas 6, 16 e 17) responde uma vez e para.
+2. **Robô do outro lado:** são **20 trocas seguidas** em que o contato responde em **menos de 20 s**.
+   - **Troca:** um envio do passo "mensagem" do motor novo seguido da mensagem recebida do contato.
+   - **Fica de fora:** mensagem de IA, de robô (AgentBot), das automações antigas ou de campanha. Ela não conta nem
+     zera.
+   - **Zera:** quando uma pessoa da equipe escreve, ou quando a conversa fica 30 min sem mensagem.
+   - **Ao disparar:** a execução para com `laco_suspeito`, só nessa conversa, e a automação continua ligada. Fica uma
+     nota para a equipe, que menciona quem ligou.
+
+Os números ficam em constantes (`AntiLaco`). As specs provam cada caso:
+- robô com latência de 12 s é pego na 20ª troca;
+- com 19 trocas, ainda manda;
+- cliente humano com 20 mensagens no próprio ritmo é respondido;
+- mensagem de IA ou de regra antiga no meio não zera;
+- a contagem zera com pessoa da equipe e com 30 min parada.
+
+## Envio pelos canais (sem remetente)
+
+Specs com o envio de verdade:
+- WhatsApp Cloud e Instagram passam pelo `SendReplyJob` com o HTTP simulado, sem erro;
+- o Híbrido manda fora da janela oficial;
+- a mensagem passa por todos os ouvintes do evento (`EventDispatcherJob`) e chega ao webhook com `sender` vazio.
+
+## Fora da F4
+
+- Modelo da Meta: F4b, #2468.
+- Anexo e e-mail como canal.
+- Escolher a caixa quando o contato tem várias conversas.
+- Variável no corpo da ação do catálogo. A `Receita` diz "chega com a mensagem (F4)", mas a F4 não a trouxe: fica
+  para quando um caso pedir.

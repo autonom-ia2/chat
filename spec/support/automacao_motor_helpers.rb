@@ -23,6 +23,18 @@ module AutomacaoMotorHelpers
     { 'id' => id, 'tipo' => 'esperar', 'duracao' => { 'valor' => valor, 'unidade' => unidade } }
   end
 
+  def ligar_mensagens(account)
+    account.enable_features!('automacao_mensagens')
+  end
+
+  def mensagem_passo(id, *texto)
+    { 'id' => id, 'tipo' => 'mensagem', 'texto' => texto }
+  end
+
+  def avisar_passo(id, para, *texto)
+    { 'id' => id, 'tipo' => 'avisar', 'para' => para, 'texto' => texto }
+  end
+
   def prioridade_passo(id, prioridade = 'urgent', conversa_id: { '$valor' => 'conversa.id' })
     { 'id' => id, 'tipo' => 'acao', 'acao' => 'POST conversations/:id/toggle_priority', 'descricao' => 'Marcar a prioridade',
       'caminho' => { 'id' => conversa_id }, 'corpo' => { 'priority' => prioridade } }

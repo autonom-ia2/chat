@@ -36,6 +36,13 @@
       "required": ["$valor"],
       "properties": { "$valor": { "type": "string", "minLength": 1 } }
     },
+    "texto": {
+      "description": "Pedaços literais e valores do alvo, montados na hora (F4). Valor vazio pula o passo.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "oneOf": [{ "type": "string", "minLength": 1 }, { "$ref": "#/definitions/valor" }] }
+    },
+    "ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
     "condicao": {
       "oneOf": [
         {
@@ -130,6 +137,36 @@
               "additionalProperties": { "oneOf": [{ "type": ["string", "integer"] }, { "$ref": "#/definitions/valor" }] }
             },
             "corpo": { "type": "object" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "texto"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "mensagem" },
+            "texto": { "$ref": "#/definitions/texto" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "texto", "para"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "avisar" },
+            "texto": { "$ref": "#/definitions/texto" },
+            "para": {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 1,
+              "properties": {
+                "responsavel": { "type": "boolean" },
+                "times": { "$ref": "#/definitions/ids" },
+                "pessoas": { "$ref": "#/definitions/ids" }
+              }
+            }
           }
         }
       ]
