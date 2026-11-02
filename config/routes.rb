@@ -212,6 +212,11 @@ Rails.application.routes.draw do
           put 'seus_posts/posts/:post_id/cuidado/foto', to: 'seus_posts_cuidado#corrigir_foto'
           post 'seus_posts/posts/:post_id/cuidado/ler_antigos', to: 'seus_posts_cuidado#ler_antigos'
           get 'seus_posts/posts/:post_id/resumo', to: 'seus_posts_cuidado#resumo'
+          # O cuidado de cada post ou anúncio como cartão em Agentes (#2469, PR 3a do #2436).
+          get 'agentes_do_post', to: 'agentes_do_post#index'
+          get 'agentes_do_post/:id', to: 'agentes_do_post#show'
+          put 'agentes_do_post/:id/estado', to: 'agentes_do_post#estado'
+          post 'agentes_do_post/:id/testar', to: 'agentes_do_post#testar'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member
@@ -714,6 +719,14 @@ Rails.application.routes.draw do
             resources :guide_memorias, only: [:index, :update, :destroy]
             # #935 — o Guia volta sozinho: as vigias ("me avisa se…") e os avisos de cada pessoa.
             resources :vigias, only: [:index, :show, :create, :update, :destroy]
+            # #2414 F5 — a Automação livre pelo editor: o catálogo de passos, as automações, ligar e desligar.
+            resources :automacoes, only: [:index, :show, :create, :update] do
+              get :passos, on: :collection
+              member do
+                post :ligar
+                post :desligar
+              end
+            end
             resources :avisos, only: [:index, :update]
             # #943 — o que o Guia deixou sem desfazer. Fora de `guide/`, de propósito: é a leitura da vigia padrão.
             get 'pendencias_do_guia', to: 'pendencias_do_guia#index'

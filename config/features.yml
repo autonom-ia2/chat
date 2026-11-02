@@ -1107,15 +1107,25 @@
   display_name: Automação › motor (automações novas)
   enabled: false
   column: feature_flags_ext_2
+# Automação livre F5, o editor (#2414). Ligada: Automações mostra a lista única (as novas, as do jeito antigo e as do
+# funil) e o editor das automações novas, montado do catálogo de passos (lib/operator_guide/automacao-passos.json).
+# Desligada: a tela de Automações fica a de hoje e a API do editor responde 404, menos o desligar, que sempre funciona
+# (D7). Rollback: desligar a flag na conta. Sem migration.
+# Bit: sem reserva (Orquestração, 02/11). Fica no fim da feature_flags_ext_2, na ordem real em que entrar na main;
+# contra a main 8964425403 (#2476), depois de automacao_motor: posição 22 (valor 2097152, 1 << 21). A F4
+# (automacao_mensagens) também pediu a 22: vale a ordem de entrada, e quem entrar por segundo traz a main e vira 23
+# (4194304). A Orquestração confirma o número na hora da fila. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: automacao_editor
+  display_name: Automação › editor e lista única
+  enabled: false
+  column: feature_flags_ext_2
 # Automação livre F4, passos mensagem e avisar (#2459, épico #2414). Só vale com automacao_motor e automacao_fundacao
 # ligadas (sem a fundação não há a cadeia comum contra laço com as regras antigas). Ligada: a receita pode
 # mandar mensagem ao cliente (sai como "Automação") e avisar a equipe por menção numa nota privada. Desligada: o salvar
 # recusa o passo, e a execução que chega nele fecha como parada (mensagens_desligadas), sem mandar nada. Sem teto de
 # uso; só a proteção contra laço. Rollback: desligar a flag na conta. Sem migration.
-# Bit: feature_flags_ext_2, posição 22 (valor 2097152, 1 << 21), logo depois de automacao_motor. A F5
-# (automacao_editor) também pediu a 22: vale a ordem de entrada na main, e quem entrar por segundo traz a main e vira
-# 23 (bit, comentário e account_spec). A Orquestração confirma na fila. Nasce DESLIGADA em todas as contas; só liga
-# depois da #2486 (Salvar tudo).
+# Bit: feature_flags_ext_2, posição 23 (valor 4194304, 1 << 22), logo depois de automacao_editor (#2485 entrou
+# primeiro, na 22). Nasce DESLIGADA em todas as contas; só liga depois da #2486 (Salvar tudo).
 - name: automacao_mensagens
   display_name: Automação › mensagem ao cliente e aviso à equipe
   enabled: false

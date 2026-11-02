@@ -15,8 +15,8 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
 
 - **Própria da F4.** Só vale com `automacao_motor` e `automacao_fundacao`: sem a fundação não há a cadeia comum contra
   laço com as regras antigas.
-- **Bit:** sai da ordem no yml: `feature_flags_ext_2`, posição 22 (2097152), logo depois de `automacao_motor`. A F5
-  também pediu a 22; vale a ordem de entrada na main, e a Orquestração confirma na fila.
+- **Bit:** sai da ordem no yml: `feature_flags_ext_2`, posição 23 (4194304), logo depois de `automacao_editor`
+  (F5, #2485), que entrou primeiro na main e ficou com a 22.
 - **Contas:** nasce DESLIGADA em todas as contas; só liga depois da #2486 (Salvar tudo).
 - **Desligada:**
   - o salvar recusa o passo (`passo_desligado`);

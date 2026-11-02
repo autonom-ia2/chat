@@ -1,4 +1,4 @@
-# Guia da Plataforma Autonom.ia — base de conhecimento (246 fluxos)
+# Guia da Plataforma Autonom.ia — base de conhecimento (248 fluxos)
 
 > ARQUIVO GERADO por `pnpm guia:build`. Não edite à mão: a rota, o endereço e a
 > permissão saem do roteador do painel, e o texto humano fica em
@@ -367,6 +367,17 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Abra Automacoes > Nova automacao; 2. Conte com suas palavras o que deve acontecer, ou escolha um modelo pronto; 3. O Guia cria a automacao e a tela passa a mostrar o resumo Quando > Se > Entao; 4. Clique em Testar com casos reais para ver o que ela faria nas conversas recentes; 5. Clique em Ligar automacao quando estiver como voce quer.
 - gotchas: nesta tela a automacao nasce DESLIGADA — ao criar, mande active false e diga que ela so comeca a valer quando a pessoa clicar em Ligar; so ligue (PATCH com active true) quando a pessoa pedir com todas as letras; o registro aberto na tela chega no contexto como id=N e e a automacao que a pessoa esta vendo, entao "esta", "ela" e "essa regra" falam dela; ajuste com PATCH automation_rules/:id na mesma automacao em vez de criar outra; o teste com casos reais nao envia nem muda nada e deixa de fora a condicao que depende de um campo mudar; Editar no modo manual abre a mesma automacao no formulario completo. Comece pronto: se a pessoa nao ditou o texto da mensagem, escreva um curto e cordial, ja crie a automacao desligada com ele e mostre o texto na resposta — ela troca conversando; nao pergunte o texto antes de criar.
 - nav_target: `automacoes_nova`
+
+### Montar uma automacao passo a passo no editor
+- intent: Quero montar a automacao eu mesmo, passo a passo; Como ponho uma espera de 2 dias antes de etiquetar?; Como faco a automacao seguir so se a conversa estiver aberta?; Como mudo um passo da automacao?; Por que a minha automacao desligou sozinha?; O que e "Acao avancada" na automacao?
+- onde_fica: Menu lateral > Automacoes > Nova automacao (com o editor ligado na conta a lista mostra as novas e as do jeito antigo juntas; as do jeito antigo abrem na tela de sempre)
+- rota: `automacoes_livre_nova` - `/app/accounts/:accountId/automacoes/livre/nova`
+- gate: feature flag `automacao_editor`; papel `administrator` ou `automation_manage`
+- cobre: automacoes_livre_editar
+- pre_requisitos: administrador ou funcao com Automacoes em Editar para montar, salvar, ligar e desligar; quem so ve abre a automacao sem os botoes; etiquetas, pessoas, times, caixas e campos personalizados usados ja precisam existir
+- passos: 1. Em Quando, toque em Escolher e diga quando ela comeca (conversa comeca, reaberta, resolvida ou chega mensagem); 2. Em So se, ponha as condicoes (o que olhar, como comparar e com o que) ou deixe sem condicao; 3. Em Faca, toque em Por o primeiro passo ou no "+" entre dois passos, escolha o passo e preencha no painel Alterar; 4. Na nova, use Guardar sem ligar ou Ligar; na que ja existe, cada Salvar do painel vira uma versao nova; 5. Ligar so funciona com quando e pelo menos um passo; Desligar sempre funciona.
+- gotchas: so aparecem os passos que a automacao ja sabe fazer (conversa, contato e empresa, etiquetas, campos personalizados, equipe, esperar, esperar ate, se/senao e parar) — passo de card do funil ainda nao entra aqui; passo que so o Guia monta aparece como Acao avancada, nao abre para editar e continua como esta quando outro passo muda; se outra pessoa salvou depois que a tela abriu, a tela avisa e mostra a versao nova antes de deixar salvar ou ligar; a automacao roda com os direitos de quem ligou, entao se outra pessoa salva uma versao nova ela pausa ate alguem ligar de novo; quem ja esta no meio termina na versao anterior; as automacoes das etapas do funil continuam em Editar funil.
+- nav_target: `automacoes_livre_nova`
 
 ### Criar respostas prontas
 - intent: Como crio uma resposta pronta?; Onde cadastro um texto padrao?; Como uso slash command no atendimento?
@@ -1077,6 +1088,16 @@ Cada bloco é um fluxo: intent (perguntas), onde fica, rota e gate (do código),
 - passos: 1. Em Anúncios, aba Resultado, abra o anúncio; 2. Em A IA cuida dos comentários, clique em Cuidar dos comentários; 3. Escreva a mensagem que a pessoa recebe no privado; 4. Em Para quem, toque numa sugestão ou escreva do seu jeito; 5. Veja como fica com os comentários do próprio anúncio e, se quiser, mude a frase que vai no comentário; 6. Clique em Ligar; 7. Se houver comentários de antes, escolha Ler e mandar ou Agora não; 8. Para parar, abra de novo e use Pausar.
 - gotchas: o mesmo cuidado vale para o anúncio no Instagram e no Facebook, nas redes em que ele roda e cuja caixa está na conta; no anúncio aberto, o selo mostra Cuidando dos comentários ou Pausado; a IA manda no privado só para quem for o caso do Para quem; reclamação nunca recebe a mensagem e vai para a caixa como urgente; propaganda ou golpe a IA esconde; cada pessoa recebe uma mensagem só por post; comentário com mais de 7 dias não recebe no privado; Ler e mandar roda uma vez por cuidado ligado; no Facebook, mandar no privado ainda não está liberado (Em breve); sem a caixa da Página ou do Instagram do anúncio na conta, a tela avisa e não liga; quem não está na caixa do anúncio não abre a tela; ligar, mudar, pausar e Ler e mandar ficam no histórico de auditoria da conta, sem o texto; o texto dos comentários não é guardado, é lido na hora.
 - nav_target: `campaigns_meta_ads_cuidar`
+
+### Ver e testar em Agentes os posts e anúncios que a IA cuida
+- intent: Onde vejo os posts que a IA está cuidando?; Qual agente responde os comentários do meu post?; Como testo o que a IA responde num comentário?; Quantos comentários estão esperando por mim?; Como pauso a IA num post pelo Agentes?; Por que o post diz que usa as frases fixas?; Como crio um agente para os comentários de um post?
+- onde_fica: Menu lateral > Agentes; cada post ou anúncio com a IA nos comentários ligada aparece como um cartão no fim da lista (o filtro Posts e anúncios mostra só eles); tocar no cartão abre a página dele, com O que sabe, Testar e Comentários
+- rota: `autonomia_post_comments` - `/app/accounts/:accountId/agents/posts/:careId`
+- gate: feature flag `meta_ads_comentarios_ia`; papel `administrator` ou `autonomia_view` ou `autonomia_manage`
+- pre_requisitos: a IA nos comentários ligada na conta; o cartão do post pede ver Seus posts e estar na caixa do perfil; o do anúncio pede ver os anúncios e estar nas caixas de todas as redes dele; Pausar, Voltar a cuidar, Editar e Testar pedem poder mudar o cuidado (Seus posts ou Anúncios em Editar, ou administrador).
+- passos: 1. Em Agentes, toque no cartão do post ou do anúncio; 2. Toque em N esperando você para ver o que ficou com você; 3. Em O que sabe, veja os materiais do agente que escreve as respostas e o que é só deste post; 4. Em Testar, escolha onde sai a resposta (no comentário ou no privado) e, no anúncio nas duas redes, a rede; escreva a pergunta e toque em Perguntar; 5. Para parar, toque em Pausar; para mudar a mensagem ou para quem, toque em Editar. Para começar num post novo, toque em Criar agente e escolha Cuidar dos comentários de um post ou anúncio.
+- gotchas: quem escreve as respostas é o agente que atende a caixa do post; no anúncio que roda no Instagram e no Facebook, cada rede tem o seu; sem agente na caixa (ou sem a chave de IA da conta), a IA usa as frases fixas que você escreveu, e a tela diz por quê; o Testar não publica nada nem guarda a pergunta; no Facebook o privado ainda não sai, e o Testar mostra só a frase do comentário; o número de esperando você é o mesmo do cartão, da página e da gaveta; mudar o que o agente sabe muda também o atendimento das conversas; pausado conta como parado no topo de Agentes.
+- nav_target: `autonomia_post_comments`
 
 ### Ver todas as origens de um contato no CRM
 - intent: O que é o +2 ao lado da origem no card do CRM?; Como vejo todas as campanhas que trouxeram este contato?; Onde vejo o primeiro e o último anúncio que o cliente clicou?; Por que a origem mostra ID e um número?

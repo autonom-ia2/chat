@@ -1,0 +1,275 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "GRUPOS": {
+      "CONVERSA": "Conversa",
+      "CONTATO": "Contato e empresa",
+      "ETIQUETA": "Etiquetas",
+      "ATRIBUTO": "Campos personalizados",
+      "EQUIPE": "Equipe",
+      "CONTROLE": "Tempo e condições"
+    },
+    "GATILHOS": {
+      "CONVERSA_CRIADA": "Quando uma conversa começa",
+      "CONVERSA_ABERTA": "Quando uma conversa é reaberta",
+      "CONVERSA_RESOLVIDA": "Quando uma conversa é resolvida",
+      "MENSAGEM_CRIADA": "Quando chega uma mensagem"
+    },
+    "OPERADORES": {
+      "VAZIO": "está vazio",
+      "PREENCHIDO": "está preenchido",
+      "IGUAL": "é igual a",
+      "DIFERENTE": "é diferente de",
+      "CONTEM": "contém",
+      "NAO_CONTEM": "não contém",
+      "MAIOR": "é maior que",
+      "MENOR": "é menor que"
+    },
+    "UNIDADES": {
+      "MINUTOS": "minutos",
+      "HORAS": "horas",
+      "DIAS": "dias"
+    },
+    "VALORES": {
+      "CONVERSA_ID": "Número da conversa",
+      "CONVERSA_STATUS": "Status da conversa",
+      "CONVERSA_PRIORIDADE": "Prioridade da conversa",
+      "CONVERSA_CAIXA_ID": "Caixa da conversa",
+      "CONVERSA_RESPONSAVEL_ID": "Responsável pela conversa",
+      "CONVERSA_TIME_ID": "Time da conversa",
+      "CONVERSA_ETIQUETAS": "Etiquetas da conversa",
+      "CONTATO_ID": "O contato",
+      "CONTATO_NOME": "Nome do contato",
+      "CONTATO_EMAIL": "E-mail do contato",
+      "CONTATO_TELEFONE": "Telefone do contato",
+      "CONTATO_EMPRESA_ID": "Empresa do contato",
+      "CONTATO_ETIQUETAS": "Etiquetas do contato",
+      "CONVERSA_ATRIBUTOS": "Campo personalizado da conversa",
+      "CONTATO_ATRIBUTOS": "Campo personalizado do contato"
+    },
+    "PASSOS": {
+      "ESPERAR": "Esperar um tempo",
+      "ESPERAR_ATE": "Esperar até algo acontecer",
+      "SE": "Se… senão…",
+      "PARAR": "Parar aqui",
+      "CONVERSA_ETIQUETAS": "Pôr ou tirar etiqueta da conversa",
+      "CONVERSA_STATUS": "Mudar o status da conversa",
+      "CONVERSA_PRIORIDADE": "Mudar a prioridade da conversa",
+      "CONVERSA_ATRIBUTOS": "Preencher campo da conversa",
+      "CONVERSA_ATRIBUIR": "Passar a conversa para alguém",
+      "CAIXA_PESSOAS": "Pôr pessoas numa caixa",
+      "CONTATO_ETIQUETAS": "Pôr ou tirar etiqueta do contato",
+      "CONTATO_ALTERAR": "Atualizar o contato",
+      "EMPRESA_ALTERAR": "Atualizar a empresa do contato",
+      "ETIQUETA_CRIAR": "Criar uma etiqueta",
+      "ETIQUETA_ALTERAR": "Mudar uma etiqueta",
+      "ATRIBUTO_CRIAR": "Criar um campo personalizado",
+      "ATRIBUTO_ALTERAR": "Mudar um campo personalizado"
+    },
+    "ESCOLHER": {
+      "ETIQUETA": "Qual etiqueta",
+      "ATRIBUTO": "Qual campo personalizado"
+    },
+    "CAMPOS": {
+      "DURACAO": "Quanto tempo",
+      "CONDICAO": "Até quando",
+      "PRAZO": "Esperar no máximo",
+      "SE_VENCER": "Se o prazo acabar",
+      "ENTAO": "Então",
+      "SENAO": "Senão",
+      "POR": "Pôr as etiquetas",
+      "TIRAR": "Tirar as etiquetas",
+      "STATUS": "Status",
+      "SNOOZED_UNTIL": "Adiar até",
+      "PRIORITY": "Prioridade",
+      "CUSTOM_ATTRIBUTES": "Campos personalizados",
+      "ASSIGNEE_ID": "Pessoa",
+      "TEAM_ID": "Time",
+      "INBOX_ID": "Caixa",
+      "USER_IDS": "Pessoas",
+      "NAME": "Nome",
+      "EMAIL": "E-mail",
+      "PHONE_NUMBER": "Telefone",
+      "COMPANY_ID": "Empresa",
+      "DESCRIPTION": "Descrição",
+      "DOMAIN": "Site",
+      "TITLE": "Nome da etiqueta",
+      "COLOR": "Cor",
+      "SHOW_ON_SIDEBAR": "Mostrar no menu",
+      "ATTRIBUTE_DISPLAY_NAME": "Nome do campo",
+      "ATTRIBUTE_KEY": "Chave do campo",
+      "ATTRIBUTE_MODEL": "O campo é de",
+      "ATTRIBUTE_DISPLAY_TYPE": "Tipo do campo",
+      "ATTRIBUTE_DESCRIPTION": "Para que serve",
+      "ATTRIBUTE_VALUES": "Opções da lista"
+    },
+    "OPCOES": {
+      "STATUS": {
+        "OPEN": "Aberta",
+        "RESOLVED": "Resolvida",
+        "PENDING": "Pendente",
+        "SNOOZED": "Adiada"
+      },
+      "PRIORITY": {
+        "LOW": "Baixa",
+        "MEDIUM": "Média",
+        "HIGH": "Alta",
+        "URGENT": "Urgente"
+      },
+      "ATTRIBUTE_MODEL": {
+        "CONVERSATION_ATTRIBUTE": "Conversa",
+        "CONTACT_ATTRIBUTE": "Contato",
+        "COMPANY_ATTRIBUTE": "Empresa",
+        "CARD_ATTRIBUTE": "Card do CRM"
+      },
+      "ATTRIBUTE_DISPLAY_TYPE": {
+        "TEXT": "Texto",
+        "NUMBER": "Número",
+        "CURRENCY": "Dinheiro",
+        "PERCENT": "Porcentagem",
+        "LINK": "Link",
+        "DATE": "Data",
+        "LIST": "Lista",
+        "CHECKBOX": "Sim ou não"
+      }
+    },
+    "LIGADA": "Ligada",
+    "DESLIGADA": "Desligada",
+    "LIGOU": "Ligada. A partir de agora ela trabalha sozinha.",
+    "DESLIGOU": "Desligada. Nada mais acontece por ela.",
+    "VOLTAR_LISTA": "Voltar para Automações",
+    "ALTERAR": "Alterar",
+    "ALTERAR_ROTULO": "Alterar: {frase}",
+    "MUDOU": "Alguém mudou esta automação. Veja a versão nova antes de seguir.",
+    "FALHOU": "Não deu certo agora. Tente de novo.",
+    "LISTA": {
+      "TITULO": "Automações",
+      "SUBTITULO": "Tudo o que acontece sozinho na sua conta, num lugar só.",
+      "NOVA": "Nova automação",
+      "VAZIO": "Nada acontece sozinho ainda.",
+      "COMECAR": "Começar",
+      "LIGADAS": "1 ligada | {n} ligadas",
+      "ANTIGAS": "1 ainda no jeito antigo | {n} ainda no jeito antigo",
+      "MAIS_PASSOS": "e mais 1 passo | e mais {n} passos",
+      "ABRIR": "Abrir",
+      "ABRIR_ROTULO": "Abrir {nome}",
+      "INTERRUPTOR": "Ligar ou desligar {nome}",
+      "CARREGANDO": "Carregando as automações",
+      "ERRO": "Não deu para carregar as automações agora.",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "DO_FUNIL": "As automações das etapas do funil ficam em Configurar › Editar funil.",
+      "VER_FUNIL": "Ver no funil",
+      "SEM_PASSO": "Ainda sem passo"
+    },
+    "ORIGEM": {
+      "CONVERSA": "Da conversa",
+      "ANTIGO": "Do jeito antigo"
+    },
+    "EDITOR": {
+      "NOVA": "Nova automação",
+      "NOME": "Nome da automação",
+      "VERSAO": "Versão {n}",
+      "MOSTRAR_TUDO": "Mostrar tudo",
+      "MOSTRAR_MENOS": "Mostrar menos",
+      "SALVOU": "Mudança salva.",
+      "GUARDOU": "Guardada desligada.",
+      "NO_MEIO": "Quem já começou termina na versão anterior.",
+      "PAUSOU": "Ela pausou porque outra pessoa salvou. Para seguir, ligue de novo.",
+      "NAO_ACHOU": "Esta automação não existe mais ou é de outra conta.",
+      "PROBLEMAS": "Para salvar, corrija:",
+      "NAO_SALVA": "Esta mudança ainda não foi salva. Complete o passo que falta e ela entra numa versão nova.",
+      "LIGADA_AVISO": "Esta automação está ligada: cada mudança vale na hora.",
+      "LIGADA_POR_OUTRA": "Esta automação está ligada por outra pessoa. Se você salvar, ela pausa até ser ligada de novo.",
+      "SAIR": {
+        "TITULO": "Sair sem guardar?",
+        "TEXTO": "O que você montou aqui ainda não foi salvo. Se sair agora, ele some.",
+        "CONTINUAR": "Continuar montando",
+        "SAIR": "Sair sem guardar"
+      }
+    },
+    "CONFIRA": {
+      "QUANDO": "Quando",
+      "SO_SE": "Só se",
+      "FACA": "Faça",
+      "ESCOLHER": "Escolher",
+      "SEM_CONDICAO": "Sempre, sem condição.",
+      "ADICIONAR_CONDICAO": "Pôr uma condição",
+      "PRIMEIRO_PASSO": "Pôr o primeiro passo",
+      "NADA": "Aqui não faz nada.",
+      "INSERIR": "Pôr um passo aqui",
+      "PASSOS_NO_GALHO": "(1 passo) | ({n} passos)",
+      "AVANCADA": "Ação avançada",
+      "AVANCADA_DICA": "Só o Guia muda este passo. Aqui ele fica como está."
+    },
+    "FRASES": {
+      "FALTA_GATILHO": "Escolha quando ela começa",
+      "ESPERAR": "Esperar {duracao}",
+      "ESPERAR_ATE": "Esperar até: {condicao} (no máximo {prazo})",
+      "SE": "Se {condicao}",
+      "CONDICAO": "{campo} {op} {valor}",
+      "CONDICAO_SEM_VALOR": "{campo} {op}",
+      "FALTA_CONDICAO": "falta escolher a condição",
+      "TODAS": "todas valem: {lista}",
+      "ALGUMA": "alguma vale: {lista}",
+      "ATRIBUTO": "{base}: {chave}",
+      "DURACAO": "{valor} {unidade}",
+      "AVANCADA": "Ação avançada: {descricao}",
+      "SIM": "sim",
+      "NAO": "não",
+      "LISTA": "{inicio} e {ultimo}",
+      "ETIQUETAS_CONVERSA": {
+        "POR": "Pôr a etiqueta {lista} na conversa",
+        "POR_VARIAS": "Pôr as etiquetas {lista} na conversa",
+        "TIRAR": "Tirar a etiqueta {lista} da conversa",
+        "TIRAR_VARIAS": "Tirar as etiquetas {lista} da conversa",
+        "POR_E_TIRAR": "Na conversa, pôr {por} e tirar {tirar}"
+      },
+      "ETIQUETAS_CONTATO": {
+        "POR": "Pôr a etiqueta {lista} no contato",
+        "POR_VARIAS": "Pôr as etiquetas {lista} no contato",
+        "TIRAR": "Tirar a etiqueta {lista} do contato",
+        "TIRAR_VARIAS": "Tirar as etiquetas {lista} do contato",
+        "POR_E_TIRAR": "No contato, pôr {por} e tirar {tirar}"
+      }
+    },
+    "RAMOS": {
+      "ENTAO": "Então",
+      "SENAO": "Senão",
+      "SE_VENCER": "Se o prazo acabar"
+    },
+    "SELETOR": {
+      "TITULO": "Escolha o próximo passo",
+      "TEXTO": "Ele entra no lugar do “+” que você tocou."
+    },
+    "ALTERAR_PAINEL": {
+      "PASSO": "Alterar o passo",
+      "GATILHO": "Alterar quando começa",
+      "CONDICAO": "Alterar a condição",
+      "TIPO_GATILHO": "Quando começa",
+      "SALVAR": "Salvar",
+      "TIRAR": "Tirar",
+      "ESCOLHA": "Escolha",
+      "CAMPO": "O que olhar",
+      "OPERADOR": "Como comparar",
+      "VALOR": "Com o quê",
+      "ATRIBUTO": "Qual campo personalizado",
+      "CHAVE_VALOR": "Valor de {campo}",
+      "UMA_POR_LINHA": "Uma opção por linha",
+      "PROCURAR": "Procurar",
+      "UNIDADE": "Unidade de tempo",
+      "COMPOSTA": "Esta condição tem várias partes. Só o Guia muda; aqui ela fica como está.",
+      "DA_CONVERSA": "Vem da conversa: {valor}",
+      "BUSCA_FALHOU": "Não deu para procurar agora. Tente de novo."
+    },
+    "LIGAR": {
+      "BOTAO": "Ligar",
+      "DESLIGADA": "Está desligada. Nada acontece até você ligar.",
+      "FALTA_GATILHO": "Falta escolher quando ela começa.",
+      "FALTA_PASSO": "Falta pôr pelo menos um passo.",
+      "GUARDAR": "Guardar sem ligar",
+      "LIGADA_AVISO": "Ela está trabalhando sozinha.",
+      "DESLIGAR": "Desligar",
+      "SO_LEITURA": "Você pode ver esta automação. Para mudar, peça a quem cuida das automações.",
+      "FALTA_COMPLETAR": "Falta completar um passo: escolha a condição e, no \"Se\", ponha pelo menos um passo em Então."
+    }
+  }
+}

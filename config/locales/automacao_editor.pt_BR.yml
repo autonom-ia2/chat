@@ -1,0 +1,6 @@
+pt_BR:
+  autonomia:
+    automacao:
+      editor:
+        sem_funil: Esta automação mexe em cards do CRM. Só quem gerencia funis pode salvar ou ligar.
+        versao_mudou: Alguém mudou esta automação. Veja a versão nova antes de seguir.

@@ -202,6 +202,7 @@ fora:
       - crm/booking_invites
       - seus_posts_comentarios
       - seus_posts_cuidado
+      - agentes_do_post
       - crm/meta_ads_facebook_comments
       - crm/meta_ads_instagram_comments
       - crm/meta_ads_whatsapp_reports
@@ -231,6 +232,7 @@ fora:
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules
+      - autonomia/automacoes
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias

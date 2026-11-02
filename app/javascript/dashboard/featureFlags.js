@@ -93,6 +93,7 @@ export const FEATURE_FLAGS = {
   AGENTES_PAINEL_DESEMPENHO: 'agentes_painel_desempenho',
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
+  AUTOMACAO_EDITOR: 'automacao_editor',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',
