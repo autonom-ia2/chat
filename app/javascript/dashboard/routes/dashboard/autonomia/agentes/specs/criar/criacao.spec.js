@@ -128,6 +128,12 @@ describe('canal sugerido no botão de começar', () => {
     expect(temCanalParaEscolher([livre(1), livre(2)], 5)).toBe(true);
     expect(temCanalParaEscolher([ocupada(3)], 5)).toBe(true);
     expect(temCanalParaEscolher([externa(1)], 5)).toBe(false);
+    expect(temCanalParaEscolher([{ ...livre(1), alcanca: false }], 5)).toBe(
+      false
+    );
+    expect(
+      temCanalParaEscolher([{ ...livre(1), alcanca: false }, ocupada(3)], 5)
+    ).toBe(true);
     expect(temCanalParaEscolher([], 5)).toBe(false);
   });
 

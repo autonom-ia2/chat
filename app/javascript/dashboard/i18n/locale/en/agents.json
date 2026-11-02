@@ -1716,6 +1716,7 @@
           "PENSANDO": "Thinking…",
           "DEMORANDO": "This is taking longer than usual. You can wait here.",
           "ESPERE": "Wait for the previous answer.",
+          "NAO_SUBIU": "The file “{nome}” did not upload. Remove it or send it again.",
           "CONTINUAR": "Let's pick up where we left off.",
           "FECHOU": "Done. {nome} already knows the main things. See how {nome} answers.",
           "ERRO": "I could not answer right now.",

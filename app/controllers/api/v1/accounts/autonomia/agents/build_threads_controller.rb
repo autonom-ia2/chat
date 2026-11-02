@@ -93,7 +93,7 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
   def append_user_message!
     @thread.append_message!('user', params[:message], image_signed_ids: image_signed_ids_param,
                                                       client_message_id: params[:client_message_id],
-                                                      materiais_a_caminho: Array(params[:materiais_a_caminho]))
+                                                      materiais_a_caminho: materiais_a_caminho_param)
   end
 
   # Portão de materiais (instrução-mãe §13): o front sinaliza `no_materials: true` quando o usuário
@@ -115,6 +115,11 @@ class Api::V1::Accounts::Autonomia::Agents::BuildThreadsController < Api::V1::Ac
     return if params[:force_close].nil?
 
     @thread.update!(force_close: ActiveModel::Type::Boolean.new.cast(params[:force_close]))
+  end
+
+  # #2489 — só lista de nomes (texto): hash ou lista aninhada não viram nome.
+  def materiais_a_caminho_param
+    params.permit(materiais_a_caminho: [])[:materiais_a_caminho]
   end
 
   # MULTIMODAL (async): signed_ids das imagens anexadas ao turno atual, emitidos pelo endpoint de upload

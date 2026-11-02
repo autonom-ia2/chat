@@ -1413,10 +1413,10 @@ module Autonomia
       # revisora, logo nunca contam como "aguardando revisão" nem destravam/travam o portão.
       def materials_status_context
         agent = @thread.agent
-        a_caminho = materiais_a_caminho
-        return '' if agent.blank? && !no_materials_declared? && a_caminho.empty?
+        return '' if agent.blank? && !no_materials_declared? && materiais_a_caminho.empty?
 
         knowledge = agent ? agent.sources.knowledge_sources.order(created_at: :desc).limit(10).to_a : []
+        a_caminho = materiais_a_caminho(knowledge)
         accepted = knowledge.count { |s| s.review_status == 'accepted' }
         # #1426: a foto da criação reprovada ou ilegível já chegou na conversa; não fica "aguardando" nem segura o fechamento.
         # #2489: o que está a caminho também aguarda (ainda vai ser lido).
@@ -1460,9 +1460,11 @@ module Autonomia
          *a_caminho.map { |nome| "- a caminho: #{nome.inspect} (ainda não chegou)" }]
       end
 
-      def materiais_a_caminho
+      # Tira o que já chegou à base (pela reference, limpa do mesmo jeito): não conta duas vezes.
+      def materiais_a_caminho(knowledge = [])
+        limpar = Autonomia::Agents::BuildThread.method(:nomes_a_caminho)
         ultimo_turno = Array(@thread.messages).reverse.find { |m| m['role'] == 'user' }
-        Autonomia::Agents::BuildThread.nomes_a_caminho(ultimo_turno.to_h['materiais_a_caminho'])
+        limpar.call(ultimo_turno.to_h['materiais_a_caminho']) - limpar.call(knowledge.map(&:reference))
       end
 
       def leitura_em_andamento?(knowledge, a_caminho)

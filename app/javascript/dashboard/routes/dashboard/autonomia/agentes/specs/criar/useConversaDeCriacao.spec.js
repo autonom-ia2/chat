@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import {
   useConversaDeCriacao,
   ESPERA_DEMORANDO_MS,
+  PRAZO_DAS_SUBIDAS_MS,
 } from '../../composables/useConversaDeCriacao';
 
 const store = vi.hoisted(() => ({
@@ -359,6 +360,64 @@ describe('useConversaDeCriacao', () => {
       'atencao'
     );
     expect(conversa.pensando.value).toBe(false);
+    expect(conversa.falhaAoSubir.value).toEqual({ nome: 'tabela.pdf' });
+  });
+
+  it('an old failed upload does not hold the next turn, and the notice clears on the next send', async () => {
+    comThread(7, 90);
+    const create = createPendente();
+    const { conversa } = montar();
+    const primeiro = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await flushPromises();
+    create.falhar(new Error('500'));
+    expect(await primeiro).toBe(false);
+    expect(conversa.falhaAoSubir.value).toEqual({ nome: 'tabela.pdf' });
+
+    expect(await conversa.enviar({ texto: 'Sigo sem a tabela' })).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+    expect(conversa.falhaAoSubir.value).toBeNull();
+  });
+
+  it('removing the material clears the notice', async () => {
+    comThread(7, 90);
+    const create = createPendente();
+    const { conversa } = montar();
+    const envio = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await flushPromises();
+    create.falhar(new Error('500'));
+    await envio;
+
+    await conversa.tirar(conversa.materiais.value[0]);
+    expect(conversa.falhaAoSubir.value).toBeNull();
+  });
+
+  it('a hung upload: after the deadline the turn goes, naming what is still on the way', async () => {
+    vi.useFakeTimers();
+    comThread(7, 90);
+    createPendente();
+    const { conversa } = montar();
+    const envio = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await vi.advanceTimersByTimeAsync(PRAZO_DAS_SUBIDAS_MS - 1);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.pensando.value).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(await envio).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+    expect(chamadas('autonomiaBuildThreads/send')[0][1].extra).toEqual({
+      materiais_a_caminho: ['tabela.pdf'],
+    });
+    expect(conversa.falhaAoSubir.value).toBeNull();
+    vi.useRealTimers();
   });
 
   it('before the draft exists, the turn says which files are on the way', async () => {

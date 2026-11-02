@@ -20,6 +20,8 @@ const props = defineProps({
   demorando: { type: Boolean, default: false },
   falhou: { type: Boolean, default: false },
   aviso: { type: String, default: null },
+  // #2489 — { nome } do arquivo que não subiu enquanto o turno esperava, ou null.
+  falhaAoSubir: { type: Object, default: null },
   fechada: { type: Boolean, default: false },
   respostas: { type: Number, default: 0 },
   ideias: { type: Array, default: () => [] },
@@ -254,6 +256,14 @@ defineExpose({ abrirArquivos, focar: () => compositor.value?.focar() });
         :enviando="pensando"
         @enviar="enviar"
       />
+      <p
+        v-if="falhaAoSubir"
+        data-falha-ao-subir
+        role="alert"
+        class="px-1 m-0 text-sm text-n-ruby-11"
+      >
+        {{ t(`${NS}.NAO_SUBIU`, { nome: falhaAoSubir.nome }) }}
+      </p>
       <p
         v-if="pensando || aviso === 'espere'"
         data-espere

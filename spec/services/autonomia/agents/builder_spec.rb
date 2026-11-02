@@ -492,6 +492,26 @@ RSpec.describe Autonomia::Agents::Builder do
       end
     end
 
+    # Com rascunho, o turno sai com "a caminho" quando o prazo de espera da subida vence.
+    context 'when the draft exists and the turn says a file is still on the way' do
+      before do
+        thread.update!(agent: agent)
+        Autonomia::Agents::Source.create!(account: account, agent: agent, source_type: 'pdf', reference: 'tabela.pdf',
+                                          status: :processing)
+        thread.append_message!('user', 'segue', materiais_a_caminho: ['tabela.pdf', 'catalogo.pdf'])
+      end
+
+      it 'lists only what has not reached the base, without counting a file twice' do
+        status = builder.send(:materials_status_context)
+
+        expect(status).to include('- a caminho: "catalogo.pdf" (ainda não chegou)')
+        expect(status).not_to include('- a caminho: "tabela.pdf"')
+        expect(status).to include('- tabela.pdf: em análise')
+        expect(status).to include('aguardando revisão/reenvio: 2')
+        expect(status).to include(described_class::MATERIAL_SENDO_LIDO)
+      end
+    end
+
     # O nome do arquivo é escrito pelo usuário: entra como dado, numa linha só e curto.
     context 'when a file name tries to break out of its line' do
       before do

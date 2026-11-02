@@ -968,6 +968,7 @@ onMounted(() => {
           :demorando="conversa.demorando.value"
           :falhou="conversa.falhou.value"
           :aviso="conversa.aviso.value"
+          :falha-ao-subir="conversa.falhaAoSubir.value"
           :fechada="conversa.fechada.value"
           :respostas="conversa.respostas.value"
           :ideias="ideias"

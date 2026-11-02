@@ -1716,6 +1716,7 @@
           "PENSANDO": "Pensando…",
           "DEMORANDO": "Está demorando mais que o normal. Pode esperar aqui.",
           "ESPERE": "Espere a resposta anterior.",
+          "NAO_SUBIU": "O arquivo “{nome}” não subiu. Tire ou mande de novo.",
           "CONTINUAR": "Vamos continuar de onde paramos.",
           "FECHOU": "Pronto. {nome} já sabe o principal. Veja como {nome} responde.",
           "ERRO": "Não consegui responder agora.",

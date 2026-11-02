@@ -35,6 +35,9 @@ import { useFase2 } from './useFase2';
 //   arquivo, espera o rascunho existir. Ao continuar um rascunho, o que já estava na base volta para
 //   a caixa (fora da conversa, que não mostra o histórico).
 export const ESPERA_DEMORANDO_MS = 60000;
+// #2489 — teto da espera do turno pelas subidas de material: vencido, o turno sai e leva os nomes
+// do que ainda está subindo (o Construtor diz que está a caminho).
+export const PRAZO_DAS_SUBIDAS_MS = 20000;
 // "Agora não" / sair com pelo menos duas respostas: fecha no servidor para o rascunho ter instrução
 // (mesma regra do Construtor de hoje e do protótipo: hasInstruction = closed || answers >= 2).
 const RESPOSTAS_PARA_FECHAR_AO_SAIR = 2;
@@ -109,6 +112,8 @@ export function useConversaDeCriacao({
   const erroDaBase = ref(false);
   // Tirar não deu certo no servidor: o item volta para a lista e a caixa avisa ({ nome }).
   const falhaAoTirar = ref(null);
+  // #2489 — um arquivo não subiu enquanto o turno esperava: o turno não sai e a conversa avisa ({ nome }).
+  const falhaAoSubir = ref(null);
   // Fontes tiradas (ou sendo tiradas): uma leitura da base em andamento não as traz de volta.
   const tiradas = new Set();
   const aviso = ref(null);
@@ -344,15 +349,39 @@ export function useConversaDeCriacao({
     }
   };
 
-  // #2489 — toda subida em andamento, venha de onde vier (anexo do turno, fila do 1º turno, clipe ou
-  // caixa de materiais): o turno espera todas antes de sair. A promessa nunca rejeita (a falha vira
-  // false e o material mostra o erro).
-  const subidasEmAndamento = new Set();
+  // #2489 — toda subida em andamento ({ subida: material }), venha de onde vier (anexo do turno, fila
+  // do 1º turno, clipe ou caixa de materiais): o turno espera todas antes de sair. A promessa nunca
+  // rejeita (a falha vira false e o material mostra o erro).
+  const subidasEmAndamento = new Map();
   const mandarParaBase = (material, descritor) => {
     const subida = subirParaBase(material, descritor);
-    subidasEmAndamento.add(subida);
+    subidasEmAndamento.set(subida, material);
     subida.finally(() => subidasEmAndamento.delete(subida));
     return subida;
+  };
+
+  // Espera as subidas em andamento até o prazo. `falhas`: as que não subiram DURANTE esta espera (uma
+  // falha antiga já saiu do registro e não retém o turno). `aindaSubindo`: os nomes do que o prazo
+  // deixou para trás.
+  const esperarSubidas = async () => {
+    const falhas = [];
+    const todas = Promise.all(
+      [...subidasEmAndamento].map(([subida, material]) =>
+        subida.then(subiu => {
+          if (!subiu) falhas.push(material);
+        })
+      )
+    );
+    let relogio;
+    const prazo = new Promise(resolve => {
+      relogio = setTimeout(() => resolve(true), PRAZO_DAS_SUBIDAS_MS);
+    });
+    const venceu = await Promise.race([todas.then(() => false), prazo]);
+    clearTimeout(relogio);
+    const aindaSubindo = venceu
+      ? [...subidasEmAndamento.values()].map(material => material.nome)
+      : [];
+    return { falhas: [...falhas], aindaSubindo };
   };
 
   // Arquivo ou site antes de existir o rascunho espera na fila ("Vou ler assim que começarmos").
@@ -447,6 +476,7 @@ export function useConversaDeCriacao({
       return false;
     }
     aviso.value = null;
+    falhaAoSubir.value = null;
     subirFila();
     anexos.filter(arquivo => !ehFoto(arquivo)).forEach(anexarArquivo);
     const fotos = anexos.filter(ehFoto);
@@ -458,12 +488,19 @@ export function useConversaDeCriacao({
     enviando.value = true;
     try {
       // #2489 — com rascunho, o turno só sai depois de todo arquivo em subida chegar à base (deste
-      // envio ou de antes): o Construtor já o vê "em análise". Se algum não subiu, o material mostra a
-      // falha e o turno não sai como se tivesse chegado (o texto volta ao campo).
-      const subiram = await Promise.all([...subidasEmAndamento]);
-      if (subiram.includes(false)) return false;
+      // envio ou de antes): o Construtor já o vê "em análise". Se algum não subiu, a conversa avisa e o
+      // turno não sai como se tivesse chegado (o texto volta ao campo). Vencido o prazo, o turno sai e
+      // diz o que ainda está a caminho.
+      const { falhas, aindaSubindo } = await esperarSubidas();
+      if (falhas.length) {
+        falhaAoSubir.value = { nome: falhas[0].nome };
+        return false;
+      }
       const fotosEnviadas = await enviarFotos(fotos);
-      const aCaminho = agenteId.value ? [] : materiaisACaminho();
+      const aCaminho = [
+        ...(agenteId.value ? [] : materiaisACaminho()),
+        ...aindaSubindo,
+      ];
       const extra = {
         ...(fotosEnviadas.length ? { image_signed_ids: fotosEnviadas } : {}),
         ...(aCaminho.length ? { materiais_a_caminho: aCaminho } : {}),
@@ -556,6 +593,7 @@ export function useConversaDeCriacao({
 
   const tirar = material => {
     falhaAoTirar.value = null;
+    falhaAoSubir.value = null;
     filaDaBase.delete(material.id);
     materiais.value = materiais.value.filter(m => m.id !== material.id);
     if (material.fonteId && agenteId.value) return tirarDoServidor(material);
@@ -611,6 +649,7 @@ export function useConversaDeCriacao({
     base,
     erroDaBase,
     falhaAoTirar,
+    falhaAoSubir,
     carregarBase,
     estadoDoMaterial,
     agenteId,
