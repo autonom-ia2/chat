@@ -314,7 +314,7 @@ export function useConversaDeCriacao({
 
   // `descritor` é { file } ou { url }, como a store espera. true = a fonte foi criada (#2489: o turno
   // espera por isso); false = não subiu e o material mostra a falha.
-  const mandarParaBase = async (material, descritor) => {
+  const subirParaBase = async (material, descritor) => {
     trocarMaterial(material.id, { estado: 'enviando' });
     try {
       const fonte = await store.dispatch('autonomiaSources/create', {
@@ -344,44 +344,47 @@ export function useConversaDeCriacao({
     }
   };
 
+  // #2489 — toda subida em andamento, venha de onde vier (anexo do turno, fila do 1º turno, clipe ou
+  // caixa de materiais): o turno espera todas antes de sair. A promessa nunca rejeita (a falha vira
+  // false e o material mostra o erro).
+  const subidasEmAndamento = new Set();
+  const mandarParaBase = (material, descritor) => {
+    const subida = subirParaBase(material, descritor);
+    subidasEmAndamento.add(subida);
+    subida.finally(() => subidasEmAndamento.delete(subida));
+    return subida;
+  };
+
   // Arquivo ou site antes de existir o rascunho espera na fila ("Vou ler assim que começarmos").
-  // Devolve { material, subida }: `subida` é a promessa do create (null na fila ou sem subir).
   const filaDaBase = new Map();
   const paraBase = (dados, descritor) => {
     if (!agenteId.value) {
       const material = novoMaterial(dados, { estado: 'fila' });
       filaDaBase.set(material.id, descritor);
-      return { material, subida: null };
+      return material;
     }
     const material = novoMaterial(dados, { estado: 'enviando' });
-    return { material, subida: mandarParaBase(material, descritor) };
+    mandarParaBase(material, descritor);
+    return material;
   };
 
   const base = computed(() => materiais.value.filter(m => m.tipo !== 'foto'));
   const semVaga = () => base.value.filter(ocupaVaga).length >= MAX_FONTES;
 
   // Também pelo clipe da conversa: grande demais ou sem vaga não sobe (o material diz por quê).
-  const subirArquivo = arquivo => {
+  const anexarArquivo = arquivo => {
     if (arquivo.size > MAX_ARQUIVO_BYTES) {
-      return {
-        material: novoMaterial(doArquivo(arquivo), { estado: 'grande' }),
-        subida: null,
-      };
+      return novoMaterial(doArquivo(arquivo), { estado: 'grande' });
     }
     if (semVaga()) {
-      return {
-        material: novoMaterial(doArquivo(arquivo), { estado: 'limite' }),
-        subida: null,
-      };
+      return novoMaterial(doArquivo(arquivo), { estado: 'limite' });
     }
     return paraBase(doArquivo(arquivo), { file: arquivo });
   };
-  const anexarArquivo = arquivo => subirArquivo(arquivo).material;
 
   // `endereco` já conferido (enderecoDoSite): a caixa só manda endereço válido.
   const anexarSite = endereco =>
-    paraBase({ nome: nomeDoSite(endereco), tipo: 'site' }, { url: endereco })
-      .material;
+    paraBase({ nome: nomeDoSite(endereco), tipo: 'site' }, { url: endereco });
 
   // #2489 — antes do rascunho, o que espera na fila vai pelo nome no turno: o Construtor sabe que o
   // material está a caminho e não diz que não chegou.
@@ -390,14 +393,16 @@ export function useConversaDeCriacao({
       .filter(m => m.estado === 'fila' && filaDaBase.has(m.id))
       .map(m => m.nome);
 
-  watch(agenteId, id => {
-    if (!id) return;
+  // Com o rascunho criado, a fila sobe. O envio também chama: não depende de o watch já ter rodado.
+  const subirFila = () => {
+    if (!agenteId.value) return;
     filaDaBase.forEach((descritor, materialId) => {
       const material = materiais.value.find(m => m.id === materialId);
       if (material) mandarParaBase(material, descritor);
     });
     filaDaBase.clear();
-  });
+  };
+  watch(agenteId, subirFila);
 
   const enviarFotos = async fotos => {
     const enviadas = await Promise.all(
@@ -442,11 +447,8 @@ export function useConversaDeCriacao({
       return false;
     }
     aviso.value = null;
-    const subidas = anexos
-      .filter(arquivo => !ehFoto(arquivo))
-      .map(subirArquivo)
-      .map(({ subida }) => subida)
-      .filter(Boolean);
+    subirFila();
+    anexos.filter(arquivo => !ehFoto(arquivo)).forEach(anexarArquivo);
     const fotos = anexos.filter(ehFoto);
     const conteudo =
       texto.trim() ||
@@ -455,10 +457,10 @@ export function useConversaDeCriacao({
 
     enviando.value = true;
     try {
-      // #2489 — com rascunho, o turno só sai depois de o arquivo chegar à base: o Construtor já o vê
-      // "em análise". Se não subiu, o material mostra a falha e o turno não sai como se tivesse chegado
-      // (o texto volta ao campo).
-      const subiram = await Promise.all(subidas);
+      // #2489 — com rascunho, o turno só sai depois de todo arquivo em subida chegar à base (deste
+      // envio ou de antes): o Construtor já o vê "em análise". Se algum não subiu, o material mostra a
+      // falha e o turno não sai como se tivesse chegado (o texto volta ao campo).
+      const subiram = await Promise.all([...subidasEmAndamento]);
       if (subiram.includes(false)) return false;
       const fotosEnviadas = await enviarFotos(fotos);
       const aCaminho = agenteId.value ? [] : materiaisACaminho();

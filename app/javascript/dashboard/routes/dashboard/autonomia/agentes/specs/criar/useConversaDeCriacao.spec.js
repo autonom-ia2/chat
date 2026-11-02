@@ -285,6 +285,82 @@ describe('useConversaDeCriacao', () => {
     expect(conversa.pensando.value).toBe(false);
   });
 
+  // Revisão do #2489: o turno espera TODA subida em andamento, não só a dos anexos deste envio.
+  const createPendente = () => {
+    const controle = {};
+    store.dispatch.mockImplementation(acao =>
+      acao === 'autonomiaSources/create'
+        ? new Promise((resolve, reject) => {
+            controle.resolver = resolve;
+            controle.falhar = reject;
+          })
+        : Promise.resolve(null)
+    );
+    return controle;
+  };
+
+  it('a file queued in the first turn: the second turn waits for its upload once the draft exists', async () => {
+    const { conversa } = montar();
+    await conversa.enviar({
+      texto: 'Vendo seguro viagem',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    const create = createPendente();
+    comThread(7, 90);
+    await nextTick();
+    await flushPromises();
+    expect(chamadas('autonomiaSources/create')).toHaveLength(1);
+
+    const envio = conversa.enviar({ texto: 'Atendo de seg a sex' });
+    await flushPromises();
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.pensando.value).toBe(true);
+
+    create.resolver({ id: 31 });
+    expect(await envio).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+    expect(chamadas('autonomiaBuildThreads/send')[0][1].extra).toEqual({});
+  });
+
+  it('a file attached by the clip with a draft: the next turn waits for its upload', async () => {
+    comThread(7, 90);
+    const create = createPendente();
+    const { conversa } = montar();
+    conversa.anexarArquivo(arquivo('tabela.pdf', 'application/pdf'));
+    await flushPromises();
+
+    const envio = conversa.enviar({ texto: 'Segue a tabela' });
+    await flushPromises();
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+
+    create.resolver({ id: 31 });
+    expect(await envio).toBe(true);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(1);
+  });
+
+  it('a queued file that fails to upload keeps the second turn from going', async () => {
+    const { conversa } = montar();
+    await conversa.enviar({
+      texto: 'Vendo seguro viagem',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    const create = createPendente();
+    comThread(7, 90);
+    await nextTick();
+    await flushPromises();
+
+    const envio = conversa.enviar({ texto: 'Atendo de seg a sex' });
+    await flushPromises();
+    create.falhar(new Error('500'));
+
+    expect(await envio).toBe(false);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+    expect(conversa.estadoDoMaterial(conversa.materiais.value[0])).toBe(
+      'atencao'
+    );
+    expect(conversa.pensando.value).toBe(false);
+  });
+
   it('before the draft exists, the turn says which files are on the way', async () => {
     const { conversa } = montar();
     await conversa.enviar({
