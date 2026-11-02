@@ -999,6 +999,26 @@ pt_BR:
         already_confirmed: 'O usuário já está confirmado.'
   autonomia:
     automacao:
+      motivos:
+        acao_fora: 'Esta ação não pode mais ser passo de automação.'
+        acao_recusada: 'A plataforma recusou esta ação do jeito que ela foi montada.'
+        alvo_sumiu: 'A conversa não existe mais.'
+        desligada: 'A automação foi desligada.'
+        erro_depois_de_gravar: 'A plataforma deu erro depois de gravar parte da ação. A automação não repete, para não fazer duas vezes; confira e desfaça se precisar.'
+        erro_inesperado: 'A automação parou no meio deste passo por um erro inesperado. Ela não repete o passo; confira o que já foi feito.'
+        erro_passageiro: 'A plataforma não respondeu; a automação vai tentar de novo.'
+        erro_permanente: 'A plataforma recusou esta ação (por exemplo, a etiqueta não existe mais).'
+        faltou_valor: 'Um valor de que este passo precisa estava vazio, e o passo foi pulado.'
+        motor_desligado: 'As automações estão desligadas nesta conta.'
+        prazo_vencido: 'A espera acabou sem a condição.'
+        quem_ligou_saiu_da_conta: 'Quem ligou a automação saiu da conta. Assuma e religue.'
+        quem_ligou_sem_acesso: 'Quem ligou a automação não tem mais acesso aqui. Assuma e religue.'
+        quem_ligou_sem_permissao: 'Quem ligou a automação não pode mais gerenciar automações. Assuma e religue.'
+        receita_com_problema: 'A receita desta versão não roda mais do jeito que foi salva. Corrija e salve de novo antes de ligar.'
+        sem_quem_ligou: 'Ninguém ligou esta automação. Assuma e religue.'
+        sem_versao: 'Esta automação ainda não tem passos salvos.'
+        spam: 'A conversa está no Spam.'
+        travada: 'Este passo parou no meio e não vai rodar de novo.'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'

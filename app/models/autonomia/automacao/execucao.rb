@@ -10,6 +10,10 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
   ABERTAS = %w[andando esperando].freeze
   TERMINAIS = %w[concluida falhou interrompida parada].freeze
   ESTADOS = (ABERTAS + TERMINAIS).freeze
+  # Quanto tempo a execução finalizada fica, depois que os registros dela já saíram (30 dias): 90 dias cabe um "não
+  # repetir por N dias" e a pergunta "esse cliente já passou por aqui?" sem guardar o histórico passo a passo
+  # (#2459, decisão da Automação em 01/11).
+  RETENCAO = 90.days
 
   belongs_to :account
   belongs_to :automacao, class_name: 'Autonomia::Automacao::Definicao', inverse_of: :execucoes
@@ -24,6 +28,15 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
   before_save :marcar_finalizada
 
   scope :abertas, -> { where(finalizada_em: nil) }
+
+  # Grava só se a execução ainda está na rodada de `marca` (andando, com essa travada_em). Quem desligou no meio, ou
+  # outra rodada, vence: devolve false e nada muda. Sem callback, então leva a finalizada_em junto (ver acima).
+  def self.gravar_na_rodada(id, marca, **atributos)
+    agora = Time.current
+    final = TERMINAIS.include?(atributos.fetch(:estado)) ? agora : nil
+    where(id: id, estado: 'andando', travada_em: marca)
+      .update_all(atributos.merge(finalizada_em: final, updated_at: agora)) == 1 # rubocop:disable Rails/SkipsModelValidations
+  end
 
   private
 

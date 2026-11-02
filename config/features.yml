@@ -1097,3 +1097,13 @@
   display_name: Automação › fundação (cadeia comum e mover cria o card)
   enabled: false
   column: feature_flags_ext_2
+# Automação livre F3, o motor (#2459, épico #2414). Ligada junto com automacao_fundacao: a conta roda as automações
+# novas (esperar, se, parar e ação da plataforma pela lista de permitidas), com a varredura de minuto em minuto.
+# Desligada: nenhuma automação começa, e a execução que esperava fecha como parada (motor_desligado) quando a
+# varredura a acorda. Rollback: desligar a flag na conta. Sem migration.
+# Bit: feature_flags_ext_2, posição 21 (valor 1048576, 1 << 20), dada pela Orquestração em 02/11. Nasce ligada no
+# piloto (contas 1, 16 e 18).
+- name: automacao_motor
+  display_name: Automação › motor (automações novas)
+  enabled: false
+  column: feature_flags_ext_2
