@@ -21,7 +21,8 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
   private
 
   # A lista já deixa de fora o que só se faz na tela; a conferência aqui é a rede, caso a lista erre.
-  def garantir_permitida!(acao)
+  # Os dados da ação (#2446) não mudam a regra do motor: a lista mais a chave de automações.
+  def garantir_permitida!(acao, _dados = nil)
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, I18n.t('autonomia.automacao.motivos.acao_fora') unless ::Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
     raise SemPermissao, I18n.t('autonomia.automacao.motivos.quem_ligou_sem_permissao') unless @account_user&.permission_granted?(

@@ -17,6 +17,8 @@ class Api::V1::Accounts::Crm::StagesController < Api::V1::Accounts::Crm::BaseCon
 
   def create
     @stage = Current.account.crm_pipeline_stages.new(stage_params.merge(pipeline: @pipeline))
+    # Sem posição (a automação nunca escolhe, #2414), a etapa nova vai para o fim do funil. A tela sempre manda a dela.
+    @stage.position = @pipeline.stages.maximum(:position).to_i + 1 unless stage_params.key?(:position)
     apply_default_ai_criteria!(@stage)
     # New stages must honor the funnel classification too — update-only handling
     # would silently drop the mapping the funnel drawer sends on stage creation.

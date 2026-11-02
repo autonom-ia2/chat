@@ -84,8 +84,8 @@
     "controller": "api/v1/accounts/automation_rules#destroy",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:47",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:50",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:104"
     ],
     "sem_corpo": true
   },
@@ -726,9 +726,9 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/stages#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:38",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:39",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:66"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:40",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:68"
     ],
     "sem_corpo": false
   },
@@ -3460,14 +3460,15 @@
     "controller": "api/v1/accounts/automation_rules#update",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:31",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:78",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:38",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:37",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:32",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
-      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:34",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:81",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:41",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:40",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:35",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:104",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:90",
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15",
+      "app/controllers/api/v1/accounts/concerns/automation_funnel_guard.rb:10"
     ],
     "sem_corpo": false
   },
@@ -6426,13 +6427,13 @@
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:33",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:126",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:123",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:112",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:66"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:128",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:125",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:68"
     ],
     "sem_corpo": false
   },
@@ -10726,12 +10727,13 @@
     "controller": "api/v1/accounts/automation_rules#create",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:17",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:78",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:23",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:18",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
-      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:20",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:81",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:26",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:21",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:90",
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15",
+      "app/controllers/api/v1/accounts/concerns/automation_funnel_guard.rb:10"
     ],
     "sem_corpo": false
   },
@@ -10745,10 +10747,11 @@
     "controller": "api/v1/accounts/automation_rules#clone",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:52",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:53",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101",
-      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:20"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:55",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:56",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:104",
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:20",
+      "app/controllers/api/v1/accounts/concerns/automation_funnel_guard.rb:14"
     ],
     "sem_corpo": false
   },
@@ -10760,9 +10763,9 @@
     "controller": "api/v1/accounts/automation_rules#ensaio",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:63",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:67",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:66",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:70",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:104"
     ],
     "sem_corpo": false
   },
@@ -16419,13 +16422,13 @@
     "modelo": "Crm::PipelineStage",
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:18",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:149",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:126",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:123",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:112",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:151",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:128",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:125",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:64"
     ],
     "sem_corpo": false
   },
@@ -16999,9 +17002,9 @@
     "controller": "api/v1/accounts/crm/stages#reorder",
     "modelo": "Crm::Pipeline",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:51",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:92",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:53"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:53",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:94",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:55"
     ],
     "sem_corpo": false
   },
@@ -22804,14 +22807,15 @@
     "controller": "api/v1/accounts/automation_rules#update",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:31",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:78",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:38",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:37",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:32",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
-      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:34",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:81",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:41",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:40",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:35",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:104",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:90",
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15",
+      "app/controllers/api/v1/accounts/concerns/automation_funnel_guard.rb:10"
     ],
     "sem_corpo": false
   },
@@ -25740,13 +25744,13 @@
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:33",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:126",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:123",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:112",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:66"
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:35",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:128",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:125",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:114",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:111",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:68"
     ],
     "sem_corpo": false
   },

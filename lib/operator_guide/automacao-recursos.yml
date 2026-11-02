@@ -72,7 +72,8 @@ passo:
   crm/stages:
     motivo: >-
       Criar e alterar etapa do funil (D13; formato completo desde o #2460). Reordenar fica fora, inclusive a posição
-      de uma etapa só, no criar e no alterar: ela muda a ordem do funil. Apagar fica só no Guia (F3.11).
+      de uma etapa só, no criar e no alterar: ela muda a ordem do funil. A etapa criada vai para o fim. Apagar fica
+      só no Guia (F3.11).
     acoes:
       POST crm/pipelines/:pipeline_id/stages: { proibe: [position] }
       PATCH crm/stages/:id: { proibe: [position] }

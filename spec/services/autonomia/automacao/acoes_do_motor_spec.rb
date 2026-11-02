@@ -22,6 +22,12 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :automacao_motor do
       .to raise_error(Autonomia::Guide::Acoes::Recusada, I18n.t('autonomia.automacao.motivos.quem_ligou_sem_permissao'))
   end
 
+  it 'aceita os dados da ação na conferência, como o Guia chama desde o #2446' do
+    definicao.update!(ligada_por: admin)
+
+    expect { acoes.send(:garantir_permitida!, 'DELETE labels/:id', { caminho: { id: 1 } }) }.to raise_error(Autonomia::Guide::Acoes::Recusada)
+  end
+
   it 'recusa a ação fora da lista, mesmo para o administrador' do
     definicao.update!(ligada_por: admin)
 
