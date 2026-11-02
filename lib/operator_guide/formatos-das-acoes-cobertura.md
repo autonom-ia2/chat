@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 691 |
-| Sem corpo | 200 |
-| Com corpo | 491 |
-| Com corpo e formato completo | 409 (83,3%) |
-| Com corpo e formato incompleto | 82 |
+| No catálogo | 696 |
+| Sem corpo | 202 |
+| Com corpo | 494 |
+| Com corpo e formato completo | 409 (82,8%) |
+| Com corpo e formato incompleto | 85 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 210 de 299 |
+| Leituras cruas tipadas | 210 de 301 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 68 |
+| leitura crua sem tipo | 71 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -35,6 +35,7 @@ Uma ação pode ter mais de um motivo.
 
 - `DELETE assignment_policies/:assignment_policy_id/inboxes/:id` — a rota não tem a action no controller: a chamada dá erro
 - `DELETE inboxes/:inbox_id/conference` — leitura crua sem tipo: call_sid
+- `PATCH autonomia/automacoes/:id` — leitura crua sem tipo: receita
 - `PATCH crm/meta_ads_connection/ads/:ad_id/budget` — leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)
 - `PATCH crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id` — leitura crua sem tipo: hidden (repassada a comments.hide!)
 - `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
@@ -47,6 +48,7 @@ Uma ação pode ter mais de um motivo.
 - `POST assignment_policies/:assignment_policy_id/inboxes` — a rota não tem a action no controller: a chamada dá erro
 - `POST autonomia/agents/:agent_id/sources` — leitura crua sem tipo: descriptor.kind
 - `POST autonomia/agents/:agent_id/tools/:id/test` — leitura crua sem tipo: params
+- `POST autonomia/automacoes` — leitura crua sem tipo: receita
 - `POST autonomia/build_threads` — leitura crua sem tipo: message (repassada a @thread.append_message!), papel, type (repassada a @thread.persist_start_options!), with_knowledge (repassada a @thread.persist_start_options!)
 - `POST autonomia/build_threads/:id/messages` — leitura crua sem tipo: message (repassada a @thread.append_message!)
 - `POST autonomia/conversations/:conversation_id/copilot` — leitura crua sem tipo: draft, instruction, task, tone
@@ -110,6 +112,7 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/:id/terminate` — leitura crua sem tipo: sdp_answer (repassada a Whatsapp::CallService.new)
 - `POST whatsapp_calls/:id/upload_recording` — leitura crua sem tipo: recording (repassada a @call.message.attachments.create!)
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
+- `PUT autonomia/automacoes/:id` — leitura crua sem tipo: receita
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
@@ -127,6 +130,8 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/autonomia/agents/build_threads#messages` message — repassada a @thread.append_message!
 - `api/v1/accounts/autonomia/agents/sources#create` descriptor.kind — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/agents/tools#test` params — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes#create` receita — o código não converte nem compara o valor
+- `api/v1/accounts/autonomia/automacoes#update` receita — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#chat` message — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#create` draft — o código não converte nem compara o valor
 - `api/v1/accounts/autonomia/conversation_copilot#create` instruction — o código não converte nem compara o valor
@@ -214,8 +219,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 425 |
-| Com parâmetros conhecidos | 374 |
+| No catálogo | 428 |
+| Com parâmetros conhecidos | 377 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

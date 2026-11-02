@@ -92,6 +92,9 @@
     },
     {
       "file": "funcoesDaEquipe.json"
+    },
+    {
+      "file": "automacaoLivre.json"
     }
   ],
   "pacotes": {

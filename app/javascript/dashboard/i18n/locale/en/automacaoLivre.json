@@ -1,0 +1,275 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "GRUPOS": {
+      "CONVERSA": "Conversation",
+      "CONTATO": "Contact and company",
+      "ETIQUETA": "Labels",
+      "ATRIBUTO": "Custom fields",
+      "EQUIPE": "Team",
+      "CONTROLE": "Time and conditions"
+    },
+    "GATILHOS": {
+      "CONVERSA_CRIADA": "When a conversation starts",
+      "CONVERSA_ABERTA": "When a conversation is reopened",
+      "CONVERSA_RESOLVIDA": "When a conversation is resolved",
+      "MENSAGEM_CRIADA": "When a message arrives"
+    },
+    "OPERADORES": {
+      "VAZIO": "is empty",
+      "PREENCHIDO": "is filled in",
+      "IGUAL": "is equal to",
+      "DIFERENTE": "is different from",
+      "CONTEM": "contains",
+      "NAO_CONTEM": "does not contain",
+      "MAIOR": "is greater than",
+      "MENOR": "is less than"
+    },
+    "UNIDADES": {
+      "MINUTOS": "minutes",
+      "HORAS": "hours",
+      "DIAS": "days"
+    },
+    "VALORES": {
+      "CONVERSA_ID": "Conversation number",
+      "CONVERSA_STATUS": "Conversation status",
+      "CONVERSA_PRIORIDADE": "Conversation priority",
+      "CONVERSA_CAIXA_ID": "Conversation inbox",
+      "CONVERSA_RESPONSAVEL_ID": "Conversation assignee",
+      "CONVERSA_TIME_ID": "Conversation team",
+      "CONVERSA_ETIQUETAS": "Conversation labels",
+      "CONTATO_ID": "The contact",
+      "CONTATO_NOME": "Contact name",
+      "CONTATO_EMAIL": "Contact email",
+      "CONTATO_TELEFONE": "Contact phone",
+      "CONTATO_EMPRESA_ID": "Contact company",
+      "CONTATO_ETIQUETAS": "Contact labels",
+      "CONVERSA_ATRIBUTOS": "Conversation custom field",
+      "CONTATO_ATRIBUTOS": "Contact custom field"
+    },
+    "PASSOS": {
+      "ESPERAR": "Wait for a while",
+      "ESPERAR_ATE": "Wait until something happens",
+      "SE": "If… otherwise…",
+      "PARAR": "Stop here",
+      "CONVERSA_ETIQUETAS": "Add or remove a conversation label",
+      "CONVERSA_STATUS": "Change the conversation status",
+      "CONVERSA_PRIORIDADE": "Change the conversation priority",
+      "CONVERSA_ATRIBUTOS": "Fill in a conversation field",
+      "CONVERSA_ATRIBUIR": "Hand the conversation to someone",
+      "CAIXA_PESSOAS": "Add people to an inbox",
+      "CONTATO_ETIQUETAS": "Add or remove a contact label",
+      "CONTATO_ALTERAR": "Update the contact",
+      "EMPRESA_ALTERAR": "Update the contact's company",
+      "ETIQUETA_CRIAR": "Create a label",
+      "ETIQUETA_ALTERAR": "Change a label",
+      "ATRIBUTO_CRIAR": "Create a custom field",
+      "ATRIBUTO_ALTERAR": "Change a custom field"
+    },
+    "ESCOLHER": {
+      "ETIQUETA": "Which label",
+      "ATRIBUTO": "Which custom field"
+    },
+    "CAMPOS": {
+      "DURACAO": "How long",
+      "CONDICAO": "Until",
+      "PRAZO": "Wait at most",
+      "SE_VENCER": "If time runs out",
+      "ENTAO": "Then",
+      "SENAO": "Otherwise",
+      "POR": "Add labels",
+      "TIRAR": "Remove labels",
+      "STATUS": "Status",
+      "SNOOZED_UNTIL": "Snooze until",
+      "PRIORITY": "Priority",
+      "CUSTOM_ATTRIBUTES": "Custom fields",
+      "ASSIGNEE_ID": "Person",
+      "TEAM_ID": "Team",
+      "INBOX_ID": "Inbox",
+      "USER_IDS": "People",
+      "NAME": "Name",
+      "EMAIL": "Email",
+      "PHONE_NUMBER": "Phone",
+      "COMPANY_ID": "Company",
+      "DESCRIPTION": "Description",
+      "DOMAIN": "Website",
+      "TITLE": "Label name",
+      "COLOR": "Color",
+      "SHOW_ON_SIDEBAR": "Show in the menu",
+      "ATTRIBUTE_DISPLAY_NAME": "Field name",
+      "ATTRIBUTE_KEY": "Field key",
+      "ATTRIBUTE_MODEL": "The field belongs to",
+      "ATTRIBUTE_DISPLAY_TYPE": "Field type",
+      "ATTRIBUTE_DESCRIPTION": "What it is for",
+      "ATTRIBUTE_VALUES": "List options"
+    },
+    "OPCOES": {
+      "STATUS": {
+        "OPEN": "Open",
+        "RESOLVED": "Resolved",
+        "PENDING": "Pending",
+        "SNOOZED": "Snoozed"
+      },
+      "PRIORITY": {
+        "LOW": "Low",
+        "MEDIUM": "Medium",
+        "HIGH": "High",
+        "URGENT": "Urgent"
+      },
+      "ATTRIBUTE_MODEL": {
+        "CONVERSATION_ATTRIBUTE": "Conversation",
+        "CONTACT_ATTRIBUTE": "Contact",
+        "COMPANY_ATTRIBUTE": "Company",
+        "CARD_ATTRIBUTE": "CRM card"
+      },
+      "ATTRIBUTE_DISPLAY_TYPE": {
+        "TEXT": "Text",
+        "NUMBER": "Number",
+        "CURRENCY": "Money",
+        "PERCENT": "Percentage",
+        "LINK": "Link",
+        "DATE": "Date",
+        "LIST": "List",
+        "CHECKBOX": "Yes or no"
+      }
+    },
+    "LIGADA": "On",
+    "DESLIGADA": "Off",
+    "LIGOU": "On. From now on it works by itself.",
+    "DESLIGOU": "Off. Nothing else happens through it.",
+    "VOLTAR_LISTA": "Back to Automations",
+    "ALTERAR": "Change",
+    "ALTERAR_ROTULO": "Change: {frase}",
+    "MUDOU": "Someone changed this automation. See the new version before going on.",
+    "FALHOU": "That did not work right now. Try again.",
+    "LISTA": {
+      "TITULO": "Automations",
+      "SUBTITULO": "Everything that happens by itself in your account, in one place.",
+      "NOVA": "New automation",
+      "VAZIO": "Nothing happens by itself yet.",
+      "COMECAR": "Start",
+      "LIGADAS": "1 on | {n} on",
+      "ANTIGAS": "1 still the old way | {n} still the old way",
+      "MAIS_PASSOS": "and 1 more step | and {n} more steps",
+      "ABRIR": "Open",
+      "ABRIR_ROTULO": "Open {nome}",
+      "INTERRUPTOR": "Turn {nome} on or off",
+      "CARREGANDO": "Loading automations",
+      "ERRO": "Could not load the automations right now.",
+      "TENTAR_DE_NOVO": "Try again",
+      "DO_FUNIL": "Pipeline stage automations live in Configure › Edit pipeline.",
+      "VER_FUNIL": "See in the pipeline",
+      "SEM_PASSO": "No step yet"
+    },
+    "ORIGEM": {
+      "CONVERSA": "From the conversation",
+      "ANTIGO": "The old way"
+    },
+    "EDITOR": {
+      "NOVA": "New automation",
+      "NOME": "Automation name",
+      "VERSAO": "Version {n}",
+      "MOSTRAR_TUDO": "Show everything",
+      "MOSTRAR_MENOS": "Show less",
+      "SALVOU": "Change saved.",
+      "GUARDOU": "Saved, still off.",
+      "NO_MEIO": "Whoever already started finishes on the previous version.",
+      "PAUSOU": "It paused because someone else saved. To go on, turn it on again.",
+      "NAO_ACHOU": "This automation no longer exists or belongs to another account.",
+      "PROBLEMAS": "To save, fix:",
+      "NAO_SALVA": "This change is not saved yet. Complete the missing step and it becomes a new version.",
+      "LIGADA_AVISO": "This automation is on: every change takes effect right away.",
+      "LIGADA_POR_OUTRA": "Someone else turned this automation on. If you save, it pauses until it is turned on again.",
+      "SAIR": {
+        "TITULO": "Leave without saving?",
+        "TEXTO": "What you built here is not saved yet. If you leave now, it goes away.",
+        "CONTINUAR": "Keep building",
+        "SAIR": "Leave without saving"
+      }
+    },
+    "CONFIRA": {
+      "QUANDO": "When",
+      "SO_SE": "Only if",
+      "FACA": "Do",
+      "ESCOLHER": "Choose",
+      "SEM_CONDICAO": "Always, no condition.",
+      "ADICIONAR_CONDICAO": "Add a condition",
+      "PRIMEIRO_PASSO": "Add the first step",
+      "NADA": "Nothing happens here.",
+      "INSERIR": "Add a step here",
+      "PASSOS_NO_GALHO": "(1 step) | ({n} steps)",
+      "AVANCADA": "Advanced action",
+      "AVANCADA_DICA": "Only the Guide changes this step. Here it stays as it is."
+    },
+    "FRASES": {
+      "FALTA_GATILHO": "Choose when it starts",
+      "ESPERAR": "Wait {duracao}",
+      "ESPERAR_ATE": "Wait until: {condicao} (at most {prazo})",
+      "SE": "If {condicao}",
+      "CONDICAO": "{campo} {op} {valor}",
+      "CONDICAO_SEM_VALOR": "{campo} {op}",
+      "FALTA_CONDICAO": "the condition is still missing",
+      "TODAS": "all apply: {lista}",
+      "ALGUMA": "any applies: {lista}",
+      "ATRIBUTO": "{base}: {chave}",
+      "DURACAO": "{valor} {unidade}",
+      "AVANCADA": "Advanced action: {descricao}",
+      "SIM": "yes",
+      "NAO": "no",
+      "LISTA": "{inicio} and {ultimo}",
+      "ETIQUETAS_CONVERSA": {
+        "POR": "Add the label {lista} to the conversation",
+        "POR_VARIAS": "Add the labels {lista} to the conversation",
+        "TIRAR": "Remove the label {lista} from the conversation",
+        "TIRAR_VARIAS": "Remove the labels {lista} from the conversation",
+        "POR_E_TIRAR": "On the conversation, add {por} and remove {tirar}"
+      },
+      "ETIQUETAS_CONTATO": {
+        "POR": "Add the label {lista} to the contact",
+        "POR_VARIAS": "Add the labels {lista} to the contact",
+        "TIRAR": "Remove the label {lista} from the contact",
+        "TIRAR_VARIAS": "Remove the labels {lista} from the contact",
+        "POR_E_TIRAR": "On the contact, add {por} and remove {tirar}"
+      }
+    },
+    "RAMOS": {
+      "ENTAO": "Then",
+      "SENAO": "Otherwise",
+      "SE_VENCER": "If time runs out"
+    },
+    "SELETOR": {
+      "TITULO": "Choose the next step",
+      "TEXTO": "It goes where the “+” you tapped is."
+    },
+    "ALTERAR_PAINEL": {
+      "PASSO": "Change the step",
+      "GATILHO": "Change when it starts",
+      "CONDICAO": "Change the condition",
+      "TIPO_GATILHO": "When it starts",
+      "SALVAR": "Save",
+      "TIRAR": "Remove",
+      "ESCOLHA": "Choose",
+      "CAMPO": "What to look at",
+      "OPERADOR": "How to compare",
+      "VALOR": "With what",
+      "ATRIBUTO": "Which custom field",
+      "CHAVE_VALOR": "Value of {campo}",
+      "UMA_POR_LINHA": "One option per line",
+      "PROCURAR": "Search",
+      "UNIDADE": "Time unit",
+      "COMPOSTA": "This condition has several parts. Only the Guide changes it; here it stays as is.",
+      "DA_CONVERSA": "Comes from the conversation: {valor}",
+      "BUSCA_FALHOU": "Could not search right now. Try again."
+    },
+    "LIGAR": {
+      "BOTAO": "Turn on",
+      "DESLIGADA": "It is off. Nothing happens until you turn it on.",
+      "FALTA_GATILHO": "Still missing when it starts.",
+      "FALTA_PASSO": "Still missing at least one step.",
+      "GUARDAR": "Save without turning on",
+      "LIGADA_AVISO": "It is working by itself.",
+      "DESLIGAR": "Turn off",
+      "SO_LEITURA": "You can see this automation. To change it, ask who looks after automations.",
+      "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
+    }
+  }
+}

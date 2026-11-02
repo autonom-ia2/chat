@@ -3674,6 +3674,31 @@
     ],
     "sem_corpo": false
   },
+  "PATCH autonomia/automacoes/:id": {
+    "campos": {
+      "nome": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      },
+      "receita": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/automacoes#update",
+    "modelo": "Autonomia::Automacao::Definicao",
+    "motivos": [
+      "leitura crua sem tipo: receita"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:114",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:58",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:57",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:54",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:96"
+    ],
+    "sem_corpo": false
+  },
   "PATCH autonomia/avisos/:id": {
     "campos": {
       "estado": {
@@ -11232,6 +11257,46 @@
       "app/controllers/api/v1/accounts/autonomia/agents/message_reports_controller.rb:45"
     ],
     "sem_corpo": false
+  },
+  "POST autonomia/automacoes": {
+    "campos": {
+      "nome": {
+        "obrigatorio": "pelo_modelo",
+        "tipo": "string"
+      },
+      "receita": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/automacoes#create",
+    "modelo": "Autonomia::Automacao::Definicao",
+    "motivos": [
+      "leitura crua sem tipo: receita"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:39",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:114",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:42"
+    ],
+    "sem_corpo": false
+  },
+  "POST autonomia/automacoes/:id/desligar": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/automacoes#desligar",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:76",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:96"
+    ],
+    "sem_corpo": true
+  },
+  "POST autonomia/automacoes/:id/ligar": {
+    "completo": true,
+    "controller": "api/v1/accounts/autonomia/automacoes#ligar",
+    "modelo": "Autonomia::Automacao::Definicao",
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:65",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:96"
+    ],
+    "sem_corpo": true
   },
   "POST autonomia/build_threads": {
     "campos": {
@@ -23093,6 +23158,31 @@
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:240",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:163",
       "app/controllers/api/v1/accounts/autonomia/agents_controller.rb:129"
+    ],
+    "sem_corpo": false
+  },
+  "PUT autonomia/automacoes/:id": {
+    "campos": {
+      "nome": {
+        "nao_pode_ficar_vazio": true,
+        "tipo": "string"
+      },
+      "receita": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/automacoes#update",
+    "modelo": "Autonomia::Automacao::Definicao",
+    "motivos": [
+      "leitura crua sem tipo: receita"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:52",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:114",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:58",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:57",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:54",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:53",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:96"
     ],
     "sem_corpo": false
   },
