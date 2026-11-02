@@ -16,6 +16,9 @@ class Autonomia::Automacao::PassoDeMensagem
   def executar
     return sem_conversa if @conversa.nil?
 
+    negado = sem_acesso
+    return negado if negado
+
     texto = texto_pronto
     motivo = motivo_para_pular(texto)
     return Resultado.new(tipo: :pulado, motivo: motivo, dados: {}) if motivo

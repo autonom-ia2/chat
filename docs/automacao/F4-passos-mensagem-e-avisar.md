@@ -15,9 +15,9 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
 
 - **Própria da F4.** Só vale com `automacao_motor` e `automacao_fundacao`: sem a fundação não há a cadeia comum contra
   laço com as regras antigas.
-- **Bit:** sai da ordem no yml, logo depois de `automacao_motor` (posição 21). A posição é confirmada com a Orquestração
-  Deploy no merge da main.
-- **Piloto:** nasce ligada nas contas 1, 16 e 18.
+- **Bit:** sai da ordem no yml: `feature_flags_ext_2`, posição 22 (2097152), logo depois de `automacao_motor`. A F5
+  também pediu a 22; vale a ordem de entrada na main, e a Orquestração confirma na fila.
+- **Contas:** nasce DESLIGADA em todas as contas; só liga depois da #2486 (Salvar tudo).
 - **Desligada:**
   - o salvar recusa o passo (`passo_desligado`);
   - a execução que chega nele fecha como parada (`mensagens_desligadas`), sem mandar nada. É o rollback.
@@ -75,6 +75,8 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
 
 - Os dois passos agem na conversa principal do card, com os valores dela.
 - Card sem conversa principal pula com `sem_conversa`, e o histórico mostra. Nada é mandado.
+- Quem ligou precisa enxergar a conversa principal, e não só o card: sem acesso, nada sai e a automação pausa com
+  `quem_ligou_sem_acesso`, como na ação. A regra fica nos dois passos (`NaConversa#sem_acesso`).
 - Os gatilhos de card são da F6.
 
 ## Proteção anti-laço

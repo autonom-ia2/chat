@@ -1114,7 +1114,8 @@
 # uso; só a proteção contra laço. Rollback: desligar a flag na conta. Sem migration.
 # Bit: feature_flags_ext_2, posição 22 (valor 2097152, 1 << 21), logo depois de automacao_motor. A F5
 # (automacao_editor) também pediu a 22: vale a ordem de entrada na main, e quem entrar por segundo traz a main e vira
-# 23 (bit, comentário e account_spec). A Orquestração confirma na fila. Nasce ligada no piloto (contas 1, 16 e 18).
+# 23 (bit, comentário e account_spec). A Orquestração confirma na fila. Nasce DESLIGADA em todas as contas; só liga
+# depois da #2486 (Salvar tudo).
 - name: automacao_mensagens
   display_name: Automação › mensagem ao cliente e aviso à equipe
   enabled: false

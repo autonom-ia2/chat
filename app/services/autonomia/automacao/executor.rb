@@ -180,17 +180,19 @@ class Autonomia::Automacao::Executor
     return encerrar(passo['id'], 'parada', 'mensagens_desligadas') unless ::Autonomia::Automacao::Motor.mensagens?(@account)
 
     resultado = classe.new(execucao: @execucao, passo: passo, alvo: alvo).executar
-    # O outro lado parece um robô: para só nesta conversa, e a automação continua ligada (a nota já ficou).
-    return encerrar(passo['id'], 'parada', 'laco_suspeito', 'falhou') if resultado.tipo == :laco
+    # Robô do outro lado: para só nesta conversa, e a automação continua ligada (a nota já ficou). Quem ligou não vê a
+    # conversa em que o passo age: pausa a automação, como na ação.
+    return encerrar(passo['id'], 'parada', motivo_da_parada(resultado), 'falhou') if %i[laco sem_acesso].include?(resultado.tipo)
 
     seguir_depois_da_acao(passo, resultado)
   end
 
+  def motivo_da_parada(resultado) = resultado.tipo == :sem_acesso ? pausar(resultado.motivo) : resultado.motivo
+
   # A ação mudou o alvo: o passo seguinte ("se", "esperar até") lê o valor de agora, não o de antes dela.
   def seguir_depois_da_acao(passo, resultado)
     @tentativas = 0
-    @alvo = nil
-    @valores = nil
+    @alvo = @valores = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
     @roteiro.seguinte(passo['id'])
   end

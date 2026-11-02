@@ -274,6 +274,31 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(notas.call).to eq(2)
     end
 
+    # Execuções concorrentes de verdade não cabem no spec (a transação do teste divide a conexão entre as threads):
+    # o spec prova que a busca e a criação da nota correm sob a trava da conversa, que é o que as serializa.
+    it 'a busca e a criação da nota da parada correm sob a trava da conversa', :aggregate_failures do
+      trocas(40, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 1.minute.ago)
+      recebida('deles')
+      travada = false
+      notas_criadas = []
+      allow_any_instance_of(Conversation).to receive(:with_lock).and_wrap_original do |original, *args, &bloco| # rubocop:disable RSpec/AnyInstance
+        original.call(*args) do
+          travada = true
+          bloco.call
+        ensure
+          travada = false
+        end
+      end
+      allow(Autonomia::Automacao::Nota).to receive(:criar).and_wrap_original do |original, **opcoes|
+        notas_criadas << travada
+        original.call(**opcoes)
+      end
+
+      comecar_e_rodar(definicao)
+
+      expect(notas_criadas).to eq([true])
+    end
+
     it 'volta quando uma pessoa da equipe escreve', :aggregate_failures do
       trocas(40, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 1.minute.ago)
       expect(registros(comecar_e_rodar(definicao))).to eq([%w[p1 falhou laco_suspeito]])
@@ -372,6 +397,18 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
                                                             { 'id' => saiu.id, 'motivo' => 'fora_da_conta' })
     end
 
+    it 'nome com ] e ) sai escapado como o editor grava, e a menção ainda avisa', :aggregate_failures do
+      estranha = create(:user, account: account, role: :agent, name: 'Ana ] (Silva_Souza*)')
+      create(:inbox_member, user: estranha, inbox: inbox)
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [avisar_passo('p1', { 'pessoas' => [estranha.id] }, 'Oi')]))
+
+      nota = conversa.messages.where(private: true).last
+      expect(nota.content).to end_with("[@Ana \\] (Silva_Souza\\*)](mention://user/#{estranha.id}/Ana%20%5D%20%28Silva_Souza%2A%29)")
+      Messages::MentionService.new(message: nota).perform
+      expect(Notification.where(notification_type: 'conversation_mention', user: estranha).count).to eq(1)
+      expect(dados_do(execucao)['pessoas']).to eq([estranha.id])
+    end
+
     it 'o salvar recusa time e pessoa de outra conta' do
       de_fora = create(:team)
       outra_pessoa = create(:user)
@@ -409,6 +446,31 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       resultado = Autonomia::Automacao::PassoDeAviso.new(execucao: execucao, passo: aviso, alvo: card(conversa)).executar
 
       expect([resultado.tipo, conversa.messages.where(private: true).last.content]).to match([:ok, start_with('Cliente Bruno')])
+    end
+
+    it 'conversa principal numa caixa que quem ligou não vê: nenhum dos passos manda, e pedem a pausa', :aggregate_failures do
+      agente = create(:user, account: account, role: :agent)
+      definicao = create(:autonomia_automacao, account: account, ligada_por: agente)
+      de_agente = create(:autonomia_automacao_execucao, versao: create(:autonomia_automacao_versao, automacao: definicao), alvo: conversa)
+      alvo = card(conversa)
+
+      mensagem = Autonomia::Automacao::PassoDeMensagem.new(execucao: de_agente, passo: oi, alvo: alvo).executar
+      aviso_do_card = Autonomia::Automacao::PassoDeAviso.new(execucao: de_agente, passo: aviso, alvo: alvo).executar
+
+      expect([mensagem.tipo, mensagem.motivo]).to eq([:sem_acesso, 'quem_ligou_sem_acesso'])
+      expect([aviso_do_card.tipo, aviso_do_card.motivo]).to eq([:sem_acesso, 'quem_ligou_sem_acesso'])
+      expect(conversa.messages.reload).to be_empty
+    end
+
+    it 'o executor pausa a automação quando o passo volta sem acesso', :aggregate_failures do
+      definicao = automacao_ligada(account, admin, [oi])
+      negado = Autonomia::Automacao::PassoDeAcao::Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: {})
+      allow_any_instance_of(Autonomia::Automacao::PassoDeMensagem).to receive(:executar).and_return(negado) # rubocop:disable RSpec/AnyInstance
+
+      execucao = comecar_e_rodar(definicao)
+
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['parada', [%w[p1 falhou quem_ligou_sem_acesso]]])
+      expect(definicao.reload.ativa).to be(false)
     end
   end
 

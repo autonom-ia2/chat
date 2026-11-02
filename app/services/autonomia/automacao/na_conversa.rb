@@ -14,6 +14,14 @@ module Autonomia::Automacao::NaConversa
 
   def sem_conversa = Resultado.new(tipo: :pulado, motivo: 'sem_conversa', dados: {})
 
+  # Quem ligou precisa enxergar a conversa em que o passo age, e não só o alvo: no card, a pergunta vai à conversa
+  # principal. Sem acesso, a automação pausa, como na ação (D1).
+  def sem_acesso
+    return if ::Autonomia::Automacao::Acesso.alcanca?(@execucao.automacao.ligada_por, @conversa)
+
+    Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: {})
+  end
+
   def texto_pronto = ::Autonomia::Automacao::Texto.new(@passo['texto'], ::Autonomia::Automacao::Valores.new(conversa: @conversa)).montar
 
   def marca

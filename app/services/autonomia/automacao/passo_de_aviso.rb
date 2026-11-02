@@ -13,6 +13,9 @@ class Autonomia::Automacao::PassoDeAviso
   def executar
     return sem_conversa if @conversa.nil?
 
+    negado = sem_acesso
+    return negado if negado
+
     texto = texto_pronto
     return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) if texto.nil?
     return Resultado.new(tipo: :pulado, motivo: 'texto_vazio', dados: {}) if texto.strip.empty?
