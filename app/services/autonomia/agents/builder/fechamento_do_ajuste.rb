@@ -187,7 +187,13 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
 
     { mudancas: mudancas, versao_id: @thread.agent.versao_do_construtor&.id, itens_descartados: @itens_descartados,
       resposta: resposta.merge(parsed.slice('needs_more_info', 'next_question', 'opcoes_de_resposta'),
-                               parsed.slice('resposta_ao_dono').compact_blank) }
+                               resposta_da_correcao(resposta, parsed)) }
+  end
+
+  # #2489 — a resposta da 1ª chamada à pergunta do dono fica; a da correção só entra quando a 1ª veio vazia (a correção
+  # não sobrescreve a resposta real com um "Pronto").
+  def resposta_da_correcao(resposta, parsed)
+    resposta['resposta_ao_dono'].to_s.strip.present? ? {} : parsed.slice('resposta_ao_dono').compact_blank
   end
 
   # A correção não aplicou: a explicação dela (texto do Construtor) entra na pergunta ao dono, com as opções dela.

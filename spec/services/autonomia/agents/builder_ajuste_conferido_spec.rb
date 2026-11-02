@@ -492,14 +492,43 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(conteudos.last).to start_with(texto(:nao_consegui, pedidos: fala))
     end
 
-    # Decisão fixada: sem pergunta, a resposta_ao_dono não vai nem sem falta (a regra do schema diz vazia).
-    it 'sem falta e sem pergunta declarada: o texto da resposta_ao_dono não chega' do
-      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Pronto, tirei a coleta.', 'mudancas' => lista)
+    # Revisão do e07221b352: sem falta, o comportamento é o da main (a resposta vai se não estiver vazia).
+    it 'sem falta e sem pergunta declarada: a resposta_ao_dono vai, como na main, e nada é cortado' do
+      allow(Rails.logger).to receive(:info)
+      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Hoje ele atende os clientes.', 'mudancas' => lista)
 
       run_turn
 
       expect(estado['conferencia']).to include('falta' => false)
-      expect(conteudos).not_to include('Pronto, tirei a coleta.')
+      expect(conteudos).to include('Hoje ele atende os clientes.')
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('resposta_ao_dono_cortada'))
+    end
+
+    it 'com falta, a resposta cortada vai ao log só com o id da thread, nunca com o texto' do
+      allow(Rails.logger).to receive(:info)
+      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Pronto, tirei a coleta.', 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+      conferencias << { roteiro: [0] }
+
+      run_turn
+
+      expect(Rails.logger).to have_received(:info).with("[autonomia][builder] resposta_ao_dono_cortada thread=#{thread.id}")
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('Pronto, tirei a coleta.'))
+    end
+
+    it 'a resposta da correção não sobrescreve a resposta real da 1ª chamada à pergunta do dono' do
+      thread.append_message!('user', 'Não colete dados neste canal. E ele fala de preço hoje?')
+      respostas << saida('instruction' => instrucao_nova, 'dono_perguntou' => true,
+                         'resposta_ao_dono' => 'Hoje ele não fala de preço.', 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'scaffold' => 'andaime sem coleta', 'dono_perguntou' => true,
+                         'resposta_ao_dono' => 'Pronto, corrigi o roteiro.', 'mudancas' => lista)
+      conferencias << { roteiro: [0] }
+
+      run_turn
+
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => false)
+      expect(conteudos).to include('Hoje ele não fala de preço.')
+      expect(conteudos).not_to include('Pronto, corrigi o roteiro.')
     end
 
     it 'sem falta e com pergunta: a resposta chega' do

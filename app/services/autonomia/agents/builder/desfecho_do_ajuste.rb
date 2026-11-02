@@ -102,7 +102,15 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     texto, opcoes, na_tela = do_modelo ? [do_modelo, opcoes_do_modelo(resposta)] : pergunta_da_conferencia(conferencia, desfecho)
     origem = origem_da_pendencia(texto, do_modelo)
     aviso = aviso_do_desfecho(desfecho, dados, conferencia)
-    [[Autonomia::Agents::Builder::RespostaAoDono.texto(resposta), aviso, texto].compact_blank, [texto, origem], aviso, opcoes, na_tela]
+    [[resposta_ao_dono(resposta, conferencia), aviso, texto].compact_blank, [texto, origem], aviso, opcoes, na_tela]
+  end
+
+  # #2489 — a resposta do Construtor que vai ao dono (RespostaAoDono). Quando ela é cortada, o log leva só o id da thread.
+  def resposta_ao_dono(resposta, conferencia)
+    regra = Autonomia::Agents::Builder::RespostaAoDono
+    falta = conferencia['falta'] == true
+    Rails.logger.info("[autonomia][builder] resposta_ao_dono_cortada thread=#{@thread.id}") if regra.cortada?(resposta, falta: falta)
+    regra.texto(resposta, falta: falta)
   end
 
   # #1850 — a pergunta inteira fica na conversa e na pendência; a tela, enquanto o cartão ⚠ do turno está lá, mostra a
