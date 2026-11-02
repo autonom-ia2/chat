@@ -15,6 +15,7 @@
 # comentário de cima) no lugar de `respostas`. Quem conta e cuida delas só com a flag meta_ads_comentarios_ia: `que_esperam`.
 #
 # `legenda` (#2424): o texto do post, lido pela Rede como no motor, para a prévia decidir com o mesmo dado.
+# `redes` e `capa` (#2469): a caixa e o post de cada rede e a primeira imagem do post, para o cartão em Agentes.
 class Crm::MetaAds::ComentariosIa::Fonte
   SEM_PESSOA = ->(_inbox) { true }
   NAO_VE_CONVERSA = ->(_conversation) { false }
@@ -103,6 +104,21 @@ class Crm::MetaAds::ComentariosIa::Fonte
     inbox, comentario = rede.values_at(:inbox, :comentario)
     Crm::MetaAds::ComentariosIa::Foto.new(account: inbox.account, network: comentario.network, post_id: comentario.post_id,
                                           imagens: -> { imagens_do_post(inbox, comentario) })
+  end
+
+  # #2469 (o cartão do post em Agentes): por rede, a caixa e o post, `{ rede => { inbox_id:, post_id: } }`. A tela acha
+  # o agente da porta de cada rede por aqui (no anúncio nas duas redes, uma porta por rede).
+  def redes
+    @leituras.transform_values { |leitura| leitura.slice(:inbox_id, :post_id) }
+  end
+
+  # #2469: a capa do cartão, o endereço da primeira imagem do primeiro post (o mesmo criativo nas duas redes), ou nil.
+  # Só lê o endereço na Meta: nenhuma IA.
+  def capa
+    rede = rede_do_post
+    rede && imagens_do_post(*rede.values_at(:inbox, :comentario)).first
+  rescue Crm::MetaAds::ComentariosIa::Rede::Indisponivel
+    nil
   end
 
   private
