@@ -4048,6 +4048,28 @@
      ],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "13.34",
+     "titulo": "Ver e testar em Agentes os posts e anúncios que a IA cuida",
+     "para_que_serve": "Ver num lugar só os posts e anúncios que a IA cuida, quem responde por cada um, o que espera você, e testar uma pergunta antes.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_post_comments"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_agents_index",
+      "destaque": null
+     },
+     "requer": "meta_ads_comentarios_ia",
+     "prints": [],
+     "fontes": [
+      "porques: comentarios_do_post_em_agentes"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },
