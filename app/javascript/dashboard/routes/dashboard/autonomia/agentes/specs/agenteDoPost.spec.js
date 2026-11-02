@@ -553,6 +553,13 @@ describe('#2469 · os comentários do post em Agentes', () => {
         expect(noBody('[data-resposta-comentario]').textContent).toContain(
           'Oi!'
         );
+        expect(noBody('[data-resposta-sem-publicar]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.SEM_PUBLICAR'
+        );
+
+        await clicar('[data-testar-rede="instagram"]');
+        await clicar('[data-testar-perguntar]');
+        expect(noBody('[data-resposta-sem-publicar]')).toBeNull();
       });
 
       it('o privado do Facebook não sai: diz isso, sem balão de privado', async () => {

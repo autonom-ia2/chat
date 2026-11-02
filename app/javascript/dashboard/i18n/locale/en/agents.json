@@ -2899,7 +2899,7 @@
         "SO_TESTE": "It's only a test: nothing is published.",
         "FICA": "Stays with you",
         "FICA_TEXTO": "I don't reply to this: it stays with you in \"Waiting for you\".",
-        "SEM_PRIVADO": "On Facebook the private message doesn't go out yet: only the phrase in the comment.",
+        "SEM_PRIVADO": "On Facebook the private message doesn't go out yet, and the comment phrase only goes with it: this question stays with you, in \"Waiting for you\".",
         "FRASES_FIXAS": "Here I use the fixed phrases you wrote.",
         "ERRO": "I couldn't test it right now. Try again.",
         "IA_FORA": "The AI didn't reply right now. Try again in a moment.",
@@ -2912,7 +2912,8 @@
           "lia": "Lia makes quotes and doesn't reply to comments.",
           "porta_parada": "This inbox's agent is stopped.",
           "piloto": "This inbox's agent is in testing, only with test phones."
-        }
+        },
+        "SEM_PUBLICAR": "This is what I would write. On this network it isn't published yet: the phrase only goes out with the private message, which isn't enabled yet. The question stays with you."
       },
       "COMENTARIOS": {
         "TITULO": "Comments",

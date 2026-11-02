@@ -9,7 +9,8 @@ import { ICONE_DA_REDE } from '../../composables/useAgentesDoPost';
 // agente da porta escreve de verdade (a mesma Escrita do motor), no comentário ou no privado, sem publicar nada. No
 // anúncio nas duas redes, o dono escolhe a rede: a tela não escolhe por ele. O que volta é o que o agente escreveria
 // (só a Escrita: a decisão do motor de responder ou não o comentário fica fora do teste): o texto escrito, "Fica com você" (o agente não sabe), as frases fixas (sem agente que escreva, com o motivo) ou, no
-// privado do Facebook, que ele ainda não sai. Sem teto: só o botão fica parado enquanto a resposta não chega.
+// privado do Facebook, que ele ainda não sai. Na rede em que o privado não sai, o motor também não publica a frase
+// (ela só acompanha o privado): o texto escrito vem com esse aviso, para o teste não prometer o que o motor não faz. Sem teto: só o botão fica parado enquanto a resposta não chega.
 const props = defineProps({
   detalhe: { type: Object, required: true },
   // testar({ pergunta, formato, network }) do useAgenteDoPost.
@@ -51,9 +52,17 @@ const perguntar = async () => {
       network: rede.value,
     })),
     formato: formato.value,
+    rede: rede.value,
   };
   perguntando.value = false;
 };
+
+// A rede do teste deixa a IA mandar o privado? (o servidor diz por porta; hoje só o Instagram)
+const publica = computed(
+  () =>
+    props.detalhe.portas.find(porta => porta.network === resultado.value?.rede)
+      ?.private === true
+);
 
 const aviso = computed(() => {
   const r = resultado.value;
@@ -191,6 +200,13 @@ const aviso = computed(() => {
               {{ resultado.texto }}
             </span>
           </div>
+          <p
+            v-if="resultado.formato === 'publico' && !publica"
+            data-resposta-sem-publicar
+            class="m-0 text-sm leading-6 text-n-slate-11"
+          >
+            {{ t(`${KEY}.SEM_PUBLICAR`) }}
+          </p>
           <div
             v-else
             data-resposta-privado
