@@ -1,0 +1,136 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "GRUPOS": {
+      "CONVERSA": "Conversa",
+      "CONTATO": "Contato e empresa",
+      "ETIQUETA": "Etiquetas",
+      "ATRIBUTO": "Campos personalizados",
+      "EQUIPE": "Equipe",
+      "CONTROLE": "Tempo e condições"
+    },
+    "GATILHOS": {
+      "CONVERSA_CRIADA": "Quando uma conversa começa",
+      "CONVERSA_ABERTA": "Quando uma conversa é reaberta",
+      "CONVERSA_RESOLVIDA": "Quando uma conversa é resolvida",
+      "MENSAGEM_CRIADA": "Quando chega uma mensagem"
+    },
+    "OPERADORES": {
+      "VAZIO": "está vazio",
+      "PREENCHIDO": "está preenchido",
+      "IGUAL": "é igual a",
+      "DIFERENTE": "é diferente de",
+      "CONTEM": "contém",
+      "NAO_CONTEM": "não contém",
+      "MAIOR": "é maior que",
+      "MENOR": "é menor que"
+    },
+    "UNIDADES": {
+      "MINUTOS": "minutos",
+      "HORAS": "horas",
+      "DIAS": "dias"
+    },
+    "VALORES": {
+      "CONVERSA_ID": "Número da conversa",
+      "CONVERSA_STATUS": "Status da conversa",
+      "CONVERSA_PRIORIDADE": "Prioridade da conversa",
+      "CONVERSA_CAIXA_ID": "Caixa da conversa",
+      "CONVERSA_RESPONSAVEL_ID": "Responsável pela conversa",
+      "CONVERSA_TIME_ID": "Time da conversa",
+      "CONVERSA_ETIQUETAS": "Etiquetas da conversa",
+      "CONTATO_ID": "O contato",
+      "CONTATO_NOME": "Nome do contato",
+      "CONTATO_EMAIL": "E-mail do contato",
+      "CONTATO_TELEFONE": "Telefone do contato",
+      "CONTATO_EMPRESA_ID": "Empresa do contato",
+      "CONTATO_ETIQUETAS": "Etiquetas do contato",
+      "CONVERSA_ATRIBUTOS": "Campo personalizado da conversa",
+      "CONTATO_ATRIBUTOS": "Campo personalizado do contato"
+    },
+    "PASSOS": {
+      "ESPERAR": "Esperar um tempo",
+      "ESPERAR_ATE": "Esperar até algo acontecer",
+      "SE": "Se… senão…",
+      "PARAR": "Parar aqui",
+      "CONVERSA_ETIQUETAS": "Pôr ou tirar etiqueta da conversa",
+      "CONVERSA_STATUS": "Mudar o status da conversa",
+      "CONVERSA_PRIORIDADE": "Mudar a prioridade da conversa",
+      "CONVERSA_ATRIBUTOS": "Preencher campo da conversa",
+      "CONVERSA_ATRIBUIR": "Passar a conversa para alguém",
+      "CAIXA_PESSOAS": "Pôr pessoas numa caixa",
+      "CONTATO_ETIQUETAS": "Pôr ou tirar etiqueta do contato",
+      "CONTATO_ALTERAR": "Atualizar o contato",
+      "EMPRESA_ALTERAR": "Atualizar a empresa do contato",
+      "ETIQUETA_CRIAR": "Criar uma etiqueta",
+      "ETIQUETA_ALTERAR": "Mudar uma etiqueta",
+      "ATRIBUTO_CRIAR": "Criar um campo personalizado",
+      "ATRIBUTO_ALTERAR": "Mudar um campo personalizado"
+    },
+    "ESCOLHER": {
+      "ETIQUETA": "Qual etiqueta",
+      "ATRIBUTO": "Qual campo personalizado"
+    },
+    "CAMPOS": {
+      "DURACAO": "Quanto tempo",
+      "CONDICAO": "Até quando",
+      "PRAZO": "Esperar no máximo",
+      "SE_VENCER": "Se o prazo acabar",
+      "ENTAO": "Então",
+      "SENAO": "Senão",
+      "POR": "Pôr as etiquetas",
+      "TIRAR": "Tirar as etiquetas",
+      "STATUS": "Status",
+      "SNOOZED_UNTIL": "Adiar até",
+      "PRIORITY": "Prioridade",
+      "CUSTOM_ATTRIBUTES": "Campos personalizados",
+      "ASSIGNEE_ID": "Pessoa",
+      "TEAM_ID": "Time",
+      "INBOX_ID": "Caixa",
+      "USER_IDS": "Pessoas",
+      "NAME": "Nome",
+      "EMAIL": "E-mail",
+      "PHONE_NUMBER": "Telefone",
+      "COMPANY_ID": "Empresa",
+      "DESCRIPTION": "Descrição",
+      "DOMAIN": "Site",
+      "TITLE": "Nome da etiqueta",
+      "COLOR": "Cor",
+      "SHOW_ON_SIDEBAR": "Mostrar no menu",
+      "ATTRIBUTE_DISPLAY_NAME": "Nome do campo",
+      "ATTRIBUTE_KEY": "Chave do campo",
+      "ATTRIBUTE_MODEL": "O campo é de",
+      "ATTRIBUTE_DISPLAY_TYPE": "Tipo do campo",
+      "ATTRIBUTE_DESCRIPTION": "Para que serve",
+      "ATTRIBUTE_VALUES": "Opções da lista"
+    },
+    "OPCOES": {
+      "STATUS": {
+        "OPEN": "Aberta",
+        "RESOLVED": "Resolvida",
+        "PENDING": "Pendente",
+        "SNOOZED": "Adiada"
+      },
+      "PRIORITY": {
+        "LOW": "Baixa",
+        "MEDIUM": "Média",
+        "HIGH": "Alta",
+        "URGENT": "Urgente"
+      },
+      "ATTRIBUTE_MODEL": {
+        "CONVERSATION_ATTRIBUTE": "Conversa",
+        "CONTACT_ATTRIBUTE": "Contato",
+        "COMPANY_ATTRIBUTE": "Empresa",
+        "CARD_ATTRIBUTE": "Card do CRM"
+      },
+      "ATTRIBUTE_DISPLAY_TYPE": {
+        "TEXT": "Texto",
+        "NUMBER": "Número",
+        "CURRENCY": "Dinheiro",
+        "PERCENT": "Porcentagem",
+        "LINK": "Link",
+        "DATE": "Data",
+        "LIST": "Lista",
+        "CHECKBOX": "Sim ou não"
+      }
+    }
+  }
+}

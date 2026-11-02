@@ -1109,3 +1109,14 @@
   display_name: Automação › motor (automações novas)
   enabled: false
   column: feature_flags_ext_2
+# Automação livre F5, o editor (#2414). Ligada: Automações mostra a lista única (as novas, as do jeito antigo e as do
+# funil) e o editor das automações novas, montado do catálogo de passos (lib/operator_guide/automacao-passos.json).
+# Desligada: a tela de Automações fica a de hoje e a API do editor responde 404, menos o desligar, que sempre funciona
+# (D7). Rollback: desligar a flag na conta. Sem migration.
+# Bit: sem reserva (Orquestração, 02/11). Fica no fim da feature_flags_ext_2, na ordem real em que entrar na main;
+# hoje, depois de automacao_motor, posição 22 (valor 2097152, 1 << 21). A Orquestração confirma o número na hora da
+# fila. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: automacao_editor
+  display_name: Automação › editor e lista única
+  enabled: false
+  column: feature_flags_ext_2

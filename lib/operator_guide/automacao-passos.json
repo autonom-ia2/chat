@@ -1,0 +1,748 @@
+{
+  "gatilhos": [
+    {
+      "tipo": "conversa.criada",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_CRIADA"
+    },
+    {
+      "tipo": "conversa.aberta",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_ABERTA"
+    },
+    {
+      "tipo": "conversa.resolvida",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_RESOLVIDA"
+    },
+    {
+      "tipo": "mensagem.criada",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.MENSAGEM_CRIADA"
+    }
+  ],
+  "operadores": [
+    {
+      "op": "vazio",
+      "pede_valor": false,
+      "frase": "AUTOMACAO_LIVRE.OPERADORES.VAZIO"
+    },
+    {
+      "op": "preenchido",
+      "pede_valor": false,
+      "frase": "AUTOMACAO_LIVRE.OPERADORES.PREENCHIDO"
+    },
+    {
+      "op": "igual",
+      "pede_valor": true,
+      "frase": "AUTOMACAO_LIVRE.OPERADORES.IGUAL"
+    },
+    {
+      "op": "diferente",
+      "pede_valor": true,
+      "frase": "AUTOMACAO_LIVRE.OPERADORES.DIFERENTE"
+    },
+    {
+      "op": "contem",
+      "pede_valor": true,
+      "frase": "AUTOMACAO_LIVRE.OPERADORES.CONTEM"
+    },
+    {
+      "op": "nao_contem",
+      "pede_valor": true,
+      "frase": "AUTOMACAO_LIVRE.OPERADORES.NAO_CONTEM"
+    },
+    {
+      "op": "maior",
+      "pede_valor": true,
+      "frase": "AUTOMACAO_LIVRE.OPERADORES.MAIOR"
+    },
+    {
+      "op": "menor",
+      "pede_valor": true,
+      "frase": "AUTOMACAO_LIVRE.OPERADORES.MENOR"
+    }
+  ],
+  "unidades": [
+    {
+      "valor": "minutos",
+      "frase": "AUTOMACAO_LIVRE.UNIDADES.MINUTOS"
+    },
+    {
+      "valor": "horas",
+      "frase": "AUTOMACAO_LIVRE.UNIDADES.HORAS"
+    },
+    {
+      "valor": "dias",
+      "frase": "AUTOMACAO_LIVRE.UNIDADES.DIAS"
+    }
+  ],
+  "valores": [
+    {
+      "caminho": "conversa.id",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ID"
+    },
+    {
+      "caminho": "conversa.status",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_STATUS"
+    },
+    {
+      "caminho": "conversa.prioridade",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_PRIORIDADE"
+    },
+    {
+      "caminho": "conversa.caixa_id",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CAIXA_ID"
+    },
+    {
+      "caminho": "conversa.responsavel_id",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_ID"
+    },
+    {
+      "caminho": "conversa.time_id",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_TIME_ID"
+    },
+    {
+      "caminho": "conversa.etiquetas",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ETIQUETAS"
+    },
+    {
+      "caminho": "contato.id",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ID"
+    },
+    {
+      "caminho": "contato.nome",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_NOME"
+    },
+    {
+      "caminho": "contato.email",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_EMAIL"
+    },
+    {
+      "caminho": "contato.telefone",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TELEFONE"
+    },
+    {
+      "caminho": "contato.empresa_id",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_EMPRESA_ID"
+    },
+    {
+      "caminho": "contato.etiquetas",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ETIQUETAS"
+    },
+    {
+      "caminho": "conversa.atributos",
+      "atributos": "conversation_attribute",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ATRIBUTOS"
+    },
+    {
+      "caminho": "contato.atributos",
+      "atributos": "contact_attribute",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ATRIBUTOS"
+    }
+  ],
+  "grupos": [
+    {
+      "chave": "CONVERSA",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.CONVERSA"
+    },
+    {
+      "chave": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.CONTATO"
+    },
+    {
+      "chave": "ETIQUETA",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.ETIQUETA"
+    },
+    {
+      "chave": "ATRIBUTO",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.ATRIBUTO"
+    },
+    {
+      "chave": "EQUIPE",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.EQUIPE"
+    },
+    {
+      "chave": "CONTROLE",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.CONTROLE"
+    }
+  ],
+  "passos": [
+    {
+      "tipo": "esperar",
+      "grupo": "CONTROLE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.ESPERAR",
+      "campos": [
+        {
+          "nome": "duracao",
+          "peca": "duracao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DURACAO"
+        }
+      ]
+    },
+    {
+      "tipo": "esperar_ate",
+      "grupo": "CONTROLE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.ESPERAR_ATE",
+      "campos": [
+        {
+          "nome": "condicao",
+          "peca": "condicao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONDICAO"
+        },
+        {
+          "nome": "prazo",
+          "peca": "duracao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PRAZO"
+        },
+        {
+          "nome": "se_vencer",
+          "peca": "passos",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SE_VENCER"
+        }
+      ]
+    },
+    {
+      "tipo": "se",
+      "grupo": "CONTROLE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.SE",
+      "campos": [
+        {
+          "nome": "condicao",
+          "peca": "condicao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONDICAO"
+        },
+        {
+          "nome": "entao",
+          "peca": "passos",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ENTAO"
+        },
+        {
+          "nome": "senao",
+          "peca": "passos",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SENAO"
+        }
+      ]
+    },
+    {
+      "tipo": "parar",
+      "grupo": "CONTROLE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.PARAR",
+      "campos": []
+    },
+    {
+      "tipo": "acao",
+      "nome": "conversa_etiquetas",
+      "acao": "PATCH conversations/:conversation_id/labels/alterar",
+      "grupo": "CONVERSA",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_ETIQUETAS",
+      "caminho": {
+        "conversation_id": {
+          "$valor": "conversa.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "por",
+          "peca": "etiquetas",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.POR",
+          "obrigatorio": false
+        },
+        {
+          "nome": "tirar",
+          "peca": "etiquetas",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TIRAR",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "conversa_status",
+      "acao": "POST conversations/:id/toggle_status",
+      "grupo": "CONVERSA",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_STATUS",
+      "caminho": {
+        "id": {
+          "$valor": "conversa.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "status",
+          "peca": "escolha",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.STATUS",
+          "obrigatorio": false,
+          "opcoes": [
+            {
+              "valor": "open",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.STATUS.OPEN"
+            },
+            {
+              "valor": "resolved",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.STATUS.RESOLVED"
+            },
+            {
+              "valor": "pending",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.STATUS.PENDING"
+            },
+            {
+              "valor": "snoozed",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.STATUS.SNOOZED"
+            }
+          ],
+          "padrao": "open"
+        },
+        {
+          "nome": "snoozed_until",
+          "peca": "data_hora",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SNOOZED_UNTIL",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "conversa_prioridade",
+      "acao": "POST conversations/:id/toggle_priority",
+      "grupo": "CONVERSA",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_PRIORIDADE",
+      "caminho": {
+        "id": {
+          "$valor": "conversa.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "priority",
+          "peca": "escolha",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PRIORITY",
+          "obrigatorio": false,
+          "opcoes": [
+            {
+              "valor": "low",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.LOW"
+            },
+            {
+              "valor": "medium",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.MEDIUM"
+            },
+            {
+              "valor": "high",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.HIGH"
+            },
+            {
+              "valor": "urgent",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.PRIORITY.URGENT"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "conversa_atributos",
+      "acao": "POST conversations/:id/custom_attributes",
+      "grupo": "CONVERSA",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_ATRIBUTOS",
+      "caminho": {
+        "id": {
+          "$valor": "conversa.id"
+        }
+      },
+      "fixos": {
+        "merge": true
+      },
+      "campos": [
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_da_conversa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "conversa_atribuir",
+      "acao": "POST conversations/:conversation_id/assignments",
+      "grupo": "EQUIPE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONVERSA_ATRIBUIR",
+      "caminho": {
+        "conversation_id": {
+          "$valor": "conversa.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "assignee_id",
+          "peca": "pessoa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ASSIGNEE_ID",
+          "obrigatorio": false
+        },
+        {
+          "nome": "team_id",
+          "peca": "time",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TEAM_ID",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "caixa_pessoas",
+      "acao": "POST inbox_members",
+      "grupo": "EQUIPE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CAIXA_PESSOAS",
+      "caminho": {},
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "inbox_id",
+          "peca": "caixa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.INBOX_ID",
+          "obrigatorio": true
+        },
+        {
+          "nome": "user_ids",
+          "peca": "pessoas",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.USER_IDS",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "contato_etiquetas",
+      "acao": "PATCH contacts/:contact_id/labels/alterar",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_ETIQUETAS",
+      "caminho": {
+        "contact_id": {
+          "$valor": "contato.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "por",
+          "peca": "etiquetas",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.POR",
+          "obrigatorio": false
+        },
+        {
+          "nome": "tirar",
+          "peca": "etiquetas",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TIRAR",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "contato_alterar",
+      "acao": "PATCH contacts/:id",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_ALTERAR",
+      "caminho": {
+        "id": {
+          "$valor": "contato.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NAME",
+          "obrigatorio": false
+        },
+        {
+          "nome": "email",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.EMAIL",
+          "obrigatorio": false
+        },
+        {
+          "nome": "phone_number",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PHONE_NUMBER",
+          "obrigatorio": false
+        },
+        {
+          "nome": "company_id",
+          "peca": "empresa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COMPANY_ID",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_do_contato",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "empresa_alterar",
+      "acao": "PATCH companies/:id",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EMPRESA_ALTERAR",
+      "caminho": {
+        "id": {
+          "$valor": "contato.empresa_id"
+        }
+      },
+      "envelope": "company",
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NAME",
+          "obrigatorio": false,
+          "max_caracteres": 100
+        },
+        {
+          "nome": "description",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESCRIPTION",
+          "obrigatorio": false,
+          "max_caracteres": 1000
+        },
+        {
+          "nome": "domain",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DOMAIN",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attributes",
+          "peca": "atributos_da_empresa",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CUSTOM_ATTRIBUTES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "etiqueta_criar",
+      "acao": "POST labels",
+      "grupo": "ETIQUETA",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.ETIQUETA_CRIAR",
+      "caminho": {},
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "title",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITLE",
+          "obrigatorio": true
+        },
+        {
+          "nome": "description",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESCRIPTION",
+          "obrigatorio": true
+        },
+        {
+          "nome": "color",
+          "peca": "cor",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COLOR",
+          "obrigatorio": false,
+          "padrao": "#1f93ff"
+        },
+        {
+          "nome": "show_on_sidebar",
+          "peca": "sim_nao",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_SIDEBAR",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "etiqueta_alterar",
+      "acao": "PATCH labels/:id",
+      "grupo": "ETIQUETA",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.ETIQUETA_ALTERAR",
+      "caminho": {
+        "id": {
+          "escolher": "etiqueta",
+          "rotulo": "AUTOMACAO_LIVRE.ESCOLHER.ETIQUETA"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "title",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITLE",
+          "obrigatorio": false
+        },
+        {
+          "nome": "description",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESCRIPTION",
+          "obrigatorio": false
+        },
+        {
+          "nome": "color",
+          "peca": "cor",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.COLOR",
+          "obrigatorio": false,
+          "padrao": "#1f93ff"
+        },
+        {
+          "nome": "show_on_sidebar",
+          "peca": "sim_nao",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SHOW_ON_SIDEBAR",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "atributo_criar",
+      "acao": "POST custom_attribute_definitions",
+      "grupo": "ATRIBUTO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.ATRIBUTO_CRIAR",
+      "caminho": {},
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "attribute_display_name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_DISPLAY_NAME",
+          "obrigatorio": true
+        },
+        {
+          "nome": "attribute_key",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_KEY",
+          "obrigatorio": true
+        },
+        {
+          "nome": "attribute_model",
+          "peca": "escolha",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_MODEL",
+          "obrigatorio": true,
+          "opcoes": [
+            {
+              "valor": "conversation_attribute",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_MODEL.CONVERSATION_ATTRIBUTE"
+            },
+            {
+              "valor": "contact_attribute",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_MODEL.CONTACT_ATTRIBUTE"
+            },
+            {
+              "valor": "company_attribute",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_MODEL.COMPANY_ATTRIBUTE"
+            },
+            {
+              "valor": "card_attribute",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_MODEL.CARD_ATTRIBUTE"
+            }
+          ],
+          "padrao": "conversation_attribute"
+        },
+        {
+          "nome": "attribute_display_type",
+          "peca": "escolha",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_DISPLAY_TYPE",
+          "obrigatorio": true,
+          "opcoes": [
+            {
+              "valor": "text",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.TEXT"
+            },
+            {
+              "valor": "number",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.NUMBER"
+            },
+            {
+              "valor": "currency",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.CURRENCY"
+            },
+            {
+              "valor": "percent",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.PERCENT"
+            },
+            {
+              "valor": "link",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.LINK"
+            },
+            {
+              "valor": "date",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.DATE"
+            },
+            {
+              "valor": "list",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.LIST"
+            },
+            {
+              "valor": "checkbox",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.ATTRIBUTE_DISPLAY_TYPE.CHECKBOX"
+            }
+          ],
+          "padrao": "text"
+        },
+        {
+          "nome": "attribute_description",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_DESCRIPTION",
+          "obrigatorio": true
+        },
+        {
+          "nome": "attribute_values",
+          "peca": "lista_de_textos",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_VALUES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "atributo_alterar",
+      "acao": "PATCH custom_attribute_definitions/:id",
+      "grupo": "ATRIBUTO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.ATRIBUTO_ALTERAR",
+      "caminho": {
+        "id": {
+          "escolher": "atributo",
+          "rotulo": "AUTOMACAO_LIVRE.ESCOLHER.ATRIBUTO"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "custom_attribute_definition.attribute_display_name",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_DISPLAY_NAME",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attribute_definition.attribute_description",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_DESCRIPTION",
+          "obrigatorio": false
+        },
+        {
+          "nome": "custom_attribute_definition.attribute_values",
+          "peca": "lista_de_textos",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_VALUES",
+          "obrigatorio": false
+        }
+      ]
+    }
+  ]
+}

@@ -714,6 +714,14 @@ Rails.application.routes.draw do
             resources :guide_memorias, only: [:index, :update, :destroy]
             # #935 — o Guia volta sozinho: as vigias ("me avisa se…") e os avisos de cada pessoa.
             resources :vigias, only: [:index, :show, :create, :update, :destroy]
+            # #2414 F5 — a Automação livre pelo editor: o catálogo de passos, as automações, ligar e desligar.
+            resources :automacoes, only: [:index, :show, :create, :update] do
+              get :passos, on: :collection
+              member do
+                post :ligar
+                post :desligar
+              end
+            end
             resources :avisos, only: [:index, :update]
             # #943 — o que o Guia deixou sem desfazer. Fora de `guide/`, de propósito: é a leitura da vigia padrão.
             get 'pendencias_do_guia', to: 'pendencias_do_guia#index'

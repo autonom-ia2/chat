@@ -183,6 +183,18 @@
       "range"
     ]
   },
+  "autonomia/automacoes": {
+    "controller": "api/v1/accounts/autonomia/automacoes#index",
+    "parametros": []
+  },
+  "autonomia/automacoes/:id": {
+    "controller": "api/v1/accounts/autonomia/automacoes#show",
+    "parametros": []
+  },
+  "autonomia/automacoes/passos": {
+    "controller": "api/v1/accounts/autonomia/automacoes#passos",
+    "parametros": []
+  },
   "autonomia/avisos": {
     "controller": "api/v1/accounts/autonomia/avisos#index",
     "parametros": [

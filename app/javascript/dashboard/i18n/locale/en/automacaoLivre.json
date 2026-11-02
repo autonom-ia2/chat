@@ -1,0 +1,136 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "GRUPOS": {
+      "CONVERSA": "Conversation",
+      "CONTATO": "Contact and company",
+      "ETIQUETA": "Labels",
+      "ATRIBUTO": "Custom fields",
+      "EQUIPE": "Team",
+      "CONTROLE": "Time and conditions"
+    },
+    "GATILHOS": {
+      "CONVERSA_CRIADA": "When a conversation starts",
+      "CONVERSA_ABERTA": "When a conversation is reopened",
+      "CONVERSA_RESOLVIDA": "When a conversation is resolved",
+      "MENSAGEM_CRIADA": "When a message arrives"
+    },
+    "OPERADORES": {
+      "VAZIO": "is empty",
+      "PREENCHIDO": "is filled in",
+      "IGUAL": "is equal to",
+      "DIFERENTE": "is different from",
+      "CONTEM": "contains",
+      "NAO_CONTEM": "does not contain",
+      "MAIOR": "is greater than",
+      "MENOR": "is less than"
+    },
+    "UNIDADES": {
+      "MINUTOS": "minutes",
+      "HORAS": "hours",
+      "DIAS": "days"
+    },
+    "VALORES": {
+      "CONVERSA_ID": "Conversation number",
+      "CONVERSA_STATUS": "Conversation status",
+      "CONVERSA_PRIORIDADE": "Conversation priority",
+      "CONVERSA_CAIXA_ID": "Conversation inbox",
+      "CONVERSA_RESPONSAVEL_ID": "Conversation assignee",
+      "CONVERSA_TIME_ID": "Conversation team",
+      "CONVERSA_ETIQUETAS": "Conversation labels",
+      "CONTATO_ID": "The contact",
+      "CONTATO_NOME": "Contact name",
+      "CONTATO_EMAIL": "Contact email",
+      "CONTATO_TELEFONE": "Contact phone",
+      "CONTATO_EMPRESA_ID": "Contact company",
+      "CONTATO_ETIQUETAS": "Contact labels",
+      "CONVERSA_ATRIBUTOS": "Conversation custom field",
+      "CONTATO_ATRIBUTOS": "Contact custom field"
+    },
+    "PASSOS": {
+      "ESPERAR": "Wait for a while",
+      "ESPERAR_ATE": "Wait until something happens",
+      "SE": "If… otherwise…",
+      "PARAR": "Stop here",
+      "CONVERSA_ETIQUETAS": "Add or remove a conversation label",
+      "CONVERSA_STATUS": "Change the conversation status",
+      "CONVERSA_PRIORIDADE": "Change the conversation priority",
+      "CONVERSA_ATRIBUTOS": "Fill in a conversation field",
+      "CONVERSA_ATRIBUIR": "Hand the conversation to someone",
+      "CAIXA_PESSOAS": "Add people to an inbox",
+      "CONTATO_ETIQUETAS": "Add or remove a contact label",
+      "CONTATO_ALTERAR": "Update the contact",
+      "EMPRESA_ALTERAR": "Update the contact's company",
+      "ETIQUETA_CRIAR": "Create a label",
+      "ETIQUETA_ALTERAR": "Change a label",
+      "ATRIBUTO_CRIAR": "Create a custom field",
+      "ATRIBUTO_ALTERAR": "Change a custom field"
+    },
+    "ESCOLHER": {
+      "ETIQUETA": "Which label",
+      "ATRIBUTO": "Which custom field"
+    },
+    "CAMPOS": {
+      "DURACAO": "How long",
+      "CONDICAO": "Until",
+      "PRAZO": "Wait at most",
+      "SE_VENCER": "If time runs out",
+      "ENTAO": "Then",
+      "SENAO": "Otherwise",
+      "POR": "Add labels",
+      "TIRAR": "Remove labels",
+      "STATUS": "Status",
+      "SNOOZED_UNTIL": "Snooze until",
+      "PRIORITY": "Priority",
+      "CUSTOM_ATTRIBUTES": "Custom fields",
+      "ASSIGNEE_ID": "Person",
+      "TEAM_ID": "Team",
+      "INBOX_ID": "Inbox",
+      "USER_IDS": "People",
+      "NAME": "Name",
+      "EMAIL": "Email",
+      "PHONE_NUMBER": "Phone",
+      "COMPANY_ID": "Company",
+      "DESCRIPTION": "Description",
+      "DOMAIN": "Website",
+      "TITLE": "Label name",
+      "COLOR": "Color",
+      "SHOW_ON_SIDEBAR": "Show in the menu",
+      "ATTRIBUTE_DISPLAY_NAME": "Field name",
+      "ATTRIBUTE_KEY": "Field key",
+      "ATTRIBUTE_MODEL": "The field belongs to",
+      "ATTRIBUTE_DISPLAY_TYPE": "Field type",
+      "ATTRIBUTE_DESCRIPTION": "What it is for",
+      "ATTRIBUTE_VALUES": "List options"
+    },
+    "OPCOES": {
+      "STATUS": {
+        "OPEN": "Open",
+        "RESOLVED": "Resolved",
+        "PENDING": "Pending",
+        "SNOOZED": "Snoozed"
+      },
+      "PRIORITY": {
+        "LOW": "Low",
+        "MEDIUM": "Medium",
+        "HIGH": "High",
+        "URGENT": "Urgent"
+      },
+      "ATTRIBUTE_MODEL": {
+        "CONVERSATION_ATTRIBUTE": "Conversation",
+        "CONTACT_ATTRIBUTE": "Contact",
+        "COMPANY_ATTRIBUTE": "Company",
+        "CARD_ATTRIBUTE": "CRM card"
+      },
+      "ATTRIBUTE_DISPLAY_TYPE": {
+        "TEXT": "Text",
+        "NUMBER": "Number",
+        "CURRENCY": "Money",
+        "PERCENT": "Percentage",
+        "LINK": "Link",
+        "DATE": "Date",
+        "LIST": "List",
+        "CHECKBOX": "Yes or no"
+      }
+    }
+  }
+}
