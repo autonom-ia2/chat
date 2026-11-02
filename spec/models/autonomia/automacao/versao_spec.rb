@@ -88,7 +88,9 @@ RSpec.describe Autonomia::Automacao::Versao do
       expect(versao(receita(alterar('PATCH contacts/:id', { 'name' => 'Ana Souza' })))).to be_valid
     end
 
-    it 'altera a etapa sem mudar a posição dela (reordenar fica fora)', :aggregate_failures do
+    it 'cria e altera a etapa sem escolher a posição dela (reordenar fica fora)', :aggregate_failures do
+      criar = alterar('POST crm/pipelines/:pipeline_id/stages', { 'name' => 'Nova', 'position' => 0 }).merge('caminho' => { 'pipeline_id' => 3 })
+      expect(erros(receita(criar))).to include('muda position')
       expect(erros(receita(alterar('PATCH crm/stages/:id', { 'position' => 2 })))).to include('muda position')
       expect(erros(receita(alterar('PUT crm/stages/:id', { 'stage' => { 'position' => 2 } })))).to include('muda position')
       expect(versao(receita(alterar('PATCH crm/stages/:id', { 'name' => 'Proposta enviada' })))).to be_valid
