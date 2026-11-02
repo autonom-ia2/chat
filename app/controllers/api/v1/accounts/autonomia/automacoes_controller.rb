@@ -65,10 +65,10 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     conferir_versao!(:versao_id)
     return recusar_funil if sem_funil?(@automacao.versao_ativa&.receita)
 
-    motivo = @automacao.assumir_e_religar!(Current.user, versao_id: versao_vista(:versao_id))
-    return render json: para_tela(@automacao) if motivo.nil?
+    recusa = @automacao.assumir_e_religar!(Current.user, versao_id: versao_vista(:versao_id))
+    return render json: para_tela(@automacao) if recusa.nil?
 
-    render json: { error: I18n.t("autonomia.automacao.motivos.#{motivo}"), problemas: problemas_de_hoje },
+    render json: { error: I18n.t("autonomia.automacao.motivos.#{recusa.motivo}"), problemas: recusa.problemas },
            status: :unprocessable_entity
   end
 
@@ -106,15 +106,6 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   # primeiro. O motor confere de novo dentro da trava.
   def conferir_versao!(chave)
     raise ::Autonomia::Automacao::Definicao::VersaoMudou if @automacao.versao_ativa_id != versao_vista(chave)
-  end
-
-  # A receita conferida de novo na hora de ligar: a lista de ações, um atributo ou uma etapa podem ter mudado.
-  def problemas_de_hoje
-    receita = @automacao.versao_ativa&.receita
-    return [] unless receita
-    return [I18n.t('autonomia.automacao.editor.formato_mudou')] unless ::Autonomia::Automacao::Receita.esquema_valido?(receita)
-
-    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).problemas
   end
 
   # A receita é livre de propósito: o esquema e a Receita conferem tudo ao salvar, com erro em frase.

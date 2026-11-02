@@ -4,4 +4,3 @@ en:
       editor:
         sem_funil: This automation changes CRM cards. Only someone who manages pipelines can save or turn it on.
         versao_mudou: Someone else saved a newer version of this automation. Check the new version first.
-        formato_mudou: The format of this automation's steps changed after it was saved. Open it, check the steps and save again.
