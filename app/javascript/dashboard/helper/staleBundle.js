@@ -2,9 +2,15 @@ import { ref } from 'vue';
 
 // #2478: uma aba aberta antes de um deploy pede pedaços do painel (chunks do
 // Vite) que não existem mais. A navegação falha e a tela parece não fazer
-// nada. Recarregar traz o painel novo; o carimbo na sessão impede o laço.
-export const STALE_RELOAD_KEY = 'dashboard:stale-bundle-reloaded-at';
-export const STALE_RELOAD_WINDOW_MS = 60 * 1000;
+// nada. Na navegação, recarregar já na rota de destino traz o painel novo.
+// Fora da navegação a página não recarrega sozinha (perderia o que a pessoa
+// digitou): só aparece o aviso para ela recarregar quando quiser.
+//
+// Mesma regra do localeLoader (#1380): uma recarga automática por sessão da
+// aba, liberada de novo quando uma navegação dá certo. A marca é separada da
+// do idioma: o idioma carrega no início de toda página e apagaria esta marca
+// logo depois da recarga, abrindo caminho para um laço.
+export const STALE_RELOAD_KEY = 'dashboard:stale-bundle-reloaded';
 
 // Texto do erro de import() dinâmico em Chrome, Safari e Firefox. Só para
 // falhas que não passaram pelo evento `vite:preloadError`.
@@ -19,20 +25,23 @@ export const isPanelOutdated = ref(false);
 const preloadErrors = new WeakSet();
 let isReloading = false;
 
-const readLastReload = () => {
+// true quando a marca foi gravada agora; false se já existia ou se não há
+// como gravar (sem marca não há como evitar o laço).
+const claimReload = () => {
   try {
-    return Number(window.sessionStorage.getItem(STALE_RELOAD_KEY)) || 0;
-  } catch {
-    return 0;
-  }
-};
-
-const saveReload = now => {
-  try {
-    window.sessionStorage.setItem(STALE_RELOAD_KEY, String(now));
+    if (window.sessionStorage.getItem(STALE_RELOAD_KEY)) return false;
+    window.sessionStorage.setItem(STALE_RELOAD_KEY, '1');
     return true;
   } catch {
     return false;
+  }
+};
+
+const forgetReload = () => {
+  try {
+    window.sessionStorage.removeItem(STALE_RELOAD_KEY);
+  } catch {
+    // Sem storage a marca nunca existiu.
   }
 };
 
@@ -43,26 +52,16 @@ export const isStaleBundleError = error => {
   return FAILED_IMPORT_MESSAGES.some(text => message.includes(text));
 };
 
-// Recarrega uma vez (indo para `target`, quando é uma navegação). Se já
-// recarregou há menos de um minuto, ou se não há como guardar o carimbo,
-// mostra o aviso em vez de recarregar de novo.
-export const recoverFromStaleBundle = (target, now = Date.now()) => {
-  if (isReloading || isPanelOutdated.value) return;
-
-  const lastReload = readLastReload();
-  const reloadedRecently =
-    lastReload && now - lastReload < STALE_RELOAD_WINDOW_MS;
-  if (reloadedRecently || !saveReload(now)) {
+// Navegação que falhou por pedaço velho: recarrega uma vez indo para o
+// destino; se já recarregou nesta sessão, fica o aviso.
+export const reloadToRoute = target => {
+  if (isReloading) return;
+  if (!claimReload()) {
     isPanelOutdated.value = true;
     return;
   }
-
   isReloading = true;
-  if (target) {
-    window.location.assign(target);
-  } else {
-    window.location.reload();
-  }
+  window.location.assign(target);
 };
 
 export const installStaleBundleRecovery = router => {
@@ -70,11 +69,20 @@ export const installStaleBundleRecovery = router => {
     if (event.payload && typeof event.payload === 'object') {
       preloadErrors.add(event.payload);
     }
-    // Dá a vez ao router.onError, que recarrega já na rota de destino.
-    setTimeout(() => recoverFromStaleBundle(), 0);
+    isPanelOutdated.value = true;
   });
 
   router.onError((error, to) => {
-    if (isStaleBundleError(error)) recoverFromStaleBundle(to?.fullPath);
+    if (!isStaleBundleError(error)) {
+      // Com um onError registrado o vue-router não loga mais o erro.
+      // eslint-disable-next-line no-console
+      console.error(error);
+      return;
+    }
+    reloadToRoute(to.fullPath);
+  });
+
+  router.afterEach((_to, _from, failure) => {
+    if (!failure) forgetReload();
   });
 };
