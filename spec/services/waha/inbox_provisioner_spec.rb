@@ -15,9 +15,108 @@ RSpec.describe Waha::InboxProvisioner do
     end
 
     before do
+      allow(client).to receive(:get_session).and_raise(Waha::Client::NotFound.new('404', status: 404))
       allow(client).to receive(:create_session)
       allow(client).to receive(:delete_app)
       allow(client).to receive(:delete_session)
+    end
+
+    def provisioner(target_account = account, token: 'account-token')
+      described_class.new(account: target_account, phone: '5511999999999', api_access_token: token,
+                          client: client, config: config)
+    end
+
+    context 'when the account already has an inbox for the number (#2478)' do
+      it 'returns the same inbox instead of creating another one' do
+        first = provisioner.perform.inbox
+
+        expect { expect(provisioner.perform.inbox).to eq(first) }.not_to change(Inbox, :count)
+        expect(client).to have_received(:create_session).once
+      end
+
+      it 'refuses a number that is already an inbox in another account' do
+        provisioner(create(:account)).perform
+
+        expect { provisioner.perform }.to raise_error(described_class::Error, 'phone_in_use_elsewhere')
+        expect(account.inboxes.count).to eq(0)
+      end
+    end
+
+    context 'when the engine still has the session without any inbox (#2478)' do
+      before do
+        allow(client).to receive(:get_session).and_return({ 'status' => 'STOPPED' })
+        allow(client).to receive(:update_session)
+        allow(client).to receive(:start_session)
+      end
+
+      it 'reuses the session: swaps its apps and starts it again' do
+        result = provisioner.perform
+
+        expect(client).not_to have_received(:create_session)
+        expect(client).to have_received(:update_session).with(
+          '5511999999999',
+          config: { ignore: hash_including(groups: true) },
+          apps: contain_exactly(hash_including(id: result.phone_numbers_app_id), hash_including(id: result.app_id))
+        )
+        expect(client).to have_received(:start_session).with('5511999999999')
+      end
+
+      it 'does not start a session that is already running' do
+        allow(client).to receive(:get_session).and_return({ 'status' => 'SCAN_QR_CODE' })
+
+        provisioner.perform
+
+        expect(client).not_to have_received(:start_session)
+      end
+
+      it 'keeps the session on failure and removes only the apps sent now' do
+        allow(Waha::Client).to receive(:new).and_return(client)
+        allow(client).to receive(:update_session).and_raise(Waha::Client::Error.new('WAHA PUT -> 500', status: 500))
+
+        expect { provisioner.perform }.to raise_error(described_class::Error, 'remote_setup_failed')
+
+        expect(client).to have_received(:delete_app).twice
+        expect(client).not_to have_received(:delete_session)
+        expect(Inbox.count).to eq(0)
+      end
+    end
+
+    context 'when the engine fails' do
+      before { allow(Waha::Client).to receive(:new).and_return(client) }
+
+      it 'deletes a session created by this attempt only once' do
+        allow(client).to receive(:create_session).and_raise(Waha::Client::Error.new('WAHA POST -> 422', status: 422))
+
+        expect { provisioner.perform }.to raise_error(described_class::Error, 'remote_setup_failed')
+
+        expect(client).to have_received(:delete_session).with('5511999999999').once
+        expect(Inbox.count).to eq(0)
+      end
+
+      it 'touches nothing remote when the engine could not even be asked about the session' do
+        allow(client).to receive(:get_session).and_raise(Waha::Client::Error.new('WAHA GET falhou: Connection refused'))
+
+        expect { provisioner.perform }.to raise_error(described_class::Error, 'engine_unavailable')
+
+        expect(client).not_to have_received(:delete_app)
+        expect(client).not_to have_received(:delete_session)
+      end
+
+      it 'answers engine_unavailable on timeout' do
+        allow(client).to receive(:create_session).and_raise(Waha::Client::Timeout, 'WAHA POST /api/sessions sem resposta')
+
+        expect { provisioner.perform }.to raise_error(described_class::Error, 'engine_unavailable')
+      end
+
+      it 'logs what the engine said, without the account token' do
+        allow(client).to receive(:create_session)
+          .and_raise(Waha::Client::Error.new('WAHA POST /api/sessions -> 422: session exists account-token', status: 422))
+
+        log = capture_log { expect { provisioner.perform }.to raise_error(described_class::Error) }
+
+        expect(log).to include('Waha::Client::Error', '422: session exists')
+        expect(log).not_to include('account-token')
+      end
     end
 
     it 'creates the WAHA inbox locked to a single conversation' do
@@ -129,7 +228,8 @@ RSpec.describe Waha::InboxProvisioner do
 
       it 'frees the IP and keeps the credential out of the log when the engine refuses the session' do
         allow(Waha::Client).to receive(:new).and_return(client)
-        allow(client).to receive(:create_session).and_raise(Waha::Client::Error, 'WAHA POST /api/sessions -> 400: [FILTERED]')
+        allow(client).to receive(:create_session)
+          .and_raise(Waha::Client::Error.new('WAHA POST /api/sessions -> 400: [FILTERED]', status: 400))
 
         log = capture_log { expect { provision }.to raise_error(described_class::Error, 'remote_setup_failed') }
 
