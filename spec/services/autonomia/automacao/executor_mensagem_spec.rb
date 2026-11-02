@@ -255,6 +255,25 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(registros(execucao)).to eq([%w[p1 falhou laco_suspeito]])
     end
 
+    it 'várias execuções em voo depois dos 40 deixam uma nota só; depois do corte, uma nota nova', :aggregate_failures do
+      notas = -> { conversa.messages.where(private: true).count }
+      trocas(40, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 1.minute.ago)
+      paradas = Array.new(5) do
+        recebida('deles')
+        comecar_e_rodar(definicao)
+      end
+
+      expect(paradas.map { |execucao| registros(execucao) }.uniq).to eq([[%w[p1 falhou laco_suspeito]]])
+      expect(notas.call).to eq(1)
+
+      create(:message, conversation: conversa, account: account, message_type: :outgoing, sender: admin, content: 'sou a Ana')
+      travel_to(10.minutes.from_now) do
+        trocas(40, resposta_em: 2.seconds, intervalo: 3.seconds)
+        expect(registros(comecar_e_rodar(definicao))).to eq([%w[p1 falhou laco_suspeito]])
+      end
+      expect(notas.call).to eq(2)
+    end
+
     it 'volta quando uma pessoa da equipe escreve', :aggregate_failures do
       trocas(40, resposta_em: 2.seconds, intervalo: 3.seconds, fim: 1.minute.ago)
       expect(registros(comecar_e_rodar(definicao))).to eq([%w[p1 falhou laco_suspeito]])

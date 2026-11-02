@@ -21,6 +21,8 @@ class Autonomia::Automacao::AntiLaco
   CONVERSA_PARADA = 30.minutes
   # Limite técnico da consulta, não teto de uso: passar dele não dispara nada. O laço bate as 40 muito antes.
   LEITURA = 1000
+  # A marca da nota da parada, para não repetir a nota até o próximo corte.
+  AVISO = 'laco'.freeze
 
   def initialize(definicao, conversa)
     @definicao = definicao
@@ -32,17 +34,37 @@ class Autonomia::Automacao::AntiLaco
   end
 
   # A execução parou por robô do outro lado: fica uma nota na conversa para a equipe, que menciona quem ligou (se ela
-  # ainda enxerga a conversa).
+  # ainda enxerga a conversa). Uma nota só por automação e conversa até o próximo corte: o robô de 2 balões deixa várias
+  # execuções em voo, e cada uma para aqui. A trava da conversa impede que duas criem a nota ao mesmo tempo.
   def avisar_parada(execucao, passo_id)
-    texto = I18n.with_locale(@conversa.account.locale) do
-      I18n.t('autonomia.automacao.nota.laco', nome: @definicao.nome, trocas: TROCAS_DO_ROBO, segundos: RESPOSTA_DE_ROBO.to_i)
+    @conversa.with_lock do
+      next if ja_avisou?
+
+      marca = { automacao_id: @definicao.id, execucao_id: execucao.id, passo: passo_id, aviso: AVISO }
+      ::Autonomia::Automacao::Nota.criar(conversa: @conversa, texto: texto_da_parada, pessoas: quem_ligou, marca: marca)
     end
-    pessoas = ::Autonomia::Automacao::Nota.alcancaveis(@conversa, [@definicao.ligada_por_id])
-    marca = { automacao_id: @definicao.id, execucao_id: execucao.id, passo: passo_id }
-    ::Autonomia::Automacao::Nota.criar(conversa: @conversa, texto: texto, pessoas: pessoas, marca: marca)
   end
 
   private
+
+  # Já há nota de parada desta automação desde o último corte (a mesma janela da contagem).
+  def ja_avisou?
+    inicio = desde_o_ultimo_corte.first&.created_at
+    return false if inicio.nil?
+
+    @conversa.messages.where(private: true).where(created_at: inicio..).any? do |nota|
+      atributos = nota.content_attributes.to_h
+      atributos['aviso'] == AVISO && atributos['automacao_id'].to_i == @definicao.id
+    end
+  end
+
+  def texto_da_parada
+    I18n.with_locale(@conversa.account.locale) do
+      I18n.t('autonomia.automacao.nota.laco', nome: @definicao.nome, trocas: TROCAS_DO_ROBO, segundos: RESPOSTA_DE_ROBO.to_i)
+    end
+  end
+
+  def quem_ligou = ::Autonomia::Automacao::Nota.alcancaveis(@conversa, [@definicao.ligada_por_id])
 
   # Na ordem do tempo, desde o último corte: cada resposta do contato dá baixa nos nossos envios que esperavam e soma os
   # que ela pegou em menos de RESPOSTA_DE_ROBO. Envios seguidos: a resposta que chega em RESPOSTA_DE_ROBO ou mais

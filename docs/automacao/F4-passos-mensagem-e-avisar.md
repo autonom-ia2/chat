@@ -94,7 +94,8 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
    - **Zera:** a resposta que chega em 20 s ou mais depois do nosso último envio. Robô não demora; gente demora, e a
      conversa humana longa, sem pausa de 30 min, não junta respostas rápidas espalhadas.
    - **Ao disparar:** a execução para com `laco_suspeito`, só nessa conversa, e a automação continua ligada. Fica uma
-     nota para a equipe, que menciona quem ligou.
+     nota para a equipe, que menciona quem ligou. É uma nota só por automação e conversa até o próximo corte, mesmo
+     com várias execuções em voo (o robô de 2 balões): sem enxurrada de avisos para a mesma pessoa.
 
 Os números ficam em constantes (`AntiLaco`). As specs provam cada caso:
 - robô de 2 balões, com execuções de verdade (uma por balão), para antes de 100 mensagens;
