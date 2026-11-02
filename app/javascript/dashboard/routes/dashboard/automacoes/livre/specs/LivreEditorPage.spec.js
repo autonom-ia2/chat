@@ -1,4 +1,4 @@
-import { defineComponent, ref } from 'vue';
+import { ref } from 'vue';
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import { onBeforeRouteLeave, useRoute } from 'vue-router';
 import { useAlert } from 'dashboard/composables';
@@ -108,16 +108,17 @@ const salva = (extra = {}) => ({
   ...extra,
 });
 
-// Os painéis de verdade usam o SidePanel; aqui guardam o que abriram.
+// Os painéis de verdade usam o SidePanel; aqui guardam o que abriram. Os falsos
+// são objetos simples: um arquivo de spec não define componente (one-component-per-file).
 const abertos = [];
-const AlterarFalso = defineComponent({
+const AlterarFalso = {
   name: 'LivreAlterar',
   setup(_, { expose }) {
     expose({ abrir: item => abertos.push(item), fechar: vi.fn() });
   },
   template: '<div data-alterar-falso />',
-});
-const SeletorFalso = defineComponent({
+};
+const SeletorFalso = {
   name: 'LivreSeletorPasso',
   setup(_, { expose }) {
     const aberto = ref(false);
@@ -132,16 +133,16 @@ const SeletorFalso = defineComponent({
     return { aberto };
   },
   template: '<div data-seletor-falso :data-aberto="aberto" />',
-});
+};
 
 const dialogo = { abrir: vi.fn() };
-const DialogoFalso = defineComponent({
+const DialogoFalso = {
   name: 'DialogoDaCasa',
   setup(_, { expose }) {
     expose({ abrir: () => dialogo.abrir() });
   },
   template: '<div data-dialogo-falso />',
-});
+};
 
 const montar = () =>
   mount(LivreEditorPage, {
