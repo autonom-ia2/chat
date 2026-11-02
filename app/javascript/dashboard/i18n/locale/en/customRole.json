@@ -324,7 +324,7 @@
       "CONVERSATION_PARTICIPATING_MANAGE": "Sees conversations they take part in, even if assigned to someone else.",
       "CRM_MOVE_CARDS": "Drags cards between stages without editing anything else.",
       "CRM_VIEW_REPORTS": "Pipeline dashboard and AI usage cost.",
-      "CRM_MANAGE_PIPELINES": "Stages, automations and pipeline inboxes.",
+      "CRM_MANAGE_PIPELINES": "Stages, automations and pipeline inboxes. Editing stage automations also needs the automatic rules permission.",
       "CRM_MANAGE_AI": "Sets up and accepts AI suggestions. This has a cost.",
       "CRM_EXPORT": "Downloads the list with customer data.",
       "CRM_DELETE_CARDS": "Archives cards, one by one or in bulk.",
