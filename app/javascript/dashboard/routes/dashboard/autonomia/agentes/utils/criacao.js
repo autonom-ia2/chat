@@ -2,22 +2,27 @@ import { TIPO_CANAL, tipoDoCanal } from './canais';
 
 // #1181 PR2 — leitura das caixas e do horário para a criação (T04 e T05).
 
-const WHATSAPP = 'Channel::Whatsapp';
-
-// O botão "Começar a atender no {canal}" já diz o canal (protótipo ctaChannel): uma caixa livre,
-// de preferência o WhatsApp; sem caixa livre, uma ocupada por outro agente (vira troca). Caixa com
-// outro sistema nunca é sugerida.
+// O botão "Começar a atender no {canal}" só diz o canal quando não há dúvida (#2489, 5b): uma única
+// caixa livre que quem cria alcança. Com mais de uma, nenhuma ou só ocupadas, devolve null e o botão
+// vira "Escolher canal": a pessoa escolhe no Comece. Caixa ocupada ou com outro sistema nunca é
+// sugerida, e o tipo do canal não desempata (o dono pode ter pedido outro canal na conversa).
 export const canalSugerido = (canais, agenteId) => {
-  const lista = canais || [];
-  const doTipo = tipo =>
-    lista.filter(canal => tipoDoCanal(canal, agenteId) === tipo);
-  const preferirWhatsapp = grupo =>
-    grupo.find(canal => canal.channel_type === WHATSAPP) || grupo[0] || null;
-  return (
-    preferirWhatsapp(doTipo(TIPO_CANAL.LIVRE)) ||
-    preferirWhatsapp(doTipo(TIPO_CANAL.OCUPADO))
+  const candidatas = (canais || []).filter(
+    canal =>
+      tipoDoCanal(canal, agenteId) === TIPO_CANAL.LIVRE &&
+      canal.alcanca !== false
   );
+  return candidatas.length === 1 ? candidatas[0] : null;
 };
+
+// Há alguma caixa para escolher no Comece (livre, ou ocupada por outro agente, que vira troca)?
+// Sem nenhuma, a Confira mostra o aviso de conectar um canal em vez do botão.
+export const temCanalParaEscolher = (canais, agenteId) =>
+  (canais || []).some(canal =>
+    [TIPO_CANAL.LIVRE, TIPO_CANAL.OCUPADO].includes(
+      tipoDoCanal(canal, agenteId)
+    )
+  );
 
 // Como o botão chama o canal: pelo tipo (AGENTS.JORNADA.CRIAR.CANAL.<chave>) ou, num tipo sem nome
 // próprio (API, SMS…), pelo nome da caixa.

@@ -1784,6 +1784,7 @@
           "DEMORA": "This is taking too long. Try again.",
           "INCOMPLETO": "{nome} does not know enough yet. Tell a bit more on the side.",
           "INCOMPLETO_CELULAR": "{nome} does not know enough yet. Tell a bit more.",
+          "ESCOLHER_CANAL": "Choose channel",
           "COMECAR_NO": "Start answering on {canal}",
           "COMECAR_TEXTO": "{nome} starts answering your customers’ messages.",
           "COMECAR_COPILOTO": "Start helping the team",

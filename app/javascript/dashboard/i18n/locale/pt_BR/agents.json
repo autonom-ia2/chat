@@ -1784,6 +1784,7 @@
           "DEMORA": "Está demorando. Tente de novo.",
           "INCOMPLETO": "{nome} ainda não sabe o suficiente. Conte mais um pouco ao lado.",
           "INCOMPLETO_CELULAR": "{nome} ainda não sabe o suficiente. Conte mais um pouco.",
+          "ESCOLHER_CANAL": "Escolher canal",
           "COMECAR_NO": "Começar a atender no {canal}",
           "COMECAR_TEXTO": "{nome} passa a responder as mensagens dos seus clientes.",
           "COMECAR_COPILOTO": "Começar a ajudar a equipe",
