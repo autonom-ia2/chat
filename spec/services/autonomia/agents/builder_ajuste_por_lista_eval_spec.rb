@@ -74,6 +74,14 @@ module AvaliacaoDoAjustePorLista
       andaime_inicial: ANDAIME_COM_COLETA, cartao_inicial: CARTAO_COM_COLETA, muda: %w[instruction human_card scaffold],
       certo: 'O agente DEPOIS não pede nem coleta dados do cliente (nome, cidade ou outros) neste canal, escrito na ' \
              'instrução, e nem o roteiro (scaffold) nem o cartão (human_card) DEPOIS mandam ou dizem que ele coleta dados.' },
+    # #2489 (revisão do 40506a4cef): estilo e coleta na mesma fala. O tom muda, e a coleta sai da instrução, do andaime e
+    # do cartão: nenhum filtro de estilo pode esconder o andaime que ainda coleta.
+    { nome: 'mais_formal_e_nao_colete', fala: 'Seja mais formal e não colete dados do cliente neste canal.', aplica: true,
+      itens: 2, andaime_inicial: ANDAIME_COM_COLETA, cartao_inicial: CARTAO_COM_COLETA,
+      muda: %w[tone instruction human_card scaffold],
+      certo: 'O agente DEPOIS tem tom mais formal E não pede nem coleta dados do cliente (nome, cidade ou outros) neste ' \
+             'canal, escrito na instrução; nem o roteiro (scaffold) nem o cartão (human_card) DEPOIS mandam ou dizem que ' \
+             'ele coleta dados.' },
     # #2489 (revisão do gestor): cartão e andaime que não falam de preço estão certos sem mudar; nada força mudança.
     { nome: 'nao_fale_de_preco_cartao_neutro', fala: 'Não fale de preço com o cliente.', aplica: true,
       andaime_inicial: ANDAIME_NEUTRO, igual: %w[human_card scaffold],

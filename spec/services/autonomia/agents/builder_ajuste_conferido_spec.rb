@@ -349,6 +349,20 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(Rails.logger).to have_received(:info).with(a_string_including('[autonomia][builder] roteiro_sem_antes thread='))
     end
 
+    it 'índice do roteiro fora da instrução: sai da conferência guardada, com log do índice e da thread' do
+      allow(Rails.logger).to receive(:warn)
+      allow(conferente).to receive(:conferir) do |**kwargs|
+        recebidas << kwargs
+        conferencia_de(kwargs[:mudancas]).merge('roteiro_descartado' => [0])
+      end
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(estado['conferencia']).not_to have_key('roteiro_descartado')
+      expect(Rails.logger).to have_received(:warn).with("[autonomia][builder] roteiro_descartado thread=#{thread.id} indice=0")
+    end
+
     it 'andaime em branco antes: fica fora dos dois lados, e nada se exige dele' do
       agent.update!(scaffold: '')
 
@@ -387,8 +401,34 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
+  # Revisão do 40506a4cef (🔴): sem filtro à mão. "Seja mais formal e não colete dados", com o tom só no tone e a coleta
+  # só na instrução: o roteiro apontado pela conferência vira falta e a correção roda.
+  describe 'quando o pedido junta tom e coleta, cada um num campo só' do
+    let(:fala) { 'Seja mais formal e não colete dados' }
+    let(:lista) { [mudanca('tone', 'mais formal'), mudanca('instruction', 'não colete dados')] }
+
+    it 'o roteiro apontado na instrução aciona UMA correção' do
+      respostas << saida('tone' => 'formal', 'instruction' => 'Atenda com formalidade. Não colete dados.', 'mudancas' => lista)
+      conferencias << { roteiro: [1] }
+      respostas << saida('tone' => 'formal', 'instruction' => 'Atenda com formalidade. Não colete dados.',
+                         'scaffold' => 'andaime sem coleta', 'mudancas' => [mudanca('instruction', 'não colete dados')])
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(calls.last[:input].last[:content].first[:text]).to eq(described_class::CorrecaoDoAjuste::AVISO_DO_ROTEIRO)
+      expect(agent.reload.scaffold).to eq('andaime sem coleta')
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => false)
+    end
+  end
+
   describe 'quando o pedido é só de tom' do
-    it 'não aciona a correção' do
+    it 'não aciona a correção nem loga roteiro_sem_antes, mesmo sem o agente na versão de antes' do
+      allow(Rails.logger).to receive(:info)
+      allow(Autonomia::Agents::ConferenciaDoAjuste).to receive(:new) do
+        agent.instruction_versions.find_each { |versao| versao.update!(metadata: versao.metadata.to_h.except('agente')) }
+        conferente
+      end
       respostas << saida('tone' => 'formal', 'mudancas' => [mudanca('tone', 'mais formal')])
 
       run_turn
@@ -396,6 +436,7 @@ RSpec.describe Autonomia::Agents::Builder do
       expect(calls.size).to eq(1)
       expect(agent.reload).to have_attributes(tone: 'formal', scaffold: 'andaime', human_card: 'O Hubber atende os clientes.')
       expect(estado['conferencia']).to include('falta' => false)
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('roteiro_sem_antes'))
     end
   end
 

@@ -123,7 +123,8 @@ class Autonomia::Agents::ConferenciaDoAjuste
 
     sem_pedido = indices(saida['sem_pedido_do_dono'], mudancas)
     # O que o dono não pediu nunca é falta nem é reaplicado na correção.
-    roteiro = roteiro_desatualizado(saida, mudancas) - sem_pedido
+    roteiro, descartados = roteiro_desatualizado(saida, mudancas)
+    roteiro -= sem_pedido
     nao = (indices(saida['nao_atendidos'], mudancas) | roteiro) - sem_pedido
     itens = mudancas.each_with_index.map do |item, indice|
       marcas = { 'atendido' => nao.exclude?(indice), 'pedido_pelo_dono' => sem_pedido.exclude?(indice) }
@@ -131,34 +132,14 @@ class Autonomia::Agents::ConferenciaDoAjuste
     end
     fora = saida['faltou_fora_da_lista'] == true
     { 'itens' => itens, 'faltou_fora_da_lista' => fora, 'conflito' => saida['conflito'] == true,
-      'falta' => nao.any? || fora }
+      'falta' => nao.any? || fora }.merge(descartados.any? ? { 'roteiro_descartado' => descartados } : {})
   end
 
-  # #2489 — o andaime ou o cartão ficou com a regra antiga: só vale para item da instrução que não é só de estilo.
+  # #2489 — o andaime ou o cartão ficou com a regra antiga. Quem julga é a conferência, pelo sentido (o estilo fica na
+  # regra do prompt). O código só confere a forma: o índice tem de ser de um item da instrução. O que sai por isso vai em
+  # `roteiro_descartado`, para o log de quem tem a thread; nunca some em silêncio.
   def roteiro_desatualizado(saida, mudancas)
-    estilo = de_estilo(mudancas)
-    indices(saida['roteiro_desatualizado'], mudancas).select do |indice|
-      mudancas[indice]['campo'] == 'instruction' && estilo.exclude?(indice)
-    end
-  end
-
-  # Os índices dos itens da instrução que são destino secundário do tom (pedido só de estilo), pela regra de grupos do
-  # cartão (ResultadoDoAjuste): grupo pelo `pedido` sem o ponto final. Com o mesmo texto de um item do tom; ou, com outro
-  # texto, quando os grupos só de instrução são tantos quantos os grupos do tom sem instrução (um par para cada). Sem
-  # par claro, vale o que a conferência julgou. Só comparação de texto, nunca leitura (regra do Rodrigo, 20/09/2026).
-  def de_estilo(mudancas)
-    grupos = grupos_por_pedido(mudancas)
-    com_tom = grupos.select { |grupo| grupo.key?('tone') }
-    abertos = com_tom.count { |grupo| !grupo.key?('instruction') }
-    so_instrucao = grupos.select { |grupo| grupo.keys == ['instruction'] }
-    pares = com_tom + (abertos.positive? && abertos == so_instrucao.size ? so_instrucao : [])
-    pares.flat_map { |grupo| grupo.fetch('instruction', []) }
-  end
-
-  # Um grupo por `pedido` sem o ponto final: { campo => [índices] }.
-  def grupos_por_pedido(mudancas)
-    mudancas.each_with_index.group_by { |item, _indice| Autonomia::Agents::ResultadoDoAjuste.sem_ponto(item['pedido']) }
-            .values.map { |pares| pares.group_by { |item, _indice| item['campo'] }.transform_values { |do_campo| do_campo.map(&:last) } }
+    indices(saida['roteiro_desatualizado'], mudancas).partition { |indice| mudancas[indice]['campo'] == 'instruction' }
   end
 
   def indices(valores, mudancas)

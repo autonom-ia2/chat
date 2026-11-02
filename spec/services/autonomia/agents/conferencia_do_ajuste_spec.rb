@@ -138,7 +138,7 @@ RSpec.describe Autonomia::Agents::ConferenciaDoAjuste do
       expect(resultado['itens'][1]).not_to have_key('roteiro_desatualizado')
     end
 
-    it 'índice de item que não é da instrução, ou sem pedido do dono, não conta' do
+    it 'índice de item que não é da instrução, ou sem pedido do dono, não conta como falta' do
       allow(fake_client).to receive(:create).and_return(
         text: { 'nao_atendidos' => [], 'sem_pedido_do_dono' => [0], 'faltou_fora_da_lista' => false, 'conflito' => false,
                 'roteiro_desatualizado' => [0, 1, 5] }.to_json
@@ -157,37 +157,31 @@ RSpec.describe Autonomia::Agents::ConferenciaDoAjuste do
       )
     end
 
-    describe 'com pedido só de estilo, em textos diferentes no tom e na instrução' do
+    # Revisão do 40506a4cef (🔴): nenhum filtro à mão na frente da conferência. "Seja mais formal e não colete dados",
+    # com o tom só no tone e a coleta só na instrução, vira falta quando a conferência aponta o roteiro.
+    describe 'com "mais formal" só no tom e "não colete dados" só na instrução' do
       let(:mudancas) do
-        [{ 'pedido' => 'no máximo 2 frases', 'campo' => 'tone', 'resumo' => 'Curto.' },
-         { 'pedido' => 'limitar a duas frases', 'campo' => 'instruction', 'resumo' => 'Duas frases.' }]
+        [{ 'pedido' => 'mais formal', 'campo' => 'tone', 'resumo' => 'Formal.' },
+         { 'pedido' => 'não colete dados', 'campo' => 'instruction', 'resumo' => 'Sem coleta.' }]
       end
 
-      it 'a instrução é destino secundário do tom: o roteiro apontado não conta' do
+      it 'o roteiro apontado na instrução vira falta' do
         roteiro_apontado([1])
 
         resultado = conferir
 
-        expect(resultado).to include('falta' => false)
-        expect(resultado['itens']).to all(include('atendido' => true))
-      end
-    end
-
-    describe 'com pedido composto: "mais formal e não colete dados"' do
-      let(:mudancas) do
-        [{ 'pedido' => 'mais formal', 'campo' => 'tone', 'resumo' => 'Formal.' },
-         { 'pedido' => 'mais formal.', 'campo' => 'instruction', 'resumo' => 'Formal.' },
-         { 'pedido' => 'não colete dados', 'campo' => 'instruction', 'resumo' => 'Sem coleta.' }]
+        expect(resultado).to include('falta' => true)
+        expect(resultado['itens'].map { |item| item['atendido'] }).to eq([true, false])
+        expect(resultado['itens'][1]).to include('roteiro_desatualizado' => true)
+        expect(resultado).not_to have_key('roteiro_descartado')
       end
 
-      it 'só a instrução do estilo fica de fora; a da coleta conta' do
-        roteiro_apontado([1, 2])
+      it 'índice do roteiro num item que não é da instrução sai do resultado, marcado para o log' do
+        roteiro_apontado([0])
 
         resultado = conferir
 
-        expect(resultado).to include('falta' => true)
-        expect(resultado['itens'].map { |item| item['atendido'] }).to eq([true, true, false])
-        expect(resultado['itens'][2]).to include('roteiro_desatualizado' => true)
+        expect(resultado).to include('falta' => false, 'roteiro_descartado' => [0])
       end
     end
 
