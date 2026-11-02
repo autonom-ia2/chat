@@ -37,9 +37,13 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   # a versão nova antes de deixar ligar ou salvar.
   class VersaoMudou < StandardError; end
 
+  # Por que não ligou: a chave do motivo (autonomia.automacao.motivos.*) e, quando a receita deixou de rodar, as frases
+  # de Receita#problemas, que a tela (F5) mostra no 422.
+  Recusa = Struct.new(:motivo, :problemas, keyword_init: true)
+
   # "Assumir e religar" (F3.7): a automação passa a agir como `usuario`, se ele pode. Nunca liga em nome de quem não
-  # pode: devolve o motivo e não muda nada. `usuario` é sempre quem está pedindo (o usuário logado): a tela não escolhe
-  # outra pessoa, senão alguém com a chave poria o administrador como quem ligou.
+  # pode: devolve a Recusa e não muda nada; ligou, devolve nil. `usuario` é sempre quem está pedindo (o usuário logado):
+  # a tela não escolhe outra pessoa, senão alguém com a chave poria o administrador como quem ligou.
   #
   # `versao_id` é a versão que a pessoa viu. Se outra pessoa salvou depois, levanta VersaoMudou: senão A ligaria, com
   # os direitos dela, os passos que B montou e A nunca viu (parecer do Funções, #2462). A receita é conferida de novo
@@ -48,8 +52,8 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
     with_lock do
       raise VersaoMudou if versao_ativa_id != versao_id
 
-      motivo = motivo_para_nao_ligar(usuario)
-      next motivo if motivo
+      recusa = recusa_para_ligar(usuario)
+      next recusa if recusa
 
       update!(ligada_por: usuario, ativa: true)
       nil
@@ -74,18 +78,24 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
 
   private
 
-  def motivo_para_nao_ligar(usuario)
-    return 'sem_versao' unless versao_ativa
-    return 'receita_com_problema' unless receita_executavel?
+  def recusa_para_ligar(usuario)
+    return Recusa.new(motivo: 'sem_versao', problemas: []) unless versao_ativa
+
+    problemas = problemas_da_receita
+    return Recusa.new(motivo: 'receita_com_problema', problemas: problemas) if problemas.any?
 
     self.ligada_por = usuario
-    ::Autonomia::Automacao::Acesso.new(self).motivo.tap { |motivo| restore_attributes([:ligada_por_id]) if motivo }
+    motivo = ::Autonomia::Automacao::Acesso.new(self).motivo
+    restore_attributes([:ligada_por_id]) if motivo
+    Recusa.new(motivo: motivo, problemas: []) if motivo
   end
 
-  def receita_executavel?
+  # Fora do esquema, a Receita não sabe dizer o problema passo a passo; vai a frase do motivo.
+  def problemas_da_receita
     receita = versao_ativa.receita
-    ::Autonomia::Automacao::Receita.esquema_valido?(receita) &&
-      ::Autonomia::Automacao::Receita.new(receita, conta: account).problemas.empty?
+    return [I18n.t('autonomia.automacao.motivos.receita_com_problema')] unless ::Autonomia::Automacao::Receita.esquema_valido?(receita)
+
+    ::Autonomia::Automacao::Receita.new(receita, conta: account).problemas
   end
 
   def versao_ativa_desta_automacao

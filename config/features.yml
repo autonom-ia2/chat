@@ -1102,9 +1102,8 @@
 # novas (esperar, se, parar e ação da plataforma pela lista de permitidas), com a varredura de minuto em minuto.
 # Desligada: nenhuma automação começa, e a execução que esperava fecha como parada (motor_desligado) quando a
 # varredura a acorda. Rollback: desligar a flag na conta. Sem migration.
-# Bit: posição 24, dada pela Orquestração em 01/11: feature_flags_ext_2, valor
-# 8388608 (1 << 23), depois da posição 23 (#1430, assíncrono); até as posições 20 a 23 entrarem na main, ela ocupa a
-# próxima livre. Nasce ligada no piloto (contas 1, 16 e 18).
+# Bit: feature_flags_ext_2, posição 21 (valor 1048576, 1 << 20), dada pela Orquestração em 02/11. Nasce ligada no
+# piloto (contas 1, 16 e 18).
 - name: automacao_motor
   display_name: Automação › motor (automações novas)
   enabled: false

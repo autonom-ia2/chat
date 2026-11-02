@@ -71,12 +71,12 @@ passo:
       POST crm/cards/:id/move: {}
   crm/stages:
     motivo: >-
-      Criar e alterar etapa do funil (D13; formato completo desde o #2460). Reordenar troca a posição de todas as
-      etapas do funil de uma vez e fica fora. Apagar fica só no Guia (F3.11).
+      Criar e alterar etapa do funil (D13; formato completo desde o #2460). Reordenar fica fora, inclusive a posição
+      de uma etapa só no alterar: ela empurra as outras. Apagar fica só no Guia (F3.11).
     acoes:
       POST crm/pipelines/:pipeline_id/stages: {}
-      PATCH crm/stages/:id: {}
-      PUT crm/stages/:id: {}
+      PATCH crm/stages/:id: { proibe: [position] }
+      PUT crm/stages/:id: { proibe: [position] }
   inbox_members:
     motivo: Pôr agente na caixa (D13). O PATCH troca a lista inteira e pode tirar gente; fica fora.
     acoes:
