@@ -510,6 +510,26 @@ en:
       description: 'Sync your contacts and conversations with LeadSquared CRM. This integration automatically creates leads in LeadSquared when new contacts are added, and logs conversation activity to provide your sales team with complete context.'
   autonomia:
     automacao:
+      motivos:
+        acao_fora: 'This action is no longer allowed as an automation step.'
+        acao_recusada: 'The platform refused this action as it was set up.'
+        alvo_sumiu: 'The conversation no longer exists.'
+        desligada: 'The automation was turned off.'
+        erro_depois_de_gravar: 'The platform failed after saving part of the action. The automation does not repeat it, so it is not done twice; check and undo if needed.'
+        erro_inesperado: 'The automation stopped in the middle of this step on an unexpected error. It does not repeat the step; check what was already done.'
+        erro_passageiro: 'The platform did not respond; the automation will try again.'
+        erro_permanente: 'The platform refused this action (for example, the label no longer exists).'
+        faltou_valor: 'A value this step needs was empty, so the step was skipped.'
+        motor_desligado: 'Automations are off for this account.'
+        prazo_vencido: 'The wait ended without the condition.'
+        quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
+        quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
+        quem_ligou_sem_permissao: 'The person who turned on the automation can no longer manage automations. Take over and turn it back on.'
+        receita_com_problema: 'This version no longer runs as it was saved. Fix it and save again before turning it on.'
+        sem_quem_ligou: 'Nobody turned this automation on. Take over and turn it back on.'
+        sem_versao: 'This automation has no saved steps yet.'
+        spam: 'The conversation is in Spam.'
+        travada: 'This step stopped in the middle and will not run again.'
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'

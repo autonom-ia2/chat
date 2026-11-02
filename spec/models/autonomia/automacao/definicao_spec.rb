@@ -52,5 +52,59 @@ RSpec.describe Autonomia::Automacao::Definicao do
     it 'recusa receita que não é objeto' do
       expect { automacao.salvar_versao!(receita: ['passo']) }.to raise_error(ActiveRecord::RecordInvalid)
     end
+
+    it 'com a versão base, salva só sobre a atual; quem editou uma versão velha recebe VersaoMudou', :aggregate_failures do
+      v1 = automacao.salvar_versao!(receita: receita(2), autor: autor, base: nil)
+      v2 = automacao.salvar_versao!(receita: receita(3), autor: autor, base: v1.id)
+
+      expect { automacao.salvar_versao!(receita: receita(4), autor: autor, base: v1.id) }
+        .to raise_error(described_class::VersaoMudou)
+      expect { automacao.salvar_versao!(receita: receita(4), autor: autor, base: nil) }
+        .to raise_error(described_class::VersaoMudou)
+      expect([automacao.reload.versao_ativa, automacao.versoes.count]).to eq([v2, 2])
+    end
+  end
+
+  describe '#assumir_e_religar! (F3.7)' do
+    let(:account) { automacao.account }
+    let(:admin) { create(:user, account: account, role: :administrator) }
+    let(:condicao) { { 'campo' => { '$valor' => 'contato.atributos.placa' }, 'op' => 'preenchido' } }
+    let(:receita) do
+      { 'gatilho' => { 'tipo' => 'conversa.resolvida' },
+        'passos' => [{ 'id' => 's1', 'tipo' => 'se', 'condicao' => condicao,
+                       'entao' => [{ 'id' => 'p2', 'tipo' => 'esperar', 'duracao' => { 'valor' => 1, 'unidade' => 'dias' } }] }] }
+    end
+    let!(:placa) { create(:custom_attribute_definition, account: account, attribute_model: 'contact_attribute', attribute_key: 'placa') }
+
+    it 'liga com a versão que a pessoa viu', :aggregate_failures do
+      versao = automacao.salvar_versao!(receita: receita, autor: admin)
+
+      expect(automacao.assumir_e_religar!(admin, versao_id: versao.id)).to be_nil
+      expect([automacao.reload.ativa, automacao.ligada_por]).to eq([true, admin])
+    end
+
+    it 'outra pessoa salvou depois do que ela viu: VersaoMudou, sem ligar nem trocar quem ligou', :aggregate_failures do
+      vista = automacao.salvar_versao!(receita: receita, autor: admin)
+      automacao.salvar_versao!(receita: receita, autor: create(:user, account: account, role: :administrator))
+
+      expect { automacao.assumir_e_religar!(admin, versao_id: vista.id) }.to raise_error(described_class::VersaoMudou)
+      expect([automacao.reload.ativa, automacao.ligada_por]).to eq([false, nil])
+    end
+
+    it 'a receita deixou de rodar depois de salva (atributo apagado): recusa e não liga', :aggregate_failures do
+      versao = automacao.salvar_versao!(receita: receita, autor: admin)
+      placa.destroy!
+
+      recusa = automacao.assumir_e_religar!(admin, versao_id: versao.id)
+      expect(recusa.motivo).to eq('receita_com_problema')
+      problema = I18n.t('autonomia.automacao.receita.atributo_inexistente', passo: 's1', caminho: 'contato.atributos.placa')
+      expect(recusa.problemas).to eq([problema])
+      expect([automacao.reload.ativa, automacao.ligada_por]).to eq([false, nil])
+    end
+
+    it 'sem versão salva: recusa', :aggregate_failures do
+      expect(automacao.assumir_e_religar!(admin, versao_id: nil).motivo).to eq('sem_versao')
+      expect(automacao.reload.ativa).to be(false)
+    end
   end
 end

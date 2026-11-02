@@ -29,6 +29,10 @@ passo:
     motivo: Pôr e tirar etiqueta da conversa uma a uma, sem trocar a lista inteira (#2202).
     acoes:
       PATCH conversations/:conversation_id/labels/alterar: {}
+  contacts/alterar_etiquetas:
+    motivo: Pôr e tirar etiqueta do contato uma a uma, sem trocar a lista inteira (#2461).
+    acoes:
+      PATCH contacts/:contact_id/labels/alterar: {}
   custom_attribute_definitions:
     motivo: >-
       Criar e alterar atributo de conversa, contato, empresa ou card (D13). Trocar a chave ou o modelo deixaria os
@@ -65,6 +69,15 @@ passo:
       PATCH crm/cards/:id: {}
       PUT crm/cards/:id: {}
       POST crm/cards/:id/move: {}
+  crm/stages:
+    motivo: >-
+      Criar e alterar etapa do funil (D13; formato completo desde o #2460). Reordenar fica fora, inclusive a posição
+      de uma etapa só, no criar e no alterar: ela muda a ordem do funil. A etapa criada vai para o fim. Apagar fica
+      só no Guia (F3.11).
+    acoes:
+      POST crm/pipelines/:pipeline_id/stages: { proibe: [position] }
+      PATCH crm/stages/:id: { proibe: [position] }
+      PUT crm/stages/:id: { proibe: [position] }
   inbox_members:
     motivo: Pôr agente na caixa (D13). O PATCH troca a lista inteira e pode tirar gente; fica fora.
     acoes:
@@ -234,18 +247,12 @@ fora:
       - crm/booking_profiles
       - crm/booking_stats
       - crm/my_booking_hours
-  - motivo: Etapa do funil. A D13 a libera, mas o formato de criar e alterar etapa é incompleto (category, funnel_stage_type) e o ADR deixa fora a ação de formato incompleto. Entra quando o formato completar.
-    recursos:
-      - crm/stages
   - motivo: >-
       Troca a lista inteira de etiquetas e apaga a que outra pessoa pôs no meio-tempo. O passo usa a rota de pôr e
       tirar uma a uma: conversations/alterar_etiquetas (#2202) e contacts/alterar_etiquetas (#2461).
     recursos:
       - contacts/labels
       - conversations/labels
-  - motivo: Pôr e tirar etiqueta do contato uma a uma (#2461). Fica fora até o PR-B do motor (#2459), que a libera.
-    recursos:
-      - contacts/alterar_etiquetas
   - motivo: Configuração e dados que a F3 não libera. A D13 cobre etiqueta, atributo, etapa, atribuição e agente na caixa; o resto entra quando um caso real pedir.
     recursos:
       - teams
