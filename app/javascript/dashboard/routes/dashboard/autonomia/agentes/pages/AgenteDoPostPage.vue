@@ -59,6 +59,11 @@ const {
 } = useAgenteDoPost(() => props.careId);
 
 const estado = computed(() => estadoDoCuidado(detalhe.value?.status));
+// Quantos esperam o dono; null quando a Meta não deixou ler os comentários (nunca um zero falso).
+const esperando = computed(() => {
+  const comentarios = detalhe.value?.comentarios;
+  return comentarios?.status === 'ready' ? comentarios.esperando.length : null;
+});
 const legenda = computed(() => tituloDaLegenda(detalhe.value?.legenda || ''));
 const redes = computed(() => redesDoCuidado(detalhe.value?.network));
 const agentes = computed(() => agentesDasPortas(detalhe.value?.portas));
@@ -294,7 +299,7 @@ const mudar = async status => {
           data-esperando
           class="flex items-center w-full gap-3 p-5 m-0 text-base font-semibold border-0 text-start rounded-2xl ring-1 ring-inset focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
           :class="
-            detalhe.comentarios.esperando.length
+            esperando
               ? 'bg-n-amber-2 ring-n-amber-6 text-n-slate-12 hover:bg-n-amber-3'
               : 'bg-n-solid-1 ring-n-weak text-n-slate-11 hover:bg-n-alpha-1'
           "
@@ -304,13 +309,12 @@ const mudar = async status => {
             class="i-lucide-hand size-5 shrink-0 text-n-amber-11"
             aria-hidden="true"
           />
-          {{
-            t(
-              `${KEY}.CARTAO.ESPERANDO`,
-              { n: detalhe.comentarios.esperando.length },
-              detalhe.comentarios.esperando.length
-            )
-          }}
+          <template v-if="esperando === null">
+            {{ t(`${KEY}.CARTAO.SEM_LEITURA`) }}
+          </template>
+          <template v-else>
+            {{ t(`${KEY}.CARTAO.ESPERANDO`, { n: esperando }, esperando) }}
+          </template>
           <span
             class="i-lucide-chevron-right ms-auto size-5 shrink-0 text-n-slate-10 rtl:rotate-180"
             aria-hidden="true"

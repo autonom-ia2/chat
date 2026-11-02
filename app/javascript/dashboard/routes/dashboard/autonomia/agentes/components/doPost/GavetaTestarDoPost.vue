@@ -7,8 +7,8 @@ import { ICONE_DA_REDE } from '../../composables/useAgentesDoPost';
 
 // #2469 (PR 3a do #2436) — "Testar" do cartão do post: o dono escreve uma pergunta como se fosse um comentário, e o
 // agente da porta escreve de verdade (a mesma Escrita do motor), no comentário ou no privado, sem publicar nada. No
-// anúncio nas duas redes, o dono escolhe a rede: a tela não escolhe por ele. O que volta é o que o motor faria: o
-// texto escrito, "Fica com você" (o agente não sabe), as frases fixas (sem agente que escreva, com o motivo) ou, no
+// anúncio nas duas redes, o dono escolhe a rede: a tela não escolhe por ele. O que volta é o que o agente escreveria
+// (só a Escrita: a decisão do motor de responder ou não o comentário fica fora do teste): o texto escrito, "Fica com você" (o agente não sabe), as frases fixas (sem agente que escreva, com o motivo) ou, no
 // privado do Facebook, que ele ainda não sai. Sem teto: só o botão fica parado enquanto a resposta não chega.
 const props = defineProps({
   detalhe: { type: Object, required: true },
@@ -200,7 +200,7 @@ const aviso = computed(() => {
               {{ t(`${KEY}.PRIVADO`) }}
             </span>
             <span
-              class="max-w-[85%] px-3 py-2 text-sm leading-6 text-white break-words rounded-2xl rounded-ee-md bg-n-brand"
+              class="max-w-[85%] px-3 py-2 text-sm leading-6 break-words rounded-2xl rounded-ee-md bg-n-blue-11 text-white dark:text-n-slate-1"
             >
               {{ resultado.texto }}
             </span>

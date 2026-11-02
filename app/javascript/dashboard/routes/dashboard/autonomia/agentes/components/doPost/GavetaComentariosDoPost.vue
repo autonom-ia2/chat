@@ -22,10 +22,12 @@ const GRUPOS = ['respondidos', 'esperando', 'nao_respondo'];
 
 const comentarios = computed(() => props.detalhe.comentarios || {});
 const enviados = computed(() => comentarios.value.results?.sent || 0);
-const numero = chave =>
-  chave === 'respondidos'
-    ? enviados.value
-    : (comentarios.value[chave] || []).length;
+// A Meta não deixou ler (sem permissão, fora do ar): esperando e não respondo ficam sem número, nunca zero.
+const leu = computed(() => comentarios.value.status === 'ready');
+const numero = chave => {
+  if (chave === 'respondidos') return enviados.value;
+  return leu.value ? (comentarios.value[chave] || []).length : '–';
+};
 const lista = computed(() =>
   props.grupo === 'respondidos' ? [] : comentarios.value[props.grupo] || []
 );
@@ -73,6 +75,14 @@ const alvo = computed(() =>
         </p>
       </div>
       <p
+        v-else-if="!leu"
+        data-sem-leitura
+        role="alert"
+        class="m-0 text-sm leading-6 text-n-slate-12"
+      >
+        {{ t(`${KEY}.SEM_LEITURA`) }}
+      </p>
+      <p
         v-else-if="!lista.length"
         data-nenhum
         class="m-0 text-sm leading-6 text-n-slate-11"
@@ -108,7 +118,7 @@ const alvo = computed(() =>
       <router-link
         data-ver-todos
         :to="rotaDoAlvo"
-        class="inline-flex items-center justify-center gap-2 px-4 text-sm font-semibold text-white no-underline rounded-xl min-h-11 w-fit bg-n-brand"
+        class="inline-flex items-center justify-center gap-2 px-4 text-sm font-semibold no-underline rounded-xl min-h-11 w-fit bg-n-blue-11 text-white dark:text-n-slate-1 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
       >
         <span class="i-lucide-reply size-4" aria-hidden="true" />
         {{ t(`${KEY}.VER_TODOS`, { alvo }) }}

@@ -8533,11 +8533,11 @@
     "completo": true,
     "controller": "api/v1/accounts/agentes_do_post#testar",
     "origem": [
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:73",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:78",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:76",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:74",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:112"
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:84",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:89",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:87",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:85",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
     ],
     "sem_corpo": false
   },
@@ -20669,9 +20669,9 @@
     "controller": "api/v1/accounts/agentes_do_post#estado",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:63",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:64",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:112"
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:74",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:75",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
     ],
     "sem_corpo": false
   },

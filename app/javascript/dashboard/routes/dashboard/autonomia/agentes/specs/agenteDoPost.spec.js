@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import AgentePostCartao from '../components/AgentePostCartao.vue';
 import AgenteDoPostPage from '../pages/AgenteDoPostPage.vue';
 import CriarTipoDeAgente from '../components/criar/CriarTipoDeAgente.vue';
+import { tituloDaLegenda } from '../composables/useAgentesDoPost';
 
 // #2469 (PR 3a do #2436): o cartão de um post ou anúncio em Agentes, a página dele e as gavetas, nos 4 casos (post e
 // anúncio, Instagram e Facebook). O servidor manda os grupos e as portas prontos; a tela só mostra.
@@ -223,6 +224,121 @@ describe('#2469 · os comentários do post em Agentes', () => {
         'AGENTS.AGENTE_DO_POST.CARTAO.ERRO'
       );
     });
+
+    it('sem acesso (403) ou fora da conta (404): o cartão diz isso, não um erro genérico', async () => {
+      const item = { id: 7, kind: 'ad', network: 'both', status: 'on' };
+      api.get.mockRejectedValueOnce({ response: { status: 403 } });
+      const semAcesso = montar(AgentePostCartao, {
+        cuidado: item,
+        href: '/a',
+        hrefEsperando: '/a',
+      });
+      await flushPromises();
+      api.get.mockRejectedValueOnce({ response: { status: 404 } });
+      const sumiu = montar(AgentePostCartao, {
+        cuidado: { ...item, id: 8 },
+        href: '/a',
+        hrefEsperando: '/a',
+      });
+      await flushPromises();
+
+      expect(semAcesso.get('[data-cartao-titulo]').text()).toBe(
+        'AGENTS.AGENTE_DO_POST.CARTAO.SEM_ACESSO'
+      );
+      expect(sumiu.get('[data-cartao-titulo]').text()).toBe(
+        'AGENTS.AGENTE_DO_POST.CARTAO.SUMIU'
+      );
+      expect(sumiu.find('[data-sem-leitura]').exists()).toBe(true);
+    });
+
+    it('a Meta não deixou ler os comentários: a faixa diz que não leu, nunca "nenhum esperando"', async () => {
+      const wrapper = await cartao(
+        { id: 7, kind: 'post', network: 'instagram', status: 'on' },
+        detalhe({
+          comentarios: {
+            status: 'needs_permission',
+            results: { sent: 0 },
+            esperando: [],
+            nao_respondo: [],
+          },
+        })
+      );
+
+      expect(wrapper.get('[data-esperando]').text()).toBe(
+        'AGENTS.AGENTE_DO_POST.CARTAO.SEM_LEITURA'
+      );
+    });
+
+    it('o cartão só lê quando aparece na tela', async () => {
+      const observados = [];
+      vi.stubGlobal(
+        'IntersectionObserver',
+        vi.fn(aviso => {
+          const observador = { aviso, observe: vi.fn(), disconnect: vi.fn() };
+          observados.push(observador);
+          return observador;
+        })
+      );
+      api.get.mockResolvedValue({ data: detalhe() });
+      const wrapper = montar(AgentePostCartao, {
+        cuidado: { id: 7, kind: 'post', network: 'instagram', status: 'on' },
+        href: '/post',
+        hrefEsperando: '/post',
+      });
+      await flushPromises();
+      expect(api.get).not.toHaveBeenCalled();
+
+      observados[0].aviso([{ isIntersecting: true }]);
+      await flushPromises();
+      expect(api.get).toHaveBeenCalledWith(7);
+      expect(wrapper.get('[data-cartao-titulo]').text()).toBe(
+        'Seguro viagem para a Europa.'
+      );
+      vi.unstubAllGlobals();
+    });
+
+    it('muitos cartões: no máximo 3 leituras na Meta ao mesmo tempo', async () => {
+      const pendentes = [];
+      api.get.mockImplementation(
+        () =>
+          new Promise(resolve => {
+            pendentes.push(resolve);
+          })
+      );
+      [1, 2, 3, 4, 5].forEach(id =>
+        montar(AgentePostCartao, {
+          cuidado: { id, kind: 'post', network: 'instagram', status: 'on' },
+          href: '/post',
+          hrefEsperando: '/post',
+        })
+      );
+      await flushPromises();
+      expect(api.get).toHaveBeenCalledTimes(3);
+
+      pendentes.shift()({ data: detalhe() });
+      await flushPromises();
+      expect(api.get).toHaveBeenCalledTimes(4);
+
+      while (pendentes.length) {
+        pendentes.shift()({ data: detalhe() });
+        // eslint-disable-next-line no-await-in-loop
+        await flushPromises();
+      }
+      expect(api.get).toHaveBeenCalledTimes(5);
+    });
+
+    it('o título corta só em fim de frase: "R$ 39.90" não corta', () => {
+      expect(
+        tituloDaLegenda('A partir de R$ 39.90 por dia. Fale comigo')
+      ).toEqual({
+        titulo: 'A partir de R$ 39.90 por dia.',
+        resto: 'Fale comigo',
+      });
+      expect(tituloDaLegenda('Promo!')).toEqual({
+        titulo: 'Promo!',
+        resto: '',
+      });
+    });
   });
 
   describe('a página', () => {
@@ -321,6 +437,32 @@ describe('#2469 · os comentários do post em Agentes', () => {
       expect(
         todosNoBody('[data-comentario]').map(item => item.dataset.comentario)
       ).toEqual(['2', '4']);
+    });
+
+    it('Comentários sem leitura da Meta: esperando e não respondo sem número, com o aviso', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
+      await pagina(
+        detalhe({
+          comentarios: {
+            status: 'meta_unavailable',
+            results: { sent: 4 },
+            esperando: [],
+            nao_respondo: [],
+          },
+        })
+      );
+
+      const numeros = todosNoBody('[data-grupo]').map(grupo =>
+        grupo.querySelector('span').textContent.trim()
+      );
+      expect(numeros).toEqual(['4', '–', '–']);
+      expect(noBody('[data-sem-leitura]').textContent).toContain(
+        'AGENTS.AGENTE_DO_POST.COMENTARIOS.SEM_LEITURA'
+      );
+      expect(noBody('[data-nenhum]')).toBeNull();
+      expect(noBody('[data-esperando]').textContent).toContain(
+        'AGENTS.AGENTE_DO_POST.CARTAO.SEM_LEITURA'
+      );
     });
 
     it('O que sabe: os materiais de cada agente da porta e o que é só do post', async () => {

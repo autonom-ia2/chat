@@ -786,7 +786,11 @@ describe('AgentesListaPage', () => {
 
     beforeEach(() => {
       store.state['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
-        flag === 'meta_ads_comentarios_ia';
+        [
+          'meta_ads_comentarios_ia',
+          'seus_posts',
+          'seus_posts_comentarios',
+        ].includes(flag);
       store.state.getCurrentAccountId = 1;
       doPost.list.mockResolvedValue({ data: { cuidados: CUIDADOS } });
       doPost.get.mockReturnValue(new Promise(() => {}));
@@ -819,6 +823,20 @@ describe('AgentesListaPage', () => {
 
       expect(document.body.querySelector('[data-criar-tipos]')).not.toBeNull();
       expect(router.push).not.toHaveBeenCalledWith({
+        name: 'autonomia_agents_builder',
+      });
+      wrapper.unmount();
+    });
+
+    it('sem o Seus posts, "Criar agente" segue a criação de hoje (o "Qual post?" vem dele)', async () => {
+      store.state['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
+        flag === 'meta_ads_comentarios_ia';
+      const wrapper = await montar();
+
+      await wrapper.get('[data-criar]').trigger('click');
+
+      expect(document.body.querySelector('[data-criar-tipos]')).toBeNull();
+      expect(router.push).toHaveBeenCalledWith({
         name: 'autonomia_agents_builder',
       });
       wrapper.unmount();

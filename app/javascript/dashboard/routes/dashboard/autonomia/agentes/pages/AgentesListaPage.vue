@@ -247,10 +247,10 @@ const usarCopiloto = () =>
 const abrirPaginaCriar = () =>
   router.push({ name: 'autonomia_agents_builder' });
 // #2469: com o cuidado dos comentários na conta, "Criar agente" pergunta antes o tipo (atender conversas ou cuidar dos
-// comentários de um post ou anúncio). Sem ele, a criação de hoje.
+// comentários de um post ou anúncio). Sem ele, ou sem o Seus posts (de onde vem o "Qual post?"), a criação de hoje.
 const criandoTipo = ref(false);
 const criarAgente = () => {
-  if (doPost.ligada.value) criandoTipo.value = true;
+  if (doPost.comPosts.value) criandoTipo.value = true;
   else abrirPaginaCriar();
 };
 const cuidarDoPost = post =>

@@ -2824,7 +2824,10 @@
         "SEM_PORTA": "No agent to write: I use the fixed phrases.",
         "LENDO": "Reading the post…",
         "SEM_LEGENDA": "No caption",
-        "ERRO": "I couldn't read it right now."
+        "ERRO": "I couldn't read it right now.",
+        "SEM_ACESSO": "No access to this post or ad.",
+        "SUMIU": "No longer in the account.",
+        "SEM_LEITURA": "Couldn't read the comments right now"
       },
       "CRIAR": {
         "TITULO": "Create agent",
@@ -2914,13 +2917,14 @@
       "COMENTARIOS": {
         "TITULO": "Comments",
         "TEXTO": "The ones I replied to and the ones waiting for you.",
-        "RESPONDIDOS": "replied",
+        "RESPONDIDOS": "in private",
         "ESPERANDO": "waiting for you",
         "NAO_RESPONDO": "not replying",
-        "RESPONDIDOS_TEXTO": "The ones I replied to are in the inbox conversations.",
+        "RESPONDIDOS_TEXTO": "People who got a private message from me. The conversations are in the inbox.",
         "VER_CONVERSA": "See conversation",
         "VER_TODOS": "See all on the {alvo}",
-        "NENHUM": "Nothing here for now."
+        "NENHUM": "Nothing here for now.",
+        "SEM_LEITURA": "Couldn't read the comments right now. Try again in a moment."
       }
     }
   }

@@ -97,7 +97,7 @@ onMounted(() => {
         </p>
         <router-link
           :to="{ name: 'autonomia_agents_builder' }"
-          class="inline-flex items-center justify-center px-4 text-sm font-semibold text-white rounded-xl min-h-11 w-fit bg-n-brand"
+          class="inline-flex items-center justify-center px-4 text-sm font-semibold rounded-xl min-h-11 w-fit bg-n-blue-11 text-white dark:text-n-slate-1 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
         >
           {{ t(`${KEY}.ENSINAR`) }}
         </router-link>

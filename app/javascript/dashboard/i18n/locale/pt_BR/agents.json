@@ -2824,7 +2824,10 @@
         "SEM_PORTA": "Sem agente para escrever: uso as frases fixas.",
         "LENDO": "Lendo o post…",
         "SEM_LEGENDA": "Sem legenda",
-        "ERRO": "Não consegui ler agora."
+        "ERRO": "Não consegui ler agora.",
+        "SEM_ACESSO": "Sem acesso a este post ou anúncio.",
+        "SUMIU": "Não está mais na conta.",
+        "SEM_LEITURA": "Não consegui ler os comentários agora"
       },
       "CRIAR": {
         "TITULO": "Criar agente",
@@ -2914,13 +2917,14 @@
       "COMENTARIOS": {
         "TITULO": "Comentários",
         "TEXTO": "Os que eu respondi e os que esperam você.",
-        "RESPONDIDOS": "respondidos",
+        "RESPONDIDOS": "no privado",
         "ESPERANDO": "esperando você",
         "NAO_RESPONDO": "não respondo",
-        "RESPONDIDOS_TEXTO": "Os que eu respondi estão nas conversas da caixa.",
+        "RESPONDIDOS_TEXTO": "Quem recebeu de mim no privado. As conversas estão na caixa.",
         "VER_CONVERSA": "Ver conversa",
         "VER_TODOS": "Ver todos no {alvo}",
-        "NENHUM": "Por enquanto, nada aqui."
+        "NENHUM": "Por enquanto, nada aqui.",
+        "SEM_LEITURA": "Não consegui ler os comentários agora. Tente de novo daqui a pouco."
       }
     }
   }

@@ -19,16 +19,22 @@ export const redesDoCuidado = network =>
 export const estadoDoCuidado = status =>
   status === 'on' ? 'cuidando' : 'pausado';
 
-// O título do cartão: a primeira frase da legenda, se for curta; senão o começo, cortado num espaço.
+// O título do cartão: a primeira frase da legenda, se for curta; senão o começo, cortado num espaço. Só é fim de frase
+// o sinal seguido de espaço ou no fim do texto: "R$ 39.90" não corta.
 const TITULO_MAX = 48;
 const FINS = ['?', '!', '.'];
+const fimDeFrase = (texto, indice) =>
+  FINS.includes(texto[indice]) &&
+  (indice + 1 === texto.length || texto[indice + 1] === ' ');
 export const tituloDaLegenda = (legenda = '') => {
   const texto = (legenda || '').trim();
-  const fins = FINS.map(fim => texto.indexOf(fim)).filter(
-    indice => indice > 0 && indice < TITULO_MAX
-  );
-  if (fins.length) {
-    const corte = Math.min(...fins) + 1;
+  const limite = Math.min(texto.length, TITULO_MAX);
+  let fim = -1;
+  for (let indice = 1; indice < limite && fim < 0; indice += 1) {
+    if (fimDeFrase(texto, indice)) fim = indice;
+  }
+  if (fim > 0) {
+    const corte = fim + 1;
     return { titulo: texto.slice(0, corte), resto: texto.slice(corte).trim() };
   }
   if (texto.length <= TITULO_MAX) return { titulo: texto, resto: '' };
@@ -49,18 +55,22 @@ export const agentesDasPortas = (portas = []) => {
     });
 };
 
-const useFlagDoCuidado = () => {
+const useFlags = (...flags) => {
   const ligada = useMapGetter('accounts/isFeatureEnabledonAccount');
   const conta = useMapGetter('getCurrentAccountId');
-  return computed(
-    () =>
-      ligada.value?.(conta.value, FEATURE_FLAGS.META_ADS_COMENTARIOS_IA) ===
-      true
+  return computed(() =>
+    flags.every(flag => ligada.value?.(conta.value, flag) === true)
   );
 };
 
 export function useAgentesDoPost() {
-  const ligada = useFlagDoCuidado();
+  const ligada = useFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA);
+  // "Qual post?" lê os posts do Seus posts: sem as flags dele, a criação pelo post não aparece.
+  const comPosts = useFlags(
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
+    FEATURE_FLAGS.SEUS_POSTS,
+    FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS
+  );
   const cuidados = ref([]);
   const carregado = ref(false);
 
@@ -86,11 +96,47 @@ export function useAgentesDoPost() {
   );
   const pausados = computed(() => cuidados.value.length - cuidando.value);
 
-  return { ligada, cuidados, carregado, carregar, cuidando, pausados };
+  // As flags da conta podem chegar depois da tela: a lista é lida de novo quando a flag liga.
+  watch(ligada, (agora, antes) => {
+    if (agora && !antes) carregar();
+  });
+
+  return {
+    ligada,
+    comPosts,
+    cuidados,
+    carregado,
+    carregar,
+    cuidando,
+    pausados,
+  };
 }
 
-// O detalhe de um cuidado: o cartão (só lê) e a página (lê, pausa, volta e testa). `id`: valor, ref ou getter.
-export function useAgenteDoPost(id) {
+// Cada detalhe lê a Meta (comentários, legenda, capa): os cartões da lista leem no máximo 3 de cada vez, para uma conta
+// com muitos posts cuidados não gastar de uma vez o limite da Meta, que o motor dos comentários usa na mesma conexão.
+const EM_PARALELO = 3;
+let correndo = 0;
+const fila = [];
+const proxima = () => {
+  if (correndo >= EM_PARALELO || !fila.length) return;
+  const { tarefa, resolve, reject } = fila.shift();
+  correndo += 1;
+  tarefa()
+    .then(resolve, reject)
+    .finally(() => {
+      correndo -= 1;
+      proxima();
+    });
+};
+const naFila = tarefa =>
+  new Promise((resolve, reject) => {
+    fila.push({ tarefa, resolve, reject });
+    proxima();
+  });
+
+// O detalhe de um cuidado: o cartão (só lê) e a página (lê, pausa, volta e testa). `id`: valor, ref ou getter; vazio,
+// não lê. `emFila`: o cartão lê pela fila (EM_PARALELO); a página lê na hora.
+export function useAgenteDoPost(id, { emFila = false } = {}) {
   const detalhe = ref(null);
   const carregando = ref(false);
   // 'acesso' (403), 'sumiu' (404) ou 'rede'; o código do servidor fica em `motivo` (not_inbox_member, no_post...).
@@ -109,7 +155,8 @@ export function useAgenteDoPost(id) {
     erro.value = null;
     motivo.value = null;
     try {
-      const { data } = await AgentesDoPostAPI.get(atual);
+      const ler = () => AgentesDoPostAPI.get(atual);
+      const { data } = await (emFila ? naFila(ler) : ler());
       if (minha === leitura) detalhe.value = data;
     } catch (error) {
       if (minha !== leitura) return;

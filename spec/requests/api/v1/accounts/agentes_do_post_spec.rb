@@ -116,6 +116,27 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(response.parsed_body['cuidados'].pluck('kind')).to eq(%w[post post])
     end
 
+    it 'sem a conexão de anúncios ativa, os anúncios saem da lista e não abrem' do
+      Crm::MetaAdsConnection.find_by(account_id: account.id).update!(status: 'invalid')
+
+      get base, headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['cuidados'].pluck('kind')).to eq(%w[post post])
+
+      get "#{base}/#{anuncio_ig.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
+      expect(response.parsed_body).to eq('error' => 'not_connected')
+    end
+
+    it 'post sem as flags do Seus posts: 404, sem ler a Meta' do
+      allow(Crm::MetaAds::ComentariosIa::Fonte).to receive(:post)
+      account.disable_features!('seus_posts_comentarios')
+
+      get "#{base}/#{post_ig.id}", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(Crm::MetaAds::ComentariosIa::Fonte).not_to have_received(:post)
+    end
+
     it 'cuidado de outra conta nunca aparece nem abre' do
       outro = create(:crm_meta_ads_comment_care, target_kind: 'ad', target_id: '999', network: 'instagram')
 
@@ -166,6 +187,35 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(comentarios['results']).to eq('sent' => 3, 'replied' => 1, 'skipped' => 1)
     end
 
+    it 'abrir de novo dentro de 2 minutos não volta à Meta; pausar troca a leitura guardada' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+
+      2.times { get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json }
+      expect(Crm::MetaAds::ComentariosIa::Fonte).to have_received(:post).once
+      expect(response.parsed_body).to include('legenda' => 'Seguro viagem para a Europa', 'can_manage' => true)
+
+      put "#{base}/#{care.id}/estado", params: { status: 'paused' }, headers: admin.create_new_auth_token, as: :json
+      get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body['status']).to eq('paused')
+
+      travel 3.minutes do
+        get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
+      end
+      expect(Crm::MetaAds::ComentariosIa::Fonte).to have_received(:post).exactly(4).times
+    end
+
+    it 'a leitura guardada é de cada pessoa: quem perde a caixa não abre pelo que outra leu' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+      agente = create(:user, account: account, role: :agent)
+      allow(Pundit).to receive(:policy!).and_call_original
+      allow(Pundit).to receive(:policy!).with(anything, :seus_posts).and_return(instance_double(SeusPostsPolicy, index?: true, manage?: false))
+
+      get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
+      get "#{base}/#{care.id}", headers: agente.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:forbidden)
+    end
+
     it 'sem agente na porta: a porta vem sem agente e com o motivo' do
       get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
 
@@ -212,6 +262,15 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(response.parsed_body).to eq('error' => 'invalid_status')
     end
 
+    it 'pausar o que já está pausado não muda nada nem vai para a Auditoria' do
+      care.update!(status: 'paused')
+
+      expect do
+        put "#{base}/#{care.id}/estado", params: { status: 'paused' }, headers: admin.create_new_auth_token, as: :json
+      end.not_to change(Audited.audit_class, :count)
+      expect(response.parsed_body['status']).to eq('paused')
+    end
+
     it 'quem só vê não pausa nem testa: 403, sem ler a Meta nem chamar a IA' do
       agente = create(:user, account: account, role: :agent)
       create(:inbox_member, user: agente, inbox: instagram.inbox)
@@ -243,6 +302,13 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
         expect(chamada).to include(formato: Autonomia::Agents::Answerer::FormatoDoComentario::PRIVADO, retrieval_query: 'Quanto custa?',
                                    delivery: nil, allow_web_search: false, trust_instruction: false)
         expect(chamada[:contexto_do_turno]).to include('Atendo de segunda a sexta')
+      end
+
+      it 'a pergunta não vai para o log' do
+        post "#{base}/#{care.id}/testar", params: { pergunta: 'Meu CPF é 123', formato: 'publico' }, headers: admin.create_new_auth_token,
+                                          as: :json
+
+        expect(request.filtered_parameters['pergunta']).to eq('[FILTERED]')
       end
 
       it 'o agente não sabe: fica com o dono, com o motivo' do
@@ -350,6 +416,23 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
 
       expect(response).to have_http_status(:forbidden)
       expect(response.parsed_body).to eq('error' => 'not_inbox_member')
+    end
+
+    it 'quem só vê o anúncio não testa nem pausa: 403, sem ler a Meta nem chamar a IA' do
+      agente = create(:user, account: account, role: :agent)
+      [instagram.inbox, pagina.inbox].each { |caixa| create(:inbox_member, user: agente, inbox: caixa) }
+      allow(Pundit).to receive(:policy!).and_call_original
+      allow(Pundit).to receive(:policy!).with(anything, Crm::MetaAdsConnection)
+                                        .and_return(instance_double(Crm::MetaAdsConnectionPolicy, show?: true, update?: false))
+
+      post "#{base}/#{care.id}/testar", params: { pergunta: 'Quanto custa?', formato: 'publico', network: 'instagram' },
+                                        headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
+      put "#{base}/#{care.id}/estado", params: { status: 'paused' }, headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
+
+      expect(Crm::MetaAds::ComentariosIa::Anuncio).not_to have_received(:ler)
+      expect(Autonomia::Agents::Answerer).not_to have_received(:new)
     end
 
     it 'o anúncio sumiu da conta de anúncios: 404' do

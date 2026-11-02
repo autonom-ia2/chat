@@ -4,7 +4,9 @@
 # GET  agentes_do_post             → { cuidados: [{ id, kind, target_id, perfil, network, status }] }: a lista e a
 #      contagem do cabeçalho, só do banco. Só os alvos que quem abre pode ver.
 # GET  agentes_do_post/:id         → o cartão e a página: o item, mais legenda, capa, foto, nota, portas[] e
-#      comentarios { status, results, esperando[], nao_respondo[] }, lidos na Meta na hora, sem IA.
+#      comentarios { status, results, esperando[], nao_respondo[] }, lidos na Meta, sem IA. A leitura fica guardada
+#      DETALHE_TTL por pessoa (abrir Agentes com muitos posts cuidados não volta à Meta a cada vez, e não gasta o limite
+#      dela, que o motor usa na mesma conexão); pausar ou voltar muda o updated_at do cuidado e troca a chave.
 # PUT  agentes_do_post/:id/estado  status ('on' | 'paused') → Pausar e Voltar a cuidar: só o estado (voltar recomeça a
 #      contar daqui), sem mexer no que o dono escreveu. Devolve o detalhe.
 # POST agentes_do_post/:id/testar  pergunta, formato ('publico' | 'privado'), network → { status: 'escrito', texto } |
@@ -16,7 +18,8 @@
 # - post (SeusPostsCuidadoController): as flags `seus_posts` e `seus_posts_comentarios`, ver (`posts_view`) ou mudar
 #   (`posts_manage`) e ver a caixa do perfil;
 # - anúncio (Crm::MetaAdsCuidadoController): a flag `meta_ads_gestao` e a dos comentários de ao menos uma rede, ver
-#   (`meta_ads_view`) ou mudar (`meta_ads_manage`), conexão ativa e ver a caixa de TODAS as redes do anúncio.
+#   (`meta_ads_view`) ou mudar (`meta_ads_manage`), conexão ativa (sem ela, o anúncio sai da lista e abre com 404) e
+#   ver a caixa de TODAS as redes do anúncio.
 # Mudar e Testar pedem a chave de mudar do alvo: a mesma de editar o cuidado. A lista mostra só o que a pessoa pode ver;
 # o anúncio cuja caixa ela não vê dá 403 `not_inbox_member` ao abrir.
 #
@@ -30,6 +33,7 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   AUDIT_ACTION = { 'post' => Api::V1::Accounts::SeusPostsCuidadoController::AUDIT_ACTION,
                    'ad' => Api::V1::Accounts::Crm::MetaAdsCuidadoController::AUDIT_ACTION }.freeze
   PERGUNTA_LIMIT = 1_000
+  DETALHE_TTL = 2.minutes
   # A policy de cada alvo, a mesma da tela do cuidado dele.
   POLITICA = { 'post' => :seus_posts, 'ad' => ::Crm::MetaAdsConnection }.freeze
   STATUS = { 'not_found' => :not_found, 'ad_not_found' => :not_found, 'not_connected' => :not_found, 'forbidden' => :forbidden,
@@ -47,26 +51,33 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   before_action :ensure_flag
   before_action :load_care, except: [:index]
   before_action :ensure_manage, only: [:estado, :testar]
-  before_action :load_alvo, except: [:index]
+  before_action :load_alvo, except: [:index, :show]
 
   rescue_from Recusa, Crm::MetaAds::ComentariosIa::Painel::Error, Crm::MetaAds::AdManagement::Error, with: :render_error
 
   def index
     cares = Crm::MetaAdsCommentCare.where(account_id: Current.account.id).includes(inbox: :channel).order(:id)
-    render json: { cuidados: cares.select { |care| ve?(care) }.map { |care| Crm::MetaAds::ComentariosIa::NoAgentes.item(care) } }
+    visiveis = cares.select { |care| ve?(care) && (care.target_kind == 'post' || conectado?) }
+    render json: { cuidados: visiveis.map { |care| Crm::MetaAds::ComentariosIa::NoAgentes.item(care) } }
   end
 
+  # O detalhe guardado só depois de passar as guardas (Recusa não é guardada). A chave leva a pessoa (os resultados e o
+  # "Ver conversa" dependem do que ela vê) e o updated_at do cuidado.
   def show
-    render json: detalhe
+    lido = Rails.cache.fetch(chave_do_detalhe, expires_in: DETALHE_TTL) do
+      load_alvo
+      no_agentes.detalhe
+    end
+    render json: lido.merge(can_manage: manage?)
   end
 
   def estado
     status = params[:status].to_s
     raise Recusa, 'invalid_status' unless Crm::MetaAdsCommentCare::STATUSES.include?(status)
 
-    Crm::MetaAdsCommentCare.transaction { mudar_estado!(status) }
+    mudou = Crm::MetaAdsCommentCare.transaction { mudar_estado!(status) }
     @care.reload
-    audit!(status)
+    audit!(status) if mudou
     render json: detalhe
   end
 
@@ -139,9 +150,17 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
     @fonte = Crm::MetaAds::ComentariosIa::Fonte.anuncio(anuncio, @alvo['networks'])
   end
 
+  def conexao
+    @conexao ||= ::Crm::MetaAdsConnection.active.find_by(account_id: Current.account.id)
+  end
+
+  def conectado?
+    conexao&.ad_account_id.present?
+  end
+
   def ler_anuncio
-    connection = ::Crm::MetaAdsConnection.active.find_by(account_id: Current.account.id)
-    raise Recusa, 'not_connected' if connection&.ad_account_id.blank?
+    connection = conexao
+    raise Recusa, 'not_connected' unless conectado?
 
     Crm::MetaAds::ComentariosIa::Anuncio.ler(connection, @care.target_id) || raise(Recusa, 'ad_not_found')
   end
@@ -149,15 +168,16 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   # Só o estado muda, como o "Pausar todos" do Seus posts (SeusPostsCuidadoController#mudar_status!): o que o dono
   # escreveu não é regravado, e um cuidado antigo que não passaria na validação de hoje ainda pausa. Voltar a cuidar só
   # liga o que passa nela (422 `invalid_care`), e recomeça a contar daqui (Painel#religar!).
-  # Dentro da transação da action, com a linha travada.
+  # Dentro da transação da action, com a linha travada. true quando mudou (só então vai para a Auditoria).
   def mudar_estado!(status)
     atual = Crm::MetaAdsCommentCare.lock.find(@care.id)
-    return if atual.status == status
+    return false if atual.status == status
     raise Recusa, 'invalid_care' if status == 'on' && !atual.tap { |care| care.status = status }.valid?
 
     agora = Time.current
     religado = status == 'on' ? { started_at: agora, read_old_at: nil } : {}
     Crm::MetaAdsCommentCare.where(id: atual.id).update_all(status: status, updated_at: agora, **religado) # rubocop:disable Rails/SkipsModelValidations
+    true
   end
 
   def painel
@@ -171,6 +191,10 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
 
   def detalhe
     no_agentes.detalhe.merge(can_manage: manage?)
+  end
+
+  def chave_do_detalhe
+    ['agentes_do_post', 'v1', Current.account.id, @care.id, @care.updated_at.to_f, Current.user&.id].join(':')
   end
 
   # "Ver conversa" só para quem enxerga a conversa (em caixa com restrição, só as dela).
