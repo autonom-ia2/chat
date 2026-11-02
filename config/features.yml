@@ -1112,8 +1112,9 @@
 # mandar mensagem ao cliente (sai como "Automação") e avisar a equipe por menção numa nota privada. Desligada: o salvar
 # recusa o passo, e a execução que chega nele fecha como parada (mensagens_desligadas), sem mandar nada. Sem teto de
 # uso; só a proteção contra laço. Rollback: desligar a flag na conta. Sem migration.
-# Bit: pela ordem neste arquivo, logo depois de automacao_motor; posição e valor confirmados com a Orquestração Deploy
-# no merge da main antes do push. Nasce ligada no piloto (contas 1, 16 e 18).
+# Bit: feature_flags_ext_2, posição 22 (valor 2097152, 1 << 21), logo depois de automacao_motor. A F5
+# (automacao_editor) também pediu a 22: vale a ordem de entrada na main, e quem entrar por segundo traz a main e vira
+# 23 (bit, comentário e account_spec). A Orquestração confirma na fila. Nasce ligada no piloto (contas 1, 16 e 18).
 - name: automacao_mensagens
   display_name: Automação › mensagem ao cliente e aviso à equipe
   enabled: false
