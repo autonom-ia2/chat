@@ -44,10 +44,12 @@ vi.mock('dashboard/composables/store', async () => {
   const { ref: criarRef } = await import('vue');
   return {
     useStore: () => ({ dispatch: vi.fn() }),
-    useMapGetter: getter =>
-      getter === 'attributes/getAttributesByModel'
-        ? criarRef(() => [])
-        : criarRef([]),
+    useMapGetter: getter => {
+      if (getter === 'getCurrentUserID') return criarRef(7);
+      if (getter === 'attributes/getAttributesByModel')
+        return criarRef(() => []);
+      return criarRef([]);
+    },
   };
 });
 vi.mock('dashboard/api/autonomia/automacoes', () => ({
@@ -172,19 +174,25 @@ describe('LivreEditorPage', () => {
     AutomacoesAPI.show.mockResolvedValue({ data: salva() });
   });
 
+  // Ligada, o aviso diz o que o salvar faz: vale na hora para quem ligou (7),
+  // pausa quando é outra pessoa.
   it.each([
-    [true, true],
-    [false, false],
-  ])(
-    'ligada=%s mostra o aviso de que a mudança vale na hora: %s',
-    async (ativa, aparece) => {
-      AutomacoesAPI.show.mockResolvedValue({ data: salva({ ativa }) });
-      const wrapper = montar();
-      await flushPromises();
+    ['desligada', { ativa: false }, null],
+    ['ligada por mim', { ativa: true, ligada_por: { id: 7 } }, 'LIGADA_AVISO'],
+    [
+      'ligada por outra pessoa',
+      { ativa: true, ligada_por: { id: 8 } },
+      'LIGADA_POR_OUTRA',
+    ],
+  ])('%s: aviso no topo', async (_caso, extra, chave) => {
+    AutomacoesAPI.show.mockResolvedValue({ data: salva(extra) });
+    const wrapper = montar();
+    await flushPromises();
 
-      expect(wrapper.find('[data-ligada]').exists()).toBe(aparece);
-    }
-  );
+    const aviso = wrapper.find('[data-ligada]');
+    expect(aviso.exists()).toBe(Boolean(chave));
+    if (chave) expect(aviso.text()).toBe(`AUTOMACAO_LIVRE.EDITOR.${chave}`);
+  });
 
   it('salva cada mudança como versão nova sobre a versão vista', async () => {
     AutomacoesAPI.salvar.mockResolvedValue({

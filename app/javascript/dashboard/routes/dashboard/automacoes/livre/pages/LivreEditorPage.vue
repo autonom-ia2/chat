@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
@@ -36,6 +37,16 @@ const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const editor = useEditorLivre();
 const { automacao, receita, nome, estado, problemas, ocupado, nova } = editor;
+
+// Ligada, salvar vale na hora só para quem a ligou; quando outra pessoa salva,
+// ela pausa até ser ligada de novo (#2486 junta as mudanças num salvar só).
+const meuId = useMapGetter('getCurrentUserID');
+const avisoDeLigada = computed(() => {
+  if (!automacao.value?.ativa) return '';
+  return automacao.value.ligada_por?.id === meuId.value
+    ? t('AUTOMACAO_LIVRE.EDITOR.LIGADA_AVISO')
+    : t('AUTOMACAO_LIVRE.EDITOR.LIGADA_POR_OUTRA');
+});
 
 const seletor = ref(null);
 const alterar = ref(null);
@@ -269,14 +280,8 @@ onMounted(() => {
         </div>
 
         <template v-else>
-          <!-- Ligada, cada salvar vale na hora para quem está no meio (#2486 junta as mudanças num salvar só). -->
-          <Banner
-            v-if="automacao?.ativa"
-            data-ligada
-            role="status"
-            color="slate"
-          >
-            {{ $t('AUTOMACAO_LIVRE.EDITOR.LIGADA_AVISO') }}
+          <Banner v-if="avisoDeLigada" data-ligada role="status" color="slate">
+            {{ avisoDeLigada }}
           </Banner>
 
           <header class="flex flex-col gap-2">

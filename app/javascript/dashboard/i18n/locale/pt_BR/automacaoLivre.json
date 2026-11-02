@@ -178,6 +178,7 @@
       "PROBLEMAS": "Para salvar, corrija:",
       "NAO_SALVA": "Esta mudança ainda não foi salva. Complete o passo que falta e ela entra numa versão nova.",
       "LIGADA_AVISO": "Esta automação está ligada: cada mudança vale na hora.",
+      "LIGADA_POR_OUTRA": "Esta automação está ligada por outra pessoa. Se você salvar, ela pausa até ser ligada de novo.",
       "SAIR": {
         "TITULO": "Sair sem guardar?",
         "TEXTO": "O que você montou aqui ainda não foi salvo. Se sair agora, ele some.",
