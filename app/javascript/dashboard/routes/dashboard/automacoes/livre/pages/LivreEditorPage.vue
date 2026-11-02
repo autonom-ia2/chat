@@ -5,6 +5,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
+import Banner from 'dashboard/components-next/banner/Banner.vue';
 import LivreConfira from '../components/LivreConfira.vue';
 import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
 import LivreAlterar from '../components/LivreAlterar.vue';
@@ -268,6 +269,16 @@ onMounted(() => {
         </div>
 
         <template v-else>
+          <!-- Ligada, cada salvar vale na hora para quem está no meio (#2486 junta as mudanças num salvar só). -->
+          <Banner
+            v-if="automacao?.ativa"
+            data-ligada
+            role="status"
+            color="slate"
+          >
+            {{ $t('AUTOMACAO_LIVRE.EDITOR.LIGADA_AVISO') }}
+          </Banner>
+
           <header class="flex flex-col gap-2">
             <Input
               v-if="podeMudar"

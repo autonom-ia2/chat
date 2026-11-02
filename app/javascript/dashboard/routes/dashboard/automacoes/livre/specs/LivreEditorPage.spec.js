@@ -172,6 +172,20 @@ describe('LivreEditorPage', () => {
     AutomacoesAPI.show.mockResolvedValue({ data: salva() });
   });
 
+  it.each([
+    [true, true],
+    [false, false],
+  ])(
+    'ligada=%s mostra o aviso de que a mudança vale na hora: %s',
+    async (ativa, aparece) => {
+      AutomacoesAPI.show.mockResolvedValue({ data: salva({ ativa }) });
+      const wrapper = montar();
+      await flushPromises();
+
+      expect(wrapper.find('[data-ligada]').exists()).toBe(aparece);
+    }
+  );
+
   it('salva cada mudança como versão nova sobre a versão vista', async () => {
     AutomacoesAPI.salvar.mockResolvedValue({
       data: salva({

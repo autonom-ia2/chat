@@ -98,9 +98,9 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   end
 
   # A versão que a tela mostrou. Chega como texto ou número; ausente ou inválida vale nil, e com versão ativa isso é
-  # VersaoMudou, nunca "salva por cima".
+  # VersaoMudou, nunca "salva por cima". Sempre na base 10: "012" é 12, não octal, e "0x1f" é inválida (como no #2460).
   def versao_vista(chave)
-    Integer(params[chave].to_s, exception: false)
+    Integer(params[chave].to_s, 10, exception: false)
   end
 
   # A versão que a tela viu, conferida antes de qualquer outra recusa: quem viu uma versão velha precisa ver a nova
@@ -115,11 +115,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     valor.respond_to?(:to_unsafe_h) ? valor.to_unsafe_h : valor
   end
 
-  # Passo de funil exige também crm_manage_pipelines (D2), de quem salva e de quem liga. O catálogo esconder o passo
-  # não autoriza nada: a API confere aqui.
+  # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: as mesmas CHAVES da regra do funil
+  # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui.
   def sem_funil?(receita)
     return false unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
-    return false if Current.account_user.permission_granted?('crm_manage_pipelines')
+    return false if ::Autonomia::Automacao::RegraDoFunil::CHAVES.any? { |chave| Current.account_user.permission_granted?(chave) }
 
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).passos.any? do |passo|
       passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.recurso_de(passo['acao']).to_s.start_with?('crm/')

@@ -145,6 +145,18 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(Autonomia::Automacao::Definicao.find(id).ativa).to be(true)
     end
 
+    it 'lê a versão vista sempre na base 10 (🟡3 da qualidade no #2485)' do
+      controlador = Api::V1::Accounts::Autonomia::AutomacoesController.new
+      vista = lambda do |valor|
+        allow(controlador).to receive(:params).and_return(ActionController::Parameters.new(versao_id: valor))
+        controlador.send(:versao_vista, :versao_id)
+      end
+
+      expect(vista.call('012')).to eq(12)
+      expect(vista.call('0x1f')).to be_nil
+      expect(vista.call(12)).to eq(12)
+    end
+
     it 'trata versão vista que não é número como versão que mudou' do
       ligar(id, "#{versao_id_de(id)}abc")
 
@@ -323,6 +335,16 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(automacao.reload.ativa).to be(false)
+    end
+
+    it 'aceita passo de card de quem tem crm_admin sem crm_manage_pipelines (mesmas chaves da regra do funil)' do
+      funcao = create(:custom_role, account: account, permissions: %w[automation_manage crm_admin])
+      montador.account_users.find_by(account: account).update!(custom_role: funcao)
+
+      post base, params: { nome: 'x', receita: receita.merge(passos: [passo_de_card]) }, headers: montador.create_new_auth_token,
+                 as: :json
+
+      expect(response).to have_http_status(:created)
     end
   end
 end

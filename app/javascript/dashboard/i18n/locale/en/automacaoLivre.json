@@ -177,6 +177,7 @@
       "NAO_ACHOU": "This automation no longer exists or belongs to another account.",
       "PROBLEMAS": "To save, fix:",
       "NAO_SALVA": "This change is not saved yet. Complete the missing step and it becomes a new version.",
+      "LIGADA_AVISO": "This automation is on: every change takes effect right away.",
       "SAIR": {
         "TITULO": "Leave without saving?",
         "TEXTO": "What you built here is not saved yet. If you leave now, it goes away.",
