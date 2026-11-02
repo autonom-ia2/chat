@@ -108,7 +108,7 @@ const startedText = computed(() => {
       <p class="m-0 text-sm leading-6 text-n-slate-12">
         {{ t('AGENTS.AGENTE_DO_POST.SABE.MATERIAL.AVISO_AGORA') }}
       </p>
-      <MaterialDoPost :care-id="data.care_id" pode-mudar />
+      <MaterialDoPost :care-id="data.care_id" pode-mudar sem-texto />
     </section>
 
     <span

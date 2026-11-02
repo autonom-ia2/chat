@@ -29,8 +29,8 @@ RSpec.describe 'Agentes: o material só do post', type: :request do
     create(:crm_meta_ads_comment_care, account: account, target_kind: kind, target_id: target_id, network: network, inbox: inbox)
   end
 
-  def na_porta(inbox, nome)
-    agente = Autonomia::Agents::Agent.create!(account: account, name: nome, agent_type: 'custom', status: :active, enabled: true)
+  def na_porta(inbox, nome, tipo: 'custom')
+    agente = Autonomia::Agents::Agent.create!(account: account, name: nome, agent_type: tipo, status: :active, enabled: true)
     Autonomia::Agents::Operate::InboxConnector.new(agent: agente, inbox: inbox).perform(connect: true)
     agente
   end
@@ -101,6 +101,14 @@ RSpec.describe 'Agentes: o material só do post', type: :request do
     end
 
     it 'sem agente na porta: 422 no_agent, nada gravado' do
+      expect { anexar(care) }.not_to change(Autonomia::Agents::Source, :count)
+
+      expect(response.parsed_body['error']).to eq('no_agent')
+    end
+
+    it 'a Lia na porta não lê material de comentário: 422 no_agent, nada gravado' do
+      na_porta(instagram.inbox, 'Lia', tipo: Crm::MetaAds::ComentariosIa::Porta::LIA)
+
       expect { anexar(care) }.not_to change(Autonomia::Agents::Source, :count)
 
       expect(response.parsed_body['error']).to eq('no_agent')
@@ -199,6 +207,44 @@ RSpec.describe 'Agentes: o material só do post', type: :request do
 
       expect(response).to have_http_status(:created)
       expect(care.sources.sole.agent).to eq(bia)
+    end
+
+    it 'a Lia no Instagram: grava com o agente do Facebook, nunca com ela' do
+      na_porta(instagram.inbox, 'Lia', tipo: Crm::MetaAds::ComentariosIa::Porta::LIA)
+      bia = na_porta(pagina.inbox, 'Bia')
+
+      anexar(care)
+
+      expect(response).to have_http_status(:created)
+      expect(care.sources.sole.agent).to eq(bia)
+    end
+
+    it 'quem não vê a caixa de uma das redes não lista nem tira: 403 not_inbox_member' do
+      bia = na_porta(pagina.inbox, 'Bia')
+      do_anuncio = material_de(care, bia, 'Cupom.txt')
+      agente = create(:user, account: account, role: :agent)
+      create(:inbox_member, user: agente, inbox: instagram.inbox)
+      allow(Pundit).to receive(:policy!).and_call_original
+      allow(Pundit).to receive(:policy!).with(anything, Crm::MetaAdsConnection)
+                                        .and_return(instance_double(Crm::MetaAdsConnectionPolicy, show?: true, update?: true))
+
+      get "#{base}/#{care.id}/materiais", headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
+      expect(response.parsed_body).to eq('error' => 'not_inbox_member')
+      delete "#{base}/#{care.id}/materiais/#{do_anuncio.id}", headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:forbidden)
+      expect(Autonomia::Agents::Source.exists?(do_anuncio.id)).to be(true)
+    end
+
+    it 'com o detalhe desta pessoa guardado, a lista que se relê não volta à Meta' do
+      allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+
+      get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      2.times { get "#{base}/#{care.id}/materiais", headers: admin.create_new_auth_token, as: :json }
+
+      expect(response).to have_http_status(:ok)
+      expect(Crm::MetaAds::ComentariosIa::Anuncio).to have_received(:ler).once
     end
   end
 

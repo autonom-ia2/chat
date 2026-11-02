@@ -266,6 +266,7 @@ const mudar = async status => {
         </section>
 
         <p
+          v-if="agentes.length || !motivos.length"
           data-usa
           class="flex flex-wrap items-center gap-2 p-4 m-0 text-sm rounded-2xl bg-n-blue-2 ring-1 ring-inset ring-n-blue-6 text-n-slate-12"
         >

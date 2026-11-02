@@ -10,8 +10,9 @@
 # DELETE agentes_do_post/:id/materiais/:material_id → 204: sai com os trechos e o arquivo.
 #
 # As guardas são as do cartão (AgentesDoPostController): ver para a lista; a chave de mudar do alvo para anexar e tirar.
-# Anexar lê a Meta (no anúncio, a caixa de cada rede só sai de lá) para achar o agente da porta; sem agente que leia, 422
-# `no_agent`.
+# No anúncio, também ver a caixa de cada rede (403 `not_inbox_member`), como o detalhe. Anexar lê a Meta (no anúncio, a
+# caixa de cada rede só sai de lá) para achar o agente da porta; sem agente que leia, 422 `no_agent`. A Lia
+# (`insurance_quote`) e o agente de outra conta nunca leem o material: não escrevem comentário (Porta).
 class Api::V1::Accounts::AgentesDoPostMateriaisController < Api::V1::Accounts::AgentesDoPostController
   TIPOS = (Autonomia::Agents::Source::SOURCE_TYPES - ['link', Autonomia::Agents::Source::FOTO]).freeze
 
@@ -19,6 +20,7 @@ class Api::V1::Accounts::AgentesDoPostMateriaisController < Api::V1::Accounts::A
   skip_before_action :load_care, :ensure_manage, :load_alvo
   before_action :load_care
   before_action :ensure_manage, only: [:create, :destroy]
+  before_action :guardas_do_anuncio, only: [:index, :destroy]
 
   def index
     render json: { materiais: @care.sources.includes(:agent).order(:id).map { |fonte| material(fonte) } }
@@ -52,12 +54,28 @@ class Api::V1::Accounts::AgentesDoPostMateriaisController < Api::V1::Accounts::A
     fonte
   end
 
-  # O agente da primeira porta que tem agente (no anúncio nas duas redes, a ordem das redes do criativo).
+  # A caixa de cada rede do anúncio só sai da Meta. O detalhe desta pessoa guardado pelo cartão prova que as guardas do
+  # anúncio passaram (o pai só guarda depois delas, numa chave por pessoa e por cuidado); sem ele, as guardas do pai. A
+  # lista se relê a cada 5 s enquanto lê: assim não volta à Meta a cada vez.
+  def guardas_do_anuncio
+    return if @care.target_kind == 'post' || Rails.cache.exist?(chave_do_detalhe)
+
+    load_alvo
+  end
+
+  # O agente da primeira porta que pode ler (no anúncio nas duas redes, a ordem das redes do criativo).
   def agente_da_porta
     agente = @fonte.redes.each_value.lazy.filter_map do |rede|
-      Crm::MetaAds::ComentariosIa::Porta.new(care: @care, inbox: Inbox.find_by(id: rede[:inbox_id], account_id: Current.account.id)).agente
+      agente_que_le(Crm::MetaAds::ComentariosIa::Porta.new(care: @care, inbox: Inbox.find_by(id: rede[:inbox_id], account_id: Current.account.id)))
     end.first
     agente || raise(Recusa, 'no_agent')
+  end
+
+  # O agente da porta, se ele pode ler o material: da conta do cuidado e não a Lia. Parado ou em piloto, lê (volta a
+  # escrever quando a porta voltar).
+  def agente_que_le(porta)
+    agente = porta.agente
+    agente if agente && agente.account_id == @care.account_id && agente.agent_type != Crm::MetaAds::ComentariosIa::Porta::LIA
   end
 
   def tipo(arquivo)

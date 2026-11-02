@@ -27,6 +27,12 @@ const KEY = 'AGENTS.AGENTE_DO_POST.SABE';
 
 const agentes = computed(() => agentesDasPortas(props.detalhe.portas));
 const motivos = computed(() => motivosDasPortas(props.detalhe.portas, t));
+// "Criar um agente" só quando falta agente numa porta. Agente parado, em teste ou a Lia: o painel dele já está acima.
+const criarAgente = computed(
+  () =>
+    !agentes.value.length ||
+    (props.detalhe.portas || []).some(porta => porta.motivo === 'sem_porta')
+);
 // { agentId: [fontes] }, do mais novo para o mais antigo. Sem leitura, a lista fica vazia (o link continua).
 const fontes = ref({});
 onMounted(() => {
@@ -113,6 +119,8 @@ onMounted(() => {
           }}
         </p>
         <router-link
+          v-if="criarAgente"
+          data-criar-agente
           :to="{ name: 'autonomia_agents_builder' }"
           class="inline-flex items-center justify-center px-4 text-sm font-semibold rounded-xl min-h-11 w-fit bg-n-blue-11 text-white dark:text-n-slate-1 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
         >

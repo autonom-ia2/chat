@@ -52,8 +52,8 @@
     "completo": true,
     "controller": "api/v1/accounts/agentes_do_post_materiais#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:37",
-      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:38",
+      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:39",
+      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:40",
       "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
     ],
     "sem_corpo": true
@@ -8537,8 +8537,8 @@
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:27",
-      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:28",
+      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:29",
+      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:30",
       "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
     ],
     "sem_corpo": false

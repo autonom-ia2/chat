@@ -12,10 +12,11 @@ import {
 // #2487 (PR 3b do #2436) — o material só deste post ou anúncio: o dono anexa um arquivo, e o agente da porta lê só para
 // responder os comentários dele (não entra no material do agente nem no atendimento). A linha é a mesma do material do
 // agente (Lendo…, Revisando…, Pronto, Precisa de você). Enquanto alguma estiver sendo lida ou revisada, a lista se relê.
-// Quem só vê tem a lista, sem anexar nem tirar.
+// Quem só vê tem a lista, sem anexar nem tirar. `semTexto`: quem chama já explicou (o "Anexar agora" logo depois de ligar).
 const props = defineProps({
   careId: { type: Number, required: true },
   podeMudar: { type: Boolean, default: false },
+  semTexto: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -42,15 +43,16 @@ const parar = () => {
   relendo = null;
 };
 
+// Uma falha no meio da leitura não congela a linha em "Lendo…": relê do mesmo jeito, e o aviso sai quando der certo.
 const carregar = async () => {
   parar();
   try {
     const { data } = await AgentesDoPostAPI.materiais(props.careId);
     materiais.value = data.materiais;
+    erro.value = '';
   } catch {
     materiais.value = materiais.value || [];
     erro.value = t(`${KEY}.ERRO_LISTA`);
-    return;
   }
   if (andando.value) relendo = setTimeout(carregar, RELER_A_CADA_MS);
 };
@@ -90,7 +92,7 @@ onBeforeUnmount(parar);
 
 <template>
   <div data-material-do-post class="flex flex-col gap-3">
-    <p class="m-0 text-sm leading-6 text-n-slate-11">
+    <p v-if="!semTexto" class="m-0 text-sm leading-6 text-n-slate-11">
       {{ t(`${KEY}.TEXTO`) }}
     </p>
     <ul

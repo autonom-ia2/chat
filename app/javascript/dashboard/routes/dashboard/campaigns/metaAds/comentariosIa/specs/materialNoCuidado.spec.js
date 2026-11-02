@@ -2,6 +2,8 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import CuidarDono from '../CuidarDono.vue';
 import CuidarLigado from '../CuidarLigado.vue';
+import MaterialDoPost from 'dashboard/routes/dashboard/autonomia/agentes/components/doPost/MaterialDoPost.vue';
+import MaterialLinha from 'dashboard/routes/dashboard/autonomia/agentes/components/pagina/MaterialLinha.vue';
 
 // #2487 (PR 3b do #2436): o material só deste post ou anúncio na tela do cuidado. No passo 1, o anexo só aparece ao
 // editar um cuidado que já existe; no novo, a linha de "depois de ligar". Logo depois de ligar, "Anexar agora" em
@@ -69,6 +71,9 @@ describe('#2487 · o material só do post na tela do cuidado', () => {
     const wrapper = await dono(painel({ care: 'on', care_id: 9 }));
 
     expect(wrapper.find('[data-anexar]').exists()).toBe(true);
+    expect(wrapper.find('[data-ia-dono-material]').text()).toContain(
+      'MATERIAL.TEXTO'
+    );
     expect(api.materiais).toHaveBeenCalledWith(9);
   });
 
@@ -87,6 +92,8 @@ describe('#2487 · o material só do post na tela do cuidado', () => {
     expect(destaque.text()).toContain('ANEXAR_AGORA');
     expect(destaque.text()).toContain('AVISO_AGORA');
     expect(destaque.find('[data-anexar]').exists()).toBe(true);
+    // O aviso já explica: o texto do anexo não se repete logo abaixo dele.
+    expect(destaque.text()).not.toContain('MATERIAL.TEXTO');
   });
 
   it('ao abrir o cuidado ligado depois, ou para quem só vê, sem o destaque', async () => {
@@ -98,5 +105,89 @@ describe('#2487 · o material só do post na tela do cuidado', () => {
 
     expect(depois.find('[data-ia-anexar-agora]').exists()).toBe(false);
     expect(soVe.find('[data-ia-anexar-agora]').exists()).toBe(false);
+  });
+});
+
+describe('#2487 · a lista do material só do post', () => {
+  const LENDO = {
+    id: 31,
+    reference: 'Tabela.txt',
+    source_type: 'txt',
+    status: 'processing',
+    agente: 'Ana',
+    review: {},
+  };
+  const PRONTO = {
+    ...LENDO,
+    status: 'ready',
+    review: { status: 'accepted', reviewed_at: '2026-11-02T10:00:00Z' },
+  };
+  const lista = materiais => ({ data: { materiais } });
+  const material = props =>
+    montar(MaterialDoPost, { careId: 9, podeMudar: true, ...props });
+
+  beforeEach(() => {
+    Object.values(api).forEach(fn => fn.mockReset());
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  });
+  afterEach(() => {
+    montadas.splice(0).forEach(wrapper => wrapper.unmount());
+    vi.useRealTimers();
+  });
+
+  const passar = async () => {
+    vi.advanceTimersByTime(5000);
+    await flushPromises();
+  };
+
+  it('relê enquanto lê e para quando fica pronto', async () => {
+    api.materiais
+      .mockResolvedValueOnce(lista([LENDO]))
+      .mockResolvedValue(lista([PRONTO]));
+    await material();
+
+    await passar();
+    await passar();
+
+    expect(api.materiais).toHaveBeenCalledTimes(2);
+  });
+
+  it('uma falha no meio da leitura não congela a linha, e o aviso sai quando dá certo', async () => {
+    api.materiais
+      .mockResolvedValueOnce(lista([LENDO]))
+      .mockRejectedValueOnce(new Error('rede'))
+      .mockResolvedValue(lista([PRONTO]));
+    const wrapper = await material();
+
+    await passar();
+    expect(wrapper.find('[data-material-erro]').text()).toContain('ERRO_LISTA');
+    await passar();
+
+    expect(api.materiais).toHaveBeenCalledTimes(3);
+    expect(wrapper.find('[data-material-erro]').exists()).toBe(false);
+  });
+
+  it('ao sair da tela, para de reler', async () => {
+    api.materiais.mockResolvedValue(lista([LENDO]));
+    const wrapper = await material();
+
+    wrapper.unmount();
+    montadas.splice(montadas.indexOf(wrapper), 1);
+    await passar();
+
+    expect(api.materiais).toHaveBeenCalledTimes(1);
+  });
+
+  it('tirar que falha avisa e mantém a linha', async () => {
+    api.materiais.mockResolvedValue(lista([PRONTO]));
+    api.tirar.mockRejectedValue(new Error('rede'));
+    const wrapper = await material();
+
+    wrapper.findComponent(MaterialLinha).vm.$emit('tirar', PRONTO);
+    await flushPromises();
+
+    expect(api.tirar).toHaveBeenCalledWith(9, 31);
+    expect(wrapper.find('[data-material-erro]').text()).toContain('ERRO_TIRAR');
+    expect(wrapper.findAllComponents(MaterialLinha)).toHaveLength(1);
   });
 });

@@ -218,6 +218,18 @@ describe('#2469 · os comentários do post em Agentes', () => {
       );
     });
 
+    it('#2487 · o motivo da conta inteira sai uma vez só, no anúncio nas duas redes', () => {
+      const t = chave => chave;
+      const semChave = { motivo: 'sem_chave' };
+
+      expect(
+        motivosDasPortas(
+          [porta('instagram', ANA, semChave), porta('facebook', BIA, semChave)],
+          t
+        )
+      ).toEqual(['AGENTS.AGENTE_DO_POST.MOTIVO_DA_PORTA.sem_chave']);
+    });
+
     it('#2487 · o motivo leva a rede e o nome da caixa', () => {
       const t = (chave, params) =>
         params ? `${chave}|${params.rede}|${params.caixa}` : chave;
@@ -577,6 +589,13 @@ describe('#2469 · os comentários do post em Agentes', () => {
         expect(noBody('[data-anexar]')).toBeNull();
       });
 
+      it('sem agente e com motivo: a página não mostra a faixa "Usa o que … sabe" vazia', async () => {
+        await pagina(detalhe({ portas: [porta('instagram', null)] }));
+
+        expect(noBody('[data-motivos-das-portas]')).not.toBeNull();
+        expect(noBody('[data-usa]')).toBeNull();
+      });
+
       it('agente parado na porta: a página diz o motivo de verdade', async () => {
         await pagina(
           detalhe({
@@ -612,11 +631,26 @@ describe('#2469 · os comentários do post em Agentes', () => {
       });
     });
 
+    it('O que sabe com agente parado na porta: o motivo, sem "Criar um agente"', async () => {
+      rota.query = { gaveta: 'sabe' };
+      await pagina(
+        detalhe({
+          portas: [porta('instagram', ANA, { motivo: 'porta_parada' })],
+        })
+      );
+
+      expect(noBody('[data-motivo-da-porta]').textContent).toContain(
+        'MOTIVO_DA_PORTA.porta_parada'
+      );
+      expect(noBody('[data-criar-agente]')).toBeNull();
+    });
+
     it('O que sabe sem agente na porta: as frases fixas e o caminho para criar um', async () => {
       rota.query = { gaveta: 'sabe' };
       await pagina(detalhe({ portas: [porta('instagram', null)] }));
 
       expect(noBody('[data-sem-porta]')).not.toBeNull();
+      expect(noBody('[data-criar-agente]')).not.toBeNull();
       expect(noBody('[data-motivo-da-porta]').textContent).toContain(
         'MOTIVO_DA_PORTA.sem_porta'
       );
