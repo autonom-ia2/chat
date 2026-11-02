@@ -33,26 +33,39 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
     end
   end
 
+  # A versão que a pessoa viu na tela já não é a ativa: outra pessoa salvou no meio. A tela (F5) responde 409 e mostra
+  # a versão nova antes de deixar ligar ou salvar.
+  class VersaoMudou < StandardError; end
+
   # "Assumir e religar" (F3.7): a automação passa a agir como `usuario`, se ele pode. Nunca liga em nome de quem não
   # pode: devolve o motivo e não muda nada. `usuario` é sempre quem está pedindo (o usuário logado): a tela não escolhe
   # outra pessoa, senão alguém com a chave poria o administrador como quem ligou.
-  def assumir_e_religar!(usuario)
-    self.ligada_por = usuario
-    motivo = ::Autonomia::Automacao::Acesso.new(self).motivo
-    if motivo
-      restore_attributes([:ligada_por_id])
-      return motivo
-    end
+  #
+  # `versao_id` é a versão que a pessoa viu. Se outra pessoa salvou depois, levanta VersaoMudou: senão A ligaria, com
+  # os direitos dela, os passos que B montou e A nunca viu (parecer do Funções, #2462). A receita é conferida de novo
+  # na hora de ligar: a lista de ações, o atributo ou a etapa podem ter mudado depois que ela foi salva.
+  def assumir_e_religar!(usuario, versao_id:)
+    with_lock do
+      raise VersaoMudou if versao_ativa_id != versao_id
 
-    update!(ativa: true)
-    nil
+      motivo = motivo_para_nao_ligar(usuario)
+      next motivo if motivo
+
+      update!(ligada_por: usuario, ativa: true)
+      nil
+    end
   end
 
   # A automação roda com os direitos de quem a ligou (D1). Se outra pessoa salva uma versão nova, a automação pausa até
   # alguém assumir e religar: senão quem tem menos direitos faria passos com os direitos de quem ligou (parecer do
   # Funções, #2462).
-  def salvar_versao!(receita:, autor: nil)
+  #
+  # `base` é a versão sobre a qual a pessoa editou (nil na primeira). Com ela, quem salva por cima de uma versão que
+  # não viu recebe VersaoMudou, em vez de o último a salvar ganhar em silêncio. Sem `base:`, salva sobre a atual.
+  def salvar_versao!(receita:, autor: nil, base: :atual)
     with_lock do
+      raise VersaoMudou if base != :atual && versao_ativa_id != base
+
       versao = versoes.create!(account: account, numero: versoes.maximum(:numero).to_i + 1, receita: receita, autor: autor)
       update!(versao_ativa: versao, ativa: ativa && autor.present? && autor.id == ligada_por_id)
       versao
@@ -60,6 +73,20 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   end
 
   private
+
+  def motivo_para_nao_ligar(usuario)
+    return 'sem_versao' unless versao_ativa
+    return 'receita_com_problema' unless receita_executavel?
+
+    self.ligada_por = usuario
+    ::Autonomia::Automacao::Acesso.new(self).motivo.tap { |motivo| restore_attributes([:ligada_por_id]) if motivo }
+  end
+
+  def receita_executavel?
+    receita = versao_ativa.receita
+    ::Autonomia::Automacao::Receita.esquema_valido?(receita) &&
+      ::Autonomia::Automacao::Receita.new(receita, conta: account).problemas.empty?
+  end
 
   def versao_ativa_desta_automacao
     errors.add(:versao_ativa, :invalid) if versao_ativa && (versao_ativa.automacao_id != id || versao_ativa.account_id != account_id)

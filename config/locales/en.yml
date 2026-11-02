@@ -525,7 +525,9 @@ en:
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
         quem_ligou_sem_permissao: 'The person who turned on the automation can no longer manage automations. Take over and turn it back on.'
+        receita_com_problema: 'This version no longer runs as it was saved. Fix it and save again before turning it on.'
         sem_quem_ligou: 'Nobody turned this automation on. Take over and turn it back on.'
+        sem_versao: 'This automation has no saved steps yet.'
         spam: 'The conversation is in Spam.'
         travada: 'This step stopped in the middle and will not run again.'
       receita:

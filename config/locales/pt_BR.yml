@@ -1014,7 +1014,9 @@ pt_BR:
         quem_ligou_saiu_da_conta: 'Quem ligou a automação saiu da conta. Assuma e religue.'
         quem_ligou_sem_acesso: 'Quem ligou a automação não tem mais acesso aqui. Assuma e religue.'
         quem_ligou_sem_permissao: 'Quem ligou a automação não pode mais gerenciar automações. Assuma e religue.'
+        receita_com_problema: 'A receita desta versão não roda mais do jeito que foi salva. Corrija e salve de novo antes de ligar.'
         sem_quem_ligou: 'Ninguém ligou esta automação. Assuma e religue.'
+        sem_versao: 'Esta automação ainda não tem passos salvos.'
         spam: 'A conversa está no Spam.'
         travada: 'Este passo parou no meio e não vai rodar de novo.'
       receita:

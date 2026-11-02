@@ -342,7 +342,7 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(definicao.reload.ativa).to be(false)
       expect(conversa.reload.priority).to be_nil
 
-      expect(definicao.assumir_e_religar!(admin)).to be_nil
+      expect(definicao.assumir_e_religar!(admin, versao_id: definicao.versao_ativa_id)).to be_nil
       expect([definicao.reload.ativa, definicao.ligada_por]).to eq([true, admin])
     end
 
@@ -374,7 +374,7 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       sem_chave = create(:user, account: account, role: :agent)
       definicao.update!(ativa: false)
 
-      expect(definicao.assumir_e_religar!(sem_chave)).to eq('quem_ligou_sem_permissao')
+      expect(definicao.assumir_e_religar!(sem_chave, versao_id: definicao.versao_ativa_id)).to eq('quem_ligou_sem_permissao')
       expect([definicao.reload.ativa, definicao.ligada_por]).to eq([false, agente])
     end
 
