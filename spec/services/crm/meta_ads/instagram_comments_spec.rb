@@ -469,6 +469,64 @@ RSpec.describe Crm::MetaAds::InstagramComments do
         expect(a_request(:post, %r{/messages})).not_to have_been_made
       end
 
+      describe 'resposta a comentário, com a flag meta_ads_comentarios_ia (#2454)' do
+        let(:mensagens) { "#{ig}/#{ig_id}/messages" }
+
+        before do
+          account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+          stub_comment('c9', parent_id: 'c1')
+        end
+
+        def recusa(corpo)
+          stub_request(:post, mensagens).with(query: hash_including({})).to_return(status: 400, headers: json, body: { error: corpo }.to_json)
+        end
+
+        it 'não recusa antes da Meta; aceito, a linha guarda o id da mensagem' do
+          service.private_reply!(ad_id, 'c9', 'Oi!', user: user)
+
+          expect(a_request(:post, mensagens).with(query: hash_including({}))).to have_been_made
+          expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c9', action: 'private_reply'))
+            .to have_attributes(confirmed_at: be_present, meta_message_id: 'mid.1', meta_error_code: nil)
+        end
+
+        it 'recusado pela Meta: o código e o subcódigo no erro e na linha private_reply_failed, nunca a mensagem' do
+          recusa({ code: 100, error_subcode: 2_534_023, message: 'Texto de terceiro' })
+
+          expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }.to raise_error(described_class::Error) { |e|
+            expect(e).to have_attributes(code: 'meta_refused', meta_code: 100, meta_subcode: 2_534_023, meta_http: 400)
+          }
+          expect(Crm::MetaAdsCommentAction.where(comment_id: 'c9', action: 'private_reply')).to be_empty
+          expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c9', action: 'private_reply_failed'))
+            .to have_attributes(actor: 'user', user_id: user.id, ad_id: ad_id, meta_error_code: 100, meta_error_subcode: 2_534_023,
+                                meta_message_id: nil)
+        end
+
+        it 'recusa 4xx sem código da Meta: a linha sai, e nenhuma linha de recusa é gravada' do
+          stub_request(:post, mensagens).with(query: hash_including({})).to_return(status: 400, headers: json, body: 'recusado')
+
+          expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }.to raise_error(described_class::Error)
+          expect(Crm::MetaAdsCommentAction.where(comment_id: 'c9')).to be_empty
+        end
+
+        it 'falha passageira segue a regra de hoje: sem confirmação, travada, e sem linha de recusa' do
+          stub_request(:post, mensagens).with(query: hash_including({})).to_timeout
+
+          expect { service.private_reply!(ad_id, 'c9', 'Oi!', user: user) }.to raise_error(described_class::Error)
+          expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c9', action: 'private_reply')).to have_attributes(failed_at: be_present)
+          expect(Crm::MetaAdsCommentAction.where(action: 'private_reply_failed')).to be_empty
+        end
+
+        it 'o comentário de primeiro nível fica como antes: sem id da mensagem nem linha de recusa' do
+          service.private_reply!(ad_id, 'c1', 'Oi!', user: user)
+          expect(Crm::MetaAdsCommentAction.find_by(comment_id: 'c1').meta_message_id).to be_nil
+
+          Crm::MetaAdsCommentAction.delete_all
+          recusa({ code: 10 })
+          expect { service.private_reply!(ad_id, 'c1', 'Oi!', user: user) }.to raise_error(described_class::Error)
+          expect(Crm::MetaAdsCommentAction.count).to eq(0)
+        end
+      end
+
       it 'depois de a Meta aceitar, erro ao abrir a conversa não vira falha' do
         allow(ConversationBuilder).to receive(:new).and_raise(ActiveRecord::RecordInvalid)
         tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)

@@ -998,6 +998,18 @@ pt_BR:
         sent: 'E-mail de confirmação enviado.'
         already_confirmed: 'O usuário já está confirmado.'
   autonomia:
+    automacao:
+      receita:
+        id_repetido: 'Passo %{passo}: o id já é de outro passo.'
+        atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
+        acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
+        caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
+        valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
+        corpo: 'Passo %{passo}: %{problema}'
+        exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
+        fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
+        proibido: 'Passo %{passo}: a automação não muda %{campo}.'
+        valor_no_corpo: 'Passo %{passo}: o corpo da ação ainda não aceita variável.'
     automacoes:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'

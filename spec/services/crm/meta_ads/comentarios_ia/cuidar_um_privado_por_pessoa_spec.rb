@@ -5,7 +5,9 @@ require 'rails_helper'
 RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   let(:account) { create(:account) }
   let(:inbox) { create(:inbox, account: account) }
-  let(:rede) { instance_double(Crm::MetaAds::ComentariosIa::Rede::Instagram, responder: true, privado_disponivel?: true) }
+  let(:rede) do
+    instance_double(Crm::MetaAds::ComentariosIa::Rede::Instagram, responder: true, privado_disponivel?: true, legenda: nil, ler_pai: nil)
+  end
   let(:avaliacao) { Crm::MetaAds::ComentariosIa::Classificador::Avaliacao.new(chave: 'private', escolha: 'private', certeza: 0.91) }
   let(:classificador) { instance_double(Crm::MetaAds::ComentariosIa::Classificador, avaliar!: avaliacao) }
   let(:conversa) { class_double(Crm::MetaAds::ComentariosIa::Conversa, anotar!: nil) }

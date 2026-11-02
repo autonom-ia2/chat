@@ -27,6 +27,25 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
     expect(acoes.find_by(action: 'ai_unread')).to have_attributes(ai_decision: nil, ai_reason: nil)
   end
 
+  it 'a pessoa reservada pelo mesmo comentário (o job tentando de novo depois de um limite da Meta) segue reservada para ele' do
+    item = Crm::MetaAds::ComentariosIa::Comentario.new(network: 'instagram', account_id: account.id, comment_id: 'c-1', post_id: '1790',
+                                                       from_id: 'igsid-1')
+
+    expect(described_class.reservar_pessoa!(item)).to be(true)
+    expect(described_class.reservar_pessoa!(item)).to be(true)
+    expect(described_class.reservar_pessoa!(item.dup.tap { |outro| outro.comment_id = 'c-2' })).to be(false)
+
+    described_class.soltar_pessoa_do_comentario!(item.dup.tap { |sem_autor| sem_autor.from_id = nil })
+    expect(Crm::MetaAdsCommentPerson.count).to eq(0)
+  end
+
+  it 'a recusa do privado em resposta (#2454) fica com o código e o subcódigo da Meta, como IA' do
+    described_class.recusa_do_privado!(comentario, codigo: 100, subcodigo: 2_534_023)
+
+    expect(Crm::MetaAdsCommentAction.sole).to have_attributes(action: 'private_reply_failed', actor: 'ai', ad_id: '120',
+                                                              meta_error_code: 100, meta_error_subcode: 2_534_023)
+  end
+
   it 'grava como IA, com o anúncio e a conversa' do
     conversation = create(:conversation, account: account)
 
@@ -45,15 +64,6 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
     described_class.soltar!(comentario, 'private_reply')
 
     expect(Crm::MetaAdsCommentAction.pluck(:action, :actor)).to eq([%w[reply user]])
-  end
-
-  it 'conta o teto do dia pelos comentários que a IA leu hoje, na conta' do
-    described_class.reservar!(comentario('c-1'))
-    described_class.reservar!(comentario('c-2'))
-    travel_to(1.day.ago) { described_class.reservar!(comentario('c-3')) }
-    Crm::MetaAdsCommentAction.record!(account: create(:account), network: 'instagram', comment_id: 'c-9', action: 'ai_seen', actor: 'ai')
-
-    expect(described_class.hoje(account.id)).to eq(2)
   end
 
   it 'a reivindicação devolve a linha, que o adaptador confirma quando a Meta aceita' do

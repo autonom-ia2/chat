@@ -6,6 +6,7 @@ json.slug tool.slug
 json.description tool.description
 json.enabled tool.enabled
 json.http_method tool.http_method
+json.timeout_seconds tool.timeout_seconds
 json.endpoint_url tool.endpoint_url
 json.headers_config tool.masked_headers_config
 json.request_body_template tool.request_body_template

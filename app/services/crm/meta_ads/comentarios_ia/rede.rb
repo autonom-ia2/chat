@@ -14,8 +14,13 @@
 # `{ text:, from_name:, from_id: }`, ou nil quando a Meta diz que não dá para ler (comentário apagado, sem permissão, Página de
 # outra conta): esse não volta. Meta fora do ar levanta Indisponivel, e o CuidarJob tenta de novo, com teto.
 # E `legenda` (#2424): o texto do post, para a IA saber do que o comentário fala; nil quando não dá para ler.
+# E `ler_pai` (#2454): o texto do comentário que uma resposta responde, lido na Meta pelo id, como o `ler`; nil no
+# comentário de primeiro nível ou quando não dá para ler o de cima.
+# E `imagens` (#2454): os endereços das imagens do post, para a leitura da foto (Foto); [] quando não dá para ler.
 module Crm::MetaAds::ComentariosIa::Rede
-  Envio = Struct.new(:ok, :recipient_id, :message_id, :conversation, :erro, :talvez_entregue, keyword_init: true)
+  # `codigo`, `subcodigo` e `http`: os da Meta na recusa (#2454), para decidir e gravar sem ler a mensagem dela.
+  Envio = Struct.new(:ok, :recipient_id, :message_id, :conversation, :erro, :talvez_entregue, :codigo, :subcodigo, :http,
+                     keyword_init: true)
   # O privado já tinha saído (pela pessoa, na tela do #2196, ou por outro job): nada a fazer, nem falha a mostrar.
   JA_FEITO = 'private_reply_done'.freeze
   # A Meta não respondeu à leitura do comentário (rede, 5xx, limite).

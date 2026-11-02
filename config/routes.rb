@@ -208,6 +208,8 @@ Rails.application.routes.draw do
           put 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#update'
           post 'seus_posts/posts/:post_id/cuidado/previa', to: 'seus_posts_cuidado#previa'
           post 'seus_posts/posts/:post_id/cuidado/rascunho', to: 'seus_posts_cuidado#rascunho'
+          post 'seus_posts/posts/:post_id/cuidado/foto', to: 'seus_posts_cuidado#foto'
+          put 'seus_posts/posts/:post_id/cuidado/foto', to: 'seus_posts_cuidado#corrigir_foto'
           post 'seus_posts/posts/:post_id/cuidado/ler_antigos', to: 'seus_posts_cuidado#ler_antigos'
           get 'seus_posts/posts/:post_id/resumo', to: 'seus_posts_cuidado#resumo'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
@@ -469,6 +471,8 @@ Rails.application.routes.draw do
               put 'ads/:ad_id/cuidado', to: 'meta_ads_cuidado#update'
               post 'ads/:ad_id/cuidado/previa', to: 'meta_ads_cuidado#previa'
               post 'ads/:ad_id/cuidado/ler_antigos', to: 'meta_ads_cuidado#ler_antigos'
+              post 'ads/:ad_id/cuidado/foto', to: 'meta_ads_cuidado#foto'
+              put 'ads/:ad_id/cuidado/foto', to: 'meta_ads_cuidado#corrigir_foto'
               get 'ads/:ad_id/resumo', to: 'meta_ads_cuidado#resumo'
             end
             # Formulários dos anúncios (#2195): Páginas, formulários e para onde vai quem preenche.
@@ -959,6 +963,7 @@ Rails.application.routes.draw do
               resources :conversations, only: [:index]
               resources :contact_inboxes, only: [:create]
               resources :labels, only: [:create, :index]
+              patch 'labels/alterar', to: 'alterar_etiquetas#update', as: :alterar_etiquetas # fork chat#2461: pôr/tirar uma a uma
               resources :notes
               resource :opt_out, only: [:create, :destroy]
               resource :customer, only: [:create, :destroy]

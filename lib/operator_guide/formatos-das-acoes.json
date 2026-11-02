@@ -84,8 +84,8 @@
     "controller": "api/v1/accounts/automation_rules#destroy",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:44",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:47",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101"
     ],
     "sem_corpo": true
   },
@@ -113,9 +113,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/tools#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:29",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:57"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:33",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
     ],
     "sem_corpo": true
   },
@@ -3460,13 +3460,14 @@
     "controller": "api/v1/accounts/automation_rules#update",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:28",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:75",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:35",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:34",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:29",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:84"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:31",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:78",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:38",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:37",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:32",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
     ],
     "sem_corpo": false
   },
@@ -3540,6 +3541,12 @@
         "padrao_do_texto": "\\A[a-zA-Z][a-zA-Z0-9_]{0,63}\\z",
         "tipo": "string",
         "unico": true
+      },
+      "timeout_seconds": {
+        "maior_que": 0,
+        "max": 2147483647,
+        "padrao": 30,
+        "tipo": "inteiro"
       }
     },
     "completo": true,
@@ -3548,10 +3555,10 @@
     "envelope": "tool",
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:65",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:57"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -4712,6 +4719,24 @@
     ],
     "sem_corpo": false
   },
+  "PATCH contacts/:contact_id/labels/alterar": {
+    "campos": {
+      "por": {
+        "tipo": "lista"
+      },
+      "tirar": {
+        "tipo": "lista"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/contacts/alterar_etiquetas#update",
+    "origem": [
+      "app/controllers/concerns/alterar_etiquetas_concern.rb:17",
+      "app/controllers/concerns/alterar_etiquetas_concern.rb:70",
+      "app/controllers/api/v1/accounts/contacts/base_controller.rb:7"
+    ],
+    "sem_corpo": false
+  },
   "PATCH contacts/:contact_id/notes/:id": {
     "campos": {
       "content": {
@@ -4847,8 +4872,8 @@
     "completo": true,
     "controller": "api/v1/accounts/conversations/alterar_etiquetas#update",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:15",
-      "app/controllers/api/v1/accounts/conversations/alterar_etiquetas_controller.rb:68",
+      "app/controllers/concerns/alterar_etiquetas_concern.rb:17",
+      "app/controllers/concerns/alterar_etiquetas_concern.rb:70",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -6346,14 +6371,20 @@
   },
   "PATCH crm/stages/:id": {
     "campos": {
-      "category": {},
+      "category": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "color": {
         "tipo": "string"
       },
       "description": {
         "tipo": "string"
       },
-      "funnel_stage_type": {},
+      "funnel_stage_type": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "is_lost_stage": {
         "padrao": false,
         "tipo": "booleano"
@@ -6389,14 +6420,11 @@
         "tipo": "inteiro"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/stages#update",
     "corpo_plano": true,
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
-    "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:33",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
@@ -10698,11 +10726,12 @@
     "controller": "api/v1/accounts/automation_rules#create",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:14",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:75",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:20",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:15",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:84"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:17",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:78",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:23",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:18",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
     ],
     "sem_corpo": false
   },
@@ -10716,9 +10745,10 @@
     "controller": "api/v1/accounts/automation_rules#clone",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:49",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:50",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:52",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:53",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101",
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:20"
     ],
     "sem_corpo": false
   },
@@ -10730,9 +10760,9 @@
     "controller": "api/v1/accounts/automation_rules#ensaio",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:60",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:64",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:63",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:67",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101"
     ],
     "sem_corpo": false
   },
@@ -11064,16 +11094,17 @@
       "response_mapping": {
         "tipo": "objeto_livre"
       },
-      "slug": {}
+      "slug": {},
+      "timeout_seconds": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/autonomia/agents/tools#create",
     "corpo_plano": true,
     "envelope": "tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:12",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:65",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:16",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59"
     ],
     "sem_corpo": false
   },
@@ -11087,10 +11118,10 @@
       "leitura crua sem tipo: params"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:88",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:57"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:97",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -15833,17 +15864,31 @@
     ],
     "sem_corpo": false
   },
+  "POST crm/meta_ads_connection/ads/:ad_id/cuidado/foto": {
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#foto",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:81",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
+    ],
+    "sem_corpo": true
+  },
   "POST crm/meta_ads_connection/ads/:ad_id/cuidado/ler_antigos": {
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:77",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:95",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": true
   },
   "POST crm/meta_ads_connection/ads/:ad_id/cuidado/previa": {
     "campos": {
+      "assunto_proibido": {
+        "max_caracteres": 300,
+        "tipo": "string"
+      },
+      "correction": {},
       "message": {
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
@@ -15862,15 +15907,24 @@
           "on",
           "paused"
         ]
+      },
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {
+        "max_caracteres": 300,
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#previa",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:66",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:141",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:69",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:159",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:186",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:183",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -16305,14 +16359,20 @@
   },
   "POST crm/pipelines/:pipeline_id/stages": {
     "campos": {
-      "category": {},
+      "category": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "color": {
         "tipo": "string"
       },
       "description": {
         "tipo": "string"
       },
-      "funnel_stage_type": {},
+      "funnel_stage_type": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "is_lost_stage": {
         "padrao": false,
         "tipo": "booleano"
@@ -16338,7 +16398,10 @@
       "sla_warning_seconds": {
         "tipo": "inteiro"
       },
-      "template_position": {},
+      "template_position": {
+        "tipo": "inteiro",
+        "tipo_pela_leitura": "uso"
+      },
       "win_probability": {
         "max": 100,
         "min": 0,
@@ -16349,23 +16412,19 @@
         "tipo": "inteiro"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/stages#create",
     "corpo_plano": true,
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
-    "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:18",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:140",
+      "app/controllers/api/v1/accounts/crm/stages_controller.rb:149",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:126",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:123",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:112",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:109",
-      "app/controllers/api/v1/accounts/crm/stages_controller.rb:151",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:62"
     ],
     "sem_corpo": false
@@ -19822,6 +19881,28 @@
     ],
     "sem_corpo": false
   },
+  "POST seus_posts/posts/:post_id/cuidado/foto": {
+    "campos": {
+      "comment_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      }
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_cuidado#foto",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:94",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
   "POST seus_posts/posts/:post_id/cuidado/ler_antigos": {
     "campos": {
       "comment_id": {
@@ -19836,7 +19917,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:87",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:108",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -19846,10 +19927,15 @@
   },
   "POST seus_posts/posts/:post_id/cuidado/previa": {
     "campos": {
+      "assunto_proibido": {
+        "max_caracteres": 300,
+        "tipo": "string"
+      },
       "comment_id": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
       },
+      "correction": {},
       "message": {
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
@@ -19872,14 +19958,23 @@
           "on",
           "paused"
         ]
+      },
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {
+        "max_caracteres": 300,
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#previa",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:68",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:74",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:170",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:167",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -19901,7 +19996,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#rascunho",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:79",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:86",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -22709,13 +22804,14 @@
     "controller": "api/v1/accounts/automation_rules#update",
     "modelo": "AutomationRule",
     "origem": [
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:28",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:75",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:35",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:34",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:29",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:98",
-      "app/controllers/api/v1/accounts/automation_rules_controller.rb:84"
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:31",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:78",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:38",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:37",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:32",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:101",
+      "app/controllers/api/v1/accounts/automation_rules_controller.rb:87",
+      "app/controllers/api/v1/accounts/concerns/automation_external_action_guard.rb:15"
     ],
     "sem_corpo": false
   },
@@ -22835,6 +22931,12 @@
         "padrao_do_texto": "\\A[a-zA-Z][a-zA-Z0-9_]{0,63}\\z",
         "tipo": "string",
         "unico": true
+      },
+      "timeout_seconds": {
+        "maior_que": 0,
+        "max": 2147483647,
+        "padrao": 30,
+        "tipo": "inteiro"
       }
     },
     "completo": true,
@@ -22843,10 +22945,10 @@
     "envelope": "tool",
     "modelo": "Autonomia::Agents::Tool",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:65",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:53",
-      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:57"
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:71",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:59",
+      "app/controllers/api/v1/accounts/autonomia/agents/tools_controller.rb:63"
     ],
     "sem_corpo": false
   },
@@ -24760,19 +24862,56 @@
   },
   "PUT crm/meta_ads_connection/ads/:ad_id/cuidado": {
     "campos": {
+      "assunto_proibido": {},
+      "correction": {},
       "message": {},
       "para_quem": {},
       "phrases": {
         "tipo": "lista"
       },
-      "status": {}
+      "status": {},
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {}
     },
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_cuidado#update",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:59",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:141",
-      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:109"
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:62",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:159",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:186",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:183",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
+    ],
+    "sem_corpo": false
+  },
+  "PUT crm/meta_ads_connection/ads/:ad_id/cuidado/foto": {
+    "campos": {
+      "assunto_proibido": {},
+      "correction": {
+        "max_caracteres": 1000,
+        "tipo": "string"
+      },
+      "message": {},
+      "para_quem": {},
+      "phrases": {
+        "tipo": "lista"
+      },
+      "status": {},
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_cuidado#corrigir_foto",
+    "modelo": "Crm::MetaAdsPostReading",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:86",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:159",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:87",
+      "app/controllers/api/v1/accounts/crm/meta_ads_cuidado_controller.rb:127"
     ],
     "sem_corpo": false
   },
@@ -25546,14 +25685,20 @@
   },
   "PUT crm/stages/:id": {
     "campos": {
-      "category": {},
+      "category": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "color": {
         "tipo": "string"
       },
       "description": {
         "tipo": "string"
       },
-      "funnel_stage_type": {},
+      "funnel_stage_type": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "is_lost_stage": {
         "padrao": false,
         "tipo": "booleano"
@@ -25589,14 +25734,11 @@
         "tipo": "inteiro"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/stages#update",
     "corpo_plano": true,
     "envelope": "stage",
     "modelo": "Crm::PipelineStage",
-    "motivos": [
-      "leitura crua sem tipo: category, funnel_stage_type"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:33",
       "app/controllers/api/v1/accounts/crm/stages_controller.rb:85",
@@ -27281,6 +27423,11 @@
   },
   "PUT seus_posts/cuidados": {
     "campos": {
+      "assunto_proibido": {
+        "max_caracteres": 300,
+        "tipo": "string"
+      },
+      "correction": {},
       "message": {
         "nao_pode_ficar_vazio": true,
         "tipo": "string"
@@ -27303,23 +27450,72 @@
           "on",
           "paused"
         ]
+      },
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {
+        "max_caracteres": 300,
+        "tipo": "string"
       }
     },
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#mudar_todos",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:42",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:51",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
     ],
     "sem_corpo": false
   },
   "PUT seus_posts/posts/:post_id/cuidado": {
     "campos": {
+      "assunto_proibido": {},
       "comment_id": {
         "tipo": "string",
         "tipo_pela_leitura": "uso"
+      },
+      "correction": {},
+      "message": {},
+      "para_quem": {},
+      "perfil": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "phrases": {
+        "tipo": "lista"
+      },
+      "status": {},
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/seus_posts_cuidado#update",
+    "origem": [
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:67",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:170",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:167",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
+    ],
+    "sem_corpo": false
+  },
+  "PUT seus_posts/posts/:post_id/cuidado/foto": {
+    "campos": {
+      "assunto_proibido": {},
+      "comment_id": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
+      "correction": {
+        "max_caracteres": 1000,
+        "tipo": "string"
       },
       "message": {},
       "para_quem": {},
@@ -27330,14 +27526,20 @@
       "phrases": {
         "tipo": "lista"
       },
-      "status": {}
+      "status": {},
+      "temas": {
+        "tipo": "lista"
+      },
+      "tom": {}
     },
     "completo": true,
-    "controller": "api/v1/accounts/seus_posts_cuidado#update",
+    "controller": "api/v1/accounts/seus_posts_cuidado#corrigir_foto",
+    "modelo": "Crm::MetaAdsPostReading",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:61",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:122",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:99",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:143",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:100",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"

@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 684 |
-| Sem corpo | 199 |
-| Com corpo | 485 |
-| Com corpo e formato completo | 400 (82,5%) |
-| Com corpo e formato incompleto | 85 |
+| No catálogo | 689 |
+| Sem corpo | 200 |
+| Com corpo | 489 |
+| Com corpo e formato completo | 407 (83,2%) |
+| Com corpo e formato incompleto | 82 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 199 de 293 |
+| Leituras cruas tipadas | 208 de 297 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 71 |
+| leitura crua sem tipo | 68 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -39,7 +39,6 @@ Uma ação pode ter mais de um motivo.
 - `PATCH crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id` — leitura crua sem tipo: hidden (repassada a comments.hide!)
 - `PATCH crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PATCH crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
-- `PATCH crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
 - `PATCH ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PATCH portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PATCH relationships/:entity/:id/values` — leitura crua sem tipo: field
@@ -84,7 +83,6 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply` — leitura crua sem tipo: content (repassada a comments.reply!)
 - `POST crm/meta_ads_connection/media` — leitura crua sem tipo: file
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
-- `POST crm/pipelines/:pipeline_id/stages` — leitura crua sem tipo: category, funnel_stage_type, template_position (repassada a Crm::PipelineStages::TemplateVariant.category_for)
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
 - `POST data_imports` — params inteiro repassado a DataImportSkipLogFinder.new
 - `POST data_imports/:id/abandon` — params inteiro repassado a DataImportSkipLogFinder.new
@@ -114,7 +112,6 @@ Uma ação pode ter mais de um motivo.
 - `POST whatsapp_calls/initiate` — leitura crua sem tipo: sdp_offer (repassada a provider_service.initiate_call)
 - `PUT crm/pipelines/:id` — leitura crua sem tipo: goal, google_sync, meta_sync, outcome_labels
 - `PUT crm/pipelines/:pipeline_id/ai_settings` — aceita qualquer campo (permit! em app/controllers/api/v1/accounts/crm/ai_settings_controller.rb:59)
-- `PUT crm/stages/:id` — leitura crua sem tipo: category, funnel_stage_type
 - `PUT ctwa_tracked_links/:id` — leitura crua sem tipo: ctwa_tracked_link
 - `PUT portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PUT relationships/configuration` — leitura crua sem tipo: configuration
@@ -185,11 +182,6 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/pipelines#update` google_sync — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` meta_sync — o código não converte nem compara o valor
 - `api/v1/accounts/crm/pipelines#update` outcome_labels — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#create` category — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#create` funnel_stage_type — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#create` template_position — repassada a Crm::PipelineStages::TemplateVariant.category_for
-- `api/v1/accounts/crm/stages#update` category — o código não converte nem compara o valor
-- `api/v1/accounts/crm/stages#update` funnel_stage_type — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#create` ctwa_tracked_link — o código não converte nem compara o valor
 - `api/v1/accounts/ctwa_tracked_links#update` ctwa_tracked_link — o código não converte nem compara o valor
 - `api/v1/accounts/email_campaigns/ai#generate` brand_mode — repassada a modes.include?

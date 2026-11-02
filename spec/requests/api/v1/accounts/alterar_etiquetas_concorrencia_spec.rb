@@ -1,10 +1,10 @@
 require 'rails_helper'
 require 'timeout'
 
-# #2202 (PR 3) — duas chamadas ao mesmo tempo, em conexões separadas, na mesma conversa. A primeira para depois de
-# ler a lista, dentro do lock; a segunda tem de esperar o lock e ler a lista já com a etiqueta da primeira. Sem o lock,
-# a segunda leria a lista velha e a última gravação apagaria a etiqueta da outra.
-RSpec.describe 'Pôr etiquetas ao mesmo tempo na mesma conversa', :relationships_committed_fixtures, type: :request do
+# #2202 (PR 3) e #2461 — duas chamadas ao mesmo tempo, em conexões separadas, na mesma conversa ou no mesmo contato.
+# A primeira para depois de ler a lista, dentro do lock; a segunda tem de esperar o lock e ler a lista já com a etiqueta
+# da primeira. Sem o lock, a segunda leria a lista velha e a última gravação apagaria a etiqueta da outra.
+RSpec.describe 'Pôr etiquetas ao mesmo tempo', :relationships_committed_fixtures, type: :request do
   self.use_transactional_tests = false
 
   # Etiqueta (tag) é global: guarda as que já existiam para apagar só as criadas aqui.
@@ -16,14 +16,16 @@ RSpec.describe 'Pôr etiquetas ao mesmo tempo na mesma conversa', :relationships
   let(:leu) { Queue.new }
   let(:soltar) { Queue.new }
   let(:threads) { [] }
-  let(:rota) { "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/labels/alterar" }
 
   before do
     create(:inbox_member, inbox: inbox, user: agente)
-    conversa.update_labels(['vip'])
+    [Conversation, Contact].each { |classe| pausar_depois_de_ler(classe) }
+  end
+
+  def pausar_depois_de_ler(classe)
     avisar = leu
     esperar = soltar
-    allow_any_instance_of(Conversation).to receive(:label_list).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
+    allow_any_instance_of(classe).to receive(:label_list).and_wrap_original do |original, *args| # rubocop:disable RSpec/AnyInstance
       lista = original.call(*args)
       if Thread.current[:pausar_depois_de_ler]
         Thread.current[:pausar_depois_de_ler] = false
@@ -42,13 +44,18 @@ RSpec.describe 'Pôr etiquetas ao mesmo tempo na mesma conversa', :relationships
   end
 
   def limpar_dados!
+    limpar_etiquetas!
     limpar_conversas!
     limpar_conta_e_pessoa!
   end
 
-  def limpar_conversas!
+  def limpar_etiquetas!
     ActsAsTaggableOn::Tagging.where(taggable_type: 'Conversation', taggable_id: account.conversations.ids).delete_all
+    ActsAsTaggableOn::Tagging.where(taggable_type: 'Contact', taggable_id: account.contacts.ids).delete_all
     ActsAsTaggableOn::Tag.where.not(id: tags_antes).delete_all
+  end
+
+  def limpar_conversas!
     Message.where(account_id: account.id).delete_all
     Conversation.where(account_id: account.id).delete_all
     ContactInbox.where(inbox_id: inbox.id).delete_all
@@ -66,7 +73,7 @@ RSpec.describe 'Pôr etiquetas ao mesmo tempo na mesma conversa', :relationships
     Audited::Audit.where(associated: account).or(Audited::Audit.where(auditable: account)).delete_all
   end
 
-  def pedir(params, pausar: false)
+  def pedir(rota, params, pausar: false)
     pronto = Queue.new
     thread = Thread.new do
       ActiveRecord::Base.connection_pool.with_connection do |conexao|
@@ -97,18 +104,33 @@ RSpec.describe 'Pôr etiquetas ao mesmo tempo na mesma conversa', :relationships
     end
   end
 
-  it 'a segunda espera a primeira e as duas etiquetas ficam' do
-    primeira, pid_primeira = pedir({ por: ['boleto'] }, pausar: true)
+  def duas_ao_mesmo_tempo(registro, rota)
+    registro.update_labels(['vip'])
+    primeira, pid_primeira = pedir(rota, { por: ['boleto'] }, pausar: true)
     Timeout.timeout(10) { leu.pop }
-    segunda, pid_segunda = pedir({ por: ['retorno'] })
+    segunda, pid_segunda = pedir(rota, { por: ['retorno'] })
 
     esperou = esperando_o_lock?(segunda, pid_segunda, pid_primeira)
     soltar << true
+    terminaram = [primeira, segunda].all? { |thread| thread.join(15) }
+    { esperou: esperou, terminaram: terminaram, respostas: terminaram && [primeira.value, segunda.value] }
+  end
 
-    expect([primeira, segunda].map { |thread| thread.join(15) }).to eq([primeira, segunda])
-    expect(esperou).to be(true)
-    expect(primeira.value.first).to eq(200)
-    expect(segunda.value).to match([200, contain_exactly('vip', 'boleto', 'retorno')])
+  def as_duas_valeram
+    { esperou: true, terminaram: true, respostas: [[200, anything], [200, contain_exactly('vip', 'boleto', 'retorno')]] }
+  end
+
+  it 'na conversa, a segunda espera a primeira e as duas etiquetas ficam' do
+    resultado = duas_ao_mesmo_tempo(conversa, "/api/v1/accounts/#{account.id}/conversations/#{conversa.display_id}/labels/alterar")
+
+    expect(resultado).to match(as_duas_valeram)
     expect(conversa.reload.label_list).to contain_exactly('vip', 'boleto', 'retorno')
+  end
+
+  it 'no contato, a segunda espera a primeira e as duas etiquetas ficam (#2461)' do
+    resultado = duas_ao_mesmo_tempo(conversa.contact, "/api/v1/accounts/#{account.id}/contacts/#{conversa.contact_id}/labels/alterar")
+
+    expect(resultado).to match(as_duas_valeram)
+    expect(conversa.contact.reload.label_list).to contain_exactly('vip', 'boleto', 'retorno')
   end
 end

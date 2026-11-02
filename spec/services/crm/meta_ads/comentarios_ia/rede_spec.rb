@@ -47,6 +47,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, talvez_entregue: true)
     end
 
+    it 'a recusa traz o código e o subcódigo da Meta (#2454), para decidir sem ler a mensagem' do
+      stub_request(:post, "#{graph}/555/messages")
+        .to_return(status: 400, body: { error: { code: 10, error_subcode: 2_018_278, message: 'Fora' } }.to_json)
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, codigo: 10, subcodigo: 2_018_278)
+
+      stub_request(:post, "#{graph}/555/messages").to_return(status: 503, body: 'indisponível')
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(codigo: nil, subcodigo: nil)
+
+      stub_request(:post, "#{graph}/555/messages").to_return(status: 429, body: 'devagar')
+      expect(pagina.private_reply('555_777', { text: 'Oi!' })).to have_attributes(ok: false, http: 429, talvez_entregue: false)
+    end
+
     it 'só a recusa explícita (4xx) é certa; 5xx e rede podem ter entregado' do
       stub_request(:post, "#{graph}/555/messages").to_return(status: 400, body: { error: { code: 10, message: 'Fora' } }.to_json)
       expect(pagina.private_reply('555_777', { text: 'Oi!' }).talvez_entregue).to be_falsey
@@ -74,7 +86,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook')) }
 
     before do
-      stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao, inbox_access:); end })
+      stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao, inbox_access:, prazo: nil); end })
       stub_const('Crm::MetaAds::FacebookComments::Error', Class.new(StandardError) { def code = message })
       allow(Crm::MetaAds::FacebookComments).to receive(:new).and_return(servico)
       allow(Crm::MetaAdsConnection).to receive(:find_by).with(account_id: account.id).and_return(instance_double(Crm::MetaAdsConnection))
@@ -108,6 +120,55 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
       expect(reivindicacao).not_to have_received(:confirm!)
       expect(Crm::MetaAds::ComentariosIa::Conversa).not_to have_received(:no_messenger!)
+    end
+
+    describe 'na resposta a comentário (2º nível, #2454): o resultado fica consultável, sem texto de terceiro' do
+      let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook', parent_id: '555_666')) }
+
+      before { allow(registro).to receive(:recusa_do_privado!) }
+
+      it 'aceito: a linha do privado guarda o id da mensagem' do
+        allow(reivindicacao).to receive(:update!)
+        allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: true, recipient_id: 'psid-1', message_id: 'mid-1'))
+
+        expect(rede.privado(care).ok).to be(true)
+        expect(reivindicacao).to have_received(:update!).with(meta_message_id: 'mid-1')
+      end
+
+      it 'recusado (4xx): a reivindicação sai e a recusa fica com o código e o subcódigo; talvez saiu: nada' do
+        recusa = described_class::Envio.new(ok: false, erro: '100 - Fora', codigo: 100, subcodigo: 33)
+        allow(pagina).to receive(:private_reply).and_return(recusa)
+
+        rede.privado(care)
+
+        expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
+        expect(registro).to have_received(:recusa_do_privado!).with(an_object_having_attributes(comment_id: '555_777'), codigo: 100, subcodigo: 33)
+
+        allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, talvez_entregue: true))
+        rede.privado(care)
+        expect(registro).to have_received(:recusa_do_privado!).once
+      end
+
+      it 'recusa sem código da Meta: a reivindicação sai, mas nada é gravado como recusa (igual ao motor)' do
+        allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: false, erro: 'HTTP 400'))
+
+        rede.privado(care)
+
+        expect(registro).to have_received(:soltar!).with(anything, 'private_reply')
+        expect(registro).not_to have_received(:recusa_do_privado!)
+      end
+
+      it 'o comentário de primeiro nível fica como antes: sem id da mensagem nem recusa gravada' do
+        allow(reivindicacao).to receive(:update!)
+        allow(pagina).to receive(:private_reply).and_return(described_class::Envio.new(ok: true, message_id: 'mid-1'),
+                                                            described_class::Envio.new(ok: false, codigo: 100))
+        primeiro = described_class::Facebook.new(inbox, comentario(network: 'facebook'))
+
+        2.times { primeiro.privado(care) }
+
+        expect(reivindicacao).not_to have_received(:update!)
+        expect(registro).not_to have_received(:recusa_do_privado!)
+      end
     end
 
     it 'privado que talvez saiu (rede, 5xx): a reivindicação fica, sem confirmar' do
@@ -155,7 +216,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
       rede.esconder
 
-      expect(Crm::MetaAds::FacebookComments).to have_received(:new).with(anything, inbox_access: described_class::Facebook::SEM_PESSOA)
+      expect(Crm::MetaAds::FacebookComments).to have_received(:new).with(anything, inbox_access: described_class::Facebook::SEM_PESSOA, prazo: nil)
     end
 
     describe 'ler (o evento leva só ids, #2327)' do
@@ -193,6 +254,36 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       end
     end
 
+    describe 'ler_pai (#2454: o comentário que a resposta responde)' do
+      let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook', parent_id: '555_666')) }
+
+      it 'só o texto do comentário de cima, lido na Meta pelo id' do
+        allow(servico).to receive(:comment).with('555_888', '555_666')
+                                           .and_return({ 'message' => 'Tem em azul?', 'from' => { 'id' => '8', 'name' => 'Bia' } })
+
+        expect(rede.ler_pai).to eq('Tem em azul?')
+      end
+
+      it 'comentário de primeiro nível, ou o de cima que não dá para ler: nil; a Meta fora do ar: Indisponivel' do
+        expect(described_class::Facebook.new(inbox, comentario(network: 'facebook')).ler_pai).to be_nil
+
+        allow(servico).to receive(:comment).and_return(nil)
+        expect(rede.ler_pai).to be_nil
+
+        # Lido uma vez por comentário (#2458): cada cenário com a sua Rede.
+        de_novo = described_class::Facebook.new(inbox, comentario(network: 'facebook', parent_id: '555_666'))
+        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+        expect { de_novo.ler_pai }.to raise_error(described_class::Indisponivel)
+      end
+
+      it 'lê o de cima uma vez só por comentário: o Classificador e a Escrita leem o mesmo (#2458)' do
+        allow(servico).to receive(:comment).and_return({ 'message' => 'Tem em azul?' })
+
+        2.times { expect(rede.ler_pai).to eq('Tem em azul?') }
+        expect(servico).to have_received(:comment).once
+      end
+    end
+
     describe 'legenda (#2424)' do
       it 'o texto do post da Página' do
         allow(servico).to receive(:post_message).with('555_888').and_return('Seguro viagem com cobertura internacional')
@@ -211,6 +302,36 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.legenda).to be_nil
       end
     end
+
+    describe 'imagens (#2454)' do
+      it 'as imagens do post da Página' do
+        dados = { 'attachments' => { 'data' => [{ 'media' => { 'image' => { 'src' => 'https://fb.exemplo/1.jpg' } } }] } }
+        allow(servico).to receive(:post_media).with('555_888').and_return(dados)
+
+        expect(rede.imagens).to eq(['https://fb.exemplo/1.jpg'])
+      end
+
+      it 'a Meta fora do ar: Indisponivel; outra recusa ou sem conexão: nenhuma' do
+        allow(servico).to receive(:post_media).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+        expect { rede.imagens }.to raise_error(described_class::Indisponivel)
+
+        allow(servico).to receive(:post_media).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
+        expect(rede.imagens).to eq([])
+
+        allow(Crm::MetaAdsConnection).to receive(:find_by).and_return(nil)
+        expect(rede.imagens).to eq([])
+      end
+
+      it 'com prazo (a leitura da foto, dentro da requisição): o serviço lê com o prazo, contado de agora' do
+        allow(servico).to receive(:post_media).and_return({})
+        antes = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+        rede.imagens(prazo: 3)
+
+        expect(Crm::MetaAds::FacebookComments).to have_received(:new)
+          .with(anything, inbox_access: described_class::Facebook::SEM_PESSOA, prazo: be_between(antes + 3, antes + 4))
+      end
+    end
   end
 
   describe 'Instagram' do
@@ -223,7 +344,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     let(:recusa) { Struct.new(:ok).new(false) }
 
     before do
-      stub_const('Instagram::CommentsClient', Class.new { def initialize(_channel); end })
+      stub_const('Instagram::CommentsClient', Class.new { def initialize(_channel, timeout: nil); end })
       allow(Crm::MetaAds::InstagramPrivateReply).to receive(:new).with(channel).and_return(privado)
       allow(Instagram::CommentsClient).to receive(:new).with(channel).and_return(cliente)
     end
@@ -241,6 +362,16 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         text: care.texto_do_privado, actor: 'ai', ad_id: nil
       )
       expect(care.texto_do_privado).to eq(care.message.strip)
+    end
+
+    it 'na resposta a comentário (#2454), o serviço recebe o parent_id; a recusa traz o código e o subcódigo da Meta' do
+      erro = Crm::MetaAds::InstagramPrivateReply::Error.new('meta_refused', meta_code: 100, meta_subcode: 2_534_023, meta_http: 400)
+      allow(privado).to receive(:perform!).and_raise(erro)
+
+      envio = described_class::Instagram.new(inbox, comentario(parent_id: '555_666')).privado(care)
+
+      expect(envio).to have_attributes(ok: false, erro: 'meta_refused', codigo: 100, subcodigo: 2_534_023, http: 400)
+      expect(privado).to have_received(:perform!).with(hash_including(comment: hash_including('parent_id' => '555_666')))
     end
 
     it 'recusa do serviço (4xx) vira envio sem sucesso com o código, sem "pode ter saído"' do
@@ -274,18 +405,60 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.legenda).to eq('Seguro viagem')
       end
 
+      # Lida uma vez por comentário (#2458): cada cenário com a sua Rede.
       it 'post sem legenda ou que não dá para ler: nil; Meta fora do ar ou token caído: Indisponivel' do
+        nova = -> { described_class::Instagram.new(inbox, comentario) }
         allow(cliente).to receive(:caption).and_return(result.new(ok: true, data: { 'id' => '555_888' }))
-        expect(rede.legenda).to be_nil
+        expect(nova.call.legenda).to be_nil
 
         allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 400, error_code: 100))
-        expect(rede.legenda).to be_nil
+        expect(nova.call.legenda).to be_nil
 
         allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 500, error_code: 2))
-        expect { rede.legenda }.to raise_error(described_class::Indisponivel)
+        expect { nova.call.legenda }.to raise_error(described_class::Indisponivel)
 
         allow(cliente).to receive(:caption).and_return(result.new(ok: false, http_code: 400, error_code: 190))
-        expect { rede.legenda }.to raise_error(described_class::Indisponivel)
+        expect { nova.call.legenda }.to raise_error(described_class::Indisponivel)
+      end
+
+      it 'lê a legenda uma vez só por comentário (#2458)' do
+        allow(cliente).to receive(:caption).and_return(result.new(ok: true, data: { 'caption' => 'Seguro viagem' }))
+
+        2.times { expect(rede.legenda).to eq('Seguro viagem') }
+        expect(cliente).to have_received(:caption).once
+      end
+    end
+
+    describe 'imagens (#2454)' do
+      let(:result) { Meta::AdsGraphClient::Result }
+
+      it 'as imagens do post, lidas pelo id da mídia (carrossel incluído)' do
+        dados = { 'media_type' => 'CAROUSEL_ALBUM', 'children' => { 'data' => [
+          { 'media_type' => 'IMAGE', 'media_url' => 'https://cdn.exemplo/1.jpg' },
+          { 'media_type' => 'VIDEO', 'thumbnail_url' => 'https://cdn.exemplo/2.jpg' }
+        ] } }
+        allow(cliente).to receive(:media).with('555_888').and_return(result.new(ok: true, data: dados))
+
+        expect(rede.imagens).to eq(%w[https://cdn.exemplo/1.jpg https://cdn.exemplo/2.jpg])
+      end
+
+      it 'que não dá para ler: nenhuma; Meta fora do ar ou token caído: Indisponivel' do
+        allow(cliente).to receive(:media).and_return(result.new(ok: false, http_code: 400, error_code: 100))
+        expect(rede.imagens).to eq([])
+
+        allow(cliente).to receive(:media).and_return(result.new(ok: false, http_code: 500, error_code: 2))
+        expect { rede.imagens }.to raise_error(described_class::Indisponivel)
+
+        allow(cliente).to receive(:media).and_return(result.new(ok: false, http_code: 400, error_code: 190))
+        expect { rede.imagens }.to raise_error(described_class::Indisponivel)
+      end
+
+      it 'com prazo (a leitura da foto, dentro da requisição): um cliente com esse prazo; sem resposta nele, Indisponivel' do
+        lento = double
+        allow(Instagram::CommentsClient).to receive(:new).with(channel, timeout: 3).and_return(lento)
+        allow(lento).to receive(:media).and_return(result.new(ok: false, http_code: nil, error_message: 'Net::ReadTimeout'))
+
+        expect { rede.imagens(prazo: 3) }.to raise_error(described_class::Indisponivel)
       end
     end
 
@@ -330,6 +503,32 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
         allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 500, error_code: 2))
         expect { rede.ler }.to raise_error(described_class::Indisponivel)
+      end
+    end
+
+    describe 'ler_pai (#2454: o comentário que a resposta responde)' do
+      let(:result) { Meta::AdsGraphClient::Result }
+      let(:rede) { described_class::Instagram.new(inbox, comentario(parent_id: '555_666')) }
+
+      it 'só o texto do comentário de cima, lido na Meta pelo id' do
+        allow(cliente).to receive(:comment).with('555_666')
+                                           .and_return(result.new(ok: true, data: { 'text' => 'Tem em azul?', 'from' => { 'id' => 8 } }))
+
+        expect(rede.ler_pai).to eq('Tem em azul?')
+      end
+
+      it 'comentário de primeiro nível, ou o de cima apagado: nil; a Meta fora do ar: Indisponivel' do
+        allow(cliente).to receive(:comment)
+        expect(described_class::Instagram.new(inbox, comentario).ler_pai).to be_nil
+        expect(cliente).not_to have_received(:comment)
+
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 400, error_code: 100))
+        expect(rede.ler_pai).to be_nil
+
+        # Lido uma vez por comentário (#2458): o cenário seguinte com a sua Rede.
+        de_novo = described_class::Instagram.new(inbox, comentario(parent_id: '555_666'))
+        allow(cliente).to receive(:comment).and_return(result.new(ok: false, http_code: 500, error_code: 2))
+        expect { de_novo.ler_pai }.to raise_error(described_class::Indisponivel)
       end
     end
 
