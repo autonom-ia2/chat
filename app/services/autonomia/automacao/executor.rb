@@ -179,7 +179,7 @@ class Autonomia::Automacao::Executor
     return if impedida?(passo['id'])
     return encerrar(passo['id'], 'parada', 'mensagens_desligadas') unless ::Autonomia::Automacao::Motor.mensagens?(@account)
 
-    resultado = classe.new(execucao: @execucao, passo: passo, valores: valores, conversa: alvo).executar
+    resultado = classe.new(execucao: @execucao, passo: passo, alvo: alvo).executar
     # O outro lado parece um robô: para só nesta conversa, e a automação continua ligada (a nota já ficou).
     return encerrar(passo['id'], 'parada', 'laco_suspeito', 'falhou') if resultado.tipo == :laco
 

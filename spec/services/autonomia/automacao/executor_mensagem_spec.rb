@@ -25,6 +25,8 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     Autonomia::Automacao::Registro.where(execucao: execucao).order(:id).pluck(:passo, :resultado, :motivo)
   end
 
+  def dados_do(execucao, passo = 'p1') = Autonomia::Automacao::Registro.find_by!(execucao: execucao, passo: passo).dados
+
   def publicas_da_automacao
     conversa.messages.outgoing.where(private: false).select { |mensagem| mensagem.content_attributes['automacao_id'].present? }
   end
@@ -243,6 +245,18 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
 
       expect(conversa.messages.where(private: true)).to be_empty
       expect(registros(execucao)).to eq([%w[p1 pulado ninguem_para_avisar]])
+      expect(dados_do(execucao)['fora']).to eq([{ 'id' => fora_da_caixa.id, 'motivo' => 'nao_ve_a_conversa' }])
+    end
+
+    it 'quem sai fica no registro com o motivo: não enxerga a conversa, ou saiu da conta depois do salvar', :aggregate_failures do
+      saiu = create(:user, account: account, role: :agent, name: 'Gil')
+      definicao = automacao_ligada(account, admin, [avisar_passo('p1', { 'times' => [time.id], 'pessoas' => [saiu.id] }, 'Oi')])
+      saiu.account_users.find_by(account: account).destroy!
+      execucao = comecar_e_rodar(definicao)
+
+      expect(dados_do(execucao)['pessoas']).to eq([do_time.id])
+      expect(dados_do(execucao)['fora']).to contain_exactly({ 'id' => fora_da_caixa.id, 'motivo' => 'nao_ve_a_conversa' },
+                                                            { 'id' => saiu.id, 'motivo' => 'fora_da_conta' })
     end
 
     it 'o salvar recusa time e pessoa de outra conta' do
@@ -254,6 +268,34 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
         expect(erro.message).to include(I18n.t('autonomia.automacao.receita.time_de_fora', passo: 'p1', id: de_fora.id),
                                         I18n.t('autonomia.automacao.receita.pessoa_de_fora', passo: 'p1', id: outra_pessoa.id))
       }
+    end
+  end
+
+  describe 'alvo card' do
+    let(:execucao) { comecar(automacao_ligada(account, admin, [esperar_passo('p0')]), conversa) }
+    let(:funil) { create_crm_pipeline(account: account, user: admin) }
+
+    def card(principal)
+      Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Pedido', currency: 'BRL',
+                        primary_conversation: principal)
+    end
+
+    def aviso = avisar_passo('p2', { 'pessoas' => [admin.id] }, 'Cliente ', { '$valor' => 'contato.nome' })
+
+    it 'sem conversa principal: mensagem e aviso pulam com sem_conversa, e nada é mandado', :aggregate_failures do
+      sozinho = card(nil)
+      mensagem = Autonomia::Automacao::PassoDeMensagem.new(execucao: execucao, passo: oi, alvo: sozinho).executar
+      aviso_do_card = Autonomia::Automacao::PassoDeAviso.new(execucao: execucao, passo: aviso, alvo: sozinho).executar
+
+      expect([mensagem.tipo, mensagem.motivo]).to eq([:pulado, 'sem_conversa'])
+      expect([aviso_do_card.tipo, aviso_do_card.motivo]).to eq([:pulado, 'sem_conversa'])
+      expect(conversa.messages.reload).to be_empty
+    end
+
+    it 'com conversa principal: avisa nela, com os valores dela' do
+      resultado = Autonomia::Automacao::PassoDeAviso.new(execucao: execucao, passo: aviso, alvo: card(conversa)).executar
+
+      expect([resultado.tipo, conversa.messages.where(private: true).last.content]).to match([:ok, start_with('Cliente Bruno')])
     end
   end
 

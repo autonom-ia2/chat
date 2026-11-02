@@ -62,10 +62,18 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
   - o responsável, os times (abertos pessoa a pessoa) e as pessoas escolhidas, só da conta;
   - fica só quem passa no `ConversationPolicy#show?` de cada pessoa. Função personalizada e administrador mudam a
     resposta; não basta estar na caixa;
+  - nunca menciona o time inteiro, só pessoas, cada uma conferida;
+  - quem sai fica no registro do passo (`fora`), com o motivo: `nao_ve_a_conversa` ou `fora_da_conta` (saiu da conta
+    depois do salvar);
   - o texto, com os valores, só chega a quem passou;
   - lista vazia pula com `ninguem_para_avisar`.
 - **No salvar:** time e pessoa de outra conta são recusados.
-- **Fora da F4:** o alvo card (sem conversa), que segue a política do card, entra com os gatilhos de card (F6).
+
+## Alvo card
+
+- Os dois passos agem na conversa principal do card, com os valores dela.
+- Card sem conversa principal pula com `sem_conversa`, e o histórico mostra. Nada é mandado.
+- Os gatilhos de card são da F6.
 
 ## Proteção anti-laço
 

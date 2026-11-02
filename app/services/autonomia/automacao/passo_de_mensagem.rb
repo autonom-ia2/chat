@@ -11,17 +11,12 @@
 #   da janela.
 # O robô do outro lado (AntiLaco) devolve :laco, e o executor para a execução nesta conversa. Sem teto de uso.
 class Autonomia::Automacao::PassoDeMensagem
-  Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
-
-  def initialize(execucao:, passo:, valores:, conversa:)
-    @execucao = execucao
-    @passo = passo
-    @valores = valores
-    @conversa = conversa
-  end
+  include ::Autonomia::Automacao::NaConversa
 
   def executar
-    texto = ::Autonomia::Automacao::Texto.new(@passo['texto'], @valores).montar
+    return sem_conversa if @conversa.nil?
+
+    texto = texto_pronto
     motivo = motivo_para_pular(texto)
     return Resultado.new(tipo: :pulado, motivo: motivo, dados: {}) if motivo
 
@@ -51,9 +46,5 @@ class Autonomia::Automacao::PassoDeMensagem
   def parar_por_robo(anti_laco)
     anti_laco.avisar_parada(@execucao, @passo['id'])
     Resultado.new(tipo: :laco, motivo: 'laco_suspeito', dados: {})
-  end
-
-  def marca
-    { automacao_id: @execucao.automacao_id, execucao_id: @execucao.id, passo: @passo['id'] }
   end
 end

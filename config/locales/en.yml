@@ -532,10 +532,11 @@ en:
         travada: 'This step stopped in the middle and will not run again.'
         canal_sem_resposta: "This channel does not accept replies (tweet). The message was not sent."
         contato_nao_recebe: "The contact asked not to receive messages. The message was not sent."
-        fora_da_janela: "The WhatsApp 24-hour window is closed, and free text cannot be sent. The message was not sent."
+        fora_da_janela: "The channel's reply window is closed, and free text cannot be sent. The message was not sent."
         laco_suspeito: "The other side replied too fast too many times in a row, like a bot. The automation stopped in this conversation."
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."
+        sem_conversa: "The card has no main conversation. Nothing was sent."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
