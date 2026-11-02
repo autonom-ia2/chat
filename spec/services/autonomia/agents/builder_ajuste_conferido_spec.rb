@@ -440,6 +440,48 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
+  # #2489 (tester T04/T04b) — com falta, nenhuma afirmação de sucesso do Construtor chega ao dono: decide o estado.
+  describe 'quando o turno fecha com falta e o Construtor escreveu resposta_ao_dono' do
+    let(:fala) { 'Não colete dados neste canal' }
+    let(:instrucao_nova) { 'Atenda o cliente da corretora com cordialidade. Não colete dados do cliente neste canal.' }
+    let(:lista) { [mudanca('instruction', fala, 'Não coleta dados.')] }
+
+    it 'a resposta da 1ª chamada não vai, e só a pergunta do que faltou chega' do
+      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Pronto, tirei a coleta.', 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+      conferencias << { roteiro: [0] }
+
+      run_turn
+
+      expect(estado['conferencia']).to include('falta' => true)
+      expect(thread.reload.messages.last(3).pluck('content')).not_to include('Pronto, tirei a coleta.')
+      expect(thread.messages.last).to include('role' => 'assistant', 'content' => a_string_starting_with(texto(:nao_consegui, pedidos: fala)))
+    end
+
+    it 'a resposta da correção também não vai quando a falta continua' do
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+      respostas << saida('instruction' => instrucao_nova, 'human_card' => 'O Hubber atende sem pedir dados.',
+                         'resposta_ao_dono' => 'Pronto, corrigi o roteiro.', 'mudancas' => lista)
+      conferencias.push({ roteiro: [0] }, { roteiro: [0] })
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => true)
+      expect(thread.reload.messages.pluck('content')).not_to include('Pronto, corrigi o roteiro.')
+      expect(thread.messages.last['content']).to start_with(texto(:nao_consegui, pedidos: fala))
+    end
+
+    it 'sem falta, a resposta_ao_dono continua indo' do
+      respostas << saida('instruction' => instrucao_nova, 'resposta_ao_dono' => 'Hoje ele atende os clientes.', 'mudancas' => lista)
+
+      run_turn
+
+      expect(estado['conferencia']).to include('falta' => false)
+      expect(thread.reload.messages.pluck('content')).to include('Hoje ele atende os clientes.')
+    end
+  end
+
   # B da revisão (e prova A): conflito sem falta vira pergunta, sem correção.
   describe 'quando só há conflito, com tudo atendido' do
     before do

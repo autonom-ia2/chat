@@ -102,7 +102,16 @@ module Autonomia::Agents::Builder::DesfechoDoAjuste
     texto, opcoes, na_tela = do_modelo ? [do_modelo, opcoes_do_modelo(resposta)] : pergunta_da_conferencia(conferencia, desfecho)
     origem = origem_da_pendencia(texto, do_modelo)
     aviso = aviso_do_desfecho(desfecho, dados, conferencia)
-    [[resposta['resposta_ao_dono'].to_s.strip, aviso, texto].compact_blank, [texto, origem], aviso, opcoes, na_tela]
+    [[resposta_do_construtor(resposta, conferencia), aviso, texto].compact_blank, [texto, origem], aviso, opcoes, na_tela]
+  end
+
+  # #2489 — com falta apontada pela conferência, a `resposta_ao_dono` do Construtor (a da 1ª chamada ou a da correção)
+  # não vai ao dono: ela pode afirmar o que não entrou ("Pronto"), e o código não lê o texto para saber. Decide o
+  # estado; a pergunta do que faltou vai sozinha.
+  def resposta_do_construtor(resposta, conferencia)
+    return '' if conferencia['falta'] == true
+
+    resposta['resposta_ao_dono'].to_s.strip
   end
 
   # #1850 — a pergunta inteira fica na conversa e na pendência; a tela, enquanto o cartão ⚠ do turno está lá, mostra a
