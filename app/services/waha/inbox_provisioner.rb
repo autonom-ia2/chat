@@ -4,7 +4,7 @@ module Waha
   # de mensagens — deixando só o passo humano de ler o QR.
   #
   # Idempotente por conta e número (#2478): a conta que já tem caixa com o número recebe a mesma caixa de volta, e a
-  # sessão que sobrou no motor sem caixa é reaproveitada em vez de travar a criação.
+  # sessão sem caixa que é provadamente nossa e desta conta é reaproveitada em vez de travar a criação.
   class InboxProvisioner
     class Error < StandardError; end
 
@@ -13,9 +13,6 @@ module Waha
     # Celular BR no formato 55 + DDD(2) + 9 dígitos (ex.: 5511987654321) = 13 dígitos.
     PHONE_RE = /\A55\d{11}\z/
 
-    # Sessão órfã que pode ser reaproveitada (decisão do Rodrigo, 02/11/2026): qualquer uma que não esteja conectada.
-    # WORKING, status desconhecido ou ausente: o número está em uso por outro sistema e a criação recusa.
-    REUSABLE_STATUSES = %w[STOPPED FAILED SCAN_QR_CODE STARTING].freeze
     # Sessão parada no motor: depois de trocar os apps, precisa ligar para mostrar o QR.
     START_AGAIN_STATUSES = %w[STOPPED FAILED].freeze
     # Resposta do gateway na frente do motor: o motor não respondeu.
@@ -110,7 +107,7 @@ module Waha
     def provision_remote(inbox, keep_inbox: false)
       app_ids = inbox.channel.additional_attributes.to_h.values_at('app_id', 'phone_numbers_app_id')
       remote = existing_session
-      raise Error, 'phone_connected_elsewhere' if remote && !reusable?(remote)
+      raise Error, 'phone_in_use_elsewhere' if remote && !ours?
 
       @proxy.take
       setup_session(remote, SessionApps.for(inbox: inbox, account: @account, token: @api_access_token, config: @config))
@@ -124,11 +121,13 @@ module Waha
       raise Error, error_code_for(e)
     end
 
-    def reusable?(remote)
-      REUSABLE_STATUSES.include?(remote['status'])
+    # O motor é compartilhado e tem sessões sem caixa de propósito (número pessoal, outro sistema). Só se reaproveita a
+    # sessão provadamente nossa e desta conta, em qualquer estado; o resto é número em uso fora daqui.
+    def ours?
+      SessionApps.ours?(@client.list_apps(@phone), account: @account, config: @config)
     end
 
-    # Sessão que sobrou no motor sem caixa (nenhuma conta tem caixa com ela, conferido sob a trava) e não conectada.
+    # Sessão nossa e desta conta que sobrou no motor sem caixa (nenhuma conta tem caixa com ela, conferido sob a trava).
     # `update_session` troca a config inteira e o conjunto de apps da sessão pelo informado (o mesmo contrato que
     # Waha::ExistingInboxMigrationExecutor confere depois da troca), então o conector antigo, que apontava para uma
     # caixa que não existe mais, sai junto. Sem IP novo, a sessão fica com o proxy que já tinha.

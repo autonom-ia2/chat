@@ -6,6 +6,21 @@ class Waha::InboxProvisioner::SessionApps
     new(inbox, account, token, config).payload(attrs['session'], attrs['app_id'], attrs['phone_numbers_app_id'])
   end
 
+  # A sessão é nossa e desta conta quando tem o conector de mensagens apontando para este chat e para esta conta.
+  # Campo faltando = não é nossa.
+  def self.ours?(apps, account:, config:)
+    base_url = config.chatwoot_base_url.to_s.strip.chomp('/')
+    return false if base_url.empty?
+
+    Array(apps).any? do |app|
+      next false unless app.is_a?(Hash)
+
+      settings = app['config'].to_h
+      app['app'] == 'chatwoot' && settings['url'].to_s.strip.chomp('/') == base_url &&
+        settings['accountId'].to_s == account.id.to_s
+    end
+  end
+
   def initialize(inbox, account, token, config)
     @inbox = inbox
     @account = account

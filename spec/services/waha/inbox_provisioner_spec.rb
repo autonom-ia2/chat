@@ -70,13 +70,20 @@ RSpec.describe Waha::InboxProvisioner do
     end
 
     context 'when the engine still has the session without any inbox (#2478)' do
+      let(:engine_writes) { %i[update_session create_session start_session delete_app delete_session] }
+
+      def chatwoot_app(url: 'https://chatwoot.example/', account_id: account.id)
+        { 'id' => 'app_antigo', 'app' => 'chatwoot', 'config' => { 'url' => url, 'accountId' => account_id } }
+      end
+
       before do
         allow(client).to receive(:get_session).and_return({ 'status' => 'STOPPED' })
+        allow(client).to receive(:list_apps).with('5511999999999').and_return([chatwoot_app])
         allow(client).to receive(:update_session)
         allow(client).to receive(:start_session)
       end
 
-      it 'reuses a session that is not connected: swaps its apps and starts it again' do
+      it 'reuses a stopped session that is ours and of this account: swaps its apps and starts it again' do
         result = provisioner.perform
 
         expect(client).not_to have_received(:create_session)
@@ -88,8 +95,8 @@ RSpec.describe Waha::InboxProvisioner do
         expect(client).to have_received(:start_session).with('5511999999999')
       end
 
-      it 'reuses a session waiting for the QR without starting it' do
-        allow(client).to receive(:get_session).and_return({ 'status' => 'SCAN_QR_CODE' })
+      it 'reuses a connected session that is ours and of this account, without starting it' do
+        allow(client).to receive(:get_session).and_return({ 'status' => 'WORKING' })
 
         provisioner.perform
 
@@ -97,17 +104,23 @@ RSpec.describe Waha::InboxProvisioner do
         expect(client).not_to have_received(:start_session)
       end
 
-      [{ 'status' => 'WORKING' }, { 'status' => 'SOMETHING_NEW' }, {}].each do |remote|
-        it "refuses a session connected elsewhere (#{remote['status'] || 'no status'}) without touching the engine" do
+      {
+        'an app of another account' => [{ 'status' => 'STOPPED' }, -> { [chatwoot_app(account_id: account.id + 1)] }],
+        'no apps, waiting for the QR (personal number)' => [{ 'status' => 'SCAN_QR_CODE' }, -> { [] }],
+        'no apps, stopped (personal number)' => [{ 'status' => 'STOPPED' }, -> { [] }],
+        'an app of another chat URL' => [{ 'status' => 'STOPPED' }, -> { [chatwoot_app(url: 'https://outro.example')] }],
+        'an app without accountId' => [{ 'status' => 'WORKING' }, -> { [chatwoot_app.merge('config' => { 'url' => 'https://chatwoot.example' })] }]
+      }.each do |kind, (remote, apps)|
+        it "refuses a session with #{kind} without writing to the engine or asking for an IP" do
+          assigner = instance_double(WhatsappProxy::Assigner, for: nil, release!: 1)
           allow(client).to receive(:get_session).and_return(remote)
+          allow(client).to receive(:list_apps).and_return(instance_exec(&apps))
 
-          expect { provisioner.perform }.to raise_error(described_class::Error, 'phone_connected_elsewhere')
+          expect { provisioner(assigner: assigner).perform }.to raise_error(described_class::Error, 'phone_in_use_elsewhere')
 
-          expect(client).not_to have_received(:update_session)
-          expect(client).not_to have_received(:create_session)
-          expect(client).not_to have_received(:start_session)
-          expect(client).not_to have_received(:delete_app)
-          expect(client).not_to have_received(:delete_session)
+          engine_writes.each { |call| expect(client).not_to have_received(call) }
+          expect(assigner).not_to have_received(:for)
+          expect(assigner).not_to have_received(:release!)
           expect(Inbox.count).to eq(0)
         end
       end
