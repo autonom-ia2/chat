@@ -272,6 +272,94 @@ RSpec.describe Autonomia::Agents::Builder do
     end
   end
 
+  # #2489 — a instrução mudou e o andaime e o cartão voltaram com o texto de antes: o código dá o item da instrução
+  # como não atendido (só igualdade de texto), e a correção que já existe roda uma vez.
+  describe 'quando a instrução muda e o andaime e o cartão voltam como estavam' do
+    let(:fala) { 'Não colete dados neste canal' }
+    let(:instrucao_nova) { 'Atenda o cliente da corretora com cordialidade. Não colete dados do cliente neste canal.' }
+    let(:lista) { [mudanca('instruction', fala, 'Não coleta dados.')] }
+    let(:aviso_do_roteiro) do
+      { role: 'developer', content: [{ type: 'input_text', text: described_class::CorrecaoDoAjuste::AVISO_DO_ROTEIRO }] }
+    end
+
+    before { respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista) }
+
+    it 'pede a correção, e depois dela o agente fica com andaime e cartão novos' do
+      respostas << saida('instruction' => instrucao_nova, 'scaffold' => 'andaime sem coleta',
+                         'human_card' => 'O Hubber atende os clientes sem pedir dados.', 'mudancas' => lista)
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(calls.last[:input].last).to eq(aviso_do_roteiro)
+      expect(calls.last[:input].last(3).first[:content].first[:text]).to include("- #{fala} (campo instruction)")
+      expect(agent.reload).to have_attributes(instruction: instrucao_nova, scaffold: 'andaime sem coleta',
+                                              human_card: 'O Hubber atende os clientes sem pedir dados.')
+      expect(estado).to include('needs_more_info' => false, 'applied' => true)
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => false)
+    end
+
+    it 'se só o cartão mudar na correção, o item segue não atendido e vira pergunta ao dono' do
+      respostas << saida('instruction' => instrucao_nova, 'human_card' => 'O Hubber atende sem pedir dados.',
+                         'mudancas' => lista)
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(agent.reload).to have_attributes(scaffold: 'andaime', human_card: 'O Hubber atende sem pedir dados.')
+      expect(estado).to include('needs_more_info' => true, 'applied' => true)
+      expect(estado['conferencia']).to include('correcao' => true, 'falta' => true)
+      expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: fala))
+    end
+
+    it 'se a correção devolver os dois iguais de novo, segue o não atendido de sempre: pergunta ao dono' do
+      respostas << saida('instruction' => instrucao_nova, 'mudancas' => lista)
+
+      run_turn
+
+      expect(calls.size).to eq(2)
+      expect(agent.reload).to have_attributes(instruction: instrucao_nova, scaffold: 'andaime',
+                                              human_card: 'O Hubber atende os clientes.')
+      expect(estado).to include('needs_more_info' => true, 'applied' => true)
+      expect(estado['next_question']).to start_with(texto(:nao_consegui, pedidos: fala))
+    end
+
+    it 'com andaime e cartão reescritos na primeira escrita, não há correção' do
+      respostas.clear
+      respostas << saida('instruction' => instrucao_nova, 'scaffold' => 'andaime sem coleta',
+                         'human_card' => 'O Hubber atende sem pedir dados.', 'mudancas' => lista)
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(estado['conferencia']).to include('falta' => false)
+    end
+  end
+
+  # Controle do #2489: pedido só de estilo (o mesmo pedido vai para o tom e a instrução) ou só de tom não força
+  # reescrever andaime e cartão.
+  describe 'quando o pedido é só de tom ou de estilo' do
+    it 'só de tom: não aciona a correção' do
+      respostas << saida('tone' => 'formal', 'mudancas' => [mudanca('tone', 'mais formal')])
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(agent.reload).to have_attributes(tone: 'formal', scaffold: 'andaime', human_card: 'O Hubber atende os clientes.')
+      expect(estado['conferencia']).to include('falta' => false)
+    end
+
+    it 'estilo no tom e na instrução, com andaime e cartão iguais: não aciona a correção' do
+      respostas << saida('tone' => 'cordial e curto', 'instruction' => 'Responda em no máximo 2 frases.',
+                         'mudancas' => [mudanca('tone', fala), mudanca('instruction', fala)])
+
+      run_turn
+
+      expect(calls.size).to eq(1)
+      expect(estado['conferencia']).to include('falta' => false)
+    end
+  end
+
   # B da revisão (e prova A): conflito sem falta vira pergunta, sem correção.
   describe 'quando só há conflito, com tudo atendido' do
     before do

@@ -94,14 +94,21 @@ module Autonomia::Agents::Builder::FechamentoDoAjuste
       valores_antes: valores_antes_do_nao_pedido,
       antes: retrato_de_antes(dados), depois: regras_do_ajuste.retrato(@thread.agent)
     )
+    roteiro = Autonomia::Agents::Builder::RoteiroDoAjuste
+    conferencia = roteiro.com_roteiro_conferido(conferencia, roteiro.roteiro_da_versao(versao_de_antes(dados)),
+                                                roteiro.roteiro(@thread.agent))
     @conferencias_ms << conferencia['duracao_ms']
     anotar_versao(versao_id, fala, mudancas, conferencia)
     conferencia
   end
 
   def retrato_de_antes(dados)
-    versao = @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
+    versao = versao_de_antes(dados)
     versao ? retrato_da_versao(versao) : {}
+  end
+
+  def versao_de_antes(dados)
+    @thread.agent.instruction_versions.find_by(id: dados['versao_antes_id'])
   end
 
   # O mesmo retrato, lido de uma versão (a de antes do ajuste): o state da thread não guarda a instrução crua.

@@ -60,6 +60,11 @@ module AvaliacaoDoAjustePorLista
     { nome: 'nao_fale_de_preco', fala: 'Não fale de preço com o cliente.', aplica: true,
       certo: 'O agente DEPOIS tem escrito que não fala de preço com o cliente (nos limites e na instrução), mesmo já ' \
              'tendo a regra geral de não inventar valores.' },
+    # #2489: a instrução muda e o cartão (e o andaime) vem reescrito a partir dela, sem a regra antiga de coletar.
+    { nome: 'nao_coletar_neste_canal', fala: 'Não colete dados do cliente neste canal.', aplica: true, itens: 1,
+      muda: %w[instruction human_card],
+      certo: 'O agente DEPOIS não pede nem coleta dados do cliente (nome, cidade ou outros) neste canal, escrito na ' \
+             'instrução, e o cartão (human_card) DEPOIS não diz que ele coleta dados do cliente.' },
     { nome: 'troca_a_saudacao', fala: 'Troque a saudação para: Olá! Aqui é o Hubber, da Hub2You. Em que posso ajudar?',
       aplica: true, so: %w[greeting],
       certo: 'Só a saudação muda, para a frase pedida. Todo o resto do agente fica igual.' },
