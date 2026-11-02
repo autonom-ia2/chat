@@ -78,6 +78,7 @@ const respondeu = vezes => {
 
 describe('useConversaDeCriacao', () => {
   beforeEach(() => prepararStore());
+  afterEach(() => vi.useRealTimers());
 
   it('opens the Builder with only the model, so the AI speaks first (no message)', () => {
     const { conversa } = montar({ modelo: 'sdr' });
@@ -417,7 +418,39 @@ describe('useConversaDeCriacao', () => {
       materiais_a_caminho: ['tabela.pdf'],
     });
     expect(conversa.falhaAoSubir.value).toBeNull();
-    vi.useRealTimers();
+  });
+
+  // Revisão do #2489: sair da tela limpa a store; o turno que esperava não pode abrir conversa nova.
+  it('leaving the screen during the wait sends nothing (no new conversation, no orphan draft)', async () => {
+    comThread(7, 90);
+    const create = createPendente();
+    const { conversa, wrapper } = montar();
+    const envio = conversa.enviar({
+      texto: 'Segue a tabela',
+      anexos: [arquivo('tabela.pdf', 'application/pdf')],
+    });
+    await flushPromises();
+
+    wrapper.unmount();
+    // O RESET da store, como na tela de verdade: a conversa some.
+    store.state['autonomiaBuildThreads/getThread'] = null;
+    create.resolver({ id: 31 });
+
+    expect(await envio).toBe(false);
+    expect(chamadas('autonomiaBuildThreads/start')).toHaveLength(0);
+    expect(chamadas('autonomiaBuildThreads/send')).toHaveLength(0);
+  });
+
+  it('a site waiting for the draft goes on the turn by its full address (the reference it will have)', async () => {
+    const { conversa } = montar();
+    conversa.anexarSite('https://www.loja.com.br/precos');
+    await conversa.enviar({ texto: 'Os preços estão no site' });
+
+    const [, inicio] = chamadas('autonomiaBuildThreads/start')[0];
+    expect(inicio.materiais_a_caminho).toEqual([
+      'https://www.loja.com.br/precos',
+    ]);
+    expect(conversa.materiais.value[0].nome).toBe('www.loja.com.br/precos');
   });
 
   it('before the draft exists, the turn says which files are on the way', async () => {

@@ -127,6 +127,8 @@ export function useConversaDeCriacao({
   const estadosDasFontes = ref({});
   let proximoMaterial = 0;
   let relogioDemora = null;
+  // #2489 — a tela saiu (a store foi limpa): um turno que ainda esperava as subidas não sai mais.
+  let desmontado = false;
   // O último turno mandado ({ conteudo, extra, echo }), para reenviar se não chegou.
   let ultimoEnvio = null;
 
@@ -317,6 +319,10 @@ export function useConversaDeCriacao({
     }
   };
 
+  // #2489 — como o material vai em `materiais_a_caminho`: igual à `reference` que a fonte terá (o nome
+  // do arquivo; o endereço inteiro do site), para o Construtor tirar o que já chegou.
+  const nomeACaminho = material => material.endereco || material.nome;
+
   // `descritor` é { file } ou { url }, como a store espera. true = a fonte foi criada (#2489: o turno
   // espera por isso); false = não subiu e o material mostra a falha.
   const subirParaBase = async (material, descritor) => {
@@ -379,7 +385,7 @@ export function useConversaDeCriacao({
     const venceu = await Promise.race([todas.then(() => false), prazo]);
     clearTimeout(relogio);
     const aindaSubindo = venceu
-      ? [...subidasEmAndamento.values()].map(material => material.nome)
+      ? [...subidasEmAndamento.values()].map(nomeACaminho)
       : [];
     return { falhas: [...falhas], aindaSubindo };
   };
@@ -413,14 +419,17 @@ export function useConversaDeCriacao({
 
   // `endereco` já conferido (enderecoDoSite): a caixa só manda endereço válido.
   const anexarSite = endereco =>
-    paraBase({ nome: nomeDoSite(endereco), tipo: 'site' }, { url: endereco });
+    paraBase(
+      { nome: nomeDoSite(endereco), tipo: 'site', endereco },
+      { url: endereco }
+    );
 
   // #2489 — antes do rascunho, o que espera na fila vai pelo nome no turno: o Construtor sabe que o
   // material está a caminho e não diz que não chegou.
   const materiaisACaminho = () =>
     materiais.value
       .filter(m => m.estado === 'fila' && filaDaBase.has(m.id))
-      .map(m => m.nome);
+      .map(nomeACaminho);
 
   // Com o rascunho criado, a fila sobe. O envio também chama: não depende de o watch já ter rodado.
   const subirFila = () => {
@@ -490,13 +499,18 @@ export function useConversaDeCriacao({
       // #2489 — com rascunho, o turno só sai depois de todo arquivo em subida chegar à base (deste
       // envio ou de antes): o Construtor já o vê "em análise". Se algum não subiu, a conversa avisa e o
       // turno não sai como se tivesse chegado (o texto volta ao campo). Vencido o prazo, o turno sai e
-      // diz o que ainda está a caminho.
+      // diz o que ainda está a caminho. Se a tela saiu ou a conversa mudou durante a espera, o turno
+      // não sai: a store limpa abriria uma conversa nova (e um rascunho órfão).
+      const conversaAntes = threadId.value;
+      const saiu = () => desmontado || threadId.value !== conversaAntes;
       const { falhas, aindaSubindo } = await esperarSubidas();
+      if (saiu()) return false;
       if (falhas.length) {
         falhaAoSubir.value = { nome: falhas[0].nome };
         return false;
       }
       const fotosEnviadas = await enviarFotos(fotos);
+      if (saiu()) return false;
       const aCaminho = [
         ...(agenteId.value ? [] : materiaisACaminho()),
         ...aindaSubindo,
@@ -638,6 +652,7 @@ export function useConversaDeCriacao({
   };
 
   onBeforeUnmount(() => {
+    desmontado = true;
     pararRelogio();
     encerrarAoSair();
     limpar();

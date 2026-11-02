@@ -1460,11 +1460,14 @@ module Autonomia
          *a_caminho.map { |nome| "- a caminho: #{nome.inspect} (ainda não chegou)" }]
       end
 
-      # Tira o que já chegou à base (pela reference, limpa do mesmo jeito): não conta duas vezes.
+      # Tira o que já chegou à base DEPOIS do turno (pela reference, limpa do mesmo jeito; no site, o endereço inteiro):
+      # não conta duas vezes. Uma fonte antiga de mesmo nome não tira o arquivo novo que ainda está subindo.
       def materiais_a_caminho(knowledge = [])
         limpar = Autonomia::Agents::BuildThread.method(:nomes_a_caminho)
-        ultimo_turno = Array(@thread.messages).reverse.find { |m| m['role'] == 'user' }
-        limpar.call(ultimo_turno.to_h['materiais_a_caminho']) - limpar.call(knowledge.map(&:reference))
+        ultimo_turno = Array(@thread.messages).reverse.find { |m| m['role'] == 'user' }.to_h
+        enviado_em = Time.zone.parse(ultimo_turno['at'].to_s)
+        chegaram = enviado_em ? knowledge.select { |s| s.created_at >= enviado_em } : []
+        limpar.call(ultimo_turno['materiais_a_caminho']) - limpar.call(chegaram.map(&:reference))
       end
 
       def leitura_em_andamento?(knowledge, a_caminho)

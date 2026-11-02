@@ -494,11 +494,15 @@ RSpec.describe Autonomia::Agents::Builder do
 
     # Com rascunho, o turno sai com "a caminho" quando o prazo de espera da subida vence.
     context 'when the draft exists and the turn says a file is still on the way' do
+      def fonte(reference, **atributos)
+        Autonomia::Agents::Source.create!({ account: account, agent: agent, source_type: 'pdf', reference: reference,
+                                            status: :processing }.merge(atributos))
+      end
+
       before do
         thread.update!(agent: agent)
-        Autonomia::Agents::Source.create!(account: account, agent: agent, source_type: 'pdf', reference: 'tabela.pdf',
-                                          status: :processing)
         thread.append_message!('user', 'segue', materiais_a_caminho: ['tabela.pdf', 'catalogo.pdf'])
+        fonte('tabela.pdf')
       end
 
       it 'lists only what has not reached the base, without counting a file twice' do
@@ -509,6 +513,19 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(status).to include('- tabela.pdf: em análise')
         expect(status).to include('aguardando revisão/reenvio: 2')
         expect(status).to include(described_class::MATERIAL_SENDO_LIDO)
+      end
+
+      it 'keeps on the way a file whose older namesake was already in the base before the turn' do
+        fonte('catalogo.pdf', created_at: 1.hour.ago)
+
+        expect(builder.send(:materials_status_context)).to include('- a caminho: "catalogo.pdf" (ainda não chegou)')
+      end
+
+      it 'takes a site off the list by its full address' do
+        thread.append_message!('user', 'e o site', materiais_a_caminho: ['https://www.loja.com.br/precos'])
+        fonte('https://www.loja.com.br/precos', source_type: 'link', external_link: 'https://www.loja.com.br/precos')
+
+        expect(builder.send(:materials_status_context)).not_to include('- a caminho:')
       end
     end
 
