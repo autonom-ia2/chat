@@ -62,6 +62,11 @@ vi.mock('dashboard/api/autonomia/automacoes', () => ({
     ligar: vi.fn(),
     desligar: vi.fn(),
     renomear: vi.fn(),
+    historico: vi.fn(() =>
+      Promise.resolve({
+        data: { execucoes: [], versoes: {}, pagina: 1, mais: false },
+      })
+    ),
   },
 }));
 

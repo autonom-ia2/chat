@@ -53,6 +53,23 @@ onMounted(() => {
   carregar();
 });
 
+// #2498 — o fato da semana: "Rodou 12 vezes esta semana · 1 parou".
+const fatoDaSemana = semana => {
+  if (!semana?.rodou) return t('AUTOMACAO_LIVRE.HISTORICO.SEMANA.NADA');
+  const rodou = t(
+    'AUTOMACAO_LIVRE.HISTORICO.SEMANA.RODOU',
+    { n: semana.rodou },
+    semana.rodou
+  );
+  if (!semana.parou) return rodou;
+  const parou = t(
+    'AUTOMACAO_LIVRE.HISTORICO.SEMANA.PAROU',
+    { n: semana.parou },
+    semana.parou
+  );
+  return `${rodou} · ${parou}`;
+};
+
 const linhaDaNova = automacao => {
   const passos = automacao.versao?.receita?.passos || [];
   return {
@@ -68,6 +85,7 @@ const linhaDaNova = automacao => {
     primeiro: passos[0] ? fraseDoPasso(passos[0], catalogo.value, t) : '',
     outros: Math.max(passos.length - 1, 0),
     ativa: automacao.ativa,
+    fato: fatoDaSemana(automacao.semana),
   };
 };
 
@@ -270,6 +288,7 @@ const alternar = async linha => {
               :quando="linha.quando"
               :primeiro="linha.primeiro"
               :outros="linha.outros"
+              :fato="linha.fato"
               :ativa="linha.ativa"
               :antiga="linha.antiga"
               :pode-mudar="podeMudar"

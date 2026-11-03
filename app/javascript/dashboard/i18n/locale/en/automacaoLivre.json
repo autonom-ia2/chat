@@ -314,6 +314,42 @@
       "DESLIGAR": "Turn off",
       "SO_LEITURA": "You can see this automation. To change it, ask who looks after automations.",
       "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
+    },
+    "HISTORICO": {
+      "TITULO": "What happened",
+      "SUBTITULO": "Every time this automation ran in the last 30 days.",
+      "CARREGANDO": "Loading what happened",
+      "ERRO": "Could not load what happened right now.",
+      "VAZIO": "It has not run yet.",
+      "VER_MAIS": "Show more",
+      "CONVERSA_DE": "Conversation with {nome}",
+      "CONVERSA_N": "Conversation #{n}",
+      "OCULTA": "A conversation",
+      "OCULTA_DICA": "In an inbox you can't see",
+      "ABRIR_CONVERSA": "Open the conversation",
+      "VER_MENSAGEM": "See the message",
+      "ESTADOS": {
+        "ANDANDO": "running",
+        "ESPERANDO": "waiting",
+        "CONCLUIDA": "finished",
+        "PARADA": "stopped",
+        "FALHOU": "error",
+        "INTERROMPIDA": "interrupted"
+      },
+      "ESPERANDO_ATE": "waiting until {quando}",
+      "PULOU": "Skipped: {frase}",
+      "NAO_FEZ": "Did not do: {frase}",
+      "INICIO": "Did not start",
+      "PASSO_SUMIU": "A step that is no longer in this version",
+      "SEGUIU_POR": "Took: {ramo}",
+      "ESPERA_ATE": "Waits until {quando}",
+      "TENTATIVA": "Attempt {n}",
+      "IA": "AI: US$ {valor}",
+      "SEMANA": {
+        "NADA": "Has not run this week",
+        "RODOU": "Ran once this week | Ran {n} times this week",
+        "PAROU": "1 stopped | {n} stopped"
+      }
     }
   }
 }

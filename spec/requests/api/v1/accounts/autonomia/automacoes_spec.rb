@@ -422,4 +422,50 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response).to have_http_status(:created)
     end
   end
+
+  describe 'o que aconteceu (#2498)' do
+    let(:automacao) { create(:autonomia_automacao, account: account) }
+    let(:versao) { create(:autonomia_automacao_versao, automacao: automacao) }
+
+    before do
+      execucao = create(:autonomia_automacao_execucao, versao: versao, estado: 'parada',
+                                                       alvo: create(:conversation, account: account))
+      create(:autonomia_automacao_registro, execucao: execucao, resultado: 'pulado', motivo: 'spam')
+    end
+
+    it 'mostra as execuções com os passos a quem pode ver a automação', :aggregate_failures do
+      get "#{base}/#{automacao.id}/historico", headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      passo = response.parsed_body['execucoes'].first['passos'].first
+      expect(passo).to include('resultado' => 'pulado', 'motivo' => I18n.t('autonomia.automacao.motivos.spam'))
+      expect(response.parsed_body['versoes'].keys).to eq([versao.id.to_s])
+    end
+
+    it 'recusa quem não tem automation_view e esconde a de outra conta', :aggregate_failures do
+      get "#{base}/#{automacao.id}/historico", headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+
+      de_fora = create(:autonomia_automacao)
+      get "#{base}/#{de_fora.id}/historico", headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
+    end
+
+    it 'deixa ver com a função que só tem automation_view' do
+      leitor = create(:user, account: account, role: :agent)
+      funcao = create(:custom_role, account: account, permissions: %w[automation_view])
+      leitor.account_users.find_by(account: account).update!(custom_role: funcao)
+
+      get "#{base}/#{automacao.id}/historico", headers: leitor.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+    end
+
+    it 'a lista leva o fato da semana de cada automação' do
+      get base, headers: admin.create_new_auth_token, as: :json
+
+      linha = response.parsed_body['automacoes'].find { |item| item['id'] == automacao.id }
+      expect(linha['semana']).to eq('rodou' => 1, 'parou' => 1)
+    end
+  end
 end
