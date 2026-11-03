@@ -4,10 +4,10 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { entradaDoPasso } from '../catalogo';
 import { fraseDoPasso } from '../frases';
-import { RAMOS, idDaLista } from '../receita';
+import { galhosDe, idDaLista } from '../receita';
 
 // #2414 F5 — os passos do "Faça", numerados, com "Alterar" em cada um e um "+"
-// entre eles. "Se" e "Esperar até" mostram os galhos: o primeiro nível aberto,
+// entre eles. "Se", "Esperar até" e "Decidir" mostram os galhos: o primeiro nível aberto,
 // os de dentro recolhidos ("Mostrar tudo" abre todos). O componente chama a si
 // mesmo para os galhos.
 const props = defineProps({
@@ -49,11 +49,12 @@ const avancada = passo => !entradaDoPasso(passo, props.catalogo);
 
 // O galho opcional vazio ("Senão" sem passo) só aparece para quem pode mudar.
 const galhos = passo =>
-  (RAMOS[passo.tipo] || [])
-    .map(ramo => ({
-      ramo,
-      chave: idDaLista(passo.id, ramo),
-      passos: passo[ramo] || [],
+  galhosDe(passo)
+    .map(galho => ({
+      ramo: galho.ramo,
+      nome: galho.nome,
+      chave: idDaLista(passo.id, galho.ramo),
+      passos: galho.passos || [],
     }))
     .filter(galho => props.podeMudar || galho.passos.length);
 
@@ -147,7 +148,10 @@ const inserir = indice => emit('inserir', { listaId: props.listaId, indice });
                 class="i-lucide-corner-down-right size-4 text-n-slate-9"
                 aria-hidden="true"
               />
-              {{ $t(`AUTOMACAO_LIVRE.RAMOS.${galho.ramo.toUpperCase()}`) }}
+              {{
+                galho.nome ||
+                $t(`AUTOMACAO_LIVRE.RAMOS.${galho.ramo.toUpperCase()}`)
+              }}
               <span
                 v-if="!aberto(galho.chave)"
                 class="font-normal text-n-slate-10"

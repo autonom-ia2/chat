@@ -253,7 +253,8 @@
     "RAMOS": {
       "ENTAO": "Então",
       "SENAO": "Senão",
-      "SE_VENCER": "Se o prazo acabar"
+      "SE_VENCER": "Se o prazo acabar",
+      "NENHUM": "Nenhum se aplica"
     },
     "SELETOR": {
       "TITULO": "Escolha o próximo passo",

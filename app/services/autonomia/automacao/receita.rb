@@ -10,6 +10,16 @@
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   RAMOS = %w[entao senao se_vencer].freeze
+  # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
+  NENHUM = 'nenhum'.freeze
+
+  # As listas de passos que um passo abre, na ordem em que aparecem. É a única travessia da receita: o salvar, o ligar, a
+  # chave de funis (sem_funil? do controller) e o Roteiro andam por aqui. Um ramo que ficasse de fora deixaria a ação
+  # dentro dele sem conferência.
+  def self.ramos(passo)
+    caminhos = Array(passo['caminhos']).map { |caminho| caminho['passos'] if caminho.is_a?(Hash) }
+    [*RAMOS.map { |ramo| passo[ramo] }, *caminhos, passo[NENHUM]].select { |lista| lista.is_a?(Array) }
+  end
 
   # O JsonSchemaValidator põe o erro na chave de dentro (`gatilho`), não em `receita`; quem segue para a conferência
   # do código pergunta aqui.
@@ -30,7 +40,7 @@ class Autonomia::Automacao::Receita
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
   def passos(lista = @receita['passos'])
-    Array(lista).flat_map { |passo| [passo, *RAMOS.flat_map { |ramo| passos(passo[ramo]) }] }
+    Array(lista).flat_map { |passo| [passo, *self.class.ramos(passo).flat_map { |ramo| passos(ramo) }] }
   end
 
   private

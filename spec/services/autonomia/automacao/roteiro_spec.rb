@@ -18,4 +18,19 @@ RSpec.describe Autonomia::Automacao::Roteiro do
   it 'ramo vazio segue para depois de quem o abriu' do
     expect(roteiro.entrar(roteiro.passo('s1'), 'senao')['id']).to eq('e1')
   end
+
+  # F7 (#2500): os caminhos do "decidir" e o "nenhum se aplica" entram pela travessia única da Receita.
+  it 'acha os passos dos caminhos e do nenhum e sai deles no passo depois do decidir', :aggregate_failures do
+    com_decidir = described_class.new(
+      'passos' => [{ 'id' => 'd1', 'tipo' => 'decidir',
+                     'caminhos' => [{ 'chave' => 'a', 'passos' => [{ 'id' => 'c1' }, { 'id' => 'c2' }] }],
+                     'nenhum' => [{ 'id' => 'n1' }] },
+                   { 'id' => 'fim' }]
+    )
+
+    expect(com_decidir.passo('c2')['id']).to eq('c2')
+    expect(com_decidir.seguinte('c1')['id']).to eq('c2')
+    expect(com_decidir.seguinte('c2')['id']).to eq('fim')
+    expect(com_decidir.seguinte('n1')['id']).to eq('fim')
+  end
 end

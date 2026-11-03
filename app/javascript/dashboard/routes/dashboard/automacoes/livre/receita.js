@@ -5,28 +5,64 @@
 
 export const copiar = valor => JSON.parse(JSON.stringify(valor));
 
-// Os galhos de cada tipo de passo, na ordem em que aparecem.
-export const RAMOS = { se: ['entao', 'senao'], esperar_ate: ['se_vencer'] };
+// Os galhos fixos de cada tipo de passo, na ordem em que aparecem. O
+// "decidir" (F7, #2500) abre ainda um galho por caminho, antes do "nenhum".
+export const RAMOS = {
+  se: ['entao', 'senao'],
+  esperar_ate: ['se_vencer'],
+  decidir: ['nenhum'],
+};
 
 // Lista raiz: 'raiz'. Lista de um galho: '<id do passo>:<ramo>'.
 export const RAIZ = 'raiz';
 export const idDaLista = (passoId, ramo) => `${passoId}:${ramo}`;
 
-const ramosDe = passo => RAMOS[passo.tipo] || [];
+const galhoFixo = (passo, ramo) => ({
+  ramo,
+  passos: passo[ramo],
+  com: (alvo, lista) => ({ ...alvo, [ramo]: lista }),
+});
+
+const galhoDoCaminho = (caminho, indice) => ({
+  ramo: `caminhos.${indice}`,
+  nome: caminho.chave,
+  passos: caminho.passos,
+  com: (alvo, lista) => ({
+    ...alvo,
+    caminhos: alvo.caminhos.map((outro, i) =>
+      i === indice ? { ...outro, passos: lista } : outro
+    ),
+  }),
+});
+
+// Os galhos de um passo, na ordem em que aparecem: `ramo` (o fim do id da
+// lista), `passos` (pode faltar), `nome` (o do caminho) e `com(passo, lista)`,
+// que devolve o passo com o galho trocado. É a única travessia da árvore no
+// editor; o servidor tem a sua em Autonomia::Automacao::Receita.ramos.
+export const galhosDe = passo => {
+  const fixos = RAMOS[passo.tipo] || [];
+  return [
+    ...fixos.filter(ramo => ramo !== 'nenhum').map(r => galhoFixo(passo, r)),
+    ...(passo.caminhos || []).map((caminho, i) =>
+      galhoDoCaminho(caminho || {}, i)
+    ),
+    ...fixos.filter(ramo => ramo === 'nenhum').map(r => galhoFixo(passo, r)),
+  ];
+};
 
 // Aplica `fn` em toda lista da árvore; `fn(lista, listaId)` devolve a nova. O
 // galho opcional que não existe ("senão" sem passo) só aparece na receita se
 // ganhou passo: a receita que ninguém mexeu volta igual.
 const mapearListas = (passos, fn, listaId = RAIZ) =>
   fn(passos, listaId).map(passo =>
-    ramosDe(passo).reduce((novo, ramo) => {
+    galhosDe(passo).reduce((novo, galho) => {
       const lista = mapearListas(
-        passo[ramo] || [],
+        galho.passos || [],
         fn,
-        idDaLista(passo.id, ramo)
+        idDaLista(passo.id, galho.ramo)
       );
-      if (!Array.isArray(passo[ramo]) && !lista.length) return novo;
-      return { ...novo, [ramo]: lista };
+      if (!Array.isArray(galho.passos) && !lista.length) return novo;
+      return galho.com(novo, lista);
     }, passo)
   );
 
@@ -50,7 +86,7 @@ export const tirarPasso = (passos, id) =>
 export const todosOsPassos = (passos = []) =>
   passos.flatMap(passo => [
     passo,
-    ...ramosDe(passo).flatMap(ramo => todosOsPassos(passo[ramo] || [])),
+    ...galhosDe(passo).flatMap(galho => todosOsPassos(galho.passos || [])),
   ]);
 
 export const acharPasso = (passos, id) =>
