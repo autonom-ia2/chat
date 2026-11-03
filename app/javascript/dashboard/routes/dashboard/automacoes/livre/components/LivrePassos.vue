@@ -43,6 +43,10 @@ const ICONES = {
   se: 'i-lucide-git-branch',
   parar: 'i-lucide-octagon-x',
   acao: 'i-lucide-play',
+  decidir: 'i-lucide-split',
+  extrair: 'i-lucide-scan-text',
+  escrever: 'i-lucide-pen-line',
+  resumir: 'i-lucide-text-quote',
 };
 const icone = passo => ICONES[passo.tipo] || 'i-lucide-blocks';
 const avancada = passo => !entradaDoPasso(passo, props.catalogo);
@@ -59,6 +63,13 @@ const galhos = passo =>
     .filter(galho => props.podeMudar || galho.passos.length);
 
 const frase = passo => fraseDoPasso(passo, props.catalogo, t);
+// O galho do caminho do "decidir" leva o nome que a pessoa deu; sem nome ainda,
+// "Nome do caminho".
+const rotuloDoGalho = galho => {
+  if (galho.ramo.startsWith('caminhos.'))
+    return galho.nome || t('AUTOMACAO_LIVRE.IA.CAMINHO.NOME');
+  return t(`AUTOMACAO_LIVRE.RAMOS.${galho.ramo.toUpperCase()}`);
+};
 const inserir = indice => emit('inserir', { listaId: props.listaId, indice });
 </script>
 
@@ -148,10 +159,7 @@ const inserir = indice => emit('inserir', { listaId: props.listaId, indice });
                 class="i-lucide-corner-down-right size-4 text-n-slate-9"
                 aria-hidden="true"
               />
-              {{
-                galho.nome ||
-                $t(`AUTOMACAO_LIVRE.RAMOS.${galho.ramo.toUpperCase()}`)
-              }}
+              {{ rotuloDoGalho(galho) }}
               <span
                 v-if="!aberto(galho.chave)"
                 class="font-normal text-n-slate-10"
