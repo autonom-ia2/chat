@@ -33,6 +33,16 @@ class Autonomia::Automacao::Valores
     'mensagem.privada' => ->(mensagem) { mensagem.private? }
   }.freeze
 
+  # O gatilho cuja mensagem o filtro lê.
+  GATILHO_DA_MENSAGEM = 'mensagem.criada'.freeze
+
+  # Valores fechados (#2496): fora destas opções e destes operadores a condição nunca casa, e a automação falharia em
+  # silêncio. O salvar recusa o resto; o editor mostra só isto.
+  FECHADOS = {
+    'mensagem.tipo' => { 'opcoes' => %w[recebida enviada nota], 'operadores' => %w[igual diferente] },
+    'mensagem.privada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
+  }.freeze
+
   ATRIBUTOS = {
     'conversa.atributos' => ->(conversa) { conversa.custom_attributes },
     'contato.atributos' => ->(conversa) { conversa.contact&.custom_attributes }
@@ -47,6 +57,8 @@ class Autonomia::Automacao::Valores
     end
 
     def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
+
+    def fechado(caminho) = FECHADOS[caminho.to_s]
 
     # O atributo da conta que o caminho lê existe? Caminho que não é atributo responde true.
     def atributo_definido?(caminho, conta)

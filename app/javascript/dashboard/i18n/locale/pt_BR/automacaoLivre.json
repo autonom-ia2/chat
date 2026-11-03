@@ -45,7 +45,20 @@
       "CONTATO_EMPRESA_ID": "Empresa do contato",
       "CONTATO_ETIQUETAS": "Etiquetas do contato",
       "CONVERSA_ATRIBUTOS": "Campo personalizado da conversa",
-      "CONTATO_ATRIBUTOS": "Campo personalizado do contato"
+      "CONTATO_ATRIBUTOS": "Campo personalizado do contato",
+      "MENSAGEM_TIPO": "Tipo da mensagem",
+      "MENSAGEM_PRIVADA": "Mensagem interna"
+    },
+    "VALOR_DA_MENSAGEM": {
+      "RECEBIDA": "do cliente",
+      "ENVIADA": "da equipe para o cliente",
+      "NOTA": "nota interna",
+      "TRUE": "sim",
+      "FALSE": "não"
+    },
+    "OPERADOR_DA_MENSAGEM": {
+      "IGUAL": "é",
+      "DIFERENTE": "não é"
     },
     "PASSOS": {
       "ESPERAR": "Esperar um tempo",
@@ -285,7 +298,9 @@
       "PESSOAS": "Pessoas",
       "SO_A_EQUIPE": "Só a equipe vê este aviso. O cliente não recebe nada.",
       "DADO_APAGADO": "Dado apagado: {dado}",
-      "TEM_DADO_APAGADO": "Um dado deste texto foi apagado da conta. Tire-o ou troque por outro: do jeito que está, o Salvar tudo não aceita."
+      "TEM_DADO_APAGADO": "Um dado deste texto foi apagado da conta. Tire-o ou troque por outro: do jeito que está, o Salvar tudo não aceita.",
+      "FILTRO_ENTRA": "Ao salvar, entra no \"Só se\": {condicao}. Dá para trocar ou tirar depois.",
+      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\"."
     },
     "LIGAR": {
       "BOTAO": "Ligar",

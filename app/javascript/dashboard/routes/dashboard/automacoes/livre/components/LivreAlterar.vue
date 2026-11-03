@@ -11,7 +11,7 @@ import LivreTexto from './LivreTexto.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
-import { copiar } from '../receita';
+import { copiar, filtrosDoGatilho } from '../receita';
 
 // #2414 F5 — o painel do "Alterar": os campos do item escolhido (o gatilho, uma
 // condição do "Só se" ou um passo), já preenchidos. Nada muda até "Salvar".
@@ -87,6 +87,17 @@ const opcoesDeGatilho = computed(() =>
     label: t(item.frase),
   }))
 );
+// O "Só se" acompanha o gatilho (#2496): o que entra e o que sai aparece aqui,
+// antes do "Salvar".
+const trocaDoGatilho = computed(() => {
+  if (alvo.value?.tipo !== 'gatilho' || !rascunho.value?.tipo) return null;
+  if (rascunho.value.tipo === alvo.value.valor?.tipo) return null;
+  return filtrosDoGatilho(
+    alvo.value.valor?.filtros,
+    rascunho.value.tipo,
+    props.catalogo
+  );
+});
 const trocarGatilho = tipo => {
   rascunho.value = { ...(rascunho.value || {}), tipo };
 };
@@ -113,7 +124,10 @@ const abrir = item => {
 // Quem usa fecha o painel quando a mudança deu certo; se a API recusou, o
 // painel fica aberto com o que a pessoa montou.
 const salvar = () => {
-  emit('salvar', { ...alvo.value, valor: copiar(rascunho.value) });
+  const valor = trocaDoGatilho.value
+    ? { ...rascunho.value, filtros: trocaDoGatilho.value.filtros }
+    : rascunho.value;
+  emit('salvar', { ...alvo.value, valor: copiar(valor) });
 };
 
 const tirar = () => {
@@ -205,8 +219,35 @@ defineExpose({ abrir, fechar });
         />
       </div>
 
+      <p
+        v-if="trocaDoGatilho?.entra"
+        data-filtro-entra
+        role="status"
+        class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-teal-3 text-n-teal-12"
+      >
+        {{
+          $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.FILTRO_ENTRA', {
+            condicao: fraseDaCondicao(trocaDoGatilho.entra, catalogo, t),
+          })
+        }}
+      </p>
+      <p
+        v-for="(filtro, i) in trocaDoGatilho?.saem || []"
+        :key="i"
+        data-filtro-sai
+        role="status"
+        class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-amber-3 text-n-amber-12"
+      >
+        {{
+          $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.FILTRO_SAI', {
+            condicao: fraseDaCondicao(filtro, catalogo, t),
+          })
+        }}
+      </p>
+
       <LivreCondicao
         v-if="alvo.tipo === 'condicao'"
+        :gatilho="alvo.gatilho"
         :model-value="rascunho"
         :catalogo="catalogo"
         :atributos-do="atributosDo"

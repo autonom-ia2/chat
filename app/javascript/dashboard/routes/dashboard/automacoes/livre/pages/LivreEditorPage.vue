@@ -91,10 +91,12 @@ const itemDaUrl = chave => {
   if (chave.startsWith('condicao@')) {
     if (!r.gatilho) return null;
     const resto = chave.slice('condicao@'.length);
-    if (resto === 'novo') return { tipo: 'condicao', indice: -1, valor: null };
+    const gatilho = r.gatilho.tipo;
+    if (resto === 'novo')
+      return { tipo: 'condicao', indice: -1, gatilho, valor: null };
     const indice = Number(resto);
     return filtros[indice]
-      ? { tipo: 'condicao', indice, valor: filtros[indice] }
+      ? { tipo: 'condicao', indice, gatilho, valor: filtros[indice] }
       : null;
   }
   const passo = acharPasso(r.passos, chave);
@@ -145,8 +147,10 @@ const comFiltros = (r, filtros) => {
 
 const receitaDoSalvar = ({ tipo, indice, novo, listaId, valor }) => {
   const r = receita.value;
-  if (tipo === 'gatilho')
-    return { ...r, gatilho: { ...(r.gatilho || {}), ...valor } };
+  if (tipo === 'gatilho') {
+    const comGatilho = { ...r, gatilho: { ...(r.gatilho || {}), ...valor } };
+    return comFiltros(comGatilho, comGatilho.gatilho.filtros || []);
+  }
   if (tipo === 'condicao') {
     const filtros = filtrosDe(r);
     return comFiltros(
