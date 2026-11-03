@@ -80,7 +80,7 @@ Nada muda na Partida, no Executor nem na varredura.
 
 A coluna `evento` e o índice único `(automacao_id, evento)` do #2494 já servem a qualquer gatilho, e não precisam de migration. Cada gatilho diz a sua marca. Assim, o mesmo evento entregue duas vezes (o `EventDispatcherJob` repete) abre uma execução só, mesmo depois de a primeira fechar.
 
-- **Evento do despacho sem id próprio** (conversa, responsável, time): a marca usa o `timestamp` do despacho. O `EventDispatcherJob` guarda e repete o mesmo valor. Isso fecha o 🟡 dos gatilhos de conversa registrado na #2459.
+- **Evento do despacho sem id próprio** (conversa, responsável, time): a marca usa o `timestamp` do despacho, serializado com microssegundos (`iso8601(6)`), nunca `to_i`: reabrir e resolver no mesmo segundo são dois fatos. O `EventDispatcherJob` guarda e repete o mesmo valor. Isso fecha o 🟡 dos gatilhos de conversa registrado na #2459.
 - **Card e reunião:** usam o id da atividade (`Crm::Activity`). Ele é único e nasce no mesmo commit da mudança.
 - **Tempo:** a marca é o próprio fato. "Entrou na etapa em tal instante" e "a data do campo vale tal dia" disparam uma vez só (F6.1). Se a pessoa mover o card e ele voltar, `entered_stage_at` muda, e conta de novo.
 
@@ -103,11 +103,16 @@ Hoje o Executor e o `Valores` supõem a conversa (`Valores.new(conversa: alvo)`)
 - **Acesso:**
   - `Acesso#alcanca?` já trata o card: `CardPolicy`, mais a conversa principal (#2494).
   - O contato passa pela `ContactPolicy#show?`.
-  - O Spam vale para a conversa e para a conversa principal do card.
+  - O Spam vale para a conversa, para a conversa principal do card e para o contato: o contato cuja única conversa está no Spam é pulado, como a conversa.
 - **O alvo é genérico** (regra da Automação entre frentes):
   - a execução guarda `alvo_type` `Conversation`, `Crm::Card` ou `Contact`, e o `alvo_id` do banco;
   - o histórico e o ensaio da F2 (#2498) leem esse alvo pelo mesmo contexto. Card aparece como "Card #<id> · <título> · <funil> › <etapa>", com o link do card; contato aparece pelo nome. O nome vem do registro, nunca é gravado;
-  - combino o contrato com a F2 antes do código. O contexto expõe `rotulo`, `link` e `visivel_para?(usuario)`.
+  - contrato combinado com a F2 (#2498):
+    - `Contexto.de(alvo)` expõe `rotulo`, `link` e `visivel_para?(usuario)`;
+    - `Contexto.de_varios(alvos, usuario)`: lote para o histórico (20 por página), com preload por tipo (conversa com caixa e contato; card com funil e etapa) e uma checagem de visibilidade por lote, sem consulta por linha;
+    - `Contexto.recentes(conta:, usuario:, tipo:, limite: 10)`: os candidatos do ensaio, só o que a pessoa enxerga (conversa pelo filtro da lista de conversas; card pelo escopo do funil). Até o card entrar, só conversa;
+    - o rótulo sai do i18n, em en e pt_BR.
+  - O agregado da lista ("Rodou 12 vezes") conta todas as execuções, sem nome; não expõe ninguém (F2, com OK da Automação).
 - **Visibilidade do histórico e do ensaio:** valem a caixa e o funil de quem olha. O card passa pela `CardPolicy#show?` (o escopo visível) e a conversa pela `ConversationPolicy#show?`. A execução que a pessoa não alcança não aparece; não aparece nem como "escondida".
 - **Ensaio:**
   - o webhook de saída nunca é chamado; o passo mostra "aqui chamaria o webhook" e o host, nunca a URL completa;
@@ -132,17 +137,26 @@ O ADR 2.5 já previa: *"o emissor passa a sair também quando há automação as
 A tela da etapa avisa o que não dispara. Ver a pergunta P5 sobre o upsert.
 
 **Mensagem que falhou:** o `MESSAGE_UPDATED` já chega ao listener assíncrono, com `previous_changes`. Só dispara quando o `status` muda para `failed`.
-- **Laço:** a mensagem que falhou foi mandada por uma automação? Sim quando `content_attributes.automacao_id` está preenchido.
-  - Nesse caso, a partida entra na cadeia com `automacao:<id>` como origem.
-  - Se a mesma automação tentar de novo e falhar de novo, cai em `:auto_disparo`, em vez de girar.
+- **Laço (🔴 da qualidade):** a falha chega assíncrona, em outro job, sem a cadeia na thread. Reconstruir só `automacao:<id>` recomeçaria a cadeia a cada salto: com o canal fora, A manda e falha, C manda e falha, A de novo, sem fim.
+  - A marca da mensagem já leva `automacao_id` e `execucao_id` (`na_conversa.rb`, `marca`).
+  - No `falhou`, a escuta lê a execução de origem e retoma a **cadeia inteira dela**: as `origens` gravadas na coluna `cadeia`, mais `automacao:<id>` da própria, por `Cadeia.retomar`. A partida nova fica com a profundidade de lá + 1.
+  - Assim, A → C → A cai em `:laco` (A já está nas origens) e qualquer caminho para na profundidade 3. A → A cai em `:auto_disparo`.
+  - A raiz não fica gravada na execução (vai no `AvancarJob`). A retomada usa uma raiz nova; quem barra é a lista de origens e a profundidade, que estão gravadas.
+  - Mensagem sem a marca (pessoa, robô antigo) começa sem cadeia, como hoje.
+  - Spec: A ↔ C com o canal fora do ar para na profundidade 3.
 
 ## 6. A varredura de tempo (`TempoJob`)
 
 - **Ritmo:** a cada 15 minutos, no `config/schedule.yml`. A hora do gatilho é cheia (8h, 9h…). Só passam as contas com motor e `automacao_gatilhos` e com alguma automação de tempo ligada.
-- **Por automação**, acha os alvos da **janela**, enfileira um job por lote e, para cada alvo, chama a Partida com a marca. A janela é de 1 dia para trás:
-  - **parado:** `entered_stage_at` entre `agora − dias − janela` e `agora − dias`, na etapa escolhida, com o card aberto.
-  - **data:** o dia de hoje no fuso da conta é `data ± dias`, e já passou da `hora`. O atributo de data é lido do `custom_attributes`; com o filtro por conta e card aberto, não precisa de índice.
-  - **recorrente:** a última ocorrência (`frequencia`, `dia`, `hora`, no fuso da conta) que é ≤ agora e cabe na janela. A ocorrência entra na marca. Ela age em cada card ou contato que passa nos filtros, uma vez cada (F8.6).
+- **Por automação**, acha os alvos da **janela**, enfileira um job por lote e, para cada alvo, chama a Partida com a marca. A janela é de 1 dia para trás.
+- **Tudo no SQL, em lote** (`find_each`): o filtro da janela, da etapa, da data e dos filtros simples vai na consulta. Nunca se carrega a conta inteira no Ruby. Contatos passam de 100 mil por conta, e a varredura roda a cada 15 minutos. É proteção contra defeito, não teto. O PR leva um spec com volume e o `EXPLAIN` de cada consulta.
+  - **parado:** `entered_stage_at` entre `agora − dias − janela` e `agora − dias`, na etapa escolhida, com o card aberto. Usa o índice `idx_crm_cards_entered_stage`.
+    - O card que já estava parado havia mais de `dias + 1` quando a automação foi ligada **nunca dispara**: ligar não age no passado. A tela do gatilho diz isso.
+  - **data:** a data-alvo é calculada no Ruby (hoje no fuso da conta ∓ `dias`) e entra no SQL como igualdade: `custom_attributes->>'<campo>' = '<AAAA-MM-DD>'`. Vale para card e contato.
+    - Só se lê data ISO (`AAAA-MM-DD`). O valor em outro formato não casa com a igualdade e é ignorado. A varredura conta quantos alvos da conta têm o campo em formato inválido e põe isso no histórico da automação, sem o valor.
+    - "Já passou da `hora`" é conferido antes da consulta.
+  - **recorrente:** a última ocorrência (`frequencia`, `dia`, `hora`, no fuso da conta) que é ≤ agora e cabe na janela. Age em cada card ou contato que passa nos filtros, uma vez cada (F8.6). Os filtros do recorrente vão no SQL.
+    - A ocorrência entra na marca em **UTC ISO** (`iso8601`), nunca na hora local: no fuso com horário de verão, a hora local ambígua não repete nem pula. Spec com um fuso que tenha horário de verão.
 - **Deploy no meio** (F8.1): nada mora em memória. A janela e a marca fazem a varredura seguinte achar a ocorrência perdida, e ela não repete a que já rodou.
 - **Janela de 1 dia:** o que ficou mais de 1 dia sem varredura não roda depois. Assim, uma pane longa não faz o cliente receber de uma vez tudo o que estava atrasado. A janela é proteção contra defeito, não freio de uso.
 - **Fuso:** o da conta (`settings['reporting_timezone']`, que o CRM e os relatórios já leem, #954), nunca "Brasília".
@@ -173,21 +187,32 @@ A tela da etapa avisa o que não dispara. Ver a pergunta P5 sobre o upsert.
 ```
 
 - **Nativo**, não ação do catálogo: o motor monta o corpo com os `campos` escolhidos (os mesmos caminhos do Valores, só os que o alvo do gatilho tem) e manda um POST JSON.
-- **Quem monta ou muda**, no mesmo padrão do #2449 (`AutomationExternalActionGuard`): criar, mudar ou copiar uma automação que tem ou vai ter o passo `webhook` pede `integration_manage`, além de `automation_manage`. Ligar, desligar ou tirar o webhook também conta como mexer na integração. O administrador sempre pode.
-  - `integration_manage` não se delega por função personalizada para isso: é a chave que já existe, não uma nova.
+- **Quem monta ou muda**, no mesmo padrão do #2449 (`AutomationExternalActionGuard`): criar, mudar, copiar ou ligar uma automação que tem ou vai ter o passo `webhook`, ou tirar o passo, pede `integration_manage`, além de `automation_manage`. O administrador sempre pode.
+  - **Desligar não pede** `integration_manage`: desligar só corta o envio para fora, e "desligar sempre funciona" (Funções).
+  - `integration_manage` é a chave que já existe, uma chave de delegação (`DELEGATION_KEYS`, `custom_role.rb`): só o admin a entrega, mas uma função pode tê-la.
   - Na rodada, o Executor reconfere `integration_manage` de `ligada_por`. Sem ela, pausa (`sem_permissao_integracao`).
-- **Quem só vê a automação não vê a URL** (#2450): para quem não é admin nem tem `integration_manage`, a resposta da API e a tela trazem a URL mascarada (só o host). Salvar sem mexer na URL mascarada mantém a gravada.
+- **Quem só vê não vê a URL** (#2450): para quem não é admin nem tem `integration_manage`, a URL sai mascarada (só o host) em **toda** saída:
+  - o show e a lista da automação;
+  - a resposta do create e do update (`para_tela`, com a receita);
+  - a lista e o diff de versões, inclusive as antigas;
+  - o histórico, o ensaio da F2 (#2498), a leitura do Guia como a pessoa, o catálogo, os formatos do Guia e qualquer exportação.
+  - Spec: quem só vê chama cada endpoint que devolve receita ou versão, e nem o caminho nem a query da URL aparecem.
+  - Como o guarda vale para a automação inteira, quem só vê nem salva. "Salvar a URL mascarada mantém a gravada" fica de reserva: casa pelo `id` do passo, compara com a máscara exata (não por prefixo), e um `id` novo com a URL mascarada é recusado.
 - **SSRF:**
-  - ao salvar, a URL tem de ser `https` (ou `http`), com host público. O host é resolvido pelo mesmo resolver do `ssrf_filter`, e endereço privado é recusado (`endereco_proibido`);
-  - ao chamar, vai pelo `SafeFetch` (`lib/safe_fetch.rb`), o mesmo do `Webhooks::Trigger`. Ele revalida o endereço a cada redirecionamento, o que cobre o DNS que muda depois do salvar;
-  - timeout curto (o do `SafeFetch`) e corpo da resposta lido até um limite pequeno.
-- **Segredo e URL:** a URL completa, a query e qualquer segredo nunca vão para log, registro ou histórico. O histórico guarda o host, o código HTTP e o tempo. O log de erro segue a regra da escuta: a classe e a linha, nunca a mensagem.
-  - Assinatura do corpo (como o `Webhooks::Trigger` faz com o `secret` do webhook da conta): ver a pergunta P11. Guardar segredo na receita não serve, porque a receita é versionada e lida por quem só vê.
+  - **só `https`**: o `http` mandaria o token da URL em claro. O salvar recusa (`so_https`);
+  - ao salvar **e ao chamar** (DNS rebinding), o host é resolvido pelo resolver do `ssrf_filter`, e IP privado, loopback, link-local e metadata (169.254.169.254) são recusados (`endereco_proibido`);
+  - **host da própria instalação** (o de `FRONTEND_URL` e os domínios da conta) também é recusado, ao salvar e ao chamar: o webhook que bate na nossa API criaria mensagem ou moveria card fora da cadeia;
+  - a chamada vai pelo `SafeFetch` (`lib/safe_fetch.rb`) com `max_redirects: 0` (um redirect reenviaria o corpo, com dados do cliente, a outro host), timeout curto e `allowed_content_types` com JSON e texto (o padrão aceita só imagem e vídeo, e toda resposta JSON viraria falha). Corpo da resposta lido até um limite pequeno;
+  - o passo ignora `SAFE_FETCH_ALLOW_PRIVATE_NETWORK`. Spec: a variável ligada não abre rede privada para o passo.
+- **Laço pelo outro sistema** (um n8n que chama de volta a nossa API): além de recusar o host da instalação, o pedido leva o cabeçalho `X-Automacao-Cadeia` (raiz e profundidade, sem dado do cliente). A nossa API, ao receber um pedido com esse cabeçalho, retoma a cadeia (`Cadeia.retomar`), e o que esse pedido mudar entra na profundidade. Spec dos dois.
+- **Segredo e URL fora de tudo:** a URL completa, a query e qualquer segredo nunca vão para log, exceção, registro, histórico ou Sentry. O histórico guarda o host, o código HTTP e o tempo. O `body_excerpt` do `SafeFetch::HttpError` fica fora do registro. O log de erro leva a classe e a linha, nunca a mensagem.
+  - Assinatura do corpo: não no 1º PR (P11, de acordo da qualidade e de Funções, com só `https`). Segredo nunca na receita.
+- **Dados que saem:** o selo "manda dados para fora" lista os campos escolhidos; os campos ficam presos aos que o alvo do gatilho tem.
 - **Falha de entrega aparece no histórico:**
   - 4xx: `falhou`, sem repetir;
   - 5xx ou timeout: tenta 3 vezes (ADR 2.4.6) e depois `falhou`;
   - endereço proibido na hora de chamar: `falhou` com `endereco_proibido`.
-  - Em todos os casos a automação segue para o próximo passo? Ver a pergunta P10.
+  - Em todos os casos a automação segue para o próximo passo (P10, recomendação; de acordo da qualidade).
 - **Ensaio:** nunca chama (seção 4).
 - **Fica para depois:** usar a resposta do outro sistema nos passos seguintes (F8.5). Ver a pergunta P10.
 
@@ -300,4 +325,12 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
   - o log, o registro e o histórico não contêm a URL completa nem a query (spec procura a string);
   - 500 do outro lado tenta 3 vezes e fica `falhou` no histórico; 400 falha sem repetir;
   - o ensaio não faz nenhuma chamada HTTP (spec com WebMock sem stub).
+- **Marca µs:** o retry do `EventDispatcherJob` com o mesmo timestamp abre 1 execução; reabrir e resolver no mesmo segundo abrem 2.
+- **Laço da falha:** A ↔ C com o canal fora do ar para na profundidade 3.
+- **Volume:** a varredura de data e de recorrente em contato, numa conta com muitos contatos, consulta em lote no SQL; o PR traz o `EXPLAIN`.
+- **Data inválida:** o campo fora de ISO é ignorado e contado no histórico.
+- **Horário de verão:** o recorrente num fuso com horário de verão roda uma vez na troca de hora.
+- **Gate do emissor:** conta só com automação não chama Meta, Google nem webhook não assinante; `meeting_*` não chega ao webhook da conta.
+- **Spam do contato:** o contato cuja única conversa está no Spam é pulado.
+- **Webhook:** `http` recusa; o host da instalação recusa ao salvar e ao chamar; um redirect não é seguido; resposta JSON não vira falha; o `body_excerpt` não vai ao registro; o cabeçalho `X-Automacao-Cadeia` faz o pedido de volta entrar na profundidade.
 - **Visibilidade:** o histórico e o ensaio não mostram a execução de card ou conversa fora do funil ou da caixa de quem olha.
