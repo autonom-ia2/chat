@@ -22,10 +22,12 @@ class Autonomia::Automacao::Acesso
     'quem_ligou_sem_permissao' unless @account_user.permission_granted?(PERMISSAO)
   end
 
-  # O alvo é uma conversa ou um card. No card, valem o próprio card e a conversa principal dele, em que os passos agem:
-  # a pergunta vai a cada política, e quem não vê um dos dois pausa a automação em vez de quebrar a rodada.
+  # O alvo é uma conversa, um card ou um contato (#2499). No card, valem o próprio card e a conversa principal dele, em
+  # que os passos agem: a pergunta vai a cada política, e quem não vê um dos dois pausa a automação em vez de quebrar a
+  # rodada. O contato pergunta à política do contato.
   def alcanca?(alvo)
     contexto = { user: @usuario, account: @account, account_user: @account_user }
+    return ContactPolicy.new(contexto, alvo).show? if alvo.is_a?(::Contact)
     return ConversationPolicy.new(contexto, alvo).show? unless alvo.is_a?(::Crm::Card)
 
     conversa = alvo.primary_conversation

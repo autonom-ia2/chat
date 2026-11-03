@@ -25,7 +25,12 @@ class Autonomia::AutomacaoListener < BaseListener
 
   private
 
-  def comecar(event, tipo) = escuta.comecar(event.data[:conversation], tipo)
+  # O instante do despacho, em µs, é a marca do evento (Gatilhos): o EventDispatcherJob repete o mesmo valor.
+  def comecar(event, tipo)
+    conversa = event.data[:conversation]
+    marca = conversa && ::Autonomia::Automacao::Gatilhos.marca_do_despacho(tipo, conversa, event.timestamp)
+    escuta.comecar(conversa, tipo, evento: marca)
+  end
 
   def escuta = ::Autonomia::Automacao::Escuta
 end

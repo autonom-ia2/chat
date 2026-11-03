@@ -1027,6 +1027,10 @@ pt_BR:
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
         sem_conversa: "O card não tem conversa principal. Nada foi mandado."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
+      alvo:
+        conversa: 'Conversa #%{id}'
+        card: 'Card #%{id} · %{titulo}'
+        contato: '%{nome}'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
@@ -1037,6 +1041,7 @@ pt_BR:
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
+        valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'

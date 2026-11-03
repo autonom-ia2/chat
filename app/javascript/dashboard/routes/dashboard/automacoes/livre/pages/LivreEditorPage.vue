@@ -13,7 +13,12 @@ import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
 import LivreAlterar from '../components/LivreAlterar.vue';
 import LivreLigar from '../components/LivreLigar.vue';
 import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/guiada/DialogoDaCasa.vue';
-import { carregarCatalogo, novoPasso, useCatalogo } from '../catalogo';
+import {
+  carregarCatalogo,
+  doAlvoDoGatilho,
+  novoPasso,
+  useCatalogo,
+} from '../catalogo';
 import {
   acharPasso,
   falta,
@@ -59,6 +64,11 @@ const avisoDeLigada = computed(() => {
     ? t('AUTOMACAO_LIVRE.EDITOR.LIGADA_AVISO')
     : t('AUTOMACAO_LIVRE.EDITOR.LIGADA_POR_OUTRA');
 });
+
+// O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499).
+const catalogoDoAlvo = computed(() =>
+  doAlvoDoGatilho(catalogo.value, receita.value.gatilho?.tipo)
+);
 
 const seletor = ref(null);
 const alterar = ref(null);
@@ -465,7 +475,7 @@ onMounted(() => {
             />
             <LivreAlterar
               ref="alterar"
-              :catalogo="catalogo"
+              :catalogo="catalogoDoAlvo"
               :opcoes="opcoes"
               :atributos-da-peca="atributosDaPeca"
               :atributos-do="atributosDo"

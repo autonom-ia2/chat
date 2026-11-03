@@ -111,3 +111,18 @@ export const novoPasso = (entrada, id, t) => {
       passo
     );
 };
+
+// #2499: só o que o alvo do gatilho alcança (conversa, card, contato). Card num
+// gatilho de conversa o salvar recusaria; o editor nem oferece. Sem gatilho
+// escolhido, ou valor sem base (a mensagem do gatilho), fica tudo.
+export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
+  const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
+  const bases = alvo && dados.alvos?.[alvo];
+  if (!bases) return dados;
+  return {
+    ...dados,
+    valores: dados.valores.filter(
+      item => !item.base || bases.includes(item.base)
+    ),
+  };
+};
