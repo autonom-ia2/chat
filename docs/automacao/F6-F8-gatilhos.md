@@ -13,9 +13,9 @@ aprovar o protótipo em tela real (kit `bin/demo`).
 - o retorno como passo, os painéis da etapa e do card, e as receitas por pacote;
 - mais gatilhos: recorrente, mensagem que falhou na entrega, troca de responsável e de time da conversa, e reunião (marcada, remarcada ou cancelada).
 
-**Fica fora:**
-- o webhook de saída (F8.4 e F8.5), que espera a decisão do Rodrigo;
-- as IAs do CRM.
+**Entra também (Rodrigo, 03/11):** o passo **webhook de saída** (F8.4), com as travas da seção 7.1.
+
+**Fica fora:** as IAs do CRM.
 
 **Do termo de aceite, mas fora da lista da Automação** (perguntas P1 e P2):
 - card criado;
@@ -104,6 +104,14 @@ Hoje o Executor e o `Valores` supõem a conversa (`Valores.new(conversa: alvo)`)
   - `Acesso#alcanca?` já trata o card: `CardPolicy`, mais a conversa principal (#2494).
   - O contato passa pela `ContactPolicy#show?`.
   - O Spam vale para a conversa e para a conversa principal do card.
+- **O alvo é genérico** (regra da Automação entre frentes):
+  - a execução guarda `alvo_type` `Conversation`, `Crm::Card` ou `Contact`, e o `alvo_id` do banco;
+  - o histórico e o ensaio da F2 (#2498) leem esse alvo pelo mesmo contexto. Card aparece como "Card #<id> · <título> · <funil> › <etapa>", com o link do card; contato aparece pelo nome. O nome vem do registro, nunca é gravado;
+  - combino o contrato com a F2 antes do código. O contexto expõe `rotulo`, `link` e `visivel_para?(usuario)`.
+- **Visibilidade do histórico e do ensaio:** valem a caixa e o funil de quem olha. O card passa pela `CardPolicy#show?` (o escopo visível) e a conversa pela `ConversationPolicy#show?`. A execução que a pessoa não alcança não aparece; não aparece nem como "escondida".
+- **Ensaio:**
+  - o webhook de saída nunca é chamado; o passo mostra "aqui chamaria o webhook" e o host, nunca a URL completa;
+  - os gatilhos de tempo não gravam nada: nem execução, nem marca, nem registro. O ensaio só mostra quais alvos a janela de hoje pegaria.
 
 ## 5. Os eventos do card
 
@@ -147,10 +155,41 @@ A tela da etapa avisa o que não dispara. Ver a pergunta P5 sobre o upsert.
 - **Card:**
   - "Mover de etapa" (`POST crm/cards/:id/move`) e "Alterar o card" (`PATCH crm/cards/:id`), que já estão liberados, ganham entradas no `automacao-passos.yml`, no grupo novo `CARD`.
   - "Ganhar ou perder" (`POST crm/cards/:id/close`) precisa ser liberado no `automacao-recursos.yml`. Ver a pergunta P4.
-- **Gatilho ou passo de funil exige `crm_manage_pipelines`** (D2/D4):
-  - o salvar recusa (`sem_permissao_funil`);
-  - o Executor reconfere a cada rodada e, sem a permissão, pausa a automação com o motivo no histórico.
-  - Parecer de Funções.
+- **Gatilho ou passo de funil exige `crm_manage_pipelines`** (D2/D4). Ajustado pelo parecer de Funções (#2499, comentário 6610737672):
+  - a conferência é `CrmPermissions#crm_permission?('crm_manage_pipelines')`, como na `StageAutomationPolicy`: ela conta o `crm_admin` e nega o agente comum. O `permission_granted?` cru recusaria o `crm_admin`;
+  - vale em três momentos, sempre junto com `automation_manage`: ao salvar (quem salva), ao ligar e a cada rodada (`ligada_por`);
+  - sem a permissão: o salvar recusa (`sem_permissao_funil`); na rodada, a automação pausa com o motivo no histórico, nunca `erro_inesperado`.
+- **Os passos de card rodam como `ligada_por`, pelas policies do card:**
+  - mover pede `crm_move_cards` ou `crm_manage_cards`, e o funil;
+  - ganhar ou perder e alterar pedem `crm_manage_cards` e o funil;
+  - o retorno pede `crm_manage_cards` e o `ensure_card_funnel!`.
+  - O `crm_manage_pipelines` não implica nada disso (só com `crm_admin`). Então a Receita recusa ao salvar o passo que quem salva não poderia fazer. Ao rodar, a recusa da policy pausa a automação com motivo claro.
+- **CRM desligado na conta:** o servidor recusa gatilho e passo de card ao salvar (`crm_desligado`); não basta o seletor esconder. Ao rodar, a execução fecha parada.
+
+### 7.1 Passo `webhook` (F8.4)
+
+```json
+{ "id": "p4", "tipo": "webhook", "url": "https://n8n.exemplo.com/webhook/abc", "campos": ["card.titulo", "contato.nome"] }
+```
+
+- **Nativo**, não ação do catálogo: o motor monta o corpo com os `campos` escolhidos (os mesmos caminhos do Valores, só os que o alvo do gatilho tem) e manda um POST JSON.
+- **Quem monta ou muda**, no mesmo padrão do #2449 (`AutomationExternalActionGuard`): criar, mudar ou copiar uma automação que tem ou vai ter o passo `webhook` pede `integration_manage`, além de `automation_manage`. Ligar, desligar ou tirar o webhook também conta como mexer na integração. O administrador sempre pode.
+  - `integration_manage` não se delega por função personalizada para isso: é a chave que já existe, não uma nova.
+  - Na rodada, o Executor reconfere `integration_manage` de `ligada_por`. Sem ela, pausa (`sem_permissao_integracao`).
+- **Quem só vê a automação não vê a URL** (#2450): para quem não é admin nem tem `integration_manage`, a resposta da API e a tela trazem a URL mascarada (só o host). Salvar sem mexer na URL mascarada mantém a gravada.
+- **SSRF:**
+  - ao salvar, a URL tem de ser `https` (ou `http`), com host público. O host é resolvido pelo mesmo resolver do `ssrf_filter`, e endereço privado é recusado (`endereco_proibido`);
+  - ao chamar, vai pelo `SafeFetch` (`lib/safe_fetch.rb`), o mesmo do `Webhooks::Trigger`. Ele revalida o endereço a cada redirecionamento, o que cobre o DNS que muda depois do salvar;
+  - timeout curto (o do `SafeFetch`) e corpo da resposta lido até um limite pequeno.
+- **Segredo e URL:** a URL completa, a query e qualquer segredo nunca vão para log, registro ou histórico. O histórico guarda o host, o código HTTP e o tempo. O log de erro segue a regra da escuta: a classe e a linha, nunca a mensagem.
+  - Assinatura do corpo (como o `Webhooks::Trigger` faz com o `secret` do webhook da conta): ver a pergunta P11. Guardar segredo na receita não serve, porque a receita é versionada e lida por quem só vê.
+- **Falha de entrega aparece no histórico:**
+  - 4xx: `falhou`, sem repetir;
+  - 5xx ou timeout: tenta 3 vezes (ADR 2.4.6) e depois `falhou`;
+  - endereço proibido na hora de chamar: `falhou` com `endereco_proibido`.
+  - Em todos os casos a automação segue para o próximo passo? Ver a pergunta P10.
+- **Ensaio:** nunca chama (seção 4).
+- **Fica para depois:** usar a resposta do outro sistema nos passos seguintes (F8.5). Ver a pergunta P10.
 
 ## 8. Telas
 
@@ -162,12 +201,16 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
 2. **Configurar › Editar funil › etapa, "Automações desta etapa":**
    - as antigas, com o selo "jeito antigo" (F6.5), e as novas desta etapa;
    - "Nova automação" abre o editor com o gatilho já preenchido;
-   - o aviso do que não dispara (F6.4).
+   - o aviso do que não dispara (F6.4), inclusive o upsert até a #2501;
+   - acesso (Funções): `crm_manage_pipelines` + `automation_view` para ver; `automation_manage` para "Nova".
 3. **Card, "Automações deste cartão":**
    - o que está rodando, com o passo e a espera;
    - o histórico em frases;
-   - "Parar para este cartão" (F6.3). Ver a pergunta P6.
-4. **Receitas por pacote:** "30 dias antes do vencimento → Renovação + mensagem + retorno em 5 dias" e "card parado 3 dias em Orçamento enviado". Dependem do mecanismo de receitas da F5. Ver a pergunta P7.
+   - "Parar para este cartão" (F6.3). Ver a pergunta P6;
+   - acesso (Funções): ver pede `automation_view` + `CardPolicy#show?`; parar pede `automation_manage` + `CardPolicy#update?`.
+   Cada endpoint novo leva o parecer de Funções no PR.
+4. **Receitas por pacote:** "30 dias antes do vencimento → Renovação + mensagem + retorno em 5 dias" e "card parado 3 dias em Orçamento enviado". Usam o formato de receitas da F2 (#2498, decisão da Automação na P7).
+5. **Passo webhook:** a URL, os campos escolhidos e o selo "manda dados para fora". Quem não tem `integration_manage` vê o passo com a URL mascarada e não edita.
 
 ## 9. Migration e flag
 
@@ -191,20 +234,24 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
 - o componente do gatilho no editor (`LivreGatilho.vue`) e os painéis novos (`EtapaAutomacoes.vue`, `TelaAutomacoesDoCard.vue`)
 - os specs desses arquivos
 
-**Compartilhados com o motor (sem outra frente conhecida):**
+**Do motor, sem outra frente conhecida:**
 - `escuta.rb`
 - `partida.rb`
-- `executor.rb`
 - `valores.rb`
-- `receita.rb`
 - `acesso.rb`
 - `automacao_listener.rb`
 - `automacao-receita.schema.json`
+- `app/services/autonomia/automacao/passo_de_webhook.rb` (novo)
 
-**Compartilhados com outras frentes** (só blocos novos e pequenos, na ordem que a Automação definir):
+**Do motor, com ordem (decisão da Automação):**
+- `receita.rb`: a F1 (#2500) entra PRIMEIRO com a travessia única de todos os ramos. O meu código vai em cima.
+- `executor.rb`: eu entro primeiro, com o alvo genérico (contexto). A F7 acrescenta o passo de IA depois.
+
+**Compartilhados com outras frentes:** cada frente põe o seu bloco em método ou chave própria; quem entra depois traz a main antes do push; ninguém mexe no bloco de outra frente.
 - `catalogo.rb`: o método `gatilhos`;
 - `automacao-passos.yml`: o grupo `CARD` e as entradas de card;
-- `automacao-recursos.yml`;
+- `automacao-recursos.yml`: `POST crm/follow_ups` e, se a P4 for sim, `POST crm/cards/:id/close`;
+- o guarda do #2449 (`automation_external_action_guard.rb`) ou o equivalente da Automação livre: o passo `webhook` pede `integration_manage`;
 - `automacaoLivre.json` (en e pt_BR);
 - `LivreEditorPage.vue`: troca o seletor de gatilho pelo `LivreGatilho`;
 - `LivreAlterar.vue`: só se o gatilho aparecer no resumo.
@@ -216,17 +263,21 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
 
 **Configuração:** `config/schedule.yml` (o `TempoJob`) e `config/features.yml` (a flag).
 
+**Funções:** a dica da linha Automações na matriz (`customRole.json`, en e pt_BR): gatilho e passo de card pedem também "Funil: Editar"; os passos de card pedem "Cards: Editar"; o passo webhook pede "Integrações".
+
 ## 11. Perguntas abertas
 
 - **P1.** Card criado, card arquivado e campo do card mudou estão no termo da F6, mas não na lista da Automação. Entram? Recomendo **criado sim** (já sai como atividade `create`) e os outros dois depois.
 - **P2.** Etiqueta posta ou tirada (F8.7) e troca do responsável do card estão no termo, mas não na lista. Entram? Recomendo **sim** para os dois. O da conversa já tem evento. O do card sai da atividade `update` com `owner_id`, que precisa de um tipo próprio no `EVENT_MAP`.
-- **P3.** Retorno como ação do catálogo (recomendo) ou como passo nativo com valores em chip no texto?
+- **P3. Decidido (Automação):** retorno pela ação do catálogo `POST crm/follow_ups`.
 - **P4.** Liberar `POST crm/cards/:id/close` (ganhar ou perder) como passo? Recomendo sim, com o motivo da perda obrigatório quando for perder.
-- **P5.** O upsert do card com `stage_id` não passa pelo Mover. Hoje ele também não roda as automações de etapa antigas. Recomendo uma Issue própria do Multifunnel, para o upsert passar pelo Mover. Até lá, a tela avisa.
+- **P5. Decidido (Automação):** Issue #2501 para o Multifunnel (upsert pelo Mover). Até lá, a tela avisa.
 - **P6.** "Parar para este cartão" (F6.3) para só o que está rodando, ou barra também o que começar depois? Recomendo **só o que está rodando**: sem migration, e a pessoa religa a qualquer hora. Barrar o futuro pede uma tabela de exclusão.
-- **P7.** As receitas por pacote dependem das receitas da F5 (#2486, sessão F2). Onde moram e quem é o dono do formato? Se ainda não existirem, as da F6 entram como receitas declaradas no mesmo formato, num PR posterior.
+- **P7. Decidido (Automação):** o dono do formato das receitas é a F2, no #2498. As receitas por pacote usam o formato dela.
 - **P8.** O exemplo da F8 "cada corretor recebe a lista dos seus cards parados" é **um aviso com a lista de vários cards**. O recorrente age em cada alvo, um por vez (F8.6). A lista agregada pede um passo novo. Fica para depois?
 - **P9.** A F6.7 depende da #2428 (IA do funil respeita o card movido por automação), ainda aberta. Ela entra antes do PR do card?
+- **P10.** Webhook: depois da falha, a automação segue para o próximo passo ou para ali? Recomendo **seguir**, com a falha no histórico, porque o resto da automação (avisar, mover) não depende do outro sistema. Usar a resposta do outro sistema (F8.5) fica para um PR depois deste?
+- **P11.** Webhook: o corpo vai assinado? O `Webhooks::Trigger` assina com o `secret` do webhook da conta. Para o passo, o segredo não pode morar na receita (versionada e lida por quem só vê). Recomendo **sem assinatura no primeiro PR**: a URL do n8n ou da planilha já leva o token, e a URL fica protegida pelo #2450 e pela regra de nunca logar. A assinatura entra depois, com segredo guardado fora da receita, se um caso pedir.
 
 ## 12. Como vou provar (specs que devem falhar antes)
 
@@ -241,3 +292,11 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
   - quem não tem `crm_manage_pipelines` não salva um gatilho de card;
   - quem perde a permissão no meio pausa a automação, sem `erro_inesperado`.
 - **Flag desligada:** o salvar recusa, e a execução aberta fecha parada.
+- **Webhook:**
+  - sem `integration_manage`, criar, mudar, copiar, ligar ou tirar o passo recusa; com a função personalizada que só tem `automation_manage`, também recusa;
+  - quem só vê recebe a URL mascarada, e salvar com a mascarada mantém a gravada;
+  - URL com host privado (127.0.0.1, 10.x, 169.254.169.254, nome que resolve para rede interna) recusa ao salvar e, se o DNS mudar, falha ao chamar com `endereco_proibido`;
+  - o log, o registro e o histórico não contêm a URL completa nem a query (spec procura a string);
+  - 500 do outro lado tenta 3 vezes e fica `falhou` no histórico; 400 falha sem repetir;
+  - o ensaio não faz nenhuma chamada HTTP (spec com WebMock sem stub).
+- **Visibilidade:** o histórico e o ensaio não mostram a execução de card ou conversa fora do funil ou da caixa de quem olha.
