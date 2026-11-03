@@ -37,8 +37,8 @@ RSpec.describe Crm::Ai::Evaluator do
     allow(Crm::Cards::CurrentSubject).to receive(:card?).and_return(true)
   end
 
-  def movido_pela_automacao(tempo:, origem: 'regra', id: 7)
-    travel_to(tempo.ago) { Crm::Cards::Mover.new(card: card, actor: nil, target_stage: proposta, automacao: { origem: origem, id: id }).perform }
+  def movido_pela_automacao(tempo:, origem: 'regra', id: 7, actor: nil)
+    travel_to(tempo.ago) { Crm::Cards::Mover.new(card: card, actor: actor, target_stage: proposta, automacao: { origem: origem, id: id }).perform }
     ia_responde
   end
 
@@ -62,6 +62,13 @@ RSpec.describe Crm::Ai::Evaluator do
 
       expect_sem_mexer
     end
+  end
+
+  # O passo da Automação livre move como quem ligou: o ator é a pessoa, a escolha é da automação.
+  it 'movido pela Automação livre com quem ligou como ator: vale a regra da automação, não a da pessoa' do
+    movido_pela_automacao(tempo: 1.hour, origem: 'livre', actor: admin)
+
+    expect_sem_mexer
   end
 
   it 'a mensagem que chega dentro da janela não solta o card' do
@@ -144,8 +151,8 @@ RSpec.describe Crm::Ai::Evaluator do
   describe 'o fim do card segue' do
     before { account.enable_features!(Crm::Ai::FecharCard::FLAG, Crm::Ai::NaoENegocio::FLAG) }
 
-    it 'o pedido de fechar vira sugestão, mesmo com a automação mexendo há pouco' do
-      movido_pela_automacao(tempo: 1.hour)
+    it 'o pedido de fechar vira sugestão, mesmo com a automação mexendo há pouco (também a livre, com ator)' do
+      movido_pela_automacao(tempo: 1.hour, origem: 'livre', actor: admin)
       ia_responde(fechar_card: { resultado: 'perdido', motivo: 'recusou', retorno_em: nil, confidence: 0.99, reasoning: 'Não quer.' },
                   suggested_stage_id: proposta.id, confidence: 0.9)
 

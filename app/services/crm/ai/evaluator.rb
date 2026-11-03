@@ -280,8 +280,9 @@ module Crm
       def pessoa_mexeu_na_etapa?
         return false if @trigger == 'manual'
 
-        da_pessoa = Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user',
-                                        created_at: RESPEITO_AO_MOVIMENTO.ago..)
+        da_pessoa = MovimentoDaAutomacao.sem_automacao(
+          Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, actor_type: 'user', created_at: RESPEITO_AO_MOVIMENTO.ago..)
+        )
         criou_na_etapa = da_pessoa.where(event_type: 'create').where('payload @> ?', { etapa_escolhida: true }.to_json)
         da_pessoa.where(event_type: ESCOLHAS_DE_ETAPA).or(criou_na_etapa).exists?
       end

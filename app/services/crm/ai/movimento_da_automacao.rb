@@ -7,6 +7,12 @@
 class Crm::Ai::MovimentoDaAutomacao
   def self.respeitar?(card) = new(card).respeitar?
 
+  # O passo da Automação livre move pela porta da frente, com quem ligou como ator: a atividade é da pessoa no nome,
+  # mas a escolha foi da automação. Fora das regras da pessoa (Evaluator, FecharCard), que barram também o fechar.
+  def self.sem_automacao(atividades)
+    atividades.where.not('payload @> ?', { by: 'automacao' }.to_json)
+  end
+
   def initialize(card)
     @card = card
   end
