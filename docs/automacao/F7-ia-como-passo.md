@@ -80,7 +80,9 @@ instrução fixa de cada passo repete a regra de sempre: o que vem da conversa �
 - **Custo no passo:** o passo soma o custo assinando o evento `crm.ai_usage` enquanto roda, do mesmo jeito que o
   registro do Guia (#861). O registro leva `custo_usd`, `modelo`, `tokens_entrada` e `tokens_saida`.
 - **Na tela:**
-  - **No histórico**, cada passo de IA mostra o custo daquela vez (F7.4).
+  - **No histórico**, cada passo de IA mostra em frases o que decidiu e o custo daquela vez (F7.4). Pela regra da
+    Automação de 03/11, a frase não traz o prompt nem dado do cliente além do que a tela já mostra. O formato da frase
+    é da F2 (#2498).
   - **No editor**, o cartão do passo mostra "cerca de US$ X por vez", pela média dos registros desse passo nos últimos
     30 dias. Antes da primeira vez, mostra "o custo aparece depois da primeira vez".
   - **Na lista**, cada automação mostra a soma dos últimos 30 dias.
@@ -164,13 +166,17 @@ instrução fixa de cada passo repete a regra de sempre: o que vem da conversa �
   opt-out, o passo pula antes de gastar.
 - **Instrução:** até 2.000 caracteres. A instrução fixa diz que o texto é para o cliente, no idioma da conversa,
   sem inventar preço, prazo ou promessa que não esteja na instrução.
-- **Ensaio (F7.3):** o motor novo ainda não tem ensaio na main. O que existe é o `AutomationRules::Ensaio`, das
-  regras antigas, e o `automacoes_controller` não tem rota de ensaio. Por isso a F7 traz um "Testar este passo" no
-  próprio cartão do `escrever` e do `resumir`.
-  - Roda em até 3 conversas reais que quem monta vê.
-  - Mostra o texto e não manda nada.
-  - Cada conversa custa uma chamada, e a tela mostra o custo antes do clique.
-  - Quando o ensaio do motor chegar, ele usa a mesma chamada. Ver D6.
+- **Ensaio (F7.3), pela regra da Automação de 03/11:** o ensaio e o histórico são da F2 (#2498). Cada tipo de passo
+  declara como se ensaia, e o passo de IA nunca chama o modelo no ensaio. No ensaio:
+  - o `escrever` mostra "aqui a IA escreveria o texto", com a instrução e o destino;
+  - o `resumir` mostra "aqui a IA resumiria a conversa";
+  - o `decidir` mostra "aqui a IA escolheria o caminho" e lista os caminhos;
+  - o `extrair` mostra "aqui a IA procuraria: placa, data" e diz onde gravaria.
+
+  O ensaio não toca o Redis do AntiLaco nem a Cadeia, não despacha evento e não publica no Cable. A forma de cada
+  passo declarar a frase do ensaio é combinada com a F2 antes de codar.
+- **Ver o texto de verdade antes de ligar:** o ensaio não mostra o texto da IA. Uma opção à parte, fora do ensaio, fica
+  para o Rodrigo decidir (D6).
 
 ## Passo `resumir`
 
@@ -223,7 +229,8 @@ O protótipo é feito em tela real, com o kit `bin/demo`, numa conta de demo com
 3. **Extrair:** a linha "o que procurar → onde gravar", com o seletor de atributo da conta, sem `<select>` nativo.
 4. **Escrever e Resumir:** a instrução, o destino e "o que a IA lê".
 5. **Cartão do passo:** "cerca de US$ X por vez".
-6. **"Testar este passo" no Escrever:** o texto gerado em 3 conversas e o custo do teste.
+6. **Ensaio:** cada passo de IA na frase "aqui a IA escolheria o caminho" (ou "escreveria o texto"), sem chamar o
+   modelo.
 7. **Histórico:** "Decidiu **sinistro** · por quê (na conversa) · US$ 0,0003", "Não achou: placa" e "Mandou a
    mensagem #…".
 
@@ -261,7 +268,8 @@ time com o resumo de 3 linhas. A criação do card espera a F6, e a demo mostra 
 - `automacaoLivre.json`, em en e pt_BR;
 - `LivreSeletorPasso.vue` e `LivreAlterar.vue`;
 - `config/features.yml` e `spec/models/account_spec.rb`, para a flag;
-- `automacoes_controller.rb` e `config/routes.rb`, para a rota do "Testar este passo".
+- a declaração de como cada passo de IA se ensaia, no formato que a F2 (#2498) definir;
+- `automacoes_controller.rb` e `config/routes.rb`, só se o Rodrigo escolher a opção A da D6.
 
 **Não tocados:** `app/services/crm/ai/*` (só usados), `app/services/autonomia/decisores/*` (só o `Estado`, usado
 como está) e as IAs do CRM.
@@ -275,4 +283,4 @@ como está) e as IAs do CRM.
 | D3 | Onde fica o "por quê" do Decidir? | **A)** Numa nota privada curta na conversa ("Automação decidiu *sinistro*: …"), e o histórico liga para ela. **B)** No registro, e o histórico só mostra a quem vê a conversa. | **A.** Mantém o contrato do registro, que não guarda texto da conversa, e quem não vê a conversa não vê o motivo. O custo é uma nota por decisão; com B, a nota some, mas o registro passa a guardar texto e o histórico tem de filtrar por acesso. |
 | D4 | O Extrair grava e-mail e telefone do contato? | **A)** Não, na F7. **B)** Sim, com as regras do `Aplicador` (telefone no formato da conta, único na conta, e-mail nunca trocado). | **A.** E-mail identifica o contato no canal, e telefone tem regra de unicidade com caminho próprio. Podem ir para um atributo. Entra quando um caso pedir. |
 | D5 | Aprovação humana antes de enviar (F7.3, proposta)? | **A)** O destino `sugestao` (nota privada que a pessoa revisa e manda). **B)** Um estado novo "esperando pessoa", com botão aprovar, que retoma a execução. | **A** na F7. B pede um estado novo na execução, tela e prazo, e fica para quando houver o caso. |
-| D6 | O "Testar este passo" do Escrever e do Resumir chama a IA paga? | **A)** Sim, até 3 conversas, com o custo mostrado antes de clicar. **B)** Não; só mostra a instrução. | **A.** A F7.3 pede ver o texto antes de ligar. São 3 chamadas pagas pelo cliente, que clicou sabendo o custo. A rota é nova, sob `automacoes`, e vale para quem tem `automation_manage`. |
+| D6 | A F7.3 pede ver o texto antes de ligar, mas o ensaio não chama a IA (regra da Automação de 03/11). Como quem monta vê um texto de verdade? | **A)** Um botão "Testar este passo", fora do ensaio, no cartão do Escrever e do Resumir. Chama a IA paga em até 3 conversas que quem monta vê, mostra o custo antes do clique e não manda nada. **B)** Nada além do ensaio. Para ver o texto de verdade, liga com destino `sugestao` (nota privada) e confere nas primeiras conversas. | **B** na F7. Respeita a regra do ensaio sem abrir uma segunda porta paga, e a `sugestao` já mostra o texto real sem mandar ao cliente. A opção A fica para quando o Rodrigo pedir. |
