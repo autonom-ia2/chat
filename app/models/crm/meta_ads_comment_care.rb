@@ -36,6 +36,8 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   belongs_to :account
   belongs_to :created_by, class_name: 'User', optional: true
   belongs_to :inbox, optional: true
+  # #2487: o material só deste post ou anúncio. Sai com o cuidado, com os trechos e o arquivo (nunca fica solto).
+  has_many :sources, class_name: 'Autonomia::Agents::Source', foreign_key: :care_id, inverse_of: :care, dependent: :destroy
 
   validates :target_kind, inclusion: { in: TARGET_KINDS }
   validates :target_id, presence: true, uniqueness: { scope: [:account_id, :target_kind] }

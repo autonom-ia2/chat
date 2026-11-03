@@ -48,6 +48,16 @@
     ],
     "sem_corpo": true
   },
+  "DELETE agentes_do_post/:id/materiais/:material_id": {
+    "completo": true,
+    "controller": "api/v1/accounts/agentes_do_post_materiais#destroy",
+    "origem": [
+      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:39",
+      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:40",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
+    ],
+    "sem_corpo": true
+  },
   "DELETE agents/:id": {
     "completo": true,
     "controller": "api/v1/accounts/agents#destroy",
@@ -8538,6 +8548,23 @@
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:11",
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:34",
       "enterprise/app/controllers/api/v1/accounts/agent_capacity_policies/users_controller.rb:25"
+    ],
+    "sem_corpo": false
+  },
+  "POST agentes_do_post/:id/materiais": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/agentes_do_post_materiais#create",
+    "modelo": "Inbox",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:29",
+      "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:30",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
     ],
     "sem_corpo": false
   },

@@ -48,7 +48,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
       .to eq([%w[1 complaint], %w[2 failed], %w[3 skipped], %w[4 waiting], %w[5 older]])
     expect(payload[:to_see].first[:conversation_path]).to start_with("/app/accounts/#{account.id}/conversations/")
     expect(payload[:hidden].pluck(:id)).to eq(%w[6])
-    expect(payload).to include(care: 'on', para_quem: 'Quem pedir o e-book', unanswered: 4, older: 1, private_available: true)
+    expect(payload).to include(care: 'on', care_id: care.id, para_quem: 'Quem pedir o e-book', unanswered: 4, older: 1,
+                               private_available: true)
+  end
+
+  it 'sem cuidado gravado, care_id nulo: a tela do passo 1 só anexa depois de ligar (#2487)' do
+    care.destroy!
+
+    expect(painel.payload).to include(care: 'off', care_id: nil)
   end
 
   it 'recebeu no privado e respondeu, pelas conversas que nasceram do cuidado; não era o caso, pelo que a IA leu' do

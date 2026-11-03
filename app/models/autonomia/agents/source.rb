@@ -53,6 +53,9 @@ module Autonomia
                          foreign_key: :autonomia_agent_id
       has_many :knowledge_entries, class_name: 'Autonomia::Agents::KnowledgeEntry',
                                    foreign_key: :source_id, dependent: :delete_all
+      # #2487 — o material só de um post ou anúncio: é do cuidado dos comentários, não do agente (o `autonomia_agent_id`
+      # guarda a porta da rede no momento do anexo). Só a resposta a um comentário daquele cuidado lê (Retriever).
+      belongs_to :care, class_name: 'Crm::MetaAdsCommentCare', optional: true
 
       enum status: { pending: 0, processing: 1, ready: 2, failed: 3 }
 
@@ -78,6 +81,10 @@ module Autonomia
 
       # Escopo do parecer aceito — usado pelo retrieval e pelos resumos do Construtor.
       scope :accepted, -> { where(review_status: 'accepted') }
+
+      # #2487 — o material do próprio agente, sem o de um post ou anúncio (care_id). Todo leitor do material do agente
+      # fora do Retriever (painel, conferências, placar, autoteste, recompute) parte daqui.
+      scope :da_agente, -> { where(care_id: nil) }
 
       # G6 — fontes SERVÍVEIS: aceitas E com geração de entries vigente — `ready` (caminho normal)
       # OU `failed` transitório (mark_failed! restaurou o parecer 'accepted'; os KnowledgeEntry

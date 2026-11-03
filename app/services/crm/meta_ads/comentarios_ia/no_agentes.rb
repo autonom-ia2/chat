@@ -41,16 +41,18 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
     return { status: 'no_private' } if formato == 'privado' && !privado?(chave)
 
     escrito = escrita(chave, rede).escrever(FORMATOS.fetch(formato), comentario: pergunta)
-    { status: escrito.status.to_s, texto: escrito.texto, motivo: escrito.motivo }.compact
+    { status: escrito.status.to_s, texto: escrito.texto, motivo: escrito.motivo, material: escrito.material.presence }.compact
   end
 
   private
 
   def portas
     @fonte.redes.map do |network, rede|
-      porta = Crm::MetaAds::ComentariosIa::Porta.new(care: @care, inbox: caixa(rede[:inbox_id]))
+      inbox = caixa(rede[:inbox_id])
+      porta = Crm::MetaAds::ComentariosIa::Porta.new(care: @care, inbox: inbox)
       agente = porta.agente
-      { network: network, inbox_id: rede[:inbox_id], private: privado?(network), motivo: porta.motivo,
+      # #2487: o nome da caixa, para a tela dizer o motivo de verdade ("No Instagram, a caixa X não tem agente atendendo").
+      { network: network, inbox_id: rede[:inbox_id], caixa: inbox&.name, private: privado?(network), motivo: porta.motivo,
         agente: agente && { id: agente.id, name: agente.name } }
     end
   end

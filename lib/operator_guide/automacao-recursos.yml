@@ -203,6 +203,7 @@ fora:
       - seus_posts_comentarios
       - seus_posts_cuidado
       - agentes_do_post
+      - agentes_do_post_materiais
       - crm/meta_ads_facebook_comments
       - crm/meta_ads_instagram_comments
       - crm/meta_ads_whatsapp_reports

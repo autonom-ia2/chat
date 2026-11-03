@@ -233,7 +233,7 @@ module Autonomia
           # restaurado): uma fonte boa que falhou num re-sync continua servida pelo Retriever, então
           # os seus temas NÃO podem sumir do topic_map/knowledge_summary (sumir aqui faria o
           # InstructionRefresher apagar esse escopo da instrução). Nunca-aceitas seguem de fora.
-          accepted = agent.sources.servable.to_a
+          accepted = agent.sources.da_agente.servable.to_a
           # P3.2 — a confiança é qualidade TÉCNICA (vale para TODAS as aceitas, mesmo as fora do escopo
           # do agente). Já o MAPA DE TEMAS é metadata de ESCOPO: gateamos por pertinência para um KB de
           # outro negócio (aprovado por nota técnica) NÃO vazar seus temas no topic_map (leak S12).

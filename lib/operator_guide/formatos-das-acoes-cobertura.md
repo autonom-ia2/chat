@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 696 |
-| Sem corpo | 202 |
-| Com corpo | 494 |
-| Com corpo e formato completo | 409 (82,8%) |
-| Com corpo e formato incompleto | 85 |
+| No catálogo | 698 |
+| Sem corpo | 203 |
+| Com corpo | 495 |
+| Com corpo e formato completo | 409 (82,6%) |
+| Com corpo e formato incompleto | 86 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 210 de 301 |
+| Leituras cruas tipadas | 210 de 302 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 71 |
+| leitura crua sem tipo | 72 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -44,6 +44,7 @@ Uma ação pode ter mais de um motivo.
 - `PATCH portals/:id` — leitura crua sem tipo: portal.config.analytics
 - `PATCH relationships/:entity/:id/values` — leitura crua sem tipo: field
 - `PATCH relationships/configuration` — leitura crua sem tipo: configuration
+- `POST agentes_do_post/:id/materiais` — leitura crua sem tipo: file
 - `POST agents/bulk_create` — leitura crua sem tipo: emails
 - `POST assignment_policies/:assignment_policy_id/inboxes` — a rota não tem a action no controller: a chamada dá erro
 - `POST autonomia/agents/:agent_id/sources` — leitura crua sem tipo: descriptor.kind
@@ -121,6 +122,7 @@ Uma ação pode ter mais de um motivo.
 
 ## Leituras cruas sem tipo
 
+- `api/v1/accounts/agentes_do_post_materiais#create` file — o código não converte nem compara o valor
 - `api/v1/accounts/agents#bulk_create` emails — o código não converte nem compara o valor
 - `api/v1/accounts/articles#reorder` positions_hash — repassada a Article.update_positions
 - `api/v1/accounts/autonomia/agents/build_threads#create` message — repassada a @thread.append_message!
@@ -219,8 +221,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 428 |
-| Com parâmetros conhecidos | 377 |
+| No catálogo | 429 |
+| Com parâmetros conhecidos | 378 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

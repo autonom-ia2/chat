@@ -2819,6 +2819,17 @@
         "CUIDANDO": "Cuidando",
         "PAUSADO": "Pausado"
       },
+      "MOTIVO_DA_PORTA": {
+        "sem_caixa": "No {rede}, este post ou anúncio está sem caixa.",
+        "outra_conta": "A caixa {caixa} é de outra conta.",
+        "sem_chave": "A conta ainda não tem a chave de IA.",
+        "agentes_desligados": "Os agentes estão desligados nesta conta.",
+        "sem_porta": "A caixa {caixa} não tem agente atendendo.",
+        "lia": "Quem atende a caixa {caixa} é a Lia, que faz cotação e não responde comentários.",
+        "porta_parada": "O agente da caixa {caixa} está parado.",
+        "piloto": "O agente da caixa {caixa} está em teste, só com telefones de teste.",
+        "FRASES_FIXAS": "Ali, eu uso as frases fixas que você escreveu."
+      },
       "CARTAO": {
         "ESPERANDO": "Nenhum esperando você | 1 esperando você | {n} esperando você",
         "USA": "Usa o que {nome} sabe.",
@@ -2886,7 +2897,21 @@
         "MUDAR_NO_CUIDADO": "Mudar no cuidado",
         "PORTA": "No {rede}, quem escreve é {nome}.",
         "SEM_PORTA": "Sem agente para escrever, eu uso as frases fixas que você escreveu.",
-        "ENSINAR": "Criar um agente"
+        "ENSINAR": "Criar um agente",
+        "MATERIAL": {
+          "ANEXAR": "Anexar para eu ler",
+          "TEXTO": "Um arquivo com o que só vale para este post ou anúncio (tabela de tamanhos, prazo, regulamento). Eu leio só para responder os comentários dele.",
+          "TIPOS": "PDF, Word, Excel, texto ou JSON.",
+          "VAZIO": "Nenhum arquivo só deste post ainda.",
+          "ENVIANDO": "Enviando…",
+          "ERRO_ENVIO": "Não consegui receber o arquivo. Tente outro em PDF, Word, Excel ou texto.",
+          "SEM_AGENTE": "Sem agente na caixa, ninguém lê o arquivo. Crie um agente primeiro.",
+          "ERRO_TIRAR": "Não consegui tirar o arquivo. Tente de novo.",
+          "ERRO_LISTA": "Não consegui ver os arquivos deste post agora.",
+          "DEPOIS_DE_LIGAR": "Depois de ligar, você anexa aqui ou em Agentes → O que sabe.",
+          "ANEXAR_AGORA": "Anexar agora",
+          "AVISO_AGORA": "Tem um arquivo só deste post ou anúncio (tabela, prazo, regulamento)? Anexe agora. Ele leva alguns minutos para ser lido: os primeiros comentários são respondidos sem ele."
+        }
       },
       "TESTAR": {
         "TITULO": "Testar",
@@ -2915,7 +2940,8 @@
           "porta_parada": "O agente desta caixa está parado.",
           "piloto": "O agente desta caixa está em teste, só com telefones de teste."
         },
-        "SEM_PUBLICAR": "É o que eu escreveria. Nesta rede ela ainda não é publicada: a frase só sai junto com o privado, que ainda não está liberado. A pergunta fica com você."
+        "SEM_PUBLICAR": "É o que eu escreveria. Nesta rede ela ainda não é publicada: a frase só sai junto com o privado, que ainda não está liberado. A pergunta fica com você.",
+        "DO_MATERIAL": "Do seu material: {arquivos}"
       },
       "COMENTARIOS": {
         "TITULO": "Comentários",

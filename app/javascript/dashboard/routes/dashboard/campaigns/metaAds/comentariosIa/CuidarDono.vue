@@ -7,6 +7,7 @@ import RespostaDoFio from './RespostaDoFio.vue';
 import PassoParaQuem from './PassoParaQuem.vue';
 import PedidoDeTom from './PedidoDeTom.vue';
 import { FOR_WHOM_LIMIT, FRASE_DO_DONO_LIMIT } from './useCuidado';
+import MaterialDoPost from 'dashboard/routes/dashboard/autonomia/agentes/components/doPost/MaterialDoPost.vue';
 
 // Comentários que viram cliente (#2212, opção (a) do Rodrigo): o jeito escrito pelo dono, em três passos, uma ação em
 // cada: o que mandar no privado → para quem, nas palavras dele → como fica, com dois comentários do post (a Prévia do
@@ -309,6 +310,28 @@ const FIELD =
         <p class="m-0 text-sm text-n-slate-11">
           {{ $t(`${KEY}.WHAT.ALL_IN_ONE`) }}
         </p>
+        <!-- #2487: o material só deste post. Anexar só no cuidado que já existe; no novo, depois de ligar. -->
+        <section
+          v-if="data.writes"
+          data-ia-dono-material
+          class="flex flex-col gap-2 pt-4 border-0 border-t border-solid border-n-weak"
+        >
+          <h3 class="m-0 text-sm font-semibold text-n-slate-12">
+            {{ $t('AGENTS.AGENTE_DO_POST.SABE.SO_DO_POST') }}
+          </h3>
+          <MaterialDoPost
+            v-if="data.care_id"
+            :care-id="data.care_id"
+            pode-mudar
+          />
+          <p
+            v-else
+            data-ia-dono-material-depois
+            class="m-0 text-sm text-n-slate-11"
+          >
+            {{ $t('AGENTS.AGENTE_DO_POST.SABE.MATERIAL.DEPOIS_DE_LIGAR') }}
+          </p>
+        </section>
       </template>
 
       <template v-else-if="step === 2">

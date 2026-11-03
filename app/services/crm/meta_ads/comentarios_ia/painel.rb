@@ -184,7 +184,9 @@ class Crm::MetaAds::ComentariosIa::Painel
     {
       network: rede_do_cuidado, private_available: @networks.intersect?(PRIVADO_LIBERADO), care: cuidado ? escrito.status : 'off',
       message: escrito.message.to_s, para_quem: escrito.para_quem.to_s, phrases: Array(escrito.phrases),
-      read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0)
+      read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0),
+      # #2487: o id do cuidado gravado (nil antes de ligar), para anexar o material só deste post ou anúncio.
+      care_id: cuidado&.id
     }.merge(Crm::MetaAds::ComentariosIa::Escrita.no_painel(@account, escrito))
   end
 

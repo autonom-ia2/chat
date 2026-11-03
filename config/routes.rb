@@ -217,6 +217,9 @@ Rails.application.routes.draw do
           get 'agentes_do_post/:id', to: 'agentes_do_post#show'
           put 'agentes_do_post/:id/estado', to: 'agentes_do_post#estado'
           post 'agentes_do_post/:id/testar', to: 'agentes_do_post#testar'
+          get 'agentes_do_post/:id/materiais', to: 'agentes_do_post_materiais#index'
+          post 'agentes_do_post/:id/materiais', to: 'agentes_do_post_materiais#create'
+          delete 'agentes_do_post/:id/materiais/:material_id', to: 'agentes_do_post_materiais#destroy'
           resources :automation_rules, only: [:index, :create, :show, :update, :destroy] do
             post :clone
             post :ensaio, on: :member

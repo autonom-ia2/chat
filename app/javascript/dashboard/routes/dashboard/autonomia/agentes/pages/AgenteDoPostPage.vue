@@ -10,6 +10,7 @@ import GavetaComentariosDoPost from '../components/doPost/GavetaComentariosDoPos
 import {
   ICONE_DA_REDE,
   agentesDasPortas,
+  motivosDasPortas,
   estadoDoCuidado,
   redesDoCuidado,
   tituloDaLegenda,
@@ -67,6 +68,8 @@ const esperando = computed(() => {
 const legenda = computed(() => tituloDaLegenda(detalhe.value?.legenda || ''));
 const redes = computed(() => redesDoCuidado(detalhe.value?.network));
 const agentes = computed(() => agentesDasPortas(detalhe.value?.portas));
+// #2487 — o motivo de verdade de cada porta que não escreve, no lugar do "Sem agente para escrever".
+const motivos = computed(() => motivosDasPortas(detalhe.value?.portas, t));
 const ehAnuncio = computed(() => detalhe.value?.kind === 'ad');
 const textoDoErro = computed(() =>
   motivo.value === 'not_inbox_member'
@@ -263,6 +266,7 @@ const mudar = async status => {
         </section>
 
         <p
+          v-if="agentes.length || !motivos.length"
           data-usa
           class="flex flex-wrap items-center gap-2 p-4 m-0 text-sm rounded-2xl bg-n-blue-2 ring-1 ring-inset ring-n-blue-6 text-n-slate-12"
         >
@@ -291,8 +295,22 @@ const mudar = async status => {
               {{ t(`${KEY}.PAGINA.VER_PORTA`, { nome: agente.name }) }}
             </router-link>
           </template>
-          <template v-else>{{ t(`${KEY}.CARTAO.SEM_PORTA`) }}</template>
+          <template v-else-if="!motivos.length">
+            {{ t(`${KEY}.CARTAO.SEM_PORTA`) }}
+          </template>
         </p>
+        <div
+          v-if="motivos.length"
+          data-motivos-das-portas
+          class="flex flex-col gap-1 p-4 rounded-2xl bg-n-amber-2 ring-1 ring-inset ring-n-amber-6 text-sm leading-6 text-n-slate-12"
+        >
+          <p v-for="frase in motivos" :key="frase" class="m-0">
+            {{ frase }}
+          </p>
+          <p class="m-0 text-n-slate-11">
+            {{ t(`${KEY}.MOTIVO_DA_PORTA.FRASES_FIXAS`) }}
+          </p>
+        </div>
 
         <button
           type="button"
