@@ -80,3 +80,22 @@ export const falta = receita => {
   if (todosOsPassos(receita.passos).some(incompleto)) return 'COMPLETAR';
   return null;
 };
+
+// A receita da tela é a salva? Compara o conteúdo, não a ordem das chaves: o
+// passo que a pessoa abriu e salvou sem mudar nada não vira "mudança".
+export const iguais = (a, b) => {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b))
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((item, i) => iguais(item, b[i]))
+    );
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  const chaves = Object.keys(a);
+  return (
+    chaves.length === Object.keys(b).length &&
+    chaves.every(chave => iguais(a[chave], b[chave]))
+  );
+};

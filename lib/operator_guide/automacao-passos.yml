@@ -17,19 +17,21 @@
 # `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
 # `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
 
-grupos: [CONVERSA, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
+grupos: [MENSAGEM, CONVERSA, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
 
 nativos:
   esperar: { grupo: CONTROLE }
   esperar_ate: { grupo: CONTROLE }
   se: { grupo: CONTROLE }
   parar: { grupo: CONTROLE }
+  # `requer`: a flag da conta sem a qual o seletor não oferece o passo. Quem recusa de verdade é a Receita, ao salvar
+  # (passo_desligado), e o executor, ao rodar (mensagens_desligadas).
+  mensagem: { grupo: MENSAGEM, requer: automacao_mensagens }
+  avisar: { grupo: MENSAGEM, requer: automacao_mensagens }
 
-# Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita (com a flag da conta) e o
-# motor roda; a tela só os mostra quando tiver as peças.
-nativos_fora_do_editor:
-  mensagem: 'entra no editor com o Salvar tudo, #2486 (grupo, peça de texto com valores e frases)'
-  avisar: 'entra no editor com o Salvar tudo, #2486 (grupo, peças de texto e de destinatários e frases)'
+# Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
+# mostra quando tiver as peças.
+nativos_fora_do_editor: {}
 
 acoes:
   conversa_etiquetas:

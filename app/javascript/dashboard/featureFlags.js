@@ -94,6 +94,7 @@ export const FEATURE_FLAGS = {
   CAMPANHAS_PUBLICO_POR_CONVERSA: 'campanhas_publico_por_conversa',
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   AUTOMACAO_EDITOR: 'automacao_editor',
+  AUTOMACAO_MENSAGENS: 'automacao_mensagens',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

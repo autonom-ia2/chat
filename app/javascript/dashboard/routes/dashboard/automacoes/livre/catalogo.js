@@ -85,6 +85,10 @@ export const novoPasso = (entrada, id, t) => {
   if (entrada.tipo === 'se')
     return { id, tipo: 'se', condicao: null, entao: [] };
   if (entrada.tipo === 'parar') return { id, tipo: 'parar' };
+  // O texto nasce vazio: o "Salvar" do painel só libera depois de escrito.
+  if (entrada.tipo === 'mensagem') return { id, tipo: 'mensagem', texto: [] };
+  if (entrada.tipo === 'avisar')
+    return { id, tipo: 'avisar', texto: [], para: { responsavel: true } };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})

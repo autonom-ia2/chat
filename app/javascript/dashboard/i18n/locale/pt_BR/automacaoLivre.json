@@ -1,6 +1,7 @@
 {
   "AUTOMACAO_LIVRE": {
     "GRUPOS": {
+      "MENSAGEM": "Mensagens",
       "CONVERSA": "Conversa",
       "CONTATO": "Contato e empresa",
       "ETIQUETA": "Etiquetas",
@@ -25,9 +26,9 @@
       "MENOR": "é menor que"
     },
     "UNIDADES": {
-      "MINUTOS": "minutos",
-      "HORAS": "horas",
-      "DIAS": "dias"
+      "MINUTOS": "minuto | minutos",
+      "HORAS": "hora | horas",
+      "DIAS": "dia | dias"
     },
     "VALORES": {
       "CONVERSA_ID": "Número da conversa",
@@ -63,7 +64,9 @@
       "ETIQUETA_CRIAR": "Criar uma etiqueta",
       "ETIQUETA_ALTERAR": "Mudar uma etiqueta",
       "ATRIBUTO_CRIAR": "Criar um campo personalizado",
-      "ATRIBUTO_ALTERAR": "Mudar um campo personalizado"
+      "ATRIBUTO_ALTERAR": "Mudar um campo personalizado",
+      "MENSAGEM": "Mandar mensagem ao cliente",
+      "AVISAR": "Avisar a equipe"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -100,7 +103,9 @@
       "ATTRIBUTE_MODEL": "O campo é de",
       "ATTRIBUTE_DISPLAY_TYPE": "Tipo do campo",
       "ATTRIBUTE_DESCRIPTION": "Para que serve",
-      "ATTRIBUTE_VALUES": "Opções da lista"
+      "ATTRIBUTE_VALUES": "Opções da lista",
+      "TEXTO": "O que dizer",
+      "PARA": "Quem avisar"
     },
     "OPCOES": {
       "STATUS": {
@@ -170,21 +175,27 @@
       "VERSAO": "Versão {n}",
       "MOSTRAR_TUDO": "Mostrar tudo",
       "MOSTRAR_MENOS": "Mostrar menos",
-      "SALVOU": "Mudança salva.",
+      "SALVOU": "Mudanças salvas.",
       "GUARDOU": "Guardada desligada.",
       "NO_MEIO": "Quem já começou termina na versão anterior.",
       "PAUSOU": "Ela pausou porque outra pessoa salvou. Para seguir, ligue de novo.",
       "NAO_ACHOU": "Esta automação não existe mais ou é de outra conta.",
       "PROBLEMAS": "Para salvar, corrija:",
-      "NAO_SALVA": "Esta mudança ainda não foi salva. Complete o passo que falta e ela entra numa versão nova.",
-      "LIGADA_AVISO": "Esta automação está ligada: cada mudança vale na hora.",
-      "LIGADA_POR_OUTRA": "Esta automação está ligada por outra pessoa. Se você salvar, ela pausa até ser ligada de novo.",
+      "NAO_SALVA": "Complete o passo que falta para poder salvar.",
+      "LIGADA_AVISO": "Esta automação está ligada. Suas mudanças só valem quando você tocar em Salvar tudo.",
+      "LIGADA_POR_OUTRA": "Esta automação foi ligada por outra pessoa. Quando você tocar em Salvar tudo, ela pausa até ser ligada de novo.",
       "SAIR": {
-        "TITULO": "Sair sem guardar?",
-        "TEXTO": "O que você montou aqui ainda não foi salvo. Se sair agora, ele some.",
-        "CONTINUAR": "Continuar montando",
-        "SAIR": "Sair sem guardar"
-      }
+        "TITULO": "Sair sem salvar?",
+        "TEXTO": "Suas mudanças ainda não foram salvas. Se sair agora, elas somem.",
+        "CONTINUAR": "Continuar aqui",
+        "SAIR": "Sair sem salvar"
+      },
+      "RASCUNHO": "Você tem mudanças que ainda não foram salvas.",
+      "SALVAR_TUDO": "Salvar tudo",
+      "DESCARTAR": "Descartar mudanças",
+      "DESCARTOU": "Mudanças descartadas.",
+      "CONFLITO": "Outra pessoa salvou antes. Suas mudanças não foram salvas.",
+      "VER_NOVA": "Ver a versão nova"
     },
     "CONFIRA": {
       "QUANDO": "Quando",
@@ -229,7 +240,15 @@
         "TIRAR": "Tirar a etiqueta {lista} do contato",
         "TIRAR_VARIAS": "Tirar as etiquetas {lista} do contato",
         "POR_E_TIRAR": "No contato, pôr {por} e tirar {tirar}"
-      }
+      },
+      "AVANCADA_SEM_NOME": "Ação avançada",
+      "MENSAGEM": "Mandar ao cliente: “{texto}”",
+      "AVISAR": "Avisar {quem}: “{texto}”",
+      "AVISAR_EQUIPE": "a equipe",
+      "RESPONSAVEL": "quem cuida da conversa",
+      "TIMES": "1 time | {n} times",
+      "PESSOAS": "1 pessoa | {n} pessoas",
+      "FALTA_TEXTO": "falta escrever o texto"
     },
     "RAMOS": {
       "ENTAO": "Então",
@@ -258,7 +277,15 @@
       "UNIDADE": "Unidade de tempo",
       "COMPOSTA": "Esta condição tem várias partes. Só o Guia muda; aqui ela fica como está.",
       "DA_CONVERSA": "Vem da conversa: {valor}",
-      "BUSCA_FALHOU": "Não deu para procurar agora. Tente de novo."
+      "BUSCA_FALHOU": "Não deu para procurar agora. Tente de novo.",
+      "POR_VALOR": "Pôr um dado da conversa",
+      "TEXTO_DICA": "O que estiver entre colchetes, como [Nome do contato], é trocado pelo dado na hora. Se o dado estiver vazio, este passo não acontece.",
+      "RESPONSAVEL": "Quem cuida da conversa",
+      "TIMES": "Times",
+      "PESSOAS": "Pessoas",
+      "SO_A_EQUIPE": "Só a equipe vê este aviso. O cliente não recebe nada.",
+      "DADO_APAGADO": "Dado apagado: {dado}",
+      "TEM_DADO_APAGADO": "Um dado deste texto foi apagado da conta. Tire-o ou troque por outro: do jeito que está, o Salvar tudo não aceita."
     },
     "LIGAR": {
       "BOTAO": "Ligar",

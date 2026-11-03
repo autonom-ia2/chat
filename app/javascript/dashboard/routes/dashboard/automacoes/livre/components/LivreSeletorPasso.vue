@@ -4,8 +4,10 @@ import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 
 // #2414 F5 — o "+" entre dois passos abre este seletor: os passos do catálogo,
 // por grupo. Só entra o que o motor roda (decisão da F5: nada de "em breve").
+// Passo que pede uma flag da conta (`requer`) só entra com ela ligada.
 const props = defineProps({
   catalogo: { type: Object, required: true },
+  liberado: { type: Function, required: true },
 });
 
 const emit = defineEmits(['escolher', 'close']);
@@ -17,7 +19,9 @@ const grupos = computed(() =>
     .map(grupo => ({
       ...grupo,
       passos: props.catalogo.passos.filter(
-        passo => passo.grupo === grupo.chave
+        passo =>
+          passo.grupo === grupo.chave &&
+          (!passo.requer || props.liberado(passo.requer))
       ),
     }))
     .filter(grupo => grupo.passos.length)

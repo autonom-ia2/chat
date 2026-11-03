@@ -1,6 +1,7 @@
 {
   "AUTOMACAO_LIVRE": {
     "GRUPOS": {
+      "MENSAGEM": "Messages",
       "CONVERSA": "Conversation",
       "CONTATO": "Contact and company",
       "ETIQUETA": "Labels",
@@ -25,9 +26,9 @@
       "MENOR": "is less than"
     },
     "UNIDADES": {
-      "MINUTOS": "minutes",
-      "HORAS": "hours",
-      "DIAS": "days"
+      "MINUTOS": "minute | minutes",
+      "HORAS": "hour | hours",
+      "DIAS": "day | days"
     },
     "VALORES": {
       "CONVERSA_ID": "Conversation number",
@@ -63,7 +64,9 @@
       "ETIQUETA_CRIAR": "Create a label",
       "ETIQUETA_ALTERAR": "Change a label",
       "ATRIBUTO_CRIAR": "Create a custom field",
-      "ATRIBUTO_ALTERAR": "Change a custom field"
+      "ATRIBUTO_ALTERAR": "Change a custom field",
+      "MENSAGEM": "Send a message to the customer",
+      "AVISAR": "Notify the team"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -100,7 +103,9 @@
       "ATTRIBUTE_MODEL": "The field belongs to",
       "ATTRIBUTE_DISPLAY_TYPE": "Field type",
       "ATTRIBUTE_DESCRIPTION": "What it is for",
-      "ATTRIBUTE_VALUES": "List options"
+      "ATTRIBUTE_VALUES": "List options",
+      "TEXTO": "What to say",
+      "PARA": "Who to notify"
     },
     "OPCOES": {
       "STATUS": {
@@ -170,21 +175,27 @@
       "VERSAO": "Version {n}",
       "MOSTRAR_TUDO": "Show everything",
       "MOSTRAR_MENOS": "Show less",
-      "SALVOU": "Change saved.",
+      "SALVOU": "Changes saved.",
       "GUARDOU": "Saved, still off.",
       "NO_MEIO": "Whoever already started finishes on the previous version.",
       "PAUSOU": "It paused because someone else saved. To go on, turn it on again.",
       "NAO_ACHOU": "This automation no longer exists or belongs to another account.",
       "PROBLEMAS": "To save, fix:",
-      "NAO_SALVA": "This change is not saved yet. Complete the missing step and it becomes a new version.",
-      "LIGADA_AVISO": "This automation is on: every change takes effect right away.",
-      "LIGADA_POR_OUTRA": "Someone else turned this automation on. If you save, it pauses until it is turned on again.",
+      "NAO_SALVA": "Complete the missing step to be able to save.",
+      "LIGADA_AVISO": "This automation is on. Your changes only take effect when you tap Save all.",
+      "LIGADA_POR_OUTRA": "Someone else turned this automation on. When you tap Save all, it pauses until it is turned on again.",
       "SAIR": {
         "TITULO": "Leave without saving?",
-        "TEXTO": "What you built here is not saved yet. If you leave now, it goes away.",
-        "CONTINUAR": "Keep building",
+        "TEXTO": "Your changes are not saved yet. If you leave now, they go away.",
+        "CONTINUAR": "Stay here",
         "SAIR": "Leave without saving"
-      }
+      },
+      "RASCUNHO": "You have changes that are not saved yet.",
+      "SALVAR_TUDO": "Save all",
+      "DESCARTAR": "Discard changes",
+      "DESCARTOU": "Changes discarded.",
+      "CONFLITO": "Someone else saved first. Your changes were not saved.",
+      "VER_NOVA": "See the new version"
     },
     "CONFIRA": {
       "QUANDO": "When",
@@ -229,7 +240,15 @@
         "TIRAR": "Remove the label {lista} from the contact",
         "TIRAR_VARIAS": "Remove the labels {lista} from the contact",
         "POR_E_TIRAR": "On the contact, add {por} and remove {tirar}"
-      }
+      },
+      "AVANCADA_SEM_NOME": "Advanced action",
+      "MENSAGEM": "Send to the customer: “{texto}”",
+      "AVISAR": "Notify {quem}: “{texto}”",
+      "AVISAR_EQUIPE": "the team",
+      "RESPONSAVEL": "whoever handles the conversation",
+      "TIMES": "1 team | {n} teams",
+      "PESSOAS": "1 person | {n} people",
+      "FALTA_TEXTO": "the text is missing"
     },
     "RAMOS": {
       "ENTAO": "Then",
@@ -258,7 +277,15 @@
       "UNIDADE": "Time unit",
       "COMPOSTA": "This condition has several parts. Only the Guide changes it; here it stays as is.",
       "DA_CONVERSA": "Comes from the conversation: {valor}",
-      "BUSCA_FALHOU": "Could not search right now. Try again."
+      "BUSCA_FALHOU": "Could not search right now. Try again.",
+      "POR_VALOR": "Add a conversation detail",
+      "TEXTO_DICA": "Anything in brackets, like [Contact name], is replaced by the detail at that moment. If the detail is empty, this step does not happen.",
+      "RESPONSAVEL": "Whoever handles the conversation",
+      "TIMES": "Teams",
+      "PESSOAS": "People",
+      "SO_A_EQUIPE": "Only the team sees this notice. The customer gets nothing.",
+      "DADO_APAGADO": "Deleted detail: {dado}",
+      "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it."
     },
     "LIGAR": {
       "BOTAO": "Turn on",

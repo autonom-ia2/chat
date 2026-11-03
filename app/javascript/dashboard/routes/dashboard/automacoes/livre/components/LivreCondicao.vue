@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { fraseDaCondicao, opcoesDoValor } from '../frases';
+import { opcoesDosValores } from '../texto';
 
 // #2414 F5 — uma condição: o que olhar, como comparar e com o quê. O que olhar
 // sai do catálogo (os valores que o motor lê) e, para campo personalizado, dos
@@ -29,16 +30,7 @@ const composta = computed(() =>
 );
 
 const opcoesDeCampo = computed(() =>
-  props.catalogo.valores.flatMap(item => {
-    if (!item.atributos) return [{ value: item.caminho, label: t(item.frase) }];
-    return props.atributosDo(item.atributos).map(atributo => ({
-      value: `${item.caminho}.${atributo.attribute_key}`,
-      label: t('AUTOMACAO_LIVRE.FRASES.ATRIBUTO', {
-        base: t(item.frase),
-        chave: atributo.attribute_display_name,
-      }),
-    }));
-  })
+  opcoesDosValores(props.catalogo, props.atributosDo, t)
 );
 
 const opcoesDeOp = computed(() =>

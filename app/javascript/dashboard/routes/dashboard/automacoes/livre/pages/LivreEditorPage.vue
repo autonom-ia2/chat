@@ -1,8 +1,9 @@
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { useCanManage } from 'dashboard/composables/useCanManage';
+import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
@@ -35,11 +36,22 @@ const podeMudar = useCanManage('automation_manage');
 const { catalogo } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
+const { isCloudFeatureEnabled } = useAccount();
 const editor = useEditorLivre();
-const { automacao, receita, nome, estado, problemas, ocupado, nova } = editor;
+const {
+  automacao,
+  receita,
+  nome,
+  estado,
+  problemas,
+  ocupado,
+  conflito,
+  nova,
+  mudou,
+} = editor;
 
-// Ligada, salvar vale na hora só para quem a ligou; quando outra pessoa salva,
-// ela pausa até ser ligada de novo (#2486 junta as mudanças num salvar só).
+// Ligada, o "Salvar tudo" vale na hora só para quem a ligou; quando outra
+// pessoa salva, ela pausa até ser ligada de novo.
 const meuId = useMapGetter('getCurrentUserID');
 const avisoDeLigada = computed(() => {
   if (!automacao.value?.ativa) return '';
@@ -159,8 +171,7 @@ const receitaDoTirar = ({ tipo, indice, valor }) => {
   return { ...r, passos: tirarPasso(r.passos, valor.id) };
 };
 
-// O painel só fecha quando a mudança entrou; recusada, fica aberto com o que a
-// pessoa montou e a tela mostra o motivo.
+// A mudança entra no rascunho da tela; vira versão no "Salvar tudo".
 const salvar = async item => {
   if (!(await editor.aplicar(receitaDoSalvar(item)))) return;
   passoNovo.value = null;
@@ -170,13 +181,14 @@ const tirar = async item => {
   if (await editor.aplicar(receitaDoTirar(item))) alterar.value?.fechar();
 };
 
-// O que só está na tela: a nova antes de guardar, ou a salva com um passo por
-// completar. Sair sem guardar perde isso, então a tela pergunta antes.
+// O que só está na tela: a nova antes de guardar, ou o rascunho da salva.
+// Sair sem salvar perde isso, então a tela pergunta antes.
 const naoSalva = computed(() =>
   nova.value
     ? Boolean(receita.value.gatilho || receita.value.passos.length)
-    : Boolean(falta(receita.value))
+    : mudou.value
 );
+const faltaCompletar = computed(() => Boolean(falta(receita.value)));
 let responderGuarda = null;
 onBeforeRouteLeave(() => {
   if (!podeMudar.value || !naoSalva.value) return true;
@@ -185,6 +197,14 @@ onBeforeRouteLeave(() => {
     responderGuarda = resolve;
   });
 });
+// Recarregar ou fechar a aba também perde o rascunho: o navegador pergunta.
+const avisarAoFechar = evento => {
+  if (!podeMudar.value || !naoSalva.value) return;
+  evento.preventDefault();
+  evento.returnValue = '';
+};
+onMounted(() => window.addEventListener('beforeunload', avisarAoFechar));
+onUnmounted(() => window.removeEventListener('beforeunload', avisarAoFechar));
 const responder = sair => {
   responderGuarda?.(sair);
   responderGuarda = null;
@@ -309,14 +329,63 @@ onMounted(() => {
             </p>
           </header>
 
-          <p
-            v-if="!nova && naoSalva"
-            data-nao-salva
-            role="status"
-            class="px-4 py-3 mb-0 text-[0.9375rem] rounded-2xl bg-n-amber-2 text-n-amber-11"
+          <div
+            v-if="conflito"
+            data-conflito
+            role="alert"
+            class="sticky top-0 z-10 flex flex-col gap-3 p-4 shadow-lg md:flex-row md:items-center rounded-2xl bg-n-ruby-3 text-n-ruby-12"
           >
-            {{ $t('AUTOMACAO_LIVRE.EDITOR.NAO_SALVA') }}
-          </p>
+            <p class="flex-1 mb-0 text-[0.9375rem] font-medium">
+              {{
+                mudou
+                  ? $t('AUTOMACAO_LIVRE.EDITOR.CONFLITO')
+                  : $t('AUTOMACAO_LIVRE.MUDOU')
+              }}
+            </p>
+            <Button
+              data-ver-nova
+              :label="$t('AUTOMACAO_LIVRE.EDITOR.VER_NOVA')"
+              icon="i-lucide-refresh-cw"
+              ruby
+              class="min-h-11"
+              @click="editor.verNova"
+            />
+          </div>
+
+          <div
+            v-else-if="!nova && naoSalva"
+            data-rascunho
+            role="status"
+            class="sticky top-0 z-10 flex flex-col gap-3 p-4 shadow-lg md:flex-row md:items-center rounded-2xl bg-n-amber-3 text-n-amber-12"
+          >
+            <div class="flex flex-col flex-1 gap-1">
+              <p class="mb-0 text-[0.9375rem] font-medium">
+                {{ $t('AUTOMACAO_LIVRE.EDITOR.RASCUNHO') }}
+              </p>
+              <p v-if="faltaCompletar" data-nao-salva class="mb-0 text-sm">
+                {{ $t('AUTOMACAO_LIVRE.EDITOR.NAO_SALVA') }}
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <Button
+                data-descartar
+                :label="$t('AUTOMACAO_LIVRE.EDITOR.DESCARTAR')"
+                slate
+                link
+                class="min-h-11"
+                :disabled="ocupado"
+                @click="editor.descartar"
+              />
+              <Button
+                data-salvar-tudo
+                :label="$t('AUTOMACAO_LIVRE.EDITOR.SALVAR_TUDO')"
+                icon="i-lucide-save"
+                class="min-h-11"
+                :disabled="faltaCompletar || ocupado"
+                @click="editor.salvarTudo"
+              />
+            </div>
+          </div>
 
           <div
             v-if="problemas.length"
@@ -341,7 +410,7 @@ onMounted(() => {
               <LivreConfira
                 :receita="receita"
                 :catalogo="catalogo"
-                :pode-mudar="podeMudar && !ocupado"
+                :pode-mudar="podeMudar && !ocupado && !conflito"
                 :tudo="tudo"
                 @alterar="chave => mudarUrl({ alterar: chave })"
                 @inserir="inserir"
@@ -371,6 +440,7 @@ onMounted(() => {
                 :nova="nova"
                 :pode-mudar="podeMudar"
                 :ocupado="ocupado"
+                :conflito="conflito"
                 @ligar="editor.ligar"
                 @guardar="editor.guardar"
                 @desligar="editor.desligar"
@@ -385,6 +455,7 @@ onMounted(() => {
             <LivreSeletorPasso
               ref="seletor"
               :catalogo="catalogo"
+              :liberado="isCloudFeatureEnabled"
               @escolher="escolherPasso"
               @close="fecharPainel('seletor')"
             />

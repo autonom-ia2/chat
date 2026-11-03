@@ -91,6 +91,41 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     expect(v1.reload.receita.dig('gatilho', 'tipo')).to eq('conversa.resolvida')
   end
 
+  # #2486: o editor esconde mensagem e avisar sem a flag da F4, mas a API é quem recusa. Quem chama direto não passa.
+  it 'pela API, sem a flag da F4, recusa mensagem e avisar ao criar e ao salvar', :aggregate_failures do
+    mensagem = { id: 'p2', tipo: 'mensagem', texto: ['Oi ', { '$valor' => 'contato.nome' }] }
+    avisar = { id: 'p3', tipo: 'avisar', texto: ['Olhe esta'], para: { responsavel: true } }
+    com_f4 = receita.merge(passos: receita[:passos] + [mensagem, avisar])
+
+    expect { criar(com: com_f4) }.not_to change(Autonomia::Automacao::Definicao, :count)
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas']).to include(
+      I18n.t('autonomia.automacao.receita.passo_desligado', passo: 'p2'),
+      I18n.t('autonomia.automacao.receita.passo_desligado', passo: 'p3')
+    )
+
+    criar
+    id = response.parsed_body['id']
+    patch "#{base}/#{id}", params: { receita: com_f4, base_versao_id: versao_id_de(id) }, headers: admin.create_new_auth_token,
+                           as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(Autonomia::Automacao::Definicao.find(id).versao_ativa.numero).to eq(1)
+  end
+
+  # #2486: o dado de um campo que a conta apagou continua {$valor} na receita; o salvar recusa com a frase, e a tela a
+  # mostra. Nunca vira texto literal para o cliente.
+  it 'com a F4 ligada, recusa texto com campo personalizado que a conta não tem' do
+    account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens')
+    mensagem = { id: 'p2', tipo: 'mensagem', texto: ['Placa: ', { '$valor' => 'contato.atributos.placa' }] }
+
+    criar(com: receita.merge(passos: receita[:passos] + [mensagem]))
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas']).to include(
+      I18n.t('autonomia.automacao.receita.atributo_inexistente', passo: 'p2', caminho: 'contato.atributos.placa')
+    )
+  end
+
   it 'liga como quem pediu e desliga' do
     criar
     id = response.parsed_body['id']
