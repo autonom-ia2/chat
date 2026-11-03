@@ -65,14 +65,15 @@ class Autonomia::Automacao::Contexto
     end
   end
 
-  # A mesma pergunta que o endpoint faria: a política da conversa, a do card ou a do contato.
+  # A mesma pergunta que a leitura faria: a política da conversa (view?, que no EE também deixa quem só lê,
+  # conversation_view), a do card ou a do contato. Para agir no alvo, a pergunta é a do Acesso#alcanca?.
   def visivel_para?(usuario)
     account_user = usuario && @alvo.account.account_users.find_by(user_id: usuario.id)
     return false unless account_user
 
     contexto = { user: usuario, account: @alvo.account, account_user: account_user }
     case @alvo
-    when ::Conversation then ConversationPolicy.new(contexto, @alvo).show?
+    when ::Conversation then ConversationPolicy.new(contexto, @alvo).view?
     when ::Crm::Card then ::Crm::CardPolicy.new(contexto, @alvo).show?
     when ::Contact then ContactPolicy.new(contexto, @alvo).show?
     else false
