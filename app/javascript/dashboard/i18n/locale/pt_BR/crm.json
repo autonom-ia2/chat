@@ -5903,7 +5903,9 @@
       "ASSUNTO_SEM_TEMPO": "{titulo}. Prioridade {prioridade}.",
       "SEM_CONTATO_ATENDER": "Ainda não há uma pessoa ligada a este atendimento.",
       "NEGOCIO_VALOR_OCULTO": "{titulo}. Urgência {urgencia}.",
-      "VALOR_OCULTO": "valor oculto"
+      "VALOR_OCULTO": "valor oculto",
+      "AUTOMACOES": "Automações deste card",
+      "AUTOMACOES_FRASE": "1 rodando agora"
     },
     "ETAPA": {
       "TELA": "Etapa",
@@ -6512,6 +6514,11 @@
     },
     "SERIE": {
       "TELA": "Repetição"
+    },
+    "AUTOMACOES": {
+      "TELA": "Automações",
+      "TITULO": "Automações deste card",
+      "TEXTO": "O que está rodando sozinho para {nome} e o que já foi feito."
     }
   },
   "CRM_LEMBRETE": {

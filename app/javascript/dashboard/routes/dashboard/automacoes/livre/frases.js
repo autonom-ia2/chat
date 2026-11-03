@@ -3,11 +3,15 @@
 // etiqueta entra, porque vai pelo nome; pessoa, time e caixa ficam no "Alterar".
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
+// #2499 PROTÓTIPO: os gatilhos novos ainda não estão no catálogo do servidor.
+import { gatilhoDe } from './gatilhosDemo';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
 export const fraseDoGatilho = (gatilho, catalogo, t) => {
-  const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
+  const entrada =
+    catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo) ||
+    gatilhoDe(gatilho?.tipo);
   return entrada ? t(entrada.frase) : t(`${P}.FALTA_GATILHO`);
 };
 

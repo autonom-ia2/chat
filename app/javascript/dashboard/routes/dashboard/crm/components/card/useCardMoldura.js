@@ -18,6 +18,8 @@ const TELAS = {
   'link-agenda': { chave: 'LINK', icone: 'i-lucide-link' },
   origem: { chave: 'ORIGEM', icone: 'i-lucide-megaphone' },
   historico: { chave: 'HISTORICO', icone: 'i-lucide-history' },
+  // #2499 (F6): "Automações deste cartão".
+  automacoes: { chave: 'AUTOMACOES', icone: 'i-lucide-workflow' },
 };
 
 export const useCardMoldura = ({

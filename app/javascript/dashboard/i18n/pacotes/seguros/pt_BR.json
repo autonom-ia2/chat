@@ -266,5 +266,13 @@
     "ALTERAR": {
       "DESFECHO": "Marcar como seguro ativo ou não fechou"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "GATILHOS_F6": {
+      "TIPOS": {
+        "CARD_GANHO": "Quando o card fecha o seguro",
+        "CARD_PERDIDO": "Quando o card não fecha"
+      }
+    }
   }
 }

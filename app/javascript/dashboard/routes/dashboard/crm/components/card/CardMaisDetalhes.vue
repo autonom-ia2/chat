@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { useOrigemLeiga } from './useOrigemLeiga';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 // #1423 — "Mais detalhes", recolhido numa linha: de onde veio, o que já
 // aconteceu, o resto do negócio (atenção, quando deve fechar, informações
@@ -23,6 +25,11 @@ defineEmits(['abrir', 'arquivar']);
 const { t } = useI18n();
 const leiga = useOrigemLeiga();
 const R = 'CRM_CARD.RESUMO';
+// #2499 (F6): a linha "Automações deste cartão", atrás da flag.
+const { isCloudFeatureEnabled } = useAccount();
+const gatilhosNovos = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.AUTOMACAO_GATILHOS)
+);
 
 const origem = computed(() => leiga.daCampanha(props.card.campaigns));
 const origemFrase = computed(() => {
@@ -82,6 +89,12 @@ const linhas = computed(() =>
       icone: 'i-lucide-megaphone',
       titulo: t(`${R}.ORIGEM`),
       frase: origemFrase.value,
+    },
+    gatilhosNovos.value && {
+      parte: 'automacoes',
+      icone: 'i-lucide-workflow',
+      titulo: t(`${R}.AUTOMACOES`),
+      frase: t(`${R}.AUTOMACOES_FRASE`),
     },
     {
       parte: 'historico',

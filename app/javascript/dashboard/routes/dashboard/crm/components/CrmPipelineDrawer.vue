@@ -5,6 +5,9 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import CrmAiSettingsPanel from './CrmAiSettingsPanel.vue';
 import CrmStageAutomationsPanel from './CrmStageAutomationsPanel.vue';
+import EtapaAutomacoes from './funil/EtapaAutomacoes.vue';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import FunilHeroi from './funil/FunilHeroi.vue';
 import FunilPassos from './funil/FunilPassos.vue';
 import FunilTelaNome from './funil/FunilTelaNome.vue';
@@ -59,6 +62,11 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save', 'archive', 'deleteStage']);
 
 const { t, locale } = useI18n();
+// #2499 (F6): "Automações desta etapa" com a Automação livre, atrás da flag.
+const { isCloudFeatureEnabled } = useAccount();
+const gatilhosNovos = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.AUTOMACAO_GATILHOS)
+);
 const store = useStore();
 const { canManageAi } = useCrmPermissions();
 
@@ -621,14 +629,19 @@ useFixedPanelPresence(computed(() => props.show));
               @acoes="abrir('stage-actions')"
             />
 
-            <CrmStageAutomationsPanel
+            <div
               v-else-if="view === 'stage-actions' && selectedStage"
-              :stage="selectedStage"
-              :pipeline-stages="form.stages"
-              :agents="agents"
-              expanded
-              :show-header="false"
-            />
+              class="flex flex-col gap-4"
+            >
+              <EtapaAutomacoes v-if="gatilhosNovos" :stage="selectedStage" />
+              <CrmStageAutomationsPanel
+                :stage="selectedStage"
+                :pipeline-stages="form.stages"
+                :agents="agents"
+                expanded
+                :show-header="false"
+              />
+            </div>
 
             <FunilSobre
               v-else-if="view === 'about'"

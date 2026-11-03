@@ -12,6 +12,7 @@ import LivreDestinatarios from './LivreDestinatarios.vue';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar } from '../receita';
+import LivreGatilho from './LivreGatilho.vue';
 
 // #2414 F5 — o painel do "Alterar": os campos do item escolhido (o gatilho, uma
 // condição do "Só se" ou um passo), já preenchidos. Nada muda até "Salvar".
@@ -22,6 +23,10 @@ const props = defineProps({
   opcoes: { type: Object, required: true },
   atributosDaPeca: { type: Function, required: true },
   atributosDo: { type: Function, required: true },
+  // #2499 (F6+F8): com a flag, a página passa os gatilhos novos e as escolhas
+  // dos campos deles (etapas, funis, campos de data). Sem eles, o seletor de hoje.
+  gatilhosNovos: { type: Array, default: null },
+  escolhasDoGatilho: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
@@ -191,7 +196,14 @@ defineExpose({ abrir, fechar });
         {{ $t('AUTOMACAO_LIVRE.CONFIRA.AVANCADA_DICA') }}
       </p>
 
-      <div v-if="alvo.tipo === 'gatilho'" class="flex flex-col gap-1.5">
+      <LivreGatilho
+        v-if="alvo.tipo === 'gatilho' && gatilhosNovos"
+        :model-value="rascunho"
+        :gatilhos="gatilhosNovos"
+        :escolhas="escolhasDoGatilho"
+        @update:model-value="novo => (rascunho = novo)"
+      />
+      <div v-else-if="alvo.tipo === 'gatilho'" class="flex flex-col gap-1.5">
         <label :for="idGatilho" class="text-sm font-medium text-n-slate-12">
           {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TIPO_GATILHO') }}
         </label>

@@ -1319,5 +1319,12 @@
     "ALTERAR": {
       "DESFECHO": "Mark as implemented or not closed"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "GATILHOS_F6": {
+      "TIPOS": {
+        "CARD_GANHO": "When the plan is implemented"
+      }
+    }
   }
 }

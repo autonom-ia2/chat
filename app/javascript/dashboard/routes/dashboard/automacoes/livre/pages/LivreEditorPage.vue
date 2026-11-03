@@ -24,6 +24,7 @@ import {
 } from '../receita';
 import { useEditorLivre } from '../useEditorLivre';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
+import { useGatilhosNovos } from '../useGatilhosNovos';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -37,6 +38,9 @@ const { catalogo } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const { isCloudFeatureEnabled } = useAccount();
+const { gatilhosNovos, escolhasDoGatilho, carregarGatilhos } = useGatilhosNovos(
+  isCloudFeatureEnabled
+);
 const editor = useEditorLivre();
 const {
   automacao,
@@ -244,6 +248,7 @@ const carregarTudo = async () => {
 
 onMounted(() => {
   carregarOpcoes();
+  carregarGatilhos();
   carregarTudo();
 });
 </script>
@@ -465,6 +470,8 @@ onMounted(() => {
               :opcoes="opcoes"
               :atributos-da-peca="atributosDaPeca"
               :atributos-do="atributosDo"
+              :gatilhos-novos="gatilhosNovos"
+              :escolhas-do-gatilho="escolhasDoGatilho"
               @salvar="salvar"
               @tirar="tirar"
               @close="fecharPainel('alterar')"

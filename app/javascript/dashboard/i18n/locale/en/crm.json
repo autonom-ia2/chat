@@ -5902,7 +5902,9 @@
       "ASSUNTO_SEM_TEMPO": "{titulo}. Priority: {prioridade}.",
       "SEM_CONTATO_ATENDER": "No person is linked to this request yet.",
       "NEGOCIO_VALOR_OCULTO": "{titulo}. Urgency: {urgencia}.",
-      "VALOR_OCULTO": "hidden amount"
+      "VALOR_OCULTO": "hidden amount",
+      "AUTOMACOES": "Automations of this card",
+      "AUTOMACOES_FRASE": "1 running now"
     },
     "ETAPA": {
       "TELA": "Stage",
@@ -6511,6 +6513,11 @@
     },
     "SERIE": {
       "TELA": "Repeat"
+    },
+    "AUTOMACOES": {
+      "TELA": "Automations",
+      "TITULO": "Automations of this card",
+      "TEXTO": "What is running on its own for {nome} and what was already done."
     }
   },
   "CRM_LEMBRETE": {

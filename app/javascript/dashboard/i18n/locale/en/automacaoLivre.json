@@ -297,6 +297,93 @@
       "DESLIGAR": "Turn off",
       "SO_LEITURA": "You can see this automation. To change it, ask who looks after automations.",
       "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
+    },
+    "GATILHOS_F6": {
+      "GRUPOS": {
+        "CONVERSA": "Conversation",
+        "MENSAGEM": "Message",
+        "CARD": "Pipeline card",
+        "TEMPO": "Time",
+        "REUNIAO": "Meeting"
+      },
+      "TIPOS": {
+        "CONVERSA_RESPONSAVEL_TROCADO": "When the conversation assignee changes",
+        "CONVERSA_TIME_TROCADO": "When the conversation team changes",
+        "MENSAGEM_FALHOU": "When a message is not delivered",
+        "CARD_ENTROU_NA_ETAPA": "When the card enters a stage",
+        "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
+        "CARD_GANHO": "When the card is won",
+        "CARD_PERDIDO": "When the card is lost",
+        "CARD_PARADO": "When the card stays idle in a stage",
+        "CARD_DATA": "Near a card date",
+        "CONTATO_DATA": "Near a contact date",
+        "RECORRENTE": "On a set day and time, every time",
+        "REUNIAO_MARCADA": "When a meeting is scheduled",
+        "REUNIAO_REMARCADA": "When a meeting is rescheduled",
+        "REUNIAO_CANCELADA": "When a meeting is canceled"
+      },
+      "PARAMETROS": {
+        "ETAPA_ID": "Stage",
+        "DIAS": "How many days",
+        "FUNIL_ID": "Pipeline (empty = all)",
+        "CAMPO": "Which date",
+        "QUANDO": "Before or after",
+        "HORA": "Time",
+        "FREQUENCIA": "How often",
+        "DIA": "Which day",
+        "ALVO": "For whom"
+      },
+      "ANTES": "Before the date",
+      "DEPOIS": "After the date",
+      "NO_DIA": "On the day",
+      "FREQ": {
+        "DIA": "Every day",
+        "SEMANA": "Every week",
+        "MES": "Every month"
+      },
+      "ALVO": {
+        "CARDS": "Each open card that matches the filter",
+        "CONTATOS": "Each contact that matches the filter"
+      },
+      "SEMANA": {
+        "SEG": "Monday",
+        "TER": "Tuesday",
+        "QUA": "Wednesday",
+        "QUI": "Thursday",
+        "SEX": "Friday",
+        "SAB": "Saturday",
+        "DOM": "Sunday"
+      },
+      "AVISO_PARADO": "Counts from when the automation is turned on. A card that was already idle before that does not trigger it.",
+      "FUSO_DA_CONTA": "Uses your account time zone.",
+      "WEBHOOK": {
+        "PASSO": "Send data to another system",
+        "URL": "Address (https)",
+        "CAMPOS": "What goes with it"
+      },
+      "ETAPA": {
+        "TITULO": "Automations of this stage",
+        "SUBTITULO": "What happens on its own with the cards in {etapa}.",
+        "NOVA": "New automation",
+        "HA_DIAS": "{base}: {dias} days",
+        "LIGADA": "On · {cards} cards now",
+        "DESLIGADA": "Off",
+        "NAO_DISPARA": "Does not trigger: archiving many cards at once, deleting the stage and changing the stage through the integration (API).",
+        "ANTIGAS": "Automations the old way",
+        "JEITO_ANTIGO": "old way"
+      },
+      "CARD": {
+        "RODANDO": "Running now",
+        "NADA_RODANDO": "No automation running on this card.",
+        "ESPERANDO": "{passo} · continues {quando}",
+        "PARAR": "Stop for this card",
+        "PARADA": "Stopped only for this card. The others continue.",
+        "HISTORICO": "What the automations did",
+        "HIST_ENTROU": "Entered {etapa} and the automation started",
+        "HIST_MENSAGEM": "Sent the quote message to the customer",
+        "HIST_RETORNO": "Created a follow-up in {dias} days",
+        "HIST_WEBHOOK": "Sent the data to {host} (answered {codigo})"
+      }
     }
   }
 }

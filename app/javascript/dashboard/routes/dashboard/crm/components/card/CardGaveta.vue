@@ -22,6 +22,7 @@ import TelaQuemCuida from './telas/TelaQuemCuida.vue';
 import TelaCliente from './telas/TelaCliente.vue';
 import TelaConversas from './telas/TelaConversas.vue';
 import TelaRetornos from './telas/TelaRetornos.vue';
+import TelaAutomacoesDoCard from './telas/TelaAutomacoesDoCard.vue';
 import TelaRetornoNovo from './telas/TelaRetornoNovo.vue';
 import TelaAgenda from './telas/TelaAgenda.vue';
 import TelaReuniaoNova from './telas/TelaReuniaoNova.vue';
@@ -965,6 +966,11 @@ defineExpose({
               :card="card"
               :conversao="conversao"
               @conversa="abrirConversa()"
+            />
+            <TelaAutomacoesDoCard
+              v-else-if="tela === 'automacoes'"
+              :card="card"
+              :formato="formato"
             />
             <TelaHistorico
               v-else-if="tela === 'historico'"

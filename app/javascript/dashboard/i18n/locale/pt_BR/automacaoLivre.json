@@ -297,6 +297,93 @@
       "DESLIGAR": "Desligar",
       "SO_LEITURA": "Você pode ver esta automação. Para mudar, peça a quem cuida das automações.",
       "FALTA_COMPLETAR": "Falta completar um passo: escolha a condição e, no \"Se\", ponha pelo menos um passo em Então."
+    },
+    "GATILHOS_F6": {
+      "GRUPOS": {
+        "CONVERSA": "Conversa",
+        "MENSAGEM": "Mensagem",
+        "CARD": "Card do funil",
+        "TEMPO": "Tempo",
+        "REUNIAO": "Reunião"
+      },
+      "TIPOS": {
+        "CONVERSA_RESPONSAVEL_TROCADO": "Quando o responsável da conversa muda",
+        "CONVERSA_TIME_TROCADO": "Quando o time da conversa muda",
+        "MENSAGEM_FALHOU": "Quando uma mensagem não é entregue",
+        "CARD_ENTROU_NA_ETAPA": "Quando o card entra numa etapa",
+        "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",
+        "CARD_GANHO": "Quando o card é ganho",
+        "CARD_PERDIDO": "Quando o card é perdido",
+        "CARD_PARADO": "Quando o card fica parado numa etapa",
+        "CARD_DATA": "Perto de uma data do card",
+        "CONTATO_DATA": "Perto de uma data do contato",
+        "RECORRENTE": "Em dia e hora marcados, sempre",
+        "REUNIAO_MARCADA": "Quando uma reunião é marcada",
+        "REUNIAO_REMARCADA": "Quando uma reunião é remarcada",
+        "REUNIAO_CANCELADA": "Quando uma reunião é cancelada"
+      },
+      "PARAMETROS": {
+        "ETAPA_ID": "Etapa",
+        "DIAS": "Quantos dias",
+        "FUNIL_ID": "Funil (vazio = todos)",
+        "CAMPO": "Qual data",
+        "QUANDO": "Antes ou depois",
+        "HORA": "Hora",
+        "FREQUENCIA": "Com que frequência",
+        "DIA": "Qual dia",
+        "ALVO": "Para quem"
+      },
+      "ANTES": "Antes da data",
+      "DEPOIS": "Depois da data",
+      "NO_DIA": "No próprio dia",
+      "FREQ": {
+        "DIA": "Todo dia",
+        "SEMANA": "Toda semana",
+        "MES": "Todo mês"
+      },
+      "ALVO": {
+        "CARDS": "Cada card aberto que passar no filtro",
+        "CONTATOS": "Cada contato que passar no filtro"
+      },
+      "SEMANA": {
+        "SEG": "Segunda",
+        "TER": "Terça",
+        "QUA": "Quarta",
+        "QUI": "Quinta",
+        "SEX": "Sexta",
+        "SAB": "Sábado",
+        "DOM": "Domingo"
+      },
+      "AVISO_PARADO": "Conta a partir de quando a automação é ligada. O card que já estava parado antes disso não dispara.",
+      "FUSO_DA_CONTA": "Usa o fuso horário da sua conta.",
+      "WEBHOOK": {
+        "PASSO": "Mandar dados para outro sistema",
+        "URL": "Endereço (https)",
+        "CAMPOS": "O que vai junto"
+      },
+      "ETAPA": {
+        "TITULO": "Automações desta etapa",
+        "SUBTITULO": "O que acontece sozinho com os cards em {etapa}.",
+        "NOVA": "Nova automação",
+        "HA_DIAS": "{base}: {dias} dias",
+        "LIGADA": "Ligada · {cards} cards agora",
+        "DESLIGADA": "Desligada",
+        "NAO_DISPARA": "Não dispara: arquivar vários cards de uma vez, apagar a etapa e mudar a etapa pela integração (API).",
+        "ANTIGAS": "Automações do jeito antigo",
+        "JEITO_ANTIGO": "jeito antigo"
+      },
+      "CARD": {
+        "RODANDO": "Rodando agora",
+        "NADA_RODANDO": "Nenhuma automação rodando neste card.",
+        "ESPERANDO": "{passo} · segue {quando}",
+        "PARAR": "Parar para este card",
+        "PARADA": "Parada só para este card. As outras seguem.",
+        "HISTORICO": "O que as automações fizeram",
+        "HIST_ENTROU": "Entrou em {etapa} e a automação começou",
+        "HIST_MENSAGEM": "Mandou a mensagem de orçamento ao cliente",
+        "HIST_RETORNO": "Criou um retorno para daqui a {dias} dias",
+        "HIST_WEBHOOK": "Mandou os dados para {host} (respondeu {codigo})"
+      }
     }
   }
 }

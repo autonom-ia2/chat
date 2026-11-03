@@ -36,6 +36,18 @@ vi.mock('vue-router', async () => {
   };
 });
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// #2499: os gatilhos novos (flag automacao_gatilhos) ficam fora deste spec; o
+// LivreGatilho tem o seu.
+vi.mock('../useGatilhosNovos', async () => {
+  const { ref: criarRef } = await import('vue');
+  return {
+    useGatilhosNovos: () => ({
+      gatilhosNovos: criarRef(null),
+      escolhasDoGatilho: criarRef({}),
+      carregarGatilhos: () => {},
+    }),
+  };
+});
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref: criarRef } = await import('vue');
   const podeMudar = criarRef(true);

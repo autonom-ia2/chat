@@ -1130,3 +1130,14 @@
   display_name: Automação › mensagem ao cliente e aviso à equipe
   enabled: false
   column: feature_flags_ext_2
+# Automação livre, fase Gatilhos (F6+F8, #2499, épico #2414): gatilhos do card do CRM, de tempo (parado, data,
+# recorrente), mensagem que falhou, troca de responsável e de time, reunião, e o passo webhook de saída. Só vale com
+# automacao_motor. Desligada: o salvar recusa os gatilhos novos, a escuta e a varredura de tempo não olham a conta e a
+# execução aberta de gatilho novo fecha parada. Rollback: desligar a flag na conta. Sem migration.
+# Bit: registrada pela Orquestração sem número fixo; vale a ordem de entrada na main. Logo depois de
+# automacao_mensagens: hoje 24 (valor 8388608, 1 << 23), disputada com #2442 e #1430. Antes da fila, trazer a main e
+# acertar o bit, este comentário e o account_spec pela posição real. Nasce ligada no piloto (contas 1, 16 e 18).
+- name: automacao_gatilhos
+  display_name: Automação › gatilhos do card, de tempo e webhook
+  enabled: false
+  column: feature_flags_ext_2

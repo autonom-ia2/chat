@@ -266,5 +266,13 @@
     "ALTERAR": {
       "DESFECHO": "Mark as active policy or not closed"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "GATILHOS_F6": {
+      "TIPOS": {
+        "CARD_GANHO": "When the card closes the policy",
+        "CARD_PERDIDO": "When the card does not close"
+      }
+    }
   }
 }
