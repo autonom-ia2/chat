@@ -347,3 +347,15 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
 - **Spam do contato:** o contato cuja única conversa está no Spam é pulado.
 - **Webhook:** `http` recusa; o host da instalação recusa ao salvar e ao chamar; um redirect não é seguido; resposta JSON não vira falha; o `body_excerpt` não vai ao registro; o cabeçalho `X-Automacao-Cadeia` faz o pedido de volta entrar na profundidade.
 - **Visibilidade:** o histórico e o ensaio não mostram a execução de card ou conversa fora do funil ou da caixa de quem olha.
+
+## 13. Notas da revisão do PR 1 (qualidade, 03/11) — para os PRs seguintes
+
+- **Lote de visibilidade para a F2.** `Contexto.de_varios` entra no PR do primeiro gatilho de card ou contato, que é
+  quando o histórico (#2498) precisa dele. Contrato combinado com a F2: entrada em pares `[alvo_type, alvo_id]`
+  (carregados em lote, uma consulta por tipo); saída `{ [alvo_type, alvo_id] => contexto }` só com os visíveis; uma
+  constante pública `alvo_type → chave i18n do tipo`, para a tela dizer "Uma conversa" sem rótulo nem link quando o
+  alvo não é visível. Sem `account_users.find_by` por alvo (o `visivel_para?` de hoje faz um por chamada).
+- **Contato do card.** Num alvo card, `contato.*` lê `card.contact` (e só sem ele o contato da conversa principal).
+  Quando os dois forem pessoas diferentes, vale o do card; spec disso no PR dos gatilhos de card.
+- **`card.valor` sem valor lê 0**, nunca vazio (`value_cents` é not null, padrão 0): a condição "valor está vazio"
+  nunca casa. Decidir no PR dos gatilhos de card entre ler nil quando for 0 ou deixar isso claro na frase.
