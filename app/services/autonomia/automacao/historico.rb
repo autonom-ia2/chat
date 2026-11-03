@@ -62,7 +62,7 @@ class Autonomia::Automacao::Historico
   # As receitas da página de uma vez, por versão única (várias execuções costumam estar na mesma versão).
   def versoes_de(execucoes)
     ::Autonomia::Automacao::Versao.where(id: execucoes.map(&:versao_id).uniq)
-                                  .to_h { |versao| [versao.id, { numero: versao.numero, receita: versao.receita }] }
+                                  .to_h { |versao| [versao.id, { numero: versao.numero, receita: versao.receita_para_tela }] }
   end
 
   # { conversation_id => conversa } das que quem vê enxerga, com o contato, numa consulta só.
@@ -93,8 +93,8 @@ class Autonomia::Automacao::Historico
 
   def dados_para_tela(dados, chaves)
     lidos = dados.slice(*chaves)
-    lidos['ia'] = lidos['ia'].slice(*IA) if lidos['ia'].is_a?(Hash)
-    lidos
+    ia = lidos.delete('ia')
+    ia.is_a?(Hash) ? lidos.merge('ia' => ia.slice(*IA)) : lidos
   end
 
   def passo(registro, visivel:)

@@ -58,6 +58,19 @@ RSpec.describe Autonomia::Automacao::Historico do
     expect(historico[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'custo_usd' => 0.002, 'modelo' => 'm' })
   end
 
+  it 'tira o ia que não vem no formato de custo' do
+    create(:autonomia_automacao_registro, execucao: execucao('a'), dados: { 'ia' => 'texto solto', 'ramo' => 'entao' })
+
+    expect(historico[:execucoes].first[:passos].first[:dados]).to eq('ramo' => 'entao')
+  end
+
+  it 'serializa a receita pelo mesmo caminho do show e do index' do
+    execucao('a')
+    allow_any_instance_of(Autonomia::Automacao::Versao).to receive(:receita_para_tela).and_return('mascarada' => true) # rubocop:disable RSpec/AnyInstance
+
+    expect(historico[:versoes].values.first[:receita]).to eq('mascarada' => true)
+  end
+
   it 'mostra só os últimos 30 dias, como a tela diz' do
     travel_to(31.days.ago) { execucao('velha', estado: 'concluida') }
     recente = travel_to(29.days.ago) { execucao('recente', estado: 'concluida') }
