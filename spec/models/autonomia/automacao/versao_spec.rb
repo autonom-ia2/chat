@@ -120,6 +120,9 @@ RSpec.describe Autonomia::Automacao::Versao do
       expect(erros(no_gatilho.call({ 'todas' => [recebida, contem] }))).to include('mensagem.tipo só compara com igual, diferente')
       expect(erros(no_gatilho.call(privada))).to include('mensagem.privada não tem o valor "sim"')
       expect(versao(no_gatilho.call(privada.merge('valor' => false)))).to be_valid
+      fora_do_gatilho = receita(esperar, gatilho: { 'tipo' => 'conversa.resolvida', 'filtros' => [open] })
+      expect(erros(fora_do_gatilho)).to include('só existe no filtro')
+      expect(erros(fora_do_gatilho)).not_to include('não tem o valor')
     end
   end
 

@@ -69,8 +69,9 @@ class Autonomia::Automacao::Receita
       pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: passo['id'], id: pessoa) }
   end
 
+  # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
   def problemas_da_condicao(id, condicao, no_gatilho: false)
-    caminhos_desconhecidos(id, condicao, no_gatilho: no_gatilho) + fora_do_fechado(id, condicao)
+    caminhos_desconhecidos(id, condicao, no_gatilho: no_gatilho).presence || fora_do_fechado(id, condicao)
   end
 
   # Operador ou valor que um valor fechado não tem: a condição nunca casaria.
