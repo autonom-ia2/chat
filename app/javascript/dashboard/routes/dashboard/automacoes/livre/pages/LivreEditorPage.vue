@@ -25,6 +25,7 @@ import {
 import { useEditorLivre } from '../useEditorLivre';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
+import { gatilhoDe } from '../gatilhosDemo';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -234,6 +235,20 @@ watch(
 
 watch(() => [route.query.alterar, route.query.seletor], abrirDaUrl);
 
+// #2499 — "Nova automação" do funil abre a nova com o gatilho já escolhido
+// (?gatilho=card.entrou_na_etapa&etapa_id=N). Só na nova, e só um gatilho
+// conhecido; o resto da URL segue igual.
+const gatilhoDaUrl = () => {
+  const { gatilho: tipo, etapa_id: etapaId } = route.query;
+  if (!nova.value || !tipo || !gatilhoDe(String(tipo))) return;
+  receita.value = {
+    ...receita.value,
+    gatilho: etapaId
+      ? { tipo: String(tipo), etapa_id: Number(etapaId) }
+      : { tipo: String(tipo) },
+  };
+};
+
 // Sem o catálogo a tela não sabe desenhar os passos: falha vira o aviso com
 // "Tentar de novo", como na lista.
 const carregarTudo = async () => {
@@ -243,6 +258,7 @@ const carregarTudo = async () => {
     estado.value = 'erro';
     return;
   }
+  gatilhoDaUrl();
   abrirDaUrl();
 };
 

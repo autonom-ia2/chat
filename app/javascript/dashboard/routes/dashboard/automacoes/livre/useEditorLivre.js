@@ -4,7 +4,7 @@
 // A nova fica só na tela até "Guardar sem ligar" ou "Ligar". Salvar e ligar
 // levam a versão que a tela mostrou; se outra pessoa salvou no meio (409), o
 // rascunho fica na tela com o aviso, e só "Ver a versão nova" o descarta.
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAlert } from 'dashboard/composables';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
@@ -14,7 +14,7 @@ import { erroDaApi } from './erroDaApi';
 const NAO_ACHOU = 404;
 
 export function useEditorLivre() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const automacao = ref(null);
   const receita = ref(receitaVazia());
@@ -32,6 +32,16 @@ export function useEditorLivre() {
   const mudou = computed(
     () => !nova.value && !iguais(receita.value, salva.value)
   );
+
+  // Abrindo a nova direto pela URL, o idioma da conta chega depois (é
+  // carregado à parte): o nome padrão acompanha enquanto ninguém o mudou.
+  watch(locale, (_atual, anterior) => {
+    if (!nova.value) return;
+    if (
+      nome.value === t('AUTOMACAO_LIVRE.EDITOR.NOVA', {}, { locale: anterior })
+    )
+      nome.value = t('AUTOMACAO_LIVRE.EDITOR.NOVA');
+  });
 
   const mostrar = dados => {
     automacao.value = dados;

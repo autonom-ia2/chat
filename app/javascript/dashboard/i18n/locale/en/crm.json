@@ -1787,6 +1787,7 @@
       "SO_VER": "You can see these rules. To create or change them, ask for the permission to manage automations.",
       "LOADING": "Loading automations...",
       "EMPTY": "No automations configured for this stage.",
+      "EMPTY_ANTIGAS": "No old-style rule on this stage.",
       "NEW_RULE_NAME": "Automation — {stage}",
       "RULE_NAME": "Rule name",
       "RULE_NAME_PLACEHOLDER": "E.g. Create follow-up on enter",

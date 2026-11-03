@@ -167,6 +167,7 @@
     },
     "ORIGEM": {
       "CONVERSA": "Da conversa",
+      "FUNIL": "Do funil",
       "ANTIGO": "Do jeito antigo"
     },
     "EDITOR": {
@@ -372,7 +373,10 @@
         "TITULO": "Automações desta etapa",
         "SUBTITULO": "O que acontece sozinho com os cards em {etapa}.",
         "NOVA": "Nova automação",
-        "HA_DIAS": "{base}: {dias} dias",
+        "RESUMO": "{automacoes}, {ligadas}",
+        "RESUMO_AUTOMACOES": "{n} automação | {n} automações",
+        "RESUMO_LIGADAS": "{n} ligada | {n} ligadas",
+        "PARADO_HA": "Quando o card fica parado há {dias} dia | Quando o card fica parado há {dias} dias",
         "LIGADA": "Ligada · {cards} cards agora",
         "DESLIGADA": "Desligada",
         "NAO_DISPARA": "Não dispara: arquivar vários cards de uma vez, apagar a etapa e mudar a etapa pela integração (API).",

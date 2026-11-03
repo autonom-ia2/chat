@@ -9,6 +9,13 @@ import { gatilhoDe } from './gatilhosDemo';
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
 export const fraseDoGatilho = (gatilho, catalogo, t) => {
+  // #2499: "Quando o card fica parado há 3 dias", com os dias escolhidos.
+  if (gatilho?.tipo === 'card.parado' && gatilho.dias)
+    return t(
+      'AUTOMACAO_LIVRE.GATILHOS_F6.ETAPA.PARADO_HA',
+      { dias: gatilho.dias },
+      gatilho.dias
+    );
   const entrada =
     catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo) ||
     gatilhoDe(gatilho?.tipo);

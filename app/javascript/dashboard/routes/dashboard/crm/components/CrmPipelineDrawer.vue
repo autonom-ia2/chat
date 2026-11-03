@@ -636,6 +636,7 @@ useFixedPanelPresence(computed(() => props.show));
               <EtapaAutomacoes v-if="gatilhosNovos" :stage="selectedStage" />
               <CrmStageAutomationsPanel
                 :stage="selectedStage"
+                :sem-criar="Boolean(gatilhosNovos)"
                 :pipeline-stages="form.stages"
                 :agents="agents"
                 expanded

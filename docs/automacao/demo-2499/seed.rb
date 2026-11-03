@@ -34,4 +34,24 @@ contatos.each_with_index do |(nome, telefone), i|
   end
 end
 
+# As duas automações da etapa "Orçamento enviado" criadas pelo funil, para a lista do menu Automações mostrar as mesmas
+# que o painel da etapa. O servidor ainda não conhece os gatilhos novos (é o protótipo): grava sem validar, só no banco
+# da demo.
+etapa = etapas[1]
+dono = account.administrators.first
+[
+  ["Orçamento parado em #{etapa.name}", { 'tipo' => 'card.parado', 'etapa_id' => etapa.id, 'dias' => 3 }, true],
+  ['Boas-vindas ao entrar', { 'tipo' => 'card.entrou_na_etapa', 'etapa_id' => etapa.id }, false]
+].each do |nome, gatilho, ligada|
+  next if Autonomia::Automacao::Definicao.exists?(account: account, nome: nome)
+
+  receita = { 'gatilho' => gatilho,
+              'passos' => [{ 'id' => 'p1', 'tipo' => 'esperar', 'duracao' => { 'valor' => 2, 'unidade' => 'dias' } }] }
+  automacao = Autonomia::Automacao::Definicao.create!(account: account, nome: nome, origem: 'manual')
+  versao = Autonomia::Automacao::Versao.new(account: account, automacao: automacao, numero: 1, receita: receita,
+                                            digest: Digest::SHA256.hexdigest(receita.to_json))
+  versao.save!(validate: false)
+  automacao.update_columns(versao_ativa_id: versao.id, ativa: ligada, ligada_por_id: ligada ? dono&.id : nil) # rubocop:disable Rails/SkipsModelValidations
+end
+
 puts "funil=#{funil.id} etapas=#{etapas.map(&:id).join(',')} cards=#{Crm::Card.where(pipeline: funil).count}"

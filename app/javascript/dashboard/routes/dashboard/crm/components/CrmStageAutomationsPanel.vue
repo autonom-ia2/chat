@@ -13,6 +13,9 @@ const props = defineProps({
   agents: { type: Array, default: () => [] },
   expanded: { type: Boolean, default: false },
   showHeader: { type: Boolean, default: true },
+  // #2499: com os gatilhos novos, criar é só pelo "Nova automação"; as regras
+  // antigas continuam para ver e mudar.
+  semCriar: { type: Boolean, default: false },
 });
 
 const { t } = useI18n();
@@ -221,7 +224,7 @@ watch(
         {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.RULES') }}
       </span>
       <Button
-        v-if="podeMontar"
+        v-if="podeMontar && !semCriar"
         :label="t('CRM_KANBAN.STAGE_AUTOMATIONS.ADD_RULE')"
         icon="i-lucide-plus"
         slate
@@ -247,7 +250,11 @@ watch(
       v-else-if="automations.length === 0 && editingId !== 'new'"
       class="rounded-xl border border-dashed border-n-slate-5 px-4 py-4 text-sm leading-5 text-n-slate-11"
     >
-      {{ t('CRM_KANBAN.STAGE_AUTOMATIONS.EMPTY') }}
+      {{
+        semCriar
+          ? t('CRM_KANBAN.STAGE_AUTOMATIONS.EMPTY_ANTIGAS')
+          : t('CRM_KANBAN.STAGE_AUTOMATIONS.EMPTY')
+      }}
     </div>
 
     <div v-else class="grid gap-2">

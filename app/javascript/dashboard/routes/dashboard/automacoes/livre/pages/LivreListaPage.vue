@@ -13,6 +13,7 @@ import LivreLinha from '../components/LivreLinha.vue';
 import { useNomesDaConta } from '../../composables/useNomesDaConta';
 import { carregarCatalogo, useCatalogo } from '../catalogo';
 import { fraseDoGatilho, fraseDoPasso } from '../frases';
+import { gatilhoDe } from '../gatilhosDemo';
 import { erroDaApi } from '../erroDaApi';
 
 // #2414 F5 — a lista única de Automações: as novas e as do jeito antigo (as
@@ -58,6 +59,7 @@ const linhaDaNova = automacao => {
   return {
     chave: `nova-${automacao.id}`,
     antiga: false,
+    doFunil: Boolean(gatilhoDe(automacao.versao?.receita?.gatilho?.tipo)?.crm),
     automacao,
     nome: automacao.nome,
     quando: fraseDoGatilho(
@@ -272,6 +274,7 @@ const alternar = async linha => {
               :outros="linha.outros"
               :ativa="linha.ativa"
               :antiga="linha.antiga"
+              :do-funil="linha.doFunil"
               :pode-mudar="podeMudar"
               :mudando="mudando === linha.chave"
               @abrir="abrir(linha)"

@@ -167,6 +167,7 @@
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
+      "FUNIL": "From the pipeline",
       "ANTIGO": "The old way"
     },
     "EDITOR": {
@@ -372,7 +373,10 @@
         "TITULO": "Automations of this stage",
         "SUBTITULO": "What happens on its own with the cards in {etapa}.",
         "NOVA": "New automation",
-        "HA_DIAS": "{base}: {dias} days",
+        "RESUMO": "{automacoes}, {ligadas}",
+        "RESUMO_AUTOMACOES": "{n} automation | {n} automations",
+        "RESUMO_LIGADAS": "{n} on | {n} on",
+        "PARADO_HA": "When the card has been idle for {dias} day | When the card has been idle for {dias} days",
         "LIGADA": "On · {cards} cards now",
         "DESLIGADA": "Off",
         "NAO_DISPARA": "Does not trigger: archiving many cards at once, deleting the stage and changing the stage through the integration (API).",

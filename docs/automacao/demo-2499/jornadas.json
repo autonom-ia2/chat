@@ -1,32 +1,171 @@
 {
-  "pasta": "docs/automacao/demo-2499/prints",
+  "pasta": "docs/automacao/demo-2499/prints-v2",
   "conta": 1,
-  "larguras": [1440, 390],
-  "temas": ["light"],
+  "larguras": [
+    1440,
+    390
+  ],
+  "temas": [
+    "light"
+  ],
   "jornadas": [
     {
       "nome": "1-editor-gatilho",
       "etapas": [
-        { "nome": "gatilho-aberto", "url": "/app/accounts/{conta}/automacoes/livre/nova?alterar=gatilho", "esperar": "[data-peca=\"gatilho\"]", "pausa": 3000 },
-        { "nome": "lista-agrupada", "passos": [{ "clicar": "[data-peca=\"gatilho\"] button" }], "pausa": 1500 },
-        { "nome": "parado-com-campos", "passos": [{ "clicar": "[role=\"option\"]:has-text(\"fica parado\")" }, { "esperar": "[data-parametro=\"dias\"]" }], "pausa": 1500 }
+        {
+          "nome": "gatilho-aberto",
+          "url": "/app/accounts/{conta}/automacoes/livre/nova?alterar=gatilho",
+          "esperar": "[data-peca=\"gatilho\"]",
+          "pausa": 3000
+        },
+        {
+          "nome": "lista-agrupada",
+          "passos": [
+            {
+              "clicar": "[data-peca=\"gatilho\"] button"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "parado-com-campos",
+          "passos": [
+            {
+              "clicar": "[role=\"option\"]:has-text(\"fica parado\")"
+            },
+            {
+              "esperar": "[data-parametro=\"dias\"]"
+            }
+          ],
+          "pausa": 1500
+        }
       ]
     },
     {
       "nome": "2-card",
       "etapas": [
-        { "nome": "card-aberto", "url": "/app/accounts/{conta}/crm?pipeline_id=1&card_id=1", "esperar": "[data-card-mais]", "pausa": 3000 },
-        { "nome": "mais-detalhes", "passos": [{ "clicar": "[data-card-mais] summary" }, { "esperar": "[data-mais=\"automacoes\"]" }], "pausa": 1500 },
-        { "nome": "automacoes-do-card", "passos": [{ "clicar": "[data-mais=\"automacoes\"]" }], "pausa": 2000 }
+        {
+          "nome": "card-aberto",
+          "url": "/app/accounts/{conta}/crm?pipeline_id=1&card_id=1",
+          "esperar": "[data-card-mais]",
+          "pausa": 3000
+        },
+        {
+          "nome": "mais-detalhes",
+          "passos": [
+            {
+              "clicar": "[data-card-mais] summary"
+            },
+            {
+              "esperar": "[data-mais=\"automacoes\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "automacoes-do-card",
+          "passos": [
+            {
+              "clicar": "[data-mais=\"automacoes\"]"
+            }
+          ],
+          "pausa": 2000
+        }
       ]
     },
     {
       "nome": "3-funil",
       "etapas": [
-        { "nome": "kanban", "url": "/app/accounts/{conta}/crm?pipeline_id=1", "esperar": "[data-crm-configurar]", "pausa": 3000 },
-        { "nome": "editar-funil", "passos": [{ "clicar": "[data-crm-configurar]" }, { "clicar": "button:has-text(\"Editar funil\")" }, { "esperar": "[data-setting=\"stages\"]" }], "pausa": 2000 },
-        { "nome": "etapa-aberta", "passos": [{ "clicar": "[data-setting=\"stages\"] button" }, { "clicar": "[data-stage-open=\"Orçamento enviado\"]:visible" }, { "esperar": "[data-setting=\"stage-actions\"]" }], "pausa": 1500 },
-        { "nome": "automacoes-da-etapa", "passos": [{ "clicar": "[data-setting=\"stage-actions\"] button" }, { "esperar": "[data-tela=\"automacoes-da-etapa\"]" }], "pausa": 2000 }
+        {
+          "nome": "kanban",
+          "url": "/app/accounts/{conta}/crm?pipeline_id=1",
+          "esperar": "[data-crm-configurar]",
+          "pausa": 3000
+        },
+        {
+          "nome": "editar-funil",
+          "passos": [
+            {
+              "clicar": "[data-crm-configurar]"
+            },
+            {
+              "clicar": "button:has-text(\"Editar funil\")"
+            },
+            {
+              "esperar": "[data-setting=\"stages\"]"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "etapa-aberta",
+          "passos": [
+            {
+              "clicar": "[data-setting=\"stages\"] button"
+            },
+            {
+              "clicar": "[data-stage-open=\"Orçamento enviado\"]:visible"
+            },
+            {
+              "esperar": "[data-setting=\"stage-actions\"]"
+            }
+          ],
+          "pausa": 1500
+        },
+        {
+          "nome": "automacoes-da-etapa",
+          "passos": [
+            {
+              "clicar": "[data-setting=\"stage-actions\"] button"
+            },
+            {
+              "esperar": "[data-tela=\"automacoes-da-etapa\"]"
+            }
+          ],
+          "pausa": 2000
+        },
+        {
+          "nome": "nova-pelo-funil",
+          "passos": [
+            {
+              "clicar": "[data-tela=\"automacoes-da-etapa\"] button:has-text(\"Nova automação\")"
+            },
+            {
+              "esperar": "[data-nome]"
+            }
+          ],
+          "pausa": 3000
+        }
+      ]
+    },
+    {
+      "nome": "4-nova-com-gatilho",
+      "etapas": [
+        {
+          "nome": "gatilho-ja-escolhido",
+          "url": "/app/accounts/{conta}/automacoes/livre/nova?gatilho=card.entrou_na_etapa&etapa_id=2&alterar=gatilho",
+          "esperar": "[data-parametro=\"etapa_id\"]",
+          "pausa": 3000
+        },
+        {
+          "nome": "etapas-do-funil",
+          "passos": [
+            {
+              "clicar": "[data-parametro=\"etapa_id\"] button"
+            }
+          ],
+          "pausa": 1500
+        }
+      ]
+    },
+    {
+      "nome": "5-lista-automacoes",
+      "etapas": [
+        {
+          "nome": "lista-do-menu",
+          "url": "/app/accounts/{conta}/automacoes",
+          "pausa": 5000
+        }
       ]
     }
   ]

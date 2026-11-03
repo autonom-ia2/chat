@@ -1787,6 +1787,7 @@
       "SO_VER": "Você pode ver estas regras. Para criar ou mudar, peça a permissão de gerenciar automações.",
       "LOADING": "Carregando automações...",
       "EMPTY": "Nenhuma automação configurada para esta etapa.",
+      "EMPTY_ANTIGAS": "Nenhuma regra do jeito antigo nesta etapa.",
       "NEW_RULE_NAME": "Automação — {stage}",
       "RULE_NAME": "Nome da regra",
       "RULE_NAME_PLACEHOLDER": "Ex.: Criar retorno ao entrar",

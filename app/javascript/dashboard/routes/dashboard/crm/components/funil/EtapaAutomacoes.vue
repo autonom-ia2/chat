@@ -6,10 +6,8 @@ import Button from 'dashboard/components-next/button/Button.vue';
 import { useCanManage } from 'dashboard/composables/useCanManage';
 import { useMapGetter } from 'dashboard/composables/store';
 import { frontendURL } from 'dashboard/helper/URLHelper';
-import {
-  automacoesDaEtapa,
-  gatilhoDe,
-} from 'dashboard/routes/dashboard/automacoes/livre/gatilhosDemo';
+import { automacoesDaEtapa } from 'dashboard/routes/dashboard/automacoes/livre/gatilhosDemo';
+import { fraseDoGatilho } from 'dashboard/routes/dashboard/automacoes/livre/frases';
 
 // #2499 (F6) — "Automações desta etapa", em Editar funil › etapa: as automações
 // novas que começam nesta etapa, com o que não dispara. As antigas continuam
@@ -27,18 +25,19 @@ const G = 'AUTOMACAO_LIVRE.GATILHOS_F6.ETAPA';
 
 const lista = computed(() => automacoesDaEtapa(props.stage).novas);
 
-const fraseDoGatilho = gatilho => {
-  const entrada = gatilhoDe(gatilho.tipo);
-  const base = entrada ? t(entrada.frase) : gatilho.tipo;
-  return gatilho.dias ? t(`${G}.HA_DIAS`, { base, dias: gatilho.dias }) : base;
-};
+const fraseDaAutomacao = automacao =>
+  fraseDoGatilho(automacao.gatilho, null, t);
 
 const abrir = automacao =>
   router.push(
     frontendURL(`accounts/${accountId.value}/automacoes/livre/${automacao.id}`)
   );
+// A nova já chega com o gatilho do card nesta etapa escolhido.
 const nova = () =>
-  router.push(frontendURL(`accounts/${accountId.value}/automacoes/livre/nova`));
+  router.push({
+    path: frontendURL(`accounts/${accountId.value}/automacoes/livre/nova`),
+    query: { gatilho: 'card.entrou_na_etapa', etapa_id: props.stage.id },
+  });
 </script>
 
 <template>
@@ -78,7 +77,7 @@ const nova = () =>
             automacao.nome
           }}</span>
           <span class="text-xs text-n-slate-11">{{
-            fraseDoGatilho(automacao.gatilho)
+            fraseDaAutomacao(automacao)
           }}</span>
         </button>
         <span

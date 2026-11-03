@@ -11,6 +11,8 @@ defineProps({
   outros: { type: Number, default: 0 },
   ativa: { type: Boolean, default: false },
   antiga: { type: Boolean, default: false },
+  // #2499: começa num card do funil (o selo diz "Do funil").
+  doFunil: { type: Boolean, default: false },
   podeMudar: { type: Boolean, default: false },
   mudando: { type: Boolean, default: false },
 });
@@ -45,13 +47,21 @@ const emit = defineEmits(['abrir', 'alternar']);
         >
           <span
             class="size-3"
-            :class="antiga ? 'i-lucide-history' : 'i-lucide-message-circle'"
+            :class="
+              antiga
+                ? 'i-lucide-history'
+                : doFunil
+                  ? 'i-lucide-kanban'
+                  : 'i-lucide-message-circle'
+            "
             aria-hidden="true"
           />
           {{
             antiga
               ? $t('AUTOMACAO_LIVRE.ORIGEM.ANTIGO')
-              : $t('AUTOMACAO_LIVRE.ORIGEM.CONVERSA')
+              : doFunil
+                ? $t('AUTOMACAO_LIVRE.ORIGEM.FUNIL')
+                : $t('AUTOMACAO_LIVRE.ORIGEM.CONVERSA')
           }}
         </span>
       </span>

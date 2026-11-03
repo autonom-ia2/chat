@@ -24,13 +24,18 @@ export function useGatilhosNovos(isCloudFeatureEnabled) {
       : null
   );
 
+  // Carrega uma vez, quando a flag aparece ligada. `once` não serve: com
+  // `immediate` ele gasta a única chamada com a flag ainda desligada.
   const carregarGatilhos = () => {
+    let carregou = false;
     watch(
       ligada,
       valor => {
-        if (valor) carregar();
+        if (!valor || carregou) return;
+        carregou = true;
+        carregar();
       },
-      { immediate: true, once: true }
+      { immediate: true }
     );
   };
 
