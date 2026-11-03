@@ -65,7 +65,8 @@ const rotuloDoGalho = galho => {
   const [ramo, indice] = galho.ramo.split('.');
   if (ramo === 'caminhos')
     return (
-      galho.nome || t('AUTOMACAO_LIVRE.RAMOS.CAMINHO', { n: Number(indice) + 1 })
+      galho.nome ||
+      t('AUTOMACAO_LIVRE.RAMOS.CAMINHO', { n: Number(indice) + 1 })
     );
   return t(`AUTOMACAO_LIVRE.RAMOS.${galho.ramo.toUpperCase()}`);
 };
