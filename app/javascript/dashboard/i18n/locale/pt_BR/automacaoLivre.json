@@ -26,9 +26,9 @@
       "MENOR": "é menor que"
     },
     "UNIDADES": {
-      "MINUTOS": "minutos",
-      "HORAS": "horas",
-      "DIAS": "dias"
+      "MINUTOS": "minuto | minutos",
+      "HORAS": "hora | horas",
+      "DIAS": "dia | dias"
     },
     "VALORES": {
       "CONVERSA_ID": "Número da conversa",

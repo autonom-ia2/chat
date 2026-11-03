@@ -65,13 +65,18 @@ export const fraseDaCondicao = (condicao, catalogo, t) => {
   return t(`${P}.CONDICAO`, { campo, op, valor: valor ?? '' });
 };
 
+// A unidade concorda com o número: "1 dia", "2 dias". Sem número, o plural.
+export const contagemDaDuracao = valor => (Number.isInteger(valor) ? valor : 2);
+
 export const fraseDaDuracao = (duracao, catalogo, t) => {
   const unidade = catalogo?.unidades.find(
     item => item.valor === duracao?.unidade
   );
   return t(`${P}.DURACAO`, {
     valor: duracao?.valor ?? '',
-    unidade: unidade ? t(unidade.frase) : '',
+    unidade: unidade
+      ? t(unidade.frase, {}, contagemDaDuracao(duracao?.valor))
+      : '',
   });
 };
 

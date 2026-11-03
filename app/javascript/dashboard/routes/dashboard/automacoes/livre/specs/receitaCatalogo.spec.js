@@ -351,7 +351,7 @@ describe('catálogo do editor livre', () => {
     });
   });
 
-  describe('frase de mensagem e avisar, com o texto de verdade', () => {
+  describe('frase de esperar, mensagem e avisar, com o texto de verdade', () => {
     const textoDe = chave =>
       chave.split('.').reduce((no, parte) => no?.[parte], pt);
     // Plural do vue-i18n: "1 time | {n} times".
@@ -378,6 +378,25 @@ describe('catálogo do editor livre', () => {
       ],
     };
     const nome = textoDe('AUTOMACAO_LIVRE.VALORES.CONTATO_NOME');
+
+    it.each([
+      [1, 'minutos', 'Esperar 1 minuto'],
+      [2, 'minutos', 'Esperar 2 minutos'],
+      [1, 'horas', 'Esperar 1 hora'],
+      [2, 'horas', 'Esperar 2 horas'],
+      [1, 'dias', 'Esperar 1 dia'],
+      [2, 'dias', 'Esperar 2 dias'],
+    ])('esperar %i %s vira "%s"', (valor, unidade, frase) => {
+      const comUnidades = {
+        ...catalogo,
+        unidades: ['minutos', 'horas', 'dias'].map(item => ({
+          valor: item,
+          frase: `AUTOMACAO_LIVRE.UNIDADES.${item.toUpperCase()}`,
+        })),
+      };
+      const passo = { id: 'p1', tipo: 'esperar', duracao: { valor, unidade } };
+      expect(fraseDoPasso(passo, comUnidades, tReal)).toBe(frase);
+    });
 
     it('mensagem mostra o texto com o dado entre colchetes', () => {
       expect(fraseDoPasso(MENSAGEM, catalogo, tReal)).toBe(

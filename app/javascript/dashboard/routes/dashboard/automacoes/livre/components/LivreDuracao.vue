@@ -3,6 +3,7 @@ import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
+import { contagemDaDuracao } from '../frases';
 
 // #2414 F5 — quanto tempo: um número e a unidade (minutos, horas ou dias).
 const props = defineProps({
@@ -17,7 +18,10 @@ const { t } = useI18n();
 const id = useId();
 
 const opcoes = computed(() =>
-  props.unidades.map(item => ({ value: item.valor, label: t(item.frase) }))
+  props.unidades.map(item => ({
+    value: item.valor,
+    label: t(item.frase, {}, contagemDaDuracao(props.modelValue?.valor)),
+  }))
 );
 
 // O esquema pede inteiro de 1 a 3650. Apagado, fica vazio (o "Salvar" espera
