@@ -14,7 +14,14 @@
     },
     {
       "tipo": "mensagem.criada",
-      "frase": "AUTOMACAO_LIVRE.GATILHOS.MENSAGEM_CRIADA"
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.MENSAGEM_CRIADA",
+      "filtro_sugerido": {
+        "campo": {
+          "$valor": "mensagem.tipo"
+        },
+        "op": "igual",
+        "valor": "recebida"
+      }
     }
   ],
   "operadores": [
@@ -135,6 +142,61 @@
       "caminho": "contato.atributos",
       "atributos": "contact_attribute",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ATRIBUTOS"
+    },
+    {
+      "caminho": "mensagem.tipo",
+      "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_TIPO",
+      "so_no_gatilho": "mensagem.criada",
+      "opcoes": [
+        {
+          "valor": "recebida",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.RECEBIDA"
+        },
+        {
+          "valor": "enviada",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.ENVIADA"
+        },
+        {
+          "valor": "nota",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.NOTA"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "mensagem.privada",
+      "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_PRIVADA",
+      "so_no_gatilho": "mensagem.criada",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_guia": true
     }
   ],
   "grupos": [

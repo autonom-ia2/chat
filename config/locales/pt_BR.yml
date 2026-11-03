@@ -1037,6 +1037,8 @@ pt_BR:
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
+        operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
+        valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
         valor_no_corpo: 'Passo %{passo}: o corpo da ação ainda não aceita variável.'
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."

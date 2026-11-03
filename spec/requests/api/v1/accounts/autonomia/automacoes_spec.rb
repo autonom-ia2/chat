@@ -126,6 +126,29 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     )
   end
 
+  # #2496: o editor só oferece as opções do valor fechado; quem chama direto (o Guia) também não grava a que nunca casa.
+  it 'recusa ao criar e ao salvar a condição da mensagem com valor ou operador que ela não tem', :aggregate_failures do
+    filtro = { campo: { '$valor' => 'mensagem.tipo' }, op: 'igual', valor: 'recebida' }
+    de_mensagem = ->(*filtros) { receita.merge(gatilho: { tipo: 'mensagem.criada', filtros: filtros }) }
+
+    criar(com: de_mensagem.call(filtro.merge(valor: 'open')))
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas']).to include(
+      I18n.t('autonomia.automacao.receita.valor_fora', passo: 'gatilho', caminho: 'mensagem.tipo', valor: 'open',
+                                                       opcoes: 'recebida, enviada, nota')
+    )
+
+    criar(com: de_mensagem.call(filtro))
+    id = response.parsed_body['id']
+    patch "#{base}/#{id}", params: { receita: de_mensagem.call(filtro.merge(op: 'contem')), base_versao_id: versao_id_de(id) },
+                           headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas']).to include(
+      I18n.t('autonomia.automacao.receita.operador_fora', passo: 'gatilho', caminho: 'mensagem.tipo', operadores: 'igual, diferente')
+    )
+    expect(Autonomia::Automacao::Definicao.find(id).versao_ativa.numero).to eq(1)
+  end
+
   it 'liga como quem pediu e desliga' do
     criar
     id = response.parsed_body['id']

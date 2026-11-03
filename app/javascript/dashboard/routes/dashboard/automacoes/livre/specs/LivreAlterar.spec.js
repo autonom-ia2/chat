@@ -46,10 +46,10 @@ const CATALOGO = {
   passos: [ETIQUETA_ALTERAR, CONVERSA_ETIQUETAS],
 };
 
-const montar = () =>
+const montar = (catalogo = CATALOGO) =>
   mount(LivreAlterar, {
     props: {
-      catalogo: CATALOGO,
+      catalogo,
       opcoes: {
         etiqueta: [{ value: 7, label: 'vip' }],
         etiquetaPorNome: [
@@ -93,6 +93,66 @@ describe('LivreAlterar', () => {
 
     await wrapper.find('[data-salvar]').trigger('click');
     expect(wrapper.emitted('salvar')[0][0].valor.caminho).toEqual({ id: 7 });
+  });
+
+  // #2496: o "Só se" acompanha o gatilho, e o painel diz o que entra e o que
+  // sai antes do "Salvar".
+  it('ao trocar o gatilho, avisa e salva o "Só se" que vale para ele', async () => {
+    const recebida = {
+      campo: { $valor: 'mensagem.tipo' },
+      op: 'igual',
+      valor: 'recebida',
+    };
+    const catalogo = {
+      ...CATALOGO,
+      gatilhos: [
+        { tipo: 'conversa.resolvida', frase: 'RESOLVIDA' },
+        {
+          tipo: 'mensagem.criada',
+          frase: 'MENSAGEM',
+          filtro_sugerido: recebida,
+        },
+      ],
+      valores: [
+        ...CATALOGO.valores,
+        {
+          caminho: 'mensagem.tipo',
+          frase: 'TIPO',
+          so_no_gatilho: 'mensagem.criada',
+        },
+      ],
+    };
+    const wrapper = montar(catalogo);
+    const escolherGatilho = async tipo => {
+      await wrapper
+        .findComponent({ name: 'ChoiceSelect' })
+        .vm.$emit('update:modelValue', tipo);
+      await flushPromises();
+    };
+
+    wrapper.vm.abrir({ tipo: 'gatilho', valor: null });
+    await flushPromises();
+    await escolherGatilho('mensagem.criada');
+    expect(wrapper.find('[data-filtro-entra]').exists()).toBe(true);
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar')[0][0].valor).toEqual({
+      tipo: 'mensagem.criada',
+      filtros: [recebida],
+    });
+
+    wrapper.vm.abrir({
+      tipo: 'gatilho',
+      valor: { tipo: 'mensagem.criada', filtros: [recebida] },
+    });
+    await flushPromises();
+    await escolherGatilho('conversa.resolvida');
+    expect(wrapper.find('[data-filtro-entra]').exists()).toBe(false);
+    expect(wrapper.findAll('[data-filtro-sai]')).toHaveLength(1);
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar')[1][0].valor).toEqual({
+      tipo: 'conversa.resolvida',
+      filtros: [],
+    });
   });
 
   it('não salva condição sem o que olhar', async () => {

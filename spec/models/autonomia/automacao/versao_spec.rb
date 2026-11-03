@@ -107,6 +107,20 @@ RSpec.describe Autonomia::Automacao::Versao do
       se = { 'id' => 's1', 'tipo' => 'se', 'condicao' => recebida, 'entao' => [esperar('p2')] }
       expect(erros(receita(se, gatilho: { 'tipo' => 'mensagem.criada' }))).to include('Passo s1: mensagem.tipo só existe')
     end
+
+    # #2496: "Tipo da mensagem é open" nunca casa; a automação ficaria ligada sem nunca rodar.
+    it 'recusa valor e operador que o valor fechado não tem, também dentro de "todas"', :aggregate_failures do
+      no_gatilho = ->(*filtros) { receita(esperar, gatilho: { 'tipo' => 'mensagem.criada', 'filtros' => filtros }) }
+      open = recebida.merge('valor' => 'open')
+      contem = recebida.merge('op' => 'contem')
+      privada = { 'campo' => { '$valor' => 'mensagem.privada' }, 'op' => 'igual', 'valor' => 'sim' }
+
+      expect(versao(no_gatilho.call(recebida, recebida.merge('op' => 'diferente', 'valor' => 'nota')))).to be_valid
+      expect(erros(no_gatilho.call(open))).to include('mensagem.tipo não tem o valor "open". Use um destes: recebida, enviada, nota')
+      expect(erros(no_gatilho.call({ 'todas' => [recebida, contem] }))).to include('mensagem.tipo só compara com igual, diferente')
+      expect(erros(no_gatilho.call(privada))).to include('mensagem.privada não tem o valor "sim"')
+      expect(versao(no_gatilho.call(privada.merge('valor' => false)))).to be_valid
+    end
   end
 
   describe 'atributo personalizado' do
