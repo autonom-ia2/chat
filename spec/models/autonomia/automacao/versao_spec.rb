@@ -25,6 +25,16 @@ RSpec.describe Autonomia::Automacao::Versao do
     expect(versao(receita(esperar, por_etiqueta))).to be_valid
   end
 
+  # #2500 F7: a conferência mora na versão, então vale para toda rota que grava (editor, API, Guia).
+  it 'recusa passo de IA sem a flag da F7 e aceita com ela' do
+    automacao.account.enable_features!('automacao_fundacao', 'automacao_motor')
+    resumir = { 'id' => 'p2', 'tipo' => 'resumir', 'le' => %w[mensagens_recentes], 'linhas' => 3, 'destino' => 'nota' }
+
+    expect(erros(receita(esperar, resumir))).to include(I18n.t('autonomia.automacao.receita.ia_desligada', passo: 'p2'))
+    automacao.account.enable_features!('automacao_ia')
+    expect(versao(receita(esperar, resumir))).to be_valid
+  end
+
   it 'recusa ação fora da lista de permitidas (F3.2)' do
     apagar_usuario = { 'id' => 'p2', 'tipo' => 'acao', 'acao' => 'DELETE agents/:id', 'caminho' => { 'id' => 7 },
                        'descricao' => 'Apagar o agente' }

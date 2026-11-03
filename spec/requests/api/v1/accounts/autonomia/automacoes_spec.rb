@@ -112,6 +112,29 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     expect(Autonomia::Automacao::Definicao.find(id).versao_ativa.numero).to eq(1)
   end
 
+  # #2500 F7: sem a flag da F7, o servidor recusa passo de IA ao criar e ao salvar, venha do editor ou de quem chama a
+  # API direto. O Guia chama esta mesma rota pela ChamadaInterna (spec próprio em guide/).
+  it 'pela API, sem a flag da F7, recusa passo de IA ao criar e ao salvar', :aggregate_failures do
+    account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens')
+    resumir = { id: 'p2', tipo: 'resumir', le: ['mensagens_recentes'], linhas: 3, destino: 'nota' }
+    com_ia = receita.merge(passos: receita[:passos] + [resumir])
+
+    expect { criar(com: com_ia) }.not_to change(Autonomia::Automacao::Definicao, :count)
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas']).to include(I18n.t('autonomia.automacao.receita.ia_desligada', passo: 'p2'))
+
+    criar
+    id = response.parsed_body['id']
+    patch "#{base}/#{id}", params: { receita: com_ia, base_versao_id: versao_id_de(id) }, headers: admin.create_new_auth_token,
+                           as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(Autonomia::Automacao::Definicao.find(id).versao_ativa.numero).to eq(1)
+
+    account.enable_features!('automacao_ia')
+    criar(com: com_ia)
+    expect(response).to have_http_status(:created)
+  end
+
   # #2486: o dado de um campo que a conta apagou continua {$valor} na receita; o salvar recusa com a frase, e a tela a
   # mostra. Nunca vira texto literal para o cliente.
   it 'com a F4 ligada, recusa texto com campo personalizado que a conta não tem' do
