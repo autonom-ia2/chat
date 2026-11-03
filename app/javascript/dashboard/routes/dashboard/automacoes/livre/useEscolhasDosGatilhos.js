@@ -42,6 +42,12 @@ export function useEscolhasDosGatilhos() {
       label: funil.name,
       options: comNome(etapasPorFunil.value[funil.id]),
     })),
+    // Para a frase do gatilho: "Quando o card entra em Orçamento enviado".
+    nomesDasEtapas: Object.fromEntries(
+      Object.values(etapasPorFunil.value)
+        .flat()
+        .map(etapa => [etapa.id, etapa.name])
+    ),
     camposDoCard: camposDeData(atributosDo.value('card_attribute')),
     camposDoContato: camposDeData(atributosDo.value('contact_attribute')),
     // A etiqueta vai pelo nome, como a conversa e o contato a guardam.

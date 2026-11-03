@@ -1,5 +1,5 @@
 {
-  "pasta": "docs/automacao/demo-2499/prints-v2",
+  "pasta": "docs/automacao/demo-2499/prints-v3",
   "conta": 1,
   "larguras": [
     1440,
@@ -135,6 +135,21 @@
             }
           ],
           "pausa": 3000
+        },
+        {
+          "nome": "voltar-para-a-etapa",
+          "passos": [
+            {
+              "clicar": "[data-voltar]"
+            },
+            {
+              "clicar": "button:has-text(\"Sair sem salvar\")"
+            },
+            {
+              "esperar": "[data-tela=\"automacoes-da-etapa\"]"
+            }
+          ],
+          "pausa": 2500
         }
       ]
     },

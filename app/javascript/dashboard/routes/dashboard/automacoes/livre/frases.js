@@ -8,7 +8,17 @@ import { gatilhoDe } from './gatilhosDemo';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
-export const fraseDoGatilho = (gatilho, catalogo, t) => {
+// #2499: os gatilhos de etapa dizem o nome dela, quando a tela o tem.
+const FRASE_COM_ETAPA = {
+  'card.entrou_na_etapa': 'ENTROU_EM',
+  'card.saiu_da_etapa': 'SAIU_DE',
+};
+
+export const fraseDoGatilho = (gatilho, catalogo, t, nomesDasEtapas = {}) => {
+  const etapa = nomesDasEtapas[gatilho?.etapa_id];
+  const comEtapa = FRASE_COM_ETAPA[gatilho?.tipo];
+  if (comEtapa && etapa)
+    return t(`AUTOMACAO_LIVRE.GATILHOS_F6.ETAPA.${comEtapa}`, { etapa });
   // #2499: "Quando o card fica parado há 3 dias", com os dias escolhidos.
   if (gatilho?.tipo === 'card.parado' && gatilho.dias)
     return t(

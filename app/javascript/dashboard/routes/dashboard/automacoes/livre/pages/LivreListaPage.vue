@@ -14,6 +14,8 @@ import { useNomesDaConta } from '../../composables/useNomesDaConta';
 import { carregarCatalogo, useCatalogo } from '../catalogo';
 import { fraseDoGatilho, fraseDoPasso } from '../frases';
 import { gatilhoDe } from '../gatilhosDemo';
+import { useGatilhosNovos } from '../useGatilhosNovos';
+import { useAccount } from 'dashboard/composables/useAccount';
 import { erroDaApi } from '../erroDaApi';
 
 // #2414 F5 — a lista única de Automações: as novas e as do jeito antigo (as
@@ -49,7 +51,14 @@ const carregar = async () => {
   }
 };
 
+// #2499: o nome das etapas, para a frase dos gatilhos de etapa.
+const { isCloudFeatureEnabled } = useAccount();
+const { escolhasDoGatilho, carregarGatilhos } = useGatilhosNovos(
+  isCloudFeatureEnabled
+);
+
 onMounted(() => {
+  carregarGatilhos();
   carregarNomes();
   carregar();
 });
@@ -65,7 +74,8 @@ const linhaDaNova = automacao => {
     quando: fraseDoGatilho(
       automacao.versao?.receita?.gatilho,
       catalogo.value,
-      t
+      t,
+      escolhasDoGatilho.value.nomesDasEtapas
     ),
     primeiro: passos[0] ? fraseDoPasso(passos[0], catalogo.value, t) : '',
     outros: Math.max(passos.length - 1, 0),

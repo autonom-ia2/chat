@@ -82,7 +82,12 @@ const frase = computed(() => {
   if (alvo.value.tipo === 'passo')
     return fraseDoPasso(rascunho.value, props.catalogo, t);
   if (alvo.value.tipo === 'gatilho')
-    return fraseDoGatilho(rascunho.value, props.catalogo, t);
+    return fraseDoGatilho(
+      rascunho.value,
+      props.catalogo,
+      t,
+      props.escolhasDoGatilho.nomesDasEtapas
+    );
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
 

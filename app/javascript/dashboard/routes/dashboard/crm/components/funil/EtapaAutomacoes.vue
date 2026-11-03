@@ -15,6 +15,8 @@ import { fraseDoGatilho } from 'dashboard/routes/dashboard/automacoes/livre/fras
 // PROTÓTIPO: a lista vem do adaptador falso (gatilhosDemo).
 const props = defineProps({
   stage: { type: Object, required: true },
+  // O funil, para a nova voltar a esta etapa.
+  pipelineId: { type: [Number, String], default: null },
 });
 
 const { t } = useI18n();
@@ -26,7 +28,9 @@ const G = 'AUTOMACAO_LIVRE.GATILHOS_F6.ETAPA';
 const lista = computed(() => automacoesDaEtapa(props.stage).novas);
 
 const fraseDaAutomacao = automacao =>
-  fraseDoGatilho(automacao.gatilho, null, t);
+  fraseDoGatilho(automacao.gatilho, null, t, {
+    [props.stage.id]: props.stage.name,
+  });
 
 const abrir = automacao =>
   router.push(
@@ -36,7 +40,11 @@ const abrir = automacao =>
 const nova = () =>
   router.push({
     path: frontendURL(`accounts/${accountId.value}/automacoes/livre/nova`),
-    query: { gatilho: 'card.entrou_na_etapa', etapa_id: props.stage.id },
+    query: {
+      gatilho: 'card.entrou_na_etapa',
+      etapa_id: props.stage.id,
+      voltar_funil: props.pipelineId,
+    },
   });
 </script>
 

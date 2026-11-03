@@ -1228,8 +1228,22 @@ const openEditPipelineDrawer = async () => {
   loadPipelineInboxes(selectedPipeline.value.id);
 };
 
+// #2499: a nova automação criada em "Automações desta etapa" volta para lá
+// (?automacoes_da_etapa=<etapa>): abre Editar funil já nessa tela.
+const etapaDoLink = ref(null);
+
 const closePipelineDrawer = () => {
   showPipelineDrawer.value = false;
+  etapaDoLink.value = null;
+};
+
+const abrirAutomacoesDaEtapaDoLink = async () => {
+  const etapa = Number(route.query.automacoes_da_etapa);
+  if (!etapa) return;
+  const { automacoes_da_etapa: _etapa, ...query } = route.query;
+  await router.replace({ query });
+  etapaDoLink.value = etapa;
+  await openEditPipelineDrawer();
 };
 
 // A passagem (#1385) volta para cá no mesmo funil: o endereço do quadro guarda o funil antes de sair (vale para o
@@ -2608,6 +2622,7 @@ onMounted(async () => {
     fetchSavedViews();
   }
   await openRouteCardIfNeeded();
+  await abrirAutomacoesDaEtapaDoLink();
 });
 
 onUnmounted(() => {
@@ -3431,6 +3446,7 @@ onUnmounted(() => {
       :is-deleting-stage="uiFlags.isDeletingStage"
       :is-loading-pipeline-inboxes="uiFlags.isFetchingPipelineInboxes"
       :agents="agents"
+      :etapa-inicial="etapaDoLink"
       @save="savePipeline"
       @archive="archivePipeline"
       @delete-stage="deleteStage"

@@ -26,6 +26,7 @@ import { useEditorLivre } from '../useEditorLivre';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
 import { gatilhoDe } from '../gatilhosDemo';
+import { frontendURL } from 'dashboard/helper/URLHelper';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -215,11 +216,36 @@ const responder = sair => {
   responderGuarda = null;
 };
 
-const voltar = () =>
+// #2499: a nova que veio de "Automações desta etapa" volta para lá. Lido uma
+// vez: a URL do editor troca com os painéis.
+const daEtapa =
+  route.query.voltar_funil && route.query.etapa_id
+    ? {
+        funil: String(route.query.voltar_funil),
+        etapa: String(route.query.etapa_id),
+      }
+    : null;
+const rotuloVoltar = computed(() => {
+  if (!daEtapa) return t('AUTOMACAO_LIVRE.VOLTAR_LISTA');
+  const etapa = escolhasDoGatilho.value?.nomesDasEtapas?.[daEtapa.etapa];
+  return etapa
+    ? t('AUTOMACAO_LIVRE.VOLTAR_ETAPA', { etapa })
+    : t('AUTOMACAO_LIVRE.VOLTAR_FUNIL');
+});
+
+const voltar = () => {
+  if (daEtapa) {
+    router.push({
+      path: frontendURL(`accounts/${route.params.accountId}/crm`),
+      query: { pipeline_id: daEtapa.funil, automacoes_da_etapa: daEtapa.etapa },
+    });
+    return;
+  }
   router.push({
     name: 'automacoes_lista',
     params: { accountId: route.params.accountId },
   });
+};
 
 // A nova ganhou id (guardou ou ligou): a URL passa a ser a dela.
 watch(
@@ -277,7 +303,7 @@ onMounted(() => {
       >
         <Button
           data-voltar
-          :label="$t('AUTOMACAO_LIVRE.VOLTAR_LISTA')"
+          :label="rotuloVoltar"
           icon="i-lucide-arrow-left"
           slate
           link
@@ -431,6 +457,7 @@ onMounted(() => {
               <LivreConfira
                 :receita="receita"
                 :catalogo="catalogo"
+                :nomes-das-etapas="escolhasDoGatilho?.nomesDasEtapas"
                 :pode-mudar="podeMudar && !ocupado && !conflito"
                 :tudo="tudo"
                 @alterar="chave => mudarUrl({ alterar: chave })"

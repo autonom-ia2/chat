@@ -17,6 +17,18 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ push: routerPush }),
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ isCloudFeatureEnabled: () => false }),
+}));
+vi.mock('../useGatilhosNovos', async () => {
+  const { ref: criarRef } = await import('vue');
+  return {
+    useGatilhosNovos: () => ({
+      escolhasDoGatilho: criarRef({}),
+      carregarGatilhos: () => {},
+    }),
+  };
+});
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref } = await import('vue');
   const podeMudar = ref(true);

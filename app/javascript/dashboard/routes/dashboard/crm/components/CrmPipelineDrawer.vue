@@ -57,6 +57,8 @@ const props = defineProps({
   isDeletingStage: { type: Boolean, default: false },
   isLoadingPipelineInboxes: { type: Boolean, default: false },
   agents: { type: Array, default: () => [] },
+  // #2499: abrir já em "Automações desta etapa" desta etapa (volta da nova).
+  etapaInicial: { type: Number, default: null },
 });
 
 const emit = defineEmits(['close', 'save', 'archive', 'deleteStage']);
@@ -451,6 +453,19 @@ watch(
   { immediate: true }
 );
 
+// #2499: depois do reset (os watchers rodam na ordem em que nascem), com as
+// etapas já no form, cai direto em "Automações desta etapa".
+watch(
+  () => props.show,
+  aberta => {
+    const etapa =
+      aberta && form.stages.find(item => item.id === props.etapaInicial);
+    if (!etapa) return;
+    openStage(etapa);
+    abrir('stage-actions');
+  }
+);
+
 // Deleting a stage keeps the drawer open and removes it server-side, so drop it
 // from the form and refresh card counts, preserving local edits.
 watch(
@@ -633,7 +648,11 @@ useFixedPanelPresence(computed(() => props.show));
               v-else-if="view === 'stage-actions' && selectedStage"
               class="flex flex-col gap-4"
             >
-              <EtapaAutomacoes v-if="gatilhosNovos" :stage="selectedStage" />
+              <EtapaAutomacoes
+                v-if="gatilhosNovos"
+                :stage="selectedStage"
+                :pipeline-id="pipeline?.id"
+              />
               <CrmStageAutomationsPanel
                 :stage="selectedStage"
                 :sem-criar="Boolean(gatilhosNovos)"
