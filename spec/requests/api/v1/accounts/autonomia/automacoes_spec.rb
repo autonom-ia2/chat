@@ -126,6 +126,29 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     )
   end
 
+  # #2496: o editor só oferece as opções do valor fechado; quem chama direto (o Guia) também não grava a que nunca casa.
+  it 'recusa ao criar e ao salvar a condição da mensagem com valor ou operador que ela não tem', :aggregate_failures do
+    filtro = { campo: { '$valor' => 'mensagem.tipo' }, op: 'igual', valor: 'recebida' }
+    de_mensagem = ->(*filtros) { receita.merge(gatilho: { tipo: 'mensagem.criada', filtros: filtros }) }
+
+    criar(com: de_mensagem.call(filtro.merge(valor: 'open')))
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas']).to include(
+      I18n.t('autonomia.automacao.receita.valor_fora', passo: 'gatilho', caminho: 'mensagem.tipo', valor: 'open',
+                                                       opcoes: 'recebida, enviada, nota')
+    )
+
+    criar(com: de_mensagem.call(filtro))
+    id = response.parsed_body['id']
+    patch "#{base}/#{id}", params: { receita: de_mensagem.call(filtro.merge(op: 'contem')), base_versao_id: versao_id_de(id) },
+                           headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas']).to include(
+      I18n.t('autonomia.automacao.receita.operador_fora', passo: 'gatilho', caminho: 'mensagem.tipo', operadores: 'igual, diferente')
+    )
+    expect(Autonomia::Automacao::Definicao.find(id).versao_ativa.numero).to eq(1)
+  end
+
   it 'liga como quem pediu e desliga' do
     criar
     id = response.parsed_body['id']
@@ -370,6 +393,23 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
 
       expect(response).to have_http_status(:unprocessable_entity)
       expect(automacao.reload.ativa).to be(false)
+    end
+
+    # F7 (#2500): o "decidir" ainda não está no esquema; aqui o esquema é dado como válido para provar que a chave de
+    # funis anda pelos caminhos e pelo "nenhum" pela travessia única da Receita.
+    it 'recusa passo de card dentro de um caminho ou do nenhum do decidir (travessia única)', :aggregate_failures do
+      # TODO(#2500): tirar o stub quando o decidir entrar no esquema.
+      allow(Autonomia::Automacao::Receita).to receive(:esquema_valido?).and_return(true)
+      no_caminho = { id: 'd1', tipo: 'decidir', caminhos: [{ chave: 'a', descricao: 'a', passos: [passo_de_card] }] }
+      no_nenhum = { id: 'd1', tipo: 'decidir', caminhos: [{ chave: 'a', descricao: 'a', passos: [] }], nenhum: [passo_de_card] }
+
+      [no_caminho, no_nenhum].each do |decidir|
+        post base, params: { nome: 'x', receita: receita.merge(passos: [decidir]) }, headers: montador.create_new_auth_token,
+                   as: :json
+
+        expect(response).to have_http_status(:unprocessable_entity)
+        expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+      end
     end
 
     it 'aceita passo de card de quem tem crm_admin sem crm_manage_pipelines (mesmas chaves da regra do funil)' do

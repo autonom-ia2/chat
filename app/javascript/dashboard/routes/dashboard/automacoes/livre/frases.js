@@ -58,9 +58,27 @@ const ESCOLHA_DO_VALOR = {
   'conversa.prioridade': ['conversa_prioridade', 'priority'],
 };
 export const opcoesDoValor = (caminho, catalogo) => {
+  const proprias = catalogo?.valores?.find(
+    item => item.caminho === caminho
+  )?.opcoes;
+  if (proprias) return proprias;
   const [nome, campo] = ESCOLHA_DO_VALOR[caminho] || [];
   const passo = catalogo?.passos.find(item => item.nome === nome);
   return passo?.campos.find(item => item.nome === campo)?.opcoes || null;
+};
+
+// O valor que traz operadores próprios ("é", "não é") só compara por eles; os
+// outros, por todos. `pede_valor` vem sempre do operador do esquema.
+export const operadoresDoValor = (caminho, catalogo) => {
+  const todos = catalogo?.operadores || [];
+  const proprios = catalogo?.valores?.find(
+    item => item.caminho === caminho
+  )?.operadores;
+  if (!proprios) return todos;
+  return proprios.map(item => ({
+    ...todos.find(op => op.op === item.op),
+    ...item,
+  }));
 };
 
 export const fraseDaCondicao = (condicao, catalogo, t) => {
@@ -72,7 +90,9 @@ export const fraseDaCondicao = (condicao, catalogo, t) => {
       .join('; ');
     return t(`${P}.${grupo}`, { lista });
   }
-  const operador = catalogo?.operadores.find(item => item.op === condicao.op);
+  const operador = operadoresDoValor(condicao.campo?.$valor, catalogo).find(
+    item => item.op === condicao.op
+  );
   const campo = fraseDoValor(condicao.campo?.$valor, catalogo, t);
   const op = operador ? t(operador.frase) : condicao.op;
   if (operador && !operador.pede_valor)

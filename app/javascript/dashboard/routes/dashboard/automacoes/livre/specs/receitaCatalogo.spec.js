@@ -135,6 +135,51 @@ describe('receita do editor livre', () => {
     expect(passos[2].entao).toEqual([AVANCADO]);
   });
 
+  // F7 (#2500): a travessia única anda pelos caminhos do "decidir" e pelo
+  // "nenhum se aplica", como o servidor (Receita.ramos).
+  describe('caminhos do decidir', () => {
+    const decidir = () => [
+      {
+        id: 'd1',
+        tipo: 'decidir',
+        caminhos: [
+          { chave: 'sinistro', passos: [{ id: 'a1', tipo: 'parar' }] },
+          { chave: 'cotacao', passos: [] },
+        ],
+        nenhum: [{ id: 'n1', tipo: 'parar' }],
+      },
+    ];
+
+    it('acha e numera os passos de dentro dos caminhos e do nenhum', () => {
+      // d1, a1 e n1 contam: sem andar pelos galhos, o id novo seria p2.
+      expect(novoId(decidir())).toBe('p4');
+      const comP4 = inserirPasso(decidir(), 'd1:caminhos.0', 0, { id: 'p4' });
+      expect(novoId(comP4)).toBe('p5');
+    });
+
+    it('põe e tira passo num caminho sem mexer nos outros', () => {
+      const novo = { id: 'p9', tipo: 'parar' };
+      const passos = inserirPasso(decidir(), 'd1:caminhos.1', 0, novo);
+      expect(passos[0].caminhos[1].passos).toEqual([novo]);
+      expect(passos[0].caminhos[0]).toEqual(decidir()[0].caminhos[0]);
+      expect(passos[0].nenhum).toEqual(decidir()[0].nenhum);
+
+      const semA1 = tirarPasso(passos, 'a1');
+      expect(semA1[0].caminhos[0].passos).toEqual([]);
+      expect(semA1[0].caminhos[0].chave).toBe('sinistro');
+    });
+
+    it('não quebra com caminho vazio na lista', () => {
+      const torto = [{ id: 'd1', tipo: 'decidir', caminhos: [null] }];
+      expect(novoId(torto)).toBe('p2');
+    });
+
+    it('troca um passo de dentro do nenhum', () => {
+      const trocado = trocarPasso(decidir(), { id: 'n1', tipo: 'esperar' });
+      expect(trocado[0].nenhum).toEqual([{ id: 'n1', tipo: 'esperar' }]);
+    });
+  });
+
   it('trocar um passo devolve idênticos o avançado, mensagem, avisar e o tipo desconhecido', () => {
     const original = receita();
     const trocado = {

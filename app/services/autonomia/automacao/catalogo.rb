@@ -82,7 +82,7 @@ module Autonomia::Automacao::Catalogo
 
   def gatilhos
     esquema.dig('properties', 'gatilho', 'properties', 'tipo', 'enum').map do |tipo|
-      { 'tipo' => tipo, 'frase' => chave('GATILHOS', tipo) }
+      { 'tipo' => tipo, 'frase' => chave('GATILHOS', tipo), 'filtro_sugerido' => declarado.dig('filtro_sugerido', tipo) }.compact
     end
   end
 
@@ -106,7 +106,24 @@ module Autonomia::Automacao::Catalogo
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
     end
-    campos + atributos
+    campos + atributos + valores_do_gatilho
+  end
+
+  # A mensagem do gatilho (#2496), com as opções e os operadores do valor fechado. A que só o Guia monta vem marcada:
+  # a tela não a oferece, mas mostra a frase, abre a condição que já a usa e a tira do "Só se" quando o gatilho muda.
+  def valores_do_gatilho
+    so_guia = declarado['valores_so_guia'].keys
+    (declarado['valores_do_gatilho'] + so_guia).map do |caminho|
+      { **valor_da_mensagem(caminho), 'so_guia' => (true if so_guia.include?(caminho)) }.compact
+    end
+  end
+
+  def valor_da_mensagem(caminho)
+    valores = ::Autonomia::Automacao::Valores
+    fechado = valores.fechado(caminho)
+    { 'caminho' => caminho, 'frase' => chave('VALORES', caminho), 'so_no_gatilho' => valores::GATILHO_DA_MENSAGEM,
+      'opcoes' => fechado['opcoes'].map { |opcao| { 'valor' => opcao, 'frase' => chave('VALOR_DA_MENSAGEM', opcao) } },
+      'operadores' => fechado['operadores'].map { |op| { 'op' => op, 'frase' => chave('OPERADOR_DA_MENSAGEM', op) } } }
   end
 
   def nativos

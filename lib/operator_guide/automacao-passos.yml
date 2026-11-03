@@ -33,6 +33,20 @@ nativos:
 # mostra quando tiver as peças.
 nativos_fora_do_editor: {}
 
+# Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o
+# editor não os oferece em outro gatilho nem nos passos (a Receita recusa: mensagem_so_no_gatilho). As opções e os
+# operadores vêm de Valores::FECHADOS, com a frase em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM.
+valores_do_gatilho: [mensagem.tipo]
+
+# Valor da mensagem que o editor não oferece para escolher, com o motivo. O Guia continua montando com ele, e o editor o
+# reconhece: mostra a frase e o tira do "Só se" quando o gatilho muda.
+valores_so_guia:
+  mensagem.privada: o mesmo que "Tipo da mensagem é nota interna"; duas formas de dizer a mesma coisa confundem
+
+# A condição que já entra no "Só se" quando a pessoa escolhe o gatilho. Dá para trocar ou tirar depois.
+filtro_sugerido:
+  mensagem.criada: { campo: { $valor: mensagem.tipo }, op: igual, valor: recebida }
+
 acoes:
   conversa_etiquetas:
     acao: PATCH conversations/:conversation_id/labels/alterar

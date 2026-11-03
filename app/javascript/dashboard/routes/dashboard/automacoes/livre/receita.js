@@ -5,28 +5,64 @@
 
 export const copiar = valor => JSON.parse(JSON.stringify(valor));
 
-// Os galhos de cada tipo de passo, na ordem em que aparecem.
-export const RAMOS = { se: ['entao', 'senao'], esperar_ate: ['se_vencer'] };
+// Os galhos fixos de cada tipo de passo, na ordem em que aparecem. O
+// "decidir" (F7, #2500) abre ainda um galho por caminho, antes do "nenhum".
+export const RAMOS = {
+  se: ['entao', 'senao'],
+  esperar_ate: ['se_vencer'],
+  decidir: ['nenhum'],
+};
 
 // Lista raiz: 'raiz'. Lista de um galho: '<id do passo>:<ramo>'.
 export const RAIZ = 'raiz';
 export const idDaLista = (passoId, ramo) => `${passoId}:${ramo}`;
 
-const ramosDe = passo => RAMOS[passo.tipo] || [];
+const galhoFixo = (passo, ramo) => ({
+  ramo,
+  passos: passo[ramo],
+  com: (alvo, lista) => ({ ...alvo, [ramo]: lista }),
+});
+
+const galhoDoCaminho = (caminho, indice) => ({
+  ramo: `caminhos.${indice}`,
+  nome: caminho.chave,
+  passos: caminho.passos,
+  com: (alvo, lista) => ({
+    ...alvo,
+    caminhos: alvo.caminhos.map((outro, i) =>
+      i === indice ? { ...outro, passos: lista } : outro
+    ),
+  }),
+});
+
+// Os galhos de um passo, na ordem em que aparecem: `ramo` (o fim do id da
+// lista), `passos` (pode faltar), `nome` (o do caminho) e `com(passo, lista)`,
+// que devolve o passo com o galho trocado. É a única travessia da árvore no
+// editor; o servidor tem a sua em Autonomia::Automacao::Receita.ramos.
+export const galhosDe = passo => {
+  const fixos = RAMOS[passo.tipo] || [];
+  return [
+    ...fixos.filter(ramo => ramo !== 'nenhum').map(r => galhoFixo(passo, r)),
+    ...(passo.caminhos || []).map((caminho, i) =>
+      galhoDoCaminho(caminho || {}, i)
+    ),
+    ...fixos.filter(ramo => ramo === 'nenhum').map(r => galhoFixo(passo, r)),
+  ];
+};
 
 // Aplica `fn` em toda lista da árvore; `fn(lista, listaId)` devolve a nova. O
 // galho opcional que não existe ("senão" sem passo) só aparece na receita se
 // ganhou passo: a receita que ninguém mexeu volta igual.
 const mapearListas = (passos, fn, listaId = RAIZ) =>
   fn(passos, listaId).map(passo =>
-    ramosDe(passo).reduce((novo, ramo) => {
+    galhosDe(passo).reduce((novo, galho) => {
       const lista = mapearListas(
-        passo[ramo] || [],
+        galho.passos || [],
         fn,
-        idDaLista(passo.id, ramo)
+        idDaLista(passo.id, galho.ramo)
       );
-      if (!Array.isArray(passo[ramo]) && !lista.length) return novo;
-      return { ...novo, [ramo]: lista };
+      if (!Array.isArray(galho.passos) && !lista.length) return novo;
+      return galho.com(novo, lista);
     }, passo)
   );
 
@@ -50,7 +86,7 @@ export const tirarPasso = (passos, id) =>
 export const todosOsPassos = (passos = []) =>
   passos.flatMap(passo => [
     passo,
-    ...ramosDe(passo).flatMap(ramo => todosOsPassos(passo[ramo] || [])),
+    ...galhosDe(passo).flatMap(galho => todosOsPassos(galho.passos || [])),
   ]);
 
 export const acharPasso = (passos, id) =>
@@ -98,4 +134,36 @@ export const iguais = (a, b) => {
     chaves.length === Object.keys(b).length &&
     chaves.every(chave => iguais(a[chave], b[chave]))
   );
+};
+
+// #2496 — o valor da mensagem só existe no "Só se" do gatilho dela. Trocar o
+// gatilho tira a condição que deixou de valer e, no gatilho que sugere uma, já
+// põe a sugestão quando o "Só se" ainda não olha a mensagem. O painel mostra o
+// que entra e o que sai antes do "Salvar".
+const caminhosDa = condicao =>
+  condicao?.todas || condicao?.alguma
+    ? (condicao.todas || condicao.alguma).flatMap(caminhosDa)
+    : [condicao?.campo?.$valor];
+
+export const filtrosDoGatilho = (filtros, tipo, catalogo) => {
+  const doGatilho = (catalogo?.valores || []).filter(
+    item => item.so_no_gatilho
+  );
+  const vale = caminho =>
+    doGatilho.every(
+      item => item.caminho !== caminho || item.so_no_gatilho === tipo
+    );
+  const todos = filtros || [];
+  const ficam = todos.filter(filtro => caminhosDa(filtro).every(vale));
+  const saem = todos.filter(filtro => !ficam.includes(filtro));
+  const sugerido = catalogo?.gatilhos.find(
+    item => item.tipo === tipo
+  )?.filtro_sugerido;
+  const olhaAMensagem = ficam.some(filtro =>
+    caminhosDa(filtro).some(caminho =>
+      doGatilho.some(item => item.caminho === caminho)
+    )
+  );
+  const entra = sugerido && !olhaAMensagem ? copiar(sugerido) : null;
+  return { filtros: entra ? [...ficam, entra] : ficam, entra, saem };
 };
