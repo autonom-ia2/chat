@@ -8,17 +8,27 @@ RSpec.describe Autonomia::Automacao::Contexto do
   let(:agente) { create(:user, account: account, role: :agent) }
   let(:inbox) { create(:inbox, account: account) }
   let(:conversa) { create(:conversation, account: account, inbox: inbox, assignee: create(:user, account: account, role: :agent)) }
-  let(:funcao) { create(:custom_role, account: account, permissions: %w[conversation_view automation_view]) }
+  let(:definicao) { create(:autonomia_automacao, account: account, ligada_por: agente) }
 
-  before do
-    create(:inbox_member, user: agente, inbox: inbox)
+  def com_funcao(*permissoes)
+    funcao = create(:custom_role, account: account, permissions: permissoes)
     agente.account_users.find_by(account: account).update!(role: :agent, custom_role: funcao)
   end
 
+  before { create(:inbox_member, user: agente, inbox: inbox) }
+
   it 'função só de leitura: vê a conversa, mas o motor não age nela como essa pessoa', :aggregate_failures do
-    definicao = create(:autonomia_automacao, account: account, ligada_por: agente)
+    com_funcao('conversation_view', 'automation_view')
 
     expect(described_class.de(conversa).visivel_para?(agente)).to be(true)
     expect(Autonomia::Automacao::Acesso.new(definicao).alcanca?(conversa)).to be(false)
+  end
+
+  it 'função que só lê contatos: vê o contato, mas o motor não o muda como essa pessoa', :aggregate_failures do
+    com_funcao('contact_view', 'automation_view')
+    contato = create(:contact, account: account)
+
+    expect(described_class.de(contato).visivel_para?(agente)).to be(true)
+    expect(Autonomia::Automacao::Acesso.new(definicao).alcanca?(contato)).to be(false)
   end
 end
