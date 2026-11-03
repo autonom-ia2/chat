@@ -51,6 +51,20 @@ RSpec.describe Autonomia::Automacao::Historico do
     expect(registro.reload.dados).to include('erro')
   end
 
+  it 'dentro de ia, repassa só os números do custo' do
+    create(:autonomia_automacao_registro, execucao: execucao('a'),
+                                          dados: { 'ia' => { 'custo_usd' => 0.002, 'modelo' => 'm', 'razao' => 'o cliente disse' } })
+
+    expect(historico[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'custo_usd' => 0.002, 'modelo' => 'm' })
+  end
+
+  it 'mostra só os últimos 30 dias, como a tela diz' do
+    travel_to(31.days.ago) { execucao('velha', estado: 'concluida') }
+    recente = travel_to(29.days.ago) { execucao('recente', estado: 'concluida') }
+
+    expect(historico[:execucoes].pluck(:id)).to eq([recente.id])
+  end
+
   it 'esconde o nome e os ids da conversa de uma caixa que a pessoa não vê', :aggregate_failures do
     agente = create(:user, account: account, role: :agent)
     create(:autonomia_automacao_registro, execucao: execucao('a'), dados: { 'mensagem_id' => 9, 'ramo' => 'entao' })

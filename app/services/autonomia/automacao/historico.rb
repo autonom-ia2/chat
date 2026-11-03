@@ -15,6 +15,10 @@ class Autonomia::Automacao::Historico
   CHAVES = %w[ramo ate tentativa ia].freeze
   # Estas apontam para dentro da conversa: só saem para quem a enxerga.
   CHAVES_DA_CONVERSA = %w[mensagem_id nota_id].freeze
+  # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
+  IA = %w[custo_usd modelo tokens_entrada tokens_saida].freeze
+  # A tela promete "nos últimos 30 dias": é o tempo em que os passos (Registro) ficam.
+  JANELA = ::Autonomia::Automacao::Registro::RETENCAO
   # O tipo do alvo como a tela o chama. Tipo novo, até o Contexto da F3, sai pelo nome da classe.
   TIPOS = { 'Conversation' => 'conversa' }.freeze
 
@@ -36,7 +40,8 @@ class Autonomia::Automacao::Historico
   end
 
   def resultado
-    lidas = @automacao.execucoes.order(created_at: :desc, id: :desc).offset((@pagina - 1) * POR_PAGINA).limit(POR_PAGINA + 1).to_a
+    recentes = @automacao.execucoes.where(created_at: JANELA.ago..).order(created_at: :desc, id: :desc)
+    lidas = recentes.offset((@pagina - 1) * POR_PAGINA).limit(POR_PAGINA + 1).to_a
     execucoes = lidas.first(POR_PAGINA)
     registros = registros_de(execucoes)
     visiveis = conversas_visiveis(execucoes)
@@ -86,12 +91,18 @@ class Autonomia::Automacao::Historico
     { tipo: 'conversa', visivel: true, conversa_id: conversa.display_id, nome: conversa.contact&.name }
   end
 
+  def dados_para_tela(dados, chaves)
+    lidos = dados.slice(*chaves)
+    lidos['ia'] = lidos['ia'].slice(*IA) if lidos['ia'].is_a?(Hash)
+    lidos
+  end
+
   def passo(registro, visivel:)
     chaves = visivel ? CHAVES + CHAVES_DA_CONVERSA : CHAVES
     {
       passo: registro.passo, resultado: registro.resultado, criado_em: registro.created_at,
       motivo: registro.motivo && I18n.t("autonomia.automacao.motivos.#{registro.motivo}", default: nil),
-      dados: registro.dados.slice(*chaves)
+      dados: dados_para_tela(registro.dados, chaves)
     }
   end
 end
