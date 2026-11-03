@@ -349,6 +349,10 @@ time com o resumo de 3 linhas. A criação do card espera a F6, e a demo mostra 
 **Não tocados:** `app/services/crm/ai/*` (só usados), `app/services/autonomia/decisores/*` (só o `Estado`, usado
 como está) e as IAs do CRM.
 
+## Decisões do Rodrigo (03/11/2026)
+
+Decididas: "F7: sigo as recomendações D1 A, D2 B, D3 A, D4 A, D5 A, D6 A". A tabela abaixo fica como registro de cada opção.
+
 ## Decisões para o Rodrigo
 
 | # | Pergunta | Opções | Recomendação |
