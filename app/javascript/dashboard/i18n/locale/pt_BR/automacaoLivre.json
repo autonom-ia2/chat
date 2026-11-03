@@ -1,6 +1,7 @@
 {
   "AUTOMACAO_LIVRE": {
     "GRUPOS": {
+      "IA": "Inteligência artificial",
       "MENSAGEM": "Mensagens",
       "CONVERSA": "Conversa",
       "CONTATO": "Contato e empresa",
@@ -79,7 +80,11 @@
       "ATRIBUTO_CRIAR": "Criar um campo personalizado",
       "ATRIBUTO_ALTERAR": "Mudar um campo personalizado",
       "MENSAGEM": "Mandar mensagem ao cliente",
-      "AVISAR": "Avisar a equipe"
+      "AVISAR": "Avisar a equipe",
+      "DECIDIR": "A IA decide o caminho",
+      "EXTRAIR": "A IA tira dados da conversa",
+      "ESCREVER": "A IA escreve um texto",
+      "RESUMIR": "A IA resume a conversa"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -118,7 +123,16 @@
       "ATTRIBUTE_DESCRIPTION": "Para que serve",
       "ATTRIBUTE_VALUES": "Opções da lista",
       "TEXTO": "O que dizer",
-      "PARA": "Quem avisar"
+      "PARA": "Quem avisar",
+      "LE": "O que a IA lê",
+      "PERGUNTA": "O que a IA deve decidir",
+      "CAMINHOS": "Caminhos",
+      "NENHUM": "Nenhum se aplica",
+      "CAMPOS": "O que procurar",
+      "TROCAR": "Trocar o que já estava preenchido",
+      "INSTRUCAO": "O que a IA deve escrever",
+      "DESTINO": "Para onde vai",
+      "LINHAS": "Tamanho do resumo (linhas)"
     },
     "OPCOES": {
       "STATUS": {
@@ -261,7 +275,13 @@
       "RESPONSAVEL": "quem cuida da conversa",
       "TIMES": "1 time | {n} times",
       "PESSOAS": "1 pessoa | {n} pessoas",
-      "FALTA_TEXTO": "falta escrever o texto"
+      "FALTA_TEXTO": "falta escrever o texto",
+      "DECIDIR": "A IA decide: “{pergunta}” ({n} caminhos)",
+      "EXTRAIR": "A IA procura na conversa: {lista}",
+      "ESCREVER_MENSAGEM": "A IA escreve e manda ao cliente: “{instrucao}”",
+      "ESCREVER_SUGESTAO": "A IA escreve uma sugestão para a equipe: “{instrucao}”",
+      "RESUMIR_NOTA": "A IA resume a conversa numa nota",
+      "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}"
     },
     "RAMOS": {
       "ENTAO": "Então",
@@ -314,6 +334,46 @@
       "DESLIGAR": "Desligar",
       "SO_LEITURA": "Você pode ver esta automação. Para mudar, peça a quem cuida das automações.",
       "FALTA_COMPLETAR": "Falta completar um passo: escolha a condição e, no \"Se\", ponha pelo menos um passo em Então."
+    },
+    "IA": {
+      "LEITURAS": {
+        "MENSAGENS_RECENTES": "As últimas mensagens do cliente",
+        "MENSAGENS_COM_RESPOSTAS": "As últimas mensagens do cliente e da equipe",
+        "ULTIMA_MENSAGEM": "A mensagem que disparou a automação",
+        "CONVERSA": "Canal, caixa, etiquetas e status da conversa",
+        "CONTATO": "Nome e campos do contato (nunca e-mail ou telefone)",
+        "EMPRESA": "Nome e campos da empresa"
+      },
+      "CAMINHO": {
+        "NOME": "Nome do caminho",
+        "QUANDO": "Quando seguir por ele",
+        "NOVO": "Adicionar caminho",
+        "TIRAR": "Tirar caminho",
+        "DICA": "De 2 a 8 caminhos. Quando a conversa não deixa claro, a IA escolhe “Nenhum se aplica”, em vez de chutar.",
+        "SEM_LETRA": "O nome do caminho precisa ter pelo menos uma letra.",
+        "RESERVADO": "“Nenhum” já é o caminho de quando nada se aplica. Escolha outro nome.",
+        "REPETIDO": "Já existe um caminho com esse nome."
+      },
+      "CAMPO": {
+        "CHAVE": "O que procurar",
+        "DESCRICAO": "Como reconhecer",
+        "DESTINO": "Onde gravar",
+        "NOVO": "Procurar mais um dado",
+        "TIRAR": "Tirar",
+        "DICA": "A IA preenche só o que está escrito na conversa. Se o dado não aparecer, o campo fica vazio e o histórico avisa."
+      },
+      "DESTINOS": {
+        "MENSAGEM": "Mandar ao cliente",
+        "SUGESTAO": "Deixar como sugestão para a equipe revisar",
+        "NOTA": "Nota na conversa",
+        "AVISAR": "Avisar a equipe"
+      },
+      "DESTINO_GRAVAR": {
+        "CONTATO_NOME": "Nome do contato",
+        "EMPRESA_NOME": "Nome da empresa",
+        "CONTATO_ATRIBUTO": "Contato: {nome}",
+        "CONVERSA_ATRIBUTO": "Conversa: {nome}"
+      }
     },
     "HISTORICO": {
       "TITULO": "O que aconteceu",

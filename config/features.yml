@@ -1130,3 +1130,10 @@
   display_name: Automação › mensagem ao cliente e aviso à equipe
   enabled: false
   column: feature_flags_ext_2
+# #2414 F7 (#2500): passos de IA (decidir, extrair, escrever, resumir) na chave da própria conta, sem teto de uso.
+# Só vale com automacao_motor e automacao_fundacao; o escrever para o cliente e o resumo em aviso pedem também
+# automacao_mensagens. Bit: a posição no fim da ext_2 vale pela ordem de entrada na fila (Orquestração).
+- name: automacao_ia
+  display_name: Automação › passos de IA
+  enabled: false
+  column: feature_flags_ext_2
