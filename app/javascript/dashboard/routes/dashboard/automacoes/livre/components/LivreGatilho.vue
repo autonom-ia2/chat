@@ -85,6 +85,7 @@ const opcoesDe = peca => {
       label: t(`${G}.SEMANA.${dia}`),
     }));
   if (peca === 'funil') return props.escolhas.funis || [];
+  if (peca === 'etiqueta') return props.escolhas.etiquetas || [];
   if (peca === 'campo_data_card') return props.escolhas.camposDoCard || [];
   if (peca === 'campo_data_contato')
     return props.escolhas.camposDoContato || [];

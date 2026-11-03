@@ -320,7 +320,13 @@
         "RECORRENTE": "On a set day and time, every time",
         "REUNIAO_MARCADA": "When a meeting is scheduled",
         "REUNIAO_REMARCADA": "When a meeting is rescheduled",
-        "REUNIAO_CANCELADA": "When a meeting is canceled"
+        "REUNIAO_CANCELADA": "When a meeting is canceled",
+        "CONVERSA_ETIQUETA_POSTA": "When a label is added to the conversation",
+        "CONVERSA_ETIQUETA_TIRADA": "When a label is removed from the conversation",
+        "CONTATO_ETIQUETA_POSTA": "When a label is added to the contact",
+        "CONTATO_ETIQUETA_TIRADA": "When a label is removed from the contact",
+        "CARD_CRIADO": "When a card is created",
+        "CARD_RESPONSAVEL_TROCADO": "When the card owner changes"
       },
       "PARAMETROS": {
         "ETAPA_ID": "Stage",
@@ -331,7 +337,8 @@
         "HORA": "Time",
         "FREQUENCIA": "How often",
         "DIA": "Which day",
-        "ALVO": "For whom"
+        "ALVO": "For whom",
+        "ETIQUETA": "Label"
       },
       "ANTES": "Before the date",
       "DEPOIS": "After the date",

@@ -19,11 +19,13 @@ const camposDeData = lista =>
 export function useEscolhasDosGatilhos() {
   const store = useStore();
   const atributosDo = useMapGetter('attributes/getAttributesByModel');
+  const etiquetas = useMapGetter('labels/getLabels');
   const funis = ref([]);
   const etapasPorFunil = ref({});
 
   const carregar = async () => {
     store.dispatch('attributes/get');
+    store.dispatch('labels/get');
     const { data } = await CrmKanbanAPI.getPipelines();
     funis.value = data.payload || [];
     const listas = await Promise.all(
@@ -42,6 +44,11 @@ export function useEscolhasDosGatilhos() {
     })),
     camposDoCard: camposDeData(atributosDo.value('card_attribute')),
     camposDoContato: camposDeData(atributosDo.value('contact_attribute')),
+    // A etiqueta vai pelo nome, como a conversa e o contato a guardam.
+    etiquetas: (etiquetas.value || []).map(item => ({
+      value: item.title,
+      label: item.title,
+    })),
   }));
 
   return { escolhas, carregar };

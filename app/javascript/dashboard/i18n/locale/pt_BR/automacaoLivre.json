@@ -320,7 +320,13 @@
         "RECORRENTE": "Em dia e hora marcados, sempre",
         "REUNIAO_MARCADA": "Quando uma reunião é marcada",
         "REUNIAO_REMARCADA": "Quando uma reunião é remarcada",
-        "REUNIAO_CANCELADA": "Quando uma reunião é cancelada"
+        "REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
+        "CONVERSA_ETIQUETA_POSTA": "Quando uma etiqueta é posta na conversa",
+        "CONVERSA_ETIQUETA_TIRADA": "Quando uma etiqueta sai da conversa",
+        "CONTATO_ETIQUETA_POSTA": "Quando uma etiqueta é posta no contato",
+        "CONTATO_ETIQUETA_TIRADA": "Quando uma etiqueta sai do contato",
+        "CARD_CRIADO": "Quando um card é criado",
+        "CARD_RESPONSAVEL_TROCADO": "Quando o responsável do card muda"
       },
       "PARAMETROS": {
         "ETAPA_ID": "Etapa",
@@ -331,7 +337,8 @@
         "HORA": "Hora",
         "FREQUENCIA": "Com que frequência",
         "DIA": "Qual dia",
-        "ALVO": "Para quem"
+        "ALVO": "Para quem",
+        "ETIQUETA": "Etiqueta"
       },
       "ANTES": "Antes da data",
       "DEPOIS": "Depois da data",

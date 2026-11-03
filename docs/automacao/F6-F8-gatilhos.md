@@ -62,6 +62,10 @@ Nada muda na Partida, no Executor nem na varredura.
 | `mensagem.falhou` | conversa | evento | `MESSAGE_UPDATED` com `status` mudando para `failed` | — | `falhou:<mensagem id>` |
 | `conversa.responsavel_trocado` | conversa | evento | `ASSIGNEE_CHANGED` | — | `responsavel:<conversa>:<timestamp>` |
 | `conversa.time_trocado` | conversa | evento | `TEAM_CHANGED` | — | `time:<conversa>:<timestamp>` |
+| `card.criado` | card | evento | atividade `create` (Creator e CardNaEtapa) | `funil_id` (opcional) | `atividade:<activity id>` |
+| `card.responsavel_trocado` | card | evento | atividade `update` com `owner_id` (tipo próprio no `EVENT_MAP`) | — | `atividade:<activity id>` |
+| `conversa.etiqueta_posta` / `.etiqueta_tirada` | conversa | evento | `CONVERSATION_UPDATED` com `label_list` em `changed_attributes` | `etiqueta` | `etiqueta:<conversa>:<etiqueta>:<timestamp>` |
+| `contato.etiqueta_posta` / `.etiqueta_tirada` | contato | evento | `CONTACT_UPDATED` com as etiquetas mudando | `etiqueta` | `etiqueta:<contato>:<etiqueta>:<timestamp>` |
 | `card.entrou_na_etapa` | card | evento | atividade `move` (Mover) e `create` (CardNaEtapa) | `etapa_id` | `atividade:<activity id>` |
 | `card.saiu_da_etapa` | card | evento | atividade `move` | `etapa_id` | `atividade:<activity id>` |
 | `card.ganho` / `card.perdido` | card | evento | atividade `won` / `lost` (Closer) | `funil_id` (opcional) | `atividade:<activity id>` |
@@ -295,17 +299,17 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
 
 ## 11. Perguntas abertas
 
-- **P1.** Card criado, card arquivado e campo do card mudou estão no termo da F6, mas não na lista da Automação. Entram? Recomendo **criado sim** (já sai como atividade `create`) e os outros dois depois.
-- **P2.** Etiqueta posta ou tirada (F8.7) e troca do responsável do card estão no termo, mas não na lista. Entram? Recomendo **sim** para os dois. O da conversa já tem evento. O do card sai da atividade `update` com `owner_id`, que precisa de um tipo próprio no `EVENT_MAP`.
+- **P1. Decidido (Rodrigo, 03/11):** card criado entra; arquivado e "campo mudou" ficam para depois.
+- **P2. Decidido (Rodrigo, 03/11):** etiqueta posta ou tirada (conversa e contato) e troca do responsável do card entram.
 - **P3. Decidido (Automação):** retorno pela ação do catálogo `POST crm/follow_ups`.
-- **P4.** Liberar `POST crm/cards/:id/close` (ganhar ou perder) como passo? Recomendo sim, com o motivo da perda obrigatório quando for perder.
+- **P4. Decidido (Rodrigo, 03/11):** o passo ganhar/perder (`POST crm/cards/:id/close`) entra; na perda, o motivo é obrigatório.
 - **P5. Decidido (Automação):** Issue #2501 para o Multifunnel (upsert pelo Mover). Até lá, a tela avisa.
-- **P6.** "Parar para este cartão" (F6.3) para só o que está rodando, ou barra também o que começar depois? Recomendo **só o que está rodando**: sem migration, e a pessoa religa a qualquer hora. Barrar o futuro pede uma tabela de exclusão.
+- **P6. Decidido (Rodrigo, 03/11):** "Parar para este card" para só o que está rodando. Sem migration.
 - **P7. Decidido (Automação):** o dono do formato das receitas é a F2, no #2498. As receitas por pacote usam o formato dela.
-- **P8.** O exemplo da F8 "cada corretor recebe a lista dos seus cards parados" é **um aviso com a lista de vários cards**. O recorrente age em cada alvo, um por vez (F8.6). A lista agregada pede um passo novo. Fica para depois?
-- **P9.** A F6.7 depende da #2428 (IA do funil respeita o card movido por automação), ainda aberta. Ela entra antes do PR do card?
-- **P10.** Webhook: depois da falha, a automação segue para o próximo passo ou para ali? Recomendo **seguir**, com a falha no histórico, porque o resto da automação (avisar, mover) não depende do outro sistema. Usar a resposta do outro sistema (F8.5) fica para um PR depois deste?
-- **P11.** Webhook: o corpo vai assinado? O `Webhooks::Trigger` assina com o `secret` do webhook da conta. Para o passo, o segredo não pode morar na receita (versionada e lida por quem só vê). Recomendo **sem assinatura no primeiro PR**: a URL do n8n ou da planilha já leva o token, e a URL fica protegida pelo #2450 e pela regra de nunca logar. A assinatura entra depois, com segredo guardado fora da receita, se um caso pedir.
+- **P8. Decidido (Rodrigo, 03/11):** a lista agregada fica para depois.
+- **P9. Decidido (Rodrigo, 03/11):** a #2428 entra antes do PR do card.
+- **P10. Decidido (Rodrigo, 03/11):** depois de um webhook que falhou, a automação segue. Usar a resposta do outro sistema (F8.5) fica para um PR depois.
+- **P11. Decidido (Rodrigo, 03/11):** sem assinatura no 1º PR ("sem senha ou no próprio link"). O link pode trazer o token, então a URL inteira conta como segredo: mascarada para quem só vê e nunca em log nem no histórico.
 
 ## 12. Como vou provar (specs que devem falhar antes)
 
