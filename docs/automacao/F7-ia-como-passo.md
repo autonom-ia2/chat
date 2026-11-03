@@ -233,6 +233,27 @@ não dispara a si mesma, e a cascata corta na profundidade 3. Isso é proteção
 A gera nota, que dispara B; B gera nota, que dispara A; a volta para A é cortada, e a IA é chamada uma vez por
 automação.
 
+## Contrato com a F2 (#2498), combinado em 03/11
+
+- **Ensaio:** cada passo de IA tem `self.ensaiar(passo, leitura)` e devolve só dados. A `leitura` não tem cliente de IA,
+  executor, Redis nem dispatcher.
+  - `decidir` → `{ faria: 'ia_decidir', ramos: [{ chave:, rotulo: }] }`, com todos os caminhos e o "nenhum";
+  - `extrair` → `{ faria: 'ia_extrair', dados: { campos: [{ chave:, destino: }] } }`;
+  - `escrever` → `{ faria: 'ia_escrever', dados: { destino: } }`;
+  - `resumir` → `{ faria: 'ia_resumir', dados: { destino: } }`.
+
+  As frases ficam em `AUTOMACAO_LIVRE.ENSAIO.FARIA.*`, no PR da F7. O "Testar este passo" aparece no ensaio só como
+  link.
+- **Registro (chaves de `dados` que o histórico mostra):**
+  - `ramo`;
+  - `campos: { gravados, ausentes, ja_tinha }`, só com as chaves;
+  - `mensagem_id` ou `nota_id`;
+  - `ia: { custo_usd, modelo, tokens_entrada, tokens_saida }`.
+
+  Chave fora dessa lista não aparece na tela. Com a D3 (A), o motivo do decidir é só o `nota_id`.
+- **"Testar este passo" do decidir:** mostra o motivo da IA na tela, para quem vê a conversa. O motivo nunca vai para
+  log nem para o `Crm::AiUsageEvent`.
+
 ## Erros e tentativas
 
 O executor já sabe o que fazer com cada tipo de resultado. Os passos de IA só devolvem o tipo certo:
