@@ -266,7 +266,9 @@
     "RAMOS": {
       "ENTAO": "Then",
       "SENAO": "Otherwise",
-      "SE_VENCER": "If time runs out"
+      "SE_VENCER": "If time runs out",
+      "NENHUM": "None applies",
+      "CAMINHO": "Path {n}"
     },
     "SELETOR": {
       "TITULO": "Choose the next step",
