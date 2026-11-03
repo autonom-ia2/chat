@@ -375,6 +375,7 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     # F7 (#2500): o "decidir" ainda não está no esquema; aqui o esquema é dado como válido para provar que a chave de
     # funis anda pelos caminhos e pelo "nenhum" pela travessia única da Receita.
     it 'recusa passo de card dentro de um caminho ou do nenhum do decidir (travessia única)', :aggregate_failures do
+      # TODO(#2500): tirar o stub quando o decidir entrar no esquema.
       allow(Autonomia::Automacao::Receita).to receive(:esquema_valido?).and_return(true)
       no_caminho = { id: 'd1', tipo: 'decidir', caminhos: [{ chave: 'a', descricao: 'a', passos: [passo_de_card] }] }
       no_nenhum = { id: 'd1', tipo: 'decidir', caminhos: [{ chave: 'a', descricao: 'a', passos: [] }], nenhum: [passo_de_card] }

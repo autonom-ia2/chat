@@ -59,6 +59,16 @@ const galhos = passo =>
     .filter(galho => props.podeMudar || galho.passos.length);
 
 const frase = passo => fraseDoPasso(passo, props.catalogo, t);
+// O galho do caminho do "decidir" leva o nome que a pessoa deu; sem nome,
+// "Caminho N".
+const rotuloDoGalho = galho => {
+  const [ramo, indice] = galho.ramo.split('.');
+  if (ramo === 'caminhos')
+    return (
+      galho.nome || t('AUTOMACAO_LIVRE.RAMOS.CAMINHO', { n: Number(indice) + 1 })
+    );
+  return t(`AUTOMACAO_LIVRE.RAMOS.${galho.ramo.toUpperCase()}`);
+};
 const inserir = indice => emit('inserir', { listaId: props.listaId, indice });
 </script>
 
@@ -148,10 +158,7 @@ const inserir = indice => emit('inserir', { listaId: props.listaId, indice });
                 class="i-lucide-corner-down-right size-4 text-n-slate-9"
                 aria-hidden="true"
               />
-              {{
-                galho.nome ||
-                $t(`AUTOMACAO_LIVRE.RAMOS.${galho.ramo.toUpperCase()}`)
-              }}
+              {{ rotuloDoGalho(galho) }}
               <span
                 v-if="!aberto(galho.chave)"
                 class="font-normal text-n-slate-10"

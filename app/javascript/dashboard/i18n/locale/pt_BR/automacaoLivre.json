@@ -254,7 +254,8 @@
       "ENTAO": "Então",
       "SENAO": "Senão",
       "SE_VENCER": "Se o prazo acabar",
-      "NENHUM": "Nenhum se aplica"
+      "NENHUM": "Nenhum se aplica",
+      "CAMINHO": "Caminho {n}"
     },
     "SELETOR": {
       "TITULO": "Escolha o próximo passo",
