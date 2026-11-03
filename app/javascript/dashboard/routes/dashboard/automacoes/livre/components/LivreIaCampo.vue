@@ -32,10 +32,12 @@ const LEITURAS = [
   'contato',
   'empresa',
 ];
-const opcoesDeLeitura = LEITURAS.map(valor => ({
-  value: valor,
-  label: t(`${I}.LEITURAS.${valor.toUpperCase()}`),
-}));
+const opcoesDeLeitura = computed(() =>
+  LEITURAS.map(valor => ({
+    value: valor,
+    label: t(`${I}.LEITURAS.${valor.toUpperCase()}`),
+  }))
+);
 
 // Onde o "extrair" grava: o nome do contato e da empresa, e os campos
 // personalizados que a conta tem no contato e na conversa.
@@ -56,14 +58,16 @@ const destinosDeGravar = computed(() => [
   })),
 ]);
 
-const opcoesDoEscrever = ['mensagem', 'sugestao'].map(valor => ({
-  value: valor,
-  label: t(`${I}.DESTINOS.${valor.toUpperCase()}`),
-}));
-const opcoesDoResumir = ['nota', 'avisar'].map(valor => ({
-  value: valor,
-  label: t(`${I}.DESTINOS.${valor.toUpperCase()}`),
-}));
+// Computados: o pt_BR chega depois do setup, e uma lista montada antes fica em inglês.
+const opcoesDeDestino = valores =>
+  computed(() =>
+    valores.map(valor => ({
+      value: valor,
+      label: t(`${I}.DESTINOS.${valor.toUpperCase()}`),
+    }))
+  );
+const opcoesDoEscrever = opcoesDeDestino(['mensagem', 'sugestao']);
+const opcoesDoResumir = opcoesDeDestino(['nota', 'avisar']);
 
 const lista = computed(() =>
   Array.isArray(props.modelValue) ? props.modelValue : []
@@ -102,6 +106,9 @@ const trocarDestinoDoResumir = valor =>
     valor === 'avisar' ? { avisar: { responsavel: true } } : valor
   );
 
+// Cada caixa do caminho e do dado tem o rótulo à vista: preenchida, o placeholder some.
+const ROTULO_DO_ITEM =
+  'flex flex-col gap-1 text-xs font-medium text-n-slate-11';
 const ROTULO_DA_CAIXA =
   'w-full px-3 py-2 text-[0.9375rem] border rounded-xl min-h-11 border-n-weak bg-n-solid-1 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';
 </script>
@@ -149,22 +156,26 @@ const ROTULO_DA_CAIXA =
       data-caminho
       class="flex flex-col gap-2 p-3 border rounded-xl border-n-weak"
     >
-      <input
-        :aria-label="$t(`${I}.CAMINHO.NOME`)"
-        :placeholder="$t(`${I}.CAMINHO.NOME`)"
-        maxlength="40"
-        :class="ROTULO_DA_CAIXA"
-        :value="caminho.chave"
-        @input="evento => trocarItem(indice, 'chave', evento.target.value)"
-      />
-      <input
-        :aria-label="$t(`${I}.CAMINHO.QUANDO`)"
-        :placeholder="$t(`${I}.CAMINHO.QUANDO`)"
-        maxlength="300"
-        :class="ROTULO_DA_CAIXA"
-        :value="caminho.descricao"
-        @input="evento => trocarItem(indice, 'descricao', evento.target.value)"
-      />
+      <label :class="ROTULO_DO_ITEM">
+        {{ $t(`${I}.CAMINHO.NOME`) }}
+        <input
+          maxlength="40"
+          :class="ROTULO_DA_CAIXA"
+          :value="caminho.chave"
+          @input="evento => trocarItem(indice, 'chave', evento.target.value)"
+        />
+      </label>
+      <label :class="ROTULO_DO_ITEM">
+        {{ $t(`${I}.CAMINHO.QUANDO`) }}
+        <input
+          maxlength="300"
+          :class="ROTULO_DA_CAIXA"
+          :value="caminho.descricao"
+          @input="
+            evento => trocarItem(indice, 'descricao', evento.target.value)
+          "
+        />
+      </label>
       <Button
         v-if="lista.length > 2"
         :label="$t(`${I}.CAMINHO.TIRAR`)"
@@ -201,29 +212,36 @@ const ROTULO_DA_CAIXA =
       data-campo-extrair
       class="flex flex-col gap-2 p-3 border rounded-xl border-n-weak"
     >
-      <input
-        :aria-label="$t(`${I}.CAMPO.CHAVE`)"
-        :placeholder="$t(`${I}.CAMPO.CHAVE`)"
-        maxlength="40"
-        :class="ROTULO_DA_CAIXA"
-        :value="item.chave"
-        @input="evento => trocarItem(indice, 'chave', evento.target.value)"
-      />
-      <input
-        :aria-label="$t(`${I}.CAMPO.DESCRICAO`)"
-        :placeholder="$t(`${I}.CAMPO.DESCRICAO`)"
-        maxlength="300"
-        :class="ROTULO_DA_CAIXA"
-        :value="item.descricao"
-        @input="evento => trocarItem(indice, 'descricao', evento.target.value)"
-      />
-      <ChoiceSelect
-        :model-value="item.destino || ''"
-        :aria-label="$t(`${I}.CAMPO.DESTINO`)"
-        :placeholder="$t(`${I}.CAMPO.DESTINO`)"
-        :options="destinosDeGravar"
-        @update:model-value="valor => trocarItem(indice, 'destino', valor)"
-      />
+      <label :class="ROTULO_DO_ITEM">
+        {{ $t(`${I}.CAMPO.CHAVE`) }}
+        <input
+          maxlength="40"
+          :class="ROTULO_DA_CAIXA"
+          :value="item.chave"
+          @input="evento => trocarItem(indice, 'chave', evento.target.value)"
+        />
+      </label>
+      <label :class="ROTULO_DO_ITEM">
+        {{ $t(`${I}.CAMPO.DESCRICAO`) }}
+        <input
+          maxlength="300"
+          :class="ROTULO_DA_CAIXA"
+          :value="item.descricao"
+          @input="
+            evento => trocarItem(indice, 'descricao', evento.target.value)
+          "
+        />
+      </label>
+      <div :class="ROTULO_DO_ITEM">
+        <span aria-hidden="true">{{ $t(`${I}.CAMPO.DESTINO`) }}</span>
+        <ChoiceSelect
+          :model-value="item.destino || ''"
+          :aria-label="$t(`${I}.CAMPO.DESTINO`)"
+          :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+          :options="destinosDeGravar"
+          @update:model-value="valor => trocarItem(indice, 'destino', valor)"
+        />
+      </div>
       <Button
         v-if="lista.length > 1"
         :label="$t(`${I}.CAMPO.TIRAR`)"

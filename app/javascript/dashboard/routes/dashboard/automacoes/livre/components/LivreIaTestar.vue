@@ -16,7 +16,8 @@ const { t, locale } = useI18n();
 const I = 'AUTOMACAO_LIVRE.IA';
 
 const dinheiro = valor =>
-  new Intl.NumberFormat(locale.value, {
+  // O vue-i18n usa pt_BR; o Intl só aceita a etiqueta BCP 47 (pt-BR).
+  new Intl.NumberFormat(locale.value.replace('_', '-'), {
     minimumFractionDigits: 4,
     maximumFractionDigits: 4,
   }).format(valor);

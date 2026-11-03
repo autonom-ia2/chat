@@ -86,8 +86,11 @@ class Autonomia::Automacao::Receita
      *repetidos(id, Array(passo['caminhos']).pluck('chave'), :caminho_repetido),
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
-     *destinatarios_de_fora('id' => id, 'para' => passo.dig('destino', 'avisar'))]
+     *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
   end
+
+  # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
+  def avisar_do_resumir(passo) = passo['destino'].is_a?(Hash) ? passo['destino']['avisar'] : nil
 
   def fala_com_gente?(passo)
     (passo['tipo'] == 'escrever' && passo['destino'] == 'mensagem') || (passo['tipo'] == 'resumir' && passo['destino'].is_a?(Hash))

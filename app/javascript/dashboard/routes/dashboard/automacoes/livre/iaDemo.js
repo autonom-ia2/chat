@@ -10,10 +10,30 @@ const CUSTO_MEDIO = {
 
 export const custoMedio = tipo => CUSTO_MEDIO[tipo] ?? null;
 
+// Cada conversa traz o que o "escrever" e o "resumir" devolveriam nela.
 const CONVERSAS = [
-  { id: 1042, cliente: 'bati o carro ontem, e agora? placa ABC1D23' },
-  { id: 1038, cliente: 'quanto fica o seguro de um Onix 2022?' },
-  { id: 1031, cliente: 'oi, bom dia' },
+  {
+    id: 1042,
+    cliente: 'bati o carro ontem, e agora? placa ABC1D23',
+    escrever:
+      'Oi! Sentimos pelo ocorrido. Um corretor fala com você em até 1 hora para abrir o sinistro.',
+    resumir:
+      'Cliente relata batida ontem.\nInformou a placa ABC1D23.\nPede orientação sobre o sinistro.',
+  },
+  {
+    id: 1038,
+    cliente: 'quanto fica o seguro de um Onix 2022?',
+    escrever:
+      'Oi! Obrigado pelo contato. Um corretor manda a cotação do Onix 2022 em até 1 hora.',
+    resumir:
+      'Cliente quer cotação de seguro.\nCarro: Onix 2022.\nAinda não informou CEP nem idade.',
+  },
+  {
+    id: 1031,
+    cliente: 'oi, bom dia',
+    escrever: 'Bom dia! Como podemos ajudar?',
+    resumir: 'Cliente só cumprimentou.\nAinda não disse o que precisa.',
+  },
 ];
 
 const resultado = (passo, conversa, indice) => {
@@ -28,14 +48,8 @@ const resultado = (passo, conversa, indice) => {
         : 'A mensagem só cumprimenta; não dá para saber o assunto.',
     };
   }
-  if (passo.tipo === 'escrever')
-    return {
-      texto:
-        'Oi! Recebemos sua mensagem e um corretor responde em até 1 hora. Obrigado pela paciência.',
-    };
   return {
-    texto:
-      'Cliente relata batida ontem.\nInformou a placa ABC1D23.\nPede orientação sobre o sinistro.',
+    texto: passo.tipo === 'escrever' ? conversa.escrever : conversa.resumir,
   };
 };
 
