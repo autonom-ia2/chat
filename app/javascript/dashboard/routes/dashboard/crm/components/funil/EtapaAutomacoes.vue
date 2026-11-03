@@ -43,7 +43,9 @@ const nova = () =>
 
 <template>
   <section class="flex flex-col gap-3" data-tela="automacoes-da-etapa">
-    <header class="flex items-center justify-between gap-3">
+    <header
+      class="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between"
+    >
       <div class="flex flex-col gap-0.5">
         <h3 class="m-0 text-base font-medium text-n-slate-12">
           {{ $t(`${G}.TITULO`) }}
