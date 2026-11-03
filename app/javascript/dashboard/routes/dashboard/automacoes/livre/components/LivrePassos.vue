@@ -43,6 +43,10 @@ const ICONES = {
   se: 'i-lucide-git-branch',
   parar: 'i-lucide-octagon-x',
   acao: 'i-lucide-play',
+  decidir: 'i-lucide-split',
+  extrair: 'i-lucide-scan-text',
+  escrever: 'i-lucide-pen-line',
+  resumir: 'i-lucide-text-quote',
 };
 const icone = passo => ICONES[passo.tipo] || 'i-lucide-blocks';
 const avancada = passo => !entradaDoPasso(passo, props.catalogo);

@@ -395,16 +395,16 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(automacao.reload.ativa).to be(false)
     end
 
-    # F7 (#2500): o "decidir" ainda não está no esquema; aqui o esquema é dado como válido para provar que a chave de
-    # funis anda pelos caminhos e pelo "nenhum" pela travessia única da Receita.
+    # F7 (#2500): a chave de funis anda pelos caminhos e pelo "nenhum" do decidir, pela travessia única da Receita.
     it 'recusa passo de card dentro de um caminho ou do nenhum do decidir (travessia única)', :aggregate_failures do
-      # TODO(#2500): tirar o stub quando o decidir entrar no esquema.
-      allow(Autonomia::Automacao::Receita).to receive(:esquema_valido?).and_return(true)
-      no_caminho = { id: 'd1', tipo: 'decidir', caminhos: [{ chave: 'a', descricao: 'a', passos: [passo_de_card] }] }
-      no_nenhum = { id: 'd1', tipo: 'decidir', caminhos: [{ chave: 'a', descricao: 'a', passos: [] }], nenhum: [passo_de_card] }
+      account.enable_features!('automacao_ia')
+      caminho = ->(chave, passos) { { nome: chave, chave: chave, descricao: chave, passos: passos } }
+      decidir = { id: 'd1', tipo: 'decidir', pergunta: 'assunto?', caminhos: [caminho.call('a', []), caminho.call('b', [])] }
+      no_caminho = decidir.merge(caminhos: [caminho.call('a', [passo_de_card]), caminho.call('b', [])])
+      no_nenhum = decidir.merge(nenhum: [passo_de_card])
 
-      [no_caminho, no_nenhum].each do |decidir|
-        post base, params: { nome: 'x', receita: receita.merge(passos: [decidir]) }, headers: montador.create_new_auth_token,
+      [no_caminho, no_nenhum].each do |passo|
+        post base, params: { nome: 'x', receita: receita.merge(passos: [passo]) }, headers: montador.create_new_auth_token,
                    as: :json
 
         expect(response).to have_http_status(:unprocessable_entity)

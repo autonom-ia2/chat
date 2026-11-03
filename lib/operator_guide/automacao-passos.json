@@ -201,6 +201,10 @@
   ],
   "grupos": [
     {
+      "chave": "IA",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.IA"
+    },
+    {
       "chave": "MENSAGEM",
       "frase": "AUTOMACAO_LIVRE.GRUPOS.MENSAGEM"
     },
@@ -330,6 +334,116 @@
           "peca": "destinatarios",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PARA"
+        }
+      ]
+    },
+    {
+      "tipo": "decidir",
+      "grupo": "IA",
+      "requer": "automacao_ia",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.DECIDIR",
+      "campos": [
+        {
+          "nome": "le",
+          "peca": "leituras",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LE"
+        },
+        {
+          "nome": "pergunta",
+          "peca": "instrucao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PERGUNTA"
+        },
+        {
+          "nome": "caminhos",
+          "peca": "caminhos",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAMINHOS"
+        },
+        {
+          "nome": "nenhum",
+          "peca": "passos",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.NENHUM"
+        }
+      ]
+    },
+    {
+      "tipo": "extrair",
+      "grupo": "IA",
+      "requer": "automacao_ia",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EXTRAIR",
+      "campos": [
+        {
+          "nome": "le",
+          "peca": "leituras",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LE"
+        },
+        {
+          "nome": "campos",
+          "peca": "campos_extrair",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAMPOS"
+        },
+        {
+          "nome": "trocar",
+          "peca": "sim_nao",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TROCAR"
+        }
+      ]
+    },
+    {
+      "tipo": "escrever",
+      "grupo": "IA",
+      "requer": "automacao_ia",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.ESCREVER",
+      "campos": [
+        {
+          "nome": "le",
+          "peca": "leituras",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LE"
+        },
+        {
+          "nome": "instrucao",
+          "peca": "instrucao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.INSTRUCAO"
+        },
+        {
+          "nome": "destino",
+          "peca": "destino_escrever",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESTINO"
+        }
+      ]
+    },
+    {
+      "tipo": "resumir",
+      "grupo": "IA",
+      "requer": "automacao_ia",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.RESUMIR",
+      "campos": [
+        {
+          "nome": "le",
+          "peca": "leituras",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LE"
+        },
+        {
+          "nome": "linhas",
+          "peca": "numero",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LINHAS"
+        },
+        {
+          "nome": "destino",
+          "peca": "destino_resumir",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESTINO"
         }
       ]
     },

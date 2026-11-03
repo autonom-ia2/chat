@@ -89,6 +89,34 @@ export const novoPasso = (entrada, id, t) => {
   if (entrada.tipo === 'mensagem') return { id, tipo: 'mensagem', texto: [] };
   if (entrada.tipo === 'avisar')
     return { id, tipo: 'avisar', texto: [], para: { responsavel: true } };
+  // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
+  // caminhos e o extrair com um dado, a preencher no painel.
+  const LE = ['mensagens_recentes'];
+  const caminhoVazio = () => ({
+    nome: '',
+    chave: '',
+    descricao: '',
+    passos: [],
+  });
+  if (entrada.tipo === 'decidir')
+    return {
+      id,
+      tipo: 'decidir',
+      le: LE,
+      pergunta: '',
+      caminhos: [caminhoVazio(), caminhoVazio()],
+    };
+  if (entrada.tipo === 'extrair')
+    return {
+      id,
+      tipo: 'extrair',
+      le: LE,
+      campos: [{ chave: '', descricao: '', destino: '' }],
+    };
+  if (entrada.tipo === 'escrever')
+    return { id, tipo: 'escrever', le: LE, instrucao: '', destino: 'sugestao' };
+  if (entrada.tipo === 'resumir')
+    return { id, tipo: 'resumir', le: LE, linhas: 3, destino: 'nota' };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})
