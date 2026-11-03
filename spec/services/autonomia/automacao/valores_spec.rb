@@ -8,8 +8,18 @@ RSpec.describe Autonomia::Automacao::Valores do
 
   it 'lê campos da conversa e do contato' do
     expect(valores.ler('conversa.id')).to eq(conversa.display_id)
+    expect(valores.ler('mensagem.tipo')).to be_nil
     expect(valores.ler('conversa.caixa_id')).to eq(conversa.inbox_id)
     expect(valores.ler('contato.nome')).to eq('Maria')
+  end
+
+  it 'lê a mensagem do gatilho: recebida, enviada ou nota', :aggregate_failures do
+    tipo = lambda do |message_type, privada = false|
+      mensagem = build(:message, conversation: conversa, account: account, message_type: message_type, private: privada)
+      described_class.new(conversa: conversa, mensagem: mensagem).ler('mensagem.tipo')
+    end
+
+    expect([tipo.call(:incoming), tipo.call(:outgoing), tipo.call(:outgoing, true)]).to eq(%w[recebida enviada nota])
   end
 
   it 'lê atributo personalizado pela chave, mesmo com ponto' do

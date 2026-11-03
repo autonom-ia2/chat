@@ -34,7 +34,9 @@ class AsyncDispatcher < BaseDispatcher
       # #1813: o e-mail recebido completa o contato; só enfileira, atrás da flag `contato_pelo_email`.
       Autonomia::ContatoPeloEmailListener.instance,
       # #2212: a IA cuida dos comentários; só enfileira, atrás da flag `meta_ads_comentarios_ia`.
-      Crm::MetaAdsComentariosIaListener.instance
+      Crm::MetaAdsComentariosIaListener.instance,
+      # #2459: a Automação livre começa pelos gatilhos e acorda o "esperar até"; atrás da flag `automacao_motor`.
+      Autonomia::AutomacaoListener.instance
     ]
   end
 end

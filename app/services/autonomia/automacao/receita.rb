@@ -40,7 +40,7 @@ class Autonomia::Automacao::Receita
   end
 
   def filtros_do_gatilho
-    Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| caminhos_desconhecidos('gatilho', condicao) }
+    Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| caminhos_desconhecidos('gatilho', condicao, no_gatilho: true) }
   end
 
   def problemas_do_passo(passo)
@@ -68,15 +68,16 @@ class Autonomia::Automacao::Receita
       pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: passo['id'], id: pessoa) }
   end
 
-  def caminhos_desconhecidos(id, condicao)
-    ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map { |caminho| problemas_do_caminho(id, caminho) }
+  def caminhos_desconhecidos(id, condicao, no_gatilho: false)
+    ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map { |caminho| problemas_do_caminho(id, caminho, no_gatilho: no_gatilho) }
   end
 
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
   # vazio no motor, com o motivo no registro.
-  def problemas_do_caminho(id, caminho)
+  def problemas_do_caminho(id, caminho, no_gatilho: false)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
+    return [texto(:mensagem_so_no_gatilho, passo: id, caminho: caminho)] if valores.da_mensagem?(caminho) && !mensagem_no_gatilho?(no_gatilho)
     return [texto(:atributo_inexistente, passo: id, caminho: caminho)] unless valores.atributo_definido?(caminho, @conta)
 
     []
@@ -88,6 +89,8 @@ class Autonomia::Automacao::Receita
 
     [*caminho_da_acao(passo), *corpo_da_acao(passo)]
   end
+
+  def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == 'mensagem.criada'
 
   def caminho_da_acao(passo)
     valores = passo['caminho'].to_h

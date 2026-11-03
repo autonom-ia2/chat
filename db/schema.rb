@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_700000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_710000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -616,9 +616,11 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_700000) do
     t.datetime "travada_em"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "evento"
     t.index ["account_id"], name: "index_autonomia_automacao_execucoes_on_account_id"
     t.index ["alvo_type", "alvo_id"], name: "index_autonomia_automacao_execucoes_on_alvo"
     t.index ["automacao_id", "alvo_type", "alvo_id", "chave_gatilho"], name: "idx_autonomia_automacao_execucoes_abertas", unique: true, where: "(finalizada_em IS NULL)"
+    t.index ["automacao_id", "evento"], name: "idx_autonomia_automacao_execucoes_evento", unique: true, where: "(evento IS NOT NULL)"
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
     t.index ["due_at"], name: "idx_autonomia_automacao_execucoes_esperando", where: "(finalizada_em IS NULL)"
     t.index ["versao_id"], name: "index_autonomia_automacao_execucoes_on_versao_id"

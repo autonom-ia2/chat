@@ -1,7 +1,8 @@
 # A varredura da Automação livre, a cada minuto (#2414 F3, ADR-001 2.4 passo 4). Agendada no config/schedule.yml.
 #
 # 1. Acorda quem espera com o prazo vencido e reenfileira quem foi reservado há mais de TRAVADA sem começar (fila
-#    atrasada, Redis fora na hora de enfileirar): reserva em lote, de forma atômica (FOR UPDATE SKIP LOCKED, então
+#    atrasada, Redis fora na hora de enfileirar), seja qual for o prazo: a reserva da escuta guarda no `due_at` o
+#    prazo do "esperar até", que pode estar dias à frente: reserva em lote, de forma atômica (FOR UPDATE SKIP LOCKED, então
 #    duas varreduras ao mesmo tempo não pegam a mesma), com uma marca nova, e enfileira uma rodada para cada uma. O
 #    job velho, se ainda vier, chega com a marca antiga e não anda. A espera mora no banco: um deploy no meio não
 #    perde ninguém (F3.3). Vem primeiro: um erro nos passos de baixo não para as esperas.
@@ -33,8 +34,8 @@ class Autonomia::Automacao::VarreduraJob < ApplicationJob
     sql = execucoes.sanitize_sql_array([<<~SQL.squish, { agora: agora, limite: agora - TRAVADA, lote: LOTE }])
       UPDATE autonomia_automacao_execucoes SET estado = 'andando', travada_em = :agora, updated_at = :agora
       WHERE id IN (SELECT id FROM autonomia_automacao_execucoes
-                   WHERE finalizada_em IS NULL AND due_at <= :agora
-                     AND (estado = 'esperando' OR (estado = 'andando' AND travada_em < :limite))
+                   WHERE finalizada_em IS NULL AND due_at IS NOT NULL
+                     AND ((estado = 'esperando' AND due_at <= :agora) OR (estado = 'andando' AND travada_em < :limite))
                    ORDER BY due_at LIMIT :lote FOR UPDATE SKIP LOCKED)
       RETURNING id
     SQL

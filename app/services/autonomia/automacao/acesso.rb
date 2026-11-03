@@ -22,8 +22,14 @@ class Autonomia::Automacao::Acesso
     'quem_ligou_sem_permissao' unless @account_user.permission_granted?(PERMISSAO)
   end
 
-  def alcanca?(conversa)
-    ConversationPolicy.new({ user: @usuario, account: @account, account_user: @account_user }, conversa).show?
+  # O alvo é uma conversa ou um card. No card, valem o próprio card e a conversa principal dele, em que os passos agem:
+  # a pergunta vai a cada política, e quem não vê um dos dois pausa a automação em vez de quebrar a rodada.
+  def alcanca?(alvo)
+    contexto = { user: @usuario, account: @account, account_user: @account_user }
+    return ConversationPolicy.new(contexto, alvo).show? unless alvo.is_a?(::Crm::Card)
+
+    conversa = alvo.primary_conversation
+    ::Crm::CardPolicy.new(contexto, alvo).show? && (conversa.nil? || ConversationPolicy.new(contexto, conversa).show?)
   end
 
   # A mesma pergunta para outra pessoa da conta (quem o passo "avisar" menciona, F4).

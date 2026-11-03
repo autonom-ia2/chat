@@ -14,11 +14,13 @@
 class Autonomia::Automacao::Partida
   Cadeia = ::Autonomia::Automacao::Cadeia
 
-  def initialize(definicao:, alvo:, chave_gatilho:)
+  # `mensagem`: a que disparou o gatilho mensagem.criada, para o filtro (mensagem.tipo).
+  def initialize(definicao:, alvo:, chave_gatilho:, mensagem: nil)
     @definicao = definicao
     @account = definicao.account
     @alvo = alvo
     @chave_gatilho = chave_gatilho
+    @mensagem = mensagem
   end
 
   # A execução aberta, ou nil quando não começou.
@@ -29,6 +31,7 @@ class Autonomia::Automacao::Partida
     return pausar(acesso.motivo) if acesso.motivo
     return pular('fora_do_alcance') unless acesso.alcanca?(@alvo)
     return pular('fora_do_filtro') unless no_filtro?
+    return pular('ja_aberta') if aberta?
 
     comecar
   end
@@ -40,8 +43,14 @@ class Autonomia::Automacao::Partida
       @alvo.account_id == @account.id && !::ConversaCanal::PastaDoEmail.no_spam?(@alvo)
   end
 
+  # A mensagem nova numa conversa que já tem a execução aberta é o caso comum: a consulta evita a cadeia e o INSERT
+  # que o índice único recusaria. O índice continua sendo a garantia (corrida entre dois eventos).
+  def aberta?
+    ::Autonomia::Automacao::Execucao.abertas.exists?(automacao_id: @definicao.id, alvo: @alvo, chave_gatilho: @chave_gatilho)
+  end
+
   def no_filtro?
-    valores = ::Autonomia::Automacao::Valores.new(conversa: @alvo)
+    valores = ::Autonomia::Automacao::Valores.new(conversa: @alvo, mensagem: @mensagem)
     Array(@definicao.versao_ativa.receita.dig('gatilho', 'filtros')).all? do |condicao|
       ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
     end
@@ -55,9 +64,13 @@ class Autonomia::Automacao::Partida
     nil
   end
 
+  # O índice único da execução aberta barra a segunda partida enquanto a primeira anda; o do evento barra o mesmo evento
+  # entregue de novo depois que ela fechou (o EventDispatcherJob repete). Os dois caem no RecordNotUnique, antes de
+  # qualquer passo.
   def abrir
     marca = Time.current.floor(6)
-    execucao = criar(estado: 'andando', travada_em: marca, due_at: marca, cadeia: Cadeia.origens, profundidade: Cadeia.origens.size)
+    execucao = criar(estado: 'andando', travada_em: marca, due_at: marca, cadeia: Cadeia.origens, profundidade: Cadeia.origens.size,
+                     evento: (@mensagem && "mensagem:#{@mensagem.id}"))
     ::Autonomia::Automacao::AvancarJob.perform_later(execucao.id, marca.iso8601(6), Cadeia.raiz)
     execucao
   rescue ActiveRecord::RecordNotUnique
@@ -75,7 +88,7 @@ class Autonomia::Automacao::Partida
   end
 
   def pular(motivo)
-    Rails.logger.info("[automacao][motor] pulada automacao=#{@definicao.id} alvo=conversa:#{@alvo.id} motivo=#{motivo}")
+    Rails.logger.debug { "[automacao][motor] pulada automacao=#{@definicao.id} alvo=conversa:#{@alvo.id} motivo=#{motivo}" }
     nil
   end
 

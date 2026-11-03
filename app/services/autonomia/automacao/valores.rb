@@ -2,7 +2,9 @@
 #
 # A lista de caminhos é fechada: a receita só lê o que está aqui, e o salvar recusa caminho desconhecido. Não é Liquid
 # nem texto livre; cada caminho é um campo do modelo. Os atributos personalizados entram pela chave
-# (`contato.atributos.placa`). Card entra com os gatilhos de card (F6).
+# (`contato.atributos.placa`). Card entra com os gatilhos de card (F6). A mensagem do gatilho `mensagem.criada` só
+# existe no filtro do gatilho (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`); nos passos ela já
+# passou, e o salvar recusa ler a mensagem fora dali.
 class Autonomia::Automacao::Valores
   # `conversa.id` é o número que a pessoa vê (#123) e o que as rotas da conversa recebem, não o id do banco.
   CAMPOS = {
@@ -21,6 +23,16 @@ class Autonomia::Automacao::Valores
     'contato.etiquetas' => ->(conversa) { conversa.contact&.label_list }
   }.freeze
 
+  # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota.
+  MENSAGEM = {
+    'mensagem.tipo' => lambda do |mensagem|
+      next 'nota' if mensagem.private?
+
+      mensagem.incoming? ? 'recebida' : 'enviada'
+    end,
+    'mensagem.privada' => ->(mensagem) { mensagem.private? }
+  }.freeze
+
   ATRIBUTOS = {
     'conversa.atributos' => ->(conversa) { conversa.custom_attributes },
     'contato.atributos' => ->(conversa) { conversa.contact&.custom_attributes }
@@ -31,8 +43,10 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      CAMPOS.key?(caminho.to_s) || atributo(caminho).present?
+      CAMPOS.key?(caminho.to_s) || MENSAGEM.key?(caminho.to_s) || atributo(caminho).present?
     end
+
+    def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
 
     # O atributo da conta que o caminho lê existe? Caminho que não é atributo responde true.
     def atributo_definido?(caminho, conta)
@@ -48,12 +62,14 @@ class Autonomia::Automacao::Valores
     end
   end
 
-  def initialize(conversa:)
+  def initialize(conversa:, mensagem: nil)
     @conversa = conversa
+    @mensagem = mensagem
   end
 
   def ler(caminho)
     return CAMPOS.fetch(caminho.to_s).call(@conversa) if CAMPOS.key?(caminho.to_s)
+    return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
 
     base, chave = self.class.atributo(caminho)
     raise ArgumentError, "caminho desconhecido: #{caminho}" unless base
