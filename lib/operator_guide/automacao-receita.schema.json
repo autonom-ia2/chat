@@ -58,15 +58,16 @@
     },
     "instrucao": { "type": "string", "minLength": 1, "maxLength": 2000 },
     "caminhos": {
-      "description": "Os caminhos do decidir (F7): de 2 a 8, cada um com a chave, o que ele quer dizer e os passos.",
+      "description": "Os caminhos do decidir (F7): de 2 a 8, cada um com o nome que a pessoa vê, a chave (gerada do nome, a que a IA devolve), o que ele quer dizer e os passos.",
       "type": "array",
       "minItems": 2,
       "maxItems": 8,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["chave", "descricao", "passos"],
+        "required": ["nome", "chave", "descricao", "passos"],
         "properties": {
+          "nome": { "type": "string", "minLength": 1, "maxLength": 40 },
           "chave": { "type": "string", "minLength": 1, "maxLength": 40 },
           "descricao": { "type": "string", "minLength": 1, "maxLength": 300 },
           "passos": { "$ref": "#/definitions/passos_opcionais" }

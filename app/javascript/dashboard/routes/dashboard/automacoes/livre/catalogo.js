@@ -92,7 +92,12 @@ export const novoPasso = (entrada, id, t) => {
   // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
   // caminhos e o extrair com um dado, a preencher no painel.
   const LE = ['mensagens_recentes'];
-  const caminhoVazio = () => ({ chave: '', descricao: '', passos: [] });
+  const caminhoVazio = () => ({
+    nome: '',
+    chave: '',
+    descricao: '',
+    passos: [],
+  });
   if (entrada.tipo === 'decidir')
     return {
       id,

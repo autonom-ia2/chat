@@ -47,8 +47,12 @@ const testar = async () => {
 
 const linhaDaConversa = conversa => {
   if (props.passo.tipo !== 'decidir') return conversa.texto;
-  return conversa.caminho
-    ? t(`${I}.TESTAR.ESCOLHEU`, { caminho: conversa.caminho })
+  // A IA devolve a chave; a tela mostra o nome que a pessoa deu ao caminho.
+  const escolhido = (props.passo.caminhos || []).find(
+    caminho => caminho.chave === conversa.caminho
+  );
+  return escolhido
+    ? t(`${I}.TESTAR.ESCOLHEU`, { caminho: escolhido.nome })
     : t(`${I}.TESTAR.NENHUM`);
 };
 </script>

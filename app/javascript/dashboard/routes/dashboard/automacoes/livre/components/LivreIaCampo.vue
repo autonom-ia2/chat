@@ -79,6 +79,23 @@ const trocarItem = (indice, chave, valor) =>
       i === indice ? { ...item, [chave]: valor } : item
     )
   );
+// O caminho mostra o nome que a pessoa escreveu ("Cotação"); a chave, que a IA
+// devolve e que nunca aparece na tela, sai dele: minúscula, sem acento, com _.
+const LETRAS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+const chaveDoNome = nome =>
+  [...nome.normalize('NFD').toLowerCase()]
+    .filter(letra => LETRAS.includes(letra) || letra === ' ')
+    .join('')
+    .split(' ')
+    .filter(Boolean)
+    .join('_');
+const trocarNomeDoCaminho = (indice, nome) =>
+  emit(
+    'update:modelValue',
+    lista.value.map((item, i) =>
+      i === indice ? { ...item, nome, chave: chaveDoNome(nome) } : item
+    )
+  );
 const tirarItem = indice =>
   emit(
     'update:modelValue',
@@ -161,8 +178,8 @@ const ROTULO_DA_CAIXA =
         <input
           maxlength="40"
           :class="ROTULO_DA_CAIXA"
-          :value="caminho.chave"
-          @input="evento => trocarItem(indice, 'chave', evento.target.value)"
+          :value="caminho.nome"
+          @input="evento => trocarNomeDoCaminho(indice, evento.target.value)"
         />
       </label>
       <label :class="ROTULO_DO_ITEM">
