@@ -203,6 +203,12 @@
     "controller": "api/v1/accounts/autonomia/automacoes#show",
     "parametros": []
   },
+  "autonomia/automacoes/:id/historico": {
+    "controller": "api/v1/accounts/autonomia/automacoes#historico",
+    "parametros": [
+      "pagina"
+    ]
+  },
   "autonomia/automacoes/passos": {
     "controller": "api/v1/accounts/autonomia/automacoes#passos",
     "parametros": []

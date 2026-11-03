@@ -374,6 +374,42 @@
         "CONTATO_ATRIBUTO": "Contato: {nome}",
         "CONVERSA_ATRIBUTO": "Conversa: {nome}"
       }
+    },
+    "HISTORICO": {
+      "TITULO": "O que aconteceu",
+      "SUBTITULO": "Cada vez que a automação rodou nos últimos 30 dias.",
+      "CARREGANDO": "Carregando o que aconteceu",
+      "ERRO": "Não deu para carregar o que aconteceu agora.",
+      "VAZIO": "Ainda não rodou.",
+      "VER_MAIS": "Ver mais",
+      "CONVERSA_DE": "Conversa de {nome}",
+      "CONVERSA_N": "Conversa #{n}",
+      "OCULTA": "Uma conversa",
+      "OCULTA_DICA": "Numa caixa que você não vê",
+      "ABRIR_CONVERSA": "Abrir a conversa",
+      "VER_MENSAGEM": "Ver a mensagem",
+      "ESTADOS": {
+        "ANDANDO": "rodando",
+        "ESPERANDO": "esperando",
+        "CONCLUIDA": "terminou",
+        "PARADA": "parou",
+        "FALHOU": "deu erro",
+        "INTERROMPIDA": "interrompida"
+      },
+      "ESPERANDO_ATE": "esperando até {quando}",
+      "PULOU": "Pulou: {frase}",
+      "NAO_FEZ": "Não fez: {frase}",
+      "INICIO": "Não começou",
+      "PASSO_SUMIU": "Um passo que não está nesta versão",
+      "SEGUIU_POR": "Seguiu por: {ramo}",
+      "ESPERA_ATE": "Espera até {quando}",
+      "TENTATIVA": "Tentativa {n}",
+      "IA": "IA: US$ {valor}",
+      "SEMANA": {
+        "NADA": "Ainda não rodou esta semana",
+        "RODOU": "Rodou 1 vez esta semana | Rodou {n} vezes esta semana",
+        "PAROU": "1 parou | {n} pararam"
+      }
     }
   }
 }
