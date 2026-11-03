@@ -233,6 +233,7 @@ fora:
   - motivo: Mexe nas próprias automações e vigias. Automação que monta automação é laço de montagem, não uso.
     recursos:
       - automation_rules
+      - autonomia/automacoes
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias
