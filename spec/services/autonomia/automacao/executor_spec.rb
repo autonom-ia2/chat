@@ -346,6 +346,25 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect([definicao.reload.ativa, definicao.ligada_por]).to eq([true, admin])
     end
 
+    # 🟡 do Funções no #2488: no card, valem o card e a conversa principal dele, e quem não os vê pausa sem quebrar a rodada.
+    it 'card cuja conversa principal saiu do alcance durante a espera: pausa limpa, sem erro_inesperado', :aggregate_failures do
+      funil = create_crm_pipeline(account: account, user: admin)
+      card = Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Pedido', currency: 'BRL',
+                               inbox: conversa.inbox, primary_conversation: conversa)
+      definicao = automacao_ligada(account, agente, [esperar_passo('p1'), esperar_passo('p2')])
+      expect(comecar_e_rodar(definicao, card)).to be_nil # sem crm_view, o card fica fora do alcance
+
+      funcao.update!(permissions: funcao.permissions + ['crm_view'])
+      execucao = comecar_e_rodar(definicao, card)
+      expect(execucao.reload.estado).to eq('esperando')
+      InboxMember.find_by(user: agente, inbox: conversa.inbox).destroy!
+
+      travel(1.day + 1.minute) { varrer }
+
+      expect([execucao.reload.estado, registros(execucao).last]).to eq(['parada', %w[p1 pulado quem_ligou_sem_acesso]])
+      expect(registros(execucao).map(&:last)).not_to include('erro_inesperado')
+    end
+
     # Q1 da qualidade: a chave de automações não dá o que o endpoint nega (criar etiqueta pede label_manage).
     it 'o endpoint nega a ação (401): pausa a automação e não cria nada', :aggregate_failures do
       criar = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'POST labels', 'descricao' => 'Criar a etiqueta',
