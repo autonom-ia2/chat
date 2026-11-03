@@ -255,6 +255,21 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
       expect(conversa.reload.status).to eq('open')
     end
 
+    # A resposta da própria automação é mensagem nova na conversa: o after_create_commit despacha com a cadeia da rodada,
+    # e a Partida recusa o auto-disparo em vez de responder à própria resposta.
+    it 'o passo mensagem não dispara a própria automação: 1 resposta e auto-disparo', :aggregate_failures do
+      ligar_mensagens(account)
+      definicao = automacao_ligada(account, admin, [mensagem_passo('p1', 'Oi')], gatilho: { 'tipo' => 'mensagem.criada' })
+      clear_enqueued_jobs
+
+      create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: :incoming)
+      drenar
+
+      expect(execucoes.where(automacao: definicao).pluck(:estado)).to eq(['concluida'])
+      expect(conversa.messages.outgoing.where(private: false).count).to eq(1)
+      expect(cadeia).to recusas(:auto_disparo)
+    end
+
     it 'uma rajada de mensagens abre uma execução só' do
       definicao = automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: { 'tipo' => 'mensagem.criada' })
       clear_enqueued_jobs
