@@ -32,15 +32,20 @@ module AutomationRules::CrmActions
   # #2414 F1.4: com a flag `automacao_fundacao`, contato sem card ganha o card na etapa (Autonomia::Automacao::CardNaEtapa).
   def crm_move_card_stage(params)
     stage = crm_stage(params)
-    return Autonomia::Automacao::CardNaEtapa.new(conversation: @conversation, stage: stage).perform if Autonomia::Automacao.fundacao?(@account)
+    if Autonomia::Automacao.fundacao?(@account)
+      return Autonomia::Automacao::CardNaEtapa.new(conversation: @conversation, stage: stage, automacao: da_regra).perform
+    end
 
     card = crm_card_for_pipeline(stage&.pipeline_id)
     # Como no Kanban (só cards abertos): mover card ganho/perdido reabriria eventos de etapa.
     return if card.blank? || stage.blank? || !card.open?
 
-    Crm::Cards::Mover.new(card: card, actor: nil, target_stage: stage).perform
+    Crm::Cards::Mover.new(card: card, actor: nil, target_stage: stage, automacao: da_regra).perform
     Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_MOVED)
   end
+
+  # #2428: o movimento leva a regra que o fez, para a IA do funil não desfazê-lo.
+  def da_regra = { origem: 'regra', id: @rule.id }
 
   def crm_mark_card_won(_params)
     close_crm_card('won')

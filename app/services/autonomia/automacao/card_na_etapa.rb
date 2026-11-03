@@ -9,11 +9,13 @@
 class Autonomia::Automacao::CardNaEtapa
   include Events::Types
 
-  def initialize(conversation:, stage:, actor: nil)
+  # automacao: quem pediu o movimento (`{ origem:, id: }`, Crm::Cards::Mover), para a IA do funil respeitá-lo (#2428).
+  def initialize(conversation:, stage:, actor: nil, automacao: nil)
     @conversation = conversation
     @account = conversation.account
     @stage = stage
     @actor = actor
+    @automacao = automacao
   end
 
   def perform
@@ -38,7 +40,7 @@ class Autonomia::Automacao::CardNaEtapa
   def mover(card)
     return unless card.open?
 
-    Crm::Cards::Mover.new(card: card, actor: @actor, target_stage: @stage).perform
+    Crm::Cards::Mover.new(card: card, actor: @actor, target_stage: @stage, automacao: @automacao).perform
     Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_MOVED)
     card
   end

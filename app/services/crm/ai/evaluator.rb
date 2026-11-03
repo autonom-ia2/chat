@@ -211,6 +211,7 @@ module Crm
 
         fim = fim_decidido(classification)
         return fim_do_card(fim) if fim
+        return respeitar_a_escolha!('automacao_mexeu_na_etapa') if automacao_mexeu_na_etapa?
 
         target_stage = stages.find { |stage| stage.id == classification[:suggested_stage_id].to_i }
         return Result.new(status: :skipped, error: 'unknown_stage') if target_stage.blank?
@@ -285,12 +286,20 @@ module Crm
         da_pessoa.where(event_type: ESCOLHAS_DE_ETAPA).or(criou_na_etapa).exists?
       end
 
-      # Nem sugere: a sugestão de etapa que esperava uma pessoa, de antes da escolha dela, também sai.
-      def pessoa_mexeu_na_etapa!
+      # #2428: o último movimento foi de uma automação (Crm::Ai::MovimentoDaAutomacao). Só a etapa fica: fechar o card e
+      # "não é negócio" seguem (fim_decidido, acima), senão o lixo ficaria aberto.
+      def automacao_mexeu_na_etapa?
+        @trigger != 'manual' && MovimentoDaAutomacao.respeitar?(@card)
+      end
+
+      def pessoa_mexeu_na_etapa! = respeitar_a_escolha!('pessoa_mexeu_na_etapa')
+
+      # Nem sugere: a sugestão de etapa que esperava uma pessoa, de antes da escolha dela (ou da automação), também sai.
+      def respeitar_a_escolha!(motivo)
         pendentes = @card.account.crm_ai_stage_suggestions.where(card: @card, status: :pending).to_a
         pendentes.each { |sugestao| sugestao.update!(status: :expired) }
         Crm::Cards::Broadcaster.broadcast(@card, Events::Types::CRM_CARD_UPDATED) if pendentes.any?
-        Result.new(status: :skipped, error: 'pessoa_mexeu_na_etapa')
+        Result.new(status: :skipped, error: motivo)
       end
 
       # #2396: "fora do negócio" com pedido de fechar na mesma resposta (quem desistiu ou chegou sem querer): primeiro a
