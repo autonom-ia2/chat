@@ -63,8 +63,10 @@ tem o campo `le`:
 - **Valores aceitos:** `mensagens_recentes`, `mensagens_com_respostas`, `ultima_mensagem`, `conversa`, `contato`,
   `empresa`.
 - **Padrão:** `mensagens_recentes`.
-- `card` entra na F6. Antes de qualquer um dos dois gravar no `catalogo.rb`, o nome do caminho do card no `Estado` e
-  nos `Valores` é combinado com a F3/F6.
+- `card` entra na F6, com o nome combinado com a F3 em 03/11:
+  - o `le` usa `card`, sem renomear;
+  - nos `Valores`, os caminhos são `card.titulo`, `card.etapa_id` e os outros da seção 4 de `F6-F8-gatilhos.md`;
+  - quem grava esses caminhos no `catalogo.rb` é a F3. A F7 não toca no bloco de valores.
 
 Pela decisão de 03/10/2026, o texto das mensagens vai para a IA, e o e-mail e o telefone do contato nunca vão. A
 instrução fixa de cada passo repete a regra de sempre: o que vem da conversa é dado e nunca é seguido como ordem.
