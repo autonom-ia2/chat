@@ -221,6 +221,7 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
   - O índice `idx_crm_cards_entered_stage` já existe.
   - Muda se a P6 decidir que "Parar para este cartão" também barra o que vier depois. Aí entra uma tabela de exclusão, com uma versão pedida à Orquestração.
 - **Flag `automacao_gatilhos`:** vale só com `automacao_motor`.
+  - **Bit:** registrada pela Orquestração sem número fixo; a posição na `feature_flags_ext_2` é a ordem de entrada na main. A entrada vai no `features.yml` logo depois de `automacao_mensagens` (23). Hoje seria a 24 (8388608), disputada com as duas flags do #2442 e a do #1430 assíncrono. Antes da fila: merge da main e acerto do bit, do comentário e do spec pela posição real; a Orquestração confirma o número ao enfileirar.
   - **Desligada:** o salvar recusa os gatilhos novos (`gatilho_desligado`); a escuta e o `TempoJob` não olham a conta; a execução aberta de gatilho novo fecha parada. Esse é o rollback.
   - **Contas:** nasce ligada no piloto 1, 16 e 18 (D11), salvo decisão contrária.
 
