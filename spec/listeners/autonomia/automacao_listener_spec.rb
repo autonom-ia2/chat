@@ -79,6 +79,27 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
       expect(execucoes.where(automacao: definicao).count).to eq(1)
     end
 
+    # A marca por evento (#2488 prometeu, PR-C entrega): o EventDispatcherJob repete o evento, e a repetição não pode
+    # responder de novo ao cliente, nem depois que a primeira execução fechou.
+    it 'o mesmo evento entregue 2x, com a 1ª execução já fechada, gera 1 execução e 1 mensagem; outro evento gera outra', :aggregate_failures do
+      ligar_mensagens(account)
+      definicao = automacao_ligada(account, admin, [mensagem_passo('p1', 'Recebemos.')], gatilho: { 'tipo' => 'mensagem.criada' })
+      entregar = lambda do |mensagem|
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
+      end
+      primeira = create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: :incoming)
+      respostas = -> { conversa.messages.outgoing.where(private: false).count }
+
+      entregar.call(primeira)
+      expect([execucoes.where(automacao: definicao).pluck(:estado, :evento), respostas.call]).to eq([[['concluida', "mensagem:#{primeira.id}"]], 1])
+
+      entregar.call(Message.find(primeira.id))
+      expect([execucoes.where(automacao: definicao).count, respostas.call]).to eq([1, 1])
+
+      entregar.call(create(:message, conversation: conversa, account: account, inbox: conversa.inbox, message_type: :incoming))
+      expect([execucoes.where(automacao: definicao).count, respostas.call]).to eq([2, 2])
+    end
+
     it 'uma automação que quebra não impede as outras' do
       quebra = resolvida
       segue = resolvida

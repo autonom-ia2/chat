@@ -64,9 +64,13 @@ class Autonomia::Automacao::Partida
     nil
   end
 
+  # O índice único da execução aberta barra a segunda partida enquanto a primeira anda; o do evento barra o mesmo evento
+  # entregue de novo depois que ela fechou (o EventDispatcherJob repete). Os dois caem no RecordNotUnique, antes de
+  # qualquer passo.
   def abrir
     marca = Time.current.floor(6)
-    execucao = criar(estado: 'andando', travada_em: marca, due_at: marca, cadeia: Cadeia.origens, profundidade: Cadeia.origens.size)
+    execucao = criar(estado: 'andando', travada_em: marca, due_at: marca, cadeia: Cadeia.origens, profundidade: Cadeia.origens.size,
+                     evento: (@mensagem && "mensagem:#{@mensagem.id}"))
     ::Autonomia::Automacao::AvancarJob.perform_later(execucao.id, marca.iso8601(6), Cadeia.raiz)
     execucao
   rescue ActiveRecord::RecordNotUnique
