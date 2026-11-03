@@ -45,7 +45,20 @@
       "CONTATO_EMPRESA_ID": "Contact company",
       "CONTATO_ETIQUETAS": "Contact labels",
       "CONVERSA_ATRIBUTOS": "Conversation custom field",
-      "CONTATO_ATRIBUTOS": "Contact custom field"
+      "CONTATO_ATRIBUTOS": "Contact custom field",
+      "MENSAGEM_TIPO": "Message type",
+      "MENSAGEM_PRIVADA": "Private message"
+    },
+    "VALOR_DA_MENSAGEM": {
+      "RECEBIDA": "from the customer",
+      "ENVIADA": "from the team to the customer",
+      "NOTA": "private note",
+      "TRUE": "yes",
+      "FALSE": "no"
+    },
+    "OPERADOR_DA_MENSAGEM": {
+      "IGUAL": "is",
+      "DIFERENTE": "is not"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",
@@ -287,7 +300,9 @@
       "PESSOAS": "People",
       "SO_A_EQUIPE": "Only the team sees this notice. The customer gets nothing.",
       "DADO_APAGADO": "Deleted detail: {dado}",
-      "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it."
+      "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it.",
+      "FILTRO_ENTRA": "When you save, \"Only if\" gets: {condicao}. You can change or remove it later.",
+      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\"."
     },
     "LIGAR": {
       "BOTAO": "Turn on",

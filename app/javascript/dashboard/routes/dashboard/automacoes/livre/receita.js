@@ -135,3 +135,35 @@ export const iguais = (a, b) => {
     chaves.every(chave => iguais(a[chave], b[chave]))
   );
 };
+
+// #2496 — o valor da mensagem só existe no "Só se" do gatilho dela. Trocar o
+// gatilho tira a condição que deixou de valer e, no gatilho que sugere uma, já
+// põe a sugestão quando o "Só se" ainda não olha a mensagem. O painel mostra o
+// que entra e o que sai antes do "Salvar".
+const caminhosDa = condicao =>
+  condicao?.todas || condicao?.alguma
+    ? (condicao.todas || condicao.alguma).flatMap(caminhosDa)
+    : [condicao?.campo?.$valor];
+
+export const filtrosDoGatilho = (filtros, tipo, catalogo) => {
+  const doGatilho = (catalogo?.valores || []).filter(
+    item => item.so_no_gatilho
+  );
+  const vale = caminho =>
+    doGatilho.every(
+      item => item.caminho !== caminho || item.so_no_gatilho === tipo
+    );
+  const todos = filtros || [];
+  const ficam = todos.filter(filtro => caminhosDa(filtro).every(vale));
+  const saem = todos.filter(filtro => !ficam.includes(filtro));
+  const sugerido = catalogo?.gatilhos.find(
+    item => item.tipo === tipo
+  )?.filtro_sugerido;
+  const olhaAMensagem = ficam.some(filtro =>
+    caminhosDa(filtro).some(caminho =>
+      doGatilho.some(item => item.caminho === caminho)
+    )
+  );
+  const entra = sugerido && !olhaAMensagem ? copiar(sugerido) : null;
+  return { filtros: entra ? [...ficam, entra] : ficam, entra, saem };
+};

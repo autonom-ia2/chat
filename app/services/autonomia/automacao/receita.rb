@@ -6,7 +6,8 @@
 # - o corpo bate com o formato da ação, como no Guia, e traz o que a automação exige (F3.10), os campos fixos e
 #   nenhum campo proibido;
 # - o corpo é literal: variável no corpo chega com a mensagem (F4);
-# - todo `$valor` do caminho e das condições é um caminho que a automação sabe ler.
+# - todo `$valor` do caminho e das condições é um caminho que a automação sabe ler;
+# - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   RAMOS = %w[entao senao se_vencer].freeze
@@ -50,11 +51,11 @@ class Autonomia::Automacao::Receita
   end
 
   def filtros_do_gatilho
-    Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| caminhos_desconhecidos('gatilho', condicao, no_gatilho: true) }
+    Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }
   end
 
   def problemas_do_passo(passo)
-    return caminhos_desconhecidos(passo['id'], passo['condicao']) if passo.key?('condicao')
+    return problemas_da_condicao(passo['id'], passo['condicao']) if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
@@ -76,6 +77,26 @@ class Autonomia::Automacao::Receita
     pessoas = Array(para['pessoas']) - @conta.users.where(id: para['pessoas']).pluck(:id)
     times.map { |time| texto(:time_de_fora, passo: passo['id'], id: time) } +
       pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: passo['id'], id: pessoa) }
+  end
+
+  # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
+  def problemas_da_condicao(id, condicao, no_gatilho: false)
+    caminhos_desconhecidos(id, condicao, no_gatilho: no_gatilho).presence || fora_do_fechado(id, condicao)
+  end
+
+  # Operador ou valor que um valor fechado não tem: a condição nunca casaria.
+  def fora_do_fechado(id, condicao)
+    filhas = condicao.values_at('todas', 'alguma').compact.flatten
+    return filhas.flat_map { |filha| fora_do_fechado(id, filha) } unless condicao.key?('campo')
+
+    caminho = condicao.dig('campo', '$valor')
+    fechado = ::Autonomia::Automacao::Valores.fechado(caminho)
+    return [] unless fechado
+    return [texto(:operador_fora, passo: id, caminho: caminho, operadores: fechado['operadores'].join(', '))] unless
+      fechado['operadores'].include?(condicao['op'])
+    return [] if fechado['opcoes'].include?(condicao['valor'])
+
+    [texto(:valor_fora, passo: id, caminho: caminho, valor: condicao['valor'], opcoes: fechado['opcoes'].join(', '))]
   end
 
   def caminhos_desconhecidos(id, condicao, no_gatilho: false)
@@ -100,7 +121,7 @@ class Autonomia::Automacao::Receita
     [*caminho_da_acao(passo), *corpo_da_acao(passo)]
   end
 
-  def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == 'mensagem.criada'
+  def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
 
   def caminho_da_acao(passo)
     valores = passo['caminho'].to_h

@@ -116,6 +116,33 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(fora.values).to all(include('#2486'))
   end
 
+  # #2496: todo valor da mensagem do gatilho está no editor ou só no Guia, uma vez. O que fica de fora do catálogo
+  # passaria pela troca de gatilho sem sair do "Só se", e o salvar recusaria sem a tela avisar.
+  it 'põe todo valor da mensagem do gatilho no editor ou só no Guia, com as opções do valor fechado', :aggregate_failures do
+    valores = Autonomia::Automacao::Valores
+    declarados = declarado['valores_do_gatilho'] + declarado['valores_so_guia'].keys
+    da_mensagem = catalogo.gerado['valores'].select { |valor| valor['so_no_gatilho'] }
+
+    expect(declarados).to match_array(valores::MENSAGEM.keys)
+    expect(declarado['valores_so_guia'].values).to all(be_present)
+    expect(da_mensagem.pluck('caminho')).to match_array(valores::MENSAGEM.keys)
+    da_mensagem.each do |valor|
+      expect(valor['opcoes'].pluck('valor')).to eq(valores.fechado(valor['caminho'])['opcoes'])
+      expect(valor['operadores'].pluck('op')).to eq(valores.fechado(valor['caminho'])['operadores'])
+    end
+  end
+
+  # A condição que o editor já põe ao escolher o gatilho tem que salvar.
+  it 'sugere filtro que a Receita aceita no próprio gatilho' do
+    catalogo.gerado['gatilhos'].select { |gatilho| gatilho['filtro_sugerido'] }.each do |gatilho|
+      receita = { 'gatilho' => { 'tipo' => gatilho['tipo'], 'filtros' => [gatilho['filtro_sugerido']] },
+                  'passos' => [{ 'id' => 'p1', 'tipo' => 'parar' }] }
+
+      expect(Autonomia::Automacao::Receita.esquema_valido?(receita)).to be(true)
+      expect(Autonomia::Automacao::Receita.new(receita, conta: create(:account)).problemas).to be_empty
+    end
+  end
+
   it 'tem a frase de tudo em pt_BR e en' do
     chaves = []
     coletar = lambda do |valor|
