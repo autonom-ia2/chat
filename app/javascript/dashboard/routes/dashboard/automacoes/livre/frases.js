@@ -2,6 +2,7 @@
 // passo é a chave do catálogo (AUTOMACAO_LIVRE.*). Das escolhas da conta, só a
 // etiqueta entra, porque vai pelo nome; pessoa, time e caixa ficam no "Alterar".
 import { entradaDoPasso, lerCampo } from './catalogo';
+import { comColchetes } from './texto';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -119,6 +120,52 @@ const resumoDaAcao = (passo, entrada, t) =>
     .map(campo => resumoDoCampo(campo, lerCampo(passo, entrada, campo.nome), t))
     .filter(Boolean);
 
+// O texto de "mensagem" e "avisar" na linha: os dados entre colchetes, pelo
+// nome do catálogo; texto longo corta, e o inteiro fica no "Alterar".
+const CABE_NA_LINHA = 60;
+const fraseDoTexto = (partes, catalogo, t) => {
+  const texto = (partes || [])
+    .map(parte =>
+      typeof parte === 'string'
+        ? parte
+        : comColchetes(fraseDoValor(parte.$valor, catalogo, t))
+    )
+    .join('')
+    .trim();
+  if (!texto) return t(`${P}.FALTA_TEXTO`);
+  return texto.length > CABE_NA_LINHA
+    ? `${texto.slice(0, CABE_NA_LINHA).trimEnd()}…`
+    : texto;
+};
+
+// Quem o "avisar" chama: o responsável e quantos times e pessoas. Os nomes
+// ficam no "Alterar", como os das outras escolhas da conta.
+const quemAvisar = (para, t) => {
+  const quem = [
+    para?.responsavel && t(`${P}.RESPONSAVEL`),
+    para?.times?.length &&
+      t(`${P}.TIMES`, { n: para.times.length }, para.times.length),
+    para?.pessoas?.length &&
+      t(`${P}.PESSOAS`, { n: para.pessoas.length }, para.pessoas.length),
+  ].filter(Boolean);
+  if (!quem.length) return t(`${P}.AVISAR_EQUIPE`);
+  return quem.length > 1
+    ? t(`${P}.LISTA`, {
+        inicio: quem.slice(0, -1).join(', '),
+        ultimo: quem[quem.length - 1],
+      })
+    : quem[0];
+};
+
+// O passo sem entrada no catálogo e sem nome (um tipo que este painel ainda não
+// conhece) fica só "Ação avançada", sem os dois-pontos vazios.
+const fraseAvancada = (passo, t) => {
+  const nome = passo.descricao || passo.acao;
+  return nome
+    ? t(`${P}.AVANCADA`, { descricao: nome })
+    : t(`${P}.AVANCADA_SEM_NOME`);
+};
+
 export const fraseDoPasso = (passo, catalogo, t) => {
   const entrada = entradaDoPasso(passo, catalogo);
   if (passo.tipo === 'esperar')
@@ -134,8 +181,16 @@ export const fraseDoPasso = (passo, catalogo, t) => {
     return t(`${P}.SE`, {
       condicao: fraseDaCondicao(passo.condicao, catalogo, t),
     });
-  if (!entrada)
-    return t(`${P}.AVANCADA`, { descricao: passo.descricao || passo.acao });
+  if (!entrada) return fraseAvancada(passo, t);
+  if (passo.tipo === 'mensagem')
+    return t(`${P}.MENSAGEM`, {
+      texto: fraseDoTexto(passo.texto, catalogo, t),
+    });
+  if (passo.tipo === 'avisar')
+    return t(`${P}.AVISAR`, {
+      quem: quemAvisar(passo.para, t),
+      texto: fraseDoTexto(passo.texto, catalogo, t),
+    });
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');

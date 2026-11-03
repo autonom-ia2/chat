@@ -7,6 +7,8 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import LivreCampo from './LivreCampo.vue';
 import LivreCondicao from './LivreCondicao.vue';
 import LivreDuracao from './LivreDuracao.vue';
+import LivreTexto from './LivreTexto.vue';
+import LivreDestinatarios from './LivreDestinatarios.vue';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar } from '../receita';
@@ -137,6 +139,15 @@ const nativoPronto = campo => {
   const valor = rascunho.value[campo.nome];
   if (campo.peca === 'duracao') return Number.isInteger(valor?.valor);
   if (campo.peca === 'condicao') return condicaoPronta(valor);
+  // O texto pede algo além de espaço; o aviso, alguém para chamar.
+  if (campo.peca === 'texto_com_valores')
+    return (valor || []).some(
+      parte => typeof parte !== 'string' || parte.trim()
+    );
+  if (campo.peca === 'destinatarios')
+    return Boolean(
+      valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
+    );
   return true;
 };
 const acaoPronta = () =>
@@ -216,6 +227,21 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreTexto
+          v-else-if="campo.peca === 'texto_com_valores'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreDestinatarios
+          v-else-if="campo.peca === 'destinatarios'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :opcoes="opcoes"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
       </template>

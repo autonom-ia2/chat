@@ -1,7 +1,7 @@
 # O catálogo de passos da Automação livre (#2414 F5, ADR-001 2.2): o arquivo que o editor e o Guia leem.
 #
 # Junta três fontes num JSON só (lib/operator_guide/automacao-passos.json):
-# - o esquema da receita: gatilhos, operadores, unidades de tempo e os passos nativos (esperar, se, parar);
+# - o esquema da receita: gatilhos, operadores, unidades de tempo e os passos nativos (esperar, se, parar, mensagem, avisar);
 # - o catálogo do Guia (formatos-das-acoes.json): o tipo, as opções e os limites de cada campo das ações liberadas;
 # - automacao-passos.yml: o nome do passo, o grupo, de onde vem cada parâmetro e a peça da tela de cada campo.
 # A frase de cada coisa é uma chave do i18n do painel (automacaoLivre.json), conferida pelo spec do CI.
@@ -38,7 +38,9 @@ module Autonomia::Automacao::Catalogo
 
   # As peças dos passos nativos: a definição do esquema que cada propriedade usa.
   PECAS_DO_ESQUEMA = { 'duracao' => 'duracao', 'condicao' => 'condicao', 'passos' => 'passos',
-                       'passos_opcionais' => 'passos' }.freeze
+                       'passos_opcionais' => 'passos', 'texto' => 'texto_com_valores' }.freeze
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar".
+  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios' }.freeze
 
   module_function
 
@@ -112,14 +114,15 @@ module Autonomia::Automacao::Catalogo
       tipo = forma.dig('properties', 'tipo', 'const')
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
-      { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'frase' => chave('PASSOS', tipo),
-        'campos' => campos_nativos(forma) }
+      { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
+        'frase' => chave('PASSOS', tipo), 'campos' => campos_nativos(forma) }.compact
     end
   end
 
   def campos_nativos(forma)
     forma['properties'].except('id', 'tipo').map do |nome, propriedade|
-      { 'nome' => nome, 'peca' => PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last],
+      peca = PECAS_DO_ESQUEMA[propriedade['$ref'].to_s.split('/').last] || PECAS_SEM_DEFINICAO[nome]
+      { 'nome' => nome, 'peca' => peca,
         'obrigatorio' => forma['required'].include?(nome), 'rotulo' => chave('CAMPOS', nome) }
     end
   end

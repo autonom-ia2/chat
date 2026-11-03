@@ -13,6 +13,9 @@ const props = defineProps({
   nova: { type: Boolean, default: false },
   podeMudar: { type: Boolean, default: false },
   ocupado: { type: Boolean, default: false },
+  // Outra pessoa salvou no meio: ligar e guardar esperam "Ver a versão nova";
+  // desligar sempre funciona.
+  conflito: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['ligar', 'desligar', 'guardar']);
@@ -43,7 +46,7 @@ const falta = computed(() => {
       size="lg"
       justify="center"
       class="w-full !min-h-14 !text-lg !font-bold !rounded-2xl shadow-lg"
-      :disabled="Boolean(falta) || ocupado"
+      :disabled="Boolean(falta) || ocupado || conflito"
       @click="emit('ligar')"
     />
     <p class="mb-0 text-sm text-center text-n-slate-11">
@@ -56,7 +59,7 @@ const falta = computed(() => {
       link
       slate
       class="self-center min-h-11"
-      :disabled="Boolean(falta) || ocupado"
+      :disabled="Boolean(falta) || ocupado || conflito"
       @click="emit('guardar')"
     />
   </div>
