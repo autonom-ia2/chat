@@ -1119,3 +1119,14 @@
   display_name: Automação › editor e lista única
   enabled: false
   column: feature_flags_ext_2
+# Automação livre F4, passos mensagem e avisar (#2459, épico #2414). Só vale com automacao_motor e automacao_fundacao
+# ligadas (sem a fundação não há a cadeia comum contra laço com as regras antigas). Ligada: a receita pode
+# mandar mensagem ao cliente (sai como "Automação") e avisar a equipe por menção numa nota privada. Desligada: o salvar
+# recusa o passo, e a execução que chega nele fecha como parada (mensagens_desligadas), sem mandar nada. Sem teto de
+# uso; só a proteção contra laço. Rollback: desligar a flag na conta. Sem migration.
+# Bit: feature_flags_ext_2, posição 23 (valor 4194304, 1 << 22), logo depois de automacao_editor (#2485 entrou
+# primeiro, na 22). Nasce DESLIGADA em todas as contas; só liga depois da #2486 (Salvar tudo).
+- name: automacao_mensagens
+  display_name: Automação › mensagem ao cliente e aviso à equipe
+  enabled: false
+  column: feature_flags_ext_2

@@ -28,6 +28,8 @@ class Autonomia::Automacao::Executor
 
   Cadeia = ::Autonomia::Automacao::Cadeia
   Execucao = ::Autonomia::Automacao::Execucao
+  # Passos que falam com gente (F4): só com a flag da F4.
+  NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso }.freeze
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -83,6 +85,7 @@ class Autonomia::Automacao::Executor
     when 'esperar_ate' then esperar_ate(passo)
     when 'se' then se(passo)
     when 'acao' then acao(passo)
+    when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     end
   end
@@ -169,11 +172,27 @@ class Autonomia::Automacao::Executor
     end
   end
 
+  # "mensagem" e "avisar" (F4). Reconferem tudo como a ação e, sem a flag da F4, fecham sem mandar nada (rollback).
+  # Não repetem: a mensagem que deu erro no meio não é mandada de novo, porque o cliente poderia recebê-la duas vezes.
+  def passo_nativo(passo, classe)
+    reconferir
+    return if impedida?(passo['id'])
+    return encerrar(passo['id'], 'parada', 'mensagens_desligadas') unless ::Autonomia::Automacao::Motor.mensagens?(@account)
+
+    resultado = classe.new(execucao: @execucao, passo: passo, alvo: alvo).executar
+    # Robô do outro lado: para só nesta conversa, e a automação continua ligada (a nota já ficou). Quem ligou não vê a
+    # conversa em que o passo age: pausa a automação, como na ação.
+    return encerrar(passo['id'], 'parada', motivo_da_parada(resultado), 'falhou') if %i[laco sem_acesso].include?(resultado.tipo)
+
+    seguir_depois_da_acao(passo, resultado)
+  end
+
+  def motivo_da_parada(resultado) = resultado.tipo == :sem_acesso ? pausar(resultado.motivo) : resultado.motivo
+
   # A ação mudou o alvo: o passo seguinte ("se", "esperar até") lê o valor de agora, não o de antes dela.
   def seguir_depois_da_acao(passo, resultado)
     @tentativas = 0
-    @alvo = nil
-    @valores = nil
+    @alvo = @valores = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
     @roteiro.seguinte(passo['id'])
   end

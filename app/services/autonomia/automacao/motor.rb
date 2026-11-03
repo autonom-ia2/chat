@@ -6,8 +6,15 @@
 module Autonomia::Automacao::Motor
   FLAG = 'automacao_motor'.freeze
 
+  # F4: mensagem ao cliente e aviso à equipe, só com o motor ligado.
+  FLAG_MENSAGENS = 'automacao_mensagens'.freeze
+
   def self.ligado?(account)
     ::Autonomia::Automacao.fundacao?(account) && account.feature_enabled?(FLAG)
+  end
+
+  def self.mensagens?(account)
+    ligado?(account) && account.feature_enabled?(FLAG_MENSAGENS)
   end
 
   # A origem da automação na cadeia comum (D6), ao lado de "regra:<id>" e "etapa:<id>".

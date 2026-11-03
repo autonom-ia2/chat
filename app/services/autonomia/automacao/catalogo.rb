@@ -110,7 +110,7 @@ module Autonomia::Automacao::Catalogo
   def nativos
     esquema.dig('definitions', 'passo', 'oneOf').filter_map do |forma|
       tipo = forma.dig('properties', 'tipo', 'const')
-      next if tipo == 'acao'
+      next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'frase' => chave('PASSOS', tipo),
         'campos' => campos_nativos(forma) }

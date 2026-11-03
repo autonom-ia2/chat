@@ -45,9 +45,27 @@ class Autonomia::Automacao::Receita
 
   def problemas_do_passo(passo)
     return caminhos_desconhecidos(passo['id'], passo['condicao']) if passo.key?('condicao')
+    return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
+  end
+
+  # "mensagem" e "avisar" (F4): só com a flag da F4, os valores do texto lidos da lista fechada, e os times e as
+  # pessoas do aviso da própria conta.
+  def problemas_da_mensagem(passo)
+    id = passo['id']
+    desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
+    lidos = ::Autonomia::Automacao::Texto.caminhos(passo['texto']).flat_map { |caminho| problemas_do_caminho(id, caminho) }
+    desligado + lidos + destinatarios_de_fora(passo)
+  end
+
+  def destinatarios_de_fora(passo)
+    para = passo['para'].to_h
+    times = Array(para['times']) - @conta.teams.where(id: para['times']).pluck(:id)
+    pessoas = Array(para['pessoas']) - @conta.users.where(id: para['pessoas']).pluck(:id)
+    times.map { |time| texto(:time_de_fora, passo: passo['id'], id: time) } +
+      pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: passo['id'], id: pessoa) }
   end
 
   def caminhos_desconhecidos(id, condicao)

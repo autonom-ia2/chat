@@ -9,7 +9,8 @@
 # - uma ação liberada em automacao-recursos.yml não está em `acoes` nem em `so_guia`;
 # - um campo da ação não está em `campos` nem em `escondidos` (os proibidos e os fixos ficam de fora sozinhos);
 # - a peça da tela não serve para o tipo do campo, ou o parâmetro do caminho não tem de onde vir;
-# - falta a frase em pt_BR ou en (automacaoLivre.json).
+# - falta a frase em pt_BR ou en (automacaoLivre.json);
+# - um passo nativo do esquema não está em `nativos` nem em `nativos_fora_do_editor`.
 #
 # `caminho`: o parâmetro vem de um valor do alvo (`conversa.id`, ver Valores) ou de uma escolha na tela (`escolher:`).
 # `campos`: nome do campo (o ponto entra no campo de dentro) => peça da tela. As peças estão em Catalogo::PECAS.
@@ -23,6 +24,12 @@ nativos:
   esperar_ate: { grupo: CONTROLE }
   se: { grupo: CONTROLE }
   parar: { grupo: CONTROLE }
+
+# Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita (com a flag da conta) e o
+# motor roda; a tela só os mostra quando tiver as peças.
+nativos_fora_do_editor:
+  mensagem: 'entra no editor com o Salvar tudo, #2486 (grupo, peça de texto com valores e frases)'
+  avisar: 'entra no editor com o Salvar tudo, #2486 (grupo, peças de texto e de destinatários e frases)'
 
 acoes:
   conversa_etiquetas:
