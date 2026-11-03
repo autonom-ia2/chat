@@ -72,6 +72,15 @@ module Autonomia
       end
 
       ACTUATIONS = %w[external internal both].freeze
+      # #2489 — teto do nome de um material a caminho no prompt do Construtor.
+      MAX_NOME_A_CAMINHO = 120
+
+      # Nomes de arquivo escritos pelo usuário, prontos para entrar no prompt como dado: uma linha (squish tira quebra
+      # de linha e tabulação), curtos, no máximo um por vaga da base.
+      def self.nomes_a_caminho(nomes)
+        Array(nomes).map { |nome| nome.to_s.squish.truncate(MAX_NOME_A_CAMINHO) }
+                    .compact_blank.first(::Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES)
+      end
       PAPEL_AJUDANTE = ::Autonomia::Agents::OndeTrabalhar::PAPEL_AJUDANTE
 
       # V2.1 — grava as escolhas da abertura (tipo + atuação + base) num único merge no jsonb `state`.
@@ -225,7 +234,10 @@ module Autonomia
       # MULTIMODAL (aditivo): `image_signed_ids` opcional guarda as referências ActiveStorage das imagens
       # anexadas a ESTE turno; default [] preserva o shape legado {role,content,at} (sem regressão). O
       # Builder resolve as imagens só do último turno user (Builder#image_parts_for).
-      def append_message!(role, content, image_signed_ids: [], client_message_id: nil)
+      # #2489 — `materiais_a_caminho`: nomes dos arquivos mandados junto com este turno que ainda não subiram para a
+      # base (o rascunho nasce depois da 1ª resposta). O Construtor lê do último turno para dizer que está lendo, e não
+      # que não chegou. O nome é escrito pelo usuário: vira uma linha só, curta (dado, nunca instrução).
+      def append_message!(role, content, image_signed_ids: [], client_message_id: nil, materiais_a_caminho: [])
         cid = client_message_id.to_s.presence
         # #17 — IDEMPOTÊNCIA (best-effort): se este turno já foi gravado com o mesmo client_message_id
         # (double-click / retry do front), é no-op — evita turno duplicado. Sem id (legado) não dedup.
@@ -233,8 +245,7 @@ module Autonomia
         return if cid && Array(messages).any? { |m| m['cid'] == cid }
 
         entry = { 'role' => role, 'content' => content.to_s, 'at' => Time.current.iso8601 }
-        ids = Array(image_signed_ids).map(&:to_s).compact_blank
-        entry['image_signed_ids'] = ids if ids.any?
+                .merge(anexos_do_turno(image_signed_ids, materiais_a_caminho))
         entry['cid'] = cid if cid
         # #17 — APPEND ATÔMICO no banco (jsonb `||` concatena; COALESCE cobre messages NULL). Substitui
         # o read-modify-write em Ruby (`messages = (messages||[]) + [entry]`), que sob concorrência
@@ -246,6 +257,14 @@ module Autonomia
       end
 
       private
+
+      # Só as chaves com conteúdo: o turno sem anexo mantém o shape legado {role, content, at}.
+      def anexos_do_turno(image_signed_ids, materiais_a_caminho)
+        {
+          'image_signed_ids' => Array(image_signed_ids).map(&:to_s).compact_blank,
+          'materiais_a_caminho' => self.class.nomes_a_caminho(materiais_a_caminho)
+        }.reject { |_chave, lista| lista.empty? }
+      end
 
       def agent_must_belong_to_account
         return if account_id.blank? || agent.blank? || agent.account_id == account_id
