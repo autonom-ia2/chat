@@ -191,6 +191,37 @@ const fraseAvancada = (passo, t) => {
     : t(`${P}.AVANCADA_SEM_NOME`);
 };
 
+// F7: os passos de IA na linha, com o que quem montou escreveu (a pergunta, a
+// instrução e o nome dos dados), nunca o que a IA respondeu.
+const curto = texto =>
+  texto && texto.length > CABE_NA_LINHA
+    ? `${texto.slice(0, CABE_NA_LINHA).trimEnd()}…`
+    : texto || '';
+const FRASE_DA_IA = {
+  decidir: (passo, t) =>
+    t(`${P}.DECIDIR`, {
+      pergunta: curto(passo.pergunta),
+      n: (passo.caminhos || []).length,
+    }),
+  extrair: (passo, t) =>
+    t(`${P}.EXTRAIR`, {
+      lista:
+        emLista(
+          (passo.campos || []).map(campo => campo.chave).filter(Boolean),
+          t
+        ) || '…',
+    }),
+  escrever: (passo, t) =>
+    t(
+      `${P}.ESCREVER_${passo.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}`,
+      { instrucao: curto(passo.instrucao) }
+    ),
+  resumir: (passo, t) =>
+    passo.destino?.avisar
+      ? t(`${P}.RESUMIR_AVISAR`, { quem: quemAvisar(passo.destino.avisar, t) })
+      : t(`${P}.RESUMIR_NOTA`),
+};
+
 export const fraseDoPasso = (passo, catalogo, t) => {
   const entrada = entradaDoPasso(passo, catalogo);
   if (passo.tipo === 'esperar')
@@ -216,6 +247,7 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       quem: quemAvisar(passo.para, t),
       texto: fraseDoTexto(passo.texto, catalogo, t),
     });
+  if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
