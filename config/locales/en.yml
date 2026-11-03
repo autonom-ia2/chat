@@ -548,6 +548,8 @@ en:
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
+        operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
+        valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
         valor_no_corpo: 'Step %{passo}: the action body cannot use variables yet.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."

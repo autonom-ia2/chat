@@ -3,7 +3,7 @@ import { computed, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
-import { fraseDaCondicao, opcoesDoValor } from '../frases';
+import { fraseDaCondicao, operadoresDoValor, opcoesDoValor } from '../frases';
 import { opcoesDosValores } from '../texto';
 
 // #2414 F5 — uma condição: o que olhar, como comparar e com o quê. O que olhar
@@ -16,6 +16,9 @@ const props = defineProps({
   modelValue: { type: Object, default: null },
   catalogo: { type: Object, required: true },
   atributosDo: { type: Function, required: true },
+  // O gatilho, quando a condição é do "Só se" dele: só aí entra o valor da
+  // mensagem (#2496).
+  gatilho: { type: String, default: null },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -29,18 +32,33 @@ const composta = computed(() =>
   Boolean(props.modelValue?.todas || props.modelValue?.alguma)
 );
 
-const opcoesDeCampo = computed(() =>
-  opcoesDosValores(props.catalogo, props.atributosDo, t)
-);
+// O valor que só o Guia monta (`so_guia`) não entra na escolha; a condição que
+// já o usa continua mostrando o que olha.
+const opcoesDeCampo = computed(() => {
+  const lista = opcoesDosValores(
+    props.catalogo,
+    props.atributosDo,
+    t,
+    props.gatilho
+  );
+  const campo = props.modelValue?.campo?.$valor;
+  const doGuia = props.catalogo.valores?.find(
+    item => item.so_guia && item.caminho === campo
+  );
+  return doGuia ? [...lista, { value: campo, label: t(doGuia.frase) }] : lista;
+});
 
+const operadoresDe = campo => operadoresDoValor(campo, props.catalogo);
 const opcoesDeOp = computed(() =>
-  props.catalogo.operadores.map(item => ({
+  operadoresDe(props.modelValue?.campo?.$valor).map(item => ({
     value: item.op,
     label: t(item.frase),
   }))
 );
 const operador = computed(() =>
-  props.catalogo.operadores.find(item => item.op === props.modelValue?.op)
+  operadoresDe(props.modelValue?.campo?.$valor).find(
+    item => item.op === props.modelValue?.op
+  )
 );
 
 // "Maior" e "menor" comparam número: o texto vira número quando é um.
@@ -50,11 +68,12 @@ const lerValor = (op, texto) =>
     ? Number(texto)
     : texto;
 
-const montar = ({ campo, op, valor }) => {
+// Trocar o que olhar leva o operador para um que o novo valor aceita.
+const montar = ({ campo, op: pedido, valor }) => {
+  const aceitos = operadoresDe(campo);
+  const op = aceitos.some(item => item.op === pedido) ? pedido : aceitos[0].op;
   const condicao = { campo: { $valor: campo }, op };
-  const pedeValor = props.catalogo.operadores.find(
-    item => item.op === op
-  )?.pede_valor;
+  const pedeValor = aceitos.find(item => item.op === op)?.pede_valor;
   return pedeValor
     ? { ...condicao, valor: lerValor(op, valor ?? '') }
     : condicao;
@@ -73,8 +92,14 @@ const opcoesDeValor = computed(() =>
   }))
 );
 
-const mudar = (chave, novo) =>
-  emit('update:modelValue', montar({ ...atual.value, [chave]: novo }));
+// O valor do campo anterior não serve para o novo ("open" não é tipo de
+// mensagem): trocar o que olhar começa pela 1ª opção, ou vazio.
+const valorInicial = campo =>
+  (opcoesDoValor(campo, props.catalogo) || [])[0]?.valor ?? '';
+const mudar = (chave, novo) => {
+  const valor = chave === 'campo' ? valorInicial(novo) : atual.value.valor;
+  emit('update:modelValue', montar({ ...atual.value, valor, [chave]: novo }));
+};
 </script>
 
 <template>

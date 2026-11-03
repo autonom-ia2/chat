@@ -22,6 +22,21 @@ RSpec.describe Autonomia::Automacao::Valores do
     expect([tipo.call(:incoming), tipo.call(:outgoing), tipo.call(:outgoing, true)]).to eq(%w[recebida enviada nota])
   end
 
+  # #2496: o salvar recusa o que não está em FECHADOS; se a lista e o que a mensagem devolve divergirem, a condição
+  # certa seria recusada, ou a errada passaria e nunca casaria.
+  it 'tem como opções da mensagem exatamente o que a mensagem pode valer', :aggregate_failures do
+    lido = lambda do |caminho, message_type, privada|
+      mensagem = build(:message, conversation: conversa, account: account, message_type: message_type, private: privada)
+      described_class.new(conversa: conversa, mensagem: mensagem).ler(caminho)
+    end
+    formas = [[:incoming, false], [:outgoing, false], [:outgoing, true], [:template, false]]
+
+    expect(described_class::FECHADOS.keys).to match_array(described_class::MENSAGEM.keys)
+    described_class::FECHADOS.each do |caminho, fechado|
+      expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
+    end
+  end
+
   it 'lê atributo personalizado pela chave, mesmo com ponto' do
     expect(valores.ler('conversa.atributos.origem')).to eq('anuncio')
     expect(valores.ler('contato.atributos.apolice.numero')).to eq('991')

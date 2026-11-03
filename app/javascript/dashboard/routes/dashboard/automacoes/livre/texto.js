@@ -24,9 +24,14 @@ const comChaveSeRepetido = opcoes => {
   );
 };
 
-export const opcoesDosValores = (catalogo, atributosDo, t) =>
+// O valor da mensagem (#2496) só aparece no "Só se" do gatilho dela; no texto
+// e nos passos, `gatilho` não vem e ele fica de fora. O que só o Guia monta
+// (`so_guia`) nunca entra na escolha.
+export const opcoesDosValores = (catalogo, atributosDo, t, gatilho = null) =>
   comChaveSeRepetido(
     (catalogo?.valores || []).flatMap(item => {
+      if (item.so_guia) return [];
+      if (item.so_no_gatilho && item.so_no_gatilho !== gatilho) return [];
       if (!item.atributos)
         return [{ value: item.caminho, label: t(item.frase) }];
       return atributosDo(item.atributos).map(atributo => ({
