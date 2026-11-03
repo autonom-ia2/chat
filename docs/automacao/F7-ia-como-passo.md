@@ -109,6 +109,9 @@ instrução fixa de cada passo repete a regra de sempre: o que vem da conversa �
 - **"Nenhum se aplica":** é sempre uma saída. O schema da resposta tem `caminho` no enum das chaves mais `nenhum`, e
   `motivo` com até 200 caracteres. A instrução manda escolher `nenhum` quando a conversa não deixa claro, em vez de
   chutar (F7.1). O ramo `nenhum` é opcional.
+- **Ordem (decisão da Automação, 03/11):** a travessia sai antes de qualquer passo de IA, num PR pequeno só dela, o
+  primeiro na ordem dos blocos, porque a `receita.rb` também é das frentes Gatilhos e F5. Branch
+  `feat/2500-travessia-dos-ramos`.
 - **Uma travessia só para os ramos (é segurança, não só navegação):** hoje cada lado tem a sua lista fixa de ramos.
   O `Receita::RAMOS` vale `%w[entao senao se_vencer]`, e o `receita.js` usa `RAMOS` por tipo. O `decidir` traz ramos
   dinâmicos: `caminhos[].passos` e `nenhum`. A F7 troca a lista fixa por uma função única, "os ramos deste passo",
@@ -157,7 +160,8 @@ instrução fixa de cada passo repete a regra de sempre: o que vem da conversa �
 - **Só preenche (padrão):** não troca o valor que já existia, pela mesma regra do `Decisores::Aplicador`, porque o
   texto é de terceiros. Com `trocar: true`, o valor novo entra mesmo assim.
 - **Resultado (F7.2):** o registro diz `gravados` e `ausentes` (as chaves que a IA não achou) e, quando há, os
-  `ja_tinha`. Os valores ficam de fora. O histórico mostra a frase "Não achou na conversa: placa". Os passos
+  `ja_tinha`. Os valores ficam de fora: a frase "Não achou na conversa: placa" usa só a chave, que é de quem montou, e
+  nunca o valor achado. Spec: o registro do extrair não tem nenhum valor. Os passos
   seguintes leem o que foi gravado pelos caminhos de sempre (`contato.atributos.placa`), no `se` e no texto.
 - **Falha:** quando nada foi achado, o passo dá `pulado` com `dado_ausente`, e a automação segue. A gravação recusada
   pela plataforma dá `falhou` com o motivo, como a ação.
