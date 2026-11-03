@@ -77,6 +77,25 @@ RSpec.describe Autonomia::Automacao::Receita do
     expect(problemas(repetidos)).to eq([erro(:caminho_repetido, passo: 'd1', nome: 'Cotação')])
   end
 
+  it 'recusa dois caminhos com o mesmo nome à vista, mesmo com chaves diferentes (API e Guia)' do
+    mesmo_nome = decidir([caminho('Cotação', 'cotacao'), caminho(' cotação ', 'cotacao_2')])
+
+    expect(problemas(mesmo_nome)).to eq([erro(:caminho_repetido, passo: 'd1', nome: 'Cotação')])
+  end
+
+  it 'reserva a chave do "nenhum se aplica": um caminho chamado Nenhum é recusado' do
+    com_nenhum = decidir([caminho('Sinistro', 'sinistro'), caminho('Nenhum', 'nenhum')])
+
+    expect(problemas(com_nenhum)).to eq([erro(:caminho_reservado, passo: 'd1', nome: 'Nenhum')])
+  end
+
+  it 'recusa o nome sem letra ("!!!" vira chave vazia, "123" fica só com dígitos)', :aggregate_failures do
+    expect(problemas(decidir([caminho('Sinistro', 'sinistro'), caminho('123', '123')])))
+      .to eq([erro(:caminho_sem_letra, passo: 'd1', nome: '123')])
+    expect(problemas(decidir([caminho('Sinistro', 'sinistro'), caminho('!!!', '')])))
+      .to eq([erro(:caminho_sem_letra, passo: 'd1', nome: '!!!')])
+  end
+
   it 'recusa o dado repetido e o destino que a conta não tem' do
     campos = [{ 'chave' => 'placa', 'descricao' => 'a', 'destino' => 'contato.nome' },
               { 'chave' => 'placa', 'descricao' => 'b', 'destino' => 'conversa.atributos.nao_existe' },

@@ -556,7 +556,9 @@ en:
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         ia_desligada: "Step %{passo}: AI steps are off for this account."
-        caminho_repetido: "Step %{passo}: two paths have the same name (%{nome})."
+        caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
+        caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."
+        caminho_sem_letra: "Step %{passo}: the path name needs at least one letter (%{nome})."
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
         campo_repetido: "Step %{passo}: %{chave} appears twice."
       nota:

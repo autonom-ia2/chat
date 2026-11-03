@@ -349,7 +349,10 @@
         "QUANDO": "When to follow it",
         "NOVO": "Add path",
         "TIRAR": "Remove path",
-        "DICA": "From 2 to 8 paths. When the conversation is unclear, the AI picks “None applies” instead of guessing."
+        "DICA": "From 2 to 8 paths. When the conversation is unclear, the AI picks “None applies” instead of guessing.",
+        "SEM_LETRA": "The path name needs at least one letter.",
+        "RESERVADO": "“None” is already the path for when nothing applies. Pick another name.",
+        "REPETIDO": "There is already a path with this name."
       },
       "CAMPO": {
         "CHAVE": "What to look for",

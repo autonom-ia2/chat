@@ -6,6 +6,7 @@ import Switch from 'dashboard/components-next/switch/Switch.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreMarcar from './LivreMarcar.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
+import { chaveDoNome, problemaDoCaminho } from '../ia';
 
 // #2500 F7 — os campos dos passos de IA no "Alterar": o que a IA lê, a pergunta
 // e os caminhos do "decidir", o que o "extrair" procura e onde grava, a
@@ -79,16 +80,6 @@ const trocarItem = (indice, chave, valor) =>
       i === indice ? { ...item, [chave]: valor } : item
     )
   );
-// O caminho mostra o nome que a pessoa escreveu ("Cotação"); a chave, que a IA
-// devolve e que nunca aparece na tela, sai dele: minúscula, sem acento, com _.
-const LETRAS = 'abcdefghijklmnopqrstuvwxyz0123456789';
-const chaveDoNome = nome =>
-  [...nome.normalize('NFD').toLowerCase()]
-    .filter(letra => LETRAS.includes(letra) || letra === ' ')
-    .join('')
-    .split(' ')
-    .filter(Boolean)
-    .join('_');
 const trocarNomeDoCaminho = (indice, nome) =>
   emit(
     'update:modelValue',
@@ -182,6 +173,13 @@ const ROTULO_DA_CAIXA =
           @input="evento => trocarNomeDoCaminho(indice, evento.target.value)"
         />
       </label>
+      <p
+        v-if="problemaDoCaminho(lista, indice)"
+        data-problema-do-caminho
+        class="mb-0 text-sm text-n-ruby-11"
+      >
+        {{ $t(`${I}.CAMINHO.${problemaDoCaminho(lista, indice)}`) }}
+      </p>
       <label :class="ROTULO_DO_ITEM">
         {{ $t(`${I}.CAMINHO.QUANDO`) }}
         <input

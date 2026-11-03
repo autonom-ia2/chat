@@ -349,7 +349,10 @@
         "QUANDO": "Quando seguir por ele",
         "NOVO": "Adicionar caminho",
         "TIRAR": "Tirar caminho",
-        "DICA": "De 2 a 8 caminhos. Quando a conversa não deixa claro, a IA escolhe “Nenhum se aplica”, em vez de chutar."
+        "DICA": "De 2 a 8 caminhos. Quando a conversa não deixa claro, a IA escolhe “Nenhum se aplica”, em vez de chutar.",
+        "SEM_LETRA": "O nome do caminho precisa ter pelo menos uma letra.",
+        "RESERVADO": "“Nenhum” já é o caminho de quando nada se aplica. Escolha outro nome.",
+        "REPETIDO": "Já existe um caminho com esse nome."
       },
       "CAMPO": {
         "CHAVE": "O que procurar",

@@ -10,6 +10,7 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import { caminhosProntos } from '../ia';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar, filtrosDoGatilho } from '../receita';
@@ -167,11 +168,7 @@ const nativoPronto = campo => {
   // F7: a pergunta e a instrução escritas; cada caminho e cada dado com nome,
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
-  if (campo.peca === 'caminhos')
-    return (
-      (valor || []).length >= 2 &&
-      valor.every(item => item.nome?.trim() && item.descricao?.trim())
-    );
+  if (campo.peca === 'caminhos') return caminhosProntos(valor || []);
   if (campo.peca === 'campos_extrair')
     return (
       (valor || []).length >= 1 &&

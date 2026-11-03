@@ -1045,7 +1045,9 @@ pt_BR:
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
         ia_desligada: "Passo %{passo}: os passos de IA estão desligados nesta conta."
-        caminho_repetido: "Passo %{passo}: dois caminhos têm o mesmo nome (%{nome})."
+        caminho_repetido: "Passo %{passo}: já existe um caminho com o nome %{nome}."
+        caminho_reservado: "Passo %{passo}: o nome %{nome} já é o caminho de quando nada se aplica. Escolha outro nome."
+        caminho_sem_letra: "Passo %{passo}: o nome do caminho precisa ter pelo menos uma letra (%{nome})."
         destino_invalido: "Passo %{passo}: a IA não pode gravar em %{destino}."
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."
       nota:
