@@ -292,24 +292,18 @@ describe('LivreEditorPage', () => {
   });
 
   it('409 sem rascunho diz que alguém mudou, e Desligar segue funcionando', async () => {
-    AutomacoesAPI.show.mockResolvedValue({
-      data: salva({ ativa: true, ligada_por: { id: 7 } }),
-    });
-    AutomacoesAPI.renomear.mockRejectedValue(respostaDeErro(409));
+    AutomacoesAPI.ligar.mockRejectedValue(respostaDeErro(409));
     AutomacoesAPI.desligar.mockResolvedValue({ data: { ativa: false } });
     const wrapper = montar();
     await flushPromises();
 
-    await wrapper.find('[data-nome] input').setValue('Outro nome');
-    await wrapper.find('[data-nome] input').trigger('blur');
+    await wrapper.find('[data-ligar]').trigger('click');
     await flushPromises();
 
     expect(wrapper.find('[data-conflito]').text()).toContain(
       'AUTOMACAO_LIVRE.MUDOU'
     );
-    await wrapper.find('[data-desligar]').trigger('click');
-    await flushPromises();
-    expect(AutomacoesAPI.desligar).toHaveBeenCalledWith(5);
+    expect(wrapper.find('[data-ligar]').attributes('disabled')).toBeDefined();
   });
 
   it('com rascunho, recarregar ou fechar a aba pede confirmação', async () => {
@@ -327,21 +321,67 @@ describe('LivreEditorPage', () => {
     expect(fechar()).toBe(true);
   });
 
-  it('renomear no blur não engole o clique em Salvar tudo', async () => {
-    AutomacoesAPI.renomear.mockReturnValue(new Promise(() => {}));
-    AutomacoesAPI.salvar.mockImplementation(async (_id, { receita }) => ({
-      data: salva({ versao: { id: 12, numero: 3, receita } }),
-    }));
-    const wrapper = montar();
-    await flushPromises();
+  // Qualidade 🟠 (#2495): o nome sai no blur, junto com o clique em "Salvar
+  // tudo"; ele não pode liberar a tela no meio do salvar nem trazer a versão
+  // antiga de volta.
+  const adiado = () => {
+    let resolver;
+    const promessa = new Promise(ok => {
+      resolver = ok;
+    });
+    return { promessa, resolver };
+  };
+  const renomearESalvar = async (wrapper, ordem) => {
+    const nomeVolta = adiado();
+    const salvarVolta = adiado();
+    AutomacoesAPI.renomear.mockReturnValue(nomeVolta.promessa);
+    AutomacoesAPI.salvar.mockReturnValue(salvarVolta.promessa);
     await trocarDuracao(wrapper, 3);
-
     await wrapper.find('[data-nome] input').setValue('Outro nome');
     await wrapper.find('[data-nome] input').trigger('blur');
     await wrapper.find('[data-salvar-tudo]').trigger('click');
+    const respostas = {
+      nome: () => nomeVolta.resolver({ data: salva({ nome: 'Outro nome' }) }),
+      salvar: () =>
+        salvarVolta.resolver({
+          data: salva({
+            versao: {
+              id: 12,
+              numero: 3,
+              receita: AutomacoesAPI.salvar.mock.calls[0][1].receita,
+            },
+          }),
+        }),
+    };
+    const [primeiro, segundo] = ordem;
+    respostas[primeiro]();
+    await flushPromises();
+    const botao = wrapper.find('[data-salvar-tudo]');
+    if (botao.exists()) await botao.trigger('click');
+    respostas[segundo]();
+    await flushPromises();
+  };
+
+  it('nome que volta antes do salvar não libera um 2º Salvar tudo', async () => {
+    const wrapper = montar();
     await flushPromises();
 
+    await renomearESalvar(wrapper, ['nome', 'salvar']);
+
     expect(AutomacoesAPI.salvar).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('[data-conflito]').exists()).toBe(false);
+    expect(wrapper.find('[data-rascunho]').exists()).toBe(false);
+  });
+
+  it('nome que volta depois do salvar não traz a versão antiga', async () => {
+    const wrapper = montar();
+    await flushPromises();
+
+    await renomearESalvar(wrapper, ['salvar', 'nome']);
+
+    expect(duracaoNaTela(wrapper)).toBe(3);
+    expect(wrapper.find('[data-rascunho]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('AUTOMACAO_LIVRE.EDITOR.VERSAO');
   });
 
   it('Ligar com rascunho salva primeiro e liga a versão nova', async () => {

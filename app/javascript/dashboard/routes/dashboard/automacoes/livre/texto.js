@@ -1,30 +1,69 @@
 // #2486 — o texto de "mensagem" e "avisar" na tela. A receita guarda pedaços
 // (`["Oi ", {"$valor": "contato.nome"}]`); a pessoa vê e escreve uma frase só,
 // com cada dado entre colchetes: "Oi [Nome do contato]". O colchete só vira
-// dado quando o nome bate, letra por letra, com um dado que a conta tem; o
-// resto (inclusive o campo personalizado que a conta apagou) fica como texto.
+// dado quando o nome bate, letra por letra, com um dado da lista; o resto fica
+// como texto. O campo personalizado que a conta apagou continua dado, marcado
+// como apagado: virar texto mandaria "[Placa]" ao cliente, e o salvar o recusa
+// (atributo_inexistente) até a pessoa tirar ou trocar.
 
 const ABRE = '[';
 const FECHA = ']';
 
 // Os dados que o motor lê do alvo, com o nome que a tela mostra. O campo
-// personalizado entra pelo nome que a conta deu a ele.
+// personalizado entra pelo nome que a conta deu a ele; dois campos com o mesmo
+// nome levam a chave junto, senão o rótulo não diria qual dos dois é.
+const comChaveSeRepetido = opcoes => {
+  const vezes = opcoes.reduce(
+    (conta, item) => ({ ...conta, [item.label]: (conta[item.label] || 0) + 1 }),
+    {}
+  );
+  return opcoes.map(({ chave, ...item }) =>
+    vezes[item.label] > 1 && chave
+      ? { ...item, label: `${item.label} (${chave})` }
+      : item
+  );
+};
+
 export const opcoesDosValores = (catalogo, atributosDo, t) =>
-  (catalogo?.valores || []).flatMap(item => {
-    if (!item.atributos) return [{ value: item.caminho, label: t(item.frase) }];
-    return atributosDo(item.atributos).map(atributo => ({
-      value: `${item.caminho}.${atributo.attribute_key}`,
-      label: t('AUTOMACAO_LIVRE.FRASES.ATRIBUTO', {
-        base: t(item.frase),
-        chave: atributo.attribute_display_name,
-      }),
-    }));
-  });
+  comChaveSeRepetido(
+    (catalogo?.valores || []).flatMap(item => {
+      if (!item.atributos)
+        return [{ value: item.caminho, label: t(item.frase) }];
+      return atributosDo(item.atributos).map(atributo => ({
+        value: `${item.caminho}.${atributo.attribute_key}`,
+        chave: atributo.attribute_key,
+        label: t('AUTOMACAO_LIVRE.FRASES.ATRIBUTO', {
+          base: t(item.frase),
+          chave: atributo.attribute_display_name,
+        }),
+      }));
+    })
+  );
 
 export const comColchetes = rotulo => `${ABRE}${rotulo}${FECHA}`;
 
-// O dado que não está mais entre as opções (o campo apagado) aparece pelo
-// caminho: a pessoa vê que ele não vale mais.
+// Os dados do texto que não estão mais entre as opções (o campo apagado)
+// entram como opção marcada `apagado`, com o rótulo que `rotular(caminho)` dá:
+// assim voltam ao mesmo {$valor} na ida e volta.
+export const comApagados = (partes, opcoes, rotular) => {
+  const sobrando = (partes || [])
+    .filter(parte => typeof parte !== 'string')
+    .map(parte => parte.$valor)
+    .filter(
+      (caminho, i, todos) =>
+        todos.indexOf(caminho) === i &&
+        !opcoes.some(item => item.value === caminho)
+    );
+  return [
+    ...opcoes,
+    ...sobrando.map(caminho => ({
+      value: caminho,
+      label: rotular(caminho),
+      apagado: true,
+    })),
+  ];
+};
+
 export const textoNaTela = (partes, opcoes) =>
   (partes || [])
     .map(parte => {

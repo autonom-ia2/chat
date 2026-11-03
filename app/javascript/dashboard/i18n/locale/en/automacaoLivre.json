@@ -283,7 +283,9 @@
       "RESPONSAVEL": "Whoever handles the conversation",
       "TIMES": "Teams",
       "PESSOAS": "People",
-      "SO_A_EQUIPE": "Only the team sees this notice. The customer gets nothing."
+      "SO_A_EQUIPE": "Only the team sees this notice. The customer gets nothing.",
+      "DADO_APAGADO": "Deleted detail: {dado}",
+      "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it."
     },
     "LIGAR": {
       "BOTAO": "Turn on",

@@ -112,6 +112,20 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
     expect(Autonomia::Automacao::Definicao.find(id).versao_ativa.numero).to eq(1)
   end
 
+  # #2486: o dado de um campo que a conta apagou continua {$valor} na receita; o salvar recusa com a frase, e a tela a
+  # mostra. Nunca vira texto literal para o cliente.
+  it 'com a F4 ligada, recusa texto com campo personalizado que a conta não tem' do
+    account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens')
+    mensagem = { id: 'p2', tipo: 'mensagem', texto: ['Placa: ', { '$valor' => 'contato.atributos.placa' }] }
+
+    criar(com: receita.merge(passos: receita[:passos] + [mensagem]))
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['problemas']).to include(
+      I18n.t('autonomia.automacao.receita.atributo_inexistente', passo: 'p2', caminho: 'contato.atributos.placa')
+    )
+  end
+
   it 'liga como quem pediu e desliga' do
     criar
     id = response.parsed_body['id']

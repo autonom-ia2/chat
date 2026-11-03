@@ -4,11 +4,13 @@ import { useI18n } from 'vue-i18n';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import {
+  comApagados,
   comColchetes,
   opcoesDosValores,
   textoDaTela,
   textoNaTela,
 } from '../texto';
+import { fraseDoValor } from '../frases';
 
 // #2486 — o texto de "mensagem" e "avisar": uma caixa só, e o dado da conversa
 // entra pela escolha "Pôr um dado", no ponto onde o cursor estava. A receita
@@ -27,8 +29,24 @@ const idDado = useId();
 
 const LIMITE = 5000;
 
-const opcoes = computed(() =>
+// O dado de um campo que a conta apagou fica no texto, marcado; não volta
+// para a lista do "Pôr um dado".
+const daConta = computed(() =>
   opcoesDosValores(props.catalogo, props.atributosDo, t)
+);
+const opcoes = computed(() =>
+  comApagados(props.modelValue, daConta.value, caminho =>
+    t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DADO_APAGADO', {
+      dado: fraseDoValor(caminho, props.catalogo, t),
+    })
+  )
+);
+const temApagado = computed(() =>
+  opcoes.value.some(
+    item =>
+      item.apagado &&
+      (props.modelValue || []).some(parte => parte?.$valor === item.value)
+  )
 );
 
 const texto = computed({
@@ -67,6 +85,14 @@ const porDado = caminho => {
     <p class="-mt-1 mb-0 text-sm text-n-slate-11">
       {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TEXTO_DICA') }}
     </p>
+    <p
+      v-if="temApagado"
+      data-dado-apagado
+      role="status"
+      class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-amber-3 text-n-amber-12"
+    >
+      {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TEM_DADO_APAGADO') }}
+    </p>
     <div class="flex flex-col gap-1.5">
       <label :for="idDado" class="text-sm font-medium text-n-slate-12">
         {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR') }}
@@ -77,7 +103,7 @@ const porDado = caminho => {
         :trigger-id="idDado"
         :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR')"
         :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
-        :options="opcoes"
+        :options="daConta"
         @update:model-value="porDado"
       />
     </div>

@@ -71,15 +71,10 @@ export function useEditorLivre() {
 
   // Uma chamada à API: 422 mostra o que corrigir; 409 deixa o rascunho na
   // tela com o aviso de conflito, sem recarregar por cima do que a pessoa fez.
-  // No conflito só o desligar segue (sempre funciona, D7). O renomear (no blur
-  // do nome) não ocupa a tela: senão o clique em "Salvar tudo" que tirou o
-  // foco do nome cairia num botão já desligado.
-  const pedir = async (
-    chamada,
-    { mesmoNoConflito = false, ocupa = true } = {}
-  ) => {
+  // No conflito só o desligar segue (sempre funciona, D7).
+  const pedir = async (chamada, { mesmoNoConflito = false } = {}) => {
     if (ocupado.value || (conflito.value && !mesmoNoConflito)) return false;
-    ocupado.value = ocupa;
+    ocupado.value = true;
     problemas.value = [];
     try {
       await chamada();
@@ -170,19 +165,18 @@ export function useEditorLivre() {
       { mesmoNoConflito: true }
     );
 
-  const renomear = () => {
+  // O nome sai no blur, às vezes junto com o clique em "Salvar tudo": corre à
+  // parte, sem ocupar a tela nem tocar na versão (a resposta pode chegar depois
+  // da do salvar e não pode trazer a receita antiga de volta).
+  const renomear = async () => {
     const texto = nome.value.trim();
-    if (nova.value || !texto || texto === automacao.value.nome) return null;
-    return pedir(
-      async () => {
-        const { data } = await AutomacoesAPI.renomear(
-          automacao.value.id,
-          texto
-        );
-        juntar(data);
-      },
-      { ocupa: false }
-    );
+    if (nova.value || !texto || texto === automacao.value.nome) return;
+    try {
+      const { data } = await AutomacoesAPI.renomear(automacao.value.id, texto);
+      automacao.value = { ...automacao.value, nome: data.nome };
+    } catch (erro) {
+      useAlert(erroDaApi(erro, t).mensagem);
+    }
   };
 
   return {

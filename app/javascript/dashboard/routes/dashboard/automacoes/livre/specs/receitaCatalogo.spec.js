@@ -7,7 +7,12 @@ import {
 } from '../receita';
 import { entradaDoPasso, gravarCampo, lerCampo, novoPasso } from '../catalogo';
 import { fraseDaCondicao, fraseDoPasso } from '../frases';
-import { opcoesDosValores, textoDaTela, textoNaTela } from '../texto';
+import {
+  comApagados,
+  opcoesDosValores,
+  textoDaTela,
+  textoNaTela,
+} from '../texto';
 import pt from 'dashboard/i18n/locale/pt_BR/automacaoLivre.json';
 
 // #2414 F5 — a receita muda sempre por cópia e o que o editor não conhece passa
@@ -174,15 +179,30 @@ describe('receita do editor livre', () => {
       }
     );
 
-    it('rótulo de campo que a conta apagou fica como texto', () => {
+    // Campo apagado continua dado (decisão da Automação, 03/11): virar texto
+    // mandaria "[Placa]" ao cliente; o salvar recusa até a pessoa trocar.
+    it('campo que a conta apagou continua dado, marcado, na ida e volta', () => {
       const semPlaca = opcoesDosValores(catalogo, () => [], tTexto);
-      const tela = textoNaTela(AVISAR.texto, semPlaca);
+      const comApagado = comApagados(
+        AVISAR.texto,
+        semPlaca,
+        caminho => `Dado apagado: ${caminho}`
+      );
+      const tela = textoNaTela(AVISAR.texto, comApagado);
 
-      expect(tela).toBe('Cliente [contato.atributos.placa] voltou');
-      expect(textoDaTela(tela, semPlaca)).toEqual([tela]);
-      expect(
-        textoDaTela('Cliente [ATRIB!: Placa do carro] voltou', semPlaca)
-      ).toEqual(['Cliente [ATRIB!: Placa do carro] voltou']);
+      expect(comApagado.at(-1)).toEqual({
+        value: 'contato.atributos.placa',
+        label: 'Dado apagado: contato.atributos.placa',
+        apagado: true,
+      });
+      expect(tela).toBe(
+        'Cliente [Dado apagado: contato.atributos.placa] voltou'
+      );
+      expect(textoDaTela(tela, comApagado)).toEqual(AVISAR.texto);
+      expect(textoDaTela(`${tela} de novo`, comApagado)).toEqual([
+        ...AVISAR.texto.slice(0, 2),
+        ' voltou de novo',
+      ]);
     });
 
     it('rótulo com colchete no nome volta inteiro', () => {
@@ -200,6 +220,24 @@ describe('receita do editor livre', () => {
         ' e ',
         { $valor: 'contato.atributos.valor' },
       ]);
+    });
+
+    it('dois campos com o mesmo nome levam a chave no rótulo', () => {
+      const repetidos = () => [
+        { attribute_key: 'placa', attribute_display_name: 'Placa' },
+        { attribute_key: 'placa_2', attribute_display_name: 'Placa' },
+      ];
+      const opcoesRepetidas = opcoesDosValores(catalogo, repetidos, tTexto);
+      const partes = [{ $valor: 'contato.atributos.placa_2' }];
+
+      expect(opcoesRepetidas.map(item => item.label)).toEqual([
+        'NOME!',
+        'ATRIB!: Placa (placa)',
+        'ATRIB!: Placa (placa_2)',
+      ]);
+      expect(
+        textoDaTela(textoNaTela(partes, opcoesRepetidas), opcoesRepetidas)
+      ).toEqual(partes);
     });
 
     it('colchete solto ou sem fechar é texto', () => {
