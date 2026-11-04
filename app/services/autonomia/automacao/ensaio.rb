@@ -56,7 +56,7 @@ class Autonomia::Automacao::Ensaio
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
-    valores = ::Autonomia::Automacao::Valores.new(conversa: conversa, mensagem: mensagem)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
 
@@ -67,11 +67,13 @@ class Autonomia::Automacao::Ensaio
     conversa.messages.where.not(message_type: :activity).reorder(created_at: :desc, id: :desc).first
   end
 
+  # O Spam pela mesma pergunta da Partida (#2499): o Contexto do alvo.
   def fora(conversa, mensagem)
-    return 'spam' if ::ConversaCanal::PastaDoEmail.no_spam?(conversa)
+    contexto = ::Autonomia::Automacao::Contexto.de(conversa)
+    return 'spam' if contexto.no_spam?
     return 'sem_mensagem' if mensagem_no_gatilho? && mensagem.nil?
 
-    valores = ::Autonomia::Automacao::Valores.new(conversa: conversa, mensagem: mensagem)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem)
     filtros = Array(@receita.dig('gatilho', 'filtros'))
     'fora_do_filtro' unless filtros.all? { |condicao| ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira? }
   end
