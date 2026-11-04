@@ -312,6 +312,7 @@ const respondeuErrado = () => {
             data-perguntas
             :rotulo="t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS_ROTULO')"
             :opcoes="textosDasPerguntas"
+            :empilhar="perguntasDoAgente.length > 0"
             :desabilitado="digitando"
             @escolher="perguntar"
           />
@@ -340,6 +341,7 @@ const respondeuErrado = () => {
           data-perguntas
           :rotulo="t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS_ROTULO')"
           :opcoes="textosDasPerguntas"
+          :empilhar="perguntasDoAgente.length > 0"
           :desabilitado="digitando"
           @escolher="perguntar"
         />

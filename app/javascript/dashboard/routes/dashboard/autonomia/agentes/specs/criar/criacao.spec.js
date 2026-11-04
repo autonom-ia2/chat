@@ -111,6 +111,14 @@ describe('perguntas do próprio agente no teste', () => {
     expect(perguntasDoAgente(agente)).toHaveLength(MAX_PERGUNTAS_DE_TESTE);
   });
 
+  it('drops repeated questions and also serves the team copilot (its questions are team requests)', () => {
+    expect(
+      perguntasDoAgente({
+        starter_questions: ['Resuma', ' Resuma', 'Próximo passo?'],
+      })
+    ).toEqual(['Resuma', 'Próximo passo?']);
+  });
+
   it('is empty without questions (the model ones stay) and for the helper agent', () => {
     expect(perguntasDoAgente(null)).toEqual([]);
     expect(perguntasDoAgente({ starter_questions: [] })).toEqual([]);

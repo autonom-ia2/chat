@@ -54,6 +54,11 @@ describe('EtapaConfira', () => {
       'O seguro cobre cancelamento da viagem?',
       'Qual o valor para 10 dias na Europa?',
     ]);
+    // Frases do Construtor podem ser longas: empilhadas, como as respostas prontas.
+    expect(wrapper.get('[data-perguntas]').classes()).toContain('flex-col');
+    expect(montar().get('[data-perguntas]').classes()).not.toContain(
+      'flex-col'
+    );
     await perguntas[0].trigger('click');
     expect(wrapper.emitted('perguntar')[0][0]).toEqual({
       texto: 'O seguro cobre cancelamento da viagem?',

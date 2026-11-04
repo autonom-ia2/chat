@@ -77,15 +77,16 @@ export const perguntasDeTeste = (modelo, interno = false, ajudante = false) => {
 // #2489 — o teste usa as perguntas que o Construtor escreveu para ESTE agente (`starter_questions`, ancoradas no que
 // o dono contou e no material): as do modelo e do pacote do segmento são iguais para todo negócio do ramo (uma
 // corretora de seguro viagem via perguntas de seguro de carro). Sem perguntas próprias, ficam as do modelo. O
-// ajudante é testado como o agente principal o consultaria, então mantém as dele.
+// ajudante é testado como o agente principal o consultaria, então mantém as dele. O copiloto da equipe usa as próprias:
+// para ele o Construtor já as escreve como pedidos do atendente (Builder#actuation_context).
 export const MAX_PERGUNTAS_DE_TESTE = 3;
 
 export const perguntasDoAgente = (agente, ajudante = false) => {
   if (ajudante) return [];
-  return (agente?.starter_questions || [])
+  const textos = (agente?.starter_questions || [])
     .map(pergunta => String(pergunta ?? '').trim())
-    .filter(Boolean)
-    .slice(0, MAX_PERGUNTAS_DE_TESTE);
+    .filter(Boolean);
+  return [...new Set(textos)].slice(0, MAX_PERGUNTAS_DE_TESTE);
 };
 
 export const exemploDoModelo = modelo =>
