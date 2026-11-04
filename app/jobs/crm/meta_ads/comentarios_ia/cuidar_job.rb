@@ -14,7 +14,8 @@ class Crm::MetaAds::ComentariosIa::CuidarJob < ApplicationJob
 
   retry_on Crm::MetaAds::ComentariosIa::Rede::Indisponivel, Crm::MetaAds::ComentariosIa::Classificador::Indisponivel,
            wait: :polynomially_longer, attempts: TENTATIVAS do |job, erro|
-    comentario = Crm::MetaAds::ComentariosIa::Comentario.new(**job.arguments.first.symbolize_keys)
+    # Como o Cuidar grava (#2519): com o anúncio do cuidado no Facebook, sem anúncio na resposta a comentário.
+    comentario = Crm::MetaAds::ComentariosIa::Cuidar.registrado(Crm::MetaAds::ComentariosIa::Comentario.new(**job.arguments.first.symbolize_keys))
     Rails.logger.warn("[comentarios_ia] #{erro.class.name} em #{TENTATIVAS} tentativas, comentário fica com a pessoa: " \
                       "account=#{comentario.account_id} network=#{comentario.network} comment=#{comentario.comment_id}")
     registro = Crm::MetaAds::ComentariosIa::Registro

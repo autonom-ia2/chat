@@ -45,6 +45,26 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   # Era o caso do privado, mas ele não sai aqui (sem o que mandar, ou a rede ainda não o libera).
   FICA_COM_O_DONO = 'kept_for_owner'.freeze
 
+  # #2519: o comentário como fica nas linhas do Registro, que o Esperando conta por anúncio. Também o CuidarJob, quando
+  # as tentativas acabam.
+  # - No Facebook o evento vem sem `ad_id`; com o cuidado de um anúncio, a linha leva o anúncio dele.
+  # - A resposta dentro de um comentário (#2454) vai sem anúncio: a lista "Esperando você" mostra só o primeiro nível,
+  #   e o número conta o mesmo que a lista.
+  # A Conversa e a Rede seguem com o comentário como chegou (a chave da conversa usa o `ad_id` do evento). As linhas que
+  # a Rede grava (a resposta pública, o esconder, o privado do Facebook) ficam com o `ad_id` do evento: nenhuma delas fica
+  # com o dono, e o número não as conta.
+  def self.registrado(comentario, care = cuidado_de(comentario))
+    return comentario.class.new(**comentario.to_h, ad_id: nil) if comentario.resposta?
+    return comentario if comentario.ad_id.present? || care&.target_kind != 'ad'
+
+    comentario.class.new(**comentario.to_h, ad_id: care.target_id)
+  end
+
+  def self.cuidado_de(comentario)
+    Crm::MetaAdsCommentCare.cuidando(account_id: comentario.account_id, network: comentario.network, post_id: comentario.post_id,
+                                     ad_id: comentario.ad_id)
+  end
+
   def initialize(comentario, rede: nil, classificador: nil, conversa: Crm::MetaAds::ComentariosIa::Conversa,
                  registro: Crm::MetaAds::ComentariosIa::Registro)
     @comentario = comentario
@@ -315,16 +335,8 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     @registro.gravar!(registrado, motivo, conversation: @conversa.para_voce!(@comentario, care, motivo))
   end
 
-  # #2519: o comentário como fica nas linhas do Registro, que o Esperando conta por anúncio.
-  # - No Facebook o evento vem sem `ad_id`; com o cuidado de um anúncio, a linha leva o anúncio dele.
-  # - A resposta dentro de um comentário (#2454) vai sem anúncio: a lista "Esperando você" mostra só o primeiro nível,
-  #   e o número conta o mesmo que a lista.
-  # A Conversa e a Rede seguem com o comentário como chegou (a chave da conversa usa o `ad_id` do evento).
   def registrado
-    return @comentario.class.new(**@comentario.to_h, ad_id: nil) if @comentario.resposta?
-    return @comentario if @comentario.ad_id.present? || care&.target_kind != 'ad'
-
-    @comentario.class.new(**@comentario.to_h, ad_id: care.target_id)
+    self.class.registrado(@comentario, care)
   end
 
   def inbox
@@ -334,8 +346,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   end
 
   def care
-    @care ||= Crm::MetaAdsCommentCare.cuidando(account_id: @comentario.account_id, network: @comentario.network,
-                                               post_id: @comentario.post_id, ad_id: @comentario.ad_id)
+    @care ||= self.class.cuidado_de(@comentario)
   end
 
   def classificador

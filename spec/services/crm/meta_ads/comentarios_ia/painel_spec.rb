@@ -187,14 +187,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     # #2519: nada some em silêncio. O evento pode não ter chegado (ou o job, morrido): sem nenhuma ação da IA em 10 min,
     # o comentário vem para o dono, com o selo de que a IA não o pegou.
     it 'chegou depois de ligar e a IA não fez nada em 10 min: fica com o dono (not_caught)' do
-      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', momento: 11.minutes.ago), linha('2', momento: 9.minutes.ago),
+      chegou = 11.minutes.ago
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', momento: chegou), linha('2', momento: 9.minutes.ago),
                                                                            linha('3', momento: 2.hours.ago)], escondidas: [] })
       acao('3', 'ai_seen')
 
       to_see = painel.payload[:to_see]
       expect(to_see.map { |item| [item[:id], item[:kind]] }).to eq([%w[1 not_caught], %w[3 skipped]])
       # A tela mostra há quanto tempo a pessoa espera ("há 11 minutos").
-      expect(Time.zone.parse(to_see.first[:created_time])).to be_within(1.second).of(11.minutes.ago)
+      expect(to_see.first[:created_time]).to eq(chegou.iso8601)
     end
 
     it 'o que a pessoa já respondeu, escondeu ou apagou pela plataforma não é "não vi a tempo"' do
