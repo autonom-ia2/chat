@@ -191,7 +191,10 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
                                                                            linha('3', momento: 2.hours.ago)], escondidas: [] })
       acao('3', 'ai_seen')
 
-      expect(painel.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 not_caught], %w[3 skipped]])
+      to_see = painel.payload[:to_see]
+      expect(to_see.map { |item| [item[:id], item[:kind]] }).to eq([%w[1 not_caught], %w[3 skipped]])
+      # A tela mostra há quanto tempo a pessoa espera ("há 11 minutos").
+      expect(Time.zone.parse(to_see.first[:created_time])).to be_within(1.second).of(11.minutes.ago)
     end
 
     it 'o que a pessoa já respondeu, escondeu ou apagou pela plataforma não é "não vi a tempo"' do

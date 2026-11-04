@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteGaveta from '../AgenteGaveta.vue';
+import { relativeTime } from 'dashboard/routes/dashboard/campaigns/metaAds/metaAdsHelpers';
 
 // #2469 (PR 3a do #2436) — "Comentários" do cartão do post, em três grupos: no privado (#2481: quem recebeu da IA no
 // privado, com o comentário que abriu a conversa e o "Ver conversa", só as conversas que a pessoa vê), esperando você e
@@ -17,7 +18,9 @@ const props = defineProps({
 
 const emit = defineEmits(['fechar', 'update:grupo']);
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+// Há quanto tempo a pessoa espera (#2519): "há 3 horas", no idioma da tela.
+const quando = item => relativeTime(item.created_time, locale.value);
 const KEY = 'AGENTS.AGENTE_DO_POST.COMENTARIOS';
 const GRUPOS = ['respondidos', 'esperando', 'nao_respondo'];
 
@@ -142,8 +145,13 @@ const alvo = computed(() =>
           class="flex flex-col gap-2 p-4 rounded-2xl ring-1 ring-inset ring-n-weak"
         >
           <p class="m-0 text-sm leading-6 text-n-slate-12">
-            <span class="block text-xs font-semibold text-n-slate-11">
-              {{ item.author ? `@${item.author}` : '' }}
+            <span
+              class="flex flex-wrap text-xs font-semibold gap-x-2 text-n-slate-11"
+            >
+              <span>{{ item.author ? `@${item.author}` : '' }}</span>
+              <span v-if="quando(item)" data-quando class="font-normal">
+                {{ quando(item) }}
+              </span>
             </span>
             {{ item.text }}
           </p>

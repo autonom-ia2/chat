@@ -239,8 +239,9 @@ class Crm::MetaAds::ComentariosIa::Painel
     cuidado.nil? || linha[:momento].nil? || linha[:momento] < cuidado.started_at
   end
 
+  # `created_time`: há quanto tempo a pessoa espera (#2519), a tela mostra "há 3 horas".
   def comentario(linha)
-    { id: linha[:id].to_s, network: linha[:network], author: linha[:author], text: linha[:text] }
+    { id: linha[:id].to_s, network: linha[:network], author: linha[:author], text: linha[:text], created_time: linha[:momento]&.iso8601 }
   end
 
   # { comment_id => { ação => conversa } }, só as da IA nesta conta.

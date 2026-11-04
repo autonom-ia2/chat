@@ -292,6 +292,31 @@ describe('CuidarComentarios (#2212)', () => {
     ).toBe(false);
   });
 
+  it('#2519 · a IA não pegou em 10 min: "não vi a tempo", em destaque, com há quanto tempo a pessoa espera', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        para_quem: 'Quem pedir o link',
+        to_see: [
+          {
+            id: 'c-7',
+            network: 'instagram',
+            author: 'fabi',
+            text: 'Qual o valor com desconto?',
+            kind: 'not_caught',
+            created_time: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar();
+    const linha = wrapper.find('[data-ia-to-see-row="not_caught"]');
+
+    expect(linha.text()).toContain('Não vi este comentário a tempo.');
+    expect(linha.find('.text-n-amber-11').exists()).toBe(true);
+    expect(linha.find('[data-ia-quando]').text()).toBe('há 3 horas');
+  });
+
   it('ligado: resultado, pausar e, no grupo dos antigos, ler e mandar', async () => {
     ComentariosIaAPI.getCuidado.mockResolvedValue({
       data: painel({

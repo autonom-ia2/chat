@@ -65,7 +65,13 @@ const detalhe = (extra = {}) => ({
     status: 'ready',
     results: { sent: 4, replied: 1, skipped: 1 },
     esperando: [
-      { id: '1', author: 'carla', text: 'E o reembolso?', kind: 'complaint' },
+      {
+        id: '1',
+        author: 'carla',
+        text: 'E o reembolso?',
+        kind: 'complaint',
+        created_time: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+      },
       {
         id: '3',
         author: 'joao',
@@ -465,6 +471,11 @@ describe('#2469 · os comentários do post em Agentes', () => {
       expect(noBody('[data-comentario="1"]').textContent).toContain(
         'META_ADS_COMMENTS_AI.ON.KIND.complaint'
       );
+      // #2519: há quanto tempo a pessoa espera; sem a hora, nada.
+      expect(
+        noBody('[data-comentario="1"] [data-quando]').textContent
+      ).toContain('3');
+      expect(noBody('[data-comentario="3"] [data-quando]')).toBeNull();
       expect(noBody('[data-ver-conversa]').getAttribute('href')).toBe(
         '/app/accounts/1/conversations/9'
       );
