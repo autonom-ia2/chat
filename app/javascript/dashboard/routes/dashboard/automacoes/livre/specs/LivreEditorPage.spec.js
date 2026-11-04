@@ -92,12 +92,12 @@ const CATALOGO = {
   ],
   receitas: [
     {
-      chave: 'BOAS_VINDAS',
+      chave: 'AGRADECER',
       frase: 'TITULO',
       requer: ['automacao_mensagens'],
       receita: {
-        gatilho: { tipo: 'conversa.criada' },
-        passos: [{ id: 'p1', tipo: 'mensagem', texto: ['Oi'] }],
+        gatilho: { tipo: 'conversa.resolvida' },
+        passos: [{ id: 'p1', tipo: 'mensagem', texto: ['Obrigado'] }],
       },
     },
   ],
@@ -554,7 +554,7 @@ describe('LivreEditorPage', () => {
     expect(wrapper.findComponent(LivreConfira).props('receita')).toEqual(
       CATALOGO.receitas[0].receita
     );
-    expect(rota.query.receita).toBe('BOAS_VINDAS');
+    expect(rota.query.receita).toBe('AGRADECER');
     expect(AutomacoesAPI.create).not.toHaveBeenCalled();
   });
 
@@ -562,7 +562,7 @@ describe('LivreEditorPage', () => {
     flags.delete('automacao_mensagens');
     rota.name = 'automacoes_livre_nova';
     rota.params = { accountId: 1 };
-    rota.query = { receita: 'BOAS_VINDAS' };
+    rota.query = { receita: 'AGRADECER' };
     const wrapper = montar();
     await flushPromises();
 

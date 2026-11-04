@@ -8,17 +8,11 @@
 #
 # Quais entram (D-R1, Rodrigo 03/11): só as que o motor de hoje monta. Rodízio espera a #2502, Fora do horário a #2503,
 # Reclamação e Orçamento o passo de IA de verdade (#2523).
+# Boas-vindas espera o valor conversa.iniciada_por: no conversa.criada, a conversa que a equipe abre (modelo, campanha,
+# agendamento) também dispara, e o cliente receberia "já vamos te responder" sem ter escrito.
 #
 # O ícone e a cor da porta ficam no LivrePortas.vue (o Tailwind só enxerga as classes escritas nos .vue). A flag que a
 # receita pede sai dos passos (`requer` em automacao-passos.yml).
-
-BOAS_VINDAS:
-  receita:
-    gatilho: { tipo: conversa.criada }
-    passos:
-      - id: p1
-        tipo: mensagem
-        texto: ['Oi, ', { $valor: contato.nome }, '! Recebemos sua mensagem e já vamos te responder.']
 
 AGRADECER:
   receita:

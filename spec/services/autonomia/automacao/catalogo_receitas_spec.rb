@@ -13,8 +13,9 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
     JSON.parse(Rails.root.join("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre.json").read)
   end
 
-  it 'monta as que o motor de hoje sabe fazer' do
-    expect(receitas.pluck('chave')).to eq(%w[BOAS_VINDAS AGRADECER])
+  # Boas-vindas espera conversa.iniciada_por: no conversa.criada, a conversa aberta pela equipe também dispara.
+  it 'monta só as que o motor de hoje faz sem erro' do
+    expect(receitas.pluck('chave')).to eq(%w[AGRADECER])
   end
 
   it 'cada receita passa no esquema e na Receita, então nenhuma quebrada chega à tela', :aggregate_failures do

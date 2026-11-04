@@ -961,31 +961,6 @@
   ],
   "receitas": [
     {
-      "chave": "BOAS_VINDAS",
-      "frase": "AUTOMACAO_LIVRE.RECEITAS.BOAS_VINDAS.TITULO",
-      "requer": [
-        "automacao_mensagens"
-      ],
-      "receita": {
-        "gatilho": {
-          "tipo": "conversa.criada"
-        },
-        "passos": [
-          {
-            "id": "p1",
-            "tipo": "mensagem",
-            "texto": [
-              "Oi, ",
-              {
-                "$valor": "contato.nome"
-              },
-              "! Recebemos sua mensagem e já vamos te responder."
-            ]
-          }
-        ]
-      }
-    },
-    {
       "chave": "AGRADECER",
       "frase": "AUTOMACAO_LIVRE.RECEITAS.AGRADECER.TITULO",
       "requer": [

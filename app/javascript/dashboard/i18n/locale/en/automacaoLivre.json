@@ -454,14 +454,9 @@
       "REQUER": {
         "AUTOMACAO_MENSAGENS": "Sends a message to the customer, and automatic messages aren't turned on in this account yet."
       },
-      "BOAS_VINDAS": {
-        "TITULO": "Let them know we'll reply soon",
-        "TEXTO": "First-time contacts don't go without an answer.",
-        "NOME": "Welcome"
-      },
       "AGRADECER": {
         "TITULO": "Thank them when closing",
-        "TEXTO": "The customer gets a thank-you when the conversation ends.",
+        "TEXTO": "The customer gets a thank-you when the conversation is resolved.",
         "NOME": "Thank when closing"
       }
     }
