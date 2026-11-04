@@ -9,9 +9,9 @@
 #      dela, que o motor usa na mesma conexão); pausar ou voltar muda o updated_at do cuidado e troca a chave.
 # PUT  agentes_do_post/:id/estado  status ('on' | 'paused') → Pausar e Voltar a cuidar: só o estado (voltar recomeça a
 #      contar daqui), sem mexer no que o dono escreveu. Devolve o detalhe.
-# POST agentes_do_post/:id/testar  pergunta, formato ('publico' | 'privado'), network → { status: 'escrito', texto } |
-#      { status: 'fica_com_o_dono', motivo } | { status: 'frases_fixas', motivo } | { status: 'no_private' }. Nada é
-#      publicado nem gravado; IA fora do ar é 422 `ai_unavailable`.
+# POST agentes_do_post/:id/testar  pergunta, network → { status: 'ready', decisao, motivo, escrita? } (#2510): o que o
+#      motor faria com o comentário (NoAgentes#testar) e, quando ele manda o privado, o que escreveria. Nada é publicado
+#      nem gravado; IA fora do ar é 422 `ai_unavailable`; IA barrada (sem chave, desligada) é 422 com o código dela.
 #
 # As guardas são as das telas do cuidado de cada alvo, para ninguém ver aqui o que não vê lá:
 # - todas: a flag `meta_ads_comentarios_ia` (404 sem ela);
@@ -84,9 +84,10 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   def testar
     pergunta = params[:pergunta]
     raise Recusa, 'invalid_pergunta' unless pergunta.is_a?(String) && pergunta.strip.length.between?(1, PERGUNTA_LIMIT)
-    raise Recusa, 'invalid_formato' unless Crm::MetaAds::ComentariosIa::NoAgentes::FORMATOS.key?(params[:formato].to_s)
 
-    render json: no_agentes.testar(pergunta: pergunta.strip, formato: params[:formato].to_s, network: params[:network].to_s)
+    render json: no_agentes.testar(pergunta: pergunta.strip, network: params[:network].to_s)
+  rescue Crm::MetaAds::ComentariosIa::Classificador::Bloqueado => e
+    render_error_code(e.code)
   rescue Crm::MetaAds::ComentariosIa::Classificador::Indisponivel
     render_error_code('ai_unavailable')
   end
