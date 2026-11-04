@@ -4,7 +4,7 @@
 # GET  agentes_do_post             → { cuidados: [{ id, kind, target_id, perfil, network, status }] }: a lista e a
 #      contagem do cabeçalho, só do banco. Só os alvos que quem abre pode ver.
 # GET  agentes_do_post/:id         → o cartão e a página: o item, mais legenda, capa, foto, nota, portas[] e
-#      comentarios { status, results, esperando[], nao_respondo[] }, lidos na Meta, sem IA. A leitura fica guardada
+#      comentarios { status, results, no_privado[], esperando[], nao_respondo[] }, lidos na Meta, sem IA. A leitura fica guardada
 #      DETALHE_TTL por pessoa (abrir Agentes com muitos posts cuidados não volta à Meta a cada vez, e não gasta o limite
 #      dela, que o motor usa na mesma conexão); pausar ou voltar muda o updated_at do cuidado e troca a chave.
 # PUT  agentes_do_post/:id/estado  status ('on' | 'paused') → Pausar e Voltar a cuidar: só o estado (voltar recomeça a
@@ -187,7 +187,13 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   end
 
   def no_agentes
-    Crm::MetaAds::ComentariosIa::NoAgentes.new(care: @care, fonte: @fonte, painel: painel)
+    Crm::MetaAds::ComentariosIa::NoAgentes.new(care: @care, fonte: @fonte, painel: painel, no_privado: no_privado)
+  end
+
+  # #2481: o grupo "no privado" da gaveta Comentários, com as conversas que a pessoa vê.
+  def no_privado
+    Crm::MetaAds::ComentariosIa::NoPrivado.new(account: Current.account, care: @care, viewer: Current.user,
+                                               conversation_access: method(:conversa_visivel?))
   end
 
   def detalhe

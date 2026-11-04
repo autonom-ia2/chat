@@ -2959,11 +2959,12 @@
         "RESPONDIDOS": "no privado",
         "ESPERANDO": "esperando você",
         "NAO_RESPONDO": "não respondo",
-        "RESPONDIDOS_TEXTO": "Quem recebeu de mim no privado. As conversas estão na caixa.",
+        "RESPONDIDOS_TEXTO": "Quem recebeu de mim no privado, da mais nova para a mais velha.",
         "VER_CONVERSA": "Ver conversa",
         "VER_TODOS": "Ver todos no {alvo}",
         "NENHUM": "Por enquanto, nada aqui.",
-        "SEM_LEITURA": "Não consegui ler os comentários agora. Tente de novo daqui a pouco."
+        "SEM_LEITURA": "Não consegui ler os comentários agora. Tente de novo daqui a pouco.",
+        "RESPONDEU": "Já respondeu"
       }
     }
   }
