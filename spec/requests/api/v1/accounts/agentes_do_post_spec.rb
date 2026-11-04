@@ -393,7 +393,27 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
         testar(pergunta: 'Talvez?')
 
         expect(response.parsed_body).to include('decisao' => 'sem_certeza')
-        expect(response.parsed_body).not_to have_key('escrita')
+        expect(response.parsed_body.keys).not_to include('escrita', 'motivo')
+      end
+
+      it 'cuidado sem ficha nem "para quem": era o caso do privado, mas fica com o dono, sem escrever (Cuidar#decidir)' do
+        care.update_columns(offer: nil, para_quem: nil) # rubocop:disable Rails/SkipsModelValidations
+        decide('private')
+
+        testar(pergunta: 'Como contrato?')
+
+        expect(response.parsed_body).to eq('status' => 'ready', 'decisao' => 'kept_for_owner', 'motivo' => 'Pergunta o preço.')
+        expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+      end
+
+      it 'a escrita fora do ar depois da decisão: 422 ai_unavailable' do
+        decide('private')
+        allow(resultado).to receive(:error).and_return('timeout')
+
+        testar(pergunta: 'Como contrato?')
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.parsed_body).to eq('error' => 'ai_unavailable')
       end
 
       it 'a pergunta não vai para o log' do
@@ -435,6 +455,28 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
         expect(response.parsed_body).to eq('status' => 'invalid_network')
         expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
       end
+    end
+  end
+
+  describe 'o cartão do post da Página do Facebook' do
+    let(:care) { cuidado('post', '555_777', 'facebook', inbox: pagina.inbox) }
+    let(:redes) { { 'facebook' => { inbox_id: pagina.inbox.id, post_id: '555_777' } } }
+
+    before do
+      allow(Crm::MetaAds::ComentariosIa::Fonte).to receive(:post).and_return(fonte(redes))
+      allow(Pundit).to receive(:policy!).and_call_original
+      allow(Pundit).to receive(:policy!).with(anything, :seus_posts).and_return(instance_double(SeusPostsPolicy, index?: true, manage?: true))
+      allow(SeusPosts::Caixa).to receive(:new).and_return(instance_double(SeusPosts::Caixa, ve?: true))
+      na_porta(pagina.inbox, 'Bia')
+    end
+
+    it 'no Testar o privado do Facebook não sai: fica com você, sem escrever' do
+      decide('price')
+
+      testar(pergunta: 'Quanto custa?')
+
+      expect(response.parsed_body).to eq('status' => 'ready', 'decisao' => 'no_private', 'motivo' => 'Pergunta o preço.')
+      expect(Autonomia::Agents::Answerer).not_to have_received(:new)
     end
   end
 
