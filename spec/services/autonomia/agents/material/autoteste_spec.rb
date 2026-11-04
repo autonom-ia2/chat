@@ -83,6 +83,18 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     expect(itens.last['veredito']).to eq('recusou')
   end
 
+  # #2444: a regra do dono vale mais que o material; sem ela, o juiz reprovava a resposta que a seguia.
+  it 'o juiz recebe as regras do dono: a instrução e a regra de passagem' do
+    agent.update!(instruction: 'Cotação só pelo WhatsApp; não colete dados aqui.', handoff_rule: 'Sinistro vai para a equipe.')
+
+    pedir_e_rodar
+
+    expect(Autonomia::Agents::Material::JuizDoAutoteste).to have_received(:new).with(
+      account: account,
+      regras: "Cotação só pelo WhatsApp; não colete dados aqui.\n\nQuando passar para a equipe: Sinistro vai para a equipe."
+    )
+  end
+
   # t4d: "De onde {agente} tirou". Só trechos deste agente; no máximo 3; o texto vai curto; páginas do material grande.
   it 'guarda até 3 trechos que o agente usou, com material, páginas e texto curto', :aggregate_failures do
     grande = material('manual.pdf', trechos: [])

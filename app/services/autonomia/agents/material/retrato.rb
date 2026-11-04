@@ -19,12 +19,18 @@ class Autonomia::Agents::Material::Retrato
     salvo = @agent.chave_do_material(Autonomia::Agents::Material::Autoteste::CHAVE)
     return nunca if salvo.blank?
 
-    itens = Array(salvo['itens'])
+    itens = julgaveis(salvo)
     { estado: estado(salvo), quando: salvo['quando'], feitas: salvo['feitas'].to_i, total: salvo['total'].to_i,
       do_material: da_origem(itens, 'material').size, de_fora: da_origem(itens, 'fora').size,
       certas_do_material: da_origem(itens, 'material').count { |item| ok?(item) },
       certas_de_fora: da_origem(itens, 'fora').count { |item| ok?(item) },
       resultados: itens.map { |item| { pergunta: item['pergunta'], origem: item['origem'], ok: ok?(item) } } }
+  end
+
+  # O item que o juiz deu como `nao_se_aplica` (#2444: o próprio item não deixa julgar) fica fora das contas e da lista:
+  # não é acerto nem erro do agente.
+  def julgaveis(salvo)
+    Array(salvo['itens']).reject { |item| item['veredito'] == Autonomia::Agents::Material::JuizDoAutoteste::NAO_SE_APLICA }
   end
 
   def da_origem(itens, origem)

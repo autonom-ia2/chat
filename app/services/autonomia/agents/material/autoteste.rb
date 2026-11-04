@@ -14,8 +14,8 @@
 #   feitas, total, gasto_usd, hash_da_base, ultima_automatica,
 #   rodada_dos_itens (a rodada que produziu os itens: o id dos cartões não muda quando outra rodada começa),
 #   itens: o ÚLTIMO resultado completo — [{ pergunta, origem (material | fora), esperado, fonte, resposta, equipe,
-#          trechos (t4d: até 3 trechos usados, { fonte, paginas, texto }), veredito (certo | errado | recusou | inventou),
-#          confirmada }]
+#          trechos (t4d: até 3 trechos usados, { fonte, paginas, texto }),
+#          veredito (certo | errado | recusou | inventou | nao_se_aplica), confirmada }]
 # Os itens só são trocados quando a rodada termina: a rodada que para no meio não apaga o resultado anterior (nem os
 # problemas que ele mostra).
 class Autonomia::Agents::Material::Autoteste
@@ -148,7 +148,9 @@ class Autonomia::Agents::Material::Autoteste
   end
 
   def julgar_e_gravar!(itens)
-    vereditos = chamar(:juiz) { Autonomia::Agents::Material::JuizDoAutoteste.new(account: @agent.account).julgar(itens) }
+    vereditos = chamar(:juiz) do
+      Autonomia::Agents::Material::JuizDoAutoteste.new(account: @agent.account, regras: regras_do_dono).julgar(itens)
+    end
     return if vereditos == :parou
     return parar!('indisponivel') if vereditos.nil?
 
@@ -175,6 +177,13 @@ class Autonomia::Agents::Material::Autoteste
     return if resultado.error.present? || (texto.nil? && !equipe)
 
     { 'resposta' => texto, 'equipe' => equipe, 'trechos' => trechos_usados(resultado.used_knowledge) }
+  end
+
+  # O que o dono mandou o agente fazer (#2444): o juiz precisa saber, porque a regra do dono vale mais que o material
+  # (ex.: "a cotação é no WhatsApp, não colete dados aqui").
+  def regras_do_dono
+    passagem = @agent.handoff_rule.presence && "Quando passar para a equipe: #{@agent.handoff_rule}"
+    [@agent.instruction.presence, passagem].compact.join("\n\n")
   end
 
   # Só trechos do material deste agente (a imagem da mensagem e o que não é dele ficam de fora), na ordem do Answerer.

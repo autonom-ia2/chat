@@ -53,6 +53,26 @@ RSpec.describe 'Autonomia agents - material', type: :request do
     )
   end
 
+  # #2444: o item que o próprio juiz não consegue julgar não é acerto nem erro do agente.
+  it 'deixa fora das contas e da lista o item que o juiz deu como "nao_se_aplica"' do
+    material('cardapio.pdf')
+    itens = [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'veredito' => 'certo' },
+             { 'pergunta' => 'Abre domingo?', 'origem' => 'material', 'veredito' => 'nao_se_aplica' },
+             { 'pergunta' => 'Tem estacionamento?', 'origem' => 'fora', 'veredito' => 'nao_se_aplica' },
+             { 'pergunta' => 'Vende bolo?', 'origem' => 'fora', 'veredito' => 'inventou' }]
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', { 'rodada' => 'r', 'rodada_dos_itens' => 'r', 'estado' => 'pronto',
+                                                                                'feitas' => 4, 'total' => 4, 'itens' => itens })
+
+    ler
+
+    expect(response.parsed_body['autoteste']).to include(
+      'do_material' => 1, 'de_fora' => 1, 'certas_do_material' => 1, 'certas_de_fora' => 0,
+      'resultados' => [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'ok' => true },
+                       { 'pergunta' => 'Vende bolo?', 'origem' => 'fora', 'ok' => false }]
+    )
+    expect(response.parsed_body['problemas'].pluck('tipo')).to eq(['autoteste_fora'])
+  end
+
   it 'rodando há mais que a validade aparece como parado (a tela oferece tentar de novo)' do
     material('cardapio.pdf')
     Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', { 'rodada' => 'r', 'estado' => 'rodando',
