@@ -31,6 +31,14 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
     expect(receitas.map { |item| item.dig('receita', 'gatilho', 'tipo') }).to all(be_in(gatilhos))
   end
 
+  it 'o texto não depende de valor do contato, que pode faltar (o passo pularia) ou ser o número' do
+    textos = Autonomia::Automacao::Receita.new({}, conta: nil).then do |leitor|
+      receitas.flat_map { |item| leitor.passos(item.dig('receita', 'passos')).filter_map { |passo| passo['texto'] } }
+    end
+
+    expect(textos.flat_map { |partes| Autonomia::Automacao::Texto.caminhos(partes) }).to eq([])
+  end
+
   it 'a receita que manda mensagem pede automacao_mensagens' do
     expect(receitas.map { |item| item['requer'] }).to all(eq(['automacao_mensagens']))
   end

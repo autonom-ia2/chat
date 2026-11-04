@@ -4,7 +4,8 @@
 # `receita` está no formato da receita salva. O spec spec/services/autonomia/automacao/catalogo_receitas_spec.rb falha
 # quando uma receita não passa no esquema ou na Receita (com as flags ligadas), quando o gatilho não existe no catálogo
 # ou quando falta o título, o texto ou o nome em pt_BR e en (automacaoLivre.json, RECEITAS.<chave>).
-# O texto da mensagem fica em português: vira o texto da automação da pessoa, que ela muda no editor.
+# O texto da mensagem fica em português: vira o texto da automação da pessoa, que ela muda no editor. Sem valor do
+# contato: contato sem nome faria o passo pular, e no WhatsApp o nome às vezes é o número. Quem quiser o nome põe depois.
 #
 # Quais entram (D-R1, Rodrigo 03/11): só as que o motor de hoje monta. Rodízio espera a #2502, Fora do horário a #2503,
 # Reclamação e Orçamento o passo de IA de verdade (#2523).
@@ -20,4 +21,4 @@ AGRADECER:
     passos:
       - id: p1
         tipo: mensagem
-        texto: ['Obrigado pelo contato, ', { $valor: contato.nome }, '! Se precisar, é só chamar.']
+        texto: ['Obrigado pelo contato! Se precisar, é só chamar.']

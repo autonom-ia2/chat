@@ -975,11 +975,7 @@
             "id": "p1",
             "tipo": "mensagem",
             "texto": [
-              "Obrigado pelo contato, ",
-              {
-                "$valor": "contato.nome"
-              },
-              "! Se precisar, é só chamar."
+              "Obrigado pelo contato! Se precisar, é só chamar."
             ]
           }
         ]
