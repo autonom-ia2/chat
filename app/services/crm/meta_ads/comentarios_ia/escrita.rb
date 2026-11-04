@@ -55,18 +55,19 @@ class Crm::MetaAds::ComentariosIa::Escrita
   end
 
   # Os dois textos de um comentário que recebe o privado (decisao 'private' ou 'price'), escritos ANTES de qualquer
-  # envio: { privado:, publico: }; { dono: motivo } quando o agente não sabe; {} nas frases fixas. O preço que o dono
-  # escreveu (`price_reply`) vale no lugar da frase pública: só o privado é escrito.
+  # envio: { privado:, publico:, material: }; { dono: motivo } quando o agente não sabe; {} nas frases fixas. O preço
+  # que o dono escreveu (`price_reply`) vale no lugar da frase pública: só o privado é escrito. `material` (#2487, o
+  # Testar em Agentes): os arquivos só deste post de que as respostas saíram; o motor não o usa.
   def textos(decisao, comentario:, pai: nil)
     privado = escrever(FORMATO::PRIVADO, comentario: comentario, pai: pai)
     return {} if privado.status == :frases_fixas
     return { dono: privado.motivo } if privado.fica_com_o_dono?
-    return { privado: privado.texto } if decisao == 'price' && @care.price_reply.present?
+    return { privado: privado.texto, material: privado.material } if decisao == 'price' && @care.price_reply.present?
 
     publico = escrever(FORMATO::PUBLICO, comentario: comentario, pai: pai)
     return { dono: publico.motivo } if publico.fica_com_o_dono?
 
-    { privado: privado.texto, publico: publico.texto }
+    { privado: privado.texto, publico: publico.texto, material: (privado.material | publico.material) }
   end
 
   # formato: FORMATO::PUBLICO ou FORMATO::PRIVADO. comentario: o texto de quem comentou; pai: o comentário de cima.

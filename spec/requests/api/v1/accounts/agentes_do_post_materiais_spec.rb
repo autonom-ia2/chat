@@ -167,12 +167,20 @@ RSpec.describe 'Agentes: o material só do post', type: :request do
                                                   content: 'P, M e G', chunk_index: 0, metadata: {})
       end
       let(:usados) { [{ id: trecho.id, content: 'P, M e G', source: 'Tabela.txt' }] }
+      # #2510: o Testar decide antes de escrever; aqui, mandar no privado.
+      let(:ia) { instance_double(Crm::Ai::ResponsesClient, create: { text: { decision: 'private', certainty: 0.9, reason: 'Quer o G.' }.to_json }) }
+
+      before do
+        allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+        allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(ia)
+      end
 
       it 'a resposta lê pelo cuidado e diz de que arquivo dele saiu' do
-        post "#{base}/#{care.id}/testar", params: { pergunta: 'Tem G?', formato: 'privado' }, headers: admin.create_new_auth_token, as: :json
+        post "#{base}/#{care.id}/testar", params: { pergunta: 'Tem G?' }, headers: admin.create_new_auth_token, as: :json
 
-        expect(chamadas.sole).to include(care_id: care.id)
-        expect(response.parsed_body).to eq('status' => 'escrito', 'texto' => 'Temos P, M e G!', 'material' => ['Tabela.txt'])
+        expect(chamadas.map { |chamada| chamada[:care_id] }.uniq).to eq([care.id])
+        expect(response.parsed_body['escrita']).to eq('status' => 'escrito', 'privado' => 'Temos P, M e G!', 'publico' => 'Temos P, M e G!',
+                                                      'material' => ['Tabela.txt'])
       end
 
       it 'o trecho do material do agente não aparece como material do post' do
@@ -180,9 +188,9 @@ RSpec.describe 'Agentes: o material só do post', type: :request do
                                                       reference: 'Base.txt')
         trecho.update!(source: do_agente)
 
-        post "#{base}/#{care.id}/testar", params: { pergunta: 'Tem G?', formato: 'privado' }, headers: admin.create_new_auth_token, as: :json
+        post "#{base}/#{care.id}/testar", params: { pergunta: 'Tem G?' }, headers: admin.create_new_auth_token, as: :json
 
-        expect(response.parsed_body).to eq('status' => 'escrito', 'texto' => 'Temos P, M e G!')
+        expect(response.parsed_body['escrita']).to eq('status' => 'escrito', 'privado' => 'Temos P, M e G!', 'publico' => 'Temos P, M e G!')
       end
     end
   end

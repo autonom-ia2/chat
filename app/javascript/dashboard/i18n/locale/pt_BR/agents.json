@@ -2919,14 +2919,11 @@
         "ESCOLHA": "Escreva uma pergunta como se fosse um comentário.",
         "SUA_PERGUNTA": "Escreva a pergunta",
         "PERGUNTAR": "Perguntar",
-        "ONDE": "Onde a resposta sai?",
         "PUBLICO": "No comentário",
         "PRIVADO": "No privado",
         "REDE": "Em qual rede?",
         "SO_TESTE": "É só um teste: nada é publicado.",
         "FICA": "Fica com você",
-        "FICA_TEXTO": "Eu não respondo isso: fica com você no \"Esperando você\".",
-        "SEM_PRIVADO": "No Facebook o privado ainda não sai, e a frase no comentário só vai junto com ele: esta pergunta fica com você, em \"Esperando você\".",
         "FRASES_FIXAS": "Aqui eu uso as frases fixas que você escreveu.",
         "ERRO": "Não consegui testar agora. Tente de novo.",
         "IA_FORA": "A IA não respondeu agora. Tente de novo em instantes.",
@@ -2940,8 +2937,21 @@
           "porta_parada": "O agente desta caixa está parado.",
           "piloto": "O agente desta caixa está em teste, só com telefones de teste."
         },
-        "SEM_PUBLICAR": "É o que eu escreveria. Nesta rede ela ainda não é publicada: a frase só sai junto com o privado, que ainda não está liberado. A pergunta fica com você.",
-        "DO_MATERIAL": "Do seu material: {arquivos}"
+        "DO_MATERIAL": "Do seu material: {arquivos}",
+        "FAZ": "O que eu faria",
+        "POR_QUE": "Por quê: {motivo}",
+        "DECISAO": {
+          "private": "Mando no privado e respondo no comentário",
+          "price": "Mando o preço no privado e respondo no comentário",
+          "to_you": "Passo para você como urgente, sem responder",
+          "hide": "Escondo este comentário",
+          "no_reply": "Não respondo",
+          "owner_topic": "Fica com você: é o assunto que você responde",
+          "sem_certeza": "Fica com você: não tive certeza do que fazer",
+          "no_private": "Fica com você: no Facebook o privado ainda não sai",
+          "kept_for_owner": "Fica com você: falta dizer para quem vai o privado"
+        },
+        "ESCRITA_FICA": "Era para mandar no privado, mas eu não sei responder isso: fica com você, em \"Esperando você\"."
       },
       "COMENTARIOS": {
         "TITULO": "Comentários",

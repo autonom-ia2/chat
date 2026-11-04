@@ -75,14 +75,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Escrita do
     end
 
     it 'textos: o privado e o público, os dois escritos antes de qualquer envio' do
-      expect(escrita.textos('private', comentario: 'Quanto custa?')).to eq(privado: 'Te mandei no direct!', publico: 'Te mandei no direct!')
+      expect(escrita.textos('private', comentario: 'Quanto custa?'))
+        .to eq(privado: 'Te mandei no direct!', publico: 'Te mandei no direct!', material: [])
       expect(chamadas.pluck(:formato)).to eq([formato::PRIVADO, formato::PUBLICO])
     end
 
     it 'textos: o preço que o dono escreveu vale no lugar da frase pública: só o privado é escrito', :aggregate_failures do
       care.update!(price_reply: 'R$ 39 no direct')
 
-      expect(escrita.textos('price', comentario: 'Quanto custa?')).to eq(privado: 'Te mandei no direct!')
+      expect(escrita.textos('price', comentario: 'Quanto custa?')).to eq(privado: 'Te mandei no direct!', material: [])
       expect(chamadas.pluck(:formato)).to eq([formato::PRIVADO])
     end
 
