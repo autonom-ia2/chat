@@ -70,4 +70,11 @@ Rails.application.reloader.to_prepare do
   Facebook::Messenger::Bot.on :postback do |postback|
     Webhooks::FacebookEventsJob.perform_later(postback.to_json)
   end
+
+  # Clique num anúncio de Messenger de quem já tinha conversa (#2521, campo `messaging_referrals`).
+  Facebook::Messenger::Bot.on :referral do |referral|
+    messaging = referral.messaging
+    Crm::MetaAds::MessagingReferralJob.perform_later('messenger', messaging.dig('recipient', 'id').to_s, messaging.dig('sender', 'id').to_s,
+                                                     messaging['referral'].to_h, messaging['timestamp'].to_s)
+  end
 end

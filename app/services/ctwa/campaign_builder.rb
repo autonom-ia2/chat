@@ -17,14 +17,19 @@ module Ctwa::CampaignBuilder
   module_function
 
   CTWA_SOURCE = 'meta_ctwa'.freeze
+  # Click-to-Messenger (`meta_ctm`) and click-to-Instagram-Direct (`meta_ctd`) ads (#2521): the referral of those
+  # channels is mapped by Crm::MetaAds::MessagingReferral and arrives here with its own `source`. AD_CLICK_SOURCES are
+  # the touches whose `source_id` is the Meta ad id.
+  MESSAGING_AD_SOURCES = %w[meta_ctm meta_ctd].freeze
+  AD_CLICK_SOURCES = [CTWA_SOURCE, *MESSAGING_AD_SOURCES].freeze
   ORGANIC_SOURCE = 'meta_organic'.freeze
   # Caps the append-only touch list so click storms can't grow the conversation jsonb
   # without bound (the length validator skips Array values, so this is the only fence).
   MAX_TOUCHES = 20
   # Slim per-touch projection: the full campaign shape minus `body` (origin keeps it).
   TOUCH_KEYS = %w[
-    source source_id source_type source_url headline media_type ctwa_clid gclid fbclid ttclid utm_source utm_medium utm_campaign
-    utm_term utm_content utm_id inferred
+    source source_id source_type source_url headline media_type ctwa_clid referral_id gclid fbclid ttclid utm_source utm_medium
+    utm_campaign utm_term utm_content utm_id inferred
   ].freeze
 
   # Builds the unified campaign attribution hash, or nil when the referral carries no
@@ -46,7 +51,8 @@ module Ctwa::CampaignBuilder
       'headline' => ref[:headline],
       'body' => ref[:body],
       'media_type' => ref[:media_type] || ref[:media_content_type],
-      'ctwa_clid' => ref[:ctwa_clid]
+      'ctwa_clid' => ref[:ctwa_clid],
+      'referral_id' => ref[:referral_id]
     }.merge(tracking_attributes(ref)).compact
   end
 
@@ -194,6 +200,7 @@ module Ctwa::CampaignBuilder
   end
 
   def source_for(ref)
+    return ref[:source] if MESSAGING_AD_SOURCES.include?(ref[:source])
     return CTWA_SOURCE if ref[:ctwa_clid].present? || ref[:source_type].to_s == 'ad'
     return 'google_ads' if ref[:gclid].present?
     return 'tiktok_ads' if ref[:ttclid].present?
@@ -232,9 +239,10 @@ module Ctwa::CampaignBuilder
     conversation.additional_attributes.key?('campaign_touches') && duplicate_touch?(existing_touches(conversation), touch)
   end
 
-  # Paid Meta clicks prefer `ctwa_clid`; tracked-link bridge and organic referrals use
-  # `source_id`, which still conservatively dedups retries without a clid.
+  # Paid Meta clicks prefer `ctwa_clid`; Messenger/Direct ad clicks have no click id, so their webhook event id
+  # (`referral_id`) plays that role; tracked-link bridge and organic referrals use `source_id`, which still
+  # conservatively dedups retries without a clid.
   def dedup_key(touch)
-    touch['ctwa_clid'].presence || touch['source_id'].presence
+    touch['ctwa_clid'].presence || touch['referral_id'].presence || touch['source_id'].presence
   end
 end

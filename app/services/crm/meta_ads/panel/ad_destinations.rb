@@ -16,6 +16,9 @@ class Crm::MetaAds::Panel::AdDestinations
     FACEBOOK_PAGE INSTAGRAM_PROFILE_AND_FACEBOOK_PAGE INSTAGRAM_LIVE FACEBOOK_LIVE IMAGINE
   ].freeze
   UNDEFINED = 'UNDEFINED'.freeze
+  # Os destinos só de Messenger ou Direct, sem WhatsApp (#2521): a conversa iniciada que a Meta conta neles não é do
+  # WhatsApp (Panel::MetaComparison). O conjunto que mistura com WhatsApp fica com o WhatsApp.
+  MESSENGER_OR_DIRECT = %w[MESSENGER INSTAGRAM_DIRECT MESSAGING_INSTAGRAM_DIRECT_MESSENGER].freeze
 
   # Objetivos do conjunto que não são de conversa (Marketing API, optimization_goal, conferida em 04/11/2026). Os de
   # conversa (CONVERSATIONS, MESSAGING_*) e os que a Meta ainda inventar ficam de fora: na dúvida, traz conversa.
@@ -52,6 +55,10 @@ class Crm::MetaAds::Panel::AdDestinations
     return OUTSIDE.include?(destination) unless destination == UNDEFINED
 
     OUTSIDE_GOALS.include?(goal)
+  end
+
+  def messenger_or_direct?(ad_id)
+    MESSENGER_OR_DIRECT.include?(adset_of(ad_id).first)
   end
 
   # Para onde leva o anúncio que não abre conversa: profile, post, lead_form, website, app, reach ou other.

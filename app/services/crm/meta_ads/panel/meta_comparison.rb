@@ -5,6 +5,9 @@
 # cada métrica só existe em anúncio daquele destino, então a linha soma a conta inteira sem contar nada duas vezes:
 # - `whatsapp`: `conversations_started` (conversas iniciadas, 7 dias por clique) × as conversas cujo primeiro
 #   toque do período veio do WhatsApp;
+# - `messaging` (#2521): a mesma métrica, só dos anúncios cujo conjunto leva ao Messenger ou ao Direct
+#   (Panel::AdDestinations#messenger_or_direct?), × as conversas cujo primeiro toque veio do Messenger ou do Direct.
+#   Esses anúncios saem da linha do WhatsApp. Não depende de destino marcado na conexão: aparece quando há número;
 # - `site`: os leads do Pixel (`offsite_conversion.fb_pixel_lead`, em `actions`) × as conversas cujo primeiro
 #   toque veio da ponte do site. As visitas à página (`landing_page_view`) vão junto, só de contexto. É a linha
 #   que a Placement tem: os anúncios dela levam ao site e não têm conversa contada pela Meta (gate G1).
@@ -26,7 +29,7 @@ class Crm::MetaAds::Panel::MetaComparison
   end
 
   def payload
-    rows = [whatsapp_row, site_row].compact
+    rows = [whatsapp_row, messaging_row, site_row].compact
     return if rows.empty?
 
     no_meta = rows.none? { |row| row[:meta].positive? } && insights.sum(:spend).positive?
@@ -42,7 +45,19 @@ class Crm::MetaAds::Panel::MetaComparison
   def whatsapp_row
     return unless destination?('whatsapp')
 
-    row('whatsapp', insights.sum(:conversations_started).to_i, ours['whatsapp'].to_i)
+    row('whatsapp', insights.sum(:conversations_started).to_i - messaging_started, ours['whatsapp'].to_i)
+  end
+
+  def messaging_row
+    row('messaging', messaging_started, ours['messenger'].to_i + ours['instagram'].to_i)
+  end
+
+  def messaging_started
+    @messaging_started ||= begin
+      destinations = Crm::MetaAds::Panel::AdDestinations.new(@connection.account_id, insights)
+      started = insights.where(conversations_started: 1..).group(:ad_id).sum(:conversations_started)
+      started.sum { |ad_id, value| destinations.messenger_or_direct?(ad_id) ? value.to_i : 0 }
+    end
   end
 
   def site_row

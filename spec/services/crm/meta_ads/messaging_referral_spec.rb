@@ -1,0 +1,69 @@
+require 'rails_helper'
+
+# Anúncio de clique para o Messenger e o Direct (#2521): o referral vira toque de campanha da conversa, igual ao do
+# WhatsApp, e a ligação conversa → anúncio (Links::Linker) com origem `messenger` ou `instagram`.
+RSpec.describe Crm::MetaAds::MessagingReferral do
+  let(:account) { create(:account) }
+  let(:conversation) { create(:conversation, account: account) }
+  let(:messenger) { Crm::MetaAds::MessagingReferral::MESSENGER_SOURCE }
+  let(:ad_referral) do
+    { 'source' => 'ADS', 'type' => 'OPEN_THREAD', 'ad_id' => '120200000000000001', 'ref' => 'promo',
+      'ads_context_data' => { 'ad_title' => 'Seguro viagem', 'photo_url' => 'https://scontent.xx.fbcdn.net/foto.jpg' } }
+  end
+
+  def touches
+    conversation.reload.additional_attributes['campaign_touches']
+  end
+
+  it 'grava o anúncio com o id, o título e o id do evento; link e loja não são anúncio' do
+    expect(described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')).to be(true)
+
+    expect(touches.sole).to include('source' => 'meta_ctm', 'source_id' => '120200000000000001', 'source_type' => 'ad',
+                                    'headline' => 'Seguro viagem', 'media_type' => 'image', 'referral_id' => 'mid.1')
+    expect(described_class.attribute!(conversation, { 'source' => 'SHORTLINK', 'ref' => 'x' }, source: messenger, event_id: 'mid.2'))
+      .to be(false)
+    expect(described_class.attribute!(conversation, ad_referral.except('ad_id'), source: messenger, event_id: 'mid.3')).to be(false)
+    expect(described_class.attribute!(conversation, nil, source: messenger, event_id: 'mid.4')).to be(false)
+  end
+
+  it 'dois cliques no mesmo anúncio são dois toques; a reentrega do mesmo evento não duplica' do
+    described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
+    described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
+    described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.2')
+
+    expect(touches.pluck('referral_id')).to eq(%w[mid.1 mid.2])
+  end
+
+  it 'a foto do anúncio vai para o job da foto, como no clique para o WhatsApp' do
+    allow(Crm::MetaAds::ReferralImageJob).to receive(:enqueue_for)
+
+    described_class.attribute!(conversation, ad_referral, source: Crm::MetaAds::MessagingReferral::INSTAGRAM_SOURCE, event_id: 'mid.1')
+
+    expect(Crm::MetaAds::ReferralImageJob).to have_received(:enqueue_for)
+      .with(conversation, hash_including('source' => 'meta_ctd'), hash_including(image_url: 'https://scontent.xx.fbcdn.net/foto.jpg'))
+  end
+
+  it 'evento só de referral vai para a conversa mais recente do contato na caixa; contato desconhecido não grava' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact, created_at: 2.days.ago)
+    latest = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
+
+    expect(described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')).to be(true)
+    expect(latest.reload.additional_attributes['campaign_touches'].sole).to include('referral_id' => 'psid-1:1700')
+    expect(described_class.attribute_to_latest!(inbox, 'psid-2', ad_referral, source: messenger, event_id: 'psid-2:1700')).to be(false)
+  end
+
+  it 'o Linker liga a conversa ao anúncio com a origem do canal' do
+    described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
+    other = create(:conversation, account: account)
+    described_class.attribute!(other, ad_referral, source: Crm::MetaAds::MessagingReferral::INSTAGRAM_SOURCE, event_id: 'mid.9')
+
+    [conversation, other].each { |item| Crm::MetaAds::Links::Linker.new(item.reload).perform }
+
+    expect(Crm::MetaAdLink.where(account: account).pluck(:conversation_id, :origin, :ad_id, :certainty, :touch_key)).to contain_exactly(
+      [conversation.id, 'messenger', '120200000000000001', 'ad', 'mid.1'],
+      [other.id, 'instagram', '120200000000000001', 'ad', 'mid.9']
+    )
+  end
+end

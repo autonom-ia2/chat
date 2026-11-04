@@ -29,8 +29,10 @@ class Channel::FacebookPage < ApplicationRecord
 
   self.table_name = 'channel_facebook_pages'
 
+  # `messaging_referrals` (#2521): o anúncio de clique para o Messenger. A Meta exige esse campo junto com `messages`.
+  # Caixa criada antes dele assina pela tarefa autonomia:meta_ads:assinar_referrals.
   MESSENGER_FIELDS = %w[
-    messages message_deliveries message_echoes message_reads standby messaging_handovers messaging_postbacks
+    messages message_deliveries message_echoes message_reads standby messaging_handovers messaging_postbacks messaging_referrals
   ].freeze
 
   validates :page_id, uniqueness: { scope: :account_id }

@@ -1,8 +1,8 @@
 # Grava nos toques de campanha da conversa os nomes de anúncio, conjunto e campanha da Meta (#1034).
 #
 # Os IDs saem dos parâmetros automáticos do anúncio — `utm_content` (anúncio), `utm_term` (conjunto),
-# `utm_campaign`/`utm_id` (campanha) — e, no clique que abre o WhatsApp (`meta_ctwa`), do `source_id`,
-# que é o ID do anúncio. Só entram valores que são IDs (Crm::MetaAds::NameResolver.meta_id?).
+# `utm_campaign`/`utm_id` (campanha) — e, no clique que abre o WhatsApp (`meta_ctwa`), o Messenger ou o Direct
+# (`meta_ctm`/`meta_ctd`, #2521), do `source_id`, que é o ID do anúncio. Só entram valores que são IDs (Crm::MetaAds::NameResolver.meta_id?).
 #
 # A escrita é merge sob lock da linha: acrescenta `ad_name`, `adset_name` e `campaign_name` sem apagar
 # nenhuma outra chave do toque. O `headline` de toque de site só muda quando ainda é
@@ -18,7 +18,7 @@ class Crm::MetaAds::TouchEnricher
     return {} unless touch.is_a?(Hash)
 
     {
-      'ad' => [touch['utm_content'], (touch['source_id'] if touch['source'] == Ctwa::CampaignBuilder::CTWA_SOURCE)],
+      'ad' => [touch['utm_content'], (touch['source_id'] if Ctwa::CampaignBuilder::AD_CLICK_SOURCES.include?(touch['source']))],
       'adset' => [touch['utm_term']],
       'campaign' => [touch['utm_campaign'], touch['utm_id']]
     }.transform_values { |ids| ids.select { |id| Crm::MetaAds::NameResolver.meta_id?(id) }.map(&:to_s) }

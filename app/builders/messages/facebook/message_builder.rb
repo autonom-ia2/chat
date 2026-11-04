@@ -25,6 +25,7 @@ class Messages::Facebook::MessageBuilder < Messages::Messenger::MessageBuilder
       build_contact_inbox
       build_message
     end
+    attribute_ad_referral
   rescue Koala::Facebook::AuthenticationError => e
     Rails.logger.warn("Facebook authentication error for inbox: #{@inbox.id} with error: #{e.message}")
     Rails.logger.error e
@@ -35,6 +36,14 @@ class Messages::Facebook::MessageBuilder < Messages::Messenger::MessageBuilder
   end
 
   private
+
+  # Anúncio de clique para o Messenger (#2521): fora da transação, como o clique para o WhatsApp.
+  def attribute_ad_referral
+    return if @outgoing_echo || @message.nil?
+
+    source = Crm::MetaAds::MessagingReferral::MESSENGER_SOURCE
+    Crm::MetaAds::MessagingReferral.attribute!(@conversation, @response.referral, source: source, event_id: @response.identifier)
+  end
 
   def build_contact_inbox
     @contact_inbox = ::ContactInboxWithContactBuilder.new(
