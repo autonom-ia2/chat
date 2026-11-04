@@ -34,7 +34,7 @@ O juiz antigo errou 8 das 26 cenas:
 3. **Revisor.**
    - Ele apontou que `nao_se_aplica` poderia esconder uma invenção. O prompt agora diz: quando a resposta afirma algo que nem os trechos nem as regras do dono sustentam, o item é `errado`. A cena E7b cobre esse caso.
    - O juiz não recebia os limites duros. Cena O11.
-   - O trecho chegava ao juiz cortado em 240 caracteres. Agora o juiz recebe até 700 (cena O12).
+   - O trecho chegava ao juiz cortado em 240 caracteres. Agora o juiz recebe o trecho inteiro, até o maior pedaço que a base grava (cena O12).
    - Fato que está nas regras do dono: cena O13.
    - Comando escondido num trecho: cena O14.
 4. **E7 de novo, 1 de 3.** A resposta da cena dizia "o material fala dos cursos de inglês", que não está nos trechos daquele item. Pela regra nova, o juiz tinha razão. Tirei a frase da cena.
@@ -43,4 +43,4 @@ O juiz antigo errou 8 das 26 cenas:
 ## Limites
 
 - As cenas são curtas e inventadas. O teste real é o autoteste nas contas piloto, depois do deploy.
-- O item `nao_se_aplica` ainda não aparece na tela, só no número. Fica para um próximo PR.
+- O item `nao_se_aplica` ainda não aparece na tela, só no número: #2540.

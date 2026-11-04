@@ -128,7 +128,7 @@ class Autonomia::Agents::Material::JuizDoAutoteste
     [Autonomia::Agents::PromptParts::Mensagem.montar('user', texto)]
   end
 
-  # O autoteste guarda cada trecho como { fonte, paginas, texto, inteiro }: o juiz lê o `inteiro` (até
+  # O autoteste guarda cada trecho como { fonte, paginas, texto, inteiro }: o juiz lê o `inteiro` (o trecho inteiro,
   # Autoteste::TRECHO_DO_JUIZ_MAX_CHARS), para um fato depois do corte da tela não virar invenção. Rodada antiga, sem
   # ele: o texto da tela.
   def textos(trechos)

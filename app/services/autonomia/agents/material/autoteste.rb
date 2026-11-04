@@ -31,8 +31,9 @@ class Autonomia::Agents::Material::Autoteste
   # "De onde {agente} tirou" (t4d): quantos trechos usados a rodada guarda por pergunta e até onde vai o texto de cada.
   TRECHOS_POR_RESPOSTA = 3
   TRECHO_MAX_CHARS = 240
-  # O que o juiz lê de cada trecho (#2444): o fato que passa do corte da tela não pode virar "inventou".
-  TRECHO_DO_JUIZ_MAX_CHARS = 700
+  # O que o juiz lê de cada trecho (#2444): o fato que passa do corte da tela não pode virar "inventou". O maior pedaço
+  # que a base grava (o mesmo teto da ProvaDoAjuste): o trecho nunca chega cortado.
+  TRECHO_DO_JUIZ_MAX_CHARS = Autonomia::Agents::ProvaDoAjuste::TRECHO_MAX_CHARS
   FALHAS_DA_IA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, *Crm::Ai::ResponsesClient::NETWORK_ERRORS,
                   OpenSSL::SSL::SSLError, Errno::EHOSTUNREACH, Errno::ENETUNREACH].freeze
 
