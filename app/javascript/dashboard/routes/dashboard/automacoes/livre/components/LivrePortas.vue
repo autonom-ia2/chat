@@ -67,33 +67,44 @@ const faltando = item =>
             data-receita
             :data-chave="item.chave"
             :disabled="faltando(item).length > 0"
-            class="flex items-start w-full h-full gap-4 p-5 transition border text-start rounded-2xl border-n-weak bg-n-solid-1 min-h-11"
+            class="flex items-start w-full h-full gap-4 p-5 transition border text-start rounded-2xl border-n-weak bg-n-solid-1 min-h-11 disabled:opacity-100"
             :class="
               faltando(item).length
-                ? 'cursor-not-allowed opacity-80'
+                ? 'cursor-not-allowed'
                 : 'hover:border-n-blue-6'
             "
             @click="emit('receita', item.chave)"
           >
+            <!-- Só o que a pessoa não pode usar fica pálido. O aviso do porquê
+                 fica com o contraste cheio: o botão global apagaria tudo. -->
             <span
               class="grid place-items-center size-11 shrink-0 rounded-xl"
-              :class="estilo(item.chave).tom"
+              :class="[
+                estilo(item.chave).tom,
+                { 'opacity-50': faltando(item).length },
+              ]"
               aria-hidden="true"
             >
               <span :class="estilo(item.chave).icone" class="size-5" />
             </span>
             <span class="flex flex-col gap-1">
-              <span class="text-base font-semibold text-n-slate-12">
+              <span
+                class="text-base font-semibold text-n-slate-12"
+                :class="{ 'opacity-60': faltando(item).length }"
+              >
                 {{ $t(item.frase) }}
               </span>
-              <span class="text-[0.9375rem] text-n-slate-11">
+              <span
+                class="text-[0.9375rem] text-n-slate-11"
+                :class="{ 'opacity-60': faltando(item).length }"
+              >
                 {{ $t(`AUTOMACAO_LIVRE.RECEITAS.${item.chave}.TEXTO`) }}
               </span>
               <span
                 v-for="flag in faltando(item)"
                 :key="flag"
                 data-falta-flag
-                class="mt-1 text-sm text-n-amber-11"
+                class="mt-1 text-sm font-medium text-n-amber-11"
               >
                 {{
                   $t(`AUTOMACAO_LIVRE.RECEITAS.REQUER.${flag.toUpperCase()}`)
