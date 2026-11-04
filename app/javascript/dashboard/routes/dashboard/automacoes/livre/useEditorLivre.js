@@ -18,7 +18,16 @@ export function useEditorLivre() {
 
   const automacao = ref(null);
   const receita = ref(receitaVazia());
-  const nome = ref('');
+  // #2530 — a nova começa sem nome escrito (null) e mostra o nome padrão no
+  // idioma da tela. Gravar o texto no carregar o prendia no inglês quando a
+  // página abria pelo endereço, antes de o pacote do idioma chegar.
+  const escrito = ref(null);
+  const nome = computed({
+    get: () => escrito.value ?? t('AUTOMACAO_LIVRE.EDITOR.NOVA'),
+    set: texto => {
+      escrito.value = texto;
+    },
+  });
   const estado = ref('carregando');
   const problemas = ref([]);
   const ocupado = ref(false);
@@ -55,7 +64,7 @@ export function useEditorLivre() {
     if (!id) {
       automacao.value = null;
       receita.value = receitaVazia();
-      nome.value = t('AUTOMACAO_LIVRE.EDITOR.NOVA');
+      escrito.value = null;
       estado.value = 'pronto';
       return;
     }
