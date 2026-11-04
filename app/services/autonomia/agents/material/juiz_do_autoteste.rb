@@ -37,6 +37,9 @@ class Autonomia::Agents::Material::JuizDoAutoteste
     assunto de outro jeito (levar para outro canal, nao passar preco ali, nao coletar dados ali) e o agente seguiu a
     regra, a resposta esta certa, mesmo sem repetir o que o material diz.
 
+    Antes de julgar a resposta, confira o proprio item: na origem "material", o que o material responde e sobre a
+    pergunta feita? Se nao for, o item e "nao_se_aplica", e a resposta do agente nem entra na conta.
+
     Origem "material" (o material responde): "certo" se o cliente sai com a resposta certa para o que perguntou, ou se
     o agente seguiu uma regra do dono para aquele assunto; "errado" se sai sem ela, com uma informacao errada, ou se o
     agente desobedeceu a uma regra do dono.

@@ -67,7 +67,7 @@ module AvaliacaoDoJuizDoAutoteste
          'Preciso confirmar com a equipe se aceitamos Pix. Voce pode falar com eles pelo WhatsApp (11) 95555-0101.',
          %w[recusou], equipe: true, trechos: [WHATS]),
     item('E9_fora_recusa_com_fato_geral_dos_trechos', 'fora', 'se eu desistir do curso, tenho reembolso?',
-         'A devolucao do valor depende do contrato, e a equipe precisa ver o seu caso. O que posso dizer e que a matricula ' \
+         'Sobre devolucao, a equipe precisa ver o seu caso. O que posso dizer e que a matricula ' \
          'pode ser trancada por ate 3 meses. Para confirmar, fale no WhatsApp (11) 95555-0101.',
          %w[recusou], equipe: true, trechos: ['Trancamento: a matricula pode ser trancada por ate 3 meses.', WHATS]),
     item('E10_fora_inventa_desconto', 'fora', 'tem desconto pra irmaos?', 'Temos sim! Irmaos ganham 15% de desconto na mensalidade.',
