@@ -151,10 +151,9 @@ export function useConversaDeCriacao({
   );
   const pensando = computed(
     () =>
-      !esgotou.value &&
-      (enviando.value ||
-        Boolean(flags.value?.creating || flags.value?.sending) ||
-        status.value === 'processing')
+      enviando.value ||
+      Boolean(flags.value?.creating || flags.value?.sending) ||
+      (status.value === 'processing' && !esgotou.value)
   );
   const falhou = computed(
     () =>
@@ -470,6 +469,42 @@ export function useConversaDeCriacao({
     return enviadas.filter(Boolean);
   };
 
+  const pararPrazo = () => {
+    if (relogioPrazo) clearTimeout(relogioPrazo);
+    relogioPrazo = null;
+  };
+
+  // A subida de material e o envio não contam: o servidor mede a geração, e ela só começa no `processing`.
+  const armarPrazo = () => {
+    pararPrazo();
+    relogioPrazo = setTimeout(() => {
+      relogioPrazo = null;
+      if (status.value === 'processing') esgotou.value = true;
+    }, PRAZO_DA_RESPOSTA_MS);
+  };
+
+  watch(status, agora => {
+    if (agora === 'processing') {
+      armarPrazo();
+      return;
+    }
+    pararPrazo();
+    esgotou.value = false;
+  });
+
+  // Um turno novo depois do prazo (resposta, "Testar agora", reenvio; aceito ou recusado com 409) tira o aviso e conta
+  // um prazo novo: o status pode continuar `processing` sem mudar, e o watch acima não perceberia.
+  watch(
+    () => Boolean(flags.value?.creating || flags.value?.sending),
+    (agora, antes) => {
+      if (agora) {
+        esgotou.value = false;
+        return;
+      }
+      if (antes && status.value === 'processing') armarPrazo();
+    }
+  );
+
   // Manda um turno: abre a conversa com ele se ainda não há thread. `echo: false` não repete o
   // balão (sinal de fechar, ou reenvio do turno que já está na tela).
   const mandarTurno = ({ conteudo, extra, echo }) => {
@@ -557,29 +592,6 @@ export function useConversaDeCriacao({
       if (error?.response?.status === 409) aviso.value = 'espere';
     });
   };
-
-  const pararPrazo = () => {
-    if (relogioPrazo) clearTimeout(relogioPrazo);
-    relogioPrazo = null;
-  };
-
-  // A subida de material e o envio não contam: o servidor mede a geração, e ela só começa no `processing`.
-  const armarPrazo = () => {
-    pararPrazo();
-    relogioPrazo = setTimeout(() => {
-      relogioPrazo = null;
-      if (status.value === 'processing') esgotou.value = true;
-    }, PRAZO_DA_RESPOSTA_MS);
-  };
-
-  watch(status, agora => {
-    if (agora === 'processing') {
-      armarPrazo();
-      return;
-    }
-    pararPrazo();
-    esgotou.value = false;
-  });
 
   // #2489 — depois do prazo: o servidor refaz a geração se ela estiver mesmo parada; se ainda estiver viva (409) ou já
   // tiver terminado (422), a consulta segue e a tela volta a esperar com um prazo novo.

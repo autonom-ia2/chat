@@ -832,6 +832,35 @@ describe('useConversaDeCriacao', () => {
       expect(conversa.pensando.value).toBe(true);
     });
 
+    it('a new turn after the window holds the field and counts a new window (status stays processing)', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: true,
+      };
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(true);
+
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: false,
+      };
+      await nextTick();
+      expect(conversa.pensando.value).toBe(true);
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      vi.advanceTimersByTime(1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+    });
+
     it('drops the warning when the answer arrives after the window', async () => {
       const { conversa } = montar();
       await processando();
