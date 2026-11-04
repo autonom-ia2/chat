@@ -8,10 +8,9 @@
 # ganho. Venda: card ganho. É uma coorte — "das conversas que chegaram no período, o que virou" —, não o que
 # fechou no período.
 #
-# `outside_comment_ads` (#2521): anúncios que levam para fora de conversa (alcance, perfil, publicação…). A conversa
-# do privado de um comentário deles (ligação de origem `comment`) não entra na coorte: o painel a mostra na linha do
-# anúncio em "Outros anúncios" (Panel::Report#other_ad_row), sem custo por conversa. A de um anúncio de WhatsApp ou
-# site entra normal.
+# A conversa do privado de um comentário de anúncio que leva para fora de conversa (#2521) não entra na coorte: as
+# ligações vêm por Panel::OutsideAds.counted_links. O painel a mostra na linha do anúncio em "Outros anúncios", sem
+# custo por conversa. A de um anúncio de WhatsApp ou site entra normal.
 #
 # O card leva o dono (`owner_id`, para o Crm::ValorDeVenda.ve_o_card?) e quando fechou (`closed_at`, a ordem das vendas
 # para quem não vê o valor, #2075).
@@ -37,10 +36,9 @@ class Crm::MetaAds::Panel::Cohort
     end
   end
 
-  def initialize(account_id, range, outside_comment_ads: [])
+  def initialize(account_id, range)
     @account_id = account_id
     @range = range
-    @outside_comment_ads = outside_comment_ads.to_set
   end
 
   # { conversation_id => ad_id ou nil }
@@ -51,8 +49,7 @@ class Crm::MetaAds::Panel::Cohort
   # { conversation_id => [ad_id ou nil, touched_at] }: o toque que decide o anúncio da conversa. O horário é o
   # desse toque, para o "por dia" do anúncio (F3b) somar exatamente as conversas que o painel conta para ele.
   def touches
-    @touches ||= links.order(:touched_at).pluck(:conversation_id, :ad_id, :touched_at, :origin)
-                      .reject { |_id, ad, _at, origin| outside_comment?(ad, origin) }
+    @touches ||= links.order(:touched_at).pluck(:conversation_id, :ad_id, :touched_at)
                       .each_with_object({}) { |(id, ad, at), all| all[id] = [ad, at] if all[id].nil? || all[id].first.nil? }
   end
 
@@ -73,11 +70,7 @@ class Crm::MetaAds::Panel::Cohort
   private
 
   def links
-    Crm::MetaAdLink.where(account_id: @account_id, touched_at: @range)
-  end
-
-  def outside_comment?(ad_id, origin)
-    origin == Crm::MetaAds::Links::CommentTouch::ORIGIN && @outside_comment_ads.include?(ad_id)
+    @links ||= Crm::MetaAds::Panel::OutsideAds.counted_links(@account_id, Crm::MetaAdLink.where(account_id: @account_id, touched_at: @range))
   end
 
   def load_cards

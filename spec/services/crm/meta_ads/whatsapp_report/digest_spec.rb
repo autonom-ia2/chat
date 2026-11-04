@@ -58,13 +58,14 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
       end
     end
 
-    # #2521: a conversa do privado de comentário de anúncio de alcance fica fora, como no painel.
-    it 'não conta a conversa do privado de comentário de anúncio que leva para fora de conversa' do
+    # #2521: a conversa do privado de comentário de anúncio de alcance fica fora, como no painel, também com o anúncio
+    # pausado (sem gasto ontem): a classificação é pelo conjunto, não pelo gasto do dia.
+    it 'não conta a conversa do privado de comentário de anúncio de fora, mesmo pausado' do
       travel_to(now) do
         Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
                                   optimization_goal: 'REACH', fetched_at: now)
         Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
-                                        date: Date.new(2026, 10, 6), currency: 'BRL', spend: 50, attribution_window: '7d_click', fetched_at: now)
+                                        date: Date.new(2026, 10, 2), currency: 'BRL', spend: 50, attribution_window: '7d_click', fetched_at: now)
         spend(promo, Date.new(2026, 10, 6), 100)
         from_ad(promo, at: Time.zone.parse('2026-10-06T10:00:00-03:00'))
         Crm::MetaAdLink.create!(account: account, conversation: create(:conversation, account: account), touch_key: 'meta_comment:1',
@@ -154,6 +155,21 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
         candidate = described_class.new(connection).candidate
 
         expect(candidate).to include(ad_id: capa, spend: 21.0, threshold: 17.46)
+      end
+    end
+
+    # #2521: a conversa do privado de comentário de anúncio de alcance não conta como conversa do anúncio, como no painel.
+    it 'anúncio de alcance com conversa só do privado de comentário ainda entra no alerta' do
+      travel_to(afternoon) do
+        Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                  optimization_goal: 'REACH', fetched_at: afternoon)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
+                                        date: Date.new(2026, 10, 7), currency: 'BRL', spend: 40, attribution_window: '7d_click',
+                                        fetched_at: afternoon)
+        Crm::MetaAdLink.create!(account: account, conversation: create(:conversation, account: account), touch_key: 'meta_comment:1',
+                                origin: 'comment', certainty: 'ad', ad_id: 'alcance', touched_at: 1.hour.ago)
+
+        expect(described_class.new(connection).candidate).to include(ad_id: 'alcance', spend: 40.0)
       end
     end
 

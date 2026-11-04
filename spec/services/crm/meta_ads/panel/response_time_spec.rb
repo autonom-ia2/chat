@@ -76,13 +76,20 @@ RSpec.describe Crm::MetaAds::Panel::ResponseTime do
     expect(response_time.payload).to include(answered: 0, unanswered: 0)
   end
 
-  it 'faz uma consulta só, qualquer que seja o número de conversas' do
-    5.times { |index| message(conversation_at(3.days.ago), :outgoing, 3.days.ago + (index * 100) + 1) }
-    queries = []
-    callback = ->(*, payload) { queries << payload[:sql] unless payload[:name] == 'SCHEMA' }
+  # #2521: mais uma consulta, a dos anúncios das conversas de comentário (Panel::OutsideAds.counted_links), que não
+  # cresce com as conversas.
+  it 'faz o mesmo número de consultas, qualquer que seja o número de conversas' do
+    count_queries = lambda do
+      queries = []
+      callback = ->(*, payload) { queries << payload[:sql] unless payload[:name] == 'SCHEMA' }
+      ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') { response_time.payload }
+      queries.size
+    end
+    message(conversation_at(3.days.ago), :outgoing, 3.days.ago + 1)
+    one = count_queries.call
+    4.times { |index| message(conversation_at(3.days.ago), :outgoing, 3.days.ago + (index * 100) + 1) }
 
-    ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') { response_time.payload }
-
-    expect(queries.size).to eq(1)
+    expect(count_queries.call).to eq(one)
+    expect(one).to be <= 2
   end
 end

@@ -269,6 +269,26 @@ RSpec.describe Crm::MetaAds::Panel::Report do
     end
   end
 
+  # Revisão da Meta aprovar: anúncio de alcance pausado antes do período, privado respondido dentro dele. Sem gasto no
+  # período ele não aparece em "Outros", e a conversa continua fora da coorte (a classificação é pelo conjunto).
+  it 'anúncio de alcance pausado, sem gasto no período: a conversa do privado fica fora da coorte' do
+    travel_to(now) do
+      adset('set-alcance', 'UNDEFINED', 'REACH')
+      spend('alcance', Date.new(2026, 9, 20), 300, adset_id: 'set-alcance')
+      spend(capa, Date.new(2026, 10, 6), 100)
+      from_ad(capa, at: 1.day.ago)
+      Crm::MetaAdLink.create!(account: account, conversation: create(:conversation, account: account), touch_key: 'meta_comment:1',
+                              origin: 'comment', certainty: 'ad', ad_id: 'alcance', touched_at: 2.days.ago)
+
+      report = described_class.new(connection, period: '7d').payload
+
+      expect(report[:ads].pluck(:ad_id)).to eq([capa])
+      expect(report[:other_ads]).to be_empty
+      expect(report[:totals]).to include(spend: 100.0, conversations: 1, cost_per_conversation: 100.0)
+      expect(report[:confidence]).to include(conversations: 1)
+    end
+  end
+
   it 'logo depois de conectar, o anúncio sem nome da Meta usa o título do clique' do
     travel_to(now) do
       conversation = from_ad(capa, at: 1.day.ago)

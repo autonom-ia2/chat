@@ -12,19 +12,17 @@
 #
 # `upto:` (#2521) fecha a janela no fim do período do painel, para "mês passado" não somar ligações de depois dele.
 #
-# `outside_comment_ads:` (#2521) tira da confiança as conversas do privado de um comentário de anúncio que leva para
-# fora de conversa: elas não entram na coorte nem no custo por conversa (Panel::OutsideAds), e a caixa conta as mesmas
-# conversas que o total do painel.
+# A confiança deixa de fora as conversas do privado de um comentário de anúncio que leva para fora de conversa
+# (#2521, Panel::OutsideAds.counted_links): a caixa conta as mesmas conversas que o total do painel.
 class Crm::MetaAds::Links::Stats
   CONFIDENCE_WINDOW = 30.days
   RANK = Crm::MetaAdLink::CERTAINTIES.each_with_index.to_h.freeze
   RANK_SQL = Arel.sql("MIN(CASE certainty #{RANK.map { |name, rank| "WHEN '#{name}' THEN #{rank}" }.join(' ')} END)")
 
-  def initialize(connection, since: nil, upto: nil, outside_comment_ads: [])
+  def initialize(connection, since: nil, upto: nil)
     @connection = connection
     @since = since
     @upto = upto
-    @outside_comment_ads = outside_comment_ads
   end
 
   def payload
@@ -51,10 +49,8 @@ class Crm::MetaAds::Links::Stats
     { window_days: window_days, conversations: best.size }.merge(counts.symbolize_keys)
   end
 
-  # A conversa de comentário só sai quando é de um anúncio de fora; ela sempre tem o anúncio.
   def counted_links
-    period = links.where(touched_at: (@since || CONFIDENCE_WINDOW.ago)..@upto)
-    period.where.not(origin: Crm::MetaAds::Links::CommentTouch::ORIGIN).or(period.where.not(ad_id: @outside_comment_ads))
+    Crm::MetaAds::Panel::OutsideAds.counted_links(@connection.account_id, links.where(touched_at: (@since || CONFIDENCE_WINDOW.ago)..@upto))
   end
 
   def window_days

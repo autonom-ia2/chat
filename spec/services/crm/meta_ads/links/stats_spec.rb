@@ -58,6 +58,10 @@ RSpec.describe Crm::MetaAds::Links::Stats do
     inside, after, outside, whatsapp = create_list(:conversation, 4, account: account)
     travel_to(now) do
       since = 10.days.ago
+      Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                optimization_goal: 'REACH', fetched_at: now)
+      Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
+                                      date: 20.days.ago.to_date, spend: 10, attribution_window: '7d_click', fetched_at: now)
       link(inside, 'ad', 5.days.ago)
       link(after, 'ad', 1.day.ago)
       Crm::MetaAdLink.create!(account: account, conversation: outside, touch_key: 'meta_comment:1', origin: 'comment', certainty: 'ad',
@@ -65,7 +69,7 @@ RSpec.describe Crm::MetaAds::Links::Stats do
       Crm::MetaAdLink.create!(account: account, conversation: whatsapp, touch_key: 'meta_comment:2', origin: 'comment', certainty: 'ad',
                               ad_id: 'capa', touched_at: 5.days.ago)
 
-      stats = described_class.new(connection, since: since, upto: 3.days.ago, outside_comment_ads: ['alcance'])
+      stats = described_class.new(connection, since: since, upto: 3.days.ago)
 
       expect(stats.payload[:confidence]).to include(conversations: 2, ad: 2)
     end
