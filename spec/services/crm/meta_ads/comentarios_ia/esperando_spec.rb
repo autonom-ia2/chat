@@ -24,12 +24,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Esperando do
     expect(contar(%w[120 121 122])).to eq('120' => 3, '121' => 1, '122' => 0)
   end
 
-  it 'sai da conta quando a pessoa age no comentário' do
+  # A linha da pessoa é a que InstagramComments e SeusPosts::ComentariosInstagram gravam (spec deles): reply, hide,
+  # show, delete ou private_reply, com actor user, no comentário original. Só a da mesma rede conta.
+  it 'sai da conta quando a pessoa age no comentário, na mesma rede' do
     acao('c-1', 'no_care')
     acao('c-2', 'to_you')
     acao('c-2', 'reply', actor: 'user', ad_id: nil)
+    acao('c-3', 'kept_for_owner')
+    Crm::MetaAdsCommentAction.create!(account: account, network: 'facebook', comment_id: 'c-3', action: 'reply', actor: 'user',
+                                      user: create(:user, account: account), at: 1.hour.ago)
 
-    expect(contar).to eq('120' => 1, '121' => 0)
+    expect(contar).to eq('120' => 2, '121' => 0)
   end
 
   it 'o que chegou sem cuidado e a IA pegou depois (Ler e mandar) só conta se ela o deixou com o dono' do

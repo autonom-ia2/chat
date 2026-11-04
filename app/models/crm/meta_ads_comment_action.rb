@@ -34,6 +34,9 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
   ACTIONS = %w[private_reply reply page_reply hide show delete ai_seen to_you private_reply_failed private_reply_unsure
                kept_for_owner ai_unread private_reply_already no_care].freeze
   ONCE = %w[private_reply ai_seen].freeze
+  # O que a pessoa faz no comentário pela plataforma, fora o privado (#2519): a IA não age por cima, e o Painel não o
+  # traz como "não vi a tempo". O privado da pessoa tem caminho próprio (a IA diz "já recebeu").
+  BY_USER = %w[reply hide show delete].freeze
   ACTORS = %w[user ai].freeze
   RESERVED_TTL = 2.minutes
   # Bem acima do tempo máximo da chamada à Meta (Instagram::CommentsClient::TIMEOUT_SECONDS).
@@ -50,6 +53,12 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
 
   # Grava agora: account:, network:, comment_id:, action:, actor: e, quando houver, ad_id:, user:, conversation:. Numa
   # ação ONCE já feita, levanta ActiveRecord::RecordNotUnique: quem chama decide (em geral, não age).
+  # Os comentários (ids) em que a pessoa já respondeu, escondeu ou apagou pela plataforma (BY_USER): o Painel não os traz
+  # como "não vi a tempo" (#2519).
+  def self.tratados_pela_pessoa(account_id, ids)
+    where(account_id: account_id, actor: 'user', action: BY_USER, comment_id: ids.map(&:to_s)).distinct.pluck(:comment_id).to_set
+  end
+
   def self.record!(**attributes)
     create!(attributes.merge(at: Time.current))
   end

@@ -441,19 +441,34 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
 
     # #2519: nada some em silêncio. O comentário de cliente sem cuidado ligado fica registrado (no_care), para o
     # Esperando contar o que está com o dono.
-    it 'post sem cuidado, ou com o cuidado pausado: não chega à IA, mas fica registrado (no_care)' do
+    it 'anúncio sem cuidado, ou com o cuidado pausado: não chega à IA, mas fica registrado (no_care)' do
+      care.update!(status: 'paused')
+      cuidar(comentario(ad_id: '120'))
+      expect(registro).not_to have_received(:reservar!)
+      expect(registro).to have_received(:sem_cuidado!).with(comentario(ad_id: '120'))
+    end
+
+    it 'post sem cuidado: não chega à IA e não registra (sem o anúncio, nenhuma leitura usaria a linha)' do
       care.update!(status: 'paused')
       cuidar
       expect(registro).not_to have_received(:reservar!)
-      expect(registro).to have_received(:sem_cuidado!).with(comentario)
+      expect(registro).not_to have_received(:sem_cuidado!)
+    end
+
+    # #2519: passados 10 min o comentário aparece ao dono; o job pode ainda tentar de novo. A IA não age por cima dele.
+    it 'a pessoa já agiu no comentário (respondeu, escondeu, apagou, mandou o privado): a IA não age' do
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: 'c-1', action: 'reply', actor: 'user',
+                                        user: create(:user, account: account))
+      cuidar
+      expect(registro).not_to have_received(:reservar!)
     end
 
     it 'sem cuidado, não registra o que não é do motor: flag desligada, mais de 7 dias, o da própria conta' do
       care.destroy!
-      cuidar(comentario(created_time: 8.days.ago))
-      cuidar(comentario(from_id: 'ig-1'))
+      cuidar(comentario(ad_id: '120', created_time: 8.days.ago))
+      cuidar(comentario(ad_id: '120', from_id: 'ig-1'))
       account.disable_features!(described_class::FLAG)
-      cuidar
+      cuidar(comentario(ad_id: '120'))
 
       expect(registro).not_to have_received(:sem_cuidado!)
     end

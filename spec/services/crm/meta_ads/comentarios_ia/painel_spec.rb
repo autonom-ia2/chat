@@ -194,6 +194,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
       expect(painel.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 not_caught], %w[3 skipped]])
     end
 
+    it 'o que a pessoa já respondeu, escondeu ou apagou pela plataforma não é "não vi a tempo"' do
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', momento: 1.hour.ago), linha('2', momento: 1.hour.ago)],
+                                                 escondidas: [] })
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: '1', action: 'reply', actor: 'user',
+                                        user: admin)
+
+      expect(painel.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[2 not_caught]])
+    end
+
     # #2454: "Os N que já estão aqui" do Ligar conta também as respostas de cliente, só com a flag meta_ads_comentarios_ia.
     it 'as respostas de cliente entram no "Ler e mandar" só com a flag meta_ads_comentarios_ia' do
       respostas = [linha('1a', dias: 3).merge(parent_id: '1'), linha('2a', dias: 1).merge(parent_id: '2')]

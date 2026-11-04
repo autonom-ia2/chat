@@ -130,13 +130,22 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     return false if inbox.nil? || !do_motor? || care.nil? || rede.nil?
     return false unless inbox.account.feature_enabled?(FLAG)
 
-    na_janela?
+    na_janela? && !pessoa_agiu?
   end
 
-  # #2519: o comentário da conta, de cliente, sem cuidado ligado (nenhum, ou o do anúncio pausado) fica registrado
-  # (`no_care`), para o Esperando contar o que está com o dono. Antes, sumia sem rastro.
+  # #2519: passados 10 min o comentário aparece ao dono no "Esperando você", mas o job pode ainda tentar de novo (Meta ou
+  # IA fora do ar). Se a pessoa já respondeu, escondeu ou apagou, a IA não age por cima dela. O privado que a pessoa
+  # mandou segue o caminho de antes (a IA vê a reserva dela e diz "já recebeu").
+  def pessoa_agiu?
+    Crm::MetaAdsCommentAction.exists?(account_id: @comentario.account_id, network: @comentario.network,
+                                      comment_id: @comentario.comment_id.to_s, actor: 'user', action: Crm::MetaAdsCommentAction::BY_USER)
+  end
+
+  # #2519: o comentário de cliente num anúncio (com o `ad_id`, que só o Instagram manda) sem cuidado ligado (nenhum, ou o
+  # do anúncio pausado) fica registrado (`no_care`), para o Esperando contar o que está com o dono. Antes, sumia sem
+  # rastro. Sem o anúncio, nenhuma leitura usaria a linha.
   def sem_cuidado?
-    return false if inbox.nil? || !do_motor? || care.present?
+    return false if @comentario.ad_id.blank? || inbox.nil? || !do_motor? || care.present?
 
     inbox.account.feature_enabled?(FLAG) && na_janela?
   end

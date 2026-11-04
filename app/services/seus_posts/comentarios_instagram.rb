@@ -41,6 +41,7 @@ class SeusPosts::ComentariosInstagram
     raise Error, failure(result) unless result.ok
 
     Crm::MetaAdsCommentAction.record_reply(account: @canal.account, ad_id: nil, reply_id: result.data['id'], user: user)
+    record_action('reply', comment_id, user)
     @rows.row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
                 'from' => { 'id' => @canal.instagram_id, 'username' => @canal.provider_name } }, actions: {}, own: true)
   end

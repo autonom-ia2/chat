@@ -197,6 +197,7 @@ class Crm::MetaAds::ComentariosIa::Painel
 
   def lista(lido)
     acoes = acoes_da_ia((lido[:linhas] + lido[:escondidas]).pluck(:id))
+    @tratados = Crm::MetaAdsCommentAction.tratados_pela_pessoa(@account.id, lido[:linhas].pluck(:id))
     to_see = lido[:linhas].filter_map { |linha| item(linha, acoes[linha[:id].to_s]) }
     esperam = Crm::MetaAds::ComentariosIa::Fonte.que_esperam(@account, lido)
     contagens(esperam).merge(status: 'ready', to_see: to_see, hidden: escondidas_pela_ia(lido[:escondidas], acoes),
@@ -230,7 +231,7 @@ class Crm::MetaAds::ComentariosIa::Painel
     return 'waiting' if antes_de_ligar?(linha)
     return 'paused' if cuidado.status == 'paused'
 
-    'not_caught' if linha[:momento] <= ESPERA_DA_IA.ago
+    'not_caught' if linha[:momento] <= ESPERA_DA_IA.ago && @tratados.exclude?(linha[:id].to_s)
   end
 
   # Sem cuidado, tudo é de antes de ligar.
