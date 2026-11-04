@@ -136,6 +136,15 @@ RSpec.describe 'Comentário do Instagram na conversa (#2215)', type: :request do
       expect(instagram_call).not_to have_been_made
     end
 
+    it 'linha de privado mandado por uma pessoa não serve de prova: 404' do
+      Crm::MetaAdsCommentAction.where(comment_id: comment_id).update_all(actor: 'user', user_id: admin.id) # rubocop:disable Rails/SkipsModelValidations
+
+      get base, headers: headers, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(instagram_call).not_to have_been_made
+    end
+
     it 'linha do comentário ligada a outra conversa não serve de prova: 404' do
       Crm::MetaAdsCommentAction.where(comment_id: comment_id).update_all(conversation_id: create(:conversation, account: account).id) # rubocop:disable Rails/SkipsModelValidations
 
