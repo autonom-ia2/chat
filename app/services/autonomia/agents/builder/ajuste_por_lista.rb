@@ -62,7 +62,8 @@ module Autonomia::Agents::Builder::AjustePorLista
     base = Autonomia::Agents::Builder::BUILDER_SCHEMA[:schema]
     pendencia = Autonomia::Agents::Builder::PendenciaDoAjuste
     resposta = Autonomia::Agents::Builder::RespostaAoDono
-    propriedades = base[:properties].merge(
+    # #2490: o canal pedido é da criação; o ajuste do piloto não muda.
+    propriedades = base[:properties].except(:canal_pedido).merge(
       next_question: { type: 'string',
                        description: 'A pergunta ao dono. No ajuste, quando so_pergunta=true, a resposta a pergunta dele, ' \
                                     'curta e em portugues simples.' },
@@ -77,7 +78,7 @@ module Autonomia::Agents::Builder::AjustePorLista
     )
     { name: 'autonomia_agent_build_ajuste',
       schema: base.merge(properties: propriedades,
-                         required: base[:required] + NOVOS_CAMPOS) }.freeze
+                         required: base[:required] - %w[canal_pedido] + NOVOS_CAMPOS) }.freeze
   end
 
   TABELA_DE_DESTINO = <<~TXT.freeze

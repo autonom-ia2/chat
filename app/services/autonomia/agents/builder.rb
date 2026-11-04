@@ -37,6 +37,18 @@ module Autonomia
         'X") ou quando o usuario so diz que nao tem material. Este campo nao substitui needs_more_info: ' \
         'preencha os dois.'.freeze
 
+      # #2490 — CANAL PEDIDO é leitura do MODELO, não lista de palavras (regra do Rodrigo, 20/09/2026). O botão "Começar a
+      # atender no {canal}" da Confira só sugere a caixa do canal que o dono pediu; "nenhum" é a saída "não se aplica" e
+      # deixa a escolha com a pessoa. Os valores batem com o `canal` de cada caixa (Autonomia::CanaisOcupadosFinder).
+      CANAIS_PEDIDOS = %w[whatsapp instagram facebook site email telegram].freeze
+      SEM_CANAL_PEDIDO = 'nenhum'.freeze
+      CANAL_PEDIDO_DESCRIPTION =
+        'Sua leitura da conversa INTEIRA: o canal em que o dono pediu que o agente atenda (ex.: "quero ele no ' \
+        'Instagram", "vai responder no WhatsApp da loja"). site = chat do site. Vale o pedido mais recente: se ele ' \
+        'trocou de canal, use o novo. nenhum quando nao se aplica: o dono nao falou de canal, citou mais de um canal, ' \
+        'deixou a escolha aberta ou so mencionou o canal sem pedir que o agente atenda nele (ex.: "meus clientes vem ' \
+        'do Instagram, mas quero ele no site" e site). Nao deduza o canal pelo ramo do negocio nem pelo material.'.freeze
+
       # Schema de saída estruturada (JSON Schema strict — todas as chaves required, sem props extras).
       # Mesma forma usada por Generator::GENERATE_SCHEMA; consumido por ResponsesClient#create.
       BUILDER_SCHEMA = {
@@ -66,11 +78,12 @@ module Autonomia
             next_question:     { type: 'string' },
             # Leitura do MODELO sobre a última fala do usuário (substitui a antiga lista de palavras
             # CLOSE_INTENT_PATTERNS). Consumido por close_intent?; false é a saída "não se aplica".
-            user_asked_to_close: { type: 'boolean', description: USER_ASKED_TO_CLOSE_DESCRIPTION }
+            user_asked_to_close: { type: 'boolean', description: USER_ASKED_TO_CLOSE_DESCRIPTION },
+            canal_pedido: { type: 'string', enum: CANAIS_PEDIDOS + [SEM_CANAL_PEDIDO], description: CANAL_PEDIDO_DESCRIPTION }
           },
           required: %w[name agent_type instruction scaffold human_card greeting fallback_message
                        handoff_rule starter_questions tone guardrails voice needs_more_info next_question
-                       user_asked_to_close],
+                       user_asked_to_close canal_pedido],
           additionalProperties: false
         }
       }.freeze
@@ -90,7 +103,7 @@ module Autonomia
       # aqui, DEPOIS da última fala do dono, e com tool_choice 'none' no lugar de tirar a busca da mesa.
       LEAN_TURN_NOTE = <<~NOTE.freeze
         COLETA ENXUTA (aviso da plataforma, só nesta chamada): decida e pergunte, sem redigir a configuração.
-        Preencha needs_more_info, next_question, user_asked_to_close, name (só se o usuário já disse) e agent_type.
+        Preencha needs_more_info, next_question, user_asked_to_close, canal_pedido, name (só se o usuário já disse) e agent_type.
         Devolva instruction, scaffold, human_card, greeting, fallback_message, handoff_rule e tone como string vazia,
         starter_questions e guardrails como lista vazia, e voice com qualquer valor (é descartado). Se for hora de
         fechar, devolva needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida.
@@ -977,6 +990,8 @@ module Autonomia
           # não repetir a mesma pergunta de sessões atrás para sempre. A pendência viva desta thread
           # continua em `next_question`.
           'pending_question' => '',
+          # #2490 — o canal que o dono pediu, para a Confira sugerir só a caixa dele (exposto no show da thread).
+          'canal_pedido' => canal_pedido_for(parsed['canal_pedido']),
           'draft_config' => {
             'name' => parsed['name'].to_s,
             'agent_type' => agent_type_for(parsed['agent_type']),
@@ -993,6 +1008,10 @@ module Autonomia
 
       def self.agent_type_for(value)
         Autonomia::Agents::Agent::AGENT_TYPES.include?(value) ? value : 'custom'
+      end
+
+      def self.canal_pedido_for(value)
+        CANAIS_PEDIDOS.include?(value) ? value : SEM_CANAL_PEDIDO
       end
 
       private

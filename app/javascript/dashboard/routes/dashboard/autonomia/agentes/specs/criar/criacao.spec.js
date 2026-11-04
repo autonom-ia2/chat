@@ -124,6 +124,34 @@ describe('canal sugerido no botão de começar', () => {
     expect(canalSugerido([], 5)).toBeNull();
   });
 
+  // #2490: o dono pediu um canal na conversa; só caixas dele entram, e a WAHA conta como WhatsApp.
+  it('suggests only the free inbox of the channel the owner asked for', () => {
+    const insta = { ...livre(1, 'Channel::Instagram'), canal: 'instagram' };
+    const zap = { ...livre(2), canal: 'whatsapp' };
+    const waha = { ...livre(3, 'Channel::Api', 'Celular'), canal: 'whatsapp' };
+    expect(canalSugerido([insta, zap], 5, 'instagram').inbox_id).toBe(1);
+    expect(canalSugerido([insta, waha], 5, 'whatsapp').inbox_id).toBe(3);
+    expect(canalSugerido([insta, zap, waha], 5, 'whatsapp')).toBeNull();
+  });
+
+  it('lets the person choose when the asked channel is busy or missing', () => {
+    const instaOcupado = {
+      ...ocupada(1, 'Channel::Instagram'),
+      canal: 'instagram',
+    };
+    const zap = { ...livre(2), canal: 'whatsapp' };
+    expect(canalSugerido([instaOcupado, zap], 5, 'instagram')).toBeNull();
+    expect(canalSugerido([zap], 5, 'site')).toBeNull();
+    expect(temCanalParaEscolher([instaOcupado, zap], 5)).toBe(true);
+  });
+
+  it('does not filter when nothing was asked ("nenhum" or an old thread)', () => {
+    const zap = { ...livre(2), canal: 'whatsapp' };
+    expect(canalSugerido([zap], 5, 'nenhum').inbox_id).toBe(2);
+    expect(canalSugerido([zap], 5, undefined).inbox_id).toBe(2);
+    expect(canalSugerido([zap], 5, '').inbox_id).toBe(2);
+  });
+
   it('has a channel to choose when any inbox is free or busy, never only other systems', () => {
     expect(temCanalParaEscolher([livre(1), livre(2)], 5)).toBe(true);
     expect(temCanalParaEscolher([ocupada(3)], 5)).toBe(true);
