@@ -36,6 +36,10 @@ module Autonomia::Automacao::ComIa
 
   def falhou(falha) = Resultado.new(tipo: falha.tipo, motivo: falha.motivo, dados: {})
 
+  # Nada para a IA ler (sem mensagem do cliente, contato sem nada): o passo pula sem pagar uma resposta vazia. Proteção
+  # contra defeito, não freio de uso.
+  def nada_para_ler = Resultado.new(tipo: :pulado, motivo: 'nada_para_ler', dados: {})
+
   def nota(texto) = ::Autonomia::Automacao::Nota.criar(conversa: @conversa, texto: texto, pessoas: [], marca: marca)
 
   # O texto fixo da nota, no idioma da conta (como a nota do AntiLaco).

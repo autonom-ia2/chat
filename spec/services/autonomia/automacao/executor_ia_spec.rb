@@ -84,6 +84,23 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     expect(dados_do(execucao, 'p1')).to eq('tipo' => 'teletransportar')
   end
 
+  # Sem mensagem para ler, a resposta da IA seria vazia ou inventada: os passos pulam sem chamar.
+  it 'extrair, escrever e resumir sem nada para ler pulam com nada_para_ler, sem chamar a IA', :aggregate_failures do
+    atributo('placa', 'conversation_attribute')
+    vazia = create(:conversation, account: account, contact: contato, status: :open)
+    so_mensagens = %w[mensagens_recentes]
+    passos = [extrair([campo('placa', 'conversa.atributos.placa')]).merge('id' => 'p1', 'le' => so_mensagens),
+              escrever('sugestao').merge('id' => 'p2', 'le' => so_mensagens), resumir('nota').merge('id' => 'p3', 'le' => so_mensagens)]
+    openai_devolve({ 'texto' => 'x' })
+
+    execucao = comecar_e_rodar(automacao_ligada(account, admin, passos), vazia)
+
+    expect([execucao.reload.estado, registros(execucao)]).to eq(
+      ['concluida', [%w[p1 pulado nada_para_ler], %w[p2 pulado nada_para_ler], %w[p3 pulado nada_para_ler]]]
+    )
+    expect(corpos).to be_empty
+  end
+
   describe 'flag e chave' do
     it 'com a flag da F7 desligada ao rodar, para sem chamar a IA (rollback)', :aggregate_failures do
       definicao = automacao_ligada(account, admin, [decidir])
@@ -205,6 +222,24 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
         'placa' => %w[string null], 'data' => %w[string null], 'carros' => %w[number null], 'nome' => %w[string null]
       )
       expect(contato.reload.custom_attributes).to eq('carros' => 2)
+    end
+
+    # Registro que diz "gravado" do que não foi gravado é falha silenciosa.
+    it 'falha parcial: o registro diz campo a campo o que gravou e o que a plataforma recusou', :aggregate_failures do
+      allow(Autonomia::Automacao::PassoDeAcao).to receive(:new).and_wrap_original do |original, **argumentos|
+        next original.call(**argumentos) unless argumentos[:passo]['acao'].start_with?('POST conversations')
+
+        instance_double(Autonomia::Automacao::PassoDeAcao,
+                        executar: Autonomia::Automacao::PassoDeAcao::Resultado.new(tipo: :permanente, motivo: 'erro_permanente', dados: {}))
+      end
+      openai_devolve({ 'placa' => 'ABC1D23', 'data' => '2026-11-03', 'carros' => nil, 'nome' => nil })
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [extrair(campos)]))
+
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['falhou', [%w[p1 falhou erro_permanente]]])
+      expect(dados_do(execucao, 'p1')['campos']).to eq('gravados' => %w[data], 'falhou' => %w[placa], 'ausentes' => %w[carros nome],
+                                                       'ja_tinha' => [])
+      expect([contato.reload.custom_attributes, conversa.reload.custom_attributes]).to eq([{ 'data_sinistro' => '2026-11-03' }, {}])
     end
 
     it 'o nome provisório (o telefone no lugar do nome) conta como vazio e é preenchido' do

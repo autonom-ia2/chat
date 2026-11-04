@@ -27,7 +27,10 @@ class Autonomia::Automacao::PassoDeExtrair
     negado = impedido
     return negado if negado
 
-    resposta, custo = perguntar(modelo: MODELO, instrucoes: instrucoes, entrada: { conversa: leitura.conversa }, schema: schema)
+    estado = leitura
+    return nada_para_ler if estado.vazio?
+
+    resposta, custo = perguntar(modelo: MODELO, instrucoes: instrucoes, entrada: { conversa: estado.conversa }, schema: schema)
     gravar(achados(resposta), custo)
   rescue Falha => e
     falhou(e)
@@ -47,27 +50,37 @@ class Autonomia::Automacao::PassoDeExtrair
     end
   end
 
+  # O registro diz, campo a campo, o que gravou e o que a plataforma recusou: na falha parcial (o contato gravou, a
+  # conversa não), `gravados` leva só o que voltou certo e `falhou`, o resto.
   def gravar(achados, custo)
     ja_tinha, novos = achados.keys.partition { |campo| !trocar? && !vazio?(atual(campo)) }
-    dados = { 'campos' => { 'gravados' => chaves(novos), 'ausentes' => chaves(campos - achados.keys), 'ja_tinha' => chaves(ja_tinha) },
-              'ia' => custo }
+    gravados, falha, recusados = achados.empty? ? [[], nil, []] : escrever(novos.index_with { |campo| achados[campo] })
+    dados = { 'campos' => do_registro(gravados, recusados, ausentes: campos - achados.keys, ja_tinha: ja_tinha), 'ia' => custo }
     return Resultado.new(tipo: :pulado, motivo: 'dado_ausente', dados: dados) if achados.empty?
 
-    falha = escrever(novos.index_with { |campo| achados[campo] })
     falha ? Resultado.new(tipo: falha.tipo, motivo: falha.motivo, dados: dados) : Resultado.new(tipo: :ok, dados: dados)
   end
 
-  # O primeiro resultado que não deu certo, ou nil. Uma ação por lugar (contato, conversa, empresa).
+  # [chaves gravadas, o primeiro resultado que não deu certo (ou nil), chaves que não foram gravadas]. Uma ação por
+  # lugar (contato, conversa, empresa); depois da primeira recusa, as seguintes não rodam.
   def escrever(valores)
-    pedidos(valores).each do |acao, id, corpo|
-      passo = { 'id' => @passo['id'], 'acao' => acao, 'descricao' => I18n.t('autonomia.automacao.ia.gravar'),
-                'caminho' => { 'id' => id }, 'corpo' => corpo }
-      resultado = ::Autonomia::Automacao::PassoDeAcao.new(execucao: @execucao, passo: passo, valores: nil, acesso: @acesso).executar
-      return resultado unless resultado.tipo == :ok
+    gravados = []
+    lista = pedidos(valores)
+    lista.each_with_index do |(acao, id, corpo, chaves_do_pedido), indice|
+      resultado = ::Autonomia::Automacao::PassoDeAcao.new(execucao: @execucao, passo: passo_da_acao(acao, id, corpo), valores: nil,
+                                                          acesso: @acesso).executar
+      return [gravados, resultado, lista.drop(indice).flat_map(&:last)] unless resultado.tipo == :ok
+
+      gravados.concat(chaves_do_pedido)
     end
-    nil
+    [gravados, nil, []]
   end
 
+  def passo_da_acao(acao, id, corpo)
+    { 'id' => @passo['id'], 'acao' => acao, 'descricao' => I18n.t('autonomia.automacao.ia.gravar'), 'caminho' => { 'id' => id }, 'corpo' => corpo }
+  end
+
+  # [ação, id, corpo, chaves dos campos] por lugar.
   def pedidos(valores)
     por_lugar = valores.group_by { |campo, _valor| lugar(campo) }.transform_values(&:to_h)
     [do_contato(por_lugar[:contato]), da_conversa(por_lugar[:conversa]), da_empresa(por_lugar[:empresa])].compact
@@ -81,18 +94,18 @@ class Autonomia::Automacao::PassoDeExtrair
 
       (lista['custom_attributes'] ||= {})[chave_do_atributo(campo)] = valor
     end
-    ['PATCH contacts/:id', @conversa.contact_id, corpo]
+    ['PATCH contacts/:id', @conversa.contact_id, corpo, chaves(valores.keys)]
   end
 
   def da_conversa(valores)
     return unless valores
 
     atributos = valores.transform_keys { |campo| chave_do_atributo(campo) }
-    ['POST conversations/:id/custom_attributes', @conversa.display_id, { 'custom_attributes' => atributos, 'merge' => true }]
+    ['POST conversations/:id/custom_attributes', @conversa.display_id, { 'custom_attributes' => atributos, 'merge' => true }, chaves(valores.keys)]
   end
 
   def da_empresa(valores)
-    ['PATCH companies/:id', @conversa.contact.company_id, { 'name' => valores.values.last }] if valores
+    ['PATCH companies/:id', @conversa.contact.company_id, { 'name' => valores.values.last }, chaves(valores.keys)] if valores
   end
 
   def lugar(campo)
@@ -126,6 +139,14 @@ class Autonomia::Automacao::PassoDeExtrair
   def vazio?(valor) = valor.nil? || (valor.respond_to?(:empty?) && valor.empty?)
 
   def chaves(lista) = lista.pluck('chave')
+
+  def do_registro(gravados, recusados, ausentes:, ja_tinha:)
+    registro = { 'gravados' => na_ordem(gravados), 'ausentes' => chaves(ausentes), 'ja_tinha' => chaves(ja_tinha) }
+    recusados.any? ? registro.merge('falhou' => na_ordem(recusados)) : registro
+  end
+
+  # As chaves na ordem dos campos da receita.
+  def na_ordem(lista) = chaves(campos) & lista
 
   # O valor pronto para gravar, ou nil. Data que não é data conta como não achada.
   def pronto(campo, valor)

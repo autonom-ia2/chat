@@ -25,11 +25,12 @@ class Autonomia::Automacao::PassoDeResumir
     return negado if negado
 
     aviso = ::Autonomia::Automacao::PassoDeAviso.new(execucao: @execucao, passo: passo_do_aviso, alvo: @conversa) if aviso?
-    ninguem = aviso&.ninguem_para_avisar
-    return ninguem if ninguem
+    estado = leitura
+    pular = antes_da_ia(aviso, estado)
+    return pular if pular
 
     resposta, custo = perguntar(modelo: MODELO, instrucoes: format(INSTRUCOES, linhas: @passo['linhas'] || LINHAS),
-                                entrada: { conversa: leitura.conversa }, schema: SCHEMA)
+                                entrada: { conversa: estado.conversa }, schema: SCHEMA)
     entregar(aviso, resposta['resumo'].to_s.strip, custo)
   rescue Falha => e
     falhou(e)
@@ -38,6 +39,9 @@ class Autonomia::Automacao::PassoDeResumir
   private
 
   def aviso? = self.class.fala_com_gente?(@passo)
+
+  # O que pula sem pagar a IA: ninguém para avisar, ou nada para ler.
+  def antes_da_ia(aviso, estado) = aviso&.ninguem_para_avisar || (nada_para_ler if estado.vazio?)
 
   def passo_do_aviso = { 'id' => @passo['id'], 'para' => @passo.dig('destino', 'avisar') }
 

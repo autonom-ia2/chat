@@ -548,6 +548,7 @@ en:
         ia_indisponivel: 'The AI did not answer; the automation will try again.'
         ia_nao_configurada: "This account has no AI key of its own. Set it in the integrations so AI steps can run."
         ia_recusou: 'The AI provider refused this request.'
+        nada_para_ler: 'There was nothing in the conversation for the AI to read. The AI was not called.'
         resposta_fora_do_schema: 'The AI answered in a format the automation cannot use. Nothing was done.'
         tipo_desconhecido: 'This step type is unknown to the automation engine. The automation stopped here without doing it.'
       receita:

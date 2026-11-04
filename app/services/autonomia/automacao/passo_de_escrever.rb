@@ -27,8 +27,11 @@ class Autonomia::Automacao::PassoDeEscrever
     motivo = mensagem&.motivo_do_canal
     return Resultado.new(tipo: :pulado, motivo: motivo, dados: {}) if motivo
 
+    estado = leitura
+    return nada_para_ler if estado.vazio?
+
     resposta, custo = perguntar(modelo: MODELO, instrucoes: "#{INSTRUCOES}\nInstrução: #{@passo['instrucao']}",
-                                entrada: { conversa: leitura.conversa }, schema: SCHEMA)
+                                entrada: { conversa: estado.conversa }, schema: SCHEMA)
     entregar(mensagem, resposta['texto'].to_s.strip, custo)
   rescue Falha => e
     falhou(e)
