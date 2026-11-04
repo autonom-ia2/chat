@@ -3,9 +3,10 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AgenteGaveta from '../AgenteGaveta.vue';
 
-// #2469 (PR 3a do #2436) — "Comentários" do cartão do post, em três grupos: respondidos (o número de quem recebeu no
-// privado; as conversas estão na caixa), esperando você e não respondo (o que a IA leu e não era o caso, e o que ela
-// escondeu). Os grupos vêm prontos do servidor: a mesma conta do cartão e da página. Cada comentário diz por quê, com
+// #2469 (PR 3a do #2436) — "Comentários" do cartão do post, em três grupos: no privado (#2481: quem recebeu da IA no
+// privado, com o comentário que abriu a conversa e o "Ver conversa", só as conversas que a pessoa vê), esperando você e
+// não respondo (o que a IA leu e não era o caso, e o que ela escondeu). Os grupos vêm prontos do servidor: a mesma
+// conta do cartão e da página. Cada comentário diz por quê, com
 // os textos da tela do cuidado, e leva à conversa (quando há uma que a pessoa vê) ou ao post para responder.
 const props = defineProps({
   detalhe: { type: Object, required: true },
@@ -28,9 +29,8 @@ const numero = chave => {
   if (chave === 'respondidos') return enviados.value;
   return leu.value ? (comentarios.value[chave] || []).length : '–';
 };
-const lista = computed(() =>
-  props.grupo === 'respondidos' ? [] : comentarios.value[props.grupo] || []
-);
+const lista = computed(() => comentarios.value[props.grupo] || []);
+const noPrivado = computed(() => comentarios.value.no_privado || []);
 const alvo = computed(() =>
   t(`AGENTS.AGENTE_DO_POST.PAGINA.ALVO.${props.detalhe.kind.toUpperCase()}`)
 );
@@ -68,11 +68,56 @@ const alvo = computed(() =>
       <div
         v-if="grupo === 'respondidos'"
         data-respondidos
-        class="flex flex-col gap-2 p-4 rounded-2xl bg-n-alpha-1"
+        class="flex flex-col gap-3"
       >
-        <p class="m-0 text-sm leading-6 text-n-slate-12">
+        <p class="m-0 text-sm leading-6 text-n-slate-11">
           {{ t(`${KEY}.RESPONDIDOS_TEXTO`) }}
         </p>
+        <p
+          v-if="!noPrivado.length"
+          data-nenhum
+          class="m-0 text-sm leading-6 text-n-slate-11"
+        >
+          {{ t(`${KEY}.NENHUM`) }}
+        </p>
+        <ol
+          v-else
+          data-no-privado
+          class="flex flex-col gap-3 p-0 m-0 list-none"
+        >
+          <li
+            v-for="item in noPrivado"
+            :key="item.id"
+            :data-no-privado-conversa="item.id"
+            class="flex flex-col gap-2 p-4 rounded-2xl ring-1 ring-inset ring-n-weak"
+          >
+            <p class="m-0 text-sm leading-6 text-n-slate-12">
+              <span class="block text-xs font-semibold text-n-slate-11">
+                {{ item.contato }}
+              </span>
+              {{ item.comentario }}
+            </p>
+            <p
+              v-if="item.respondeu"
+              data-respondeu
+              class="inline-flex items-center gap-1.5 m-0 text-xs font-semibold leading-5 text-n-teal-11"
+            >
+              <span class="i-lucide-reply size-4" aria-hidden="true" />
+              {{ t(`${KEY}.RESPONDEU`) }}
+            </p>
+            <a
+              v-if="item.conversation_path"
+              data-ver-conversa
+              :href="item.conversation_path"
+              :aria-label="
+                t(`${KEY}.VER_CONVERSA_DE`, { contato: item.contato })
+              "
+              class="inline-flex items-center gap-1 text-sm font-semibold underline min-h-11 w-fit text-n-blue-11"
+            >
+              {{ t(`${KEY}.VER_CONVERSA`) }}
+            </a>
+          </li>
+        </ol>
       </div>
       <p
         v-else-if="!leu"

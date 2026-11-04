@@ -2958,11 +2958,13 @@
         "RESPONDIDOS": "in private",
         "ESPERANDO": "waiting for you",
         "NAO_RESPONDO": "not replying",
-        "RESPONDIDOS_TEXTO": "People who got a private message from me. The conversations are in the inbox.",
+        "RESPONDIDOS_TEXTO": "People who got a private message from me, newest first.",
         "VER_CONVERSA": "See conversation",
         "VER_TODOS": "See all on the {alvo}",
         "NENHUM": "Nothing here for now.",
-        "SEM_LEITURA": "Couldn't read the comments right now. Try again in a moment."
+        "SEM_LEITURA": "Couldn't read the comments right now. Try again in a moment.",
+        "RESPONDEU": "Replied to the message",
+        "VER_CONVERSA_DE": "See the conversation with {contato}"
       }
     }
   }
