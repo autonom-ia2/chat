@@ -31,6 +31,8 @@ class Autonomia::Agents::Material::Autoteste
   # "De onde {agente} tirou" (t4d): quantos trechos usados a rodada guarda por pergunta e até onde vai o texto de cada.
   TRECHOS_POR_RESPOSTA = 3
   TRECHO_MAX_CHARS = 240
+  # O que o juiz lê de cada trecho (#2444): o fato que passa do corte da tela não pode virar "inventou".
+  TRECHO_DO_JUIZ_MAX_CHARS = 700
   FALHAS_DA_IA = [Crm::Ai::ResponsesClient::Error, JSON::ParserError, *Crm::Ai::ResponsesClient::NETWORK_ERRORS,
                   OpenSSL::SSL::SSLError, Errno::EHOSTUNREACH, Errno::ENETUNREACH].freeze
 
@@ -182,10 +184,13 @@ class Autonomia::Agents::Material::Autoteste
   end
 
   # O que o dono mandou o agente fazer (#2444): o juiz precisa saber, porque a regra do dono vale mais que o material
-  # (ex.: "a cotação é no WhatsApp, não colete dados aqui").
+  # (ex.: "a cotação é no WhatsApp, não colete dados aqui"). As mesmas partes que o PromptBuilder põe no prompt: a
+  # instrução que vai ao modelo, os limites duros e a regra de passagem.
   def regras_do_dono
+    limites = Array(@agent.guardrails).compact_blank
+    limites = limites.any? && "Limites duros:\n#{limites.map { |limite| "- #{limite}" }.join("\n")}"
     passagem = @agent.handoff_rule.presence && "Quando passar para a equipe: #{@agent.handoff_rule}"
-    [@agent.instruction.presence, passagem].compact.join("\n\n")
+    [@agent.instrucao_do_sistema.presence, limites, passagem].select(&:present?).join("\n\n")
   end
 
   # Só trechos do material deste agente (a imagem da mensagem e o que não é dele ficam de fora), na ordem do Answerer.
@@ -194,7 +199,8 @@ class Autonomia::Agents::Material::Autoteste
     por_id = @agent.knowledge_entries.where(id: ids).index_by(&:id)
     ids.filter_map { |id| por_id[id] }.first(TRECHOS_POR_RESPOSTA).map do |trecho|
       { 'fonte' => trecho.source_id, 'paginas' => trecho.metadata.to_h['paginas'],
-        'texto' => trecho.content.to_s.squish.truncate(TRECHO_MAX_CHARS) }.compact
+        'texto' => trecho.content.to_s.squish.truncate(TRECHO_MAX_CHARS),
+        'inteiro' => trecho.content.to_s.squish.truncate(TRECHO_DO_JUIZ_MAX_CHARS) }.compact
     end
   end
 

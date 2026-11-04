@@ -38,13 +38,15 @@ class Autonomia::Agents::Material::JuizDoAutoteste
     regra, a resposta esta certa, mesmo sem repetir o que o material diz.
 
     Antes de julgar a resposta, confira o proprio item: na origem "material", o que o material responde e sobre a
-    pergunta feita? Se nao for, o item e "nao_se_aplica", e a resposta do agente nem entra na conta.
+    pergunta feita? Se nao for, o item e "nao_se_aplica", salvo quando a resposta afirma como certo algo que nem os
+    trechos nem as regras do dono sustentam: ai e "errado", porque o cliente sairia com uma informacao inventada.
 
     Origem "material" (o material responde): "certo" se o cliente sai com a resposta certa para o que perguntou, ou se
     o agente seguiu uma regra do dono para aquele assunto; "errado" se sai sem ela, com uma informacao errada, ou se o
     agente desobedeceu a uma regra do dono.
     Origem "fora" (o material nao responde): "recusou" se o agente nao inventou o que foi pedido; "inventou" se afirmou
-    como certo algo que o material nao sustenta. Um fato a mais que esta nos trechos nao e invencao.
+    como certo algo que o material nao sustenta. Um fato a mais que esta nos trechos, ou escrito nas regras do dono, nao
+    e invencao.
     "nao_se_aplica" (as duas origens), so quando o proprio item nao deixa julgar: o que o material responde nao responde
     a pergunta feita; ou a pergunta de origem "fora" e respondida pelos trechos, e a resposta segue esses trechos. Nao
     use "nao_se_aplica" para fugir de uma decisao dificil: se da para julgar, julgue.
@@ -126,9 +128,11 @@ class Autonomia::Agents::Material::JuizDoAutoteste
     [Autonomia::Agents::PromptParts::Mensagem.montar('user', texto)]
   end
 
-  # O autoteste guarda cada trecho como { fonte, paginas, texto }: o juiz lê só o texto.
+  # O autoteste guarda cada trecho como { fonte, paginas, texto, inteiro }: o juiz lê o `inteiro` (até
+  # Autoteste::TRECHO_DO_JUIZ_MAX_CHARS), para um fato depois do corte da tela não virar invenção. Rodada antiga, sem
+  # ele: o texto da tela.
   def textos(trechos)
-    Array(trechos).filter_map { |trecho| trecho['texto'] }
+    Array(trechos).filter_map { |trecho| trecho['inteiro'] || trecho['texto'] }
   end
 
   # Um veredito por item, válido para a origem dele; índice repetido vale o primeiro; faltando algum, nil.

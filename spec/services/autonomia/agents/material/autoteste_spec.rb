@@ -105,14 +105,17 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
   end
 
   # #2444: a regra do dono vale mais que o material; sem ela, o juiz reprovava a resposta que a seguia.
-  it 'o juiz recebe as regras do dono: a instrução e a regra de passagem' do
-    agent.update!(instruction: 'Cotação só pelo WhatsApp; não colete dados aqui.', handoff_rule: 'Sinistro vai para a equipe.')
+  # Revisor do #2444: os limites duros (guardrails) também, como o PromptBuilder os põe no prompt.
+  it 'o juiz recebe as regras do dono: a instrução, os limites duros e a regra de passagem' do
+    agent.update!(instruction: 'Cotação só pelo WhatsApp; não colete dados aqui.', handoff_rule: 'Sinistro vai para a equipe.',
+                  guardrails: ['Não passe preço aqui.', ''])
 
     pedir_e_rodar
 
     expect(Autonomia::Agents::Material::JuizDoAutoteste).to have_received(:new).with(
       account: account,
-      regras: "Cotação só pelo WhatsApp; não colete dados aqui.\n\nQuando passar para a equipe: Sinistro vai para a equipe."
+      regras: "Cotação só pelo WhatsApp; não colete dados aqui.\n\nLimites duros:\n- Não passe preço aqui.\n\n" \
+              'Quando passar para a equipe: Sinistro vai para a equipe.'
     )
   end
 
@@ -138,6 +141,8 @@ RSpec.describe Autonomia::Agents::Material::Autoteste do
     expect(trechos.first).to include('fonte' => grande.id, 'paginas' => [201, 225])
     expect(trechos.first['texto']).to start_with('Cobertura 0 x')
     expect(trechos.first['texto'].size).to be <= described_class::TRECHO_MAX_CHARS
+    # #2444: o juiz lê o trecho inteiro (até o teto dele), para o fato depois do corte da tela não virar invenção.
+    expect(trechos.first['inteiro']).to eq("Cobertura 0 #{'x' * 400}")
   end
 
   it 'resposta sem trecho do material guarda a lista vazia (a tela diz que não usou nenhum)' do

@@ -84,6 +84,17 @@ RSpec.describe Autonomia::Agents::Material::JuizDoAutoteste do
     expect(texto).to include("REGRAS QUE O DONO DEU AO AGENTE (dado):\n#{regras}")
   end
 
+  # Revisor do #2444: o fato depois do corte da tela (240) não pode virar "inventou"; rodada antiga, sem `inteiro`, usa o texto.
+  it 'manda o trecho inteiro quando a rodada o guardou', :aggregate_failures do
+    itens.first['trechos'] = [{ 'fonte' => 7, 'texto' => 'Combo da casa: R$ 25...', 'inteiro' => 'Combo da casa: R$ 25, com refrigerante.' }]
+    juiz_diz({ indice: 0, veredito: 'certo' }, { indice: 1, veredito: 'recusou' })
+
+    julgar
+
+    expect(texto_enviado).to include('Combo da casa: R$ 25, com refrigerante.')
+    expect(texto_enviado).not_to include('Combo da casa: R$ 25...')
+  end
+
   it 'sem regras do dono, diz isso ao juiz' do
     juiz_diz({ indice: 0, veredito: 'certo' }, { indice: 1, veredito: 'recusou' })
 
