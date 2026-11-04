@@ -47,9 +47,10 @@ class Instagram::CommentsClient
     request(:get, media_id.to_s, { fields: 'media_type,media_url,thumbnail_url,children{media_type,media_url,thumbnail_url}' })
   end
 
-  # Um comentário só, com a mídia dele: quem age confere que ele é do anúncio; o webhook lê o texto aqui.
+  # Um comentário só, com a mídia dele: quem age confere que ele é do anúncio; o webhook lê o texto aqui. `hidden`: a
+  # conversa do comentário mostra se ele está escondido (#2215).
   def comment(comment_id)
-    request(:get, comment_id.to_s, { fields: 'id,text,timestamp,parent_id,from{id,username},media{id}' })
+    request(:get, comment_id.to_s, { fields: 'id,text,timestamp,hidden,parent_id,from{id,username},media{id}' })
   end
 
   # Em formulário: com JSON, a Graph do login do Instagram recusou a resposta em produção (400, código 24, #2330).
