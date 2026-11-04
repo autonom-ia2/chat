@@ -906,7 +906,7 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
       <p
         v-if="privateReplies?.sent"
         data-ad-detail-private-replies
-        class="m-0 flex items-center gap-2 text-sm text-n-slate-12"
+        class="m-0 flex flex-wrap items-center gap-2 text-sm text-n-slate-12"
       >
         <span class="i-lucide-send size-4 text-n-slate-11" aria-hidden="true" />
         <span>
@@ -917,7 +917,12 @@ const image = computed(() => adImage(ad.value, brokenImages.value));
               privateReplies.sent
             )
           }}
-          ·
+        </span>
+        <span
+          class="size-1 shrink-0 rounded-full bg-n-slate-8"
+          aria-hidden="true"
+        />
+        <span>
           {{
             $t(
               'CRM_KANBAN.META_ADS_HUB.AD_DETAIL.PRIVATE_REPLIES.REPLIED',
