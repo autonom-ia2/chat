@@ -197,7 +197,8 @@ export default {
     inboxId() {
       return this.currentChat.inbox_id;
     },
-    // #2215: a conversa nasceu de um comentário do Instagram (#2212): o comentário fica no topo, com as ações nele.
+    // #2215: a conversa nasceu de um comentário do Instagram (#2212): o comentário fica no topo, com as ações nele
+    // (o cartão confere a flag).
     nasceuDeComentarioDoInstagram() {
       const origem = this.currentChat.additional_attributes?.meta_ads_comment;
       return this.isAnInstagramChannel && origem?.network === 'instagram';
@@ -789,6 +790,7 @@ export default {
       <ComentarioNaConversa
         v-if="nasceuDeComentarioDoInstagram"
         :conversation-id="currentChat.id"
+        :inbox-id="currentChat.inbox_id"
       />
       <Banner
         v-if="isInstagramRestrictionBannerVisible"

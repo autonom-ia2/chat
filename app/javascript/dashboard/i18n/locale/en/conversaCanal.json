@@ -715,7 +715,8 @@
       },
       "ERRO": {
         "GERAL": "Could not do it on Instagram. Try again.",
-        "PERMISSAO": "Instagram did not allow it: access to comments needs to be allowed again."
+        "PERMISSAO": "Instagram did not allow it: access to comments needs to be allowed again.",
+        "SUMIU": "This comment is no longer on Instagram."
       }
     }
   }

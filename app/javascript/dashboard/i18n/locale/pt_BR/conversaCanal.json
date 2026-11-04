@@ -715,7 +715,8 @@
       },
       "ERRO": {
         "GERAL": "Não deu para fazer no Instagram. Tente de novo.",
-        "PERMISSAO": "O Instagram não deixou: é preciso liberar de novo o acesso aos comentários."
+        "PERMISSAO": "O Instagram não deixou: é preciso liberar de novo o acesso aos comentários.",
+        "SUMIU": "Este comentário não está mais no Instagram."
       }
     }
   }

@@ -5,9 +5,9 @@ import ApiClient from './ApiClient';
 // from (#2212), and the actions on it without leaving the conversation:
 // public reply, hide/show and delete (ComentarioDaConversaController).
 //
-// GET    → { status, comentario, pode, pode_liberar }
+// GET    → { status, comentario, pode }
 //          status: ok | needs_permission | apagado | meta_unavailable
-// POST   responder { content } → { resposta: { id, texto } }
+// POST   responder { content } → { resposta: { texto } }
 // POST   esconder  { hidden }  → { escondido }
 // DELETE                       → { status: 'apagado' }
 //

@@ -1,38 +1,59 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { haQuanto } from 'dashboard/routes/dashboard/seusPosts/seusPostsHelpers';
+import { useLiberarAcesso } from 'dashboard/routes/dashboard/seusPosts/useLiberarAcesso';
 import { useComentarioDaConversa } from './useComentarioDaConversa';
 
 // Comentários na caixa (#2215): na conversa que nasceu de um comentário do Instagram (#2212), o comentário fica no
 // topo, junto dos outros avisos da conversa (topBannerRef), com o que dá para fazer nele sem sair dali: responder em
 // público (a resposta sai no post, não no Direct), esconder e mostrar de novo, e apagar (confirma citando o comentário;
 // não volta). Os botões vêm do servidor (`pode`): quem só lê não recebe nenhum. Sem a permissão de comentários do
-// Instagram, nenhum botão, e a explicação de como liberar.
+// Instagram, nenhum botão, e a explicação de como liberar: o "Liberar acesso" de Seus posts (a mesma reautorização da
+// caixa, com os comentários), para quem pode; para os outros, pedir a um administrador.
 const props = defineProps({
   conversationId: { type: [Number, String], required: true },
+  inboxId: { type: Number, required: true },
 });
 
 const { locale, t } = useI18n();
+const { isCloudFeatureEnabled } = useAccount();
+// A flag da IA dos comentários, a mesma que cria estas conversas: sem ela, nem o cartão nem a leitura.
+const ligado = computed(() =>
+  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+);
 const {
   estado,
   comentario,
   pode,
-  podeLiberar,
   ocupado,
   carregar,
   responder,
   esconder,
   apagar,
 } = useComentarioDaConversa({
-  conversationId: computed(() => props.conversationId),
+  conversationId: computed(() => (ligado.value ? props.conversationId : null)),
 });
 
 // 'responder', 'apagar' (confirmar) ou null.
 const abrindo = ref(null);
 const texto = ref('');
 const cartao = ref(null);
+
+const { podeLiberar: podeReautorizar, liberar } = useLiberarAcesso({
+  perfil: computed(() => ({ rede: 'instagram', inboxId: props.inboxId })),
+  precisa: computed(() => estado.value === 'needs_permission'),
+  reler: carregar,
+});
+// Sem a flag dos comentários em Seus posts, a reautorização pediria só os números: não serviria aqui.
+const podeLiberar = computed(
+  () =>
+    podeReautorizar.value &&
+    isCloudFeatureEnabled(FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS)
+);
 
 const escondido = computed(() => Boolean(comentario.value?.escondido));
 const autor = computed(
@@ -55,12 +76,22 @@ const abrir = acao => {
   focar('textarea, [data-comentario-confirmar-apagar]');
 };
 // O texto só some quando a Meta aceitou; uma falha deixa o que foi escrito.
+// O cartão fica montado de uma conversa para a outra: o que estava aberto (resposta escrita, confirmação de apagar) era
+// do comentário anterior e nunca vai para o novo.
+watch(
+  () => props.conversationId,
+  () => {
+    abrindo.value = null;
+    texto.value = '';
+  }
+);
 const enviar = async () => {
   if (await responder(texto.value.trim())) fechar();
 };
+// Fecha só com sucesso; na falha a confirmação continua aberta e o foco volta a ela.
 const confirmarApagar = async () => {
-  await apagar();
-  abrindo.value = null;
+  if (await apagar()) abrindo.value = null;
+  else focar('[data-comentario-confirmar-apagar]');
 };
 
 const ACAO =
@@ -69,6 +100,7 @@ const ACAO =
 
 <template>
   <section
+    v-if="ligado"
     ref="cartao"
     data-comentario-na-conversa
     :data-estado="estado"
@@ -114,6 +146,7 @@ const ACAO =
           icon="i-lucide-key-round"
           :label="$t('CONVERSA_CANAL.COMENTARIO.LIBERAR')"
           class="!min-h-11 !rounded-xl"
+          @click="liberar"
         />
       </div>
     </template>

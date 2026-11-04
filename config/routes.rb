@@ -910,6 +910,11 @@ Rails.application.routes.draw do
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]
+              # #2215: o comentário do Instagram de onde a conversa nasceu, e as ações nele.
+              resource :comentario, only: [:show, :destroy], controller: 'comentario' do
+                post :responder
+                post :esconder
+              end
             end
             member do
               post :mute

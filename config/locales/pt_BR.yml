@@ -358,6 +358,10 @@ pt_BR:
         to_you: 'Reclamação: não respondi e passei para você.'
         private_reply_failed: 'Não consegui mandar a mensagem. Responda você, se quiser.'
         private_reply_unsure: 'Não sei se a mensagem saiu: a Meta não respondeu. Confira no direct antes de responder.'
+        public_reply: '%{user_name} respondeu em público no post: “%{text}”'
+        hidden: '%{user_name} escondeu o comentário do post'
+        shown: '%{user_name} mostrou de novo o comentário no post'
+        deleted: '%{user_name} apagou o comentário do post'
       captain:
         resolved: 'A conversa foi marcada como resolvida por %{user_name} por inatividade'
         resolved_with_reason: 'A conversa foi marcada como resolvida por %{user_name} (%{reason})'

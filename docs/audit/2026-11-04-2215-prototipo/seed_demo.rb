@@ -12,7 +12,8 @@ end
 inbox = Inbox.find_or_create_by!(account: account, channel: canal) { |i| i.name = 'Instagram @clinica.vida' }
 User.where(email: 'john@acme.inc').find_each { |u| InboxMember.find_or_create_by!(inbox: inbox, user: u) }
 
-def conversa!(account, inbox, nome:, ig_id:, comentario:, onde:, mensagens:)
+def conversa!(account, inbox, dados)
+  nome, ig_id, comentario, onde, mensagens = dados.values_at(:nome, :ig_id, :comentario, :onde, :mensagens)
   contact_inbox = ContactInboxWithContactBuilder.new(source_id: ig_id, inbox: inbox, contact_attributes: { name: nome }).perform
   conv = Conversation.create!(account: account, inbox: inbox, contact: contact_inbox.contact, contact_inbox: contact_inbox, status: :open,
                               additional_attributes: { 'meta_ads_comment' => { 'network' => 'instagram', 'comment_id' => "179#{ig_id}",
@@ -29,11 +30,11 @@ def conversa!(account, inbox, nome:, ig_id:, comentario:, onde:, mensagens:)
   conv
 end
 
-conversa!(account, inbox, nome: 'marina.costa', ig_id: '9100000000000001', onde: :post,
-                          comentario: 'Quanto custa o plano para família de 4 pessoas? Tem carência para consulta?',
-                          mensagens: [[:outgoing, 'Oi, Marina! Vi seu comentário no post. Me conta as idades de vocês que eu já mando os valores 😊'],
-                                      [:incoming, '38, 36, 9 e 5 anos. Somos de Campinas.']])
-conversa!(account, inbox, nome: 'rafa.lopes', ig_id: '9100000000000002', onde: :anuncio,
-                          comentario: 'Golpe! Paguei e ninguém me atende!!',
-                          mensagens: [])
+conversa!(account, inbox, { nome: 'marina.costa', ig_id: '9100000000000001', onde: :post,
+                            comentario: 'Quanto custa o plano para família de 4 pessoas? Tem carência para consulta?',
+                            mensagens: [[:outgoing, 'Oi, Marina! Vi seu comentário no post. Me conta as idades que eu mando os valores 😊'],
+                                        [:incoming, '38, 36, 9 e 5 anos. Somos de Campinas.']] })
+conversa!(account, inbox, { nome: 'rafa.lopes', ig_id: '9100000000000002', onde: :anuncio,
+                            comentario: 'Golpe! Paguei e ninguém me atende!!',
+                            mensagens: [] })
 puts "inbox #{inbox.id}; conversas: #{inbox.conversations.pluck(:display_id).join(', ')}"
