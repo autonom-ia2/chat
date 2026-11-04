@@ -3116,6 +3116,7 @@
           "ENGAGEMENT": "Engajamento",
           "COMMENTS": "Comentários",
           "LEADS": "Cadastros",
+          "PRIVATE": "Conversas pelo privado",
           "DESTINATIONS": {
             "PROFILE": "Leva ao seu perfil",
             "POST": "Leva a uma publicação ou vídeo",
@@ -3339,6 +3340,7 @@
           "ENGAGEMENT": "Engajamento",
           "COMMENTS": "Comentários",
           "LEADS": "Cadastros",
+          "PRIVATE": "Conversas pelo privado",
           "SHOWN": "Apareceu"
         },
         "WHY_TITLE": "Por quê",

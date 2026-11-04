@@ -361,15 +361,19 @@ const otherStats = ad => [
   { key: 'SPEND', value: fmt(ad.spend) },
   ...otherAdStats(ad).map(stat => ({ ...stat, value: number(stat.value) })),
 ];
-// Atalho para "Cuidar dos comentários" do anúncio: só com a IA dos comentários ligada na conta, e fora do exemplo.
-const careOn = computed(
-  () =>
+// Atalho para "Cuidar dos comentários" do anúncio: fora do exemplo e com as mesmas flags que mostram o cuidar no
+// anúncio por dentro (MetaAdsAdDetail showCare): a gestão, os comentários de ao menos uma rede e a IA dos comentários.
+const careOn = computed(() => {
+  const on = flag =>
+    isFeatureEnabledonAccount.value(Number(route.params.accountId), flag);
+  return (
     !props.sample &&
-    isFeatureEnabledonAccount.value(
-      Number(route.params.accountId),
-      FEATURE_FLAGS.META_ADS_COMENTARIOS_IA
-    )
-);
+    on(FEATURE_FLAGS.META_ADS_GESTAO) &&
+    (on(FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM) ||
+      on(FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK)) &&
+    on(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+  );
+});
 const careRoute = ad => ({
   name: 'campaigns_meta_ads_cuidar',
   params: { accountId: route.params.accountId, adId: String(ad.ad_id) },
@@ -1108,7 +1112,7 @@ onMounted(() => {
                   v-for="stat in otherStats(ad)"
                   :key="stat.key"
                   :data-panel-other-stat="stat.key"
-                  class="flex flex-col gap-0.5"
+                  class="flex flex-col justify-between gap-0.5"
                 >
                   <dt class="text-xs text-n-slate-11">
                     {{

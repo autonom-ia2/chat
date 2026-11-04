@@ -125,7 +125,7 @@ RSpec.describe Crm::MetaAds::Panel::Report do
 
       expect(report[:ads].pluck(:ad_id)).to eq([capa, familia])
       expect(report[:other_ads]).to eq([{ ad_id: site, spend: 101.71, destination: 'website', impressions: 9000, link_clicks: 540,
-                                          comments: 0, post_engagement: 0, video_views: 0, leads: 0, name: 'EUA',
+                                          private_conversations: 0, comments: 0, post_engagement: 0, video_views: 0, leads: 0, name: 'EUA',
                                           thumbnail_url: nil, image_url: nil }])
       expect(report[:totals]).to include(spend: 150.0, other_spend: 101.71, cost_per_conversation: 150.0, cost_per_sale: 150.0)
     end
@@ -222,6 +222,30 @@ RSpec.describe Crm::MetaAds::Panel::Report do
 
       expect(report[:ads].sole).to include(ad_id: capa, conversations: 1)
       expect(report[:totals]).to include(conversations: 1, cost_per_conversation: 100.0)
+    end
+  end
+
+  # #2521, decisão da Meta aprovar seguindo o protótipo aprovado: anúncio de alcance com conversa do privado de um
+  # comentário continua em "Outros anúncios". As conversas aparecem na linha dele, fora do custo por conversa e da média.
+  it 'R$ 500 de alcance com 2 privados respondidos fica em Outros, sem entrar no custo por conversa' do
+    travel_to(now) do
+      adset('set-alcance', 'UNDEFINED', 'REACH')
+      spend('alcance', Date.new(2026, 10, 5), 500, adset_id: 'set-alcance', actions: [action('comment', 5)])
+      spend(capa, Date.new(2026, 10, 6), 100)
+      from_ad(capa, at: 1.day.ago)
+      2.times do |index|
+        Crm::MetaAdLink.create!(account: account, conversation: create(:conversation, account: account), touch_key: "meta_comment:#{index}",
+                                origin: 'comment', certainty: 'ad', ad_id: 'alcance', touched_at: 1.day.ago)
+      end
+
+      panel = described_class.new(connection, period: '30d')
+      report = panel.payload
+
+      expect(report[:ads].pluck(:ad_id)).to eq([capa])
+      expect(report[:other_ads].sole).to include(ad_id: 'alcance', spend: 500.0, destination: 'reach', private_conversations: 2, comments: 5)
+      expect(report[:totals]).to include(spend: 100.0, other_spend: 500.0, conversations: 1, cost_per_conversation: 100.0)
+      expect(report[:confidence]).to include(conversations: 1, ad: 1)
+      expect(panel.ad('alcance')).to include(outside: true, verdict: nil, conversations: 0, private_conversations: 2)
     end
   end
 

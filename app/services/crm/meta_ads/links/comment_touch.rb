@@ -7,8 +7,9 @@
 # ou privado sem resposta, fica fora; o número de comentários do anúncio é o da Meta (Panel::AdResults).
 #
 # O horário do toque é o da primeira mensagem da pessoa depois do privado; a chave é o comentário, para regravar nunca
-# duplicar. A conversa que a pessoa já tinha aberta na caixa (o privado entra nela) conta a partir do privado, não
-# das mensagens de antes.
+# duplicar. O privado do Instagram entra na conversa que a pessoa já tinha aberta na caixa: aí o toque é a resposta ao
+# privado, mas o card da conversa é o mesmo de antes e vai com ela para a coorte — a mesma regra do clique para o
+# WhatsApp que cai numa conversa aberta.
 module Crm::MetaAds::Links::CommentTouch
   KEY_PREFIX = 'meta_comment:'.freeze
   ORIGIN = 'comment'.freeze

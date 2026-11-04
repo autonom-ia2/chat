@@ -9,8 +9,10 @@
 # Sem conexão (Anúncios sem login, #1960), `account:` diz a conta e o anúncio traz `people`: cada conversa que
 # ele trouxe no período, com a situação do card e se já teve resposta (Panel::PathList do anúncio).
 #
-# `private_replies` (#2521): quantos comentários do anúncio receberam privado no período e quantas pessoas responderam
-# (estas são as conversas de comentário que contam na coorte, Links::CommentTouch). Só com conexão.
+# `private_replies` (#2521): quantos comentários do anúncio receberam privado no período e quantas pessoas responderam.
+# As que responderam são as ligações de comentário do anúncio no período (Links::CommentTouch), a mesma régua da
+# lista: as conversas dele na coorte ou, no anúncio de fora, as `private_conversations` de "Outros anúncios". Só com
+# conexão.
 #
 # Os valores de venda em R$ seguem a pessoa de `visible` (#2075, Panel::SalesValue): sem `sales_value_view`, o anúncio
 # sai sem o dinheiro dos cards e cada proposta sem o valor, menos a de que a pessoa é dona. O porquê do veredito é do
@@ -94,11 +96,10 @@ class Crm::MetaAds::Panel::AdDetail
 
   def private_replies
     sent = Crm::MetaAdsCommentAction.where(account_id: @report.account_id, ad_id: @ad_id, action: 'private_reply', at: @report.range)
-                                    .where.not(confirmed_at: nil).pluck(:conversation_id, :at)
-    replied = sent.count do |conversation_id, at|
-      conversation_id && Message.where(conversation_id: conversation_id, created_at: at..).incoming.exists?
-    end
-    { sent: sent.size, replied: replied }
+                                    .where.not(confirmed_at: nil).count
+    replied = Crm::MetaAdLink.where(account_id: @report.account_id, ad_id: @ad_id, touched_at: @report.range,
+                                    origin: Crm::MetaAds::Links::CommentTouch::ORIGIN).distinct.count(:conversation_id)
+    { sent: sent, replied: replied }
   end
 
   def people

@@ -219,6 +219,17 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
       expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id)).to have_attributes(destination_type: 'UNDEFINED', optimization_goal: 'UNDEFINED')
     end
 
+    # A lista não traz os arquivados: o destino lido antes do #2521 não pode virar UNDEFINED.
+    it 'conjunto já conhecido fora da lista mantém o destino e só fecha o objetivo' do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
+      Crm::MetaAdObject.create!(account: account, meta_object_id: adset_id, object_type: 'adset', destination_type: 'WEBSITE')
+      stub_meta_ad_set_destinations(ad_account_id, rows: [])
+
+      sync.perform('today')
+
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id)).to have_attributes(destination_type: 'WEBSITE', optimization_goal: 'UNDEFINED')
+    end
+
     it 'lista cortada no teto de páginas: só grava os que vieram, o resto fica para a próxima leitura' do
       stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
       page = { data: [{ id: '999', destination_type: 'WHATSAPP' }], paging: { cursors: { after: 'C' }, next: 'https://graph.facebook.com/n' } }

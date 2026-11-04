@@ -3115,6 +3115,7 @@
           "ENGAGEMENT": "Engagement",
           "COMMENTS": "Comments",
           "LEADS": "Leads",
+          "PRIVATE": "Conversations via DM",
           "DESTINATIONS": {
             "PROFILE": "Leads to your profile",
             "POST": "Leads to a post or video",
@@ -3338,6 +3339,7 @@
           "ENGAGEMENT": "Engagement",
           "COMMENTS": "Comments",
           "LEADS": "Leads",
+          "PRIVATE": "Conversations via DM",
           "SHOWN": "Shown"
         },
         "WHY_TITLE": "Why",

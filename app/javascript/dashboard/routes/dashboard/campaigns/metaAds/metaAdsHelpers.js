@@ -265,12 +265,18 @@ const OTHER_STAT_FIELDS = {
   LEADS: 'leads',
   SHOWN: 'impressions',
 };
-export const otherAdStats = ad =>
-  (OTHER_STAT_KEYS[ad.destination] || ['CLICKS', 'SHOWN'])
+// As conversas do privado de um comentário (#2521) vêm primeiro, só quando houve: são o resultado em conversa de um
+// anúncio que não abre conversa, fora do custo por conversa.
+export const otherAdStats = ad => [
+  ...(ad.private_conversations
+    ? [{ key: 'PRIVATE', value: ad.private_conversations }]
+    : []),
+  ...(OTHER_STAT_KEYS[ad.destination] || ['CLICKS', 'SHOWN'])
     .filter(
       key => key !== 'LEADS' || ad.destination === 'lead_form' || ad.leads
     )
-    .map(key => ({ key, value: ad[OTHER_STAT_FIELDS[key]] || 0 }));
+    .map(key => ({ key, value: ad[OTHER_STAT_FIELDS[key]] || 0 })),
+];
 
 // Chave do texto do destino (PANEL.OTHER_ADS.DESTINATIONS): profile, post, lead_form, website, app, reach ou other.
 export const destinationKey = ad =>

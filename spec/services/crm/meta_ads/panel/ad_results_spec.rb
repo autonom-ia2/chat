@@ -9,11 +9,12 @@ RSpec.describe Crm::MetaAds::Panel::AdResults do
                                     fetched_at: Time.current, actions: actions, **metrics)
   end
 
-  it 'soma os dias, prefere o número da janela fixa e ignora ações que não mostra' do
+  it 'soma os dias, usa a janela fixa só no cadastro e ignora ações que não mostra' do
     day('a', Date.new(2026, 10, 5), [{ 'action_type' => 'lead', 'value' => '9', '7d_click' => '4' },
                                      { 'action_type' => 'comment', 'value' => '2' }, { 'action_type' => 'like', 'value' => '50' }],
         impressions: 100, link_clicks: 10)
-    day('a', Date.new(2026, 10, 6), [{ 'action_type' => 'video_view', 'value' => '30' }, 'lixo', { 'action_type' => 'post_engagement' }],
+    day('a', Date.new(2026, 10, 6),
+        [{ 'action_type' => 'video_view', 'value' => '30', '7d_click' => '3' }, 'lixo', { 'action_type' => 'post_engagement' }],
         impressions: 50, link_clicks: 5)
 
     results = described_class.new(Crm::MetaAdInsightDaily.where(account: account))

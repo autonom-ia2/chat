@@ -9,14 +9,19 @@
 # `since:` (F5, D5.8) troca a janela pelo período do painel: o painel em 7 dias confia só nos 7 dias, e
 # `window_days` vira o número de dias, no fuso da conta, de `since` até hoje. Sem ele fica a janela de 30 dias
 # da aba Conexão.
+#
+# `outside_comment_ads:` (#2521) tira da confiança as conversas do privado de um comentário de anúncio que leva para
+# fora de conversa: elas não entram na coorte nem no custo por conversa (Panel::OutsideAds), e a caixa conta as mesmas
+# conversas que o total do painel.
 class Crm::MetaAds::Links::Stats
   CONFIDENCE_WINDOW = 30.days
   RANK = Crm::MetaAdLink::CERTAINTIES.each_with_index.to_h.freeze
   RANK_SQL = Arel.sql("MIN(CASE certainty #{RANK.map { |name, rank| "WHEN '#{name}' THEN #{rank}" }.join(' ')} END)")
 
-  def initialize(connection, since: nil)
+  def initialize(connection, since: nil, outside_comment_ads: [])
     @connection = connection
     @since = since
+    @outside_comment_ads = outside_comment_ads
   end
 
   def payload
@@ -38,9 +43,15 @@ class Crm::MetaAds::Links::Stats
   end
 
   def confidence
-    best = links.where(touched_at: (@since || CONFIDENCE_WINDOW.ago)..).group(:conversation_id).pluck(RANK_SQL)
+    best = counted_links.group(:conversation_id).pluck(RANK_SQL)
     counts = RANK.keys.index_with(0).merge(best.tally.transform_keys { |rank| RANK.key(rank) })
     { window_days: window_days, conversations: best.size }.merge(counts.symbolize_keys)
+  end
+
+  # A conversa de comentário só sai quando é de um anúncio de fora; ela sempre tem o anúncio.
+  def counted_links
+    period = links.where(touched_at: (@since || CONFIDENCE_WINDOW.ago)..)
+    period.where.not(origin: Crm::MetaAds::Links::CommentTouch::ORIGIN).or(period.where.not(ad_id: @outside_comment_ads))
   end
 
   def window_days

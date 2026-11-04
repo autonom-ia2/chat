@@ -13,11 +13,12 @@
 # Cada anúncio e o total também dizem quantos estão em negociação (card aberto) e quantos se perderam.
 #
 # Com conexão (#2054), os anúncios se separam em dois blocos. `ads` são os que trazem conversa: já trouxeram alguma
-# (ligação conversa → anúncio, do WhatsApp, do site ou do privado de um comentário, ou a contagem da Meta, em qualquer
-# época) ou levam a uma conversa pelo destino ou pelo objetivo do conjunto; o gasto, o custo por conversa e o custo por
+# (ligação conversa → anúncio, do WhatsApp ou do site, ou a contagem da Meta, em qualquer época) ou levam a uma
+# conversa pelo destino ou pelo objetivo do conjunto; o gasto, o custo por conversa e o custo por
 # venda saem só deles. `other_ads` são os que nunca trouxeram conversa e cujo conjunto, segundo a Meta, leva a outro
 # lugar (perfil, publicação, formulário, site, alcance…): gasto, para onde leva (`destination`) e o que a Meta mede
-# nele (Panel::AdResults), para o gasto deles não inflar o custo de quem traz conversa. Sem o destino ainda
+# nele (Panel::AdResults), mais as conversas do privado de um comentário deles (`private_conversations`, #2521, fora
+# da coorte), para o gasto deles não inflar o custo de quem traz conversa. Sem o destino ainda
 # (Panel::AdDestinations), o anúncio fica entre os que trazem conversa. Todo anúncio leva os `comments` que a Meta
 # contou no período (#2519), para o atalho "Cuidar dos comentários" da lista.
 #
@@ -75,7 +76,11 @@ class Crm::MetaAds::Panel::Report
   end
 
   def cohort
-    @cohort ||= (whatsapp_only? ? Crm::MetaAds::Panel::WhatsappCohort : Crm::MetaAds::Panel::Cohort).new(@account_id, range)
+    @cohort ||= if whatsapp_only?
+                  Crm::MetaAds::Panel::WhatsappCohort.new(@account_id, range)
+                else
+                  Crm::MetaAds::Panel::Cohort.new(@account_id, range, outside_comment_ads: outside.ids)
+                end
   end
 
   def insights
@@ -180,24 +185,14 @@ class Crm::MetaAds::Panel::Report
     @whatsapp_ad_ids ||= (spend_by_ad.keys.reject { |ad_id| outside_conversation?(ad_id) } + cohort.conversation_ads.values.compact).uniq
   end
 
-  # Fora dos que trazem conversa: nunca trouxe conversa e a Meta diz que o conjunto leva a outro lugar (site, vídeo,
-  # perfil). Anúncio novo de WhatsApp, ainda sem a primeira mensagem, continua entre os que trazem conversa.
+  # Fora dos que trazem conversa (Panel::OutsideAds). Sem conexão não há gasto, e nenhum anúncio fica de fora.
   def outside_conversation?(ad_id)
-    messaging_ad_ids.exclude?(ad_id) && destinations.outside_conversation?(ad_id)
+    !whatsapp_only? && outside.include?(ad_id)
   end
 
-  def destinations
-    @destinations ||= Crm::MetaAds::Panel::AdDestinations.new(@account_id, insights)
-  end
-
-  # Já trouxe conversa: pelo clique (qualquer época) ou a Meta já contou conversa iniciada nele.
-  def messaging_ad_ids
-    @messaging_ad_ids ||= if whatsapp_only?
-                            Set.new
-                          else
-                            Set.new(insights_since_ever.where(ad_id: spend_by_ad.keys, conversations_started: 1..).distinct.pluck(:ad_id)) |
-                              Crm::MetaAdLink.where(account_id: @account_id, ad_id: spend_by_ad.keys).distinct.pluck(:ad_id)
-                          end
+  def outside
+    @outside ||= Crm::MetaAds::Panel::OutsideAds.new(@account_id, insights: insights, ever: insights_since_ever,
+                                                                  spend_by_ad: spend_by_ad, range: range)
   end
 
   def results
@@ -205,8 +200,7 @@ class Crm::MetaAds::Panel::Report
   end
 
   def other_ad_row(ad_id)
-    { ad_id: ad_id, spend: spend_by_ad.fetch(ad_id, 0.0).round(2), destination: destinations.kind(ad_id) }
-      .merge(results.for(ad_id), ad_look(ad_id))
+    { ad_id: ad_id, spend: spend_by_ad.fetch(ad_id, 0.0).round(2) }.merge(outside.row(ad_id), results.for(ad_id), ad_look(ad_id))
   end
 
   def ad_row(ad_id)
@@ -262,7 +256,7 @@ class Crm::MetaAds::Panel::Report
   end
 
   def confidence
-    @confidence ||= Crm::MetaAds::Links::Stats.new(@connection, since: range.begin).payload[:confidence]
+    @confidence ||= Crm::MetaAds::Links::Stats.new(@connection, since: range.begin, outside_comment_ads: outside.ids).payload[:confidence]
   end
 
   def ratio(numerator, denominator)

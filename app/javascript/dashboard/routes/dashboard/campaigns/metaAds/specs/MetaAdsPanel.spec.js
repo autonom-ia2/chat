@@ -787,6 +787,21 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(row.text()).toContain('430');
   });
 
+  it('conversations from a comment DM show first on the other ad row, only when there are some (#2521)', async () => {
+    panelWithOther({ ...PROFILE_AD, private_conversations: 2 });
+    const wrapper = await mountPanel();
+
+    const row = wrapper.find('[data-panel-other-ad="9"]');
+    expect(statKeys(row)).toEqual([
+      'SPEND',
+      'PRIVATE',
+      'CLICKS',
+      'ENGAGEMENT',
+      'SHOWN',
+    ]);
+    expect(row.text()).toContain('PANEL.OTHER_ADS.PRIVATE');
+  });
+
   it('a lead form ad shows leads even at zero; a website ad only when it had some (#2521)', async () => {
     panelWithOther({ ...PROFILE_AD, destination: 'lead_form' });
     let wrapper = await mountPanel();
@@ -832,8 +847,14 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     );
   });
 
+  const CARE_FLAGS = [
+    'meta_ads_gestao',
+    'meta_ads_comentarios_instagram',
+    'meta_ads_comentarios_ia',
+  ];
+
   it('with the comments AI on, each ad with comments links to "Handle comments" (#2519)', async () => {
-    accountFlags.add('meta_ads_comentarios_ia');
+    CARE_FLAGS.forEach(flag => accountFlags.add(flag));
     panelWithOther(PROFILE_AD, [{ ...PANEL.ads[0], comments: 4 }]);
     const wrapper = await mountPanel();
 
@@ -862,7 +883,14 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(wrapper.find('[data-panel-ad-comments]').exists()).toBe(false);
     wrapper.unmount();
 
+    // A IA sem a gestão ou sem os comentários de nenhuma rede: o anúncio por dentro também não mostra o cuidar.
     accountFlags.add('meta_ads_comentarios_ia');
+    panelWithOther(PROFILE_AD, [{ ...PANEL.ads[0], comments: 4 }]);
+    wrapper = await mountPanel();
+    expect(wrapper.find('[data-panel-ad-comments]').exists()).toBe(false);
+    wrapper.unmount();
+
+    CARE_FLAGS.forEach(flag => accountFlags.add(flag));
     panelWithOther({ ...PROFILE_AD, comments: 0 }, [
       { ...PANEL.ads[0], comments: 0 },
     ]);

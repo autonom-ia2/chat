@@ -4,9 +4,10 @@
 #
 # Só chama a Meta quando algum conjunto com gasto em WINDOW ainda não tem destino ou objetivo: os dois nascem com o
 # conjunto, então cada um é lido uma vez (o conjunto lido antes do #2521, só com o destino, é lido mais uma vez). O
-# conjunto que não vem na lista completa (apagado, arquivado) fica UNDEFINED nos dois — "não se sabe" para o painel —
-# e não é pedido de novo; com a lista cortada no teto de páginas, o que faltou fica para a próxima leitura. Leitura
-# opcional, como a de frequência: no erro só registra o uso e o log, sem passar por Failure.handle!.
+# conjunto que não vem na lista completa (apagado, arquivado) fica UNDEFINED no que faltava — "não se sabe" para o
+# painel — e não é pedido de novo; o destino já lido antes fica como estava (a lista não traz os arquivados, e o
+# anúncio de site arquivado não pode voltar a "trazem conversa"); com a lista cortada no teto de páginas, o que faltou
+# fica para a próxima leitura. Leitura opcional, como a de frequência: no erro só registra o uso e o log, sem passar por Failure.handle!.
 class Crm::MetaAds::Insights::Destinations
   UNKNOWN = Crm::MetaAds::Panel::AdDestinations::UNDEFINED
   LIMIT = 64
@@ -41,9 +42,10 @@ class Crm::MetaAds::Insights::Destinations
 
   def write!(missing, rows, complete:)
     listed = destinations_in(rows)
+    known = known_destinations(missing)
     now = Time.current
     records = missing.filter_map do |id|
-      read = listed[id] || ([UNKNOWN, UNKNOWN] if complete)
+      read = listed[id] || ([known.fetch(id, UNKNOWN), UNKNOWN] if complete)
       read && { account_id: @connection.account_id, meta_object_id: id, object_type: 'adset', destination_type: read.first,
                 optimization_goal: read.last, created_at: now, updated_at: now }
     end
@@ -51,6 +53,11 @@ class Crm::MetaAds::Insights::Destinations
 
     Crm::MetaAdObject.upsert_all(records, unique_by: :idx_crm_meta_ad_objects_account_object, # rubocop:disable Rails/SkipsModelValidations
                                           update_only: %i[destination_type optimization_goal])
+  end
+
+  def known_destinations(ids)
+    Crm::MetaAdObject.where(account_id: @connection.account_id, meta_object_id: ids).where.not(destination_type: nil)
+                     .pluck(:meta_object_id, :destination_type).to_h
   end
 
   # { id do conjunto => [destino, objetivo] } do que a Meta listou. Campo vazio vale UNDEFINED, como o conjunto que não
