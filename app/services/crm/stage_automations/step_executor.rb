@@ -125,7 +125,8 @@ class Crm::StageAutomations::StepExecutor
       card: @card,
       actor: @actor,
       target_stage: target_stage,
-      automation_context: @automation_context.merge(depth: depth + 1)
+      automation_context: @automation_context.merge(depth: depth + 1),
+      automacao: { origem: 'etapa', id: @step.stage_automation_id }
     ).perform
 
     log_activity('automation_stage_moved', target_stage_id: target_stage.id)
