@@ -66,6 +66,7 @@ import {
   topoDaFaixa,
 } from 'dashboard/components-next/conversa-canal/rolagemDaPele';
 import { useAlert } from 'dashboard/composables';
+import ComentarioNaConversa from 'dashboard/components-next/conversa-canal/comentario/ComentarioNaConversa.vue';
 
 // Até quantos px do fim a lista conta como "no fim" quando a caixa de resposta cresce.
 const NO_FIM_DO_PAINEL = 40;
@@ -83,6 +84,7 @@ export default {
     AvisoJanelaFechada,
     EncaminharDaConversa,
     FaixaDeNaoLidas,
+    ComentarioNaConversa,
   },
   mixins: [inboxMixin],
   setup() {
@@ -194,6 +196,11 @@ export default {
     },
     inboxId() {
       return this.currentChat.inbox_id;
+    },
+    // #2215: a conversa nasceu de um comentário do Instagram (#2212): o comentário fica no topo, com as ações nele.
+    nasceuDeComentarioDoInstagram() {
+      const origem = this.currentChat.additional_attributes?.meta_ads_comment;
+      return this.isAnInstagramChannel && origem?.network === 'instagram';
     },
     inbox() {
       return this.$store.getters['inboxes/getInbox'](this.inboxId);
@@ -779,6 +786,10 @@ export default {
     :data-conversa-da-pele="pele ? '' : undefined"
   >
     <div ref="topBannerRef">
+      <ComentarioNaConversa
+        v-if="nasceuDeComentarioDoInstagram"
+        :conversation-id="currentChat.id"
+      />
       <Banner
         v-if="isInstagramRestrictionBannerVisible"
         color-scheme="warning"
