@@ -13,6 +13,7 @@ import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
 import LivreAlterar from '../components/LivreAlterar.vue';
 import LivreLigar from '../components/LivreLigar.vue';
 import LivreHistorico from '../components/LivreHistorico.vue';
+import LivreEnsaio from '../components/LivreEnsaio.vue';
 import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/guiada/DialogoDaCasa.vue';
 import { carregarCatalogo, novoPasso, useCatalogo } from '../catalogo';
 import {
@@ -78,6 +79,12 @@ const fecharPainel = chave => {
   const { [chave]: _fechado, ...resto } = route.query;
   router.replace({ query: resto });
 };
+
+// #2498 — Ensaiar (?ensaiar=1): o que a automação faria nas conversas
+// recentes, com o rascunho da tela quando há mudança sem salvar.
+const ensaiar = computed(() => route.query.ensaiar === '1');
+const abrirEnsaio = () =>
+  router.replace({ query: { ...route.query, ensaiar: '1' } });
 
 const alternarTudo = () =>
   router.replace({
@@ -456,11 +463,34 @@ onMounted(() => {
                 @guardar="editor.guardar"
                 @desligar="editor.desligar"
               />
+              <Button
+                data-ensaiar
+                :label="
+                  automacao?.ativa
+                    ? $t('AUTOMACAO_LIVRE.ENSAIO.BOTAO')
+                    : $t('AUTOMACAO_LIVRE.ENSAIO.BOTAO_ANTES')
+                "
+                icon="i-lucide-flask-conical"
+                slate
+                faded
+                class="w-full min-h-11"
+                :disabled="!receita.gatilho"
+                @click="abrirEnsaio"
+              />
               <p v-if="!nova" class="mb-0 text-sm text-n-slate-11">
                 {{ $t('AUTOMACAO_LIVRE.EDITOR.NO_MEIO') }}
               </p>
             </aside>
           </div>
+
+          <LivreEnsaio
+            v-if="ensaiar && catalogo && receita.gatilho"
+            :automacao-id="automacao?.id ?? null"
+            :receita="receita"
+            :rascunho="mudou"
+            :catalogo="catalogo"
+            @fechar="fecharPainel('ensaiar')"
+          />
 
           <template v-if="catalogo && podeMudar">
             <LivreSeletorPasso

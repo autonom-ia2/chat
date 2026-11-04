@@ -723,13 +723,16 @@ Rails.application.routes.draw do
             resources :guide_memorias, only: [:index, :update, :destroy]
             # #935 — o Guia volta sozinho: as vigias ("me avisa se…") e os avisos de cada pessoa.
             resources :vigias, only: [:index, :show, :create, :update, :destroy]
-            # #2414 F5 — a Automação livre pelo editor: o catálogo de passos, as automações, ligar, desligar e o histórico.
+            # #2414 F5 — a Automação livre pelo editor: o catálogo de passos, as automações, ligar, desligar, o histórico
+            # e o ensaio (#2498: o da coleção é o da automação ainda não salva).
             resources :automacoes, only: [:index, :show, :create, :update] do
               get :passos, on: :collection
+              post :ensaio, on: :collection, action: :ensaio_novo
               member do
                 post :ligar
                 post :desligar
                 get :historico
+                post :ensaio
               end
             end
             resources :avisos, only: [:index, :update]
@@ -911,6 +914,11 @@ Rails.application.routes.draw do
               resource :participants, only: [:show, :create, :update, :destroy]
               resource :direct_uploads, only: [:create]
               resource :draft_messages, only: [:show, :update, :destroy]
+              # #2215: o comentário do Instagram de onde a conversa nasceu, e as ações nele.
+              resource :comentario, only: [:show, :destroy], controller: 'comentario' do
+                post :responder
+                post :esconder
+              end
             end
             member do
               post :mute

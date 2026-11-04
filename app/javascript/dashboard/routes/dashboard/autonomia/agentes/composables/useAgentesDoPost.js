@@ -218,20 +218,17 @@ export function useAgenteDoPost(id, { emFila = false } = {}) {
     }
   };
 
-  // O Testar: a resposta do servidor, ou { status: 'erro', ia: true } com a IA fora do ar, ou { status: 'erro' }.
-  const testar = async ({ pergunta, formato, network }) => {
+  // O Testar: a resposta do servidor, ou { status: 'erro', codigo } com o código do erro (ai_unavailable,
+  // no_credential, …), ou { status: 'erro' }.
+  const testar = async ({ pergunta, network }) => {
     try {
       const { data } = await AgentesDoPostAPI.testar(toValue(id), {
         pergunta,
-        formato,
         network,
       });
       return data;
     } catch (error) {
-      return {
-        status: 'erro',
-        ia: error?.response?.data?.error === 'ai_unavailable',
-      };
+      return { status: 'erro', codigo: error?.response?.data?.error || null };
     }
   };
 

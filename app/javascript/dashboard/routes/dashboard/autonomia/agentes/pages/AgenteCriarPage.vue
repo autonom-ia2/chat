@@ -31,6 +31,7 @@ import {
   caixasDaQuery,
   caixasNaQuery,
   perguntasDeTeste,
+  perguntasDoAgente,
 } from '../constants/criacao';
 import { MODELO_DO_MEU_JEITO, MODELOS } from '../constants/modelos';
 import {
@@ -1035,6 +1036,7 @@ onMounted(() => {
           :nome="nome"
           :empresa="empresa"
           :perguntas="perguntasDeTeste(modelo, interno, ajudante)"
+          :perguntas-do-agente="perguntasDoAgente(agente, ajudante)"
           :interno="interno"
           :ajudante="ajudante"
           :mensagens="teste.mensagens.value"

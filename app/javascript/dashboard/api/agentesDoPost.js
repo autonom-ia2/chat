@@ -13,9 +13,11 @@ import ApiClient from './ApiClient';
 // - get: o item mais { legenda, capa, foto, nota, can_manage, portas[], comentarios },
 //   lido na Meta na hora, sem IA.
 // - estado: 'on' | 'paused' → o mesmo do get.
-// - testar: { pergunta, formato: 'publico' | 'privado', network } →
-//   { status: 'escrito', texto } | { status: 'fica_com_o_dono', motivo } |
-//   { status: 'frases_fixas', motivo } | { status: 'no_private' }; no escrito, `material`: os
+// - testar (#2510): { pergunta, network } → { status: 'ready', decisao, motivo,
+//   escrita? }: o que o motor faria com o comentário e, quando manda o privado,
+//   escrita { status: 'escrito', privado, publico, material } |
+//   { status: 'fica_com_o_dono', motivo } |
+//   { status: 'frases_fixas', motivo, privado, publico }. `material`: os
 //   arquivos só deste post de que a resposta saiu (#2487).
 // - materiais / anexar / tirar (#2487): o material só deste post ou anúncio,
 //   { materiais: [{ id, reference, source_type, status, agente, review }] }.
@@ -40,12 +42,8 @@ class AgentesDoPostAPI extends ApiClient {
     return axios.put(`${this.url}/${id}/estado`, { status });
   }
 
-  testar(id, { pergunta, formato, network }) {
-    return axios.post(`${this.url}/${id}/testar`, {
-      pergunta,
-      formato,
-      network,
-    });
+  testar(id, { pergunta, network }) {
+    return axios.post(`${this.url}/${id}/testar`, { pergunta, network });
   }
 
   materiais(id) {

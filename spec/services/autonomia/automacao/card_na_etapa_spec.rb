@@ -71,6 +71,17 @@ RSpec.describe Autonomia::Automacao::CardNaEtapa do
       expect { rodar_regra }.to change(Crm::Card, :count).by(1)
     end
 
+    it 'com a flag, o card que já existe é movido com a marca da regra (#2428)' do
+      account.enable_features!('automacao_fundacao')
+      card = account.crm_cards.create!(pipeline: pipeline, stage: stage, contact: conversation.contact,
+                                       primary_conversation: conversation, title: 'Lead')
+
+      rodar_regra
+
+      movimento = Crm::Activity.where(card: card, event_type: 'move').sole
+      expect(movimento.payload).to include('by' => 'automacao', 'origem' => 'regra', 'automacao_id' => rule.id)
+    end
+
     it 'sem a flag, faz o de antes: sem card, nada acontece' do
       expect { rodar_regra }.not_to change(Crm::Card, :count)
     end

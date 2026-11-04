@@ -4,3 +4,7 @@ en:
       editor:
         sem_funil: This automation changes CRM cards. Only someone who manages pipelines can save or turn it on.
         versao_mudou: Someone else saved a newer version of this automation. Check the new version first.
+      ensaio:
+        receita_invalida: This automation has something to fix before a test run.
+        sem_receita: The automation needs a valid trigger and steps for a test run.
+        gatilho_de_card: Test runs only work with conversation triggers for now.
