@@ -116,6 +116,16 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(response.parsed_body['cuidados'].pluck('kind')).to eq(%w[post post])
     end
 
+    it 'sem o CRM na instalação, os anúncios saem da lista e não abrem (#2479)' do
+      with_modified_env CRM_KANBAN_ENABLED: 'false' do
+        get base, headers: admin.create_new_auth_token, as: :json
+        expect(response.parsed_body['cuidados'].pluck('kind')).to eq(%w[post post])
+
+        get "#{base}/#{anuncio_ig.id}", headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
     it 'sem a conexão de anúncios ativa, os anúncios saem da lista e não abrem' do
       Crm::MetaAdsConnection.find_by(account_id: account.id).update!(status: 'invalid')
 
