@@ -167,9 +167,10 @@ class Meta::AdsGraphClient
     paged("act_#{ad_account_id}/adspixels", fields: PIXEL_FIELDS)
   end
 
-  # Para onde leva cada conjunto da conta (#2054): WHATSAPP, WEBSITE, ON_VIDEO…
+  # Para onde leva cada conjunto da conta (#2054): WHATSAPP, WEBSITE, ON_VIDEO…, e o objetivo dele (#2521), que decide
+  # quando o destino vem UNDEFINED.
   def ad_set_destinations(ad_account_id)
-    paged("act_#{ad_account_id}/adsets", fields: 'id,destination_type')
+    paged("act_#{ad_account_id}/adsets", fields: 'id,destination_type,optimization_goal')
   end
 
   include Meta::AdsGraphClient::Management

@@ -197,6 +197,18 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
       expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id).name).to eq('Conjunto 60+')
     end
 
+    # #2521: o objetivo do conjunto vem na mesma leitura; o conjunto lido antes, só com o destino, é lido mais uma vez.
+    it 'guarda o objetivo do conjunto e relê uma vez o conjunto lido antes, sem objetivo' do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
+      Crm::MetaAdObject.create!(account: account, meta_object_id: adset_id, object_type: 'adset', destination_type: 'UNDEFINED')
+      adsets = stub_meta_ad_set_destinations(ad_account_id, rows: [{ id: adset_id, destination_type: 'UNDEFINED', optimization_goal: 'REACH' }])
+
+      2.times { described_class.new(connection).perform('today') }
+
+      expect(adsets).to have_been_requested.once
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id)).to have_attributes(destination_type: 'UNDEFINED', optimization_goal: 'REACH')
+    end
+
     it 'conjunto fora da lista da Meta fica UNDEFINED e não é pedido de novo' do
       stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
       adsets = stub_meta_ad_set_destinations(ad_account_id, rows: [])
@@ -204,14 +216,25 @@ RSpec.describe Crm::MetaAds::Insights::Sync do
       2.times { described_class.new(connection).perform('today') }
 
       expect(adsets).to have_been_requested.once
-      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id).destination_type).to eq('UNDEFINED')
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id)).to have_attributes(destination_type: 'UNDEFINED', optimization_goal: 'UNDEFINED')
+    end
+
+    # A lista não traz os arquivados: o destino lido antes do #2521 não pode virar UNDEFINED.
+    it 'conjunto já conhecido fora da lista mantém o destino e só fecha o objetivo' do
+      stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
+      Crm::MetaAdObject.create!(account: account, meta_object_id: adset_id, object_type: 'adset', destination_type: 'WEBSITE')
+      stub_meta_ad_set_destinations(ad_account_id, rows: [])
+
+      sync.perform('today')
+
+      expect(Crm::MetaAdObject.find_by(meta_object_id: adset_id)).to have_attributes(destination_type: 'WEBSITE', optimization_goal: 'UNDEFINED')
     end
 
     it 'lista cortada no teto de páginas: só grava os que vieram, o resto fica para a próxima leitura' do
       stub_meta_insights(ad_account_id, date_preset: 'today', rows: [meta_insights_row])
       page = { data: [{ id: '999', destination_type: 'WHATSAPP' }], paging: { cursors: { after: 'C' }, next: 'https://graph.facebook.com/n' } }
       stub_request(:get, meta_graph_url("act_#{ad_account_id}/adsets"))
-        .with(query: hash_including('fields' => 'id,destination_type'))
+        .with(query: hash_including('fields' => 'id,destination_type,optimization_goal'))
         .to_return(status: 200, body: page.to_json, headers: { 'Content-Type' => 'application/json' })
 
       sync.perform('today')

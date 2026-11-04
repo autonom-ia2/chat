@@ -3108,10 +3108,27 @@
         "OTHER_ADS": {
           "TITLE": "Other ads",
           "TOTAL": "{value} invested",
-          "HINT": "They brought no conversation: they lead to your website, a video or your profile. They stay out of the cost per conversation and per sale.",
+          "HINT": "They don't open a conversation directly: they lead to your profile, a post, a form or your website. People who message you later aren't linked to them. They're left out of the cost per conversation and per sale.",
           "SPEND": "Invested",
           "CLICKS": "Clicks",
-          "SHOWN": "Shown"
+          "SHOWN": "Shown",
+          "ENGAGEMENT": "Engagement",
+          "COMMENTS": "Comments",
+          "LEADS": "Leads",
+          "PRIVATE": "Conversations via DM",
+          "DESTINATIONS": {
+            "PROFILE": "Leads to your profile",
+            "POST": "Leads to a post or video",
+            "LEAD_FORM": "Leads to a lead form",
+            "WEBSITE": "Leads to your website",
+            "APP": "Leads to an app",
+            "REACH": "To be seen (reach)",
+            "OTHER": "Leads somewhere else"
+          }
+        },
+        "COMMENTS": {
+          "COUNT": "1 comment | {count} comments",
+          "CARE": "Handle comments"
         }
       },
       "GESTAO": {
@@ -3317,7 +3334,13 @@
           "SPEND": "Invested",
           "QUOTES": "Quotes",
           "SALES": "Sales",
-          "CONVERSATIONS": "Conversations"
+          "CONVERSATIONS": "Conversations",
+          "CLICKS": "Clicks",
+          "ENGAGEMENT": "Engagement",
+          "COMMENTS": "Comments",
+          "LEADS": "Leads",
+          "PRIVATE": "Conversations via DM",
+          "SHOWN": "Shown"
         },
         "WHY_TITLE": "Why",
         "REASON": {
@@ -3332,17 +3355,26 @@
         "MEANWHILE": "1 open quote from this ad is waiting for an answer. Picking it up is what you can do now. | {count} open quotes from this ad are waiting for an answer. Picking them up is what you can do now.",
         "MEANWHILE_SEE": "See the quotes",
         "CHART_TITLE": "Spend and conversations per day",
+        "CHART_TITLE_SPEND": "Spend per day",
         "CHART_TITLE_TALKS": "Conversations per day",
         "LEGEND_SPEND": "Spend",
         "LEGEND_CONVERSATIONS": "Conversations",
         "CHART_DAY": "{date}: {spend} · 1 conversation | {date}: {spend} · {count} conversations",
+        "CHART_DAY_SPEND": "{date}: {spend}",
         "CHART_DAY_TALKS": "{date}: 1 conversation | {date}: {count} conversations",
+        "CHART_SCALE_SPEND": "Highest spend in a day: {spend}",
         "CHART_SCALE": "Highest spend in a day: {spend} · most conversations in a day: 1 | Highest spend in a day: {spend} · most conversations in a day: {count}",
         "DAYS_TOGGLE": "See day by day",
         "DAYS_DATE": "Day",
         "QUOTES_TITLE": "Quotes from this ad",
         "QUOTES_EMPTY": "No quote from this ad in this period yet.",
-        "WON": "Sold"
+        "WON": "Sold",
+        "DESTINATION_TITLE": "Where it leads",
+        "DESTINATION": "{destination}. It doesn't open a conversation directly: people who message you later, on Direct or WhatsApp, aren't linked to this ad. That's why it's left out of the cost per conversation and per sale.",
+        "PRIVATE_REPLIES": {
+          "SENT": "Messaged 1 privately | Messaged {count} privately",
+          "REPLIED": "{count} replied | {count} replied"
+        }
       },
       "AI": {
         "DAILY": {

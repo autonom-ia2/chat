@@ -314,6 +314,62 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     expect(keys).toEqual(['SPEND', 'CONVERSATIONS', 'QUOTES', 'SALES']);
   });
 
+  // #2521: o anúncio que não abre conversa mostra a medida do destino e para onde leva, sem "Por quê".
+  it('an ad outside conversations shows the measure of its destination and where it leads', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({
+        ...AD,
+        verdict: null,
+        reason: null,
+        outside: true,
+        destination: 'profile',
+        link_clicks: 400,
+        post_engagement: 430,
+        impressions: 10000,
+        leads: 0,
+      })
+    );
+    const wrapper = await mountDetail();
+
+    expect(
+      wrapper
+        .findAll('[data-ad-detail-tile]')
+        .map(tile => tile.attributes('data-ad-detail-tile'))
+    ).toEqual(['SPEND', 'CLICKS', 'ENGAGEMENT', 'SHOWN']);
+    expect(wrapper.find('[data-ad-detail-why]').exists()).toBe(false);
+    const destination = wrapper.find('[data-ad-detail-destination]');
+    expect(destination.attributes('data-destination')).toBe('profile');
+    expect(destination.text()).toContain('AD_DETAIL.DESTINATION');
+    expect(destination.text()).toContain('DESTINATIONS.PROFILE');
+    // O gráfico fica só com o gasto: sem ponto, legenda nem coluna de conversas.
+    expect(wrapper.text()).toContain('AD_DETAIL.CHART_TITLE_SPEND');
+    expect(wrapper.text()).not.toContain('AD_DETAIL.LEGEND_CONVERSATIONS');
+    expect(wrapper.find('[data-ad-detail-chart-scale]').text()).toContain(
+      'AD_DETAIL.CHART_SCALE_SPEND'
+    );
+    expect(wrapper.findAll('[data-ad-detail-dot]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-ad-detail-bar]').length).toBeGreaterThan(0);
+  });
+
+  it('says how many were messaged privately and how many replied, only when someone was', async () => {
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({ ...AD, private_replies: { sent: 5, replied: 2 } })
+    );
+    let wrapper = await mountDetail();
+    const line = wrapper.find('[data-ad-detail-private-replies]').text();
+    expect(line).toContain('PRIVATE_REPLIES.SENT {"count":5}');
+    expect(line).toContain('PRIVATE_REPLIES.REPLIED {"count":2}');
+    wrapper.unmount();
+
+    CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
+      answer({ ...AD, private_replies: { sent: 0, replied: 0 } })
+    );
+    wrapper = await mountDetail();
+    expect(wrapper.find('[data-ad-detail-private-replies]').exists()).toBe(
+      false
+    );
+  });
+
   it('with a sale puts cost per sale next to the account average', async () => {
     CrmMetaAdsConnectionAPI.panelAd.mockResolvedValue(
       answer({
