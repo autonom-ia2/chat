@@ -2,18 +2,22 @@
   "gatilhos": [
     {
       "tipo": "conversa.criada",
+      "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_CRIADA"
     },
     {
       "tipo": "conversa.aberta",
+      "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_ABERTA"
     },
     {
       "tipo": "conversa.resolvida",
+      "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_RESOLVIDA"
     },
     {
       "tipo": "mensagem.criada",
+      "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.MENSAGEM_CRIADA",
       "filtro_sugerido": {
         "campo": {
@@ -83,65 +87,136 @@
   "valores": [
     {
       "caminho": "conversa.id",
+      "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ID"
     },
     {
       "caminho": "conversa.status",
+      "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_STATUS"
     },
     {
       "caminho": "conversa.prioridade",
+      "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_PRIORIDADE"
     },
     {
       "caminho": "conversa.caixa_id",
+      "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CAIXA_ID"
     },
     {
       "caminho": "conversa.responsavel_id",
+      "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_RESPONSAVEL_ID"
     },
     {
       "caminho": "conversa.time_id",
+      "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_TIME_ID"
     },
     {
       "caminho": "conversa.etiquetas",
+      "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ETIQUETAS"
     },
     {
       "caminho": "contato.id",
+      "base": "contato",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ID"
     },
     {
       "caminho": "contato.nome",
+      "base": "contato",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_NOME"
     },
     {
       "caminho": "contato.email",
+      "base": "contato",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_EMAIL"
     },
     {
       "caminho": "contato.telefone",
+      "base": "contato",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_TELEFONE"
     },
     {
       "caminho": "contato.empresa_id",
+      "base": "contato",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_EMPRESA_ID"
     },
     {
       "caminho": "contato.etiquetas",
+      "base": "contato",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ETIQUETAS"
     },
     {
+      "caminho": "card.id",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ID"
+    },
+    {
+      "caminho": "card.titulo",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TITULO"
+    },
+    {
+      "caminho": "card.etapa_id",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ETAPA_ID"
+    },
+    {
+      "caminho": "card.funil_id",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_FUNIL_ID"
+    },
+    {
+      "caminho": "card.status",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_STATUS"
+    },
+    {
+      "caminho": "card.valor",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_VALOR"
+    },
+    {
+      "caminho": "card.responsavel_id",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_RESPONSAVEL_ID"
+    },
+    {
+      "caminho": "card.time_id",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_TIME_ID"
+    },
+    {
+      "caminho": "card.dias_na_etapa",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_DIAS_NA_ETAPA"
+    },
+    {
+      "caminho": "card.motivo_da_perda",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_MOTIVO_DA_PERDA"
+    },
+    {
       "caminho": "conversa.atributos",
+      "base": "conversa",
       "atributos": "conversation_attribute",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ATRIBUTOS"
     },
     {
       "caminho": "contato.atributos",
+      "base": "contato",
       "atributos": "contact_attribute",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ATRIBUTOS"
+    },
+    {
+      "caminho": "card.atributos",
+      "base": "card",
+      "atributos": "card_attribute",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_ATRIBUTOS"
     },
     {
       "caminho": "mensagem.tipo",
@@ -199,6 +274,20 @@
       "so_guia": true
     }
   ],
+  "alvos": {
+    "Conversation": [
+      "conversa",
+      "contato"
+    ],
+    "Crm::Card": [
+      "card",
+      "conversa",
+      "contato"
+    ],
+    "Contact": [
+      "contato"
+    ]
+  },
   "grupos": [
     {
       "chave": "IA",

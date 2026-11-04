@@ -266,5 +266,10 @@
     "ALTERAR": {
       "DESFECHO": "Marcar como seguro ativo ou não fechou"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "VALORES": {
+      "CARD_MOTIVO_DA_PERDA": "Por que não fechou"
+    }
   }
 }

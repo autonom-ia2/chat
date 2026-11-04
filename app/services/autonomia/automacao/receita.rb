@@ -172,6 +172,7 @@ class Autonomia::Automacao::Receita
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
     return [texto(:mensagem_so_no_gatilho, passo: id, caminho: caminho)] if valores.da_mensagem?(caminho) && !mensagem_no_gatilho?(no_gatilho)
+    return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
     return [texto(:atributo_inexistente, passo: id, caminho: caminho)] unless valores.atributo_definido?(caminho, @conta)
 
     []
@@ -182,6 +183,12 @@ class Autonomia::Automacao::Receita
     return [texto(:acao_fora, passo: passo['id'], acao: acao)] unless ::Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
 
     [*caminho_da_acao(passo), *corpo_da_acao(passo)]
+  end
+
+  # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
+  def no_alvo_do_gatilho?(caminho)
+    alvo = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
+    alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
   end
 
   def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
