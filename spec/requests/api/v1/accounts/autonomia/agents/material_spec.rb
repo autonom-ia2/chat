@@ -46,7 +46,7 @@ RSpec.describe 'Autonomia agents - material', type: :request do
     ler
 
     expect(response.parsed_body['autoteste']).to eq(
-      'estado' => 'pronto', 'quando' => nil, 'feitas' => 2, 'total' => 2, 'do_material' => 1, 'de_fora' => 1,
+      'estado' => 'pronto', 'quando' => nil, 'feitas' => 2, 'total' => 2, 'nao_julgadas' => 0, 'do_material' => 1, 'de_fora' => 1,
       'certas_do_material' => 1, 'certas_de_fora' => 1,
       'resultados' => [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'ok' => true },
                        { 'pergunta' => 'Vende bolo?', 'origem' => 'fora', 'ok' => true }]
@@ -54,7 +54,7 @@ RSpec.describe 'Autonomia agents - material', type: :request do
   end
 
   # #2444: o item que o próprio juiz não consegue julgar não é acerto nem erro do agente.
-  it 'deixa fora das contas e da lista o item que o juiz deu como "nao_se_aplica"' do
+  it 'deixa fora das contas e da lista o item que o juiz deu como "nao_se_aplica", e diz quantos foram' do
     material('cardapio.pdf')
     itens = [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'veredito' => 'certo' },
              { 'pergunta' => 'Abre domingo?', 'origem' => 'material', 'veredito' => 'nao_se_aplica' },
@@ -66,11 +66,24 @@ RSpec.describe 'Autonomia agents - material', type: :request do
     ler
 
     expect(response.parsed_body['autoteste']).to include(
-      'do_material' => 1, 'de_fora' => 1, 'certas_do_material' => 1, 'certas_de_fora' => 0,
+      'nao_julgadas' => 2, 'do_material' => 1, 'de_fora' => 1, 'certas_do_material' => 1, 'certas_de_fora' => 0,
       'resultados' => [{ 'pergunta' => 'Abre sábado?', 'origem' => 'material', 'ok' => true },
                        { 'pergunta' => 'Vende bolo?', 'origem' => 'fora', 'ok' => false }]
     )
     expect(response.parsed_body['problemas'].pluck('tipo')).to eq(['autoteste_fora'])
+  end
+
+  it 'nenhuma pergunta do material deu para julgar: zero do material, com o número das que ficaram de fora' do
+    material('cardapio.pdf')
+    itens = [{ 'pergunta' => 'Abre domingo?', 'origem' => 'material', 'veredito' => 'nao_se_aplica' },
+             { 'pergunta' => 'Vende bolo?', 'origem' => 'fora', 'veredito' => 'recusou' }]
+    Autonomia::Agents::Agent.gravar_chave_do_material!(agent.id, 'autoteste', { 'rodada' => 'r', 'rodada_dos_itens' => 'r', 'estado' => 'pronto',
+                                                                                'feitas' => 2, 'total' => 2, 'itens' => itens })
+
+    ler
+
+    expect(response.parsed_body['autoteste']).to include('estado' => 'pronto', 'nao_julgadas' => 1, 'do_material' => 0,
+                                                         'certas_do_material' => 0, 'de_fora' => 1)
   end
 
   it 'rodando há mais que a validade aparece como parado (a tela oferece tentar de novo)' do

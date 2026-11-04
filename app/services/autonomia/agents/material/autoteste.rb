@@ -13,6 +13,7 @@
 #   rodada, estado (rodando | pronto | parado), motivo (teto | indisponivel), quando (pedido | base_mudou), desde,
 #   feitas, total, gasto_usd, hash_da_base, ultima_automatica,
 #   rodada_dos_itens (a rodada que produziu os itens: o id dos cartões não muda quando outra rodada começa),
+#   nao_julgadas (#2444: quantos itens dessa rodada o juiz deu como nao_se_aplica; vai também no log do fim da rodada),
 #   itens: o ÚLTIMO resultado completo — [{ pergunta, origem (material | fora), esperado, fonte, resposta, equipe,
 #          trechos (t4d: até 3 trechos usados, { fonte, paginas, texto }),
 #          veredito (certo | errado | recusou | inventou | nao_se_aplica), confirmada }]
@@ -88,7 +89,7 @@ class Autonomia::Agents::Material::Autoteste
     end
 
     def nova_rodada(atual, rodada, quando, agent)
-      base = atual.is_a?(Hash) ? atual.slice('itens', 'rodada_dos_itens', 'ultima_automatica') : {}
+      base = atual.is_a?(Hash) ? atual.slice('itens', 'rodada_dos_itens', 'nao_julgadas', 'ultima_automatica') : {}
       base = base.merge('ultima_automatica' => Time.current.iso8601) if quando == 'base_mudou'
       base.merge('rodada' => rodada, 'estado' => 'rodando', 'motivo' => nil, 'quando' => quando, 'desde' => Time.current.iso8601,
                  'feitas' => 0, 'total' => 0, 'gasto_usd' => 0.0, 'hash_da_base' => Autonomia::Agents::Material.hash_da_base(agent))
@@ -155,7 +156,8 @@ class Autonomia::Agents::Material::Autoteste
     return parar!('indisponivel') if vereditos.nil?
 
     julgados = itens.zip(vereditos).map { |item, veredito| item.merge('veredito' => veredito) }
-    finalizar!('estado' => 'pronto', 'rodada_dos_itens' => @rodada, 'itens' => julgados)
+    finalizar!('estado' => 'pronto', 'rodada_dos_itens' => @rodada, 'itens' => julgados,
+               'nao_julgadas' => vereditos.count(Autonomia::Agents::Material::JuizDoAutoteste::NAO_SE_APLICA))
   end
 
   # Cabe no teto? Mede e chama; não cabe, para antes (`:parou`).
@@ -218,7 +220,7 @@ class Autonomia::Agents::Material::Autoteste
   def finalizar!(mudanca)
     alterar! { |atual| atual.merge(mudanca).merge('gasto_usd' => @medidor.gasto.round(4)) }
     Rails.logger.info("[autonomia][autoteste] agent=#{@agent.id} rodada=#{@rodada} #{mudanca['estado']} " \
-                      "motivo=#{mudanca['motivo']} gasto_usd=#{@medidor.gasto.round(4)}")
+                      "motivo=#{mudanca['motivo']} nao_julgadas=#{mudanca['nao_julgadas']} gasto_usd=#{@medidor.gasto.round(4)}")
     true
   end
 

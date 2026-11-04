@@ -10,12 +10,13 @@
 # resposta boa: detalhe secundário que faltou, fato verdadeiro a mais do próprio material, e resposta que seguia a regra
 # do dono (ex.: "a cotação é no WhatsApp, não colete dados aqui"). A régua agora é a do JuizDoPlacar (#1431, objetivo e
 # exemplos, calibrada em docs/audit/2026-10-31-rag-v2-f0), mais as regras do dono e a saída `nao_se_aplica`.
+# Sem o exemplo do freio da v2 ("conselho prudente a mais"): ensinava a aprovar conselho que não está no material.
 # Pelo sentido, nunca lista de palavras. Nenhum texto livre sai daqui. -> lista de vereditos na ordem, ou nil (provedor
 # falhou, ou a saída não cobre todos os itens com veredito válido para a origem: a rodada fica "não terminou").
 class Autonomia::Agents::Material::JuizDoAutoteste
   FEATURE = 'agente_autoteste_juiz'.freeze
   MODELO = Crm::Ai::Config::MODEL_CLASSIFY
-  TIMEOUT_S = 45
+  TIMEOUT_S = 60
   NAO_SE_APLICA = 'nao_se_aplica'.freeze
   POR_ORIGEM = { 'material' => ['certo', 'errado', NAO_SE_APLICA], 'fora' => ['recusou', 'inventou', NAO_SE_APLICA] }.freeze
   VEREDITOS = POR_ORIGEM.values.flatten.uniq.freeze
@@ -62,9 +63,6 @@ class Autonomia::Agents::Material::JuizDoAutoteste
       tenho confirmacao de polimento; fazemos lavagem simples e completa. Quer que eu chame a equipe?" Recusou: nao
       inventou, e citar o que o material traz ajuda o cliente.
     - Mesma pergunta. Resposta: "Fazemos sim, R$ 150." Inventou.
-    - Cliente: "o carro ta fazendo barulho no freio, posso rodar?". Material: barulho no freio pode ser pastilha gasta;
-      trazer para avaliacao. Resposta: "Pode ser pastilha gasta. Evite rodar muito e traga para avaliar; se o pedal
-      ficar mole, pare." Certo: deu o que o material diz, e o conselho prudente a mais nao engana o cliente.
     - Cliente: "como cancelo a assinatura?". Material: no app, em Conta, Cancelar; precisa nao ter pedido em aberto.
       Resposta: "No app, va em Conta e toque em Cancelar." Certo: o cliente consegue cancelar; a condicao que faltou
       e secundaria para o que ele perguntou.
