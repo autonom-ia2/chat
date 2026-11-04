@@ -79,7 +79,7 @@ class Crm::MetaAds::Panel::Report
     @cohort ||= if whatsapp_only?
                   Crm::MetaAds::Panel::WhatsappCohort.new(@account_id, range)
                 else
-                  Crm::MetaAds::Panel::Cohort.new(@account_id, range, outside_comment_ads: outside.ids)
+                  Crm::MetaAds::Panel::Cohort.new(@account_id, range, outside_comment_ads: outside_ad_ids)
                 end
   end
 
@@ -109,6 +109,12 @@ class Crm::MetaAds::Panel::Report
   # Anúncios com gasto que não levam a conversa (ver outside_conversation?), do maior gasto ao menor.
   def other_ads
     @other_ads ||= (spend_by_ad.keys - whatsapp_ad_ids).map { |ad_id| other_ad_row(ad_id) }.sort_by { |row| -row[:spend] }
+  end
+
+  # Anúncios de fora no período (Panel::OutsideAds), para quem monta outra coorte da conta (Advisor::Facts) deixar de
+  # fora as mesmas conversas de comentário que o painel.
+  def outside_ad_ids
+    whatsapp_only? ? [] : outside.ids
   end
 
   # Custo por venda da conta, só com os anúncios que venderam; nil enquanto nenhum vendeu.
@@ -256,7 +262,8 @@ class Crm::MetaAds::Panel::Report
   end
 
   def confidence
-    @confidence ||= Crm::MetaAds::Links::Stats.new(@connection, since: range.begin, outside_comment_ads: outside.ids).payload[:confidence]
+    stats = Crm::MetaAds::Links::Stats.new(@connection, since: range.begin, upto: range.end, outside_comment_ads: outside_ad_ids)
+    @confidence ||= stats.payload[:confidence]
   end
 
   def ratio(numerator, denominator)

@@ -2,7 +2,8 @@
 # conta o gasto.
 #
 # Gasto de `crm_meta_ad_insights_daily` (date = ontem); conversas, propostas e vendas da mesma coorte do painel
-# (`Panel::Cohort`) com o intervalo de ontem; o anúncio que mais trouxe conversa; e o que fazer hoje.
+# (`Panel::Cohort`) com o intervalo de ontem, sem as conversas do privado de comentário de anúncio que leva para fora
+# de conversa, como o painel (Panel::OutsideAds, #2521); o anúncio que mais trouxe conversa; e o que fazer hoje.
 #
 # O que fazer hoje (F5, #1110): a primeira ação do consultor (Crm::MetaAds::Advisor::Analysis), a mesma que o
 # painel mostra em primeiro, porque o consultor não depende do período da tela (D5.2). Com `with_ai: true` (o
@@ -56,7 +57,18 @@ class Crm::MetaAds::WhatsappReport::Digest
   end
 
   def cohort
-    @cohort ||= Crm::MetaAds::Panel::Cohort.new(@connection.account_id, date.in_time_zone(@zone).all_day)
+    @cohort ||= Crm::MetaAds::Panel::Cohort.new(@connection.account_id, day, outside_comment_ads: outside.ids)
+  end
+
+  def day
+    date.in_time_zone(@zone).all_day
+  end
+
+  def outside
+    Crm::MetaAds::Panel::OutsideAds.new(
+      @connection.account_id, insights: insights, spend_by_ad: insights.group(:ad_id).sum(:spend), range: day,
+                              ever: Crm::MetaAdInsightDaily.where(account_id: @connection.account_id, ad_account_id: @connection.ad_account_id)
+    )
   end
 
   def sales

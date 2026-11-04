@@ -152,7 +152,8 @@ class Crm::MetaAds::Advisor::Facts
 
   def week_cohort
     @week_cohort ||= Crm::MetaAds::Panel::Cohort.new(
-      @connection.account_id, windows[:week_b].first.in_time_zone(report.zone)...(windows[:week_a].last + 1).in_time_zone(report.zone)
+      @connection.account_id, windows[:week_b].first.in_time_zone(report.zone)...(windows[:week_a].last + 1).in_time_zone(report.zone),
+      outside_comment_ads: report.outside_ad_ids
     )
   end
 
@@ -187,7 +188,8 @@ class Crm::MetaAds::Advisor::Facts
   end
 
   def confidence
-    Crm::MetaAds::Links::Stats.new(@connection, since: cohort_start).payload[:confidence].slice(:conversations, :ad, :ad_name, :unknown)
+    Crm::MetaAds::Links::Stats.new(@connection, since: cohort_start, upto: report.range.end, outside_comment_ads: report.outside_ad_ids)
+                              .payload[:confidence].slice(:conversations, :ad, :ad_name, :unknown)
   end
 
   def cohort_start

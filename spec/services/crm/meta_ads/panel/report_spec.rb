@@ -249,6 +249,26 @@ RSpec.describe Crm::MetaAds::Panel::Report do
     end
   end
 
+  it 'conversa que comentou num anúncio de fora e depois clicou num de WhatsApp fica com o de WhatsApp' do
+    travel_to(now) do
+      adset('set-alcance', 'UNDEFINED', 'REACH')
+      spend('alcance', Date.new(2026, 10, 5), 500, adset_id: 'set-alcance')
+      spend(capa, Date.new(2026, 10, 6), 100)
+      conversation = create(:conversation, account: account)
+      Crm::MetaAdLink.create!(account: account, conversation: conversation, touch_key: 'meta_comment:1', origin: 'comment',
+                              certainty: 'ad', ad_id: 'alcance', touched_at: 3.days.ago)
+      Crm::MetaAdLink.create!(account: account, conversation: conversation, touch_key: 'clique', origin: 'whatsapp',
+                              certainty: 'ad', ad_id: capa, touched_at: 1.day.ago)
+
+      report = described_class.new(connection, period: '30d').payload
+
+      expect(report[:ads].sole).to include(ad_id: capa, conversations: 1)
+      expect(report[:other_ads].sole).to include(ad_id: 'alcance', private_conversations: 1)
+      expect(report[:totals]).to include(conversations: 1, cost_per_conversation: 100.0)
+      expect(report[:confidence]).to include(conversations: 1)
+    end
+  end
+
   it 'logo depois de conectar, o anúncio sem nome da Meta usa o título do clique' do
     travel_to(now) do
       conversation = from_ad(capa, at: 1.day.ago)

@@ -112,9 +112,13 @@ RSpec.describe Crm::MetaAds::Panel::AdDetail do
       reply.call('c-6', respondeu, ad: 'outro')
       create(:message, account: account, inbox: respondeu.inbox, conversation: respondeu, message_type: :incoming, created_at: 1.hour.ago)
       create(:message, account: account, inbox: calado.inbox, conversation: calado, message_type: :incoming, created_at: 3.days.ago)
-      [respondeu, calado].each { |conversation| Crm::MetaAds::Links::Linker.new(conversation.reload, connection: connection).perform }
+      antigo = create(:conversation, account: account)
+      reply.call('c-7', antigo, at: 20.days.ago)
+      create(:message, account: account, inbox: antigo.inbox, conversation: antigo, message_type: :incoming, created_at: 2.hours.ago)
+      [respondeu, calado, antigo].each { |conversation| Crm::MetaAds::Links::Linker.new(conversation.reload, connection: connection).perform }
 
-      # Respondeu: dois privados do anúncio, uma pessoa. Calado: escreveu antes do privado, não depois.
+      # Respondeu: dois privados do anúncio, uma pessoa. Calado: escreveu antes do privado, não depois. Antigo: privado de
+      # antes do período, respondido dentro dele, não entra (o "M" é parte do "N").
       expect(detail(capa)[:private_replies]).to eq(sent: 3, replied: 1)
     end
   end
