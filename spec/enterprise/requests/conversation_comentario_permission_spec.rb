@@ -19,6 +19,9 @@ RSpec.describe 'Comentário do Instagram na conversa: acesso por função (#2215
 
   before do
     account.enable_features!('meta_ads_comentarios_ia')
+    # A prova do servidor de que a conversa nasceu do comentário: a linha que o motor da IA grava (#2212).
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: comment_id, action: 'private_reply',
+                                      actor: 'ai', conversation: conversation)
     create(:inbox_member, inbox: canal.inbox, user: agent)
     stub_request(:get, %r{#{ig}/#{comment_id}\?}).to_return(
       status: 200, headers: json,

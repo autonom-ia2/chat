@@ -85,6 +85,14 @@ describe('ComentarioNaConversa', () => {
     expect(acoes(wrapper)).toEqual(['responder', 'esconder', 'apagar']);
   });
 
+  it('conversa que o servidor não reconhece (404): o cartão some', async () => {
+    api.get.mockRejectedValue({ response: { status: 404 } });
+    const wrapper = await montar();
+
+    expect(wrapper.attributes('data-estado')).toBe('fora');
+    expect(wrapper.classes()).toContain('hidden');
+  });
+
   it('quem só lê vê o comentário, sem botões', async () => {
     const resposta = ok();
     resposta.data.pode = { responder: false, esconder: false, apagar: false };

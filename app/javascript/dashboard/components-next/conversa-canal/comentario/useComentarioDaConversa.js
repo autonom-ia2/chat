@@ -32,8 +32,11 @@ export const useComentarioDaConversa = ({
       estado.value = data.status;
       comentario.value = data.comentario || null;
       pode.value = data.pode || {};
-    } catch {
-      if (id === conversationId.value) estado.value = 'meta_unavailable';
+    } catch (error) {
+      if (id !== conversationId.value) return;
+      // 404: o servidor não reconhece a conversa como nascida de um comentário (sem a prova dele): o cartão some.
+      estado.value =
+        error?.response?.status === 404 ? 'fora' : 'meta_unavailable';
     }
   };
 

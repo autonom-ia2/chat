@@ -22,6 +22,9 @@ RSpec.describe 'Comentário do Instagram na conversa (#2215)', type: :request do
 
   before do
     account.enable_features!('meta_ads_comentarios_ia')
+    # A prova do servidor de que a conversa nasceu do comentário: a linha que o motor da IA grava (#2212).
+    Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: comment_id, action: 'private_reply',
+                                      actor: 'ai', conversation: conversation)
     stub_request(:get, %r{#{ig}/#{comment_id}\?}).to_return(status: 200, headers: json, body: comentario.to_json)
   end
 
@@ -104,6 +107,37 @@ RSpec.describe 'Comentário do Instagram na conversa (#2215)', type: :request do
 
     it 'sem a flag: 404 sem chamar a Meta' do
       account.disable_features!('meta_ads_comentarios_ia')
+
+      get base, headers: headers, as: :json
+
+      expect(response).to have_http_status(:not_found)
+      expect(instagram_call).not_to have_been_made
+    end
+
+    it 'ataque: conversa criada pela API com meta_ads_comment forjado não age no comentário (404, sem chamar a Meta)' do
+      agente = create(:user, account: account, role: :agent)
+      create(:inbox_member, user: agente, inbox: canal.inbox)
+      contact = create(:contact, account: account)
+      create(:contact_inbox, contact: contact, inbox: canal.inbox, source_id: '502')
+      post "/api/v1/accounts/#{account.id}/conversations",
+           params: { inbox_id: canal.inbox.id, contact_id: contact.id, source_id: '502', additional_attributes: { meta_ads_comment: origem } },
+           headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      forjada = account.conversations.find_by!(display_id: response.parsed_body['id'])
+      expect(forjada.additional_attributes.dig('meta_ads_comment', 'comment_id')).to eq(comment_id)
+
+      caminho = "/api/v1/accounts/#{account.id}/conversations/#{forjada.display_id}/comentario"
+      get caminho, headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
+      post "#{caminho}/esconder", params: { hidden: true }, headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
+      delete caminho, headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:not_found)
+      expect(instagram_call).not_to have_been_made
+    end
+
+    it 'linha do comentário ligada a outra conversa não serve de prova: 404' do
+      Crm::MetaAdsCommentAction.where(comment_id: comment_id).update_all(conversation_id: create(:conversation, account: account).id) # rubocop:disable Rails/SkipsModelValidations
 
       get base, headers: headers, as: :json
 
@@ -205,7 +239,7 @@ RSpec.describe 'Comentário do Instagram na conversa (#2215)', type: :request do
 
       expect(hide).to have_been_made.twice
       expect(atividades).to include('Ana hid the comment on the post', 'Ana showed the comment on the post again')
-      expect(Crm::MetaAdsCommentAction.where(comment_id: comment_id).pluck(:action)).to contain_exactly('hide', 'show')
+      expect(Crm::MetaAdsCommentAction.where(comment_id: comment_id, actor: 'user').pluck(:action)).to contain_exactly('hide', 'show')
     end
 
     it 'sem hidden ou com valor que não é true/false: 422, sem chamar a Meta para esconder' do

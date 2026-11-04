@@ -102,6 +102,7 @@ const ACAO =
     :data-estado="estado"
     :aria-label="$t('CONVERSA_CANAL.COMENTARIO.ROTULO')"
     class="ms-2 me-16 mt-2 flex flex-col gap-1.5 rounded-lg border border-n-weak bg-n-solid-2 px-3 py-2.5 text-sm text-n-slate-12"
+    :class="{ hidden: estado === 'fora' }"
   >
     <p class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1 text-n-slate-11">
       <span class="i-ri-instagram-line size-4 shrink-0" aria-hidden="true" />

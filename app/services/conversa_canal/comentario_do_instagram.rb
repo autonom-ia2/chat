@@ -12,13 +12,22 @@ class ConversaCanal::ComentarioDoInstagram
   NETWORK = 'instagram'.freeze
   ATIVIDADE = 'conversations.activity.meta_ads_comment'.freeze
 
-  # A conversa nasceu de um comentário do Instagram, numa caixa do Instagram, com comentário e post gravados.
+  # A conversa nasceu de um comentário do Instagram, numa caixa do Instagram, com comentário e post gravados. A prova é
+  # do servidor: `additional_attributes` aceita qualquer coisa de quem cria a conversa pela API, então só vale o
+  # comentário que tem, em crm_meta_ads_comment_actions, uma linha ligada a ESTA conversa (o motor grava a do privado
+  # em `vincular!` e a da passagem em `gravar!(conversation:)`). Sem ela, a conversa não age em comentário nenhum.
   def self.da_conversa(conversation)
     origem = conversation.additional_attributes.to_h['meta_ads_comment']
     return unless origem.is_a?(Hash) && origem['network'] == NETWORK && conversation.inbox.channel.is_a?(Channel::Instagram)
     return if origem['comment_id'].blank? || origem['post_id'].blank?
+    return unless nasceu_do_comentario?(conversation, origem['comment_id'].to_s)
 
     new(conversation, origem)
+  end
+
+  def self.nasceu_do_comentario?(conversation, comment_id)
+    Crm::MetaAdsCommentAction.exists?(account_id: conversation.account_id, network: NETWORK, comment_id: comment_id,
+                                      conversation_id: conversation.id)
   end
 
   def initialize(conversation, origem)
