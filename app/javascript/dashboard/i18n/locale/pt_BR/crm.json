@@ -3109,10 +3109,26 @@
         "OTHER_ADS": {
           "TITLE": "Outros anúncios",
           "TOTAL": "{value} investidos",
-          "HINT": "Não trouxeram nenhuma conversa: levam para o site, um vídeo ou o seu perfil. Ficam fora do custo por conversa e por venda.",
+          "HINT": "Não abrem conversa direto: levam ao perfil, a uma publicação, a um formulário ou ao site. Quem chamar você depois não fica ligado a eles. Ficam fora do custo por conversa e por venda.",
           "SPEND": "Investido",
           "CLICKS": "Cliques",
-          "SHOWN": "Apareceu"
+          "SHOWN": "Apareceu",
+          "ENGAGEMENT": "Engajamento",
+          "COMMENTS": "Comentários",
+          "LEADS": "Cadastros",
+          "DESTINATIONS": {
+            "PROFILE": "Leva ao seu perfil",
+            "POST": "Leva a uma publicação ou vídeo",
+            "LEAD_FORM": "Leva a um formulário de cadastro",
+            "WEBSITE": "Leva ao site",
+            "APP": "Leva a um aplicativo",
+            "REACH": "Para ser visto (alcance)",
+            "OTHER": "Leva a outro lugar"
+          }
+        },
+        "COMMENTS": {
+          "COUNT": "1 comentário | {count} comentários",
+          "CARE": "Cuidar dos comentários"
         }
       },
       "GESTAO": {
@@ -3318,7 +3334,12 @@
           "SPEND": "Investido",
           "QUOTES": "Propostas",
           "SALES": "Vendas",
-          "CONVERSATIONS": "Conversas"
+          "CONVERSATIONS": "Conversas",
+          "CLICKS": "Cliques",
+          "ENGAGEMENT": "Engajamento",
+          "COMMENTS": "Comentários",
+          "LEADS": "Cadastros",
+          "SHOWN": "Apareceu"
         },
         "WHY_TITLE": "Por quê",
         "REASON": {
@@ -3333,17 +3354,26 @@
         "MEANWHILE": "1 proposta aberta deste anúncio espera resposta. Retomar essa conversa é o que dá para fazer agora. | {count} propostas abertas deste anúncio esperam resposta. Retomar essas conversas é o que dá para fazer agora.",
         "MEANWHILE_SEE": "Ver as propostas",
         "CHART_TITLE": "Gasto e conversas por dia",
+        "CHART_TITLE_SPEND": "Gasto por dia",
         "CHART_TITLE_TALKS": "Conversas por dia",
         "LEGEND_SPEND": "Gasto",
         "LEGEND_CONVERSATIONS": "Conversas",
         "CHART_DAY": "{date}: {spend} · 1 conversa | {date}: {spend} · {count} conversas",
+        "CHART_DAY_SPEND": "{date}: {spend}",
         "CHART_DAY_TALKS": "{date}: 1 conversa | {date}: {count} conversas",
+        "CHART_SCALE_SPEND": "Maior gasto num dia: {spend}",
         "CHART_SCALE": "Maior gasto num dia: {spend} · mais conversas num dia: 1 | Maior gasto num dia: {spend} · mais conversas num dia: {count}",
         "DAYS_TOGGLE": "Ver dia a dia",
         "DAYS_DATE": "Dia",
         "QUOTES_TITLE": "Propostas deste anúncio",
         "QUOTES_EMPTY": "Nenhuma proposta deste anúncio neste período ainda.",
-        "WON": "Vendida"
+        "WON": "Vendida",
+        "DESTINATION_TITLE": "Para onde leva",
+        "DESTINATION": "{destination}. Não abre conversa direto: quem chamar você depois, pelo Direct ou pelo WhatsApp, não fica ligado a este anúncio. Por isso ele fica fora do custo por conversa e por venda.",
+        "PRIVATE_REPLIES": {
+          "SENT": "Chamei 1 no privado | Chamei {count} no privado",
+          "REPLIED": "{count} respondeu | {count} responderam"
+        }
       },
       "AI": {
         "DAILY": {

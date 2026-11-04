@@ -15,7 +15,9 @@ import {
   VERDICT_CLASSES,
   adImage,
   amount,
+  destinationKey,
   duration,
+  otherAdStats,
   periodRange,
   relativeTime,
   rollingDays,
@@ -48,7 +50,11 @@ import { useMapGetter } from 'dashboard/composables/store';
 //
 // Conectar a conta de anúncios (#2054): sem conexão, o caminho começa num "Investimento" sem valor, com "Ver quanto
 // gastei" (emite 'connect'). Com conexão, os anúncios que não levam ao WhatsApp ficam num bloco à parte ("Outros
-// anúncios", panel.other_ads), com gasto, cliques e vezes que apareceram, fora do custo por conversa e por venda.
+// anúncios", panel.other_ads), fora do custo por conversa e por venda.
+//
+// Números honestos (#2521): cada um dos "Outros anúncios" diz para onde leva (ad.destination) e mostra o que a Meta
+// mede nesse destino (OTHER_STATS), e abre por dentro como os outros (#2519). Todo anúncio com comentário no período
+// mostra quantos e o atalho para "Cuidar dos comentários" (flag meta_ads_comentarios_ia).
 const props = defineProps({
   // Quem só tem meta_ads_view (#1794): o painel sem os gestos do consultor nem os atalhos para a conexão.
   readOnly: { type: Boolean, default: false },
@@ -350,6 +356,24 @@ const adStats = ad => [
   { key: 'CONVERSATIONS', value: ad.conversations },
   { key: 'SALES', value: ad.sales },
 ];
+// "Outros anúncios" (#2521): o gasto e o que a Meta mede no destino de cada um (otherAdStats).
+const otherStats = ad => [
+  { key: 'SPEND', value: fmt(ad.spend) },
+  ...otherAdStats(ad).map(stat => ({ ...stat, value: number(stat.value) })),
+];
+// Atalho para "Cuidar dos comentários" do anúncio: só com a IA dos comentários ligada na conta, e fora do exemplo.
+const careOn = computed(
+  () =>
+    !props.sample &&
+    isFeatureEnabledonAccount.value(
+      Number(route.params.accountId),
+      FEATURE_FLAGS.META_ADS_COMENTARIOS_IA
+    )
+);
+const careRoute = ad => ({
+  name: 'campaigns_meta_ads_cuidar',
+  params: { accountId: route.params.accountId, adId: String(ad.ad_id) },
+});
 // As propostas paradas são sempre uma ação do dia (aberta ou feita); dispensadas, ficam na etapa Propostas.
 const stalledAction = computed(
   () =>
@@ -961,6 +985,29 @@ onMounted(() => {
                         )
                   }}
                 </p>
+                <!-- Comentários do período (#2519): acima do botão que cobre o cartão (relative z-10), para o atalho
+                   abrir "Cuidar dos comentários" e não o anúncio. -->
+                <router-link
+                  v-if="careOn && ad.comments"
+                  :to="careRoute(ad)"
+                  :data-panel-ad-comments="ad.ad_id"
+                  class="relative z-10 inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-medium text-n-slate-12 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand rounded-lg"
+                >
+                  <span
+                    class="i-lucide-message-circle size-4 text-n-slate-11"
+                    aria-hidden="true"
+                  />
+                  {{
+                    $t(
+                      'CRM_KANBAN.META_ADS_HUB.PANEL.COMMENTS.COUNT',
+                      { count: ad.comments },
+                      ad.comments
+                    )
+                  }}
+                  <span class="text-n-blue-11">
+                    {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.COMMENTS.CARE') }}
+                  </span>
+                </router-link>
                 <!-- O botão cobre o cartão inteiro (after:inset-0): tocar em qualquer parte abre o anúncio, e o
                    leitor de tela ouve um só botão com o nome dele. -->
                 <button
@@ -1039,35 +1086,87 @@ onMounted(() => {
                   />
                 </span>
               </span>
-              <span
-                class="min-w-0 flex-1 basis-40 text-sm font-semibold text-n-slate-12 line-clamp-2"
-              >
-                {{ ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME') }}
+              <span class="flex min-w-0 flex-1 basis-40 flex-col gap-0.5">
+                <span
+                  class="text-sm font-semibold text-n-slate-12 line-clamp-2"
+                >
+                  {{
+                    ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME')
+                  }}
+                </span>
+                <span
+                  :data-panel-other-destination="ad.destination"
+                  class="text-xs text-n-slate-11"
+                >
+                  {{ $t(destinationKey(ad)) }}
+                </span>
               </span>
               <dl
-                class="m-0 grid grid-cols-3 gap-x-5 text-end tabular-nums sm:w-auto"
+                class="m-0 grid grid-flow-col gap-x-5 text-end tabular-nums sm:w-auto"
               >
                 <div
-                  v-for="stat in ['SPEND', 'CLICKS', 'SHOWN']"
-                  :key="stat"
+                  v-for="stat in otherStats(ad)"
+                  :key="stat.key"
+                  :data-panel-other-stat="stat.key"
                   class="flex flex-col gap-0.5"
                 >
                   <dt class="text-xs text-n-slate-11">
-                    {{ $t(`CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.${stat}`) }}
+                    {{
+                      $t(`CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.${stat.key}`)
+                    }}
                   </dt>
                   <dd
                     class="m-0 whitespace-nowrap text-sm font-semibold text-n-slate-12"
                   >
-                    {{
-                      stat === 'SPEND'
-                        ? fmt(ad.spend)
-                        : number(
-                            stat === 'CLICKS' ? ad.link_clicks : ad.impressions
-                          )
-                    }}
+                    {{ stat.value }}
                   </dd>
                 </div>
               </dl>
+              <div
+                class="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1"
+              >
+                <router-link
+                  v-if="careOn && ad.comments"
+                  :to="careRoute(ad)"
+                  :data-panel-ad-comments="ad.ad_id"
+                  class="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-n-slate-12 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+                >
+                  <span
+                    class="i-lucide-message-circle size-4 text-n-slate-11"
+                    aria-hidden="true"
+                  />
+                  {{
+                    $t(
+                      'CRM_KANBAN.META_ADS_HUB.PANEL.COMMENTS.COUNT',
+                      { count: ad.comments },
+                      ad.comments
+                    )
+                  }}
+                  <span class="text-n-blue-11">
+                    {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.COMMENTS.CARE') }}
+                  </span>
+                </router-link>
+                <button
+                  v-if="!sample"
+                  type="button"
+                  :data-panel-other-open="ad.ad_id"
+                  :aria-label="
+                    $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD_LABEL', {
+                      name:
+                        ad.name ||
+                        $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME'),
+                    })
+                  "
+                  class="ms-auto inline-flex min-h-11 items-center gap-1 rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+                  @click="rememberAd(String(ad.ad_id))"
+                >
+                  {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD') }}
+                  <span
+                    class="i-lucide-arrow-right size-3.5"
+                    aria-hidden="true"
+                  />
+                </button>
+              </div>
             </li>
           </ul>
         </div>

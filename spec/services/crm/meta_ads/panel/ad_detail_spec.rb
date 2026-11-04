@@ -90,7 +90,30 @@ RSpec.describe Crm::MetaAds::Panel::AdDetail do
       Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: capa, date: Date.new(2026, 10, 6),
                                       currency: 'BRL', spend: 40, adset_id: 'set-site', attribution_window: '7d_click', fetched_at: now)
 
-      expect(detail(capa)).to include(spend: 40.0, conversations: 0, verdict: nil, reason: nil)
+      expect(detail(capa)).to include(spend: 40.0, conversations: 0, verdict: nil, reason: nil, outside: true, destination: 'website')
+    end
+  end
+
+  # #2521: "Chamei N no privado · M responderam" — os privados confirmados do período e quantos tiveram resposta depois.
+  it 'conta os privados dos comentários do anúncio no período e quantos responderam' do
+    travel_to(now) do
+      spend(capa, Date.new(2026, 10, 6), 10)
+      respondeu = create(:conversation, account: account)
+      calado = create(:conversation, account: account)
+      reply = lambda do |comment_id, conversation, at: 1.day.ago, confirmed: true, ad: capa|
+        Crm::MetaAdsCommentAction.create!(account: account, network: 'instagram', comment_id: comment_id, ad_id: ad, action: 'private_reply',
+                                          actor: 'ai', conversation_id: conversation&.id, at: at, confirmed_at: (at if confirmed))
+      end
+      reply.call('c-1', respondeu)
+      reply.call('c-2', calado)
+      reply.call('c-3', nil)
+      reply.call('c-4', respondeu, confirmed: false)
+      reply.call('c-5', respondeu, at: 20.days.ago)
+      reply.call('c-6', respondeu, ad: 'outro')
+      create(:message, account: account, inbox: respondeu.inbox, conversation: respondeu, message_type: :incoming, created_at: 1.hour.ago)
+      create(:message, account: account, inbox: calado.inbox, conversation: calado, message_type: :incoming, created_at: 3.days.ago)
+
+      expect(detail(capa)[:private_replies]).to eq(sent: 3, replied: 1)
     end
   end
 

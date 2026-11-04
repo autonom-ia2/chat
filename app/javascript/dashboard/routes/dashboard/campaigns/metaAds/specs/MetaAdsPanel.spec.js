@@ -156,6 +156,7 @@ const mountPanel = async (options = {}) => {
           template: '<span data-report-stub :data-period="period" />',
         },
         RouterLink: {
+          name: 'RouterLink',
           props: ['to'],
           template: '<a :href="to"><slot /></a>',
         },
@@ -176,6 +177,7 @@ const mountPanel = async (options = {}) => {
 describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    accountFlags.clear();
     // Rota reativa e replace que muda o endereço, como o vue-router: o painel lê o anúncio aberto do endereço.
     routing.route = reactive({ params: { accountId: '18' }, query: {} });
     routing.replace.mockImplementation(({ query }) => {
@@ -741,6 +743,132 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(other.find('[data-panel-other-ad="9"]').text()).toContain('540');
     expect(wrapper.text()).toContain('PANEL.ADS_WHATSAPP_TITLE');
     expect(wrapper.find('[data-panel-ad="9"]').exists()).toBe(false);
+  });
+
+  // #2521: cada um dos outros diz para onde leva e mostra a medida do destino; abre por dentro como os outros (#2519).
+  const PROFILE_AD = {
+    ad_id: '9',
+    name: 'Perfil',
+    destination: 'profile',
+    spend: 50,
+    link_clicks: 400,
+    post_engagement: 430,
+    comments: 3,
+    leads: 0,
+    impressions: 10000,
+    thumbnail_url: null,
+    image_url: null,
+  };
+  const panelWithOther = (other, ads = PANEL.ads) =>
+    CrmMetaAdsConnectionAPI.panel.mockResolvedValue({
+      data: {
+        panel: {
+          ...PANEL,
+          ads,
+          totals: { ...PANEL.totals, other_spend: 50 },
+          other_ads: [other],
+        },
+      },
+    });
+  const statKeys = row =>
+    row
+      .findAll('[data-panel-other-stat]')
+      .map(node => node.attributes('data-panel-other-stat'));
+
+  it('an ad to the profile says so and shows clicks and engagement, not leads (#2521)', async () => {
+    panelWithOther(PROFILE_AD);
+    const wrapper = await mountPanel();
+
+    const row = wrapper.find('[data-panel-other-ad="9"]');
+    expect(row.find('[data-panel-other-destination]').text()).toContain(
+      'PANEL.OTHER_ADS.DESTINATIONS.PROFILE'
+    );
+    expect(statKeys(row)).toEqual(['SPEND', 'CLICKS', 'ENGAGEMENT', 'SHOWN']);
+    expect(row.text()).toContain('430');
+  });
+
+  it('a lead form ad shows leads even at zero; a website ad only when it had some (#2521)', async () => {
+    panelWithOther({ ...PROFILE_AD, destination: 'lead_form' });
+    let wrapper = await mountPanel();
+    expect(statKeys(wrapper.find('[data-panel-other-ad="9"]'))).toEqual([
+      'SPEND',
+      'LEADS',
+      'CLICKS',
+      'SHOWN',
+    ]);
+    wrapper.unmount();
+
+    panelWithOther({ ...PROFILE_AD, destination: 'website' });
+    wrapper = await mountPanel();
+    expect(statKeys(wrapper.find('[data-panel-other-ad="9"]'))).toEqual([
+      'SPEND',
+      'CLICKS',
+      'SHOWN',
+    ]);
+  });
+
+  it('an unknown destination falls back to clicks and shown (#2521)', async () => {
+    panelWithOther({ ...PROFILE_AD, destination: 'reach' });
+    const wrapper = await mountPanel();
+
+    expect(statKeys(wrapper.find('[data-panel-other-ad="9"]'))).toEqual([
+      'SPEND',
+      'CLICKS',
+      'SHOWN',
+    ]);
+  });
+
+  it('an ad among the others opens inside like the rest (#2519)', async () => {
+    panelWithOther(PROFILE_AD);
+    const wrapper = await mountPanel();
+
+    await wrapper.find('[data-panel-other-open="9"]').trigger('click');
+    await flushPromises();
+
+    expect(routing.route.query).toEqual({ anuncio: '9' });
+    expect(CrmMetaAdsConnectionAPI.panelAd).toHaveBeenLastCalledWith(
+      '9',
+      '30d'
+    );
+  });
+
+  it('with the comments AI on, each ad with comments links to "Handle comments" (#2519)', async () => {
+    accountFlags.add('meta_ads_comentarios_ia');
+    panelWithOther(PROFILE_AD, [{ ...PANEL.ads[0], comments: 4 }]);
+    const wrapper = await mountPanel();
+
+    expect(wrapper.find('[data-panel-ad-comments="1"]').text()).toContain(
+      'PANEL.COMMENTS.COUNT'
+    );
+    expect(
+      wrapper
+        .findAllComponents({ name: 'RouterLink' })
+        .map(link => link.props('to'))
+    ).toContainEqual({
+      name: 'campaigns_meta_ads_cuidar',
+      params: { accountId: '18', adId: '1' },
+    });
+    expect(
+      wrapper
+        .find('[data-panel-other-ad="9"] [data-panel-ad-comments="9"]')
+        .exists()
+    ).toBe(true);
+    accountFlags.clear();
+  });
+
+  it('without the comments AI, or without comments, there is no comments link (#2519)', async () => {
+    panelWithOther(PROFILE_AD, [{ ...PANEL.ads[0], comments: 4 }]);
+    let wrapper = await mountPanel();
+    expect(wrapper.find('[data-panel-ad-comments]').exists()).toBe(false);
+    wrapper.unmount();
+
+    accountFlags.add('meta_ads_comentarios_ia');
+    panelWithOther({ ...PROFILE_AD, comments: 0 }, [
+      { ...PANEL.ads[0], comments: 0 },
+    ]);
+    wrapper = await mountPanel();
+    expect(wrapper.find('[data-panel-ad-comments]').exists()).toBe(false);
+    accountFlags.clear();
   });
 
   it('without ads outside WhatsApp there is no other block and the usual title (#2054)', async () => {

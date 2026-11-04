@@ -100,9 +100,13 @@ RSpec.describe Crm::MetaAds::Panel::Report do
     expect(described_class.new(connection, days: '365').payload[:days]).to eq(30)
   end
 
-  def adset(id, destination)
+  def adset(id, destination, goal = nil)
     Crm::MetaAdObject.create!(account: account, meta_object_id: id, object_type: 'adset', name: "Conjunto #{id}", destination_type: destination,
-                              fetched_at: now)
+                              optimization_goal: goal, fetched_at: now)
+  end
+
+  def action(type, value)
+    { 'action_type' => type, 'value' => value.to_s }
   end
 
   # #2054: o gasto de anúncio que leva para fora de conversa não entra no custo por conversa nem por venda.
@@ -120,7 +124,8 @@ RSpec.describe Crm::MetaAds::Panel::Report do
       report = described_class.new(connection, period: '30d').payload
 
       expect(report[:ads].pluck(:ad_id)).to eq([capa, familia])
-      expect(report[:other_ads]).to eq([{ ad_id: site, spend: 101.71, impressions: 9000, link_clicks: 540, name: 'EUA',
+      expect(report[:other_ads]).to eq([{ ad_id: site, spend: 101.71, destination: 'website', impressions: 9000, link_clicks: 540,
+                                          comments: 0, post_engagement: 0, video_views: 0, leads: 0, name: 'EUA',
                                           thumbnail_url: nil, image_url: nil }])
       expect(report[:totals]).to include(spend: 150.0, other_spend: 101.71, cost_per_conversation: 150.0, cost_per_sale: 150.0)
     end
@@ -152,6 +157,71 @@ RSpec.describe Crm::MetaAds::Panel::Report do
       spend('video', Date.new(2026, 10, 6), 25)
 
       expect(described_class.new(connection, period: '30d').payload[:other_ads].pluck(:ad_id)).to eq(['video'])
+    end
+  end
+
+  # #2521: a Meta devolve UNDEFINED também em alcance e engajamento; aí decide o objetivo do conjunto.
+  it 'destino UNDEFINED: o objetivo do conjunto decide, e objetivo de conversa ou desconhecido segue trazendo conversa' do
+    travel_to(now) do
+      adset('set-alcance', 'UNDEFINED', 'REACH')
+      adset('set-conversa', 'UNDEFINED', 'CONVERSATIONS')
+      adset('set-novo', 'UNDEFINED', 'OBJETIVO_NOVO_DA_META')
+      adset('set-cadastro', 'UNDEFINED', 'LEAD_GENERATION')
+      spend('alcance', Date.new(2026, 10, 6), 10, adset_id: 'set-alcance')
+      spend('conversa', Date.new(2026, 10, 6), 20, adset_id: 'set-conversa')
+      spend('novo', Date.new(2026, 10, 6), 30, adset_id: 'set-novo')
+      spend('cadastro', Date.new(2026, 10, 6), 40, adset_id: 'set-cadastro')
+      spend('cadastro-com-conversa', Date.new(2026, 10, 6), 50, adset_id: 'set-cadastro')
+      from_ad('cadastro-com-conversa', at: 1.day.ago) # já trouxe conversa: fica, qualquer que seja o objetivo
+
+      report = described_class.new(connection, period: '30d').payload
+
+      expect(report[:ads].pluck(:ad_id)).to contain_exactly('conversa', 'novo', 'cadastro-com-conversa')
+      expect(report[:other_ads].map { |ad| ad.slice(:ad_id, :destination) })
+        .to eq([{ ad_id: 'cadastro', destination: 'lead_form' }, { ad_id: 'alcance', destination: 'reach' }])
+      expect(report[:totals]).to include(spend: 100.0, other_spend: 50.0)
+    end
+  end
+
+  it 'anúncio de perfil mede cliques, engajamento e comentários das ações da Meta, e todo anúncio leva os comentários' do
+    travel_to(now) do
+      adset('set-perfil', 'INSTAGRAM_PROFILE', 'VISIT_INSTAGRAM_PROFILE')
+      spend('perfil', Date.new(2026, 10, 5), 60, adset_id: 'set-perfil', link_clicks: 300, impressions: 9000,
+                                                 actions: [action('post_engagement', 320), action('comment', 2)])
+      spend('perfil', Date.new(2026, 10, 6), 40, adset_id: 'set-perfil', link_clicks: 100, impressions: 1000,
+                                                 actions: [action('post_engagement', 110), action('comment', 1), action('like', 9)])
+      spend(capa, Date.new(2026, 10, 6), 100, actions: [action('comment', 4)])
+
+      report = described_class.new(connection, period: '30d').payload
+
+      expect(report[:other_ads].sole).to include(ad_id: 'perfil', destination: 'profile', link_clicks: 400, impressions: 10_000,
+                                                 post_engagement: 430, comments: 3, leads: 0)
+      expect(report[:ads].sole).to include(ad_id: capa, comments: 4)
+    end
+  end
+
+  it 'o anúncio dos outros abre por dentro com a medida dele e sem veredito' do
+    travel_to(now) do
+      adset('set-perfil', 'INSTAGRAM_PROFILE')
+      spend('perfil', Date.new(2026, 10, 6), 40, adset_id: 'set-perfil', link_clicks: 100, actions: [action('comment', 1)])
+
+      expect(described_class.new(connection, period: '30d').ad('perfil'))
+        .to include(ad_id: 'perfil', outside: true, verdict: nil, destination: 'profile', link_clicks: 100, comments: 1)
+    end
+  end
+
+  # #2521: a conversa do privado de um comentário de anúncio, gravada pelo Linker com origem `comment`, conta na coorte.
+  it 'a conversa do privado de comentário conta para o anúncio como a do clique' do
+    travel_to(now) do
+      spend(capa, Date.new(2026, 10, 6), 100)
+      conversation = create(:conversation, account: account)
+      Crm::MetaAdLink.create!(account: account, conversation: conversation, touch_key: 'meta_comment:1', origin: 'comment',
+                              certainty: 'ad', ad_id: capa, touched_at: 1.day.ago)
+
+      report = described_class.new(connection, period: '30d').payload
+
+      expect(report[:ads].sole).to include(ad_id: capa, conversations: 1)
+      expect(report[:totals]).to include(conversations: 1, cost_per_conversation: 100.0)
     end
   end
 

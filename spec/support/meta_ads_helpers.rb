@@ -52,7 +52,7 @@ module MetaAdsHelpers
   def stub_meta_ad_set_destinations(ad_account_id, rows: [], status: 200)
     body = status == 200 ? { data: rows } : meta_graph_error(100)
     stub_request(:get, meta_graph_url("act_#{ad_account_id}/adsets"))
-      .with(query: hash_including('fields' => 'id,destination_type'))
+      .with(query: hash_including('fields' => 'id,destination_type,optimization_goal'))
       .to_return(status: status, body: body.to_json, headers: { 'Content-Type' => 'application/json' })
   end
 

@@ -9,6 +9,9 @@
 # Sem conexão (Anúncios sem login, #1960), `account:` diz a conta e o anúncio traz `people`: cada conversa que
 # ele trouxe no período, com a situação do card e se já teve resposta (Panel::PathList do anúncio).
 #
+# `private_replies` (#2521): quantos comentários do anúncio receberam privado no período e quantas pessoas responderam
+# (estas são as conversas de comentário que contam na coorte, Links::CommentTouch). Só com conexão.
+#
 # Os valores de venda em R$ seguem a pessoa de `visible` (#2075, Panel::SalesValue): sem `sales_value_view`, o anúncio
 # sai sem o dinheiro dos cards e cada proposta sem o valor, menos a de que a pessoa é dona. O porquê do veredito é do
 # gasto e fica.
@@ -31,7 +34,7 @@ class Crm::MetaAds::Panel::AdDetail
       account_average_cost_per_sale: @report.average_cost_per_sale,
       reason: reason,
       daily: daily, quotes_list: quotes_list
-    ).merge(@report.whatsapp_only? ? { people: people, spend: nil } : {})
+    ).merge(@report.whatsapp_only? ? { people: people, spend: nil } : { private_replies: private_replies })
   end
 
   private
@@ -87,6 +90,15 @@ class Crm::MetaAds::Panel::AdDetail
     row = { card_id: card.id, title: card.title, value: card.value, status: card.status, stage_name: card.stage_name,
             conversation_id: card.conversation_id, waiting_since: card.waiting_since }
     Crm::MetaAds::Panel::SalesValue.card?(@visible, card) ? row : row.merge(value: nil, value_hidden: true)
+  end
+
+  def private_replies
+    sent = Crm::MetaAdsCommentAction.where(account_id: @report.account_id, ad_id: @ad_id, action: 'private_reply', at: @report.range)
+                                    .where.not(confirmed_at: nil).pluck(:conversation_id, :at)
+    replied = sent.count do |conversation_id, at|
+      conversation_id && Message.where(conversation_id: conversation_id, created_at: at..).incoming.exists?
+    end
+    { sent: sent.size, replied: replied }
   end
 
   def people

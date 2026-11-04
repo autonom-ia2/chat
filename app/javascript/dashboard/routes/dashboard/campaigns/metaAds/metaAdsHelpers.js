@@ -248,3 +248,30 @@ export const adImage = (ad, failed = []) =>
   [ad?.image_url, ad?.thumbnail_url].find(
     url => url && !failed.includes(url)
   ) || null;
+
+// O que a Meta mede em cada destino do anúncio que não abre conversa (#2521; Crm::MetaAds::Panel::AdResults). Ela não
+// manda "visitas ao perfil": o anúncio de perfil fica com cliques e engajamento. Leads só aparecem no formulário ou
+// quando houve algum (site com Pixel). A lista e o anúncio por dentro mostram os mesmos números.
+const OTHER_STAT_KEYS = {
+  profile: ['CLICKS', 'ENGAGEMENT', 'SHOWN'],
+  post: ['ENGAGEMENT', 'COMMENTS', 'SHOWN'],
+  lead_form: ['LEADS', 'CLICKS', 'SHOWN'],
+  website: ['CLICKS', 'LEADS', 'SHOWN'],
+};
+const OTHER_STAT_FIELDS = {
+  CLICKS: 'link_clicks',
+  ENGAGEMENT: 'post_engagement',
+  COMMENTS: 'comments',
+  LEADS: 'leads',
+  SHOWN: 'impressions',
+};
+export const otherAdStats = ad =>
+  (OTHER_STAT_KEYS[ad.destination] || ['CLICKS', 'SHOWN'])
+    .filter(
+      key => key !== 'LEADS' || ad.destination === 'lead_form' || ad.leads
+    )
+    .map(key => ({ key, value: ad[OTHER_STAT_FIELDS[key]] || 0 }));
+
+// Chave do texto do destino (PANEL.OTHER_ADS.DESTINATIONS): profile, post, lead_form, website, app, reach ou other.
+export const destinationKey = ad =>
+  `CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.DESTINATIONS.${(ad.destination || 'other').toUpperCase()}`;
