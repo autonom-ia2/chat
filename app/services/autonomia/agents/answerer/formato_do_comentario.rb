@@ -31,10 +31,10 @@ module Autonomia::Agents::Answerer::FormatoDoComentario
   QUEBRAS_UNICODE = "\u0085  ".freeze
   # Teto de cada texto de terceiro, em grafemas.
   TETO = 600
-  # A resposta publicável: a frase do comentário é curta; o privado cabe na mensagem do Instagram (1000 bytes, como
-  # Crm::MetaAdsCommentCare::MESSAGE_LIMIT), com folga.
+  # A resposta publicável: a frase do comentário é curta; o privado cabe na mensagem do Instagram, com folga. Os bytes
+  # são a régua única do privado (Crm::MetaAdsCommentCare::MESSAGE_LIMIT, #2543).
   LIMITE = { PUBLICO => 300, PRIVADO => 700 }.freeze
-  LIMITE_EM_BYTES = 1_000
+  LIMITE_EM_BYTES = Crm::MetaAdsCommentCare::MESSAGE_LIMIT
 
   REGRAS = {
     PUBLICO => <<~TEXTO.squish,

@@ -200,6 +200,14 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
     end
   end
 
+  it 'privado com acento acima de 1000 bytes (menos de 1000 letras): 422 text_too_long, sem chamar a Meta (#2543)' do
+    post "#{path}/18000000000000001/private_reply", params: { content: 'ã' * 600 }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'text_too_long')
+    expect(meta_call(/graph\.(instagram|facebook)\.com/)).not_to have_been_made
+  end
+
   it 'erro de regra vira 422 com o código' do
     post "#{path}/18000000000000001/reply", params: { content: ' ' }, headers: admin.create_new_auth_token, as: :json
 

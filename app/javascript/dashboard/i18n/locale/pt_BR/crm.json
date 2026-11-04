@@ -3294,6 +3294,7 @@
             "NEEDS_LOGIN": "Falta a permissão dos comentários. Entre de novo com o Instagram.",
             "META_UNAVAILABLE": "O Instagram não respondeu. Tente de novo em um minuto.",
             "INVALID_TEXT": "Escreva a resposta antes de enviar.",
+            "TEXT_TOO_LONG": "A mensagem ficou longa demais para o Instagram (letra com acento e emoji contam mais). Tire um pouco do texto.",
             "NOT_INBOX_MEMBER": "Você não atende a caixa do Instagram deste anúncio, por isso não pode ver nem responder os comentários aqui.",
             "META_REFUSED": "O Instagram recusou esta ação. Recarregue os comentários e tente de novo.",
             "COMMENT_NOT_FOUND": "Este comentário não está mais no anúncio. Recarregue os comentários.",

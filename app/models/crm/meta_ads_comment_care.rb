@@ -20,7 +20,8 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
   # assignment: você ou sua equipe, pela Atribuição; agent: o agente de IA da caixa.
   HANDOFFS = %w[assignment agent].freeze
   # Texto de uma mensagem do Instagram (a mais curta das duas redes), em bytes UTF-8, como a Meta conta: acento e emoji
-  # ocupam mais de um byte. A tela (CuidarDono) conta igual.
+  # ocupam mais de um byte. É a régua de todo privado do Instagram, da IA e da pessoa (InstagramPrivateReply.valid_text!,
+  # #2543); a tela conta igual (dashboard/helper/privadoDoInstagram.js).
   MESSAGE_LIMIT = 1_000
   NOTE_LIMIT = 500
   PHRASES = (1..3)

@@ -46,14 +46,25 @@ class Crm::MetaAds::InstagramPrivateReply
   RESPOSTAS = Crm::MetaAds::ComentariosIa::Cuidar::FLAG
 
   WINDOW = 7.days
-  MAX_TEXT = 1000
+
+  # O texto do privado, conferido antes de qualquer chamada à Meta: vazio é `invalid_text`; acima do limite,
+  # `text_too_long`. O limite é o de Crm::MetaAdsCommentCare::MESSAGE_LIMIT, em bytes UTF-8 como a Meta conta (#2543):
+  # 700 letras com acento já passam de 1000 bytes. Quem chama antes de ler o comentário (gaveta do anúncio, Seus posts)
+  # usa este mesmo método.
+  def self.valid_text!(text)
+    text = text.to_s.strip
+    raise Error, 'invalid_text' if text.blank?
+    raise Error, 'text_too_long' if text.bytesize > Crm::MetaAdsCommentCare::MESSAGE_LIMIT
+
+    text
+  end
 
   def initialize(channel)
     @channel = channel
   end
 
   def perform!(comment:, text:, actor:, user: nil, ad_id: nil)
-    text = valid_text!(text)
+    text = self.class.valid_text!(text)
     validate_comment!(comment)
     release_abandoned!(comment['id'])
     action = claim!(comment['id'], actor, user, ad_id)
@@ -135,13 +146,6 @@ class Crm::MetaAds::InstagramPrivateReply
 
   def release_person!(person_id)
     Crm::MetaAdsCommentPerson.where(id: person_id).delete_all if person_id
-  end
-
-  def valid_text!(text)
-    text = text.to_s.strip
-    raise Error, 'invalid_text' if text.blank? || text.length > MAX_TEXT
-
-    text
   end
 
   def validate_comment!(comment)

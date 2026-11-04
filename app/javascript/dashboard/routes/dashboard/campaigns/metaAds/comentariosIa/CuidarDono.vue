@@ -7,6 +7,7 @@ import RespostaDoFio from './RespostaDoFio.vue';
 import PassoParaQuem from './PassoParaQuem.vue';
 import PedidoDeTom from './PedidoDeTom.vue';
 import { FOR_WHOM_LIMIT, FRASE_DO_DONO_LIMIT } from './useCuidado';
+import { privadoLongoDemais } from 'dashboard/helper/privadoDoInstagram';
 import MaterialDoPost from 'dashboard/routes/dashboard/autonomia/agentes/components/doPost/MaterialDoPost.vue';
 
 // Comentários que viram cliente (#2212, opção (a) do Rodrigo): o jeito escrito pelo dono, em três passos, uma ação em
@@ -42,8 +43,8 @@ const emit = defineEmits(['done', 'leave']);
 const { t } = useI18n();
 const KEY = 'META_ADS_COMMENTS_AI.DONO';
 // A Meta aceita até 1000 bytes (UTF-8) no texto do privado: acento e emoji ocupam mais de um byte, então a conta é em
-// bytes, não em letras. O privado é só a mensagem do dono: nada é acrescentado no fim.
-const LIMIT_BYTES = 1000;
+// bytes, não em letras (dashboard/helper/privadoDoInstagram). O privado é só a mensagem do dono: nada é acrescentado
+// no fim.
 const PHRASE_LIMIT = 120;
 const RULES_MORE = ['SEVEN_DAYS', 'LIVE', 'REQUESTS', 'COMPLAINT'];
 const SUGGESTIONS = ['PRICE', 'LINK', 'CATALOG'];
@@ -121,9 +122,7 @@ const examplesFailed = ref(false);
 
 const soon = computed(() => props.data.private_available === false);
 const dm = computed(() => message.value.trim());
-const tooLong = computed(
-  () => new TextEncoder().encode(dm.value).length > LIMIT_BYTES
-);
+const tooLong = computed(() => privadoLongoDemais(dm.value));
 const forWhomTooLong = computed(
   () => forWhom.value.trim().length > FOR_WHOM_LIMIT
 );

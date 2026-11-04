@@ -225,6 +225,7 @@
         "ERROR": "Não consegui fazer isso agora. Tente de novo.",
         "ERRORS": {
           "invalid_text": "Escreva a mensagem antes de mandar.",
+          "text_too_long": "A mensagem ficou longa demais para o Instagram (letra com acento e emoji contam mais). Tire um pouco do texto.",
           "comment_not_found": "Este comentário não está mais no post.",
           "meta_unavailable": "A Meta não respondeu agora. Tente de novo daqui a pouco.",
           "meta_refused": "A Meta não deixou fazer isso neste comentário.",

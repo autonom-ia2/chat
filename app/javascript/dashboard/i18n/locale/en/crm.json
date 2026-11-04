@@ -3293,6 +3293,7 @@
             "NEEDS_LOGIN": "Comment access is missing. Log in with Instagram again.",
             "META_UNAVAILABLE": "Instagram didn't answer. Try again in a minute.",
             "INVALID_TEXT": "Write the reply before sending.",
+            "TEXT_TOO_LONG": "The message is too long for Instagram (accented letters and emojis count extra). Make it a bit shorter.",
             "NOT_INBOX_MEMBER": "You don't handle this ad's Instagram inbox, so you can't see or answer its comments here.",
             "META_REFUSED": "Instagram refused this action. Reload the comments and try again.",
             "COMMENT_NOT_FOUND": "This comment is no longer on the ad. Reload the comments.",
