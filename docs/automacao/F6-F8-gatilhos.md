@@ -4,7 +4,8 @@ Desenho para a sessão Automação, a qualidade e Funções, em 03/11/2026. Libe
 protótipo em tela real (kit `bin/demo`) foi aprovado pelo Rodrigo em 03/11.
 
 **Entrega em PRs, nesta ordem:**
-1. núcleo: o alvo genérico (`Contexto`), o registro `Gatilhos` com os gatilhos de hoje e a marca em µs (este PR);
+1. núcleo: o alvo genérico (`Contexto`), o registro `Gatilhos` com os gatilhos de hoje e a marca em µs (#2508);
+1b. quem começou a conversa (#2527): `conversa.iniciada_por` e `mensagem.primeira` (ver 14);
 2. gatilhos novos de conversa, a flag e o editor com o catálogo do servidor;
 3. card: o emissor, os eventos de card e reunião, os passos de card e os painéis da etapa e do card;
 4. a varredura de tempo (`TempoJob`);
@@ -359,3 +360,21 @@ O protótipo é em tela real: componentes Vue do fork, kit `bin/demo`, dados do 
   Quando os dois forem pessoas diferentes, vale o do card; spec disso no PR dos gatilhos de card.
 - **`card.valor` sem valor lê 0**, nunca vazio (`value_cents` é not null, padrão 0): a condição "valor está vazio"
   nunca casa. Decidir no PR dos gatilhos de card entre ler nil quando for 0 ou deixar isso claro na frase.
+
+## 14. Quem começou a conversa (#2527)
+
+Em produção (30 dias, uma stack), a primeira mensagem às vezes é gravada segundos depois da conversa, e no WhatsApp
+há mensagens com data anterior à da conversa (histórico importado). Por isso `conversa.criada` pode ver a conversa
+ainda sem mensagem, e "quem começou" não sai do gatilho: sai da primeira mensagem de verdade.
+
+- `Autonomia::Automacao::PrimeiraMensagem`: a primeira mensagem sem atividade nem nota (`Message.chat`), por
+  `created_at` e, no empate, por `id`.
+- `conversa.iniciada_por` (valor fechado, base conversa): `cliente` quando a primeira é `incoming`; `equipe` quando é
+  `outgoing` ou `template` (resposta, privado do comentário, campanha, ligação feita); vazio sem mensagem.
+- `mensagem.primeira` (só no filtro de `mensagem.criada`): `true` quando a mensagem do gatilho é essa primeira.
+- Conversa resolvida que o cliente reabre continua de quem a começou. Histórico importado: a mensagem antiga diz
+  quem começou, e a nova não é a primeira.
+- O catálogo dá ao valor fechado do alvo as opções e os operadores, como aos da mensagem (frases em
+  `VALOR_DA_MENSAGEM`).
+- A Boas-vindas (F5, #2526) passa para `mensagem.criada` com `mensagem.primeira = true` e
+  `conversa.iniciada_por = cliente`, num PR da F5 depois deste.

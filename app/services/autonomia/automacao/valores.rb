@@ -3,8 +3,8 @@
 # A lista de caminhos é fechada: a receita só lê o que está aqui, e o salvar recusa caminho desconhecido. Não é Liquid
 # nem texto livre; cada caminho é um campo do modelo. Os atributos personalizados entram pela chave
 # (`contato.atributos.placa`). A mensagem do gatilho `mensagem.criada` só existe no filtro do gatilho
-# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`); nos passos ela já passou, e o salvar recusa ler a
-# mensagem fora dali.
+# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`; `mensagem.primeira`); nos passos ela já passou, e o
+# salvar recusa ler a mensagem fora dali.
 #
 # #2499 (F6): cada caminho começa pela base (`conversa`, `contato` ou `card`), lida do alvo pelas pontes do Contexto.
 # A base que o alvo não alcança (card num gatilho de conversa) o salvar recusa; a ponte vazia ao rodar (card sem
@@ -19,6 +19,8 @@ class Autonomia::Automacao::Valores
     'conversa.responsavel_id' => ->(conversa) { conversa.assignee_id },
     'conversa.time_id' => ->(conversa) { conversa.team_id },
     'conversa.etiquetas' => ->(conversa) { conversa.label_list },
+    # "cliente" ou "equipe", pela primeira mensagem de verdade (#2527); vazio enquanto a conversa não tem mensagem.
+    'conversa.iniciada_por' => ->(conversa) { ::Autonomia::Automacao::PrimeiraMensagem.iniciada_por(conversa) },
     'contato.id' => ->(contato) { contato.id },
     'contato.nome' => ->(contato) { contato.name },
     'contato.email' => ->(contato) { contato.email },
@@ -52,7 +54,9 @@ class Autonomia::Automacao::Valores
 
       mensagem.incoming? ? 'recebida' : 'enviada'
     end,
-    'mensagem.privada' => ->(mensagem) { mensagem.private? }
+    'mensagem.privada' => ->(mensagem) { mensagem.private? },
+    # A mensagem é a primeira de verdade da conversa (#2527)? A nota e a atividade nunca são.
+    'mensagem.primeira' => ->(mensagem) { ::Autonomia::Automacao::PrimeiraMensagem.primeira?(mensagem) }
   }.freeze
 
   # O gatilho cuja mensagem o filtro lê.
@@ -62,7 +66,9 @@ class Autonomia::Automacao::Valores
   # silêncio. O salvar recusa o resto; o editor mostra só isto.
   FECHADOS = {
     'mensagem.tipo' => { 'opcoes' => %w[recebida enviada nota], 'operadores' => %w[igual diferente] },
-    'mensagem.privada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
+    'mensagem.privada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] }
   }.freeze
 
   ATRIBUTOS = {

@@ -12,12 +12,12 @@
       "properties": {
         "tipo": {
           "enum": ["conversa.criada", "conversa.aberta", "conversa.resolvida", "mensagem.criada"],
-          "description": "conversa.criada: a conversa nasceu, inclusive a que já nasce aberta. conversa.aberta: a conversa voltou a ficar aberta (reaberta ou saiu de pendente/adiada); não dispara na criação. conversa.resolvida: a conversa foi resolvida. mensagem.criada: chegou ou saiu uma mensagem, inclusive nota privada (a atividade da plataforma fica de fora); filtre por mensagem.tipo (recebida, enviada, nota)."
+          "description": "conversa.criada: a conversa nasceu, inclusive a que já nasce aberta. conversa.aberta: a conversa voltou a ficar aberta (reaberta ou saiu de pendente/adiada); não dispara na criação. conversa.resolvida: a conversa foi resolvida. mensagem.criada: chegou ou saiu uma mensagem, inclusive nota privada (a atividade da plataforma fica de fora); filtre por mensagem.tipo (recebida, enviada, nota). Quem começou a conversa é conversa.iniciada_por (cliente, equipe); na conversa.criada ela pode ainda estar vazia, porque a mensagem é gravada depois. Para \"o cliente começou a conversa\", use mensagem.criada com mensagem.primeira = true e conversa.iniciada_por = cliente."
         },
         "filtros": {
           "type": "array",
           "items": { "$ref": "#/definitions/condicao" },
-          "description": "Só aqui a receita lê mensagem.tipo e mensagem.privada, e só no gatilho mensagem.criada."
+          "description": "Só aqui a receita lê mensagem.tipo, mensagem.privada e mensagem.primeira (a primeira mensagem de verdade da conversa, sem nota nem atividade), e só no gatilho mensagem.criada."
         }
       }
     },
