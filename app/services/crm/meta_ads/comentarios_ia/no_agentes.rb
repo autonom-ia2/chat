@@ -49,7 +49,8 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
 
     avaliacao = classificador(chave, rede).avaliar!(pergunta)
     decisao = decisao_do_motor(avaliacao&.chave, chave)
-    { status: 'ready', decisao: decisao, motivo: avaliacao&.motivo,
+    # Sem certeza, o porquê é o de uma escolha que não vale: a tela não o mostra.
+    { status: 'ready', decisao: decisao, motivo: (avaliacao.motivo if avaliacao&.chave),
       escrita: (escrita_do_privado(decisao, chave, rede, pergunta) if RECEBE.include?(decisao)) }.compact
   end
 
@@ -98,7 +99,8 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   end
 
   # { status: 'escrito', privado:, publico:, material: } | { status: 'fica_com_o_dono', motivo: } |
-  # { status: 'frases_fixas', motivo:, privado:, publico: } (a mensagem e a frase do dono, como o motor manda).
+  # { status: 'frases_fixas', motivo:, privado:, publico: } (a mensagem e a frase do dono, como o motor manda; o botão
+  # que o motor põe junto no privado não aparece no teste).
   def escrita_do_privado(decisao, network, rede, pergunta)
     escrita = escrita(network, rede)
     textos = escrita.textos(decisao, comentario: pergunta)

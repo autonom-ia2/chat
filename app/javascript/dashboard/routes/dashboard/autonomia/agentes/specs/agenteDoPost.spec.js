@@ -780,7 +780,10 @@ describe('#2469 · os comentários do post em Agentes', () => {
           })
         );
         await perguntar('Tem para Marte?');
-        expect(noBody('[data-resposta-fica]')).not.toBeNull();
+        expect(noBody('[data-decisao="nao_sei"]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.DECISAO.nao_sei'
+        );
+        expect(noBody('[data-decisao="private"]')).toBeNull();
         expect(noBody('[data-resposta-privado]')).toBeNull();
 
         api.testar.mockResolvedValueOnce(
@@ -815,6 +818,14 @@ describe('#2469 · os comentários do post em Agentes', () => {
         await perguntar('Quanto custa?');
         expect(noBody('[data-resposta-aviso]').textContent).toContain(
           'AGENTS.AGENTE_DO_POST.TESTAR.MOTIVO.sem_chave'
+        );
+
+        api.testar.mockRejectedValueOnce({
+          response: { status: 422, data: { error: 'ai_disabled' } },
+        });
+        await perguntar('Quanto custa?');
+        expect(noBody('[data-resposta-aviso]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.ERRO'
         );
       });
     });

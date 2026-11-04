@@ -2923,7 +2923,6 @@
         "PRIVADO": "No privado",
         "REDE": "Em qual rede?",
         "SO_TESTE": "É só um teste: nada é publicado.",
-        "FICA": "Fica com você",
         "FRASES_FIXAS": "Aqui eu uso as frases fixas que você escreveu.",
         "ERRO": "Não consegui testar agora. Tente de novo.",
         "IA_FORA": "A IA não respondeu agora. Tente de novo em instantes.",
@@ -2949,9 +2948,9 @@
           "owner_topic": "Fica com você: é o assunto que você responde",
           "sem_certeza": "Fica com você: não tive certeza do que fazer",
           "no_private": "Fica com você: no Facebook o privado ainda não sai",
-          "kept_for_owner": "Fica com você: falta dizer para quem vai o privado"
-        },
-        "ESCRITA_FICA": "Era para mandar no privado, mas eu não sei responder isso: fica com você, em \"Esperando você\"."
+          "kept_for_owner": "Fica com você: falta dizer para quem vai o privado",
+          "nao_sei": "Fica com você: era para o privado, mas eu não sei responder isso"
+        }
       },
       "COMENTARIOS": {
         "TITULO": "Comentários",

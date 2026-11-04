@@ -35,6 +35,7 @@ const COM_O_DONO = [
   'sem_certeza',
   'no_private',
   'kept_for_owner',
+  'nao_sei',
 ];
 const ICONE = {
   private: 'i-lucide-send',
@@ -72,8 +73,13 @@ const perguntar = async () => {
   perguntando.value = false;
 };
 
-const decisao = computed(() => resultado.value?.decisao);
 const escrita = computed(() => resultado.value?.escrita);
+// Era o caso do privado, mas o agente não sabe responder: o motor deixa com o dono, e o selo diz isso.
+const decisao = computed(() =>
+  escrita.value?.status === 'fica_com_o_dono'
+    ? 'nao_sei'
+    : resultado.value?.decisao
+);
 const tom = computed(() => {
   if (RECEBE.includes(decisao.value)) return 'recebe';
   return COM_O_DONO.includes(decisao.value) ? 'dono' : 'nada';
@@ -83,12 +89,11 @@ const escreveu = computed(() =>
   ['escrito', 'frases_fixas'].includes(escrita.value?.status)
 );
 
-// A IA não respondeu (fora do ar, desligada) ou a conta está sem a chave; o resto é "não consegui testar".
-const IA_FORA = ['ai_unavailable', 'ai_disabled'];
+// A IA não respondeu agora (tentar de novo resolve) ou a conta está sem a chave; o resto é "não consegui testar".
 const aviso = computed(() => {
   const codigo = resultado.value?.codigo;
   if (codigo === 'no_credential') return t(`${KEY}.MOTIVO.sem_chave`);
-  return t(`${KEY}.${IA_FORA.includes(codigo) ? 'IA_FORA' : 'ERRO'}`);
+  return t(`${KEY}.${codigo === 'ai_unavailable' ? 'IA_FORA' : 'ERRO'}`);
 });
 </script>
 
@@ -175,7 +180,11 @@ const aviso = computed(() => {
           aria-hidden="true"
         />
         <template v-else-if="resultado.status === 'ready'">
-          <div :data-decisao="decisao" class="flex flex-col items-start gap-2">
+          <div
+            :data-decisao="decisao"
+            :data-resposta-fica="decisao === 'nao_sei' || null"
+            class="flex flex-col items-start gap-2"
+          >
             <span class="text-xs font-semibold text-n-slate-11">
               {{ t(`${KEY}.FAZ`) }}
             </span>
@@ -241,13 +250,6 @@ const aviso = computed(() => {
               }}
             </p>
           </template>
-          <p
-            v-else-if="escrita?.status === 'fica_com_o_dono'"
-            data-resposta-fica
-            class="m-0 text-sm leading-6 text-n-slate-12"
-          >
-            {{ t(`${KEY}.ESCRITA_FICA`) }}
-          </p>
         </template>
         <p
           v-else
