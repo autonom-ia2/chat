@@ -267,7 +267,8 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
 
   // Each action answers 422 { error } (invalid_text, needs_login,
   // meta_unavailable, meta_refused, private_reply_done,
-  // private_reply_expired) or 404 comment_not_found.
+  // private_reply_expired; text_too_long when a private reply passes
+  // 1000 bytes, #2543) or 404 comment_not_found.
   // The text goes as `content`, which the Rails log filters (#2327).
   replyInstagramComment(adId, commentId, content) {
     return axios.post(`${this.instagramCommentsUrl(adId, commentId)}/reply`, {

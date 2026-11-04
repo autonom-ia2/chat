@@ -9,7 +9,8 @@
 #
 # Erros (Error#code): `comment_not_found`, `invalid_text`, `needs_permission` (sem
 # instagram_business_manage_comments, ou o token caiu: a tela mostra o "Libere o acesso" do F1), `meta_unavailable`,
-# `meta_refused`, `private_reply_not_pending` e os do privado (Crm::MetaAds::InstagramPrivateReply).
+# `meta_refused`, `private_reply_not_pending` e os do privado (Crm::MetaAds::InstagramPrivateReply), entre eles
+# `text_too_long` (acima de 1000 bytes, antes da Meta, #2543).
 class SeusPosts::ComentariosInstagram
   Error = Crm::MetaAds::InstagramPrivateReply::Error
 
@@ -66,7 +67,7 @@ class SeusPosts::ComentariosInstagram
   end
 
   def private_reply!(post_id, comment_id, text, user:)
-    valid_text!(text, Crm::MetaAds::InstagramPrivateReply::MAX_TEXT)
+    Crm::MetaAds::InstagramPrivateReply.valid_text!(text)
     comment = comment_of!(post_id, comment_id)
     sent = Crm::MetaAds::InstagramPrivateReply.new(@canal).perform!(comment: comment, text: text, actor: 'user', user: user)
     { sent_at: Time.current.iso8601, conversation_path: @rows.conversation_path(sent[:conversation]) }

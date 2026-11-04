@@ -321,10 +321,13 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       expect(instagram_call).not_to have_been_made
     end
 
-    it 'texto vazio ou longo demais: invalid_text, sem chamar a Meta' do
+    it 'texto vazio: invalid_text; privado acima de 1000 bytes: text_too_long; nada chama a Meta' do
       expect { service.reply!(ad_id, 'c1', '  ', user: user) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('invalid_text') }
       expect { service.private_reply!(ad_id, 'c1', 'a' * 1001, user: user) }
-        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('invalid_text') }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('text_too_long') }
+      # #2543: 600 letras com acento são 1200 bytes, e a Meta conta bytes.
+      expect { service.private_reply!(ad_id, 'c1', 'ã' * 600, user: user) }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('text_too_long') }
       expect(instagram_call).not_to have_been_made
     end
 

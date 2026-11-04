@@ -158,6 +158,19 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
                                                               comment_id: comment_id)
   end
 
+  it 'privado com acento acima de 1000 bytes (menos de 1000 letras): 422 text_too_long, sem chamar a Meta (#2543)' do
+    envio = stub_request(:post, %r{#{ig}/#{ig_id}/messages})
+
+    post "#{base}/comments/#{comment_id}/private_reply", params: { perfil: perfil, content: 'ã' * 600 },
+                                                         headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body).to eq('error' => 'text_too_long')
+    expect(envio).not_to have_been_made
+    expect(a_request(:get, /graph\.instagram\.com/)).not_to have_been_made
+    expect(Crm::MetaAdsCommentAction.where(comment_id: comment_id)).to be_empty
+  end
+
   describe 'a marca da pessoa no post (#2212): nasce antes da Meta' do
     def mandar
       post "#{base}/comments/#{comment_id}/private_reply", params: { perfil: perfil, content: 'Oi, Carla!' }, headers: headers, as: :json
