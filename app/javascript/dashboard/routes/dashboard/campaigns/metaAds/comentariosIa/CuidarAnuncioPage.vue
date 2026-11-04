@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { lerGestao } from '../gestaoDoAnuncio';
@@ -35,12 +36,24 @@ const cabecalho = computed(() => {
 const caixa = inboxId =>
   frontendURL(`accounts/${route.params.accountId}/inbox/${inboxId}`);
 
+// #2479: aberto pelo "Criar agente" de Agentes (?de=agentes), volta para Agentes.
+const { t } = useI18n();
+const deAgentes = computed(() => route.query.de === 'agentes');
+const voltarLabel = computed(() =>
+  deAgentes.value ? t('AGENTS.AGENTE_DO_POST.CRIAR.VOLTAR_AGENTES') : ''
+);
+const paraOAnuncio = () => ({
+  name: 'campaigns_meta_ads_index',
+  params: { accountId: route.params.accountId },
+  query: { aba: 'resultado', anuncio: adId.value },
+});
+const paraAgentes = () => ({
+  name: 'autonomia_agents_index',
+  params: { accountId: route.params.accountId },
+});
 const voltar = () =>
-  router.push({
-    name: 'campaigns_meta_ads_index',
-    params: { accountId: route.params.accountId },
-    query: { aba: 'resultado', anuncio: adId.value },
-  });
+  router.push(deAgentes.value ? paraAgentes() : paraOAnuncio());
+const responder = () => router.push(paraOAnuncio());
 </script>
 
 <template>
@@ -55,9 +68,11 @@ const voltar = () =>
         :target="target"
         :post="cabecalho"
         origin="anuncio"
+        :back-label="voltarLabel"
         :can-manage="canManage"
         :inbox-path-of="caixa"
         @back="voltar"
+        @reply="responder"
       />
     </div>
   </section>

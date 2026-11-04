@@ -7,6 +7,9 @@ import ApiClient from './ApiClient';
 //
 // - list: { cuidados: [{ id, kind, target_id, perfil, network, status }] }, só
 //   do banco.
+// - anuncios (#2479): { anuncios: [{ id, name, image_url, care }] }, os do
+//   "Qual post?" ao criar o cuidado: os da lista de Anúncios dos últimos 30
+//   dias, só do banco.
 // - get: o item mais { legenda, capa, foto, nota, can_manage, portas[], comentarios },
 //   lido na Meta na hora, sem IA.
 // - estado: 'on' | 'paused' → o mesmo do get.
@@ -25,6 +28,10 @@ class AgentesDoPostAPI extends ApiClient {
 
   list() {
     return axios.get(this.url);
+  }
+
+  anuncios() {
+    return axios.get(`${this.url}/anuncios`);
   }
 
   get(id) {

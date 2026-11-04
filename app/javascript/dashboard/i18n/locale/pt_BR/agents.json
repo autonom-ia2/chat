@@ -2859,7 +2859,23 @@
         "LENDO": "Lendo seus posts…",
         "SEM_POSTS": "Não achei posts deste perfil nos últimos 30 dias.",
         "ERRO": "Não consegui ler seus posts agora.",
-        "ANUNCIO": "É um anúncio? Escolha em Anúncios",
+        "VOLTAR_AGENTES": "Voltar para Agentes",
+        "ANUNCIOS": {
+          "FONTE": "Posts ou anúncios",
+          "CHIP": {
+            "POSTS": "Posts",
+            "ANUNCIOS": "Anúncios"
+          },
+          "QUAL_ANUNCIO": "Qual anúncio?",
+          "LENDO": "Lendo seus anúncios…",
+          "SEM_ANUNCIOS": "Não achei anúncios nos últimos 30 dias.",
+          "ERRO": "Não consegui ler seus anúncios agora.",
+          "SEM_ACESSO": "Você não tem acesso aos anúncios. Peça a quem administra a conta.",
+          "SEM_CONEXAO": "Sua conta de anúncios não está conectada. Conecte em Anúncios para escolher um anúncio.",
+          "SEM_NOME": "Anúncio {id}",
+          "CUIDANDO": "A IA já cuida dele",
+          "PAUSADO": "Pausado"
+        },
         "SEM_ACESSO": "Você não tem acesso aos posts. Peça a quem administra a conta."
       },
       "PAGINA": {

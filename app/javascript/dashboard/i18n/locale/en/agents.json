@@ -2859,7 +2859,23 @@
         "LENDO": "Reading your posts…",
         "SEM_POSTS": "I found no posts from this profile in the last 30 days.",
         "ERRO": "I couldn't read your posts right now.",
-        "ANUNCIO": "Is it an ad? Choose it in Ads",
+        "VOLTAR_AGENTES": "Back to Agents",
+        "ANUNCIOS": {
+          "FONTE": "Posts or ads",
+          "CHIP": {
+            "POSTS": "Posts",
+            "ANUNCIOS": "Ads"
+          },
+          "QUAL_ANUNCIO": "Which ad?",
+          "LENDO": "Reading your ads…",
+          "SEM_ANUNCIOS": "I found no ads in the last 30 days.",
+          "ERRO": "I couldn't read your ads right now.",
+          "SEM_ACESSO": "You don't have access to the ads. Ask the account admin.",
+          "SEM_CONEXAO": "Your ad account isn't connected. Connect it in Ads to choose an ad.",
+          "SEM_NOME": "Ad {id}",
+          "CUIDANDO": "The AI already takes care of it",
+          "PAUSADO": "Paused"
+        },
         "SEM_ACESSO": "You don't have access to the posts. Ask the account admin."
       },
       "PAGINA": {

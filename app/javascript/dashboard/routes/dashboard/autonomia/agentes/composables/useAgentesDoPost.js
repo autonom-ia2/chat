@@ -1,6 +1,8 @@
 import { computed, ref, toValue, watch } from 'vue';
 import { useMapGetter } from 'dashboard/composables/store';
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+import { isCrmKanbanEnabled } from 'dashboard/helper/routeHelpers';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import AgentesDoPostAPI from 'dashboard/api/agentesDoPost';
 
 // Os comentários do post em Agentes (#2469, PR 3a do #2436). A lista vem só do banco (useAgentesDoPost); cada cartão e
@@ -87,6 +89,24 @@ export function useAgentesDoPost() {
     FEATURE_FLAGS.SEUS_POSTS,
     FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS
   );
+  // #2479: o "Qual post?" também lista os anúncios, com as guardas da tela do cuidado do anúncio
+  // (campaigns_meta_ads_cuidar): o CRM, as flags de Anúncios, a dos comentários de ao menos uma rede e ver Anúncios.
+  const comGestao = useFlags(
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
+    FEATURE_FLAGS.META_ADS_HUB,
+    FEATURE_FLAGS.META_ADS_GESTAO
+  );
+  const comInstagram = useFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM);
+  const comFacebook = useFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK);
+  const veAnuncios = usePermissionGranted('meta_ads_view');
+  const mudaAnuncios = usePermissionGranted('meta_ads_manage');
+  const comAnuncios = computed(
+    () =>
+      isCrmKanbanEnabled() &&
+      comGestao.value &&
+      (comInstagram.value || comFacebook.value) &&
+      (veAnuncios.value || mudaAnuncios.value)
+  );
   const cuidados = ref([]);
   const carregado = ref(false);
 
@@ -120,6 +140,7 @@ export function useAgentesDoPost() {
   return {
     ligada,
     comPosts,
+    comAnuncios,
     cuidados,
     carregado,
     carregar,
