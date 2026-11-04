@@ -23,7 +23,8 @@
 # - 'conversation_view': Can read every conversation of their inboxes (messages and notes) without operating on them.
 #   Writes keep requiring the trio above (#1800).
 # - 'conversation_message_delete': Can delete messages in the conversations they operate (#1893). Agents without a
-#   custom role keep deleting as before.
+#   custom role keep deleting messages as before. The key also deletes the Instagram comment a conversation came
+#   from, which agents without a custom role cannot do (only administrators, #2517).
 # - 'contact_manage': Can manage contacts.
 # - 'report_manage': Can manage reports.
 # - 'knowledge_base_manage': Can manage knowledge base portals.

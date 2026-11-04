@@ -589,7 +589,7 @@
         },
         "conversation_message_delete": {
           "TITULO": "Apagar mensagens",
-          "TEXTO": "A mensagem fica como apagada na conversa"
+          "TEXTO": "A mensagem fica como apagada na conversa. Também apaga, no Instagram, o comentário de onde a conversa veio"
         },
         "crm_manage_ai": {
           "TITULO": "Pedir ajuda à IA nas vendas",

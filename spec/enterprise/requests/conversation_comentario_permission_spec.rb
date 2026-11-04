@@ -1,8 +1,8 @@
 require 'rails_helper'
 
 # Comentários na caixa (#2215) com funções personalizadas: ler o comentário é ler a conversa (view?); responder em
-# público e esconder são escrever na conversa (show?); apagar segue a régua de apagar mensagem (delete_message?, chave
-# conversation_message_delete). Quem não pode não chega a chamar a Meta.
+# público e esconder são escrever na conversa (show?); apagar pede, além disso, a chave conversation_message_delete na
+# função (delete_comment?, #2517): agente sem função não apaga. Quem não pode não chega a chamar a Meta.
 RSpec.describe 'Comentário do Instagram na conversa: acesso por função (#2215)', type: :request do
   let(:account) { create(:account) }
   let(:post_id) { '17900000000000001' }
@@ -82,9 +82,21 @@ RSpec.describe 'Comentário do Instagram na conversa: acesso por função (#2215
     expect(apagar).to have_been_made.once
   end
 
-  it 'agente sem cargo, da caixa, pode tudo' do
+  it 'agente sem cargo, da caixa, responde e esconde, mas não apaga (#2517)' do
     get base, headers: headers, as: :json
+    expect(response.parsed_body['pode']).to eq('responder' => true, 'esconder' => true, 'apagar' => false)
 
-    expect(response.parsed_body['pode']).to eq('responder' => true, 'esconder' => true, 'apagar' => true)
+    delete base, headers: headers, as: :json
+    expect(response).to have_http_status(:unauthorized)
+    expect(a_request(:delete, /graph\.instagram\.com/)).not_to have_been_made
+  end
+
+  it 'a chave sozinha, sem operar a conversa, não apaga' do
+    give_role(%w[conversation_view conversation_message_delete])
+
+    delete base, headers: headers, as: :json
+
+    expect(response).to have_http_status(:unauthorized)
+    expect(a_request(:delete, /graph\.instagram\.com/)).not_to have_been_made
   end
 end
