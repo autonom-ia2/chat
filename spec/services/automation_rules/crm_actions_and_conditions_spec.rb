@@ -71,6 +71,14 @@ RSpec.describe AutomationRules::CrmActions do
       expect(card.reload.stage_id).to eq(next_stage.id)
     end
 
+    it 'crm_create_card marca na criação a regra que pôs o card na etapa (#2428)' do
+      run_action('crm_create_card', [next_stage.id])
+
+      card = Crm::Cards::ConversationCardFinder.new(account: account).find(conversation)
+      criacao = Crm::Activity.where(card: card, event_type: 'create').sole
+      expect(criacao.payload).to include('by' => 'automacao', 'origem' => 'regra', 'automacao_id' => rule.id)
+    end
+
     # #2428: sem a marca, a IA do funil não separa a regra dela mesma e desfaz o movimento.
     it 'crm_move_card_stage marca no movimento a regra que o fez' do
       card = create_card

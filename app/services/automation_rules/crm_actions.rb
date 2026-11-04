@@ -23,7 +23,7 @@ module AutomationRules::CrmActions
 
       card = Crm::Cards::Creator.new(
         account: @account, user: nil, conversation: @conversation,
-        params: { pipeline_id: stage.pipeline_id, stage_id: stage.id }
+        params: { pipeline_id: stage.pipeline_id, stage_id: stage.id }, automacao: da_regra
       ).perform
     end
     Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_CREATED) if card.present?

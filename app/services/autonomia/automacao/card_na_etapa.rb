@@ -54,7 +54,7 @@ class Autonomia::Automacao::CardNaEtapa
 
       card = Crm::Cards::Creator.new(
         account: @account, user: @actor, conversation: @conversation,
-        params: { pipeline_id: @stage.pipeline_id, stage_id: @stage.id }
+        params: { pipeline_id: @stage.pipeline_id, stage_id: @stage.id }, automacao: @automacao
       ).perform
     end
     return if card.blank?

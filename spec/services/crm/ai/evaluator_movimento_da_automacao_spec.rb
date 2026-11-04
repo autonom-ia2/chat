@@ -71,6 +71,29 @@ RSpec.describe Crm::Ai::Evaluator do
     expect_sem_mexer
   end
 
+  def criado_por(tempo:, automacao:)
+    Crm::Activity.where(card: card).delete_all
+    novo = travel_to(tempo.ago) do
+      Crm::Cards::Creator.new(account: account, user: nil, automacao: automacao,
+                              params: { pipeline_id: pipeline.id, stage_id: proposta.id, title: 'Novo' }).perform
+    end
+    ia_responde
+    novo
+  end
+
+  it 'criado numa etapa por automação há pouco: a IA não move nem sugere' do
+    novo = criado_por(tempo: 1.hour, automacao: { origem: 'regra', id: 3 })
+
+    expect(described_class.new(card: novo, trigger: 'message').perform).to have_attributes(error: 'automacao_mexeu_na_etapa')
+    expect(novo.reload.stage).to eq(proposta)
+  end
+
+  it 'criado sem automação (o sistema, sem escolher etapa): a IA move' do
+    novo = criado_por(tempo: 1.hour, automacao: nil)
+
+    expect(described_class.new(card: novo, trigger: 'message').perform.status).to eq(:auto_moved)
+  end
+
   it 'a mensagem que chega dentro da janela não solta o card' do
     movido_pela_automacao(tempo: 1.hour)
     mensagem_do_cliente(tempo: 30.minutes)

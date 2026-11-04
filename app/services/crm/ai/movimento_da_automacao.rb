@@ -1,10 +1,14 @@
 # #2428 (F6.7 do #2414): a IA do funil respeita o card que uma automação moveu, como respeita o da pessoa. Sem isso, a
 # avaliação seguinte devolvia o card para onde estava e desfazia, sem ninguém ver, a automação que alguém configurou.
 #
-# Vale quando o último movimento do card foi de uma automação (`by: 'automacao'`, Crm::Cards::Mover): dentro da mesma
-# janela da pessoa (RESPEITO_AO_MOVIMENTO) e, depois dela, até chegar mensagem NOVA do cliente. Card parado ou
-# reavaliação sem fato novo não desfazem a automação. Movimento da IA ou de uma pessoa depois dele encerra o respeito.
+# Vale quando o último movimento do card foi de uma automação (`by: 'automacao'`, Crm::Cards::Mover), ou quando uma
+# automação o criou na etapa e ninguém o moveu depois (Crm::Cards::Creator): dentro da mesma janela da pessoa
+# (RESPEITO_AO_MOVIMENTO) e, depois dela, até chegar mensagem NOVA do cliente. Card parado ou reavaliação sem fato novo
+# não desfazem a automação. Movimento da IA ou de uma pessoa depois dele encerra o respeito.
 class Crm::Ai::MovimentoDaAutomacao
+  # Onde o card ganha etapa: nascer nela ou ir para ela.
+  EVENTOS_DE_ETAPA = %w[create move].freeze
+
   def self.respeitar?(card) = new(card).respeitar?
 
   # O passo da Automação livre move pela porta da frente, com quem ligou como ator: a atividade é da pessoa no nome,
@@ -27,7 +31,7 @@ class Crm::Ai::MovimentoDaAutomacao
   private
 
   def ultimo_movimento
-    Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, event_type: 'move').order(:created_at, :id).last
+    Crm::Activity.where(account_id: @card.account_id, card_id: @card.id, event_type: EVENTOS_DE_ETAPA).order(:created_at, :id).last
   end
 
   def mensagem_nova_depois?(momento)
