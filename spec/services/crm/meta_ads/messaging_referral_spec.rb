@@ -69,6 +69,18 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     expect(described_class.attribute_pending!(fresh)).to be(false)
   end
 
+  it 'mensagem com referral que não é anúncio (link m.me) usa o clique guardado' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact, status: :resolved)
+    described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')
+    fresh = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
+
+    described_class.attribute_message!(fresh, { 'source' => 'SHORTLINK', 'ref' => 'x' }, source: messenger, event_id: 'mid.9')
+
+    expect(fresh.reload.additional_attributes['campaign_touches'].sole).to include('referral_id' => 'psid-1:1700')
+  end
+
   it 'caixa que trava numa conversa só grava o clique na conversa encerrada, que reabre' do
     inbox = conversation.inbox
     inbox.update!(lock_to_single_conversation: true)

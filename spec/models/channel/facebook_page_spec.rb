@@ -50,7 +50,7 @@ RSpec.describe Channel::FacebookPage do
       expect(Crm::MetaAds::PageSubscription).to have_received(:new)
         .with(page_id: channel.page_id, access_token: channel.page_access_token)
       expect(subscription).to have_received(:add!).with(include('messages', 'messaging_postbacks'))
-      expect(subscription).to have_received(:add!).with(%w[messaging_referrals])
+      expect(Crm::MetaAds::MessagingReferralsSubscribeJob).to have_been_enqueued.with(channel.page_id)
     end
 
     it 'removes only the messenger fields on unsubscribe, keeping leadgen and feed' do
@@ -77,22 +77,19 @@ RSpec.describe Channel::FacebookPage do
       stub_request(:get, "#{graph}/app").to_return(status: 200, headers: json, body: { id: '544' }.to_json)
     end
 
-    # #2521: messaging_referrals vai numa gravação à parte, depois dos campos do Messenger.
-    it 'keeps leadgen and feed of the page when the inbox subscribes the messenger fields, then the referral field' do
+    it 'keeps leadgen and feed of the page when the inbox subscribes the messenger fields' do
       wanted = %w[leadgen feed] + Channel::FacebookPage::MESSENGER_FIELDS
-      with_referrals = wanted + Channel::FacebookPage::REFERRAL_FIELDS
-      reads = [%w[leadgen feed], wanted, wanted, with_referrals].map do |fields|
-        { status: 200, headers: json, body: { data: [{ id: '544', subscribed_fields: fields }] }.to_json }
-      end
-      stub_request(:get, "#{graph}/#{page_id}/subscribed_apps").to_return(*reads)
-      posts = [wanted, with_referrals].map do |fields|
-        stub_request(:post, "#{graph}/#{page_id}/subscribed_apps").with(body: { subscribed_fields: fields.join(',') })
-                                                                  .to_return(status: 200, headers: json, body: { success: true }.to_json)
-      end
+      stub_request(:get, "#{graph}/#{page_id}/subscribed_apps").to_return(
+        { status: 200, headers: json, body: { data: [{ id: '544', subscribed_fields: %w[leadgen feed] }] }.to_json },
+        { status: 200, headers: json, body: { data: [{ id: '544', subscribed_fields: wanted }] }.to_json }
+      )
+      post = stub_request(:post, "#{graph}/#{page_id}/subscribed_apps")
+             .with(body: { subscribed_fields: wanted.join(',') })
+             .to_return(status: 200, headers: json, body: { success: true }.to_json)
 
       create(:channel_facebook_page, page_id: page_id)
 
-      expect(posts).to all(have_been_requested)
+      expect(post).to have_been_requested
     end
   end
 end

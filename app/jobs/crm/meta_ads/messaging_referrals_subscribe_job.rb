@@ -1,6 +1,6 @@
-# Assina o campo `messaging_referrals` numa Página que já era caixa do Messenger antes do #2521 (a caixa nova já
-# assina na criação, Channel::FacebookPage::REFERRAL_FIELDS). Só soma o campo: os outros recursos da Página ficam
-# como estão (Crm::MetaAds::PageSubscription). Roda pela tarefa autonomia:meta_ads:assinar_referrals, nunca sozinho.
+# Assina o campo `messaging_referrals` numa Página do Messenger (#2521): a caixa nova enfileira na criação
+# (Channel::FacebookPage#subscribe); a Página que já era caixa antes, pela tarefa autonomia:meta_ads:assinar_referrals.
+# Só soma o campo: os outros recursos da Página ficam como estão (Crm::MetaAds::PageSubscription).
 #
 # A mesma Página pode ser caixa de mais de uma conta: se o token de uma for recusado, tenta o da próxima. Erro
 # passageiro (rede, 5xx, limite, trava ocupada) tenta de novo mais tarde; recusa de todas fica no log.

@@ -50,18 +50,19 @@ module Crm::MetaAds::MessagingReferral
   # A mensagem sem referral de quem clicou com a conversa encerrada: o clique guardado vai para a conversa dela.
   def attribute_pending!(conversation)
     key = pending_key(conversation.contact_inbox_id)
-    raw = Redis::Alfred.get(key)
+    # Lê e apaga de uma vez: duas mensagens ao mesmo tempo não levam o mesmo clique.
+    raw = Redis::Alfred.with { |conn| conn.multi { |transaction| [transaction.get(key), transaction.del(key)] }.first }
     return false if raw.blank?
 
-    Redis::Alfred.delete(key)
     pending = JSON.parse(raw)
     attribute!(conversation, pending['referral'], source: pending['source'], event_id: pending['event_id'])
   end
 
-  # Mensagem que chegou: o referral dela, ou o clique guardado do evento solto.
+  # Mensagem que chegou: o anúncio dela, ou o clique guardado do evento solto (referral que não é anúncio, como link
+  # m.me ou loja, não conta).
   def attribute_message!(conversation, referral, source:, event_id:)
     return false if conversation.nil?
-    return attribute!(conversation, referral, source: source, event_id: event_id) if referral.present?
+    return attribute!(conversation, referral, source: source, event_id: event_id) if for_campaign(referral, source: source, event_id: event_id)
 
     attribute_pending!(conversation)
   end
