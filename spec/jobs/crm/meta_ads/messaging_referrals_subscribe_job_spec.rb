@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# Reassinatura das Páginas antigas (#2521): soma só `messaging_referrals`; a mesma Página em várias contas tenta o token
-# de cada uma; erro passageiro tenta de novo mais tarde.
+# Assinatura de `messaging_referrals` (#2521): soma só o campo; a mesma Página em várias contas tenta o token de cada uma,
+# só das contas permitidas; erro passageiro tenta de novo mais tarde.
 RSpec.describe Crm::MetaAds::MessagingReferralsSubscribeJob do
   let(:refused) { Crm::MetaAds::PageSubscription::Error.new('token', code: 190, http_code: 400) }
   let(:transient) { Crm::MetaAds::PageSubscription::Error.new('5xx', http_code: 500) }
@@ -26,11 +26,25 @@ RSpec.describe Crm::MetaAds::MessagingReferralsSubscribeJob do
     expect(second_subscription).to have_received(:add!).with(%w[messaging_referrals])
   end
 
-  it 'erro passageiro reenfileira até o limite' do
+  it 'com contas permitidas, não usa o token de caixa de outra conta' do
+    mine = create(:channel_facebook_page, page_id: 'page-1')
+    other = create(:channel_facebook_page, page_id: 'page-1', account: create(:account))
+    mine_subscription = subscription_for(mine)
+    other_subscription = subscription_for(other)
+    allow(mine_subscription).to receive(:add!).and_raise(refused)
+    allow(other_subscription).to receive(:add!)
+
+    described_class.perform_now('page-1', [mine.account_id])
+
+    expect(other_subscription).not_to have_received(:add!)
+  end
+
+  it 'erro passageiro reenfileira até o limite, com as mesmas contas' do
     page = create(:channel_facebook_page, page_id: 'page-1')
     allow(subscription_for(page)).to receive(:add!).and_raise(transient)
 
-    expect { described_class.perform_now('page-1') }.to have_enqueued_job(described_class).with('page-1', 2)
-    expect { described_class.perform_now('page-1', 3) }.not_to have_enqueued_job(described_class)
+    expect { described_class.perform_now('page-1', [page.account_id]) }
+      .to have_enqueued_job(described_class).with('page-1', [page.account_id], 2)
+    expect { described_class.perform_now('page-1', nil, 3) }.not_to have_enqueued_job(described_class)
   end
 end

@@ -42,7 +42,8 @@ class Messages::Facebook::MessageBuilder < Messages::Messenger::MessageBuilder
     return if @outgoing_echo || @message.nil?
 
     source = Crm::MetaAds::MessagingReferral::MESSENGER_SOURCE
-    Crm::MetaAds::MessagingReferral.attribute_message!(@conversation, @response.referral, source: source, event_id: @response.identifier)
+    Crm::MetaAds::MessagingReferral.attribute_message!(@conversation, @response.referral, source: source, event_id: @response.identifier,
+                                                                                          new_conversation: @new_conversation.present?)
   end
 
   def build_contact_inbox
@@ -82,6 +83,7 @@ class Messages::Facebook::MessageBuilder < Messages::Messenger::MessageBuilder
   end
 
   def build_conversation
+    @new_conversation = true
     Conversation.create!(conversation_params.merge(
                            contact_inbox_id: @contact_inbox.id
                          ))

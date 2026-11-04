@@ -17,7 +17,7 @@ class Crm::MetaAds::ReferralImageJob < ApplicationJob
   IMAGE_TYPES = %w[image/jpeg image/png image/webp image/gif].freeze
 
   def self.enqueue_for(conversation, touch, referral)
-    return unless Ctwa::CampaignBuilder::AD_CLICK_SOURCES.include?(touch['source']) && touch['source_id'].present?
+    return unless Crm::MetaAds::MessagingReferral::AD_CLICK_SOURCES.include?(touch['source']) && touch['source_id'].present?
 
     url = image_url(referral)
     return if url.nil? || !Crm::MetaAds::SemLogin.enabled?(conversation.account_id)

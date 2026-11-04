@@ -9,17 +9,28 @@ RSpec.describe Crm::MetaAds::MessagingReferralJob do
     create(:conversation, account: inbox.account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
   end
 
-  it 'Messenger: grava em toda caixa da mesma Página, com o id do evento pelo remetente e a hora' do
+  it 'Messenger: grava com o id do evento pelo remetente e a hora; Página de duas contas, só na que conhece o anúncio' do
     first = create(:channel_facebook_page, page_id: 'page-1')
     second = create(:channel_facebook_page, page_id: 'page-1', account: create(:account))
-    conversations = [first, second].map { |page| conversation_in(page.inbox, 'psid-1') }
+    mine, theirs = [first, second].map { |page| conversation_in(page.inbox, 'psid-1') }
+    Crm::MetaAdObject.create!(account: mine.account, meta_object_id: '120200000000000001', object_type: 'ad', fetched_at: Time.current)
 
     described_class.perform_now('messenger', 'page-1', 'psid-1', referral, '1700000000')
 
-    conversations.each do |conversation|
-      expect(conversation.reload.additional_attributes['campaign_touches'].sole)
-        .to include('source' => 'meta_ctm', 'referral_id' => 'psid-1:1700000000')
-    end
+    expect(mine.reload.additional_attributes['campaign_touches'].sole).to include('source' => 'meta_ctm', 'referral_id' => 'psid-1:1700000000')
+    expect(theirs.reload.additional_attributes).not_to have_key('campaign_touches')
+  end
+
+  it 'enfileira só o anúncio, sem os links assinados; referral que não é anúncio não enfileira' do
+    context = { 'ad_title' => 'Promo', 'photo_url' => 'https://x.fbcdn.net/p.jpg' }
+    messaging = { 'sender' => { 'id' => 'psid-1' }, 'recipient' => { 'id' => 'page-1' }, 'timestamp' => 1_700_000_000,
+                  'referral' => { 'source' => 'ADS', 'ad_id' => '1202', 'ads_context_data' => context } }
+
+    expect { described_class.enqueue_for('messenger', messaging) }.to have_enqueued_job(described_class)
+      .with('messenger', 'page-1', 'psid-1', { 'source' => 'ADS', 'ad_id' => '1202', 'ads_context_data' => { 'ad_title' => 'Promo' },
+                                               'media_type' => 'image' }, '1700000000')
+    expect { described_class.enqueue_for('messenger', messaging.merge('referral' => { 'source' => 'SHORTLINK' })) }
+      .not_to have_enqueued_job(described_class)
   end
 
   it 'Instagram: acha a caixa pelo id da conta; caixa desconhecida não faz nada' do

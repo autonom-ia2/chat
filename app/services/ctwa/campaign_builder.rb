@@ -18,10 +18,8 @@ module Ctwa::CampaignBuilder
 
   CTWA_SOURCE = 'meta_ctwa'.freeze
   # Click-to-Messenger (`meta_ctm`) and click-to-Instagram-Direct (`meta_ctd`) ads (#2521): the referral of those
-  # channels is mapped by Crm::MetaAds::MessagingReferral and arrives here with its own `source`. AD_CLICK_SOURCES are
-  # the touches whose `source_id` is the Meta ad id.
+  # channels is mapped by Crm::MetaAds::MessagingReferral and arrives here with its own `source`.
   MESSAGING_AD_SOURCES = %w[meta_ctm meta_ctd].freeze
-  AD_CLICK_SOURCES = [CTWA_SOURCE, *MESSAGING_AD_SOURCES].freeze
   ORGANIC_SOURCE = 'meta_organic'.freeze
   # Caps the append-only touch list so click storms can't grow the conversation jsonb
   # without bound (the length validator skips Array values, so this is the only fence).
@@ -52,9 +50,12 @@ module Ctwa::CampaignBuilder
       'body' => ref[:body],
       'media_type' => ref[:media_type] || ref[:media_content_type],
       'ctwa_clid' => ref[:ctwa_clid],
-      'referral_id' => ref[:referral_id]
+      'referral_id' => messaging_referral_id(ref)
     }.merge(tracking_attributes(ref)).compact
   end
+
+  # Only Messenger/Direct ad clicks carry the webhook event id: any other referral ignores the key.
+  def messaging_referral_id(ref) = (ref[:referral_id] if MESSAGING_AD_SOURCES.include?(ref[:source]))
 
   # Records the CTWA touch on the conversation. The first touch becomes the `campaign`
   # origin; later clicks append to `campaign_touches`. Idempotent per click: a touch whose

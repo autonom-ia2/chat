@@ -9,18 +9,25 @@ class Crm::MetaAds::MessagingReferralsSubscribeJob < ApplicationJob
 
   ATTEMPTS = 3
 
-  def perform(page_id, attempt = 1)
-    channels = Channel::FacebookPage.where(page_id: page_id.to_s).order(:id).reject(&:reauthorization_required?)
+  # account_ids: as contas cujo token pode ser usado (a da caixa nova, ou o ACCOUNT_IDS da tarefa); nil = todas.
+  def perform(page_id, account_ids = nil, attempt = 1)
+    channels = channels_for(page_id, account_ids)
     return if channels.empty? || channels.any? { |channel| subscribed?(channel) }
 
     Rails.logger.warn("[#{self.class.name}] page=#{page_id} sem token aceito (#{channels.size} caixa(s))")
   rescue Crm::MetaAds::PageSubscription::Error => e
     return Rails.logger.warn("[#{self.class.name}] page=#{page_id} desistiu: #{e.message}") if attempt >= ATTEMPTS
 
-    self.class.set(wait: (attempt * 30).seconds).perform_later(page_id, attempt + 1)
+    self.class.set(wait: (attempt * 30).seconds).perform_later(page_id, account_ids, attempt + 1)
   end
 
   private
+
+  def channels_for(page_id, account_ids)
+    scope = Channel::FacebookPage.where(page_id: page_id.to_s).order(:id)
+    scope = scope.where(account_id: account_ids) if account_ids.present?
+    scope.reject(&:reauthorization_required?)
+  end
 
   # true quando o campo ficou; recusa do token desta caixa é false (tenta a próxima); erro passageiro sobe.
   def subscribed?(channel)

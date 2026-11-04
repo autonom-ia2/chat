@@ -18,7 +18,7 @@ class Crm::MetaAds::TouchEnricher
     return {} unless touch.is_a?(Hash)
 
     {
-      'ad' => [touch['utm_content'], (touch['source_id'] if Ctwa::CampaignBuilder::AD_CLICK_SOURCES.include?(touch['source']))],
+      'ad' => [touch['utm_content'], (touch['source_id'] if Crm::MetaAds::MessagingReferral::AD_CLICK_SOURCES.include?(touch['source']))],
       'adset' => [touch['utm_term']],
       'campaign' => [touch['utm_campaign'], touch['utm_id']]
     }.transform_values { |ids| ids.select { |id| Crm::MetaAds::NameResolver.meta_id?(id) }.map(&:to_s) }

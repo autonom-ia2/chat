@@ -64,7 +64,7 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     expect(old.reload.additional_attributes).not_to have_key('campaign_touches')
 
     fresh = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
-    expect(described_class.attribute_message!(fresh, nil, source: messenger, event_id: 'mid.9')).to be(true)
+    expect(described_class.attribute_message!(fresh, nil, source: messenger, event_id: 'mid.9', new_conversation: true)).to be(true)
     expect(fresh.reload.additional_attributes['campaign_touches'].sole).to include('source' => 'meta_ctm', 'referral_id' => 'psid-1:1700')
     expect(described_class.attribute_pending!(fresh)).to be(false)
   end
@@ -76,9 +76,50 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')
     fresh = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
 
-    described_class.attribute_message!(fresh, { 'source' => 'SHORTLINK', 'ref' => 'x' }, source: messenger, event_id: 'mid.9')
+    link = { 'source' => 'SHORTLINK', 'ref' => 'x' }
+    described_class.attribute_message!(fresh, link, source: messenger, event_id: 'mid.9', new_conversation: true)
 
     expect(fresh.reload.additional_attributes['campaign_touches'].sole).to include('referral_id' => 'psid-1:1700')
+  end
+
+  it 'dois cliques guardados valem os dois; mensagem em conversa que já existia não lê os guardados' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact, status: :resolved)
+    other_ad = ad_referral.merge('ad_id' => '120200000000000002')
+    described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')
+    described_class.attribute_to_latest!(inbox, 'psid-1', other_ad, source: messenger, event_id: 'psid-1:1701')
+    fresh = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
+
+    expect(described_class.attribute_message!(fresh, nil, source: messenger, event_id: 'mid.8', new_conversation: false)).to be(false)
+    expect(described_class.attribute_message!(fresh, nil, source: messenger, event_id: 'mid.9', new_conversation: true)).to be(true)
+
+    expect(fresh.reload.additional_attributes['campaign_touches'].pluck('source_id', 'referral_id'))
+      .to eq([%w[120200000000000001 psid-1:1700], %w[120200000000000002 psid-1:1701]])
+  end
+
+  it 'o clique guardado não leva o link assinado da foto' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact, status: :resolved)
+
+    described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')
+
+    guardado = Redis::Alfred.lrange(described_class.pending_key(contact_inbox.id))
+    expect(guardado.sole).to include('Seguro viagem')
+    expect(guardado.sole).not_to include('fbcdn')
+  end
+
+  # Página que é caixa de duas contas: a mensagem chega nas duas, e o anúncio vai só para a conta que o conhece.
+  it 'Página de duas contas: o anúncio vai só para a conversa da conta que o conhece' do
+    page = create(:channel_facebook_page, account: account)
+    other_page = create(:channel_facebook_page, page_id: page.page_id, account: create(:account))
+    mine = create(:conversation, account: account, inbox: page.inbox)
+    theirs = create(:conversation, account: other_page.account, inbox: other_page.inbox)
+    Crm::MetaAdObject.create!(account: account, meta_object_id: '120200000000000001', object_type: 'ad', fetched_at: Time.current)
+
+    expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.1')).to be(true)
+    expect(described_class.attribute!(theirs, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)
   end
 
   it 'caixa que trava numa conversa só grava o clique na conversa encerrada, que reabre' do

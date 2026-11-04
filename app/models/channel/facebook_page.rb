@@ -59,7 +59,7 @@ class Channel::FacebookPage < ApplicationRecord
     # ref https://developers.facebook.com/docs/messenger-platform/reference/webhook-events
     # #2200: soma só os campos do Messenger; leadgen e feed da mesma Página continuam inscritos.
     page_subscription.add!(MESSENGER_FIELDS)
-    Crm::MetaAds::MessagingReferralsSubscribeJob.perform_later(page_id)
+    Crm::MetaAds::MessagingReferralsSubscribeJob.perform_later(page_id, [account_id])
   rescue StandardError => e
     Rails.logger.warn("[Channel::FacebookPage] subscribed_apps page=#{page_id} #{e.class}: #{e.message}")
     true

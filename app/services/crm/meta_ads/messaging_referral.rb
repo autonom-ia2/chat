@@ -12,6 +12,8 @@
 module Crm::MetaAds::MessagingReferral
   AD_SOURCE = 'ADS'.freeze
   MESSENGER_SOURCE, INSTAGRAM_SOURCE = Ctwa::CampaignBuilder::MESSAGING_AD_SOURCES
+  # Os toques cujo `source_id` é o id do anúncio da Meta: o clique para o WhatsApp, o Messenger e o Direct.
+  AD_CLICK_SOURCES = [Ctwa::CampaignBuilder::CTWA_SOURCE, *Ctwa::CampaignBuilder::MESSAGING_AD_SOURCES].freeze
   # Origem da ligação conversa → anúncio (Crm::MetaAdLink) por fonte do toque.
   ORIGINS = { MESSENGER_SOURCE => 'messenger', INSTAGRAM_SOURCE => 'instagram' }.freeze
   PENDING_KEY_PREFIX = 'meta_ads:messaging_referral:pending:'.freeze
@@ -19,11 +21,12 @@ module Crm::MetaAds::MessagingReferral
 
   module_function
 
-  # source: MESSENGER_SOURCE ou INSTAGRAM_SOURCE; event_id: o mid da mensagem ou, no evento só
-  # de referral, remetente e hora. true quando o toque foi gravado.
+  # source: MESSENGER_SOURCE ou INSTAGRAM_SOURCE; event_id: o mid da mensagem ou, no evento só de referral, remetente e
+  # hora. true quando o toque foi gravado.
   def attribute!(conversation, referral, source:, event_id:)
     ad_referral = for_campaign(referral, source: source, event_id: event_id)
     return false if conversation.nil? || ad_referral.nil?
+    return false if foreign_ad?(conversation, ad_referral[:source_id])
 
     Ctwa::CampaignBuilder.attribute!(conversation, ad_referral)
   end
@@ -31,7 +34,7 @@ module Crm::MetaAds::MessagingReferral
   # Evento só de referral: a pessoa já tinha conversa na caixa. O toque vai para a conversa mais recente dela, se ainda
   # aberta (ou se a caixa trava numa conversa só, que reabre). Encerrada, a próxima mensagem abre conversa nova e não traz
   # o referral de novo (doc da Meta): o clique fica guardado (PENDING_TTL) e vai para a próxima conversa
-  # (`attribute_pending!`). Contato que a caixa não conhece não tem onde gravar.
+  # (`attribute_message!`). Contato que a caixa não conhece não tem onde gravar.
   #
   # Se a Meta mandasse o mesmo clique no evento solto e de novo na mensagem, seriam dois toques (ids diferentes) do mesmo
   # anúncio na conversa: a doc diz que não manda, e a contagem do painel é por conversa.
@@ -47,34 +50,38 @@ module Crm::MetaAds::MessagingReferral
     keep_pending(contact_inbox, referral, source: source, event_id: event_id)
   end
 
-  # A mensagem sem referral de quem clicou com a conversa encerrada: o clique guardado vai para a conversa dela.
-  def attribute_pending!(conversation)
-    key = pending_key(conversation.contact_inbox_id)
-    # Lê e apaga de uma vez: duas mensagens ao mesmo tempo não levam o mesmo clique.
-    raw = Redis::Alfred.with { |conn| conn.multi { |transaction| [transaction.get(key), transaction.del(key)] }.first }
-    return false if raw.blank?
-
-    pending = JSON.parse(raw)
-    attribute!(conversation, pending['referral'], source: pending['source'], event_id: pending['event_id'])
-  end
-
-  # Mensagem que chegou: o anúncio dela, ou o clique guardado do evento solto (referral que não é anúncio, como link
-  # m.me ou loja, não conta).
-  def attribute_message!(conversation, referral, source:, event_id:)
+  # Mensagem que chegou: o anúncio dela; sem anúncio (ou com referral que não é anúncio, como link m.me ou loja), os
+  # cliques guardados do evento solto, só quando esta mensagem abriu a conversa.
+  def attribute_message!(conversation, referral, source:, event_id:, new_conversation:)
     return false if conversation.nil?
     return attribute!(conversation, referral, source: source, event_id: event_id) if for_campaign(referral, source: source, event_id: event_id)
+    return false unless new_conversation
 
     attribute_pending!(conversation)
+  end
+
+  # Os cliques guardados vão para a conversa nova. Lê e apaga de uma vez: duas mensagens ao mesmo tempo não levam o
+  # mesmo clique. Redis fora não derruba a mensagem: o clique se perde e fica no log.
+  def attribute_pending!(conversation)
+    key = pending_key(conversation.contact_inbox_id)
+    pending = Redis::Alfred.with { |conn| conn.multi { |transaction| [transaction.lrange(key, 0, -1), transaction.del(key)] }.first }
+    Array(pending).map { |raw| JSON.parse(raw) }.count do |click|
+      attribute!(conversation, click['referral'], source: click['source'], event_id: click['event_id'])
+    end.positive?
+  rescue Redis::BaseError => e
+    Rails.logger.warn("[#{name}] conversation=#{conversation.id} cliques guardados não lidos: #{e.class}")
+    false
   end
 
   def continues?(inbox, conversation)
     conversation.present? && (inbox.lock_to_single_conversation || !conversation.resolved?)
   end
 
-  # O referral traz a foto num link assinado da Meta: fica só no Redis, com prazo, nunca no log.
+  # Um clique por item da lista: dois anúncios clicados antes da próxima mensagem valem os dois.
   def keep_pending(contact_inbox, referral, source:, event_id:)
-    Redis::Alfred.set(pending_key(contact_inbox.id), { referral: hash_of(referral), source: source, event_id: event_id }.to_json,
-                      ex: PENDING_TTL.to_i)
+    key = pending_key(contact_inbox.id)
+    click = { referral: slim(referral), source: source, event_id: event_id }.to_json
+    Redis::Alfred.with { |conn| conn.multi { |transaction| [transaction.rpush(key, click), transaction.expire(key, PENDING_TTL.to_i)] } }
     false
   end
 
@@ -82,17 +89,48 @@ module Crm::MetaAds::MessagingReferral
     "#{PENDING_KEY_PREFIX}#{contact_inbox_id}"
   end
 
+  # A mesma Página pode ser caixa de mais de uma conta (Integrations::Facebook::MessageCreator grava a mensagem em
+  # todas): o anúncio só vai para a conversa da conta que o conhece (gasto ou nome do anúncio). Página de uma conta só
+  # grava sempre, mesmo o anúncio novo que a coleta ainda não trouxe.
+  def foreign_ad?(conversation, ad_id)
+    channel = conversation.inbox&.channel
+    return false unless channel.is_a?(Channel::FacebookPage)
+    return false unless Channel::FacebookPage.where(page_id: channel.page_id).where.not(id: channel.id).exists?
+
+    account_id = conversation.account_id
+    Crm::MetaAdObject.where(account_id: account_id, meta_object_id: ad_id).none? &&
+      Crm::MetaAdInsightDaily.where(account_id: account_id, ad_id: ad_id).none?
+  end
+
   # O referral do anúncio no formato que o Ctwa::CampaignBuilder lê, ou nil quando não é anúncio.
   def for_campaign(referral, source:, event_id:)
     ref = hash_of(referral)
-    return unless ref['source'].to_s.casecmp?(AD_SOURCE) && ref['ad_id'].present? && event_id.present?
+    return unless ad?(ref) && event_id.present?
 
     context = hash_of(ref['ads_context_data'])
     {
       source: source, source_id: ref['ad_id'].to_s, source_type: 'ad', headline: context['ad_title'].presence,
-      media_type: context['video_url'].present? ? 'video' : 'image', image_url: context['photo_url'].presence,
-      referral_id: event_id.to_s
+      media_type: media_type(ref, context), image_url: context['photo_url'].presence, referral_id: event_id.to_s
     }.compact
+  end
+
+  # O referral sem os links assinados da Meta (foto, vídeo), para a fila e o Redis: só o que grava o toque. nil quando
+  # não é anúncio.
+  def slim(referral)
+    ref = hash_of(referral)
+    return unless ad?(ref)
+
+    context = hash_of(ref['ads_context_data'])
+    { 'source' => AD_SOURCE, 'ad_id' => ref['ad_id'].to_s, 'ads_context_data' => { 'ad_title' => context['ad_title'] }.compact,
+      'media_type' => media_type(ref, context) }
+  end
+
+  def ad?(ref)
+    ref['source'].to_s.casecmp?(AD_SOURCE) && ref['ad_id'].present?
+  end
+
+  def media_type(ref, context)
+    ref['media_type'].presence || (context['video_url'].present? ? 'video' : 'image')
   end
 
   def hash_of(value)

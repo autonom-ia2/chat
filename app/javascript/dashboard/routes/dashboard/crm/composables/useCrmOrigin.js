@@ -21,6 +21,15 @@ export const CRM_ORIGIN_SOURCE_META = {
     icon: 'i-lucide-megaphone',
     labelKey: 'CRM_KANBAN.ORIGIN.META_PAID',
   },
+  // #2521: clique para o Messenger e o Direct; o rótulo próprio vem no PR-B2.
+  meta_ctm: {
+    icon: 'i-lucide-megaphone',
+    labelKey: 'CRM_KANBAN.ORIGIN.META_PAID',
+  },
+  meta_ctd: {
+    icon: 'i-lucide-megaphone',
+    labelKey: 'CRM_KANBAN.ORIGIN.META_PAID',
+  },
   tracked_link: {
     icon: 'i-lucide-link',
     labelKey: 'CRM_KANBAN.ORIGIN.TRACKED_LINK',
@@ -213,6 +222,8 @@ export function useCrmOrigin() {
       case 'tiktok_ads':
         return t('CRM_KANBAN.ORIGIN.TIKTOK_ADS');
       case 'meta_paid':
+      case 'meta_ctm':
+      case 'meta_ctd':
         return t('CRM_KANBAN.ORIGIN.META_PAID');
       case 'tracked_link':
         return t('CRM_KANBAN.ORIGIN.TRACKED_LINK');

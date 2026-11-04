@@ -85,7 +85,8 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
 
   def process_messages(entry)
     messages(entry).each do |messaging|
-      Rails.logger.info("Instagram Events Job Messaging: #{messaging}")
+      # Só o tipo e os ids: o `messaging` inteiro traz o texto e, no anúncio (#2521), links assinados da Meta.
+      Rails.logger.info("Instagram Events Job Messaging: event=#{event_name(messaging).inspect} mid=#{messaging.dig(:message, :mid)}")
 
       instagram_id = instagram_id(messaging)
       channel = find_channel(instagram_id)
@@ -211,8 +212,7 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
   end
 
   def referral(messaging, _channel)
-    Crm::MetaAds::MessagingReferralJob.perform_later('instagram', messaging.dig(:recipient, :id).to_s, messaging.dig(:sender, :id).to_s,
-                                                     messaging[:referral].to_h, messaging[:timestamp].to_s)
+    Crm::MetaAds::MessagingReferralJob.enqueue_for('instagram', messaging.to_h.deep_stringify_keys)
   end
 
   def message_edit(messaging, channel)

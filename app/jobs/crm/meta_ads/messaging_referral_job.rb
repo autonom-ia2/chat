@@ -12,6 +12,15 @@ class Crm::MetaAds::MessagingReferralJob < ApplicationJob
   # { 'messenger' => 'meta_ctm', 'instagram' => 'meta_ctd' }
   SOURCES = Crm::MetaAds::MessagingReferral::ORIGINS.invert.freeze
 
+  # messaging: o evento do webhook (chaves em texto). Vai para a fila só o anúncio sem links assinados
+  # (Crm::MetaAds::MessagingReferral.slim); referral que não é anúncio não enfileira.
+  def self.enqueue_for(network, messaging)
+    referral = Crm::MetaAds::MessagingReferral.slim(messaging['referral'])
+    return if referral.nil?
+
+    perform_later(network, messaging.dig('recipient', 'id').to_s, messaging.dig('sender', 'id').to_s, referral, messaging['timestamp'].to_s)
+  end
+
   def perform(network, recipient_id, sender_id, referral, timestamp)
     # Sem a hora, o id do evento seria o mesmo para todo clique do contato e o próximo cairia como reentrega.
     return if timestamp.blank?

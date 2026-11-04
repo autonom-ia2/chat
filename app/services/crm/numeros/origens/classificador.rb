@@ -12,7 +12,11 @@ class Crm::Numeros::Origens::Classificador
   ANUNCIO_META = 'anuncio_meta'.freeze
   DIRETO = 'direto'.freeze
   OUTRAS = 'outras'.freeze
-  GRUPOS = { 'meta_ctwa' => ANUNCIO_META, 'meta_paid' => ANUNCIO_META, 'google_ads' => 'google', 'tracked_link' => 'site' }.freeze
+  # meta_ctm/meta_ctd: clique para o Messenger e o Direct (#2521).
+  GRUPOS = {
+    'meta_ctwa' => ANUNCIO_META, 'meta_paid' => ANUNCIO_META, 'meta_ctm' => ANUNCIO_META, 'meta_ctd' => ANUNCIO_META,
+    'google_ads' => 'google', 'tracked_link' => 'site'
+  }.freeze
   ORIGENS = (GRUPOS.values.uniq + [DIRETO, OUTRAS]).freeze
   # Id de objeto da Meta: só dígitos, de 6 a 30 (a mesma regra do Crm::MetaAds::NameResolver).
   ID_DA_META = (6..30)
@@ -95,7 +99,7 @@ class Crm::Numeros::Origens::Classificador
   end
 
   def anuncio_de(fonte, toque)
-    return unless fonte == Ctwa::CampaignBuilder::CTWA_SOURCE
+    return unless Crm::MetaAds::MessagingReferral::AD_CLICK_SOURCES.include?(fonte)
 
     id = toque['source_id'].to_s
     id if ID_DA_META.cover?(id.length) && id.each_char.all? { |char| char.between?('0', '9') }

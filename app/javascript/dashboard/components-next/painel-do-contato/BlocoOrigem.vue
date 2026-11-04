@@ -48,7 +48,15 @@ const CANAL = {
   google_ads: 'Google',
   tiktok_ads: 'TikTok',
 };
-const ANUNCIOS = ['meta_ctwa', 'meta_paid', 'google_ads', 'tiktok_ads'];
+// meta_ctm/meta_ctd: clique para o Messenger e o Direct (#2521).
+const ANUNCIOS = [
+  'meta_ctwa',
+  'meta_ctm',
+  'meta_ctd',
+  'meta_paid',
+  'google_ads',
+  'tiktok_ads',
+];
 
 const frase = computed(() => {
   const o = origem.value;
