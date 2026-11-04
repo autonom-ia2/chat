@@ -8,6 +8,7 @@ import { haQuanto } from 'dashboard/routes/dashboard/seusPosts/seusPostsHelpers'
 import { useLiberarAcesso } from 'dashboard/routes/dashboard/seusPosts/useLiberarAcesso';
 import { useComentarioDaConversa } from './useComentarioDaConversa';
 
+// Quem monta (MessagesView) só monta com a flag da IA dos comentários, a mesma que cria estas conversas.
 // Comentários na caixa (#2215): na conversa que nasceu de um comentário do Instagram (#2212), o comentário fica no
 // topo, junto dos outros avisos da conversa (topBannerRef), com o que dá para fazer nele sem sair dali: responder em
 // público (a resposta sai no post, não no Direct), esconder e mostrar de novo, e apagar (confirma citando o comentário;
@@ -21,10 +22,6 @@ const props = defineProps({
 
 const { locale, t } = useI18n();
 const { isCloudFeatureEnabled } = useAccount();
-// A flag da IA dos comentários, a mesma que cria estas conversas: sem ela, nem o cartão nem a leitura.
-const ligado = computed(() =>
-  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
-);
 const {
   estado,
   comentario,
@@ -35,7 +32,7 @@ const {
   esconder,
   apagar,
 } = useComentarioDaConversa({
-  conversationId: computed(() => (ligado.value ? props.conversationId : null)),
+  conversationId: computed(() => props.conversationId),
 });
 
 // 'responder', 'apagar' (confirmar) ou null.
@@ -100,7 +97,6 @@ const ACAO =
 
 <template>
   <section
-    v-if="ligado"
     ref="cartao"
     data-comentario-na-conversa
     :data-estado="estado"

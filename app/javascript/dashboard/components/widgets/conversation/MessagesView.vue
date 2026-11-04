@@ -67,6 +67,7 @@ import {
 } from 'dashboard/components-next/conversa-canal/rolagemDaPele';
 import { useAlert } from 'dashboard/composables';
 import ComentarioNaConversa from 'dashboard/components-next/conversa-canal/comentario/ComentarioNaConversa.vue';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 // Até quantos px do fim a lista conta como "no fim" quando a caixa de resposta cresce.
 const NO_FIM_DO_PAINEL = 40;
@@ -177,6 +178,7 @@ export default {
       listLoadingStatus: 'getAllMessagesLoaded',
       currentAccountId: 'getCurrentAccountId',
       isMetaMessageSendingDisabled: 'globalConfig/isMetaMessageSendingDisabled',
+      isFeatureEnabledonAccount: 'accounts/isFeatureEnabledonAccount',
     }),
     isOpen() {
       return this.currentChat?.status === wootConstants.STATUS_TYPE.OPEN;
@@ -197,11 +199,18 @@ export default {
     inboxId() {
       return this.currentChat.inbox_id;
     },
-    // #2215: a conversa nasceu de um comentário do Instagram (#2212): o comentário fica no topo, com as ações nele
-    // (o cartão confere a flag).
+    // #2215: a conversa nasceu de um comentário do Instagram (#2212): o comentário fica no topo, com as ações nele.
+    // Atrás da flag da IA dos comentários, a mesma que cria estas conversas.
     nasceuDeComentarioDoInstagram() {
       const origem = this.currentChat.additional_attributes?.meta_ads_comment;
-      return this.isAnInstagramChannel && origem?.network === 'instagram';
+      return (
+        this.isAnInstagramChannel &&
+        origem?.network === 'instagram' &&
+        this.isFeatureEnabledonAccount(
+          this.currentAccountId,
+          FEATURE_FLAGS.META_ADS_COMENTARIOS_IA
+        )
+      );
     },
     inbox() {
       return this.$store.getters['inboxes/getInbox'](this.inboxId);

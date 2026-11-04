@@ -16,7 +16,7 @@ vi.mock('dashboard/api/comentarioDaConversa', () => ({
   },
 }));
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
-const flags = { value: ['meta_ads_comentarios_ia', 'seus_posts_comentarios'] };
+const flags = { value: ['seus_posts_comentarios'] };
 vi.mock('dashboard/composables/useAccount', () => ({
   useAccount: () => ({
     isCloudFeatureEnabled: flag => flags.value.includes(flag),
@@ -69,7 +69,7 @@ const acoes = wrapper =>
 describe('ComentarioNaConversa', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    flags.value = ['meta_ads_comentarios_ia', 'seus_posts_comentarios'];
+    flags.value = ['seus_posts_comentarios'];
     podeLiberar.value = true;
   });
 
@@ -83,14 +83,6 @@ describe('ComentarioNaConversa', () => {
     );
     expect(wrapper.text()).toContain('Comentário no post');
     expect(acoes(wrapper)).toEqual(['responder', 'esconder', 'apagar']);
-  });
-
-  it('sem a flag da IA dos comentários: nem cartão nem leitura', async () => {
-    flags.value = [];
-    const wrapper = await montar();
-
-    expect(wrapper.find('[data-comentario-na-conversa]').exists()).toBe(false);
-    expect(api.get).not.toHaveBeenCalled();
   });
 
   it('quem só lê vê o comentário, sem botões', async () => {
@@ -226,7 +218,7 @@ describe('ComentarioNaConversa', () => {
   });
 
   it('sem poder reautorizar (ou sem os comentários em Seus posts): pede a um administrador', async () => {
-    flags.value = ['meta_ads_comentarios_ia'];
+    flags.value = [];
     api.get.mockResolvedValue({ data: { status: 'needs_permission' } });
     const wrapper = await montar();
 
