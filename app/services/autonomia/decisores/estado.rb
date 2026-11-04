@@ -52,7 +52,7 @@ class Autonomia::Decisores::Estado
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
                  leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES,
-                 papeis: false, com_midia: false)
+                 papeis: false, com_midia: false, fuso: nil)
     @conversation = conversation
     @message = message
     @card = card
@@ -63,6 +63,7 @@ class Autonomia::Decisores::Estado
     @max_caracteres_anteriores = max_caracteres_anteriores
     @rotulo = Crm::Ai::FatosDaConversa::Rotulo.new(conversation) if papeis
     @com_midia = com_midia
+    @fuso = fuso
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -198,12 +199,18 @@ class Autonomia::Decisores::Estado
   # #1807 (flag `email_autoria`): e-mail recebido sem o histórico citado; o de outro endereço sempre diz quem escreveu.
   # #1924: as MAX_MENSAGENS mais recentes com texto vão até MAX_CARACTERES; as mais antigas da janela, até
   # @max_caracteres_anteriores. A posição conta depois de tirar as vazias (e-mail só com citação).
+  # #2500: com `fuso`, cada texto começa pela data e hora da mensagem nesse fuso, para a IA resolver "ontem" e
+  # "sexta passada". Sem ele (o Decisor), o texto vai como sempre foi.
   def textos(lista, com_autor: false)
     com_texto = lista.map { |mensagem| [mensagem, texto_de(mensagem)] }.reject { |(_, texto)| texto.empty? }
     com_texto.each_with_index.map do |(mensagem, inteiro), posicao|
       texto = inteiro.first(posicao < com_texto.size - MAX_MENSAGENS ? @max_caracteres_anteriores : MAX_CARACTERES)
-      com_autor || email_autoria.de(mensagem) ? "#{quem(mensagem)}: #{texto}" : texto
+      com_data(mensagem, com_autor || email_autoria.de(mensagem) ? "#{quem(mensagem)}: #{texto}" : texto)
     end
+  end
+
+  def com_data(mensagem, texto)
+    @fuso ? "[#{mensagem.created_at.in_time_zone(@fuso).strftime('%Y-%m-%d %H:%M')}] #{texto}" : texto
   end
 
   def texto_de(mensagem)

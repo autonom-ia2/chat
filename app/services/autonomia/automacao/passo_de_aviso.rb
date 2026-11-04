@@ -18,6 +18,12 @@ class Autonomia::Automacao::PassoDeAviso
 
     texto = texto_pronto
     return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) if texto.nil?
+
+    avisar(texto)
+  end
+
+  # Com o texto já pronto. O "resumir" da F7 (#2500) chega aqui com o resumo da IA.
+  def avisar(texto)
     return Resultado.new(tipo: :pulado, motivo: 'texto_vazio', dados: {}) if texto.strip.empty?
 
     pessoas, fora = destinatarios
@@ -25,6 +31,12 @@ class Autonomia::Automacao::PassoDeAviso
 
     nota = ::Autonomia::Automacao::Nota.criar(conversa: @conversa, texto: texto, pessoas: pessoas, marca: marca)
     Resultado.new(tipo: :ok, dados: { 'mensagem_id' => nota.id, 'pessoas' => pessoas.map(&:id), 'fora' => fora })
+  end
+
+  # O que pula sem olhar o texto: o "resumir" confere antes de pagar a IA.
+  def ninguem_para_avisar
+    pessoas, fora = destinatarios
+    Resultado.new(tipo: :pulado, motivo: 'ninguem_para_avisar', dados: { 'fora' => fora }) if pessoas.empty?
   end
 
   private
