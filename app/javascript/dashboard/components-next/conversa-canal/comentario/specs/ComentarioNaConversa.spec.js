@@ -103,6 +103,15 @@ describe('ComentarioNaConversa', () => {
     expect(acoes(wrapper)).toEqual([]);
   });
 
+  it('quem atende sem poder apagar (#2517): responde e esconde, sem o botão Apagar', async () => {
+    const resposta = ok();
+    resposta.data.pode = { responder: true, esconder: true, apagar: false };
+    api.get.mockResolvedValue(resposta);
+    const wrapper = await montar();
+
+    expect(acoes(wrapper)).toEqual(['responder', 'esconder']);
+  });
+
   it('responde em público e mostra a resposta; o campo fecha só no sucesso', async () => {
     api.get.mockResolvedValue(ok());
     api.responder.mockRejectedValueOnce({
