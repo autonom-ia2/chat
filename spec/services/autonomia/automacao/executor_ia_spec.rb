@@ -212,6 +212,24 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(dados.to_json).not_to include('ABC1D23', '2026-11-03')
     end
 
+    # O exemplo do aceite: "bati o carro ontem à noite" só vira data quando a IA sabe o dia em que a mensagem foi escrita.
+    # A mensagem é das 23h30 de 3/11 em Cuiabá (já 4/11 em UTC) e o passo roda depois da meia-noite: o "ontem" é 2/11.
+    it 'data relativa: a IA recebe hoje e a data de cada mensagem, no fuso da conta', :aggregate_failures do
+      account.update!(custom_attributes: { 'timezone' => 'America/Cuiaba' })
+      travel_to(Time.utc(2026, 11, 4, 3, 30)) do
+        create(:message, conversation: conversa, account: account, message_type: :incoming, content: 'Oi, bati o carro ontem à noite')
+      end
+      openai_devolve({ 'placa' => nil, 'data' => '2026-11-02', 'carros' => nil, 'nome' => nil })
+
+      travel_to(Time.utc(2026, 11, 4, 4, 10)) { comecar_e_rodar(automacao_ligada(account, admin, [extrair(campos)])) }
+
+      entrada = JSON.parse(corpos.first.dig('input', 0, 'content', 0, 'text'))
+      expect(entrada['hoje']).to eq('2026-11-04')
+      expect(entrada.dig('conversa', 'messages').last).to eq('[2026-11-03 23:30] Oi, bati o carro ontem à noite')
+      expect(corpos.first['instructions']).to include('Data relativa')
+      expect(contato.reload.custom_attributes).to eq('data_sinistro' => '2026-11-02')
+    end
+
     it 'a resposta segue o tipo do atributo: número vira número no schema' do
       openai_devolve({ 'placa' => nil, 'data' => nil, 'carros' => 2, 'nome' => nil })
 

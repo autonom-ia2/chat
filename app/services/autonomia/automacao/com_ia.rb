@@ -23,9 +23,16 @@ module Autonomia::Automacao::ComIa
 
   private
 
-  def leitura
+  # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem").
+  def leitura(fuso: nil)
     leituras = Array(@passo['le']).presence || ::Autonomia::Decisor::LEITURAS_PADRAO
-    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras)
+    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras, fuso: fuso)
+  end
+
+  # O fuso que a tela grava na conta (#954, o mesmo do Guia); sem ele, o padrão da plataforma (Crm::Timezone::Resolver).
+  def fuso_da_conta
+    conta = @conversa.account
+    ::Crm::Timezone::Resolver.new(explicit: conta.custom_attributes.to_h['timezone'], account: conta).zone_or_default
   end
 
   # [resposta, custo]; a Falha vira o Resultado do tipo que o executor entende.

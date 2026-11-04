@@ -4,6 +4,7 @@
 #
 # - A resposta tem um campo por chave, do tipo do atributo da conta: número para número, moeda e porcentagem, sim/não
 #   para caixa de seleção, uma das opções para lista, data no formato AAAA-MM-DD. Nulo quando o dado não está escrito.
+# - Para a data relativa ("bati o carro ontem"), a IA recebe a data de hoje e a de cada mensagem, no fuso da conta.
 # - Só preenche: o valor que já existia fica, porque o texto é de terceiros. Com `trocar: true`, o novo entra.
 # - Grava pela porta da frente, como quem ligou (PassoDeAcao): a plataforma confere a permissão, e quem não pode
 #   gravar pausa a automação, como na ação.
@@ -19,6 +20,8 @@ class Autonomia::Automacao::PassoDeExtrair
     Tire da conversa os dados pedidos. Responda só com JSON no schema, um campo por chave.
     Preencha um campo só com o que está escrito na conversa: nunca adivinhe nem invente. Devolva null quando o dado não aparece.
     Mantenha o idioma original do valor. Data no formato AAAA-MM-DD.
+    Cada mensagem começa pela data e hora em que foi escrita, no fuso da conta, e "hoje" diz a data de agora.
+    Data relativa ("ontem", "sexta passada") conta a partir da data da mensagem em que aparece.
   TEXTO
 
   def self.fala_com_gente?(_passo) = false
@@ -27,10 +30,12 @@ class Autonomia::Automacao::PassoDeExtrair
     negado = impedido
     return negado if negado
 
-    estado = leitura
+    fuso = fuso_da_conta
+    estado = leitura(fuso: fuso)
     return nada_para_ler if estado.vazio?
 
-    resposta, custo = perguntar(modelo: MODELO, instrucoes: instrucoes, entrada: { conversa: estado.conversa }, schema: schema)
+    entrada = { hoje: Time.current.in_time_zone(fuso).to_date.iso8601, conversa: estado.conversa }
+    resposta, custo = perguntar(modelo: MODELO, instrucoes: instrucoes, entrada: entrada, schema: schema)
     gravar(achados(resposta), custo)
   rescue Falha => e
     falhou(e)
