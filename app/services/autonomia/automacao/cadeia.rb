@@ -48,6 +48,15 @@ class Autonomia::Automacao::Cadeia
       raiz_atual
     end
 
+    # #2428: a Automação livre que está agindo agora, quando o passo "ação" move o card pela porta da frente (pela
+    # ChamadaInterna, como quem ligou): `{ origem: 'livre', id: }`, para o Crm::Cards::Mover marcar o movimento como
+    # dela. Vem da cadeia, e não do `Current`, pelo mesmo motivo da cadeia: o pedido de dentro mexe no `Current`.
+    # nil fora de cadeia, ou quando quem age por último é uma regra ou uma automação de etapa.
+    def automacao_livre
+      tipo, id = origens.last.to_s.split(':', 2)
+      { origem: 'livre', id: id.to_i } if tipo == 'automacao' && id.present?
+    end
+
     # nil quando pode entrar; senão o motivo: :auto_disparo (a automação de agora casou com a própria mudança), :laco
     # (já rodou antes neste ramo) ou :profundidade.
     def motivo_para_recusar(origem)
