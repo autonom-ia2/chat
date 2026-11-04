@@ -3,11 +3,13 @@
 # Junta três fontes num JSON só (lib/operator_guide/automacao-passos.json):
 # - o esquema da receita: gatilhos, operadores, unidades de tempo e os passos nativos (esperar, se, parar, mensagem, avisar);
 # - o catálogo do Guia (formatos-das-acoes.json): o tipo, as opções e os limites de cada campo das ações liberadas;
-# - automacao-passos.yml: o nome do passo, o grupo, de onde vem cada parâmetro e a peça da tela de cada campo.
+# - automacao-passos.yml: o nome do passo, o grupo, de onde vem cada parâmetro e a peça da tela de cada campo;
+# - automacao-receitas.yml: as receitas prontas da porta da nova (#2498), com a flag que cada uma pede.
 # A frase de cada coisa é uma chave do i18n do painel (automacaoLivre.json), conferida pelo spec do CI.
 module Autonomia::Automacao::Catalogo
   ARQUIVO = Rails.root.join('lib/operator_guide/automacao-passos.json')
   DECLARADO = Rails.root.join('lib/operator_guide/automacao-passos.yml')
+  RECEITAS = Rails.root.join('lib/operator_guide/automacao-receitas.yml')
   I18N = 'AUTOMACAO_LIVRE'.freeze
 
   # A peça da tela que mostra cada campo e os tipos do catálogo do Guia que ela aceita. Campo sem tipo no catálogo
@@ -61,8 +63,18 @@ module Autonomia::Automacao::Catalogo
       # O que cada alvo de gatilho alcança (#2499): o editor só oferece o valor dessas bases.
       'alvos' => ::Autonomia::Automacao::Valores::BASES_DO_ALVO,
       'grupos' => declarado['grupos'].map { |grupo| { 'chave' => grupo, 'frase' => chave('GRUPOS', grupo) } },
-      'passos' => nativos + acoes
+      'passos' => nativos + acoes,
+      'receitas' => receitas
     }
+  end
+
+  # #2498: cada receita pronta com a frase da porta e as flags que os passos dela pedem (a porta mostra o porquê).
+  def receitas
+    YAML.safe_load_file(RECEITAS).map do |nome, item|
+      tipos = ::Autonomia::Automacao::Receita.new(item['receita'], conta: nil).passos.pluck('tipo')
+      requer = tipos.filter_map { |tipo| declarado.dig('nativos', tipo, 'requer') }.uniq
+      { 'chave' => nome, 'frase' => chave('RECEITAS', nome, 'TITULO'), 'requer' => requer, 'receita' => item['receita'] }
+    end
   end
 
   def escrever!

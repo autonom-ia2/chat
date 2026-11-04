@@ -36,6 +36,11 @@ vi.mock('vue-router', async () => {
   };
 });
 vi.mock('dashboard/composables', () => ({ useAlert: vi.fn() }));
+// As flags da conta: a receita que pede mensagem só abre com ela ligada.
+const flags = vi.hoisted(() => new Set(['automacao_mensagens']));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({ isCloudFeatureEnabled: flag => flags.has(flag) }),
+}));
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref: criarRef } = await import('vue');
   const podeMudar = criarRef(true);
@@ -84,6 +89,17 @@ const CATALOGO = {
       campos: [{ nome: 'duracao', peca: 'duracao' }],
     },
     { tipo: 'parar', grupo: 'CONTROLE', frase: 'PARAR', campos: [] },
+  ],
+  receitas: [
+    {
+      chave: 'AGRADECER',
+      frase: 'TITULO',
+      requer: ['automacao_mensagens'],
+      receita: {
+        gatilho: { tipo: 'conversa.resolvida' },
+        passos: [{ id: 'p1', tipo: 'mensagem', texto: ['Obrigado'] }],
+      },
+    },
   ],
 };
 
@@ -459,6 +475,7 @@ describe('LivreEditorPage', () => {
     const wrapper = montar();
     await flushPromises();
 
+    await wrapper.find('[data-porta-zero]').trigger('click');
     expect(wrapper.find('[data-ligar]').attributes('disabled')).toBeDefined();
     const confira = wrapper.findComponent(LivreConfira);
     confira.vm.$emit('alterar', 'gatilho');
@@ -520,6 +537,42 @@ describe('LivreEditorPage', () => {
     expect(AutomacoesAPI.salvar).not.toHaveBeenCalled();
     expect(wrapper.find('[data-nao-salva]').exists()).toBe(true);
     expect(wrapper.find('[data-ligar]').attributes('disabled')).toBeDefined();
+  });
+
+  it('a nova começa pelas portas, e a receita abre na tela, desligada, com o nome dela', async () => {
+    rota.name = 'automacoes_livre_nova';
+    rota.params = { accountId: 1 };
+    rota.query = {};
+    const wrapper = montar();
+    await flushPromises();
+
+    expect(wrapper.find('[data-portas]').exists()).toBe(true);
+    await wrapper.find('[data-receita]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-portas]').exists()).toBe(false);
+    expect(wrapper.findComponent(LivreConfira).props('receita')).toEqual(
+      CATALOGO.receitas[0].receita
+    );
+    expect(rota.query.receita).toBe('AGRADECER');
+    expect(AutomacoesAPI.create).not.toHaveBeenCalled();
+  });
+
+  it('sem a flag que a receita pede, a porta fica desabilitada com o porquê, e ?receita não abre', async () => {
+    flags.delete('automacao_mensagens');
+    rota.name = 'automacoes_livre_nova';
+    rota.params = { accountId: 1 };
+    rota.query = { receita: 'AGRADECER' };
+    const wrapper = montar();
+    await flushPromises();
+
+    const porta = wrapper.find('[data-receita]');
+    expect(porta.attributes('disabled')).toBeDefined();
+    expect(wrapper.find('[data-falta-flag]').text()).toBe(
+      'AUTOMACAO_LIVRE.RECEITAS.REQUER.AUTOMACAO_MENSAGENS'
+    );
+    expect(wrapper.find('[data-portas]').exists()).toBe(true);
+    flags.add('automacao_mensagens');
   });
 
   it('pergunta antes de sair com a nova ainda não guardada', async () => {

@@ -1047,5 +1047,28 @@
         }
       ]
     }
+  ],
+  "receitas": [
+    {
+      "chave": "AGRADECER",
+      "frase": "AUTOMACAO_LIVRE.RECEITAS.AGRADECER.TITULO",
+      "requer": [
+        "automacao_mensagens"
+      ],
+      "receita": {
+        "gatilho": {
+          "tipo": "conversa.resolvida"
+        },
+        "passos": [
+          {
+            "id": "p1",
+            "tipo": "mensagem",
+            "texto": [
+              "Obrigado pelo contato! Se precisar, é só chamar."
+            ]
+          }
+        ]
+      }
+    }
   ]
 }

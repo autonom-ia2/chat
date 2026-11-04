@@ -453,7 +453,23 @@
       "NAO_SAIRIA": "Não sairia: a mensagem automática ainda não está ligada nesta conta.",
       "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
       "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",
-      "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar."
+      "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar.",
+      "OPCAO": "{nome} · #{n}"
+    },
+    "RECEITAS": {
+      "COMO_COMECAR": "Como você quer começar?",
+      "ZERO_TITULO": "Montar do zero",
+      "ZERO_TEXTO": "Escolha o \"Quando\" e os passos você mesmo.",
+      "OU_RECEITA": "Ou comece de uma receita pronta",
+      "USAR": "Usar esta",
+      "REQUER": {
+        "AUTOMACAO_MENSAGENS": "Manda mensagem ao cliente, e a mensagem automática ainda não está ligada nesta conta."
+      },
+      "AGRADECER": {
+        "TITULO": "Agradecer ao encerrar",
+        "TEXTO": "O cliente recebe um obrigado quando a conversa é resolvida.",
+        "NOME": "Agradecer ao encerrar"
+      }
     }
   }
 }

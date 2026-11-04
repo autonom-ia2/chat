@@ -453,7 +453,23 @@
       "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
       "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
-      "CORTE": "The test stopped here: the automation has too many paths to show."
+      "CORTE": "The test stopped here: the automation has too many paths to show.",
+      "OPCAO": "{nome} · #{n}"
+    },
+    "RECEITAS": {
+      "COMO_COMECAR": "How do you want to start?",
+      "ZERO_TITULO": "Build from scratch",
+      "ZERO_TEXTO": "Choose the \"When\" and the steps yourself.",
+      "OU_RECEITA": "Or start from a ready recipe",
+      "USAR": "Use this one",
+      "REQUER": {
+        "AUTOMACAO_MENSAGENS": "Sends a message to the customer, and automatic messages aren't turned on in this account yet."
+      },
+      "AGRADECER": {
+        "TITULO": "Thank them when closing",
+        "TEXTO": "The customer gets a thank-you when the conversation is resolved.",
+        "NOME": "Thank when closing"
+      }
     }
   }
 }
