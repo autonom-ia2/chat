@@ -55,9 +55,9 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   end
 
   def call
-    return @registro.sem_cuidado!(@comentario) if sem_cuidado?
+    return @registro.sem_cuidado!(registrado) if sem_cuidado?
 
-    cuidar if cuidar? && @registro.reservar!(@comentario)
+    cuidar if cuidar? && @registro.reservar!(registrado)
   end
 
   private
@@ -84,7 +84,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   # dono (FICA_COM_O_DONO: o Painel a mostra em "Esperando você", não como "não se aplica").
   def decidir
     avaliacao = avaliar
-    @registro.decisao!(@comentario, avaliacao) if avaliacao
+    @registro.decisao!(registrado, avaliacao) if avaliacao
     decisao = avaliacao&.chave
     return decisao unless %w[private price].include?(decisao)
 
@@ -106,7 +106,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
 
   # Uma falha ao soltar não pode trocar o erro original: é ele que diz ao job se tenta de novo.
   def soltar_leitura
-    @registro.soltar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::LIDO)
+    @registro.soltar!(registrado, Crm::MetaAds::ComentariosIa::Registro::LIDO)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: Account.find_by(id: @comentario.account_id)).capture_exception
   end
@@ -114,7 +114,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   # O comentário fica com o dono, com o porquê só no log (ids, nunca o texto).
   def nao_cuidou(motivo)
     Rails.logger.info("[comentarios_ia] não cuidou motivo=#{motivo} #{ids}")
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   def ids
@@ -143,9 +143,9 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
 
   # #2519: o comentário de cliente num anúncio (com o `ad_id`, que só o Instagram manda) sem cuidado ligado (nenhum, ou o
   # do anúncio pausado) fica registrado (`no_care`), para o Esperando contar o que está com o dono. Antes, sumia sem
-  # rastro. Sem o anúncio, nenhuma leitura usaria a linha.
+  # rastro. Sem o anúncio, nenhuma leitura usaria a linha. Só o primeiro nível, como a lista "Esperando você".
   def sem_cuidado?
-    return false if @comentario.ad_id.blank? || inbox.nil? || !do_motor? || care.present?
+    return false if @comentario.ad_id.blank? || @comentario.resposta? || inbox.nil? || !do_motor? || care.present?
 
     inbox.account.feature_enabled?(FLAG) && na_janela?
   end
@@ -175,7 +175,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     when 'private', 'price' then privado(decisao)
     when 'to_you' then agir { para_voce('to_you') }
     when 'hide' then esconder
-    when FICA_COM_O_DONO, Crm::MetaAds::ComentariosIa::Classificador::DONO then @registro.gravar!(@comentario, FICA_COM_O_DONO)
+    when FICA_COM_O_DONO, Crm::MetaAds::ComentariosIa::Classificador::DONO then @registro.gravar!(registrado, FICA_COM_O_DONO)
     end
   end
 
@@ -189,11 +189,11 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   def privado(decisao)
     return nao_cuidou('sem_quem_comentou') if @comentario.from_id.blank? || @comentario.post_id.blank?
 
-    return ja_tem_privado unless @registro.reservar_pessoa!(@comentario)
+    return ja_tem_privado unless @registro.reservar_pessoa!(registrado)
 
     textos = textos_reservados(decisao)
     # O agente não soube escrever: fica com o dono, no "Esperando você".
-    return @registro.gravar!(@comentario, FICA_COM_O_DONO) if textos.key?(:dono)
+    return @registro.gravar!(registrado, FICA_COM_O_DONO) if textos.key?(:dono)
 
     inicio = Time.current
     envio = agir { rede.privado(care, texto: textos[:privado]) }
@@ -210,10 +210,10 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     return {} unless Crm::MetaAds::ComentariosIa::Escrita.ligada?(inbox.account)
 
     textos = textos_escritos(decisao)
-    @registro.soltar_pessoa!(@comentario) if textos.key?(:dono)
+    @registro.soltar_pessoa!(registrado) if textos.key?(:dono)
     textos
   rescue Crm::MetaAds::ComentariosIa::Classificador::Erro
-    @registro.soltar_pessoa!(@comentario)
+    @registro.soltar_pessoa!(registrado)
     raise
   end
 
@@ -228,7 +228,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     return if rede.responder(escrita || care.resposta_publica(decisao, @registro.vez(@comentario.account_id)))
 
     recusou('reply')
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   # Já feito (pela pessoa, na tela do #2196, ou por outro job): nada a mostrar. Sem resposta da Meta, pode ter saído: a
@@ -239,7 +239,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
 
     return limite_em_resposta(envio) if @comentario.resposta? && Crm::MetaAds::ComentariosIa::LimiteDaMeta.do_envio?(envio)
 
-    @registro.soltar_pessoa!(@comentario)
+    @registro.soltar_pessoa!(registrado)
     return recusado_em_resposta(envio, decisao) if @comentario.resposta? && envio.codigo.present?
 
     para_voce('private_reply_failed')
@@ -260,11 +260,11 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   def recusado_em_resposta(envio, decisao)
     Rails.logger.info("[comentarios_ia] privado em resposta recusado codigo=#{envio.codigo} subcodigo=#{envio.subcodigo} #{ids}")
     frase = care.price_reply.presence if decisao == 'price'
-    return @registro.gravar!(@comentario, FICA_COM_O_DONO) if frase.nil?
+    return @registro.gravar!(registrado, FICA_COM_O_DONO) if frase.nil?
     return if rede.responder(frase)
 
     recusou('reply')
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   # O comentário no topo da conversa do privado, e o id dela na linha do privado. O privado já saiu: uma falha aqui vai
@@ -273,7 +273,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     return Rails.logger.warn("[comentarios_ia] privado sem conversa gravada #{ids}") if conversation.nil?
 
     @conversa.anotar!(conversation, @comentario, care, nova: conversation.created_at >= inicio)
-    @registro.vincular!(@comentario, 'private_reply', conversation)
+    @registro.vincular!(registrado, 'private_reply', conversation)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: inbox.account).capture_exception
   end
@@ -287,7 +287,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     return if agir { rede.esconder }
 
     recusou('hide')
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::NAO_CUIDOU)
   end
 
   # Outro envio deste comentário (a pessoa na tela, ou outro job). Confirmado pela Meta: "já recebeu". Ainda saindo, ou
@@ -296,7 +296,7 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   def outro_envio
     return ja_tem_privado if privado_confirmado?
 
-    @registro.soltar_pessoa!(@comentario)
+    @registro.soltar_pessoa!(registrado)
     nao_cuidou('outro_envio_sem_confirmacao')
   end
 
@@ -307,12 +307,24 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
 
   # O Painel mostra "já recebeu o privado" em vez de "não se aplica".
   def ja_tem_privado
-    @registro.gravar!(@comentario, Crm::MetaAds::ComentariosIa::Registro::JA_TEM_PRIVADO)
+    @registro.gravar!(registrado, Crm::MetaAds::ComentariosIa::Registro::JA_TEM_PRIVADO)
   end
 
   # Uma vez só por comentário: o `ai_seen` já deixou um job só cuidando dele.
   def para_voce(motivo)
-    @registro.gravar!(@comentario, motivo, conversation: @conversa.para_voce!(@comentario, care, motivo))
+    @registro.gravar!(registrado, motivo, conversation: @conversa.para_voce!(@comentario, care, motivo))
+  end
+
+  # #2519: o comentário como fica nas linhas do Registro, que o Esperando conta por anúncio.
+  # - No Facebook o evento vem sem `ad_id`; com o cuidado de um anúncio, a linha leva o anúncio dele.
+  # - A resposta dentro de um comentário (#2454) vai sem anúncio: a lista "Esperando você" mostra só o primeiro nível,
+  #   e o número conta o mesmo que a lista.
+  # A Conversa e a Rede seguem com o comentário como chegou (a chave da conversa usa o `ad_id` do evento).
+  def registrado
+    return @comentario.class.new(**@comentario.to_h, ad_id: nil) if @comentario.resposta?
+    return @comentario if @comentario.ad_id.present? || care&.target_kind != 'ad'
+
+    @comentario.class.new(**@comentario.to_h, ad_id: care.target_id)
   end
 
   def inbox

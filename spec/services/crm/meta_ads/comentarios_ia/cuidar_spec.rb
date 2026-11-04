@@ -422,6 +422,34 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(Crm::MetaAdsCommentAction.where(account_id: account.id, comment_id: 'c-1', action: 'ai_unread')).not_to exist
   end
 
+  # #2519: as linhas do Registro são o que o Esperando conta por anúncio, e o número conta o mesmo que a lista mostra.
+  describe 'o anúncio nas linhas do Registro (Esperando)' do
+    before do
+      create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120', network: 'both', post_ids: %w[1790])
+    end
+
+    def cuidar_de_verdade(item)
+      decide(nil)
+      described_class.new(item, rede: rede, classificador: classificador, conversa: conversa).call
+    end
+
+    it 'no Facebook (o evento vem sem ad_id), com o cuidado de um anúncio: a linha leva o anúncio, e o Esperando a conta' do
+      cuidar_de_verdade(comentario(network: 'facebook', ad_id: nil))
+
+      expect(Crm::MetaAdsCommentAction.where(comment_id: 'c-1').pluck(:action, :ad_id)).to contain_exactly(%w[ai_seen 120], %w[ai_unread 120])
+      expect(Crm::MetaAds::ComentariosIa::Esperando.por_anuncio(account.id, %w[120])).to eq('120' => 1)
+    end
+
+    it 'a resposta dentro de um comentário vai sem anúncio: a lista mostra só o primeiro nível, e o número também' do
+      account.enable_features!(described_class::FLAG)
+      allow(rede).to receive(:ler_pai).and_return({ text: 'Tem desconto?', from_name: 'ana' })
+      cuidar_de_verdade(comentario(ad_id: '120', parent_id: 'c-0'))
+
+      expect(Crm::MetaAdsCommentAction.where(comment_id: 'c-1').pluck(:ad_id).uniq).to eq([nil])
+      expect(Crm::MetaAds::ComentariosIa::Esperando.por_anuncio(account.id, %w[120])).to eq('120' => 0)
+    end
+  end
+
   describe 'o que não chega à IA' do
     before { allow(classificador).to receive(:avaliar!) }
 
@@ -446,6 +474,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
       cuidar(comentario(ad_id: '120'))
       expect(registro).not_to have_received(:reservar!)
       expect(registro).to have_received(:sem_cuidado!).with(comentario(ad_id: '120'))
+    end
+
+    it 'resposta dentro de um comentário de anúncio, sem cuidado: não registra (a lista mostra só o primeiro nível)' do
+      care.update!(status: 'paused')
+      cuidar(comentario(ad_id: '120', parent_id: 'c-0'))
+      expect(registro).not_to have_received(:sem_cuidado!)
     end
 
     it 'post sem cuidado: não chega à IA e não registra (sem o anúncio, nenhuma leitura usaria a linha)' do

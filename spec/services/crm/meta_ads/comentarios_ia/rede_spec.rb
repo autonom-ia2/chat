@@ -374,6 +374,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(privado).to have_received(:perform!).with(hash_including(comment: hash_including('parent_id' => '555_666')))
     end
 
+    # #2519: o Esperando conta por anúncio só o primeiro nível, como a lista mostra.
+    it 'o privado do comentário leva o anúncio; o da resposta a comentário, não' do
+      allow(privado).to receive(:perform!).and_return({ conversation: conversation, message: double })
+
+      described_class::Instagram.new(inbox, comentario(ad_id: '120')).privado(care)
+      described_class::Instagram.new(inbox, comentario(ad_id: '120', parent_id: '555_666')).privado(care)
+
+      expect(privado).to have_received(:perform!).with(hash_including(ad_id: '120')).once
+      expect(privado).to have_received(:perform!).with(hash_including(ad_id: nil)).once
+    end
+
     it 'recusa do serviço (4xx) vira envio sem sucesso com o código, sem "pode ter saído"' do
       allow(privado).to receive(:perform!).and_raise(Crm::MetaAds::InstagramPrivateReply::Error.new('meta_refused'))
 

@@ -9,8 +9,11 @@
 #
 # Limites, ditos no PR:
 # - conta a partir do deploy do #2519 (antes dele, o comentário sem cuidado não deixava registro);
-# - só o comentário que trouxe o `ad_id`: no Instagram vem no evento; no Facebook não vem, e sem cuidado nada no banco
-#   liga o post ao anúncio. Para o Facebook sem cuidado, o painel mostra o total dos insights;
+# - o anúncio vem no evento do Instagram; no Facebook não vem, e o Cuidar grava o anúncio do cuidado (Cuidar#registrado).
+#   Facebook SEM cuidado: nada no banco liga o post ao anúncio, e o painel mostra o total dos insights;
+# - só o primeiro nível, como a lista "Esperando você": a resposta dentro de um comentário (#2454) vai sem anúncio;
+# - reclamação e "já recebeu" resolvidos na caixa seguem contados até os 7 dias: responder na conversa não grava ação no
+#   comentário (a lista "Esperando você" também os mostra);
 # - o comentário cujo evento nunca chegou não tem linha: só o "Esperando você" do Painel (que lê a Meta) o mostra;
 # - a resposta dada direto no app do Instagram (fora da plataforma) não deixa linha: o comentário segue contado até os
 #   7 dias.
