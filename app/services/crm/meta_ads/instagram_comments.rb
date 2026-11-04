@@ -61,7 +61,7 @@ class Crm::MetaAds::InstagramComments
                         'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, actions: {}, own: true)
   end
 
-  def hide!(ad_id, comment_id, hidden:, user: nil)
+  def hide!(ad_id, comment_id, hidden:, user:)
     channel = comment_of_ad!(ad_id, comment_id)[:channel]
     result = client(channel).hide(comment_id, hidden: hidden)
     raise Error, failure(result) unless result.ok
@@ -71,7 +71,7 @@ class Crm::MetaAds::InstagramComments
   end
 
   # Irreversível: some do Instagram. A tela confirma antes.
-  def delete!(ad_id, comment_id, user: nil)
+  def delete!(ad_id, comment_id, user:)
     channel = comment_of_ad!(ad_id, comment_id)[:channel]
     result = client(channel).delete(comment_id)
     raise Error, failure(result) unless result.ok

@@ -456,10 +456,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     end
 
     # #2519: passados 10 min o comentário aparece ao dono; o job pode ainda tentar de novo. A IA não age por cima dele.
-    it 'a pessoa já agiu no comentário (respondeu, escondeu, apagou, mandou o privado): a IA não age' do
-      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: 'c-1', action: 'reply', actor: 'user',
-                                        user: create(:user, account: account))
-      cuidar
+    it 'a pessoa já respondeu, escondeu ou apagou o comentário: a IA não age' do
+      pessoa = create(:user, account: account)
+      %w[reply hide delete].each_with_index do |acao, indice|
+        Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: "c-#{indice}", action: acao, actor: 'user',
+                                          user: pessoa)
+        cuidar(comentario(comment_id: "c-#{indice}"))
+      end
+
       expect(registro).not_to have_received(:reservar!)
     end
 

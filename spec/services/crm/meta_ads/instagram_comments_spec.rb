@@ -280,7 +280,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
     it 'recusa comentário de outra mídia como comment_not_found, sem agir' do
       stub_comment('c1', media: '1799999')
 
-      expect { service.hide!(ad_id, 'c1', hidden: true) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('comment_not_found') }
+      expect { service.hide!(ad_id, 'c1', hidden: true, user: user) }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('comment_not_found') }
       expect(a_request(:post, %r{#{ig}/c1})).not_to have_been_made
     end
 
@@ -303,8 +304,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       refused = ->(code) { raise_error(described_class::Error) { |e| expect(e.code).to eq(code) } }
 
       expect { outsider.reply!(ad_id, 'c1', 'Temos sim', user: user) }.to refused.call('not_inbox_member')
-      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to refused.call('not_inbox_member')
-      expect { outsider.delete!(ad_id, 'c1') }.to refused.call('not_inbox_member')
+      expect { outsider.hide!(ad_id, 'c1', hidden: true, user: user) }.to refused.call('not_inbox_member')
+      expect { outsider.delete!(ad_id, 'c1', user: user) }.to refused.call('not_inbox_member')
       expect { outsider.private_reply!(ad_id, 'c1', 'Oi', user: user) }.to refused.call('not_inbox_member')
       expect(instagram_call).not_to have_been_made
       expect(Crm::MetaAdsCommentAction.count).to eq(0)
@@ -315,7 +316,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       allow(channel).to receive(:reauthorization_required?).and_return(true)
       outsider = described_class.new(connection, inbox_access: ->(_inbox) { false }, can_manage: true)
 
-      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('needs_login') }
+      expect { outsider.hide!(ad_id, 'c1', hidden: true, user: user) }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('needs_login') }
       expect(instagram_call).not_to have_been_made
     end
 
