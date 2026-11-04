@@ -15,7 +15,7 @@
 # privado: pode ter saído), kept_for_owner (a pergunta que era o caso do privado, mas ele não sai ali), ai_unread (a
 # IA não cuidou: a Meta ou a IA fora do ar em todas as tentativas, sem certeza, sem saber quem comentou,
 # ou a Meta não escondeu) e private_reply_already (era o caso do privado, mas a pessoa já tem um deste post). As seis
-# últimas formam o "Esperando você".
+# últimas formam o "Esperando você". no_care (#2519): chegou sem cuidado ligado, e a IA não cuidou (Esperando).
 #
 # O privado por pessoa em cada post (Crm::MetaAdsCommentPerson) é reservado aqui também, antes da Meta.
 module Crm::MetaAds::ComentariosIa::Registro
@@ -24,6 +24,8 @@ module Crm::MetaAds::ComentariosIa::Registro
   NAO_CUIDOU = 'ai_unread'.freeze
   # Era o caso do privado, mas a pessoa já tem um deste post (outro comentário dela, ou o que alguém mandou na tela).
   JA_TEM_PRIVADO = 'private_reply_already'.freeze
+  # Chegou sem cuidado ligado (#2519): a IA não cuida, e o comentário fica com o dono. Antes, sumia sem registro.
+  SEM_CUIDADO = 'no_care'.freeze
   # O motivo é uma frase curta; o que passar disso é cortado.
   MOTIVO_MAXIMO = 500
 
@@ -52,6 +54,12 @@ module Crm::MetaAds::ComentariosIa::Registro
     registrar!(comentario, acao)
   rescue ActiveRecord::RecordNotUnique
     false
+  end
+
+  # Uma linha por comentário: o webhook reenviado não conta duas vezes (o Esperando conta comentários distintos, então a
+  # corrida rara entre dois reenvios ao mesmo tempo também não).
+  def sem_cuidado!(comentario)
+    linha(comentario, SEM_CUIDADO).exists? || gravar!(comentario, SEM_CUIDADO)
   end
 
   def gravar!(comentario, acao, conversation: nil)

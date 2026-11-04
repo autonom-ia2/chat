@@ -6,7 +6,8 @@
 #   conta (#2313).
 # - `action`: o que a pessoa (#2196, #2197) ou a IA dos comentários (#2212) fez. `ai_seen`, `to_you`,
 #   `private_reply_failed` e `kept_for_owner` são só da IA: a leitura do comentário, a reclamação passada à pessoa, o
-#   privado recusado e a pergunta que era o caso do privado, mas ficou com o dono (o privado não sai ali).
+#   privado recusado e a pergunta que era o caso do privado, mas ficou com o dono (o privado não sai ali). `no_care`
+#   (#2519) também: o comentário que chegou sem cuidado ligado, para não sumir sem registro.
 # - `actor`: `user` (com `user_id`) ou `ai`.
 # - `conversation_id`: na resposta no privado, a conversa da caixa onde ela continua.
 # - `ai_decision`, `ai_confidence` e `ai_reason` (#2424): só na linha `ai_seen`, o que a IA escolheu, com que certeza
@@ -31,7 +32,7 @@ class Crm::MetaAdsCommentAction < ApplicationRecord
 
   NETWORKS = %w[instagram facebook].freeze
   ACTIONS = %w[private_reply reply page_reply hide show delete ai_seen to_you private_reply_failed private_reply_unsure
-               kept_for_owner ai_unread private_reply_already].freeze
+               kept_for_owner ai_unread private_reply_already no_care].freeze
   ONCE = %w[private_reply ai_seen].freeze
   ACTORS = %w[user ai].freeze
   RESERVED_TTL = 2.minutes

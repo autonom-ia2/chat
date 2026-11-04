@@ -41,7 +41,7 @@ const handle = item =>
 // de ligar e não era o caso (`skipped`) fica em "Esperando você": não é antigo nem volta para a fila.
 const BEFORE_KINDS = ['waiting', 'older'];
 // Pedem atenção do dono: a reclamação e o privado que pode ter saído (conferir no direct antes de responder).
-const ALERT_KINDS = ['complaint', 'unsure'];
+const ALERT_KINDS = ['complaint', 'unsure', 'not_caught'];
 const toSee = computed(() => props.data.to_see || []);
 const hidden = computed(() =>
   (props.data.hidden || []).map(item => ({ ...item, kind: 'hidden' }))

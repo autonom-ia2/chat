@@ -13,6 +13,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Registro do
     expect(described_class.reservar!(comentario('c-1', network: 'facebook'))).to be(true)
   end
 
+  it 'sem cuidado (#2519): uma linha no_care por comentário, com o anúncio; o webhook reenviado não grava de novo' do
+    2.times { described_class.sem_cuidado!(comentario) }
+
+    expect(Crm::MetaAdsCommentAction.where(comment_id: 'c-1', action: 'no_care').pluck(:ad_id, :actor)).to eq([%w[120 ai]])
+  end
+
   it 'grava na linha ai_seen o que a IA escolheu, a certeza e o motivo, também sem certeza para agir (#2424)' do
     described_class.reservar!(comentario)
     described_class.gravar!(comentario, 'ai_unread')

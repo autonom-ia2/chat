@@ -42,7 +42,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
   before do
     account.enable_features!(described_class::FLAG)
     allow(registro).to receive_messages(reservar!: true, vez: 0, gravar!: true, vincular!: 1, soltar!: 1,
-                                        reservar_pessoa!: true, soltar_pessoa!: 1, decisao!: 1)
+                                        reservar_pessoa!: true, soltar_pessoa!: 1, decisao!: 1, sem_cuidado!: true)
     allow(conversa).to receive_messages(anotar!: conversation, para_voce!: conversation)
     allow(rede).to receive_messages(privado: enviado, ler: { text: 'Quanto custa?', from_name: 'carla.mendes' })
   end
@@ -436,12 +436,26 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
       cuidar
       expect(classificador).not_to have_received(:avaliar!)
       expect(registro).not_to have_received(:reservar!)
+      expect(registro).not_to have_received(:sem_cuidado!)
     end
 
-    it 'post sem cuidado, ou com o cuidado pausado' do
+    # #2519: nada some em silêncio. O comentário de cliente sem cuidado ligado fica registrado (no_care), para o
+    # Esperando contar o que está com o dono.
+    it 'post sem cuidado, ou com o cuidado pausado: não chega à IA, mas fica registrado (no_care)' do
       care.update!(status: 'paused')
       cuidar
       expect(registro).not_to have_received(:reservar!)
+      expect(registro).to have_received(:sem_cuidado!).with(comentario)
+    end
+
+    it 'sem cuidado, não registra o que não é do motor: flag desligada, mais de 7 dias, o da própria conta' do
+      care.destroy!
+      cuidar(comentario(created_time: 8.days.ago))
+      cuidar(comentario(from_id: 'ig-1'))
+      account.disable_features!(described_class::FLAG)
+      cuidar
+
+      expect(registro).not_to have_received(:sem_cuidado!)
     end
 
     it 'comentário com mais de 7 dias, que não aceita mais privado' do

@@ -1,7 +1,8 @@
 # IA cuida dos comentários (#2212): o que acontece com um comentário novo num post ou anúncio de que a IA cuida.
 #
 # 1. Filtra o que não é dela: flag desligada, caixa de outra conta ou de outro canal, resposta a outro comentário, post
-#    sem cuidado ou pausado, ou comentário com mais de 7 dias (o privado não sai mais).
+#    sem cuidado ou pausado, ou comentário com mais de 7 dias (o privado não sai mais). O de cliente sem cuidado ligado
+#    fica registrado (`no_care`, #2519): o Esperando o conta, e nada some em silêncio.
 #    Com a flag meta_ads_comentarios_ia (#2454), a resposta dentro de um comentário entra: a de cliente é
 #    decidida como um comentário próprio, com o de cima (lido na Meta pelo id, Rede#ler_pai) à parte, como contexto. A
 #    da própria conta (o perfil ou a Página, inclusive a frase pública que a IA posta) nunca entra. O privado para
@@ -54,6 +55,8 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
   end
 
   def call
+    return @registro.sem_cuidado!(@comentario) if sem_cuidado?
+
     cuidar if cuidar? && @registro.reservar!(@comentario)
   end
 
@@ -128,6 +131,14 @@ class Crm::MetaAds::ComentariosIa::Cuidar # rubocop:disable Metrics/ClassLength 
     return false unless inbox.account.feature_enabled?(FLAG)
 
     na_janela?
+  end
+
+  # #2519: o comentário da conta, de cliente, sem cuidado ligado (nenhum, ou o do anúncio pausado) fica registrado
+  # (`no_care`), para o Esperando contar o que está com o dono. Antes, sumia sem rastro.
+  def sem_cuidado?
+    return false if inbox.nil? || !do_motor? || care.present?
+
+    inbox.account.feature_enabled?(FLAG) && na_janela?
   end
 
   # O comentário de primeiro nível e a resposta dentro dele (#2454), nunca o da própria conta.

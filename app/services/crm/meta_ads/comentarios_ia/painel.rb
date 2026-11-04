@@ -9,7 +9,8 @@
 #   ter saído (a Meta não respondeu), não cuidei (Meta ou IA fora do ar, teto do dia, sem certeza), mais de 7 dias,
 #   era o caso do privado, mas ele não sai ali (`no_private`), não era o caso (a IA leu e não agiu), chegou antes de
 #   ligar (`started_at`) ou chegou com o cuidado pausado (`paused`). O que chegou depois de ligar, com o cuidado ligado,
-#   e a IA ainda não leu está na fila dela: não entra. "Escondi" (`hidden`): o que a IA escondeu.
+#   e a IA ainda não leu está na fila dela: não entra por ESPERA_DA_IA; depois, entra (`not_caught`, #2519).
+#   "Escondi" (`hidden`): o que a IA escondeu.
 # - "Ler e mandar": uma vez por cuidado ligado (trava atômica em `read_old_at`), o LerAntigosJob põe os comentários de
 #   até 7 dias que chegaram antes de ligar na fila do motor, como comentários novos. Quem não é o caso fica com o dono.
 class Crm::MetaAds::ComentariosIa::Painel
@@ -29,6 +30,9 @@ class Crm::MetaAds::ComentariosIa::Painel
     'to_you' => 'complaint', 'private_reply_failed' => 'failed', 'private_reply_unsure' => 'unsure',
     'kept_for_owner' => 'no_private', 'ai_unread' => 'unread', 'private_reply_already' => 'already_sent'
   }.freeze
+
+  # Quanto o comentário espera na fila da IA antes de vir para o dono, no "Esperando você" (#2519).
+  ESPERA_DA_IA = 10.minutes
 
   CARE_ID = Arel.sql("conversations.additional_attributes -> 'meta_ads_comment' ->> 'care_id'")
   SEM_RESULTADO = { sent: 0, replied: 0 }.freeze
@@ -218,13 +222,15 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   # nil: chegou depois de ligar, com o cuidado ligado, e a IA ainda não leu (está na fila dela): não fica com o dono.
-  # Com o cuidado pausado, a IA não lê: fica com o dono (`paused`).
+  # Com o cuidado pausado, a IA não lê: fica com o dono (`paused`). Passado ESPERA_DA_IA sem nenhuma ação dela, o
+  # comentário vem para o dono (`not_caught`, #2519): o evento pode não ter chegado, e nada pode sumir em silêncio.
   def tipo_sem_acao(linha, acoes)
     return 'older' unless recente?(linha)
     return 'skipped' if acoes.key?(Crm::MetaAds::ComentariosIa::Registro::LIDO)
     return 'waiting' if antes_de_ligar?(linha)
+    return 'paused' if cuidado.status == 'paused'
 
-    'paused' if cuidado.status == 'paused'
+    'not_caught' if linha[:momento] <= ESPERA_DA_IA.ago
   end
 
   # Sem cuidado, tudo é de antes de ligar.
