@@ -36,6 +36,13 @@ class AutomacoesAPI extends ApiClient {
   historico(id, pagina = 1) {
     return axios.get(`${this.url}/${id}/historico`, { params: { pagina } });
   }
+
+  // Ensaiar (#2498): só lê. Sem id é a automação ainda não salva; `receita`
+  // é o rascunho da tela; `conversaId`, o número da conversa escolhida.
+  ensaiar(id, { receita, conversaId } = {}) {
+    const caminho = id ? `${this.url}/${id}/ensaio` : `${this.url}/ensaio`;
+    return axios.post(caminho, { receita, conversa_id: conversaId });
+  }
 }
 
 export default new AutomacoesAPI();

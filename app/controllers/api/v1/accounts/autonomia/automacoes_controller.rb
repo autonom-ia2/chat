@@ -1,6 +1,7 @@
 # As automações da Automação livre pelo editor (#2414 F5, ADR-001 2.2): o catálogo de passos, a lista, abrir, criar,
 # salvar (cada salvar é uma versão nova; a anterior nunca muda), ligar e desligar. O histórico ("O que aconteceu", #2498)
-# mostra cada vez que ela rodou, e a lista leva as contagens da semana.
+# mostra cada vez que ela rodou, e a lista leva as contagens da semana. O ensaio (#2498) mostra o que ela faria nas
+# conversas recentes de quem pede, sem fazer nada.
 #
 # A automação nasce desligada. Ligar é sempre "assumir e religar": passa a agir como quem está pedindo, se essa pessoa
 # pode (D1, F3.7); quem não pode recebe o motivo e nada muda. A receita é conferida pela própria Versao (esquema +
@@ -14,7 +15,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   # Desligar sempre funciona (D7), mesmo com a flag desligada depois de a automação ter sido ligada.
   before_action :exigir_flag, except: :desligar
   before_action :autorizar
-  before_action :carregar_automacao, only: [:show, :update, :ligar, :desligar, :historico]
+  before_action :carregar_automacao, only: [:show, :update, :ligar, :desligar, :historico, :ensaio]
 
   # Outra pessoa salvou depois da versão que a tela mostrou (🔴1/🟠3 da qualidade): a tela mostra a versão nova antes
   # de deixar ligar ou salvar.
@@ -85,6 +86,17 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     render json: ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, pagina: params[:pagina]).resultado
   end
 
+  # A salva ensaia a versão ativa; com `receita` no corpo (o rascunho da tela), ensaia ela. A coleção (`ensaio_novo`) é
+  # a automação que ainda não foi salva.
+  def ensaio
+    rascunho = params.key?(:receita)
+    ensaiar(rascunho ? receita : @automacao.versao_ativa&.receita, conferir: rascunho)
+  end
+
+  def ensaio_novo
+    ensaiar(receita, conferir: true)
+  end
+
   private
 
   def exigir_flag
@@ -131,6 +143,31 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).passos.any? do |passo|
       passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.recurso_de(passo['acao']).to_s.start_with?('crm/')
     end
+  end
+
+  # O rascunho passa pela mesma conferência do salvar (esquema + Receita); a versão salva já passou por ela, e assim o
+  # passo de mensagem de uma conta que desligou a flag ainda aparece, com o "não sairia". Só gatilho de conversa: o de
+  # card espera a F3 (#2499).
+  def ensaiar(receita, conferir:)
+    problemas = problemas_do_ensaio(receita, conferir)
+    return recusar_ensaio('receita_invalida', problemas) if problemas.any?
+    return recusar_ensaio('gatilho_de_card') unless ::Autonomia::Automacao::Ensaio.gatilho_suportado?(receita)
+
+    render json: ::Autonomia::Automacao::Ensaio.new(receita: receita, conta: Current.account, usuario: Current.user,
+                                                    conversa_id: params[:conversa_id]).resultado
+  rescue ActiveRecord::RecordNotFound
+    head :not_found
+  end
+
+  def problemas_do_ensaio(receita, conferir)
+    return [I18n.t('autonomia.automacao.ensaio.sem_receita')] unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
+    return [] unless conferir
+
+    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).problemas
+  end
+
+  def recusar_ensaio(chave, problemas = [])
+    render json: { error: I18n.t("autonomia.automacao.ensaio.#{chave}"), problemas: problemas }, status: :unprocessable_entity
   end
 
   def recusar_funil

@@ -35,6 +35,11 @@ import { useFase2 } from './useFase2';
 //   arquivo, espera o rascunho existir. Ao continuar um rascunho, o que já estava na base volta para
 //   a caixa (fora da conversa, que não mostra o histórico).
 export const ESPERA_DEMORANDO_MS = 60000;
+// #2489 — o servidor só dá a geração por perdida depois de 5 min parada (BuildThread::STALE_PROCESSING_AFTER, contados de
+// quando ela começa) e só então aceita refazê-la. O prazo da tela conta do mesmo ponto (quando o status vira
+// `processing`), com folga; passado, ela oferece "Tentar de novo" em vez de 30 min de "Pensando…". Gerar ou ajustar o
+// agente leva até ~4 min em produção (p90 136 s), abaixo do prazo.
+export const PRAZO_DA_RESPOSTA_MS = 5 * 60 * 1000 + 15000;
 // #2489 — teto da espera do turno pelas subidas de material: vencido, o turno sai e leva os nomes
 // do que ainda está subindo (o Construtor diz que está a caminho).
 export const PRAZO_DAS_SUBIDAS_MS = 20000;
@@ -118,6 +123,9 @@ export function useConversaDeCriacao({
   const tiradas = new Set();
   const aviso = ref(null);
   const demorando = ref(false);
+  // #2489 — a geração passou do prazo: a tela mostra "Tentar de novo". Fica só aqui, sem mexer no status da store: a
+  // consulta continua, e uma resposta que chegue depois (ou um status novo) desfaz o aviso sozinha.
+  const esgotou = ref(false);
   // Quantas vezes a conversa fechou de novo depois de fechada (o teste avisa "Atualizado").
   const atualizacoes = ref(0);
   const encerrando = ref(false);
@@ -127,6 +135,7 @@ export function useConversaDeCriacao({
   const estadosDasFontes = ref({});
   let proximoMaterial = 0;
   let relogioDemora = null;
+  let relogioPrazo = null;
   // #2489 — a tela saiu (a store foi limpa): um turno que ainda esperava as subidas não sai mais.
   let desmontado = false;
   // O último turno mandado ({ conteudo, extra, echo }), para reenviar se não chegou.
@@ -144,10 +153,11 @@ export function useConversaDeCriacao({
     () =>
       enviando.value ||
       Boolean(flags.value?.creating || flags.value?.sending) ||
-      status.value === 'processing'
+      (status.value === 'processing' && !esgotou.value)
   );
   const falhou = computed(
     () =>
+      esgotou.value ||
       ['send', 'failed', 'timeout'].includes(erroDaStore.value) ||
       status.value === 'failed'
   );
@@ -459,6 +469,42 @@ export function useConversaDeCriacao({
     return enviadas.filter(Boolean);
   };
 
+  const pararPrazo = () => {
+    if (relogioPrazo) clearTimeout(relogioPrazo);
+    relogioPrazo = null;
+  };
+
+  // A subida de material e o envio não contam: o servidor mede a geração, e ela só começa no `processing`.
+  const armarPrazo = () => {
+    pararPrazo();
+    relogioPrazo = setTimeout(() => {
+      relogioPrazo = null;
+      if (status.value === 'processing') esgotou.value = true;
+    }, PRAZO_DA_RESPOSTA_MS);
+  };
+
+  watch(status, agora => {
+    if (agora === 'processing') {
+      armarPrazo();
+      return;
+    }
+    pararPrazo();
+    esgotou.value = false;
+  });
+
+  // Um turno novo depois do prazo (resposta, "Testar agora", reenvio; aceito ou recusado com 409) tira o aviso e conta
+  // um prazo novo: o status pode continuar `processing` sem mudar, e o watch acima não perceberia.
+  watch(
+    () => Boolean(flags.value?.creating || flags.value?.sending),
+    (agora, antes) => {
+      if (agora) {
+        esgotou.value = false;
+        return;
+      }
+      if (antes && status.value === 'processing') armarPrazo();
+    }
+  );
+
   // Manda um turno: abre a conversa com ele se ainda não há thread. `echo: false` não repete o
   // balão (sinal de fechar, ou reenvio do turno que já está na tela).
   const mandarTurno = ({ conteudo, extra, echo }) => {
@@ -547,7 +593,23 @@ export function useConversaDeCriacao({
     });
   };
 
+  // #2489 — depois do prazo: o servidor refaz a geração se ela estiver mesmo parada; se ainda estiver viva (409) ou já
+  // tiver terminado (422), a consulta segue e a tela volta a esperar com um prazo novo.
+  const refazerDepoisDoPrazo = () => {
+    esgotou.value = false;
+    armarPrazo();
+    return store
+      .dispatch('autonomiaBuildThreads/retry', { threadId: threadId.value })
+      .catch(() =>
+        store.dispatch('autonomiaBuildThreads/poll', {
+          threadId: threadId.value,
+          delay: 0,
+        })
+      );
+  };
+
   const tentarDeNovo = () => {
+    if (esgotou.value && threadId.value) return refazerDepoisDoPrazo();
     const turnoNaoChegou = erroDaStore.value === 'send';
     store.commit('autonomiaBuildThreads/SET_ERROR', null);
     if (turnoNaoChegou && ultimoEnvio) return reenviar();
@@ -631,10 +693,12 @@ export function useConversaDeCriacao({
   const pararRelogio = () => {
     if (relogioDemora) clearTimeout(relogioDemora);
     relogioDemora = null;
+    pararPrazo();
   };
 
   watch(pensando, agora => {
-    pararRelogio();
+    if (relogioDemora) clearTimeout(relogioDemora);
+    relogioDemora = null;
     demorando.value = false;
     if (!agora) return;
     relogioDemora = setTimeout(() => {
