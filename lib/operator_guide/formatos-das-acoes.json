@@ -450,7 +450,7 @@
     "completo": true,
     "controller": "api/v1/accounts/conversations/comentario#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:43",
+      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:45",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": true
@@ -14164,8 +14164,9 @@
     "completo": true,
     "controller": "api/v1/accounts/conversations/comentario#esconder",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:34",
-      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:35",
+      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:36",
+      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:39",
+      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:37",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
@@ -14180,8 +14181,8 @@
     "completo": true,
     "controller": "api/v1/accounts/conversations/comentario#responder",
     "origem": [
-      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:28",
-      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:67",
+      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:30",
+      "app/controllers/api/v1/accounts/conversations/comentario_controller.rb:69",
       "app/controllers/api/v1/accounts/conversations/base_controller.rb:8"
     ],
     "sem_corpo": false
