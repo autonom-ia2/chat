@@ -247,19 +247,27 @@ const usarCopiloto = () =>
 const abrirPaginaCriar = () =>
   router.push({ name: 'autonomia_agents_builder' });
 // #2469: com o cuidado dos comentários na conta, "Criar agente" pergunta antes o tipo (atender conversas ou cuidar dos
-// comentários de um post ou anúncio). Sem ele, ou sem o Seus posts (de onde vem o "Qual post?"), a criação de hoje.
+// comentários de um post ou anúncio). Sem ele, ou sem nem o Seus posts nem Anúncios (de onde vem o "Qual post?"), a
+// criação de hoje. #2479: o passo 1 do cuidado aberto daqui volta para Agentes (?de=agentes).
 const criandoTipo = ref(false);
 const criarAgente = () => {
-  if (doPost.comPosts.value) criandoTipo.value = true;
+  if (doPost.comPosts.value || doPost.comAnuncios.value)
+    criandoTipo.value = true;
   else abrirPaginaCriar();
 };
+const DE_AGENTES = { de: 'agentes' };
 const cuidarDoPost = post =>
   router.push({
     name: 'seus_posts_cuidar',
     params: { postId: post.id },
-    query: { perfil: post.perfil },
+    query: { perfil: post.perfil, ...DE_AGENTES },
   });
-const escolherAnuncio = () => router.push({ name: 'campaigns_meta_ads_index' });
+const cuidarDoAnuncio = anuncio =>
+  router.push({
+    name: 'campaigns_meta_ads_cuidar',
+    params: { adId: anuncio.id },
+    query: DE_AGENTES,
+  });
 
 const abrirAgente = agente =>
   router.push({
@@ -652,10 +660,12 @@ onBeforeUnmount(() => {
     />
     <CriarTipoDeAgente
       v-if="criandoTipo"
+      :com-posts="doPost.comPosts.value"
+      :com-anuncios="doPost.comAnuncios.value"
       @fechar="criandoTipo = false"
       @atender="abrirPaginaCriar"
       @post="cuidarDoPost"
-      @anuncio="escolherAnuncio"
+      @anuncio="cuidarDoAnuncio"
     />
   </div>
 </template>

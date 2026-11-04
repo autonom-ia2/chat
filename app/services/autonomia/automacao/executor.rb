@@ -111,7 +111,7 @@ class Autonomia::Automacao::Executor
     return %w[parada motor_desligado] unless ::Autonomia::Automacao::Motor.ligado?(@account)
     return %w[parada desligada] unless @definicao.ativa
     return %w[interrompida alvo_sumiu] unless alvo_da_conta?
-    return %w[parada spam] if ::ConversaCanal::PastaDoEmail.no_spam?(alvo)
+    return %w[parada spam] if contexto.no_spam?
 
     motivo = motivo_de_quem_ligou
     ['parada', pausar(motivo)] if motivo
@@ -138,6 +138,7 @@ class Autonomia::Automacao::Executor
     @account.reload
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao)
     @alvo = nil
+    @contexto = nil
     @valores = nil
   end
 
@@ -198,7 +199,7 @@ class Autonomia::Automacao::Executor
   # A ação mudou o alvo: o passo seguinte ("se", "esperar até") lê o valor de agora, não o de antes dela.
   def seguir_depois_da_acao(passo, resultado)
     @tentativas = 0
-    @alvo = @valores = nil
+    @alvo = @contexto = @valores = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
     @roteiro.seguinte(passo['id'])
   end
@@ -257,7 +258,8 @@ class Autonomia::Automacao::Executor
   # Lido do banco a cada reconferência: o alvo pode ter sido apagado no meio da rodada.
   def alvo = (@alvo ||= @execucao.alvo_type.constantize.find_by(id: @execucao.alvo_id))
 
-  def valores
-    @valores ||= ::Autonomia::Automacao::Valores.new(conversa: alvo)
-  end
+  # As pontes do alvo (#2499): conversa, card ou contato, e os outros dois quando há caminho.
+  def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(alvo))
+
+  def valores = (@valores ||= ::Autonomia::Automacao::Valores.new(alvo: contexto))
 end

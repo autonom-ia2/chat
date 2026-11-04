@@ -24,16 +24,17 @@
 module Autonomia::Automacao::Escuta
   module_function
 
-  def comecar(conversa, tipo, mensagem: nil)
-    return unless conversa && ::Autonomia::Automacao::Motor.ligado?(conversa.account)
+  # `alvo`: a conversa, o card ou o contato do gatilho (Gatilhos). `evento`: a marca única do fato.
+  def comecar(alvo, tipo, mensagem: nil, evento: nil)
+    return unless alvo && ::Autonomia::Automacao::Motor.ligado?(alvo.account)
 
-    automacoes_do_gatilho(conversa.account_id, tipo).includes(:account, :versao_ativa, :ligada_por).find_each do |definicao|
-      ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: tipo, mensagem: mensagem).call
+    automacoes_do_gatilho(alvo.account_id, tipo).includes(:account, :versao_ativa, :ligada_por).find_each do |definicao|
+      ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: alvo, chave_gatilho: tipo, mensagem: mensagem, evento: evento).call
     rescue StandardError => e
-      registrar_erro("não começou automacao=#{definicao.id} alvo=conversa:#{conversa.id}", e)
+      registrar_erro("não começou automacao=#{definicao.id} alvo=#{alvo.class.name}:#{alvo.id}", e)
     end
   rescue StandardError => e
-    registrar_erro("não ouviu gatilho=#{tipo} alvo=conversa:#{conversa&.id}", e)
+    registrar_erro("não ouviu gatilho=#{tipo} alvo=#{alvo&.class&.name}:#{alvo&.id}", e)
   end
 
   # Atividade (o histórico que a própria plataforma escreve) não é mensagem de ninguém. Nota privada conta: é mensagem

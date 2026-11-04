@@ -19,6 +19,8 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
   let!(:pagina) { create(:inbox, account: account, channel: create(:channel_facebook_page, account: account, inbox: nil)).channel }
   let(:resultado) { Autonomia::Agents::AnswerResult.new(reply: 'Te mandei no direct!', confidence: 0.9, handoff: { should: false }) }
   let(:chamadas) { [] }
+  let(:ia) { instance_double(Crm::Ai::ResponsesClient) }
+  let(:clientes_da_ia) { [] }
 
   def cuidado(kind, target_id, network, inbox: nil, **extra)
     create(:crm_meta_ads_comment_care, account: account, target_kind: kind, target_id: target_id, network: network, inbox: inbox, **extra)
@@ -50,6 +52,21 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
     redes.transform_values { |rede| { inbox_id: rede[:inbox].id, post_id: rede[:post_id] } }
   end
 
+  # #2510: a decisão do Classificador, como o modelo responde.
+  def decide(decisao, certeza = 0.92, motivo = 'Pergunta o preço.')
+    allow(ia).to receive(:create).and_return({ text: { decision: decisao, certainty: certeza, reason: motivo }.to_json })
+  end
+
+  def pedido_da_ia
+    pedido = nil
+    expect(ia).to have_received(:create) { |**argumentos| pedido = argumentos }
+    pedido
+  end
+
+  def testar(params, quem = admin)
+    post "#{base}/#{care.id}/testar", params: params, headers: quem.create_new_auth_token, as: :json
+  end
+
   before do
     account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia', 'meta_ads_gestao',
                              'meta_ads_comentarios_instagram', 'meta_ads_comentarios_facebook')
@@ -58,6 +75,11 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
     allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(true)
     allow(Integrations::Openai::KeyValidator).to receive(:valid?).and_return(true)
     create(:integrations_hook, account: account, app_id: 'crm_kanban_ai', hook_type: :account, settings: { 'api_key' => 'chave-da-conta' })
+    allow(Crm::Ai::Config).to receive(:enabled?).and_return(true)
+    allow(Crm::Ai::ResponsesClient).to receive(:new) do |**kwargs|
+      clientes_da_ia << kwargs
+      ia
+    end
     allow(Autonomia::Agents::Answerer).to receive(:new) do |**kwargs|
       chamadas << kwargs
       instance_double(Autonomia::Agents::Answerer, answer: resultado)
@@ -114,6 +136,16 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       get base, headers: admin.create_new_auth_token, as: :json
 
       expect(response.parsed_body['cuidados'].pluck('kind')).to eq(%w[post post])
+    end
+
+    it 'sem o CRM na instalação, os anúncios saem da lista e não abrem (#2479)' do
+      with_modified_env CRM_KANBAN_ENABLED: 'false' do
+        get base, headers: admin.create_new_auth_token, as: :json
+        expect(response.parsed_body['cuidados'].pluck('kind')).to eq(%w[post post])
+
+        get "#{base}/#{anuncio_ig.id}", headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:not_found)
+      end
     end
 
     it 'sem a conexão de anúncios ativa, os anúncios saem da lista e não abrem' do
@@ -185,6 +217,29 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(comentarios['esperando'].pluck('id')).to eq(%w[1 3])
       expect(comentarios['nao_respondo'].map { |item| [item['id'], item['kind']] }).to eq([%w[2 skipped], %w[4 hidden]])
       expect(comentarios['results']).to eq('sent' => 3, 'replied' => 1, 'skipped' => 1)
+    end
+
+    it '#2481: "no privado" lista as conversas do privado deste cuidado que a pessoa vê, com o comentário do topo' do
+      contato = create(:contact, account: account, name: 'Mariana')
+      conversa = create(:conversation, account: account, inbox: instagram.inbox, contact: contato,
+                                       additional_attributes: { 'meta_ads_comment' => { 'care_id' => care.id, 'network' => 'instagram',
+                                                                                        'private_reply' => true } })
+      create(:message, account: account, inbox: instagram.inbox, conversation: conversa, message_type: :activity,
+                       content: 'Comentou no post: “Quanto custa?”')
+      agente = create(:user, account: account, role: :agent)
+      allow(Pundit).to receive(:policy!).and_call_original
+      allow(Pundit).to receive(:policy!).with(anything, :seus_posts).and_return(instance_double(SeusPostsPolicy, index?: true, manage?: false))
+
+      get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body.dig('comentarios', 'no_privado')).to eq(
+        [{ 'id' => conversa.display_id, 'contato' => 'Mariana', 'comentario' => 'Comentou no post: “Quanto custa?”', 'network' => 'instagram',
+           'respondeu' => false, 'conversation_path' => "/app/accounts/#{account.id}/conversations/#{conversa.display_id}" }]
+      )
+
+      create(:inbox_member, user: agente, inbox: create(:inbox, account: account))
+      allow(SeusPosts::Caixa).to receive(:new).and_return(instance_double(SeusPosts::Caixa, ve?: true))
+      get "#{base}/#{care.id}", headers: agente.create_new_auth_token, as: :json
+      expect(response.parsed_body.dig('comentarios', 'no_privado')).to eq([])
     end
 
     it 'abrir de novo dentro de 2 minutos não volta à Meta; pausar troca a leitura guardada' do
@@ -280,69 +335,158 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
 
       put "#{base}/#{care.id}/estado", params: { status: 'paused' }, headers: agente.create_new_auth_token, as: :json
       expect(response).to have_http_status(:forbidden)
-      post "#{base}/#{care.id}/testar", params: { pergunta: 'Quanto custa?', formato: 'publico' }, headers: agente.create_new_auth_token, as: :json
+      testar({ pergunta: 'Quanto custa?' }, agente)
       expect(response).to have_http_status(:forbidden)
 
       get "#{base}/#{care.id}", headers: agente.create_new_auth_token, as: :json
       expect(response.parsed_body['can_manage']).to be(false)
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+      expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
       expect(care.reload.status).to eq('on')
     end
 
-    describe 'Testar' do
+    describe 'Testar (#2510): primeiro a decisão do motor, depois o texto' do
       before { na_porta(instagram.inbox, 'Ana') }
 
-      it 'o agente da porta escreve de verdade, no formato pedido, com a pergunta como comentário; nada é gravado' do
-        expect do
-          post "#{base}/#{care.id}/testar", params: { pergunta: ' Quanto custa? ', formato: 'privado' }, headers: admin.create_new_auth_token,
-                                            as: :json
-        end.not_to(change { [Crm::MetaAdsCommentAction.count, Conversation.count, Message.count] })
+      it 'preço no Instagram: a decisão com o porquê e o que o agente escreveria no privado e no comentário; nada é gravado' do
+        care.update!(para_quem: 'Quem perguntar o preço')
+        decide('price')
 
-        expect(response.parsed_body).to eq('status' => 'escrito', 'texto' => 'Te mandei no direct!')
+        expect { testar(pergunta: ' Quanto custa? ') }.not_to(change { [Crm::MetaAdsCommentAction.count, Conversation.count, Message.count] })
+
+        expect(response.parsed_body).to eq('status' => 'ready', 'decisao' => 'price', 'motivo' => 'Pergunta o preço.',
+                                           'escrita' => { 'status' => 'escrito', 'privado' => 'Te mandei no direct!',
+                                                          'publico' => care.price_reply })
+        expect(clientes_da_ia.sole).to include(feature: Crm::MetaAds::ComentariosIa::Classificador::FEATURE_DA_TELA)
+        expect(JSON.parse(pedido_da_ia[:input])).to include('comment' => 'Quanto custa?', 'owner_criterion' => care.para_quem,
+                                                            'caption' => 'Seguro viagem para a Europa')
         chamada = chamadas.sole
         expect(chamada).to include(formato: Autonomia::Agents::Answerer::FormatoDoComentario::PRIVADO, retrieval_query: 'Quanto custa?',
                                    delivery: nil, allow_web_search: false, trust_instruction: false)
         expect(chamada[:contexto_do_turno]).to include('Atendo de segunda a sexta')
       end
 
-      it 'a pergunta não vai para o log' do
-        post "#{base}/#{care.id}/testar", params: { pergunta: 'Meu CPF é 123', formato: 'publico' }, headers: admin.create_new_auth_token,
-                                          as: :json
+      it 'privado sem o preço do dono: escreve a mensagem e a frase do comentário' do
+        decide('private', 0.9, 'Quer saber como contratar.')
 
-        expect(request.filtered_parameters['pergunta']).to eq('[FILTERED]')
+        testar(pergunta: 'Como contrato?')
+
+        expect(response.parsed_body['escrita']).to eq('status' => 'escrito', 'privado' => 'Te mandei no direct!',
+                                                      'publico' => 'Te mandei no direct!')
+        expect(chamadas.map { |chamada| chamada[:formato] }).to eq([Autonomia::Agents::Answerer::FormatoDoComentario::PRIVADO,
+                                                                    Autonomia::Agents::Answerer::FormatoDoComentario::PUBLICO])
       end
 
-      it 'o agente não sabe: fica com o dono, com o motivo' do
-        allow(resultado).to receive_messages(reply: 'fallback', handoff: { should: true, reason: 'no_knowledge' })
+      it 'o caso do 03/11: com o "para quem" de preço, "Cobre bagagem?" não é respondido, e nada é escrito' do
+        care.update!(para_quem: 'Quem perguntar o preço')
+        decide('no_reply', 0.9, 'Pergunta sobre cobertura, não sobre o preço.')
 
-        post "#{base}/#{care.id}/testar", params: { pergunta: 'Tem para Marte?', formato: 'publico' }, headers: admin.create_new_auth_token,
-                                          as: :json
+        testar(pergunta: 'Cobre bagagem?')
 
-        expect(response.parsed_body).to eq('status' => 'fica_com_o_dono', 'motivo' => 'no_knowledge')
+        expect(response.parsed_body).to eq('status' => 'ready', 'decisao' => 'no_reply', 'motivo' => 'Pergunta sobre cobertura, não sobre o preço.')
+        expect(Autonomia::Agents::Answerer).not_to have_received(:new)
       end
 
-      it 'IA fora do ar: 422 ai_unavailable' do
+      it 'reclamação, propaganda e o assunto do dono: só a decisão, sem texto' do
+        care.update!(assunto_proibido: 'Desconto')
+        { 'to_you' => 'to_you', 'hide' => 'hide', 'owner_topic' => 'owner_topic' }.each do |escolha, decisao|
+          decide(escolha)
+          testar(pergunta: 'Oi')
+          expect(response.parsed_body.slice('decisao', 'escrita')).to eq('decisao' => decisao)
+        end
+        expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+      end
+
+      it 'sem certeza suficiente o motor não decide: fica com você' do
+        decide('price', 0.5)
+
+        testar(pergunta: 'Talvez?')
+
+        expect(response.parsed_body).to include('decisao' => 'sem_certeza')
+        expect(response.parsed_body.keys).not_to include('escrita', 'motivo')
+      end
+
+      it 'cuidado sem ficha nem "para quem": era o caso do privado, mas fica com o dono, sem escrever (Cuidar#decidir)' do
+        care.update_columns(offer: nil, para_quem: nil) # rubocop:disable Rails/SkipsModelValidations
+        decide('private')
+
+        testar(pergunta: 'Como contrato?')
+
+        expect(response.parsed_body).to eq('status' => 'ready', 'decisao' => 'kept_for_owner', 'motivo' => 'Pergunta o preço.')
+        expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+      end
+
+      it 'a escrita fora do ar depois da decisão: 422 ai_unavailable' do
+        decide('private')
         allow(resultado).to receive(:error).and_return('timeout')
 
-        post "#{base}/#{care.id}/testar", params: { pergunta: 'Quanto custa?', formato: 'publico' }, headers: admin.create_new_auth_token,
-                                          as: :json
+        testar(pergunta: 'Como contrato?')
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(response.parsed_body).to eq('error' => 'ai_unavailable')
       end
 
-      it 'recusa pergunta vazia, longa demais ou que não é texto, formato desconhecido e rede que o cuidado não tem' do
-        [{ pergunta: ' ', formato: 'publico' }, { pergunta: 'a' * 1001, formato: 'publico' }, { pergunta: ['x'], formato: 'publico' },
-         { pergunta: 'Oi', formato: 'dm' }].each do |errado|
-          post "#{base}/#{care.id}/testar", params: errado, headers: admin.create_new_auth_token, as: :json
+      it 'a pergunta não vai para o log' do
+        decide('no_reply')
+        testar(pergunta: 'Meu CPF é 123')
+
+        expect(request.filtered_parameters['pergunta']).to eq('[FILTERED]')
+      end
+
+      it 'o agente não sabe: era o caso do privado, mas fica com o dono, com o motivo' do
+        decide('private')
+        allow(resultado).to receive_messages(reply: 'fallback', handoff: { should: true, reason: 'no_knowledge' })
+
+        testar(pergunta: 'Tem para Marte?')
+
+        expect(response.parsed_body).to include('decisao' => 'private', 'escrita' => { 'status' => 'fica_com_o_dono', 'motivo' => 'no_knowledge' })
+      end
+
+      it 'IA fora do ar: 422 ai_unavailable; conta sem a chave: 422 no_credential' do
+        allow(ia).to receive(:create).and_raise(Crm::Ai::ResponsesClient::Error.new('recusou', status: 400))
+
+        testar(pergunta: 'Quanto custa?')
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.parsed_body).to eq('error' => 'ai_unavailable')
+
+        Integrations::Hook.where(account: account, app_id: 'crm_kanban_ai').delete_all
+        testar(pergunta: 'Quanto custa?')
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(response.parsed_body).to eq('error' => 'no_credential')
+      end
+
+      it 'recusa pergunta vazia, longa demais ou que não é texto, e rede que o cuidado não tem' do
+        [{ pergunta: ' ' }, { pergunta: 'a' * 1001 }, { pergunta: ['x'] }].each do |errado|
+          testar(errado)
 
           expect(response).to have_http_status(:unprocessable_content)
         end
-        post "#{base}/#{care.id}/testar", params: { pergunta: 'Oi', formato: 'publico', network: 'facebook' }, headers: admin.create_new_auth_token,
-                                          as: :json
+        testar(pergunta: 'Oi', network: 'facebook')
         expect(response.parsed_body).to eq('status' => 'invalid_network')
-        expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+        expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
       end
+    end
+  end
+
+  describe 'o cartão do post da Página do Facebook' do
+    let(:care) { cuidado('post', '555_777', 'facebook', inbox: pagina.inbox) }
+    let(:redes) { { 'facebook' => { inbox_id: pagina.inbox.id, post_id: '555_777' } } }
+
+    before do
+      allow(Crm::MetaAds::ComentariosIa::Fonte).to receive(:post).and_return(fonte(redes))
+      allow(Pundit).to receive(:policy!).and_call_original
+      allow(Pundit).to receive(:policy!).with(anything, :seus_posts).and_return(instance_double(SeusPostsPolicy, index?: true, manage?: true))
+      allow(SeusPosts::Caixa).to receive(:new).and_return(instance_double(SeusPosts::Caixa, ve?: true))
+      na_porta(pagina.inbox, 'Bia')
+    end
+
+    it 'no Testar o privado do Facebook não sai: fica com você, sem escrever' do
+      decide('price')
+
+      testar(pergunta: 'Quanto custa?')
+
+      expect(response.parsed_body).to eq('status' => 'ready', 'decisao' => 'no_private', 'motivo' => 'Pergunta o preço.')
+      expect(Autonomia::Agents::Answerer).not_to have_received(:new)
     end
   end
 
@@ -378,31 +522,31 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(response.parsed_body['portas'].pluck('network')).to eq(%w[instagram])
     end
 
-    it 'no Testar o dono escolhe a rede: com as duas, sem a rede é recusado; o privado do Facebook não sai (F4)' do
+    it 'no Testar o dono escolhe a rede; no Facebook o privado não sai (F4): fica com você, sem texto' do
       na_porta(instagram.inbox, 'Ana')
       na_porta(pagina.inbox, 'Bia')
+      decide('price')
 
-      post "#{base}/#{care.id}/testar", params: { pergunta: 'Quanto custa?', formato: 'publico' }, headers: admin.create_new_auth_token, as: :json
+      testar(pergunta: 'Quanto custa?')
       expect(response.parsed_body).to eq('status' => 'invalid_network')
 
-      post "#{base}/#{care.id}/testar", params: { pergunta: 'Quanto custa?', formato: 'privado', network: 'facebook' },
-                                        headers: admin.create_new_auth_token, as: :json
-      expect(response.parsed_body).to eq('status' => 'no_private')
+      testar(pergunta: 'Quanto custa?', network: 'facebook')
+      expect(response.parsed_body).to eq('status' => 'ready', 'decisao' => 'no_private', 'motivo' => 'Pergunta o preço.')
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
 
-      post "#{base}/#{care.id}/testar", params: { pergunta: 'Quanto custa?', formato: 'publico', network: 'facebook' },
-                                        headers: admin.create_new_auth_token, as: :json
-      expect(response.parsed_body).to eq('status' => 'escrito', 'texto' => 'Te mandei no direct!')
-      expect(chamadas.sole[:agent].name).to eq('Bia')
+      testar(pergunta: 'Quanto custa?', network: 'instagram')
+      expect(response.parsed_body).to include('decisao' => 'price', 'escrita' => include('status' => 'escrito'))
+      expect(chamadas.sole[:agent].name).to eq('Ana')
     end
 
-    it 'a porta do Facebook sem agente: o Testar nessa rede fica nas frases fixas, com o motivo' do
-      na_porta(instagram.inbox, 'Ana')
+    it 'a porta do Instagram sem agente: o Testar mostra as frases fixas do dono, com o motivo' do
+      na_porta(pagina.inbox, 'Bia')
+      decide('private')
 
-      post "#{base}/#{care.id}/testar", params: { pergunta: 'Quanto custa?', formato: 'publico', network: 'facebook' },
-                                        headers: admin.create_new_auth_token, as: :json
+      testar(pergunta: 'Como contrato?', network: 'instagram')
 
-      expect(response.parsed_body).to eq('status' => 'frases_fixas', 'motivo' => 'sem_porta')
+      expect(response.parsed_body['escrita']).to eq('status' => 'frases_fixas', 'motivo' => 'sem_porta', 'privado' => care.message,
+                                                    'publico' => care.phrases.first)
     end
 
     it 'quem não vê a caixa de uma das redes: 403 not_inbox_member' do
@@ -425,8 +569,7 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       allow(Pundit).to receive(:policy!).with(anything, Crm::MetaAdsConnection)
                                         .and_return(instance_double(Crm::MetaAdsConnectionPolicy, show?: true, update?: false))
 
-      post "#{base}/#{care.id}/testar", params: { pergunta: 'Quanto custa?', formato: 'publico', network: 'instagram' },
-                                        headers: agente.create_new_auth_token, as: :json
+      testar({ pergunta: 'Quanto custa?', network: 'instagram' }, agente)
       expect(response).to have_http_status(:forbidden)
       put "#{base}/#{care.id}/estado", params: { status: 'paused' }, headers: agente.create_new_auth_token, as: :json
       expect(response).to have_http_status(:forbidden)

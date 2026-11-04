@@ -1040,6 +1040,10 @@ pt_BR:
         nada_para_ler: 'Não havia nada na conversa para a IA ler. A IA não foi chamada.'
         resposta_fora_do_schema: 'A IA respondeu num formato que a automação não usa. Nada foi feito.'
         tipo_desconhecido: 'O motor da automação não conhece este tipo de passo. A automação parou aqui sem fazê-lo.'
+      alvo:
+        conversa: 'Conversa #%{id}'
+        card: 'Card #%{id} · %{titulo}'
+        contato: '%{nome}'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
@@ -1050,6 +1054,7 @@ pt_BR:
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
+        valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'

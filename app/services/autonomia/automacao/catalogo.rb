@@ -58,6 +58,8 @@ module Autonomia::Automacao::Catalogo
       'operadores' => operadores,
       'unidades' => unidades,
       'valores' => valores,
+      # O que cada alvo de gatilho alcança (#2499): o editor só oferece o valor dessas bases.
+      'alvos' => ::Autonomia::Automacao::Valores::BASES_DO_ALVO,
       'grupos' => declarado['grupos'].map { |grupo| { 'chave' => grupo, 'frase' => chave('GRUPOS', grupo) } },
       'passos' => nativos + acoes
     }
@@ -86,7 +88,8 @@ module Autonomia::Automacao::Catalogo
 
   def gatilhos
     esquema.dig('properties', 'gatilho', 'properties', 'tipo', 'enum').map do |tipo|
-      { 'tipo' => tipo, 'frase' => chave('GATILHOS', tipo), 'filtro_sugerido' => declarado.dig('filtro_sugerido', tipo) }.compact
+      { 'tipo' => tipo, 'alvo' => ::Autonomia::Automacao::Gatilhos.alvo(tipo), 'frase' => chave('GATILHOS', tipo),
+        'filtro_sugerido' => declarado.dig('filtro_sugerido', tipo) }.compact
     end
   end
 
@@ -104,11 +107,14 @@ module Autonomia::Automacao::Catalogo
     end.flatten
   end
 
-  # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave.
+  # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
+  # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499).
   def valores
-    campos = ::Autonomia::Automacao::Valores::CAMPOS.keys.map { |caminho| { 'caminho' => caminho, 'frase' => chave('VALORES', caminho) } }
+    campos = ::Autonomia::Automacao::Valores::CAMPOS.keys.map do |caminho|
+      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho) }
+    end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
-      { 'caminho' => base, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
+      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
     end
     campos + atributos + valores_do_gatilho
   end

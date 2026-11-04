@@ -31,6 +31,24 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
       expect([outra, desligada].map { |definicao| execucoes.exists?(automacao: definicao) }).to eq([false, false])
     end
 
+    # #2499: o EventDispatcherJob repete o evento com o mesmo instante; a marca µs barra a segunda execução mesmo com a
+    # primeira fechada. Reabrir e resolver no mesmo segundo, em instantes diferentes, são dois fatos.
+    it 'o mesmo evento entregue 2 vezes abre 1 execução; dois fatos no mesmo segundo abrem 2', :aggregate_failures do
+      definicao = resolvida
+      instante = Time.zone.parse('2026-11-03 10:00:00.100000 -03:00')
+      repetido = Events::Base.new('conversation.resolved', instante, conversation: conversa)
+
+      listener.conversation_resolved(repetido)
+      execucoes.update_all(estado: 'concluida', travada_em: nil, due_at: nil, finalizada_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      listener.conversation_resolved(repetido)
+      expect(execucoes.where(automacao: definicao).count).to eq(1)
+      expect(execucoes.first.evento).to eq("conversa.resolvida:#{conversa.id}:2026-11-03T13:00:00.100000Z")
+
+      execucoes.update_all(estado: 'concluida', travada_em: nil, due_at: nil, finalizada_em: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      listener.conversation_resolved(Events::Base.new('conversation.resolved', instante + 0.5, conversation: conversa))
+      expect(execucoes.where(automacao: definicao).count).to eq(2)
+    end
+
     # message.created é o evento mais frequente da plataforma: sem o motor, nenhum dos quatro toca as tabelas da
     # automação, e a mensagem nem carrega a conversa.
     it 'conta sem o motor não consulta automação nenhuma, em nenhum dos eventos', :aggregate_failures do

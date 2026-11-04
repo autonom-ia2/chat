@@ -20,7 +20,7 @@ vi.mock('vue-router', () => ({
 
 const CuidarComentarios = {
   name: 'CuidarComentarios',
-  props: ['target', 'post', 'origin', 'canManage', 'inboxPath'],
+  props: ['target', 'post', 'origin', 'canManage', 'inboxPath', 'backLabel'],
   template: '<div data-tela-de-cuidar :data-pode="String(canManage)" />',
 };
 
@@ -54,7 +54,10 @@ const montar = async () => {
 };
 
 describe('CuidarComentariosPage (#2212)', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete route.query.de;
+  });
   afterEach(() => {
     montadas.splice(0).forEach(wrapper => wrapper.unmount());
   });
@@ -117,5 +120,38 @@ describe('CuidarComentariosPage (#2212)', () => {
       params: { accountId: 1, postId: '17900000000000001' },
       query: { perfil: 'instagram-1', dias: '30' },
     });
+  });
+
+  // #2479: aberto pelo "Qual post?" de Agentes, o "Voltar" leva a Agentes; "Ver no post" segue indo ao post.
+  it('aberto de Agentes: voltar leva a Agentes; responder vai ao post', async () => {
+    route.query.de = 'agentes';
+    SeusPostsAPI.getPost.mockResolvedValue(postLido());
+    const wrapper = await montar();
+
+    const tela = wrapper.findComponent({ name: 'CuidarComentarios' });
+    expect(tela.props('backLabel')).toBe(
+      'AGENTS.AGENTE_DO_POST.CRIAR.VOLTAR_AGENTES'
+    );
+    tela.vm.$emit('back');
+    expect(push).toHaveBeenLastCalledWith({
+      name: 'autonomia_agents_index',
+      params: { accountId: 1 },
+    });
+
+    tela.vm.$emit('reply');
+    expect(push).toHaveBeenLastCalledWith({
+      name: 'seus_posts_post',
+      params: { accountId: 1, postId: '17900000000000001' },
+      query: { perfil: 'instagram-1', dias: '30' },
+    });
+  });
+
+  it('sem vir de Agentes, a tela de cuidar fica com o "Voltar" de sempre', async () => {
+    SeusPostsAPI.getPost.mockResolvedValue(postLido());
+    const wrapper = await montar();
+
+    expect(
+      wrapper.findComponent({ name: 'CuidarComentarios' }).props('backLabel')
+    ).toBe('');
   });
 });

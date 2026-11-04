@@ -266,5 +266,10 @@
     "ALTERAR": {
       "DESFECHO": "Mark as active policy or not closed"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "VALORES": {
+      "CARD_MOTIVO_DA_PERDA": "Why it did not close"
+    }
   }
 }

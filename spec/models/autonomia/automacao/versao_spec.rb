@@ -181,12 +181,19 @@ RSpec.describe Autonomia::Automacao::Versao do
   end
 
   it 'recusa condição com valor desconhecido, também no filtro do gatilho' do
+    condicao = { 'campo' => { '$valor' => 'card.senha' }, 'op' => 'maior', 'valor' => 10 }
+    se = { 'id' => 'p2', 'tipo' => 'se', 'condicao' => condicao, 'entao' => [por_etiqueta('p3')] }
+
+    expect(erros(receita(se))).to include('Passo p2: a automação não sabe ler card.senha')
+    expect(erros(receita(esperar, gatilho: { 'tipo' => 'conversa.resolvida', 'filtros' => [condicao] })))
+      .to include('Passo gatilho: a automação não sabe ler card.senha')
+  end
+
+  it 'recusa o caminho do card num gatilho de conversa (#2499): o alvo não tem card' do
     condicao = { 'campo' => { '$valor' => 'card.valor' }, 'op' => 'maior', 'valor' => 10 }
     se = { 'id' => 'p2', 'tipo' => 'se', 'condicao' => condicao, 'entao' => [por_etiqueta('p3')] }
 
-    expect(erros(receita(se))).to include('Passo p2: a automação não sabe ler card.valor')
-    expect(erros(receita(esperar, gatilho: { 'tipo' => 'conversa.resolvida', 'filtros' => [condicao] })))
-      .to include('Passo gatilho: a automação não sabe ler card.valor')
+    expect(erros(receita(se))).to include('Passo p2: card.valor não dá para ler')
   end
 
   it 'recusa id repetido, mesmo dentro de um ramo' do

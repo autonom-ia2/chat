@@ -15,12 +15,14 @@ class Autonomia::Automacao::Partida
   Cadeia = ::Autonomia::Automacao::Cadeia
 
   # `mensagem`: a que disparou o gatilho mensagem.criada, para o filtro (mensagem.tipo).
-  def initialize(definicao:, alvo:, chave_gatilho:, mensagem: nil)
+  # `evento`: a marca única do fato que disparou (ver Gatilhos); sem ela, a da mensagem.
+  def initialize(definicao:, alvo:, chave_gatilho:, mensagem: nil, evento: nil)
     @definicao = definicao
     @account = definicao.account
     @alvo = alvo
     @chave_gatilho = chave_gatilho
     @mensagem = mensagem
+    @evento = evento || (mensagem && "mensagem:#{mensagem.id}")
   end
 
   # A execução aberta, ou nil quando não começou.
@@ -40,7 +42,7 @@ class Autonomia::Automacao::Partida
 
   def pode_comecar?
     ::Autonomia::Automacao::Motor.ligado?(@account) && @definicao.ativa && @definicao.versao_ativa &&
-      @alvo.account_id == @account.id && !::ConversaCanal::PastaDoEmail.no_spam?(@alvo)
+      @alvo.account_id == @account.id && !contexto.no_spam?
   end
 
   # A mensagem nova numa conversa que já tem a execução aberta é o caso comum: a consulta evita a cadeia e o INSERT
@@ -50,7 +52,7 @@ class Autonomia::Automacao::Partida
   end
 
   def no_filtro?
-    valores = ::Autonomia::Automacao::Valores.new(conversa: @alvo, mensagem: @mensagem)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, mensagem: @mensagem)
     Array(@definicao.versao_ativa.receita.dig('gatilho', 'filtros')).all? do |condicao|
       ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
     end
@@ -60,7 +62,7 @@ class Autonomia::Automacao::Partida
     resultado = Cadeia.entrar(::Autonomia::Automacao::Motor.origem(@definicao), @account) { abrir }
     return resultado unless resultado.is_a?(Cadeia::Recusa)
 
-    Cadeia.registrar_recusa(resultado, account_id: @account.id, alvo: "conversa:#{@alvo.id}", conversa: @alvo, nome: @definicao.nome)
+    Cadeia.registrar_recusa(resultado, account_id: @account.id, alvo: rotulo_do_alvo, conversa: contexto.conversa, nome: @definicao.nome)
     nil
   end
 
@@ -70,7 +72,7 @@ class Autonomia::Automacao::Partida
   def abrir
     marca = Time.current.floor(6)
     execucao = criar(estado: 'andando', travada_em: marca, due_at: marca, cadeia: Cadeia.origens, profundidade: Cadeia.origens.size,
-                     evento: (@mensagem && "mensagem:#{@mensagem.id}"))
+                     evento: @evento)
     ::Autonomia::Automacao::AvancarJob.perform_later(execucao.id, marca.iso8601(6), Cadeia.raiz)
     execucao
   rescue ActiveRecord::RecordNotUnique
@@ -88,9 +90,14 @@ class Autonomia::Automacao::Partida
   end
 
   def pular(motivo)
-    Rails.logger.debug { "[automacao][motor] pulada automacao=#{@definicao.id} alvo=conversa:#{@alvo.id} motivo=#{motivo}" }
+    Rails.logger.debug { "[automacao][motor] pulada automacao=#{@definicao.id} alvo=#{rotulo_do_alvo} motivo=#{motivo}" }
     nil
   end
+
+  def contexto = @contexto ||= ::Autonomia::Automacao::Contexto.de(@alvo)
+
+  # Para o log: o tipo e o id do banco, sem nome nem título (podem ser do cliente).
+  def rotulo_do_alvo = "#{contexto.base}:#{@alvo.id}"
 
   def criar(**atributos)
     ::Autonomia::Automacao::Execucao.create!(account: @account, automacao: @definicao, versao: @definicao.versao_ativa, alvo: @alvo,

@@ -551,6 +551,10 @@ en:
         nada_para_ler: 'There was nothing in the conversation for the AI to read. The AI was not called.'
         resposta_fora_do_schema: 'The AI answered in a format the automation cannot use. Nothing was done.'
         tipo_desconhecido: 'This step type is unknown to the automation engine. The automation stopped here without doing it.'
+      alvo:
+        conversa: 'Conversation #%{id}'
+        card: 'Card #%{id} · %{titulo}'
+        contato: '%{nome}'
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'
@@ -561,6 +565,7 @@ en:
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
+        valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'

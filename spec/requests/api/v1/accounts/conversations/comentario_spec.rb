@@ -274,6 +274,19 @@ RSpec.describe 'Comentário do Instagram na conversa (#2215)', type: :request do
       expect(Crm::MetaAdsCommentAction.exists?(comment_id: comment_id, action: 'delete')).to be(true)
     end
 
+    it 'agente da caixa sem função responde e esconde, mas não apaga: sem o botão e 401, sem chamar a Meta (#2517)' do
+      agente = create(:user, account: account, role: :agent)
+      create(:inbox_member, user: agente, inbox: canal.inbox)
+
+      get base, headers: agente.create_new_auth_token, as: :json
+      expect(response.parsed_body['pode']).to eq('responder' => true, 'esconder' => true, 'apagar' => false)
+
+      delete base, headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:unauthorized)
+      expect(a_request(:delete, /graph\.instagram\.com/)).not_to have_been_made
+      expect(Crm::MetaAdsCommentAction.exists?(comment_id: comment_id, action: 'delete')).to be(false)
+    end
+
     it 'comentário que já não existe na Meta: 404 comment_not_found, sem apagar' do
       stub_request(:get, %r{#{ig}/#{comment_id}\?})
         .to_return(status: 400, headers: json, body: { error: { code: 100, error_subcode: 33 } }.to_json)

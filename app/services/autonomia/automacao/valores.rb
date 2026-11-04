@@ -2,9 +2,13 @@
 #
 # A lista de caminhos é fechada: a receita só lê o que está aqui, e o salvar recusa caminho desconhecido. Não é Liquid
 # nem texto livre; cada caminho é um campo do modelo. Os atributos personalizados entram pela chave
-# (`contato.atributos.placa`). Card entra com os gatilhos de card (F6). A mensagem do gatilho `mensagem.criada` só
-# existe no filtro do gatilho (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`); nos passos ela já
-# passou, e o salvar recusa ler a mensagem fora dali.
+# (`contato.atributos.placa`). A mensagem do gatilho `mensagem.criada` só existe no filtro do gatilho
+# (`mensagem.tipo`: recebida, enviada ou nota; `mensagem.privada`); nos passos ela já passou, e o salvar recusa ler a
+# mensagem fora dali.
+#
+# #2499 (F6): cada caminho começa pela base (`conversa`, `contato` ou `card`), lida do alvo pelas pontes do Contexto.
+# A base que o alvo não alcança (card num gatilho de conversa) o salvar recusa; a ponte vazia ao rodar (card sem
+# conversa) chega como valor vazio.
 class Autonomia::Automacao::Valores
   # `conversa.id` é o número que a pessoa vê (#123) e o que as rotas da conversa recebem, não o id do banco.
   CAMPOS = {
@@ -15,12 +19,30 @@ class Autonomia::Automacao::Valores
     'conversa.responsavel_id' => ->(conversa) { conversa.assignee_id },
     'conversa.time_id' => ->(conversa) { conversa.team_id },
     'conversa.etiquetas' => ->(conversa) { conversa.label_list },
-    'contato.id' => ->(conversa) { conversa.contact&.id },
-    'contato.nome' => ->(conversa) { conversa.contact&.name },
-    'contato.email' => ->(conversa) { conversa.contact&.email },
-    'contato.telefone' => ->(conversa) { conversa.contact&.phone_number },
-    'contato.empresa_id' => ->(conversa) { conversa.contact&.company_id },
-    'contato.etiquetas' => ->(conversa) { conversa.contact&.label_list }
+    'contato.id' => ->(contato) { contato.id },
+    'contato.nome' => ->(contato) { contato.name },
+    'contato.email' => ->(contato) { contato.email },
+    'contato.telefone' => ->(contato) { contato.phone_number },
+    'contato.empresa_id' => ->(contato) { contato.company_id },
+    'contato.etiquetas' => ->(contato) { contato.label_list },
+    # `card.id` é o id do banco: é o que as rotas do card recebem e o que a tela mostra (#123).
+    'card.id' => ->(card) { card.id },
+    'card.titulo' => ->(card) { card.title },
+    'card.etapa_id' => ->(card) { card.stage_id },
+    'card.funil_id' => ->(card) { card.pipeline_id },
+    'card.status' => ->(card) { card.status },
+    'card.valor' => ->(card) { card.value_cents.to_d / 100 },
+    'card.responsavel_id' => ->(card) { card.owner_id },
+    'card.time_id' => ->(card) { card.team_id },
+    'card.dias_na_etapa' => ->(card) { card.entered_stage_at && ((Time.current - card.entered_stage_at) / 1.day).floor },
+    'card.motivo_da_perda' => ->(card) { card.lost_reason }
+  }.freeze
+
+  # O que cada alvo alcança, pelas pontes do Contexto.
+  BASES_DO_ALVO = {
+    'Conversation' => %w[conversa contato],
+    'Crm::Card' => %w[card conversa contato],
+    'Contact' => %w[contato]
   }.freeze
 
   # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota.
@@ -45,11 +67,16 @@ class Autonomia::Automacao::Valores
 
   ATRIBUTOS = {
     'conversa.atributos' => ->(conversa) { conversa.custom_attributes },
-    'contato.atributos' => ->(conversa) { conversa.contact&.custom_attributes }
+    'contato.atributos' => ->(contato) { contato.custom_attributes },
+    'card.atributos' => ->(card) { card.custom_attributes }
   }.freeze
 
   # O modelo do atributo personalizado de cada base, para conferir ao salvar que a chave existe na conta.
-  MODELOS = { 'conversa.atributos' => 'conversation_attribute', 'contato.atributos' => 'contact_attribute' }.freeze
+  MODELOS = {
+    'conversa.atributos' => 'conversation_attribute',
+    'contato.atributos' => 'contact_attribute',
+    'card.atributos' => 'card_attribute'
+  }.freeze
 
   class << self
     def caminho_valido?(caminho)
@@ -57,6 +84,11 @@ class Autonomia::Automacao::Valores
     end
 
     def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
+
+    # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
+    def no_alvo?(caminho, alvo_type)
+      da_mensagem?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
+    end
 
     def fechado(caminho) = FECHADOS[caminho.to_s]
 
@@ -74,18 +106,35 @@ class Autonomia::Automacao::Valores
     end
   end
 
-  def initialize(conversa:, mensagem: nil)
-    @conversa = conversa
+  # `alvo`: a conversa, o card ou o contato da execução (ou um Contexto já montado).
+  def initialize(alvo:, mensagem: nil)
+    @contexto = alvo.is_a?(::Autonomia::Automacao::Contexto) ? alvo : ::Autonomia::Automacao::Contexto.de(alvo)
     @mensagem = mensagem
   end
 
   def ler(caminho)
-    return CAMPOS.fetch(caminho.to_s).call(@conversa) if CAMPOS.key?(caminho.to_s)
     return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
+    return do_objeto(caminho) { |objeto| CAMPOS.fetch(caminho.to_s).call(objeto) } if CAMPOS.key?(caminho.to_s)
 
     base, chave = self.class.atributo(caminho)
     raise ArgumentError, "caminho desconhecido: #{caminho}" unless base
 
-    ATRIBUTOS.fetch(base).call(@conversa).to_h[chave]
+    do_objeto(caminho) { |objeto| ATRIBUTOS.fetch(base).call(objeto).to_h[chave] }
+  end
+
+  private
+
+  def do_objeto(caminho)
+    objeto = da_base(caminho)
+    objeto && yield(objeto)
+  end
+
+  # A ponte vazia (card sem conversa, conversa sem contato) lê vazio.
+  def da_base(caminho)
+    case caminho.to_s.split('.', 2).first
+    when 'conversa' then @contexto.conversa
+    when 'contato' then @contexto.contato
+    when 'card' then @contexto.card
+    end
   end
 end
