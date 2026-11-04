@@ -421,6 +421,39 @@
         "RODOU": "Rodou 1 vez esta semana | Rodou {n} vezes esta semana",
         "PAROU": "1 parou | {n} pararam"
       }
+    },
+    "ENSAIO": {
+      "BOTAO": "Ensaiar",
+      "BOTAO_ANTES": "Ensaiar antes de ligar",
+      "TITULO": "Ensaiar",
+      "SUBTITULO": "Veja o que a automação faria nas suas conversas. Nada é mandado nem mudado.",
+      "FECHAR": "Fechar",
+      "CARREGANDO": "Ensaiando nas conversas recentes",
+      "ERRO": "Não consegui ensaiar agora. Tente de novo.",
+      "SEM_CONVERSAS": "Você ainda não tem conversas para ensaiar.",
+      "QUANTAS": "das {total} conversas mais recentes entrariam nesta automação",
+      "ENTRARIA": "entraria",
+      "NAO_ENTRARIA": "não entraria",
+      "OUTRA": "Ensaiar em outra conversa",
+      "ESCOLHA": "Escolha a conversa",
+      "CONVERSA_N": "Conversa {n}",
+      "NA_CONVERSA": "Na conversa de {nome}, a automação faria:",
+      "FORA": {
+        "SPAM": "Nada: a conversa está no Spam.",
+        "SEM_MENSAGEM": "Nada: a conversa ainda não tem mensagem.",
+        "FORA_DO_FILTRO": "Nada: a conversa não passa no \"Só se\" do gatilho."
+      },
+      "HOJE_SIM": "Hoje, sim: seguiria por \"Então\".",
+      "HOJE_NAO": "Hoje, não: seguiria por \"Senão\".",
+      "JA_VALE": "Já vale agora: seguiria na hora.",
+      "SE_CHEGAR": "Se chegar a tempo:",
+      "SE_VENCER": "Se o prazo vencer:",
+      "SE_CAMINHO": "Se a IA escolher \"{nome}\":",
+      "SE_NENHUM": "Se nenhum se aplicar:",
+      "NAO_SAIRIA": "Não sairia: a mensagem automática ainda não está ligada nesta conta.",
+      "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
+      "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",
+      "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar."
     }
   }
 }
