@@ -7,7 +7,8 @@
 #   mostra (a leitura já gravada, Foto.texto_para_ia), a porta de cada rede (Porta: o agente e, quando ele não escreve,
 #   por quê) e os comentários do Painel, nos grupos da tela. Uma conta só para o cartão, a gaveta e a página:
 #   "esperando você" é o que ficou com o dono (Painel `to_see`), menos o que a IA leu e viu que não era o caso, que vai
-#   para "não respondo" junto com o que ela escondeu.
+#   para "não respondo" junto com o que ela escondeu. "No privado" (#2481) lista as conversas do privado que a pessoa
+#   vê (NoPrivado), com quem, o comentário e o "Ver conversa".
 # - `testar` (#2510): o que o motor faria com o comentário, na ordem do motor (Cuidar#decidir e #executar), sem publicar
 #   nada e sem gravar nada. Primeiro a decisão, pelo mesmo Classificador, com o "para quem", a ficha e o assunto
 #   proibido do cuidado (o uso da IA vai em FEATURE_DA_TELA); depois, só quando a decisão é mandar o privado e ele sai
@@ -28,10 +29,12 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   end
 
   # care: o cuidado. alvo e fonte: os do Painel (Fonte.post ou Fonte.anuncio). painel: o Painel do mesmo alvo.
-  def initialize(care:, fonte:, painel:)
+  # no_privado: a lista do grupo "no privado" (NoPrivado).
+  def initialize(care:, fonte:, painel:, no_privado:)
     @care = care
     @fonte = fonte
     @painel = painel
+    @no_privado = no_privado
   end
 
   def detalhe
@@ -75,7 +78,7 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   def comentarios
     payload = @painel.payload
     to_see = Array(payload[:to_see])
-    { status: payload[:status], results: payload[:results],
+    { status: payload[:status], results: payload[:results], no_privado: @no_privado.call,
       esperando: to_see.reject { |linha| linha[:kind] == NAO_ERA_O_CASO },
       nao_respondo: to_see.select { |linha| linha[:kind] == NAO_ERA_O_CASO } + Array(payload[:hidden]).map { |linha| linha.merge(kind: 'hidden') } }
   end

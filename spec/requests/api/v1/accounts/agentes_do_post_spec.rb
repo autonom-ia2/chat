@@ -219,6 +219,29 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(comentarios['results']).to eq('sent' => 3, 'replied' => 1, 'skipped' => 1)
     end
 
+    it '#2481: "no privado" lista as conversas do privado deste cuidado que a pessoa vê, com o comentário do topo' do
+      contato = create(:contact, account: account, name: 'Mariana')
+      conversa = create(:conversation, account: account, inbox: instagram.inbox, contact: contato,
+                                       additional_attributes: { 'meta_ads_comment' => { 'care_id' => care.id, 'network' => 'instagram',
+                                                                                        'private_reply' => true } })
+      create(:message, account: account, inbox: instagram.inbox, conversation: conversa, message_type: :activity,
+                       content: 'Comentou no post: “Quanto custa?”')
+      agente = create(:user, account: account, role: :agent)
+      allow(Pundit).to receive(:policy!).and_call_original
+      allow(Pundit).to receive(:policy!).with(anything, :seus_posts).and_return(instance_double(SeusPostsPolicy, index?: true, manage?: false))
+
+      get "#{base}/#{care.id}", headers: admin.create_new_auth_token, as: :json
+      expect(response.parsed_body.dig('comentarios', 'no_privado')).to eq(
+        [{ 'id' => conversa.display_id, 'contato' => 'Mariana', 'comentario' => 'Comentou no post: “Quanto custa?”', 'network' => 'instagram',
+           'respondeu' => false, 'conversation_path' => "/app/accounts/#{account.id}/conversations/#{conversa.display_id}" }]
+      )
+
+      create(:inbox_member, user: agente, inbox: create(:inbox, account: account))
+      allow(SeusPosts::Caixa).to receive(:new).and_return(instance_double(SeusPosts::Caixa, ve?: true))
+      get "#{base}/#{care.id}", headers: agente.create_new_auth_token, as: :json
+      expect(response.parsed_body.dig('comentarios', 'no_privado')).to eq([])
+    end
+
     it 'abrir de novo dentro de 2 minutos não volta à Meta; pausar troca a leitura guardada' do
       allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
 

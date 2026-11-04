@@ -475,6 +475,50 @@ describe('#2469 · os comentários do post em Agentes', () => {
       ).toEqual(['2', '4']);
     });
 
+    it('#2481 · Comentários "no privado": quem recebeu, o comentário, se respondeu e o "Ver conversa" de quem a pessoa vê', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'respondidos' };
+      await pagina(
+        detalhe({
+          comentarios: {
+            ...detalhe().comentarios,
+            no_privado: [
+              {
+                id: 21,
+                contato: 'Mariana',
+                comentario: 'Comentou no post: “Quanto custa?”',
+                respondeu: true,
+                conversation_path: '/app/accounts/1/conversations/21',
+              },
+              { id: 20, contato: 'Rafael', comentario: 'Qual o valor?' },
+            ],
+          },
+        })
+      );
+
+      expect(
+        todosNoBody('[data-no-privado-conversa]').map(
+          item => item.dataset.noPrivadoConversa
+        )
+      ).toEqual(['21', '20']);
+      const mariana = noBody('[data-no-privado-conversa="21"]');
+      expect(mariana.textContent).toContain('Mariana');
+      expect(mariana.textContent).toContain('Quanto custa?');
+      expect(mariana.querySelector('[data-respondeu]')).not.toBeNull();
+      expect(
+        mariana.querySelector('[data-ver-conversa]').getAttribute('href')
+      ).toBe('/app/accounts/1/conversations/21');
+      const rafael = noBody('[data-no-privado-conversa="20"]');
+      expect(rafael.querySelector('[data-respondeu]')).toBeNull();
+      expect(rafael.querySelector('[data-ver-conversa]')).toBeNull();
+    });
+
+    it('#2481 · "no privado" vazio diz que não há nada', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'respondidos' };
+      await pagina(detalhe());
+
+      expect(noBody('[data-respondidos] [data-nenhum]')).not.toBeNull();
+    });
+
     it('Comentários sem leitura da Meta: esperando e não respondo sem número, com o aviso', async () => {
       rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
       await pagina(
