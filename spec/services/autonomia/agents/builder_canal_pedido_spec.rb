@@ -63,9 +63,26 @@ RSpec.describe Autonomia::Agents::Builder do
   context 'when the turn closes the agent (full call)' do
     let(:fechar) { true }
 
-    it 'keeps the reading of the full call, which applies the agent' do
+    it 'keeps the reading of the full call, which applies the agent, in the thread and in the agent' do
       expect(run_turn.state['canal_pedido']).to eq('instagram')
       expect(thread.agent.instruction).to eq('Instrução completa da Ana.')
+      # Um rascunho reaberto (sem a thread na tela) lê daqui.
+      expect(thread.agent.config['canal_pedido']).to eq('instagram')
+    end
+  end
+
+  context 'when an existing agent is adjusted' do
+    let(:canal_da_completa) { 'nenhum' }
+    let(:agente) do
+      Autonomia::Agents::Agent.create!(account: account, name: 'Ana', agent_type: 'sdr', mode: :guided, status: :active,
+                                       enabled: true, instruction: 'Instrução fechada da Ana.',
+                                       config: { 'canal_pedido' => 'instagram' })
+    end
+    let(:thread) { Autonomia::Agents::BuildThread.create!(account: account, agent: agente) }
+
+    it 'keeps the channel asked at creation (the adjustment talk does not mention it)' do
+      run_turn
+      expect(agente.reload.config['canal_pedido']).to eq('instagram')
     end
   end
 

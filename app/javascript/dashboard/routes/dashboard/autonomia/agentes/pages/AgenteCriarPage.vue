@@ -288,12 +288,15 @@ const canais = computed(() =>
 const horarios = computed(() =>
   horariosDasCaixas(canais.value, caixas.value, t)
 );
+// A conversa na tela traz a leitura mais nova; um rascunho reaberto (sem a thread) lê a que ficou no agente.
+const canalPedido = computed(
+  () =>
+    estadoDaConversa.value?.canal_pedido ||
+    agente.value?.config?.canal_pedido ||
+    null
+);
 const sugerido = computed(() =>
-  canalSugerido(
-    canais.value,
-    conversa.agenteId.value,
-    estadoDaConversa.value?.canal_pedido
-  )
+  canalSugerido(canais.value, conversa.agenteId.value, canalPedido.value)
 );
 
 const carregarElegiveis = async id => {

@@ -48,6 +48,7 @@ RSpec.describe Autonomia::Agents::Builder do
 
   let(:account) { create(:account) }
   let(:teto) { ENV.fetch('AUTONOMIA_EVAL_TETO_USD', '1.80').to_f }
+  let(:gasto) { { usd: 0.0 } }
 
   def thread_com(falas)
     thread = Autonomia::Agents::BuildThread.create!(account: account)
@@ -69,14 +70,14 @@ RSpec.describe Autonomia::Agents::Builder do
     esforco = fechamento ? Autonomia::Agents::Config::BUILDER_REASONING_EFFORT : Autonomia::Agents::Config::BUILDER_REASONING_EFFORT_COLLECT
     raw = cliente.create(model: Autonomia::Agents::Config::BUILDER_MODEL, instructions: described_class::MOTHER_INSTRUCTION,
                          input: input, schema: described_class::BUILDER_SCHEMA, reasoning_effort: esforco)
-    @gasto += Crm::Ai::UsageRecorder.cost_for(Autonomia::Agents::Config::BUILDER_MODEL,
-                                              Crm::Ai::UsageRecorder.extract_tokens(raw[:usage]))
+    tokens = Crm::Ai::UsageRecorder.extract_tokens(raw[:usage])
+    gasto[:usd] += Crm::Ai::UsageRecorder.cost_for(Autonomia::Agents::Config::BUILDER_MODEL, tokens)
     JSON.parse(raw[:text])['canal_pedido']
   end
 
   def avaliar(casos, fechamento:)
     casos.filter_map do |falas, esperado|
-      raise "teto de US$ #{teto} atingido (gasto US$ #{@gasto.round(4)})" if @gasto >= teto
+      raise "teto de US$ #{teto} atingido (gasto US$ #{gasto[:usd].round(4)})" if gasto[:usd] >= teto
 
       lido = leitura(falas, fechamento: fechamento)
       "#{falas.last.inspect}: esperado #{esperado}, lido #{lido.inspect}" unless lido == esperado
@@ -87,11 +88,10 @@ RSpec.describe Autonomia::Agents::Builder do
     ligada = ENV['AUTONOMIA_EVAL_PAGO'] == '1' && ENV['OPENAI_API_KEY'].present?
     skip 'avaliação paga: rode com AUTONOMIA_EVAL_PAGO=1 e OPENAI_API_KEY' unless ligada
 
-    @gasto = 0.0
     erros = avaliar(AvaliacaoDoCanalPedido::ENTREVISTA, fechamento: false) +
             avaliar(AvaliacaoDoCanalPedido::FECHAMENTO, fechamento: true)
     puts "[eval canal_pedido] #{AvaliacaoDoCanalPedido::ENTREVISTA.size + AvaliacaoDoCanalPedido::FECHAMENTO.size} " \
-         "cenas, gasto US$ #{@gasto.round(4)}"
+         "cenas, gasto US$ #{gasto[:usd].round(4)}"
 
     expect(erros).to be_empty, "leituras erradas:\n#{erros.join("\n")}"
   end

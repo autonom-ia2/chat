@@ -1280,6 +1280,9 @@ module Autonomia
         attrs = self.class.map_attributes(parsed, truncated: @truncated_fields)
         attrs[:actuation] = builder_actuation
         attrs[:config] = (attrs[:config] || {}).merge('with_knowledge' => effective_with_knowledge)
+        # #2490: o canal pedido também fica no agente, para a Confira de um rascunho reaberto (sem a thread na tela). Só na
+        # criação: a conversa de um ajuste não fala de canal e apagaria o pedido (o merge do config preserva o que já existe).
+        attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido']) unless adjust_mode?
         attrs
       end
 
