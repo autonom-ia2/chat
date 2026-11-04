@@ -214,6 +214,7 @@ Rails.application.routes.draw do
           get 'seus_posts/posts/:post_id/resumo', to: 'seus_posts_cuidado#resumo'
           # O cuidado de cada post ou anúncio como cartão em Agentes (#2469, PR 3a do #2436).
           get 'agentes_do_post', to: 'agentes_do_post#index'
+          get 'agentes_do_post/anuncios', to: 'agentes_do_post#anuncios'
           get 'agentes_do_post/:id', to: 'agentes_do_post#show'
           put 'agentes_do_post/:id/estado', to: 'agentes_do_post#estado'
           post 'agentes_do_post/:id/testar', to: 'agentes_do_post#testar'

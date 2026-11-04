@@ -30,6 +30,8 @@ const props = defineProps({
   post: { type: Object, default: null },
   // De onde a tela abriu: 'post' (o post em Seus posts) ou 'anuncio'.
   origin: { type: String, default: 'post' },
+  // #2479: o texto do "Voltar" quando a tela foi aberta de outro lugar (Agentes); vazio, o de `origin`.
+  backLabel: { type: String, default: '' },
   canManage: { type: Boolean, default: false },
   // A caixa da rede, para "Ver na caixa".
   inboxPath: { type: String, default: '' },
@@ -37,7 +39,9 @@ const props = defineProps({
   inboxPathOf: { type: Function, default: null },
 });
 
-const emit = defineEmits(['back']);
+// 'reply': "Responder" no cuidado ligado, que leva aos comentários do post ou do anúncio (#2479: mesmo quando o
+// "Voltar" vai para Agentes).
+const emit = defineEmits(['back', 'reply']);
 
 const { t } = useI18n();
 const router = useRouter();
@@ -220,7 +224,7 @@ const openInbox = path => {
       @click="emit('back')"
     >
       <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
-      {{ $t(`${KEY}.SCREEN.${BACK_KEY[origin] || 'BACK_POSTS'}`) }}
+      {{ backLabel || $t(`${KEY}.SCREEN.${BACK_KEY[origin] || 'BACK_POSTS'}`) }}
     </button>
 
     <header class="flex items-center gap-4">
@@ -339,7 +343,7 @@ const openInbox = path => {
         :busy="salvando"
         @pause="pause"
         @resume="resume"
-        @reply="emit('back')"
+        @reply="emit('reply')"
         @read-old="oldDialog?.open()"
         @inbox="openInbox"
         @change="change"

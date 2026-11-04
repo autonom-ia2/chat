@@ -822,8 +822,7 @@ describe('#2469 · os comentários do post em Agentes', () => {
         [{ id: '1790', perfil: 'instagram-3' }],
       ]);
 
-      await clicar('[data-criar-anuncio]');
-      expect(wrapper.emitted('anuncio')).toHaveLength(1);
+      expect(noBody('[data-criar-fontes]')).toBeNull();
     });
 
     it('"Atender conversas" segue a criação de hoje', async () => {

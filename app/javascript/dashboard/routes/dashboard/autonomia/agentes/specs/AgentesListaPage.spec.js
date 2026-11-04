@@ -6,6 +6,7 @@ const estado = vi.hoisted(() => ({
   podeGerenciar: true,
   podeConectarCanal: true,
   admin: true,
+  veAnuncios: true,
 }));
 
 const store = vi.hoisted(() => ({ dispatch: vi.fn(), state: null }));
@@ -18,7 +19,10 @@ vi.mock('dashboard/composables/store', async () => {
 });
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { computed } = await import('vue');
-  return { useCanManage: () => computed(() => estado.podeGerenciar) };
+  return {
+    useCanManage: () => computed(() => estado.podeGerenciar),
+    usePermissionGranted: () => computed(() => estado.veAnuncios),
+  };
 });
 vi.mock('dashboard/composables/useAdmin', async () => {
   const { computed } = await import('vue');
@@ -47,7 +51,11 @@ vi.mock('vue-router', () => ({ useRouter: () => router }));
 const api = vi.hoisted(() => ({ semana: vi.fn(), canaisOcupados: vi.fn() }));
 vi.mock('dashboard/api/autonomia/jornada', () => ({ default: api }));
 // #2469: os cartões dos posts e anúncios com o cuidado dos comentários (só com a flag meta_ads_comentarios_ia).
-const doPost = vi.hoisted(() => ({ list: vi.fn(), get: vi.fn() }));
+const doPost = vi.hoisted(() => ({
+  list: vi.fn(),
+  get: vi.fn(),
+  anuncios: vi.fn(),
+}));
 vi.mock('dashboard/api/agentesDoPost', () => ({ default: doPost }));
 
 const agente = (id, extra = {}) => ({
@@ -840,6 +848,101 @@ describe('AgentesListaPage', () => {
         name: 'autonomia_agents_builder',
       });
       wrapper.unmount();
+    });
+
+    // #2479: o "Qual post?" também lista os anúncios, com as guardas da tela do cuidado do anúncio.
+    describe('#2479 · anúncios no "Qual post?"', () => {
+      const FLAGS_DOS_ANUNCIOS = [
+        'meta_ads_comentarios_ia',
+        'meta_ads_hub',
+        'meta_ads_gestao',
+        'meta_ads_comentarios_facebook',
+      ];
+
+      beforeEach(() => {
+        window.globalConfig = { CRM_KANBAN_ENABLED: 'true' };
+        estado.veAnuncios = true;
+        doPost.anuncios.mockResolvedValue({
+          data: { anuncios: [{ id: '120', name: 'Seguro', care: null }] },
+        });
+      });
+      afterEach(() => {
+        delete window.globalConfig;
+      });
+
+      it('só com Anúncios: "Criar agente" pergunta o tipo e o anúncio escolhido abre o cuidado dele, voltando para Agentes', async () => {
+        store.state['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
+          FLAGS_DOS_ANUNCIOS.includes(flag);
+        const wrapper = await montar();
+
+        await wrapper.get('[data-criar]').trigger('click');
+        document.body.querySelector('[data-criar-tipo="post"]').click();
+        await flushPromises();
+        expect(document.body.querySelector('[data-criar-fontes]')).toBeNull();
+        document.body.querySelector('[data-criar-anuncio="120"]').click();
+        await flushPromises();
+
+        expect(router.push).toHaveBeenCalledWith({
+          name: 'campaigns_meta_ads_cuidar',
+          params: { adId: '120' },
+          query: { de: 'agentes' },
+        });
+        wrapper.unmount();
+      });
+
+      it('com posts e anúncios, o chip aparece; o post escolhido também volta para Agentes', async () => {
+        store.state['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
+          [
+            ...FLAGS_DOS_ANUNCIOS,
+            'seus_posts',
+            'seus_posts_comentarios',
+          ].includes(flag);
+        const wrapper = await montar();
+
+        await wrapper.get('[data-criar]').trigger('click');
+        document.body.querySelector('[data-criar-tipo="post"]').click();
+        await flushPromises();
+
+        expect(
+          document.body.querySelector('[data-criar-fontes]')
+        ).not.toBeNull();
+        wrapper.unmount();
+      });
+
+      it.each([
+        [
+          'sem o CRM',
+          () => {
+            delete window.globalConfig;
+          },
+        ],
+        [
+          'sem ver Anúncios',
+          () => {
+            estado.veAnuncios = false;
+          },
+        ],
+        [
+          'sem a flag dos comentários de nenhuma rede',
+          () => {
+            store.state['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
+              FLAGS_DOS_ANUNCIOS.slice(0, 3).includes(flag);
+          },
+        ],
+      ])('%s, só com Anúncios: a criação de hoje', async (_caso, tirar) => {
+        store.state['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
+          FLAGS_DOS_ANUNCIOS.includes(flag);
+        tirar();
+        const wrapper = await montar();
+
+        await wrapper.get('[data-criar]').trigger('click');
+
+        expect(document.body.querySelector('[data-criar-tipos]')).toBeNull();
+        expect(router.push).toHaveBeenCalledWith({
+          name: 'autonomia_agents_builder',
+        });
+        wrapper.unmount();
+      });
     });
 
     it('sem a flag do cuidado, nada é lido e o "Criar agente" é o de hoje', async () => {

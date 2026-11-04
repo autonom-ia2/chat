@@ -54,7 +54,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:39",
       "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:40",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:136"
     ],
     "sem_corpo": true
   },
@@ -8564,7 +8564,7 @@
     "origem": [
       "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:29",
       "app/controllers/api/v1/accounts/agentes_do_post_materiais_controller.rb:30",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:136"
     ],
     "sem_corpo": false
   },
@@ -8585,11 +8585,11 @@
     "completo": true,
     "controller": "api/v1/accounts/agentes_do_post#testar",
     "origem": [
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:84",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:89",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:87",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:85",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:97",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:102",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:100",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:98",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:136"
     ],
     "sem_corpo": false
   },
@@ -20769,9 +20769,9 @@
     "controller": "api/v1/accounts/agentes_do_post#estado",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:74",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:75",
-      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:123"
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:87",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:88",
+      "app/controllers/api/v1/accounts/agentes_do_post_controller.rb:136"
     ],
     "sem_corpo": false
   },

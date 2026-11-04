@@ -3,6 +3,9 @@
 #
 # GET  agentes_do_post             → { cuidados: [{ id, kind, target_id, perfil, network, status }] }: a lista e a
 #      contagem do cabeçalho, só do banco. Só os alvos que quem abre pode ver.
+# GET  agentes_do_post/anuncios → { anuncios: [{ id, name, image_url, care }] }: os anúncios do "Qual post?" ao criar o
+#      cuidado (#2479), os da lista de Anúncios dos últimos 30 dias, só do banco (AnunciosParaCuidar). As guardas são
+#      as de ver o cuidado do anúncio; sem a conexão ativa, 404 `not_connected`.
 # GET  agentes_do_post/:id         → o cartão e a página: o item, mais legenda, capa, foto, nota, portas[] e
 #      comentarios { status, results, esperando[], nao_respondo[] }, lidos na Meta, sem IA. A leitura fica guardada
 #      DETALHE_TTL por pessoa (abrir Agentes com muitos posts cuidados não volta à Meta a cada vez, e não gasta o limite
@@ -49,9 +52,9 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   end
 
   before_action :ensure_flag
-  before_action :load_care, except: [:index]
+  before_action :load_care, except: [:index, :anuncios]
   before_action :ensure_manage, only: [:estado, :testar]
-  before_action :load_alvo, except: [:index, :show]
+  before_action :load_alvo, except: [:index, :show, :anuncios]
 
   rescue_from Recusa, Crm::MetaAds::ComentariosIa::Painel::Error, Crm::MetaAds::AdManagement::Error, with: :render_error
 
@@ -63,6 +66,16 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
 
   # O detalhe guardado só depois de passar as guardas (Recusa não é guardada). A chave leva a pessoa (os resultados e o
   # "Ver conversa" dependem do que ela vê) e o updated_at do cuidado.
+  # Só quem veria o cuidado do anúncio: as flags de Anúncios, a chave de ver e a conexão ativa. A caixa de cada rede se
+  # confere ao abrir o cuidado (o criativo é que diz as caixas).
+  def anuncios
+    raise Recusa, 'not_found' unless flags?('ad')
+    raise Recusa, 'forbidden' unless policy('ad').show?
+    raise Recusa, 'not_connected' unless conectado?
+
+    render json: { anuncios: Crm::MetaAds::ComentariosIa::AnunciosParaCuidar.new(conexao, visible: viewer).lista }
+  end
+
   def show
     lido = Rails.cache.fetch(chave_do_detalhe, expires_in: DETALHE_TTL) do
       load_alvo
@@ -148,6 +161,10 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
 
     @alvo = anuncio.alvo
     @fonte = Crm::MetaAds::ComentariosIa::Fonte.anuncio(anuncio, @alvo['networks'])
+  end
+
+  def viewer
+    @viewer ||= ::Crm::MetaAds::VisibleConversations.current
   end
 
   def conexao
