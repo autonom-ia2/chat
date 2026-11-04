@@ -90,11 +90,22 @@ RSpec.describe 'Autonomia canais ocupados', type: :request do
       waha = caixa.call(create(:channel_api, account: account, additional_attributes: { 'provider' => 'waha' }), 'Celular')
       api = caixa.call(create(:channel_api, account: account), 'WhatsApp antigo')
       instagram = caixa.call(create(:channel_instagram, account: account), 'Direct')
+      # Página do Facebook com o Instagram ligado é Instagram (Inbox#instagram?); Twilio no medium whatsapp é WhatsApp.
+      pagina = lambda do |instagram_id, nome|
+        create(:inbox, account: account, name: nome,
+                       channel: create(:channel_facebook_page, account: account, inbox: nil, instagram_id: instagram_id))
+      end
+      pagina_com_insta = pagina.call('17841400000000000', 'Página da loja')
+      pagina_sem_insta = pagina.call(nil, 'Instagram (só a página)')
+      twilio_zap = create(:channel_twilio_sms, :whatsapp, account: account).inbox
+      twilio_sms = create(:channel_twilio_sms, account: account).inbox
 
       get_canais
 
       canais = response.parsed_body['payload'].to_h { |item| [item['inbox_id'], item['canal']] }
-      expect(canais).to eq(whatsapp.id => 'whatsapp', waha.id => 'whatsapp', api.id => nil, instagram.id => 'instagram')
+      expect(canais).to include(whatsapp.id => 'whatsapp', waha.id => 'whatsapp', api.id => nil, instagram.id => 'instagram',
+                                pagina_com_insta.id => 'instagram', pagina_sem_insta.id => 'facebook',
+                                twilio_zap.id => 'whatsapp', twilio_sms.id => nil)
     end
 
     it 'names the native agent that answers an inbox and whether it is answering now' do

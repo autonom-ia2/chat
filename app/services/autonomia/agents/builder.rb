@@ -408,6 +408,9 @@ module Autonomia
         @materials_gate_decision = nil
         @ajuste_da_fase2 = nil
         @idioma_do_ajuste = nil
+        # #2490 — criação ou ajuste, lido ANTES do turno: o fechamento da criação grava a instrução no agente, e depois
+        # disso o adjust_mode? já diz "ajuste".
+        @criacao = !adjust_mode?
         # #1428 — o re-run de um ajuste do piloto que já gravou (mesmo token) não chama o Construtor de novo: vai direto
         # conferir e fechar, ANTES de olhar a chave. O turno nasceu no piloto; se a chave desligou no meio, voltar pelo
         # caminho legado aplicaria de novo. No ajuste do piloto, a credencial é resolvida uma vez no começo do turno.
@@ -990,8 +993,6 @@ module Autonomia
           # não repetir a mesma pergunta de sessões atrás para sempre. A pendência viva desta thread
           # continua em `next_question`.
           'pending_question' => '',
-          # #2490 — o canal que o dono pediu, para a Confira sugerir só a caixa dele (exposto no show da thread).
-          'canal_pedido' => canal_pedido_for(parsed['canal_pedido']),
           'draft_config' => {
             'name' => parsed['name'].to_s,
             'agent_type' => agent_type_for(parsed['agent_type']),
@@ -1087,7 +1088,7 @@ module Autonomia
           # no state (next_question) e o FE a injetava localmente — um refresh perdia o fio e o LLM
           # recebia a resposta ("sim/isso/o segundo") sem a pergunta anterior. Só grava se o
           # mark_ready! venceu (token ainda ativo — geração não superseded).
-          persist_assistant_turn!(parsed['next_question']) if @thread.mark_ready!(token, state: self.class.state_for(parsed))
+          persist_assistant_turn!(parsed['next_question']) if @thread.mark_ready!(token, state: estado_do_turno(parsed))
         else
           # GATE/P2 — FALLBACK de nome no fechamento: se o usuário mandou fechar mas nunca nomeou o
           # agente, derive um default pelo tipo em vez de deixar o agente vazio/"Novo agente" (T13).
@@ -1251,6 +1252,16 @@ module Autonomia
         @user_asked_to_close == true
       end
 
+      # #2490 — o state do turno com o canal que o dono pediu (a Confira sugere só a caixa dele; exposto no show da thread).
+      # Só na criação: a conversa de um ajuste não fala de canal, e o mark_ready! faz merge, então o pedido da criação
+      # continua no state. O ajuste da Fase 2 (AjusteConferido) usa o state_for puro pelo mesmo motivo.
+      def estado_do_turno(parsed)
+        estado = self.class.state_for(parsed)
+        return estado unless criacao?
+
+        estado.merge('canal_pedido' => self.class.canal_pedido_for(parsed['canal_pedido']))
+      end
+
       # Cria (ou atualiza) o Agent e aplica a config gerada de forma guardada pelo token. instruction/
       # scaffold ficam OCULTOS nas colunas; o jbuilder os filtra.
       def apply_to_agent(token, parsed)
@@ -1267,7 +1278,7 @@ module Autonomia
         # reprova e isto vira no-op — a geração nova é quem marca ready. Idempotente nos dois casos.
         @thread.mark_ready!(
           token,
-          state: self.class.state_for(parsed).merge('applied' => true, 'truncated_fields' => @truncated_fields.to_a)
+          state: estado_do_turno(parsed).merge('applied' => true, 'truncated_fields' => @truncated_fields.to_a)
         )
       end
 
@@ -1282,7 +1293,7 @@ module Autonomia
         attrs[:config] = (attrs[:config] || {}).merge('with_knowledge' => effective_with_knowledge)
         # #2490: o canal pedido também fica no agente, para a Confira de um rascunho reaberto (sem a thread na tela). Só na
         # criação: a conversa de um ajuste não fala de canal e apagaria o pedido (o merge do config preserva o que já existe).
-        attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido']) unless adjust_mode?
+        attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido']) if criacao?
         attrs
       end
 
@@ -1547,6 +1558,11 @@ module Autonomia
       # presença da `instruction`, conforme o spec.
       def adjust_mode?
         @thread.agent&.instruction.present?
+      end
+
+      # #2490 — o turno começou como criação (agente sem instrução)? Fora do run! (specs que chamam o apply direto), lê agora.
+      def criacao?
+        @criacao.nil? ? !adjust_mode? : @criacao
       end
 
       def no_materials_declared?

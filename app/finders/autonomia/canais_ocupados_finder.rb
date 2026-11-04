@@ -18,8 +18,9 @@
 # `alcanca` (regra G, #1788): quem pede pode pôr ou tirar agente desta caixa (membro ou inbox_manage). Sem `alcancavel`,
 #   true em todas.
 # `canal` (#2490): o canal da caixa, nos mesmos valores do canal que o dono pede ao Construtor
-#   (Autonomia::Agents::Builder::CANAIS_PEDIDOS), ou nil. Sai do tipo da caixa e, no Channel::Api, do provider: a WAHA é
-#   WhatsApp (a maioria das caixas WhatsApp da plataforma). Nunca do nome da caixa.
+#   (Autonomia::Agents::Builder::CANAIS_PEDIDOS), ou nil. Sai do tipo da caixa e de um campo do canal, nunca do nome da
+#   caixa: na Channel::Api, o provider (a WAHA é WhatsApp, a maioria das caixas WhatsApp da plataforma); na Twilio, o
+#   medium whatsapp (Inbox#twilio_whatsapp?); na página do Facebook, o instagram_id ligado (Inbox#instagram?).
 class Autonomia::CanaisOcupadosFinder
   EXTERNO = { kind: 'external' }.freeze
   CANAL_DO_TIPO = {
@@ -31,6 +32,14 @@ class Autonomia::CanaisOcupadosFinder
     'Channel::Telegram' => 'telegram'
   }.freeze
   PROVIDER_DA_API = Arel.sql("channel_api.additional_attributes ->> 'provider'")
+  MEDIUM_DA_TWILIO = Arel.sql('channel_twilio_sms.medium')
+  INSTAGRAM_DA_PAGINA = Arel.sql('channel_facebook_pages.instagram_id')
+  JUNCOES_DO_CANAL = [
+    "LEFT JOIN channel_api ON inboxes.channel_type = 'Channel::Api' AND channel_api.id = inboxes.channel_id",
+    "LEFT JOIN channel_twilio_sms ON inboxes.channel_type = 'Channel::TwilioSms' AND channel_twilio_sms.id = inboxes.channel_id",
+    "LEFT JOIN channel_facebook_pages ON inboxes.channel_type = 'Channel::FacebookPage' " \
+    'AND channel_facebook_pages.id = inboxes.channel_id'
+  ].freeze
 
   def initialize(account:, agents_scope:, alcancavel: nil)
     @account = account
@@ -43,9 +52,9 @@ class Autonomia::CanaisOcupadosFinder
   def call
     com_bot = caixas_com_bot
     robos_de_outro_sistema # sempre, para o número de consultas não depender das caixas
-    caixas.map do |inbox_id, name, channel_type, provider|
+    caixas.map do |inbox_id, name, channel_type, *campos_do_canal|
       ocupado_por = ocupante(inbox_id, com_bot)
-      { inbox_id: inbox_id, name: name, channel_type: channel_type, canal: canal(channel_type, provider), occupied_by: ocupado_por,
+      { inbox_id: inbox_id, name: name, channel_type: channel_type, canal: canal(channel_type, *campos_do_canal), occupied_by: ocupado_por,
         so_de_pessoas: ocupado_por.nil?, areas: areas_por_caixa.fetch(inbox_id, []),
         alcanca: @alcancavel.nil? || @alcancavel.alcanca_id?(inbox_id) }
     end
@@ -53,18 +62,19 @@ class Autonomia::CanaisOcupadosFinder
 
   private
 
-  # O provider da Channel::Api vem na mesma consulta das caixas (LEFT JOIN): a contagem de consultas não muda.
+  # Os campos do canal vêm na mesma consulta das caixas (LEFT JOIN): a contagem de consultas não muda.
   def caixas
-    @account.inboxes
-            .joins("LEFT JOIN channel_api ON inboxes.channel_type = 'Channel::Api' AND channel_api.id = inboxes.channel_id")
-            .order(:name, :id).pluck(:id, :name, :channel_type, PROVIDER_DA_API)
+    @account.inboxes.joins(JUNCOES_DO_CANAL.join(' '))
+            .order(:name, :id).pluck(:id, :name, :channel_type, PROVIDER_DA_API, MEDIUM_DA_TWILIO, INSTAGRAM_DA_PAGINA)
   end
 
-  def canal(channel_type, provider)
-    # A mesma regra do Channel::Api#waha_provider?.
-    return 'whatsapp' if channel_type == 'Channel::Api' && provider == 'waha'
-
-    CANAL_DO_TIPO[channel_type]
+  def canal(channel_type, provider, medium, instagram_id)
+    case channel_type
+    when 'Channel::Api' then ('whatsapp' if provider == 'waha') # Channel::Api#waha_provider?
+    when 'Channel::TwilioSms' then ('whatsapp' if medium == Channel::TwilioSms.media[:whatsapp]) # Inbox#twilio_whatsapp?
+    when 'Channel::FacebookPage' then instagram_id.present? ? 'instagram' : 'facebook' # Inbox#instagram?
+    else CANAL_DO_TIPO[channel_type]
+    end
   end
 
   def ocupante(inbox_id, com_bot)

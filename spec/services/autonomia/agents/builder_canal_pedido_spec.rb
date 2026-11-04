@@ -78,11 +78,15 @@ RSpec.describe Autonomia::Agents::Builder do
                                        enabled: true, instruction: 'Instrução fechada da Ana.',
                                        config: { 'canal_pedido' => 'instagram' })
     end
-    let(:thread) { Autonomia::Agents::BuildThread.create!(account: account, agent: agente) }
+    let(:thread) do
+      Autonomia::Agents::BuildThread.create!(account: account, agent: agente, state: { 'canal_pedido' => 'instagram' })
+    end
 
-    it 'keeps the channel asked at creation (the adjustment talk does not mention it)' do
+    it 'keeps the channel asked at creation in the agent and in the thread (the adjustment talk does not mention it)' do
       run_turn
       expect(agente.reload.config['canal_pedido']).to eq('instagram')
+      # A tela lê a thread antes do agente: um "nenhum" do ajuste aqui traria o defeito de volta.
+      expect(thread.state['canal_pedido']).to eq('instagram')
     end
   end
 
