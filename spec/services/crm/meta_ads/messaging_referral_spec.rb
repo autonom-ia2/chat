@@ -111,12 +111,17 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
   end
 
   # Página que é caixa de duas contas: a mensagem chega nas duas, e o anúncio vai só para a conta que o conhece.
-  it 'Página de duas contas: o anúncio vai só para a conversa da conta que o conhece' do
-    page = create(:channel_facebook_page, account: account)
-    other_page = create(:channel_facebook_page, page_id: page.page_id, account: create(:account))
-    mine = create(:conversation, account: account, inbox: page.inbox)
-    theirs = create(:conversation, account: other_page.account, inbox: other_page.inbox)
-    Crm::MetaAdObject.create!(account: account, meta_object_id: '120200000000000001', object_type: 'ad', fetched_at: Time.current)
+  it 'Página de duas contas: o anúncio vai só para a conta que o conhece; se nenhuma conhece, para as duas' do
+    page = create(:channel_facebook_page)
+    other_page = create(:channel_facebook_page, page_id: page.page_id)
+    mine = create(:conversation, account: page.inbox.account, inbox: page.inbox)
+    theirs = create(:conversation, account: other_page.inbox.account, inbox: other_page.inbox)
+    new_ad = ad_referral.merge('ad_id' => '120200000000000009')
+
+    expect(described_class.attribute!(mine, new_ad, source: messenger, event_id: 'mid.0')).to be(true)
+    expect(described_class.attribute!(theirs, new_ad, source: messenger, event_id: 'mid.0')).to be(true)
+
+    Crm::MetaAdObject.create!(account: mine.account, meta_object_id: '120200000000000001', object_type: 'ad', fetched_at: Time.current)
 
     expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.1')).to be(true)
     expect(described_class.attribute!(theirs, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)

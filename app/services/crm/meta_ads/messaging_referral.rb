@@ -61,7 +61,9 @@ module Crm::MetaAds::MessagingReferral
   end
 
   # Os cliques guardados vão para a conversa nova. Lê e apaga de uma vez: duas mensagens ao mesmo tempo não levam o
-  # mesmo clique. Redis fora não derruba a mensagem: o clique se perde e fica no log.
+  # mesmo clique. Redis fora não derruba a mensagem: o clique se perde e fica no log. Se alguém reabrir a conversa
+  # encerrada e a pessoa escrever nela, o clique fica guardado e vai para a próxima conversa nova do contato no mesmo
+  # dia (PENDING_TTL): perda aceita, a conversa reaberta não tem o toque.
   def attribute_pending!(conversation)
     key = pending_key(conversation.contact_inbox_id)
     pending = Redis::Alfred.with { |conn| conn.multi { |transaction| [transaction.lrange(key, 0, -1), transaction.del(key)] }.first }
@@ -90,16 +92,24 @@ module Crm::MetaAds::MessagingReferral
   end
 
   # A mesma Página pode ser caixa de mais de uma conta (Integrations::Facebook::MessageCreator grava a mensagem em
-  # todas): o anúncio só vai para a conversa da conta que o conhece (gasto ou nome do anúncio). Página de uma conta só
-  # grava sempre, mesmo o anúncio novo que a coleta ainda não trouxe.
+  # todas): se alguma conta da Página conhece o anúncio (gasto ou nome), ele vai só para a conversa dela. Se nenhuma
+  # conhece (anúncio novo, antes da coleta), vai para todas, para o clique não se perder. Página de uma conta só grava
+  # sempre.
   def foreign_ad?(conversation, ad_id)
     channel = conversation.inbox&.channel
     return false unless channel.is_a?(Channel::FacebookPage)
-    return false unless Channel::FacebookPage.where(page_id: channel.page_id).where.not(id: channel.id).exists?
 
-    account_id = conversation.account_id
-    Crm::MetaAdObject.where(account_id: account_id, meta_object_id: ad_id).none? &&
-      Crm::MetaAdInsightDaily.where(account_id: account_id, ad_id: ad_id).none?
+    others = Inbox.where(channel_type: channel.class.name,
+                         channel_id: Channel::FacebookPage.where(page_id: channel.page_id).where.not(id: channel.id).select(:id))
+                  .pluck(:account_id)
+    return false if others.empty? || known_ad?(conversation.account_id, ad_id)
+
+    known_ad?(others, ad_id)
+  end
+
+  def known_ad?(account_ids, ad_id)
+    Crm::MetaAdObject.exists?(account_id: account_ids, meta_object_id: ad_id) ||
+      Crm::MetaAdInsightDaily.exists?(account_id: account_ids, ad_id: ad_id)
   end
 
   # O referral do anúncio no formato que o Ctwa::CampaignBuilder lê, ou nil quando não é anúncio.

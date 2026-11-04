@@ -77,5 +77,6 @@ Rails.application.reloader.to_prepare do
     Crm::MetaAds::MessagingReferralJob.enqueue_for('messenger', referral.messaging)
   rescue StandardError => e
     Rails.logger.warn("[facebook_messenger] referral não enfileirado: #{e.class}")
+    ChatwootExceptionTracker.new(e).capture_exception
   end
 end
