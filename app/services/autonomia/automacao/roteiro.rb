@@ -30,6 +30,14 @@ class Autonomia::Automacao::Roteiro
     Array(passo[ramo]).first || seguinte(passo['id'])
   end
 
+  # O primeiro passo do caminho que o "decidir" escolheu (a chave, ou `nenhum`); caminho vazio, o que vem depois.
+  def entrar_no_caminho(passo, chave)
+    caminho = Array(passo['caminhos']).find { |item| item['chave'] == chave }
+    return entrar(passo, ::Autonomia::Automacao::Receita::NENHUM) unless caminho
+
+    Array(caminho['passos']).first || seguinte(passo['id'])
+  end
+
   private
 
   def mapear(lista, pai)

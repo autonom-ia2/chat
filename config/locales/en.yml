@@ -542,6 +542,14 @@ en:
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."
         sem_conversa: "The card has no main conversation. Nothing was sent."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
+        dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
+        ia_chave_recusada: "The AI provider refused the account's key. Check the AI key in the integrations."
+        ia_desligada: 'AI steps are off for this account. The AI was not called.'
+        ia_indisponivel: 'The AI did not answer; the automation will try again.'
+        ia_nao_configurada: "This account has no AI key of its own. Set it in the integrations so AI steps can run."
+        ia_recusou: 'The AI provider refused this request.'
+        resposta_fora_do_schema: 'The AI answered in a format the automation cannot use. Nothing was done.'
+        tipo_desconhecido: 'This step type is unknown to the automation engine. The automation stopped here without doing it.'
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'
@@ -567,6 +575,12 @@ en:
         campo_repetido: "Step %{passo}: %{chave} appears twice."
       nota:
         laco: "Automation %{nome} stopped in this conversation: the other side replied in under %{segundos} seconds to %{trocas} automation messages, with no pause and no one from the team in between, like a bot. Check it before letting it continue here."
+        decidiu: 'Automation chose *%{nome}*: %{motivo}'
+        nenhum: 'None applies'
+        sugestao: "Automation suggestion (review before sending):\n\n%{texto}"
+        resumo: "Automation summary:\n\n%{texto}"
+      ia:
+        gravar: 'Save what the AI found in the conversation'
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'

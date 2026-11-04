@@ -30,6 +30,8 @@ class Autonomia::Automacao::Executor
   Execucao = ::Autonomia::Automacao::Execucao
   # Passos que falam com gente (F4): só com a flag da F4.
   NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso }.freeze
+  # Os passos de IA (F7, #2500).
+  include ::Autonomia::Automacao::IaNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -77,8 +79,8 @@ class Autonomia::Automacao::Executor
     finalizar('concluida') unless @parou
   end
 
-  # O próximo passo, ou nil quando a rodada parou (espera, fim, erro).
-  def dar(passo)
+  # O próximo passo, ou nil quando a rodada parou (espera, fim, erro). Um tipo por linha: a complexidade é a lista.
+  def dar(passo) # rubocop:disable Metrics/CyclomaticComplexity
     @passo_atual = passo['id']
     case passo['tipo']
     when 'esperar' then esperar(passo)
@@ -86,7 +88,11 @@ class Autonomia::Automacao::Executor
     when 'se' then se(passo)
     when 'acao' then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
+    when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
+    # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha
+    # como "concluida" sem ter feito nada.
+    else encerrar(passo['id'], 'falhou', 'tipo_desconhecido', 'falhou', 'tipo' => passo['tipo'].to_s)
     end
   end
 
@@ -242,18 +248,14 @@ class Autonomia::Automacao::Executor
                                              resultado: resultado, motivo: motivo, dados: dados)
   end
 
-  def condicao?(condicao)
-    ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
-  end
+  def condicao?(condicao) = ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
 
   def duracao(duracao)
     duracao['valor'].public_send(UNIDADES.fetch(duracao['unidade']))
   end
 
   # Lido do banco a cada reconferência: o alvo pode ter sido apagado no meio da rodada.
-  def alvo
-    @alvo ||= @execucao.alvo_type.constantize.find_by(id: @execucao.alvo_id)
-  end
+  def alvo = (@alvo ||= @execucao.alvo_type.constantize.find_by(id: @execucao.alvo_id))
 
   def valores
     @valores ||= ::Autonomia::Automacao::Valores.new(conversa: alvo)

@@ -1031,6 +1031,14 @@ pt_BR:
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
         sem_conversa: "O card não tem conversa principal. Nada foi mandado."
         texto_vazio: "O texto ficou em branco depois de montado. A mensagem não foi mandada."
+        dado_ausente: 'A IA não achou na conversa nenhum dos dados pedidos. Nada foi gravado.'
+        ia_chave_recusada: 'O provedor de IA recusou a chave da conta. Confira a chave de IA nas integrações.'
+        ia_desligada: 'Os passos de IA estão desligados nesta conta. A IA não foi chamada.'
+        ia_indisponivel: 'A IA não respondeu; a automação vai tentar de novo.'
+        ia_nao_configurada: 'Esta conta não tem chave de IA própria. Cadastre nas integrações para os passos de IA rodarem.'
+        ia_recusou: 'O provedor de IA recusou este pedido.'
+        resposta_fora_do_schema: 'A IA respondeu num formato que a automação não usa. Nada foi feito.'
+        tipo_desconhecido: 'O motor da automação não conhece este tipo de passo. A automação parou aqui sem fazê-lo.'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
@@ -1056,6 +1064,12 @@ pt_BR:
         campo_repetido: "Passo %{passo}: %{chave} aparece duas vezes."
       nota:
         laco: "A automação %{nome} parou nesta conversa: o outro lado respondeu em menos de %{segundos} segundos a %{trocas} mensagens da automação, sem pausa e sem ninguém da equipe no meio, como um robô. Confira antes de deixar ela seguir aqui."
+        decidiu: 'A automação escolheu *%{nome}*: %{motivo}'
+        nenhum: 'Nenhum se aplica'
+        sugestao: "Sugestão da automação (revise antes de mandar):\n\n%{texto}"
+        resumo: "Resumo da automação:\n\n%{texto}"
+      ia:
+        gravar: 'Gravar o que a IA achou na conversa'
     automacoes:
       ensaio:
         condicoes_invalidas: 'Esta automação tem uma condição que a plataforma não aceita, então não dá para testar. Corrija no modo manual.'
