@@ -413,4 +413,39 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(dados_do(execucao, 'p1')).to include('pessoas' => [admin.id])
     end
   end
+
+  # O #2508: no card, o passo age na conversa principal (NaConversa). Card sem ela não tem o que ler: pula sem pagar a IA.
+  describe 'alvo card' do
+    let(:funil) { create_crm_pipeline(account: account, user: admin) }
+
+    let(:dois_caminhos) { [caminho('Sinistro', 'sinistro'), caminho('Cotação', 'cotacao')] }
+
+    def card(principal)
+      Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Pedido', currency: 'BRL',
+                        primary_conversation: principal)
+    end
+
+    it 'sem conversa principal: os quatro passos pulam com sem_conversa, sem chamar a IA', :aggregate_failures do
+      atributo('placa', 'conversation_attribute')
+      openai_devolve({ 'caminho' => 'sinistro', 'motivo' => 'x' })
+      passos = [decidir(caminhos: dois_caminhos).merge('id' => 'p1'),
+                extrair([campo('placa', 'conversa.atributos.placa')]).merge('id' => 'p2'),
+                escrever('sugestao').merge('id' => 'p3'), resumir('nota').merge('id' => 'p4')]
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, passos), card(nil))
+
+      expect(registros(execucao)).to eq(%w[p1 p2 p3 p4].map { |id| [id, 'pulado', 'sem_conversa'] })
+      expect([execucao.reload.estado, corpos]).to eq(['concluida', []])
+    end
+
+    it 'com conversa principal: decide lendo a conversa e deixa a nota nela', :aggregate_failures do
+      openai_devolve({ 'caminho' => 'sinistro', 'motivo' => 'Bateu o carro' })
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [decidir(caminhos: dois_caminhos)]), card(conversa))
+
+      expect([execucao.reload.estado, registros(execucao).first]).to eq(['concluida', ['p1', 'ok', nil]])
+      expect(corpos.first.dig('input', 0, 'content', 0, 'text')).to include('Bati o carro ontem')
+      expect(conversa.messages.where(private: true).last.content).to include('Sinistro', 'Bateu o carro')
+    end
+  end
 end
