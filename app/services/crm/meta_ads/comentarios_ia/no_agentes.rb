@@ -29,8 +29,8 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   end
 
   # care: o cuidado. alvo e fonte: os do Painel (Fonte.post ou Fonte.anuncio). painel: o Painel do mesmo alvo.
-  # no_privado: a lista do grupo "no privado" (NoPrivado), só no detalhe.
-  def initialize(care:, fonte:, painel:, no_privado: nil)
+  # no_privado: a lista do grupo "no privado" (NoPrivado).
+  def initialize(care:, fonte:, painel:, no_privado:)
     @care = care
     @fonte = fonte
     @painel = painel

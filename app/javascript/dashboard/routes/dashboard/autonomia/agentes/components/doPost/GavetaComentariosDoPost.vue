@@ -5,7 +5,8 @@ import AgenteGaveta from '../AgenteGaveta.vue';
 
 // #2469 (PR 3a do #2436) — "Comentários" do cartão do post, em três grupos: no privado (#2481: quem recebeu da IA no
 // privado, com o comentário que abriu a conversa e o "Ver conversa", só as conversas que a pessoa vê), esperando você e
-// não respondo (o que a IA leu e não era o caso, e o que ela escondeu). Os grupos vêm prontos do servidor: a mesma conta do cartão e da página. Cada comentário diz por quê, com
+// não respondo (o que a IA leu e não era o caso, e o que ela escondeu). Os grupos vêm prontos do servidor: a mesma
+// conta do cartão e da página. Cada comentário diz por quê, com
 // os textos da tela do cuidado, e leva à conversa (quando há uma que a pessoa vê) ou ao post para responder.
 const props = defineProps({
   detalhe: { type: Object, required: true },
@@ -108,6 +109,9 @@ const alvo = computed(() =>
               v-if="item.conversation_path"
               data-ver-conversa
               :href="item.conversation_path"
+              :aria-label="
+                t(`${KEY}.VER_CONVERSA_DE`, { contato: item.contato })
+              "
               class="inline-flex items-center gap-1 text-sm font-semibold underline min-h-11 w-fit text-n-blue-11"
             >
               {{ t(`${KEY}.VER_CONVERSA`) }}

@@ -2963,7 +2963,8 @@
         "VER_TODOS": "Ver todos no {alvo}",
         "NENHUM": "Por enquanto, nada aqui.",
         "SEM_LEITURA": "Não consegui ler os comentários agora. Tente de novo daqui a pouco.",
-        "RESPONDEU": "Já respondeu"
+        "RESPONDEU": "Respondeu a mensagem",
+        "VER_CONVERSA_DE": "Ver a conversa com {contato}"
       }
     }
   }
