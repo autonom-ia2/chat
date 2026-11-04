@@ -908,6 +908,41 @@ describe('useConversaDeCriacao', () => {
       await nextTick();
       expect(conversa.falhou.value).toBe(false);
     });
+
+    it('leaves no timer behind when the screen leaves during the generation', async () => {
+      const { conversa, wrapper } = montar();
+      await processando();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+      wrapper.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+    });
+
+    it('clears the window and the warning when the thread changes (status back to empty)', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+
+      comThread(8);
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+
+      // Uma geração que sai antes do prazo não deixa o relógio dela para trás.
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+      await nextTick();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 
   it('stops polling and clears the stores when leaving', () => {
