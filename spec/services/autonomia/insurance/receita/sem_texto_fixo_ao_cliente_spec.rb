@@ -45,9 +45,10 @@ module TextoAoCliente
       { tipo: :nota_privada, motivo: 'a nota da equipe no fecho da cotação' },
     'app/services/autonomia/automacao/nota.rb::Autonomia::Automacao::Nota#criar' =>
       { tipo: :nota_privada, motivo: 'o aviso da automação à equipe, com menção, e a parada do anti-laço (#2414 F4)' },
-    'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#executar' =>
-      { tipo: :outro, motivo: 'o texto que o dono da conta escreveu no passo "mensagem" da automação (#2414 F4): não é ' \
-                              'texto nosso nem do modelo; a receita de ramo não usa este passo' },
+    'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#mandar' =>
+      { tipo: :outro, motivo: 'o texto que o dono da conta escreveu no passo "mensagem" da automação (#2414 F4), ou o que ' \
+                              'o modelo escreveu no passo "escrever" (#2500 F7): nunca texto nosso; a receita de ramo não ' \
+                              'usa nenhum dos dois' },
     'app/services/autonomia/insurance/nota_na_hora.rb::Autonomia::Insurance::NotaNaHora#criar' =>
       { tipo: :nota_privada, motivo: 'a falha da cotação sem execução nem passagem (rodadas, laço, proposta), para a equipe na hora' }
   }.freeze
