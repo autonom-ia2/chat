@@ -17,6 +17,13 @@ module Autonomia::Automacao::Motor
     ligado?(account) && account.feature_enabled?(FLAG_MENSAGENS)
   end
 
+  # F7: os passos de IA (decidir, extrair, escrever, resumir), só com o motor ligado.
+  FLAG_IA = 'automacao_ia'.freeze
+
+  def self.ia?(account)
+    ligado?(account) && account.feature_enabled?(FLAG_IA)
+  end
+
   # A origem da automação na cadeia comum (D6), ao lado de "regra:<id>" e "etapa:<id>".
   def self.origem(definicao)
     "automacao:#{definicao.id}"

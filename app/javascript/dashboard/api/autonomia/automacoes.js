@@ -31,6 +31,11 @@ class AutomacoesAPI extends ApiClient {
   desligar(id) {
     return axios.post(`${this.url}/${id}/desligar`);
   }
+
+  // "O que aconteceu" (#2498): 20 execuções por página, a mais nova primeiro.
+  historico(id, pagina = 1) {
+    return axios.get(`${this.url}/${id}/historico`, { params: { pagina } });
+  }
 }
 
 export default new AutomacoesAPI();

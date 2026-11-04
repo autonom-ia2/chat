@@ -12,6 +12,7 @@ import LivreConfira from '../components/LivreConfira.vue';
 import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
 import LivreAlterar from '../components/LivreAlterar.vue';
 import LivreLigar from '../components/LivreLigar.vue';
+import LivreHistorico from '../components/LivreHistorico.vue';
 import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/guiada/DialogoDaCasa.vue';
 import { carregarCatalogo, novoPasso, useCatalogo } from '../catalogo';
 import {
@@ -435,6 +436,12 @@ onMounted(() => {
                 link
                 class="self-start min-h-11"
                 @click="alternarTudo"
+              />
+              <LivreHistorico
+                v-if="automacao?.id && catalogo"
+                :automacao-id="automacao.id"
+                :catalogo="catalogo"
+                :account-id="Number(route.params.accountId)"
               />
             </div>
             <aside class="flex flex-col gap-3 lg:sticky lg:top-6">

@@ -1,6 +1,7 @@
 {
   "AUTOMACAO_LIVRE": {
     "GRUPOS": {
+      "IA": "Artificial intelligence",
       "MENSAGEM": "Messages",
       "CONVERSA": "Conversation",
       "CONTATO": "Contact and company",
@@ -79,7 +80,11 @@
       "ATRIBUTO_CRIAR": "Create a custom field",
       "ATRIBUTO_ALTERAR": "Change a custom field",
       "MENSAGEM": "Send a message to the customer",
-      "AVISAR": "Notify the team"
+      "AVISAR": "Notify the team",
+      "DECIDIR": "AI chooses the path",
+      "EXTRAIR": "AI pulls data from the conversation",
+      "ESCREVER": "AI writes a text",
+      "RESUMIR": "AI summarizes the conversation"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -118,7 +123,16 @@
       "ATTRIBUTE_DESCRIPTION": "What it is for",
       "ATTRIBUTE_VALUES": "List options",
       "TEXTO": "What to say",
-      "PARA": "Who to notify"
+      "PARA": "Who to notify",
+      "LE": "What the AI reads",
+      "PERGUNTA": "What the AI should decide",
+      "CAMINHOS": "Paths",
+      "NENHUM": "None applies",
+      "CAMPOS": "What to look for",
+      "TROCAR": "Replace what was already filled in",
+      "INSTRUCAO": "What the AI should write",
+      "DESTINO": "Where it goes",
+      "LINHAS": "Summary length (lines)"
     },
     "OPCOES": {
       "STATUS": {
@@ -261,7 +275,13 @@
       "RESPONSAVEL": "whoever handles the conversation",
       "TIMES": "1 team | {n} teams",
       "PESSOAS": "1 person | {n} people",
-      "FALTA_TEXTO": "the text is missing"
+      "FALTA_TEXTO": "the text is missing",
+      "DECIDIR": "AI decides: “{pergunta}” ({n} paths)",
+      "EXTRAIR": "AI looks in the conversation for: {lista}",
+      "ESCREVER_MENSAGEM": "AI writes and sends to the customer: “{instrucao}”",
+      "ESCREVER_SUGESTAO": "AI writes a suggestion for the team: “{instrucao}”",
+      "RESUMIR_NOTA": "AI summarizes the conversation in a note",
+      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}"
     },
     "RAMOS": {
       "ENTAO": "Then",
@@ -314,6 +334,82 @@
       "DESLIGAR": "Turn off",
       "SO_LEITURA": "You can see this automation. To change it, ask who looks after automations.",
       "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
+    },
+    "IA": {
+      "LEITURAS": {
+        "MENSAGENS_RECENTES": "The latest customer messages",
+        "MENSAGENS_COM_RESPOSTAS": "The latest customer and team messages",
+        "ULTIMA_MENSAGEM": "The message that started the automation",
+        "CONVERSA": "Channel, inbox, labels and status of the conversation",
+        "CONTATO": "Contact name and fields (never email or phone)",
+        "EMPRESA": "Company name and fields"
+      },
+      "CAMINHO": {
+        "NOME": "Path name",
+        "QUANDO": "When to follow it",
+        "NOVO": "Add path",
+        "TIRAR": "Remove path",
+        "DICA": "From 2 to 8 paths. When the conversation is unclear, the AI picks “None applies” instead of guessing.",
+        "SEM_LETRA": "The path name needs at least one letter.",
+        "RESERVADO": "“None” is already the path for when nothing applies. Pick another name.",
+        "REPETIDO": "There is already a path with this name."
+      },
+      "CAMPO": {
+        "CHAVE": "What to look for",
+        "DESCRICAO": "How to recognize it",
+        "DESTINO": "Where to save",
+        "NOVO": "Look for one more item",
+        "TIRAR": "Remove",
+        "DICA": "The AI fills in only what is written in the conversation. If it is not there, the field stays empty and the history says so."
+      },
+      "DESTINOS": {
+        "MENSAGEM": "Send to the customer",
+        "SUGESTAO": "Leave as a suggestion for the team to review",
+        "NOTA": "Note in the conversation",
+        "AVISAR": "Notify the team"
+      },
+      "DESTINO_GRAVAR": {
+        "CONTATO_NOME": "Contact name",
+        "EMPRESA_NOME": "Company name",
+        "CONTATO_ATRIBUTO": "Contact: {nome}",
+        "CONVERSA_ATRIBUTO": "Conversation: {nome}"
+      }
+    },
+    "HISTORICO": {
+      "TITULO": "What happened",
+      "SUBTITULO": "Every time this automation ran in the last 30 days.",
+      "CARREGANDO": "Loading what happened",
+      "ERRO": "Could not load what happened right now.",
+      "VAZIO": "It has not run yet.",
+      "VER_MAIS": "Show more",
+      "CONVERSA_DE": "Conversation with {nome}",
+      "CONVERSA_N": "Conversation #{n}",
+      "OCULTA": "A conversation",
+      "OCULTA_DICA": "In an inbox you can't see",
+      "ABRIR_CONVERSA": "Open the conversation",
+      "VER_MENSAGEM": "See the message",
+      "ESTADOS": {
+        "ANDANDO": "running",
+        "ESPERANDO": "waiting",
+        "CONCLUIDA": "finished",
+        "PARADA": "stopped",
+        "FALHOU": "error",
+        "INTERROMPIDA": "interrupted"
+      },
+      "ESPERANDO_ATE": "waiting until {quando}",
+      "PULOU": "Skipped: {frase}",
+      "NAO_FEZ": "Did not do: {frase}",
+      "INICIO": "Did not start",
+      "PASSO_SUMIU": "A step that is no longer in this version",
+      "SEGUIU_POR": "Took: {ramo}",
+      "ESPERA_ATE": "Waits until {quando}",
+      "TENTATIVA": "Attempt {n}",
+      "IA": "AI: US$ {valor}",
+      "SEMANA": {
+        "NADA": "Has not run this week",
+        "RODOU": "Ran once this week | Ran {n} times this week",
+        "PAROU": "1 stopped | {n} stopped"
+      }
     }
   }
 }

@@ -17,7 +17,7 @@
 # `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
 # `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
 
-grupos: [MENSAGEM, CONVERSA, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
+grupos: [IA, MENSAGEM, CONVERSA, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
 
 nativos:
   esperar: { grupo: CONTROLE }
@@ -28,6 +28,11 @@ nativos:
   # (passo_desligado), e o executor, ao rodar (mensagens_desligadas).
   mensagem: { grupo: MENSAGEM, requer: automacao_mensagens }
   avisar: { grupo: MENSAGEM, requer: automacao_mensagens }
+  # F7: os passos de IA, na chave da própria conta. Quem recusa de verdade é a Receita, ao salvar (ia_desligada).
+  decidir: { grupo: IA, requer: automacao_ia }
+  extrair: { grupo: IA, requer: automacao_ia }
+  escrever: { grupo: IA, requer: automacao_ia }
+  resumir: { grupo: IA, requer: automacao_ia }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
 # mostra quando tiver as peças.

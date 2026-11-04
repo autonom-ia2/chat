@@ -9,6 +9,8 @@ defineProps({
   quando: { type: String, required: true },
   primeiro: { type: String, default: '' },
   outros: { type: Number, default: 0 },
+  // #2498 — "Rodou 12 vezes esta semana · 1 parou". A antiga não tem.
+  fato: { type: String, default: '' },
   ativa: { type: Boolean, default: false },
   antiga: { type: Boolean, default: false },
   podeMudar: { type: Boolean, default: false },
@@ -76,6 +78,14 @@ const emit = defineEmits(['abrir', 'alternar']);
         <span v-if="outros > 0" class="text-sm text-n-slate-10">
           {{ $t('AUTOMACAO_LIVRE.LISTA.MAIS_PASSOS', { n: outros }, outros) }}
         </span>
+      </span>
+      <span
+        v-if="fato"
+        data-fato
+        class="flex items-center gap-1.5 text-sm text-n-slate-11"
+      >
+        <span class="i-lucide-activity size-4" aria-hidden="true" />
+        {{ fato }}
       </span>
     </button>
     <Button
