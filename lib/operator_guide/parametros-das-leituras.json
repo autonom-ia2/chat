@@ -1071,6 +1071,10 @@
       "updated_within"
     ]
   },
+  "conversations/:conversation_id/comentario": {
+    "controller": "api/v1/accounts/conversations/comentario#show",
+    "parametros": []
+  },
   "conversations/:conversation_id/draft_messages": {
     "controller": "api/v1/accounts/conversations/draft_messages#show",
     "parametros": []

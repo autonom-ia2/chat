@@ -173,6 +173,7 @@ fora:
       - conversations/contact_info_requests
       - conversations/draft_messages
       - conversations/direct_uploads
+      - conversations/comentario
       - conversa_canal/encaminhamentos
       - conversa_canal/reacoes
       - conversa_canal/convites_do_email
