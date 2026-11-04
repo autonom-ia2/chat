@@ -11,14 +11,15 @@ vi.mock(
   () => ({ useEmailEditor: () => editor.api })
 );
 const dispatch = vi.hoisted(() => vi.fn(() => Promise.resolve({})));
+const campaigns = vi.hoisted(() => ({}));
 vi.mock('dashboard/composables/store', async () => {
-  const { computed } = await import('vue');
+  const { computed, ref: vueRef } = await import('vue');
+  campaigns.list = vueRef([]);
   return {
     useStore: () => ({ dispatch }),
     useMapGetter: key =>
       computed(() => {
-        if (key === 'emailCampaigns/getCampaigns')
-          return [{ id: 7, name: 'Outubro', body_mjml: '<mjml></mjml>' }];
+        if (key === 'emailCampaigns/getCampaigns') return campaigns.list.value;
         if (key === 'emailCampaigns/getUIFlags') return {};
         return { email: 'gestora@empresa.com.br' };
       }),
@@ -59,6 +60,9 @@ afterAll(() => {
 });
 
 const mountWith = getMjml => {
+  campaigns.list.value = [
+    { id: 7, name: 'Outubro', body_mjml: '<mjml></mjml>' },
+  ];
   editor.api = {
     isReady: ref(true),
     device: ref('desktop'),
@@ -176,5 +180,68 @@ describe('EmailBuilderPage — failed save', () => {
     expect(useAlert).toHaveBeenCalledWith(
       'Could not save the campaign, try again'
     );
+  });
+});
+
+// #2545: a draft without a subject comes from the server as null. Save used to break on null.trim().
+describe('EmailBuilderPage — campaign without a subject', () => {
+  const loadWithoutSubject = async wrapper => {
+    campaigns.list.value = [
+      { id: 7, name: 'Outubro', body_mjml: '<mjml></mjml>', subject: null },
+    ];
+    await wrapper.vm.$nextTick();
+  };
+
+  it('saves the draft with an empty subject', async () => {
+    const wrapper = mountWith(vi.fn(() => '<mjml></mjml>'));
+    await loadWithoutSubject(wrapper);
+
+    await button(wrapper, 'Save').trigger('click');
+    await flushPromises();
+
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith(
+      'emailCampaigns/update',
+      expect.objectContaining({ id: 7, subject: '' })
+    );
+    expect(useAlert).toHaveBeenCalledWith('Campaign saved successfully');
+  });
+
+  it('goes to "Review and send" without breaking', async () => {
+    const wrapper = mountWith(vi.fn(() => '<mjml></mjml>'));
+    await loadWithoutSubject(wrapper);
+
+    await button(wrapper, 'Review and send').trigger('click');
+    await flushPromises();
+
+    expect(consoleError).not.toHaveBeenCalled();
+    expect(dispatch).toHaveBeenCalledWith(
+      'emailCampaigns/update',
+      expect.objectContaining({ id: 7, subject: '' })
+    );
+  });
+
+  it('asks for the subject before a test send and opens Email details', async () => {
+    const wrapper = mountWith(vi.fn(() => '<mjml></mjml>'));
+    await loadWithoutSubject(wrapper);
+
+    await wrapper.find('button[aria-label="Send test"]').trigger('click');
+    wrapper
+      .findComponent({ name: 'TestSendForm' })
+      .vm.$emit('send', ['gestora@empresa.com.br']);
+    await flushPromises();
+
+    expect(dispatch).not.toHaveBeenCalledWith(
+      'emailCampaigns/sendTest',
+      expect.anything()
+    );
+    expect(
+      wrapper.findComponent({ name: 'TestSendForm' }).props('errorMessage')
+    ).toBe('Add the subject in Email details.');
+    expect(
+      wrapper
+        .find('button[aria-label="Email details"]')
+        .attributes('aria-expanded')
+    ).toBe('true');
   });
 });
