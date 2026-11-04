@@ -5,6 +5,8 @@ class Autonomia::Automacao::DefinicaoPolicy < ApplicationPolicy
   def index? = ver?
   def show? = ver?
   def historico? = ver?
+  def ensaio? = ver?
+  def ensaio_novo? = ver?
   def create? = gerenciar?
   def update? = gerenciar?
   def ligar? = gerenciar?
