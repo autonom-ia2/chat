@@ -37,9 +37,9 @@ import { useFase2 } from './useFase2';
 export const ESPERA_DEMORANDO_MS = 60000;
 // #2489 — o servidor só dá a geração por perdida depois de 5 min parada (BuildThread::STALE_PROCESSING_AFTER, a partir do
 // último toque no updated_at) e só então aceita refazê-la. O prazo da tela conta de quando o status vira `processing`
-// (o mais perto disso que a tela vê), com folga; se o servidor ainda achar a geração viva, o "Tentar de novo" recebe 409 e
-// volta a esperar; passado, ela oferece "Tentar de novo" em vez de 30 min de "Pensando…". Gerar ou ajustar o
-// agente leva até ~4 min em produção (p90 136 s), abaixo do prazo.
+// (o mais perto disso que a tela vê), com folga. Passado o prazo, a tela oferece "Tentar de novo" em vez de 30 min de
+// "Pensando…"; se o servidor ainda achar a geração viva, o pedido recebe 409 e a tela volta a esperar. Gerar ou ajustar
+// o agente leva até ~4 min em produção (p90 136 s), abaixo do prazo.
 export const PRAZO_DA_RESPOSTA_MS = 5 * 60 * 1000 + 15000;
 // #2489 — teto da espera do turno pelas subidas de material: vencido, o turno sai e leva os nomes
 // do que ainda está subindo (o Construtor diz que está a caminho).
@@ -609,7 +609,7 @@ export function useConversaDeCriacao({
       );
   };
 
-  const tentarDeNovo = () => {
+  const fazerTentativa = () => {
     if (esgotou.value && threadId.value) return refazerDepoisDoPrazo();
     const turnoNaoChegou = erroDaStore.value === 'send';
     store.commit('autonomiaBuildThreads/SET_ERROR', null);
@@ -624,6 +624,17 @@ export function useConversaDeCriacao({
         );
     }
     return abrir();
+  };
+
+  // #2489 — um pedido por vez: dois cliques antes da resposta não mandam dois retries (o segundo cairia no caminho
+  // antigo, porque o primeiro já tirou o aviso do prazo). O segundo recebe a mesma promessa.
+  let tentativaEmAndamento = null;
+  const tentarDeNovo = () => {
+    if (tentativaEmAndamento) return tentativaEmAndamento;
+    tentativaEmAndamento = Promise.resolve(fazerTentativa()).finally(() => {
+      tentativaEmAndamento = null;
+    });
+    return tentativaEmAndamento;
   };
 
   const sinalDeFechar = () => t('AGENTS.BUILDER.FINALIZE_SIGNAL');
