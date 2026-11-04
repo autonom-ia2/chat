@@ -248,8 +248,11 @@ RSpec.describe Crm::MetaAds::InstagramComments do
 
       expect(row).to include(id: 'c9', text: 'Temos sim', can_reply: false)
       expect(row[:author]).to include(username: 'lojaexemplo', is_page: true)
-      expect(Crm::MetaAdsCommentAction.sole).to have_attributes(account_id: account.id, network: 'instagram', ad_id: ad_id,
-                                                                comment_id: 'c9', action: 'page_reply', actor: 'user', user_id: user.id)
+      expect(Crm::MetaAdsCommentAction.find_by!(action: 'page_reply'))
+        .to have_attributes(account_id: account.id, network: 'instagram', ad_id: ad_id, comment_id: 'c9', actor: 'user', user_id: user.id)
+      # #2519: o comentário respondido também fica marcado, para sair do "esperando" e a IA não agir por cima.
+      expect(Crm::MetaAdsCommentAction.find_by!(action: 'reply'))
+        .to have_attributes(account_id: account.id, network: 'instagram', ad_id: ad_id, comment_id: 'c1', actor: 'user', user_id: user.id)
     end
 
     it 'resposta aceita pela Meta não vira erro quando gravar a linha falha' do
@@ -260,8 +263,9 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
 
       expect(service.reply!(ad_id, 'c1', 'Temos sim', user: user)).to include(id: 'c9')
-      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(NoMethodError), account: account)
-      expect(tracker).to have_received(:capture_exception)
+      # A linha da resposta (page_reply) e a do comentário respondido (reply, #2519): as duas vão ao rastreador.
+      expect(ChatwootExceptionTracker).to have_received(:new).with(an_instance_of(NoMethodError), account: account).twice
+      expect(tracker).to have_received(:capture_exception).twice
     end
 
     it 'resposta a uma resposta vai para o comentário de cima, como no app' do
@@ -276,7 +280,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
     it 'recusa comentário de outra mídia como comment_not_found, sem agir' do
       stub_comment('c1', media: '1799999')
 
-      expect { service.hide!(ad_id, 'c1', hidden: true) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('comment_not_found') }
+      expect { service.hide!(ad_id, 'c1', hidden: true, user: user) }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('comment_not_found') }
       expect(a_request(:post, %r{#{ig}/c1})).not_to have_been_made
     end
 
@@ -285,9 +290,12 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       stub_request(:post, %r{#{ig}/c1\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
       stub_request(:delete, %r{#{ig}/c1\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)
 
-      expect(service.hide!(ad_id, 'c1', hidden: true)).to eq(id: 'c1', hidden: true)
-      expect(service.hide!(ad_id, 'c1', hidden: false)).to eq(id: 'c1', hidden: false)
-      expect(service.delete!(ad_id, 'c1')).to eq(id: 'c1')
+      expect(service.hide!(ad_id, 'c1', hidden: true, user: user)).to eq(id: 'c1', hidden: true)
+      expect(service.hide!(ad_id, 'c1', hidden: false, user: user)).to eq(id: 'c1', hidden: false)
+      expect(service.delete!(ad_id, 'c1', user: user)).to eq(id: 'c1')
+      # #2519: cada ação da pessoa fica no comentário (o Esperando e o Cuidar a leem).
+      expect(Crm::MetaAdsCommentAction.where(comment_id: 'c1').order(:id).pluck(:action, :actor, :ad_id, :user_id))
+        .to eq([['hide', 'user', ad_id, user.id], ['show', 'user', ad_id, user.id], ['delete', 'user', ad_id, user.id]])
     end
 
     # #2358: agir em comentário pede ver a caixa do Instagram, não só o privado.
@@ -296,8 +304,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       refused = ->(code) { raise_error(described_class::Error) { |e| expect(e.code).to eq(code) } }
 
       expect { outsider.reply!(ad_id, 'c1', 'Temos sim', user: user) }.to refused.call('not_inbox_member')
-      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to refused.call('not_inbox_member')
-      expect { outsider.delete!(ad_id, 'c1') }.to refused.call('not_inbox_member')
+      expect { outsider.hide!(ad_id, 'c1', hidden: true, user: user) }.to refused.call('not_inbox_member')
+      expect { outsider.delete!(ad_id, 'c1', user: user) }.to refused.call('not_inbox_member')
       expect { outsider.private_reply!(ad_id, 'c1', 'Oi', user: user) }.to refused.call('not_inbox_member')
       expect(instagram_call).not_to have_been_made
       expect(Crm::MetaAdsCommentAction.count).to eq(0)
@@ -308,7 +316,8 @@ RSpec.describe Crm::MetaAds::InstagramComments do
       allow(channel).to receive(:reauthorization_required?).and_return(true)
       outsider = described_class.new(connection, inbox_access: ->(_inbox) { false }, can_manage: true)
 
-      expect { outsider.hide!(ad_id, 'c1', hidden: true) }.to raise_error(described_class::Error) { |e| expect(e.code).to eq('needs_login') }
+      expect { outsider.hide!(ad_id, 'c1', hidden: true, user: user) }
+        .to raise_error(described_class::Error) { |e| expect(e.code).to eq('needs_login') }
       expect(instagram_call).not_to have_been_made
     end
 

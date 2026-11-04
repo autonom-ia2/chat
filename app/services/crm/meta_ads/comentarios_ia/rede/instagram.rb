@@ -17,11 +17,13 @@ class Crm::MetaAds::ComentariosIa::Rede::Instagram
   # Outro envio deste comentário (já feito, ou saindo agora em outra requisição): nada a fazer.
   OUTRO_ENVIO = %w[private_reply_done private_reply_retry].freeze
 
-  # texto: a mensagem escrita pela IA para este comentário (#2458); sem ela, a do dono.
+  # texto: a mensagem escrita pela IA para este comentário (#2458); sem ela, a do dono. A resposta dentro de um
+  # comentário vai sem o anúncio (#2519): o Esperando conta por anúncio só o primeiro nível, como a lista mostra (a tela
+  # do anúncio também não oferece "Não foi enviado" para resposta).
   def privado(care, texto: nil)
     resultado = Crm::MetaAds::InstagramPrivateReply.new(@inbox.channel)
                                                    .perform!(comment: comment, text: texto || care.texto_do_privado, actor: REGISTRO::ACTOR,
-                                                             ad_id: @comentario.ad_id)
+                                                             ad_id: (@comentario.ad_id unless @comentario.resposta?))
     Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, conversation: resultado[:conversation])
   rescue Crm::MetaAds::InstagramPrivateReply::Error => e
     erro = OUTRO_ENVIO.include?(e.code) ? Crm::MetaAds::ComentariosIa::Rede::JA_FEITO : e.code

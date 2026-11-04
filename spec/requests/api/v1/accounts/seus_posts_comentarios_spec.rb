@@ -96,6 +96,19 @@ RSpec.describe 'Seus posts: comentários de cada post', type: :request do
     expect(response.parsed_body['error']).to eq('meta_unavailable')
   end
 
+  # #2519: o comentário respondido fica marcado com a ação da pessoa (além do `page_reply` da resposta), para sair do
+  # "esperando" e a IA não agir por cima.
+  it 'responde em público e grava a ação da pessoa no comentário respondido' do
+    stub_comentario
+    stub_request(:post, %r{#{ig}/#{comment_id}/replies}).to_return(status: 200, headers: json, body: { id: '18000000000000009' }.to_json)
+
+    post "#{base}/comments/#{comment_id}/reply", params: { perfil: perfil, content: 'Temos sim' }, headers: headers, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentAction.where(actor: 'user').order(:id).pluck(:action, :comment_id))
+      .to eq([%w[page_reply 18000000000000009], ['reply', comment_id]])
+  end
+
   it 'esconde e apaga, grava as ações sem anúncio e esquece "esperando você" do perfil' do
     stub_comentario
     stub_request(:post, %r{#{ig}/#{comment_id}\?}).to_return(status: 200, headers: json, body: { success: true }.to_json)

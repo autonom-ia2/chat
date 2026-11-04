@@ -12,8 +12,8 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '1790', offer: nil, para_quem: 'Quem pedir o e-book')
   end
 
-  def linha(id, dias: 1)
-    { id: id, network: 'instagram', author: "pessoa#{id}", text: "texto #{id}", momento: dias.days.ago, inbox_id: inbox.id, post_id: '1790' }
+  def linha(id, dias: 1, momento: dias.days.ago)
+    { id: id, network: 'instagram', author: "pessoa#{id}", text: "texto #{id}", momento: momento, inbox_id: inbox.id, post_id: '1790' }
   end
 
   def acao(comment_id, action, conversation: nil)
@@ -173,9 +173,9 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
   describe 'chegaram antes de ligar' do
     before { care.update!(started_at: 2.days.ago) }
 
-    it 'só é "antes" o que chegou antes de ligar; o que chegou depois e a IA ainda não leu não fica com o dono' do
-      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', dias: 1), linha('3', dias: 1),
-                                                                           linha('4', dias: 9)], escondidas: [] })
+    it 'só é "antes" o que chegou antes de ligar; o que chegou depois e a IA ainda não leu fica na fila dela, até 10 min' do
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', momento: 9.minutes.ago),
+                                                                           linha('3', dias: 1), linha('4', dias: 9)], escondidas: [] })
       acao('3', 'ai_seen')
 
       payload = painel.payload
@@ -184,10 +184,33 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
       expect(payload).to include(unanswered: 1, older: 1)
     end
 
+    # #2519: nada some em silêncio. O evento pode não ter chegado (ou o job, morrido): sem nenhuma ação da IA em 10 min,
+    # o comentário vem para o dono, com o selo de que a IA não o pegou.
+    it 'chegou depois de ligar e a IA não fez nada em 10 min: fica com o dono (not_caught)' do
+      chegou = 11.minutes.ago
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', momento: chegou), linha('2', momento: 9.minutes.ago),
+                                                                           linha('3', momento: 2.hours.ago)], escondidas: [] })
+      acao('3', 'ai_seen')
+
+      to_see = painel.payload[:to_see]
+      expect(to_see.map { |item| [item[:id], item[:kind]] }).to eq([%w[1 not_caught], %w[3 skipped]])
+      # A tela mostra há quanto tempo a pessoa espera ("há 11 minutos").
+      expect(to_see.first[:created_time]).to eq(chegou.iso8601)
+    end
+
+    it 'o que a pessoa já respondeu, escondeu ou apagou pela plataforma não é "não vi a tempo"' do
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', momento: 1.hour.ago), linha('2', momento: 1.hour.ago)],
+                                                 escondidas: [] })
+      Crm::MetaAdsCommentAction.record!(account: account, network: 'instagram', comment_id: '1', action: 'reply', actor: 'user',
+                                        user: admin)
+
+      expect(painel.payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[2 not_caught]])
+    end
+
     # #2454: "Os N que já estão aqui" do Ligar conta também as respostas de cliente, só com a flag meta_ads_comentarios_ia.
     it 'as respostas de cliente entram no "Ler e mandar" só com a flag meta_ads_comentarios_ia' do
       respostas = [linha('1a', dias: 3).merge(parent_id: '1'), linha('2a', dias: 1).merge(parent_id: '2')]
-      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', dias: 1)], escondidas: [],
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', momento: 5.minutes.ago)], escondidas: [],
                                                  respostas_que_esperam: respostas })
 
       expect(painel.payload).to include(unanswered: 1, older: 0)

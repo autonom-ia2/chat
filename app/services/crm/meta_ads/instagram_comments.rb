@@ -56,24 +56,27 @@ class Crm::MetaAds::InstagramComments
     raise Error, failure(result) unless result.ok
 
     Crm::MetaAdsCommentAction.record_reply(account: @connection.account, ad_id: ad_id, reply_id: result.data['id'], user: user)
+    record_action('reply', ad_id, comment_id, user)
     rows(channel).row({ 'id' => result.data['id'].to_s, 'text' => text, 'timestamp' => Time.current.iso8601,
                         'from' => { 'id' => channel.instagram_id, 'username' => channel.provider_name } }, actions: {}, own: true)
   end
 
-  def hide!(ad_id, comment_id, hidden:)
+  def hide!(ad_id, comment_id, hidden:, user:)
     channel = comment_of_ad!(ad_id, comment_id)[:channel]
     result = client(channel).hide(comment_id, hidden: hidden)
     raise Error, failure(result) unless result.ok
 
+    record_action(hidden ? 'hide' : 'show', ad_id, comment_id, user)
     { id: comment_id, hidden: hidden }
   end
 
   # Irreversível: some do Instagram. A tela confirma antes.
-  def delete!(ad_id, comment_id)
+  def delete!(ad_id, comment_id, user:)
     channel = comment_of_ad!(ad_id, comment_id)[:channel]
     result = client(channel).delete(comment_id)
     raise Error, failure(result) unless result.ok
 
+    record_action('delete', ad_id, comment_id, user)
     { id: comment_id }
   end
 
@@ -98,6 +101,15 @@ class Crm::MetaAds::InstagramComments
   end
 
   private
+
+  # O que a pessoa fez no comentário (#2519): ele sai do "esperando" (Esperando) e a IA não age mais nele (Cuidar). A Meta
+  # já agiu quando isto roda: falha ao gravar vai ao rastreador e a resposta continua dizendo a verdade.
+  def record_action(acao, ad_id, comment_id, user)
+    Crm::MetaAdsCommentAction.record!(account: @connection.account, network: 'instagram', ad_id: ad_id.to_s, comment_id: comment_id.to_s,
+                                      action: acao, actor: 'user', user: user)
+  rescue StandardError => e
+    ChatwootExceptionTracker.new(e, account: @connection.account).capture_exception
+  end
 
   def target(ad_id)
     ad = @management.ad(ad_id.to_s)

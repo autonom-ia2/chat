@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { intlLocale } from '../metaAdsHelpers';
+import { intlLocale, relativeTime } from '../metaAdsHelpers';
 import { linhaDoResultado } from './redes';
 import MaterialDoPost from 'dashboard/routes/dashboard/autonomia/agentes/components/doPost/MaterialDoPost.vue';
 
@@ -36,12 +36,14 @@ const format = value =>
   new Intl.NumberFormat(intlLocale(locale.value)).format(value);
 const handle = item =>
   item.network === 'facebook' ? item.author : `@${item.author}`;
+// Há quanto tempo a pessoa espera (#2519): "há 3 horas", no idioma da tela.
+const quando = item => relativeTime(item.created_time, locale.value);
 // "Esperando você" sempre; "Escondi" só quando escondi algum. As perguntas que chegaram antes de ligar ficam num grupo
 // próprio, com "Ler e mandar": quem disse "Agora não" depois de ligar ainda pode voltar atrás. O que a IA já leu depois
 // de ligar e não era o caso (`skipped`) fica em "Esperando você": não é antigo nem volta para a fila.
 const BEFORE_KINDS = ['waiting', 'older'];
 // Pedem atenção do dono: a reclamação e o privado que pode ter saído (conferir no direct antes de responder).
-const ALERT_KINDS = ['complaint', 'unsure'];
+const ALERT_KINDS = ['complaint', 'unsure', 'not_caught'];
 const toSee = computed(() => props.data.to_see || []);
 const hidden = computed(() =>
   (props.data.hidden || []).map(item => ({ ...item, kind: 'hidden' }))
@@ -233,8 +235,13 @@ const startedText = computed(() => {
       >
         <div class="flex min-w-0 flex-1 flex-col gap-1">
           <p class="m-0 text-base leading-6 text-n-slate-12">
-            <span class="block text-sm font-semibold text-n-slate-11">
-              {{ handle(item) }}
+            <span
+              class="flex flex-wrap gap-x-2 text-sm font-semibold text-n-slate-11"
+            >
+              <span>{{ handle(item) }}</span>
+              <span v-if="quando(item)" data-ia-quando class="font-normal">
+                {{ quando(item) }}
+              </span>
             </span>
             {{ item.text }}
           </p>

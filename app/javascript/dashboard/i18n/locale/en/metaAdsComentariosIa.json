@@ -86,7 +86,8 @@
         "paused": "Came in while paused. Reply in the comment if you want.",
         "waiting": "Came in before you turned it on. Reply in the comment if you want.",
         "older": "Older than 7 days: I can't send a DM anymore. Reply in the comment.",
-        "skipped": "Doesn't apply · I didn't send. It stays with you: reply in the comment if you want."
+        "skipped": "Doesn't apply · I didn't send. It stays with you: reply in the comment if you want.",
+        "not_caught": "I missed this comment. Please reply yourself."
       },
       "OPEN_INBOX": "Open in inbox",
       "SEE_ON_POST": "See it on the post",
