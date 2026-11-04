@@ -25,7 +25,7 @@ class Crm::MetaAds::WhatsappReport::Digest
   def payload
     @payload ||= {
       date: date, currency: currency, spend: spend, conversations: cohort.conversation_ads.size,
-      cost_per_conversation: ratio(spend, cohort.conversation_ads.size), quotes: cohort.cards.count(&:quote?),
+      cost_per_conversation: ratio(conversation_spend, cohort.conversation_ads.size), quotes: cohort.cards.count(&:quote?),
       sales: sales.size, sales_value: sales.sum(&:value).round(2), best_ad: best_ad, action: action
     }
   end
@@ -50,6 +50,14 @@ class Crm::MetaAds::WhatsappReport::Digest
 
   def spend
     @spend ||= insights.sum(:spend).to_f.round(2)
+  end
+
+  # O custo por conversa divide só o gasto dos anúncios que trazem conversa, como o painel (Report#total_spend): o de
+  # alcance ou perfil (Panel::OutsideAds, #2521) não infla o custo.
+  def conversation_spend
+    by_ad = insights.group(:ad_id).sum(:spend)
+    outside = Crm::MetaAds::Panel::OutsideAds.new(@connection.account_id, ad_ids: by_ad.keys).ids
+    by_ad.except(*outside).values.sum.to_f.round(2)
   end
 
   def currency

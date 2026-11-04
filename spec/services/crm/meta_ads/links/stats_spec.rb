@@ -75,6 +75,21 @@ RSpec.describe Crm::MetaAds::Links::Stats do
     end
   end
 
+  it 'conversas de hoje sem as do privado de comentário de anúncio de fora (#2521)' do
+    counted, outside = create_list(:conversation, 2, account: account)
+    travel_to(now) do
+      Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                optimization_goal: 'REACH', fetched_at: now)
+      Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
+                                      date: 20.days.ago.to_date, spend: 10, attribution_window: '7d_click', fetched_at: now)
+      link(counted, 'ad', Time.utc(2026, 10, 5, 15))
+      Crm::MetaAdLink.create!(account: account, conversation: outside, touch_key: 'meta_comment:1', origin: 'comment', certainty: 'ad',
+                              ad_id: 'alcance', touched_at: Time.utc(2026, 10, 5, 16))
+
+      expect(described_class.new(connection).payload[:ad_conversations_today]).to eq(1)
+    end
+  end
+
   it 'sem ligações devolve zeros' do
     expect(described_class.new(connection).payload)
       .to eq(ad_conversations_today: 0, confidence: { window_days: 30, conversations: 0, ad: 0, ad_name: 0, campaign: 0, unknown: 0 })

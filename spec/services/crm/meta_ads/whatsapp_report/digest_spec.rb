@@ -78,6 +78,19 @@ RSpec.describe Crm::MetaAds::WhatsappReport::Digest do
       end
     end
 
+    it 'o custo por conversa divide só o gasto dos anúncios que trazem conversa, como o painel' do
+      travel_to(now) do
+        Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                                  optimization_goal: 'REACH', fetched_at: now)
+        Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'alcance', adset_id: 'set-alcance',
+                                        date: Date.new(2026, 10, 6), currency: 'BRL', spend: 50, attribution_window: '7d_click', fetched_at: now)
+        spend(promo, Date.new(2026, 10, 6), 100)
+        2.times { from_ad(promo, at: Time.zone.parse('2026-10-06T10:00:00-03:00')) }
+
+        expect(described_class.new(connection).payload).to include(spend: 150.0, conversations: 2, cost_per_conversation: 50.0)
+      end
+    end
+
     describe 'o que fazer hoje: a primeira ação do consultor (F5)' do
       it 'o envio das 8h pede a análise do dia, que pode escrever pela IA, no idioma do resumo' do
         travel_to(now) do

@@ -76,6 +76,23 @@ RSpec.describe Crm::MetaAds::Panel::ResponseTime do
     expect(response_time.payload).to include(answered: 0, unanswered: 0)
   end
 
+  # #2521: a conversa do privado de comentário de anúncio de alcance não entra, como na coorte.
+  it 'deixa de fora a conversa do privado de comentário de anúncio de fora' do
+    Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-alcance', object_type: 'adset', destination_type: 'UNDEFINED',
+                              optimization_goal: 'REACH', fetched_at: Time.current)
+    Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: '1', ad_id: 'alcance', adset_id: 'set-alcance', date: 40.days.ago.to_date,
+                                    spend: 10, attribution_window: '7d_click', fetched_at: Time.current)
+    counted = conversation_at(3.days.ago)
+    message(counted, :outgoing, 3.days.ago + 60)
+    outside = create(:conversation, account: account, inbox: inbox)
+    Crm::MetaAdLink.create!(account: account, conversation: outside, touch_key: 'meta_comment:1', origin: 'comment', certainty: 'ad',
+                            ad_id: 'alcance', touched_at: 2.days.ago)
+    message(outside, :incoming, 2.days.ago)
+    message(outside, :outgoing, 2.days.ago + 600)
+
+    expect(response_time.by_conversation.keys).to eq([counted.id])
+  end
+
   # #2521: mais uma consulta, a dos anúncios das conversas de comentário (Panel::OutsideAds.counted_links), que não
   # cresce com as conversas.
   it 'faz o mesmo número de consultas, qualquer que seja o número de conversas' do
