@@ -44,6 +44,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     ids.to_h { |id| [id.to_i, { sent: sent.fetch(id, 0), replied: replied.fetch(id, 0) }] }
   end
 
+  # As conversas do privado dos cuidados `ids` que `user` vê. Também a lista do "no privado" em Agentes (NoPrivado,
+  # #2481).
   def self.enviadas_vistas(account, ids, user)
     Conversations::PermissionFilterService.new(account.conversations, user, account, for_reading: true).perform
                                           .unscope(:order).where(CARE_ID.in(ids))
@@ -54,7 +56,6 @@ class Crm::MetaAds::ComentariosIa::Painel
   def self.respondeu
     Message.unscope(:order).where(message_type: :incoming).where(Message.arel_table[:conversation_id].eq(Conversation.arel_table[:id]))
   end
-  private_class_method :enviadas_vistas, :respondeu
 
   # O cuidado do alvo (Fonte.do_alvo), ou nil. O LerAntigosJob também o acha por aqui.
   def self.cuidado_do(account_id, alvo)

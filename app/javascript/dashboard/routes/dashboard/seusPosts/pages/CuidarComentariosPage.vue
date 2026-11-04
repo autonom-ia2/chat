@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import SeusPostsAPI from 'dashboard/api/seusPosts';
 import Button from 'dashboard/components-next/button/Button.vue';
 import { frontendURL } from 'dashboard/helper/URLHelper';
@@ -62,12 +63,25 @@ const caixa = computed(() =>
     : ''
 );
 
-const voltar = () =>
-  router.push({
-    name: 'seus_posts_post',
-    params: { accountId: route.params.accountId, postId: postId.value },
-    query: { perfil: perfilId.value, dias: route.query.dias },
-  });
+// #2479: aberto pelo "Criar agente" de Agentes (?de=agentes), volta para Agentes.
+const { t } = useI18n();
+const deAgentes = computed(() => route.query.de === 'agentes');
+const voltarLabel = computed(() =>
+  deAgentes.value
+    ? t('AGENTS.AGENTE_DO_POST.CRIAR.VOLTAR_AGENTES')
+    : t(`${KEY}.BACK_POST`)
+);
+const paraOPost = () => ({
+  name: 'seus_posts_post',
+  params: { accountId: route.params.accountId, postId: postId.value },
+  query: { perfil: perfilId.value, dias: route.query.dias },
+});
+const paraAgentes = () => ({
+  name: 'autonomia_agents_index',
+  params: { accountId: route.params.accountId },
+});
+const voltar = () => router.push(deAgentes.value ? paraAgentes() : paraOPost());
+const responder = () => router.push(paraOPost());
 </script>
 
 <template>
@@ -86,7 +100,7 @@ const voltar = () =>
           @click="voltar"
         >
           <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
-          {{ $t(`${KEY}.BACK_POST`) }}
+          {{ voltarLabel }}
         </button>
         <div
           v-if="erro"
@@ -123,9 +137,11 @@ const voltar = () =>
         :target="target"
         :post="cabecalho"
         origin="post"
+        :back-label="deAgentes ? voltarLabel : ''"
         :can-manage="Boolean(dados.can_manage)"
         :inbox-path="caixa"
         @back="voltar"
+        @reply="responder"
       />
     </div>
   </section>

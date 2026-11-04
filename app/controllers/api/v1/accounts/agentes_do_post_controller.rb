@@ -3,15 +3,19 @@
 #
 # GET  agentes_do_post             → { cuidados: [{ id, kind, target_id, perfil, network, status }] }: a lista e a
 #      contagem do cabeçalho, só do banco. Só os alvos que quem abre pode ver.
+# GET  agentes_do_post/anuncios → { anuncios: [{ id, name, image_url, care }] }: os anúncios do "Qual post?" ao criar o
+#      cuidado (#2479), os da lista de Anúncios dos últimos 30 dias, só do banco (AnunciosParaCuidar). As guardas são
+#      as de ver o cuidado do anúncio; sem a conexão ativa, 404 `not_connected`.
 # GET  agentes_do_post/:id         → o cartão e a página: o item, mais legenda, capa, foto, nota, portas[] e
-#      comentarios { status, results, esperando[], nao_respondo[] }, lidos na Meta, sem IA. A leitura fica guardada
-#      DETALHE_TTL por pessoa (abrir Agentes com muitos posts cuidados não volta à Meta a cada vez, e não gasta o limite
-#      dela, que o motor usa na mesma conexão); pausar ou voltar muda o updated_at do cuidado e troca a chave.
+#      comentarios { status, results, no_privado[], esperando[], nao_respondo[] }, lidos na Meta, sem IA. A leitura fica
+#      guardada DETALHE_TTL por pessoa (abrir Agentes com muitos posts cuidados não volta à Meta a cada vez, e não gasta o
+#      limite dela, que o motor usa na mesma conexão); pausar ou voltar muda o updated_at do cuidado e troca a chave. A
+#      versão da chave (v2, #2481) muda quando o detalhe ganha campo novo.
 # PUT  agentes_do_post/:id/estado  status ('on' | 'paused') → Pausar e Voltar a cuidar: só o estado (voltar recomeça a
 #      contar daqui), sem mexer no que o dono escreveu. Devolve o detalhe.
-# POST agentes_do_post/:id/testar  pergunta, formato ('publico' | 'privado'), network → { status: 'escrito', texto } |
-#      { status: 'fica_com_o_dono', motivo } | { status: 'frases_fixas', motivo } | { status: 'no_private' }. Nada é
-#      publicado nem gravado; IA fora do ar é 422 `ai_unavailable`.
+# POST agentes_do_post/:id/testar  pergunta, network → { status: 'ready', decisao, motivo, escrita? } (#2510): o que o
+#      motor faria com o comentário (NoAgentes#testar) e, quando ele manda o privado, o que escreveria. Nada é publicado
+#      nem gravado; IA fora do ar é 422 `ai_unavailable`; IA barrada (sem chave, desligada) é 422 com o código dela.
 #
 # As guardas são as das telas do cuidado de cada alvo, para ninguém ver aqui o que não vê lá:
 # - todas: a flag `meta_ads_comentarios_ia` (404 sem ela);
@@ -49,9 +53,9 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   end
 
   before_action :ensure_flag
-  before_action :load_care, except: [:index]
+  before_action :load_care, except: [:index, :anuncios]
   before_action :ensure_manage, only: [:estado, :testar]
-  before_action :load_alvo, except: [:index, :show]
+  before_action :load_alvo, except: [:index, :show, :anuncios]
 
   rescue_from Recusa, Crm::MetaAds::ComentariosIa::Painel::Error, Crm::MetaAds::AdManagement::Error, with: :render_error
 
@@ -59,6 +63,16 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
     cares = Crm::MetaAdsCommentCare.where(account_id: Current.account.id).includes(inbox: :channel).order(:id)
     visiveis = cares.select { |care| ve?(care) && (care.target_kind == 'post' || conectado?) }
     render json: { cuidados: visiveis.map { |care| Crm::MetaAds::ComentariosIa::NoAgentes.item(care) } }
+  end
+
+  # Só quem veria o cuidado do anúncio: as flags de Anúncios, a chave de ver e a conexão ativa. A caixa de cada rede se
+  # confere ao abrir o cuidado (o criativo é que diz as caixas).
+  def anuncios
+    raise Recusa, 'not_found' unless flags?('ad')
+    raise Recusa, 'forbidden' unless policy('ad').show?
+    raise Recusa, 'not_connected' unless conectado?
+
+    render json: { anuncios: Crm::MetaAds::ComentariosIa::AnunciosParaCuidar.new(conexao).lista }
   end
 
   # O detalhe guardado só depois de passar as guardas (Recusa não é guardada). A chave leva a pessoa (os resultados e o
@@ -84,9 +98,10 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   def testar
     pergunta = params[:pergunta]
     raise Recusa, 'invalid_pergunta' unless pergunta.is_a?(String) && pergunta.strip.length.between?(1, PERGUNTA_LIMIT)
-    raise Recusa, 'invalid_formato' unless Crm::MetaAds::ComentariosIa::NoAgentes::FORMATOS.key?(params[:formato].to_s)
 
-    render json: no_agentes.testar(pergunta: pergunta.strip, formato: params[:formato].to_s, network: params[:network].to_s)
+    render json: no_agentes.testar(pergunta: pergunta.strip, network: params[:network].to_s)
+  rescue Crm::MetaAds::ComentariosIa::Classificador::Bloqueado => e
+    render_error_code(e.code)
   rescue Crm::MetaAds::ComentariosIa::Classificador::Indisponivel
     render_error_code('ai_unavailable')
   end
@@ -106,7 +121,10 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
 
   def flags?(kind)
     ligada = ->(flag) { Current.account.feature_enabled?(flag) }
-    kind == 'post' ? POST_FLAGS.all?(&ligada) : AD_FLAGS.all?(&ligada) && REDE_FLAGS.any?(&ligada)
+    return POST_FLAGS.all?(&ligada) if kind == 'post'
+
+    # O anúncio mora no CRM (#2479): sem ele, as telas do cuidado do anúncio (Crm::BaseController) não abrem.
+    ::Crm::Config.enabled? && AD_FLAGS.all?(&ligada) && REDE_FLAGS.any?(&ligada)
   end
 
   def policy(kind)
@@ -186,7 +204,13 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   end
 
   def no_agentes
-    Crm::MetaAds::ComentariosIa::NoAgentes.new(care: @care, fonte: @fonte, painel: painel)
+    Crm::MetaAds::ComentariosIa::NoAgentes.new(care: @care, fonte: @fonte, painel: painel, no_privado: no_privado)
+  end
+
+  # #2481: o grupo "no privado" da gaveta Comentários, com as conversas que a pessoa vê.
+  def no_privado
+    Crm::MetaAds::ComentariosIa::NoPrivado.new(account: Current.account, care: @care, viewer: Current.user,
+                                               conversation_access: method(:conversa_visivel?))
   end
 
   def detalhe
@@ -194,7 +218,7 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
   end
 
   def chave_do_detalhe
-    ['agentes_do_post', 'v1', Current.account.id, @care.id, @care.updated_at.to_f, Current.user&.id].join(':')
+    ['agentes_do_post', 'v2', Current.account.id, @care.id, @care.updated_at.to_f, Current.user&.id].join(':')
   end
 
   # "Ver conversa" só para quem enxerga a conversa (em caixa com restrição, só as dela).

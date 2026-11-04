@@ -48,7 +48,9 @@ vi.mock('vue-router', () => ({
 }));
 
 const UM_DIA = 24 * 60 * 60 * 1000;
-const haDias = dias => new Date(Date.now() - dias * UM_DIA).toISOString();
+// Um instante só para o arquivo: posts com a mesma idade empatam e ficam na ordem de entrada.
+const AGORA = Date.now();
+const haDias = dias => new Date(AGORA - dias * UM_DIA).toISOString();
 
 const post = (id, extra = {}) => ({
   id,

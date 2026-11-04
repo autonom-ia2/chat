@@ -5,8 +5,8 @@
 # GET    conversations/:id/comentario            → { status, comentario, pode }. Ler: quem vê a conversa (view?).
 # POST   conversations/:id/comentario/responder  content= → responder em público. Quem escreve na conversa (show?).
 # POST   conversations/:id/comentario/esconder   hidden=  → esconder ou mostrar de novo. Quem escreve na conversa.
-# DELETE conversations/:id/comentario                     → apagar (a tela confirma antes). A régua de apagar
-#        mensagem (ConversationPolicy#delete_message?; no EE, cargo precisa de conversation_message_delete).
+# DELETE conversations/:id/comentario                     → apagar (a tela confirma antes). Só administrador ou função
+#        com conversation_message_delete (ConversationPolicy#delete_comment?, #2517); agente sem função não apaga.
 #
 # O texto vai só em `content`, que o log do Rails já filtra (#2103). Toda ação fica na Auditoria da conta com quem, a
 # conversa, o post, o comentário e a ação, nunca o texto.
@@ -19,7 +19,7 @@ class Api::V1::Accounts::Conversations::ComentarioController < Api::V1::Accounts
 
   before_action :ensure_flag
   before_action :load_comentario
-  before_action -> { authorize @conversation, :delete_message? }, only: :destroy
+  before_action -> { authorize @conversation, :delete_comment? }, only: :destroy
 
   rescue_from ::Crm::MetaAds::InstagramPrivateReply::Error, with: :render_error
 
@@ -61,7 +61,7 @@ class Api::V1::Accounts::Conversations::ComentarioController < Api::V1::Accounts
 
   def pode
     escrever = policy(@conversation).show?
-    { responder: escrever, esconder: escrever, apagar: policy(@conversation).delete_message? }
+    { responder: escrever, esconder: escrever, apagar: policy(@conversation).delete_comment? }
   end
 
   # Só texto: lista ou objeto em `content` virariam outro texto no `to_s` e iriam à Meta (#2327).

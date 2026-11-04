@@ -2859,7 +2859,23 @@
         "LENDO": "Reading your posts…",
         "SEM_POSTS": "I found no posts from this profile in the last 30 days.",
         "ERRO": "I couldn't read your posts right now.",
-        "ANUNCIO": "Is it an ad? Choose it in Ads",
+        "VOLTAR_AGENTES": "Back to Agents",
+        "ANUNCIOS": {
+          "FONTE": "Posts or ads",
+          "CHIP": {
+            "POSTS": "Posts",
+            "ANUNCIOS": "Ads"
+          },
+          "QUAL_ANUNCIO": "Which ad?",
+          "LENDO": "Reading your ads…",
+          "SEM_ANUNCIOS": "I found no ads in the last 30 days.",
+          "ERRO": "I couldn't read your ads right now.",
+          "SEM_ACESSO": "You don't have access to the ads. Ask the account admin.",
+          "SEM_CONEXAO": "Your ad account isn't connected. Connect it in Ads to choose an ad.",
+          "SEM_NOME": "Ad {id}",
+          "CUIDANDO": "The AI already takes care of it",
+          "PAUSADO": "Paused"
+        },
         "SEM_ACESSO": "You don't have access to the posts. Ask the account admin."
       },
       "PAGINA": {
@@ -2919,14 +2935,10 @@
         "ESCOLHA": "Write a question as if it were a comment.",
         "SUA_PERGUNTA": "Write the question",
         "PERGUNTAR": "Ask",
-        "ONDE": "Where does the reply go?",
         "PUBLICO": "In the comment",
         "PRIVADO": "In private",
         "REDE": "On which network?",
         "SO_TESTE": "It's only a test: nothing is published.",
-        "FICA": "Stays with you",
-        "FICA_TEXTO": "I don't reply to this: it stays with you in \"Waiting for you\".",
-        "SEM_PRIVADO": "On Facebook the private message doesn't go out yet, and the comment phrase only goes with it: this question stays with you, in \"Waiting for you\".",
         "FRASES_FIXAS": "Here I use the fixed phrases you wrote.",
         "ERRO": "I couldn't test it right now. Try again.",
         "IA_FORA": "The AI didn't reply right now. Try again in a moment.",
@@ -2940,8 +2952,21 @@
           "porta_parada": "This inbox's agent is stopped.",
           "piloto": "This inbox's agent is in testing, only with test phones."
         },
-        "SEM_PUBLICAR": "This is what I would write. On this network it isn't published yet: the phrase only goes out with the private message, which isn't enabled yet. The question stays with you.",
-        "DO_MATERIAL": "From your material: {arquivos}"
+        "DO_MATERIAL": "From your material: {arquivos}",
+        "FAZ": "What I would do",
+        "POR_QUE": "Why: {motivo}",
+        "DECISAO": {
+          "private": "I send a private message and reply in the comment",
+          "price": "I send the price in private and reply in the comment",
+          "to_you": "I pass it to you as urgent, without replying",
+          "hide": "I hide this comment",
+          "no_reply": "I don't reply",
+          "owner_topic": "It stays with you: it's the subject you answer",
+          "sem_certeza": "It stays with you: I wasn't sure what to do",
+          "no_private": "It stays with you: on Facebook the private message doesn't go out yet",
+          "kept_for_owner": "It stays with you: you still need to say who gets the private message",
+          "nao_sei": "It stays with you: it was a case for a private message, but I don't know how to answer it"
+        }
       },
       "COMENTARIOS": {
         "TITULO": "Comments",
@@ -2949,11 +2974,13 @@
         "RESPONDIDOS": "in private",
         "ESPERANDO": "waiting for you",
         "NAO_RESPONDO": "not replying",
-        "RESPONDIDOS_TEXTO": "People who got a private message from me. The conversations are in the inbox.",
+        "RESPONDIDOS_TEXTO": "People who got a private message from me, newest first.",
         "VER_CONVERSA": "See conversation",
         "VER_TODOS": "See all on the {alvo}",
         "NENHUM": "Nothing here for now.",
-        "SEM_LEITURA": "Couldn't read the comments right now. Try again in a moment."
+        "SEM_LEITURA": "Couldn't read the comments right now. Try again in a moment.",
+        "RESPONDEU": "Replied to the message",
+        "VER_CONVERSA_DE": "See the conversation with {contato}"
       }
     }
   }

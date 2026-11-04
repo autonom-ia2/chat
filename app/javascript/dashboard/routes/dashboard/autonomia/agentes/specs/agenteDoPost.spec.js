@@ -475,6 +475,50 @@ describe('#2469 · os comentários do post em Agentes', () => {
       ).toEqual(['2', '4']);
     });
 
+    it('#2481 · Comentários "no privado": quem recebeu, o comentário, se respondeu e o "Ver conversa" de quem a pessoa vê', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'respondidos' };
+      await pagina(
+        detalhe({
+          comentarios: {
+            ...detalhe().comentarios,
+            no_privado: [
+              {
+                id: 21,
+                contato: 'Mariana',
+                comentario: 'Comentou no post: “Quanto custa?”',
+                respondeu: true,
+                conversation_path: '/app/accounts/1/conversations/21',
+              },
+              { id: 20, contato: 'Rafael', comentario: 'Qual o valor?' },
+            ],
+          },
+        })
+      );
+
+      expect(
+        todosNoBody('[data-no-privado-conversa]').map(
+          item => item.dataset.noPrivadoConversa
+        )
+      ).toEqual(['21', '20']);
+      const mariana = noBody('[data-no-privado-conversa="21"]');
+      expect(mariana.textContent).toContain('Mariana');
+      expect(mariana.textContent).toContain('Quanto custa?');
+      expect(mariana.querySelector('[data-respondeu]')).not.toBeNull();
+      expect(
+        mariana.querySelector('[data-ver-conversa]').getAttribute('href')
+      ).toBe('/app/accounts/1/conversations/21');
+      const rafael = noBody('[data-no-privado-conversa="20"]');
+      expect(rafael.querySelector('[data-respondeu]')).toBeNull();
+      expect(rafael.querySelector('[data-ver-conversa]')).toBeNull();
+    });
+
+    it('#2481 · "no privado" vazio diz que não há nada', async () => {
+      rota.query = { gaveta: 'comentarios', grupo: 'respondidos' };
+      await pagina(detalhe());
+
+      expect(noBody('[data-respondidos] [data-nenhum]')).not.toBeNull();
+    });
+
     it('Comentários sem leitura da Meta: esperando e não respondo sem número, com o aviso', async () => {
       rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
       await pagina(
@@ -613,9 +657,14 @@ describe('#2469 · os comentários do post em Agentes', () => {
         await pagina(detalhe());
         api.testar.mockResolvedValue({
           data: {
-            status: 'escrito',
-            texto: 'Temos P, M e G!',
-            material: ['Tabela.txt'],
+            status: 'ready',
+            decisao: 'private',
+            escrita: {
+              status: 'escrito',
+              privado: 'Temos P, M e G!',
+              publico: 'Te mandei no direct!',
+              material: ['Tabela.txt'],
+            },
           },
         });
 
@@ -666,44 +715,80 @@ describe('#2469 · os comentários do post em Agentes', () => {
         await clicar('[data-testar-perguntar]');
       };
 
-      it('post do Instagram: a rede já vem escolhida, e o privado escrito aparece como privado', async () => {
+      const decidiu = (decisao, extra = {}) => ({
+        data: {
+          status: 'ready',
+          decisao,
+          motivo: 'Pergunta o preço.',
+          ...extra,
+        },
+      });
+
+      it('#2510 · post do Instagram: a decisão vem primeiro, com o porquê, e depois o privado e a frase do comentário', async () => {
         rota.query = { gaveta: 'testar' };
         await pagina(detalhe());
-        api.testar.mockResolvedValue({
-          data: { status: 'escrito', texto: 'Te mandei no direct!' },
-        });
+        api.testar.mockResolvedValue(
+          decidiu('price', {
+            escrita: {
+              status: 'escrito',
+              privado: 'O seguro sai R$ 39 por dia.',
+              publico: 'Te mandei no direct!',
+            },
+          })
+        );
 
-        await clicar('[data-testar-formato="privado"]');
+        expect(noBody('[data-testar-formato]')).toBeNull();
         await perguntar(' Quanto custa? ');
 
         expect(api.testar).toHaveBeenCalledWith('7', {
           pergunta: 'Quanto custa?',
-          formato: 'privado',
           network: 'instagram',
         });
-        expect(noBody('[data-resposta-privado]').textContent).toContain(
-          'Te mandei no direct!'
+        expect(noBody('[data-decisao="price"]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.DECISAO.price'
         );
-        expect(noBody('[data-resposta-comentario]')).toBeNull();
-      });
-
-      it('post do Instagram no comentário: só o comentário, sem balão de privado nem aviso', async () => {
-        rota.query = { gaveta: 'testar' };
-        await pagina(detalhe());
-        api.testar.mockResolvedValue({
-          data: { status: 'escrito', texto: 'Te mandei no direct!' },
-        });
-
-        await perguntar('Quanto custa?');
-
+        expect(noBody('[data-decisao-motivo]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.POR_QUE'
+        );
+        expect(noBody('[data-resposta-privado]').textContent).toContain(
+          'O seguro sai R$ 39 por dia.'
+        );
         expect(noBody('[data-resposta-comentario]').textContent).toContain(
           'Te mandei no direct!'
         );
-        expect(noBody('[data-resposta-privado]')).toBeNull();
-        expect(noBody('[data-resposta-sem-publicar]')).toBeNull();
       });
 
-      it('anúncio nas duas redes: o dono escolhe a rede antes de perguntar', async () => {
+      it('#2510 · o caso do 03/11: "Cobre bagagem?" com o "para quem" de preço não é respondido, e nenhum texto aparece', async () => {
+        rota.query = { gaveta: 'testar' };
+        await pagina(detalhe());
+        api.testar.mockResolvedValue(decidiu('no_reply'));
+
+        await perguntar('Cobre bagagem?');
+
+        expect(noBody('[data-decisao="no_reply"]')).not.toBeNull();
+        expect(noBody('[data-resposta-privado]')).toBeNull();
+        expect(noBody('[data-resposta-comentario]')).toBeNull();
+      });
+
+      it('#2510 · cada decisão que não responde aparece como tal: reclamação, assunto do dono, escondo, sem certeza', async () => {
+        rota.query = { gaveta: 'testar' };
+        await pagina(detalhe());
+
+        await ['to_you', 'owner_topic', 'hide', 'sem_certeza'].reduce(
+          async (anterior, decisao) => {
+            await anterior;
+            api.testar.mockResolvedValueOnce(decidiu(decisao));
+            await perguntar('Oi');
+            expect(noBody(`[data-decisao="${decisao}"]`).textContent).toContain(
+              `AGENTS.AGENTE_DO_POST.TESTAR.DECISAO.${decisao}`
+            );
+            expect(noBody('[data-resposta-privado]')).toBeNull();
+          },
+          Promise.resolve()
+        );
+      });
+
+      it('anúncio nas duas redes: o dono escolhe a rede antes de perguntar; no Facebook o privado não sai', async () => {
         rota.query = { gaveta: 'testar' };
         await pagina(
           detalhe({
@@ -712,9 +797,7 @@ describe('#2469 · os comentários do post em Agentes', () => {
             portas: [porta('instagram', ANA), porta('facebook', BIA)],
           })
         );
-        api.testar.mockResolvedValue({
-          data: { status: 'escrito', texto: 'Oi!' },
-        });
+        api.testar.mockResolvedValue(decidiu('no_private'));
 
         await perguntar('Quanto custa?');
         expect(api.testar).not.toHaveBeenCalled();
@@ -723,56 +806,46 @@ describe('#2469 · os comentários do post em Agentes', () => {
         await clicar('[data-testar-perguntar]');
         expect(api.testar).toHaveBeenCalledWith('7', {
           pergunta: 'Quanto custa?',
-          formato: 'publico',
           network: 'facebook',
         });
-        expect(noBody('[data-resposta-comentario]').textContent).toContain(
-          'Oi!'
-        );
-        expect(noBody('[data-resposta-sem-publicar]').textContent).toContain(
-          'AGENTS.AGENTE_DO_POST.TESTAR.SEM_PUBLICAR'
+        expect(noBody('[data-decisao="no_private"]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.DECISAO.no_private'
         );
         expect(noBody('[data-resposta-privado]')).toBeNull();
-
-        await clicar('[data-testar-rede="instagram"]');
-        await clicar('[data-testar-perguntar]');
-        expect(noBody('[data-resposta-sem-publicar]')).toBeNull();
-        expect(noBody('[data-resposta-privado]')).toBeNull();
-        expect(noBody('[data-resposta-comentario]')).not.toBeNull();
       });
 
-      it('o privado do Facebook não sai: diz isso, sem balão de privado', async () => {
-        rota.query = { gaveta: 'testar' };
-        await pagina(
-          detalhe({ network: 'facebook', portas: [porta('facebook', BIA)] })
-        );
-        api.testar.mockResolvedValue({ data: { status: 'no_private' } });
-
-        await clicar('[data-testar-formato="privado"]');
-        await perguntar('Quanto custa?');
-
-        expect(noBody('[data-resposta-privado]')).toBeNull();
-        expect(noBody('[data-resposta-aviso]').textContent).toContain(
-          'AGENTS.AGENTE_DO_POST.TESTAR.SEM_PRIVADO'
-        );
-      });
-
-      it('o agente não sabe: "Fica com você"; sem agente, as frases fixas com o motivo; IA fora do ar avisa', async () => {
+      it('o agente não sabe: "Fica com você"; sem agente, as frases fixas com o motivo; IA fora do ar e sem chave avisam', async () => {
         rota.query = { gaveta: 'testar' };
         await pagina(detalhe());
 
-        api.testar.mockResolvedValueOnce({
-          data: { status: 'fica_com_o_dono', motivo: 'no_knowledge' },
-        });
+        api.testar.mockResolvedValueOnce(
+          decidiu('private', {
+            escrita: { status: 'fica_com_o_dono', motivo: 'no_knowledge' },
+          })
+        );
         await perguntar('Tem para Marte?');
-        expect(noBody('[data-resposta-fica]')).not.toBeNull();
+        expect(noBody('[data-decisao="nao_sei"]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.DECISAO.nao_sei'
+        );
+        expect(noBody('[data-decisao="private"]')).toBeNull();
+        expect(noBody('[data-resposta-privado]')).toBeNull();
 
-        api.testar.mockResolvedValueOnce({
-          data: { status: 'frases_fixas', motivo: 'sem_chave' },
-        });
+        api.testar.mockResolvedValueOnce(
+          decidiu('private', {
+            escrita: {
+              status: 'frases_fixas',
+              motivo: 'sem_porta',
+              privado: 'Oi! Te mandei os valores.',
+              publico: 'Te chamei no direct 😊',
+            },
+          })
+        );
         await perguntar('Quanto custa?');
-        expect(noBody('[data-resposta-aviso]').textContent).toContain(
-          'AGENTS.AGENTE_DO_POST.TESTAR.MOTIVO.sem_chave'
+        expect(noBody('[data-resposta-privado]').textContent).toContain(
+          'Oi! Te mandei os valores.'
+        );
+        expect(noBody('[data-resposta-frases-fixas]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.MOTIVO.sem_porta'
         );
 
         api.testar.mockRejectedValueOnce({
@@ -781,6 +854,22 @@ describe('#2469 · os comentários do post em Agentes', () => {
         await perguntar('Quanto custa?');
         expect(noBody('[data-resposta-aviso]').textContent).toContain(
           'AGENTS.AGENTE_DO_POST.TESTAR.IA_FORA'
+        );
+
+        api.testar.mockRejectedValueOnce({
+          response: { status: 422, data: { error: 'no_credential' } },
+        });
+        await perguntar('Quanto custa?');
+        expect(noBody('[data-resposta-aviso]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.MOTIVO.sem_chave'
+        );
+
+        api.testar.mockRejectedValueOnce({
+          response: { status: 422, data: { error: 'ai_disabled' } },
+        });
+        await perguntar('Quanto custa?');
+        expect(noBody('[data-resposta-aviso]').textContent).toContain(
+          'AGENTS.AGENTE_DO_POST.TESTAR.ERRO'
         );
       });
     });
@@ -822,8 +911,7 @@ describe('#2469 · os comentários do post em Agentes', () => {
         [{ id: '1790', perfil: 'instagram-3' }],
       ]);
 
-      await clicar('[data-criar-anuncio]');
-      expect(wrapper.emitted('anuncio')).toHaveLength(1);
+      expect(noBody('[data-criar-fontes]')).toBeNull();
     });
 
     it('"Atender conversas" segue a criação de hoje', async () => {

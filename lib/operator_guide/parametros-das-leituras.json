@@ -31,6 +31,10 @@
     "controller": "api/v1/accounts/agentes_do_post_materiais#index",
     "parametros": []
   },
+  "agentes_do_post/anuncios": {
+    "controller": "api/v1/accounts/agentes_do_post#anuncios",
+    "parametros": []
+  },
   "agents": {
     "controller": "api/v1/accounts/agents#index",
     "parametros": []

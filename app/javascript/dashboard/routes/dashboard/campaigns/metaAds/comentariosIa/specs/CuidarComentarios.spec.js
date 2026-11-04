@@ -218,7 +218,8 @@ describe('CuidarComentarios (#2212)', () => {
 
     expect(botao.text()).toBe('Ver no post');
     await botao.trigger('click');
-    expect(wrapper.emitted('back')).toHaveLength(1);
+    expect(wrapper.emitted('reply')).toHaveLength(1);
+    expect(wrapper.emitted('back')).toBeUndefined();
   });
 
   it('o que a IA leu depois de ligar e não era o caso fica em "Esperando você", não nos antigos', async () => {
