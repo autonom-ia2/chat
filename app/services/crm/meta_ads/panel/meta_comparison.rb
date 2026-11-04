@@ -7,7 +7,8 @@
 #   toque do período veio do WhatsApp;
 # - `messaging` (#2521): a mesma métrica, só dos anúncios cujo conjunto leva ao Messenger ou ao Direct
 #   (Panel::AdDestinations#messenger_or_direct?), × as conversas cujo primeiro toque veio do Messenger ou do Direct.
-#   Esses anúncios saem da linha do WhatsApp. Não depende de destino marcado na conexão: aparece quando há número;
+#   Esses anúncios saem da linha do WhatsApp; o de conjunto ainda não lido fica nela. Não depende de destino marcado na
+#   conexão: aparece quando há número;
 # - `site`: os leads do Pixel (`offsite_conversion.fb_pixel_lead`, em `actions`) × as conversas cujo primeiro
 #   toque veio da ponte do site. As visitas à página (`landing_page_view`) vão junto, só de contexto. É a linha
 #   que a Placement tem: os anúncios dela levam ao site e não têm conversa contada pela Meta (gate G1).

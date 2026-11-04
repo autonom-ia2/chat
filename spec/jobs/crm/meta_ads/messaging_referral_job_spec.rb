@@ -31,4 +31,13 @@ RSpec.describe Crm::MetaAds::MessagingReferralJob do
 
     expect(conversation.reload.additional_attributes['campaign_touches'].sole).to include('source' => 'meta_ctd')
   end
+
+  it 'sem a hora do evento não grava (todo clique do contato teria o mesmo id)' do
+    page = create(:channel_facebook_page, page_id: 'page-1')
+    conversation = conversation_in(page.inbox, 'psid-1')
+
+    described_class.perform_now('messenger', 'page-1', 'psid-1', referral, '')
+
+    expect(conversation.reload.additional_attributes).not_to have_key('campaign_touches')
+  end
 end

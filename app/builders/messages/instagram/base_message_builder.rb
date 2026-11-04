@@ -27,7 +27,7 @@ class Messages::Instagram::BaseMessageBuilder < Messages::Messenger::MessageBuil
 
     referral = @messaging[:referral] || message[:referral] || @messaging.dig(:postback, :referral)
     source = Crm::MetaAds::MessagingReferral::INSTAGRAM_SOURCE
-    Crm::MetaAds::MessagingReferral.attribute!(@conversation, referral, source: source, event_id: message_identifier)
+    Crm::MetaAds::MessagingReferral.attribute_message!(@conversation, referral, source: source, event_id: message_identifier)
   end
 
   def attachments

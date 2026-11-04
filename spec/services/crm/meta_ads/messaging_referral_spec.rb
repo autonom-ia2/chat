@@ -54,6 +54,31 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     expect(described_class.attribute_to_latest!(inbox, 'psid-2', ad_referral, source: messenger, event_id: 'psid-2:1700')).to be(false)
   end
 
+  # A próxima mensagem de conversa encerrada abre conversa nova sem o referral: o clique vai para ela, não para a velha.
+  it 'evento só de referral com a conversa encerrada fica guardado e vai para a próxima conversa' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    old = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact, status: :resolved)
+
+    expect(described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')).to be(false)
+    expect(old.reload.additional_attributes).not_to have_key('campaign_touches')
+
+    fresh = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
+    expect(described_class.attribute_message!(fresh, nil, source: messenger, event_id: 'mid.9')).to be(true)
+    expect(fresh.reload.additional_attributes['campaign_touches'].sole).to include('source' => 'meta_ctm', 'referral_id' => 'psid-1:1700')
+    expect(described_class.attribute_pending!(fresh)).to be(false)
+  end
+
+  it 'caixa que trava numa conversa só grava o clique na conversa encerrada, que reabre' do
+    inbox = conversation.inbox
+    inbox.update!(lock_to_single_conversation: true)
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    old = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact, status: :resolved)
+
+    expect(described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')).to be(true)
+    expect(old.reload.additional_attributes['campaign_touches'].sole).to include('referral_id' => 'psid-1:1700')
+  end
+
   it 'o Linker liga a conversa ao anúncio com a origem do canal' do
     described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
     other = create(:conversation, account: account)

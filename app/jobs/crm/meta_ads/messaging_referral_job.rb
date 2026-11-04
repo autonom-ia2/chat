@@ -13,6 +13,9 @@ class Crm::MetaAds::MessagingReferralJob < ApplicationJob
   SOURCES = Crm::MetaAds::MessagingReferral::ORIGINS.invert.freeze
 
   def perform(network, recipient_id, sender_id, referral, timestamp)
+    # Sem a hora, o id do evento seria o mesmo para todo clique do contato e o próximo cairia como reentrega.
+    return if timestamp.blank?
+
     inboxes_for(network, recipient_id.to_s).each do |inbox|
       Crm::MetaAds::MessagingReferral.attribute_to_latest!(inbox, sender_id, referral, source: SOURCES.fetch(network),
                                                                                        event_id: "#{sender_id}:#{timestamp}")

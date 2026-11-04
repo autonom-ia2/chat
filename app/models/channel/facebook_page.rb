@@ -29,11 +29,13 @@ class Channel::FacebookPage < ApplicationRecord
 
   self.table_name = 'channel_facebook_pages'
 
-  # `messaging_referrals` (#2521): o anúncio de clique para o Messenger. A Meta exige esse campo junto com `messages`.
-  # Caixa criada antes dele assina pela tarefa autonomia:meta_ads:assinar_referrals.
   MESSENGER_FIELDS = %w[
-    messages message_deliveries message_echoes message_reads standby messaging_handovers messaging_postbacks messaging_referrals
+    messages message_deliveries message_echoes message_reads standby messaging_handovers messaging_postbacks
   ].freeze
+  # `messaging_referrals` (#2521): o anúncio de clique para o Messenger; a Meta exige esse campo junto com `messages`.
+  # Assina numa gravação à parte: se a Meta recusar só ele, os campos do Messenger ficam. Caixa criada antes dele assina
+  # pela tarefa autonomia:meta_ads:assinar_referrals.
+  REFERRAL_FIELDS = %w[messaging_referrals].freeze
 
   validates :page_id, uniqueness: { scope: :account_id }
 
@@ -55,7 +57,9 @@ class Channel::FacebookPage < ApplicationRecord
   def subscribe
     # ref https://developers.facebook.com/docs/messenger-platform/reference/webhook-events
     # #2200: soma só os campos do Messenger; leadgen e feed da mesma Página continuam inscritos.
-    page_subscription.add!(MESSENGER_FIELDS)
+    subscription = page_subscription
+    subscription.add!(MESSENGER_FIELDS)
+    subscription.add!(REFERRAL_FIELDS)
   rescue StandardError => e
     Rails.logger.warn("[Channel::FacebookPage] subscribed_apps page=#{page_id} #{e.class}: #{e.message}")
     true
@@ -67,7 +71,7 @@ class Channel::FacebookPage < ApplicationRecord
   def unsubscribe
     return true if Channel::FacebookPage.where(page_id: page_id).where.not(id: id).exists?
 
-    page_subscription.remove!(MESSENGER_FIELDS)
+    page_subscription.remove!(MESSENGER_FIELDS + REFERRAL_FIELDS)
   rescue StandardError => e
     Rails.logger.warn("[Channel::FacebookPage] subscribed_apps page=#{page_id} #{e.class}: #{e.message}")
     true
