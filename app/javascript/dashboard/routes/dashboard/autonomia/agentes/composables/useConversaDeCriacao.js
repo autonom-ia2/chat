@@ -35,9 +35,10 @@ import { useFase2 } from './useFase2';
 //   arquivo, espera o rascunho existir. Ao continuar um rascunho, o que já estava na base volta para
 //   a caixa (fora da conversa, que não mostra o histórico).
 export const ESPERA_DEMORANDO_MS = 60000;
-// #2489 — o servidor só dá a geração por perdida depois de 5 min parada (BuildThread::STALE_PROCESSING_AFTER, contados de
-// quando ela começa) e só então aceita refazê-la. O prazo da tela conta do mesmo ponto (quando o status vira
-// `processing`), com folga; passado, ela oferece "Tentar de novo" em vez de 30 min de "Pensando…". Gerar ou ajustar o
+// #2489 — o servidor só dá a geração por perdida depois de 5 min parada (BuildThread::STALE_PROCESSING_AFTER, a partir do
+// último toque no updated_at) e só então aceita refazê-la. O prazo da tela conta de quando o status vira `processing`
+// (o mais perto disso que a tela vê), com folga; se o servidor ainda achar a geração viva, o "Tentar de novo" recebe 409 e
+// volta a esperar; passado, ela oferece "Tentar de novo" em vez de 30 min de "Pensando…". Gerar ou ajustar o
 // agente leva até ~4 min em produção (p90 136 s), abaixo do prazo.
 export const PRAZO_DA_RESPOSTA_MS = 5 * 60 * 1000 + 15000;
 // #2489 — teto da espera do turno pelas subidas de material: vencido, o turno sai e leva os nomes
