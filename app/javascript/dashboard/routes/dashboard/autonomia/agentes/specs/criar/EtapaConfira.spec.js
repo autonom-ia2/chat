@@ -41,6 +41,26 @@ describe('EtapaConfira', () => {
     });
   });
 
+  // #2489 (5a) — as perguntas do próprio agente tomam o lugar das do modelo (e do pacote do segmento).
+  it("offers the agent's own questions instead of the model ones", async () => {
+    const wrapper = montar({
+      perguntasDoAgente: [
+        'O seguro cobre cancelamento da viagem?',
+        'Qual o valor para 10 dias na Europa?',
+      ],
+    });
+    const perguntas = wrapper.get('[data-perguntas]').findAll('button');
+    expect(perguntas.map(b => b.text())).toEqual([
+      'O seguro cobre cancelamento da viagem?',
+      'Qual o valor para 10 dias na Europa?',
+    ]);
+    await perguntas[0].trigger('click');
+    expect(wrapper.emitted('perguntar')[0][0]).toEqual({
+      texto: 'O seguro cobre cancelamento da viagem?',
+      anexos: [],
+    });
+  });
+
   it('the test clip takes only photos', () => {
     const wrapper = montar();
     expect(wrapper.get('input[type="file"]').attributes('accept')).toBe(

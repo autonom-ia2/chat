@@ -18,6 +18,8 @@ const props = defineProps({
   nome: { type: String, required: true },
   empresa: { type: String, default: '' },
   perguntas: { type: Array, default: () => [] },
+  // #2489 — as perguntas do próprio agente (textos prontos); quando vêm, tomam o lugar das do modelo.
+  perguntasDoAgente: { type: Array, default: () => [] },
   mensagens: { type: Array, default: () => [] },
   digitando: { type: Boolean, default: false },
   problema: { type: String, default: null },
@@ -105,6 +107,7 @@ const celularMensagens = computed(() =>
 
 // As chaves escritas por inteiro (o gate do i18n não aceita chave montada); `perguntasDeTeste` só usa estas.
 const textosDasPerguntas = computed(() => {
+  if (props.perguntasDoAgente.length) return props.perguntasDoAgente;
   const textos = {
     QUANTO_CUSTA: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.QUANTO_CUSTA'),
     SABADO: t('AGENTS.JORNADA.CRIAR.CONFIRA.PERGUNTAS.SABADO'),

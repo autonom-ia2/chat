@@ -35,6 +35,10 @@ import { useFase2 } from './useFase2';
 //   arquivo, espera o rascunho existir. Ao continuar um rascunho, o que já estava na base volta para
 //   a caixa (fora da conversa, que não mostra o histórico).
 export const ESPERA_DEMORANDO_MS = 60000;
+// #2489 — o servidor só dá a geração por perdida depois de 5 min parada (BuildThread::STALE_PROCESSING_AFTER) e só então
+// aceita refazê-la. Passado esse prazo (com folga), a tela para de esperar e oferece "Tentar de novo"; antes, ficava até
+// 30 min em "Pensando…". Gerar ou ajustar o agente leva até ~4 min em produção (p90 136 s), abaixo do prazo.
+export const PRAZO_DA_RESPOSTA_MS = 5 * 60 * 1000 + 15000;
 // #2489 — teto da espera do turno pelas subidas de material: vencido, o turno sai e leva os nomes
 // do que ainda está subindo (o Construtor diz que está a caminho).
 export const PRAZO_DAS_SUBIDAS_MS = 20000;
@@ -127,6 +131,7 @@ export function useConversaDeCriacao({
   const estadosDasFontes = ref({});
   let proximoMaterial = 0;
   let relogioDemora = null;
+  let relogioPrazo = null;
   // #2489 — a tela saiu (a store foi limpa): um turno que ainda esperava as subidas não sai mais.
   let desmontado = false;
   // O último turno mandado ({ conteudo, extra, echo }), para reenviar se não chegou.
@@ -630,7 +635,19 @@ export function useConversaDeCriacao({
 
   const pararRelogio = () => {
     if (relogioDemora) clearTimeout(relogioDemora);
+    if (relogioPrazo) clearTimeout(relogioPrazo);
     relogioDemora = null;
+    relogioPrazo = null;
+  };
+
+  // #2489 — a geração passou do prazo do servidor: para de consultar e mostra o cartão de falha, cujo "Tentar de novo"
+  // pede o retry (o servidor refaz se ela estiver mesmo parada; se ainda estiver viva, responde 409 e a tela volta a
+  // esperar). Só vale para a geração no servidor: a subida de arquivo tem prazo próprio.
+  const desistirDeEsperar = () => {
+    if (status.value !== 'processing') return;
+    store.dispatch('autonomiaBuildThreads/stopPolling');
+    store.commit('autonomiaBuildThreads/SET_ERROR', 'timeout');
+    store.commit('autonomiaBuildThreads/SET_STATUS', 'failed');
   };
 
   watch(pensando, agora => {
@@ -640,6 +657,7 @@ export function useConversaDeCriacao({
     relogioDemora = setTimeout(() => {
       demorando.value = true;
     }, ESPERA_DEMORANDO_MS);
+    relogioPrazo = setTimeout(desistirDeEsperar, PRAZO_DA_RESPOSTA_MS);
   });
 
   // Começo limpo e saída limpa: as stores são únicas no app (outra tela do Construtor ou da base

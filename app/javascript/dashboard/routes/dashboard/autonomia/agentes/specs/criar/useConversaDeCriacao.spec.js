@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import {
   useConversaDeCriacao,
   ESPERA_DEMORANDO_MS,
+  PRAZO_DA_RESPOSTA_MS,
   PRAZO_DAS_SUBIDAS_MS,
 } from '../../composables/useConversaDeCriacao';
 
@@ -757,6 +758,76 @@ describe('useConversaDeCriacao', () => {
     store.state['autonomiaBuildThreads/getStatus'] = 'ready';
     await nextTick();
     expect(conversa.demorando.value).toBe(false);
+    vi.useRealTimers();
+  });
+
+  // #2489 — a geração parada além do prazo do servidor (5 min) vira o cartão "Tentar de novo", em vez de 30 min de
+  // "Pensando…" que só a recarga resolvia.
+  it('gives up waiting after the server window and offers to try again', async () => {
+    vi.useFakeTimers();
+    comThread();
+    const { conversa } = montar();
+    store.state['autonomiaBuildThreads/getStatus'] = 'processing';
+    await nextTick();
+
+    vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+    expect(store.commit).not.toHaveBeenCalledWith(
+      'autonomiaBuildThreads/SET_ERROR',
+      'timeout'
+    );
+    vi.advanceTimersByTime(1);
+    expect(store.dispatch).toHaveBeenCalledWith(
+      'autonomiaBuildThreads/stopPolling'
+    );
+    expect(store.commit).toHaveBeenCalledWith(
+      'autonomiaBuildThreads/SET_ERROR',
+      'timeout'
+    );
+    expect(store.commit).toHaveBeenCalledWith(
+      'autonomiaBuildThreads/SET_STATUS',
+      'failed'
+    );
+
+    // "Tentar de novo" pede ao servidor que refaça a geração (ele recusa com 409 se ela ainda estiver viva).
+    store.state['autonomiaBuildThreads/getError'] = 'timeout';
+    store.state['autonomiaBuildThreads/getStatus'] = 'failed';
+    await nextTick();
+    expect(conversa.falhou.value).toBe(true);
+    expect(conversa.pensando.value).toBe(false);
+    await conversa.tentarDeNovo();
+    expect(store.dispatch).toHaveBeenCalledWith('autonomiaBuildThreads/retry', {
+      threadId: 7,
+    });
+    vi.useRealTimers();
+  });
+
+  it('does not give up when the answer arrives in time, nor while only a file is uploading', async () => {
+    vi.useFakeTimers();
+    comThread();
+    montar();
+    store.state['autonomiaBuildThreads/getStatus'] = 'processing';
+    await nextTick();
+    vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1000);
+    store.state['autonomiaBuildThreads/getStatus'] = 'ready';
+    await nextTick();
+    vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+    expect(store.commit).not.toHaveBeenCalledWith(
+      'autonomiaBuildThreads/SET_ERROR',
+      'timeout'
+    );
+
+    // Pensando só pelo envio (a geração não começou no servidor): o prazo não se aplica.
+    store.state['autonomiaBuildThreads/getStatus'] = 'open';
+    store.state['autonomiaBuildThreads/getUIFlags'] = {
+      creating: false,
+      sending: true,
+    };
+    await nextTick();
+    vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+    expect(store.commit).not.toHaveBeenCalledWith(
+      'autonomiaBuildThreads/SET_ERROR',
+      'timeout'
+    );
     vi.useRealTimers();
   });
 

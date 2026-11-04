@@ -4,6 +4,8 @@ import {
   modeloDaQuery,
   idDaQuery,
   perguntasDeTeste,
+  perguntasDoAgente,
+  MAX_PERGUNTAS_DE_TESTE,
   exemploDoModelo,
   ETAPA,
   etapaDaQuery,
@@ -85,6 +87,34 @@ describe('Copiloto da equipe na query (#1494)', () => {
       'SABADO',
       'PESSOA',
     ]);
+  });
+});
+
+// #2489 (5a) — o teste pergunta o que o Construtor escreveu para este agente, não o genérico do ramo.
+describe('perguntas do próprio agente no teste', () => {
+  it('takes the first questions the Builder wrote, trimmed and without blanks', () => {
+    const agente = {
+      starter_questions: [
+        ' Cobre cancelamento? ',
+        '',
+        null,
+        'Quanto custa 10 dias?',
+        'Tem para intercâmbio?',
+        'E bagagem?',
+      ],
+    };
+    expect(perguntasDoAgente(agente)).toEqual([
+      'Cobre cancelamento?',
+      'Quanto custa 10 dias?',
+      'Tem para intercâmbio?',
+    ]);
+    expect(perguntasDoAgente(agente)).toHaveLength(MAX_PERGUNTAS_DE_TESTE);
+  });
+
+  it('is empty without questions (the model ones stay) and for the helper agent', () => {
+    expect(perguntasDoAgente(null)).toEqual([]);
+    expect(perguntasDoAgente({ starter_questions: [] })).toEqual([]);
+    expect(perguntasDoAgente({ starter_questions: ['Oi?'] }, true)).toEqual([]);
   });
 });
 

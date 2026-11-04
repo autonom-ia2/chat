@@ -1714,7 +1714,7 @@
           "ASSISTENTE": "Creation assistant:",
           "VOCE": "You:",
           "PENSANDO": "Thinking…",
-          "DEMORANDO": "This is taking longer than usual. You can wait here.",
+          "DEMORANDO": "Still working on it. It can take a few minutes, and the answer will show up here on its own.",
           "ESPERE": "Wait for the previous answer.",
           "NAO_SUBIU": "The file “{nome}” did not upload. Remove it or send it again.",
           "CONTINUAR": "Let's pick up where we left off.",
