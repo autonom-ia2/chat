@@ -25,7 +25,7 @@ const galhoFixo = (passo, ramo) => ({
 
 const galhoDoCaminho = (caminho, indice) => ({
   ramo: `caminhos.${indice}`,
-  nome: caminho.chave,
+  nome: caminho.nome,
   passos: caminho.passos,
   com: (alvo, lista) => ({
     ...alvo,

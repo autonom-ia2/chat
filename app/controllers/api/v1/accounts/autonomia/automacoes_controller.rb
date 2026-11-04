@@ -1,5 +1,6 @@
 # As automações da Automação livre pelo editor (#2414 F5, ADR-001 2.2): o catálogo de passos, a lista, abrir, criar,
-# salvar (cada salvar é uma versão nova; a anterior nunca muda), ligar e desligar.
+# salvar (cada salvar é uma versão nova; a anterior nunca muda), ligar e desligar. O histórico ("O que aconteceu", #2498)
+# mostra cada vez que ela rodou, e a lista leva as contagens da semana.
 #
 # A automação nasce desligada. Ligar é sempre "assumir e religar": passa a agir como quem está pedindo, se essa pessoa
 # pode (D1, F3.7); quem não pode recebe o motivo e nada muda. A receita é conferida pela própria Versao (esquema +
@@ -13,7 +14,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   # Desligar sempre funciona (D7), mesmo com a flag desligada depois de a automação ter sido ligada.
   before_action :exigir_flag, except: :desligar
   before_action :autorizar
-  before_action :carregar_automacao, only: [:show, :update, :ligar, :desligar]
+  before_action :carregar_automacao, only: [:show, :update, :ligar, :desligar, :historico]
 
   # Outra pessoa salvou depois da versão que a tela mostrou (🔴1/🟠3 da qualidade): a tela mostra a versão nova antes
   # de deixar ligar ou salvar.
@@ -26,10 +27,12 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     render json: ::Autonomia::Automacao::Catalogo.todos
   end
 
-  # A lista mostra cada automação em frase (Quando → primeiro passo), então leva a receita.
+  # A lista mostra cada automação em frase (Quando → primeiro passo), então leva a receita, e o fato da semana
+  # ("Rodou 12 vezes esta semana · 1 parou"), de uma consulta agrupada só.
   def index
-    automacoes = escopo.includes(:versao_ativa, :ligada_por).order(:id)
-    render json: { automacoes: automacoes.map { |automacao| para_tela(automacao, receita: true) } }
+    automacoes = escopo.includes(:versao_ativa, :ligada_por).order(:id).to_a
+    semana = ::Autonomia::Automacao::Historico.semana(automacoes.map(&:id))
+    render json: { automacoes: automacoes.map { |automacao| para_tela(automacao, receita: true).merge(semana: semana[automacao.id]) } }
   end
 
   def show
@@ -76,6 +79,10 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def desligar
     @automacao.desligar!
     render json: para_tela(@automacao)
+  end
+
+  def historico
+    render json: ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, pagina: params[:pagina]).resultado
   end
 
   private
@@ -141,7 +148,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
       id: automacao.id, nome: automacao.nome, ativa: automacao.ativa, origem: automacao.origem,
       ligada_por: automacao.ligada_por&.slice(:id, :name), atualizada_em: automacao.updated_at,
       versao: versao && { id: versao.id, numero: versao.numero, autor_id: versao.autor_id, criada_em: versao.created_at,
-                          receita: (versao.receita if receita) }.compact
+                          receita: (versao.receita_para_tela if receita) }.compact
     }
   end
 end

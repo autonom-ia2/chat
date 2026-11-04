@@ -9,6 +9,8 @@ import LivreCondicao from './LivreCondicao.vue';
 import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
+import LivreIaCampo from './LivreIaCampo.vue';
+import { caminhosProntos } from '../ia';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar, filtrosDoGatilho } from '../receita';
@@ -47,6 +49,7 @@ const camposNativos = computed(() =>
     ? entrada.value.campos.filter(campo => campo.peca !== 'passos')
     : []
 );
+const ehDeIa = computed(() => entrada.value?.grupo === 'IA');
 const camposDaAcao = computed(() =>
   entrada.value?.tipo === 'acao' ? entrada.value.campos : []
 );
@@ -162,6 +165,18 @@ const nativoPronto = campo => {
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
     );
+  // F7: a pergunta e a instrução escritas; cada caminho e cada dado com nome,
+  // descrição e (no extrair) onde gravar; o destino escolhido.
+  if (campo.peca === 'instrucao') return Boolean(valor?.trim());
+  if (campo.peca === 'caminhos') return caminhosProntos(valor || []);
+  if (campo.peca === 'campos_extrair')
+    return (
+      (valor || []).length >= 1 &&
+      valor.every(
+        item => item.chave?.trim() && item.descricao?.trim() && item.destino
+      )
+    );
+  if (campo.peca.startsWith('destino_')) return !vazio(valor);
   return true;
 };
 const acaoPronta = () =>
@@ -283,6 +298,14 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreIaCampo
+          v-else-if="ehDeIa"
+          :campo="campo"
+          :model-value="rascunho[campo.nome]"
+          :opcoes="opcoes"
+          :atributos-do="atributosDo"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
       </template>

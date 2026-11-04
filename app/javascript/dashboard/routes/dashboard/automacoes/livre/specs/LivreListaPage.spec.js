@@ -11,7 +11,11 @@ const { routerPush, config } = vi.hoisted(() => ({
   config: { crmKanbanEnabled: false },
 }));
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (chave, valores) => (valores?.n ? `${chave}:${valores.n}` : chave),
+  }),
+}));
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { accountId: 1 }, query: {} }),
   useRouter: () => ({ push: routerPush }),
@@ -96,6 +100,30 @@ describe('LivreListaPage', () => {
     expect(linhas[0].find('[data-frase]').text()).toContain('QUANDO_COMECA');
     expect(linhas[0].find('[data-frase]').text()).toContain('PARAR');
     expect(linhas[1].attributes('data-antiga')).toBeDefined();
+  });
+
+  it('a nova mostra o fato da semana; a antiga, não (#2498)', async () => {
+    AutomacoesAPI.get.mockResolvedValue({
+      data: { automacoes: [{ ...NOVA, semana: { rodou: 12, parou: 1 } }] },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    const linhas = wrapper.findAll('[data-linha]');
+    expect(linhas[0].find('[data-fato]').text()).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.SEMANA.RODOU:12 · AUTOMACAO_LIVRE.HISTORICO.SEMANA.PAROU:1'
+    );
+    expect(linhas[1].find('[data-fato]').exists()).toBe(false);
+  });
+
+  it('sem rodar na semana, diz que ainda não rodou', async () => {
+    AutomacoesAPI.get.mockResolvedValue({
+      data: { automacoes: [{ ...NOVA, semana: { rodou: 0, parou: 0 } }] },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    expect(wrapper.find('[data-fato]').text()).toBe(
+      'AUTOMACAO_LIVRE.HISTORICO.SEMANA.NADA'
+    );
   });
 
   it('a antiga abre na tela de hoje; a nova, no editor', async () => {

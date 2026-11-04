@@ -2,7 +2,8 @@ import { mount } from '@vue/test-utils';
 import LivrePassos from '../components/LivrePassos.vue';
 
 // #2500 F7 — os galhos do "decidir" pela travessia única: um por caminho, com o
-// nome que a pessoa deu ("Caminho N" enquanto não tem nome), e o "nenhum".
+// nome à vista que a pessoa deu, nunca a chave ("Caminho N" enquanto não tem
+// nome), e o "nenhum".
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (chave, valores) =>
@@ -31,8 +32,13 @@ describe('LivrePassos com o decidir', () => {
         id: 'd1',
         tipo: 'decidir',
         caminhos: [
-          { chave: 'sinistro', descricao: 'batida', passos: [] },
-          { chave: '', descricao: 'preço', passos: [] },
+          {
+            nome: 'Sinistro',
+            chave: 'sinistro',
+            descricao: 'batida',
+            passos: [],
+          },
+          { nome: '', chave: '', descricao: 'preço', passos: [] },
         ],
         nenhum: [],
       },
@@ -41,7 +47,7 @@ describe('LivrePassos com o decidir', () => {
     const rotulos = wrapper
       .findAll('[data-galho]')
       .map(galho => galho.text().trim());
-    expect(rotulos[0]).toContain('sinistro');
+    expect(rotulos[0]).toContain('Sinistro');
     expect(rotulos[1]).toContain('AUTOMACAO_LIVRE.RAMOS.CAMINHO {"n":2}');
     expect(rotulos[2]).toContain('AUTOMACAO_LIVRE.RAMOS.NENHUM');
   });

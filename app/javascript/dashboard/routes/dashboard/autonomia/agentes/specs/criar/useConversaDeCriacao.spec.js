@@ -3,6 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import {
   useConversaDeCriacao,
   ESPERA_DEMORANDO_MS,
+  PRAZO_DA_RESPOSTA_MS,
   PRAZO_DAS_SUBIDAS_MS,
 } from '../../composables/useConversaDeCriacao';
 
@@ -758,6 +759,155 @@ describe('useConversaDeCriacao', () => {
     await nextTick();
     expect(conversa.demorando.value).toBe(false);
     vi.useRealTimers();
+  });
+
+  // #2489 — a geração parada além do prazo do servidor (5 min) vira o cartão "Tentar de novo", em vez de 30 min de
+  // "Pensando…" que só a recarga resolvia. O aviso fica no composable: o status da store não é forjado.
+  describe('prazo da geração (#2489)', () => {
+    const processando = async () => {
+      store.state['autonomiaBuildThreads/getStatus'] = 'processing';
+      await nextTick();
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      comThread();
+    });
+
+    it('offers to try again after the server window, without touching the store status', async () => {
+      const { conversa } = montar();
+      await processando();
+
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(true);
+
+      vi.advanceTimersByTime(1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+      expect(conversa.pensando.value).toBe(false);
+      expect(store.commit).not.toHaveBeenCalledWith(
+        'autonomiaBuildThreads/SET_STATUS',
+        'failed'
+      );
+      expect(chamadas('autonomiaBuildThreads/stopPolling')).toHaveLength(0);
+
+      await conversa.tentarDeNovo();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/retry',
+        {
+          threadId: 7,
+        }
+      );
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(true);
+
+      // Ainda viva no servidor: um prazo novo, e o aviso volta se ela continuar parada.
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+    });
+
+    it('goes back to waiting right away when the server refuses the retry (still alive or already done)', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      store.dispatch.mockImplementation(nome =>
+        nome === 'autonomiaBuildThreads/retry'
+          ? Promise.reject(new Error('409'))
+          : Promise.resolve(null)
+      );
+
+      await conversa.tentarDeNovo();
+      await flushPromises();
+      expect(store.dispatch).toHaveBeenCalledWith(
+        'autonomiaBuildThreads/poll',
+        {
+          threadId: 7,
+          delay: 0,
+        }
+      );
+      expect(conversa.pensando.value).toBe(true);
+    });
+
+    it('a new turn after the window holds the field and counts a new window (status stays processing)', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: true,
+      };
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(true);
+
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: false,
+      };
+      await nextTick();
+      expect(conversa.pensando.value).toBe(true);
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      vi.advanceTimersByTime(1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+    });
+
+    it('drops the warning when the answer arrives after the window', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+
+      store.state['autonomiaBuildThreads/getStatus'] = 'ready';
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(conversa.pensando.value).toBe(false);
+    });
+
+    it('counts from when the generation starts, not from the upload or the send', async () => {
+      const { conversa } = montar();
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: true,
+      };
+      await nextTick();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+
+      store.state['autonomiaBuildThreads/getUIFlags'] = {
+        creating: false,
+        sending: false,
+      };
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      vi.advanceTimersByTime(1);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+    });
+
+    it('does not warn when the answer arrives in time', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1000);
+      store.state['autonomiaBuildThreads/getStatus'] = 'ready';
+      await nextTick();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+    });
   });
 
   it('stops polling and clears the stores when leaving', () => {

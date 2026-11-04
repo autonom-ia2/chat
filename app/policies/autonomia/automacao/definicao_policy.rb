@@ -4,6 +4,7 @@ class Autonomia::Automacao::DefinicaoPolicy < ApplicationPolicy
   def passos? = ver?
   def index? = ver?
   def show? = ver?
+  def historico? = ver?
   def create? = gerenciar?
   def update? = gerenciar?
   def ligar? = gerenciar?

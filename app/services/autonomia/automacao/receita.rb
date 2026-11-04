@@ -13,6 +13,13 @@ class Autonomia::Automacao::Receita
   RAMOS = %w[entao senao se_vencer].freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
+  # Os passos de IA (F7), só com a flag da F7.
+  IA = %w[decidir extrair escrever resumir].freeze
+  # Onde o extrair pode gravar, além dos atributos do contato e da conversa (`<base>.atributos.<chave>`).
+  DESTINOS_FIXOS = %w[contato.nome empresa.nome].freeze
+  DESTINOS_DE_ATRIBUTO = %w[contato.atributos conversa.atributos].freeze
+  # A chave do caminho sai do nome (minúscula, sem acento) e precisa de pelo menos uma letra.
+  LETRAS = ('a'..'z')
 
   # As listas de passos que um passo abre, na ordem em que aparecem. É a única travessia da receita: o salvar, o ligar, a
   # chave de funis (sem_funil? do controller) e o Roteiro andam por aqui. Um ramo que ficasse de fora deixaria a ação
@@ -57,6 +64,7 @@ class Autonomia::Automacao::Receita
   def problemas_do_passo(passo)
     return problemas_da_condicao(passo['id'], passo['condicao']) if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
+    return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
@@ -69,6 +77,61 @@ class Autonomia::Automacao::Receita
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
     lidos = ::Autonomia::Automacao::Texto.caminhos(passo['texto']).flat_map { |caminho| problemas_do_caminho(id, caminho) }
     desligado + lidos + destinatarios_de_fora(passo)
+  end
+
+  # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da
+  # F4. Os caminhos e os campos não repetem, e o extrair só grava onde pode.
+  def problemas_da_ia(passo)
+    id = passo['id']
+    [*(::Autonomia::Automacao::Motor.ia?(@conta) ? [] : [texto(:ia_desligada, passo: id)]),
+     *(fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta) ? [texto(:passo_desligado, passo: id)] : []),
+     *caminhos_repetidos(id, Array(passo['caminhos'])),
+     *caminhos_sem_chave_boa(id, Array(passo['caminhos'])),
+     *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
+     *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
+     *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
+  end
+
+  # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
+  def avisar_do_resumir(passo) = passo['destino'].is_a?(Hash) ? passo['destino']['avisar'] : nil
+
+  def fala_com_gente?(passo)
+    (passo['tipo'] == 'escrever' && passo['destino'] == 'mensagem') || (passo['tipo'] == 'resumir' && passo['destino'].is_a?(Hash))
+  end
+
+  # Dois caminhos com a mesma chave ("Cotação" e "cotacao" viram cotacao) ou com o mesmo nome à vista (quem chama a API
+  # pode mandar chaves diferentes): uma frase por grupo, com o nome do primeiro, que é o que a pessoa vê.
+  def caminhos_repetidos(id, caminhos)
+    primeiros = caminhos.each_index.filter_map do |indice|
+      caminhos.first(indice).index { |outro| mesmo_caminho?(outro, caminhos[indice]) }
+    end
+    primeiros.uniq.map { |indice| texto(:caminho_repetido, passo: id, nome: caminhos[indice]['nome']) }
+  end
+
+  def mesmo_caminho?(primeiro, outro) = primeiro['chave'] == outro['chave'] || nome_comparavel(primeiro) == nome_comparavel(outro)
+
+  def nome_comparavel(caminho) = caminho['nome'].to_s.strip.downcase
+
+  # A chave "nenhum" é do ramo "nenhum se aplica": um caminho com ela deixaria a resposta da IA e o histórico ambíguos.
+  # E a chave precisa de letra: "!!!" vira vazia e "123" fica só com dígitos.
+  def caminhos_sem_chave_boa(id, caminhos)
+    caminhos.filter_map do |caminho|
+      chave = caminho['chave'].to_s
+      next texto(:caminho_reservado, passo: id, nome: caminho['nome']) if chave == NENHUM
+
+      texto(:caminho_sem_letra, passo: id, nome: caminho['nome']) if chave.each_char.none? { |letra| LETRAS.cover?(letra) }
+    end
+  end
+
+  def repetidos(id, chaves, motivo)
+    chaves.tally.select { |_chave, vezes| vezes > 1 }.keys.map { |chave| texto(motivo, passo: id, chave: chave) }
+  end
+
+  def destino_invalido(id, destino)
+    base = DESTINOS_DE_ATRIBUTO.find { |prefixo| destino.to_s.start_with?("#{prefixo}.") }
+    valido = DESTINOS_FIXOS.include?(destino) ||
+             (base && destino.to_s.length > base.length + 1 && ::Autonomia::Automacao::Valores.atributo_definido?(destino, @conta))
+    valido ? [] : [texto(:destino_invalido, passo: id, destino: destino)]
   end
 
   def destinatarios_de_fora(passo)
