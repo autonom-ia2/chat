@@ -1714,7 +1714,7 @@
           "ASSISTENTE": "Creation assistant:",
           "VOCE": "You:",
           "PENSANDO": "Thinking…",
-          "DEMORANDO": "This is taking longer than usual. You can wait here.",
+          "DEMORANDO": "Still working on it. It can take a few minutes, and the answer will show up here on its own.",
           "ESPERE": "Wait for the previous answer.",
           "NAO_SUBIU": "The file “{nome}” did not upload. Remove it or send it again.",
           "CONTINUAR": "Let's pick up where we left off.",
@@ -2919,14 +2919,10 @@
         "ESCOLHA": "Write a question as if it were a comment.",
         "SUA_PERGUNTA": "Write the question",
         "PERGUNTAR": "Ask",
-        "ONDE": "Where does the reply go?",
         "PUBLICO": "In the comment",
         "PRIVADO": "In private",
         "REDE": "On which network?",
         "SO_TESTE": "It's only a test: nothing is published.",
-        "FICA": "Stays with you",
-        "FICA_TEXTO": "I don't reply to this: it stays with you in \"Waiting for you\".",
-        "SEM_PRIVADO": "On Facebook the private message doesn't go out yet, and the comment phrase only goes with it: this question stays with you, in \"Waiting for you\".",
         "FRASES_FIXAS": "Here I use the fixed phrases you wrote.",
         "ERRO": "I couldn't test it right now. Try again.",
         "IA_FORA": "The AI didn't reply right now. Try again in a moment.",
@@ -2940,8 +2936,21 @@
           "porta_parada": "This inbox's agent is stopped.",
           "piloto": "This inbox's agent is in testing, only with test phones."
         },
-        "SEM_PUBLICAR": "This is what I would write. On this network it isn't published yet: the phrase only goes out with the private message, which isn't enabled yet. The question stays with you.",
-        "DO_MATERIAL": "From your material: {arquivos}"
+        "DO_MATERIAL": "From your material: {arquivos}",
+        "FAZ": "What I would do",
+        "POR_QUE": "Why: {motivo}",
+        "DECISAO": {
+          "private": "I send a private message and reply in the comment",
+          "price": "I send the price in private and reply in the comment",
+          "to_you": "I pass it to you as urgent, without replying",
+          "hide": "I hide this comment",
+          "no_reply": "I don't reply",
+          "owner_topic": "It stays with you: it's the subject you answer",
+          "sem_certeza": "It stays with you: I wasn't sure what to do",
+          "no_private": "It stays with you: on Facebook the private message doesn't go out yet",
+          "kept_for_owner": "It stays with you: you still need to say who gets the private message",
+          "nao_sei": "It stays with you: it was a case for a private message, but I don't know how to answer it"
+        }
       },
       "COMENTARIOS": {
         "TITULO": "Comments",

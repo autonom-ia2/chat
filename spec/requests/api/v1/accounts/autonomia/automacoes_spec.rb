@@ -465,6 +465,16 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response.parsed_body['versoes'].keys).to eq([versao.id.to_s])
     end
 
+    it 'a receita de versoes sai igual à do show' do
+      automacao.update!(versao_ativa: versao)
+
+      get "#{base}/#{automacao.id}", headers: admin.create_new_auth_token, as: :json
+      do_show = response.parsed_body.dig('versao', 'receita')
+      get "#{base}/#{automacao.id}/historico", headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body.dig('versoes', versao.id.to_s, 'receita')).to eq(do_show)
+    end
+
     it 'recusa quem não tem automation_view e esconde a de outra conta', :aggregate_failures do
       get "#{base}/#{automacao.id}/historico", headers: agente.create_new_auth_token, as: :json
       expect(response).to have_http_status(:unauthorized)
