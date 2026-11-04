@@ -133,6 +133,18 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     end
   end
 
+  # #2527: o valor fechado do alvo (quem começou a conversa) vai ao editor com as opções, como os da mensagem; sem
+  # elas, a pessoa digitaria "Cliente" e o salvar recusaria.
+  it 'dá ao valor fechado do alvo as opções e os operadores dele' do
+    valor = catalogo.gerado['valores'].find { |item| item['caminho'] == 'conversa.iniciada_por' }
+
+    expect(valor).to include('base' => 'conversa', 'opcoes' => [
+                               { 'valor' => 'cliente', 'frase' => 'AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.CLIENTE' },
+                               { 'valor' => 'equipe', 'frase' => 'AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.EQUIPE' }
+                             ])
+    expect(valor['operadores'].pluck('op')).to eq(%w[igual diferente])
+  end
+
   # A condição que o editor já põe ao escolher o gatilho tem que salvar.
   it 'sugere filtro que a Receita aceita no próprio gatilho' do
     catalogo.gerado['gatilhos'].select { |gatilho| gatilho['filtro_sugerido'] }.each do |gatilho|

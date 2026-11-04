@@ -39,6 +39,7 @@
       "CONVERSA_RESPONSAVEL_ID": "Responsável pela conversa",
       "CONVERSA_TIME_ID": "Time da conversa",
       "CONVERSA_ETIQUETAS": "Etiquetas da conversa",
+      "CONVERSA_INICIADA_POR": "Quem começou a conversa",
       "CONTATO_ID": "O contato",
       "CONTATO_NOME": "Nome do contato",
       "CONTATO_EMAIL": "E-mail do contato",
@@ -59,14 +60,17 @@
       "CARD_MOTIVO_DA_PERDA": "Motivo da perda",
       "CARD_ATRIBUTOS": "Campo personalizado do card",
       "MENSAGEM_TIPO": "Tipo da mensagem",
-      "MENSAGEM_PRIVADA": "Mensagem interna"
+      "MENSAGEM_PRIVADA": "Mensagem interna",
+      "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa"
     },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "do cliente",
       "ENVIADA": "da equipe para o cliente",
       "NOTA": "nota interna",
       "TRUE": "sim",
-      "FALSE": "não"
+      "FALSE": "não",
+      "CLIENTE": "o cliente",
+      "EQUIPE": "a equipe"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "é",

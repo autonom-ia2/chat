@@ -97,6 +97,27 @@ RSpec.describe Autonomia::AutomacaoListener, :automacao_motor do
       expect(execucoes.where(automacao: definicao).count).to eq(1)
     end
 
+    # #2527: a Boas-vindas só responde à primeira mensagem da conversa que o cliente começou; a que a equipe começou
+    # (campanha, modelo) fica calada, mesmo quando o cliente responde.
+    it 'o filtro "primeira mensagem, e o cliente começou" pega só a conversa aberta pelo cliente', :aggregate_failures do
+      filtros = [{ 'campo' => { '$valor' => 'mensagem.primeira' }, 'op' => 'igual', 'valor' => true },
+                 { 'campo' => { '$valor' => 'conversa.iniciada_por' }, 'op' => 'igual', 'valor' => 'cliente' }]
+      definicao = automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: { 'tipo' => 'mensagem.criada', 'filtros' => filtros })
+      chegou = lambda do |na_conversa, tipo = :incoming|
+        create(:message, conversation: na_conversa, account: account, inbox: na_conversa.inbox, message_type: tipo).tap do |nova|
+          listener.message_created(evento('message.created', message: nova))
+        end
+      end
+
+      primeira = chegou.call(conversa)
+      chegou.call(conversa)
+      da_equipe = create(:conversation, account: account, status: :open)
+      chegou.call(da_equipe, :template)
+      chegou.call(da_equipe)
+
+      expect(execucoes.where(automacao: definicao).pluck(:evento)).to eq(["mensagem:#{primeira.id}"])
+    end
+
     # A marca por evento (#2488 prometeu, PR-C entrega): o EventDispatcherJob repete o evento, e a repetição não pode
     # responder de novo ao cliente, nem depois que a primeira execução fechou.
     it 'o mesmo evento entregue 2x, com a 1ª execução já fechada, gera 1 execução e 1 mensagem; outro evento gera outra', :aggregate_failures do

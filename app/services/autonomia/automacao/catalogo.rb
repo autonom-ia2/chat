@@ -111,7 +111,7 @@ module Autonomia::Automacao::Catalogo
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499).
   def valores
     campos = ::Autonomia::Automacao::Valores::CAMPOS.keys.map do |caminho|
-      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho) }
+      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho) }
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
@@ -129,10 +129,17 @@ module Autonomia::Automacao::Catalogo
   end
 
   def valor_da_mensagem(caminho)
-    valores = ::Autonomia::Automacao::Valores
-    fechado = valores.fechado(caminho)
-    { 'caminho' => caminho, 'frase' => chave('VALORES', caminho), 'so_no_gatilho' => valores::GATILHO_DA_MENSAGEM,
-      'opcoes' => fechado['opcoes'].map { |opcao| { 'valor' => opcao, 'frase' => chave('VALOR_DA_MENSAGEM', opcao) } },
+    { 'caminho' => caminho, 'frase' => chave('VALORES', caminho),
+      'so_no_gatilho' => ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM, **do_fechado(caminho) }
+  end
+
+  # As opções e os operadores do valor fechado (#2496), da mensagem ou do alvo (`conversa.iniciada_por`, #2527). As
+  # frases ficam em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM para todos os fechados.
+  def do_fechado(caminho)
+    fechado = ::Autonomia::Automacao::Valores.fechado(caminho)
+    return {} unless fechado
+
+    { 'opcoes' => fechado['opcoes'].map { |opcao| { 'valor' => opcao, 'frase' => chave('VALOR_DA_MENSAGEM', opcao) } },
       'operadores' => fechado['operadores'].map { |op| { 'op' => op, 'frase' => chave('OPERADOR_DA_MENSAGEM', op) } } }
   end
 

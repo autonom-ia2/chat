@@ -134,6 +134,20 @@ RSpec.describe Autonomia::Automacao::Versao do
       expect(erros(fora_do_gatilho)).to include('só existe no filtro')
       expect(erros(fora_do_gatilho)).not_to include('não tem o valor')
     end
+
+    # #2527: a Boas-vindas é "chegou a primeira mensagem, e foi o cliente que começou".
+    it 'aceita a Boas-vindas e recusa quem começou fora de cliente e equipe', :aggregate_failures do
+      primeira = { 'campo' => { '$valor' => 'mensagem.primeira' }, 'op' => 'igual', 'valor' => true }
+      do_cliente = { 'campo' => { '$valor' => 'conversa.iniciada_por' }, 'op' => 'igual', 'valor' => 'cliente' }
+      no_gatilho = ->(tipo, *filtros) { receita(esperar, gatilho: { 'tipo' => tipo, 'filtros' => filtros }) }
+
+      expect(versao(no_gatilho.call('mensagem.criada', recebida, primeira, do_cliente))).to be_valid
+      expect(versao(no_gatilho.call('conversa.resolvida', do_cliente.merge('valor' => 'equipe')))).to be_valid
+      expect(erros(no_gatilho.call('mensagem.criada', do_cliente.merge('valor' => 'Cliente'))))
+        .to include('conversa.iniciada_por não tem o valor "Cliente". Use um destes: cliente, equipe')
+      expect(erros(no_gatilho.call('mensagem.criada', primeira.merge('valor' => 'sim')))).to include('mensagem.primeira não tem o valor "sim"')
+      expect(erros(no_gatilho.call('conversa.resolvida', primeira))).to include('mensagem.primeira só existe no filtro')
+    end
   end
 
   describe 'atributo personalizado' do

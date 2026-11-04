@@ -121,6 +121,31 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_ETIQUETAS"
     },
     {
+      "caminho": "conversa.iniciada_por",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_INICIADA_POR",
+      "opcoes": [
+        {
+          "valor": "cliente",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.CLIENTE"
+        },
+        {
+          "valor": "equipe",
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.EQUIPE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
       "caminho": "contato.id",
       "base": "contato",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONTATO_ID"
@@ -234,6 +259,31 @@
         {
           "valor": "nota",
           "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.NOTA"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ]
+    },
+    {
+      "caminho": "mensagem.primeira",
+      "frase": "AUTOMACAO_LIVRE.VALORES.MENSAGEM_PRIMEIRA",
+      "so_no_gatilho": "mensagem.criada",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
         }
       ],
       "operadores": [

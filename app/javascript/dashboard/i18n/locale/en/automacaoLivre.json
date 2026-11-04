@@ -39,6 +39,7 @@
       "CONVERSA_RESPONSAVEL_ID": "Conversation assignee",
       "CONVERSA_TIME_ID": "Conversation team",
       "CONVERSA_ETIQUETAS": "Conversation labels",
+      "CONVERSA_INICIADA_POR": "Who started the conversation",
       "CONTATO_ID": "The contact",
       "CONTATO_NOME": "Contact name",
       "CONTATO_EMAIL": "Contact email",
@@ -59,14 +60,17 @@
       "CARD_MOTIVO_DA_PERDA": "Lost reason",
       "CARD_ATRIBUTOS": "Card custom field",
       "MENSAGEM_TIPO": "Message type",
-      "MENSAGEM_PRIVADA": "Private message"
+      "MENSAGEM_PRIVADA": "Private message",
+      "MENSAGEM_PRIMEIRA": "First message of the conversation"
     },
     "VALOR_DA_MENSAGEM": {
       "RECEBIDA": "from the customer",
       "ENVIADA": "from the team to the customer",
       "NOTA": "private note",
       "TRUE": "yes",
-      "FALSE": "no"
+      "FALSE": "no",
+      "CLIENTE": "the customer",
+      "EQUIPE": "the team"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "is",
