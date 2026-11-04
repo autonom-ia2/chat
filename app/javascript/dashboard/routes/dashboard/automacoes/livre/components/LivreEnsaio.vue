@@ -97,7 +97,11 @@ const nomeDe = item =>
 const opcoes = computed(() =>
   [...conversas.value, ...outras.value].map(item => ({
     value: item.conversa_id,
-    label: nomeDe(item),
+    // Duas conversas do mesmo contato: o número separa uma da outra.
+    label: t('AUTOMACAO_LIVRE.ENSAIO.OPCAO', {
+      nome: nomeDe(item),
+      n: item.conversa_id,
+    }),
   }))
 );
 

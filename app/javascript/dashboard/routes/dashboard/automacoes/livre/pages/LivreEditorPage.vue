@@ -14,10 +14,12 @@ import LivreAlterar from '../components/LivreAlterar.vue';
 import LivreLigar from '../components/LivreLigar.vue';
 import LivreHistorico from '../components/LivreHistorico.vue';
 import LivreEnsaio from '../components/LivreEnsaio.vue';
+import LivrePortas from '../components/LivrePortas.vue';
 import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/guiada/DialogoDaCasa.vue';
 import { carregarCatalogo, novoPasso, useCatalogo } from '../catalogo';
 import {
   acharPasso,
+  copiar,
   falta,
   inserirPasso,
   novoId,
@@ -85,6 +87,31 @@ const fecharPainel = chave => {
 const ensaiar = computed(() => route.query.ensaiar === '1');
 const abrirEnsaio = () =>
   router.replace({ query: { ...route.query, ensaiar: '1' } });
+
+// #2498 — A nova, ainda vazia, começa pelas portas: montar do zero ou uma
+// receita pronta (?receita=<chave>), que abre aqui desligada e só vira
+// automação ao salvar. Receita que pede flag que a conta não tem não abre.
+const doZero = ref(false);
+const portas = computed(
+  () =>
+    nova.value &&
+    podeMudar.value &&
+    !doZero.value &&
+    !receita.value.gatilho &&
+    !receita.value.passos.length
+);
+const receitaPronta = chave => {
+  const item = (catalogo.value?.receitas || []).find(r => r.chave === chave);
+  const liberada = item && (item.requer || []).every(isCloudFeatureEnabled);
+  return liberada ? item : null;
+};
+const usarReceita = async chave => {
+  const item = receitaPronta(chave);
+  if (!item) return;
+  await editor.aplicar(copiar(item.receita));
+  nome.value = t(`AUTOMACAO_LIVRE.RECEITAS.${chave}.NOME`);
+  router.replace({ query: { ...route.query, receita: chave } });
+};
 
 const alternarTudo = () =>
   router.replace({
@@ -251,6 +278,7 @@ const carregarTudo = async () => {
     estado.value = 'erro';
     return;
   }
+  if (nova.value && route.query.receita) await usarReceita(route.query.receita);
   abrirDaUrl();
 };
 
@@ -415,7 +443,15 @@ onMounted(() => {
             </ul>
           </div>
 
+          <LivrePortas
+            v-if="portas && catalogo"
+            :receitas="catalogo.receitas"
+            :liberado="isCloudFeatureEnabled"
+            @receita="usarReceita"
+            @zero="doZero = true"
+          />
           <div
+            v-else
             class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] items-start"
           >
             <div class="flex flex-col gap-4">
