@@ -609,7 +609,7 @@ export function useConversaDeCriacao({
       );
   };
 
-  const tentarDeNovo = () => {
+  const fazerTentativa = () => {
     if (esgotou.value && threadId.value) return refazerDepoisDoPrazo();
     const turnoNaoChegou = erroDaStore.value === 'send';
     store.commit('autonomiaBuildThreads/SET_ERROR', null);
@@ -624,6 +624,17 @@ export function useConversaDeCriacao({
         );
     }
     return abrir();
+  };
+
+  // #2489 — um pedido por vez: dois cliques antes da resposta não mandam dois retries (o segundo cairia no caminho
+  // antigo, porque o primeiro já tirou o aviso do prazo). O segundo recebe a mesma promessa.
+  let tentativaEmAndamento = null;
+  const tentarDeNovo = () => {
+    if (tentativaEmAndamento) return tentativaEmAndamento;
+    tentativaEmAndamento = Promise.resolve(fazerTentativa()).finally(() => {
+      tentativaEmAndamento = null;
+    });
+    return tentativaEmAndamento;
   };
 
   const sinalDeFechar = () => t('AGENTS.BUILDER.FINALIZE_SIGNAL');
