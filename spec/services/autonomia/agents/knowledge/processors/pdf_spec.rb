@@ -20,6 +20,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
     atributos = { MediaBox: caixa }.merge(attributes)
     pages = page_texts.map { |text| instance_double(PDF::Reader::Page, text: text, attributes: atributos, objects: objetos) }
     allow(PDF::Reader).to receive(:new).and_return(reader)
+    allow(Autonomia::Agents::Knowledge::Processors::PdfTrechos).to receive(:da_pagina).and_return([])
     allow(reader).to receive(:pages).and_return(pages)
   end
 
@@ -107,6 +108,17 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
         expect(ocr).to have_received(:ler).with('/tmp/pagina-1.png', tempo: 60)
         expect(file).to have_received(:download).once
         expect(source).not_to have_received(:paginas_de_fora=)
+      end
+
+      # #1426 (#2425) — a conferência precisa saber que o texto veio de leitura de imagem.
+      it 'marks the source as read by OCR when the OCR text is used' do
+        allow(source).to receive(:leitura_de_imagem=)
+        stub_pages([' '])
+        stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
+
+        processor.extract
+
+        expect(source).to have_received(:leitura_de_imagem=).with(true)
       end
 
       # X2 — página que a 300 DPI passaria de 40 MP (A0) nem é rasterizada.
@@ -244,7 +256,7 @@ RSpec.describe Autonomia::Agents::Knowledge::Processors::Pdf do
       end
 
       it 'runs the OCR for an agent of the Fase 2 that is not the Lia' do
-        bia = described_class.new(material(agent: instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false)))
+        bia = described_class.new(material(agent: instance_double(Autonomia::Agents::Agent, instrucao_mantida?: false, config: {})))
         stub_pages([' '])
         stub_ocr('TEXTO RECONHECIDO VIA OCR DO SCAN')
 

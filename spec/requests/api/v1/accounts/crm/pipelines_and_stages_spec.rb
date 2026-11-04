@@ -100,6 +100,20 @@ RSpec.describe 'CRM pipelines and stages API', type: :request do
     expect(account.crm_pipeline_stages.exists?(stage.id)).to be(true)
   end
 
+  it 'puts a stage created without position at the end of its pipeline, and keeps a given position', :aggregate_failures do
+    account, user = create_account_and_user
+    pipeline, = create_crm_pipeline(account: account, user: user)
+    account.crm_pipeline_stages.create!(pipeline: pipeline, name: 'Proposta', position: 4)
+    create_crm_pipeline(account: account, user: user, name: 'Outro funil').first.stages.first.update!(position: 9)
+    url = "/api/v1/accounts/#{account.id}/crm/pipelines/#{pipeline.id}/stages"
+
+    post url, params: { stage: { name: 'Fechamento' } }, headers: auth_headers(user)
+    expect(response.parsed_body.dig('payload', 'position')).to eq(5)
+
+    post url, params: { stage: { name: 'Triagem', position: 1 } }, headers: auth_headers(user)
+    expect(response.parsed_body.dig('payload', 'position')).to eq(1)
+  end
+
   it 'blocks stage reorder across different pipelines' do
     account, user = create_account_and_user
     first_pipeline, first_stage = create_crm_pipeline(account: account, user: user, name: 'Funil A')

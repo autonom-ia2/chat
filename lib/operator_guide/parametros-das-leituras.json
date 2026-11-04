@@ -19,6 +19,18 @@
     "controller": "api/v1/accounts/agent_capacity_policies#show",
     "parametros": []
   },
+  "agentes_do_post": {
+    "controller": "api/v1/accounts/agentes_do_post#index",
+    "parametros": []
+  },
+  "agentes_do_post/:id": {
+    "controller": "api/v1/accounts/agentes_do_post#show",
+    "parametros": []
+  },
+  "agentes_do_post/:id/materiais": {
+    "controller": "api/v1/accounts/agentes_do_post_materiais#index",
+    "parametros": []
+  },
   "agents": {
     "controller": "api/v1/accounts/agents#index",
     "parametros": []
@@ -182,6 +194,24 @@
       "metric",
       "range"
     ]
+  },
+  "autonomia/automacoes": {
+    "controller": "api/v1/accounts/autonomia/automacoes#index",
+    "parametros": []
+  },
+  "autonomia/automacoes/:id": {
+    "controller": "api/v1/accounts/autonomia/automacoes#show",
+    "parametros": []
+  },
+  "autonomia/automacoes/:id/historico": {
+    "controller": "api/v1/accounts/autonomia/automacoes#historico",
+    "parametros": [
+      "pagina"
+    ]
+  },
+  "autonomia/automacoes/passos": {
+    "controller": "api/v1/accounts/autonomia/automacoes#passos",
+    "parametros": []
   },
   "autonomia/avisos": {
     "controller": "api/v1/accounts/autonomia/avisos#index",
@@ -1040,6 +1070,10 @@
       "team_id",
       "updated_within"
     ]
+  },
+  "conversations/:conversation_id/comentario": {
+    "controller": "api/v1/accounts/conversations/comentario#show",
+    "parametros": []
   },
   "conversations/:conversation_id/draft_messages": {
     "controller": "api/v1/accounts/conversations/draft_messages#show",

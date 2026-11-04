@@ -1,23 +1,15 @@
 require 'rails_helper'
 
+# Mitigação temporária (#2454, Issue #2455): o job antigo do Resumo só existe para não matar o que estiver na fila low na
+# hora do deploy. Não faz nada.
 RSpec.describe Crm::MetaAds::ComentariosIa::ResumoJob do
-  let(:account) { create(:account) }
-  let(:alvo) { { 'kind' => 'ad', 'ad_id' => '120', 'networks' => ['instagram'] } }
+  it 'o perform não chama nada e não levanta erro, com os argumentos de antes' do
+    allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
+    allow(Account).to receive(:find_by)
 
-  it 'conta o resumo do alvo' do
-    resumo = instance_double(Crm::MetaAds::ComentariosIa::Resumo, contar!: true)
-    allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new).with(account: account, alvo: alvo).and_return(resumo)
+    expect { described_class.perform_now(1, { 'kind' => 'post', 'perfil' => 'instagram-1', 'post_id' => '1790' }) }.not_to raise_error
 
-    described_class.perform_now(account.id, alvo)
-
-    expect(resumo).to have_received(:contar!)
-  end
-
-  it 'sem nova tentativa: repetir a conta gastaria de novo a Meta e a IA' do
-    expect(described_class.get_sidekiq_options['retry']).to be(false)
-  end
-
-  it 'conta que não existe mais: nada' do
-    expect { described_class.perform_now(0, alvo) }.not_to raise_error
+    expect(Crm::MetaAds::ComentariosIa::Resumo).not_to have_received(:new)
+    expect(Account).not_to have_received(:find_by)
   end
 end

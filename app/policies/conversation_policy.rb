@@ -17,6 +17,12 @@ class ConversationPolicy < ApplicationPolicy
     true
   end
 
+  # Apagar mensagem (e, #2215, o comentário de onde a conversa nasceu). No OSS, quem escreve na conversa; o EE pede
+  # também a chave do cargo.
+  def delete_message?
+    show?
+  end
+
   # Ler a conversa (GET). No OSS é o mesmo que show?; o EE também deixa passar quem só lê (conversation_view).
   def view?
     show?

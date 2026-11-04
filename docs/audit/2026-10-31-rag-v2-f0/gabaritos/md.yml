@@ -1,0 +1,150 @@
+perguntas:
+  - pergunta: "quantos caracteres precisa ter a senha?"
+    tipo: fato_simples
+    esperado: "No mínimo 8 caracteres, com pelo menos uma letra e um número."
+    ancoras: ["A senha precisa ter no mínimo 8 caracteres"]
+  - pergunta: "vcs aceitam amex?"
+    tipo: fato_simples
+    esperado: "Não. O cartão de crédito aceito é Visa, Mastercard, Elo e Hipercard; American Express não é aceita."
+    ancoras: ["Não aceitamos American Express."]
+  - pergunta: "posso cancelar o clube quando eu quiser?"
+    tipo: fato_simples
+    esperado: "Pode, a qualquer momento e sem multa. Os benefícios continuam até o fim do período já pago."
+    ancoras: ["a qualquer momento, sem multa"]
+  - pergunta: "a gorjeta vai tudo pro entregador mesmo?"
+    tipo: fato_simples
+    esperado: "Sim, todo o valor da gorjeta vai para o entregador, sem desconto."
+    ancoras: ["Todo o valor da gorjeta vai para o entregador"]
+  - pergunta: "o entregador sobe até meu apto?"
+    tipo: fato_simples
+    esperado: "Em prédio com portaria ele deixa na portaria. Só sobe até a porta quando o prédio não tem portaria ou o condomínio autoriza."
+    ancoras: ["o entregador deixa o pedido na portaria", "quando o prédio não tem portaria ou quando o condomínio autoriza"]
+  - pergunta: "posso usar 2 cupons no mesmo pedido"
+    tipo: fato_simples
+    esperado: "Não, vale um cupom por pedido e os cupons não se somam. Dá para usar junto com crédito do app e com o frete grátis do Clube."
+    ancoras: ["Cupons não se somam entre si"]
+  - pergunta: "menor de idade pode receber cerveja?"
+    tipo: fato_simples
+    esperado: "Não. Só entregamos bebida alcoólica para maiores de 18 anos, com documento com foto na hora."
+    ancoras: ["Só entregamos bebida alcoólica para maiores de 18 anos"]
+  - pergunta: "qual o pedido minimo?"
+    tipo: valor
+    esperado: "R$ 30, sem contar a taxa de entrega."
+    ancoras: ["O pedido mínimo é de R$ 30, sem contar a taxa de entrega"]
+  - pergunta: "quanto custa o clube por mes"
+    tipo: valor
+    esperado: "R$ 19,90 por mês no plano mensal. O anual é R$ 199,00 em cobrança única."
+    ancoras: ["O plano mensal custa R$ 19,90 por mês"]
+  - pergunta: "o credito do app vence?"
+    tipo: valor
+    esperado: "Sim, vale por 90 dias a partir do dia em que foi recebido."
+    ancoras: ["O crédito vale por 90 dias a partir do dia em que foi recebido"]
+  - pergunta: "pagando em dinheiro tem limite de valor?"
+    tipo: valor
+    esperado: "Tem, o limite é de R$ 200 por pedido."
+    ancoras: ["limite de R$ 200 por pedido"]
+  - pergunta: "o pix expira em quanto tempo"
+    tipo: valor
+    esperado: "O código do Pix vale por 30 minutos. Vencendo sem pagamento, o pedido é cancelado."
+    ancoras: ["o app mostra o código de pagamento, que vale por 30 minutos"]
+  - pergunta: "quanto eu ganho indicando um amigo?"
+    tipo: valor
+    esperado: "R$ 15,00 de crédito para cada um, depois que o primeiro pedido do amigo (mínimo R$ 40) for entregue."
+    ancoras: ["você e o seu amigo ganham R$ 15,00 de crédito cada"]
+  - pergunta: "o teste gratis do clube é por qts dias"
+    tipo: valor
+    esperado: "14 dias grátis, uma vez por CPF."
+    ancoras: ["Quem nunca assinou tem 14 dias grátis"]
+  - pergunta: "qnto é a taxa de chuva"
+    tipo: valor
+    esperado: "R$ 3,00 por pedido, só quando há alerta de chuva forte da Defesa Civil na cidade."
+    ancoras: ["cobramos um adicional de R$ 3,00 por pedido"]
+  - pergunta: "quanto fica a entrega pra quem mora a 5km da loja?"
+    tipo: tabela_linha
+    esperado: "De 4,1 km até 6 km a taxa é R$ 11,90, com prazo de 60 a 90 minutos."
+    ancoras: ["De 4,1 km até 6 km", "R$ 11,90 por pedido"]
+  - pergunta: "lagoa azul abre domingo até q horas?"
+    tipo: tabela_linha
+    esperado: "Em Lagoa Azul, aos domingos e feriados, das 9h às 15h."
+    ancoras: ["Lagoa Azul (zona urbana)"]
+  - pergunta: "o reembolso do vale alimentação demora qto"
+    tipo: tabela_linha
+    esperado: "Até 10 dias úteis, contados da aprovação do reembolso."
+    ancoras: ["Vale-alimentação ou vale-refeição", "Até 10 dias úteis"]
+  - pergunta: "se eu pagei no pix, em qto tempo o dinheiro volta?"
+    tipo: tabela_linha
+    esperado: "Em até 1 dia útil depois da aprovação do reembolso."
+    ancoras: ["Em até 1 dia útil"]
+  - pergunta: "vila nova do sul entrega domingo até que horas"
+    tipo: tabela_linha
+    esperado: "Domingos e feriados das 8h às 21h; o último pedido do dia é até 22h30 (de segunda a sábado)."
+    ancoras: ["Vila Nova do Sul (zona urbana)"]
+  - pergunta: "o mercado não tinha o produto q eu pedi, e agora?"
+    tipo: parafrase
+    esperado: "Para cada item você escolhe na hora do pedido: substituir por similar, me avisar (5 minutos para responder) ou remover."
+    ancoras: ["Para cada item, você escolhe uma entre três opções"]
+  - pergunta: "comprei um pacote de bolacha lacrado e nao quero mais, dá pra devolver?"
+    tipo: parafrase
+    esperado: "Dá, em até 7 dias corridos, se estiver lacrado e na embalagem original. A retirada é gratuita."
+    ancoras: ["itens não perecíveis, lacrados e na embalagem original"]
+  - pergunta: "quero sair do app de vez, como faço"
+    tipo: parafrase
+    esperado: "Em Perfil, Privacidade, Excluir conta. Conclui em até 15 dias; antes não pode ter pedido em andamento nem assinatura ativa."
+    ancoras: ["Vá em Perfil, Privacidade e toque em Excluir conta"]
+  - pergunta: "o motoboy atrasou mto, eu ganho alguma coisa?"
+    tipo: parafrase
+    esperado: "Se chegar mais de 30 minutos depois do fim do prazo estimado, você ganha R$ 10,00 de crédito no app, desde que o atraso não seja por culpa do endereço ou de ninguém atender."
+    ancoras: ["damos R$ 10,00 de crédito no app, automaticamente"]
+  - pergunta: "perdi a senha do app, como recupero?"
+    tipo: parafrase
+    esperado: "Toque em Esqueci minha senha na tela de entrada; o link enviado por e-mail vale por 2 horas."
+    ancoras: ["Você recebe um link que vale por 2 horas"]
+  - pergunta: "veio um produto trocado mais caro q o q eu pedi, vou pagar a mais?"
+    tipo: secao_longa
+    esperado: "Não. Se o substituto for mais caro você paga o preço do original; se for mais barato, paga o menor."
+    ancoras: ["você paga o preço do original"]
+  - pergunta: "ninguém estava em casa na hora da entrega, perco o dinheiro?"
+    tipo: secao_longa
+    esperado: "O entregador espera 5 minutos e liga duas vezes. Depois o pedido volta: perecíveis e congelados não são reembolsados; os demais itens são devolvidos sem a taxa de entrega. Nova entrega exige novo pedido."
+    ancoras: ["o entregador espera 5 minutos e liga duas vezes pelo app", "perecíveis e congelados são descartados e não são reembolsados"]
+  - pergunta: "cancelei o pedido quando tava em separação, cobram algo?"
+    tipo: secao_longa
+    esperado: "Cobram R$ 5,00 pelo trabalho de separação. Antes da separação é grátis e depois que saiu para entrega não dá para cancelar."
+    ancoras: ["mas cobramos R$ 5,00 pelo trabalho de separação"]
+  - pergunta: "faltou muita coisa no meu pedido, devolvem a taxa de entrega?"
+    tipo: secao_longa
+    esperado: "Sim, se faltar mais de 20% do valor do pedido, a taxa de entrega volta em crédito no app. Os itens removidos são estornados."
+    ancoras: ["Se faltar mais de 20% do valor do pedido"]
+  - pergunta: "qual a taxa de entrega mais cara?"
+    tipo: agregacao
+    esperado: "R$ 15,90, para endereços de 6,1 km até 8 km da loja."
+    ancoras: ["De 6,1 km até 8 km", "R$ 15,90 por pedido"]
+  - pergunta: "qual cidade vcs entregam até mais tarde no domingo?"
+    tipo: agregacao
+    esperado: "Vila Nova do Sul, até as 21h aos domingos e feriados."
+    ancoras: ["Vila Nova do Sul (zona urbana)"]
+  - pergunta: "qual forma de pagamento demora mais pra devolver o dinheiro?"
+    tipo: agregacao
+    esperado: "Vale-alimentação ou vale-refeição, até 10 dias úteis."
+    ancoras: ["Vale-alimentação ou vale-refeição", "Até 10 dias úteis"]
+  - pergunta: "qual o telefone pra ligar na central?"
+    tipo: fora
+    fora: true
+  - pergunta: "quanto o entregador ganha por entrega?"
+    tipo: fora
+    fora: true
+  - pergunta: "vcs tem loja física pra eu retirar o pedido?"
+    tipo: fora
+    fora: true
+  - pergunta: "entregam remédio de farmácia tb?"
+    tipo: fora
+    fora: true
+  - pergunta: "como faço pra vender meus produtos no app de vcs?"
+    tipo: fora
+    fora: true
+  - pergunta: "tem programa de pontos ou milhas?"
+    tipo: fora
+    fora: true
+  - pergunta: "qual o cnpj de vcs pra eu conferir?"
+    tipo: fora
+    fora: true

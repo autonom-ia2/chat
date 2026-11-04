@@ -38,7 +38,7 @@ class Autonomia::Agents::Material::Autoteste
     # material da Fase 2 ou sem material aprovado. Passado o limite: o pedido da pessoa levanta LimiteDoAutoteste::Excedido;
     # a rodada automática só não abre (nil).
     def pedir!(agent, quando:)
-      return unless Autonomia::Agents::Material.conferir?(agent) && agent.sources.knowledge_sources.servable.exists?
+      return unless Autonomia::Agents::Material.conferir?(agent) && agent.sources.da_agente.knowledge_sources.servable.exists?
 
       rodada, bloqueio, estado = abrir_rodada(agent, quando)
       raise LIMITE::Excedido, bloqueio if bloqueio && quando == 'pedido'

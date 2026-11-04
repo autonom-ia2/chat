@@ -3,7 +3,7 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   before_action :fetch_source, only: [:destroy, :resync]
 
   def index
-    @sources = @agent.sources.order(created_at: :desc)
+    @sources = @agent.sources.da_agente.order(created_at: :desc)
   end
 
   def create
@@ -115,7 +115,7 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   # o dropzone, isto é a defesa de servidor).
   def knowledge_limit_reached?(kind)
     kind == 'knowledge' &&
-      @agent.sources.knowledge_sources.count >= Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES
+      @agent.sources.da_agente.knowledge_sources.count >= Autonomia::Agents::Source::MAX_KNOWLEDGE_SOURCES
   end
 
   # #1426 (revisão adversarial) — o arquivo vem só como upload. Um texto em `file` seria lido pelo ActiveStorage como
@@ -168,7 +168,7 @@ class Api::V1::Accounts::Autonomia::Agents::SourcesController < Api::V1::Account
   end
 
   def fetch_source
-    @source = @agent.sources.find(params[:id])
+    @source = @agent.sources.da_agente.find(params[:id])
   end
 
   def source_params

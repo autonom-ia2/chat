@@ -27,7 +27,7 @@ module Autonomia::Agents::Material::DecisoesDoMaterial
                  .select { |item| item['escolha'].present? }
     return [] if escolhidas.empty?
 
-    em_uso = agent.sources.knowledge_sources.servable.where(id: escolhidas.pluck('escolha')).index_by(&:id)
+    em_uso = agent.sources.da_agente.knowledge_sources.servable.where(id: escolhidas.pluck('escolha')).index_by(&:id)
     escolhidas.filter_map do |item|
       fonte = em_uso[item['escolha']]
       { assunto: item['assunto'].to_s.squish, vale_o_material: Autonomia::Agents::Material.nome(fonte) }.to_json if fonte

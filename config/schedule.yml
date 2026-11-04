@@ -300,6 +300,18 @@ autonomia_guide_limpar_execucoes_job:
   class: 'Autonomia::Guide::LimparExecucoesJob'
   queue: scheduled_jobs
 
+# executed every day at 04:45; apaga os registros da Automação livre com mais de 30 dias (#2414, F2 #2452).
+autonomia_automacao_limpar_registros_job:
+  cron: '45 4 * * *'
+  class: 'Autonomia::Automacao::LimparRegistrosJob'
+  queue: scheduled_jobs
+
+# executed every minute; acorda as execuções da Automação livre que esperam e fecha as travadas (#2414, F3 #2459).
+autonomia_automacao_varredura_job:
+  cron: '* * * * *'
+  class: 'Autonomia::Automacao::VarreduraJob'
+  queue: scheduled_jobs
+
 # executed every 5 minutes; retoma a tarefa longa do Guia que ficou sem batimento (#936).
 autonomia_guide_tarefas_vigia_job:
   cron: '*/5 * * * *'

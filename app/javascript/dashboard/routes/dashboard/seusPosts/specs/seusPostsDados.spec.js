@@ -187,6 +187,63 @@ describe('Seus posts: comentarioParaTela', () => {
   });
 });
 
+// #2454: o estado de cada resposta, com a régua da Fonte do servidor (a do Resumo).
+describe('Seus posts: o estado da resposta (#2454)', () => {
+  const daConta = hora => ({
+    id: 'p',
+    text: 'Oi',
+    created_time: hora,
+    author: { is_page: true },
+  });
+  const dela = (extra = {}) => ({
+    id: 'r',
+    text: 'Tem no M?',
+    created_time: '2026-10-29T10:00:00+0000',
+    author: { username: 'outra' },
+    ...extra,
+  });
+  const estadoDe = (resposta, outras = []) =>
+    comentarioParaTela({
+      id: 'c',
+      text: 'Oi',
+      author: { username: 'pessoa' },
+      replies: [resposta, ...outras],
+    }).respostas[0].estado;
+
+  it.each([
+    ['sem a conta no fio', dela(), [], 'esperando'],
+    [
+      'a conta respondeu antes',
+      dela(),
+      [daConta('2026-10-29T09:00:00+0000')],
+      'esperando',
+    ],
+    [
+      'a conta respondeu depois',
+      dela(),
+      [daConta('2026-10-29T11:00:00+0000')],
+      'respondido',
+    ],
+    [
+      'sem hora: na dúvida, respondida',
+      dela({ created_time: null }),
+      [daConta('2026-10-29T09:00:00+0000')],
+      'respondido',
+    ],
+    ['escondida', dela({ hidden: true }), [], 'escondido'],
+    [
+      'recebeu no privado',
+      dela({ private_reply: { sent_at: 'x' } }),
+      [],
+      'privado',
+    ],
+    ['sem texto', dela({ text: ' ' }), [], null],
+    ['da própria conta', daConta('2026-10-29T09:00:00+0000'), [], null],
+  ])('%s', (_caso, resposta, outras, estado) => {
+    expect(estadoDe(resposta, outras)).toBe(estado);
+  });
+});
+
 describe('Seus posts: quem espera no post', () => {
   it('sem a contagem (flag desligada) fica nulo, nunca 0', () => {
     const post = postParaTela(

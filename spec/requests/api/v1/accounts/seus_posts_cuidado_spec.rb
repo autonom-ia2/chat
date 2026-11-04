@@ -105,6 +105,54 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response.parsed_body['error']).to eq('already_read')
   end
 
+  describe 'o passo 2 com a IA escrevendo as respostas (#2458)' do
+    let(:passo_2) { corpo.merge(temas: %w[link price], assunto_proibido: 'reembolso', tom: 'mais formal') }
+
+    it 'grava os temas, o assunto proibido e o tom, e o painel os devolve' do
+      put "#{base}/cuidado", params: passo_2, headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body).to include('writes' => true, 'temas' => %w[link price],
+                                              'assunto_proibido' => 'reembolso', 'tom' => 'mais formal')
+      expect(Crm::MetaAdsCommentCare.sole).to have_attributes(temas: %w[link price], assunto_proibido: 'reembolso',
+                                                              tom: 'mais formal')
+    end
+
+    it 'pausar sem os campos do passo 2 não os apaga; mandar vazio apaga' do
+      put "#{base}/cuidado", params: passo_2, headers: admin.create_new_auth_token, as: :json
+
+      put "#{base}/cuidado", params: corpo.merge(status: 'paused'), headers: admin.create_new_auth_token, as: :json
+      expect(Crm::MetaAdsCommentCare.sole).to have_attributes(status: 'paused', assunto_proibido: 'reembolso', tom: 'mais formal')
+
+      put "#{base}/cuidado", params: corpo.merge(assunto_proibido: '', tom: ''), headers: admin.create_new_auth_token, as: :json
+      expect(Crm::MetaAdsCommentCare.sole).to have_attributes(assunto_proibido: nil, tom: nil, temas: %w[link price])
+    end
+
+    it 'recusa temas que não são chips, assunto ou tom longo demais' do
+      longo = 'a' * (Crm::MetaAdsCommentCare::FRASE_DO_DONO_LIMIT + 1)
+      [passo_2.merge(temas: 'preço'), passo_2.merge(temas: [{ a: 1 }]), passo_2.merge(temas: ['pedir o link']),
+       passo_2.merge(assunto_proibido: longo),
+       passo_2.merge(tom: longo), passo_2.merge(tom: ['x'])].each do |errado|
+        put "#{base}/cuidado", params: errado, headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:unprocessable_content)
+      end
+      expect(Crm::MetaAdsCommentCare.count).to eq(0)
+    end
+
+    it 'prévia: o assunto proibido e o tom vão à Prévia, com o cuidado gravado' do
+      allow(Crm::MetaAds::ComentariosIa::Previa).to receive(:new)
+        .and_return(instance_double(Crm::MetaAds::ComentariosIa::Previa, call: { status: 'ready', recebe: { sample: true }, nao: nil }))
+
+      post "#{base}/cuidado/previa", params: { perfil: perfil, para_quem: 'Quem pedir o link', assunto_proibido: 'reembolso', tom: 'formal' },
+                                     headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:ok)
+      expect(Crm::MetaAds::ComentariosIa::Previa).to have_received(:new)
+        .with(hash_including(para_quem: 'Quem pedir o link', base: nil, escrita: { assunto_proibido: 'reembolso', tom: 'formal' }))
+    end
+  end
+
   it 'prévia: decide com o "para quem" do dono e a legenda do post (#2424)' do
     classificador = instance_double(Crm::MetaAds::ComentariosIa::Classificador)
     allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new).and_return(classificador)
@@ -159,16 +207,6 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
       .and_return(instance_double(Crm::MetaAds::ComentariosIa::Rascunho, call: { status: 'ai_unavailable' }))
 
     post "#{base}/cuidado/rascunho", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
-
-    expect(response).to have_http_status(:unprocessable_content)
-    expect(response.parsed_body).to eq('error' => 'ai_unavailable')
-  end
-
-  it 'resumo: IA fora do ar é falha (422 ai_unavailable)' do
-    allow(Crm::MetaAds::ComentariosIa::Resumo).to receive(:new)
-      .and_return(instance_double(Crm::MetaAds::ComentariosIa::Resumo, call: { status: 'ai_unavailable' }))
-
-    get "#{base}/resumo", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:unprocessable_content)
     expect(response.parsed_body).to eq('error' => 'ai_unavailable')
@@ -261,10 +299,17 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response.parsed_body['cuidados'].sole['results']).to eq('sent' => 1, 'replied' => 0)
   end
 
-  it 'resumo: na primeira vez, está lendo' do
+  it 'resumo: antes do clique, só o que o código conta, sem nenhuma IA (#2454)' do
+    allow(Crm::Ai::ResponsesClient).to receive(:new)
+    allow(Crm::MetaAds::ComentariosIa::Classificador).to receive(:new)
+
     get "#{base}/resumo", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 
-    expect(response.parsed_body).to eq('status' => 'reading')
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to eq('status' => 'ready', 'waiting' => 3, 'private_window' => 2)
+    expect(Crm::MetaAds::ComentariosIa::Classificador).not_to have_received(:new)
+    expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    expect(Crm::AiUsageEvent.count).to eq(0)
   end
 
   it 'a lista: o estado do cuidado de cada post, para o selo "Cuidando"' do

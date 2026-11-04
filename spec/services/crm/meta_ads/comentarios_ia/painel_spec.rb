@@ -48,7 +48,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
       .to eq([%w[1 complaint], %w[2 failed], %w[3 skipped], %w[4 waiting], %w[5 older]])
     expect(payload[:to_see].first[:conversation_path]).to start_with("/app/accounts/#{account.id}/conversations/")
     expect(payload[:hidden].pluck(:id)).to eq(%w[6])
-    expect(payload).to include(care: 'on', para_quem: 'Quem pedir o e-book', unanswered: 4, older: 1, private_available: true)
+    expect(payload).to include(care: 'on', care_id: care.id, para_quem: 'Quem pedir o e-book', unanswered: 4, older: 1,
+                               private_available: true)
+  end
+
+  it 'sem cuidado gravado, care_id nulo: a tela do passo 1 só anexa depois de ligar (#2487)' do
+    care.destroy!
+
+    expect(painel.payload).to include(care: 'off', care_id: nil)
   end
 
   it 'recebeu no privado e respondeu, pelas conversas que nasceram do cuidado; não era o caso, pelo que a IA leu' do
@@ -175,6 +182,20 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
 
       expect(payload[:to_see].map { |item| [item[:id], item[:kind]] }).to eq([%w[1 waiting], %w[3 skipped], %w[4 older]])
       expect(payload).to include(unanswered: 1, older: 1)
+    end
+
+    # #2454: "Os N que já estão aqui" do Ligar conta também as respostas de cliente, só com a flag meta_ads_comentarios_ia.
+    it 'as respostas de cliente entram no "Ler e mandar" só com a flag meta_ads_comentarios_ia' do
+      respostas = [linha('1a', dias: 3).merge(parent_id: '1'), linha('2a', dias: 1).merge(parent_id: '2')]
+      allow(fonte).to receive(:ler).and_return({ status: 'ready', linhas: [linha('1', dias: 3), linha('2', dias: 1)], escondidas: [],
+                                                 respostas_que_esperam: respostas })
+
+      expect(painel.payload).to include(unanswered: 1, older: 0)
+
+      account.enable_features!(Crm::MetaAds::ComentariosIa::Cuidar::FLAG)
+      payload = described_class.new(account: account.reload, alvo: alvo, fonte: fonte, conversation_access: ve_tudo, viewer: admin).payload
+      expect(payload).to include(unanswered: 2, older: 0)
+      expect(payload[:to_see].pluck(:id)).to eq(%w[1])
     end
 
     it 'cuidado pausado: o que chegou depois de ligar e a IA não leu fica com o dono (paused), não some' do

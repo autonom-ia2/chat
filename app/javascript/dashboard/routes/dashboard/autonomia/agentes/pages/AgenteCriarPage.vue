@@ -43,6 +43,7 @@ import { fecharFrase, MAX_FOTO } from '../utils/pagina';
 import {
   canalSugerido,
   horariosDasCaixas,
+  temCanalParaEscolher,
   tipoDoCanalParaTexto,
 } from '../utils/criacao';
 import AgenteBotao from '../components/AgenteBotao.vue';
@@ -321,7 +322,13 @@ const rotuloComecar = computed(() => {
   if (ocupacao.estado.value === 'carregando') {
     return t('AGENTS.JORNADA.CRIAR.COMECE.COMECAR');
   }
-  if (!sugerido.value) return '';
+  // #2489 (5b): sem uma única caixa certa, a pessoa escolhe no Comece; sem caixa nenhuma, a Confira
+  // mostra o aviso de conectar um canal.
+  if (!sugerido.value) {
+    return temCanalParaEscolher(canais.value, conversa.agenteId.value)
+      ? t('AGENTS.JORNADA.CRIAR.CONFIRA.ESCOLHER_CANAL')
+      : '';
+  }
   const tipo = tipoDoCanalParaTexto(sugerido.value);
   const canal = tipo.chave ? NOME_DO_CANAL[tipo.chave]() : tipo.nome;
   return t('AGENTS.JORNADA.CRIAR.CONFIRA.COMECAR_NO', { canal });
@@ -961,6 +968,7 @@ onMounted(() => {
           :demorando="conversa.demorando.value"
           :falhou="conversa.falhou.value"
           :aviso="conversa.aviso.value"
+          :falha-ao-subir="conversa.falhaAoSubir.value"
           :fechada="conversa.fechada.value"
           :respostas="conversa.respostas.value"
           :ideias="ideias"

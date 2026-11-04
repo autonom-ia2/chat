@@ -190,6 +190,29 @@ describe('Helper functions', () => {
       });
     });
 
+    // #2459 — a automação diz o passo e o número dela.
+    it('should carry the step and the automation id of an automation action', () => {
+      const auditLogItem = {
+        auditable_type: 'Account',
+        action: 'automacao_action',
+        user_id: 1,
+        auditable_id: 16,
+        audited_changes: {
+          frase: 'Pôr a etiqueta pós-venda',
+          acao: 'PATCH conversations/:conversation_id/labels/alterar',
+          automacao_id: 7,
+          execucao_id: 99,
+        },
+      };
+
+      expect(generateTranslationPayload(auditLogItem, agentList)).toEqual({
+        agentName: 'Agent 1',
+        id: 16,
+        frase: 'Pôr a etiqueta pós-venda',
+        automacaoId: 7,
+      });
+    });
+
     it('should handle generic case like Team create', () => {
       const auditLogItem = {
         auditable_type: 'Team',
@@ -321,6 +344,19 @@ describe('Helper functions', () => {
 
       expect(generateLogActionKey(auditLogItem)).toEqual(
         'AUDIT_LOGS.GUIDE.ACTION'
+      );
+    });
+
+    it('should generate the key of an automation action (#2459)', () => {
+      const auditLogItem = {
+        auditable_type: 'Account',
+        action: 'automacao_action',
+        user_id: 1,
+        auditable_id: 16,
+      };
+
+      expect(generateLogActionKey(auditLogItem)).toEqual(
+        'AUDIT_LOGS.AUTOMACAO.ACTION'
       );
     });
 

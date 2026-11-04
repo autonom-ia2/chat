@@ -41,7 +41,7 @@ class Autonomia::Agents::Faq::KnowledgeWriter
   end
 
   def faq_source!
-    existing = @agent.sources.kind_knowledge.find { |source| self.class.faq_source?(source) }
+    existing = @agent.sources.da_agente.kind_knowledge.find { |source| self.class.faq_source?(source) }
     return existing if existing
 
     @agent.sources.create!(

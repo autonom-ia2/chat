@@ -99,7 +99,8 @@ class Autonomia::Guide::Acoes
     'DELETE conversa_canal/pastas_do_email/:conversation_id',
     # #2084 — "Este contato é" fora do funil expira as sugestões de card do contato e, com arquivar_cards, arquiva os
     # cards abertos dele em lote: o desfazer do Guia não alcança isso.
-    'PUT crm/contacts/:contact_id/relacao'
+    # #2414 F1.3 — a cópia de uma regra nasce ligada (o `active` vem junto), então passa a agir sozinha: confirma.
+    'PUT crm/contacts/:contact_id/relacao', 'POST automation_rules/:automation_rule_id/clone'
   ].freeze
 
   # O que só a pessoa faz, na tela, e por isso nem entra no catálogo (nem com confirmação). #1586: o aceite do dono
@@ -156,7 +157,7 @@ class Autonomia::Guide::Acoes
   # caminho que execute pelo turno passa por este ponto, e a confirmação não
   # pode depender de quem chamou lembrar dela.
   def conferir!(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     raise Recusada, traduzir('needs_confirmation') unless desfazivel?(acao, dados)
 
     montar_caminho(acao, dados)
@@ -184,7 +185,7 @@ class Autonomia::Guide::Acoes
   # ação sem o identificador, e essa recusa tem que acontecer ANTES do botão
   # aparecer, não depois do clique.
   def descrever(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     montar_caminho(acao, dados)
     conferencia = conferir_corpo!(acao, dados)
 
@@ -201,7 +202,7 @@ class Autonomia::Guide::Acoes
   # Executa pela API da conta, como o usuário: se a
   # plataforma não deixa ele fazer, não deixa o Guia fazer.
   def executar(acao, dados)
-    garantir_permitida!(acao)
+    garantir_permitida!(acao, dados)
     caminho = montar_caminho(acao, dados)
     conferencia = conferir_corpo!(acao, dados)
     resposta = requisitar(verbo_de(acao), caminho, conferencia.corpo)
@@ -237,21 +238,20 @@ class Autonomia::Guide::Acoes
   def conferir_corpo!(acao, dados) = conferencia(acao, dados).conferida!
   def conferencia(acao, dados) = ::Autonomia::Guide::Formatos::Conferencia.new(acao, corpo_de(dados), conta: @account)
 
-  def garantir_permitida!(acao)
+  def garantir_permitida!(acao, dados = nil)
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, traduzir('unknown_action') unless catalogo.include?(acao.to_s)
-    raise Recusada, traduzir('admin_only') unless administrador?
+
+    # #2414 F1.3: quem não administra ainda monta automação com automation_manage (Autonomia::Guide::PorteiroDaAutomacao).
+    recusa = ::Autonomia::Guide::PorteiroDaAutomacao.recusa(acao, @account_user, dados ? corpo_de(dados) : {}) unless administrador?
+    raise Recusada, traduzir(recusa) if recusa
   end
 
-  def administrador?
-    @account_user&.role.to_s == 'administrator'
-  end
+  def administrador? = @account_user&.role.to_s == 'administrator'
 
   def verbo_de(acao) = acao.to_s.split(' ', 2).first
 
-  def recurso_de(acao)
-    acao.to_s.split(' ', 2).last
-  end
+  def recurso_de(acao) = acao.to_s.split(' ', 2).last
 
   # Troca cada `:id` pelo valor que veio no pedido. Sem valor, não executa: uma
   # rota com parâmetro em branco atingiria o registro errado ou nenhum.
@@ -306,9 +306,9 @@ class Autonomia::Guide::Acoes
   # não pode ouvir que não deu certo — deu. O erro vai inteiro para o log.
   def auditar(acao, dados, registro)
     Audited.audit_class.create!(
-      auditable: @account, user: @user, action: AUDITORIA,
+      auditable: @account, user: @user, action: self.class::AUDITORIA,
       comment: dados[:descricao].to_s,
-      audited_changes: { 'acao' => acao.to_s, 'frase' => dados[:descricao].to_s, 'registro' => registro }
+      audited_changes: { 'acao' => acao.to_s, 'frase' => dados[:descricao].to_s, 'registro' => registro }.merge(trilha)
     )
   rescue StandardError => e
     Rails.logger.error(
@@ -316,6 +316,9 @@ class Autonomia::Guide::Acoes
       "#{e.class}: #{e.message}"
     )
   end
+
+  # O que a auditoria leva além da ação: a Automação livre põe o id dela (#2459).
+  def trilha = {}
 
   # O erro que volta é o da própria plataforma: é ele que diz a verdade sobre o
   # que faltou ou o que não foi permitido. Quando não há motivo legível, devolve

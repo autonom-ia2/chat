@@ -4,19 +4,28 @@
 #      "Cuidando" e a faixa da lista, só os do perfil (?perfil=).
 # PUT  seus_posts/cuidados                              status → "Pausar todos" / "Retomar todos" do perfil; a lista.
 # GET  seus_posts/posts/:post_id/cuidado                → o Painel (Crm::MetaAds::ComentariosIa::Painel).
-# GET  seus_posts/posts/:post_id/resumo                 → "O que tem nos comentários" (Resumo; 'reading' enquanto conta).
+# GET  seus_posts/posts/:post_id/resumo                 → "O que tem nos comentários" (Resumo): só o que o código conta,
+#      sem IA (#2454): { status, waiting, private_window }.
 #      Ver: administrador ou `posts_view`.
 # PUT  seus_posts/posts/:post_id/cuidado                message, para_quem, phrases[], status → o Painel.
+#      Com a IA escrevendo (#2458), também temas[], assunto_proibido e tom do passo 2.
 # POST seus_posts/posts/:post_id/cuidado/previa         para_quem → os exemplos do passo "como fica" (Previa).
+#      Com a escrita (#2458), também assunto_proibido e tom: o que a IA escreveria.
 # POST seus_posts/posts/:post_id/cuidado/rascunho       → o começo da mensagem do passo 1, escrito pela IA a partir da
 #      legenda do post lida na Meta (Rascunho; uma vez por legenda). { status: 'ready', message } | 'no_offer' |
 #      'no_caption'; a IA fora do ar é 422 `ai_unavailable`.
+# POST seus_posts/posts/:post_id/cuidado/foto           → "O que eu vi na foto" do passo 1 (#2454, flag
+#      meta_ads_comentarios_ia): a Foto lê a foto do post uma vez, só depois do clique. { status: 'ready', text,
+#      corrected } | 'no_image' | 'no_credential' (a conta sem a chave dela) | 'unavailable' (IA ou Meta fora do ar),
+#      sempre 200.
+# PUT  seus_posts/posts/:post_id/cuidado/foto           correction → a correção do dono, que vale no lugar da leitura.
+#      Sem a chave `correction`, 422 `missing_correction`; `correction: ""` volta para a leitura da IA.
 # POST seus_posts/posts/:post_id/cuidado/ler_antigos    → "Ler e mandar" (uma vez por cuidado ligado).
 #      Mudar: administrador ou `posts_manage`.
 #
 # As mesmas guardas do post (SeusPostsComentariosController): ?perfil=, ver a caixa do perfil e o post ser do perfil
 # (inclusive no GET do painel, que o pai pula), mais a flag `meta_ads_comentarios_ia`. A chave de mudar vem antes de
-# conferir o post: quem só vê recebe 403 sem chamada à Meta. Prévia e resumo com a IA fora do ar: 422 `ai_unavailable`.
+# conferir o post: quem só vê recebe 403 sem chamada à Meta. Prévia com a IA fora do ar: 422 `ai_unavailable`.
 # O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,
 # mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
 class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPostsComentariosController
@@ -27,7 +36,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   # O pai confere a chave de mudar em todas as escritas e pula o post no `show`. Aqui as duas voltam na ordem certa: a
   # chave antes de ler o post na Meta, e o post em toda ação de um post (o painel também).
   skip_before_action :ensure_manage, :load_post
-  before_action :ensure_manage, only: [:update, :previa, :rascunho, :ler_antigos, :mudar_todos]
+  before_action :ensure_manage, only: [:update, :previa, :rascunho, :foto, :corrigir_foto, :ler_antigos, :mudar_todos]
   before_action :load_post, except: [:cuidados, :mudar_todos]
   skip_before_action :ensure_ids, only: [:cuidados, :mudar_todos]
 
@@ -52,15 +61,12 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   end
 
   def resumo
-    resultado = Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
-    return render_error_code(AI_UNAVAILABLE) if resultado[:status] == AI_UNAVAILABLE
-
-    render json: resultado
+    render json: Crm::MetaAds::ComentariosIa::Resumo.new(account: Current.account, alvo: alvo, fonte: fonte).call
   end
 
   def update
     painel.salvar!(message: texto(:message), para_quem: texto(:para_quem),
-                   phrases: frases, status: cuidado_params[:status].to_s, user: Current.user)
+                   phrases: frases, status: cuidado_params[:status].to_s, user: Current.user, escrita: escrita)
     audit_care!('save')
     render json: painel.payload
   end
@@ -69,7 +75,8 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     para_quem = texto(:para_quem)
     return render_error_code('invalid_para_quem') if para_quem.strip.empty? || para_quem.strip.length > Crm::MetaAdsCommentCare::NOTE_LIMIT
 
-    resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem).call
+    resultado = Crm::MetaAds::ComentariosIa::Previa.new(account: Current.account, fonte: fonte, para_quem: para_quem,
+                                                        base: painel.cuidado, escrita: escrita).call
     # A tela trata qualquer resposta de erro como "não deu para ler": só a prévia pronta vai como prévia.
     return render_error_code(resultado[:status]) unless resultado[:status] == 'ready'
 
@@ -82,6 +89,20 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     return render_error_code(AI_UNAVAILABLE) if resultado[:status] == AI_UNAVAILABLE
 
     render json: resultado
+  end
+
+  def foto
+    render json: fonte.foto&.ler || { status: 'no_image' }
+  end
+
+  # A chave `correction` é obrigatória: sem ela, 422, sem mexer em nada. Apagar a correção só com `correction: ""`.
+  def corrigir_foto
+    return render_error_code('missing_correction') unless params.key?(:correction)
+
+    correcao = texto(:correction)
+    return render_error_code('invalid_correction') if correcao.strip.length > Crm::MetaAdsPostReading::TEXT_LIMIT
+
+    render json: fonte.foto&.corrigir!(correcao, user: Current.user) || { status: 'no_image' }
   end
 
   def ler_antigos
@@ -119,7 +140,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   end
 
   def cuidado_params
-    @cuidado_params ||= params.permit(:status, :message, :para_quem, phrases: [])
+    @cuidado_params ||= params.permit(:status, :message, :para_quem, :correction, :assunto_proibido, :tom, phrases: [], temas: [])
   end
 
   # Só texto: lista ou objeto virariam outro texto no `to_s` (#2327). O que chegou e os strong params tiraram veio
@@ -135,6 +156,18 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_phrases' unless value.is_a?(Array) && value.all?(String)
 
     value
+  end
+
+  # #2458: o passo 2 com a escrita, só os campos que vieram (pausar e retomar não mexem neles). Os temas, só lista de
+  # textos. Sem a flag, o passo 2 nem é lido: o pedido de antes não ganha um 422 novo.
+  def escrita
+    return {} unless Crm::MetaAds::ComentariosIa::Escrita.ligada?(Current.account)
+
+    temas = cuidado_params[:temas]
+    raise Crm::MetaAds::ComentariosIa::Painel::Error, 'invalid_temas' if params.key?(:temas) && !(temas.is_a?(Array) && temas.all?(String))
+
+    campos = %i[assunto_proibido tom].select { |campo| params.key?(campo) }.index_with { |campo| texto(campo) }
+    params.key?(:temas) ? campos.merge(temas: temas) : campos
   end
 
   # Tudo de uma vez, numa transação: o status muda sem regravar o resto (um cuidado antigo que não passaria na validação

@@ -1784,6 +1784,7 @@
       "HIDE": "Ocultar automações",
       "RULES": "Regras automáticas",
       "ADD_RULE": "Nova regra",
+      "SO_VER": "Você pode ver estas regras. Para criar ou mudar, peça a permissão de gerenciar automações.",
       "LOADING": "Carregando automações...",
       "EMPTY": "Nenhuma automação configurada para esta etapa.",
       "NEW_RULE_NAME": "Automação — {stage}",

@@ -44,7 +44,7 @@ class Autonomia::Agents::Material::Retrato
 
   # Sem rodada ainda: a caixa aparece só quando há material aprovado para testar.
   def nunca
-    return unless @agent.sources.knowledge_sources.servable.exists?
+    return unless @agent.sources.da_agente.knowledge_sources.servable.exists?
 
     { estado: 'nunca', quando: nil, feitas: 0, total: 0, do_material: 0, de_fora: 0, certas_do_material: 0,
       certas_de_fora: 0, resultados: [] }

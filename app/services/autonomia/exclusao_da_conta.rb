@@ -38,9 +38,9 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Crm::SubjectDecision', :por_conta],
     ['Crm::MemoriaFato', :por_conta],
     ['Crm::MetaAdsCommentAction', :por_conta],
-    ['Crm::MetaAdsCommentCare', :por_conta],
     ['Crm::MetaAdsCommentPerson', :por_conta],
     ['Crm::MetaAdsCommentDraft', :por_conta],
+    ['Crm::MetaAdsPostReading', :por_conta],
     ['Crm::MemoriaChave', :por_conta],
     # Card e o que pendura nele.
     ['Crm::StageAutomationExecution', :por_conta],
@@ -106,6 +106,8 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Agents::InstructionVersion', :por_conta],
     ['Autonomia::Agents::KnowledgeEntry', :por_conta],
     ['Autonomia::Agents::Source', :por_conta],
+    # O material só de um post ou anúncio (#2487) aponta para o cuidado: a fonte sai antes, com o arquivo.
+    ['Crm::MetaAdsCommentCare', :por_conta],
     ['Autonomia::Agents::Specialist', :por_conta],
     ['Autonomia::Agents::Tool', :por_conta],
     ['Autonomia::Agents::BuildThread', :por_conta],
@@ -117,6 +119,12 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
+    # Automação livre (#2414): registro, execução, versão e automação. A versão ativa da automação aponta para a
+    # versão com SET NULL, então as versões saem antes sem esbarrar nela.
+    ['Autonomia::Automacao::Registro', :por_conta],
+    ['Autonomia::Automacao::Execucao', :por_conta],
+    ['Autonomia::Automacao::Versao', :por_conta],
+    ['Autonomia::Automacao::Definicao', :por_conta],
     # Guia da Plataforma.
     ['Autonomia::Guide::Aviso', :por_conta],
     ['Autonomia::Guide::Memoria', :por_conta],
