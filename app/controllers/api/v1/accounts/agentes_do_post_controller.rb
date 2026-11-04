@@ -64,8 +64,6 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
     render json: { cuidados: visiveis.map { |care| Crm::MetaAds::ComentariosIa::NoAgentes.item(care) } }
   end
 
-  # O detalhe guardado só depois de passar as guardas (Recusa não é guardada). A chave leva a pessoa (os resultados e o
-  # "Ver conversa" dependem do que ela vê) e o updated_at do cuidado.
   # Só quem veria o cuidado do anúncio: as flags de Anúncios, a chave de ver e a conexão ativa. A caixa de cada rede se
   # confere ao abrir o cuidado (o criativo é que diz as caixas).
   def anuncios
@@ -73,9 +71,11 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
     raise Recusa, 'forbidden' unless policy('ad').show?
     raise Recusa, 'not_connected' unless conectado?
 
-    render json: { anuncios: Crm::MetaAds::ComentariosIa::AnunciosParaCuidar.new(conexao, visible: viewer).lista }
+    render json: { anuncios: Crm::MetaAds::ComentariosIa::AnunciosParaCuidar.new(conexao).lista }
   end
 
+  # O detalhe guardado só depois de passar as guardas (Recusa não é guardada). A chave leva a pessoa (os resultados e o
+  # "Ver conversa" dependem do que ela vê) e o updated_at do cuidado.
   def show
     lido = Rails.cache.fetch(chave_do_detalhe, expires_in: DETALHE_TTL) do
       load_alvo
@@ -119,7 +119,10 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
 
   def flags?(kind)
     ligada = ->(flag) { Current.account.feature_enabled?(flag) }
-    kind == 'post' ? POST_FLAGS.all?(&ligada) : AD_FLAGS.all?(&ligada) && REDE_FLAGS.any?(&ligada)
+    return POST_FLAGS.all?(&ligada) if kind == 'post'
+
+    # O anúncio mora no CRM (#2479): sem ele, as telas do cuidado do anúncio (Crm::BaseController) não abrem.
+    ::Crm::Config.enabled? && AD_FLAGS.all?(&ligada) && REDE_FLAGS.any?(&ligada)
   end
 
   def policy(kind)
@@ -161,10 +164,6 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
 
     @alvo = anuncio.alvo
     @fonte = Crm::MetaAds::ComentariosIa::Fonte.anuncio(anuncio, @alvo['networks'])
-  end
-
-  def viewer
-    @viewer ||= ::Crm::MetaAds::VisibleConversations.current
   end
 
   def conexao

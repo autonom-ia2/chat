@@ -16,9 +16,9 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
   let!(:connection) { create_meta_ads_insights_connection(account) }
   let(:agora) { Time.zone.parse('2026-11-04T10:00:00-03:00') }
 
-  def gasto(ad_id, date, valor)
+  def gasto(ad_id, date, valor, **extra)
     Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: ad_id, date: date, currency: 'BRL',
-                                    spend: valor, attribution_window: '7d_click', fetched_at: agora)
+                                    spend: valor, attribution_window: '7d_click', fetched_at: agora, **extra)
   end
 
   def nome(ad_id, texto, thumbnail_url: nil)
@@ -36,25 +36,37 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
     stub_request(:any, /graph\.facebook\.com/).to_raise('a lista não lê a Meta')
   end
 
-  it 'os anúncios dos últimos 30 dias, com nome, foto e o estado do cuidado, sem ler a Meta' do
+  it 'os anúncios dos últimos 30 dias, na ordem de Anúncios (primeiro os que trazem conversa), com nome, foto e estado' do
     nome('1201', 'Seguro viagem', thumbnail_url: 'https://cdn.exemplo/1201.jpg')
     nome('1202', 'Seguro auto')
-    gasto('1201', Date.new(2026, 11, 3), 80)
+    Crm::MetaAdObject.create!(account: account, meta_object_id: 'conjunto-site', object_type: 'adset', destination_type: 'WEBSITE',
+                              fetched_at: agora)
+    gasto('1201', Date.new(2026, 11, 3), 80, conversations_started: 2)
     gasto('1202', Date.new(2026, 11, 2), 30)
-    gasto('1203', Date.new(2026, 11, 1), 10)
+    gasto('1203', Date.new(2026, 11, 1), 10, adset_id: 'conjunto-site') # leva ao site: entre os outros
     gasto('1299', Date.new(2026, 9, 1), 500) # fora dos 30 dias
     create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '1202', network: 'both', status: 'paused')
     create(:crm_meta_ads_comment_care, account: account, target_kind: 'post', target_id: '1203', network: 'instagram')
+    create(:crm_meta_ads_comment_care, account: create(:account), target_kind: 'ad', target_id: '1201', network: 'both')
 
     pedir
 
     expect(response).to have_http_status(:ok)
-    expect(response.parsed_body['anuncios']).to contain_exactly(
-      { 'id' => '1201', 'name' => 'Seguro viagem', 'image_url' => 'https://cdn.exemplo/1201.jpg', 'care' => nil },
-      { 'id' => '1202', 'name' => 'Seguro auto', 'image_url' => nil, 'care' => 'paused' },
-      { 'id' => '1203', 'name' => nil, 'image_url' => nil, 'care' => nil }
-    )
+    expect(response.parsed_body['anuncios']).to eq([
+                                                     { 'id' => '1201', 'name' => 'Seguro viagem', 'image_url' => 'https://cdn.exemplo/1201.jpg',
+                                                       'care' => nil },
+                                                     { 'id' => '1202', 'name' => 'Seguro auto', 'image_url' => nil, 'care' => 'paused' },
+                                                     { 'id' => '1203', 'name' => nil, 'image_url' => nil, 'care' => nil }
+                                                   ])
     expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
+  it 'sem o CRM na instalação: 404' do
+    with_modified_env CRM_KANBAN_ENABLED: 'false' do
+      pedir
+    end
+
+    expect(response).to have_http_status(:not_found)
   end
 
   it 'não pede a leitura de hoje à Meta (como faz o painel de Anúncios)' do

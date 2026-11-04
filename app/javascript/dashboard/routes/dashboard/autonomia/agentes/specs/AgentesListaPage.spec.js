@@ -57,6 +57,22 @@ const doPost = vi.hoisted(() => ({
   anuncios: vi.fn(),
 }));
 vi.mock('dashboard/api/agentesDoPost', () => ({ default: doPost }));
+// #2479: os posts do "Qual post?" (Seus posts).
+const seusPosts = vi.hoisted(() => ({
+  get: vi.fn(() =>
+    Promise.resolve({
+      data: {
+        perfis: [{ id: 'instagram-3', network: 'instagram', name: 'loja' }],
+        perfil: {
+          id: 'instagram-3',
+          network: 'instagram',
+          posts: [{ id: '1790', text: 'Seguro viagem.', image_url: null }],
+        },
+      },
+    })
+  ),
+}));
+vi.mock('dashboard/api/seusPosts', () => ({ default: seusPosts }));
 
 const agente = (id, extra = {}) => ({
   id,
@@ -906,6 +922,13 @@ describe('AgentesListaPage', () => {
         expect(
           document.body.querySelector('[data-criar-fontes]')
         ).not.toBeNull();
+        document.body.querySelector('[data-criar-post="1790"]').click();
+        await flushPromises();
+        expect(router.push).toHaveBeenCalledWith({
+          name: 'seus_posts_cuidar',
+          params: { postId: '1790' },
+          query: { perfil: 'instagram-3', de: 'agentes' },
+        });
         wrapper.unmount();
       });
 

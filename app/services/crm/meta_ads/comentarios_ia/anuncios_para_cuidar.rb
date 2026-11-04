@@ -8,13 +8,12 @@
 class Crm::MetaAds::ComentariosIa::AnunciosParaCuidar
   PERIODO = '30d'.freeze
 
-  def initialize(connection, visible:)
+  def initialize(connection)
     @connection = connection
-    @visible = visible
   end
 
   def lista
-    linhas = (report.ads + report.other_ads).uniq { |linha| linha[:ad_id] }
+    linhas = report.ads + report.other_ads
     estados = estados_do_cuidado(linhas.pluck(:ad_id))
     linhas.map do |linha|
       { id: linha[:ad_id], name: linha[:name], image_url: linha[:image_url] || linha[:thumbnail_url], care: estados[linha[:ad_id]] }
@@ -24,7 +23,7 @@ class Crm::MetaAds::ComentariosIa::AnunciosParaCuidar
   private
 
   def report
-    @report ||= Crm::MetaAds::Panel::Report.new(@connection, period: PERIODO, visible: @visible)
+    @report ||= Crm::MetaAds::Panel::Report.new(@connection, period: PERIODO)
   end
 
   def estados_do_cuidado(ad_ids)

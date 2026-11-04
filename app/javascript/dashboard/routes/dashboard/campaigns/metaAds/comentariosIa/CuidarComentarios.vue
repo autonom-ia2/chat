@@ -40,7 +40,7 @@ const props = defineProps({
 });
 
 // 'reply': "Responder" no cuidado ligado, que leva aos comentários do post ou do anúncio (#2479: mesmo quando o
-// "Voltar" vai para Agentes).
+// "Voltar" vai para Agentes). Quem usa esta tela precisa tratar os dois: sem `@reply`, o botão não faz nada.
 const emit = defineEmits(['back', 'reply']);
 
 const { t } = useI18n();
