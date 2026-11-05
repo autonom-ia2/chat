@@ -3,8 +3,8 @@
 # Cada rede tem o seu adaptador, que usa os serviços do #2196 e do #2197 sempre que eles existem:
 # - Instagram (Rede::Instagram): o privado pelo Crm::MetaAds::InstagramPrivateReply, que reivindica, confere a janela
 #   de 7 dias, envia e abre a conversa; a resposta e o esconder pelo Instagram::CommentsClient;
-# - Facebook (Rede::Facebook): o privado pelo Messenger é nosso (Rede::Pagina, token da caixa); a resposta e o
-#   esconder pelo Crm::MetaAds::FacebookComments, que grava a ação.
+# - Facebook (Rede::Facebook): o privado pelo Messenger é nosso (Rede::Pagina, token da caixa); a leitura, a resposta e
+#   o esconder pelo Rede::ComentariosDaPagina, também com o token da caixa (#2587), que grava a ação.
 #
 # `privado_disponivel?` diz se a rede já deixa a IA mandar o privado (o Facebook espera a pages_messaging, F4).
 # Todo adaptador responde `privado(care)` com um Envio (ok, conversation, erro) e `responder(texto)` e `esconder` com

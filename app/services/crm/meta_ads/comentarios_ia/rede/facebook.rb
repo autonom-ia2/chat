@@ -4,13 +4,13 @@
 #   do Messenger com a mensagem que saiu (Conversa.no_messenger!). Recusado (4xx), a linha sai; sem resposta ou 5xx, a
 #   Meta pode ter entregado: a linha fica sem confirmação e travada. Na resposta a comentário (2º nível, #2454), nada
 #   recusa antes da Meta, e o resultado fica gravado como no Instagram (meta_message_id, ou a recusa com o código);
-# - leitura, resposta e esconder: Crm::MetaAds::FacebookComments do #2197, com a conexão de anúncios da conta. Ele
-#   confere que o comentário é do post e que a Página é da conta (leitura) ou tem a caixa do Messenger nela (ações), e
-#   grava a ação com actor 'ai'. Aqui não há pessoa abrindo a tela: a IA age pela caixa da Página, sem conferir quem a vê.
+# - leitura, resposta e esconder (#2587): Rede::ComentariosDaPagina, com o token da caixa da Página, em post e em
+#   anúncio, sem a conexão de Anúncios (antes, sem ela, o comentário era descartado). Ele confere que o comentário é do
+#   post e que o post é desta Página, e grava a ação com actor 'ai'. Aqui não há pessoa abrindo a tela: a IA age pela
+#   caixa da Página, sem conferir quem a vê.
 class Crm::MetaAds::ComentariosIa::Rede::Facebook
   TENTA_DE_NOVO = %w[meta_unavailable needs_login].freeze
   REGISTRO = Crm::MetaAds::ComentariosIa::Registro
-  SEM_PESSOA = ->(_inbox) { true }
 
   def initialize(inbox, comentario)
     @inbox = inbox
@@ -41,7 +41,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   def ler
-    dados = comentarios&.comment(@comentario.post_id, @comentario.comment_id)
+    dados = comentarios.comment(@comentario.post_id, @comentario.comment_id)
     dados && { text: dados['message'], from_name: dados.dig('from', 'name'), from_id: dados.dig('from', 'id')&.to_s }
   # Como no Instagram: Meta fora do ar, login caído ou permissão tirada tentam de novo (um problema da Página não
   # descarta os comentários um a um; esgotado, o CuidarJob deixa o comentário com o dono). O resto é descartado.
@@ -58,7 +58,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     return @ler_pai if defined?(@ler_pai)
     return if @comentario.parent_id.blank?
 
-    @ler_pai = comentarios&.comment(@comentario.post_id, @comentario.parent_id)&.dig('message')
+    @ler_pai = comentarios.comment(@comentario.post_id, @comentario.parent_id)&.dig('message')
   rescue Crm::MetaAds::FacebookComments::Error => e
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
 
@@ -69,7 +69,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   def legenda
     return @legenda if defined?(@legenda)
 
-    @legenda = @comentario.post_id.present? ? comentarios&.post_message(@comentario.post_id) : nil
+    @legenda = @comentario.post_id.present? ? comentarios.post_message(@comentario.post_id) : nil
   rescue Crm::MetaAds::FacebookComments::Error => e
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
 
@@ -80,7 +80,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   # para todas as idas à Graph desta leitura (a leitura da foto roda dentro da requisição); passou dele, Indisponivel.
   def imagens(prazo: nil)
     limite = prazo && (Process.clock_gettime(Process::CLOCK_MONOTONIC) + prazo)
-    dados = @comentario.post_id.present? ? comentarios(prazo: limite)&.post_media(@comentario.post_id) : nil
+    dados = @comentario.post_id.present? ? comentarios(prazo: limite).post_media(@comentario.post_id) : nil
     Crm::MetaAds::ComentariosIa::Imagens.do_facebook(dados.to_h)
   rescue Crm::MetaAds::FacebookComments::Error => e
     raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
@@ -89,13 +89,13 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   def responder(texto)
-    comentarios&.reply_as_ai(@comentario.post_id, @comentario.comment_id, texto).present?
+    comentarios.reply_as_ai(@comentario.post_id, @comentario.comment_id, texto).present?
   rescue Crm::MetaAds::FacebookComments::Error
     false
   end
 
   def esconder
-    comentarios&.hide_as_ai(@comentario.post_id, @comentario.comment_id, true) == true
+    comentarios.hide_as_ai(@comentario.post_id, @comentario.comment_id, true) == true
   rescue Crm::MetaAds::FacebookComments::Error
     false
   end
@@ -145,7 +145,6 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   def comentarios(prazo: nil)
-    conexao = Crm::MetaAdsConnection.find_by(account_id: @comentario.account_id)
-    conexao && Crm::MetaAds::FacebookComments.new(conexao, inbox_access: SEM_PESSOA, prazo: prazo)
+    Crm::MetaAds::ComentariosIa::Rede::ComentariosDaPagina.new(@inbox.channel, prazo: prazo)
   end
 end
