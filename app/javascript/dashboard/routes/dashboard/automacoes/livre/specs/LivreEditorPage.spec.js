@@ -59,10 +59,12 @@ vi.mock('dashboard/composables/store', async () => {
     },
   };
 });
-// #2597: quem lê o valor do card tem spec próprio (valorProtegido.spec.js).
+// #2597: quem lê o valor do card. O espelho tem spec próprio
+// (valorProtegido.spec.js); aqui só a ligação com o catálogo do Alterar.
+const leValores = vi.hoisted(() => ({ sim: true }));
 vi.mock('../usePodeLerValor', async () => {
   const { ref: criarRef } = await import('vue');
-  return { usePodeLerValor: () => criarRef(() => true) };
+  return { usePodeLerValor: () => criarRef(() => leValores.sim) };
 });
 // #2499: os gatilhos de card pedem a chave de funis; as etapas vêm do CRM.
 vi.mock(
@@ -161,6 +163,7 @@ const salva = (extra = {}) => ({
 const abertos = [];
 const AlterarFalso = {
   name: 'LivreAlterar',
+  props: { catalogo: { type: Object, default: null } },
   setup(_, { expose }) {
     expose({ abrir: item => abertos.push(item), fechar: vi.fn() });
   },
@@ -216,6 +219,7 @@ describe('LivreEditorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     abertos.length = 0;
+    leValores.sim = true;
     rota.name = 'automacoes_livre_editar';
     rota.params = { accountId: 1, id: 5 };
     rota.query = {};
@@ -623,6 +627,33 @@ describe('LivreEditorPage', () => {
   // #2499: com a flag, o "Alterar" recebe os gatilhos de card; trocar de
   // "entrou na etapa" para "card ganho" não leva a etapa junto, e a frase do
   // Confira diz a etapa escolhida.
+  it.each([
+    ['quem lê os valores', true, undefined],
+    ['quem não lê os valores', false, true],
+  ])(
+    '%s: o catálogo do Alterar marca o valor do card',
+    async (_caso, sim, marca) => {
+      leValores.sim = sim;
+      const valor = {
+        caminho: 'card.valor',
+        frase: 'VALOR',
+        permissao: 'sales_value_view',
+      };
+      // O catálogo fica em cache no módulo: troca e volta, como no gatilho de card.
+      const { catalogo } = useCatalogo();
+      const antes = catalogo.value;
+      catalogo.value = { ...CATALOGO, valores: [valor] };
+      const wrapper = montar();
+      await flushPromises();
+
+      const valores = wrapper
+        .findComponent(AlterarFalso)
+        .props('catalogo').valores;
+      catalogo.value = antes;
+      expect(valores[0].sem_permissao).toBe(marca);
+    }
+  );
+
   it('gatilho de card: oferece com a flag e salva o gatilho inteiro', async () => {
     const ENTROU = {
       tipo: 'card.entrou_na_etapa',

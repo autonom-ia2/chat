@@ -34,7 +34,8 @@ const rotulos = catalogo =>
 const STUBS = {
   TextArea: {
     props: ['modelValue'],
-    template: '<textarea :value="modelValue" />',
+    template:
+      '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
   },
   ChoiceSelect: {
     props: ['options', 'modelValue'],
@@ -65,6 +66,25 @@ describe('valor que pede permissão', () => {
     expect(ve('agent', null, [])).toBe(true);
     expect(ve('agent', 7, ['crm_view'])).toBe(false);
     expect(ve('agent', 7, ['sales_value_view'])).toBe(true);
+    expect(ve(undefined, undefined, [])).toBe(false);
+  });
+
+  it('digitar "[VALOR]" num texto que não o usa fica como texto, sem virar o dado', async () => {
+    const wrapper = mount(LivreTexto, {
+      props: {
+        rotulo: 'TEXTO',
+        modelValue: ['Oi'],
+        catalogo: sem,
+        atributosDo: () => [],
+      },
+      global: { mocks: { $t: chave => chave }, stubs: STUBS },
+    });
+
+    await wrapper.find('textarea').setValue('Valor: [VALOR]');
+
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toEqual([
+      'Valor: [VALOR]',
+    ]);
   });
 
   it('no texto que já usa o valor, ele mostra o nome, sem "apagado", e fica fora do "Pôr um dado"', () => {

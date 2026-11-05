@@ -39,7 +39,10 @@ const daConta = computed(() =>
 const opcoes = computed(() =>
   comApagados(
     props.modelValue,
-    [...daConta.value, ...valoresSemPermissao(props.catalogo, t)],
+    [
+      ...daConta.value,
+      ...valoresSemPermissao(props.catalogo, t, props.modelValue || []),
+    ],
     caminho =>
       t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DADO_APAGADO', {
         dado: fraseDoValor(caminho, props.catalogo, t),

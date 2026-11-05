@@ -154,7 +154,7 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
 
       expect(conversa.reload.priority).to eq('low')
       expect(registros(execucao)).to eq([['s1', 'ok', nil], ['a2', 'ok', nil], %w[m1 pulado faltou_valor]])
-      expect(conversa.messages.where('content LIKE ?', 'Valor:%')).to be_empty
+      expect(conversa.messages.where('content LIKE ? OR content LIKE ?', '%2500%', 'Valor:%')).to be_empty
     end
 
     # Sem account_user, o Valores já lê vazio (ver "quem não está na conta"); antes disso, a execução nem anda.
@@ -166,7 +166,7 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
 
       expect(registros(execucao)).to eq([%w[inicio pulado quem_ligou_saiu_da_conta]])
       expect(conversa.reload.priority).to be_nil
-      expect(conversa.messages.where('content LIKE ?', 'Valor:%')).to be_empty
+      expect(conversa.messages.where('content LIKE ? OR content LIKE ?', '%2500%', 'Valor:%')).to be_empty
     end
   end
 end
