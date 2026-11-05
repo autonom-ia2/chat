@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_11_08_720000) do
+ActiveRecord::Schema[7.2].define(version: 2026_11_08_730000) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -599,6 +599,18 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_720000) do
     t.index ["deleted_by_id"], name: "index_autonomia_agents_on_deleted_by_id"
   end
 
+  create_table "autonomia_automacao_conversoes", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "antigo_tipo", null: false
+    t.bigint "antigo_id", null: false
+    t.bigint "definicao_id", null: false
+    t.jsonb "estado_antes", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "antigo_tipo", "antigo_id"], name: "idx_autonomia_automacao_conversoes_antiga", unique: true
+    t.index ["definicao_id"], name: "index_autonomia_automacao_conversoes_on_definicao_id"
+  end
+
   create_table "autonomia_automacao_execucoes", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "automacao_id", null: false
@@ -624,7 +636,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_720000) do
     t.index ["automacao_id"], name: "index_autonomia_automacao_execucoes_on_automacao_id"
     t.index ["due_at"], name: "idx_autonomia_automacao_execucoes_esperando", where: "(finalizada_em IS NULL)"
     t.index ["versao_id"], name: "index_autonomia_automacao_execucoes_on_versao_id"
-    t.check_constraint "(estado::text = ANY (ARRAY['concluida'::text, 'falhou'::text, 'interrompida'::text, 'parada'::text])) = (finalizada_em IS NOT NULL)", name: "chk_autonomia_automacao_execucoes_finalizada"
+    t.check_constraint "(estado::text = ANY (ARRAY['concluida'::text, 'falhou'::text, 'interrompida'::text, 'parada'::text, 'do_antigo'::text])) = (finalizada_em IS NOT NULL)", name: "chk_autonomia_automacao_execucoes_finalizada"
   end
 
   create_table "autonomia_automacao_registros", force: :cascade do |t|
@@ -4697,6 +4709,8 @@ ActiveRecord::Schema[7.2].define(version: 2026_11_08_720000) do
   add_foreign_key "autonomia_agents", "accounts"
   add_foreign_key "autonomia_agents", "users", column: "created_by_id"
   add_foreign_key "autonomia_agents", "users", column: "deleted_by_id", on_delete: :nullify
+  add_foreign_key "autonomia_automacao_conversoes", "accounts"
+  add_foreign_key "autonomia_automacao_conversoes", "autonomia_automacoes", column: "definicao_id"
   add_foreign_key "autonomia_automacao_execucoes", "accounts"
   add_foreign_key "autonomia_automacao_execucoes", "autonomia_automacao_versoes", column: "versao_id"
   add_foreign_key "autonomia_automacao_execucoes", "autonomia_automacoes", column: "automacao_id"
