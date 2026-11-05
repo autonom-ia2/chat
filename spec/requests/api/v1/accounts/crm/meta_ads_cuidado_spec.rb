@@ -41,7 +41,8 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
 
   before do
     Rails.cache.clear
-    account.enable_features!('meta_ads_gestao', 'meta_ads_comentarios_instagram', 'meta_ads_comentarios_ia')
+    # #2520: a gestão de Anúncios (meta_ads_gestao) não entra na régua; desligada aqui, o cuidado abre.
+    account.enable_features!('meta_ads_comentarios_instagram', 'meta_ads_comentarios_ia')
     create_meta_ads_insights_connection(account)
     stub_anuncio({ effective_instagram_media_id: media_id, instagram_user_id: ig_id, effective_object_story_id: story_id })
     data = [comentario('101', 'Quero o e-book'), comentario('102', 'Lindo!'), comentario('103', 'Valor?', horas: 24 * 9)]
@@ -49,8 +50,8 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     stub_request(:get, %r{#{ig}/#{media_id}\?}).to_return(status: 200, headers: json, body: { comments_count: data.size }.to_json)
   end
 
-  it 'sem a flag meta_ads_comentarios_ia, sem a gestão ou sem a flag de nenhuma rede: 404 sem chamar a Meta' do
-    [%w[meta_ads_comentarios_ia], %w[meta_ads_gestao], %w[meta_ads_comentarios_instagram]].each do |flags|
+  it 'sem a flag meta_ads_comentarios_ia ou sem a flag de nenhuma rede: 404 sem chamar a Meta' do
+    [%w[meta_ads_comentarios_ia], %w[meta_ads_comentarios_instagram]].each do |flags|
       account.disable_features!(*flags)
 
       get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json

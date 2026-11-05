@@ -32,6 +32,13 @@ class ComentariosIaAPI extends ApiClient {
     return kind === 'post' ? { perfil } : {};
   }
 
+  // #2520: the post of the care screen (post target only), under the care flags: { perfil, status, can_manage, post }.
+  getPostDoCuidado(target) {
+    return axios.get(`${this.targetUrl(target)}/cuidado/post`, {
+      params: ComentariosIaAPI.params(target),
+    });
+  }
+
   getCuidado(target) {
     return axios.get(`${this.targetUrl(target)}/cuidado`, {
       params: ComentariosIaAPI.params(target),

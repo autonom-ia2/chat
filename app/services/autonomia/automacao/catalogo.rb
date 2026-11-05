@@ -98,32 +98,18 @@ module Autonomia::Automacao::Catalogo
     [I18N, *partes.map { |parte| parte.to_s.tr('.', '_').upcase }].join('.')
   end
 
-  def gatilhos
-    esquema.dig('properties', 'gatilho', 'properties', 'tipo', 'enum').map do |tipo|
-      { 'tipo' => tipo, 'alvo' => ::Autonomia::Automacao::Gatilhos.alvo(tipo), 'frase' => chave('GATILHOS', tipo),
-        'filtro_sugerido' => declarado.dig('filtro_sugerido', tipo) }.compact
-    end
-  end
-
-  def unidades
-    esquema.dig('definitions', 'duracao', 'properties', 'unidade', 'enum').map do |unidade|
-      { 'valor' => unidade, 'frase' => chave('UNIDADES', unidade) }
-    end
-  end
-
-  # Cada operador e se ele pede um valor para comparar ("está vazio" não pede).
-  def operadores
-    esquema.dig('definitions', 'condicao', 'oneOf').filter_map do |forma|
-      ops = forma.dig('properties', 'op', 'enum')
-      ops&.map { |op| { 'op' => op, 'pede_valor' => forma['required'].include?('valor'), 'frase' => chave('OPERADORES', op) } }
-    end.flatten
-  end
+  # O que sai do esquema da receita: os gatilhos, as unidades de tempo e os operadores.
+  def gatilhos = ::Autonomia::Automacao::CatalogoDoEsquema.gatilhos(esquema, declarado)
+  def unidades = ::Autonomia::Automacao::CatalogoDoEsquema.unidades(esquema)
+  def operadores = ::Autonomia::Automacao::CatalogoDoEsquema.operadores(esquema)
 
   # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
-  # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499).
+  # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499). A resposta durante a espera
+  # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até".
   def valores
-    campos = ::Autonomia::Automacao::Valores::CAMPOS.keys.map do |caminho|
-      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho) }
+    campos = (::Autonomia::Automacao::Valores::CAMPOS.keys + ::Autonomia::Automacao::Valores::RESPOSTA.keys).map do |caminho|
+      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
+        'so_na_espera' => (true if ::Autonomia::Automacao::Valores.da_resposta?(caminho)) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }

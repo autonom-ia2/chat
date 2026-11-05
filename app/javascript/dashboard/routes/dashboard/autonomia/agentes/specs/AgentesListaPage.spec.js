@@ -813,7 +813,7 @@ describe('AgentesListaPage', () => {
         [
           'meta_ads_comentarios_ia',
           'seus_posts',
-          'seus_posts_comentarios',
+          'meta_ads_comentarios_instagram',
         ].includes(flag);
       store.state.getCurrentAccountId = 1;
       doPost.list.mockResolvedValue({ data: { cuidados: CUIDADOS } });
@@ -868,10 +868,10 @@ describe('AgentesListaPage', () => {
 
     // #2479: o "Qual post?" também lista os anúncios, com as guardas da tela do cuidado do anúncio.
     describe('#2479 · anúncios no "Qual post?"', () => {
+      // #2520: sem a gestão (meta_ads_gestao), que não entra na régua dos comentários.
       const FLAGS_DOS_ANUNCIOS = [
         'meta_ads_comentarios_ia',
         'meta_ads_hub',
-        'meta_ads_gestao',
         'meta_ads_comentarios_facebook',
       ];
 
@@ -949,7 +949,7 @@ describe('AgentesListaPage', () => {
           'sem a flag dos comentários de nenhuma rede',
           () => {
             store.state['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
-              FLAGS_DOS_ANUNCIOS.slice(0, 3).includes(flag);
+              FLAGS_DOS_ANUNCIOS.slice(0, 2).includes(flag);
           },
         ],
       ])('%s, só com Anúncios: a criação de hoje', async (_caso, tirar) => {

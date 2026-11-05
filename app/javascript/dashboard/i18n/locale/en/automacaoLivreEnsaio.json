@@ -1,0 +1,87 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "ENSAIO": {
+      "BOTAO": "Test run",
+      "BOTAO_ANTES": "Test run before turning on",
+      "TITULO": "Test run",
+      "SUBTITULO": "See what the automation would do in your conversations. Nothing is sent or changed.",
+      "FECHAR": "Close",
+      "CARREGANDO": "Testing on recent conversations",
+      "ERRO": "Couldn't run the test now. Try again.",
+      "SEM_CONVERSAS": "You don't have conversations to test on yet.",
+      "QUANTAS": "of the {total} most recent conversations would enter this automation",
+      "ENTRARIA": "would enter",
+      "NAO_ENTRARIA": "wouldn't enter",
+      "OUTRA": "Test on another conversation",
+      "ESCOLHA": "Choose the conversation",
+      "CONVERSA_N": "Conversation {n}",
+      "NA_CONVERSA": "In {nome}'s conversation, the automation would:",
+      "FORA": {
+        "SPAM": "Nothing: the conversation is in Spam.",
+        "SEM_MENSAGEM": "Nothing: the conversation has no message yet.",
+        "FORA_DO_FILTRO": "Nothing: the conversation doesn't pass the trigger's \"Only if\"."
+      },
+      "HOJE_SIM": "Today, yes: it would follow \"Then\".",
+      "HOJE_NAO": "Today, no: it would follow \"Otherwise\".",
+      "JA_VALE": "Already true: it would continue right away.",
+      "SE_CHEGAR": "If it arrives in time:",
+      "SE_VENCER": "If the deadline passes:",
+      "SE_CAMINHO": "If the AI picks \"{nome}\":",
+      "SE_NENHUM": "If none applies:",
+      "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
+      "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
+      "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
+      "CORTE": "The test stopped here: the automation has too many paths to show.",
+      "OPCAO": "{nome} · #{n}",
+      "FARIA": {
+        "IA_EXTRAIR": "Would save: {lista}.",
+        "IA_ESCREVER_MENSAGEM": "Would go to the customer.",
+        "IA_ESCREVER_SUGESTAO": "Would stay as a suggestion for the team to review and send.",
+        "IA_RESUMIR_NOTA": "Would stay in a private note.",
+        "IA_RESUMIR_AVISAR": "Would notify the team.",
+        "ONDE": {
+          "CONVERSA": "{campo}, in the conversation",
+          "CONTATO": "{campo}, in the contact",
+          "EMPRESA": "{campo}, in the company"
+        }
+      }
+    },
+    "HISTORICO": {
+      "TITULO": "What happened",
+      "SUBTITULO": "Every time this automation ran in the last 30 days.",
+      "CARREGANDO": "Loading what happened",
+      "ERRO": "Could not load what happened right now.",
+      "VAZIO": "It has not run yet.",
+      "VER_MAIS": "Show more",
+      "CONVERSA_DE": "Conversation with {nome}",
+      "CONVERSA_N": "Conversation #{n}",
+      "OCULTA": "A conversation",
+      "OCULTA_DICA": "In an inbox you can't see",
+      "ABRIR_CONVERSA": "Open the conversation",
+      "VER_MENSAGEM": "See the message",
+      "ESTADOS": {
+        "ANDANDO": "running",
+        "ESPERANDO": "waiting",
+        "CONCLUIDA": "finished",
+        "PARADA": "stopped",
+        "FALHOU": "error",
+        "INTERROMPIDA": "interrupted"
+      },
+      "ESPERANDO_ATE": "waiting until {quando}",
+      "PULOU": "Skipped: {frase}",
+      "NAO_FEZ": "Did not do: {frase}",
+      "INICIO": "Did not start",
+      "PASSO_SUMIU": "A step that is no longer in this version",
+      "SEGUIU_POR": "Took: {ramo}",
+      "ESPERA_ATE": "Waits until {quando}",
+      "TENTATIVA": "Attempt {n}",
+      "IA": "AI: US$ {valor}",
+      "IA_MENOS_DE": "AI: less than US$ {valor}",
+      "SEMANA": {
+        "NADA": "Has not run this week",
+        "RODOU": "Ran once this week | Ran {n} times this week",
+        "PAROU": "1 stopped | {n} stopped"
+      }
+    }
+  }
+}

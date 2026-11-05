@@ -5,16 +5,21 @@
 #   cadeia).
 # - `mensagem_criada`: o gatilho "mensagem.criada" e o despertar da conversa dela. A flag vem antes de carregar a
 #   conversa: é o evento mais frequente da plataforma.
-# - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela é reservado e confere a
-#   condição agora, em vez de esperar o prazo. Só o "esperar até": a ação que espera uma nova tentativa e o "esperar"
-#   de tempo seguem o relógio.
+# - `evento_do_card`: o card criado, movido, ganho ou perdido (#2499, F6), que o emissor do CRM despacha também quando há
+#   automação assinante (`assinante?`). Cada gatilho do evento começa com a marca da atividade e a etapa ou o funil.
+#   Roda no EventoDoCardJob, não no listener: o erro sobe e o job tenta de novo sozinho, sem repetir os webhooks e os
+#   avisos dos outros listeners do mesmo evento. A repetição é segura: a marca da atividade não deixa abrir duas.
+# - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela, também o card cuja
+#   conversa principal é ela, é reservado e confere a condição agora, em vez de esperar o prazo. Só o "esperar até":
+#   a ação que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
 # que já foi desligado.
 #
 # Falha aqui vai para o log e não para as outras automações, nem o evento: o EventDispatcherJob tenta de novo, e
-# repetiria os webhooks e avisos dos outros listeners. Vale para o método inteiro (o Motor.ligado? e as consultas
+# repetiria os webhooks e avisos dos outros listeners. A exceção é o `evento_do_card`, que roda no job próprio e deixa
+# o erro subir. Vale para o método inteiro (o Motor.ligado? e as consultas
 # também) e, dentro dele, para cada automação e cada execução. O log leva a classe do erro e onde ele saiu, nunca a
 # mensagem: a de uma consulta traz os valores, que podem ser do cliente. A automação que não começou por erro não
 # deixa registro (não há execução onde pôr); o "esperar até" que não acordou segue pelo relógio.
@@ -24,18 +29,33 @@
 module Autonomia::Automacao::Escuta
   module_function
 
-  # `alvo`: a conversa, o card ou o contato do gatilho (Gatilhos). `evento`: a marca única do fato.
-  def comecar(alvo, tipo, mensagem: nil, evento: nil)
+  # `alvo`: a conversa, o card ou o contato do gatilho (Gatilhos). `evento`: a marca única do fato. `dados`: o que o
+  # evento traz para os parâmetros do gatilho (a etapa, o funil).
+  def comecar(alvo, tipo, mensagem: nil, evento: nil, dados: {})
     return unless alvo && ::Autonomia::Automacao::Motor.ligado?(alvo.account)
 
-    automacoes_do_gatilho(alvo.account_id, tipo).includes(:account, :versao_ativa, :ligada_por).find_each do |definicao|
-      ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: alvo, chave_gatilho: tipo, mensagem: mensagem, evento: evento).call
+    cada_automacao(alvo, tipo, dados) do |definicao|
+      partir(definicao, alvo, tipo, mensagem: mensagem, evento: evento)
     rescue StandardError => e
-      registrar_erro("não começou automacao=#{definicao.id} alvo=#{alvo.class.name}:#{alvo.id}", e)
+      registrar_erro("não começou automacao=#{definicao.id} alvo=#{rotulo(alvo)}", e)
     end
   rescue StandardError => e
-    registrar_erro("não ouviu gatilho=#{tipo} alvo=#{alvo&.class&.name}:#{alvo&.id}", e)
+    registrar_erro("não ouviu gatilho=#{tipo} alvo=#{rotulo(alvo)}", e)
   end
+
+  # As automações ligadas com o gatilho cujos parâmetros (etapa, funil) casam com os `dados` do evento.
+  def cada_automacao(alvo, tipo, dados)
+    automacoes_do_gatilho(alvo.account_id, tipo).includes(:account, :versao_ativa, :ligada_por).find_each do |definicao|
+      yield definicao if ::Autonomia::Automacao::Gatilhos.casa?(definicao.versao_ativa.receita['gatilho'].to_h, dados)
+    end
+  end
+
+  def partir(definicao, alvo, tipo, mensagem: nil, evento: nil)
+    ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: alvo, chave_gatilho: tipo, mensagem: mensagem, evento: evento).call
+  end
+
+  # Para o log: o tipo e o id do banco, sem nome nem título (podem ser do cliente).
+  def rotulo(alvo) = alvo ? "#{alvo.class.name}:#{alvo.id}" : 'nenhum'
 
   # Atividade (o histórico que a própria plataforma escreve) não é mensagem de ninguém. Nota privada conta: é mensagem
   # da equipe na conversa.
@@ -54,8 +74,7 @@ module Autonomia::Automacao::Escuta
     account = registro.account
     return unless ::Autonomia::Automacao::Motor.ligado?(account)
 
-    ::Autonomia::Automacao::Execucao.where(account_id: account.id, alvo_type: 'Conversation', alvo_id: conversa_ids, estado: 'esperando')
-                                    .includes(:versao).find_each do |execucao|
+    esperando_pela_conversa(account, conversa_ids).includes(:versao).find_each do |execucao|
       reservar(execucao) if esperando_condicao?(execucao)
     rescue StandardError => e
       registrar_erro("não acordou execucao=#{execucao.id}", e)
@@ -64,13 +83,105 @@ module Autonomia::Automacao::Escuta
     registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
   end
 
+  # Quem espera pela conversa: a execução dela e a do card cuja conversa principal é ela (G11: a resposta do cliente
+  # acorda o card na hora, em vez de no fim do prazo).
+  def esperando_pela_conversa(account, conversa_ids)
+    execucoes = ::Autonomia::Automacao::Execucao.where(account_id: account.id, estado: 'esperando')
+    cards = ::Crm::Card.where(account_id: account.id, conversation_id: conversa_ids).select(:id)
+    execucoes.where(alvo_type: 'Conversation', alvo_id: conversa_ids).or(execucoes.where(alvo_type: 'Crm::Card', alvo_id: cards))
+  end
+
+  # O listener só enfileira o evento do card, e só na conta com os gatilhos de card ligados. A cadeia em curso (que o
+  # EventDispatcherJob retomou do evento) vai junto, para o laço e a profundidade valerem no job.
+  def enfileirar_evento_do_card(dados, evento)
+    account = Account.find_by(id: dados[:account_id])
+    return unless account && ::Autonomia::Automacao::Motor.gatilhos?(account)
+
+    ::Autonomia::Automacao::EventoDoCardJob.perform_later(dados.to_h.deep_stringify_keys.merge(cadeia_em_curso), evento)
+  end
+
+  def cadeia_em_curso
+    cadeia = ::Autonomia::Automacao::Cadeia
+    return {} unless cadeia.ativa?
+
+    em_curso = { 'conta' => cadeia.conta_id, 'origens' => cadeia.origens, 'raiz' => cadeia.raiz }
+    { ::Autonomia::Automacao::EventoDoCardJob::CHAVE_DA_CADEIA => em_curso }
+  end
+
+  # Um evento do card (#2499, F6), com os ids do emissor do CRM: cada gatilho que o evento dispara tenta começar, com a
+  # marca da atividade. O card é relido do banco: o evento pode chegar depois de outra mudança. Card apagado no meio
+  # (ou conta sem a flag agora) não é erro: não há o que começar. Qualquer outro erro sobe ao EventoDoCardJob.
+  def evento_do_card(dados, evento)
+    dados = dados.to_h.with_indifferent_access
+    account = Account.find_by(id: dados[:account_id])
+    return unless account && ::Autonomia::Automacao::Motor.gatilhos?(account)
+
+    card = ::Crm::Card.find_by(id: dados[:card_id], account_id: account.id)
+    return unless card
+
+    mudou = dados[:changed_attributes].to_h.with_indifferent_access
+    ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, []).each do |tipo|
+      marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
+      cada_automacao(card, tipo, dados_do_card(tipo, card, mudou)) { |definicao| partir(definicao, card, tipo, evento: marca) }
+    end
+  end
+
+  # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a
+  # etapa em que nasceu (stage_id); o movido, as duas pontas.
+  def dados_do_card(tipo, card, mudou)
+    case tipo
+    when 'card.entrou_na_etapa' then { 'etapa_id' => mudou[:to_stage_id] || mudou[:stage_id] || card.stage_id }
+    when 'card.saiu_da_etapa' then { 'etapa_id' => mudou[:from_stage_id] }
+    else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id }
+    end
+  end
+
+  # O emissor do CRM pergunta antes de despachar (#2499): a conta tem automação ligada com um gatilho que o evento
+  # dispara, na etapa ou no funil do evento? A flag vem primeiro, lida da conta, sem consulta; depois um exists? pelo
+  # índice (account_id, ativa), com o gatilho e o parâmetro lidos da receita na mesma consulta. O que o evento não traz
+  # (o funil no ganho/perdido) não filtra: o job confere de novo com o card relido.
+  #
+  # Roda no after_commit do card: um erro aqui não pode quebrar o pedido de quem moveu o card, nem perder o evento. Em
+  # erro, despacha assim mesmo (o job assíncrono decide) e loga só a classe.
+  def assinante?(account, evento, mudou = {})
+    tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD[evento]
+    return false if tipos.blank? || account.blank? || !::Autonomia::Automacao::Motor.gatilhos?(account)
+
+    mudou = mudou.to_h.with_indifferent_access
+    automacoes_do_gatilho(account.id, tipos).where(tipos.map { |tipo| gatilho_casa_sql(tipo, mudou) }.join(' OR ')).exists?
+  rescue StandardError => e
+    registrar_erro("gate do emissor falhou evento=#{evento} conta=#{account&.id}; despacha assim mesmo", e)
+    true
+  end
+
+  # "tipo = X AND (parâmetro vazio OR parâmetro = valor do evento)", com os valores escapados.
+  def gatilho_casa_sql(tipo, mudou)
+    nome, valor = parametro_do_evento(tipo, mudou)
+    gatilho = "autonomia_automacao_versoes.receita -> 'gatilho'"
+    return ::Autonomia::Automacao::Definicao.sanitize_sql_array(["(#{gatilho} ->> 'tipo' = ?)", tipo]) if valor.nil?
+
+    ::Autonomia::Automacao::Definicao.sanitize_sql_array(
+      ["(#{gatilho} ->> 'tipo' = ? AND (#{gatilho} ->> ? IS NULL OR #{gatilho} ->> ? = ?))", tipo, nome, nome, valor.to_s]
+    )
+  end
+
+  # O parâmetro do gatilho e o valor que o evento traz, sem reler o card.
+  def parametro_do_evento(tipo, mudou)
+    case tipo
+    when 'card.entrou_na_etapa' then ['etapa_id', mudou[:to_stage_id] || mudou[:stage_id]]
+    when 'card.saiu_da_etapa' then ['etapa_id', mudou[:from_stage_id]]
+    else ['funil_id', mudou[:pipeline_id]]
+    end
+  end
+
   def registrar_erro(contexto, erro)
     Rails.logger.error("[automacao][escuta] #{contexto} #{erro.class} em #{erro.backtrace&.first}")
   end
 
+  # `tipo`: um tipo ou a lista dos que o evento dispara.
   def automacoes_do_gatilho(account_id, tipo)
     ::Autonomia::Automacao::Definicao.joins(:versao_ativa).where(account_id: account_id, ativa: true)
-                                     .where("autonomia_automacao_versoes.receita -> 'gatilho' ->> 'tipo' = ?", tipo)
+                                     .where("autonomia_automacao_versoes.receita -> 'gatilho' ->> 'tipo' IN (?)", Array(tipo))
   end
 
   def esperando_condicao?(execucao)

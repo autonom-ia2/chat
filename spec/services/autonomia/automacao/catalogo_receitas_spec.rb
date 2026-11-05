@@ -10,7 +10,10 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
   before { account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens', 'automacao_ia') }
 
   def frases(locale)
-    JSON.parse(Rails.root.join("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre.json").read)
+    # Um arquivo por área (#2569), juntos no mesmo AUTOMACAO_LIVRE como no index do painel.
+    Rails.root.glob("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre*.json")
+         .map { |arquivo| JSON.parse(arquivo.read) }
+         .reduce { |juntos, area| juntos.merge(area) { |_namespace, um, outro| um.merge(outro) } }
   end
 
   # Boas-vindas (#2526) começa na primeira mensagem do cliente, na conversa que ele começou (spec da receita ao lado).

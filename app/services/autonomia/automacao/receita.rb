@@ -7,7 +7,8 @@
 #   nenhum campo proibido;
 # - o corpo é literal: variável no corpo chega com a mensagem (F4);
 # - todo `$valor` do caminho e das condições é um caminho que a automação sabe ler;
-# - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496).
+# - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
+# - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   RAMOS = %w[entao senao se_vencer].freeze
@@ -43,7 +44,7 @@ class Autonomia::Automacao::Receita
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
+    [*ids_repetidos, *gatilho_de_card, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -57,12 +58,25 @@ class Autonomia::Automacao::Receita
     passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
   end
 
+  # O gatilho de card pede a flag da F6 e o CRM; a etapa e o funil escolhidos precisam ser da conta (o esquema já
+  # conferiu que são números e que "entrou" e "saiu" trazem a etapa).
+  def gatilho_de_card
+    gatilho = @receita['gatilho'].to_h
+    return [] unless ::Autonomia::Automacao::Gatilhos.do_card?(gatilho['tipo'])
+    return [texto(:gatilho_desligado)] unless ::Autonomia::Automacao::Motor.gatilhos?(@conta)
+
+    etapa = gatilho['etapa_id']
+    funil = gatilho['funil_id']
+    [*(texto(:etapa_de_fora, id: etapa) if etapa && !@conta.crm_pipeline_stages.exists?(id: etapa)),
+     *(texto(:funil_de_fora, id: funil) if funil && !@conta.crm_pipelines.exists?(id: funil))]
+  end
+
   def filtros_do_gatilho
     Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }
   end
 
   def problemas_do_passo(passo)
-    return problemas_da_condicao(passo['id'], passo['condicao']) if passo.key?('condicao')
+    return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
@@ -143,8 +157,11 @@ class Autonomia::Automacao::Receita
   end
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
-  def problemas_da_condicao(id, condicao, no_gatilho: false)
-    caminhos_desconhecidos(id, condicao, no_gatilho: no_gatilho).presence || fora_do_fechado(id, condicao)
+  def problemas_da_condicao(id, condicao, no_gatilho: false, na_espera: false)
+    lidos = ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map do |caminho|
+      problemas_do_caminho(id, caminho, no_gatilho: no_gatilho, na_espera: na_espera)
+    end
+    lidos.presence || fora_do_fechado(id, condicao)
   end
 
   # Operador ou valor que um valor fechado não tem: a condição nunca casaria.
@@ -162,16 +179,15 @@ class Autonomia::Automacao::Receita
     [texto(:valor_fora, passo: id, caminho: caminho, valor: condicao['valor'], opcoes: fechado['opcoes'].join(', '))]
   end
 
-  def caminhos_desconhecidos(id, condicao, no_gatilho: false)
-    ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map { |caminho| problemas_do_caminho(id, caminho, no_gatilho: no_gatilho) }
-  end
-
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
-  # vazio no motor, com o motivo no registro.
-  def problemas_do_caminho(id, caminho, no_gatilho: false)
+  # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
+  # o começo da espera, e ela leria sempre vazio.
+  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
-    return [texto(:mensagem_so_no_gatilho, passo: id, caminho: caminho)] if valores.da_mensagem?(caminho) && !mensagem_no_gatilho?(no_gatilho)
+
+    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera)
+    return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
     return [texto(:atributo_inexistente, passo: id, caminho: caminho)] unless valores.atributo_definido?(caminho, @conta)
 

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, useId } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -10,6 +10,7 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
@@ -24,13 +25,16 @@ const props = defineProps({
   opcoes: { type: Object, required: true },
   atributosDaPeca: { type: Function, required: true },
   atributosDo: { type: Function, required: true },
+  // #2499: os gatilhos que esta pessoa pode escolher (com a flag e a chave de
+  // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
+  gatilhos: { type: Array, default: null },
+  escolhasDoGatilho: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
 
 const { t } = useI18n();
 const painel = ref(null);
-const idGatilho = useId();
 
 // { tipo: 'gatilho' | 'condicao' | 'passo', indice?, novo?, listaId?, valor }
 const alvo = ref(null);
@@ -80,15 +84,17 @@ const frase = computed(() => {
   if (alvo.value.tipo === 'passo')
     return fraseDoPasso(rascunho.value, props.catalogo, t);
   if (alvo.value.tipo === 'gatilho')
-    return fraseDoGatilho(rascunho.value, props.catalogo, t);
+    return fraseDoGatilho(
+      rascunho.value,
+      props.catalogo,
+      t,
+      props.escolhasDoGatilho.nomes
+    );
   return fraseDaCondicao(rascunho.value, props.catalogo, t);
 });
 
-const opcoesDeGatilho = computed(() =>
-  props.catalogo.gatilhos.map(item => ({
-    value: item.tipo,
-    label: t(item.frase),
-  }))
+const gatilhosDoSeletor = computed(
+  () => props.gatilhos || props.catalogo.gatilhos
 );
 // O "Só se" acompanha o gatilho (#2496): o que entra e o que sai aparece aqui,
 // antes do "Salvar".
@@ -101,9 +107,6 @@ const trocaDoGatilho = computed(() => {
     props.catalogo
   );
 });
-const trocarGatilho = tipo => {
-  rascunho.value = { ...(rascunho.value || {}), tipo };
-};
 
 const mudarNativo = (nome, novo) => {
   rascunho.value = { ...rascunho.value, [nome]: novo };
@@ -189,9 +192,19 @@ const acaoPronta = () =>
       campo => !vazio(lerCampo(rascunho.value, entrada.value, campo.nome))
     );
 
+// O que o gatilho pede e é obrigatório (a etapa) precisa vir antes do "Salvar".
+const gatilhoPronto = gatilho =>
+  Boolean(gatilho.tipo) &&
+  (
+    props.catalogo.gatilhos.find(item => item.tipo === gatilho.tipo)
+      ?.parametros || []
+  )
+    .filter(parametro => parametro.obrigatorio)
+    .every(parametro => !vazio(gatilho[parametro.nome]));
+
 const podeSalvar = computed(() => {
   if (avancada.value || !rascunho.value) return false;
-  if (alvo.value?.tipo === 'gatilho') return Boolean(rascunho.value.tipo);
+  if (alvo.value?.tipo === 'gatilho') return gatilhoPronto(rascunho.value);
   if (alvo.value?.tipo === 'condicao') return condicaoPronta(rascunho.value);
   return camposNativos.value.every(nativoPronto) && acaoPronta();
 });
@@ -220,19 +233,13 @@ defineExpose({ abrir, fechar });
         {{ $t('AUTOMACAO_LIVRE.CONFIRA.AVANCADA_DICA') }}
       </p>
 
-      <div v-if="alvo.tipo === 'gatilho'" class="flex flex-col gap-1.5">
-        <label :for="idGatilho" class="text-sm font-medium text-n-slate-12">
-          {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TIPO_GATILHO') }}
-        </label>
-        <ChoiceSelect
-          :model-value="rascunho?.tipo || ''"
-          :trigger-id="idGatilho"
-          :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.TIPO_GATILHO')"
-          :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
-          :options="opcoesDeGatilho"
-          @update:model-value="trocarGatilho"
-        />
-      </div>
+      <LivreGatilho
+        v-if="alvo.tipo === 'gatilho'"
+        :model-value="rascunho"
+        :gatilhos="gatilhosDoSeletor"
+        :escolhas="escolhasDoGatilho"
+        @update:model-value="novo => (rascunho = novo)"
+      />
 
       <p
         v-if="trocaDoGatilho?.entra"
@@ -283,6 +290,7 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
+          :na-espera="entrada?.tipo === 'esperar_ate'"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreTexto

@@ -31,8 +31,10 @@ RSpec.describe Autonomia::Automacao::Valores do
     end
     formas = [[:incoming, false], [:outgoing, false], [:outgoing, true], [:template, false]]
 
-    # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec.
-    expect(described_class::FECHADOS.keys).to match_array(described_class::MENSAGEM.keys + ['conversa.iniciada_por'])
+    # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
+    # durante a espera (G11): resposta_spec.
+    expect(described_class::FECHADOS.keys)
+      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + ['conversa.iniciada_por'])
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end
@@ -70,6 +72,12 @@ RSpec.describe Autonomia::Automacao::Valores do
       expect(valores.ler('card.atributos.vencimento')).to eq('2026-12-01')
       expect(valores.ler('conversa.id')).to eq(conversa.display_id)
       expect(valores.ler('contato.nome')).to eq('Maria')
+    end
+
+    # Decisão do #2499 (PR2a): o card sem valor lê zero, não vazio, como no quadro (value_cents é obrigatório, padrão 0).
+    # "Valor maior que 0" separa o card com valor; "está vazio" nunca casa no card.
+    it 'o card sem valor lê zero' do
+      expect(described_class.new(alvo: novo_card).ler('card.valor')).to eq(0)
     end
 
     it 'lê vazio quando a ponte falta: card sem conversa, contato sem card' do

@@ -11,6 +11,8 @@ import { RAIZ } from '../receita';
 defineProps({
   receita: { type: Object, required: true },
   catalogo: { type: Object, required: true },
+  // #2499: o nome da etapa e do funil escolhidos, para a frase do gatilho.
+  nomesDoGatilho: { type: Object, default: () => ({}) },
   podeMudar: { type: Boolean, default: false },
   tudo: { type: Boolean, default: false },
 });
@@ -49,7 +51,7 @@ const BLOCOS = {
           "
         >
           <p data-gatilho class="flex-1 mb-0 text-base text-n-slate-12">
-            {{ fraseDoGatilho(receita.gatilho, catalogo, t) }}
+            {{ fraseDoGatilho(receita.gatilho, catalogo, t, nomesDoGatilho) }}
           </p>
           <Button
             v-if="podeMudar"
