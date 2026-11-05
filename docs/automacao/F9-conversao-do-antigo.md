@@ -232,7 +232,11 @@ O comando exato vai no runbook do PR da F9.2, escrito antes da primeira conta. T
 
 Três travas, todas pela tabela de conversões:
 1. **Ligar a nova** (`Definicao#recusa_para_ligar`) recusa com `antiga_ligada` se a antiga do par está ligada.
-2. **Religar a antiga** pela API, pela tela ou pelo Guia: um prepend em `AutomationRule` e em `Crm::StageAutomation` recusa `active`/`enabled` = true enquanto houver conversão vigente. A mensagem diz "esta regra virou a automação X; reverta a conversão".
+2. **Religar a antiga** pela API, pela tela ou pelo Guia: um prepend em `AutomationRule` e em `Crm::StageAutomation` recusa `active`/`enabled` = true enquanto houver conversão vigente. A mensagem diz "esta regra virou a automação X; reverta a conversão". Pelo parecer de Funções:
+   - só a **transição para ligada** é barrada. Apagar (`ExclusaoDaConta`) e editar mantendo desligada continuam;
+   - o "Reverter conversão" religa porque marca `revertida_em` antes, na mesma transação;
+   - a recusa é 422 com frase em en e pt_BR, sem mudar a policy do EE;
+   - validação nova no modelo pode mudar os formatos do Guia (lição do #1219): o PR regera `autonomia:guia:formatos`.
 3. **Fila da etapa:** o `Crm::StageAutomationStepJob` não reconfere o `enabled`, então um passo atrasado já na fila rodaria depois da troca. A F9.2 faz o job reconferir, e a troca recusa conta com passo na fila (seção 5).
 
 A cadeia comum (D6) já impede que as duas, cada uma num motor, se disparem em laço.
@@ -268,6 +272,10 @@ Opções:
 
 Com a opção a), quando o admin sai da conta, a automação pausa e alguém usa "Assumir e religar". Não há troca silenciosa.
 
+**Parecer de Funções (05/11, [comentário](https://github.com/autonom-ia2/chat/pull/2575#issuecomment-6655917227)): opção a) liberada, só para administrador.**
+- O administrador basta: `permission_granted?` já dá `automation_manage` e `crm_manage_pipelines` (`StageAutomationPolicy#create?`). Um spec cobre isso.
+- Função personalizada com `automation_manage` **não converte**. Com `ligada_por` sem ser admin, o D5 cortaria caixas em silêncio: a regra que rodava em todas passaria a rodar em menos, sem erro. O gate é `administrator?` explícito, com request spec de 403 para função com `automation_manage` + `crm_manage_pipelines`.
+
 ## 10. Fechar a criação nova nos motores antigos
 
 Quando todas as contas estiverem convertidas e com o mês limpo, uma flag `automacao_antigo_fechado` (bit dado pela Orquestração) fecha a criação. Prazo proposto: 30 dias depois da última conversão (P2).
@@ -293,7 +301,7 @@ Quando todas as contas estiverem convertidas e com o mês limpo, uma flag `autom
 - **P2 (Rodrigo):** o prazo para fechar a criação nova. Recomendação: 30 dias depois da última conversão.
 - **P3 (Rodrigo):** a ordem das contas. Recomendação: a piloto antes da 17.
 - **P4 (sessão F6):** o parâmetro "só quando o card é movido" no `card.entrou_na_etapa`.
-- **P5 (Funções):** `ligada_por` = quem aperta "Converter" (seção 9).
+- **P5 (Funções):** respondida em 05/11. `ligada_por` = o administrador que aperta "Converter"; função personalizada não converte (seção 9).
 - **P6 (Multifunnel):** as automações de etapa convertidas passam a sair pela `Crm::Activity` e pelo emissor, não mais pelo `Runner`.
   - O que o `Runner` fazia e a F6 precisa manter: profundidade 3, o `CardGuard` do mover e a marca `automacao:{origem:'etapa'}` que a IA do funil respeita (#2428).
   - A marca passa a ser `origem: 'livre'`. A IA do funil continua respeitando?
