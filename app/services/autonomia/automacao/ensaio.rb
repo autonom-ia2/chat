@@ -132,7 +132,8 @@ class Autonomia::Automacao::Ensaio
     return no(passo, 'faltou_valor') if pronto.nil?
     return no(passo, 'texto_vazio') if pronto.strip.empty?
 
-    no(passo, passo['tipo'], { texto: pronto })
+    # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada.
+    no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome') }.compact)
   end
 
   # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o

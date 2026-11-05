@@ -9,9 +9,9 @@
 #   automação assinante (`assinante?`). Cada gatilho do evento começa com a marca da atividade e a etapa ou o funil.
 #   Roda no EventoDoCardJob, não no listener: o erro sobe e o job tenta de novo sozinho, sem repetir os webhooks e os
 #   avisos dos outros listeners do mesmo evento. A repetição é segura: a marca da atividade não deixa abrir duas.
-# - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela é reservado e confere a
-#   condição agora, em vez de esperar o prazo. Só o "esperar até": a ação que espera uma nova tentativa e o "esperar"
-#   de tempo seguem o relógio.
+# - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela, também o card cuja
+#   conversa principal é ela, é reservado e confere a condição agora, em vez de esperar o prazo. Só o "esperar até":
+#   a ação que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
@@ -92,14 +92,21 @@ module Autonomia::Automacao::Escuta
     account = registro.account
     return unless ::Autonomia::Automacao::Motor.ligado?(account)
 
-    ::Autonomia::Automacao::Execucao.where(account_id: account.id, alvo_type: 'Conversation', alvo_id: conversa_ids, estado: 'esperando')
-                                    .includes(:versao).find_each do |execucao|
+    esperando_pela_conversa(account, conversa_ids).includes(:versao).find_each do |execucao|
       reservar(execucao) if esperando_condicao?(execucao)
     rescue StandardError => e
       registrar_erro("não acordou execucao=#{execucao.id}", e)
     end
   rescue StandardError => e
     registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
+  end
+
+  # Quem espera pela conversa: a execução dela e a do card cuja conversa principal é ela (G11: a resposta do cliente
+  # acorda o card na hora, em vez de no fim do prazo).
+  def esperando_pela_conversa(account, conversa_ids)
+    execucoes = ::Autonomia::Automacao::Execucao.where(account_id: account.id, estado: 'esperando')
+    cards = ::Crm::Card.where(account_id: account.id, conversation_id: conversa_ids).select(:id)
+    execucoes.where(alvo_type: 'Conversation', alvo_id: conversa_ids).or(execucoes.where(alvo_type: 'Crm::Card', alvo_id: cards))
   end
 
   # O listener só enfileira o evento do card, e só na conta com os gatilhos de card ligados. A cadeia em curso (que o

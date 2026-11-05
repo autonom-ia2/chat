@@ -160,6 +160,42 @@ describe('LivreAlterar', () => {
     });
   });
 
+  // G11: a resposta durante a espera só vale na condição do "esperar até".
+  it('oferece a resposta durante a espera só na condição do "esperar até"', async () => {
+    const condicao = { nome: 'condicao', peca: 'condicao', rotulo: 'CONDICAO' };
+    const catalogo = {
+      ...CATALOGO,
+      valores: [
+        { caminho: 'conversa.status', frase: 'STATUS' },
+        {
+          caminho: 'conversa.cliente_respondeu',
+          frase: 'CLIENTE_RESPONDEU',
+          so_na_espera: true,
+        },
+      ],
+      passos: [
+        { tipo: 'esperar_ate', frase: 'ESPERAR_ATE', campos: [condicao] },
+        { tipo: 'se', frase: 'SE', campos: [condicao] },
+      ],
+    };
+    const oferecidos = async tipo => {
+      const wrapper = montar(catalogo);
+      wrapper.vm.abrir({ tipo: 'passo', valor: { id: 'p1', tipo } });
+      await flushPromises();
+      return wrapper
+        .findComponent({ name: 'LivreCondicao' })
+        .findAllComponents({ name: 'ChoiceSelect' })[0]
+        .props('options')
+        .map(opcao => opcao.value);
+    };
+
+    expect(await oferecidos('esperar_ate')).toEqual([
+      'conversa.status',
+      'conversa.cliente_respondeu',
+    ]);
+    expect(await oferecidos('se')).toEqual(['conversa.status']);
+  });
+
   it('não salva condição sem o que olhar', async () => {
     const wrapper = montar();
     wrapper.vm.abrir({

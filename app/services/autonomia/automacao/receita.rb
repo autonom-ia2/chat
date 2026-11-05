@@ -76,7 +76,7 @@ class Autonomia::Automacao::Receita
   end
 
   def problemas_do_passo(passo)
-    return problemas_da_condicao(passo['id'], passo['condicao']) if passo.key?('condicao')
+    return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
@@ -84,15 +84,17 @@ class Autonomia::Automacao::Receita
     problemas_da_acao(passo)
   end
 
-  # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (e do assunto do e-mail) lidos da
-  # lista fechada, os times e as pessoas do aviso da própria conta, e a caixa do e-mail uma caixa de e-mail da conta.
+  # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
+  # variável do modelo da Meta, F4b) lidos da lista fechada, os times e as pessoas do aviso da própria conta, o modelo
+  # pronto na conta e a caixa do e-mail uma caixa de e-mail da conta.
   def problemas_da_mensagem(passo)
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
-    caminhos = [passo['texto'], passo['assunto']].flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }
-    lidos = caminhos.flat_map { |caminho| problemas_do_caminho(id, caminho) }
+    textos = [passo['texto'], passo['assunto'], *Array(passo.dig('modelo', 'variaveis'))]
+    lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map { |caminho| problemas_do_caminho(id, caminho) }
     caixa = passo['tipo'] == 'email' ? ::Autonomia::Automacao::PassoDeEmail.problemas_ao_salvar(@conta, passo) : []
-    desligado + lidos + destinatarios_de_fora(passo) + caixa
+    modelo = ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
+    desligado + lidos + destinatarios_de_fora(passo) + modelo + caixa
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da
@@ -159,8 +161,11 @@ class Autonomia::Automacao::Receita
   end
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
-  def problemas_da_condicao(id, condicao, no_gatilho: false)
-    caminhos_desconhecidos(id, condicao, no_gatilho: no_gatilho).presence || fora_do_fechado(id, condicao)
+  def problemas_da_condicao(id, condicao, no_gatilho: false, na_espera: false)
+    lidos = ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map do |caminho|
+      problemas_do_caminho(id, caminho, no_gatilho: no_gatilho, na_espera: na_espera)
+    end
+    lidos.presence || fora_do_fechado(id, condicao)
   end
 
   # Operador ou valor que um valor fechado não tem: a condição nunca casaria.
@@ -178,16 +183,15 @@ class Autonomia::Automacao::Receita
     [texto(:valor_fora, passo: id, caminho: caminho, valor: condicao['valor'], opcoes: fechado['opcoes'].join(', '))]
   end
 
-  def caminhos_desconhecidos(id, condicao, no_gatilho: false)
-    ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map { |caminho| problemas_do_caminho(id, caminho, no_gatilho: no_gatilho) }
-  end
-
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
-  # vazio no motor, com o motivo no registro.
-  def problemas_do_caminho(id, caminho, no_gatilho: false)
+  # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
+  # o começo da espera, e ela leria sempre vazio.
+  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
-    return [texto(:mensagem_so_no_gatilho, passo: id, caminho: caminho)] if valores.da_mensagem?(caminho) && !mensagem_no_gatilho?(no_gatilho)
+
+    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera)
+    return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
     return [texto(:atributo_inexistente, passo: id, caminho: caminho)] unless valores.atributo_definido?(caminho, @conta)
 
@@ -254,7 +258,5 @@ class Autonomia::Automacao::Receita
     acao.split(' ', 2).last.split('/').filter_map { |segmento| segmento.delete_prefix(':') if segmento.start_with?(':') }
   end
 
-  def texto(chave, **valores)
-    I18n.t("autonomia.automacao.receita.#{chave}", **valores)
-  end
+  def texto(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 end
