@@ -124,8 +124,9 @@ class Crm::MetaAds::Creation::Draft
     end
   end
 
-  # Carrossel: as mídias depois da primeira, até 10 no total, só nos destinos que aceitam (a tela confere o mesmo). A ordem
-  # é a do carrossel (a primeira aparece primeiro), então entra no #digest como veio: outra ordem é outro anúncio.
+  # Carrossel: as mídias depois da primeira, até 10 no total, só nos destinos que aceitam. A tela usa a mesma lista
+  # (CAROUSEL_DESTINATIONS em midiaDoAnuncio.js): esconde o carrossel nos outros destinos e apaga Messenger e Direct quando
+  # já há cartões. A ordem é a do carrossel (a primeira aparece primeiro), então entra no #digest como veio.
   def cards
     list = Array(@params[:cards])
     fail!('invalid_media') if list.size + 1 > CARDS_MAX

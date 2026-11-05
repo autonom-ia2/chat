@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import MetaAdsCreate from '../components/MetaAdsCreate.vue';
+import MetaAdsCarouselCards from '../components/MetaAdsCarouselCards.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { esquecerTentativas } from '../criacaoNaMeta';
 
@@ -599,6 +600,44 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
         whatsapp_number: null,
       })
     );
+  });
+
+  // Carrossel só com WhatsApp ou site (o servidor recusa o resto com invalid_media).
+  const chooseLibraryPhoto = async wrapper => {
+    await wrapper.find('[data-create-media-library-toggle]').trigger('click');
+    await wrapper.find('[data-create-image="h1"]').trigger('click');
+  };
+
+  it('Messenger hides the carousel: there is no way to add a second photo', async () => {
+    const wrapper = await mountCreate(MESSAGING);
+    await chooseLibraryPhoto(wrapper);
+    expect(wrapper.find('[data-create-carousel]').exists()).toBe(true);
+
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+    await wrapper
+      .find('[data-create-destination-option="MESSENGER"]')
+      .trigger('click');
+
+    expect(wrapper.find('[data-create-carousel]').exists()).toBe(false);
+  });
+
+  it('with a carousel built, Messenger and Direct are off with the carousel reason', async () => {
+    const wrapper = await mountCreate({ ...MESSAGING, pages: [IG_PAGE] });
+    await chooseLibraryPhoto(wrapper);
+    wrapper
+      .findComponent(MetaAdsCarouselCards)
+      .vm.$emit('update:modelValue', [{ kind: 'image', hash: 'h1' }]);
+    await flushPromises();
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+
+    ['MESSENGER', 'INSTAGRAM_DIRECT'].forEach(option => {
+      expect(
+        wrapper
+          .find(`[data-create-destination-option="${option}"]`)
+          .attributes('aria-disabled')
+      ).toBe('true');
+    });
+    expect(wrapper.text()).toContain(`${KEY}.DESTINATION.REASONS.CAROUSEL`);
   });
 
   it('Direct chosen, then a Page without Instagram: content asks for another destination', async () => {
