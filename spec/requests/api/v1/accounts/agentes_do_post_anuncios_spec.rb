@@ -63,7 +63,7 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
   end
 
   # #2519 (3A): o anúncio com comentário esperando o dono (Esperando) diz quantos e vem primeiro; o que saiu dos 30 dias
-  # entra também, com o nome e a miniatura guardados. Outra conta não entra.
+  # entra também, com o nome e a miniatura guardados, o que mais espera primeiro. Outra conta não entra.
   it 'os que têm comentário esperando vêm primeiro, com o número, mesmo fora dos 30 dias' do
     nome('1201', 'Seguro viagem')
     nome('1202', 'Seguro auto')
@@ -79,12 +79,13 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
     esperando.call('c-2', '1202')
     esperando.call('c-3', '1299')
     esperando.call('c-4', '1300')
+    esperando.call('c-6', '1300')
     esperando.call('c-5', '1301', create(:account))
 
     pedir
 
     lista = response.parsed_body['anuncios'].map { |anuncio| anuncio.values_at('id', 'name', 'image_url', 'waiting') }
-    expect(lista).to eq([['1202', 'Seguro auto', nil, 2], ['1299', 'Antigo', 'https://cdn.exemplo/1299.jpg', 1], ['1300', nil, nil, 1],
+    expect(lista).to eq([['1202', 'Seguro auto', nil, 2], ['1300', nil, nil, 2], ['1299', 'Antigo', 'https://cdn.exemplo/1299.jpg', 1],
                          ['1201', 'Seguro viagem', nil, 0]])
   end
 
