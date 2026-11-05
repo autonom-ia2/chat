@@ -3,22 +3,26 @@
     {
       "tipo": "conversa.criada",
       "alvo": "Conversation",
-      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_CRIADA"
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_CRIADA",
+      "grupo": "conversa"
     },
     {
       "tipo": "conversa.aberta",
       "alvo": "Conversation",
-      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_ABERTA"
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_ABERTA",
+      "grupo": "conversa"
     },
     {
       "tipo": "conversa.resolvida",
       "alvo": "Conversation",
-      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_RESOLVIDA"
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONVERSA_RESOLVIDA",
+      "grupo": "conversa"
     },
     {
       "tipo": "mensagem.criada",
       "alvo": "Conversation",
       "frase": "AUTOMACAO_LIVRE.GATILHOS.MENSAGEM_CRIADA",
+      "grupo": "conversa",
       "filtro_sugerido": {
         "campo": {
           "$valor": "mensagem.tipo"
@@ -26,6 +30,86 @@
         "op": "igual",
         "valor": "recebida"
       }
+    },
+    {
+      "tipo": "card.criado",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_CRIADO",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        }
+      ]
+    },
+    {
+      "tipo": "card.entrou_na_etapa",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_ENTROU_NA_ETAPA",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "etapa_id",
+          "peca": "etapa",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETAPA_ID"
+        }
+      ]
+    },
+    {
+      "tipo": "card.saiu_da_etapa",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_SAIU_DA_ETAPA",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "etapa_id",
+          "peca": "etapa",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETAPA_ID"
+        }
+      ]
+    },
+    {
+      "tipo": "card.ganho",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_GANHO",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        }
+      ]
+    },
+    {
+      "tipo": "card.perdido",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_PERDIDO",
+      "grupo": "card",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        }
+      ]
     }
   ],
   "operadores": [
