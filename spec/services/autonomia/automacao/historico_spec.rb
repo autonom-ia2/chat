@@ -58,13 +58,14 @@ RSpec.describe Autonomia::Automacao::Historico do
     expect(historico[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'custo_usd' => 0.002, 'modelo' => 'm' })
   end
 
-  it 'sem com_valores, tira o dinheiro e deixa modelo e tokens (#2557)', :aggregate_failures do
+  it 'sem com_valores, tira o dinheiro e os tokens e deixa o modelo (#2557)', :aggregate_failures do
     create(:autonomia_automacao_registro, execucao: execucao('a'),
-                                          dados: { 'ia' => { 'custo_usd' => 0.002, 'modelo' => 'm', 'tokens_entrada' => 420 } })
+                                          dados: { 'ia' => { 'custo_usd' => 0.002, 'modelo' => 'm', 'tokens_entrada' => 420,
+                                                             'tokens_saida' => 30 } })
 
-    expect(historico(com_valores: false)[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'modelo' => 'm', 'tokens_entrada' => 420 })
+    expect(historico(com_valores: false)[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'modelo' => 'm' })
     sem_dizer = described_class.new(automacao: automacao, usuario: admin).resultado
-    expect(sem_dizer[:execucoes].first[:passos].first[:dados]['ia']).not_to have_key('custo_usd')
+    expect(sem_dizer[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'modelo' => 'm' })
   end
 
   it 'tira o ia que não vem no formato de custo' do

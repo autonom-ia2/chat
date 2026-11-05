@@ -513,13 +513,13 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
                                               dados: { 'ia' => { 'custo_usd' => 0.002, 'modelo' => 'm', 'tokens_saida' => 30 } })
       end
 
-      it 'não sai para quem só tem automation_view' do
-        expect(dados_da_ia(com_funcao(%w[automation_view]))).to eq('modelo' => 'm', 'tokens_saida' => 30)
+      it 'nem o custo nem os tokens saem para quem só tem automation_view' do
+        expect(dados_da_ia(com_funcao(%w[automation_view]))).to eq('modelo' => 'm')
       end
 
       it 'sai para o administrador e para a função com financial_view', :aggregate_failures do
-        expect(dados_da_ia(admin)).to include('custo_usd' => 0.002)
-        expect(dados_da_ia(com_funcao(%w[automation_view financial_view]))).to include('custo_usd' => 0.002)
+        expect(dados_da_ia(admin)).to eq('custo_usd' => 0.002, 'modelo' => 'm', 'tokens_saida' => 30)
+        expect(dados_da_ia(com_funcao(%w[automation_view financial_view]))).to eq('custo_usd' => 0.002, 'modelo' => 'm', 'tokens_saida' => 30)
       end
     end
 
