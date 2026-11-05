@@ -66,6 +66,7 @@ class Conversation < ApplicationRecord
   include ConversationPassagem
   include ConversationRegistroDoAgente
   include ActivityMessageHandler
+  include ConversationAtividadeDaAutomacao
   include UrlHelper
   include SortHandler
   include PushDataHelper
