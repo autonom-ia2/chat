@@ -40,6 +40,8 @@
       "CONVERSA_TIME_ID": "Time da conversa",
       "CONVERSA_ETIQUETAS": "Etiquetas da conversa",
       "CONVERSA_INICIADA_POR": "Quem começou a conversa",
+      "CONVERSA_CLIENTE_RESPONDEU": "O cliente respondeu durante a espera",
+      "CONVERSA_EQUIPE_RESPONDEU": "A equipe respondeu durante a espera",
       "CONTATO_ID": "O contato",
       "CONTATO_NOME": "Nome do contato",
       "CONTATO_EMAIL": "E-mail do contato",

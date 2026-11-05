@@ -149,16 +149,21 @@ class Autonomia::Automacao::Executor
   end
 
   def esperar_ate(passo)
-    if condicao?(passo['condicao'])
-      registrar(passo['id'], 'ok')
-      return @roteiro.seguinte(passo['id'])
-    end
-    return aguardar(passo, Time.current + duracao(passo['prazo'])) unless @retomando
+    espera = janela_da_espera(passo)
+    return cumprida(passo) if condicao?(passo['condicao'], ::Autonomia::Automacao::Valores.new(alvo: contexto, espera: espera))
+    return aguardar(passo, espera.begin + duracao(passo['prazo'])) unless @retomando
     return aguardar(passo, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
 
     registrar(passo['id'], 'pulado', 'prazo_vencido')
     @roteiro.entrar(passo, 'se_vencer')
   end
+
+  # A janela do "esperar até", para a resposta que chegou durante ele (G11): na primeira conferência, de agora em diante;
+  # ao retomar, do começo (o prazo gravado menos a duração dele, na versão em que a execução entrou) até o prazo. A
+  # execução foi lida antes da troca, com o `due_at` da espera. Resposta depois do prazo não conta: o prazo venceu.
+  def janela_da_espera(passo) = @retomando && @execucao.due_at ? ((@execucao.due_at - duracao(passo['prazo']))..@execucao.due_at) : (Time.current..)
+
+  def cumprida(passo) = registrar(passo['id'], 'ok').then { @roteiro.seguinte(passo['id']) }
 
   def se(passo)
     ramo = condicao?(passo['condicao']) ? 'entao' : 'senao'
@@ -249,7 +254,8 @@ class Autonomia::Automacao::Executor
                                              resultado: resultado, motivo: motivo, dados: dados)
   end
 
-  def condicao?(condicao) = ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
+  # `lidos`: o "esperar até" lê com o começo da espera, para a resposta que chegou durante ela (G11).
+  def condicao?(condicao, lidos = valores) = ::Autonomia::Automacao::Condicao.new(condicao, lidos).verdadeira?
 
   def duracao(duracao)
     duracao['valor'].public_send(UNIDADES.fetch(duracao['unidade']))

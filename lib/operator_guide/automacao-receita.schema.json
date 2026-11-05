@@ -163,6 +163,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["id", "tipo", "condicao", "prazo"],
+          "description": "Espera a condição ficar verdadeira, até o prazo; vencido, segue pelo se_vencer e depois continua. Para esperar a resposta de alguém, a condição lê conversa.cliente_respondeu ou conversa.equipe_respondeu (igual a true): a resposta que chegou durante esta espera. Esses dois valores só valem aqui.",
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "esperar_ate" },

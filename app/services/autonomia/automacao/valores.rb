@@ -40,6 +40,14 @@ class Autonomia::Automacao::Valores
     'card.motivo_da_perda' => ->(card) { card.lost_reason }
   }.freeze
 
+  # G11: a resposta que chegou durante o "esperar até" (Resposta). Só existe na condição dele, onde há a janela da
+  # espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
+  # false: nunca "respondeu", e "diferente de true" não vira resposta.
+  RESPOSTA = {
+    'conversa.cliente_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.cliente?(conversa, espera) },
+    'conversa.equipe_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.equipe?(conversa, espera) }
+  }.freeze
+
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
     'Conversation' => %w[conversa contato],
@@ -68,7 +76,9 @@ class Autonomia::Automacao::Valores
     'mensagem.tipo' => { 'opcoes' => %w[recebida enviada nota], 'operadores' => %w[igual diferente] },
     'mensagem.privada' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] }
+    'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
+    'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
   }.freeze
 
   ATRIBUTOS = {
@@ -86,10 +96,12 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      CAMPOS.key?(caminho.to_s) || MENSAGEM.key?(caminho.to_s) || atributo(caminho).present?
+      CAMPOS.key?(caminho.to_s) || MENSAGEM.key?(caminho.to_s) || RESPOSTA.key?(caminho.to_s) || atributo(caminho).present?
     end
 
     def da_mensagem?(caminho) = MENSAGEM.key?(caminho.to_s)
+
+    def da_resposta?(caminho) = RESPOSTA.key?(caminho.to_s)
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
@@ -112,14 +124,17 @@ class Autonomia::Automacao::Valores
     end
   end
 
-  # `alvo`: a conversa, o card ou o contato da execução (ou um Contexto já montado).
-  def initialize(alvo:, mensagem: nil)
+  # `alvo`: a conversa, o card ou o contato da execução (ou um Contexto já montado). `espera`: a janela (Range de
+  # instantes) do "esperar até" que está conferindo a condição.
+  def initialize(alvo:, mensagem: nil, espera: nil)
     @contexto = alvo.is_a?(::Autonomia::Automacao::Contexto) ? alvo : ::Autonomia::Automacao::Contexto.de(alvo)
     @mensagem = mensagem
+    @espera = espera
   end
 
   def ler(caminho)
     return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
+    return resposta(caminho) if RESPOSTA.key?(caminho.to_s)
     return do_objeto(caminho) { |objeto| CAMPOS.fetch(caminho.to_s).call(objeto) } if CAMPOS.key?(caminho.to_s)
 
     base, chave = self.class.atributo(caminho)
@@ -129,6 +144,8 @@ class Autonomia::Automacao::Valores
   end
 
   private
+
+  def resposta(caminho) = !@espera.nil? && do_objeto(caminho) { |conversa| RESPOSTA.fetch(caminho.to_s).call(conversa, @espera) } == true
 
   def do_objeto(caminho)
     objeto = da_base(caminho)
