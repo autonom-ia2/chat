@@ -181,11 +181,12 @@ O relatório não roda em produção, porque lá o acesso é só por psql. Os n�
   "faltas_por_fase": { "F6 (#2554)": 1, "F6 (P3: POST crm/follow_ups)": 1, "F6 PR2a'": 1, "F6 PR2d (proposta F9)": 7 } }
 ```
 
-O spec (`spec/services/autonomia/automacao/conversao/relatorio_spec.rb`, 9 exemplos) confere quatro coisas:
+O spec (`spec/services/autonomia/automacao/conversao/relatorio_spec.rb`, 10 exemplos) confere cinco coisas:
 - a receita do molde da conta 17 passa no esquema **e** na conferência do motor (`Receita#problemas`). Isso pegou um defeito do primeiro rascunho: faltava o `caminho` da ação;
 - o relatório não grava nada;
 - o agrupamento do AND e do OR está certo;
-- o `contem` de texto nunca é traduzido.
+- o `contem` de texto nunca é traduzido;
+- o `diferente` de campo único vai junto com `preenchido`, como o `NOT IN` antigo.
 
 ## 4. O que falta e onde entra
 
@@ -364,7 +365,7 @@ Quando todas as contas estiverem convertidas e com o mês limpo, uma flag `autom
 ## 11. Ordem dos PRs da F9
 
 1. **Este PR, só docs:** o desenho e a leitura agregada.
-2. **F9.1, o relatório:** mapa, `Resultado`, `Condicoes`, `DaRegra`, `DaEtapa`, `Relatorio`, rake e spec. Só leitura. Está commitado localmente, sem push, até o desenho ser aprovado.
+2. **F9.1, o relatório:** mapa, `Resultado`, `Condicoes`, `DaRegra`, `DaEtapa`, `Relatorio`, rake e spec. Só leitura. Está commitado localmente na branch `feat/2568-relatorio-conversao` (f22cc3c76b), sem push, até o desenho ser aprovado.
 3. **F9.2, a troca:** migration das duas tabelas (P1), conversor, a divisão por instante com o advisory lock (5.1), o gate versionado, reversão, as travas da seção 7, o job da etapa reconferindo e a tabela de fatos.
 4. **F9.3, a tela:** "Converter regras antigas" e "Reverter", com o relatório.
 5. **F9.0:** os dois itens da conta 16, depois da F6 PR2a' e da F7.
