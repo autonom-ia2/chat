@@ -52,7 +52,9 @@ RSpec.describe Autonomia::Automacao::Valores do
   end
 
   describe 'alvo card e contato (#2499)' do
-    let(:funil) { create_crm_pipeline(account: account, user: create(:user, account: account, role: :administrator)) }
+    # O valor da venda pede quem vê valores de venda (#2597): o administrador vê.
+    let(:funil_admin) { create(:user, account: account, role: :administrator) }
+    let(:funil) { create_crm_pipeline(account: account, user: funil_admin) }
     let(:card) do
       novo_card(primary_conversation: conversa, title: 'Seguro auto', value_cents: 180_050, custom_attributes: { 'vencimento' => '2026-12-01' })
     end
@@ -62,7 +64,7 @@ RSpec.describe Autonomia::Automacao::Valores do
     end
 
     it 'lê o card e, pelas pontes, a conversa principal e o contato', :aggregate_failures do
-      valores = described_class.new(alvo: card)
+      valores = described_class.new(alvo: card, quem: funil_admin)
 
       expect(valores.ler('card.titulo')).to eq('Seguro auto')
       expect(valores.ler('card.valor')).to eq(BigDecimal('1800.50'))
@@ -75,7 +77,7 @@ RSpec.describe Autonomia::Automacao::Valores do
     # Decisão do #2499 (PR2a): o card sem valor lê zero, não vazio, como no quadro (value_cents é obrigatório, padrão 0).
     # "Valor maior que 0" separa o card com valor; "está vazio" nunca casa no card.
     it 'o card sem valor lê zero' do
-      expect(described_class.new(alvo: novo_card).ler('card.valor')).to eq(0)
+      expect(described_class.new(alvo: novo_card, quem: funil_admin).ler('card.valor')).to eq(0)
     end
 
     it 'lê vazio quando a ponte falta: card sem conversa, contato sem card' do

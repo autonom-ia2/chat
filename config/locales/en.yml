@@ -564,6 +564,7 @@ en:
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
+        valor_de_venda: 'Step %{passo}: only people who see sales values can read %{caminho}. Ask for the permission or remove this value.'
         corpo: 'Step %{passo}: %{problema}'
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'

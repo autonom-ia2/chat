@@ -1053,6 +1053,7 @@ pt_BR:
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
         valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
+        valor_de_venda: 'Passo %{passo}: só quem vê os valores de venda pode ler %{caminho}. Peça a permissão ou tire esse valor.'
         corpo: 'Passo %{passo}: %{problema}'
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'

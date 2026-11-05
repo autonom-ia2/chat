@@ -263,5 +263,5 @@ class Autonomia::Automacao::Executor
   # As pontes do alvo (#2499): conversa, card ou contato, e os outros dois quando há caminho.
   def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(alvo))
 
-  def valores = (@valores ||= ::Autonomia::Automacao::Valores.new(alvo: contexto))
+  def valores = (@valores ||= ::Autonomia::Automacao::Valores.new(alvo: contexto, quem: @definicao.ligada_por))
 end

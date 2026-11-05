@@ -37,9 +37,12 @@ class Autonomia::Automacao::Receita
     @esquema.valid?(JSON.parse(receita.to_json))
   end
 
-  def initialize(receita, conta:)
+  # `account_user`: quem salva ou liga, na conta. Com ele, o valor que pede permissão (Valores::PROTEGIDOS, #2597) só
+  # entra se ele pode ler; sem ele (o catálogo), a regra não se aplica aqui e a execução continua lendo vazio.
+  def initialize(receita, conta:, account_user: nil)
     @receita = receita
     @conta = conta
+    @account_user = account_user
   end
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
@@ -189,8 +192,10 @@ class Autonomia::Automacao::Receita
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
     return [texto(:atributo_inexistente, passo: id, caminho: caminho)] unless valores.atributo_definido?(caminho, @conta)
 
-    []
+    lido_sem_permissao?(caminho) ? [texto(:valor_de_venda, passo: id, caminho: caminho)] : []
   end
+
+  def lido_sem_permissao?(caminho) = @account_user && !::Autonomia::Automacao::Valores.pode_ler?(caminho, @account_user)
 
   def problemas_da_acao(passo)
     acao = passo['acao']

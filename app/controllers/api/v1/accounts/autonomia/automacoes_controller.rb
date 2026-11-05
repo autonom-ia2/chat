@@ -173,7 +173,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     return [I18n.t('autonomia.automacao.ensaio.sem_receita')] unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
     return [] unless conferir
 
-    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).problemas
+    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).problemas
   end
 
   def recusar_ensaio(chave, problemas = [])
