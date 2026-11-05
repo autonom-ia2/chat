@@ -48,6 +48,31 @@ RSpec.describe ConversationAtividadeDaAutomacao do
     expect(atividades).to include(I18n.t('conversations.activity.status.resolved', user_name: quem_age))
   end
 
+  it 'prioridade, etiqueta e equipe também dizem a automação' do
+    team = create(:team, account: account, name: 'Vendas')
+
+    pela_automacao do
+      conversation.update!(priority: :high)
+      conversation.update!(label_list: ['vip'])
+      conversation.update!(team: team)
+    end
+
+    expect(atividades.size).to eq(3)
+    expect(atividades).to all(include(quem_age))
+  end
+
+  it 'busca a automação uma vez só por conversa' do
+    pela_automacao { conversation.update!(assignee: juliana) }
+    consultas = 0
+    contar = ->(*, payload) { consultas += 1 if payload[:sql].include?('autonomia_automacoes') }
+
+    ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
+      pela_automacao { 3.times { conversation.send(:self_assign?, juliana.id) } }
+    end
+
+    expect(consultas).to eq(0)
+  end
+
   it 'sem quem ligou, fica só o nome da automação' do
     automacao.update!(ligada_por: nil)
 

@@ -28,14 +28,23 @@ module ConversationAtividadeDaAutomacao
     super
   end
 
+  # Um save chama isto várias vezes (texto, atribuição, aviso): uma consulta por automação, guardada na conversa.
   def automacao_livre_que_age
     id = Autonomia::Automacao::Cadeia.automacao_livre&.dig(:id)
-    automacao = id && Autonomia::Automacao::Definicao.includes(:ligada_por).find_by(id: id, account_id: account_id)
-    return unless automacao
+    return unless id
 
-    quem_ligou = automacao.ligada_por&.name
-    return I18n.t('automation.livre.sem_quem_ligou', nome: automacao.nome) if quem_ligou.blank?
+    @automacao_livre_que_age ||= {}
+    return @automacao_livre_que_age[id] if @automacao_livre_que_age.key?(id)
 
-    I18n.t('automation.livre.com_quem_ligou', nome: automacao.nome, user_name: quem_ligou)
+    @automacao_livre_que_age[id] = texto_da_automacao(id)
+  end
+
+  def texto_da_automacao(id)
+    automacao = Autonomia::Automacao::Definicao.where(id: id, account_id: account_id).left_joins(:ligada_por)
+    nome, quem_ligou = automacao.pick(:nome, 'users.name')
+    return unless nome
+    return I18n.t('automation.livre.sem_quem_ligou', nome: nome) if quem_ligou.blank?
+
+    I18n.t('automation.livre.com_quem_ligou', nome: nome, user_name: quem_ligou)
   end
 end
