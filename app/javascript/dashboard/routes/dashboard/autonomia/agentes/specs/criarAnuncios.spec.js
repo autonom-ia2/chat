@@ -116,7 +116,7 @@ describe('#2479 · anúncios no "Qual post?"', () => {
     expect(
       noBody('[data-criar-anuncio="130"] [data-criar-anuncio-esperando]')
         .textContent
-    ).toContain('AGENTS.AGENTE_DO_POST.CRIAR.ANUNCIOS.ESPERANDO');
+    ).toContain('AGENTS.AGENTE_DO_POST.CARTAO.ESPERANDO');
     expect(
       noBody('[data-criar-anuncio="120"] [data-criar-anuncio-esperando]')
     ).toBeNull();

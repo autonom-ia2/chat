@@ -362,12 +362,12 @@ const titulo = computed(() => {
                   class="inline-flex items-center gap-1.5 text-sm font-medium text-n-amber-11"
                 >
                   <span
-                    class="i-lucide-message-circle-warning size-4 shrink-0"
+                    class="i-lucide-hand size-4 shrink-0"
                     aria-hidden="true"
                   />
                   {{
                     t(
-                      `${KEY}.ANUNCIOS.ESPERANDO`,
+                      'AGENTS.AGENTE_DO_POST.CARTAO.ESPERANDO',
                       { n: anuncio.waiting },
                       anuncio.waiting
                     )
