@@ -5,7 +5,8 @@
 #   GET numeros/origens/report?formato=pdf|planilha&mes=AAAA-MM&funil=…    o relatório baixado, com os mesmos números
 #
 # Mês inválido: 422 `crm.numeros.mes_invalido`. Funil que a pessoa não vê: 403.
-# Gasto: só para quem pode ver os anúncios (Crm::MetaAdsConnectionPolicy#show?). R$ de venda: `sales_value_view`
+# Gasto: só para quem pode ver os anúncios (Crm::MetaAdsConnectionPolicy#show?). Os anúncios que trouxeram venda
+# (título, miniatura, id): só para quem vê o anúncio de origem (Crm::AnuncioDeOrigem.ve?). R$ de venda: `sales_value_view`
 # (Crm::ValorDeVenda, #2075). No arquivo, a lista de clientes vai só para quem pode exportar o CRM
 # (Crm::CardPolicy#export?, crm_export: dado pessoal em lote) e só com os cards que a pessoa vê (policy_scope).
 class Api::V1::Accounts::Crm::NumerosOrigensController < Api::V1::Accounts::Crm::BaseController
@@ -62,7 +63,8 @@ class Api::V1::Accounts::Crm::NumerosOrigensController < Api::V1::Accounts::Crm:
   end
 
   def perfil
-    { gasto: Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).show?, valor: ::Crm::ValorDeVenda.ve?(Current.account_user) }
+    { gasto: Pundit.policy!(pundit_user, ::Crm::MetaAdsConnection).show?, valor: ::Crm::ValorDeVenda.ve?(Current.account_user),
+      anuncio: ::Crm::AnuncioDeOrigem.ve?(Current.account_user) }
   end
 
   # Sem a permissão de exportar o CRM, nenhuma pessoa vai no arquivo (nil).

@@ -18,6 +18,7 @@ module Crm::MetaAds::MessagingReferral
   ORIGINS = { MESSENGER_SOURCE => 'messenger', INSTAGRAM_SOURCE => 'instagram' }.freeze
   PENDING_KEY_PREFIX = 'meta_ads:messaging_referral:pending:'.freeze
   PENDING_TTL = 1.day
+  OWNER_CACHE = 1.hour
 
   module_function
 
@@ -67,11 +68,19 @@ module Crm::MetaAds::MessagingReferral
   def attribute_pending!(conversation)
     key = pending_key(conversation.contact_inbox_id)
     pending = Redis::Alfred.with { |conn| conn.multi { |transaction| [transaction.lrange(key, 0, -1), transaction.del(key)] }.first }
-    Array(pending).map { |raw| JSON.parse(raw) }.count do |click|
-      attribute!(conversation, click['referral'], source: click['source'], event_id: click['event_id'])
-    end.positive?
+    Array(pending).count { |raw| attribute_click(conversation, raw) }.positive?
   rescue Redis::BaseError => e
     Rails.logger.warn("[#{name}] conversation=#{conversation.id} cliques guardados não lidos: #{e.class}")
+    false
+  end
+
+  # Um clique guardado com defeito não leva os outros junto: fica no log e no rastreador.
+  def attribute_click(conversation, raw)
+    click = JSON.parse(raw)
+    attribute!(conversation, click['referral'], source: click['source'], event_id: click['event_id'])
+  rescue StandardError => e
+    Rails.logger.warn("[#{name}] conversation=#{conversation.id} clique guardado não gravado: #{e.class}")
+    ChatwootExceptionTracker.new(e, account: conversation.account).capture_exception
     false
   end
 
@@ -93,8 +102,8 @@ module Crm::MetaAds::MessagingReferral
 
   # A mesma Página pode ser caixa de mais de uma conta (Integrations::Facebook::MessageCreator grava a mensagem em
   # todas): se alguma conta da Página conhece o anúncio (gasto ou nome), ele vai só para a conversa dela. Se nenhuma
-  # conhece (anúncio novo, antes da coleta), vai para todas, para o clique não se perder. Página de uma conta só grava
-  # sempre.
+  # conhece (anúncio novo, antes da coleta), a Graph diz de qual conta de anúncios ele é (`owner?`); sem como saber,
+  # não grava. Página de uma conta só grava sempre.
   def foreign_ad?(conversation, ad_id)
     channel = conversation.inbox&.channel
     return false unless channel.is_a?(Channel::FacebookPage)
@@ -103,8 +112,21 @@ module Crm::MetaAds::MessagingReferral
                          channel_id: Channel::FacebookPage.where(page_id: channel.page_id).where.not(id: channel.id).select(:id))
                   .pluck(:account_id)
     return false if others.empty? || known_ad?(conversation.account_id, ad_id)
+    return true if known_ad?(others, ad_id)
 
-    known_ad?(others, ad_id)
+    !owner?(conversation.account_id, ad_id)
+  end
+
+  # O anúncio é da conta de anúncios conectada nesta conta? GET /<ad_id>?fields=account_id com o token da conexão.
+  # Sem conexão ativa ou sem resposta, não. Guardado por 1 hora (as caixas da Página perguntam o mesmo anúncio).
+  def owner?(account_id, ad_id)
+    connection = Crm::MetaAdsConnection.active.find_by(account_id: account_id)
+    return false if connection&.ad_account_id.blank?
+
+    Rails.cache.fetch("meta_ads:dono_do_anuncio:#{account_id}:#{ad_id}", expires_in: OWNER_CACHE) do
+      result = Meta::AdsGraphClient.new(access_token: connection.read_token).object(ad_id, fields: 'account_id')
+      result.ok && result.data.to_h['account_id'].to_s.delete_prefix('act_') == connection.ad_account_id.to_s.delete_prefix('act_')
+    end
   end
 
   def known_ad?(account_ids, ad_id)

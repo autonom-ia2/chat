@@ -211,8 +211,12 @@ class Webhooks::InstagramEventsJob < MutexApplicationJob
     nil
   end
 
+  # Erro aqui não pode parar os outros eventos do lote: fica no log e no rastreador, como no Messenger.
   def referral(messaging, _channel)
     Crm::MetaAds::MessagingReferralJob.enqueue_for('instagram', messaging.to_h.deep_stringify_keys)
+  rescue StandardError => e
+    Rails.logger.warn("[#{self.class.name}] referral não enfileirado: #{e.class}")
+    ChatwootExceptionTracker.new(e).capture_exception
   end
 
   def message_edit(messaging, channel)

@@ -19,11 +19,16 @@ class Crm::MetaAds::ReferralImageJob < ApplicationJob
   def self.enqueue_for(conversation, touch, referral)
     return unless Crm::MetaAds::MessagingReferral::AD_CLICK_SOURCES.include?(touch['source']) && touch['source_id'].present?
 
-    url = image_url(referral)
-    return if url.nil? || !Crm::MetaAds::SemLogin.enabled?(conversation.account_id)
-    return if stored?(conversation.account_id, touch['source_id'].to_s)
+    enqueue_for_ad(conversation.account_id, touch['source_id'].to_s, referral)
+  end
 
-    perform_later(conversation.account_id, touch['source_id'].to_s, url)
+  # O clique que não passa pela conversa na hora (evento só de referral do Messenger e do Direct, #2521).
+  def self.enqueue_for_ad(account_id, ad_id, referral)
+    url = image_url(referral)
+    return if url.nil? || ad_id.blank? || !Crm::MetaAds::SemLogin.enabled?(account_id)
+    return if stored?(account_id, ad_id.to_s)
+
+    perform_later(account_id, ad_id.to_s, url)
   end
 
   def self.image_url(referral)

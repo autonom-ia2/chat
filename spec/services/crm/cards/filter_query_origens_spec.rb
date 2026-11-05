@@ -42,7 +42,7 @@ RSpec.describe Crm::Cards::FilterQuery do
     tela = Crm::Numeros::Origens::Tela.new(
       account: account, mes: Crm::Numeros::Mes.new(account: account, chave: '2026-10'),
       funis: Crm::Numeros::Origens::Funis.new(account: account, acesso: Crm::Access::VisiblePipelines.new(user: admin, account: account)),
-      perfil: { gasto: false, valor: true }
+      perfil: { gasto: false, valor: true, anuncio: true }
     ).perform
 
     expect(lista(entrou_em: '2026-10')).to contain_exactly(do_anuncio, fechou_agora, direto)

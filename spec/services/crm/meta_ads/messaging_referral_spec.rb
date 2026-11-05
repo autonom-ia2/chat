@@ -111,20 +111,47 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
   end
 
   # Página que é caixa de duas contas: a mensagem chega nas duas, e o anúncio vai só para a conta que o conhece.
-  it 'Página de duas contas: o anúncio vai só para a conta que o conhece; se nenhuma conhece, para as duas' do
+  it 'Página de duas contas: o anúncio vai só para a conta que o conhece' do
     page = create(:channel_facebook_page)
     other_page = create(:channel_facebook_page, page_id: page.page_id)
     mine = create(:conversation, account: page.inbox.account, inbox: page.inbox)
     theirs = create(:conversation, account: other_page.inbox.account, inbox: other_page.inbox)
-    new_ad = ad_referral.merge('ad_id' => '120200000000000009')
-
-    expect(described_class.attribute!(mine, new_ad, source: messenger, event_id: 'mid.0')).to be(true)
-    expect(described_class.attribute!(theirs, new_ad, source: messenger, event_id: 'mid.0')).to be(true)
-
     Crm::MetaAdObject.create!(account: mine.account, meta_object_id: '120200000000000001', object_type: 'ad', fetched_at: Time.current)
 
     expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.1')).to be(true)
     expect(described_class.attribute!(theirs, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)
+  end
+
+  # Anúncio novo, que nenhuma conta da Página conhece: a Graph diz de qual conta de anúncios ele é; sem conexão, não grava.
+  it 'Página de duas contas e anúncio novo: grava só na conta cuja conta de anúncios é a do anúncio' do
+    page = create(:channel_facebook_page)
+    other_page = create(:channel_facebook_page, page_id: page.page_id)
+    third_page = create(:channel_facebook_page, page_id: page.page_id)
+    mine, theirs, without = [page, other_page, third_page].map do |channel|
+      create(:conversation, account: channel.inbox.account, inbox: channel.inbox)
+    end
+    create_meta_ads_insights_connection(mine.account, ad_account_id: '700000')
+    create_meta_ads_insights_connection(theirs.account, ad_account_id: '700001')
+    stub_request(:get, %r{graph\.facebook\.com/.*/120200000000000001\?})
+      .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: { id: '120200000000000001', account_id: '700000' }.to_json)
+
+    expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.1')).to be(true)
+    expect(described_class.attribute!(theirs, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)
+    expect(described_class.attribute!(without, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)
+  end
+
+  it 'um clique guardado com defeito não leva os outros' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    fresh = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
+    Redis::Alfred.with do |conn|
+      conn.rpush(described_class.pending_key(contact_inbox.id), 'não é json')
+      conn.rpush(described_class.pending_key(contact_inbox.id),
+                 { referral: described_class.slim(ad_referral), source: messenger, event_id: 'psid-1:1700' }.to_json)
+    end
+
+    expect(described_class.attribute_pending!(fresh)).to be(true)
+    expect(fresh.reload.additional_attributes['campaign_touches'].sole).to include('referral_id' => 'psid-1:1700')
   end
 
   it 'caixa que trava numa conversa só grava o clique na conversa encerrada, que reabre' do

@@ -34,7 +34,7 @@ RSpec.describe Crm::MetaAds::MessagingReferralsSubscribeJob do
     allow(mine_subscription).to receive(:add!).and_raise(refused)
     allow(other_subscription).to receive(:add!)
 
-    described_class.perform_now('page-1', [mine.account_id])
+    described_class.perform_now('page-1', account_ids: [mine.account_id])
 
     expect(other_subscription).not_to have_received(:add!)
   end
@@ -43,8 +43,8 @@ RSpec.describe Crm::MetaAds::MessagingReferralsSubscribeJob do
     page = create(:channel_facebook_page, page_id: 'page-1')
     allow(subscription_for(page)).to receive(:add!).and_raise(transient)
 
-    expect { described_class.perform_now('page-1', [page.account_id]) }
-      .to have_enqueued_job(described_class).with('page-1', [page.account_id], 2)
-    expect { described_class.perform_now('page-1', nil, 3) }.not_to have_enqueued_job(described_class)
+    expect { described_class.perform_now('page-1', account_ids: [page.account_id]) }
+      .to have_enqueued_job(described_class).with('page-1', account_ids: [page.account_id], attempt: 2)
+    expect { described_class.perform_now('page-1', attempt: 3) }.not_to have_enqueued_job(described_class)
   end
 end

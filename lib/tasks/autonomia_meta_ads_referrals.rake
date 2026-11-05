@@ -24,7 +24,7 @@ namespace :autonomia do
       next puts('[meta_ads][assinar_referrals] DRY_RUN: nada enfileirado. Rode de novo com APPLY=true.') unless apply
 
       # Com ACCOUNT_IDS, o job só usa o token das caixas dessas contas.
-      pages.each { |page| Crm::MetaAds::MessagingReferralsSubscribeJob.perform_later(page.page_id, account_ids.presence) }
+      pages.each { |page| Crm::MetaAds::MessagingReferralsSubscribeJob.perform_later(page.page_id, account_ids: account_ids.presence) }
       puts "[meta_ads][assinar_referrals] enfileirados=#{pages.size}"
     end
   end

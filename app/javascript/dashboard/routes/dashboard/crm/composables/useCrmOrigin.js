@@ -1,5 +1,12 @@
 import { useI18n } from 'vue-i18n';
 
+// Paid Meta ad clicks that open a chat with the ad id in source_id: WhatsApp,
+// Messenger and Instagram Direct (#2521). Legacy touches without `source` were
+// always WhatsApp.
+export const META_AD_CLICK_SOURCES = ['meta_ctwa', 'meta_ctm', 'meta_ctd'];
+export const isMetaAdClickOption = option =>
+  !option.source || META_AD_CLICK_SOURCES.includes(option.source);
+
 export const CRM_ORIGIN_SOURCE_META = {
   meta_ctwa: {
     icon: 'i-lucide-message-circle',

@@ -10,7 +10,7 @@ class Crm::MetaAds::MessagingReferralsSubscribeJob < ApplicationJob
   ATTEMPTS = 3
 
   # account_ids: as contas cujo token pode ser usado (a da caixa nova, ou o ACCOUNT_IDS da tarefa); nil = todas.
-  def perform(page_id, account_ids = nil, attempt = 1)
+  def perform(page_id, account_ids: nil, attempt: 1)
     channels = channels_for(page_id, account_ids)
     return if channels.empty? || channels.any? { |channel| subscribed?(channel) }
 
@@ -18,7 +18,7 @@ class Crm::MetaAds::MessagingReferralsSubscribeJob < ApplicationJob
   rescue Crm::MetaAds::PageSubscription::Error => e
     return Rails.logger.warn("[#{self.class.name}] page=#{page_id} desistiu: #{e.message}") if attempt >= ATTEMPTS
 
-    self.class.set(wait: (attempt * 30).seconds).perform_later(page_id, account_ids, attempt + 1)
+    self.class.set(wait: (attempt * 30).seconds).perform_later(page_id, account_ids: account_ids, attempt: attempt + 1)
   end
 
   private

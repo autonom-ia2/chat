@@ -43,6 +43,19 @@ RSpec.describe Crm::MetaAds::MessagingReferralJob do
     expect(conversation.reload.additional_attributes['campaign_touches'].sole).to include('source' => 'meta_ctd')
   end
 
+  it 'a foto do anúncio vai direto para o job da foto, só quando a Página é de uma conta só' do
+    page = create(:channel_facebook_page, page_id: 'page-1')
+    allow(Crm::MetaAds::SemLogin).to receive(:enabled?).and_return(true)
+    messaging = { 'sender' => { 'id' => 'psid-1' }, 'recipient' => { 'id' => 'page-1' }, 'timestamp' => 1_700_000_000,
+                  'referral' => { 'source' => 'ADS', 'ad_id' => '1202', 'ads_context_data' => { 'photo_url' => 'https://x.fbcdn.net/p.jpg' } } }
+
+    expect { described_class.enqueue_for('messenger', messaging) }
+      .to have_enqueued_job(Crm::MetaAds::ReferralImageJob).with(page.inbox.account_id, '1202', 'https://x.fbcdn.net/p.jpg')
+
+    create(:channel_facebook_page, page_id: 'page-1')
+    expect { described_class.enqueue_for('messenger', messaging) }.not_to have_enqueued_job(Crm::MetaAds::ReferralImageJob)
+  end
+
   it 'sem a hora do evento não grava (todo clique do contato teria o mesmo id)' do
     page = create(:channel_facebook_page, page_id: 'page-1')
     conversation = conversation_in(page.inbox, 'psid-1')

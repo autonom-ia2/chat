@@ -22,6 +22,7 @@ import {
 } from '../helpers/dashboardOutcomes';
 import { originRows as buildOriginRows } from '../helpers/dashboardOrigins';
 import { useCrmPermissions } from '../composables/useCrmPermissions';
+import { isMetaAdClickOption } from '../composables/useCrmOrigin';
 
 const { t } = useI18n();
 const { resolvedLocale } = useLocale();
@@ -306,9 +307,7 @@ const loadCtwaGate = async () => {
     const { data } = await CtwaCampaignsAPI.get();
     // Paid CTWA only: organic referrals / tracked links must not light the Meta
     // block. Legacy touches predate `source` and were always paid.
-    hasCtwaAds.value = (data.payload || []).some(
-      option => !option.source || option.source === 'meta_ctwa'
-    );
+    hasCtwaAds.value = (data.payload || []).some(isMetaAdClickOption);
   } catch {
     hasCtwaAds.value = false;
   }
