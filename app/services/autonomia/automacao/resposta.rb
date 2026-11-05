@@ -6,8 +6,13 @@
 # - Equipe: a mesma régua da IA que responde (Autonomia::Agents::Operate::PessoaDaEquipe): pessoa da equipe escrevendo
 #   ao cliente, ou o eco do que ela mandou pelo app do celular. Não contam a nota, o robô, o envio automático em nome
 #   de alguém (follow-up, campanha, regra), a mensagem da própria automação nem a que falhou: o cliente não a recebeu.
-#   Efeito herdado da régua: na caixa Híbrida, o eco da resposta da IA que chega antes da bolha ter o id físico vira
-#   mensagem nova com a marca do celular, e conta como da equipe (PessoaDaEquipe, "ECO DO CELULAR").
+#
+# O eco de uma mensagem NOSSA (IA, automação, robô) não é a equipe respondendo. Normalmente ele nem vira mensagem: o
+# reconciliador o junta à bolha que já existe (WhatsappHybrid::EchoReconcilerExtension; na Cloud, o mesmo source_id).
+# Quando o eco chega antes de a bolha ter o id gravado, nasce uma mensagem a mais, com a marca do celular e sem
+# remetente (PessoaDaEquipe, "ECO DO CELULAR"). A raiz para separar: o eco leva o id da mensagem que saiu (o wamid; no
+# Híbrido, o id físico dentro dele, WhatsappHybrid::Wamid). Se outra mensagem de saída da caixa tem esse id, o eco é
+# dela e não conta. O eco do que a pessoa mandou pelo celular não tem par aqui.
 module Autonomia::Automacao::Resposta
   module_function
 
@@ -19,7 +24,14 @@ module Autonomia::Automacao::Resposta
   def equipe?(conversa, espera)
     equipe = ::Autonomia::Agents::Operate::PessoaDaEquipe
     candidatas = conversa.messages.chat.outgoing.where(sender_type: ['User', nil]).where.not(status: :failed)
-    na_janela(candidatas, espera).find_each.any? { |mensagem| equipe.da_pessoa?(mensagem) || equipe.eco_do_celular?(mensagem) }
+    na_janela(candidatas, espera).find_each.any? do |mensagem|
+      equipe.da_pessoa?(mensagem) || (equipe.eco_do_celular?(mensagem) && !eco_do_que_saiu_daqui?(mensagem))
+    end
+  end
+
+  def eco_do_que_saiu_daqui?(eco)
+    ids = [eco.source_id, ::WhatsappHybrid::Wamid.message_id(eco.source_id.to_s)].compact_blank.uniq
+    ids.any? && ::Message.where(inbox_id: eco.inbox_id, message_type: :outgoing, source_id: ids).where.not(id: eco.id).exists?
   end
 
   def na_janela(mensagens, espera)

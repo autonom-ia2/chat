@@ -22,6 +22,14 @@ Um "esperar até" cuja condição lê a resposta, com o prazo e o caminho "se ve
 o robô, o envio automático em nome de alguém (follow-up, convite de reunião, campanha, regra), a mensagem da própria
 automação e a mensagem que falhou na entrega.
 
+**O eco do que nós mandamos não é a equipe.** A IA ou a automação mandam pelo WhatsApp, e o eco volta. Normalmente o
+reconciliador o junta à bolha (`WhatsappHybrid::EchoReconcilerExtension`; na Cloud, pelo mesmo `source_id`). Quando o
+eco chega antes de a bolha ter o id gravado, nasce uma mensagem a mais, sem remetente e com a marca do celular, igual
+ao eco de uma pessoa que respondeu pelo app. A diferença está no id: o eco leva o wamid da mensagem que saiu (no
+Híbrido, o id físico dentro dele, `WhatsappHybrid::Wamid`). Se outra mensagem de saída da caixa tem esse id, o eco é
+dela e não conta. No exemplo 10, a agente de IA respondendo não encerra o "esperar a gerente responder". A
+`PessoaDaEquipe` (a régua da IA) não muda.
+
 ## Decisões
 
 - **"Durante a espera", não "desde o passo X".** O começo é o do "esperar até": na primeira conferência, agora; ao

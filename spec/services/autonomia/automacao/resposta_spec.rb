@@ -29,8 +29,9 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
   def evento(nome, **dados) = Events::Base.new(nome, Time.zone.now, dados)
 
   # A mensagem gravada e o evento dela na escuta, com as rodadas que ele acorda.
-  def escreve(**atributos)
-    mensagem = create(:message, account: account, conversation: conversa, inbox: conversa.inbox, **atributos)
+  # Sem remetente de verdade (eco do celular, a própria automação), pelo trait: a factory põe uma pessoa no lugar do nil.
+  def escreve(*traits, **atributos)
+    mensagem = create(:message, *traits, account: account, conversation: conversa, inbox: conversa.inbox, **atributos)
     perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
     mensagem
   end
@@ -148,9 +149,32 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
     it 'a equipe respondendo pelo app do celular (eco) conta como resposta' do
       execucao = comecar_e_rodar(definicao)
 
-      travel(5.minutes) { escreve(message_type: :outgoing, sender: nil, content_attributes: { 'external_echo' => true }) }
+      travel(5.minutes) do
+        escreve(:bot_message, content_attributes: { 'external_echo' => true }, source_id: 'wamid.do-celular')
+      end
 
       expect(execucao.reload.estado).to eq('concluida')
+    end
+
+    # O eco da mensagem que nós mesmos mandamos (a IA ou a automação), que nasceu como mensagem nova porque chegou antes
+    # de a bolha ter o id: não é a gerente respondendo.
+    it 'o eco de uma mensagem nossa não conta: nem no Híbrido (id físico no wamid) nem na Cloud (mesmo wamid)', :aggregate_failures do
+      execucao = comecar_e_rodar(definicao)
+      robo = create(:agent_bot, account: account)
+      fisico = '3EB0A1B2C3D4E5F6'
+      wamid = "wamid.#{Base64.strict_encode64([0x18, fisico.size].pack('C*') + fisico)}"
+      eco = { content_attributes: { 'external_echo' => true } }
+
+      travel(5.minutes) do
+        create(:message, account: account, conversation: conversa, inbox: conversa.inbox, message_type: :outgoing, sender: robo,
+                         source_id: fisico)
+        escreve(:bot_message, **eco, source_id: wamid)
+        create(:message, :bot_message, account: account, conversation: conversa, inbox: conversa.inbox,
+                                       content_attributes: { 'automacao_id' => definicao.id }, source_id: 'wamid.da-cloud')
+        escreve(:bot_message, **eco, source_id: 'wamid.da-cloud')
+      end
+
+      expect(execucao.reload.estado).to eq('esperando')
     end
 
     it 'não contam: o cliente, a nota, o robô, o envio automático, a mensagem da automação e a que falhou', :aggregate_failures do
@@ -163,7 +187,7 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
         escreve(message_type: :outgoing, sender: robo)
         escreve(message_type: :outgoing, sender: atendente, content_attributes: { 'crm_follow_up_id' => 1 })
         escreve(message_type: :outgoing, sender: atendente, content_attributes: { 'automacao_id' => definicao.id })
-        escreve(message_type: :outgoing, sender: nil, content_attributes: { 'automacao_id' => definicao.id })
+        escreve(:bot_message, content_attributes: { 'automacao_id' => definicao.id })
         escreve(message_type: :outgoing, sender: atendente, status: :failed)
       end
 
