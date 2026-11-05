@@ -35,18 +35,18 @@ const novas = ref([]);
 const antigas = ref([]);
 const mudando = ref(null);
 
-// #2499 — o gatilho de card diz a etapa e o funil pelo nome. Os funis só são
-// lidos se alguma automação tem gatilho com etapa ou funil. Se a leitura falhar
-// (ou quem vê não enxerga o funil), a linha fica com a frase do catálogo, que
-// continua certa, só sem o nome.
+// #2499 — o gatilho de card diz a etapa e o funil pelo nome, e o de data, o
+// campo. Os funis (ou os campos) só são lidos se alguma automação tem gatilho
+// que os pede. Se a leitura falhar (ou quem vê não enxerga o funil), a linha
+// fica com a frase do catálogo, que continua certa, só sem o nome.
 const lerNomesDosFunis = async () => {
   const tipos = novas.value.map(item => item.versao?.receita?.gatilho?.tipo);
-  const deCard = (catalogo.value?.gatilhos || []).some(
-    item => item.parametros?.length && tipos.includes(item.tipo)
-  );
-  if (!deCard) return;
+  const pecas = (catalogo.value?.gatilhos || [])
+    .filter(item => tipos.includes(item.tipo))
+    .flatMap(item => (item.parametros || []).map(parametro => parametro.peca));
+  if (!pecas.length) return;
   try {
-    await carregarFunis();
+    await carregarFunis(pecas);
   } catch {
     // A frase do catálogo já está na tela.
   }
