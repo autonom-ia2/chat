@@ -6152,6 +6152,7 @@
     "ORIGEM": {
       "TELA": "De onde veio",
       "FORMULARIO_META": "Veio do formulário \"{formulario}\" · anúncio {anuncio}",
+      "FORMULARIO_META_GENERICO": "Veio de um formulário de anúncio da Meta",
       "TITULO": "Como {nome} chegou",
       "TEXTO": "O caminho até aqui e a que este cliente está ligado.",
       "CAMINHO": "Caminho até aqui",
