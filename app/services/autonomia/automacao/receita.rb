@@ -84,13 +84,14 @@ class Autonomia::Automacao::Receita
     problemas_da_acao(passo)
   end
 
-  # "mensagem" e "avisar" (F4): só com a flag da F4, os valores do texto lidos da lista fechada, e os times e as
-  # pessoas do aviso da própria conta.
+  # "mensagem" e "avisar" (F4): só com a flag da F4, os valores do texto (e de cada variável do modelo da Meta, F4b)
+  # lidos da lista fechada, os times e as pessoas do aviso da própria conta, e o modelo pronto na conta.
   def problemas_da_mensagem(passo)
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
-    lidos = ::Autonomia::Automacao::Texto.caminhos(passo['texto']).flat_map { |caminho| problemas_do_caminho(id, caminho) }
-    desligado + lidos + destinatarios_de_fora(passo)
+    textos = [passo['texto'], *Array(passo.dig('modelo', 'variaveis'))]
+    lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map { |caminho| problemas_do_caminho(id, caminho) }
+    desligado + lidos + destinatarios_de_fora(passo) + ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da
