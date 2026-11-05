@@ -124,11 +124,12 @@ class Crm::MetaAds::Creation::Draft
     end
   end
 
-  # Carrossel: as mídias depois da primeira, até 10 no total. A ordem é a do carrossel (a primeira aparece primeiro), então
-  # entra no #digest como veio: outra ordem é outro anúncio.
+  # Carrossel: as mídias depois da primeira, até 10 no total, só nos destinos que aceitam (a tela confere o mesmo). A ordem
+  # é a do carrossel (a primeira aparece primeiro), então entra no #digest como veio: outra ordem é outro anúncio.
   def cards
     list = Array(@params[:cards])
     fail!('invalid_media') if list.size + 1 > CARDS_MAX
+    fail!('invalid_media') if list.any? && Crm::MetaAds::Creation::Confirmed::CAROUSEL_DESTINATIONS.exclude?(@params[:destination].to_s)
     list.map { |card| media(card) }
   end
 

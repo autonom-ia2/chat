@@ -503,4 +503,66 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
       })
     );
   });
+
+  // #2560: Messenger e Direct liberados no servidor.
+  const MESSAGING = {
+    ...OPTIONS,
+    destinations: ['WHATSAPP', 'INSTAGRAM_DIRECT', 'MESSENGER', 'WEBSITE'],
+    placements_by_destination: {
+      ...OPTIONS.placements_by_destination,
+      INSTAGRAM_DIRECT: ['AUTO'],
+      MESSENGER: ['AUTO'],
+    },
+  };
+
+  it('a Messenger ad sends no WhatsApp number, site or ready message', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
+    const wrapper = await mountCreate(MESSAGING);
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+    await wrapper
+      .find('[data-create-destination-option="MESSENGER"]')
+      .trigger('click');
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: 'MESSENGER',
+        placement: 'AUTO',
+        whatsapp_number: null,
+        ready_message: null,
+      })
+    );
+  });
+
+  it('without a WhatsApp number, "another destination" skips Direct when the Page has no Instagram', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
+    const wrapper = await mountCreate({ ...MESSAGING, whatsapp_numbers: [] });
+    expect(
+      wrapper.find('[data-create-blocker]').attributes('data-create-blocker')
+    ).toBe('NO_NUMBER');
+
+    await wrapper
+      .find('[data-create-blocker-other="NO_NUMBER"]')
+      .trigger('click');
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith(
+      expect.objectContaining({ destination: 'MESSENGER' })
+    );
+  });
+
+  it('a Page without Instagram refused by the server says to link one', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(
+      refusal(422, { error: 'invalid_instagram', nothing_created: true })
+    );
+    const wrapper = await mountCreate(MESSAGING);
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+
+    expect(wrapper.text()).toContain(`${KEY}.ERRORS.INVALID_INSTAGRAM`);
+  });
 });

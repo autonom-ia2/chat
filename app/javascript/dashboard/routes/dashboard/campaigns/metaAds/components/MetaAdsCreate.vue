@@ -67,6 +67,7 @@ const CREATE_ERRORS = [
   'invalid_site',
   'invalid_whatsapp_number',
   'invalid_page',
+  'invalid_instagram',
   'invalid_media',
   'invalid_audience',
   'video_processing',
@@ -475,9 +476,14 @@ const goToInboxes = () =>
   router.push(
     frontendURL(`accounts/${route.params.accountId}/settings/inboxes/new`)
   );
-// Sem número de WhatsApp: dá para anunciar com outro destino confirmado (o primeiro da lista), em vez de parar.
+// Sem número de WhatsApp: dá para anunciar com outro destino confirmado (o primeiro da lista que a Página aceita), em vez
+// de parar. O Direct só serve com a conta do Instagram ligada à Página.
 const otherDestination = computed(() =>
-  destinations.value.find(option => option !== 'WHATSAPP')
+  destinations.value.find(
+    option =>
+      option !== 'WHATSAPP' &&
+      (option !== 'INSTAGRAM_DIRECT' || Boolean(instagram.value))
+  )
 );
 const adWithoutWhatsapp = () => {
   draft.value = { ...draft.value, destination: otherDestination.value };

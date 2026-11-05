@@ -166,7 +166,7 @@ Mais quatro pontos, que a tela já supõe:
 
 **Regra:** a gravação da Meta (vídeo do App Review) só mostra o que a chamada
 real confirmou. No protótipo, `?demo=so-confirmado` mostra o caso mínimo, só com
-o que a doc já garante: WhatsApp e site (o Messenger espera o item 9),
+o que a doc já garante: WhatsApp e site (Messenger e Direct entraram no #2560),
 WhatsApp só em "Automático" e "Trocar a foto (cria uma cópia)" no lugar de
 "Trocar foto ou texto". As outras cenas mostram tudo, como se a chamada real
 tivesse confirmado.
@@ -187,15 +187,23 @@ Verificado na documentação oficial em 26/10/2026.
     vídeo e carrossel.
     [Fonte](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ad-creative/messaging-ads/click-to-whatsapp)
   - **Messenger:** `OUTCOME_ENGAGEMENT`, destino `MESSENGER`, otimização
-    `CONVERSATIONS`, `promoted_object` com `page_id`; botão `MESSAGE_PAGE`.
-    [Fonte](https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-group/)
-  - **Direct do Instagram:** destino `INSTAGRAM_DIRECT`, botão `MESSAGE_PAGE`
-    com `app_destination: INSTAGRAM_DIRECT`.
-    [Fonte](https://developers.facebook.com/documentation/ads-commerce/instagram/ads-api/guides/use-posts-as-ads)
-    O objetivo e a otimização para ele sozinho **não estão confirmados** na doc.
-    Entrou no protótipo por decisão de 26/10; **confirmar na chamada real antes
-    da flag**. Sem conta do Instagram ligada à Página, a opção aparece apagada,
-    com o motivo.
+    `CONVERSATIONS`, `promoted_object` com `page_id`; criativo com `link`
+    `https://fb.com/messenger_doc/` e botão `MESSAGE_PAGE` com
+    `app_destination: MESSENGER`. Liberado no #2560 (05/11), só em
+    "Automático", sem carrossel e sem mensagem pronta (vale a saudação padrão
+    da Meta).
+    [Fonte](https://developers.facebook.com/docs/marketing-api/ad-creative/messaging-ads/click-to-messenger)
+  - **Direct do Instagram:** `OUTCOME_ENGAGEMENT`, destino `INSTAGRAM_DIRECT`,
+    otimização `CONVERSATIONS`, `promoted_object` com `page_id`; criativo com a
+    conta do Instagram da Página, `link` `https://www.instagram.com` e botão
+    `INSTAGRAM_MESSAGE` com `app_destination: INSTAGRAM_DIRECT`. Liberado no
+    #2560 (05/11), com as mesmas limitações do Messenger. Sem conta do
+    Instagram ligada à Página, a opção aparece apagada, com o motivo, e o
+    servidor recusa (`invalid_instagram`).
+    [Fonte](https://developers.facebook.com/docs/marketing-api/ad-creative/messaging-ads/click-to-instagram)
+    A doc chama o campo da conta de `instagram_actor_id`; o criativo manda
+    `instagram_user_id`, o mesmo do site e do WhatsApp. **A primeira chamada
+    real confirma** (anúncio pausado de teste na conta 18).
   - **Site:** `OUTCOME_TRAFFIC`, `LINK_CLICKS`, `link` e botão `LEARN_MORE`
     (padrão) ou `SHOP_NOW`.
     [Fonte do link e do botão](https://developers.facebook.com/documentation/ads-commerce/marketing-api/get-started/basic-ad-creation/create-an-ad-creative)
@@ -366,6 +374,8 @@ vídeo ao vivo, e ela só entra no pedido se a chamada real provar que precisa.
 Na conta de teste, com os testadores do app:
 
 1. Objetivo e otimização do anúncio com destino Direct do Instagram sozinho.
+   A doc oficial (Click to Instagram) diz `OUTCOME_ENGAGEMENT` com
+   `CONVERSATIONS`; falta a chamada real (#2560).
 2. "Só Instagram" e "Só Facebook" com destino WhatsApp.
 3. `POST /{ad_id}` com `creative` novo, sem recriar o anúncio.
 4. Subcampos de `boost_eligibility_info`.
@@ -373,7 +383,8 @@ Na conta de teste, com os testadores do app:
 6. Carrossel com destino Messenger ou Direct (hoje a tela não oferece).
 7. Botão de WhatsApp em post da Página (hoje a tela não oferece).
 8. Posições aceitas pelo clique para WhatsApp e `adapt_to_placement`.
-9. Destino Messenger com objetivo de mensagens.
+9. Destino Messenger com objetivo de mensagens. A doc oficial (Click to
+   Messenger) confirma os campos; falta a chamada real (#2560).
 10. Publicar vídeo comum no post da Página: provar se precisa de `publish_video`
     ou se `pages_manage_posts` basta.
 11. Tirar a data de fim de um grupo com orçamento por dia: o servidor manda
