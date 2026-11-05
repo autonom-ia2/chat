@@ -219,4 +219,23 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
       expect(card_lido(definicao)).not_to have_key(:value)
     end
   end
+
+  # O "Testar este passo" (#2500 C2) lê como quem pede: o valor do card só com a chave dela.
+  describe 'leitura do card no testar' do
+    def card_lido_no_teste(quem)
+      card
+      passo = { 'id' => 'r1', 'tipo' => 'resumir', 'le' => %w[card], 'linhas' => 2, 'destino' => 'nota' }
+      teste = Autonomia::Automacao::TestarPasso.new(receita: receita([passo]), passo_id: 'r1', conta: account, account_user: na_conta(quem))
+      teste.send(:leitura, conversa).conversa[:card]
+    end
+
+    it 'quem pede tem a chave: o card vai com o valor' do
+      expect(card_lido_no_teste(pessoa_com(base + %w[sales_value_view]))).to include(value: '2500.0 BRL')
+    end
+
+    it 'quem pede não tem a chave: o card vai sem o valor' do
+      lido = card_lido_no_teste(pessoa_com(base))
+      expect([lido[:title], lido.key?(:value)]).to eq(['Pedido', false])
+    end
+  end
 end

@@ -11371,6 +11371,31 @@
     ],
     "sem_corpo": false
   },
+  "POST autonomia/automacoes/testar_passo": {
+    "campos": {
+      "conversa_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "passo_id": {
+        "tipo": "id",
+        "tipo_pela_leitura": "nome"
+      },
+      "receita": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/autonomia/automacoes_ia#testar_passo",
+    "motivos": [
+      "leitura crua sem tipo: receita"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:19",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:76",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:75",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:64"
+    ],
+    "sem_corpo": false
+  },
   "POST autonomia/build_threads": {
     "campos": {
       "actuation": {

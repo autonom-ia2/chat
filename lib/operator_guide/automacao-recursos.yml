@@ -235,6 +235,7 @@ fora:
     recursos:
       - automation_rules
       - autonomia/automacoes
+      - autonomia/automacoes_ia
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias

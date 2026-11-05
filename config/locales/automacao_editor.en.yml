@@ -8,3 +8,8 @@ en:
         receita_invalida: This automation has something to fix before a test run.
         sem_receita: The automation needs a valid trigger and steps for a test run.
         gatilho_de_card: Test runs only work with conversation triggers for now.
+      testar:
+        receita_invalida: This automation has something to fix before testing the step.
+        passo_nao_testavel: Only AI steps that decide, write or summarize can be tested.
+        ia_nao_configurada: To test, the account needs its own AI key.
+        sem_conversa: You can't see any conversation to test with.

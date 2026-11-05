@@ -201,15 +201,14 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       cliente_escreve(conversa, 'Bom dia! Qual o horário de vocês no sábado?')
     end
 
-    # A nota privada do "decidir" (F7.4) sai também no "nenhum se aplica": com o gatilho em toda mensagem do cliente,
-    # cada mensagem normal ganha uma nota para a equipe. Registrado no doc (seção 7) para decisão.
-    it 'para aqui: nada muda na conversa e nada sai para o cliente; fica só a nota da IA para a equipe', :aggregate_failures do
+    # O "nenhum se aplica" do "decidir" não deixa nota (#2578): a mensagem normal não enche a conversa de notas.
+    it 'para aqui: nada muda na conversa, nada sai para o cliente e nenhuma nota para a equipe', :aggregate_failures do
       conversa.reload
       expect([conversa.assignee, conversa.priority, conversa.label_list]).to eq([rafael, nil, []])
       expect(chamadas_para('graph.facebook.com')).to be_empty
       expect(historico_de(automacao).map(&:first)).to eq(['tom'])
       expect(conversa.messages.outgoing.where(private: false)).to be_empty
-      expect(conversa.messages.where(private: true).count).to eq(1)
+      expect(conversa.messages.where(private: true)).to be_empty
     end
   end
 
