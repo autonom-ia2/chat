@@ -79,9 +79,10 @@ class Autonomia::Automacao::Valores
 
   # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
   # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não
-  # `ve_o_card?`. Sem a permissão, o salvar recusa e a execução lê vazio.
+  # `ve_o_card?`. Sem a permissão, o salvar recusa e a execução lê vazio. Cada regra responde `ve?(account_user)` e diz
+  # a chave (`CHAVE`) que o catálogo manda ao editor, para ele não oferecer o valor a quem não pode ler.
   PROTEGIDOS = {
-    'card.valor' => ->(account_user) { ::Crm::ValorDeVenda.ve?(account_user) }
+    'card.valor' => ::Crm::ValorDeVenda
   }.freeze
 
   # O modelo do atributo personalizado de cada base, para conferir ao salvar que a chave existe na conta.
@@ -108,7 +109,7 @@ class Autonomia::Automacao::Valores
     # `account_user` pode ler o caminho? Sem pessoa (nil), o valor protegido fica fechado.
     def pode_ler?(caminho, account_user)
       regra = PROTEGIDOS[caminho.to_s]
-      regra.nil? || regra.call(account_user)
+      regra.nil? || regra.ve?(account_user)
     end
 
     # O atributo da conta que o caminho lê existe? Caminho que não é atributo responde true.

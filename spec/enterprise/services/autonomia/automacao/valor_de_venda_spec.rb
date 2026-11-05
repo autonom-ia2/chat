@@ -122,6 +122,12 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
       expect([ler(com_chave), ler(admin), ler(sem_chave), ler(nil)]).to eq([2500, 2500, nil, nil])
     end
 
+    it 'quem não está na conta (saiu, ou é de outra) lê vazio' do
+      de_fora = create(:user)
+
+      expect(ler(de_fora)).to be_nil
+    end
+
     it 'os outros campos do card não mudam' do
       expect(Autonomia::Automacao::Valores.new(alvo: card, quem: sem_chave).ler('card.titulo')).to eq('Pedido')
     end
@@ -148,7 +154,19 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
 
       expect(conversa.reload.priority).to eq('low')
       expect(registros(execucao)).to eq([['s1', 'ok', nil], ['a2', 'ok', nil], %w[m1 pulado faltou_valor]])
-      expect(conversa.messages.where('content LIKE ?', '%2500%')).to be_empty
+      expect(conversa.messages.where('content LIKE ?', 'Valor:%')).to be_empty
+    end
+
+    # Sem account_user, o Valores já lê vazio (ver "quem não está na conta"); antes disso, a execução nem anda.
+    it 'quem ligou saiu da conta: a execução não anda, nada escrito nem mandado' do
+      definicao = automacao_ligada(account, dono, [caro, mensagem_passo('m1', 'Valor: ', valor)], gatilho: gatilho)
+      AccountUser.find_by(account: account, user: dono).destroy!
+
+      execucao = rodar(definicao)
+
+      expect(registros(execucao)).to eq([%w[inicio pulado quem_ligou_saiu_da_conta]])
+      expect(conversa.reload.priority).to be_nil
+      expect(conversa.messages.where('content LIKE ?', 'Valor:%')).to be_empty
     end
   end
 end

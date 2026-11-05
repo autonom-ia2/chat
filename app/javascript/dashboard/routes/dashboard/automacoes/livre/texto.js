@@ -26,11 +26,12 @@ const comChaveSeRepetido = opcoes => {
 
 // O valor da mensagem (#2496) só aparece no "Só se" do gatilho dela; no texto
 // e nos passos, `gatilho` não vem e ele fica de fora. O que só o Guia monta
-// (`so_guia`) nunca entra na escolha.
+// (`so_guia`) e o que a pessoa não pode ler (`sem_permissao`, #2597) nunca
+// entram na escolha.
 export const opcoesDosValores = (catalogo, atributosDo, t, gatilho = null) =>
   comChaveSeRepetido(
     (catalogo?.valores || []).flatMap(item => {
-      if (item.so_guia) return [];
+      if (item.so_guia || item.sem_permissao) return [];
       if (item.so_no_gatilho && item.so_no_gatilho !== gatilho) return [];
       if (!item.atributos)
         return [{ value: item.caminho, label: t(item.frase) }];
@@ -44,6 +45,13 @@ export const opcoesDosValores = (catalogo, atributosDo, t, gatilho = null) =>
       }));
     })
   );
+
+// O valor que a pessoa não pode ler (#2597), com o nome dele: o texto que já o
+// usa mostra o nome, não "apagado".
+export const valoresSemPermissao = (catalogo, t) =>
+  (catalogo?.valores || [])
+    .filter(item => item.sem_permissao && !item.atributos)
+    .map(item => ({ value: item.caminho, label: t(item.frase) }));
 
 export const comColchetes = rotulo => `${ABRE}${rotulo}${FECHA}`;
 

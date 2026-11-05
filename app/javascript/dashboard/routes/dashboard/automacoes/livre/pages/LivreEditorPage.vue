@@ -18,6 +18,7 @@ import LivrePortas from '../components/LivrePortas.vue';
 import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/guiada/DialogoDaCasa.vue';
 import {
   carregarCatalogo,
+  comPermissoes,
   doAlvoDoGatilho,
   novoPasso,
   useCatalogo,
@@ -34,6 +35,7 @@ import {
 import { useEditorLivre } from '../useEditorLivre';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
 import { useGatilhosNovos } from '../useGatilhosNovos';
+import { usePodeLerValor } from '../usePodeLerValor';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -75,9 +77,14 @@ const avisoDeLigada = computed(() => {
     : t('AUTOMACAO_LIVRE.EDITOR.LIGADA_POR_OUTRA');
 });
 
-// O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499).
+// O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
+// a pessoa pode ler (#2597).
+const podeLerValor = usePodeLerValor();
 const catalogoDoAlvo = computed(() =>
-  doAlvoDoGatilho(catalogo.value, receita.value.gatilho?.tipo)
+  doAlvoDoGatilho(
+    comPermissoes(catalogo.value, podeLerValor.value),
+    receita.value.gatilho?.tipo
+  )
 );
 
 const seletor = ref(null);

@@ -107,7 +107,8 @@ module Autonomia::Automacao::Catalogo
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499).
   def valores
     campos = ::Autonomia::Automacao::Valores::CAMPOS.keys.map do |caminho|
-      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho) }
+      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
+        **do_protegido(caminho) }
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
@@ -137,6 +138,13 @@ module Autonomia::Automacao::Catalogo
 
     { 'opcoes' => fechado['opcoes'].map { |opcao| { 'valor' => opcao, 'frase' => chave('VALOR_DA_MENSAGEM', opcao) } },
       'operadores' => fechado['operadores'].map { |op| { 'op' => op, 'frase' => chave('OPERADOR_DA_MENSAGEM', op) } } }
+  end
+
+  # O valor que pede permissão (#2597) leva a chave: o editor não o oferece a quem não a tem. Quem autoriza continua
+  # sendo a Receita, ao salvar, e o Valores, ao rodar.
+  def do_protegido(caminho)
+    regra = ::Autonomia::Automacao::Valores::PROTEGIDOS[caminho]
+    regra ? { 'permissao' => regra::CHAVE } : {}
   end
 
   def nativos

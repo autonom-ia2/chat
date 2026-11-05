@@ -59,6 +59,11 @@ vi.mock('dashboard/composables/store', async () => {
     },
   };
 });
+// #2597: quem lê o valor do card tem spec próprio (valorProtegido.spec.js).
+vi.mock('../usePodeLerValor', async () => {
+  const { ref: criarRef } = await import('vue');
+  return { usePodeLerValor: () => criarRef(() => true) };
+});
 // #2499: os gatilhos de card pedem a chave de funis; as etapas vêm do CRM.
 vi.mock(
   'dashboard/routes/dashboard/crm/composables/useCrmPermissions',

@@ -287,7 +287,8 @@
     {
       "caminho": "card.valor",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_VALOR"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_VALOR",
+      "permissao": "sales_value_view"
     },
     {
       "caminho": "card.responsavel_id",
