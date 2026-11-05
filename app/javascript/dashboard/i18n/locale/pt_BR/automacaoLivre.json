@@ -464,11 +464,11 @@
       "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar.",
       "OPCAO": "{nome} · #{n}",
       "FARIA": {
-        "IA_EXTRAIR": "Aqui a IA procuraria: {lista}.",
-        "IA_ESCREVER_MENSAGEM": "Aqui a IA escreveria o texto e mandaria ao cliente.",
-        "IA_ESCREVER_SUGESTAO": "Aqui a IA escreveria o texto como sugestão, para a equipe revisar e mandar.",
-        "IA_RESUMIR_NOTA": "Aqui a IA resumiria a conversa numa nota privada.",
-        "IA_RESUMIR_AVISAR": "Aqui a IA resumiria a conversa e avisaria a equipe.",
+        "IA_EXTRAIR": "Gravaria: {lista}.",
+        "IA_ESCREVER_MENSAGEM": "Sairia para o cliente.",
+        "IA_ESCREVER_SUGESTAO": "Ficaria como sugestão para a equipe revisar e mandar.",
+        "IA_RESUMIR_NOTA": "Ficaria numa nota privada.",
+        "IA_RESUMIR_AVISAR": "Avisaria a equipe.",
         "ONDE": {
           "CONVERSA": "{campo}, na conversa",
           "CONTATO": "{campo}, no contato",

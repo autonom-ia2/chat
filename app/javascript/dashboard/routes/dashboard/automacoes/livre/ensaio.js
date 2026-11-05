@@ -14,10 +14,12 @@ const AVISO = {
 // sem chamar a IA (o servidor manda só o que a receita diz).
 const F = `${E}.FARIA`;
 const LUGAR = { conversa: 'CONVERSA', contato: 'CONTATO', empresa: 'EMPRESA' };
-const ondeGrava = (campo, t) =>
-  t(`${F}.ONDE.${LUGAR[(campo.destino || '').split('.')[0]]}`, {
-    campo: campo.chave,
-  });
+// Lugar que este painel não conhece (ou destino vazio): só o campo, nunca a
+// chave crua do i18n.
+const ondeGrava = (campo, t) => {
+  const lugar = LUGAR[(campo.destino || '').split('.')[0]];
+  return lugar ? t(`${F}.ONDE.${lugar}`, { campo: campo.chave }) : campo.chave;
+};
 const FARIA_DA_IA = {
   ia_extrair: (dados, t) =>
     t(`${F}.IA_EXTRAIR`, {

@@ -212,8 +212,8 @@ describe('linhasDoEnsaio', () => {
     ]);
   });
 
-  // #2500 — extrair, escrever e resumir dizem o que a IA faria e para onde
-  // iria; nada vem da IA.
+  // #2500 — extrair, escrever e resumir dizem para onde iria o que a IA
+  // fizesse; nada vem da IA. Lugar que o painel não conhece mostra só o campo.
   it.each([
     [
       'extrair',
@@ -222,9 +222,11 @@ describe('linhasDoEnsaio', () => {
           { chave: 'placa', destino: 'conversa.placa' },
           { chave: 'cpf', destino: 'contato.cpf' },
           { chave: 'empresa', destino: 'empresa.nome' },
+          { chave: 'etapa', destino: 'card.atributos.etapa' },
+          { chave: 'sem_destino', destino: '' },
         ],
       },
-      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_EXTRAIR(AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.CONVERSA(placa); AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.CONTATO(cpf); AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.EMPRESA(empresa))',
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_EXTRAIR(AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.CONVERSA(placa); AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.CONTATO(cpf); AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.EMPRESA(empresa); etapa; sem_destino)',
     ],
     [
       'escrever',
