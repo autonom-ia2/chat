@@ -7,7 +7,8 @@
 #   nenhum campo proibido;
 # - o corpo é literal: variável no corpo chega com a mensagem (F4);
 # - todo `$valor` do caminho e das condições é um caminho que a automação sabe ler;
-# - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496).
+# - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
+# - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
   RAMOS = %w[entao senao se_vencer].freeze
@@ -43,7 +44,7 @@ class Autonomia::Automacao::Receita
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
+    [*ids_repetidos, *gatilho_de_card, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -55,6 +56,19 @@ class Autonomia::Automacao::Receita
 
   def ids_repetidos
     passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
+  end
+
+  # O gatilho de card pede a flag da F6 e o CRM; a etapa e o funil escolhidos precisam ser da conta (o esquema já
+  # conferiu que são números e que "entrou" e "saiu" trazem a etapa).
+  def gatilho_de_card
+    gatilho = @receita['gatilho'].to_h
+    return [] unless ::Autonomia::Automacao::Gatilhos.do_card?(gatilho['tipo'])
+    return [texto(:gatilho_desligado)] unless ::Autonomia::Automacao::Motor.gatilhos?(@conta)
+
+    etapa = gatilho['etapa_id']
+    funil = gatilho['funil_id']
+    [*(texto(:etapa_de_fora, id: etapa) if etapa && !@conta.crm_pipeline_stages.exists?(id: etapa)),
+     *(texto(:funil_de_fora, id: funil) if funil && !@conta.crm_pipelines.exists?(id: funil))]
   end
 
   def filtros_do_gatilho

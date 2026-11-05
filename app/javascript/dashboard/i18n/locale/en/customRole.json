@@ -211,7 +211,7 @@
           "NAME": "Automations",
           "HINT": "Automation rules",
           "LEVEL_VIEW": "Sees the rules.",
-          "LEVEL_MANAGE": "Creates and edits rules. A rule with a webhook or an email transcript also needs Integrations."
+          "LEVEL_MANAGE": "Creates and edits rules. A rule with a webhook or an email transcript also needs Integrations. An automation with a pipeline card trigger also needs Manage CRM pipelines & automations."
         },
         "SCHEDULING": {
           "NAME": "Scheduling",

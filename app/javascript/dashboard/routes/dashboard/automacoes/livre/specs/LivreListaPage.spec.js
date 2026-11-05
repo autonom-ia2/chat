@@ -1,6 +1,7 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import AutomationAPI from 'dashboard/api/automation';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
+import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import LivreListaPage from '../pages/LivreListaPage.vue';
 
 // #2414 F5 — a lista única: as novas (em frase pelo catálogo) e as do jeito
@@ -47,12 +48,30 @@ vi.mock('dashboard/composables/useCrmAutomationOptions', () => ({
 vi.mock('dashboard/api/automation', () => ({
   default: { get: vi.fn(), update: vi.fn() },
 }));
+vi.mock('dashboard/api/crmKanban', () => ({
+  default: {
+    getPipelines: vi.fn(() =>
+      Promise.resolve({ data: { payload: [{ id: 3, name: 'Vendas' }] } })
+    ),
+    getStages: vi.fn(() =>
+      Promise.resolve({ data: { payload: [{ id: 12, name: 'Negociação' }] } })
+    ),
+  },
+}));
 vi.mock('dashboard/api/autonomia/automacoes', () => ({
   default: { get: vi.fn(), passos: vi.fn(), ligar: vi.fn(), desligar: vi.fn() },
 }));
 
 const CATALOGO = {
-  gatilhos: [{ tipo: 'conversa.criada', frase: 'QUANDO_COMECA' }],
+  gatilhos: [
+    { tipo: 'conversa.criada', alvo: 'Conversation', frase: 'QUANDO_COMECA' },
+    {
+      tipo: 'card.entrou_na_etapa',
+      alvo: 'Crm::Card',
+      frase: 'AUTOMACAO_LIVRE.GATILHOS.CARD_ENTROU_NA_ETAPA',
+      parametros: [{ nome: 'etapa_id', peca: 'etapa' }],
+    },
+  ],
   operadores: [],
   unidades: [],
   valores: [],
@@ -100,6 +119,44 @@ describe('LivreListaPage', () => {
     expect(linhas[0].find('[data-frase]').text()).toContain('QUANDO_COMECA');
     expect(linhas[0].find('[data-frase]').text()).toContain('PARAR');
     expect(linhas[1].attributes('data-antiga')).toBeDefined();
+  });
+
+  // #2499: a de card tem o selo do card e a frase com o nome da etapa; os
+  // funis só são lidos quando há uma automação assim.
+  it('a automação de card tem o selo do card e a etapa pelo nome', async () => {
+    const montada = montar();
+    await flushPromises();
+    expect(CrmKanbanAPI.getPipelines).not.toHaveBeenCalled();
+    expect(montada.find('[data-origem]').text()).toBe(
+      'AUTOMACAO_LIVRE.ORIGEM.CONVERSA'
+    );
+
+    AutomacoesAPI.get.mockResolvedValue({
+      data: {
+        automacoes: [
+          {
+            ...NOVA,
+            versao: {
+              id: 22,
+              receita: {
+                gatilho: { tipo: 'card.entrou_na_etapa', etapa_id: 12 },
+                passos: [{ id: 'p1', tipo: 'parar' }],
+              },
+            },
+          },
+        ],
+      },
+    });
+    const wrapper = montar();
+    await flushPromises();
+    const linha = wrapper.find('[data-linha]');
+    expect(CrmKanbanAPI.getPipelines).toHaveBeenCalledTimes(1);
+    expect(linha.find('[data-origem]').text()).toBe(
+      'AUTOMACAO_LIVRE.ORIGEM.CARD'
+    );
+    expect(linha.find('[data-frase]').text()).toContain(
+      'AUTOMACAO_LIVRE.GATILHO_COM.CARD_ENTROU_NA_ETAPA'
+    );
   });
 
   it('a nova mostra o fato da semana; a antiga, não (#2498)', async () => {

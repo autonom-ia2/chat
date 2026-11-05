@@ -72,6 +72,12 @@ RSpec.describe Autonomia::Automacao::Valores do
       expect(valores.ler('contato.nome')).to eq('Maria')
     end
 
+    # Decisão do #2499 (PR2a): o card sem valor lê zero, não vazio, como no quadro (value_cents é obrigatório, padrão 0).
+    # "Valor maior que 0" separa o card com valor; "está vazio" nunca casa no card.
+    it 'o card sem valor lê zero' do
+      expect(described_class.new(alvo: novo_card).ler('card.valor')).to eq(0)
+    end
+
     it 'lê vazio quando a ponte falta: card sem conversa, contato sem card' do
       sem_conversa = novo_card(primary_conversation: nil)
 

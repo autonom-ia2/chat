@@ -49,4 +49,57 @@ RSpec.describe Autonomia::Automacao::Receita do
 
     expect(described_class.ramos(torto)).to eq([[{ 'id' => 'x' }]])
   end
+
+  # #2499: o gatilho de card pede a flag da F6 e o CRM; a etapa e o funil do gatilho são da conta, e "entrou" e "saiu"
+  # pedem a etapa (esquema).
+  describe 'gatilho de card' do
+    around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
+
+    let(:admin) { create(:user, account: account, role: :administrator) }
+    let(:funil_e_etapa) { create_crm_pipeline(account: account, user: admin) }
+    let(:outra_conta) { create_crm_pipeline(account: create(:account), user: admin) }
+
+    def de_card(gatilho) = { 'gatilho' => gatilho, 'passos' => [{ 'id' => 'p1', 'tipo' => 'parar' }] }
+
+    def problemas(gatilho) = described_class.new(de_card(gatilho), conta: account).problemas
+
+    before { account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos') }
+
+    it 'aceita a etapa e o funil da conta', :aggregate_failures do
+      expect(problemas('tipo' => 'card.entrou_na_etapa', 'etapa_id' => funil_e_etapa.last.id)).to be_empty
+      expect(problemas('tipo' => 'card.ganho', 'funil_id' => funil_e_etapa.first.id)).to be_empty
+      expect(problemas('tipo' => 'card.perdido')).to be_empty
+    end
+
+    it 'recusa a etapa e o funil de outra conta', :aggregate_failures do
+      expect(problemas('tipo' => 'card.saiu_da_etapa', 'etapa_id' => outra_conta.last.id))
+        .to eq([I18n.t('autonomia.automacao.receita.etapa_de_fora', id: outra_conta.last.id)])
+      expect(problemas('tipo' => 'card.criado', 'funil_id' => outra_conta.first.id))
+        .to eq([I18n.t('autonomia.automacao.receita.funil_de_fora', id: outra_conta.first.id)])
+    end
+
+    it 'recusa o gatilho de card sem a flag ou sem o CRM', :aggregate_failures do
+      account.disable_features!('automacao_gatilhos')
+      expect(problemas('tipo' => 'card.ganho')).to eq([I18n.t('autonomia.automacao.receita.gatilho_desligado')])
+
+      account.enable_features!('automacao_gatilhos')
+      with_modified_env(CRM_KANBAN_ENABLED: 'false') do
+        expect(problemas('tipo' => 'card.ganho')).to eq([I18n.t('autonomia.automacao.receita.gatilho_desligado')])
+      end
+    end
+
+    it 'o esquema pede a etapa em "entrou" e "saiu", e não aceita etapa nem funil fora do gatilho deles', :aggregate_failures do
+      expect(described_class.esquema_valido?(de_card('tipo' => 'card.entrou_na_etapa'))).to be(false)
+      expect(described_class.esquema_valido?(de_card('tipo' => 'card.ganho', 'etapa_id' => 1))).to be(false)
+      expect(described_class.esquema_valido?(de_card('tipo' => 'card.saiu_da_etapa', 'etapa_id' => 1, 'funil_id' => 1))).to be(false)
+      expect(described_class.esquema_valido?(de_card('tipo' => 'conversa.criada', 'funil_id' => 1))).to be(false)
+      expect(described_class.esquema_valido?(de_card('tipo' => 'card.saiu_da_etapa', 'etapa_id' => 1))).to be(true)
+    end
+
+    it 'card.* vale no gatilho de card e não no de conversa', :aggregate_failures do
+      filtro = [{ 'campo' => { '$valor' => 'card.valor' }, 'op' => 'maior', 'valor' => 0 }]
+      expect(problemas('tipo' => 'card.ganho', 'filtros' => filtro)).to be_empty
+      expect(problemas('tipo' => 'conversa.criada', 'filtros' => filtro)).to include(a_string_including('card.valor'))
+    end
+  end
 end

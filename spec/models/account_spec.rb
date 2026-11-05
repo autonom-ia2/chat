@@ -305,6 +305,7 @@ RSpec.describe Account do
       # #2414 F4: automacao_mensagens depois dela, 23 (1 << 22 = 4194304), pela ordem da main (02/11).
       # #2414 F7 (#2500): automacao_ia depois dela, 24 (1 << 23 = 8388608), provisória até a Orquestração dar o bit.
       # #1479 F3: agentes_enviar_local_e_contato depois dela, 25 (1 << 24 = 16777216), dada pela Orquestração (04/11).
+      # #2499 F6: automacao_gatilhos depois dela, 26 (1 << 25 = 33554432), contra a main 45e251027e; Orquestração confirma.
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
@@ -315,7 +316,7 @@ RSpec.describe Account do
         feature_agente_diz_quando_nao_sabe: 65_536, feature_ia_previa_de_link: 131_072,
         feature_agentes_pedir_localizacao: 262_144, feature_automacao_fundacao: 524_288, feature_automacao_motor: 1_048_576,
         feature_automacao_editor: 2_097_152, feature_automacao_mensagens: 4_194_304, feature_automacao_ia: 8_388_608,
-        feature_agentes_enviar_local_e_contato: 16_777_216
+        feature_agentes_enviar_local_e_contato: 16_777_216, feature_automacao_gatilhos: 33_554_432
       )
     end
 

@@ -98,26 +98,10 @@ module Autonomia::Automacao::Catalogo
     [I18N, *partes.map { |parte| parte.to_s.tr('.', '_').upcase }].join('.')
   end
 
-  def gatilhos
-    esquema.dig('properties', 'gatilho', 'properties', 'tipo', 'enum').map do |tipo|
-      { 'tipo' => tipo, 'alvo' => ::Autonomia::Automacao::Gatilhos.alvo(tipo), 'frase' => chave('GATILHOS', tipo),
-        'filtro_sugerido' => declarado.dig('filtro_sugerido', tipo) }.compact
-    end
-  end
-
-  def unidades
-    esquema.dig('definitions', 'duracao', 'properties', 'unidade', 'enum').map do |unidade|
-      { 'valor' => unidade, 'frase' => chave('UNIDADES', unidade) }
-    end
-  end
-
-  # Cada operador e se ele pede um valor para comparar ("está vazio" não pede).
-  def operadores
-    esquema.dig('definitions', 'condicao', 'oneOf').filter_map do |forma|
-      ops = forma.dig('properties', 'op', 'enum')
-      ops&.map { |op| { 'op' => op, 'pede_valor' => forma['required'].include?('valor'), 'frase' => chave('OPERADORES', op) } }
-    end.flatten
-  end
+  # O que sai do esquema da receita: os gatilhos, as unidades de tempo e os operadores.
+  def gatilhos = ::Autonomia::Automacao::CatalogoDoEsquema.gatilhos(esquema, declarado)
+  def unidades = ::Autonomia::Automacao::CatalogoDoEsquema.unidades(esquema)
+  def operadores = ::Autonomia::Automacao::CatalogoDoEsquema.operadores(esquema)
 
   # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
   # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499).
