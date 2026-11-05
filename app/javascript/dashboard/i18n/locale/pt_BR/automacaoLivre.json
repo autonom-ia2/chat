@@ -34,7 +34,10 @@
     "UNIDADES": {
       "MINUTOS": "minuto | minutos",
       "HORAS": "hora | horas",
-      "DIAS": "dia | dias"
+      "DIAS": "dia | dias",
+      "SEMANAS": "semana | semanas",
+      "MESES": "mês | meses",
+      "ANOS": "ano | anos"
     },
     "VALORES": {
       "CONVERSA_ID": "Número da conversa",
@@ -346,7 +349,13 @@
       "DADO_APAGADO": "Dado apagado: {dado}",
       "TEM_DADO_APAGADO": "Um dado deste texto foi apagado da conta. Tire-o ou troque por outro: do jeito que está, o Salvar tudo não aceita.",
       "FILTRO_ENTRA": "Ao salvar, entra no \"Só se\": {condicao}. Dá para trocar ou tirar depois.",
-      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\"."
+      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\".",
+      "CALCULADO_TEXTO": "Montado na hora: {texto}",
+      "HOJE": "hoje",
+      "DATA_CALCULADA": "Data calculada na hora: {de}",
+      "DATA_CALCULADA_MAIS": "Data calculada na hora: {de} + {n} {unidade}",
+      "DATA_CALCULADA_MENOS": "Data calculada na hora: {de} − {n} {unidade}",
+      "ATRIBUTO_CALCULADO": "{nome}: {valor}"
     },
     "LIGAR": {
       "BOTAO": "Ligar",
@@ -479,8 +488,12 @@
           "CONVERSA": "{campo}, na conversa",
           "CONTATO": "{campo}, no contato",
           "EMPRESA": "{campo}, na empresa"
-        }
-      }
+        },
+        "GRAVARIA": "Gravaria: {lista}."
+      },
+      "ACAO_FALTOU_VALOR": "Não faria: falta um dado desta conversa.",
+      "DATA_INVALIDA": "Não faria: a data lida não é uma data.",
+      "VALOR_FORA_DO_FORMATO": "Não faria: o valor calculado não cabe no campo."
     },
     "RECEITAS": {
       "COMO_COMECAR": "Como você quer começar?",

@@ -7,12 +7,15 @@ import Switch from 'dashboard/components-next/switch/Switch.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreMarcar from './LivreMarcar.vue';
 import LivreEmpresa from './LivreEmpresa.vue';
-import { fraseDoValor } from '../frases';
+import LivreTexto from './LivreTexto.vue';
+import { fraseDoCalculado } from '../frases';
+import { campoDasPartes, partesDoCampo } from '../texto';
 
 // #2414 F5 — um campo de uma ação, desenhado pela peça que o catálogo deu a ele.
 // Escolha de uma é sempre o ChoiceSelect, nunca <select>; de várias, botões que
-// marcam. Valor que vem da conversa ({ $valor }), que só o Guia monta, aparece
-// em frase e passa intacto.
+// marcam. O campo de texto aceita dado da conversa ("[Nome do contato]"), que
+// vira `{ $texto }` (#2414 G16). Outro valor calculado ({ $valor }, { $data }),
+// que só o Guia monta, aparece em frase e passa intacto.
 const props = defineProps({
   campo: { type: Object, required: true },
   modelValue: { type: [String, Number, Boolean, Array, Object], default: null },
@@ -20,6 +23,7 @@ const props = defineProps({
   opcoes: { type: Object, required: true },
   atributos: { type: Array, default: () => [] },
   bloqueadas: { type: Array, default: () => [] },
+  atributosDo: { type: Function, default: () => [] },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -29,7 +33,14 @@ const id = useId();
 
 const rotulo = computed(() => t(props.campo.rotulo));
 const peca = computed(() => props.campo.peca);
-const daConversa = computed(() => Boolean(props.modelValue?.$valor));
+const calculado = valor =>
+  Boolean(valor?.$valor || valor?.$texto || valor?.$data);
+const comoTexto = computed(
+  () => peca.value === 'texto' && !props.modelValue?.$data
+);
+const soMostra = computed(
+  () => calculado(props.modelValue) && !comoTexto.value
+);
 const mudar = novo => emit('update:modelValue', novo);
 
 const UMA = { pessoa: 'pessoa', time: 'time', caixa: 'caixa' };
@@ -76,6 +87,10 @@ const linhas = computed({
 });
 
 const valorDoAtributo = chave => props.modelValue?.[chave];
+// O atributo de texto aceita dado da conversa, como o campo de texto.
+const atributoDeTexto = atributo =>
+  atributo.attribute_display_type === 'text' &&
+  !valorDoAtributo(atributo.attribute_key)?.$data;
 const mudarAtributo = (chave, novo) => {
   const { [chave]: _antes, ...resto } = props.modelValue || {};
   mudar(novo === '' || novo === null ? resto : { ...resto, [chave]: novo });
@@ -89,18 +104,25 @@ const opcoesDoAtributo = atributo =>
 
 <template>
   <div class="flex flex-col gap-1.5" :data-campo="campo.nome">
-    <template v-if="daConversa">
+    <template v-if="soMostra">
       <span class="text-sm font-medium text-n-slate-12">{{ rotulo }}</span>
       <p
+        data-calculado
         class="px-4 py-3 mb-0 text-base rounded-xl bg-n-alpha-2 text-n-slate-12"
       >
-        {{
-          $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DA_CONVERSA', {
-            valor: fraseDoValor(modelValue.$valor, catalogo, t),
-          })
-        }}
+        {{ fraseDoCalculado(modelValue, catalogo, t) }}
       </p>
     </template>
+
+    <LivreTexto
+      v-else-if="comoTexto"
+      curto
+      :rotulo="rotulo"
+      :model-value="partesDoCampo(modelValue)"
+      :catalogo="catalogo"
+      :atributos-do="atributosDo"
+      @update:model-value="novo => mudar(campoDasPartes(novo))"
+    />
 
     <template v-else-if="ehUma">
       <label :for="id" class="text-sm font-medium text-n-slate-12">
@@ -181,8 +203,35 @@ const opcoesDoAtributo = atributo =>
         {{ rotulo }}
       </legend>
       <template v-for="atributo in atributos" :key="atributo.attribute_key">
+        <LivreTexto
+          v-if="atributoDeTexto(atributo)"
+          curto
+          :rotulo="atributo.attribute_display_name"
+          :model-value="partesDoCampo(valorDoAtributo(atributo.attribute_key))"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="
+            novo => mudarAtributo(atributo.attribute_key, campoDasPartes(novo))
+          "
+        />
+        <p
+          v-else-if="calculado(valorDoAtributo(atributo.attribute_key))"
+          data-calculado
+          class="px-4 py-3 mb-0 text-base rounded-xl bg-n-alpha-2 text-n-slate-12"
+        >
+          {{
+            $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ATRIBUTO_CALCULADO', {
+              nome: atributo.attribute_display_name,
+              valor: fraseDoCalculado(
+                valorDoAtributo(atributo.attribute_key),
+                catalogo,
+                t
+              ),
+            })
+          }}
+        </p>
         <ChoiceSelect
-          v-if="atributo.attribute_display_type === 'list'"
+          v-else-if="atributo.attribute_display_type === 'list'"
           :model-value="valorDoAtributo(atributo.attribute_key) ?? ''"
           :aria-label="atributo.attribute_display_name"
           :placeholder="atributo.attribute_display_name"

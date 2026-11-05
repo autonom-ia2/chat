@@ -34,7 +34,10 @@
     "UNIDADES": {
       "MINUTOS": "minute | minutes",
       "HORAS": "hour | hours",
-      "DIAS": "day | days"
+      "DIAS": "day | days",
+      "SEMANAS": "week | weeks",
+      "MESES": "month | months",
+      "ANOS": "year | years"
     },
     "VALORES": {
       "CONVERSA_ID": "Conversation number",
@@ -346,7 +349,13 @@
       "DADO_APAGADO": "Deleted detail: {dado}",
       "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it.",
       "FILTRO_ENTRA": "When you save, \"Only if\" gets: {condicao}. You can change or remove it later.",
-      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\"."
+      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\".",
+      "CALCULADO_TEXTO": "Put together when it runs: {texto}",
+      "HOJE": "today",
+      "DATA_CALCULADA": "Date worked out when it runs: {de}",
+      "DATA_CALCULADA_MAIS": "Date worked out when it runs: {de} + {n} {unidade}",
+      "DATA_CALCULADA_MENOS": "Date worked out when it runs: {de} − {n} {unidade}",
+      "ATRIBUTO_CALCULADO": "{nome}: {valor}"
     },
     "LIGAR": {
       "BOTAO": "Turn on",
@@ -479,8 +488,12 @@
           "CONVERSA": "{campo}, in the conversation",
           "CONTATO": "{campo}, in the contact",
           "EMPRESA": "{campo}, in the company"
-        }
-      }
+        },
+        "GRAVARIA": "Would save: {lista}."
+      },
+      "ACAO_FALTOU_VALOR": "Would not do it: a value from this conversation is missing.",
+      "DATA_INVALIDA": "Would not do it: the date it reads is not a date.",
+      "VALOR_FORA_DO_FORMATO": "Would not do it: the worked-out value does not fit the field."
     },
     "RECEITAS": {
       "COMO_COMECAR": "How do you want to start?",

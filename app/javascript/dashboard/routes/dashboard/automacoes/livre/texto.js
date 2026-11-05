@@ -45,6 +45,22 @@ export const opcoesDosValores = (catalogo, atributosDo, t, gatilho = null) =>
     })
   );
 
+// #2414 G16 — o campo de texto de uma ação. Só texto fica string; com dado,
+// vira `{ $texto: [...] }`, montado na hora da execução (o motor pula a ação se
+// o dado estiver vazio).
+export const partesDoCampo = valor => {
+  if (valor?.$texto) return valor.$texto;
+  if (valor?.$valor) return [valor];
+  return valor === undefined || valor === null || valor === ''
+    ? []
+    : [String(valor)];
+};
+
+export const campoDasPartes = partes =>
+  (partes || []).some(parte => typeof parte !== 'string')
+    ? { $texto: partes }
+    : (partes || []).join('');
+
 export const comColchetes = rotulo => `${ABRE}${rotulo}${FECHA}`;
 
 // Os dados do texto que não estão mais entre as opções (o campo apagado)

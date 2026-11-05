@@ -5,8 +5,9 @@
 # - a ação está na lista de permitidas (F3.2) e tem todo parâmetro do caminho;
 # - o corpo bate com o formato da ação, como no Guia, e traz o que a automação exige (F3.10), os campos fixos e
 #   nenhum campo proibido;
-# - o corpo é literal: variável no corpo chega com a mensagem (F4);
-# - todo `$valor` do caminho e das condições é um caminho que a automação sabe ler;
+# - o valor calculado no corpo (G16: `$valor`, `$texto`, `$data`) lê caminhos que a automação sabe ler, e a data parte
+#   de "hoje" ou de um atributo do tipo data;
+# - todo `$valor` do caminho, do corpo e das condições é um caminho que a automação sabe ler;
 # - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499).
 class Autonomia::Automacao::Receita
@@ -215,11 +216,15 @@ class Autonomia::Automacao::Receita
     faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho) }
   end
 
+  # O formato confere o corpo com um exemplo no lugar de cada valor calculado (Corpo.exemplo): chave fora do formato e
+  # opção fora da lista continuam pegas. O valor de verdade é conferido de novo ao executar.
   def corpo_da_acao(passo)
-    return [texto(:valor_no_corpo, passo: passo['id'])] if variavel?(passo['corpo'])
-
-    conferencia = ::Autonomia::Guide::Formatos::Conferencia.new(passo['acao'], passo['corpo'].to_h, conta: @conta)
-    conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
+    corpo = passo['corpo'].to_h
+    exemplo = ::Autonomia::Automacao::Corpo.exemplo(passo['acao'], corpo)
+    conferencia = ::Autonomia::Guide::Formatos::Conferencia.new(passo['acao'], exemplo, conta: @conta)
+    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |caminho| problemas_do_caminho(passo['id'], caminho) }
+    calculo.problemas +
+      conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
       regras_da_lista(passo['id'], passo['acao'], conferencia.valores)
   end
 
@@ -238,14 +243,6 @@ class Autonomia::Automacao::Receita
     return valores.key?(partes.first) if partes.one?
 
     valores[partes.first].is_a?(Hash) && mandado?(valores[partes.first], partes.drop(1))
-  end
-
-  def variavel?(valor)
-    case valor
-    when Hash then valor.key?('$valor') || valor.values.any? { |item| variavel?(item) }
-    when Array then valor.any? { |item| variavel?(item) }
-    else false
-    end
   end
 
   def parametros(acao)
