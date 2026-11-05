@@ -22,7 +22,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
     create(:conversation, account: account, inbox: inbox, contact: paulo, contact_inbox: contact_inbox, assignee: rafael, status: :open)
   end
 
-  # A receita como o Guia ou o editor gravariam (passos 1 a 5 e 7 do termo).
+  # O que vem depois do "acalmar": nada aqui; o passo 6 (G11) põe a espera pela Fernanda.
+  let(:depois_de_acalmar) { [] }
+
+  # A receita como o Guia ou o editor gravariam (passos 1 a 5 e 7 do termo; o 6 no contexto dele).
   let(:receita) do
     {
       gatilho: { tipo: 'mensagem.criada', filtros: [{ campo: { '$valor' => 'mensagem.tipo' }, op: 'igual', valor: 'recebida' }] },
@@ -38,7 +41,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
               etiqueta('etiqueta_reclamacao', 'reclamacao'),
               { id: 'resumo', tipo: 'resumir', le: %w[mensagens_recentes], linhas: 3, destino: { avisar: { pessoas: [fernanda.id] } } },
               { id: 'acalmar', tipo: 'mensagem',
-                texto: ['Entendi, ', { '$valor' => 'contato.nome' }, '. A Fernanda, gerente, já está vendo seu caso'] }
+                texto: ['Entendi, ', { '$valor' => 'contato.nome' }, '. A Fernanda, gerente, já está vendo seu caso'] },
+              *depois_de_acalmar
             ] },
           { nome: 'Irritado', chave: 'irritado', descricao: 'está irritado, mas sem reclamação grave',
             passos: [
@@ -119,12 +123,54 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       expect(custo).to include('tokens_entrada' => 800, 'tokens_saida' => 120)
     end
 
-    it 'passo 6: espera a Fernanda responder por até 30 minutos; sem resposta, avisa o dono com o mesmo resumo' do
-      # Só a metade "a equipe respondeu" da G11 (receita do passo combinada com a frente Motor G, #2414).
-      abertas = FechamentoAutomacao::Lacunas.valor?('conversa.equipe_respondeu') ? [] : %w[G11]
-      pending 'lacuna G11: o "esperar até" não tem o valor conversa.equipe_respondeu. ' \
-              'Quando passar: esperar_ate 30 minutos depois do "acalmar"; se vencer, resumir avisando a dona'
-      expect(abertas).to be_empty
+    # Passo 6 (G11, a metade "a equipe respondeu"): depois do "acalmar", espera a Fernanda responder por até 30
+    # minutos; sem resposta, avisa a dona com o mesmo resumo. O eco do "acalmar" não conta como resposta da equipe.
+    context 'with a espera pela resposta da Fernanda (passo 6)' do
+      let(:depois_de_acalmar) do
+        [{ id: 'espera_fernanda', tipo: 'esperar_ate',
+           condicao: { campo: { '$valor' => 'conversa.equipe_respondeu' }, op: 'igual', valor: true },
+           prazo: { valor: 30, unidade: 'minutos' },
+           se_vencer: [{ id: 'resumo_dona', tipo: 'resumir', le: %w[mensagens_recentes], linhas: 3,
+                         destino: { avisar: { pessoas: [dona.id] } } }] }]
+      end
+
+      def execucao = Autonomia::Automacao::Execucao.where(automacao_id: automacao['id']).sole
+
+      def passar(tempo)
+        travel(tempo) do
+          Autonomia::Automacao::VarreduraJob.perform_now
+          rodar_jobs
+          yield if block_given?
+        end
+      end
+
+      it 'depois do "acalmar", fica esperando a Fernanda, sem avisar a dona', :aggregate_failures do
+        expect(execucao.estado).to eq('esperando')
+        expect(historico_de(automacao).map(&:first).last(2)).to eq(%w[acalmar espera_fernanda])
+        expect(mencoes_para(dona)).to be_empty
+      end
+
+      it 'a Fernanda responde em 10 minutos: a espera termina e a dona não é avisada', :aggregate_failures do
+        passar(10.minutes) do
+          create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :outgoing, sender: fernanda,
+                           content: 'Paulo, aqui é a Fernanda. Já pedi o estorno.')
+          rodar_jobs
+        end
+
+        expect(execucao.reload.estado).to eq('concluida')
+        expect(historico_de(automacao).map(&:first)).not_to include('resumo_dona')
+        expect(mencoes_para(dona)).to be_empty
+      end
+
+      it 'ninguém responde em 30 minutos: a dona recebe no sino o mesmo resumo', :aggregate_failures do
+        passar(31.minutes)
+
+        expect(execucao.reload.estado).to eq('concluida')
+        expect(historico_de(automacao).last.first(2)).to eq(%w[resumo_dona ok])
+        expect(mencoes_para(dona).count).to eq(1)
+        avisos = conversa.messages.where(private: true).where('content LIKE ?', "%mention://user/#{dona.id}/%")
+        expect(avisos.sole.content).to include('cobrado duas vezes')
+      end
     end
 
     it 'passo 2: tira a conversa da agente de IA' do

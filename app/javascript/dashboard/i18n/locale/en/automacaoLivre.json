@@ -10,17 +10,6 @@
       "EQUIPE": "Team",
       "CONTROLE": "Time and conditions"
     },
-    "GATILHOS": {
-      "CONVERSA_CRIADA": "When a conversation starts",
-      "CONVERSA_ABERTA": "When a conversation is reopened",
-      "CONVERSA_RESOLVIDA": "When a conversation is resolved",
-      "MENSAGEM_CRIADA": "When a message arrives",
-      "CARD_CRIADO": "When a card is created",
-      "CARD_ENTROU_NA_ETAPA": "When the card enters a stage",
-      "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
-      "CARD_GANHO": "When the card is won",
-      "CARD_PERDIDO": "When the card is lost"
-    },
     "OPERADORES": {
       "VAZIO": "is empty",
       "PREENCHIDO": "is filled in",
@@ -45,6 +34,8 @@
       "CONVERSA_TIME_ID": "Conversation team",
       "CONVERSA_ETIQUETAS": "Conversation labels",
       "CONVERSA_INICIADA_POR": "Who started the conversation",
+      "CONVERSA_CLIENTE_RESPONDEU": "The customer replied during the wait",
+      "CONVERSA_EQUIPE_RESPONDEU": "The team replied during the wait",
       "CONTATO_ID": "The contact",
       "CONTATO_NOME": "Contact name",
       "CONTATO_EMAIL": "Contact email",
@@ -67,19 +58,6 @@
       "MENSAGEM_TIPO": "Message type",
       "MENSAGEM_PRIVADA": "Private message",
       "MENSAGEM_PRIMEIRA": "First message of the conversation"
-    },
-    "VALOR_DA_MENSAGEM": {
-      "RECEBIDA": "from the customer",
-      "ENVIADA": "from the team to the customer",
-      "NOTA": "private note",
-      "TRUE": "yes",
-      "FALSE": "no",
-      "CLIENTE": "the customer",
-      "EQUIPE": "the team"
-    },
-    "OPERADOR_DA_MENSAGEM": {
-      "IGUAL": "is",
-      "DIFERENTE": "is not"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",
@@ -152,7 +130,8 @@
       "TROCAR": "Replace what was already filled in",
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
-      "LINHAS": "Summary length (lines)"
+      "LINHAS": "Summary length (lines)",
+      "MODELO": "If the 24-hour window is closed"
     },
     "OPCOES": {
       "STATUS": {
@@ -211,11 +190,6 @@
       "DO_FUNIL": "Pipeline stage automations live in Configure › Edit pipeline.",
       "VER_FUNIL": "See in the pipeline",
       "SEM_PASSO": "No step yet"
-    },
-    "ORIGEM": {
-      "CONVERSA": "From the conversation",
-      "CARD": "From a pipeline card",
-      "ANTIGO": "The old way"
     },
     "EDITOR": {
       "NOVA": "New automation",
@@ -346,7 +320,17 @@
       "DADO_APAGADO": "Deleted detail: {dado}",
       "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it.",
       "FILTRO_ENTRA": "When you save, \"Only if\" gets: {condicao}. You can change or remove it later.",
-      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\"."
+      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\".",
+      "MODELO": {
+        "DICA": "On official WhatsApp, 24 hours after the customer's last message, free text can't be sent. Pick a Meta-approved template to send instead; Meta charges for each template sent. With the window open, the text above is sent.",
+        "NENHUM": "Don't send anything (the step is skipped)",
+        "OPCAO": "{nome} ({idioma})",
+        "SEM_MODELOS": "No official WhatsApp inbox you can see has an approved utility template. Create and approve one in Templates.",
+        "DIVERGENTE": "This template has different text in another inbox. Each conversation gets its own inbox's template; if it asks for other variables there, the message is not sent.",
+        "MUDOU": "The template now asks for {quantas} variables. Fill in all of them before saving.",
+        "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
+        "VARIAVEL": "Template variable {numero}"
+      }
     },
     "LIGAR": {
       "BOTAO": "Turn on",
@@ -358,170 +342,6 @@
       "DESLIGAR": "Turn off",
       "SO_LEITURA": "You can see this automation. To change it, ask who looks after automations.",
       "FALTA_COMPLETAR": "A step is incomplete: choose the condition and, in \"If\", add at least one step under Then."
-    },
-    "IA": {
-      "LEITURAS": {
-        "MENSAGENS_RECENTES": "The latest customer messages",
-        "MENSAGENS_COM_RESPOSTAS": "The latest customer and team messages",
-        "ULTIMA_MENSAGEM": "The message that started the automation",
-        "CONVERSA": "Channel, inbox, labels and status of the conversation",
-        "CONTATO": "Contact name and fields (never email or phone)",
-        "EMPRESA": "Company name and fields"
-      },
-      "CAMINHO": {
-        "NOME": "Path name",
-        "QUANDO": "When to follow it",
-        "NOVO": "Add path",
-        "TIRAR": "Remove path",
-        "DICA": "From 2 to 8 paths. When the conversation is unclear, the AI picks “None applies” instead of guessing.",
-        "SEM_LETRA": "The path name needs at least one letter.",
-        "RESERVADO": "“None” is already the path for when nothing applies. Pick another name.",
-        "REPETIDO": "There is already a path with this name."
-      },
-      "CAMPO": {
-        "CHAVE": "What to look for",
-        "DESCRICAO": "How to recognize it",
-        "DESTINO": "Where to save",
-        "NOVO": "Look for one more item",
-        "TIRAR": "Remove",
-        "DICA": "The AI fills in only what is written in the conversation. If it is not there, the field stays empty and the history says so."
-      },
-      "DESTINOS": {
-        "MENSAGEM": "Send to the customer",
-        "SUGESTAO": "Leave as a suggestion for the team to review",
-        "NOTA": "Note in the conversation",
-        "AVISAR": "Notify the team"
-      },
-      "DESTINO_GRAVAR": {
-        "CONTATO_NOME": "Contact name",
-        "EMPRESA_NOME": "Company name",
-        "CONTATO_ATRIBUTO": "Contact: {nome}",
-        "CONVERSA_ATRIBUTO": "Conversation: {nome}"
-      }
-    },
-    "HISTORICO": {
-      "TITULO": "What happened",
-      "SUBTITULO": "Every time this automation ran in the last 30 days.",
-      "CARREGANDO": "Loading what happened",
-      "ERRO": "Could not load what happened right now.",
-      "VAZIO": "It has not run yet.",
-      "VER_MAIS": "Show more",
-      "CONVERSA_DE": "Conversation with {nome}",
-      "CONVERSA_N": "Conversation #{n}",
-      "OCULTA": "A conversation",
-      "OCULTA_DICA": "In an inbox you can't see",
-      "ABRIR_CONVERSA": "Open the conversation",
-      "VER_MENSAGEM": "See the message",
-      "ESTADOS": {
-        "ANDANDO": "running",
-        "ESPERANDO": "waiting",
-        "CONCLUIDA": "finished",
-        "PARADA": "stopped",
-        "FALHOU": "error",
-        "INTERROMPIDA": "interrupted"
-      },
-      "ESPERANDO_ATE": "waiting until {quando}",
-      "PULOU": "Skipped: {frase}",
-      "NAO_FEZ": "Did not do: {frase}",
-      "INICIO": "Did not start",
-      "PASSO_SUMIU": "A step that is no longer in this version",
-      "SEGUIU_POR": "Took: {ramo}",
-      "ESPERA_ATE": "Waits until {quando}",
-      "TENTATIVA": "Attempt {n}",
-      "IA": "AI: US$ {valor}",
-      "IA_MENOS_DE": "AI: less than US$ {valor}",
-      "SEMANA": {
-        "NADA": "Has not run this week",
-        "RODOU": "Ran once this week | Ran {n} times this week",
-        "PAROU": "1 stopped | {n} stopped"
-      }
-    },
-    "ENSAIO": {
-      "BOTAO": "Test run",
-      "BOTAO_ANTES": "Test run before turning on",
-      "TITULO": "Test run",
-      "SUBTITULO": "See what the automation would do in your conversations. Nothing is sent or changed.",
-      "FECHAR": "Close",
-      "CARREGANDO": "Testing on recent conversations",
-      "ERRO": "Couldn't run the test now. Try again.",
-      "SEM_CONVERSAS": "You don't have conversations to test on yet.",
-      "QUANTAS": "of the {total} most recent conversations would enter this automation",
-      "ENTRARIA": "would enter",
-      "NAO_ENTRARIA": "wouldn't enter",
-      "OUTRA": "Test on another conversation",
-      "ESCOLHA": "Choose the conversation",
-      "CONVERSA_N": "Conversation {n}",
-      "NA_CONVERSA": "In {nome}'s conversation, the automation would:",
-      "FORA": {
-        "SPAM": "Nothing: the conversation is in Spam.",
-        "SEM_MENSAGEM": "Nothing: the conversation has no message yet.",
-        "FORA_DO_FILTRO": "Nothing: the conversation doesn't pass the trigger's \"Only if\"."
-      },
-      "HOJE_SIM": "Today, yes: it would follow \"Then\".",
-      "HOJE_NAO": "Today, no: it would follow \"Otherwise\".",
-      "JA_VALE": "Already true: it would continue right away.",
-      "SE_CHEGAR": "If it arrives in time:",
-      "SE_VENCER": "If the deadline passes:",
-      "SE_CAMINHO": "If the AI picks \"{nome}\":",
-      "SE_NENHUM": "If none applies:",
-      "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
-      "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
-      "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
-      "CORTE": "The test stopped here: the automation has too many paths to show.",
-      "OPCAO": "{nome} · #{n}",
-      "FARIA": {
-        "IA_EXTRAIR": "Would save: {lista}.",
-        "IA_ESCREVER_MENSAGEM": "Would go to the customer.",
-        "IA_ESCREVER_SUGESTAO": "Would stay as a suggestion for the team to review and send.",
-        "IA_RESUMIR_NOTA": "Would stay in a private note.",
-        "IA_RESUMIR_AVISAR": "Would notify the team.",
-        "ONDE": {
-          "CONVERSA": "{campo}, in the conversation",
-          "CONTATO": "{campo}, in the contact",
-          "EMPRESA": "{campo}, in the company"
-        }
-      }
-    },
-    "RECEITAS": {
-      "COMO_COMECAR": "How do you want to start?",
-      "ZERO_TITULO": "Build from scratch",
-      "ZERO_TEXTO": "Choose the \"When\" and the steps yourself.",
-      "OU_RECEITA": "Or start from a ready recipe",
-      "USAR": "Use this one",
-      "REQUER": {
-        "AUTOMACAO_MENSAGENS": "Sends a message to the customer, and automatic messages aren't turned on in this account yet."
-      },
-      "BOAS_VINDAS": {
-        "TITULO": "Let them know we'll reply soon",
-        "TEXTO": "Whoever starts a conversation is told the team will reply soon.",
-        "NOME": "Welcome"
-      },
-      "AGRADECER": {
-        "TITULO": "Thank them when closing",
-        "TEXTO": "The customer gets a thank-you when the conversation is resolved.",
-        "NOME": "Thank when closing"
-      }
-    },
-    "PARAMETROS_DO_GATILHO": {
-      "ETAPA_ID": "Stage",
-      "FUNIL_ID": "Pipeline"
-    },
-    "GRUPOS_DO_GATILHO": {
-      "CONVERSA": "Conversation and message",
-      "CARD": "Pipeline card"
-    },
-    "GATILHO_COM": {
-      "CARD_CRIADO": "When a card is created in {funil}",
-      "CARD_ENTROU_NA_ETAPA": "When the card enters {etapa}",
-      "CARD_SAIU_DA_ETAPA": "When the card leaves {etapa}",
-      "CARD_GANHO": "When a card in {funil} is won",
-      "CARD_PERDIDO": "When a card in {funil} is lost"
-    },
-    "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
-    "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once, when the stage is deleted or when another system changes the stage.",
-    "GATILHO_DO_CARD": {
-      "TODOS_OS_FUNIS": "All pipelines",
-      "ERRO_FUNIS": "Could not load the pipelines and stages. Close and open it again."
     }
   }
 }

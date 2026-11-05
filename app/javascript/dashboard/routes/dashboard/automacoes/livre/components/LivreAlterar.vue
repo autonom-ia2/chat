@@ -8,6 +8,7 @@ import LivreCampo from './LivreCampo.vue';
 import LivreCondicao from './LivreCondicao.vue';
 import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
+import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
 import LivreGatilho from './LivreGatilho.vue';
@@ -108,7 +109,14 @@ const trocaDoGatilho = computed(() => {
   );
 });
 
+// Campo opcional que volta vazio (o modelo da F4b) sai da receita: o esquema
+// não aceita null.
 const mudarNativo = (nome, novo) => {
+  if (novo === null) {
+    const { [nome]: _tirado, ...resto } = rascunho.value;
+    rascunho.value = resto;
+    return;
+  }
   rascunho.value = { ...rascunho.value, [nome]: novo };
 };
 const mudarCampo = (nome, novo) => {
@@ -163,6 +171,14 @@ const nativoPronto = campo => {
   if (campo.peca === 'texto_com_valores')
     return (valor || []).some(
       parte => typeof parte !== 'string' || parte.trim()
+    );
+  // F4b: o modelo é opcional; escolhido, cada variável pede algo além de espaço.
+  if (campo.peca === 'modelo_whatsapp')
+    return (
+      !valor ||
+      (valor.variaveis || []).every(partes =>
+        (partes || []).some(parte => typeof parte !== 'string' || parte.trim())
+      )
     );
   if (campo.peca === 'destinatarios')
     return Boolean(
@@ -290,10 +306,19 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
+          :na-espera="entrada?.tipo === 'esperar_ate'"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreTexto
           v-else-if="campo.peca === 'texto_com_valores'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreModelo
+          v-else-if="campo.peca === 'modelo_whatsapp'"
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"

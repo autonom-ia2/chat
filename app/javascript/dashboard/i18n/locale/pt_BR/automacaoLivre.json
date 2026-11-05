@@ -10,17 +10,6 @@
       "EQUIPE": "Equipe",
       "CONTROLE": "Tempo e condições"
     },
-    "GATILHOS": {
-      "CONVERSA_CRIADA": "Quando uma conversa começa",
-      "CONVERSA_ABERTA": "Quando uma conversa é reaberta",
-      "CONVERSA_RESOLVIDA": "Quando uma conversa é resolvida",
-      "MENSAGEM_CRIADA": "Quando chega uma mensagem",
-      "CARD_CRIADO": "Quando um card é criado",
-      "CARD_ENTROU_NA_ETAPA": "Quando o card entra numa etapa",
-      "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",
-      "CARD_GANHO": "Quando o card é ganho",
-      "CARD_PERDIDO": "Quando o card é perdido"
-    },
     "OPERADORES": {
       "VAZIO": "está vazio",
       "PREENCHIDO": "está preenchido",
@@ -45,6 +34,8 @@
       "CONVERSA_TIME_ID": "Time da conversa",
       "CONVERSA_ETIQUETAS": "Etiquetas da conversa",
       "CONVERSA_INICIADA_POR": "Quem começou a conversa",
+      "CONVERSA_CLIENTE_RESPONDEU": "O cliente respondeu durante a espera",
+      "CONVERSA_EQUIPE_RESPONDEU": "A equipe respondeu durante a espera",
       "CONTATO_ID": "O contato",
       "CONTATO_NOME": "Nome do contato",
       "CONTATO_EMAIL": "E-mail do contato",
@@ -67,19 +58,6 @@
       "MENSAGEM_TIPO": "Tipo da mensagem",
       "MENSAGEM_PRIVADA": "Mensagem interna",
       "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa"
-    },
-    "VALOR_DA_MENSAGEM": {
-      "RECEBIDA": "do cliente",
-      "ENVIADA": "da equipe para o cliente",
-      "NOTA": "nota interna",
-      "TRUE": "sim",
-      "FALSE": "não",
-      "CLIENTE": "o cliente",
-      "EQUIPE": "a equipe"
-    },
-    "OPERADOR_DA_MENSAGEM": {
-      "IGUAL": "é",
-      "DIFERENTE": "não é"
     },
     "PASSOS": {
       "ESPERAR": "Esperar um tempo",
@@ -152,7 +130,8 @@
       "TROCAR": "Trocar o que já estava preenchido",
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
-      "LINHAS": "Tamanho do resumo (linhas)"
+      "LINHAS": "Tamanho do resumo (linhas)",
+      "MODELO": "Se a janela de 24 h estiver fechada"
     },
     "OPCOES": {
       "STATUS": {
@@ -211,11 +190,6 @@
       "DO_FUNIL": "As automações das etapas do funil ficam em Configurar › Editar funil.",
       "VER_FUNIL": "Ver no funil",
       "SEM_PASSO": "Ainda sem passo"
-    },
-    "ORIGEM": {
-      "CONVERSA": "Da conversa",
-      "CARD": "Do card do funil",
-      "ANTIGO": "Do jeito antigo"
     },
     "EDITOR": {
       "NOVA": "Nova automação",
@@ -346,7 +320,17 @@
       "DADO_APAGADO": "Dado apagado: {dado}",
       "TEM_DADO_APAGADO": "Um dado deste texto foi apagado da conta. Tire-o ou troque por outro: do jeito que está, o Salvar tudo não aceita.",
       "FILTRO_ENTRA": "Ao salvar, entra no \"Só se\": {condicao}. Dá para trocar ou tirar depois.",
-      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\"."
+      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\".",
+      "MODELO": {
+        "DICA": "No WhatsApp oficial, 24 h depois da última mensagem do cliente, texto livre não sai. Escolha um modelo aprovado na Meta para mandar no lugar; cada envio de modelo é cobrado pela Meta. Com a janela aberta, sai o texto acima.",
+        "NENHUM": "Não mandar nada (o passo pula)",
+        "OPCAO": "{nome} ({idioma})",
+        "SEM_MODELOS": "Nenhuma caixa do WhatsApp oficial que você vê tem modelo de utilidade aprovado. Crie e aprove em Modelos.",
+        "DIVERGENTE": "Este modelo tem texto diferente em outra caixa. Cada conversa recebe o modelo da própria caixa; se lá ele pedir outras variáveis, a mensagem não sai.",
+        "MUDOU": "O modelo agora pede {quantas} variáveis. Preencha todas antes de salvar.",
+        "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
+        "VARIAVEL": "Variável {numero} do modelo"
+      }
     },
     "LIGAR": {
       "BOTAO": "Ligar",
@@ -358,170 +342,6 @@
       "DESLIGAR": "Desligar",
       "SO_LEITURA": "Você pode ver esta automação. Para mudar, peça a quem cuida das automações.",
       "FALTA_COMPLETAR": "Falta completar um passo: escolha a condição e, no \"Se\", ponha pelo menos um passo em Então."
-    },
-    "IA": {
-      "LEITURAS": {
-        "MENSAGENS_RECENTES": "As últimas mensagens do cliente",
-        "MENSAGENS_COM_RESPOSTAS": "As últimas mensagens do cliente e da equipe",
-        "ULTIMA_MENSAGEM": "A mensagem que disparou a automação",
-        "CONVERSA": "Canal, caixa, etiquetas e status da conversa",
-        "CONTATO": "Nome e campos do contato (nunca e-mail ou telefone)",
-        "EMPRESA": "Nome e campos da empresa"
-      },
-      "CAMINHO": {
-        "NOME": "Nome do caminho",
-        "QUANDO": "Quando seguir por ele",
-        "NOVO": "Adicionar caminho",
-        "TIRAR": "Tirar caminho",
-        "DICA": "De 2 a 8 caminhos. Quando a conversa não deixa claro, a IA escolhe “Nenhum se aplica”, em vez de chutar.",
-        "SEM_LETRA": "O nome do caminho precisa ter pelo menos uma letra.",
-        "RESERVADO": "“Nenhum” já é o caminho de quando nada se aplica. Escolha outro nome.",
-        "REPETIDO": "Já existe um caminho com esse nome."
-      },
-      "CAMPO": {
-        "CHAVE": "O que procurar",
-        "DESCRICAO": "Como reconhecer",
-        "DESTINO": "Onde gravar",
-        "NOVO": "Procurar mais um dado",
-        "TIRAR": "Tirar",
-        "DICA": "A IA preenche só o que está escrito na conversa. Se o dado não aparecer, o campo fica vazio e o histórico avisa."
-      },
-      "DESTINOS": {
-        "MENSAGEM": "Mandar ao cliente",
-        "SUGESTAO": "Deixar como sugestão para a equipe revisar",
-        "NOTA": "Nota na conversa",
-        "AVISAR": "Avisar a equipe"
-      },
-      "DESTINO_GRAVAR": {
-        "CONTATO_NOME": "Nome do contato",
-        "EMPRESA_NOME": "Nome da empresa",
-        "CONTATO_ATRIBUTO": "Contato: {nome}",
-        "CONVERSA_ATRIBUTO": "Conversa: {nome}"
-      }
-    },
-    "HISTORICO": {
-      "TITULO": "O que aconteceu",
-      "SUBTITULO": "Cada vez que a automação rodou nos últimos 30 dias.",
-      "CARREGANDO": "Carregando o que aconteceu",
-      "ERRO": "Não deu para carregar o que aconteceu agora.",
-      "VAZIO": "Ainda não rodou.",
-      "VER_MAIS": "Ver mais",
-      "CONVERSA_DE": "Conversa de {nome}",
-      "CONVERSA_N": "Conversa #{n}",
-      "OCULTA": "Uma conversa",
-      "OCULTA_DICA": "Numa caixa que você não vê",
-      "ABRIR_CONVERSA": "Abrir a conversa",
-      "VER_MENSAGEM": "Ver a mensagem",
-      "ESTADOS": {
-        "ANDANDO": "rodando",
-        "ESPERANDO": "esperando",
-        "CONCLUIDA": "terminou",
-        "PARADA": "parou",
-        "FALHOU": "deu erro",
-        "INTERROMPIDA": "interrompida"
-      },
-      "ESPERANDO_ATE": "esperando até {quando}",
-      "PULOU": "Pulou: {frase}",
-      "NAO_FEZ": "Não fez: {frase}",
-      "INICIO": "Não começou",
-      "PASSO_SUMIU": "Um passo que não está nesta versão",
-      "SEGUIU_POR": "Seguiu por: {ramo}",
-      "ESPERA_ATE": "Espera até {quando}",
-      "TENTATIVA": "Tentativa {n}",
-      "IA": "IA: US$ {valor}",
-      "IA_MENOS_DE": "IA: menos de US$ {valor}",
-      "SEMANA": {
-        "NADA": "Ainda não rodou esta semana",
-        "RODOU": "Rodou 1 vez esta semana | Rodou {n} vezes esta semana",
-        "PAROU": "1 parou | {n} pararam"
-      }
-    },
-    "ENSAIO": {
-      "BOTAO": "Ensaiar",
-      "BOTAO_ANTES": "Ensaiar antes de ligar",
-      "TITULO": "Ensaiar",
-      "SUBTITULO": "Veja o que a automação faria nas suas conversas. Nada é mandado nem mudado.",
-      "FECHAR": "Fechar",
-      "CARREGANDO": "Ensaiando nas conversas recentes",
-      "ERRO": "Não consegui ensaiar agora. Tente de novo.",
-      "SEM_CONVERSAS": "Você ainda não tem conversas para ensaiar.",
-      "QUANTAS": "das {total} conversas mais recentes entrariam nesta automação",
-      "ENTRARIA": "entraria",
-      "NAO_ENTRARIA": "não entraria",
-      "OUTRA": "Ensaiar em outra conversa",
-      "ESCOLHA": "Escolha a conversa",
-      "CONVERSA_N": "Conversa {n}",
-      "NA_CONVERSA": "Na conversa de {nome}, a automação faria:",
-      "FORA": {
-        "SPAM": "Nada: a conversa está no Spam.",
-        "SEM_MENSAGEM": "Nada: a conversa ainda não tem mensagem.",
-        "FORA_DO_FILTRO": "Nada: a conversa não passa no \"Só se\" do gatilho."
-      },
-      "HOJE_SIM": "Hoje, sim: seguiria por \"Então\".",
-      "HOJE_NAO": "Hoje, não: seguiria por \"Senão\".",
-      "JA_VALE": "Já vale agora: seguiria na hora.",
-      "SE_CHEGAR": "Se chegar a tempo:",
-      "SE_VENCER": "Se o prazo vencer:",
-      "SE_CAMINHO": "Se a IA escolher \"{nome}\":",
-      "SE_NENHUM": "Se nenhum se aplicar:",
-      "NAO_SAIRIA": "Não sairia: a mensagem automática ainda não está ligada nesta conta.",
-      "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
-      "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",
-      "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar.",
-      "OPCAO": "{nome} · #{n}",
-      "FARIA": {
-        "IA_EXTRAIR": "Gravaria: {lista}.",
-        "IA_ESCREVER_MENSAGEM": "Sairia para o cliente.",
-        "IA_ESCREVER_SUGESTAO": "Ficaria como sugestão para a equipe revisar e mandar.",
-        "IA_RESUMIR_NOTA": "Ficaria numa nota privada.",
-        "IA_RESUMIR_AVISAR": "Avisaria a equipe.",
-        "ONDE": {
-          "CONVERSA": "{campo}, na conversa",
-          "CONTATO": "{campo}, no contato",
-          "EMPRESA": "{campo}, na empresa"
-        }
-      }
-    },
-    "RECEITAS": {
-      "COMO_COMECAR": "Como você quer começar?",
-      "ZERO_TITULO": "Montar do zero",
-      "ZERO_TEXTO": "Escolha o \"Quando\" e os passos você mesmo.",
-      "OU_RECEITA": "Ou comece de uma receita pronta",
-      "USAR": "Usar esta",
-      "REQUER": {
-        "AUTOMACAO_MENSAGENS": "Manda mensagem ao cliente, e a mensagem automática ainda não está ligada nesta conta."
-      },
-      "BOAS_VINDAS": {
-        "TITULO": "Avisar que já vamos responder",
-        "TEXTO": "Quem começa uma conversa recebe um aviso de que a equipe já vai responder.",
-        "NOME": "Boas-vindas"
-      },
-      "AGRADECER": {
-        "TITULO": "Agradecer ao encerrar",
-        "TEXTO": "O cliente recebe um obrigado quando a conversa é resolvida.",
-        "NOME": "Agradecer ao encerrar"
-      }
-    },
-    "PARAMETROS_DO_GATILHO": {
-      "ETAPA_ID": "Etapa",
-      "FUNIL_ID": "Funil"
-    },
-    "GRUPOS_DO_GATILHO": {
-      "CONVERSA": "Conversa e mensagem",
-      "CARD": "Card do funil"
-    },
-    "GATILHO_COM": {
-      "CARD_CRIADO": "Quando um card é criado em {funil}",
-      "CARD_ENTROU_NA_ETAPA": "Quando o card entra em {etapa}",
-      "CARD_SAIU_DA_ETAPA": "Quando o card sai de {etapa}",
-      "CARD_GANHO": "Quando um card de {funil} é ganho",
-      "CARD_PERDIDO": "Quando um card de {funil} é perdido"
-    },
-    "GATILHO_NO_FUNIL": "{frase}, no funil {funil}",
-    "GATILHO_NAO_DISPARA": "Não dispara quando vários cards são arquivados de uma vez, quando a etapa é apagada ou quando outro sistema muda a etapa.",
-    "GATILHO_DO_CARD": {
-      "TODOS_OS_FUNIS": "Todos os funis",
-      "ERRO_FUNIS": "Não consegui carregar os funis e as etapas. Feche e abra de novo."
     }
   }
 }

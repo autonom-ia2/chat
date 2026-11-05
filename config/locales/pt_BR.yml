@@ -1029,6 +1029,11 @@ pt_BR:
         canal_sem_resposta: "Este canal não aceita resposta (tweet). A mensagem não foi mandada."
         contato_nao_recebe: "O contato pediu para não receber mensagens. A mensagem não foi mandada."
         fora_da_janela: "A janela de resposta do canal está fechada, e texto livre não sai. A mensagem não foi mandada."
+        limite_da_caixa: "A caixa tem um limite de horas para responder, configurado nas opções dela, e o cliente não escreve há mais tempo que isso. A mensagem não foi mandada."
+        modelo_fora_da_caixa: "A janela estava fechada, e a caixa desta conversa não tem o modelo escolhido. A mensagem não foi mandada."
+        modelo_nao_aprovado: "A janela estava fechada, e o modelo escolhido não está aprovado na Meta nesta caixa. A mensagem não foi mandada."
+        modelo_de_propaganda: "A janela estava fechada, e o modelo escolhido é de propaganda. A automação só manda modelo de utilidade. A mensagem não foi mandada."
+        modelo_mudou: "A janela estava fechada, e o modelo desta caixa pede outras variáveis do que as do passo. Escolha o modelo de novo. A mensagem não foi mandada."
         laco_suspeito: "O outro lado respondeu depressa demais muitas vezes seguidas, como um robô. A automação parou nesta conversa."
         mensagens_desligadas: "Mensagem e aviso estão desligados nesta conta. Nada foi mandado."
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
@@ -1057,12 +1062,14 @@ pt_BR:
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
+        resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
         valor_no_corpo: 'Passo %{passo}: o corpo da ação ainda não aceita variável.'
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."
+        modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
         gatilho_desligado: 'Os gatilhos de card estão desligados nesta conta.'
