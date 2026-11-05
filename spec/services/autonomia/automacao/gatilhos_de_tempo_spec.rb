@@ -24,8 +24,10 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
     account.update!(reporting_timezone: fuso.name)
   end
 
-  def de_tempo(tipo, **parametros)
-    automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: { 'tipo' => tipo, **parametros.transform_keys(&:to_s) })
+  # Ligada há uma semana: os casos que não são sobre o instante de ligar não dependem dele.
+  def de_tempo(tipo, ligada: 1.week.ago, **parametros)
+    gatilho = { 'tipo' => tipo, **parametros.transform_keys(&:to_s) }
+    travel_to(ligada) { automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: gatilho) }
   end
 
   # Uma varredura completa: o TempoJob e os jobs de cada automação que ele enfileirou.
@@ -63,11 +65,25 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
       expect(execucoes.where(automacao: definicao).count).to eq(2)
     end
 
-    it 'ligar não age no passado: passou do prazo há mais de 1 dia, não entra' do
+    it 'pane: o que passou do prazo há mais de 1 dia não entra, mesmo ligada antes' do
       parado_desde(5.days.ago)
       varrer_tempo
 
       expect(execucoes.count).to eq(0)
+    end
+
+    # Qualidade, PR3a: ligar não age no passado. O card que chegou ao prazo 1 hora antes de ligar fica de fora; o que
+    # chega ao prazo depois de ligar entra.
+    it 'ligar não age no passado: só o card que chega ao prazo depois de ligar', :aggregate_failures do
+      definicao.update!(ativa: false)
+      definicao.update!(ativa: true)
+      parado_desde(3.days.ago - 1.hour)
+      varrer_tempo
+      expect(execucoes.count).to eq(0)
+
+      parado_desde(3.days.ago + 10.minutes)
+      travel(15.minutes) { varrer_tempo }
+      expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([card.id])
     end
 
     it 'só o card aberto, na etapa escolhida, com dias suficientes', :aggregate_failures do
@@ -106,6 +122,49 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
 
       expect(execucoes.where(automacao: definicao).pluck(:alvo_type, :alvo_id)).to eq([['Contact', contato.id]])
       expect(execucoes.where(alvo_id: outro.id)).to be_empty
+    end
+
+    # Qualidade, PR3a: ligar às 8h um "às 9h" não manda o de ontem; a primeira ocorrência é a de hoje às 9h.
+    def ligada_as_8h(**parametros) = de_tempo('contato.data', ligada: fuso.local(2026, 11, 10, 8, 0), **parametros)
+
+    it 'ligada às 8h com hora 9: nada até as 9h e, às 9h15, só o dia de hoje', :aggregate_failures do
+      definicao = ligada_as_8h(campo: 'vencimento', dias: 0, quando: 'depois', hora: 9)
+      com_data(contato, 'vencimento', '2026-11-10')
+      ontem = create(:contact, account: account, custom_attributes: { 'vencimento' => '2026-11-09' })
+
+      travel_to(fuso.local(2026, 11, 10, 8, 15)) { varrer_tempo }
+      expect(execucoes.count).to eq(0)
+
+      travel_to(fuso.local(2026, 11, 10, 9, 15)) { varrer_tempo }
+      expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([contato.id])
+      expect(execucoes.where(alvo_id: ontem.id)).to be_empty
+    end
+
+    it 'ligada às 8h com antes 3 dias e hora 9: não manda o lembrete de ontem', :aggregate_failures do
+      definicao = ligada_as_8h(campo: 'vencimento', dias: 3, quando: 'antes', hora: 9)
+      com_data(contato, 'vencimento', '2026-11-13')
+      de_ontem = create(:contact, account: account, custom_attributes: { 'vencimento' => '2026-11-12' })
+
+      travel_to(fuso.local(2026, 11, 10, 8, 15)) { varrer_tempo }
+      expect(execucoes.count).to eq(0)
+
+      travel_to(fuso.local(2026, 11, 10, 9, 15)) { varrer_tempo }
+      expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([contato.id])
+      expect(execucoes.where(alvo_id: de_ontem.id)).to be_empty
+    end
+
+    it 'religar depois da hora vale o instante novo: a de hoje, antes de religar, não roda; a de amanhã roda', :aggregate_failures do
+      definicao = de_tempo('contato.data', campo: 'vencimento', dias: 0, quando: 'depois', hora: 9)
+      com_data(contato, 'vencimento', '2026-11-10')
+      amanha = create(:contact, account: account, custom_attributes: { 'vencimento' => '2026-11-11' })
+      travel_to(fuso.local(2026, 11, 10, 8, 0)) { definicao.desligar! }
+      travel_to(fuso.local(2026, 11, 10, 9, 30)) { definicao.update!(ativa: true) }
+
+      travel_to(fuso.local(2026, 11, 10, 9, 45)) { varrer_tempo }
+      expect(execucoes.count).to eq(0)
+
+      travel_to(fuso.local(2026, 11, 11, 9, 15)) { varrer_tempo }
+      expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([amanha.id])
     end
 
     it 'antes da hora vale a ocorrência de ontem' do

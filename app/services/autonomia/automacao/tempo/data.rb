@@ -1,7 +1,8 @@
 # card.data e contato.data (#2499, PR3): os cards abertos ou os contatos cujo campo de data vale o dia-alvo.
 #
 # A ocorrência é a última `hora` cheia, no fuso da conta, que já passou: hoje, se já passou da hora; senão, ontem.
-# Ela cai sempre dentro da janela de 1 dia. O dia-alvo é o dia da ocorrência mais `dias` (antes: a data ainda vai
+# Ela cai sempre dentro da janela de 1 dia. A ocorrência anterior a ligar não roda: ligar às 8h um "às 9h" não manda o
+# de ontem, e a primeira é a de hoje às 9h. O dia-alvo é o dia da ocorrência mais `dias` (antes: a data ainda vai
 # chegar) ou menos `dias` (depois: a data já passou), e entra no SQL como igualdade.
 #
 # O campo guarda o dia como a tela grava (AAAA-MM-DD); o valor antigo com a hora (AAAA-MM-DDT…) vale pelo dia escrito,
@@ -24,6 +25,8 @@ class Autonomia::Automacao::Tempo::Data
   def cada
     contar_invalidos
     dia = dia_alvo
+    return unless dia
+
     escopo.where('left(custom_attributes ->> ?, 10) = ?', campo, dia.iso8601).find_each do |alvo|
       yield alvo, ::Autonomia::Automacao::Gatilhos.marca_da_data(tipo, alvo, campo, dia)
     end
@@ -33,6 +36,8 @@ class Autonomia::Automacao::Tempo::Data
     local = @agora.in_time_zone(::Autonomia::Automacao::Tempo.fuso(@definicao.account))
     ocorrencia = local.change(hour: @gatilho['hora'].to_i)
     ocorrencia -= 1.day if ocorrencia > local
+    return if ocorrencia < ::Autonomia::Automacao::Tempo.ligada_desde(@definicao)
+
     dias = @gatilho['dias'].to_i
     @gatilho['quando'] == 'antes' ? ocorrencia.to_date + dias : ocorrencia.to_date - dias
   end

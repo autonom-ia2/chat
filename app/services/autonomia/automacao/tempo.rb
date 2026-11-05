@@ -6,6 +6,8 @@
 #   cliente não receber de uma vez tudo o que estava atrasado. É proteção contra defeito, não freio de uso.
 # - Nada mora em memória: um deploy no meio não perde a ocorrência (a varredura seguinte ainda a acha na janela) e a
 #   marca única (automacao_id, evento) não deixa repetir a que já rodou.
+# - Ligar não age no passado: a ocorrência anterior a ligar (ou a salvar a versão ativa) não roda.
+#   A janela de 1 dia é só para pane; não é o que ligar alcança.
 # - Fuso: o da conta (`reporting_timezone`, o dos relatórios e do CRM); sem ele, o do servidor.
 module Autonomia::Automacao::Tempo
   RITMO = 15.minutes
@@ -14,6 +16,10 @@ module Autonomia::Automacao::Tempo
   module_function
 
   def fuso(conta) = ActiveSupport::TimeZone[conta.reporting_timezone.to_s] || Time.zone
+
+  # Desde quando a versão ativa está ligada: o mais recente entre ligar e salvar a versão (quem ligou salva por cima sem
+  # desligar). A automação ligada antes da coluna ligada_em fica só com a hora da versão.
+  def ligada_desde(definicao) = [definicao.ligada_em, definicao.versao_ativa&.created_at].compact.max
 
   # A rodada da varredura: o começo do intervalo de RITMO em que `agora` cai. Duas varreduras na mesma rodada são a
   # mesma (o TempoDaAutomacaoJob processa cada automação uma vez por rodada).
