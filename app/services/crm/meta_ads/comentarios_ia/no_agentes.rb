@@ -20,7 +20,7 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   RECEBE = %w[private price].freeze
   # Sem certeza suficiente o motor não decide: o comentário fica com o dono ("não cuidei").
   SEM_CERTEZA = 'sem_certeza'.freeze
-  # Era o caso do privado, mas ele não sai nesta rede (Facebook, F4): nada é publicado, fica com o dono.
+  # Era o caso do privado, mas ele não sai nesta rede (Facebook sem a flag, #2613): nada é publicado, fica com o dono.
   SEM_PRIVADO_NA_REDE = 'no_private'.freeze
 
   def self.item(care)
@@ -139,7 +139,7 @@ class Crm::MetaAds::ComentariosIa::NoAgentes
   end
 
   def privado?(network)
-    Crm::MetaAds::ComentariosIa::Painel::PRIVADO_LIBERADO.include?(network)
+    Crm::MetaAds::ComentariosIa::Rede.privado_liberado?(@care.account, network)
   end
 
   def caixa(inbox_id)

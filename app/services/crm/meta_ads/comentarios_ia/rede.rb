@@ -6,7 +6,8 @@
 # - Facebook (Rede::Facebook): o privado pelo Messenger é nosso (Rede::Pagina, token da caixa); a leitura, a resposta e
 #   o esconder pelo Rede::ComentariosDaPagina, também com o token da caixa (#2587), que grava a ação.
 #
-# `privado_disponivel?` diz se a rede já deixa a IA mandar o privado (o Facebook espera a pages_messaging, F4).
+# `privado_disponivel?` diz se a rede deixa a IA mandar o privado: no Instagram, sempre; no Facebook, só na conta com a
+# flag `meta_ads_comentarios_privado_facebook` (privado_liberado?, #2613).
 # Todo adaptador responde `privado(care)` com um Envio (ok, conversation, erro) e `responder(texto)` e `esconder` com
 # true ou false. Nada levanta para o job: a recusa da Meta é um resultado.
 #
@@ -25,6 +26,10 @@ module Crm::MetaAds::ComentariosIa::Rede
   JA_FEITO = 'private_reply_done'.freeze
   # A Meta não respondeu à leitura do comentário (rede, 5xx, limite).
   class Indisponivel < StandardError; end
+  # O privado pelo Messenger no Facebook (#2613): a Meta deixa usar a pages_messaging nas Páginas de quem tem papel no
+  # app (Standard Access), e é o caso das contas internas. Para elas a flag liga; para as outras, espera a Meta
+  # aprovar a permissão para o app.
+  PRIVADO_NO_FACEBOOK = 'meta_ads_comentarios_privado_facebook'.freeze
 
   module_function
 
@@ -32,6 +37,16 @@ module Crm::MetaAds::ComentariosIa::Rede
     case inbox.channel
     when Channel::Instagram then Instagram.new(inbox, comentario)
     when Channel::FacebookPage then Facebook.new(inbox, comentario)
+    end
+  end
+
+  # Se a IA pode mandar o privado nesta rede, nesta conta: o motor (Rede#privado_disponivel?), a tela do cuidado
+  # (Painel, `private_available`) e o teste em Agentes (NoAgentes) perguntam aqui.
+  def privado_liberado?(account, network)
+    case network
+    when 'instagram' then true
+    when 'facebook' then account.feature_enabled?(PRIVADO_NO_FACEBOOK)
+    else false
     end
   end
 end
