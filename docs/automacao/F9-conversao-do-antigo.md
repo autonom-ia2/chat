@@ -80,6 +80,12 @@ O mapa vive em `app/services/autonomia/automacao/conversao/mapa.rb`. O relatóri
 O maior risco está nas linhas do "não dispara". As 23 automações de retorno com atraso dariam um retorno a todo card da chegada.
 
 **Proposta (P4, para a F6):** a atividade do card leva no payload se o caminho roda as automações de etapa, com o mesmo critério do `Runner`. Hoje esse critério é o `skip_automations` e a chamada (ou não) do `Runner` em cada caminho. A automação convertida usa um parâmetro do gatilho, "como as automações de etapa", que só casa quando a marca diz sim. Assim a conversão reproduz a tabela acima sem regra nova escrita à mão.
+- A marca não pode ser deduzida no emissor a partir de "chamou o `Runner`" (Multifunnel, 05/11). Na IA de assunto, a decisão de rodar vem **depois** do `Creator`, fora da trava (`etapa.rb:38`). Por isso quem chama passa a marca ao `Creator`:
+  - `Applier`/`Etapa`: sim, só se a etapa não é a 1ª;
+  - `CardNaEtapa`: sim;
+  - `CrmCardConverter`: sim.
+
+  Os outros caminhos dizem não. Um spec por caminho, incluindo o da IA de assunto na 1ª etapa, que não dispara.
 - "Só quando o card é movido" não serve: quebraria os três caminhos de criação que disparam.
 - "Sempre" também não: quebraria as exclusões.
 
@@ -386,4 +392,4 @@ Quando todas as contas estiverem convertidas e com o mês limpo, uma flag `autom
   - Condição: o passo convertido de mover ou criar passa pelo Mover/Creator com `automacao:`, ou pelo `cards_controller` com a `Cadeia.automacao_livre` ativa. Por outro caminho, a atividade sai sem `by` e a IA desfaz o movimento.
   - Spec da F9.2: card movido pelo passo convertido, a IA avalia dentro de 4 horas, e o card fica onde está.
   - O que a F6 precisa manter do `Runner`: o `CardGuard#move_allowed?` com pessoa no ator (o ator é quem ligou); a raiz comum da cadeia (`cadeia_nos_motores.rb`) contra o laço mover → entrou → mover; e a espera do Decisor (#858), se alguma conta usar. Nenhuma das 12 usa hoje.
-  - O Multifunnel revisa o `by:'automacao'` no PR da F6 que tocar no Mover e no Creator.
+  - O Multifunnel revisa o `by:'automacao'` no PR da F6 que tocar no Mover e no Creator. De acordo com o desenho no 1f6c60bd86.
