@@ -397,7 +397,7 @@
         "VALOR": "US$ {valor}",
         "VALOR_MENOS_DE": "less than US$ {valor}",
         "MEDIA": "About {custo} per run, on your account AI key.",
-        "PRIMEIRA": "The cost shows up after the first run. It uses your account AI key."
+        "PRIMEIRA": "The cost shows up after the first run."
       },
       "TESTAR": {
         "BOTAO": "Test this step",

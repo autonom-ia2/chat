@@ -397,7 +397,7 @@
         "VALOR": "US$ {valor}",
         "VALOR_MENOS_DE": "menos de US$ {valor}",
         "MEDIA": "Cerca de {custo} por vez, na chave de IA da sua conta.",
-        "PRIMEIRA": "O custo aparece depois da primeira vez. Usa a chave de IA da sua conta."
+        "PRIMEIRA": "O custo aparece depois da primeira vez."
       },
       "TESTAR": {
         "BOTAO": "Testar este passo",
