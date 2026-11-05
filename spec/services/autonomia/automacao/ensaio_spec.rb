@@ -72,6 +72,24 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(passos_de(receita(espera, esperar_passo('r1'))).map { |no| [no[:id], no[:faria]] }).to eq([%w[a1 esperar_ate_ja_vale], %w[r1 esperar]])
   end
 
+  # #2523: o aviso só para o responsável, na conversa sem responsável, não sairia para ninguém.
+  it 'o aviso só para o responsável diz que ninguém seria avisado na conversa sem responsável', :aggregate_failures do
+    aviso = avisar_passo('a1', { 'responsavel' => true }, 'Chegou reclamação')
+
+    expect(passos_de(receita(aviso)).first).to eq(id: 'a1', tipo: 'avisar', faria: 'sem_responsavel', dados: {})
+
+    conversa.update!(assignee: admin)
+    expect(passos_de(receita(aviso)).first).to include(faria: 'avisar', dados: { texto: 'Chegou reclamação' })
+  end
+
+  # #2552: com a reserva da caixa, o aviso sem responsável iria para quem atende a caixa.
+  it 'o aviso com a reserva, sem responsável, mostra o texto e diz que iria para a caixa' do
+    aviso = avisar_passo('a1', { 'responsavel' => true, 'se_nao_houver' => 'caixa' }, 'Chegou reclamação')
+
+    expect(passos_de(receita(aviso)).first).to eq(id: 'a1', tipo: 'avisar', faria: 'avisar',
+                                                  dados: { texto: 'Chegou reclamação', reserva: 'caixa' })
+  end
+
   it 'o "decidir" mostra todos os caminhos e o "nenhum", sem chamar IA' do
     decidir = { 'id' => 'd1', 'tipo' => 'decidir', 'pergunta' => 'Sobre o quê?', 'nenhum' => [],
                 'caminhos' => [{ 'chave' => 'cotacao', 'nome' => 'Cotação', 'passos' => [esperar_passo('c1')] }] }

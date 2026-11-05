@@ -18,6 +18,22 @@ const mudar = (chave, valor) => {
   const vazio = valor === false || (Array.isArray(valor) && !valor.length);
   emit('update:modelValue', vazio ? resto : { ...resto, [chave]: valor });
 };
+
+// #2552 — a reserva da caixa só vale junto do responsável: desligar o
+// responsável tira a reserva também.
+const mudarResponsavel = valor => {
+  if (valor) {
+    mudar('responsavel', true);
+    return;
+  }
+  const {
+    responsavel: _r,
+    se_nao_houver: _s,
+    ...resto
+  } = props.modelValue || {};
+  emit('update:modelValue', resto);
+};
+const mudarReserva = valor => mudar('se_nao_houver', valor ? 'caixa' : false);
 </script>
 
 <template>
@@ -36,7 +52,22 @@ const mudar = (chave, valor) => {
         class="mx-1.5 scale-[1.4]"
         :model-value="Boolean(modelValue?.responsavel)"
         :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.RESPONSAVEL')"
-        @update:model-value="valor => mudar('responsavel', valor)"
+        @update:model-value="mudarResponsavel"
+      />
+    </label>
+    <label
+      v-if="modelValue?.responsavel"
+      class="flex items-center justify-between gap-3 cursor-pointer min-h-11"
+    >
+      <span class="text-[0.9375rem] text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.RESERVA_CAIXA') }}
+      </span>
+      <Switch
+        data-reserva-caixa
+        class="mx-1.5 scale-[1.4]"
+        :model-value="modelValue?.se_nao_houver === 'caixa'"
+        :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.RESERVA_CAIXA')"
+        @update:model-value="mudarReserva"
       />
     </label>
     <LivreMarcar

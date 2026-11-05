@@ -362,6 +362,84 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(nota.content).not_to include("mention://user/#{restrita.id}/")
     end
 
+    # #2523: só o responsável pedido, e a conversa sem responsável. O histórico diz isso, e não "ninguém na lista".
+    it 'só o responsável, numa conversa sem responsável: pula dizendo que falta o responsável', :aggregate_failures do
+      conversa.update!(assignee: nil)
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [avisar_passo('p1', { 'responsavel' => true }, 'Oi')]))
+
+      expect(conversa.messages.where(private: true)).to be_empty
+      expect(registros(execucao)).to eq([%w[p1 pulado sem_responsavel]])
+    end
+
+    # #2552: a reserva da caixa. Só os membros da caixa da conversa (o administrador fora dela não entra), cada um pela
+    # mesma conferência de quem enxerga a conversa e de quem a menção avisa.
+    describe 'com a reserva da caixa' do
+      let(:reserva) { { 'responsavel' => true, 'se_nao_houver' => 'caixa' } }
+
+      def nota = conversa.messages.where(private: true).last
+
+      it 'sem responsável: avisa quem atende a caixa e diz por quê', :aggregate_failures do
+        conversa.update!(assignee: nil)
+        execucao = comecar_e_rodar(automacao_ligada(account, admin, [avisar_passo('p1', reserva, 'Reclamação')]))
+
+        expect(nota.content).to include("mention://user/#{responsavel.id}/", "mention://user/#{do_time.id}/")
+        expect(nota.content).not_to include("mention://user/#{admin.id}/", "mention://user/#{fora_da_caixa.id}/")
+        expect(registros(execucao)).to eq([%w[p1 ok caixa_sem_responsavel]])
+      end
+
+      it 'com responsável que não pode ser avisado: avisa a caixa e diz por quê', :aggregate_failures do
+        conversa.update!(assignee: fora_da_caixa)
+        execucao = comecar_e_rodar(automacao_ligada(account, admin, [avisar_passo('p1', reserva, 'Reclamação')]))
+
+        expect(nota.content).to include("mention://user/#{responsavel.id}/", "mention://user/#{do_time.id}/")
+        expect(nota.content).not_to include("mention://user/#{fora_da_caixa.id}/")
+        expect(registros(execucao)).to eq([%w[p1 ok caixa_responsavel_fora]])
+      end
+
+      it 'com responsável que pode ser avisado: só ele, sem a caixa', :aggregate_failures do
+        execucao = comecar_e_rodar(automacao_ligada(account, admin, [avisar_passo('p1', reserva, 'Reclamação')]))
+
+        expect(nota.content).to include("mention://user/#{responsavel.id}/")
+        expect(nota.content).not_to include("mention://user/#{do_time.id}/")
+        expect(registros(execucao)).to eq([['p1', 'ok', nil]])
+      end
+
+      # Só vê as conversas em que participa: a conversa sem responsável não é dela.
+      it 'membro da caixa com função que não enxerga a conversa fica de fora', :aggregate_failures do
+        conversa.update!(assignee: nil)
+        restrita = create(:user, account: account, role: :agent, name: 'Fabi')
+        create(:inbox_member, user: restrita, inbox: inbox)
+        funcao = create(:custom_role, account: account, permissions: ['conversation_participating_manage'])
+        restrita.account_users.find_by(account: account).update!(custom_role: funcao)
+        execucao = comecar_e_rodar(automacao_ligada(account, admin, [avisar_passo('p1', reserva, 'Oi')]))
+
+        expect(nota.content).not_to include("mention://user/#{restrita.id}/")
+        expect(dados_do(execucao)['fora']).to include({ 'id' => restrita.id, 'motivo' => 'nao_ve_a_conversa' })
+      end
+
+      it 'caixa sem ninguém avisável: pula com o motivo', :aggregate_failures do
+        conversa.update!(assignee: nil)
+        InboxMember.where(inbox: inbox).delete_all
+        execucao = comecar_e_rodar(automacao_ligada(account, admin, [avisar_passo('p1', reserva, 'Oi')]))
+
+        expect(conversa.messages.where(private: true)).to be_empty
+        expect(registros(execucao)).to eq([%w[p1 pulado caixa_sem_ninguem]])
+      end
+
+      it 'no card, vai pela conversa principal', :aggregate_failures do
+        conversa.update!(assignee: nil)
+        funil = create_crm_pipeline(account: account, user: admin)
+        card = Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Pedido', currency: 'BRL',
+                                 primary_conversation: conversa)
+        execucao = comecar(automacao_ligada(account, admin, [esperar_passo('p0')]), conversa)
+        resultado = Autonomia::Automacao::PassoDeAviso.new(execucao: execucao, passo: avisar_passo('p2', reserva, 'Oi'), alvo: card)
+                                                      .executar
+
+        expect([resultado.tipo, resultado.motivo]).to eq([:ok, 'caixa_sem_responsavel'])
+        expect(nota.content).to include("mention://user/#{do_time.id}/")
+      end
+    end
+
     it 'ninguém da lista enxerga a conversa: pula', :aggregate_failures do
       passo = avisar_passo('p1', { 'pessoas' => [fora_da_caixa.id] }, 'Oi')
       execucao = comecar_e_rodar(automacao_ligada(account, admin, [passo]))

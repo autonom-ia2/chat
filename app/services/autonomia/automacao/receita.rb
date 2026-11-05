@@ -76,7 +76,7 @@ class Autonomia::Automacao::Receita
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
     lidos = ::Autonomia::Automacao::Texto.caminhos(passo['texto']).flat_map { |caminho| problemas_do_caminho(id, caminho) }
-    desligado + lidos + destinatarios_de_fora(passo)
+    desligado + lidos + problemas_do_para(passo)
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da
@@ -89,7 +89,7 @@ class Autonomia::Automacao::Receita
      *caminhos_sem_chave_boa(id, Array(passo['caminhos'])),
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
-     *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
+     *problemas_do_para('id' => id, 'para' => avisar_do_resumir(passo))]
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
@@ -134,12 +134,19 @@ class Autonomia::Automacao::Receita
     valido ? [] : [texto(:destino_invalido, passo: id, destino: destino)]
   end
 
+  def problemas_do_para(passo) = destinatarios_de_fora(passo) + reserva_sem_responsavel(passo['id'], passo['para'].to_h)
+
   def destinatarios_de_fora(passo)
     para = passo['para'].to_h
     times = Array(para['times']) - @conta.teams.where(id: para['times']).pluck(:id)
     pessoas = Array(para['pessoas']) - @conta.users.where(id: para['pessoas']).pluck(:id)
     times.map { |time| texto(:time_de_fora, passo: passo['id'], id: time) } +
       pessoas.map { |pessoa| texto(:pessoa_de_fora, passo: passo['id'], id: pessoa) }
+  end
+
+  # A reserva da caixa (#2552) substitui o responsável: sem ele, não tem o que substituir.
+  def reserva_sem_responsavel(id, para)
+    para.key?('se_nao_houver') && para['responsavel'] != true ? [texto(:reserva_sem_responsavel, passo: id)] : []
   end
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.

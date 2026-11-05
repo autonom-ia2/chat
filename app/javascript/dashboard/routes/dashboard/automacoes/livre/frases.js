@@ -167,7 +167,8 @@ const fraseDoTexto = (partes, catalogo, t) => {
 // ficam no "Alterar", como os das outras escolhas da conta.
 const quemAvisar = (para, t) => {
   const quem = [
-    para?.responsavel && t(`${P}.RESPONSAVEL`),
+    para?.responsavel &&
+      t(`${P}.${para.se_nao_houver ? 'RESPONSAVEL_OU_CAIXA' : 'RESPONSAVEL'}`),
     para?.times?.length &&
       t(`${P}.TIMES`, { n: para.times.length }, para.times.length),
     para?.pessoas?.length &&

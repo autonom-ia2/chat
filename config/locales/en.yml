@@ -540,6 +540,10 @@ en:
         laco_suspeito: "The other side replied too fast too many times in a row, like a bot. The automation stopped in this conversation."
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."
+        sem_responsavel: "Nobody was alerted: the conversation has no assignee."
+        caixa_sem_responsavel: "The conversation has no assignee: whoever handles the inbox was alerted."
+        caixa_responsavel_fora: "The assignee could not be alerted in this conversation: whoever handles the inbox was alerted."
+        caixa_sem_ninguem: "Nobody was alerted: the assignee could not be alerted and nobody in the inbox can see this conversation."
         sem_conversa: "The card has no main conversation. Nothing was sent."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
@@ -573,6 +577,7 @@ en:
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
+        reserva_sem_responsavel: 'Step %{passo}: "alert whoever handles the inbox" only works together with the assignee.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."

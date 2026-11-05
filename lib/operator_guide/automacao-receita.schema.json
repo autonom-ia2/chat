@@ -109,7 +109,11 @@
       "properties": {
         "responsavel": { "type": "boolean" },
         "times": { "$ref": "#/definitions/ids" },
-        "pessoas": { "$ref": "#/definitions/ids" }
+        "pessoas": { "$ref": "#/definitions/ids" },
+        "se_nao_houver": {
+          "description": "Reserva (#2552): se o responsável não existe ou não pode ser avisado, avisa também quem atende a caixa da conversa. Só junto de responsavel.",
+          "enum": ["caixa"]
+        }
       }
     },
     "condicao": {
@@ -233,7 +237,8 @@
               "properties": {
                 "responsavel": { "type": "boolean" },
                 "times": { "$ref": "#/definitions/ids" },
-                "pessoas": { "$ref": "#/definitions/ids" }
+                "pessoas": { "$ref": "#/definitions/ids" },
+                "se_nao_houver": { "enum": ["caixa"] }
               }
             }
           }

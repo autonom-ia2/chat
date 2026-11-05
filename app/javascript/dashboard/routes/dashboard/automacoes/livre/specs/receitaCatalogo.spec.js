@@ -494,6 +494,19 @@ describe('catálogo do editor livre', () => {
       );
     });
 
+    // #2552: com a reserva da caixa, a frase diz para onde o aviso vai.
+    it('avisar com a reserva diz que a caixa entra se o responsável não puder', () => {
+      const passo = {
+        id: 'p1',
+        tipo: 'avisar',
+        texto: ['Oi'],
+        para: { responsavel: true, se_nao_houver: 'caixa' },
+      };
+      expect(fraseDoPasso(passo, catalogo, tReal)).toBe(
+        'Avisar quem cuida da conversa ou, se não puder, quem atende a caixa: “Oi”'
+      );
+    });
+
     it('avisar sem texto diz o que falta', () => {
       const passo = { id: 'p1', tipo: 'avisar', texto: [], para: {} };
       expect(fraseDoPasso(passo, catalogo, tReal)).toBe(

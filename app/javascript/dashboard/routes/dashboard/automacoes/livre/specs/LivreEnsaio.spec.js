@@ -189,6 +189,37 @@ describe('linhasDoEnsaio', () => {
     expect(linha.balao).toBeUndefined();
   });
 
+  // #2523: o aviso só para o responsável, na conversa sem responsável.
+  it('o aviso sem responsável diz que ninguém seria avisado', () => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'a1', tipo: 'avisar', faria: 'sem_responsavel' }],
+      fraseDe,
+      t
+    );
+
+    expect(linha.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.SEM_RESPONSAVEL');
+    expect(linha.balao).toBeUndefined();
+  });
+
+  // #2552: sem responsável, com a reserva, o aviso iria para a caixa.
+  it('o aviso com a reserva mostra o texto e diz que iria para a caixa', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'a1',
+          tipo: 'avisar',
+          faria: 'avisar',
+          dados: { texto: 'Chegou reclamação', reserva: 'caixa' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha.balao).toBe('Chegou reclamação');
+    expect(linha.destaque).toBe('AUTOMACAO_LIVRE.ENSAIO.IRIA_PARA_CAIXA');
+  });
+
   it('o "decidir" rotula cada caminho e o "nenhum"', () => {
     const linhas = linhasDoEnsaio(
       [

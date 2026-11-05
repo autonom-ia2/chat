@@ -116,8 +116,23 @@ class Autonomia::Automacao::Ensaio
     pronto = ::Autonomia::Automacao::Texto.new(passo['texto'], valores).montar
     return no(passo, 'faltou_valor') if pronto.nil?
     return no(passo, 'texto_vazio') if pronto.strip.empty?
+    return no(passo, 'sem_responsavel') if sem_responsavel?(passo, valores)
 
-    no(passo, passo['tipo'], { texto: pronto })
+    no(passo, passo['tipo'], { texto: pronto, reserva: reserva_da_caixa(passo, valores) }.compact)
+  end
+
+  # O "avisar" só para o responsável, numa conversa sem responsável: ninguém seria avisado (#2523). Com a reserva da
+  # caixa (#2552), iria para quem atende a caixa. O responsável que existe mas não pode ser avisado só o motor sabe.
+  def sem_responsavel?(passo, valores)
+    passo['tipo'] == 'avisar' &&
+      ::Autonomia::Automacao::PassoDeAviso.sem_responsavel?(passo['para'], valores.ler('conversa.responsavel_id'))
+  end
+
+  def reserva_da_caixa(passo, valores)
+    para = passo['para'].to_h
+    return unless passo['tipo'] == 'avisar' && para['se_nao_houver'] == ::Autonomia::Automacao::PassoDeAviso::CAIXA
+
+    'caixa' if valores.ler('conversa.responsavel_id').nil?
   end
 
   def se(passo, valores)

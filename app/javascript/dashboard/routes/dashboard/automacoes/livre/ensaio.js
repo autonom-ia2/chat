@@ -8,6 +8,7 @@ const AVISO = {
   mensagens_desligadas: 'NAO_SAIRIA',
   faltou_valor: 'FALTOU_VALOR',
   texto_vazio: 'TEXTO_VAZIO',
+  sem_responsavel: 'SEM_RESPONSAVEL',
 };
 
 const rotuloDoCaminho = (no, ramo, t) => {
@@ -30,6 +31,12 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.faria === 'esperar_ate_ja_vale')
     return { ...base, destaque: t(`${E}.JA_VALE`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  if (no.dados?.reserva)
+    return {
+      ...base,
+      balao: no.dados.texto,
+      destaque: t(`${E}.IRIA_PARA_CAIXA`),
+    };
   if (no.dados?.texto) return { ...base, balao: no.dados.texto };
   return base;
 };
