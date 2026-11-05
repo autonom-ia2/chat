@@ -3,6 +3,10 @@
 # No antigo, o `query_operator` de cada condição liga ela à próxima, e o filtro vira SQL na ordem em que estão: o AND
 # pesa mais que o OR (`a AND b OR c` = `(a e b) ou c`). Por isso a lista é cortada no OR em grupos de AND:
 # `alguma[todas[a, b], todas[c]]`. Uma condição com vários valores (`inbox_id` igual a [1, 2]) vale qualquer um deles.
+#
+# O `not_equal_to` antigo vira `NOT IN` no SQL, e o campo vazio (NULL) não casa: "time diferente de 3" numa conversa
+# sem time não dispara. O `diferente` novo casa com o vazio; por isso, em campo de valor único, ele vai junto com
+# `preenchido`. Nas etiquetas não: o antigo usa NOT EXISTS, e a conversa sem etiqueta casa nos dois.
 class Autonomia::Automacao::Conversao::Condicoes
   Mapa = Autonomia::Automacao::Conversao::Mapa
 
@@ -47,8 +51,13 @@ class Autonomia::Automacao::Conversao::Condicoes
     return { 'campo' => { '$valor' => campo }, 'op' => operador } if %w[vazio preenchido].include?(operador)
 
     valores = Array(condicao['values']).map { |valor| valor_novo(condicao, valor) }
-    lista = valores.map { |valor| { 'campo' => { '$valor' => campo }, 'op' => operador, 'valor' => valor } }
-    juntar(%w[diferente nao_contem].include?(operador) ? 'todas' : 'alguma', lista)
+    comparacoes(campo, operador, valores.map { |valor| { 'campo' => { '$valor' => campo }, 'op' => operador, 'valor' => valor } })
+  end
+
+  def comparacoes(campo, operador, lista)
+    return juntar('alguma', lista) unless %w[diferente nao_contem].include?(operador)
+
+    juntar('todas', operador == 'diferente' ? [{ 'campo' => { '$valor' => campo }, 'op' => 'preenchido' }, *lista] : lista)
   end
 
   def campo(condicao)

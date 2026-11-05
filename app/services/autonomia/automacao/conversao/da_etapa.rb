@@ -35,7 +35,10 @@ class Autonomia::Automacao::Conversao::DaEtapa
   # Diferenças que a conversão precisa tratar para o comportamento ficar igual (F9.2).
   def ressalvas
     lista = []
-    lista << 'nasce_na_etapa: o novo também dispara quando o card é criado na etapa; o antigo não' if @automacao.on_enter?
+    if @automacao.on_enter?
+      lista << 'caminho_do_card: o antigo não dispara no card da chegada, no criado pela tela ou API e no movido com ' \
+               'skip_automations; o novo dispara em todos até a F6 levar essa marca (P4)'
+    end
     if @automacao.steps.any? { |passo| !passo.create_follow_up? && passo.delay_seconds.positive? }
       lista << 'atraso_sem_reconferir: o atraso antigo não reconfere se a automação segue ligada; o esperar novo reconfere'
     end

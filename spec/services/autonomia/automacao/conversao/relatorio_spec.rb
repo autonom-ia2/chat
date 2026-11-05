@@ -106,6 +106,26 @@ RSpec.describe Autonomia::Automacao::Conversao::Relatorio do
     expect(Autonomia::Automacao::Conversao::DaRegra.new(antiga).resultado.faltas.pluck(:chave)).to eq(['operador_texto'])
   end
 
+  # MOTIVO: no antigo, "diferente" é NOT IN e o campo vazio não casa; o novo casaria, e a regra pegaria conversas a mais.
+  it 'leva o diferente de campo único junto com preenchido, e o de etiqueta sozinho' do
+    antiga = build(:automation_rule, account: account, event_name: 'conversation_created',
+                                     conditions: [
+                                       { 'attribute_key' => 'team_id', 'filter_operator' => 'not_equal_to', 'values' => [3],
+                                         'query_operator' => 'AND' },
+                                       { 'attribute_key' => 'labels', 'filter_operator' => 'not_equal_to', 'values' => ['vip'],
+                                         'query_operator' => nil }
+                                     ],
+                                     actions: [{ 'action_name' => 'add_label', 'action_params' => ['b'] }])
+
+    expect(Autonomia::Automacao::Conversao::DaRegra.new(antiga).resultado.receita.dig('gatilho', 'filtros', 0)).to eq(
+      'todas' => [
+        { 'todas' => [{ 'campo' => { '$valor' => 'conversa.time_id' }, 'op' => 'preenchido' },
+                      { 'campo' => { '$valor' => 'conversa.time_id' }, 'op' => 'diferente', 'valor' => 3 }] },
+        { 'campo' => { '$valor' => 'conversa.etiquetas' }, 'op' => 'nao_contem', 'valor' => 'vip' }
+      ]
+    )
+  end
+
   # MOTIVO: variável Liquid não tem tradução automática segura; o relatório precisa mandar para revisão humana.
   it 'manda texto com variável para o conversor, e converte o texto puro' do
     com_variavel = build(:automation_rule, account: account, event_name: 'conversation_created', conditions: [],
@@ -120,7 +140,7 @@ RSpec.describe Autonomia::Automacao::Conversao::Relatorio do
 
   # MOTIVO: as 12 automações de etapa de produção dependem da F6 e da F7; o relatório tem de dizer isso por passo e
   # avisar que o gatilho novo também dispara na criação do card.
-  it 'lê a automação de etapa, com a falta de cada passo e a ressalva do card criado' do
+  it 'lê a automação de etapa, com a falta de cada passo e a ressalva do caminho do card' do
     pipeline, stage = create_crm_pipeline(account: account, user: admin)
     automacao = account.crm_stage_automations.create!(pipeline: pipeline, stage: stage, name: 'Retornos',
                                                       trigger_event: :on_enter, created_by: admin)
@@ -132,7 +152,7 @@ RSpec.describe Autonomia::Automacao::Conversao::Relatorio do
     expect(linha.origem).to eq('etapa')
     expect(linha.receita['gatilho']).to eq('tipo' => 'card.entrou_na_etapa', 'etapa_id' => stage.id)
     expect(linha.faltas.pluck(:chave)).to eq(%w[gatilho_de_card passo_retorno passo_de_card])
-    expect(linha.ressalvas.first).to start_with('nasce_na_etapa')
+    expect(linha.ressalvas.first).to start_with('caminho_do_card')
     expect(linha.autor_conhecido).to be(true)
   end
 
