@@ -169,6 +169,7 @@ RSpec.describe Autonomia::Automacao::Conversao::Relatorio do
     expect(linha.faltas).to eq([])
     expect(linha.receita.dig('gatilho', 'filtros', 0))
       .to eq('campo' => { '$valor' => 'contato.atributos.parcelas' }, 'op' => 'diferente', 'valor' => 3)
+    expect(linha.ressalvas).to include(start_with('diferente_corrigido'))
   end
 
   # MOTIVO: "igual a nada" no antigo é IN (), que não pega ninguém; sem condição, o gatilho novo pegaria tudo.

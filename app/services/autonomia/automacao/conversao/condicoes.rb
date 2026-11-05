@@ -82,6 +82,9 @@ class Autonomia::Automacao::Conversao::Condicoes
     return falta('campo_sem_valor', chave) unless base
     return falta('atributo_sem_maiusculas', chave) if %w[equal_to not_equal_to].include?(condicao['filter_operator']) && texto?(condicao)
 
+    if condicao['filter_operator'] == 'not_equal_to'
+      @ressalvas << "diferente_corrigido: #{chave}: o antigo não disparava ou escapava da precedência; o novo dispara"
+    end
     "#{base}.#{chave}"
   end
 
