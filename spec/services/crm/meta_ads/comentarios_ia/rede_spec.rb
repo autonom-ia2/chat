@@ -81,7 +81,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
   describe 'Facebook' do
     let(:canal) { instance_double(Channel::FacebookPage) }
-    let(:inbox) { instance_double(Inbox, channel: canal) }
+    let(:inbox) { instance_double(Inbox, channel: canal, account: account) }
     let(:pagina) { instance_double(described_class::Pagina) }
     let(:servico) { double }
     let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook')) }
@@ -92,8 +92,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       allow(Crm::MetaAds::ComentariosIa::Conversa).to receive(:no_messenger!).and_return(conversation)
     end
 
-    it 'o privado pelo Messenger ainda não está liberado (pages_messaging, F4)' do
+    it 'o privado pelo Messenger só sai na conta com a flag (#2613)' do
       expect(rede.privado_disponivel?).to be(false)
+
+      account.enable_features!('meta_ads_comentarios_privado_facebook')
+      expect(rede.privado_disponivel?).to be(true)
     end
 
     it 'reivindica, manda o privado com o botão do WhatsApp e abre a conversa no Messenger' do
@@ -540,6 +543,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(cliente).to have_received(:hide).with('555_777', hidden: true)
       expect(registro).to have_received(:gravar!).with(anything, 'reply')
       expect(registro).not_to have_received(:gravar!).with(anything, 'hide')
+    end
+  end
+
+  describe '.privado_liberado? (#2613)' do
+    it 'no Instagram sempre; no Facebook só com a flag da conta; outra rede, nunca' do
+      expect(described_class.privado_liberado?(account, 'instagram')).to be(true)
+      expect(described_class.privado_liberado?(account, 'facebook')).to be(false)
+
+      account.enable_features!('meta_ads_comentarios_privado_facebook')
+      expect(described_class.privado_liberado?(account, 'facebook')).to be(true)
+      expect(described_class.privado_liberado?(account, 'whatsapp')).to be(false)
     end
   end
 end
