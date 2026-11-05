@@ -1,0 +1,54 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "GATILHOS": {
+      "CONVERSA_CRIADA": "Quando uma conversa começa",
+      "CONVERSA_ABERTA": "Quando uma conversa é reaberta",
+      "CONVERSA_RESOLVIDA": "Quando uma conversa é resolvida",
+      "MENSAGEM_CRIADA": "Quando chega uma mensagem",
+      "CARD_CRIADO": "Quando um card é criado",
+      "CARD_ENTROU_NA_ETAPA": "Quando o card entra numa etapa",
+      "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",
+      "CARD_GANHO": "Quando o card é ganho",
+      "CARD_PERDIDO": "Quando o card é perdido"
+    },
+    "ORIGEM": {
+      "CONVERSA": "Da conversa",
+      "CARD": "Do card do funil",
+      "ANTIGO": "Do jeito antigo"
+    },
+    "VALOR_DA_MENSAGEM": {
+      "RECEBIDA": "do cliente",
+      "ENVIADA": "da equipe para o cliente",
+      "NOTA": "nota interna",
+      "TRUE": "sim",
+      "FALSE": "não",
+      "CLIENTE": "o cliente",
+      "EQUIPE": "a equipe"
+    },
+    "OPERADOR_DA_MENSAGEM": {
+      "IGUAL": "é",
+      "DIFERENTE": "não é"
+    },
+    "PARAMETROS_DO_GATILHO": {
+      "ETAPA_ID": "Etapa",
+      "FUNIL_ID": "Funil"
+    },
+    "GRUPOS_DO_GATILHO": {
+      "CONVERSA": "Conversa e mensagem",
+      "CARD": "Card do funil"
+    },
+    "GATILHO_COM": {
+      "CARD_CRIADO": "Quando um card é criado em {funil}",
+      "CARD_ENTROU_NA_ETAPA": "Quando o card entra em {etapa}",
+      "CARD_SAIU_DA_ETAPA": "Quando o card sai de {etapa}",
+      "CARD_GANHO": "Quando um card de {funil} é ganho",
+      "CARD_PERDIDO": "Quando um card de {funil} é perdido"
+    },
+    "GATILHO_NO_FUNIL": "{frase}, no funil {funil}",
+    "GATILHO_NAO_DISPARA": "Não dispara quando vários cards são arquivados de uma vez, quando a etapa é apagada ou quando outro sistema muda a etapa.",
+    "GATILHO_DO_CARD": {
+      "TODOS_OS_FUNIS": "Todos os funis",
+      "ERRO_FUNIS": "Não consegui carregar os funis e as etapas. Feche e abra de novo."
+    }
+  }
+}
