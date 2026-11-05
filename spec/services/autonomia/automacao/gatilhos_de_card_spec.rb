@@ -199,6 +199,49 @@ RSpec.describe 'Automação livre: gatilhos de card', :automacao_motor do # rubo
       expect(definicao.reload.ativa).to be(false)
       expect(Autonomia::Automacao::Registro.where(automacao: definicao).sole.motivo).to eq('sem_permissao_funil')
     end
+
+    # A chave é conferida a cada rodada, pelo gatilho da execução: tirada depois do "esperar", a rodada seguinte pausa,
+    # mesmo que a versão nova da automação tenha trocado o gatilho de card por um de conversa (que não pede a chave).
+    describe 'a chave de funis tirada no meio da execução' do
+      let(:agente) { create(:user, account: account, role: :agent) }
+      let(:funcao) do
+        create(:custom_role, account: account,
+                             permissions: %w[automation_manage conversation_manage crm_view crm_manage_cards crm_manage_pipelines])
+      end
+      let(:definicao) do
+        de_card('card.entrou_na_etapa', [esperar_passo('p1'), mover_passo('p2', fechamento)], etapa_id: proposta.id)
+      end
+
+      before do
+        account.account_users.find_by(user: agente).update!(custom_role: funcao)
+        # O agente vê o card pela caixa dele (Crm::Cards::VisibleScopeQuery).
+        create(:inbox_member, user: agente, inbox: conversa.inbox)
+        card.update!(inbox: conversa.inbox)
+        definicao.update!(ligada_por: agente)
+        mover(card, proposta)
+        drenar
+        funcao.update!(permissions: funcao.permissions - %w[crm_manage_pipelines])
+      end
+
+      # O estado da execução, se a automação segue ligada, o último motivo e a etapa do card depois da rodada seguinte.
+      def rodar_depois_do_esperar
+        travel(2.days) { varrer }
+        [execucoes.where(automacao: definicao).sole.estado, definicao.reload.ativa,
+         Autonomia::Automacao::Registro.where(automacao: definicao).last.motivo, card.reload.stage]
+      end
+
+      it 'a rodada depois do esperar pausa com sem_permissao_funil' do
+        expect(rodar_depois_do_esperar).to eq(['parada', false, 'sem_permissao_funil', proposta])
+      end
+
+      it 'pausa também depois de salvarem uma versão com gatilho de conversa' do
+        definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [esperar_passo('p1')] },
+                                 autor: admin)
+        definicao.update!(ativa: true)
+
+        expect(rodar_depois_do_esperar).to eq(['parada', false, 'sem_permissao_funil', proposta])
+      end
+    end
   end
 
   describe 'o gate do emissor' do

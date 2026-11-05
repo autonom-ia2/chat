@@ -29,7 +29,7 @@ class Autonomia::Automacao::Partida
   def call
     return unless pode_comecar?
 
-    acesso = ::Autonomia::Automacao::Acesso.new(@definicao)
+    acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @chave_gatilho)
     return pausar(acesso.motivo) if acesso.motivo
     return pular('fora_do_alcance') unless acesso.alcanca?(@alvo)
     return pular('fora_do_filtro') unless no_filtro?
