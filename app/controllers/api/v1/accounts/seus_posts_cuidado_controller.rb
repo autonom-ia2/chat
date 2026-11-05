@@ -40,8 +40,8 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   # O pai confere a chave de mudar em todas as escritas e pula o post no `show`. Aqui as duas voltam na ordem certa: a
   # chave antes de ler o post na Meta, e o post em toda ação de um post (o painel também).
-  # A flag da rede (#2520) vem logo depois de achar o canal (load_canal do pai), antes das guardas de acesso: sem ela,
-  # 404 para todos, sem dizer que o recurso existe.
+  # A flag da rede (#2520) vem logo depois de achar o canal (load_canal do pai), antes das guardas da caixa e da chave
+  # de mudar: sem ela, 404, sem dizer que o recurso existe. A guarda de papel do pai (posts_view) roda antes.
   skip_before_action :ensure_manage, :ensure_inbox_member, :load_post
   before_action :ensure_flag_da_rede
   before_action :ensure_inbox_member

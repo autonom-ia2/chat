@@ -73,7 +73,7 @@ export const motivosDasPortas = (portas, t) => [
   ),
 ];
 
-const useFlags = (...flags) => {
+export const useFlags = (...flags) => {
   const ligada = useMapGetter('accounts/isFeatureEnabledonAccount');
   const conta = useMapGetter('getCurrentAccountId');
   return computed(() =>

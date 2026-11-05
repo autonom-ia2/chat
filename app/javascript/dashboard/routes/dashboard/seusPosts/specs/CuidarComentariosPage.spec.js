@@ -192,6 +192,7 @@ describe('CuidarComentariosPage (#2212)', () => {
 
     const tela = wrapper.findComponent({ name: 'CuidarComentarios' });
     expect(tela.props('canReply')).toBe(false);
+    expect(tela.props('backLabel')).toBe('Voltar para Seus posts');
     tela.vm.$emit('back');
     expect(push).toHaveBeenLastCalledWith({
       name: 'seus_posts_index',

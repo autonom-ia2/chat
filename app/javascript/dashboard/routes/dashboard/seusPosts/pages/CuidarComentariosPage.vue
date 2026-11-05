@@ -150,7 +150,7 @@ const responder = () => router.push(paraOPost());
         :target="target"
         :post="cabecalho"
         origin="post"
-        :back-label="deAgentes ? voltarLabel : ''"
+        :back-label="deAgentes || !comPostPorDentro ? voltarLabel : ''"
         :can-manage="Boolean(dados.can_manage)"
         :inbox-path="caixa"
         :can-reply="comPostPorDentro"

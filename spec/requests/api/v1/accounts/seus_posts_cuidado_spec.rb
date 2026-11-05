@@ -73,7 +73,7 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response.parsed_body).not_to have_key('comments')
   end
 
-  it 'sem a flag da rede, 404 antes das guardas de acesso: quem não é da caixa também recebe 404' do
+  it 'sem a flag da rede, 404 antes das guardas da caixa: quem vê posts e não é da caixa também recebe 404' do
     account.disable_features!('meta_ads_comentarios_instagram')
     de_fora = create(:user, account: account, role: :agent)
     so_ve = CustomRole.create!(account: account, name: 'Só vê posts', permissions: %w[posts_view])
