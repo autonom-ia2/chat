@@ -73,7 +73,7 @@ export const motivosDasPortas = (portas, t) => [
   ),
 ];
 
-const useFlags = (...flags) => {
+export const useFlags = (...flags) => {
   const ligada = useMapGetter('accounts/isFeatureEnabledonAccount');
   const conta = useMapGetter('getCurrentAccountId');
   return computed(() =>
@@ -83,27 +83,30 @@ const useFlags = (...flags) => {
 
 export function useAgentesDoPost() {
   const ligada = useFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA);
-  // "Qual post?" lê os posts do Seus posts: sem as flags dele, a criação pelo post não aparece.
-  const comPosts = useFlags(
+  const comInstagram = useFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM);
+  const comFacebook = useFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK);
+  // "Qual post?" lê os posts do Seus posts: sem a flag dele, a criação pelo post não aparece. A régua do cuidado
+  // (#2520) é a do motor: a flag do cuidado e a dos comentários de ao menos uma rede.
+  const comSeusPosts = useFlags(
     FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
-    FEATURE_FLAGS.SEUS_POSTS,
-    FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS
+    FEATURE_FLAGS.SEUS_POSTS
+  );
+  const comPosts = computed(
+    () => comSeusPosts.value && (comInstagram.value || comFacebook.value)
   );
   // #2479: o "Qual post?" também lista os anúncios, com as guardas da tela do cuidado do anúncio
   // (campaigns_meta_ads_cuidar): o CRM, as flags de Anúncios, a dos comentários de ao menos uma rede e ver Anúncios.
-  const comGestao = useFlags(
+  // A gestão (meta_ads_gestao) não entra (#2520).
+  const comCuidadoDeAnuncio = useFlags(
     FEATURE_FLAGS.META_ADS_COMENTARIOS_IA,
-    FEATURE_FLAGS.META_ADS_HUB,
-    FEATURE_FLAGS.META_ADS_GESTAO
+    FEATURE_FLAGS.META_ADS_HUB
   );
-  const comInstagram = useFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM);
-  const comFacebook = useFlags(FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK);
   const veAnuncios = usePermissionGranted('meta_ads_view');
   const mudaAnuncios = usePermissionGranted('meta_ads_manage');
   const comAnuncios = computed(
     () =>
       isCrmKanbanEnabled() &&
-      comGestao.value &&
+      comCuidadoDeAnuncio.value &&
       (comInstagram.value || comFacebook.value) &&
       (veAnuncios.value || mudaAnuncios.value)
   );

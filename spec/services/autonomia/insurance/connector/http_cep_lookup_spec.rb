@@ -84,7 +84,9 @@ RSpec.describe Autonomia::Insurance::Connector::Http do
     erro = recusa
 
     expect(erro.kind).to eq(:unavailable)
-    expect(erro.details).to eq({})
+    # Só a classificação do adapter (chat#2595), nada a perguntar ao cliente.
+    expect(erro.details.keys).to eq(['failure'])
+    expect(erro.details['failure']).to include('actor' => 'nobody', 'retryable' => true)
   end
 
   # O MOCK ENSINA A MESMA FORMA: o que o `Http` entrega com a saída do handler é o que o mock devolve, e

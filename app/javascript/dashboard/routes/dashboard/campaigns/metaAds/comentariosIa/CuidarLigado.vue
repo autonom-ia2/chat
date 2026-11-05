@@ -18,6 +18,8 @@ const props = defineProps({
   started: { type: String, default: null },
   canManage: { type: Boolean, default: false },
   busy: { type: Boolean, default: false },
+  // #2520: sem a tela do post por dentro (Seus posts sem seus_posts_comentarios), sem o "Ver no post".
+  canReply: { type: Boolean, default: true },
 });
 
 const emit = defineEmits([
@@ -267,7 +269,7 @@ const startedText = computed(() => {
           @click="emit('inbox', item.conversation_path)"
         />
         <Button
-          v-else-if="item.kind !== 'hidden'"
+          v-else-if="item.kind !== 'hidden' && canReply"
           data-ia-reply-comment
           variant="faded"
           color="slate"

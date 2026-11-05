@@ -154,7 +154,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     registro = cuidado || novo_cuidado(user)
     registro.assign_attributes(atributos)
     religar!(registro)
-    registro.save!
+    # #2520: gravado, o cuidado de Facebook assina o `feed` da Página (o Facebook só manda o comentário com ele).
+    Crm::MetaAds::ComentariosIa::AssinarFeedJob.para!(registro.tap(&:save!))
     @cuidado = registro
   rescue ActiveRecord::RecordNotUnique
     raise if de_novo

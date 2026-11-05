@@ -13,7 +13,7 @@ import {
   textoDaTela,
   textoNaTela,
 } from '../texto';
-import pt from 'dashboard/i18n/locale/pt_BR/automacaoLivre.json';
+import pt from 'dashboard/i18n/locale/pt_BR';
 
 // #2414 F5 — a receita muda sempre por cópia e o que o editor não conhece passa
 // intacto (a ida e volta do 🟠6): trocar um passo não reescreve os outros.

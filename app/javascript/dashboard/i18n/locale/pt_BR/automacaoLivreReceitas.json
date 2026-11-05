@@ -1,0 +1,24 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "RECEITAS": {
+      "COMO_COMECAR": "Como você quer começar?",
+      "ZERO_TITULO": "Montar do zero",
+      "ZERO_TEXTO": "Escolha o \"Quando\" e os passos você mesmo.",
+      "OU_RECEITA": "Ou comece de uma receita pronta",
+      "USAR": "Usar esta",
+      "REQUER": {
+        "AUTOMACAO_MENSAGENS": "Manda mensagem ao cliente, e a mensagem automática ainda não está ligada nesta conta."
+      },
+      "BOAS_VINDAS": {
+        "TITULO": "Avisar que já vamos responder",
+        "TEXTO": "Quem começa uma conversa recebe um aviso de que a equipe já vai responder.",
+        "NOME": "Boas-vindas"
+      },
+      "AGRADECER": {
+        "TITULO": "Agradecer ao encerrar",
+        "TEXTO": "O cliente recebe um obrigado quando a conversa é resolvida.",
+        "NOME": "Agradecer ao encerrar"
+      }
+    }
+  }
+}

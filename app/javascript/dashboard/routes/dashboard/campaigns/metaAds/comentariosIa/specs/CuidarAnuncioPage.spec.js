@@ -8,6 +8,13 @@ vi.mock('../../gestaoDoAnuncio', () => ({ lerGestao: vi.fn() }));
 vi.mock('dashboard/composables/useCanManage', () => ({
   usePermissionGranted: () => true,
 }));
+// #2520: a tela abre sem a gestão; só com ela lê o anúncio na gestão.
+const flags = vi.hoisted(() => ({ ligadas: ['meta_ads_gestao'] }));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    isCloudFeatureEnabled: flag => flags.ligadas.includes(flag),
+  }),
+}));
 const push = vi.fn();
 const rota = vi.hoisted(() => ({
   params: { accountId: '9', adId: '120' },
@@ -22,6 +29,16 @@ describe('CuidarAnuncioPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     rota.query = {};
+    flags.ligadas = ['meta_ads_gestao'];
+  });
+
+  it('sem meta_ads_gestao: abre a tela sem perguntar à gestão, e sem cabeçalho (#2520)', async () => {
+    flags.ligadas = [];
+    const wrapper = shallowMount(CuidarAnuncioPage);
+    await flushPromises();
+
+    expect(lerGestao).not.toHaveBeenCalled();
+    expect(wrapper.findComponent(CuidarComentarios).props('post')).toBeNull();
   });
 
   it('o alvo é o anúncio, com o post da gestão no cabeçalho e a caixa vinda do servidor', async () => {

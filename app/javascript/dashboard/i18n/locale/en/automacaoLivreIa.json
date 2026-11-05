@@ -1,0 +1,71 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "IA": {
+      "LEITURAS": {
+        "MENSAGENS_RECENTES": "The latest customer messages",
+        "MENSAGENS_COM_RESPOSTAS": "The latest customer and team messages",
+        "ULTIMA_MENSAGEM": "The message that started the automation",
+        "CONVERSA": "Channel, inbox, labels and status of the conversation",
+        "CONTATO": "Contact name and fields (never email or phone)",
+        "EMPRESA": "Company name and fields"
+      },
+      "CAMINHO": {
+        "NOME": "Path name",
+        "QUANDO": "When to follow it",
+        "NOVO": "Add path",
+        "TIRAR": "Remove path",
+        "DICA": "From 2 to 8 paths. When the conversation is unclear, the AI picks “None applies” instead of guessing.",
+        "SEM_LETRA": "The path name needs at least one letter.",
+        "RESERVADO": "“None” is already the path for when nothing applies. Pick another name.",
+        "REPETIDO": "There is already a path with this name."
+      },
+      "CAMPO": {
+        "CHAVE": "What to look for",
+        "DESCRICAO": "How to recognize it",
+        "DESTINO": "Where to save",
+        "NOVO": "Look for one more item",
+        "TIRAR": "Remove",
+        "DICA": "The AI fills in only what is written in the conversation. If it is not there, the field stays empty and the history says so."
+      },
+      "DESTINOS": {
+        "MENSAGEM": "Send to the customer",
+        "SUGESTAO": "Leave as a suggestion for the team to review",
+        "NOTA": "Note in the conversation",
+        "AVISAR": "Notify the team"
+      },
+      "DESTINO_GRAVAR": {
+        "CONTATO_NOME": "Contact name",
+        "EMPRESA_NOME": "Company name",
+        "CONTATO_ATRIBUTO": "Contact: {nome}",
+        "CONVERSA_ATRIBUTO": "Conversation: {nome}"
+      },
+      "CUSTO": {
+        "VALOR": "US$ {valor}",
+        "VALOR_MENOS_DE": "less than US$ {valor}",
+        "MEDIA": "About {custo} per run, on your account AI key.",
+        "PRIMEIRA": "The cost shows up after the first run."
+      },
+      "TESTAR": {
+        "BOTAO": "Test this step",
+        "DICA": "Runs on up to 3 conversations you can see and shows what it would do. Sends and saves nothing. Uses your account AI key.",
+        "RODANDO": "Testing…",
+        "CONVERSA": "Conversation #{id}",
+        "CONVERSA_DE": "Conversation #{id} · {nome}",
+        "ESCOLHEU": "Would choose: {caminho}",
+        "MOTIVO": "Why: {motivo}",
+        "NENHUM": "Would choose: None applies",
+        "CUSTOU": "The test cost {custo}.",
+        "AVISO": {
+          "GATILHO_SEM_CONVERSA": "This automation starts from a card. The test uses the most recent conversations you can see.",
+          "NENHUMA_ENTRARIA": "No recent conversation would enter this automation right now. The test uses the most recent ones you can see."
+        },
+        "MOTIVOS": {
+          "NADA_PARA_LER": "There was nothing for the AI to read in this conversation. The AI was not called.",
+          "IA_INDISPONIVEL": "The AI did not answer in time. Try again.",
+          "CHAVE_RECUSADA": "The AI provider refused the account key. Check the key in integrations.",
+          "OUTRO": "The AI could not answer for this conversation."
+        }
+      }
+    }
+  }
+}

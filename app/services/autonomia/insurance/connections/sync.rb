@@ -37,6 +37,15 @@ class Autonomia::Insurance::Connections::Sync
   # de uma cotação em andamento". Medido e falso — logins da mesma conta compartilham a sessão. O
   # que se economiza é login, não sobrevivência de cotação. Ver `connections/session.rb`.)
   def call
+    anterior = @connection.status
+    sincronizar
+  ensure
+    registrar_mudanca(anterior)
+  end
+
+  private
+
+  def sincronizar
     return mark!(status: 'not_configured') unless @connection.credentials_present?
 
     mark!(status: 'authenticating')
@@ -56,14 +65,13 @@ class Autonomia::Insurance::Connections::Sync
     # Credencial recusada invalida também o que estava guardado: manter a sessão faria a próxima
     # operação tentar de novo com um portador que o portal já não aceita.
     @connection.forget_session! if e.kind == :auth_required
-    mark!(status: STATUS_BY_ERROR.fetch(e.kind, 'degraded'), error: "#{e.kind}: #{e.message}")
+    mark!(status: STATUS_BY_ERROR.fetch(e.kind, 'degraded'), error: "#{e.kind}: #{e.message}",
+          failure: e.details.to_h['failure'])
   rescue StandardError => e
     # Formato inesperado, validação do model ou bug: registra a CLASSE, nunca a mensagem (que pode
     # carregar payload do portal), e deixa a conexão num estado consultável em vez de estourar 500.
-    mark!(status: 'degraded', error: "unexpected: #{e.class.name}")
+    mark!(status: 'degraded', error: "unexpected: #{e.class.name}", failure: nil)
   end
-
-  private
 
   # Uma consulta de status, e UMA renovacao quando o portal recusa a sessao que guardavamos.
   #
@@ -205,9 +213,45 @@ class Autonomia::Insurance::Connections::Sync
     metadata.merge('quote_schemas' => metadata['quote_schemas'].to_h.merge(schemas))
   end
 
-  def mark!(status:, error: nil)
-    @connection.update!(status: status, last_error: sanitize(error), last_healthcheck_at: Time.current)
+  # `failure:` só nos ERROS (auditoria da conexão, 05/11/2026). Antes daqui o erro gravava status e
+  # `last_error` e deixava `last_failure` como a verificação anterior o deixou — nil, de quando estava
+  # tudo bem —, e a tela, que decide pelo `actor`, não pedia nada a ninguém. Gravar a falha que o
+  # adapter classificou (ou nada, quando ele não classificou) é o que faz a tela e o healthcheck lerem
+  # o MESMO fato. Os estados transitórios não passam `failure:` e não tocam no diagnóstico.
+  #
+  # Com `failure:` a escrita vai DENTRO DO LOCK, com a linha recarregada, pelo mesmo motivo de
+  # `apply_status!`: o polling de cotação escreve `insurers_pending_auth` no mesmo jsonb.
+  def mark!(status:, error: nil, failure: :manter)
+    atributos = { status: status, last_error: sanitize(error), last_healthcheck_at: Time.current }
+    return @connection.tap { |connection| connection.update!(atributos) } if failure == :manter
+
+    @connection.with_lock do
+      @connection.update!(atributos.merge(
+                            metadata: @connection.metadata.to_h.merge('last_failure' => failure_gravavel(failure))
+                          ))
+    end
     @connection
+  end
+
+  # O RASTRO que faltou em 25/10 e 02/11: a tabela guarda só o último estado, e cada verificação o
+  # sobrescreve. Uma linha por sincronização que MUDA o estado, comparando o de antes do `authenticating`
+  # com o de depois — o transitório do meio não conta. A causa é o código do adapter (`failure.cause`,
+  # já sanitizado e cortado em `mark!`), não a mensagem do portal. Sem migration: o log do worker já
+  # vai para o CloudWatch. Roda no `ensure` de `call`, então não pode levantar.
+  def registrar_mudanca(anterior)
+    atual = @connection.status
+    return if anterior == atual
+
+    falha = @connection.last_failure
+    Rails.logger.info({ evento: 'insurance.connection.status', connection_id: @connection.id,
+                        account_id: @connection.account_id, de: anterior, para: atual,
+                        causa: falha.is_a?(Hash) ? falha['cause'] : nil }.to_json)
+  end
+
+  # Só Hash é diagnóstico: um adapter que mandasse texto no lugar viraria `last_failure` String, e a
+  # tela e o healthcheck leem chaves dele.
+  def failure_gravavel(failure)
+    failure.is_a?(Hash) && failure.present? ? sanitize_deep(failure) : nil
   end
 
   def sanitize(message)

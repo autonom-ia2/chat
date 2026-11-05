@@ -20,6 +20,10 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/metaAdsOrganico.json
       - /app/javascript/dashboard/i18n/locale/en/funcoesDaEquipe.json
       - /app/javascript/dashboard/i18n/locale/en/automacaoLivre.json
+      - /app/javascript/dashboard/i18n/locale/en/automacaoLivreGatilhos.json
+      - /app/javascript/dashboard/i18n/locale/en/automacaoLivreIa.json
+      - /app/javascript/dashboard/i18n/locale/en/automacaoLivreReceitas.json
+      - /app/javascript/dashboard/i18n/locale/en/automacaoLivreEnsaio.json
       - /app/javascript/dashboard/i18n/locale/en/modelosWhatsapp.json
       - /app/javascript/dashboard/i18n/locale/en/horarioDoCanal.json
       - /app/javascript/dashboard/i18n/locale/en/novaConversa.json

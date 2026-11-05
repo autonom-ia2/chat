@@ -158,8 +158,10 @@ module VarreduraDaReceita::Regex
   end
 end
 
-# ONDE UMA MENSAGEM NASCE (guarda 2): o `MessageBuilder` do Chatwoot, `messages.create/new/build` e `Message.create`.
+# ONDE UMA MENSAGEM NASCE (guarda 2): o `MessageBuilder` do Chatwoot (e o `Autonomia::LiteralMessageBuilder`, que herda
+# dele), `messages.create/new/build` e `Message.create`.
 module VarreduraDaReceita::Mensagem
+  BUILDERS = %i[MessageBuilder LiteralMessageBuilder].freeze
   NA_COLECAO = %i[create create! new build].freeze
   NO_MODELO = %i[create create! new insert insert! insert_all insert_all! upsert upsert_all].freeze
 
@@ -193,7 +195,7 @@ module VarreduraDaReceita::Mensagem
   end
 
   def builder?(nodo)
-    nodo.name == :new && constante?(nodo.receiver, :MessageBuilder)
+    nodo.name == :new && BUILDERS.any? { |nome| constante?(nodo.receiver, nome) }
   end
 
   # `conversation.messages.create!(...)`, `@conversation.messages.new(...)`
