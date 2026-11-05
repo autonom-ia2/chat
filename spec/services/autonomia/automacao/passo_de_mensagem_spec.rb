@@ -206,13 +206,14 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         end
       end
 
-      it 'variável que só tem quebra, tab e espaço: pula com faltou_valor', :aggregate_failures do
+      it 'variável que só tem quebra, tab e espaço: para com faltou_valor (janela fechada, #2573)', :aggregate_failures do
         contato.update!(name: " \n\t ")
         recebida(conversa, 30.hours.ago)
         execucao = rodar(conversa)
 
         expect(mandada(conversa)).to be_nil
-        expect(registros(execucao)).to eq([%w[p1 pulado faltou_valor]])
+        expect(registros(execucao)).to eq([%w[p1 falhou faltou_valor]])
+        expect(execucao.reload.estado).to eq('parada')
         expect(pedidos).to be_empty
       end
 
@@ -233,13 +234,14 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         expect(registros(execucao)).to eq([%w[p1 pulado contato_nao_recebe]])
       end
 
-      it 'valor vazio numa variável: pula com faltou_valor', :aggregate_failures do
+      it 'valor vazio numa variável: para com faltou_valor (janela fechada, #2573)', :aggregate_failures do
         contato.update!(name: '')
         recebida(conversa, 30.hours.ago)
         execucao = rodar(conversa)
 
         expect(mandada(conversa)).to be_nil
-        expect(registros(execucao)).to eq([%w[p1 pulado faltou_valor]])
+        expect(registros(execucao)).to eq([%w[p1 falhou faltou_valor]])
+        expect(execucao.reload.estado).to eq('parada')
       end
 
       it 'robô do outro lado: o modelo para pela mesma trava do texto, sem mandar nada', :aggregate_failures do
@@ -262,14 +264,15 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         'o modelo pede imagem no topo' => [{ 'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' },
                                                               { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}.' }] }, 'modelo_mudou']
       }.each do |caso, (troca, motivo)|
-        it "#{caso} depois de salvar: pula com #{motivo}, sem mandar nada", :aggregate_failures do
+        it "#{caso} depois de salvar: para com #{motivo}, sem mandar nada (#2573)", :aggregate_failures do
           automacao = automacao_ligada(account, admin, [passo])
           com_modelos(modelo_aprovado.merge(troca))
           recebida(conversa, 30.hours.ago)
           execucao = rodar(conversa, automacao)
 
           expect(mandada(conversa)).to be_nil
-          expect(registros(execucao)).to eq([['p1', 'pulado', motivo]])
+          expect(registros(execucao)).to eq([['p1', 'falhou', motivo]])
+          expect(execucao.reload.estado).to eq('parada')
           expect(pedidos).to be_empty
         end
       end

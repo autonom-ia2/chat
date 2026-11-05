@@ -132,12 +132,11 @@ RSpec.describe 'Fechamento #2414 · itens a conferir', :automacao_motor, :fecham
       expect(conversa.reload.priority).to be_nil
     end
 
-    # Só a janela fechada para: os outros motivos de pular seguem para o passo seguinte, como antes.
+    # Só a janela fechada para. Um motivo de pular que não é de janela segue para o passo seguinte, como antes.
     it 'contato que pediu para não receber: pula e segue para o passo seguinte', :aggregate_failures do
       create(:message, conversation: conversa, account: account, inbox: canal.inbox, message_type: :incoming, content: 'oi',
                        created_at: 1.hour.ago)
-      contato.update!(blocked: false)
-      allow(Contact).to receive(:opted_out).and_return(Contact.where(id: contato.id))
+      contato.update!(opted_out_at: 1.day.ago)
       receita = { gatilho: { tipo: 'conversa.resolvida' }, passos: [mensagem_passo('renovacao', 'Oi.'), prioridade_passo('depois')] }
       automacao = montar_automacao(dona, account, nome: 'Renovação', receita: receita)
       ligar_automacao(dona, account, automacao)

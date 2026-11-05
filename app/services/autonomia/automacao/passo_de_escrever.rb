@@ -2,7 +2,7 @@
 #
 # - `destino: mensagem`: o texto sai ao cliente pelo passo "mensagem" (F4), com todas as regras dele: autor
 #   "Automação", janela, contato que pediu para não receber, tweet e anti-laço. As conferências que não dependem do texto
-#   vêm antes da IA: fora da janela, o passo pula sem gastar. Pede também a flag da F4 (o executor confere).
+#   vêm antes da IA: fora da janela, a execução para sem gastar (#2573). Pede também a flag da F4 (o executor confere).
 # - `destino: sugestao`: o texto vira uma nota privada para a equipe revisar e mandar (D5 A).
 class Autonomia::Automacao::PassoDeEscrever
   include ::Autonomia::Automacao::ComIa
@@ -28,7 +28,7 @@ class Autonomia::Automacao::PassoDeEscrever
 
     mensagem = ::Autonomia::Automacao::PassoDeMensagem.new(execucao: @execucao, passo: @passo, alvo: @conversa) if mensagem?
     motivo = mensagem&.motivo_do_canal
-    return Resultado.new(tipo: :pulado, motivo: motivo, dados: {}) if motivo
+    return ::Autonomia::Automacao::PassoDeMensagem.pulado(motivo) if motivo
 
     estado = leitura
     return nada_para_ler if estado.vazio?
