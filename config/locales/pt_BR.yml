@@ -646,6 +646,10 @@ pt_BR:
     policy_actor: 'Sistema de Automação via %{policy_name}'
   automation:
     system_name: 'Sistema de Automação'
+    # #2568 P7: quem age quando uma Automação livre muda a conversa.
+    livre:
+      com_quem_ligou: 'Automação «%{nome}» · ligada por %{user_name}'
+      sem_quem_ligou: 'Automação «%{nome}»'
   crm:
     # #2096: o card mantido sem dado pessoal depois que o contato foi excluído (LGPD), e os retornos e reuniões dele.
     cards:
@@ -1084,7 +1088,6 @@ pt_BR:
       nota:
         laco: "A automação %{nome} parou nesta conversa: o outro lado respondeu em menos de %{segundos} segundos a %{trocas} mensagens da automação, sem pausa e sem ninguém da equipe no meio, como um robô. Confira antes de deixar ela seguir aqui."
         decidiu: 'A automação escolheu *%{nome}*: %{motivo}'
-        nenhum: 'Nenhum se aplica'
         sugestao: "Sugestão da automação (revise antes de mandar):\n\n%{texto}"
         resumo: "Resumo da automação:\n\n%{texto}"
       ia:
