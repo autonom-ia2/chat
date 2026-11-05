@@ -2874,7 +2874,8 @@
           "SEM_CONEXAO": "Your ad account isn't connected. Connect it in Ads to choose an ad.",
           "SEM_NOME": "Ad {id}",
           "CUIDANDO": "The AI already takes care of it",
-          "PAUSADO": "Paused"
+          "PAUSADO": "Paused",
+          "ESPERANDO": "{n} comment waiting for you | {n} comments waiting for you"
         },
         "SEM_ACESSO": "You don't have access to the posts. Ask the account admin."
       },

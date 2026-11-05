@@ -2874,7 +2874,8 @@
           "SEM_CONEXAO": "Sua conta de anúncios não está conectada. Conecte em Anúncios para escolher um anúncio.",
           "SEM_NOME": "Anúncio {id}",
           "CUIDANDO": "A IA já cuida dele",
-          "PAUSADO": "Pausado"
+          "PAUSADO": "Pausado",
+          "ESPERANDO": "{n} comentário esperando você | {n} comentários esperando você"
         },
         "SEM_ACESSO": "Você não tem acesso aos posts. Peça a quem administra a conta."
       },
