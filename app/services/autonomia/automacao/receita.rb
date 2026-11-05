@@ -158,7 +158,10 @@ class Autonomia::Automacao::Receita
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
   def problemas_da_condicao(id, condicao, no_gatilho: false, na_espera: false)
-    caminhos_desconhecidos(id, condicao, no_gatilho: no_gatilho, na_espera: na_espera).presence || fora_do_fechado(id, condicao)
+    lidos = ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map do |caminho|
+      problemas_do_caminho(id, caminho, no_gatilho: no_gatilho, na_espera: na_espera)
+    end
+    lidos.presence || fora_do_fechado(id, condicao)
   end
 
   # Operador ou valor que um valor fechado não tem: a condição nunca casaria.
@@ -176,12 +179,6 @@ class Autonomia::Automacao::Receita
     [texto(:valor_fora, passo: id, caminho: caminho, valor: condicao['valor'], opcoes: fechado['opcoes'].join(', '))]
   end
 
-  def caminhos_desconhecidos(id, condicao, no_gatilho: false, na_espera: false)
-    ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map do |caminho|
-      problemas_do_caminho(id, caminho, no_gatilho: no_gatilho, na_espera: na_espera)
-    end
-  end
-
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
   # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
   # o começo da espera, e ela leria sempre vazio.
@@ -189,20 +186,12 @@ class Autonomia::Automacao::Receita
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
 
-    fora = fora_do_lugar(caminho, no_gatilho, na_espera)
+    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera)
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
     return [texto(:atributo_inexistente, passo: id, caminho: caminho)] unless valores.atributo_definido?(caminho, @conta)
 
     []
-  end
-
-  # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela; a resposta no "esperar até".
-  def fora_do_lugar(caminho, no_gatilho, na_espera)
-    valores = ::Autonomia::Automacao::Valores
-    return :mensagem_so_no_gatilho if valores.da_mensagem?(caminho) && !mensagem_no_gatilho?(no_gatilho)
-
-    :resposta_so_na_espera if valores.da_resposta?(caminho) && !na_espera
   end
 
   def problemas_da_acao(passo)

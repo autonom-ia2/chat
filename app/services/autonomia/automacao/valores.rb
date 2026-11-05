@@ -103,6 +103,14 @@ class Autonomia::Automacao::Valores
 
     def da_resposta?(caminho) = RESPOSTA.key?(caminho.to_s)
 
+    # O valor que só existe num lugar da receita: a mensagem no filtro do gatilho dela (`mensagem`: a receita está lá);
+    # a resposta no "esperar até" (`na_espera`). Devolve a chave da frase do salvar, ou nil.
+    def fora_do_lugar(caminho, mensagem:, na_espera:)
+      return :mensagem_so_no_gatilho if da_mensagem?(caminho) && !mensagem
+
+      :resposta_so_na_espera if da_resposta?(caminho) && !na_espera
+    end
+
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
       da_mensagem?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
