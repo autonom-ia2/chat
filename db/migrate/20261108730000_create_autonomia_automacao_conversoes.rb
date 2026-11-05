@@ -8,7 +8,8 @@
 #   fato no índice único (automacao_id, evento), e assim os dois motores nunca agem sobre o mesmo fato (seção 5.1).
 #
 # Sem transação: o CHECK novo entra NOT VALID (trava curta) e é validado depois, sem barrar escrita. O novo aceita
-# tudo o que o antigo aceitava, então a validação não acha linha ruim. O down recusa enquanto houver `do_antigo`.
+# tudo o que o antigo aceitava, então a validação não acha linha ruim. O down recusa, antes de mexer em
+# qualquer coisa, enquanto houver `do_antigo`.
 class CreateAutonomiaAutomacaoConversoes < ActiveRecord::Migration[7.2]
   disable_ddl_transaction!
 
@@ -24,7 +25,12 @@ class CreateAutonomiaAutomacaoConversoes < ActiveRecord::Migration[7.2]
     trocar_check(FINALIZADA)
   end
 
+  # Recusa antes de qualquer DDL: com execução `do_antigo`, o CHECK antigo barraria o motor antigo ainda no ar.
   def down
+    if select_value("SELECT 1 FROM autonomia_automacao_execucoes WHERE estado = 'do_antigo' LIMIT 1")
+      raise ActiveRecord::IrreversibleMigration, 'há execuções do_antigo: desfazer a F9.2 antes'
+    end
+
     trocar_check(FINALIZADA_ANTES)
     drop_table :autonomia_automacao_conversoes, if_exists: true
   end
@@ -43,8 +49,7 @@ class CreateAutonomiaAutomacaoConversoes < ActiveRecord::Migration[7.2]
     end
   end
 
-  # Troca o CHECK sem segurar a tabela: tira o velho, põe o novo NOT VALID e valida. No down, se houver execução
-  # `do_antigo`, a validação falha e a migration para: desfazer a F9.2 antes.
+  # Troca o CHECK sem segurar a tabela: tira o velho, põe o novo NOT VALID e valida.
   def trocar_check(expressao)
     remove_check_constraint :autonomia_automacao_execucoes, name: CHECK, if_exists: true
     add_check_constraint :autonomia_automacao_execucoes, expressao, name: CHECK, validate: false
