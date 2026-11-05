@@ -14,11 +14,12 @@ import { useNomesDaConta } from '../../composables/useNomesDaConta';
 import { carregarCatalogo, useCatalogo } from '../catalogo';
 import { fraseDoGatilho, fraseDoPasso } from '../frases';
 import { erroDaApi } from '../erroDaApi';
+import { custoEmTexto } from '../custoDaIa';
 
 // #2414 F5 — a lista única de Automações: as novas e as do jeito antigo (as
 // regras de hoje, que abrem na tela de hoje), cada uma em frase. As automações
 // das etapas do funil continuam no funil; uma linha leva até lá.
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const podeMudar = useCanManage('automation_manage');
@@ -31,6 +32,16 @@ const estado = ref('carregando');
 const novas = ref([]);
 const antigas = ref([]);
 const mudando = ref(null);
+// #2500 C2: { automacao_id: soma em US$ } dos últimos 30 dias; vazio sem
+// financial_view. É só informação: se não carregar, a lista segue sem ele.
+const custos = ref({});
+const carregarCustos = async () => {
+  try {
+    custos.value = (await AutomacoesAPI.custos()).data.custos || {};
+  } catch {
+    custos.value = {};
+  }
+};
 
 const carregar = async () => {
   estado.value = 'carregando';
@@ -51,6 +62,7 @@ const carregar = async () => {
 onMounted(() => {
   carregarNomes();
   carregar();
+  carregarCustos();
 });
 
 // #2498 — o fato da semana: "Rodou 12 vezes esta semana · 1 parou".
@@ -85,7 +97,15 @@ const linhaDaNova = automacao => {
     primeiro: passos[0] ? fraseDoPasso(passos[0], catalogo.value, t) : '',
     outros: Math.max(passos.length - 1, 0),
     ativa: automacao.ativa,
-    fato: fatoDaSemana(automacao.semana),
+    fato: [
+      fatoDaSemana(automacao.semana),
+      custos.value[automacao.id] &&
+        t('AUTOMACAO_LIVRE.LISTA.CUSTO_IA', {
+          custo: custoEmTexto(custos.value[automacao.id], t, locale.value),
+        }),
+    ]
+      .filter(Boolean)
+      .join(' · '),
   };
 };
 

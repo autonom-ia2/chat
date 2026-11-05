@@ -10,6 +10,7 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import LivreIaTestar from './LivreIaTestar.vue';
 import { caminhosProntos } from '../ia';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
@@ -24,6 +25,10 @@ const props = defineProps({
   opcoes: { type: Object, required: true },
   atributosDaPeca: { type: Function, required: true },
   atributosDo: { type: Function, required: true },
+  // #2500 C2: o rascunho inteiro com o passo do painel, para o "Testar", e o
+  // custo de cada passo ({ com_valores, custos }).
+  receitaDoTeste: { type: Function, default: null },
+  custos: { type: Object, default: () => ({ com_valores: false, custos: {} }) },
 });
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
@@ -198,6 +203,12 @@ const podeSalvar = computed(() => {
 
 const fechar = () => painel.value?.close();
 
+const receitaParaTestar = computed(() =>
+  ehDeIa.value && props.receitaDoTeste && rascunho.value
+    ? props.receitaDoTeste({ ...alvo.value, valor: rascunho.value })
+    : null
+);
+
 defineExpose({ abrir, fechar });
 </script>
 
@@ -338,6 +349,15 @@ defineExpose({ abrir, fechar });
         :atributos="atributosDaPeca(campo.peca)"
         :bloqueadas="bloqueadasDe(campo)"
         @update:model-value="novo => mudarCampo(campo.nome, novo)"
+      />
+
+      <LivreIaTestar
+        v-if="ehDeIa"
+        :passo="rascunho"
+        :receita="receitaParaTestar"
+        :custo="custos.custos[rascunho.id]"
+        :mostra-custo="custos.com_valores"
+        :pronto="podeSalvar"
       />
     </div>
 

@@ -205,7 +205,8 @@
       "TENTAR_DE_NOVO": "Try again",
       "DO_FUNIL": "Pipeline stage automations live in Configure › Edit pipeline.",
       "VER_FUNIL": "See in the pipeline",
-      "SEM_PASSO": "No step yet"
+      "SEM_PASSO": "No step yet",
+      "CUSTO_IA": "AI: {custo} in runs over the last 30 days"
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
@@ -391,6 +392,33 @@
         "EMPRESA_NOME": "Company name",
         "CONTATO_ATRIBUTO": "Contact: {nome}",
         "CONVERSA_ATRIBUTO": "Conversation: {nome}"
+      },
+      "CUSTO": {
+        "VALOR": "US$ {valor}",
+        "VALOR_MENOS_DE": "less than US$ {valor}",
+        "MEDIA": "About {custo} per run, on your account AI key.",
+        "PRIMEIRA": "The cost shows up after the first run. It uses your account AI key."
+      },
+      "TESTAR": {
+        "BOTAO": "Test this step",
+        "DICA": "Runs on up to 3 conversations you can see and shows what it would do. Sends and saves nothing. Uses your account AI key.",
+        "RODANDO": "Testing…",
+        "CONVERSA": "Conversation #{id}",
+        "CONVERSA_DE": "Conversation #{id} · {nome}",
+        "ESCOLHEU": "Would choose: {caminho}",
+        "MOTIVO": "Why: {motivo}",
+        "NENHUM": "Would choose: None applies",
+        "CUSTOU": "The test cost {custo}.",
+        "AVISO": {
+          "GATILHO_SEM_CONVERSA": "This automation starts from a card. The test uses the most recent conversations you can see.",
+          "NENHUMA_ENTRARIA": "No recent conversation would enter this automation right now. The test uses the most recent ones you can see."
+        },
+        "MOTIVOS": {
+          "NADA_PARA_LER": "There was nothing for the AI to read in this conversation. The AI was not called.",
+          "IA_INDISPONIVEL": "The AI did not answer in time. Try again.",
+          "CHAVE_RECUSADA": "The AI provider refused the account key. Check the key in integrations.",
+          "OUTRO": "The AI could not answer for this conversation."
+        }
       }
     },
     "HISTORICO": {

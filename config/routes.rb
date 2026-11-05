@@ -728,11 +728,15 @@ Rails.application.routes.draw do
             resources :automacoes, only: [:index, :show, :create, :update] do
               get :passos, on: :collection
               post :ensaio, on: :collection, action: :ensaio_novo
+              # #2500 C2: o "Testar este passo" e os custos da IA.
+              post :testar_passo, on: :collection, to: 'automacoes_ia#testar_passo'
+              get :custos, on: :collection, to: 'automacoes_ia#custos'
               member do
                 post :ligar
                 post :desligar
                 get :historico
                 post :ensaio
+                get :custos, to: 'automacoes_ia#custos_da_automacao'
               end
             end
             resources :avisos, only: [:index, :update]

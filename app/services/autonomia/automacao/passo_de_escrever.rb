@@ -22,6 +22,11 @@ class Autonomia::Automacao::PassoDeEscrever
   # O ensaio (#2498) só diz para onde o texto iria: nenhuma IA é chamada.
   def self.ensaiar(passo) = { destino: passo['destino'] }
 
+  # O que vai à IA: o mesmo na execução e no "Testar este passo" (#2500 C2).
+  def self.consulta(passo, estado)
+    { modelo: MODELO, instrucoes: "#{INSTRUCOES}\nInstrução: #{passo['instrucao']}", entrada: { conversa: estado.conversa }, schema: SCHEMA }
+  end
+
   def executar
     negado = impedido
     return negado if negado
@@ -33,8 +38,7 @@ class Autonomia::Automacao::PassoDeEscrever
     estado = leitura
     return nada_para_ler if estado.vazio?
 
-    resposta, custo = perguntar(modelo: MODELO, instrucoes: "#{INSTRUCOES}\nInstrução: #{@passo['instrucao']}",
-                                entrada: { conversa: estado.conversa }, schema: SCHEMA)
+    resposta, custo = perguntar(**self.class.consulta(@passo, estado))
     entregar(mensagem, resposta['texto'].to_s.strip, custo)
   rescue Falha => e
     falhou(e)
