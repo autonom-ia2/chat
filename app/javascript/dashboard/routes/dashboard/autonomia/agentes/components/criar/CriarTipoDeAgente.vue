@@ -15,6 +15,7 @@ import {
 // #2479: o chip "Posts | Anúncios" troca a lista pelos anúncios (os da lista de Anúncios dos últimos 30 dias, só do
 // banco: abrir não lê a Meta). Cada lista aparece só para quem tem as guardas dela (`comPosts`, `comAnuncios`); com uma só,
 // sem chip. A entrada pelo próprio post e pelo anúncio continua.
+// #2519 (3A): o anúncio com comentário esperando o dono diz quantos (`waiting`) e vem primeiro, mesmo fora dos 30 dias.
 const props = defineProps({
   comPosts: { type: Boolean, default: true },
   comAnuncios: { type: Boolean, default: false },
@@ -354,6 +355,23 @@ const titulo = computed(() => {
                   class="text-sm text-n-slate-11"
                 >
                   {{ t(`${KEY}.ANUNCIOS.${ESTADO_DO_ANUNCIO[anuncio.care]}`) }}
+                </span>
+                <span
+                  v-if="anuncio.waiting > 0"
+                  data-criar-anuncio-esperando
+                  class="inline-flex items-center gap-1.5 text-sm font-medium text-n-amber-11"
+                >
+                  <span
+                    class="i-lucide-hand size-4 shrink-0"
+                    aria-hidden="true"
+                  />
+                  {{
+                    t(
+                      'AGENTS.AGENTE_DO_POST.CARTAO.ESPERANDO',
+                      { n: anuncio.waiting },
+                      anuncio.waiting
+                    )
+                  }}
                 </span>
               </span>
               <span

@@ -97,6 +97,31 @@ describe('#2479 · anúncios no "Qual post?"', () => {
     expect(seusPosts.get).not.toHaveBeenCalled();
   });
 
+  // #2519 (3A): o servidor já manda primeiro os que esperam; a tela só diz quantos.
+  it('o anúncio com comentário esperando diz quantos; sem espera, nada', async () => {
+    api.anuncios.mockResolvedValue({
+      data: {
+        anuncios: [
+          { id: '130', name: 'Antigo', care: null, waiting: 3 },
+          { id: '120', name: 'Seguro', care: null, waiting: 0 },
+        ],
+      },
+    });
+    montar({ comPosts: false, comAnuncios: true });
+
+    await clicar('[data-criar-tipo="post"]');
+
+    const esperando = todosNoBody('[data-criar-anuncio-esperando]');
+    expect(esperando).toHaveLength(1);
+    expect(
+      noBody('[data-criar-anuncio="130"] [data-criar-anuncio-esperando]')
+        .textContent
+    ).toContain('AGENTS.AGENTE_DO_POST.CARTAO.ESPERANDO');
+    expect(
+      noBody('[data-criar-anuncio="120"] [data-criar-anuncio-esperando]')
+    ).toBeNull();
+  });
+
   it('só posts: sem chip e sem ler os anúncios', async () => {
     montar({ comPosts: true, comAnuncios: false });
 
