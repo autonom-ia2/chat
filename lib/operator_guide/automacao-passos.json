@@ -590,6 +590,12 @@
           "peca": "texto_com_valores",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TEXTO"
+        },
+        {
+          "nome": "modelo",
+          "peca": "modelo_whatsapp",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
         }
       ]
     },

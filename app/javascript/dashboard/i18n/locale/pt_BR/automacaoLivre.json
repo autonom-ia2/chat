@@ -130,7 +130,8 @@
       "TROCAR": "Trocar o que já estava preenchido",
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
-      "LINHAS": "Tamanho do resumo (linhas)"
+      "LINHAS": "Tamanho do resumo (linhas)",
+      "MODELO": "Se a janela de 24 h estiver fechada"
     },
     "OPCOES": {
       "STATUS": {
@@ -319,7 +320,17 @@
       "DADO_APAGADO": "Dado apagado: {dado}",
       "TEM_DADO_APAGADO": "Um dado deste texto foi apagado da conta. Tire-o ou troque por outro: do jeito que está, o Salvar tudo não aceita.",
       "FILTRO_ENTRA": "Ao salvar, entra no \"Só se\": {condicao}. Dá para trocar ou tirar depois.",
-      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\"."
+      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\".",
+      "MODELO": {
+        "DICA": "No WhatsApp oficial, 24 h depois da última mensagem do cliente, texto livre não sai. Escolha um modelo aprovado na Meta para mandar no lugar; cada envio de modelo é cobrado pela Meta. Com a janela aberta, sai o texto acima.",
+        "NENHUM": "Não mandar nada (o passo pula)",
+        "OPCAO": "{nome} ({idioma})",
+        "SEM_MODELOS": "Nenhuma caixa do WhatsApp oficial que você vê tem modelo de utilidade aprovado. Crie e aprove em Modelos.",
+        "DIVERGENTE": "Este modelo tem texto diferente em outra caixa. Cada conversa recebe o modelo da própria caixa; se lá ele pedir outras variáveis, a mensagem não sai.",
+        "MUDOU": "O modelo agora pede {quantas} variáveis. Preencha todas antes de salvar.",
+        "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
+        "VARIAVEL": "Variável {numero} do modelo"
+      }
     },
     "LIGAR": {
       "BOTAO": "Ligar",

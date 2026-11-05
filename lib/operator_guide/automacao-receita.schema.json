@@ -62,6 +62,17 @@
       "minItems": 1,
       "items": { "oneOf": [{ "type": "string", "minLength": 1 }, { "$ref": "#/definitions/valor" }] }
     },
+    "modelo_whatsapp": {
+      "description": "Modelo aprovado da Meta para quando a janela de 24 h do número oficial estiver fechada (F4b, #2468). Procurado pelo nome e pelo idioma na caixa da conversa; um texto por variável do corpo, na ordem ({{1}}, {{2}}...). Com a janela aberta, sai o texto livre.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nome", "idioma", "variaveis"],
+      "properties": {
+        "nome": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "idioma": { "type": "string", "minLength": 1, "maxLength": 15 },
+        "variaveis": { "type": "array", "items": { "$ref": "#/definitions/texto" } }
+      }
+    },
     "ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
     "leituras": {
       "description": "O que a IA lê do alvo (F7), da lista fechada do Decisor. E-mail e telefone do contato nunca vão. Sem a lista, as mensagens recentes do cliente.",
@@ -229,7 +240,8 @@
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "mensagem" },
-            "texto": { "$ref": "#/definitions/texto" }
+            "texto": { "$ref": "#/definitions/texto" },
+            "modelo": { "$ref": "#/definitions/modelo_whatsapp" }
           }
         },
         {

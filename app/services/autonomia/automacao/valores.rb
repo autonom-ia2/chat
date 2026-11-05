@@ -126,6 +126,15 @@ class Autonomia::Automacao::Valores
 
     def fechado(caminho) = FECHADOS[caminho.to_s]
 
+    # O que impede a receita de ler o caminho que já vale ali: o atributo que a conta não tem, ou o valor que pede
+    # permissão (#2597) para quem salva sem ela. Sem pessoa (`account_user` nil: o catálogo), a permissão não é
+    # conferida aqui; a execução lê vazio.
+    def problema_de_leitura(caminho, conta:, account_user:)
+      return :atributo_inexistente unless atributo_definido?(caminho, conta)
+
+      :valor_de_venda if account_user && !pode_ler?(caminho, account_user)
+    end
+
     # `account_user` pode ler o caminho? Sem pessoa (nil), o valor protegido fica fechado.
     def pode_ler?(caminho, account_user)
       regra = PROTEGIDOS[caminho.to_s]

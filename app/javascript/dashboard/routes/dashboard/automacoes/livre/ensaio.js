@@ -55,7 +55,15 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
   if (FARIA_DA_IA[no.faria])
     return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
-  if (no.dados?.texto) return { ...base, balao: no.dados.texto };
+  // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada.
+  if (no.dados?.texto)
+    return {
+      ...base,
+      balao: no.dados.texto,
+      ...(no.dados.modelo && {
+        destaque: t(`${E}.MODELO_FORA_DA_JANELA`, { modelo: no.dados.modelo }),
+      }),
+    };
   return base;
 };
 

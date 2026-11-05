@@ -540,6 +540,11 @@ en:
         canal_sem_resposta: "This channel does not accept replies (tweet). The message was not sent."
         contato_nao_recebe: "The contact asked not to receive messages. The message was not sent."
         fora_da_janela: "The channel's reply window is closed, and free text cannot be sent. The message was not sent."
+        limite_da_caixa: "The inbox has a reply time limit, set in its options, and the customer has not written within it. The message was not sent."
+        modelo_fora_da_caixa: "The window was closed, and this conversation's inbox doesn't have the chosen template. The message was not sent."
+        modelo_nao_aprovado: "The window was closed, and the chosen template isn't approved by Meta in this inbox. The message was not sent."
+        modelo_de_propaganda: "The window was closed, and the chosen template is marketing. The automation only sends utility templates. The message was not sent."
+        modelo_mudou: "The window was closed, and this inbox's template asks for different variables than the step's. Choose the template again. The message was not sent."
         laco_suspeito: "The other side replied too fast too many times in a row, like a bot. The automation stopped in this conversation."
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."
@@ -576,6 +581,7 @@ en:
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
         valor_no_corpo: 'Step %{passo}: the action body cannot use variables yet.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
+        modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         gatilho_desligado: 'Card triggers are off for this account.'
