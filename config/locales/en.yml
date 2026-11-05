@@ -539,8 +539,8 @@ en:
         travada: 'This step stopped in the middle and will not run again.'
         canal_sem_resposta: "This channel does not accept replies (tweet). The message was not sent."
         contato_nao_recebe: "The contact asked not to receive messages. The message was not sent."
-        fora_da_janela: "The channel's reply window is closed, and free text cannot be sent. The message was not sent."
-        limite_da_caixa: "The inbox has a reply time limit, set in its options, and the customer has not written within it. The message was not sent."
+        fora_da_janela: "The channel's reply window is closed, and free text cannot be sent. The message was not sent, and the automation stopped in this conversation."
+        limite_da_caixa: "The inbox has a reply time limit, set in its options, and the customer has not written within it. The message was not sent, and the automation stopped in this conversation."
         modelo_fora_da_caixa: "The window was closed, and this conversation's inbox doesn't have the chosen template. The message was not sent."
         modelo_nao_aprovado: "The window was closed, and the chosen template isn't approved by Meta in this inbox. The message was not sent."
         modelo_de_propaganda: "The window was closed, and the chosen template is marketing. The automation only sends utility templates. The message was not sent."

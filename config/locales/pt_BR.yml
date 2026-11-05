@@ -1028,8 +1028,8 @@ pt_BR:
         travada: 'Este passo parou no meio e não vai rodar de novo.'
         canal_sem_resposta: "Este canal não aceita resposta (tweet). A mensagem não foi mandada."
         contato_nao_recebe: "O contato pediu para não receber mensagens. A mensagem não foi mandada."
-        fora_da_janela: "A janela de resposta do canal está fechada, e texto livre não sai. A mensagem não foi mandada."
-        limite_da_caixa: "A caixa tem um limite de horas para responder, configurado nas opções dela, e o cliente não escreve há mais tempo que isso. A mensagem não foi mandada."
+        fora_da_janela: "A janela de resposta do canal está fechada, e texto livre não sai. A mensagem não foi mandada, e a automação parou nesta conversa."
+        limite_da_caixa: "A caixa tem um limite de horas para responder, configurado nas opções dela, e o cliente não escreve há mais tempo que isso. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_fora_da_caixa: "A janela estava fechada, e a caixa desta conversa não tem o modelo escolhido. A mensagem não foi mandada."
         modelo_nao_aprovado: "A janela estava fechada, e o modelo escolhido não está aprovado na Meta nesta caixa. A mensagem não foi mandada."
         modelo_de_propaganda: "A janela estava fechada, e o modelo escolhido é de propaganda. A automação só manda modelo de utilidade. A mensagem não foi mandada."
