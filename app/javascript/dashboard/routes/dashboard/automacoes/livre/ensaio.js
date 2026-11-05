@@ -9,6 +9,13 @@ const AVISO = {
   faltou_valor: 'FALTOU_VALOR',
   texto_vazio: 'TEXTO_VAZIO',
   sem_responsavel: 'SEM_RESPONSAVEL',
+  caixa_sem_ninguem: 'CAIXA_SEM_NINGUEM',
+};
+
+// #2552: por que o aviso iria para quem atende a caixa.
+const RESERVA = {
+  sem_responsavel: 'IRIA_PARA_CAIXA',
+  responsavel_fora: 'IRIA_PARA_CAIXA_FORA',
 };
 
 // #2500 F7 — os passos de IA no ensaio: o que a IA faria e para onde iria,
@@ -55,7 +62,8 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     return { ...base, destaque: t(`${E}.JA_VALE`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
   // A reserva da caixa (#2552): no avisar e no resumo que sai pelo avisar.
-  const caixa = no.dados?.reserva ? t(`${E}.IRIA_PARA_CAIXA`) : null;
+  const reserva = RESERVA[no.dados?.reserva];
+  const caixa = reserva ? t(`${E}.${reserva}`) : null;
   if (FARIA_DA_IA[no.faria]) {
     const faria = FARIA_DA_IA[no.faria](no.dados || {}, t);
     return { ...base, destaque: caixa ? `${faria} ${caixa}` : faria };

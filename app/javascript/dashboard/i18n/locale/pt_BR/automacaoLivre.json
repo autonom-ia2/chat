@@ -462,6 +462,8 @@
       "SE_NENHUM": "Se nenhum se aplicar:",
       "NAO_SAIRIA": "Não sairia: a mensagem automática ainda não está ligada nesta conta.",
       "IRIA_PARA_CAIXA": "A conversa não tem responsável: o aviso iria para quem atende a caixa.",
+      "IRIA_PARA_CAIXA_FORA": "O responsável não poderia ser avisado nesta conversa: o aviso iria para quem atende a caixa.",
+      "CAIXA_SEM_NINGUEM": "Ninguém seria avisado: ninguém que atende a caixa enxerga esta conversa.",
       "SEM_RESPONSAVEL": "Ninguém seria avisado: a conversa não tem responsável.",
       "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
       "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",

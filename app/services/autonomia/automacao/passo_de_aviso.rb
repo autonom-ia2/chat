@@ -20,6 +20,12 @@ class Autonomia::Automacao::PassoDeAviso
 
   CAIXA = 'caixa'.freeze
 
+  # A reserva só vale junto do responsável (a Receita também barra), aqui e no ensaio.
+  def self.reserva?(para)
+    para = para.to_h
+    para['responsavel'] == true && para['se_nao_houver'] == CAIXA
+  end
+
   def self.sem_responsavel?(para, responsavel_id)
     para = para.to_h
     para['responsavel'] == true && para['se_nao_houver'].nil? && responsavel_id.nil? &&
@@ -56,6 +62,13 @@ class Autonomia::Automacao::PassoDeAviso
     Resultado.new(tipo: :pulado, motivo: motivo_sem_ninguem(reserva), dados: { 'fora' => fora }) if pessoas.empty?
   end
 
+  # Só lê, para o ensaio (#2498): com a reserva, o que o motor faria nesta conversa. nil quando o responsável seria
+  # avisado; senão o motivo do registro sem o prefixo (sem_responsavel, responsavel_fora) ou caixa_sem_ninguem.
+  def reserva_prevista
+    pessoas, _fora, reserva = destinatarios
+    pessoas.empty? ? 'caixa_sem_ninguem' : reserva
+  end
+
   private
 
   def para = @passo['para'].to_h
@@ -69,27 +82,35 @@ class Autonomia::Automacao::PassoDeAviso
 
   # Quem recebe, quem saiu (cada um com o motivo) e, quando a caixa entrou de reserva, por quê: sem_responsavel ou
   # responsavel_fora. Saem quem não é da conta, quem não enxerga a conversa e quem enxerga mas a menção não o avisaria
-  # (só administrador e membro da caixa recebem o aviso da menção).
+  # (só administrador e membro da caixa recebem o aviso da menção). Uma conta por passo: o "resumir" pergunta antes e
+  # depois da IA.
   def destinatarios
-    avisaveis = ::Autonomia::Automacao::Nota.avisaveis_ids(@conversa)
-    pessoas, fora = conferir(ids.compact.uniq, avisaveis)
-    reserva = motivo_da_reserva(fora)
-    return [pessoas, fora, nil] unless reserva
-
-    da_caixa, fora_da_caixa = conferir(@conversa.inbox.members.pluck(:id) - pessoas.map(&:id), avisaveis)
-    # A caixa sem ninguém avisável só vira motivo quando ninguém mais foi avisado (caixa_sem_ninguem).
-    [pessoas + da_caixa, fora + fora_da_caixa, (reserva if da_caixa.any? || pessoas.empty?)]
+    @destinatarios ||= begin
+      avisaveis = ::Autonomia::Automacao::Nota.avisaveis_ids(@conversa)
+      pedidos = ids.compact.uniq
+      pessoas, fora = conferir(pedidos, avisaveis)
+      reserva = motivo_da_reserva(fora)
+      if reserva
+        # Quem já foi conferido (avisado ou de fora) não passa de novo.
+        da_caixa, fora_da_caixa = conferir(@conversa.inbox.members.pluck(:id) - pedidos, avisaveis)
+        # A caixa sem ninguém avisável só vira motivo quando ninguém mais foi avisado (caixa_sem_ninguem).
+        [pessoas + da_caixa, fora + fora_da_caixa, (reserva if da_caixa.any? || pessoas.empty?)]
+      else
+        [pessoas, fora, nil]
+      end
+    end
   end
 
   def conferir(pedidos, avisaveis)
     da_conta = @conversa.account.users.where(id: pedidos).to_a
-    avaliadas = da_conta.map { |pessoa| [pessoa, motivo_de_fora(pessoa, avisaveis)] }
+    vinculos = @conversa.account.account_users.where(user_id: da_conta.map(&:id)).index_by(&:user_id)
+    avaliadas = da_conta.map { |pessoa| [pessoa, motivo_de_fora(pessoa, vinculos[pessoa.id], avisaveis)] }
     fora = avaliadas.filter_map { |pessoa, motivo| { 'id' => pessoa.id, 'motivo' => motivo } if motivo }
     [avaliadas.filter_map { |pessoa, motivo| pessoa unless motivo }, fora_da_conta(pedidos, da_conta) + fora]
   end
 
   def motivo_da_reserva(fora)
-    return unless para['responsavel'] == true && para['se_nao_houver'] == CAIXA
+    return unless self.class.reserva?(para)
     return 'sem_responsavel' if @conversa.assignee_id.nil?
 
     'responsavel_fora' if fora.any? { |item| item['id'] == @conversa.assignee_id }
@@ -99,8 +120,8 @@ class Autonomia::Automacao::PassoDeAviso
     (pedidos - da_conta.map(&:id)).map { |id| { 'id' => id, 'motivo' => 'fora_da_conta' } }
   end
 
-  def motivo_de_fora(pessoa, avisaveis)
-    return 'nao_ve_a_conversa' unless ::Autonomia::Automacao::Acesso.alcanca?(pessoa, @conversa)
+  def motivo_de_fora(pessoa, vinculo, avisaveis)
+    return 'nao_ve_a_conversa' unless ::Autonomia::Automacao::Acesso.alcanca?(pessoa, @conversa, account_user: vinculo)
 
     'nao_e_da_caixa' unless avisaveis.include?(pessoa.id)
   end

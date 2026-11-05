@@ -417,6 +417,20 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
         expect(dados_do(execucao)['fora']).to include({ 'id' => restrita.id, 'motivo' => 'nao_ve_a_conversa' })
       end
 
+      # Quem já foi conferido na lista não passa de novo pela caixa: o registro o mostra uma vez.
+      it 'pessoa pedida que não enxerga a conversa e é da caixa sai uma vez só', :aggregate_failures do
+        conversa.update!(assignee: nil)
+        restrita = create(:user, account: account, role: :agent, name: 'Fabi')
+        create(:inbox_member, user: restrita, inbox: inbox)
+        funcao = create(:custom_role, account: account, permissions: ['conversation_participating_manage'])
+        restrita.account_users.find_by(account: account).update!(custom_role: funcao)
+        passo = avisar_passo('p1', reserva.merge('pessoas' => [restrita.id]), 'Oi')
+        execucao = comecar_e_rodar(automacao_ligada(account, admin, [passo]))
+
+        expect(dados_do(execucao)['fora'].count { |item| item['id'] == restrita.id }).to eq(1)
+        expect(registros(execucao)).to eq([%w[p1 ok caixa_sem_responsavel]])
+      end
+
       it 'caixa sem ninguém avisável: pula com o motivo', :aggregate_failures do
         conversa.update!(assignee: nil)
         InboxMember.where(inbox: inbox).delete_all

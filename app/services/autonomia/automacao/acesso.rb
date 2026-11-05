@@ -34,9 +34,9 @@ class Autonomia::Automacao::Acesso
     ::Crm::CardPolicy.new(contexto, alvo).show? && (conversa.nil? || ConversationPolicy.new(contexto, conversa).show?)
   end
 
-  # A mesma pergunta para outra pessoa da conta (quem o passo "avisar" menciona, F4).
-  def self.alcanca?(usuario, conversa)
-    account_user = conversa.account.account_users.find_by(user_id: usuario.id)
+  # A mesma pergunta para outra pessoa da conta (quem o passo "avisar" menciona, F4). Quem confere várias pessoas passa
+  # o vínculo já carregado.
+  def self.alcanca?(usuario, conversa, account_user: conversa.account.account_users.find_by(user_id: usuario.id))
     account_user.present? &&
       ConversationPolicy.new({ user: usuario, account: conversa.account, account_user: account_user }, conversa).show?
   end

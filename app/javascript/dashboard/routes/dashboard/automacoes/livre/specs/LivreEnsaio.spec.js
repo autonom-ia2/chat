@@ -201,23 +201,40 @@ describe('linhasDoEnsaio', () => {
     expect(linha.balao).toBeUndefined();
   });
 
-  // #2552: sem responsável, com a reserva, o aviso iria para a caixa.
-  it('o aviso com a reserva mostra o texto e diz que iria para a caixa', () => {
+  // #2552: com a reserva, o aviso diz por que iria para a caixa.
+  it.each([
+    ['sem_responsavel', 'AUTOMACAO_LIVRE.ENSAIO.IRIA_PARA_CAIXA'],
+    ['responsavel_fora', 'AUTOMACAO_LIVRE.ENSAIO.IRIA_PARA_CAIXA_FORA'],
+  ])(
+    'o aviso com a reserva (%s) mostra o texto e diz que iria para a caixa',
+    (reserva, destaque) => {
+      const [linha] = linhasDoEnsaio(
+        [
+          {
+            id: 'a1',
+            tipo: 'avisar',
+            faria: 'avisar',
+            dados: { texto: 'Chegou reclamação', reserva },
+          },
+        ],
+        fraseDe,
+        t
+      );
+
+      expect(linha.balao).toBe('Chegou reclamação');
+      expect(linha.destaque).toBe(destaque);
+    }
+  );
+
+  it('a caixa sem ninguém que pudesse ser avisado diz que ninguém seria avisado', () => {
     const [linha] = linhasDoEnsaio(
-      [
-        {
-          id: 'a1',
-          tipo: 'avisar',
-          faria: 'avisar',
-          dados: { texto: 'Chegou reclamação', reserva: 'caixa' },
-        },
-      ],
+      [{ id: 'a1', tipo: 'avisar', faria: 'caixa_sem_ninguem' }],
       fraseDe,
       t
     );
 
-    expect(linha.balao).toBe('Chegou reclamação');
-    expect(linha.destaque).toBe('AUTOMACAO_LIVRE.ENSAIO.IRIA_PARA_CAIXA');
+    expect(linha.aviso).toBe('AUTOMACAO_LIVRE.ENSAIO.CAIXA_SEM_NINGUEM');
+    expect(linha.balao).toBeUndefined();
   });
 
   it('o "decidir" rotula cada caminho e o "nenhum"', () => {
@@ -297,7 +314,7 @@ describe('linhasDoEnsaio', () => {
           id: 'i1',
           tipo: 'resumir',
           faria: 'ia_resumir',
-          dados: { destino: 'avisar', reserva: 'caixa' },
+          dados: { destino: 'avisar', reserva: 'sem_responsavel' },
         },
       ],
       fraseDe,

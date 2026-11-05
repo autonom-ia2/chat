@@ -60,6 +60,7 @@ class Autonomia::Automacao::Ensaio
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
+    @conversa = conversa
     valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
@@ -129,21 +130,24 @@ class Autonomia::Automacao::Ensaio
     return no(passo, 'texto_vazio') if pronto.strip.empty?
     return no(passo, 'sem_responsavel') if sem_responsavel?(passo, valores)
 
-    no(passo, passo['tipo'], { texto: pronto, reserva: reserva_da_caixa(passo, valores) }.compact)
+    reserva = reserva_da_caixa(passo)
+    return no(passo, reserva) if reserva == 'caixa_sem_ninguem'
+
+    no(passo, passo['tipo'], { texto: pronto, reserva: reserva }.compact)
   end
 
-  # O "avisar" só para o responsável, numa conversa sem responsável: ninguém seria avisado (#2523). Com a reserva da
-  # caixa (#2552), iria para quem atende a caixa. O responsável que existe mas não pode ser avisado só o motor sabe.
+  # O "avisar" só para o responsável, numa conversa sem responsável: ninguém seria avisado (#2523).
   def sem_responsavel?(passo, valores)
     passo['tipo'] == 'avisar' &&
       ::Autonomia::Automacao::PassoDeAviso.sem_responsavel?(passo['para'], valores.ler('conversa.responsavel_id'))
   end
 
-  def reserva_da_caixa(passo, valores)
-    para = passo['para'].to_h
-    return unless passo['tipo'] == 'avisar' && para['se_nao_houver'] == ::Autonomia::Automacao::PassoDeAviso::CAIXA
+  # Com a reserva da caixa (#2552), a mesma conta do motor, que só lê: por que iria para a caixa (sem_responsavel,
+  # responsavel_fora), caixa_sem_ninguem, ou nil quando o responsável seria avisado.
+  def reserva_da_caixa(passo)
+    return unless passo['tipo'] == 'avisar' && ::Autonomia::Automacao::PassoDeAviso.reserva?(passo['para'])
 
-    'caixa' if valores.ler('conversa.responsavel_id').nil?
+    ::Autonomia::Automacao::PassoDeAviso.new(execucao: nil, passo: passo, alvo: @conversa).reserva_prevista
   end
 
   def se(passo, valores)
@@ -181,7 +185,10 @@ class Autonomia::Automacao::Ensaio
     aviso = aviso_do_resumo(passo)
     return no(passo, 'sem_responsavel') if aviso && sem_responsavel?(aviso, valores)
 
-    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(reserva: aviso && reserva_da_caixa(aviso, valores)).compact)
+    reserva = aviso && reserva_da_caixa(aviso)
+    return no(passo, reserva) if reserva == 'caixa_sem_ninguem'
+
+    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo).merge(reserva: reserva).compact)
   end
 
   # O "avisar" dentro do resumir, como o motor o monta (PassoDeResumir#passo_do_aviso).

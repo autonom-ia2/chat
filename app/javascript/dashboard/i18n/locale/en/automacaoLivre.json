@@ -462,6 +462,8 @@
       "SE_NENHUM": "If none applies:",
       "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
       "IRIA_PARA_CAIXA": "The conversation has no assignee: the alert would go to whoever handles the inbox.",
+      "IRIA_PARA_CAIXA_FORA": "The assignee could not be alerted in this conversation: the alert would go to whoever handles the inbox.",
+      "CAIXA_SEM_NINGUEM": "Nobody would be alerted: nobody who handles the inbox can see this conversation.",
       "SEM_RESPONSAVEL": "Nobody would be alerted: the conversation has no assignee.",
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
       "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
