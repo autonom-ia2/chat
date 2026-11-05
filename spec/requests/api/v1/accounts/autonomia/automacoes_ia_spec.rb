@@ -48,6 +48,13 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
                                  headers: quem.create_new_auth_token, as: :json
   end
 
+  def medir(&)
+    consultas = 0
+    contar = ->(*, dados) { consultas += 1 unless dados[:name] == 'SCHEMA' || dados[:cached] }
+    tempo = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { Benchmark.realtime(&) }
+    { consultas: consultas, tempo: tempo }
+  end
+
   describe 'POST testar_passo' do
     before { openai_devolve({ caminho: 'sinistro', motivo: 'O cliente bateu o carro.' }) }
 
@@ -196,17 +203,18 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
     end
 
     # O Rack::Timeout corta aos 15 s e a IA tem 12. O resto do pedido é preso por uma conta fixa de consultas, não pelo
-    # relógio (que oscila com a máquina): hoje são 23. O tempo largo fica só de alarme.
+    # relógio (que oscila com a máquina); o tempo largo fica só de alarme. O 1º pedido é o mais pesado: varre as 50
+    # conversas recentes do ensaio, e aqui nenhuma entra. Hoje: 44 no 1º e 23 no seguinte (o número não cresce com as conversas).
     it 'fora a chamada à IA, o pedido faz poucas consultas e não se aproxima do corte', :aggregate_failures do
-      testar
-      consultas = 0
-      contar = ->(*, dados) { consultas += 1 unless dados[:name] == 'SCHEMA' || dados[:cached] }
-      tempo = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
-        Benchmark.realtime { testar(conversa_id: conversa.display_id) }
-      end
+      49.times { create(:conversation, account: account, inbox: inbox) }
+      resolvida = { campo: { '$valor': 'conversa.status' }, op: 'igual', valor: 'resolved' }
 
-      expect(consultas).to be <= 30
-      expect(tempo).to be < 5.0
+      primeiro = medir { testar(corpo: receita.merge(gatilho: { tipo: 'conversa.criada', filtros: [resolvida] })) }
+      seguinte = medir { testar(conversa_id: conversa.display_id) }
+
+      expect(primeiro[:consultas]).to be <= 55
+      expect(seguinte[:consultas]).to be <= 30
+      expect([primeiro[:tempo], seguinte[:tempo]]).to all(be < 5.0)
     end
 
     it 'nenhuma conversa entraria: testa nas recentes e avisa' do
