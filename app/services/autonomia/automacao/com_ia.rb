@@ -26,7 +26,15 @@ module Autonomia::Automacao::ComIa
   # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem").
   def leitura(fuso: nil)
     leituras = Array(@passo['le']).presence || ::Autonomia::Decisor::LEITURAS_PADRAO
-    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras, fuso: fuso)
+    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras, fuso: fuso, valor_do_card: ve_o_valor_do_card?)
+  end
+
+  # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores. Quem saiu da
+  # conta não lê.
+  def ve_o_valor_do_card?
+    quem = @execucao.automacao.ligada_por
+    na_conta = quem && @conversa.account.account_users.find_by(user_id: quem.id)
+    ::Autonomia::Automacao::Valores.pode_ler?('card.valor', na_conta)
   end
 
   # O fuso que a tela grava na conta (#954, o mesmo do Guia); sem ele, o padrão da plataforma (Crm::Timezone::Resolver).

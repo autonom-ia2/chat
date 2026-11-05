@@ -169,4 +169,33 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
       expect(conversa.messages.where('content LIKE ? OR content LIKE ?', '%2500%', 'Valor:%')).to be_empty
     end
   end
+
+  # A leitura "card" do Decisores::Estado leva o valor. O esquema da receita ainda não deixa o passo de IA ler o card, mas
+  # o ComIa já passa a regra de quem ligou: se a leitura entrar na lista, o valor não vaza por ali.
+  describe 'leitura do card no passo de IA' do
+    let(:dono) { pessoa_com(base + %w[sales_value_view]) }
+
+    def card_lido(definicao)
+      card
+      execucao = Autonomia::Automacao::Execucao.find_or_create_by!(
+        account: account, automacao: definicao, versao: definicao.versao_ativa, alvo: card, chave_gatilho: 'card.ganho'
+      )
+      passo = { 'id' => 'r1', 'tipo' => 'resumir', 'le' => %w[card], 'linhas' => 2, 'destino' => 'nota' }
+      Autonomia::Automacao::PassoDeResumir.new(execucao: execucao, passo: passo, alvo: card, acesso: nil).send(:leitura).conversa[:card]
+    end
+
+    it 'quem ligou tem a chave: o card vai com o valor' do
+      expect(card_lido(automacao_ligada(account, dono, [caro], gatilho: gatilho))).to include(value: '2500.0 BRL')
+    end
+
+    it 'quem ligou perdeu a chave ou saiu da conta: o card vai sem o valor', :aggregate_failures do
+      definicao = automacao_ligada(account, dono, [caro], gatilho: gatilho)
+      AccountUser.find_by(account: account, user: dono).custom_role.update!(permissions: base)
+      lido = card_lido(definicao)
+      expect([lido[:title], lido.key?(:value)]).to eq(['Pedido', false])
+
+      AccountUser.find_by(account: account, user: dono).destroy!
+      expect(card_lido(definicao)).not_to have_key(:value)
+    end
+  end
 end
