@@ -206,13 +206,13 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         end
       end
 
-      it 'variável que só tem quebra, tab e espaço: para com faltou_valor (janela fechada, #2573)', :aggregate_failures do
+      it 'variável que só tem quebra, tab e espaço: para com modelo_faltou_valor (#2573)', :aggregate_failures do
         contato.update!(name: " \n\t ")
         recebida(conversa, 30.hours.ago)
         execucao = rodar(conversa)
 
         expect(mandada(conversa)).to be_nil
-        expect(registros(execucao)).to eq([%w[p1 falhou faltou_valor]])
+        expect(registros(execucao)).to eq([%w[p1 falhou modelo_faltou_valor]])
         expect(execucao.reload.estado).to eq('parada')
         expect(pedidos).to be_empty
       end
@@ -234,13 +234,13 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         expect(registros(execucao)).to eq([%w[p1 pulado contato_nao_recebe]])
       end
 
-      it 'valor vazio numa variável: para com faltou_valor (janela fechada, #2573)', :aggregate_failures do
+      it 'valor vazio numa variável: para com modelo_faltou_valor (#2573)', :aggregate_failures do
         contato.update!(name: '')
         recebida(conversa, 30.hours.ago)
         execucao = rodar(conversa)
 
         expect(mandada(conversa)).to be_nil
-        expect(registros(execucao)).to eq([%w[p1 falhou faltou_valor]])
+        expect(registros(execucao)).to eq([%w[p1 falhou modelo_faltou_valor]])
         expect(execucao.reload.estado).to eq('parada')
       end
 

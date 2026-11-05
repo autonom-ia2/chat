@@ -13,7 +13,7 @@
 #   modelo, ou fora do número oficial, o motivo continua `fora_da_janela`;
 # - limite de horas que o dono pôs na caixa do canal API (`agent_reply_time_window`), vencido: `limite_da_caixa`. Sem
 #   esse limite, o canal API responde a qualquer hora.
-# Com a janela fechada, o modelo que não pôde sair (fora da caixa, não aprovado, de propaganda, variável vazia) também
+# Com a janela fechada, o modelo que não pôde sair (fora da caixa, não aprovado, de propaganda, mudou, variável vazia) também
 # para: nada saiu ao cliente. O resultado leva `janela: fechada`, que é o que o executor lê.
 # O robô do outro lado (AntiLaco) devolve :laco, e o executor para a execução nesta conversa. Sem teto de uso.
 class Autonomia::Automacao::PassoDeMensagem
