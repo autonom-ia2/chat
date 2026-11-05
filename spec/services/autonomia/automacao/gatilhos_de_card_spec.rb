@@ -36,7 +36,7 @@ RSpec.describe 'Automação livre: gatilhos de card', :automacao_motor do # rubo
 
   # Um job de cada vez, na ordem da fila: o job enfileirado dentro de outro só roda depois dele.
   def drenar
-    drenados = [EventDispatcherJob, Autonomia::Automacao::AvancarJob]
+    drenados = [EventDispatcherJob, Autonomia::Automacao::EventoDoCardJob, Autonomia::Automacao::AvancarJob]
     40.times do
       job = enqueued_jobs.find { |item| drenados.include?(item[:job]) }
       return unless job
@@ -250,6 +250,7 @@ RSpec.describe 'Automação livre: gatilhos de card', :automacao_motor do # rubo
 
       mover(card, proposta)
       perform_enqueued_jobs(only: EventDispatcherJob)
+      perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob)
 
       fora = [Webhooks::CrmDeliveryJob, WebhookJob, Crm::MetaCapi::DispatchJob, Crm::GoogleOffline::RecordJob]
       expect(enqueued_jobs.map { |job| job[:job] } & fora).to be_empty
@@ -262,6 +263,53 @@ RSpec.describe 'Automação livre: gatilhos de card', :automacao_motor do # rubo
       mover(card, proposta)
 
       expect(enqueued_jobs.map { |job| job[:job] }).not_to include(EventDispatcherJob)
+    end
+
+    # O revisor do #2554: a etapa do evento filtra na mesma consulta. Automação de outra etapa não faz despachar.
+    it 'automação só de outra etapa não despacha' do
+      de_card('card.entrou_na_etapa', etapa_id: fechamento.id)
+
+      mover(card, proposta)
+
+      expect(enqueued_jobs.map { |job| job[:job] }).not_to include(EventDispatcherJob)
+    end
+
+    # Roda no after_commit do card: erro no gate não quebra quem moveu, e o evento sai assim mesmo (fail-open).
+    it 'erro no gate despacha assim mesmo e loga só a classe', :aggregate_failures do
+      de_card('card.entrou_na_etapa', etapa_id: proposta.id)
+      allow(Autonomia::Automacao::Definicao).to receive(:joins).and_raise(ActiveRecord::StatementInvalid, 'valor do cliente')
+      allow(Rails.logger).to receive(:error)
+
+      expect { mover(card, proposta) }.not_to raise_error
+      expect(enqueued_jobs.map { |job| job[:job] }).to include(EventDispatcherJob)
+      expect(Rails.logger).to have_received(:error)
+        .with(satisfy { |linha| linha.include?('ActiveRecord::StatementInvalid') && linha.exclude?('valor do cliente') })
+    end
+  end
+
+  # O revisor do #2554: o listener só enfileira; o erro da automação sobe no EventoDoCardJob, que tenta de novo sem
+  # repetir os outros listeners do evento (webhook, Meta, Google).
+  describe 'o erro na automação do card' do
+    it 'sobe no EventoDoCardJob, não no despacho do evento', :aggregate_failures do
+      de_card('card.entrou_na_etapa', etapa_id: proposta.id)
+      allow(Autonomia::Automacao::Partida).to receive(:new).and_raise(ActiveRecord::Deadlocked)
+
+      mover(card, proposta)
+      expect { perform_enqueued_jobs(only: EventDispatcherJob) }.not_to raise_error
+      expect(Autonomia::Automacao::EventoDoCardJob).to have_been_enqueued
+
+      job = enqueued_jobs.find { |item| item[:job] == Autonomia::Automacao::EventoDoCardJob }
+      expect { Autonomia::Automacao::EventoDoCardJob.perform_now(*ActiveJob::Arguments.deserialize(job[:args])) }
+        .to raise_error(ActiveRecord::Deadlocked)
+    end
+
+    it 'card apagado antes do job não é erro' do
+      de_card('card.entrou_na_etapa', etapa_id: proposta.id)
+      mover(card, proposta)
+      perform_enqueued_jobs(only: EventDispatcherJob)
+      card.destroy!
+
+      expect { perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob) }.not_to raise_error
     end
   end
 end

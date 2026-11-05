@@ -33,7 +33,7 @@ class Autonomia::Automacao::Partida
     return pausar(acesso.motivo) if acesso.motivo
     return pular('fora_do_alcance') unless acesso.alcanca?(@alvo)
     return pular('fora_do_filtro') unless no_filtro?
-    return pular('ja_aberta') if aberta?
+    return ja_aberta if aberta?
 
     comecar
   end
@@ -50,7 +50,24 @@ class Autonomia::Automacao::Partida
   # A mensagem nova numa conversa que já tem a execução aberta é o caso comum: a consulta evita a cadeia e o INSERT
   # que o índice único recusaria. O índice continua sendo a garantia (corrida entre dois eventos).
   def aberta?
-    ::Autonomia::Automacao::Execucao.abertas.exists?(automacao_id: @definicao.id, alvo: @alvo, chave_gatilho: @chave_gatilho)
+    execucao_aberta.present?
+  end
+
+  def execucao_aberta
+    @execucao_aberta ||= ::Autonomia::Automacao::Execucao.abertas.find_by(automacao_id: @definicao.id, alvo: @alvo,
+                                                                          chave_gatilho: @chave_gatilho)
+  end
+
+  # O gatilho aconteceu de novo com a execução ainda rodando (esperando, por exemplo): não abre outra, e o histórico da
+  # que está aberta diz isso ao dono. Uma linha por execução: a mensagem nova numa conversa com a execução aberta é o
+  # caso comum, e não pode encher o histórico.
+  def ja_aberta
+    execucao = execucao_aberta
+    return if ::Autonomia::Automacao::Registro.exists?(execucao: execucao, resultado: 'pulado', motivo: 'ja_aberta')
+
+    ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @definicao, execucao: execucao, passo: 'inicio',
+                                             resultado: 'pulado', motivo: 'ja_aberta')
+    nil
   end
 
   def no_filtro?
