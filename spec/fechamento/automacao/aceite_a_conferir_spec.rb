@@ -91,6 +91,33 @@ RSpec.describe 'Fechamento #2414 · itens a conferir', :automacao_motor, :fecham
     end
   end
 
+  # F4.4: "Fora da janela de 24 h do WhatsApp, o passo usa o caminho já validado ou para com o motivo; nunca falha
+  # calado." Decisão do Rodrigo (#2573): fora da janela, a automação PARA nesse ponto, sem seguir sem mandar.
+  describe 'F4.4 · fora da janela de 24 h, a automação para' do
+    let(:canal) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let(:account) { canal.account.tap { |conta| conta.update!(locale: 'pt_BR') } }
+    let(:contato) { create(:contact, account: account, name: 'Paulo', phone_number: '+5511900000001') }
+    let(:contact_inbox) { create(:contact_inbox, inbox: canal.inbox, contact: contato, source_id: '5511900000001') }
+    let(:conversa) { create(:conversation, account: account, inbox: canal.inbox, contact: contato, contact_inbox: contact_inbox) }
+
+    it 'a mensagem não sai, a execução fecha parada com o motivo, e o passo seguinte não roda', :aggregate_failures do
+      create(:message, conversation: conversa, account: account, inbox: canal.inbox, message_type: :incoming, content: 'oi',
+                       created_at: 30.hours.ago)
+      receita = { gatilho: { tipo: 'conversa.resolvida' },
+                  passos: [mensagem_passo('renovacao', 'Seu seguro vence este mês.'), prioridade_passo('depois')] }
+      automacao = montar_automacao(dona, account, nome: 'Renovação', receita: receita)
+      ligar_automacao(dona, account, automacao)
+
+      execucao = rodar(automacao)
+
+      pending 'F4.4 decidida (#2573): fora da janela a execução para; hoje o passo pula e a execução segue'
+      expect(conversa.messages.outgoing.where(private: false)).to be_empty
+      expect(execucao.reload.estado).to eq('parada')
+      expect(historico_de(automacao).last.values_at(0, 2)).to eq(%w[renovacao fora_da_janela])
+      expect(conversa.reload.priority).to be_nil
+    end
+  end
+
   # F6.7: "Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte, mesmo com 'Mover
   # automaticamente' ligado." As duas metades têm spec (spec/services/crm/ai/movimento_da_automacao_livre_spec.rb e
   # evaluator_movimento_da_automacao_spec.rb); aqui as duas juntas: o motor move e a IA do funil avalia em seguida.
