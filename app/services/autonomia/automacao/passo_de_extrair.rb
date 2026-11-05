@@ -26,6 +26,11 @@ class Autonomia::Automacao::PassoDeExtrair
 
   def self.fala_com_gente?(_passo) = false
 
+  # O ensaio (#2498) só mostra o que procuraria e onde gravaria: nenhuma IA é chamada.
+  def self.ensaiar(passo)
+    { campos: Array(passo['campos']).map { |campo| { chave: campo['chave'], destino: campo['destino'] } } }
+  end
+
   def executar
     negado = impedido
     return negado if negado

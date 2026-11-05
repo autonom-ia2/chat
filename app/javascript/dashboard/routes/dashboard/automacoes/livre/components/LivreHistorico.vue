@@ -62,10 +62,19 @@ const hora = iso =>
     timeStyle: 'short',
   });
 
+// O custo de um passo de IA fica na casa de US$ 0,0001: dois algarismos
+// significativos, e abaixo do mínimo "menos de", nunca "US$ 0".
+const MENOR_CUSTO = 0.0001;
 const dinheiro = valor =>
   new Intl.NumberFormat(locale.value.replace('_', '-'), {
-    maximumFractionDigits: 4,
+    maximumSignificantDigits: 2,
   }).format(valor);
+const custoDaIa = valor =>
+  valor < MENOR_CUSTO
+    ? t('AUTOMACAO_LIVRE.HISTORICO.IA_MENOS_DE', {
+        valor: dinheiro(MENOR_CUSTO),
+      })
+    : t('AUTOMACAO_LIVRE.HISTORICO.IA', { valor: dinheiro(valor) });
 
 const fraseDe = (execucao, passo) => {
   if (passo.passo === 'inicio') return t('AUTOMACAO_LIVRE.HISTORICO.INICIO');
@@ -78,8 +87,20 @@ const fraseDe = (execucao, passo) => {
   return chave ? t(`AUTOMACAO_LIVRE.HISTORICO.${chave}`, { frase }) : frase;
 };
 
-const ramoDe = ramo =>
-  RAMO[ramo] ? t(`AUTOMACAO_LIVRE.RAMOS.${RAMO[ramo]}`) : ramo;
+// O caminho do "decidir" pelo nome que tinha na versão que rodou (a pessoa
+// pode ter renomeado depois); sem achar, a chave.
+const nomeDoCaminho = (execucao, passo) => {
+  const receita = versoes.value[execucao.versao_id]?.receita;
+  const decidir = acharPasso(receita?.passos || [], passo.passo);
+  return (decidir?.caminhos || []).find(
+    caminho => caminho.chave === passo.dados.ramo
+  )?.nome;
+};
+const ramoDe = (execucao, passo) => {
+  const { ramo } = passo.dados;
+  if (RAMO[ramo]) return t(`AUTOMACAO_LIVRE.RAMOS.${RAMO[ramo]}`);
+  return nomeDoCaminho(execucao, passo) || ramo;
+};
 
 const linkDa = (execucao, mensagemId) => {
   const url = frontendURL(
@@ -264,7 +285,7 @@ onMounted(() => carregar());
                   >
                     {{
                       $t('AUTOMACAO_LIVRE.HISTORICO.SEGUIU_POR', {
-                        ramo: ramoDe(passo.dados.ramo),
+                        ramo: ramoDe(execucao, passo),
                       })
                     }}
                   </span>
@@ -297,11 +318,7 @@ onMounted(() => carregar());
                     data-ia
                     class="text-xs text-n-slate-10"
                   >
-                    {{
-                      $t('AUTOMACAO_LIVRE.HISTORICO.IA', {
-                        valor: dinheiro(passo.dados.ia.custo_usd),
-                      })
-                    }}
+                    {{ custoDaIa(passo.dados.ia.custo_usd) }}
                   </span>
                   <a
                     v-if="

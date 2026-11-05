@@ -20,6 +20,9 @@ class Autonomia::Automacao::PassoDeResumir
 
   def self.fala_com_gente?(passo) = passo['destino'].is_a?(Hash)
 
+  # O ensaio (#2498) só diz para onde o resumo iria: nenhuma IA é chamada.
+  def self.ensaiar(passo) = { destino: fala_com_gente?(passo) ? 'avisar' : 'nota' }
+
   def executar
     negado = impedido
     return negado if negado

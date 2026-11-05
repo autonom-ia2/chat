@@ -292,9 +292,12 @@
       "PESSOAS": "1 pessoa | {n} pessoas",
       "FALTA_TEXTO": "falta escrever o texto",
       "DECIDIR": "A IA decide: “{pergunta}” ({n} caminhos)",
+      "DECIDIR_SEM_PERGUNTA": "A IA decide o caminho: falta escrever a pergunta ({n} caminhos)",
       "EXTRAIR": "A IA procura na conversa: {lista}",
       "ESCREVER_MENSAGEM": "A IA escreve e manda ao cliente: “{instrucao}”",
+      "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "A IA escreve e manda ao cliente: falta escrever a instrução",
       "ESCREVER_SUGESTAO": "A IA escreve uma sugestão para a equipe: “{instrucao}”",
+      "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "A IA escreve uma sugestão para a equipe: falta escrever a instrução",
       "RESUMIR_NOTA": "A IA resume a conversa numa nota",
       "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}"
     },
@@ -420,6 +423,7 @@
       "ESPERA_ATE": "Espera até {quando}",
       "TENTATIVA": "Tentativa {n}",
       "IA": "IA: US$ {valor}",
+      "IA_MENOS_DE": "IA: menos de US$ {valor}",
       "SEMANA": {
         "NADA": "Ainda não rodou esta semana",
         "RODOU": "Rodou 1 vez esta semana | Rodou {n} vezes esta semana",
@@ -458,7 +462,19 @@
       "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
       "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",
       "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar.",
-      "OPCAO": "{nome} · #{n}"
+      "OPCAO": "{nome} · #{n}",
+      "FARIA": {
+        "IA_EXTRAIR": "Gravaria: {lista}.",
+        "IA_ESCREVER_MENSAGEM": "Sairia para o cliente.",
+        "IA_ESCREVER_SUGESTAO": "Ficaria como sugestão para a equipe revisar e mandar.",
+        "IA_RESUMIR_NOTA": "Ficaria numa nota privada.",
+        "IA_RESUMIR_AVISAR": "Avisaria a equipe.",
+        "ONDE": {
+          "CONVERSA": "{campo}, na conversa",
+          "CONTATO": "{campo}, no contato",
+          "EMPRESA": "{campo}, na empresa"
+        }
+      }
     },
     "RECEITAS": {
       "COMO_COMECAR": "Como você quer começar?",
