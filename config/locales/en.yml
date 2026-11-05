@@ -1157,6 +1157,10 @@ en:
     policy_actor: 'Automation System via %{policy_name}'
   automation:
     system_name: 'Automation System'
+    # #2568 P7: who acts when an Automação livre changes the conversation.
+    livre:
+      com_quem_ligou: 'Automation «%{nome}» · turned on by %{user_name}'
+      sem_quem_ligou: 'Automation «%{nome}»'
   crm:
     # #2096: the card kept without personal data after its contact was deleted (LGPD), and its reminders and meetings.
     cards:

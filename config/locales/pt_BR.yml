@@ -646,6 +646,10 @@ pt_BR:
     policy_actor: 'Sistema de Automação via %{policy_name}'
   automation:
     system_name: 'Sistema de Automação'
+    # #2568 P7: quem age quando uma Automação livre muda a conversa.
+    livre:
+      com_quem_ligou: 'Automação «%{nome}» · ligada por %{user_name}'
+      sem_quem_ligou: 'Automação «%{nome}»'
   crm:
     # #2096: o card mantido sem dado pessoal depois que o contato foi excluído (LGPD), e os retornos e reuniões dele.
     cards:
