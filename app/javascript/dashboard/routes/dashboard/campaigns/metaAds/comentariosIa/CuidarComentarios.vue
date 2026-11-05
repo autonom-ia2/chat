@@ -37,6 +37,8 @@ const props = defineProps({
   inboxPath: { type: String, default: '' },
   // No anúncio (B2), a caixa vem do servidor (Painel `inbox_id`): a página diz como vira endereço.
   inboxPathOf: { type: Function, default: null },
+  // #2520: o "Ver no post" só quando a página tem para onde levar (CuidarLigado).
+  canReply: { type: Boolean, default: true },
 });
 
 // 'reply': "Responder" no cuidado ligado, que leva aos comentários do post ou do anúncio (#2479: mesmo quando o
@@ -341,6 +343,7 @@ const openInbox = path => {
         :started="started"
         :can-manage="canManage"
         :busy="salvando"
+        :can-reply="canReply"
         @pause="pause"
         @resume="resume"
         @reply="emit('reply')"

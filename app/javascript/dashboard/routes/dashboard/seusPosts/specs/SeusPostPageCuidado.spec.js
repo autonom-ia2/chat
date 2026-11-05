@@ -51,7 +51,12 @@ const route = reactive({
 });
 vi.mock('vue-router', () => ({ useRoute: () => route }));
 
-const TODAS = ['seus_posts_comentarios', 'meta_ads_comentarios_ia'];
+// #2520: o cuidado segue a régua do motor: a flag dele e a dos comentários da rede do perfil.
+const TODAS = [
+  'seus_posts_comentarios',
+  'meta_ads_comentarios_ia',
+  'meta_ads_comentarios_instagram',
+];
 
 const comPost = ({ network = 'instagram', canManage = true } = {}) =>
   SeusPostsAPI.getPost.mockResolvedValue({
@@ -150,6 +155,18 @@ describe('Seus posts: o cuidado no post (#2212)', () => {
     expect(wrapper.find('[data-seus-posts-cuidado-heroi]').exists()).toBe(
       false
     );
+  });
+
+  it('sem a flag dos comentários da rede do perfil: não lê o cuidado (#2520)', async () => {
+    flags.value = [
+      'seus_posts_comentarios',
+      'meta_ads_comentarios_ia',
+      'meta_ads_comentarios_facebook',
+    ];
+    const wrapper = await montar();
+
+    expect(ComentariosIaAPI.getCuidado).not.toHaveBeenCalled();
+    expect(bloco(wrapper).exists()).toBe(false);
   });
 
   it('pronto: lê o resumo do post do perfil e diz o que tem, com o botão de cuidar', async () => {

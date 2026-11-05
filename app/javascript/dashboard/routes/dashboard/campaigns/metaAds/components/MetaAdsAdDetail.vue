@@ -367,15 +367,16 @@ const gestao = ref(null);
 // ao vivo agora, ou o gasto, que só vem de anúncio sincronizado por uma conexão (sem login, #1960, ele é nil). A
 // gestão sozinha não basta: uma falha passageira na leitura dela tiraria os comentários de um anúncio com números. O
 // gasto sozinho também não: anúncio que nunca rodou, ou parou antes do período, não tem número nenhum (#2335).
+// #2520: a flag da gestão não esconde os comentários (régua única: a dos comentários da rede). Sem a gestão não há a
+// leitura ao vivo, e o sinal fica só o gasto: o anúncio sem número no período fica sem os comentários aqui.
 const showComments = computed(
   () =>
-    gestaoOn.value &&
     commentTabs.value.length > 0 &&
     Boolean(gestao.value || (ad.value && !withoutSpend.value))
 );
 
 // IA cuida dos comentários (#2212, B2, flag meta_ads_comentarios_ia): a entrada fica onde os comentários ficam, e só
-// com eles (showComments já pede a gestão e a flag dos comentários de ao menos uma rede, como o servidor).
+// com eles (showComments já pede a flag dos comentários de ao menos uma rede, como o servidor).
 const showCare = computed(
   () =>
     showComments.value &&

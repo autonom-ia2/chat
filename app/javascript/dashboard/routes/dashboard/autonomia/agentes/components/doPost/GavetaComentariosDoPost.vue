@@ -12,8 +12,8 @@ import { relativeTime } from 'dashboard/routes/dashboard/campaigns/metaAds/metaA
 const props = defineProps({
   detalhe: { type: Object, required: true },
   grupo: { type: String, required: true },
-  // A tela com todos os comentários do post ou do anúncio, para responder.
-  rotaDoAlvo: { type: Object, required: true },
+  // A tela com todos os comentários do post ou do anúncio, para responder. Nula sem o post por dentro (#2520).
+  rotaDoAlvo: { type: Object, default: null },
 });
 
 const emit = defineEmits(['fechar', 'update:grupo']);
@@ -169,6 +169,7 @@ const alvo = computed(() =>
         </li>
       </ol>
       <router-link
+        v-if="rotaDoAlvo"
         data-ver-todos
         :to="rotaDoAlvo"
         class="inline-flex items-center justify-center gap-2 px-4 text-sm font-semibold no-underline rounded-xl min-h-11 w-fit bg-n-blue-11 text-white dark:text-n-slate-1 hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-n-blue-11"
