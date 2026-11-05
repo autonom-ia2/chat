@@ -191,14 +191,19 @@ const frase = computed(() => {
         {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.QUANTO') }}
       </span>
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <Input
-          data-data-numero
-          type="number"
-          min="0"
-          :model-value="escolha.numero"
-          :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO')"
-          @update:model-value="novo => mudar('numero', String(novo ?? ''))"
-        />
+        <div class="flex flex-col gap-1.5">
+          <Input
+            data-data-numero
+            type="number"
+            min="0"
+            :model-value="escolha.numero"
+            :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO')"
+            @update:model-value="novo => mudar('numero', String(novo ?? ''))"
+          />
+          <p data-data-zero class="mb-0 text-sm text-n-slate-11">
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.ZERO') }}
+          </p>
+        </div>
         <div class="flex flex-col gap-1.5">
           <label :for="ids.unidade" class="text-sm font-medium text-n-slate-12">
             {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.UNIDADE') }}

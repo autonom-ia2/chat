@@ -366,6 +366,7 @@
         "SEM_CAMPO": "A conta ainda não tem campo de data.",
         "QUANTO": "Quanto tempo?",
         "NUMERO": "Quantos",
+        "ZERO": "Use 0 para gravar o mesmo dia",
         "UNIDADE": "De quê",
         "SENTIDO": "Depois ou antes",
         "DEPOIS": "depois",

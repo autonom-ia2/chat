@@ -91,6 +91,9 @@ describe('LivreData', () => {
     await escolher(wrapper, 'data-data-modo', 'hoje');
 
     expect(wrapper.find('[data-data-quanto]').exists()).toBe(true);
+    expect(wrapper.find('[data-data-zero]').text()).toBe(
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.ZERO'
+    );
     expect(ultimo(wrapper)).toEqual({
       $data: { de: 'hoje', mais: { valor: null, unidade: 'dias' } },
     });
