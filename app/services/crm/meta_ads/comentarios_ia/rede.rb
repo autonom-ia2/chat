@@ -11,8 +11,8 @@
 # true ou false. Nada levanta para o job: a recusa da Meta é um resultado.
 #
 # E `ler`: o texto e o nome de quem comentou, lidos na Meta na hora, porque o evento leva só ids (#2327). Devolve
-# `{ text:, from_name:, from_id: }`, ou nil quando a Meta diz que não dá para ler (comentário apagado, sem permissão, Página de
-# outra conta): esse não volta. Meta fora do ar levanta Indisponivel, e o CuidarJob tenta de novo, com teto.
+# `{ text:, from_name:, from_id: }`, ou nil quando não dá para ler (comentário apagado ou de outro post, Página de outra
+# conta): esse não volta. Meta fora do ar levanta Indisponivel, e o CuidarJob tenta de novo, com teto.
 # E `legenda` (#2424): o texto do post, para a IA saber do que o comentário fala; nil quando não dá para ler.
 # E `ler_pai` (#2454): o texto do comentário que uma resposta responde, lido na Meta pelo id, como o `ler`; nil no
 # comentário de primeiro nível ou quando não dá para ler o de cima.

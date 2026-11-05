@@ -227,10 +227,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'Ana', from_id: '9')
       end
 
-      it 'comentário de outro post ou de outra Página: nil' do
+      it 'comentário de outro post ou de outra Página: nil, com o motivo no log só com ids' do
+        allow(Rails.logger).to receive(:warn)
         allow(servico).to receive(:comment).and_raise(described_class::ComentariosDaPagina::Error.new('comment_not_found'))
 
         expect(rede.ler).to be_nil
+        expect(Rails.logger).to have_received(:warn).with(include('comment_not_found', 'post=555_888', 'comment=555_777'))
       end
 
       it 'a Meta fora do ar: Indisponivel, para o job tentar de novo; outra recusa: nil' do

@@ -64,6 +64,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede::ComentariosDaPagina do
     expect(leitor.post_media(post_id)).to eq('full_picture' => 'https://cdn.exemplo/bolo.jpg')
   end
 
+  # #2454: a leitura da foto roda dentro da requisição; o prazo vale para cada ida à Graph.
+  it 'com prazo: o cliente da Graph recebe o prazo de quem chama' do
+    allow(Meta::AdsGraphClient).to receive(:new).and_call_original
+    prazo = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
+    stub_request(:get, meta_graph_url(post_id)).with(query: hash_including({})).to_return(status: 200, body: {}.to_json, headers: json)
+
+    described_class.new(canal, prazo: prazo).post_media(post_id)
+
+    expect(Meta::AdsGraphClient).to have_received(:new).with(access_token: canal.page_access_token, prazo: prazo)
+  end
+
   it '#post_message de post de outra Página: nil, sem chamar a Meta' do
     expect(leitor.post_message('666_1')).to be_nil
     expect(a_request(:get, meta_graph_url('666_1')).with(query: hash_including({}))).not_to have_been_made

@@ -46,9 +46,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   # Como no Instagram: Meta fora do ar, login caído ou permissão tirada tentam de novo (um problema da Página não
   # descarta os comentários um a um; esgotado, o CuidarJob deixa o comentário com o dono). O resto é descartado.
   rescue Crm::MetaAds::FacebookComments::Error => e
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
-
-    nil
+    nao_lido!(e, 'comentário')
   end
 
   # O texto do comentário que esta resposta responde (#2454), ou nil (primeiro nível, ou o de cima que não dá para ler).
@@ -60,9 +58,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
     @ler_pai = comentarios.comment(@comentario.post_id, @comentario.parent_id)&.dig('message')
   rescue Crm::MetaAds::FacebookComments::Error => e
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
-
-    nil
+    nao_lido!(e, 'comentário de cima')
   end
 
   # O texto do post (#2424), ou nil. As mesmas regras do `ler`. Lido uma vez por comentário (#2458).
@@ -71,9 +67,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
     @legenda = @comentario.post_id.present? ? comentarios.post_message(@comentario.post_id) : nil
   rescue Crm::MetaAds::FacebookComments::Error => e
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
-
-    nil
+    nao_lido!(e, 'post')
   end
 
   # As imagens do post (#2454), pelos anexos (Imagens). As mesmas regras da `legenda`; sem nada, nenhuma. prazo: segundos
@@ -83,8 +77,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
     dados = @comentario.post_id.present? ? comentarios(prazo: limite).post_media(@comentario.post_id) : nil
     Crm::MetaAds::ComentariosIa::Imagens.do_facebook(dados.to_h)
   rescue Crm::MetaAds::FacebookComments::Error => e
-    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(e.code)
-
+    nao_lido!(e, 'imagens do post')
     []
   end
 
@@ -101,6 +94,16 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   private
+
+  # Meta fora do ar, login caído ou permissão tirada: Indisponivel, para o job tentar de novo. O resto (comentário de
+  # outro post ou de outra Página, recusa da Meta) não volta: fica no log, só com ids e o código, e a leitura dá nil.
+  def nao_lido!(error, what)
+    raise Crm::MetaAds::ComentariosIa::Rede::Indisponivel if TENTA_DE_NOVO.include?(error.code)
+
+    Rails.logger.warn("[meta_ads] #{what} do Facebook não lido: #{error.code} account=#{@comentario.account_id} " \
+                      "post=#{@comentario.post_id} comment=#{@comentario.comment_id}")
+    nil
+  end
 
   # O privado já saiu: uma falha ao abrir a conversa não pode soltar a reivindicação (o reenvio mandaria de novo).
   def na_caixa(envio, texto)
