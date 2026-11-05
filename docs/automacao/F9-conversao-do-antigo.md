@@ -107,7 +107,7 @@ No antigo, o `query_operator` de cada condição a liga à próxima, e o filtro 
 | `message_type` (incoming/outgoing) | `mensagem.tipo` (recebida/enviada), só no gatilho `mensagem.criada` |
 | `private_note` | `mensagem.privada`, só no gatilho `mensagem.criada` |
 | `crm_pipeline_id`, `crm_stage_id`, `crm_card_status` | `card.funil_id`, `card.etapa_id`, `card.status` |
-| atributo personalizado da conversa ou do contato | `conversa.atributos.<chave>`, `contato.atributos.<chave>` |
+| atributo personalizado da conversa ou do contato | `conversa.atributos.<chave>`, `contato.atributos.<chave>`. Com texto em `equal_to`, ou com `not_equal_to`: **falta** (ver a nota abaixo) |
 | `mail_subject`, `content`, `city`, `company_name`, `country_code`, `browser_language`, `conversation_language`, `referer` | **falta**: o motor novo não tem esses valores |
 | `sla_policy_id` (EE) | **falta**, sem fase |
 
@@ -120,6 +120,10 @@ No antigo, o `query_operator` de cada condição a liga à próxima, e o filtro 
 | `attribute_changed` (de → para) | **falta**: precisa dos valores do evento (`evento.*`, PR2d da F6) |
 
 **Nota sobre campo vazio (qualidade, 05/11):** no antigo, `not_equal_to` vira `NOT IN (...)` no SQL (`filter_service.rb:179`), e campo vazio (NULL) não casa. Por exemplo, "time diferente de 3" numa conversa sem time **não** dispara. O `diferente` novo trata o vazio como texto vazio e casa. Por isso, em campo de valor único, o conversor gera `todas[preenchido, diferente …]`. Nas etiquetas não, porque o antigo usa `NOT EXISTS` e a conversa sem etiqueta casa nos dois.
+
+**Nota sobre atributo personalizado (revisor, 05/11):** o antigo compara o texto do atributo em minúsculas e só com o 1º valor da lista (`filter_service.rb`, `string_filter_values`). O `not_equal_to` dele monta SQL quebrado (`custom_attribute_filter_helper.rb`, `not_in_custom_attr_query`): quando não é a última condição, o SQL é inválido e a regra nunca dispara; quando é a última, o `OR … IS NULL` escapa da precedência. O novo compara o texto como está.
+- `equal_to` com texto: falta `atributo_sem_maiusculas`, para a F9.0 (um `igual` que ignora maiúsculas).
+- `not_equal_to`: falta `diferente_de_atributo`. Copiar o defeito ou corrigir é decisão do Rodrigo; nenhuma conta usa hoje.
 
 **Nota sobre `attribute_changed`:** ele é avaliado em Ruby, à parte do SQL, e se junta às outras condições por interseção e união de listas, não pela precedência do AND e do OR. Hoje é falta. Quando o PR2d da F6 trouxer os valores `evento.*`, o conversor precisa dessa outra regra de precedência.
 
@@ -186,12 +190,14 @@ O relatório não roda em produção, porque lá o acesso é só por psql. Os n�
   "faltas_por_fase": { "F6 (#2554)": 1, "F6 (P3: POST crm/follow_ups)": 1, "F6 PR2a'": 1, "F6 PR2d (proposta F9)": 7 } }
 ```
 
-O spec (`spec/services/autonomia/automacao/conversao/relatorio_spec.rb`, 10 exemplos) confere cinco coisas:
+O spec (`spec/services/autonomia/automacao/conversao/relatorio_spec.rb`, 17 exemplos, no PR #2581) confere, entre outras coisas:
 - a receita do molde da conta 17 passa no esquema **e** na conferência do motor (`Receita#problemas`). Isso pegou um defeito do primeiro rascunho: faltava o `caminho` da ação;
 - o relatório não grava nada;
 - o agrupamento do AND e do OR está certo;
 - o `contem` de texto nunca é traduzido;
-- o `diferente` de campo único vai junto com `preenchido`, como o `NOT IN` antigo.
+- o `diferente` dos campos da conversa e do contato vai junto com `preenchido`, como o `NOT IN` antigo (no card não);
+- "igual a nada", evento desconhecido e formato estranho viram falta;
+- "converte" só quando o motor novo aceita a receita (`esquema_valido?` e `problemas`).
 
 ## 4. O que falta e onde entra
 
@@ -200,13 +206,14 @@ Só entra o que uma conta de verdade usa (YAGNI). O resto fica "sem equivalente"
 | Falta | Quem usa hoje | Fase |
 |---|---|---|
 | gatilho "conversa atualizada" + "o atributo mudou" | conta 6 (7 regras, desligadas) | PR2d da F6 (proposta) |
+| `igual` de texto que ignora maiúsculas, para atributo personalizado | conta 6 | **F9.0** |
 | gatilhos e passos de card, retorno | conta 16 e as 12 de etapa | F6 (#2554, PR2a') |
 | `decidir` a partir de um Decisor salvo | conta 16 | F7 |
 | assunto do e-mail como valor + "contém texto" | conta 16 | **F9.0**: o caminho `conversa.assunto_do_email` e um operador `contem_texto`, separado do `contem` de lista, com `include?` sobre o texto em minúsculas, sem regex (Automação, 05/11) |
 | `evento.roda_automacoes_de_etapa` e `evento.origem` | as 12 de etapa | F6 PR2d (P4) |
 | último atendente que respondeu, nota privada, espera por episódio, `use_card_owner`, demais valores | ninguém | sem fase, até alguém pedir |
 
-**F9.0** é um PR pequeno, só com os dois itens que a conta 16 pede. Ele entra depois do PR2a' da F6.
+**F9.0** é um PR pequeno, só com o que as contas 16 e 6 pedem. Ele entra depois do PR2a' da F6.
 
 ## 5. A troca de uma conta: desligar sem apagar, com backup
 
@@ -405,7 +412,7 @@ Nas palavras do Rodrigo: "pode fechar o motor antigo... com prazer. Vamos coloca
 ## 11. Ordem dos PRs da F9
 
 1. **Este PR, só docs:** o desenho e a leitura agregada.
-2. **F9.1, o relatório:** mapa, `Resultado`, `Condicoes`, `DaRegra`, `DaEtapa`, `Relatorio`, rake e spec. Só leitura, então entra cedo (Automação, 05/11), em PR próprio.
+2. **F9.1, o relatório:** PR #2581 (draft). Mapa, `Resultado`, `Condicoes`, `DaRegra`, `DaEtapa`, `Relatorio`, rake e spec. Só leitura, então entra cedo (Automação, 05/11).
 3. **Antes da F9.2, PR próprio:** o Guia (`porteiro_da_automacao`) passa a montar no motor novo. A F9.2 depende dele, porque fecha a criação antiga.
 4. **F9.2, a troca:** a migration da tabela (P1) e do estado `do_antigo` no CHECK, o conversor, a divisão por instante com o advisory lock e a reivindicação (5.1), o gate versionado, a reversão, as travas da seção 7, o job da etapa reconferindo e o fechamento por conta (seção 10).
 5. **F9.3, a tela:** "Converter regras antigas" e "Reverter", com o relatório.
