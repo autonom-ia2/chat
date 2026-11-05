@@ -7,6 +7,7 @@ import { conversationUrl, frontendURL } from 'dashboard/helper/URLHelper';
 import { relativeTimeFromISO } from 'shared/helpers/timeHelper';
 import { fraseDoPasso } from '../frases';
 import { acharPasso } from '../receita';
+import { abaixoDoMinimo, dolares } from '../custoDaIa';
 
 // #2498 — "O que aconteceu": cada vez que a automação rodou, com os passos em
 // frases e o porquê de cada pulo e falha. A frase sai da receita da versão em
@@ -62,19 +63,13 @@ const hora = iso =>
     timeStyle: 'short',
   });
 
-// O custo de um passo de IA fica na casa de US$ 0,0001: dois algarismos
-// significativos, e abaixo do mínimo "menos de", nunca "US$ 0".
-const MENOR_CUSTO = 0.0001;
-const dinheiro = valor =>
-  new Intl.NumberFormat(locale.value.replace('_', '-'), {
-    maximumSignificantDigits: 2,
-  }).format(valor);
 const custoDaIa = valor =>
-  valor < MENOR_CUSTO
-    ? t('AUTOMACAO_LIVRE.HISTORICO.IA_MENOS_DE', {
-        valor: dinheiro(MENOR_CUSTO),
-      })
-    : t('AUTOMACAO_LIVRE.HISTORICO.IA', { valor: dinheiro(valor) });
+  t(
+    abaixoDoMinimo(valor)
+      ? 'AUTOMACAO_LIVRE.HISTORICO.IA_MENOS_DE'
+      : 'AUTOMACAO_LIVRE.HISTORICO.IA',
+    { valor: dolares(valor, locale.value) }
+  );
 
 const fraseDe = (execucao, passo) => {
   if (passo.passo === 'inicio') return t('AUTOMACAO_LIVRE.HISTORICO.INICIO');

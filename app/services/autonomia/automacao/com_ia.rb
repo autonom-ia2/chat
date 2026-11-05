@@ -9,6 +9,10 @@ module Autonomia::Automacao::ComIa
 
   Falha = ::Autonomia::Automacao::PassoDeIa::Falha
 
+  # O que o passo lê: o `le` dele, ou o padrão do Decisor. O "Testar este passo" (#2500 C2) lê o mesmo. O esquema da
+  # receita não aceita `card`; se aceitar um dia, ver o aviso no TestarPasso.
+  def self.leituras(passo) = Array(passo['le']).presence || ::Autonomia::Decisor::LEITURAS_PADRAO
+
   def initialize(execucao:, passo:, alvo:, acesso:)
     super(execucao: execucao, passo: passo, alvo: alvo)
     @acesso = acesso
@@ -25,8 +29,7 @@ module Autonomia::Automacao::ComIa
 
   # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem").
   def leitura(fuso: nil)
-    leituras = Array(@passo['le']).presence || ::Autonomia::Decisor::LEITURAS_PADRAO
-    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras, fuso: fuso)
+    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: ::Autonomia::Automacao::ComIa.leituras(@passo), fuso: fuso)
   end
 
   # O fuso que a tela grava na conta (#954, o mesmo do Guia); sem ele, o padrão da plataforma (Crm::Timezone::Resolver).

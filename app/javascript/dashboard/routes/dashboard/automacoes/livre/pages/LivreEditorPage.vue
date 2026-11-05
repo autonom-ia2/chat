@@ -8,6 +8,7 @@ import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
 import Input from 'dashboard/components-next/input/Input.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
+import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import LivreConfira from '../components/LivreConfira.vue';
 import LivreSeletorPasso from '../components/LivreSeletorPasso.vue';
 import LivreAlterar from '../components/LivreAlterar.vue';
@@ -287,6 +288,18 @@ watch(
 
 watch(() => [route.query.alterar, route.query.seletor], abrirDaUrl);
 
+// #2500 C2: o custo de cada passo de IA nos últimos 30 dias, para o cartão do
+// "Alterar". É só informação: se não carregar, o cartão fica sem a linha.
+const custos = ref({ com_valores: false, custos: {} });
+const carregarCustos = async id => {
+  if (!id) return;
+  try {
+    custos.value = (await AutomacoesAPI.custosDaAutomacao(id)).data;
+  } catch {
+    custos.value = { com_valores: false, custos: {} };
+  }
+};
+
 // Sem o catálogo a tela não sabe desenhar os passos: falha vira o aviso com
 // "Tentar de novo", como na lista.
 const carregarTudo = async () => {
@@ -298,6 +311,7 @@ const carregarTudo = async () => {
   }
   if (nova.value && route.query.receita) await usarReceita(route.query.receita);
   abrirDaUrl();
+  carregarCustos(route.params.id);
 };
 
 onMounted(() => {
@@ -561,6 +575,8 @@ onMounted(() => {
               :opcoes="opcoes"
               :atributos-da-peca="atributosDaPeca"
               :atributos-do="atributosDo"
+              :receita-do-teste="receitaDoSalvar"
+              :custos="custos"
               :gatilhos="gatilhos"
               :escolhas-do-gatilho="escolhasDoGatilho"
               @salvar="salvar"
