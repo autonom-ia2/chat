@@ -262,20 +262,43 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
       expect(conversa.reload.priority).to eq('high')
     end
 
-    it 'o eco que chega antes de a bolha ter o id vira mensagem nova, mas é da automação: a equipe não respondeu', :aggregate_failures do
+    # A ordem real da corrida: o eco vira mensagem nova porque a bolha ainda não tem o id, e é no message_created dele
+    # que a espera acorda. Com uma mensagem nossa ainda sem id antes dele, o eco é ambíguo e não conta agora; no prazo,
+    # a varredura confere de novo, já com o id gravado, e o descarta.
+    it 'o eco que chega antes de a bolha ter o id é ambíguo: não conta agora, e no prazo é descartado pelo id', :aggregate_failures do
       execucao = comecar_e_rodar(definicao)
       bolha = acalmar(nil)
       ultima = conversa.messages.maximum(:id)
 
       travel(5.minutes) do
         expect { eco_da_meta }.to change(Message, :count).by(1)
-        bolha.update!(source_id: fisico)
         acordar_pelas_mensagens_novas(ultima)
       end
-
       expect(execucao.reload.estado).to eq('esperando')
+
+      travel(6.minutes) { bolha.update!(source_id: fisico) }
       travel(31.minutes) { varrer }
+
+      expect(execucao.reload.estado).to eq('concluida')
       expect(conversa.reload.priority).to eq('high')
+    end
+
+    # A pessoa respondeu de verdade pelo celular enquanto a mensagem nossa ainda não tinha o id: conta no prazo, atrasada.
+    it 'o eco de uma pessoa, ambíguo na hora, conta no prazo quando a mensagem nossa já tem o id', :aggregate_failures do
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [esperar_resposta('equipe'), prioridade_passo('respondeu', 'low')]))
+      bolha = acalmar(nil)
+
+      travel(5.minutes) do
+        webhook({ message_echoes: [{ from: canal.phone_number.delete('+'), to: cliente, id: 'wamid.da-pessoa', timestamp: '1760371990',
+                                     type: 'text', text: { body: 'Oi, Paulo, sou a Fernanda' } }] }, eco: true)
+        acordar_pelas_mensagens_novas(bolha.id)
+      end
+      expect(execucao.reload.estado).to eq('esperando')
+
+      travel(6.minutes) { bolha.update!(source_id: fisico) }
+      travel(31.minutes) { varrer }
+
+      expect(conversa.reload.priority).to eq('low')
     end
   end
 

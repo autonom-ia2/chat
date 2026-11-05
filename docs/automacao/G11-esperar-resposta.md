@@ -29,8 +29,14 @@ ao eco de uma pessoa que respondeu pelo app. A diferença está no id: o eco lev
 Híbrido, o id físico dentro dele, `WhatsappHybrid::Wamid`). Se outra mensagem de saída da caixa tem esse id, o eco é
 dela e não conta. No exemplo 10, a agente de IA respondendo não encerra o "esperar a gerente responder". Nem a própria
 mensagem da automação ("A Fernanda já está vendo seu caso"): na caixa Híbrida, o eco dela casa na bolha pelo
-reconciliador e não vira mensagem; se chegar antes do id, vira mensagem, mas é descartado pelo id. A `PessoaDaEquipe`
-(a régua da IA) não muda.
+reconciliador e não vira mensagem. A `PessoaDaEquipe` (a régua da IA) não muda.
+
+**A corrida do eco.** O eco vira mensagem nova justamente porque a bolha ainda não tem o id, e a espera acorda no
+mesmo instante, quando ainda não há par. Regra: eco sem par, com uma mensagem nossa de saída da conversa ainda sem id
+(robô, automação ou envio automático; não falhou; anterior ao eco), é **ambíguo e não conta agora**. A espera segue, e
+no prazo a varredura confere a janela inteira de novo, com o id já gravado: o eco da bolha é descartado. Se uma pessoa
+respondeu de verdade pelo celular nesse intervalo, a resposta conta, mas só no prazo (atrasada). Uma mensagem nossa
+que nunca ganha id (envio preso, sem falha marcada) deixa os ecos seguintes da conversa ambíguos até o prazo.
 
 **A mensagem conta no instante em que é lida.** Se a resposta da equipe for marcada como falha depois que a espera já
 seguiu, o caminho não volta atrás.

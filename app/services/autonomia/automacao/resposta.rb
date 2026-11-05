@@ -13,6 +13,11 @@
 # remetente (PessoaDaEquipe, "ECO DO CELULAR"). A raiz para separar: o eco leva o id da mensagem que saiu (o wamid; no
 # Híbrido, o id físico dentro dele, WhatsappHybrid::Wamid). Se outra mensagem de saída da caixa tem esse id, o eco é
 # dela e não conta. O eco do que a pessoa mandou pelo celular não tem par aqui.
+#
+# A corrida: o eco vira mensagem nova justamente porque a bolha ainda não tem o id, e a espera acorda nesse mesmo
+# instante. Por isso, eco sem par com uma mensagem NOSSA de saída da conversa ainda sem id, anterior a ele, é ambíguo e
+# não conta agora. A espera segue; no prazo, a varredura confere de novo a janela inteira, com o id já gravado: o eco
+# da bolha é descartado, e o de uma pessoa conta (atrasado, no prazo).
 module Autonomia::Automacao::Resposta
   module_function
 
@@ -25,8 +30,18 @@ module Autonomia::Automacao::Resposta
     equipe = ::Autonomia::Agents::Operate::PessoaDaEquipe
     candidatas = conversa.messages.chat.outgoing.where(sender_type: ['User', nil]).where.not(status: :failed)
     na_janela(candidatas, espera).find_each.any? do |mensagem|
-      equipe.da_pessoa?(mensagem) || (equipe.eco_do_celular?(mensagem) && !eco_do_que_saiu_daqui?(mensagem))
+      equipe.da_pessoa?(mensagem) || (equipe.eco_do_celular?(mensagem) && eco_de_pessoa?(mensagem))
     end
+  end
+
+  def eco_de_pessoa?(eco) = !eco_do_que_saiu_daqui?(eco) && !saida_nossa_sem_id_antes?(eco)
+
+  # Nossa: robô, automação ou envio automático em nome de alguém (PessoaDaEquipe.envio_automatico?). O eco sempre tem
+  # source_id (o wamid), então nunca entra aqui.
+  def saida_nossa_sem_id_antes?(eco)
+    equipe = ::Autonomia::Agents::Operate::PessoaDaEquipe
+    eco.conversation.messages.chat.outgoing.where(source_id: nil).where.not(status: :failed).where('messages.id < ?', eco.id)
+       .find_each.any? { |mensagem| mensagem.sender_type != 'User' || equipe.envio_automatico?(mensagem) }
   end
 
   def eco_do_que_saiu_daqui?(eco)
