@@ -95,6 +95,7 @@ export const FEATURE_FLAGS = {
   FUNCOES_GUIADAS: 'funcoes_guiadas',
   AUTOMACAO_EDITOR: 'automacao_editor',
   AUTOMACAO_MENSAGENS: 'automacao_mensagens',
+  AUTOMACAO_GATILHOS: 'automacao_gatilhos',
   CHANNEL_TIKTOK: 'channel_tiktok',
   CHANNEL_VOICE: 'channel_voice',
   CONTACT_CHATWOOT_SUPPORT_TEAM: 'contact_chatwoot_support_team',

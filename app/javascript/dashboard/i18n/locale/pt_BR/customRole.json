@@ -211,7 +211,7 @@
           "NAME": "Automações",
           "HINT": "Regras de automação",
           "LEVEL_VIEW": "Vê as regras.",
-          "LEVEL_MANAGE": "Cria e altera regras. Regra com webhook ou transcrição por e-mail pede também Integrações."
+          "LEVEL_MANAGE": "Cria e altera regras. Regra com webhook ou transcrição por e-mail pede também Integrações. Automação com gatilho de card do funil pede também Gerenciar funis e automações do CRM."
         },
         "SCHEDULING": {
           "NAME": "Agendamento",

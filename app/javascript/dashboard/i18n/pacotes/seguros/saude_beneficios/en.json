@@ -1319,5 +1319,13 @@
     "ALTERAR": {
       "DESFECHO": "Mark as implemented or not closed"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "GATILHOS": {
+      "CARD_GANHO": "When the plan is implemented"
+    },
+    "GATILHO_COM": {
+      "CARD_GANHO": "When a plan in {funil} is implemented"
+    }
   }
 }

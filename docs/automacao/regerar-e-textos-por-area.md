@@ -10,7 +10,7 @@ Os textos ficam em `app/javascript/dashboard/i18n/locale/{en,pt_BR}/`, e cada ar
 
 | Arquivo | Blocos | Frente |
 |---|---|---|
-| `automacaoLivreGatilhos.json` | `GATILHOS`, `ORIGEM`, `VALOR_DA_MENSAGEM`, `OPERADOR_DA_MENSAGEM` | Gatilhos (F6/F8, #2499) |
+| `automacaoLivreGatilhos.json` | `GATILHOS`, `ORIGEM`, `VALOR_DA_MENSAGEM`, `OPERADOR_DA_MENSAGEM`, `PARAMETROS_DO_GATILHO`, `GRUPOS_DO_GATILHO`, `GATILHO_COM`, `GATILHO_NO_FUNIL`, `GATILHO_NAO_DISPARA`, `GATILHO_DO_CARD` | Gatilhos (F6/F8, #2499) |
 | `automacaoLivreIa.json` | `IA` | IA como passo (F7, #2500) |
 | `automacaoLivreReceitas.json` | `RECEITAS` | Receitas (F5, #2498) |
 | `automacaoLivreEnsaio.json` | `ENSAIO`, `HISTORICO` | Ensaio e histórico (F5) |

@@ -107,7 +107,7 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
   end
 
   it 'falha ao criar devolve o código e se nada foi criado' do
-    params = { idempotency_key: SecureRandom.uuid, name: 'Bolo', destination: 'MESSENGER' }
+    params = { idempotency_key: SecureRandom.uuid, name: 'Bolo', destination: 'INSTAGRAM_PROFILE' }
 
     post "#{path}/ads", params: params, headers: admin.create_new_auth_token, as: :json
 

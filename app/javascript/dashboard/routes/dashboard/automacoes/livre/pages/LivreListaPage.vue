@@ -13,6 +13,7 @@ import LivreLinha from '../components/LivreLinha.vue';
 import { useNomesDaConta } from '../../composables/useNomesDaConta';
 import { carregarCatalogo, useCatalogo } from '../catalogo';
 import { fraseDoGatilho, fraseDoPasso } from '../frases';
+import { useEscolhasDosGatilhos } from '../useEscolhasDosGatilhos';
 import { erroDaApi } from '../erroDaApi';
 
 // #2414 F5 — a lista única de Automações: as novas e as do jeito antigo (as
@@ -24,6 +25,8 @@ const router = useRouter();
 const podeMudar = useCanManage('automation_manage');
 const { catalogo } = useCatalogo();
 const { nomes, carregarNomes } = useNomesDaConta();
+const { escolhas: escolhasDoGatilho, carregar: carregarFunis } =
+  useEscolhasDosGatilhos();
 const globalConfig = useMapGetter('globalConfig/get');
 const temFunil = computed(() => globalConfig.value?.crmKanbanEnabled === true);
 
@@ -31,6 +34,23 @@ const estado = ref('carregando');
 const novas = ref([]);
 const antigas = ref([]);
 const mudando = ref(null);
+
+// #2499 — o gatilho de card diz a etapa e o funil pelo nome. Os funis só são
+// lidos se alguma automação tem gatilho com etapa ou funil. Se a leitura falhar
+// (ou quem vê não enxerga o funil), a linha fica com a frase do catálogo, que
+// continua certa, só sem o nome.
+const lerNomesDosFunis = async () => {
+  const tipos = novas.value.map(item => item.versao?.receita?.gatilho?.tipo);
+  const deCard = (catalogo.value?.gatilhos || []).some(
+    item => item.parametros?.length && tipos.includes(item.tipo)
+  );
+  if (!deCard) return;
+  try {
+    await carregarFunis();
+  } catch {
+    // A frase do catálogo já está na tela.
+  }
+};
 
 const carregar = async () => {
   estado.value = 'carregando';
@@ -45,7 +65,9 @@ const carregar = async () => {
     estado.value = 'pronto';
   } catch {
     estado.value = 'erro';
+    return;
   }
+  lerNomesDosFunis();
 };
 
 onMounted(() => {
@@ -70,6 +92,11 @@ const fatoDaSemana = semana => {
   return `${rodou} · ${parou}`;
 };
 
+const alvoDoGatilho = automacao =>
+  catalogo.value?.gatilhos.find(
+    item => item.tipo === automacao.versao?.receita?.gatilho?.tipo
+  )?.alvo;
+
 const linhaDaNova = automacao => {
   const passos = automacao.versao?.receita?.passos || [];
   return {
@@ -80,11 +107,13 @@ const linhaDaNova = automacao => {
     quando: fraseDoGatilho(
       automacao.versao?.receita?.gatilho,
       catalogo.value,
-      t
+      t,
+      escolhasDoGatilho.value.nomes
     ),
     primeiro: passos[0] ? fraseDoPasso(passos[0], catalogo.value, t) : '',
     outros: Math.max(passos.length - 1, 0),
     ativa: automacao.ativa,
+    doCard: alvoDoGatilho(automacao) === 'Crm::Card',
     fato: fatoDaSemana(automacao.semana),
   };
 };
@@ -291,6 +320,7 @@ const alternar = async linha => {
               :fato="linha.fato"
               :ativa="linha.ativa"
               :antiga="linha.antiga"
+              :do-card="linha.doCard"
               :pode-mudar="podeMudar"
               :mudando="mudando === linha.chave"
               @abrir="abrir(linha)"
