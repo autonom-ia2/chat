@@ -582,7 +582,6 @@ en:
       nota:
         laco: "Automation %{nome} stopped in this conversation: the other side replied in under %{segundos} seconds to %{trocas} automation messages, with no pause and no one from the team in between, like a bot. Check it before letting it continue here."
         decidiu: 'Automation chose *%{nome}*: %{motivo}'
-        nenhum: 'None applies'
         sugestao: "Automation suggestion (review before sending):\n\n%{texto}"
         resumo: "Automation summary:\n\n%{texto}"
       ia:

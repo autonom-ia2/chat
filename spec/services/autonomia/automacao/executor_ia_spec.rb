@@ -167,6 +167,18 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(conversa.reload.priority).to eq('low')
     end
 
+    # #2578: com um gatilho de toda mensagem e o "nenhum" como o normal, a nota viraria uma por mensagem.
+    it 'o "nenhum" não deixa nota na conversa: o ramo fica só no histórico', :aggregate_failures do
+      openai_devolve({ 'caminho' => 'nenhum', 'motivo' => 'Mensagem normal.' })
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [decidir]))
+
+      expect(conversa.messages.where(private: true)).to be_empty
+      expect(dados_do(execucao, 'p1')).to include('ramo' => 'nenhum')
+      expect(dados_do(execucao, 'p1').keys).not_to include('nota_id', 'nota_faltou')
+      expect(dados_do(execucao, 'p1').to_s).not_to include('Mensagem normal.')
+    end
+
     it 'o que a IA lê não leva o e-mail nem o telefone do contato' do
       openai_devolve({ 'caminho' => 'cotacao', 'motivo' => 'x' })
 

@@ -31,11 +31,13 @@ class Autonomia::Automacao::PassoDeDecidir
     falhou(e)
   end
 
-  # A nota do motivo, no caminho escolhido. nil quando não houve pergunta à IA.
+  # A nota do motivo, no caminho escolhido. nil quando não houve pergunta à IA ou quando ela escolheu "nenhum" (#2578):
+  # a nota serve quando algo muda na conversa, e um gatilho de toda mensagem com o "nenhum" como o normal deixaria uma
+  # nota por mensagem. O histórico guarda o ramo.
   def anotar(ramo)
-    return if @motivo.nil?
+    return if @motivo.nil? || ramo == nenhum
 
-    nome = Array(@passo['caminhos']).find { |caminho| caminho['chave'] == ramo }&.dig('nome') || frase(:nenhum)
+    nome = Array(@passo['caminhos']).find { |caminho| caminho['chave'] == ramo }&.dig('nome')
     nota(frase(:decidiu, nome: nome, motivo: @motivo))
   end
 
