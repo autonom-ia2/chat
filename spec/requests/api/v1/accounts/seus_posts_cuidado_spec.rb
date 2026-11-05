@@ -62,6 +62,28 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response).to have_http_status(:not_found)
   end
 
+  # #2520: a tela de cuidar lê o post pelo cuidado, sem seus_posts_comentarios (desligada aqui).
+  it 'o post da tela de cuidar: perfil, can_manage e o post, sem os comentários' do
+    get "#{base}/cuidado/post", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to include('status' => 'ok', 'can_manage' => true,
+                                            'perfil' => { 'id' => perfil, 'network' => 'instagram', 'inbox_id' => canal.inbox.id })
+    expect(response.parsed_body['post']).to include('id' => post_id)
+    expect(response.parsed_body).not_to have_key('comments')
+  end
+
+  it 'sem a flag da rede, 404 antes das guardas de acesso: quem não é da caixa também recebe 404' do
+    account.disable_features!('meta_ads_comentarios_instagram')
+    de_fora = create(:user, account: account, role: :agent)
+    so_ve = CustomRole.create!(account: account, name: 'Só vê posts', permissions: %w[posts_view])
+    AccountUser.find_by(account: account, user: de_fora).update!(custom_role: so_ve)
+
+    get "#{base}/cuidado/post", params: { perfil: perfil }, headers: de_fora.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
+  end
+
   it 'antes de ligar: cuidado desligado, o que espera o dono e o privado liberado no Instagram' do
     get "#{base}/cuidado", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 
@@ -283,6 +305,21 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     auditoria = Audited.audit_class.where(action: 'seus_posts_comment_care').order(:id).last
     expect(auditoria.audited_changes).to include('status' => 'on', 'post_ids' => [post_id])
     expect(Crm::MetaAdsCommentCare.find_by(target_id: post_id).started_at).to be_within(5.seconds).of(Time.current)
+  end
+
+  # #2520: "Voltar a cuidar de todos" no Facebook assina o `feed` da Página, como ligar um cuidado (AssinarFeedJob).
+  it '"Voltar a cuidar de todos" passa cada cuidado religado pela assinatura do feed; pausar, não' do
+    put "#{base}/cuidado", params: corpo.merge(status: 'paused'), headers: admin.create_new_auth_token, as: :json
+    allow(Crm::MetaAds::ComentariosIa::AssinarFeedJob).to receive(:para!)
+
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'on' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(Crm::MetaAds::ComentariosIa::AssinarFeedJob).to have_received(:para!)
+      .with(having_attributes(target_id: post_id, status: 'on')).once
+
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'paused' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(Crm::MetaAds::ComentariosIa::AssinarFeedJob).to have_received(:para!).once
   end
 
   it 'texto em forma errada (objeto no lugar de texto, frases que não são lista) é recusado, não vira vazio' do

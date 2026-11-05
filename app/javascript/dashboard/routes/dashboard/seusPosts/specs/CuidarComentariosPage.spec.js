@@ -3,11 +3,20 @@ import { reactive } from 'vue';
 import { createI18n } from 'vue-i18n';
 import ptBR from 'dashboard/i18n/locale/pt_BR/metaAdsComentariosIa.json';
 import CuidarComentariosPage from '../pages/CuidarComentariosPage.vue';
-import SeusPostsAPI from 'dashboard/api/seusPosts';
+import ComentariosIaAPI from 'dashboard/api/comentariosIa';
 
 // #2212 (B1): a página de cuidar de um post só abre a tela com o post lido (é dele que vem o `can_manage`). Falhou a
 // leitura: diz e oferece tentar de novo, em vez de mostrar só leitura sem explicação. Dados sintéticos.
-vi.mock('dashboard/api/seusPosts', () => ({ default: { getPost: vi.fn() } }));
+// #2520: o post vem do próprio cuidado (GET .../cuidado/post), com a régua dele.
+vi.mock('dashboard/api/comentariosIa', () => ({
+  default: { getPostDoCuidado: vi.fn() },
+}));
+const flags = vi.hoisted(() => ({ ligadas: ['seus_posts_comentarios'] }));
+vi.mock('dashboard/composables/useAccount', () => ({
+  useAccount: () => ({
+    isCloudFeatureEnabled: flag => flags.ligadas.includes(flag),
+  }),
+}));
 const route = reactive({
   query: { perfil: 'instagram-1', dias: '30' },
   params: { accountId: 1, postId: '17900000000000001' },
@@ -20,7 +29,15 @@ vi.mock('vue-router', () => ({
 
 const CuidarComentarios = {
   name: 'CuidarComentarios',
-  props: ['target', 'post', 'origin', 'canManage', 'inboxPath', 'backLabel'],
+  props: [
+    'target',
+    'post',
+    'origin',
+    'canManage',
+    'inboxPath',
+    'backLabel',
+    'canReply',
+  ],
   template: '<div data-tela-de-cuidar :data-pode="String(canManage)" />',
 };
 
@@ -57,13 +74,14 @@ describe('CuidarComentariosPage (#2212)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete route.query.de;
+    flags.ligadas = ['seus_posts_comentarios'];
   });
   afterEach(() => {
     montadas.splice(0).forEach(wrapper => wrapper.unmount());
   });
 
   it('com o post lido: abre a tela de cuidar com o can_manage dele', async () => {
-    SeusPostsAPI.getPost.mockResolvedValue(postLido());
+    ComentariosIaAPI.getPostDoCuidado.mockResolvedValue(postLido());
     const wrapper = await montar();
 
     expect(wrapper.find('[data-tela-de-cuidar]').attributes('data-pode')).toBe(
@@ -73,7 +91,7 @@ describe('CuidarComentariosPage (#2212)', () => {
   });
 
   it('lendo o post: diz que está lendo, sem a tela em só leitura', async () => {
-    SeusPostsAPI.getPost.mockReturnValue(new Promise(() => {}));
+    ComentariosIaAPI.getPostDoCuidado.mockReturnValue(new Promise(() => {}));
     const wrapper = await montar();
 
     expect(wrapper.find('[data-seus-posts-cuidar-lendo]').exists()).toBe(true);
@@ -81,7 +99,7 @@ describe('CuidarComentariosPage (#2212)', () => {
   });
 
   it('falha ao ler o post: diz e tenta de novo', async () => {
-    SeusPostsAPI.getPost
+    ComentariosIaAPI.getPostDoCuidado
       .mockRejectedValueOnce(falha(500))
       .mockResolvedValueOnce(postLido());
     const wrapper = await montar();
@@ -93,14 +111,14 @@ describe('CuidarComentariosPage (#2212)', () => {
     await erro.find('[data-seus-posts-cuidar-de-novo]').trigger('click');
     await flushPromises();
 
-    expect(SeusPostsAPI.getPost).toHaveBeenCalledTimes(2);
+    expect(ComentariosIaAPI.getPostDoCuidado).toHaveBeenCalledTimes(2);
     expect(wrapper.find('[data-tela-de-cuidar]').attributes('data-pode')).toBe(
       'true'
     );
   });
 
   it('sem acesso ao post (403): diz, sem tentar de novo', async () => {
-    SeusPostsAPI.getPost.mockRejectedValue(falha(403));
+    ComentariosIaAPI.getPostDoCuidado.mockRejectedValue(falha(403));
     const wrapper = await montar();
     const erro = wrapper.find('[data-seus-posts-cuidar-erro]');
 
@@ -111,7 +129,7 @@ describe('CuidarComentariosPage (#2212)', () => {
   });
 
   it('voltar leva ao post, no mesmo perfil', async () => {
-    SeusPostsAPI.getPost.mockRejectedValue(falha());
+    ComentariosIaAPI.getPostDoCuidado.mockRejectedValue(falha());
     const wrapper = await montar();
     await wrapper.find('[data-seus-posts-cuidar-voltar]').trigger('click');
 
@@ -125,7 +143,7 @@ describe('CuidarComentariosPage (#2212)', () => {
   // #2479: aberto pelo "Qual post?" de Agentes, o "Voltar" leva a Agentes; "Ver no post" segue indo ao post.
   it('aberto de Agentes: voltar leva a Agentes; responder vai ao post', async () => {
     route.query.de = 'agentes';
-    SeusPostsAPI.getPost.mockResolvedValue(postLido());
+    ComentariosIaAPI.getPostDoCuidado.mockResolvedValue(postLido());
     const wrapper = await montar();
 
     const tela = wrapper.findComponent({ name: 'CuidarComentarios' });
@@ -147,11 +165,38 @@ describe('CuidarComentariosPage (#2212)', () => {
   });
 
   it('sem vir de Agentes, a tela de cuidar fica com o "Voltar" de sempre', async () => {
-    SeusPostsAPI.getPost.mockResolvedValue(postLido());
+    ComentariosIaAPI.getPostDoCuidado.mockResolvedValue(postLido());
     const wrapper = await montar();
 
     expect(
       wrapper.findComponent({ name: 'CuidarComentarios' }).props('backLabel')
     ).toBe('');
+  });
+
+  it('lê o post pelo cuidado, com o alvo do post e o perfil (#2520)', async () => {
+    ComentariosIaAPI.getPostDoCuidado.mockResolvedValue(postLido());
+    await montar();
+
+    expect(ComentariosIaAPI.getPostDoCuidado).toHaveBeenCalledWith({
+      kind: 'post',
+      id: '17900000000000001',
+      perfil: 'instagram-1',
+    });
+  });
+
+  // #2520: o cuidado abre sem seus_posts_comentarios; o post por dentro, não.
+  it('sem seus_posts_comentarios: voltar leva à lista do Seus posts e não há "Ver no post"', async () => {
+    flags.ligadas = [];
+    ComentariosIaAPI.getPostDoCuidado.mockResolvedValue(postLido());
+    const wrapper = await montar();
+
+    const tela = wrapper.findComponent({ name: 'CuidarComentarios' });
+    expect(tela.props('canReply')).toBe(false);
+    tela.vm.$emit('back');
+    expect(push).toHaveBeenLastCalledWith({
+      name: 'seus_posts_index',
+      params: { accountId: 1 },
+      query: { perfil: 'instagram-1', dias: '30' },
+    });
   });
 });

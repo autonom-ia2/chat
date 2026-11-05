@@ -2325,6 +2325,13 @@
       "perfil"
     ]
   },
+  "seus_posts/posts/:post_id/cuidado/post": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#ler_post",
+    "parametros": [
+      "comment_id",
+      "perfil"
+    ]
+  },
   "seus_posts/posts/:post_id/resumo": {
     "controller": "api/v1/accounts/seus_posts_cuidado#resumo",
     "parametros": [

@@ -4,6 +4,8 @@
 #      "Cuidando" e a faixa da lista, só os do perfil (?perfil=).
 # PUT  seus_posts/cuidados                              status → "Pausar todos" / "Retomar todos" do perfil; a lista.
 # GET  seus_posts/posts/:post_id/cuidado                → o Painel (Crm::MetaAds::ComentariosIa::Painel).
+# GET  seus_posts/posts/:post_id/cuidado/post           → o post da tela de cuidar (#2520): { perfil, status,
+#      can_manage, post }, sem os comentários, com as guardas do cuidado (a tela não pede seus_posts_comentarios).
 # GET  seus_posts/posts/:post_id/resumo                 → "O que tem nos comentários" (Resumo): só o que o código conta,
 #      sem IA (#2454): { status, waiting, private_window }.
 #      Ver: administrador ou `posts_view`.
@@ -38,13 +40,24 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   # O pai confere a chave de mudar em todas as escritas e pula o post no `show`. Aqui as duas voltam na ordem certa: a
   # chave antes de ler o post na Meta, e o post em toda ação de um post (o painel também).
-  skip_before_action :ensure_manage, :load_post
+  # A flag da rede (#2520) vem logo depois de achar o canal (load_canal do pai), antes das guardas de acesso: sem ela,
+  # 404 para todos, sem dizer que o recurso existe.
+  skip_before_action :ensure_manage, :ensure_inbox_member, :load_post
+  before_action :ensure_flag_da_rede
+  before_action :ensure_inbox_member
   before_action :ensure_manage, only: [:update, :previa, :rascunho, :foto, :corrigir_foto, :ler_antigos, :mudar_todos]
-  before_action :ensure_flag_da_rede # depois do load_canal do pai: a rede vem do perfil
-  before_action :load_post, except: [:cuidados, :mudar_todos]
+  before_action :load_post, except: [:cuidados, :mudar_todos, :ler_post]
   skip_before_action :ensure_ids, only: [:cuidados, :mudar_todos]
 
   rescue_from Crm::MetaAds::ComentariosIa::Painel::Error, with: :render_error
+
+  def ler_post
+    lido = leitura.post(post_id)
+    return render_error_code('post_not_found') if lido.nil?
+
+    base = { perfil: perfil, status: lido[:status], can_manage: manage? }
+    render json: lido[:status] == 'ok' ? base.merge(post: lido[:post]) : base
+  end
 
   def cuidados
     cares = cuidados_do_perfil.to_a
@@ -56,7 +69,10 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
     status = cuidado_params[:status].to_s
     return render_error_code('invalid_status') unless Crm::MetaAds::ComentariosIa::Painel::STATUSES.include?(status)
 
-    audit_all!(status, mudar_status!(status))
+    mudados = mudar_status!(status)
+    # #2520: "Retomar todos" no Facebook assina o `feed` da Página, como ligar um cuidado.
+    mudados.each { |care| Crm::MetaAds::ComentariosIa::AssinarFeedJob.para!(care) } if status == 'on'
+    audit_all!(status, mudados.map(&:target_id))
     cuidados
   end
 
@@ -182,7 +198,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   # Tudo de uma vez, numa transação: o status muda sem regravar o resto (um cuidado antigo que não passaria na validação
   # de hoje não trava os outros). Pausar vale para todos. Voltar a cuidar só liga o cuidado que passa na validação de
   # hoje: o que não passa fica pausado, e a lista devolvida mostra isso post a post. Religado, recomeça a contar daqui
-  # (Painel#religar!). Devolve os posts mudados, para a Auditoria depois de mudar.
+  # (Painel#religar!). Devolve os cuidados mudados (com o status novo quando religados), para a Auditoria e o feed.
   def mudar_status!(status)
     Crm::MetaAdsCommentCare.transaction do
       mudados = cuidados_do_perfil.where.not(status: status).includes(:account).lock.to_a
@@ -190,7 +206,7 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
       agora = Time.current
       religados = status == 'on' ? { started_at: agora, read_old_at: nil } : {}
       Crm::MetaAdsCommentCare.where(id: mudados.map(&:id)).update_all(status: status, updated_at: agora, **religados) # rubocop:disable Rails/SkipsModelValidations
-      mudados.map(&:target_id)
+      mudados
     end
   end
 
