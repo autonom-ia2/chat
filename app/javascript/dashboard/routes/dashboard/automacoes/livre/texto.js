@@ -26,12 +26,20 @@ const comChaveSeRepetido = opcoes => {
 
 // O valor da mensagem (#2496) só aparece no "Só se" do gatilho dela; no texto
 // e nos passos, `gatilho` não vem e ele fica de fora. O que só o Guia monta
-// (`so_guia`) nunca entra na escolha.
-export const opcoesDosValores = (catalogo, atributosDo, t, gatilho = null) =>
+// (`so_guia`) nunca entra na escolha. A resposta durante a espera (G11,
+// `so_na_espera`) só aparece na condição do "esperar até" (`naEspera`).
+export const opcoesDosValores = (
+  catalogo,
+  atributosDo,
+  t,
+  gatilho = null,
+  naEspera = false
+) =>
   comChaveSeRepetido(
     (catalogo?.valores || []).flatMap(item => {
       if (item.so_guia) return [];
       if (item.so_no_gatilho && item.so_no_gatilho !== gatilho) return [];
+      if (item.so_na_espera && !naEspera) return [];
       if (!item.atributos)
         return [{ value: item.caminho, label: t(item.frase) }];
       return atributosDo(item.atributos).map(atributo => ({
