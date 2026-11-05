@@ -12,7 +12,7 @@ module Autonomia::Automacao::CatalogoDeValores
   def todos
     campos = (::Autonomia::Automacao::Valores::CAMPOS.keys + ::Autonomia::Automacao::Valores::RESPOSTA.keys).map do |caminho|
       { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
-        'so_na_espera' => (true if ::Autonomia::Automacao::Valores.da_resposta?(caminho)) }.compact
+        **do_protegido(caminho), 'so_na_espera' => (true if ::Autonomia::Automacao::Valores.da_resposta?(caminho)) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
@@ -42,5 +42,12 @@ module Autonomia::Automacao::CatalogoDeValores
 
     { 'opcoes' => fechado['opcoes'].map { |opcao| { 'valor' => opcao, 'frase' => chave('VALOR_DA_MENSAGEM', opcao) } },
       'operadores' => fechado['operadores'].map { |op| { 'op' => op, 'frase' => chave('OPERADOR_DA_MENSAGEM', op) } } }
+  end
+
+  # O valor que pede permissão (#2597) leva a chave: o editor não o oferece a quem não a tem. Quem autoriza continua
+  # sendo a Receita, ao salvar, e o Valores, ao rodar.
+  def do_protegido(caminho)
+    regra = ::Autonomia::Automacao::Valores::PROTEGIDOS[caminho]
+    regra ? { 'permissao' => regra::CHAVE } : {}
   end
 end
