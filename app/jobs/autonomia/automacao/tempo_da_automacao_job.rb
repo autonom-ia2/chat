@@ -52,7 +52,10 @@ class Autonomia::Automacao::TempoDaAutomacaoJob < ApplicationJob
   # O primeiro erro dos alvos, ou nil.
   def cada_alvo(busca, definicao, tipo)
     primeiro_erro = nil
-    busca.cada { |alvo, marca| primeiro_erro ||= comecar(definicao, alvo, tipo, marca) }
+    busca.cada do |alvo, marca|
+      erro = comecar(definicao, alvo, tipo, marca)
+      primeiro_erro ||= erro
+    end
     primeiro_erro
   end
 
