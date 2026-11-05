@@ -1,6 +1,9 @@
 # Os passos de IA no executor (#2500 F7): "decidir", "extrair", "escrever" e "resumir". Ficam fora do Executor para
 # ele seguir sendo a lista dos passos; os métodos usam os dele (reconferir, impedida?, encerrar, registrar).
 module Autonomia::Automacao::IaNoExecutor
+  # A parada fora da janela (F4.4): o "escrever" ao cliente usa aqui, e a mensagem no Executor.
+  include ::Autonomia::Automacao::JanelaFechada
+
   IA = {
     'decidir' => ::Autonomia::Automacao::PassoDeDecidir, 'extrair' => ::Autonomia::Automacao::PassoDeExtrair,
     'escrever' => ::Autonomia::Automacao::PassoDeEscrever, 'resumir' => ::Autonomia::Automacao::PassoDeResumir
@@ -23,7 +26,10 @@ module Autonomia::Automacao::IaNoExecutor
     depois_da_ia(passo, executor, executor.executar)
   end
 
+  # O "escrever" ao cliente com a janela fechada para antes de pagar a IA, como a mensagem (F4.4, #2573).
   def depois_da_ia(passo, executor, resultado)
+    return parar_na_janela(passo, resultado) if janela_fechada?(resultado)
+
     case resultado.tipo
     when :ok, :pulado then resultado.dados['ramo'] ? seguir_pelo_caminho(passo, executor, resultado) : seguir_depois_da_acao(passo, resultado)
     when :permanente then encerrar(passo['id'], 'falhou', resultado.motivo, 'falhou', resultado.dados)

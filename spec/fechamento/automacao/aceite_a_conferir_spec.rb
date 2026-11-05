@@ -110,10 +110,9 @@ RSpec.describe 'Fechamento #2414 · itens a conferir', :automacao_motor, :fecham
 
       execucao = rodar(automacao)
 
-      pending 'F4.4 decidida (#2573): fora da janela a execução para; hoje o passo pula e a execução segue'
       expect(conversa.messages.outgoing.where(private: false)).to be_empty
       expect(execucao.reload.estado).to eq('parada')
-      expect(historico_de(automacao).last.values_at(0, 2)).to eq(%w[renovacao fora_da_janela])
+      expect(historico_de(automacao).last).to eq(%w[renovacao falhou fora_da_janela])
       expect(conversa.reload.priority).to be_nil
     end
   end
