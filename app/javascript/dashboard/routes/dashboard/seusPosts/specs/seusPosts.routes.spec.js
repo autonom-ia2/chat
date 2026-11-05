@@ -78,10 +78,11 @@ describe('seusPosts.routes', () => {
       store.getters['accounts/isFeatureEnabledonAccount'] = (_id, flag) =>
         ligadas.includes(flag);
     };
-    const TODAS = [
-      'seus_posts',
-      'seus_posts_comentarios',
-      'meta_ads_comentarios_ia',
+    // #2520: a régua do motor: a tela, o cuidado e os comentários de ao menos uma rede; sem seus_posts_comentarios.
+    const TODAS = ['seus_posts', 'meta_ads_comentarios_ia'];
+    const REDES = [
+      'meta_ads_comentarios_instagram',
+      'meta_ads_comentarios_facebook',
     ];
 
     it('a rota fica no endereço do post, com o guarda e as permissões do post', () => {
@@ -95,15 +96,22 @@ describe('seusPosts.routes', () => {
       expect(cuidar.meta.permissions).toEqual(post.meta.permissions);
     });
 
-    it('com as três flags: abre', async () => {
-      comFlags(TODAS);
+    it.each(REDES)('com as duas flags e %s: abre', async rede => {
+      comFlags([...TODAS, rede]);
       const next = vi.fn();
       await ensureCuidarEnabled(para, {}, next);
       expect(next).toHaveBeenCalledWith();
     });
 
+    it('sem a flag dos comentários de nenhuma rede: vai para home', async () => {
+      comFlags(TODAS);
+      const next = vi.fn();
+      await ensureCuidarEnabled(para, {}, next);
+      expect(next).toHaveBeenCalledWith({ name: 'home', params: para.params });
+    });
+
     it.each(TODAS)('sem %s: vai para home', async flag => {
-      comFlags(TODAS.filter(ligada => ligada !== flag));
+      comFlags([...TODAS, ...REDES].filter(ligada => ligada !== flag));
       const next = vi.fn();
       await ensureCuidarEnabled(para, {}, next);
       expect(next).toHaveBeenCalledWith({ name: 'home', params: para.params });

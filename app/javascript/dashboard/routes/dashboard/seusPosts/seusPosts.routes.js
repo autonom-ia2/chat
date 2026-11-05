@@ -1,6 +1,6 @@
 import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper';
-import { comFlags } from 'dashboard/helper/comFlags';
+import { comFlags, comFlagsEAlguma } from 'dashboard/helper/comFlags';
 
 export const ensureSeusPostsEnabled = comFlags(FEATURE_FLAGS.SEUS_POSTS);
 // O post aqui dentro (F2, #2305): também com a flag dos comentários.
@@ -8,11 +8,15 @@ export const ensureSeusPostsComentariosEnabled = comFlags(
   FEATURE_FLAGS.SEUS_POSTS,
   FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS
 );
-// Cuidar dos comentários de um post (#2212, B1): também com a flag do cuidado.
-export const ensureCuidarEnabled = comFlags(
-  FEATURE_FLAGS.SEUS_POSTS,
-  FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS,
-  FEATURE_FLAGS.META_ADS_COMENTARIOS_IA
+// Cuidar dos comentários de um post (#2212, B1): a régua do cuidado (#2520), a mesma do webhook e do motor: a tela
+// (seus_posts), a flag do cuidado e a dos comentários de ao menos uma rede (a do perfil, o servidor confere). A
+// seus_posts_comentarios é só a do post por dentro.
+export const ensureCuidarEnabled = comFlagsEAlguma(
+  [FEATURE_FLAGS.SEUS_POSTS, FEATURE_FLAGS.META_ADS_COMENTARIOS_IA],
+  [
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+    FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK,
+  ]
 );
 
 // Seus posts (#2302): página própria em Crescer, atrás da flag seus_posts. Administrador ou posts_view/posts_manage

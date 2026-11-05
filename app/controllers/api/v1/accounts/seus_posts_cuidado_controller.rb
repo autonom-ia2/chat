@@ -24,19 +24,23 @@
 #      Mudar: administrador ou `posts_manage`.
 #
 # As mesmas guardas do post (SeusPostsComentariosController): ?perfil=, ver a caixa do perfil e o post ser do perfil
-# (inclusive no GET do painel, que o pai pula), mais a flag `meta_ads_comentarios_ia`. A chave de mudar vem antes de
+# (inclusive no GET do painel, que o pai pula). As flags são a régua única do cuidado (#2520): `seus_posts` (a tela),
+# `meta_ads_comentarios_ia` e a dos comentários da rede do perfil, a mesma do webhook e do motor; a
+# `seus_posts_comentarios` é só a do post por dentro (ver e responder ali), não do cuidado. A chave de mudar vem antes de
 # conferir o post: quem só vê recebe 403 sem chamada à Meta. Prévia com a IA fora do ar: 422 `ai_unavailable`.
 # O texto do dono vai só em `message` e `para_quem`; o dos comentários só na resposta, nunca gravado. Ligar, pausar,
 # mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
 class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPostsComentariosController
   AUDIT_ACTION = 'seus_posts_comment_care'.freeze
   AI_UNAVAILABLE = 'ai_unavailable'.freeze
-  FLAGS = (Api::V1::Accounts::SeusPostsComentariosController::FLAGS + [Crm::MetaAds::ComentariosIa::Cuidar::FLAG]).freeze
+  FLAGS = ['seus_posts', Crm::MetaAds::ComentariosIa::Cuidar::FLAG].freeze
+  REDE_FLAGS = Crm::MetaAds::ComentariosIa::Anuncio::FLAGS
 
   # O pai confere a chave de mudar em todas as escritas e pula o post no `show`. Aqui as duas voltam na ordem certa: a
   # chave antes de ler o post na Meta, e o post em toda ação de um post (o painel também).
   skip_before_action :ensure_manage, :load_post
   before_action :ensure_manage, only: [:update, :previa, :rascunho, :foto, :corrigir_foto, :ler_antigos, :mudar_todos]
+  before_action :ensure_flag_da_rede # depois do load_canal do pai: a rede vem do perfil
   before_action :load_post, except: [:cuidados, :mudar_todos]
   skip_before_action :ensure_ids, only: [:cuidados, :mudar_todos]
 
@@ -115,6 +119,11 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   def ensure_flags
     head :not_found unless FLAGS.all? { |flag| Current.account.feature_enabled?(flag) }
+  end
+
+  # A rede do perfil só se sabe depois de achar o canal (load_canal).
+  def ensure_flag_da_rede
+    head :not_found unless Current.account.feature_enabled?(REDE_FLAGS.fetch(SeusPosts::Perfil.rede(@canal)))
   end
 
   def painel

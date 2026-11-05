@@ -14,7 +14,9 @@ import {
   comentarioParaTela,
   comentariosDaAba,
   contarComentarios,
+  flagsDoCuidado,
   postParaTela,
+  redeDoPerfil,
 } from '../seusPostsDados';
 import { formatar, intlLocale, vereditoDoPost } from '../seusPostsHelpers';
 import { useLiberarAcesso } from '../useLiberarAcesso';
@@ -51,8 +53,13 @@ const postId = computed(() => route.params.postId);
 // Comentários que viram cliente (#2212, B1), atrás da flag meta_ads_comentarios_ia: o cuidado do post (Painel) e o
 // resumo "O que tem nos comentários" (A2), lidos ao lado do post, sem travar a página. Sem a flag, nada é lido nem
 // aparece. Ver é de quem já vê o post; ligar, pausar e voltar, só com `can_manage` (o mesmo do F2).
+// #2520: com a régua do motor: a flag do cuidado e a dos comentários da rede do perfil, como o servidor.
 const comCuidado = computed(() =>
-  isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)
+  Boolean(
+    flagsDoCuidado(redeDoPerfil(perfilId.value))?.every(flag =>
+      isCloudFeatureEnabled(flag)
+    )
+  )
 );
 const alvoDoCuidado = computed(() =>
   comCuidado.value

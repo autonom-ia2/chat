@@ -1,3 +1,5 @@
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
+
 // Seus posts (#2302, F1 #2304): o que GET seus_posts manda (SeusPosts::Leitura, em inglês, como a API) no formato
 // que a tela usa. Número que a Meta não mandou continua nulo, nunca 0.
 
@@ -230,3 +232,14 @@ export const comentariosDaAba = (lista, estado, fio) => {
     ];
   });
 };
+
+// #2520: o cuidado da IA segue a régua do motor: a flag dele e a dos comentários da rede do perfil ("instagram-12").
+const FLAG_DOS_COMENTARIOS = {
+  instagram: FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM,
+  facebook: FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK,
+};
+export const flagsDoCuidado = rede =>
+  FLAG_DOS_COMENTARIOS[rede]
+    ? [FEATURE_FLAGS.META_ADS_COMENTARIOS_IA, FLAG_DOS_COMENTARIOS[rede]]
+    : null;
+export const redeDoPerfil = perfilId => String(perfilId || '').split('-')[0];

@@ -32,7 +32,8 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
 
   before do
     Rails.cache.clear
-    account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia')
+    # #2520: a régua do cuidado é a do motor (seus_posts, a IA e a flag dos comentários da rede); sem seus_posts_comentarios.
+    account.enable_features!('seus_posts', 'meta_ads_comentarios_ia', 'meta_ads_comentarios_instagram')
     allow(SeusPosts::Posts).to receive(:para).and_return(
       instance_double(SeusPosts::PostsInstagram, perform: { status: 'ok', posts: [{ id: post_id, created_time: 1.day.ago.iso8601 }], normal: {} })
     )
@@ -45,6 +46,19 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
 
     get "#{base}/cuidado", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
 
+    expect(response).to have_http_status(:not_found)
+  end
+
+  # #2520: o webhook só entrega o comentário do Instagram com a flag dos comentários do Instagram; sem ela, o cuidado
+  # não abre (antes abria e nunca recebia nada). A do Facebook não serve para o perfil do Instagram.
+  it 'sem a flag dos comentários da rede do perfil: 404, mesmo com a da outra rede' do
+    account.disable_features!('meta_ads_comentarios_instagram')
+    account.enable_features!('meta_ads_comentarios_facebook')
+
+    get "#{base}/cuidado", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+
+    get "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
     expect(response).to have_http_status(:not_found)
   end
 

@@ -251,6 +251,17 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     let(:alvo_novo) { alvo.merge('post_id' => '1791') }
     let(:corpo) { { message: 'Oi', para_quem: 'Quem pedir', phrases: ['Te chamei'], status: 'on', user: nil } }
 
+    # #2520: o Facebook só manda o comentário com o `feed` da Página assinado; o Instagram não precisa.
+    it 'ligar um cuidado do Facebook assina o feed da Página; o do Instagram não' do
+      pagina = create(:channel_facebook_page, account: account, page_id: '555')
+      alvo_fb = { 'kind' => 'post', 'perfil' => "facebook-#{pagina.inbox.id}", 'post_id' => '555_1', 'networks' => ['facebook'],
+                  'inbox_id' => pagina.inbox.id }
+      facebook = described_class.new(account: account, alvo: alvo_fb, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
+
+      expect { facebook.salvar!(**corpo) }.to have_enqueued_job(Crm::MetaAds::ComentariosIa::AssinarFeedJob).with(account.id, '555')
+      expect { painel.salvar!(**corpo) }.not_to have_enqueued_job(Crm::MetaAds::ComentariosIa::AssinarFeedJob)
+    end
+
     it 'duas abas ligando o mesmo post ao mesmo tempo: a segunda relê o cuidado e aplica por cima, sem erro' do
       aba1 = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
       aba2 = described_class.new(account: account, alvo: alvo_novo, fonte: fonte, conversation_access: ve_tudo, viewer: admin)
