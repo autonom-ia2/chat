@@ -205,6 +205,7 @@ Rails.application.routes.draw do
           get 'seus_posts/cuidados', to: 'seus_posts_cuidado#cuidados'
           put 'seus_posts/cuidados', to: 'seus_posts_cuidado#mudar_todos'
           get 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#show'
+          get 'seus_posts/posts/:post_id/cuidado/post', to: 'seus_posts_cuidado#ler_post'
           put 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#update'
           post 'seus_posts/posts/:post_id/cuidado/previa', to: 'seus_posts_cuidado#previa'
           post 'seus_posts/posts/:post_id/cuidado/rascunho', to: 'seus_posts_cuidado#rascunho'

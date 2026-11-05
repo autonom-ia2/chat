@@ -15,7 +15,9 @@ import {
   redesDoCuidado,
   tituloDaLegenda,
   useAgenteDoPost,
+  useFlags,
 } from '../composables/useAgentesDoPost';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 
 // #2469 (PR 3a do #2436) — a página do cartão de um post ou anúncio em Agentes. Três gavetas, uma ação em cada: o que
 // sabe (a base do agente da porta e o que é só deste post), testar e os comentários (respondidos, esperando você,
@@ -92,18 +94,21 @@ const fechar = () => {
 };
 
 // Onde estão todos os comentários (para responder) e onde o cuidado se edita: o post no Seus posts ou o anúncio.
-const rotaDoAlvo = computed(() =>
-  ehAnuncio.value
-    ? {
-        name: 'campaigns_meta_ads_index',
-        query: { aba: 'resultado', anuncio: detalhe.value.target_id },
-      }
-    : {
-        name: 'seus_posts_post',
-        params: { postId: detalhe.value.target_id },
-        query: { perfil: detalhe.value.perfil },
-      }
-);
+// #2520: o post por dentro pede seus_posts_comentarios; sem ela, não há onde responder no post, e o link some.
+const comPostPorDentro = useFlags(FEATURE_FLAGS.SEUS_POSTS_COMENTARIOS);
+const rotaDoAlvo = computed(() => {
+  if (ehAnuncio.value)
+    return {
+      name: 'campaigns_meta_ads_index',
+      query: { aba: 'resultado', anuncio: detalhe.value.target_id },
+    };
+  if (!comPostPorDentro.value) return null;
+  return {
+    name: 'seus_posts_post',
+    params: { postId: detalhe.value.target_id },
+    query: { perfil: detalhe.value.perfil },
+  };
+});
 const rotaDoCuidado = computed(() => {
   if (!detalhe.value?.can_manage) return null;
   return ehAnuncio.value
@@ -203,6 +208,7 @@ const mudar = async status => {
               {{ legenda.resto }}
             </span>
             <router-link
+              v-if="rotaDoAlvo"
               data-ver-post
               :to="rotaDoAlvo"
               class="inline-flex items-center gap-1 text-sm font-semibold text-white underline min-h-11 w-fit"

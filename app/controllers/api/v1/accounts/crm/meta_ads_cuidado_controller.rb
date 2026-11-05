@@ -18,8 +18,8 @@
 # POST meta_ads_connection/ads/:ad_id/cuidado/ler_antigos → "Ler e mandar" (uma vez por cuidado ligado).
 #      Mudar: administrador ou `meta_ads_manage`.
 #
-# As guardas das abas de comentários do anúncio (#2196, #2197): flags `meta_ads_gestao`, a dos comentários de ao menos
-# uma rede e `meta_ads_comentarios_ia` (404 sem elas: nada aqui chama a Meta); conexão ativa com conta de anúncios;
+# As guardas das abas de comentários do anúncio (#2196, #2197): a dos comentários de ao menos uma rede e
+# `meta_ads_comentarios_ia` (404 sem elas: nada aqui chama a Meta; a gestão de Anúncios não entra, #2520); conexão ativa com conta de anúncios;
 # anúncio dessa conta (senão 404). As redes do cuidado vêm do criativo (Anuncio): só as com post, flag e caixa na
 # conta. Sem nenhuma, 422 `no_post` (o anúncio não aparece numa rede ligada) ou `no_inbox` (falta a caixa). Ler os
 # comentários pede ver a caixa de TODAS as redes do anúncio (InboxPolicy#show?), não só de uma: o Painel junta as
@@ -34,7 +34,7 @@
 # mudar e "Ler e mandar" ficam na Auditoria da conta, sem texto.
 class Api::V1::Accounts::Crm::MetaAdsCuidadoController < Api::V1::Accounts::Crm::BaseController
   AUDIT_ACTION = 'meta_ads_comment_care'.freeze
-  FLAGS = ['meta_ads_gestao', Crm::MetaAds::ComentariosIa::Cuidar::FLAG].freeze
+  FLAGS = [Crm::MetaAds::ComentariosIa::Cuidar::FLAG].freeze
   REDE_FLAGS = Crm::MetaAds::ComentariosIa::Anuncio::FLAGS.values.freeze
   STATUS = { 'ad_not_found' => :not_found, 'not_connected' => :not_found, 'not_inbox_member' => :forbidden }.freeze
 
