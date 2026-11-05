@@ -79,7 +79,7 @@ O mapa vive em `app/services/autonomia/automacao/conversao/mapa.rb`. O relatóri
 
 O maior risco está nas linhas do "não dispara". As 23 automações de retorno com atraso dariam um retorno a todo card da chegada.
 
-**Proposta (P4, para a F6):** a atividade do card leva no payload se o caminho roda as automações de etapa, com o mesmo critério do `Runner`. Hoje esse critério é o `skip_automations` e a chamada (ou não) do `Runner` em cada caminho. A automação convertida usa um parâmetro do gatilho, "como as automações de etapa", que só casa quando a marca diz sim. Assim a conversão reproduz a tabela acima sem regra nova escrita à mão.
+**Proposta (P4, para a F6):** a atividade do card leva no payload se o caminho roda as automações de etapa, com o mesmo critério do `Runner`. O critério fica num lugar só, consultado pelo `Runner` e pela atividade, por exemplo `Crm::Cards::RodaAutomacoesDeEtapa.para(caminho)`, para os dois nunca divergirem (qualidade, 05/11). Hoje esse critério é o `skip_automations` e a chamada (ou não) do `Runner` em cada caminho. A automação convertida usa um parâmetro do gatilho, "como as automações de etapa", que só casa quando a marca diz sim. Assim a conversão reproduz a tabela acima sem regra nova escrita à mão.
 - A marca não pode ser deduzida no emissor a partir de "chamou o `Runner`" (Multifunnel, 05/11). Na IA de assunto, a decisão de rodar vem **depois** do `Creator`, fora da trava (`etapa.rb:38`). Por isso quem chama passa a marca ao `Creator`:
   - `Applier`/`Etapa`: sim, só se a etapa não é a 1ª;
   - `CardNaEtapa`: sim;
@@ -221,7 +221,7 @@ Só entra o que uma conta de verdade usa (YAGNI). O resto fica "sem equivalente"
 - `convertida_por_id`, `convertida_em`, `revertida_em`;
 - índice único em (`antiga_tipo`, `antiga_id`) enquanto não revertida.
 
-`autonomia_automacao_conversao_fatos`, a prova do F9.3 (seção 8): `conversao_id`, `motor` (antigo ou novo), `resultado` (rodou ou recusou), `marca` do fato e `instante`. Fica 40 dias.
+`autonomia_automacao_conversao_fatos`, a reivindicação e a prova do F9.3 (5.1 e seção 8): `conversao_id`, `motor` (antigo ou novo), `resultado` (rodou ou recusou), `marca` do fato e `instante`, com índice único em (`conversao_id`, `marca`). Cada linha fica 40 dias, mais que o retry máximo do Sidekiq.
 
 O ADR-001 disse "F9 sem migration". Sem essas tabelas, porém, o par antigo↔novo só existiria num arquivo de backup. Aí a divisão por instante (abaixo), as travas da seção 7 e a reversão da seção 6 não teriam onde olhar.
 
@@ -256,12 +256,21 @@ A primeira versão deste doc dizia que uma transação bastava, porque os dois m
 - Assim, todo fato que o antigo decidiu "sem conversão" tem instante anterior a `convertida_em`, e o novo o recusa.
 - Custo: um `pg_advisory_xact_lock_shared` por decisão, nas contas com regra antiga.
 
-**Resto:** o fato e o `convertida_em` são carimbados pelo relógio da aplicação. A diferença entre os relógios dos containers é o que sobra. A tabela de fatos (seção 8) mede isso.
+**O relógio: o instante decide quem pode; a reivindicação decide quem faz (qualidade, 05/11).** O `created_at` do fato vem do relógio do container que o criou, e o `convertida_em` vem do relógio de outro. Com um container 2 s adiantado, um fato anterior à troca ganha instante ≥ `convertida_em`. O antigo, que decidiu antes sob o lock, roda; o novo também. Medir não evita essa dupla.
+- Por isso a tabela de fatos é também a **reivindicação**, com índice único em (`conversao_id`, `marca`).
+- Cada motor só executa se o `INSERT … ON CONFLICT DO NOTHING` dele devolver a linha.
+- A dupla fica impossível por construção. O lock passa a ser só otimização.
+- **A mesma marca nos dois motores:**
+  - conversa: a marca do despacho, que os dois listeners recebem do mesmo evento;
+  - card: o id da `Crm::Activity`. O `Runner` roda depois do `log_move!`, então o id da atividade passa a ele.
+- A reivindicação vale enquanto houver conversão vigente, não só 30 dias: um evento de antes da troca pode chegar dias depois, num retry do Sidekiq.
+- **O lock:** `pg_advisory_xact_lock_shared` só vale dentro de transação, e o `AutomationRuleListener` e o `Runner` não rodam numa. A F9.2 põe uma `transaction` curta em volta da decisão.
 
 **Spec obrigatório da F9.2:**
 - o commit da troca entre os dois listeners do mesmo evento dá exatamente 1 efeito;
 - o commit da troca entre o `Runner` e o `EventoDoCardJob` do mesmo movimento dá exatamente 1 efeito;
 - o evento enfileirado antes da troca e processado depois dá exatamente 1 efeito (o do antigo).
+- com o relógio do fato adiantado (o `travel` no create), não há dupla.
 
 ### 5.2 Passos, nesta ordem
 
@@ -327,20 +336,20 @@ A cadeia comum (D6) já impede que as duas, cada uma num motor, se disparem em l
 - o antigo grava `rodou` ou `recusou` (recusado pela 5.1);
 - o novo grava `rodou` ou `recusou` (`antes_da_conversao`), com a mesma marca do fato.
 
-Assim a dupla vira uma conta exata, sem heurística de minuto: duas linhas `rodou` com a mesma marca, uma de cada motor. Tem de ser 0. O antigo não registra execução hoje, e por isso "antes" e "depois" não seriam comparáveis sem essa tabela.
+Com a reivindicação (5.1), a dupla é impossível por construção. A leitura semanal confere isso pelas marcas e mede o relógio. O antigo não registra execução hoje, e por isso "antes" e "depois" não seriam comparáveis sem essa tabela.
 
 Uma leitura agregada semanal, por psql e só leitura, pela Orquestração:
 
 | Medida | Como |
 |---|---|
-| Duplas | marcas com `rodou` nos dois motores (tem de ser 0) |
+| Duplas | marcas com `rodou` nos dois motores (0 por construção; a leitura confere) |
 | Perdidas | marcas com `recusou` nos dois motores (tem de ser 0) |
 | Efeito | registros com sucesso por passo, contra o ensaio |
 | Erros | execuções com erro, pausadas (`ligada_por` sem acesso) ou interrompidas |
 | Relógio | fatos recusados pelo novo com instante a menos de 1 s de `convertida_em` (mede a diferença entre os relógios) |
 
 - Divergência sem explicação, ou qualquer dupla ou perdida: reverter a conta (seção 6) e abrir Issue.
-- O mês só fecha com as quatro semanas limpas. Depois disso, a tabela de fatos deixa de receber linhas daquela conta.
+- O mês só fecha com as quatro semanas limpas. A reivindicação continua enquanto a conversão estiver vigente; a retenção de 40 dias vale só para as linhas já reivindicadas há mais tempo que o retry máximo.
 
 ## 9. Quem vira `ligada_por` (parecer da sessão Funções personalizadas)
 
