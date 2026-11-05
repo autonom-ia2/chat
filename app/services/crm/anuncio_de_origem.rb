@@ -26,7 +26,8 @@
 # O balão do referral na mensagem (content_attributes da MENSAGEM, WhatsappReferral.vue) fica como está.
 module Crm::AnuncioDeOrigem
   CHAVE = 'meta_ads_view'.freeze
-  FONTES_DE_ANUNCIO = %w[meta_ctwa meta_paid google_ads tiktok_ads].freeze
+  # O clique para o Messenger e o Direct (`meta_ctm`/`meta_ctd`, #2521) é anúncio como o do WhatsApp.
+  FONTES_DE_ANUNCIO = (%w[meta_ctwa meta_paid google_ads tiktok_ads] + Ctwa::CampaignBuilder::MESSAGING_AD_SOURCES).freeze
   CAMPOS_QUE_FICAM = %i[source source_type touched_at conversation_id].freeze
   CAMPOS_DO_TOQUE_QUE_FICAM = %w[source_type touched_at].freeze
   # Origens em que a regra de "pago" é refeita sobre o toque: sem origem gravada, link e publicação.

@@ -9,6 +9,8 @@
 # - entraria: os passos em ordem, do jeito do Roteiro. O "se" vale agora e segue pelo ramo que valer. O "esperar até"
 #   que ainda não vale abre dois caminhos (se chegar a tempo: segue o resto; se o prazo vencer: o ramo e depois o
 #   resto), e o "decidir" da IA abre um caminho por saída, sem escolher. "Parar" acaba o caminho.
+# - "extrair", "escrever" e "resumir" (#2500 F7) só dizem o que a IA faria e para onde iria, pelo `ensaiar` de cada
+#   passo: nenhuma IA é chamada.
 #
 # Cada tipo de passo diz o que faria por um mapa fechado. Tipo fora do mapa (um passo novo) só ganha a frase do
 # catálogo: o ensaio nunca roda o que não conhece.
@@ -20,6 +22,8 @@ class Autonomia::Automacao::Ensaio
   MAXIMO_DE_PASSOS = 500
   GATILHOS = %w[conversa.criada conversa.aberta conversa.resolvida mensagem.criada].freeze
   SO_MOSTRA = %w[esperar acao].freeze
+  # #2500 F7: os passos de IA que seguem em frente; o "decidir" abre caminhos e tem regra própria.
+  IA_SO_DIZ = %w[extrair escrever resumir].freeze
 
   def self.gatilho_suportado?(receita)
     GATILHOS.include?(receita.dig('gatilho', 'tipo'))
@@ -92,8 +96,9 @@ class Autonomia::Automacao::Ensaio
     passos
   end
 
-  # [o que faria, o próximo passo neste caminho (nil quando acabou aqui)]. Esperar e ação só se mostram; o resto do
-  # mapa fechado tem regra própria, e tipo fora dele é "catalogo" (só a frase).
+  # [o que faria, o próximo passo neste caminho (nil quando acabou aqui)]. Esperar e ação só se mostram; os passos de IA
+  # que não abrem caminho só dizem o que fariam; o resto do mapa fechado tem regra própria, e tipo fora dele é
+  # "catalogo" (só a frase).
   def ensaiar_passo(passo, valores)
     case passo['tipo']
     when 'mensagem', 'avisar' then [texto(passo, valores), @roteiro.seguinte(passo['id'])]
@@ -101,8 +106,14 @@ class Autonomia::Automacao::Ensaio
     when 'se' then se(passo, valores)
     when 'decidir' then [decidir(passo, valores), nil]
     when 'parar' then [no(passo, 'parar'), nil]
-    else [no(passo, SO_MOSTRA.include?(passo['tipo']) ? passo['tipo'] : 'catalogo'), @roteiro.seguinte(passo['id'])]
+    else [em_frente(passo), @roteiro.seguinte(passo['id'])]
     end
+  end
+
+  def em_frente(passo)
+    return ia(passo) if IA_SO_DIZ.include?(passo['tipo'])
+
+    no(passo, SO_MOSTRA.include?(passo['tipo']) ? passo['tipo'] : 'catalogo')
   end
 
   def no(passo, faria, dados = {}, ramos: nil)
@@ -144,6 +155,15 @@ class Autonomia::Automacao::Ensaio
     chave = ::Autonomia::Automacao::Receita::NENHUM
     nenhum = { chave: chave, passos: caminho(@roteiro.entrar(passo, chave), valores) }
     no(passo, 'decidir', ramos: caminhos << nenhum)
+  end
+
+  # O que a IA faria, só com o que a receita diz. O passo que manda mensagem ou aviso (regras da F4) sem a mensagem
+  # automática ligada na conta não sairia, como no motor.
+  def ia(passo)
+    classe = ::Autonomia::Automacao::IaNoExecutor::IA.fetch(passo['tipo'])
+    return no(passo, 'mensagens_desligadas') if classe.fala_com_gente?(passo) && !::Autonomia::Automacao::Motor.mensagens?(@conta)
+
+    no(passo, "ia_#{passo['tipo']}", classe.ensaiar(passo))
   end
 
   def condicao?(condicao, valores)

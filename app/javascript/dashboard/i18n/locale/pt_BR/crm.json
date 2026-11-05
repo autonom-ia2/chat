@@ -2816,6 +2816,12 @@
               "META_HIGHER": "A Meta também conta quem já conversava com você; conversa encaminhada ou de contato salvo chega sem origem para nós.",
               "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
             },
+            "MESSAGING": {
+              "LINE": "Até ontem, a Meta diz {meta} conversa iniciada pelo Messenger e pelo Direct do Instagram; nós contamos {ours}. | Até ontem, a Meta diz {meta} conversas iniciadas pelo Messenger e pelo Direct do Instagram; nós contamos {ours}.",
+              "CLOSE": "Os dois números batem.",
+              "META_HIGHER": "A Meta também conta quem já conversava com você; conversa que não veio pelo clique no anúncio chega sem origem para nós.",
+              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
+            },
             "SITE": {
               "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
@@ -3617,6 +3623,7 @@
             "WEBSITE": "{offer}. Veja no site e faça seu pedido."
           },
           "NEED_SITE": "Digite o endereço do site para continuar.",
+          "NEED_INSTAGRAM": "Esta Página não tem Instagram ligado. Escolha outro destino para continuar.",
           "TEXT_READY": "Texto pronto: «{text}»",
           "TEXT_READY_EMPTY": "O texto sai do que você vende.",
           "TEXT_CHANGE": "Mudar texto",
@@ -3805,6 +3812,7 @@
           "INVALID_SITE": "O endereço do site não vale. Confira se ele está certo, como lojaexemplo.com.br.",
           "INVALID_WHATSAPP_NUMBER": "Esse número de WhatsApp não é desta conta. Escolha outro.",
           "INVALID_PAGE": "A Página do Facebook não está liberada para a plataforma. Entre de novo com o Facebook na Conexão.",
+          "INVALID_INSTAGRAM": "Esta Página não tem conta profissional do Instagram ligada. Ligue uma ou escolha outro destino.",
           "INVALID_MEDIA": "A Meta não aceitou a foto ou o vídeo. Escolha de novo.",
           "INVALID_AUDIENCE": "O público não vale. Confira os estados e a idade.",
           "VIDEO_PROCESSING": "A Meta ainda está preparando o vídeo. Tente de novo em um minuto.",
@@ -6146,6 +6154,7 @@
     "ORIGEM": {
       "TELA": "De onde veio",
       "FORMULARIO_META": "Veio do formulário \"{formulario}\" · anúncio {anuncio}",
+      "FORMULARIO_META_GENERICO": "Veio de um formulário de anúncio da Meta",
       "TITULO": "Como {nome} chegou",
       "TEXTO": "O caminho até aqui e a que este cliente está ligado.",
       "CAMINHO": "Caminho até aqui",

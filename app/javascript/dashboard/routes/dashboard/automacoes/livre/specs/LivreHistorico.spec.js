@@ -49,9 +49,12 @@ const execucao = (id, extra = {}) => ({
   ...extra,
 });
 
-const responder = (execucoes, { mais = false, pagina = 1 } = {}) =>
+const responder = (
+  execucoes,
+  { mais = false, pagina = 1, versoes = VERSOES } = {}
+) =>
   AutomacoesAPI.historico.mockResolvedValueOnce({
-    data: { execucoes, versoes: VERSOES, pagina, mais },
+    data: { execucoes, versoes, pagina, mais },
   });
 
 const montar = () =>
@@ -149,7 +152,15 @@ describe('LivreHistorico', () => {
     expect(wrapper.find('[data-ver-mensagem]').exists()).toBe(false);
   });
 
-  it('o custo de IA aparece em dólar, no formato da conta', async () => {
+  // #2500 — o custo do passo fica na casa de US$ 0,0001: dois algarismos
+  // significativos, e abaixo do mínimo "menos de", nunca "US$ 0".
+  it.each([
+    [0, 'AUTOMACAO_LIVRE.HISTORICO.IA_MENOS_DE(0,0001)'],
+    [0.00004, 'AUTOMACAO_LIVRE.HISTORICO.IA_MENOS_DE(0,0001)'],
+    [0.000135, 'AUTOMACAO_LIVRE.HISTORICO.IA(0,00014)'],
+    [0.0021, 'AUTOMACAO_LIVRE.HISTORICO.IA(0,0021)'],
+    [1.5, 'AUTOMACAO_LIVRE.HISTORICO.IA(1,5)'],
+  ])('o custo de IA %s aparece como %s', async (custo, texto) => {
     responder([
       execucao(1, {
         passos: [
@@ -157,7 +168,7 @@ describe('LivreHistorico', () => {
             passo: 'p1',
             resultado: 'ok',
             motivo: null,
-            dados: { ia: { custo_usd: 0.0021 } },
+            dados: { ia: { custo_usd: custo } },
           },
         ],
       }),
@@ -165,9 +176,56 @@ describe('LivreHistorico', () => {
     const wrapper = montar();
     await flushPromises();
 
-    expect(wrapper.find('[data-ia]').text()).toBe(
-      'AUTOMACAO_LIVRE.HISTORICO.IA(0,0021)'
+    expect(wrapper.find('[data-ia]').text()).toBe(texto);
+  });
+
+  // #2500 — o caminho do "decidir" aparece pelo nome que tinha na versão que
+  // rodou, mesmo que a pessoa tenha renomeado depois; nunca pela chave.
+  it('o decidir mostra o nome do caminho na versão que rodou', async () => {
+    const decidir = nome => ({
+      numero: 1,
+      receita: {
+        gatilho: { tipo: 'conversa.criada' },
+        passos: [
+          {
+            id: 'p1',
+            tipo: 'decidir',
+            pergunta: 'O que o cliente quer?',
+            caminhos: [
+              { chave: 'sinistro', nome, passos: [] },
+              { chave: 'cotacao', nome: 'Cotação', passos: [] },
+            ],
+          },
+        ],
+      },
+    });
+    const passos = ramo => [
+      { passo: 'p1', resultado: 'ok', motivo: null, dados: { ramo } },
+    ];
+    responder(
+      [
+        execucao(1, { versao_id: 21, passos: passos('sinistro') }),
+        execucao(2, { versao_id: 22, passos: passos('sinistro') }),
+        execucao(3, { versao_id: 22, passos: passos('nenhum') }),
+      ],
+      { versoes: { 21: decidir('Sinistro'), 22: decidir('Batida de carro') } }
     );
+    const wrapper = montar();
+    await flushPromises();
+    // A primeira já vem aberta; abrir outra fecha a anterior.
+    const linhas = wrapper.findAll('[data-execucao]');
+    const ramo = () => wrapper.find('[data-ramo]').text();
+    const ramos = [ramo()];
+    await linhas[1].trigger('click');
+    ramos.push(ramo());
+    await linhas[2].trigger('click');
+    ramos.push(ramo());
+
+    expect(ramos).toEqual([
+      'AUTOMACAO_LIVRE.HISTORICO.SEGUIU_POR(Sinistro)',
+      'AUTOMACAO_LIVRE.HISTORICO.SEGUIU_POR(Batida de carro)',
+      'AUTOMACAO_LIVRE.HISTORICO.SEGUIU_POR(AUTOMACAO_LIVRE.RAMOS.NENHUM)',
+    ]);
   });
 
   it('"Ver mais" traz a página seguinte embaixo', async () => {

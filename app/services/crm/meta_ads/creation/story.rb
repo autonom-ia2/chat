@@ -3,13 +3,15 @@
 #
 # - WhatsApp: botão WHATSAPP_MESSAGE com `app_destination: WHATSAPP`; a mensagem pronta vai em `page_welcome_message`.
 # - Site: o endereço e o botão escolhido (LEARN_MORE ou SHOP_NOW).
-# - Messenger e Direct do Instagram: botão MESSAGE_PAGE com o `app_destination` de cada um (só entram quando a chamada
-#   real confirmar; ver Crm::MetaAds::Creation::Confirmed).
+# - Messenger: botão MESSAGE_PAGE com `app_destination: MESSENGER` e o link do Messenger (#2560).
+# - Direct do Instagram: botão INSTAGRAM_MESSAGE com `app_destination: INSTAGRAM_DIRECT` e o link do Instagram; precisa da
+#   conta do Instagram da Página, que vai em `instagram_user_id` (#2560). Os dois usam a saudação padrão da Meta.
 # - Foto: `link_data` com `image_hash`. Vídeo: `video_data` com `video_id` e a capa em `image_hash`. Carrossel (2 a 10):
 #   `link_data.child_attachments`, todos com o mesmo título e o mesmo botão.
 class Crm::MetaAds::Creation::Story
   WHATSAPP_LINK = 'https://api.whatsapp.com/send'.freeze
   MESSENGER_LINK = 'https://fb.com/messenger_doc/'.freeze
+  INSTAGRAM_LINK = 'https://www.instagram.com'.freeze
 
   def initialize(draft, instagram_id: nil)
     @draft = draft
@@ -51,7 +53,8 @@ class Crm::MetaAds::Creation::Story
     case @draft[:destination]
     when 'WEBSITE' then @draft[:site_url]
     when 'WHATSAPP' then WHATSAPP_LINK
-    else MESSENGER_LINK
+    when 'INSTAGRAM_DIRECT' then INSTAGRAM_LINK
+    when 'MESSENGER' then MESSENGER_LINK
     end
   end
 
@@ -59,7 +62,8 @@ class Crm::MetaAds::Creation::Story
     case @draft[:destination]
     when 'WEBSITE' then { type: @draft[:site_action], value: { link: @draft[:site_url] } }
     when 'WHATSAPP' then { type: 'WHATSAPP_MESSAGE', value: { app_destination: 'WHATSAPP' } }
-    else { type: 'MESSAGE_PAGE', value: { app_destination: @draft[:destination] } }
+    when 'INSTAGRAM_DIRECT' then { type: 'INSTAGRAM_MESSAGE', value: { app_destination: 'INSTAGRAM_DIRECT' } }
+    when 'MESSENGER' then { type: 'MESSAGE_PAGE', value: { app_destination: 'MESSENGER' } }
     end
   end
 

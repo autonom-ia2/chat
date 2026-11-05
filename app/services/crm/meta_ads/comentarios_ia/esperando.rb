@@ -27,12 +27,22 @@ module Crm::MetaAds::ComentariosIa::Esperando
     ids = Array(ad_ids).map(&:to_s).uniq
     return {} if ids.empty?
 
-    contagem = esperam(account_id, ids).group(:ad_id).distinct.count(:comment_id)
+    contagem = contar(esperam(account_id).where(ad_id: ids))
     ids.index_with { |id| contagem.fetch(id, 0) }
   end
 
-  def esperam(account_id, ids)
-    da_ia = Crm::MetaAdsCommentAction.where(account_id: account_id, actor: Crm::MetaAds::ComentariosIa::Registro::ACTOR, ad_id: ids)
+  # #2519 (3A): os anúncios da conta com algum comentário esperando, { 'ad_id' => Integer }, só os com mais de zero. É o
+  # que põe no "Qual post?" o anúncio que saiu do período de Anúncios mas ainda tem comentário com o dono.
+  def anuncios_com_espera(account_id)
+    contar(esperam(account_id).where.not(ad_id: nil))
+  end
+
+  def contar(escopo)
+    escopo.group(:ad_id).distinct.count(:comment_id)
+  end
+
+  def esperam(account_id)
+    da_ia = Crm::MetaAdsCommentAction.where(account_id: account_id, actor: Crm::MetaAds::ComentariosIa::Registro::ACTOR)
                                      .where(at: Crm::MetaAds::ComentariosIa::Cuidar::JANELA.ago..)
     sem_cuidado = da_ia.where(action: Crm::MetaAds::ComentariosIa::Registro::SEM_CUIDADO)
                        .where(sem_outra(actor: Crm::MetaAds::ComentariosIa::Registro::ACTOR, action: Crm::MetaAds::ComentariosIa::Registro::LIDO))

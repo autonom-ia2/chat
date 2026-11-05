@@ -26,7 +26,7 @@ import {
   filtrosDoLink,
   semChaves,
 } from '../helpers/filtrosDoLink';
-import { useCrmOrigin } from '../composables/useCrmOrigin';
+import { isMetaAdClickOption, useCrmOrigin } from '../composables/useCrmOrigin';
 import CompanyAPI from 'dashboard/api/companies';
 import { useRelationshipPermissions } from 'dashboard/composables/useRelationshipPermissions';
 import MetaConversionsAPI from 'dashboard/api/metaConversions';
@@ -637,9 +637,7 @@ watch(
 // campaignOptions now, but the Meta CAPI column/gate is about ad attribution.
 // Legacy touches predate the `source` field and were always paid CTWA.
 const isMetaSyncActive = computed(() =>
-  campaignOptions.value.some(
-    option => !option.source || option.source === 'meta_ctwa'
-  )
+  campaignOptions.value.some(isMetaAdClickOption)
 );
 const metaByCard = ref({});
 // Monotonic request token: a stale (out-of-order) response must never overwrite

@@ -505,6 +505,35 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response).to have_http_status(:ok)
     end
 
+    describe 'o custo da IA em dinheiro (#2557)' do
+      def dados_da_ia(quem)
+        get "#{base}/#{automacao.id}/historico", headers: quem.create_new_auth_token, as: :json
+        response.parsed_body['execucoes'].first['passos'].find { |passo| passo['passo'] == 'p_ia' }.dig('dados', 'ia')
+      end
+
+      def com_funcao(permissoes)
+        create(:user, account: account, role: :agent).tap do |pessoa|
+          funcao = create(:custom_role, account: account, permissions: permissoes)
+          pessoa.account_users.find_by(account: account).update!(custom_role: funcao)
+        end
+      end
+
+      before do
+        execucao = automacao.execucoes.first
+        create(:autonomia_automacao_registro, execucao: execucao, passo: 'p_ia', resultado: 'ok',
+                                              dados: { 'ia' => { 'custo_usd' => 0.002, 'modelo' => 'm', 'tokens_saida' => 30 } })
+      end
+
+      it 'nem o custo nem os tokens saem para quem só tem automation_view' do
+        expect(dados_da_ia(com_funcao(%w[automation_view]))).to eq('modelo' => 'm')
+      end
+
+      it 'sai para o administrador e para a função com financial_view', :aggregate_failures do
+        expect(dados_da_ia(admin)).to eq('custo_usd' => 0.002, 'modelo' => 'm', 'tokens_saida' => 30)
+        expect(dados_da_ia(com_funcao(%w[automation_view financial_view]))).to eq('custo_usd' => 0.002, 'modelo' => 'm', 'tokens_saida' => 30)
+      end
+    end
+
     it 'a lista leva o fato da semana de cada automação' do
       get base, headers: admin.create_new_auth_token, as: :json
 

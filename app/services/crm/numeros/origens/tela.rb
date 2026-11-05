@@ -16,6 +16,9 @@
 #   Sem a permissão, `gastoOculto` explica, só quando há gasto;
 # - R$ de venda segue `sales_value_view` (#2075, `perfil[:valor]`): sem ela, os valores e o retorno vêm nil e
 #   `valorOculto: true`; as contagens ficam.
+# - "Qual anúncio trouxe venda" (título, miniatura e id do anúncio) só para quem vê o anúncio de origem
+#   (Crm::AnuncioDeOrigem.ve_no_contexto?, `perfil[:anuncio]`, #2271/#2521): sem ele, `anuncios` vem vazio; a origem "anúncio da
+#   Meta" e as contagens ficam.
 class Crm::Numeros::Origens::Tela
   def initialize(account:, mes:, funis:, perfil:)
     @account = account
@@ -23,6 +26,7 @@ class Crm::Numeros::Origens::Tela
     @funis = funis
     @gasto_permitido = perfil[:gasto]
     @valor = perfil[:valor]
+    @anuncio_visivel = perfil[:anuncio]
   end
 
   def perform
@@ -59,8 +63,7 @@ class Crm::Numeros::Origens::Tela
 
   # Por R$ (e vendas, clientes): anúncio sem venda fica no fim.
   def anuncios
-    @anuncios ||= linhas.select(&:ad_id).group_by(&:ad_id).map { |ad_id, cards| anuncio(ad_id, cards) }
-                        .select { |ad| contou?(ad) }.sort_by { |ad| ordem_do_anuncio(ad) }
+    @anuncios ||= @anuncio_visivel ? anuncios_com_venda : []
   end
 
   # O gasto do mês na tela: só em "Todos os funis", para quem pode ver e quando existe.
@@ -71,6 +74,11 @@ class Crm::Numeros::Origens::Tela
   end
 
   private
+
+  def anuncios_com_venda
+    linhas.select(&:ad_id).group_by(&:ad_id).map { |ad_id, cards| anuncio(ad_id, cards) }
+          .select { |ad| contou?(ad) }.sort_by { |ad| ordem_do_anuncio(ad) }
+  end
 
   # Os clientes que vieram de anúncio da Meta, em todos os funis: a base do "por cliente" e do "por venda".
   def resumo_do_gasto
