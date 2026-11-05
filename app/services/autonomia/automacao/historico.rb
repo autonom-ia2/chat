@@ -17,6 +17,9 @@ class Autonomia::Automacao::Historico
   CHAVES_DA_CONVERSA = %w[mensagem_id nota_id].freeze
   # Dentro de `ia`, só os números do custo: a razão da IA ou um trecho lido seriam texto da conversa.
   IA = %w[custo_usd modelo tokens_entrada tokens_saida].freeze
+  # O valor em dinheiro é custo da conta: só sai com `com_valores` (administrador ou financial_view, #1969, #2557). Os
+  # tokens contam como dinheiro: com o preço público, dão o valor.
+  DINHEIRO = %w[custo_usd tokens_entrada tokens_saida].freeze
   # A tela promete "nos últimos 30 dias": é o tempo em que os passos (Registro) ficam.
   JANELA = ::Autonomia::Automacao::Registro::RETENCAO
   # O tipo do alvo como a tela o chama. Tipo novo, até o Contexto da F3, sai pelo nome da classe.
@@ -33,9 +36,10 @@ class Autonomia::Automacao::Historico
     end
   end
 
-  def initialize(automacao:, usuario:, pagina: 1)
+  def initialize(automacao:, usuario:, com_valores: false, pagina: 1)
     @automacao = automacao
     @usuario = usuario
+    @ia = com_valores ? IA : IA - DINHEIRO
     @pagina = [pagina.to_i, 1].max
   end
 
@@ -94,7 +98,7 @@ class Autonomia::Automacao::Historico
   def dados_para_tela(dados, chaves)
     lidos = dados.slice(*chaves)
     ia = lidos.delete('ia')
-    ia.is_a?(Hash) ? lidos.merge('ia' => ia.slice(*IA)) : lidos
+    ia.is_a?(Hash) ? lidos.merge('ia' => ia.slice(*@ia)) : lidos
   end
 
   def passo(registro, visivel:)
