@@ -132,6 +132,9 @@ const ICONE = {
   esperar_ate: 'i-lucide-timer',
   se: 'i-lucide-split',
   decidir: 'i-lucide-sparkles',
+  extrair: 'i-lucide-sparkles',
+  escrever: 'i-lucide-sparkles',
+  resumir: 'i-lucide-sparkles',
   parar: 'i-lucide-octagon',
   acao: 'i-lucide-zap',
 };
