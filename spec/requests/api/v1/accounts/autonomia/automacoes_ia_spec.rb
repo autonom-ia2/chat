@@ -195,11 +195,18 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
       expect(corpos).to be_empty
     end
 
-    it 'fora a chamada à IA, o pedido leva menos de 1 s (o Rack::Timeout corta aos 15 s)' do
+    # O Rack::Timeout corta aos 15 s e a IA tem 12. O resto do pedido é preso por uma conta fixa de consultas, não pelo
+    # relógio (que oscila com a máquina): hoje são 23. O tempo largo fica só de alarme.
+    it 'fora a chamada à IA, o pedido faz poucas consultas e não se aproxima do corte', :aggregate_failures do
       testar
-      tempo = Benchmark.realtime { testar }
+      consultas = 0
+      contar = ->(*, dados) { consultas += 1 unless dados[:name] == 'SCHEMA' || dados[:cached] }
+      tempo = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') do
+        Benchmark.realtime { testar(conversa_id: conversa.display_id) }
+      end
 
-      expect(tempo).to be < 1.0
+      expect(consultas).to be <= 30
+      expect(tempo).to be < 5.0
     end
 
     it 'nenhuma conversa entraria: testa nas recentes e avisa' do
