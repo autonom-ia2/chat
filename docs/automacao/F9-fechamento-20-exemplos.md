@@ -158,7 +158,7 @@ o RSpec acusa ("Expected pending … to fail", com a instrução do que fazer), 
 e sai da lista. A sonda roda antes do `pending`: sonda quebrada (classe renomeada) é erro vermelho, nunca pendente.
 
 A frente que fecha uma lacuna ajusta a sonda no mesmo PR se o nome que deu for outro (ex.: o passo se chama
-`criar_retorno`, não `retorno`). Sonda vazia (G15, G16, G18, G20, G22 a G25) é lacuna que nenhuma pergunta simples
+`criar_retorno`, não `retorno`). Sonda vazia (G16, G18, G20, G22, G23, G24) é lacuna que nenhuma pergunta simples
 responde: a frente troca a sonda pela prova.
 
 ## 6. Os 20 exemplos: o que existe e o que falta
