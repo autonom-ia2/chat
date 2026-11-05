@@ -12,7 +12,8 @@
 # - contato sem e-mail, que pediu para não receber (o mesmo campo das campanhas) ou com o e-mail bloqueado na conta
 #   (devolução, reclamação, descadastro: EmailSuppression, a mesma régua das campanhas);
 # - valor vazio, ou assunto ou texto que ficou em branco.
-# Quem ligou precisa estar na caixa (ou ser administrador): sem isso a automação pausa, como na conversa (D1, D5).
+# Quem ligou precisa estar na caixa (ou ser administrador) e poder começar conversa, como no "Nova conversa": no EE, a
+# função só de leitura não começa. Sem isso a automação pausa, como na conversa (D1, D5).
 # E-mail não tem janela. A resposta automática ("estou de férias") não volta a disparar automação: a Escuta não começa
 # gatilho pela mensagem marcada como resposta automática. Sem teto de uso.
 class Autonomia::Automacao::PassoDeEmail
@@ -66,13 +67,15 @@ class Autonomia::Automacao::PassoDeEmail
     Resultado.new(tipo: :ok, dados: { 'mensagem_id' => mensagem.id, 'conversa_id' => conversa.display_id })
   end
 
-  # A mesma pergunta da ConversationPolicy para começar conversa na caixa: administrador ou membro dela.
+  # As mesmas perguntas do "Nova conversa" do painel: administrador ou membro da caixa (o controller confere), e a
+  # ConversationPolicy deixa começar conversa (o EE recusa a função que só lê).
   def na_caixa?(caixa)
     usuario = @execucao.automacao.ligada_por
     account_user = usuario && @execucao.account.account_users.find_by(user_id: usuario.id)
     return false unless account_user
+    return false unless account_user.administrator? || usuario.inboxes.exists?(id: caixa.id)
 
-    account_user.administrator? || usuario.inboxes.exists?(id: caixa.id)
+    ConversationPolicy.new({ user: usuario, account: @execucao.account, account_user: account_user }, Conversation).create?
   end
 
   # A caixa que trava numa conversa só devolve a dela: o assunto deste envio passa a ser o dela, porque o envio lê o
