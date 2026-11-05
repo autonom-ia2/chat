@@ -94,6 +94,27 @@ describe('LivreIaTestar', () => {
     expect(wrapper.findAll('[data-teste-conversa]')).toHaveLength(2);
   });
 
+  it('trocar de passo no meio do teste para o teste antigo', async () => {
+    let soltar;
+    AutomacoesAPI.testarPasso.mockReturnValueOnce(
+      new Promise(resolve => {
+        soltar = resolve;
+      })
+    );
+    const wrapper = montar();
+
+    await wrapper.find('[data-testar]').trigger('click');
+    await wrapper.setProps({ passo: { ...DECIDIR, id: 'p2' } });
+    soltar(primeira(BRUNO, [7, 8]));
+    await flushPromises();
+
+    expect(AutomacoesAPI.testarPasso).toHaveBeenCalledTimes(1);
+    expect(wrapper.findAll('[data-teste-conversa]')).toHaveLength(0);
+    expect(
+      wrapper.find('[data-testar]').attributes('disabled')
+    ).toBeUndefined();
+  });
+
   it('trava o botão enquanto o teste roda', async () => {
     let soltar;
     AutomacoesAPI.testarPasso.mockReturnValue(

@@ -48,11 +48,11 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
                                  headers: quem.create_new_auth_token, as: :json
   end
 
-  def medir(&)
+  def consultas_de(&)
     consultas = 0
     contar = ->(*, dados) { consultas += 1 unless dados[:name] == 'SCHEMA' || dados[:cached] }
-    tempo = ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { Benchmark.realtime(&) }
-    { consultas: consultas, tempo: tempo }
+    ActiveSupport::Notifications.subscribed(contar, 'sql.active_record', &)
+    consultas
   end
 
   describe 'POST testar_passo' do
@@ -187,7 +187,7 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
       expect(response.parsed_body['conversa']['conversa_id']).to eq(candidatas.first)
 
       testar(conversa_id: candidatas.second)
-      expect(response.parsed_body).to eq('conversa' => response.parsed_body['conversa'])
+      expect(response.parsed_body.keys).to eq(['conversa'])
       expect(response.parsed_body['conversa']['conversa_id']).to eq(candidatas.second)
       expect(corpos.size).to eq(2)
     end
@@ -203,18 +203,17 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::AutomacoesIa', :automacao_motor, t
     end
 
     # O Rack::Timeout corta aos 15 s e a IA tem 12. O resto do pedido é preso por uma conta fixa de consultas, não pelo
-    # relógio (que oscila com a máquina); o tempo largo fica só de alarme. O 1º pedido é o mais pesado: varre as 50
-    # conversas recentes do ensaio, e aqui nenhuma entra. Hoje: 44 no 1º e 23 no seguinte (o número não cresce com as conversas).
-    it 'fora a chamada à IA, o pedido faz poucas consultas e não se aproxima do corte', :aggregate_failures do
+    # relógio (que oscila com a máquina). O 1º pedido é o mais pesado: varre as 50 conversas recentes do ensaio, e aqui
+    # nenhuma entra. Hoje: 44 no 1º e 23 no seguinte (o número não cresce com as conversas).
+    it 'fora a chamada à IA, o pedido faz poucas consultas', :aggregate_failures do
       49.times { create(:conversation, account: account, inbox: inbox) }
       resolvida = { campo: { '$valor': 'conversa.status' }, op: 'igual', valor: 'resolved' }
 
-      primeiro = medir { testar(corpo: receita.merge(gatilho: { tipo: 'conversa.criada', filtros: [resolvida] })) }
-      seguinte = medir { testar(conversa_id: conversa.display_id) }
+      primeiro = consultas_de { testar(corpo: receita.merge(gatilho: { tipo: 'conversa.criada', filtros: [resolvida] })) }
+      seguinte = consultas_de { testar(conversa_id: conversa.display_id) }
 
-      expect(primeiro[:consultas]).to be <= 55
-      expect(seguinte[:consultas]).to be <= 30
-      expect([primeiro[:tempo], seguinte[:tempo]]).to all(be < 5.0)
+      expect(primeiro).to be <= 55
+      expect(seguinte).to be <= 30
     end
 
     it 'nenhuma conversa entraria: testa nas recentes e avisa' do

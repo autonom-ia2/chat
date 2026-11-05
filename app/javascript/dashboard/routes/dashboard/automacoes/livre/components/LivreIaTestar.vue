@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -38,13 +38,22 @@ const aviso = ref(null);
 const erro = ref('');
 const testou = ref(false);
 
+// Cada teste tem um número. Trocar de passo ou fechar a tela muda o número, e o
+// teste antigo para antes do próximo pedido: não chama a IA à toa nem mistura
+// resultados de outro passo.
+let rodada = 0;
 const limpar = () => {
+  rodada += 1;
   conversas.value = [];
   aviso.value = null;
   erro.value = '';
   testou.value = false;
+  rodando.value = false;
 };
 watch(() => props.passo.id, limpar);
+onBeforeUnmount(() => {
+  rodada += 1;
+});
 
 const pedir = conversaId =>
   AutomacoesAPI.testarPasso({
@@ -64,9 +73,12 @@ const mostrar = conversa => {
 // aparece assim que chega.
 const testar = async () => {
   limpar();
+  const minha = rodada;
+  const valendo = () => minha === rodada;
   rodando.value = true;
   try {
     const { data } = await pedir();
+    if (!valendo()) return;
     aviso.value = data.aviso;
     mostrar(data.conversa);
     const restantes = (data.candidatas || []).filter(
@@ -74,14 +86,17 @@ const testar = async () => {
     );
     for (let i = 0; i < restantes.length; i += 1) {
       // eslint-disable-next-line no-await-in-loop
-      mostrar((await pedir(restantes[i])).data.conversa);
+      const { data: seguinte } = await pedir(restantes[i]);
+      if (!valendo()) return;
+      mostrar(seguinte.conversa);
     }
     testou.value = true;
   } catch (e) {
+    if (!valendo()) return;
     const { mensagem, problemas } = erroDaApi(e, t);
     erro.value = [mensagem, ...problemas].join(' ');
   } finally {
-    rodando.value = false;
+    if (valendo()) rodando.value = false;
   }
 };
 
