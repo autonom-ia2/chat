@@ -27,7 +27,7 @@ RSpec.describe 'Comentários do Instagram: ler e agir só para quem vê a caixa 
     AccountUser.find_by(account: account, user: manager).update!(custom_role: role)
     viewer_role = CustomRole.create!(account: account, name: 'Só vê anúncios', permissions: %w[meta_ads_view])
     AccountUser.find_by(account: account, user: viewer).update!(custom_role: viewer_role)
-    account.enable_features!('meta_ads_gestao', 'meta_ads_comentarios_instagram')
+    account.enable_features!('meta_ads_comentarios_instagram')
     create_meta_ads_insights_connection(account)
     stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))
                                              .to_return(status: 200, headers: json,

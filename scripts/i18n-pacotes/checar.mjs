@@ -89,6 +89,8 @@ const entreAspas = (texto, depois) => {
 
 // Catálogo do painel de um idioma, montado como locale/<l>/index.js monta:
 // `import X from './Y.json'` e o spread raso na mesma ordem do export.
+// `...X.CHAVE,` é um namespace montado de vários arquivos (Automação livre,
+// #2569): `CHAVE: { ...X.CHAVE, ...Z.CHAVE }` junta o bloco de cada um nele.
 export function baseDoPainel(dirLocale) {
   const linhas = readFileSync(path.join(dirLocale, 'index.js'), 'utf8')
     .split('\n')
@@ -102,20 +104,35 @@ export function baseDoPainel(dirLocale) {
         .trim();
       arquivos.set(nome, entreAspas(linha, linha.indexOf(' from ')));
     });
-  return linhas
-    .filter(linha => linha.startsWith('...') && linha.endsWith(','))
-    .map(linha => linha.slice(3, -1))
-    .reduce((base, nome) => {
-      const arquivo = arquivos.get(nome);
-      if (!arquivo)
-        throw new Error(
-          `${dirLocale}/index.js: ...${nome} sem import de .json`
-        );
-      return {
-        ...base,
-        ...JSON.parse(readFileSync(path.join(dirLocale, arquivo), 'utf8')),
-      };
-    }, {});
+  // Cada spread com o bloco `CHAVE: {` em que ele está (null no topo).
+  let bloco = null;
+  const spreads = [];
+  linhas.forEach(linha => {
+    if (linha.endsWith(': {')) bloco = linha.slice(0, -3);
+    else if (linha === '},') bloco = null;
+    else if (linha.startsWith('...') && linha.endsWith(','))
+      spreads.push({ spread: linha.slice(3, -1), bloco });
+  });
+  return spreads.reduce((base, { spread, bloco: dentro }) => {
+    const [nome, namespace] = spread.split('.');
+    const arquivo = arquivos.get(nome);
+    if (!arquivo)
+      throw new Error(
+        `${dirLocale}/index.js: ...${spread} sem import de .json`
+      );
+    if ((namespace || null) !== dentro)
+      throw new Error(
+        `${dirLocale}/index.js: ...${spread} fora do bloco ${namespace || 'do topo'}`
+      );
+    const catalogo = JSON.parse(
+      readFileSync(path.join(dirLocale, arquivo), 'utf8')
+    );
+    if (!namespace) return { ...base, ...catalogo };
+    return {
+      ...base,
+      [namespace]: { ...base[namespace], ...catalogo[namespace] },
+    };
+  }, {});
 }
 
 const mesclar = (alvo, fonte) => {

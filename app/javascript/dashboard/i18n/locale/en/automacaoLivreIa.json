@@ -1,0 +1,44 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "IA": {
+      "LEITURAS": {
+        "MENSAGENS_RECENTES": "The latest customer messages",
+        "MENSAGENS_COM_RESPOSTAS": "The latest customer and team messages",
+        "ULTIMA_MENSAGEM": "The message that started the automation",
+        "CONVERSA": "Channel, inbox, labels and status of the conversation",
+        "CONTATO": "Contact name and fields (never email or phone)",
+        "EMPRESA": "Company name and fields"
+      },
+      "CAMINHO": {
+        "NOME": "Path name",
+        "QUANDO": "When to follow it",
+        "NOVO": "Add path",
+        "TIRAR": "Remove path",
+        "DICA": "From 2 to 8 paths. When the conversation is unclear, the AI picks “None applies” instead of guessing.",
+        "SEM_LETRA": "The path name needs at least one letter.",
+        "RESERVADO": "“None” is already the path for when nothing applies. Pick another name.",
+        "REPETIDO": "There is already a path with this name."
+      },
+      "CAMPO": {
+        "CHAVE": "What to look for",
+        "DESCRICAO": "How to recognize it",
+        "DESTINO": "Where to save",
+        "NOVO": "Look for one more item",
+        "TIRAR": "Remove",
+        "DICA": "The AI fills in only what is written in the conversation. If it is not there, the field stays empty and the history says so."
+      },
+      "DESTINOS": {
+        "MENSAGEM": "Send to the customer",
+        "SUGESTAO": "Leave as a suggestion for the team to review",
+        "NOTA": "Note in the conversation",
+        "AVISAR": "Notify the team"
+      },
+      "DESTINO_GRAVAR": {
+        "CONTATO_NOME": "Contact name",
+        "EMPRESA_NOME": "Company name",
+        "CONTATO_ATRIBUTO": "Contact: {nome}",
+        "CONVERSA_ATRIBUTO": "Conversation: {nome}"
+      }
+    }
+  }
+}

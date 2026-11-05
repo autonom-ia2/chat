@@ -7,10 +7,12 @@ module Autonomia::Automacao::CatalogoDeValores
   def declarado = ::Autonomia::Automacao::Catalogo.declarado
 
   # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
-  # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499).
+  # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499). A resposta durante a espera
+  # (G11) vem marcada `so_na_espera`: o editor só a oferece na condição do "esperar até".
   def todos
-    campos = ::Autonomia::Automacao::Valores::CAMPOS.keys.map do |caminho|
-      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho) }
+    campos = (::Autonomia::Automacao::Valores::CAMPOS.keys + ::Autonomia::Automacao::Valores::RESPOSTA.keys).map do |caminho|
+      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho),
+        'so_na_espera' => (true if ::Autonomia::Automacao::Valores.da_resposta?(caminho)) }.compact
     end
     atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
       { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }

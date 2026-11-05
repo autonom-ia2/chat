@@ -76,7 +76,7 @@ class Autonomia::Automacao::Receita
   end
 
   def problemas_do_passo(passo)
-    return problemas_da_condicao(passo['id'], passo['condicao']) if passo.key?('condicao')
+    return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
@@ -158,8 +158,11 @@ class Autonomia::Automacao::Receita
   end
 
   # O caminho que não vale ali já diz o que corrigir; o valor fora só aparece depois.
-  def problemas_da_condicao(id, condicao, no_gatilho: false)
-    caminhos_desconhecidos(id, condicao, no_gatilho: no_gatilho).presence || fora_do_fechado(id, condicao)
+  def problemas_da_condicao(id, condicao, no_gatilho: false, na_espera: false)
+    lidos = ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map do |caminho|
+      problemas_do_caminho(id, caminho, no_gatilho: no_gatilho, na_espera: na_espera)
+    end
+    lidos.presence || fora_do_fechado(id, condicao)
   end
 
   # Operador ou valor que um valor fechado não tem: a condição nunca casaria.
@@ -177,16 +180,15 @@ class Autonomia::Automacao::Receita
     [texto(:valor_fora, passo: id, caminho: caminho, valor: condicao['valor'], opcoes: fechado['opcoes'].join(', '))]
   end
 
-  def caminhos_desconhecidos(id, condicao, no_gatilho: false)
-    ::Autonomia::Automacao::Condicao.caminhos(condicao).flat_map { |caminho| problemas_do_caminho(id, caminho, no_gatilho: no_gatilho) }
-  end
-
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
-  # vazio no motor, com o motivo no registro.
-  def problemas_do_caminho(id, caminho, no_gatilho: false)
+  # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
+  # o começo da espera, e ela leria sempre vazio.
+  def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
-    return [texto(:mensagem_so_no_gatilho, passo: id, caminho: caminho)] if valores.da_mensagem?(caminho) && !mensagem_no_gatilho?(no_gatilho)
+
+    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera)
+    return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
     return [texto(:atributo_inexistente, passo: id, caminho: caminho)] unless valores.atributo_definido?(caminho, @conta)
 

@@ -306,6 +306,7 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
+          :na-espera="entrada?.tipo === 'esperar_ate'"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreTexto
