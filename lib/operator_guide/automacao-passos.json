@@ -554,7 +554,7 @@
         },
         {
           "nome": "assunto",
-          "peca": "texto_com_valores",
+          "peca": "linha_com_valores",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ASSUNTO"
         },

@@ -40,7 +40,7 @@ module Autonomia::Automacao::Catalogo
 
   # As peças dos passos nativos: a definição do esquema que cada propriedade usa.
   PECAS_DO_ESQUEMA = { 'duracao' => 'duracao', 'condicao' => 'condicao', 'passos' => 'passos',
-                       'passos_opcionais' => 'passos', 'texto' => 'texto_com_valores',
+                       'passos_opcionais' => 'passos', 'texto' => 'texto_com_valores', 'linha' => 'linha_com_valores',
                        # F7: os passos de IA.
                        'leituras' => 'leituras', 'instrucao' => 'instrucao', 'caminhos' => 'caminhos',
                        'campos_extrair' => 'campos_extrair', 'destino_escrever' => 'destino_escrever',

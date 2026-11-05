@@ -342,6 +342,7 @@
       "DA_CONVERSA": "Vem da conversa: {valor}",
       "BUSCA_FALHOU": "Não deu para procurar agora. Tente de novo.",
       "POR_VALOR": "Pôr um dado da conversa",
+      "POR_VALOR_EM": "Pôr um dado da conversa em “{campo}”",
       "TEXTO_DICA": "O que estiver entre colchetes, como [Nome do contato], é trocado pelo dado na hora. Se o dado estiver vazio, este passo não acontece.",
       "RESPONSAVEL": "Quem cuida da conversa",
       "TIMES": "Times",
@@ -487,7 +488,7 @@
           "EMPRESA": "{campo}, na empresa"
         }
       },
-      "EMAIL": "Sairia por {caixa}, com o assunto “{assunto}”",
+      "EMAIL": "Sairia por {caixa}",
       "CONTATO_SEM_EMAIL": "Não sairia: o contato não tem e-mail.",
       "CONTATO_NAO_RECEBE": "Não sairia: o contato pediu para não receber mensagens.",
       "EMAIL_BLOQUEADO": "Não sairia: o e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro).",

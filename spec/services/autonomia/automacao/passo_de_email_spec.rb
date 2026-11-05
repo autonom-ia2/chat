@@ -193,6 +193,12 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       .to eq([I18n.t('autonomia.automacao.receita.caixa_de_email_invalida', passo: 'p1', id: outra_conta.id)])
   end
 
+  it 'o esquema aceita assunto de até 150 letras escritas e recusa o mais longo' do
+    receita = ->(assunto) { { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [email_passo('p1', assunto: [assunto])] } }
+    expect(Autonomia::Automacao::Receita.esquema_valido?(receita.call('a' * 150))).to be(true)
+    expect(Autonomia::Automacao::Receita.esquema_valido?(receita.call('a' * 151))).to be(false)
+  end
+
   # O laço com o autoresponder: "mensagem recebida → manda e-mail". A resposta automática ("estou de férias") chega como
   # mensagem do contato na conversa de e-mail; a cadeia não a vê. Sem o corte da Escuta, cada resposta abriria outra
   # execução e outro e-mail, sem fim.
@@ -306,6 +312,11 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
       expect(no).to include(tipo: 'email', faria: 'email')
       expect(no[:dados]).to eq(texto: 'Oi Carla, seu pedido saiu.', assunto: 'Seu pedido', caixa: caixa.name)
       expect(conversas_de_email).to be_empty
+    end
+
+    it 'o assunto em várias linhas aparece numa linha só, como sai no envio' do
+      passo['assunto'] = ["Seu\n pedido  ", { '$valor' => 'contato.nome' }]
+      expect(ensaio({ 'tipo' => 'conversa.criada' }, conversa)[:passos].sole[:dados][:assunto]).to eq('Seu pedido Carla')
     end
 
     it 'diz por que não sairia: contato sem e-mail, ou caixa que não existe mais', :aggregate_failures do

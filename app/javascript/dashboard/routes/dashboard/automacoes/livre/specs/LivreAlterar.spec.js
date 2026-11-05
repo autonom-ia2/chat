@@ -5,7 +5,12 @@ import LivreAlterar from '../components/LivreAlterar.vue';
 // #2414 F5 — o "Salvar" só aparece pronto quando o esquema aceitaria: alvo a
 // escolher e campo obrigatório preenchidos, condição com o que olhar. A ação
 // avançada abre só para ver.
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (chave, valores) =>
+      valores ? `${chave}(${Object.values(valores).join(',')})` : chave,
+  }),
+}));
 
 const PainelFalso = defineComponent({
   name: 'SidePanel',
@@ -232,7 +237,7 @@ describe('LivreAlterar', () => {
         },
         {
           nome: 'assunto',
-          peca: 'texto_com_valores',
+          peca: 'linha_com_valores',
           obrigatorio: true,
           rotulo: 'ASSUNTO',
         },
@@ -281,6 +286,61 @@ describe('LivreAlterar', () => {
       expect(salvarDesligado(wrapper)).toBe(false);
       await wrapper.find('[data-salvar]').trigger('click');
       expect(wrapper.emitted('salvar')[0][0].valor.caixa_id).toBe(3);
+    });
+
+    it('o assunto é uma linha só, e cada "Pôr um dado" diz em qual caixa entra', async () => {
+      const wrapper = montarEmail([{ value: 3, label: 'Contato' }]);
+      wrapper.vm.abrir({ tipo: 'passo', valor: passo(3) });
+      await flushPromises();
+      const [assunto, texto] = wrapper.findAllComponents({
+        name: 'LivreTexto',
+      });
+
+      expect(assunto.props('umaLinha')).toBe(true);
+      expect(texto.props('umaLinha')).toBe(false);
+      expect(assunto.props('rotuloDoDado')).toBe(
+        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM(ASSUNTO)'
+      );
+      expect(texto.props('rotuloDoDado')).toBe(
+        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM(TEXTO)'
+      );
+    });
+
+    it('a mensagem, com um texto só, segue em caixa grande e com o rótulo de sempre', async () => {
+      const MENSAGEM = {
+        tipo: 'mensagem',
+        grupo: 'MENSAGEM',
+        frase: 'MENSAGEM',
+        campos: [
+          {
+            nome: 'texto',
+            peca: 'texto_com_valores',
+            obrigatorio: true,
+            rotulo: 'TEXTO',
+          },
+        ],
+      };
+      const wrapper = mount(LivreAlterar, {
+        props: {
+          catalogo: { ...CATALOGO, passos: [MENSAGEM] },
+          opcoes: {},
+          atributosDaPeca: () => [],
+          atributosDo: () => [],
+        },
+        global: {
+          stubs: { SidePanel: PainelFalso, LivreTexto: true },
+          mocks: { $t: chave => chave },
+        },
+      });
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: { id: 'm1', tipo: 'mensagem', texto: ['Oi'] },
+      });
+      await flushPromises();
+      const texto = wrapper.findComponent({ name: 'LivreTexto' });
+
+      expect(texto.props('umaLinha')).toBe(false);
+      expect(texto.props('rotuloDoDado')).toBe('');
     });
 
     it('sem caixa de e-mail na conta, avisa e não salva', async () => {

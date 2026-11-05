@@ -58,14 +58,13 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.faria === 'esperar_ate_ja_vale')
     return { ...base, destaque: t(`${E}.JA_VALE`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
-  // G2: por qual caixa e com que assunto o e-mail sairia, e o texto no balão.
+  // G2: a linha já com o assunto montado (como o balão da mensagem), por qual
+  // caixa sairia e o texto no balão.
   if (no.faria === 'email')
     return {
       ...base,
-      destaque: t(`${E}.EMAIL`, {
-        caixa: no.dados.caixa,
-        assunto: no.dados.assunto,
-      }),
+      texto: t('AUTOMACAO_LIVRE.FRASES.EMAIL', { assunto: no.dados.assunto }),
+      destaque: t(`${E}.EMAIL`, { caixa: no.dados.caixa }),
       balao: no.dados.texto,
     };
   if (FARIA_DA_IA[no.faria])

@@ -62,6 +62,12 @@
       "minItems": 1,
       "items": { "oneOf": [{ "type": "string", "minLength": 1 }, { "$ref": "#/definitions/valor" }] }
     },
+    "linha": {
+      "description": "Como o texto, numa linha só e curta: o assunto do e-mail (G2). Quebra de linha vira espaço ao mandar.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 150 }, { "$ref": "#/definitions/valor" }] }
+    },
     "ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
     "leituras": {
       "description": "O que a IA lê do alvo (F7), da lista fechada do Decisor. E-mail e telefone do contato nunca vão. Sem a lista, as mensagens recentes do cliente.",
@@ -239,7 +245,7 @@
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "email" },
             "caixa_id": { "type": "integer", "minimum": 1, "description": "A caixa de e-mail da conta por onde o e-mail sai. Abre uma conversa nova nela, com o assunto." },
-            "assunto": { "$ref": "#/definitions/texto" },
+            "assunto": { "$ref": "#/definitions/linha" },
             "texto": { "$ref": "#/definitions/texto" }
           }
         },

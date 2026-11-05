@@ -342,6 +342,7 @@
       "DA_CONVERSA": "Comes from the conversation: {valor}",
       "BUSCA_FALHOU": "Could not search right now. Try again.",
       "POR_VALOR": "Add a conversation detail",
+      "POR_VALOR_EM": "Add a conversation detail to “{campo}”",
       "TEXTO_DICA": "Anything in brackets, like [Contact name], is replaced by the detail at that moment. If the detail is empty, this step does not happen.",
       "RESPONSAVEL": "Whoever handles the conversation",
       "TIMES": "Teams",
@@ -487,7 +488,7 @@
           "EMPRESA": "{campo}, in the company"
         }
       },
-      "EMAIL": "Would go out from {caixa}, subject “{assunto}”",
+      "EMAIL": "Would go out from {caixa}",
       "CONTATO_SEM_EMAIL": "Would not go out: the contact has no e-mail.",
       "CONTATO_NAO_RECEBE": "Would not go out: the contact asked not to receive messages.",
       "EMAIL_BLOQUEADO": "Would not go out: the contact's e-mail is blocked in this account (bounce, complaint or unsubscribe).",

@@ -155,12 +155,25 @@ const vazio = valor =>
   valor === null ||
   valor === '' ||
   (Array.isArray(valor) && !valor.length);
+// O texto e a linha (assunto do e-mail, G2) levam dado da conversa; com os dois
+// no passo, cada "Pôr um dado" diz em qual caixa o dado entra.
+const TEXTOS = ['texto_com_valores', 'linha_com_valores'];
+const variosTextos = computed(
+  () =>
+    camposNativos.value.filter(campo => TEXTOS.includes(campo.peca)).length > 1
+);
+const rotuloDoDado = campo =>
+  variosTextos.value
+    ? t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM', {
+        campo: t(campo.rotulo),
+      })
+    : '';
 const nativoPronto = campo => {
   const valor = rascunho.value[campo.nome];
   if (campo.peca === 'duracao') return Number.isInteger(valor?.valor);
   if (campo.peca === 'condicao') return condicaoPronta(valor);
   // O texto pede algo além de espaço; o aviso, alguém para chamar.
-  if (campo.peca === 'texto_com_valores')
+  if (TEXTOS.includes(campo.peca))
     return (valor || []).some(
       parte => typeof parte !== 'string' || parte.trim()
     );
@@ -294,8 +307,10 @@ defineExpose({ abrir, fechar });
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreTexto
-          v-else-if="campo.peca === 'texto_com_valores'"
+          v-else-if="TEXTOS.includes(campo.peca)"
           :rotulo="$t(campo.rotulo)"
+          :uma-linha="campo.peca === 'linha_com_valores'"
+          :rotulo-do-dado="rotuloDoDado(campo)"
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
