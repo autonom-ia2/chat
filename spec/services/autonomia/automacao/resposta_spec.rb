@@ -204,6 +204,81 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
     end
   end
 
+  # O padrão do G11 (exemplo 10): a automação manda a mensagem e espera a equipe. Na caixa Híbrida, o eco dessa mensagem
+  # volta pela Meta e passa pelo reconciliador de verdade (WhatsappHybrid::EchoReconcilerExtension).
+  describe 'na caixa Híbrida, o eco da mensagem da automação' do
+    let(:canal) { create(:channel_whatsapp, provider: 'whatsapp_cloud', sync_templates: false, validate_provider_config: false) }
+    let(:account) { canal.account }
+    let(:cliente) { '5511900000001' }
+    let(:fisico) { '3EB0C0FFEE000001' }
+    let(:wamid) { "wamid.#{Base64.strict_encode64([0x18, fisico.size].pack('C*') + fisico)}" }
+    let(:conversa) { chegou_do_cliente.conversation }
+    let(:definicao) { automacao_ligada(account, admin, [esperar_resposta('equipe')]) }
+
+    around { |exemplo| with_modified_env(WHATSAPP_HYBRID_ACCOUNT_IDS: account.id.to_s) { exemplo.run } }
+
+    before { allow(WhatsappHybrid::Config).to receive(:hybrid_inbox?).and_return(true) }
+
+    after { Redis::Alfred.scan_each(match: 'MESSAGE_SOURCE_KEY::*') { |chave| Redis::Alfred.delete(chave) } }
+
+    def webhook(valor, eco: false)
+      params = { object: 'whatsapp_business_account', phone_number: canal.phone_number,
+                 entry: [{ changes: [{ field: eco ? 'smb_message_echoes' : 'messages', value: valor }] }] }.with_indifferent_access
+      Whatsapp::IncomingMessageWhatsappCloudService.new(inbox: canal.inbox, params: params, outgoing_echo: eco).perform
+    end
+
+    def chegou_do_cliente
+      webhook({ contacts: [{ profile: { name: 'Paulo' }, wa_id: cliente }],
+                messages: [{ from: cliente, id: 'wamid.do-cliente', timestamp: '1760371920', type: 'text', text: { body: 'oi' } }] })
+      Message.find_by!(source_id: 'wamid.do-cliente')
+    end
+
+    def eco_da_meta
+      webhook({ message_echoes: [{ from: canal.phone_number.delete('+'), to: cliente, id: wamid, timestamp: '1760371980',
+                                   type: 'text', text: { body: 'A Fernanda já está vendo seu caso' } }] }, eco: true)
+    end
+
+    # A mensagem da automação como o envio pelo WhatsApp API a deixa: sem remetente, com a marca, e o id físico.
+    def acalmar(source_id)
+      create(:message, :bot_message, account: account, conversation: conversa, inbox: conversa.inbox,
+                                     content_attributes: { 'automacao_id' => definicao.id }, source_id: source_id)
+    end
+
+    def acordar_pelas_mensagens_novas(desde)
+      conversa.messages.where('id > ?', desde).find_each do |mensagem|
+        perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { listener.message_created(evento('message.created', message: mensagem)) }
+      end
+    end
+
+    it 'o reconciliador casa o eco na bolha: nada novo, a equipe não respondeu, e no prazo segue pelo "se vencer"', :aggregate_failures do
+      execucao = comecar_e_rodar(definicao)
+      bolha = acalmar(fisico)
+
+      travel(5.minutes) { expect { eco_da_meta }.not_to change(Message, :count) }
+
+      expect(bolha.reload.source_id).to eq(wamid)
+      expect(execucao.reload.estado).to eq('esperando')
+      travel(31.minutes) { varrer }
+      expect(conversa.reload.priority).to eq('high')
+    end
+
+    it 'o eco que chega antes de a bolha ter o id vira mensagem nova, mas é da automação: a equipe não respondeu', :aggregate_failures do
+      execucao = comecar_e_rodar(definicao)
+      bolha = acalmar(nil)
+      ultima = conversa.messages.maximum(:id)
+
+      travel(5.minutes) do
+        expect { eco_da_meta }.to change(Message, :count).by(1)
+        bolha.update!(source_id: fisico)
+        acordar_pelas_mensagens_novas(ultima)
+      end
+
+      expect(execucao.reload.estado).to eq('esperando')
+      travel(31.minutes) { varrer }
+      expect(conversa.reload.priority).to eq('high')
+    end
+  end
+
   describe 'no card' do
     let(:funil) { create_crm_pipeline(account: account, user: admin) }
     let(:card) do

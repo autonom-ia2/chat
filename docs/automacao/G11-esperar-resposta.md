@@ -27,8 +27,13 @@ reconciliador o junta à bolha (`WhatsappHybrid::EchoReconcilerExtension`; na Cl
 eco chega antes de a bolha ter o id gravado, nasce uma mensagem a mais, sem remetente e com a marca do celular, igual
 ao eco de uma pessoa que respondeu pelo app. A diferença está no id: o eco leva o wamid da mensagem que saiu (no
 Híbrido, o id físico dentro dele, `WhatsappHybrid::Wamid`). Se outra mensagem de saída da caixa tem esse id, o eco é
-dela e não conta. No exemplo 10, a agente de IA respondendo não encerra o "esperar a gerente responder". A
-`PessoaDaEquipe` (a régua da IA) não muda.
+dela e não conta. No exemplo 10, a agente de IA respondendo não encerra o "esperar a gerente responder". Nem a própria
+mensagem da automação ("A Fernanda já está vendo seu caso"): na caixa Híbrida, o eco dela casa na bolha pelo
+reconciliador e não vira mensagem; se chegar antes do id, vira mensagem, mas é descartado pelo id. A `PessoaDaEquipe`
+(a régua da IA) não muda.
+
+**A mensagem conta no instante em que é lida.** Se a resposta da equipe for marcada como falha depois que a espera já
+seguiu, o caminho não volta atrás.
 
 ## Decisões
 
@@ -49,7 +54,8 @@ O catálogo marca os dois valores com `so_na_espera`. O editor só os oferece na
 
 ## Fora daqui
 
-- **Prazo como data** ("até dia X"): hoje o prazo é só duração. Se vier, o começo da espera deixa de sair do
-  `due_at - prazo` (`Executor#comeco_da_espera`) e precisa ser gravado ao entrar na espera.
+- **Prazo como data** ("até dia X") **ou unidade nova** (meses): hoje o prazo é minutos, horas ou dias, e
+  `due_at - prazo` volta exato ao começo. Com data, ou com meses (que não invertem exato), o começo deixa de sair dessa
+  conta (`Executor#janela_da_espera`) e precisa ser gravado ao entrar na espera.
 - "Esperar a resposta de uma pessoa específica" (a Fernanda, e não qualquer pessoa da equipe). Nos exemplos, quem
   responde é a responsável pela conversa, e "a equipe respondeu" basta.
