@@ -126,6 +126,78 @@ RSpec.describe Autonomia::Automacao::Conversao::Relatorio do
     )
   end
 
+  def da_regra(event_name: 'conversation_created', conditions: [], actions: [{ 'action_name' => 'add_label', 'action_params' => ['b'] }])
+    Autonomia::Automacao::Conversao::DaRegra.new(
+      build(:automation_rule, account: account, event_name: event_name, conditions: conditions, actions: actions)
+    ).resultado
+  end
+
+  def condicao(chave, operador, valores, tipo: nil)
+    { 'attribute_key' => chave, 'filter_operator' => operador, 'values' => valores, 'query_operator' => nil,
+      'custom_attribute_type' => tipo }.compact
+  end
+
+  # MOTIVO: no card, o "diferente" antigo é verdadeiro sem card; pôr "preenchido" deixaria de pegar a conversa sem card.
+  it 'não põe preenchido no diferente do card' do
+    filtro = da_regra(conditions: [condicao('crm_stage_id', 'not_equal_to', [5])]).receita.dig('gatilho', 'filtros', 0)
+
+    expect(filtro).to eq('campo' => { '$valor' => 'card.etapa_id' }, 'op' => 'diferente', 'valor' => 5)
+  end
+
+  # MOTIVO: o antigo compara atributo de texto em minúsculas e só com o 1º valor, e o diferente dele monta SQL quebrado;
+  # traduzir em silêncio mudaria quem a regra pega.
+  it 'deixa o atributo personalizado de texto e o diferente de atributo como falta' do
+    igual = da_regra(conditions: [condicao('placa', 'equal_to', ['ABC'], tipo: 'conversation_attribute')])
+    diferente = da_regra(conditions: [condicao('placa', 'not_equal_to', ['ABC'], tipo: 'conversation_attribute')])
+
+    expect(igual.faltas.pluck(:chave)).to eq(['atributo_sem_maiusculas'])
+    expect(diferente.faltas.pluck(:chave)).to eq(['diferente_de_atributo'])
+  end
+
+  # MOTIVO: "igual a nada" no antigo é IN (), que não pega ninguém; sem condição, o gatilho novo pegaria tudo.
+  it 'não deixa a condição sem valor sumir do filtro' do
+    expect(da_regra(conditions: [condicao('inbox_id', 'equal_to', [])]).faltas.pluck(:chave)).to eq(['condicao_sem_valor'])
+  end
+
+  # MOTIVO: os nomes de verdade das ações de status são *_conversation; com o nome errado, a regra virava "sem equivalente".
+  it 'converte resolver e adiar com os nomes de verdade das ações' do
+    resolver = da_regra(actions: [{ 'action_name' => 'resolve_conversation', 'action_params' => [] }])
+    adiar = da_regra(actions: [{ 'action_name' => 'snooze_conversation', 'action_params' => [] }])
+
+    expect(resolver).to be_convertivel
+    expect(resolver.receita['passos'].sole['corpo']).to eq('status' => 'resolved')
+    expect(adiar.ressalvas).to include(start_with('adiar_sem_prazo'))
+  end
+
+  # MOTIVO: o "converte" só vale se o motor novo aceitar a receita; tirar a prioridade e regra sem ação não passam.
+  it 'só diz converte quando o motor novo aceita a receita' do
+    sem_prioridade = da_regra(actions: [{ 'action_name' => 'change_priority', 'action_params' => ['nil'] }])
+    sem_acao = da_regra(actions: [])
+
+    expect(sem_prioridade.faltas.pluck(:chave)).to eq(['acao_sem_equivalente'])
+    expect(sem_acao.faltas.pluck(:chave)).to eq(['receita_recusada'])
+  end
+
+  # MOTIVO: evento desconhecido não é "conversa atualizada"; a fase errada mandaria a regra esperar o PR errado.
+  it 'separa o evento desconhecido e o formato estranho' do
+    desconhecido = Autonomia::Automacao::Conversao::DaRegra.new(
+      build(:automation_rule, account: account, event_name: 'contact_created', conditions: [], actions: [])
+    ).resultado
+    estranho = Autonomia::Automacao::Conversao::DaRegra.new(
+      build(:automation_rule, account: account, conditions: ['inbox_id'], actions: [{ 'action_name' => 'resolve_conversation' }])
+    ).resultado
+
+    expect(desconhecido.faltas.pluck(:chave)).to eq(['gatilho_desconhecido'])
+    expect(estranho.faltas.pluck(:chave)).to include('formato_desconhecido')
+  end
+
+  # MOTIVO: o antigo ignora a atribuição a quem não é da caixa; o novo atribui. O dono precisa saber antes de converter.
+  it 'avisa que a atribuição deixa de ignorar quem não é da caixa' do
+    linha = da_regra(actions: [{ 'action_name' => 'assign_agent', 'action_params' => [admin.id] }])
+
+    expect(linha.ressalvas).to include(start_with('atribuir_fora_da_caixa'))
+  end
+
   # MOTIVO: variável Liquid não tem tradução automática segura; o relatório precisa mandar para revisão humana.
   it 'manda texto com variável para o conversor, e converte o texto puro' do
     com_variavel = build(:automation_rule, account: account, event_name: 'conversation_created', conditions: [],

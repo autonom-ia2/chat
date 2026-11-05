@@ -15,12 +15,14 @@ class Autonomia::Automacao::Conversao::DaRegra
   def resultado
     gatilho = gatilho!
     filtro = filtro!(gatilho)
-    Array(@regra.actions).each { |acao| passo!(acao.to_h.stringify_keys) }
+    Array(@regra.actions).each { |acao| acao.is_a?(Hash) ? passo!(acao.stringify_keys) : falta('formato_desconhecido', acao) }
     espera!
+    receita = receita(gatilho, filtro)
+    conferir!(receita)
 
     Autonomia::Automacao::Conversao::Resultado.new(
       origem: 'regra', id: @regra.id, ligada: @regra.active, autor_conhecido: autor_conhecido?,
-      receita: receita(gatilho, filtro), faltas: @faltas, ressalvas: @ressalvas
+      receita: receita, faltas: @faltas, ressalvas: @ressalvas
     )
   end
 
@@ -35,9 +37,18 @@ class Autonomia::Automacao::Conversao::DaRegra
   end
 
   def gatilho!
-    tipo = Mapa::GATILHO_DA_REGRA[@regra.event_name]
-    falta('gatilho_conversa_atualizada', @regra.event_name) unless tipo
-    tipo
+    return falta('gatilho_desconhecido', @regra.event_name) unless Mapa::GATILHO_DA_REGRA.key?(@regra.event_name)
+
+    Mapa::GATILHO_DA_REGRA[@regra.event_name] || falta('gatilho_conversa_atualizada', @regra.event_name)
+  end
+
+  # Sem falta, a receita ainda passa pelo esquema e pela conferência do motor novo: o "converte" do relatório só vale se
+  # o motor aceitar salvar a receita.
+  def conferir!(receita)
+    return if @faltas.any? || receita.nil?
+    return falta('receita_recusada', 'esquema') unless Autonomia::Automacao::Receita.esquema_valido?(receita)
+
+    Autonomia::Automacao::Receita.new(receita, conta: @regra.account).problemas.each { |problema| falta('receita_recusada', problema) }
   end
 
   def filtro!(gatilho)
@@ -79,7 +90,7 @@ class Autonomia::Automacao::Conversao::DaRegra
   end
 
   CONVERSA = %w[assign_agent assign_team remove_assigned_agent remove_assigned_team add_label remove_label change_status
-                resolve open pending_conversation snooze change_priority].freeze
+                resolve_conversation open_conversation pending_conversation snooze_conversation change_priority].freeze
 
   # Atribuir e tirar: a ação antiga → o campo da rota de atribuição e se o valor vem do parâmetro.
   ATRIBUICAO = { 'assign_agent' => ['assignee_id', true], 'assign_team' => ['team_id', true],
@@ -94,9 +105,16 @@ class Autonomia::Automacao::Conversao::DaRegra
     case nome
     when 'add_label' then acao!(:etiquetas, 'por' => params)
     when 'remove_label' then acao!(:etiquetas, 'tirar' => params)
-    when 'change_priority' then acao!(:prioridade, 'priority' => params.first == 'nil' ? nil : params.first)
+    when 'change_priority' then prioridade!(params.first)
     else status!(nome, params)
     end
+  end
+
+  # O passo novo só aceita uma das prioridades; "tirar a prioridade" (nil) não tem equivalente.
+  def prioridade!(valor)
+    return falta('acao_sem_equivalente', 'change_priority nil') if valor.blank? || valor.to_s == 'nil'
+
+    acao!(:prioridade, 'priority' => valor)
   end
 
   def atribuir!(campo, valor)
@@ -104,6 +122,9 @@ class Autonomia::Automacao::Conversao::DaRegra
 
     valor = nil if valor.to_s == 'nil' || valor.to_s == '0'
     @ressalvas << "#{campo}_vazio: tirar o responsável pela rota de atribuição" if valor.nil?
+    if campo == 'assignee_id' && valor
+      @ressalvas << 'atribuir_fora_da_caixa: o antigo ignora quem não é da caixa nem admin, ou não confirmou o e-mail; o novo atribui'
+    end
     acao!(:atribuir, campo => valor)
   end
 
@@ -124,6 +145,9 @@ class Autonomia::Automacao::Conversao::DaRegra
   def mensagem!(params)
     texto = params.first.to_s
     return falta('texto_com_variavel', 'send_message') if texto.include?('{{')
+    return falta('condicao_sem_valor', 'send_message vazio') if texto.strip.empty?
+
+    @ressalvas << 'tweet: o antigo não manda mensagem em conversa do Twitter; o novo manda'
 
     @passos << { 'id' => "p#{@passos.size + 1}", 'tipo' => 'mensagem', 'texto' => [texto] }
   end

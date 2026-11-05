@@ -5,15 +5,19 @@
 # `alguma[todas[a, b], todas[c]]`. Uma condição com vários valores (`inbox_id` igual a [1, 2]) vale qualquer um deles.
 #
 # O `not_equal_to` antigo vira `NOT IN` no SQL, e o campo vazio (NULL) não casa: "time diferente de 3" numa conversa
-# sem time não dispara. O `diferente` novo casa com o vazio; por isso, em campo de valor único, ele vai junto com
-# `preenchido`. Nas etiquetas não: o antigo usa NOT EXISTS, e a conversa sem etiqueta casa nos dois.
+# sem time não dispara. O `diferente` novo casa com o vazio; por isso, nos campos da conversa e do contato, ele vai
+# junto com `preenchido`. Nas etiquetas não (o antigo usa NOT EXISTS), nem no card (o antigo dá verdadeiro sem card).
+#
+# Atributo personalizado de texto: o antigo compara em minúsculas e só com o 1º valor, e o `not_equal_to` dele monta
+# SQL quebrado (`custom_attribute_filter_helper.rb`). O novo compara como está. Nada disso é traduzido em silêncio:
+# vira falta.
 class Autonomia::Automacao::Conversao::Condicoes
   Mapa = Autonomia::Automacao::Conversao::Mapa
 
   attr_reader :faltas, :ressalvas
 
   def initialize(condicoes, gatilho:)
-    @condicoes = Array(condicoes).map { |condicao| condicao.to_h.stringify_keys }
+    @condicoes = Array(condicoes)
     @gatilho = gatilho
     @faltas = []
     @ressalvas = []
@@ -21,16 +25,17 @@ class Autonomia::Automacao::Conversao::Condicoes
 
   # A condição única do filtro do gatilho, ou nil quando a regra não tem condição.
   def filtro
-    return if @condicoes.empty?
+    condicoes = @condicoes.filter_map { |condicao| condicao.is_a?(Hash) ? condicao.stringify_keys : falta('formato_desconhecido', condicao) }
+    return if condicoes.empty?
 
-    grupos = grupos_por_ou.filter_map { |grupo| juntar('todas', grupo.filter_map { |condicao| converter(condicao) }) }
+    grupos = grupos_por_ou(condicoes).filter_map { |grupo| juntar('todas', grupo.filter_map { |condicao| converter(condicao) }) }
     juntar('alguma', grupos)
   end
 
   private
 
-  def grupos_por_ou
-    @condicoes.each_with_object([[]]) do |condicao, grupos|
+  def grupos_por_ou(condicoes)
+    condicoes.each_with_object([[]]) do |condicao, grupos|
       grupos.last << condicao
       grupos << [] if condicao['query_operator'].to_s.casecmp?('or')
     end.reject(&:empty?)
@@ -44,20 +49,21 @@ class Autonomia::Automacao::Conversao::Condicoes
 
   def converter(condicao)
     campo = campo(condicao)
-    return unless campo
-
-    operador = operador(condicao)
+    operador = campo && operador(condicao)
     return unless operador
     return { 'campo' => { '$valor' => campo }, 'op' => operador } if %w[vazio preenchido].include?(operador)
 
     valores = Array(condicao['values']).map { |valor| valor_novo(condicao, valor) }
+    return falta('condicao_sem_valor', condicao['attribute_key']) if valores.empty?
+
     comparacoes(campo, operador, valores.map { |valor| { 'campo' => { '$valor' => campo }, 'op' => operador, 'valor' => valor } })
   end
 
   def comparacoes(campo, operador, lista)
     return juntar('alguma', lista) unless %w[diferente nao_contem].include?(operador)
+    return juntar('todas', lista) unless operador == 'diferente' && campo.start_with?('conversa.', 'contato.')
 
-    juntar('todas', operador == 'diferente' ? [{ 'campo' => { '$valor' => campo }, 'op' => 'preenchido' }, *lista] : lista)
+    juntar('todas', [{ 'campo' => { '$valor' => campo }, 'op' => 'preenchido' }, *lista])
   end
 
   def campo(condicao)
@@ -65,8 +71,14 @@ class Autonomia::Automacao::Conversao::Condicoes
     return campo_da_plataforma(chave) if Mapa::CAMPO.key?(chave)
 
     base = Mapa::BASE_DO_ATRIBUTO[condicao['custom_attribute_type'].to_s]
-    base ? "#{base}.#{chave}" : falta('campo_sem_valor', chave)
+    return falta('campo_sem_valor', chave) unless base
+    return falta('diferente_de_atributo', chave) if condicao['filter_operator'] == 'not_equal_to'
+    return falta('atributo_sem_maiusculas', chave) if condicao['filter_operator'] == 'equal_to' && texto?(condicao)
+
+    "#{base}.#{chave}"
   end
+
+  def texto?(condicao) = Array(condicao['values']).any?(String)
 
   # `mensagem.*` só existe no gatilho mensagem.criada (o esquema recusa nos outros).
   def campo_da_plataforma(chave)

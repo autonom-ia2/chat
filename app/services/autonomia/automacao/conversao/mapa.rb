@@ -48,8 +48,8 @@ module Autonomia::Automacao::Conversao::Mapa
     prioridade: ['POST conversations/:id/toggle_priority', NA_CONVERSA_POR_ID]
   }.freeze
 
-  STATUS_DA_ACAO = { 'resolve' => 'resolved', 'open' => 'open', 'pending_conversation' => 'pending',
-                     'snooze' => 'snoozed' }.freeze
+  STATUS_DA_ACAO = { 'resolve_conversation' => 'resolved', 'open_conversation' => 'open',
+                     'pending_conversation' => 'pending', 'snooze_conversation' => 'snoozed' }.freeze
 
   # O que ainda não tem equivalente: a chave da falta → a fase em que entra. A frase de cada uma fica no doc.
   FALTA = {
@@ -66,11 +66,14 @@ module Autonomia::Automacao::Conversao::Mapa
     'espera_de_episodio' => 'F9.0',
     'texto_com_variavel' => 'F9 (conversor)',
     'nota_privada' => 'F9.0',
-    'acao_sem_equivalente' => 'sem fase (decisão do Rodrigo)'
+    'acao_sem_equivalente' => 'sem fase (decisão do Rodrigo)',
+    'atributo_sem_maiusculas' => 'F9.0',
+    'diferente_de_atributo' => 'decisão do Rodrigo (o antigo monta SQL quebrado)',
+    'condicao_sem_valor' => 'revisão manual',
+    'formato_desconhecido' => 'revisão manual',
+    'gatilho_desconhecido' => 'revisão manual',
+    'receita_recusada' => 'F9 (conversor)'
   }.freeze
 
-  # Ações antigas sem passo hoje e sem fase prevista: a conversão não as leva, e o relatório diz isso.
-  SEM_EQUIVALENTE = %w[mute send_email_transcript send_attachment disable_crm_ai_followup enable_crm_ai_followup
-                       add_sla].freeze
   DE_CARD = %w[crm_create_card crm_move_card_stage crm_mark_card_won crm_mark_card_lost crm_assign_card_owner].freeze
 end
