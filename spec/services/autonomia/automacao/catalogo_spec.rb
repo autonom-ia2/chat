@@ -11,7 +11,10 @@ RSpec.describe Autonomia::Automacao::Catalogo do
   let(:acoes) { passos.select { |passo| passo['tipo'] == 'acao' } }
 
   def frases(locale)
-    JSON.parse(Rails.root.join("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre.json").read)
+    # Um arquivo por área (#2569), juntos no mesmo AUTOMACAO_LIVRE como no index do painel.
+    Rails.root.glob("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre*.json")
+         .map { |arquivo| JSON.parse(arquivo.read) }
+         .reduce { |juntos, area| juntos.merge(area) { |_namespace, um, outro| um.merge(outro) } }
   end
 
   # Os campos que a ação aceita, com o de dentro pelo ponto: "custom_attribute_definition.attribute_values".

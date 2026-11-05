@@ -362,10 +362,13 @@ export function assertLocaleIndex(locale) {
     1,
     `${locale}: expected one namespace import`
   );
-  const exported = source.match(/export default\s*\{([\s\S]*?)\};?/);
-  assert(exported, `${locale}: missing export object`);
+  // Tudo do `export default` até o fim: o objeto pode ter blocos aninhados
+  // (AUTOMACAO_LIVRE: { ... }, #2569), então não dá para parar no primeiro `}`.
+  const inicio = source.indexOf('export default');
+  assert(inicio !== -1, `${locale}: missing export object`);
+  const exported = source.slice(inicio);
   assert.equal(
-    [...exported[1].matchAll(/\.\.\.emailCampaignProtection\s*[,}]/g)].length,
+    [...exported.matchAll(/\.\.\.emailCampaignProtection\s*[,}]/g)].length,
     1,
     `${locale}: expected one namespace spread`
   );
