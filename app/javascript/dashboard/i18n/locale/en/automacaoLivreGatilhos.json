@@ -70,7 +70,7 @@
       "DEPOIS": "after"
     },
     "GATILHO_DE_TEMPO": {
-      "AVISO_PARADO": "Turning it on does not act on the past: a card already more than 1 day past the deadline is skipped.",
+      "AVISO_PARADO": "Only cards that reach the deadline from now on are included. Cards already more than 1 day past the deadline are left out.",
       "AVISO_DATA": "Checked every 15 minutes, in the account time zone. A date written in another format does not count.",
       "SEM_CAMPO": "There is no date field here. Create one in Settings › Custom attributes.",
       "HORA": "{hora}h",

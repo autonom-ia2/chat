@@ -70,7 +70,7 @@
       "DEPOIS": "depois"
     },
     "GATILHO_DE_TEMPO": {
-      "AVISO_PARADO": "Ligar não age no passado: o card que já passou do prazo há mais de 1 dia não entra.",
+      "AVISO_PARADO": "Só entram os cards que chegarem ao prazo a partir de agora. Quem já passou do prazo há mais de 1 dia fica de fora.",
       "AVISO_DATA": "Confere a cada 15 minutos, no fuso da conta. Data escrita em outro formato não conta.",
       "SEM_CAMPO": "Não há campo de data aqui. Crie um em Configurações › Atributos personalizados.",
       "HORA": "{hora}h",
