@@ -92,6 +92,25 @@ describe.each([
     expect(foraDaLista).toEqual([]);
   });
 
+  it('cada bloco da lista existe no seu arquivo', () => {
+    const presentes = Object.fromEntries(
+      arquivos.map(([caminho, bloco]) => [
+        caminho.split('/').at(-1),
+        Object.keys(bloco),
+      ])
+    );
+    const sumidos = Object.entries(BLOCOS_POR_ARQUIVO).flatMap(
+      ([nome, blocos]) =>
+        blocos
+          .filter(chave => !(presentes[nome] || []).includes(chave))
+          .map(
+            chave =>
+              `${idioma}/${nome}: ${chave} está na lista mas não no arquivo — tire da lista ou devolva o bloco`
+          )
+    );
+    expect(sumidos).toEqual([]);
+  });
+
   it('não repete chave entre os arquivos de área', () => {
     const donos = {};
     arquivos.forEach(([caminho, bloco]) =>
