@@ -68,8 +68,8 @@ module Autonomia::Automacao::Conversao::Mapa
     'nota_privada' => 'F9.0',
     'acao_sem_equivalente' => 'sem fase (decisão do Rodrigo)',
     'atributo_sem_maiusculas' => 'F9.0',
-    'diferente_de_atributo' => 'decisão do Rodrigo (o antigo monta SQL quebrado)',
     'condicao_sem_valor' => 'revisão manual',
+    'mensagem_vazia' => 'revisão manual',
     'formato_desconhecido' => 'revisão manual',
     'gatilho_desconhecido' => 'revisão manual',
     'receita_recusada' => 'F9 (conversor)'

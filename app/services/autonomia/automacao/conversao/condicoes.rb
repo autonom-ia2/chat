@@ -8,17 +8,22 @@
 # sem time não dispara. O `diferente` novo casa com o vazio; por isso, nos campos da conversa e do contato, ele vai
 # junto com `preenchido`. Nas etiquetas não (o antigo usa NOT EXISTS), nem no card (o antigo dá verdadeiro sem card).
 #
-# Atributo personalizado de texto: o antigo compara em minúsculas e só com o 1º valor, e o `not_equal_to` dele monta
-# SQL quebrado (`custom_attribute_filter_helper.rb`). O novo compara como está. Nada disso é traduzido em silêncio:
-# vira falta.
+# Atributo personalizado: o antigo compara texto em minúsculas e só com o 1º valor; o novo compara como está, então o
+# texto vira falta até a F9.0. O `not_equal_to` antigo monta SQL quebrado (`custom_attribute_filter_helper.rb`); a
+# conversão corrige (Automação, 05/11): diferente, com o atributo vazio contando como diferente, que era a intenção do
+# `OR ... IS NULL` antigo.
 class Autonomia::Automacao::Conversao::Condicoes
   Mapa = Autonomia::Automacao::Conversao::Mapa
 
   attr_reader :faltas, :ressalvas
 
-  def initialize(condicoes, gatilho:)
+  # O antigo compara em minúsculas os atributos destes tipos (FilterService::ATTRIBUTE_TYPES → 'text').
+  TIPOS_DE_TEXTO = %w[text link list].freeze
+
+  def initialize(condicoes, gatilho:, conta:)
     @condicoes = Array(condicoes)
     @gatilho = gatilho
+    @conta = conta
     @faltas = []
     @ressalvas = []
   end
@@ -61,10 +66,13 @@ class Autonomia::Automacao::Conversao::Condicoes
 
   def comparacoes(campo, operador, lista)
     return juntar('alguma', lista) unless %w[diferente nao_contem].include?(operador)
-    return juntar('todas', lista) unless operador == 'diferente' && campo.start_with?('conversa.', 'contato.')
+    return juntar('todas', lista) unless operador == 'diferente' && com_preenchido?(campo)
 
     juntar('todas', [{ 'campo' => { '$valor' => campo }, 'op' => 'preenchido' }, *lista])
   end
+
+  # Só nos campos da plataforma na conversa e no contato; o atributo personalizado (`contato.atributos.x`) e o card não.
+  def com_preenchido?(campo) = Mapa::CAMPO.value?(campo) && campo.start_with?('conversa.', 'contato.')
 
   def campo(condicao)
     chave = condicao['attribute_key'].to_s
@@ -72,13 +80,17 @@ class Autonomia::Automacao::Conversao::Condicoes
 
     base = Mapa::BASE_DO_ATRIBUTO[condicao['custom_attribute_type'].to_s]
     return falta('campo_sem_valor', chave) unless base
-    return falta('diferente_de_atributo', chave) if condicao['filter_operator'] == 'not_equal_to'
-    return falta('atributo_sem_maiusculas', chave) if condicao['filter_operator'] == 'equal_to' && texto?(condicao)
+    return falta('atributo_sem_maiusculas', chave) if %w[equal_to not_equal_to].include?(condicao['filter_operator']) && texto?(condicao)
 
     "#{base}.#{chave}"
   end
 
-  def texto?(condicao) = Array(condicao['values']).any?(String)
+  # Pelo tipo do atributo na conta, como o antigo decide, e não pela classe do valor ("3" num atributo numérico).
+  def texto?(condicao)
+    definicao = @conta.custom_attribute_definitions.find_by(attribute_key: condicao['attribute_key'],
+                                                            attribute_model: condicao['custom_attribute_type'])
+    TIPOS_DE_TEXTO.include?(definicao&.attribute_display_type)
+  end
 
   # `mensagem.*` só existe no gatilho mensagem.criada (o esquema recusa nos outros).
   def campo_da_plataforma(chave)

@@ -144,14 +144,31 @@ RSpec.describe Autonomia::Automacao::Conversao::Relatorio do
     expect(filtro).to eq('campo' => { '$valor' => 'card.etapa_id' }, 'op' => 'diferente', 'valor' => 5)
   end
 
-  # MOTIVO: o antigo compara atributo de texto em minúsculas e só com o 1º valor, e o diferente dele monta SQL quebrado;
-  # traduzir em silêncio mudaria quem a regra pega.
-  it 'deixa o atributo personalizado de texto e o diferente de atributo como falta' do
+  # MOTIVO: o antigo compara atributo de texto em minúsculas e só com o 1º valor; traduzir em silêncio mudaria quem a
+  # regra pega.
+  it 'deixa o atributo personalizado de texto como falta' do
+    create(:custom_attribute_definition, account: account, attribute_key: 'placa', attribute_model: 'conversation_attribute',
+                                         attribute_display_type: 'text')
     igual = da_regra(conditions: [condicao('placa', 'equal_to', ['ABC'], tipo: 'conversation_attribute')])
     diferente = da_regra(conditions: [condicao('placa', 'not_equal_to', ['ABC'], tipo: 'conversation_attribute')])
 
     expect(igual.faltas.pluck(:chave)).to eq(['atributo_sem_maiusculas'])
-    expect(diferente.faltas.pluck(:chave)).to eq(['diferente_de_atributo'])
+    expect(diferente.faltas.pluck(:chave)).to eq(['atributo_sem_maiusculas'])
+  end
+
+  # MOTIVO: o diferente de atributo antigo monta SQL quebrado; a conversão corrige (Automação, 05/11), com o atributo
+  # vazio contando como diferente, sem o "preenchido" dos campos da plataforma.
+  it 'converte o diferente de atributo numérico corrigido, mesmo com o número gravado como texto' do
+    create(:custom_attribute_definition, account: account, attribute_key: 'parcelas', attribute_model: 'contact_attribute',
+                                         attribute_display_type: 'number')
+    texto = da_regra(conditions: [condicao('parcelas', 'equal_to', ['3'], tipo: 'contact_attribute')])
+    expect(texto.faltas).to eq([])
+
+    linha = da_regra(conditions: [condicao('parcelas', 'not_equal_to', [3], tipo: 'contact_attribute')])
+
+    expect(linha.faltas).to eq([])
+    expect(linha.receita.dig('gatilho', 'filtros', 0))
+      .to eq('campo' => { '$valor' => 'contato.atributos.parcelas' }, 'op' => 'diferente', 'valor' => 3)
   end
 
   # MOTIVO: "igual a nada" no antigo é IN (), que não pega ninguém; sem condição, o gatilho novo pegaria tudo.

@@ -52,7 +52,7 @@ class Autonomia::Automacao::Conversao::DaRegra
   end
 
   def filtro!(gatilho)
-    condicoes = Autonomia::Automacao::Conversao::Condicoes.new(@regra.conditions, gatilho: gatilho)
+    condicoes = Autonomia::Automacao::Conversao::Condicoes.new(@regra.conditions, gatilho: gatilho, conta: @regra.account)
     filtro = condicoes.filtro
     @faltas.concat(condicoes.faltas)
     @ressalvas.concat(condicoes.ressalvas)
@@ -145,11 +145,15 @@ class Autonomia::Automacao::Conversao::DaRegra
   def mensagem!(params)
     texto = params.first.to_s
     return falta('texto_com_variavel', 'send_message') if texto.include?('{{')
-    return falta('condicao_sem_valor', 'send_message vazio') if texto.strip.empty?
+    return falta('mensagem_vazia', 'send_message') if texto.strip.empty?
 
-    @ressalvas << 'tweet: o antigo não manda mensagem em conversa do Twitter; o novo manda'
+    @ressalvas << 'tweet: o antigo não manda mensagem em conversa do Twitter; o novo manda' if twitter?
 
     @passos << { 'id' => "p#{@passos.size + 1}", 'tipo' => 'mensagem', 'texto' => [texto] }
+  end
+
+  def twitter?
+    @regra.account.inboxes.exists?(channel_type: 'Channel::TwitterProfile')
   end
 
   def aviso_por_email!(nome)
