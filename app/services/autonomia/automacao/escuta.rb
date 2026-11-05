@@ -33,6 +33,7 @@ module Autonomia::Automacao::Escuta
   # evento traz para os parâmetros do gatilho (a etapa, o funil).
   def comecar(alvo, tipo, mensagem: nil, evento: nil, dados: {})
     return unless alvo && ::Autonomia::Automacao::Motor.ligado?(alvo.account)
+    return if resposta_automatica?(alvo, tipo, mensagem)
 
     cada_automacao(alvo, tipo, dados) do |definicao|
       partir(definicao, alvo, tipo, mensagem: mensagem, evento: evento)
@@ -41,6 +42,23 @@ module Autonomia::Automacao::Escuta
     end
   rescue StandardError => e
     registrar_erro("não ouviu gatilho=#{tipo} alvo=#{rotulo(alvo)}", e)
+  end
+
+  # A resposta automática de e-mail ("estou de férias", aviso do servidor) não é o contato falando: o MailPresenter a
+  # marca pelo cabeçalho (Auto-Submitted, X-Autoreply), na mensagem e na conversa que ela abriu. Ela não começa
+  # gatilho; senão "mensagem recebida → manda e-mail" giraria sem fim com o autoresponder do outro lado (G2), e a cadeia
+  # não vê esse laço: a resposta chega como mensagem do contato. Vale para qualquer passo, como nas automações antigas
+  # (AutomationRuleListener). A marca da conversa é de quando ela nasceu: na reaberta, quem decide é a última
+  # mensagem recebida, porque o cliente de verdade pode reabrir a conversa que o autoresponder abriu.
+  def resposta_automatica?(alvo, tipo, mensagem)
+    return mensagem.auto_reply_email? if mensagem
+    return false unless alvo.is_a?(::Conversation)
+
+    case tipo
+    when 'conversa.criada' then alvo.additional_attributes.to_h['auto_reply'].present?
+    when 'conversa.aberta' then alvo.messages.incoming.reorder(created_at: :desc, id: :desc).first&.auto_reply_email? || false
+    else false
+    end
   end
 
   # As automações ligadas com o gatilho cujos parâmetros (etapa, funil) casam com os `dados` do evento.

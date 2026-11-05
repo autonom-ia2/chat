@@ -539,6 +539,9 @@ en:
         travada: 'This step stopped in the middle and will not run again.'
         canal_sem_resposta: "This channel does not accept replies (tweet). The message was not sent."
         contato_nao_recebe: "The contact asked not to receive messages. The message was not sent."
+        caixa_de_email_indisponivel: 'The e-mail inbox of this step was deleted or is no longer an e-mail inbox. The e-mail was not sent.'
+        contato_sem_email: 'The contact has no e-mail. The e-mail was not sent.'
+        email_bloqueado: "The contact's e-mail is blocked in this account (bounce, complaint or unsubscribe). The e-mail was not sent."
         fora_da_janela: "The channel's reply window is closed, and free text cannot be sent. The message was not sent."
         laco_suspeito: "The other side replied too fast too many times in a row, like a bot. The automation stopped in this conversation."
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
@@ -560,6 +563,7 @@ en:
         contato: '%{nome}'
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
+        caixa_de_email_invalida: 'Step %{passo}: inbox %{id} is not an e-mail inbox of this account.'
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'

@@ -104,7 +104,8 @@
       "DECIDIR": "A IA decide o caminho",
       "EXTRAIR": "A IA tira dados da conversa",
       "ESCREVER": "A IA escreve um texto",
-      "RESUMIR": "A IA resume a conversa"
+      "RESUMIR": "A IA resume a conversa",
+      "EMAIL": "Mandar e-mail ao cliente"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -152,7 +153,9 @@
       "TROCAR": "Trocar o que já estava preenchido",
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
-      "LINHAS": "Tamanho do resumo (linhas)"
+      "LINHAS": "Tamanho do resumo (linhas)",
+      "CAIXA_ID": "Por qual caixa de e-mail",
+      "ASSUNTO": "Assunto"
     },
     "OPCOES": {
       "STATUS": {
@@ -305,7 +308,8 @@
       "ESCREVER_SUGESTAO": "A IA escreve uma sugestão para a equipe: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "A IA escreve uma sugestão para a equipe: falta escrever a instrução",
       "RESUMIR_NOTA": "A IA resume a conversa numa nota",
-      "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}"
+      "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}",
+      "EMAIL": "Mandar e-mail ao cliente: “{assunto}”"
     },
     "RAMOS": {
       "ENTAO": "Então",
@@ -346,7 +350,8 @@
       "DADO_APAGADO": "Dado apagado: {dado}",
       "TEM_DADO_APAGADO": "Um dado deste texto foi apagado da conta. Tire-o ou troque por outro: do jeito que está, o Salvar tudo não aceita.",
       "FILTRO_ENTRA": "Ao salvar, entra no \"Só se\": {condicao}. Dá para trocar ou tirar depois.",
-      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\"."
+      "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\".",
+      "SEM_CAIXA_DE_EMAIL": "A conta ainda não tem caixa de e-mail. Crie uma em Caixas de entrada para usar este passo."
     },
     "LIGAR": {
       "BOTAO": "Ligar",
@@ -455,7 +460,8 @@
       "FORA": {
         "SPAM": "Nada: a conversa está no Spam.",
         "SEM_MENSAGEM": "Nada: a conversa ainda não tem mensagem.",
-        "FORA_DO_FILTRO": "Nada: a conversa não passa no \"Só se\" do gatilho."
+        "FORA_DO_FILTRO": "Nada: a conversa não passa no \"Só se\" do gatilho.",
+        "RESPOSTA_AUTOMATICA": "Nada: a última mensagem é uma resposta automática de e-mail (fora do escritório, aviso do servidor)."
       },
       "HOJE_SIM": "Hoje, sim: seguiria por \"Então\".",
       "HOJE_NAO": "Hoje, não: seguiria por \"Senão\".",
@@ -480,7 +486,12 @@
           "CONTATO": "{campo}, no contato",
           "EMPRESA": "{campo}, na empresa"
         }
-      }
+      },
+      "EMAIL": "Sairia por {caixa}, com o assunto “{assunto}”",
+      "CONTATO_SEM_EMAIL": "Não sairia: o contato não tem e-mail.",
+      "CONTATO_NAO_RECEBE": "Não sairia: o contato pediu para não receber mensagens.",
+      "EMAIL_BLOQUEADO": "Não sairia: o e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro).",
+      "CAIXA_DE_EMAIL_INDISPONIVEL": "Não sairia: a caixa de e-mail escolhida não existe mais."
     },
     "RECEITAS": {
       "COMO_COMECAR": "Como você quer começar?",

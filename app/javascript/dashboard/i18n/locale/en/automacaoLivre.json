@@ -104,7 +104,8 @@
       "DECIDIR": "AI chooses the path",
       "EXTRAIR": "AI pulls data from the conversation",
       "ESCREVER": "AI writes a text",
-      "RESUMIR": "AI summarizes the conversation"
+      "RESUMIR": "AI summarizes the conversation",
+      "EMAIL": "Send an e-mail to the customer"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -152,7 +153,9 @@
       "TROCAR": "Replace what was already filled in",
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
-      "LINHAS": "Summary length (lines)"
+      "LINHAS": "Summary length (lines)",
+      "CAIXA_ID": "From which e-mail inbox",
+      "ASSUNTO": "Subject"
     },
     "OPCOES": {
       "STATUS": {
@@ -305,7 +308,8 @@
       "ESCREVER_SUGESTAO": "AI writes a suggestion for the team: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "AI writes a suggestion for the team: the instruction is missing",
       "RESUMIR_NOTA": "AI summarizes the conversation in a note",
-      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}"
+      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}",
+      "EMAIL": "E-mail the customer: “{assunto}”"
     },
     "RAMOS": {
       "ENTAO": "Then",
@@ -346,7 +350,8 @@
       "DADO_APAGADO": "Deleted detail: {dado}",
       "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it.",
       "FILTRO_ENTRA": "When you save, \"Only if\" gets: {condicao}. You can change or remove it later.",
-      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\"."
+      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\".",
+      "SEM_CAIXA_DE_EMAIL": "This account has no e-mail inbox yet. Create one in Inboxes to use this step."
     },
     "LIGAR": {
       "BOTAO": "Turn on",
@@ -455,7 +460,8 @@
       "FORA": {
         "SPAM": "Nothing: the conversation is in Spam.",
         "SEM_MENSAGEM": "Nothing: the conversation has no message yet.",
-        "FORA_DO_FILTRO": "Nothing: the conversation doesn't pass the trigger's \"Only if\"."
+        "FORA_DO_FILTRO": "Nothing: the conversation doesn't pass the trigger's \"Only if\".",
+        "RESPOSTA_AUTOMATICA": "Nothing: the last message is an automatic e-mail reply (out of office, server notice)."
       },
       "HOJE_SIM": "Today, yes: it would follow \"Then\".",
       "HOJE_NAO": "Today, no: it would follow \"Otherwise\".",
@@ -480,7 +486,12 @@
           "CONTATO": "{campo}, in the contact",
           "EMPRESA": "{campo}, in the company"
         }
-      }
+      },
+      "EMAIL": "Would go out from {caixa}, subject “{assunto}”",
+      "CONTATO_SEM_EMAIL": "Would not go out: the contact has no e-mail.",
+      "CONTATO_NAO_RECEBE": "Would not go out: the contact asked not to receive messages.",
+      "EMAIL_BLOQUEADO": "Would not go out: the contact's e-mail is blocked in this account (bounce, complaint or unsubscribe).",
+      "CAIXA_DE_EMAIL_INDISPONIVEL": "Would not go out: the chosen e-mail inbox no longer exists."
     },
     "RECEITAS": {
       "COMO_COMECAR": "How do you want to start?",

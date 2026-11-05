@@ -5,7 +5,8 @@
 # rascunho, já conferida por quem chama).
 #
 # Para cada conversa:
-# - não entraria: no Spam, sem mensagem (no gatilho "mensagem criada") ou fora do "Só se" do gatilho;
+# - não entraria: no Spam, sem mensagem (no gatilho "mensagem criada"), resposta automática de e-mail (a régua da
+#   Escuta) ou fora do "Só se" do gatilho;
 # - entraria: os passos em ordem, do jeito do Roteiro. O "se" vale agora e segue pelo ramo que valer. O "esperar até"
 #   que ainda não vale abre dois caminhos (se chegar a tempo: segue o resto; se o prazo vencer: o ramo e depois o
 #   resto), e o "decidir" da IA abre um caminho por saída, sem escolher. "Parar" acaba o caminho.
@@ -60,6 +61,7 @@ class Autonomia::Automacao::Ensaio
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
+    @conversa = conversa
     valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
@@ -76,6 +78,7 @@ class Autonomia::Automacao::Ensaio
     contexto = ::Autonomia::Automacao::Contexto.de(conversa)
     return 'spam' if contexto.no_spam?
     return 'sem_mensagem' if mensagem_no_gatilho? && mensagem.nil?
+    return 'resposta_automatica' if ::Autonomia::Automacao::Escuta.resposta_automatica?(conversa, @receita.dig('gatilho', 'tipo'), mensagem)
 
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem)
     filtros = Array(@receita.dig('gatilho', 'filtros'))
@@ -102,6 +105,7 @@ class Autonomia::Automacao::Ensaio
   def ensaiar_passo(passo, valores)
     case passo['tipo']
     when 'mensagem', 'avisar' then [texto(passo, valores), @roteiro.seguinte(passo['id'])]
+    when 'email' then [email(passo, valores), @roteiro.seguinte(passo['id'])]
     when 'esperar_ate' then esperar_ate(passo, valores)
     when 'se' then se(passo, valores)
     when 'decidir' then [decidir(passo, valores), nil]
@@ -129,6 +133,25 @@ class Autonomia::Automacao::Ensaio
     return no(passo, 'texto_vazio') if pronto.strip.empty?
 
     no(passo, passo['tipo'], { texto: pronto })
+  end
+
+  # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o
+  # contato dela (as mesmas perguntas do passo). Não abre conversa nem manda.
+  def email(passo, valores)
+    pronto = texto(passo, valores)
+    return pronto unless pronto[:faria] == 'email'
+
+    caixa = ::Autonomia::Automacao::PassoDeEmail.caixa(@conta, passo['caixa_id'])
+    return no(passo, 'caixa_de_email_indisponivel') if caixa.nil?
+
+    motivo = ::Autonomia::Automacao::PassoDeEmail.motivo_do_contato(@conta, @conversa.contact)
+    return no(passo, motivo) if motivo
+
+    assunto = ::Autonomia::Automacao::Texto.new(passo['assunto'], valores).montar
+    return no(passo, 'faltou_valor') if assunto.nil?
+    return no(passo, 'texto_vazio') if assunto.strip.empty?
+
+    pronto.merge(dados: pronto[:dados].merge(assunto: assunto.squish, caixa: caixa.name))
   end
 
   def se(passo, valores)

@@ -234,6 +234,18 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["id", "tipo", "caixa_id", "assunto", "texto"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "email" },
+            "caixa_id": { "type": "integer", "minimum": 1, "description": "A caixa de e-mail da conta por onde o e-mail sai. Abre uma conversa nova nela, com o assunto." },
+            "assunto": { "$ref": "#/definitions/texto" },
+            "texto": { "$ref": "#/definitions/texto" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "required": ["id", "tipo", "texto", "para"],
           "properties": {
             "id": { "$ref": "#/definitions/id" },

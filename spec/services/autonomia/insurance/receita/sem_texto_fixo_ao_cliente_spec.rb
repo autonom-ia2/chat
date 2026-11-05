@@ -49,6 +49,9 @@ module TextoAoCliente
       { tipo: :nota_privada, motivo: 'a nota da equipe no fecho da cotação' },
     'app/services/autonomia/automacao/nota.rb::Autonomia::Automacao::Nota#criar' =>
       { tipo: :nota_privada, motivo: 'o aviso da automação à equipe, com menção, e a parada do anti-laço (#2414 F4)' },
+    'app/services/autonomia/automacao/passo_de_email.rb::Autonomia::Automacao::PassoDeEmail#mandar' =>
+      { tipo: :outro, motivo: 'o texto que o dono da conta escreveu no passo "email" da automação (#2414 G2), ao contato ' \
+                              'pela caixa de e-mail da conta: nunca texto nosso; a receita de ramo não o usa' },
     'app/services/autonomia/automacao/passo_de_mensagem.rb::Autonomia::Automacao::PassoDeMensagem#mandar' =>
       { tipo: :outro, motivo: 'o texto que o dono da conta escreveu no passo "mensagem" da automação (#2414 F4), ou o que ' \
                               'o modelo escreveu no passo "escrever" (#2500 F7): nunca texto nosso; a receita de ramo não ' \

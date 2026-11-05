@@ -77,20 +77,22 @@ class Autonomia::Automacao::Receita
 
   def problemas_do_passo(passo)
     return problemas_da_condicao(passo['id'], passo['condicao']) if passo.key?('condicao')
-    return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
+    return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
   end
 
-  # "mensagem" e "avisar" (F4): só com a flag da F4, os valores do texto lidos da lista fechada, e os times e as
-  # pessoas do aviso da própria conta.
+  # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (e do assunto do e-mail) lidos da
+  # lista fechada, os times e as pessoas do aviso da própria conta, e a caixa do e-mail uma caixa de e-mail da conta.
   def problemas_da_mensagem(passo)
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
-    lidos = ::Autonomia::Automacao::Texto.caminhos(passo['texto']).flat_map { |caminho| problemas_do_caminho(id, caminho) }
-    desligado + lidos + destinatarios_de_fora(passo)
+    caminhos = [passo['texto'], passo['assunto']].flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }
+    lidos = caminhos.flat_map { |caminho| problemas_do_caminho(id, caminho) }
+    caixa = passo['tipo'] == 'email' ? ::Autonomia::Automacao::PassoDeEmail.problemas_ao_salvar(@conta, passo) : []
+    desligado + lidos + destinatarios_de_fora(passo) + caixa
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da

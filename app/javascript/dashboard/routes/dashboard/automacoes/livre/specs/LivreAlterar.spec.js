@@ -215,4 +215,80 @@ describe('LivreAlterar', () => {
     await wrapper.find('[data-tirar]').trigger('click');
     expect(wrapper.emitted('tirar')).toHaveLength(1);
   });
+
+  // G2: a caixa do e-mail é uma escolha do ChoiceSelect, só entre as caixas de
+  // e-mail da conta; sem nenhuma, o painel diz e o "Salvar" não libera.
+  describe('passo "email"', () => {
+    const EMAIL = {
+      tipo: 'email',
+      grupo: 'MENSAGEM',
+      frase: 'EMAIL',
+      campos: [
+        {
+          nome: 'caixa_id',
+          peca: 'caixa_de_email',
+          obrigatorio: true,
+          rotulo: 'CAIXA_ID',
+        },
+        {
+          nome: 'assunto',
+          peca: 'texto_com_valores',
+          obrigatorio: true,
+          rotulo: 'ASSUNTO',
+        },
+        {
+          nome: 'texto',
+          peca: 'texto_com_valores',
+          obrigatorio: true,
+          rotulo: 'TEXTO',
+        },
+      ],
+    };
+    const passo = caixaId => ({
+      id: 'p1',
+      tipo: 'email',
+      caixa_id: caixaId,
+      assunto: ['Seu pedido'],
+      texto: ['Saiu.'],
+    });
+    const montarEmail = caixaDeEmail =>
+      mount(LivreAlterar, {
+        props: {
+          catalogo: { ...CATALOGO, passos: [EMAIL] },
+          opcoes: { caixaDeEmail },
+          atributosDaPeca: () => [],
+          atributosDo: () => [],
+        },
+        global: {
+          stubs: { SidePanel: PainelFalso, LivreTexto: true },
+          mocks: { $t: chave => chave },
+        },
+      });
+
+    it('escolhe entre as caixas de e-mail e só salva com uma escolhida', async () => {
+      const wrapper = montarEmail([{ value: 3, label: 'Contato' }]);
+      wrapper.vm.abrir({ tipo: 'passo', valor: passo(null) });
+      await flushPromises();
+      const escolha = wrapper
+        .find('[data-peca="caixa_de_email"]')
+        .findComponent({ name: 'ChoiceSelect' });
+      expect(escolha.props('options')).toEqual([
+        { value: 3, label: 'Contato' },
+      ]);
+      expect(salvarDesligado(wrapper)).toBe(true);
+
+      await escolha.vm.$emit('update:modelValue', 3);
+      expect(salvarDesligado(wrapper)).toBe(false);
+      await wrapper.find('[data-salvar]').trigger('click');
+      expect(wrapper.emitted('salvar')[0][0].valor.caixa_id).toBe(3);
+    });
+
+    it('sem caixa de e-mail na conta, avisa e não salva', async () => {
+      const wrapper = montarEmail([]);
+      wrapper.vm.abrir({ tipo: 'passo', valor: passo(null) });
+      await flushPromises();
+      expect(wrapper.find('[data-sem-caixa-de-email]').exists()).toBe(true);
+      expect(salvarDesligado(wrapper)).toBe(true);
+    });
+  });
 });

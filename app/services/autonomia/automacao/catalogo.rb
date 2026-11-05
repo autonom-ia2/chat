@@ -1,7 +1,7 @@
 # O catálogo de passos da Automação livre (#2414 F5, ADR-001 2.2): o arquivo que o editor e o Guia leem.
 #
 # Junta três fontes num JSON só (lib/operator_guide/automacao-passos.json):
-# - o esquema da receita: gatilhos, operadores, unidades de tempo e os passos nativos (esperar, se, parar, mensagem, avisar);
+# - o esquema da receita: gatilhos, operadores, unidades de tempo e os passos nativos (esperar, se, parar, mensagem, avisar, email);
 # - o catálogo do Guia (formatos-das-acoes.json): o tipo, as opções e os limites de cada campo das ações liberadas;
 # - automacao-passos.yml: o nome do passo, o grupo, de onde vem cada parâmetro e a peça da tela de cada campo;
 # - automacao-receitas.yml: as receitas prontas da porta da nova (#2498), com a flag que cada uma pede.
@@ -45,8 +45,8 @@ module Autonomia::Automacao::Catalogo
                        'leituras' => 'leituras', 'instrucao' => 'instrucao', 'caminhos' => 'caminhos',
                        'campos_extrair' => 'campos_extrair', 'destino_escrever' => 'destino_escrever',
                        'destino_resumir' => 'destino_resumir' }.freeze
-  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar".
-  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero' }.freeze
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar" e a caixa do "email" (G2).
+  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email' }.freeze
 
   module_function
 

@@ -164,6 +164,7 @@ const nativoPronto = campo => {
     return (valor || []).some(
       parte => typeof parte !== 'string' || parte.trim()
     );
+  if (campo.peca === 'caixa_de_email') return !vazio(valor);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
@@ -300,6 +301,26 @@ defineExpose({ abrir, fechar });
           :atributos-do="atributosDo"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <div
+          v-else-if="campo.peca === 'caixa_de_email'"
+          class="flex flex-col gap-1.5"
+          data-peca="caixa_de_email"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            v-if="opcoes.caixaDeEmail?.length"
+            :model-value="rascunho[campo.nome] ?? ''"
+            :aria-label="$t(campo.rotulo)"
+            :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+            :options="opcoes.caixaDeEmail"
+            @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          />
+          <p v-else class="text-sm text-n-slate-11" data-sem-caixa-de-email>
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_CAIXA_DE_EMAIL') }}
+          </p>
+        </div>
         <LivreDestinatarios
           v-else-if="campo.peca === 'destinatarios'"
           :rotulo="$t(campo.rotulo)"

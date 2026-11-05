@@ -8,6 +8,11 @@ const AVISO = {
   mensagens_desligadas: 'NAO_SAIRIA',
   faltou_valor: 'FALTOU_VALOR',
   texto_vazio: 'TEXTO_VAZIO',
+  // G2: o e-mail que não sairia para o contato desta conversa.
+  contato_sem_email: 'CONTATO_SEM_EMAIL',
+  contato_nao_recebe: 'CONTATO_NAO_RECEBE',
+  email_bloqueado: 'EMAIL_BLOQUEADO',
+  caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
 };
 
 // #2500 F7 — os passos de IA no ensaio: o que a IA faria e para onde iria,
@@ -53,6 +58,16 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.faria === 'esperar_ate_ja_vale')
     return { ...base, destaque: t(`${E}.JA_VALE`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  // G2: por qual caixa e com que assunto o e-mail sairia, e o texto no balão.
+  if (no.faria === 'email')
+    return {
+      ...base,
+      destaque: t(`${E}.EMAIL`, {
+        caixa: no.dados.caixa,
+        assunto: no.dados.assunto,
+      }),
+      balao: no.dados.texto,
+    };
   if (FARIA_DA_IA[no.faria])
     return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
   if (no.dados?.texto) return { ...base, balao: no.dados.texto };

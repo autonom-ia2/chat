@@ -1028,6 +1028,9 @@ pt_BR:
         travada: 'Este passo parou no meio e não vai rodar de novo.'
         canal_sem_resposta: "Este canal não aceita resposta (tweet). A mensagem não foi mandada."
         contato_nao_recebe: "O contato pediu para não receber mensagens. A mensagem não foi mandada."
+        caixa_de_email_indisponivel: 'A caixa de e-mail deste passo foi apagada ou não é mais de e-mail. O e-mail não foi mandado.'
+        contato_sem_email: 'O contato não tem e-mail. O e-mail não foi mandado.'
+        email_bloqueado: 'O e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro). O e-mail não foi mandado.'
         fora_da_janela: "A janela de resposta do canal está fechada, e texto livre não sai. A mensagem não foi mandada."
         laco_suspeito: "O outro lado respondeu depressa demais muitas vezes seguidas, como um robô. A automação parou nesta conversa."
         mensagens_desligadas: "Mensagem e aviso estão desligados nesta conta. Nada foi mandado."
@@ -1049,6 +1052,7 @@ pt_BR:
         contato: '%{nome}'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
+        caixa_de_email_invalida: 'Passo %{passo}: a caixa %{id} não é uma caixa de e-mail desta conta.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
