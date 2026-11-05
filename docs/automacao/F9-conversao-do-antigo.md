@@ -79,15 +79,14 @@ O mapa vive em `app/services/autonomia/automacao/conversao/mapa.rb`. O relatóri
 
 O maior risco está nas linhas do "não dispara". As 23 automações de retorno com atraso dariam um retorno a todo card da chegada.
 
-**Proposta (P4, para a F6):** a atividade do card leva no payload se o caminho roda as automações de etapa, com o mesmo critério do `Runner`. O critério fica num lugar só, consultado pelo `Runner` e pela atividade, por exemplo `Crm::Cards::RodaAutomacoesDeEtapa.para(caminho)`, para os dois nunca divergirem (qualidade, 05/11). Hoje esse critério é o `skip_automations` e a chamada (ou não) do `Runner` em cada caminho. A automação convertida usa um parâmetro do gatilho, "como as automações de etapa", que só casa quando a marca diz sim. Assim a conversão reproduz a tabela acima sem regra nova escrita à mão.
-- A marca não pode ser deduzida no emissor a partir de "chamou o `Runner`" (Multifunnel, 05/11). Na IA de assunto, a decisão de rodar vem **depois** do `Creator`, fora da trava (`etapa.rb:38`). Por isso quem chama passa a marca ao `Creator`:
-  - `Applier`/`Etapa`: sim, só se a etapa não é a 1ª;
-  - `CardNaEtapa`: sim;
-  - `CrmCardConverter`: sim.
-
-  Os outros caminhos dizem não. Um spec por caminho, incluindo o da IA de assunto na 1ª etapa, que não dispara.
-- "Só quando o card é movido" não serve: quebraria os três caminhos de criação que disparam.
-- "Sempre" também não: quebraria as exclusões.
+**P4, combinada com a sessão Gatilhos (F6) em 05/11.** Nada de parâmetro escondido que só a conversão usa. A atividade do card grava o fato, e o gatilho o expõe como valor que qualquer automação pode filtrar:
+- **Quem chama passa o caminho.** O `Creator` e o `Mover` recebem o caminho explícito (`applier_etapa`, `card_na_etapa`, `crm_card_converter`, `ia_assunto`, `sync`, `tela`, `api`…). Nada é deduzido no emissor. Na IA de assunto, a decisão de rodar vem depois do `Creator`, fora da trava (`etapa.rb:38`, Multifunnel).
+- **Critério num lugar só:** `Crm::Cards::RodaAutomacoesDeEtapa.para(caminho, etapa)`, com o "sim só fora da 1ª etapa" do `Applier`. O `Runner` e a atividade leem o mesmo método.
+- **A atividade grava** `origem` (o fato: `pessoa`, `ia_assunto`, `prospeccao`, `automacao`, `integracao`, `sem_automacoes`) e `roda_automacoes_de_etapa` (o critério).
+- **O gatilho expõe** `evento.origem` e `evento.roda_automacoes_de_etapa` como valores fechados, do mesmo jeito que o `conversa.iniciada_por`. A conversão de uma automação de etapa gera `card.entrou_na_etapa` (etapa X) + o filtro `evento.roda_automacoes_de_etapa = sim`. A tela explica o filtro, e ele serve a qualquer automação nova.
+- **Specs:** um por caminho, incluindo a IA de assunto na 1ª etapa, que não dispara.
+- **Onde entra:** no PR2d da F6. Se a F9.2 precisar antes, a sessão Gatilhos separa só "caminho + `RodaAutomacoesDeEtapa` + atividade + valor" num PR pequeno, que o Multifunnel revisa. A F9.2 só precisa disso para as 12 automações de etapa (stack autonomia). A conta 17 não depende disso.
+- "Só quando o card é movido" não serve: quebraria os três caminhos de criação que disparam. "Sempre" também não: quebraria as exclusões.
 
 **Idempotência:** o antigo dedupa pelo `TriggerToken` (`enter:<etapa>:<entered_stage_at>`, `exit:<etapa>:<card>:<exited_at>`). O novo usa a marca `tipo:atividade:<id>` (#2554): o retry da atividade ou do emissor reusa o mesmo id e não abre outra execução. O spec da F9.2 confere que o retry não duplica o retorno.
 
@@ -203,27 +202,31 @@ Só entra o que uma conta de verdade usa (YAGNI). O resto fica "sem equivalente"
 | gatilho "conversa atualizada" + "o atributo mudou" | conta 6 (7 regras, desligadas) | PR2d da F6 (proposta) |
 | gatilhos e passos de card, retorno | conta 16 e as 12 de etapa | F6 (#2554, PR2a') |
 | `decidir` a partir de um Decisor salvo | conta 16 | F7 |
-| assunto do e-mail como valor + "contém texto" | conta 16 | **F9.0**: o caminho `conversa.assunto_do_email` e um operador `contem_texto`, separado do `contem` de lista |
-| "como as automações de etapa": a marca no payload da atividade | as 12 de etapa | F6 (P4) |
+| assunto do e-mail como valor + "contém texto" | conta 16 | **F9.0**: o caminho `conversa.assunto_do_email` e um operador `contem_texto`, separado do `contem` de lista, com `include?` sobre o texto em minúsculas, sem regex (Automação, 05/11) |
+| `evento.roda_automacoes_de_etapa` e `evento.origem` | as 12 de etapa | F6 PR2d (P4) |
 | último atendente que respondeu, nota privada, espera por episódio, `use_card_owner`, demais valores | ninguém | sem fase, até alguém pedir |
 
 **F9.0** é um PR pequeno, só com os dois itens que a conta 16 pede. Ele entra depois do PR2a' da F6.
 
 ## 5. A troca de uma conta: desligar sem apagar, com backup
 
-**Pergunta P1 ao Rodrigo (recomendação: sim; a qualidade confirma que é necessária).** Uma migration pequena, sozinha na fila, com duas tabelas.
+**P1, decidida pelo Rodrigo em 05/11:** "pode criar tabela nova sem problemas... só cuide para ela ser o mais eficiente possível". Uma migration, sozinha na fila e com versão única, com uma tabela só.
 
 `autonomia_automacao_conversoes`, o par e o backup:
-- `account_id`;
-- `antiga_tipo` e `antiga_id` (`AutomationRule` ou `Crm::StageAutomation`);
-- `automacao_id`;
-- `estado_antes` (jsonb, a linha antiga inteira);
-- `convertida_por_id`, `convertida_em`, `revertida_em`;
-- índice único em (`antiga_tipo`, `antiga_id`) enquanto não revertida.
 
-`autonomia_automacao_conversao_fatos`, a reivindicação e a prova do F9.3 (5.1 e seção 8): `conversao_id`, `motor` (antigo ou novo), `resultado` (rodou ou recusou), `marca` do fato e `instante`, com índice único em (`conversao_id`, `marca`). Cada linha fica 40 dias, mais que o retry máximo do Sidekiq.
+| Coluna | Para quê |
+|---|---|
+| `account_id` | a conta; primeira coluna do índice único |
+| `antigo_tipo`, `antigo_id` | a antiga (`AutomationRule` ou `Crm::StageAutomation`) |
+| `definicao_id` | a automação nova |
+| `estado_antes` (jsonb) | a linha antiga inteira, o backup que a reversão restaura |
+| `created_at`, `updated_at` | `created_at` é o instante da conversão (o `convertida_em` das seções abaixo) |
 
-O ADR-001 disse "F9 sem migration". Sem essas tabelas, porém, o par antigo↔novo só existiria num arquivo de backup. Aí a divisão por instante (abaixo), as travas da seção 7 e a reversão da seção 6 não teriam onde olhar.
+- **Índice único** em (`account_id`, `antigo_tipo`, `antigo_id`). Ele é a própria trava: uma antiga tem no máximo uma conversão vigente. É também o índice que o motor antigo consulta ("esta regra foi convertida?").
+- **Índice** em `definicao_id`, que é o que o motor novo consulta.
+- Nada que dê para derivar. Quem converteu fica na Issue (o OK do Rodrigo) e no `ligada_por` da nova. A reversão apaga a linha (seção 6), então não há `revertida_em`.
+
+**A reivindicação não precisa de tabela nova.** A tabela de execuções do motor novo já tem o índice único (`automacao_id`, `evento`). O antigo reivindica o fato gravando, para a automação do par, uma execução terminal num estado novo, `do_antigo`, com o mesmo `evento` (5.1). A mesma migration acrescenta `do_antigo` à lista do CHECK `chk_autonomia_automacao_execucoes_finalizada`. A execução fica 90 dias, bem mais que o retry máximo do Sidekiq.
 
 **A troca é uma ação dentro do produto**, porque produção não aceita `rails runner`. Uma tela "Converter regras antigas" (F9.3) mostra o relatório da conta. O botão "Converter" vale só para:
 - o administrador da conta (parecer de Funções, seção 9);
@@ -237,9 +240,9 @@ A primeira versão deste doc dizia que uma transação bastava, porque os dois m
 - **O inverso:** o evento enfileirado antes da troca chega ao antigo depois do commit (vê desligada). O novo já o tinha pulado, porque o gate ou o cache dizia "sem assinante". Nenhuma roda.
 
 **A regra:** cada fato tem um dono, decidido pelo instante do fato contra o par na tabela de conversões.
-- Fato com instante antes de `convertida_em`: só o antigo, mesmo que ele processe depois.
-- Fato com instante em ou depois de `convertida_em` (e antes de `revertida_em`, se houver): só o novo.
-- Depois de `revertida_em`: de novo só o antigo.
+- Fato com instante antes de `convertida_em` (o `created_at` da linha): só o antigo, mesmo que ele processe depois.
+- Fato com instante em ou depois de `convertida_em`: só o novo.
+- Sem linha (nunca convertida, ou revertida): só o antigo.
 
 **O instante do fato:**
 - `created_at` da mensagem, nos eventos de mensagem;
@@ -248,7 +251,7 @@ A primeira versão deste doc dizia que uma transação bastava, porque os dois m
 
 **Quem consulta o par:**
 - o antigo: um prepend no `AutomationRuleListener` e no `Runner` decide pela tabela, e não pelo `active`/`enabled`, para as regras com conversão;
-- o novo: a `Partida` recusa o fato anterior a `convertida_em`, com o motivo `antes_da_conversao`.
+- o novo: a `Partida` recusa o fato anterior a `convertida_em`, com o motivo `antes_da_conversao`. Isso evita que a execução `do_antigo` e a do novo disputem o índice por um fato que é claramente do antigo.
 
 **Por que a decisão não cruza a troca:** a decisão do antigo e a troca se serializam por um advisory lock da conta no Postgres.
 - O antigo decide com o lock compartilhado.
@@ -257,11 +260,13 @@ A primeira versão deste doc dizia que uma transação bastava, porque os dois m
 - Custo: um `pg_advisory_xact_lock_shared` por decisão, nas contas com regra antiga.
 
 **O relógio: o instante decide quem pode; a reivindicação decide quem faz (qualidade, 05/11).** O `created_at` do fato vem do relógio do container que o criou, e o `convertida_em` vem do relógio de outro. Com um container 2 s adiantado, um fato anterior à troca ganha instante ≥ `convertida_em`. O antigo, que decidiu antes sob o lock, roda; o novo também. Medir não evita essa dupla.
-- Por isso a tabela de fatos é também a **reivindicação**, com índice único em (`conversao_id`, `marca`).
+- Por isso cada fato é **reivindicado** no índice único (`automacao_id`, `evento`) das execuções, com a automação do par:
+  - o novo já grava a execução com esse `evento` (a marca do #2494);
+  - o antigo grava uma execução terminal `do_antigo`, com o mesmo `evento`, antes de agir.
 - Cada motor só executa se o `INSERT … ON CONFLICT DO NOTHING` dele devolver a linha.
 - A dupla fica impossível por construção. O lock passa a ser só otimização.
 - **A mesma marca nos dois motores:**
-  - conversa: a marca do despacho, que os dois listeners recebem do mesmo evento;
+  - conversa: a marca do despacho, que os dois listeners recebem do mesmo evento. O antigo monta a marca com `Gatilhos.marca_do_despacho` e o tipo novo do mapa (`conversation_created` → `conversa.criada`), para sair igual à do novo;
   - card: o id da `Crm::Activity`. O `Runner` roda depois do `log_move!`, então o id da atividade passa a ele.
 - A reivindicação vale enquanto houver conversão vigente, não só 30 dias: um evento de antes da troca pode chegar dias depois, num retry do Sidekiq.
 - **O lock:** `pg_advisory_xact_lock_shared` só vale dentro de transação, e o `AutomationRuleListener` e o `Runner` não rodam numa. A F9.2 põe uma `transaction` curta em volta da decisão.
@@ -284,7 +289,7 @@ A primeira versão deste doc dizia que uma transação bastava, porque os dois m
 3. **Numa transação, com o lock exclusivo da conta:**
    - trava as antigas (`FOR UPDATE`);
    - cria cada automação nova (versão 1);
-   - grava o par com `convertida_em`;
+   - grava o par (o `created_at` é o `convertida_em`);
    - desliga a antiga (`active`/`enabled` = false), sem apagar nada;
    - liga a nova (`ativa: true`, `ligada_por`).
 4. **O gate do emissor e o cache.** O gate ("há automação ligada para esse gatilho nesta conta") não pode negar depois de `convertida_em`. A chave do cache leva o `convertida_em` mais recente da conta, lido na mesma consulta do gate. A troca muda a chave na própria transação, e nenhum leitor repovoa o valor velho.
@@ -295,14 +300,17 @@ A primeira versão deste doc dizia que uma transação bastava, porque os dois m
 O botão "Reverter conversão", no mesmo lugar, faz numa transação com o lock exclusivo da conta (o mesmo da 5.1), para que nenhum fato fique sem dono:
 - `Definicao#desligar!` em cada nova, o que também para as execuções abertas;
 - a antiga volta ao `estado_antes`;
-- grava `revertida_em`. A partir desse instante, os fatos voltam a ser do antigo;
+- apaga a linha da conversão. A partir desse instante, os fatos voltam a ser do antigo, e a antiga pode ser convertida de novo depois;
 - muda a chave do cache do gate, como na troca.
 
 A automação nova não é apagada: fica desligada, com o histórico.
 
+**O que sobra na reversão:** sem a linha, o antigo não reivindica mais. Um fato que o novo já executou e que chega atrasado ao antigo depois da reversão (um retry no meio) rodaria de novo. A janela é a do retry de um evento que cruza a reversão, e a reversão é um caso de emergência. Este risco fica aceito e escrito: guardar o par depois da reversão pediria uma coluna a mais, e a tabela é mínima por decisão do Rodrigo. Antes de reverter, a Orquestração confere a fila de retry do Sidekiq; com evento da conta lá, a reversão espera ele sair.
+
 **Plano B, se a tela estiver fora:** a mesma troca por psql, pela Orquestração Deploy, com os ids da tabela de conversões:
 - desligar as novas (`ativa = false`) e fechar as execuções abertas, como o `desligar!` faz;
-- religar as antigas.
+- religar as antigas pelo `estado_antes`;
+- apagar as linhas da conversão.
 
 O comando exato vai no runbook do PR da F9.2, escrito antes da primeira conta. Tempo estimado: menos de 5 minutos. É o rollback pré-aprovado da regra 3. Ainda assim, é escrita em produção, e por isso exige o OK do Rodrigo antes de virar runbook.
 
@@ -314,7 +322,7 @@ As travas abaixo são a frente do sistema (UX): dizem à pessoa o que aconteceu,
 1. **Ligar a nova** (`Definicao#recusa_para_ligar`) recusa com `antiga_ligada` se a antiga do par está ligada.
 2. **Religar a antiga** pela API, pela tela ou pelo Guia é barrado por uma validação em `AutomationRule` e em `Crm::StageAutomation`, enquanto houver conversão vigente. A mensagem diz "esta regra virou a automação X; reverta a conversão". Pelo parecer de Funções:
    - só a **transição para ligada** é barrada. Apagar (`ExclusaoDaConta`) e editar mantendo desligada continuam;
-   - o "Reverter conversão" religa porque marca `revertida_em` antes, na mesma transação;
+   - o "Reverter conversão" religa porque apaga a linha da conversão antes, na mesma transação;
    - a recusa é 422 com frase em en e pt_BR, sem mudar a policy do EE;
    - validação nova no modelo pode mudar os formatos do Guia (lição do #1219): o PR regera `autonomia:guia:formatos`.
 3. **Duplicar regra** (`POST automation_rules/:id/clone`) numa conta com conversão vigente: o clone nasce desligado e fora da tabela, com a frase "monte em Automações". Spec cobre o clone.
@@ -332,24 +340,20 @@ A cadeia comum (D6) já impede que as duas, cada uma num motor, se disparem em l
 - **Ordem:** a regra antiga atribui dentro do `EventDispatcherJob`, como "sistema". A nova atribui depois, num job a mais (`Partida`, depois `AvancarJob`). Contra a Atribuição e o auto-assign do fork, a ordem pode mudar quem fica no fim. A F9.2 tem um teste da corrida com a Atribuição ligada. Se o resultado final mudar, a conversão da conta espera a correção.
 - **Quem aparece:** a atividade e a notificação da atribuição passam a dizer o nome do administrador que ligou, e não "Automação". O D9 marca só a mensagem. Pergunta ao Rodrigo: a atividade da atribuição também deve dizer "Automação"? (P7)
 
-**Durante 30 dias depois da troca:** só nas contas convertidas, a tabela `autonomia_automacao_conversao_fatos` (seção 5) recebe uma linha para cada fato de uma regra convertida:
-- o antigo grava `rodou` ou `recusou` (recusado pela 5.1);
-- o novo grava `rodou` ou `recusou` (`antes_da_conversao`), com a mesma marca do fato.
-
-Com a reivindicação (5.1), a dupla é impossível por construção. A leitura semanal confere isso pelas marcas e mede o relógio. O antigo não registra execução hoje, e por isso "antes" e "depois" não seriam comparáveis sem essa tabela.
+**Durante 30 dias depois da troca:** a reivindicação (5.1) deixa a prova nas execuções da automação do par: cada fato tem uma execução, `do_antigo` ou do novo, nunca as duas (índice único). A dupla é impossível por construção.
 
 Uma leitura agregada semanal, por psql e só leitura, pela Orquestração:
 
 | Medida | Como |
 |---|---|
-| Duplas | marcas com `rodou` nos dois motores (0 por construção; a leitura confere) |
-| Perdidas | marcas com `recusou` nos dois motores (tem de ser 0) |
-| Efeito | registros com sucesso por passo, contra o ensaio |
+| Duplas | o mesmo `evento` com execução nos dois motores. É 0 pelo índice; a leitura confere |
+| Perdidas | fatos que atendem ao filtro (por exemplo, conversas criadas na caixa X) sem execução nenhuma, `do_antigo` ou nova. Tem de ser 0 |
+| Efeito | registros com sucesso por passo, contra o ensaio. Nas atribuições, o responsável final |
 | Erros | execuções com erro, pausadas (`ligada_por` sem acesso) ou interrompidas |
-| Relógio | fatos recusados pelo novo com instante a menos de 1 s de `convertida_em` (mede a diferença entre os relógios) |
+| Relógio | execuções `do_antigo` com instante do fato a menos de 1 s do `convertida_em`. Mede a diferença entre os relógios |
 
 - Divergência sem explicação, ou qualquer dupla ou perdida: reverter a conta (seção 6) e abrir Issue.
-- O mês só fecha com as quatro semanas limpas. A reivindicação continua enquanto a conversão estiver vigente; a retenção de 40 dias vale só para as linhas já reivindicadas há mais tempo que o retry máximo.
+- O mês só fecha com as quatro semanas limpas. A reivindicação continua enquanto a conversão estiver vigente.
 
 ## 9. Quem vira `ligada_por` (parecer da sessão Funções personalizadas)
 
@@ -369,31 +373,33 @@ Com a opção a), quando o admin sai da conta, a automação pausa e alguém usa
 - O administrador basta: `permission_granted?` já dá `automation_manage` e `crm_manage_pipelines` (`StageAutomationPolicy#create?`). Um spec cobre isso.
 - Função personalizada com `automation_manage` **não converte**. Com `ligada_por` sem ser admin, o D5 cortaria caixas em silêncio: a regra que rodava em todas passaria a rodar em menos, sem erro. O gate é `administrator?` explícito, com request spec de 403 para função com `automation_manage` + `crm_manage_pipelines`.
 
-## 10. Fechar a criação nova nos motores antigos
+## 10. Fechar o motor antigo (P2, decidida pelo Rodrigo em 05/11)
 
-Quando todas as contas estiverem convertidas e com o mês limpo, uma flag `automacao_antigo_fechado` (bit dado pela Orquestração) fecha a criação. Prazo proposto: 30 dias depois da última conversão (P2).
-- O `create` de `automation_rules` e de `stage_automations` responde 422, com a frase "monte em Automações".
-- O `update` só aceita desligar. O `index`, o `show` e o `destroy` seguem, como D12 pede: a API é preservada.
-- O Guia (`porteiro_da_automacao`, que hoje grava `POST automation_rules`) passa a montar só no motor novo **antes** de a flag ligar.
-- As telas `settings/automation` e o painel antigo da etapa saem do menu. A lista única mostra tudo no motor novo (F9.5).
+Nas palavras do Rodrigo: "pode fechar o motor antigo... com prazer. Vamos colocar o novo motor para subir. Ninguém será prejudicado. Ainda não fiz o lançamento oficial." Não há prazo de 30 dias.
+
+- **Por conta, junto com a conversão.** A conta com alguma linha em `autonomia_automacao_conversoes` não cria mais regra antiga nem automação de etapa: o `create` responde 422, com a frase "monte em Automações". O `update` só aceita desligar. O `index`, o `show` e o `destroy` seguem (D12: a API é preservada).
+- **Conta sem nenhuma antiga** (quase todas): não há o que converter. Proposta: a criação antiga fecha para elas quando a F9.2 subir, porque ninguém usa e ninguém é prejudicado. Decisão da Automação.
+- **Com a última conta convertida**, o motor antigo é desligado: o listener das regras e o `Runner` param de rodar. O código sai depois, num PR próprio.
+- **Antes de fechar qualquer conta:** o Guia (`porteiro_da_automacao`, que hoje grava `POST automation_rules`) precisa montar no motor novo. Senão o Guia recebe 422 na conta convertida.
+- As telas `settings/automation` e o painel antigo da etapa saem do menu da conta fechada. A lista única mostra tudo no motor novo (F9.5).
 
 ## 11. Ordem dos PRs da F9
 
 1. **Este PR, só docs:** o desenho e a leitura agregada.
-2. **F9.1, o relatório:** mapa, `Resultado`, `Condicoes`, `DaRegra`, `DaEtapa`, `Relatorio`, rake e spec. Só leitura. Está commitado localmente na branch `feat/2568-relatorio-conversao` (f22cc3c76b), sem push, até o desenho ser aprovado.
-3. **F9.2, a troca:** migration das duas tabelas (P1), conversor, a divisão por instante com o advisory lock (5.1), o gate versionado, reversão, as travas da seção 7, o job da etapa reconferindo e a tabela de fatos.
+2. **F9.1, o relatório:** mapa, `Resultado`, `Condicoes`, `DaRegra`, `DaEtapa`, `Relatorio`, rake e spec. Só leitura, então entra cedo (Automação, 05/11), em PR próprio.
+3. **F9.2, a troca:** a migration da tabela (P1) e do estado `do_antigo` no CHECK, o conversor, a divisão por instante com o advisory lock e a reivindicação (5.1), o gate versionado, a reversão, as travas da seção 7, o job da etapa reconferindo e o fechamento por conta (seção 10).
 4. **F9.3, a tela:** "Converter regras antigas" e "Reverter", com o relatório.
 5. **F9.0:** os dois itens da conta 16, depois da F6 PR2a' e da F7.
-6. **F9.5, o fechamento:** a flag, o Guia no motor novo e a saída das telas.
+6. **F9.5, o fim do antigo:** desligar o motor antigo depois da última conta; o código sai num PR próprio.
 
-**Primeira conta (P3):** a 17 converte hoje sem falta, mas é cliente real. A recomendação é ensaiar primeiro numa conta piloto com o mesmo molde, montado à mão, e só depois converter a 17, com o OK do Rodrigo.
+**Primeira conta (P3, decidida pela Automação em 05/11):** o ensaio é na conta 1 (hub2you), com o molde da 17 montado à mão. A 17 só converte depois, com o OK do Rodrigo registrado na Issue. A escrita em produção é pela Orquestração Deploy, com aviso antes.
 
 ## 12. Perguntas abertas
 
-- **P1 (Rodrigo):** a migration da tabela de conversões. Recomendação: sim.
-- **P2 (Rodrigo):** o prazo para fechar a criação nova. Recomendação: 30 dias depois da última conversão.
-- **P3 (Rodrigo):** a ordem das contas. Recomendação: a piloto antes da 17.
-- **P4 (sessão F6):** a marca "roda as automações de etapa" no payload da atividade do card e o parâmetro do gatilho que a lê (seção 2.1).
+- **P1:** decidida. Uma tabela, a mínima (seção 5). A reivindicação usa o índice das execuções.
+- **P2:** decidida. O antigo fecha por conta, junto com a conversão (seção 10).
+- **P3:** decidida. Ensaio na conta 1, a 17 depois.
+- **P4:** combinada com a sessão Gatilhos em 05/11 (seção 2.1).
 - **P5 (Funções):** respondida em 05/11. `ligada_por` = o administrador que aperta "Converter"; função personalizada não converte (seção 9).
 - **P7 (Rodrigo):** a atividade e a notificação da atribuição feita por automação dizem "Automação" (como a mensagem, D9) ou o nome de quem ligou? (seção 8)
 - **P6 (Multifunnel):** respondida em 05/11.
