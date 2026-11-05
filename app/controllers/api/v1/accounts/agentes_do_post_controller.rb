@@ -3,9 +3,10 @@
 #
 # GET  agentes_do_post             → { cuidados: [{ id, kind, target_id, perfil, network, status }] }: a lista e a
 #      contagem do cabeçalho, só do banco. Só os alvos que quem abre pode ver.
-# GET  agentes_do_post/anuncios → { anuncios: [{ id, name, image_url, care }] }: os anúncios do "Qual post?" ao criar o
-#      cuidado (#2479), os da lista de Anúncios dos últimos 30 dias, só do banco (AnunciosParaCuidar). As guardas são
-#      as de ver o cuidado do anúncio; sem a conexão ativa, 404 `not_connected`.
+# GET  agentes_do_post/anuncios → { anuncios: [{ id, name, image_url, care, waiting }] }: os anúncios do "Qual post?" ao
+#      criar o cuidado (#2479), os da lista de Anúncios dos últimos 30 dias, mais os de fora com comentário esperando
+#      (#2519), primeiro os que esperam; só do banco (AnunciosParaCuidar). As guardas são as de ver o cuidado do anúncio;
+#      sem a conexão ativa, 404 `not_connected`.
 # GET  agentes_do_post/:id         → o cartão e a página: o item, mais legenda, capa, foto, nota, portas[] e
 #      comentarios { status, results, no_privado[], esperando[], nao_respondo[] }, lidos na Meta, sem IA. A leitura fica
 #      guardada DETALHE_TTL por pessoa (abrir Agentes com muitos posts cuidados não volta à Meta a cada vez, e não gasta o

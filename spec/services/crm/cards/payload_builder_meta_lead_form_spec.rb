@@ -17,8 +17,9 @@ RSpec.describe Crm::Cards::PayloadBuilder do
     account.crm_cards.create!(pipeline: pipeline, stage: stage, title: 'Ana', metadata: { 'meta_lead_form' => origem })
   end
 
-  def payload(full:)
+  def payload(full:, anuncio: true)
     allow(Crm::Cards::ContactReading).to receive(:full?).and_return(full)
+    allow(Crm::AnuncioDeOrigem).to receive(:ve_no_contexto?).and_return(anuncio)
     described_class.new(card, user: admin, account_user: admin.account_users.find_by(account: account)).perform
   end
 
@@ -30,5 +31,14 @@ RSpec.describe Crm::Cards::PayloadBuilder do
     origem = payload(full: false)[:metadata]['meta_lead_form']
 
     expect(origem).to eq('form_name' => 'Orçamento', 'ad_name' => 'Carrossel')
+  end
+
+  # #2558: o formulário, o anúncio e a campanha só para quem vê o anúncio de origem.
+  it 'quem não vê o anúncio recebe as respostas sem formulário nem anúncio' do
+    expect(payload(full: true, anuncio: false)[:metadata]['meta_lead_form']).to eq('fields' => [{ 'key' => 'email', 'value' => 'ana@example.com' }])
+  end
+
+  it 'quem não vê nem o anúncio nem o contato inteiro não recebe nada do formulário' do
+    expect(payload(full: false, anuncio: false)[:metadata]['meta_lead_form']).to eq({})
   end
 end

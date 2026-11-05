@@ -211,4 +211,50 @@ describe('linhasDoEnsaio', () => {
       'AUTOMACAO_LIVRE.ENSAIO.SE_NENHUM',
     ]);
   });
+
+  // #2500 — extrair, escrever e resumir dizem para onde iria o que a IA
+  // fizesse; nada vem da IA. Lugar que o painel não conhece mostra só o campo.
+  it.each([
+    [
+      'extrair',
+      {
+        campos: [
+          { chave: 'placa', destino: 'conversa.placa' },
+          { chave: 'cpf', destino: 'contato.cpf' },
+          { chave: 'empresa', destino: 'empresa.nome' },
+          { chave: 'etapa', destino: 'card.atributos.etapa' },
+          { chave: 'sem_destino', destino: '' },
+        ],
+      },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_EXTRAIR(AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.CONVERSA(placa); AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.CONTATO(cpf); AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.EMPRESA(empresa); etapa; sem_destino)',
+    ],
+    [
+      'escrever',
+      { destino: 'mensagem' },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_ESCREVER_MENSAGEM',
+    ],
+    [
+      'escrever',
+      { destino: 'sugestao' },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_ESCREVER_SUGESTAO',
+    ],
+    [
+      'resumir',
+      { destino: 'nota' },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_RESUMIR_NOTA',
+    ],
+    [
+      'resumir',
+      { destino: 'avisar' },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_RESUMIR_AVISAR',
+    ],
+  ])('o "%s" diz o que a IA faria', (tipo, dados, destaque) => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'i1', tipo, faria: `ia_${tipo}`, dados }],
+      fraseDe,
+      t
+    );
+
+    expect(linha).toMatchObject({ texto: 'frase i1', destaque });
+  });
 });

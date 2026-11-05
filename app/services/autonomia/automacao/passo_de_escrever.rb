@@ -19,6 +19,9 @@ class Autonomia::Automacao::PassoDeEscrever
 
   def self.fala_com_gente?(passo) = passo['destino'] == 'mensagem'
 
+  # O ensaio (#2498) só diz para onde o texto iria: nenhuma IA é chamada.
+  def self.ensaiar(passo) = { destino: passo['destino'] }
+
   def executar
     negado = impedido
     return negado if negado

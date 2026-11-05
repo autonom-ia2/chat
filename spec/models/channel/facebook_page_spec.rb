@@ -50,12 +50,13 @@ RSpec.describe Channel::FacebookPage do
       expect(Crm::MetaAds::PageSubscription).to have_received(:new)
         .with(page_id: channel.page_id, access_token: channel.page_access_token)
       expect(subscription).to have_received(:add!).with(include('messages', 'messaging_postbacks'))
+      expect(Crm::MetaAds::MessagingReferralsSubscribeJob).to have_been_enqueued.with(channel.page_id, account_ids: [channel.account_id])
     end
 
     it 'removes only the messenger fields on unsubscribe, keeping leadgen and feed' do
       channel.unsubscribe
 
-      expect(subscription).to have_received(:remove!).with(Channel::FacebookPage::MESSENGER_FIELDS)
+      expect(subscription).to have_received(:remove!).with(Channel::FacebookPage::MESSENGER_FIELDS + Channel::FacebookPage::REFERRAL_FIELDS)
     end
 
     it 'keeps the messenger fields when the page is still an inbox of another account' do

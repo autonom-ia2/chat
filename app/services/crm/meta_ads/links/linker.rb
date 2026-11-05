@@ -3,6 +3,8 @@
 # Toque de anúncio da Meta é o clique para o WhatsApp (`meta_ctwa`) ou o clique numa página do site (`site:…`)
 # que traz algum sinal da Meta: ID de anúncio, conjunto ou campanha, o `fbclid` que a Meta põe no endereço, ou o
 # `utm_source=meta` do texto que a tela manda colar nos anúncios. O resto (QR, Google, orgânico) fica de fora.
+# O clique num anúncio de Messenger ou de Direct do Instagram (`meta_ctm`/`meta_ctd`, Crm::MetaAds::MessagingReferral,
+# #2521) é toque com o anúncio, de origem `messenger` ou `instagram`.
 # Também é toque o privado em resposta ao comentário de um anúncio, quando a pessoa respondeu (Links::CommentTouch,
 # #2521): origem `comment`, sempre com o anúncio.
 #
@@ -20,10 +22,12 @@ class Crm::MetaAds::Links::Linker
   META_UTM_SOURCE = 'meta'.freeze
   SITE_PREFIX = Crm::MetaAds::TouchEnricher::SITE_SOURCE_PREFIX
   UPDATED_COLUMNS = %i[ad_account_id ad_id adset_id campaign_id origin certainty first_touch touched_at].freeze
+  # Cliques que abrem a conversa direto no canal, com o anúncio no `source_id`.
+  CLICK_ORIGINS = { Ctwa::CampaignBuilder::CTWA_SOURCE => 'whatsapp' }.merge(Crm::MetaAds::MessagingReferral::ORIGINS).freeze
 
   def self.origin(touch)
     return unless touch.is_a?(Hash)
-    return 'whatsapp' if touch['source'] == Ctwa::CampaignBuilder::CTWA_SOURCE
+    return CLICK_ORIGINS[touch['source']] if CLICK_ORIGINS.key?(touch['source'])
     return unless touch['source_id'].to_s.start_with?(SITE_PREFIX)
 
     meta_signal = Crm::MetaAds::TouchEnricher.meta_ids?(touch) || touch['fbclid'].present? || touch['utm_source'] == META_UTM_SOURCE

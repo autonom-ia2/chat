@@ -214,10 +214,12 @@ const curto = texto =>
   texto && texto.length > CABE_NA_LINHA
     ? `${texto.slice(0, CABE_NA_LINHA).trimEnd()}…`
     : texto || '';
+// Ainda sem pergunta ou instrução, a linha diz o que falta, sem aspas vazias.
+const escrito = texto => (texto || '').trim();
 const FRASE_DA_IA = {
   decidir: (passo, t) =>
-    t(`${P}.DECIDIR`, {
-      pergunta: curto(passo.pergunta),
+    t(`${P}.${escrito(passo.pergunta) ? 'DECIDIR' : 'DECIDIR_SEM_PERGUNTA'}`, {
+      pergunta: curto(escrito(passo.pergunta)),
       n: (passo.caminhos || []).length,
     }),
   extrair: (passo, t) =>
@@ -230,8 +232,10 @@ const FRASE_DA_IA = {
     }),
   escrever: (passo, t) =>
     t(
-      `${P}.ESCREVER_${passo.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}`,
-      { instrucao: curto(passo.instrucao) }
+      `${P}.ESCREVER_${passo.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}${
+        escrito(passo.instrucao) ? '' : '_SEM_INSTRUCAO'
+      }`,
+      { instrucao: curto(escrito(passo.instrucao)) }
     ),
   resumir: (passo, t) =>
     passo.destino?.avisar

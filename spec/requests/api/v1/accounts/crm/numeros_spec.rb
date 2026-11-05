@@ -124,6 +124,34 @@ RSpec.describe 'Api::V1::Accounts::Crm::Numeros', type: :request do
       expect(response.body).not_to include('Bruno', '7000.0')
     end
 
+    # #2521: o "próximo passo" conta só a divulgação (CampaignJourney::CampaignMarks, source_type de campanha). O toque de
+    # anúncio (source_type 'ad': WhatsApp, Messenger, Direct) nunca entra: nem título nem id do anúncio no "Só eu" de
+    # quem não tem meta_ads_view.
+    it 'próximo passo sem o anúncio: só a campanha de divulgação, nunca o título nem o id do anúncio' do
+      vendedor = role_user('crm_view')
+      campanha = { 'source_id' => 'campaign:whatsapp:7', 'source_type' => 'campaign_whatsapp', 'headline' => 'Dia das Crianças',
+                   'touched_at' => 3.days.ago.iso8601 }
+      anuncios = %w[meta_ctwa meta_ctm meta_ctd].map.with_index do |fonte, index|
+        { 'source' => fonte, 'source_id' => "12020000000000000#{index}", 'source_type' => 'ad', 'headline' => "Oferta secreta #{index}",
+          'touched_at' => 2.days.ago.iso8601 }
+      end
+      3.times do
+        chat = create(:conversation, account: account)
+        chat.update!(additional_attributes: { 'campaign_touches' => anuncios })
+        card(owner: vendedor, conversation_id: chat.id)
+      end
+      chat = create(:conversation, account: account)
+      chat.update!(additional_attributes: { 'campaign_touches' => [campanha, *anuncios] })
+      card(owner: vendedor, conversation_id: chat.id)
+
+      call(vendedor, "#{base}/numeros")
+
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['proximo']).to eq([{ 'tipo' => 'campanha_com_voce', 'n' => 1, 'campanha' => 'Dia das Crianças',
+                                                       'origem' => 'campaign:whatsapp:7' }])
+      expect(response.body).not_to include('Oferta secreta', '120200000000000')
+    end
+
     it 'aceita o mês anterior e recusa o mês que ainda não chegou' do
       sale
       call(ana, "#{base}/numeros", mes: '2026-09')

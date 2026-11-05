@@ -71,14 +71,16 @@ RSpec.describe Autonomia::Insurance::Parametros do
     # Voz da Lia, item 6 (`1a15e8d5…` -> `e49be23c…`, 26/09/2026): entram, em todo ramo, os dois parâmetros comuns do
     # pedido (`pedido_que_entrou` e `pedido_que_nao_coube`, texto ou nulo), que ficam na execução e não vão ao portal.
     # Conferido: sem os dois, o md5 volta a ser `1a15e8d5…`; o resto do formulário de auto não mudou.
+    # Moto com padrão, chat#2466 (02/11/2026): as descrições de `vehicle.isAssociate` e `vehicle.usagePeriod` no
+    # schema de teste deixam de mandar perguntar (`e49be23c…` -> `170d0db0…`, e o sem-pedido, `1a15e8d5…` -> `d880d1ab…`).
     it 'auto não muda: o formulário de auto não tem o grupo e é o mesmo de antes' do
       formulario = strict('cotacao_auto')
 
       expect(formulario[:properties]).not_to have_key('renovacao')
-      expect(Digest::MD5.hexdigest(JSON.generate(formulario))).to eq('e49be23c7087a668033ee972c1c0d90c')
+      expect(Digest::MD5.hexdigest(JSON.generate(formulario))).to eq('170d0db0b208239bc38fbea05e2dd20e')
       pedido = %w[pedido_que_entrou pedido_que_nao_coube]
       sem_o_pedido = formulario.merge(properties: formulario[:properties].except(*pedido), required: formulario[:required] - pedido)
-      expect(Digest::MD5.hexdigest(JSON.generate(sem_o_pedido))).to eq('1a15e8d5b531509a7db10256927df08d')
+      expect(Digest::MD5.hexdigest(JSON.generate(sem_o_pedido))).to eq('d880d1abe2b4a50e5276a14f43c24e04')
     end
   end
 

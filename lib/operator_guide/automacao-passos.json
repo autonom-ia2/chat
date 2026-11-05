@@ -1184,6 +1184,50 @@
   ],
   "receitas": [
     {
+      "chave": "BOAS_VINDAS",
+      "frase": "AUTOMACAO_LIVRE.RECEITAS.BOAS_VINDAS.TITULO",
+      "requer": [
+        "automacao_mensagens"
+      ],
+      "receita": {
+        "gatilho": {
+          "tipo": "mensagem.criada",
+          "filtros": [
+            {
+              "campo": {
+                "$valor": "mensagem.tipo"
+              },
+              "op": "igual",
+              "valor": "recebida"
+            },
+            {
+              "campo": {
+                "$valor": "mensagem.primeira"
+              },
+              "op": "igual",
+              "valor": true
+            },
+            {
+              "campo": {
+                "$valor": "conversa.iniciada_por"
+              },
+              "op": "igual",
+              "valor": "cliente"
+            }
+          ]
+        },
+        "passos": [
+          {
+            "id": "p1",
+            "tipo": "mensagem",
+            "texto": [
+              "Olá! Recebemos sua mensagem e já vamos te responder."
+            ]
+          }
+        ]
+      }
+    },
+    {
       "chave": "AGRADECER",
       "frase": "AUTOMACAO_LIVRE.RECEITAS.AGRADECER.TITULO",
       "requer": [

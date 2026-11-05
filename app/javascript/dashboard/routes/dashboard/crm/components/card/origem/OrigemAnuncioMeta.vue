@@ -1,13 +1,24 @@
 <script setup>
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import OrigemFormulario from './OrigemFormulario.vue';
 
 // #2195 — cliente que chegou pelo formulário do anúncio da Meta: de qual formulário e anúncio veio e o que
 // respondeu, aberto no card (não há conversa para mostrar ainda).
-defineProps({
+const props = defineProps({
   formulario: { type: Object, required: true },
 });
 const { t } = useI18n();
+
+// #2558: quem não vê o anúncio de origem recebe o formulário sem nome, anúncio nem campanha; fica a origem genérica.
+const frase = computed(() =>
+  props.formulario.form_name || props.formulario.ad_name
+    ? t('CRM_CARD.ORIGEM.FORMULARIO_META', {
+        formulario: props.formulario.form_name,
+        anuncio: props.formulario.ad_name,
+      })
+    : t('CRM_CARD.ORIGEM.FORMULARIO_META_GENERICO')
+);
 </script>
 
 <template>
@@ -27,12 +38,7 @@ const { t } = useI18n();
           {{ t('CRM_CARD.ORIGEM.TELA') }}
         </h3>
         <p class="mb-0 text-[0.9375rem] font-medium text-n-slate-12">
-          {{
-            t('CRM_CARD.ORIGEM.FORMULARIO_META', {
-              formulario: formulario.form_name,
-              anuncio: formulario.ad_name,
-            })
-          }}
+          {{ frase }}
         </p>
       </div>
     </div>

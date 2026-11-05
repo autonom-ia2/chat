@@ -9,6 +9,9 @@ const FONTES = {
   meta_ctwa: 'ANUNCIO_WHATSAPP',
   meta_organic: 'PUBLICACAO',
   meta_paid: 'ANUNCIO_META',
+  // #2521: clique para o Messenger e o Direct; o rótulo próprio vem no PR-B2.
+  meta_ctm: 'ANUNCIO_META',
+  meta_ctd: 'ANUNCIO_META',
   google_ads: 'ANUNCIO_GOOGLE',
   tiktok_ads: 'ANUNCIO_TIKTOK',
   tracked_link: 'LINK',

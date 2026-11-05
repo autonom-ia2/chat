@@ -2816,6 +2816,12 @@
               "META_HIGHER": "A Meta também conta quem já conversava com você; conversa encaminhada ou de contato salvo chega sem origem para nós.",
               "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
             },
+            "MESSAGING": {
+              "LINE": "Até ontem, a Meta diz {meta} conversa iniciada pelo Messenger e pelo Direct do Instagram; nós contamos {ours}. | Até ontem, a Meta diz {meta} conversas iniciadas pelo Messenger e pelo Direct do Instagram; nós contamos {ours}.",
+              "CLOSE": "Os dois números batem.",
+              "META_HIGHER": "A Meta também conta quem já conversava com você; conversa que não veio pelo clique no anúncio chega sem origem para nós.",
+              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
+            },
             "SITE": {
               "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
@@ -6146,6 +6152,7 @@
     "ORIGEM": {
       "TELA": "De onde veio",
       "FORMULARIO_META": "Veio do formulário \"{formulario}\" · anúncio {anuncio}",
+      "FORMULARIO_META_GENERICO": "Veio de um formulário de anúncio da Meta",
       "TITULO": "Como {nome} chegou",
       "TEXTO": "O caminho até aqui e a que este cliente está ligado.",
       "CAMINHO": "Caminho até aqui",

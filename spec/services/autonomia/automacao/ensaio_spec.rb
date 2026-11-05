@@ -81,6 +81,45 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
     expect(no[:ramos].map { |ramo| [ramo[:chave], ramo[:passos].pluck(:id)] }).to eq([['cotacao', %w[c1 r1]], ['nenhum', %w[r1]]])
   end
 
+  describe 'extrair, escrever e resumir (#2500 F7)' do
+    let(:extrair) do
+      { 'id' => 'i1', 'tipo' => 'extrair', 'le' => ['mensagens'],
+        'campos' => [{ 'chave' => 'placa', 'descricao' => 'A placa', 'destino' => 'conversa.placa' }] }
+    end
+    let(:escrever) { { 'id' => 'i2', 'tipo' => 'escrever', 'le' => ['mensagens'], 'instrucao' => 'Agradeça', 'destino' => 'mensagem' } }
+    let(:resumir) { { 'id' => 'i3', 'tipo' => 'resumir', 'le' => ['mensagens'], 'destino' => { 'avisar' => { 'responsavel' => true } } } }
+
+    before do
+      allow(Crm::Ai::CredentialResolver).to receive(:new)
+      allow(Crm::Ai::ResponsesClient).to receive(:new)
+    end
+
+    it 'dizem o que a IA faria e para onde iria, seguem para o próximo passo e não chamam IA', :aggregate_failures do
+      passos = passos_de(receita(extrair, escrever, resumir, esperar_passo('r1')))
+
+      expect(passos).to eq([
+                             { id: 'i1', tipo: 'extrair', faria: 'ia_extrair',
+                               dados: { campos: [{ chave: 'placa', destino: 'conversa.placa' }] } },
+                             { id: 'i2', tipo: 'escrever', faria: 'ia_escrever', dados: { destino: 'mensagem' } },
+                             { id: 'i3', tipo: 'resumir', faria: 'ia_resumir', dados: { destino: 'avisar' } },
+                             { id: 'r1', tipo: 'esperar', faria: 'esperar', dados: {} }
+                           ])
+      expect(Crm::Ai::CredentialResolver).not_to have_received(:new)
+      expect(Crm::Ai::ResponsesClient).not_to have_received(:new)
+    end
+
+    it 'sem a mensagem automática, o que falaria com gente não sairia; a sugestão e a nota sim' do
+      account.disable_features!('automacao_mensagens')
+      sugestao = escrever.merge('id' => 'i4', 'destino' => 'sugestao')
+      nota = resumir.merge('id' => 'i5', 'destino' => 'nota')
+
+      passos = passos_de(receita(escrever, resumir, sugestao, nota))
+
+      expect(passos.map { |no| [no[:id], no[:faria]] })
+        .to eq([%w[i2 mensagens_desligadas], %w[i3 mensagens_desligadas], %w[i4 ia_escrever], %w[i5 ia_resumir]])
+    end
+  end
+
   it 'um tipo que o ensaio não conhece só ganha a frase do catálogo' do
     expect(passos_de(receita({ 'id' => 'x1', 'tipo' => 'inventado' })).first).to eq(id: 'x1', tipo: 'inventado', faria: 'catalogo', dados: {})
   end

@@ -115,6 +115,21 @@ RSpec.describe 'Anúncio de origem na conversa, no picker e no filtro (#2271)', 
       expect(referral).to eq('headline' => 'Título do anúncio X', 'source_url' => 'https://fb.me/anuncio-x')
     end
 
+    # #2521: o clique para o Messenger e o Direct é anúncio como o do WhatsApp.
+    it 'sem a chave, o anúncio de clique para o Messenger e o Direct também vem escondido' do
+      %w[meta_ctm meta_ctd].each do |fonte|
+        toque = toque_anuncio.except('ctwa_clid').merge('source' => fonte, 'referral_id' => 'mid.secreto')
+        conversa_anuncio.update!(additional_attributes: { 'campaign' => toque, 'campaign_touches' => [toque],
+                                                          'campaign_source_ids' => %w[120200000000000001] })
+
+        atributos = ler("conversations/#{conversa_anuncio.display_id}", sem_chave)['additional_attributes']
+
+        oculto = { 'source' => fonte, 'source_type' => 'ad', 'touched_at' => '2026-10-01T12:00:00Z', 'ad_hidden' => true }
+        expect(atributos).to include('campaign' => oculto, 'campaign_touches' => [oculto], 'campaign_source_ids' => [])
+        expect(atributos.to_json).not_to include(*(identificadores - ['clid-secreto', 'Texto do anúncio']), 'mid.secreto')
+      end
+    end
+
     it 'administrador, agente sem função, meta_ads_view e meta_ads_manage veem a conversa inteira' do
       [admin, plain_agent, com_view, com_manage].each do |user|
         atributos = atributos_da_lista(user)

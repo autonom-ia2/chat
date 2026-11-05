@@ -2815,6 +2815,12 @@
               "META_HIGHER": "Meta also counts people who were already talking to you; a forwarded conversation or one from a saved contact reaches us without an origin.",
               "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click."
             },
+            "MESSAGING": {
+              "LINE": "Until yesterday, Meta says {meta} conversation started on Messenger and Instagram Direct; we counted {ours}. | Until yesterday, Meta says {meta} conversations started on Messenger and Instagram Direct; we counted {ours}.",
+              "CLOSE": "The two numbers match.",
+              "META_HIGHER": "Meta also counts people who were already talking to you; a conversation that did not come through the ad click reaches us without an origin.",
+              "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click."
+            },
             "SITE": {
               "LINE": "Until yesterday, Meta says {meta} contact on the site (page visits: {visits}); through the site button, we counted {ours}. | Until yesterday, Meta says {meta} contacts on the site (page visits: {visits}); through the site button, we counted {ours}.",
               "CLOSE": "The two numbers match.",
@@ -6145,6 +6151,7 @@
     "ORIGEM": {
       "TELA": "Where it came from",
       "FORMULARIO_META": "Came from the \"{formulario}\" form · ad {anuncio}",
+      "FORMULARIO_META_GENERICO": "Came from a Meta lead form",
       "TITULO": "How {nome} arrived",
       "TEXTO": "The path so far and what this customer is linked to.",
       "CAMINHO": "Path so far",
