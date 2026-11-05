@@ -156,6 +156,44 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     expect(graph).to have_been_requested.twice
   end
 
+  it 'dono do anúncio: recusa do token (190) não fica guardada; anúncio de outra conta (100) fica' do
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+    page = create(:channel_facebook_page)
+    create(:channel_facebook_page, page_id: page.page_id)
+    mine = create(:conversation, account: page.inbox.account, inbox: page.inbox)
+    create_meta_ads_insights_connection(mine.account, ad_account_id: '700000')
+    erro = ->(code) { { status: 400, headers: { 'Content-Type' => 'application/json' }, body: { error: { code: code } }.to_json } }
+    graph = stub_request(:get, %r{graph\.facebook\.com/.*/120200000000000001\?}).to_return(erro.call(190), erro.call(100))
+
+    3.times { |index| expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: "mid.#{index}")).to be(false) }
+    expect(graph).to have_been_requested.twice
+  end
+
+  it 'ad_id que não é id da Meta (só dígitos, 6 a 30) não é anúncio: não vai para a Graph, o log nem a fila' do
+    ['../me', '12345', '1202000000000a1', '1' * 31].each do |ad_id|
+      referral = ad_referral.merge('ad_id' => ad_id)
+      expect(described_class.for_campaign(referral, source: messenger, event_id: 'mid.1')).to be_nil
+      expect(described_class.slim(referral)).to be_nil
+    end
+  end
+
+  it 'no caminho da mensagem (dentro da trava), o dono pela Graph vai para o job, que grava fora da trava' do
+    page = create(:channel_facebook_page)
+    create(:channel_facebook_page, page_id: page.page_id)
+    mine = create(:conversation, account: page.inbox.account, inbox: page.inbox)
+    create_meta_ads_insights_connection(mine.account, ad_account_id: '700000')
+    graph = stub_request(:get, %r{graph\.facebook\.com/.*/120200000000000001\?})
+            .to_return(status: 200, headers: { 'Content-Type' => 'application/json' }, body: { account_id: '700000' }.to_json)
+
+    expect do
+      expect(described_class.attribute_message!(mine, ad_referral, source: messenger, event_id: 'mid.1', new_conversation: true)).to be(false)
+    end.to have_enqueued_job(Crm::MetaAds::MessagingReferralOwnerJob).with(mine.id, described_class.slim(ad_referral), messenger, 'mid.1')
+    expect(graph).not_to have_been_requested
+
+    perform_enqueued_jobs(only: Crm::MetaAds::MessagingReferralOwnerJob)
+    expect(mine.reload.additional_attributes['campaign_touches'].sole).to include('source_id' => '120200000000000001', 'referral_id' => 'mid.1')
+  end
+
   it 'um clique guardado com defeito não leva os outros' do
     inbox = conversation.inbox
     contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')

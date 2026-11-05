@@ -24,10 +24,10 @@ RSpec.describe Crm::MetaAds::MessagingReferralJob do
   it 'enfileira só o anúncio, sem os links assinados; referral que não é anúncio não enfileira' do
     context = { 'ad_title' => 'Promo', 'photo_url' => 'https://x.fbcdn.net/p.jpg' }
     messaging = { 'sender' => { 'id' => 'psid-1' }, 'recipient' => { 'id' => 'page-1' }, 'timestamp' => 1_700_000_000,
-                  'referral' => { 'source' => 'ADS', 'ad_id' => '1202', 'ads_context_data' => context } }
+                  'referral' => { 'source' => 'ADS', 'ad_id' => '120200000001202', 'ads_context_data' => context } }
 
     expect { described_class.enqueue_for('messenger', messaging) }.to have_enqueued_job(described_class)
-      .with('messenger', 'page-1', 'psid-1', { 'source' => 'ADS', 'ad_id' => '1202', 'ads_context_data' => { 'ad_title' => 'Promo' },
+      .with('messenger', 'page-1', 'psid-1', { 'source' => 'ADS', 'ad_id' => '120200000001202', 'ads_context_data' => { 'ad_title' => 'Promo' },
                                                'media_type' => 'image' }, '1700000000')
     expect { described_class.enqueue_for('messenger', messaging.merge('referral' => { 'source' => 'SHORTLINK' })) }
       .not_to have_enqueued_job(described_class)
@@ -47,10 +47,10 @@ RSpec.describe Crm::MetaAds::MessagingReferralJob do
     page = create(:channel_facebook_page, page_id: 'page-1')
     allow(Crm::MetaAds::SemLogin).to receive(:enabled?).and_return(true)
     messaging = { 'sender' => { 'id' => 'psid-1' }, 'recipient' => { 'id' => 'page-1' }, 'timestamp' => 1_700_000_000,
-                  'referral' => { 'source' => 'ADS', 'ad_id' => '1202', 'ads_context_data' => { 'photo_url' => 'https://x.fbcdn.net/p.jpg' } } }
+                  'referral' => { 'source' => 'ADS', 'ad_id' => '120200000001202', 'ads_context_data' => { 'photo_url' => 'https://x.fbcdn.net/p.jpg' } } }
 
     expect { described_class.enqueue_for('messenger', messaging) }
-      .to have_enqueued_job(Crm::MetaAds::ReferralImageJob).with(page.inbox.account_id, '1202', 'https://x.fbcdn.net/p.jpg')
+      .to have_enqueued_job(Crm::MetaAds::ReferralImageJob).with(page.inbox.account_id, '120200000001202', 'https://x.fbcdn.net/p.jpg')
 
     create(:channel_facebook_page, page_id: 'page-1')
     expect { described_class.enqueue_for('messenger', messaging) }.not_to have_enqueued_job(Crm::MetaAds::ReferralImageJob)

@@ -19,17 +19,34 @@ module Crm::MetaAds::MessagingReferral
   PENDING_KEY_PREFIX = 'meta_ads:messaging_referral:pending:'.freeze
   PENDING_TTL = 1.day
   OWNER_CACHE = 1.hour
+  # Id de objeto da Meta: só dígitos, de 6 a 30 (a mesma regra do Crm::Numeros::Origens::Classificador). O ad_id vem do
+  # webhook e entra no caminho da Graph e no log: o que não for id fica de fora.
+  META_ID_LENGTH = (6..30)
 
   module_function
 
   # source: MESSENGER_SOURCE ou INSTAGRAM_SOURCE; event_id: o mid da mensagem ou, no evento só de referral, remetente e
   # hora. true quando o toque foi gravado.
-  def attribute!(conversation, referral, source:, event_id:)
+  #
+  # ask_owner: false no caminho da mensagem, que roda dentro da trava por contato do webhook. Quando o dono do anúncio
+  # depende da Graph (até 8 s), a pergunta vai para o MessagingReferralOwnerJob, fora da trava, e grava de lá.
+  def attribute!(conversation, referral, source:, event_id:, ask_owner: true)
     ad_referral = for_campaign(referral, source: source, event_id: event_id)
     return false if conversation.nil? || ad_referral.nil?
-    return false if foreign_ad?(conversation, ad_referral[:source_id])
 
-    Ctwa::CampaignBuilder.attribute!(conversation, ad_referral)
+    ad_id = ad_referral[:source_id]
+    owner = ownership(conversation, ad_id)
+    if owner == :ask
+      return ask_owner_later(conversation, referral, source: source, event_id: event_id) unless ask_owner
+
+      owner = owner?(conversation.account_id, ad_id) ? :mine : :foreign
+    end
+    owner == :mine && Ctwa::CampaignBuilder.attribute!(conversation, ad_referral)
+  end
+
+  def ask_owner_later(conversation, referral, source:, event_id:)
+    Crm::MetaAds::MessagingReferralOwnerJob.perform_later(conversation.id, slim(referral), source, event_id.to_s)
+    false
   end
 
   # Evento só de referral: a pessoa já tinha conversa na caixa. O toque vai para a conversa mais recente dela, se ainda
@@ -55,7 +72,9 @@ module Crm::MetaAds::MessagingReferral
   # cliques guardados do evento solto, só quando esta mensagem abriu a conversa.
   def attribute_message!(conversation, referral, source:, event_id:, new_conversation:)
     return false if conversation.nil?
-    return attribute!(conversation, referral, source: source, event_id: event_id) if for_campaign(referral, source: source, event_id: event_id)
+    if for_campaign(referral, source: source, event_id: event_id)
+      return attribute!(conversation, referral, source: source, event_id: event_id, ask_owner: false)
+    end
     return false unless new_conversation
 
     attribute_pending!(conversation)
@@ -74,10 +93,11 @@ module Crm::MetaAds::MessagingReferral
     false
   end
 
-  # Um clique guardado com defeito não leva os outros junto: fica no log e no rastreador.
+  # Um clique guardado com defeito não leva os outros junto: fica no log e no rastreador. Roda no caminho da mensagem
+  # (dentro da trava): o dono pela Graph vai para o job.
   def attribute_click(conversation, raw)
     click = JSON.parse(raw)
-    attribute!(conversation, click['referral'], source: click['source'], event_id: click['event_id'])
+    attribute!(conversation, click['referral'], source: click['source'], event_id: click['event_id'], ask_owner: false)
   rescue StandardError => e
     Rails.logger.warn("[#{name}] conversation=#{conversation.id} clique guardado não gravado: #{e.class}")
     ChatwootExceptionTracker.new(e, account: conversation.account).capture_exception
@@ -101,39 +121,58 @@ module Crm::MetaAds::MessagingReferral
   end
 
   # A mesma Página pode ser caixa de mais de uma conta (Integrations::Facebook::MessageCreator grava a mensagem em
-  # todas): se alguma conta da Página conhece o anúncio (gasto ou nome), ele vai só para a conversa dela. Se nenhuma
-  # conhece (anúncio novo, antes da coleta), a Graph diz de qual conta de anúncios ele é (`owner?`); sem como saber,
-  # não grava. Página de uma conta só grava sempre.
-  def foreign_ad?(conversation, ad_id)
+  # todas): se alguma conta da Página conhece o anúncio (gasto ou nome), ele vai só para a conversa dela (:mine ou
+  # :foreign). Se nenhuma conhece (anúncio novo, antes da coleta), :ask: a Graph diz de qual conta de anúncios ele é
+  # (`owner?`). Página de uma conta só é sempre :mine.
+  def ownership(conversation, ad_id)
     channel = conversation.inbox&.channel
-    return false unless channel.is_a?(Channel::FacebookPage)
+    return :mine unless channel.is_a?(Channel::FacebookPage)
 
     others = Inbox.where(channel_type: channel.class.name,
                          channel_id: Channel::FacebookPage.where(page_id: channel.page_id).where.not(id: channel.id).select(:id))
                   .pluck(:account_id)
-    return false if others.empty? || known_ad?(conversation.account_id, ad_id)
-    return true if known_ad?(others, ad_id)
+    return :mine if others.empty? || known_ad?(conversation.account_id, ad_id)
+    return :foreign if known_ad?(others, ad_id)
 
-    !owner?(conversation.account_id, ad_id)
+    :ask
   end
 
   # O anúncio é da conta de anúncios conectada nesta conta? GET /<ad_id>?fields=account_id com o token da conexão.
-  # Sem conexão ativa ou sem resposta, não. A resposta definitiva fica guardada por 1 hora (as caixas da Página perguntam
-  # o mesmo anúncio); a falha passageira (rede, 5xx, limite) não fica, e o próximo clique pergunta de novo.
+  # Sem conexão ativa ou sem resposta, não, e fica no log (com o motivo, sem token). Só a resposta definitiva fica
+  # guardada por 1 hora (as caixas da Página perguntam o mesmo anúncio): o account_id que voltou, ou anúncio inexistente
+  # ou de outra conta (100/803). Falha passageira e recusa do token (190, 10, 200–299: token sem ads_read) não ficam.
   def owner?(account_id, ad_id)
     connection = Crm::MetaAdsConnection.active.find_by(account_id: account_id)
-    return false if connection&.ad_account_id.blank?
+    return skip_owner(account_id, ad_id, 'sem conexão de anúncios') if connection&.ad_account_id.blank?
 
     key = "meta_ads:dono_do_anuncio:#{account_id}:#{ad_id}"
-    cached = Rails.cache.read(key)
-    return cached unless cached.nil?
+    owner = Rails.cache.read(key)
+    owner = graph_owner(connection, ad_id, key) if owner.nil?
+    return false if owner.nil?
 
+    owner || skip_owner(account_id, ad_id, 'de outra conta de anúncios')
+  end
+
+  # true/false quando a Graph responde de vez (e guarda); nil, no log, quando não.
+  def graph_owner(connection, ad_id, key)
     result = Meta::AdsGraphClient.new(access_token: connection.read_token).object(ad_id, fields: 'account_id')
-    return false if result.transient?
+    unless result.ok || result.object_error?
+      skip_owner(connection.account_id, ad_id, "Graph sem resposta definitiva (code=#{result.error_code.inspect})")
+      return
+    end
 
-    owner = result.ok && result.data.to_h['account_id'].to_s.delete_prefix('act_') == connection.ad_account_id.to_s.delete_prefix('act_')
+    owner = result.ok && same_ad_account?(result.data.to_h['account_id'], connection.ad_account_id)
     Rails.cache.write(key, owner, expires_in: OWNER_CACHE)
     owner
+  end
+
+  def same_ad_account?(one, other)
+    one.to_s.delete_prefix('act_') == other.to_s.delete_prefix('act_')
+  end
+
+  def skip_owner(account_id, ad_id, reason)
+    Rails.logger.warn("[#{name}] account=#{account_id} ad=#{ad_id} não gravado: #{reason}")
+    false
   end
 
   def known_ad?(account_ids, ad_id)
@@ -165,7 +204,12 @@ module Crm::MetaAds::MessagingReferral
   end
 
   def ad?(ref)
-    ref['source'].to_s.casecmp?(AD_SOURCE) && ref['ad_id'].present?
+    ref['source'].to_s.casecmp?(AD_SOURCE) && meta_id?(ref['ad_id'])
+  end
+
+  def meta_id?(value)
+    id = value.to_s
+    META_ID_LENGTH.cover?(id.length) && id.each_char.all? { |char| char.between?('0', '9') }
   end
 
   def media_type(ref, context)
