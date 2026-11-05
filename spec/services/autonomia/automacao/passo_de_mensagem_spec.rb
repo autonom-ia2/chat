@@ -44,12 +44,13 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
       allow(HTTParty).to receive(:post).and_return(resposta)
     end
 
-    it 'fora das 24 h pula com fora_da_janela, mesmo com a tag de agente humano (é envio automático)', :aggregate_failures do
+    it 'fora das 24 h para com fora_da_janela, mesmo com a tag de agente humano (é envio automático)', :aggregate_failures do
       recebida(conversa, 30.hours.ago)
       execucao = rodar(conversa)
 
       expect(mandada(conversa)).to be_nil
-      expect(registros(execucao)).to eq([%w[p1 pulado fora_da_janela]])
+      expect(registros(execucao)).to eq([%w[p1 falhou fora_da_janela]])
+      expect(execucao.reload.estado).to eq('parada')
     end
 
     it 'dentro da janela, a mensagem sem remetente sai pelo canal sem erro', :aggregate_failures do
@@ -85,12 +86,13 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
                                             'components' => [{ 'type' => 'BODY', 'text' => 'Seu pedido saiu.' }] }])
     end
 
-    it 'com o limite do dono vencido, mesmo com modelo no passo: pula com limite_da_caixa', :aggregate_failures do
+    it 'com o limite do dono vencido, mesmo com modelo no passo: para com limite_da_caixa', :aggregate_failures do
       recebida(conversa, 30.hours.ago)
       execucao = rodar(conversa)
 
       expect(mandada(conversa)).to be_nil
-      expect(registros(execucao)).to eq([%w[p1 pulado limite_da_caixa]])
+      expect(registros(execucao)).to eq([%w[p1 falhou limite_da_caixa]])
+      expect(execucao.reload.estado).to eq('parada')
     end
 
     context 'with a caixa sem limite de horas' do
@@ -151,13 +153,14 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
       expect(mensagem.status).not_to eq('failed')
     end
 
-    it 'fora da janela, sem modelo no passo: pula', :aggregate_failures do
+    it 'fora da janela, sem modelo no passo: para (#2573)', :aggregate_failures do
       passo.delete('modelo')
       recebida(conversa, 30.hours.ago)
       execucao = rodar(conversa)
 
       expect(mandada(conversa)).to be_nil
-      expect(registros(execucao)).to eq([%w[p1 pulado fora_da_janela]])
+      expect(registros(execucao)).to eq([%w[p1 falhou fora_da_janela]])
+      expect(execucao.reload.estado).to eq('parada')
     end
 
     describe 'o modelo aprovado fora da janela (#2468)' do

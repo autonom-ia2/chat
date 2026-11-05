@@ -12,6 +12,8 @@
 #   modelo, ou fora do número oficial, o motivo continua `fora_da_janela`;
 # - limite de horas que o dono pôs na caixa do canal API (`agent_reply_time_window`), vencido: `limite_da_caixa`. Sem
 #   esse limite, o canal API responde a qualquer hora.
+# Os dois motivos de janela (`fora_da_janela` e `limite_da_caixa`) param a execução (Autonomia::Automacao::JanelaFechada,
+# #2573); os outros seguem para o passo seguinte.
 # O robô do outro lado (AntiLaco) devolve :laco, e o executor para a execução nesta conversa. Sem teto de uso.
 class Autonomia::Automacao::PassoDeMensagem
   include ::Autonomia::Automacao::NaConversa
