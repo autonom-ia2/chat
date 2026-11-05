@@ -135,10 +135,17 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   end
 
   # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: as mesmas CHAVES da regra do funil
-  # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui.
+  # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui. O gatilho de
+  # card (#2499) também pede a chave.
   def sem_funil?(receita)
     return false unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
     return false if ::Autonomia::Automacao::RegraDoFunil::CHAVES.any? { |chave| Current.account_user.permission_granted?(chave) }
+
+    de_funil?(receita)
+  end
+
+  def de_funil?(receita)
+    return true if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
 
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).passos.any? do |passo|
       passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.recurso_de(passo['acao']).to_s.start_with?('crm/')

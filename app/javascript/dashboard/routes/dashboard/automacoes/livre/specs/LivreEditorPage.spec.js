@@ -5,6 +5,7 @@ import { useAlert } from 'dashboard/composables';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import LivreEditorPage from '../pages/LivreEditorPage.vue';
 import LivreConfira from '../components/LivreConfira.vue';
+import { useCatalogo } from '../catalogo';
 
 // #2414 F5 — o editor: a nova fica na tela até guardar ou ligar; a salva junta
 // as mudanças até "Salvar tudo" (#2486), levando a versão vista; 409 mantém o
@@ -58,6 +59,26 @@ vi.mock('dashboard/composables/store', async () => {
     },
   };
 });
+// #2499: os gatilhos de card pedem a chave de funis; as etapas vêm do CRM.
+vi.mock(
+  'dashboard/routes/dashboard/crm/composables/useCrmPermissions',
+  async () => {
+    const { ref: criarRef } = await import('vue');
+    return {
+      useCrmPermissions: () => ({ canManagePipelines: criarRef(true) }),
+    };
+  }
+);
+vi.mock('dashboard/api/crmKanban', () => ({
+  default: {
+    getPipelines: vi.fn(() =>
+      Promise.resolve({ data: { payload: [{ id: 3, name: 'Vendas' }] } })
+    ),
+    getStages: vi.fn(() =>
+      Promise.resolve({ data: { payload: [{ id: 12, name: 'Orçamento' }] } })
+    ),
+  },
+}));
 vi.mock('dashboard/api/autonomia/automacoes', () => ({
   default: {
     passos: vi.fn(),
@@ -592,5 +613,67 @@ describe('LivreEditorPage', () => {
     expect(dialogo.abrir).toHaveBeenCalled();
     wrapper.findComponent(DialogoFalso).vm.$emit('acao');
     await expect(resposta).resolves.toBe(true);
+  });
+
+  // #2499: com a flag, o "Alterar" recebe os gatilhos de card; trocar de
+  // "entrou na etapa" para "card ganho" não leva a etapa junto, e a frase do
+  // Confira diz a etapa escolhida.
+  it('gatilho de card: oferece com a flag e salva o gatilho inteiro', async () => {
+    const ENTROU = {
+      tipo: 'card.entrou_na_etapa',
+      frase: 'AUTOMACAO_LIVRE.GATILHOS.CARD_ENTROU_NA_ETAPA',
+      grupo: 'card',
+      requer: 'automacao_gatilhos',
+      funil: true,
+      parametros: [
+        { nome: 'etapa_id', peca: 'etapa', obrigatorio: true, frase: 'E' },
+      ],
+    };
+    const GANHO = { ...ENTROU, tipo: 'card.ganho', parametros: undefined };
+    // O catálogo fica guardado no módulo depois da primeira carga.
+    const { catalogo } = useCatalogo();
+    const antes = catalogo.value;
+    catalogo.value = {
+      ...CATALOGO,
+      gatilhos: [...CATALOGO.gatilhos, ENTROU, GANHO],
+    };
+    const tiposOferecidos = wrapper =>
+      wrapper
+        .findComponent(AlterarFalso)
+        .vm.$attrs.gatilhos.map(item => item.tipo);
+
+    const semFlag = montar();
+    await flushPromises();
+    expect(tiposOferecidos(semFlag)).toEqual(['conversa.criada']);
+    semFlag.unmount();
+
+    flags.add('automacao_gatilhos');
+    const wrapper = montar();
+    await flushPromises();
+    expect(tiposOferecidos(wrapper)).toEqual([
+      'conversa.criada',
+      'card.entrou_na_etapa',
+      'card.ganho',
+    ]);
+
+    const alterar = wrapper.findComponent(AlterarFalso);
+    alterar.vm.$emit('salvar', {
+      tipo: 'gatilho',
+      valor: { tipo: 'card.entrou_na_etapa', etapa_id: 12 },
+    });
+    await flushPromises();
+    const confira = wrapper.findComponent(LivreConfira);
+    expect(confira.find('[data-gatilho]').text()).toBe(
+      'AUTOMACAO_LIVRE.GATILHO_COM.CARD_ENTROU_NA_ETAPA'
+    );
+
+    alterar.vm.$emit('salvar', {
+      tipo: 'gatilho',
+      valor: { tipo: 'card.ganho' },
+    });
+    await flushPromises();
+    expect(confira.props('receita').gatilho).toEqual({ tipo: 'card.ganho' });
+    flags.delete('automacao_gatilhos');
+    catalogo.value = antes;
   });
 });

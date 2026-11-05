@@ -5,6 +5,8 @@
 #   cadeia).
 # - `mensagem_criada`: o gatilho "mensagem.criada" e o despertar da conversa dela. A flag vem antes de carregar a
 #   conversa: é o evento mais frequente da plataforma.
+# - `evento_do_card`: o card criado, movido, ganho ou perdido (#2499, F6), que o emissor do CRM despacha também quando há
+#   automação assinante (`assinante?`). Cada gatilho do evento começa com a marca da atividade e a etapa ou o funil.
 # - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela é reservado e confere a
 #   condição agora, em vez de esperar o prazo. Só o "esperar até": a ação que espera uma nova tentativa e o "esperar"
 #   de tempo seguem o relógio.
@@ -24,18 +26,24 @@
 module Autonomia::Automacao::Escuta
   module_function
 
-  # `alvo`: a conversa, o card ou o contato do gatilho (Gatilhos). `evento`: a marca única do fato.
-  def comecar(alvo, tipo, mensagem: nil, evento: nil)
+  # `alvo`: a conversa, o card ou o contato do gatilho (Gatilhos). `evento`: a marca única do fato. `dados`: o que o
+  # evento traz para os parâmetros do gatilho (a etapa, o funil).
+  def comecar(alvo, tipo, mensagem: nil, evento: nil, dados: {})
     return unless alvo && ::Autonomia::Automacao::Motor.ligado?(alvo.account)
 
     automacoes_do_gatilho(alvo.account_id, tipo).includes(:account, :versao_ativa, :ligada_por).find_each do |definicao|
+      next unless ::Autonomia::Automacao::Gatilhos.casa?(definicao.versao_ativa.receita['gatilho'].to_h, dados)
+
       ::Autonomia::Automacao::Partida.new(definicao: definicao, alvo: alvo, chave_gatilho: tipo, mensagem: mensagem, evento: evento).call
     rescue StandardError => e
-      registrar_erro("não começou automacao=#{definicao.id} alvo=#{alvo.class.name}:#{alvo.id}", e)
+      registrar_erro("não começou automacao=#{definicao.id} alvo=#{rotulo(alvo)}", e)
     end
   rescue StandardError => e
-    registrar_erro("não ouviu gatilho=#{tipo} alvo=#{alvo&.class&.name}:#{alvo&.id}", e)
+    registrar_erro("não ouviu gatilho=#{tipo} alvo=#{rotulo(alvo)}", e)
   end
+
+  # Para o log: o tipo e o id do banco, sem nome nem título (podem ser do cliente).
+  def rotulo(alvo) = alvo ? "#{alvo.class.name}:#{alvo.id}" : 'nenhum'
 
   # Atividade (o histórico que a própria plataforma escreve) não é mensagem de ninguém. Nota privada conta: é mensagem
   # da equipe na conversa.
@@ -64,13 +72,52 @@ module Autonomia::Automacao::Escuta
     registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
   end
 
+  # Um evento do card (#2499, F6), com os ids do emissor do CRM: cada gatilho que o evento dispara tenta começar, com a
+  # marca da atividade. O card é relido do banco: o evento pode chegar depois de outra mudança.
+  def evento_do_card(dados, evento)
+    dados = dados.to_h.with_indifferent_access
+    account = Account.find_by(id: dados[:account_id])
+    return unless account && ::Autonomia::Automacao::Motor.gatilhos?(account)
+
+    card = ::Crm::Card.find_by(id: dados[:card_id], account_id: account.id)
+    return unless card
+
+    mudou = dados[:changed_attributes].to_h.with_indifferent_access
+    ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, []).each do |tipo|
+      comecar(card, tipo, evento: ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id]),
+                          dados: dados_do_card(tipo, card, mudou))
+    end
+  rescue StandardError => e
+    registrar_erro("não ouviu evento=#{evento} card=#{dados && dados[:card_id]}", e)
+  end
+
+  # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a
+  # etapa em que nasceu (stage_id); o movido, as duas pontas.
+  def dados_do_card(tipo, card, mudou)
+    case tipo
+    when 'card.entrou_na_etapa' then { 'etapa_id' => mudou[:to_stage_id] || mudou[:stage_id] || card.stage_id }
+    when 'card.saiu_da_etapa' then { 'etapa_id' => mudou[:from_stage_id] }
+    else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id }
+    end
+  end
+
+  # O emissor do CRM pergunta antes de despachar (#2499): a conta tem automação ligada com um gatilho que o evento
+  # dispara? A flag vem primeiro, lida da conta, sem consulta; depois um exists? pelo índice (account_id, ativa).
+  def assinante?(account, evento)
+    tipos = ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD[evento]
+    return false if tipos.blank? || account.blank? || !::Autonomia::Automacao::Motor.gatilhos?(account)
+
+    automacoes_do_gatilho(account.id, tipos).exists?
+  end
+
   def registrar_erro(contexto, erro)
     Rails.logger.error("[automacao][escuta] #{contexto} #{erro.class} em #{erro.backtrace&.first}")
   end
 
+  # `tipo`: um tipo ou a lista dos que o evento dispara.
   def automacoes_do_gatilho(account_id, tipo)
     ::Autonomia::Automacao::Definicao.joins(:versao_ativa).where(account_id: account_id, ativa: true)
-                                     .where("autonomia_automacao_versoes.receita -> 'gatilho' ->> 'tipo' = ?", tipo)
+                                     .where("autonomia_automacao_versoes.receita -> 'gatilho' ->> 'tipo' IN (?)", Array(tipo))
   end
 
   def esperando_condicao?(execucao)

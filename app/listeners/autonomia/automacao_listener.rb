@@ -23,6 +23,12 @@ class Autonomia::AutomacaoListener < BaseListener
     escuta.acordar(contact, Conversation.where(contact_id: contact.id).select(:id))
   end
 
+  # Os eventos do card (#2499, F6): o emissor do CRM manda só ids; a Escuta relê o card e confere a flag.
+  def crm_card_created(event) = escuta.evento_do_card(event.data, Events::Types::CRM_CARD_CREATED)
+  def crm_card_moved(event) = escuta.evento_do_card(event.data, Events::Types::CRM_CARD_MOVED)
+  def crm_card_won(event) = escuta.evento_do_card(event.data, Events::Types::CRM_CARD_WON)
+  def crm_card_lost(event) = escuta.evento_do_card(event.data, Events::Types::CRM_CARD_LOST)
+
   private
 
   # O instante do despacho, em µs, é a marca do evento (Gatilhos): o EventDispatcherJob repete o mesmo valor.

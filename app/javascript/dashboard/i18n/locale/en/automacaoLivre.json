@@ -14,7 +14,12 @@
       "CONVERSA_CRIADA": "When a conversation starts",
       "CONVERSA_ABERTA": "When a conversation is reopened",
       "CONVERSA_RESOLVIDA": "When a conversation is resolved",
-      "MENSAGEM_CRIADA": "When a message arrives"
+      "MENSAGEM_CRIADA": "When a message arrives",
+      "CARD_CRIADO": "When a card is created",
+      "CARD_ENTROU_NA_ETAPA": "When the card enters a stage",
+      "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
+      "CARD_GANHO": "When the card is won",
+      "CARD_PERDIDO": "When the card is lost"
     },
     "OPERADORES": {
       "VAZIO": "is empty",
@@ -209,6 +214,7 @@
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
+      "CARD": "From a pipeline card",
       "ANTIGO": "The old way"
     },
     "EDITOR": {
@@ -474,6 +480,27 @@
         "TEXTO": "The customer gets a thank-you when the conversation is resolved.",
         "NOME": "Thank when closing"
       }
+    },
+    "PARAMETROS_DO_GATILHO": {
+      "ETAPA_ID": "Stage",
+      "FUNIL_ID": "Pipeline"
+    },
+    "GRUPOS_DO_GATILHO": {
+      "CONVERSA": "Conversation and message",
+      "CARD": "Pipeline card"
+    },
+    "GATILHO_COM": {
+      "CARD_CRIADO": "When a card is created in {funil}",
+      "CARD_ENTROU_NA_ETAPA": "When the card enters {etapa}",
+      "CARD_SAIU_DA_ETAPA": "When the card leaves {etapa}",
+      "CARD_GANHO": "When a card in {funil} is won",
+      "CARD_PERDIDO": "When a card in {funil} is lost"
+    },
+    "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
+    "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once, when the stage is deleted or when another system changes the stage.",
+    "GATILHO_DO_CARD": {
+      "TODOS_OS_FUNIS": "All pipelines",
+      "ERRO_FUNIS": "Could not load the pipelines and stages. Close and open it again."
     }
   }
 }

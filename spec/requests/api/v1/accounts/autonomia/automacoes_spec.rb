@@ -381,6 +381,17 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
     end
 
+    # #2499: o gatilho de card também pede a chave de funis, mesmo sem passo de card.
+    it 'recusa salvar gatilho de card pela API direta' do
+      account.enable_features!('automacao_gatilhos')
+      receita_de_card = receita.merge(gatilho: { tipo: 'card.ganho' })
+
+      post base, params: { nome: 'x', receita: receita_de_card }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+    end
+
     it 'recusa salvar por cima com passo de card, e confere a versão antes' do
       automacao = create(:autonomia_automacao, account: account)
       automacao.salvar_versao!(receita: receita.deep_stringify_keys, autor: admin)

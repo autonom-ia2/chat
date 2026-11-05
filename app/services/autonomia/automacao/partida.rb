@@ -41,9 +41,11 @@ class Autonomia::Automacao::Partida
   private
 
   def pode_comecar?
-    ::Autonomia::Automacao::Motor.ligado?(@account) && @definicao.ativa && @definicao.versao_ativa &&
+    @definicao.ativa && @definicao.versao_ativa && ::Autonomia::Automacao::Gatilhos.disponivel?(@chave_gatilho, @account) &&
       @alvo.account_id == @account.id && !contexto.no_spam?
   end
+
+  def gatilho = @definicao.versao_ativa.receita['gatilho'].to_h
 
   # A mensagem nova numa conversa que já tem a execução aberta é o caso comum: a consulta evita a cadeia e o INSERT
   # que o índice único recusaria. O índice continua sendo a garantia (corrida entre dois eventos).
@@ -53,7 +55,7 @@ class Autonomia::Automacao::Partida
 
   def no_filtro?
     valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, mensagem: @mensagem)
-    Array(@definicao.versao_ativa.receita.dig('gatilho', 'filtros')).all? do |condicao|
+    Array(gatilho['filtros']).all? do |condicao|
       ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
     end
   end
