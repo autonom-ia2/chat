@@ -46,6 +46,14 @@ class Autonomia::Automacao::ModeloWhatsapp
     end
   end
 
+  # A Receita confere ao salvar (o texto das variáveis ela lê como o do texto livre). Sem conta, como no catálogo, não
+  # confere a caixa.
+  def self.problemas_ao_salvar(conta, passo_id, modelo)
+    return [] if modelo.nil? || conta.nil? || na_conta?(conta, modelo)
+
+    [I18n.t('autonomia.automacao.receita.modelo_indisponivel', passo: passo_id, nome: modelo['nome'])]
+  end
+
   def self.configurado(modelo) = { 'name' => modelo['nome'].to_s, 'language' => modelo['idioma'].to_s }
 
   def initialize(modelo, conversa, valores)
