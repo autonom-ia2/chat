@@ -33,6 +33,7 @@ const ids = {
   unidade: useId(),
   sentido: useId(),
   quanto: useId(),
+  zero: useId(),
 };
 
 const modoDoValor = valor => {
@@ -198,9 +199,10 @@ const frase = computed(() => {
             min="0"
             :model-value="escolha.numero"
             :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO')"
+            :aria-describedby="ids.zero"
             @update:model-value="novo => mudar('numero', String(novo ?? ''))"
           />
-          <p data-data-zero class="mb-0 text-sm text-n-slate-11">
+          <p :id="ids.zero" data-data-zero class="mb-0 text-sm text-n-slate-11">
             {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.ZERO') }}
           </p>
         </div>

@@ -91,9 +91,11 @@ describe('LivreData', () => {
     await escolher(wrapper, 'data-data-modo', 'hoje');
 
     expect(wrapper.find('[data-data-quanto]').exists()).toBe(true);
-    expect(wrapper.find('[data-data-zero]').text()).toBe(
-      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.ZERO'
-    );
+    const dica = wrapper.find('[data-data-zero]');
+    expect(dica.text()).toBe('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.ZERO');
+    expect(
+      wrapper.find('[data-data-numero]').attributes('aria-describedby')
+    ).toBe(dica.attributes('id'));
     expect(ultimo(wrapper)).toEqual({
       $data: { de: 'hoje', mais: { valor: null, unidade: 'dias' } },
     });
@@ -113,6 +115,26 @@ describe('LivreData', () => {
     await wrapper.setProps({ modelValue: valor });
     expect(wrapper.find('[data-data-frase]').text()).toBe(
       'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.GRAVA(AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA_MAIS(AUTOMACAO_LIVRE.ALTERAR_PAINEL.HOJE,6,AUTOMACAO_LIVRE.UNIDADES.MESES#6))'
+    );
+  });
+
+  it('com o Input de verdade, a dica descreve o <input> do número', () => {
+    const wrapper = mount(LivreData, {
+      props: {
+        rotulo: 'Revisão',
+        modelValue: { $data: { de: 'hoje' } },
+        catalogo: CATALOGO,
+        atributosDo: () => ATRIBUTOS,
+      },
+      global: {
+        mocks: { $t: t },
+        stubs: { ChoiceSelect: { template: '<div />' } },
+      },
+    });
+
+    const numero = wrapper.find('input[type="number"]');
+    expect(numero.attributes('aria-describedby')).toBe(
+      wrapper.find('[data-data-zero]').attributes('id')
     );
   });
 
