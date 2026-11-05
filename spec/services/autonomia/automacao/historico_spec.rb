@@ -15,8 +15,8 @@ RSpec.describe Autonomia::Automacao::Historico do
     create(:autonomia_automacao_execucao, versao: versao, alvo: alvo, chave_gatilho: chave, **atributos)
   end
 
-  def historico(usuario = admin, pagina: 1)
-    described_class.new(automacao: automacao, usuario: usuario, pagina: pagina).resultado
+  def historico(usuario = admin, pagina: 1, com_valores: true)
+    described_class.new(automacao: automacao, usuario: usuario, com_valores: com_valores, pagina: pagina).resultado
   end
 
   it 'devolve a mais nova primeiro, com os passos em ordem e o motivo em frase', :aggregate_failures do
@@ -56,6 +56,15 @@ RSpec.describe Autonomia::Automacao::Historico do
                                           dados: { 'ia' => { 'custo_usd' => 0.002, 'modelo' => 'm', 'razao' => 'o cliente disse' } })
 
     expect(historico[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'custo_usd' => 0.002, 'modelo' => 'm' })
+  end
+
+  it 'sem com_valores, tira o dinheiro e deixa modelo e tokens (#2557)', :aggregate_failures do
+    create(:autonomia_automacao_registro, execucao: execucao('a'),
+                                          dados: { 'ia' => { 'custo_usd' => 0.002, 'modelo' => 'm', 'tokens_entrada' => 420 } })
+
+    expect(historico(com_valores: false)[:execucoes].first[:passos].first[:dados]).to eq('ia' => { 'modelo' => 'm', 'tokens_entrada' => 420 })
+    sem_dizer = described_class.new(automacao: automacao, usuario: admin).resultado
+    expect(sem_dizer[:execucoes].first[:passos].first[:dados]['ia']).not_to have_key('custo_usd')
   end
 
   it 'tira o ia que não vem no formato de custo' do

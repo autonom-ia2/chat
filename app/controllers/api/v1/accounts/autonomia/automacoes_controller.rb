@@ -82,8 +82,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     render json: para_tela(@automacao)
   end
 
+  # O custo da IA em dinheiro segue a regra do Crm::AiUsageController#com_valores? (#1969): administrador ou financial_view.
   def historico
-    render json: ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, pagina: params[:pagina]).resultado
+    com_valores = Current.account_user&.permission_granted?('financial_view') || false
+    render json: ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, com_valores: com_valores,
+                                                       pagina: params[:pagina]).resultado
   end
 
   # A salva ensaia a versão ativa; com `receita` no corpo (o rascunho da tela), ensaia ela. A coleção (`ensaio_novo`) é
