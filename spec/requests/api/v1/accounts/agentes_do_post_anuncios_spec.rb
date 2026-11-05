@@ -31,8 +31,7 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
   end
 
   before do
-    account.enable_features!('meta_ads_comentarios_ia', 'meta_ads_gestao', 'meta_ads_comentarios_instagram',
-                             'meta_ads_comentarios_facebook')
+    account.enable_features!('meta_ads_comentarios_ia', 'meta_ads_comentarios_instagram', 'meta_ads_comentarios_facebook')
     stub_request(:any, /graph\.facebook\.com/).to_raise('a lista não lê a Meta')
   end
 
@@ -124,12 +123,13 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
-  it 'sem meta_ads_gestao: 404' do
-    account.disable_features!('meta_ads_gestao')
+  # #2520: a gestão de Anúncios não esconde os anúncios do cuidado.
+  it 'sem meta_ads_gestao: vê a lista' do
+    expect(account.feature_enabled?('meta_ads_gestao')).to be(false)
 
     pedir
 
-    expect(response).to have_http_status(:not_found)
+    expect(response).to have_http_status(:ok)
   end
 
   it 'sem a flag do cuidado: 404' do
