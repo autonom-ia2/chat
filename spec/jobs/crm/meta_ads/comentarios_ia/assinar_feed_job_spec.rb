@@ -12,6 +12,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::AssinarFeedJob do
   let(:assinatura) { instance_double(Crm::MetaAds::PageSubscription, add!: true) }
 
   before do
+    account.enable_features!('meta_ads_comentarios_facebook')
     allow(Crm::MetaAds::PageSubscription).to receive(:new).with(page_id: '555', access_token: canal.page_access_token).and_return(assinatura)
   end
 
@@ -37,6 +38,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::AssinarFeedJob do
 
       expect { described_class.para!(pausado) }.not_to have_enqueued_job(described_class)
       expect { described_class.para!(instagram) }.not_to have_enqueued_job(described_class)
+    end
+
+    it 'sem a flag dos comentários do Facebook (anúncio nas duas redes com só a do Instagram): nada' do
+      account.disable_features!('meta_ads_comentarios_facebook')
+      care = create(:crm_meta_ads_comment_care, account: account, target_kind: 'ad', target_id: '120', post_ids: %w[17900 777_2],
+                                                network: 'both')
+
+      expect { described_class.para!(care) }.not_to have_enqueued_job(described_class)
     end
   end
 
@@ -76,8 +85,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::AssinarFeedJob do
     allow(assinatura).to receive(:add!).and_raise(transient)
     expect { described_class.perform_now(account.id, canal.page_id) }.to have_enqueued_job(described_class).with(account.id, '555', 2)
 
+    rastreador = instance_double(ChatwootExceptionTracker, capture_exception: true)
+    allow(ChatwootExceptionTracker).to receive(:new).with(refused, account: account).and_return(rastreador)
     allow(assinatura).to receive(:add!).and_raise(refused)
     expect { described_class.perform_now(account.id, canal.page_id) }.not_to have_enqueued_job(described_class)
     expect(Crm::MetaAdsPage.feed_receiving.count).to eq(0)
+    expect(rastreador).to have_received(:capture_exception)
   end
 end

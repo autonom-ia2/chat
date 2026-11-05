@@ -62,6 +62,29 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     expect(response).to have_http_status(:not_found)
   end
 
+  # #2520: a flag da rede saiu com o cuidado ligado: pausar (um ou todos) ainda passa, porque não escreve na Meta;
+  # ligar, não.
+  it 'sem a flag da rede: pausa um e todos, mas não liga' do
+    put "#{base}/cuidado", params: corpo, headers: admin.create_new_auth_token, as: :json
+    account.disable_features!('meta_ads_comentarios_instagram')
+
+    put "#{base}/cuidado", params: corpo, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+
+    put "#{base}/cuidado", params: corpo.merge(status: 'paused'), headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentCare.sole.status).to eq('paused')
+
+    Crm::MetaAdsCommentCare.sole.update!(status: 'on')
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'on' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'paused' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentCare.sole.status).to eq('paused')
+  end
+
   # #2520: a tela de cuidar lê o post pelo cuidado, sem seus_posts_comentarios (desligada aqui).
   it 'o post da tela de cuidar: perfil, can_manage e o post, sem os comentários' do
     get "#{base}/cuidado/post", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json

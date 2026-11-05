@@ -20102,7 +20102,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#foto",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:114",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:115",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -20124,7 +20124,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#ler_antigos",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:128",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:129",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -20178,10 +20178,10 @@
     "controller": "api/v1/accounts/seus_posts_cuidado#previa",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:94",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:168",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:195",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:192",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:95",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:173",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:200",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:197",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -20203,7 +20203,7 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#rascunho",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:106",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:107",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
@@ -27717,8 +27717,8 @@
     "controller": "api/v1/accounts/seus_posts_cuidado#mudar_todos",
     "modelo": "Crm::MetaAdsCommentCare",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:68",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:168",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:69",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:173",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
     ],
     "sem_corpo": false
@@ -27749,11 +27749,11 @@
     "completo": true,
     "controller": "api/v1/accounts/seus_posts_cuidado#update",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:87",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:168",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:88",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:173",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:195",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:192",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:200",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:197",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"
@@ -27790,10 +27790,10 @@
     "controller": "api/v1/accounts/seus_posts_cuidado#corrigir_foto",
     "modelo": "Crm::MetaAdsPostReading",
     "origem": [
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:119",
-      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:168",
-      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
       "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:120",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:173",
+      "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:174",
+      "app/controllers/api/v1/accounts/seus_posts_cuidado_controller.rb:121",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:178",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:118",
       "app/controllers/api/v1/accounts/seus_posts_comentarios_controller.rb:128"

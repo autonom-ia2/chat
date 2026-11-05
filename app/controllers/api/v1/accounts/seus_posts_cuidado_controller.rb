@@ -41,9 +41,10 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
   # O pai confere a chave de mudar em todas as escritas e pula o post no `show`. Aqui as duas voltam na ordem certa: a
   # chave antes de ler o post na Meta, e o post em toda ação de um post (o painel também).
   # A flag da rede (#2520) vem logo depois de achar o canal (load_canal do pai), antes das guardas da caixa e da chave
-  # de mudar: sem ela, 404, sem dizer que o recurso existe. A guarda de papel do pai (posts_view) roda antes.
+  # de mudar: sem ela, 404, sem dizer que o recurso existe. A guarda de papel do pai (posts_view) roda antes. Pausar
+  # passa sem ela: não escreve na Meta, e o cuidado ligado antes de a flag sair não fica sem como parar.
   skip_before_action :ensure_manage, :ensure_inbox_member, :load_post
-  before_action :ensure_flag_da_rede
+  before_action :ensure_flag_da_rede, unless: :pausando?
   before_action :ensure_inbox_member
   before_action :ensure_manage, only: [:update, :previa, :rascunho, :foto, :corrigir_foto, :ler_antigos, :mudar_todos]
   before_action :load_post, except: [:cuidados, :mudar_todos, :ler_post]
@@ -135,6 +136,10 @@ class Api::V1::Accounts::SeusPostsCuidadoController < Api::V1::Accounts::SeusPos
 
   def ensure_flags
     head :not_found unless FLAGS.all? { |flag| Current.account.feature_enabled?(flag) }
+  end
+
+  def pausando?
+    %w[update mudar_todos].include?(action_name) && cuidado_params[:status].to_s == 'paused'
   end
 
   # A rede do perfil só se sabe depois de achar o canal (load_canal).
