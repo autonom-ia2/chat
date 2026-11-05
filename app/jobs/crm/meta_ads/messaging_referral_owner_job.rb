@@ -4,6 +4,10 @@
 # dona. O referral vem sem links assinados (MessagingReferral.slim).
 class Crm::MetaAds::MessagingReferralOwnerJob < ApplicationJob
   queue_as :default
+  # A Graph fora do ar sobre o dono do anúncio: tenta de novo; na última, fica no log.
+  retry_on Crm::MetaAds::MessagingReferral::OwnerUnavailable, wait: 30.seconds, attempts: 3 do |_job, error|
+    Rails.logger.warn("[#{name}] dono do anúncio sem resposta, não gravado: #{error.message}")
+  end
 
   def perform(conversation_id, referral, source, event_id)
     conversation = Conversation.find_by(id: conversation_id)

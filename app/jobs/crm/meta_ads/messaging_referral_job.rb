@@ -8,6 +8,10 @@ class Crm::MetaAds::MessagingReferralJob < ApplicationJob
   queue_as :default
   # A foto do anúncio vem num link assinado da Meta: não vai para o log.
   self.log_arguments = false
+  # A Graph fora do ar sobre o dono do anúncio: tenta de novo; na última, fica no log.
+  retry_on Crm::MetaAds::MessagingReferral::OwnerUnavailable, wait: 30.seconds, attempts: 3 do |_job, error|
+    Rails.logger.warn("[#{name}] dono do anúncio sem resposta, não gravado: #{error.message}")
+  end
 
   # { 'messenger' => 'meta_ctm', 'instagram' => 'meta_ctd' }
   SOURCES = Crm::MetaAds::MessagingReferral::ORIGINS.invert.freeze

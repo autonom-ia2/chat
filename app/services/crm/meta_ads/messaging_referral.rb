@@ -10,6 +10,9 @@
 # e o id do evento em `referral_id`: esse clique não tem `ctwa_clid`, e o id do evento separa dois cliques no mesmo
 # anúncio e segura a reentrega do webhook.
 module Crm::MetaAds::MessagingReferral
+  # A Graph não respondeu de vez (rede, 5xx, limite) sobre o dono do anúncio: os jobs que perguntam tentam de novo.
+  class OwnerUnavailable < StandardError; end
+
   AD_SOURCE = 'ADS'.freeze
   MESSENGER_SOURCE, INSTAGRAM_SOURCE = Ctwa::CampaignBuilder::MESSAGING_AD_SOURCES
   # Os toques cujo `source_id` é o id do anúncio da Meta: o clique para o WhatsApp, o Messenger e o Direct.
@@ -153,9 +156,12 @@ module Crm::MetaAds::MessagingReferral
     owner || skip_owner(account_id, ad_id, 'de outra conta de anúncios')
   end
 
-  # true/false quando a Graph responde de vez (e guarda); nil, no log, quando não.
+  # true/false quando a Graph responde de vez (e guarda); falha passageira levanta OwnerUnavailable (o job tenta de
+  # novo); recusa do token é nil, no log.
   def graph_owner(connection, ad_id, key)
     result = Meta::AdsGraphClient.new(access_token: connection.read_token).object(ad_id, fields: 'account_id')
+    raise OwnerUnavailable, "account=#{connection.account_id} ad=#{ad_id} code=#{result.error_code.inspect}" if result.transient?
+
     unless result.ok || result.object_error?
       skip_owner(connection.account_id, ad_id, "Graph sem resposta definitiva (code=#{result.error_code.inspect})")
       return

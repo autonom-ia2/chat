@@ -150,7 +150,8 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
             .to_return({ status: 503, body: '' },
                        { status: 200, headers: { 'Content-Type' => 'application/json' }, body: { account_id: '700000' }.to_json })
 
-    expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)
+    expect { described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.1') }
+      .to raise_error(described_class::OwnerUnavailable)
     expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.2')).to be(true)
     expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.3')).to be(true)
     expect(graph).to have_been_requested.twice
@@ -192,6 +193,19 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
 
     perform_enqueued_jobs(only: Crm::MetaAds::MessagingReferralOwnerJob)
     expect(mine.reload.additional_attributes['campaign_touches'].sole).to include('source_id' => '120200000000000001', 'referral_id' => 'mid.1')
+  end
+
+  it 'o job do dono tenta de novo quando a Graph não responde de vez' do
+    page = create(:channel_facebook_page)
+    create(:channel_facebook_page, page_id: page.page_id)
+    mine = create(:conversation, account: page.inbox.account, inbox: page.inbox)
+    create_meta_ads_insights_connection(mine.account, ad_account_id: '700000')
+    stub_request(:get, %r{graph\.facebook\.com/.*/120200000000000001\?}).to_return(status: 503, body: '')
+
+    expect do
+      Crm::MetaAds::MessagingReferralOwnerJob.perform_now(mine.id, described_class.slim(ad_referral), messenger, 'mid.1')
+    end.to have_enqueued_job(Crm::MetaAds::MessagingReferralOwnerJob)
+    expect(mine.reload.additional_attributes['campaign_touches']).to be_blank
   end
 
   it 'um clique guardado com defeito não leva os outros' do
