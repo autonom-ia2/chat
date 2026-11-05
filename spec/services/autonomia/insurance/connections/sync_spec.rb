@@ -254,6 +254,87 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
     expect(result.last_error).not_to include('eyJ')
   end
 
+  # Auditoria da conexão, 05/11/2026: depois de um erro a tela mostrava o diagnóstico da verificação
+  # anterior (`last_failure` nil, de quando estava tudo bem) e não pedia ação a ninguém.
+  describe 'a falha do erro chega ao diagnóstico' do
+    def recusando(failure)
+      Class.new(Autonomia::Insurance::Connector::Client) do
+        define_method(:open_session) do |**|
+          raise Autonomia::Insurance::Connector::Error.new(:auth_required, 'recusada', { 'failure' => failure })
+        end
+      end.new
+    end
+
+    it 'grava a falha classificada pelo adapter, e a tela passa a pedir a senha' do
+      failure = { 'cause' => 'credential_rejected', 'actor' => 'broker', 'retryable' => false }
+
+      result = described_class.new(connection, connector: recusando(failure)).call
+
+      expect(result.reload.status).to eq('auth_required')
+      expect(result.last_failure).to eq(failure)
+    end
+
+    it 'apaga a falha antiga quando o erro não traz classificação' do
+      record = connection
+      record.update!(metadata: { 'last_failure' => { 'cause' => 'antiga' }, 'commission_percent' => 12 })
+      sem_classificacao = Class.new(Autonomia::Insurance::Connector::Client) do
+        def open_session(**) = raise(Autonomia::Insurance::Connector::Error.new(:unavailable, 'fora'))
+      end.new
+
+      result = described_class.new(record, connector: sem_classificacao).call
+
+      expect(result.reload.status).to eq('offline')
+      expect(result.last_failure).to be_nil
+      expect(result.metadata['commission_percent']).to eq(12)
+    end
+
+    it 'registra no log a mudança de estado, com a causa e sem texto do portal' do
+      failure = { 'cause' => 'credential_rejected', 'actor' => 'broker', 'retryable' => false }
+      record = connection
+      record.update!(status: 'ready')
+      allow(Rails.logger).to receive(:info).and_call_original
+
+      described_class.new(record, connector: recusando(failure)).call
+
+      expect(Rails.logger).to have_received(:info).with(
+        a_string_including('"evento":"insurance.connection.status"', '"de":"ready"', '"para":"auth_required"',
+                           '"causa":"credential_rejected"')
+      )
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('recusada'))
+    end
+
+    it 'continua devolvendo a conexão no erro, e ignora failure que não seja Hash' do
+      result = described_class.new(connection, connector: recusando('texto solto')).call
+
+      expect(result).to be_a(Autonomia::Insurance::Connection)
+      expect(result.reload.status).to eq('auth_required')
+      expect(result.last_failure).to be_nil
+    end
+
+    it 'apaga a falha antiga num erro inesperado' do
+      record = connection
+      record.update!(metadata: { 'last_failure' => { 'cause' => 'credential_rejected', 'actor' => 'broker' } })
+      quebrado = Class.new(Autonomia::Insurance::Connector::Client) do
+        def open_session(**) = raise('boom')
+      end.new
+
+      result = described_class.new(record, connector: quebrado).call
+
+      expect(result.reload.status).to eq('degraded')
+      expect(result.last_failure).to be_nil
+    end
+
+    it 'não registra nada quando o estado não muda' do
+      record = connection
+      record.update!(status: 'ready')
+      allow(Rails.logger).to receive(:info).and_call_original
+
+      described_class.new(record, connector: connector_answering({ 'status' => 'ready' }), scan_capabilities: false).call
+
+      expect(Rails.logger).not_to have_received(:info).with(a_string_including('insurance.connection.status'))
+    end
+  end
+
   it 'skips the connector entirely without credentials' do
     empty = Autonomia::Insurance::Connection.create!(account: account)
     expect(described_class.new(empty, connector: nil).call.status).to eq('not_configured')
