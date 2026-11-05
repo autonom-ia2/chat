@@ -3,7 +3,7 @@ import LivreCondicao from '../components/LivreCondicao.vue';
 import { filtrosDoGatilho } from '../receita';
 import { fraseDaCondicao, operadoresDoValor } from '../frases';
 import { opcoesDosValores } from '../texto';
-import pt from 'dashboard/i18n/locale/pt_BR/automacaoLivre.json';
+import pt from 'dashboard/i18n/locale/pt_BR';
 
 // #2496 — o "Tipo da mensagem" só vale no "Só se" de "Quando chega uma
 // mensagem": entra sugerido ao escolher o gatilho, sai quando ele muda, e o

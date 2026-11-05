@@ -1,0 +1,27 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "GATILHOS": {
+      "CONVERSA_CRIADA": "Quando uma conversa começa",
+      "CONVERSA_ABERTA": "Quando uma conversa é reaberta",
+      "CONVERSA_RESOLVIDA": "Quando uma conversa é resolvida",
+      "MENSAGEM_CRIADA": "Quando chega uma mensagem"
+    },
+    "ORIGEM": {
+      "CONVERSA": "Da conversa",
+      "ANTIGO": "Do jeito antigo"
+    },
+    "VALOR_DA_MENSAGEM": {
+      "RECEBIDA": "do cliente",
+      "ENVIADA": "da equipe para o cliente",
+      "NOTA": "nota interna",
+      "TRUE": "sim",
+      "FALSE": "não",
+      "CLIENTE": "o cliente",
+      "EQUIPE": "a equipe"
+    },
+    "OPERADOR_DA_MENSAGEM": {
+      "IGUAL": "é",
+      "DIFERENTE": "não é"
+    }
+  }
+}
