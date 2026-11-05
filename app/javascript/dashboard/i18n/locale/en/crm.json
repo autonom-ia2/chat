@@ -6151,6 +6151,7 @@
     "ORIGEM": {
       "TELA": "Where it came from",
       "FORMULARIO_META": "Came from the \"{formulario}\" form · ad {anuncio}",
+      "FORMULARIO_META_GENERICO": "Came from a Meta lead form",
       "TITULO": "How {nome} arrived",
       "TEXTO": "The path so far and what this customer is linked to.",
       "CAMINHO": "Path so far",
