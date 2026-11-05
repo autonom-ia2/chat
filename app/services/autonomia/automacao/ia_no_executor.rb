@@ -42,8 +42,8 @@ module Autonomia::Automacao::IaNoExecutor
     @roteiro.entrar_no_caminho(passo, resultado.dados['ramo'])
   end
 
-  # A nota do motivo; false quando não havia motivo (não houve pergunta à IA), nil quando falhou. A falha fica no log só
-  # com a classe do erro: a mensagem pode trazer o texto da conversa.
+  # A nota do motivo; false quando não há nota a deixar (não houve pergunta à IA, ou a IA escolheu "nenhum"), nil quando
+  # falhou. A falha fica no log só com a classe do erro: a mensagem pode trazer o texto da conversa.
   def anotar(executor, ramo)
     executor.anotar(ramo) || false
   rescue StandardError => e
