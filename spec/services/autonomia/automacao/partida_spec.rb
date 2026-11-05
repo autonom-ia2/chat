@@ -26,6 +26,16 @@ RSpec.describe Autonomia::Automacao::Partida, :automacao_motor do
     expect { expect(comecar(definicao, conversa)).to be_nil }.not_to change(Autonomia::Automacao::Execucao, :count)
   end
 
+  # O revisor do #2554: o gatilho que acontece de novo com a execução aberta aparece no histórico dela, uma vez só.
+  it 'o gatilho de novo com a execução aberta fica no histórico dela, uma linha só', :aggregate_failures do
+    execucao = comecar(definicao, conversa)
+    2.times { comecar(definicao, conversa) }
+
+    pulos = Autonomia::Automacao::Registro.where(execucao: execucao, resultado: 'pulado', motivo: 'ja_aberta')
+    expect(pulos.count).to eq(1)
+    expect(I18n.t("autonomia.automacao.motivos.#{pulos.sole.motivo}", locale: :pt_BR)).to include('já estava rodando')
+  end
+
   it 'não começa sem o motor, com a automação desligada ou para alvo de outra conta', :aggregate_failures do
     outra = create(:conversation)
     expect(comecar(definicao, outra)).to be_nil

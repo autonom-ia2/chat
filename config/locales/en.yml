@@ -529,6 +529,9 @@ en:
         quem_ligou_saiu_da_conta: 'The person who turned on the automation left the account. Take over and turn it back on.'
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
         quem_ligou_sem_permissao: 'The person who turned on the automation can no longer manage automations. Take over and turn it back on.'
+        sem_permissao_funil: 'The person who turned on the automation can no longer edit the pipeline, which card triggers need. Take over and turn it back on.'
+        gatilho_desligado: 'Card triggers are off for this account. The automation did not continue.'
+        ja_aberta: 'The trigger happened again, but the automation was already running here and did not start again.'
         receita_com_problema: 'This version no longer runs as it was saved. Fix it and save again before turning it on.'
         sem_quem_ligou: 'Nobody turned this automation on. Take over and turn it back on.'
         sem_versao: 'This automation has no saved steps yet.'
@@ -574,6 +577,9 @@ en:
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
+        gatilho_desligado: 'Card triggers are off for this account.'
+        etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
+        funil_de_fora: 'Trigger: pipeline %{id} is not from this account.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."

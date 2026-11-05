@@ -48,7 +48,8 @@ module Crm
       def perform
         event = EVENT_MAP[@event_type]
         return if event.blank?
-        return unless any_account_webhook_subscribed?(event) || meta_sync_subscribed?(event) || google_sync_subscribed?(event)
+        return unless any_account_webhook_subscribed?(event) || meta_sync_subscribed?(event) || google_sync_subscribed?(event) ||
+                      automacao_subscribed?(event)
 
         Rails.configuration.dispatcher.dispatch(
           event,
@@ -89,6 +90,13 @@ module Crm
       # only google_sync enabled must still get the dispatch.
       def google_sync_subscribed?(event)
         sync_subscribed?(event, 'google_sync')
+      end
+
+      # #2499 (Automação livre F6, ADR 2.5): the event also goes out when an active automation has a card trigger it
+      # fires, in the stage or pipeline of this event. The flag is read first (no query for accounts without it); then
+      # one exists? on (account_id, ativa). On error it answers true (fail-open): the async job decides.
+      def automacao_subscribed?(event)
+        Autonomia::Automacao::Escuta.assinante?(account, event, @changed_attributes)
       end
 
       def sync_subscribed?(event, metadata_key)

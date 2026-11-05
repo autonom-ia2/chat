@@ -1319,5 +1319,13 @@
     "ALTERAR": {
       "DESFECHO": "Marcar como implantado ou não fechou"
     }
+  },
+  "AUTOMACAO_LIVRE": {
+    "GATILHOS": {
+      "CARD_GANHO": "Quando o plano é implantado"
+    },
+    "GATILHO_COM": {
+      "CARD_GANHO": "Quando um plano de {funil} é implantado"
+    }
   }
 }

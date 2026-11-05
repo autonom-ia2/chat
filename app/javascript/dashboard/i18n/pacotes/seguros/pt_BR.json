@@ -270,6 +270,14 @@
   "AUTOMACAO_LIVRE": {
     "VALORES": {
       "CARD_MOTIVO_DA_PERDA": "Por que não fechou"
+    },
+    "GATILHOS": {
+      "CARD_GANHO": "Quando o card fecha o seguro",
+      "CARD_PERDIDO": "Quando o card não fecha"
+    },
+    "GATILHO_COM": {
+      "CARD_GANHO": "Quando um card de {funil} fecha o seguro",
+      "CARD_PERDIDO": "Quando um card de {funil} não fecha"
     }
   }
 }
