@@ -280,7 +280,7 @@ A primeira versão deste doc dizia que uma transação bastava, porque os dois m
 - Cada motor só executa se o `INSERT … ON CONFLICT DO NOTHING` dele devolver a linha.
 - A dupla fica impossível por construção. O lock passa a ser só otimização.
 - **A mesma marca nos dois motores:**
-  - **um método só** monta a marca, `Gatilhos.marca(tipo, evento_ou_atividade)`. O listener novo, o listener antigo e o `Runner` chamam esse método, e nenhum deles a reimplementa. Duas montagens da mesma string divergiriam (registro errado, instante, prefixo), os dois motores rodariam, e a medida "Duplas" ficaria cega (qualidade, 05/11);
+  - **a marca sai sempre do módulo `Gatilhos`**, com um método por tipo de fato: `marca_do_despacho(tipo, registro, instante)` nos eventos de conversa e `marca_da_atividade(tipo, activity_id)` nos de card (#2554). O listener novo, o listener antigo e o `Runner` chamam esses métodos, e nenhum deles reimplementa a string. Os fatos de tempo do PR3a têm métodos próprios no mesmo módulo, mas o antigo não tem fato de tempo. Duas montagens da mesma string divergiriam (registro errado, instante, prefixo), os dois motores rodariam, e a medida "Duplas" ficaria cega (qualidade, 05/11);
   - conversa: o tipo novo vem do mapa (`conversation_created` → `conversa.criada`) e o instante é o do despacho, que os dois listeners recebem do mesmo evento;
   - card: o id da `Crm::Activity`. O `Runner` roda depois do `log_move!`, então o id da atividade passa a ele;
   - spec: o mesmo evento passa pelos dois motores, e a string sai igual.
