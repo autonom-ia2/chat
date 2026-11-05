@@ -228,6 +228,20 @@ Só entra o que uma conta de verdade usa (YAGNI). O resto fica "sem equivalente"
 
 **A reivindicação não precisa de tabela nova.** A tabela de execuções do motor novo já tem o índice único (`automacao_id`, `evento`). O antigo reivindica o fato gravando, para a automação do par, uma execução terminal num estado novo, `do_antigo`, com o mesmo `evento` (5.1). A mesma migration acrescenta `do_antigo` à lista do CHECK `chk_autonomia_automacao_execucoes_finalizada`. A execução fica 90 dias, bem mais que o retry máximo do Sidekiq.
 
+A linha `do_antigo` é gravada como uma execução de verdade: `versao_id` = a versão ligada, e `alvo` e `chave_gatilho` reais, porque são NOT NULL. A F9.2 também põe `do_antigo` em `Execucao::ESTADOS` e `TERMINAIS`, além do CHECK.
+
+**Quem lê execuções passa a ver essas linhas** (qualidade, 05/11). A F9.2 decide e cobre com spec cada leitor:
+
+| Leitor | Tratamento proposto |
+|---|---|
+| `Historico` e `LivreHistorico.vue` (frase por estado) | mostra "feito pela regra antiga" (frase em en e pt_BR) |
+| contagens da lista (`useCriadasPeloGuia.js`, `AutomacoesPage`) | não conta como execução da nova |
+| custos da IA (#2571, `custos_da_automacao`) | fica fora: a linha não tem custo |
+| `VarreduraJob` | não acorda: já nasce terminal (`finalizada_em` preenchida) |
+| `Partida`, `Executor`, `Escuta` | a `Partida` recebe o conflito do índice e não abre outra; o `Executor` nunca vê a linha, porque ela é terminal |
+| `LimparRegistrosJob` e a retenção de 90 dias | igual às outras |
+| `ExclusaoDaConta` | apaga junto, igual às outras |
+
 **A troca é uma ação dentro do produto**, porque produção não aceita `rails runner`. Uma tela "Converter regras antigas" (F9.3) mostra o relatório da conta. O botão "Converter" vale só para:
 - o administrador da conta (parecer de Funções, seção 9);
 - conta que já tem o OK do Rodrigo registrado na Issue.
@@ -266,8 +280,11 @@ A primeira versão deste doc dizia que uma transação bastava, porque os dois m
 - Cada motor só executa se o `INSERT … ON CONFLICT DO NOTHING` dele devolver a linha.
 - A dupla fica impossível por construção. O lock passa a ser só otimização.
 - **A mesma marca nos dois motores:**
-  - conversa: a marca do despacho, que os dois listeners recebem do mesmo evento. O antigo monta a marca com `Gatilhos.marca_do_despacho` e o tipo novo do mapa (`conversation_created` → `conversa.criada`), para sair igual à do novo;
-  - card: o id da `Crm::Activity`. O `Runner` roda depois do `log_move!`, então o id da atividade passa a ele.
+  - **um método só** monta a marca, `Gatilhos.marca(tipo, evento_ou_atividade)`. O listener novo, o listener antigo e o `Runner` chamam esse método, e nenhum deles a reimplementa. Duas montagens da mesma string divergiriam (registro errado, instante, prefixo), os dois motores rodariam, e a medida "Duplas" ficaria cega (qualidade, 05/11);
+  - conversa: o tipo novo vem do mapa (`conversation_created` → `conversa.criada`) e o instante é o do despacho, que os dois listeners recebem do mesmo evento;
+  - card: o id da `Crm::Activity`. O `Runner` roda depois do `log_move!`, então o id da atividade passa a ele;
+  - spec: o mesmo evento passa pelos dois motores, e a string sai igual.
+- **Quando o antigo grava `do_antigo`:** só quando vai agir, depois de conferir as condições. Assim a medida "Perdidas" fica certa, sem linha de ruído.
 - A reivindicação vale enquanto houver conversão vigente, não só 30 dias: um evento de antes da troca pode chegar dias depois, num retry do Sidekiq.
 - **O lock:** `pg_advisory_xact_lock_shared` só vale dentro de transação, e o `AutomationRuleListener` e o `Runner` não rodam numa. A F9.2 põe uma `transaction` curta em volta da decisão.
 
@@ -305,7 +322,9 @@ O botão "Reverter conversão", no mesmo lugar, faz numa transação com o lock 
 
 A automação nova não é apagada: fica desligada, com o histórico.
 
-**O que sobra na reversão:** sem a linha, o antigo não reivindica mais. Um fato que o novo já executou e que chega atrasado ao antigo depois da reversão (um retry no meio) rodaria de novo. A janela é a do retry de um evento que cruza a reversão, e a reversão é um caso de emergência. Este risco fica aceito e escrito: guardar o par depois da reversão pediria uma coluna a mais, e a tabela é mínima por decisão do Rodrigo. Antes de reverter, a Orquestração confere a fila de retry do Sidekiq; com evento da conta lá, a reversão espera ele sair.
+**O que sobra na reversão:** sem a linha, o antigo não reivindica mais. Um fato que o novo já executou e que chega atrasado ao antigo depois da reversão (um retry no meio) rodaria de novo. A janela é a do retry de um evento que cruza a reversão, e a reversão é um caso de emergência. Este risco fica aceito e escrito: guardar o par depois da reversão pediria uma coluna a mais, e a tabela é mínima por decisão do Rodrigo. Antes de reverter, a Orquestração confere as três filas do Sidekiq com evento da conta: retry, scheduled e enqueued. Com evento da conta em qualquer uma delas, a reversão espera ele sair. A `Definicao` não tem jsonb livre para guardar de onde veio (colunas: nome, ativa, origem, versao_ativa_id, ligada_por_id), e por isso a saída sem coluna nova não se aplica.
+
+**Retorno em espera na reversão:** o `desligar!` para a execução nova que espera (por exemplo, um retorno com atraso), e o antigo não tem aquele fato. Esse retorno se perde. É emergência: a lista das execuções paradas fica no histórico, para refazer à mão.
 
 **Plano B, se a tela estiver fora:** a mesma troca por psql, pela Orquestração Deploy, com os ids da tabela de conversões:
 - desligar as novas (`ativa = false`) e fechar as execuções abertas, como o `desligar!` faz;
