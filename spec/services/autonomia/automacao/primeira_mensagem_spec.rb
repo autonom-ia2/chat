@@ -86,6 +86,72 @@ RSpec.describe Autonomia::Automacao::PrimeiraMensagem do
     expect([described_class.primeira?(antes), described_class.primeira?(depois)]).to eq([true, false])
   end
 
+  # #2526: cada caminho que cria conversa a partir de comentário (Crm::MetaAds::ComentariosIa::Conversa e o privado da
+  # tela, InstagramPrivateReply). A conversa que a plataforma abriu é da equipe; a que o cliente já tinha, continua dele.
+  describe 'conversa que nasce de comentário' do
+    let(:care) { create(:crm_meta_ads_comment_care, account: account, target_id: '1790') }
+    let(:instagram) { create(:channel_instagram, account: account).inbox }
+    let(:pagina) do
+      stub_request(:post, %r{graph\.facebook\.com/.*/subscribed_apps})
+      create(:inbox, account: account, channel: create(:channel_facebook_page, account: account))
+    end
+    let(:conversas) { Crm::MetaAds::ComentariosIa::Conversa }
+    let(:envio) { Crm::MetaAds::ComentariosIa::Rede::Envio.new(ok: true, recipient_id: 'psid-1', message_id: 'mid-9') }
+
+    before { allow(Crm::Entrega).to receive(:new).and_return(instance_double(Crm::Entrega, call: nil)) }
+
+    def comentario(rede, caixa)
+      Crm::MetaAds::ComentariosIa::Comentario.new(
+        network: rede, account_id: account.id, inbox_id: caixa.id, owner_id: 'dono-1', post_id: '1790', ad_id: nil,
+        comment_id: "c-#{rede}", parent_id: nil, from_id: 'psid-1', from_name: 'carla.mendes', text: 'Quanto custa?',
+        created_time: 1.minute.ago
+      )
+    end
+
+    def privado(alvo) = create(:message, conversation: alvo, account: account, inbox: alvo.inbox, message_type: :outgoing, source_id: 'mid-1')
+
+    it 'a que a IA abre para a equipe é da equipe, antes e depois de o cliente escrever, no Instagram e no Facebook',
+       :aggregate_failures do
+      [['instagram', instagram], ['facebook', pagina]].each do |rede, caixa|
+        aberta = conversas.para_voce!(comentario(rede, caixa), care, 'to_you')
+        expect(described_class.iniciada_por(aberta.reload)).to eq('equipe'), rede
+
+        chegou = create(:message, conversation: aberta, account: account, inbox: caixa, message_type: :incoming)
+        expect(described_class.iniciada_por(aberta.reload)).to eq('equipe'), rede
+        expect(described_class.primeira?(chegou)).to be(true), rede
+      end
+    end
+
+    it 'a nova do privado da IA é da equipe: no Instagram (anotar!) e no Messenger (no_messenger! e anotar!)',
+       :aggregate_failures do
+      nova = create(:conversation, account: account, inbox: instagram, status: :open)
+      privado(nova)
+      conversas.anotar!(nova, comentario('instagram', instagram), care, nova: true)
+      expect(described_class.iniciada_por(nova.reload)).to eq('equipe')
+
+      messenger = conversas.no_messenger!(comentario('facebook', pagina), envio, care.message)
+      conversas.anotar!(messenger, comentario('facebook', pagina), care, nova: true)
+      expect(described_class.iniciada_por(messenger.reload)).to eq('equipe')
+    end
+
+    it 'a que o cliente já tinha aberta na caixa continua dele depois do privado da IA' do
+      dele = create(:conversation, account: account, inbox: instagram, status: :open)
+      create(:message, conversation: dele, account: account, inbox: instagram, message_type: :incoming, created_at: 1.hour.ago)
+      privado(dele)
+      conversas.anotar!(dele, comentario('instagram', instagram), care, nova: false)
+
+      expect(described_class.iniciada_por(dele.reload)).to eq('cliente')
+    end
+
+    # O privado da tela não marca a conversa: a primeira mensagem é o privado que saiu.
+    it 'a do privado que a pessoa da equipe manda pela tela é da equipe' do
+      tela = create(:conversation, account: account, inbox: instagram, status: :open)
+      privado(tela)
+
+      expect(described_class.iniciada_por(tela.reload)).to eq('equipe')
+    end
+  end
+
   describe 'pelo Valores' do
     let(:valores) { Autonomia::Automacao::Valores }
 

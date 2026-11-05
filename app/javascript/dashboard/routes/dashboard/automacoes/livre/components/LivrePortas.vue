@@ -11,6 +11,10 @@ const emit = defineEmits(['receita', 'zero']);
 // O ícone e a cor de cada receita. Fica aqui, e não no YAML, porque o
 // Tailwind só gera as classes que lê nos .vue.
 const ESTILO = {
+  BOAS_VINDAS: {
+    icone: 'i-lucide-message-circle-heart',
+    tom: 'bg-n-blue-3 text-n-blue-11',
+  },
   AGRADECER: {
     icone: 'i-lucide-heart-handshake',
     tom: 'bg-n-ruby-3 text-n-ruby-11',
