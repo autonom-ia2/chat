@@ -61,6 +61,38 @@ export const campoDasPartes = partes =>
     ? { $texto: partes }
     : (partes || []).join('');
 
+// #2414 G16b — os campos de data que a data calculada pode usar como ponto de
+// partida: só os atributos do tipo data, com os rótulos do "Pôr um dado".
+export const opcoesDeDatas = (catalogo, atributosDo, t) => {
+  const bases = (catalogo?.valores || []).filter(item => item.atributos);
+  return opcoesDosValores(
+    { ...catalogo, valores: bases },
+    modelo =>
+      atributosDo(modelo).filter(
+        atributo => atributo.attribute_display_type === 'date'
+      ),
+    t
+  );
+};
+
+// O mesmo teto do esquema (automacao-receita.schema.json), contra erro de
+// digitação.
+export const TETO_DA_DATA = 3650;
+
+// A data calculada só vai para a receita inteira: o ponto de partida escolhido
+// e, quando há "mais", um número inteiro dentro do teto.
+export const dataCompleta = data =>
+  Boolean(data?.de) &&
+  (data.mais === undefined ||
+    (Number.isInteger(data.mais.valor) &&
+      Math.abs(data.mais.valor) <= TETO_DA_DATA));
+
+export const temDataIncompleta = valor => {
+  if (!valor || typeof valor !== 'object') return false;
+  if (valor.$data) return !dataCompleta(valor.$data);
+  return Object.values(valor).some(temDataIncompleta);
+};
+
 export const comColchetes = rotulo => `${ABRE}${rotulo}${FECHA}`;
 
 // Os dados do texto que não estão mais entre as opções (o campo apagado)

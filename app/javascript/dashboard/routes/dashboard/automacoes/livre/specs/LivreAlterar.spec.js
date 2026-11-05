@@ -95,6 +95,96 @@ describe('LivreAlterar', () => {
     expect(wrapper.emitted('salvar')[0][0].valor.caminho).toEqual({ id: 7 });
   });
 
+  // #2414 G16b: a data calculada pela metade segura o "Salvar".
+  it('não salva com a data calculada pela metade', async () => {
+    const wrapper = montar();
+    const passo = data => ({
+      id: 'p1',
+      tipo: 'acao',
+      acao: 'PATCH labels/:id',
+      descricao: 'x',
+      caminho: { id: 7 },
+      corpo: { title: 'cliente', custom_attributes: { revisao: data } },
+    });
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo({
+        $data: { de: 'hoje', mais: { valor: null, unidade: 'meses' } },
+      }),
+    });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo({
+        $data: { de: 'hoje', mais: { valor: 6, unidade: 'meses' } },
+      }),
+    });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
+  // #2414 G16b: o painel fica montado entre um passo e outro; a peça de data
+  // não pode levar o modo de um para o outro.
+  it('cada passo reabre a peça de data com o modo dele', async () => {
+    const contato = {
+      tipo: 'acao',
+      nome: 'contato_alterar',
+      acao: 'PATCH contacts/:id',
+      grupo: 'CONTATO',
+      frase: 'MUDAR_CONTATO',
+      caminho: { id: { $valor: 'contato.id' } },
+      fixos: {},
+      campos: [
+        {
+          nome: 'custom_attributes',
+          peca: 'atributos_do_contato',
+          rotulo: 'X',
+        },
+      ],
+    };
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo: { ...CATALOGO, passos: [contato] },
+        opcoes: {},
+        atributosDaPeca: () => [
+          {
+            attribute_key: 'revisao',
+            attribute_display_name: 'Revisão',
+            attribute_display_type: 'date',
+          },
+        ],
+        atributosDo: () => [],
+      },
+      global: {
+        stubs: { SidePanel: PainelFalso },
+        mocks: { $t: chave => chave },
+      },
+    });
+    const passo = (id, revisao) => ({
+      id,
+      tipo: 'acao',
+      acao: 'PATCH contacts/:id',
+      descricao: 'x',
+      caminho: { id: { $valor: 'contato.id' } },
+      corpo: { custom_attributes: { revisao } },
+    });
+    const modo = () =>
+      wrapper.find('[data-data-modo] [role="combobox"]').text();
+
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo('a', { $data: { de: 'hoje' } }),
+    });
+    await flushPromises();
+    expect(modo()).toBe('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.HOJE');
+
+    wrapper.vm.abrir({ tipo: 'passo', valor: passo('b', '2027-05-04') });
+    await flushPromises();
+    expect(modo()).toBe('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.DIA');
+  });
+
   // #2496: o "Só se" acompanha o gatilho, e o painel diz o que entra e o que
   // sai antes do "Salvar".
   it('ao trocar o gatilho, avisa e salva o "Só se" que vale para ele', async () => {

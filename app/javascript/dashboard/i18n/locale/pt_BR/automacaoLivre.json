@@ -353,9 +353,25 @@
       "CALCULADO_TEXTO": "Montado na hora: {texto}",
       "HOJE": "hoje",
       "DATA_CALCULADA": "Data calculada na hora: {de}",
-      "DATA_CALCULADA_MAIS": "Data calculada na hora: {de} + {n} {unidade}",
-      "DATA_CALCULADA_MENOS": "Data calculada na hora: {de} − {n} {unidade}",
-      "ATRIBUTO_CALCULADO": "{nome}: {valor}"
+      "ATRIBUTO_CALCULADO": "{nome}: {valor}",
+      "DATA_MAIS": "{de} + {n} {unidade}",
+      "DATA_MENOS": "{de} − {n} {unidade}",
+      "DATA": {
+        "PERGUNTA": "Que data gravar?",
+        "DIA": "Um dia certo",
+        "HOJE": "Uma data a partir de hoje",
+        "CAMPO": "Uma data a partir de um campo de data",
+        "DIA_ROTULO": "Dia",
+        "QUAL_CAMPO": "A partir de qual campo?",
+        "SEM_CAMPO": "A conta ainda não tem campo de data.",
+        "QUANTO": "Quanto tempo?",
+        "NUMERO": "Quantos",
+        "UNIDADE": "De quê",
+        "SENTIDO": "Depois ou antes",
+        "DEPOIS": "depois",
+        "ANTES": "antes",
+        "GRAVA": "Grava: {valor}"
+      }
     },
     "LIGAR": {
       "BOTAO": "Ligar",

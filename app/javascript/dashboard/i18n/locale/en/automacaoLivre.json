@@ -353,9 +353,25 @@
       "CALCULADO_TEXTO": "Put together when it runs: {texto}",
       "HOJE": "today",
       "DATA_CALCULADA": "Date worked out when it runs: {de}",
-      "DATA_CALCULADA_MAIS": "Date worked out when it runs: {de} + {n} {unidade}",
-      "DATA_CALCULADA_MENOS": "Date worked out when it runs: {de} − {n} {unidade}",
-      "ATRIBUTO_CALCULADO": "{nome}: {valor}"
+      "ATRIBUTO_CALCULADO": "{nome}: {valor}",
+      "DATA_MAIS": "{de} + {n} {unidade}",
+      "DATA_MENOS": "{de} − {n} {unidade}",
+      "DATA": {
+        "PERGUNTA": "Which date to save?",
+        "DIA": "A set day",
+        "HOJE": "A date counted from today",
+        "CAMPO": "A date counted from a date field",
+        "DIA_ROTULO": "Day",
+        "QUAL_CAMPO": "Counted from which field?",
+        "SEM_CAMPO": "This account has no date field yet.",
+        "QUANTO": "How long?",
+        "NUMERO": "How many",
+        "UNIDADE": "Of what",
+        "SENTIDO": "After or before",
+        "DEPOIS": "after",
+        "ANTES": "before",
+        "GRAVA": "Saves: {valor}"
+      }
     },
     "LIGAR": {
       "BOTAO": "Turn on",
