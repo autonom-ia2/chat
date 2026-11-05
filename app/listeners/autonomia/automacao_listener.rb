@@ -23,11 +23,12 @@ class Autonomia::AutomacaoListener < BaseListener
     escuta.acordar(contact, Conversation.where(contact_id: contact.id).select(:id))
   end
 
-  # Os eventos do card (#2499, F6): o emissor do CRM manda só ids; a Escuta relê o card e confere a flag.
-  def crm_card_created(event) = escuta.evento_do_card(event.data, Events::Types::CRM_CARD_CREATED)
-  def crm_card_moved(event) = escuta.evento_do_card(event.data, Events::Types::CRM_CARD_MOVED)
-  def crm_card_won(event) = escuta.evento_do_card(event.data, Events::Types::CRM_CARD_WON)
-  def crm_card_lost(event) = escuta.evento_do_card(event.data, Events::Types::CRM_CARD_LOST)
+  # Os eventos do card (#2499, F6): o emissor do CRM manda só ids. O listener só enfileira o EventoDoCardJob, que relê
+  # o card: um erro lá tenta de novo sem repetir os webhooks e os avisos dos outros listeners deste evento.
+  def crm_card_created(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_CREATED)
+  def crm_card_moved(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_MOVED)
+  def crm_card_won(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_WON)
+  def crm_card_lost(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_LOST)
 
   private
 

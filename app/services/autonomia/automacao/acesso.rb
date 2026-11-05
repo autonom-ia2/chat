@@ -8,8 +8,11 @@ class Autonomia::Automacao::Acesso
 
   attr_reader :usuario, :account_user
 
-  def initialize(definicao)
+  # `chave_gatilho`: o gatilho da execução que está rodando (ou começando). Sem ele (ao ligar), vale o da versão ativa.
+  # A execução em andamento segue a versão dela: salvar uma versão com outro gatilho não tira a checagem do funil.
+  def initialize(definicao, chave_gatilho: nil)
     @definicao = definicao
+    @chave_gatilho = chave_gatilho
     @account = definicao.account
     @usuario = definicao.ligada_por
     @account_user = @usuario && @account.account_users.find_by(user_id: @usuario.id)
@@ -45,7 +48,9 @@ class Autonomia::Automacao::Acesso
     ::Crm::StageAutomationPolicy.new(contexto, ::Crm::StageAutomation.new(account: @account)).create?
   end
 
-  def gatilho_de_card? = ::Autonomia::Automacao::Gatilhos.do_card?(@definicao.versao_ativa&.receita&.dig('gatilho', 'tipo'))
+  def gatilho_de_card?
+    ::Autonomia::Automacao::Gatilhos.do_card?(@chave_gatilho || @definicao.versao_ativa&.receita&.dig('gatilho', 'tipo'))
+  end
 
   # A mesma pergunta para outra pessoa da conta (quem o passo "avisar" menciona, F4).
   def self.alcanca?(usuario, conversa)

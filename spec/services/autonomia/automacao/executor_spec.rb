@@ -379,8 +379,8 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
     it 'perdeu a chave entre a reconferência e a chamada: pausa', :aggregate_failures do
       definicao = automacao_ligada(account, agente, [prioridade_passo('p1')])
       funcao.update!(permissions: %w[conversation_manage])
-      allow(Autonomia::Automacao::Acesso).to receive(:new).and_wrap_original do |original, *argumentos|
-        original.call(*argumentos).tap { |acesso| allow(acesso).to receive(:motivo).and_return(nil) }
+      allow(Autonomia::Automacao::Acesso).to receive(:new).and_wrap_original do |original, *argumentos, **opcoes|
+        original.call(*argumentos, **opcoes).tap { |acesso| allow(acesso).to receive(:motivo).and_return(nil) }
       end
 
       execucao = comecar_e_rodar(definicao)

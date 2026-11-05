@@ -53,7 +53,7 @@ class Autonomia::Automacao::Executor
     @account = execucao.account
     @raiz = raiz || SecureRandom.uuid
     @roteiro = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita)
-    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao)
+    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @tentativas = execucao.tentativas
   end
 
@@ -138,7 +138,7 @@ class Autonomia::Automacao::Executor
   def reconferir
     @definicao.reload
     @account.reload
-    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao)
+    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @alvo = nil
     @contexto = nil
     @valores = nil

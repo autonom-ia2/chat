@@ -36,7 +36,7 @@ RSpec.describe 'Automação livre: gatilhos de card', :automacao_motor do # rubo
 
   # Um job de cada vez, na ordem da fila: o job enfileirado dentro de outro só roda depois dele.
   def drenar
-    drenados = [EventDispatcherJob, Autonomia::Automacao::AvancarJob]
+    drenados = [EventDispatcherJob, Autonomia::Automacao::EventoDoCardJob, Autonomia::Automacao::AvancarJob]
     40.times do
       job = enqueued_jobs.find { |item| drenados.include?(item[:job]) }
       return unless job
@@ -199,6 +199,49 @@ RSpec.describe 'Automação livre: gatilhos de card', :automacao_motor do # rubo
       expect(definicao.reload.ativa).to be(false)
       expect(Autonomia::Automacao::Registro.where(automacao: definicao).sole.motivo).to eq('sem_permissao_funil')
     end
+
+    # A chave é conferida a cada rodada, pelo gatilho da execução: tirada depois do "esperar", a rodada seguinte pausa,
+    # mesmo que a versão nova da automação tenha trocado o gatilho de card por um de conversa (que não pede a chave).
+    describe 'a chave de funis tirada no meio da execução' do
+      let(:agente) { create(:user, account: account, role: :agent) }
+      let(:funcao) do
+        create(:custom_role, account: account,
+                             permissions: %w[automation_manage conversation_manage crm_view crm_manage_cards crm_manage_pipelines])
+      end
+      let(:definicao) do
+        de_card('card.entrou_na_etapa', [esperar_passo('p1'), mover_passo('p2', fechamento)], etapa_id: proposta.id)
+      end
+
+      before do
+        account.account_users.find_by(user: agente).update!(custom_role: funcao)
+        # O agente vê o card pela caixa dele (Crm::Cards::VisibleScopeQuery).
+        create(:inbox_member, user: agente, inbox: conversa.inbox)
+        card.update!(inbox: conversa.inbox)
+        definicao.update!(ligada_por: agente)
+        mover(card, proposta)
+        drenar
+        funcao.update!(permissions: funcao.permissions - %w[crm_manage_pipelines])
+      end
+
+      # O estado da execução, se a automação segue ligada, o último motivo e a etapa do card depois da rodada seguinte.
+      def rodar_depois_do_esperar
+        travel(2.days) { varrer }
+        [execucoes.where(automacao: definicao).sole.estado, definicao.reload.ativa,
+         Autonomia::Automacao::Registro.where(automacao: definicao).last.motivo, card.reload.stage]
+      end
+
+      it 'a rodada depois do esperar pausa com sem_permissao_funil' do
+        expect(rodar_depois_do_esperar).to eq(['parada', false, 'sem_permissao_funil', proposta])
+      end
+
+      it 'pausa também depois de salvarem uma versão com gatilho de conversa' do
+        definicao.salvar_versao!(receita: { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [esperar_passo('p1')] },
+                                 autor: admin)
+        definicao.update!(ativa: true)
+
+        expect(rodar_depois_do_esperar).to eq(['parada', false, 'sem_permissao_funil', proposta])
+      end
+    end
   end
 
   describe 'o gate do emissor' do
@@ -207,6 +250,7 @@ RSpec.describe 'Automação livre: gatilhos de card', :automacao_motor do # rubo
 
       mover(card, proposta)
       perform_enqueued_jobs(only: EventDispatcherJob)
+      perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob)
 
       fora = [Webhooks::CrmDeliveryJob, WebhookJob, Crm::MetaCapi::DispatchJob, Crm::GoogleOffline::RecordJob]
       expect(enqueued_jobs.map { |job| job[:job] } & fora).to be_empty
@@ -219,6 +263,53 @@ RSpec.describe 'Automação livre: gatilhos de card', :automacao_motor do # rubo
       mover(card, proposta)
 
       expect(enqueued_jobs.map { |job| job[:job] }).not_to include(EventDispatcherJob)
+    end
+
+    # O revisor do #2554: a etapa do evento filtra na mesma consulta. Automação de outra etapa não faz despachar.
+    it 'automação só de outra etapa não despacha' do
+      de_card('card.entrou_na_etapa', etapa_id: fechamento.id)
+
+      mover(card, proposta)
+
+      expect(enqueued_jobs.map { |job| job[:job] }).not_to include(EventDispatcherJob)
+    end
+
+    # Roda no after_commit do card: erro no gate não quebra quem moveu, e o evento sai assim mesmo (fail-open).
+    it 'erro no gate despacha assim mesmo e loga só a classe', :aggregate_failures do
+      de_card('card.entrou_na_etapa', etapa_id: proposta.id)
+      allow(Autonomia::Automacao::Definicao).to receive(:joins).and_raise(ActiveRecord::StatementInvalid, 'valor do cliente')
+      allow(Rails.logger).to receive(:error)
+
+      expect { mover(card, proposta) }.not_to raise_error
+      expect(enqueued_jobs.map { |job| job[:job] }).to include(EventDispatcherJob)
+      expect(Rails.logger).to have_received(:error)
+        .with(satisfy { |linha| linha.include?('ActiveRecord::StatementInvalid') && linha.exclude?('valor do cliente') })
+    end
+  end
+
+  # O revisor do #2554: o listener só enfileira; o erro da automação sobe no EventoDoCardJob, que tenta de novo sem
+  # repetir os outros listeners do evento (webhook, Meta, Google).
+  describe 'o erro na automação do card' do
+    it 'sobe no EventoDoCardJob, não no despacho do evento', :aggregate_failures do
+      de_card('card.entrou_na_etapa', etapa_id: proposta.id)
+      allow(Autonomia::Automacao::Partida).to receive(:new).and_raise(ActiveRecord::Deadlocked)
+
+      mover(card, proposta)
+      expect { perform_enqueued_jobs(only: EventDispatcherJob) }.not_to raise_error
+      expect(Autonomia::Automacao::EventoDoCardJob).to have_been_enqueued
+
+      job = enqueued_jobs.find { |item| item[:job] == Autonomia::Automacao::EventoDoCardJob }
+      expect { Autonomia::Automacao::EventoDoCardJob.perform_now(*ActiveJob::Arguments.deserialize(job[:args])) }
+        .to raise_error(ActiveRecord::Deadlocked)
+    end
+
+    it 'card apagado antes do job não é erro' do
+      de_card('card.entrou_na_etapa', etapa_id: proposta.id)
+      mover(card, proposta)
+      perform_enqueued_jobs(only: EventDispatcherJob)
+      card.destroy!
+
+      expect { perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob) }.not_to raise_error
     end
   end
 end
