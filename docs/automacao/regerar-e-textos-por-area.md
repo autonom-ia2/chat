@@ -24,13 +24,14 @@ Regras:
 - **Um bloco mora em um só arquivo.** O index junta os arquivos no primeiro nível de `AUTOMACAO_LIVRE`. Um bloco que
   aparecesse em dois arquivos ficaria só com o último, sem nenhum aviso. O spec
   `app/javascript/dashboard/i18n/specs/automacaoLivrePorArea.spec.js` reprova isso.
-- **Bloco novo vai no arquivo da sua frente.** Um bloco que serve a todas vai no `automacaoLivre.json`.
+- **Bloco novo vai no arquivo da sua frente.** Um bloco que serve a todas vai no `automacaoLivre.json`. O bloco novo
+  também entra na lista `BLOCOS_POR_ARQUIVO` do mesmo spec, que reprova bloco fora do arquivo listado.
 - **Arquivo de área novo** pede os mesmos passos de qualquer catálogo do fork (`docs/i18n/fork-translations.md`):
   - criar o arquivo em en e em pt_BR;
   - registrar em `config/fork_i18n.json` e em `crowdin.yml`;
   - importar no `index.js` dos dois idiomas, com a linha `...<arquivo>.AUTOMACAO_LIVRE,` dentro do bloco
     `AUTOMACAO_LIVRE`;
-  - subir de 5 para 6 a contagem no spec acima.
+  - pôr o arquivo e os blocos dele em `BLOCOS_POR_ARQUIVO`, no spec acima.
 - Os specs Ruby do catálogo (`spec/services/autonomia/automacao/catalogo*_spec.rb`) leem todos os
   `automacaoLivre*.json` do idioma e juntam os blocos no primeiro nível de `AUTOMACAO_LIVRE`, como o index faz.
 - O checador dos pacotes (`scripts/i18n-pacotes/checar.mjs`) lê o `index.js` linha a linha. Ele entende

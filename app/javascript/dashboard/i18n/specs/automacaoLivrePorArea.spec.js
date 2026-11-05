@@ -9,6 +9,48 @@ const areas = import.meta.glob('../locale/{en,pt_BR}/automacaoLivre*.json', {
   import: 'default',
 });
 
+// Onde cada bloco de topo mora. Bloco novo entra aqui, no arquivo da sua frente
+// (docs/automacao/regerar-e-textos-por-area.md). Sem a lista, um bloco de área
+// posto no automacaoLivre.json passaria sem aviso no arquivo errado.
+const BLOCOS_POR_ARQUIVO = {
+  'automacaoLivre.json': [
+    'GRUPOS',
+    'OPERADORES',
+    'UNIDADES',
+    'VALORES',
+    'PASSOS',
+    'ESCOLHER',
+    'CAMPOS',
+    'OPCOES',
+    'LIGADA',
+    'DESLIGADA',
+    'LIGOU',
+    'DESLIGOU',
+    'VOLTAR_LISTA',
+    'ALTERAR',
+    'ALTERAR_ROTULO',
+    'MUDOU',
+    'FALHOU',
+    'LISTA',
+    'EDITOR',
+    'CONFIRA',
+    'FRASES',
+    'RAMOS',
+    'SELETOR',
+    'ALTERAR_PAINEL',
+    'LIGAR',
+  ],
+  'automacaoLivreGatilhos.json': [
+    'GATILHOS',
+    'ORIGEM',
+    'VALOR_DA_MENSAGEM',
+    'OPERADOR_DA_MENSAGEM',
+  ],
+  'automacaoLivreIa.json': ['IA'],
+  'automacaoLivreReceitas.json': ['RECEITAS'],
+  'automacaoLivreEnsaio.json': ['ENSAIO', 'HISTORICO'],
+};
+
 const doIdioma = idioma =>
   Object.entries(areas)
     .filter(([caminho]) => caminho.includes(`/${idioma}/`))
@@ -31,8 +73,23 @@ describe.each([
 ])('AUTOMACAO_LIVRE em %s', (idioma, mensagens) => {
   const arquivos = doIdioma(idioma);
 
-  it('tem os cinco arquivos de área', () => {
-    expect(arquivos).toHaveLength(5);
+  it('tem os arquivos de área da lista', () => {
+    const nomes = arquivos.map(([caminho]) => caminho.split('/').at(-1));
+    expect(nomes.sort()).toEqual(Object.keys(BLOCOS_POR_ARQUIVO).sort());
+  });
+
+  it('cada bloco está no arquivo que a lista diz', () => {
+    const foraDaLista = arquivos.flatMap(([caminho, bloco]) => {
+      const nome = caminho.split('/').at(-1);
+      const permitidos = BLOCOS_POR_ARQUIVO[nome] || [];
+      return Object.keys(bloco)
+        .filter(chave => !permitidos.includes(chave))
+        .map(
+          chave =>
+            `${idioma}/${nome}: ${chave} — diga em qual arquivo ele mora e adicione na lista BLOCOS_POR_ARQUIVO`
+        );
+    });
+    expect(foraDaLista).toEqual([]);
   });
 
   it('não repete chave entre os arquivos de área', () => {
