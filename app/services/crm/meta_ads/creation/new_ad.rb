@@ -114,11 +114,12 @@ class Crm::MetaAds::Creation::NewAd
   end
 
   # Post: tem que ser desta Página (ou do Instagram dela) e a Meta tem que deixar impulsionar, relido agora. Anúncio
-  # novo: o vídeo pronto.
+  # novo: o vídeo pronto e, para o Direct, a conta do Instagram ligada à Página (#2560).
   def ensure_content_ready!(draft, page)
-    return ensure_video_ready!(draft) unless draft[:kind] == 'post'
+    return Crm::MetaAds::Creation::Posts.new(client).find!(page, draft[:post_source], draft[:post_id]) if draft[:kind] == 'post'
+    raise Crm::MetaAds::Creation::Error, 'invalid_instagram' if draft[:destination] == 'INSTAGRAM_DIRECT' && page.dig(:instagram, :id).blank?
 
-    Crm::MetaAds::Creation::Posts.new(client).find!(page, draft[:post_source], draft[:post_id])
+    ensure_video_ready!(draft)
   end
 
   def find_page!(page_id)

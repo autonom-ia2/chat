@@ -3622,6 +3622,7 @@
             "WEBSITE": "{offer}. See it on our website and place your order."
           },
           "NEED_SITE": "Type the website address to continue.",
+          "NEED_INSTAGRAM": "This Page has no Instagram linked. Choose another destination to continue.",
           "TEXT_READY": "Ready text: “{text}”",
           "TEXT_READY_EMPTY": "The text comes from what you sell.",
           "TEXT_CHANGE": "Change text",
@@ -3810,6 +3811,7 @@
           "INVALID_SITE": "The website address doesn't work. Check that it's right, like samplestore.com.",
           "INVALID_WHATSAPP_NUMBER": "This WhatsApp number doesn't belong to this account. Pick another one.",
           "INVALID_PAGE": "The Facebook Page isn't available to the platform. Sign in with Facebook again under Connection.",
+          "INVALID_INSTAGRAM": "This Page has no Instagram professional account linked. Link one, or pick another destination.",
           "INVALID_MEDIA": "Meta didn't accept the photo or video. Choose it again.",
           "INVALID_AUDIENCE": "The audience doesn't work. Check the states and the age.",
           "VIDEO_PROCESSING": "Meta is still preparing the video. Try again in a minute.",

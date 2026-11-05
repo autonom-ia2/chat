@@ -232,6 +232,49 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(stubs[:creative].with(&creative_ok)).to have_been_made
   end
 
+  # #2560: campos da documentação de anúncio de mensagem (Click to Messenger e Click to Instagram) da Meta.
+  it 'Messenger: conversa no Messenger, sem número nem mensagem pronta' do
+    stubs = stub_creation
+    stub_reread
+
+    create!(draft.merge(destination: 'MESSENGER', whatsapp_number: nil))
+
+    expect(stubs[:campaign].with { |req| form(req)['objective'] == 'OUTCOME_ENGAGEMENT' }).to have_been_made
+    adset_ok = lambda do |req|
+      body = form(req)
+      body['destination_type'] == 'MESSENGER' && body['optimization_goal'] == 'CONVERSATIONS' &&
+        JSON.parse(body['promoted_object']) == { 'page_id' => page_id }
+    end
+    creative_ok = lambda do |req|
+      link_data = JSON.parse(form(req)['object_story_spec'])['link_data']
+      form(req)['url_tags'].nil? && link_data['link'] == 'https://fb.com/messenger_doc/' && link_data['page_welcome_message'].nil? &&
+        link_data['call_to_action'] == { 'type' => 'MESSAGE_PAGE', 'value' => { 'app_destination' => 'MESSENGER' } }
+    end
+    expect(stubs[:adset].with(&adset_ok)).to have_been_made
+    expect(stubs[:creative].with(&creative_ok)).to have_been_made
+  end
+
+  it 'Direct: conversa no Direct da conta do Instagram da Página' do
+    stub_pages(instagram: { id: '178', username: 'lojaexemplo' })
+    stubs = stub_creation
+    stub_reread
+
+    create!(draft.merge(destination: 'INSTAGRAM_DIRECT', whatsapp_number: nil))
+
+    adset_ok = lambda do |req|
+      body = form(req)
+      body['destination_type'] == 'INSTAGRAM_DIRECT' && body['optimization_goal'] == 'CONVERSATIONS' &&
+        JSON.parse(body['promoted_object']) == { 'page_id' => page_id }
+    end
+    creative_ok = lambda do |req|
+      spec = JSON.parse(form(req)['object_story_spec'])
+      spec['instagram_user_id'] == '178' && spec.dig('link_data', 'link') == 'https://www.instagram.com' &&
+        spec.dig('link_data', 'call_to_action') == { 'type' => 'INSTAGRAM_MESSAGE', 'value' => { 'app_destination' => 'INSTAGRAM_DIRECT' } }
+    end
+    expect(stubs[:adset].with(&adset_ok)).to have_been_made
+    expect(stubs[:creative].with(&creative_ok)).to have_been_made
+  end
+
   it 'categoria especial marca crédito/seguro e trava a idade em 18 a 65' do
     stubs = stub_creation
     stub_reread
@@ -808,8 +851,12 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
   describe 'revalida no servidor, sem chamar a Meta para criar (ponto 5)' do
     {
-      'destino não confirmado' => [{ destination: 'MESSENGER' }, 'invalid_destination'],
+      'destino não confirmado' => [{ destination: 'INSTAGRAM_PROFILE' }, 'invalid_destination'],
       'lugar não confirmado para o destino' => [{ placement: 'INSTAGRAM' }, 'invalid_placement'],
+      'Messenger fora do Automático' => [{ destination: 'MESSENGER', placement: 'FACEBOOK' }, 'invalid_placement'],
+      'carrossel no Messenger' => [{ destination: 'MESSENGER', cards: [{ kind: 'image', hash: 'x' }] }, 'invalid_media'],
+      'carrossel no Direct' => [{ destination: 'INSTAGRAM_DIRECT', cards: [{ kind: 'image', hash: 'x' }] }, 'invalid_media'],
+      'Direct com Página sem Instagram' => [{ destination: 'INSTAGRAM_DIRECT' }, 'invalid_instagram'],
       'valor por dia abaixo de R$ 6' => [{ daily_amount: '5' }, 'invalid_amount'],
       'valor por dia acima de R$ 500' => [{ daily_amount: '501' }, 'invalid_amount'],
       'valor com mais de 2 casas' => [{ daily_amount: '20.005' }, 'invalid_amount'],

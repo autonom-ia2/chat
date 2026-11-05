@@ -34,6 +34,7 @@ import {
 } from '../receita';
 import { useEditorLivre } from '../useEditorLivre';
 import { useOpcoesDaConta } from '../useOpcoesDaConta';
+import { useGatilhosNovos } from '../useGatilhosNovos';
 
 // #2414 F5 — o editor da Automação livre: o "Confira" à esquerda e, ao lado, a
 // ação principal (Ligar). A URL diz o painel aberto: ?alterar=<item>,
@@ -47,6 +48,11 @@ const { catalogo } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
 const { isCloudFeatureEnabled } = useAccount();
+// #2499: os gatilhos que esta pessoa pode escolher, e os funis e as etapas.
+const { gatilhos, escolhasDoGatilho } = useGatilhosNovos(
+  isCloudFeatureEnabled,
+  catalogo
+);
 const editor = useEditorLivre();
 const {
   automacao,
@@ -194,7 +200,9 @@ const comFiltros = (r, filtros) => {
 const receitaDoSalvar = ({ tipo, indice, novo, listaId, valor }) => {
   const r = receita.value;
   if (tipo === 'gatilho') {
-    const comGatilho = { ...r, gatilho: { ...(r.gatilho || {}), ...valor } };
+    // O gatilho do painel é inteiro: trocar o tipo não traz de volta a etapa
+    // ou o funil do anterior (#2499).
+    const comGatilho = { ...r, gatilho: valor };
     return comFiltros(comGatilho, comGatilho.gatilho.filtros || []);
   }
   if (tipo === 'condicao') {
@@ -482,6 +490,7 @@ onMounted(() => {
               <LivreConfira
                 :receita="receita"
                 :catalogo="catalogo"
+                :nomes-do-gatilho="escolhasDoGatilho.nomes"
                 :pode-mudar="podeMudar && !ocupado && !conflito"
                 :tudo="tudo"
                 @alterar="chave => mudarUrl({ alterar: chave })"
@@ -568,6 +577,8 @@ onMounted(() => {
               :atributos-do="atributosDo"
               :receita-do-teste="receitaDoSalvar"
               :custos="custos"
+              :gatilhos="gatilhos"
+              :escolhas-do-gatilho="escolhasDoGatilho"
               @salvar="salvar"
               @tirar="tirar"
               @close="fecharPainel('alterar')"
