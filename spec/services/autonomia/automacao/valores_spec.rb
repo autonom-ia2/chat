@@ -4,7 +4,7 @@ RSpec.describe Autonomia::Automacao::Valores do
   let(:account) { create(:account) }
   let(:contato) { create(:contact, account: account, name: 'Maria', custom_attributes: { 'apolice.numero' => '991' }) }
   let(:conversa) { create(:conversation, account: account, contact: contato, custom_attributes: { 'origem' => 'anuncio' }) }
-  let(:valores) { described_class.new(alvo: conversa) }
+  let(:valores) { described_class.new(alvo: conversa, quem: nil) }
 
   it 'lê campos da conversa e do contato' do
     expect(valores.ler('conversa.id')).to eq(conversa.display_id)
@@ -16,7 +16,7 @@ RSpec.describe Autonomia::Automacao::Valores do
   it 'lê a mensagem do gatilho: recebida, enviada ou nota', :aggregate_failures do
     tipo = lambda do |message_type, privada = false|
       mensagem = build(:message, conversation: conversa, account: account, message_type: message_type, private: privada)
-      described_class.new(alvo: conversa, mensagem: mensagem).ler('mensagem.tipo')
+      described_class.new(alvo: conversa, mensagem: mensagem, quem: nil).ler('mensagem.tipo')
     end
 
     expect([tipo.call(:incoming), tipo.call(:outgoing), tipo.call(:outgoing, true)]).to eq(%w[recebida enviada nota])
@@ -27,7 +27,7 @@ RSpec.describe Autonomia::Automacao::Valores do
   it 'tem como opções da mensagem exatamente o que a mensagem pode valer', :aggregate_failures do
     lido = lambda do |caminho, message_type, privada|
       mensagem = build(:message, conversation: conversa, account: account, message_type: message_type, private: privada)
-      described_class.new(alvo: conversa, mensagem: mensagem).ler(caminho)
+      described_class.new(alvo: conversa, mensagem: mensagem, quem: nil).ler(caminho)
     end
     formas = [[:incoming, false], [:outgoing, false], [:outgoing, true], [:template, false]]
 
@@ -83,9 +83,9 @@ RSpec.describe Autonomia::Automacao::Valores do
     it 'lê vazio quando a ponte falta: card sem conversa, contato sem card' do
       sem_conversa = novo_card(primary_conversation: nil)
 
-      expect(described_class.new(alvo: sem_conversa).ler('conversa.status')).to be_nil
-      expect(described_class.new(alvo: contato).ler('card.titulo')).to be_nil
-      expect(described_class.new(alvo: contato).ler('contato.atributos.apolice.numero')).to eq('991')
+      expect(described_class.new(alvo: sem_conversa, quem: nil).ler('conversa.status')).to be_nil
+      expect(described_class.new(alvo: contato, quem: nil).ler('card.titulo')).to be_nil
+      expect(described_class.new(alvo: contato, quem: nil).ler('contato.atributos.apolice.numero')).to eq('991')
     end
 
     it 'diz o que cada alvo alcança' do
