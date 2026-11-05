@@ -198,6 +198,50 @@ describe('LivreAlterar', () => {
     });
   });
 
+  // #2523: a receita pronta põe a etiqueta por nome, e a conta pode não tê-la.
+  it('etiqueta que a conta não tem fica marcada, com o aviso de que entra sem cor', async () => {
+    const wrapper = montar();
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: {
+        id: 'p2',
+        tipo: 'acao',
+        acao: 'PATCH conversations/:conversation_id/labels/alterar',
+        descricao: 'x',
+        caminho: { conversation_id: { $valor: 'conversa.id' } },
+        corpo: { por: ['reclamacao'] },
+      },
+    });
+    await flushPromises();
+    const nomes = campo =>
+      wrapper
+        .findAll(`[data-campo="${campo}"] button`)
+        .map(item => item.text());
+    const nova = wrapper
+      .findAll('[data-campo="por"] button')
+      .find(
+        item => item.text() === 'AUTOMACAO_LIVRE.ALTERAR_PAINEL.ETIQUETA_NOVA'
+      );
+
+    expect(nomes('por')).toEqual([
+      'vip',
+      'lead',
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.ETIQUETA_NOVA',
+    ]);
+    expect(nova.attributes('aria-pressed')).toBe('true');
+    expect(nomes('tirar')).toEqual(['vip', 'lead']);
+
+    await wrapper
+      .findAll('[data-campo="por"] button')
+      .find(item => item.text() === 'vip')
+      .trigger('click');
+    await wrapper.find('[data-salvar]').trigger('click');
+    expect(wrapper.emitted('salvar')[0][0].valor.corpo.por).toEqual([
+      'reclamacao',
+      'vip',
+    ]);
+  });
+
   it('a ação avançada abre só para ver, e dá para tirar', async () => {
     const wrapper = montar();
     wrapper.vm.abrir({

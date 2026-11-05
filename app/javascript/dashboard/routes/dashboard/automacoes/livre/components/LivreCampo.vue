@@ -43,9 +43,21 @@ const opcoesDeUma = computed(() => {
 });
 const ehUma = computed(() => peca.value === 'escolha' || UMA[peca.value]);
 
+// #2523: a etiqueta que a receita pronta traz e a conta ainda não tem fica à
+// vista, marcada, com o aviso de que entra sem cor (o servidor a aceita assim).
+const etiquetasNovas = computed(() => {
+  const daConta = (props.opcoes.etiquetaPorNome || []).map(item => item.value);
+  return (props.modelValue || [])
+    .filter(nome => !daConta.includes(nome))
+    .map(nome => ({
+      value: nome,
+      label: t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ETIQUETA_NOVA', { nome }),
+    }));
+});
+
 const opcoesDeVarias = computed(() =>
   peca.value === 'etiquetas'
-    ? props.opcoes.etiquetaPorNome
+    ? [...(props.opcoes.etiquetaPorNome || []), ...etiquetasNovas.value]
     : props.opcoes.pessoa
 );
 

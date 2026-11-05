@@ -322,6 +322,7 @@
       "VALOR": "With what",
       "ATRIBUTO": "Which custom field",
       "CHAVE_VALOR": "Value of {campo}",
+      "ETIQUETA_NOVA": "{nome} (new: added without a color)",
       "UMA_POR_LINHA": "One option per line",
       "PROCURAR": "Search",
       "UNIDADE": "Time unit",
@@ -467,7 +468,8 @@
       "OU_RECEITA": "Or start from a ready recipe",
       "USAR": "Use this one",
       "REQUER": {
-        "AUTOMACAO_MENSAGENS": "Sends a message to the customer, and automatic messages aren't turned on in this account yet."
+        "AUTOMACAO_IA": "Uses AI to understand the message, and automation AI isn't turned on in this account yet.",
+        "AUTOMACAO_MENSAGENS": "Sends an automatic message, to the customer or the team, and automatic messages aren't turned on in this account yet."
       },
       "BOAS_VINDAS": {
         "TITULO": "Let them know we'll reply soon",
@@ -478,6 +480,16 @@
         "TITULO": "Thank them when closing",
         "TEXTO": "The customer gets a thank-you when the conversation is resolved.",
         "NOME": "Thank when closing"
+      },
+      "RECLAMACAO": {
+        "TITULO": "Flag complaints",
+        "TEXTO": "The AI spots a complaint, adds the reclamacao label and tells whoever handles the conversation.",
+        "NOME": "Complaint"
+      },
+      "ORCAMENTO": {
+        "TITULO": "Flag quote requests",
+        "TEXTO": "The AI spots a price request, adds the orcamento label and tells whoever handles the conversation.",
+        "NOME": "Quote"
       }
     }
   }

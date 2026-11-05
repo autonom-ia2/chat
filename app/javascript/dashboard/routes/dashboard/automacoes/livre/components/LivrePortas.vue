@@ -19,6 +19,14 @@ const ESTILO = {
     icone: 'i-lucide-heart-handshake',
     tom: 'bg-n-ruby-3 text-n-ruby-11',
   },
+  RECLAMACAO: {
+    icone: 'i-lucide-message-circle-warning',
+    tom: 'bg-n-amber-3 text-n-amber-11',
+  },
+  ORCAMENTO: {
+    icone: 'i-lucide-receipt-text',
+    tom: 'bg-n-teal-3 text-n-teal-11',
+  },
 };
 const PADRAO = {
   icone: 'i-lucide-sparkles',

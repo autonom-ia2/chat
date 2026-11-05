@@ -322,6 +322,7 @@
       "VALOR": "Com o quê",
       "ATRIBUTO": "Qual campo personalizado",
       "CHAVE_VALOR": "Valor de {campo}",
+      "ETIQUETA_NOVA": "{nome} (nova: entra sem cor)",
       "UMA_POR_LINHA": "Uma opção por linha",
       "PROCURAR": "Procurar",
       "UNIDADE": "Unidade de tempo",
@@ -467,7 +468,8 @@
       "OU_RECEITA": "Ou comece de uma receita pronta",
       "USAR": "Usar esta",
       "REQUER": {
-        "AUTOMACAO_MENSAGENS": "Manda mensagem ao cliente, e a mensagem automática ainda não está ligada nesta conta."
+        "AUTOMACAO_IA": "Usa a IA para entender a mensagem, e a IA da automação ainda não está ligada nesta conta.",
+        "AUTOMACAO_MENSAGENS": "Manda mensagem automática, ao cliente ou à equipe, e ela ainda não está ligada nesta conta."
       },
       "BOAS_VINDAS": {
         "TITULO": "Avisar que já vamos responder",
@@ -478,6 +480,16 @@
         "TITULO": "Agradecer ao encerrar",
         "TEXTO": "O cliente recebe um obrigado quando a conversa é resolvida.",
         "NOME": "Agradecer ao encerrar"
+      },
+      "RECLAMACAO": {
+        "TITULO": "Avisar quando chega reclamação",
+        "TEXTO": "A IA percebe a reclamação, põe a etiqueta reclamacao e avisa quem cuida da conversa.",
+        "NOME": "Reclamação"
+      },
+      "ORCAMENTO": {
+        "TITULO": "Avisar quando pedem orçamento",
+        "TEXTO": "A IA percebe o pedido de preço, põe a etiqueta orcamento e avisa quem cuida da conversa.",
+        "NOME": "Orçamento"
       }
     }
   }

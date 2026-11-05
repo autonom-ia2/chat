@@ -1163,6 +1163,166 @@
           }
         ]
       }
+    },
+    {
+      "chave": "RECLAMACAO",
+      "frase": "AUTOMACAO_LIVRE.RECEITAS.RECLAMACAO.TITULO",
+      "requer": [
+        "automacao_ia",
+        "automacao_mensagens"
+      ],
+      "receita": {
+        "gatilho": {
+          "tipo": "mensagem.criada",
+          "filtros": [
+            {
+              "campo": {
+                "$valor": "mensagem.tipo"
+              },
+              "op": "igual",
+              "valor": "recebida"
+            },
+            {
+              "campo": {
+                "$valor": "conversa.etiquetas"
+              },
+              "op": "nao_contem",
+              "valor": "reclamacao"
+            }
+          ]
+        },
+        "passos": [
+          {
+            "id": "p1",
+            "tipo": "decidir",
+            "le": [
+              "mensagens_recentes"
+            ],
+            "pergunta": "O cliente está reclamando de alguma coisa?",
+            "caminhos": [
+              {
+                "nome": "Reclamação",
+                "chave": "reclamacao",
+                "descricao": "O cliente reclama de um problema: atraso, defeito, cobrança errada, atendimento ruim ou promessa não cumprida.",
+                "passos": [
+                  {
+                    "id": "p2",
+                    "tipo": "acao",
+                    "acao": "PATCH conversations/:conversation_id/labels/alterar",
+                    "descricao": "Pôr a etiqueta reclamacao",
+                    "caminho": {
+                      "conversation_id": {
+                        "$valor": "conversa.id"
+                      }
+                    },
+                    "corpo": {
+                      "por": [
+                        "reclamacao"
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p3",
+                    "tipo": "avisar",
+                    "texto": [
+                      "Chegou uma reclamação nesta conversa. Vale responder logo."
+                    ],
+                    "para": {
+                      "responsavel": true
+                    }
+                  }
+                ]
+              },
+              {
+                "nome": "Outro assunto",
+                "chave": "outro_assunto",
+                "descricao": "Dúvida, pedido, elogio ou qualquer mensagem que não é reclamação.",
+                "passos": []
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "chave": "ORCAMENTO",
+      "frase": "AUTOMACAO_LIVRE.RECEITAS.ORCAMENTO.TITULO",
+      "requer": [
+        "automacao_ia",
+        "automacao_mensagens"
+      ],
+      "receita": {
+        "gatilho": {
+          "tipo": "mensagem.criada",
+          "filtros": [
+            {
+              "campo": {
+                "$valor": "mensagem.tipo"
+              },
+              "op": "igual",
+              "valor": "recebida"
+            },
+            {
+              "campo": {
+                "$valor": "conversa.etiquetas"
+              },
+              "op": "nao_contem",
+              "valor": "orcamento"
+            }
+          ]
+        },
+        "passos": [
+          {
+            "id": "p1",
+            "tipo": "decidir",
+            "le": [
+              "mensagens_recentes"
+            ],
+            "pergunta": "O cliente está pedindo orçamento, preço ou cotação?",
+            "caminhos": [
+              {
+                "nome": "Orçamento",
+                "chave": "orcamento",
+                "descricao": "O cliente quer saber quanto custa, pede um orçamento, uma cotação ou uma proposta.",
+                "passos": [
+                  {
+                    "id": "p2",
+                    "tipo": "acao",
+                    "acao": "PATCH conversations/:conversation_id/labels/alterar",
+                    "descricao": "Pôr a etiqueta orcamento",
+                    "caminho": {
+                      "conversation_id": {
+                        "$valor": "conversa.id"
+                      }
+                    },
+                    "corpo": {
+                      "por": [
+                        "orcamento"
+                      ]
+                    }
+                  },
+                  {
+                    "id": "p3",
+                    "tipo": "avisar",
+                    "texto": [
+                      "Pediram orçamento nesta conversa."
+                    ],
+                    "para": {
+                      "responsavel": true
+                    }
+                  }
+                ]
+              },
+              {
+                "nome": "Outro assunto",
+                "chave": "outro_assunto",
+                "descricao": "Dúvida, reclamação, elogio ou qualquer mensagem que não pede preço.",
+                "passos": []
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

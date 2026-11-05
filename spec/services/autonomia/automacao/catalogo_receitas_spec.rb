@@ -15,7 +15,7 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
 
   # Boas-vindas (#2526) começa na primeira mensagem do cliente, na conversa que ele começou (spec da receita ao lado).
   it 'monta só as que o motor de hoje faz sem erro' do
-    expect(receitas.pluck('chave')).to eq(%w[BOAS_VINDAS AGRADECER])
+    expect(receitas.pluck('chave')).to eq(%w[BOAS_VINDAS AGRADECER RECLAMACAO ORCAMENTO])
   end
 
   it 'cada receita passa no esquema e na Receita, então nenhuma quebrada chega à tela', :aggregate_failures do
@@ -39,8 +39,12 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
     expect(textos.flat_map { |partes| Autonomia::Automacao::Texto.caminhos(partes) }).to eq([])
   end
 
-  it 'a receita que manda mensagem pede automacao_mensagens' do
-    expect(receitas.map { |item| item['requer'] }).to all(eq(['automacao_mensagens']))
+  # O "avisar" fica dentro do caminho do decidir: a flag sai dos passos de dentro dos ramos também (#2523).
+  it 'a flag que cada receita pede sai dos passos dela, inclusive os de dentro dos caminhos' do
+    expect(receitas.to_h { |item| [item['chave'], item['requer']] }).to eq(
+      'BOAS_VINDAS' => ['automacao_mensagens'], 'AGRADECER' => ['automacao_mensagens'],
+      'RECLAMACAO' => %w[automacao_ia automacao_mensagens], 'ORCAMENTO' => %w[automacao_ia automacao_mensagens]
+    )
   end
 
   it 'tem título, texto e nome em pt_BR e en', :aggregate_failures do
