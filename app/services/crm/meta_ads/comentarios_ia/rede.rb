@@ -3,16 +3,16 @@
 # Cada rede tem o seu adaptador, que usa os serviços do #2196 e do #2197 sempre que eles existem:
 # - Instagram (Rede::Instagram): o privado pelo Crm::MetaAds::InstagramPrivateReply, que reivindica, confere a janela
 #   de 7 dias, envia e abre a conversa; a resposta e o esconder pelo Instagram::CommentsClient;
-# - Facebook (Rede::Facebook): o privado pelo Messenger é nosso (Rede::Pagina, token da caixa); a resposta e o
-#   esconder pelo Crm::MetaAds::FacebookComments, que grava a ação.
+# - Facebook (Rede::Facebook): o privado pelo Messenger é nosso (Rede::Pagina, token da caixa); a leitura, a resposta e
+#   o esconder pelo Rede::ComentariosDaPagina, também com o token da caixa (#2587), que grava a ação.
 #
 # `privado_disponivel?` diz se a rede já deixa a IA mandar o privado (o Facebook espera a pages_messaging, F4).
 # Todo adaptador responde `privado(care)` com um Envio (ok, conversation, erro) e `responder(texto)` e `esconder` com
 # true ou false. Nada levanta para o job: a recusa da Meta é um resultado.
 #
 # E `ler`: o texto e o nome de quem comentou, lidos na Meta na hora, porque o evento leva só ids (#2327). Devolve
-# `{ text:, from_name:, from_id: }`, ou nil quando a Meta diz que não dá para ler (comentário apagado, sem permissão, Página de
-# outra conta): esse não volta. Meta fora do ar levanta Indisponivel, e o CuidarJob tenta de novo, com teto.
+# `{ text:, from_name:, from_id: }`, ou nil quando não dá para ler (comentário apagado ou de outro post, Página de outra
+# conta): esse não volta. Meta fora do ar levanta Indisponivel, e o CuidarJob tenta de novo, com teto.
 # E `legenda` (#2424): o texto do post, para a IA saber do que o comentário fala; nil quando não dá para ler.
 # E `ler_pai` (#2454): o texto do comentário que uma resposta responde, lido na Meta pelo id, como o `ler`; nil no
 # comentário de primeiro nível ou quando não dá para ler o de cima.

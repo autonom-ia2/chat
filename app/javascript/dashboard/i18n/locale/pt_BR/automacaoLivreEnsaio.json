@@ -44,7 +44,8 @@
           "CONTATO": "{campo}, no contato",
           "EMPRESA": "{campo}, na empresa"
         }
-      }
+      },
+      "MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo {modelo} (cobrado pela Meta)."
     },
     "HISTORICO": {
       "TITULO": "O que aconteceu",
