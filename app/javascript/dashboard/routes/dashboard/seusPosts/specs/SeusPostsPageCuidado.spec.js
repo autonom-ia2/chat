@@ -152,7 +152,11 @@ describe('Seus posts: o cuidado da IA (#2212)', () => {
     Element.prototype.scrollIntoView = vi.fn();
     route.query = {};
     granted.value = ['posts_manage'];
-    flags.value = ['seus_posts_comentarios', 'meta_ads_comentarios_ia'];
+    flags.value = [
+      'seus_posts_comentarios',
+      'meta_ads_comentarios_ia',
+      'meta_ads_comentarios_instagram',
+    ];
   });
 
   it('sem a flag, não lê os cuidados nem mostra faixa', async () => {
@@ -162,6 +166,15 @@ describe('Seus posts: o cuidado da IA (#2212)', () => {
 
     expect(ComentariosIaAPI.getCuidados).not.toHaveBeenCalled();
     expect(wrapper.find('[data-ia-band]').exists()).toBe(false);
+  });
+
+  // #2520: a régua do motor; a flag da outra rede não serve.
+  it('sem a flag dos comentários da rede do perfil, não lê os cuidados', async () => {
+    flags.value = ['meta_ads_comentarios_ia', 'meta_ads_comentarios_facebook'];
+    responder(instagram());
+    await montar();
+
+    expect(ComentariosIaAPI.getCuidados).not.toHaveBeenCalled();
   });
 
   it('lê os cuidados do perfil, põe o selo no cartão e a faixa com o resultado', async () => {

@@ -949,12 +949,13 @@
   enabled: false
   column: feature_flags_ext_2
 
-# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada (com meta_ads_gestao): o detalhe
+# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada: o detalhe
 # do anúncio ganha a aba Instagram dos comentários (ver, responder, ocultar, apagar e responder no privado), e a caixa
 # do Instagram pode pedir de novo o login com instagram_business_manage_comments, voltando ao anúncio. Desligada: a aba
 # não aparece e a API responde 404. Migration 20261108550000 (crm_meta_ads_comment_actions). Fim da
 # feature_flags_ext_2, depois de meta_ads_formularios (#2195): posição 8 (valor 128, 1 << 7). Se outra flag da ext_2
 # entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+# #2520: não pede meta_ads_gestao, e é a flag de rede do cuidado da IA no Instagram (com meta_ads_comentarios_ia).
 - name: meta_ads_comentarios_instagram
   display_name: Anúncios da Meta › comentários do anúncio no Instagram
   enabled: false
@@ -997,6 +998,7 @@
 # webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
 # feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2303): posição 12 (valor 2048, 1 << 11), dada pela
 # Orquestração (28/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+# #2520: é a flag de rede do cuidado da IA no Facebook; só com ela ligar o cuidado assina o `feed` da Página.
 - name: meta_ads_comentarios_facebook
   display_name: Anúncios da Meta › comentários do anúncio no Facebook
   enabled: false
@@ -1148,5 +1150,17 @@
 # 1, 16 e 18).
 - name: agentes_enviar_local_e_contato
   display_name: Agentes › enviar o mapa e o contato da página
+  enabled: false
+  column: feature_flags_ext_2
+# Automação livre F6 (#2499, épico #2414): os gatilhos de card do funil (card criado, entrou ou saiu da etapa, ganho e
+# perdido). Só vale com automacao_motor e automacao_fundacao, e com o CRM da instalação ligado. Ligada: o editor
+# oferece os gatilhos de card a quem pode mexer no funil, e o emissor do CRM despacha o evento também quando há
+# automação assinante. Desligada: o salvar recusa o gatilho de card (gatilho_desligado), a escuta e o emissor não olham
+# a conta, e a execução aberta de gatilho de card fecha como parada (gatilho_desligado). Rollback: desligar a flag na
+# conta. Sem migration. Bit: fim da feature_flags_ext_2, depois de agentes_enviar_local_e_contato: posição 26 (valor
+# 33554432, 1 << 25) contra a main 45e251027e; a Orquestração confirma o número na fila. Nasce ligada no piloto
+# (contas 1, 16 e 18).
+- name: automacao_gatilhos
+  display_name: Automação › gatilhos de card do funil
   enabled: false
   column: feature_flags_ext_2

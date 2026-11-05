@@ -362,13 +362,13 @@ const otherStats = ad => [
   ...otherAdStats(ad).map(stat => ({ ...stat, value: number(stat.value) })),
 ];
 // Atalho para "Cuidar dos comentários" do anúncio: fora do exemplo e com as mesmas flags que mostram o cuidar no
-// anúncio por dentro (MetaAdsAdDetail showCare): a gestão, os comentários de ao menos uma rede e a IA dos comentários.
+// anúncio por dentro (MetaAdsAdDetail showCare): os comentários de ao menos uma rede e a IA dos comentários (a gestão
+// não entra, #2520).
 const careOn = computed(() => {
   const on = flag =>
     isFeatureEnabledonAccount.value(Number(route.params.accountId), flag);
   return (
     !props.sample &&
-    on(FEATURE_FLAGS.META_ADS_GESTAO) &&
     (on(FEATURE_FLAGS.META_ADS_COMENTARIOS_INSTAGRAM) ||
       on(FEATURE_FLAGS.META_ADS_COMENTARIOS_FACEBOOK)) &&
     on(FEATURE_FLAGS.META_ADS_COMENTARIOS_IA)

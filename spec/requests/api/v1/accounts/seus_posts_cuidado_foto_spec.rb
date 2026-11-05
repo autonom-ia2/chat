@@ -20,7 +20,8 @@ RSpec.describe 'Seus posts: o que eu vi na foto do post', type: :request do
   def json = { 'Content-Type' => 'application/json' }
 
   def liga!(conta)
-    conta.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia')
+    # #2520: a régua do cuidado é a flag da IA mais a dos comentários da rede do post.
+    conta.enable_features!('seus_posts', 'meta_ads_comentarios_ia', 'meta_ads_comentarios_instagram')
   end
 
   before do

@@ -23,9 +23,12 @@ const fontes = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('dashboard/api/autonomia/sources', () => ({ default: fontes }));
 const seusPosts = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock('dashboard/api/seusPosts', () => ({ default: seusPosts }));
+const desligadas = vi.hoisted(() => new Set());
 vi.mock('dashboard/composables/store', async () => {
   const { computed } = await import('vue');
-  return { useMapGetter: () => computed(() => () => true) };
+  return {
+    useMapGetter: () => computed(() => (_conta, flag) => !desligadas.has(flag)),
+  };
 });
 const alerta = vi.hoisted(() => vi.fn());
 vi.mock('dashboard/composables', () => ({ useAlert: alerta }));
@@ -407,6 +410,26 @@ describe('#2469 · os comentários do post em Agentes', () => {
       expect(soVe.find('[data-mudar-estado]').exists()).toBe(false);
       expect(soVe.find('[data-editar]').exists()).toBe(false);
       expect(soVe.find('[data-abrir-gaveta="testar"]').exists()).toBe(false);
+    });
+
+    // #2520: o cuidado aparece sem seus_posts_comentarios, mas o post por dentro pede a flag: sem ela, nada leva lá.
+    it('sem seus_posts_comentarios: o post fica sem "Ver post" e sem "Ver todos"; o anúncio mantém os dois', async () => {
+      desligadas.add('seus_posts_comentarios');
+      rota.query = { gaveta: 'comentarios', grupo: 'esperando' };
+      try {
+        await pagina(detalhe());
+        expect(noBody('[data-ver-post]')).toBeNull();
+        expect(noBody('[data-ver-todos]')).toBeNull();
+        expect(todosNoBody('[data-comentario]').length).toBe(2);
+        montadas.splice(0).forEach(wrapper => wrapper.unmount());
+
+        await pagina(detalhe({ kind: 'ad', target_id: '1202', perfil: null }));
+        expect(noBody('[data-ver-post]')).not.toBeNull();
+        expect(noBody('[data-ver-todos]')).not.toBeNull();
+      } finally {
+        desligadas.clear();
+        rota.query = {};
+      }
     });
 
     it('editar leva aos passos do cuidado: o post no Seus posts, o anúncio em Anúncios', async () => {

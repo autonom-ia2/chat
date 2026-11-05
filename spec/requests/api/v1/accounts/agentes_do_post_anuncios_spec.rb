@@ -31,8 +31,7 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
   end
 
   before do
-    account.enable_features!('meta_ads_comentarios_ia', 'meta_ads_gestao', 'meta_ads_comentarios_instagram',
-                             'meta_ads_comentarios_facebook')
+    account.enable_features!('meta_ads_comentarios_ia', 'meta_ads_comentarios_instagram', 'meta_ads_comentarios_facebook')
     stub_request(:any, /graph\.facebook\.com/).to_raise('a lista não lê a Meta')
   end
 
@@ -54,11 +53,39 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
     expect(response).to have_http_status(:ok)
     expect(response.parsed_body['anuncios']).to eq([
                                                      { 'id' => '1201', 'name' => 'Seguro viagem', 'image_url' => 'https://cdn.exemplo/1201.jpg',
-                                                       'care' => nil },
-                                                     { 'id' => '1202', 'name' => 'Seguro auto', 'image_url' => nil, 'care' => 'paused' },
-                                                     { 'id' => '1203', 'name' => nil, 'image_url' => nil, 'care' => nil }
+                                                       'care' => nil, 'waiting' => 0 },
+                                                     { 'id' => '1202', 'name' => 'Seguro auto', 'image_url' => nil, 'care' => 'paused',
+                                                       'waiting' => 0 },
+                                                     { 'id' => '1203', 'name' => nil, 'image_url' => nil, 'care' => nil, 'waiting' => 0 }
                                                    ])
     expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
+  # #2519 (3A): o anúncio com comentário esperando o dono (Esperando) diz quantos e vem primeiro; o que saiu dos 30 dias
+  # entra também, com o nome e a miniatura guardados, o que mais espera primeiro. Outra conta não entra.
+  it 'os que têm comentário esperando vêm primeiro, com o número, mesmo fora dos 30 dias' do
+    nome('1201', 'Seguro viagem')
+    nome('1202', 'Seguro auto')
+    nome('1299', 'Antigo', thumbnail_url: 'https://cdn.exemplo/1299.jpg')
+    gasto('1201', Date.new(2026, 11, 3), 80, conversations_started: 2)
+    gasto('1202', Date.new(2026, 11, 2), 30)
+    gasto('1299', Date.new(2026, 9, 1), 500)
+    esperando = lambda do |comment_id, ad_id, conta = account|
+      Crm::MetaAdsCommentAction.create!(account: conta, network: 'instagram', comment_id: comment_id, action: 'no_care', actor: 'ai',
+                                        ad_id: ad_id, at: agora - 1.hour)
+    end
+    esperando.call('c-1', '1202')
+    esperando.call('c-2', '1202')
+    esperando.call('c-3', '1299')
+    esperando.call('c-4', '1300')
+    esperando.call('c-6', '1300')
+    esperando.call('c-5', '1301', create(:account))
+
+    pedir
+
+    lista = response.parsed_body['anuncios'].map { |anuncio| anuncio.values_at('id', 'name', 'image_url', 'waiting') }
+    expect(lista).to eq([['1202', 'Seguro auto', nil, 2], ['1300', nil, nil, 2], ['1299', 'Antigo', 'https://cdn.exemplo/1299.jpg', 1],
+                         ['1201', 'Seguro viagem', nil, 0]])
   end
 
   it 'sem o CRM na instalação: 404' do
@@ -96,12 +123,13 @@ RSpec.describe 'Agentes: os anúncios do "Qual post?"', type: :request do
     expect(response).to have_http_status(:not_found)
   end
 
-  it 'sem meta_ads_gestao: 404' do
-    account.disable_features!('meta_ads_gestao')
+  # #2520: a gestão de Anúncios não esconde os anúncios do cuidado.
+  it 'sem meta_ads_gestao: vê a lista' do
+    expect(account.feature_enabled?('meta_ads_gestao')).to be(false)
 
     pedir
 
-    expect(response).to have_http_status(:not_found)
+    expect(response).to have_http_status(:ok)
   end
 
   it 'sem a flag do cuidado: 404' do

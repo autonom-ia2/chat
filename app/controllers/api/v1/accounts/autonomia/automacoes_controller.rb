@@ -82,8 +82,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     render json: para_tela(@automacao)
   end
 
+  # Custo da IA e tokens (que dão o custo) seguem o Crm::AiUsageController#com_valores? (#1969): administrador ou financial_view.
   def historico
-    render json: ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, pagina: params[:pagina]).resultado
+    com_valores = Current.account_user&.permission_granted?('financial_view') || false
+    render json: ::Autonomia::Automacao::Historico.new(automacao: @automacao, usuario: Current.user, com_valores: com_valores,
+                                                       pagina: params[:pagina]).resultado
   end
 
   # A salva ensaia a versão ativa; com `receita` no corpo (o rascunho da tela), ensaia ela. A coleção (`ensaio_novo`) é
@@ -135,10 +138,17 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   end
 
   # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: as mesmas CHAVES da regra do funil
-  # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui.
+  # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui. O gatilho de
+  # card (#2499) também pede a chave.
   def sem_funil?(receita)
     return false unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
     return false if ::Autonomia::Automacao::RegraDoFunil::CHAVES.any? { |chave| Current.account_user.permission_granted?(chave) }
+
+    de_funil?(receita)
+  end
+
+  def de_funil?(receita)
+    return true if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
 
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).passos.any? do |passo|
       passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.recurso_de(passo['acao']).to_s.start_with?('crm/')

@@ -90,7 +90,8 @@ class Crm::MetaAds::LeadForms::Importer
     Crm::Cards::Creator.new(
       account: @account, user: nil,
       params: { pipeline_id: @pipeline.id, stage_id: @stage.id, contact_id: contact.id, source: SOURCE,
-                title: title_name(lead) || @form_name.presence || "Lead #{lead['id']}",
+                # #2562: sem nome, nunca o do formulário: ele costuma repetir a campanha e o título todos veem (#2558).
+                title: title_name(lead) || "Lead #{lead['id']}",
                 metadata: { 'meta_lead_form' => origin(lead) } }
     ).perform
   end

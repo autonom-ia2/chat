@@ -6,9 +6,26 @@ import { comColchetes } from './texto';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
-export const fraseDoGatilho = (gatilho, catalogo, t) => {
+// #2499: o gatilho com a etapa ou o funil escolhidos diz o nome deles
+// ("Quando o card entra em Orçamento"). `nomes` vem pela peça do parâmetro
+// ({ etapa: { 12: 'Orçamento' }, funil: {...} }). Sem o nome na tela, ou sem o
+// funil (vale qualquer um), fica a frase do catálogo. Com mais de um funil na
+// conta, `nomes.funilDaEtapa` acrescenta o funil da etapa ("..., no funil X").
+export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
-  return entrada ? t(entrada.frase) : t(`${P}.FALTA_GATILHO`);
+  if (!entrada) return t(`${P}.FALTA_GATILHO`);
+  const parametros = entrada.parametros || [];
+  const escolhidos = Object.fromEntries(
+    parametros.map(item => [item.peca, nomes[item.peca]?.[gatilho[item.nome]]])
+  );
+  if (!parametros.length || !Object.values(escolhidos).every(Boolean))
+    return t(entrada.frase);
+  const chave = entrada.frase.split('.').pop();
+  const frase = t(`AUTOMACAO_LIVRE.GATILHO_COM.${chave}`, escolhidos);
+  const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
+  return funil
+    ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
+    : frase;
 };
 
 // "Status da conversa", ou "Campo personalizado do contato: placa".

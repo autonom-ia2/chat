@@ -53,7 +53,7 @@ class Autonomia::Automacao::Executor
     @account = execucao.account
     @raiz = raiz || SecureRandom.uuid
     @roteiro = ::Autonomia::Automacao::Roteiro.new(execucao.versao.receita)
-    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao)
+    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @tentativas = execucao.tentativas
   end
 
@@ -110,6 +110,8 @@ class Autonomia::Automacao::Executor
   def impedimento
     return %w[parada motor_desligado] unless ::Autonomia::Automacao::Motor.ligado?(@account)
     return %w[parada desligada] unless @definicao.ativa
+    # #2499: a flag dos gatilhos de card desligada é o rollback da F6; a execução aberta de gatilho de card fecha.
+    return %w[parada gatilho_desligado] unless ::Autonomia::Automacao::Gatilhos.disponivel?(@execucao.chave_gatilho, @account)
     return %w[interrompida alvo_sumiu] unless alvo_da_conta?
     return %w[parada spam] if contexto.no_spam?
 
@@ -136,7 +138,7 @@ class Autonomia::Automacao::Executor
   def reconferir
     @definicao.reload
     @account.reload
-    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao)
+    @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @alvo = nil
     @contexto = nil
     @valores = nil

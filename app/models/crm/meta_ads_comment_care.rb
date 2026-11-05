@@ -59,8 +59,9 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
 
   # O cuidado que vale para um comentário: o do anúncio, quando ele veio de um (pelo id do anúncio ou por um dos posts
   # do criativo), senão o do post. Só o da rede do comentário (ou das duas). Vários anúncios com o mesmo post: vale o
-  # mais antigo (menor id) que está ligado, sempre o mesmo. O anúncio pausado também conta: a IA não cuida (nil), e o
-  # cuidado do post não entra no lugar dele.
+  # mais antigo (menor id) que está ligado, sempre o mesmo. O anúncio pausado só conta quando o comentário traz o id dele
+  # (o Instagram traz): a IA não cuida (nil), e o cuidado do post não entra no lugar dele. Sem o id (o Facebook nunca
+  # traz), o anúncio pausado não bloqueia: o post impulsionado é o mesmo do orgânico, e o cuidado do post vale (#2520).
   def self.cuidando(account_id:, network:, post_id:, ad_id:)
     escopo = where(account_id: account_id, network: [network.to_s, 'both']).order(:id)
     anuncio = do_anuncio(escopo, post_id, ad_id)
@@ -69,15 +70,14 @@ class Crm::MetaAdsCommentCare < ApplicationRecord
     (post_id.present? && escopo.on.find_by(target_kind: 'post', target_id: post_id.to_s)) || nil
   end
 
-  # Pelo id do anúncio, o dele (ligado ou não). Pelo post do criativo, o ligado; sem nenhum ligado, um pausado.
+  # Pelo id do anúncio, o dele (ligado ou não). Pelo post do criativo, só o ligado.
   def self.do_anuncio(escopo, post_id, ad_id)
     anuncios = escopo.where(target_kind: 'ad')
     pelo_id = ad_id.present? && anuncios.find_by(target_id: ad_id.to_s)
     return pelo_id if pelo_id
     return if post_id.blank?
 
-    do_post = anuncios.where('post_ids @> ?', [post_id.to_s].to_json)
-    do_post.on.first || do_post.first
+    anuncios.on.find_by('post_ids @> ?', [post_id.to_s].to_json)
   end
 
   # Post sem produto: a IA só esconde propaganda e avisa reclamação.

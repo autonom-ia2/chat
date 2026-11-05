@@ -61,4 +61,18 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Esperando do
   it 'sem anúncio pedido, nada' do
     expect(contar([])).to eq({})
   end
+
+  # #2519 (3A): o "Qual post?" pede os anúncios da conta com algo esperando, sem saber quais são.
+  it 'anuncios_com_espera: só os anúncios desta conta com algo esperando, sem os zeros e sem o comentário sem anúncio' do
+    acao('c-1', 'no_care')
+    acao('c-2', 'to_you', ad_id: '130')
+    acao('c-3', 'reply', ad_id: '131')
+    acao('c-4', 'no_care', ad_id: nil)
+    acao('c-5', 'kept_for_owner', ad_id: '132')
+    acao('c-5', 'hide', actor: 'user', ad_id: nil)
+    Crm::MetaAdsCommentAction.create!(account: create(:account), network: 'instagram', comment_id: 'c-6', action: 'no_care',
+                                      actor: 'ai', ad_id: '133', at: 1.hour.ago)
+
+    expect(described_class.anuncios_com_espera(account.id)).to eq('120' => 1, '130' => 1)
+  end
 end

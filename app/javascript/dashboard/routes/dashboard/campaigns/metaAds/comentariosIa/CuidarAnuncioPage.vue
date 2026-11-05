@@ -3,6 +3,8 @@ import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { usePermissionGranted } from 'dashboard/composables/useCanManage';
+import { useAccount } from 'dashboard/composables/useAccount';
+import { FEATURE_FLAGS } from 'dashboard/featureFlags';
 import { frontendURL } from 'dashboard/helper/URLHelper';
 import { lerGestao } from '../gestaoDoAnuncio';
 import CuidarComentarios from './CuidarComentarios.vue';
@@ -18,11 +20,14 @@ const adId = computed(() => String(route.params.adId));
 const target = computed(() => ({ kind: 'ad', id: adId.value }));
 const canManage = usePermissionGranted('meta_ads_manage');
 
-// Sem a gestão (falhou a leitura), a tela de cuidar segue sem o cabeçalho do post.
+// Sem a gestão (falhou a leitura, ou a flag meta_ads_gestao desligada: #2520, a tela abre sem ela), a tela de cuidar
+// segue sem o cabeçalho do post. Sem a flag, nem pergunta (o servidor responderia 404).
+const { isCloudFeatureEnabled } = useAccount();
 const gestao = ref(null);
 const lerAnuncio = async () => {
   const asked = adId.value;
   gestao.value = null;
+  if (!isCloudFeatureEnabled(FEATURE_FLAGS.META_ADS_GESTAO)) return;
   const data = await lerGestao(asked);
   if (asked === adId.value) gestao.value = data;
 };

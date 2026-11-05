@@ -270,6 +270,14 @@
   "AUTOMACAO_LIVRE": {
     "VALORES": {
       "CARD_MOTIVO_DA_PERDA": "Why it did not close"
+    },
+    "GATILHOS": {
+      "CARD_GANHO": "When the card closes the policy",
+      "CARD_PERDIDO": "When the card does not close"
+    },
+    "GATILHO_COM": {
+      "CARD_GANHO": "When a card in {funil} closes the policy",
+      "CARD_PERDIDO": "When a card in {funil} does not close"
     }
   }
 }

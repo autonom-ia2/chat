@@ -1,10 +1,11 @@
 <script setup>
+import { computed } from 'vue';
 import Switch from 'dashboard/components-next/switch/Switch.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 
 // #2414 F5 — uma automação na lista única, nova ou do jeito antigo: a frase
 // (Quando → primeiro passo), o selo de origem e o interruptor.
-defineProps({
+const props = defineProps({
   nome: { type: String, required: true },
   quando: { type: String, required: true },
   primeiro: { type: String, default: '' },
@@ -13,11 +14,29 @@ defineProps({
   fato: { type: String, default: '' },
   ativa: { type: Boolean, default: false },
   antiga: { type: Boolean, default: false },
+  // #2499 — começa num card do funil, não numa conversa.
+  doCard: { type: Boolean, default: false },
   podeMudar: { type: Boolean, default: false },
   mudando: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['abrir', 'alternar']);
+
+// O selo diz de onde a automação vem: do jeito antigo, de um card do funil ou
+// de uma conversa.
+const selo = computed(() => {
+  if (props.antiga)
+    return {
+      icone: 'i-lucide-history',
+      chave: 'AUTOMACAO_LIVRE.ORIGEM.ANTIGO',
+    };
+  if (props.doCard)
+    return { icone: 'i-lucide-kanban', chave: 'AUTOMACAO_LIVRE.ORIGEM.CARD' };
+  return {
+    icone: 'i-lucide-message-circle',
+    chave: 'AUTOMACAO_LIVRE.ORIGEM.CONVERSA',
+  };
+});
 </script>
 
 <template>
@@ -45,16 +64,8 @@ const emit = defineEmits(['abrir', 'alternar']);
               : 'bg-n-blue-3 text-n-blue-11'
           "
         >
-          <span
-            class="size-3"
-            :class="antiga ? 'i-lucide-history' : 'i-lucide-message-circle'"
-            aria-hidden="true"
-          />
-          {{
-            antiga
-              ? $t('AUTOMACAO_LIVRE.ORIGEM.ANTIGO')
-              : $t('AUTOMACAO_LIVRE.ORIGEM.CONVERSA')
-          }}
+          <span class="size-3" :class="selo.icone" aria-hidden="true" />
+          {{ $t(selo.chave) }}
         </span>
       </span>
       <span
