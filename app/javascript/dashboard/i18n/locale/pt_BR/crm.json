@@ -3623,6 +3623,7 @@
             "WEBSITE": "{offer}. Veja no site e faça seu pedido."
           },
           "NEED_SITE": "Digite o endereço do site para continuar.",
+          "NEED_INSTAGRAM": "Esta Página não tem Instagram ligado. Escolha outro destino para continuar.",
           "TEXT_READY": "Texto pronto: «{text}»",
           "TEXT_READY_EMPTY": "O texto sai do que você vende.",
           "TEXT_CHANGE": "Mudar texto",
@@ -3811,6 +3812,7 @@
           "INVALID_SITE": "O endereço do site não vale. Confira se ele está certo, como lojaexemplo.com.br.",
           "INVALID_WHATSAPP_NUMBER": "Esse número de WhatsApp não é desta conta. Escolha outro.",
           "INVALID_PAGE": "A Página do Facebook não está liberada para a plataforma. Entre de novo com o Facebook na Conexão.",
+          "INVALID_INSTAGRAM": "Esta Página não tem conta profissional do Instagram ligada. Ligue uma ou escolha outro destino.",
           "INVALID_MEDIA": "A Meta não aceitou a foto ou o vídeo. Escolha de novo.",
           "INVALID_AUDIENCE": "O público não vale. Confira os estados e a idade.",
           "VIDEO_PROCESSING": "A Meta ainda está preparando o vídeo. Tente de novo em um minuto.",
