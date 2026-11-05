@@ -57,7 +57,7 @@ O que já existe e o que se aproveita:
 
 - **Dados:** novo `lib/operator_guide/automacao-receitas.yml`, uma receita por chave, no formato da receita salva, mais o título e o texto em i18n. O spec confere que cada receita passa no esquema e na `Receita`, então uma receita quebrada não chega à tela.
 - **Quais entram agora:** só as que o catálogo de hoje monta sem trapaça.
-  - **Boas-vindas:** conversa criada → mensagem "Já vamos te responder".
+  - **Boas-vindas:** conversa criada → mensagem "Já vamos te responder". Saiu do PR 3 e voltou na #2526 com outro gatilho: mensagem chegou, só se for a primeira da conversa e a conversa foi iniciada pelo cliente (`conversa.iniciada_por`, que trata como da equipe a conversa que nasce de comentário).
   - **Agradecer:** conversa resolvida → mensagem de obrigado.
   - As outras 4 não entram. Dividir em rodízio, Fora do horário, Reclamação e Orçamento pedem passo ou valor que não existe; Reclamação e Orçamento pediriam também a IA entendendo a mensagem, e lista de palavras é proibida. **Decisão pedida (D-R1), abaixo.**
 - **Tela:** na lista, "Nova" abre duas portas: "Começar de uma receita" e "Montar do zero". A receita abre o editor já preenchido e desligado (`?receita=BOAS_VINDAS`). Ela só vira automação ao salvar.

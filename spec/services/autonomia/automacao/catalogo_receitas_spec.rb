@@ -13,9 +13,9 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
     JSON.parse(Rails.root.join("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre.json").read)
   end
 
-  # Boas-vindas espera conversa.iniciada_por: no conversa.criada, a conversa aberta pela equipe também dispara.
+  # Boas-vindas (#2526) começa na primeira mensagem do cliente, na conversa que ele começou (spec da receita ao lado).
   it 'monta só as que o motor de hoje faz sem erro' do
-    expect(receitas.pluck('chave')).to eq(%w[AGRADECER])
+    expect(receitas.pluck('chave')).to eq(%w[BOAS_VINDAS AGRADECER])
   end
 
   it 'cada receita passa no esquema e na Receita, então nenhuma quebrada chega à tela', :aggregate_failures do
