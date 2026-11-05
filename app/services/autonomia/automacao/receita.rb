@@ -38,8 +38,9 @@ class Autonomia::Automacao::Receita
   end
 
   # `account_user`: quem salva ou liga, na conta. Com ele, o valor que pede permissão (Valores::PROTEGIDOS, #2597) só
-  # entra se ele pode ler; sem ele (o catálogo), a regra não se aplica aqui e a execução continua lendo vazio.
-  def initialize(receita, conta:, account_user: nil)
+  # entra se ele pode ler; `nil` explícito (o catálogo, a leitura sem pessoa) não aplica a regra aqui, e a execução
+  # continua lendo vazio. Obrigatório, sem padrão: quem monta a Receita diz quem é, e o esquecimento quebra o spec.
+  def initialize(receita, conta:, account_user:)
     @receita = receita
     @conta = conta
     @account_user = account_user

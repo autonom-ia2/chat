@@ -152,7 +152,7 @@ RSpec.describe Autonomia::Automacao::Catalogo do
                   'passos' => [{ 'id' => 'p1', 'tipo' => 'parar' }] }
 
       expect(Autonomia::Automacao::Receita.esquema_valido?(receita)).to be(true)
-      expect(Autonomia::Automacao::Receita.new(receita, conta: create(:account)).problemas).to be_empty
+      expect(Autonomia::Automacao::Receita.new(receita, conta: create(:account), account_user: nil).problemas).to be_empty
     end
   end
 

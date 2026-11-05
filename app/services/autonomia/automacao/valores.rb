@@ -127,8 +127,9 @@ class Autonomia::Automacao::Valores
   end
 
   # `alvo`: a conversa, o card ou o contato da execução (ou um Contexto já montado). `quem`: a pessoa com cujas
-  # permissões a receita lê (quem ligou a automação; no ensaio, quem pede). Sem ela, o valor protegido lê vazio.
-  def initialize(alvo:, mensagem: nil, quem: nil)
+  # permissões a receita lê (quem ligou a automação; no ensaio, quem pede). `nil` explícito: o valor protegido lê
+  # vazio. Obrigatório, sem padrão: quem cria o Valores diz quem é, e o esquecimento quebra o spec em vez de ler vazio.
+  def initialize(alvo:, quem:, mensagem: nil)
     @contexto = alvo.is_a?(::Autonomia::Automacao::Contexto) ? alvo : ::Autonomia::Automacao::Contexto.de(alvo)
     @mensagem = mensagem
     @quem = quem
