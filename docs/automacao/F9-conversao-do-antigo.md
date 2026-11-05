@@ -397,7 +397,7 @@ Com a opção a), quando o admin sai da conta, a automação pausa e alguém usa
 Nas palavras do Rodrigo: "pode fechar o motor antigo... com prazer. Vamos colocar o novo motor para subir. Ninguém será prejudicado. Ainda não fiz o lançamento oficial." Não há prazo de 30 dias.
 
 - **Por conta, junto com a conversão.** A conta com alguma linha em `autonomia_automacao_conversoes` não cria mais regra antiga nem automação de etapa: o `create` responde 422, com a frase "monte em Automações". O `update` só aceita desligar. O `index`, o `show` e o `destroy` seguem (D12: a API é preservada).
-- **Conta sem nenhuma antiga** (quase todas): não há o que converter. Proposta: a criação antiga fecha para elas quando a F9.2 subir, porque ninguém usa e ninguém é prejudicado. Decisão da Automação.
+- **Conta sem nenhuma antiga** (quase todas): não há o que converter. A criação antiga fecha para elas na F9.2 (Automação, 05/11, com o "pode fechar o motor antigo com prazer" do Rodrigo).
 - **Com a última conta convertida**, o motor antigo é desligado: o listener das regras e o `Runner` param de rodar. O código sai depois, num PR próprio.
 - **Antes de fechar qualquer conta:** o Guia (`porteiro_da_automacao`, que hoje grava `POST automation_rules`) precisa montar no motor novo. Senão o Guia recebe 422 na conta convertida.
 - As telas `settings/automation` e o painel antigo da etapa saem do menu da conta fechada. A lista única mostra tudo no motor novo (F9.5).
@@ -406,10 +406,11 @@ Nas palavras do Rodrigo: "pode fechar o motor antigo... com prazer. Vamos coloca
 
 1. **Este PR, só docs:** o desenho e a leitura agregada.
 2. **F9.1, o relatório:** mapa, `Resultado`, `Condicoes`, `DaRegra`, `DaEtapa`, `Relatorio`, rake e spec. Só leitura, então entra cedo (Automação, 05/11), em PR próprio.
-3. **F9.2, a troca:** a migration da tabela (P1) e do estado `do_antigo` no CHECK, o conversor, a divisão por instante com o advisory lock e a reivindicação (5.1), o gate versionado, a reversão, as travas da seção 7, o job da etapa reconferindo e o fechamento por conta (seção 10).
-4. **F9.3, a tela:** "Converter regras antigas" e "Reverter", com o relatório.
-5. **F9.0:** os dois itens da conta 16, depois da F6 PR2a' e da F7.
-6. **F9.5, o fim do antigo:** desligar o motor antigo depois da última conta; o código sai num PR próprio.
+3. **Antes da F9.2, PR próprio:** o Guia (`porteiro_da_automacao`) passa a montar no motor novo. A F9.2 depende dele, porque fecha a criação antiga.
+4. **F9.2, a troca:** a migration da tabela (P1) e do estado `do_antigo` no CHECK, o conversor, a divisão por instante com o advisory lock e a reivindicação (5.1), o gate versionado, a reversão, as travas da seção 7, o job da etapa reconferindo e o fechamento por conta (seção 10).
+5. **F9.3, a tela:** "Converter regras antigas" e "Reverter", com o relatório.
+6. **F9.0:** os dois itens da conta 16, depois da F6 PR2a' e da F7.
+7. **F9.5, o fim do antigo:** desligar o motor antigo depois da última conta; o código sai num PR próprio.
 
 **Primeira conta (P3, decidida pela Automação em 05/11):** o ensaio é na conta 1 (hub2you), com o molde da 17 montado à mão. A 17 só converte depois, com o OK do Rodrigo registrado na Issue. A escrita em produção é pela Orquestração Deploy, com aviso antes.
 
@@ -420,7 +421,7 @@ Nas palavras do Rodrigo: "pode fechar o motor antigo... com prazer. Vamos coloca
 - **P3:** decidida. Ensaio na conta 1, a 17 depois.
 - **P4:** combinada com a sessão Gatilhos em 05/11 (seção 2.1).
 - **P5 (Funções):** respondida em 05/11. `ligada_por` = o administrador que aperta "Converter"; função personalizada não converte (seção 9).
-- **P7 (Rodrigo):** a atividade e a notificação da atribuição feita por automação dizem "Automação" (como a mensagem, D9) ou o nome de quem ligou? (seção 8)
+- **P7 (Rodrigo):** a atividade e a notificação da atribuição feita por automação dizem "Automação" (como a mensagem, D9) ou o nome de quem ligou? (seção 8). A recomendação da Automação é mostrar os dois: "Automação «nome» · ligada por Fulano".
 - **P6 (Multifunnel):** respondida em 05/11.
   - O respeito da IA do funil olha só `payload['by'] == 'automacao'` na última atividade de criar ou mover (`MovimentoDaAutomacao#respeitar?`, e o `sem_automacao` do FecharCard e do Evaluator). A `origem` não entra.
   - Condição: o passo convertido de mover ou criar passa pelo Mover/Creator com `automacao:`, ou pelo `cards_controller` com a `Cadeia.automacao_livre` ativa. Por outro caminho, a atividade sai sem `by` e a IA desfaz o movimento.
