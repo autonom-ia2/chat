@@ -1057,6 +1057,7 @@ pt_BR:
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
+        resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
