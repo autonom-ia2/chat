@@ -34,6 +34,17 @@ describe('originRows (#1876)', () => {
     expect(rows[2].labelKey).toBe('CRM_DASHBOARD.ORIGIN.SOURCES.NONE');
   });
 
+  it('puts a Messenger or Direct ad click on the paid Meta ad line (#2521)', () => {
+    const rows = originRows([
+      { source: 'meta_ctm', won_count: 2, won_value_by_currency: sale(200) },
+      { source: 'meta_ctd', won_count: 1, won_value_by_currency: sale(100) },
+    ]);
+
+    expect(rows.map(row => [row.source, row.wonCount])).toEqual([
+      ['meta_paid', 3],
+    ]);
+  });
+
   it('adds up two server rows that land on the same line instead of keeping only the last one', () => {
     const rows = originRows([
       {

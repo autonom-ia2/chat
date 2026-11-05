@@ -40,9 +40,16 @@ const SOURCE_BY_KEY = Object.fromEntries(
   ORIGIN_SOURCES.map(source => [source.key, source])
 );
 
+// #2521: o clique para o Messenger e o Direct entra na linha de anúncio pago da
+// Meta até o PR-B2 trazer a linha própria.
+const SAME_LINE = { meta_ctm: 'meta_paid', meta_ctd: 'meta_paid' };
+
 // Origem que o painel não conhece não ganha linha própria: é venda sem origem
 // que a tela sabe nomear.
-const lineFor = source => (SOURCE_BY_KEY[source] ? source : NO_ORIGIN);
+const lineFor = source => {
+  const key = SAME_LINE[source] || source;
+  return SOURCE_BY_KEY[key] ? key : NO_ORIGIN;
+};
 
 const addValues = (list, extra) => {
   const byCurrency = new Map(list.map(item => [item.currency, item]));

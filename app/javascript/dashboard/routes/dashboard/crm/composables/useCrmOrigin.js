@@ -1,5 +1,12 @@
 import { useI18n } from 'vue-i18n';
 
+// Paid Meta ad clicks that open a chat with the ad id in source_id: WhatsApp,
+// Messenger and Instagram Direct (#2521). Legacy touches without `source` were
+// always WhatsApp.
+export const META_AD_CLICK_SOURCES = ['meta_ctwa', 'meta_ctm', 'meta_ctd'];
+export const isMetaAdClickOption = option =>
+  !option.source || META_AD_CLICK_SOURCES.includes(option.source);
+
 export const CRM_ORIGIN_SOURCE_META = {
   meta_ctwa: {
     icon: 'i-lucide-message-circle',
@@ -18,6 +25,15 @@ export const CRM_ORIGIN_SOURCE_META = {
     labelKey: 'CRM_KANBAN.ORIGIN.TIKTOK_ADS',
   },
   meta_paid: {
+    icon: 'i-lucide-megaphone',
+    labelKey: 'CRM_KANBAN.ORIGIN.META_PAID',
+  },
+  // #2521: clique para o Messenger e o Direct; o rótulo próprio vem no PR-B2.
+  meta_ctm: {
+    icon: 'i-lucide-megaphone',
+    labelKey: 'CRM_KANBAN.ORIGIN.META_PAID',
+  },
+  meta_ctd: {
     icon: 'i-lucide-megaphone',
     labelKey: 'CRM_KANBAN.ORIGIN.META_PAID',
   },
@@ -213,6 +229,8 @@ export function useCrmOrigin() {
       case 'tiktok_ads':
         return t('CRM_KANBAN.ORIGIN.TIKTOK_ADS');
       case 'meta_paid':
+      case 'meta_ctm':
+      case 'meta_ctd':
         return t('CRM_KANBAN.ORIGIN.META_PAID');
       case 'tracked_link':
         return t('CRM_KANBAN.ORIGIN.TRACKED_LINK');
