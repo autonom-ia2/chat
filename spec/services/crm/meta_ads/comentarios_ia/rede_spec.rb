@@ -80,16 +80,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
   end
 
   describe 'Facebook' do
-    let(:inbox) { instance_double(Inbox, channel: instance_double(Channel::FacebookPage)) }
+    let(:canal) { instance_double(Channel::FacebookPage) }
+    let(:inbox) { instance_double(Inbox, channel: canal) }
     let(:pagina) { instance_double(described_class::Pagina) }
     let(:servico) { double }
     let(:rede) { described_class::Facebook.new(inbox, comentario(network: 'facebook')) }
 
     before do
-      stub_const('Crm::MetaAds::FacebookComments', Class.new { def initialize(_conexao, inbox_access:, prazo: nil); end })
-      stub_const('Crm::MetaAds::FacebookComments::Error', Class.new(StandardError) { def code = message })
-      allow(Crm::MetaAds::FacebookComments).to receive(:new).and_return(servico)
-      allow(Crm::MetaAdsConnection).to receive(:find_by).with(account_id: account.id).and_return(instance_double(Crm::MetaAdsConnection))
+      allow(described_class::ComentariosDaPagina).to receive(:new).and_return(servico)
       allow(described_class::Pagina).to receive(:new).and_return(pagina)
       allow(Crm::MetaAds::ComentariosIa::Conversa).to receive(:no_messenger!).and_return(conversation)
     end
@@ -196,7 +194,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(reivindicacao).not_to have_received(:attempt!)
     end
 
-    it 'responde e esconde pelo serviço do #2197, como IA' do
+    it 'responde e esconde pelo token da caixa, como IA (#2587)' do
       allow(servico).to receive_messages(reply_as_ai: { id: 'c-2' }, hide_as_ai: true)
 
       expect(rede.responder('Te chamei no Messenger')).to be(true)
@@ -206,17 +204,19 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
     end
 
     it 'recusa do serviço vira false' do
-      allow(servico).to receive(:reply_as_ai).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
+      allow(servico).to receive(:reply_as_ai).and_raise(described_class::ComentariosDaPagina::Error.new('meta_refused'))
 
       expect(rede.responder('oi')).to be(false)
     end
 
-    it 'age pela caixa da Página, sem pessoa abrindo a tela' do
+    # #2587: a caixa da Página, não a conexão de Anúncios (a conta aqui nem tem uma).
+    it 'age pela caixa da Página, sem pessoa abrindo a tela e sem conexão de Anúncios' do
       allow(servico).to receive(:hide_as_ai).and_return(true)
 
       rede.esconder
 
-      expect(Crm::MetaAds::FacebookComments).to have_received(:new).with(anything, inbox_access: described_class::Facebook::SEM_PESSOA, prazo: nil)
+      expect(described_class::ComentariosDaPagina).to have_received(:new).with(canal, prazo: nil)
+      expect(Crm::MetaAdsConnection.where(account_id: account.id)).not_to exist
     end
 
     describe 'ler (o evento leva só ids, #2327)' do
@@ -227,28 +227,24 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.ler).to eq(text: 'Quanto custa?', from_name: 'Ana', from_id: '9')
       end
 
-      it 'a Meta diz que não dá para ler (apagado, sem permissão, Página de outra conta): nil' do
-        allow(servico).to receive(:comment).and_return(nil)
+      it 'comentário de outro post ou de outra Página: nil, com o motivo no log só com ids' do
+        allow(Rails.logger).to receive(:warn)
+        allow(servico).to receive(:comment).and_raise(described_class::ComentariosDaPagina::Error.new('comment_not_found'))
 
         expect(rede.ler).to be_nil
-      end
-
-      it 'sem conexão de anúncios na conta: nil' do
-        allow(Crm::MetaAdsConnection).to receive(:find_by).and_return(nil)
-
-        expect(rede.ler).to be_nil
+        expect(Rails.logger).to have_received(:warn).with(include('comment_not_found', 'post=555_888', 'comment=555_777'))
       end
 
       it 'a Meta fora do ar: Indisponivel, para o job tentar de novo; outra recusa: nil' do
-        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+        allow(servico).to receive(:comment).and_raise(described_class::ComentariosDaPagina::Error.new('meta_unavailable'))
         expect { rede.ler }.to raise_error(described_class::Indisponivel)
 
-        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
+        allow(servico).to receive(:comment).and_raise(described_class::ComentariosDaPagina::Error.new('meta_refused'))
         expect(rede.ler).to be_nil
       end
 
       it 'login caído ou permissão tirada: Indisponivel, como no Instagram (não descarta o comentário)' do
-        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('needs_login'))
+        allow(servico).to receive(:comment).and_raise(described_class::ComentariosDaPagina::Error.new('needs_login'))
 
         expect { rede.ler }.to raise_error(described_class::Indisponivel)
       end
@@ -267,12 +263,12 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       it 'comentário de primeiro nível, ou o de cima que não dá para ler: nil; a Meta fora do ar: Indisponivel' do
         expect(described_class::Facebook.new(inbox, comentario(network: 'facebook')).ler_pai).to be_nil
 
-        allow(servico).to receive(:comment).and_return(nil)
+        allow(servico).to receive(:comment).and_raise(described_class::ComentariosDaPagina::Error.new('meta_refused'))
         expect(rede.ler_pai).to be_nil
 
         # Lido uma vez por comentário (#2458): cada cenário com a sua Rede.
         de_novo = described_class::Facebook.new(inbox, comentario(network: 'facebook', parent_id: '555_666'))
-        allow(servico).to receive(:comment).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+        allow(servico).to receive(:comment).and_raise(described_class::ComentariosDaPagina::Error.new('meta_unavailable'))
         expect { de_novo.ler_pai }.to raise_error(described_class::Indisponivel)
       end
 
@@ -291,14 +287,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.legenda).to eq('Seguro viagem com cobertura internacional')
       end
 
-      it 'a Meta fora do ar: Indisponivel; outra recusa ou sem conexão: nil' do
-        allow(servico).to receive(:post_message).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+      it 'a Meta fora do ar: Indisponivel; outra recusa: nil' do
+        allow(servico).to receive(:post_message).and_raise(described_class::ComentariosDaPagina::Error.new('meta_unavailable'))
         expect { rede.legenda }.to raise_error(described_class::Indisponivel)
 
-        allow(servico).to receive(:post_message).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
-        expect(rede.legenda).to be_nil
-
-        allow(Crm::MetaAdsConnection).to receive(:find_by).and_return(nil)
+        allow(servico).to receive(:post_message).and_raise(described_class::ComentariosDaPagina::Error.new('meta_refused'))
         expect(rede.legenda).to be_nil
       end
     end
@@ -311,14 +304,11 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
         expect(rede.imagens).to eq(['https://fb.exemplo/1.jpg'])
       end
 
-      it 'a Meta fora do ar: Indisponivel; outra recusa ou sem conexão: nenhuma' do
-        allow(servico).to receive(:post_media).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_unavailable'))
+      it 'a Meta fora do ar: Indisponivel; outra recusa: nenhuma' do
+        allow(servico).to receive(:post_media).and_raise(described_class::ComentariosDaPagina::Error.new('meta_unavailable'))
         expect { rede.imagens }.to raise_error(described_class::Indisponivel)
 
-        allow(servico).to receive(:post_media).and_raise(Crm::MetaAds::FacebookComments::Error.new('meta_refused'))
-        expect(rede.imagens).to eq([])
-
-        allow(Crm::MetaAdsConnection).to receive(:find_by).and_return(nil)
+        allow(servico).to receive(:post_media).and_raise(described_class::ComentariosDaPagina::Error.new('meta_refused'))
         expect(rede.imagens).to eq([])
       end
 
@@ -328,8 +318,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
 
         rede.imagens(prazo: 3)
 
-        expect(Crm::MetaAds::FacebookComments).to have_received(:new)
-          .with(anything, inbox_access: described_class::Facebook::SEM_PESSOA, prazo: be_between(antes + 3, antes + 4))
+        expect(described_class::ComentariosDaPagina).to have_received(:new).with(canal, prazo: be_between(antes + 3, antes + 4))
       end
     end
   end

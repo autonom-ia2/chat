@@ -71,17 +71,6 @@ RSpec.describe Crm::MetaAds::FacebookComments do
     stub_page_token
   end
 
-  # #2454, revisão da Agentes IA: a leitura da foto roda dentro da requisição; o prazo vale para cada ida à Graph.
-  it 'com prazo: cada cliente da Graph recebe o prazo de quem chama' do
-    allow(Meta::AdsGraphClient).to receive(:new).and_call_original
-    prazo = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 3
-    stub_request(:get, %r{graph\.facebook\.com/.*/me/permissions}).to_return(status: 503, body: 'fora')
-
-    expect { described_class.new(connection, inbox_access: inbox_access, prazo: prazo).post_media(post_id) }
-      .to raise_error(described_class::Error, 'meta_unavailable')
-    expect(Meta::AdsGraphClient).to have_received(:new).with(hash_including(prazo: prazo))
-  end
-
   describe '#list' do
     it 'traz os comentários do post do anúncio, com uma camada de respostas, quem é a Página e o que dá para fazer' do
       ready!(*all_permissions)
@@ -350,28 +339,6 @@ RSpec.describe Crm::MetaAds::FacebookComments do
       expect { build_service.delete!(ad_id, comment_id) }.to raise_error(described_class::Error, 'meta_unavailable')
     end
 
-    # #2212: a IA age pelo post do comentário que chegou pelo evento, sem pessoa e sem anúncio.
-    it 'pela IA: responde e oculta pelo post, gravando o actor, sem pessoa nem anúncio' do
-      stub_request(:post, meta_graph_url("#{comment_id}/comments")).with(body: { message: 'Te chamei no Messenger' })
-                                                                   .to_return(status: 200, body: { id: '200000000000002_800' }.to_json, headers: json)
-      stub_request(:post, meta_graph_url(comment_id)).with(body: { is_hidden: 'true' })
-                                                     .to_return(status: 200, body: { success: true }.to_json, headers: json)
-      service = described_class.new(connection, inbox_access: ->(_inbox) { true })
-
-      expect(service.reply_as_ai(post_id, comment_id, 'Te chamei no Messenger')).to eq(id: '200000000000002_800')
-      expect(service.hide_as_ai(post_id, comment_id, true)).to be(true)
-      expect(Crm::MetaAdsCommentAction.order(:id).pluck(:action, :actor, :ad_id, :user_id))
-        .to eq([['reply', 'ai', nil, nil], ['hide', 'ai', nil, nil]])
-    end
-
-    it 'pela IA, sem a caixa do Messenger da Página na conta: no_inbox, sem chamar a Meta' do
-      Channel::FacebookPage.where(id: page_inbox.channel_id).delete_all
-      service = described_class.new(connection, inbox_access: ->(_inbox) { true })
-
-      expect { service.hide_as_ai(post_id, comment_id, true) }.to raise_error(described_class::Error, 'no_inbox')
-      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
-    end
-
     it 'falha ao gravar a ação não desfaz o que a Meta já fez' do
       stub_request(:delete, meta_graph_url(comment_id)).to_return(status: 200, body: { success: true }.to_json, headers: json)
       allow(Crm::MetaAdsCommentAction).to receive(:record!).and_raise(ActiveRecord::RecordInvalid)
@@ -380,71 +347,6 @@ RSpec.describe Crm::MetaAds::FacebookComments do
 
       expect(build_service.delete!(ad_id, comment_id)).to be(true)
       expect(tracker).to have_received(:capture_exception)
-    end
-  end
-
-  describe '#comment (quem consome meta_ads.comment_received, que leva só ids)' do
-    before do
-      stub_permissions(*all_permissions)
-      stub_page_token
-    end
-
-    it 'lê o comentário com o token da Página, sem registrar a Página de novo' do
-      stub_request(:get, meta_graph_url(comment_id)).with(query: hash_including({}), headers: { 'Authorization' => "Bearer #{page_token}" })
-                                                    .to_return(status: 200, headers: json,
-                                                               body: { id: comment_id, from: { id: '555', name: 'Ana' }, message: 'Oi' }.to_json)
-      allow(Crm::MetaAdsPage).to receive(:remember!)
-
-      expect(build_service.comment(post_id, comment_id)).to include('message' => 'Oi')
-      expect(Crm::MetaAdsPage).not_to have_received(:remember!)
-    end
-
-    it 'comentário de outro post: nil, com o motivo no log só com ids, sem chamar a Meta pelo comentário' do
-      allow(Rails.logger).to receive(:warn)
-
-      expect(build_service.comment(post_id, '999_1')).to be_nil
-      expect(Rails.logger).to have_received(:warn).with(include('comment_not_found', '999_1'))
-      expect(a_request(:get, meta_graph_url('999_1'))).not_to have_been_made
-    end
-
-    it 'Página de outra conta: nil, sem chamar a Meta pelo comentário' do
-      allow(Crm::MetaAdsPage).to receive(:account_ids_for).and_return([account.id + 1])
-
-      expect(build_service.comment(post_id, comment_id)).to be_nil
-      expect(a_request(:get, meta_graph_url(comment_id))).not_to have_been_made
-    end
-  end
-
-  describe '#post_message (a legenda do post, para a IA que cuida dos comentários, #2424)' do
-    before do
-      stub_permissions(*all_permissions)
-      stub_page_token
-    end
-
-    it 'lê o texto do post com o token da Página' do
-      stub_request(:get, meta_graph_url(post_id)).with(query: hash_including('fields' => 'message'),
-                                                       headers: { 'Authorization' => "Bearer #{page_token}" })
-                                                 .to_return(status: 200, headers: json, body: { id: post_id, message: 'Bolo novo' }.to_json)
-
-      expect(build_service.post_message(post_id)).to eq('Bolo novo')
-    end
-
-    it 'Página de outra conta: nil, sem chamar a Meta pelo post' do
-      allow(Crm::MetaAdsPage).to receive(:account_ids_for).and_return([account.id + 1])
-
-      expect(build_service.post_message(post_id)).to be_nil
-      expect(a_request(:get, meta_graph_url(post_id))).not_to have_been_made
-    end
-
-    it 'Meta fora do ar sobe, para o job tentar de novo; recusa vira nil com o motivo no log' do
-      stub_request(:get, meta_graph_url(post_id)).with(query: hash_including({})).to_return(status: 503, headers: json, body: '{}')
-      expect { build_service.post_message(post_id) }.to raise_error(described_class::Error) { |erro| expect(erro.code).to eq('meta_unavailable') }
-
-      allow(Rails.logger).to receive(:warn)
-      stub_request(:get, meta_graph_url(post_id)).with(query: hash_including({}))
-                                                 .to_return(status: 400, headers: json, body: { error: { code: 100, message: 'x' } }.to_json)
-      expect(build_service.post_message(post_id)).to be_nil
-      expect(Rails.logger).to have_received(:warn).with(include('post do Facebook', post_id))
     end
   end
 end

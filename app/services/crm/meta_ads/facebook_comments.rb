@@ -2,9 +2,9 @@
 # apagar. Chama a Meta ao vivo; o comentário não é gravado (dado de terceiro), só a ação em
 # crm_meta_ads_comment_actions (#2196), sem o texto.
 #
-# - Pela tela: só o post do anúncio da conta de anúncios da conexão (Crm::MetaAds::AdManagement#ad); anúncio de outra
-#   conta é `ad_not_found`; post apagado ou que a Meta não acha mais é `no_post`. Pelo evento do webhook
-#   (`meta_ads.comment_received`, que leva só ids): `comment`, só em post de Página da conta (Crm::MetaAdsPage, #2195).
+# - Só pela tela: o post do anúncio da conta de anúncios da conexão (Crm::MetaAds::AdManagement#ad); anúncio de outra
+#   conta é `ad_not_found`; post apagado ou que a Meta não acha mais é `no_post`. A IA que cuida dos comentários lê e
+#   age pela caixa da Página, sem a conexão (Crm::MetaAds::ComentariosIa::Rede::ComentariosDaPagina, #2587).
 # - Tudo com o token da Página, pedido com o token da pessoa. Ler exige `pages_read_user_content`; responder, ocultar e
 #   apagar, `pages_manage_engagement`. Sem a primeira (ou no modo `partner`, em que o token é o da plataforma), a aba
 #   pede para entrar de novo com o Facebook (`needs_login`); sem a segunda, lê e não age. Falha passageira da Meta ao
@@ -20,16 +20,13 @@
 #   com o mesmo page_id, e `inbox_access` (InboxPolicy#show? de quem abre) dizendo sim. Sem essa caixa na conta é
 #   `no_inbox` para todos, inclusive o administrador; com ela e sem ser dela, `not_inbox_member`. Nos dois casos a
 #   Página não é lida (nem token, nem comentários) e as permissões da pessoa nem são conferidas; só o anúncio foi
-#   lido, para achar a Página. O evento do webhook (`comment`) não passa por aqui: não há pessoa.
+#   lido, para achar a Página.
 # - Resposta no privado (Private Reply) fica fora: exige pages_messaging (decisão de 25/10 na #2197; é do #2212).
 #
 # Erros: `ad_not_found`, `comment_not_found`, `needs_login`, `invalid_text`, `no_inbox`, `not_inbox_member`,
 # `meta_unavailable` (rede, 5xx, limite) e `meta_refused` (qualquer outra recusa da Meta).
 class Crm::MetaAds::FacebookComments
   class Error < Crm::MetaAds::AdManagement::Error; end
-
-  # `comment`, `post_message` e `post_media`: a leitura sem pessoa (o evento do webhook e a leitura da foto, #2454).
-  include Crm::MetaAds::FacebookPageReading
 
   READ = 'pages_read_user_content'.freeze
   MANAGE = 'pages_manage_engagement'.freeze
@@ -40,14 +37,11 @@ class Crm::MetaAds::FacebookComments
 
   # management: a Crm::MetaAds::AdManagement que já leu o anúncio, quando quem chama já a tem (IA dos comentários,
   # #2212): ela guarda a leitura, e o criativo não é lido de novo. Sem ela, uma nova.
-  # prazo: o relógio monotônico até o qual quem chama espera (Meta::AdsGraphClient::Prazo), para quem roda dentro da
-  # requisição com prazo curto (a leitura da foto, #2454). Vale para cada ida à Graph deste serviço. Sem ele, o de sempre.
-  def initialize(connection, inbox_access:, can_manage: false, management: nil, prazo: nil)
+  def initialize(connection, inbox_access:, can_manage: false, management: nil)
     @connection = connection
     @inbox_access = inbox_access
     @can_manage = can_manage
     @management = management || Crm::MetaAds::AdManagement.new(connection)
-    @prazo = prazo
   end
 
   def list(ad_id)
@@ -101,12 +95,6 @@ class Crm::MetaAds::FacebookComments
     true
   end
 
-  # Pela IA que cuida dos comentários (#2212): age no comentário que chegou pelo evento, pelo post (não há anúncio) e sem
-  # pessoa, sempre gravado como 'ai'. As mesmas regras da tela: comentário do post, caixa do Messenger da Página na
-  # conta e pages_manage_engagement.
-  def reply_as_ai(post_id, comment_id, message) = reply_to(post_id, comment_id, message, { actor: 'ai', user: nil, ad_id: nil })
-  def hide_as_ai(post_id, comment_id, hidden) = hide_in(post_id, comment_id, hidden, { actor: 'ai', user: nil, ad_id: nil })
-
   private
 
   def by_user(ad_id, user)
@@ -137,7 +125,7 @@ class Crm::MetaAds::FacebookComments
   # Só este serviço usa as chamadas de comentário: cada cliente ganha Meta::AdsGraphClient::PageComments para si, sem
   # crescer a classe comum.
   def graph_client(token)
-    Meta::AdsGraphClient.new(access_token: token, prazo: @prazo).extend(Meta::AdsGraphClient::PageComments)
+    Meta::AdsGraphClient.new(access_token: token).extend(Meta::AdsGraphClient::PageComments)
   end
 
   def granted?(permission)
@@ -237,10 +225,6 @@ class Crm::MetaAds::FacebookComments
     return 'no_inbox' if inbox.nil?
 
     'not_inbox_member' unless @inbox_access.call(inbox)
-  end
-
-  def own_page?(post_id)
-    Crm::MetaAdsPage.account_ids_for(page_id(post_id)).include?(@connection.account_id)
   end
 
   # A Meta já agiu quando isto roda: falha ao gravar vai ao rastreador e a resposta continua dizendo a verdade.
