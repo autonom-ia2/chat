@@ -72,6 +72,11 @@ class Integrations::Facebook::MessageParser
     app_id.present? && app_id.to_s == GlobalConfigService.load('FB_APP_ID', '').to_s
   end
 
+  # Anúncio de clique para o Messenger (#2521): na mensagem de conversa nova, no postback ou no evento só de referral.
+  def referral
+    @messaging['referral'] || @messaging.dig('message', 'referral') || @messaging.dig('postback', 'referral')
+  end
+
   def in_reply_to_external_id
     @messaging.dig('message', 'reply_to', 'mid')
   end

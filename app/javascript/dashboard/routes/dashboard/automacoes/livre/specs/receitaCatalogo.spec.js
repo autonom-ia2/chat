@@ -513,5 +513,46 @@ describe('catálogo do editor livre', () => {
         'Avisar a equipe: “falta escrever o texto”'
       );
     });
+
+    // #2500 — passo de IA ainda sem pergunta ou instrução diz o que falta,
+    // sem aspas vazias.
+    const comIa = {
+      ...catalogo,
+      passos: [
+        ...catalogo.passos,
+        ...['decidir', 'escrever'].map(tipo => ({ tipo, grupo: 'IA' })),
+      ],
+    };
+    it.each([
+      [
+        { pergunta: '', caminhos: [{}, {}] },
+        'A IA decide o caminho: falta escrever a pergunta (2 caminhos)',
+      ],
+      [
+        { pergunta: '   ', caminhos: [{}, {}] },
+        'A IA decide o caminho: falta escrever a pergunta (2 caminhos)',
+      ],
+      [
+        { pergunta: 'O que o cliente quer?', caminhos: [{}, {}] },
+        'A IA decide: “O que o cliente quer?” (2 caminhos)',
+      ],
+    ])('decidir %j vira "%s"', (campos, frase) => {
+      const passo = { id: 'p1', tipo: 'decidir', ...campos };
+      expect(fraseDoPasso(passo, comIa, tReal)).toBe(frase);
+    });
+
+    it.each([
+      [
+        'mensagem',
+        'A IA escreve e manda ao cliente: falta escrever a instrução',
+      ],
+      [
+        'sugestao',
+        'A IA escreve uma sugestão para a equipe: falta escrever a instrução',
+      ],
+    ])('escrever para %s sem instrução diz o que falta', (destino, frase) => {
+      const passo = { id: 'p1', tipo: 'escrever', instrucao: '', destino };
+      expect(fraseDoPasso(passo, comIa, tReal)).toBe(frase);
+    });
   });
 });

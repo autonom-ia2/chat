@@ -242,4 +242,71 @@ describe('linhasDoEnsaio', () => {
       'AUTOMACAO_LIVRE.ENSAIO.SE_NENHUM',
     ]);
   });
+
+  // #2500 — extrair, escrever e resumir dizem para onde iria o que a IA
+  // fizesse; nada vem da IA. Lugar que o painel não conhece mostra só o campo.
+  it.each([
+    [
+      'extrair',
+      {
+        campos: [
+          { chave: 'placa', destino: 'conversa.placa' },
+          { chave: 'cpf', destino: 'contato.cpf' },
+          { chave: 'empresa', destino: 'empresa.nome' },
+          { chave: 'etapa', destino: 'card.atributos.etapa' },
+          { chave: 'sem_destino', destino: '' },
+        ],
+      },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_EXTRAIR(AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.CONVERSA(placa); AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.CONTATO(cpf); AUTOMACAO_LIVRE.ENSAIO.FARIA.ONDE.EMPRESA(empresa); etapa; sem_destino)',
+    ],
+    [
+      'escrever',
+      { destino: 'mensagem' },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_ESCREVER_MENSAGEM',
+    ],
+    [
+      'escrever',
+      { destino: 'sugestao' },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_ESCREVER_SUGESTAO',
+    ],
+    [
+      'resumir',
+      { destino: 'nota' },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_RESUMIR_NOTA',
+    ],
+    [
+      'resumir',
+      { destino: 'avisar' },
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_RESUMIR_AVISAR',
+    ],
+  ])('o "%s" diz o que a IA faria', (tipo, dados, destaque) => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'i1', tipo, faria: `ia_${tipo}`, dados }],
+      fraseDe,
+      t
+    );
+
+    expect(linha).toMatchObject({ texto: 'frase i1', destaque });
+  });
+
+  // #2552: o resumo que sai pelo avisar, com a reserva, diz que iria para a caixa.
+  it('o resumo com a reserva diz que avisaria e que iria para a caixa', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'i1',
+          tipo: 'resumir',
+          faria: 'ia_resumir',
+          dados: { destino: 'avisar', reserva: 'caixa' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha.destaque).toBe(
+      'AUTOMACAO_LIVRE.ENSAIO.FARIA.IA_RESUMIR_AVISAR AUTOMACAO_LIVRE.ENSAIO.IRIA_PARA_CAIXA'
+    );
+    expect(linha.balao).toBeUndefined();
+  });
 });

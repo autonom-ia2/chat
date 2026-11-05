@@ -293,9 +293,12 @@
       "PESSOAS": "1 person | {n} people",
       "FALTA_TEXTO": "the text is missing",
       "DECIDIR": "AI decides: “{pergunta}” ({n} paths)",
+      "DECIDIR_SEM_PERGUNTA": "AI chooses the path: the question is missing ({n} paths)",
       "EXTRAIR": "AI looks in the conversation for: {lista}",
       "ESCREVER_MENSAGEM": "AI writes and sends to the customer: “{instrucao}”",
+      "ESCREVER_MENSAGEM_SEM_INSTRUCAO": "AI writes and sends to the customer: the instruction is missing",
       "ESCREVER_SUGESTAO": "AI writes a suggestion for the team: “{instrucao}”",
+      "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "AI writes a suggestion for the team: the instruction is missing",
       "RESUMIR_NOTA": "AI summarizes the conversation in a note",
       "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}"
     },
@@ -422,6 +425,7 @@
       "ESPERA_ATE": "Waits until {quando}",
       "TENTATIVA": "Attempt {n}",
       "IA": "AI: US$ {valor}",
+      "IA_MENOS_DE": "AI: less than US$ {valor}",
       "SEMANA": {
         "NADA": "Has not run this week",
         "RODOU": "Ran once this week | Ran {n} times this week",
@@ -462,7 +466,19 @@
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
       "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
       "CORTE": "The test stopped here: the automation has too many paths to show.",
-      "OPCAO": "{nome} · #{n}"
+      "OPCAO": "{nome} · #{n}",
+      "FARIA": {
+        "IA_EXTRAIR": "Would save: {lista}.",
+        "IA_ESCREVER_MENSAGEM": "Would go to the customer.",
+        "IA_ESCREVER_SUGESTAO": "Would stay as a suggestion for the team to review and send.",
+        "IA_RESUMIR_NOTA": "Would stay in a private note.",
+        "IA_RESUMIR_AVISAR": "Would notify the team.",
+        "ONDE": {
+          "CONVERSA": "{campo}, in the conversation",
+          "CONTATO": "{campo}, in the contact",
+          "EMPRESA": "{campo}, in the company"
+        }
+      }
     },
     "RECEITAS": {
       "COMO_COMECAR": "How do you want to start?",
@@ -472,6 +488,11 @@
       "USAR": "Use this one",
       "REQUER": {
         "AUTOMACAO_MENSAGENS": "Sends a message to the customer, and automatic messages aren't turned on in this account yet."
+      },
+      "BOAS_VINDAS": {
+        "TITULO": "Let them know we'll reply soon",
+        "TEXTO": "Whoever starts a conversation is told the team will reply soon.",
+        "NOME": "Welcome"
       },
       "AGRADECER": {
         "TITULO": "Thank them when closing",

@@ -68,6 +68,27 @@ RSpec.describe Crm::MetaAds::Panel::MetaComparison do
     expect(comparison[:rows].sole).to include(meta: 42, ours: 46, difference: 4, explanation: 'close')
   end
 
+  # #2521: a conversa iniciada que a Meta conta em anúncio de Messenger ou Direct sai da linha do WhatsApp e vai para a
+  # linha "Messenger e Direct", ao lado das conversas que chegaram por esses anúncios.
+  it 'anúncio de Messenger ou Direct tem a linha própria, fora da do WhatsApp' do
+    connection.update!(destinations: { 'whatsapp' => true })
+    insight(Date.new(2026, 10, 3), conversations: 10)
+    Crm::MetaAdObject.create!(account: account, meta_object_id: 'set-msg', object_type: 'adset', destination_type: 'MESSENGER',
+                              optimization_goal: 'CONVERSATIONS', fetched_at: now)
+    Crm::MetaAdInsightDaily.create!(account: account, ad_account_id: connection.ad_account_id, ad_id: 'M', adset_id: 'set-msg',
+                                    date: Date.new(2026, 10, 3), currency: 'BRL', spend: 10, conversations_started: 4,
+                                    attribution_window: '7d_click', fetched_at: now)
+    messenger, direct, whatsapp = conversations(3)
+    link_from(messenger, 'messenger', 3)
+    link_from(direct, 'instagram', 4)
+    link_from(whatsapp, 'whatsapp', 4)
+
+    expect(comparison[:rows]).to eq(
+      [{ destination: 'whatsapp', meta: 10, ours: 1, difference: -9, explanation: 'meta_higher' },
+       { destination: 'messaging', meta: 4, ours: 2, difference: -2, explanation: 'close' }]
+    )
+  end
+
   it 'destino não marcado não tem linha, mesmo com número da Meta' do
     insight(Date.new(2026, 10, 3), conversations: 5, leads: 8, visits: 20)
     link_from(conversations(1).first, 'site', 3)
