@@ -157,6 +157,27 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
       expect(conversa.messages.where('content LIKE ? OR content LIKE ?', '%2500%', 'Valor:%')).to be_empty
     end
 
+    # O "esperar até" (G11) lê a condição com as permissões de quem ligou, como o "se".
+    def esperar_caro
+      { 'id' => 'e1', 'tipo' => 'esperar_ate', 'condicao' => caro['condicao'], 'prazo' => { 'valor' => 1, 'unidade' => 'dias' },
+        'se_vencer' => [prioridade_passo('a2', 'low')] }
+    end
+
+    it 'esperar até o valor passar de 1000: com a chave, segue na hora' do
+      execucao = rodar(automacao_ligada(account, dono, [esperar_caro, prioridade_passo('a1', 'high')], gatilho: gatilho))
+
+      expect([execucao.reload.estado, conversa.reload.priority]).to eq(%w[concluida high])
+    end
+
+    it 'esperar até o valor passar de 1000: sem a chave, o valor lê vazio e a espera não se cumpre' do
+      definicao = automacao_ligada(account, dono, [esperar_caro, prioridade_passo('a1', 'high')], gatilho: gatilho)
+      tirar_a_chave
+
+      execucao = rodar(definicao)
+
+      expect([execucao.reload.estado, conversa.reload.priority]).to eq(['esperando', nil])
+    end
+
     # Sem account_user, o Valores já lê vazio (ver "quem não está na conta"); antes disso, a execução nem anda.
     it 'quem ligou saiu da conta: a execução não anda, nada escrito nem mandado' do
       definicao = automacao_ligada(account, dono, [caro, mensagem_passo('m1', 'Valor: ', valor)], gatilho: gatilho)

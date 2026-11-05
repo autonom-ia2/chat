@@ -19,6 +19,8 @@ const props = defineProps({
   // O gatilho, quando a condição é do "Só se" dele: só aí entra o valor da
   // mensagem (#2496).
   gatilho: { type: String, default: null },
+  // A condição do "esperar até": só aí entra a resposta durante a espera (G11).
+  naEspera: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -40,7 +42,8 @@ const opcoesDeCampo = computed(() => {
     props.catalogo,
     props.atributosDo,
     t,
-    props.gatilho
+    props.gatilho,
+    props.naEspera
   );
   const campo = props.modelValue?.campo?.$valor;
   const foraDaEscolha = props.catalogo.valores?.find(
