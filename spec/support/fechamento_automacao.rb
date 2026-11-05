@@ -109,6 +109,19 @@ module FechamentoAutomacao::Lacunas
     end
   end
 
+  # O campo `campo` existe no passo de tipo `tipo` do esquema da receita.
+  def campo_do_passo?(tipo, campo) = campos_do_passo(Autonomia::Automacao::Receita::ESQUEMA, tipo).include?(campo)
+
+  def campos_do_passo(trecho, tipo)
+    case trecho
+    when Hash
+      proprios = trecho.dig('properties', 'tipo', 'const') == tipo ? trecho['properties'].keys : []
+      proprios + trecho.values.flat_map { |filho| campos_do_passo(filho, tipo) }
+    when Array then trecho.flat_map { |filho| campos_do_passo(filho, tipo) }
+    else []
+    end
+  end
+
   def gatilho?(*tipos) = tipos.any? { |tipo| Autonomia::Automacao::Gatilhos.entrada(tipo) }
   def gatilho_no?(alvo) = Autonomia::Automacao::Gatilhos::LISTA.values.any? { |entrada| entrada.alvo == alvo }
   def gatilho_de?(origem) = Autonomia::Automacao::Gatilhos::LISTA.values.any? { |entrada| entrada.origem == origem }
@@ -122,7 +135,8 @@ module FechamentoAutomacao::Lacunas
   end
 
   SONDAS = {
-    'G1' => -> { passo?('modelo') },
+    # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
+    'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
     'G2' => -> { passo?('email') },
     'G3' => -> { passo?('retorno') },
     'G4' => -> { acao?('POST crm/cards') || acao?('POST crm/cards/from_conversation') },
