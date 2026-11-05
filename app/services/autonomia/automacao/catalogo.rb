@@ -60,7 +60,7 @@ module Autonomia::Automacao::Catalogo
       'gatilhos' => gatilhos,
       'operadores' => operadores,
       'unidades' => unidades,
-      'valores' => valores,
+      'valores' => ::Autonomia::Automacao::CatalogoDeValores.todos,
       # O que cada alvo de gatilho alcança (#2499): o editor só oferece o valor dessas bases.
       'alvos' => ::Autonomia::Automacao::Valores::BASES_DO_ALVO,
       'grupos' => declarado['grupos'].map { |grupo| { 'chave' => grupo, 'frase' => chave('GRUPOS', grupo) } },
@@ -118,42 +118,6 @@ module Autonomia::Automacao::Catalogo
       ops = forma.dig('properties', 'op', 'enum')
       ops&.map { |op| { 'op' => op, 'pede_valor' => forma['required'].include?('valor'), 'frase' => chave('OPERADORES', op) } }
     end.flatten
-  end
-
-  # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
-  # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499).
-  def valores
-    campos = ::Autonomia::Automacao::Valores::CAMPOS.keys.map do |caminho|
-      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho) }
-    end
-    atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
-      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
-    end
-    campos + atributos + valores_do_gatilho
-  end
-
-  # A mensagem do gatilho (#2496), com as opções e os operadores do valor fechado. A que só o Guia monta vem marcada:
-  # a tela não a oferece, mas mostra a frase, abre a condição que já a usa e a tira do "Só se" quando o gatilho muda.
-  def valores_do_gatilho
-    so_guia = declarado['valores_so_guia'].keys
-    (declarado['valores_do_gatilho'] + so_guia).map do |caminho|
-      { **valor_da_mensagem(caminho), 'so_guia' => (true if so_guia.include?(caminho)) }.compact
-    end
-  end
-
-  def valor_da_mensagem(caminho)
-    { 'caminho' => caminho, 'frase' => chave('VALORES', caminho),
-      'so_no_gatilho' => ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM, **do_fechado(caminho) }
-  end
-
-  # As opções e os operadores do valor fechado (#2496), da mensagem ou do alvo (`conversa.iniciada_por`, #2527). As
-  # frases ficam em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM para todos os fechados.
-  def do_fechado(caminho)
-    fechado = ::Autonomia::Automacao::Valores.fechado(caminho)
-    return {} unless fechado
-
-    { 'opcoes' => fechado['opcoes'].map { |opcao| { 'valor' => opcao, 'frase' => chave('VALOR_DA_MENSAGEM', opcao) } },
-      'operadores' => fechado['operadores'].map { |op| { 'op' => op, 'frase' => chave('OPERADOR_DA_MENSAGEM', op) } } }
   end
 
   def nativos
