@@ -15,8 +15,8 @@ class Autonomia::Automacao::CampoDaAcao
                'objeto' => {}, 'objeto_livre' => {}, 'json' => {} }.freeze
   CABE = {
     'string' => ->(valor) { valor.is_a?(String) || valor.is_a?(Numeric) },
-    'inteiro' => ->(valor) { valor.is_a?(Integer) },
-    'id' => ->(valor) { valor.is_a?(Integer) },
+    'inteiro' => ->(valor) { Autonomia::Automacao::CampoDaAcao.inteiro?(valor) },
+    'id' => ->(valor) { Autonomia::Automacao::CampoDaAcao.inteiro?(valor) },
     'numero' => ->(valor) { valor.is_a?(Numeric) },
     'booleano' => ->(valor) { [true, false].include?(valor) },
     'data_hora' => ->(valor) { Autonomia::Automacao::CampoDaAcao.data?(valor) },
@@ -35,6 +35,12 @@ class Autonomia::Automacao::CampoDaAcao
     tipos = ::Autonomia::Automacao::Corpo.lugares(original).reject { |onde, _folha| campos.cabe?(onde, montado.dig(*onde)) }
     ::Autonomia::Guide::Formatos::Conferencia.new(acao, montado, conta: conta).problemas_em_texto +
       tipos.map { |onde, _folha| "#{campos.nome(onde)}: o valor calculado não é do tipo deste campo" }
+  end
+
+  # O número inteiro, ou o texto dele em base 10 ("3"): o atributo numérico pode estar gravado como texto, e a
+  # plataforma converte.
+  def self.inteiro?(valor)
+    valor.is_a?(Integer) || (valor.is_a?(String) && Integer(valor, 10, exception: false).present?)
   end
 
   # "AAAA-MM-DD", com ou sem a hora depois: como a tela grava e lê uma data.
