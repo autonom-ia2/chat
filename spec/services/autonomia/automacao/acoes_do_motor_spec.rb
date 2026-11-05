@@ -3,6 +3,8 @@ require 'rails_helper'
 # A porta da ação da automação (#2414 F3, D2): a lista de ações permitidas e a chave de automações liberam; a caixa, o
 # Pundit e a conta seguem valendo pelo endpoint.
 RSpec.describe Autonomia::Automacao::AcoesDoMotor, :automacao_motor do
+  include ActiveJob::TestHelper
+
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
   let(:agente) { create(:user, account: account, role: :agent) }
@@ -32,6 +34,19 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :automacao_motor do
     definicao.update!(ligada_por: admin)
 
     expect { acoes.executar('DELETE labels/:id', { caminho: { id: 1 } }) }.to raise_error(Autonomia::Guide::Acoes::Recusada)
+  end
+
+  # #2568 P7: o que o pedido da automação muda sai assinado por ela, com quem a ligou; depois do pedido, o ato fecha.
+  it 'a atividade do pedido diz a automação e quem a ligou', :aggregate_failures do
+    definicao.update!(ligada_por: admin)
+
+    resultado = acoes.executar('POST conversations/:id/toggle_priority', prioridade)
+
+    atividade = enqueued_jobs.find { |job| job['job_class'] == 'Conversations::ActivityMessageJob' }
+    conteudo = ActiveJob::Arguments.deserialize(atividade['arguments']).last[:content]
+    expect(resultado.ok).to be(true)
+    expect(conteudo).to include(I18n.t('automation.livre.com_quem_ligou', nome: definicao.nome, user_name: admin.name))
+    expect(Autonomia::Automacao::Ato.automacao_id).to be_nil
   end
 
   # Pedido da Automação era 403; a plataforma responde 401 ao Pundit::NotAuthorizedError (ver ApplicationController).
