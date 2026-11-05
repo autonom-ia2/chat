@@ -20,9 +20,9 @@
 #
 # As guardas são as das telas do cuidado de cada alvo, para ninguém ver aqui o que não vê lá:
 # - todas: a flag `meta_ads_comentarios_ia` (404 sem ela);
-# - post (SeusPostsCuidadoController): as flags `seus_posts` e `seus_posts_comentarios`, ver (`posts_view`) ou mudar
+# - post (SeusPostsCuidadoController): a flag `seus_posts` e a dos comentários da rede do post (#2520), ver (`posts_view`) ou mudar
 #   (`posts_manage`) e ver a caixa do perfil;
-# - anúncio (Crm::MetaAdsCuidadoController): a flag `meta_ads_gestao` e a dos comentários de ao menos uma rede, ver
+# - anúncio (Crm::MetaAdsCuidadoController): a flag dos comentários de ao menos uma rede (a gestão não, #2520), ver
 #   (`meta_ads_view`) ou mudar (`meta_ads_manage`), conexão ativa (sem ela, o anúncio sai da lista e abre com 404) e
 #   ver a caixa de TODAS as redes do anúncio.
 # Mudar e Testar pedem a chave de mudar do alvo: a mesma de editar o cuidado. A lista mostra só o que a pessoa pode ver;
@@ -32,9 +32,9 @@
 # com a ação de cada alvo.
 class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseController
   FLAG = Crm::MetaAds::ComentariosIa::Cuidar::FLAG
-  POST_FLAGS = Api::V1::Accounts::SeusPostsComentariosController::FLAGS
-  AD_FLAGS = ['meta_ads_gestao'].freeze
-  REDE_FLAGS = Crm::MetaAds::ComentariosIa::Anuncio::FLAGS.values.freeze
+  POST_FLAGS = %w[seus_posts].freeze
+  REDE_FLAGS_POR_REDE = Crm::MetaAds::ComentariosIa::Anuncio::FLAGS
+  REDE_FLAGS = REDE_FLAGS_POR_REDE.values.freeze
   AUDIT_ACTION = { 'post' => Api::V1::Accounts::SeusPostsCuidadoController::AUDIT_ACTION,
                    'ad' => Api::V1::Accounts::Crm::MetaAdsCuidadoController::AUDIT_ACTION }.freeze
   PERGUNTA_LIMIT = 1_000
@@ -115,17 +115,26 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
 
   # Ver: as flags do alvo, a chave de ver e, no post, a caixa do perfil (no anúncio, a caixa só sai da Meta: ao abrir).
   def ve?(care)
-    return false unless flags?(care.target_kind) && policy(care.target_kind).public_send(care.target_kind == 'post' ? :index? : :show?)
+    return false unless flags?(care.target_kind, care.network) &&
+                        policy(care.target_kind).public_send(care.target_kind == 'post' ? :index? : :show?)
 
     care.target_kind == 'ad' || (care.inbox.present? && SeusPosts::Caixa.new(inbox: care.inbox, viewer: pundit_user).ve?)
   end
 
-  def flags?(kind)
+  # #2520: a régua de tela, webhook e motor é a mesma: a flag do cuidado (ensure_flag) e a dos comentários da rede do
+  # cuidado (as duas valem para o das duas redes, e a lista de anúncios pede uma). A gestão de Anúncios não entra.
+  def flags?(kind, network = nil)
     ligada = ->(flag) { Current.account.feature_enabled?(flag) }
+    return false unless flags_da_rede(network).any?(&ligada)
     return POST_FLAGS.all?(&ligada) if kind == 'post'
 
     # O anúncio mora no CRM (#2479): sem ele, as telas do cuidado do anúncio (Crm::BaseController) não abrem.
-    ::Crm::Config.enabled? && AD_FLAGS.all?(&ligada) && REDE_FLAGS.any?(&ligada)
+    ::Crm::Config.enabled?
+  end
+
+  # A da rede do cuidado; o das duas redes (e a lista, sem rede) fica com qualquer uma.
+  def flags_da_rede(network)
+    REDE_FLAGS_POR_REDE.key?(network) ? [REDE_FLAGS_POR_REDE[network]] : REDE_FLAGS
   end
 
   def policy(kind)
@@ -140,7 +149,7 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
 
   def load_care
     @care = Crm::MetaAdsCommentCare.find_by(id: params[:id], account_id: Current.account.id)
-    raise Recusa, 'not_found' if @care.nil? || !flags?(@care.target_kind)
+    raise Recusa, 'not_found' if @care.nil? || !flags?(@care.target_kind, @care.network)
     raise Recusa, 'forbidden' unless ve?(@care)
   end
 
@@ -196,6 +205,7 @@ class Api::V1::Accounts::AgentesDoPostController < Api::V1::Accounts::BaseContro
     agora = Time.current
     religado = status == 'on' ? { started_at: agora, read_old_at: nil } : {}
     Crm::MetaAdsCommentCare.where(id: atual.id).update_all(status: status, updated_at: agora, **religado) # rubocop:disable Rails/SkipsModelValidations
+    Crm::MetaAds::ComentariosIa::AssinarFeedJob.para!(atual.reload) # #2520: voltar a cuidar no Facebook assina o `feed`
     true
   end
 

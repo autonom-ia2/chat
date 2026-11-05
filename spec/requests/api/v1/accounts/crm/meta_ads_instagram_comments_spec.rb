@@ -22,7 +22,7 @@ RSpec.describe 'CRM meta_ads_connection Instagram comments (#2196)', type: :requ
 
   before do
     create(:channel_instagram, account: account, instagram_id: ig_id, provider_name: 'lojaexemplo')
-    account.enable_features!('meta_ads_gestao', 'meta_ads_comentarios_instagram')
+    account.enable_features!('meta_ads_comentarios_instagram')
     create_meta_ads_insights_connection(account)
     stub_request(:get, meta_graph_url(ad_id)).with(query: hash_including({}))
                                              .to_return(status: 200, headers: json,
