@@ -107,7 +107,7 @@ No antigo, o `query_operator` de cada condição a liga à próxima, e o filtro 
 | `message_type` (incoming/outgoing) | `mensagem.tipo` (recebida/enviada), só no gatilho `mensagem.criada` |
 | `private_note` | `mensagem.privada`, só no gatilho `mensagem.criada` |
 | `crm_pipeline_id`, `crm_stage_id`, `crm_card_status` | `card.funil_id`, `card.etapa_id`, `card.status` |
-| atributo personalizado da conversa ou do contato | `conversa.atributos.<chave>`, `contato.atributos.<chave>`. Com texto em `equal_to`, ou com `not_equal_to`: **falta** (ver a nota abaixo) |
+| atributo personalizado da conversa ou do contato | `conversa.atributos.<chave>`, `contato.atributos.<chave>`. Atributo de texto em `equal_to`/`not_equal_to`: **falta** até a F9.0 (ver a nota abaixo) |
 | `mail_subject`, `content`, `city`, `company_name`, `country_code`, `browser_language`, `conversation_language`, `referer` | **falta**: o motor novo não tem esses valores |
 | `sla_policy_id` (EE) | **falta**, sem fase |
 
@@ -122,8 +122,9 @@ No antigo, o `query_operator` de cada condição a liga à próxima, e o filtro 
 **Nota sobre campo vazio (qualidade, 05/11):** no antigo, `not_equal_to` vira `NOT IN (...)` no SQL (`filter_service.rb:179`), e campo vazio (NULL) não casa. Por exemplo, "time diferente de 3" numa conversa sem time **não** dispara. O `diferente` novo trata o vazio como texto vazio e casa. Por isso, em campo de valor único, o conversor gera `todas[preenchido, diferente …]`. Nas etiquetas não, porque o antigo usa `NOT EXISTS` e a conversa sem etiqueta casa nos dois.
 
 **Nota sobre atributo personalizado (revisor, 05/11):** o antigo compara o texto do atributo em minúsculas e só com o 1º valor da lista (`filter_service.rb`, `string_filter_values`). O `not_equal_to` dele monta SQL quebrado (`custom_attribute_filter_helper.rb`, `not_in_custom_attr_query`): quando não é a última condição, o SQL é inválido e a regra nunca dispara; quando é a última, o `OR … IS NULL` escapa da precedência. O novo compara o texto como está.
-- `equal_to` com texto: falta `atributo_sem_maiusculas`, para a F9.0 (um `igual` que ignora maiúsculas).
-- `not_equal_to`: falta `diferente_de_atributo`. Copiar o defeito ou corrigir é decisão do Rodrigo; nenhuma conta usa hoje.
+- `equal_to` com texto: falta `atributo_sem_maiusculas`, para a F9.0 (um `igual` que ignora maiúsculas: `casecmp?`/`downcase` dos dois lados, sem regex).
+- `not_equal_to`: converte **corrigido** (Automação, 05/11: copiar um defeito de SQL não tem valor, e ninguém usa hoje). Vira `diferente`, e o atributo vazio conta como diferente, que era a intenção do `OR … IS NULL`. Com texto, também espera a F9.0.
+- O que é texto sai do tipo do atributo na conta (`text`, `link`, `list`, como no antigo), e não da classe do valor gravado.
 
 **Nota sobre `attribute_changed`:** ele é avaliado em Ruby, à parte do SQL, e se junta às outras condições por interseção e união de listas, não pela precedência do AND e do OR. Hoje é falta. Quando o PR2d da F6 trouxer os valores `evento.*`, o conversor precisa dessa outra regra de precedência.
 
@@ -190,7 +191,7 @@ O relatório não roda em produção, porque lá o acesso é só por psql. Os n�
   "faltas_por_fase": { "F6 (#2554)": 1, "F6 (P3: POST crm/follow_ups)": 1, "F6 PR2a'": 1, "F6 PR2d (proposta F9)": 7 } }
 ```
 
-O spec (`spec/services/autonomia/automacao/conversao/relatorio_spec.rb`, 17 exemplos, no PR #2581) confere, entre outras coisas:
+O spec (`spec/services/autonomia/automacao/conversao/relatorio_spec.rb`, 18 exemplos, no PR #2581) confere, entre outras coisas:
 - a receita do molde da conta 17 passa no esquema **e** na conferência do motor (`Receita#problemas`). Isso pegou um defeito do primeiro rascunho: faltava o `caminho` da ação;
 - o relatório não grava nada;
 - o agrupamento do AND e do OR está certo;
@@ -416,7 +417,7 @@ Nas palavras do Rodrigo: "pode fechar o motor antigo... com prazer. Vamos coloca
 3. **Antes da F9.2, PR próprio:** o Guia (`porteiro_da_automacao`) passa a montar no motor novo. A F9.2 depende dele, porque fecha a criação antiga.
 4. **F9.2, a troca:** a migration da tabela (P1) e do estado `do_antigo` no CHECK, o conversor, a divisão por instante com o advisory lock e a reivindicação (5.1), o gate versionado, a reversão, as travas da seção 7, o job da etapa reconferindo e o fechamento por conta (seção 10).
 5. **F9.3, a tela:** "Converter regras antigas" e "Reverter", com o relatório.
-6. **F9.0:** os dois itens da conta 16, depois da F6 PR2a' e da F7.
+6. **F9.0:** os três itens das contas 16 e 6 (`conversa.assunto_do_email`, `contem_texto` e o `igual` que ignora maiúsculas), depois da F6 PR2a' e da F7.
 7. **F9.5, o fim do antigo:** desligar o motor antigo depois da última conta; o código sai num PR próprio.
 
 **Primeira conta (P3, decidida pela Automação em 05/11):** o ensaio é na conta 1 (hub2you), com o molde da 17 montado à mão. A 17 só converte depois, com o OK do Rodrigo registrado na Issue. A escrita em produção é pela Orquestração Deploy, com aviso antes.
