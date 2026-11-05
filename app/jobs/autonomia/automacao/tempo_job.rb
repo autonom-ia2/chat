@@ -11,8 +11,6 @@ class Autonomia::Automacao::TempoJob < ApplicationJob
       next unless ::Autonomia::Automacao::Gatilhos.disponivel?(tipo, definicao.account)
 
       ::Autonomia::Automacao::TempoDaAutomacaoJob.perform_later(definicao.id, rodada)
-    rescue StandardError => e
-      Rails.logger.error("[automacao][tempo] não enfileirou automacao=#{definicao.id} #{e.class} em #{e.backtrace&.first}")
     end
   end
 

@@ -43,11 +43,14 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
   describe 'card parado' do
     let!(:definicao) { de_tempo('card.parado', etapa_id: proposta.id, dias: 3) }
 
-    it 'dispara uma vez em 10 varreduras seguidas' do
+    # O revisor do PR3a: o mesmo card achado de novo a cada rodada não passa pela cadeia (a marca no Redis) nem pelo INSERT.
+    it 'dispara uma vez em 10 varreduras seguidas, e as outras 9 nem entram na cadeia', :aggregate_failures do
       parado_desde(3.days.ago - 1.hour)
+      allow(Autonomia::Automacao::Cadeia).to receive(:entrar).and_call_original
       10.times { |vez| travel(15.minutes * vez) { varrer_tempo } }
 
       expect(execucoes.where(automacao: definicao).pluck(:alvo_id, :chave_gatilho)).to eq([[card.id, 'card.parado']])
+      expect(Autonomia::Automacao::Cadeia).to have_received(:entrar).once
     end
 
     it 'o card que sai da etapa e volta dispara de novo' do
@@ -161,6 +164,24 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
 
       expect(Autonomia::Automacao::Tempo).not_to have_received(:busca)
       Redis::Alfred.delete("automacao:tempo:rodando:#{definicao.id}")
+    end
+
+    it 'erro num alvo não para os outros, e o job falha no fim para aparecer no Sidekiq', :aggregate_failures do
+      outro = account.crm_cards.create!(pipeline: funil, stage: proposta, title: 'Outro', currency: 'BRL')
+      outro.update_columns(entered_stage_at: 3.days.ago - 1.hour) # rubocop:disable Rails/SkipsModelValidations
+      chamadas = 0
+      allow(Autonomia::Automacao::Partida).to receive(:new).and_wrap_original do |original, **opcoes|
+        chamadas += 1
+        raise ActiveRecord::Deadlocked if chamadas == 1
+
+        original.call(**opcoes)
+      end
+
+      expect do
+        Autonomia::Automacao::TempoDaAutomacaoJob.perform_now(definicao.id, Autonomia::Automacao::Tempo.rodada(Time.current).iso8601)
+      end.to raise_error(ActiveRecord::Deadlocked)
+      expect(execucoes.where(automacao: definicao).count).to eq(1)
+      expect(Redis::Alfred.get("automacao:tempo:rodando:#{definicao.id}")).to be_nil
     end
 
     it 'sem a flag, a conta fica de fora' do
