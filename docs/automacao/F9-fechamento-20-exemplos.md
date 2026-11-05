@@ -208,9 +208,9 @@ G11 → G4 → G12 → G14. G16, G17, G18 e G20 destravam os exemplos mais longo
 - **Só o WhatsApp oficial.** O termo diz "toda mensagem do cliente, em qualquer canal". Hoje o spec prova pelo WhatsApp
   oficial; os outros canais entram com o receptor de cada um (seção 3.2). Para contar inteiro, o exemplo roda em
   WhatsApp oficial, Híbrido e Instagram.
-- **Nota do "decidir" em toda mensagem normal.** O "decidir" deixa uma nota privada com o caminho e o porquê (F7.4),
-  inclusive no "nenhum se aplica". Com o gatilho em toda mensagem do cliente, cada mensagem normal ganha uma nota para
-  a equipe. O spec confere o comportamento de hoje; a decisão está na #2578 (frente F7).
+- **Nota do "decidir" em toda mensagem normal: decidido.** O "decidir" deixa uma nota privada com o caminho e o porquê
+  (F7.4), mas não no "nenhum se aplica" (#2578, PR #2589). Com o gatilho em toda mensagem do cliente, a mensagem normal
+  não ganha nota. O spec confere isso.
 
 ## 7. Os 5 itens "a conferir" (Parte A do #2570)
 

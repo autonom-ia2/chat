@@ -119,8 +119,10 @@ class Autonomia::ExclusaoDaConta # rubocop:disable Metrics/ClassLength
     ['Autonomia::Desempenho::Ficha', :por_conta],
     ['Autonomia::Insurance::Connection', :por_conta],
     ['Autonomia::AccountLink', :por_conta],
-    # Automação livre (#2414): registro, execução, versão e automação. A versão ativa da automação aponta para a
+    # Automação livre (#2414): conversão do antigo (F9), registro, execução, versão e automação. A conversão aponta
+    # para a automação sem cascata e guarda o backup da regra antiga. A versão ativa da automação aponta para a
     # versão com SET NULL, então as versões saem antes sem esbarrar nela.
+    ['Autonomia::Automacao::Conversao', :por_conta],
     ['Autonomia::Automacao::Registro', :por_conta],
     ['Autonomia::Automacao::Execucao', :por_conta],
     ['Autonomia::Automacao::Versao', :por_conta],
