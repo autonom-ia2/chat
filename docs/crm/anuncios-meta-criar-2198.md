@@ -201,9 +201,13 @@ Verificado na documentação oficial em 26/10/2026.
     Instagram ligada à Página, a opção aparece apagada, com o motivo, e o
     servidor recusa (`invalid_instagram`).
     [Fonte](https://developers.facebook.com/docs/marketing-api/ad-creative/messaging-ads/click-to-instagram)
-    A doc chama o campo da conta de `instagram_actor_id`; o criativo manda
-    `instagram_user_id`, o mesmo do site e do WhatsApp. **A primeira chamada
-    real confirma** (anúncio pausado de teste na conta 18).
+    A página do Direct ainda cita `instagram_actor_id`, mas a Marketing API
+    v22.0 trocou esse campo por `instagram_user_id`, que é o que o criativo
+    manda (o mesmo do site e do WhatsApp).
+    [Changelog v22.0](https://developers.facebook.com/docs/marketing-api/marketing-api-changelog/version22.0)
+    Vídeo único vale para os dois: as páginas de Messenger e Direct trazem
+    exemplo com `video_data`. **A primeira chamada real confirma** (anúncio
+    pausado de teste na conta 18).
   - **Site:** `OUTCOME_TRAFFIC`, `LINK_CLICKS`, `link` e botão `LEARN_MORE`
     (padrão) ou `SHOP_NOW`.
     [Fonte do link e do botão](https://developers.facebook.com/documentation/ads-commerce/marketing-api/get-started/basic-ad-creation/create-an-ad-creative)

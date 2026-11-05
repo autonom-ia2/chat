@@ -3622,6 +3622,7 @@
             "WEBSITE": "{offer}. See it on our website and place your order."
           },
           "NEED_SITE": "Type the website address to continue.",
+          "NEED_INSTAGRAM": "This Page has no Instagram linked. Choose another destination to continue.",
           "TEXT_READY": "Ready text: “{text}”",
           "TEXT_READY_EMPTY": "The text comes from what you sell.",
           "TEXT_CHANGE": "Change text",

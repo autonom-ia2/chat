@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import MetaAdsCreate from '../components/MetaAdsCreate.vue';
 import CrmMetaAdsConnectionAPI from 'dashboard/api/crmMetaAdsConnection';
 import { esquecerTentativas } from '../criacaoNaMeta';
@@ -554,7 +555,7 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     );
   });
 
-  it('a Page without Instagram refused by the server says to link one', async () => {
+  it('the invalid_instagram refusal from the server is translated, not "unknown"', async () => {
     CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(
       refusal(422, { error: 'invalid_instagram', nothing_created: true })
     );
@@ -564,5 +565,70 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     await submit(wrapper);
 
     expect(wrapper.text()).toContain(`${KEY}.ERRORS.INVALID_INSTAGRAM`);
+  });
+
+  const IG_PAGE = {
+    id: '110000000002161',
+    name: 'Loja',
+    instagram: { id: '178', username: 'loja' },
+  };
+  const directOption = wrapper =>
+    wrapper.find('[data-create-destination-option="INSTAGRAM_DIRECT"]');
+
+  it('Direct is off, with the reason, when the Page has no Instagram', async () => {
+    const wrapper = await mountCreate(MESSAGING);
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+
+    expect(directOption(wrapper).attributes('aria-disabled')).toBe('true');
+  });
+
+  it('a Direct ad goes out when the Page has Instagram', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
+    const wrapper = await mountCreate({ ...MESSAGING, pages: [IG_PAGE] });
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+    expect(directOption(wrapper).attributes('aria-disabled')).toBeUndefined();
+    await directOption(wrapper).trigger('click');
+    await fillUntilReview(wrapper);
+
+    await submit(wrapper);
+
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: 'INSTAGRAM_DIRECT',
+        page_id: IG_PAGE.id,
+        whatsapp_number: null,
+      })
+    );
+  });
+
+  it('Direct chosen, then a Page without Instagram: content asks for another destination', async () => {
+    const OTHER = '220000000002161';
+    const wrapper = await mountCreate({
+      ...MESSAGING,
+      pages: [IG_PAGE, { id: OTHER, name: 'Outra', instagram: null }],
+    });
+    const pickPage = async id => {
+      wrapper
+        .findAllComponents(ChoiceSelect)
+        .find(item => item.attributes('data-create-page') !== undefined)
+        .vm.$emit('update:modelValue', id);
+      await flushPromises();
+    };
+    await pickPage(IG_PAGE.id);
+    await submit(wrapper);
+    await wrapper.find('[data-create-destination-change]').trigger('click');
+    await directOption(wrapper).trigger('click');
+    await wrapper.find('[data-create-back]').trigger('click');
+    await flushPromises();
+    await pickPage(OTHER);
+    await submit(wrapper);
+    await wrapper.find('input[data-create-offer]').setValue('bolo de pote');
+    await wrapper.find('[data-create-media-library-toggle]').trigger('click');
+    await wrapper.find('[data-create-image="h1"]').trigger('click');
+
+    await submit(wrapper);
+
+    expect(step(wrapper)).toBe('CONTENT');
+    expect(wrapper.text()).toContain(`${KEY}.CONTENT.NEED_INSTAGRAM`);
   });
 });

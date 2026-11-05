@@ -241,6 +241,10 @@ const numberOptions = computed(() =>
 const contentMissing = computed(() => {
   const { destination, site_url: url, offer, media, text } = draft.value;
   if (destination === 'WEBSITE' && !siteValido(url)) return 'NEED_SITE';
+  // Direct escolhido e depois a troca para uma Página sem Instagram (#2560): a pessoa escolhe outro destino.
+  if (destination === 'INSTAGRAM_DIRECT' && !instagram.value) {
+    return 'NEED_INSTAGRAM';
+  }
   if (!offer.trim()) return 'NEED_OFFER';
   if (draft.value.uploading_media || draft.value.uploading_cards) {
     return 'UPLOADING';

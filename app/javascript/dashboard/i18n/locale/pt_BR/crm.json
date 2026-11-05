@@ -3623,6 +3623,7 @@
             "WEBSITE": "{offer}. Veja no site e faça seu pedido."
           },
           "NEED_SITE": "Digite o endereço do site para continuar.",
+          "NEED_INSTAGRAM": "Esta Página não tem Instagram ligado. Escolha outro destino para continuar.",
           "TEXT_READY": "Texto pronto: «{text}»",
           "TEXT_READY_EMPTY": "O texto sai do que você vende.",
           "TEXT_CHANGE": "Mudar texto",
