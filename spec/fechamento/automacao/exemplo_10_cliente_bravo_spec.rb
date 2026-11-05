@@ -16,8 +16,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
   let(:dona) { create(:user, account: account, role: :administrator, name: 'Carla Dona') }
   let(:fernanda) { create(:user, account: account, role: :agent, name: 'Fernanda Gerente') }
   let(:rafael) { create(:user, account: account, role: :agent, name: 'Rafael Vendas') }
-  let(:paulo) { create(:contact, account: account, name: 'Paulo', email: 'paulo@exemplo.com', phone_number: '+5511937016094') }
-  let(:contact_inbox) { create(:contact_inbox, inbox: inbox, contact: paulo, source_id: '5511937016094') }
+  let(:paulo) { create(:contact, account: account, name: 'Paulo', email: 'paulo@exemplo.com', phone_number: '+5511900000001') }
+  let(:contact_inbox) { create(:contact_inbox, inbox: inbox, contact: paulo, source_id: '5511900000001') }
   let(:conversa) do
     create(:conversation, account: account, inbox: inbox, contact: paulo, contact_inbox: contact_inbox, assignee: rafael, status: :open)
   end
@@ -100,7 +100,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
     it 'o cliente recebe pelo WhatsApp oficial a mensagem com o nome dele, sem a palavra Automação', :aggregate_failures do
       saidas = chamadas_para('graph.facebook.com')
       expect(saidas.size).to eq(1)
-      expect(saidas.sole.corpo).to include('to' => '5511937016094', 'type' => 'text')
+      expect(saidas.sole.corpo).to include('to' => '5511900000001', 'type' => 'text')
       expect(saidas.sole.corpo.dig('text', 'body')).to eq('Entendi, Paulo. A Fernanda, gerente, já está vendo seu caso')
       expect(saidas.sole.corpo.to_json).not_to include('Automação')
     end
@@ -109,7 +109,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       expect(ia_recebeu.size).to eq(2)
       enviado = ia_recebeu.to_json
       expect(enviado).to include('cobraram duas vezes')
-      expect(enviado).not_to include('paulo@exemplo.com', '5511937016094')
+      expect(enviado).not_to include('paulo@exemplo.com', '5511900000001')
     end
 
     it 'o histórico mostra cada passo feito, uma vez só, e o custo da IA', :aggregate_failures do
@@ -120,13 +120,17 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
     end
 
     it 'passo 6: espera a Fernanda responder por até 30 minutos; sem resposta, avisa o dono com o mesmo resumo' do
-      pending 'lacuna G11: o "esperar até" não tem valor que diga "a equipe respondeu depois do passo X"'
-      expect(FechamentoAutomacao::Lacunas.abertas(%w[G11])).to be_empty
+      # Só a metade "a equipe respondeu" da G11 (receita do passo combinada com a frente Motor G, #2414).
+      abertas = FechamentoAutomacao::Lacunas.valor?('conversa.equipe_respondeu') ? [] : %w[G11]
+      pending 'lacuna G11: o "esperar até" não tem o valor conversa.equipe_respondeu. ' \
+              'Quando passar: esperar_ate 30 minutos depois do "acalmar"; se vencer, resumir avisando a dona'
+      expect(abertas).to be_empty
     end
 
     it 'passo 2: tira a conversa da agente de IA' do
+      abertas = FechamentoAutomacao::Lacunas.abertas(%w[G15])
       pending 'lacuna G15: não está provado que a agente de IA (Agentes) deixa a conversa quando ela é atribuída a uma pessoa'
-      expect(FechamentoAutomacao::Lacunas.abertas(%w[G15])).to be_empty
+      expect(abertas).to be_empty
     end
   end
 
@@ -164,7 +168,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
   end
 
   it 'passo 8: conversa resolvida com a etiqueta reclamação vira card no quadro "Melhorias" com o resumo' do
+    abertas = FechamentoAutomacao::Lacunas.abertas(%w[G4])
     pending 'lacuna G4: criar card num funil/etapa não é passo da Automação livre (POST crm/cards fora da lista)'
-    expect(FechamentoAutomacao::Lacunas.abertas(%w[G4])).to be_empty
+    expect(abertas).to be_empty
   end
 end

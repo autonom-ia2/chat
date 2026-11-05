@@ -27,11 +27,18 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G11, G12, G13, G14']
   }
 
+  it 'sonda quebrada é erro, nunca pendente' do
+    stub_const('FechamentoAutomacao::Lacunas::SONDAS', { 'GX' => -> { raise NameError, 'classe renomeada' } })
+
+    expect { FechamentoAutomacao::Lacunas.abertas(%w[GX]) }.to raise_error(NameError)
+  end
+
   pendentes.each do |numero, (nome, lacunas)|
     it "exemplo #{numero}: #{nome}" do
-      codigos = lacunas.split(', ').map { |lacuna| lacuna.split.first }
-      pending "lacunas #{lacunas}"
-      expect(FechamentoAutomacao::Lacunas.abertas(codigos)).to be_empty
+      # Fora do `pending`: sonda quebrada (classe renomeada) é erro vermelho, não "falha esperada".
+      abertas = FechamentoAutomacao::Lacunas.abertas(lacunas.split(', ').map { |lacuna| lacuna.split.first })
+      pending "lacunas #{lacunas}. #{FechamentoAutomacao::Lacunas::SE_PASSOU % numero}"
+      expect(abertas).to be_empty
     end
   end
 end

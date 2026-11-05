@@ -126,7 +126,7 @@ module FechamentoAutomacao::Lacunas
     'G8' => -> { gatilho?('mensagem.falhou') },
     'G9' => -> { gatilho?('card.responsavel_mudou', 'conversa.responsavel_mudou') },
     'G10' => -> { gatilho?('etiqueta.posta', 'conversa.etiqueta_posta', 'contato.etiqueta_posta') },
-    'G11' => -> { valor?('conversa.respondida_pelo_cliente') && valor?('conversa.respondida_pela_equipe') },
+    'G11' => -> { valor?('conversa.equipe_respondeu') && valor?('conversa.cliente_respondeu') },
     'G12' => -> { gatilho?('reuniao.marcada') },
     'G13' => -> { passo?('webhook') },
     'G14' => -> { passo?('campanha') },
@@ -143,6 +143,10 @@ module FechamentoAutomacao::Lacunas
     'G25' => nil,
     'G26' => -> { passo?('sla') }
   }.freeze
+
+  # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
+  SE_PASSOU = 'Se este pendente passou, as lacunas do exemplo %s fecharam: mova-o para o arquivo próprio em ' \
+              'spec/fechamento/automacao/ com o spec de ponta a ponta, ou avise a sessão do fechamento (#2570).'.freeze
 
   # As lacunas da lista que ainda estão abertas.
   def abertas(codigos) = codigos.reject { |codigo| SONDAS.fetch(codigo)&.call }

@@ -154,7 +154,8 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 Cada lacuna tem uma sonda em `spec/support/fechamento_automacao.rb` (`FechamentoAutomacao::Lacunas::SONDAS`): uma
 pergunta ao código da main, como "o esquema da receita tem um passo `retorno`?" ou "algum gatilho roda no card?". O
 exemplo pendente é `pending` com corpo real: confere que as lacunas dele fecharam. Quando todas fecham, o pendente passa,
-o RSpec acusa ("Expected pending … to fail"), e o exemplo ganha o spec de ponta a ponta e sai da lista.
+o RSpec acusa ("Expected pending … to fail", com a instrução do que fazer), e o exemplo ganha o spec de ponta a ponta
+e sai da lista. A sonda roda antes do `pending`: sonda quebrada (classe renomeada) é erro vermelho, nunca pendente.
 
 A frente que fecha uma lacuna ajusta a sonda no mesmo PR se o nome que deu for outro (ex.: o passo se chama
 `criar_retorno`, não `retorno`). Sonda vazia (G15, G16, G18, G20, G22 a G25) é lacuna que nenhuma pergunta simples
@@ -209,7 +210,7 @@ G11 → G4 → G12 → G14. G16, G17, G18 e G20 destravam os exemplos mais longo
   WhatsApp oficial, Híbrido e Instagram.
 - **Nota do "decidir" em toda mensagem normal.** O "decidir" deixa uma nota privada com o caminho e o porquê (F7.4),
   inclusive no "nenhum se aplica". Com o gatilho em toda mensagem do cliente, cada mensagem normal ganha uma nota para
-  a equipe. O spec confere o comportamento de hoje; vale decidir se o "nenhum" deve anotar (frente F7).
+  a equipe. O spec confere o comportamento de hoje; a decisão está na #2578 (frente F7).
 
 ## 7. Os 5 itens "a conferir" (Parte A do #2570)
 
