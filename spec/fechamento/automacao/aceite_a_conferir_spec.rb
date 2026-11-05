@@ -115,6 +115,39 @@ RSpec.describe 'Fechamento #2414 · itens a conferir', :automacao_motor, :fecham
       expect(historico_de(automacao).last).to eq(%w[renovacao falhou fora_da_janela])
       expect(conversa.reload.priority).to be_nil
     end
+
+    it 'o "escrever" ao cliente também para, antes de chamar a IA', :aggregate_failures do
+      create(:message, conversation: conversa, account: account, inbox: canal.inbox, message_type: :incoming, content: 'oi',
+                       created_at: 30.hours.ago)
+      escrever = { id: 'escrever', tipo: 'escrever', le: %w[mensagens_recentes], instrucao: 'Lembre a renovação.', destino: 'mensagem' }
+      receita = { gatilho: { tipo: 'conversa.resolvida' }, passos: [escrever, prioridade_passo('depois')] }
+      automacao = montar_automacao(dona, account, nome: 'Renovação pela IA', receita: receita)
+      ligar_automacao(dona, account, automacao)
+
+      execucao = rodar(automacao)
+
+      expect(execucao.reload.estado).to eq('parada')
+      expect(historico_de(automacao).last).to eq(%w[escrever falhou fora_da_janela])
+      expect(a_request(:post, FechamentoAutomacao::OPENAI)).not_to have_been_made
+      expect(conversa.reload.priority).to be_nil
+    end
+
+    # Só a janela fechada para: os outros motivos de pular seguem para o passo seguinte, como antes.
+    it 'contato que pediu para não receber: pula e segue para o passo seguinte', :aggregate_failures do
+      create(:message, conversation: conversa, account: account, inbox: canal.inbox, message_type: :incoming, content: 'oi',
+                       created_at: 1.hour.ago)
+      contato.update!(blocked: false)
+      allow(Contact).to receive(:opted_out).and_return(Contact.where(id: contato.id))
+      receita = { gatilho: { tipo: 'conversa.resolvida' }, passos: [mensagem_passo('renovacao', 'Oi.'), prioridade_passo('depois')] }
+      automacao = montar_automacao(dona, account, nome: 'Renovação', receita: receita)
+      ligar_automacao(dona, account, automacao)
+
+      execucao = rodar(automacao)
+
+      expect(execucao.reload.estado).to eq('concluida')
+      expect(historico_de(automacao)).to eq([%w[renovacao pulado contato_nao_recebe], ['depois', 'ok', nil]])
+      expect(conversa.reload.priority).to eq('urgent')
+    end
   end
 
   # F6.7: "Card movido pela automação não é desfeito pela IA do funil na avaliação seguinte, mesmo com 'Mover
