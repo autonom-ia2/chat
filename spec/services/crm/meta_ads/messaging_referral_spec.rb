@@ -140,6 +140,22 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     expect(described_class.attribute!(without, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)
   end
 
+  it 'dono do anúncio: a falha passageira da Graph não fica guardada, a resposta definitiva fica' do
+    allow(Rails).to receive(:cache).and_return(ActiveSupport::Cache::MemoryStore.new)
+    page = create(:channel_facebook_page)
+    create(:channel_facebook_page, page_id: page.page_id)
+    mine = create(:conversation, account: page.inbox.account, inbox: page.inbox)
+    create_meta_ads_insights_connection(mine.account, ad_account_id: '700000')
+    graph = stub_request(:get, %r{graph\.facebook\.com/.*/120200000000000001\?})
+            .to_return({ status: 503, body: '' },
+                       { status: 200, headers: { 'Content-Type' => 'application/json' }, body: { account_id: '700000' }.to_json })
+
+    expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.1')).to be(false)
+    expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.2')).to be(true)
+    expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.3')).to be(true)
+    expect(graph).to have_been_requested.twice
+  end
+
   it 'um clique guardado com defeito não leva os outros' do
     inbox = conversation.inbox
     contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')

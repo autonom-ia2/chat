@@ -17,7 +17,7 @@
 # - R$ de venda segue `sales_value_view` (#2075, `perfil[:valor]`): sem ela, os valores e o retorno vêm nil e
 #   `valorOculto: true`; as contagens ficam.
 # - "Qual anúncio trouxe venda" (título, miniatura e id do anúncio) só para quem vê o anúncio de origem
-#   (Crm::AnuncioDeOrigem.ve?, `perfil[:anuncio]`, #2271/#2521): sem ele, `anuncios` vem vazio; a origem "anúncio da
+#   (Crm::AnuncioDeOrigem.ve_no_contexto?, `perfil[:anuncio]`, #2271/#2521): sem ele, `anuncios` vem vazio; a origem "anúncio da
 #   Meta" e as contagens ficam.
 class Crm::Numeros::Origens::Tela
   def initialize(account:, mes:, funis:, perfil:)

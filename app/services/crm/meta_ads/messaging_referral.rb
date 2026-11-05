@@ -118,15 +118,22 @@ module Crm::MetaAds::MessagingReferral
   end
 
   # O anúncio é da conta de anúncios conectada nesta conta? GET /<ad_id>?fields=account_id com o token da conexão.
-  # Sem conexão ativa ou sem resposta, não. Guardado por 1 hora (as caixas da Página perguntam o mesmo anúncio).
+  # Sem conexão ativa ou sem resposta, não. A resposta definitiva fica guardada por 1 hora (as caixas da Página perguntam
+  # o mesmo anúncio); a falha passageira (rede, 5xx, limite) não fica, e o próximo clique pergunta de novo.
   def owner?(account_id, ad_id)
     connection = Crm::MetaAdsConnection.active.find_by(account_id: account_id)
     return false if connection&.ad_account_id.blank?
 
-    Rails.cache.fetch("meta_ads:dono_do_anuncio:#{account_id}:#{ad_id}", expires_in: OWNER_CACHE) do
-      result = Meta::AdsGraphClient.new(access_token: connection.read_token).object(ad_id, fields: 'account_id')
-      result.ok && result.data.to_h['account_id'].to_s.delete_prefix('act_') == connection.ad_account_id.to_s.delete_prefix('act_')
-    end
+    key = "meta_ads:dono_do_anuncio:#{account_id}:#{ad_id}"
+    cached = Rails.cache.read(key)
+    return cached unless cached.nil?
+
+    result = Meta::AdsGraphClient.new(access_token: connection.read_token).object(ad_id, fields: 'account_id')
+    return false if result.transient?
+
+    owner = result.ok && result.data.to_h['account_id'].to_s.delete_prefix('act_') == connection.ad_account_id.to_s.delete_prefix('act_')
+    Rails.cache.write(key, owner, expires_in: OWNER_CACHE)
+    owner
   end
 
   def known_ad?(account_ids, ad_id)
