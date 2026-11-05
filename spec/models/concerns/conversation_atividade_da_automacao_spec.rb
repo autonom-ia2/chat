@@ -19,8 +19,9 @@ RSpec.describe ConversationAtividadeDaAutomacao do
 
   after { Current.reset }
 
-  def pela_automacao(origem = "automacao:#{automacao.id}", &)
-    Autonomia::Automacao::Cadeia.restaurada([origem], account.id, &)
+  # O ato é aberto pelo AcoesDoMotor em volta do pedido da automação (ver acoes_do_motor_spec, de ponta a ponta).
+  def pela_automacao(id = automacao.id, &)
+    Autonomia::Automacao::Ato.da(id, &)
   end
 
   def atividades
@@ -85,14 +86,15 @@ RSpec.describe ConversationAtividadeDaAutomacao do
   it 'automação de outra conta não empresta o nome' do
     outra = create(:autonomia_automacao, nome: 'De fora')
 
-    pela_automacao("automacao:#{outra.id}") { conversation.update!(status: :resolved) }
+    pela_automacao(outra.id) { conversation.update!(status: :resolved) }
 
     expect(atividades).to include(I18n.t('conversations.activity.status.resolved', user_name: 'Juliana Prado'))
   end
 
-  it 'fora de uma Automação livre segue como antes' do
-    pela_automacao('regra:12') { conversation.update!(assignee: juliana) }
+  it 'quem herda a cadeia da automação no evento não assina como ela' do
+    Autonomia::Automacao::Cadeia.restaurada(["automacao:#{automacao.id}"], account.id) { conversation.update!(assignee: juliana) }
 
     expect(atividades).to include(I18n.t('conversations.activity.assignee.self_assigned', user_name: 'Juliana Prado'))
+    expect(atividades.join).not_to include('Boas-vindas')
   end
 end

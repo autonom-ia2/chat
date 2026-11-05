@@ -3,9 +3,9 @@
 # (Autonomia::Guide::ChamadaInterna) como quem a ligou. Sem isto, a atividade dizia "por Juliana", e a atribuição para
 # a própria Juliana virava "Juliana atribuiu a si mesma" e não a avisava.
 #
-# Quem age vem da cadeia (Autonomia::Automacao::Cadeia.automacao_livre), não do `Current`: o pedido de dentro mexe no
-# `Current`, a cadeia sobrevive a ele. Fora de uma Automação livre (pessoa, regra antiga, automação de etapa), tudo
-# segue como antes.
+# Quem age vem do ato (Autonomia::Automacao::Ato), aberto só em volta do pedido que a automação faz. Não vem da cadeia:
+# ela viaja no evento, e quem age depois (Atribuição, agente de IA) a herda sem ter sido a automação. Fora desse
+# pedido (pessoa, regra antiga, automação de etapa, listener do evento), tudo segue como antes.
 module ConversationAtividadeDaAutomacao
   extend ActiveSupport::Concern
 
@@ -30,7 +30,7 @@ module ConversationAtividadeDaAutomacao
 
   # Um save chama isto várias vezes (texto, atribuição, aviso): uma consulta por automação, guardada na conversa.
   def automacao_livre_que_age
-    id = Autonomia::Automacao::Cadeia.automacao_livre&.dig(:id)
+    id = Autonomia::Automacao::Ato.automacao_id
     return unless id
 
     @automacao_livre_que_age ||= {}
