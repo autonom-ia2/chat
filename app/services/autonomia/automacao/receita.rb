@@ -76,7 +76,19 @@ class Autonomia::Automacao::Receita
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
     lidos = ::Autonomia::Automacao::Texto.caminhos(passo['texto']).flat_map { |caminho| problemas_do_caminho(id, caminho) }
-    desligado + lidos + destinatarios_de_fora(passo)
+    desligado + lidos + destinatarios_de_fora(passo) + problemas_do_modelo(id, passo['modelo'])
+  end
+
+  # F4b (#2468): os valores de cada variável, como os do texto, e o modelo pronto (aprovado, de categoria aceita e com
+  # as mesmas variáveis) em pelo menos uma caixa WhatsApp oficial da conta. Na hora de mandar vale a caixa da conversa.
+  def problemas_do_modelo(id, modelo)
+    return [] if modelo.nil?
+
+    lidos = Array(modelo['variaveis']).flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }
+                                      .flat_map { |caminho| problemas_do_caminho(id, caminho) }
+    return lidos if @conta.nil? || ::Autonomia::Automacao::ModeloWhatsapp.na_conta?(@conta, modelo)
+
+    lidos + [texto(:modelo_indisponivel, passo: id, nome: modelo['nome'])]
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da

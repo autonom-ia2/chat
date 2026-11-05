@@ -147,7 +147,8 @@
       "TROCAR": "Replace what was already filled in",
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
-      "LINHAS": "Summary length (lines)"
+      "LINHAS": "Summary length (lines)",
+      "MODELO": "If the 24-hour window is closed"
     },
     "OPCOES": {
       "STATUS": {
@@ -340,7 +341,17 @@
       "DADO_APAGADO": "Deleted detail: {dado}",
       "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it.",
       "FILTRO_ENTRA": "When you save, \"Only if\" gets: {condicao}. You can change or remove it later.",
-      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\"."
+      "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\".",
+      "MODELO": {
+        "DICA": "On official WhatsApp, 24 hours after the customer's last message, free text can't be sent. Pick a Meta-approved template to send instead; Meta charges for each template sent. With the window open, the text above is sent.",
+        "NENHUM": "Don't send anything (the step is skipped)",
+        "OPCAO": "{nome} ({idioma})",
+        "SEM_MODELOS": "No official WhatsApp inbox you can see has an approved utility template. Create and approve one in Templates.",
+        "DIVERGENTE": "This template has different text in another inbox. Each conversation gets its own inbox's template; if it asks for other variables there, the message is not sent.",
+        "MUDOU": "The template now asks for {quantas} variables. Fill in all of them before saving.",
+        "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
+        "VARIAVEL": "Template variable {numero}"
+      }
     },
     "LIGAR": {
       "BOTAO": "Turn on",
@@ -474,7 +485,8 @@
           "CONTATO": "{campo}, in the contact",
           "EMPRESA": "{campo}, in the company"
         }
-      }
+      },
+      "MODELO_FORA_DA_JANELA": "If the 24-hour window is closed, the template {modelo} is sent (charged by Meta)."
     },
     "RECEITAS": {
       "COMO_COMECAR": "How do you want to start?",

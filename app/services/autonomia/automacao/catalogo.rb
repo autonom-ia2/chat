@@ -44,7 +44,8 @@ module Autonomia::Automacao::Catalogo
                        # F7: os passos de IA.
                        'leituras' => 'leituras', 'instrucao' => 'instrucao', 'caminhos' => 'caminhos',
                        'campos_extrair' => 'campos_extrair', 'destino_escrever' => 'destino_escrever',
-                       'destino_resumir' => 'destino_resumir' }.freeze
+                       # F4b (#2468): o modelo da Meta do passo "mensagem".
+                       'destino_resumir' => 'destino_resumir', 'modelo_whatsapp' => 'modelo_whatsapp' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar".
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero' }.freeze
 
