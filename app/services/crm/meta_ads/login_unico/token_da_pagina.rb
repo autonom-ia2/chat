@@ -8,6 +8,14 @@
 # Meta pelo token da Página, e reautorizar é entrar de novo com o Facebook. Nenhum token sai daqui em log, erro ou
 # resposta.
 class Crm::MetaAds::LoginUnico::TokenDaPagina
+  # Código de erro para uma leitura da Meta que falhou com o token da conexão. Também usado por LigarPagina.
+  def self.failure(result)
+    return 'reconnect' if result.token_invalid?
+    return 'meta_unavailable' if result.transient?
+
+    'page_not_granted'
+  end
+
   def initialize(connection)
     @connection = connection
   end
@@ -16,20 +24,11 @@ class Crm::MetaAds::LoginUnico::TokenDaPagina
   # (o acesso do login venceu) ou `page_not_granted` (a Página não veio neste login).
   def call(page_id)
     result = Meta::AdsGraphClient.new(access_token: @connection.read_token).page_access_token(page_id)
-    return { error: failure(result) } unless result.ok
+    return { error: self.class.failure(result) } unless result.ok
 
     page_token = result.data.to_h['access_token'].presence
     return { error: 'page_not_granted' } if page_token.blank?
 
     { page: page_token, user: @connection.read_token }
-  end
-
-  private
-
-  def failure(result)
-    return 'reconnect' if result.token_invalid?
-    return 'meta_unavailable' if result.transient?
-
-    'page_not_granted'
   end
 end

@@ -142,6 +142,23 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
     expect(a_request(:get, meta_graph_url(page_id)).with(query: hash_including(fields: 'access_token'))).not_to have_been_made
   end
 
+  [[500, 2, 'meta_unavailable'], [400, 190, 'reconnect']].each do |status, code, error|
+    it "Página que já tem caixa e a lista de permissões falha com #{code}: 422 #{error} e o token da caixa fica" do
+      stub_page_token
+      stub_request(:get, meta_graph_url('me/permissions'))
+        .to_return(status: status, headers: json, body: { error: { code: code } }.to_json)
+      channel = create(:channel_facebook_page, account: account, page_id: page_id)
+      create(:inbox, account: account, channel: channel)
+      old_token = channel.page_access_token
+
+      post "#{path}/pagina", params: { page_id: page_id }, headers: admin.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['error']).to eq(error)
+      expect(channel.reload.page_access_token).to eq(old_token)
+      expect(a_request(:get, meta_graph_url(page_id)).with(query: hash_including(fields: 'access_token'))).not_to have_been_made
+    end
+  end
+
   it 'a Meta não dá o token da Página: 422 page_not_granted e nada é criado' do
     stub_page_token(token: nil)
 

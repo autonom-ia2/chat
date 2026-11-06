@@ -44,10 +44,11 @@ class Crm::MetaAds::LoginUnico::LigarPagina
   private
 
   # A caixa que já funciona só troca de token se este login concedeu o que ela usa. Sem isso, o Messenger dela pararia
-  # em silêncio (o login de Anúncios pode ter vindo sem as permissões da caixa). Sem a lista da Meta, não troca às cegas.
+  # em silêncio (o login de Anúncios pode ter vindo sem as permissões da caixa). Sem a lista da Meta, não troca às cegas:
+  # o acesso vencido pede `reconnect`; a Meta fora, `meta_unavailable`.
   def ensure_inbox_permissions!
     result = Meta::AdsGraphClient.new(access_token: @connection.read_token).permissions
-    raise Error, 'meta_unavailable' unless result.ok
+    raise Error, Crm::MetaAds::LoginUnico::TokenDaPagina.failure(result) unless result.ok
 
     granted = Array(result.data.to_h['data']).filter_map { |row| row['permission'] if row.is_a?(Hash) && row['status'] == 'granted' }
     raise Error, 'missing_permissions' unless (INBOX_PERMISSIONS - granted).empty?
