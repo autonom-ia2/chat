@@ -78,6 +78,17 @@ RSpec.describe Crm::MetaAds::InstagramPrivateReply do
       expect(Messages::EnvioAutomatico.automatico?(message)).to be(true)
     end
 
+    it 'o eco do Instagram que chegou antes fica com a marca da IA, sem mensagem duplicada' do
+      conversation = create(:conversation, account: account, inbox: channel.inbox)
+      eco = create(:message, account: account, inbox: channel.inbox, conversation: conversation, message_type: :outgoing,
+                             source_id: 'mid-1', content_attributes: { 'external_echo' => true })
+
+      message = enviar(actor: 'ai')[:message]
+
+      expect(message).to eq(eco)
+      expect(eco.reload.content_attributes.to_h).to include('external_echo' => true, marca => be_present)
+    end
+
     it 'o da tela fica com a pessoa que clicou, sem marca' do
       message = enviar(actor: 'user', user: user)[:message]
 
@@ -90,6 +101,8 @@ RSpec.describe Crm::MetaAds::InstagramPrivateReply do
       expect(Autonomia::Agents::Operate::PessoaDaEquipe::MARCAS_DE_ENVIO_AUTOMATICO).to include(marca)
     end
 
+    # O índice único é (network, comment_id, action): o id do comentário é da Meta, único entre contas. Uma linha de
+    # outra conta com o mesmo id não é desta, e a limpeza não a toca.
     it 'a reserva vencida de outra conta com o mesmo comment_id não é apagada' do
       outra = create(:account)
       vencida = Crm::MetaAdsCommentAction.create!(account: outra, network: 'instagram', comment_id: 'c-1', action: 'private_reply',
