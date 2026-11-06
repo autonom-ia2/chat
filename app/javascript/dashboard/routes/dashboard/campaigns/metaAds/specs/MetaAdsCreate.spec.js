@@ -713,6 +713,51 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     expect(step(wrapper)).toBe('GOAL');
   });
 
+  it('with two Pages, the profile is offered when one has Instagram, and the Page chosen is checked at the photo', async () => {
+    const OTHER = '220000000002161';
+    const wrapper = await mountCreate(
+      {
+        ...PROFILE,
+        pages: [IG_PAGE, { id: OTHER, name: 'Outra', instagram: null }],
+      },
+      null
+    );
+    expect(
+      wrapper.find('[data-create-goal-unavailable="PROFILE"]').exists()
+    ).toBe(false);
+
+    await wrapper.find('[data-create-goal="PROFILE"]').trigger('click');
+    await flushPromises();
+    expect(step(wrapper)).toBe('WHERE');
+    const pickPage = async id => {
+      wrapper
+        .findAllComponents(ChoiceSelect)
+        .find(item => item.attributes('data-create-page') !== undefined)
+        .vm.$emit('update:modelValue', id);
+      await flushPromises();
+    };
+    await pickPage(OTHER);
+    await submit(wrapper);
+    await wrapper.find('input[data-create-offer]').setValue('bolo de pote');
+    await wrapper.find('[data-create-media-library-toggle]').trigger('click');
+    await wrapper.find('[data-create-image="h1"]').trigger('click');
+    await submit(wrapper);
+
+    expect(step(wrapper)).toBe('CONTENT');
+    expect(wrapper.text()).toContain(`${KEY}.CONTENT.NEED_INSTAGRAM`);
+  });
+
+  it('an Instagram account without its @ cannot take a profile ad', async () => {
+    const wrapper = await mountCreate(
+      { ...PROFILE, pages: [{ ...IG_PAGE, instagram: { id: '178' } }] },
+      null
+    );
+
+    expect(
+      wrapper.find('[data-create-goal-unavailable="PROFILE"]').exists()
+    ).toBe(true);
+  });
+
   it('a profile ad about insurance or credit explains it and goes back to the destination question', async () => {
     const wrapper = await mountCreate(PROFILE, 'PROFILE');
     await wrapper.find('input[data-create-offer]').setValue('seguro auto');

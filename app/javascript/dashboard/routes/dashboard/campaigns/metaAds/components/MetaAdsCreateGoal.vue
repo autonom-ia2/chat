@@ -10,8 +10,8 @@ const props = defineProps({
   modelValue: { type: String, default: null },
   // Destinos confirmados para a conta, na ordem da tela.
   destinations: { type: Array, required: true },
-  // Conta profissional do Instagram ligada à Página: { username } ou null.
-  instagram: { type: Object, default: null },
+  // Alguma Página que a pessoa pode usar tem conta profissional do Instagram com @ (a escolhida, se já escolheu).
+  profileReady: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['choose']);
@@ -25,7 +25,7 @@ const offered = computed(() =>
 );
 
 const reasonFor = goal =>
-  goal === 'PROFILE' && !props.instagram ? 'NO_INSTAGRAM' : '';
+  goal === 'PROFILE' && !props.profileReady ? 'NO_INSTAGRAM' : '';
 
 const choose = goal => {
   if (reasonFor(goal)) return;

@@ -221,6 +221,20 @@ const chosenPage = computed(() =>
 );
 // O Instagram da Página escolhida (cada Página tem o seu, ou nenhum).
 const instagram = computed(() => chosenPage.value?.instagram || null);
+// O que cada destino do Instagram precisa da conta: o Direct, que ela exista; o perfil, também o @ (#2564).
+const INSTAGRAM_NEEDS = {
+  INSTAGRAM_DIRECT: account => Boolean(account),
+  INSTAGRAM_PROFILE: account => Boolean(account?.username),
+};
+const instagramReady = destination =>
+  !INSTAGRAM_NEEDS[destination] ||
+  INSTAGRAM_NEEDS[destination](instagram.value);
+// Na pergunta do destino a Página ainda pode não estar escolhida (2 ou mais): vale se alguma delas serve. A Página
+// escolhida depois é conferida no passo da foto (NEED_INSTAGRAM).
+const instagramPossible = destination =>
+  draft.value.page_id
+    ? instagramReady(destination)
+    : pages.value.some(page => INSTAGRAM_NEEDS[destination](page.instagram));
 
 // O botão do anúncio: o do destino; no post, o do post.
 const action = computed(() =>
@@ -269,12 +283,7 @@ const contentMissing = computed(() => {
   const { destination, site_url: url, offer, media, text } = draft.value;
   if (destination === 'WEBSITE' && !siteValido(url)) return 'NEED_SITE';
   // Direct escolhido e depois a troca para uma Página sem Instagram (#2560): a pessoa escolhe outro destino.
-  if (
-    ['INSTAGRAM_DIRECT', 'INSTAGRAM_PROFILE'].includes(destination) &&
-    !instagram.value
-  ) {
-    return 'NEED_INSTAGRAM';
-  }
+  if (!instagramReady(destination)) return 'NEED_INSTAGRAM';
   if (!offer.trim()) return 'NEED_OFFER';
   if (draft.value.uploading_media || draft.value.uploading_cards) {
     return 'UPLOADING';
@@ -448,7 +457,7 @@ const submit = () => {
 // só segue em destino que aceita.
 const usable = option =>
   (option !== 'WHATSAPP' || numbers.value.length > 0) &&
-  (option !== 'INSTAGRAM_DIRECT' || Boolean(instagram.value));
+  (!INSTAGRAM_NEEDS[option] || instagramPossible(option));
 const firstUsable = list => list.find(usable) || list[0];
 const chooseGoal = value => {
   const list = destinations.value.filter(option =>
@@ -549,9 +558,7 @@ const goToInboxes = () =>
 // de parar. O Direct só serve com a conta do Instagram ligada à Página.
 const otherDestination = computed(() =>
   destinations.value.find(
-    option =>
-      option !== 'WHATSAPP' &&
-      (option !== 'INSTAGRAM_DIRECT' || Boolean(instagram.value))
+    option => option !== 'WHATSAPP' && instagramReady(option)
   )
 );
 const adWithoutWhatsapp = () => {
@@ -737,7 +744,7 @@ const BLOCKERS = {
           v-else-if="current === 'GOAL'"
           :model-value="goal"
           :destinations="destinations"
-          :instagram="instagram"
+          :profile-ready="instagramPossible('INSTAGRAM_PROFILE')"
           @choose="chooseGoal"
         />
 
