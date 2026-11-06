@@ -2485,7 +2485,8 @@
           "TRUST": {
             "SAFE": "We only see the numbers. Nothing changes in your ads",
             "TIME": "No password, no key",
-            "OFF": "Turn it off anytime"
+            "OFF": "Turn it off anytime",
+            "SAFE_LOGIN_UNICO": "You choose what to link. Nothing is published unless you say so"
           },
           "COPY": {
             "TITLE": "Copy the {partner} code",
@@ -2549,7 +2550,26 @@
             "DESTINATION_LATER": "Choose later",
             "DESTINATION_LATER_HINT": "The account is connected. Choose where your ads lead in the Connection tab.",
             "PAGE_MISSING": "The website page is not linked yet. Link it so we count the visits from your ads.",
-            "PAGE_LINK": "Link"
+            "PAGE_LINK": "Link",
+            "WORKS": {
+              "TITLE": "What already works",
+              "SPEND": "Spend of each ad",
+              "CREATE": "Create and boost ads",
+              "COMMENTS_FACEBOOK": "Facebook comments",
+              "FORMS": "Sign-up forms",
+              "POSTS": "Your posts' numbers",
+              "COMMENTS_INSTAGRAM": "Instagram comments",
+              "MESSAGES_INSTAGRAM": "Instagram messages",
+              "READY": "Working",
+              "MISSING_PAGE": "Page missing",
+              "MISSING_INSTAGRAM": "Instagram missing",
+              "MISSING_PERMISSION": "Not allowed",
+              "FIX_TEXT": "In the Facebook window, a permission was left unchecked. Sign in again and keep everything checked: only what was missing changes.",
+              "FIX": "Sign in again",
+              "MISSING_INSTAGRAM_TAP": "One more tap",
+              "INSTAGRAM_TEXT": "Instagram Direct and comments arrive here after you link Instagram, with one tap.",
+              "INSTAGRAM_CTA": "Link Instagram"
+            }
           },
           "GUIDE": {
             "LABEL": "Where to tap on Meta",
@@ -2573,6 +2593,7 @@
             "STEPS": {
               "ENTER": "Sign in with Facebook",
               "CHOOSE": "Confirm your account",
+              "PAGE": "Check your Page",
               "WHERE": "Choose where",
               "SEE": "See your spend"
             },
@@ -2584,7 +2605,33 @@
             "REFUSED_TITLE": "Facebook did not share your ads",
             "BROKEN": "The connection with Meta dropped. Sign in again to see your spend.",
             "SOMEONE": "Someone else takes care of my ads",
-            "PARTNER": "Share through Business Manager"
+            "PARTNER": "Share through Business Manager",
+            "TEXT_LOGIN_UNICO": "Sign in with the same Facebook you use to create your ads. One sign-in links your ad account and Page.",
+            "WAITING_LOGIN_UNICO": "The Facebook window is open. Keep everything checked, including your Page, and tap \"Next\" until \"Done\"."
+          },
+          "PAGE": {
+            "LOADING": "Looking for your Page…",
+            "TITLE": "Is this your business Page?",
+            "TEXT_PAGE": "With the Page linked, Facebook comments and forms arrive here.",
+            "FACEBOOK": "Facebook Page",
+            "FOLLOWERS": "{count} followers",
+            "CONTINUE": "Yes, this one",
+            "NOT_THIS": "Not this Page",
+            "CHOOSE_TITLE": "Which Page is your business?",
+            "CHOOSE_TEXT": "You checked more than one. Choose the one your ads show.",
+            "CHOOSE_CTA": "Continue",
+            "NONE_TITLE": "Your Page was not checked",
+            "NONE_TEXT": "Sign in again and, in the Facebook window, check your business Page. Without it, comments and forms don't arrive here.",
+            "WRONG_TITLE": "Let's change the Page",
+            "WRONG_TEXT": "Sign in again and, in the Facebook window, check only your business Page.",
+            "SIGN_IN_AGAIN": "Sign in again",
+            "NO_PAGE": "I don't have a Facebook Page",
+            "FAILED": "We couldn't see your Pages now. Go on without them and link them later in the Connection tab.",
+            "CONTINUE_WITHOUT": "Go on without the Page",
+            "CHOOSE_PLACEHOLDER": "Choose your Page",
+            "ERROR_NOT_GRANTED": "Facebook didn't share this Page. Tap \"Not this Page\", sign in again and check the Page in the Facebook window.",
+            "ERROR_FORBIDDEN": "Only people who manage inboxes can link the Page. Ask an administrator.",
+            "ERROR_FAILED": "We couldn't link the Page now. Try again in a few minutes."
           }
         },
         "PENDING": {

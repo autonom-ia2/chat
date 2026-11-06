@@ -448,6 +448,9 @@ Rails.application.routes.draw do
               get 'ads/:ad_id/management', to: 'meta_ads_ad_management#show'
               post 'ads/:ad_id/status', to: 'meta_ads_ad_management#status'
               get :pages, to: 'meta_ads_ad_management#pages'
+              # Login único (#2338): a Página vem do mesmo login dos Anúncios.
+              get :paginas, to: 'meta_ads_pagina#index'
+              post :pagina, to: 'meta_ads_pagina#create'
               # Destino (#2338): ligar a página do site sem sair de Anúncios.
               get :site_pages, to: 'meta_ads_site_pages#index'
               post :site_pages, to: 'meta_ads_site_pages#create'

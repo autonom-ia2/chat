@@ -1505,6 +1505,10 @@
     "controller": "api/v1/accounts/crm/meta_ads_ad_management#pages",
     "parametros": []
   },
+  "crm/meta_ads_connection/paginas": {
+    "controller": "api/v1/accounts/crm/meta_ads_pagina#index",
+    "parametros": []
+  },
   "crm/meta_ads_connection/panel": {
     "controller": "api/v1/accounts/crm/meta_ads_connections#panel",
     "parametros": [
