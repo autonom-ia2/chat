@@ -29,9 +29,12 @@ export const GOAL_ICONS = {
 };
 export const objetivoDoDestino = destination =>
   Object.keys(GOALS).find(goal => GOALS[goal].includes(destination)) || null;
-// O anúncio de perfil não vai com categoria especial (doc da Meta: special_ad_categories precisa ser NONE).
+// O anúncio de perfil não vai com categoria especial (doc da Meta: special_ad_categories precisa ser NONE). Post
+// impulsionado não tem esse destino, mesmo que o rascunho guarde o do anúncio novo de antes.
 export const perfilComCategoriaEspecial = draft =>
-  draft.destination === 'INSTAGRAM_PROFILE' && draft.special_category === true;
+  draft.kind !== 'post' &&
+  draft.destination === 'INSTAGRAM_PROFILE' &&
+  draft.special_category === true;
 
 export const SITE_ACTIONS = ['LEARN_MORE', 'SHOP_NOW'];
 

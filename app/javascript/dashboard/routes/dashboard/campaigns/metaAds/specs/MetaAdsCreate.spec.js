@@ -745,6 +745,47 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
 
     expect(step(wrapper)).toBe('CONTENT');
     expect(wrapper.text()).toContain(`${KEY}.CONTENT.NEED_INSTAGRAM`);
+
+    await wrapper.find('[data-create-content-change-goal]').trigger('click');
+    await flushPromises();
+    expect(step(wrapper)).toBe('GOAL');
+  });
+
+  it('going from the profile to the website starts again from Automatic, not only Instagram', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
+    const wrapper = await mountCreate(PROFILE, 'PROFILE');
+    await wrapper.find('[data-create-back]').trigger('click');
+    await flushPromises();
+    expect(step(wrapper)).toBe('GOAL');
+
+    await wrapper.find('[data-create-goal="WEBSITE"]').trigger('click');
+    await flushPromises();
+    await wrapper.find('input[data-create-site-url]').setValue('loja.com.br');
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith(
+      expect.objectContaining({ destination: 'WEBSITE', placement: 'AUTO' })
+    );
+  });
+
+  it('without a WhatsApp number, "Continue" on the destination question goes to a channel that works', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
+    const wrapper = await mountCreate(
+      { ...MESSAGING, whatsapp_numbers: [] },
+      null
+    );
+    expect(step(wrapper)).toBe('GOAL');
+
+    await submit(wrapper);
+    expect(step(wrapper)).toBe('CONTENT');
+    expect(wrapper.find('[data-create-blocker]').exists()).toBe(false);
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith(
+      expect.objectContaining({ destination: 'MESSENGER' })
+    );
   });
 
   it('an Instagram account without its @ cannot take a profile ad', async () => {

@@ -468,9 +468,15 @@ const chooseGoal = value => {
     list.includes(before.destination) && usable(before.destination)
       ? before.destination
       : firstUsable(list);
+  // Outro destino, outro lugar: volta ao primeiro que vale para ele (Automático; só Instagram no perfil).
+  const placement =
+    destination === before.destination
+      ? before.placement
+      : lugaresDoDestino(options.value, destination)[0];
   draft.value = {
     ...before,
     destination,
+    placement,
     text: before.text_edited
       ? before.text
       : textoDaOferta(t, before.offer, destination),
@@ -480,14 +486,19 @@ const chooseGoal = value => {
   };
   next();
 };
-// Perfil marcado como seguro ou crédito: a pessoa volta à pergunta do destino.
+// Perfil marcado como seguro ou crédito, ou Página sem Instagram: a pessoa volta à pergunta do destino. O post não
+// tem essa pergunta.
+const canGoToGoal = computed(() => STEPS.value.includes('GOAL'));
 const goToGoal = () => {
-  step.value = STEPS.value.indexOf('GOAL');
+  if (canGoToGoal.value) step.value = STEPS.value.indexOf('GOAL');
 };
 
 // Com uma opção só, ela já vem escolhida.
 const prefill = data => {
-  const [destination = null] = destinosDaConta(data);
+  // O primeiro destino que dá (WhatsApp com número, Direct ou perfil com Instagram); sem nenhum, o primeiro, e o
+  // passo seguinte diz o que falta.
+  const list = destinosDaConta(data);
+  const destination = list.find(usable) || list[0] || null;
   const kind = draft.value.kind || fixedKind.value;
   draft.value = {
     ...draft.value,
@@ -897,6 +908,20 @@ const BLOCKERS = {
           >
             {{ blockReason }}
           </p>
+          <button
+            v-if="
+              current === 'CONTENT' &&
+              contentMissing === 'NEED_INSTAGRAM' &&
+              canGoToGoal
+            "
+            type="button"
+            data-create-content-change-goal
+            class="inline-flex min-h-11 items-center gap-1.5 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 ring-1 ring-n-weak hover:ring-n-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+            @click="goToGoal"
+          >
+            <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
+            {{ $t(`${KEY}.AUDIENCE.CHANGE_GOAL`) }}
+          </button>
         </div>
       </div>
     </form>
