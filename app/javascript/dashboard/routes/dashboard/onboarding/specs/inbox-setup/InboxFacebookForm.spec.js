@@ -58,7 +58,7 @@ const clickButton = (wrapper, label) =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  preloadSdk = vi.fn();
+  preloadSdk = vi.fn().mockResolvedValue();
   loginAndFetchPages = vi.fn();
   useFacebookPageConnect.mockReturnValue({
     isAuthenticating: ref(false),
