@@ -335,7 +335,7 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
       wrapper
         .findAll('[data-ad-detail-tile]')
         .map(tile => tile.attributes('data-ad-detail-tile'))
-    ).toEqual(['SPEND', 'CLICKS', 'ENGAGEMENT', 'SHOWN']);
+    ).toEqual(['SPEND', 'PROFILE', 'ENGAGEMENT', 'SHOWN']);
     expect(wrapper.find('[data-ad-detail-why]').exists()).toBe(false);
     const destination = wrapper.find('[data-ad-detail-destination]');
     expect(destination.attributes('data-destination')).toBe('profile');

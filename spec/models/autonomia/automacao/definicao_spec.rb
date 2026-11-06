@@ -106,5 +106,22 @@ RSpec.describe Autonomia::Automacao::Definicao do
       expect(automacao.assumir_e_religar!(admin, versao_id: nil).motivo).to eq('sem_versao')
       expect(automacao.reload.ativa).to be(false)
     end
+
+    # #2499 (PR3a): ligada_em é o instante de cada vez que liga; os gatilhos de tempo não agem antes dele.
+    it 'grava ligada_em ao ligar e de novo ao religar, nunca ao desligar nem ao salvar ligada', :aggregate_failures do
+      versao = travel_to(Time.zone.local(2026, 11, 10, 8)) { automacao.salvar_versao!(receita: receita, autor: admin) }
+      travel_to(Time.zone.local(2026, 11, 10, 9)) { automacao.assumir_e_religar!(admin, versao_id: versao.id) }
+      expect(automacao.reload.ligada_em).to eq(Time.zone.local(2026, 11, 10, 9))
+
+      nova = travel_to(Time.zone.local(2026, 11, 10, 10)) { automacao.salvar_versao!(receita: receita, autor: admin) }
+      expect([automacao.reload.ativa, automacao.ligada_em]).to eq([true, Time.zone.local(2026, 11, 10, 9)])
+      expect(Autonomia::Automacao::Tempo.ligada_desde(automacao)).to eq(Time.zone.local(2026, 11, 10, 10))
+
+      travel_to(Time.zone.local(2026, 11, 10, 11)) { automacao.desligar! }
+      expect(automacao.reload.ligada_em).to eq(Time.zone.local(2026, 11, 10, 9))
+
+      travel_to(Time.zone.local(2026, 11, 10, 12)) { automacao.assumir_e_religar!(admin, versao_id: nova.id) }
+      expect(automacao.reload.ligada_em).to eq(Time.zone.local(2026, 11, 10, 12))
+    end
   end
 end

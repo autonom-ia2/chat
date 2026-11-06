@@ -240,7 +240,7 @@ describe('Anúncios da Meta · impulsionar post (#2339)', () => {
       .trigger('click');
     await flushPromises();
 
-    expect(step(wrapper)).toBe('CONTENT');
+    expect(step(wrapper)).toBe('GOAL');
   });
 
   it('without any post and no way to make a new ad, does not offer the new ad', async () => {
