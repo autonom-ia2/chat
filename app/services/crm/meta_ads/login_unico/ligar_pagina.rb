@@ -38,13 +38,11 @@ class Crm::MetaAds::LoginUnico::LigarPagina
 
   private
 
-  # Tokens, nome e Instagram mudam juntos, e só então o alerta de reautorização sai (como o CallbacksController).
+  # Tokens, nome e Instagram num só save; o alerta de reautorização (Redis e evento) sai só depois dele gravado.
   def reauthorize(channel, tokens)
     details = page_details(tokens[:page])
-    ActiveRecord::Base.transaction do
-      channel.update!(user_access_token: tokens[:user], page_access_token: tokens[:page], **details.compact)
-      channel.reauthorized!
-    end
+    channel.update!(user_access_token: tokens[:user], page_access_token: tokens[:page], **details.compact)
+    channel.reauthorized!
     channel.inbox
   end
 

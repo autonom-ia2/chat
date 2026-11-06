@@ -37,7 +37,8 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
     ]
     stub_request(:get, meta_graph_url('me/accounts')).with(query: hash_including({}))
                                                      .to_return(status: 200, headers: json, body: { data: pages }.to_json)
-    permissions = [{ permission: 'ads_read', status: 'granted' }] + declined.map { |name| { permission: name, status: 'declined' } }
+    permissions = [{ permission: 'ads_read', status: 'granted' }, { permission: 'pages_messaging', status: 'expired' }] +
+                  declined.map { |name| { permission: name, status: 'declined' } }
     stub_request(:get, meta_graph_url('me/permissions')).to_return(status: 200, headers: json, body: { data: permissions }.to_json)
   end
 
@@ -81,7 +82,7 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
       ]
     )
     expect(response.parsed_body['granted_permissions']).to eq(['ads_read'])
-    expect(response.parsed_body['declined_permissions']).to eq(['read_insights'])
+    expect(response.parsed_body['declined_permissions']).to eq(%w[pages_messaging read_insights])
   end
 
   it 'no modo parceiro não lista Páginas: o token é o da plataforma' do

@@ -45,10 +45,11 @@ class Crm::MetaAds::LoginUnico::Paginas
   def permissions
     result = client.permissions
     rows = result.ok ? Array(result.data['data']).select { |row| row.is_a?(Hash) } : []
-    { granted_permissions: names(rows, 'granted'), declined_permissions: names(rows, 'declined') }
+    # `expired` conta como recusa: a pessoa precisa entrar de novo para valer.
+    { granted_permissions: names(rows, %w[granted]), declined_permissions: names(rows, %w[declined expired]) }
   end
 
-  def names(rows, status)
-    rows.filter_map { |row| row['permission'] if row['status'] == status }
+  def names(rows, statuses)
+    rows.filter_map { |row| row['permission'] if statuses.include?(row['status']) }
   end
 end
