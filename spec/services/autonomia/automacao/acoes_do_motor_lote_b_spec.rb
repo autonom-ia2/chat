@@ -74,6 +74,38 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :automacao_motor do
     expect(chamadas.last.keys).to eq(['Idempotency-Key'])
   end
 
+  # Qualidade adversarial (#2660 lote B): a IA nunca fecha o card sozinha (#2389). Pela automação o aceite fecharia sem
+  # nenhuma pessoa ver; ele fica fora, e dispensar continua valendo.
+  describe 'sugestão de fechar da IA' do
+    let!(:sugestao) do
+      account.crm_ai_stage_suggestions.create!(
+        card: card, from_stage: card.stage, to_stage: card.stage, confidence: 0.86, reasoning: 'Disse que vai pensar.', model_used: 'm',
+        metadata: { fechar: { resultado: 'perdido', motivo: 'recusou' }, lido_em: Time.current.utc.iso8601(6) }
+      )
+    end
+
+    around { |exemplo| with_modified_env(CRM_AI_ENABLED: 'true') { exemplo.run } }
+
+    before { account.enable_features!(Crm::Ai::FecharCard::FLAG) }
+
+    it 'aceitar pela automação é recusado e o card não fecha', :aggregate_failures do
+      aceitar = { caminho: { id: sugestao.id }, descricao: 'Aceitar a sugestão' }
+
+      expect { acoes.executar('POST crm/ai_suggestions/:id/accept', aceitar) }
+        .to raise_error(Autonomia::Guide::Acoes::Recusada, I18n.t('autonomia.automacao.motivos.acao_fora'))
+      expect(card.reload).to be_open
+      expect(sugestao.reload).to be_pending
+    end
+
+    it 'dispensar pela automação não fecha nada', :aggregate_failures do
+      dispensar = acoes.executar('POST crm/ai_suggestions/:id/dismiss', { caminho: { id: sugestao.id }, descricao: 'Dispensar' })
+
+      expect(dispensar.ok).to be(true)
+      expect(card.reload).to be_open
+      expect(sugestao.reload).to be_dismissed
+    end
+  end
+
   it 'restaurar o card não aceita o force' do
     restaurar = { caminho: { id: card.id }, corpo: { force: true }, descricao: 'Restaurar' }
 
