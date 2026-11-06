@@ -28,7 +28,7 @@ RSpec.describe Crm::MetaAds::MessagingReferralJob do
 
     expect { described_class.enqueue_for('messenger', messaging) }.to have_enqueued_job(described_class)
       .with('messenger', 'page-1', 'psid-1', { 'source' => 'ADS', 'ad_id' => '120200000001202', 'ads_context_data' => { 'ad_title' => 'Promo' },
-                                               'media_type' => 'image' }, '1700000000')
+                                               'media_type' => 'image', 'clicked_at' => '1700000000' }, '1700000000')
     expect { described_class.enqueue_for('messenger', messaging.merge('referral' => { 'source' => 'SHORTLINK' })) }
       .not_to have_enqueued_job(described_class)
   end
