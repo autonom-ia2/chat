@@ -17,7 +17,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
   end
 
   before do
-    allow(reivindicacao).to receive_messages(attempt!: true, confirm!: true)
+    allow(reivindicacao).to receive_messages(attempt!: true, confirm!: true, id: 7)
     allow(registro).to receive_messages(reivindicar!: reivindicacao, soltar!: 0, soltar_abandonada!: 0, gravar!: true)
   end
 
@@ -112,6 +112,15 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Rede do
       expect(reivindicacao).to have_received(:confirm!).ordered
       expect(pagina).to have_received(:private_reply).with('555_777', hash_including(attachment: hash_including(type: 'template')))
       expect(resultado).to have_attributes(ok: true, conversation: conversation)
+    end
+
+    it 'a mensagem na caixa leva a marca de envio automático com o id da linha private_reply (#2212)' do
+      envio = described_class::Envio.new(ok: true, recipient_id: 'psid-1', message_id: 'mid-1')
+      allow(pagina).to receive(:private_reply).and_return(envio)
+
+      rede.privado(care)
+
+      expect(Crm::MetaAds::ComentariosIa::Conversa).to have_received(:no_messenger!).with(anything, envio, anything, 7)
     end
 
     it 'privado recusado: a reivindicação sai' do
