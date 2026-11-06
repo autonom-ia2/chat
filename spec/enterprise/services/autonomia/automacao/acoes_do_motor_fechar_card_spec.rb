@@ -54,12 +54,15 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :aggregate_failures, :automac
     Autonomia::Automacao::Registro.where(execucao: execucao).order(:id).pluck(:passo, :resultado, :motivo)
   end
 
-  it 'fecha como ganho sem valor: mantém o valor do card, em nome de quem ligou' do
+  it 'fecha como ganho sem valor: mantém o valor do card, e a atividade diz que foi a automação' do
     execucao = rodar([fechar('result' => 'won')])
 
     expect([execucao.reload.estado, registros(execucao)]).to eq(['concluida', [['f1', 'ok', nil]]])
     expect([card.reload.status, card.value_cents]).to eq(%w[won] + [250_000])
-    expect(card.activities.order(:id).last.slice(:event_type, :actor_id)).to eq('event_type' => 'won', 'actor_id' => dono.id)
+    atividade = card.activities.order(:id).last
+    expect(atividade.event_type).to eq('won')
+    expect(atividade.payload.slice('by', 'origem', 'automacao_id'))
+      .to eq('by' => 'automacao', 'origem' => 'livre', 'automacao_id' => execucao.automacao_id)
   end
 
   it 'fecha como perdido com o motivo' do

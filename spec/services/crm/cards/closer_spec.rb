@@ -74,4 +74,12 @@ RSpec.describe Crm::Cards::Closer do
 
     expect(close(card, 'reopen').payload).not_to have_key('closed_with')
   end
+
+  # G25: o fechamento pedido pela Automação livre leva a automação na atividade, como o Mover (#2428); sem ela, nada muda.
+  it 'grava a automação que fechou, e só quando foi ela', :aggregate_failures do
+    pela_automacao = described_class.new(card: card_in(sale), actor: admin, result: 'lost', automacao: { origem: 'livre', id: 7 }).perform
+    expect(pela_automacao.activities.order(:id).last.payload.slice('by', 'origem', 'automacao_id'))
+      .to eq('by' => 'automacao', 'origem' => 'livre', 'automacao_id' => 7)
+    expect(close(card_in(sale), 'won').payload).not_to include('by', 'automacao_id')
+  end
 end

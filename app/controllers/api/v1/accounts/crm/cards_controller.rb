@@ -160,7 +160,9 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
         result: params[:result].to_s,
         value_cents: params[:value_cents],
         currency: params[:currency],
-        lost_reason: params[:lost_reason]
+        lost_reason: params[:lost_reason],
+        # G25: pedido do passo da Automação livre (dentro da cadeia dela): o fechamento leva a automação, como o move.
+        automacao: ::Autonomia::Automacao::Cadeia.automacao_livre
       ).perform
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
       render :show
