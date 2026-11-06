@@ -6,7 +6,7 @@ require 'rails_helper'
 #
 # - "Não receber" (exemplo 7, passo 6: "tira a pessoa de todas as campanhas"): o cliente escreve, a automação marca.
 # - "Disparar" (exemplos 7, 9 e 16): a campanha da tela, para quem tem a etiqueta, com o modelo aprovado. Só em gatilho
-#   sem alvo (recorrente, G7, ainda fora da main): num gatilho de conversa a API recusa ao salvar. O disparo em si é
+#   da conta (`conta.recorrente`, G7, ainda fora da main): num gatilho de conversa a API recusa ao salvar. O disparo em si é
 #   provado no passo, até o pedido na Graph, pelo Whatsapp::OneoffCampaignService, que pula quem pediu para não receber.
 # - Pôr e tirar da campanha (exemplos 2, 3, 6, 12) é a etiqueta do público, com o passo de etiqueta que já existe.
 RSpec.describe 'Fechamento #2414 · G14: campanhas como passo', :fechamento_automacao, type: :request do
@@ -72,8 +72,8 @@ RSpec.describe 'Fechamento #2414 · G14: campanhas como passo', :fechamento_auto
     cliente('Bia', '+5511900000021', etiquetas: ['ja_comprou'])
     cliente('Caio', '+5511900000022', etiquetas: ['ja_comprou']).opt_out!(source: 'manual')
     cliente('Duda', '+5511900000023')
-    # Salva como no recorrente (G7): o gatilho sem alvo ainda não está na main.
-    allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_sem_alvo?).and_return(true)
+    # Salva como no recorrente (G7): o gatilho da conta ainda não está na main.
+    allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_da_conta?).and_return(true)
     # A trava do disparo pergunta à Meta o estado do modelo na hora (#1329): a Meta de teste responde aprovado.
     stub_request(:get, ->(uri) { uri.host == 'graph.facebook.com' && uri.path.end_with?('/message_templates') })
       .to_return(status: 200, body: { data: [pre_black.merge('id' => '9001')] }.to_json, headers: { 'Content-Type' => 'application/json' })
@@ -82,7 +82,7 @@ RSpec.describe 'Fechamento #2414 · G14: campanhas como passo', :fechamento_auto
     definicao.update!(ligada_por: dona)
     execucao = Autonomia::Automacao::Execucao.new(automacao: definicao, account: account)
 
-    resultado = Autonomia::Automacao::PassoDeCampanha.new(execucao: execucao, passo: disparar.deep_stringify_keys, alvo: nil).executar
+    resultado = Autonomia::Automacao::PassoDeCampanha.new(execucao: execucao, passo: disparar.deep_stringify_keys, alvo: account).executar
     perform_enqueued_jobs(only: Campaigns::TriggerOneoffCampaignJob)
 
     expect(resultado.tipo).to eq(:ok)

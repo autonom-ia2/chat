@@ -47,11 +47,11 @@ RSpec.describe 'Automação livre: passo campanha com função personalizada (#2
   def disparar_como(quem)
     definicao = create(:autonomia_automacao, account: account, ligada_por: quem)
     execucao = Autonomia::Automacao::Execucao.new(automacao: definicao, account: account)
-    Autonomia::Automacao::PassoDeCampanha.new(execucao: execucao, passo: disparar, alvo: nil).executar
+    Autonomia::Automacao::PassoDeCampanha.new(execucao: execucao, passo: disparar, alvo: account).executar
   end
 
   describe 'disparar' do
-    before { allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_sem_alvo?).and_return(true) }
+    before { allow(Autonomia::Automacao::PassoDeCampanha).to receive(:gatilho_da_conta?).and_return(true) }
 
     it 'quem só monta campanha (sem campaign_send) não salva nem dispara' do
       so_monta = pessoa_com(base + %w[campaign_manage])

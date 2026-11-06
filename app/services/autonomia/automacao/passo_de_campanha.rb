@@ -4,7 +4,8 @@
 #   `account.campaigns.create!` da API de campanhas e a põe na fila do disparo (Campaigns::TriggerOneoffCampaignJob, o
 #   mesmo job do agendador). Quem manda é o Whatsapp::OneoffCampaignService (e o overlay do EE): ele lê o público no
 #   disparo, relê a recusa de cada contato antes de mandar e manda o modelo. Nada sai por um caminho próprio daqui.
-#   Só em gatilho sem alvo (recorrente): num gatilho de conversa, card ou contato, cada execução criaria uma campanha
+#   Só em gatilho da conta (o recorrente da G7, `conta.recorrente`, alvo = a própria Account): num gatilho de
+#   conversa, card ou contato, cada execução criaria uma campanha
 #   nova para o mesmo público, o mesmo envio N vezes. A Receita recusa ao salvar; a receita que chegar assim mesmo pula
 #   com `campanha_so_sem_alvo`. Não é teto de uso, é a regra de não repetir o mesmo envio.
 # - `nao_receber`: marca o contato do alvo como "não recebe" (a recusa das campanhas e mensagens ativas), como o botão
@@ -25,6 +26,7 @@ class Autonomia::Automacao::PassoDeCampanha
   CANAL = ModeloWhatsapp::CANAL
   PROVEDOR = 'whatsapp_cloud'.freeze
   FLAG_DA_CAMPANHA = :whatsapp_campaign
+  ALVO_DA_CONTA = 'Account'.freeze
 
   # O que a Receita confere ao salvar (#2630). Sem conta (o catálogo das receitas prontas), só o que não depende dela.
   def self.problemas_ao_salvar(passo, receita, conta:, account_user:)
@@ -38,7 +40,7 @@ class Autonomia::Automacao::PassoDeCampanha
 
   def self.problemas_do_disparo(passo, conta, gatilho, account_user)
     id = passo['id']
-    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless gatilho_sem_alvo?(gatilho)),
+    lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless gatilho_da_conta?(gatilho)),
              *(frase(:campanha_variavel_fixa, passo: id) unless variaveis_escritas?(passo['modelo']))]
     return lista if conta.nil?
 
@@ -77,8 +79,10 @@ class Autonomia::Automacao::PassoDeCampanha
     caixa if caixa&.channel.try(:provider) == PROVEDOR
   end
 
-  def self.gatilho_sem_alvo?(tipo)
-    ::Autonomia::Automacao::Gatilhos.entrada(tipo).present? && ::Autonomia::Automacao::Gatilhos.alvo(tipo).nil?
+  # O gatilho que roda na conta inteira, não numa conversa, card ou contato. Contrato com a G7 (#2499): o
+  # `conta.recorrente` entra em Gatilhos::LISTA com alvo 'Account'.
+  def self.gatilho_da_conta?(tipo)
+    ::Autonomia::Automacao::Gatilhos.alvo(tipo) == ALVO_DA_CONTA
   end
 
   def self.pode_disparar?(usuario, conta)
@@ -123,7 +127,7 @@ class Autonomia::Automacao::PassoDeCampanha
   private
 
   def disparar
-    return pulado('campanha_so_sem_alvo') if @alvo.present?
+    return pulado('campanha_so_sem_alvo') unless @alvo.is_a?(::Account)
     return sem_acesso('quem_ligou_sem_permissao_campanha') unless self.class.pode_disparar?(@quem, @conta)
 
     caixa = self.class.caixa_da_campanha(@conta, @passo['caixa_id'])

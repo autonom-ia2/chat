@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-# O passo "campanha" (#2414 G14, #2630): disparar pela Campanha da tela, só em gatilho sem alvo, e marcar "não recebe".
+# O passo "campanha" (#2414 G14, #2630): disparar pela Campanha da tela, só em gatilho da conta, e marcar "não recebe".
 RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
   include ActiveJob::TestHelper
 
@@ -46,8 +46,8 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
       expect(problemas(disparar, gatilho: 'card.ganho')).to include(frase(:campanha_so_sem_alvo))
     end
 
-    context 'with a gatilho sem alvo (o recorrente, G7)' do
-      before { allow(described_class).to receive(:gatilho_sem_alvo?).and_return(true) }
+    context 'with o gatilho da conta (conta.recorrente, G7)' do
+      before { allow(described_class).to receive(:gatilho_da_conta?).and_return(true) }
 
       it 'aceita a campanha pronta, com modelo de utilidade aprovado' do
         expect(problemas(disparar)).to be_empty
@@ -113,7 +113,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     it 'cria a campanha da tela para a etiqueta, com o modelo, e a põe na fila do disparo' do
       execucao = execucao_de([nao_receber])
 
-      resultado = described_class.new(execucao: execucao, passo: disparar, alvo: nil).executar
+      resultado = described_class.new(execucao: execucao, passo: disparar, alvo: account).executar
 
       campanha = account.campaigns.last
       expect(resultado.tipo).to eq(:ok)
@@ -124,6 +124,15 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
                                                   'processed_params' => { 'body' => { '1' => 'na quinta' } })
       expect(resultado.dados).to eq('campanha_id' => campanha.display_id, 'etiquetas' => [etiqueta.id])
       expect(Campaigns::TriggerOneoffCampaignJob).to have_been_enqueued.with(campanha)
+    end
+
+    it 'o gatilho da conta é o de alvo Account (contrato com a G7), não o de conversa ou card' do
+      allow(Autonomia::Automacao::Gatilhos).to receive(:alvo).and_call_original
+      allow(Autonomia::Automacao::Gatilhos).to receive(:alvo).with('conta.recorrente').and_return('Account')
+
+      expect(described_class.gatilho_da_conta?('conta.recorrente')).to be(true)
+      expect(described_class.gatilho_da_conta?('conversa.criada')).to be(false)
+      expect(described_class.gatilho_da_conta?('card.ganho')).to be(false)
     end
 
     it 'receita antiga com alvo pula com o motivo e não cria campanha' do
@@ -138,7 +147,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     it 'quem ligou sem permissão de enviar campanha: sem acesso, e nada criado' do
       dona.account_users.find_by(account: account).update!(role: :agent)
 
-      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: nil).executar
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: account).executar
 
       expect([resultado.tipo, resultado.motivo]).to eq([:sem_acesso, 'quem_ligou_sem_permissao_campanha'])
       expect(account.campaigns).to be_empty
@@ -147,7 +156,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     it 'modelo de propaganda sai na campanha (decisão de 06/11)' do
       canal.update!(message_templates: [pre_black.merge('category' => 'MARKETING')])
 
-      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: nil).executar
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: account).executar
 
       expect(resultado.tipo).to eq(:ok)
       expect(account.campaigns.last.template_params['category']).to eq('MARKETING')
@@ -156,7 +165,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     it 'modelo de autenticação pula com o motivo, sem criar campanha' do
       canal.update!(message_templates: [pre_black.merge('category' => 'AUTHENTICATION')])
 
-      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: nil).executar
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: account).executar
 
       expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'campanha_modelo_de_categoria_fora'])
       expect(account.campaigns).to be_empty
@@ -165,7 +174,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     it 'modelo que deixou de ser aprovado na caixa pula com o motivo da campanha' do
       canal.update!(message_templates: [pre_black.merge('status' => 'PAUSED')])
 
-      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: nil).executar
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: account).executar
 
       expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'campanha_modelo_nao_aprovado'])
     end
@@ -173,7 +182,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
     it 'variável só com espaço que chegar assim mesmo pula, sem criar campanha' do
       passo = disparar.deep_merge('modelo' => { 'variaveis' => [['   ']] })
 
-      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: passo, alvo: nil).executar
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: passo, alvo: account).executar
 
       expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'campanha_variavel_vazia'])
       expect(account.campaigns).to be_empty
@@ -216,10 +225,10 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
 
     it 'o disparar que chegar num gatilho de conversa pula com o motivo e a execução segue' do
       conversa = create(:conversation, account: account, inbox: caixa, status: :resolved)
-      # Salva como se o gatilho não tivesse alvo; ao rodar, a regra de hoje vale.
-      allow(described_class).to receive(:gatilho_sem_alvo?).and_return(true)
+      # Salva como se fosse o gatilho da conta; ao rodar, a regra de hoje vale.
+      allow(described_class).to receive(:gatilho_da_conta?).and_return(true)
       definicao = automacao_ligada(account, dona, [disparar])
-      allow(described_class).to receive(:gatilho_sem_alvo?).and_call_original
+      allow(described_class).to receive(:gatilho_da_conta?).and_call_original
 
       perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) { comecar(definicao, conversa) }
 
