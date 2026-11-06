@@ -23,10 +23,12 @@ json.tone agent.tone
 # `booking_agent_ids` (#1307): as pessoas da página liberadas para a IA, como gravadas (conferidas ao salvar; vazio =
 # todas). Id que deixou de ser da página depois continua aqui até o próximo salvar; a IA confere de novo a cada turno.
 # `booking_page_id` (#1196): a página de agendamento que liga a agenda da IA (PanelTune).
+# `canal_pedido` (#2490): o canal que o dono pediu ao Construtor na criação (whatsapp, instagram… ou nenhum); a Confira
+# de um rascunho reaberto sugere só a caixa desse canal.
 json.config agent.config.to_h.slice('handoff_strategy', 'handoff_target_id',
                                     'with_knowledge', 'knowledge_confidence', 'knowledge_summary',
                                     'audience', 'response_window', 'audience_unknown_contact',
-                                    'faq_suggestions', 'booking_page_id', 'booking_agent_ids')
+                                    'faq_suggestions', 'booking_page_id', 'booking_agent_ids', 'canal_pedido')
 # #1196: o agente recebe a agenda da IA (o Agente de Cotação, de ferramentas mantidas, não). O PanelTune esconde a
 # escolha da página quando é false.
 json.booking_available Autonomia::Agents::Tools::Native::Agenda.aceita?(agent)

@@ -57,5 +57,28 @@ RSpec.describe 'Autonomia agent config exposure', type: :request do
       expect(response.body).not_to include('builder_active_thread_id')
       expect(response.body).not_to include('test_allowlist_phones')
     end
+
+    # #2490: a Confira de um rascunho reaberto lê o canal que o dono pediu ao Construtor.
+    it 'exposes the channel the owner asked the Builder for' do
+      agent.update!(config: agent.config.merge('canal_pedido' => 'instagram'))
+
+      get "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}", headers: administrator.create_new_auth_token, as: :json
+
+      expect(response.parsed_body['config']['canal_pedido']).to eq('instagram')
+    end
+  end
+
+  describe 'PATCH /api/v1/accounts/:account_id/autonomia/agents/:id' do
+    # #2490: só o Construtor escreve o canal pedido; a API de edição não o troca.
+    it 'keeps the channel asked to the Builder when the config is saved through the API' do
+      agent.update!(config: agent.config.merge('canal_pedido' => 'instagram'))
+
+      patch "/api/v1/accounts/#{account.id}/autonomia/agents/#{agent.id}",
+            params: { agent: { config: { canal_pedido: 'whatsapp', handoff_target_id: 7 } } },
+            headers: administrator.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:success)
+      expect(agent.reload.config).to include('canal_pedido' => 'instagram', 'handoff_target_id' => 7)
+    end
   end
 end
