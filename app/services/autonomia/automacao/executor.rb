@@ -29,8 +29,9 @@ class Autonomia::Automacao::Executor
   Cadeia = ::Autonomia::Automacao::Cadeia
   Execucao = ::Autonomia::Automacao::Execucao
   # Passos que falam com gente (F4): só com a flag da F4.
-  NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso }.freeze
-  # Os passos de IA (F7, #2500).
+  NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso,
+              'email' => ::Autonomia::Automacao::PassoDeEmail }.freeze
+  # Os passos de IA (F7, #2500); com eles vem a parada fora da janela (F4.4, #2573), que vale também para a mensagem.
   include ::Autonomia::Automacao::IaNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
@@ -139,8 +140,7 @@ class Autonomia::Automacao::Executor
     @definicao.reload
     @account.reload
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
-    @alvo = nil
-    @contexto = nil
+    @alvo = @contexto = nil
   end
 
   def esperar(passo)
@@ -185,7 +185,7 @@ class Autonomia::Automacao::Executor
     end
   end
 
-  # "mensagem" e "avisar" (F4). Reconferem tudo como a ação e, sem a flag da F4, fecham sem mandar nada (rollback).
+  # "mensagem", "avisar" (F4) e "email" (G2). Reconferem tudo como a ação e, sem a flag da F4, fecham sem mandar nada (rollback).
   # Não repetem: a mensagem que deu erro no meio não é mandada de novo, porque o cliente poderia recebê-la duas vezes.
   def passo_nativo(passo, classe)
     reconferir
@@ -197,7 +197,7 @@ class Autonomia::Automacao::Executor
     # conversa em que o passo age: pausa a automação, como na ação.
     return encerrar(passo['id'], 'parada', motivo_da_parada(resultado), 'falhou') if %i[laco sem_acesso].include?(resultado.tipo)
 
-    seguir_depois_da_acao(passo, resultado)
+    janela_fechada?(resultado) ? parar_na_janela(passo, resultado) : seguir_depois_da_acao(passo, resultado)
   end
 
   def motivo_da_parada(resultado) = resultado.tipo == :sem_acesso ? pausar(resultado.motivo) : resultado.motivo

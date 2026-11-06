@@ -28,6 +28,7 @@ class Autonomia::Automacao::Partida
   # A execução aberta, ou nil quando não começou.
   def call
     return unless pode_comecar?
+    return if ja_aconteceu?
 
     acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @chave_gatilho)
     return pausar(acesso.motivo) if acesso.motivo
@@ -46,6 +47,13 @@ class Autonomia::Automacao::Partida
   end
 
   def gatilho = @definicao.versao_ativa.receita['gatilho'].to_h
+
+  # O mesmo fato já abriu uma execução (o evento repetido, ou a varredura de tempo achando o mesmo card de novo a cada
+  # rodada): não passa pela cadeia nem tenta o INSERT. Pelo índice único (automacao_id, evento); o índice segue sendo a
+  # garantia na corrida.
+  def ja_aconteceu?
+    @evento.present? && ::Autonomia::Automacao::Execucao.exists?(automacao_id: @definicao.id, evento: @evento)
+  end
 
   # A mensagem nova numa conversa que já tem a execução aberta é o caso comum: a consulta evita a cadeia e o INSERT
   # que o índice único recusaria. O índice continua sendo a garantia (corrida entre dois eventos).

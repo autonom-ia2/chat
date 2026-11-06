@@ -57,6 +57,12 @@ class Crm::MetaAds::Panel::AdDestinations
     OUTSIDE_GOALS.include?(goal)
   end
 
+  # A Meta disse o destino com todas as letras e ele não é conversa (site, perfil, vídeo…), sem depender do objetivo.
+  # A conversa que só a Meta contou não muda esse anúncio de lugar (#2621, OutsideAds).
+  def stated_outside?(ad_id)
+    OUTSIDE.include?(adset_of(ad_id).first)
+  end
+
   def messenger_or_direct?(ad_id)
     MESSENGER_OR_DIRECT.include?(adset_of(ad_id).first)
   end

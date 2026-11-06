@@ -12,6 +12,13 @@ export const ORIGIN_SOURCES = [
   { key: 'meta_organic', icon: 'i-lucide-leaf', barClass: 'bg-n-teal-9' },
   { key: 'google_ads', icon: 'i-lucide-search', barClass: 'bg-n-amber-9' },
   { key: 'tiktok_ads', icon: 'i-lucide-music-2', barClass: 'bg-n-violet-9' },
+  // #2620: clique no anúncio que abre o Messenger e o Direct, linha própria.
+  {
+    key: 'meta_ctm',
+    icon: 'i-lucide-message-square',
+    barClass: 'bg-n-violet-7',
+  },
+  { key: 'meta_ctd', icon: 'i-lucide-instagram', barClass: 'bg-n-ruby-7' },
   {
     key: 'meta_paid',
     icon: 'i-lucide-badge-dollar-sign',
@@ -40,15 +47,10 @@ const SOURCE_BY_KEY = Object.fromEntries(
   ORIGIN_SOURCES.map(source => [source.key, source])
 );
 
-// #2521: o clique para o Messenger e o Direct entra na linha de anúncio pago da
-// Meta até o PR-B2 trazer a linha própria.
-const SAME_LINE = { meta_ctm: 'meta_paid', meta_ctd: 'meta_paid' };
-
 // Origem que o painel não conhece não ganha linha própria: é venda sem origem
 // que a tela sabe nomear.
 const lineFor = source => {
-  const key = SAME_LINE[source] || source;
-  return SOURCE_BY_KEY[key] ? key : NO_ORIGIN;
+  return SOURCE_BY_KEY[source] ? source : NO_ORIGIN;
 };
 
 const addValues = (list, extra) => {

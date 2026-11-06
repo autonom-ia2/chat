@@ -5,8 +5,9 @@
 # - a ação está na lista de permitidas (F3.2) e tem todo parâmetro do caminho;
 # - o corpo bate com o formato da ação, como no Guia, e traz o que a automação exige (F3.10), os campos fixos e
 #   nenhum campo proibido;
-# - o corpo é literal: variável no corpo chega com a mensagem (F4);
-# - todo `$valor` do caminho e das condições é um caminho que a automação sabe ler;
+# - o valor calculado no corpo (G16: `$valor`, `$texto`, `$data`) lê caminhos que a automação sabe ler, e a data parte
+#   de "hoje" ou de um atributo do tipo data;
+# - todo `$valor` do caminho, do corpo e das condições é um caminho que a automação sabe ler;
 # - a condição sobre um valor fechado (`mensagem.tipo`) usa uma das opções e um dos operadores dele (#2496);
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499).
 class Autonomia::Automacao::Receita
@@ -48,7 +49,7 @@ class Autonomia::Automacao::Receita
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *gatilho_de_card, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
+    [*ids_repetidos, *gatilho_novo, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -62,18 +63,8 @@ class Autonomia::Automacao::Receita
     passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
   end
 
-  # O gatilho de card pede a flag da F6 e o CRM; a etapa e o funil escolhidos precisam ser da conta (o esquema já
-  # conferiu que são números e que "entrou" e "saiu" trazem a etapa).
-  def gatilho_de_card
-    gatilho = @receita['gatilho'].to_h
-    return [] unless ::Autonomia::Automacao::Gatilhos.do_card?(gatilho['tipo'])
-    return [texto(:gatilho_desligado)] unless ::Autonomia::Automacao::Motor.gatilhos?(@conta)
-
-    etapa = gatilho['etapa_id']
-    funil = gatilho['funil_id']
-    [*(texto(:etapa_de_fora, id: etapa) if etapa && !@conta.crm_pipeline_stages.exists?(id: etapa)),
-     *(texto(:funil_de_fora, id: funil) if funil && !@conta.crm_pipelines.exists?(id: funil))]
-  end
+  # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta.
+  def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta).problemas
 
   def filtros_do_gatilho
     Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }
@@ -81,21 +72,24 @@ class Autonomia::Automacao::Receita
 
   def problemas_do_passo(passo)
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
-    return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
+    return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
   end
 
-  # "mensagem" e "avisar" (F4): só com a flag da F4, os valores do texto (e de cada variável do modelo da Meta, F4b)
-  # lidos da lista fechada, os times e as pessoas do aviso da própria conta, e o modelo pronto na conta.
+  # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
+  # variável do modelo da Meta, F4b) lidos da lista fechada, os times e as pessoas do aviso da própria conta, o modelo
+  # pronto na conta e a caixa do e-mail uma caixa de e-mail da conta.
   def problemas_da_mensagem(passo)
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
-    textos = [passo['texto'], *Array(passo.dig('modelo', 'variaveis'))]
+    textos = [passo['texto'], passo['assunto'], *Array(passo.dig('modelo', 'variaveis'))]
     lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map { |caminho| problemas_do_caminho(id, caminho) }
-    desligado + lidos + destinatarios_de_fora(passo) + ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
+    caixa = passo['tipo'] == 'email' ? ::Autonomia::Automacao::PassoDeEmail.problemas_ao_salvar(@conta, passo) : []
+    modelo = ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
+    desligado + lidos + destinatarios_de_fora(passo) + modelo + caixa
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da
@@ -221,11 +215,15 @@ class Autonomia::Automacao::Receita
     faltando + lidos.flat_map { |caminho| problemas_do_caminho(passo['id'], caminho) }
   end
 
+  # O formato confere o corpo com um exemplo no lugar de cada valor calculado (Corpo.exemplo): chave fora do formato e
+  # opção fora da lista continuam pegas. O valor de verdade é conferido de novo ao executar.
   def corpo_da_acao(passo)
-    return [texto(:valor_no_corpo, passo: passo['id'])] if variavel?(passo['corpo'])
-
-    conferencia = ::Autonomia::Guide::Formatos::Conferencia.new(passo['acao'], passo['corpo'].to_h, conta: @conta)
-    conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
+    corpo = passo['corpo'].to_h
+    exemplo = ::Autonomia::Automacao::Corpo.exemplo(passo['acao'], corpo)
+    conferencia = ::Autonomia::Guide::Formatos::Conferencia.new(passo['acao'], exemplo, conta: @conta)
+    calculo = ::Autonomia::Automacao::ProblemasDoCorpo.new(passo, conta: @conta) { |caminho| problemas_do_caminho(passo['id'], caminho) }
+    calculo.problemas +
+      conferencia.problemas_em_texto.map { |problema| texto(:corpo, passo: passo['id'], problema: problema) } +
       regras_da_lista(passo['id'], passo['acao'], conferencia.valores)
   end
 
@@ -246,19 +244,9 @@ class Autonomia::Automacao::Receita
     valores[partes.first].is_a?(Hash) && mandado?(valores[partes.first], partes.drop(1))
   end
 
-  def variavel?(valor)
-    case valor
-    when Hash then valor.key?('$valor') || valor.values.any? { |item| variavel?(item) }
-    when Array then valor.any? { |item| variavel?(item) }
-    else false
-    end
-  end
-
   def parametros(acao)
     acao.split(' ', 2).last.split('/').filter_map { |segmento| segmento.delete_prefix(':') if segmento.start_with?(':') }
   end
 
-  def texto(chave, **valores)
-    I18n.t("autonomia.automacao.receita.#{chave}", **valores)
-  end
+  def texto(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 end

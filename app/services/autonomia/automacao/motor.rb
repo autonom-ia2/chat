@@ -28,7 +28,12 @@ module Autonomia::Automacao::Motor
   FLAG_GATILHOS = 'automacao_gatilhos'.freeze
 
   def self.gatilhos?(account)
-    ligado?(account) && account.feature_enabled?(FLAG_GATILHOS) && ::Crm::Config.enabled?
+    gatilhos_sem_crm?(account) && ::Crm::Config.enabled?
+  end
+
+  # O gatilho de tempo do contato (#2499, PR3) vem com a mesma flag, mas não depende do CRM.
+  def self.gatilhos_sem_crm?(account)
+    ligado?(account) && account.feature_enabled?(FLAG_GATILHOS)
   end
 
   # A origem da automação na cadeia comum (D6), ao lado de "regra:<id>" e "etapa:<id>".
