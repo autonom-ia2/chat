@@ -93,6 +93,11 @@ acoes:
     grupo: CONTATO
     caminho: { contact_id: contato.id }
     campos: { por: etiquetas, tirar: etiquetas }
+  contato_nota:
+    acao: POST contacts/:contact_id/notes
+    grupo: CONTATO
+    caminho: { contact_id: contato.id }
+    campos: { content: texto }
   contato_alterar:
     acao: PATCH contacts/:id
     grupo: CONTATO

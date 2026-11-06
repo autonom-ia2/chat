@@ -140,7 +140,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G16 | **Valor calculado no corpo** da ação (gravar "hoje + 6 meses", "indicado por {nome}", motivo da perda no texto) | F3/F4 | O corpo da ação é literal; variável só na mensagem | Motor | 3, 5, 6, 11, 13, 16, 17 |
 | G17 | **Criar contato** (o amigo indicado, o funcionário novo) e **importar em lote** ligado à empresa | novo | `POST contacts` fora da lista; importação não é passo | F2 | 8, 11 |
 | G18 | **Agir em outro registro** que não o alvo (o card do João avisa a Maria; para cada card com etiqueta X) | F8 / novo | O passo age só no alvo da execução | Motor | 11, 16, 17 |
-| G19 | **Nota no contato** (não na conversa) | F3 (ação) | `contacts/notes` fora da lista | F2 | 5, 19 |
+| G19 | **Nota no contato** (não na conversa) | F3 (ação) | Em PR (#2636): `POST contacts/:contact_id/notes` na lista | F7 | 5, 19 |
 | G20 | Passos de IA **lendo anexo** (PDF, foto do currículo, documento) pelo leitor de mídia | F7 | O `Estado` dos passos de IA não usa `com_midia`; só a IA de assunto lê | F7 | 3, 8, 14, 18 |
 | G21 | **Prospecção**: rodar busca salva e conferência de WhatsApp como passo | novo | Sem passo | F5 | 9 |
 | G22 | **Avisar quem não está na conversa** (o RH da empresa cliente por mensagem; a equipe quando o alvo não tem conversa) | F4 | O "avisar" é nota com menção na conversa do alvo; card sem conversa pula com `sem_conversa` | F1 | 8 |
