@@ -1058,6 +1058,27 @@
     },
     {
       "tipo": "acao",
+      "nome": "contato_nota",
+      "acao": "POST contacts/:contact_id/notes",
+      "grupo": "CONTATO",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CONTATO_NOTA",
+      "caminho": {
+        "contact_id": {
+          "$valor": "contato.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "content",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CONTENT",
+          "obrigatorio": true
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
       "nome": "contato_alterar",
       "acao": "PATCH contacts/:id",
       "grupo": "CONTATO",
