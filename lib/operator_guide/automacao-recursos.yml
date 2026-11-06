@@ -60,9 +60,9 @@ passo:
       POST conversations/:id/toggle_priority: {}
       POST conversations/:id/toggle_status: {}
   conversations/assignments:
-    motivo: Atribuir a conversa a uma pessoa ou a um time (D13).
+    motivo: Atribuir a conversa a uma pessoa ou a um time (D13). Para a agente de IA, só o passo ia_assumir, pela Atribuição (G15).
     acoes:
-      POST conversations/:conversation_id/assignments: {}
+      POST conversations/:conversation_id/assignments: { proibe: [assignee_type] }
   crm/cards:
     motivo: Alterar o card e movê-lo de etapa.
     acoes:

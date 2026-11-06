@@ -124,6 +124,38 @@ RSpec.describe 'Autonomia Insurance Connection API', type: :request do
     end
   end
 
+  # chat#2647: `discovering` de conexão já varrida serve às ferramentas da Lia. Só pode nascer de uma
+  # conexão pronta; a que está fora do ar não pode virar utilizável antes de o portal responder.
+  describe 'POST /connection/scan e as ferramentas da Lia' do
+    def conexao_varrida(status)
+      Autonomia::Insurance::Connection.create!(account: account, username: 'c@x.com', password: 'segredo',
+                                               status: status, last_capability_scan_at: 1.day.ago)
+    end
+
+    it 'conexão pronta segue servindo às ferramentas enquanto a varredura espera na fila' do
+      enable_feature!
+      conexao = conexao_varrida('ready')
+
+      post "#{base}/scan", headers: admin.create_new_auth_token, as: :json
+
+      expect(conexao.reload.status).to eq('discovering')
+      expect(conexao).to be_usable
+    end
+
+    %w[auth_required offline degraded].each do |status|
+      it "conexão #{status} não vira utilizável só porque pediram a varredura" do
+        enable_feature!
+        conexao = conexao_varrida(status)
+
+        post "#{base}/scan", headers: admin.create_new_auth_token, as: :json
+
+        expect(response).to have_http_status(:accepted)
+        expect(conexao.reload.status).to eq('authenticating')
+        expect(conexao).not_to be_usable
+      end
+    end
+  end
+
   describe 'DELETE /connection' do
     it 'removes the stored connection' do
       enable_feature!

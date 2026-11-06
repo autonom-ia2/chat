@@ -75,7 +75,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
     # escolhe mal o plano das mensagens (em produção o autovacuum mantém as estatísticas).
     ActiveRecord::Base.connection.execute('ANALYZE messages, conversations, autonomia_desempenho_procuras')
 
-    painel = described_class.new(account: conta, sujeito_type: sujeito_type, sujeito_id: sujeito_id)
+    painel = described_class.new(account: conta, ve_anuncio: true, sujeito_type: sujeito_type, sujeito_id: sujeito_id)
     falhas = described_class::PERIODOS.to_h do |chave|
       esperado = Autonomia::Desempenho::Exportacao::Contrato.do_pacote(referencia, chave)
       obtido = JSON.parse(painel.call(chave).to_json)

@@ -89,6 +89,9 @@ export const novoPasso = (entrada, id, t) => {
   if (entrada.tipo === 'mensagem') return { id, tipo: 'mensagem', texto: [] };
   if (entrada.tipo === 'avisar')
     return { id, tipo: 'avisar', texto: [], para: { responsavel: true } };
+  // G2: a caixa de e-mail a escolher, o assunto e o texto a escrever.
+  if (entrada.tipo === 'email')
+    return { id, tipo: 'email', caixa_id: null, assunto: [], texto: [] };
   // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
   if (entrada.tipo === 'retorno')
     return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
@@ -120,6 +123,9 @@ export const novoPasso = (entrada, id, t) => {
     return { id, tipo: 'escrever', le: LE, instrucao: '', destino: 'sugestao' };
   if (entrada.tipo === 'resumir')
     return { id, tipo: 'resumir', le: LE, linhas: 3, destino: 'nota' };
+  // G15: a agente nasce sem escolha; o "Salvar" do painel espera escolher.
+  if (entrada.tipo === 'ia_assumir')
+    return { id, tipo: 'ia_assumir', agente_id: null };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})
@@ -162,6 +168,7 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
+// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
 export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
   const bases = alvo && dados.alvos?.[alvo];
@@ -169,7 +176,9 @@ export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   return {
     ...dados,
     valores: dados.valores.filter(
-      item => !item.base || bases.includes(item.base)
+      item =>
+        (!item.base || bases.includes(item.base)) &&
+        (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
   };
 };

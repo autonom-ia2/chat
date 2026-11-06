@@ -312,6 +312,12 @@ autonomia_automacao_varredura_job:
   class: 'Autonomia::Automacao::VarreduraJob'
   queue: scheduled_jobs
 
+# executed every 15 minutes; os gatilhos de tempo da Automação livre: card parado e data do card ou do contato (#2499).
+autonomia_automacao_tempo_job:
+  cron: '*/15 * * * *'
+  class: 'Autonomia::Automacao::TempoJob'
+  queue: scheduled_jobs
+
 # executed every 5 minutes; retoma a tarefa longa do Guia que ficou sem batimento (#936).
 autonomia_guide_tarefas_vigia_job:
   cron: '*/5 * * * *'

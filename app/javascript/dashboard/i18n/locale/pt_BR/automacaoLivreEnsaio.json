@@ -19,7 +19,8 @@
       "FORA": {
         "SPAM": "Nada: a conversa está no Spam.",
         "SEM_MENSAGEM": "Nada: a conversa ainda não tem mensagem.",
-        "FORA_DO_FILTRO": "Nada: a conversa não passa no \"Só se\" do gatilho."
+        "FORA_DO_FILTRO": "Nada: a conversa não passa no \"Só se\" do gatilho.",
+        "RESPOSTA_AUTOMATICA": "Nada: a última mensagem é uma resposta automática de e-mail (fora do escritório, aviso do servidor)."
       },
       "HOJE_SIM": "Hoje, sim: seguiria por \"Então\".",
       "HOJE_NAO": "Hoje, não: seguiria por \"Senão\".",
@@ -46,7 +47,21 @@
           "EMPRESA": "{campo}, na empresa"
         }
       },
-      "MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo {modelo} (cobrado pela Meta)."
+      "MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo {modelo} (cobrado pela Meta).",
+      "IA_ASSUMIR": "Passaria para {agente}",
+      "NAO_PASSARIA": {
+        "AGENTE_SUMIU": "Não passaria: a agente escolhida não existe mais.",
+        "FASE2_DESLIGADA": "Não passaria: as agentes de IA não recebem conversas nesta conta.",
+        "CONVERSA_RESOLVIDA": "Não passaria: a conversa está resolvida.",
+        "PESSOA_ATRIBUIDA": "Não passaria: a conversa está com uma pessoa, e ela continua com a conversa.",
+        "SEM_VINCULO_NA_CAIXA": "Não passaria: {agente} não trabalha na caixa desta conversa.",
+        "NAO_ATENDE_CLIENTE": "Não passaria: {agente} não está atendendo clientes agora."
+      },
+      "EMAIL": "Sairia por {caixa}",
+      "CONTATO_SEM_EMAIL": "Não sairia: o contato não tem e-mail.",
+      "CONTATO_NAO_RECEBE": "Não sairia: o contato pediu para não receber mensagens.",
+      "EMAIL_BLOQUEADO": "Não sairia: o e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro).",
+      "CAIXA_DE_EMAIL_INDISPONIVEL": "Não sairia: a caixa de e-mail escolhida não existe mais."
     },
     "HISTORICO": {
       "TITULO": "O que aconteceu",

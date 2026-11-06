@@ -18,6 +18,7 @@ import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
 import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
+import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar, filtrosDoGatilho } from '../receita';
 
@@ -137,7 +138,11 @@ const mudarCaminho = (param, novo) => {
   };
 };
 
+// Cada abertura remonta os campos: a peça de data guarda o modo e o número que a
+// pessoa está montando, e um passo não pode herdar os do outro (#2414 G16b).
+const aberturas = ref(0);
 const abrir = item => {
+  aberturas.value += 1;
   alvo.value = item;
   rascunho.value = copiar(item.valor ?? null);
   painel.value?.open();
@@ -171,15 +176,29 @@ const vazio = valor =>
   valor === null ||
   valor === '' ||
   (Array.isArray(valor) && !valor.length);
+// O texto e a linha (assunto do e-mail, G2) levam dado da conversa; com os dois
+// no passo, cada "Pôr um dado" diz em qual caixa o dado entra.
+const TEXTOS = ['texto_com_valores', 'linha_com_valores'];
+const variosTextos = computed(
+  () =>
+    camposNativos.value.filter(campo => TEXTOS.includes(campo.peca)).length > 1
+);
+const rotuloDoDado = campo =>
+  variosTextos.value
+    ? t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM', {
+        campo: t(campo.rotulo),
+      })
+    : '';
 const nativoPronto = campo => {
   const valor = rascunho.value[campo.nome];
   if (campo.peca === 'duracao') return Number.isInteger(valor?.valor);
   if (campo.peca === 'condicao') return condicaoPronta(valor);
   // O texto pede algo além de espaço; o aviso, alguém para chamar.
-  if (campo.peca === 'texto_com_valores')
+  if (TEXTOS.includes(campo.peca))
     return (valor || []).some(
       parte => typeof parte !== 'string' || parte.trim()
     );
+  if (campo.peca === 'caixa_de_email') return !vazio(valor);
   // F4b: o modelo é opcional; escolhido, cada variável pede algo além de espaço.
   if (campo.peca === 'modelo_whatsapp')
     return (
@@ -194,6 +213,8 @@ const nativoPronto = campo => {
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
     );
+  // G15: a agente de IA escolhida.
+  if (campo.peca === 'agente_de_ia') return Number.isInteger(valor);
   // F7: a pergunta e a instrução escritas; cada caminho e cada dado com nome,
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
@@ -208,7 +229,10 @@ const nativoPronto = campo => {
   if (campo.peca.startsWith('destino_')) return !vazio(valor);
   return true;
 };
+// A data calculada pela metade (sem o campo de partida, sem o número) segura o
+// "Salvar" (#2414 G16b).
 const acaoPronta = () =>
+  !temDataIncompleta(rascunho.value.corpo) &&
   escolhasDoCaminho.value.every(
     escolha => !vazio(rascunho.value.caminho?.[escolha.param])
   ) &&
@@ -326,13 +350,35 @@ defineExpose({ abrir, fechar });
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreTexto
-          v-else-if="campo.peca === 'texto_com_valores'"
+          v-else-if="TEXTOS.includes(campo.peca)"
           :rotulo="$t(campo.rotulo)"
+          :uma-linha="campo.peca === 'linha_com_valores'"
+          :rotulo-do-dado="rotuloDoDado(campo)"
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <div
+          v-else-if="campo.peca === 'caixa_de_email'"
+          class="flex flex-col gap-1.5"
+          data-peca="caixa_de_email"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            v-if="opcoes.caixaDeEmail?.length"
+            :model-value="rascunho[campo.nome] ?? ''"
+            :aria-label="$t(campo.rotulo)"
+            :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+            :options="opcoes.caixaDeEmail"
+            @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          />
+          <p v-else class="text-sm text-n-slate-11" data-sem-caixa-de-email>
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_CAIXA_DE_EMAIL') }}
+          </p>
+        </div>
         <LivreModelo
           v-else-if="campo.peca === 'modelo_whatsapp'"
           :rotulo="$t(campo.rotulo)"
@@ -348,6 +394,37 @@ defineExpose({ abrir, fechar });
           :opcoes="opcoes"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <div
+          v-else-if="campo.peca === 'agente_de_ia'"
+          class="flex flex-col gap-1.5"
+          data-peca="agente_de_ia"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            v-if="opcoes.agenteDeIa?.length"
+            :model-value="rascunho[campo.nome] ?? ''"
+            :aria-label="$t(campo.rotulo)"
+            :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+            :options="opcoes.agenteDeIa"
+            @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          />
+          <p
+            v-else-if="opcoes.agenteDeIaFalhou"
+            class="mb-0 text-sm text-n-ruby-11"
+            data-agentes-de-ia-falhou
+          >
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.AGENTES_DE_IA_FALHOU') }}
+          </p>
+          <p
+            v-else-if="opcoes.agenteDeIa"
+            class="mb-0 text-sm text-n-slate-11"
+            data-sem-agente-de-ia
+          >
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_AGENTE_DE_IA') }}
+          </p>
+        </div>
         <LivreRetornoPara
           v-else-if="campo.peca === 'quem_recebe_retorno'"
           :rotulo="$t(campo.rotulo)"
@@ -393,7 +470,7 @@ defineExpose({ abrir, fechar });
 
       <LivreCampo
         v-for="campo in camposDaAcao"
-        :key="campo.nome"
+        :key="`${aberturas}-${campo.nome}`"
         :campo="campo"
         :model-value="lerCampo(rascunho, entrada, campo.nome)"
         :catalogo="catalogo"

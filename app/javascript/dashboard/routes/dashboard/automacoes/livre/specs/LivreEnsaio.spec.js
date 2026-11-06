@@ -189,6 +189,27 @@ describe('linhasDoEnsaio', () => {
     expect(linha.balao).toBeUndefined();
   });
 
+  it('o e-mail mostra só o assunto montado, a caixa e o texto no balão', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'e1',
+          tipo: 'email',
+          faria: 'email',
+          dados: { assunto: 'Oi, Carla', caixa: 'Atendimento', texto: 'Saiu.' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha).toMatchObject({
+      texto: 'AUTOMACAO_LIVRE.FRASES.EMAIL(Oi, Carla)',
+      destaque: 'AUTOMACAO_LIVRE.ENSAIO.EMAIL(Atendimento)',
+      balao: 'Saiu.',
+    });
+  });
+
   it('o "decidir" rotula cada caminho e o "nenhum"', () => {
     const linhas = linhasDoEnsaio(
       [
@@ -256,5 +277,40 @@ describe('linhasDoEnsaio', () => {
     );
 
     expect(linha).toMatchObject({ texto: 'frase i1', destaque });
+  });
+
+  // G15 — o "Passar para a agente de IA" diz para quem passaria; se não
+  // passaria, o porquê, com o nome da agente. Nada chama os Agentes.
+  it.each([
+    [
+      'ia_assumir',
+      { agente: 'Área' },
+      { destaque: 'AUTOMACAO_LIVRE.ENSAIO.IA_ASSUMIR(Área)' },
+    ],
+    [
+      'pessoa_atribuida',
+      { agente: 'Área' },
+      { aviso: 'AUTOMACAO_LIVRE.ENSAIO.NAO_PASSARIA.PESSOA_ATRIBUIDA(Área)' },
+    ],
+    [
+      'sem_vinculo_na_caixa',
+      { agente: 'Área' },
+      {
+        aviso: 'AUTOMACAO_LIVRE.ENSAIO.NAO_PASSARIA.SEM_VINCULO_NA_CAIXA(Área)',
+      },
+    ],
+    [
+      'agente_sumiu',
+      {},
+      { aviso: 'AUTOMACAO_LIVRE.ENSAIO.NAO_PASSARIA.AGENTE_SUMIU()' },
+    ],
+  ])('o "Passar para a agente" com "%s"', (faria, dados, esperado) => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'g1', tipo: 'ia_assumir', faria, dados }],
+      fraseDe,
+      t
+    );
+
+    expect(linha).toMatchObject({ texto: 'frase g1', ...esperado });
   });
 });

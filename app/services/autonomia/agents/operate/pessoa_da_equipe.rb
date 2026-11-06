@@ -30,10 +30,12 @@ module Autonomia::Agents::Operate::PessoaDaEquipe
   # marca que cada um grava em `content_attributes`: regra de automação (`Message#human_response?`), Automação livre
   # (F4 do #2414, que manda sem remetente e grava a marca do mesmo jeito), follow-up e lembrete do CRM, inclusive o
   # composto pela IA (Crm::FollowUps::MessageSender), convite e lembrete de reunião do
-  # Agendamento (Crm::BookingV2::InviteDeliverer / MeetingReminder) e aviso do Agendamento (Crm::BookingV2::Notices).
+  # Agendamento (Crm::BookingV2::InviteDeliverer / MeetingReminder), aviso do Agendamento (Crm::BookingV2::Notices) e o
+  # privado que a IA manda a quem comentou (Crm::MetaAds::ComentariosIa::Registro::MARCA, #2212).
   # Campanha marca em `additional_attributes` (MARCAS_DE_CAMPANHA). A guarda por AST
   # (varredura_de_envios_em_nome_de_pessoa_spec) cobra uma destas em todo envio novo em nome de pessoa.
-  MARCAS_DE_ENVIO_AUTOMATICO = %w[automation_rule_id automacao_id crm_follow_up_id crm_booking_invite_id crm_booking_notice].freeze
+  MARCAS_DE_ENVIO_AUTOMATICO = %w[automation_rule_id automacao_id crm_follow_up_id crm_booking_invite_id crm_booking_notice
+                                  meta_ads_comment_action_id].freeze
   MARCAS_DE_CAMPANHA = %w[campaign_id whatsapp_api_campaign_id].freeze
 
   module_function
