@@ -478,6 +478,28 @@ describe('Anúncios da Meta · o anúncio por dentro (#1088, F3b)', () => {
     expect(on.find('[data-ad-comments-empty]').exists()).toBe(true);
   });
 
+  // #2520: one flag rule for comments and care (the network comments flag + the care flag); the ad management flag
+  // does not hide them. Without it there is no live read, so the signal is the spend.
+  it('without meta_ads_gestao, an ad with spend still shows the comments and the AI care entry (#2520)', async () => {
+    comentariosInstagram.listar.mockResolvedValue({
+      status: 'ready',
+      account: { username: 'lojaexemplo' },
+      comments: [],
+      total: 0,
+      next_cursor: null,
+    });
+    flags.value = {
+      meta_ads_comentarios_instagram: true,
+      meta_ads_comentarios_ia: true,
+    };
+    const wrapper = await mountDetail();
+
+    expect(lerGestao).not.toHaveBeenCalled();
+    expect(wrapper.find('[data-ad-comments]').exists()).toBe(true);
+    expect(wrapper.findComponent(CuidarAnuncioEntrada).exists()).toBe(true);
+    expect(wrapper.find('[data-ad-status]').exists()).toBe(false);
+  });
+
   it('shows the AI comment care entry only with meta_ads_comentarios_ia, next to the comments (#2212)', async () => {
     lerGestao.mockResolvedValue(null);
     comentariosInstagram.listar.mockResolvedValue({

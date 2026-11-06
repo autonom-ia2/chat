@@ -21,6 +21,9 @@
 # `com_midia: true` (IA entende a conversa F4, só a IA de assunto com a flag `crm_ia_leitor_de_midia`): a mensagem sem
 # texto com anexo também entra, e o texto lido do anexo (Crm::Ai::TextoDaMidia.lido: transcrição, descrição, texto do
 # PDF) vai junto do texto da mensagem. Anexo ainda sem leitura não vira texto. Sem ele, igual.
+#
+# `valor_do_card: false` (#2597, a Automação livre para quem não vê valores de venda): o card vai sem o valor. Quem chama
+# decide pela regra dele (Valores.pode_ler?); sem ele, igual.
 class Autonomia::Decisores::Estado
   include Autonomia::DadoDeContato
 
@@ -52,7 +55,7 @@ class Autonomia::Decisores::Estado
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
                  leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES,
-                 papeis: false, com_midia: false, fuso: nil)
+                 papeis: false, com_midia: false, fuso: nil, valor_do_card: true)
     @conversation = conversation
     @message = message
     @card = card
@@ -64,6 +67,7 @@ class Autonomia::Decisores::Estado
     @rotulo = Crm::Ai::FatosDaConversa::Rotulo.new(conversation) if papeis
     @com_midia = com_midia
     @fuso = fuso
+    @valor_do_card = valor_do_card
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -169,9 +173,7 @@ class Autonomia::Decisores::Estado
               metadata: metadata, attributes: curto(card.custom_attributes) }.compact_blank }
   end
 
-  def valor_do_card
-    "#{card.value_cents / 100.0} #{card.currency}" if card.value_cents.to_i.positive?
-  end
+  def valor_do_card = ("#{card.value_cents / 100.0} #{card.currency}" if @valor_do_card && card.value_cents.to_i.positive?)
 
   def ler_empresa
     empresa = contato.respond_to?(:company) ? contato.company : nil

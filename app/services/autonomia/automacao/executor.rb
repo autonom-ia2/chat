@@ -141,7 +141,6 @@ class Autonomia::Automacao::Executor
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @alvo = nil
     @contexto = nil
-    @valores = nil
   end
 
   def esperar(passo)
@@ -151,16 +150,21 @@ class Autonomia::Automacao::Executor
   end
 
   def esperar_ate(passo)
-    if condicao?(passo['condicao'])
-      registrar(passo['id'], 'ok')
-      return @roteiro.seguinte(passo['id'])
-    end
-    return aguardar(passo, Time.current + duracao(passo['prazo'])) unless @retomando
+    espera = janela_da_espera(passo)
+    return cumprida(passo) if condicao?(passo['condicao'], valores(espera: espera))
+    return aguardar(passo, espera.begin + duracao(passo['prazo'])) unless @retomando
     return aguardar(passo, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
 
     registrar(passo['id'], 'pulado', 'prazo_vencido')
     @roteiro.entrar(passo, 'se_vencer')
   end
+
+  # A janela do "esperar até", para a resposta que chegou durante ele (G11): na primeira conferência, de agora em diante;
+  # ao retomar, do começo (o prazo gravado menos a duração dele, na versão em que a execução entrou) até o prazo. A
+  # execução foi lida antes da troca, com o `due_at` da espera. Resposta depois do prazo não conta: o prazo venceu.
+  def janela_da_espera(passo) = @retomando && @execucao.due_at ? ((@execucao.due_at - duracao(passo['prazo']))..@execucao.due_at) : (Time.current..)
+
+  def cumprida(passo) = registrar(passo['id'], 'ok').then { @roteiro.seguinte(passo['id']) }
 
   def se(passo)
     ramo = condicao?(passo['condicao']) ? 'entao' : 'senao'
@@ -201,7 +205,7 @@ class Autonomia::Automacao::Executor
   # A ação mudou o alvo: o passo seguinte ("se", "esperar até") lê o valor de agora, não o de antes dela.
   def seguir_depois_da_acao(passo, resultado)
     @tentativas = 0
-    @alvo = @contexto = @valores = nil
+    @alvo = @contexto = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
     @roteiro.seguinte(passo['id'])
   end
@@ -251,7 +255,8 @@ class Autonomia::Automacao::Executor
                                              resultado: resultado, motivo: motivo, dados: dados)
   end
 
-  def condicao?(condicao) = ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira?
+  # `lidos`: o "esperar até" lê com o começo da espera, para a resposta que chegou durante ela (G11).
+  def condicao?(condicao, lidos = valores) = ::Autonomia::Automacao::Condicao.new(condicao, lidos).verdadeira?
 
   def duracao(duracao)
     duracao['valor'].public_send(UNIDADES.fetch(duracao['unidade']))
@@ -263,5 +268,6 @@ class Autonomia::Automacao::Executor
   # As pontes do alvo (#2499): conversa, card ou contato, e os outros dois quando há caminho.
   def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(alvo))
 
-  def valores = (@valores ||= ::Autonomia::Automacao::Valores.new(alvo: contexto))
+  # Com as permissões de quem ligou (#2597); no "esperar até", com a janela da espera (G11).
+  def valores(espera: nil) = ::Autonomia::Automacao::Valores.new(alvo: contexto, quem: @definicao.ligada_por, espera: espera)
 end

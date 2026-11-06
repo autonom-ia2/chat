@@ -43,6 +43,27 @@ class AutomacoesAPI extends ApiClient {
     const caminho = id ? `${this.url}/${id}/ensaio` : `${this.url}/ensaio`;
     return axios.post(caminho, { receita, conversa_id: conversaId });
   }
+
+  // "Testar este passo" (#2500 C2): uma conversa por pedido. O 1º escolhe as
+  // candidatas (o servidor devolve os ids); os seguintes mandam `conversaId`,
+  // conferido no servidor. Chama a IA e paga.
+  testarPasso({ receita, passoId, conversaId }) {
+    return axios.post(`${this.url}/testar_passo`, {
+      receita,
+      passo_id: passoId,
+      conversa_id: conversaId,
+    });
+  }
+
+  // O custo da IA nos últimos 30 dias: a soma de cada automação (lista) e a
+  // média de cada passo (cartão). Sem financial_view, `com_valores` é false.
+  custos() {
+    return axios.get(`${this.url}/custos`);
+  }
+
+  custosDaAutomacao(id) {
+    return axios.get(`${this.url}/${id}/custos`);
+  }
 }
 
 export default new AutomacoesAPI();

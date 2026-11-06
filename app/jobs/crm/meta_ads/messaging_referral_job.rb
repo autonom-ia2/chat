@@ -19,7 +19,7 @@ class Crm::MetaAds::MessagingReferralJob < ApplicationJob
   # messaging: o evento do webhook (chaves em texto). Vai para a fila só o anúncio sem links assinados
   # (Crm::MetaAds::MessagingReferral.slim); referral que não é anúncio não enfileira.
   def self.enqueue_for(network, messaging)
-    referral = Crm::MetaAds::MessagingReferral.slim(messaging['referral'])
+    referral = Crm::MetaAds::MessagingReferral.slim(Crm::MetaAds::MessagingReferral.with_click_time(messaging['referral'], messaging['timestamp']))
     return if referral.nil?
 
     recipient_id = messaging.dig('recipient', 'id').to_s

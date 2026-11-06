@@ -134,10 +134,18 @@ RSpec.describe Crm::MetaAdsCommentCare do
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '17900', ad_id: nil)).to eq(anuncio)
     end
 
-    it 'anúncio pausado: a IA não cuida, e o cuidado do post ligado não entra no lugar dele' do
+    it 'anúncio pausado, com o id dele no comentário: a IA não cuida, e o cuidado do post ligado não entra no lugar dele' do
       anuncio.update!(status: 'paused', post_ids: %w[179])
 
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: '120')).to be_nil
+    end
+
+    # #2520: no Facebook o comentário nunca traz o anúncio, e o post impulsionado é o mesmo do orgânico.
+    it 'anúncio pausado, comentário sem o id do anúncio: vale o cuidado do post ligado' do
+      anuncio.update!(status: 'paused', post_ids: %w[179], network: 'both')
+      post.update!(network: 'facebook')
+
+      expect(described_class.cuidando(network: 'facebook', account_id: account.id, post_id: '179', ad_id: nil)).to eq(post)
       expect(described_class.cuidando(network: 'instagram', account_id: account.id, post_id: '179', ad_id: nil)).to be_nil
     end
 

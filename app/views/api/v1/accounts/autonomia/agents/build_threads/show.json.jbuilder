@@ -20,6 +20,8 @@ json.payload do
     json.error_fields Array(@thread.state['error_fields'])
     json.truncated_fields Array(@thread.state['truncated_fields'])
     json.applied @thread.state['applied']
+    # #2490: o canal que o dono pediu na conversa (whatsapp, instagram… ou nenhum). Leitura do Construtor, não é IP.
+    json.canal_pedido @thread.state['canal_pedido'] if @thread.state.key?('canal_pedido')
     # #1428 (piloto): o ajuste aplicou parte e ainda falta algo ou pergunta. Só existe onde o piloto rodou.
     json.parcial @thread.state['parcial'] if @thread.state.key?('parcial')
     # #1428 (entrega C, piloto): as respostas prontas da pergunta aberta (do Construtor, ou os botões fixos do conflito).

@@ -24,8 +24,6 @@ class Crm::MetaAds::ComentariosIa::Painel
   end
 
   STATUSES = %w[on paused].freeze
-  # A rede que já deixa a IA mandar o privado (Rede#privado_disponivel?): o Facebook espera a pages_messaging (F4).
-  PRIVADO_LIBERADO = %w[instagram].freeze
   MOTIVO_DA_ACAO = {
     'to_you' => 'complaint', 'private_reply_failed' => 'failed', 'private_reply_unsure' => 'unsure',
     'kept_for_owner' => 'no_private', 'ai_unread' => 'unread', 'private_reply_already' => 'already_sent'
@@ -154,7 +152,8 @@ class Crm::MetaAds::ComentariosIa::Painel
     registro = cuidado || novo_cuidado(user)
     registro.assign_attributes(atributos)
     religar!(registro)
-    registro.save!
+    # #2520: gravado, o cuidado de Facebook assina o `feed` da Página (o Facebook só manda o comentário com ele).
+    Crm::MetaAds::ComentariosIa::AssinarFeedJob.para!(registro.tap(&:save!))
     @cuidado = registro
   rescue ActiveRecord::RecordNotUnique
     raise if de_novo
@@ -187,7 +186,9 @@ class Crm::MetaAds::ComentariosIa::Painel
   def cuidado_payload
     escrito = cuidado || Crm::MetaAdsCommentCare.new
     {
-      network: rede_do_cuidado, private_available: @networks.intersect?(PRIVADO_LIBERADO), care: cuidado ? escrito.status : 'off',
+      # O privado sai em alguma rede do alvo: no Facebook, só com a flag da conta (Rede.privado_liberado?, #2613).
+      private_available: @networks.any? { |rede| Crm::MetaAds::ComentariosIa::Rede.privado_liberado?(@account, rede) },
+      network: rede_do_cuidado, care: cuidado ? escrito.status : 'off',
       message: escrito.message.to_s, para_quem: escrito.para_quem.to_s, phrases: Array(escrito.phrases),
       read_old: escrito.read_old_at.present?, results: resultados.merge(skipped: 0),
       # #2487: o id do cuidado gravado (nil antes de ligar), para anexar o material só deste post ou anúncio.

@@ -170,6 +170,8 @@ const registros = useMapGetter('autonomiaAgents/getRecords');
 const caixas = useMapGetter('inboxes/getInboxes');
 const contaId = useMapGetter('getCurrentAccountId');
 const contaDaStore = useMapGetter('accounts/getAccount');
+// #2490: o canal que o dono pediu na conversa com o Construtor.
+const estadoDaConversa = useMapGetter('autonomiaBuildThreads/getThreadState');
 
 const abrindo = ref(Boolean(idInicial));
 const falhouAoAbrir = ref(false);
@@ -287,8 +289,15 @@ const canais = computed(() =>
 const horarios = computed(() =>
   horariosDasCaixas(canais.value, caixas.value, t)
 );
+// A conversa na tela traz a leitura mais nova; um rascunho reaberto (sem a thread) lê a que ficou no agente.
+const canalPedido = computed(
+  () =>
+    estadoDaConversa.value?.canal_pedido ||
+    agente.value?.config?.canal_pedido ||
+    null
+);
 const sugerido = computed(() =>
-  canalSugerido(canais.value, conversa.agenteId.value)
+  canalSugerido(canais.value, conversa.agenteId.value, canalPedido.value)
 );
 
 const carregarElegiveis = async id => {

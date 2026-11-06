@@ -222,6 +222,28 @@ describe('CuidarComentarios (#2212)', () => {
     expect(wrapper.emitted('back')).toBeUndefined();
   });
 
+  // #2520: sem o post por dentro (seus_posts_comentarios), não há onde responder: o "Ver no post" some.
+  it('sem poder abrir o post (canReply falso): o comentário fica sem "Ver no post"', async () => {
+    ComentariosIaAPI.getCuidado.mockResolvedValue({
+      data: painel({
+        care: 'on',
+        to_see: [
+          {
+            id: 'c-1',
+            network: 'instagram',
+            author: 'ana',
+            text: 'Péssimo',
+            kind: 'complaint',
+          },
+        ],
+      }),
+    });
+    const wrapper = await montar({ canReply: false });
+
+    expect(wrapper.text()).toContain('Péssimo');
+    expect(wrapper.find('[data-ia-reply-comment]').exists()).toBe(false);
+  });
+
   it('o que a IA leu depois de ligar e não era o caso fica em "Esperando você", não nos antigos', async () => {
     ComentariosIaAPI.getCuidado.mockResolvedValue({
       data: painel({

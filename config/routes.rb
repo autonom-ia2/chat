@@ -205,6 +205,7 @@ Rails.application.routes.draw do
           get 'seus_posts/cuidados', to: 'seus_posts_cuidado#cuidados'
           put 'seus_posts/cuidados', to: 'seus_posts_cuidado#mudar_todos'
           get 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#show'
+          get 'seus_posts/posts/:post_id/cuidado/post', to: 'seus_posts_cuidado#ler_post'
           put 'seus_posts/posts/:post_id/cuidado', to: 'seus_posts_cuidado#update'
           post 'seus_posts/posts/:post_id/cuidado/previa', to: 'seus_posts_cuidado#previa'
           post 'seus_posts/posts/:post_id/cuidado/rascunho', to: 'seus_posts_cuidado#rascunho'
@@ -728,11 +729,15 @@ Rails.application.routes.draw do
             resources :automacoes, only: [:index, :show, :create, :update] do
               get :passos, on: :collection
               post :ensaio, on: :collection, action: :ensaio_novo
+              # #2500 C2: o "Testar este passo" e os custos da IA.
+              post :testar_passo, on: :collection, to: 'automacoes_ia#testar_passo'
+              get :custos, on: :collection, to: 'automacoes_ia#custos'
               member do
                 post :ligar
                 post :desligar
                 get :historico
                 post :ensaio
+                get :custos, to: 'automacoes_ia#custos_da_automacao'
               end
             end
             resources :avisos, only: [:index, :update]

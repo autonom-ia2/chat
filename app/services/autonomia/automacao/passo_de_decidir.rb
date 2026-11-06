@@ -17,6 +17,25 @@ class Autonomia::Automacao::PassoDeDecidir
 
   def self.fala_com_gente?(_passo) = false
 
+  # O que vai à IA: o mesmo na execução e no "Testar este passo" (#2500 C2).
+  def self.consulta(passo, estado)
+    { modelo: MODELO, instrucoes: instrucoes(passo), entrada: { conversa: estado.conversa }, schema: schema(passo) }
+  end
+
+  def self.instrucoes(passo)
+    caminhos = Array(passo['caminhos']).map { |caminho| "- #{caminho['chave']}: #{caminho['descricao']}" }
+    nenhum = ::Autonomia::Automacao::Receita::NENHUM
+    [INSTRUCOES, "Pergunta: #{passo['pergunta']}", "Caminhos:\n#{caminhos.join("\n")}\n- #{nenhum}: nenhum se aplica"].join("\n\n")
+  end
+
+  def self.schema(passo)
+    chaves = Array(passo['caminhos']).pluck('chave') + [::Autonomia::Automacao::Receita::NENHUM]
+    { name: 'automacao_decidir',
+      schema: { type: 'object', additionalProperties: false, required: %w[caminho motivo],
+                properties: { caminho: { type: 'string', enum: chaves }, motivo: { type: 'string' } } } }
+  end
+  private_class_method :instrucoes, :schema
+
   def executar
     negado = impedido
     return negado if negado
@@ -24,35 +43,24 @@ class Autonomia::Automacao::PassoDeDecidir
     estado = leitura
     return Resultado.new(tipo: :ok, dados: { 'ramo' => nenhum, 'sem_leitura' => true }) if estado.vazio?
 
-    resposta, custo = perguntar(modelo: MODELO, instrucoes: instrucoes, entrada: { conversa: estado.conversa }, schema: schema)
+    resposta, custo = perguntar(**self.class.consulta(@passo, estado))
     @motivo = resposta['motivo'].to_s.squish.first(MAX_MOTIVO)
     Resultado.new(tipo: :ok, dados: { 'ramo' => resposta['caminho'], 'ia' => custo })
   rescue Falha => e
     falhou(e)
   end
 
-  # A nota do motivo, no caminho escolhido. nil quando não houve pergunta à IA.
+  # A nota do motivo, no caminho escolhido. nil quando não houve pergunta à IA ou quando ela escolheu "nenhum" (#2578):
+  # a nota serve quando algo muda na conversa, e um gatilho de toda mensagem com o "nenhum" como o normal deixaria uma
+  # nota por mensagem. O histórico guarda o ramo.
   def anotar(ramo)
-    return if @motivo.nil?
+    return if @motivo.nil? || ramo == nenhum
 
-    nome = Array(@passo['caminhos']).find { |caminho| caminho['chave'] == ramo }&.dig('nome') || frase(:nenhum)
+    nome = Array(@passo['caminhos']).find { |caminho| caminho['chave'] == ramo }&.dig('nome')
     nota(frase(:decidiu, nome: nome, motivo: @motivo))
   end
 
   private
 
   def nenhum = ::Autonomia::Automacao::Receita::NENHUM
-
-  def chaves = Array(@passo['caminhos']).pluck('chave')
-
-  def instrucoes
-    caminhos = Array(@passo['caminhos']).map { |caminho| "- #{caminho['chave']}: #{caminho['descricao']}" }
-    [INSTRUCOES, "Pergunta: #{@passo['pergunta']}", "Caminhos:\n#{caminhos.join("\n")}\n- #{nenhum}: nenhum se aplica"].join("\n\n")
-  end
-
-  def schema
-    { name: 'automacao_decidir',
-      schema: { type: 'object', additionalProperties: false, required: %w[caminho motivo],
-                properties: { caminho: { type: 'string', enum: chaves + [nenhum] }, motivo: { type: 'string' } } } }
-  end
 end

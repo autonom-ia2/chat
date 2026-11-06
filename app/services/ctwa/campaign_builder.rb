@@ -49,13 +49,12 @@ module Ctwa::CampaignBuilder
       'headline' => ref[:headline],
       'body' => ref[:body],
       'media_type' => ref[:media_type] || ref[:media_content_type],
-      'ctwa_clid' => ref[:ctwa_clid],
-      'referral_id' => messaging_referral_id(ref)
-    }.merge(tracking_attributes(ref)).compact
+      'ctwa_clid' => ref[:ctwa_clid]
+    }.merge(tracking_attributes(ref), messaging_click(ref)).compact
   end
 
-  # Only Messenger/Direct ad clicks carry the webhook event id: any other referral ignores the key.
-  def messaging_referral_id(ref) = (ref[:referral_id] if MESSAGING_AD_SOURCES.include?(ref[:source]))
+  # Only Messenger/Direct ad clicks carry the webhook event id and Meta's click time (#2607): any other referral ignores both.
+  def messaging_click(ref) = MESSAGING_AD_SOURCES.include?(ref[:source]) ? ref.slice(:referral_id, :touched_at).transform_keys(&:to_s) : {}
 
   # Records the CTWA touch on the conversation. The first touch becomes the `campaign`
   # origin; later clicks append to `campaign_touches`. Idempotent per click: a touch whose
@@ -233,7 +232,7 @@ module Ctwa::CampaignBuilder
   end
 
   def duplicate_touch?(touches, touch)
-    touches.any? { |existing| dedup_key(existing) == dedup_key(touch) }
+    touches.any? { |existing| dedup_key(existing) == dedup_key(touch) || Crm::MetaAds::MessagingReferral::Click.same?(existing, touch) }
   end
 
   def deduped_multi_touch?(conversation, touch)

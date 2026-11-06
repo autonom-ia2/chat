@@ -358,6 +358,7 @@ pt_BR:
         to_you: 'Reclamação: não respondi e passei para você.'
         private_reply_failed: 'Não consegui mandar a mensagem. Responda você, se quiser.'
         private_reply_unsure: 'Não sei se a mensagem saiu: a Meta não respondeu. Confira no direct antes de responder.'
+        resolved_after_private_reply: 'Mandei a mensagem no privado e resolvi a conversa. Se a pessoa responder, a resposta chega na caixa.'
         public_reply: '%{user_name} respondeu em público no post: “%{text}”'
         hidden: '%{user_name} escondeu o comentário do post'
         shown: '%{user_name} mostrou de novo o comentário no post'
@@ -646,6 +647,10 @@ pt_BR:
     policy_actor: 'Sistema de Automação via %{policy_name}'
   automation:
     system_name: 'Sistema de Automação'
+    # #2568 P7: quem age quando uma Automação livre muda a conversa.
+    livre:
+      com_quem_ligou: 'Automação «%{nome}» · ligada por %{user_name}'
+      sem_quem_ligou: 'Automação «%{nome}»'
   crm:
     # #2096: o card mantido sem dado pessoal depois que o contato foi excluído (LGPD), e os retornos e reuniões dele.
     cards:
@@ -1031,6 +1036,11 @@ pt_BR:
         canal_sem_resposta: "Este canal não aceita resposta (tweet). A mensagem não foi mandada."
         contato_nao_recebe: "O contato pediu para não receber mensagens. A mensagem não foi mandada."
         fora_da_janela: "A janela de resposta do canal está fechada, e texto livre não sai. A mensagem não foi mandada."
+        limite_da_caixa: "A caixa tem um limite de horas para responder, configurado nas opções dela, e o cliente não escreve há mais tempo que isso. A mensagem não foi mandada."
+        modelo_fora_da_caixa: "A janela estava fechada, e a caixa desta conversa não tem o modelo escolhido. A mensagem não foi mandada."
+        modelo_nao_aprovado: "A janela estava fechada, e o modelo escolhido não está aprovado na Meta nesta caixa. A mensagem não foi mandada."
+        modelo_de_propaganda: "A janela estava fechada, e o modelo escolhido é de propaganda. A automação só manda modelo de utilidade. A mensagem não foi mandada."
+        modelo_mudou: "A janela estava fechada, e o modelo desta caixa pede outras variáveis do que as do passo. Escolha o modelo de novo. A mensagem não foi mandada."
         laco_suspeito: "O outro lado respondeu depressa demais muitas vezes seguidas, como um robô. A automação parou nesta conversa."
         mensagens_desligadas: "Mensagem e aviso estão desligados nesta conta. Nada foi mandado."
         ninguem_para_avisar: "Ninguém que enxerga esta conversa estava na lista do aviso."
@@ -1055,6 +1065,7 @@ pt_BR:
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
         valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
+        valor_de_venda: 'Passo %{passo}: só quem vê os valores de venda pode ler %{caminho}. Peça a permissão ou tire esse valor.'
         corpo: 'Passo %{passo}: %{problema}'
         forma_nao_cabe: 'Passo %{passo}: o campo %{campo} não aceita texto montado nem data calculada.'
         forma_desconhecida: 'Passo %{passo}: %{chave} não é um valor calculado que a automação conhece ($valor, $texto ou $data).'
@@ -1062,11 +1073,13 @@ pt_BR:
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
+        resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."
+        modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
         gatilho_desligado: 'Os gatilhos de card estão desligados nesta conta.'
@@ -1081,7 +1094,6 @@ pt_BR:
       nota:
         laco: "A automação %{nome} parou nesta conversa: o outro lado respondeu em menos de %{segundos} segundos a %{trocas} mensagens da automação, sem pausa e sem ninguém da equipe no meio, como um robô. Confira antes de deixar ela seguir aqui."
         decidiu: 'A automação escolheu *%{nome}*: %{motivo}'
-        nenhum: 'Nenhum se aplica'
         sugestao: "Sugestão da automação (revise antes de mandar):\n\n%{texto}"
         resumo: "Resumo da automação:\n\n%{texto}"
       ia:

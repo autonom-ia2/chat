@@ -167,6 +167,18 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(conversa.reload.priority).to eq('low')
     end
 
+    # #2578: com um gatilho de toda mensagem e o "nenhum" como o normal, a nota viraria uma por mensagem.
+    it 'o "nenhum" não deixa nota na conversa: o ramo fica só no histórico', :aggregate_failures do
+      openai_devolve({ 'caminho' => 'nenhum', 'motivo' => 'Mensagem normal.' })
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [decidir]))
+
+      expect(conversa.messages.where(private: true)).to be_empty
+      expect(dados_do(execucao, 'p1')).to include('ramo' => 'nenhum')
+      expect(dados_do(execucao, 'p1').keys).not_to include('nota_id', 'nota_faltou')
+      expect(dados_do(execucao, 'p1').to_s).not_to include('Mensagem normal.')
+    end
+
     it 'o que a IA lê não leva o e-mail nem o telefone do contato' do
       openai_devolve({ 'caminho' => 'cotacao', 'motivo' => 'x' })
 
@@ -210,6 +222,17 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       dados = dados_do(execucao, 'p1')
       expect(dados['campos']).to eq('gravados' => %w[placa data], 'ausentes' => %w[carros], 'ja_tinha' => %w[nome])
       expect(dados.to_json).not_to include('ABC1D23', '2026-11-03')
+    end
+
+    # O que a IA devolve é dado, nunca fórmula do valor calculado (G16): o PassoDeAcao do extrair recebe valores: nil, e
+    # a forma {"$valor": …} nunca chega a ele, porque a resposta fora do esquema (texto, número, sim/não) para antes.
+    it 'valor da IA com a forma do valor calculado: para no esquema, sem ler nem gravar', :aggregate_failures do
+      openai_devolve({ 'placa' => { '$valor' => 'contato.nome' }, 'data' => nil, 'carros' => nil, 'nome' => nil })
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [extrair(campos)]))
+
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['falhou', [%w[p1 falhou resposta_fora_do_schema]]])
+      expect(conversa.reload.custom_attributes).to eq({})
     end
 
     # O exemplo do aceite: "bati o carro ontem à noite" só vira data quando a IA sabe o dia em que a mensagem foi escrita.

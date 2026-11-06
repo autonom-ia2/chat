@@ -50,7 +50,7 @@ RSpec.describe 'Agentes: o material só do post', type: :request do
   end
 
   before do
-    account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia', 'meta_ads_gestao',
+    account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia',
                              'meta_ads_comentarios_instagram', 'meta_ads_comentarios_facebook')
     create_meta_ads_insights_connection(account)
     allow(Autonomia::Agents::Config).to receive(:enabled?).and_call_original

@@ -23,6 +23,12 @@ class Autonomia::Automacao::PassoDeResumir
   # O ensaio (#2498) só diz para onde o resumo iria: nenhuma IA é chamada.
   def self.ensaiar(passo) = { destino: fala_com_gente?(passo) ? 'avisar' : 'nota' }
 
+  # O que vai à IA: o mesmo na execução e no "Testar este passo" (#2500 C2).
+  def self.consulta(passo, estado)
+    { modelo: MODELO, instrucoes: format(INSTRUCOES, linhas: passo['linhas'] || LINHAS), entrada: { conversa: estado.conversa },
+      schema: SCHEMA }
+  end
+
   def executar
     negado = impedido
     return negado if negado
@@ -32,8 +38,7 @@ class Autonomia::Automacao::PassoDeResumir
     pular = antes_da_ia(aviso, estado)
     return pular if pular
 
-    resposta, custo = perguntar(modelo: MODELO, instrucoes: format(INSTRUCOES, linhas: @passo['linhas'] || LINHAS),
-                                entrada: { conversa: estado.conversa }, schema: SCHEMA)
+    resposta, custo = perguntar(**self.class.consulta(@passo, estado))
     entregar(aviso, resposta['resumo'].to_s.strip, custo)
   rescue Falha => e
     falhou(e)

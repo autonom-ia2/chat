@@ -949,12 +949,13 @@
   enabled: false
   column: feature_flags_ext_2
 
-# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada (com meta_ads_gestao): o detalhe
+# Anúncios da Meta › comentários do anúncio no Instagram (#2196, épico #2194). Ligada: o detalhe
 # do anúncio ganha a aba Instagram dos comentários (ver, responder, ocultar, apagar e responder no privado), e a caixa
 # do Instagram pode pedir de novo o login com instagram_business_manage_comments, voltando ao anúncio. Desligada: a aba
 # não aparece e a API responde 404. Migration 20261108550000 (crm_meta_ads_comment_actions). Fim da
 # feature_flags_ext_2, depois de meta_ads_formularios (#2195): posição 8 (valor 128, 1 << 7). Se outra flag da ext_2
 # entrar antes, esta vai para depois dela (a Orquestração confere antes de enfileirar).
+# #2520: não pede meta_ads_gestao, e é a flag de rede do cuidado da IA no Instagram (com meta_ads_comentarios_ia).
 - name: meta_ads_comentarios_instagram
   display_name: Anúncios da Meta › comentários do anúncio no Instagram
   enabled: false
@@ -997,6 +998,7 @@
 # webhook `feed` da Página avisa comentário novo. Desligada: a aba some e a API responde 404. Sem migration. Fim da
 # feature_flags_ext_2, depois de campanhas_publico_por_conversa (#2303): posição 12 (valor 2048, 1 << 11), dada pela
 # Orquestração (28/10). Se outra flag da ext_2 entrar antes, esta vai para depois dela.
+# #2520: é a flag de rede do cuidado da IA no Facebook; só com ela ligar o cuidado assina o `feed` da Página.
 - name: meta_ads_comentarios_facebook
   display_name: Anúncios da Meta › comentários do anúncio no Facebook
   enabled: false
@@ -1160,5 +1162,16 @@
 # (contas 1, 16 e 18).
 - name: automacao_gatilhos
   display_name: Automação › gatilhos de card do funil
+  enabled: false
+  column: feature_flags_ext_2
+
+# IA cuida dos comentários (#2613, parte do #2212): o privado pelo Messenger no Facebook. A Meta deixa usar a
+# pages_messaging nas Páginas de quem tem papel no app (Standard Access); é o caso das contas internas. Ligada (com
+# meta_ads_comentarios_ia e meta_ads_comentarios_facebook): a tela do cuidado de um post ou anúncio do Facebook deixa
+# ligar o privado, o motor manda o privado pela caixa da Página, e o teste em Agentes mostra o privado. Desligada: como
+# antes, "Em breve", e a pergunta fica com o dono. Rollback: desligar a flag na conta. Sem migration. Bit: posição 27
+# (67108864), dada pela Orquestração. Nasce ligada só nas contas internas: 1, 16 e 18 na hub2you e 24 na autonomia.
+- name: meta_ads_comentarios_privado_facebook
+  display_name: Anúncios › privado no Facebook pela IA
   enabled: false
   column: feature_flags_ext_2

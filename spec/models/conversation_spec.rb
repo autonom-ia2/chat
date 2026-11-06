@@ -338,6 +338,27 @@ RSpec.describe Conversation do
                                content: system_resolved_message,
                                content_attributes: { activity: { type: 'conversation_status_changed', status: 'resolved' } } })
     end
+
+    # #2536: o auto-resolve roda num job, sem o idioma de ninguém.
+    it 'writes the system auto resolution message in the account locale' do
+      account.update!(locale: 'pt_BR', auto_resolve_after: 40 * 24 * 60)
+      conversation2 = create(:conversation, status: 'open', account: account, assignee: old_assignee)
+      Current.reset
+
+      expect { I18n.with_locale(:en) { conversation2.update(status: :resolved) } }
+        .to have_enqueued_job(Conversations::ActivityMessageJob)
+        .with(conversation2, { account_id: conversation2.account_id, inbox_id: conversation2.inbox_id, message_type: :activity,
+                               content: 'A conversa foi marcada como resolvida pelo sistema por ter 40 dias de inatividade',
+                               content_attributes: { activity: { type: 'conversation_status_changed', status: 'resolved' } } })
+    end
+
+    # #2536: sem auto-resolve na conta, quem resolveu sem pessoa não foi ele; antes saía "0 minutes of inactivity".
+    it 'does not claim inactivity when nobody resolved it and the account has no auto resolve' do
+      conversation2 = create(:conversation, status: 'open', account: account, assignee: old_assignee)
+      Current.reset
+
+      expect { conversation2.update(status: :resolved) }.not_to have_enqueued_job(Conversations::ActivityMessageJob)
+    end
   end
 
   describe '#update_labels' do

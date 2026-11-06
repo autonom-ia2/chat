@@ -30,8 +30,9 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
     )
   end
 
+  # O que o pedido mudar sai assinado pela automação (Ato, #2568 P7), não só por quem a ligou.
   def requisitar(verbo, caminho, corpo)
-    super.tap { |resposta| @codigo = resposta.codigo.to_i }
+    ::Autonomia::Automacao::Ato.da(@execucao.automacao_id) { super }.tap { |resposta| @codigo = resposta.codigo.to_i }
   end
 
   def trilha

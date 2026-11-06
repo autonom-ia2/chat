@@ -4,7 +4,7 @@ RSpec.describe Autonomia::Automacao::Valores do
   let(:account) { create(:account) }
   let(:contato) { create(:contact, account: account, name: 'Maria', custom_attributes: { 'apolice.numero' => '991' }) }
   let(:conversa) { create(:conversation, account: account, contact: contato, custom_attributes: { 'origem' => 'anuncio' }) }
-  let(:valores) { described_class.new(alvo: conversa) }
+  let(:valores) { described_class.new(alvo: conversa, quem: nil) }
 
   it 'lê campos da conversa e do contato' do
     expect(valores.ler('conversa.id')).to eq(conversa.display_id)
@@ -16,7 +16,7 @@ RSpec.describe Autonomia::Automacao::Valores do
   it 'lê a mensagem do gatilho: recebida, enviada ou nota', :aggregate_failures do
     tipo = lambda do |message_type, privada = false|
       mensagem = build(:message, conversation: conversa, account: account, message_type: message_type, private: privada)
-      described_class.new(alvo: conversa, mensagem: mensagem).ler('mensagem.tipo')
+      described_class.new(alvo: conversa, mensagem: mensagem, quem: nil).ler('mensagem.tipo')
     end
 
     expect([tipo.call(:incoming), tipo.call(:outgoing), tipo.call(:outgoing, true)]).to eq(%w[recebida enviada nota])
@@ -27,12 +27,14 @@ RSpec.describe Autonomia::Automacao::Valores do
   it 'tem como opções da mensagem exatamente o que a mensagem pode valer', :aggregate_failures do
     lido = lambda do |caminho, message_type, privada|
       mensagem = build(:message, conversation: conversa, account: account, message_type: message_type, private: privada)
-      described_class.new(alvo: conversa, mensagem: mensagem).ler(caminho)
+      described_class.new(alvo: conversa, mensagem: mensagem, quem: nil).ler(caminho)
     end
     formas = [[:incoming, false], [:outgoing, false], [:outgoing, true], [:template, false]]
 
-    # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec.
-    expect(described_class::FECHADOS.keys).to match_array(described_class::MENSAGEM.keys + ['conversa.iniciada_por'])
+    # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
+    # durante a espera (G11): resposta_spec.
+    expect(described_class::FECHADOS.keys)
+      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + ['conversa.iniciada_por'])
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end
@@ -52,7 +54,9 @@ RSpec.describe Autonomia::Automacao::Valores do
   end
 
   describe 'alvo card e contato (#2499)' do
-    let(:funil) { create_crm_pipeline(account: account, user: create(:user, account: account, role: :administrator)) }
+    # O valor da venda pede quem vê valores de venda (#2597): o administrador vê.
+    let(:funil_admin) { create(:user, account: account, role: :administrator) }
+    let(:funil) { create_crm_pipeline(account: account, user: funil_admin) }
     let(:card) do
       novo_card(primary_conversation: conversa, title: 'Seguro auto', value_cents: 180_050, custom_attributes: { 'vencimento' => '2026-12-01' })
     end
@@ -62,7 +66,7 @@ RSpec.describe Autonomia::Automacao::Valores do
     end
 
     it 'lê o card e, pelas pontes, a conversa principal e o contato', :aggregate_failures do
-      valores = described_class.new(alvo: card)
+      valores = described_class.new(alvo: card, quem: funil_admin)
 
       expect(valores.ler('card.titulo')).to eq('Seguro auto')
       expect(valores.ler('card.valor')).to eq(BigDecimal('1800.50'))
@@ -75,15 +79,15 @@ RSpec.describe Autonomia::Automacao::Valores do
     # Decisão do #2499 (PR2a): o card sem valor lê zero, não vazio, como no quadro (value_cents é obrigatório, padrão 0).
     # "Valor maior que 0" separa o card com valor; "está vazio" nunca casa no card.
     it 'o card sem valor lê zero' do
-      expect(described_class.new(alvo: novo_card).ler('card.valor')).to eq(0)
+      expect(described_class.new(alvo: novo_card, quem: funil_admin).ler('card.valor')).to eq(0)
     end
 
     it 'lê vazio quando a ponte falta: card sem conversa, contato sem card' do
       sem_conversa = novo_card(primary_conversation: nil)
 
-      expect(described_class.new(alvo: sem_conversa).ler('conversa.status')).to be_nil
-      expect(described_class.new(alvo: contato).ler('card.titulo')).to be_nil
-      expect(described_class.new(alvo: contato).ler('contato.atributos.apolice.numero')).to eq('991')
+      expect(described_class.new(alvo: sem_conversa, quem: nil).ler('conversa.status')).to be_nil
+      expect(described_class.new(alvo: contato, quem: nil).ler('card.titulo')).to be_nil
+      expect(described_class.new(alvo: contato, quem: nil).ler('contato.atributos.apolice.numero')).to eq('991')
     end
 
     it 'diz o que cada alvo alcança' do

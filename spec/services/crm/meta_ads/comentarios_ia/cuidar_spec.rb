@@ -337,7 +337,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Cuidar do
     expect(rede).to have_received(:privado).with(care, texto: nil)
   end
 
-  it 'rede em que o privado ainda não está liberado (Facebook, até a pages_messaging): a pergunta fica com o dono' do
+  it 'rede em que o privado não está liberado (Facebook sem a flag, #2613): a pergunta fica com o dono' do
     allow(rede).to receive(:privado_disponivel?).and_return(false)
     decide('price')
 
