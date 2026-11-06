@@ -24,14 +24,17 @@ export function useOpcoesDaConta() {
   const etiquetas = useMapGetter('labels/getLabels');
   const atributosDo = useMapGetter('attributes/getAttributesByModel');
   // G15: as agentes de IA vêm da própria Automação (só id e nome), não da
-  // tela de Agentes, que pede outra permissão.
-  const agentesDeIa = ref([]);
+  // tela de Agentes, que pede outra permissão. `null` enquanto carrega; se a
+  // lista não vem, o painel diz que não carregou (nunca "a conta não tem").
+  const agentesDeIa = ref(null);
+  const agentesDeIaFalhou = ref(false);
   const carregarAgentesDeIa = async () => {
+    agentesDeIaFalhou.value = false;
     try {
       const { data } = await AutomacoesAPI.agentesDeIa();
       agentesDeIa.value = data.agentes || [];
     } catch {
-      agentesDeIa.value = [];
+      agentesDeIaFalhou.value = true;
     }
   };
 
@@ -50,7 +53,8 @@ export function useOpcoesDaConta() {
     pessoa: comNome(agentes.value),
     time: comNome(times.value),
     caixa: comNome(caixas.value),
-    agenteDeIa: comNome(agentesDeIa.value),
+    agenteDeIa: agentesDeIa.value && comNome(agentesDeIa.value),
+    agenteDeIaFalhou: agentesDeIaFalhou.value,
     etiquetaPorNome: (etiquetas.value || []).map(item => ({
       value: item.title,
       label: item.title,

@@ -113,7 +113,7 @@ ao cliente dentro da janela, aviso à equipe pelo sino e os quatro passos de IA.
 **Placar em 05/11 (main `0be0f12ef4`): 0 de 20 inteiros.** Lacunas fechadas: G1, G5, G11. Exemplo só conta inteiro e com spec verde; parcial não conta.
 
 Com isso, **só o exemplo 10 (cliente bravo) roda quase inteiro**: os passos 1 a 7. O passo 8 (card no quadro "Melhorias")
-depende da G4, e o 2 (tirar da agente de IA) da prova da G15. Os outros 19 começam por um gatilho
+depende da G4; o 2 (tirar da agente de IA) roda desde a G15. Os outros 19 começam por um gatilho
 ou dependem de um passo que ainda não existe na main.
 
 ## 5. Lacunas: o que falta, por fase
@@ -136,7 +136,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G12 | Gatilho **reunião marcada / remarcada / cancelada** e o **link da agenda** do responsável no texto | F8 | A fazer; o link da agenda não é valor da receita | Gatilhos | 1, 2, 3, 4, 5, 6, 9, 11, 15, 16, 18, 20 |
 | G13 | **Webhook de saída** e gravar a resposta no card; recusa vira caminho "deu erro" | F8 | A fazer (F6/F8 PR4) | Gatilhos | 8, 14, 20 |
 | G14 | **Campanhas**: pôr e tirar o contato de uma campanha, montar e disparar campanha para quem tem uma etiqueta | novo | Sem passo | F5 | 2, 3, 6, 7, 9, 12, 16, 20 |
-| G15 | **Passar a conversa para a agente de IA** e tirar dela | F3 (ação) | A atribuição aceita `AgentBot`, mas não está provado que a "agente de IA" (Agentes) assume pela atribuição; a conferir | F7 | 2, 4, 7, 10, 15, 17, 18 |
+| G15 | **Passar a conversa para a agente de IA** e tirar dela | F3 (ação) | **Em PR** (G15): passo próprio "Passar para a agente de IA" (`ia_assumir`), pela Atribuição do CRM; `assignee_type` proibido no atribuir. Tirar = atribuir à pessoa (provado no exemplo 10, passo 2) | F7 | 2, 4, 7, 10, 15, 17, 18 |
 | G16 | **Valor calculado no corpo** da ação (gravar "hoje + 6 meses", "indicado por {nome}", motivo da perda no texto) | F3/F4 | O corpo da ação é literal; variável só na mensagem | Motor | 3, 5, 6, 11, 13, 16, 17 |
 | G17 | **Criar contato** (o amigo indicado, o funcionário novo) e **importar em lote** ligado à empresa | novo | `POST contacts` fora da lista; importação não é passo | F2 | 8, 11 |
 | G18 | **Agir em outro registro** que não o alvo (o card do João avisa a Maria; para cada card com etiqueta X) | F8 / novo | O passo age só no alvo da execução | Motor | 11, 16, 17 |
@@ -176,7 +176,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 7 | Black Friday | ⛔ G7 (quinta 9h) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela) | G5, G7, G14, G15 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24 | Não |
 | 9 | Prospecção semanal | ⛔ G7 (segunda 8h) | decidir ✅, etiqueta ✅, mover ✅, resumir ✅ | G3, G4, G7, G12, G14, G21 | Não |
-| 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅ | G4 (passo 8), G15 (tirar da agente de IA, a conferir) | **Parcial: passos 1–7** |
+| 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅ | G4 (passo 8) | **Parcial: passos 1–7** |
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25 | Não |
 | 13 | Festa do contrato ao depoimento | 🟡 G5 (card ganho) + ⛔ G6 (datas da festa) | extrair ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | G1, G2, G5, G6, G16 | Não |

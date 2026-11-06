@@ -39,6 +39,15 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
     expect(execucao.reload.estado).to eq('concluida')
   end
 
+  it 'a passagem fica gravada no CRM com o motivo da automação, pelo contrato de verdade' do
+    allow(contrato).to receive(:registrar_passagem!).and_call_original
+    allow(contrato).to receive(:com_motivo_da_passagem).and_call_original
+
+    rodar
+
+    expect(Crm::Passagem.where(conversation_id: conversation.id).order(:id).last).to have_attributes(motivo: 'automacao')
+  end
+
   it 'com a agente já dona da conversa, segue sem trocar' do
     conversation.update!(ai_assignee: espelho_area)
 
@@ -121,10 +130,42 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
     expect(Autonomia::Automacao::Execucao.where(automacao: automacao).count).to eq(1)
   end
 
+  # O desvio que o G15 fecha: o passo "ação" de atribuir mandava `assignee_type: AgentBot` e passava a conversa ao robô
+  # sem a Atribuição. A lista agora proíbe o campo ao salvar e o motor confere de novo ao rodar, para a versão salva antes.
+  describe 'o atribuir da lista de ações' do
+    def atribuir(id, corpo)
+      { 'id' => id, 'tipo' => 'acao', 'acao' => 'POST conversations/:conversation_id/assignments', 'descricao' => 'Atribuir',
+        'caminho' => { 'conversation_id' => { '$valor' => 'conversa.id' } }, 'corpo' => corpo }
+    end
+
+    it 'versão salva antes da regra com assignee_type: o motor recusa ao rodar e a conversa não muda de dono' do
+      robo = create(:agent_bot, account: account)
+      automacao = automacao_ligada(account, admin, [atribuir('p1', { 'assignee_id' => pessoa.id })])
+      antiga = automacao.versao_ativa.receita.deep_dup
+      antiga['passos'][0]['corpo'] = { 'assignee_type' => 'AgentBot', 'assignee_id' => robo.id }
+      # Gravada antes da regra: a validação de hoje não a deixaria salvar, e a versão é só leitura.
+      Autonomia::Automacao::Versao.where(id: automacao.versao_ativa_id).update_all(receita: antiga) # rubocop:disable Rails/SkipsModelValidations
+
+      execucao = rodar(automacao)
+
+      expect(registro(execucao)).to have_attributes(resultado: 'falhou', motivo: 'acao_recusada')
+      expect(conversation.reload.ai_assignee).to eq(porta)
+    end
+
+    it 'a receita com assignee_type não salva' do
+      receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' },
+                  'passos' => [atribuir('p1', { 'assignee_type' => 'AgentBot', 'assignee_id' => 1 })] }
+
+      problemas = Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas
+
+      expect(problemas.join).to include('assignee_type')
+    end
+  end
+
   describe '.opcoes' do
     it 'traz só id e nome das agentes que recebem conversa numa caixa da conta, porta e área' do
       expect(described_class.opcoes(account)).to contain_exactly({ id: agente_da_porta.id, name: 'Porta' },
-                                                                  { id: area.id, name: 'Área Suporte' })
+                                                                 { id: area.id, name: 'Área Suporte' })
     end
 
     it 'sem as agentes ligadas na conta, nenhuma' do
@@ -145,13 +186,35 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
   end
 
   describe '.ensaiar' do
-    it 'diz para quem passaria, ou o motivo, sem chamar o serviço dos Agentes' do
-      allow(Autonomia::Agents::PassarParaIa).to receive(:call)
+    it 'diz para quem passaria, ou o motivo, sem chamar a passagem' do
+      expect(Crm::Entrega::ParaIa).not_to receive(:passar!)
 
       expect(described_class.ensaiar(passo, conversation)).to eq(['ia_assumir', { agente: 'Área Suporte' }])
       conversation.update!(assignee: pessoa)
       expect(described_class.ensaiar(passo, conversation)).to eq(['pessoa_atribuida', { agente: 'Área Suporte' }])
-      expect(Autonomia::Agents::PassarParaIa).not_to have_received(:call)
+    end
+
+    # O ensaio não chama o serviço dos Agentes, então repete as perguntas dele: aqui as duas respostas lado a lado.
+    {
+      'passa' => -> {},
+      'pessoa no nome' => -> { conversation.update!(assignee: pessoa) },
+      'conversa resolvida' => -> { conversation.update!(status: :resolved) },
+      'agente sem vínculo na caixa' => -> { area_sumiu! },
+      'agente que não atende cliente' => -> { area.update_column(:enabled, false) }, # rubocop:disable Rails/SkipsModelValidations
+      'resolvida e com a agente sem atender' => lambda {
+        conversation.update!(status: :resolved)
+        area.update_column(:enabled, false) # rubocop:disable Rails/SkipsModelValidations
+      },
+      'agentes desligadas na conta' => -> { allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(false) }
+    }.each do |cenario, preparar|
+      it "#{cenario}: o ensaio diz o que a passagem de verdade diz" do
+        instance_exec(&preparar)
+
+        no_ensaio = described_class.ensaiar(passo, conversation.reload).first
+        de_verdade = Crm::Entrega::ParaIa.passar!(conversation: conversation, agent: area.reload, por: :crm, motivo: 'automacao')
+
+        expect(no_ensaio).to eq(de_verdade == Crm::Entrega::ParaIa::PASSOU ? 'ia_assumir' : de_verdade)
+      end
     end
   end
 end

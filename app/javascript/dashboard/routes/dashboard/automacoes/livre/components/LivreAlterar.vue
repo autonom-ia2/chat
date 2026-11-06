@@ -361,7 +361,18 @@ defineExpose({ abrir, fechar });
             :options="opcoes.agenteDeIa"
             @update:model-value="novo => mudarNativo(campo.nome, novo)"
           />
-          <p v-else class="mb-0 text-sm text-n-slate-11" data-sem-agente-de-ia>
+          <p
+            v-else-if="opcoes.agenteDeIaFalhou"
+            class="mb-0 text-sm text-n-ruby-11"
+            data-agentes-de-ia-falhou
+          >
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.AGENTES_DE_IA_FALHOU') }}
+          </p>
+          <p
+            v-else-if="opcoes.agenteDeIa"
+            class="mb-0 text-sm text-n-slate-11"
+            data-sem-agente-de-ia
+          >
             {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_AGENTE_DE_IA') }}
           </p>
         </div>

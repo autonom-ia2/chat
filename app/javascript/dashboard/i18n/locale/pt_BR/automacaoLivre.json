@@ -132,8 +132,8 @@
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
       "LINHAS": "Tamanho do resumo (linhas)",
-      "MODELO": "Se a janela de 24 h estiver fechada",
-      "AGENTE_ID": "Qual agente de IA"
+      "AGENTE_ID": "Qual agente de IA",
+      "MODELO": "Se a janela de 24 h estiver fechada"
     },
     "OPCOES": {
       "STATUS": {
@@ -334,7 +334,8 @@
         "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
         "VARIAVEL": "Variável {numero} do modelo"
       },
-      "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo."
+      "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo.",
+      "AGENTES_DE_IA_FALHOU": "Não deu para carregar as agentes de IA. Recarregue a página para tentar de novo."
     },
     "LIGAR": {
       "BOTAO": "Ligar",

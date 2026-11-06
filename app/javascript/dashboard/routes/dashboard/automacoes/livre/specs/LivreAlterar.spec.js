@@ -46,7 +46,7 @@ const CATALOGO = {
   passos: [ETIQUETA_ALTERAR, CONVERSA_ETIQUETAS],
 };
 
-const montar = (catalogo = CATALOGO) =>
+const montar = (catalogo = CATALOGO, extras = {}) =>
   mount(LivreAlterar, {
     props: {
       catalogo,
@@ -56,6 +56,7 @@ const montar = (catalogo = CATALOGO) =>
           { value: 'vip', label: 'vip' },
           { value: 'lead', label: 'lead' },
         ],
+        ...extras,
       },
       atributosDaPeca: () => [],
       atributosDo: () => [],
@@ -70,6 +71,61 @@ const salvarDesligado = wrapper =>
   wrapper.find('[data-salvar]').attributes('disabled') !== undefined;
 
 describe('LivreAlterar', () => {
+  // G15 — a agente de IA é escolhida na lista da conta (só id e nome); sem
+  // nenhuma, o painel diz isso em vez de abrir uma escolha vazia.
+  const IA_ASSUMIR = {
+    tipo: 'ia_assumir',
+    grupo: 'EQUIPE',
+    frase: 'IA_ASSUMIR',
+    campos: [
+      {
+        nome: 'agente_id',
+        peca: 'agente_de_ia',
+        obrigatorio: true,
+        rotulo: 'AGENTE_ID',
+      },
+    ],
+  };
+  const COM_IA = { ...CATALOGO, passos: [...CATALOGO.passos, IA_ASSUMIR] };
+  const PASSO_IA = { id: 'g1', tipo: 'ia_assumir', agente_id: null };
+
+  it('espera escolher a agente de IA antes de salvar', async () => {
+    const wrapper = montar(COM_IA, {
+      agenteDeIa: [{ value: 3, label: 'Área Suporte' }],
+    });
+    wrapper.vm.abrir({ tipo: 'passo', valor: PASSO_IA });
+    await flushPromises();
+    expect(wrapper.find('[data-peca="agente_de_ia"]').exists()).toBe(true);
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    wrapper.vm.abrir({ tipo: 'passo', valor: { ...PASSO_IA, agente_id: 3 } });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
+  it('sem agente de IA na conta, diz isso e não salva', async () => {
+    const wrapper = montar(COM_IA, { agenteDeIa: [] });
+    wrapper.vm.abrir({ tipo: 'passo', valor: PASSO_IA });
+    await flushPromises();
+
+    expect(wrapper.find('[data-sem-agente-de-ia]').exists()).toBe(true);
+    expect(salvarDesligado(wrapper)).toBe(true);
+  });
+
+  it('enquanto a lista carrega, não diz que falta agente; se não veio, diz que não carregou', async () => {
+    const carregando = montar(COM_IA, { agenteDeIa: null });
+    carregando.vm.abrir({ tipo: 'passo', valor: PASSO_IA });
+    await flushPromises();
+    expect(carregando.find('[data-sem-agente-de-ia]').exists()).toBe(false);
+    expect(carregando.find('[data-agentes-de-ia-falhou]').exists()).toBe(false);
+
+    const falhou = montar(COM_IA, { agenteDeIa: null, agenteDeIaFalhou: true });
+    falhou.vm.abrir({ tipo: 'passo', valor: PASSO_IA });
+    await flushPromises();
+    expect(falhou.find('[data-agentes-de-ia-falhou]').exists()).toBe(true);
+    expect(falhou.find('[data-sem-agente-de-ia]').exists()).toBe(false);
+  });
+
   it('espera o alvo e o campo obrigatório antes de salvar', async () => {
     const wrapper = montar();
     const passo = {

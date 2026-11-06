@@ -33,7 +33,8 @@ class Autonomia::Automacao::PassoDeIaAssumir
     [I18n.t('autonomia.automacao.receita.agente_de_ia_invalido', passo: passo['id'], id: passo['agente_id'])]
   end
 
-  # Para o ensaio: [o que faria, dados], pelas mesmas perguntas do serviço dos Agentes, sem gravar nem chamá-lo.
+  # Para o ensaio: [o que faria, dados], pelas mesmas perguntas do serviço dos Agentes e na mesma ordem
+  # (PassarParaIa#recusa_antes_da_trava e #decidir), sem gravar nem chamá-lo. O spec compara os dois motivo a motivo.
   def self.ensaiar(passo, conversa)
     agente = agente(conversa.account, passo['agente_id'])
     return ['agente_sumiu', {}] if agente.nil?
@@ -43,11 +44,12 @@ class Autonomia::Automacao::PassoDeIaAssumir
 
   def self.motivo_no_ensaio(conversa, agente)
     return 'fase2_desligada' unless ::Crm::AgentesIa.ligado?(conversa.account)
+    return 'nao_atende_cliente' unless agente.atende_cliente?
     return 'conversa_resolvida' if conversa.resolved?
     return 'pessoa_atribuida' if conversa.assignee_id.present?
-    return if ::Autonomia::Agents::PassarParaIa.destinos_possiveis(conversa).include?(agente)
 
-    agente.atende_cliente? ? 'sem_vinculo_na_caixa' : 'nao_atende_cliente'
+    'sem_vinculo_na_caixa' unless ::Autonomia::Agents::AgentInbox.kept.exists?(account_id: conversa.account_id, inbox_id: conversa.inbox_id,
+                                                                               autonomia_agent_id: agente.id)
   end
   private_class_method :motivo_no_ensaio
 

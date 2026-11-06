@@ -132,8 +132,8 @@
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
-      "MODELO": "If the 24-hour window is closed",
-      "AGENTE_ID": "Which AI agent"
+      "AGENTE_ID": "Which AI agent",
+      "MODELO": "If the 24-hour window is closed"
     },
     "OPCOES": {
       "STATUS": {
@@ -334,7 +334,8 @@
         "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
         "VARIAVEL": "Template variable {numero}"
       },
-      "SEM_AGENTE_DE_IA": "No AI agent receives conversations in this account yet. Add an agent to an inbox, in AI Agents, to use this step."
+      "SEM_AGENTE_DE_IA": "No AI agent receives conversations in this account yet. Add an agent to an inbox, in AI Agents, to use this step.",
+      "AGENTES_DE_IA_FALHOU": "Could not load the AI agents. Reload the page to try again."
     },
     "LIGAR": {
       "BOTAO": "Turn on",
