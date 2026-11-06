@@ -83,6 +83,9 @@ class Autonomia::Automacao::Receita
   def problemas_do_passo(passo)
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
+    if passo['tipo'] == 'campanha'
+      return ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
+    end
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 

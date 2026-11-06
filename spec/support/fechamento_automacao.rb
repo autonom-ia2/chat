@@ -152,7 +152,9 @@ module FechamentoAutomacao::Lacunas
         %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
     },
     'G13' => -> { passo?('webhook') },
-    'G14' => -> { passo?('campanha') },
+    # Fechada com prova (#2630): o passo existe no esquema e o motor o roda; o ponta a ponta está em
+    # spec/fechamento/automacao/g14_campanhas_spec.rb.
+    'G14' => -> { passo?('campanha') && Autonomia::Automacao::Executor::NATIVOS.key?('campanha') },
     # A Atribuição é o motor único de entrega, inclusive para agente de IA (regra do Rodrigo): fecha quando o passo de
     # atribuir aceita um agente de IA como destino. "Tirar" é atribuir de volta à pessoa ou ao time, que o passo já
     # faz. O nome fica com a F7, e o desenho passa pela sessão Automação antes do código. Contrato da sonda: fecha quando

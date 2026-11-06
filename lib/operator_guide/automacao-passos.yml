@@ -28,6 +28,8 @@ nativos:
   # (passo_desligado), e o executor, ao rodar (mensagens_desligadas).
   mensagem: { grupo: MENSAGEM, requer: automacao_mensagens }
   avisar: { grupo: MENSAGEM, requer: automacao_mensagens }
+  # G14 (#2630): disparar campanha e marcar "não recebe". `peca`: o passo inteiro numa peça só (LivreCampanha.vue).
+  campanha: { grupo: MENSAGEM, requer: automacao_mensagens, peca: campanha }
   # F7: os passos de IA, na chave da própria conta. Quem recusa de verdade é a Receita, ao salvar (ia_desligada).
   decidir: { grupo: IA, requer: automacao_ia }
   extrair: { grupo: IA, requer: automacao_ia }

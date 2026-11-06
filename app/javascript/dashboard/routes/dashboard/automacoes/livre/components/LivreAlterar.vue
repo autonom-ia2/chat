@@ -10,10 +10,12 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
+import LivreCampanha from './LivreCampanha.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
+import { campanhaPronta } from '../campanha';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar, filtrosDoGatilho } from '../receita';
@@ -185,6 +187,8 @@ const nativoPronto = campo => {
         (partes || []).some(parte => typeof parte !== 'string' || parte.trim())
       )
     );
+  // G14: a peça da campanha mostra e confere o passo inteiro.
+  if (campo.peca === 'campanha') return campanhaPronta(rascunho.value);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
@@ -342,6 +346,12 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreCampanha
+          v-else-if="campo.peca === 'campanha' && campo.nome === 'faz'"
+          :model-value="rascunho"
+          :etiquetas="opcoes.etiqueta"
+          @update:model-value="novo => (rascunho = novo)"
         />
         <LivreIaCampo
           v-else-if="ehDeIa"

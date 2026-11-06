@@ -1,0 +1,25 @@
+# Automação livre, passo "campanha" (#2414 G14, #2630). Arquivo próprio para não disputar o pt_BR.yml com as outras frentes.
+pt_BR:
+  autonomia:
+    automacao:
+      motivos:
+        campanha_so_sem_alvo: 'Esta automação roda em cada conversa, card ou contato, então mandaria a mesma campanha de novo a cada vez. Mandar campanha só vale numa automação recorrente. Nada foi mandado.'
+        quem_ligou_sem_permissao_campanha: 'Quem ligou a automação não pode mais enviar campanhas. Assuma e religue.'
+        campanha_sem_caixa: 'A caixa escolhida não existe mais ou não é do WhatsApp oficial. A campanha não foi criada.'
+        campanha_desligada: 'As campanhas de WhatsApp estão desligadas nesta conta. A campanha não foi criada.'
+        campanha_sem_etiqueta: 'Nenhuma das etiquetas escolhidas existe mais. A campanha não foi criada.'
+        campanha_recusada: 'A plataforma recusou a campanha como ela foi montada. Nada foi mandado.'
+        campanha_modelo_fora_da_caixa: 'A caixa escolhida não tem o modelo escolhido. A campanha não foi criada.'
+        campanha_modelo_nao_aprovado: 'O modelo escolhido não está aprovado pela Meta nesta caixa. A campanha não foi criada.'
+        campanha_modelo_de_categoria_fora: 'O modelo escolhido não é de utilidade nem de propaganda. A campanha não foi criada.'
+        campanha_modelo_mudou: 'O modelo pede outras variáveis que as do passo. Escolha o modelo de novo. A campanha não foi criada.'
+        sem_contato: 'Aqui não há contato para marcar.'
+        contato_ja_nao_recebe: 'O contato já estava marcado como "não recebe".'
+      receita:
+        campanha_so_sem_alvo: 'Passo %{passo}: mandar campanha só vale numa automação recorrente. Num gatilho de conversa, card ou contato, cada execução mandaria a mesma campanha de novo.'
+        campanha_variavel_fixa: 'Passo %{passo}: a campanha vai para muita gente de uma vez, então cada variável do modelo precisa ser texto fixo.'
+        campanha_sem_permissao: 'Passo %{passo}: para usar este passo você precisa da permissão de enviar campanhas.'
+        campanha_desligada: 'Passo %{passo}: as campanhas de WhatsApp estão desligadas nesta conta.'
+        campanha_sem_caixa: 'Passo %{passo}: escolha uma caixa do WhatsApp oficial desta conta.'
+        campanha_modelo: 'Passo %{passo}: a caixa escolhida não tem o modelo %{nome} aprovado e pronto.'
+        campanha_etiqueta_de_fora: 'Passo %{passo}: a etiqueta %{id} não é desta conta.'
