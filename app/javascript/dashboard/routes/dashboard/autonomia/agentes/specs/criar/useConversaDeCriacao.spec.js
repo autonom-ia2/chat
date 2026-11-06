@@ -908,6 +908,70 @@ describe('useConversaDeCriacao', () => {
       await nextTick();
       expect(conversa.falhou.value).toBe(false);
     });
+
+    it('sends one retry when "Try again" is clicked twice before the answer', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      let responder;
+      store.dispatch.mockImplementation(nome =>
+        nome === 'autonomiaBuildThreads/retry'
+          ? new Promise(resolve => {
+              responder = resolve;
+            })
+          : Promise.resolve(null)
+      );
+
+      const primeira = conversa.tentarDeNovo();
+      const segunda = conversa.tentarDeNovo();
+      expect(segunda).toBe(primeira);
+      expect(chamadas('autonomiaBuildThreads/retry')).toHaveLength(1);
+      expect(store.commit).not.toHaveBeenCalledWith(
+        'autonomiaBuildThreads/SET_ERROR',
+        null
+      );
+
+      responder(null);
+      await flushPromises();
+      conversa.tentarDeNovo();
+      expect(chamadas('autonomiaBuildThreads/retry')).toHaveLength(2);
+    });
+
+    it('leaves no timer behind when the screen leaves during the generation', async () => {
+      const { conversa, wrapper } = montar();
+      await processando();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+      wrapper.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+    });
+
+    it('clears the window and the warning when the thread changes (status back to empty)', async () => {
+      const { conversa } = montar();
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(true);
+
+      comThread(8);
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+
+      // Uma geração que sai antes do prazo não deixa o relógio dela para trás.
+      await processando();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS - 1);
+      store.state['autonomiaBuildThreads/getStatus'] = null;
+      await nextTick();
+      vi.advanceTimersByTime(PRAZO_DA_RESPOSTA_MS);
+      await nextTick();
+      expect(conversa.falhou.value).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 
   it('stops polling and clears the stores when leaving', () => {
