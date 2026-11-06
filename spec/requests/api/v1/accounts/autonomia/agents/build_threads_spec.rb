@@ -47,6 +47,20 @@ RSpec.describe 'Autonomia agent build threads', type: :request do
       expect(messages.pluck('role')).to eq(%w[user assistant])
       expect(messages.last['content']).to eq('Qual o nome do agente?')
     end
+
+    # #2490: a Confira lê o canal que o dono pediu; thread antiga, sem a leitura, não manda o campo.
+    it 'returns the channel the owner asked for only when the Builder read one' do
+      get_thread = lambda do
+        get "/api/v1/accounts/#{account.id}/autonomia/build_threads/#{thread.id}",
+            headers: administrator.create_new_auth_token, as: :json
+        response.parsed_body['payload']['state']
+      end
+
+      expect(get_thread.call).not_to have_key('canal_pedido')
+
+      thread.update!(state: thread.state.to_h.merge('canal_pedido' => 'instagram'))
+      expect(get_thread.call['canal_pedido']).to eq('instagram')
+    end
   end
 
   describe 'POST /autonomia/build_threads/:id/messages (E3)' do

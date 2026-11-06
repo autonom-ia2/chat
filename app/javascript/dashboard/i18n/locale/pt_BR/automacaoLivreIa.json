@@ -38,6 +38,33 @@
         "EMPRESA_NOME": "Nome da empresa",
         "CONTATO_ATRIBUTO": "Contato: {nome}",
         "CONVERSA_ATRIBUTO": "Conversa: {nome}"
+      },
+      "CUSTO": {
+        "VALOR": "US$ {valor}",
+        "VALOR_MENOS_DE": "menos de US$ {valor}",
+        "MEDIA": "Cerca de {custo} por vez, na chave de IA da sua conta.",
+        "PRIMEIRA": "O custo aparece depois da primeira vez."
+      },
+      "TESTAR": {
+        "BOTAO": "Testar este passo",
+        "DICA": "Roda em até 3 conversas que você vê e mostra o que faria. Não manda nada nem grava nada. Usa a chave de IA da sua conta.",
+        "RODANDO": "Testando…",
+        "CONVERSA": "Conversa #{id}",
+        "CONVERSA_DE": "Conversa #{id} · {nome}",
+        "ESCOLHEU": "Escolheria: {caminho}",
+        "MOTIVO": "Por quê: {motivo}",
+        "NENHUM": "Escolheria: Nenhum se aplica",
+        "CUSTOU": "O teste custou {custo}.",
+        "AVISO": {
+          "GATILHO_SEM_CONVERSA": "Esta automação começa por um card. O teste usa as conversas mais recentes que você vê.",
+          "NENHUMA_ENTRARIA": "Nenhuma conversa recente entraria nesta automação agora. O teste usa as mais recentes que você vê."
+        },
+        "MOTIVOS": {
+          "NADA_PARA_LER": "Não havia nada para a IA ler nesta conversa. A IA não foi chamada.",
+          "IA_INDISPONIVEL": "A IA não respondeu a tempo. Tente de novo.",
+          "CHAVE_RECUSADA": "O provedor de IA recusou a chave da conta. Confira a chave nas integrações.",
+          "OUTRO": "A IA não conseguiu responder nesta conversa."
+        }
       }
     }
   }

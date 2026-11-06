@@ -23,7 +23,10 @@
     "UNIDADES": {
       "MINUTOS": "minute | minutes",
       "HORAS": "hour | hours",
-      "DIAS": "day | days"
+      "DIAS": "day | days",
+      "SEMANAS": "week | weeks",
+      "MESES": "month | months",
+      "ANOS": "year | years"
     },
     "VALORES": {
       "CONVERSA_ID": "Conversation number",
@@ -82,7 +85,8 @@
       "DECIDIR": "AI chooses the path",
       "EXTRAIR": "AI pulls data from the conversation",
       "ESCREVER": "AI writes a text",
-      "RESUMIR": "AI summarizes the conversation"
+      "RESUMIR": "AI summarizes the conversation",
+      "EMAIL": "Send an e-mail to the customer"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -131,6 +135,8 @@
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
+      "CAIXA_ID": "From which e-mail inbox",
+      "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed"
     },
     "OPCOES": {
@@ -189,7 +195,8 @@
       "TENTAR_DE_NOVO": "Try again",
       "DO_FUNIL": "Pipeline stage automations live in Configure › Edit pipeline.",
       "VER_FUNIL": "See in the pipeline",
-      "SEM_PASSO": "No step yet"
+      "SEM_PASSO": "No step yet",
+      "CUSTO_IA": "AI: {custo} in runs over the last 30 days"
     },
     "EDITOR": {
       "NOVA": "New automation",
@@ -279,7 +286,8 @@
       "ESCREVER_SUGESTAO": "AI writes a suggestion for the team: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "AI writes a suggestion for the team: the instruction is missing",
       "RESUMIR_NOTA": "AI summarizes the conversation in a note",
-      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}"
+      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}",
+      "EMAIL": "E-mail the customer: “{assunto}”"
     },
     "RAMOS": {
       "ENTAO": "Then",
@@ -321,16 +329,24 @@
       "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it.",
       "FILTRO_ENTRA": "When you save, \"Only if\" gets: {condicao}. You can change or remove it later.",
       "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\".",
+      "CALCULADO_TEXTO": "Put together when it runs: {texto}",
+      "HOJE": "today",
+      "DATA_CALCULADA": "Date worked out when it runs: {de}",
+      "DATA_CALCULADA_MAIS": "Date worked out when it runs: {de} + {n} {unidade}",
+      "DATA_CALCULADA_MENOS": "Date worked out when it runs: {de} − {n} {unidade}",
+      "ATRIBUTO_CALCULADO": "{nome}: {valor}",
       "MODELO": {
         "DICA": "On official WhatsApp, 24 hours after the customer's last message, free text can't be sent. Pick a Meta-approved template to send instead; Meta charges for each template sent. With the window open, the text above is sent.",
-        "NENHUM": "Don't send anything (the step is skipped)",
+        "NENHUM": "Don't send anything (the automation stops in this conversation)",
         "OPCAO": "{nome} ({idioma})",
         "SEM_MODELOS": "No official WhatsApp inbox you can see has an approved utility template. Create and approve one in Templates.",
         "DIVERGENTE": "This template has different text in another inbox. Each conversation gets its own inbox's template; if it asks for other variables there, the message is not sent.",
         "MUDOU": "The template now asks for {quantas} variables. Fill in all of them before saving.",
         "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
         "VARIAVEL": "Template variable {numero}"
-      }
+      },
+      "POR_VALOR_EM": "Add a conversation detail to “{campo}”",
+      "SEM_CAIXA_DE_EMAIL": "This account has no e-mail inbox yet. Create one in Inboxes to use this step."
     },
     "LIGAR": {
       "BOTAO": "Turn on",

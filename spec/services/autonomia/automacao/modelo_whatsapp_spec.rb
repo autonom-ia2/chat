@@ -42,7 +42,8 @@ RSpec.describe Autonomia::Automacao::ModeloWhatsapp do
 
   describe 'ao salvar a receita' do
     def problemas(passo)
-      Autonomia::Automacao::Receita.new({ 'gatilho' => { 'tipo' => 'conversa.criada' }, 'passos' => [passo] }, conta: account).problemas
+      receita = { 'gatilho' => { 'tipo' => 'conversa.criada' }, 'passos' => [passo] }
+      Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas
     end
 
     def passo_com(modelo) = { 'id' => 'p1', 'tipo' => 'mensagem', 'texto' => ['Oi.'], 'modelo' => modelo }

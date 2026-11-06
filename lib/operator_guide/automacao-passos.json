@@ -376,7 +376,8 @@
     {
       "caminho": "card.valor",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_VALOR"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_VALOR",
+      "permissao": "sales_value_view"
     },
     {
       "caminho": "card.responsavel_id",
@@ -684,6 +685,32 @@
           "peca": "modelo_whatsapp",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
+        }
+      ]
+    },
+    {
+      "tipo": "email",
+      "grupo": "MENSAGEM",
+      "requer": "automacao_mensagens",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EMAIL",
+      "campos": [
+        {
+          "nome": "caixa_id",
+          "peca": "caixa_de_email",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAIXA_ID"
+        },
+        {
+          "nome": "assunto",
+          "peca": "linha_com_valores",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ASSUNTO"
+        },
+        {
+          "nome": "texto",
+          "peca": "texto_com_valores",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TEXTO"
         }
       ]
     },

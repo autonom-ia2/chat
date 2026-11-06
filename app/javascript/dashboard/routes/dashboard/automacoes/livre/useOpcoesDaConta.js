@@ -37,6 +37,12 @@ export function useOpcoesDaConta() {
     pessoa: comNome(agentes.value),
     time: comNome(times.value),
     caixa: comNome(caixas.value),
+    // G2: só as caixas de e-mail, por onde o passo "email" sai.
+    caixaDeEmail: comNome(
+      (caixas.value || []).filter(
+        caixa => caixa.channel_type === 'Channel::Email'
+      )
+    ),
     etiquetaPorNome: (etiquetas.value || []).map(item => ({
       value: item.title,
       label: item.title,

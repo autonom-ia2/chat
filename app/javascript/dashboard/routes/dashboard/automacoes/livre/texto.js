@@ -26,8 +26,9 @@ const comChaveSeRepetido = opcoes => {
 
 // O valor da mensagem (#2496) só aparece no "Só se" do gatilho dela; no texto
 // e nos passos, `gatilho` não vem e ele fica de fora. O que só o Guia monta
-// (`so_guia`) nunca entra na escolha. A resposta durante a espera (G11,
-// `so_na_espera`) só aparece na condição do "esperar até" (`naEspera`).
+// (`so_guia`) e o que a pessoa não pode ler (`sem_permissao`, #2597) nunca
+// entram na escolha. A resposta durante a espera (G11, `so_na_espera`) só
+// aparece na condição do "esperar até" (`naEspera`).
 export const opcoesDosValores = (
   catalogo,
   atributosDo,
@@ -37,7 +38,7 @@ export const opcoesDosValores = (
 ) =>
   comChaveSeRepetido(
     (catalogo?.valores || []).flatMap(item => {
-      if (item.so_guia) return [];
+      if (item.so_guia || item.sem_permissao) return [];
       if (item.so_no_gatilho && item.so_no_gatilho !== gatilho) return [];
       if (item.so_na_espera && !naEspera) return [];
       if (!item.atributos)
@@ -52,6 +53,34 @@ export const opcoesDosValores = (
       }));
     })
   );
+
+// #2414 G16 — o campo de texto de uma ação. Só texto fica string; com dado,
+// vira `{ $texto: [...] }`, montado na hora da execução (o motor pula a ação se
+// o dado estiver vazio).
+export const partesDoCampo = valor => {
+  if (valor?.$texto) return valor.$texto;
+  if (valor?.$valor) return [valor];
+  return valor === undefined || valor === null || valor === ''
+    ? []
+    : [String(valor)];
+};
+
+export const campoDasPartes = partes =>
+  (partes || []).some(parte => typeof parte !== 'string')
+    ? { $texto: partes }
+    : (partes || []).join('');
+
+// O valor que a pessoa não pode ler (#2597) e que o texto já usa, com o nome
+// dele: mostra o nome, não "apagado". Só o que já está nas partes entra, para
+// digitar o nome entre colchetes não criar o dado.
+export const valoresSemPermissao = (catalogo, t, partes = []) => {
+  const usados = partes
+    .filter(parte => typeof parte !== 'string')
+    .map(parte => parte.$valor);
+  return (catalogo?.valores || [])
+    .filter(item => item.sem_permissao && usados.includes(item.caminho))
+    .map(item => ({ value: item.caminho, label: t(item.frase) }));
+};
 
 export const comColchetes = rotulo => `${ABRE}${rotulo}${FECHA}`;
 

@@ -175,10 +175,16 @@ tivesse confirmado.
 
 Verificado na documentação oficial em 26/10/2026.
 
+- **Para onde vai quem toca (#2564).** O anúncio novo começa com a pergunta
+  "Quando a pessoa tocar no anúncio, para onde ela vai?", em três cartões:
+  conversar com você, seu site e seu perfil do Instagram. Só aparece o cartão
+  que tem destino confirmado; o perfil fica apagado, com o motivo, quando a
+  Página não tem conta do Instagram ligada.
 - **Destino, WhatsApp primeiro e marcado.** É decisão de produto: não há dado
-  oficial da Meta sobre qual destino é o mais usado. A troca fica numa linha no
-  topo da tela da foto ("Quem tocar vai para: WhatsApp · Trocar"), sem passo a
-  mais.
+  oficial da Meta sobre qual destino é o mais usado. Dentro de "conversar", a
+  troca do canal fica numa linha no topo da tela da foto ("Quem tocar vai para:
+  WhatsApp · Trocar"); com um destino só (site, perfil), a linha não tem
+  "Trocar".
   - **WhatsApp:** campanha `OUTCOME_ENGAGEMENT`; grupo com
     `destination_type: WHATSAPP`, `optimization_goal: CONVERSATIONS` e
     `promoted_object` com `page_id` (obrigatório) e `whatsapp_phone_number`;
@@ -215,7 +221,22 @@ Verificado na documentação oficial em 26/10/2026.
     só os dois do exemplo oficial. A pessoa digita o endereço como conhece
     ("lojaexemplo.com.br"); a tela completa com `https://` na conferência e no
     envio. O servidor confere o endereço (https e domínio) de novo.
-  - Sem número de WhatsApp, a tela para com "Conectar número" e oferece
+  - **Perfil do Instagram (#2564):** `OUTCOME_TRAFFIC`, destino
+    `INSTAGRAM_PROFILE`, otimização `PROFILE_VISIT`, `promoted_object` com
+    `page_id`, cobrança por impressão; criativo com a conta do Instagram da
+    Página em `instagram_user_id`, `link` para o perfil
+    (`https://www.instagram.com/<usuario>/`) e botão `VIEW_INSTAGRAM_PROFILE`
+    com o mesmo endereço. Só em "Só Instagram" (decisão do Rodrigo, 06/11), sem
+    carrossel. A Meta exige `special_ad_categories` vazio: com "seguro, crédito,
+    empréstimo ou investimento" marcado, a tela explica e leva de volta à
+    pergunta do destino, e o servidor recusa (`special_category_profile`). Sem
+    conta do Instagram (ou sem o @ dela), `invalid_instagram`. A doc avisa que
+    o anúncio tem disponibilidade limitada; vídeo único segue o mesmo
+    `video_data` do site. **A primeira chamada real confirma** (anúncio pausado
+    de teste na conta 18, com OK do Rodrigo).
+    [Fonte](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ad-creative/profile-visit-ads/instagram-profile-visit)
+  - Sem número de WhatsApp, "conversar" escolhe o Direct ou o Messenger quando
+    dá. Se só o WhatsApp sobrar, a tela para com "Conectar número" e oferece
     "Anunciar com outro destino" (o primeiro destino confirmado depois do
     WhatsApp; sem nenhum, só "Conectar número").
 - **O que a pessoa vende:** campo obrigatório no topo ("bolo de pote a R$ 12").

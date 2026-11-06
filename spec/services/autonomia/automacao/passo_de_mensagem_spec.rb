@@ -44,12 +44,13 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
       allow(HTTParty).to receive(:post).and_return(resposta)
     end
 
-    it 'fora das 24 h pula com fora_da_janela, mesmo com a tag de agente humano (é envio automático)', :aggregate_failures do
+    it 'fora das 24 h para com fora_da_janela, mesmo com a tag de agente humano (é envio automático)', :aggregate_failures do
       recebida(conversa, 30.hours.ago)
       execucao = rodar(conversa)
 
       expect(mandada(conversa)).to be_nil
-      expect(registros(execucao)).to eq([%w[p1 pulado fora_da_janela]])
+      expect(registros(execucao)).to eq([%w[p1 falhou fora_da_janela]])
+      expect(execucao.reload.estado).to eq('parada')
     end
 
     it 'dentro da janela, a mensagem sem remetente sai pelo canal sem erro', :aggregate_failures do
@@ -85,12 +86,13 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
                                             'components' => [{ 'type' => 'BODY', 'text' => 'Seu pedido saiu.' }] }])
     end
 
-    it 'com o limite do dono vencido, mesmo com modelo no passo: pula com limite_da_caixa', :aggregate_failures do
+    it 'com o limite do dono vencido, mesmo com modelo no passo: para com limite_da_caixa', :aggregate_failures do
       recebida(conversa, 30.hours.ago)
       execucao = rodar(conversa)
 
       expect(mandada(conversa)).to be_nil
-      expect(registros(execucao)).to eq([%w[p1 pulado limite_da_caixa]])
+      expect(registros(execucao)).to eq([%w[p1 falhou limite_da_caixa]])
+      expect(execucao.reload.estado).to eq('parada')
     end
 
     context 'with a caixa sem limite de horas' do
@@ -151,13 +153,14 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
       expect(mensagem.status).not_to eq('failed')
     end
 
-    it 'fora da janela, sem modelo no passo: pula', :aggregate_failures do
+    it 'fora da janela, sem modelo no passo: para (#2573)', :aggregate_failures do
       passo.delete('modelo')
       recebida(conversa, 30.hours.ago)
       execucao = rodar(conversa)
 
       expect(mandada(conversa)).to be_nil
-      expect(registros(execucao)).to eq([%w[p1 pulado fora_da_janela]])
+      expect(registros(execucao)).to eq([%w[p1 falhou fora_da_janela]])
+      expect(execucao.reload.estado).to eq('parada')
     end
 
     describe 'o modelo aprovado fora da janela (#2468)' do
@@ -174,6 +177,21 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         parametros = corpo.dig('template', 'components').find { |parte| parte['type'] == 'body' }['parameters']
         expect(parametros.pluck('text')).to eq(['Ana', 'nº 42'])
         expect(mandada(conversa).reload.status).not_to eq('failed')
+      end
+
+      # #2597: as variáveis do modelo leem com as permissões de quem ligou, como o texto.
+      it 'janela fechada: as variáveis do modelo leem com as permissões de quem ligou' do
+        automacao = automacao_ligada(account, admin, [passo])
+        recebida(conversa, 30.hours.ago)
+        lidos = []
+        allow(Autonomia::Automacao::ModeloWhatsapp).to receive(:new).and_wrap_original do |original, modelo, alvo, valores|
+          lidos << valores
+          original.call(modelo, alvo, valores)
+        end
+
+        rodar(conversa, automacao)
+
+        expect(lidos.map { |valores| valores.send(:account_user)&.user }).to eq([admin])
       end
 
       it 'janela fechada com texto só de espaços: o modelo sai mesmo assim (ele não usa o texto)', :aggregate_failures do
@@ -203,13 +221,14 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         end
       end
 
-      it 'variável que só tem quebra, tab e espaço: pula com faltou_valor', :aggregate_failures do
+      it 'variável que só tem quebra, tab e espaço: para com modelo_faltou_valor (#2573)', :aggregate_failures do
         contato.update!(name: " \n\t ")
         recebida(conversa, 30.hours.ago)
         execucao = rodar(conversa)
 
         expect(mandada(conversa)).to be_nil
-        expect(registros(execucao)).to eq([%w[p1 pulado faltou_valor]])
+        expect(registros(execucao)).to eq([%w[p1 falhou modelo_faltou_valor]])
+        expect(execucao.reload.estado).to eq('parada')
         expect(pedidos).to be_empty
       end
 
@@ -230,13 +249,14 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         expect(registros(execucao)).to eq([%w[p1 pulado contato_nao_recebe]])
       end
 
-      it 'valor vazio numa variável: pula com faltou_valor', :aggregate_failures do
+      it 'valor vazio numa variável: para com modelo_faltou_valor (#2573)', :aggregate_failures do
         contato.update!(name: '')
         recebida(conversa, 30.hours.ago)
         execucao = rodar(conversa)
 
         expect(mandada(conversa)).to be_nil
-        expect(registros(execucao)).to eq([%w[p1 pulado faltou_valor]])
+        expect(registros(execucao)).to eq([%w[p1 falhou modelo_faltou_valor]])
+        expect(execucao.reload.estado).to eq('parada')
       end
 
       it 'robô do outro lado: o modelo para pela mesma trava do texto, sem mandar nada', :aggregate_failures do
@@ -259,14 +279,15 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         'o modelo pede imagem no topo' => [{ 'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' },
                                                               { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}.' }] }, 'modelo_mudou']
       }.each do |caso, (troca, motivo)|
-        it "#{caso} depois de salvar: pula com #{motivo}, sem mandar nada", :aggregate_failures do
+        it "#{caso} depois de salvar: para com #{motivo}, sem mandar nada (#2573)", :aggregate_failures do
           automacao = automacao_ligada(account, admin, [passo])
           com_modelos(modelo_aprovado.merge(troca))
           recebida(conversa, 30.hours.ago)
           execucao = rodar(conversa, automacao)
 
           expect(mandada(conversa)).to be_nil
-          expect(registros(execucao)).to eq([['p1', 'pulado', motivo]])
+          expect(registros(execucao)).to eq([['p1', 'falhou', motivo]])
+          expect(execucao.reload.estado).to eq('parada')
           expect(pedidos).to be_empty
         end
       end

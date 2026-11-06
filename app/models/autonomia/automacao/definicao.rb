@@ -85,7 +85,7 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   def recusa_para_ligar(usuario)
     return Recusa.new(motivo: 'sem_versao', problemas: []) unless versao_ativa
 
-    problemas = problemas_da_receita
+    problemas = problemas_da_receita(usuario)
     return Recusa.new(motivo: 'receita_com_problema', problemas: problemas) if problemas.any?
 
     self.ligada_por = usuario
@@ -95,11 +95,11 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   end
 
   # Fora do esquema, a Receita não sabe dizer o problema passo a passo; vai a frase do motivo.
-  def problemas_da_receita
+  def problemas_da_receita(usuario)
     receita = versao_ativa.receita
     return [I18n.t('autonomia.automacao.motivos.receita_com_problema')] unless ::Autonomia::Automacao::Receita.esquema_valido?(receita)
 
-    ::Autonomia::Automacao::Receita.new(receita, conta: account).problemas
+    ::Autonomia::Automacao::Receita.new(receita, conta: account, account_user: account.account_users.find_by(user_id: usuario&.id)).problemas
   end
 
   def versao_ativa_desta_automacao

@@ -208,6 +208,11 @@ RSpec.describe 'CRM meta_ads_connection: IA cuida dos comentários do anúncio',
     expect(response.parsed_body).to include('status' => 'ready', 'network' => 'facebook', 'private_available' => false,
                                             'inbox_id' => pagina.id)
     expect(response.parsed_body['to_see'].map { |item| [item['id'], item['kind']] }).to eq([%w[555_1 waiting]])
+
+    # #2613: com a flag do privado no Facebook, a tela deixa ligar o privado.
+    account.enable_features!('meta_ads_comentarios_privado_facebook')
+    get "#{base}/cuidado", headers: admin.create_new_auth_token, as: :json
+    expect(response.parsed_body).to include('network' => 'facebook', 'private_available' => true)
   end
 
   it 'pausa: o cuidado fica pausado, com o que o dono escreveu' do

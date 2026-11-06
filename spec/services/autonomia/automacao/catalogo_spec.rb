@@ -95,21 +95,21 @@ RSpec.describe Autonomia::Automacao::Catalogo do
   it 'dá grupo e peça a todo passo nativo do esquema' do
     nativos = passos.reject { |passo| passo['tipo'] == 'acao' }
 
-    expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar',
+    expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar', 'email',
                                                      'decidir', 'extrair', 'escrever', 'resumir')
     expect(nativos.flat_map { |passo| passo['campos'] }.pluck('peca')).to all(be_present)
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end
 
   # A tela esconde o passo sem a flag; a flag tem que existir, senão o passo some de todas as contas sem aviso.
-  it 'só pede flag que existe, e mensagem e avisar pedem a da F4' do
+  it 'só pede flag que existe, e mensagem, avisar e email pedem a da F4' do
     flags = YAML.load_file(Rails.root.join('config/features.yml')).pluck('name')
     requer = passos.filter_map { |passo| passo['requer'] }
-    da_f4 = %w[mensagem avisar]
+    da_f4 = %w[mensagem avisar email]
 
     expect(requer - flags).to be_empty
     expect(passos.select { |passo| da_f4.include?(passo['tipo']) }.pluck('requer'))
-      .to eq([Autonomia::Automacao::Motor::FLAG_MENSAGENS] * 2)
+      .to eq([Autonomia::Automacao::Motor::FLAG_MENSAGENS] * 3)
   end
 
   it 'põe todo passo nativo do esquema no editor ou fora dele com motivo, uma vez' do
@@ -165,7 +165,7 @@ RSpec.describe Autonomia::Automacao::Catalogo do
                   'passos' => [{ 'id' => 'p1', 'tipo' => 'parar' }] }
 
       expect(Autonomia::Automacao::Receita.esquema_valido?(receita)).to be(true)
-      expect(Autonomia::Automacao::Receita.new(receita, conta: create(:account)).problemas).to be_empty
+      expect(Autonomia::Automacao::Receita.new(receita, conta: create(:account), account_user: nil).problemas).to be_empty
     end
   end
 

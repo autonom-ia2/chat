@@ -110,10 +110,10 @@ conversa e do contato), os passos esperar, esperar até, se e parar, a ação da
 (etiquetas, atributos, contato, empresa, conversa, atribuição, card alterar e mover, etapa, agente na caixa), mensagem
 ao cliente dentro da janela, aviso à equipe pelo sino e os quatro passos de IA.
 
-**Placar em 05/11: 0 de 20 inteiros.** Exemplo só conta inteiro e com spec verde; parcial não conta.
+**Placar em 05/11 (main `0be0f12ef4`): 0 de 20 inteiros.** Lacunas fechadas: G1, G5, G11. Exemplo só conta inteiro e com spec verde; parcial não conta.
 
-Com isso, **só o exemplo 10 (cliente bravo) roda quase inteiro**: os passos 1 a 5 e 7. Os passos 6 (esperar a
-gerente responder) e 8 (card no quadro "Melhorias") dependem das lacunas G11 e G4. Os outros 19 começam por um gatilho
+Com isso, **só o exemplo 10 (cliente bravo) roda quase inteiro**: os passos 1 a 7. O passo 8 (card no quadro "Melhorias")
+depende da G4, e o 2 (tirar da agente de IA) da prova da G15. Os outros 19 começam por um gatilho
 ou dependem de um passo que ainda não existe na main.
 
 ## 5. Lacunas: o que falta, por fase
@@ -122,17 +122,17 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 
 | Código | O que falta | Fase | Situação em 05/11 | Dono | Exemplos que segura |
 |---|---|---|---|---|---|
-| G1 | Mandar pelo **modelo aprovado do WhatsApp** fora da janela de 24 h | F4 (F4b) | Sem passo; Issue #2468 (risco 6 do ADR) | F1 | 1, 2, 3, 4, 5, 6, 8, 11, 13, 14, 18, 19, 20 |
+| G1 | Mandar pelo **modelo aprovado do WhatsApp** fora da janela de 24 h | F4 (F4b) | **Fechada** (#2586): campo `modelo` do passo "mensagem" | F1 | 1, 2, 3, 4, 5, 6, 8, 11, 13, 14, 18, 19, 20 |
 | G2 | Mandar **e-mail** ao contato (pela caixa de e-mail da conta) | F4 / F8.2 | Sem passo | F1 | 1, 12, 13, 19, 20 |
 | G3 | **Criar retorno** para a equipe (com e sem envio automático) | F6 "Retorno" | Sem passo | F2 | 1, 2, 3, 4, 5, 9, 12, 14, 15, 16, 19 |
 | G4 | **Criar card** num funil/etapa para a conversa ou o contato (e "abrir card de retenção", "card no quadro X") | F6 | `POST crm/cards` fora da lista; o `CardNaEtapa` (F1.4) só existe nas Regras | F2 | 4, 6, 8, 9, 10, 11, 16, 18 |
-| G5 | Gatilhos do **card**: criado, entrou/saiu da etapa, ganho, perdido, arquivado, campo mudou | F6 | Em PR (#2554, F6 PR2) | Gatilhos | 2, 3, 4, 5, 7, 8, 11, 12, 13, 14, 15, 18, 20 |
+| G5 | Gatilhos do **card**: criado, entrou/saiu da etapa, ganho, perdido, arquivado, campo mudou | F6 | **Fechada** (#2554) | Gatilhos | 2, 3, 4, 5, 7, 8, 11, 12, 13, 14, 15, 18, 20 |
 | G6 | Gatilhos de **tempo**: parado há X dias; N dias antes/depois de uma data do card ou do contato (vencimento, aniversário, próxima revisão, data da festa) | F6 | Em PR (F6 PR3a) | Motor | 1, 5, 6, 13, 18 |
 | G7 | **Recorrente** com filtro (todo dia 1º, toda segunda 8h, quinta 9h) | F8 | Em PR (F8 PR3b) | Gatilhos | 7, 8, 9, 16, 17 |
 | G8 | Gatilho **mensagem que falhou** na entrega | F8 | A fazer (F8 PR2d) | Gatilhos | 1, 19 |
 | G9 | Gatilho **troca de responsável** (do card e da conversa), com o anterior marcado como ausente | F8 | A fazer (F8 PR2d); "ausente" não é valor que a receita lê | Gatilhos | 17 |
 | G10 | Gatilho **etiqueta posta/tirada** | F8 | A fazer (F8 PR2d) | Gatilhos | — |
-| G11 | **Esperar a resposta** de alguém: "até o cliente responder" e "até a equipe responder", com prazo | F3/F4 | O "esperar até" existe, mas não há valor que diga "o cliente respondeu depois do passo X" nem "a equipe respondeu" | Motor | 1, 2, 10, 12, 15, 17, 19, 20 |
+| G11 | **Esperar a resposta** de alguém: "até o cliente responder" e "até a equipe responder", com prazo | F3/F4 | **Fechada** (#2592): `conversa.equipe_respondeu` e `conversa.cliente_respondeu` no "esperar até" | Motor | 1, 2, 10, 12, 15, 17, 19, 20 |
 | G12 | Gatilho **reunião marcada / remarcada / cancelada** e o **link da agenda** do responsável no texto | F8 | A fazer; o link da agenda não é valor da receita | Gatilhos | 1, 2, 3, 4, 5, 6, 9, 11, 15, 16, 18, 20 |
 | G13 | **Webhook de saída** e gravar a resposta no card; recusa vira caminho "deu erro" | F8 | A fazer (F6/F8 PR4) | Gatilhos | 8, 14, 20 |
 | G14 | **Campanhas**: pôr e tirar o contato de uma campanha, montar e disparar campanha para quem tem uma etiqueta | novo | Sem passo | F5 | 2, 3, 6, 7, 9, 12, 16, 20 |
@@ -158,7 +158,7 @@ o RSpec acusa ("Expected pending … to fail", com a instrução do que fazer), 
 e sai da lista. A sonda roda antes do `pending`: sonda quebrada (classe renomeada) é erro vermelho, nunca pendente.
 
 A frente que fecha uma lacuna ajusta a sonda no mesmo PR se o nome que deu for outro (ex.: o passo se chama
-`criar_retorno`, não `retorno`). Sonda vazia (G15, G16, G18, G20, G22 a G25) é lacuna que nenhuma pergunta simples
+`criar_retorno`, não `retorno`). Sonda vazia (G16, G18, G20, G22, G23, G24) é lacuna que nenhuma pergunta simples
 responde: a frente troca a sonda pela prova.
 
 ## 6. Os 20 exemplos: o que existe e o que falta
@@ -176,7 +176,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 7 | Black Friday | ⛔ G7 (quinta 9h) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela) | G5, G7, G14, G15 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24 | Não |
 | 9 | Prospecção semanal | ⛔ G7 (segunda 8h) | decidir ✅, etiqueta ✅, mover ✅, resumir ✅ | G3, G4, G7, G12, G14, G21 | Não |
-| 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅ | G11 (passo 6), G4 (passo 8), G15 (tirar da agente de IA, a conferir) | **Parcial: passos 1–5 e 7** |
+| 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅ | G4 (passo 8), G15 (tirar da agente de IA, a conferir) | **Parcial: passos 1–7** |
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25 | Não |
 | 13 | Festa do contrato ao depoimento | 🟡 G5 (card ganho) + ⛔ G6 (datas da festa) | extrair ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | G1, G2, G5, G6, G16 | Não |
@@ -220,7 +220,7 @@ Provados contra o texto do aceite, na main `4bd7168c0f`.
 |---|---|---|---|
 | F3.7 quem ligou perdeu a caixa: pausa e "Assumir e religar" | **Não passa** (o motor passa, a tela não) | Motor: `spec/services/autonomia/automacao/executor_spec.rb:335`. API: `spec/fechamento/automacao/aceite_a_conferir_spec.rb` (F3.7): pausa, histórico com "Assuma e religue", ligar de novo troca quem ligou. Tela: `LivreLigar.vue` mostra só "Ligar" e "Está desligada" | #2572 |
 | F3.10 etiqueta e atributo criados levam descrição | **Passa** | `aceite_a_conferir_spec.rb` (F3.10): sem descrição, 422 com a frase; com descrição, a etiqueta e o atributo nascem com ela. Regra em `lib/operator_guide/automacao-recursos.yml` (`exige`) | — |
-| F4.4 fora da janela: caminho validado ou para com motivo | **Não passa** | Nunca calado: `passo_de_mensagem_spec.rb:46` e `:95` (`pulado / fora_da_janela`). Mas o passo pula e a execução segue (`Executor#passo_nativo`), e o retorno com envio do modelo não é passo | #2573 (decisão: parar ou seguir) |
+| F4.4 fora da janela: caminho validado ou para com motivo | **Passa** (com a correção da #2573) | Com modelo aprovado, sai o modelo (`passo_de_mensagem_spec.rb`, #2468). Sem ele, a execução para com o motivo (decisão do Rodrigo, 05/11): `aceite_a_conferir_spec.rb` (F4.4) prova a mensagem e o "escrever" parando, e o pular por outro motivo seguindo; `passo_de_mensagem_spec.rb` prova `falhou / fora_da_janela` e `falhou / limite_da_caixa` com a execução `parada` | #2573 |
 | F5.4 ligar com mensagem ou IA pede confirmação e custo | **Não passa** | Ligar chama a API direto: `useEditorLivre.js:155` e `LivreListaPage.vue:137`; não há confirmação nem custo | #2574 |
 | F6.7 card movido pela automação não é desfeito pela IA do funil | **Passa** | Ponta a ponta em `aceite_a_conferir_spec.rb` (F6.7): o motor move o card, e a avaliação seguinte com "Mover automaticamente" ligado sai `automacao_mexeu_na_etapa` e o card fica. Metades: `movimento_da_automacao_livre_spec.rb`, `evaluator_movimento_da_automacao_spec.rb` | — |
 

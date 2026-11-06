@@ -19,19 +19,19 @@ RSpec.describe Autonomia::Automacao::Receita do
 
   it 'anda pelos ramos fixos, pelos caminhos do decidir e pelo nenhum, na ordem' do
     se = { 'id' => 's1', 'tipo' => 'se', 'entao' => [{ 'id' => 'e1' }], 'senao' => [{ 'id' => 'e2' }] }
-    todos = described_class.new(receita(se, decidir(caminho: [{ 'id' => 'c1' }], nenhum: [{ 'id' => 'n1' }])), conta: account)
+    todos = described_class.new(receita(se, decidir(caminho: [{ 'id' => 'c1' }], nenhum: [{ 'id' => 'n1' }])), conta: account, account_user: nil)
 
     expect(todos.passos.pluck('id')).to eq(%w[s1 e1 e2 d1 c1 n1])
   end
 
   it 'confere a ação de dentro de um caminho do decidir no salvar' do
-    problemas = described_class.new(receita(decidir(caminho: [passo_proibido])), conta: account).problemas
+    problemas = described_class.new(receita(decidir(caminho: [passo_proibido])), conta: account, account_user: nil).problemas
 
     expect(problemas).to include(I18n.t('autonomia.automacao.receita.acao_fora', passo: 'x1', acao: 'DELETE accounts/:id'))
   end
 
   it 'confere a ação de dentro do nenhum se aplica no salvar' do
-    problemas = described_class.new(receita(decidir(nenhum: [passo_proibido])), conta: account).problemas
+    problemas = described_class.new(receita(decidir(nenhum: [passo_proibido])), conta: account, account_user: nil).problemas
 
     expect(problemas).to include(I18n.t('autonomia.automacao.receita.acao_fora', passo: 'x1', acao: 'DELETE accounts/:id'))
   end
@@ -39,7 +39,7 @@ RSpec.describe Autonomia::Automacao::Receita do
   it 'recusa o id repetido entre um caminho e o nenhum' do
     repetido = decidir(caminho: [{ 'id' => 'p9', 'tipo' => 'parar' }], nenhum: [{ 'id' => 'p9', 'tipo' => 'parar' }])
 
-    expect(described_class.new(receita(repetido), conta: account).problemas)
+    expect(described_class.new(receita(repetido), conta: account, account_user: nil).problemas)
       .to include(I18n.t('autonomia.automacao.receita.id_repetido', passo: 'p9'))
   end
 
@@ -61,7 +61,7 @@ RSpec.describe Autonomia::Automacao::Receita do
 
     def de_card(gatilho) = { 'gatilho' => gatilho, 'passos' => [{ 'id' => 'p1', 'tipo' => 'parar' }] }
 
-    def problemas(gatilho) = described_class.new(de_card(gatilho), conta: account).problemas
+    def problemas(gatilho) = described_class.new(de_card(gatilho), conta: account, account_user: nil).problemas
 
     before { account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_gatilhos') }
 

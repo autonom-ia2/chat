@@ -31,7 +31,7 @@ RSpec.describe Autonomia::Automacao::Receita do
   end
 
   def problemas(*passos)
-    described_class.new(receita(*passos), conta: account).problemas
+    described_class.new(receita(*passos), conta: account, account_user: nil).problemas
   end
 
   def erro(chave, **valores)

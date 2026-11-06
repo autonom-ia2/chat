@@ -4,7 +4,8 @@
 #
 # O resultado diz o que o executor faz depois (F3.6, F3.7):
 # - :ok segue;
-# - :pulado segue, com o motivo (faltou um valor do alvo);
+# - :pulado segue, com o motivo: faltou um valor do alvo, a data lida não é data, ou o valor calculado no corpo (G16)
+#   não cabe no campo (fora da lista de opções): nunca grava valor que a plataforma recusaria;
 # - :permanente para a execução (4xx: a etiqueta não existe, o corpo não serve);
 # - :sem_acesso pausa a automação (401/403, ou quem ligou perdeu a chave de automações);
 # - :passageiro tenta de novo (5xx, 408, 425, 429, erro sem resposta), menos quando o caderno mostra que a ação já
@@ -23,12 +24,8 @@ class Autonomia::Automacao::PassoDeAcao
 
   def executar
     caminho = caminho_resolvido
-    return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) if caminho.values.any?(&:blank?)
-
-    caderno = ::Autonomia::Guide::Execucao.abrir(account: @execucao.account, user: @acesso.usuario)
-    acoes = ::Autonomia::Automacao::AcoesDoMotor.new(execucao: @execucao, account_user: @acesso.account_user)
-    resultado = no_caderno(caderno) { acoes.executar(@passo['acao'], dados(caminho)) }
-    classificar(resultado, acoes.codigo, caderno)
+    corpo = caminho.values.any?(&:blank?) ? pulado('faltou_valor') : corpo_pronto
+    corpo.is_a?(Resultado) ? corpo : agir(caminho, corpo)
   rescue ::Autonomia::Automacao::AcoesDoMotor::SemPermissao
     Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_permissao', dados: {})
   rescue ::Autonomia::Guide::Acoes::Recusada => e
@@ -37,6 +34,13 @@ class Autonomia::Automacao::PassoDeAcao
   end
 
   private
+
+  def agir(caminho, corpo)
+    caderno = ::Autonomia::Guide::Execucao.abrir(account: @execucao.account, user: @acesso.usuario)
+    acoes = ::Autonomia::Automacao::AcoesDoMotor.new(execucao: @execucao, account_user: @acesso.account_user)
+    resultado = no_caderno(caderno) { acoes.executar(@passo['acao'], dados(caminho, corpo)) }
+    classificar(resultado, acoes.codigo, caderno)
+  end
 
   def no_caderno(caderno, &)
     resultado = ::Autonomia::Guide::Diario.gravando(caderno, caderno.passos.size, &)
@@ -50,8 +54,27 @@ class Autonomia::Automacao::PassoDeAcao
     end
   end
 
-  def dados(caminho)
-    { caminho: caminho, corpo: @passo['corpo'].to_h, descricao: @passo['descricao'] }
+  def pulado(motivo, dados = {}) = Resultado.new(tipo: :pulado, motivo: motivo, dados: dados)
+
+  # O corpo com os valores calculados (G16), ou o pulo: valor vazio, data que não é data, valor que não cabe no campo.
+  def corpo_pronto
+    montado = ::Autonomia::Automacao::Corpo.new(@passo['corpo'], valores: @valores, conta: @execucao.account).montar
+    return pulado(montado.motivo) if montado.motivo
+
+    fora = fora_do_formato(montado.corpo)
+    fora.any? ? pulado('valor_fora_do_formato', 'problemas' => fora) : montado.corpo
+  end
+
+  # O corpo literal o salvar já conferiu. O calculado só existe agora: confere com o valor de verdade (opção fora da
+  # lista ou valor de outro tipo vira pulo com o motivo, nunca valor inválido gravado).
+  def fora_do_formato(corpo)
+    return [] unless ::Autonomia::Automacao::Corpo.calculado_em?(@passo['corpo'])
+
+    ::Autonomia::Automacao::CampoDaAcao.problemas(@passo['acao'], @passo['corpo'].to_h, corpo, conta: @execucao.account)
+  end
+
+  def dados(caminho, corpo)
+    { caminho: caminho, corpo: corpo, descricao: @passo['descricao'] }
   end
 
   def classificar(resultado, codigo, caderno)

@@ -87,6 +87,14 @@ class Autonomia::Automacao::Valores
     'card.atributos' => ->(card) { card.custom_attributes }
   }.freeze
 
+  # Os valores que pedem permissão para ler (#2597): a pergunta é a mesma do resto do CRM, feita a quem salva a receita
+  # e a quem ligou a automação. O dono de um card não ganha, pela automação, o valor dos cards alheios: `ve?`, não
+  # `ve_o_card?`. Sem a permissão, o salvar recusa e a execução lê vazio. Cada regra responde `ve?(account_user)` e diz
+  # a chave (`CHAVE`) que o catálogo manda ao editor, para ele não oferecer o valor a quem não pode ler.
+  PROTEGIDOS = {
+    'card.valor' => ::Crm::ValorDeVenda
+  }.freeze
+
   # O modelo do atributo personalizado de cada base, para conferir ao salvar que a chave existe na conta.
   MODELOS = {
     'conversa.atributos' => 'conversation_attribute',
@@ -118,10 +126,33 @@ class Autonomia::Automacao::Valores
 
     def fechado(caminho) = FECHADOS[caminho.to_s]
 
+    # O que impede a receita de ler o caminho que já vale ali: o atributo que a conta não tem, ou o valor que pede
+    # permissão (#2597) para quem salva sem ela. Sem pessoa (`account_user` nil: o catálogo), a permissão não é
+    # conferida aqui; a execução lê vazio.
+    def problema_de_leitura(caminho, conta:, account_user:)
+      return :atributo_inexistente unless atributo_definido?(caminho, conta)
+
+      :valor_de_venda if account_user && !pode_ler?(caminho, account_user)
+    end
+
+    # `account_user` pode ler o caminho? Sem pessoa (nil), o valor protegido fica fechado.
+    def pode_ler?(caminho, account_user)
+      regra = PROTEGIDOS[caminho.to_s]
+      regra.nil? || regra.ve?(account_user)
+    end
+
     # O atributo da conta que o caminho lê existe? Caminho que não é atributo responde true.
     def atributo_definido?(caminho, conta)
       base, chave = atributo(caminho)
       base.nil? || conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave)
+    end
+
+    # O caminho lê um atributo do tipo data da conta? A data calculada no corpo (G16) só parte de um deles: os CAMPOS
+    # não têm data.
+    def data?(caminho, conta)
+      base, chave = atributo(caminho)
+      base.present? && conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave,
+                                                                  attribute_display_type: :date)
     end
 
     # "contato.atributos.placa" => ["contato.atributos", "placa"]. A chave do atributo pode ter ponto.
@@ -132,15 +163,19 @@ class Autonomia::Automacao::Valores
     end
   end
 
-  # `alvo`: a conversa, o card ou o contato da execução (ou um Contexto já montado). `espera`: a janela (Range de
-  # instantes) do "esperar até" que está conferindo a condição.
-  def initialize(alvo:, mensagem: nil, espera: nil)
+  # `alvo`: a conversa, o card ou o contato da execução (ou um Contexto já montado). `quem`: a pessoa com cujas
+  # permissões a receita lê (quem ligou a automação; no ensaio, quem pede). `nil` explícito: o valor protegido lê
+  # vazio. Obrigatório, sem padrão: quem cria o Valores diz quem é, e o esquecimento quebra o spec em vez de ler vazio.
+  # `espera`: a janela (Range de instantes) do "esperar até" que está conferindo a condição.
+  def initialize(alvo:, quem:, mensagem: nil, espera: nil)
     @contexto = alvo.is_a?(::Autonomia::Automacao::Contexto) ? alvo : ::Autonomia::Automacao::Contexto.de(alvo)
     @mensagem = mensagem
+    @quem = quem
     @espera = espera
   end
 
   def ler(caminho)
+    return unless permitido?(caminho)
     return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
     return resposta(caminho) if RESPOSTA.key?(caminho.to_s)
     return do_objeto(caminho) { |objeto| CAMPOS.fetch(caminho.to_s).call(objeto) } if CAMPOS.key?(caminho.to_s)
@@ -154,6 +189,15 @@ class Autonomia::Automacao::Valores
   private
 
   def resposta(caminho) = !@espera.nil? && do_objeto(caminho) { |conversa| RESPOSTA.fetch(caminho.to_s).call(conversa, @espera) } == true
+
+  # A pessoa só é buscada quando o caminho pede permissão.
+  def permitido?(caminho) = !PROTEGIDOS.key?(caminho.to_s) || self.class.pode_ler?(caminho, account_user)
+
+  def account_user
+    return @account_user if defined?(@account_user)
+
+    @account_user = @quem && @contexto.alvo.account.account_users.find_by(user_id: @quem.id)
+  end
 
   def do_objeto(caminho)
     objeto = da_base(caminho)

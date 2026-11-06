@@ -62,9 +62,10 @@ class Api::V1::Accounts::Autonomia::AgentsController < Api::V1::Accounts::Autono
   # `agente_de_cotacao` (#380): as escolhas da corretora que o Agente de Cotação lê a cada turno
   # (`QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA`) — só o Builder as escreve, sempre as quatro; uma
   # escrita parcial por aqui pararia o agente com `EscolhasIncompletas`.
+  # `canal_pedido` (#2490): o canal que o dono pediu ao Construtor na criação; só o Builder o escreve.
   PROTECTED_CONFIG_KEYS = (%w[
     topic_map knowledge_confidence knowledge_summary knowledge_refresh_token
-    with_knowledge system_key builder_active_thread_id
+    with_knowledge system_key builder_active_thread_id canal_pedido
   ] + [::Autonomia::Insurance::QuoteAgent::Builder::ESCOLHAS_DA_CORRETORA]).freeze
 
   # #1366 — status, enabled ou actuation mudando: tudo (assign + save!) com o AGENTE TRAVADO (with_lock relê o agente),
