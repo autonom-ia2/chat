@@ -575,6 +575,7 @@ en:
         contato: '%{nome}'
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
+        sem_criar_card: 'Step %{passo}: you cannot create cards in the CRM, which the "Create card" step needs.'
         etapa_do_card_de_fora: 'Step %{passo}: stage %{id} is not from this account.'
         card_desligado: 'Step %{passo}: the "Create card" step is off for this account (card triggers or the CRM are off).'
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'

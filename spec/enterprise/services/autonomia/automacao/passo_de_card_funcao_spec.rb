@@ -65,4 +65,23 @@ RSpec.describe Autonomia::Automacao::PassoDeCard, :automacao_motor do
 
     expect(resultado.tipo).to eq(:ok)
   end
+
+  describe 'ao salvar e ao ligar (Receita, com a pessoa)' do
+    def problemas_de(permissions)
+      pessoa = create(:user, account: account, role: :agent)
+      funcao = CustomRole.create!(account: account, name: "Função #{SecureRandom.hex(4)}", permissions: permissions)
+      account_user = AccountUser.find_by(account: account, user: pessoa)
+      account_user.update!(custom_role: funcao)
+      receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }
+      Autonomia::Automacao::Receita.new(receita, conta: account, account_user: account_user).problemas
+    end
+
+    it 'configura funis mas não cria card: recusa, em vez de pausar no primeiro disparo' do
+      expect(problemas_de(base + %w[crm_manage_pipelines])).to eq([I18n.t('autonomia.automacao.receita.sem_criar_card', passo: 'p1')])
+    end
+
+    it 'cria card: aceita (a chave de funis o controller confere)' do
+      expect(problemas_de(base + %w[crm_manage_cards crm_manage_pipelines])).to be_empty
+    end
+  end
 end

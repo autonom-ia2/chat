@@ -4,7 +4,8 @@
 #
 # A criação é a das Regras (CardNovo), com o contrato do POST crm/cards: o card aberto no funil escolhido já é o card
 # desta conversa (pula com `card_ja_existe`, sem duplicar); funil diferente é outro assunto, card novo. Contato fora do
-# funil (#2084) não vira card. Nunca move card: mover é a ação `POST crm/cards/:id/move`.
+# funil (#2084) não vira card. Nunca move card: mover é a ação `POST crm/cards/:id/move`. O card novo não vira o assunto
+# atual da conversa nem desliga o card que ela já tem ("Convive" do termo): o card do pedido continua o principal.
 #
 # Age como quem ligou (D1), conferido a cada execução, com as perguntas da API de cards: criar card (CardPolicy#create?,
 # no EE `crm_manage_cards`) e o funil da etapa nas caixas dele (CardGuard#create_allowed?). Por ser passo de funil, pede
@@ -17,12 +18,21 @@ class Autonomia::Automacao::PassoDeCard
   # Passo de funil, com a flag da F6 (a dos gatilhos de card) e o CRM ligado.
   def self.ligado?(conta) = ::Autonomia::Automacao::Motor.gatilhos?(conta)
 
-  # Ao salvar (Receita): a flag e a etapa da conta.
-  def self.problemas_ao_salvar(conta, passo)
-    return [I18n.t('autonomia.automacao.receita.card_desligado', passo: passo['id'])] unless ligado?(conta)
-    return [] if conta.crm_pipeline_stages.exists?(id: passo['etapa_id'])
+  # Ao salvar e ao ligar (Receita): a flag, a etapa da conta e, com a pessoa, poder criar card (CardPolicy#create?). A
+  # chave de funis o controller já confere (de_funil?). `account_user` nil (o catálogo) não confere a pessoa.
+  def self.problemas_ao_salvar(conta, passo, account_user)
+    id = passo['id']
+    return [I18n.t('autonomia.automacao.receita.card_desligado', passo: id)] unless ligado?(conta)
+    return [I18n.t('autonomia.automacao.receita.etapa_do_card_de_fora', passo: id, id: passo['etapa_id'])] unless
+      conta.crm_pipeline_stages.exists?(id: passo['etapa_id'])
+    return [] if account_user.nil? || cria_card?(account_user)
 
-    [I18n.t('autonomia.automacao.receita.etapa_do_card_de_fora', passo: passo['id'], id: passo['etapa_id'])]
+    [I18n.t('autonomia.automacao.receita.sem_criar_card', passo: id)]
+  end
+
+  def self.cria_card?(account_user)
+    contexto = { user: account_user.user, account: account_user.account, account_user: account_user }
+    ::Crm::CardPolicy.new(contexto, ::Crm::Card).create?
   end
 
   def initialize(execucao:, passo:, alvo:, acesso:)
@@ -32,7 +42,8 @@ class Autonomia::Automacao::PassoDeCard
     @conta = execucao.account
     contexto = ::Autonomia::Automacao::Contexto.de(alvo)
     @conversa = contexto.conversa
-    @contato = contexto.contato
+    # O contato em que o card nasce: o da conversa, quando há (CardNovo grava esse), senão o do alvo.
+    @contato = @conversa&.contact || contexto.contato
   end
 
   def executar
@@ -49,7 +60,7 @@ class Autonomia::Automacao::PassoDeCard
 
   def criar(etapa)
     card = ::Autonomia::Automacao::CardNovo.new(stage: etapa, conversation: @conversa, contact: @contato, actor: @acesso.usuario,
-                                                automacao: { origem: ORIGEM, id: @execucao.automacao_id })
+                                                automacao: { origem: ORIGEM, id: @execucao.automacao_id }, foco: false)
                                            .criar { aberto(etapa).exists? }
     return pulado('card_ja_existe', 'card_id' => aberto(etapa).pick(:id)) if card.nil?
 
@@ -67,9 +78,9 @@ class Autonomia::Automacao::PassoDeCard
   end
 
   def pode_criar?(etapa)
-    contexto = { user: @acesso.usuario, account: @conta, account_user: @acesso.account_user }
-    ::Crm::CardPolicy.new(contexto, ::Crm::Card).create? && @acesso.mexe_no_funil? &&
-      ::Crm::Access::CardGuard.new(**contexto).create_allowed?(etapa.pipeline_id, conversation: @conversa)
+    self.class.cria_card?(@acesso.account_user) && @acesso.mexe_no_funil? &&
+      ::Crm::Access::CardGuard.new(user: @acesso.usuario, account: @conta, account_user: @acesso.account_user)
+                              .create_allowed?(etapa.pipeline_id, conversation: @conversa)
   end
 
   def pulado(motivo, dados = {}) = Resultado.new(tipo: :pulado, motivo: motivo, dados: dados)

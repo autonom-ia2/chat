@@ -62,6 +62,29 @@ RSpec.describe Autonomia::Automacao::PassoDeCard, :automacao_motor do
     expect(pedido.reload).to have_attributes(pipeline_id: vendas.id, stage_id: novo.id, status: 'open')
   end
 
+  # "Convive" do termo: o card de Melhorias liga à mesma conversa sem virar o assunto atual dela nem desligar o pedido.
+  it 'o card do pedido continua o principal da conversa, ligado a ela, mesmo escolhido por uma pessoa', :aggregate_failures do
+    pedido = Crm::Cards::Creator.new(account: account, user: admin, conversation: conversa,
+                                     params: { pipeline_id: vendas.id, stage_id: novo.id }).perform
+
+    rodar
+
+    melhoria = melhorias.cards.sole
+    finder = Crm::Cards::ConversationCardFinder.new(account: account)
+    expect(finder.find(conversa)).to eq(pedido)
+    expect(finder.all(conversa)).to contain_exactly(pedido, melhoria)
+    expect(Crm::CardConversation.find_by!(card: melhoria, conversation: conversa).focused_at).to be_nil
+    expect(Crm::CardConversation.find_by!(card: pedido, conversation: conversa)).to have_attributes(is_primary: true)
+  end
+
+  it 'sem foco marcado no pedido, ele continua o principal (o card novo não toma o lugar)' do
+    pedido = card_vendas
+
+    rodar
+
+    expect(Crm::Cards::ConversationCardFinder.new(account: account).find(conversa)).to eq(pedido)
+  end
+
   it 'com card aberto no mesmo funil, pula sem duplicar e diz qual card já existe', :aggregate_failures do
     rodar
     existente = melhorias.cards.sole
