@@ -90,6 +90,7 @@ class Autonomia::Automacao::Executor
     when 'acao' then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
+    when 'ia_assumir' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeIaAssumir, mensagem: false)
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha
     # como "concluida" sem ter feito nada.
@@ -185,12 +186,14 @@ class Autonomia::Automacao::Executor
     end
   end
 
-  # "mensagem", "avisar" (F4) e "email" (G2). Reconferem tudo como a ação e, sem a flag da F4, fecham sem mandar nada (rollback).
-  # Não repetem: a mensagem que deu erro no meio não é mandada de novo, porque o cliente poderia recebê-la duas vezes.
-  def passo_nativo(passo, classe)
+  # "mensagem", "avisar" (F4), "email" (G2) e o "Passar para a agente de IA" (G15, `mensagem: false`). Reconferem tudo
+  # como a ação e, se mandam mensagem, sem a flag da F4 fecham sem mandar nada (rollback). Não repetem: a mensagem que
+  # deu erro no meio não é mandada de novo, porque o cliente poderia recebê-la duas vezes; a troca de dono pode já ter
+  # acontecido.
+  def passo_nativo(passo, classe, mensagem: true)
     reconferir
     return if impedida?(passo['id'])
-    return encerrar(passo['id'], 'parada', 'mensagens_desligadas') unless ::Autonomia::Automacao::Motor.mensagens?(@account)
+    return encerrar(passo['id'], 'parada', 'mensagens_desligadas') if mensagem && !::Autonomia::Automacao::Motor.mensagens?(@account)
 
     resultado = classe.new(execucao: @execucao, passo: passo, alvo: alvo).executar
     # Robô do outro lado: para só nesta conversa, e a automação continua ligada (a nota já ficou). Quem ligou não vê a

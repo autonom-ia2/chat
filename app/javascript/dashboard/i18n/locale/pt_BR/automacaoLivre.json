@@ -90,6 +90,7 @@
       "EXTRAIR": "A IA tira dados da conversa",
       "ESCREVER": "A IA escreve um texto",
       "RESUMIR": "A IA resume a conversa",
+      "IA_ASSUMIR": "Passar para a agente de IA",
       "EMAIL": "Mandar e-mail ao cliente"
     },
     "ESCOLHER": {
@@ -139,6 +140,7 @@
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
       "LINHAS": "Tamanho do resumo (linhas)",
+      "AGENTE_ID": "Qual agente de IA",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada"
@@ -368,6 +370,8 @@
         "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
         "VARIAVEL": "Variável {numero} do modelo"
       },
+      "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo.",
+      "AGENTES_DE_IA_FALHOU": "Não deu para carregar as agentes de IA. Recarregue a página para tentar de novo.",
       "POR_VALOR_EM": "Pôr um dado da conversa em “{campo}”",
       "SEM_CAIXA_DE_EMAIL": "A conta ainda não tem caixa de e-mail. Crie uma em Caixas de entrada para usar este passo."
     },

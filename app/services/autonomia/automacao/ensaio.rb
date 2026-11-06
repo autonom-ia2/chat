@@ -109,7 +109,7 @@ class Autonomia::Automacao::Ensaio
   end
 
   # Os passos que montam com os valores desta conversa e seguem para o próximo: o método do ensaio de cada um.
-  EM_LINHA = { 'mensagem' => :texto, 'avisar' => :texto, 'email' => :email, 'acao' => :acao }.freeze
+  EM_LINHA = { 'mensagem' => :texto, 'avisar' => :texto, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir }.freeze
 
   # [o que faria, o próximo passo neste caminho (nil quando acabou aqui)]. Esperar e ação só se mostram; os passos de IA
   # que não abrem caminho só dizem o que fariam; o resto do mapa fechado tem regra própria, e tipo fora dele é
@@ -126,6 +126,9 @@ class Autonomia::Automacao::Ensaio
     else [em_frente(passo), @roteiro.seguinte(passo['id'])]
     end
   end
+
+  # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes.
+  def ia_assumir(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
 
   def em_frente(passo)
     return ia(passo) if IA_SO_DIZ.include?(passo['tipo'])

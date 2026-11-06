@@ -90,6 +90,7 @@
       "EXTRAIR": "AI pulls data from the conversation",
       "ESCREVER": "AI writes a text",
       "RESUMIR": "AI summarizes the conversation",
+      "IA_ASSUMIR": "Hand over to the AI agent",
       "EMAIL": "Send an e-mail to the customer"
     },
     "ESCOLHER": {
@@ -139,6 +140,7 @@
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
+      "AGENTE_ID": "Which AI agent",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed"
@@ -368,6 +370,8 @@
         "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
         "VARIAVEL": "Template variable {numero}"
       },
+      "SEM_AGENTE_DE_IA": "No AI agent receives conversations in this account yet. Add an agent to an inbox, in AI Agents, to use this step.",
+      "AGENTES_DE_IA_FALHOU": "Could not load the AI agents. Reload the page to try again.",
       "POR_VALOR_EM": "Add a conversation detail to “{campo}”",
       "SEM_CAIXA_DE_EMAIL": "This account has no e-mail inbox yet. Create one in Inboxes to use this step."
     },

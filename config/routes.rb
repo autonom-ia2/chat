@@ -734,6 +734,8 @@ Rails.application.routes.draw do
               # #2500 C2: o "Testar este passo" e os custos da IA.
               post :testar_passo, on: :collection, to: 'automacoes_ia#testar_passo'
               get :custos, on: :collection, to: 'automacoes_ia#custos'
+              # G15: as agentes de IA do passo "Passar para a agente de IA".
+              get :agentes_de_ia, on: :collection, to: 'automacoes_ia#agentes_de_ia'
               member do
                 post :ligar
                 post :desligar

@@ -79,6 +79,16 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.tipo === 'acao' && AVISO_DA_ACAO[no.faria])
     return { ...base, aviso: t(`${E}.${AVISO_DA_ACAO[no.faria]}`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  // G15: para quem passaria; se não passaria, o porquê, com o nome da agente.
+  if (no.tipo === 'ia_assumir')
+    return no.faria === 'ia_assumir'
+      ? { ...base, destaque: t(`${E}.IA_ASSUMIR`, { agente: no.dados.agente }) }
+      : {
+          ...base,
+          aviso: t(`${E}.NAO_PASSARIA.${no.faria.toUpperCase()}`, {
+            agente: no.dados?.agente,
+          }),
+        };
   // G2: a linha já com o assunto montado (como o balão da mensagem), por qual
   // caixa sairia e o texto no balão.
   if (no.faria === 'email')

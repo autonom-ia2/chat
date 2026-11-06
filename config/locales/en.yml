@@ -568,6 +568,14 @@ en:
         nada_para_ler: 'There was nothing in the conversation for the AI to read. The AI was not called.'
         resposta_fora_do_schema: 'The AI answered in a format the automation cannot use. Nothing was done.'
         tipo_desconhecido: 'This step type is unknown to the automation engine. The automation stopped here without doing it.'
+        agente_sumiu: 'The chosen AI agent no longer exists. The conversation stayed as it was.'
+        fase2_desligada: 'AI agents do not receive conversations in this account. The conversation stayed as it was.'
+        pessoa_atribuida: 'A person has the conversation and keeps it. The AI agent did not take over.'
+        sem_vinculo_na_caixa: 'The AI agent does not work in this conversation''s inbox. The conversation stayed as it was.'
+        nao_atende_cliente: 'The AI agent is not answering customers right now. The conversation stayed as it was.'
+        conversa_resolvida: 'The conversation is resolved. The AI agent did not take over.'
+        outra_conta: 'The AI agent belongs to another account. The conversation stayed as it was.'
+        campo_proibido: 'The action sends a field the automation does not change.'
       alvo:
         conversa: 'Conversation #%{id}'
         card: 'Card #%{id} · %{titulo}'
@@ -596,6 +604,7 @@ en:
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
+        agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."

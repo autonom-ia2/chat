@@ -1061,6 +1061,14 @@ pt_BR:
         nada_para_ler: 'Não havia nada na conversa para a IA ler. A IA não foi chamada.'
         resposta_fora_do_schema: 'A IA respondeu num formato que a automação não usa. Nada foi feito.'
         tipo_desconhecido: 'O motor da automação não conhece este tipo de passo. A automação parou aqui sem fazê-lo.'
+        agente_sumiu: 'A agente de IA escolhida não existe mais. A conversa ficou como estava.'
+        fase2_desligada: 'As agentes de IA não recebem conversas nesta conta. A conversa ficou como estava.'
+        pessoa_atribuida: 'A conversa está com uma pessoa, e ela continua com a conversa. A agente de IA não assumiu.'
+        sem_vinculo_na_caixa: 'A agente de IA não trabalha na caixa desta conversa. A conversa ficou como estava.'
+        nao_atende_cliente: 'A agente de IA não está atendendo clientes agora. A conversa ficou como estava.'
+        conversa_resolvida: 'A conversa está resolvida. A agente de IA não assumiu.'
+        outra_conta: 'A agente de IA é de outra conta. A conversa ficou como estava.'
+        campo_proibido: 'A ação manda um campo que a automação não muda.'
       alvo:
         conversa: 'Conversa #%{id}'
         card: 'Card #%{id} · %{titulo}'
@@ -1089,6 +1097,7 @@ pt_BR:
         valor_fora: 'Passo %{passo}: %{caminho} não tem o valor "%{valor}". Use um destes: %{opcoes}.'
         proibido: 'Passo %{passo}: a automação não muda %{campo}.'
         passo_desligado: "Passo %{passo}: mensagem e aviso estão desligados nesta conta."
+        agente_de_ia_invalido: 'Passo %{passo}: a agente de IA %{id} não é desta conta.'
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."

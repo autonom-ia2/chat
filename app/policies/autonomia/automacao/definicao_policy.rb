@@ -14,6 +14,7 @@ class Autonomia::Automacao::DefinicaoPolicy < ApplicationPolicy
   def ligar? = gerenciar?
   def desligar? = gerenciar?
   def testar_passo? = gerenciar?
+  def agentes_de_ia? = gerenciar?
   def custos? = ver?
   def custos_da_automacao? = ver?
 
