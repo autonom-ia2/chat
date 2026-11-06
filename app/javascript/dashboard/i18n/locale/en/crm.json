@@ -3034,11 +3034,14 @@
         "RETURN": "Each R$ 1 invested returned {value}",
         "OPEN_QUOTES": "Sales on the way: 1 open quote | Sales on the way: {count} open quotes",
         "ADS_TITLE": "Your ads, by sale",
+        "ADS_ALL_TITLE": "Your ads",
         "ADS_EMPTY": "As soon as an ad spends or brings a conversation, it shows up here.",
         "AD_NO_NAME": "Unnamed ad",
         "OPEN_AD": "See inside",
         "OPEN_AD_LABEL": "See inside the ad {name}",
         "AD_QUOTES": "1 open quote | {count} open quotes",
+        "AD_PRIVATE": "1 private-message conversation | {count} private-message conversations",
+        "AD_DESTINATION_PRIVATE": "{destination} · {private}",
         "VERDICT": {
           "UP": "Increase · enough data",
           "KEEP": "Keep",
@@ -3060,7 +3063,13 @@
         "AD_STATS": {
           "SPEND": "Invested",
           "CONVERSATIONS": "Conversations",
-          "SALES": "Sales"
+          "SALES": "Sales",
+          "RESULT_PROFILE": "Taps to see your profile",
+          "RESULT_WEBSITE": "Clicks to your website",
+          "RESULT_LEADS": "Sign-ups",
+          "RESULT_ENGAGEMENT": "Interactions with the post",
+          "RESULT_SHOWN": "Times shown",
+          "RESULT_CLICKS": "Clicks"
         },
         "DURATION": {
           "SECONDS": "less than 1 min",
@@ -3114,18 +3123,7 @@
           "NOTE": "Connect your ad account to see it",
           "CTA": "See how much I spent"
         },
-        "ADS_WHATSAPP_TITLE": "Ads that bring conversations",
         "OTHER_ADS": {
-          "TITLE": "Other ads",
-          "TOTAL": "{value} invested",
-          "HINT": "They don't open a conversation directly: they lead to your profile, a post, a form or your website. People who message you later aren't linked to them. They're left out of the cost per conversation and per sale.",
-          "SPEND": "Invested",
-          "CLICKS": "Clicks",
-          "SHOWN": "Shown",
-          "ENGAGEMENT": "Engagement",
-          "COMMENTS": "Comments",
-          "LEADS": "Leads",
-          "PRIVATE": "Conversations via DM",
           "DESTINATIONS": {
             "PROFILE": "Leads to your profile",
             "POST": "Leads to a post or video",
@@ -3347,6 +3345,7 @@
           "SALES": "Sales",
           "CONVERSATIONS": "Conversations",
           "CLICKS": "Clicks",
+          "PROFILE": "Taps to see your profile",
           "ENGAGEMENT": "Engagement",
           "COMMENTS": "Comments",
           "LEADS": "Leads",
