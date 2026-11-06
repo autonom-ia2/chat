@@ -1326,6 +1326,17 @@
     },
     "GATILHO_COM": {
       "CARD_GANHO": "When a plan in {funil} is implemented"
+    },
+    "PASSOS": {
+      "CARD_FECHAR": "Mark whether the plan was implemented"
+    },
+    "CAMPOS": {
+      "RESULT": "Was the plan implemented?"
+    },
+    "OPCOES": {
+      "RESULT": {
+        "WON": "Implemented"
+      }
     }
   }
 }

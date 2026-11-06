@@ -15219,19 +15219,19 @@
       "lost_reason": {
         "tipo": "string"
       },
-      "result": {},
+      "result": {
+        "tipo": "string",
+        "tipo_pela_leitura": "uso"
+      },
       "value_cents": {
         "min": 0,
         "padrao": 0,
         "tipo": "inteiro"
       }
     },
-    "completo": false,
+    "completo": true,
     "controller": "api/v1/accounts/crm/cards#close",
     "modelo": "Crm::Card",
-    "motivos": [
-      "leitura crua sem tipo: result (repassada a ::Crm::Cards::Closer.new)"
-    ],
     "origem": [
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:153",
       "app/controllers/api/v1/accounts/crm/cards_controller.rb:163",

@@ -571,7 +571,7 @@ onMounted(() => {
           <template v-if="catalogo && podeMudar">
             <LivreSeletorPasso
               ref="seletor"
-              :catalogo="catalogo"
+              :catalogo="catalogoDoAlvo"
               :liberado="isCloudFeatureEnabled"
               @escolher="escolherPasso"
               @close="fecharPainel('seletor')"

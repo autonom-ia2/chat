@@ -126,6 +126,7 @@ module Autonomia::Automacao::Catalogo
     declarado['acoes'].map do |nome, passo|
       formato = formato_da_acao(nome, passo['acao'])
       { 'tipo' => 'acao', 'nome' => nome, 'acao' => passo['acao'], 'grupo' => passo['grupo'], 'frase' => chave('PASSOS', nome),
+        'requer' => passo['requer'], 'funil' => passo['funil'],
         'caminho' => passo['caminho'].to_h.transform_values { |origem| origem_do_parametro(origem) },
         'envelope' => (formato['envelope'] unless formato['corpo_plano']),
         'fixos' => ::Autonomia::Automacao::AcoesPermitidas.fixos(passo['acao']),
@@ -148,12 +149,16 @@ module Autonomia::Automacao::Catalogo
     { 'escolher' => origem['escolher'], 'rotulo' => chave('ESCOLHER', origem['escolher']) }
   end
 
+  # A lista (`um_de` de automacao-recursos.yml) estreita as opções da plataforma e torna o campo obrigatório.
   def campo_da_acao(acao, formato, campo, peca)
     regra = formato_do_campo(formato, campo)
+    permitidas = ::Autonomia::Automacao::AcoesPermitidas
+    opcoes = permitidas.um_de(acao)[campo] || regra['um_de']
     {
       'nome' => campo, 'peca' => peca, 'rotulo' => chave('CAMPOS', campo.split('.').last),
-      'obrigatorio' => OBRIGATORIO.include?(regra['obrigatorio']) || ::Autonomia::Automacao::AcoesPermitidas.exige(acao).include?(campo),
-      'opcoes' => regra['um_de']&.map { |valor| { 'valor' => valor, 'frase' => chave('OPCOES', campo.split('.').last, valor) } },
+      'obrigatorio' => OBRIGATORIO.include?(regra['obrigatorio']) || permitidas.exige(acao).include?(campo) ||
+        permitidas.um_de(acao).key?(campo),
+      'opcoes' => opcoes&.map { |valor| { 'valor' => valor, 'frase' => chave('OPCOES', campo.split('.').last, valor) } },
       **regra.slice('padrao', 'min', 'max', 'max_caracteres')
     }.compact
   end
