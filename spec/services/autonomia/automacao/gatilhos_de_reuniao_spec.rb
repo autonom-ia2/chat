@@ -297,7 +297,7 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
       expect([resultado.motivo, resultado.dados]).to eq(['faltou_valor', {}])
     end
 
-    it 'no modelo do WhatsApp (janela fechada) sem o link: o mesmo motivo próprio e o por' do
+    it 'no modelo do WhatsApp (janela fechada) sem o link: o mesmo motivo próprio e o por, e a execução para' do
       ligar_mensagens(account)
       conversa = create(:conversation, account: account, contact: world.contact)
       card.update!(primary_conversation: conversa, owner: nil)
@@ -313,7 +313,8 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
 
       resultado = Autonomia::Automacao::PassoDeMensagem.new(execucao: execucao, passo: passo, alvo: card).executar
 
-      expect([resultado.tipo, resultado.motivo, resultado.dados]).to eq([:pulado, 'faltou_link_da_agenda', { 'por' => 'sem_responsavel' }])
+      expect([resultado.tipo, resultado.motivo, resultado.dados])
+        .to eq([:pulado, 'faltou_link_da_agenda', { 'por' => 'sem_responsavel', 'janela' => 'fechada' }])
     end
   end
 end

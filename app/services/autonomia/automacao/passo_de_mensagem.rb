@@ -2,19 +2,29 @@
 # com a marca da automação (`automacao_id`), que a lista única de envios automáticos reconhece
 # (Autonomia::Agents::Operate::PessoaDaEquipe). O cliente recebe uma mensagem normal da empresa.
 #
-# Pula, com o motivo no registro:
+# Pula e segue, com o motivo no registro:
 # - valor vazio ou texto que ficou em branco;
 # - contato que pediu para não receber (o mesmo campo das campanhas);
-# - canal sem resposta (tweet);
+# - canal sem resposta (tweet).
+# Para a execução, com o motivo no registro (#2573, Autonomia::Automacao::JanelaFechada):
 # - janela fechada. Vale para todo canal com janela, lida como envio automático (sem a tag de agente humano da Meta,
 #   24 h). A caixa híbrida com o WhatsApp API pronto responde fora da janela, em texto. No número oficial, com a janela
 #   fechada e um modelo aprovado na receita (F4b, #2468), sai o modelo (Autonomia::Automacao::ModeloWhatsapp); sem
 #   modelo, ou fora do número oficial, o motivo continua `fora_da_janela`;
 # - limite de horas que o dono pôs na caixa do canal API (`agent_reply_time_window`), vencido: `limite_da_caixa`. Sem
 #   esse limite, o canal API responde a qualquer hora.
+# Com a janela fechada, o modelo que não pôde sair (fora da caixa, não aprovado, de propaganda, mudou, variável vazia) também
+# para: nada saiu ao cliente. O resultado leva `janela: fechada`, que é o que o executor lê.
 # O robô do outro lado (AntiLaco) devolve :laco, e o executor para a execução nesta conversa. Sem teto de uso.
 class Autonomia::Automacao::PassoDeMensagem
   include ::Autonomia::Automacao::NaConversa
+
+  MOTIVOS_DE_JANELA = %w[fora_da_janela limite_da_caixa].freeze
+
+  # Também usado pelo "escrever", que confere o canal antes de pagar a IA.
+  def self.pulado(motivo, janela_fechada: MOTIVOS_DE_JANELA.include?(motivo))
+    Resultado.new(tipo: :pulado, motivo: motivo, dados: janela_fechada ? { 'janela' => 'fechada' } : {})
+  end
 
   def executar
     return sem_conversa if @conversa.nil?
@@ -50,7 +60,7 @@ class Autonomia::Automacao::PassoDeMensagem
 
     # Os valores do modelo com as permissões de quem ligou (#2597), como no texto.
     pronto = ::Autonomia::Automacao::ModeloWhatsapp.new(@passo['modelo'], @conversa, valores).preparar
-    return pronto == 'faltou_valor' ? faltou_valor : pulado(pronto) if pronto.is_a?(String)
+    return modelo_nao_sai(pronto) if pronto.is_a?(String)
 
     anti_laco = ::Autonomia::Automacao::AntiLaco.new(@execucao.automacao, @conversa)
     return parar_por_robo(anti_laco) if anti_laco.robo_do_outro_lado?
@@ -76,7 +86,16 @@ class Autonomia::Automacao::PassoDeMensagem
 
   private
 
-  def pulado(motivo) = Resultado.new(tipo: :pulado, motivo: motivo, dados: {})
+  def pulado(motivo, **) = self.class.pulado(motivo, **)
+
+  # O modelo que não sai para a execução, como a janela fechada (#2573). Sem o link da agenda (G12), o motivo próprio
+  # e o porquê.
+  def modelo_nao_sai(motivo)
+    por = valores.falta_da_agenda if motivo == 'faltou_valor'
+    return pulado(motivo, janela_fechada: true) unless por
+
+    Resultado.new(tipo: :pulado, motivo: 'faltou_link_da_agenda', dados: { 'por' => por, 'janela' => 'fechada' })
+  end
 
   def janela_aberta?
     ::Conversations::MessageWindowService.new(@conversa, automatic: true).can_reply? || @conversa.whatsapp_api_reply?
