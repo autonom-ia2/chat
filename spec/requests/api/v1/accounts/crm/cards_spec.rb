@@ -256,6 +256,7 @@ RSpec.describe 'CRM cards API', type: :request do
     expect(response.parsed_body.dig('payload', 'custom_attributes')).to eq('placa' => 'ABC1D23', 'ano' => 2022)
   end
 
+  # G27 (#2661): ao lado, o `antes` só da chave que mudou (a placa, que não veio no pedido, não entra).
   it 'o histórico do PATCH registra só os campos enviados, não o hash inteiro (#1146)' do
     account, user = create_account_and_user
     pipeline, stage = create_crm_pipeline(account: account, user: user)
@@ -264,7 +265,8 @@ RSpec.describe 'CRM cards API', type: :request do
     patch "/api/v1/accounts/#{account.id}/crm/cards/#{card.id}",
           params: { card: { custom_attributes: { ano: 2022 } } }, headers: auth_headers(user), as: :json
 
-    expect(card.activities.where(event_type: 'update').last.payload).to eq('custom_attributes' => { 'ano' => 2022 })
+    expect(card.activities.where(event_type: 'update').last.payload)
+      .to eq('custom_attributes' => { 'ano' => 2022 }, 'antes' => { 'custom_attributes' => { 'ano' => nil } })
   end
 
   it 'cria o card com os campos enviados e o upsert por external_id junta com o que já existe (#1146)' do

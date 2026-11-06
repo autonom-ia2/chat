@@ -175,7 +175,9 @@ module FechamentoAutomacao::Lacunas
     'G23' => nil,
     'G24' => nil,
     'G25' => -> { acao?('POST crm/cards/:id/close') },
-    'G26' => -> { passo?('sla') }
+    'G26' => -> { passo?('sla') },
+    # O card atualizado (#2661): o campo e a condição da mudança, inclusive no card que nasce (exemplos 8 e 15).
+    'G27' => -> { gatilho?('card.atualizado') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

@@ -65,11 +65,29 @@ const fraseDoRecorrente = (gatilho, entrada, t) => {
   });
 };
 
+// G27 (#2661): o card atualizado diz o campo e a condição ("Quando o valor de
+// venda do card passa de 50000"). O campo personalizado vai pelo nome, ou pela
+// chave quando o nome ainda não chegou. Sem campo ou sem condição, a frase do
+// catálogo.
+const M = 'AUTOMACAO_LIVRE.MUDANCA';
+const fraseDaMudanca = (gatilho, entrada, t, nomes) => {
+  const { campo, chave, condicao, valor } = gatilho.mudanca || {};
+  const nome =
+    campo === 'valor'
+      ? t(`${M}.VALOR_DE_VENDA`)
+      : chave && (nomes.campoDoCard?.[chave] || chave);
+  const precisaDeValor = condicao && condicao !== 'mudou';
+  if (!nome || !condicao || (precisaDeValor && !valor)) return t(entrada.frase);
+  return t(`${M}.FRASE.${condicao.toUpperCase()}`, { campo: nome, valor });
+};
+
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
   if ((entrada.parametros || []).some(item => item.peca === 'frequencia'))
     return fraseDoRecorrente(gatilho, entrada, t);
+  if ((entrada.parametros || []).some(item => item.peca === 'mudanca'))
+    return fraseDaMudanca(gatilho, entrada, t, nomes);
   const parametros = entrada.parametros || [];
   const escolhidos = Object.fromEntries(
     parametros.map(item => [

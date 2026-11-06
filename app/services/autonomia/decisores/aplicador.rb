@@ -203,6 +203,7 @@ class Autonomia::Decisores::Aplicador
     return 'já tinha valor' unless @card_novo || @trocar || card[atributo].blank?
 
     card.update!(atributo => valor)
+    registrar_no_card(card, { atributo => valor })
     Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED)
     :gravado
   end
@@ -217,9 +218,21 @@ class Autonomia::Decisores::Aplicador
     return :sem_card if card.blank?
     return 'já tinha valor' unless @card_novo || @trocar || card.custom_attributes.to_h[chave].blank?
 
-    card.with_lock { card.update!(custom_attributes: card.custom_attributes.to_h.merge(chave => valor)) }
+    card.with_lock do
+      card.update!(custom_attributes: card.custom_attributes.to_h.merge(chave => valor))
+      registrar_no_card(card, { custom_attributes: { chave => valor } })
+    end
     Crm::Cards::Broadcaster.broadcast(card, Events::Types::CRM_CARD_UPDATED)
     :gravado
+  end
+
+  # G27 (#2661): a gravação da IA entra no histórico do card como as outras dela (`by: 'ai'`, sem pessoa), com o valor
+  # de antes. É o rastro que faltava, e o que o gatilho "card atualizado" da Automação escuta. Sem mudança, sem linha.
+  def registrar_no_card(card, gravado)
+    return if card.saved_changes.slice(*gravado.keys.map(&:to_s)).empty?
+
+    Crm::ActivityLogger.new(card: card, actor: nil, event_type: 'update', conversation: @conversation,
+                            payload: Crm::Cards::Antes.no_payload(gravado, card).merge(by: 'ai')).perform
   end
 
   def card_da_conversa

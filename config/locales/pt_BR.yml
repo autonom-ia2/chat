@@ -1114,6 +1114,9 @@ pt_BR:
         responsavel_de_fora: 'Gatilho: o responsável escolhido não é desta conta.'
         etiqueta_de_fora: 'Gatilho: a etiqueta %{etiqueta} não existe nesta conta.'
         atributo_de_fora: 'Gatilho: o campo %{campo} não é um campo de contato desta conta.'
+        campo_do_card_de_fora: 'Gatilho: o campo %{campo} não é um campo de card desta conta.'
+        gatilho_valor_de_venda: 'Gatilho: só quem vê os valores de venda pode usar o valor de venda no gatilho. Peça a permissão ou escolha outro campo.'
+        mudanca_sem_numero: 'Gatilho: "maior que" e "passou de" (e o valor de venda) pedem um número, como 50000 ou 50000.5.'
         funil_de_fora: 'Gatilho: o funil %{id} não é desta conta.'
         ia_desligada: "Passo %{passo}: os passos de IA estão desligados nesta conta."
         caminho_repetido: "Passo %{passo}: já existe um caminho com o nome %{nome}."

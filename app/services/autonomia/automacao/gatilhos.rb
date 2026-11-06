@@ -29,6 +29,8 @@ module Autonomia::Automacao::Gatilhos
   DO_RECORRENTE = %w[frequencia dia_da_semana dia_do_mes hora selecao].freeze
   DA_OCORRENCIA = %w[frequencia dia_da_semana dia_do_mes hora].freeze
   VARRIDOS = %i[tempo recorrente].freeze
+  # O card atualizado (G27, #2661): a `mudanca` é o campo e a condição (Autonomia::Automacao::MudancaDoCard).
+  ATUALIZADO = 'card.atualizado'.freeze
 
   LISTA = [
     Entrada.new(tipo: 'conversa.criada', alvo: 'Conversation', origem: :evento, parametros: []),
@@ -40,6 +42,7 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'card.saiu_da_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
     Entrada.new(tipo: 'card.ganho', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.perdido', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: ATUALIZADO, alvo: CARD, origem: :evento, parametros: %w[mudanca]),
     Entrada.new(tipo: 'card.reuniao_marcada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.reuniao_remarcada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
@@ -52,9 +55,11 @@ module Autonomia::Automacao::Gatilhos
   ].index_by(&:tipo).freeze
 
   # O evento do emissor do CRM (Crm::Webhooks::Emitter) e os gatilhos que ele pode disparar. O card criado já nasce
-  # numa etapa: conta como "entrou" nela, venha da tela, da API, da IA ou de uma automação.
+  # numa etapa: conta como "entrou" nela, venha da tela, da API, da IA ou de uma automação. E conta como "atualizado":
+  # os campos com que ele nasce vêm do vazio ("criado ou atualizado com valor acima de R$ 50 mil").
   DO_EVENTO_DO_CARD = {
-    Events::Types::CRM_CARD_CREATED => %w[card.criado card.entrou_na_etapa],
+    Events::Types::CRM_CARD_CREATED => ['card.criado', 'card.entrou_na_etapa', ATUALIZADO],
+    Events::Types::CRM_CARD_UPDATED => [ATUALIZADO],
     Events::Types::CRM_CARD_MOVED => %w[card.saiu_da_etapa card.entrou_na_etapa],
     Events::Types::CRM_CARD_WON => %w[card.ganho],
     Events::Types::CRM_CARD_LOST => %w[card.perdido],
@@ -110,8 +115,10 @@ module Autonomia::Automacao::Gatilhos
   end
 
   # Cada parâmetro escolhido no gatilho (`gatilho` da receita) bate com o que o evento traz (`dados`)? O que a pessoa
-  # deixou em branco vale para qualquer valor.
+  # deixou em branco vale para qualquer valor. No card atualizado, a mudança escolhida aconteceu (`dados['mudancas']`).
   def casa?(gatilho, dados)
+    return ::Autonomia::Automacao::MudancaDoCard.casa?(gatilho['mudanca'].to_h, dados['mudancas']) if gatilho['tipo'] == ATUALIZADO
+
     entrada(gatilho['tipo'])&.parametros.to_a.all? do |nome|
       gatilho[nome].nil? || gatilho[nome].to_i == dados[nome].to_i
     end

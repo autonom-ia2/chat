@@ -49,7 +49,17 @@ class Crm::Ai::AttributeExtractorApplier
 
       # A gravação da IA não é correção de pessoa (Crm::Memoria::Correcao, A14), mesmo dentro de uma requisição.
       Crm::Memoria::Correcao.sem_correcao(record) { record.update!(custom_attributes: current.merge(updates)) } if updates.any?
+      registrar_no_card(record, updates) if target == :card && updates.any?
     end
+  end
+
+  # G27 (#2661): o campo que a IA grava no card entra no histórico como as outras gravações dela (`by: 'ai'`, sem
+  # pessoa), com o valor de antes. É o que o gatilho "card atualizado" da Automação escuta. Sem mudança, sem linha.
+  def registrar_no_card(card, updates)
+    payload = Crm::Cards::Antes.no_payload({ custom_attributes: updates }, card)
+    return unless payload.key?(:antes)
+
+    Crm::ActivityLogger.new(card: card, actor: nil, event_type: 'update', payload: payload.merge(by: 'ai')).perform
   end
 
   def apply_item(target, item, attribute_model, current, updates)

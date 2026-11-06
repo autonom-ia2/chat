@@ -10,6 +10,7 @@
       "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
       "CARD_GANHO": "When the card is won",
       "CARD_PERDIDO": "When the card is lost",
+      "CARD_ATUALIZADO": "When a card is updated",
       "CARD_REUNIAO_MARCADA": "When a meeting is scheduled",
       "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled",
       "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
@@ -48,7 +49,8 @@
       "FREQUENCIA": "How often",
       "DIA_DA_SEMANA": "Day of the week",
       "DIA_DO_MES": "Day of the month",
-      "SELECAO": "Which ones"
+      "SELECAO": "Which ones",
+      "MUDANCA": "Change"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
@@ -137,6 +139,28 @@
       "SEM_ETIQUETA": "Does not have the label",
       "ATRIBUTO": "Contact field equal to",
       "VALOR": "Value"
+    },
+    "MUDANCA": {
+      "CAMPO": "Field",
+      "ESCOLHA_O_CAMPO": "Choose the field",
+      "VALOR_DE_VENDA": "Sale value",
+      "CONDICAO": "When it",
+      "VALOR": "Value",
+      "EM_REAIS": "In reais, e.g. 50000",
+      "CONDICOES": {
+        "MUDOU": "changes",
+        "IGUAL": "becomes exactly",
+        "MAIOR_QUE": "changes and is above",
+        "PASSOU_DE": "goes above"
+      },
+      "FRASE": {
+        "MUDOU": "When the card {campo} changes",
+        "IGUAL": "When the card {campo} becomes {valor}",
+        "MAIOR_QUE": "When the card {campo} changes and is above {valor}",
+        "PASSOU_DE": "When the card {campo} goes above {valor}"
+      },
+      "AVISO": "A new card counts too: a card created with R$ 80,000 \"goes above 50000\". A change made by this automation itself does not start it again.",
+      "ERRO_CAMPOS": "Could not load the card fields. Open the editor again to retry."
     }
   }
 }

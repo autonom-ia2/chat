@@ -140,14 +140,20 @@ module Autonomia::Automacao::Escuta
     mudou = dados[:changed_attributes].to_h.with_indifferent_access
     ::Autonomia::Automacao::Gatilhos::DO_EVENTO_DO_CARD.fetch(evento, []).each do |tipo|
       marca = ::Autonomia::Automacao::Gatilhos.marca_da_atividade(tipo, dados[:activity_id])
-      cada_automacao(card, tipo, dados_do_card(tipo, card, mudou)) { |definicao| partir(definicao, card, tipo, evento: marca) }
+      dados_do_gatilho = dados_do_card(tipo, card, mudou, evento, dados[:activity_id])
+      cada_automacao(card, tipo, dados_do_gatilho) do |definicao|
+        partir(definicao, card, tipo, evento: marca) if le_a_mudanca?(definicao)
+      end
     end
   end
 
   # A etapa de onde o card saiu ou para onde entrou, e o funil, para os parâmetros do gatilho. O card criado traz a
-  # etapa em que nasceu (stage_id); o movido, as duas pontas.
-  def dados_do_card(tipo, card, mudou)
+  # etapa em que nasceu (stage_id); o movido, as duas pontas. O atualizado (G27), o que mudou e de quanto.
+  def dados_do_card(tipo, card, mudou, evento, atividade_id)
     case tipo
+    when ::Autonomia::Automacao::Gatilhos::ATUALIZADO
+      criado = evento == Events::Types::CRM_CARD_CREATED
+      { 'mudancas' => ::Autonomia::Automacao::MudancaDoCard.da_atividade(mudou, card, criado: criado, atividade_id: atividade_id) }
     when 'card.entrou_na_etapa' then { 'etapa_id' => mudou[:to_stage_id] || mudou[:stage_id] || card.stage_id }
     when 'card.saiu_da_etapa' then { 'etapa_id' => mudou[:from_stage_id] }
     else { 'funil_id' => mudou[:pipeline_id] || card.pipeline_id }
@@ -183,9 +189,21 @@ module Autonomia::Automacao::Escuta
     )
   end
 
-  # O parâmetro do gatilho e o valor que o evento traz, sem reler o card.
+  # G27: o "card atualizado" no valor de venda só dispara se quem ligou vê os valores (#2597): o disparo diria a quem
+  # não vê que o card passou do limite.
+  def le_a_mudanca?(definicao)
+    gatilho = definicao.versao_ativa.receita['gatilho'].to_h
+    return true unless gatilho.dig('mudanca', 'campo') == ::Autonomia::Automacao::MudancaDoCard::VALOR
+
+    quem = AccountUser.find_by(account_id: definicao.account_id, user_id: definicao.ligada_por_id)
+    ::Autonomia::Automacao::Valores.pode_ler?('card.valor', quem)
+  end
+
+  # O parâmetro do gatilho e o valor que o evento traz, sem reler o card. O atualizado (G27) não filtra aqui: a mudança
+  # pede o card e o `antes`, e o job confere.
   def parametro_do_evento(tipo, mudou)
     case tipo
+    when ::Autonomia::Automacao::Gatilhos::ATUALIZADO then [nil, nil]
     when 'card.entrou_na_etapa' then ['etapa_id', mudou[:to_stage_id] || mudou[:stage_id]]
     when 'card.saiu_da_etapa' then ['etapa_id', mudou[:from_stage_id]]
     else ['funil_id', mudou[:pipeline_id]]

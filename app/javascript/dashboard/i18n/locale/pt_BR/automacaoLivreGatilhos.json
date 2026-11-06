@@ -10,6 +10,7 @@
       "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",
       "CARD_GANHO": "Quando o card é ganho",
       "CARD_PERDIDO": "Quando o card é perdido",
+      "CARD_ATUALIZADO": "Quando o card é atualizado",
       "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada",
       "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada",
       "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
@@ -48,7 +49,8 @@
       "FREQUENCIA": "De quanto em quanto",
       "DIA_DA_SEMANA": "Dia da semana",
       "DIA_DO_MES": "Dia do mês",
-      "SELECAO": "Quais"
+      "SELECAO": "Quais",
+      "MUDANCA": "Mudança"
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversa e mensagem",
@@ -137,6 +139,28 @@
       "SEM_ETIQUETA": "Sem a etiqueta",
       "ATRIBUTO": "Campo do contato igual a",
       "VALOR": "Valor"
+    },
+    "MUDANCA": {
+      "CAMPO": "Campo",
+      "ESCOLHA_O_CAMPO": "Escolha o campo",
+      "VALOR_DE_VENDA": "Valor de venda",
+      "CONDICAO": "Quando ele",
+      "VALOR": "Valor",
+      "EM_REAIS": "Em reais, ex.: 50000",
+      "CONDICOES": {
+        "MUDOU": "mudar",
+        "IGUAL": "ficar igual a",
+        "MAIOR_QUE": "mudar e ficar acima de",
+        "PASSOU_DE": "passar de"
+      },
+      "FRASE": {
+        "MUDOU": "Quando o campo {campo} do card muda",
+        "IGUAL": "Quando o campo {campo} do card fica igual a {valor}",
+        "MAIOR_QUE": "Quando o campo {campo} do card muda e fica acima de {valor}",
+        "PASSOU_DE": "Quando o campo {campo} do card passa de {valor}"
+      },
+      "AVISO": "O card novo também conta: o card criado com R$ 80 mil \"passa de 50000\". Uma mudança feita por esta própria automação não a dispara de novo.",
+      "ERRO_CAMPOS": "Não consegui carregar os campos do card. Abra o editor de novo para tentar outra vez."
     }
   }
 }

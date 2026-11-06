@@ -621,6 +621,9 @@ en:
         responsavel_de_fora: 'Trigger: the chosen owner is not in this account.'
         etiqueta_de_fora: 'Trigger: label %{etiqueta} does not exist in this account.'
         atributo_de_fora: 'Trigger: field %{campo} is not a contact field of this account.'
+        campo_do_card_de_fora: 'Trigger: field %{campo} is not a card field of this account.'
+        gatilho_valor_de_venda: 'Trigger: only people who see sales values can use the sale value in the trigger. Ask for the permission or choose another field.'
+        mudanca_sem_numero: 'Trigger: "greater than" and "went above" (and the sale value) need a number, like 50000 or 50000.5.'
         funil_de_fora: 'Trigger: pipeline %{id} is not from this account.'
         ia_desligada: "Step %{passo}: AI steps are off for this account."
         caminho_repetido: "Step %{passo}: there is already a path named %{nome}."

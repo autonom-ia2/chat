@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import LivreSelecao from './LivreSelecao.vue';
+import LivreMudanca from './LivreMudanca.vue';
 
 // #2499 — o gatilho no "Alterar": o seletor, agrupado quando há mais de um
 // grupo (conversa e mensagem, card do funil), e o que o gatilho escolhido pede
@@ -12,7 +13,8 @@ import LivreSelecao from './LivreSelecao.vue';
 // no funil. Os de tempo (PR3a) pedem também os dias, o campo de data do alvo,
 // antes ou depois e a hora. O recorrente (#2635, G7) pede a frequência, o dia
 // (da semana ou do mês, conforme a frequência), a hora e a seleção dos cards ou
-// contatos (LivreSelecao).
+// contatos (LivreSelecao). O "card atualizado" (G27, #2661) pede a mudança: o
+// campo do card, a condição e o valor (LivreMudanca).
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
@@ -66,6 +68,7 @@ const avisoDeTempo = computed(() => {
       : 'AUTOMACAO_LIVRE.GATILHO_RECORRENTE.AVISO_CONTA';
   if (pede('campo')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_DATA';
   if (pede('dias')) return 'AUTOMACAO_LIVRE.GATILHO_DE_TEMPO.AVISO_PARADO';
+  if (pede('mudanca')) return 'AUTOMACAO_LIVRE.MUDANCA.AVISO';
   return null;
 });
 
@@ -126,12 +129,15 @@ const PADRAO_DA_DATA = { dias: 30, quando: 'antes', hora: 8 };
 const PADRAO_DO_RECORRENTE = { frequencia: 'diaria', hora: 8, selecao: {} };
 // O da conta não tem seleção: roda uma vez por ocorrência.
 const PADRAO_DA_CONTA = { frequencia: 'diaria', hora: 8 };
+// O card atualizado começa em "mudou"; o campo, a pessoa escolhe.
+const PADRAO_DA_MUDANCA = { mudanca: { condicao: 'mudou' } };
 const padraoDo = tipo => {
   const item = entradaDo(tipo);
   if (pedePeca(item, 'frequencia'))
     return pedePeca(item, 'selecao') ? PADRAO_DO_RECORRENTE : PADRAO_DA_CONTA;
   if (pedePeca(item, 'campo')) return PADRAO_DA_DATA;
   if (pedePeca(item, 'dias')) return PADRAO_DO_PARADO;
+  if (pedePeca(item, 'mudanca')) return PADRAO_DA_MUDANCA;
   return {};
 };
 
@@ -246,6 +252,12 @@ const mudar = (nome, valor) => {
         :alvo="entrada?.alvo"
         :escolhas="escolhas"
         :opcoes="opcoes"
+        @update:model-value="valor => mudar(parametro.nome, valor)"
+      />
+      <LivreMudanca
+        v-else-if="parametro.peca === 'mudanca'"
+        :model-value="modelValue?.mudanca || {}"
+        :campos="escolhas.camposDoCard || []"
         @update:model-value="valor => mudar(parametro.nome, valor)"
       />
       <ChoiceSelect

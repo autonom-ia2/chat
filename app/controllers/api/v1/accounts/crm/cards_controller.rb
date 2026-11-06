@@ -291,7 +291,8 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
     end
     if attributes.present?
       @card.update!(attributes)
-      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: attributes).perform
+      payload = ::Crm::Cards::Antes.no_payload(attributes, @card)
+      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: payload).perform
       broadcast_card(::Events::Types::CRM_CARD_UPDATED)
     end
     render :show, status: :ok
@@ -683,8 +684,10 @@ class Api::V1::Accounts::Crm::CardsController < Api::V1::Accounts::Crm::BaseCont
         registro[:payment_promise_at] = promessa
       end
       @card.update!(attributes)
-      # O histórico (e o webhook) registram só os campos que o pedido mandou, não o hash inteiro já juntado.
-      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: registro).perform
+      # O histórico (e o webhook) registram só os campos que o pedido mandou, não o hash inteiro já juntado. O `antes`
+      # (G27) é o valor anterior dos que mudaram, para o gatilho "card atualizado".
+      payload = ::Crm::Cards::Antes.no_payload(registro, @card)
+      ::Crm::ActivityLogger.new(card: @card, actor: Current.user, event_type: 'update', payload: payload).perform
     end
   end
 end

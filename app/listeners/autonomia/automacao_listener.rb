@@ -29,6 +29,8 @@ class Autonomia::AutomacaoListener < BaseListener
   def crm_card_moved(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_MOVED)
   def crm_card_won(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_WON)
   def crm_card_lost(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_LOST)
+  # G27: a edição dos campos do card (a atividade 'update').
+  def crm_card_updated(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_UPDATED)
 
   # A reunião do card (G12) chega pelo mesmo caminho: a atividade da reunião é do card, e o evento traz só ids.
   def crm_meeting_scheduled(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_MEETING_SCHEDULED)

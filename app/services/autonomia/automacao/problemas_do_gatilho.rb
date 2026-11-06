@@ -6,8 +6,12 @@
 # No recorrente (#2635, G7), a seleção: pelo menos uma condição (sem nenhuma, a automação pegaria a conta inteira por
 # engano), só as condições do alvo (card ou contato) e funil, etapa, responsável, etiqueta e atributo da conta. O da
 # conta não tem seleção (o esquema recusa).
+#
+# No card atualizado (G27, #2661), a mudança: o campo personalizado é do card, desta conta, e a condição numérica
+# (maior que, passou de) tem número para comparar.
 class Autonomia::Automacao::ProblemasDoGatilho
   Gatilhos = ::Autonomia::Automacao::Gatilhos
+  MudancaDoCard = ::Autonomia::Automacao::MudancaDoCard
 
   def initialize(gatilho, conta)
     @gatilho = gatilho
@@ -25,7 +29,7 @@ class Autonomia::Automacao::ProblemasDoGatilho
     return [] if Gatilhos.da_conta?(@tipo)
     return selecao if Gatilhos.recorrente?(@tipo)
 
-    [*etapa_de_fora, *funil_de_fora, *parado_sem_dias, *campo_de_fora]
+    [*etapa_de_fora, *funil_de_fora, *parado_sem_dias, *campo_de_fora, *da_mudanca]
   end
 
   private
@@ -53,6 +57,25 @@ class Autonomia::Automacao::ProblemasDoGatilho
     return [] if @conta.custom_attribute_definitions.exists?(attribute_key: campo, attribute_model: modelo, attribute_display_type: :date)
 
     [texto(:campo_de_fora, campo: campo)]
+  end
+
+  def da_mudanca
+    mudanca = @gatilho['mudanca']
+    return [] if mudanca.nil?
+
+    [*campo_do_card_de_fora(mudanca['chave']),
+     *(texto(:mudanca_sem_numero) if mudanca_numerica?(mudanca) && !MudancaDoCard.numero?(mudanca['valor']))]
+  end
+
+  def campo_do_card_de_fora(chave)
+    return [] if chave.nil? || @conta.custom_attribute_definitions.exists?(attribute_key: chave, attribute_model: :card_attribute)
+
+    [texto(:campo_do_card_de_fora, campo: chave)]
+  end
+
+  # O valor de venda é número em qualquer condição com valor; o campo personalizado, só em maior que e passou de.
+  def mudanca_numerica?(mudanca)
+    mudanca.key?('valor') && (mudanca['campo'] == MudancaDoCard::VALOR || MudancaDoCard::NUMERICAS.include?(mudanca['condicao']))
   end
 
   def selecao

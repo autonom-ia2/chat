@@ -156,6 +156,7 @@ describe('gatilhos de card', () => {
     expect(comTudo.escolhasDoGatilho.value.nomes).toEqual({
       ...ESCOLHAS.nomes,
       campo: { 'Crm::Card': {}, Contact: {} },
+      campoDoCard: {},
     });
   });
 

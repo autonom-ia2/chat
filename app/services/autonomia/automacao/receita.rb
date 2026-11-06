@@ -64,7 +64,19 @@ class Autonomia::Automacao::Receita
   end
 
   # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta.
-  def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta).problemas
+  def gatilho_novo
+    gatilho = @receita['gatilho'].to_h
+    [*::Autonomia::Automacao::ProblemasDoGatilho.new(gatilho, @conta).problemas, *valor_da_mudanca(gatilho)]
+  end
+
+  # G27 (#2661): "o valor passou de R$ 50 mil" lê o valor de venda, com a mesma permissão do `card.valor` (#2597): quem
+  # não vê os valores não monta um gatilho que descobre o valor dos cards pelo disparo.
+  def valor_da_mudanca(gatilho)
+    return [] unless gatilho.dig('mudanca', 'campo') == ::Autonomia::Automacao::MudancaDoCard::VALOR
+
+    leitura = ::Autonomia::Automacao::Valores.problema_de_leitura('card.valor', conta: @conta, account_user: @account_user)
+    leitura ? [texto(:gatilho_valor_de_venda)] : []
+  end
 
   def filtros_do_gatilho
     Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }

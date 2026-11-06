@@ -27,7 +27,9 @@ module Crm
 
       # #2499 (G12): the meeting activities feed only the Automação livre. They stay out of EVENT_MAP, so the account
       # webhooks, Meta and Google syncs never see them; the dispatch happens only when an automation listens.
+      # G27 (#2661): the 'update' activity (the card fields edited, with `antes`) too, for the "card atualizado" trigger.
       AUTOMACAO_EVENT_MAP = {
+        'update' => Events::Types::CRM_CARD_UPDATED,
         'meeting_scheduled' => Events::Types::CRM_MEETING_SCHEDULED,
         'meeting_rescheduled' => Events::Types::CRM_MEETING_RESCHEDULED,
         'meeting_canceled' => Events::Types::CRM_MEETING_CANCELED
@@ -66,7 +68,14 @@ module Crm
 
       def dispatch_for_automacao
         event = AUTOMACAO_EVENT_MAP[@event_type]
-        dispatch(event) if event.present? && automacao_subscribed?(event)
+        return if event.blank? || (@event_type == 'update' && !campos_mudaram?)
+
+        dispatch(event) if automacao_subscribed?(event)
+      end
+
+      # G27: only an edit that changed the sale value or a custom field (the `antes`) can match "card atualizado".
+      def campos_mudaram?
+        @changed_attributes.to_h.with_indifferent_access[:antes].present?
       end
 
       def dispatch(event)
