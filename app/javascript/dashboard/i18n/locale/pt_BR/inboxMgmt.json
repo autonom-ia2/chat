@@ -750,6 +750,25 @@
       "ERROR_FB_AUTH": "Algo deu errado, por favor, atualize a página...",
       "ERROR_FB_UNAUTHORIZED": "Você não está autorizado a realizar esta ação. ",
       "ERROR_FB_UNAUTHORIZED_HELP": "A tradução é:\n\nPor favor, certifique-se de que você tem acesso à página do Facebook com controle total. Você pode ler mais sobre as funções do Facebook <a href=\" https://www.facebook.com/help/187316341316631\">aqui</a>.",
+      "FB_LOGIN_ERROR": {
+        "CANCELLED": {
+          "TITLE": "Não deu para entrar com o Facebook",
+          "HELP": "Tente de novo e, na janela do Facebook, toque em Continuar até o fim."
+        },
+        "BLOCKED": {
+          "TITLE": "O Facebook não abriu neste navegador",
+          "HELP": "Se você usa bloqueador de anúncios, desligue para este site e tente de novo."
+        },
+        "FAILED": {
+          "TITLE": "Algo deu errado com o Facebook",
+          "HELP": "Espere alguns minutos e tente de novo."
+        },
+        "NOT_CONFIGURED": {
+          "TITLE": "O Facebook ainda não está ligado nesta plataforma",
+          "HELP": "Não há nada para você fazer aqui. Fale com o suporte para ligarmos."
+        },
+        "RETRY": "Tentar de novo"
+      },
       "ERROR_CHANNEL_CREATION": "Não foi possível criar a caixa de entrada. Por favor, tente novamente.",
       "CREATING_CHANNEL": "Criando sua caixa de entrada...",
       "TITLE": "Configurar detalhes da Caixa de Entrada",
