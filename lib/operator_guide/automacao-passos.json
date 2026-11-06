@@ -110,6 +110,95 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
         }
       ]
+    },
+    {
+      "tipo": "card.parado",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_PARADO",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "etapa_id",
+          "peca": "etapa",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.ETAPA_ID"
+        },
+        {
+          "nome": "dias",
+          "peca": "dias",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIAS"
+        }
+      ]
+    },
+    {
+      "tipo": "card.data",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_DATA",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "campo",
+          "peca": "campo",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.CAMPO"
+        },
+        {
+          "nome": "dias",
+          "peca": "dias",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIAS"
+        },
+        {
+          "nome": "quando",
+          "peca": "quando",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.QUANDO"
+        },
+        {
+          "nome": "hora",
+          "peca": "hora",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        }
+      ]
+    },
+    {
+      "tipo": "contato.data",
+      "alvo": "Contact",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CONTATO_DATA",
+      "grupo": "tempo",
+      "requer": "automacao_gatilhos",
+      "parametros": [
+        {
+          "nome": "campo",
+          "peca": "campo",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.CAMPO"
+        },
+        {
+          "nome": "dias",
+          "peca": "dias",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.DIAS"
+        },
+        {
+          "nome": "quando",
+          "peca": "quando",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.QUANDO"
+        },
+        {
+          "nome": "hora",
+          "peca": "hora",
+          "obrigatorio": true,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        }
+      ]
     }
   ],
   "operadores": [
@@ -596,6 +685,32 @@
           "peca": "modelo_whatsapp",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
+        }
+      ]
+    },
+    {
+      "tipo": "email",
+      "grupo": "MENSAGEM",
+      "requer": "automacao_mensagens",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EMAIL",
+      "campos": [
+        {
+          "nome": "caixa_id",
+          "peca": "caixa_de_email",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAIXA_ID"
+        },
+        {
+          "nome": "assunto",
+          "peca": "linha_com_valores",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ASSUNTO"
+        },
+        {
+          "nome": "texto",
+          "peca": "texto_com_valores",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TEXTO"
         }
       ]
     },

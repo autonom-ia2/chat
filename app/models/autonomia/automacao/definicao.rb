@@ -20,6 +20,10 @@ class Autonomia::Automacao::Definicao < ApplicationRecord
   validates :origem, inclusion: { in: ORIGENS }
   validate :versao_ativa_desta_automacao
 
+  # O instante em que ficou ligada, a cada vez que liga (religar depois de desligar conta de novo). Os gatilhos de tempo
+  # não agem na ocorrência anterior a ele (Tempo.ligada_desde).
+  before_save { self.ligada_em = Time.current if ativa && will_save_change_to_ativa? }
+
   # Desligar sempre funciona (D7, F3.4): quem está no meio para agora, e a próxima rodada de quem já estava na fila
   # também para (o executor confere `ativa`).
   #
