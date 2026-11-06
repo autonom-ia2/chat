@@ -455,6 +455,8 @@ Rails.application.routes.draw do
               get :boost_posts, to: 'meta_ads_creation#boost_posts'
               post :media, to: 'meta_ads_creation#media'
               post :ads, to: 'meta_ads_creation#create'
+              post :post_media, to: 'meta_ads_creation#post_media'
+              post :posts, to: 'meta_ads_creation#publish'
               get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
               patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
               get :paused_ads, to: 'meta_ads_creation#paused'
