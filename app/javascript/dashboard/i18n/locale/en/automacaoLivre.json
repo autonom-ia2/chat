@@ -23,7 +23,10 @@
     "UNIDADES": {
       "MINUTOS": "minute | minutes",
       "HORAS": "hour | hours",
-      "DIAS": "day | days"
+      "DIAS": "day | days",
+      "SEMANAS": "week | weeks",
+      "MESES": "month | months",
+      "ANOS": "year | years"
     },
     "VALORES": {
       "CONVERSA_ID": "Conversation number",
@@ -324,9 +327,15 @@
       "TEM_DADO_APAGADO": "A detail in this text was deleted from the account. Remove it or swap it for another: as it is, Save all will not accept it.",
       "FILTRO_ENTRA": "When you save, \"Only if\" gets: {condicao}. You can change or remove it later.",
       "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\".",
+      "CALCULADO_TEXTO": "Put together when it runs: {texto}",
+      "HOJE": "today",
+      "DATA_CALCULADA": "Date worked out when it runs: {de}",
+      "DATA_CALCULADA_MAIS": "Date worked out when it runs: {de} + {n} {unidade}",
+      "DATA_CALCULADA_MENOS": "Date worked out when it runs: {de} − {n} {unidade}",
+      "ATRIBUTO_CALCULADO": "{nome}: {valor}",
       "MODELO": {
         "DICA": "On official WhatsApp, 24 hours after the customer's last message, free text can't be sent. Pick a Meta-approved template to send instead; Meta charges for each template sent. With the window open, the text above is sent.",
-        "NENHUM": "Don't send anything (the step is skipped)",
+        "NENHUM": "Don't send anything (the automation stops in this conversation)",
         "OPCAO": "{nome} ({idioma})",
         "SEM_MODELOS": "No official WhatsApp inbox you can see has an approved utility template. Create and approve one in Templates.",
         "DIVERGENTE": "This template has different text in another inbox. Each conversation gets its own inbox's template; if it asks for other variables there, the message is not sent.",

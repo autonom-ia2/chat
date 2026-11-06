@@ -273,3 +273,28 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
 };
+
+// #2414 G16 — o valor calculado que o Guia montou num campo da ação, em frase:
+// "Vem da conversa: Nome do contato", "Montado na hora: indicado por [Nome do
+// contato]", "Data calculada na hora: hoje + 6 meses".
+const A = 'AUTOMACAO_LIVRE.ALTERAR_PAINEL';
+export const fraseDoCalculado = (valor, catalogo, t) => {
+  if (valor?.$valor)
+    return t(`${A}.DA_CONVERSA`, {
+      valor: fraseDoValor(valor.$valor, catalogo, t),
+    });
+  if (valor?.$texto)
+    return t(`${A}.CALCULADO_TEXTO`, {
+      texto: fraseDoTexto(valor.$texto, catalogo, t),
+    });
+  const { de, mais } = valor?.$data || {};
+  const inicio =
+    de === 'hoje' ? t(`${A}.HOJE`) : fraseDoValor(de?.$valor, catalogo, t);
+  if (!mais?.valor) return t(`${A}.DATA_CALCULADA`, { de: inicio });
+  const n = Math.abs(mais.valor);
+  return t(`${A}.DATA_CALCULADA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
+    de: inicio,
+    n,
+    unidade: t(`AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`, {}, n),
+  });
+};

@@ -524,6 +524,7 @@ en:
         erro_inesperado: 'The automation stopped in the middle of this step on an unexpected error. It does not repeat the step; check what was already done.'
         erro_passageiro: 'The platform did not respond; the automation will try again.'
         erro_permanente: 'The platform refused this action (for example, the label no longer exists).'
+        data_invalida: 'The date this step reads is not a date, so the step was skipped.'
         faltou_valor: 'A value this step needs was empty, so the step was skipped.'
         motor_desligado: 'Automations are off for this account.'
         prazo_vencido: 'The wait ended without the condition.'
@@ -538,14 +539,16 @@ en:
         sem_versao: 'This automation has no saved steps yet.'
         spam: 'The conversation is in Spam.'
         travada: 'This step stopped in the middle and will not run again.'
+        valor_fora_do_formato: 'The calculated value does not fit this field (for example, it is not one of the options), so the action was skipped and nothing was saved.'
         canal_sem_resposta: "This channel does not accept replies (tweet). The message was not sent."
         contato_nao_recebe: "The contact asked not to receive messages. The message was not sent."
-        fora_da_janela: "The channel's reply window is closed, and free text cannot be sent. The message was not sent."
-        limite_da_caixa: "The inbox has a reply time limit, set in its options, and the customer has not written within it. The message was not sent."
-        modelo_fora_da_caixa: "The window was closed, and this conversation's inbox doesn't have the chosen template. The message was not sent."
-        modelo_nao_aprovado: "The window was closed, and the chosen template isn't approved by Meta in this inbox. The message was not sent."
-        modelo_de_propaganda: "The window was closed, and the chosen template is marketing. The automation only sends utility templates. The message was not sent."
-        modelo_mudou: "The window was closed, and this inbox's template asks for different variables than the step's. Choose the template again. The message was not sent."
+        fora_da_janela: "The channel's reply window is closed, and free text cannot be sent. The message was not sent, and the automation stopped in this conversation."
+        limite_da_caixa: "The inbox has a reply time limit, set in its options, and the customer has not written within it. The message was not sent, and the automation stopped in this conversation."
+        modelo_fora_da_caixa: "The window was closed, and this conversation's inbox doesn't have the chosen template. The message was not sent, and the automation stopped in this conversation."
+        modelo_nao_aprovado: "The window was closed, and the chosen template isn't approved by Meta in this inbox. The message was not sent, and the automation stopped in this conversation."
+        modelo_de_propaganda: "The window was closed, and the chosen template is marketing. The automation only sends utility templates. The message was not sent, and the automation stopped in this conversation."
+        modelo_mudou: "The window was closed, and this inbox's template asks for different variables than the step's. Choose the template again. The message was not sent, and the automation stopped in this conversation."
+        modelo_faltou_valor: "The window was closed, and a value the template needs was empty in this conversation. The message was not sent, and the automation stopped in this conversation."
         laco_suspeito: "The other side replied too fast too many times in a row, like a bot. The automation stopped in this conversation."
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."
@@ -580,6 +583,9 @@ en:
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
         valor_de_venda: 'Step %{passo}: only people who see sales values can read %{caminho}. Ask for the permission or remove this value.'
         corpo: 'Step %{passo}: %{problema}'
+        forma_nao_cabe: 'Step %{passo}: the %{campo} field does not take put-together text or a calculated date.'
+        forma_desconhecida: 'Step %{passo}: %{chave} is not a calculated value the automation knows ($valor, $texto or $data).'
+        data_sem_data: 'Step %{passo}: %{caminho} is not a date attribute. A calculated date starts from "today" or from a date attribute.'
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
@@ -588,7 +594,6 @@ en:
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
-        valor_no_corpo: 'Step %{passo}: the action body cannot use variables yet.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         agente_de_ia_invalido: 'Step %{passo}: AI agent %{id} is not from this account.'
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
