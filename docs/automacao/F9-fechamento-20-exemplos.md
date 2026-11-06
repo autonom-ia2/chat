@@ -125,7 +125,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G1 | Mandar pelo **modelo aprovado do WhatsApp** fora da janela de 24 h | F4 (F4b) | **Fechada** (#2586): campo `modelo` do passo "mensagem" | F1 | 1, 2, 3, 4, 5, 6, 8, 11, 13, 14, 18, 19, 20 |
 | G2 | Mandar **e-mail** ao contato (pela caixa de e-mail da conta) | F4 / F8.2 | Sem passo | F1 | 1, 12, 13, 19, 20 |
 | G3 | **Criar retorno** para a equipe (com e sem envio automático) | F6 "Retorno" | Sem passo | F2 | 1, 2, 3, 4, 5, 9, 12, 14, 15, 16, 19 |
-| G4 | **Criar card** num funil/etapa para a conversa ou o contato (e "abrir card de retenção", "card no quadro X") | F6 | `POST crm/cards` fora da lista; o `CardNaEtapa` (F1.4) só existe nas Regras | F2 | 4, 6, 8, 9, 10, 11, 16, 18 |
+| G4 | **Criar card** num funil/etapa para a conversa ou o contato (e "abrir card de retenção", "card no quadro X") | F6 | **Fechada** (#2628): passo `card` (`etapa_id`), com a criação do `CardNaEtapa` (`CardNovo`); pede a chave de funis | F2 | 4, 6, 8, 9, 10, 11, 16, 18 |
 | G5 | Gatilhos do **card**: criado, entrou/saiu da etapa, ganho, perdido, arquivado, campo mudou | F6 | **Fechada** (#2554) | Gatilhos | 2, 3, 4, 5, 7, 8, 11, 12, 13, 14, 15, 18, 20 |
 | G6 | Gatilhos de **tempo**: parado há X dias; N dias antes/depois de uma data do card ou do contato (vencimento, aniversário, próxima revisão, data da festa) | F6 | Em PR (F6 PR3a) | Motor | 1, 5, 6, 13, 18 |
 | G7 | **Recorrente** com filtro (todo dia 1º, toda segunda 8h, quinta 9h) | F8 | Em PR (F8 PR3b) | Gatilhos | 7, 8, 9, 16, 17 |
@@ -176,7 +176,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 7 | Black Friday | ⛔ G7 (quinta 9h) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela) | G5, G7, G14, G15 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24 | Não |
 | 9 | Prospecção semanal | ⛔ G7 (segunda 8h) | decidir ✅, etiqueta ✅, mover ✅, resumir ✅ | G3, G4, G7, G12, G14, G21 | Não |
-| 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅ | G4 (passo 8), G15 (tirar da agente de IA, a conferir) | **Parcial: passos 1–7** |
+| 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅, card no quadro ✅ (G4) | G15 (tirar da agente de IA, a conferir) | **Parcial: passos 1 e 3–8** |
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25 | Não |
 | 13 | Festa do contrato ao depoimento | 🟡 G5 (card ganho) + ⛔ G6 (datas da festa) | extrair ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | G1, G2, G5, G6, G16 | Não |

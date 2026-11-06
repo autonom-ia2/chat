@@ -4,6 +4,7 @@
       "IA": "Artificial intelligence",
       "MENSAGEM": "Messages",
       "CONVERSA": "Conversation",
+      "FUNIL": "Pipeline",
       "CONTATO": "Contact and company",
       "ETIQUETA": "Labels",
       "ATRIBUTO": "Custom fields",
@@ -85,6 +86,7 @@
       "DECIDIR": "AI chooses the path",
       "EXTRAIR": "AI pulls data from the conversation",
       "ESCREVER": "AI writes a text",
+      "CARD": "Create a card in the pipeline",
       "RESUMIR": "AI summarizes the conversation"
     },
     "ESCOLHER": {
@@ -134,6 +136,7 @@
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
+      "ETAPA_ID": "In which stage the card starts",
       "MODELO": "If the 24-hour window is closed"
     },
     "OPCOES": {

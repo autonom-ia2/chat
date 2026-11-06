@@ -17,7 +17,7 @@
 # `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
 # `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
 
-grupos: [IA, MENSAGEM, CONVERSA, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
+grupos: [IA, MENSAGEM, CONVERSA, FUNIL, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
 
 nativos:
   esperar: { grupo: CONTROLE }
@@ -33,6 +33,9 @@ nativos:
   extrair: { grupo: IA, requer: automacao_ia }
   escrever: { grupo: IA, requer: automacao_ia }
   resumir: { grupo: IA, requer: automacao_ia }
+  # G4: criar card numa etapa, com a flag dos gatilhos de card (F6). `funil`: só para quem pode mexer no funil
+  # (crm_manage_pipelines), como o gatilho de card; quem recusa de verdade é a API, ao salvar e ao ligar.
+  card: { grupo: FUNIL, requer: automacao_gatilhos, funil: true }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
 # mostra quando tiver as peças.

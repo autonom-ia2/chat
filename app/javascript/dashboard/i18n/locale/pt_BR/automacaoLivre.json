@@ -4,6 +4,7 @@
       "IA": "Inteligência artificial",
       "MENSAGEM": "Mensagens",
       "CONVERSA": "Conversa",
+      "FUNIL": "Funil",
       "CONTATO": "Contato e empresa",
       "ETIQUETA": "Etiquetas",
       "ATRIBUTO": "Campos personalizados",
@@ -85,6 +86,7 @@
       "DECIDIR": "A IA decide o caminho",
       "EXTRAIR": "A IA tira dados da conversa",
       "ESCREVER": "A IA escreve um texto",
+      "CARD": "Criar um card no funil",
       "RESUMIR": "A IA resume a conversa"
     },
     "ESCOLHER": {
@@ -134,6 +136,7 @@
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
       "LINHAS": "Tamanho do resumo (linhas)",
+      "ETAPA_ID": "Em qual etapa o card nasce",
       "MODELO": "Se a janela de 24 h estiver fechada"
     },
     "OPCOES": {

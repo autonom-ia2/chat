@@ -139,7 +139,8 @@ module FechamentoAutomacao::Lacunas
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
     'G2' => -> { passo?('email') },
     'G3' => -> { passo?('retorno') },
-    'G4' => -> { acao?('POST crm/cards') || acao?('POST crm/cards/from_conversation') },
+    # O "criar card" entrou como passo próprio (#2628), não como a ação POST crm/cards.
+    'G4' => -> { passo?('card') },
     'G5' => -> { gatilho_no?('Crm::Card') },
     'G6' => -> { gatilho_de?(:tempo) },
     'G7' => -> { gatilho_de?(:recorrente) },

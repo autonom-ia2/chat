@@ -84,6 +84,7 @@ class Autonomia::Automacao::Receita
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
+    return ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo) if passo['tipo'] == 'card'
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)

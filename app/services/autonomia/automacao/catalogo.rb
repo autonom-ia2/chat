@@ -46,8 +46,8 @@ module Autonomia::Automacao::Catalogo
                        'campos_extrair' => 'campos_extrair', 'destino_escrever' => 'destino_escrever',
                        # F4b (#2468): o modelo da Meta do passo "mensagem".
                        'destino_resumir' => 'destino_resumir', 'modelo_whatsapp' => 'modelo_whatsapp' }.freeze
-  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar".
-  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero' }.freeze
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar" e a etapa do "card" (G4).
+  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'etapa_id' => 'etapa' }.freeze
 
   module_function
 
@@ -110,7 +110,7 @@ module Autonomia::Automacao::Catalogo
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
-        'frase' => chave('PASSOS', tipo), 'campos' => campos_nativos(forma) }.compact
+        'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo), 'campos' => campos_nativos(forma) }.compact
     end
   end
 

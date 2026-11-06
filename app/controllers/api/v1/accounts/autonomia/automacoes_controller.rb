@@ -137,9 +137,8 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     valor.respond_to?(:to_unsafe_h) ? valor.to_unsafe_h : valor
   end
 
-  # Passo de funil exige também a chave de funis (D2), de quem salva e de quem liga: as mesmas CHAVES da regra do funil
-  # (crm_manage_pipelines ou crm_admin). O catálogo esconder o passo não autoriza nada: a API confere aqui. O gatilho de
-  # card (#2499) também pede a chave.
+  # Passo de funil (ação de card, "criar card" do G4) e gatilho de card (#2499) pedem também a chave de funis (D2), de quem
+  # salva e de quem liga: as CHAVES da regra do funil. O catálogo esconder o passo não autoriza nada: a API confere aqui.
   def sem_funil?(receita)
     return false unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
     return false if ::Autonomia::Automacao::RegraDoFunil::CHAVES.any? { |chave| Current.account_user.permission_granted?(chave) }
@@ -151,7 +150,8 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     return true if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
 
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).passos.any? do |passo|
-      passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.recurso_de(passo['acao']).to_s.start_with?('crm/')
+      passo['tipo'] == 'card' ||
+        (passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.recurso_de(passo['acao']).to_s.start_with?('crm/'))
     end
   end
 

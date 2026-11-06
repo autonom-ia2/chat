@@ -32,6 +32,8 @@ class Autonomia::Automacao::Executor
   NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso }.freeze
   # Os passos de IA (F7, #2500); com eles vem a parada fora da janela (F4.4, #2573), que vale também para a mensagem.
   include ::Autonomia::Automacao::IaNoExecutor
+  # O "criar card" (G4).
+  include ::Autonomia::Automacao::CardNoExecutor
 
   # Chamado pelo AvancarJob com a marca de quem reservou a execução (Partida ou VarreduraJob). A execução lida antes
   # da troca guarda o `due_at` da espera, que o "esperar até" usa como prazo.
@@ -89,6 +91,7 @@ class Autonomia::Automacao::Executor
     when 'acao' then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
+    when 'card' then passo_de_card(passo)
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha
     # como "concluida" sem ter feito nada.
@@ -139,8 +142,7 @@ class Autonomia::Automacao::Executor
     @definicao.reload
     @account.reload
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
-    @alvo = nil
-    @contexto = nil
+    @alvo = @contexto = nil
   end
 
   def esperar(passo)

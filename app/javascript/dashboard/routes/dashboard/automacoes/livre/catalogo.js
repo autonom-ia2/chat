@@ -89,6 +89,8 @@ export const novoPasso = (entrada, id, t) => {
   if (entrada.tipo === 'mensagem') return { id, tipo: 'mensagem', texto: [] };
   if (entrada.tipo === 'avisar')
     return { id, tipo: 'avisar', texto: [], para: { responsavel: true } };
+  // G4: a etapa do card a escolher no painel.
+  if (entrada.tipo === 'card') return { id, tipo: 'card', etapa_id: null };
   // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
   // caminhos e o extrair com um dado, a preencher no painel.
   const LE = ['mensagens_recentes'];

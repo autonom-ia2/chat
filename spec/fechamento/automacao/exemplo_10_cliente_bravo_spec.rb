@@ -173,6 +173,57 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       end
     end
 
+    # Passo 8 (G4): a conversa resolvida com a etiqueta "reclamação" vira card no quadro "Melhorias", com o resumo do
+    # problema na conversa do card, para a Fernanda tratar a causa. É outra automação, que a dona monta e liga.
+    context 'with a conversa resolvida depois (passo 8)' do
+      around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
+
+      let(:para_tratar) do
+        melhorias = account.crm_pipelines.create!(name: 'Melhorias', created_by: dona, status: :active)
+        account.crm_pipeline_stages.create!(pipeline: melhorias, name: 'Para tratar', position: 0)
+      end
+      let(:melhoria) { montar_automacao(dona, account, nome: 'Reclamação vira melhoria', receita: receita_melhorias) }
+
+      def melhorias = para_tratar.pipeline
+
+      def receita_melhorias
+        { gatilho: { tipo: 'conversa.resolvida',
+                     filtros: [{ campo: { '$valor' => 'conversa.etiquetas' }, op: 'contem', valor: 'reclamacao' }] },
+          passos: [{ id: 'card_melhorias', tipo: 'card', etapa_id: para_tratar.id },
+                   { id: 'resumo_do_card', tipo: 'resumir', le: %w[mensagens_recentes], linhas: 3, destino: 'nota' }] }
+      end
+
+      def resolver
+        conversa.reload.update!(status: :resolved)
+        rodar_jobs
+      end
+
+      before do
+        account.enable_features!('automacao_gatilhos')
+        ligar_automacao(dona, account, melhoria)
+        resolver
+      end
+
+      it 'cria o card no quadro "Melhorias", ligado à conversa do Paulo, com o resumo do problema', :aggregate_failures do
+        card = melhorias.cards.sole
+        expect(card).to have_attributes(stage_id: para_tratar.id, conversation_id: conversa.id, contact_id: paulo.id, status: 'open')
+        expect(Crm::Cards::ConversationCardFinder.new(account: account).all(conversa)).to include(card)
+        # O resumo para o card fica na conversa dele, sem menção; o da Fernanda (passo 4) é outro, com a menção.
+        resumo = conversa.messages.where(private: true).where('content LIKE ?', '%cobrado duas vezes%').where.not('content LIKE ?', '%mention://%')
+        expect(resumo.sole.content).to include('Resumo')
+        expect(historico_de(melhoria)).to eq([%w[card_melhorias ok] + [nil], %w[resumo_do_card ok] + [nil]])
+      end
+
+      it 'reaberta e resolvida de novo, não abre outro card no quadro', :aggregate_failures do
+        conversa.update!(status: :open)
+        resolver
+
+        expect(melhorias.cards.count).to eq(1)
+        expect(historico_de(melhoria).map(&:first).count('card_melhorias')).to eq(2)
+        expect(historico_de(melhoria)).to include(%w[card_melhorias pulado card_ja_existe])
+      end
+    end
+
     it 'passo 2: tira a conversa da agente de IA' do
       abertas = FechamentoAutomacao::Lacunas.abertas(%w[G15])
       pending 'lacuna G15: não está provado que a agente de IA (Agentes) deixa a conversa quando ela é atribuída a uma pessoa'
@@ -210,11 +261,5 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       expect(conversa.messages.outgoing.where(private: false)).to be_empty
       expect(conversa.messages.where(private: true)).to be_empty
     end
-  end
-
-  it 'passo 8: conversa resolvida com a etiqueta reclamação vira card no quadro "Melhorias" com o resumo' do
-    abertas = FechamentoAutomacao::Lacunas.abertas(%w[G4])
-    pending 'lacuna G4: criar card num funil/etapa não é passo da Automação livre (POST crm/cards fora da lista)'
-    expect(abertas).to be_empty
   end
 end

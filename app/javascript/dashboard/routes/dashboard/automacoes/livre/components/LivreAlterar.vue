@@ -10,6 +10,7 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
+import LivreEtapa from './LivreEtapa.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
@@ -201,6 +202,7 @@ const nativoPronto = campo => {
       )
     );
   if (campo.peca.startsWith('destino_')) return !vazio(valor);
+  if (campo.peca === 'etapa') return !vazio(valor);
   return true;
 };
 const acaoPronta = () =>
@@ -341,6 +343,13 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreEtapa
+          v-else-if="campo.peca === 'etapa'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :grupos="escolhasDoGatilho.etapas || []"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreIaCampo

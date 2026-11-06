@@ -370,6 +370,16 @@
             "linhas": { "type": "integer", "minimum": 1, "maximum": 10 },
             "destino": { "$ref": "#/definitions/destino_resumir" }
           }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "etapa_id"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "card" },
+            "etapa_id": { "type": "integer", "minimum": 1, "description": "Criar card (G4; flag automacao_gatilhos; pede a chave de funis de quem salva e de quem liga): a etapa do funil (id) em que o card nasce, ligado à conversa do alvo (no card, à conversa principal dele; no contato, só ao contato). Se a conversa (ou o contato) já tem card aberto nesse funil, o passo pula, sem duplicar; card de outro funil não conta. Nunca move card." }
+          }
         }
       ]
     }
