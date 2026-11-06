@@ -600,6 +600,32 @@
       ]
     },
     {
+      "tipo": "email",
+      "grupo": "MENSAGEM",
+      "requer": "automacao_mensagens",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.EMAIL",
+      "campos": [
+        {
+          "nome": "caixa_id",
+          "peca": "caixa_de_email",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CAIXA_ID"
+        },
+        {
+          "nome": "assunto",
+          "peca": "linha_com_valores",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ASSUNTO"
+        },
+        {
+          "nome": "texto",
+          "peca": "texto_com_valores",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TEXTO"
+        }
+      ]
+    },
+    {
       "tipo": "avisar",
       "grupo": "MENSAGEM",
       "requer": "automacao_mensagens",

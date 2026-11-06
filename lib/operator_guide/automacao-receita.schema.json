@@ -62,6 +62,12 @@
       "minItems": 1,
       "items": { "oneOf": [{ "type": "string", "minLength": 1 }, { "$ref": "#/definitions/valor" }] }
     },
+    "linha": {
+      "description": "Como o texto, numa linha só e curta: o assunto do e-mail (G2). Quebra de linha vira espaço ao mandar.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 150 }, { "$ref": "#/definitions/valor" }] }
+    },
     "modelo_whatsapp": {
       "description": "Modelo aprovado da Meta para quando a janela de 24 h do número oficial estiver fechada (F4b, #2468). Procurado pelo nome e pelo idioma na caixa da conversa; um texto por variável do corpo, na ordem ({{1}}, {{2}}...). Com a janela aberta, sai o texto livre.",
       "type": "object",
@@ -300,6 +306,18 @@
             "tipo": { "const": "mensagem" },
             "texto": { "$ref": "#/definitions/texto" },
             "modelo": { "$ref": "#/definitions/modelo_whatsapp" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "caixa_id", "assunto", "texto"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "email" },
+            "caixa_id": { "type": "integer", "minimum": 1, "description": "A caixa de e-mail da conta por onde o e-mail sai. Abre uma conversa nova nela, com o assunto." },
+            "assunto": { "$ref": "#/definitions/linha" },
+            "texto": { "$ref": "#/definitions/texto" }
           }
         },
         {

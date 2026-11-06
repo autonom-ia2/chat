@@ -162,7 +162,7 @@ const resumoDaAcao = (passo, entrada, t) =>
     .map(campo => resumoDoCampo(campo, lerCampo(passo, entrada, campo.nome), t))
     .filter(Boolean);
 
-// O texto de "mensagem" e "avisar" na linha: os dados entre colchetes, pelo
+// O texto de "mensagem" e "avisar" (e o assunto do "email") na linha: os dados entre colchetes, pelo
 // nome do catálogo; texto longo corta, e o inteiro fica no "Alterar".
 const CABE_NA_LINHA = 60;
 const fraseDoTexto = (partes, catalogo, t) => {
@@ -262,6 +262,10 @@ export const fraseDoPasso = (passo, catalogo, t) => {
   if (passo.tipo === 'mensagem')
     return t(`${P}.MENSAGEM`, {
       texto: fraseDoTexto(passo.texto, catalogo, t),
+    });
+  if (passo.tipo === 'email')
+    return t(`${P}.EMAIL`, {
+      assunto: fraseDoTexto(passo.assunto, catalogo, t),
     });
   if (passo.tipo === 'avisar')
     return t(`${P}.AVISAR`, {

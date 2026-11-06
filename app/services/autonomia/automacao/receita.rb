@@ -82,21 +82,24 @@ class Autonomia::Automacao::Receita
 
   def problemas_do_passo(passo)
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
-    return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
+    return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
   end
 
-  # "mensagem" e "avisar" (F4): só com a flag da F4, os valores do texto (e de cada variável do modelo da Meta, F4b)
-  # lidos da lista fechada, os times e as pessoas do aviso da própria conta, e o modelo pronto na conta.
+  # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
+  # variável do modelo da Meta, F4b) lidos da lista fechada, os times e as pessoas do aviso da própria conta, o modelo
+  # pronto na conta e a caixa do e-mail uma caixa de e-mail da conta.
   def problemas_da_mensagem(passo)
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
-    textos = [passo['texto'], *Array(passo.dig('modelo', 'variaveis'))]
+    textos = [passo['texto'], passo['assunto'], *Array(passo.dig('modelo', 'variaveis'))]
     lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map { |caminho| problemas_do_caminho(id, caminho) }
-    desligado + lidos + destinatarios_de_fora(passo) + ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
+    caixa = passo['tipo'] == 'email' ? ::Autonomia::Automacao::PassoDeEmail.problemas_ao_salvar(@conta, passo) : []
+    modelo = ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
+    desligado + lidos + destinatarios_de_fora(passo) + modelo + caixa
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da
@@ -255,7 +258,5 @@ class Autonomia::Automacao::Receita
     acao.split(' ', 2).last.split('/').filter_map { |segmento| segmento.delete_prefix(':') if segmento.start_with?(':') }
   end
 
-  def texto(chave, **valores)
-    I18n.t("autonomia.automacao.receita.#{chave}", **valores)
-  end
+  def texto(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 end

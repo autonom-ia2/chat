@@ -85,7 +85,8 @@
       "DECIDIR": "AI chooses the path",
       "EXTRAIR": "AI pulls data from the conversation",
       "ESCREVER": "AI writes a text",
-      "RESUMIR": "AI summarizes the conversation"
+      "RESUMIR": "AI summarizes the conversation",
+      "EMAIL": "Send an e-mail to the customer"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -134,6 +135,8 @@
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
+      "CAIXA_ID": "From which e-mail inbox",
+      "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed"
     },
     "OPCOES": {
@@ -283,7 +286,8 @@
       "ESCREVER_SUGESTAO": "AI writes a suggestion for the team: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "AI writes a suggestion for the team: the instruction is missing",
       "RESUMIR_NOTA": "AI summarizes the conversation in a note",
-      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}"
+      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}",
+      "EMAIL": "E-mail the customer: “{assunto}”"
     },
     "RAMOS": {
       "ENTAO": "Then",
@@ -340,7 +344,9 @@
         "MUDOU": "The template now asks for {quantas} variables. Fill in all of them before saving.",
         "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
         "VARIAVEL": "Template variable {numero}"
-      }
+      },
+      "POR_VALOR_EM": "Add a conversation detail to “{campo}”",
+      "SEM_CAIXA_DE_EMAIL": "This account has no e-mail inbox yet. Create one in Inboxes to use this step."
     },
     "LIGAR": {
       "BOTAO": "Turn on",

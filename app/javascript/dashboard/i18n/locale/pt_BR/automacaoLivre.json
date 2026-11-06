@@ -85,7 +85,8 @@
       "DECIDIR": "A IA decide o caminho",
       "EXTRAIR": "A IA tira dados da conversa",
       "ESCREVER": "A IA escreve um texto",
-      "RESUMIR": "A IA resume a conversa"
+      "RESUMIR": "A IA resume a conversa",
+      "EMAIL": "Mandar e-mail ao cliente"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -134,6 +135,8 @@
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
       "LINHAS": "Tamanho do resumo (linhas)",
+      "CAIXA_ID": "Por qual caixa de e-mail",
+      "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada"
     },
     "OPCOES": {
@@ -283,7 +286,8 @@
       "ESCREVER_SUGESTAO": "A IA escreve uma sugestão para a equipe: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "A IA escreve uma sugestão para a equipe: falta escrever a instrução",
       "RESUMIR_NOTA": "A IA resume a conversa numa nota",
-      "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}"
+      "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}",
+      "EMAIL": "Mandar e-mail ao cliente: “{assunto}”"
     },
     "RAMOS": {
       "ENTAO": "Então",
@@ -340,7 +344,9 @@
         "MUDOU": "O modelo agora pede {quantas} variáveis. Preencha todas antes de salvar.",
         "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
         "VARIAVEL": "Variável {numero} do modelo"
-      }
+      },
+      "POR_VALOR_EM": "Pôr um dado da conversa em “{campo}”",
+      "SEM_CAIXA_DE_EMAIL": "A conta ainda não tem caixa de e-mail. Crie uma em Caixas de entrada para usar este passo."
     },
     "LIGAR": {
       "BOTAO": "Ligar",
