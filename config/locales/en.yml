@@ -532,6 +532,7 @@ en:
         quem_ligou_sem_acesso: 'The person who turned on the automation has no access here anymore. Take over and turn it back on.'
         quem_ligou_sem_permissao: 'The person who turned on the automation can no longer manage automations. Take over and turn it back on.'
         sem_permissao_funil: 'The person who turned on the automation can no longer edit the pipeline, which card triggers need. Take over and turn it back on.'
+        sem_chave_de_funis: 'The person who turned on the automation can no longer edit the pipeline, and this step changes the pipeline. Take over and turn it back on.'
         gatilho_desligado: 'Card triggers are off for this account. The automation did not continue.'
         ja_aberta: 'The trigger happened again, but the automation was already running here and did not start again.'
         receita_com_problema: 'This version no longer runs as it was saved. Fix it and save again before turning it on.'

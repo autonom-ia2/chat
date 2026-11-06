@@ -7,7 +7,8 @@
 # - :pulado segue, com o motivo: faltou um valor do alvo, a data lida não é data, ou o valor calculado no corpo (G16)
 #   não cabe no campo (fora da lista de opções): nunca grava valor que a plataforma recusaria;
 # - :permanente para a execução (4xx: a etiqueta não existe, o corpo não serve);
-# - :sem_acesso pausa a automação (401/403, ou quem ligou perdeu a chave de automações);
+# - :sem_acesso pausa a automação (401/403, ou quem ligou perdeu a chave de automações ou, na ação de funil, a de
+#   funis, #2633);
 # - :passageiro tenta de novo (5xx, 408, 425, 429, erro sem resposta), menos quando o caderno mostra que a ação já
 #   gravou alguma coisa: repetir faria de novo (criaria a etiqueta duas vezes), então fecha como permanente.
 class Autonomia::Automacao::PassoDeAcao
@@ -26,8 +27,8 @@ class Autonomia::Automacao::PassoDeAcao
     caminho = caminho_resolvido
     corpo = caminho.values.any?(&:blank?) ? pulado('faltou_valor') : corpo_pronto
     corpo.is_a?(Resultado) ? corpo : agir(caminho, corpo)
-  rescue ::Autonomia::Automacao::AcoesDoMotor::SemPermissao
-    Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_permissao', dados: {})
+  rescue ::Autonomia::Automacao::AcoesDoMotor::SemPermissao => e
+    Resultado.new(tipo: :sem_acesso, motivo: e.motivo, dados: {})
   rescue ::Autonomia::Guide::Acoes::Recusada => e
     Rails.logger.info("[automacao][passo] recusado execucao=#{@execucao.id} passo=#{@passo['id']} #{e.class}: #{e.message}")
     Resultado.new(tipo: :permanente, motivo: 'acao_recusada', dados: {})
