@@ -42,7 +42,9 @@ que só pega defeito. Uso legítimo, por maior que seja, nunca é barrado. Isso 
   Messenger, TikTok, Twilio, API com prazo).
   - Como envio automático, a tag de agente humano da Meta não vale, e a janela é de 24 h.
   - A caixa híbrida com o WhatsApp API pronto responde fora da janela.
-  - Fora da janela: `fora_da_janela`. É só texto livre; o modelo da Meta é a F4b, #2468.
+  - Fora da janela: `fora_da_janela` (no canal API com prazo, `limite_da_caixa`). É só texto livre; o modelo da Meta é a
+    F4b, #2468. Esses dois, e o modelo que não pôde sair com a janela fechada, **param** a execução (#2573); os outros
+    motivos acima pulam e seguem.
 - **Resultado:** o passo dá `ok` quando a mensagem é criada. O passo que deu ok nunca reenvia.
 - **Duplicidade:** é tratada pelo evento de origem, nunca pelo texto. Uma execução por mensagem recebida e, no
   máximo, uma resposta do passo por evento. A marca por evento fica na escuta (PR-C), que eu refaço sobre este PR.

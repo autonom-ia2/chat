@@ -132,9 +132,9 @@
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
-      "MODELO": "If the 24-hour window is closed",
       "CAIXA_ID": "From which e-mail inbox",
-      "ASSUNTO": "Subject"
+      "ASSUNTO": "Subject",
+      "MODELO": "If the 24-hour window is closed"
     },
     "OPCOES": {
       "STATUS": {
@@ -328,7 +328,7 @@
       "FILTRO_SAI": "When you save, \"Only if\" loses: {condicao}. It only works with \"When a message arrives\".",
       "MODELO": {
         "DICA": "On official WhatsApp, 24 hours after the customer's last message, free text can't be sent. Pick a Meta-approved template to send instead; Meta charges for each template sent. With the window open, the text above is sent.",
-        "NENHUM": "Don't send anything (the step is skipped)",
+        "NENHUM": "Don't send anything (the automation stops in this conversation)",
         "OPCAO": "{nome} ({idioma})",
         "SEM_MODELOS": "No official WhatsApp inbox you can see has an approved utility template. Create and approve one in Templates.",
         "DIVERGENTE": "This template has different text in another inbox. Each conversation gets its own inbox's template; if it asks for other variables there, the message is not sent.",
