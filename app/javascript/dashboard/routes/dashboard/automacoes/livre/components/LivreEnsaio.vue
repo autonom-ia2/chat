@@ -28,6 +28,15 @@ const conversas = ref([]);
 const outras = ref([]);
 const escolhida = ref(null);
 const extra = ref(null);
+// #2635 (G7): no recorrente, só quantos a seleção pegaria agora ({ alvo,
+// pegaria }); pegaria nulo = quem pede não vê os contatos da conta.
+const recorrente = ref(null);
+const CHAVES_DO_RECORRENTE = {
+  Contact: 'AUTOMACAO_LIVRE.ENSAIO.RECORRENTE_CONTATOS',
+  Account: 'AUTOMACAO_LIVRE.ENSAIO.RECORRENTE_CONTA',
+};
+const chaveDoRecorrente = alvo =>
+  CHAVES_DO_RECORRENTE[alvo] || 'AUTOMACAO_LIVRE.ENSAIO.RECORRENTE_CARDS';
 
 const raiz = ref(null);
 const passosRef = ref(null);
@@ -43,6 +52,11 @@ const carregar = async () => {
   extra.value = null;
   try {
     const { data } = await AutomacoesAPI.ensaiar(props.automacaoId, corpo());
+    recorrente.value = data.recorrente || null;
+    if (recorrente.value) {
+      estado.value = 'pronto';
+      return;
+    }
     conversas.value = data.conversas;
     outras.value = data.outras || [];
     escolhida.value =
@@ -201,6 +215,23 @@ const ICONE = {
         @click="carregar"
       />
     </div>
+
+    <p
+      v-else-if="recorrente"
+      data-recorrente
+      role="status"
+      class="mb-0 text-[0.9375rem] text-n-slate-12"
+    >
+      {{
+        recorrente.pegaria === null
+          ? $t('AUTOMACAO_LIVRE.ENSAIO.RECORRENTE_SEM_ACESSO')
+          : $t(
+              chaveDoRecorrente(recorrente.alvo),
+              { total: recorrente.pegaria.toLocaleString(locale) },
+              recorrente.pegaria
+            )
+      }}
+    </p>
 
     <p
       v-else-if="!conversas.length"

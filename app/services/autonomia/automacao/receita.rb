@@ -71,6 +71,7 @@ class Autonomia::Automacao::Receita
   end
 
   def problemas_do_passo(passo)
+    return [texto(:passo_pede_alvo, passo: passo['id'])] if da_conta? && !sem_alvo?(passo)
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
@@ -204,6 +205,12 @@ class Autonomia::Automacao::Receita
     alvo = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
     alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
   end
+
+  # conta.recorrente (#2635, G7) roda sem conversa, card ou contato: só ficam o esperar e o disparar de campanha (G14),
+  # que escolhe o público pela etiqueta. Recusar aqui é o que impede o passo de quebrar sem alvo ao rodar.
+  def da_conta? = ::Autonomia::Automacao::Gatilhos.da_conta?(@receita.dig('gatilho', 'tipo'))
+
+  def sem_alvo?(passo) = passo['tipo'] == 'esperar' || (passo['tipo'] == 'campanha' && passo['faz'] == 'disparar')
 
   def mensagem_no_gatilho?(no_gatilho) = no_gatilho && @receita.dig('gatilho', 'tipo') == ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM
 

@@ -48,6 +48,13 @@ export function useOpcoesDaConta() {
       label: item.title,
     })),
     etiqueta: comNome(etiquetas.value, 'title'),
+    // G7: o campo do contato na seleção do recorrente vai pela chave.
+    atributoDoContato: (atributosDo.value('contact_attribute') || []).map(
+      item => ({
+        value: item.attribute_key,
+        label: item.attribute_display_name,
+      })
+    ),
     atributo: [
       'conversation_attribute',
       'contact_attribute',

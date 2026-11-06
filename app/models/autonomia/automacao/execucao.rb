@@ -45,7 +45,7 @@ class Autonomia::Automacao::Execucao < ApplicationRecord
   def da_mesma_automacao
     errors.add(:versao, :invalid) if versao && versao.automacao_id != automacao_id
     errors.add(:automacao, :invalid) if automacao && automacao.account_id != account_id
-    errors.add(:alvo, :invalid) if alvo && alvo.account_id != account_id
+    errors.add(:alvo, :invalid) if alvo && ::Autonomia::Automacao::Contexto.de(alvo).conta_id != account_id
   end
 
   def marcar_finalizada
