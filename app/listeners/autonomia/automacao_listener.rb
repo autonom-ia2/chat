@@ -30,6 +30,11 @@ class Autonomia::AutomacaoListener < BaseListener
   def crm_card_won(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_WON)
   def crm_card_lost(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_CARD_LOST)
 
+  # A reunião do card (G12) chega pelo mesmo caminho: a atividade da reunião é do card, e o evento traz só ids.
+  def crm_meeting_scheduled(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_MEETING_SCHEDULED)
+  def crm_meeting_rescheduled(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_MEETING_RESCHEDULED)
+  def crm_meeting_canceled(event) = escuta.enfileirar_evento_do_card(event.data, Events::Types::CRM_MEETING_CANCELED)
+
   private
 
   # O instante do despacho, em µs, é a marca do evento (Gatilhos): o EventDispatcherJob repete o mesmo valor.

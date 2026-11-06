@@ -10,6 +10,9 @@
       "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",
       "CARD_GANHO": "Quando o card é ganho",
       "CARD_PERDIDO": "Quando o card é perdido",
+      "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada",
+      "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada",
+      "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada",
       "CARD_PARADO": "Quando o card fica parado numa etapa",
       "CARD_DATA": "Perto de uma data do card",
       "CONTATO_DATA": "Perto de uma data do contato"
@@ -43,6 +46,7 @@
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversa e mensagem",
       "CARD": "Card do funil",
+      "REUNIAO": "Reunião",
       "TEMPO": "Tempo"
     },
     "GATILHO_COM": {
@@ -51,6 +55,9 @@
       "CARD_SAIU_DA_ETAPA": "Quando o card sai de {etapa}",
       "CARD_GANHO": "Quando um card de {funil} é ganho",
       "CARD_PERDIDO": "Quando um card de {funil} é perdido",
+      "CARD_REUNIAO_MARCADA": "Quando uma reunião é marcada num card de {funil}",
+      "CARD_REUNIAO_REMARCADA": "Quando uma reunião é remarcada num card de {funil}",
+      "CARD_REUNIAO_CANCELADA": "Quando uma reunião é cancelada num card de {funil}",
       "CARD_PARADO": "Quando o card fica {dias} dias parado em {etapa}",
       "CARD_DATA": "{dias} dias {quando} de {campo} do card, a partir das {hora}h",
       "CONTATO_DATA": "{dias} dias {quando} de {campo} do contato, a partir das {hora}h"

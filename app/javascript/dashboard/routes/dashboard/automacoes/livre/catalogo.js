@@ -162,6 +162,7 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
+// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
 export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
   const bases = alvo && dados.alvos?.[alvo];
@@ -169,7 +170,9 @@ export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   return {
     ...dados,
     valores: dados.valores.filter(
-      item => !item.base || bases.includes(item.base)
+      item =>
+        (!item.base || bases.includes(item.base)) &&
+        (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
   };
 };

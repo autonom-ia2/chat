@@ -24,9 +24,20 @@ module Autonomia::Automacao::NaConversa
     Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: {})
   end
 
-  def texto_pronto
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
-    ::Autonomia::Automacao::Texto.new(@passo['texto'], valores).montar
+  def texto_pronto = ::Autonomia::Automacao::Texto.new(@passo['texto'], valores).montar
+
+  # Com as permissões de quem ligou (#2597) e a execução: a reunião do gatilho (G12) sai da marca dela.
+  def valores
+    @valores ||= ::Autonomia::Automacao::Valores.new(alvo: ::Autonomia::Automacao::Contexto.de(@alvo, execucao: @execucao),
+                                                     quem: @execucao.automacao.ligada_por)
+  end
+
+  # O texto ficou sem um valor: o link da agenda vazio diz por quê (G12); o resto é o faltou_valor de sempre.
+  def faltou_valor
+    por = valores.falta_da_agenda
+    return Resultado.new(tipo: :pulado, motivo: 'faltou_link_da_agenda', dados: { 'por' => por }) if por
+
+    Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {})
   end
 
   def marca
