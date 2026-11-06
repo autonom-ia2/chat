@@ -289,6 +289,7 @@ defineExpose({ abrir, fechar });
         :model-value="rascunho"
         :gatilhos="gatilhosDoSeletor"
         :escolhas="escolhasDoGatilho"
+        :opcoes="opcoes"
         @update:model-value="novo => (rascunho = novo)"
       />
 

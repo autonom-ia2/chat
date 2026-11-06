@@ -161,12 +161,25 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def ensaiar(receita, conferir:)
     problemas = problemas_do_ensaio(receita, conferir)
     return recusar_ensaio('receita_invalida', problemas) if problemas.any?
+    return render(json: recorrente_no_ensaio(receita)) if ::Autonomia::Automacao::Gatilhos.recorrente?(receita.dig('gatilho', 'tipo'))
     return recusar_ensaio('gatilho_de_card') unless ::Autonomia::Automacao::Ensaio.gatilho_suportado?(receita)
 
     render json: ::Autonomia::Automacao::Ensaio.new(receita: receita, conta: Current.account, usuario: Current.user,
                                                     conversa_id: params[:conversa_id]).resultado
   rescue ActiveRecord::RecordNotFound
     head :not_found
+  end
+
+  # O recorrente (#2635, G7): quantos cards ou contatos a seleção pegaria agora, para o dono ver antes de ligar.
+  def recorrente_no_ensaio(receita)
+    tipo = receita.dig('gatilho', 'tipo')
+    alvo = ::Autonomia::Automacao::Gatilhos.alvo(tipo)
+    # O da conta (G7) roda uma vez por ocorrência, sem seleção.
+    return { 'recorrente' => { 'alvo' => alvo, 'pegaria' => 1 } } if ::Autonomia::Automacao::Gatilhos.da_conta?(tipo)
+
+    contexto = { user: Current.user, account: Current.account, account_user: Current.account_user }
+    selecao = ::Autonomia::Automacao::Tempo::Selecao.new(Current.account, receita['gatilho'])
+    { 'recorrente' => { 'alvo' => alvo, 'pegaria' => selecao.quantos_para(contexto) } }
   end
 
   def problemas_do_ensaio(receita, conferir)

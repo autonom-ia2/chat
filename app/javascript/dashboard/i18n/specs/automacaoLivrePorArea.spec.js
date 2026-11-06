@@ -54,6 +54,8 @@ const BLOCOS_POR_ARQUIVO = {
     'GATILHO_NO_DIA',
     'QUANDO_DA_DATA',
     'GATILHO_DE_TEMPO',
+    'GATILHO_RECORRENTE',
+    'SELECAO',
   ],
   'automacaoLivreIa.json': ['IA'],
   'automacaoLivreReceitas.json': ['RECEITAS'],
