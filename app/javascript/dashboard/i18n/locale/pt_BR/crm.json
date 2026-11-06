@@ -255,6 +255,8 @@
       "REVENUE": "Receita",
       "SOURCES": {
         "META_CTWA": "Meta CTWA",
+        "META_CTM": "Anúncio no Messenger",
+        "META_CTD": "Anúncio no Instagram",
         "META_ORGANIC": "Meta orgânico",
         "GOOGLE_ADS": "Google Ads",
         "TIKTOK_ADS": "TikTok Ads",
@@ -314,6 +316,8 @@
     "TITLE": "CRM Kanban",
     "ORIGIN": {
       "META_CTWA": "Meta clique para WhatsApp",
+      "META_CTM": "Anúncio no Messenger",
+      "META_CTD": "Anúncio no Instagram",
       "META_ORGANIC": "Meta orgânico",
       "GOOGLE_ADS": "Google Ads",
       "TIKTOK_ADS": "TikTok Ads",
@@ -6171,6 +6175,8 @@
         "ANUNCIO_WHATSAPP": "um anúncio no Facebook ou no Instagram que abre o WhatsApp",
         "PUBLICACAO": "uma publicação no Facebook ou no Instagram",
         "ANUNCIO_META": "um anúncio no Facebook ou no Instagram",
+        "ANUNCIO_MESSENGER": "um anúncio no Facebook ou no Instagram que abre o Messenger",
+        "ANUNCIO_DIRECT": "um anúncio no Facebook ou no Instagram que abre o Direct do Instagram",
         "ANUNCIO_GOOGLE": "um anúncio no Google",
         "ANUNCIO_TIKTOK": "um anúncio no TikTok",
         "LINK": "um link de divulgação",
