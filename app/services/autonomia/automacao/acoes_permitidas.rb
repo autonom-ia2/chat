@@ -18,6 +18,12 @@ module Autonomia::Automacao::AcoesPermitidas
     acoes.key?(acao.to_s)
   end
 
+  # Ação de funil (crm/) pede também a chave de funis, ao salvar e a cada execução (D2, #2633). O recurso sai da própria
+  # lista, não do catálogo: ação permitida sempre tem recurso, e a pergunta é a mesma no salvar e no motor.
+  def de_funil?(acao)
+    lista['passo'].any? { |recurso, bloco| recurso.start_with?('crm/') && bloco['acoes'].key?(acao.to_s) }
+  end
+
   # Campos que a receita tem de preencher além do que a plataforma pede (F3.10: descrição).
   def exige(acao)
     Array(acoes.dig(acao.to_s, 'exige'))
@@ -31,6 +37,18 @@ module Autonomia::Automacao::AcoesPermitidas
   # Campos que a receita não pode mandar.
   def proibe(acao)
     Array(acoes.dig(acao.to_s, 'proibe'))
+  end
+
+  # Os campos proibidos que os valores mandam (a chave presente, mesmo vazia; o ponto entra no campo de dentro). A
+  # Receita pergunta ao salvar, e o motor de novo ao rodar (G15).
+  def proibidos(acao, valores)
+    proibe(acao).select { |campo| mandado?(valores.to_h, campo.split('.')) }
+  end
+
+  def mandado?(valores, partes)
+    return valores.key?(partes.first) if partes.one?
+
+    valores[partes.first].is_a?(Hash) && mandado?(valores[partes.first], partes.drop(1))
   end
 
   # Os recursos que nunca viram passo (ADR-001 2.1), para o CI cobrar.

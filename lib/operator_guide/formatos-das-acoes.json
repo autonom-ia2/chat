@@ -5639,10 +5639,10 @@
       "leitura crua sem tipo: amount (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!), end_time (repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!)"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:55",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:62",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:111",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:57"
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:77",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:84",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:137",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:79"
     ],
     "sem_corpo": false
   },
@@ -11389,10 +11389,10 @@
       "leitura crua sem tipo: receita"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:19",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:76",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:75",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:64"
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:20",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:82",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:81",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_ia_controller.rb:70"
     ],
     "sem_corpo": false
   },
@@ -16091,8 +16091,8 @@
     "completo": true,
     "controller": "api/v1/accounts/crm/meta_ads_creation#create",
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:44",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:73"
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:48",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:95"
     ],
     "sem_corpo": false
   },
@@ -16337,8 +16337,8 @@
       "leitura crua sem tipo: file"
     ],
     "origem": [
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:37",
-      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:38"
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:41",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:42"
     ],
     "sem_corpo": false
   },
@@ -16354,6 +16354,39 @@
     "origem": [
       "app/controllers/api/v1/accounts/crm/meta_ads_pagina_controller.rb:25",
       "app/controllers/api/v1/accounts/crm/meta_ads_pagina_controller.rb:26"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/post_media": {
+    "campos": {
+      "file": {}
+    },
+    "completo": false,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#post_media",
+    "motivos": [
+      "leitura crua sem tipo: file"
+    ],
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:55",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:56"
+    ],
+    "sem_corpo": false
+  },
+  "POST crm/meta_ads_connection/posts": {
+    "campos": {
+      "caption": {},
+      "idempotency_key": {},
+      "media_id": {},
+      "networks": {
+        "tipo": "lista"
+      },
+      "page_id": {}
+    },
+    "completo": true,
+    "controller": "api/v1/accounts/crm/meta_ads_creation#publish",
+    "origem": [
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:63",
+      "app/controllers/api/v1/accounts/crm/meta_ads_creation_controller.rb:102"
     ],
     "sem_corpo": false
   },

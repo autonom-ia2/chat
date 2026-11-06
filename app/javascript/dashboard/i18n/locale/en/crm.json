@@ -3649,7 +3649,9 @@
           },
           "SUPPORT": "Contact support.",
           "POST": "Boost a post",
-          "POST_HINT": "Shows a post you already published on Instagram or Facebook to more people."
+          "POST_HINT": "Shows a post you already published on Instagram or Facebook to more people.",
+          "PUBLISH": "Create a post",
+          "PUBLISH_HINT": "Publishes now on Instagram and Facebook, for free. Then you can boost it if you want."
         },
         "GOAL": {
           "TITLE": "When someone taps the ad, where do they go?",
@@ -3942,7 +3944,103 @@
           "RETRY": "Try again",
           "EMPTY_SOURCE": "No posts here yet."
         },
-        "CREATE_BOOST": "Create paused boost"
+        "CREATE_BOOST": "Create paused boost",
+        "PUBLISH": {
+          "TITLE": "Create a post",
+          "HINT": "Publishes right away, at no cost.",
+          "PAGE": "Facebook Page",
+          "CHOOSE_PAGE": "Choose the Page",
+          "WHERE": "Where to publish",
+          "NETWORKS": {
+            "INSTAGRAM": "Instagram",
+            "FACEBOOK": "Facebook"
+          },
+          "REASONS": {
+            "NO_INSTAGRAM": "Link an Instagram professional account to your Page to publish there.",
+            "LIMIT": "You reached today's Instagram post limit. It frees up again tomorrow.",
+            "NO_PERMISSION": "Permission to publish here is missing."
+          },
+          "CAPTION": "Caption",
+          "CAPTION_PLACEHOLDER": "Say what it is, the price and how to order.",
+          "NEED_PAGE": "Choose the Page to continue.",
+          "NEED_NETWORK": "Choose where to publish to continue.",
+          "UPLOADING": "Wait for the photo or video to finish uploading.",
+          "NEED_MEDIA": "Choose a photo or video to continue.",
+          "NO_NETWORK": "To publish, log in with Facebook again and keep the publish option checked.",
+          "SIGN_IN": "Log in with Facebook"
+        },
+        "PUBLISH_REVIEW": {
+          "TITLE": "Review and publish",
+          "HINT": "Publishing costs nothing. If you boost, the boost starts paused.",
+          "WHERE": "Where",
+          "PLACES": {
+            "AUTO": "On Instagram ({'@'}{username}) and on the {page} Page",
+            "INSTAGRAM": "On Instagram ({'@'}{username})",
+            "FACEBOOK": "On the {page} Page"
+          },
+          "CAPTION": "Caption",
+          "NO_CAPTION": "No caption.",
+          "FREE": "Publishing is free. The post stays on your profile and Page like any other.",
+          "PUBLISH": "Publish now",
+          "PUBLISH_AND_BOOST": "Publish and boost",
+          "CONFIRM_TITLE": {
+            "AUTO": "Publish now on Instagram and Facebook?",
+            "INSTAGRAM": "Publish now on Instagram?",
+            "FACEBOOK": "Publish now on Facebook?"
+          },
+          "CONFIRM_HINT": "Everyone sees the post as soon as you confirm. To take it down, delete it in the app.",
+          "CONFIRM_HINT_BOOST": "Everyone sees the post as soon as you confirm. Then you choose who sees the boost and how much to spend; it starts paused.",
+          "CONFIRM": "Publish",
+          "CANCEL": "Cancel",
+          "ERRORS": {
+            "PROCESSING": "Instagram is still preparing the video. Nothing was published. Try again in 1 minute.",
+            "CANNOT_PUBLISH": "Permission to publish is missing. Nothing was published. Log in with Facebook again.",
+            "IN_PROGRESS": "This post is already being published. Wait a moment.",
+            "NETWORK": "No answer right now. Check Instagram and Facebook before trying again.",
+            "UNKNOWN": "Meta didn't publish now. Nothing was published. Try again in a little while.",
+            "UNCONFIRMED": "We couldn't tell if the post went out. Check Instagram and Facebook before publishing again."
+          },
+          "CHECKED_NOT_PUBLISHED": "I checked and it didn't go out anywhere: publish again"
+        },
+        "PUBLISHED": {
+          "TITLE": {
+            "AUTO": "Post published on Instagram and Facebook",
+            "INSTAGRAM": "Post published on Instagram",
+            "FACEBOOK": "Post published on Facebook"
+          },
+          "HINT": "It's live, for free. To show it to more people, boost it.",
+          "SEE": {
+            "INSTAGRAM": "See on Instagram",
+            "FACEBOOK": "See on Facebook"
+          },
+          "BOOST": "Boost this post",
+          "BOOST_HINT": "Continues with this post already chosen. The boost starts paused.",
+          "DONE": "Back to the panel",
+          "PARTIAL": {
+            "INSTAGRAM": "Instagram didn't work. Try again.",
+            "FACEBOOK": "Facebook didn't work. Try again."
+          },
+          "PROCESSING": {
+            "INSTAGRAM": "Instagram is still preparing the video. Try again in 1 minute.",
+            "FACEBOOK": "Facebook is still preparing the video. Try again in 1 minute."
+          },
+          "RETRY": {
+            "INSTAGRAM": "Try Instagram again",
+            "FACEBOOK": "Try Facebook again"
+          },
+          "RETRY_FAILED": {
+            "INSTAGRAM": "Instagram didn't publish again. The post is still on Facebook. Try again in a little while.",
+            "FACEBOOK": "Facebook didn't publish again. The post is still on Instagram. Try again in a little while."
+          },
+          "UNCONFIRMED": {
+            "INSTAGRAM": "We couldn't tell if it went out on Instagram. Check there before publishing again.",
+            "FACEBOOK": "We couldn't tell if it went out on Facebook. Check there before publishing again."
+          },
+          "CHECKED": {
+            "INSTAGRAM": "I checked and it didn't go out on Instagram: publish again",
+            "FACEBOOK": "I checked and it didn't go out on Facebook: publish again"
+          }
+        }
       }
     },
     "BOOKING_AGENDA": {

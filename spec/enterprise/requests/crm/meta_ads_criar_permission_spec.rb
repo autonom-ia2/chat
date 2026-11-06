@@ -104,4 +104,15 @@ RSpec.describe 'Anúncios da Meta: criar e orçamento com funções (#2198)', ty
     expect(response).to have_http_status(:ok)
     expect(update).to have_been_made.once
   end
+
+  it 'meta_ads_view não sobe a mídia do post nem publica (#2653), sem chamar a Meta' do
+    headers = pessoa_com(%w[meta_ads_view]).create_new_auth_token
+
+    post "#{path}/post_media", params: { file: Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/booking_small.jpg'), 'image/jpeg') },
+                               headers: headers
+    expect(response).to have_http_status(:forbidden)
+    post "#{path}/posts", params: { idempotency_key: 'k', page_id: '110', networks: ['facebook'] }, headers: headers, as: :json
+    expect(response).to have_http_status(:forbidden)
+    expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+  end
 end

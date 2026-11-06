@@ -232,6 +232,21 @@ class CrmMetaAdsConnectionAPI extends ApiClient {
     return axios.post(`${this.url}/media`, form);
   }
 
+  // Photo or video of an organic post (#2653), stored once for both networks
+  // → { media: { kind: 'image' | 'video', signed_id } }. PNG becomes JPEG.
+  uploadPostMedia(file) {
+    const form = new FormData();
+    form.append('file', file);
+    return axios.post(`${this.url}/post_media`, form);
+  }
+
+  // Publishes the post right away (#2653) → { facebook, instagram, failed,
+  // errors }. Each network on its own; the same idempotency_key never
+  // publishes twice. 422 { error } when no network published.
+  publishPost(body) {
+    return axios.post(`${this.url}/posts`, body);
+  }
+
   // New ad, always created PAUSED → { ad_id, name, status, budget }. The same
   // idempotency_key returns the same ad. 422 { error, nothing_created };
   // 409 { error: 'in_progress' } while that key is still being created.

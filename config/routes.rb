@@ -458,6 +458,8 @@ Rails.application.routes.draw do
               get :boost_posts, to: 'meta_ads_creation#boost_posts'
               post :media, to: 'meta_ads_creation#media'
               post :ads, to: 'meta_ads_creation#create'
+              post :post_media, to: 'meta_ads_creation#post_media'
+              post :posts, to: 'meta_ads_creation#publish'
               get 'ads/:ad_id/budget', to: 'meta_ads_creation#budget'
               patch 'ads/:ad_id/budget', to: 'meta_ads_creation#update_budget'
               get :paused_ads, to: 'meta_ads_creation#paused'
@@ -735,6 +737,8 @@ Rails.application.routes.draw do
               # #2500 C2: o "Testar este passo" e os custos da IA.
               post :testar_passo, on: :collection, to: 'automacoes_ia#testar_passo'
               get :custos, on: :collection, to: 'automacoes_ia#custos'
+              # G15: as agentes de IA do passo "Passar para a agente de IA".
+              get :agentes_de_ia, on: :collection, to: 'automacoes_ia#agentes_de_ia'
               member do
                 post :ligar
                 post :desligar

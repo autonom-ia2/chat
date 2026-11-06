@@ -120,6 +120,9 @@ export const novoPasso = (entrada, id, t) => {
     return { id, tipo: 'escrever', le: LE, instrucao: '', destino: 'sugestao' };
   if (entrada.tipo === 'resumir')
     return { id, tipo: 'resumir', le: LE, linhas: 3, destino: 'nota' };
+  // G15: a agente nasce sem escolha; o "Salvar" do painel espera escolher.
+  if (entrada.tipo === 'ia_assumir')
+    return { id, tipo: 'ia_assumir', agente_id: null };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})

@@ -278,4 +278,39 @@ describe('linhasDoEnsaio', () => {
 
     expect(linha).toMatchObject({ texto: 'frase i1', destaque });
   });
+
+  // G15 — o "Passar para a agente de IA" diz para quem passaria; se não
+  // passaria, o porquê, com o nome da agente. Nada chama os Agentes.
+  it.each([
+    [
+      'ia_assumir',
+      { agente: 'Área' },
+      { destaque: 'AUTOMACAO_LIVRE.ENSAIO.IA_ASSUMIR(Área)' },
+    ],
+    [
+      'pessoa_atribuida',
+      { agente: 'Área' },
+      { aviso: 'AUTOMACAO_LIVRE.ENSAIO.NAO_PASSARIA.PESSOA_ATRIBUIDA(Área)' },
+    ],
+    [
+      'sem_vinculo_na_caixa',
+      { agente: 'Área' },
+      {
+        aviso: 'AUTOMACAO_LIVRE.ENSAIO.NAO_PASSARIA.SEM_VINCULO_NA_CAIXA(Área)',
+      },
+    ],
+    [
+      'agente_sumiu',
+      {},
+      { aviso: 'AUTOMACAO_LIVRE.ENSAIO.NAO_PASSARIA.AGENTE_SUMIU()' },
+    ],
+  ])('o "Passar para a agente" com "%s"', (faria, dados, esperado) => {
+    const [linha] = linhasDoEnsaio(
+      [{ id: 'g1', tipo: 'ia_assumir', faria, dados }],
+      fraseDe,
+      t
+    );
+
+    expect(linha).toMatchObject({ texto: 'frase g1', ...esperado });
+  });
 });

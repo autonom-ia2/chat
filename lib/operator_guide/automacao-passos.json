@@ -817,6 +817,19 @@
       ]
     },
     {
+      "tipo": "ia_assumir",
+      "grupo": "EQUIPE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.IA_ASSUMIR",
+      "campos": [
+        {
+          "nome": "agente_id",
+          "peca": "agente_de_ia",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.AGENTE_ID"
+        }
+      ]
+    },
+    {
       "tipo": "decidir",
       "grupo": "IA",
       "requer": "automacao_ia",
