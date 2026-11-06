@@ -156,6 +156,34 @@ RSpec.describe Autonomia::Insurance::Connections::HealthcheckJob, type: :job do
       expect(record.reload.status).to eq('discovering')
     end
 
+    # Auditoria da conexão, 05/11/2026, achado 17: re-sincronizar sem varrer devolvia `ready` sem
+    # capacidades nem formulários, e toda cotação de auto era recusada.
+    it 'refaz a varredura da que ficou presa em discovering' do
+      # Arrange
+      record = travel_to(30.minutes.ago) { connection(status: 'discovering') }
+
+      # Act
+      described_class.perform_now
+
+      # Assert
+      expect(record.reload.status).to eq('ready')
+      expect(record.last_capability_scan_at).to be_present
+      expect(record.capabilities['products']).to be_present
+      expect(record.quote_schema('auto')).to be_present
+    end
+
+    it 'não varre a que ficou presa em authenticating: ali o que morreu foi o login' do
+      # Arrange
+      record = travel_to(30.minutes.ago) { connection(status: 'authenticating') }
+
+      # Act
+      described_class.perform_now
+
+      # Assert
+      expect(record.reload.status).to eq('ready')
+      expect(record.last_capability_scan_at).to be_nil
+    end
+
     it 'vale para os tres estados de passagem, e so para eles' do
       # Arrange / Assert
       expect(Autonomia::Insurance::Connection::TRANSIENT_STATUSES)
