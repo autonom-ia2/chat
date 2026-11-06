@@ -79,6 +79,7 @@ class Autonomia::Automacao::Receita
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
+    return ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo) if passo['tipo'] == 'ia_assumir'
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
@@ -230,17 +231,11 @@ class Autonomia::Automacao::Receita
     permitidas = ::Autonomia::Automacao::AcoesPermitidas
     exigidos = permitidas.exige(acao).select { |campo| valores[campo].blank? }
     fixos = permitidas.fixos(acao).reject { |campo, valor| valores[campo] == valor }
-    proibidos = permitidas.proibe(acao).select { |campo| mandado?(valores, campo.split('.')) }
+    proibidos = permitidas.proibidos(acao, valores)
 
     exigidos.map { |campo| texto(:exige, passo: id, campo: campo) } +
       fixos.map { |campo, valor| texto(:fixo, passo: id, campo: campo, valor: valor) } +
       proibidos.map { |campo| texto(:proibido, passo: id, campo: campo) }
-  end
-
-  def mandado?(valores, partes)
-    return valores.key?(partes.first) if partes.one?
-
-    valores[partes.first].is_a?(Hash) && mandado?(valores[partes.first], partes.drop(1))
   end
 
   def variavel?(valor)

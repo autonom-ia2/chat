@@ -53,6 +53,16 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.faria === 'esperar_ate_ja_vale')
     return { ...base, destaque: t(`${E}.JA_VALE`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  // G15: para quem passaria; se não passaria, o porquê, com o nome da agente.
+  if (no.tipo === 'ia_assumir')
+    return no.faria === 'ia_assumir'
+      ? { ...base, destaque: t(`${E}.IA_ASSUMIR`, { agente: no.dados.agente }) }
+      : {
+          ...base,
+          aviso: t(`${E}.NAO_PASSARIA.${no.faria.toUpperCase()}`, {
+            agente: no.dados?.agente,
+          }),
+        };
   if (FARIA_DA_IA[no.faria])
     return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
   // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada.

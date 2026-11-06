@@ -189,6 +189,8 @@ const nativoPronto = campo => {
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
     );
+  // G15: a agente de IA escolhida.
+  if (campo.peca === 'agente_de_ia') return Number.isInteger(valor);
   // F7: a pergunta e a instrução escritas; cada caminho e cada dado com nome,
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
@@ -343,6 +345,26 @@ defineExpose({ abrir, fechar });
           :opcoes="opcoes"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <div
+          v-else-if="campo.peca === 'agente_de_ia'"
+          class="flex flex-col gap-1.5"
+          data-peca="agente_de_ia"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            v-if="opcoes.agenteDeIa?.length"
+            :model-value="rascunho[campo.nome] ?? ''"
+            :aria-label="$t(campo.rotulo)"
+            :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+            :options="opcoes.agenteDeIa"
+            @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          />
+          <p v-else class="mb-0 text-sm text-n-slate-11" data-sem-agente-de-ia>
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_AGENTE_DE_IA') }}
+          </p>
+        </div>
         <LivreIaCampo
           v-else-if="ehDeIa"
           :campo="campo"

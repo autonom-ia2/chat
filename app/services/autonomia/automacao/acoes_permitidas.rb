@@ -33,6 +33,18 @@ module Autonomia::Automacao::AcoesPermitidas
     Array(acoes.dig(acao.to_s, 'proibe'))
   end
 
+  # Os campos proibidos que os valores mandam (a chave presente, mesmo vazia; o ponto entra no campo de dentro). A
+  # Receita pergunta ao salvar, e o motor de novo ao rodar (G15).
+  def proibidos(acao, valores)
+    proibe(acao).select { |campo| mandado?(valores.to_h, campo.split('.')) }
+  end
+
+  def mandado?(valores, partes)
+    return valores.key?(partes.first) if partes.one?
+
+    valores[partes.first].is_a?(Hash) && mandado?(valores[partes.first], partes.drop(1))
+  end
+
   # Os recursos que nunca viram passo (ADR-001 2.1), para o CI cobrar.
   def sempre_fora
     lista['fora'].select { |grupo| grupo['sempre'] }.flat_map { |grupo| grupo['recursos'] }

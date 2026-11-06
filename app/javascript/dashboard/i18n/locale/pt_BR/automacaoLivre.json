@@ -82,7 +82,8 @@
       "DECIDIR": "A IA decide o caminho",
       "EXTRAIR": "A IA tira dados da conversa",
       "ESCREVER": "A IA escreve um texto",
-      "RESUMIR": "A IA resume a conversa"
+      "RESUMIR": "A IA resume a conversa",
+      "IA_ASSUMIR": "Passar para a agente de IA"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -131,7 +132,8 @@
       "INSTRUCAO": "O que a IA deve escrever",
       "DESTINO": "Para onde vai",
       "LINHAS": "Tamanho do resumo (linhas)",
-      "MODELO": "Se a janela de 24 h estiver fechada"
+      "MODELO": "Se a janela de 24 h estiver fechada",
+      "AGENTE_ID": "Qual agente de IA"
     },
     "OPCOES": {
       "STATUS": {
@@ -331,7 +333,8 @@
         "MUDOU": "O modelo agora pede {quantas} variáveis. Preencha todas antes de salvar.",
         "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
         "VARIAVEL": "Variável {numero} do modelo"
-      }
+      },
+      "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo."
     },
     "LIGAR": {
       "BOTAO": "Ligar",

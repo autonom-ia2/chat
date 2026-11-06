@@ -217,6 +217,10 @@
       "pagina"
     ]
   },
+  "autonomia/automacoes/agentes_de_ia": {
+    "controller": "api/v1/accounts/autonomia/automacoes_ia#agentes_de_ia",
+    "parametros": []
+  },
   "autonomia/automacoes/custos": {
     "controller": "api/v1/accounts/autonomia/automacoes_ia#custos",
     "parametros": []

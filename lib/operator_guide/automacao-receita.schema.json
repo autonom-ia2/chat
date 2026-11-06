@@ -115,6 +115,7 @@
       }
     },
     "destino_escrever": { "enum": ["mensagem", "sugestao"] },
+    "agente_de_ia": { "type": "integer", "minimum": 1, "description": "O id da agente de IA da conta (G15)." },
     "destino_resumir": {
       "oneOf": [
         { "const": "nota" },
@@ -262,6 +263,17 @@
                 "pessoas": { "$ref": "#/definitions/ids" }
               }
             }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Passa a conversa à agente de IA pela Atribuição do CRM. Pessoa no nome vence: o passo pula.",
+          "required": ["id", "tipo", "agente_id"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "ia_assumir" },
+            "agente_id": { "$ref": "#/definitions/agente_de_ia" }
           }
         },
         {

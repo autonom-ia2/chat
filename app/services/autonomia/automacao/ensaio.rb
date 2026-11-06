@@ -67,6 +67,7 @@ class Autonomia::Automacao::Ensaio
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
+    @conversa = conversa
     valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
@@ -113,6 +114,8 @@ class Autonomia::Automacao::Ensaio
     when 'se' then se(passo, valores)
     when 'decidir' then [decidir(passo, valores), nil]
     when 'parar' then [no(passo, 'parar'), nil]
+    # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes.
+    when 'ia_assumir' then [no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa)), @roteiro.seguinte(passo['id'])]
     else [em_frente(passo), @roteiro.seguinte(passo['id'])]
     end
   end

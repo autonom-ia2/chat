@@ -33,6 +33,9 @@ nativos:
   extrair: { grupo: IA, requer: automacao_ia }
   escrever: { grupo: IA, requer: automacao_ia }
   resumir: { grupo: IA, requer: automacao_ia }
+  # G15: passar a conversa à agente de IA, pela Atribuição. Sem flag própria: o painel diz quando a conta não tem agente
+  # que receba conversa, e o motor pula com o motivo.
+  ia_assumir: { grupo: EQUIPE }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
 # mostra quando tiver as peças.
@@ -80,8 +83,6 @@ acoes:
     grupo: EQUIPE
     caminho: { conversation_id: conversa.id }
     campos: { assignee_id: pessoa, team_id: time }
-    # A plataforma deduz o tipo pelo campo preenchido.
-    escondidos: [assignee_type]
   caixa_pessoas:
     acao: POST inbox_members
     grupo: EQUIPE

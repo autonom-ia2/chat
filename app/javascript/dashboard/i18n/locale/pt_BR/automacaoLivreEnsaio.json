@@ -45,7 +45,16 @@
           "EMPRESA": "{campo}, na empresa"
         }
       },
-      "MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo {modelo} (cobrado pela Meta)."
+      "MODELO_FORA_DA_JANELA": "Se a janela de 24 h estiver fechada, vai o modelo {modelo} (cobrado pela Meta).",
+      "IA_ASSUMIR": "Passaria para {agente}",
+      "NAO_PASSARIA": {
+        "AGENTE_SUMIU": "Não passaria: a agente escolhida não existe mais.",
+        "FASE2_DESLIGADA": "Não passaria: as agentes de IA não recebem conversas nesta conta.",
+        "CONVERSA_RESOLVIDA": "Não passaria: a conversa está resolvida.",
+        "PESSOA_ATRIBUIDA": "Não passaria: a conversa está com uma pessoa, e ela continua com a conversa.",
+        "SEM_VINCULO_NA_CAIXA": "Não passaria: {agente} não trabalha na caixa desta conversa.",
+        "NAO_ATENDE_CLIENTE": "Não passaria: {agente} não está atendendo clientes agora."
+      }
     },
     "HISTORICO": {
       "TITULO": "O que aconteceu",

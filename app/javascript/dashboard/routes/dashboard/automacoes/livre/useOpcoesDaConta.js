@@ -1,5 +1,6 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 
 // #2414 F5 — as escolhas da conta que os campos do "Alterar" mostram: pessoas,
 // times, caixas, etiquetas e campos personalizados. Vêm das mesmas stores que o
@@ -22,6 +23,17 @@ export function useOpcoesDaConta() {
   const caixas = useMapGetter('inboxes/getInboxes');
   const etiquetas = useMapGetter('labels/getLabels');
   const atributosDo = useMapGetter('attributes/getAttributesByModel');
+  // G15: as agentes de IA vêm da própria Automação (só id e nome), não da
+  // tela de Agentes, que pede outra permissão.
+  const agentesDeIa = ref([]);
+  const carregarAgentesDeIa = async () => {
+    try {
+      const { data } = await AutomacoesAPI.agentesDeIa();
+      agentesDeIa.value = data.agentes || [];
+    } catch {
+      agentesDeIa.value = [];
+    }
+  };
 
   const carregarOpcoes = () => {
     [
@@ -31,12 +43,14 @@ export function useOpcoesDaConta() {
       'labels/get',
       'attributes/get',
     ].forEach(acao => store.dispatch(acao));
+    carregarAgentesDeIa();
   };
 
   const opcoes = computed(() => ({
     pessoa: comNome(agentes.value),
     time: comNome(times.value),
     caixa: comNome(caixas.value),
+    agenteDeIa: comNome(agentesDeIa.value),
     etiquetaPorNome: (etiquetas.value || []).map(item => ({
       value: item.title,
       label: item.title,

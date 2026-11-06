@@ -30,6 +30,16 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
     )
   end
 
+  # O `proibe` da lista vale também na hora de rodar, e não só ao salvar (G15): a versão salva antes da regra, ou montada
+  # fora do editor, com um campo proibido (o `assignee_type` que passaria a conversa ao robô sem a Atribuição) não passa.
+  def conferir_corpo!(acao, dados)
+    super.tap do |conferencia|
+      next if ::Autonomia::Automacao::AcoesPermitidas.proibidos(acao, conferencia.valores).empty?
+
+      raise Recusada, I18n.t('autonomia.automacao.motivos.campo_proibido')
+    end
+  end
+
   # O que o pedido mudar sai assinado pela automação (Ato, #2568 P7), não só por quem a ligou.
   def requisitar(verbo, caminho, corpo)
     ::Autonomia::Automacao::Ato.da(@execucao.automacao_id) { super }.tap { |resposta| @codigo = resposta.codigo.to_i }

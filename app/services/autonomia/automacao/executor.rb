@@ -89,6 +89,7 @@ class Autonomia::Automacao::Executor
     when 'acao' then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
+    when 'ia_assumir' then ia_assumir(passo)
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
     # Tipo que este motor não conhece (versão salva por um código mais novo, defeito): falha com registro, nunca fecha
     # como "concluida" sem ter feito nada.
@@ -202,6 +203,18 @@ class Autonomia::Automacao::Executor
   end
 
   def motivo_da_parada(resultado) = resultado.tipo == :sem_acesso ? pausar(resultado.motivo) : resultado.motivo
+
+  # G15: passar a conversa à agente de IA, pela Atribuição. Reconfere como a ação e não repete: a troca pode já ter
+  # acontecido. Quem ligou não vê a conversa: pausa a automação.
+  def ia_assumir(passo)
+    reconferir
+    return if impedida?(passo['id'])
+
+    resultado = ::Autonomia::Automacao::PassoDeIaAssumir.new(execucao: @execucao, passo: passo, alvo: alvo).executar
+    return encerrar(passo['id'], 'parada', pausar(resultado.motivo), 'falhou') if resultado.tipo == :sem_acesso
+
+    seguir_depois_da_acao(passo, resultado)
+  end
 
   # A ação mudou o alvo: o passo seguinte ("se", "esperar até") lê o valor de agora, não o de antes dela.
   def seguir_depois_da_acao(passo, resultado)

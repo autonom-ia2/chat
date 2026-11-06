@@ -82,7 +82,8 @@
       "DECIDIR": "AI chooses the path",
       "EXTRAIR": "AI pulls data from the conversation",
       "ESCREVER": "AI writes a text",
-      "RESUMIR": "AI summarizes the conversation"
+      "RESUMIR": "AI summarizes the conversation",
+      "IA_ASSUMIR": "Hand over to the AI agent"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -131,7 +132,8 @@
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
-      "MODELO": "If the 24-hour window is closed"
+      "MODELO": "If the 24-hour window is closed",
+      "AGENTE_ID": "Which AI agent"
     },
     "OPCOES": {
       "STATUS": {
@@ -331,7 +333,8 @@
         "MUDOU": "The template now asks for {quantas} variables. Fill in all of them before saving.",
         "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
         "VARIAVEL": "Template variable {numero}"
-      }
+      },
+      "SEM_AGENTE_DE_IA": "No AI agent receives conversations in this account yet. Add an agent to an inbox, in AI Agents, to use this step."
     },
     "LIGAR": {
       "BOTAO": "Turn on",

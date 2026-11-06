@@ -64,6 +64,11 @@ class AutomacoesAPI extends ApiClient {
   custosDaAutomacao(id) {
     return axios.get(`${this.url}/${id}/custos`);
   }
+
+  // G15: as agentes de IA que podem receber conversa na conta (id e nome).
+  agentesDeIa() {
+    return axios.get(`${this.url}/agentes_de_ia`);
+  }
 }
 
 export default new AutomacoesAPI();
