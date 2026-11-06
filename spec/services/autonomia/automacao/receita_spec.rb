@@ -114,7 +114,7 @@ RSpec.describe Autonomia::Automacao::Receita do
 
     def de_tempo(gatilho) = { 'gatilho' => gatilho, 'passos' => [{ 'id' => 'p1', 'tipo' => 'parar' }] }
 
-    def problemas(gatilho) = described_class.new(de_tempo(gatilho), conta: account).problemas
+    def problemas(gatilho) = described_class.new(de_tempo(gatilho), conta: account, account_user: nil).problemas
 
     def campo(chave, modelo, tipo = 'date')
       create(:custom_attribute_definition, account: account, attribute_key: chave, attribute_model: modelo, attribute_display_type: tipo)
