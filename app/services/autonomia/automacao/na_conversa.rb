@@ -26,8 +26,11 @@ module Autonomia::Automacao::NaConversa
 
   def texto_pronto = ::Autonomia::Automacao::Texto.new(@passo['texto'], valores).montar
 
-  # Com a execução: a reunião do gatilho (G12) sai da marca dela.
-  def valores = (@valores ||= ::Autonomia::Automacao::Valores.new(alvo: ::Autonomia::Automacao::Contexto.de(@alvo, execucao: @execucao)))
+  # Com as permissões de quem ligou (#2597) e a execução: a reunião do gatilho (G12) sai da marca dela.
+  def valores
+    @valores ||= ::Autonomia::Automacao::Valores.new(alvo: ::Autonomia::Automacao::Contexto.de(@alvo, execucao: @execucao),
+                                                     quem: @execucao.automacao.ligada_por)
+  end
 
   # O texto ficou sem um valor: o link da agenda vazio diz por quê (G12); o resto é o faltou_valor de sempre.
   def faltou_valor

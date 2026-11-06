@@ -501,6 +501,18 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
     end
 
+    it 'com a flag do privado no Facebook (#2613), o Testar decide e escreve o privado, como no Instagram' do
+      account.enable_features!('meta_ads_comentarios_privado_facebook')
+      care.update!(para_quem: 'Quem perguntar o preço')
+      decide('price')
+
+      testar(pergunta: 'Quanto custa?')
+
+      expect(response.parsed_body).to include('status' => 'ready', 'decisao' => 'price', 'motivo' => 'Pergunta o preço.')
+      expect(response.parsed_body['escrita']).to include('status' => 'escrito')
+      expect(Autonomia::Agents::Answerer).to have_received(:new).at_least(:once)
+    end
+
     # #2520: o Facebook só manda o comentário com o `feed` da Página assinado; pausar não assina.
     it 'voltar a cuidar assina o feed da Página; pausar não' do
       care.update!(status: 'paused')

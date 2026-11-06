@@ -371,6 +371,7 @@ en:
         to_you: "Complaint: I didn't reply and passed it to you."
         private_reply_failed: "I couldn't send the message. Reply yourself, if you want."
         private_reply_unsure: "I'm not sure the message went out: Meta didn't answer. Check the inbox before you reply."
+        resolved_after_private_reply: 'I sent the private message and resolved the conversation. If the person replies, the reply comes to the inbox.'
         public_reply: '%{user_name} replied in public on the post: “%{text}”'
         hidden: '%{user_name} hid the comment on the post'
         shown: '%{user_name} showed the comment on the post again'
@@ -572,6 +573,7 @@ en:
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
+        valor_de_venda: 'Step %{passo}: only people who see sales values can read %{caminho}. Ask for the permission or remove this value.'
         corpo: 'Step %{passo}: %{problema}'
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'

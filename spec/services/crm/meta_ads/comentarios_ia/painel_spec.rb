@@ -112,11 +112,13 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Painel do
     expect(sem_ver.payload[:to_see].first[:conversation_path]).to be_nil
   end
 
-  it 'no Facebook, o privado ainda não está liberado (pages_messaging, F4)' do
+  it 'no Facebook, o privado só está liberado na conta com a flag (#2613)' do
     facebook = described_class.new(account: account, alvo: alvo.merge('networks' => ['facebook']), fonte: fonte, conversation_access: ve_tudo,
                                    viewer: admin)
-
     expect(facebook.payload[:private_available]).to be(false)
+
+    account.enable_features!('meta_ads_comentarios_privado_facebook')
+    expect(facebook.payload[:private_available]).to be(true)
   end
 
   it 'no Facebook, a pergunta que era o caso fica com o dono (no_private), não como "não se aplica"' do

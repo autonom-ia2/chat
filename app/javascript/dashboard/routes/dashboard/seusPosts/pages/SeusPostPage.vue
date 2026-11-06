@@ -376,7 +376,7 @@ const situacaoDoCuidado = computed(() => {
 const cuidando = computed(() =>
   ['on', 'paused'].includes(situacaoDoCuidado.value)
 );
-// O privado no Facebook espera a pages_messaging (F4): o resumo não promete privado.
+// O privado no Facebook só sai na conta com a flag (#2613, o servidor decide); antes de ler, o resumo não promete.
 const privadoLiberado = computed(
   () => cuidado.value?.private_available ?? rede.value !== 'facebook'
 );

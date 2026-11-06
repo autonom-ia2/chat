@@ -42,8 +42,9 @@ class Messages::Facebook::MessageBuilder < Messages::Messenger::MessageBuilder
     return if @outgoing_echo || @message.nil?
 
     source = Crm::MetaAds::MessagingReferral::MESSENGER_SOURCE
-    Crm::MetaAds::MessagingReferral.attribute_message!(@conversation, @response.referral, source: source, event_id: @response.identifier,
-                                                                                          new_conversation: @new_conversation.present?)
+    referral = Crm::MetaAds::MessagingReferral.with_click_time(@response.referral, @response.time_stamp)
+    Crm::MetaAds::MessagingReferral.attribute_message!(@conversation, referral, source: source, event_id: @response.identifier,
+                                                                                new_conversation: @new_conversation.present?)
   end
 
   def build_contact_inbox

@@ -68,7 +68,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesIaController < Api::V1::Accounts::
   def problemas_do_rascunho
     return [I18n.t('autonomia.automacao.ensaio.sem_receita')] unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
 
-    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).problemas
+    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).problemas
   end
 
   def teste

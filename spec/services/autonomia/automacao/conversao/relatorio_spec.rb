@@ -32,7 +32,7 @@ RSpec.describe Autonomia::Automacao::Conversao::Relatorio do
                      'descricao' => "Convertido da regra #{linha.id}", 'corpo' => { 'assignee_id' => admin.id } }]
     )
     expect(Autonomia::Automacao::Receita.esquema_valido?(linha.receita)).to be(true)
-    expect(Autonomia::Automacao::Receita.new(linha.receita, conta: account).problemas).to eq([])
+    expect(Autonomia::Automacao::Receita.new(linha.receita, conta: account, account_user: nil).problemas).to eq([])
   end
 
   # MOTIVO: o relatório é só leitura (F9.1). Se gravasse, rodar o relatório já mexeria na conta.

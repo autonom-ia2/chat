@@ -20,12 +20,13 @@ RSpec.describe 'Anúncio de clique para o Messenger e o Direct na entrada' do # 
       described_class.new(parser, channel.inbox, outgoing_echo: outgoing_echo).perform
     end
 
-    it 'a primeira mensagem com o anúncio grava o toque do Messenger na conversa' do
-      deliver({ sender: { id: 'psid-1' }, recipient: { id: channel.page_id },
+    it 'a primeira mensagem com o anúncio grava o toque do Messenger na conversa, com a hora do clique da Meta' do
+      deliver({ sender: { id: 'psid-1' }, recipient: { id: channel.page_id }, timestamp: 1_700_000_004_000,
                 message: { mid: 'm_1', text: 'Oi, vi o anúncio', referral: ad_referral } })
 
       touch = channel.inbox.conversations.sole.additional_attributes['campaign_touches'].sole
-      expect(touch).to include('source' => 'meta_ctm', 'source_id' => '120200000000000001', 'referral_id' => 'm_1')
+      expect(touch).to include('source' => 'meta_ctm', 'source_id' => '120200000000000001', 'referral_id' => 'm_1',
+                               'touched_at' => '2023-11-14T22:13:24Z')
     end
 
     it 'o postback do "Começar" com o anúncio grava; a mensagem de saída (echo) não' do
@@ -62,7 +63,8 @@ RSpec.describe 'Anúncio de clique para o Messenger e o Direct na entrada' do # 
       described_class.new(messaging, inbox).perform
 
       touch = inbox.conversations.sole.additional_attributes['campaign_touches'].sole
-      expect(touch).to include('source' => 'meta_ctd', 'source_id' => '120200000000000001', 'referral_id' => 'ig_m_1')
+      expect(touch).to include('source' => 'meta_ctd', 'source_id' => '120200000000000001', 'referral_id' => 'ig_m_1',
+                               'touched_at' => '2023-11-14T22:13:20Z')
     end
   end
 

@@ -141,7 +141,7 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
   end
 
   describe 'a reunião do gatilho nos valores' do
-    def valores_da(execucao) = Autonomia::Automacao::Valores.new(alvo: Autonomia::Automacao::Contexto.de(card, execucao: execucao))
+    def valores_da(execucao) = Autonomia::Automacao::Valores.new(alvo: Autonomia::Automacao::Contexto.de(card, execucao: execucao), quem: admin)
 
     before { account.update!(locale: 'pt_BR') }
 
@@ -194,7 +194,7 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
       receita = { 'gatilho' => { 'tipo' => 'card.ganho' },
                   'passos' => [{ 'id' => 's1', 'tipo' => 'se', 'condicao' => { 'campo' => { '$valor' => 'reuniao.inicio' }, 'op' => 'preenchido' },
                                  'entao' => [esperar_passo('p2')] }] }
-      problemas = I18n.with_locale(:pt_BR) { Autonomia::Automacao::Receita.new(receita, conta: account).problemas }
+      problemas = I18n.with_locale(:pt_BR) { Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas }
       expect(problemas.join).to include('só existe nos gatilhos de reunião')
     end
   end
@@ -210,8 +210,8 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
       conversa = create(:conversation, account: account, assignee: world.host)
       card.update!(primary_conversation: conversa)
 
-      expect(Autonomia::Automacao::Valores.new(alvo: card).ler('card.link_da_agenda')).to eq(Crm::BookingV2::ShortLink.url_for(world.profile))
-      expect(Autonomia::Automacao::Valores.new(alvo: conversa).ler('conversa.link_da_agenda'))
+      expect(Autonomia::Automacao::Valores.new(alvo: card, quem: admin).ler('card.link_da_agenda')).to eq(Crm::BookingV2::ShortLink.url_for(world.profile))
+      expect(Autonomia::Automacao::Valores.new(alvo: conversa, quem: admin).ler('conversa.link_da_agenda'))
         .to eq(Crm::BookingV2::ShortLink.url_for(world.profile))
     end
 
