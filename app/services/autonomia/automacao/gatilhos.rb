@@ -32,6 +32,9 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'card.saiu_da_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
     Entrada.new(tipo: 'card.ganho', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.perdido', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: 'card.reuniao_marcada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: 'card.reuniao_remarcada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
+    Entrada.new(tipo: 'card.reuniao_cancelada', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.parado', alvo: CARD, origem: :tempo, parametros: %w[etapa_id dias]),
     Entrada.new(tipo: 'card.data', alvo: CARD, origem: :tempo, parametros: DA_DATA),
     Entrada.new(tipo: 'contato.data', alvo: CONTATO, origem: :tempo, parametros: DA_DATA)
@@ -43,8 +46,17 @@ module Autonomia::Automacao::Gatilhos
     Events::Types::CRM_CARD_CREATED => %w[card.criado card.entrou_na_etapa],
     Events::Types::CRM_CARD_MOVED => %w[card.saiu_da_etapa card.entrou_na_etapa],
     Events::Types::CRM_CARD_WON => %w[card.ganho],
-    Events::Types::CRM_CARD_LOST => %w[card.perdido]
+    Events::Types::CRM_CARD_LOST => %w[card.perdido],
+    Events::Types::CRM_MEETING_SCHEDULED => %w[card.reuniao_marcada],
+    Events::Types::CRM_MEETING_RESCHEDULED => %w[card.reuniao_remarcada],
+    Events::Types::CRM_MEETING_CANCELED => %w[card.reuniao_cancelada]
   }.freeze
+
+  # Os gatilhos de reunião (G12): só neles a receita lê `reuniao.*`, a reunião da atividade que disparou.
+  DE_REUNIAO = %w[card.reuniao_marcada card.reuniao_remarcada card.reuniao_cancelada].freeze
+
+  # O pedaço da marca entre o tipo e o id da atividade (marca_da_atividade).
+  ATIVIDADE = 'atividade'.freeze
 
   module_function
 
@@ -62,14 +74,22 @@ module Autonomia::Automacao::Gatilhos
   # Os tipos que a varredura de tempo acha.
   def de_tempo = LISTA.values.select { |item| item.origem == :tempo }.map(&:tipo)
 
-  # O gatilho vale na conta agora? Os de conversa vêm com o motor; os de card pedem a flag da F6 e o CRM; o de tempo
-  # do contato pede a flag, mas não o CRM.
+  # O gatilho vale na conta agora? Os de conversa vêm com o motor; os de card pedem a flag da F6 e o CRM; os de reunião,
+  # também as reuniões da instalação ligadas (sem elas nenhuma reunião nasce).
   def disponivel?(tipo, conta)
     return false unless entrada(tipo)
+    return ::Autonomia::Automacao::Motor.gatilhos?(conta) && ::Crm::Config.calendar_meetings_enabled? if de_reuniao?(tipo)
     return ::Autonomia::Automacao::Motor.gatilhos?(conta) if do_card?(tipo)
     return ::Autonomia::Automacao::Motor.gatilhos_sem_crm?(conta) if de_tempo?(tipo)
 
     ::Autonomia::Automacao::Motor.ligado?(conta)
+  end
+
+  # Por que o gatilho de card não vale na conta agora (a chave do texto da receita), ou nil quando vale.
+  def desligado(tipo, conta)
+    return if disponivel?(tipo, conta)
+
+    de_reuniao?(tipo) && ::Autonomia::Automacao::Motor.gatilhos?(conta) ? :reunioes_desligadas : :gatilho_desligado
   end
 
   # Cada parâmetro escolhido no gatilho (`gatilho` da receita) bate com o que o evento traz (`dados`)? O que a pessoa
@@ -85,8 +105,16 @@ module Autonomia::Automacao::Gatilhos
     "#{tipo}:#{registro.id}:#{instante.utc.iso8601(6)}"
   end
 
+  def de_reuniao?(tipo) = DE_REUNIAO.include?(tipo.to_s)
+
   # O mesmo movimento dispara "saiu" e "entrou": o tipo entra na marca para cada um ter a sua.
-  def marca_da_atividade(tipo, activity_id) = "#{tipo}:atividade:#{activity_id}"
+  def marca_da_atividade(tipo, activity_id) = "#{tipo}:#{ATIVIDADE}:#{activity_id}"
+
+  # O id da atividade numa marca de marca_da_atividade; nil em marca de outro formato.
+  def atividade_da_marca(marca)
+    tipo, pedaco, id = marca.to_s.split(':', 3)
+    Integer(id, 10, exception: false) if tipo.present? && pedaco == ATIVIDADE && id
+  end
 
   # Parado: o instante em que o card entrou na etapa. Se ele sair e voltar, o instante muda e conta de novo.
   def marca_do_parado(card) = "card.parado:#{card.id}:#{card.entered_stage_at.utc.iso8601(6)}"

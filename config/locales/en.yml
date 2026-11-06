@@ -525,6 +525,7 @@ en:
         erro_passageiro: 'The platform did not respond; the automation will try again.'
         erro_permanente: 'The platform refused this action (for example, the label no longer exists).'
         data_invalida: 'The date this step reads is not a date, so the step was skipped.'
+        faltou_link_da_agenda: 'The booking link was empty (no owner, no booking page, or more than one page), so the step was skipped.'
         faltou_valor: 'A value this step needs was empty, so the step was skipped.'
         motor_desligado: 'Automations are off for this account.'
         prazo_vencido: 'The wait ended without the condition.'
@@ -571,6 +572,8 @@ en:
         conversa: 'Conversation #%{id}'
         card: 'Card #%{id} · %{titulo}'
         contato: '%{nome}'
+      valores:
+        inicio_da_reuniao: '%m/%d/%Y at %H:%M'
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
         caixa_de_email_invalida: 'Step %{passo}: inbox %{id} is not an e-mail inbox of this account.'
@@ -586,6 +589,7 @@ en:
         exige: 'Step %{passo}: %{campo} is required; what the automation creates needs a description.'
         fixo: 'Step %{passo}: %{campo} must be %{valor}.'
         mensagem_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the filter of the "message created" trigger.'
+        reuniao_so_no_gatilho: 'Step %{passo}: %{caminho} only exists in the meeting triggers (scheduled, rescheduled, canceled).'
         resposta_so_na_espera: 'Step %{passo}: %{caminho} only exists in the condition of a "wait until" step.'
         valor_fora_do_alvo: 'Step %{passo}: %{caminho} cannot be read from what this trigger starts on (conversation, card or contact).'
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
@@ -596,6 +600,7 @@ en:
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
         gatilho_desligado: 'Card and time triggers are off for this account.'
+        reunioes_desligadas: 'Meetings are off in this installation, so the meeting triggers cannot be used.'
         etapa_de_fora: 'Trigger: stage %{id} is not from this account.'
         parado_sem_dias: 'Trigger: a stuck card needs at least 1 day.'
         campo_de_fora: 'Trigger: field %{campo} is not a date field of this account.'

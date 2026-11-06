@@ -1,4 +1,5 @@
-# O que a Receita confere no gatilho de card e no de tempo (#2499): a flag da F6 (o de card pede também o CRM) e que a
+# O que a Receita confere no gatilho de card e no de tempo (#2499): a flag da F6 (o de card pede também o CRM; o de
+# reunião, G12, também as reuniões da instalação, com frase própria) e que a
 # etapa, o funil e o campo de data escolhidos são da conta. O esquema já conferiu os tipos e quais parâmetros cada
 # gatilho traz; aqui fica o que só o banco responde.
 class Autonomia::Automacao::ProblemasDoGatilho
@@ -13,7 +14,9 @@ class Autonomia::Automacao::ProblemasDoGatilho
   # Frases para a pessoa corrigir; vazio = pode salvar.
   def problemas
     return [] unless Gatilhos.do_card?(@tipo) || Gatilhos.de_tempo?(@tipo)
-    return [texto(:gatilho_desligado)] unless Gatilhos.disponivel?(@tipo, @conta)
+
+    desligado = Gatilhos.desligado(@tipo, @conta)
+    return [texto(desligado)] if desligado
 
     [*etapa_de_fora, *funil_de_fora, *parado_sem_dias, *campo_de_fora]
   end

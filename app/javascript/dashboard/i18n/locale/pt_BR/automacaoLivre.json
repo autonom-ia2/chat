@@ -60,7 +60,11 @@
       "CARD_ATRIBUTOS": "Campo personalizado do card",
       "MENSAGEM_TIPO": "Tipo da mensagem",
       "MENSAGEM_PRIVADA": "Mensagem interna",
-      "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa"
+      "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa",
+      "CARD_LINK_DA_AGENDA": "Link da agenda do responsável pelo card (na hora do passo)",
+      "CONVERSA_LINK_DA_AGENDA": "Link da agenda do responsável pela conversa (na hora do passo)",
+      "REUNIAO_INICIO": "Dia e hora da reunião",
+      "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião"
     },
     "PASSOS": {
       "ESPERAR": "Esperar um tempo",
