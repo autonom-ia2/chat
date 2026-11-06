@@ -168,6 +168,21 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
       expect(conversa.messages.where('content LIKE ? OR content LIKE ?', '%2500%', 'Valor:%')).to be_empty
     end
 
+    # G2 (#2601): o assunto do e-mail lê com as permissões de quem ligou, como o texto da mensagem.
+    it 'quem ligou perdeu a chave: o e-mail com o valor no assunto pula, sem abrir conversa nem mandar o valor' do
+      caixa = create(:channel_email, account: account).inbox
+      create(:inbox_member, user: dono, inbox: caixa)
+      conversa.contact.update!(email: 'cliente@exemplo.com')
+      email = { 'id' => 'm1', 'tipo' => 'email', 'caixa_id' => caixa.id, 'assunto' => ['Valor: ', valor], 'texto' => ['Oi'] }
+      definicao = automacao_ligada(account, dono, [email], gatilho: gatilho)
+      tirar_a_chave
+
+      execucao = rodar(definicao)
+
+      expect(registros(execucao)).to eq([%w[m1 pulado faltou_valor]])
+      expect(caixa.conversations).to be_empty
+    end
+
     it 'valor calculado do corpo (G16): com a chave grava; sem ela, a ação pula sem gravar o valor' do
       com = rodar(automacao_ligada(account, dono, [no_corpo], gatilho: gatilho))
       expect([registros(com), conversa.reload.custom_attributes['nota']]).to eq([[['a1', 'ok', nil]], 'Valor 2500.0'])

@@ -2,6 +2,7 @@
 import { computed, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import TextArea from 'dashboard/components-next/textarea/TextArea.vue';
+import Input from 'dashboard/components-next/input/Input.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import {
   comApagados,
@@ -15,12 +16,15 @@ import { fraseDoValor } from '../frases';
 
 // #2486 — o texto de "mensagem" e "avisar": uma caixa só, e o dado da conversa
 // entra pela escolha "Pôr um dado", no ponto onde o cursor estava. A receita
-// recebe os pedaços; a pessoa nunca vê {$valor}.
+// recebe os pedaços; a pessoa nunca vê {$valor}. O assunto do e-mail (G2) é uma
+// linha curta; com mais de uma caixa no passo, o "Pôr um dado" diz em qual entra.
 const props = defineProps({
   rotulo: { type: String, required: true },
   modelValue: { type: Array, default: () => [] },
   catalogo: { type: Object, required: true },
   atributosDo: { type: Function, required: true },
+  umaLinha: { type: Boolean, default: false },
+  rotuloDoDado: { type: String, default: '' },
   // #2414 G16 — o campo de uma linha de uma ação (nome, descrição).
   curto: { type: Boolean, default: false },
 });
@@ -31,6 +35,10 @@ const { t } = useI18n();
 const idDado = useId();
 
 const LIMITE = 5000;
+const LIMITE_DA_LINHA = 150;
+const rotuloPorDado = computed(
+  () => props.rotuloDoDado || t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR')
+);
 
 // O dado de um campo que a conta apagou fica no texto, marcado; não volta
 // para a lista do "Pôr um dado". O valor que a pessoa não pode ler (#2597)
@@ -83,7 +91,16 @@ const porDado = caminho => {
 
 <template>
   <div class="flex flex-col gap-3" data-peca="texto">
+    <Input
+      v-if="umaLinha"
+      v-model="texto"
+      :label="rotulo"
+      :maxlength="LIMITE_DA_LINHA"
+      :message="`${texto.length} / ${LIMITE_DA_LINHA}`"
+      @blur="lembrarCursor"
+    />
     <TextArea
+      v-else
       v-model="texto"
       :label="rotulo"
       :max-length="LIMITE"
@@ -105,13 +122,13 @@ const porDado = caminho => {
     </p>
     <div class="flex flex-col gap-1.5">
       <label :for="idDado" class="text-sm font-medium text-n-slate-12">
-        {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR') }}
+        {{ rotuloPorDado }}
       </label>
       <ChoiceSelect
         model-value=""
         data-por-dado
         :trigger-id="idDado"
-        :aria-label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR')"
+        :aria-label="rotuloPorDado"
         :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
         :options="daConta"
         @update:model-value="porDado"

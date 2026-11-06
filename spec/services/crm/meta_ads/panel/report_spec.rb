@@ -150,6 +150,23 @@ RSpec.describe Crm::MetaAds::Panel::Report do
     end
   end
 
+  # #2621, "Filha" da conta 18: conjunto de visita ao perfil em que a Meta contou 1 conversa iniciada (alguém chamou
+  # pelo perfil). A contagem da Meta não puxa para a lista de conversa o anúncio cujo conjunto diz, com todas as letras,
+  # que leva a outro lugar. A conversa que chega pelo nosso clique continua puxando (o site com botão do WhatsApp).
+  it 'conversa contada só pela Meta não puxa para a conversa o anúncio de destino conhecido fora dela' do
+    travel_to(now) do
+      adset('set-perfil', 'INSTAGRAM_PROFILE', 'PROFILE_VISIT')
+      adset('set-indefinido', 'UNDEFINED', 'REACH')
+      spend('perfil', Date.new(2026, 10, 6), 60, adset_id: 'set-perfil', conversations_started: 1)
+      spend('alcance', Date.new(2026, 10, 6), 40, adset_id: 'set-indefinido', conversations_started: 1)
+
+      report = described_class.new(connection, period: '30d').payload
+
+      expect(report[:other_ads].map { |ad| ad.slice(:ad_id, :destination) }).to eq([{ ad_id: 'perfil', destination: 'profile' }])
+      expect(report[:ads].pluck(:ad_id)).to eq(['alcance'])
+    end
+  end
+
   it 'o conjunto resolvido depois manda o anúncio para os outros, mesmo sem o conjunto no gasto' do
     travel_to(now) do
       adset('set-video', 'ON_VIDEO')

@@ -43,12 +43,15 @@ const feedFrame = computed(() =>
 const showFeed = computed(() => props.feedOnly || place.value === 'FEED');
 
 const SITE_ACTIONS = ['LEARN_MORE', 'SHOP_NOW'];
+// Site e perfil (#2564) têm o texto do botão próprio (DESTINATION.ACTIONS); a conversa usa o "Enviar mensagem".
+const OWN_LABEL = [...SITE_ACTIONS, 'INSTAGRAM_PROFILE'];
 const button = computed(() => {
   if (!props.action) return null;
-  const isSite = SITE_ACTIONS.includes(props.action);
   return {
-    icon: isSite ? 'i-lucide-external-link' : DESTINATION_ICONS[props.action],
-    label: isSite
+    icon: SITE_ACTIONS.includes(props.action)
+      ? 'i-lucide-external-link'
+      : DESTINATION_ICONS[props.action],
+    label: OWN_LABEL.includes(props.action)
       ? `CRM_KANBAN.META_ADS_HUB.CRIAR.DESTINATION.ACTIONS.${props.action}`
       : `${KEY}.CTA`,
   };
