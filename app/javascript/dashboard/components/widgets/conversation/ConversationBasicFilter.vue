@@ -25,7 +25,7 @@ const emit = defineEmits(['changeFilter']);
 const store = useStore();
 const { t } = useI18n();
 
-const { updateUISettings } = useUISettings();
+const { uiSettings, updateUISettings } = useUISettings();
 
 const chatStatusFilter = useMapGetter('getChatStatusFilter');
 const chatSortFilter = useMapGetter('getChatSortFilter');
@@ -120,10 +120,15 @@ const activeChatSortLabel = computed(
     ''
 );
 
+// Trocar a ordem grava o status salvo, não o da tela: o filtro do link (Números, Seus posts) abre num status próprio
+// que não é escolha da pessoa.
 const saveSelectedFilter = (type, value) => {
+  const statusSalvo =
+    uiSettings.value.conversations_filter_by?.status ||
+    currentStatusFilter.value;
   updateUISettings({
     conversations_filter_by: {
-      status: type === 'status' ? value : currentStatusFilter.value,
+      status: type === 'status' ? value : statusSalvo,
       order_by: type === 'sort' ? value : currentSortBy.value,
     },
   });

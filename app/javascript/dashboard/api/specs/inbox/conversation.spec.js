@@ -62,12 +62,18 @@ describe('#ConversationAPI', () => {
     });
 
     it('#get e #meta levam os filtros pelo link (#1883)', () => {
-      const filtros = { status: 'open', daIa: true, esperandoMin: 30 };
+      const filtros = {
+        status: 'open',
+        daIa: true,
+        esperandoMin: 30,
+        desdeDias: 7,
+      };
       conversationAPI.get(filtros);
       conversationAPI.meta(filtros);
       const comFiltros = expect.objectContaining({
         da_ia: 1,
         esperando_min: 30,
+        desde_dias: 7,
       });
       expect(axiosMock.get).toHaveBeenCalledWith('/api/v1/conversations', {
         params: comFiltros,

@@ -109,6 +109,8 @@ const filtroDoLinkAtivo = (state, rootState) =>
   !state.appliedFilters?.length &&
   naCaixa(rootState?.route) &&
   filtroDoLinkLigado(filtrosDoEndereco(rootState.route));
+const soDesdeDias = filtros =>
+  Boolean(filtros?.desdeDias && !filtros.daIa && !filtros.esperandoMin);
 let releituraAgendada = null;
 
 // Geração da lista: sobe a cada leitura, esvaziamento ou troca de aba. A releitura das páginas e a leitura comum
@@ -857,7 +859,10 @@ const actions = {
     { commit, dispatch, state, rootState, rootGetters },
     conversation
   ) {
-    agendarReleituraDoFiltroDoLink({ state, rootState, dispatch });
+    // Com só o desde_dias (Seus posts, #2209), a lista depende da data de criação, que não muda: só conversa nova relê.
+    if (!soDesdeDias(state?.conversationFilters)) {
+      agendarReleituraDoFiltroDoLink({ state, rootState, dispatch });
+    }
     const sender = conversation.meta?.sender;
     const needsFunnel = needsCrmFunnel(state, conversation.id);
 

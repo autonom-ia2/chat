@@ -1113,7 +1113,15 @@ watch(
 );
 watch([pastaDoEmail, versaoDasPastas], () => resetAndFetchData());
 // Os valores do link, não o filtro já combinado: aplicar um filtro avançado não pode disparar uma releitura que o apaga.
-watch(assinaturaDoLink, () => resetAndFetchData());
+// O filtro do link abre num status próprio (Abertas no Números, todos em Seus posts) sem gravar a escolha da pessoa:
+// quando o link sai (Limpar, menu), a lista volta ao status salvo.
+watch(assinaturaDoLink, () => {
+  if (!temFiltroDoLink.value) {
+    setFiltersFromUISettings();
+    store.dispatch('setChatStatusFilter', activeStatus.value);
+  }
+  resetAndFetchData();
+});
 
 // A seta "Limpar filtros" do topo: um clique limpa tudo. Com o link no endereço (mesmo com o filtro avançado por cima),
 // tira o link e o watch acima relê a lista, o que também tira o avançado.

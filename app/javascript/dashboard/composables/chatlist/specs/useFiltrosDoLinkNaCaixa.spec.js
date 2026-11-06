@@ -111,6 +111,16 @@ describe('filtroDoLinkDaLista (o filtro que a lista pede)', () => {
     });
   });
 
+  it('desde_dias segue para a lista; com pasta ou filtro avançado, sai também', () => {
+    expect(filtroDoLinkDaLista({ desdeDias: 30 })).toEqual({ desdeDias: 30 });
+    expect(
+      filtroDoLinkDaLista({ desdeDias: 30, pasta: 'spam' }).desdeDias
+    ).toBe(undefined);
+    expect(
+      filtroDoLinkDaLista({ desdeDias: 30, filtroAvancado: true }).desdeDias
+    ).toBe(undefined);
+  });
+
   it('no Spam ou na Lixeira, a pasta manda: filtro nulo', () => {
     expect(
       filtroDoLinkDaLista({ daIa: true, esperandoMin: 30, pasta: 'spam' })
@@ -400,6 +410,11 @@ describe('useReleituraPeriodica', () => {
 // #1999: o número do Números conta todas as conversas que a pessoa enxerga; a caixa abre em "Todas" para bater.
 describe('abaDoFiltroDoLink', () => {
   const ABAS = ['me', 'unassigned', 'all'];
+
+  it('desde_dias (Seus posts) também abre em Todas, com o funil de todos', () => {
+    expect(abaDoFiltroDoLink({ desdeDias: 7 }, ABAS, 'all')).toBe('all');
+    expect(funilDoFiltroDoLink({ desdeDias: 7 }, '12', '')).toBe('');
+  });
 
   it('com o filtro do link, abre em Todas', () => {
     expect(
