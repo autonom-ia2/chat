@@ -3601,6 +3601,23 @@
           "POST": "Impulsionar um post",
           "POST_HINT": "Mostra para mais gente um post que você já publicou no Instagram ou no Facebook."
         },
+        "GOAL": {
+          "TITLE": "Quando a pessoa tocar no anúncio, para onde ela vai?",
+          "HINT": "Escolha o que você quer que aconteça. O canal da conversa dá para trocar depois.",
+          "OPTIONS": {
+            "CONVERSATION": "Conversar comigo",
+            "WEBSITE": "Meu site",
+            "PROFILE": "Meu perfil do Instagram"
+          },
+          "WHEN": {
+            "CONVERSATION": "Use para receber mensagens e vender na conversa: WhatsApp, Direct ou Messenger.",
+            "WEBSITE": "Use para mostrar detalhes ou vender na sua página.",
+            "PROFILE": "Use para ganhar seguidores."
+          },
+          "REASONS": {
+            "NO_INSTAGRAM": "Ligue uma conta profissional do Instagram à Página para usar."
+          }
+        },
         "WHERE": {
           "TITLE": "Página e número do WhatsApp",
           "HINT": "O anúncio aparece em nome da Página e abre conversa com este número.",
@@ -3611,6 +3628,7 @@
         "CONTENT": {
           "TITLE": "Foto ou vídeo e texto",
           "HINT": "Instagram e Facebook. A Meta escolhe onde mostrar: feed, Stories ou Reels.",
+          "HINT_PROFILE": "Só no Instagram: feed, Stories e Reels. Quem tocar vai para o seu perfil.",
           "TEXT": "Texto",
           "TEXT_PLACEHOLDER": "Conte numa frase o que você oferece",
           "HEADLINE": "Título",
@@ -3629,7 +3647,8 @@
             "WHATSAPP": "{offer}. Chame no WhatsApp e faça seu pedido.",
             "INSTAGRAM_DIRECT": "{offer}. Chame no Direct e faça seu pedido.",
             "MESSENGER": "{offer}. Chame no Messenger e faça seu pedido.",
-            "WEBSITE": "{offer}. Veja no site e faça seu pedido."
+            "WEBSITE": "{offer}. Veja no site e faça seu pedido.",
+            "INSTAGRAM_PROFILE": "{offer}. Siga nosso perfil e veja mais."
           },
           "NEED_SITE": "Digite o endereço do site para continuar.",
           "NEED_INSTAGRAM": "Esta Página não tem Instagram ligado. Escolha outro destino para continuar.",
@@ -3645,6 +3664,8 @@
           "YES": "Sim",
           "NO": "Não",
           "SPECIAL_HINT": "A Meta pede que anúncios assim sejam marcados. A idade fica de 18 a 65+ e não dá para escolher gênero.",
+          "SPECIAL_PROFILE": "A Meta não aceita anúncio que leva ao perfil quando ele fala de seguro, crédito, empréstimo ou investimento. Para anunciar isso, escolha conversar com você ou o seu site.",
+          "CHANGE_GOAL": "Escolher outro destino",
           "WHERE": "Onde",
           "ALL_BRAZIL": "Brasil todo",
           "SOME_STATES": "Alguns estados",
@@ -3694,7 +3715,8 @@
             "WHATSAPP": "Anúncio novo que chama no WhatsApp ({number})",
             "INSTAGRAM_DIRECT": "Anúncio novo que chama no Direct do Instagram ({'@'}{username})",
             "MESSENGER": "Anúncio novo que chama no Messenger",
-            "WEBSITE": "Anúncio novo que leva ao site ({url})"
+            "WEBSITE": "Anúncio novo que leva ao site ({url})",
+            "INSTAGRAM_PROFILE": "Anúncio novo que leva ao seu perfil do Instagram ({'@'}{username})"
           },
           "WHAT_CAROUSEL": "Carrossel com {count} cartões",
           "TAP": {
@@ -3704,7 +3726,8 @@
             "WEBSITE": "Quem toca abre o seu site.",
             "POST_FACEBOOK": "Quem toca vê o post na sua Página.",
             "POST_INSTAGRAM_WHATSAPP": "Quem toca no botão começa uma conversa com você no WhatsApp.",
-            "POST_INSTAGRAM": "Quem toca vê o post no Instagram."
+            "POST_INSTAGRAM": "Quem toca vê o post no Instagram.",
+            "INSTAGRAM_PROFILE": "Quem toca vai para o seu perfil e pode seguir você. Não abre conversa."
           },
           "DEFAULT_NAME_AD": "{where} · {date}",
           "DEFAULT_NAME_POST": "Post impulsionado · {date}",
@@ -3765,17 +3788,20 @@
           "CHANGE": "Trocar",
           "CURRENT_WHATSAPP": "WhatsApp ({phone})",
           "CURRENT_INSTAGRAM_DIRECT": "Direct do Instagram ({'@'}{username})",
+          "CURRENT_INSTAGRAM_PROFILE": "Seu perfil do Instagram ({'@'}{username})",
           "OPTIONS": {
             "WHATSAPP": "WhatsApp",
             "INSTAGRAM_DIRECT": "Direct do Instagram",
             "MESSENGER": "Messenger",
-            "WEBSITE": "Seu site"
+            "WEBSITE": "Seu site",
+            "INSTAGRAM_PROFILE": "Seu perfil do Instagram"
           },
           "HINTS": {
             "WHATSAPP": "Abre conversa com o seu número.",
             "INSTAGRAM_DIRECT": "Abre conversa no Direct de {'@'}{username}.",
             "MESSENGER": "Abre conversa com a sua Página no Messenger.",
-            "WEBSITE": "Leva para o endereço que você escolher."
+            "WEBSITE": "Leva para o endereço que você escolher.",
+            "INSTAGRAM_PROFILE": "Leva ao perfil {'@'}{username}."
           },
           "REASONS": {
             "NO_NUMBER": "Conecte um número de WhatsApp para usar.",
@@ -3788,13 +3814,15 @@
           "SITE_ACTION": "Texto do botão",
           "ACTIONS": {
             "LEARN_MORE": "Saiba mais",
-            "SHOP_NOW": "Comprar"
+            "SHOP_NOW": "Comprar",
+            "INSTAGRAM_PROFILE": "Ver perfil do Instagram"
           },
           "SHORT": {
             "WHATSAPP": "WhatsApp",
             "INSTAGRAM_DIRECT": "Direct",
             "MESSENGER": "Messenger",
-            "WEBSITE": "Site"
+            "WEBSITE": "Site",
+            "INSTAGRAM_PROFILE": "Perfil"
           }
         },
         "PLACEMENT": {
@@ -3822,6 +3850,7 @@
           "INVALID_WHATSAPP_NUMBER": "Esse número de WhatsApp não é desta conta. Escolha outro.",
           "INVALID_PAGE": "A Página do Facebook não está liberada para a plataforma. Entre de novo com o Facebook na Conexão.",
           "INVALID_INSTAGRAM": "Esta Página não tem conta profissional do Instagram ligada. Ligue uma ou escolha outro destino.",
+          "SPECIAL_CATEGORY_PROFILE": "A Meta não aceita anúncio que leva ao perfil quando ele fala de seguro, crédito, empréstimo ou investimento. Escolha outro destino.",
           "INVALID_MEDIA": "A Meta não aceitou a foto ou o vídeo. Escolha de novo.",
           "INVALID_AUDIENCE": "O público não vale. Confira os estados e a idade.",
           "VIDEO_PROCESSING": "A Meta ainda está preparando o vídeo. Tente de novo em um minuto.",

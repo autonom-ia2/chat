@@ -3600,6 +3600,23 @@
           "POST": "Boost a post",
           "POST_HINT": "Shows a post you already published on Instagram or Facebook to more people."
         },
+        "GOAL": {
+          "TITLE": "When someone taps the ad, where do they go?",
+          "HINT": "Choose what you want to happen. You can change the chat channel later.",
+          "OPTIONS": {
+            "CONVERSATION": "Chat with me",
+            "WEBSITE": "My website",
+            "PROFILE": "My Instagram profile"
+          },
+          "WHEN": {
+            "CONVERSATION": "Use it to get messages and sell in the chat: WhatsApp, Direct or Messenger.",
+            "WEBSITE": "Use it to show details or sell on your page.",
+            "PROFILE": "Use it to gain followers."
+          },
+          "REASONS": {
+            "NO_INSTAGRAM": "Link a professional Instagram account to the Page to use this."
+          }
+        },
         "WHERE": {
           "TITLE": "Page and WhatsApp number",
           "HINT": "The ad shows in the name of the Page and opens a chat with this number.",
@@ -3610,6 +3627,7 @@
         "CONTENT": {
           "TITLE": "Photo or video and text",
           "HINT": "Instagram and Facebook. Meta chooses where to show it: feed, Stories or Reels.",
+          "HINT_PROFILE": "Instagram only: feed, Stories and Reels. Whoever taps goes to your profile.",
           "TEXT": "Text",
           "TEXT_PLACEHOLDER": "Say what you offer in one sentence",
           "HEADLINE": "Title",
@@ -3628,7 +3646,8 @@
             "WHATSAPP": "{offer}. Message us on WhatsApp and place your order.",
             "INSTAGRAM_DIRECT": "{offer}. Message us on Direct and place your order.",
             "MESSENGER": "{offer}. Message us on Messenger and place your order.",
-            "WEBSITE": "{offer}. See it on our website and place your order."
+            "WEBSITE": "{offer}. See it on our website and place your order.",
+            "INSTAGRAM_PROFILE": "{offer}. Follow our profile to see more."
           },
           "NEED_SITE": "Type the website address to continue.",
           "NEED_INSTAGRAM": "This Page has no Instagram linked. Choose another destination to continue.",
@@ -3644,6 +3663,8 @@
           "YES": "Yes",
           "NO": "No",
           "SPECIAL_HINT": "Meta asks for ads like this to be marked. The age stays from 18 to 65+ and gender cannot be chosen.",
+          "SPECIAL_PROFILE": "Meta does not accept profile ads about insurance, credit, loans or investments. To advertise that, choose to chat with you or your website.",
+          "CHANGE_GOAL": "Choose another destination",
           "WHERE": "Where",
           "ALL_BRAZIL": "All of Brazil",
           "SOME_STATES": "Some states",
@@ -3693,7 +3714,8 @@
             "WHATSAPP": "New ad that opens WhatsApp ({number})",
             "INSTAGRAM_DIRECT": "New ad that opens Instagram Direct ({'@'}{username})",
             "MESSENGER": "New ad that opens Messenger",
-            "WEBSITE": "New ad that goes to your website ({url})"
+            "WEBSITE": "New ad that goes to your website ({url})",
+            "INSTAGRAM_PROFILE": "New ad that takes people to your Instagram profile ({'@'}{username})"
           },
           "WHAT_CAROUSEL": "Carousel with {count} cards",
           "TAP": {
@@ -3703,7 +3725,8 @@
             "WEBSITE": "People who tap open your website.",
             "POST_FACEBOOK": "People who tap see the post on your Page.",
             "POST_INSTAGRAM_WHATSAPP": "People who tap the button start a chat with you on WhatsApp.",
-            "POST_INSTAGRAM": "People who tap see the post on Instagram."
+            "POST_INSTAGRAM": "People who tap see the post on Instagram.",
+            "INSTAGRAM_PROFILE": "Whoever taps goes to your profile and can follow you. It does not open a chat."
           },
           "DEFAULT_NAME_AD": "{where} · {date}",
           "DEFAULT_NAME_POST": "Boosted post · {date}",
@@ -3764,17 +3787,20 @@
           "CHANGE": "Change",
           "CURRENT_WHATSAPP": "WhatsApp ({phone})",
           "CURRENT_INSTAGRAM_DIRECT": "Instagram Direct ({'@'}{username})",
+          "CURRENT_INSTAGRAM_PROFILE": "Your Instagram profile ({'@'}{username})",
           "OPTIONS": {
             "WHATSAPP": "WhatsApp",
             "INSTAGRAM_DIRECT": "Instagram Direct",
             "MESSENGER": "Messenger",
-            "WEBSITE": "Your website"
+            "WEBSITE": "Your website",
+            "INSTAGRAM_PROFILE": "Your Instagram profile"
           },
           "HINTS": {
             "WHATSAPP": "Opens a chat with your number.",
             "INSTAGRAM_DIRECT": "Opens a chat in {'@'}{username}'s Direct.",
             "MESSENGER": "Opens a chat with your Page on Messenger.",
-            "WEBSITE": "Takes people to the address you choose."
+            "WEBSITE": "Takes people to the address you choose.",
+            "INSTAGRAM_PROFILE": "Takes people to the {'@'}{username} profile."
           },
           "REASONS": {
             "NO_NUMBER": "Connect a WhatsApp number to use this.",
@@ -3787,13 +3813,15 @@
           "SITE_ACTION": "Button text",
           "ACTIONS": {
             "LEARN_MORE": "Learn more",
-            "SHOP_NOW": "Shop now"
+            "SHOP_NOW": "Shop now",
+            "INSTAGRAM_PROFILE": "View Instagram profile"
           },
           "SHORT": {
             "WHATSAPP": "WhatsApp",
             "INSTAGRAM_DIRECT": "Direct",
             "MESSENGER": "Messenger",
-            "WEBSITE": "Website"
+            "WEBSITE": "Website",
+            "INSTAGRAM_PROFILE": "Profile"
           }
         },
         "PLACEMENT": {
@@ -3821,6 +3849,7 @@
           "INVALID_WHATSAPP_NUMBER": "This WhatsApp number doesn't belong to this account. Pick another one.",
           "INVALID_PAGE": "The Facebook Page isn't available to the platform. Sign in with Facebook again under Connection.",
           "INVALID_INSTAGRAM": "This Page has no Instagram professional account linked. Link one, or pick another destination.",
+          "SPECIAL_CATEGORY_PROFILE": "Meta does not accept profile ads about insurance, credit, loans or investments. Choose another destination.",
           "INVALID_MEDIA": "Meta didn't accept the photo or video. Choose it again.",
           "INVALID_AUDIENCE": "The audience doesn't work. Check the states and the age.",
           "VIDEO_PROCESSING": "Meta is still preparing the video. Try again in a minute.",
