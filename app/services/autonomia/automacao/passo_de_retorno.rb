@@ -15,15 +15,29 @@ class Autonomia::Automacao::PassoDeRetorno
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
 
   # Ao salvar: os valores do título e da mensagem lidos pelo bloco de quem confere a receita (Receita#problemas_do_caminho),
-  # a mensagem só com a flag da F4 e só com gatilho de card, e as pessoas e o time da própria conta.
-  def self.problemas_ao_salvar(conta, passo, gatilho, &)
-    id = passo['id']
+  # a mensagem só com a flag da F4 e só com gatilho de card, as pessoas e o time da própria conta e, com a pessoa, poder
+  # criar retorno (FollowUpPolicy#create?, como o "criar card" do G4). `account_user` nil (o catálogo) não confere a pessoa.
+  def self.problemas_ao_salvar(conta, passo, receita, account_user, &)
     textos = [passo['titulo'], passo.dig('envio', 'mensagem')].compact
     lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map(&)
-    desligado = passo['envio'] && !::Autonomia::Automacao::Motor.mensagens?(conta) ? [frase(:passo_desligado, passo: id)] : []
-    do_card = ::Autonomia::Automacao::Gatilhos.do_card?(gatilho.to_h['tipo'])
-    sem_card = passo['envio'] && !do_card ? [frase(:retorno_mensagem_sem_card, passo: id)] : []
-    desligado + sem_card + lidos + de_fora(conta, passo)
+    da_mensagem(conta, passo, receita.dig('gatilho', 'tipo')) + de_quem_salva(passo, account_user) + lidos + de_fora(conta, passo)
+  end
+
+  def self.da_mensagem(conta, passo, gatilho)
+    return [] unless passo['envio']
+    return [frase(:passo_desligado, passo: passo['id'])] unless ::Autonomia::Automacao::Motor.mensagens?(conta)
+    return [] if ::Autonomia::Automacao::Gatilhos.do_card?(gatilho)
+
+    [frase(:retorno_mensagem_sem_card, passo: passo['id'])]
+  end
+
+  def self.de_quem_salva(passo, account_user)
+    account_user.nil? || cria_retorno?(account_user) ? [] : [frase(:sem_criar_retorno, passo: passo['id'])]
+  end
+
+  def self.cria_retorno?(account_user)
+    contexto = { user: account_user.user, account: account_user.account, account_user: account_user }
+    ::Crm::FollowUpPolicy.new(contexto, ::Crm::FollowUp).create?
   end
 
   def self.de_fora(conta, passo)

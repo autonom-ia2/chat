@@ -115,7 +115,7 @@ class Autonomia::Automacao::Receita
 
   # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
   def problemas_do_retorno(passo)
-    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita['gatilho']) { |c| problemas_do_caminho(passo['id'], c) }
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) { |c| problemas_do_caminho(passo['id'], c) }
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.

@@ -156,16 +156,21 @@ RSpec.describe Autonomia::Automacao::PassoDeRetorno, :automacao_motor do
     end
   end
 
-  # O gate do retorno é o da API: no EE, crm_manage_cards. Quem liga só com a chave de automações não cria retorno, e a
-  # automação pausa como em qualquer ação sem acesso.
-  it 'quem ligou sem poder criar retorno: a automação pausa e nada é criado', :aggregate_failures do
+  # O gate do retorno é o da API: no EE, crm_manage_cards. O salvar já confere; quem perde a chave depois de ligar não
+  # cria retorno, e a automação pausa como em qualquer ação sem acesso.
+  it 'quem ligou perdeu o poder de criar retorno: a automação pausa e nada é criado', :aggregate_failures do
     skip 'só no EE' unless ChatwootApp.enterprise?
 
-    funcao = create(:custom_role, account: account, permissions: %w[automation_manage conversation_manage crm_view])
+    funcao = create(:custom_role, account: account, permissions: %w[automation_manage conversation_manage crm_view crm_manage_cards])
     atendente.account_users.find_by(account: account).update!(custom_role: funcao)
     conversa.update!(assignee: atendente)
+    definicao = automacao_ligada(account, atendente, [retorno])
+    funcao.update!(permissions: funcao.permissions - %w[crm_manage_cards])
 
-    execucao = rodar([retorno], conversa, por: atendente)
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+      Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'conversa.resolvida').call
+    end
+    execucao = Autonomia::Automacao::Execucao.where(automacao: definicao).last
 
     expect(registros(execucao)).to eq([%w[r1 falhou quem_ligou_sem_acesso]])
     expect(execucao.automacao.reload.ativa).to be(false)
@@ -203,6 +208,19 @@ RSpec.describe Autonomia::Automacao::PassoDeRetorno, :automacao_motor do
       expect(problemas(retorno(titulo: [{ '$valor' => 'contato.inventado' }]))).not_to be_empty
       desligado = I18n.t('autonomia.automacao.receita.passo_desligado', passo: 'r1')
       expect(problemas(retorno(envio: { 'mensagem' => ['Oi'] }))).to include(desligado)
+    end
+
+    # Funções (parecer G3): quem salva precisa poder criar retorno, senão a automação pausaria na 1ª rodada.
+    it 'recusa quem não pode criar retorno, no EE' do
+      skip 'só no EE' unless ChatwootApp.enterprise?
+
+      funcao = create(:custom_role, account: account, permissions: %w[automation_manage crm_view crm_manage_pipelines])
+      vinculo = atendente.account_users.find_by(account: account)
+      vinculo.update!(custom_role: funcao)
+      receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [retorno] }
+
+      expect(Autonomia::Automacao::Receita.new(receita, conta: account, account_user: vinculo).problemas)
+        .to eq([I18n.t('autonomia.automacao.receita.sem_criar_retorno', passo: 'r1')])
     end
 
     it 'o esquema recusa pessoas vazias e envio sem mensagem', :aggregate_failures do

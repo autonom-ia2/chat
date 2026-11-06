@@ -589,6 +589,7 @@ en:
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
+        sem_criar_retorno: 'Step %{passo}: you cannot create follow-ups in the CRM, which the "Create follow-up" step needs.'
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."
