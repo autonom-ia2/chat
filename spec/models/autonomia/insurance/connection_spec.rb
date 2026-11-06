@@ -86,6 +86,25 @@ RSpec.describe Autonomia::Insurance::Connection do
     expect(connection.reload.metadata.to_h).to eq('comissao' => { 'auto' => 12 })
   end
 
+  # Auditoria da conexão, 05/11/2026, achado 3: a varredura de uma conexão já varrida não pode tirar
+  # as ferramentas da Lia. Sem varredura anterior não há capacidade nem formulário para usar.
+  describe '#usable?' do
+    it 'serve pronta e em varredura de conexão já varrida; não serve sem varredura anterior nem fora de ar' do
+      exemplos = {
+        ['ready', nil] => true,
+        ['discovering', 1.day.ago] => true,
+        ['discovering', nil] => false,
+        ['authenticating', 1.day.ago] => false,
+        ['auth_required', 1.day.ago] => false
+      }
+
+      exemplos.each do |(status, varrida_em), esperado|
+        conexao = described_class.new(account: account, status: status, last_capability_scan_at: varrida_em)
+        expect(conexao.usable?).to be(esperado), "#{status} varrida_em=#{varrida_em.inspect}"
+      end
+    end
+  end
+
   it 'allows an empty (not_configured) record without the vault' do
     allow(Chatwoot).to receive(:encryption_configured?).and_return(false)
     expect(described_class.new(account: account)).to be_valid

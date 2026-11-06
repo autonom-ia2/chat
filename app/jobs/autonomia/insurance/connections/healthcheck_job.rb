@@ -30,6 +30,11 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
   # sincronização é que decide o estado. Se estiver tudo bem, volta a `ready` sozinha.
   STUCK_AFTER = 10.minutes
 
+  # Presa em `discovering` é uma VARREDURA que morreu, e é ela que se refaz. Re-sincronizar sem varrer
+  # devolvia `ready` sem capacidades nem formulários, e toda cotação de auto era recusada até alguém
+  # clicar em Atualizar configuração (auditoria da conexão, 05/11/2026, achado 17).
+  VARRENDO = 'discovering'.freeze
+
   # `auth_required` QUE NÃO É DA CORRETORA volta a ser tentado, a cada 60 a 90 minutos (auditoria da
   # conexão, 05/11/2026). Só quando o adapter AFIRMA que a ação não é dela — `last_failure.actor`
   # presente e diferente de `broker` (sessão recusada depois de renovar, por exemplo). Sem
@@ -44,7 +49,7 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
     ::Autonomia::Insurance::Connection.where(status: CHECKABLE).find_each(batch_size: BATCH_SIZE) do |connection|
       check(connection)
     end
-    presas.find_each(batch_size: BATCH_SIZE) { |connection| check(connection) }
+    presas.find_each(batch_size: BATCH_SIZE) { |connection| check(connection, varrer: connection.status == VARRENDO) }
     recusas_sem_dono.find_each(batch_size: BATCH_SIZE) { |connection| check(connection) }
   end
 
@@ -68,11 +73,11 @@ class Autonomia::Insurance::Connections::HealthcheckJob < ApplicationJob
 
   # `Sync` com `scan_capabilities: false` é exatamente o ping: resolve a sessão (reusa ou renova),
   # consulta o portal, grava status e `last_healthcheck_at`, e NUNCA levanta — falha vira estado
-  # consultável na tela, que é o que o corretor precisa ver.
-  def check(connection)
+  # consultável na tela, que é o que o corretor precisa ver. `varrer:` só para a varredura presa.
+  def check(connection, varrer: false)
     return unless ::Autonomia::Insurance::Config.enabled?(connection.account)
 
-    ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: false).call
+    ::Autonomia::Insurance::Connections::Sync.new(connection, scan_capabilities: varrer).call
   rescue StandardError => e
     # Uma conexão problemática não pode impedir a verificação das outras.
     Rails.logger.warn("[autonomia][insurance] healthcheck failed connection=#{connection.id} #{e.class}")

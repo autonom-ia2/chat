@@ -48,7 +48,7 @@ class Autonomia::Insurance::Connections::Sync
   def sincronizar
     return mark!(status: 'not_configured') unless @connection.credentials_present?
 
-    mark!(status: 'authenticating')
+    marcar_inicio!
     # `with_fresh_session` e não `resolve!`: `session_live?` só conhece o PRAZO QUE NÓS GRAVAMOS, e
     # prazo gravado não é prova — a sessão pode ter acabado antes dele, e só descobrimos isso quando
     # o portal recusa. Sem a renovação, a conexão fica "credencial recusada" com a credencial válida
@@ -71,6 +71,14 @@ class Autonomia::Insurance::Connections::Sync
     # Formato inesperado, validação do model ou bug: registra a CLASSE, nunca a mensagem (que pode
     # carregar payload do portal), e deixa a conexão num estado consultável em vez de estourar 500.
     mark!(status: 'degraded', error: "unexpected: #{e.class.name}", failure: nil)
+  end
+
+  # Conexão que já serve às ferramentas NÃO passa por `authenticating`: ela continua valendo até o
+  # portal responder, e é a resposta que decide o novo estado. Antes, toda checagem de 30 minutos
+  # escondia a conexão da Lia por 1 a 60 s, 48 vezes por dia (auditoria da conexão, 05/11/2026,
+  # achado 3). O transitório fica para quem ainda não está pronta, onde ele é o que a tela mostra.
+  def marcar_inicio!
+    mark!(status: 'authenticating') unless @connection.usable?
   end
 
   # Uma consulta de status, e UMA renovacao quando o portal recusa a sessao que guardavamos.
