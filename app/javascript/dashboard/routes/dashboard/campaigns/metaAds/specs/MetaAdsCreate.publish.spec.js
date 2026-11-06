@@ -255,6 +255,32 @@ describe('Anúncios da Meta · criar post (#2653)', () => {
     );
   });
 
+  it('no answer: keeps the same key (Meta may have published) until the person says they checked', async () => {
+    crypto.randomUUID.mockReturnValueOnce('key-1').mockReturnValueOnce('key-2');
+    CrmMetaAdsConnectionAPI.publishPost
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ data: PUBLISHED });
+    const wrapper = await mountCreate();
+    await toReview(wrapper);
+    await confirm(wrapper);
+
+    expect(wrapper.find('[data-create-publish-error]').text()).toBe(
+      `${KEY}.PUBLISH_REVIEW.ERRORS.NETWORK`
+    );
+    await confirm(wrapper);
+    const keys = () =>
+      CrmMetaAdsConnectionAPI.publishPost.mock.calls.map(
+        ([body]) => body.idempotency_key
+      );
+    expect(keys()).toEqual(['key-1', 'key-1']);
+
+    await wrapper.find('[data-create-publish-checked]').trigger('click');
+    await confirm(wrapper);
+
+    expect(keys()).toEqual(['key-1', 'key-1', 'key-2']);
+  });
+
   it('"Boost this post" goes to the boost flow with the Instagram post just published already chosen', async () => {
     CrmMetaAdsConnectionAPI.publishPost.mockResolvedValue({ data: PUBLISHED });
     CrmMetaAdsConnectionAPI.boostPosts.mockResolvedValue({

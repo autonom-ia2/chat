@@ -11,6 +11,7 @@ import {
   juntarPublicado,
   lugarDoPost,
   motivosDasRedes,
+  publicacaoIncerta,
   redesQueDao,
 } from '../criarPost';
 import MetaAdsCreatePublish from './MetaAdsCreatePublish.vue';
@@ -22,7 +23,9 @@ import MetaAdsCreatePublished from './MetaAdsCreatePublished.vue';
 // escolhido (`boost`), que nasce pausado como no PR 2.
 //
 // A chave da tentativa nasce na primeira confirmação e vale enquanto o post não muda: tocar de novo, ou o "Tentar de
-// novo" numa rede, nunca publica duas vezes. Mudou alguma coisa, chave nova.
+// novo" numa rede, nunca publica duas vezes. Mudou alguma coisa, chave nova, menos depois de uma resposta incerta
+// (sem resposta, ou o servidor não sabe se a Meta publicou): aí a chave só muda quando a pessoa diz que conferiu na
+// rede e não saiu ("Conferi, publicar de novo").
 const props = defineProps({
   pages: { type: Array, default: () => [] },
   // As permissões do token: { facebook, instagram }.
@@ -43,6 +46,8 @@ const review = ref(null);
 const saving = ref(false);
 const error = ref('');
 const published = ref(null);
+// A última tentativa pode ter publicado: a chave fica até a pessoa conferir.
+const uncertain = ref(false);
 let chave = null;
 
 const pageOf = id => props.pages.find(page => page.id === id);
@@ -85,7 +90,7 @@ watch(
     post.value.caption,
   ],
   () => {
-    chave = null;
+    if (!uncertain.value) chave = null;
   },
   { deep: true }
 );
@@ -116,8 +121,17 @@ const back = () => {
   else emit('back');
 };
 
-const errorText = failure =>
-  t(`${KEY}.PUBLISH_REVIEW.ERRORS.${erroDoPublicar(failure)}`);
+const showError = failure => {
+  const code = erroDoPublicar(failure);
+  uncertain.value = publicacaoIncerta(code);
+  error.value = t(`${KEY}.PUBLISH_REVIEW.ERRORS.${code}`);
+};
+// "Conferi e não saiu": a próxima confirmação é outra tentativa.
+const checkedNotPublished = () => {
+  uncertain.value = false;
+  chave = null;
+  error.value = '';
+};
 
 const send = async redes => {
   chave = chave || novaChave();
@@ -144,7 +158,7 @@ const publishNow = async boost => {
       step.value = 'DONE';
     }
   } catch (failure) {
-    error.value = errorText(failure);
+    showError(failure);
   } finally {
     saving.value = false;
     review.value?.close();
@@ -155,12 +169,19 @@ const retry = async rede => {
   saving.value = true;
   try {
     published.value = juntarPublicado(published.value, await send([rede]));
-  } catch {
+  } catch (failure) {
+    // Vídeo ainda em preparo, ou resposta incerta: a frase da rede diz o que fazer.
+    const code = erroDoPublicar(failure);
+    let motivo = 'meta_refused';
+    if (code === 'PROCESSING') motivo = 'processing';
+    else if (publicacaoIncerta(code)) motivo = 'unconfirmed';
     published.value = {
       ...published.value,
-      errors: { ...published.value.errors, [rede]: 'meta_refused' },
+      errors: { ...published.value.errors, [rede]: motivo },
     };
-    error.value = t(`${KEY}.PUBLISHED.RETRY_FAILED.${rede.toUpperCase()}`);
+    if (motivo === 'meta_refused') {
+      error.value = t(`${KEY}.PUBLISHED.RETRY_FAILED.${rede.toUpperCase()}`);
+    }
   } finally {
     saving.value = false;
   }
@@ -275,6 +296,15 @@ const submit = () => {
         />
         {{ error }}
       </p>
+      <button
+        v-if="error && uncertain && step === 'REVIEW'"
+        type="button"
+        data-create-publish-checked
+        class="inline-flex min-h-11 items-center self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+        @click="checkedNotPublished"
+      >
+        {{ $t(`${KEY}.PUBLISH_REVIEW.CHECKED_NOT_PUBLISHED`) }}
+      </button>
 
       <div
         v-if="step !== 'DONE'"

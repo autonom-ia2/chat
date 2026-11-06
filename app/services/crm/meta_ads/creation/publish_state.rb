@@ -1,63 +1,94 @@
-# Onde está a publicação de um post numa rede, por chave de tentativa (#2198 PR 3, #2653). Fica no Redis:
+# Onde está a publicação de um post numa rede, por chave de tentativa (#2198 PR 3, #2653). Post não tem pausa nem
+# desfazer: na dúvida, nunca publica de novo sozinho. Fica no Redis por um dia:
 #
-# - `running`: publicando agora. Vale 5 minutos, para um processo que caiu não travar a chave pelo dia inteiro.
-# - `container`: o Instagram recebeu o vídeo, mas ainda não publicou. A próxima tentativa segue com o mesmo contêiner
-#   (a Meta não publica o mesmo contêiner duas vezes).
-# - `done`: publicado; guarda o que a tela mostra, para a mesma chave nunca publicar de novo.
+# - trava (`:lock`, 2 minutos): só uma tentativa por chave e rede de cada vez; a outra recebe `in_progress`. Se o
+#   processo cair, a trava vence sozinha.
+# - `container`: o Instagram recebeu a mídia e ainda não publicou. A próxima tentativa segue com o mesmo contêiner.
+# - `sent`: a chamada que publica saiu e não voltou resposta certa (rede, 5xx, queda do processo). Pode ter publicado:
+#   a mesma chave responde `unconfirmed` e a pessoa confere no Instagram e no Facebook antes de publicar de novo.
+# - `done`: publicado; guarda o que a tela mostra, e a mesma chave devolve isso sem chamar a Meta.
+#
+# A chave vale para um conteúdo só (Página, mídia e legenda): o mesmo id com outro conteúdo é `idempotency_conflict`.
 class Crm::MetaAds::Creation::PublishState
-  RUNNING_TTL = 5.minutes
+  LOCK_TTL = 2.minutes
   KEEP_TTL = 1.day
 
-  def initialize(account, key, network)
-    @redis_key = "meta_ads:publish:#{account.id}:#{Digest::SHA256.hexdigest(key.to_s)}:#{network}"
-    @container = nil
+  def initialize(account, key, network, digest)
+    @state_key = "meta_ads:publish:#{account.id}:#{Digest::SHA256.hexdigest(key.to_s)}:#{network}"
+    @lock_key = "#{@state_key}:lock"
+    @digest = digest
+    @saved = {}
+    @locked = false
+    @sent = false
   end
 
-  attr_reader :container
-
-  # Toma a vez. Já publicado: devolve o post. Outra tentativa publicando agora: `in_progress`.
+  # Toma a vez. Já publicado: devolve o post (com chaves em símbolo). Senão nil, e a tentativa segue.
   def claim!
-    return if write({ state: 'running' }, only_new: true, ttl: RUNNING_TTL)
+    fail!('in_progress') unless Redis::Alfred.set(@lock_key, '1', nx: true, ex: LOCK_TTL.to_i)
+    @locked = true
+    @saved = read
+    return if @saved.empty?
 
-    saved = read
-    return saved['post'].symbolize_keys if saved['state'] == 'done'
-    raise Crm::MetaAds::Creation::Error, 'in_progress' unless saved['state'] == 'container'
+    fail!('idempotency_conflict') unless @saved['digest'] == @digest
+    fail!('unconfirmed') if @saved['state'] == 'sent'
 
-    @container = saved['container']
-    write({ state: 'running', container: @container }, ttl: RUNNING_TTL)
-    nil
+    @saved['post'].deep_symbolize_keys if @saved['state'] == 'done'
+  end
+
+  def container
+    @saved['container'].presence
   end
 
   def container!(id)
-    @container = id
-    write({ state: 'running', container: id }, ttl: RUNNING_TTL)
+    write('state' => 'container', 'container' => id)
+  end
+
+  # Logo antes da chamada que publica: daqui em diante, falha sem resposta certa vira `unconfirmed`.
+  def sending!
+    @sent = true
+    write('state' => 'sent', 'container' => container)
+  end
+
+  def sent?
+    @sent
+  end
+
+  def done!(post)
+    write('state' => 'done', 'post' => post)
   end
 
   # O contêiner quebrou na Meta: a próxima tentativa cria outro.
   def forget_container!
-    @container = nil
+    @saved = @saved.except('container')
   end
 
-  def done!(post)
-    write({ state: 'done', post: post }, ttl: KEEP_TTL)
+  # Não publicou com certeza (recusa antes de publicar, ou recusa definitiva da própria publicação): libera a chave,
+  # guardando o contêiner do Instagram, se houver.
+  def not_published!
+    return Redis::Alfred.delete(@state_key) if container.blank? || @sent
+
+    write('state' => 'container', 'container' => container)
   end
 
-  # Não publicou: libera a chave, guardando o contêiner do Instagram, se houver, para a próxima tentativa.
-  def release!
-    return Redis::Alfred.delete(@redis_key) if @container.blank?
-
-    write({ state: 'container', container: @container }, ttl: KEEP_TTL)
+  def unlock!
+    Redis::Alfred.delete(@lock_key) if @locked
+    @locked = false
   end
 
   private
 
-  def write(value, ttl:, only_new: false)
-    Redis::Alfred.set(@redis_key, value.to_json, nx: only_new, ex: ttl.to_i)
+  def write(value)
+    @saved = value.merge('digest' => @digest)
+    Redis::Alfred.set(@state_key, @saved.to_json, ex: KEEP_TTL.to_i)
   end
 
   def read
-    JSON.parse(Redis::Alfred.get(@redis_key).to_s)
+    JSON.parse(Redis::Alfred.get(@state_key).to_s)
   rescue JSON::ParserError
     {}
+  end
+
+  def fail!(code)
+    raise Crm::MetaAds::Creation::Error, code
   end
 end

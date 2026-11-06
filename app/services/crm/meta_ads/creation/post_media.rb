@@ -2,12 +2,16 @@
 # arquivo num endereço temporário do nosso armazenamento, na Página e no Instagram. Por isso a mídia sobe uma vez e
 # vale para as duas redes e para o "Tentar de novo".
 #
-# - Mesmos limites e conferência do arquivo do anúncio (Crm::MetaAds::Creation::Media.kind!).
-# - O Instagram só aceita foto JPEG: PNG vira JPEG aqui, e a Página recebe a mesma.
+# - Mesma conferência do arquivo do anúncio (Crm::MetaAds::Creation::Media.kind!). Foto até 8 MB, o teto do
+#   Instagram (a Página aceita a mesma); vídeo com o limite do anúncio.
+# - O Instagram só aceita foto JPEG: o que não começa como JPEG (pelos bytes, não pelo tipo que o navegador diz) vira
+#   JPEG aqui, com a transparência sobre fundo branco, e a Página recebe a mesma.
 # - Volta um `signed_id` que só vale nesta conta e por um dia; o arquivo é apagado depois disso.
 class Crm::MetaAds::Creation::PostMedia
   KEEP = 1.day
   JPEG_TYPE = 'image/jpeg'.freeze
+  IMAGE_MAX_BYTES = 8.megabytes
+  WHITE = [255, 255, 255].freeze
 
   def initialize(account)
     @account = account
@@ -15,6 +19,8 @@ class Crm::MetaAds::Creation::PostMedia
 
   def upload!(file)
     kind = Crm::MetaAds::Creation::Media.kind!(file)
+    raise Crm::MetaAds::Creation::Error, 'media_too_large' if kind == 'image' && file.size > IMAGE_MAX_BYTES
+
     Crm::MetaAds::Creation::Media.frontend_host!
     blob = kind == 'image' ? store_image(file) : store(File.open(file.path), file.original_filename.presence || 'video.mp4', file.content_type)
     ActiveStorage::PurgeJob.set(wait: KEEP).perform_later(blob)
@@ -37,13 +43,16 @@ class Crm::MetaAds::Creation::PostMedia
   end
 
   def store_image(file)
-    return store(File.open(file.path), 'post.jpg', JPEG_TYPE) if file.content_type.to_s == JPEG_TYPE
+    jpeg_bytes = Crm::MetaAds::Creation::Media.head(file, Crm::MetaAds::Creation::Media::JPEG_START.bytesize)
+    return store(File.open(file.path), 'post.jpg', JPEG_TYPE) if jpeg_bytes == Crm::MetaAds::Creation::Media::JPEG_START
 
     store(jpeg(file.path), 'post.jpg', JPEG_TYPE)
   end
 
   def jpeg(path)
-    ImageProcessing::Vips.source(path).convert('jpg').saver(quality: 90).call
+    ImageProcessing::Vips.source(path)
+                         .custom { |image| image.has_alpha? ? image.flatten(background: WHITE) : image }
+                         .convert('jpg').saver(quality: 90).call
   end
 
   def store(io, filename, content_type)

@@ -118,7 +118,7 @@ RSpec.describe Crm::MetaAds::Creation::Publish do
   end
 
   it 'outra tentativa publicando agora com a mesma chave: in_progress, sem chamar a Meta' do
-    Crm::MetaAds::Creation::PublishState.new(account, 'k-2653', 'facebook').claim!
+    Crm::MetaAds::Creation::PublishState.new(account, 'k-2653', 'facebook', 'qualquer').claim!
 
     expect { service.publish!(params.merge(networks: ['facebook'])) }
       .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('in_progress') }
@@ -159,6 +159,66 @@ RSpec.describe Crm::MetaAds::Creation::Publish do
     result = service.publish!(params.merge(networks: ['facebook'], media_id: media_signed_id('video/mp4')))
 
     expect(result[:facebook]).to eq(id: '555', permalink: '/110/videos/555', boostable: false)
+  end
+
+  describe 'na dúvida, nunca publica de novo sozinho' do
+    it 'a Página não respondeu depois de a chamada sair: unconfirmed, e a mesma chave não chama a Meta de novo' do
+      stub_facebook_photo(status: 500)
+
+      expect { service.publish!(params.merge(networks: ['facebook'])) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('unconfirmed') }
+      expect { service.publish!(params.merge(networks: ['facebook'])) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('unconfirmed') }
+      expect(a_request(:post, meta_graph_url('110/photos'))).to have_been_made.once
+    end
+
+    it 'falha fora da Meta (processo, Redis) depois de a chamada sair: unconfirmed, e vai para o rastreador' do
+      stub_facebook_photo
+      allow(Meta::AdsGraphClient).to receive(:new).and_call_original
+      allow_any_instance_of(Meta::AdsGraphClient).to receive(:publish_page_photo).and_raise(Timeout::Error) # rubocop:disable RSpec/AnyInstance
+      tracker = instance_double(ChatwootExceptionTracker, capture_exception: true)
+      allow(ChatwootExceptionTracker).to receive(:new).and_return(tracker)
+
+      expect { service.publish!(params.merge(networks: ['facebook'])) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('unconfirmed') }
+      expect(tracker).to have_received(:capture_exception)
+    end
+
+    it 'falha antes de publicar (token da Página): a chave fica livre para tentar de novo' do
+      stub_request(:get, meta_graph_url('110')).with(query: hash_including('fields' => 'access_token'))
+                                               .to_return(status: 500, body: '{}', headers: json)
+
+      expect { service.publish!(params.merge(networks: ['facebook'])) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('meta_unavailable') }
+
+      stub_facebook_photo
+      expect(service.publish!(params.merge(networks: ['facebook']))).to include(facebook: hash_including(id: '110_901'))
+    end
+
+    it 'contêiner do Instagram que já aparece publicado: unconfirmed, sem publicar de novo' do
+      instagram = stub_instagram(status_code: 'PUBLISHED')
+
+      expect { service.publish!(params.merge(networks: ['instagram'])) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('unconfirmed') }
+      expect(instagram[:publish]).not_to have_been_made
+    end
+
+    it 'a mesma chave com outro conteúdo: idempotency_conflict, sem chamar a Meta' do
+      stub_facebook_photo
+      service.publish!(params.merge(networks: ['facebook']))
+
+      expect { service.publish!(params.merge(networks: ['facebook'], caption: 'Outro texto')) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('idempotency_conflict') }
+      expect(a_request(:post, meta_graph_url('110/photos'))).to have_been_made.once
+    end
+
+    it 'vídeo no Instagram não espera dentro da requisição: confere uma vez e devolve processing' do
+      stub_instagram(status_code: 'IN_PROGRESS')
+
+      expect { service.publish!(params.merge(networks: ['instagram'], media_id: media_signed_id('video/mp4'))) }
+        .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('processing') }
+      expect(pauses).to eq([])
+    end
   end
 
   describe 'recusa antes de chamar a Meta' do

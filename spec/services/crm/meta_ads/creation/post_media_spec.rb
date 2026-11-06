@@ -33,6 +33,26 @@ RSpec.describe Crm::MetaAds::Creation::PostMedia do
     expect(service).to have_received(:jpeg).with(end_with('.png')).once
   end
 
+  it 'PNG com o tipo de JPEG (o navegador mentiu): vira JPEG pelos bytes' do
+    converted = Tempfile.new(['post', '.jpg'], binmode: true)
+    converted.write(File.binread(Rails.root.join('spec/assets/booking_small.jpg')))
+    converted.rewind
+    allow(service).to receive(:jpeg).and_return(converted)
+
+    service.upload!(upload('avatar.png', 'image/jpeg'))
+
+    expect(service).to have_received(:jpeg).once
+  end
+
+  it 'foto acima de 8 MB (o teto do Instagram): media_too_large, sem guardar' do
+    file = upload('booking_small.jpg', 'image/jpeg')
+    allow(file).to receive(:size).and_return(8.megabytes + 1)
+
+    expect { service.upload!(file) }
+      .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('media_too_large') }
+      .and(not_change(ActiveStorage::Blob, :count))
+  end
+
   it 'vídeo: guarda e devolve kind video' do
     media = service.upload!(upload('sample.mp4', 'video/mp4'))
 

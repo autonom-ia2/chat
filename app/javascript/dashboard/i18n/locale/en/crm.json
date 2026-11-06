@@ -3946,8 +3946,10 @@
             "CANNOT_PUBLISH": "Permission to publish is missing. Nothing was published. Log in with Facebook again.",
             "IN_PROGRESS": "This post is already being published. Wait a moment.",
             "NETWORK": "No answer right now. Check Instagram and Facebook before trying again.",
-            "UNKNOWN": "Meta didn't publish now. Nothing was published. Try again in a little while."
-          }
+            "UNKNOWN": "Meta didn't publish now. Nothing was published. Try again in a little while.",
+            "UNCONFIRMED": "We couldn't tell if the post went out. Check Instagram and Facebook before publishing again."
+          },
+          "CHECKED_NOT_PUBLISHED": "I checked and it didn't go out: publish again"
         },
         "PUBLISHED": {
           "TITLE": {
@@ -3978,6 +3980,10 @@
           "RETRY_FAILED": {
             "INSTAGRAM": "Instagram didn't publish again. The post is still on Facebook. Try again in a little while.",
             "FACEBOOK": "Facebook didn't publish again. The post is still on Instagram. Try again in a little while."
+          },
+          "UNCONFIRMED": {
+            "INSTAGRAM": "We couldn't tell if it went out on Instagram. Check there before publishing again.",
+            "FACEBOOK": "We couldn't tell if it went out on Facebook. Check there before publishing again."
           }
         }
       }

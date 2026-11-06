@@ -47,15 +47,26 @@ export const juntarPublicado = (antes, depois) => ({
   errors: depois.errors,
 });
 
-// Recusas que a tela sabe explicar; outra vira a frase geral.
-const ERROS_CONHECIDOS = ['processing', 'cannot_publish', 'in_progress'];
+// Recusas que a tela sabe explicar; outra vira a frase geral. `unconfirmed` (o servidor não sabe se a Meta publicou) e
+// `idempotency_conflict` (a mesma tentativa com outro conteúdo, depois de um "não sei") viram a mesma frase: confira
+// na rede antes de publicar de novo.
+const ERROS_CONHECIDOS = {
+  processing: 'PROCESSING',
+  cannot_publish: 'CANNOT_PUBLISH',
+  in_progress: 'IN_PROGRESS',
+  unconfirmed: 'UNCONFIRMED',
+  idempotency_conflict: 'UNCONFIRMED',
+};
 const HTTP_CONFLICT = 409;
 
-// O código da recusa para a frase da tela: 'PROCESSING', 'CANNOT_PUBLISH', 'IN_PROGRESS', 'NETWORK' ou 'UNKNOWN'.
+// O código da recusa para a frase da tela: um dos de ERROS_CONHECIDOS, 'NETWORK' ou 'UNKNOWN'.
 export const erroDoPublicar = error => {
   const response = error?.response;
   if (!response) return 'NETWORK';
   if (response.status === HTTP_CONFLICT) return 'IN_PROGRESS';
-  const code = response.data?.error;
-  return ERROS_CONHECIDOS.includes(code) ? code.toUpperCase() : 'UNKNOWN';
+  return ERROS_CONHECIDOS[response.data?.error] || 'UNKNOWN';
 };
+
+// Sem resposta, ou o servidor não sabe: a Meta pode ter publicado. A tela não troca a chave sozinha.
+export const publicacaoIncerta = codigo =>
+  ['NETWORK', 'UNCONFIRMED'].includes(codigo);

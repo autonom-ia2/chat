@@ -3947,8 +3947,10 @@
             "CANNOT_PUBLISH": "Falta a permissão para publicar. Nada foi publicado. Entre com o Facebook de novo.",
             "IN_PROGRESS": "Este post já está sendo publicado. Espere um pouco.",
             "NETWORK": "Sem resposta agora. Confira no Instagram e no Facebook antes de tentar de novo.",
-            "UNKNOWN": "A Meta não publicou agora. Nada foi publicado. Tente de novo daqui a pouco."
-          }
+            "UNKNOWN": "A Meta não publicou agora. Nada foi publicado. Tente de novo daqui a pouco.",
+            "UNCONFIRMED": "Não deu para saber se o post saiu. Confira no Instagram e no Facebook antes de publicar de novo."
+          },
+          "CHECKED_NOT_PUBLISHED": "Conferi e não saiu: publicar de novo"
         },
         "PUBLISHED": {
           "TITLE": {
@@ -3979,6 +3981,10 @@
           "RETRY_FAILED": {
             "INSTAGRAM": "O Instagram não publicou de novo. O post continua no Facebook. Tente daqui a pouco.",
             "FACEBOOK": "O Facebook não publicou de novo. O post continua no Instagram. Tente daqui a pouco."
+          },
+          "UNCONFIRMED": {
+            "INSTAGRAM": "Não deu para saber se saiu no Instagram. Confira lá antes de publicar de novo.",
+            "FACEBOOK": "Não deu para saber se saiu no Facebook. Confira lá antes de publicar de novo."
           }
         }
       }

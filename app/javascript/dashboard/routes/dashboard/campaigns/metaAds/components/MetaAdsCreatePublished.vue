@@ -21,10 +21,14 @@ const links = computed(() =>
   REDES.filter(rede => props.published[rede]?.permalink)
 );
 const canBoost = computed(() => Boolean(alvoDoImpulsionar(props.published)));
+const PARTIAL_BY_ERROR = {
+  processing: 'PROCESSING',
+  unconfirmed: 'UNCONFIRMED',
+};
 const partialText = rede =>
-  props.published.errors?.[rede] === 'processing'
-    ? `${KEY}.PROCESSING.${rede.toUpperCase()}`
-    : `${KEY}.PARTIAL.${rede.toUpperCase()}`;
+  `${KEY}.${PARTIAL_BY_ERROR[props.published.errors?.[rede]] || 'PARTIAL'}.${rede.toUpperCase()}`;
+// Sem saber se saiu, tentar de novo com a mesma chave não adianta: a pessoa confere na rede.
+const canRetry = rede => props.published.errors?.[rede] !== 'unconfirmed';
 </script>
 
 <template>
@@ -44,6 +48,7 @@ const partialText = rede =>
         {{ $t(partialText(rede)) }}
       </p>
       <Button
+        v-if="canRetry(rede)"
         :data-create-published-retry="rede"
         variant="faded"
         color="amber"
