@@ -60,7 +60,7 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
   it 'só exige, fixa ou proíbe campo que a ação aceita' do
     permitidas.acoes.each do |acao, opcoes|
       campos = Array(opcoes['exige']) + opcoes.fetch('fixos', {}).keys + Array(opcoes['proibe']).map { |campo| campo.split('.').first }
-      expect(campos - formatos[acao]['campos'].keys).to be_empty, acao
+      expect(campos - formatos[acao].fetch('campos', {}).keys).to be_empty, acao
     end
   end
 
