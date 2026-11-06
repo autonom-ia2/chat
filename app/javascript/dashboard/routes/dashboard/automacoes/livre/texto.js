@@ -54,6 +54,22 @@ export const opcoesDosValores = (
     })
   );
 
+// #2414 G16 — o campo de texto de uma ação. Só texto fica string; com dado,
+// vira `{ $texto: [...] }`, montado na hora da execução (o motor pula a ação se
+// o dado estiver vazio).
+export const partesDoCampo = valor => {
+  if (valor?.$texto) return valor.$texto;
+  if (valor?.$valor) return [valor];
+  return valor === undefined || valor === null || valor === ''
+    ? []
+    : [String(valor)];
+};
+
+export const campoDasPartes = partes =>
+  (partes || []).some(parte => typeof parte !== 'string')
+    ? { $texto: partes }
+    : (partes || []).join('');
+
 // O valor que a pessoa não pode ler (#2597) e que o texto já usa, com o nome
 // dele: mostra o nome, não "apagado". Só o que já está nas partes entra, para
 // digitar o nome entre colchetes não criar o dado.

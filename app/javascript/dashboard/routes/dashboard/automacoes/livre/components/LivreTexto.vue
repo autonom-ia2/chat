@@ -25,6 +25,8 @@ const props = defineProps({
   atributosDo: { type: Function, required: true },
   umaLinha: { type: Boolean, default: false },
   rotuloDoDado: { type: String, default: '' },
+  // #2414 G16 — o campo de uma linha de uma ação (nome, descrição).
+  curto: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['update:modelValue']);
@@ -102,7 +104,7 @@ const porDado = caminho => {
       v-model="texto"
       :label="rotulo"
       :max-length="LIMITE"
-      min-height="7rem"
+      :min-height="curto ? '3rem' : '7rem'"
       auto-height
       show-character-count
       @blur="lembrarCursor"

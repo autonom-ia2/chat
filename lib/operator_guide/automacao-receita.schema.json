@@ -80,6 +80,59 @@
       }
     },
     "ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+    "valor_calculado": {
+      "description": "Valor calculado numa folha do corpo da ação (G16), lido na hora da execução. $valor copia um valor do alvo; $texto junta pedaços como o texto da mensagem; $data dá \"AAAA-MM-DD\" a partir de \"hoje\" (no fuso da conta) ou de um atributo do tipo data, mais N dias, semanas, meses ou anos (N negativo volta no tempo; 31/01 + 1 mês = 28/02). Valor lido vazio pula a ação.",
+      "oneOf": [
+        { "$ref": "#/definitions/valor" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["$texto"],
+          "properties": { "$texto": { "$ref": "#/definitions/texto" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["$data"],
+          "properties": {
+            "$data": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["de"],
+              "properties": {
+                "de": { "oneOf": [{ "const": "hoje" }, { "$ref": "#/definitions/valor" }] },
+                "mais": {
+                  "description": "Teto de 3650 de cada unidade: proteção contra erro de digitação, não limite de uso.",
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["valor", "unidade"],
+                  "properties": {
+                    "valor": { "type": "integer", "minimum": -3650, "maximum": 3650 },
+                    "unidade": { "enum": ["dias", "semanas", "meses", "anos"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "chaves_do_corpo": {
+      "description": "Chave do corpo da ação: as que começam um valor calculado ($valor, $texto, $data) só valem sozinhas, como valor_calculado.",
+      "not": { "enum": ["$valor", "$texto", "$data"] }
+    },
+    "valor_do_corpo": {
+      "anyOf": [
+        { "type": ["string", "number", "boolean", "null"] },
+        { "type": "array", "items": { "$ref": "#/definitions/valor_do_corpo" } },
+        { "$ref": "#/definitions/valor_calculado" },
+        {
+          "type": "object",
+          "propertyNames": { "$ref": "#/definitions/chaves_do_corpo" },
+          "additionalProperties": { "$ref": "#/definitions/valor_do_corpo" }
+        }
+      ]
+    },
     "leituras": {
       "description": "O que a IA lê do alvo (F7), da lista fechada do Decisor. E-mail e telefone do contato nunca vão. Sem a lista, as mensagens recentes do cliente.",
       "type": "array",
@@ -236,7 +289,12 @@
               "type": "object",
               "additionalProperties": { "oneOf": [{ "type": ["string", "integer"] }, { "$ref": "#/definitions/valor" }] }
             },
-            "corpo": { "type": "object" }
+            "corpo": {
+              "description": "O corpo da ação, no formato do Guia. Uma folha pode ser valor_calculado.",
+              "type": "object",
+              "propertyNames": { "$ref": "#/definitions/chaves_do_corpo" },
+              "additionalProperties": { "$ref": "#/definitions/valor_do_corpo" }
+            }
           }
         },
         {

@@ -67,6 +67,13 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
     definicao.execucoes.order(:id).last
   end
 
+  # O valor calculado no corpo de uma ação (G16): o texto montado lê o valor como o texto da mensagem.
+  def no_corpo
+    { 'id' => 'a1', 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
+      'caminho' => { 'id' => { '$valor' => 'conversa.id' } },
+      'corpo' => { 'merge' => true, 'custom_attributes' => { 'nota' => { '$texto' => ['Valor ', valor] } } } }
+  end
+
   describe 'salvar' do
     let(:sem_chave) { pessoa_com(base) }
     let(:com_chave) { pessoa_com(base + %w[sales_value_view]) }
@@ -80,6 +87,10 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
       expect(recusa?(problemas([caro], sem_chave), 's1')).to be(true)
       expect(recusa?(problemas(no_texto, sem_chave, gatilho.merge('filtros' => [no_filtro])), 'gatilho')).to be(true)
       expect(recusa?(problemas([no_caminho], sem_chave), 'a1')).to be(true)
+    end
+
+    it 'recusa o valor calculado do corpo da ação (G16) para quem não tem a chave, e deixa quem tem' do
+      expect([recusa?(problemas([no_corpo], sem_chave), 'a1'), recusa?(problemas([no_corpo], com_chave), 'a1')]).to eq([true, false])
     end
 
     it 'deixa quem tem a chave, o administrador e o agente sem função' do
@@ -170,6 +181,17 @@ RSpec.describe 'Automação livre: valor da venda com sales_value_view (#2597)',
 
       expect(registros(execucao)).to eq([%w[m1 pulado faltou_valor]])
       expect(caixa.conversations).to be_empty
+    end
+
+    it 'valor calculado do corpo (G16): com a chave grava; sem ela, a ação pula sem gravar o valor' do
+      com = rodar(automacao_ligada(account, dono, [no_corpo], gatilho: gatilho))
+      expect([registros(com), conversa.reload.custom_attributes['nota']]).to eq([[['a1', 'ok', nil]], 'Valor 2500.0'])
+
+      conversa.update!(custom_attributes: {})
+      definicao = automacao_ligada(account, dono, [no_corpo], gatilho: gatilho)
+      tirar_a_chave
+      sem = rodar(definicao)
+      expect([registros(sem).map(&:second), conversa.reload.custom_attributes['nota']]).to eq([['pulado'], nil])
     end
 
     # O "esperar até" (G11) lê a condição com as permissões de quem ligou, como o "se".
