@@ -200,6 +200,8 @@ describe('Anúncios sem login · conectar a conta de anúncios (#2054)', () => {
 
     await saveDestination(wrapper);
     expect(wrapper.attributes('data-screen')).toBe('done');
+    // O "O que já funciona" é do login único: sem a flag, o pronto fica como antes.
+    expect(wrapper.find('[data-conectar-funciona]').exists()).toBe(false);
     expect(
       wrapper.find('[data-conectar-faixa] [aria-current="step"]').text()
     ).toContain('Veja seus gastos');

@@ -24,12 +24,13 @@ class Crm::MetaAds::LoginUnico::LigarPagina
     Channel::FacebookPage.find_by(account_id: @connection.account_id, page_id: page_id.to_s)
   end
 
-  # Inbox da Página. Erros: `not_own_token` (modo parceiro), `page_not_granted` (a Meta não deu o token da Página).
+  # Inbox da Página. Erros: `not_own_token` (modo parceiro) e os de TokenDaPagina (`page_not_granted`, `reconnect`,
+  # `meta_unavailable`).
   def call(page_id)
     raise Error, 'not_own_token' unless @connection.own_token?
 
     tokens = Crm::MetaAds::LoginUnico::TokenDaPagina.new(@connection).call(page_id.to_s)
-    raise Error, 'page_not_granted' if tokens.nil?
+    raise Error, tokens[:error] if tokens[:error]
 
     channel = existing(page_id)
     channel ? reauthorize(channel, tokens) : create(page_id.to_s, tokens)
@@ -37,27 +38,26 @@ class Crm::MetaAds::LoginUnico::LigarPagina
 
   private
 
+  # Tokens, nome e Instagram mudam juntos, e só então o alerta de reautorização sai (como o CallbacksController).
   def reauthorize(channel, tokens)
-    channel.update!(user_access_token: tokens[:user], page_access_token: tokens[:page])
-    sync_details(channel, tokens[:page])
-    channel.reauthorized!
+    details = page_details(tokens[:page])
+    ActiveRecord::Base.transaction do
+      channel.update!(user_access_token: tokens[:user], page_access_token: tokens[:page], **details.compact)
+      channel.reauthorized!
+    end
     channel.inbox
   end
 
+  # O avatar entra na fila depois do commit: o job acha a caixa, e um rollback não deixa job órfão.
   def create(page_id, tokens)
     details = page_details(tokens[:page])
-    ActiveRecord::Base.transaction do
-      channel = account.facebook_pages.create!(page_id: page_id, user_access_token: tokens[:user], page_access_token: tokens[:page])
-      channel.update!(details.compact) if details.present?
-      inbox = account.inboxes.create!(name: details[:provider_name].presence || page_id, channel: channel)
-      Avatar::AvatarFromUrlJob.perform_later(inbox, "https://graph.facebook.com/#{page_id}/picture?type=large")
-      inbox
+    inbox = ActiveRecord::Base.transaction do
+      channel = account.facebook_pages.create!(page_id: page_id, user_access_token: tokens[:user], page_access_token: tokens[:page],
+                                               **details.compact)
+      account.inboxes.create!(name: details[:provider_name].presence || page_id, channel: channel)
     end
-  end
-
-  def sync_details(channel, page_token)
-    details = page_details(page_token)
-    channel.update!(details.compact) if details.present?
+    Avatar::AvatarFromUrlJob.perform_later(inbox, "https://graph.facebook.com/#{page_id}/picture?type=large")
+    inbox
   end
 
   # Nome e Instagram da Página. Falhar aqui não impede ligar: a caixa nasce com o id e o nome chega na próxima leitura.

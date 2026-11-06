@@ -131,6 +131,32 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
     expect(response.parsed_body['error']).to eq('page_not_granted')
   end
 
+  it 'a Meta fora: 422 meta_unavailable, sem mandar remarcar a Página' do
+    stub_request(:get, meta_graph_url(page_id)).with(query: hash_including(fields: 'access_token'))
+                                               .to_return(status: 500, headers: json, body: { error: { code: 2 } }.to_json)
+
+    post "#{path}/pagina", params: { page_id: page_id }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('meta_unavailable')
+  end
+
+  it 'o acesso do login venceu: 422 reconnect' do
+    stub_request(:get, meta_graph_url(page_id)).with(query: hash_including(fields: 'access_token'))
+                                               .to_return(status: 400, headers: json, body: { error: { code: 190 } }.to_json)
+
+    post "#{path}/pagina", params: { page_id: page_id }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['error']).to eq('reconnect')
+  end
+
+  it 'page_id que não é número: 422 page_id_required, sem chamar a Meta' do
+    post "#{path}/pagina", params: { page_id: 'me/accounts' }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response.parsed_body['error']).to eq('page_id_required')
+    expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
+  end
+
   it 'sem page_id: 422 page_id_required' do
     post "#{path}/pagina", headers: admin.create_new_auth_token, as: :json
 

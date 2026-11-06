@@ -405,14 +405,22 @@ const loadPages = async () => {
 };
 
 // Ligar cria a caixa da Página (ou troca o token da que existe). Sem dar certo, a pessoa fica no passo com o motivo.
-const PAGE_ERRORS = { page_not_granted: 'NOT_GRANTED', forbidden: 'FORBIDDEN' };
+const PAGE_ERRORS = {
+  page_not_granted: 'NOT_GRANTED',
+  forbidden: 'FORBIDDEN',
+  reconnect: 'RECONNECT',
+  limit: 'LIMIT',
+};
 const confirmPage = async page => {
   savingPage.value = true;
   pageError.value = null;
   try {
     await CrmMetaAdsConnectionAPI.linkPage(page.id);
   } catch (error) {
-    pageError.value = PAGE_ERRORS[error?.response?.data?.error] || 'FAILED';
+    // 402: a conta chegou ao limite de caixas do plano (CustomExceptions::Inbox::LimitExceeded).
+    const code =
+      error?.response?.status === 402 ? 'limit' : error?.response?.data?.error;
+    pageError.value = PAGE_ERRORS[code] || 'FAILED';
     return;
   } finally {
     savingPage.value = false;
@@ -1117,12 +1125,15 @@ onBeforeUnmount(stopRecheck);
               {{ chosenPage.name }}
             </span>
             <span class="text-sm text-n-slate-11">
-              {{ chosenPage.category }} ·
-              {{
-                $t(`${C}.PAGE.FOLLOWERS`, {
-                  count: count(chosenPage.followers),
-                })
-              }}
+              {{ chosenPage.category }}
+              <template v-if="chosenPage.followers != null">
+                ·
+                {{
+                  $t(`${C}.PAGE.FOLLOWERS`, {
+                    count: count(chosenPage.followers),
+                  })
+                }}
+              </template>
             </span>
           </span>
         </div>
@@ -1298,6 +1309,7 @@ onBeforeUnmount(stopRecheck);
         {{ $t(`${C}.DONE.TEXT`, { name: chosen?.name }) }}
       </p>
       <section
+        v-if="loginUnico"
         data-conectar-funciona
         class="flex w-full max-w-md flex-col gap-3 rounded-2xl bg-n-alpha-1 p-4 text-start"
         :aria-label="$t(`${C}.DONE.WORKS.TITLE`)"

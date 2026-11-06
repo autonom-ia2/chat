@@ -199,6 +199,21 @@ describe('Anúncios · login único (#2338)', () => {
     );
   });
 
+  it('inbox limit of the plan says so, instead of asking to try again later', async () => {
+    pagesReply([LOJA]);
+    CrmMetaAdsConnectionAPI.linkPage.mockRejectedValue({
+      response: { status: 402, data: { message: 'Account limit exceeded' } },
+    });
+    const wrapper = await mountConnect();
+    await toPageStep(wrapper);
+    await wrapper.find('[data-conectar-pagina-sim]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('[data-conectar-pagina-erro]').text()).toContain(
+      'limite de caixas de entrada'
+    );
+  });
+
   it('more than one Page: asks which one and links only that one', async () => {
     pagesReply([LOJA, BLOG]);
     const wrapper = await mountConnect();
