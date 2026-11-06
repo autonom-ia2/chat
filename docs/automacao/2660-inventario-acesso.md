@@ -82,8 +82,9 @@ pedindo a chave dela, e a automação age com a função de quem a ligou.
 | #2644 | nota no contato (G19) | `POST contacts/:contact_id/notes` no yml |
 | #2654 | fechar card ganho ou perdido (G25) | `POST crm/cards/:id/close` no yml, com `um_de` |
 
-O #2644 deixa mudar e apagar nota de fora ("a automação não reescreve o que alguém anotou"). A D1 cita "apagar nota
-do contato" como exemplo do que abre. Quem fizer o lote que toca `contacts/notes` confirma com a Automação qual vale.
+O #2644 deixa mudar e apagar nota de fora ("a automação não reescreve o que alguém anotou"). Vale a D1: o Rodrigo
+escolheu uma opção que dizia "apagar uma nota" (decisão repassada pela Automação, 06/11). O #2644 não muda, porque já
+tem OK. Mudar e apagar nota entram no lote 3 (trava do DELETE), que também atualiza a frase do G19 no yml.
 
 **Os lotes desta issue, na ordem proposta:**
 
@@ -302,7 +303,7 @@ O que o desfazer do Guia não alcança: `delete_all`, `update_all`, `upsert`, `u
 | branded_email_layouts | FORA 1 (D5) | — | muda o HTML em volta de todo e-mail ao cliente; fica até o Rodrigo decidir | email_template.rb:55 |
 | upload | FORA 3 | — | arquivo no storage fora do desfazer; busca URL de fora | upload_controller.rb:22-40 |
 | ctwa_tracked_links | PARTE | `POST`, `PATCH`/`PUT :id` | DELETE: cascade nos cliques (3) e quebra link em anúncio | schema.rb:4985 |
-| contacts/notes | LIBERAR | `POST` (#2644, G19); `PATCH`/`PUT :id`; `DELETE*` | — (o #2644 deixa mudar e apagar de fora; ver seção 4) | contacts/notes_controller.rb:13-21 |
+| contacts/notes | LIBERAR | `POST` (#2644, G19); `PATCH`/`PUT :id`; `DELETE*` | — (mudar e apagar entram no lote 3, pela D1; ver seção 4) | contacts/notes_controller.rb:13-21 |
 | contacts/opt_outs | FORA 4 | — | registrar corta mensagem ao cliente (como `blocked`, já proibido); apagar solta a recusa dele | opt_outs_controller.rb:13-31 |
 | contacts/customers | LIBERAR | `POST contacts/:contact_id/customer`; `DELETE*` (volta a lead) | — | customers_controller.rb:7-12 |
 | contacts/contact_inboxes | LIBERAR | `POST` com `proibe: [source_id, hmac_verified]` | `source_id` solto toma a identidade de outro contato | contact_inbox_builder.rb:61-89 |
