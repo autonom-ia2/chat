@@ -14,11 +14,14 @@
 #   que a Placement tem: os anúncios dela levam ao site e não têm conversa contada pela Meta (gate G1).
 #
 # Linha sem número da Meta e sem conversa nossa não aparece; sem nenhuma linha, nil. `explanation` é decidida
-# aqui, nunca pela IA.
+# aqui, nunca pela IA. #2344: "batem" (`close`) só com os dois lados acima de zero e a diferença de até 10% do maior;
+# uma tolerância absoluta ficava maior que os próprios números (2 × 0 "batia"). Meta com número e nós com zero é
+# `ours_none`: nenhuma conversa chegou com a marca do anúncio. Meta com zero e nós com número é `meta_none` (cada um conta
+# de um jeito; vale o nosso), menos quando a Meta não mandou número nenhum no período: aí o aviso geral `no_meta_data`
+# já explica, e a linha fica sem frase.
 class Crm::MetaAds::Panel::MetaComparison
   LEAD_ACTION = 'offsite_conversion.fb_pixel_lead'.freeze
   VISIT_ACTION = 'landing_page_view'.freeze
-  CLOSE_MIN = 2
   CLOSE_SHARE = 0.10
   ACTION_SQL = 'jsonb_array_elements(crm_meta_ad_insights_daily.actions) AS action'.freeze
   # Com a janela fixa, cada ação traz o valor nela; sem ele, o valor padrão (como Insights::Writer#conversations).
@@ -34,10 +37,17 @@ class Crm::MetaAds::Panel::MetaComparison
     return if rows.empty?
 
     no_meta = rows.none? { |row| row[:meta].positive? } && insights.sum(:spend).positive?
-    { days: @report.days, until: until_day, rows: rows, explanation: no_meta ? 'no_meta_data' : nil }
+    return { days: @report.days, until: until_day, rows: rows, explanation: nil } unless no_meta
+
+    { days: @report.days, until: until_day, rows: without_meta_none(rows), explanation: 'no_meta_data' }
   end
 
   private
+
+  # O aviso geral já diz que a Meta não mandou número: a linha não repete "cada um conta de um jeito".
+  def without_meta_none(rows)
+    rows.map { |row| row[:explanation] == 'meta_none' ? row.merge(explanation: nil) : row }
+  end
 
   def destination?(key)
     @connection.destinations_payload[key]
@@ -74,10 +84,11 @@ class Crm::MetaAds::Panel::MetaComparison
     { destination: destination, meta: meta, ours: ours, difference: difference, explanation: explanation(meta, difference) }
   end
 
-  # Sem número da Meta (ainda não mandou, ou o destino não tem o dado) não há o que explicar: nil.
   def explanation(meta, difference)
-    return if meta.zero?
-    return 'close' if difference.abs <= [CLOSE_MIN, meta * CLOSE_SHARE].max
+    ours = meta + difference
+    return 'meta_none' if meta.zero?
+    return 'ours_none' if ours.zero?
+    return 'close' if difference.abs <= [meta, ours].max * CLOSE_SHARE
 
     difference.negative? ? 'meta_higher' : 'ours_higher'
   end

@@ -652,8 +652,8 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
               {
                 destination: 'whatsapp',
                 meta: 52,
-                ours: 46,
-                difference: -6,
+                ours: 48,
+                difference: -4,
                 explanation: 'close',
               },
             ],
@@ -1174,8 +1174,8 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
     {
       destination: 'whatsapp',
       meta: 52,
-      ours: 46,
-      difference: -6,
+      ours: 48,
+      difference: -4,
       explanation: 'close',
     },
     {
@@ -1219,11 +1219,11 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
     );
     const whatsapp = wrapper.find('[data-confidence-meta-row="whatsapp"]');
     expect(whatsapp.text()).toContain(
-      'Até ontem, a Meta diz 52 conversas iniciadas pelo WhatsApp; nós contamos 46.'
+      'Até ontem, a Meta diz 52 conversas iniciadas pelo WhatsApp; nós contamos 48.'
     );
     expect(whatsapp.findAll('strong').map(node => node.text())).toEqual([
       '52',
-      '46',
+      '48',
     ]);
     expect(whatsapp.text()).toContain('Os dois números batem.');
     const site = wrapper.find('[data-confidence-meta-row="site"]');
@@ -1241,6 +1241,41 @@ describe('Anúncios da Meta · Quanto confiar, Meta × nós (#1110, F5)', () => 
 
     expect(wrapper.find('[data-confidence-meta-empty]').text()).toBe(
       'A Meta ainda não mandou o número deste período.'
+    );
+  });
+
+  // #2344: um lado zerado nunca "bate"; a frase diz o caso, com o número e o plural certos.
+  it('explains a zero on one side, with the Meta number and its plural', () => {
+    const row = (destination, meta, ours, explanation) => ({
+      destination,
+      meta,
+      ours,
+      difference: ours - meta,
+      explanation,
+    });
+    const wrapper = mountConfidence({
+      confidence: CONFIDENCE,
+      comparison: {
+        days: 7,
+        rows: [
+          row('whatsapp', 1, 0, 'ours_none'),
+          row('messaging', 2, 0, 'ours_none'),
+          row('site', 0, 3, 'meta_none'),
+        ],
+      },
+    });
+
+    const text = destination =>
+      wrapper.find(`[data-confidence-meta-row="${destination}"]`).text();
+    expect(text('whatsapp')).toContain(
+      'A Meta contou 1 conversa, mas nenhuma chegou aqui marcada como vinda dos seus anúncios.'
+    );
+    expect(text('messaging')).toContain(
+      'A Meta contou 2 conversas, mas nenhuma chegou aqui marcada como vinda dos seus anúncios.'
+    );
+    expect(text('whatsapp')).not.toContain('batem');
+    expect(text('site')).toContain(
+      'Cada um conta de um jeito. O número que vale é o nosso: são as conversas que chegaram aqui pelo botão do site.'
     );
   });
 

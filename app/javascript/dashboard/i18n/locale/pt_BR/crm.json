@@ -2818,19 +2818,25 @@
               "LINE": "Até ontem, a Meta diz {meta} conversa iniciada pelo WhatsApp; nós contamos {ours}. | Até ontem, a Meta diz {meta} conversas iniciadas pelo WhatsApp; nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
               "META_HIGHER": "A Meta também conta quem já conversava com você; conversa encaminhada ou de contato salvo chega sem origem para nós.",
-              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
+              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique.",
+              "OURS_NONE": "A Meta contou {meta} conversa, mas nenhuma chegou aqui marcada como vinda dos seus anúncios. | A Meta contou {meta} conversas, mas nenhuma chegou aqui marcada como vinda dos seus anúncios.",
+              "META_NONE": "Cada um conta de um jeito. O número que vale é o nosso: são as conversas que chegaram aqui."
             },
             "MESSAGING": {
               "LINE": "Até ontem, a Meta diz {meta} conversa iniciada pelo Messenger e pelo Direct do Instagram; nós contamos {ours}. | Até ontem, a Meta diz {meta} conversas iniciadas pelo Messenger e pelo Direct do Instagram; nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
               "META_HIGHER": "A Meta também conta quem já conversava com você; conversa que não veio pelo clique no anúncio chega sem origem para nós.",
-              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
+              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique.",
+              "OURS_NONE": "A Meta contou {meta} conversa, mas nenhuma chegou aqui marcada como vinda dos seus anúncios. | A Meta contou {meta} conversas, mas nenhuma chegou aqui marcada como vinda dos seus anúncios.",
+              "META_NONE": "Cada um conta de um jeito. O número que vale é o nosso: são as conversas que chegaram aqui."
             },
             "SITE": {
               "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
               "META_HIGHER": "A Meta conta quem deixou contato no site; nem todo mundo clica depois para conversar no WhatsApp.",
-              "OURS_HIGHER": "Contamos toda conversa que veio pelo botão do site, mesmo de quem não deixou contato lá."
+              "OURS_HIGHER": "Contamos toda conversa que veio pelo botão do site, mesmo de quem não deixou contato lá.",
+              "OURS_NONE": "A Meta contou {meta} contato deixado no site, mas nenhum chegou aqui como conversa pelo botão do site. | A Meta contou {meta} contatos deixados no site, mas nenhum chegou aqui como conversa pelo botão do site.",
+              "META_NONE": "Cada um conta de um jeito. O número que vale é o nosso: são as conversas que chegaram aqui pelo botão do site."
             },
             "NO_META_DATA": "A Meta ainda não mandou o número deste período."
           }

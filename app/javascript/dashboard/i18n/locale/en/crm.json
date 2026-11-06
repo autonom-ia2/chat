@@ -2817,19 +2817,25 @@
               "LINE": "Until yesterday, Meta says {meta} conversation started on WhatsApp; we counted {ours}. | Until yesterday, Meta says {meta} conversations started on WhatsApp; we counted {ours}.",
               "CLOSE": "The two numbers match.",
               "META_HIGHER": "Meta also counts people who were already talking to you; a forwarded conversation or one from a saved contact reaches us without an origin.",
-              "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click."
+              "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click.",
+              "OURS_NONE": "Meta counted {meta} conversation, but none reached us marked as coming from your ads. | Meta counted {meta} conversations, but none reached us marked as coming from your ads.",
+              "META_NONE": "Each side counts differently. The number that matters is ours: these are the conversations that reached us."
             },
             "MESSAGING": {
               "LINE": "Until yesterday, Meta says {meta} conversation started on Messenger and Instagram Direct; we counted {ours}. | Until yesterday, Meta says {meta} conversations started on Messenger and Instagram Direct; we counted {ours}.",
               "CLOSE": "The two numbers match.",
               "META_HIGHER": "Meta also counts people who were already talking to you; a conversation that did not come through the ad click reaches us without an origin.",
-              "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click."
+              "OURS_HIGHER": "We count every conversation that came from the ad, including people who clicked before and came back; Meta only counts up to 7 days after the click.",
+              "OURS_NONE": "Meta counted {meta} conversation, but none reached us marked as coming from your ads. | Meta counted {meta} conversations, but none reached us marked as coming from your ads.",
+              "META_NONE": "Each side counts differently. The number that matters is ours: these are the conversations that reached us."
             },
             "SITE": {
               "LINE": "Until yesterday, Meta says {meta} contact on the site (page visits: {visits}); through the site button, we counted {ours}. | Until yesterday, Meta says {meta} contacts on the site (page visits: {visits}); through the site button, we counted {ours}.",
               "CLOSE": "The two numbers match.",
               "META_HIGHER": "Meta counts people who left their contact on the site; not everyone clicks afterwards to talk on WhatsApp.",
-              "OURS_HIGHER": "We count every conversation that came through the site button, even from people who did not leave their contact there."
+              "OURS_HIGHER": "We count every conversation that came through the site button, even from people who did not leave their contact there.",
+              "OURS_NONE": "Meta counted {meta} contact left on the site, but none reached us as a conversation through the site button. | Meta counted {meta} contacts left on the site, but none reached us as a conversation through the site button.",
+              "META_NONE": "Each side counts differently. The number that matters is ours: these are the conversations that reached us through the site button."
             },
             "NO_META_DATA": "Meta has not sent the number for this period yet."
           }
