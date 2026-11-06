@@ -9,6 +9,11 @@ const RECURSOS = [
     precisa: 'page',
     permissao: 'pages_manage_engagement',
   },
+  {
+    chave: 'MESSAGES_FACEBOOK',
+    precisa: 'page',
+    permissao: 'pages_messaging',
+  },
   { chave: 'FORMS', precisa: 'page', permissao: 'leads_retrieval' },
   { chave: 'POSTS', precisa: 'page', permissao: 'read_insights' },
   {

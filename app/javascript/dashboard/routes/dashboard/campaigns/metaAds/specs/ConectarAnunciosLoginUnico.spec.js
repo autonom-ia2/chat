@@ -272,6 +272,7 @@ describe('recursosDoLogin', () => {
       'PAGE',
       'PAGE',
       'PAGE',
+      'PAGE',
     ]);
   });
 
