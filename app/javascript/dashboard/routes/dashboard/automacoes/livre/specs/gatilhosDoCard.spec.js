@@ -74,11 +74,11 @@ const CATALOGO = {
 };
 
 // Os gatilhos que o editor oferece, numa tela mínima.
-const oferecidos = async flags => {
+const oferecidos = async (flags, catalogo = CATALOGO) => {
   let resultado;
   mount({
     setup() {
-      resultado = useGatilhosNovos(flag => flags.includes(flag), ref(CATALOGO));
+      resultado = useGatilhosNovos(flag => flags.includes(flag), ref(catalogo));
       return {};
     },
     template: '<div />',
@@ -157,6 +157,31 @@ describe('gatilhos de card', () => {
       ...ESCOLHAS.nomes,
       campo: { 'Crm::Card': {}, Contact: {} },
     });
+  });
+
+  it('o de reunião só com as reuniões da instalação ligadas', async () => {
+    const comReuniao = {
+      ...CATALOGO,
+      gatilhos: [
+        ...CATALOGO.gatilhos,
+        {
+          ...deCard('card.reuniao_marcada', 'CARD_REUNIAO_MARCADA', []),
+          grupo: 'reuniao',
+          reunioes: true,
+        },
+      ],
+    };
+    const ofertados = async () =>
+      tipos(
+        (await oferecidos(['automacao_gatilhos'], comReuniao)).gatilhos.value
+      );
+
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'false' };
+    expect(await ofertados()).not.toContain('card.reuniao_marcada');
+
+    window.globalConfig = { CRM_CALENDAR_MEETINGS_ENABLED: 'true' };
+    expect(await ofertados()).toContain('card.reuniao_marcada');
+    window.globalConfig = {};
   });
 
   it('o seletor agrupa conversa e card', async () => {

@@ -266,7 +266,7 @@ class Autonomia::Automacao::Executor
   def alvo = (@alvo ||= @execucao.alvo_type.constantize.find_by(id: @execucao.alvo_id))
 
   # As pontes do alvo (#2499): conversa, card ou contato, e os outros dois quando há caminho.
-  def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(alvo))
+  def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(alvo, execucao: @execucao))
 
   # Com as permissões de quem ligou (#2597); no "esperar até", com a janela da espera (G11).
   def valores(espera: nil) = ::Autonomia::Automacao::Valores.new(alvo: contexto, quem: @definicao.ligada_por, espera: espera)

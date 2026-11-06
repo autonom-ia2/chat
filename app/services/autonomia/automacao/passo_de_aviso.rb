@@ -17,7 +17,7 @@ class Autonomia::Automacao::PassoDeAviso
     return negado if negado
 
     texto = texto_pronto
-    return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) if texto.nil?
+    return faltou_valor if texto.nil?
 
     avisar(texto)
   end

@@ -76,6 +76,10 @@ module Events::Types
   CRM_CARD_REOPENED = 'crm.card.reopened'
   CRM_CARD_ARCHIVED = 'crm.card.archived'
   CRM_FOLLOW_UP_DUE = 'crm.follow_up.due'
+  # reunião do card marcada, remarcada ou cancelada (#2499, G12): só a Automação livre ouve; os webhooks não recebem
+  CRM_MEETING_SCHEDULED = 'crm.meeting.scheduled'
+  CRM_MEETING_RESCHEDULED = 'crm.meeting.rescheduled'
+  CRM_MEETING_CANCELED = 'crm.meeting.canceled'
   # leitura do gasto de hoje dos anúncios da Meta terminou (#1073) — a tela troca os números
   CRM_META_ADS_INSIGHTS_UPDATED = 'crm.meta_ads.insights_updated'
   # comentário novo num post da Meta, Instagram (#2196) ou Página (#2197), para quem cuida dos comentários (#2212).

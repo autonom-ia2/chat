@@ -61,7 +61,11 @@
       "CARD_ATRIBUTOS": "Card custom field",
       "MENSAGEM_TIPO": "Message type",
       "MENSAGEM_PRIVADA": "Private message",
-      "MENSAGEM_PRIMEIRA": "First message of the conversation"
+      "MENSAGEM_PRIMEIRA": "First message of the conversation",
+      "CARD_LINK_DA_AGENDA": "Booking link of the card owner (at step time)",
+      "CONVERSA_LINK_DA_AGENDA": "Booking link of the conversation assignee (at step time)",
+      "REUNIAO_INICIO": "Meeting date and time",
+      "REUNIAO_LINK_DA_REUNIAO": "Meeting call link"
     },
     "PASSOS": {
       "ESPERAR": "Wait for a while",

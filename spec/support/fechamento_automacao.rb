@@ -162,7 +162,7 @@ module FechamentoAutomacao::Lacunas
     'G10' => -> { gatilho?('etiqueta.posta', 'conversa.etiqueta_posta', 'contato.etiqueta_posta') },
     'G11' => -> { valor?('conversa.equipe_respondeu') && valor?('conversa.cliente_respondeu') },
     'G12' => lambda {
-      gatilho?('reuniao.marcada') && gatilho?('reuniao.cancelada') &&
+      gatilho?('card.reuniao_marcada') && gatilho?('card.reuniao_cancelada') &&
         %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
     },
     'G13' => -> { passo?('webhook') },
