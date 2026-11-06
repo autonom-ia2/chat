@@ -152,7 +152,11 @@ describe('gatilhos de card', () => {
     ]);
     // E aí lê os funis e as etapas, agrupadas pelo funil.
     expect(comTudo.escolhasDoGatilho.value.etapas).toEqual(ESCOLHAS.etapas);
-    expect(comTudo.escolhasDoGatilho.value.nomes).toEqual(ESCOLHAS.nomes);
+    // Sem gatilho de data oferecido, os campos de data não são lidos.
+    expect(comTudo.escolhasDoGatilho.value.nomes).toEqual({
+      ...ESCOLHAS.nomes,
+      campo: { 'Crm::Card': {}, Contact: {} },
+    });
   });
 
   it('o seletor agrupa conversa e card', async () => {
