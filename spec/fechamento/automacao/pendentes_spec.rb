@@ -8,7 +8,7 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
   pendentes = {
     1 => ['Renovação do seguro sem esquecer ninguém', 'G6 (30 dias antes do vencimento), G1, G2, G3, G8, G11, G12'],
     2 => ['Lead do anúncio atendido em 5 minutos', 'G5 (card criado pelo formulário), G1, G3, G11, G12, G14, G15'],
-    3 => ['Pós-procedimento da clínica', 'G5 (entrou em "Atendida"), G1, G3, G12, G14, G16, G20'],
+    3 => ['Pós-procedimento da clínica', 'G5 (entrou em "Atendida"), G1, G2, G3, G12, G16, G20'],
     4 => ['Aluno que começa a faltar', 'G5 (entrou em "Faltou"), G1, G3, G4, G12, G15, G25'],
     5 => ['Revisão do carro no tempo certo', 'G5 (card ganho), G1, G3, G6, G12, G16, G19'],
     6 => ['Aniversário que vira horário marcado', 'G6 (data de nascimento do contato), G1, G4, G12, G14, G16, G25'],
@@ -21,10 +21,10 @@ RSpec.describe 'Fechamento #2414 · exemplos que ainda não rodam', type: :model
     14 => ['Documentação completa para emitir', 'G5 (entrou em "Documentação"), G1, G3, G13, G20'],
     15 => ['Cliente grande, atendimento de dono', 'G5 (card criado ou valor mudou), G3, G11, G12, G15'],
     16 => ['Reconquistar quem foi para o concorrente', 'G7 (todo dia 1º), G3, G4, G12, G14, G16, G18'],
-    17 => ['Vendedora de férias, cliente bem cuidado', 'G9 (troca de responsável), G7, G11, G15, G16, G18, G23'],
+    17 => ['Vendedora de férias, cliente bem cuidado', 'G9 (troca de responsável), G7, G11, G15, G16, G23'],
     18 => ['Seleção de candidatos sem planilha', 'G4, G20 (ler o currículo e criar o card), G1, G5, G6, G12, G15, G25'],
     19 => ['Cliente que sumiu do WhatsApp', 'G8 (mensagem que falhou), G1, G2, G3, G11, G19'],
-    20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G11, G12, G13, G14']
+    20 => ['Venda fechada já entra no sistema da empresa', 'G5 (card ganho), G1, G2, G7, G11, G12, G13']
   }
 
   it 'sonda quebrada é erro, nunca pendente' do
