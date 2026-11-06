@@ -110,7 +110,7 @@ conversa e do contato), os passos esperar, esperar até, se e parar, a ação da
 (etiquetas, atributos, contato, empresa, conversa, atribuição, card alterar e mover, etapa, agente na caixa), mensagem
 ao cliente dentro da janela, aviso à equipe pelo sino e os quatro passos de IA.
 
-**Placar em 06/11 (main `8c7a06acc0`): 0 de 20 inteiros.** Lacunas fechadas: G1, G2, G5, G6, G11. Exemplo só conta inteiro e com spec verde; parcial não conta.
+**Placar em 06/11 (main `74b6e48766` + #2639): 1 de 20 inteiros (ex. 13).** Lacunas fechadas: G1, G2, G5, G6, G11, G16. Exemplo só conta inteiro e com spec verde; parcial não conta.
 
 Com isso, **só o exemplo 10 (cliente bravo) roda quase inteiro**: os passos 1 e 3 a 7, e no 2 a passagem para a Fernanda. O
 passo 8 (card no quadro "Melhorias") depende da G4, e tirar da agente de IA (passo 2) da prova da G15. Os outros 19 começam por um gatilho
@@ -137,7 +137,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G13 | **Webhook de saída** e gravar a resposta no card; recusa vira caminho "deu erro" | F8 | A fazer (F6/F8 PR4) | Gatilhos | 8, 14, 20 |
 | G14 | **Campanhas**: pôr e tirar o contato de uma campanha, montar e disparar campanha para quem tem uma etiqueta | novo | Sem passo | F5 | 2, 6, 7, 9, 12, 16 |
 | G15 | **Passar a conversa para a agente de IA** e tirar dela | F3 (ação) | A atribuição aceita `AgentBot`, mas não está provado que a "agente de IA" (Agentes) assume pela atribuição; a conferir | F7 | 2, 4, 7, 10, 15, 17, 18 |
-| G16 | **Valor calculado no corpo** da ação (gravar "hoje + 6 meses", "indicado por {nome}", motivo da perda no texto) | F3/F4 | O corpo da ação é literal; variável só na mensagem | Motor | 3, 5, 6, 11, 13, 16, 17 |
+| G16 | **Valor calculado no corpo** da ação (gravar "hoje + 6 meses", "indicado por {nome}", motivo da perda no texto) | F3/F4 | **Fechada** (#2593 motor, #2639 editor): `$valor`, `$texto` e `$data` no corpo da ação | Motor | 3, 5, 6, 11, 13, 16, 17 |
 | G17 | **Criar contato** (o amigo indicado, o funcionário novo) e **importar em lote** ligado à empresa | novo | `POST contacts` fora da lista; importação não é passo | F2 | 8, 11 |
 | G18 | **Agir ou ler em outro registro ligado** ao alvo (o card do João avisa a Maria, que indicou; a resposta lê o motivo da perda no card antigo do mesmo contato). "Para cada card com etiqueta X" é da G7 | F8 / novo | O passo age só no alvo da execução | Motor | 11, 16 |
 | G19 | **Nota no contato** (não na conversa) | F3 (ação) | `contacts/notes` fora da lista | F2 | 5, 19 |
@@ -179,7 +179,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 10 | **Cliente bravo** | ✅ mensagem do cliente | decidir ✅, atribuir ✅, prioridade ✅, etiqueta ✅, resumir+avisar ✅, mensagem ✅ | G4 (passo 8), G15 (tirar da agente de IA, a conferir) | **Parcial: passos 1 e 3–7**; no 2, passar para a Fernanda ✅, tirar da agente de IA a conferir (G15) |
 | 11 | Indicação que vira presente | ✅ mensagem do cliente | decidir ✅, extrair ✅, mensagem a Maria ✅ | G1, G4, G5, G12, G16, G17, G18 | Não |
 | 12 | Visita que aconteceu | 🟡 G5 (entrou em "Visita feita") | mensagem ✅ (na janela), decidir ✅, extrair ✅, mover ✅, etiqueta ✅, avisar ✅ | G2, G3, G5, G11, G14, G25 | Não |
-| 13 | Festa do contrato ao depoimento | 🟡 G5 (card ganho) + ⛔ G6 (datas da festa) | extrair ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | G1, G2, G5, G6, G16 | Não |
+| 13 | Festa do contrato ao depoimento | ✅ G5 (card ganho) + ✅ G6 (datas da festa) | e-mail ✅ (G2), modelo fora da janela ✅ (G1), data calculada ✅ (G16), extrair → copiar ao card (2 passos) ✅, resumir/avisar ✅, decidir ✅, etiqueta ✅ | — | **Sim** (`exemplo_13_festa_do_contrato_spec.rb`) |
 | 14 | Documentação para emitir | 🟡 G5 (entrou em "Documentação") | extrair ✅, escrever ✅, etiqueta ✅, mover ✅, avisar ✅ | G1, G3, G5, G13, G20 | Não |
 | 15 | Cliente grande | 🟡 G5 (card criado/valor mudou) | se com etiqueta ✅, atribuir ✅, etiqueta ✅, prioridade ✅, resumir ✅, mensagem ✅ | G3, G5, G11, G12, G15 | Não |
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
