@@ -371,6 +371,7 @@ en:
         to_you: "Complaint: I didn't reply and passed it to you."
         private_reply_failed: "I couldn't send the message. Reply yourself, if you want."
         private_reply_unsure: "I'm not sure the message went out: Meta didn't answer. Check the inbox before you reply."
+        resolved_after_private_reply: 'I sent the private message and resolved the conversation. If the person replies, the reply comes to the inbox.'
         public_reply: '%{user_name} replied in public on the post: “%{text}”'
         hidden: '%{user_name} hid the comment on the post'
         shown: '%{user_name} showed the comment on the post again'
