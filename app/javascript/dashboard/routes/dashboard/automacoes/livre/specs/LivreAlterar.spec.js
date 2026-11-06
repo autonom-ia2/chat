@@ -5,7 +5,12 @@ import LivreAlterar from '../components/LivreAlterar.vue';
 // #2414 F5 — o "Salvar" só aparece pronto quando o esquema aceitaria: alvo a
 // escolher e campo obrigatório preenchidos, condição com o que olhar. A ação
 // avançada abre só para ver.
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: chave => chave }) }));
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (chave, valores) =>
+      valores ? `${chave}(${Object.values(valores).join(',')})` : chave,
+  }),
+}));
 
 const PainelFalso = defineComponent({
   name: 'SidePanel',
@@ -93,6 +98,96 @@ describe('LivreAlterar', () => {
 
     await wrapper.find('[data-salvar]').trigger('click');
     expect(wrapper.emitted('salvar')[0][0].valor.caminho).toEqual({ id: 7 });
+  });
+
+  // #2414 G16b: a data calculada pela metade segura o "Salvar".
+  it('não salva com a data calculada pela metade', async () => {
+    const wrapper = montar();
+    const passo = data => ({
+      id: 'p1',
+      tipo: 'acao',
+      acao: 'PATCH labels/:id',
+      descricao: 'x',
+      caminho: { id: 7 },
+      corpo: { title: 'cliente', custom_attributes: { revisao: data } },
+    });
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo({
+        $data: { de: 'hoje', mais: { valor: null, unidade: 'meses' } },
+      }),
+    });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo({
+        $data: { de: 'hoje', mais: { valor: 6, unidade: 'meses' } },
+      }),
+    });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
+  // #2414 G16b: o painel fica montado entre um passo e outro; a peça de data
+  // não pode levar o modo de um para o outro.
+  it('cada passo reabre a peça de data com o modo dele', async () => {
+    const contato = {
+      tipo: 'acao',
+      nome: 'contato_alterar',
+      acao: 'PATCH contacts/:id',
+      grupo: 'CONTATO',
+      frase: 'MUDAR_CONTATO',
+      caminho: { id: { $valor: 'contato.id' } },
+      fixos: {},
+      campos: [
+        {
+          nome: 'custom_attributes',
+          peca: 'atributos_do_contato',
+          rotulo: 'X',
+        },
+      ],
+    };
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo: { ...CATALOGO, passos: [contato] },
+        opcoes: {},
+        atributosDaPeca: () => [
+          {
+            attribute_key: 'revisao',
+            attribute_display_name: 'Revisão',
+            attribute_display_type: 'date',
+          },
+        ],
+        atributosDo: () => [],
+      },
+      global: {
+        stubs: { SidePanel: PainelFalso },
+        mocks: { $t: chave => chave },
+      },
+    });
+    const passo = (id, revisao) => ({
+      id,
+      tipo: 'acao',
+      acao: 'PATCH contacts/:id',
+      descricao: 'x',
+      caminho: { id: { $valor: 'contato.id' } },
+      corpo: { custom_attributes: { revisao } },
+    });
+    const modo = () =>
+      wrapper.find('[data-data-modo] [role="combobox"]').text();
+
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo('a', { $data: { de: 'hoje' } }),
+    });
+    await flushPromises();
+    expect(modo()).toBe('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.HOJE');
+
+    wrapper.vm.abrir({ tipo: 'passo', valor: passo('b', '2027-05-04') });
+    await flushPromises();
+    expect(modo()).toBe('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.DIA');
   });
 
   // #2496: o "Só se" acompanha o gatilho, e o painel diz o que entra e o que
@@ -250,5 +345,136 @@ describe('LivreAlterar', () => {
     expect(wrapper.find('[data-avancada-dica]').exists()).toBe(true);
     await wrapper.find('[data-tirar]').trigger('click');
     expect(wrapper.emitted('tirar')).toHaveLength(1);
+  });
+
+  // G2: a caixa do e-mail é uma escolha do ChoiceSelect, só entre as caixas de
+  // e-mail da conta; sem nenhuma, o painel diz e o "Salvar" não libera.
+  describe('passo "email"', () => {
+    const EMAIL = {
+      tipo: 'email',
+      grupo: 'MENSAGEM',
+      frase: 'EMAIL',
+      campos: [
+        {
+          nome: 'caixa_id',
+          peca: 'caixa_de_email',
+          obrigatorio: true,
+          rotulo: 'CAIXA_ID',
+        },
+        {
+          nome: 'assunto',
+          peca: 'linha_com_valores',
+          obrigatorio: true,
+          rotulo: 'ASSUNTO',
+        },
+        {
+          nome: 'texto',
+          peca: 'texto_com_valores',
+          obrigatorio: true,
+          rotulo: 'TEXTO',
+        },
+      ],
+    };
+    const passo = caixaId => ({
+      id: 'p1',
+      tipo: 'email',
+      caixa_id: caixaId,
+      assunto: ['Seu pedido'],
+      texto: ['Saiu.'],
+    });
+    const montarEmail = caixaDeEmail =>
+      mount(LivreAlterar, {
+        props: {
+          catalogo: { ...CATALOGO, passos: [EMAIL] },
+          opcoes: { caixaDeEmail },
+          atributosDaPeca: () => [],
+          atributosDo: () => [],
+        },
+        global: {
+          stubs: { SidePanel: PainelFalso, LivreTexto: true },
+          mocks: { $t: chave => chave },
+        },
+      });
+
+    it('escolhe entre as caixas de e-mail e só salva com uma escolhida', async () => {
+      const wrapper = montarEmail([{ value: 3, label: 'Contato' }]);
+      wrapper.vm.abrir({ tipo: 'passo', valor: passo(null) });
+      await flushPromises();
+      const escolha = wrapper
+        .find('[data-peca="caixa_de_email"]')
+        .findComponent({ name: 'ChoiceSelect' });
+      expect(escolha.props('options')).toEqual([
+        { value: 3, label: 'Contato' },
+      ]);
+      expect(salvarDesligado(wrapper)).toBe(true);
+
+      await escolha.vm.$emit('update:modelValue', 3);
+      expect(salvarDesligado(wrapper)).toBe(false);
+      await wrapper.find('[data-salvar]').trigger('click');
+      expect(wrapper.emitted('salvar')[0][0].valor.caixa_id).toBe(3);
+    });
+
+    it('o assunto é uma linha só, e cada "Pôr um dado" diz em qual caixa entra', async () => {
+      const wrapper = montarEmail([{ value: 3, label: 'Contato' }]);
+      wrapper.vm.abrir({ tipo: 'passo', valor: passo(3) });
+      await flushPromises();
+      const [assunto, texto] = wrapper.findAllComponents({
+        name: 'LivreTexto',
+      });
+
+      expect(assunto.props('umaLinha')).toBe(true);
+      expect(texto.props('umaLinha')).toBe(false);
+      expect(assunto.props('rotuloDoDado')).toBe(
+        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM(ASSUNTO)'
+      );
+      expect(texto.props('rotuloDoDado')).toBe(
+        'AUTOMACAO_LIVRE.ALTERAR_PAINEL.POR_VALOR_EM(TEXTO)'
+      );
+    });
+
+    it('a mensagem, com um texto só, segue em caixa grande e com o rótulo de sempre', async () => {
+      const MENSAGEM = {
+        tipo: 'mensagem',
+        grupo: 'MENSAGEM',
+        frase: 'MENSAGEM',
+        campos: [
+          {
+            nome: 'texto',
+            peca: 'texto_com_valores',
+            obrigatorio: true,
+            rotulo: 'TEXTO',
+          },
+        ],
+      };
+      const wrapper = mount(LivreAlterar, {
+        props: {
+          catalogo: { ...CATALOGO, passos: [MENSAGEM] },
+          opcoes: {},
+          atributosDaPeca: () => [],
+          atributosDo: () => [],
+        },
+        global: {
+          stubs: { SidePanel: PainelFalso, LivreTexto: true },
+          mocks: { $t: chave => chave },
+        },
+      });
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: { id: 'm1', tipo: 'mensagem', texto: ['Oi'] },
+      });
+      await flushPromises();
+      const texto = wrapper.findComponent({ name: 'LivreTexto' });
+
+      expect(texto.props('umaLinha')).toBe(false);
+      expect(texto.props('rotuloDoDado')).toBe('');
+    });
+
+    it('sem caixa de e-mail na conta, avisa e não salva', async () => {
+      const wrapper = montarEmail([]);
+      wrapper.vm.abrir({ tipo: 'passo', valor: passo(null) });
+      await flushPromises();
+      expect(wrapper.find('[data-sem-caixa-de-email]').exists()).toBe(true);
+      expect(salvarDesligado(wrapper)).toBe(true);
+    });
   });
 });

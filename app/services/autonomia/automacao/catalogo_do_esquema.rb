@@ -2,7 +2,8 @@
 # unidades de tempo e os operadores.
 #
 # #2499 (F6): o gatilho de card traz o grupo, a flag que pede, a chave de funis (`funil`) e os parâmetros que a pessoa
-# escolhe nele (a etapa, o funil), com a frase e se é obrigatório, pelas regras `allOf` do esquema.
+# escolhe nele (a etapa, o funil), com a frase e se é obrigatório, pelas regras `allOf` do esquema. Os de tempo (PR3)
+# trazem também os dias, o campo de data, antes ou depois e a hora.
 # G12: o de reunião marca `reunioes` — o editor só oferece com as reuniões da instalação ligadas.
 module Autonomia::Automacao::CatalogoDoEsquema
   module_function
@@ -10,8 +11,9 @@ module Autonomia::Automacao::CatalogoDoEsquema
   def gatilhos(esquema, declarado)
     esquema.dig('properties', 'gatilho', 'properties', 'tipo', 'enum').map do |tipo|
       card = ::Autonomia::Automacao::Gatilhos.do_card?(tipo)
+      tempo = ::Autonomia::Automacao::Gatilhos.de_tempo?(tipo)
       { 'tipo' => tipo, 'alvo' => ::Autonomia::Automacao::Gatilhos.alvo(tipo), 'frase' => chave('GATILHOS', tipo),
-        'grupo' => grupo(tipo, card), 'requer' => (::Autonomia::Automacao::Motor::FLAG_GATILHOS if card),
+        'grupo' => grupo(tipo, card, tempo), 'requer' => (::Autonomia::Automacao::Motor::FLAG_GATILHOS if card || tempo),
         'funil' => (true if card), 'reunioes' => (true if ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)),
         'parametros' => parametros(esquema, tipo).presence,
         'filtro_sugerido' => declarado.dig('filtro_sugerido', tipo) }.compact
@@ -19,8 +21,10 @@ module Autonomia::Automacao::CatalogoDoEsquema
   end
 
   # A reunião (G12) é do card, mas fica num grupo próprio no editor: quem procura "reunião" não pensa em "card do funil".
-  def grupo(tipo, card)
+  # #2499 PR3: os de tempo (inclusive o card parado e a data do card) ficam no grupo Tempo.
+  def grupo(tipo, card, tempo)
     return 'reuniao' if ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)
+    return 'tempo' if tempo
 
     card ? 'card' : 'conversa'
   end

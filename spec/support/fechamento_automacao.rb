@@ -134,6 +134,20 @@ module FechamentoAutomacao::Lacunas
     acao?(acao) && tipos.include?('Autonomia::Agents::Agent')
   end
 
+  # G16: o corpo de uma ação aceita valor calculado. O esquema da receita deixa a data calculada no corpo, e o motor a
+  # monta na hora: hoje + 6 meses sai como "AAAA-MM-DD", no fuso da conta.
+  def valor_calculado_no_corpo?
+    data = { '$data' => { 'de' => 'hoje', 'mais' => { 'valor' => 6, 'unidade' => 'meses' } } }
+    corpo = { 'merge' => true, 'custom_attributes' => { 'revisao' => data } }
+    passo = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
+              'caminho' => { 'id' => { '$valor' => 'conversa.id' } }, 'corpo' => corpo }
+    receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }
+    conta = Account.new(custom_attributes: { 'timezone' => 'UTC' })
+    montado = Autonomia::Automacao::Corpo.new(corpo, valores: nil, conta: conta).montar
+    Autonomia::Automacao::Receita.esquema_valido?(receita) &&
+      montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
+  end
+
   SONDAS = {
     # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
@@ -159,7 +173,7 @@ module FechamentoAutomacao::Lacunas
     # o formato gerado (formatos-das-acoes.json) listar 'Autonomia::Agents::Agent' em `assignee_type.um_de`, o que pede
     # inclusion no modelo ou validação no controller; se a F7 aceitar o agente por outro caminho, ela ajusta esta sonda.
     'G15' => -> { atribui_agente_de_ia? },
-    'G16' => nil,
+    'G16' => -> { valor_calculado_no_corpo? },
     'G17' => -> { acao?('POST contacts') },
     'G18' => nil,
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },

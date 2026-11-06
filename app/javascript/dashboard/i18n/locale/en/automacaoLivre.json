@@ -89,7 +89,8 @@
       "DECIDIR": "AI chooses the path",
       "EXTRAIR": "AI pulls data from the conversation",
       "ESCREVER": "AI writes a text",
-      "RESUMIR": "AI summarizes the conversation"
+      "RESUMIR": "AI summarizes the conversation",
+      "EMAIL": "Send an e-mail to the customer"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -138,6 +139,8 @@
       "INSTRUCAO": "What the AI should write",
       "DESTINO": "Where it goes",
       "LINHAS": "Summary length (lines)",
+      "CAIXA_ID": "From which e-mail inbox",
+      "ASSUNTO": "Subject",
       "MODELO": "If the 24-hour window is closed"
     },
     "OPCOES": {
@@ -287,7 +290,8 @@
       "ESCREVER_SUGESTAO": "AI writes a suggestion for the team: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "AI writes a suggestion for the team: the instruction is missing",
       "RESUMIR_NOTA": "AI summarizes the conversation in a note",
-      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}"
+      "RESUMIR_AVISAR": "AI summarizes the conversation and notifies {quem}",
+      "EMAIL": "E-mail the customer: “{assunto}”"
     },
     "RAMOS": {
       "ENTAO": "Then",
@@ -332,9 +336,28 @@
       "CALCULADO_TEXTO": "Put together when it runs: {texto}",
       "HOJE": "today",
       "DATA_CALCULADA": "Date worked out when it runs: {de}",
-      "DATA_CALCULADA_MAIS": "Date worked out when it runs: {de} + {n} {unidade}",
-      "DATA_CALCULADA_MENOS": "Date worked out when it runs: {de} − {n} {unidade}",
       "ATRIBUTO_CALCULADO": "{nome}: {valor}",
+      "DATA_MAIS": "{de} + {n} {unidade}",
+      "DATA_MENOS": "{de} − {n} {unidade}",
+      "DATA": {
+        "PERGUNTA": "Which date to save?",
+        "DIA": "A set day",
+        "HOJE": "A date counted from today",
+        "CAMPO": "A date counted from a date field",
+        "DIA_ROTULO": "Day",
+        "QUAL_CAMPO": "Counted from which field?",
+        "SEM_CAMPO": "This account has no date field yet.",
+        "QUANTO": "How long?",
+        "NUMERO": "How many",
+        "ZERO": "Use 0 to save the same day",
+        "UNIDADE": "Of what",
+        "SENTIDO": "After or before",
+        "DEPOIS": "after",
+        "ANTES": "before",
+        "GRAVA": "Saves: {valor}",
+        "CAMPO_APAGADO": "This date field was deleted from the account. Pick another one: as it is, Save all will not accept it.",
+        "NUMERO_INVALIDO": "Use a whole number from 0 to {teto}."
+      },
       "MODELO": {
         "DICA": "On official WhatsApp, 24 hours after the customer's last message, free text can't be sent. Pick a Meta-approved template to send instead; Meta charges for each template sent. With the window open, the text above is sent.",
         "NENHUM": "Don't send anything (the automation stops in this conversation)",
@@ -344,7 +367,9 @@
         "MUDOU": "The template now asks for {quantas} variables. Fill in all of them before saving.",
         "SUMIU": "The template {nome} is no longer approved as utility in the inboxes you can see. Pick another.",
         "VARIAVEL": "Template variable {numero}"
-      }
+      },
+      "POR_VALOR_EM": "Add a conversation detail to “{campo}”",
+      "SEM_CAIXA_DE_EMAIL": "This account has no e-mail inbox yet. Create one in Inboxes to use this step."
     },
     "LIGAR": {
       "BOTAO": "Turn on",

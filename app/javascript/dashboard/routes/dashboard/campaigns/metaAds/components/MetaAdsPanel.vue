@@ -17,9 +17,9 @@ import {
   amount,
   destinationKey,
   duration,
-  otherAdStats,
   periodRange,
   relativeTime,
+  resultadoDoAnuncio,
   rollingDays,
   thumbClass,
 } from '../metaAdsHelpers';
@@ -49,11 +49,12 @@ import { useMapGetter } from 'dashboard/composables/store';
 // exemplo, sem servidor e sem abrir anúncio ou lista.
 //
 // Conectar a conta de anúncios (#2054): sem conexão, o caminho começa num "Investimento" sem valor, com "Ver quanto
-// gastei" (emite 'connect'). Com conexão, os anúncios que não levam ao WhatsApp ficam num bloco à parte ("Outros
-// anúncios", panel.other_ads), fora do custo por conversa e por venda.
+// gastei" (emite 'connect'). Com conexão, os anúncios que não levam a conversa (panel.other_ads) ficam fora do custo
+// por conversa e por venda.
 //
-// Números honestos (#2521): cada um dos "Outros anúncios" diz para onde leva (ad.destination) e mostra o que a Meta
-// mede nesse destino (OTHER_STATS), e abre por dentro como os outros (#2519). Todo anúncio com comentário no período
+// Lista única (#2621, decisão do Rodrigo): todos os anúncios no mesmo cartão grande, os que não levam a conversa depois.
+// Cada um desses diz para onde leva (ad.destination) e mostra o investido e um número só, o do objetivo dele
+// (resultadoDoAnuncio), e abre por dentro como os outros (#2519). Todo anúncio com comentário no período
 // mostra quantos e o atalho para "Cuidar dos comentários" (flag meta_ads_comentarios_ia).
 const props = defineProps({
   // Quem só tem meta_ads_view (#1794): o painel sem os gestos do consultor nem os atalhos para a conexão.
@@ -356,11 +357,21 @@ const adStats = ad => [
   { key: 'CONVERSATIONS', value: ad.conversations },
   { key: 'SALES', value: ad.sales },
 ];
-// "Outros anúncios" (#2521): o gasto e o que a Meta mede no destino de cada um (otherAdStats).
-const otherStats = ad => [
-  { key: 'SPEND', value: fmt(ad.spend) },
-  ...otherAdStats(ad).map(stat => ({ ...stat, value: number(stat.value) })),
-];
+// Lista única (#2621): primeiro os que trazem conversa, na ordem do servidor (por venda), depois os que levam a outro
+// lugar, do maior gasto ao menor. Esses levam o investido e um número só, o do objetivo deles (resultadoDoAnuncio), sem
+// veredito de conversa: "faltam conversas" não vale para quem não abre conversa.
+const listedAds = computed(() => [
+  ...ads.value,
+  ...otherAds.value.map(ad => ({ ...ad, outside: true })),
+]);
+const cardStats = ad => {
+  if (!ad.outside) return adStats(ad);
+  const result = resultadoDoAnuncio(ad);
+  return [
+    ...(withoutSpend.value ? [] : [{ key: 'SPEND', value: fmt(ad.spend) }]),
+    { key: `RESULT_${result.key}`, value: number(result.value), wide: true },
+  ];
+};
 // Atalho para "Cuidar dos comentários" do anúncio: fora do exemplo e com as mesmas flags que mostram o cuidar no
 // anúncio por dentro (MetaAdsAdDetail showCare): os comentários de ao menos uma rede e a IA dos comentários (a gestão
 // não entra, #2520).
@@ -883,11 +894,11 @@ onMounted(() => {
           <h4 class="m-0 text-sm font-semibold text-n-slate-11">
             {{
               otherAds.length
-                ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_WHATSAPP_TITLE')
+                ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_ALL_TITLE')
                 : $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_TITLE')
             }}
           </h4>
-          <p v-if="!ads.length" class="m-0 text-sm text-n-slate-11">
+          <p v-if="!listedAds.length" class="m-0 text-sm text-n-slate-11">
             {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.ADS_EMPTY') }}
           </p>
           <ul
@@ -895,9 +906,10 @@ onMounted(() => {
             class="grid items-stretch gap-5 p-0 m-0 list-none sm:grid-cols-2 xl:grid-cols-3"
           >
             <li
-              v-for="ad in ads"
+              v-for="ad in listedAds"
               :key="ad.ad_id"
               :data-panel-ad="ad.ad_id"
+              :data-panel-ad-kind="ad.outside ? ad.destination : 'conversation'"
               class="relative flex flex-col overflow-hidden rounded-xl bg-n-solid-1 ring-1 ring-n-weak transition hover:ring-n-slate-6 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-n-brand"
             >
               <!-- Moldura 4:5 em todos os cartões (#2010): o criativo aparece inteiro (vertical, feed ou quadrado) e a
@@ -959,10 +971,11 @@ onMounted(() => {
                 </div>
                 <dl class="grid grid-cols-2 m-0 gap-x-3 gap-y-3">
                   <div
-                    v-for="stat in adStats(ad)"
+                    v-for="stat in cardStats(ad)"
                     :key="stat.key"
+                    :data-panel-ad-stat="stat.key"
                     class="flex flex-col gap-1 min-w-0"
-                    :class="{ 'col-span-2': stat.key === 'SPEND' }"
+                    :class="{ 'col-span-2': stat.key === 'SPEND' || stat.wide }"
                   >
                     <dt class="text-xs text-n-slate-11">
                       {{
@@ -976,7 +989,32 @@ onMounted(() => {
                     </dd>
                   </div>
                 </dl>
-                <p class="m-0 text-xs font-normal tabular-nums text-n-slate-10">
+                <p
+                  v-if="ad.outside"
+                  :data-panel-ad-destination="ad.destination"
+                  class="m-0 text-xs font-normal tabular-nums text-n-slate-10"
+                >
+                  <template v-if="ad.private_conversations">
+                    {{
+                      $t(
+                        'CRM_KANBAN.META_ADS_HUB.PANEL.AD_DESTINATION_PRIVATE',
+                        {
+                          destination: $t(destinationKey(ad)),
+                          private: $t(
+                            'CRM_KANBAN.META_ADS_HUB.PANEL.AD_PRIVATE',
+                            { count: ad.private_conversations },
+                            ad.private_conversations
+                          ),
+                        }
+                      )
+                    }}
+                  </template>
+                  <template v-else>{{ $t(destinationKey(ad)) }}</template>
+                </p>
+                <p
+                  v-else
+                  class="m-0 text-xs font-normal tabular-nums text-n-slate-10"
+                >
                   {{
                     ad.cost_per_sale != null
                       ? $t('CRM_KANBAN.META_ADS_HUB.PANEL.PER_SALE', {
@@ -1026,142 +1064,6 @@ onMounted(() => {
                     })
                   "
                   class="inline-flex min-h-11 mt-auto items-center gap-1 self-start rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 focus-visible:outline-none after:absolute after:inset-0 after:rounded-xl after:content-['']"
-                  @click="rememberAd(String(ad.ad_id))"
-                >
-                  {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD') }}
-                  <span
-                    class="i-lucide-arrow-right size-3.5"
-                    aria-hidden="true"
-                  />
-                </button>
-              </div>
-            </li>
-          </ul>
-        </div>
-
-        <div
-          v-if="otherAds.length"
-          data-panel-other-ads
-          class="flex flex-col gap-4 rounded-2xl bg-n-solid-1 p-5 ring-1 ring-inset ring-n-weak sm:p-6"
-        >
-          <div
-            class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"
-          >
-            <h4 class="m-0 text-sm font-semibold text-n-slate-11">
-              {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.TITLE') }}
-            </h4>
-            <span class="text-sm font-semibold tabular-nums text-n-slate-12">
-              {{
-                $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.TOTAL', {
-                  value: fmt(totals.other_spend),
-                })
-              }}
-            </span>
-          </div>
-          <p class="m-0 max-w-3xl text-sm text-n-slate-11">
-            {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.HINT') }}
-          </p>
-          <ul class="m-0 flex list-none flex-col gap-2 p-0">
-            <li
-              v-for="ad in otherAds"
-              :key="ad.ad_id"
-              :data-panel-other-ad="ad.ad_id"
-              class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl px-3 py-3 ring-1 ring-inset ring-n-weak"
-            >
-              <span
-                class="relative size-12 flex-none overflow-hidden rounded-lg bg-n-alpha-1"
-              >
-                <img
-                  v-if="imageOf(ad)"
-                  :src="imageOf(ad)"
-                  alt=""
-                  loading="lazy"
-                  class="size-full object-cover"
-                  @error="imageFailed(ad)"
-                />
-                <span
-                  v-else
-                  class="grid size-full place-items-center bg-gradient-to-br"
-                  :class="thumbClass(ad.ad_id)"
-                >
-                  <span
-                    class="i-lucide-image size-5 text-white/50"
-                    aria-hidden="true"
-                  />
-                </span>
-              </span>
-              <span class="flex min-w-0 flex-1 basis-40 flex-col gap-0.5">
-                <span
-                  class="text-sm font-semibold text-n-slate-12 line-clamp-2"
-                >
-                  {{
-                    ad.name || $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME')
-                  }}
-                </span>
-                <span
-                  :data-panel-other-destination="ad.destination"
-                  class="text-xs text-n-slate-11"
-                >
-                  {{ $t(destinationKey(ad)) }}
-                </span>
-              </span>
-              <dl
-                class="m-0 grid grid-flow-col gap-x-5 text-end tabular-nums sm:w-auto"
-              >
-                <div
-                  v-for="stat in otherStats(ad)"
-                  :key="stat.key"
-                  :data-panel-other-stat="stat.key"
-                  class="flex flex-col justify-between gap-0.5"
-                >
-                  <dt class="text-xs text-n-slate-11">
-                    {{
-                      $t(`CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.${stat.key}`)
-                    }}
-                  </dt>
-                  <dd
-                    class="m-0 whitespace-nowrap text-sm font-semibold text-n-slate-12"
-                  >
-                    {{ stat.value }}
-                  </dd>
-                </div>
-              </dl>
-              <div
-                class="flex w-full flex-wrap items-center justify-between gap-x-4 gap-y-1"
-              >
-                <router-link
-                  v-if="careOn && ad.comments"
-                  :to="careRoute(ad)"
-                  :data-panel-ad-comments="ad.ad_id"
-                  class="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-medium text-n-slate-12 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
-                >
-                  <span
-                    class="i-lucide-message-circle size-4 text-n-slate-11"
-                    aria-hidden="true"
-                  />
-                  {{
-                    $t(
-                      'CRM_KANBAN.META_ADS_HUB.PANEL.COMMENTS.COUNT',
-                      { count: ad.comments },
-                      ad.comments
-                    )
-                  }}
-                  <span class="text-n-blue-11">
-                    {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.COMMENTS.CARE') }}
-                  </span>
-                </router-link>
-                <button
-                  v-if="!sample"
-                  type="button"
-                  :data-panel-other-open="ad.ad_id"
-                  :aria-label="
-                    $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD_LABEL', {
-                      name:
-                        ad.name ||
-                        $t('CRM_KANBAN.META_ADS_HUB.PANEL.AD_NO_NAME'),
-                    })
-                  "
-                  class="ms-auto inline-flex min-h-11 items-center gap-1 rounded-xl border-0 bg-transparent p-0 text-sm font-medium text-n-blue-11 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
                   @click="rememberAd(String(ad.ad_id))"
                 >
                   {{ $t('CRM_KANBAN.META_ADS_HUB.PANEL.OPEN_AD') }}

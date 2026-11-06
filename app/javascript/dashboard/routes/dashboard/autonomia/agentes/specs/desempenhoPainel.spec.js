@@ -272,6 +272,21 @@ describe('DesempenhoPage', () => {
     expect(origem.find('[data-sem-anuncio]').exists()).toBe(false);
   });
 
+  // #2296: sem meta_ads_view o servidor manda as contagens sem a lista de anúncios e com `anuncios_ocultos`.
+  it('hides the per-ad card when the server hides the ads', async () => {
+    const { painelDemo } = await import('../utils/desempenhoFonte');
+    const painel = await painelDemo({ periodo: '30' });
+    respostaDaApi.painel = {
+      ...painel,
+      meta: { ...painel.meta, fonte: 'api' },
+      origem: { ...painel.origem, anuncios: [], anuncios_ocultos: true },
+    };
+    const wrapper = await abrir();
+    const origem = wrapper.get('#origem');
+    expect(origem.findAll('[data-lado]')).toHaveLength(2);
+    expect(origem.find('[data-por-anuncio]').exists()).toBe(false);
+  });
+
   it('says calmly that the account has no ads, with the link only for admins', async () => {
     const wrapper = await abrir({ fonte: 'demo', anuncio: '0' });
     const origem = wrapper.get('#origem');

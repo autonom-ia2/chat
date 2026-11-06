@@ -1026,7 +1026,7 @@ pt_BR:
         quem_ligou_sem_acesso: 'Quem ligou a automação não tem mais acesso aqui. Assuma e religue.'
         quem_ligou_sem_permissao: 'Quem ligou a automação não pode mais gerenciar automações. Assuma e religue.'
         sem_permissao_funil: 'Quem ligou a automação não pode mais editar o funil, e os gatilhos de card pedem isso. Assuma e religue.'
-        gatilho_desligado: 'Os gatilhos de card estão desligados nesta conta. A automação não seguiu.'
+        gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta. A automação não seguiu.'
         ja_aberta: 'O gatilho aconteceu de novo, mas a automação já estava rodando aqui e não começou outra vez.'
         receita_com_problema: 'A receita desta versão não roda mais do jeito que foi salva. Corrija e salve de novo antes de ligar.'
         sem_quem_ligou: 'Ninguém ligou esta automação. Assuma e religue.'
@@ -1036,6 +1036,9 @@ pt_BR:
         valor_fora_do_formato: 'O valor calculado não cabe neste campo (por exemplo, não é uma das opções), e a ação foi pulada sem gravar nada.'
         canal_sem_resposta: "Este canal não aceita resposta (tweet). A mensagem não foi mandada."
         contato_nao_recebe: "O contato pediu para não receber mensagens. A mensagem não foi mandada."
+        caixa_de_email_indisponivel: 'A caixa de e-mail deste passo foi apagada ou não é mais de e-mail. O e-mail não foi mandado.'
+        contato_sem_email: 'O contato não tem e-mail. O e-mail não foi mandado.'
+        email_bloqueado: 'O e-mail do contato está bloqueado nesta conta (devolução, reclamação ou descadastro). O e-mail não foi mandado.'
         fora_da_janela: "A janela de resposta do canal está fechada, e texto livre não sai. A mensagem não foi mandada, e a automação parou nesta conversa."
         limite_da_caixa: "A caixa tem um limite de horas para responder, configurado nas opções dela, e o cliente não escreve há mais tempo que isso. A mensagem não foi mandada, e a automação parou nesta conversa."
         modelo_fora_da_caixa: "A janela estava fechada, e a caixa desta conversa não tem o modelo escolhido. A mensagem não foi mandada, e a automação parou nesta conversa."
@@ -1065,6 +1068,7 @@ pt_BR:
         inicio_da_reuniao: '%d/%m/%Y às %H:%M'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
+        caixa_de_email_invalida: 'Passo %{passo}: a caixa %{id} não é uma caixa de e-mail desta conta.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
@@ -1087,9 +1091,11 @@ pt_BR:
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
-        gatilho_desligado: 'Os gatilhos de card estão desligados nesta conta.'
+        gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta.'
         reunioes_desligadas: 'As reuniões estão desligadas nesta instalação, e os gatilhos de reunião não podem ser usados.'
         etapa_de_fora: 'Gatilho: a etapa %{id} não é desta conta.'
+        parado_sem_dias: 'Gatilho: card parado pede pelo menos 1 dia.'
+        campo_de_fora: 'Gatilho: o campo %{campo} não é um campo de data desta conta.'
         funil_de_fora: 'Gatilho: o funil %{id} não é desta conta.'
         ia_desligada: "Passo %{passo}: os passos de IA estão desligados nesta conta."
         caminho_repetido: "Passo %{passo}: já existe um caminho com o nome %{nome}."

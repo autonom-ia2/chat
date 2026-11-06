@@ -2,14 +2,15 @@
 # a ficha vigente (nomes e regras), as procuras lidas e, ao vivo, as mensagens das conversas lidas.
 #
 #   Autonomia::Desempenho::Painel.new(account:, sujeito_type: 'robo', sujeito_id: 1, visiveis: relation_ou_nil,
-#                                     ve_valores: true).call('30')
+#                                     ve_valores: true, ve_anuncio: true).call('30')
 #
 # Devolve o painel de UM período no contrato v2 (o mesmo que a tela, o PDF e a planilha leem: os agregados + o
 # catálogo + as procuras do período) ou nil quando o agente ainda não tem leitura. Os números são do que a pessoa vê
 # (decisão do Rodrigo, 26/10, ESPEC 6.2): com `visiveis` (ContaDaIa.visiveis), procuras e mensagens saem só das
 # conversas dessas caixas, e as sugestões e o ticket (calculados para a conta inteira) não vão; admin e quem vê todas
 # as caixas (`visiveis` nil) recebem a conta inteira. Quem tem leitura mas não vê nenhuma das conversas recebe o
-# painel vazio com a situação `sem_conversas`. `ve_valores` (Crm::ValorDeVenda.ve?) decide se o dinheiro vai.
+# painel vazio com a situação `sem_conversas`. `ve_valores` (Crm::ValorDeVenda.ve?) decide se o dinheiro vai;
+# `ve_anuncio` (Crm::AnuncioDeOrigem.ve?, #2296), se os anúncios vão.
 #
 # Do banco sai só o período e o anterior (procuras por `inicio_em`, mensagens por `created_at`); o que é do histórico
 # (início dos dados, primeira procura de cada conversa, equipe por mês) tem consulta própria. A lista de procuras do
@@ -28,12 +29,13 @@ class Autonomia::Desempenho::Painel
   FONTE = 'api'.freeze
   LIMITE_DA_LISTA = 5_000
 
-  def initialize(account:, sujeito_type:, sujeito_id:, visiveis: nil, ve_valores: true)
+  def initialize(account:, sujeito_type:, sujeito_id:, ve_anuncio:, visiveis: nil, ve_valores: true) # rubocop:disable Metrics/ParameterLists
     @account = account
     @sujeito_type = sujeito_type
     @sujeito_id = sujeito_id
     @pedidas = visiveis
     @ve_valores = ve_valores
+    @ve_anuncio = ve_anuncio
   end
 
   def call(chave)
@@ -44,7 +46,7 @@ class Autonomia::Desempenho::Painel
     return sem_conversas(chave) if @visiveis && !todas.exists?(conversation_id: @visiveis.select(:id))
 
     painel = com_leitura_automatica(agregador.painel(chave, @inicio, @fim, anterior: @anterior, dados_ate: ate_onde_leu, fonte: FONTE))
-    Autonomia::Desempenho::Visibilidade.new(ocultas: @visiveis && ocultas_no_periodo, ve_valores: @ve_valores)
+    Autonomia::Desempenho::Visibilidade.new(ocultas: @visiveis && ocultas_no_periodo, ve_valores: @ve_valores, ve_anuncio: @ve_anuncio)
                                        .aplicar(com_lista(painel))
   end
 

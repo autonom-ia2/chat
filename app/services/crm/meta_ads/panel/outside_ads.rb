@@ -1,8 +1,9 @@
 # Os anúncios que levam para fora de conversa (#2054, #2521), para o Panel::Report separar "Outros anúncios" dos que
 # trazem conversa, e a regra única de quais ligações conversa → anúncio contam (`counted_links`).
 #
-# Fora dos que trazem conversa: nunca trouxe conversa e a Meta diz que o conjunto leva a outro lugar (site, vídeo,
-# perfil, alcance…, Panel::AdDestinations). Anúncio novo de WhatsApp, ainda sem a primeira mensagem, continua entre
+# Fora dos que trazem conversa: nunca trouxe conversa pelo clique e a Meta diz que o conjunto leva a outro lugar (site,
+# vídeo, perfil, alcance…, Panel::AdDestinations). A conversa que só a Meta contou pesa apenas quando o destino não está
+# dito (#2621). Anúncio novo de WhatsApp, ainda sem a primeira mensagem, continua entre
 # os que trazem conversa. A classificação é do anúncio, não do período: o destino e o objetivo vêm do conjunto
 # (Crm::MetaAdObject), com ou sem gasto no período.
 #
@@ -29,7 +30,10 @@ class Crm::MetaAds::Panel::OutsideAds
   end
 
   def include?(ad_id)
-    messaging_ad_ids.exclude?(ad_id) && destinations.outside_conversation?(ad_id)
+    return false unless destinations.outside_conversation?(ad_id)
+    return false if linked_ad_ids.include?(ad_id)
+
+    destinations.stated_outside?(ad_id) || meta_counted_ad_ids.exclude?(ad_id)
   end
 
   def ids
@@ -57,10 +61,16 @@ class Crm::MetaAds::Panel::OutsideAds
                                               .group(:ad_id).distinct.count(:conversation_id)
   end
 
-  # Já trouxe conversa: pelo clique (qualquer época) ou a Meta já contou conversa iniciada nele.
-  def messaging_ad_ids
-    @messaging_ad_ids ||= Set.new(insights.where(conversations_started: 1..).distinct.pluck(:ad_id)) |
-                          Crm::MetaAdLink.where(account_id: @account_id, ad_id: @ad_ids).where.not(origin: COMMENT)
-                                         .distinct.pluck(:ad_id)
+  # Já trouxe conversa pelo clique, em qualquer época (o site com botão do WhatsApp, por exemplo): fica entre os que
+  # trazem conversa, qualquer que seja o destino.
+  def linked_ad_ids
+    @linked_ad_ids ||= Set.new(Crm::MetaAdLink.where(account_id: @account_id, ad_id: @ad_ids).where.not(origin: COMMENT)
+                                              .distinct.pluck(:ad_id))
+  end
+
+  # A Meta contou conversa iniciada nele. Só decide quando o destino não está dito (UNDEFINED, decidido pelo objetivo):
+  # no de perfil, a conversa que a Meta conta é de quem chamou pelo perfil, e ele continua de perfil (#2621, "Filha").
+  def meta_counted_ad_ids
+    @meta_counted_ad_ids ||= Set.new(insights.where(conversations_started: 1..).distinct.pluck(:ad_id))
   end
 end

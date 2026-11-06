@@ -8,14 +8,17 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import LivreMarcar from './LivreMarcar.vue';
 import LivreEmpresa from './LivreEmpresa.vue';
 import LivreTexto from './LivreTexto.vue';
+import LivreData from './LivreData.vue';
 import { fraseDoCalculado } from '../frases';
 import { campoDasPartes, partesDoCampo } from '../texto';
 
 // #2414 F5 — um campo de uma ação, desenhado pela peça que o catálogo deu a ele.
 // Escolha de uma é sempre o ChoiceSelect, nunca <select>; de várias, botões que
 // marcam. O campo de texto aceita dado da conversa ("[Nome do contato]"), que
-// vira `{ $texto }` (#2414 G16). Outro valor calculado ({ $valor }, { $data }),
-// que só o Guia monta, aparece em frase e passa intacto.
+// vira `{ $texto }` (#2414 G16). O atributo do tipo data escolhe um dia certo ou
+// uma data calculada (`{ $data }`, G16b). Outro valor calculado que só o Guia
+// monta ({ $valor } sozinho, { $data } num campo de texto) aparece em frase e
+// passa intacto.
 const props = defineProps({
   campo: { type: Object, required: true },
   modelValue: { type: [String, Number, Boolean, Array, Object], default: null },
@@ -91,6 +94,16 @@ const valorDoAtributo = chave => props.modelValue?.[chave];
 const atributoDeTexto = atributo =>
   atributo.attribute_display_type === 'text' &&
   !valorDoAtributo(atributo.attribute_key)?.$data;
+// O atributo de data monta o dia certo ou a data calculada; o `{ $valor }` que o
+// Guia pôs nele continua em frase.
+const atributoDeData = atributo => {
+  const valor = valorDoAtributo(atributo.attribute_key);
+  return (
+    atributo.attribute_display_type === 'date' &&
+    !valor?.$valor &&
+    !valor?.$texto
+  );
+};
 const mudarAtributo = (chave, novo) => {
   const { [chave]: _antes, ...resto } = props.modelValue || {};
   mudar(novo === '' || novo === null ? resto : { ...resto, [chave]: novo });
@@ -212,6 +225,16 @@ const opcoesDoAtributo = atributo =>
           :atributos-do="atributosDo"
           @update:model-value="
             novo => mudarAtributo(atributo.attribute_key, campoDasPartes(novo))
+          "
+        />
+        <LivreData
+          v-else-if="atributoDeData(atributo)"
+          :rotulo="atributo.attribute_display_name"
+          :model-value="valorDoAtributo(atributo.attribute_key) ?? null"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="
+            novo => mudarAtributo(atributo.attribute_key, novo)
           "
         />
         <p
