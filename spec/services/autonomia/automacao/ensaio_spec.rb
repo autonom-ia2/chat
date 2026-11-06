@@ -142,6 +142,15 @@ RSpec.describe Autonomia::Automacao::Ensaio, :automacao_motor do
 
       expect(passos_de(receita(retorno.merge('envio' => { 'mensagem' => ['Oi'] }))).first[:faria]).to eq('mensagens_desligadas')
     end
+
+    it 'a mensagem com valor vazio ou só de espaços pula como o motor', :aggregate_failures do
+      conversa.update!(assignee: admin)
+      vazia = retorno.merge('envio' => { 'mensagem' => [{ '$valor' => 'contato.email' }] })
+
+      conversa.contact.update!(email: nil)
+      expect(passos_de(receita(vazia)).first[:faria]).to eq('faltou_valor')
+      expect(passos_de(receita(retorno.merge('envio' => { 'mensagem' => ['   '] }))).first[:faria]).to eq('texto_vazio')
+    end
   end
 
   it 'um tipo que o ensaio não conhece só ganha a frase do catálogo' do
