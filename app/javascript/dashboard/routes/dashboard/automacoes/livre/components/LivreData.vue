@@ -7,8 +7,13 @@ import {
   attributeDate,
   formatAttributeDate,
 } from 'dashboard/helper/attributeDate';
-import { TETO_DA_DATA, dataCompleta, opcoesDeDatas } from '../texto';
-import { fraseDaData } from '../frases';
+import {
+  TETO_DA_DATA,
+  comApagados,
+  dataCompleta,
+  opcoesDeDatas,
+} from '../texto';
+import { fraseDaData, fraseDoValor } from '../frases';
 
 // #2414 G16b — o atributo do tipo data numa ação: um dia certo, ou uma data
 // calculada na hora (a partir de hoje ou de outro campo de data, mais ou menos
@@ -44,10 +49,14 @@ const modo = ref(modoDoValor(props.modelValue));
 
 const data = computed(() => props.modelValue?.$data || null);
 // O número fica na tela mesmo vazio ou inválido; só vai para a receita inteiro.
+// O zero é gravado sem "mais" e reabre como 0.
+const numeroSalvo = () => {
+  if (Number.isInteger(data.value?.mais?.valor))
+    return String(Math.abs(data.value.mais.valor));
+  return data.value?.de && data.value.mais === undefined ? '0' : '';
+};
 const escolha = reactive({
-  numero: Number.isInteger(data.value?.mais?.valor)
-    ? String(Math.abs(data.value.mais.valor))
-    : '',
+  numero: numeroSalvo(),
   unidade: data.value?.mais?.unidade || 'dias',
   sentido: data.value?.mais?.valor < 0 ? 'antes' : 'depois',
   campo: data.value?.de?.$valor || '',
@@ -59,8 +68,21 @@ const opcoesDeModo = computed(() =>
     label: t(`${P}.${valor.toUpperCase()}`),
   }))
 );
+// O campo de data que a conta apagou (ou que deixou de ser data) continua na
+// escolha, marcado como apagado, como no texto: o salvar o recusa
+// (atributo_inexistente) até a pessoa trocar.
 const opcoesDeCampo = computed(() =>
-  opcoesDeDatas(props.catalogo, props.atributosDo, t)
+  comApagados(
+    escolha.campo ? [{ $valor: escolha.campo }] : [],
+    opcoesDeDatas(props.catalogo, props.atributosDo, t),
+    caminho =>
+      t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DADO_APAGADO', {
+        dado: fraseDoValor(caminho, props.catalogo, t),
+      })
+  )
+);
+const campoApagado = computed(
+  () => modo.value === 'campo' && opcoesDeCampo.value.some(op => op.apagado)
 );
 const opcoesDeUnidade = computed(() =>
   UNIDADES.map(valor => ({
@@ -74,6 +96,15 @@ const opcoesDeSentido = computed(() =>
     label: t(`${P}.${valor.toUpperCase()}`),
   }))
 );
+
+// O número digitado que não vale: a tela diz por quê, em vez de só desligar o
+// "Salvar".
+const numeroInvalido = computed(() => {
+  const texto = escolha.numero.trim();
+  if (texto === '') return false;
+  const n = Number(texto);
+  return !(Number.isInteger(n) && n >= 0 && n <= TETO_DA_DATA);
+});
 
 // "Quanto tempo?" só depois de saber de onde a data parte.
 const perguntaQuanto = computed(
@@ -159,6 +190,7 @@ const frase = computed(() => {
       v-model="dia"
       data-data-dia
       type="date"
+      custom-input-class="!h-11"
       :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.DIA_ROTULO')"
     />
 
@@ -179,6 +211,14 @@ const frase = computed(() => {
       <p v-else data-data-sem-campo class="mb-0 text-sm text-n-slate-11">
         {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.SEM_CAMPO') }}
       </p>
+      <p
+        v-if="campoApagado"
+        data-data-campo-apagado
+        role="status"
+        class="px-4 py-3 mb-0 text-sm rounded-xl bg-n-amber-3 text-n-amber-12"
+      >
+        {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.CAMPO_APAGADO') }}
+      </p>
     </div>
 
     <div
@@ -196,8 +236,16 @@ const frase = computed(() => {
           <Input
             data-data-numero
             type="number"
-            min="0"
+            custom-input-class="!h-11"
             :model-value="escolha.numero"
+            :message="
+              numeroInvalido
+                ? $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO_INVALIDO', {
+                    teto: TETO_DA_DATA,
+                  })
+                : ''
+            "
+            message-type="error"
             :label="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO')"
             :aria-describedby="ids.zero"
             @update:model-value="novo => mudar('numero', String(novo ?? ''))"

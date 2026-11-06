@@ -51,10 +51,10 @@ const montar = (modelValue, atributos = ATRIBUTOS) =>
             '<div data-escolha :data-valor="modelValue"><button v-for="o in options" :key="o.value" :data-opcao="o.value" @click="$emit(\'update:modelValue\', o.value)">{{ o.label }}</button></div>',
         },
         Input: {
-          props: ['modelValue', 'type'],
+          props: ['modelValue', 'type', 'message'],
           emits: ['update:modelValue'],
           template:
-            '<input :type="type" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input :type="type" :value="modelValue" :data-mensagem="message" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
       },
     },
@@ -147,6 +147,49 @@ describe('LivreData', () => {
 
     await wrapper.find('[data-data-numero]').setValue('0');
     expect(ultimo(wrapper)).toEqual({ $data: { de: 'hoje' } });
+  });
+
+  it('reabre o zero salvo como 0, não como número vazio', () => {
+    const wrapper = montar({ $data: { de: 'hoje' } });
+
+    expect(wrapper.find('[data-data-numero]').element.value).toBe('0');
+    expect(wrapper.find('[data-data-frase]').exists()).toBe(true);
+  });
+
+  it('o número que não vale ganha a mensagem; o válido e o vazio, não', async () => {
+    const wrapper = montar(null);
+    await escolher(wrapper, 'data-data-modo', 'hoje');
+    const numero = () => wrapper.find('[data-data-numero]');
+    expect(numero().attributes('data-mensagem')).toBeFalsy();
+
+    await numero().setValue('-3');
+    expect(numero().attributes('data-mensagem')).toBe(
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.NUMERO_INVALIDO(3650)'
+    );
+    await numero().setValue('12');
+    expect(numero().attributes('data-mensagem')).toBeFalsy();
+  });
+
+  it('campo de data apagado da conta: continua na escolha, marcado, com o aviso', () => {
+    const wrapper = montar(
+      {
+        $data: {
+          de: { $valor: 'contato.atributos.vencimento' },
+          mais: { valor: 1, unidade: 'anos' },
+        },
+      },
+      ATRIBUTOS
+    );
+
+    expect(
+      wrapper.find('[data-opcao="contato.atributos.vencimento"]').text()
+    ).toContain('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DADO_APAGADO');
+    expect(wrapper.find('[data-data-campo-apagado]').exists()).toBe(true);
+
+    const valido = montar({
+      $data: { de: { $valor: 'contato.atributos.nascimento' } },
+    });
+    expect(valido.find('[data-data-campo-apagado]').exists()).toBe(false);
   });
 
   it('número quebrado, negativo ou acima do teto não vale', async () => {

@@ -135,13 +135,17 @@ module FechamentoAutomacao::Lacunas
   end
 
   # G16: o corpo de uma ação aceita valor calculado. O esquema da receita deixa a data calculada no corpo, e o motor a
-  # reconhece como cálculo (Corpo), não como texto fixo.
+  # monta na hora: hoje + 6 meses sai como "AAAA-MM-DD", no fuso da conta.
   def valor_calculado_no_corpo?
-    corpo = { 'merge' => true, 'custom_attributes' => { 'revisao' => { '$data' => { 'de' => 'hoje' } } } }
+    data = { '$data' => { 'de' => 'hoje', 'mais' => { 'valor' => 6, 'unidade' => 'meses' } } }
+    corpo = { 'merge' => true, 'custom_attributes' => { 'revisao' => data } }
     passo = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
               'caminho' => { 'id' => { '$valor' => 'conversa.id' } }, 'corpo' => corpo }
     receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }
-    Autonomia::Automacao::Receita.esquema_valido?(receita) && Autonomia::Automacao::Corpo.calculado_em?(corpo)
+    conta = Account.new(custom_attributes: { 'timezone' => 'UTC' })
+    montado = Autonomia::Automacao::Corpo.new(corpo, valores: nil, conta: conta).montar
+    Autonomia::Automacao::Receita.esquema_valido?(receita) &&
+      montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
   SONDAS = {
