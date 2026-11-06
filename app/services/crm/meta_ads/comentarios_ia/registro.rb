@@ -20,6 +20,9 @@
 # O privado por pessoa em cada post (Crm::MetaAdsCommentPerson) é reservado aqui também, antes da Meta.
 module Crm::MetaAds::ComentariosIa::Registro
   ACTOR = 'ai'.freeze
+  # A marca de envio automático (Autonomia::Agents::Operate::PessoaDaEquipe::MARCAS_DE_ENVIO_AUTOMATICO) na mensagem do
+  # privado que a IA mandou, no Instagram e no Messenger: o id da linha `private_reply` dela.
+  MARCA = 'meta_ads_comment_action_id'.freeze
   LIDO = 'ai_seen'.freeze
   NAO_CUIDOU = 'ai_unread'.freeze
   # Era o caso do privado, mas a pessoa já tem um deste post (outro comentário dela, ou o que alguém mandou na tela).

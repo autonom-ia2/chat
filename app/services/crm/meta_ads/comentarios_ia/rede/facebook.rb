@@ -36,7 +36,7 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
 
     reivindicacao.confirm!
     aceito_em_resposta(reivindicacao, envio)
-    envio.conversation = na_caixa(envio, texto)
+    envio.conversation = na_caixa(envio, texto, reivindicacao)
     envio
   end
 
@@ -106,8 +106,8 @@ class Crm::MetaAds::ComentariosIa::Rede::Facebook
   end
 
   # O privado já saiu: uma falha ao abrir a conversa não pode soltar a reivindicação (o reenvio mandaria de novo).
-  def na_caixa(envio, texto)
-    Crm::MetaAds::ComentariosIa::Conversa.no_messenger!(@comentario, envio, texto)
+  def na_caixa(envio, texto, reivindicacao)
+    Crm::MetaAds::ComentariosIa::Conversa.no_messenger!(@comentario, envio, texto, reivindicacao.id)
   rescue StandardError => e
     ChatwootExceptionTracker.new(e, account: @inbox.account).capture_exception
     nil
