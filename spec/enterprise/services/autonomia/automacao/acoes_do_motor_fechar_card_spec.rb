@@ -18,7 +18,10 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :aggregate_failures, :automac
   end
   let(:dono) { pessoa_com(base) }
 
-  before { ligar_motor(account) }
+  before do
+    ligar_motor(account)
+    account.enable_features!('automacao_gatilhos')
+  end
 
   after { Current.reset }
 
@@ -32,15 +35,17 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :aggregate_failures, :automac
     user
   end
 
-  def fechar(corpo)
+  # O passo de verdade: o card do gatilho de card (`$valor card.id`).
+  def fechar(corpo, card_id = { '$valor' => 'card.id' })
     { 'id' => 'f1', 'tipo' => 'acao', 'acao' => 'POST crm/cards/:id/close', 'descricao' => 'Fechar o card',
-      'caminho' => { 'id' => card.id }, 'corpo' => corpo }
+      'caminho' => { 'id' => card_id }, 'corpo' => corpo }
   end
 
   def rodar(passos)
-    definicao = automacao_ligada(account, dono, passos)
+    gatilho = { 'tipo' => 'card.criado', 'funil_id' => funil_e_etapa.first.id }
+    definicao = automacao_ligada(account, dono, passos, gatilho: gatilho)
     perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
-      Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'conversa.resolvida').call
+      Autonomia::Automacao::Partida.new(definicao: definicao, alvo: card, chave_gatilho: 'card.criado').call
     end
     definicao.execucoes.order(:id).last
   end
@@ -64,8 +69,10 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :aggregate_failures, :automac
     expect([card.reload.status, card.lost_reason]).to eq(%w[lost Preço])
   end
 
+  # No gatilho de card, quem perde a chave pausa já no começo (Acesso, sem_permissao_funil); o motor reconfere a chave no
+  # passo, então aqui o gatilho é de conversa, com o id do card escrito.
   it 'sem a chave de funis, pausa sem fechar o card' do
-    definicao = automacao_ligada(account, dono, [fechar('result' => 'won')])
+    definicao = automacao_ligada(account, dono, [fechar({ 'result' => 'won' }, card.id)])
     AccountUser.find_by(account: account, user: dono).custom_role.update!(permissions: base - ['crm_manage_pipelines'])
 
     perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do

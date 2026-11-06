@@ -25,6 +25,11 @@ RSpec.describe Autonomia::Automacao::Receita do
     expect(problemas('lost_reason' => 'Preço')).to include(fora)
   end
 
+  # O valor calculado no resultado poderia reabrir o card (conversa.status "open"): o salvar recusa.
+  it 'recusa o resultado calculado' do
+    expect(problemas('result' => { '$valor' => 'conversa.status' })).to include(fora)
+  end
+
   it 'recusa o force' do
     expect(problemas('result' => 'won', 'force' => true))
       .to include(I18n.t('autonomia.automacao.receita.proibido', passo: 'f1', campo: 'force'))

@@ -28,12 +28,15 @@ class Autonomia::Automacao::CampoDaAcao
     'arquivo' => ->(_valor) { false }
   }.freeze
 
-  # O que impede a ação com o corpo já montado: o formato da ação (opção fora da lista) e o tipo de cada campo que
+  # O que impede a ação com o corpo já montado: o formato da ação (opção fora da lista), as regras da lista da
+  # automação (G25: o fechar o card só como ganho ou perdido, mesmo com valor calculado) e o tipo de cada campo que
   # recebeu valor calculado. Vazio = segue. O motor e o ensaio perguntam aqui.
   def self.problemas(acao, original, montado, conta:)
     campos = new(acao)
     tipos = ::Autonomia::Automacao::Corpo.lugares(original).reject { |onde, _folha| campos.cabe?(onde, montado.dig(*onde)) }
+    lista = ::Autonomia::Automacao::AcoesPermitidas.fora_da_lista(acao, montado)
     ::Autonomia::Guide::Formatos::Conferencia.new(acao, montado, conta: conta).problemas_em_texto +
+      lista.map { |chave, dados| "#{dados[:campo]}: fora da regra da automação (#{chave})" } +
       tipos.map { |onde, _folha| "#{campos.nome(onde)}: o valor calculado não é do tipo deste campo" }
   end
 
