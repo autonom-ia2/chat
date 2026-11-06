@@ -195,4 +195,74 @@ RSpec.describe 'Autonomia agent performance panel', type: :request do
       expect(response).to have_http_status(:ok)
     end
   end
+
+  # #2296: o anúncio de origem (id, nome e campanha) só sai para quem vê (Crm::AnuncioDeOrigem.ve?): administrador,
+  # agente sem função e função com meta_ads_view. A função sem a chave recebe as contagens (anúncio x sem anúncio), sem
+  # saber qual anúncio, no JSON, no PDF e na planilha.
+  describe 'anúncio de origem' do
+    let(:identificadores) { ['1202000999', 'Carrossel Primavera', 'Campanha Outono'] }
+    let(:exportar) { "#{endereco}/exportar" }
+
+    before do
+      ficha = Autonomia::Desempenho::Ficha.find_by!(account: account, sujeito_id: robo.id)
+      catalogo = ficha.catalogo.deep_merge('origens' => { 'anuncio_meta' => { 'nome' => 'Anúncio da Meta', 'tipo' => 'anuncio' } })
+      configuracao = ficha.configuracao.merge('anuncios_ligados' => true,
+                                              'anuncios' => [{ 'id' => '1202000999', 'nome' => 'Carrossel Primavera',
+                                                               'campanha' => 'Campanha Outono' }])
+      ficha.update!(catalogo: catalogo, configuracao: configuracao)
+      Autonomia::Desempenho::Procura.find_by!(conversation: conversa).update!(origem_id: 'anuncio_meta', anuncio_id: '1202000999')
+    end
+
+    def pessoa(permissoes)
+      com_funcao(permissoes).tap { |usuario| create(:inbox_member, user: usuario, inbox: caixa) }
+    end
+
+    def textos_da_planilha(corpo)
+      planilha = Roo::Excelx.new(StringIO.new(corpo))
+      planilha.sheets.flat_map { |aba| planilha.sheet(aba).to_a.flatten.compact.map(&:to_s) }.join(' ')
+    end
+
+    def textos_do_pdf(corpo) = PDF::Reader.new(StringIO.new(corpo)).pages.map(&:text).join(' ')
+
+    it 'sem meta_ads_view: as contagens ficam, sem lista de anúncios nem anuncio_id' do
+      get endereco, params: { origem: 'webhook', periodo: '7' }, headers: pessoa(%w[desempenho_view conversation_view]).create_new_auth_token,
+                    as: :json
+
+      expect(response).to have_http_status(:ok)
+      origem = response.parsed_body['origem']
+      expect(origem).to include('anuncios' => [], 'anuncios_ocultos' => true, 'anuncios_ligados' => true)
+      expect(origem.dig('comparacao', 'anuncio', 'procuras')).to eq(1)
+      expect(response.parsed_body['procuras'].pluck('anuncio_id')).to eq([nil])
+      expect(response.body).not_to include(*identificadores)
+    end
+
+    it 'sem meta_ads_view: o PDF e a planilha também saem sem o anúncio' do
+      usuario = pessoa(%w[desempenho_view conversation_view contact_export])
+
+      get exportar, params: { origem: 'webhook', periodo: '7', formato: 'xlsx' }, headers: usuario.create_new_auth_token
+      expect(response).to have_http_status(:ok)
+      expect(textos_da_planilha(response.body)).not_to include(*identificadores)
+
+      get exportar, params: { origem: 'webhook', periodo: '7', formato: 'pdf' }, headers: usuario.create_new_auth_token
+      expect(response).to have_http_status(:ok)
+      expect(textos_do_pdf(response.body)).not_to include(*identificadores)
+    end
+
+    it 'administrador e função com meta_ads_view veem o anúncio, também no arquivo' do
+      com_chave = pessoa(%w[desempenho_view conversation_view contact_export meta_ads_view])
+      [admin, com_chave].each do |usuario|
+        get endereco, params: { origem: 'webhook', periodo: '7' }, headers: usuario.create_new_auth_token, as: :json
+
+        anuncio = response.parsed_body.dig('origem', 'anuncios').first
+        expect(anuncio).to include('id' => '1202000999', 'nome' => 'Carrossel Primavera', 'campanha' => 'Campanha Outono')
+        expect(response.parsed_body['origem']).not_to have_key('anuncios_ocultos')
+      end
+
+      get exportar, params: { origem: 'webhook', periodo: '7', formato: 'xlsx' }, headers: com_chave.create_new_auth_token
+      expect(textos_da_planilha(response.body)).to include('Carrossel Primavera')
+
+      get exportar, params: { origem: 'webhook', periodo: '7', formato: 'pdf' }, headers: com_chave.create_new_auth_token
+      expect(textos_do_pdf(response.body)).to include('Carrossel Primavera')
+    end
+  end
 end

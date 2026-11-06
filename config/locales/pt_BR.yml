@@ -1026,7 +1026,7 @@ pt_BR:
         quem_ligou_sem_permissao: 'Quem ligou a automação não pode mais gerenciar automações. Assuma e religue.'
         sem_permissao_funil: 'Quem ligou a automação não pode mais editar o funil, e os gatilhos de card pedem isso. Assuma e religue.'
         sem_chave_de_funis: 'Quem ligou a automação não pode mais editar o funil, e este passo mexe no funil. Assuma e religue.'
-        gatilho_desligado: 'Os gatilhos de card estão desligados nesta conta. A automação não seguiu.'
+        gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta. A automação não seguiu.'
         ja_aberta: 'O gatilho aconteceu de novo, mas a automação já estava rodando aqui e não começou outra vez.'
         receita_com_problema: 'A receita desta versão não roda mais do jeito que foi salva. Corrija e salve de novo antes de ligar.'
         sem_quem_ligou: 'Ninguém ligou esta automação. Assuma e religue.'
@@ -1088,8 +1088,10 @@ pt_BR:
         modelo_indisponivel: "Passo %{passo}: nenhuma caixa do WhatsApp oficial tem o modelo %{nome} aprovado, de utilidade e com estas variáveis."
         time_de_fora: "Passo %{passo}: o time %{id} não é desta conta."
         pessoa_de_fora: "Passo %{passo}: a pessoa %{id} não é desta conta."
-        gatilho_desligado: 'Os gatilhos de card estão desligados nesta conta.'
+        gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta.'
         etapa_de_fora: 'Gatilho: a etapa %{id} não é desta conta.'
+        parado_sem_dias: 'Gatilho: card parado pede pelo menos 1 dia.'
+        campo_de_fora: 'Gatilho: o campo %{campo} não é um campo de data desta conta.'
         funil_de_fora: 'Gatilho: o funil %{id} não é desta conta.'
         ia_desligada: "Passo %{passo}: os passos de IA estão desligados nesta conta."
         caminho_repetido: "Passo %{passo}: já existe um caminho com o nome %{nome}."
