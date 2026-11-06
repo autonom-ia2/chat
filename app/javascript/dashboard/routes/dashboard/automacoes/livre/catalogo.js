@@ -162,6 +162,13 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
+// G25: o mesmo vale para a ação que lê o alvo no caminho (`card.id` no fechar
+// o card): no gatilho de conversa, o seletor nem a oferece.
+const caminhoNoAlvo = (passo, bases) =>
+  Object.values(passo.caminho || {}).every(
+    origem => !origem.$valor || bases.includes(origem.$valor.split('.')[0])
+  );
+
 // G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
 export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
@@ -174,5 +181,6 @@ export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
         (!item.base || bases.includes(item.base)) &&
         (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
+    passos: (dados.passos || []).filter(passo => caminhoNoAlvo(passo, bases)),
   };
 };

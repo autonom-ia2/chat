@@ -595,6 +595,7 @@ en:
         operador_fora: 'Step %{passo}: %{caminho} only compares with %{operadores}.'
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
+        um_de: 'Step %{passo}: %{campo} must be one of: %{opcoes}.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."

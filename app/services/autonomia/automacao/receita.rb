@@ -228,20 +228,7 @@ class Autonomia::Automacao::Receita
   end
 
   def regras_da_lista(id, acao, valores)
-    permitidas = ::Autonomia::Automacao::AcoesPermitidas
-    exigidos = permitidas.exige(acao).select { |campo| valores[campo].blank? }
-    fixos = permitidas.fixos(acao).reject { |campo, valor| valores[campo] == valor }
-    proibidos = permitidas.proibe(acao).select { |campo| mandado?(valores, campo.split('.')) }
-
-    exigidos.map { |campo| texto(:exige, passo: id, campo: campo) } +
-      fixos.map { |campo, valor| texto(:fixo, passo: id, campo: campo, valor: valor) } +
-      proibidos.map { |campo| texto(:proibido, passo: id, campo: campo) }
-  end
-
-  def mandado?(valores, partes)
-    return valores.key?(partes.first) if partes.one?
-
-    valores[partes.first].is_a?(Hash) && mandado?(valores[partes.first], partes.drop(1))
+    ::Autonomia::Automacao::AcoesPermitidas.fora_da_lista(acao, valores).map { |chave, dados| texto(chave, passo: id, **dados) }
   end
 
   def parametros(acao)

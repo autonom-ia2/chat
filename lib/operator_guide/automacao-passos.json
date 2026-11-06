@@ -660,6 +660,10 @@
       "frase": "AUTOMACAO_LIVRE.GRUPOS.CONVERSA"
     },
     {
+      "chave": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.FUNIL"
+    },
+    {
       "chave": "CONTATO",
       "frase": "AUTOMACAO_LIVRE.GRUPOS.CONTATO"
     },
@@ -1433,6 +1437,45 @@
           "nome": "custom_attribute_definition.attribute_values",
           "peca": "lista_de_textos",
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ATTRIBUTE_VALUES",
+          "obrigatorio": false
+        }
+      ]
+    },
+    {
+      "tipo": "acao",
+      "nome": "card_fechar",
+      "acao": "POST crm/cards/:id/close",
+      "grupo": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD_FECHAR",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "caminho": {
+        "id": {
+          "$valor": "card.id"
+        }
+      },
+      "fixos": {},
+      "campos": [
+        {
+          "nome": "result",
+          "peca": "escolha",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.RESULT",
+          "obrigatorio": true,
+          "opcoes": [
+            {
+              "valor": "won",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.RESULT.WON"
+            },
+            {
+              "valor": "lost",
+              "frase": "AUTOMACAO_LIVRE.OPCOES.RESULT.LOST"
+            }
+          ]
+        },
+        {
+          "nome": "lost_reason",
+          "peca": "texto",
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.LOST_REASON",
           "obrigatorio": false
         }
       ]

@@ -34,6 +34,44 @@ describe('doAlvoDoGatilho', () => {
     );
   });
 
+  // G25: a ação que lê o card no caminho só entra no gatilho de card.
+  it('tira do gatilho de conversa a ação que lê o card no caminho', () => {
+    const comPassos = {
+      ...catalogo,
+      passos: [
+        {
+          tipo: 'acao',
+          nome: 'card_fechar',
+          caminho: { id: { $valor: 'card.id' } },
+        },
+        {
+          tipo: 'acao',
+          nome: 'conversa_status',
+          caminho: { id: { $valor: 'conversa.id' } },
+        },
+        {
+          tipo: 'acao',
+          nome: 'etiqueta_alterar',
+          caminho: { id: { escolher: 'etiqueta' } },
+        },
+        { tipo: 'esperar' },
+      ],
+    };
+    const nomes = dados => dados.passos.map(item => item.nome || item.tipo);
+
+    expect(nomes(doAlvoDoGatilho(comPassos, 'conversa.criada'))).toEqual([
+      'conversa_status',
+      'etiqueta_alterar',
+      'esperar',
+    ]);
+    expect(nomes(doAlvoDoGatilho(comPassos, 'card.entrou_na_etapa'))).toEqual([
+      'card_fechar',
+      'conversa_status',
+      'etiqueta_alterar',
+      'esperar',
+    ]);
+  });
+
   it('sem gatilho escolhido, devolve o catálogo como veio', () => {
     expect(doAlvoDoGatilho(catalogo, undefined)).toBe(catalogo);
     expect(doAlvoDoGatilho(null, 'conversa.criada')).toBeNull();
