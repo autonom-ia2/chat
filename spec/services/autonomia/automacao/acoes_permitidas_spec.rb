@@ -68,4 +68,11 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
     expect(permitidas.exige('POST labels')).to eq(['description'])
     expect(permitidas.exige('POST custom_attribute_definitions')).to eq(['attribute_description'])
   end
+
+  # #2633: a pergunta única de "ação de funil", do salvar e do motor; o recurso sai da lista.
+  it 'de_funil? só nas ações permitidas de recurso crm/', :aggregate_failures do
+    expect(permitidas.de_funil?('PATCH crm/cards/:id')).to be(true)
+    expect(permitidas.de_funil?('POST conversations/:id/toggle_priority')).to be(false)
+    expect(permitidas.de_funil?('DELETE crm/pipelines/:id')).to be(false)
+  end
 end

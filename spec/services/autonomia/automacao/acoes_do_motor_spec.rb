@@ -30,6 +30,25 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :automacao_motor do
     expect { acoes.send(:garantir_permitida!, 'DELETE labels/:id', { caminho: { id: 1 } }) }.to raise_error(Autonomia::Guide::Acoes::Recusada)
   end
 
+  it 'na ação de funil, quem ligou sem a chave de funis recebe o motivo próprio (#2633)', :aggregate_failures do
+    definicao.update!(ligada_por: admin)
+    allow(Autonomia::Automacao::RegraDoFunil).to receive(:chave?).and_return(false)
+
+    expect { acoes.executar('PATCH crm/cards/:id', { caminho: { id: 1 }, corpo: { title: 'x' } }) }
+      .to raise_error(described_class::SemPermissao, I18n.t('autonomia.automacao.motivos.sem_chave_de_funis')) { |erro|
+        expect(erro.motivo).to eq('sem_chave_de_funis')
+      }
+    expect { acoes.conferir!('POST conversations/:id/toggle_priority') }.not_to raise_error
+  end
+
+  it 'quem ligou saiu da conta no meio da rodada: pausa com o motivo, sem quebrar (#2633)' do
+    motor = acoes
+    account.account_users.find_by(user: agente).destroy!
+
+    expect { motor.conferir!('POST conversations/:id/toggle_priority') }
+      .to raise_error(described_class::SemPermissao) { |erro| expect(erro.motivo).to eq('quem_ligou_saiu_da_conta') }
+  end
+
   it 'recusa a ação fora da lista, mesmo para o administrador' do
     definicao.update!(ligada_por: admin)
 

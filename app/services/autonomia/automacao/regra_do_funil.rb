@@ -12,6 +12,10 @@ module Autonomia::Automacao::RegraDoFunil
       nomes(conditions, :attribute_key).intersect?(AutomationRules::CrmConditions::OPERATORS.keys)
   end
 
+  # A chave de funis, sem olhar a flag: a pergunta do passo de funil da Automação livre (D2), ao salvar, ao ligar e a
+  # cada execução (#2633).
+  def self.chave?(account_user) = CHAVES.any? { |chave| account_user&.permission_granted?(chave) }
+
   def self.pode?(account_user)
     return true unless Autonomia::Automacao.fundacao?(account_user&.account)
 
