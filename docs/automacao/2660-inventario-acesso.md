@@ -2,8 +2,9 @@
 
 - **Issue:** #2660 · épico #2414 · decisão do Rodrigo em 06/11/2026: "Liberar tudo, com guardas".
 - **Base lida:** `main` em `e2b081d250`. Só leitura de código; nenhuma regra mudou ainda.
-- **Próximo passo:** o Rodrigo decide os pontos da seção 3. Depois, um PR por lote (seção 4), cada um com o
-  `acoes_permitidas_spec`, parecer da Funções e da qualidade, e OK dele.
+- **Decidido:** o Rodrigo escolheu "Liberar mais" em 06/11/2026 (seção 3).
+- **Próximo passo:** um PR por lote (seção 4), cada um com o `acoes_permitidas_spec`, parecer da Funções e da
+  qualidade, e OK dele.
 
 ## 1. Em poucas palavras
 
@@ -15,8 +16,8 @@ Lemos o código de cada uma das 207. O resultado:
 | | Recursos |
 |---|---|
 | Ficam trancadas para sempre (grupo 1: usuários, canais, integrações, credenciais) | 33 |
-| Podem ser liberadas, inteiras (34) ou em parte (33) | **67** |
-| Continuam trancadas, com motivo concreto | 107 |
+| Podem ser liberadas, inteiras (33) ou em parte (35) | **68** |
+| Continuam trancadas, com motivo concreto | 106 |
 
 "Em parte" quer dizer: o recurso entra, mas uma ou outra ação dele fica de fora (por exemplo, a automação pode criar
 um time, mas não apagar).
@@ -50,35 +51,54 @@ Das lacunas dos 20 exemplos (`F9-fechamento-20-exemplos.md`, seção 6), quatro 
 | G19 nota no contato | `contacts/notes` | 5, 19 (2) |
 
 G4, G25 e G17 não estão na lista `fora`: são ações que faltam em recursos já liberados (`crm/cards`, `contacts`).
-Entram aqui porque o lote natural delas é o mesmo. G14 (campanhas) e G21 (prospecção) ficam só em parte: montar
-rascunho entra, disparar não (motivo 4).
+G3, G4, G19 e G25 já estão no trem do #2414 (seção 4); desta issue, só G17 ainda fecha lacuna. G14 tem passo
+nativo no trem (#2642). G21 (prospecção) fica só em parte: montar entra, buscar no Google não (motivo 3).
 
-## 3. Decisões que são do Rodrigo
+## 3. Decisões do Rodrigo (06/11/2026: "Liberar mais")
 
-| # | Pergunta | Recomendação |
+| # | Pergunta | Decisão |
 |---|---|---|
-| D1 | Hoje o spec proíbe **todo** DELETE como passo. Vários DELETE só apagam dado dentro da requisição e o desfazer alcança (tirar pessoa do time, apagar nota do contato, apagar resposta pronta). Trocar a regra para "nenhum DELETE de estrutura nem sem desfazer"? | Manter a regra no primeiro lote. Abrir só quando um exemplo pedir. Os candidatos estão marcados `DELETE*` nas tabelas. |
-| D2 | Retorno com **envio automático** (`automation_mode: auto_send_message`) manda mensagem ao cliente no vencimento. O desfazer só alcança antes de enviar. | Entrar com `proibe` agora. Liberar o modo depois, se o Rodrigo quiser. |
-| D3 | **Configurar agente de IA** (instrução, material, ferramentas, onde atende, ligar e desligar) ficou trancado (motivo 1, como o robô de atendimento). | Manter trancado. Alternativa: liberar só ligar e desligar o agente (`PATCH autonomia/agents/:id` com `proibe` em tudo, menos o status). |
-| D4 | `crm/ai_settings`: ligar a IA do funil faz ela avaliar e mover cards sozinha, com gasto contínuo de IA. | Liberar com os 4 `proibe` da tabela (os que mandam mensagem ao cliente). O gasto segue a regra "sem freio no uso do cliente". |
-| D5 | Artigo e portal ficam **públicos na hora**; o layout de e-mail muda o HTML em volta de todo e-mail enviado ao cliente. | Liberar artigo com `fixos: { status: draft }`. Layout de e-mail fica trancado até o Rodrigo dizer. |
-| D6 | **Desligar** regra antiga ou automação de etapa como passo (`fixos: { active: false }` / `{ enabled: false }`). Criar e editar continuam trancados. | Fora agora. Pode servir na F9 (conversão do antigo), mas lá o caminho é o próprio conversor. |
-| D7 | `POST crm/cards/:card_id/contact` (criar contato e ligar ao card) exige o cabeçalho `Idempotency-Key`, que a porta interna não manda. | Lote B: a porta interna manda a chave com o id da execução e do passo. É mudança de código no motor, não só na lista. |
-| D8 | **Pausar** campanha (e-mail e WhatsApp API), IA dos comentários e anúncio: não fala com o cliente, mas o desfazer de hoje trava a campanha ou não alcança. | Fora até corrigir o desfazer. Pausar anúncio pode virar passo próprio. |
+| D1 | Hoje o spec proíbe **todo** DELETE como passo (`acoes_permitidas_spec.rb:40`). Vários DELETE só apagam dado dentro da requisição, e o desfazer alcança. | **Abrir.** Entra o DELETE de item simples que o desfazer alcança e que não é estrutura: os marcados `DELETE*` nas tabelas (tirar pessoa do time, apagar nota do contato, apagar resposta pronta). DELETE de estrutura e DELETE sem desfazer continuam fora. A trava do spec vira "nenhum DELETE de estrutura nem sem desfazer". O DELETE da política de distribuição e o da caixa do funil ficam fora mesmo assim: param a distribuição e a criação de card. |
+| D2 | Retorno com **envio automático** (`automation_mode: auto_send_message`) manda mensagem ao cliente no vencimento. | **Liberado,** pelo passo nativo `retorno` do G3 (#2640), não pela rota crua: vale o `Creator` e o `AutoSendValidator`, só modelo UTILITY, e o histórico mostra que mandou. A rota crua `POST crm/follow_ups` fica fora (motivo 5: o passo nativo é o caminho). |
+| D3 | **Configurar agente de IA** (instrução, material, ferramentas, onde atende) ficou trancado (motivo 1). | **Ligar e desligar o agente entra:** `PATCH`/`PUT autonomia/agents/:id`, só com `enabled` e `status` (`active` ou `paused`). Fica `proibe` em todos os outros campos: `name`, `agent_type`, `mode`, `tone`, `greeting`, `fallback_message`, `handoff_rule`, `human_card`, `actuation`, `instruction`, `starter_questions`, `config` (e `agent.*`). `status: draft` fica fora pelo `um_de` (modificador do #2654). `autonomia/agents` sai do grupo `sempre` do yml. |
+| D4 | `crm/ai_settings`: ligar a IA do funil faz ela avaliar e mover cards sozinha, com gasto contínuo. | **Liberar com os 4 `proibe`** da tabela, os campos que mandam mensagem ao cliente. O gasto segue a regra "sem freio no uso do cliente". `crm/ai_settings` sai do `sempre`; o spec que o espera lá muda junto (`acoes_permitidas_spec.rb:53`). |
+| D5 | Artigo e portal ficam **públicos na hora**; o layout de e-mail muda o HTML em volta de todo e-mail enviado ao cliente. | **Artigo só como rascunho:** `fixos: { status: draft }`. **Layout de e-mail fica trancado.** |
+| D6 | **Desligar** regra antiga ou automação de etapa como passo. | **Fora.** Na F9, o caminho é o próprio conversor. |
+| D7 | `POST crm/cards/:card_id/contact` exige o cabeçalho `Idempotency-Key`, que a porta interna não manda. | **A porta interna manda a chave** (id da execução e do passo). É mudança no motor, no lote B. |
+| D8 | **Pausar** campanha (e-mail e WhatsApp API), IA dos comentários e anúncio: o desfazer de hoje trava a campanha ou não alcança. | **Fora** até corrigir o desfazer. |
 
 A regra das funções personalizadas ("só o administrador" e as quatro proteções) não muda: cada rota continua
 pedindo a chave dela, e a automação age com a função de quem a ligou.
 
-## 4. Lotes, na ordem de quantos exemplos ajudam
+## 4. Lotes
 
-| Lote | O que entra | Exemplos que ajuda |
+**Já no trem do #2414 (não entram nos lotes desta issue):**
+
+| PR | O que faz | Como |
 |---|---|---|
-| **B · card e contato** | criar card e card pela conversa (G4), fechar card (G25), ligar e desligar contato e conversa do card, restaurar; criar contato (G17) e contato pelo card (D7); nota do contato (G19); cliente e lead; contato na empresa; fatos da memória do card; aceitar sugestão de etapa da IA | 4, 5, 6, 8, 9, 10, 11, 12, 16, 18, 19 (11; o 10 fecha inteiro) |
-| **A · retorno e agenda** | retorno e série de retornos (G3), registrar se a reunião aconteceu, horários da agenda de quem ligou, página de agendamento, link de agendamento (sem mandar) | 1, 2, 3, 4, 5, 9, 12, 14, 15, 16, 19 (11) |
-| **C · rascunho de campanha e prospecção** | rascunho de campanha, prévia de destinatários, campanha e modelo de e-mail em rascunho, modelo local do WhatsApp API; prospecção: lista, lead vira contato ou card, filtros salvos | 2, 6, 7, 9, 12, 16 só em parte (monta, não dispara) |
-| **D · configuração do atendimento** | times e pessoas no time, respostas prontas, filtros, visões salvas, SLA, política de distribuição e de capacidade, funis e caixas do funil, ajuste do CRM por caixa, horário de atendimento, metas, participantes da conversa, nome de etiqueta | nenhum direto |
-| **E · IA do CRM** | ajustes da IA do funil (D4), decisores, foco e assunto da conversa, catálogo da memória, ações do consultor de anúncios, sugestões de FAQ e relatos de mensagem | nenhum direto |
-| **F · conteúdo e painel** | portal, artigo e categoria (D5), identidade visual, macros (criar e editar, sem executar), link rastreado, página de site do anúncio, foto do cuidado dos comentários, avisos e notificações de quem ligou, passos do onboarding | nenhum direto |
+| #2640 | criar retorno (G3), com envio automático (D2) | passo nativo `retorno` |
+| #2641 | criar card (G4) | passo nativo de card |
+| #2642 | campanha como passo (G14) | passo nativo de campanha |
+| #2644 | nota no contato (G19) | `POST contacts/:contact_id/notes` no yml |
+| #2654 | fechar card ganho ou perdido (G25) | `POST crm/cards/:id/close` no yml, com `um_de` |
+
+O #2644 deixa mudar e apagar nota de fora ("a automação não reescreve o que alguém anotou"). A D1 cita "apagar nota
+do contato" como exemplo do que abre. Quem fizer o lote que toca `contacts/notes` confirma com a Automação qual vale.
+
+**Os lotes desta issue, na ordem proposta:**
+
+| Ordem | Lote | O que entra | Exemplos que ajuda |
+|---|---|---|---|
+| 1 | **B · card e contato** | criar contato (G17) e contato pelo card (D7, com a chave no motor); ligar e desligar contato e conversa do card; restaurar card (`proibe: force`); cliente e lead; contato na empresa; criar empresa; fatos da memória do card; aceitar sugestão de etapa da IA | 8, 11 (G17), e o resto deixa o card completo nos exemplos de card |
+| 2 | **A · retorno e agenda** | alterar, concluir, cancelar e remarcar retorno; série de retornos; registrar se a reunião aconteceu; horários da agenda de quem ligou; página de agendamento; link de agendamento (sem mandar) | ajuda os 11 do G3 depois que o retorno existe (mexer no retorno criado); nenhum fecha sozinho |
+| 3 | **D1 · trava do DELETE** | a trava do spec vira "nenhum DELETE de estrutura nem sem desfazer" e entram os `DELETE*` | nenhum direto; pode ir junto com o lote que tiver mais `DELETE*` (D) |
+| 4 | **D · configuração do atendimento** | times e pessoas no time, respostas prontas, filtros, visões salvas, SLA, política de distribuição e de capacidade, funis e caixas do funil, ajuste do CRM por caixa, horário de atendimento, metas, participantes da conversa, nome de etiqueta | nenhum direto |
+| 5 | **E · IA do CRM** | ajustes da IA do funil (D4), ligar e desligar agente de IA (D3), decisores, foco e assunto da conversa, catálogo da memória, ações do consultor de anúncios, sugestões de FAQ e relatos de mensagem | nenhum direto |
+| 6 | **C · rascunho de campanha e prospecção** | rascunho de campanha, prévia de destinatários, campanha e modelo de e-mail em rascunho, modelo local do WhatsApp API; prospecção: lista, lead vira contato ou card, filtros salvos | 9 (G21) em parte. Fica depois do #2642 para não pisar na campanha nativa |
+| 7 | **F · conteúdo e painel** | portal, artigo como rascunho e categoria (D5), identidade visual, macros (criar e editar, sem executar), link rastreado, página de site do anúncio, foto do cuidado dos comentários, avisos e notificações de quem ligou, passos do onboarding | nenhum direto |
+
+Todos mexem em `lib/operator_guide/automacao-recursos.yml`, como #2644 e #2654. Um lote por vez no trem, depois
+deles.
 
 As ações que faltam de recursos já liberados e não entraram em lote ficam como estão: `PATCH conversations/:id`,
 mudo, não lida, transcrição, apagar atributo. Entram quando um caso pedir, com a mesma leitura do controller.
@@ -86,7 +106,7 @@ mudo, não lida, transcrição, apagar atributo. Entram quando um caso pedir, co
 ## 5. A tabela
 
 Legenda do veredito: **LIBERAR** · **PARTE** (o recurso entra, algumas ações não) · **FORA n** (motivo n da
-seção 1). `DELETE*` = DELETE que só apaga dado, dentro da requisição: entra só se a D1 mudar.
+seção 1). `DELETE*` = DELETE que só apaga dado, dentro da requisição: entra pela D1.
 
 No `proibe` de rota do CRM, citar os dois caminhos (`campo` e `objeto.campo`): o `parameter_set` do CRM aceita o
 corpo com raiz ou solto (`crm/base_controller.rb:48`).
@@ -114,7 +134,7 @@ corpo com raiz ou solto (`crm/base_controller.rb:48`).
 | crm/meta_ads_advisor_actions | LIBERAR | `open`, `accept`, `dismiss` | — (só marca status; não fala com a Meta; pede `meta_ads_manage`) | meta_ads_advisor_actions_controller.rb:16-33 |
 | crm/conversation_cards | PARTE | `focus`, `repasse/manter`, aceitar e dispensar sugestão de assunto | `repasse`: solta o atendente e pode passar à IA; já existem atribuir e `ia_assumir` (5) | conversation_cards_controller.rb:14-55; repasse.rb:100-110 |
 | crm/caixas | FORA 1 | — | `PUT` salva a caixa inteira: funis, pessoas e agentes de IA do canal | caixas_controller.rb:21-36 |
-| autonomia/agents | FORA 1 (D3) | — | instrução, ferramentas, status de quem atende o cliente; DELETE (2); avatar (3) | agents_controller.rb:42-115 |
+| autonomia/agents | PARTE (D3) | `PATCH`/`PUT autonomia/agents/:id` só com `enabled` e `status` (`um_de: [active, paused]`); `proibe` nos outros campos (seção 3) | criar e configurar (instrução, ferramentas, modo, atuação): quem fala com o cliente (1); DELETE (2); avatar (3) | agents_controller.rb:76-90,200-207; agent.rb:99 |
 | autonomia/agents/ajuda | FORA 1 | — | troca o conjunto de principais do agente | ajuda_controller.rb:12-16 |
 | autonomia/agents/base_de_seguros | FORA 1 | — | troca a base do agente; comparar é IA paga (3) | base_de_seguros_controller.rb:29-51 |
 | autonomia/agents/build_threads | FORA 3 | — | o Construtor chama IA paga e reescreve o agente | build_threads_controller.rb:19-67 |
@@ -227,7 +247,7 @@ A porta interna só manda corpo em JSON (`chamada_interna.rb:47-55`): nada que s
 | crm/stage_automations | FORA 1 (D6) | — | nasce ligada e roda sem policy, como automation_rules; trocar `steps` troca a lista | persister.rb:16-49 |
 | crm/stage_automation_steps | FORA 1 | — | muda passo de automação de etapa ligada, sem policy | stage_automation_steps_controller.rb:7-23 |
 | autonomia/vigias | FORA 1 | — | a vigia é o alarme contra automação descontrolada; automação não pode silenciar o próprio alarme | vigia.rb:1-16 |
-| crm/follow_ups | LIBERAR (D2) | `POST`, `PATCH`/`PUT :id` com `proibe: [automation_mode, follow_up.automation_mode]`; concluir, cancelar, remarcar, dispensar lembrete; `DELETE*` (só cancela) | `auto_send_message` manda ao cliente (4) | follow_ups_controller.rb:48-208 |
+| crm/follow_ups | PARTE (D2) | `PATCH`/`PUT :id` com `proibe: [automation_mode, follow_up.automation_mode]`; concluir, cancelar, remarcar, dispensar lembrete; `DELETE*` (só cancela) | `POST`: criar é o passo nativo `retorno` (#2640), com o envio automático pela regra do G3 (5). Trocar o modo pela rota crua passaria por fora do `AutoSendValidator` | follow_ups_controller.rb:48-208 |
 | crm/follow_up_series | LIBERAR | `PATCH`/`PUT :id`, pausar, retomar, encerrar | — | follow_up_series_controller.rb:16-34 |
 | crm/meetings | PARTE | `POST :id/record_outcome` (registra se aconteceu; pode mover o card, cascata D6) | criar, alterar, apagar: agenda Google/Microsoft e aviso ao cliente (3/4). Sincronizar (3). Resumo, convite, sugerir horário: IA paga (3) | meetings_controller.rb:44-139 |
 | crm/meeting_actions | FORA 5 | — | lembrar e mandar link de novo: passo mensagem com o link da agenda já existe | meeting_actions_controller.rb:25-34 |
@@ -252,7 +272,7 @@ O que o desfazer do Guia não alcança: `delete_all`, `update_all`, `upsert`, `u
 | custom_filters | LIBERAR | `POST`, `PATCH`/`PUT :id`; `DELETE*` | — (o filtro é de quem ligou) | custom_filters_controller.rb:37 |
 | crm/saved_views | LIBERAR | `POST`; `PATCH`/`PUT :id` com `proibe: [position]`; `DELETE*` | — | saved_views_controller.rb:62 |
 | sla_policies | PARTE | `POST`, `PATCH`/`PUT :id` | DELETE: SEM_DESFAZER | sla_policies_controller.rb:21 |
-| assignment_policies | PARTE | `POST`, `PATCH`/`PUT :id` | DELETE: desliga a distribuição das caixas ligadas; fora mesmo se a D1 mudar | assignment_policy.rb:28 |
+| assignment_policies | PARTE | `POST`, `PATCH`/`PUT :id` | DELETE: desliga a distribuição das caixas ligadas; fica fora mesmo com a D1 | assignment_policy.rb:28 |
 | assignment_policies/inboxes | FORA 5 | — | o controller só tem `index`; a rota que funciona é `inboxes/:inbox_id/assignment_policy` | assignment_policies/inboxes_controller.rb:5 |
 | agent_capacity_policies | PARTE | `POST`, `PATCH`/`PUT :id` | DELETE: nullify por update_all (3) | agent_capacity_policy.rb:23 |
 | agent_capacity_policies/inbox_limits | LIBERAR | `POST`, `PATCH`/`PUT :id`; `DELETE*` | — | inbox_limits_controller.rb:9-20 |
@@ -261,7 +281,7 @@ O que o desfazer do Guia não alcança: `delete_all`, `update_all`, `upsert`, `u
 | inbox_csat_templates | FORA 4 | — | cria modelo na Meta/Twilio; analisar é IA paga (3) | inbox_csat_templates_controller.rb:22-32 |
 | csat_survey_responses | LIBERAR | `PATCH :id` (só a nota interna da avaliação) | — | csat_survey_responses_controller.rb:6 |
 | crm/pipelines | PARTE | `POST`, `PATCH`/`PUT :id`, `POST :id/restore`, todos com `proibe: [status, is_default, position, metadata, meta_sync, google_sync]` (e `pipeline.*`) | DELETE arquiva e move cards em lote (2/3). `status` arquiva; `metadata` sobrescreve IA e metas; `meta_sync`/`google_sync` mandam eventos para fora | pipelines_controller.rb:90-189 |
-| crm/pipeline_inboxes | PARTE | `POST crm/pipelines/:pipeline_id/inboxes` | DELETE: para de criar card pela caixa; fora mesmo se a D1 mudar | pipeline_inboxes_controller.rb:14-27 |
+| crm/pipeline_inboxes | PARTE | `POST crm/pipelines/:pipeline_id/inboxes` | DELETE: para de criar card pela caixa; fica fora mesmo com a D1 | pipeline_inboxes_controller.rb:14-27 |
 | crm/inbox_settings | PARTE | `PATCH :inbox_id` com `proibe: [crm_enabled, subject_ai_mode]` (e `inbox_setting.*`) | `crm_enabled` expira sugestões com update_all (3); `subject_ai_mode` liga IA paga | inbox_setting.rb:45-68 |
 | crm/service_schedules | LIBERAR | `POST`, `PATCH`/`PUT :id`; `DELETE*` | — | service_schedules_controller.rb:13-37 |
 | crm/metas | LIBERAR | `PUT crm/metas` | — (pede `sales_value_view`) | metas_controller.rb:36 |
@@ -276,13 +296,13 @@ O que o desfazer do Guia não alcança: `delete_all`, `update_all`, `upsert`, `u
 | onboarding_progress | LIBERAR | pular e retomar passo | — (só administrador) | onboarding/progress.rb:106 |
 | onboardings | FORA 1 | — | muda nome e idioma da conta; na nuvem cria caixa | onboardings_controller.rb:32-39 |
 | portals | PARTE (D5) | `POST`, `PATCH`/`PUT :id`, arquivar, com `proibe: [custom_domain, slug, config.analytics]` (e `portal.*`) | DELETE e mandar instruções: SEM_DESFAZER. Apagar logo: purge (3). Domínio é infra, slug quebra links, analytics injeta script | portals_controller.rb:49-109 |
-| articles | PARTE (D5) | `POST`, `PATCH`/`PUT :id` com `proibe: [position, draft_title, draft_content]` (e `article.*`) | DELETE: nullify (3). Reordenar: update_column (3). Rascunho grava com update_columns (3) | articles_controller.rb:102; article.rb:43-174 |
+| articles | PARTE (D5) | `POST`, `PATCH`/`PUT :id` com `fixos: { status: draft }` e `proibe: [position, draft_title, draft_content]` (e `article.*`) | DELETE: nullify (3). Reordenar: update_column (3). Rascunho grava com update_columns (3) | articles_controller.rb:102; article.rb:43-174 |
 | categories | PARTE | `POST`, `PATCH`/`PUT :id` com `proibe: [position, related_category_ids]` (e `category.*`) | DELETE: destroy_async (2/3). Reordenar muda a ordem do portal. `related_category_ids` troca a lista (5) | categories_controller.rb:24-36 |
 | brand_kits | LIBERAR | `POST`, `PATCH`/`PUT :id` com `proibe: [logo_source_url, logo, remove_logo]` (e `brand_kit.*`); restaurar, padrão; `DELETE*` (só arquiva) | `logo_source_url` baixa URL de fora; `remove_logo` apaga arquivo em job | brand_kits_controller.rb:35-85 |
 | branded_email_layouts | FORA 1 (D5) | — | muda o HTML em volta de todo e-mail ao cliente; fica até o Rodrigo decidir | email_template.rb:55 |
 | upload | FORA 3 | — | arquivo no storage fora do desfazer; busca URL de fora | upload_controller.rb:22-40 |
 | ctwa_tracked_links | PARTE | `POST`, `PATCH`/`PUT :id` | DELETE: cascade nos cliques (3) e quebra link em anúncio | schema.rb:4985 |
-| contacts/notes | LIBERAR | `POST`, `PATCH`/`PUT :id`; `DELETE*` | — | contacts/notes_controller.rb:13-21 |
+| contacts/notes | LIBERAR | `POST` (#2644, G19); `PATCH`/`PUT :id`; `DELETE*` | — (o #2644 deixa mudar e apagar de fora; ver seção 4) | contacts/notes_controller.rb:13-21 |
 | contacts/opt_outs | FORA 4 | — | registrar corta mensagem ao cliente (como `blocked`, já proibido); apagar solta a recusa dele | opt_outs_controller.rb:13-31 |
 | contacts/customers | LIBERAR | `POST contacts/:contact_id/customer`; `DELETE*` (volta a lead) | — | customers_controller.rb:7-12 |
 | contacts/contact_inboxes | LIBERAR | `POST` com `proibe: [source_id, hmac_verified]` | `source_id` solto toma a identidade de outro contato | contact_inbox_builder.rb:61-89 |
@@ -304,9 +324,8 @@ O que o desfazer do Guia não alcança: `delete_all`, `update_all`, `upsert`, `u
 
 | Ação | Veredito | Guarda | Observação |
 |---|---|---|---|
-| `POST crm/cards` | LIBERAR | — | G4. Cria na requisição (`create_authorized_card`); pede a chave de funis (D2, #2633) |
-| `POST crm/cards/from_conversation` | LIBERAR | — | G4. Card da conversa do alvo |
-| `POST crm/cards/:id/close` | LIBERAR | — | G25. `Closer` grava na requisição (`closer.rb:40-52`). A conferir no PR: se o ganho manda conversão de anúncio para fora (3) |
+| `POST crm/cards`, `POST crm/cards/from_conversation` | FORA 5 | — | G4 é o passo nativo de card (#2641) |
+| `POST crm/cards/:id/close` | no trem | `um_de: { result: [won, lost] }`, `proibe: [force]` | G25 (#2654) |
 | `POST crm/cards/:id/link_contact`, `unlink_contact`, `link_conversation`, `unlink_conversation`, `restore` | LIBERAR | — | ligam e desligam na requisição (`cards_controller.rb:175-220`) |
 | `POST crm/cards/:id/evaluate_ai`, `summarize` | FORA 3 | — | IA paga em job; os passos de IA já existem (5) |
 | `POST crm/cards/:id/reset_auto_followup` | FORA 4 | — | rearma o follow-up automático da IA, que fala com o cliente |
