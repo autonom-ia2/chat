@@ -18,6 +18,7 @@ import * as Sentry from '@sentry/vue';
 import { emitter } from 'shared/helpers/mitt';
 import { BUS_EVENTS } from 'shared/constants/busEvents';
 import {
+  filtroDoLinkLigado,
   filtrosDoEndereco,
   naCaixa,
 } from 'dashboard/composables/chatlist/useFiltrosDoLinkNaCaixa';
@@ -101,15 +102,13 @@ export const TEMPO_LIMITE_DA_RELEITURA_MS = 20000;
 // Até 5 páginas carregadas, a releitura relê todas e troca a lista no lugar (a paginação fica, a rolagem não vai ao
 // topo); acima disso, volta à página 1.
 export const PAGINAS_RELIDAS_NO_MAXIMO = 5;
-const filtroDoLinkNosParametros = params =>
-  Boolean(params?.daIa || params?.esperandoMin);
 // Ligado = a lista pediu com o filtro, sem filtro avançado por cima, e quem está na tela é a caixa com o link. Fora da
 // caixa (CRM, Contatos) os filtros guardados no store não fazem a lista ser relida por baixo.
 const filtroDoLinkAtivo = (state, rootState) =>
-  filtroDoLinkNosParametros(state?.conversationFilters) &&
+  filtroDoLinkLigado(state?.conversationFilters) &&
   !state.appliedFilters?.length &&
   naCaixa(rootState?.route) &&
-  filtroDoLinkNosParametros(filtrosDoEndereco(rootState.route));
+  filtroDoLinkLigado(filtrosDoEndereco(rootState.route));
 let releituraAgendada = null;
 
 // Geração da lista: sobe a cada leitura, esvaziamento ou troca de aba. A releitura das páginas e a leitura comum
@@ -397,7 +396,7 @@ const actions = {
         }
 
         // Filtros pelo link (#1883): quem decide o que entra é o servidor; guarda o que ele mandou.
-        if (filtroDoLinkNosParametros(params)) {
+        if (filtroDoLinkLigado(params)) {
           commit(types.SET_IDS_DO_FILTRO_DO_LINK, {
             ids: data.payload.map(({ id }) => id),
             substituir: replaceExisting,

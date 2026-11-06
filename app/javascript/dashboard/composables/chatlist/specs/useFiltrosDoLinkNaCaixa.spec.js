@@ -12,6 +12,7 @@ import {
   chaveDaPaginaDaLista,
   filtroDoLinkDaLista,
   filtrosDoEndereco,
+  filtroDoLinkLigado,
   useFiltrosDoLinkNaCaixa,
   useReleituraPeriodica,
   RELEITURA_PERIODICA_MS,
@@ -57,15 +58,46 @@ describe('filtrosDoEndereco', () => {
   it('lê da_ia=1 e esperando_min dentro de 1..1440', () => {
     expect(
       filtrosDoEndereco({ query: { da_ia: '1', esperando_min: '30' } })
-    ).toEqual({ daIa: true, esperandoMin: 30, noFunil: false });
+    ).toEqual({
+      daIa: true,
+      esperandoMin: 30,
+      noFunil: false,
+      desdeDias: null,
+    });
   });
 
   it('ignora valor que a caixa não oferece', () => {
     ['0', '1441', '-1', 'abc', '30.5', '0x1e', ''].forEach(valor => {
       expect(
         filtrosDoEndereco({ query: { da_ia: 'sim', esperando_min: valor } })
-      ).toEqual({ daIa: false, esperandoMin: null, noFunil: false });
+      ).toEqual({
+        daIa: false,
+        esperandoMin: null,
+        noFunil: false,
+        desdeDias: null,
+      });
     });
+  });
+
+  it('lê desde_dias só nos períodos de Seus posts (7, 30 ou 90)', () => {
+    expect(filtrosDoEndereco({ query: { desde_dias: '30' } }).desdeDias).toBe(
+      30
+    );
+    ['10', '0', '-7', ' 7', '7.0', 'abc', ''].forEach(valor => {
+      expect(
+        filtrosDoEndereco({ query: { desde_dias: valor } }).desdeDias
+      ).toBe(null);
+    });
+  });
+});
+
+describe('filtroDoLinkLigado', () => {
+  it('liga com da_ia, esperando_min ou desde_dias; no_funil sozinho, não', () => {
+    expect(filtroDoLinkLigado({ daIa: true })).toBe(true);
+    expect(filtroDoLinkLigado({ esperandoMin: 30 })).toBe(true);
+    expect(filtroDoLinkLigado({ desdeDias: 7 })).toBe(true);
+    expect(filtroDoLinkLigado({ noFunil: true })).toBe(false);
+    expect(filtroDoLinkLigado(undefined)).toBe(false);
   });
 });
 
@@ -108,6 +140,21 @@ describe('useFiltrosDoLinkNaCaixa', () => {
 
     expect(filtros.daIa.value).toBe(true);
     expect(filtros.esperandoMin.value).toBe(null);
+  });
+
+  it('"Ver conversas" de Seus posts: desde_dias liga, vai para a conversa e o Limpar tira', async () => {
+    const { router, filtros } = await montar(
+      '/app/accounts/1/inbox/3?desde_dias=30'
+    );
+    expect(filtros.desdeDias.value).toBe(30);
+    expect(filtros.linkDoFiltro.value).toEqual({ desde_dias: '30' });
+
+    await router.push('/app/accounts/1/conversations/7');
+    expect(router.currentRoute.value.query).toEqual({ desde_dias: '30' });
+
+    await filtros.limpar();
+    expect(router.currentRoute.value.query).toEqual({});
+    expect(filtros.desdeDias.value).toBe(null);
   });
 
   it('abrir uma conversa da lista filtrada leva o link junto; voltar pelo menu, sem o link, desliga', async () => {
@@ -375,6 +422,12 @@ describe('abaDoFiltroDoLink', () => {
 
 // #1999: o Números conta as conversas abertas; com o filtro do link, a caixa abre em "Abertas" mesmo com outro salvo.
 describe('statusDoFiltroDoLink', () => {
+  it('desde_dias (Seus posts) abre em todos os status, como o cartão conta', () => {
+    expect(
+      statusDoFiltroDoLink({ desdeDias: 30 }, 'resolved', 'open', 'all')
+    ).toBe('all');
+  });
+
   it('com o filtro do link, abre em Abertas mesmo com Pendentes salvo', () => {
     expect(
       statusDoFiltroDoLink({ daIa: true, esperandoMin: 30 }, 'pending', 'open')
