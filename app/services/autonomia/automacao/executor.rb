@@ -142,7 +142,6 @@ class Autonomia::Automacao::Executor
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
     @alvo = nil
     @contexto = nil
-    @valores = nil
   end
 
   def esperar(passo)
@@ -153,7 +152,7 @@ class Autonomia::Automacao::Executor
 
   def esperar_ate(passo)
     espera = janela_da_espera(passo)
-    return cumprida(passo) if condicao?(passo['condicao'], ::Autonomia::Automacao::Valores.new(alvo: contexto, espera: espera))
+    return cumprida(passo) if condicao?(passo['condicao'], valores(espera: espera))
     return aguardar(passo, espera.begin + duracao(passo['prazo'])) unless @retomando
     return aguardar(passo, @execucao.due_at, registrar: false) if @execucao.due_at&.future?
 
@@ -219,7 +218,7 @@ class Autonomia::Automacao::Executor
   # A ação mudou o alvo: o passo seguinte ("se", "esperar até") lê o valor de agora, não o de antes dela.
   def seguir_depois_da_acao(passo, resultado)
     @tentativas = 0
-    @alvo = @contexto = @valores = nil
+    @alvo = @contexto = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
     @roteiro.seguinte(passo['id'])
   end
@@ -282,5 +281,6 @@ class Autonomia::Automacao::Executor
   # As pontes do alvo (#2499): conversa, card ou contato, e os outros dois quando há caminho.
   def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(alvo))
 
-  def valores = (@valores ||= ::Autonomia::Automacao::Valores.new(alvo: contexto))
+  # Com as permissões de quem ligou (#2597); no "esperar até", com a janela da espera (G11).
+  def valores(espera: nil) = ::Autonomia::Automacao::Valores.new(alvo: contexto, quem: @definicao.ligada_por, espera: espera)
 end

@@ -41,8 +41,10 @@ class Autonomia::Automacao::TestarPasso
   # `account_user` é quem pede, na conta: dele saem a pessoa e o que ela enxerga.
   def initialize(receita:, passo_id:, conta:, account_user:, conversa_id: nil)
     @receita = receita
-    @passo = ::Autonomia::Automacao::Receita.new(receita, conta: conta).passos.find { |passo| passo['id'] == passo_id.to_s }
+    passos = ::Autonomia::Automacao::Receita.new(receita, conta: conta, account_user: account_user).passos
+    @passo = passos.find { |passo| passo['id'] == passo_id.to_s }
     @conta = conta
+    @account_user = account_user
     @usuario = account_user.user
     @conversa_id = conversa_id.presence
   end
@@ -84,7 +86,7 @@ class Autonomia::Automacao::TestarPasso
 
   def rodar(classe, conversa, com_valores)
     base = { conversa_id: conversa.display_id, nome: conversa.contact&.name }
-    estado = ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: ::Autonomia::Automacao::ComIa.leituras(@passo))
+    estado = leitura(conversa)
     return base.merge(motivo: 'nada_para_ler') if estado.vazio?
 
     consulta = classe.consulta(@passo, estado)
@@ -93,6 +95,12 @@ class Autonomia::Automacao::TestarPasso
     base.merge(resultado: para_tela(resposta)).merge(com_valores ? { custo_usd: custo['custo_usd'] } : {})
   rescue ::Autonomia::Automacao::PassoDeIa::Falha => e
     base.merge(motivo: e.motivo)
+  end
+
+  # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores.
+  def leitura(conversa)
+    ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: ::Autonomia::Automacao::ComIa.leituras(@passo),
+                                       valor_do_card: ::Autonomia::Automacao::Valores.pode_ler?('card.valor', @account_user))
   end
 
   def para_tela(resposta)

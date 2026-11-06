@@ -68,7 +68,7 @@ class Autonomia::Automacao::Ensaio
 
     @contados = 0
     @conversa = conversa
-    valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem, quem: @usuario)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
 
@@ -85,7 +85,7 @@ class Autonomia::Automacao::Ensaio
     return 'spam' if contexto.no_spam?
     return 'sem_mensagem' if mensagem_no_gatilho? && mensagem.nil?
 
-    valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     filtros = Array(@receita.dig('gatilho', 'filtros'))
     'fora_do_filtro' unless filtros.all? { |condicao| ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira? }
   end

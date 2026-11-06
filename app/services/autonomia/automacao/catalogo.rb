@@ -74,7 +74,7 @@ module Autonomia::Automacao::Catalogo
   # #2498: cada receita pronta com a frase da porta e as flags que os passos dela pedem (a porta mostra o porquê).
   def receitas
     YAML.safe_load_file(RECEITAS).map do |nome, item|
-      tipos = ::Autonomia::Automacao::Receita.new(item['receita'], conta: nil).passos.pluck('tipo')
+      tipos = ::Autonomia::Automacao::Receita.new(item['receita'], conta: nil, account_user: nil).passos.pluck('tipo')
       requer = tipos.filter_map { |tipo| declarado.dig('nativos', tipo, 'requer') }.uniq
       { 'chave' => nome, 'frase' => chave('RECEITAS', nome, 'TITULO'), 'requer' => requer, 'receita' => item['receita'] }
     end

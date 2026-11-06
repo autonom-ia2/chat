@@ -48,8 +48,9 @@ class Autonomia::Automacao::PassoDeMensagem
   def mandar_modelo
     return pulado('fora_da_janela') unless ::Autonomia::Automacao::ModeloWhatsapp.aplica?(@conversa)
 
-    pronto = ::Autonomia::Automacao::ModeloWhatsapp.new(@passo['modelo'], @conversa, ::Autonomia::Automacao::Valores.new(alvo: @alvo))
-                                                   .preparar
+    # Os valores do modelo com as permissões de quem ligou (#2597), como no texto.
+    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
+    pronto = ::Autonomia::Automacao::ModeloWhatsapp.new(@passo['modelo'], @conversa, valores).preparar
     return pulado(pronto) if pronto.is_a?(String)
 
     anti_laco = ::Autonomia::Automacao::AntiLaco.new(@execucao.automacao, @conversa)

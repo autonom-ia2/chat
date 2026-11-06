@@ -146,6 +146,22 @@ export const novoPasso = (entrada, id, t) => {
 // #2499: só o que o alvo do gatilho alcança (conversa, card, contato). Card num
 // gatilho de conversa o salvar recusaria; o editor nem oferece. Sem gatilho
 // escolhido, ou valor sem base (a mensagem do gatilho), fica tudo.
+// #2597: o valor que pede permissão (`permissao`, como o valor do card, que
+// pede `sales_value_view`) fica marcado `sem_permissao` para quem não pode
+// lê-lo. A escolha não o oferece; o texto e a condição que já o usam continuam
+// mostrando o nome dele, e o salvar recusa até a pessoa tirar.
+export const comPermissoes = (dados, podeLer) => {
+  if (!dados?.valores) return dados;
+  return {
+    ...dados,
+    valores: dados.valores.map(item =>
+      item.permissao && !podeLer(item.permissao)
+        ? { ...item, sem_permissao: true }
+        : item
+    ),
+  };
+};
+
 export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
   const bases = alvo && dados.alvos?.[alvo];

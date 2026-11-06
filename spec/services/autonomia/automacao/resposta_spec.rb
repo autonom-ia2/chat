@@ -334,7 +334,8 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
 
   describe 'o salvar' do
     def problemas(passos)
-      Autonomia::Automacao::Receita.new({ 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => passos }, conta: account).problemas
+      receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => passos }
+      Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas
     end
 
     it 'aceita a resposta na condição do "esperar até"' do
@@ -346,7 +347,7 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
       no_caminho = [prioridade_passo('a1', conversa_id: { '$valor' => 'conversa.cliente_respondeu' })]
       no_filtro = Autonomia::Automacao::Receita.new(
         { 'gatilho' => { 'tipo' => 'conversa.resolvida', 'filtros' => [respondeu('cliente')] }, 'passos' => [prioridade_passo('a1')] },
-        conta: account
+        conta: account, account_user: nil
       ).problemas
 
       expect(problemas(no_se)).to include(a_string_including('conversa.equipe_respondeu', '"wait until"'))
@@ -366,7 +367,7 @@ RSpec.describe Autonomia::Automacao::Resposta, :automacao_motor do
     sem_conversa = Crm::Card.create!(account: account, pipeline: funil.first, stage: funil.last, title: 'Avulso', currency: 'BRL')
     valores = Autonomia::Automacao::Valores
 
-    expect(valores.new(alvo: conversa).ler('conversa.cliente_respondeu')).to be(false)
-    expect(valores.new(alvo: sem_conversa, espera: (1.hour.ago..)).ler('conversa.equipe_respondeu')).to be(false)
+    expect(valores.new(alvo: conversa, quem: nil).ler('conversa.cliente_respondeu')).to be(false)
+    expect(valores.new(alvo: sem_conversa, quem: nil, espera: (1.hour.ago..)).ler('conversa.equipe_respondeu')).to be(false)
   end
 end

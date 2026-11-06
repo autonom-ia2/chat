@@ -43,12 +43,14 @@ class Autonomia::Automacao::Conversao::DaRegra
   end
 
   # Sem falta, a receita ainda passa pelo esquema e pela conferência do motor novo: o "converte" do relatório só vale se
-  # o motor aceitar salvar a receita.
+  # o motor aceitar salvar a receita. Sem pessoa (`account_user: nil`): o relatório só lê, e quem salvar a convertida
+  # passa pela conferência dela na Versao (#2597).
   def conferir!(receita)
     return if @faltas.any? || receita.nil?
     return falta('receita_recusada', 'esquema') unless Autonomia::Automacao::Receita.esquema_valido?(receita)
 
-    Autonomia::Automacao::Receita.new(receita, conta: @regra.account).problemas.each { |problema| falta('receita_recusada', problema) }
+    problemas = Autonomia::Automacao::Receita.new(receita, conta: @regra.account, account_user: nil).problemas
+    problemas.each { |problema| falta('receita_recusada', problema) }
   end
 
   def filtro!(gatilho)

@@ -34,8 +34,9 @@ const composta = computed(() =>
   Boolean(props.modelValue?.todas || props.modelValue?.alguma)
 );
 
-// O valor que só o Guia monta (`so_guia`) não entra na escolha; a condição que
-// já o usa continua mostrando o que olha.
+// O valor que só o Guia monta (`so_guia`) e o que a pessoa não pode ler
+// (`sem_permissao`, #2597) não entram na escolha; a condição que já usa um
+// deles continua mostrando o que olha.
 const opcoesDeCampo = computed(() => {
   const lista = opcoesDosValores(
     props.catalogo,
@@ -45,10 +46,12 @@ const opcoesDeCampo = computed(() => {
     props.naEspera
   );
   const campo = props.modelValue?.campo?.$valor;
-  const doGuia = props.catalogo.valores?.find(
-    item => item.so_guia && item.caminho === campo
+  const foraDaEscolha = props.catalogo.valores?.find(
+    item => (item.so_guia || item.sem_permissao) && item.caminho === campo
   );
-  return doGuia ? [...lista, { value: campo, label: t(doGuia.frase) }] : lista;
+  return foraDaEscolha
+    ? [...lista, { value: campo, label: t(foraDaEscolha.frase) }]
+    : lista;
 });
 
 const operadoresDe = campo => operadoresDoValor(campo, props.catalogo);

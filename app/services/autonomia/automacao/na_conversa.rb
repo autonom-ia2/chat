@@ -24,7 +24,10 @@ module Autonomia::Automacao::NaConversa
     Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: {})
   end
 
-  def texto_pronto = ::Autonomia::Automacao::Texto.new(@passo['texto'], ::Autonomia::Automacao::Valores.new(alvo: @alvo)).montar
+  def texto_pronto
+    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
+    ::Autonomia::Automacao::Texto.new(@passo['texto'], valores).montar
+  end
 
   def marca
     { automacao_id: @execucao.automacao_id, execucao_id: @execucao.id, passo: @passo['id'] }

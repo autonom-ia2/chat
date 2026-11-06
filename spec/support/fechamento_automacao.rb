@@ -109,17 +109,37 @@ module FechamentoAutomacao::Lacunas
     end
   end
 
+  # O campo `campo` existe no passo de tipo `tipo` do esquema da receita.
+  def campo_do_passo?(tipo, campo) = campos_do_passo(Autonomia::Automacao::Receita::ESQUEMA, tipo).include?(campo)
+
+  def campos_do_passo(trecho, tipo)
+    case trecho
+    when Hash
+      proprios = trecho.dig('properties', 'tipo', 'const') == tipo ? trecho['properties'].keys : []
+      proprios + trecho.values.flat_map { |filho| campos_do_passo(filho, tipo) }
+    when Array then trecho.flat_map { |filho| campos_do_passo(filho, tipo) }
+    else []
+    end
+  end
+
   def gatilho?(*tipos) = tipos.any? { |tipo| Autonomia::Automacao::Gatilhos.entrada(tipo) }
   def gatilho_no?(alvo) = Autonomia::Automacao::Gatilhos::LISTA.values.any? { |entrada| entrada.alvo == alvo }
   def gatilho_de?(origem) = Autonomia::Automacao::Gatilhos::LISTA.values.any? { |entrada| entrada.origem == origem }
   def acao?(acao) = Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
   def valor?(caminho) = Autonomia::Automacao::Valores.caminho_valido?(caminho)
 
+  def atribui_agente_de_ia?
+    acao = 'POST conversations/:conversation_id/assignments'
+    tipos = Array(Autonomia::Guide::Formatos.para(acao)&.dig('campos', 'assignee_type', 'um_de'))
+    acao?(acao) && tipos.include?('Autonomia::Agents::Agent')
+  end
+
   SONDAS = {
-    'G1' => -> { passo?('modelo') },
+    # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
+    'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
     'G2' => -> { passo?('email') },
     'G3' => -> { passo?('retorno') },
-    'G4' => -> { acao?('POST crm/cards') },
+    'G4' => -> { acao?('POST crm/cards') || acao?('POST crm/cards/from_conversation') },
     'G5' => -> { gatilho_no?('Crm::Card') },
     'G6' => -> { gatilho_de?(:tempo) },
     'G7' => -> { gatilho_de?(:recorrente) },
@@ -127,10 +147,18 @@ module FechamentoAutomacao::Lacunas
     'G9' => -> { gatilho?('card.responsavel_mudou', 'conversa.responsavel_mudou') },
     'G10' => -> { gatilho?('etiqueta.posta', 'conversa.etiqueta_posta', 'contato.etiqueta_posta') },
     'G11' => -> { valor?('conversa.equipe_respondeu') && valor?('conversa.cliente_respondeu') },
-    'G12' => -> { gatilho?('reuniao.marcada') },
+    'G12' => lambda {
+      gatilho?('reuniao.marcada') && gatilho?('reuniao.cancelada') &&
+        %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
+    },
     'G13' => -> { passo?('webhook') },
     'G14' => -> { passo?('campanha') },
-    'G15' => nil,
+    # A Atribuição é o motor único de entrega, inclusive para agente de IA (regra do Rodrigo): fecha quando o passo de
+    # atribuir aceita um agente de IA como destino. "Tirar" é atribuir de volta à pessoa ou ao time, que o passo já
+    # faz. O nome fica com a F7, e o desenho passa pela sessão Automação antes do código. Contrato da sonda: fecha quando
+    # o formato gerado (formatos-das-acoes.json) listar 'Autonomia::Agents::Agent' em `assignee_type.um_de`, o que pede
+    # inclusion no modelo ou validação no controller; se a F7 aceitar o agente por outro caminho, ela ajusta esta sonda.
+    'G15' => -> { atribui_agente_de_ia? },
     'G16' => nil,
     'G17' => -> { acao?('POST contacts') },
     'G18' => nil,
@@ -140,7 +168,7 @@ module FechamentoAutomacao::Lacunas
     'G22' => nil,
     'G23' => nil,
     'G24' => nil,
-    'G25' => nil,
+    'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') }
   }.freeze
 

@@ -4,7 +4,7 @@ RSpec.describe Autonomia::Automacao::Condicao do
   let(:account) { create(:account) }
   let(:contato) { create(:contact, account: account, custom_attributes: { 'placa' => 'ABC1D23', 'renda' => '3500' }) }
   let(:conversa) { create(:conversation, account: account, contact: contato, status: :resolved) }
-  let(:valores) { Autonomia::Automacao::Valores.new(alvo: conversa) }
+  let(:valores) { Autonomia::Automacao::Valores.new(alvo: conversa, quem: nil) }
 
   before { conversa.update_labels(%w[vip pos-venda]) }
 

@@ -33,7 +33,7 @@
 #      para este comentário (Escrita), as duas ANTES de qualquer envio. O que o agente não sabe, e o comentário sobre o
 #      assunto proibido do dono (`owner_topic`), ficam com o dono (`kept_for_owner`). O preço que o dono escreveu vale
 #      no lugar da frase escrita. Sem agente que possa escrever, as frases fixas (o motivo vai ao log).
-#    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado ainda não está liberado (Facebook, F4),
+#    Sem oferta na ficha nem "para quem" do dono, ou na rede em que o privado não está liberado (Facebook sem a flag),
 #    nunca manda privado: a pergunta fica com o dono (`kept_for_owner`, "Esperando você" no Painel).
 #
 # Erro antes de a IA agir na Meta solta a reivindicação e sobe: o job tenta de novo. Depois de agir, a reivindicação
