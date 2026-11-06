@@ -155,12 +155,18 @@ const fixedKind = computed(
   () => props.kind || (kinds.value.length === 1 ? kinds.value[0] : null)
 );
 
-// Página e número só perguntam quando há escolha a fazer.
-const needsWhere = computed(
-  () => pages.value.length > 1 || numbers.value.length > 1
-);
-
 const isPost = computed(() => draft.value.kind === 'post');
+// O número do WhatsApp só é pergunta quando o anúncio leva ao WhatsApp (#2645). No post ele ainda pode ser: o botão
+// do WhatsApp só se decide no passo do post, que vem depois.
+const asksNumber = computed(
+  () => isPost.value || draft.value.destination === 'WHATSAPP'
+);
+const asksPage = computed(() => pages.value.length > 1);
+const asksNumberChoice = computed(
+  () => asksNumber.value && numbers.value.length > 1
+);
+// Página e número só perguntam quando há escolha a fazer.
+const needsWhere = computed(() => asksPage.value || asksNumberChoice.value);
 // Anúncio novo (#2564): logo depois do "O que fazer", para onde vai quem toca (conversa, site ou perfil).
 const STEPS = computed(() => [
   'KIND',
@@ -173,11 +179,24 @@ const STEPS = computed(() => [
 ]);
 const current = computed(() => STEPS.value[step.value]);
 // A frase do passo; a da foto no anúncio de perfil diz que ele aparece só no Instagram (#2564).
-const stepHint = computed(() =>
-  current.value === 'CONTENT' && draft.value.destination === 'INSTAGRAM_PROFILE'
-    ? `${KEY}.CONTENT.HINT_PROFILE`
-    : `${KEY}.${current.value}.HINT`
+// No "Onde", o título e a frase dizem só o que o passo pergunta: a Página, o número ou os dois (#2645).
+const whereVariant = computed(() => {
+  if (!asksPage.value) return '_NUMBER';
+  return asksNumberChoice.value ? '' : '_PAGE';
+});
+const stepTitle = computed(() =>
+  current.value === 'WHERE'
+    ? `${KEY}.WHERE.TITLE${whereVariant.value}`
+    : `${KEY}.${current.value}.TITLE`
 );
+const stepHint = computed(() => {
+  if (current.value === 'WHERE')
+    return `${KEY}.WHERE.HINT${whereVariant.value}`;
+  return current.value === 'CONTENT' &&
+    draft.value.destination === 'INSTAGRAM_PROFILE'
+    ? `${KEY}.CONTENT.HINT_PROFILE`
+    : `${KEY}.${current.value}.HINT`;
+});
 const total = computed(() => STEPS.value.length - 1);
 
 const impulsionar = useImpulsionarPost({ draft, numbers });
@@ -295,11 +314,11 @@ const contentMissing = computed(() => {
 const STEP_READY = {
   KIND: () => Boolean(draft.value.kind),
   GOAL: () => Boolean(goal.value),
-  // Com um número só (ou nenhum), ele não é pergunta: já vem escolhido ou o destino não é o WhatsApp.
+  // Com um número só (ou nenhum), ou com destino que não é o WhatsApp, ele não é pergunta.
   WHERE: () =>
     Boolean(
       draft.value.page_id &&
-        (numbers.value.length <= 1 || draft.value.whatsapp_number)
+        (!asksNumberChoice.value || draft.value.whatsapp_number)
     ),
   CONTENT: () => !contentMissing.value,
   // Enquanto lê (ou relê para outra Página), o post marcado ainda pode ser o da leitura anterior.
@@ -316,6 +335,16 @@ const STEP_READY = {
   REVIEW: () => Boolean(draft.value.name.trim()),
 };
 const ready = computed(() => STEP_READY[current.value]());
+// Destino trocado depois do "Onde" (#2645, o "Trocar" do passo da foto): o "Onde" pode entrar ou sair da lista, e o
+// número do passo mudaria de lugar. A pessoa fica no passo em que estava.
+watch(
+  STEPS,
+  (list, old) => {
+    const index = list.indexOf(old[step.value]);
+    if (index >= 0) step.value = index;
+  },
+  { flush: 'sync' }
+);
 
 const blockReason = computed(() => {
   if (current.value === 'CONTENT' && contentMissing.value) {
@@ -730,7 +759,7 @@ const BLOCKERS = {
           tabindex="-1"
           class="m-0 text-xl font-semibold text-n-slate-12 focus:outline-none"
         >
-          {{ $t(`${KEY}.${current}.TITLE`) }}
+          {{ $t(stepTitle) }}
         </h2>
         <p class="m-0 max-w-prose text-sm leading-6 text-n-slate-11">
           {{ $t(stepHint) }}
@@ -777,7 +806,7 @@ const BLOCKERS = {
               @update:model-value="draft = { ...draft, page_id: $event }"
             />
           </div>
-          <div v-if="numbers.length > 1" class="flex flex-col gap-2">
+          <div v-if="asksNumberChoice" class="flex flex-col gap-2">
             <span class="text-sm font-medium text-n-slate-12">
               {{ $t(`${KEY}.WHERE.NUMBER`) }}
             </span>
