@@ -31,10 +31,10 @@ module AutonomiaDesempenhoHelpers
     'remetentes_do_agente' => [%w[AgentBot 0]]
   }.freeze
 
-  def ficha_da_loja!(account, sujeito_id:, versao: 1, remetentes: nil)
+  def ficha_da_loja!(account, sujeito_id:, sujeito_type: 'robo', versao: 1, remetentes: nil)
     configuracao = CONFIGURACAO_DA_LOJA.deep_dup
     configuracao['remetentes_do_agente'] = remetentes || [['AgentBot', sujeito_id]]
-    Autonomia::Desempenho::Ficha.create!(account: account, sujeito_type: 'robo', sujeito_id: sujeito_id, versao: versao, lote: 'spec',
+    Autonomia::Desempenho::Ficha.create!(account: account, sujeito_type: sujeito_type, sujeito_id: sujeito_id, versao: versao, lote: 'spec',
                                          catalogo: CATALOGO_DA_LOJA.deep_dup, configuracao: configuracao,
                                          referencias: { 'ticket' => nil, 'confianca' => nil, 'exemplos' => {} })
   end
