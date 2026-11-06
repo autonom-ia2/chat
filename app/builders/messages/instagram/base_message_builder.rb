@@ -26,6 +26,7 @@ class Messages::Instagram::BaseMessageBuilder < Messages::Messenger::MessageBuil
     return if @outgoing_echo || @message.nil?
 
     referral = @messaging[:referral] || message[:referral] || @messaging.dig(:postback, :referral)
+    referral = Crm::MetaAds::MessagingReferral.with_click_time(referral, @messaging[:timestamp])
     source = Crm::MetaAds::MessagingReferral::INSTAGRAM_SOURCE
     Crm::MetaAds::MessagingReferral.attribute_message!(@conversation, referral, source: source, event_id: message_identifier,
                                                                                 new_conversation: @new_conversation.present?)

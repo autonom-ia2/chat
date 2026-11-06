@@ -179,6 +179,21 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
         expect(mandada(conversa).reload.status).not_to eq('failed')
       end
 
+      # #2597: as variáveis do modelo leem com as permissões de quem ligou, como o texto.
+      it 'janela fechada: as variáveis do modelo leem com as permissões de quem ligou' do
+        automacao = automacao_ligada(account, admin, [passo])
+        recebida(conversa, 30.hours.ago)
+        lidos = []
+        allow(Autonomia::Automacao::ModeloWhatsapp).to receive(:new).and_wrap_original do |original, modelo, alvo, valores|
+          lidos << valores
+          original.call(modelo, alvo, valores)
+        end
+
+        rodar(conversa, automacao)
+
+        expect(lidos.map { |valores| valores.send(:account_user)&.user }).to eq([admin])
+      end
+
       it 'janela fechada com texto só de espaços: o modelo sai mesmo assim (ele não usa o texto)', :aggregate_failures do
         passo['texto'] = ['   ']
         recebida(conversa, 30.hours.ago)

@@ -8,9 +8,7 @@ RSpec.describe Autonomia::Desempenho::LeituraAutomaticaJob do
   let(:robo) { create(:agent_bot, account: ligada) }
 
   def ficha_com_chave!(account, sujeito_id, tipo: 'robo', versao: 1)
-    ficha = ficha_da_loja!(account, sujeito_id: sujeito_id, versao: versao)
-    ficha.update!(sujeito_type: tipo, chave_de_leitura: 'Leia.')
-    ficha
+    ficha_da_loja!(account, sujeito_id: sujeito_id, sujeito_type: tipo, versao: versao).tap { |f| f.update!(chave_de_leitura: 'Leia.') }
   end
 
   def agente!(enabled: true)

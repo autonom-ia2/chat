@@ -158,7 +158,7 @@ RSpec.describe Autonomia::Automacao::PrimeiraMensagem do
     it 'lê conversa.iniciada_por e mensagem.primeira, com as opções que o salvar aceita', :aggregate_failures do
       primeira = mensagem(:incoming)
       segunda = mensagem(:outgoing)
-      lido = ->(caminho, cada) { valores.new(alvo: conversa.reload, mensagem: cada).ler(caminho) }
+      lido = ->(caminho, cada) { valores.new(alvo: conversa.reload, mensagem: cada, quem: nil).ler(caminho) }
 
       expect(lido.call('conversa.iniciada_por', primeira)).to eq('cliente')
       expect([lido.call('mensagem.primeira', primeira), lido.call('mensagem.primeira', segunda)]).to eq([true, false])
@@ -173,7 +173,7 @@ RSpec.describe Autonomia::Automacao::PrimeiraMensagem do
                                primary_conversation: conversa, contact: conversa.contact)
       mensagem(:incoming)
 
-      expect(valores.new(alvo: card.reload).ler('conversa.iniciada_por')).to eq('cliente')
+      expect(valores.new(alvo: card.reload, quem: nil).ler('conversa.iniciada_por')).to eq('cliente')
     end
   end
 end

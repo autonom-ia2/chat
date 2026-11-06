@@ -47,6 +47,13 @@ class Autonomia::Automacao::Ensaio
       outras: recentes.drop(RECENTES).map { |conversa| { conversa_id: conversa.display_id, nome: conversa.contact&.name } } }
   end
 
+  # As conversas recentes de quem pede em que a automação entraria agora, na ordem do ensaio. O "Testar este passo"
+  # (#2500 C2) roda nelas.
+  def entrariam(limite)
+    recentes = visiveis.includes(:contact).reorder(last_activity_at: :desc, id: :desc).limit(RECENTES + OUTRAS)
+    recentes.select { |conversa| fora(conversa, (ultima_mensagem(conversa) if mensagem_no_gatilho?)).nil? }.first(limite)
+  end
+
   private
 
   def visiveis
@@ -60,7 +67,7 @@ class Autonomia::Automacao::Ensaio
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
-    valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem, quem: @usuario)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
 
@@ -77,7 +84,7 @@ class Autonomia::Automacao::Ensaio
     return 'spam' if contexto.no_spam?
     return 'sem_mensagem' if mensagem_no_gatilho? && mensagem.nil?
 
-    valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem)
+    valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     filtros = Array(@receita.dig('gatilho', 'filtros'))
     'fora_do_filtro' unless filtros.all? { |condicao| ::Autonomia::Automacao::Condicao.new(condicao, valores).verdadeira? }
   end

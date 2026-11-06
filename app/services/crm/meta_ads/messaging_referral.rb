@@ -57,8 +57,8 @@ module Crm::MetaAds::MessagingReferral
   # o referral de novo (doc da Meta): o clique fica guardado (PENDING_TTL) e vai para a próxima conversa
   # (`attribute_message!`). Contato que a caixa não conhece não tem onde gravar.
   #
-  # Se a Meta mandasse o mesmo clique no evento solto e de novo na mensagem, seriam dois toques (ids diferentes) do mesmo
-  # anúncio na conversa: a doc diz que não manda, e a contagem do painel é por conversa.
+  # A Meta manda o mesmo clique no evento solto e de novo na mensagem, com ids diferentes (#2607): vale um toque só
+  # (Crm::MetaAds::MessagingReferral::Click).
   def attribute_to_latest!(inbox, contact_source_id, referral, source:, event_id:)
     return false if for_campaign(referral, source: source, event_id: event_id).nil?
 
@@ -71,16 +71,16 @@ module Crm::MetaAds::MessagingReferral
     keep_pending(contact_inbox, referral, source: source, event_id: event_id)
   end
 
-  # Mensagem que chegou: o anúncio dela; sem anúncio (ou com referral que não é anúncio, como link m.me ou loja), os
-  # cliques guardados do evento solto, só quando esta mensagem abriu a conversa.
+  # Mensagem que chegou: quando ela abriu a conversa, primeiro os cliques guardados do evento solto; depois o anúncio
+  # dela, se tiver. O mesmo clique vem no evento e na mensagem (#2607): o guardado entra antes e a repetição da mensagem
+  # não grava (Click.same?). Sem ler os guardados aqui, eles iriam para a próxima conversa nova como clique fantasma.
   def attribute_message!(conversation, referral, source:, event_id:, new_conversation:)
     return false if conversation.nil?
-    if for_campaign(referral, source: source, event_id: event_id)
-      return attribute!(conversation, referral, source: source, event_id: event_id, ask_owner: false)
-    end
-    return false unless new_conversation
 
-    attribute_pending!(conversation)
+    pending = new_conversation && attribute_pending!(conversation)
+    return pending unless for_campaign(referral, source: source, event_id: event_id)
+
+    attribute!(conversation, referral, source: source, event_id: event_id, ask_owner: false) || pending
   end
 
   # Os cliques guardados vão para a conversa nova. Lê e apaga de uma vez: duas mensagens ao mesmo tempo não levam o
@@ -194,8 +194,15 @@ module Crm::MetaAds::MessagingReferral
     context = hash_of(ref['ads_context_data'])
     {
       source: source, source_id: ref['ad_id'].to_s, source_type: 'ad', headline: context['ad_title'].presence,
-      media_type: media_type(ref, context), image_url: context['photo_url'].presence, referral_id: event_id.to_s
+      media_type: media_type(ref, context), image_url: context['photo_url'].presence, referral_id: event_id.to_s,
+      touched_at: Click.time(ref['clicked_at'])&.utc&.iso8601
     }.compact
+  end
+
+  # O referral do webhook com a hora do clique da Meta (`timestamp` do evento ou da mensagem) em `clicked_at`, que segue
+  # com ele para a fila, o Redis e o toque (Click).
+  def with_click_time(referral, timestamp)
+    referral.is_a?(Hash) && timestamp.present? ? referral.merge('clicked_at' => timestamp.to_s) : referral
   end
 
   # O referral sem os links assinados da Meta (foto, vídeo), para a fila e o Redis: só o que grava o toque. nil quando
@@ -206,7 +213,7 @@ module Crm::MetaAds::MessagingReferral
 
     context = hash_of(ref['ads_context_data'])
     { 'source' => AD_SOURCE, 'ad_id' => ref['ad_id'].to_s, 'ads_context_data' => { 'ad_title' => context['ad_title'] }.compact,
-      'media_type' => media_type(ref, context) }
+      'media_type' => media_type(ref, context), 'clicked_at' => ref['clicked_at'] }.compact
   end
 
   def ad?(ref)

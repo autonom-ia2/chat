@@ -189,7 +189,8 @@
       "TENTAR_DE_NOVO": "Try again",
       "DO_FUNIL": "Pipeline stage automations live in Configure › Edit pipeline.",
       "VER_FUNIL": "See in the pipeline",
-      "SEM_PASSO": "No step yet"
+      "SEM_PASSO": "No step yet",
+      "CUSTO_IA": "AI: {custo} in runs over the last 30 days"
     },
     "EDITOR": {
       "NOVA": "New automation",
