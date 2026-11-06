@@ -891,6 +891,20 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     expect(step(wrapper)).toBe('CONTENT');
   });
 
+  it('with two Pages and two numbers, a WhatsApp ad asks for both, with the full title', async () => {
+    const wrapper = await mountCreate({
+      ...OPTIONS,
+      whatsapp_numbers: TWO_NUMBERS,
+      pages: [...OPTIONS.pages, { id: '220000000002161', name: 'Outra' }],
+    });
+
+    expect(step(wrapper)).toBe('WHERE');
+    expect(wrapper.text()).toContain(`${KEY}.WHERE.TITLE`);
+    expect(wrapper.text()).not.toContain(`${KEY}.WHERE.TITLE_`);
+    expect(wrapper.find('[data-create-page]').exists()).toBe(true);
+    expect(wrapper.find('[data-create-number]').exists()).toBe(true);
+  });
+
   it('with two Pages and a website ad, the step asks only for the Page', async () => {
     const wrapper = await mountCreate(
       {

@@ -336,12 +336,17 @@ const STEP_READY = {
 };
 const ready = computed(() => STEP_READY[current.value]());
 // Destino trocado depois do "Onde" (#2645, o "Trocar" do passo da foto): o "Onde" pode entrar ou sair da lista, e o
-// número do passo mudaria de lugar. A pessoa fica no passo em que estava.
+// número do passo mudaria de lugar. A pessoa fica no passo em que estava. Se o WhatsApp entrou pedindo um número que
+// ainda não foi escolhido, ela vai ao "Onde": anúncio do WhatsApp nunca chega à conferência sem número.
 watch(
   STEPS,
   (list, old) => {
     const index = list.indexOf(old[step.value]);
-    if (index >= 0) step.value = index;
+    const where = list.indexOf('WHERE');
+    const missingNumber =
+      !old.includes('WHERE') && where >= 0 && !STEP_READY.WHERE();
+    if (missingNumber && where < index) step.value = where;
+    else if (index >= 0) step.value = index;
   },
   { flush: 'sync' }
 );
