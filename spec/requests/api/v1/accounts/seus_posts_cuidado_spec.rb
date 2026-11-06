@@ -32,7 +32,8 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
 
   before do
     Rails.cache.clear
-    account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia')
+    # #2520: a régua do cuidado é a do motor (seus_posts, a IA e a flag dos comentários da rede); sem seus_posts_comentarios.
+    account.enable_features!('seus_posts', 'meta_ads_comentarios_ia', 'meta_ads_comentarios_instagram')
     allow(SeusPosts::Posts).to receive(:para).and_return(
       instance_double(SeusPosts::PostsInstagram, perform: { status: 'ok', posts: [{ id: post_id, created_time: 1.day.ago.iso8601 }], normal: {} })
     )
@@ -44,6 +45,64 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     account.disable_features!('meta_ads_comentarios_ia')
 
     get "#{base}/cuidado", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:not_found)
+  end
+
+  # #2520: o webhook só entrega o comentário do Instagram com a flag dos comentários do Instagram; sem ela, o cuidado
+  # não abre (antes abria e nunca recebia nada). A do Facebook não serve para o perfil do Instagram.
+  it 'sem a flag dos comentários da rede do perfil: 404, mesmo com a da outra rede' do
+    account.disable_features!('meta_ads_comentarios_instagram')
+    account.enable_features!('meta_ads_comentarios_facebook')
+
+    get "#{base}/cuidado", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+
+    get "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+  end
+
+  # #2520: a flag da rede saiu com o cuidado ligado: pausar (um ou todos) ainda passa, porque não escreve na Meta;
+  # ligar, não.
+  it 'sem a flag da rede: pausa um e todos, mas não liga' do
+    put "#{base}/cuidado", params: corpo, headers: admin.create_new_auth_token, as: :json
+    account.disable_features!('meta_ads_comentarios_instagram')
+
+    put "#{base}/cuidado", params: corpo, headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+
+    put "#{base}/cuidado", params: corpo.merge(status: 'paused'), headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentCare.sole.status).to eq('paused')
+
+    Crm::MetaAdsCommentCare.sole.update!(status: 'on')
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'on' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:not_found)
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'paused' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(response).to have_http_status(:ok)
+    expect(Crm::MetaAdsCommentCare.sole.status).to eq('paused')
+  end
+
+  # #2520: a tela de cuidar lê o post pelo cuidado, sem seus_posts_comentarios (desligada aqui).
+  it 'o post da tela de cuidar: perfil, can_manage e o post, sem os comentários' do
+    get "#{base}/cuidado/post", params: { perfil: perfil }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:ok)
+    expect(response.parsed_body).to include('status' => 'ok', 'can_manage' => true,
+                                            'perfil' => { 'id' => perfil, 'network' => 'instagram', 'inbox_id' => canal.inbox.id })
+    expect(response.parsed_body['post']).to include('id' => post_id)
+    expect(response.parsed_body).not_to have_key('comments')
+  end
+
+  it 'sem a flag da rede, 404 antes das guardas da caixa: quem vê posts e não é da caixa também recebe 404' do
+    account.disable_features!('meta_ads_comentarios_instagram')
+    de_fora = create(:user, account: account, role: :agent)
+    so_ve = CustomRole.create!(account: account, name: 'Só vê posts', permissions: %w[posts_view])
+    AccountUser.find_by(account: account, user: de_fora).update!(custom_role: so_ve)
+
+    get "#{base}/cuidado/post", params: { perfil: perfil }, headers: de_fora.create_new_auth_token, as: :json
 
     expect(response).to have_http_status(:not_found)
   end
@@ -269,6 +328,21 @@ RSpec.describe 'Seus posts: IA cuida dos comentários do post', type: :request d
     auditoria = Audited.audit_class.where(action: 'seus_posts_comment_care').order(:id).last
     expect(auditoria.audited_changes).to include('status' => 'on', 'post_ids' => [post_id])
     expect(Crm::MetaAdsCommentCare.find_by(target_id: post_id).started_at).to be_within(5.seconds).of(Time.current)
+  end
+
+  # #2520: "Voltar a cuidar de todos" no Facebook assina o `feed` da Página, como ligar um cuidado (AssinarFeedJob).
+  it '"Voltar a cuidar de todos" passa cada cuidado religado pela assinatura do feed; pausar, não' do
+    put "#{base}/cuidado", params: corpo.merge(status: 'paused'), headers: admin.create_new_auth_token, as: :json
+    allow(Crm::MetaAds::ComentariosIa::AssinarFeedJob).to receive(:para!)
+
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'on' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(Crm::MetaAds::ComentariosIa::AssinarFeedJob).to have_received(:para!)
+      .with(having_attributes(target_id: post_id, status: 'on')).once
+
+    put "/api/v1/accounts/#{account.id}/seus_posts/cuidados", params: { perfil: perfil, status: 'paused' },
+                                                              headers: admin.create_new_auth_token, as: :json
+    expect(Crm::MetaAds::ComentariosIa::AssinarFeedJob).to have_received(:para!).once
   end
 
   it 'texto em forma errada (objeto no lugar de texto, frases que não são lista) é recusado, não vira vazio' do

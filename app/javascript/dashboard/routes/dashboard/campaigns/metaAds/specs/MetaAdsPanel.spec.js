@@ -847,8 +847,8 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     );
   });
 
+  // #2520: sem a gestão (meta_ads_gestao), que não entra na régua dos comentários.
   const CARE_FLAGS = [
-    'meta_ads_gestao',
     'meta_ads_comentarios_instagram',
     'meta_ads_comentarios_ia',
   ];
@@ -883,7 +883,7 @@ describe('Anúncios da Meta · painel do dia a dia (#1088)', () => {
     expect(wrapper.find('[data-panel-ad-comments]').exists()).toBe(false);
     wrapper.unmount();
 
-    // A IA sem a gestão ou sem os comentários de nenhuma rede: o anúncio por dentro também não mostra o cuidar.
+    // A IA sem os comentários de nenhuma rede: o anúncio por dentro também não mostra o cuidar.
     accountFlags.add('meta_ads_comentarios_ia');
     panelWithOther(PROFILE_AD, [{ ...PANEL.ads[0], comments: 4 }]);
     wrapper = await mountPanel();

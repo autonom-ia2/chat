@@ -207,11 +207,19 @@
     "controller": "api/v1/accounts/autonomia/automacoes#show",
     "parametros": []
   },
+  "autonomia/automacoes/:id/custos": {
+    "controller": "api/v1/accounts/autonomia/automacoes_ia#custos_da_automacao",
+    "parametros": []
+  },
   "autonomia/automacoes/:id/historico": {
     "controller": "api/v1/accounts/autonomia/automacoes#historico",
     "parametros": [
       "pagina"
     ]
+  },
+  "autonomia/automacoes/custos": {
+    "controller": "api/v1/accounts/autonomia/automacoes_ia#custos",
+    "parametros": []
   },
   "autonomia/automacoes/passos": {
     "controller": "api/v1/accounts/autonomia/automacoes#passos",
@@ -2320,6 +2328,13 @@
   },
   "seus_posts/posts/:post_id/cuidado": {
     "controller": "api/v1/accounts/seus_posts_cuidado#show",
+    "parametros": [
+      "comment_id",
+      "perfil"
+    ]
+  },
+  "seus_posts/posts/:post_id/cuidado/post": {
+    "controller": "api/v1/accounts/seus_posts_cuidado#ler_post",
     "parametros": [
       "comment_id",
       "perfil"

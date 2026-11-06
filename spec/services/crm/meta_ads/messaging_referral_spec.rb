@@ -26,12 +26,118 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     expect(described_class.attribute!(conversation, nil, source: messenger, event_id: 'mid.4')).to be(false)
   end
 
-  it 'dois cliques no mesmo anúncio são dois toques; a reentrega do mesmo evento não duplica' do
+  it 'dois cliques no mesmo anúncio em momentos diferentes são dois toques; a reentrega do mesmo evento não duplica' do
     described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
     described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
-    described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.2')
+    travel_to(2.minutes.from_now) do
+      described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.2')
+    end
 
     expect(touches.pluck('referral_id')).to eq(%w[mid.1 mid.2])
+  end
+
+  # #2607: a Meta manda o clique no evento solto e, segundos depois, na mensagem, cada um com o seu id.
+  it 'o mesmo clique no evento e na mensagem é um toque só, o do evento' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    open_one = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
+
+    expect(described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')).to be(true)
+    travel_to(5.seconds.from_now) do
+      expect(described_class.attribute_message!(open_one, ad_referral, source: messenger, event_id: 'mid.1', new_conversation: false))
+        .to be(false)
+    end
+
+    expect(open_one.reload.additional_attributes['campaign_touches'].sole).to include('referral_id' => 'psid-1:1700')
+  end
+
+  it 'na ordem inversa também: a mensagem grava e o evento do mesmo clique não' do
+    described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
+    travel_to(5.seconds.from_now) do
+      expect(described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'psid-1:1700')).to be(false)
+    end
+
+    expect(touches.pluck('referral_id')).to eq(%w[mid.1])
+  end
+
+  it 'conversa encerrada: o clique guardado do evento entra na conversa nova e a mensagem do mesmo clique não repete' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact, status: :resolved)
+
+    expect(described_class.attribute_to_latest!(inbox, 'psid-1', ad_referral, source: messenger, event_id: 'psid-1:1700')).to be(false)
+    fresh = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
+    travel_to(5.seconds.from_now) do
+      expect(described_class.attribute_message!(fresh, ad_referral, source: messenger, event_id: 'mid.1', new_conversation: true)).to be(true)
+    end
+
+    expect(fresh.reload.additional_attributes['campaign_touches'].sole).to include('referral_id' => 'psid-1:1700')
+    expect(described_class.attribute_pending!(fresh)).to be(false)
+  end
+
+  # A hora que vale é a do clique que a Meta manda (segundos no evento, milissegundos na mensagem), não a do processamento.
+  def clicked(timestamp) = described_class.with_click_time(ad_referral, timestamp)
+
+  it 'a janela do mesmo clique, pela hora da Meta: 59 s junta, 61 s separa' do
+    described_class.attribute!(conversation, clicked('1700000000'), source: messenger, event_id: 'psid-1:1700000000')
+    expect(described_class.attribute!(conversation, clicked(1_700_000_059_000), source: messenger, event_id: 'mid.1')).to be(false)
+    expect(described_class.attribute!(conversation, clicked(1_700_000_061_000), source: messenger, event_id: 'mid.2')).to be(true)
+
+    expect(touches.pluck('referral_id', 'touched_at'))
+      .to eq([%w[psid-1:1700000000 2023-11-14T22:13:20Z], %w[mid.2 2023-11-14T22:14:21Z]])
+  end
+
+  it 'fila atrasada ou nova tentativa não separam o mesmo clique: vale a hora da Meta' do
+    described_class.attribute!(conversation, clicked('1700000000'), source: messenger, event_id: 'psid-1:1700000000')
+    travel_to(10.minutes.from_now) do
+      expect(described_class.attribute!(conversation, clicked(1_700_000_004_000), source: messenger, event_id: 'mid.1')).to be(false)
+    end
+
+    expect(touches.pluck('referral_id')).to eq(%w[psid-1:1700000000])
+  end
+
+  it 'a hora do clique segue no referral enxuto da fila e do Redis' do
+    expect(described_class.slim(clicked('1700000000'))).to include('clicked_at' => '1700000000')
+    expect(described_class.slim(ad_referral)).not_to have_key('clicked_at')
+  end
+
+  it 'dois cliques guardados no mesmo anúncio em horas diferentes continuam dois toques na conversa nova' do
+    inbox = conversation.inbox
+    contact_inbox = create(:contact_inbox, inbox: inbox, source_id: 'psid-1')
+    create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact, status: :resolved)
+    described_class.attribute_to_latest!(inbox, 'psid-1', clicked('1700000000'), source: messenger, event_id: 'psid-1:1700000000')
+    described_class.attribute_to_latest!(inbox, 'psid-1', clicked('1700018000'), source: messenger, event_id: 'psid-1:1700018000')
+
+    fresh = create(:conversation, account: account, inbox: inbox, contact_inbox: contact_inbox, contact: contact_inbox.contact)
+    expect(described_class.attribute_message!(fresh, clicked(1_700_018_004_000), source: messenger, event_id: 'mid.1', new_conversation: true))
+      .to be(true)
+
+    expect(fresh.reload.additional_attributes['campaign_touches'].pluck('referral_id')).to eq(%w[psid-1:1700000000 psid-1:1700018000])
+  end
+
+  it 'hora da Meta que não é número fica de fora: vale a hora de agora' do
+    freeze_time do
+      described_class.attribute!(conversation, clicked('amanhã'), source: messenger, event_id: 'mid.1')
+
+      expect(touches.sole['touched_at']).to eq(Time.current.utc.iso8601)
+    end
+  end
+
+  it 'o toque do WhatsApp com o mesmo anúncio no mesmo instante continua sendo outro toque' do
+    described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
+    Ctwa::CampaignBuilder.attribute!(conversation, { 'source_type' => 'ad', 'source_id' => '120200000000000001', 'ctwa_clid' => 'clid-1' })
+
+    expect(touches.pluck('source', 'source_id')).to eq([%w[meta_ctm 120200000000000001], %w[meta_ctwa 120200000000000001]])
+  end
+
+  it 'outro anúncio, ou o mesmo anúncio no outro canal, no mesmo instante é outro toque' do
+    other_ad = ad_referral.merge('ad_id' => '120200000000000002')
+    described_class.attribute!(conversation, ad_referral, source: messenger, event_id: 'mid.1')
+    described_class.attribute!(conversation, other_ad, source: messenger, event_id: 'mid.2')
+    described_class.attribute!(conversation, ad_referral, source: Crm::MetaAds::MessagingReferral::INSTAGRAM_SOURCE, event_id: 'mid.3')
+
+    expect(touches.pluck('source', 'source_id'))
+      .to eq([%w[meta_ctm 120200000000000001], %w[meta_ctm 120200000000000002], %w[meta_ctd 120200000000000001]])
   end
 
   it 'a foto do anúncio vai para o job da foto, como no clique para o WhatsApp' do
@@ -153,7 +259,9 @@ RSpec.describe Crm::MetaAds::MessagingReferral do
     expect { described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.1') }
       .to raise_error(described_class::OwnerUnavailable)
     expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.2')).to be(true)
-    expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.3')).to be(true)
+    travel_to(2.minutes.from_now) do
+      expect(described_class.attribute!(mine, ad_referral, source: messenger, event_id: 'mid.3')).to be(true)
+    end
     expect(graph).to have_been_requested.twice
   end
 

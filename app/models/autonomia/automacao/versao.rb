@@ -38,8 +38,11 @@ class Autonomia::Automacao::Versao < ApplicationRecord
   def receita_executavel
     return unless ::Autonomia::Automacao::Receita.esquema_valido?(receita)
 
-    ::Autonomia::Automacao::Receita.new(receita, conta: account).problemas.each { |problema| errors.add(:receita, problema) }
+    problemas = ::Autonomia::Automacao::Receita.new(receita, conta: account, account_user: autor_na_conta).problemas
+    problemas.each { |problema| errors.add(:receita, problema) }
   end
+
+  def autor_na_conta = autor && account&.account_users&.find_by(user_id: autor.id)
 
   def calcular_digest
     self.digest = Digest::SHA256.hexdigest(ordenada(receita).to_json)

@@ -5,7 +5,7 @@ RSpec.describe Autonomia::Automacao::Corpo do
   let(:account) { create(:account) }
   let(:contato) { create(:contact, account: account, name: 'Maria') }
   let(:conversa) { create(:conversation, account: account, contact: contato) }
-  let(:valores) { Autonomia::Automacao::Valores.new(alvo: conversa) }
+  let(:valores) { Autonomia::Automacao::Valores.new(alvo: conversa, quem: nil) }
 
   def montar(corpo) = described_class.new(corpo, valores: valores, conta: account).montar
 

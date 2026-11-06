@@ -8,8 +8,10 @@ import LivreCampo from './LivreCampo.vue';
 import LivreCondicao from './LivreCondicao.vue';
 import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
+import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
@@ -25,6 +27,10 @@ const props = defineProps({
   opcoes: { type: Object, required: true },
   atributosDaPeca: { type: Function, required: true },
   atributosDo: { type: Function, required: true },
+  // #2500 C2: o rascunho inteiro com o passo do painel, para o "Testar", e o
+  // custo de cada passo ({ com_valores, custos }).
+  receitaDoTeste: { type: Function, default: null },
+  custos: { type: Object, default: () => ({ com_valores: false, custos: {} }) },
   // #2499: os gatilhos que esta pessoa pode escolher (com a flag e a chave de
   // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
   gatilhos: { type: Array, default: null },
@@ -108,7 +114,14 @@ const trocaDoGatilho = computed(() => {
   );
 });
 
+// Campo opcional que volta vazio (o modelo da F4b) sai da receita: o esquema
+// não aceita null.
 const mudarNativo = (nome, novo) => {
+  if (novo === null) {
+    const { [nome]: _tirado, ...resto } = rascunho.value;
+    rascunho.value = resto;
+    return;
+  }
   rascunho.value = { ...rascunho.value, [nome]: novo };
 };
 const mudarCampo = (nome, novo) => {
@@ -164,6 +177,14 @@ const nativoPronto = campo => {
     return (valor || []).some(
       parte => typeof parte !== 'string' || parte.trim()
     );
+  // F4b: o modelo é opcional; escolhido, cada variável pede algo além de espaço.
+  if (campo.peca === 'modelo_whatsapp')
+    return (
+      !valor ||
+      (valor.variaveis || []).every(partes =>
+        (partes || []).some(parte => typeof parte !== 'string' || parte.trim())
+      )
+    );
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
@@ -210,6 +231,12 @@ const podeSalvar = computed(() => {
 });
 
 const fechar = () => painel.value?.close();
+
+const receitaParaTestar = computed(() =>
+  ehDeIa.value && props.receitaDoTeste && rascunho.value
+    ? props.receitaDoTeste({ ...alvo.value, valor: rascunho.value })
+    : null
+);
 
 defineExpose({ abrir, fechar });
 </script>
@@ -290,10 +317,19 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
           :atributos-do="atributosDo"
+          :na-espera="entrada?.tipo === 'esperar_ate'"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreTexto
           v-else-if="campo.peca === 'texto_com_valores'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreModelo
+          v-else-if="campo.peca === 'modelo_whatsapp'"
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :catalogo="catalogo"
@@ -346,6 +382,15 @@ defineExpose({ abrir, fechar });
         :atributos-do="atributosDo"
         :bloqueadas="bloqueadasDe(campo)"
         @update:model-value="novo => mudarCampo(campo.nome, novo)"
+      />
+
+      <LivreIaTestar
+        v-if="ehDeIa"
+        :passo="rascunho"
+        :receita="receitaParaTestar"
+        :custo="custos.custos[rascunho.id]"
+        :mostra-custo="custos.com_valores"
+        :pronto="podeSalvar"
       />
     </div>
 

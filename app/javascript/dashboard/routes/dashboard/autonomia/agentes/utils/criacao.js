@@ -2,15 +2,22 @@ import { TIPO_CANAL, tipoDoCanal } from './canais';
 
 // #1181 PR2 — leitura das caixas e do horário para a criação (T04 e T05).
 
+// #2490 — o canal que o dono pediu ao Construtor (state.canal_pedido da thread). "nenhum" e o vazio
+// (thread antiga, ou sem a conversa na tela) não restringem.
+const SEM_CANAL_PEDIDO = 'nenhum';
+
 // O botão "Começar a atender no {canal}" só diz o canal quando não há dúvida (#2489, 5b): uma única
 // caixa livre que quem cria alcança. Com mais de uma, nenhuma ou só ocupadas, devolve null e o botão
 // vira "Escolher canal": a pessoa escolhe no Comece. Caixa ocupada ou com outro sistema nunca é
-// sugerida, e o tipo do canal não desempata (o dono pode ter pedido outro canal na conversa).
-export const canalSugerido = (canais, agenteId) => {
+// sugerida. Se o dono pediu um canal (#2490), só caixas desse canal (`canal` da caixa, que conta a
+// WAHA como WhatsApp) entram: o canal pedido ocupado, ou sem caixa, vira "Escolher canal".
+export const canalSugerido = (canais, agenteId, canalPedido = null) => {
+  const pediu = Boolean(canalPedido) && canalPedido !== SEM_CANAL_PEDIDO;
   const candidatas = (canais || []).filter(
     canal =>
       tipoDoCanal(canal, agenteId) === TIPO_CANAL.LIVRE &&
-      canal.alcanca !== false
+      canal.alcanca !== false &&
+      (!pediu || canal.canal === canalPedido)
   );
   return candidatas.length === 1 ? candidatas[0] : null;
 };

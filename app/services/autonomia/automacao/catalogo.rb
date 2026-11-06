@@ -44,7 +44,8 @@ module Autonomia::Automacao::Catalogo
                        # F7: os passos de IA.
                        'leituras' => 'leituras', 'instrucao' => 'instrucao', 'caminhos' => 'caminhos',
                        'campos_extrair' => 'campos_extrair', 'destino_escrever' => 'destino_escrever',
-                       'destino_resumir' => 'destino_resumir' }.freeze
+                       # F4b (#2468): o modelo da Meta do passo "mensagem".
+                       'destino_resumir' => 'destino_resumir', 'modelo_whatsapp' => 'modelo_whatsapp' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar".
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero' }.freeze
 
@@ -59,7 +60,7 @@ module Autonomia::Automacao::Catalogo
       'gatilhos' => gatilhos,
       'operadores' => operadores,
       'unidades' => unidades,
-      'valores' => valores,
+      'valores' => ::Autonomia::Automacao::CatalogoDeValores.todos,
       # O que cada alvo de gatilho alcança (#2499): o editor só oferece o valor dessas bases.
       'alvos' => ::Autonomia::Automacao::Valores::BASES_DO_ALVO,
       'grupos' => declarado['grupos'].map { |grupo| { 'chave' => grupo, 'frase' => chave('GRUPOS', grupo) } },
@@ -71,7 +72,7 @@ module Autonomia::Automacao::Catalogo
   # #2498: cada receita pronta com a frase da porta e as flags que os passos dela pedem (a porta mostra o porquê).
   def receitas
     YAML.safe_load_file(RECEITAS).map do |nome, item|
-      tipos = ::Autonomia::Automacao::Receita.new(item['receita'], conta: nil).passos.pluck('tipo')
+      tipos = ::Autonomia::Automacao::Receita.new(item['receita'], conta: nil, account_user: nil).passos.pluck('tipo')
       requer = tipos.filter_map { |tipo| declarado.dig('nativos', tipo, 'requer') }.uniq
       { 'chave' => nome, 'frase' => chave('RECEITAS', nome, 'TITULO'), 'requer' => requer, 'receita' => item['receita'] }
     end
@@ -102,42 +103,6 @@ module Autonomia::Automacao::Catalogo
   def gatilhos = ::Autonomia::Automacao::CatalogoDoEsquema.gatilhos(esquema, declarado)
   def unidades = ::Autonomia::Automacao::CatalogoDoEsquema.unidades(esquema)
   def operadores = ::Autonomia::Automacao::CatalogoDoEsquema.operadores(esquema)
-
-  # O que a receita lê do alvo, para o editor mostrar como chip. Os atributos entram pela base mais a chave. A `base`
-  # (conversa, contato, card) diz ao editor o que oferecer para o alvo do gatilho (#2499).
-  def valores
-    campos = ::Autonomia::Automacao::Valores::CAMPOS.keys.map do |caminho|
-      { 'caminho' => caminho, 'base' => caminho.split('.').first, 'frase' => chave('VALORES', caminho), **do_fechado(caminho) }
-    end
-    atributos = ::Autonomia::Automacao::Valores::MODELOS.map do |base, modelo|
-      { 'caminho' => base, 'base' => base.split('.').first, 'atributos' => modelo, 'frase' => chave('VALORES', base) }
-    end
-    campos + atributos + valores_do_gatilho
-  end
-
-  # A mensagem do gatilho (#2496), com as opções e os operadores do valor fechado. A que só o Guia monta vem marcada:
-  # a tela não a oferece, mas mostra a frase, abre a condição que já a usa e a tira do "Só se" quando o gatilho muda.
-  def valores_do_gatilho
-    so_guia = declarado['valores_so_guia'].keys
-    (declarado['valores_do_gatilho'] + so_guia).map do |caminho|
-      { **valor_da_mensagem(caminho), 'so_guia' => (true if so_guia.include?(caminho)) }.compact
-    end
-  end
-
-  def valor_da_mensagem(caminho)
-    { 'caminho' => caminho, 'frase' => chave('VALORES', caminho),
-      'so_no_gatilho' => ::Autonomia::Automacao::Valores::GATILHO_DA_MENSAGEM, **do_fechado(caminho) }
-  end
-
-  # As opções e os operadores do valor fechado (#2496), da mensagem ou do alvo (`conversa.iniciada_por`, #2527). As
-  # frases ficam em VALOR_DA_MENSAGEM e OPERADOR_DA_MENSAGEM para todos os fechados.
-  def do_fechado(caminho)
-    fechado = ::Autonomia::Automacao::Valores.fechado(caminho)
-    return {} unless fechado
-
-    { 'opcoes' => fechado['opcoes'].map { |opcao| { 'valor' => opcao, 'frase' => chave('VALOR_DA_MENSAGEM', opcao) } },
-      'operadores' => fechado['operadores'].map { |op| { 'op' => op, 'frase' => chave('OPERADOR_DA_MENSAGEM', op) } } }
-  end
 
   def nativos
     esquema.dig('definitions', 'passo', 'oneOf').filter_map do |forma|

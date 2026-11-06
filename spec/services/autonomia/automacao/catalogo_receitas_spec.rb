@@ -10,7 +10,10 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
   before { account.enable_features!('automacao_fundacao', 'automacao_motor', 'automacao_mensagens', 'automacao_ia') }
 
   def frases(locale)
-    JSON.parse(Rails.root.join("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre.json").read)
+    # Um arquivo por área (#2569), juntos no mesmo AUTOMACAO_LIVRE como no index do painel.
+    Rails.root.glob("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre*.json")
+         .map { |arquivo| JSON.parse(arquivo.read) }
+         .reduce { |juntos, area| juntos.merge(area) { |_namespace, um, outro| um.merge(outro) } }
   end
 
   # Boas-vindas (#2526) começa na primeira mensagem do cliente, na conversa que ele começou (spec da receita ao lado).
@@ -21,7 +24,7 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
   it 'cada receita passa no esquema e na Receita, então nenhuma quebrada chega à tela', :aggregate_failures do
     receitas.each do |item|
       expect(Autonomia::Automacao::Receita.esquema_valido?(item['receita'])).to be(true), item['chave']
-      expect(Autonomia::Automacao::Receita.new(item['receita'], conta: account).problemas).to eq([]), item['chave']
+      expect(Autonomia::Automacao::Receita.new(item['receita'], conta: account, account_user: nil).problemas).to eq([]), item['chave']
     end
   end
 
@@ -32,7 +35,7 @@ RSpec.describe Autonomia::Automacao::Catalogo, '.receitas' do
   end
 
   it 'o texto não depende de valor do contato, que pode faltar (o passo pularia) ou ser o número' do
-    textos = Autonomia::Automacao::Receita.new({}, conta: nil).then do |leitor|
+    textos = Autonomia::Automacao::Receita.new({}, conta: nil, account_user: nil).then do |leitor|
       receitas.flat_map { |item| leitor.passos(item.dig('receita', 'passos')).filter_map { |passo| passo['texto'] } }
     end
 

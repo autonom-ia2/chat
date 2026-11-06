@@ -37,12 +37,16 @@ class Autonomia::Automacao::PassoDeIa
     @modelo = modelo
   end
 
-  # [a resposta já conferida pelo schema, o custo para o registro]. Levanta Falha.
-  def perguntar(instrucoes:, entrada:, schema:)
+  # A conta tem a chave própria. O "Testar este passo" (#2500 C2) confere antes de escolher as conversas.
+  def configurada? = credencial.present?
+
+  # [a resposta já conferida pelo schema, o custo para o registro]. Levanta Falha. `tempo` menor é para quem chama
+  # dentro da requisição web, que o Rack::Timeout corta aos 15 s (o Testar).
+  def perguntar(instrucoes:, entrada:, schema:, tempo: TEMPO)
     custos = []
     resposta = medindo(custos) do
       cliente.create(model: @modelo, instructions: "#{REGRA}\n\n#{instrucoes}", input: entrada.to_json, schema: schema,
-                     reasoning_effort: ESFORCO, timeout: TEMPO)
+                     reasoning_effort: ESFORCO, timeout: tempo)
     end
     [conferida(resposta[:text], schema), custo(custos)]
   rescue ::Crm::Ai::ResponsesClient::Error => e
@@ -56,12 +60,17 @@ class Autonomia::Automacao::PassoDeIa
   private
 
   def cliente
-    raise Falha.new(:permanente, 'ia_nao_configurada') unless ::Crm::Ai::Config.enabled?
-
-    credencial = ::Crm::Ai::CredentialResolver.new(account: @conta).resolve
-    raise Falha.new(:permanente, 'ia_nao_configurada') unless credencial&.dig(:source) == :hook
+    raise Falha.new(:permanente, 'ia_nao_configurada') unless configurada?
 
     ::Crm::Ai::ResponsesClient.new(credential: credencial, feature: @feature, account: @conta, max_retries: 0)
+  end
+
+  # Só a chave da conta (`source: :hook`); a da instalação conta como sem chave.
+  def credencial
+    return @credencial if defined?(@credencial)
+
+    resolvida = ::Crm::Ai::CredentialResolver.new(account: @conta).resolve if ::Crm::Ai::Config.enabled?
+    @credencial = (resolvida if resolvida&.dig(:source) == :hook)
   end
 
   def medindo(custos)

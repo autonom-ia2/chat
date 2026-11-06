@@ -68,7 +68,7 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
   end
 
   before do
-    account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia', 'meta_ads_gestao',
+    account.enable_features!('seus_posts', 'seus_posts_comentarios', 'meta_ads_comentarios_ia',
                              'meta_ads_comentarios_instagram', 'meta_ads_comentarios_facebook')
     create_meta_ads_insights_connection(account)
     allow(Autonomia::Agents::Config).to receive(:enabled?).and_call_original
@@ -130,12 +130,13 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(response.parsed_body['cuidados'].pluck('id')).to eq([post_ig.id])
     end
 
-    it 'sem as flags do alvo, o alvo sai da lista' do
-      account.disable_features!('meta_ads_gestao')
+    # #2520: a régua é a flag dos comentários da rede do cuidado (o das duas redes fica com uma), sem a gestão.
+    it 'sem a flag dos comentários de uma rede, saem os cuidados só dessa rede' do
+      account.disable_features!('meta_ads_comentarios_instagram')
 
       get base, headers: admin.create_new_auth_token, as: :json
 
-      expect(response.parsed_body['cuidados'].pluck('kind')).to eq(%w[post post])
+      expect(response.parsed_body['cuidados'].pluck('id')).to contain_exactly(post_fb.id, anuncio_fb.id)
     end
 
     it 'sem o CRM na instalação, os anúncios saem da lista e não abrem (#2479)' do
@@ -159,14 +160,25 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
       expect(response.parsed_body).to eq('error' => 'not_connected')
     end
 
-    it 'post sem as flags do Seus posts: 404, sem ler a Meta' do
+    it 'post sem a flag do Seus posts ou sem a dos comentários da rede dele: 404, sem ler a Meta' do
       allow(Crm::MetaAds::ComentariosIa::Fonte).to receive(:post)
+
+      [%w[seus_posts], %w[meta_ads_comentarios_instagram]].each do |flags|
+        account.disable_features!(*flags)
+        get "#{base}/#{post_ig.id}", headers: admin.create_new_auth_token, as: :json
+        expect(response).to have_http_status(:not_found)
+        account.enable_features!(*flags)
+      end
+      expect(Crm::MetaAds::ComentariosIa::Fonte).not_to have_received(:post)
+    end
+
+    # #2520: seus_posts_comentarios é só a do post por dentro, no Seus posts; o cuidado não depende dela.
+    it 'sem seus_posts_comentarios, o cuidado do post continua na lista' do
       account.disable_features!('seus_posts_comentarios')
 
-      get "#{base}/#{post_ig.id}", headers: admin.create_new_auth_token, as: :json
+      get base, headers: admin.create_new_auth_token, as: :json
 
-      expect(response).to have_http_status(:not_found)
-      expect(Crm::MetaAds::ComentariosIa::Fonte).not_to have_received(:post)
+      expect(response.parsed_body['cuidados'].pluck('id')).to include(post_ig.id, post_fb.id)
     end
 
     it 'cuidado de outra conta nunca aparece nem abre' do
@@ -487,6 +499,31 @@ RSpec.describe 'Agentes: os comentários do post', type: :request do
 
       expect(response.parsed_body).to eq('status' => 'ready', 'decisao' => 'no_private', 'motivo' => 'Pergunta o preço.')
       expect(Autonomia::Agents::Answerer).not_to have_received(:new)
+    end
+
+    it 'com a flag do privado no Facebook (#2613), o Testar decide e escreve o privado, como no Instagram' do
+      account.enable_features!('meta_ads_comentarios_privado_facebook')
+      care.update!(para_quem: 'Quem perguntar o preço')
+      decide('price')
+
+      testar(pergunta: 'Quanto custa?')
+
+      expect(response.parsed_body).to include('status' => 'ready', 'decisao' => 'price', 'motivo' => 'Pergunta o preço.')
+      expect(response.parsed_body['escrita']).to include('status' => 'escrito')
+      expect(Autonomia::Agents::Answerer).to have_received(:new).at_least(:once)
+    end
+
+    # #2520: o Facebook só manda o comentário com o `feed` da Página assinado; pausar não assina.
+    it 'voltar a cuidar assina o feed da Página; pausar não' do
+      care.update!(status: 'paused')
+
+      expect do
+        put "#{base}/#{care.id}/estado", params: { status: 'on' }, headers: admin.create_new_auth_token, as: :json
+      end.to have_enqueued_job(Crm::MetaAds::ComentariosIa::AssinarFeedJob).with(account.id, pagina.page_id.to_s)
+
+      expect do
+        put "#{base}/#{care.id}/estado", params: { status: 'paused' }, headers: admin.create_new_auth_token, as: :json
+      end.not_to have_enqueued_job(Crm::MetaAds::ComentariosIa::AssinarFeedJob)
     end
   end
 

@@ -20,7 +20,7 @@ RSpec.describe Autonomia::Automacao::Receita do
 
   def atributo(valor) = { 'merge' => true, 'custom_attributes' => { 'revisao' => valor } }
 
-  def problemas(corpo, **) = described_class.new(receita(corpo, **), conta: account).problemas
+  def problemas(corpo, **) = described_class.new(receita(corpo, **), conta: account, account_user: nil).problemas
 
   def frase(chave, **) = I18n.t("autonomia.automacao.receita.#{chave}", passo: 'p1', **)
 

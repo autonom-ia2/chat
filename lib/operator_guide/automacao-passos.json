@@ -287,7 +287,8 @@
     {
       "caminho": "card.valor",
       "base": "card",
-      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_VALOR"
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_VALOR",
+      "permissao": "sales_value_view"
     },
     {
       "caminho": "card.responsavel_id",
@@ -308,6 +309,58 @@
       "caminho": "card.motivo_da_perda",
       "base": "card",
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_MOTIVO_DA_PERDA"
+    },
+    {
+      "caminho": "conversa.cliente_respondeu",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CLIENTE_RESPONDEU",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
+    },
+    {
+      "caminho": "conversa.equipe_respondeu",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_EQUIPE_RESPONDEU",
+      "opcoes": [
+        {
+          "valor": true,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.TRUE"
+        },
+        {
+          "valor": false,
+          "frase": "AUTOMACAO_LIVRE.VALOR_DA_MENSAGEM.FALSE"
+        }
+      ],
+      "operadores": [
+        {
+          "op": "igual",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.IGUAL"
+        },
+        {
+          "op": "diferente",
+          "frase": "AUTOMACAO_LIVRE.OPERADOR_DA_MENSAGEM.DIFERENTE"
+        }
+      ],
+      "so_na_espera": true
     },
     {
       "caminho": "conversa.atributos",
@@ -537,6 +590,12 @@
           "peca": "texto_com_valores",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TEXTO"
+        },
+        {
+          "nome": "modelo",
+          "peca": "modelo_whatsapp",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.MODELO"
         }
       ]
     },

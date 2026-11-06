@@ -62,6 +62,17 @@
       "minItems": 1,
       "items": { "oneOf": [{ "type": "string", "minLength": 1 }, { "$ref": "#/definitions/valor" }] }
     },
+    "modelo_whatsapp": {
+      "description": "Modelo aprovado da Meta para quando a janela de 24 h do número oficial estiver fechada (F4b, #2468). Procurado pelo nome e pelo idioma na caixa da conversa; um texto por variável do corpo, na ordem ({{1}}, {{2}}...). Com a janela aberta, sai o texto livre.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nome", "idioma", "variaveis"],
+      "properties": {
+        "nome": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "idioma": { "type": "string", "minLength": 1, "maxLength": 15 },
+        "variaveis": { "type": "array", "items": { "$ref": "#/definitions/texto" } }
+      }
+    },
     "ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
     "valor_calculado": {
       "description": "Valor calculado numa folha do corpo da ação (G16), lido na hora da execução. $valor copia um valor do alvo; $texto junta pedaços como o texto da mensagem; $data dá \"AAAA-MM-DD\" a partir de \"hoje\" (no fuso da conta) ou de um atributo do tipo data, mais N dias, semanas, meses ou anos (N negativo volta no tempo; 31/01 + 1 mês = 28/02). Valor lido vazio pula a ação.",
@@ -229,6 +240,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["id", "tipo", "condicao", "prazo"],
+          "description": "Espera a condição ficar verdadeira, até o prazo; vencido, segue pelo se_vencer e depois continua. Para esperar a resposta de alguém, a condição lê conversa.cliente_respondeu ou conversa.equipe_respondeu (igual a true): a resposta que chegou durante esta espera. Esses dois valores só valem aqui.",
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "esperar_ate" },
@@ -286,7 +298,8 @@
           "properties": {
             "id": { "$ref": "#/definitions/id" },
             "tipo": { "const": "mensagem" },
-            "texto": { "$ref": "#/definitions/texto" }
+            "texto": { "$ref": "#/definitions/texto" },
+            "modelo": { "$ref": "#/definitions/modelo_whatsapp" }
           }
         },
         {

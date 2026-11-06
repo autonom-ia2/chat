@@ -11,7 +11,10 @@ RSpec.describe Autonomia::Automacao::Catalogo do
   let(:acoes) { passos.select { |passo| passo['tipo'] == 'acao' } }
 
   def frases(locale)
-    JSON.parse(Rails.root.join("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre.json").read)
+    # Um arquivo por área (#2569), juntos no mesmo AUTOMACAO_LIVRE como no index do painel.
+    Rails.root.glob("app/javascript/dashboard/i18n/locale/#{locale}/automacaoLivre*.json")
+         .map { |arquivo| JSON.parse(arquivo.read) }
+         .reduce { |juntos, area| juntos.merge(area) { |_namespace, um, outro| um.merge(outro) } }
   end
 
   # Os campos que a ação aceita, com o de dentro pelo ponto: "custom_attribute_definition.attribute_values".
@@ -145,6 +148,16 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     expect(valor['operadores'].pluck('op')).to eq(%w[igual diferente])
   end
 
+  # G11: a resposta durante a espera vai ao catálogo como valor do alvo, sim/não, marcada para o editor só a oferecer
+  # na condição do "esperar até"; nunca como valor da mensagem do gatilho.
+  it 'leva a resposta durante a espera como valor do alvo, só para o "esperar até"', :aggregate_failures do
+    respostas = catalogo.gerado['valores'].select { |item| item['so_na_espera'] }
+
+    expect(respostas.pluck('caminho')).to eq(%w[conversa.cliente_respondeu conversa.equipe_respondeu])
+    expect(respostas).to all(include('base' => 'conversa'))
+    expect(respostas).to all(satisfy { |item| item['so_no_gatilho'].nil? && item['opcoes'].pluck('valor') == [true, false] })
+  end
+
   # A condição que o editor já põe ao escolher o gatilho tem que salvar.
   it 'sugere filtro que a Receita aceita no próprio gatilho' do
     catalogo.gerado['gatilhos'].select { |gatilho| gatilho['filtro_sugerido'] }.each do |gatilho|
@@ -152,7 +165,7 @@ RSpec.describe Autonomia::Automacao::Catalogo do
                   'passos' => [{ 'id' => 'p1', 'tipo' => 'parar' }] }
 
       expect(Autonomia::Automacao::Receita.esquema_valido?(receita)).to be(true)
-      expect(Autonomia::Automacao::Receita.new(receita, conta: create(:account)).problemas).to be_empty
+      expect(Autonomia::Automacao::Receita.new(receita, conta: create(:account), account_user: nil).problemas).to be_empty
     end
   end
 
