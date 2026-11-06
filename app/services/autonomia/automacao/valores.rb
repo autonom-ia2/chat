@@ -187,16 +187,26 @@ class Autonomia::Automacao::Valores
     @mensagem = mensagem
     @quem = quem
     @espera = espera
+    @vazios = []
   end
 
-  # Por que o link da agenda lido ficou vazio (`por` do LinkDaAgenda), para o passo pular com o motivo próprio.
-  attr_reader :falta_da_agenda
+  # Por que o link da agenda lido ficou vazio (`por` do LinkDaAgenda), para o passo pular com o motivo próprio. Só
+  # quando ele é o único valor vazio lido: com outro vazio junto, o motivo é o geral (`faltou_valor`).
+  def falta_da_agenda = (@por_da_agenda if @vazios.any? && @vazios.all? { |caminho| AGENDA.key?(caminho) })
 
   def ler(caminho)
+    valor = lido(caminho)
+    @vazios << caminho.to_s if valor.blank?
+    valor
+  end
+
+  private
+
+  def lido(caminho)
     return unless permitido?(caminho)
     return @mensagem && MENSAGEM.fetch(caminho.to_s).call(@mensagem) if MENSAGEM.key?(caminho.to_s)
     return resposta(caminho) if RESPOSTA.key?(caminho.to_s)
-    return do_campo(caminho.to_s) if CAMPOS.key?(caminho.to_s) || AGENDA.key?(caminho.to_s)
+    return do_campo(caminho.to_s) if campo?(caminho.to_s)
 
     base, chave = self.class.atributo(caminho)
     raise ArgumentError, "caminho desconhecido: #{caminho}" unless base
@@ -204,7 +214,7 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ATRIBUTOS.fetch(base).call(objeto).to_h[chave] }
   end
 
-  private
+  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave)
 
   def do_campo(chave)
     do_objeto(chave) { |objeto| CAMPOS.key?(chave) ? CAMPOS[chave].call(objeto) : link_da_agenda(objeto, AGENDA[chave].call(objeto)) }
@@ -212,7 +222,7 @@ class Autonomia::Automacao::Valores
 
   def link_da_agenda(objeto, pessoa)
     resultado = ::Autonomia::Automacao::LinkDaAgenda.resultado(objeto.account, pessoa, pagina_id: pagina_da_reuniao)
-    @falta_da_agenda ||= resultado.por
+    @por_da_agenda ||= resultado.por
     resultado.url
   end
 

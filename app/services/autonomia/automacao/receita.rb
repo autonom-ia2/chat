@@ -62,15 +62,16 @@ class Autonomia::Automacao::Receita
     passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
   end
 
-  # O gatilho de card pede a flag da F6 e o CRM; a etapa e o funil escolhidos precisam ser da conta (o esquema já
-  # conferiu que são números e que "entrou" e "saiu" trazem a etapa).
+  # O gatilho de card pede a flag da F6 e o CRM (o de reunião, também as reuniões da instalação); a etapa e o funil
+  # escolhidos precisam ser da conta (o esquema já conferiu que são números e que "entrou" e "saiu" trazem a etapa).
   def gatilho_de_card
     gatilho = @receita['gatilho'].to_h
     return [] unless ::Autonomia::Automacao::Gatilhos.do_card?(gatilho['tipo'])
-    return [texto(:gatilho_desligado)] unless ::Autonomia::Automacao::Motor.gatilhos?(@conta)
 
-    etapa = gatilho['etapa_id']
-    funil = gatilho['funil_id']
+    desligado = ::Autonomia::Automacao::Gatilhos.desligado(gatilho['tipo'], @conta)
+    return [texto(desligado)] if desligado
+
+    etapa, funil = gatilho.values_at('etapa_id', 'funil_id')
     [*(texto(:etapa_de_fora, id: etapa) if etapa && !@conta.crm_pipeline_stages.exists?(id: etapa)),
      *(texto(:funil_de_fora, id: funil) if funil && !@conta.crm_pipelines.exists?(id: funil))]
   end

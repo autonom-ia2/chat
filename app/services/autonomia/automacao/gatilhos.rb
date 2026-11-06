@@ -71,6 +71,13 @@ module Autonomia::Automacao::Gatilhos
     ::Autonomia::Automacao::Motor.ligado?(conta)
   end
 
+  # Por que o gatilho de card não vale na conta agora (a chave do texto da receita), ou nil quando vale.
+  def desligado(tipo, conta)
+    return if disponivel?(tipo, conta)
+
+    de_reuniao?(tipo) && ::Autonomia::Automacao::Motor.gatilhos?(conta) ? :reunioes_desligadas : :gatilho_desligado
+  end
+
   # Cada parâmetro escolhido no gatilho (`gatilho` da receita) bate com o que o evento traz (`dados`)? O que a pessoa
   # deixou em branco vale para qualquer valor.
   def casa?(gatilho, dados)

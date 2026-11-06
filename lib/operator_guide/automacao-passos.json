@@ -118,6 +118,7 @@
       "grupo": "reuniao",
       "requer": "automacao_gatilhos",
       "funil": true,
+      "reunioes": true,
       "parametros": [
         {
           "nome": "funil_id",
@@ -134,6 +135,7 @@
       "grupo": "reuniao",
       "requer": "automacao_gatilhos",
       "funil": true,
+      "reunioes": true,
       "parametros": [
         {
           "nome": "funil_id",
@@ -150,6 +152,7 @@
       "grupo": "reuniao",
       "requer": "automacao_gatilhos",
       "funil": true,
+      "reunioes": true,
       "parametros": [
         {
           "nome": "funil_id",

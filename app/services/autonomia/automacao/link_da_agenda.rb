@@ -1,9 +1,9 @@
 # O link da agenda de uma pessoa (#2499, G12): o endereço público da página de agendamento em que ela atende, para o
 # texto da automação mandar ao cliente marcar. É o mesmo endereço dos convites (Crm::BookingV2::ShortLink).
 #
-# Qual página: a da reunião, quando há uma (`pagina_id`, da reunião do gatilho); senão, a única página publicada em que
-# a pessoa atende. Sem link, o passo pula, e o histórico diz por quê (`por`): `sem_responsavel`, `varias_paginas`
-# (duas ou mais sem pista) ou `sem_pagina` (nenhuma em que ela atende, ela já não atende, ou o agendamento desligado
+# Qual página: a da reunião, quando a pessoa atende nela (`pagina_id`, da reunião do gatilho); senão, a única página
+# publicada em que ela atende. Sem link, o passo pula, e o histórico diz por quê (`por`): `sem_responsavel`,
+# `varias_paginas` (duas ou mais, e nenhuma é a da reunião) ou `sem_pagina` (nenhuma em que ela atende, ela já não atende, ou o agendamento desligado
 # na conta). Decide na hora do passo, com o responsável de então. Nunca cai no link de outra pessoa: o cliente
 # marcaria com quem não é o responsável dele (parecer do Funções).
 class Autonomia::Automacao::LinkDaAgenda
@@ -24,21 +24,20 @@ class Autonomia::Automacao::LinkDaAgenda
     return vazio('sem_pagina') unless ::Crm::Config.booking_v2_enabled?(@conta)
 
     onde_atende = paginas.usable.select { |pagina| atende?(pagina) }
-    return vazio('varias_paginas') if @pagina_id.blank? && onde_atende.many?
-
     pagina = escolhida(onde_atende)
-    pagina ? Resultado.new(url: ::Crm::BookingV2::ShortLink.url_for(pagina, link: link_proprio(pagina)), por: nil) : vazio('sem_pagina')
+    return vazio(onde_atende.many? ? 'varias_paginas' : 'sem_pagina') unless pagina
+
+    Resultado.new(url: ::Crm::BookingV2::ShortLink.url_for(pagina, link: link_proprio(pagina)), por: nil)
   end
 
   private
 
   def vazio(por) = Resultado.new(url: nil, por: por)
 
-  # A página da reunião, se a pessoa atende nela; sem reunião, a única em que atende.
+  # A página da reunião desempata; sem ela (ou se a pessoa não atende nela), a única em que atende.
   def escolhida(onde_atende)
-    return onde_atende.find { |pagina| pagina.id == @pagina_id.to_i } if @pagina_id.present?
-
-    onde_atende.first
+    da_reuniao = onde_atende.find { |pagina| pagina.id.to_s == @pagina_id.to_s } if @pagina_id.present?
+    da_reuniao || (onde_atende.first if onde_atende.one?)
   end
 
   # No responsável fixo, ele mesmo; no link por pessoa, o link ativo dela.

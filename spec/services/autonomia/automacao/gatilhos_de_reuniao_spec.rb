@@ -133,11 +133,25 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
       expect(enqueued_jobs.map { |item| item[:job] }).not_to include(EventDispatcherJob)
     end
 
-    it 'com automação de reunião, o despacho não chega ao WebhookListener (ele não ouve reunião)' do
+    it 'com automação de reunião, o despacho roda e o webhook que assina todos os eventos do card não recebe nada', :aggregate_failures do
+      create(:webhook, account: account, webhook_type: :account_type,
+                       subscriptions: Crm::Webhooks::Emitter::EVENT_MAP.values + ['conversation_created'])
       de_reuniao('card.reuniao_marcada')
-      expect(WebhookListener.instance).not_to respond_to(:crm_meeting_scheduled)
-      expect(Crm::Webhooks::Emitter::EVENT_MAP.values).not_to include(Events::Types::CRM_MEETING_SCHEDULED)
+      marcar
+      drenar
+
+      expect(execucoes.count).to eq(1)
+      expect(enqueued_jobs.map { |item| item[:job] }).not_to include(WebhookJob)
     end
+  end
+
+  it 'reuniões da instalação desligadas: o salvar recusa o gatilho de reunião' do
+    receita = { 'gatilho' => { 'tipo' => 'card.reuniao_marcada' }, 'passos' => [esperar_passo('p1')] }
+    problemas = with_modified_env(CRM_CALENDAR_MEETINGS_ENABLED: 'false') do
+      Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas
+    end
+
+    expect(problemas).to include(I18n.t('autonomia.automacao.receita.reunioes_desligadas'))
   end
 
   describe 'a reunião do gatilho nos valores' do
@@ -210,7 +224,8 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
       conversa = create(:conversation, account: account, assignee: world.host)
       card.update!(primary_conversation: conversa)
 
-      expect(Autonomia::Automacao::Valores.new(alvo: card, quem: admin).ler('card.link_da_agenda')).to eq(Crm::BookingV2::ShortLink.url_for(world.profile))
+      expect(Autonomia::Automacao::Valores.new(alvo: card, quem: admin).ler('card.link_da_agenda'))
+        .to eq(Crm::BookingV2::ShortLink.url_for(world.profile))
       expect(Autonomia::Automacao::Valores.new(alvo: conversa, quem: admin).ler('conversa.link_da_agenda'))
         .to eq(Crm::BookingV2::ShortLink.url_for(world.profile))
     end
@@ -220,6 +235,13 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
 
       expect(link.resultado(account, card.owner).to_h).to eq(url: nil, por: 'varias_paginas')
       expect(link.de(account, card.owner, pagina_id: segunda.id)).to eq(Crm::BookingV2::ShortLink.url_for(segunda))
+    end
+
+    it 'a página da reunião só desempata: se a pessoa não atende nela, vale a única em que atende', :aggregate_failures do
+      colega = create(:user, account: account, role: :agent)
+      alheia = create_booking_profile(account: account, host: colega, title: 'Da colega')
+
+      expect(link.de(account, card.owner, pagina_id: alheia.id)).to eq(Crm::BookingV2::ShortLink.url_for(world.profile))
     end
 
     it 'página de link por pessoa: o link dela; link desligado não vale, e nunca o de outra pessoa', :aggregate_failures do
@@ -254,6 +276,40 @@ RSpec.describe 'Automação livre: gatilhos de reunião', :automacao_motor do # 
       definicao = automacao_ligada(account, admin, [passo], gatilho: { 'tipo' => 'card.ganho' })
       execucao = execucoes.create!(account: account, automacao: definicao, versao: definicao.versao_ativa, alvo: card,
                                    chave_gatilho: 'card.ganho', evento: 'card.ganho:atividade:1')
+
+      resultado = Autonomia::Automacao::PassoDeMensagem.new(execucao: execucao, passo: passo, alvo: card).executar
+
+      expect([resultado.tipo, resultado.motivo, resultado.dados]).to eq([:pulado, 'faltou_link_da_agenda', { 'por' => 'sem_responsavel' }])
+    end
+
+    it 'o link vazio junto de outro valor vazio: o motivo geral, faltou_valor' do
+      ligar_mensagens(account)
+      conversa = create(:conversation, account: account, contact: world.contact)
+      card.update!(primary_conversation: conversa, owner: nil)
+      world.contact.update!(name: '')
+      passo = mensagem_passo('m1', { '$valor' => 'contato.nome' }, ', marque aqui: ', { '$valor' => 'card.link_da_agenda' })
+      definicao = automacao_ligada(account, admin, [passo], gatilho: { 'tipo' => 'card.ganho' })
+      execucao = execucoes.create!(account: account, automacao: definicao, versao: definicao.versao_ativa, alvo: card,
+                                   chave_gatilho: 'card.ganho', evento: 'card.ganho:atividade:1')
+
+      resultado = Autonomia::Automacao::PassoDeMensagem.new(execucao: execucao, passo: passo, alvo: card).executar
+
+      expect([resultado.motivo, resultado.dados]).to eq(['faltou_valor', {}])
+    end
+
+    it 'no modelo do WhatsApp (janela fechada) sem o link: o mesmo motivo próprio e o por' do
+      ligar_mensagens(account)
+      conversa = create(:conversation, account: account, contact: world.contact)
+      card.update!(primary_conversation: conversa, owner: nil)
+      definicao = automacao_ligada(account, admin, [esperar_passo('p1')], gatilho: { 'tipo' => 'card.ganho' })
+      execucao = execucoes.create!(account: account, automacao: definicao, versao: definicao.versao_ativa, alvo: card,
+                                   chave_gatilho: 'card.ganho', evento: 'card.ganho:atividade:1')
+      passo = mensagem_passo('m1', 'Oi').merge('modelo' => { 'nome' => 'agenda' })
+      allow(Conversations::MessageWindowService).to receive(:new).and_return(instance_double(Conversations::MessageWindowService, can_reply?: false))
+      allow(Autonomia::Automacao::ModeloWhatsapp).to receive(:aplica?).and_return(true)
+      allow(Autonomia::Automacao::ModeloWhatsapp).to receive(:new) do |_modelo, _conversa, valores|
+        instance_double(Autonomia::Automacao::ModeloWhatsapp, preparar: valores.ler('card.link_da_agenda') || 'faltou_valor')
+      end
 
       resultado = Autonomia::Automacao::PassoDeMensagem.new(execucao: execucao, passo: passo, alvo: card).executar
 

@@ -50,7 +50,7 @@ class Autonomia::Automacao::PassoDeMensagem
 
     # Os valores do modelo com as permissões de quem ligou (#2597), como no texto.
     pronto = ::Autonomia::Automacao::ModeloWhatsapp.new(@passo['modelo'], @conversa, valores).preparar
-    return pulado(pronto) if pronto.is_a?(String)
+    return pronto == 'faltou_valor' ? faltou_valor : pulado(pronto) if pronto.is_a?(String)
 
     anti_laco = ::Autonomia::Automacao::AntiLaco.new(@execucao.automacao, @conversa)
     return parar_por_robo(anti_laco) if anti_laco.robo_do_outro_lado?

@@ -15,9 +15,12 @@ export function useGatilhosNovos(isCloudFeatureEnabled, catalogo) {
   const { canManagePipelines } = useCrmPermissions();
   const { escolhas, carregar } = useEscolhasDosGatilhos();
 
+  // G12: o de reunião (`reunioes`) só com as reuniões da instalação ligadas.
   const liberado = item =>
     (!item.requer || isCloudFeatureEnabled(item.requer)) &&
-    (!item.funil || canManagePipelines.value);
+    (!item.funil || canManagePipelines.value) &&
+    (!item.reunioes ||
+      window.globalConfig?.CRM_CALENDAR_MEETINGS_ENABLED === 'true');
 
   const gatilhos = computed(() =>
     catalogo.value ? catalogo.value.gatilhos.filter(liberado) : null
