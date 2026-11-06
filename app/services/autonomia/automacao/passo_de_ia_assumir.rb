@@ -18,12 +18,14 @@ class Autonomia::Automacao::PassoDeIaAssumir
   def self.agente(conta, id) = ::Autonomia::Agents::Agent.kept.find_by(account_id: conta.id, id: id)
 
   # Os agentes que o passo oferece na tela: os que podem receber conversa em alguma caixa da conta (quem atende primeiro
-  # e quem recebe quando alguém passa), só com id e nome. Sem as áreas de IA, nenhum.
+  # e quem recebe quando alguém passa), só com id e nome. Sem as áreas de IA, nenhum. A mesma regra do
+  # PassarParaIa.destinos_na_caixa (vínculo vivo e agente atendendo cliente), numa consulta para a conta toda.
   def self.opcoes(conta)
     return [] unless ::Crm::AgentesIa.ligado?(conta)
 
-    conta.inboxes.flat_map { |caixa| ::Autonomia::Agents::PassarParaIa.destinos_na_caixa(caixa) }.uniq
-         .sort_by { |agente| [agente.name.to_s.downcase, agente.id] }.map { |agente| { id: agente.id, name: agente.name } }
+    ::Autonomia::Agents::AgentInbox.kept.where(account_id: conta.id, inbox_id: conta.inboxes.select(:id)).includes(:agent)
+                                   .filter_map(&:agent).uniq.select { |agente| agente.account_id == conta.id && agente.atende_cliente? }
+                                   .sort_by { |agente| [agente.name.to_s.downcase, agente.id] }.map { |agente| { id: agente.id, name: agente.name } }
   end
 
   # Para a Receita, ao salvar: o agente tem de ser desta conta.

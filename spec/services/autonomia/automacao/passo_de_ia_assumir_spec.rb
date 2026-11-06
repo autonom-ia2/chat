@@ -168,6 +168,24 @@ RSpec.describe Autonomia::Automacao::PassoDeIaAssumir, :automacao_motor, :um_tur
                                                                  { id: area.id, name: 'Área Suporte' })
     end
 
+    it 'são as mesmas que cada caixa receberia, numa consulta só, com uma caixa ou com várias', :aggregate_failures do
+      outra = create(:inbox, account: account)
+      Autonomia::Agents::Areas.vincular!(agent: criar_agente('Comercial'), inbox: outra)
+      pela_caixa = account.inboxes.flat_map { |caixa| Autonomia::Agents::PassarParaIa.destinos_na_caixa(caixa) }.uniq.map(&:id)
+      consultas = lambda do
+        contadas = 0
+        contar = ->(*, dados) { contadas += 1 unless dados[:name] == 'SCHEMA' || dados[:cached] }
+        ActiveSupport::Notifications.subscribed(contar, 'sql.active_record') { described_class.opcoes(account) }
+        contadas
+      end
+      com_duas = consultas.call
+      3.times { |n| Autonomia::Agents::Areas.vincular!(agent: criar_agente("Extra #{n}"), inbox: create(:inbox, account: account)) }
+
+      extras = Autonomia::Agents::Agent.where(name: ['Extra 0', 'Extra 1', 'Extra 2']).ids
+      expect(described_class.opcoes(account).pluck(:id)).to match_array(pela_caixa + extras)
+      expect(consultas.call).to eq(com_duas)
+    end
+
     it 'sem as agentes ligadas na conta, nenhuma' do
       allow(Autonomia::Agents::Config).to receive(:enabled?).with(account).and_return(false)
 
