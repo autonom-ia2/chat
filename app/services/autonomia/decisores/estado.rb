@@ -24,7 +24,12 @@
 #
 # `valor_do_card: false` (#2597, a Automação livre para quem não vê valores de venda): o card vai sem o valor. Quem chama
 # decide pela regra dele (Valores.pode_ler?); sem ele, igual.
-class Autonomia::Decisores::Estado
+#
+# `anuncio: true` (#2558): o card leva o anúncio de origem do formulário da Meta (formulário, anúncio e campanha em
+# metadata.meta_lead_form). Sem ele, só a hora da captura (Crm::MetaAds::LeadForms::Answers): fechado por padrão. Quem
+# chama decide pela chave do responsável (Crm::AnuncioDeOrigem.ve?): quem pede, quem ligou a automação ou quem salvou o
+# Decisor. O exemplo guardado (texto_do_exemplo) nunca leva o anúncio, porque quem tem automation_view o lê.
+class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
   include Autonomia::DadoDeContato
 
   MAX_MENSAGENS = 5
@@ -50,12 +55,12 @@ class Autonomia::Decisores::Estado
   # O estado de uma decisão já guardada (a dúvida que vai ao Guia, a resposta que vira exemplo).
   def self.da_decisao(decisao)
     new(conversation: decisao.conversation, message: decisao.message, card: decisao.card,
-        leituras: decisao.decisor.leituras_efetivas)
+        leituras: decisao.decisor.leituras_efetivas, anuncio: decisao.decisor.ve_o_anuncio?)
   end
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
                  leituras: Autonomia::Decisor::LEITURAS_PADRAO, max_mensagens: MAX_MENSAGENS, max_caracteres_anteriores: MAX_CARACTERES,
-                 papeis: false, com_midia: false, fuso: nil, valor_do_card: true)
+                 papeis: false, com_midia: false, fuso: nil, valor_do_card: true, anuncio: false)
     @conversation = conversation
     @message = message
     @card = card
@@ -68,6 +73,7 @@ class Autonomia::Decisores::Estado
     @com_midia = com_midia
     @fuso = fuso
     @valor_do_card = valor_do_card
+    @anuncio = anuncio
   end
 
   # #936 — o registro de uma tarefa longa vai ao Jev inteiro, como texto: sem vazio e sem valor com
@@ -87,10 +93,12 @@ class Autonomia::Decisores::Estado
     dados
   end
 
-  # O texto guardado como exemplo quando a pessoa (ou o Guia) confirma a resposta.
+  # O texto guardado como exemplo quando a pessoa (ou o Guia) confirma a resposta. Sem o anúncio de origem (#2558): o
+  # exemplo fica no Decisor, e quem tem automation_view o lê.
   def texto_do_exemplo
-    blocos = BLOCOS.filter_map { |chave| "#{chave}: #{dados[chave].to_json}" if dados[chave] }
-    [dados[:subject], *dados[:messages], dados[:last_message], dados[:text], *blocos]
+    lido = @anuncio && dados[:card] ? dados.merge(ler_card(anuncio: false)) : dados
+    blocos = BLOCOS.filter_map { |chave| "#{chave}: #{lido[chave].to_json}" if lido[chave] }
+    [lido[:subject], *lido[:messages], lido[:last_message], lido[:text], *blocos]
       .compact_blank.join("\n\n").first(Autonomia::Decisor::MAX_TEXTO_DO_EXEMPLO)
   end
 
@@ -164,11 +172,12 @@ class Autonomia::Decisores::Estado
     { contact: { name: (contato.name unless nome_provisorio?), attributes: curto(contato.custom_attributes) }.compact_blank }
   end
 
-  def ler_card
+  # As respostas do formulário do anúncio (#2195) trazem telefone e e-mail um nível abaixo, onde o curto não olha: nunca
+  # vão. O formulário, o anúncio e a campanha, só com `anuncio` (#2558).
+  def ler_card(anuncio: @anuncio)
     return {} if card.nil?
 
-    # As respostas do formulário do anúncio (#2195) trazem telefone e e-mail um nível abaixo, onde o curto não olha.
-    metadata = curto(Crm::MetaAds::LeadForms::Answers.without(card.metadata))
+    metadata = curto(Crm::MetaAds::LeadForms::Answers.para(card.metadata, contato_inteiro: false, anuncio_visivel: anuncio))
     { card: { title: card.title, stage: card.stage&.name, pipeline: card.pipeline&.name, value: valor_do_card, status: card.status,
               metadata: metadata, attributes: curto(card.custom_attributes) }.compact_blank }
   end

@@ -159,8 +159,8 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/decisores#destroy",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:31",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:35",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
     ],
     "sem_corpo": true
   },
@@ -3779,9 +3779,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/decisores#update",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:26",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:74",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:79",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
     ],
     "sem_corpo": false
   },
@@ -11694,8 +11694,8 @@
     "controller": "api/v1/accounts/autonomia/decisores#create",
     "modelo": "Autonomia::Decisor",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:21",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:74"
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:25",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:79"
     ],
     "sem_corpo": false
   },
@@ -11716,10 +11716,10 @@
     "controller": "api/v1/accounts/autonomia/decisores#exemplos",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:42",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:46",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:43",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:47",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:51",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:48",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
     ],
     "sem_corpo": false
   },
@@ -11738,10 +11738,10 @@
     "controller": "api/v1/accounts/autonomia/decisores#teste",
     "modelo": "Conversation",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:37",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:89",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:88",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:41",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:94",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:93",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
     ],
     "sem_corpo": false
   },
@@ -23386,9 +23386,9 @@
     "completo": true,
     "controller": "api/v1/accounts/autonomia/decisores#update",
     "origem": [
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:26",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:74",
-      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:70"
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:30",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:79",
+      "app/controllers/api/v1/accounts/autonomia/decisores_controller.rb:75"
     ],
     "sem_corpo": false
   },

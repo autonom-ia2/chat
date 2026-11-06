@@ -52,7 +52,7 @@ class Autonomia::Decisores::PerguntarJob < ApplicationJob
 
   def seguir(decisao, marca, rule, message, indice)
     estado = Autonomia::Decisores::Estado.new(conversation: message.conversation, message: message,
-                                              leituras: decisao.decisor.leituras_efetivas)
+                                              leituras: decisao.decisor.leituras_efetivas, anuncio: decisao.decisor.ve_o_anuncio?)
     Autonomia::Decisores::Seguimento.new(decisao: decisao, marca: marca, estado: estado).perform do
       AutomationRules::ActionService.new(rule, rule.account, message.conversation).perform(desde: indice + 1, message: message)
     end

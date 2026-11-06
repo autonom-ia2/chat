@@ -2,6 +2,10 @@
 #
 # Mesmas chaves das automações (automation_view / automation_manage), pela policy própria. Não herda a
 # porta dos Agentes Autonom.ia: o Decisor é parte das automações, não da área de agentes.
+#
+# Anúncio de origem (#2558): criar e editar gravam quem salvou (`salvo_por`), e o Decisor só lê o anúncio do card com a
+# chave dessa pessoa (Autonomia::Decisor#ve_o_anuncio?). O teste lê com a chave de quem testa. O exemplo nunca guarda o
+# anúncio (Decisores::Estado#texto_do_exemplo).
 class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::BaseController
   wrap_parameters false
 
@@ -19,12 +23,12 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
   end
 
   def create
-    decisor = escopo.create!(decisor_params)
+    decisor = escopo.create!(decisor_params.merge(salvo_por: Current.user))
     render json: completo(decisor), status: :created
   end
 
   def update
-    @decisor.update!(decisor_params)
+    @decisor.update!(decisor_params.merge(salvo_por: Current.user))
     render json: completo(@decisor)
   end
 
@@ -35,7 +39,8 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
 
   # Não grava nada: responde em conversas reais e mostra os campos que extrairia.
   def teste
-    render json: Autonomia::Decisores::Teste.new(decisor: @decisor, conversations: conversas_do_teste).perform
+    render json: Autonomia::Decisores::Teste.new(decisor: @decisor, conversations: conversas_do_teste,
+                                                 anuncio: ::Crm::AnuncioDeOrigem.ve?(Current.account_user)).perform
   end
 
   # O "Confirmar" do teste: a resposta certa para aquela conversa vira exemplo.
@@ -92,7 +97,8 @@ class Api::V1::Accounts::Autonomia::DecisoresController < Api::V1::Accounts::Bas
 
   def estado_da_conversa(conversation)
     message = conversation.messages.incoming.reorder(id: :desc).first
-    message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message, leituras: @decisor.leituras_efetivas)
+    message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message, leituras: @decisor.leituras_efetivas,
+                                                anuncio: ::Crm::AnuncioDeOrigem.ve?(Current.account_user))
   end
 
   def resumo(decisor, esperando)

@@ -97,10 +97,11 @@ class Autonomia::Automacao::TestarPasso
     base.merge(motivo: e.motivo)
   end
 
-  # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores.
+  # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores; o anúncio de origem também (#2558).
   def leitura(conversa)
     ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: ::Autonomia::Automacao::ComIa.leituras(@passo),
-                                       valor_do_card: ::Autonomia::Automacao::Valores.pode_ler?('card.valor', @account_user))
+                                       valor_do_card: ::Autonomia::Automacao::Valores.pode_ler?('card.valor', @account_user),
+                                       anuncio: ::Crm::AnuncioDeOrigem.ve?(@account_user))
   end
 
   def para_tela(resposta)

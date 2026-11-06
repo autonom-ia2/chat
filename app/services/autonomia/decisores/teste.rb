@@ -7,7 +7,8 @@
 #
 # Nenhuma chamada repete aqui dentro: uma nova tentativa usaria o prazo inteiro de novo, mais a espera.
 # A folga de cada uma é o pior caso dela — o Jev pode levar 3 s para conectar e 3 s para ler. A
-# conversa sem texto (só áudio ou imagem) fica de fora: não há o que perguntar.
+# conversa sem texto (só áudio ou imagem) fica de fora: não há o que perguntar. O anúncio de origem do card (#2558)
+# vai só com a chave de quem testa (`anuncio`, Crm::AnuncioDeOrigem.ve?).
 class Autonomia::Decisores::Teste
   PRAZO = 10.0
   MAX_QUANTIDADE = 10
@@ -17,8 +18,9 @@ class Autonomia::Decisores::Teste
   FOLGA_JEV = TypesafeAi::Client::OPEN_TIMEOUT + JEV_LEITURA
   FOLGA_EXTRACAO = 3.0
 
-  def initialize(decisor:, conversations:, relogio: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
+  def initialize(decisor:, conversations:, anuncio:, relogio: -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) })
     @decisor = decisor
+    @anuncio = anuncio
     @conversations = conversations
     @relogio = relogio
     @comeco = relogio.call
@@ -36,7 +38,8 @@ class Autonomia::Decisores::Teste
 
   def caso(conversation)
     message = conversation.messages.incoming.reorder(id: :desc).first
-    estado = message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message, leituras: @decisor.leituras_efetivas)
+    estado = message && Autonomia::Decisores::Estado.new(conversation: conversation, message: message, leituras: @decisor.leituras_efetivas,
+                                                         anuncio: @anuncio)
     estado unless estado.nil? || estado.vazio?
   end
 
