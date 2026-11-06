@@ -110,7 +110,7 @@ conversa e do contato), os passos esperar, esperar até, se e parar, a ação da
 (etiquetas, atributos, contato, empresa, conversa, atribuição, card alterar e mover, etapa, agente na caixa), mensagem
 ao cliente dentro da janela, aviso à equipe pelo sino e os quatro passos de IA.
 
-**Placar em 05/11 (main `631d34fb30`): 0 de 20 inteiros.** Lacunas fechadas: G1, G5, G11. Exemplo só conta inteiro e com spec verde; parcial não conta.
+**Placar em 06/11 (main `8c7a06acc0`): 0 de 20 inteiros.** Lacunas fechadas: G1, G2, G5, G6, G11. Exemplo só conta inteiro e com spec verde; parcial não conta.
 
 Com isso, **só o exemplo 10 (cliente bravo) roda quase inteiro**: os passos 1 e 3 a 7, e no 2 a passagem para a Fernanda. O
 passo 8 (card no quadro "Melhorias") depende da G4, e tirar da agente de IA (passo 2) da prova da G15. Os outros 19 começam por um gatilho
@@ -123,11 +123,11 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | Código | O que falta | Fase | Situação em 05/11 | Dono | Exemplos que segura |
 |---|---|---|---|---|---|
 | G1 | Mandar pelo **modelo aprovado do WhatsApp** fora da janela de 24 h | F4 (F4b) | **Fechada** (#2586): campo `modelo` do passo "mensagem" | F1 | 1, 2, 3, 4, 5, 6, 8, 11, 13, 14, 18, 19, 20 |
-| G2 | Mandar **e-mail** ao contato (pela caixa de e-mail da conta) | F4 / F8.2 | Sem passo | F1 | 1, 3, 12, 13, 19, 20 |
+| G2 | Mandar **e-mail** ao contato (pela caixa de e-mail da conta) | F4 / F8.2 | **Fechada** (#2601) | F1 | 1, 3, 12, 13, 19, 20 |
 | G3 | **Criar retorno** para a equipe (com e sem envio automático) | F6 "Retorno" | Sem passo | F2 | 1, 2, 3, 4, 5, 9, 12, 14, 15, 16, 19 |
 | G4 | **Criar card** num funil/etapa para a conversa ou o contato (e "abrir card de retenção", "card no quadro X") | F6 | `POST crm/cards` fora da lista; o `CardNaEtapa` (F1.4) só existe nas Regras | F2 | 4, 6, 8, 9, 10, 11, 16, 18 |
 | G5 | Gatilhos do **card**: criado, entrou/saiu da etapa, ganho, perdido, arquivado, campo mudou | F6 | **Fechada** (#2554) | Gatilhos | 2, 3, 4, 5, 7, 8, 11, 12, 13, 14, 15, 18, 20 |
-| G6 | Gatilhos de **tempo**: parado há X dias; N dias antes/depois de uma data do card ou do contato (vencimento, aniversário, próxima revisão, data da festa) | F6 | Em PR (F6 PR3a) | Motor | 1, 5, 6, 13, 18 |
+| G6 | Gatilhos de **tempo**: parado há X dias; N dias antes/depois de uma data do card ou do contato (vencimento, aniversário, próxima revisão, data da festa) | F6 | **Fechada** (#2611) | Motor | 1, 5, 6, 13, 18 |
 | G7 | **Recorrente** com filtro (todo dia 1º, toda segunda 8h, quinta 9h), **uma execução por registro do filtro** (contato ou card), nunca uma execução sem alvo (decisão da Automação, 06/11) | F8 | Em PR (F8 PR3b) | Gatilhos | 7, 8, 9, 16, 17, 20 |
 | G8 | Gatilho **mensagem que falhou** na entrega | F8 | A fazer (F8 PR2d) | Gatilhos | 1, 19 |
 | G9 | Gatilho **troca de responsável** (do card e da conversa), com o anterior marcado como ausente | F8 | A fazer (F8 PR2d); "ausente" não é valor que a receita lê | Gatilhos | 17 |
