@@ -3037,6 +3037,7 @@
         "OPEN_AD_LABEL": "See inside the ad {name}",
         "AD_QUOTES": "1 open quote | {count} open quotes",
         "AD_PRIVATE": "1 private-message conversation | {count} private-message conversations",
+        "AD_DESTINATION_PRIVATE": "{destination} · {private}",
         "VERDICT": {
           "UP": "Increase · enough data",
           "KEEP": "Keep",

@@ -3038,6 +3038,7 @@
         "OPEN_AD_LABEL": "Ver por dentro o anúncio {name}",
         "AD_QUOTES": "1 proposta aberta | {count} propostas abertas",
         "AD_PRIVATE": "1 conversa pelo privado | {count} conversas pelo privado",
+        "AD_DESTINATION_PRIVATE": "{destination} · {private}",
         "VERDICT": {
           "UP": "Aumentar · base suficiente",
           "KEEP": "Manter",

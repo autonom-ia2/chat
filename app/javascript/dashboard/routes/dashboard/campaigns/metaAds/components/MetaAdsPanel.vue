@@ -994,17 +994,22 @@ onMounted(() => {
                   :data-panel-ad-destination="ad.destination"
                   class="m-0 text-xs font-normal tabular-nums text-n-slate-10"
                 >
-                  {{ $t(destinationKey(ad)) }}
                   <template v-if="ad.private_conversations">
-                    ·
                     {{
                       $t(
-                        'CRM_KANBAN.META_ADS_HUB.PANEL.AD_PRIVATE',
-                        { count: ad.private_conversations },
-                        ad.private_conversations
+                        'CRM_KANBAN.META_ADS_HUB.PANEL.AD_DESTINATION_PRIVATE',
+                        {
+                          destination: $t(destinationKey(ad)),
+                          private: $t(
+                            'CRM_KANBAN.META_ADS_HUB.PANEL.AD_PRIVATE',
+                            { count: ad.private_conversations },
+                            ad.private_conversations
+                          ),
+                        }
                       )
                     }}
                   </template>
+                  <template v-else>{{ $t(destinationKey(ad)) }}</template>
                 </p>
                 <p
                   v-else
