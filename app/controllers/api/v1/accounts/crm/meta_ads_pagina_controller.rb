@@ -8,7 +8,8 @@
 # Os dois pedem `meta_ads_manage` (a conexão guiada é dela). Ligar ainda segue a régua das caixas: Página sem caixa
 # cria uma (`inbox_manage`); com caixa, troca o token dela (`integration_manage`), como o CallbacksController.
 # Sem conexão ativa com conta de anúncios: 404 not_connected. A Meta fora: 422 meta_unavailable. O acesso do login
-# venceu: 422 reconnect. `page_id` é o id numérico da Página; outra coisa é 422 page_id_required.
+# venceu: 422 reconnect. Página com caixa e login sem o que a caixa usa: 422 missing_permissions, sem trocar o
+# token. `page_id` é o id numérico da Página; outra coisa é 422 page_id_required.
 class Api::V1::Accounts::Crm::MetaAdsPaginaController < Api::V1::Accounts::Crm::BaseController
   before_action :ensure_feature
   before_action :ensure_manage

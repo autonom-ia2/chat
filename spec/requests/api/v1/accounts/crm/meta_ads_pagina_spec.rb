@@ -108,8 +108,14 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
     expect(response.body).not_to include(page_token)
   end
 
+  def stub_permissions(granted)
+    rows = granted.map { |name| { permission: name, status: 'granted' } }
+    stub_request(:get, meta_graph_url('me/permissions')).to_return(status: 200, headers: json, body: { data: rows }.to_json)
+  end
+
   it 'Página que já tem caixa: troca o token dela e não cria outra' do
     stub_page_token
+    stub_permissions(%w[ads_read pages_messaging pages_manage_metadata])
     channel = create(:channel_facebook_page, account: account, page_id: page_id)
     create(:inbox, account: account, channel: channel)
 
@@ -119,6 +125,21 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
 
     expect(response).to have_http_status(:ok)
     expect(channel.reload.page_access_token).to eq(page_token)
+  end
+
+  it 'Página que já tem caixa e login sem pages_messaging: 422 missing_permissions e o token da caixa fica' do
+    stub_page_token
+    stub_permissions(%w[ads_read pages_manage_metadata])
+    channel = create(:channel_facebook_page, account: account, page_id: page_id)
+    create(:inbox, account: account, channel: channel)
+    old_token = channel.page_access_token
+
+    post "#{path}/pagina", params: { page_id: page_id }, headers: admin.create_new_auth_token, as: :json
+
+    expect(response).to have_http_status(:unprocessable_entity)
+    expect(response.parsed_body['error']).to eq('missing_permissions')
+    expect(channel.reload.page_access_token).to eq(old_token)
+    expect(a_request(:get, meta_graph_url(page_id)).with(query: hash_including(fields: 'access_token'))).not_to have_been_made
   end
 
   it 'a Meta não dá o token da Página: 422 page_not_granted e nada é criado' do

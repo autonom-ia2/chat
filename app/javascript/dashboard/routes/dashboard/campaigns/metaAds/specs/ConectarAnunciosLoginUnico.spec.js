@@ -199,6 +199,26 @@ describe('Anúncios · login único (#2338)', () => {
     );
   });
 
+  it('a Page whose inbox would lose its messages keeps the inbox and asks to sign in again', async () => {
+    pagesReply([{ ...LOJA, linked: true }]);
+    CrmMetaAdsConnectionAPI.linkPage.mockRejectedValue({
+      response: { status: 422, data: { error: 'missing_permissions' } },
+    });
+    const wrapper = await mountConnect();
+    await toPageStep(wrapper);
+    await wrapper.find('[data-conectar-pagina-sim]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.attributes('data-screen')).toBe('page');
+    expect(wrapper.find('[data-conectar-pagina-erro]').text()).toContain(
+      'Faltou permitir'
+    );
+    facebook.connect.mockClear();
+    await wrapper.find('[data-conectar-pagina-permitir]').trigger('click');
+    await flushPromises();
+    expect(facebook.connect).toHaveBeenCalled();
+  });
+
   it('inbox limit of the plan says so, instead of asking to try again later', async () => {
     pagesReply([LOJA]);
     CrmMetaAdsConnectionAPI.linkPage.mockRejectedValue({

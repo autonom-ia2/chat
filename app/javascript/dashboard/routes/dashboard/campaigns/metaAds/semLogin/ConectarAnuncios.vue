@@ -410,6 +410,7 @@ const PAGE_ERRORS = {
   forbidden: 'FORBIDDEN',
   reconnect: 'RECONNECT',
   limit: 'LIMIT',
+  missing_permissions: 'MISSING_PERMISSIONS',
 };
 const confirmPage = async page => {
   savingPage.value = true;
@@ -1154,6 +1155,16 @@ onBeforeUnmount(stopRecheck);
       >
         {{ $t(`${C}.PAGE.ERROR_${pageError}`) }}
       </p>
+      <Button
+        v-if="pageError === 'MISSING_PERMISSIONS'"
+        data-conectar-pagina-permitir
+        variant="outline"
+        class="!min-h-11 self-start"
+        icon="i-ri-facebook-circle-fill"
+        :is-loading="isConnecting"
+        :label="$t(`${C}.DONE.WORKS.FIX`)"
+        @click="signIn"
+      />
       <button
         type="button"
         data-conectar-pagina-nao
@@ -1200,6 +1211,16 @@ onBeforeUnmount(stopRecheck);
       >
         {{ $t(`${C}.PAGE.ERROR_${pageError}`) }}
       </p>
+      <Button
+        v-if="pageError === 'MISSING_PERMISSIONS'"
+        data-conectar-pagina-permitir
+        variant="outline"
+        class="!min-h-11 self-start"
+        icon="i-ri-facebook-circle-fill"
+        :is-loading="isConnecting"
+        :label="$t(`${C}.DONE.WORKS.FIX`)"
+        @click="signIn"
+      />
     </template>
 
     <template v-else-if="screen === 'pageNone' || screen === 'pageWrong'">

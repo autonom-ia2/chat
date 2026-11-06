@@ -2633,6 +2633,7 @@
             "ERROR_NOT_GRANTED": "Facebook didn't share this Page. Tap \"Not this Page\", sign in again and check the Page in the Facebook window.",
             "ERROR_RECONNECT": "Your Facebook access expired. Tap \"Not this Page\" and sign in with Facebook again.",
             "ERROR_LIMIT": "Your account reached the plan's inbox limit. Ask an administrator to free up or add inboxes.",
+            "ERROR_MISSING_PERMISSIONS": "Missing permission. This Page already has an inbox, and to keep its messages working Facebook must allow Page messages. Sign in again and leave everything checked. Until then, the inbox stays as it is.",
             "ERROR_FORBIDDEN": "Only people who manage inboxes can link the Page. Ask an administrator.",
             "ERROR_FAILED": "We couldn't link the Page now. Try again in a few minutes."
           }

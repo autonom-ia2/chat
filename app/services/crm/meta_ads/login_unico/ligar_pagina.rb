@@ -15,6 +15,9 @@ class Crm::MetaAds::LoginUnico::LigarPagina
     end
   end
 
+  # O que a caixa da Página usa: mensagens do Messenger e a assinatura do webhook da Página.
+  INBOX_PERMISSIONS = %w[pages_messaging pages_manage_metadata].freeze
+
   def initialize(connection)
     @connection = connection
   end
@@ -24,19 +27,31 @@ class Crm::MetaAds::LoginUnico::LigarPagina
     Channel::FacebookPage.find_by(account_id: @connection.account_id, page_id: page_id.to_s)
   end
 
-  # Inbox da Página. Erros: `not_own_token` (modo parceiro) e os de TokenDaPagina (`page_not_granted`, `reconnect`,
-  # `meta_unavailable`).
+  # Inbox da Página. Erros: `not_own_token` (modo parceiro), `missing_permissions` (a caixa que já existe perderia o que
+  # usa) e os de TokenDaPagina (`page_not_granted`, `reconnect`, `meta_unavailable`).
   def call(page_id)
     raise Error, 'not_own_token' unless @connection.own_token?
+
+    channel = existing(page_id)
+    ensure_inbox_permissions! if channel
 
     tokens = Crm::MetaAds::LoginUnico::TokenDaPagina.new(@connection).call(page_id.to_s)
     raise Error, tokens[:error] if tokens[:error]
 
-    channel = existing(page_id)
     channel ? reauthorize(channel, tokens) : create(page_id.to_s, tokens)
   end
 
   private
+
+  # A caixa que já funciona só troca de token se este login concedeu o que ela usa. Sem isso, o Messenger dela pararia
+  # em silêncio (o login de Anúncios pode ter vindo sem as permissões da caixa). Sem a lista da Meta, não troca às cegas.
+  def ensure_inbox_permissions!
+    result = Meta::AdsGraphClient.new(access_token: @connection.read_token).permissions
+    raise Error, 'meta_unavailable' unless result.ok
+
+    granted = Array(result.data.to_h['data']).filter_map { |row| row['permission'] if row.is_a?(Hash) && row['status'] == 'granted' }
+    raise Error, 'missing_permissions' unless (INBOX_PERMISSIONS - granted).empty?
+  end
 
   # Tokens, nome e Instagram num só save; o alerta de reautorização (Redis e evento) sai só depois dele gravado.
   def reauthorize(channel, tokens)

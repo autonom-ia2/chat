@@ -2634,6 +2634,7 @@
             "ERROR_NOT_GRANTED": "O Facebook não liberou esta Página. Toque em \"Não é esta Página\", entre de novo e marque a Página na janela do Facebook.",
             "ERROR_RECONNECT": "O acesso ao Facebook venceu. Toque em \"Não é esta Página\" e entre de novo com o Facebook.",
             "ERROR_LIMIT": "Sua conta chegou ao limite de caixas de entrada do plano. Peça a um administrador para liberar ou aumentar.",
+            "ERROR_MISSING_PERMISSIONS": "Faltou permitir. Esta Página já tem caixa de entrada e, para as mensagens dela continuarem chegando, o Facebook precisa liberar as mensagens da Página. Entre de novo e deixe tudo marcado. Até lá, a caixa continua como está.",
             "ERROR_FORBIDDEN": "Só quem cuida das caixas de entrada pode ligar a Página. Peça a um administrador.",
             "ERROR_FAILED": "Não conseguimos ligar a Página agora. Tente de novo em alguns minutos."
           }
