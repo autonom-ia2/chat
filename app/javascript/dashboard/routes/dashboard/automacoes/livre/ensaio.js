@@ -2,6 +2,8 @@
 // ({ id, tipo, faria, dados, ramos }). Quem abre caminhos (o "esperar até" que
 // ainda não vale e o "decidir" da IA) põe um rótulo por caminho e os passos
 // dele um nível adentro. A frase de cada passo é a do editor (`fraseDe`).
+import { formatAttributeDate } from 'dashboard/helper/attributeDate';
+
 const E = 'AUTOMACAO_LIVRE.ENSAIO';
 
 const AVISO = {
@@ -9,6 +11,23 @@ const AVISO = {
   faltou_valor: 'FALTOU_VALOR',
   texto_vazio: 'TEXTO_VAZIO',
 };
+
+// #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o
+// "hoje" de agora), ou por que pularia, como o motor.
+const AVISO_DA_ACAO = {
+  faltou_valor: 'ACAO_FALTOU_VALOR',
+  data_invalida: 'DATA_INVALIDA',
+  valor_fora_do_formato: 'VALOR_FORA_DO_FORMATO',
+};
+const gravaria = (calculados, t) =>
+  t(`${E}.FARIA.GRAVARIA`, {
+    lista: calculados
+      .map(
+        item =>
+          `${item.campo}: ${formatAttributeDate(item.valor) || item.valor}`
+      )
+      .join('; '),
+  });
 
 // #2500 F7 — os passos de IA no ensaio: o que a IA faria e para onde iria,
 // sem chamar a IA (o servidor manda só o que a receita diz).
@@ -52,7 +71,11 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
     };
   if (no.faria === 'esperar_ate_ja_vale')
     return { ...base, destaque: t(`${E}.JA_VALE`) };
+  if (no.tipo === 'acao' && AVISO_DA_ACAO[no.faria])
+    return { ...base, aviso: t(`${E}.${AVISO_DA_ACAO[no.faria]}`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  if (no.dados?.calculados?.length)
+    return { ...base, destaque: gravaria(no.dados.calculados, t) };
   if (FARIA_DA_IA[no.faria])
     return { ...base, destaque: FARIA_DA_IA[no.faria](no.dados || {}, t) };
   // F4b: com modelo, a tela diz o que sai se a janela de 24 h estiver fechada.
