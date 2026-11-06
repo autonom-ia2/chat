@@ -275,6 +275,23 @@ describe('recursosDoLogin', () => {
     ]);
   });
 
+  it('leaves out what the login did not ask for, keeps Instagram and flags what was unticked', () => {
+    const page = { id: '1', instagram: { username: 'loja' } };
+    const itens = recursosDoLogin({
+      page,
+      granted: ['ads_read', 'ads_management', 'pages_manage_engagement'],
+      declined: ['read_insights'],
+    });
+    expect(itens).toEqual([
+      { chave: 'SPEND', falta: null },
+      { chave: 'CREATE', falta: null },
+      { chave: 'COMMENTS_FACEBOOK', falta: null },
+      { chave: 'POSTS', falta: 'PERMISSION' },
+      { chave: 'COMMENTS_INSTAGRAM', falta: 'INSTAGRAM_TAP' },
+      { chave: 'MESSAGES_INSTAGRAM', falta: 'INSTAGRAM_TAP' },
+    ]);
+  });
+
   it('a Page without Instagram says Instagram is missing, not a tap away', () => {
     const page = { id: '1', instagram: null };
     const instagram = recursosDoLogin({ page }).filter(item =>

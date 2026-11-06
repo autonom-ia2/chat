@@ -80,6 +80,7 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
           'instagram' => nil, 'linked' => true }
       ]
     )
+    expect(response.parsed_body['granted_permissions']).to eq(['ads_read'])
     expect(response.parsed_body['declined_permissions']).to eq(['read_insights'])
   end
 
@@ -88,7 +89,7 @@ RSpec.describe 'CRM meta_ads_connection página do login único (#2338)', type: 
 
     get "#{path}/paginas", headers: admin.create_new_auth_token, as: :json
 
-    expect(response.parsed_body).to eq('pages' => [], 'declined_permissions' => [])
+    expect(response.parsed_body).to eq('pages' => [], 'granted_permissions' => [], 'declined_permissions' => [])
     expect(a_request(:any, /graph\.facebook\.com/)).not_to have_been_made
   end
 

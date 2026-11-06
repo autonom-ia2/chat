@@ -165,6 +165,7 @@ const linkDialog = ref(null);
 // entrar de novo e marcar, ou seguir sem.
 const pages = ref([]);
 const pagesFailed = ref(false);
+const granted = ref([]);
 const declined = ref([]);
 const chosenPage = ref(null);
 const pageChoice = ref('');
@@ -178,7 +179,11 @@ const pageChoices = computed(() =>
   }))
 );
 const works = computed(() =>
-  recursosDoLogin({ page: chosenPage.value, declined: declined.value })
+  recursosDoLogin({
+    page: chosenPage.value,
+    granted: granted.value,
+    declined: declined.value,
+  })
 );
 const worksMissingPermission = computed(() =>
   works.value.some(item => item.falta === 'PERMISSION')
@@ -381,6 +386,7 @@ const loadPages = async () => {
   try {
     const { data } = await CrmMetaAdsConnectionAPI.loginPages();
     pages.value = data.pages || [];
+    granted.value = data.granted_permissions || [];
     declined.value = data.declined_permissions || [];
     pagesFailed.value = false;
   } catch {

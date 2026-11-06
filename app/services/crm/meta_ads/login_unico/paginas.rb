@@ -2,20 +2,21 @@
 #
 # Só com o token do próprio cliente: no modo `partner` o token é o da plataforma, e `me/accounts` traria Páginas da
 # plataforma (ou de outros clientes) para esta conta (o mesmo cuidado do Crm::MetaAds::AdManagement#pages).
-# `linked`: a Página já tem caixa nesta conta. `declined_permissions`: o que a pessoa recusou na janela da Meta.
+# `linked`: a Página já tem caixa nesta conta. `granted_permissions`: o que a Meta concedeu; `declined_permissions`: o
+# que a pessoa desmarcou na janela. O que não está em nenhuma das duas a configuração do login não pediu.
 class Crm::MetaAds::LoginUnico::Paginas
   def initialize(connection)
     @connection = connection
   end
 
-  # { pages: [...], declined_permissions: [...] }, ou nil quando a Meta não respondeu.
+  # { pages: [...], granted_permissions: [...], declined_permissions: [...] }, ou nil quando a Meta não respondeu.
   def call
-    return { pages: [], declined_permissions: [] } unless @connection.own_token?
+    return { pages: [], granted_permissions: [], declined_permissions: [] } unless @connection.own_token?
 
     result = client.login_pages
     return unless result.ok
 
-    { pages: pages(Array(result.data['data'])), declined_permissions: declined }
+    { pages: pages(Array(result.data['data'])), **permissions }
   end
 
   private
@@ -41,10 +42,13 @@ class Crm::MetaAds::LoginUnico::Paginas
   end
 
   # Sem a lista de permissões o passo segue: a Página vale do mesmo jeito, só não dá para dizer o que faltou.
-  def declined
+  def permissions
     result = client.permissions
-    return [] unless result.ok
+    rows = result.ok ? Array(result.data['data']).select { |row| row.is_a?(Hash) } : []
+    { granted_permissions: names(rows, 'granted'), declined_permissions: names(rows, 'declined') }
+  end
 
-    Array(result.data['data']).filter_map { |row| row['permission'] if row.is_a?(Hash) && row['status'] == 'declined' }
+  def names(rows, status)
+    rows.filter_map { |row| row['permission'] if row['status'] == status }
   end
 end
