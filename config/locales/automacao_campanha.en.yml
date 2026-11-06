@@ -13,6 +13,7 @@ en:
         campanha_modelo_nao_aprovado: "The chosen template isn't approved by Meta in this inbox. The campaign was not created."
         campanha_modelo_de_categoria_fora: 'The chosen template is not a utility or marketing template. The campaign was not created.'
         campanha_modelo_mudou: "The template asks for different variables than the step's. Choose the template again. The campaign was not created."
+        campanha_variavel_vazia: "A template variable has no text. Write the fixed text of each variable. The campaign was not created."
         sem_contato: 'There is no contact here to mark.'
         contato_ja_nao_recebe: 'The contact was already marked as not receiving messages.'
       receita:

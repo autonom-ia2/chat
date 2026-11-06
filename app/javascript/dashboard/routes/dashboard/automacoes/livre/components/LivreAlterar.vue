@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useMapGetter } from 'dashboard/composables/store';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -170,6 +171,7 @@ const vazio = valor =>
   valor === null ||
   valor === '' ||
   (Array.isArray(valor) && !valor.length);
+const caixasDaConta = useMapGetter('inboxes/getInboxes');
 const nativoPronto = campo => {
   const valor = rascunho.value[campo.nome];
   if (campo.peca === 'duracao') return Number.isInteger(valor?.valor);
@@ -188,7 +190,8 @@ const nativoPronto = campo => {
       )
     );
   // G14: a peça da campanha mostra e confere o passo inteiro.
-  if (campo.peca === 'campanha') return campanhaPronta(rascunho.value);
+  if (campo.peca === 'campanha')
+    return campanhaPronta(rascunho.value, caixasDaConta.value);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length

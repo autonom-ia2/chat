@@ -38,9 +38,8 @@ class Autonomia::Automacao::PassoDeCampanha
 
   def self.problemas_do_disparo(passo, conta, gatilho, account_user)
     id = passo['id']
-    fixas = Array(passo.dig('modelo', 'variaveis')).flatten.all?(String)
     lista = [*(frase(:campanha_so_sem_alvo, passo: id) unless gatilho_sem_alvo?(gatilho)),
-             *(frase(:campanha_variavel_fixa, passo: id) unless fixas)]
+             *(frase(:campanha_variavel_fixa, passo: id) unless variaveis_escritas?(passo['modelo']))]
     return lista if conta.nil?
 
     lista + problemas_de_acesso(passo['id'], conta, account_user) + problemas_da_campanha(passo, conta)
@@ -59,6 +58,15 @@ class Autonomia::Automacao::PassoDeCampanha
     [*(frase(:campanha_sem_caixa, passo: id) if caixa.nil?),
      *(frase(:campanha_modelo, passo: id, nome: passo.dig('modelo', 'nome')) if modelo.is_a?(String)),
      *etiquetas.map { |etiqueta| frase(:campanha_etiqueta_de_fora, passo: id, id: etiqueta) }]
+  end
+
+  # Cada variável com texto fixo de verdade: a campanha vai para muita gente (sem dado do contato), e só espaço
+  # mandaria o parâmetro vazio para todo o público.
+  def self.variaveis_escritas?(modelo)
+    Array(modelo&.dig('variaveis')).all? do |partes|
+      lista = Array(partes)
+      lista.all?(String) && lista.join.split.any?
+    end
   end
 
   def self.frase(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
@@ -121,6 +129,7 @@ class Autonomia::Automacao::PassoDeCampanha
     caixa = self.class.caixa_da_campanha(@conta, @passo['caixa_id'])
     return pulado('campanha_sem_caixa') if caixa.nil?
     return pulado('campanha_desligada') unless @conta.feature_enabled?(FLAG_DA_CAMPANHA)
+    return pulado('campanha_variavel_vazia') unless self.class.variaveis_escritas?(@passo['modelo'])
 
     template_params = self.class.modelo_pronto(caixa, @passo['modelo'])
     return pulado("campanha_#{template_params}") if template_params.is_a?(String)

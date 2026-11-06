@@ -41,13 +41,26 @@ export const comFaz = (passo, faz) =>
 
 const escrito = texto => typeof texto === 'string' && texto.trim() !== '';
 
-export const campanhaPronta = passo => {
+// A caixa e o modelo contra o que a tela mostra: modelo que sumiu da caixa (ou
+// caixa que deixou de ser oficial) não salva, como o servidor recusaria.
+const modeloNaTela = (passo, caixas) => {
+  const caixa = caixasDaCampanha(caixas).find(
+    item => item.id === passo.caixa_id
+  );
+  const chave = `${passo.modelo?.nome}|${passo.modelo?.idioma}`;
+  return modelosDaCaixa(caixa).some(
+    modelo => `${modelo.name}|${modelo.language}` === chave
+  );
+};
+
+export const campanhaPronta = (passo, caixas) => {
   if (passo?.faz === 'nao_receber') return true;
   if (passo?.faz !== 'disparar') return false;
   return (
     escrito(passo.titulo) &&
     Number.isInteger(passo.caixa_id) &&
     Boolean(passo.modelo?.nome) &&
+    modeloNaTela(passo, caixas) &&
     (passo.modelo.variaveis || []).every(partes =>
       (partes || []).some(escrito)
     ) &&

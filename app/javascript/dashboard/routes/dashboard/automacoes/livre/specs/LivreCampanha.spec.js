@@ -67,18 +67,25 @@ describe('campanha.js', () => {
   });
 
   it('pronta só com nome, caixa, modelo com texto em cada variável e etiqueta', () => {
-    expect(campanhaPronta(PRONTA)).toBe(true);
-    expect(campanhaPronta({ ...PRONTA, titulo: '  ' })).toBe(false);
-    expect(campanhaPronta({ ...PRONTA, etiquetas: [] })).toBe(false);
+    expect(campanhaPronta(PRONTA, CAIXAS)).toBe(true);
+    expect(campanhaPronta({ ...PRONTA, titulo: '  ' }, CAIXAS)).toBe(false);
+    expect(campanhaPronta({ ...PRONTA, etiquetas: [] }, CAIXAS)).toBe(false);
     expect(
-      campanhaPronta({
-        ...PRONTA,
-        modelo: { ...PRONTA.modelo, variaveis: [[]] },
-      })
+      campanhaPronta(
+        { ...PRONTA, modelo: { ...PRONTA.modelo, variaveis: [[]] } },
+        CAIXAS
+      )
     ).toBe(false);
     expect(
       campanhaPronta({ id: 'n1', tipo: 'campanha', faz: 'nao_receber' })
     ).toBe(true);
+  });
+
+  it('modelo que sumiu da caixa, ou caixa que não é a oficial, não salva', () => {
+    const sumiu = { ...PRONTA, modelo: { ...PRONTA.modelo, nome: 'antigo' } };
+    expect(campanhaPronta(sumiu, CAIXAS)).toBe(false);
+    expect(campanhaPronta({ ...PRONTA, caixa_id: 4 }, CAIXAS)).toBe(false);
+    expect(campanhaPronta(PRONTA, [])).toBe(false);
   });
 
   it('voltar para "não receber" tira os campos do disparo', () => {

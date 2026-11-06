@@ -76,6 +76,12 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
         expect(problemas(passo)).to include(frase(:campanha_variavel_fixa))
       end
 
+      it 'recusa variável só com espaço: o parâmetro iria vazio para todo o público' do
+        passo = disparar.deep_merge('modelo' => { 'variaveis' => [['   ']] })
+
+        expect(problemas(passo)).to include(frase(:campanha_variavel_fixa))
+      end
+
       it 'recusa caixa que não é do WhatsApp oficial, etiqueta de outra conta e modelo que a caixa não tem' do
         outra = create(:label)
         passo = disparar.merge('caixa_id' => create(:inbox, account: account).id, 'etiquetas' => [etiqueta.id, outra.id])
@@ -162,6 +168,15 @@ RSpec.describe Autonomia::Automacao::PassoDeCampanha, :automacao_motor do
       resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: disparar, alvo: nil).executar
 
       expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'campanha_modelo_nao_aprovado'])
+    end
+
+    it 'variável só com espaço que chegar assim mesmo pula, sem criar campanha' do
+      passo = disparar.deep_merge('modelo' => { 'variaveis' => [['   ']] })
+
+      resultado = described_class.new(execucao: execucao_de([nao_receber]), passo: passo, alvo: nil).executar
+
+      expect([resultado.tipo, resultado.motivo]).to eq([:pulado, 'campanha_variavel_vazia'])
+      expect(account.campaigns).to be_empty
     end
   end
 
