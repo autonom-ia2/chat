@@ -189,6 +189,27 @@ describe('linhasDoEnsaio', () => {
     expect(linha.balao).toBeUndefined();
   });
 
+  it('o e-mail mostra só o assunto montado, a caixa e o texto no balão', () => {
+    const [linha] = linhasDoEnsaio(
+      [
+        {
+          id: 'e1',
+          tipo: 'email',
+          faria: 'email',
+          dados: { assunto: 'Oi, Carla', caixa: 'Atendimento', texto: 'Saiu.' },
+        },
+      ],
+      fraseDe,
+      t
+    );
+
+    expect(linha).toMatchObject({
+      texto: 'AUTOMACAO_LIVRE.FRASES.EMAIL(Oi, Carla)',
+      destaque: 'AUTOMACAO_LIVRE.ENSAIO.EMAIL(Atendimento)',
+      balao: 'Saiu.',
+    });
+  });
+
   it('o "decidir" rotula cada caminho e o "nenhum"', () => {
     const linhas = linhasDoEnsaio(
       [

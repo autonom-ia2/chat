@@ -2818,19 +2818,25 @@
               "LINE": "Até ontem, a Meta diz {meta} conversa iniciada pelo WhatsApp; nós contamos {ours}. | Até ontem, a Meta diz {meta} conversas iniciadas pelo WhatsApp; nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
               "META_HIGHER": "A Meta também conta quem já conversava com você; conversa encaminhada ou de contato salvo chega sem origem para nós.",
-              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
+              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique.",
+              "OURS_NONE": "A Meta contou {meta} conversa, mas nenhuma chegou aqui marcada como vinda dos seus anúncios. | A Meta contou {meta} conversas, mas nenhuma chegou aqui marcada como vinda dos seus anúncios.",
+              "META_NONE": "Cada um conta de um jeito. O número que vale é o nosso: são as conversas que chegaram aqui."
             },
             "MESSAGING": {
               "LINE": "Até ontem, a Meta diz {meta} conversa iniciada pelo Messenger e pelo Direct do Instagram; nós contamos {ours}. | Até ontem, a Meta diz {meta} conversas iniciadas pelo Messenger e pelo Direct do Instagram; nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
               "META_HIGHER": "A Meta também conta quem já conversava com você; conversa que não veio pelo clique no anúncio chega sem origem para nós.",
-              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique."
+              "OURS_HIGHER": "Contamos toda conversa que chegou pelo anúncio, inclusive de quem clicou antes e voltou; a Meta só conta até 7 dias depois do clique.",
+              "OURS_NONE": "A Meta contou {meta} conversa, mas nenhuma chegou aqui marcada como vinda dos seus anúncios. | A Meta contou {meta} conversas, mas nenhuma chegou aqui marcada como vinda dos seus anúncios.",
+              "META_NONE": "Cada um conta de um jeito. O número que vale é o nosso: são as conversas que chegaram aqui."
             },
             "SITE": {
               "LINE": "Até ontem, a Meta diz {meta} contato pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}. | Até ontem, a Meta diz {meta} contatos pelo site (visitas à página: {visits}); pelo botão do site, nós contamos {ours}.",
               "CLOSE": "Os dois números batem.",
               "META_HIGHER": "A Meta conta quem deixou contato no site; nem todo mundo clica depois para conversar no WhatsApp.",
-              "OURS_HIGHER": "Contamos toda conversa que veio pelo botão do site, mesmo de quem não deixou contato lá."
+              "OURS_HIGHER": "Contamos toda conversa que veio pelo botão do site, mesmo de quem não deixou contato lá.",
+              "OURS_NONE": "A Meta contou {meta} contato deixado no site, mas nenhum chegou aqui como conversa pelo botão do site. | A Meta contou {meta} contatos deixados no site, mas nenhum chegou aqui como conversa pelo botão do site.",
+              "META_NONE": "Cada um conta de um jeito. O número que vale é o nosso: são as conversas que chegaram aqui pelo botão do site."
             },
             "NO_META_DATA": "A Meta ainda não mandou o número deste período."
           }
@@ -3035,11 +3041,14 @@
         "RETURN": "Cada R$ 1 investido voltou {value}",
         "OPEN_QUOTES": "Vendas chegando: 1 proposta aberta | Vendas chegando: {count} propostas abertas",
         "ADS_TITLE": "Seus anúncios, por venda",
+        "ADS_ALL_TITLE": "Seus anúncios",
         "ADS_EMPTY": "Assim que um anúncio gastar ou trouxer conversa, ele aparece aqui.",
         "AD_NO_NAME": "Anúncio sem nome",
         "OPEN_AD": "Ver por dentro",
         "OPEN_AD_LABEL": "Ver por dentro o anúncio {name}",
         "AD_QUOTES": "1 proposta aberta | {count} propostas abertas",
+        "AD_PRIVATE": "1 conversa pelo privado | {count} conversas pelo privado",
+        "AD_DESTINATION_PRIVATE": "{destination} · {private}",
         "VERDICT": {
           "UP": "Aumentar · base suficiente",
           "KEEP": "Manter",
@@ -3061,7 +3070,13 @@
         "AD_STATS": {
           "SPEND": "Investido",
           "CONVERSATIONS": "Conversas",
-          "SALES": "Vendas"
+          "SALES": "Vendas",
+          "RESULT_PROFILE": "Toques para ver seu perfil",
+          "RESULT_WEBSITE": "Cliques para o site",
+          "RESULT_LEADS": "Cadastros",
+          "RESULT_ENGAGEMENT": "Interações com a publicação",
+          "RESULT_SHOWN": "Vezes que apareceu",
+          "RESULT_CLICKS": "Cliques"
         },
         "DURATION": {
           "SECONDS": "menos de 1 min",
@@ -3115,18 +3130,7 @@
           "NOTE": "Conecte sua conta de anúncios para ver",
           "CTA": "Ver quanto gastei"
         },
-        "ADS_WHATSAPP_TITLE": "Anúncios que trazem conversa",
         "OTHER_ADS": {
-          "TITLE": "Outros anúncios",
-          "TOTAL": "{value} investidos",
-          "HINT": "Não abrem conversa direto: levam ao perfil, a uma publicação, a um formulário ou ao site. Quem chamar você depois não fica ligado a eles. Ficam fora do custo por conversa e por venda.",
-          "SPEND": "Investido",
-          "CLICKS": "Cliques",
-          "SHOWN": "Apareceu",
-          "ENGAGEMENT": "Engajamento",
-          "COMMENTS": "Comentários",
-          "LEADS": "Cadastros",
-          "PRIVATE": "Conversas pelo privado",
           "DESTINATIONS": {
             "PROFILE": "Leva ao seu perfil",
             "POST": "Leva a uma publicação ou vídeo",
@@ -3348,6 +3352,7 @@
           "SALES": "Vendas",
           "CONVERSATIONS": "Conversas",
           "CLICKS": "Cliques",
+          "PROFILE": "Toques para ver seu perfil",
           "ENGAGEMENT": "Engajamento",
           "COMMENTS": "Comentários",
           "LEADS": "Cadastros",
@@ -3596,9 +3601,30 @@
           "POST": "Impulsionar um post",
           "POST_HINT": "Mostra para mais gente um post que você já publicou no Instagram ou no Facebook."
         },
+        "GOAL": {
+          "TITLE": "Quando a pessoa tocar no anúncio, para onde ela vai?",
+          "HINT": "Escolha o que você quer que aconteça. O canal da conversa dá para trocar depois.",
+          "OPTIONS": {
+            "CONVERSATION": "Conversar comigo",
+            "WEBSITE": "Meu site",
+            "PROFILE": "Meu perfil do Instagram"
+          },
+          "WHEN": {
+            "CONVERSATION": "Use para receber mensagens e vender na conversa: WhatsApp, Direct ou Messenger.",
+            "WEBSITE": "Use para mostrar detalhes ou vender na sua página.",
+            "PROFILE": "Use para ganhar seguidores."
+          },
+          "REASONS": {
+            "NO_INSTAGRAM": "Ligue uma conta profissional do Instagram à Página para usar."
+          }
+        },
         "WHERE": {
           "TITLE": "Página e número do WhatsApp",
           "HINT": "O anúncio aparece em nome da Página e abre conversa com este número.",
+          "TITLE_PAGE": "Página do Facebook",
+          "HINT_PAGE": "O anúncio aparece em nome desta Página.",
+          "TITLE_NUMBER": "Número do WhatsApp",
+          "HINT_NUMBER": "Quem tocar no anúncio abre conversa com este número.",
           "PAGE": "Página do Facebook",
           "NUMBER": "Número do WhatsApp",
           "CHOOSE": "Escolha"
@@ -3606,6 +3632,7 @@
         "CONTENT": {
           "TITLE": "Foto ou vídeo e texto",
           "HINT": "Instagram e Facebook. A Meta escolhe onde mostrar: feed, Stories ou Reels.",
+          "HINT_PROFILE": "Só no Instagram: feed, Stories e Reels. Quem tocar vai para o seu perfil.",
           "TEXT": "Texto",
           "TEXT_PLACEHOLDER": "Conte numa frase o que você oferece",
           "HEADLINE": "Título",
@@ -3624,7 +3651,8 @@
             "WHATSAPP": "{offer}. Chame no WhatsApp e faça seu pedido.",
             "INSTAGRAM_DIRECT": "{offer}. Chame no Direct e faça seu pedido.",
             "MESSENGER": "{offer}. Chame no Messenger e faça seu pedido.",
-            "WEBSITE": "{offer}. Veja no site e faça seu pedido."
+            "WEBSITE": "{offer}. Veja no site e faça seu pedido.",
+            "INSTAGRAM_PROFILE": "{offer}. Siga nosso perfil e veja mais."
           },
           "NEED_SITE": "Digite o endereço do site para continuar.",
           "NEED_INSTAGRAM": "Esta Página não tem Instagram ligado. Escolha outro destino para continuar.",
@@ -3640,6 +3668,8 @@
           "YES": "Sim",
           "NO": "Não",
           "SPECIAL_HINT": "A Meta pede que anúncios assim sejam marcados. A idade fica de 18 a 65+ e não dá para escolher gênero.",
+          "SPECIAL_PROFILE": "A Meta não aceita anúncio que leva ao perfil quando ele fala de seguro, crédito, empréstimo ou investimento. Para anunciar isso, escolha conversar com você ou o seu site.",
+          "CHANGE_GOAL": "Escolher outro destino",
           "WHERE": "Onde",
           "ALL_BRAZIL": "Brasil todo",
           "SOME_STATES": "Alguns estados",
@@ -3689,7 +3719,8 @@
             "WHATSAPP": "Anúncio novo que chama no WhatsApp ({number})",
             "INSTAGRAM_DIRECT": "Anúncio novo que chama no Direct do Instagram ({'@'}{username})",
             "MESSENGER": "Anúncio novo que chama no Messenger",
-            "WEBSITE": "Anúncio novo que leva ao site ({url})"
+            "WEBSITE": "Anúncio novo que leva ao site ({url})",
+            "INSTAGRAM_PROFILE": "Anúncio novo que leva ao seu perfil do Instagram ({'@'}{username})"
           },
           "WHAT_CAROUSEL": "Carrossel com {count} cartões",
           "TAP": {
@@ -3699,7 +3730,8 @@
             "WEBSITE": "Quem toca abre o seu site.",
             "POST_FACEBOOK": "Quem toca vê o post na sua Página.",
             "POST_INSTAGRAM_WHATSAPP": "Quem toca no botão começa uma conversa com você no WhatsApp.",
-            "POST_INSTAGRAM": "Quem toca vê o post no Instagram."
+            "POST_INSTAGRAM": "Quem toca vê o post no Instagram.",
+            "INSTAGRAM_PROFILE": "Quem toca vai para o seu perfil e pode seguir você. Não abre conversa."
           },
           "DEFAULT_NAME_AD": "{where} · {date}",
           "DEFAULT_NAME_POST": "Post impulsionado · {date}",
@@ -3760,17 +3792,20 @@
           "CHANGE": "Trocar",
           "CURRENT_WHATSAPP": "WhatsApp ({phone})",
           "CURRENT_INSTAGRAM_DIRECT": "Direct do Instagram ({'@'}{username})",
+          "CURRENT_INSTAGRAM_PROFILE": "Seu perfil do Instagram ({'@'}{username})",
           "OPTIONS": {
             "WHATSAPP": "WhatsApp",
             "INSTAGRAM_DIRECT": "Direct do Instagram",
             "MESSENGER": "Messenger",
-            "WEBSITE": "Seu site"
+            "WEBSITE": "Seu site",
+            "INSTAGRAM_PROFILE": "Seu perfil do Instagram"
           },
           "HINTS": {
             "WHATSAPP": "Abre conversa com o seu número.",
             "INSTAGRAM_DIRECT": "Abre conversa no Direct de {'@'}{username}.",
             "MESSENGER": "Abre conversa com a sua Página no Messenger.",
-            "WEBSITE": "Leva para o endereço que você escolher."
+            "WEBSITE": "Leva para o endereço que você escolher.",
+            "INSTAGRAM_PROFILE": "Leva ao perfil {'@'}{username}."
           },
           "REASONS": {
             "NO_NUMBER": "Conecte um número de WhatsApp para usar.",
@@ -3783,13 +3818,15 @@
           "SITE_ACTION": "Texto do botão",
           "ACTIONS": {
             "LEARN_MORE": "Saiba mais",
-            "SHOP_NOW": "Comprar"
+            "SHOP_NOW": "Comprar",
+            "INSTAGRAM_PROFILE": "Ver perfil do Instagram"
           },
           "SHORT": {
             "WHATSAPP": "WhatsApp",
             "INSTAGRAM_DIRECT": "Direct",
             "MESSENGER": "Messenger",
-            "WEBSITE": "Site"
+            "WEBSITE": "Site",
+            "INSTAGRAM_PROFILE": "Perfil"
           }
         },
         "PLACEMENT": {
@@ -3817,6 +3854,7 @@
           "INVALID_WHATSAPP_NUMBER": "Esse número de WhatsApp não é desta conta. Escolha outro.",
           "INVALID_PAGE": "A Página do Facebook não está liberada para a plataforma. Entre de novo com o Facebook na Conexão.",
           "INVALID_INSTAGRAM": "Esta Página não tem conta profissional do Instagram ligada. Ligue uma ou escolha outro destino.",
+          "SPECIAL_CATEGORY_PROFILE": "A Meta não aceita anúncio que leva ao perfil quando ele fala de seguro, crédito, empréstimo ou investimento. Escolha outro destino.",
           "INVALID_MEDIA": "A Meta não aceitou a foto ou o vídeo. Escolha de novo.",
           "INVALID_AUDIENCE": "O público não vale. Confira os estados e a idade.",
           "VIDEO_PROCESSING": "A Meta ainda está preparando o vídeo. Tente de novo em um minuto.",

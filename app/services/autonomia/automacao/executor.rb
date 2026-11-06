@@ -29,7 +29,8 @@ class Autonomia::Automacao::Executor
   Cadeia = ::Autonomia::Automacao::Cadeia
   Execucao = ::Autonomia::Automacao::Execucao
   # Passos que falam com gente (F4): só com a flag da F4.
-  NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso }.freeze
+  NATIVOS = { 'mensagem' => ::Autonomia::Automacao::PassoDeMensagem, 'avisar' => ::Autonomia::Automacao::PassoDeAviso,
+              'email' => ::Autonomia::Automacao::PassoDeEmail }.freeze
   # Os passos de IA (F7, #2500); com eles vem a parada fora da janela (F4.4, #2573), que vale também para a mensagem.
   include ::Autonomia::Automacao::IaNoExecutor
 
@@ -140,8 +141,7 @@ class Autonomia::Automacao::Executor
     @definicao.reload
     @account.reload
     @acesso = ::Autonomia::Automacao::Acesso.new(@definicao, chave_gatilho: @execucao.chave_gatilho)
-    @alvo = nil
-    @contexto = nil
+    @alvo = @contexto = nil
   end
 
   def esperar(passo)
@@ -186,9 +186,10 @@ class Autonomia::Automacao::Executor
     end
   end
 
-  # "mensagem" e "avisar" (F4), e o "Passar para a agente de IA" (G15, `mensagem: false`). Reconferem tudo como a ação
-  # e, se mandam mensagem, sem a flag da F4 fecham sem mandar nada (rollback). Não repetem: a mensagem que deu erro no
-  # meio não é mandada de novo, porque o cliente poderia recebê-la duas vezes; a troca de dono pode já ter acontecido.
+  # "mensagem", "avisar" (F4), "email" (G2) e o "Passar para a agente de IA" (G15, `mensagem: false`). Reconferem tudo
+  # como a ação e, se mandam mensagem, sem a flag da F4 fecham sem mandar nada (rollback). Não repetem: a mensagem que
+  # deu erro no meio não é mandada de novo, porque o cliente poderia recebê-la duas vezes; a troca de dono pode já ter
+  # acontecido.
   def passo_nativo(passo, classe, mensagem: true)
     reconferir
     return if impedida?(passo['id'])
@@ -268,7 +269,7 @@ class Autonomia::Automacao::Executor
   def alvo = (@alvo ||= @execucao.alvo_type.constantize.find_by(id: @execucao.alvo_id))
 
   # As pontes do alvo (#2499): conversa, card ou contato, e os outros dois quando há caminho.
-  def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(alvo))
+  def contexto = (@contexto ||= ::Autonomia::Automacao::Contexto.de(alvo, execucao: @execucao))
 
   # Com as permissões de quem ligou (#2597); no "esperar até", com a janela da espera (G11).
   def valores(espera: nil) = ::Autonomia::Automacao::Valores.new(alvo: contexto, quem: @definicao.ligada_por, espera: espera)

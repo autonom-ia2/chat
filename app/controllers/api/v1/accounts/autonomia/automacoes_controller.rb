@@ -142,7 +142,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   # card (#2499) também pede a chave.
   def sem_funil?(receita)
     return false unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
-    return false if ::Autonomia::Automacao::RegraDoFunil::CHAVES.any? { |chave| Current.account_user.permission_granted?(chave) }
+    return false if ::Autonomia::Automacao::RegraDoFunil.chave?(Current.account_user)
 
     de_funil?(receita)
   end
@@ -151,7 +151,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     return true if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
 
     ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).passos.any? do |passo|
-      passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.recurso_de(passo['acao']).to_s.start_with?('crm/')
+      passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.de_funil?(passo['acao'])
     end
   end
 

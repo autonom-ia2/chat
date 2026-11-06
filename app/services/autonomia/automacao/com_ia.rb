@@ -34,7 +34,7 @@ module Autonomia::Automacao::ComIa
   end
 
   # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores. Quem saiu da
-  # conta não lê.
+  # conta não lê. O anúncio de origem (#2558) nunca vai: todo passo de IA escreve texto livre (nota, mensagem, resumo).
   def ve_o_valor_do_card?
     quem = @execucao.automacao.ligada_por
     na_conta = quem && @conversa.account.account_users.find_by(user_id: quem.id)

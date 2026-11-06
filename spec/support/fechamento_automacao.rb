@@ -128,6 +128,20 @@ module FechamentoAutomacao::Lacunas
   def acao?(acao) = Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
   def valor?(caminho) = Autonomia::Automacao::Valores.caminho_valido?(caminho)
 
+  # G16: o corpo de uma ação aceita valor calculado. O esquema da receita deixa a data calculada no corpo, e o motor a
+  # monta na hora: hoje + 6 meses sai como "AAAA-MM-DD", no fuso da conta.
+  def valor_calculado_no_corpo?
+    data = { '$data' => { 'de' => 'hoje', 'mais' => { 'valor' => 6, 'unidade' => 'meses' } } }
+    corpo = { 'merge' => true, 'custom_attributes' => { 'revisao' => data } }
+    passo = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
+              'caminho' => { 'id' => { '$valor' => 'conversa.id' } }, 'corpo' => corpo }
+    receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }
+    conta = Account.new(custom_attributes: { 'timezone' => 'UTC' })
+    montado = Autonomia::Automacao::Corpo.new(corpo, valores: nil, conta: conta).montar
+    Autonomia::Automacao::Receita.esquema_valido?(receita) &&
+      montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
+  end
+
   SONDAS = {
     # O modelo aprovado entrou como campo do passo "mensagem" (F4b, #2468/#2586), não como passo próprio.
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
@@ -142,7 +156,7 @@ module FechamentoAutomacao::Lacunas
     'G10' => -> { gatilho?('etiqueta.posta', 'conversa.etiqueta_posta', 'contato.etiqueta_posta') },
     'G11' => -> { valor?('conversa.equipe_respondeu') && valor?('conversa.cliente_respondeu') },
     'G12' => lambda {
-      gatilho?('reuniao.marcada') && gatilho?('reuniao.cancelada') &&
+      gatilho?('card.reuniao_marcada') && gatilho?('card.reuniao_cancelada') &&
         %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
     },
     'G13' => -> { passo?('webhook') },
@@ -151,7 +165,7 @@ module FechamentoAutomacao::Lacunas
     # caminho (G15, D1): o passo próprio "ia_assumir", que passa pela Atribuição do CRM, e não `assignee_type` no
     # atribuir, que a lista agora proíbe. "Tirar" é atribuir de volta à pessoa ou ao time, que o passo já faz.
     'G15' => -> { passo?('ia_assumir') },
-    'G16' => nil,
+    'G16' => -> { valor_calculado_no_corpo? },
     'G17' => -> { acao?('POST contacts') },
     'G18' => nil,
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },

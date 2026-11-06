@@ -48,9 +48,9 @@ RSpec.describe Crm::MetaAds::Creation::Options do
       currency: 'BRL', min_daily: 6, max_daily: 500, kinds: %w[ad post],
       # 01:30 UTC de 28/10 ainda é 27/10 no fuso da conta de anúncios (São Paulo).
       today: '2026-10-27',
-      destinations: %w[WHATSAPP INSTAGRAM_DIRECT MESSENGER WEBSITE],
+      destinations: %w[WHATSAPP INSTAGRAM_DIRECT MESSENGER WEBSITE INSTAGRAM_PROFILE],
       placements_by_destination: { 'WHATSAPP' => %w[AUTO], 'INSTAGRAM_DIRECT' => %w[AUTO], 'MESSENGER' => %w[AUTO],
-                                   'WEBSITE' => %w[AUTO INSTAGRAM FACEBOOK] }
+                                   'WEBSITE' => %w[AUTO INSTAGRAM FACEBOOK], 'INSTAGRAM_PROFILE' => %w[INSTAGRAM] }
     )
     expect(payload[:facebook_login]).to eq(Crm::MetaAds::FacebookLogin.public_payload)
   end

@@ -14,6 +14,16 @@ import { setupFacebookSdk } from 'dashboard/routes/dashboard/settings/inbox/chan
 // when the picker opens means the click-time `await` resolves within that
 // activation window; a cold load resolves on the script's `load` task seconds
 // later, after activation has expired, and the popup gets blocked.
+// Without an app id the SDK starts with no app and FB.login never calls back
+// (#2319): the caller would wait forever. Fail before opening the login.
+export const FACEBOOK_NOT_CONFIGURED = 'FacebookNotConfigured';
+
+const notConfiguredError = () => {
+  const error = new Error('Facebook app is not configured');
+  error.name = FACEBOOK_NOT_CONFIGURED;
+  return error;
+};
+
 export function useFacebookPageConnect() {
   const accountId = useMapGetter('getCurrentAccountId');
   const isAuthenticating = ref(false);
@@ -23,9 +33,12 @@ export function useFacebookPageConnect() {
   // Idempotent — call this when the picker UI opens. A failed load clears the
   // cache so a later attempt can retry instead of being stuck on a rejection.
   const preloadSdk = () => {
+    if (!window.chatwootConfig?.fbAppId) {
+      return Promise.reject(notConfiguredError());
+    }
     if (!sdkSetupPromise) {
       sdkSetupPromise = setupFacebookSdk(
-        window.chatwootConfig?.fbAppId,
+        window.chatwootConfig.fbAppId,
         window.chatwootConfig?.fbApiVersion
       ).catch(error => {
         sdkSetupPromise = null;
@@ -36,9 +49,14 @@ export function useFacebookPageConnect() {
   };
 
   // FB.login never rejects; resolve the user access token on success and null
-  // for any other status (closed popup, not_authorized, unknown).
-  const login = (extraScopes = []) =>
-    new Promise(resolve => {
+  // for any other status (closed popup, not_authorized, unknown). It runs right
+  // in the click, so the popup keeps the gesture; without an app it would never
+  // call back, so it refuses first.
+  const login = (extraScopes = []) => {
+    if (!window.chatwootConfig?.fbAppId) {
+      return Promise.reject(notConfiguredError());
+    }
+    return new Promise(resolve => {
       window.FB.login(
         response => {
           resolve(
@@ -50,9 +68,11 @@ export function useFacebookPageConnect() {
         { scope: buildFacebookLoginScopes({ extraScopes }) }
       );
     });
+  };
 
   // Resolves { userAccessToken, pages } on success, null when the user cancels,
-  // and rejects on SDK-load or page-fetch failure (the caller maps it to UI).
+  // and rejects on missing app, SDK-load or page-fetch failure (the caller maps
+  // it to UI).
   const loginAndFetchPages = async () => {
     if (isAuthenticating.value) return null;
     isAuthenticating.value = true;

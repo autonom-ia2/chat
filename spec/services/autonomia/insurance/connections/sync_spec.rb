@@ -513,4 +513,73 @@ RSpec.describe Autonomia::Insurance::Connections::Sync do
     expect(conexao.reload.status).to eq('ready')
     expect(conexao.last_failure).to be_nil
   end
+
+  # Auditoria da conexão, 05/11/2026, achado 3. Toda checagem de 30 minutos gravava `authenticating`
+  # antes de falar com o portal, e as ferramentas da Lia só enxergam conexão que serve (`usable?`):
+  # o turno que caía na janela dizia ao cliente que a corretora não tinha conectado o AGGER.
+  describe 'a checagem não esconde a conexão das ferramentas' do
+    # O status gravado no banco NO MOMENTO em que o portal é consultado.
+    def connector_que_anota(estados, conexao)
+      dobro = connector_answering({ 'status' => 'ready', 'account_label' => 'X' })
+      allow(dobro).to receive(:connection_status) do
+        estados << conexao.class.find(conexao.id).status
+        { 'status' => 'ready', 'account_label' => 'X' }
+      end
+      dobro
+    end
+
+    it 'conexão pronta continua pronta enquanto o portal responde' do
+      # Arrange
+      conexao = connection
+      conexao.update!(status: 'ready')
+      estados = []
+
+      # Act
+      described_class.new(conexao, connector: connector_que_anota(estados, conexao), scan_capabilities: false).call
+
+      # Assert
+      expect(estados).to eq(['ready'])
+      expect(conexao.reload.status).to eq('ready')
+    end
+
+    it 'conexão em varredura de configuração já varrida não passa por authenticating' do
+      # Arrange
+      conexao = connection
+      conexao.update!(status: 'discovering', last_capability_scan_at: 1.day.ago)
+      estados = []
+
+      # Act
+      described_class.new(conexao, connector: connector_que_anota(estados, conexao), scan_capabilities: false).call
+
+      # Assert
+      expect(estados).to eq(['discovering'])
+    end
+
+    it 'conexão que ainda não serve passa por authenticating, que é o que a tela mostra' do
+      # Arrange
+      conexao = connection
+      estados = []
+
+      # Act
+      described_class.new(conexao, connector: connector_que_anota(estados, conexao), scan_capabilities: false).call
+
+      # Assert
+      expect(estados).to eq(['authenticating'])
+      expect(conexao.reload.status).to eq('ready')
+    end
+
+    it 'o resultado da checagem é que tira a conexão pronta do ar' do
+      # Arrange
+      conexao = connection
+      conexao.update!(status: 'ready')
+      connector = connector_answering({ 'status' => 'degraded', 'reason' => 'portal lento' })
+
+      # Act
+      described_class.new(conexao, connector: connector, scan_capabilities: false).call
+
+      # Assert
+      expect(conexao.reload.status).to eq('degraded')
+      expect(conexao.usable?).to be(false)
+    end
+  end
 end
