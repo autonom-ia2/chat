@@ -150,7 +150,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
   def de_funil?(receita)
     return true if ::Autonomia::Automacao::Gatilhos.do_card?(receita.dig('gatilho', 'tipo'))
 
-    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).passos.any? do |passo|
+    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).passos.any? do |passo|
       passo['tipo'] == 'acao' && ::Autonomia::Automacao::AcoesPermitidas.recurso_de(passo['acao']).to_s.start_with?('crm/')
     end
   end
@@ -173,7 +173,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesController < Api::V1::Accounts::Ba
     return [I18n.t('autonomia.automacao.ensaio.sem_receita')] unless receita.is_a?(Hash) && ::Autonomia::Automacao::Receita.esquema_valido?(receita)
     return [] unless conferir
 
-    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account).problemas
+    ::Autonomia::Automacao::Receita.new(receita, conta: Current.account, account_user: Current.account_user).problemas
   end
 
   def recusar_ensaio(chave, problemas = [])

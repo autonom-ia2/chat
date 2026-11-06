@@ -37,6 +37,18 @@ module Autonomia
         'X") ou quando o usuario so diz que nao tem material. Este campo nao substitui needs_more_info: ' \
         'preencha os dois.'.freeze
 
+      # #2490 — CANAL PEDIDO é leitura do MODELO, não lista de palavras (regra do Rodrigo, 20/09/2026). O botão "Começar a
+      # atender no {canal}" da Confira só sugere a caixa do canal que o dono pediu; "nenhum" é a saída "não se aplica" e
+      # deixa a escolha com a pessoa. Os valores batem com o `canal` de cada caixa (Autonomia::CanaisOcupadosFinder).
+      CANAIS_PEDIDOS = %w[whatsapp instagram facebook site email telegram].freeze
+      SEM_CANAL_PEDIDO = 'nenhum'.freeze
+      CANAL_PEDIDO_DESCRIPTION =
+        'Sua leitura da conversa INTEIRA: o canal em que o dono pediu que o agente atenda (ex.: "quero ele no ' \
+        'Instagram", "vai responder no WhatsApp da loja"). site = chat do site. Vale o pedido mais recente: se ele ' \
+        'trocou de canal, use o novo. nenhum quando nao se aplica: o dono nao falou de canal, citou mais de um canal, ' \
+        'deixou a escolha aberta ou so mencionou o canal sem pedir que o agente atenda nele (ex.: "meus clientes vem ' \
+        'do Instagram, mas quero ele no site" e site). Nao deduza o canal pelo ramo do negocio nem pelo material.'.freeze
+
       # Schema de saída estruturada (JSON Schema strict — todas as chaves required, sem props extras).
       # Mesma forma usada por Generator::GENERATE_SCHEMA; consumido por ResponsesClient#create.
       BUILDER_SCHEMA = {
@@ -66,11 +78,12 @@ module Autonomia
             next_question:     { type: 'string' },
             # Leitura do MODELO sobre a última fala do usuário (substitui a antiga lista de palavras
             # CLOSE_INTENT_PATTERNS). Consumido por close_intent?; false é a saída "não se aplica".
-            user_asked_to_close: { type: 'boolean', description: USER_ASKED_TO_CLOSE_DESCRIPTION }
+            user_asked_to_close: { type: 'boolean', description: USER_ASKED_TO_CLOSE_DESCRIPTION },
+            canal_pedido: { type: 'string', enum: CANAIS_PEDIDOS + [SEM_CANAL_PEDIDO], description: CANAL_PEDIDO_DESCRIPTION }
           },
           required: %w[name agent_type instruction scaffold human_card greeting fallback_message
                        handoff_rule starter_questions tone guardrails voice needs_more_info next_question
-                       user_asked_to_close],
+                       user_asked_to_close canal_pedido],
           additionalProperties: false
         }
       }.freeze
@@ -90,7 +103,7 @@ module Autonomia
       # aqui, DEPOIS da última fala do dono, e com tool_choice 'none' no lugar de tirar a busca da mesa.
       LEAN_TURN_NOTE = <<~NOTE.freeze
         COLETA ENXUTA (aviso da plataforma, só nesta chamada): decida e pergunte, sem redigir a configuração.
-        Preencha needs_more_info, next_question, user_asked_to_close, name (só se o usuário já disse) e agent_type.
+        Preencha needs_more_info, next_question, user_asked_to_close, canal_pedido, name (só se o usuário já disse) e agent_type.
         Devolva instruction, scaffold, human_card, greeting, fallback_message, handoff_rule e tone como string vazia,
         starter_questions e guardrails como lista vazia, e voice com qualquer valor (é descartado). Se for hora de
         fechar, devolva needs_more_info=false e next_question vazio: a plataforma pede a configuração completa em seguida.
@@ -395,6 +408,9 @@ module Autonomia
         @materials_gate_decision = nil
         @ajuste_da_fase2 = nil
         @idioma_do_ajuste = nil
+        # #2490 — criação ou ajuste, lido ANTES do turno: o fechamento da criação grava a instrução no agente, e depois
+        # disso o adjust_mode? já diz "ajuste".
+        @criacao = !adjust_mode?
         # #1428 — o re-run de um ajuste do piloto que já gravou (mesmo token) não chama o Construtor de novo: vai direto
         # conferir e fechar, ANTES de olhar a chave. O turno nasceu no piloto; se a chave desligou no meio, voltar pelo
         # caminho legado aplicaria de novo. No ajuste do piloto, a credencial é resolvida uma vez no começo do turno.
@@ -995,6 +1011,10 @@ module Autonomia
         Autonomia::Agents::Agent::AGENT_TYPES.include?(value) ? value : 'custom'
       end
 
+      def self.canal_pedido_for(value)
+        CANAIS_PEDIDOS.include?(value) ? value : SEM_CANAL_PEDIDO
+      end
+
       private
 
       # Faz o parse do JSON estruturado e decide o destino. Tudo guardado pelo `token`: se uma nova
@@ -1068,7 +1088,7 @@ module Autonomia
           # no state (next_question) e o FE a injetava localmente — um refresh perdia o fio e o LLM
           # recebia a resposta ("sim/isso/o segundo") sem a pergunta anterior. Só grava se o
           # mark_ready! venceu (token ainda ativo — geração não superseded).
-          persist_assistant_turn!(parsed['next_question']) if @thread.mark_ready!(token, state: self.class.state_for(parsed))
+          persist_assistant_turn!(parsed['next_question']) if @thread.mark_ready!(token, state: estado_do_turno(parsed))
         else
           # GATE/P2 — FALLBACK de nome no fechamento: se o usuário mandou fechar mas nunca nomeou o
           # agente, derive um default pelo tipo em vez de deixar o agente vazio/"Novo agente" (T13).
@@ -1232,6 +1252,16 @@ module Autonomia
         @user_asked_to_close == true
       end
 
+      # #2490 — o state do turno com o canal que o dono pediu (a Confira sugere só a caixa dele; exposto no show da thread).
+      # Só na criação: a conversa de um ajuste não fala de canal, e o mark_ready! faz merge, então o pedido da criação
+      # continua no state. O ajuste da Fase 2 (AjusteConferido) usa o state_for puro pelo mesmo motivo.
+      def estado_do_turno(parsed)
+        estado = self.class.state_for(parsed)
+        return estado unless criacao?
+
+        estado.merge('canal_pedido' => self.class.canal_pedido_for(parsed['canal_pedido']))
+      end
+
       # Cria (ou atualiza) o Agent e aplica a config gerada de forma guardada pelo token. instruction/
       # scaffold ficam OCULTOS nas colunas; o jbuilder os filtra.
       def apply_to_agent(token, parsed)
@@ -1248,7 +1278,7 @@ module Autonomia
         # reprova e isto vira no-op — a geração nova é quem marca ready. Idempotente nos dois casos.
         @thread.mark_ready!(
           token,
-          state: self.class.state_for(parsed).merge('applied' => true, 'truncated_fields' => @truncated_fields.to_a)
+          state: estado_do_turno(parsed).merge('applied' => true, 'truncated_fields' => @truncated_fields.to_a)
         )
       end
 
@@ -1261,6 +1291,9 @@ module Autonomia
         attrs = self.class.map_attributes(parsed, truncated: @truncated_fields)
         attrs[:actuation] = builder_actuation
         attrs[:config] = (attrs[:config] || {}).merge('with_knowledge' => effective_with_knowledge)
+        # #2490: o canal pedido também fica no agente, para a Confira de um rascunho reaberto (sem a thread na tela). Só na
+        # criação: a conversa de um ajuste não fala de canal e apagaria o pedido (o merge do config preserva o que já existe).
+        attrs[:config]['canal_pedido'] = self.class.canal_pedido_for(parsed['canal_pedido']) if criacao?
         attrs
       end
 
@@ -1525,6 +1558,11 @@ module Autonomia
       # presença da `instruction`, conforme o spec.
       def adjust_mode?
         @thread.agent&.instruction.present?
+      end
+
+      # #2490 — o turno começou como criação (agente sem instrução)? Fora do run! (specs que chamam o apply direto), lê agora.
+      def criacao?
+        @criacao.nil? ? !adjust_mode? : @criacao
       end
 
       def no_materials_declared?

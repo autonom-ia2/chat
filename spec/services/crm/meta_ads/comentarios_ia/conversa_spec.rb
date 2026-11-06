@@ -32,7 +32,36 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
         .to include('network' => 'instagram', 'comment_id' => 'c-1', 'post_id' => '1790', 'care_id' => care.id,
                     'from_id' => 'igsid-1', 'private_reply' => true)
       expect(conversation.messages.reorder(:created_at, :id).map { |message| [message.message_type, message.content] })
-        .to eq([['activity', 'Comentou no post: “Quanto custa?”'], ['outgoing', care.message]])
+        .to eq([['activity', 'Comentou no post: “Quanto custa?”'], ['outgoing', care.message],
+                ['activity', 'Mandei a mensagem no privado e resolvi a conversa. Se a pessoa responder, a resposta chega na caixa.']])
+    end
+
+    # #2536: rodando num job (sem pessoa, sem o idioma de ninguém) e sem auto-resolve na conta, a resolução da IA virava
+    # "Conversation was marked resolved by system due to 0 minutes of inactivity".
+    it 'resolve sem o "resolvida por inatividade", com a atividade da IA no idioma da conta' do
+      privado = conversa_do_privado
+      Current.reset
+
+      conversation = I18n.with_locale(:en) do
+        perform_enqueued_jobs { described_class.anotar!(privado, comentario, care, nova: true) }
+      end
+
+      atividades = conversation.messages.activity.pluck(:content)
+      expect(atividades).to eq(['Comentou no post: “Quanto custa?”',
+                                'Mandei a mensagem no privado e resolvi a conversa. Se a pessoa responder, a resposta chega na caixa.'])
+      expect(Current.executed_by).to be_nil
+    end
+
+    it 'com auto-resolve na conta, também não diz que resolveu por inatividade' do
+      account.update!(auto_resolve_after: 60)
+      privado = conversa_do_privado
+
+      conversation = perform_enqueued_jobs { described_class.anotar!(privado, comentario, care, nova: true) }
+
+      expect(conversation.messages.activity.pluck(:content)).to eq(
+        ['Comentou no post: “Quanto custa?”',
+         'Mandei a mensagem no privado e resolvi a conversa. Se a pessoa responder, a resposta chega na caixa.']
+      )
     end
 
     it 'não resolve a conversa que a pessoa já tinha aberta na caixa' do

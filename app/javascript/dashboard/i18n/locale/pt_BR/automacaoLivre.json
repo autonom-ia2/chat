@@ -192,7 +192,8 @@
       "TENTAR_DE_NOVO": "Tentar de novo",
       "DO_FUNIL": "As automações das etapas do funil ficam em Configurar › Editar funil.",
       "VER_FUNIL": "Ver no funil",
-      "SEM_PASSO": "Ainda sem passo"
+      "SEM_PASSO": "Ainda sem passo",
+      "CUSTO_IA": "IA: {custo} nas execuções dos últimos 30 dias"
     },
     "EDITOR": {
       "NOVA": "Nova automação",

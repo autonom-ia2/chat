@@ -99,6 +99,15 @@ RSpec.describe Autonomia::Agents::Builder do
         expect(Autonomia::Agents::ConferenciaDoAjuste).not_to have_received(:new)
       end
 
+      # #2490: a tela lê o canal pedido da thread antes do agente; o turno do ajuste não o troca por "nenhum".
+      it 'mantém no state da thread o canal que o dono pediu na criação' do
+        thread.update!(state: thread.state.to_h.merge('canal_pedido' => 'instagram'))
+
+        run_turn
+
+        expect(estado).to include('canal_pedido' => 'instagram', 'next_question' => resposta)
+      end
+
       it 'mesmo com uma lista junto, nada entra' do
         respostas.replace([saida('so_pergunta' => true, 'next_question' => resposta, 'greeting' => 'Outra',
                                  'mudancas' => [mudanca('greeting')])])

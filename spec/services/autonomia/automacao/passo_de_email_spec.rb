@@ -189,7 +189,7 @@ RSpec.describe Autonomia::Automacao::PassoDeEmail, :automacao_motor do
   it 'a Receita recusa caixa que não é de e-mail da conta' do
     outra_conta = create(:channel_email).inbox
     receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [email_passo('p1', caixa_id: outra_conta.id)] }
-    expect(Autonomia::Automacao::Receita.new(receita, conta: account).problemas)
+    expect(Autonomia::Automacao::Receita.new(receita, conta: account, account_user: nil).problemas)
       .to eq([I18n.t('autonomia.automacao.receita.caixa_de_email_invalida', passo: 'p1', id: outra_conta.id)])
   end
 

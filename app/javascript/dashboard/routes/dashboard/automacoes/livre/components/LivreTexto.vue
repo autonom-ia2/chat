@@ -10,6 +10,7 @@ import {
   opcoesDosValores,
   textoDaTela,
   textoNaTela,
+  valoresSemPermissao,
 } from '../texto';
 import { fraseDoValor } from '../frases';
 
@@ -38,15 +39,22 @@ const rotuloPorDado = computed(
 );
 
 // O dado de um campo que a conta apagou fica no texto, marcado; não volta
-// para a lista do "Pôr um dado".
+// para a lista do "Pôr um dado". O valor que a pessoa não pode ler (#2597)
+// também fica fora da lista, mas o texto que já o usa mostra o nome dele.
 const daConta = computed(() =>
   opcoesDosValores(props.catalogo, props.atributosDo, t)
 );
 const opcoes = computed(() =>
-  comApagados(props.modelValue, daConta.value, caminho =>
-    t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DADO_APAGADO', {
-      dado: fraseDoValor(caminho, props.catalogo, t),
-    })
+  comApagados(
+    props.modelValue,
+    [
+      ...daConta.value,
+      ...valoresSemPermissao(props.catalogo, t, props.modelValue || []),
+    ],
+    caminho =>
+      t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DADO_APAGADO', {
+        dado: fraseDoValor(caminho, props.catalogo, t),
+      })
   )
 );
 const temApagado = computed(() =>

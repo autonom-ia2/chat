@@ -54,7 +54,8 @@ class Autonomia::Automacao::PassoDeEmail
   private
 
   def mandar(caixa, contato)
-    assunto = ::Autonomia::Automacao::Texto.new(@passo['assunto'], ::Autonomia::Automacao::Valores.new(alvo: @alvo)).montar
+    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
+    assunto = ::Autonomia::Automacao::Texto.new(@passo['assunto'], valores).montar
     texto = texto_pronto
     return pulado('faltou_valor') if assunto.nil? || texto.nil?
     return pulado('texto_vazio') if assunto.strip.empty? || texto.strip.empty?
