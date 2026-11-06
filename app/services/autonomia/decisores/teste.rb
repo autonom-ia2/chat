@@ -8,7 +8,7 @@
 # Nenhuma chamada repete aqui dentro: uma nova tentativa usaria o prazo inteiro de novo, mais a espera.
 # A folga de cada uma é o pior caso dela — o Jev pode levar 3 s para conectar e 3 s para ler. A
 # conversa sem texto (só áudio ou imagem) fica de fora: não há o que perguntar. O anúncio de origem do card (#2558)
-# vai só com a chave de quem testa (`anuncio`, Crm::AnuncioDeOrigem.ve?).
+# vai à decisão só com a chave de quem testa (`anuncio`, Crm::AnuncioDeOrigem.ve?); à extração dos campos, nunca.
 class Autonomia::Decisores::Teste
   PRAZO = 10.0
   MAX_QUANTIDADE = 10
@@ -66,11 +66,16 @@ class Autonomia::Decisores::Teste
       next item[:campos_pendentes] = true if restante < FOLGA_EXTRACAO
 
       item[:campos] = Autonomia::Decisores::Extrator.new(decisor: @decisor, timeout: (restante - 1).floor, max_retries: 0)
-                                                    .extrair(item[:estado])
+                                                    .extrair(sem_anuncio(item[:estado]))
     rescue Autonomia::Decisores::Extrator::Error => e
       item[:campos] = nil
       item[:erro_campos] = e.message
     end
+  end
+
+  # A extração é texto livre: lê sem o anúncio de origem, mesmo quando a decisão o leu (#2558).
+  def sem_anuncio(estado)
+    Autonomia::Decisores::Estado.new(conversation: estado.conversation, message: estado.message, leituras: @decisor.leituras_efetivas)
   end
 
   def resumo(resultados)

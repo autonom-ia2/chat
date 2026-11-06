@@ -30,21 +30,15 @@ module Autonomia::Automacao::ComIa
   # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem").
   def leitura(fuso: nil)
     leituras = ::Autonomia::Automacao::ComIa.leituras(@passo)
-    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras, fuso: fuso, valor_do_card: ve_o_valor_do_card?,
-                                       anuncio: ::Crm::AnuncioDeOrigem.ve?(quem_ligou_na_conta))
+    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras, fuso: fuso, valor_do_card: ve_o_valor_do_card?)
   end
 
-  # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores. #2558: e o
-  # anúncio de origem, só com a chave dessa pessoa. Quem saiu da conta não lê.
+  # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores. Quem saiu da
+  # conta não lê. O anúncio de origem (#2558) nunca vai: todo passo de IA escreve texto livre (nota, mensagem, resumo).
   def ve_o_valor_do_card?
-    ::Autonomia::Automacao::Valores.pode_ler?('card.valor', quem_ligou_na_conta)
-  end
-
-  def quem_ligou_na_conta
-    return @quem_ligou_na_conta if defined?(@quem_ligou_na_conta)
-
     quem = @execucao.automacao.ligada_por
-    @quem_ligou_na_conta = quem && @conversa.account.account_users.find_by(user_id: quem.id)
+    na_conta = quem && @conversa.account.account_users.find_by(user_id: quem.id)
+    ::Autonomia::Automacao::Valores.pode_ler?('card.valor', na_conta)
   end
 
   # O fuso que a tela grava na conta (#954, o mesmo do Guia); sem ele, o padrão da plataforma (Crm::Timezone::Resolver).

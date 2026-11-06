@@ -126,4 +126,82 @@ RSpec.describe 'Anúncio de origem no Decisor (#2558)', :aggregate_failures, typ
       expect(rodar).not_to include(*identificadores)
     end
   end
+
+  # O texto livre (motivo da dúvida, campos extraídos, nota e mensagem da automação) quem lê é quem tem automation_view,
+  # com ou sem meta_ads_view: nunca leva o anúncio, nem quando quem salvou o Decisor o vê. O modelo falso devolve o que
+  # recebeu do card, então o anúncio, se fosse, voltaria escrito.
+  describe 'texto livre escrito pela IA' do
+    let(:decisor) do
+      create(:autonomia_decisor, account: account, leituras: %w[card mensagens_recentes], salvo_por: com_chave,
+                                 campos: [{ 'chave' => 'resumo', 'descricao' => 'Resumo do pedido', 'destino' => 'card.descricao' }])
+    end
+    let(:card) { account.crm_cards.find_by!(title: 'Lead do formulário') }
+
+    before do
+      allow(Crm::Ai::CredentialResolver).to receive(:new).and_return(instance_double(Crm::Ai::CredentialResolver, resolve: 'credencial'))
+      allow(Crm::Ai::ResponsesClient).to receive(:new).and_return(modelo_falso)
+    end
+
+    def modelo_falso
+      instance_double(Crm::Ai::ResponsesClient).tap do |falso|
+        allow(falso).to receive(:create) do |**pedido|
+          eco = eco_do_card(pedido[:input])
+          resposta = pedido[:schema][:name] == 'decisor_duvida' ? { resposta: 'sim', seguro: false, motivo: eco } : { resumo: eco }
+          { text: resposta.to_json }
+        end
+      end
+    end
+
+    # O trecho do card que chegou ao modelo, a partir do título.
+    def eco_do_card(entrada)
+      inicio = entrada.index('Lead do formulário')
+      inicio ? entrada[inicio, 400] : 'sem card'
+    end
+
+    def decisoes_vistas_por(usuario)
+      get "#{base}/#{decisor.id}/decisoes", headers: usuario.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      response.parsed_body['decisoes'].to_json
+    end
+
+    it 'controle: o modelo falso devolve o anúncio quando a leitura o leva' do
+      decisao = create(:autonomia_decisor_decisao, decisor: decisor, conversation: conversa, message: mensagem, status: 'duvida')
+      estado = Autonomia::Decisores::Estado.new(conversation: conversa, message: mensagem, leituras: decisor.leituras_efetivas, anuncio: true)
+
+      expect(Autonomia::Decisores::Duvida.new(decisao).perguntar(estado).motivo).to include('Carrossel Primavera')
+    end
+
+    it 'motivo da dúvida que o Guia escreve: sem o anúncio' do
+      decisao = create(:autonomia_decisor_decisao, decisor: decisor, conversation: conversa, message: mensagem, status: 'duvida')
+
+      Autonomia::Decisores::DuvidaJob.perform_now(decisao.id)
+
+      expect(decisao.reload).to have_attributes(status: 'esperando_pessoa')
+      expect(decisao.motivo).to include('Lead do formulário')
+      expect(decisoes_vistas_por(sem_chave)).not_to include(*identificadores)
+    end
+
+    it 'campos extraídos e o card escrito pelo Aplicador: sem o anúncio, mesmo com a decisão lendo o anúncio' do
+      rule = create(:automation_rule, account: account, event_name: 'message_created', conditions: [],
+                                      actions: [{ action_name: 'perguntar_ao_decisor', action_params: [decisor.id, 'sim'] }])
+      WebMock::RequestRegistry.instance.reset!
+
+      Autonomia::Decisores::PerguntarJob.perform_now(rule.id, conversa.id, mensagem.id, 0)
+
+      expect(lido_pelo_jev).to include('Carrossel Primavera')
+      decisao = Autonomia::DecisorDecisao.find_by!(decisor: decisor, message: mensagem)
+      expect(decisao.campos_extraidos['resumo']).to include('Lead do formulário', '2026-11-01T12:00:00Z')
+      expect(decisoes_vistas_por(sem_chave)).not_to include(*identificadores)
+      expect(card.reload.description).to include('Lead do formulário')
+      expect(card.description).not_to include(*identificadores)
+    end
+
+    it 'passo de IA da automação: a leitura que ele monta não leva o anúncio' do
+      # Autonomia::Automacao::ComIa#leitura: o Estado sem `anuncio`. O esquema da receita nem aceita a leitura `card`.
+      conversa_lida = Autonomia::Decisores::Estado.new(conversation: conversa, leituras: %w[card mensagens_recentes]).conversa.to_json
+
+      expect(conversa_lida).to include('Lead do formulário')
+      expect(conversa_lida).not_to include(*identificadores)
+    end
+  end
 end

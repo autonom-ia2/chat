@@ -80,7 +80,9 @@ class Autonomia::Decisor < ApplicationRecord
   end
 
   # O anúncio de origem (#2558, Crm::AnuncioDeOrigem) só vai ao Jev quando quem salvou o Decisor por último o vê hoje. Sem
-  # ninguém (Decisor antigo, pessoa apagada) ou com a pessoa fora da conta, não vai.
+  # ninguém (Decisor antigo, pessoa apagada) ou com a pessoa fora da conta, não vai. "Salvar" é criar ou editar pela tela
+  # (DecisoresController); confirmar um exemplo, a dúvida resolvida pelo Guia e os contadores não mudam `salvo_por`: o
+  # exemplo nunca leva o anúncio e não muda o que o Decisor lê.
   def ve_o_anuncio?
     Crm::AnuncioDeOrigem.ve?(salvo_por_id && account.account_users.find_by(user_id: salvo_por_id))
   end

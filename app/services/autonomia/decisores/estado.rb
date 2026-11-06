@@ -26,9 +26,11 @@
 # decide pela regra dele (Valores.pode_ler?); sem ele, igual.
 #
 # `anuncio: true` (#2558): o card leva o anúncio de origem do formulário da Meta (formulário, anúncio e campanha em
-# metadata.meta_lead_form). Sem ele, só a hora da captura (Crm::MetaAds::LeadForms::Answers): fechado por padrão. Quem
-# chama decide pela chave do responsável (Crm::AnuncioDeOrigem.ve?): quem pede, quem ligou a automação ou quem salvou o
-# Decisor. O exemplo guardado (texto_do_exemplo) nunca leva o anúncio, porque quem tem automation_view o lê.
+# metadata.meta_lead_form). Sem ele, só a hora da captura (Crm::MetaAds::LeadForms::Answers): fechado por padrão. Só a
+# resposta de opção fechada recebe o anúncio, pela chave do responsável (Crm::AnuncioDeOrigem.ve?): a rodada do Decisor
+# (quem o salvou por último), o teste do Decisor (quem testa) e a classificação do Guia (quem pede). Texto livre nunca
+# o recebe, porque o que ele escreve chega a quem não tem a chave: a dúvida que o Guia responde com motivo, a extração
+# de campos e os passos de IA da Automação (nota, mensagem, resumo). O exemplo guardado (texto_do_exemplo) também não.
 class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
   include Autonomia::DadoDeContato
 
@@ -52,10 +54,11 @@ class Autonomia::Decisores::Estado # rubocop:disable Metrics/ClassLength
 
   attr_reader :conversation, :message
 
-  # O estado de uma decisão já guardada (a dúvida que vai ao Guia, a resposta que vira exemplo).
+  # O estado de uma decisão já guardada (a dúvida que vai ao Guia, a resposta que vira exemplo). Sem o anúncio: o Guia
+  # responde com um motivo em texto livre, gravado na decisão (#2558).
   def self.da_decisao(decisao)
     new(conversation: decisao.conversation, message: decisao.message, card: decisao.card,
-        leituras: decisao.decisor.leituras_efetivas, anuncio: decisao.decisor.ve_o_anuncio?)
+        leituras: decisao.decisor.leituras_efetivas)
   end
 
   def initialize(conversation: nil, message: nil, card: nil, contact: nil, texto: nil, # rubocop:disable Metrics/ParameterLists
