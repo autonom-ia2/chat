@@ -161,7 +161,8 @@ RSpec.describe Autonomia::Automacao::PassoDeRetorno, :automacao_motor do
   it 'quem ligou perdeu o poder de criar retorno: a automação pausa e nada é criado', :aggregate_failures do
     skip 'só no EE' unless ChatwootApp.enterprise?
 
-    funcao = create(:custom_role, account: account, permissions: %w[automation_manage conversation_manage crm_view crm_manage_cards])
+    funcao = create(:custom_role, account: account,
+                                  permissions: %w[automation_manage conversation_manage crm_view crm_manage_cards crm_manage_pipelines])
     atendente.account_users.find_by(account: account).update!(custom_role: funcao)
     conversa.update!(assignee: atendente)
     definicao = automacao_ligada(account, atendente, [retorno])
@@ -173,6 +174,28 @@ RSpec.describe Autonomia::Automacao::PassoDeRetorno, :automacao_motor do
     execucao = Autonomia::Automacao::Execucao.where(automacao: definicao).last
 
     expect(registros(execucao)).to eq([%w[r1 falhou quem_ligou_sem_acesso]])
+    expect(execucao.automacao.reload.ativa).to be(false)
+    expect(Crm::FollowUp.count).to eq(0)
+  end
+
+  # O salvar pede a chave de funis para o retorno; quem a perde depois de ligar pausa a automação já na execução seguinte
+  # (#2633), com o motivo dela no histórico.
+  it 'quem ligou perdeu a chave de funis: pausa com o motivo e nada é criado', :aggregate_failures do
+    skip 'só no EE' unless ChatwootApp.enterprise?
+
+    funcao = create(:custom_role, account: account,
+                                  permissions: %w[automation_manage conversation_manage crm_view crm_manage_cards crm_manage_pipelines])
+    atendente.account_users.find_by(account: account).update!(custom_role: funcao)
+    conversa.update!(assignee: atendente)
+    definicao = automacao_ligada(account, atendente, [retorno])
+    funcao.update!(permissions: funcao.permissions - %w[crm_manage_pipelines])
+
+    perform_enqueued_jobs(only: Autonomia::Automacao::AvancarJob) do
+      Autonomia::Automacao::Partida.new(definicao: definicao, alvo: conversa, chave_gatilho: 'conversa.resolvida').call
+    end
+    execucao = Autonomia::Automacao::Execucao.where(automacao: definicao).last
+
+    expect(registros(execucao)).to eq([%w[r1 falhou sem_chave_de_funis]])
     expect(execucao.automacao.reload.ativa).to be(false)
     expect(Crm::FollowUp.count).to eq(0)
   end
