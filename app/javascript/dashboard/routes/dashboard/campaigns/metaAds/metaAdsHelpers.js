@@ -253,13 +253,14 @@ export const adImage = (ad, failed = []) =>
 // manda "visitas ao perfil": o anúncio de perfil fica com cliques e engajamento. Leads só aparecem no formulário ou
 // quando houve algum (site com Pixel). A lista e o anúncio por dentro mostram os mesmos números.
 const OTHER_STAT_KEYS = {
-  profile: ['CLICKS', 'ENGAGEMENT', 'SHOWN'],
+  profile: ['PROFILE', 'ENGAGEMENT', 'SHOWN'],
   post: ['ENGAGEMENT', 'COMMENTS', 'SHOWN'],
   lead_form: ['LEADS', 'CLICKS', 'SHOWN'],
   website: ['CLICKS', 'LEADS', 'SHOWN'],
 };
 const OTHER_STAT_FIELDS = {
   CLICKS: 'link_clicks',
+  PROFILE: 'link_clicks',
   ENGAGEMENT: 'post_engagement',
   COMMENTS: 'comments',
   LEADS: 'leads',
