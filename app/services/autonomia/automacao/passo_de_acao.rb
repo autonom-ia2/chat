@@ -24,6 +24,7 @@ class Autonomia::Automacao::PassoDeAcao
   end
 
   def executar
+    motor.conferir!(@passo['acao'])
     caminho = caminho_resolvido
     corpo = caminho.values.any?(&:blank?) ? pulado('faltou_valor') : corpo_pronto
     corpo.is_a?(Resultado) ? corpo : agir(caminho, corpo)
@@ -38,9 +39,12 @@ class Autonomia::Automacao::PassoDeAcao
 
   def agir(caminho, corpo)
     caderno = ::Autonomia::Guide::Execucao.abrir(account: @execucao.account, user: @acesso.usuario)
-    acoes = ::Autonomia::Automacao::AcoesDoMotor.new(execucao: @execucao, account_user: @acesso.account_user)
-    resultado = no_caderno(caderno) { acoes.executar(@passo['acao'], dados(caminho, corpo)) }
-    classificar(resultado, acoes.codigo, caderno)
+    resultado = no_caderno(caderno) { motor.executar(@passo['acao'], dados(caminho, corpo)) }
+    classificar(resultado, motor.codigo, caderno)
+  end
+
+  def motor
+    @motor ||= ::Autonomia::Automacao::AcoesDoMotor.new(execucao: @execucao, account_user: @acesso.account_user)
   end
 
   def no_caderno(caderno, &)

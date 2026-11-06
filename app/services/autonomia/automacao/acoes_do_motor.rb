@@ -26,6 +26,16 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
     super(account: execucao.account, user: execucao.automacao.ligada_por, account_user: account_user)
   end
 
+  # A mesma conferência do executar, antes de montar o pedido: a chave que falta pausa a automação mesmo quando o passo
+  # pularia por falta de valor. Relê quem ligou (e a função dele): a chave tirada no meio da rodada vale já no passo
+  # seguinte, não só na próxima execução. Quem saiu da conta no meio da rodada pausa, como no começo dela.
+  def conferir!(acao)
+    @account_user&.reload
+    garantir_permitida!(acao)
+  rescue ActiveRecord::RecordNotFound
+    raise SemPermissao, 'quem_ligou_saiu_da_conta'
+  end
+
   private
 
   # A lista já deixa de fora o que só se faz na tela; a conferência aqui é a rede, caso a lista erre.
@@ -35,10 +45,9 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, I18n.t('autonomia.automacao.motivos.acao_fora') unless ::Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
     raise SemPermissao, 'quem_ligou_sem_permissao' unless @account_user&.permission_granted?(::Autonomia::Automacao::Acesso::PERMISSAO)
-    raise SemPermissao, 'sem_chave_de_funis' if de_funil?(acao) && !::Autonomia::Automacao::RegraDoFunil.chave?(@account_user)
+    return unless ::Autonomia::Automacao::AcoesPermitidas.de_funil?(acao)
+    raise SemPermissao, 'sem_chave_de_funis' unless ::Autonomia::Automacao::RegraDoFunil.chave?(@account_user)
   end
-
-  def de_funil?(acao) = ::Autonomia::Automacao::AcoesPermitidas.recurso_de(acao).to_s.start_with?('crm/')
 
   # O que o pedido mudar sai assinado pela automação (Ato, #2568 P7), não só por quem a ligou.
   def requisitar(verbo, caminho, corpo)
