@@ -3,8 +3,8 @@
 - **Épico:** #2414 · lacuna G16 do fechamento dos 20 exemplos (F9.6).
 - **Destrava:** o G16 sai das listas dos exemplos 3, 5, 6, 11, 13, 16 e 17. Nenhum roda inteiro só com ele: todos
   dependem também de G1, G4, G6 ou G18.
-- **Este PR (G16a):** motor, salvar, Guia, ensaio e o editor de **texto**. O **G16b** traz a peça "data calculada" no
-  editor (hoje a data calculada só sai pelo Guia; o editor a mostra em frase e a preserva).
+- **G16a:** motor, salvar, Guia, ensaio e o editor de **texto**.
+- **G16b:** a peça "data" no editor, para o atributo do tipo data (conversa, contato, empresa).
 
 ## O que a receita escreve
 
@@ -76,15 +76,24 @@ O histórico guarda, no motivo `valor_fora_do_formato`, o problema com o valor l
 não coube. A ação de corpo literal continua só
 mostrada.
 
-## Editor (G16a)
+## Editor
 
 - O campo de texto de uma ação (nome, descrição) e o atributo personalizado de texto usam a mesma caixa da mensagem
   (`LivreTexto`), com "Pôr um dado". Só texto grava string; com dado, grava `{"$texto": [...]}`.
-- Outro valor calculado num campo (`$valor` numa escolha, `$data`) aparece em frase ("Data calculada na hora: hoje + 6
-  meses") e passa intacto.
+- O atributo do tipo data usa a peça `LivreData` (G16b), uma pergunta por vez, só com `ChoiceSelect`:
+  1. "Que data gravar?": um dia certo, uma data a partir de hoje ou a partir de um campo de data (o próprio campo vale).
+  2. Dia certo: o mesmo campo de data da tela da conversa (`<input type="date">`), grava "AAAA-MM-DD".
+  3. A partir de um campo: só os atributos do tipo data da conta. Sem nenhum, a peça diz isso.
+  4. "Quanto tempo?" só depois de saber de onde a data parte: o número, a unidade (dias, semanas, meses, anos) e
+     depois ou antes. Zero grava a data de partida, sem soma.
+  5. Embaixo, "Grava: hoje + 6 meses" (ou o dia certo, no formato da tela).
+- Data calculada pela metade (sem o campo de partida, número vazio, quebrado ou negativo) segura o "Salvar".
+- Outro valor calculado que só o Guia monta (`$valor` sozinho numa escolha ou num atributo, `$data` num campo de
+  texto) aparece em frase ("Data calculada na hora: hoje + 6 meses") e passa intacto.
 
 ## Fora daqui
 
-- **G16b:** a peça "data calculada" no editor ("hoje" ou um campo de data, mais N dias/semanas/meses/anos).
+- Atributo de data do **card** no editor: o catálogo ainda não tem a ação "Mudar campos do card" (#2594). O motor e o
+  Guia já gravam (exemplo 5 no card).
 - Nome amigável do campo no ensaio: hoje mostra a chave ("revisao").
 - Cálculo com número (somar, multiplicar) e texto com formatação (maiúsculas, data por extenso): fora do G16.

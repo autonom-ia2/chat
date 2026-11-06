@@ -15,6 +15,7 @@ import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
+import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar, filtrosDoGatilho } from '../receita';
 
@@ -134,7 +135,11 @@ const mudarCaminho = (param, novo) => {
   };
 };
 
+// Cada abertura remonta os campos: a peça de data guarda o modo e o número que a
+// pessoa está montando, e um passo não pode herdar os do outro (#2414 G16b).
+const aberturas = ref(0);
 const abrir = item => {
+  aberturas.value += 1;
   alvo.value = item;
   rascunho.value = copiar(item.valor ?? null);
   painel.value?.open();
@@ -217,7 +222,10 @@ const nativoPronto = campo => {
   if (campo.peca.startsWith('destino_')) return !vazio(valor);
   return true;
 };
+// A data calculada pela metade (sem o campo de partida, sem o número) segura o
+// "Salvar" (#2414 G16b).
 const acaoPronta = () =>
+  !temDataIncompleta(rascunho.value.corpo) &&
   escolhasDoCaminho.value.every(
     escolha => !vazio(rascunho.value.caminho?.[escolha.param])
   ) &&
@@ -409,7 +417,7 @@ defineExpose({ abrir, fechar });
 
       <LivreCampo
         v-for="campo in camposDaAcao"
-        :key="campo.nome"
+        :key="`${aberturas}-${campo.nome}`"
         :campo="campo"
         :model-value="lerCampo(rascunho, entrada, campo.nome)"
         :catalogo="catalogo"
