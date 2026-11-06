@@ -730,6 +730,37 @@
       ]
     },
     {
+      "tipo": "retorno",
+      "grupo": "EQUIPE",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.RETORNO",
+      "campos": [
+        {
+          "nome": "titulo",
+          "peca": "texto_com_valores",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.TITULO"
+        },
+        {
+          "nome": "daqui",
+          "peca": "duracao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DAQUI"
+        },
+        {
+          "nome": "para",
+          "peca": "quem_recebe_retorno",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.PARA"
+        },
+        {
+          "nome": "envio",
+          "peca": "envio_do_retorno",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ENVIO"
+        }
+      ]
+    },
+    {
       "tipo": "acao",
       "nome": "conversa_etiquetas",
       "acao": "PATCH conversations/:conversation_id/labels/alterar",

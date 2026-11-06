@@ -96,7 +96,7 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     nativos = passos.reject { |passo| passo['tipo'] == 'acao' }
 
     expect(nativos.pluck('tipo')).to contain_exactly('esperar', 'esperar_ate', 'se', 'parar', 'mensagem', 'avisar',
-                                                     'decidir', 'extrair', 'escrever', 'resumir')
+                                                     'decidir', 'extrair', 'escrever', 'resumir', 'retorno')
     expect(nativos.flat_map { |passo| passo['campos'] }.pluck('peca')).to all(be_present)
     expect(passos.pluck('grupo') - declarado['grupos']).to be_empty
   end

@@ -33,6 +33,8 @@ nativos:
   extrair: { grupo: IA, requer: automacao_ia }
   escrever: { grupo: IA, requer: automacao_ia }
   resumir: { grupo: IA, requer: automacao_ia }
+  # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
+  retorno: { grupo: EQUIPE }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
 # mostra quando tiver as peças.

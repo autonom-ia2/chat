@@ -30,6 +30,7 @@
       "SE_NENHUM": "If none applies:",
       "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
+      "RETORNO_SEM_RESPONSAVEL": "Would not create the follow-up: this conversation has no assignee.",
       "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
       "CORTE": "The test stopped here: the automation has too many paths to show.",
       "OPCAO": "{nome} · #{n}",

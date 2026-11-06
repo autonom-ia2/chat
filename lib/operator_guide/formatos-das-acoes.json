@@ -11334,7 +11334,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:94",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:167",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:168",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:136",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:95",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:118"
@@ -11366,7 +11366,7 @@
     ],
     "origem": [
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:99",
-      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:167",
+      "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:168",
       "app/controllers/api/v1/accounts/autonomia/automacoes_controller.rb:136"
     ],
     "sem_corpo": false

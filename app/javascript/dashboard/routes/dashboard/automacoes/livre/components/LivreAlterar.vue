@@ -10,10 +10,13 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
+import LivreRetornoPara from './LivreRetornoPara.vue';
+import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
+import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar, filtrosDoGatilho } from '../receita';
@@ -185,6 +188,8 @@ const nativoPronto = campo => {
         (partes || []).some(parte => typeof parte !== 'string' || parte.trim())
       )
     );
+  if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
+  if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
@@ -341,6 +346,21 @@ defineExpose({ abrir, fechar });
           :rotulo="$t(campo.rotulo)"
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreRetornoPara
+          v-else-if="campo.peca === 'quem_recebe_retorno'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :opcoes="opcoes"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreRetornoEnvio
+          v-else-if="campo.peca === 'envio_do_retorno'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
         <LivreIaCampo

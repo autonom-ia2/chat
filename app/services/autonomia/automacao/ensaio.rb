@@ -116,12 +116,13 @@ class Autonomia::Automacao::Ensaio
     when 'decidir' then [decidir(passo, valores), nil]
     when 'parar' then [no(passo, 'parar'), nil]
     when 'acao' then [acao(passo, valores), @roteiro.seguinte(passo['id'])]
-    else [em_frente(passo), @roteiro.seguinte(passo['id'])]
+    else [em_frente(passo, valores), @roteiro.seguinte(passo['id'])]
     end
   end
 
-  def em_frente(passo)
+  def em_frente(passo, valores)
     return ia(passo) if IA_SO_DIZ.include?(passo['tipo'])
+    return retorno(passo, valores) if passo['tipo'] == 'retorno'
 
     no(passo, SO_MOSTRA.include?(passo['tipo']) ? passo['tipo'] : 'catalogo')
   end
@@ -140,6 +141,19 @@ class Autonomia::Automacao::Ensaio
 
     # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada.
     no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome') }.compact)
+  end
+
+  # O retorno (G3): o título montado, ou por que pularia, como o motor. O ensaio só descreve; nada é criado.
+  def retorno(passo, valores)
+    return no(passo, 'mensagens_desligadas') if passo['envio'] && !::Autonomia::Automacao::Motor.mensagens?(@conta)
+
+    titulo = ::Autonomia::Automacao::Texto.new(passo['titulo'], valores).montar
+    return no(passo, 'faltou_valor') if titulo.nil?
+    return no(passo, 'texto_vazio') if titulo.strip.empty?
+    return no(passo, 'retorno_sem_responsavel') if [nil, 'responsavel'].include?(passo.dig('para', 'quem')) &&
+                                                   valores.ler('conversa.responsavel_id').blank?
+
+    no(passo, 'retorno', { texto: titulo })
   end
 
   # O valor calculado do corpo (G16) com os dados desta conversa e o "hoje" de agora: a data que daria se rodasse

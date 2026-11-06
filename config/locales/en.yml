@@ -552,6 +552,7 @@ en:
         laco_suspeito: "The other side replied too fast too many times in a row, like a bot. The automation stopped in this conversation."
         mensagens_desligadas: "Message and alert steps are off for this account. Nothing was sent."
         ninguem_para_avisar: "Nobody who can see this conversation was on the alert list."
+        retorno_sem_responsavel: "The follow-up was not created: it was for the owner, and no one owns this yet."
         sem_conversa: "The card has no main conversation. Nothing was sent."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
@@ -587,6 +588,7 @@ en:
         valor_fora: 'Step %{passo}: %{caminho} has no value "%{valor}". Use one of: %{opcoes}.'
         proibido: 'Step %{passo}: the automation cannot change %{campo}.'
         passo_desligado: "Step %{passo}: message and alert steps are off for this account."
+        retorno_mensagem_sem_card: "Step %{passo}: the follow-up message only goes out with a card trigger. Use a card trigger or turn the message off."
         modelo_indisponivel: "Step %{passo}: no official WhatsApp inbox has the template %{nome} approved, as utility and with these variables."
         time_de_fora: "Step %{passo}: team %{id} is not from this account."
         pessoa_de_fora: "Step %{passo}: person %{id} is not from this account."

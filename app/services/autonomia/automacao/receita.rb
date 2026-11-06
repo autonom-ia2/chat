@@ -84,6 +84,7 @@ class Autonomia::Automacao::Receita
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
+    return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
@@ -110,6 +111,11 @@ class Autonomia::Automacao::Receita
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
+  end
+
+  # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
+  def problemas_do_retorno(passo)
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita['gatilho']) { |c| problemas_do_caminho(passo['id'], c) }
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.

@@ -10,6 +10,7 @@ const AVISO = {
   mensagens_desligadas: 'NAO_SAIRIA',
   faltou_valor: 'FALTOU_VALOR',
   texto_vazio: 'TEXTO_VAZIO',
+  retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
 };
 
 // #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o

@@ -86,7 +86,7 @@ class Autonomia::Automacao::Executor
     when 'esperar' then esperar(passo)
     when 'esperar_ate' then esperar_ate(passo)
     when 'se' then se(passo)
-    when 'acao' then acao(passo)
+    when 'acao', 'retorno' then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
     when 'parar' then encerrar(passo['id'], 'concluida', nil, 'ok')
@@ -176,7 +176,8 @@ class Autonomia::Automacao::Executor
     reconferir
     return if impedida?(passo['id'])
 
-    resultado = ::Autonomia::Automacao::PassoDeAcao.new(execucao: @execucao, passo: passo, valores: valores, acesso: @acesso).executar
+    classe = passo['tipo'] == 'retorno' ? ::Autonomia::Automacao::PassoDeRetorno : ::Autonomia::Automacao::PassoDeAcao
+    resultado = classe.new(execucao: @execucao, passo: passo, valores: valores, acesso: @acesso).executar
     case resultado.tipo
     when :ok, :pulado then seguir_depois_da_acao(passo, resultado)
     when :permanente then encerrar(passo['id'], 'falhou', resultado.motivo, 'falhou', resultado.dados)

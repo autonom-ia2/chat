@@ -85,7 +85,8 @@
       "DECIDIR": "AI chooses the path",
       "EXTRAIR": "AI pulls data from the conversation",
       "ESCREVER": "AI writes a text",
-      "RESUMIR": "AI summarizes the conversation"
+      "RESUMIR": "AI summarizes the conversation",
+      "RETORNO": "Create a follow-up for the team"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -125,6 +126,9 @@
       "ATTRIBUTE_VALUES": "List options",
       "TEXTO": "What to say",
       "PARA": "Who to notify",
+      "TITULO": "What the team will do",
+      "DAQUI": "How long from now",
+      "ENVIO": "Message to the customer",
       "LE": "What the AI reads",
       "PERGUNTA": "What the AI should decide",
       "CAMINHOS": "Paths",

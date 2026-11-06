@@ -124,7 +124,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 |---|---|---|---|---|---|
 | G1 | Mandar pelo **modelo aprovado do WhatsApp** fora da janela de 24 h | F4 (F4b) | **Fechada** (#2586): campo `modelo` do passo "mensagem" | F1 | 1, 2, 3, 4, 5, 6, 8, 11, 13, 14, 18, 19, 20 |
 | G2 | Mandar **e-mail** ao contato (pela caixa de e-mail da conta) | F4 / F8.2 | Sem passo | F1 | 1, 12, 13, 19, 20 |
-| G3 | **Criar retorno** para a equipe (com e sem envio automático) | F6 "Retorno" | Sem passo | F2 | 1, 2, 3, 4, 5, 9, 12, 14, 15, 16, 19 |
+| G3 | **Criar retorno** para a equipe (com e sem envio automático) | F6 "Retorno" | **Fechada** (#2629): passo `retorno`, prova em `g3_criar_retorno_spec.rb` | F2 | 1, 2, 3, 4, 5, 9, 12, 14, 15, 16, 19 |
 | G4 | **Criar card** num funil/etapa para a conversa ou o contato (e "abrir card de retenção", "card no quadro X") | F6 | `POST crm/cards` fora da lista; o `CardNaEtapa` (F1.4) só existe nas Regras | F2 | 4, 6, 8, 9, 10, 11, 16, 18 |
 | G5 | Gatilhos do **card**: criado, entrou/saiu da etapa, ganho, perdido, arquivado, campo mudou | F6 | **Fechada** (#2554) | Gatilhos | 2, 3, 4, 5, 7, 8, 11, 12, 13, 14, 15, 18, 20 |
 | G6 | Gatilhos de **tempo**: parado há X dias; N dias antes/depois de uma data do card ou do contato (vencimento, aniversário, próxima revisão, data da festa) | F6 | Em PR (F6 PR3a) | Motor | 1, 5, 6, 13, 18 |

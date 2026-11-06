@@ -45,7 +45,9 @@ module Autonomia::Automacao::Catalogo
                        'leituras' => 'leituras', 'instrucao' => 'instrucao', 'caminhos' => 'caminhos',
                        'campos_extrair' => 'campos_extrair', 'destino_escrever' => 'destino_escrever',
                        # F4b (#2468): o modelo da Meta do passo "mensagem".
-                       'destino_resumir' => 'destino_resumir', 'modelo_whatsapp' => 'modelo_whatsapp' }.freeze
+                       'destino_resumir' => 'destino_resumir', 'modelo_whatsapp' => 'modelo_whatsapp',
+                       # G3 (#2629): o "criar retorno".
+                       'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar".
   PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero' }.freeze
 

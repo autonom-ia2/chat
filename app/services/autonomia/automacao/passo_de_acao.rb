@@ -15,11 +15,13 @@ class Autonomia::Automacao::PassoDeAcao
   # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
   PASSAGEIROS = [408, 425, 429].freeze
 
-  def initialize(execucao:, passo:, valores:, acesso:)
+  # `acoes`: a porta que executa. O passo "criar retorno" (G3) passa a dele, liberada só para o retorno.
+  def initialize(execucao:, passo:, valores:, acesso:, acoes: ::Autonomia::Automacao::AcoesDoMotor)
     @execucao = execucao
     @passo = passo
     @valores = valores
     @acesso = acesso
+    @acoes = acoes
   end
 
   def executar
@@ -37,7 +39,7 @@ class Autonomia::Automacao::PassoDeAcao
 
   def agir(caminho, corpo)
     caderno = ::Autonomia::Guide::Execucao.abrir(account: @execucao.account, user: @acesso.usuario)
-    acoes = ::Autonomia::Automacao::AcoesDoMotor.new(execucao: @execucao, account_user: @acesso.account_user)
+    acoes = @acoes.new(execucao: @execucao, account_user: @acesso.account_user)
     resultado = no_caderno(caderno) { acoes.executar(@passo['acao'], dados(caminho, corpo)) }
     classificar(resultado, acoes.codigo, caderno)
   end
