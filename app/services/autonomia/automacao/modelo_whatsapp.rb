@@ -70,7 +70,7 @@ class Autonomia::Automacao::ModeloWhatsapp
 
     lidos = variaveis.map { |partes| ::Autonomia::Automacao::Texto.new(partes, @valores).montar }
     # Vazio, ou só quebra, tab e espaço: o que sobraria da limpeza abaixo é nada.
-    return 'faltou_valor' if lidos.any? { |lido| lido.nil? || lido.split.empty? }
+    return 'modelo_faltou_valor' if lidos.any? { |lido| lido.nil? || lido.split.empty? }
 
     # A Meta recusa variável de corpo com quebra de linha, tab ou espaços seguidos (erro 132018), e a recusa só chega
     # depois, com o passo já "ok": cada sequência de espaços vira um espaço, no envio e no texto do painel.

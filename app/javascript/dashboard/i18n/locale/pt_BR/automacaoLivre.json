@@ -324,7 +324,7 @@
       "FILTRO_SAI": "Ao salvar, sai do \"Só se\": {condicao}. Ela só vale em \"Quando chega uma mensagem\".",
       "MODELO": {
         "DICA": "No WhatsApp oficial, 24 h depois da última mensagem do cliente, texto livre não sai. Escolha um modelo aprovado na Meta para mandar no lugar; cada envio de modelo é cobrado pela Meta. Com a janela aberta, sai o texto acima.",
-        "NENHUM": "Não mandar nada (o passo pula)",
+        "NENHUM": "Não mandar nada (a automação para nesta conversa)",
         "OPCAO": "{nome} ({idioma})",
         "SEM_MODELOS": "Nenhuma caixa do WhatsApp oficial que você vê tem modelo de utilidade aprovado. Crie e aprove em Modelos.",
         "DIVERGENTE": "Este modelo tem texto diferente em outra caixa. Cada conversa recebe o modelo da própria caixa; se lá ele pedir outras variáveis, a mensagem não sai.",
