@@ -379,6 +379,7 @@ defineExpose({ abrir, fechar });
         :catalogo="catalogo"
         :opcoes="opcoes"
         :atributos="atributosDaPeca(campo.peca)"
+        :atributos-do="atributosDo"
         :bloqueadas="bloqueadasDe(campo)"
         @update:model-value="novo => mudarCampo(campo.nome, novo)"
       />

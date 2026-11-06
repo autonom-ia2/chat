@@ -166,9 +166,9 @@ RSpec.describe Autonomia::Automacao::Versao do
     end
   end
 
-  it 'recusa variável no corpo da ação (chega com a mensagem, F4)' do
-    expect(erros(receita(por_etiqueta(corpo: { 'por' => [{ '$valor' => 'contato.nome' }] }))))
-      .to include('o corpo da ação ainda não aceita variável')
+  it 'aceita valor calculado no corpo da ação (G16) e confere o caminho que ele lê', :aggregate_failures do
+    expect(versao(receita(por_etiqueta(corpo: { 'por' => [{ '$valor' => 'contato.nome' }] })))).to be_valid
+    expect(erros(receita(por_etiqueta(corpo: { 'por' => [{ '$valor' => 'contato.apelido' }] })))).to include('contato.apelido')
   end
 
   it 'pede o valor da comparação e põe teto na espera' do

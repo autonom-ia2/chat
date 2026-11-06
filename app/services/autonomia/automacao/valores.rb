@@ -170,6 +170,14 @@ class Autonomia::Automacao::Valores
       base.nil? || conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave)
     end
 
+    # O caminho lê um atributo do tipo data da conta? A data calculada no corpo (G16) só parte de um deles: os CAMPOS
+    # não têm data.
+    def data?(caminho, conta)
+      base, chave = atributo(caminho)
+      base.present? && conta.custom_attribute_definitions.exists?(attribute_model: MODELOS.fetch(base), attribute_key: chave,
+                                                                  attribute_display_type: :date)
+    end
+
     # "contato.atributos.placa" => ["contato.atributos", "placa"]. A chave do atributo pode ter ponto.
     def atributo(caminho)
       base = ATRIBUTOS.keys.find { |prefixo| caminho.to_s.start_with?("#{prefixo}.") }
