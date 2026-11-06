@@ -3621,6 +3621,10 @@
         "WHERE": {
           "TITLE": "Página e número do WhatsApp",
           "HINT": "O anúncio aparece em nome da Página e abre conversa com este número.",
+          "TITLE_PAGE": "Página do Facebook",
+          "HINT_PAGE": "O anúncio aparece em nome desta Página.",
+          "TITLE_NUMBER": "Número do WhatsApp",
+          "HINT_NUMBER": "Quem tocar no anúncio abre conversa com este número.",
           "PAGE": "Página do Facebook",
           "NUMBER": "Número do WhatsApp",
           "CHOOSE": "Escolha"

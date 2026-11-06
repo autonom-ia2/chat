@@ -3620,6 +3620,10 @@
         "WHERE": {
           "TITLE": "Page and WhatsApp number",
           "HINT": "The ad shows in the name of the Page and opens a chat with this number.",
+          "TITLE_PAGE": "Facebook Page",
+          "HINT_PAGE": "The ad shows in the name of this Page.",
+          "TITLE_NUMBER": "WhatsApp number",
+          "HINT_NUMBER": "Whoever taps the ad opens a chat with this number.",
           "PAGE": "Facebook Page",
           "NUMBER": "WhatsApp number",
           "CHOOSE": "Choose"
