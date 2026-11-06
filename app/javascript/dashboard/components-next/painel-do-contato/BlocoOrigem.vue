@@ -47,6 +47,8 @@ const origem = computed(
 const CANAL = {
   google_ads: 'Google',
   tiktok_ads: 'TikTok',
+  meta_ctm: 'Messenger',
+  meta_ctd: 'Instagram',
 };
 // meta_ctm/meta_ctd: clique para o Messenger e o Direct (#2521).
 const ANUNCIOS = [

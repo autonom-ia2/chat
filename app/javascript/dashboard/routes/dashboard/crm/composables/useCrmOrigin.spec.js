@@ -56,8 +56,11 @@ describe('useCrmOrigin', () => {
     expect(adHierarchyLines(origin)).toEqual([]);
   });
 
-  it('names a Messenger or Direct ad click as a Meta ad and hides it the same way (#2521)', () => {
-    ['meta_ctm', 'meta_ctd'].forEach(source => {
+  it('names a Messenger or Direct ad click by its own channel and hides it the same way (#2521, #2620)', () => {
+    [
+      ['meta_ctm', 'CRM_KANBAN.ORIGIN.META_CTM'],
+      ['meta_ctd', 'CRM_KANBAN.ORIGIN.META_CTD'],
+    ].forEach(([source, labelKey]) => {
       const origin = originFromCampaign({
         source,
         source_type: 'ad',
@@ -66,8 +69,8 @@ describe('useCrmOrigin', () => {
       });
 
       expect(origin).toMatchObject({ source, adHidden: true, headline: '' });
-      expect(origin.labelKey).toBe('CRM_KANBAN.ORIGIN.META_PAID');
-      expect(humanizedOriginLabel(origin)).toBe('CRM_KANBAN.ORIGIN.META_PAID');
+      expect(origin.labelKey).toBe(labelKey);
+      expect(humanizedOriginLabel(origin)).toBe(labelKey);
     });
   });
 
