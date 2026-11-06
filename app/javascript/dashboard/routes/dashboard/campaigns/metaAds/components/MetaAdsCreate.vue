@@ -16,11 +16,16 @@ import Spinner from 'dashboard/components-next/spinner/Spinner.vue';
 import { todayIso, todayOfAccount } from '../dinheiroDoAnuncio';
 import { useDinheiroDoRascunho } from '../useDinheiroDoRascunho';
 import {
+  GOALS,
   botaoDoAnuncio,
   destinosDaConta,
   lugaresDoDestino,
+  objetivoDoDestino,
+  perfilComCategoriaEspecial,
   siteValido,
+  textoDaOferta,
 } from '../anuncioNovo';
+import { CAROUSEL_DESTINATIONS } from '../midiaDoAnuncio';
 import {
   criarAnuncio,
   esquecerTentativas,
@@ -33,6 +38,7 @@ import MetaAdsCreateAudience from './MetaAdsCreateAudience.vue';
 import MetaAdsCreateBudget from './MetaAdsCreateBudget.vue';
 import MetaAdsCreateContent from './MetaAdsCreateContent.vue';
 import MetaAdsCreateDone from './MetaAdsCreateDone.vue';
+import MetaAdsCreateGoal from './MetaAdsCreateGoal.vue';
 import MetaAdsCreateKind from './MetaAdsCreateKind.vue';
 import MetaAdsCreatePost from './MetaAdsCreatePost.vue';
 import MetaAdsCreateReview from './MetaAdsCreateReview.vue';
@@ -68,6 +74,7 @@ const CREATE_ERRORS = [
   'invalid_whatsapp_number',
   'invalid_page',
   'invalid_instagram',
+  'special_category_profile',
   'invalid_media',
   'invalid_audience',
   'video_processing',
@@ -154,8 +161,10 @@ const needsWhere = computed(
 );
 
 const isPost = computed(() => draft.value.kind === 'post');
+// Anúncio novo (#2564): logo depois do "O que fazer", para onde vai quem toca (conversa, site ou perfil).
 const STEPS = computed(() => [
   'KIND',
+  ...(isPost.value ? [] : ['GOAL']),
   ...(needsWhere.value ? ['WHERE'] : []),
   isPost.value ? 'POST' : 'CONTENT',
   'AUDIENCE',
@@ -163,6 +172,12 @@ const STEPS = computed(() => [
   'REVIEW',
 ]);
 const current = computed(() => STEPS.value[step.value]);
+// A frase do passo; a da foto no anúncio de perfil diz que ele aparece só no Instagram (#2564).
+const stepHint = computed(() =>
+  current.value === 'CONTENT' && draft.value.destination === 'INSTAGRAM_PROFILE'
+    ? `${KEY}.CONTENT.HINT_PROFILE`
+    : `${KEY}.${current.value}.HINT`
+);
 const total = computed(() => STEPS.value.length - 1);
 
 const impulsionar = useImpulsionarPost({ draft, numbers });
@@ -177,7 +192,13 @@ const blocker = computed(() => {
   if (!draft.value.kind) return null;
   if (!pages.value.length) return 'NO_PAGE';
   if (isPost.value) return impulsionar.semPosts.value ? 'NO_POST' : null;
-  if (draft.value.destination === 'WHATSAPP' && !numbers.value.length) {
+  // Só depois da pergunta do destino (#2564): quem vai para o site ou o perfil não precisa de número.
+  const asking = ['KIND', 'GOAL'].includes(current.value);
+  if (
+    !asking &&
+    draft.value.destination === 'WHATSAPP' &&
+    !numbers.value.length
+  ) {
     return 'NO_NUMBER';
   }
   return null;
@@ -208,6 +229,11 @@ const action = computed(() =>
 // Só o que a chamada real já confirmou para a conta: os destinos e, para o destino do anúncio, os lugares. Lugar
 // escolhido que deixa de valer (trocou o destino) volta para Automático.
 const destinations = computed(() => destinosDaConta(options.value));
+// O objetivo escolhido e, no passo da foto, só os destinos dele para trocar (o canal da conversa, por exemplo).
+const goal = computed(() => objetivoDoDestino(draft.value.destination));
+const goalDestinations = computed(() =>
+  destinations.value.filter(option => GOALS[goal.value]?.includes(option))
+);
 // Post do Instagram vai em Automático; o da Página, só no Facebook (o servidor manda assim).
 const placements = computed(() => {
   if (isPost.value) {
@@ -216,10 +242,11 @@ const placements = computed(() => {
   return lugaresDoDestino(options.value, draft.value.destination);
 });
 watch(placements, list => {
-  // O post tem lugar fixo (o servidor decide); só o anúncio novo volta para Automático.
+  // O post tem lugar fixo (o servidor decide); o anúncio novo volta para o primeiro lugar que vale (Automático, ou só
+  // Instagram no perfil).
   if (isPost.value) return;
   if (!list.includes(draft.value.placement)) {
-    draft.value = { ...draft.value, placement: 'AUTO' };
+    draft.value = { ...draft.value, placement: list[0] };
   }
 });
 
@@ -242,7 +269,10 @@ const contentMissing = computed(() => {
   const { destination, site_url: url, offer, media, text } = draft.value;
   if (destination === 'WEBSITE' && !siteValido(url)) return 'NEED_SITE';
   // Direct escolhido e depois a troca para uma Página sem Instagram (#2560): a pessoa escolhe outro destino.
-  if (destination === 'INSTAGRAM_DIRECT' && !instagram.value) {
+  if (
+    ['INSTAGRAM_DIRECT', 'INSTAGRAM_PROFILE'].includes(destination) &&
+    !instagram.value
+  ) {
     return 'NEED_INSTAGRAM';
   }
   if (!offer.trim()) return 'NEED_OFFER';
@@ -255,6 +285,7 @@ const contentMissing = computed(() => {
 });
 const STEP_READY = {
   KIND: () => Boolean(draft.value.kind),
+  GOAL: () => Boolean(goal.value),
   // Com um número só (ou nenhum), ele não é pergunta: já vem escolhido ou o destino não é o WhatsApp.
   WHERE: () =>
     Boolean(
@@ -269,6 +300,7 @@ const STEP_READY = {
     Boolean(postEscolhido.value?.eligible),
   AUDIENCE: () =>
     draft.value.special_category !== null &&
+    !perfilComCategoriaEspecial(draft.value) &&
     (draft.value.region === 'BR' || draft.value.states.length > 0) &&
     draft.value.age_min <= draft.value.age_max,
   BUDGET: () => !amountError.value,
@@ -411,6 +443,39 @@ const submit = () => {
   else next();
 };
 
+// Conversar: fica o canal de conversa já escolhido; senão o primeiro que dá (WhatsApp com número, Direct com
+// Instagram, Messenger). Site e perfil têm um destino só. O texto montado acompanha, até a pessoa mexer nele; carrossel
+// só segue em destino que aceita.
+const usable = option =>
+  (option !== 'WHATSAPP' || numbers.value.length > 0) &&
+  (option !== 'INSTAGRAM_DIRECT' || Boolean(instagram.value));
+const firstUsable = list => list.find(usable) || list[0];
+const chooseGoal = value => {
+  const list = destinations.value.filter(option =>
+    GOALS[value].includes(option)
+  );
+  const before = draft.value;
+  const destination =
+    list.includes(before.destination) && usable(before.destination)
+      ? before.destination
+      : firstUsable(list);
+  draft.value = {
+    ...before,
+    destination,
+    text: before.text_edited
+      ? before.text
+      : textoDaOferta(t, before.offer, destination),
+    more_media: CAROUSEL_DESTINATIONS.includes(destination)
+      ? before.more_media
+      : [],
+  };
+  next();
+};
+// Perfil marcado como seguro ou crédito: a pessoa volta à pergunta do destino.
+const goToGoal = () => {
+  step.value = STEPS.value.indexOf('GOAL');
+};
+
 // Com uma opção só, ela já vem escolhida.
 const prefill = data => {
   const [destination = null] = destinosDaConta(data);
@@ -491,7 +556,7 @@ const otherDestination = computed(() =>
 );
 const adWithoutWhatsapp = () => {
   draft.value = { ...draft.value, destination: otherDestination.value };
-  step.value = 1;
+  step.value = STEPS.value.indexOf('CONTENT');
 };
 
 // Sem a configuração do login no servidor, o botão diz a verdade: leva à Conexão.
@@ -650,7 +715,7 @@ const BLOCKERS = {
           {{ $t(`${KEY}.${current}.TITLE`) }}
         </h2>
         <p class="m-0 max-w-prose text-sm leading-6 text-n-slate-11">
-          {{ $t(`${KEY}.${current}.HINT`) }}
+          {{ $t(stepHint) }}
         </p>
       </div>
 
@@ -666,6 +731,14 @@ const BLOCKERS = {
           :kinds="kinds"
           :unavailable="destinations.length ? {} : { ad: 'NO_DESTINATION' }"
           @choose="chooseKind"
+        />
+
+        <MetaAdsCreateGoal
+          v-else-if="current === 'GOAL'"
+          :model-value="goal"
+          :destinations="destinations"
+          :instagram="instagram"
+          @choose="chooseGoal"
         />
 
         <div
@@ -712,7 +785,7 @@ const BLOCKERS = {
           :phone="chosenNumber?.phone"
           :has-number="numbers.length > 0"
           :instagram="instagram"
-          :destinations="destinations"
+          :destinations="goalDestinations"
         />
 
         <MetaAdsCreatePost
@@ -730,6 +803,8 @@ const BLOCKERS = {
         <MetaAdsCreateAudience
           v-else-if="current === 'AUDIENCE'"
           v-model="draft"
+          :profile-blocked="perfilComCategoriaEspecial(draft)"
+          @change-goal="goToGoal"
         />
 
         <MetaAdsCreateBudget

@@ -4,6 +4,14 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 import Input from 'dashboard/components-next/input/Input.vue';
 import { ESTADOS, semAcento } from '../brasilEstados';
 
+// Perfil do Instagram com "Sim" (#2564): a Meta não aceita anúncio de perfil com categoria especial. A tela explica e
+// leva de volta à pergunta do destino; o "Continuar" fica desligado até mudar.
+defineProps({
+  profileBlocked: { type: Boolean, default: false },
+});
+
+const emit = defineEmits(['changeGoal']);
+
 // Anúncios da Meta (#2198), criar: quem vê o anúncio. Primeiro a pergunta da categoria especial (a Meta exige o campo
 // em toda campanha; anúncio de seguro, crédito, empréstimo ou investimento vai marcado, com as travas de público
 // ligadas: idade 18 a 65+ e sem escolha de gênero). Depois onde (Brasil todo ou estados, pelo nome) e a idade.
@@ -75,8 +83,31 @@ const chipClass = active =>
           {{ $t(`${KEY}.${answer ? 'YES' : 'NO'}`) }}
         </button>
       </div>
+      <div
+        v-if="profileBlocked"
+        data-create-special-profile
+        role="alert"
+        class="flex flex-col items-start gap-3 rounded-xl bg-n-amber-2 p-4 text-sm text-n-amber-12"
+      >
+        <p class="m-0 flex gap-2">
+          <span
+            class="i-lucide-triangle-alert mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
+          {{ $t(`${KEY}.SPECIAL_PROFILE`) }}
+        </p>
+        <button
+          type="button"
+          data-create-special-change-goal
+          class="inline-flex min-h-11 items-center gap-1.5 rounded-xl border-0 bg-n-solid-1 px-4 text-sm font-medium text-n-slate-12 ring-1 ring-n-weak hover:ring-n-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-n-brand"
+          @click="emit('changeGoal')"
+        >
+          <span class="i-lucide-arrow-left size-4" aria-hidden="true" />
+          {{ $t(`${KEY}.CHANGE_GOAL`) }}
+        </button>
+      </div>
       <p
-        v-if="draft.special_category"
+        v-else-if="draft.special_category"
         data-create-special-hint
         class="m-0 flex gap-2 rounded-xl bg-n-blue-2 p-3 text-sm text-n-blue-12"
       >

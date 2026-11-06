@@ -77,7 +77,8 @@ const DialogStub = {
 const STUBS = { Spinner: true, RouterLink: true, Dialog: DialogStub };
 
 let mounted = null;
-const mountCreate = async (options = OPTIONS) => {
+// Anúncio novo (#2564): a primeira pergunta é para onde vai quem toca. `goal` já responde; null para na pergunta.
+const mountCreate = async (options = OPTIONS, goal = 'CONVERSATION') => {
   CrmMetaAdsConnectionAPI.createOptions.mockResolvedValue({
     data: { options },
   });
@@ -88,6 +89,10 @@ const mountCreate = async (options = OPTIONS) => {
     },
   });
   await flushPromises();
+  if (goal && mounted.find(`[data-create-goal="${goal}"]`).exists()) {
+    await mounted.find(`[data-create-goal="${goal}"]`).trigger('click');
+    await flushPromises();
+  }
   return mounted;
 };
 
@@ -130,10 +135,10 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
   });
 
   it('with only one kind offered, enters it directly, without "What to do"', async () => {
-    const wrapper = await mountCreate();
+    const wrapper = await mountCreate(OPTIONS, null);
 
     expect(CrmMetaAdsConnectionAPI.createOptions).toHaveBeenCalledTimes(1);
-    expect(step(wrapper)).toBe('CONTENT');
+    expect(step(wrapper)).toBe('GOAL');
     expect(wrapper.find('[data-create-kind]').exists()).toBe(false);
     expect(wrapper.find('[data-create-back]').text()).toBe(
       `${KEY}.BACK_TO_PANEL`
@@ -188,7 +193,7 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
 
     await mounted.find('[data-create-failed] button').trigger('click');
     await flushPromises();
-    expect(step(mounted)).toBe('CONTENT');
+    expect(step(mounted)).toBe('GOAL');
   });
 
   it('without an ad account (404 not_connected) asks to choose it, never "could not reach Meta" (#2338)', async () => {
@@ -485,11 +490,7 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
 
   it('a website ad sends the address with https and no WhatsApp number', async () => {
     CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
-    const wrapper = await mountCreate();
-    await wrapper.find('[data-create-destination-change]').trigger('click');
-    await wrapper
-      .find('[data-create-destination-option="WEBSITE"]')
-      .trigger('click');
+    const wrapper = await mountCreate(OPTIONS, 'WEBSITE');
     await wrapper.find('input[data-create-site-url]').setValue('loja.com.br');
     await fillUntilReview(wrapper);
 
@@ -538,16 +539,11 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
     );
   });
 
-  it('without a WhatsApp number, "another destination" skips Direct when the Page has no Instagram', async () => {
+  it('without a WhatsApp number, "chat with me" skips WhatsApp and Direct when the Page has no Instagram', async () => {
     CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
     const wrapper = await mountCreate({ ...MESSAGING, whatsapp_numbers: [] });
-    expect(
-      wrapper.find('[data-create-blocker]').attributes('data-create-blocker')
-    ).toBe('NO_NUMBER');
+    expect(wrapper.find('[data-create-blocker]').exists()).toBe(false);
 
-    await wrapper
-      .find('[data-create-blocker-other="NO_NUMBER"]')
-      .trigger('click');
     await fillUntilReview(wrapper);
     await submit(wrapper);
 
@@ -669,5 +665,79 @@ describe('Anúncios da Meta · anúncio novo (#2198)', () => {
 
     expect(step(wrapper)).toBe('CONTENT');
     expect(wrapper.text()).toContain(`${KEY}.CONTENT.NEED_INSTAGRAM`);
+  });
+
+  // #2564: anúncio que leva ao perfil do Instagram, só no Instagram.
+  const PROFILE = {
+    ...MESSAGING,
+    pages: [IG_PAGE],
+    destinations: [...MESSAGING.destinations, 'INSTAGRAM_PROFILE'],
+    placements_by_destination: {
+      ...MESSAGING.placements_by_destination,
+      INSTAGRAM_PROFILE: ['INSTAGRAM'],
+    },
+  };
+
+  it('a profile ad goes only to Instagram and sends no WhatsApp number', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockResolvedValue({ data: CREATED });
+    const wrapper = await mountCreate(PROFILE, 'PROFILE');
+    expect(step(wrapper)).toBe('CONTENT');
+    expect(wrapper.find('[data-create-destination-change]').exists()).toBe(
+      false
+    );
+
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(CrmMetaAdsConnectionAPI.createAd).toHaveBeenCalledWith(
+      expect.objectContaining({
+        destination: 'INSTAGRAM_PROFILE',
+        placement: 'INSTAGRAM',
+        whatsapp_number: null,
+        ready_message: null,
+      })
+    );
+  });
+
+  it('without Instagram on the Page, the profile card is off with the reason and does not advance', async () => {
+    const wrapper = await mountCreate(
+      { ...PROFILE, pages: [{ ...IG_PAGE, instagram: null }] },
+      null
+    );
+
+    expect(
+      wrapper.find('[data-create-goal-unavailable="PROFILE"]').exists()
+    ).toBe(true);
+    await wrapper.find('[data-create-goal="PROFILE"]').trigger('click');
+    await flushPromises();
+    expect(step(wrapper)).toBe('GOAL');
+  });
+
+  it('a profile ad about insurance or credit explains it and goes back to the destination question', async () => {
+    const wrapper = await mountCreate(PROFILE, 'PROFILE');
+    await wrapper.find('input[data-create-offer]').setValue('seguro auto');
+    await wrapper.find('[data-create-media-library-toggle]').trigger('click');
+    await wrapper.find('[data-create-image="h1"]').trigger('click');
+    await submit(wrapper);
+    await wrapper.find('[data-create-special="true"]').trigger('click');
+
+    expect(wrapper.find('[data-create-special-profile]').exists()).toBe(true);
+    await submit(wrapper);
+    expect(step(wrapper)).toBe('AUDIENCE');
+
+    await wrapper.find('[data-create-special-change-goal]').trigger('click');
+    await flushPromises();
+    expect(step(wrapper)).toBe('GOAL');
+  });
+
+  it('the special_category_profile refusal from the server is translated', async () => {
+    CrmMetaAdsConnectionAPI.createAd.mockRejectedValue(
+      refusal(422, { error: 'special_category_profile', nothing_created: true })
+    );
+    const wrapper = await mountCreate(PROFILE, 'PROFILE');
+    await fillUntilReview(wrapper);
+    await submit(wrapper);
+
+    expect(wrapper.text()).toContain(`${KEY}.ERRORS.SPECIAL_CATEGORY_PROFILE`);
   });
 });

@@ -34,7 +34,12 @@ const isCarousel = computed(() => draft.value.more_media.length > 0);
 // Por que uma opção não dá agora; '' quando dá.
 const reasonFor = option => {
   if (option === 'WHATSAPP' && !props.hasNumber) return 'NO_NUMBER';
-  if (option === 'INSTAGRAM_DIRECT' && !props.instagram) return 'NO_INSTAGRAM';
+  if (
+    ['INSTAGRAM_DIRECT', 'INSTAGRAM_PROFILE'].includes(option) &&
+    !props.instagram
+  ) {
+    return 'NO_INSTAGRAM';
+  }
   if (isCarousel.value && !CAROUSEL_DESTINATIONS.includes(option)) {
     return 'CAROUSEL';
   }
@@ -47,6 +52,11 @@ const labelFor = option => {
   }
   if (option === 'INSTAGRAM_DIRECT' && props.instagram) {
     return t(`${KEY}.CURRENT_INSTAGRAM_DIRECT`, {
+      username: props.instagram.username,
+    });
+  }
+  if (option === 'INSTAGRAM_PROFILE' && props.instagram) {
+    return t(`${KEY}.CURRENT_INSTAGRAM_PROFILE`, {
       username: props.instagram.username,
     });
   }
@@ -95,6 +105,7 @@ const siteError = computed(() =>
         </span>
       </p>
       <button
+        v-if="destinations.length > 1"
         type="button"
         data-create-destination-change
         :aria-expanded="open"
@@ -111,7 +122,7 @@ const siteError = computed(() =>
     </div>
 
     <div
-      v-if="open"
+      v-if="open && destinations.length > 1"
       role="radiogroup"
       :aria-label="$t(`${KEY}.GOES_TO`)"
       class="grid grid-cols-1 gap-2 sm:grid-cols-2"
