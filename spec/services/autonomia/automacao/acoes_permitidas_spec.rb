@@ -52,7 +52,8 @@ RSpec.describe Autonomia::Automacao::AcoesPermitidas do
 
   it 'deixa fora usuários, funções, conta, integrações, webhooks, tokens e as IAs (ADR-001 2.1)' do
     expect(permitidas.sempre_fora).to include('agents', 'custom_roles', 'api/v1/accounts', 'webhooks', 'integrations/slack',
-                                              'whatsapp/authorizations', 'crm/integration_tokens', 'crm/ai_settings')
+                                              'whatsapp/authorizations', 'crm/integration_tokens', 'crm/ai_settings',
+                                              'crm/ai_suggestions')
     expect(permitidas.lista['passo'].keys & permitidas.sempre_fora).to be_empty
     expect(permitidas.permitida?('DELETE agents/:id')).to be(false)
   end

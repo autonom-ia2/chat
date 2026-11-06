@@ -99,13 +99,6 @@ passo:
       execução e pedido (AcoesDoMotor), e a repetição do passo devolve o mesmo contato em vez de criar outro.
     acoes:
       POST crm/cards/:card_id/contact: {}
-  crm/ai_suggestions:
-    motivo: >-
-      Dispensar a sugestão de etapa da IA do funil (#2660 lote B). Aceitar fica fora: a de fechar fecharia o card sem
-      nenhuma pessoa ver, e a IA nunca fecha sozinha (#2389); a de mover ficaria "aceita", como se fosse de uma pessoa,
-      e entraria na taxa de aceite da IA sem dizer que foi a automação.
-    acoes:
-      POST crm/ai_suggestions/:id/dismiss: {}
   crm/memoria_fatos:
     motivo: >-
       Aceitar a sugestão, destravar e marcar "não vale mais" num fato da memória do card (#2660 lote B). Pela automação,
@@ -171,6 +164,7 @@ fora:
     sempre: true
     recursos:
       - crm/ai_settings
+      - crm/ai_suggestions
       - crm/stage_criteria
       - crm/memoria_chaves
       - crm/meta_ads_ai

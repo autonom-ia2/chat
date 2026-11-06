@@ -74,8 +74,9 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :automacao_motor do
     expect(chamadas.last.keys).to eq(['Idempotency-Key'])
   end
 
-  # Qualidade adversarial (#2660 lote B): a IA nunca fecha o card sozinha (#2389). Pela automação o aceite fecharia sem
-  # nenhuma pessoa ver; ele fica fora, e dispensar continua valendo.
+  # Qualidade adversarial (#2660 lote B): a IA nunca fecha o card sozinha (#2389), e pela automação o aceite fecharia
+  # sem nenhuma pessoa ver. Dispensar também fica fora: a taxa de aceite da IA (Crm::Reports::AiVsHuman) conta o
+  # "dismissed" como recusa de uma pessoa.
   describe 'sugestão de fechar da IA' do
     let!(:sugestao) do
       account.crm_ai_stage_suggestions.create!(
@@ -97,12 +98,12 @@ RSpec.describe Autonomia::Automacao::AcoesDoMotor, :automacao_motor do
       expect(sugestao.reload).to be_pending
     end
 
-    it 'dispensar pela automação não fecha nada', :aggregate_failures do
-      dispensar = acoes.executar('POST crm/ai_suggestions/:id/dismiss', { caminho: { id: sugestao.id }, descricao: 'Dispensar' })
+    it 'dispensar pela automação é recusado e a sugestão segue pendente', :aggregate_failures do
+      dispensar = { caminho: { id: sugestao.id }, descricao: 'Dispensar' }
 
-      expect(dispensar.ok).to be(true)
-      expect(card.reload).to be_open
-      expect(sugestao.reload).to be_dismissed
+      expect { acoes.executar('POST crm/ai_suggestions/:id/dismiss', dispensar) }
+        .to raise_error(Autonomia::Guide::Acoes::Recusada, I18n.t('autonomia.automacao.motivos.acao_fora'))
+      expect(sugestao.reload).to be_pending
     end
   end
 
