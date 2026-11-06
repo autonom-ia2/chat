@@ -278,6 +278,24 @@ export const otherAdStats = ad => [
     .map(key => ({ key, value: ad[OTHER_STAT_FIELDS[key]] || 0 })),
 ];
 
+// O número do cartão de um anúncio que não abre conversa, na lista única do painel (#2621): um só, o do objetivo dele.
+// Perfil: a Meta não manda "visitas ao perfil" nas ações do anúncio (Panel::AdResults); o número oficial mais perto é
+// o clique (`link_clicks`), que no anúncio de perfil é o toque que leva ao perfil. Chave em PANEL.AD_RESULT.
+const RESULT_BY_DESTINATION = {
+  profile: ['PROFILE', 'link_clicks'],
+  website: ['WEBSITE', 'link_clicks'],
+  lead_form: ['LEADS', 'leads'],
+  post: ['ENGAGEMENT', 'post_engagement'],
+  reach: ['SHOWN', 'impressions'],
+};
+export const resultadoDoAnuncio = ad => {
+  const [key, field] = RESULT_BY_DESTINATION[ad.destination] || [
+    'CLICKS',
+    'link_clicks',
+  ];
+  return { key, value: ad[field] || 0 };
+};
+
 // Chave do texto do destino (PANEL.OTHER_ADS.DESTINATIONS): profile, post, lead_form, website, app, reach ou other.
 export const destinationKey = ad =>
   `CRM_KANBAN.META_ADS_HUB.PANEL.OTHER_ADS.DESTINATIONS.${(ad.destination || 'other').toUpperCase()}`;

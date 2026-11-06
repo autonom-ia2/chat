@@ -3031,11 +3031,13 @@
         "RETURN": "Cada R$ 1 investido voltou {value}",
         "OPEN_QUOTES": "Vendas chegando: 1 proposta aberta | Vendas chegando: {count} propostas abertas",
         "ADS_TITLE": "Seus anúncios, por venda",
+        "ADS_ALL_TITLE": "Seus anúncios",
         "ADS_EMPTY": "Assim que um anúncio gastar ou trouxer conversa, ele aparece aqui.",
         "AD_NO_NAME": "Anúncio sem nome",
         "OPEN_AD": "Ver por dentro",
         "OPEN_AD_LABEL": "Ver por dentro o anúncio {name}",
         "AD_QUOTES": "1 proposta aberta | {count} propostas abertas",
+        "AD_PRIVATE": "1 conversa pelo privado | {count} conversas pelo privado",
         "VERDICT": {
           "UP": "Aumentar · base suficiente",
           "KEEP": "Manter",
@@ -3057,7 +3059,13 @@
         "AD_STATS": {
           "SPEND": "Investido",
           "CONVERSATIONS": "Conversas",
-          "SALES": "Vendas"
+          "SALES": "Vendas",
+          "RESULT_PROFILE": "Toques para ver seu perfil",
+          "RESULT_WEBSITE": "Cliques para o site",
+          "RESULT_LEADS": "Cadastros",
+          "RESULT_ENGAGEMENT": "Interações com a publicação",
+          "RESULT_SHOWN": "Vezes que apareceu",
+          "RESULT_CLICKS": "Cliques"
         },
         "DURATION": {
           "SECONDS": "menos de 1 min",
@@ -3111,18 +3119,7 @@
           "NOTE": "Conecte sua conta de anúncios para ver",
           "CTA": "Ver quanto gastei"
         },
-        "ADS_WHATSAPP_TITLE": "Anúncios que trazem conversa",
         "OTHER_ADS": {
-          "TITLE": "Outros anúncios",
-          "TOTAL": "{value} investidos",
-          "HINT": "Não abrem conversa direto: levam ao perfil, a uma publicação, a um formulário ou ao site. Quem chamar você depois não fica ligado a eles. Ficam fora do custo por conversa e por venda.",
-          "SPEND": "Investido",
-          "CLICKS": "Cliques",
-          "SHOWN": "Apareceu",
-          "ENGAGEMENT": "Engajamento",
-          "COMMENTS": "Comentários",
-          "LEADS": "Cadastros",
-          "PRIVATE": "Conversas pelo privado",
           "DESTINATIONS": {
             "PROFILE": "Leva ao seu perfil",
             "POST": "Leva a uma publicação ou vídeo",
