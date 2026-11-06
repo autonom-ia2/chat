@@ -1016,6 +1016,7 @@ pt_BR:
         erro_inesperado: 'A automação parou no meio deste passo por um erro inesperado. Ela não repete o passo; confira o que já foi feito.'
         erro_passageiro: 'A plataforma não respondeu; a automação vai tentar de novo.'
         erro_permanente: 'A plataforma recusou esta ação (por exemplo, a etiqueta não existe mais).'
+        faltou_link_da_agenda: 'O link da agenda ficou vazio (sem responsável, sem página de agendamento ou com mais de uma página), e o passo foi pulado.'
         faltou_valor: 'Um valor de que este passo precisa estava vazio, e o passo foi pulado.'
         motor_desligado: 'As automações estão desligadas nesta conta.'
         prazo_vencido: 'A espera acabou sem a condição.'
@@ -1056,6 +1057,8 @@ pt_BR:
         conversa: 'Conversa #%{id}'
         card: 'Card #%{id} · %{titulo}'
         contato: '%{nome}'
+      valores:
+        inicio_da_reuniao: '%d/%m/%Y às %H:%M'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
@@ -1066,6 +1069,7 @@ pt_BR:
         exige: 'Passo %{passo}: falta %{campo}; o que a automação cria leva descrição.'
         fixo: 'Passo %{passo}: %{campo} tem de ser %{valor}.'
         mensagem_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe no filtro do gatilho "mensagem criada".'
+        reuniao_so_no_gatilho: 'Passo %{passo}: %{caminho} só existe nos gatilhos de reunião (marcada, remarcada, cancelada).'
         resposta_so_na_espera: 'Passo %{passo}: %{caminho} só existe na condição de um "esperar até".'
         valor_fora_do_alvo: 'Passo %{passo}: %{caminho} não dá para ler naquilo em que este gatilho começa (conversa, card ou contato).'
         operador_fora: 'Passo %{passo}: %{caminho} só compara com %{operadores}.'

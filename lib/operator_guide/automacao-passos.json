@@ -110,6 +110,54 @@
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
         }
       ]
+    },
+    {
+      "tipo": "card.reuniao_marcada",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_REUNIAO_MARCADA",
+      "grupo": "reuniao",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        }
+      ]
+    },
+    {
+      "tipo": "card.reuniao_remarcada",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_REUNIAO_REMARCADA",
+      "grupo": "reuniao",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        }
+      ]
+    },
+    {
+      "tipo": "card.reuniao_cancelada",
+      "alvo": "Crm::Card",
+      "frase": "AUTOMACAO_LIVRE.GATILHOS.CARD_REUNIAO_CANCELADA",
+      "grupo": "reuniao",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "parametros": [
+        {
+          "nome": "funil_id",
+          "peca": "funil",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.FUNIL_ID"
+        }
+      ]
     }
   ],
   "operadores": [
@@ -310,6 +358,36 @@
       "frase": "AUTOMACAO_LIVRE.VALORES.CARD_MOTIVO_DA_PERDA"
     },
     {
+      "caminho": "reuniao.inicio",
+      "base": "reuniao",
+      "frase": "AUTOMACAO_LIVRE.VALORES.REUNIAO_INICIO",
+      "so_nos_gatilhos": [
+        "card.reuniao_marcada",
+        "card.reuniao_remarcada",
+        "card.reuniao_cancelada"
+      ]
+    },
+    {
+      "caminho": "reuniao.link_da_reuniao",
+      "base": "reuniao",
+      "frase": "AUTOMACAO_LIVRE.VALORES.REUNIAO_LINK_DA_REUNIAO",
+      "so_nos_gatilhos": [
+        "card.reuniao_marcada",
+        "card.reuniao_remarcada",
+        "card.reuniao_cancelada"
+      ]
+    },
+    {
+      "caminho": "card.link_da_agenda",
+      "base": "card",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CARD_LINK_DA_AGENDA"
+    },
+    {
+      "caminho": "conversa.link_da_agenda",
+      "base": "conversa",
+      "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_LINK_DA_AGENDA"
+    },
+    {
       "caminho": "conversa.cliente_respondeu",
       "base": "conversa",
       "frase": "AUTOMACAO_LIVRE.VALORES.CONVERSA_CLIENTE_RESPONDEU",
@@ -468,7 +546,8 @@
     "Crm::Card": [
       "card",
       "conversa",
-      "contato"
+      "contato",
+      "reuniao"
     ],
     "Contact": [
       "contato"

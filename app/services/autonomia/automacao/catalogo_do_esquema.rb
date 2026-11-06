@@ -10,10 +10,17 @@ module Autonomia::Automacao::CatalogoDoEsquema
     esquema.dig('properties', 'gatilho', 'properties', 'tipo', 'enum').map do |tipo|
       card = ::Autonomia::Automacao::Gatilhos.do_card?(tipo)
       { 'tipo' => tipo, 'alvo' => ::Autonomia::Automacao::Gatilhos.alvo(tipo), 'frase' => chave('GATILHOS', tipo),
-        'grupo' => card ? 'card' : 'conversa', 'requer' => (::Autonomia::Automacao::Motor::FLAG_GATILHOS if card),
+        'grupo' => grupo(tipo, card), 'requer' => (::Autonomia::Automacao::Motor::FLAG_GATILHOS if card),
         'funil' => (true if card), 'parametros' => parametros(esquema, tipo).presence,
         'filtro_sugerido' => declarado.dig('filtro_sugerido', tipo) }.compact
     end
+  end
+
+  # A reunião (G12) é do card, mas fica num grupo próprio no editor: quem procura "reunião" não pensa em "card do funil".
+  def grupo(tipo, card)
+    return 'reuniao' if ::Autonomia::Automacao::Gatilhos.de_reuniao?(tipo)
+
+    card ? 'card' : 'conversa'
   end
 
   def parametros(esquema, tipo)

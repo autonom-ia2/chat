@@ -142,7 +142,8 @@ export const novoPasso = (entrada, id, t) => {
 
 // #2499: só o que o alvo do gatilho alcança (conversa, card, contato). Card num
 // gatilho de conversa o salvar recusaria; o editor nem oferece. Sem gatilho
-// escolhido, ou valor sem base (a mensagem do gatilho), fica tudo.
+// escolhido, ou valor sem base (a mensagem do gatilho), fica tudo. A reunião
+// (G12, `so_nos_gatilhos`) só nos gatilhos de reunião.
 export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
   const bases = alvo && dados.alvos?.[alvo];
@@ -150,7 +151,9 @@ export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   return {
     ...dados,
     valores: dados.valores.filter(
-      item => !item.base || bases.includes(item.base)
+      item =>
+        (!item.base || bases.includes(item.base)) &&
+        (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
   };
 };

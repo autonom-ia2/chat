@@ -23,7 +23,7 @@ class Autonomia::Automacao::PassoDeMensagem
     return negado if negado
 
     texto = texto_pronto
-    return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) if texto.nil?
+    return faltou_valor if texto.nil?
 
     mandar(texto)
   end
@@ -48,7 +48,7 @@ class Autonomia::Automacao::PassoDeMensagem
   def mandar_modelo
     return pulado('fora_da_janela') unless ::Autonomia::Automacao::ModeloWhatsapp.aplica?(@conversa)
 
-    pronto = ::Autonomia::Automacao::ModeloWhatsapp.new(@passo['modelo'], @conversa, ::Autonomia::Automacao::Valores.new(alvo: @alvo))
+    pronto = ::Autonomia::Automacao::ModeloWhatsapp.new(@passo['modelo'], @conversa, valores)
                                                    .preparar
     return pulado(pronto) if pronto.is_a?(String)
 

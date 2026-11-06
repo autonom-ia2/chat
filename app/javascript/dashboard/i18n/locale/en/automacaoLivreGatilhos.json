@@ -9,7 +9,10 @@
       "CARD_ENTROU_NA_ETAPA": "When the card enters a stage",
       "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
       "CARD_GANHO": "When the card is won",
-      "CARD_PERDIDO": "When the card is lost"
+      "CARD_PERDIDO": "When the card is lost",
+      "CARD_REUNIAO_MARCADA": "When a meeting is scheduled",
+      "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled",
+      "CARD_REUNIAO_CANCELADA": "When a meeting is canceled"
     },
     "ORIGEM": {
       "CONVERSA": "From the conversation",
@@ -35,14 +38,18 @@
     },
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
-      "CARD": "Pipeline card"
+      "CARD": "Pipeline card",
+      "REUNIAO": "Meeting"
     },
     "GATILHO_COM": {
       "CARD_CRIADO": "When a card is created in {funil}",
       "CARD_ENTROU_NA_ETAPA": "When the card enters {etapa}",
       "CARD_SAIU_DA_ETAPA": "When the card leaves {etapa}",
       "CARD_GANHO": "When a card in {funil} is won",
-      "CARD_PERDIDO": "When a card in {funil} is lost"
+      "CARD_PERDIDO": "When a card in {funil} is lost",
+      "CARD_REUNIAO_MARCADA": "When a meeting is scheduled on a {funil} card",
+      "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled on a {funil} card",
+      "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card"
     },
     "GATILHO_NO_FUNIL": "{frase}, in the {funil} pipeline",
     "GATILHO_NAO_DISPARA": "Does not trigger when many cards are archived at once, when the stage is deleted or when another system changes the stage.",
