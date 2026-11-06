@@ -764,7 +764,7 @@
         },
         "NOT_CONFIGURED": {
           "TITLE": "Facebook isn't set up on this platform yet",
-          "HELP": "There's nothing for you to do here. Contact support so we can turn it on."
+          "HELP": "Contact support so we can turn Facebook on here."
         },
         "RETRY": "Try again"
       },

@@ -765,7 +765,7 @@
         },
         "NOT_CONFIGURED": {
           "TITLE": "O Facebook ainda não está ligado nesta plataforma",
-          "HELP": "Não há nada para você fazer aqui. Fale com o suporte para ligarmos."
+          "HELP": "Fale com o suporte para ligarmos o Facebook aqui."
         },
         "RETRY": "Tentar de novo"
       },
