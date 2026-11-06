@@ -195,6 +195,17 @@ RSpec.describe Crm::MetaAds::Creation::Publish do
       expect(service.publish!(params.merge(networks: ['facebook']))).to include(facebook: hash_including(id: '110_901'))
     end
 
+    it 'a Página respondeu sucesso sem o id do post: unconfirmed, nunca recusa (a chave fica presa)' do
+      stub_request(:get, meta_graph_url('110')).with(query: hash_including('fields' => 'access_token')).to_return(ok(access_token: 'page-token'))
+      stub_request(:post, meta_graph_url('110/photos')).to_return(ok({}))
+
+      2.times do
+        expect { service.publish!(params.merge(networks: ['facebook'])) }
+          .to raise_error(Crm::MetaAds::Creation::Error) { |error| expect(error.code).to eq('unconfirmed') }
+      end
+      expect(a_request(:post, meta_graph_url('110/photos'))).to have_been_made.once
+    end
+
     it 'contêiner do Instagram que já aparece publicado: unconfirmed, sem publicar de novo' do
       instagram = stub_instagram(status_code: 'PUBLISHED')
 

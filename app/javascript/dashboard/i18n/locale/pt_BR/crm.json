@@ -3950,7 +3950,7 @@
             "UNKNOWN": "A Meta não publicou agora. Nada foi publicado. Tente de novo daqui a pouco.",
             "UNCONFIRMED": "Não deu para saber se o post saiu. Confira no Instagram e no Facebook antes de publicar de novo."
           },
-          "CHECKED_NOT_PUBLISHED": "Conferi e não saiu: publicar de novo"
+          "CHECKED_NOT_PUBLISHED": "Conferi e não saiu em nenhuma rede: publicar de novo"
         },
         "PUBLISHED": {
           "TITLE": {
@@ -3985,6 +3985,10 @@
           "UNCONFIRMED": {
             "INSTAGRAM": "Não deu para saber se saiu no Instagram. Confira lá antes de publicar de novo.",
             "FACEBOOK": "Não deu para saber se saiu no Facebook. Confira lá antes de publicar de novo."
+          },
+          "CHECKED": {
+            "INSTAGRAM": "Conferi e não saiu no Instagram: publicar de novo",
+            "FACEBOOK": "Conferi e não saiu no Facebook: publicar de novo"
           }
         }
       }

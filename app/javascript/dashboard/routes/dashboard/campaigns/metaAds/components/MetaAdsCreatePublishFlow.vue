@@ -123,20 +123,23 @@ const back = () => {
 
 const showError = failure => {
   const code = erroDoPublicar(failure);
-  uncertain.value = publicacaoIncerta(code);
+  // Outra tentativa ainda publicando não tira a dúvida da anterior.
+  uncertain.value =
+    publicacaoIncerta(code) || (uncertain.value && code === 'IN_PROGRESS');
   error.value = t(`${KEY}.PUBLISH_REVIEW.ERRORS.${code}`);
 };
-// "Conferi e não saiu": a próxima confirmação é outra tentativa.
+// "Conferi e não saiu em nenhuma rede": a próxima confirmação é outra tentativa.
 const checkedNotPublished = () => {
   uncertain.value = false;
   chave = null;
   error.value = '';
 };
 
-const send = async redes => {
+// `fresh`: a pessoa conferiu que não saiu naquela rede; só ela vai com chave nova.
+const send = async (redes, fresh = null) => {
   chave = chave || novaChave();
   return publicarPost({
-    chave,
+    chave: fresh || chave,
     pageId: post.value.page_id,
     networks: redes,
     caption: post.value.caption,
@@ -165,13 +168,19 @@ const publishNow = async boost => {
   }
 };
 
-const retry = async rede => {
+const retry = async (rede, checked = false) => {
   saving.value = true;
+  error.value = '';
   try {
-    published.value = juntarPublicado(published.value, await send([rede]));
+    const result = await send([rede], checked ? novaChave() : null);
+    published.value = juntarPublicado(published.value, result);
   } catch (failure) {
     // Vídeo ainda em preparo, ou resposta incerta: a frase da rede diz o que fazer.
     const code = erroDoPublicar(failure);
+    if (code === 'IN_PROGRESS') {
+      error.value = t(`${KEY}.PUBLISH_REVIEW.ERRORS.IN_PROGRESS`);
+      return;
+    }
     let motivo = 'meta_refused';
     if (code === 'PROCESSING') motivo = 'processing';
     else if (publicacaoIncerta(code)) motivo = 'unconfirmed';

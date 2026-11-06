@@ -20,11 +20,12 @@ class Crm::MetaAds::Creation::PublishState
     @saved = {}
     @locked = false
     @sent = false
+    @owner = SecureRandom.uuid
   end
 
   # Toma a vez. Já publicado: devolve o post (com chaves em símbolo). Senão nil, e a tentativa segue.
   def claim!
-    fail!('in_progress') unless Redis::Alfred.set(@lock_key, '1', nx: true, ex: LOCK_TTL.to_i)
+    fail!('in_progress') unless Redis::Alfred.set(@lock_key, @owner, nx: true, ex: LOCK_TTL.to_i)
     @locked = true
     @saved = read
     return if @saved.empty?
@@ -45,8 +46,8 @@ class Crm::MetaAds::Creation::PublishState
 
   # Logo antes da chamada que publica: daqui em diante, falha sem resposta certa vira `unconfirmed`.
   def sending!
-    @sent = true
     write('state' => 'sent', 'container' => container)
+    @sent = true
   end
 
   def sent?
@@ -71,7 +72,8 @@ class Crm::MetaAds::Creation::PublishState
   end
 
   def unlock!
-    Redis::Alfred.delete(@lock_key) if @locked
+    # Só a própria trava: se ela venceu e outra tentativa pegou a vez, a dela fica.
+    Redis::Alfred.delete_if_equals(@lock_key, @owner) if @locked
     @locked = false
   end
 

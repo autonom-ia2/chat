@@ -122,12 +122,19 @@ class Crm::MetaAds::Creation::Publish
     page_client = Meta::AdsGraphClient.new(access_token: page_token!(page_id))
     state.sending!
     result = page_post(page_client, page_id, request[:media], request[:caption])
-    raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok && result.data['id'].present?
+    published!(result)
 
     # Foto: `post_id` é o post da Página, que o impulsionar usa. Vídeo: a Meta devolve só o vídeo (impulsionar o post
     # do vídeo fica para a chamada real confirmar).
     post_id = result.data['post_id'].presence
     [page_client, { id: (post_id || result.data['id']).to_s, boostable: post_id.present? }]
+  end
+
+  # Resposta da chamada que publica. Sucesso sem o id do post: pode ter publicado, nunca é recusa.
+  def published!(result)
+    raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok
+
+    fail!('unconfirmed') if result.data['id'].blank?
   end
 
   def page_post(page_client, page_id, media, caption)
@@ -142,7 +149,7 @@ class Crm::MetaAds::Creation::Publish
     wait_ready!(state, request[:media][:kind])
     state.sending!
     result = @access.client.instagram_publish(instagram_id, state.container)
-    raise Crm::MetaAds::Creation::Error.from_result(result) unless result.ok && result.data['id'].present?
+    published!(result)
 
     [@access.client, { id: result.data['id'].to_s, boostable: true }]
   end

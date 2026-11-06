@@ -64,7 +64,10 @@ export const erroDoPublicar = error => {
   const response = error?.response;
   if (!response) return 'NETWORK';
   if (response.status === HTTP_CONFLICT) return 'IN_PROGRESS';
-  return ERROS_CONHECIDOS[response.data?.error] || 'UNKNOWN';
+  const code = response.data?.error;
+  return Object.hasOwn(ERROS_CONHECIDOS, code ?? '')
+    ? ERROS_CONHECIDOS[code]
+    : 'UNKNOWN';
 };
 
 // Sem resposta, ou o servidor não sabe: a Meta pode ter publicado. A tela não troca a chave sozinha.

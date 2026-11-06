@@ -3949,7 +3949,7 @@
             "UNKNOWN": "Meta didn't publish now. Nothing was published. Try again in a little while.",
             "UNCONFIRMED": "We couldn't tell if the post went out. Check Instagram and Facebook before publishing again."
           },
-          "CHECKED_NOT_PUBLISHED": "I checked and it didn't go out: publish again"
+          "CHECKED_NOT_PUBLISHED": "I checked and it didn't go out anywhere: publish again"
         },
         "PUBLISHED": {
           "TITLE": {
@@ -3984,6 +3984,10 @@
           "UNCONFIRMED": {
             "INSTAGRAM": "We couldn't tell if it went out on Instagram. Check there before publishing again.",
             "FACEBOOK": "We couldn't tell if it went out on Facebook. Check there before publishing again."
+          },
+          "CHECKED": {
+            "INSTAGRAM": "I checked and it didn't go out on Instagram: publish again",
+            "FACEBOOK": "I checked and it didn't go out on Facebook: publish again"
           }
         }
       }

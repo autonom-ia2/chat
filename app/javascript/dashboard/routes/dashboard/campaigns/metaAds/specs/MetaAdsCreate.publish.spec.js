@@ -281,6 +281,42 @@ describe('Anúncios da Meta · criar post (#2653)', () => {
     expect(keys()).toEqual(['key-1', 'key-1', 'key-2']);
   });
 
+  it('one network unknown on the published screen: after checking, publishes only that network with a new key', async () => {
+    crypto.randomUUID
+      .mockReturnValueOnce('key-1')
+      .mockReturnValueOnce('key-ig');
+    CrmMetaAdsConnectionAPI.publishPost
+      .mockResolvedValueOnce({
+        data: {
+          facebook: PUBLISHED.facebook,
+          failed: ['instagram'],
+          errors: { instagram: 'unconfirmed' },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: { instagram: PUBLISHED.instagram, failed: [], errors: {} },
+      });
+    const wrapper = await mountCreate();
+    await toReview(wrapper);
+    await confirm(wrapper);
+
+    expect(
+      wrapper.find('[data-create-published-retry="instagram"]').exists()
+    ).toBe(false);
+    await wrapper
+      .find('[data-create-published-checked="instagram"]')
+      .trigger('click');
+    await flushPromises();
+
+    expect(CrmMetaAdsConnectionAPI.publishPost.mock.calls[1][0]).toMatchObject({
+      idempotency_key: 'key-ig',
+      networks: ['instagram'],
+    });
+    expect(wrapper.find('[data-create-published-partial]').exists()).toBe(
+      false
+    );
+  });
+
   it('"Boost this post" goes to the boost flow with the Instagram post just published already chosen', async () => {
     CrmMetaAdsConnectionAPI.publishPost.mockResolvedValue({ data: PUBLISHED });
     CrmMetaAdsConnectionAPI.boostPosts.mockResolvedValue({

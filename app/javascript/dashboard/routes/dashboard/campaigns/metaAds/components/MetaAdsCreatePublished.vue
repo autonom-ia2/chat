@@ -27,7 +27,8 @@ const PARTIAL_BY_ERROR = {
 };
 const partialText = rede =>
   `${KEY}.${PARTIAL_BY_ERROR[props.published.errors?.[rede]] || 'PARTIAL'}.${rede.toUpperCase()}`;
-// Sem saber se saiu, tentar de novo com a mesma chave não adianta: a pessoa confere na rede.
+// Sem saber se saiu, tentar de novo com a mesma chave não adianta: a pessoa confere na rede e diz que não saiu (o
+// pai manda só esta rede, com chave nova).
 const canRetry = rede => props.published.errors?.[rede] !== 'unconfirmed';
 </script>
 
@@ -56,6 +57,16 @@ const canRetry = rede => props.published.errors?.[rede] !== 'unconfirmed';
         :is-loading="retrying"
         :disabled="retrying"
         @click="emit('retry', rede)"
+      />
+      <Button
+        v-else
+        :data-create-published-checked="rede"
+        variant="faded"
+        color="amber"
+        :label="$t(`${KEY}.CHECKED.${rede.toUpperCase()}`)"
+        :is-loading="retrying"
+        :disabled="retrying"
+        @click="emit('retry', rede, true)"
       />
     </div>
     <div v-if="links.length" class="flex flex-wrap gap-x-5 gap-y-1">
