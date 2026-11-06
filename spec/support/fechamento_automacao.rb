@@ -175,7 +175,9 @@ module FechamentoAutomacao::Lacunas
     'G23' => nil,
     'G24' => nil,
     'G25' => -> { acao?('POST crm/cards/:id/close') },
-    'G26' => -> { passo?('sla') }
+    'G26' => -> { passo?('sla') },
+    # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
+    'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".
