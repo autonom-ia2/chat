@@ -1127,14 +1127,16 @@ onBeforeUnmount(stopRecheck);
             </span>
             <span class="text-sm text-n-slate-11">
               {{ chosenPage.category }}
-              <template v-if="chosenPage.followers != null">
-                ·
+              <span
+                v-if="chosenPage.followers != null"
+                class="before:content-['·'] before:mx-1"
+              >
                 {{
                   $t(`${C}.PAGE.FOLLOWERS`, {
                     count: count(chosenPage.followers),
                   })
                 }}
-              </template>
+              </span>
             </span>
           </span>
         </div>
