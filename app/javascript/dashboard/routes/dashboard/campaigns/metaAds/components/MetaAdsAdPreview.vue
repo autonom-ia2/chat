@@ -23,6 +23,8 @@ const props = defineProps({
   places: { type: String, default: 'AUTO' },
   // Só o feed, sem abas: post impulsionado do Facebook.
   feedOnly: { type: Boolean, default: false },
+  // Post comum, sem "Patrocinado" (criar post, #2653).
+  organic: { type: Boolean, default: false },
 });
 
 const KEY = 'CRM_KANBAN.META_ADS_HUB.CRIAR.PREVIEW';
@@ -144,7 +146,7 @@ const move = async step => {
     >
       <p class="m-0 px-4 pt-3 text-xs font-semibold text-n-slate-11">
         {{ pageName }}
-        <span class="font-normal text-n-slate-10">
+        <span v-if="!organic" class="font-normal text-n-slate-10">
           {{ $t(`${KEY}.SPONSORED`) }}
         </span>
       </p>
@@ -234,7 +236,7 @@ const move = async step => {
         class="absolute inset-x-0 top-0 m-0 bg-gradient-to-b from-n-black/60 to-transparent px-3 pb-6 pt-3 text-xs font-semibold text-white"
       >
         {{ pageName }}
-        <span class="font-normal text-white/75">
+        <span v-if="!organic" class="font-normal text-white/75">
           {{ $t(`${KEY}.SPONSORED`) }}
         </span>
       </p>
