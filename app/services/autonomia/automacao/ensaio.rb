@@ -149,8 +149,11 @@ class Autonomia::Automacao::Ensaio
     return no(passo, 'faltou_valor') if pronto.nil?
     return no(passo, 'texto_vazio') if pronto.strip.empty?
 
-    # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada.
-    no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome') }.compact)
+    # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada; o de propaganda
+    # (lote 5, #2681) leva o aviso de custo.
+    modelo = passo['modelo']
+    propaganda = true if ::Autonomia::Automacao::ModeloWhatsapp.propaganda?(@conversa&.inbox, modelo)
+    no(passo, passo['tipo'], { texto: pronto, modelo: modelo&.dig('nome'), propaganda: propaganda }.compact)
   end
 
   # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o

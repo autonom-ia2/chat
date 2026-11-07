@@ -16,6 +16,7 @@
       "VARIAVEL_DICA": "The campaign goes to many people at once, so write fixed text.",
       "ETIQUETAS_DICA": "Whoever has one of these labels when it sends gets it. Adding or removing the label puts the person in or out of the campaign.",
       "SEM_ETIQUETAS": "This account has no labels yet.",
+      "SEM_ETIQUETAS_DICA": "Optional. Anyone with one of these labels is left out, even with an audience label. E.g.: everyone except who already bought.",
       "FRASE_DISPARAR": "Send the WhatsApp campaign “{titulo}”",
       "FRASE_NAO_RECEBER": "Mark the contact as “does not receive”"
     }
