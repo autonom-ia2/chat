@@ -166,6 +166,17 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
     end
   end
 
+  # O termo: a festa é fechada (card ganho) em 02/12, antes de qualquer passo de data. #2678: até aqui o card ficava
+  # aberto nos passos de data, e o spec passava com o gatilho de data ignorando o card ganho.
+  def festa_fechada
+    travel_to(fuso.parse('2026-12-02 15:00')) do
+      Crm::Cards::Closer.new(card: card, actor: rose, result: 'won').perform
+      rodar_jobs
+      perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob)
+      rodar_jobs
+    end
+  end
+
   def modelos_enviados = chamadas_para('graph.facebook.com').filter_map { |chamada| chamada.corpo.dig('template', 'name') }
   def mencoes_para(pessoa) = Notification.where(user: pessoa, notification_type: 'conversation_mention')
   def historico(nome) = Autonomia::Automacao::Registro.where(automacao_id: automacao_id(nome)).order(:id).pluck(:passo, :resultado)
@@ -188,12 +199,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
   after { Current.reset }
 
   it 'passo 1: festa fechada, o contrato vai por e-mail, a etiqueta entra e a oferta do próximo ano fica marcada', :aggregate_failures do
-    travel_to(fuso.parse('2026-12-02 15:00')) do
-      Crm::Cards::Closer.new(card: card, actor: rose, result: 'won').perform
-      rodar_jobs
-      perform_enqueued_jobs(only: Autonomia::Automacao::EventoDoCardJob)
-      rodar_jobs
-    end
+    festa_fechada
 
     email = Conversation.where(inbox: caixa_de_email).sole
     expect(email.contact).to eq(familia)
@@ -206,6 +212,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
 
   it 'passos 2 e 3: 30 dias antes pergunta pelo modelo aprovado, e os números da resposta vão para o card', :aggregate_failures do
     roteiro['automacao_extrair'] = { 'convidados' => 40, 'criancas' => 15 }
+    festa_fechada
+    expect(card.reload.status).to eq('won')
     chega_o_dia('2027-02-18')
     expect(modelos_enviados).to eq(%w[festa_convidados])
 
@@ -218,6 +226,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
 
   it 'passo 4: 15 dias antes manda o cardápio pelo modelo, e as alergias da resposta vão para o card', :aggregate_failures do
     roteiro['automacao_extrair'] = { 'alergias' => 'amendoim' }
+    festa_fechada
     chega_o_dia('2027-03-05')
     expect(modelos_enviados).to eq(%w[festa_cardapio])
 
@@ -227,6 +236,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
   end
 
   it 'passo 5: 7 dias antes, a cozinha e a decoração recebem no sino o resumo da festa', :aggregate_failures do
+    festa_fechada
     card.update!(custom_attributes: card.custom_attributes.merge('convidados' => 40, 'alergias' => 'amendoim'))
     roteiro['automacao_resumir'] = { 'resumo' => 'Festa da Ana em 20/03: 40 convidados, alergia a amendoim, tema fundo do mar.' }
 
@@ -239,13 +249,17 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
   end
 
   it 'passo 6: 1 dia antes, a família é lembrada pelo modelo aprovado' do
+    festa_fechada
     chega_o_dia('2027-03-19')
 
     expect(modelos_enviados).to eq(%w[festa_lembrete])
   end
 
   context 'with o dia seguinte à festa (passos 7 a 9)' do
-    before { chega_o_dia('2027-03-21') }
+    before do
+      festa_fechada
+      chega_o_dia('2027-03-21')
+    end
 
     it 'pede a nota pelo modelo aprovado' do
       expect(modelos_enviados).to eq(%w[festa_nota])
@@ -272,8 +286,10 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
     end
   end
 
-  it 'passo 10: 11 meses depois da festa, oferece a do próximo aniversário pelo modelo aprovado' do
-    card.update!(custom_attributes: card.custom_attributes.merge('proxima_oferta' => '2028-02-20'))
+  it 'passo 10: 11 meses depois da festa, oferece a do próximo aniversário pelo modelo aprovado', :aggregate_failures do
+    # A data da oferta vem do passo 1 (festa + 11 meses), não escrita à mão.
+    festa_fechada
+    expect(card.reload.custom_attributes['proxima_oferta']).to eq('2028-02-20')
 
     chega_o_dia('2028-02-20')
 

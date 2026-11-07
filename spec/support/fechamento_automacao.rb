@@ -181,6 +181,9 @@ module FechamentoAutomacao::Lacunas
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
     'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') },
+    # G28 (#2674, absorvida pelo lote 2 #2679): o texto da IA vira valor entre passos e a IA lê o card. Segura o 10 e o 13
+    # (#2678) e os 4, 5 e 19. A frente do lote 2 troca o nil pela sonda.
+    'G28' => nil,
     # Achadas no exemplo 2 (07/11), ainda sem desenho: a frente dona troca o nil pela sonda quando escolher o caminho.
     # G29: a origem do card do formulário (anúncio, formulário) como valor da receita, no filtro do gatilho e nos passos.
     'G29' => nil,
