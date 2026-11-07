@@ -15,6 +15,9 @@ class Crm::Conversations::CardSyncer
     return unless load_conversation
     return if @conversation.inbox_id.blank?
 
+    # Cliente com card aberto escrevendo por outro canal (#1150, R13): liga ao card antes de pensar em criar outro.
+    Crm::Conversations::OpenCardRouter.new(conversation: @conversation).perform
+
     pipeline_inbox = auto_create_pipeline_inbox
     return refresh_existing_card if pipeline_inbox.blank?
 
