@@ -91,7 +91,8 @@
       "ESCREVER": "AI writes a text",
       "RESUMIR": "AI summarizes the conversation",
       "IA_ASSUMIR": "Hand over to the AI agent",
-      "EMAIL": "Send an e-mail to the customer"
+      "EMAIL": "Send an e-mail to the customer",
+      "RETORNO": "Create a follow-up for the team"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -131,6 +132,9 @@
       "ATTRIBUTE_VALUES": "List options",
       "TEXTO": "What to say",
       "PARA": "Who to notify",
+      "TITULO": "What the team will do",
+      "DAQUI": "How long from now",
+      "ENVIO": "Message to the customer",
       "LE": "What the AI reads",
       "PERGUNTA": "What the AI should decide",
       "CAMINHOS": "Paths",

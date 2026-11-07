@@ -1181,3 +1181,13 @@
   display_name: Anúncios › privado no Facebook pela IA
   enabled: true
   column: feature_flags_ext_2
+
+# Login único (#2338): a Página vem do mesmo "Entrar com o Facebook" dos Anúncios. Ligada: o passo a passo de conectar
+# os anúncios ganha "Confira a Página" (a caixa da Página nasce ou é reautorizada ali mesmo, sem o login da Página) e o
+# pronto mostra o que já funciona. Desligada: o passo a passo de 4 passos de hoje. O Instagram continua no login dele.
+# Rollback: desligar a flag na conta. Sem migration. Bit: posição 28 (134217728), dada pela Orquestração. Nasce
+# desligada; o piloto (1, 16 e 18 na hub2you e 24 na autonomia) pede o OK do Rodrigo.
+- name: anuncios_login_unico
+  display_name: Anúncios › login único
+  enabled: false
+  column: feature_flags_ext_2

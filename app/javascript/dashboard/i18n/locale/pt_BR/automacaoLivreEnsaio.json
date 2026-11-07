@@ -32,6 +32,7 @@
       "NAO_SAIRIA": "Não sairia: a mensagem automática ainda não está ligada nesta conta.",
       "FALTOU_VALOR": "Não sairia: falta um dado desta conversa no texto.",
       "TEXTO_VAZIO": "Não sairia: o texto ficaria vazio.",
+      "RETORNO_SEM_RESPONSAVEL": "Não criaria o retorno: esta conversa não tem responsável.",
       "CORTE": "O ensaio parou aqui: a automação tem caminhos demais para mostrar.",
       "OPCAO": "{nome} · #{n}",
       "FARIA": {

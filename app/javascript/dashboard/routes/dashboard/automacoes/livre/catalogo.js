@@ -92,6 +92,9 @@ export const novoPasso = (entrada, id, t) => {
   // G2: a caixa de e-mail a escolher, o assunto e o texto a escrever.
   if (entrada.tipo === 'email')
     return { id, tipo: 'email', caixa_id: null, assunto: [], texto: [] };
+  // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
+  if (entrada.tipo === 'retorno')
+    return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
   // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
   // caminhos e o extrair com um dado, a preencher no painel.
   const LE = ['mensagens_recentes'];

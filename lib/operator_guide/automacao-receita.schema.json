@@ -94,6 +94,31 @@
       }
     },
     "ids": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+    "para_do_retorno": {
+      "description": "Quem recebe o retorno (G3): o responsável (no card, quem cuida do cliente; na conversa, o responsável dela), pessoas ou um time. Sem ele, o responsável.",
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["quem"], "properties": { "quem": { "const": "responsavel" } } },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["quem", "pessoas"],
+          "properties": { "quem": { "const": "pessoas" }, "pessoas": { "allOf": [{ "$ref": "#/definitions/ids" }, { "minItems": 1 }] } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["quem", "time"],
+          "properties": { "quem": { "const": "time" }, "time": { "type": "integer", "minimum": 1 } }
+        }
+      ]
+    },
+    "envio_do_retorno": {
+      "description": "Com ele, a mensagem vai ao cliente na hora do retorno, pelo envio automático do Followup e com as regras dele (só no card). Sem ele, só o lembrete para a equipe.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mensagem"],
+      "properties": { "mensagem": { "$ref": "#/definitions/texto" } }
+    },
     "valor_calculado": {
       "description": "Valor calculado numa folha do corpo da ação (G16), lido na hora da execução. $valor copia um valor do alvo; $texto junta pedaços como o texto da mensagem; $data dá \"AAAA-MM-DD\" a partir de \"hoje\" (no fuso da conta) ou de um atributo do tipo data, mais N dias, semanas, meses ou anos (N negativo volta no tempo; 31/01 + 1 mês = 28/02). Valor lido vazio pula a ação.",
       "oneOf": [
@@ -413,6 +438,19 @@
             "le": { "$ref": "#/definitions/leituras" },
             "linhas": { "type": "integer", "minimum": 1, "maximum": 10 },
             "destino": { "$ref": "#/definitions/destino_resumir" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "titulo", "daqui"],
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "retorno" },
+            "titulo": { "$ref": "#/definitions/texto" },
+            "daqui": { "$ref": "#/definitions/duracao" },
+            "para": { "$ref": "#/definitions/para_do_retorno" },
+            "envio": { "$ref": "#/definitions/envio_do_retorno" }
           }
         }
       ]

@@ -342,6 +342,53 @@ describe('LivreAlterar', () => {
     expect(await oferecidos('se')).toEqual(['conversa.status']);
   });
 
+  // G3 (#2629): o retorno espera a escolha de pessoas e a mensagem escrita.
+  it('o retorno só salva com quem recebe escolhido e a mensagem escrita', async () => {
+    const catalogo = {
+      ...CATALOGO,
+      passos: [
+        {
+          tipo: 'retorno',
+          frase: 'RETORNO',
+          campos: [
+            {
+              nome: 'titulo',
+              peca: 'texto',
+              rotulo: 'TITULO',
+              obrigatorio: true,
+            },
+            { nome: 'para', peca: 'quem_recebe_retorno', rotulo: 'PARA' },
+            { nome: 'envio', peca: 'envio_do_retorno', rotulo: 'ENVIO' },
+          ],
+        },
+      ],
+    };
+    const wrapper = montar(catalogo);
+    const abrir = async extra => {
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: { id: 'r1', tipo: 'retorno', titulo: ['Ligar'], ...extra },
+      });
+      await flushPromises();
+    };
+
+    await abrir({});
+    expect(wrapper.find('[data-peca="quem_recebe_retorno"]').exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-peca="envio_do_retorno"]').exists()).toBe(true);
+    expect(salvarDesligado(wrapper)).toBe(false);
+
+    await abrir({ para: { quem: 'pessoas', pessoas: [] } });
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    await abrir({ envio: { mensagem: [] } });
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    await abrir({ envio: { mensagem: ['Oi'] } });
+    expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
   it('não salva condição sem o que olhar', async () => {
     const wrapper = montar();
     wrapper.vm.abrir({
