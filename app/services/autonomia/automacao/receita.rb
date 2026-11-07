@@ -73,6 +73,11 @@ class Autonomia::Automacao::Receita
   def problemas_do_passo(passo)
     return [texto(:passo_pede_alvo, passo: passo['id'])] if da_conta? && !sem_alvo?(passo)
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
+
+    problemas_pelo_tipo(passo)
+  end
+
+  def problemas_pelo_tipo(passo)
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
