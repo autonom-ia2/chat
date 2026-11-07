@@ -199,6 +199,80 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
 
       expect(execucoes.where(automacao: definicao).pluck(:evento)).to eq(["card.data:#{card.id}:renovacao:2026-11-17"])
     end
+
+    # #2678: a festa, a revisão e a apólice vêm depois da venda. O card ganho dispara; o perdido, o cancelado e o
+    # arquivado não (o cliente foi embora ou o card saiu de cena).
+    it 'card.data: o card ganho também dispara; o perdido, o cancelado e o arquivado não', :aggregate_failures do
+      definicao = de_tempo('card.data', campo: 'renovacao', dias: 7, quando: 'antes', hora: 8)
+      ganho = card.tap { |c| c.update!(status: :won) }
+      fechados = %i[lost cancelled archived].map do |status|
+        # O status direto no banco: fechar como cancelado pede um funil com esse resultado, e aqui só importa o status.
+        account.crm_cards.create!(pipeline: funil, stage: proposta, title: status.to_s, currency: 'BRL')
+               .tap { |fechado| fechado.update_columns(status: status) } # rubocop:disable Rails/SkipsModelValidations
+      end
+      [ganho, *fechados].each { |alvo| com_data(alvo, 'renovacao', '2026-11-17') }
+
+      as_9h_da_conta { varrer_tempo }
+
+      expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([ganho.id])
+    end
+
+    describe 'todo ano (aniversário)' do
+      it 'compara só o dia e o mês: a data de outro ano dispara, uma vez por ano', :aggregate_failures do
+        definicao = de_tempo('contato.data', campo: 'vencimento', dias: 0, quando: 'antes', hora: 8, repete: 'todo_ano')
+        com_data(contato, 'vencimento', '1990-11-10')
+        outro_dia = create(:contact, account: account, custom_attributes: { 'vencimento' => '1990-11-11' })
+
+        as_9h_da_conta { varrer_tempo }
+        travel_to(fuso.local(2026, 11, 10, 9, 30)) { varrer_tempo }
+
+        expect(execucoes.where(automacao: definicao).pluck(:evento)).to eq(["contato.data:#{contato.id}:vencimento:2026-11-10"])
+        expect(execucoes.where(alvo_id: outro_dia.id)).to be_empty
+      end
+
+      it 'sem "todo ano", a data de outro ano não dispara (o vencimento é de um dia só)' do
+        definicao = de_tempo('contato.data', campo: 'vencimento', dias: 0, quando: 'antes', hora: 8)
+        com_data(contato, 'vencimento', '1990-11-10')
+
+        as_9h_da_conta { varrer_tempo }
+
+        expect(execucoes.where(automacao: definicao)).to be_empty
+      end
+
+      it 'antes N dias atravessa a virada do ano', :aggregate_failures do
+        definicao = de_tempo('contato.data', campo: 'vencimento', dias: 5, quando: 'antes', hora: 8, repete: 'todo_ano')
+        com_data(contato, 'vencimento', '1985-01-02')
+
+        travel_to(fuso.local(2026, 12, 28, 9, 0)) { varrer_tempo }
+
+        expect(execucoes.where(automacao: definicao).pluck(:evento)).to eq(["contato.data:#{contato.id}:vencimento:2027-01-02"])
+      end
+
+      it 'quem nasceu em 29/02 é lembrado em 28/02 no ano que não é bissexto, e em 29/02 no bissexto', :aggregate_failures do
+        definicao = de_tempo('contato.data', campo: 'vencimento', dias: 0, quando: 'antes', hora: 8, repete: 'todo_ano',
+                                             ligada: fuso.local(2026, 1, 1, 0, 0))
+        com_data(contato, 'vencimento', '2000-02-29')
+
+        # Entre um ano e outro a execução já terminou (a receita de teste fica esperando).
+        [fuso.local(2027, 2, 28, 9, 0), fuso.local(2028, 2, 28, 9, 0), fuso.local(2028, 2, 29, 9, 0)].each do |momento|
+          travel_to(momento) { varrer_tempo }
+          fechar_execucoes
+        end
+
+        expect(execucoes.where(automacao: definicao).pluck(:evento))
+          .to eq(["contato.data:#{contato.id}:vencimento:2027-02-28", "contato.data:#{contato.id}:vencimento:2028-02-29"])
+      end
+
+      it 'card.data também repete todo ano, inclusive no card ganho' do
+        definicao = de_tempo('card.data', campo: 'renovacao', dias: 0, quando: 'antes', hora: 8, repete: 'todo_ano')
+        card.update!(status: :won)
+        com_data(card, 'renovacao', '2025-11-10')
+
+        as_9h_da_conta { varrer_tempo }
+
+        expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([card.id])
+      end
+    end
   end
 
   describe 'a varredura' do

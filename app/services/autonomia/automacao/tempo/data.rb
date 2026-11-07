@@ -1,4 +1,9 @@
-# card.data e contato.data (#2499, PR3): os cards abertos ou os contatos cujo campo de data vale o dia-alvo.
+# card.data e contato.data (#2499, PR3): os cards abertos ou ganhos, ou os contatos, cujo campo de data vale o dia-alvo.
+#
+# #2678: o card ganho entra (a festa, a revisão e a renovação da apólice vêm depois da venda); o perdido, o cancelado e
+# o arquivado não (o cliente foi embora ou o card saiu de cena). Com `repete: todo_ano`, a data compara só o mês e o
+# dia, todo ano (aniversário). Quem nasceu em 29/02 é lembrado em 28/02 no ano que não é bissexto; no bissexto, em
+# 29/02. A marca leva o dia-alvo com o ano, então dispara uma vez por ano.
 #
 # A ocorrência é a última `hora` cheia, no fuso da conta, que já passou: hoje, se já passou da hora; senão, ontem.
 # Ela cai sempre dentro da janela de 1 dia. A ocorrência anterior a ligar não roda: ligar às 8h um "às 9h" não manda o
@@ -10,6 +15,7 @@
 # conta quantos alvos têm o campo em formato inválido e põe a contagem no log, sem o valor, que é dado do cliente.
 class Autonomia::Automacao::Tempo::Data
   # Os 10 primeiros caracteres têm o formato AAAA-MM-DD: só dígitos e hífens, com os hífens no lugar.
+  STATUS_DO_CARD = %i[open won].freeze
   FORMATO_DO_DIA = <<~SQL.squish.freeze
     length(left(custom_attributes ->> :campo, 10)) = 10
     AND substr(custom_attributes ->> :campo, 5, 1) = '-' AND substr(custom_attributes ->> :campo, 8, 1) = '-'
@@ -27,7 +33,7 @@ class Autonomia::Automacao::Tempo::Data
     dia = dia_alvo
     return unless dia
 
-    escopo.where('left(custom_attributes ->> ?, 10) = ?', campo, dia.iso8601).find_each do |alvo|
+    no_dia(dia).find_each do |alvo|
       yield alvo, ::Autonomia::Automacao::Gatilhos.marca_da_data(tipo, alvo, campo, dia)
     end
   end
@@ -50,7 +56,19 @@ class Autonomia::Automacao::Tempo::Data
   def escopo
     return ::Contact.where(account_id: @definicao.account_id) if tipo == 'contato.data'
 
-    ::Crm::Card.where(account_id: @definicao.account_id, status: :open)
+    ::Crm::Card.where(account_id: @definicao.account_id, status: STATUS_DO_CARD)
+  end
+
+  def no_dia(dia)
+    return escopo.where('left(custom_attributes ->> ?, 10) = ?', campo, dia.iso8601) unless @gatilho['repete'] == 'todo_ano'
+
+    escopo.where(FORMATO_DO_DIA, campo: campo).where('substr(custom_attributes ->> ?, 6, 5) IN (?)', campo, mes_e_dia(dia))
+  end
+
+  # 28/02 de ano que não é bissexto também lembra quem nasceu em 29/02.
+  def mes_e_dia(dia)
+    mes_dia = dia.strftime('%m-%d')
+    mes_dia == '02-28' && !dia.leap? ? [mes_dia, '02-29'] : [mes_dia]
   end
 
   # Uma vez por automação e dia (a trava no Redis vale 1 dia).

@@ -215,6 +215,12 @@
           "peca": "hora",
           "obrigatorio": true,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "repete",
+          "peca": "repete",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
     },
@@ -248,6 +254,12 @@
           "peca": "hora",
           "obrigatorio": true,
           "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.HORA"
+        },
+        {
+          "nome": "repete",
+          "peca": "repete",
+          "obrigatorio": false,
+          "frase": "AUTOMACAO_LIVRE.PARAMETROS_DO_GATILHO.REPETE"
         }
       ]
     }

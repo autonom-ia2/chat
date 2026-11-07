@@ -43,7 +43,10 @@ const chaveDaFrase = (entrada, gatilho) => {
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
-  const parametros = entrada.parametros || [];
+  // #2678: o "repete" é opcional e entra só como fim da frase ("..., todo ano").
+  const parametros = (entrada.parametros || []).filter(
+    item => item.peca !== 'repete'
+  );
   const escolhidos = Object.fromEntries(
     parametros.map(item => [
       item.peca,
@@ -54,7 +57,11 @@ export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
     valor => valor !== undefined && valor !== null && valor !== ''
   );
   if (!parametros.length || !completo) return t(entrada.frase);
-  const frase = t(chaveDaFrase(entrada, gatilho), escolhidos);
+  const base = t(chaveDaFrase(entrada, gatilho), escolhidos);
+  const frase =
+    gatilho.repete === 'todo_ano'
+      ? t('AUTOMACAO_LIVRE.GATILHO_TODO_ANO', { frase: base })
+      : base;
   const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
   return funil
     ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
