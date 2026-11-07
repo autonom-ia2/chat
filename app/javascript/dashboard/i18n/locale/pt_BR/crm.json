@@ -7234,7 +7234,8 @@
     "FILTRO_DO_LINK": {
       "DA_IA": "Recebidas da IA",
       "ESPERANDO": "Esperando há mais de {n} min",
-      "DA_IA_ESPERANDO": "Da IA, esperando +{n} min"
+      "DA_IA_ESPERANDO": "Da IA, esperando +{n} min",
+      "DESDE_DIAS": "Começaram nos últimos {n} dias"
     }
   },
   "CRM_NUMEROS_V2": {
