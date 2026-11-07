@@ -68,4 +68,15 @@ RSpec.describe 'Login único: ligar a Página com funções e limite (#2338)', t
 
     expect(response).to have_http_status(:payment_required)
   end
+
+  # #2683: o token do login de empresa passa de 255 caracteres; a caixa nasce e guarda o token inteiro.
+  it 'liga a Página com token do login de empresa acima de 255 caracteres' do
+    long_token = "EAA#{'x' * 400}"
+    Crm::MetaAdsConnection.find_by(account: account).update!(access_token: long_token)
+
+    expect { ligar(account.administrators.first) }.to change(account.inboxes, :count).by(1)
+
+    expect(response).to have_http_status(:ok)
+    expect(Channel::FacebookPage.find_by(account: account, page_id: page_id).user_access_token).to eq(long_token)
+  end
 end
