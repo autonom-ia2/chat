@@ -567,6 +567,10 @@ en:
         ia_nao_configurada: "This account has no AI key of its own. Set it in the integrations so AI steps can run."
         ia_recusou: 'The AI provider refused this request.'
         nada_para_ler: 'There was nothing in the conversation for the AI to read. The AI was not called.'
+        anexo_grande_demais: 'An attachment in the conversation was too large for the AI. The AI was not called.'
+        anexo_fora_do_formato: 'An attachment in the conversation was in a format the AI cannot read. The AI was not called.'
+        anexo_sem_leitura: 'An attachment in the conversation could not be read (a voice note without transcription or a file that did not arrive). The AI was not called.'
+        modelo_sem_imagem: 'The AI of this step cannot see photos or PDFs. The AI was not called.'
         resposta_fora_do_schema: 'The AI answered in a format the automation cannot use. Nothing was done.'
         tipo_desconhecido: 'This step type is unknown to the automation engine. The automation stopped here without doing it.'
         agente_sumiu: 'The chosen AI agent no longer exists. The conversation stayed as it was.'

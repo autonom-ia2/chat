@@ -4,7 +4,7 @@
 # aviso dele à Gestão IA): a chamada é paga na chave da conta, e a Gestão IA mostra.
 #
 # - Só "decidir", "escrever" e "resumir". O "extrair" fica fora: gravar é o que ele faz, e o teste não grava (D6).
-# - O texto que vai à IA é o da execução: o `consulta` de cada passo e a mesma leitura (`le`).
+# - O texto que vai à IA é o da execução: o `consulta` de cada passo e a mesma leitura (`le`), com os anexos (G20).
 # - As conversas são escolhidas aqui, nunca pela tela: as que o ensaio diz que entrariam, entre as que quem pede
 #   enxerga. Sem nenhuma, as mais recentes que ela enxerga, com o aviso. Gatilho que não é de conversa (card) também
 #   vai às recentes, com o aviso próprio.
@@ -90,18 +90,21 @@ class Autonomia::Automacao::TestarPasso
     return base.merge(motivo: 'nada_para_ler') if estado.vazio?
 
     consulta = classe.consulta(@passo, estado)
+    anexos = estado.anexos&.partes(modelo: consulta[:modelo]) || []
     resposta, custo = ia(classe, consulta[:modelo]).perguntar(instrucoes: consulta[:instrucoes], entrada: consulta[:entrada],
-                                                              schema: consulta[:schema], tempo: TEMPO)
+                                                              schema: consulta[:schema], tempo: TEMPO, anexos: anexos)
     base.merge(resultado: para_tela(resposta)).merge(com_valores ? { custo_usd: custo['custo_usd'] } : {})
-  rescue ::Autonomia::Automacao::PassoDeIa::Falha => e
+  rescue ::Autonomia::Automacao::PassoDeIa::Falha, ::Autonomia::Automacao::AnexosDaConversa::Recusa => e
     base.merge(motivo: e.motivo)
   end
 
   # O valor do card só com a chave de quem pede (#2597), a mesma regra do Valores. O anúncio de origem nunca (#2558),
   # como no passo de verdade (ComIa).
+  # Com `le: anexos` (G20), os anexos da conversa, como no passo de verdade.
   def leitura(conversa)
-    ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: ::Autonomia::Automacao::ComIa.leituras(@passo),
-                                       valor_do_card: ::Autonomia::Automacao::Valores.pode_ler?('card.valor', @account_user))
+    estado = ::Autonomia::Decisores::Estado.new(conversation: conversa, leituras: ::Autonomia::Automacao::ComIa.leituras(@passo),
+                                                valor_do_card: ::Autonomia::Automacao::Valores.pode_ler?('card.valor', @account_user))
+    ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, conversa)
   end
 
   def para_tela(resposta)
