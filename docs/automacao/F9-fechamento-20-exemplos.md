@@ -141,7 +141,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G17 | **Criar contato** (o amigo indicado, o funcionário novo) e **importar em lote** ligado à empresa | novo | `POST contacts` fora da lista; importação não é passo | F2 | 8, 11 |
 | G18 | **Agir ou ler em outro registro ligado** ao alvo (o card do João avisa a Maria, que indicou; a resposta lê o motivo da perda no card antigo do mesmo contato). "Para cada card com etiqueta X" é da G7 | F8 / novo | O passo age só no alvo da execução | Motor | 11, 16 |
 | G19 | **Nota no contato** (não na conversa) | F3 (ação) | `contacts/notes` fora da lista | F2 | 5, 19 |
-| G20 | Passos de IA **lendo anexo** (PDF, foto do currículo, documento) pelo leitor de mídia | F7 | O `Estado` dos passos de IA não usa `com_midia`; só a IA de assunto lê | F7 | 3, 8, 14, 18 |
+| G20 | Passos de IA **lendo anexo** (PDF, foto do currículo, documento) | F7 | Em PR (#2669): `le: anexos` — foto e PDF vão como estão ao modelo do passo, áudio pela transcrição; o que passa do limite do provedor pula com motivo | F7 | 3, 8, 14, 18 |
 | G21 | **Prospecção**: rodar busca salva e conferência de WhatsApp como passo | novo | Sem passo | F5 | 9 |
 | G22 | **Avisar quem não está na conversa** (o RH da empresa cliente por mensagem; a equipe quando o alvo não tem conversa) | F4 | O "avisar" é nota com menção na conversa do alvo; card sem conversa pula com `sem_conversa` | F1 | 8 |
 | G23 | Condição sobre **disponibilidade de uma pessoa** (a responsável voltou de férias) | F8 | Não é valor da receita | Motor | 17 |
@@ -159,7 +159,7 @@ o RSpec acusa ("Expected pending … to fail", com a instrução do que fazer), 
 e sai da lista. A sonda roda antes do `pending`: sonda quebrada (classe renomeada) é erro vermelho, nunca pendente.
 
 A frente que fecha uma lacuna ajusta a sonda no mesmo PR se o nome que deu for outro (ex.: o passo se chama
-`criar_retorno`, não `retorno`). Sonda vazia (G16, G18, G20, G22, G23, G24) é lacuna que nenhuma pergunta simples
+`criar_retorno`, não `retorno`). Sonda vazia (G16, G18, G22, G23, G24) é lacuna que nenhuma pergunta simples
 responde: a frente troca a sonda pela prova.
 
 ## 6. Os 20 exemplos: o que existe e o que falta

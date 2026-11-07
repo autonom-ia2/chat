@@ -11,7 +11,10 @@ module Autonomia::Automacao::ComIa
 
   # O que o passo lê: o `le` dele, ou o padrão do Decisor. O "Testar este passo" (#2500 C2) lê o mesmo. O esquema da
   # receita não aceita `card`; se aceitar um dia, ver o aviso no TestarPasso.
-  def self.leituras(passo) = Array(passo['le']).presence || ::Autonomia::Decisor::LEITURAS_PADRAO
+  # Os anexos (G20) não são do Estado: o passo que lê só os anexos lê também as mensagens recentes, como o padrão.
+  def self.leituras(passo)
+    ::Autonomia::Automacao::AnexosDaConversa.sem_anexos(passo['le']).presence || ::Autonomia::Decisor::LEITURAS_PADRAO
+  end
 
   def initialize(execucao:, passo:, alvo:, acesso:)
     super(execucao: execucao, passo: passo, alvo: alvo)
@@ -27,10 +30,12 @@ module Autonomia::Automacao::ComIa
 
   private
 
-  # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem").
+  # Com `fuso`, cada mensagem vai com a data e a hora dela (o extrair precisa para "ontem"). Com `le: anexos` (G20), os
+  # anexos da conversa vão junto (AnexosDaConversa).
   def leitura(fuso: nil)
     leituras = ::Autonomia::Automacao::ComIa.leituras(@passo)
-    ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras, fuso: fuso, valor_do_card: ve_o_valor_do_card?)
+    estado = ::Autonomia::Decisores::Estado.new(conversation: @conversa, leituras: leituras, fuso: fuso, valor_do_card: ve_o_valor_do_card?)
+    @leitura = ::Autonomia::Automacao::AnexosDaConversa.leitura(estado, @passo, @conversa)
   end
 
   # #2597: a leitura "card" leva o valor só se quem ligou a automação pode lê-lo, a mesma regra do Valores. Quem saiu da
@@ -47,10 +52,13 @@ module Autonomia::Automacao::ComIa
     ::Crm::Timezone::Resolver.new(explicit: conta.custom_attributes.to_h['timezone'], account: conta).zone_or_default
   end
 
-  # [resposta, custo]; a Falha vira o Resultado do tipo que o executor entende.
+  # [resposta, custo]; a Falha vira o Resultado do tipo que o executor entende. O anexo que não pode ir à IA (G20) faz o
+  # passo pular, sem chamá-la.
   def perguntar(modelo:, instrucoes:, entrada:, schema:)
     ia = ::Autonomia::Automacao::PassoDeIa.new(conta: @conversa.account, feature: "automacao_#{@passo['tipo']}", modelo: modelo)
-    ia.perguntar(instrucoes: instrucoes, entrada: entrada, schema: schema)
+    ia.perguntar(instrucoes: instrucoes, entrada: entrada, schema: schema, anexos: @leitura&.anexos&.partes(modelo: modelo) || [])
+  rescue ::Autonomia::Automacao::AnexosDaConversa::Recusa => e
+    raise Falha.new(:pulado, e.motivo)
   end
 
   def falhou(falha) = Resultado.new(tipo: falha.tipo, motivo: falha.motivo, dados: {})

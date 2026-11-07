@@ -169,7 +169,8 @@ module FechamentoAutomacao::Lacunas
     'G17' => -> { acao?('POST contacts') },
     'G18' => nil,
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
-    'G20' => nil,
+    # Os passos de IA leem a foto, o PDF e o áudio da conversa (`le: anexos`, #2669).
+    'G20' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('anexos') },
     'G21' => -> { passo?('prospeccao') },
     'G22' => nil,
     'G23' => nil,
