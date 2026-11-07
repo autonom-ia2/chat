@@ -45,7 +45,10 @@ vi.mock('dashboard/composables/useAccount', () => ({
 vi.mock('dashboard/composables/useCanManage', async () => {
   const { ref: criarRef } = await import('vue');
   const podeMudar = criarRef(true);
-  return { useCanManage: () => podeMudar };
+  return {
+    useCanManage: () => podeMudar,
+    usePermissionGranted: () => podeMudar,
+  };
 });
 vi.mock('dashboard/composables/store', async () => {
   const { ref: criarRef } = await import('vue');

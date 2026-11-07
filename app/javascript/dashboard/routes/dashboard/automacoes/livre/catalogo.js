@@ -95,6 +95,16 @@ export const novoPasso = (entrada, id, t) => {
   // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
   if (entrada.tipo === 'retorno')
     return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
+  // G13: o endereço, a frase, o que mandar e o que guardar, a preencher no painel.
+  if (entrada.tipo === 'webhook')
+    return {
+      id,
+      tipo: 'webhook',
+      descricao: '',
+      url: '',
+      corpo: {},
+      gravar: [],
+    };
   // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
   // caminhos e o extrair com um dado, a preencher no painel.
   const LE = ['mensagens_recentes'];

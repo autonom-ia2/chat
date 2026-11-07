@@ -69,6 +69,16 @@ class AutomacoesAPI extends ApiClient {
   agentesDeIa() {
     return axios.get(`${this.url}/agentes_de_ia`);
   }
+
+  // G13 (#2670): o segredo da assinatura do passo "webhook". Só o
+  // administrador; a resposta traz `secret`.
+  segredoDoWebhook(id) {
+    return axios.get(`${this.url}/${id}/segredo_do_webhook`);
+  }
+
+  trocarSegredoDoWebhook(id) {
+    return axios.post(`${this.url}/${id}/trocar_segredo_do_webhook`);
+  }
 }
 
 export default new AutomacoesAPI();

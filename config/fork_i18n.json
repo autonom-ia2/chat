@@ -110,6 +110,9 @@
     },
     {
       "file": "automacaoLivreRetorno.json"
+    },
+    {
+      "file": "automacaoLivreWebhook.json"
     }
   ],
   "pacotes": {

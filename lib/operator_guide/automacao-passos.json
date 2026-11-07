@@ -676,6 +676,10 @@
       "frase": "AUTOMACAO_LIVRE.GRUPOS.EQUIPE"
     },
     {
+      "chave": "OUTRO_SISTEMA",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.OUTRO_SISTEMA"
+    },
+    {
       "chave": "CONTROLE",
       "frase": "AUTOMACAO_LIVRE.GRUPOS.CONTROLE"
     }
@@ -967,6 +971,45 @@
           "peca": "envio_do_retorno",
           "obrigatorio": false,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ENVIO"
+        }
+      ]
+    },
+    {
+      "tipo": "webhook",
+      "grupo": "OUTRO_SISTEMA",
+      "requer": "automacao_gatilhos",
+      "chave": "integration_manage",
+      "frase": "AUTOMACAO_LIVRE.PASSOS.WEBHOOK",
+      "campos": [
+        {
+          "nome": "descricao",
+          "peca": "descricao",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESCRICAO"
+        },
+        {
+          "nome": "url",
+          "peca": "endereco_do_webhook",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.URL"
+        },
+        {
+          "nome": "corpo",
+          "peca": "corpo_do_webhook",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.CORPO"
+        },
+        {
+          "nome": "gravar",
+          "peca": "resposta_do_webhook",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.GRAVAR"
+        },
+        {
+          "nome": "se_recusar",
+          "peca": "passos",
+          "obrigatorio": false,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.SE_RECUSAR"
         }
       ]
     },

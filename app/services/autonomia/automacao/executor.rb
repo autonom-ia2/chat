@@ -87,7 +87,7 @@ class Autonomia::Automacao::Executor
     when 'esperar' then esperar(passo)
     when 'esperar_ate' then esperar_ate(passo)
     when 'se' then se(passo)
-    when 'acao', 'retorno' then acao(passo)
+    when 'acao', 'retorno', 'webhook' then acao(passo)
     when *NATIVOS.keys then passo_nativo(passo, NATIVOS.fetch(passo['tipo']))
     when *IA.keys then passo_de_ia(passo, IA.fetch(passo['tipo']))
     when 'ia_assumir' then passo_nativo(passo, ::Autonomia::Automacao::PassoDeIaAssumir, mensagem: false)
@@ -210,7 +210,7 @@ class Autonomia::Automacao::Executor
     @tentativas = 0
     @alvo = @contexto = nil
     registrar(passo['id'], resultado.tipo == :ok ? 'ok' : 'pulado', resultado.motivo, resultado.dados)
-    @roteiro.seguinte(passo['id'])
+    resultado.dados['ramo'] ? @roteiro.entrar(passo, resultado.dados['ramo']) : @roteiro.seguinte(passo['id'])
   end
 
   def tentar_de_novo(passo, resultado)

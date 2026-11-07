@@ -16,9 +16,10 @@ class Autonomia::Automacao::PassoDeAcao
   # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
   PASSAGEIROS = [408, 425, 429].freeze
 
-  # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno).
+  # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno). O "webhook" (G13,
+  # #2670) também: manda para fora e grava a resposta por esta porta.
   def self.executar(passo:, **)
-    classe = passo['tipo'] == 'retorno' ? ::Autonomia::Automacao::PassoDeRetorno : self
+    classe = { 'retorno' => ::Autonomia::Automacao::PassoDeRetorno, 'webhook' => ::Autonomia::Automacao::PassoDeWebhook }.fetch(passo['tipo'], self)
     classe.new(passo: passo, **).executar
   end
 

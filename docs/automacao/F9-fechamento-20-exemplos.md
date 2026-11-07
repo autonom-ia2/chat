@@ -134,7 +134,7 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G10 | Gatilho **etiqueta posta/tirada** | F8 | A fazer (F8 PR2d) | Gatilhos | — |
 | G11 | **Esperar a resposta** de alguém: "até o cliente responder" e "até a equipe responder", com prazo | F3/F4 | **Fechada** (#2592): `conversa.equipe_respondeu` e `conversa.cliente_respondeu` no "esperar até" | Motor | 1, 2, 10, 12, 15, 17, 19, 20 |
 | G12 | Gatilho **reunião marcada / remarcada / cancelada** e o **link da agenda** do responsável no texto | F8 | A fazer; o link da agenda não é valor da receita | Gatilhos | 1, 2, 3, 4, 5, 6, 9, 11, 15, 16, 18, 20 |
-| G13 | **Webhook de saída** e gravar a resposta no card; recusa vira caminho "deu erro" | F8 | A fazer (F6/F8 PR4) | Gatilhos | 8, 14, 20 |
+| G13 | **Webhook de saída** e gravar a resposta no card; recusa vira caminho "deu erro" | F8 | Em PR (#2670): passo `webhook`, prova em `g13_webhook_spec.rb` (ex. 20, passos 3 e 4) | Gatilhos | 8, 14, 20 |
 | G14 | **Campanhas**: pôr e tirar o contato de uma campanha, montar e disparar campanha para quem tem uma etiqueta | novo | Sem passo | F5 | 2, 6, 7, 9, 12, 16 |
 | G15 | **Passar a conversa para a agente de IA** e tirar dela | F3 (ação) | **Em PR** (G15): passo próprio "Passar para a agente de IA" (`ia_assumir`), pela Atribuição do CRM; `assignee_type` proibido no atribuir. Tirar = atribuir à pessoa (provado no exemplo 10, passo 2) | F7 | 2, 4, 7, 10, 15, 17, 18 |
 | G16 | **Valor calculado no corpo** da ação (gravar "hoje + 6 meses", "indicado por {nome}", motivo da perda no texto) | F3/F4 | **Fechada** (#2593 motor, #2639 editor): `$valor`, `$texto` e `$data` no corpo da ação | Motor | 3, 5, 6, 11, 13, 16, 17 |

@@ -237,6 +237,7 @@ fora:
       - automation_rules
       - autonomia/automacoes
       - autonomia/automacoes_ia
+      - autonomia/automacoes_webhook
       - crm/stage_automations
       - crm/stage_automation_steps
       - autonomia/vigias

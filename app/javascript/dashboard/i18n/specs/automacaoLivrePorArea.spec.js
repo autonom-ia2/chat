@@ -59,6 +59,7 @@ const BLOCOS_POR_ARQUIVO = {
   'automacaoLivreReceitas.json': ['RECEITAS'],
   'automacaoLivreEnsaio.json': ['ENSAIO', 'HISTORICO'],
   'automacaoLivreRetorno.json': ['RETORNO'],
+  'automacaoLivreWebhook.json': ['WEBHOOK'],
 };
 
 const doIdioma = idioma =>

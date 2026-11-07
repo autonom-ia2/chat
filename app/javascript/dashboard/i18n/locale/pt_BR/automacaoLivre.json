@@ -8,6 +8,7 @@
       "ETIQUETA": "Etiquetas",
       "ATRIBUTO": "Campos personalizados",
       "EQUIPE": "Equipe",
+      "OUTRO_SISTEMA": "Outro sistema",
       "CONTROLE": "Tempo e condições"
     },
     "OPERADORES": {
@@ -92,7 +93,8 @@
       "RESUMIR": "A IA resume a conversa",
       "IA_ASSUMIR": "Passar para a agente de IA",
       "EMAIL": "Mandar e-mail ao cliente",
-      "RETORNO": "Criar um retorno para a equipe"
+      "RETORNO": "Criar um retorno para a equipe",
+      "WEBHOOK": "Mandar dados para outro sistema"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -147,7 +149,12 @@
       "AGENTE_ID": "Qual agente de IA",
       "CAIXA_ID": "Por qual caixa de e-mail",
       "ASSUNTO": "Assunto",
-      "MODELO": "Se a janela de 24 h estiver fechada"
+      "MODELO": "Se a janela de 24 h estiver fechada",
+      "DESCRICAO": "Para que serve este envio",
+      "URL": "Endereço do outro sistema",
+      "CORPO": "O que mandar",
+      "GRAVAR": "O que gravar da resposta",
+      "SE_RECUSAR": "Se o outro sistema recusar"
     },
     "OPCOES": {
       "STATUS": {
@@ -304,7 +311,8 @@
       "SENAO": "Senão",
       "SE_VENCER": "Se o prazo acabar",
       "NENHUM": "Nenhum se aplica",
-      "CAMINHO": "Caminho {n}"
+      "CAMINHO": "Caminho {n}",
+      "SE_RECUSAR": "Se o outro sistema recusar"
     },
     "SELETOR": {
       "TITULO": "Escolha o próximo passo",

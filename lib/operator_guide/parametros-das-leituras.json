@@ -217,6 +217,10 @@
       "pagina"
     ]
   },
+  "autonomia/automacoes/:id/segredo_do_webhook": {
+    "controller": "api/v1/accounts/autonomia/automacoes_webhook#segredo",
+    "parametros": []
+  },
   "autonomia/automacoes/agentes_de_ia": {
     "controller": "api/v1/accounts/autonomia/automacoes_ia#agentes_de_ia",
     "parametros": []

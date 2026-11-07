@@ -4,6 +4,7 @@
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
 import { fraseDoRetorno } from './retorno';
+import { fraseDoWebhook } from './webhook';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -312,6 +313,7 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       titulo: fraseDoTexto(passo.titulo, catalogo, t),
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });
+  if (passo.tipo === 'webhook') return fraseDoWebhook(passo, t);
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
