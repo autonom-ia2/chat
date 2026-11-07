@@ -98,6 +98,7 @@ fora:
       - email_oauth_apps
       - crm/integration_tokens
       - crm/meta_ads_connections
+      - crm/meta_ads_pagina
       - integrations/dyte
       - integrations/hooks
       - integrations/linear
