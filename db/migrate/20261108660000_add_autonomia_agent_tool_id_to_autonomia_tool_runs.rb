@@ -1,6 +1,7 @@
-# #1430 — a execução de uma ferramenta HTTP que roda assíncrona (tempo acima de `Tool::LIMIAR_ASSINCRONO`) aponta para a
-# ferramenta cadastrada. O job a resolve por este id, nunca pelo slug: o slug de uma HTTP pode ser igual ao de uma
-# nativa (`cotar_seguro`), e pelo catálogo a consulta cairia na Lia. Nula nas execuções das nativas.
+# #1430 — a execução de uma consulta HTTP em segundo plano (a ferramenta cadastrada, com a flag
+# `agente_ferramenta_em_segundo_plano`, numa conversa) aponta para a ferramenta. O job a resolve por este id, nunca pelo
+# slug: o slug de uma HTTP podia ser igual ao de uma nativa (`cotar_seguro`), e pelo catálogo a consulta cairia na Lia.
+# Nula nas execuções das nativas.
 # - Sem FK: apagar a ferramenta (ou o agente, em cascata) não pode esbarrar no histórico de execuções. O job que não acha
 #   a ferramenta encerra a execução como `ferramenta_indisponivel`.
 # - O add_column nulo é só metadado; o lock_timeout do StrongMigrations cobre o ACCESS EXCLUSIVE curto.

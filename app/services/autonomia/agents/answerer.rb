@@ -480,8 +480,10 @@ module Autonomia
       end
 
       # #1430 (desenho D): as consultas HTTP em segundo plano da rodada saem TODAS antes de o turno esperar qualquer uma
-      # (`Tools::Bound#disparar`); a execução de cada chamada reusa a sua. O especialista tem a precedência do despacho.
+      # (`Tools::Bound#disparar`), numa janela que é desta rodada; a execução de cada chamada toma a sua. O especialista
+      # tem a precedência do despacho.
       def disparar_consultas(calls, tools_by_slug, specialists_by_function)
+        Tools::ConsultaNoTurno.nova_rodada(@delivery) if @delivery
         Array(calls).each do |call|
           nome = call['name'].to_s
           tools_by_slug[nome]&.disparar(call, turno: @delivery) unless specialists_by_function.key?(nome)

@@ -23,4 +23,12 @@ RSpec.describe Autonomia::Agents::Tool do
 
     expect(tool).to be_valid
   end
+
+  it 'so confere o slug quando ele muda: a ferramenta antiga com nome hoje reservado continua editavel' do
+    tool = described_class.create!(account: account, agent: agent, name: 'X', slug: 'consultar_pedido', endpoint_url: 'https://erp.exemplo.test/x')
+    tool.update_column(:slug, Autonomia::Agents::Tools::Registry.slugs.first) # rubocop:disable Rails/SkipsModelValidations
+
+    expect(tool.reload.update(name: 'Outro nome')).to be(true)
+    expect(tool.update(slug: Autonomia::Agents::Tools::Registry.slugs.last)).to be(false)
+  end
 end

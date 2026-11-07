@@ -31,7 +31,7 @@ class Autonomia::Agents::Tools::HttpExecutor
   # `turno`: o `Delivery` de onde sai o `Idempotency-Key` (`ChaveDeIdempotencia`); sem ele, uma chave nova por
   # chamada. `segundos`: o teto desta chamada; sem ele, o tempo da ferramenta (`Tool#timeout_seconds`).
   # #1430, a consulta em segundo plano: `chave` é o `Idempotency-Key` gravado na abertura (o job não tem turno), e
-  # `higienizar` passa a resposta 2xx pelas regras do trecho do 4xx (`resposta`).
+  # `higienizar` mascara na resposta 2xx os segredos do cadastro (`resposta`).
   def initialize(tool:, params: {}, turno: nil, segundos: nil, chave: nil, higienizar: false) # rubocop:disable Metrics/ParameterLists
     @tool = tool
     @params_do_modelo = params.to_h.deep_stringify_keys
@@ -155,12 +155,13 @@ class Autonomia::Agents::Tools::HttpExecutor
     Autonomia::Agents::Tools::SegredosDaChamada.new(tool: @tool, headers: headers, corpo: corpo, endereco: method(:render_template))
   end
 
-  # #1430: a consulta em segundo plano grava a resposta 2xx e a mostra ao modelo e a quem atende: passa pelas mesmas
-  # regras do trecho do 4xx. Sem corte (`MAX_RESPONSE_BYTES` é o teto do corpo): quem corta é o `Bound#cabendo`.
+  # #1430: a consulta em segundo plano grava a resposta 2xx e a mostra ao modelo e a quem atende (a nota privada): os
+  # segredos do cadastro saem, e só eles — UUID, PIX, linha digitável e id em endereço chegam inteiros, como no
+  # síncrono. Sem corte aqui: quem corta é o `Bound#cabendo`, no teto e com o aviso do síncrono.
   def resposta(texto, headers)
     return texto unless @higienizar
 
-    segredos_da_chamada(headers).higienizar(texto, limite: MAX_RESPONSE_BYTES).to_s
+    segredos_da_chamada(headers).mascarar(texto)
   end
 
   # Sem corte aqui: quem corta é o `Bound#cabendo`, com o aviso de corte que o modelo precisa ler

@@ -1,8 +1,9 @@
 require 'rails_helper'
 
-# #1430, desenho D: um deploy no meio da consulta HTTP mata o worker por SIGKILL e o job não volta. O varredor
-# reenfileira UMA vez, com a mesma Idempotency-Key (o sistema de fora reconhece o pedido repetido); na segunda vez,
-# fecha como falha e o agente avisa. A execução reivindicada há pouco não é tocada.
+# #1430, desenho D: um deploy no meio da consulta HTTP mata o worker por SIGKILL e o job se perde. O varredor decide
+# pelo que a linha mostra: a chamada feita sem resposta fecha como incerta (nunca chama de novo); o job que nunca
+# começou volta à fila sem gastar a segunda chance; o que começou e morreu antes de chamar volta uma vez e, na segunda,
+# fecha como falha. Cada escrita confere o prazo vencido: a execução reivindicada há pouco não é tocada.
 RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
   let(:account) { create(:account, internal_attributes: { 'autonomia_agents_enabled' => true }) }
   let(:inbox) { create(:inbox, account: account) }
@@ -46,25 +47,52 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     run.reload
   end
 
-  it 'na primeira vez reenfileira o job HTTP uma vez, renovando o prazo pelo tempo gravado, sem fechar nem falar' do
+  # O job começou (anotou a espera na fila) e morreu antes de chamar.
+  def comecou(run)
+    run.merge_handle!({ runs::FILA_MS => 5 })
+    run
+  end
+
+  it 'D2: a chamada feita sem resultado fecha como incerta, com nota ao atendente e consulta_falhou, sem chamar de novo' do
+    run = comecou(consulta_vencida)
+    run.merge_handle!({ runs::CHAMADA_FEITA => true, runs::PASSADA => 'job-morto' }) # o worker morreu no meio da chamada
+    allow(SafeFetch).to receive(:fetch)
+
+    described_class.new.perform
+
+    expect(run.reload).to have_attributes(status: 'failed', failure_code: 'consulta_incerta')
+    expect(run.handle).not_to have_key(runs::REENFILEIRADA)
+    expect(job_http).to have_been_enqueued.with(run.id).once # só o da abertura
+    expect(eventos_disparados(run)).to eq(['consulta_falhou'])
+    expect(conversation.messages.where(private: true).sole.content).to include('Confira se o pedido foi registrado')
+    expect(SafeFetch).not_to have_received(:fetch)
+    expect(Autonomia::Agents::Tools::Registry).not_to have_received(:find)
+  end
+
+  it 'B4: o job que nunca comecou volta a fila sem gastar a segunda chance, quantas vezes precisar' do
     run = consulta_vencida
-    run.merge_handle!({ runs::CHAMADA_FEITA => true }) # o worker morreu no meio da chamada
 
     freeze_time do
       described_class.new.perform
 
       expect(run.reload).to have_attributes(status: 'running', expires_at: 60.seconds.from_now + job_http::FOLGA)
     end
-    expect(run.handle).to include(runs::REENFILEIRADA => true)
-    expect(run.handle).not_to have_key(runs::CHAMADA_FEITA)
-    expect(job_http).to have_been_enqueued.with(run.id).twice # o da abertura e o do varredor
+    vencer(run)
+    described_class.new.perform
+
+    expect(run.reload.status).to eq('running')
+    expect(run.handle).not_to have_key(runs::REENFILEIRADA)
+    expect(job_http).to have_been_enqueued.with(run.id).exactly(3).times # o da abertura e um por varredura
     expect(eventos_disparados(run)).to be_empty
-    expect(Autonomia::Agents::Tools::Registry).not_to have_received(:find)
   end
 
-  it 'na segunda vez fecha failed com consulta_falhou' do
-    run = consulta_vencida
+  it 'comecou e morreu antes de chamar: reenfileira uma vez; na segunda, fecha failed com consulta_falhou' do
+    run = comecou(consulta_vencida)
+
     described_class.new.perform
+
+    expect(run.reload.handle).to include(runs::REENFILEIRADA => true)
+    expect(job_http).to have_been_enqueued.with(run.id).twice
     vencer(run)
 
     described_class.new.perform
@@ -73,25 +101,29 @@ RSpec.describe Autonomia::Agents::Tools::ReapStaleRunsJob, type: :job do
     expect(eventos_disparados(run)).to eq(['consulta_falhou'])
   end
 
-  it 'a passada reenfileirada usa a mesma Idempotency-Key da primeira' do
-    run = consulta_vencida
-    chaves = []
-    allow(SafeFetch).to receive(:fetch) do |_url, **opcoes|
-      chaves << opcoes[:headers]['Idempotency-Key']
-      # A primeira passada morre no meio da chamada, como no deploy: nada do job roda depois disto.
-      raise Sidekiq::Shutdown if chaves.one?
-
-      raise SafeFetch::FetchError, 'de novo'
-    end
-    expect { job_http.new.perform(run.id) }.to raise_error(Sidekiq::Shutdown)
-    vencer(run)
+  it 'o resultado gravado com a linha aberta (morreu entre gravar e fechar) so fecha' do
+    run = comecou(consulta_vencida)
+    run.merge_handle!({ runs::CHAMADA_FEITA => true })
+    run.gravar_resultado!('{"ok":1}', sucesso: true, codigo: nil, api_ms: 3)
 
     described_class.new.perform
-    job_http.new.perform(run.id)
 
-    expect(chaves.size).to eq(2)
-    expect(chaves.uniq).to eq([run.reload.handle.fetch(runs::CHAVE_DA_CONSULTA)])
-    expect(run.status).to eq('failed')
+    expect(run.reload.status).to eq('done')
+    expect(eventos_disparados(run)).to eq(['consulta_concluida'])
+  end
+
+  it 'B4: as escritas do varredor conferem o prazo vencido no mesmo comando' do
+    run = comecou(consulta_vencida)
+    viva = runs.find(run.id)
+    runs.where(id: run.id).update_all(expires_at: 2.minutes.from_now) # rubocop:disable Rails/SkipsModelValidations
+
+    limite = described_class::GRACE.ago
+    expect(job_http.reenfileirar(viva, vencida_antes_de: limite)).to be(false)
+    expect(job_http.reenfileirar_sem_comecar(viva, vencida_antes_de: limite)).to be(false)
+    expect(job_http.abandonar(viva, vencida_antes_de: limite)).to be(false)
+    viva.merge_handle!({ runs::CHAMADA_FEITA => true })
+    expect(job_http.incerta(viva, vencida_antes_de: limite)).to be(false)
+    expect(run.reload.status).to eq('running')
   end
 
   it 'a execucao reivindicada ha pouco nao e tocada' do

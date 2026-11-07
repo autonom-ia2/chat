@@ -65,7 +65,7 @@ class Autonomia::Agents::Tool < ApplicationRecord
   validate :validate_endpoint_url
   validate :validate_param_schema
   validate :validate_headers_config
-  validate :validate_slug_livre
+  validate :validate_slug_livre, if: :will_save_change_to_slug?
 
   scope :enabled, -> { where(enabled: true) }
 

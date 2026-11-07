@@ -1,6 +1,6 @@
 # O QUE NUNCA PODE APARECER NA RESPOSTA DE UMA CHAMADA HTTP DA FERRAMENTA (#1425), saído do `HttpExecutor` (#1430):
-# o trecho do 4xx usava isto, e a resposta 2xx da consulta em segundo plano, que fica gravada na execução e é mostrada
-# ao modelo e a quem atende, passa a usar as mesmas regras. Mesmo código, só noutro arquivo.
+# o trecho do 4xx passa pelas regras inteiras (`higienizar`); a resposta 2xx da consulta em segundo plano, que fica
+# gravada na execução e é mostrada ao modelo e a quem atende, só pelos segredos do cadastro (`mascarar`).
 #
 # `endereco` é o renderizador do executor (`HttpExecutor#render_template`): o endereço do cadastro com cada {{ }} vazio.
 class Autonomia::Agents::Tools::SegredosDaChamada
@@ -15,6 +15,12 @@ class Autonomia::Agents::Tools::SegredosDaChamada
   def higienizar(texto, limite:, cortado: false)
     Autonomia::Agents::Tools::TrechoHigienizado.new(texto, segredos: segredos, literais: literais_do_cadastro, limite: limite,
                                                            cortado: cortado).to_s
+  end
+
+  # Só os segredos do cadastro (cabeçalhos, query, usuário e senha do endereço), em todas as formas. O resto da resposta
+  # é dado do negócio e chega inteiro, como no síncrono.
+  def mascarar(texto)
+    Autonomia::Agents::Tools::TrechoHigienizado.new(texto, segredos: segredos, limite: nil).mascarado
   end
 
   private

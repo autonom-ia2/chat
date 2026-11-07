@@ -23,18 +23,37 @@ RSpec.describe AgentToolsQueue do
   end
 
   it 'ENV que nao e inteiro nao derruba o boot: cai no padrao e avisa' do
-    with_modified_env(AGENT_TOOLS_CONCURRENCY: 'dez', SIDEKIQ_CONCURRENCY: '3O') do
-      expect { expect(described_class.pool_do_sidekiq).to eq(20) }.to output(a_string_including('AGENT_TOOLS_CONCURRENCY')).to_stderr
+    with_modified_env(AGENT_TOOLS_CONCURRENCY: 'dez') do
+      expect { expect(described_class.pool_do_sidekiq(10)).to eq(20) }.to output(a_string_including('AGENT_TOOLS_CONCURRENCY')).to_stderr
     end
   end
 
   it 'o pool do worker soma as threads do processo principal e as do capsule' do
-    with_modified_env(SIDEKIQ_CONCURRENCY: '30', AGENT_TOOLS_CONCURRENCY: nil) do
-      expect(described_class.pool_do_sidekiq).to eq(40)
+    with_modified_env(AGENT_TOOLS_CONCURRENCY: nil) do
+      expect(described_class.pool_do_sidekiq(30)).to eq(40)
     end
-    with_modified_env(SIDEKIQ_CONCURRENCY: nil, AGENT_TOOLS_CONCURRENCY: '4') do
-      expect(described_class.pool_do_sidekiq).to eq(14)
+    with_modified_env(AGENT_TOOLS_CONCURRENCY: '4') do
+      expect(described_class.pool_do_sidekiq(10)).to eq(14)
     end
+  end
+
+  # B10: o padrão do processo principal tem uma fonte só, o config/sidekiq.yml, que o Sidekiq lê antes de o Rails subir.
+  it 'as threads do processo principal saem da configuracao que o Sidekiq montou do sidekiq.yml' do
+    config = Sidekiq.default_configuration
+    antes = config.concurrency
+    config.concurrency = 30
+
+    expect(described_class.pool_do_sidekiq).to eq(30 + described_class.concorrencia)
+  ensure
+    config.concurrency = antes
+  end
+
+  it 'o sidekiq.yml tem uma concorrencia so, sem repetir o padrao por ambiente' do
+    yml = YAML.safe_load(ERB.new(Rails.root.join('config/sidekiq.yml').read).result, permitted_classes: [Symbol])
+
+    expect(yml).not_to have_key('production')
+    expect(yml).not_to have_key('staging')
+    expect(described_class.constants).not_to include(:CONCORRENCIA_PRINCIPAL_PADRAO)
   end
 
   it 'o database.yml usa o pool do worker no Sidekiq' do

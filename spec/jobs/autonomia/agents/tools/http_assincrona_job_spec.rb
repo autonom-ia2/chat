@@ -50,7 +50,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
   end
 
   describe 'sucesso' do
-    it 'chama uma vez com a chave e o tempo da abertura, grava higienizado e a telemetria, fecha e dispara' do
+    it 'chama uma vez com a chave e o tempo da abertura, grava com o segredo do cadastro mascarado e a telemetria' do
       run = consulta_aberta
       sistema_responde('{"status":"enviado","eco":"segredo-da-conta-123"}', chaves: chaves)
 
@@ -60,8 +60,7 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
       expect(chaves).to eq([run.handle.fetch(runs::CHAVE_DA_CONSULTA)])
       run.reload
       expect(run.status).to eq('done')
-      expect(run.resultado_da_consulta).to include('enviado').and include('[oculto]')
-      expect(run.resultado_da_consulta).not_to include('segredo-da-conta-123')
+      expect(run.resultado_da_consulta).to eq('{"status":"enviado","eco":"[oculto]"}')
       expect(run.handle).to include(runs::FILA_MS => a_kind_of(Integer), runs::API_MS => a_kind_of(Integer))
       expect(eventos_disparados(run)).to eq(['consulta_concluida'])
     end
@@ -144,8 +143,8 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
       expect(SafeFetch).not_to have_received(:fetch)
     end
 
-    it 'operador puxou o freio (agente desligado): bloqueia sem chamar e sem evento' do
-      run = consulta_aberta
+    it 'operador puxou o freio com o turno ainda na janela: bloqueia sem chamar e sem evento' do
+      run = consulta_aberta(desistiu: false)
       agent.update!(enabled: false)
       allow(SafeFetch).to receive(:fetch)
 
@@ -154,6 +153,18 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
       expect(SafeFetch).not_to have_received(:fetch)
       expect(run.reload).to have_attributes(status: 'blocked', failure_code: 'nao_autorizado')
       expect(eventos_disparados(run)).to be_empty
+    end
+
+    it 'B6: operador puxou o freio depois de o turno desistir: falha bloqueada com consulta_falhou, sem chamar' do
+      run = consulta_aberta
+      agent.update!(enabled: false)
+      allow(SafeFetch).to receive(:fetch)
+
+      described_class.new.perform(run.id)
+
+      expect(SafeFetch).not_to have_received(:fetch)
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'bloqueada')
+      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
     end
 
     it 'ferramenta desligada depois da abertura: falha ferramenta_indisponivel com evento, sem chamar' do
@@ -224,5 +235,162 @@ RSpec.describe Autonomia::Agents::Tools::HttpAssincronaJob, type: :job do
       expect(nota.content).to include('{"status":"enviado"}', Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO)
       expect(conversation.messages.where(private: false, sender_type: 'AgentBot')).to be_empty
     end
+  end
+
+  describe 'D2: a chamada feita sem resultado nunca chama de novo' do
+    it 'o mesmo job de volta (o desligamento o devolveu) fecha como incerta na hora, sem renovar o prazo' do
+      run = consulta_aberta
+      job = described_class.new
+      run.merge_handle!({ runs::CHAMADA_FEITA => true, runs::PASSADA => job.job_id, runs::FILA_MS => 3 })
+      prazo = run.reload.expires_at
+      allow(SafeFetch).to receive(:fetch)
+
+      job.perform(run.id)
+
+      expect(SafeFetch).not_to have_received(:fetch)
+      run.reload
+      expect(run).to have_attributes(status: 'failed', failure_code: 'consulta_incerta', expires_at: prazo)
+      expect(run.handle).to include(runs::POSSIVELMENTE_DUPLICADA => true)
+      expect(runs.possivelmente_duplicadas).to include(run)
+      expect(eventos_disparados(run)).to eq(['consulta_falhou'])
+      expect(conversation.messages.where(private: true).sole.content).to include('Confira se o pedido foi registrado')
+    end
+
+    it 'outra passada com a chamada feita nao chama, nao fecha e nao renova o prazo: quem decide e o varredor' do
+      run = consulta_aberta
+      run.merge_handle!({ runs::CHAMADA_FEITA => true, runs::PASSADA => 'outro-job' })
+      prazo = run.reload.expires_at
+      allow(SafeFetch).to receive(:fetch)
+
+      described_class.new.perform(run.id)
+
+      expect(SafeFetch).not_to have_received(:fetch)
+      expect(run.reload).to have_attributes(status: 'running', expires_at: prazo)
+    end
+
+    it 'a passada que morreu no meio da chamada e volta pelo Sidekiq nao manda a segunda chamada' do
+      run = consulta_aberta
+      job = described_class.new
+      chamadas = 0
+      allow(SafeFetch).to receive(:fetch) do
+        chamadas += 1
+        raise Sidekiq::Shutdown
+      end
+
+      expect { job.perform(run.id) }.to raise_error(Sidekiq::Shutdown)
+      job.perform(run.id)
+
+      expect(chamadas).to eq(1)
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'consulta_incerta')
+    end
+  end
+
+  describe 'D3: a equidade entre contas no capsule' do
+    let(:outra_conta) { create(:account) }
+    let(:outro_agente) do
+      Autonomia::Agents::Agent.create!(account: outra_conta, name: 'Bot B', agent_type: 'custom', status: :active, enabled: true,
+                                       instruction: 'Atenda.')
+    end
+
+    def linha(conta, dono, faixa, handle)
+      runs.create!(account: conta, agent: dono, slug: 'consultar_pedido', faixa: faixa, status: 'running', conversation_id: conversation.id,
+                   execution_key: SecureRandom.uuid, arguments: {}, handle: handle, autonomia_agent_tool_id: tool.id,
+                   expires_at: 5.minutes.from_now)
+    end
+
+    def ocupar(quantas)
+      quantas.times { |i| linha(account, agent, "ocupada_#{i}", { runs::FILA_MS => 1 }) }
+    end
+
+    it 'a conta que ja ocupa mais da metade cede a vez quando outra conta espera: volta a fila sem chamar' do
+      run = consulta_aberta
+      ocupar(6)
+      linha(outra_conta, outro_agente, 'esperando', {})
+      allow(SafeFetch).to receive(:fetch)
+
+      expect { described_class.new.perform(run.id) }.to have_enqueued_job(described_class).with(run.id)
+
+      expect(SafeFetch).not_to have_received(:fetch)
+      expect(run.reload.status).to eq('running')
+      expect(run.handle).not_to have_key(runs::FILA_MS)
+      expect(run.expires_at).to be > 89.seconds.from_now
+    end
+
+    it 'com a fila livre a conta usa todas as threads' do
+      run = consulta_aberta
+      ocupar(9)
+      sistema_responde('{"status":"ok"}')
+
+      described_class.new.perform(run.id)
+
+      expect(SafeFetch).to have_received(:fetch).once
+    end
+
+    it 'ate a metade nao cede, mesmo com outra conta esperando' do
+      run = consulta_aberta
+      ocupar(5)
+      linha(outra_conta, outro_agente, 'esperando', {})
+      sistema_responde('{"status":"ok"}')
+
+      described_class.new.perform(run.id)
+
+      expect(SafeFetch).to have_received(:fetch).once
+    end
+  end
+
+  describe 'D4: a resposta 2xx so perde os segredos do cadastro' do
+    it 'UUID, PIX, linha digitavel e id e assinatura em endereco chegam inteiros; cabecalho e query do cadastro, nao' do
+      tool.update!(endpoint_url: 'https://erp.exemplo.test/pedidos?token=qk9zzqueryvalor')
+      run = consulta_aberta
+      dados = {
+        'uuid' => '3f2b8c1e-9a4d-4e7f-b6c5-1d2e3f4a5b6c',
+        'pix' => '00020126580014BR.GOV.BCB.PIX0136123e4567-e12b-12d1-a456-4266554400005204000053039865802BR5913Fulano de Tal',
+        'linha' => '23793381286000000000300000000401884340000012345',
+        'boleto' => 'https://pagamentos.exemplo.test/boletos/7f3a9c2e8b1d4f6a9e0c5b7d2a1f8e3c/pdf?assinatura=a8F3kLm92QzX7pR4tV1wY6nB',
+        'eco' => 'segredo-da-conta-123', 'q' => 'qk9zzqueryvalor'
+      }
+      sistema_responde(dados.to_json)
+
+      described_class.new.perform(run.id)
+
+      gravado = JSON.parse(run.reload.resultado_da_consulta)
+      expect(gravado.except('eco', 'q')).to eq(dados.except('eco', 'q'))
+      expect(gravado.values_at('eco', 'q')).to eq(['[oculto]', '[oculto]'])
+    end
+  end
+
+  describe 'B4: a resposta 2xx que chega numa linha ja fechada pelo varredor' do
+    it 'avisa o atendente com o resultado, sem falar com o cliente' do
+      run = consulta_aberta
+      sistema_responde('{"status":"registrado"}', antes: lambda {
+        runs.where(id: run.id).update_all(expires_at: 10.minutes.ago) # rubocop:disable Rails/SkipsModelValidations
+        described_class.incerta(runs.find(run.id), vencida_antes_de: 5.minutes.ago)
+      })
+
+      described_class.new.perform(run.id)
+
+      expect(run.reload).to have_attributes(status: 'failed', failure_code: 'consulta_incerta')
+      notas = conversation.messages.where(private: true).order(:id).map(&:content)
+      expect(notas.last).to include('respondeu depois', '{"status":"registrado"}')
+    end
+  end
+
+  it 'B10: o agente da execucao e lido antes de soltar a conexao do banco' do
+    run = consulta_aberta
+    consultas = []
+    soltou = false
+    allow(Autonomia::Agents::Tools::ConexaoDoBanco).to receive(:soltar).and_wrap_original do |original|
+      soltou = true
+      original.call
+    end
+    assinatura = ActiveSupport::Notifications.subscribe('sql.active_record') do |*, dados|
+      consultas << dados[:sql] if soltou && consultas.size < 50
+    end
+    sistema_responde('{}', antes: -> { soltou = false })
+
+    described_class.new.perform(run.id)
+
+    ActiveSupport::Notifications.unsubscribe(assinatura)
+    expect(consultas.select { |sql| sql.include?('"autonomia_agents"') }).to be_empty
   end
 end

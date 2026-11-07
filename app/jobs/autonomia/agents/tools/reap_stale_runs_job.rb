@@ -110,14 +110,33 @@ class Autonomia::Agents::Tools::ReapStaleRunsJob < ApplicationJob
     nil
   end
 
-  # A CONSULTA HTTP VENCIDA (#1430): o worker morreu num deploy (SIGKILL) e o job não volta. Ao contrário da cotação,
-  # retomar aqui é seguro: a passada reenfileirada manda a mesma Idempotency-Key, e o sistema de fora reconhece o pedido.
-  # Uma vez só; na segunda, a consulta fecha como falha e o agente diz que não conseguiu.
+  # A CONSULTA HTTP VENCIDA (#1430). O job dela não tem retry: o desligamento do Sidekiq o devolve à fila (e ele mesmo
+  # decide, `HttpAssincronaJob#reentrada`), mas um SIGKILL o perde, e a linha fica aqui. O varredor decide pelo que a
+  # linha mostra, e cada escrita confere o prazo vencido no mesmo comando (o job que começou depois da seleção ganha):
+  #   - resultado gravado e linha aberta (morreu entre gravar e fechar): só fecha;
+  #   - chamada feita sem resultado: incerta. NÃO chama de novo: o pedido pode estar registrado lá;
+  #   - o job nunca começou (sem `FILA_MS`; perdido na fila): de volta à fila, sem gastar a segunda chance — não houve
+  #     chamada. A idade conta da abertura (`ABERTA_EM`), que vai no log;
+  #   - começou e morreu antes de chamar: de volta à fila uma vez; na segunda, abandonada (o agente diz que não
+  #     conseguiu).
   def fechar_consulta(run)
-    http = ::Autonomia::Agents::Tools::HttpAssincronaJob
-    return if !run.running? || http.reenfileirar(run)
+    return unless run.running?
 
-    http.abandonar(run) if run.reload.handle.to_h[::Autonomia::Agents::ToolRun::REENFILEIRADA]
+    http = ::Autonomia::Agents::Tools::HttpAssincronaJob
+    limite = GRACE.ago
+    return http.fechar(run) if run.resultado_gravado?
+    return http.incerta(run, vencida_antes_de: limite) if run.chamada_feita?
+    return sem_comecar(run, limite) unless run.comecou?
+
+    http.reenfileirar(run, vencida_antes_de: limite) || http.abandonar(run, vencida_antes_de: limite)
+  end
+
+  def sem_comecar(run, limite)
+    return unless ::Autonomia::Agents::Tools::HttpAssincronaJob.reenfileirar_sem_comecar(run, vencida_antes_de: limite)
+
+    aberta_em = Time.zone.parse(run.handle.to_h[::Autonomia::Agents::ToolRun::ABERTA_EM].to_s)
+    idade = aberta_em ? (Time.current - aberta_em).round : '-'
+    Rails.logger.warn("[autonomia][tool][http_assincrona] run=#{run.id} job_nunca_comecou idade_s=#{idade} reenfileirada")
   end
 
   # O MESMO ENCERRAMENTO DO MOTOR (`Tools::Encerramento`, entrega 8): as entregas que a ferramenta tem PRONTAS e

@@ -64,4 +64,36 @@ RSpec.describe Autonomia::Agents::Tools::Evento do
       expect(texto.downcase).not_to include('cota')
     end
   end
+
+  describe 'a falha com motivo proprio (#1430, D2 e B6)' do
+    def falha(codigo)
+      falhada = Autonomia::Agents::ToolRun.open!(agent: agent, slug: tool.slug, arguments: {},
+                                                 scope: { conversation_id: conversation.id, autonomia_agent_tool_id: tool.id,
+                                                          faixa: "consulta_http:#{codigo}" })
+      falhada.promote!(expected_chunks: 0, notify_customer: false, expires_at: 3.minutes.from_now)
+      falhada.gravar_resultado!(Autonomia::Agents::Tools::Recusa.saida(codigo), sucesso: false, codigo: codigo, api_ms: nil)
+      described_class.new(run: falhada.reload, tipo: 'consulta_falhou')
+    end
+
+    it 'incerta: o agente diz que nao conseguiu confirmar, sem o bloco do resultado' do
+      evento = falha('consulta_incerta')
+
+      expect(evento.nota_do_sistema).to include(described_class::FALHAS_DA_CONSULTA.fetch('consulta_incerta'))
+      expect(evento.nota_do_sistema).to include('não conseguiu confirmar')
+      expect(evento.nota_do_sistema).not_to include(described_class::DESCRICOES.fetch('consulta_falhou'))
+      expect(evento.fatos).to be_nil
+    end
+
+    it 'bloqueada: o agente diz que nao conseguiu fazer a consulta' do
+      evento = falha('bloqueada')
+
+      expect(evento.nota_do_sistema).to include(described_class::FALHAS_DA_CONSULTA.fetch('bloqueada'))
+    end
+
+    it 'as outras falhas seguem com a descricao generica e o resultado' do
+      evento = falha('tool_http_error')
+
+      expect(evento.nota_do_sistema).to include(described_class::DESCRICOES.fetch('consulta_falhou'), 'tool_http_error')
+    end
+  end
 end

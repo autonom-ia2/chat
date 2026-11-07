@@ -52,6 +52,17 @@ class Autonomia::Agents::Tools::Evento
     CONSULTA_FALHOU => 'a consulta que a pessoa pediu não pôde ser concluída (erro ou tempo esgotado), e nada chegou a ela. ' \
                        'Diga que não conseguiu agora.'
   }.freeze
+  # #1430: a falha da consulta que tem motivo próprio, pelo código gravado na linha (`ToolRun::CODIGO_DA_CONSULTA`). No
+  # lugar da descrição genérica de `consulta_falhou`, e sem o bloco do resultado (que só repetiria o código).
+  FALHAS_DA_CONSULTA = {
+    ::Autonomia::Agents::ToolRun::INCERTA => 'o pedido que a pessoa fez saiu para o sistema, mas a resposta se perdeu: não dá ' \
+                                             'para confirmar se ele foi registrado, e nada chegou a ela. Diga que não ' \
+                                             'conseguiu confirmar agora e que a equipe vai conferir; não diga que deu certo ' \
+                                             'nem que deu errado.',
+    ::Autonomia::Agents::ToolRun::BLOQUEADA => 'a consulta que a pessoa pediu não foi feita, porque o atendimento automático ' \
+                                               'desta conversa foi pausado ou mudou de responsável, e nada chegou a ela. Diga ' \
+                                               'que não conseguiu fazer a consulta agora.'
+  }.freeze
 
   attr_reader :run, :tipo
 
@@ -82,6 +93,15 @@ class Autonomia::Agents::Tools::Evento
 
   def self.slot_de(tipo)
     tipo == COMECO ? COMECO_KEY : FECHO_KEY
+  end
+
+  # Um resultado de sistema de fora entre as cercas, com o aviso de dado externo; nil quando vazio.
+  def self.cercado(texto)
+    limpo = texto.to_s.gsub(CERCA_DO_RESULTADO, '').strip
+    return nil if limpo.blank?
+
+    "Resultado da consulta (#{::Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}):\n#{CERCA_DO_RESULTADO}\n#{limpo}\n" \
+      "#{CERCA_DO_RESULTADO}"
   end
 
   def self.nao_disparado(run, tipo, motivo)
@@ -129,7 +149,7 @@ class Autonomia::Agents::Tools::Evento
   # A consulta HTTP (#1430) traz o que o job gravou; o slug dela pode ser o de uma nativa, e o catálogo não é lido.
   def fatos
     return @fatos if defined?(@fatos)
-    return @fatos = resultado_cercado if run.consulta_http?
+    return @fatos = (falha_com_motivo ? nil : self.class.cercado(run.resultado_da_consulta)) if run.consulta_http?
 
     @fatos = ::Autonomia::Agents::Tools::Registry.find(run.slug)&.fatos_do_evento(tipo, run).to_s.strip.presence
   rescue StandardError => e
@@ -143,17 +163,15 @@ class Autonomia::Agents::Tools::Evento
     [
       "AVISO DO SISTEMA SOBRE #{consulta? ? 'UMA CONSULTA' : 'A COTAÇÃO'} DESTA CONVERSA. Isto não é mensagem da pessoa: é " \
       'o sistema contando o que aconteceu, para você falar com ela agora, na sua voz.',
-      "O que aconteceu: #{DESCRICOES.fetch(tipo, tipo)}",
+      "O que aconteceu: #{falha_com_motivo || DESCRICOES.fetch(tipo, tipo)}",
       fatos && (consulta? ? fatos : "Fatos: #{fatos}")
     ].compact.join("\n")
   end
 
-  # O resultado gravado pelo job, entre as cercas, ou nil.
-  def resultado_cercado
-    texto = run.resultado_da_consulta.to_s.gsub(CERCA_DO_RESULTADO, '').strip
-    return nil if texto.blank?
+  # A descrição própria da falha da consulta (`FALHAS_DA_CONSULTA`), ou nil.
+  def falha_com_motivo
+    return nil unless tipo == CONSULTA_FALHOU && run.consulta_http?
 
-    "Resultado da consulta (#{::Autonomia::Agents::Tools::Recusa::AVISO_DE_DADO_EXTERNO}):\n#{CERCA_DO_RESULTADO}\n#{texto}\n" \
-      "#{CERCA_DO_RESULTADO}"
+    FALHAS_DA_CONSULTA[run.handle.to_h[::Autonomia::Agents::ToolRun::CODIGO_DA_CONSULTA]]
   end
 end

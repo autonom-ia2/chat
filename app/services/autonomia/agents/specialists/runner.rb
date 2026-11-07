@@ -165,7 +165,9 @@ class Autonomia::Agents::Specialists::Runner
   # contagem das rodadas (`#rodadas`).
   def execute_tool_calls(calls)
     by_slug = specialist_tools.index_by(&:slug)
-    # #1430 (desenho D): as consultas HTTP em segundo plano da rodada saem todas antes de esperar (`Bound#disparar`).
+    # #1430 (desenho D): as consultas HTTP em segundo plano da rodada saem todas antes de esperar (`Bound#disparar`), numa
+    # janela que é desta rodada.
+    ::Autonomia::Agents::Tools::ConsultaNoTurno.nova_rodada(@delivery) if @delivery
     Array(calls).each { |call| by_slug[call['name'].to_s]&.disparar(call, turno: @delivery) }
     @rodadas_usadas = rodadas_usadas + 1
     resultados = Array(calls).map { |call| executar(by_slug[call['name'].to_s], call) }

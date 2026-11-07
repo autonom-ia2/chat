@@ -1,23 +1,28 @@
 # A CHAMADA DA CONSULTA HTTP EM SEGUNDO PLANO (#1430, desenho D). Quem abre a execução e a enfileira é o turno
-# (`Tools::ConsultaNoTurno`), que espera por ela até a janela dele.
+# (`Tools::ConsultaNoTurno`), que espera por ela até a janela da rodada.
 #
 # UMA chamada, sem poll, na fila própria (`AgentToolsQueue`): uma conta com o sistema lento não ocupa as filas das
 # outras. Sem retry do Sidekiq: uma nova tentativa automática chamaria o sistema de fora de novo. A ordem que protege a
 # chamada única, a mesma do `SUBMITTED_KEY` da Lia:
-#   1. reivindica a linha: renova o prazo com o tempo gravado na abertura e anota a espera na fila;
-#   2. com o resultado já gravado (reentrada), só fecha;
-#   3. confere a ferramenta e a autorização;
-#   4. marca `chamada_feita` por compare-and-set — só em linha viva, sem chamada e sem resultado. Quem não marca não
-#      chama: a superada antes de começar e a reentrada depois da marca param aqui;
-#   5. solta a conexão do banco, chama com a chave e o tempo da abertura;
-#   6. grava o resultado uma vez (higienizado, o mesmo texto do síncrono), com conexão nova;
-#   7. fecha: o evento só sai se o turno desistiu (`ENTREGA`), e sai ANTES do `finish!`, porque o slot dele só é
+#   1. com o resultado já gravado, só fecha;
+#   2. com a chamada já feita e sem resultado, NÃO chama: se foi este mesmo job (o Sidekiq o devolveu à fila no
+#      desligamento, mesmo com `retry: false`), o worker morreu no meio da chamada, e a consulta fecha como incerta na
+#      hora; se foi outra passada, ela pode estar chamando, e quem decide é o varredor;
+#   3. cede a vez quando a conta ocupa mais da metade do capsule e outra conta espera (`ceder_a_vez?`);
+#   4. reivindica a linha: renova o prazo com o tempo gravado na abertura e anota a espera na fila;
+#   5. confere a ferramenta e a autorização;
+#   6. marca `chamada_feita` por compare-and-set — só em linha viva, sem chamada e sem resultado. Quem não marca não
+#      chama: a superada antes de começar para aqui;
+#   7. solta a conexão do banco, chama com a chave e o tempo da abertura;
+#   8. grava o resultado uma vez (a resposta com os segredos do cadastro mascarados e o teto do síncrono), com conexão
+#      nova;
+#   9. fecha: o evento só sai se o turno desistiu (`ENTREGA`), e sai ANTES do `finish!`, porque o slot dele só é
 #      adquirido em linha viva.
 #
 # A ferramenta é resolvida pelo id gravado na linha, nunca pelo slug.
 #
-# DEPLOY NO MEIO: o worker morre e o job não volta. Quem recupera é o `ReapStaleRunsJob`, uma vez (`reenfileirar`, que
-# tira a `chamada_feita` e manda a mesma chave); na segunda, `abandonar`.
+# DEPLOY NO MEIO: o desligamento devolve o job interrompido à fila (passo 2); o SIGKILL o perde, e quem recupera é o
+# `ReapStaleRunsJob` (`fechar_consulta`), pelo que a linha mostra.
 class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   FILA = AgentToolsQueue::FILA.to_sym
   queue_as FILA
@@ -25,30 +30,54 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
 
   ToolRun = ::Autonomia::Agents::ToolRun
   Evento = ::Autonomia::Agents::Tools::Evento
+  Recusa = ::Autonomia::Agents::Tools::Recusa
+  Aviso = ::Autonomia::Agents::Operate::AvisoAoAtendente
   # O prazo da linha passa do tempo da ferramenta por esta folga: a espera na fila e a abertura da conexão. O varredor
-  # ainda soma a dele (`ReapStaleRunsJob::GRACE`) antes de reenfileirar. Folga de desenho, não medida.
+  # ainda soma a dele (`ReapStaleRunsJob::GRACE`) antes de agir. Folga de desenho, não medida.
   FOLGA = 2.minutes
+  # Quanto o job que cedeu a vez espera para tentar de novo. Poucos segundos: a outra conta só precisa pegar a thread.
+  ESPERA_DA_VEZ = 3.seconds
 
   def self.vence_em(segundos)
     segundos.to_i.seconds.from_now + FOLGA
   end
 
-  # A segunda chance do varredor: -> true quando enfileirou.
-  def self.reenfileirar(run)
-    return false unless run.reenfileirar_consulta!(expires_at: vence_em(run.handle.to_h.fetch(ToolRun::TEMPO_DA_CONSULTA)))
+  def self.tempo(run)
+    run.handle.to_h.fetch(ToolRun::TEMPO_DA_CONSULTA)
+  end
+
+  # A segunda chance do varredor, para o job que começou e morreu ANTES de chamar: -> true quando enfileirou.
+  def self.reenfileirar(run, vencida_antes_de:)
+    return false unless run.reenfileirar_consulta!(expires_at: vence_em(tempo(run)), vencida_antes_de: vencida_antes_de)
 
     perform_later(run.id)
     true
   end
 
-  # A consulta que morreu duas vezes: falha, e o agente diz que não conseguiu. O turno já foi embora há muito: sem marca
-  # de entrega, quem fala é o evento.
-  def self.abandonar(run)
-    return unless run.running?
+  # O job que nunca começou: de volta à fila, sem gastar a segunda chance (não houve chamada).
+  def self.reenfileirar_sem_comecar(run, vencida_antes_de:)
+    return false unless run.reenfileirar_sem_comecar!(expires_at: vence_em(tempo(run)), vencida_antes_de: vencida_antes_de)
 
+    perform_later(run.id)
+    true
+  end
+
+  # O job que começou duas vezes e morreu antes de chamar: falha, e o agente diz que não conseguiu. O turno já foi
+  # embora há muito: sem marca de entrega, quem fala é o evento.
+  def self.abandonar(run, vencida_antes_de:)
     run.marcar_desistencia!(espera_ms: nil)
-    run.gravar_resultado!(::Autonomia::Agents::Tools::Recusa.saida('execucao_abandonada'), sucesso: false, codigo: 'execucao_abandonada',
-                                                                                           api_ms: nil)
+    return false unless run.abandonar_consulta!(Recusa.saida('execucao_abandonada'), vencida_antes_de: vencida_antes_de)
+
+    fechar(run.reload)
+  end
+
+  # A chamada saiu e a resposta se perdeu: não chama de novo. Quem atende confere se o pedido foi registrado lá; o
+  # cliente ouve que não deu para confirmar (`Evento`, pelo código `INCERTA`). `vencida_antes_de`: o varredor.
+  def self.incerta(run, vencida_antes_de: nil)
+    run.marcar_desistencia!(espera_ms: nil) if vencida_antes_de
+    return false unless run.fechar_incerta!(Recusa.saida(ToolRun::INCERTA), vencida_antes_de: vencida_antes_de)
+
+    Aviso.consulta_incerta(run)
     fechar(run.reload)
   end
 
@@ -64,8 +93,7 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   def perform(run_id)
     inicio = agora
     run = consulta_viva(run_id)
-    return unless run && reivindicar(run)
-    return self.class.fechar(run) if run.resultado_gravado?
+    return if run.nil? || sem_chamar?(run)
 
     tool = ferramenta(run)
     return indisponivel(run) if tool.nil?
@@ -85,31 +113,64 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
     run if run&.running? && run.consulta_http?
   end
 
+  # As paradas antes da chamada, na ordem do cabeçalho (passos 1 a 4). -> true quando esta passada não chama.
+  def sem_chamar?(run)
+    return ceder_a_vez?(run) || !reivindicar(run) unless run.resultado_gravado? || run.chamada_feita?
+
+    run.resultado_gravado? ? self.class.fechar(run) : reentrada(run)
+    true
+  end
+
+  # A chamada já saiu nesta linha e não há resultado. Este mesmo job de volta: o worker morreu no meio da chamada.
+  # Outra passada: ela pode estar chamando agora.
+  def reentrada(run)
+    return log(run, 'chamada_em_voo_de_outra_passada') unless run.handle.to_h[ToolRun::PASSADA] == job_id
+
+    log(run, 'reentrada_depois_da_chamada') if self.class.incerta(run)
+  end
+
+  # A EQUIDADE ENTRE CONTAS NO CAPSULE (o isolamento entre filas é o `AgentToolsQueue`; este é o outro). A conta deste
+  # job já ocupa mais da metade das threads E uma consulta de outra conta espera: o job volta à fila em poucos
+  # segundos, sem chamar e sem prender a thread. Fila livre, a conta usa todas. Nada é recusado. A ocupação sai da
+  # própria tabela (as linhas vivas que começaram e não têm resposta), no índice das ativas: uma leitura, sem varrer a
+  # fila no Redis, cujo payload só tem o id da linha.
+  def ceder_a_vez?(run)
+    return false unless ToolRun.consultas_em_voo(run.account_id) * 2 > AgentToolsQueue.concorrencia
+    return false unless ToolRun.consulta_esperando_de_outra_conta?(run.account_id)
+    return false unless run.adiar_comeco!(expires_at: self.class.vence_em(self.class.tempo(run)))
+
+    self.class.set(wait: ESPERA_DA_VEZ).perform_later(run.id)
+    log(run, 'cedeu_a_vez')
+    true
+  end
+
   def reivindicar(run)
     aberta_em = Time.zone.parse(run.handle.to_h[ToolRun::ABERTA_EM].to_s)
     fila_ms = aberta_em && ((Time.current - aberta_em) * 1000).round
-    run.reivindicar!(expires_at: self.class.vence_em(run.handle.to_h.fetch(ToolRun::TEMPO_DA_CONSULTA)), fila_ms: fila_ms)
+    run.reivindicar!(expires_at: self.class.vence_em(self.class.tempo(run)), fila_ms: fila_ms)
   end
 
   def chamar_uma_vez(run, tool, inicio)
     chave = run.handle.to_h.fetch(ToolRun::CHAVE_DA_CONSULTA)
-    return log(run, 'chamada_ja_feita') unless run.marcar_chamada!
+    return log(run, 'chamada_ja_feita') unless run.marcar_chamada!(passada: job_id)
 
+    # Lido antes de soltar a conexão: depois dela, só a escrita do resultado volta ao banco.
+    agente = run.agent
     banco_antes_ms = ms_desde(inicio)
     ::Autonomia::Agents::Tools::ConexaoDoBanco.soltar
-    saida, codigo, api_ms = chamar(run, tool, chave)
+    saida, codigo, api_ms = chamar(run, tool, agente, chave)
     depois = agora
-    gravou = run.gravar_resultado!(saida, sucesso: codigo.nil?, codigo: codigo, api_ms: api_ms)
+    run.gravar_resultado!(saida, sucesso: codigo.nil?, codigo: codigo, api_ms: api_ms)
     run.reload
-    run.running? ? self.class.fechar(run) : superada(run, gravou)
+    run.running? ? self.class.fechar(run) : fora_do_turno(run, saida, codigo)
     log(run, "fim fila_ms=#{run.handle[ToolRun::FILA_MS]} api_ms=#{api_ms} banco_antes_ms=#{banco_antes_ms} " \
              "banco_depois_ms=#{ms_desde(depois)}")
   end
 
   # -> [o texto do desfecho, o código da falha ou nil, o tempo da API]. Só os erros esperados da chamada viram desfecho
   # (o executor já traduz rede, tempo, HTTP e modelo para `HttpExecutor::Error`); o defeito nosso sobe, registrado.
-  def chamar(run, tool, chave)
-    bound = ::Autonomia::Agents::Tools::Bound.new(agent: run.agent, record: tool)
+  def chamar(run, tool, agente, chave)
+    bound = ::Autonomia::Agents::Tools::Bound.new(agent: agente, record: tool)
     comeco = agora
     texto = executor(run, tool, chave).call
     [bound.cabendo(texto), nil, ms_desde(comeco)]
@@ -122,15 +183,16 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
 
   def executor(run, tool, chave)
     ::Autonomia::Agents::Tools::HttpExecutor.new(tool: tool, params: run.arguments, chave: chave, higienizar: true,
-                                                 segundos: run.handle.to_h.fetch(ToolRun::TEMPO_DA_CONSULTA))
+                                                 segundos: self.class.tempo(run))
   end
 
-  # A consulta trocada por uma mais nova enquanto chamava: o resultado fica gravado e não é falado. Se o sistema de fora
-  # fez o pedido (2xx), quem atende fica sabendo.
-  def superada(run, gravou)
-    return unless gravou && run.resultado_ok?
+  # A linha deixou de ser desta passada enquanto ela chamava: trocada por um pedido mais novo, ou fechada pelo varredor.
+  # O resultado não é falado; se o sistema de fora fez o pedido (2xx), quem atende fica sabendo, com a resposta.
+  def fora_do_turno(run, saida, codigo)
+    return unless codigo.nil?
+    return unless run.status == 'superseded' || ToolRun::FECHADAS_SEM_RESPOSTA.include?(run.handle.to_h[ToolRun::CODIGO_DA_CONSULTA])
 
-    ::Autonomia::Agents::Operate::AvisoAoAtendente.consulta_antiga(run)
+    Aviso.consulta_antiga(run, run.status == 'superseded' ? 'consulta_antiga' : 'consulta_fechada_concluiu', resultado: saida)
   end
 
   # Desligada ou apagada depois da abertura. Da mesma conta, pelo id; a ferramenta pode ser de um ajudante.
@@ -139,22 +201,28 @@ class Autonomia::Agents::Tools::HttpAssincronaJob < ApplicationJob
   end
 
   def indisponivel(run)
-    run.gravar_resultado!(::Autonomia::Agents::Tools::Recusa.saida('ferramenta_indisponivel'), sucesso: false,
-                                                                                               codigo: 'ferramenta_indisponivel', api_ms: nil)
+    run.gravar_resultado!(Recusa.saida('ferramenta_indisponivel'), sucesso: false, codigo: 'ferramenta_indisponivel', api_ms: nil)
     self.class.fechar(run.reload)
   end
 
-  # O operador puxou o freio depois da abertura (conta, agente, allowlist), ou a conversa mudou de dono: para sem chamar
-  # e sem falar, como o `AsyncRunJob`.
+  # O operador puxou o freio depois da abertura (conta, agente, allowlist), ou a conversa mudou de dono: para sem chamar,
+  # como o `AsyncRunJob`. O resultado `bloqueada` é gravado antes: o turno que ainda espera o lê como recusa, e o que já
+  # desistiu faz o evento `consulta_falhou` falar (o cliente não fica sem resposta; sem quem possa falar, vira nota).
   def bloqueada?(run)
-    vinculo = ::Autonomia::Agents::Operate.authorized_agent_inbox(run.conversation)
-    codigo = if vinculo.blank? then 'nao_autorizado'
-             elsif run.agent_inbox_id.present? && vinculo.id != run.agent_inbox_id then 'vinculo_mudou'
-             end
+    codigo = motivo_do_bloqueio(run)
     return false if codigo.nil?
 
-    run.finish!('blocked', failure_code: codigo)
+    run.gravar_resultado!(Recusa.saida(ToolRun::BLOQUEADA), sucesso: false, codigo: ToolRun::BLOQUEADA, api_ms: nil)
+    run.reload
+    run.entrega == ToolRun::DESISTIU_DO_TURNO ? self.class.fechar(run) : run.finish!('blocked', failure_code: codigo)
     true
+  end
+
+  def motivo_do_bloqueio(run)
+    vinculo = ::Autonomia::Agents::Operate.authorized_agent_inbox(run.conversation)
+    if vinculo.blank? then 'nao_autorizado'
+    elsif run.agent_inbox_id.present? && vinculo.id != run.agent_inbox_id then 'vinculo_mudou'
+    end
   end
 
   def ms_desde(comeco)

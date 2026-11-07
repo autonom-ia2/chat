@@ -19,20 +19,35 @@ class Autonomia::Agents::Operate::AvisoAoAtendente
     'ia_falhou' => 'A IA tentou falar com o cliente sobre isto duas vezes e não conseguiu. A conversa foi passada para a ' \
                    'equipe.',
     'consulta_antiga' => 'Esta consulta foi trocada por uma mais nova, mas também concluiu. O cliente não recebeu este ' \
-                         'resultado; confira se o sistema da conta registrou o pedido duas vezes.'
+                         'resultado; confira se o sistema da conta registrou o pedido duas vezes.',
+    'consulta_fechada_concluiu' => 'Esta consulta foi dada como encerrada sem resposta, mas o sistema da conta respondeu ' \
+                                   'depois. O cliente não recebeu este resultado; confira o pedido no sistema da conta.',
+    'consulta_incerta' => 'O pedido saiu para o sistema da conta, mas a resposta se perdeu (o processo caiu no meio). A IA ' \
+                          'não chamou de novo e vai dizer ao cliente que não conseguiu confirmar. Confira se o pedido foi ' \
+                          'registrado.'
   }.freeze
 
-  # #1430: a consulta HTTP superada que concluiu (2xx) mesmo assim. O sistema de fora fez o pedido, e quem atende precisa
-  # saber, com o resultado; o cliente não ouve nada. Pelo mesmo `notar` (a marca do evento evita a nota em dobro).
-  def self.consulta_antiga(run)
-    new(evento: ::Autonomia::Agents::Tools::Evento.new(run: run, tipo: ::Autonomia::Agents::Tools::Evento::CONSULTA_CONCLUIDA))
-      .notar('consulta_antiga')
+  # #1430: a consulta HTTP que concluiu (2xx) fora do turno — superada por um pedido mais novo, ou fechada pelo varredor
+  # antes da resposta. O sistema de fora fez o pedido, e quem atende precisa saber, com o resultado (`resultado`, quando
+  # não é o gravado na linha); o cliente não ouve nada. Pelo mesmo `notar` (a marca do evento evita a nota em dobro).
+  def self.consulta_antiga(run, motivo = 'consulta_antiga', resultado: nil)
+    evento = ::Autonomia::Agents::Tools::Evento.new(run: run, tipo: ::Autonomia::Agents::Tools::Evento::CONSULTA_CONCLUIDA)
+    fatos = resultado ? ::Autonomia::Agents::Tools::Evento.cercado(resultado) : :do_evento
+    new(evento: evento, fatos: fatos).notar(motivo)
   end
 
-  def initialize(evento:)
+  # #1430: a chamada saiu e a resposta se perdeu. A marca é a do tipo `incerta`, e não a do `consulta_falhou`: o evento
+  # que fala com o cliente não pode tomar esta nota pela palavra dele.
+  def self.consulta_incerta(run)
+    new(evento: ::Autonomia::Agents::Tools::Evento.new(run: run, tipo: 'incerta'), fatos: nil).notar('consulta_incerta')
+  end
+
+  # `fatos`: o que a nota mostra abaixo da descrição; por padrão, os do evento.
+  def initialize(evento:, fatos: :do_evento)
     @evento = evento
     @run = evento.run
     @conversation = evento.run.conversation
+    @fatos = fatos
   end
 
   # -> a nota criada, ou nil (já existia uma mensagem com a marca, ou não há conversa). Nunca levanta.
@@ -89,8 +104,8 @@ class Autonomia::Agents::Operate::AvisoAoAtendente
 
   def texto(motivo)
     [
-      "Aviso da #{@evento.consulta? ? 'consulta' : 'cotação'} (execução #{@run.id}): #{descricao}",
-      (@evento.fatos if @evento.fatos),
+      "Aviso da #{@run.consulta_http? ? 'consulta' : 'cotação'} (execução #{@run.id}): #{descricao}",
+      (@fatos == :do_evento ? @evento.fatos : @fatos),
       MOTIVOS.fetch(motivo, MOTIVOS['inelegivel'])
     ].compact.join("\n")
   end

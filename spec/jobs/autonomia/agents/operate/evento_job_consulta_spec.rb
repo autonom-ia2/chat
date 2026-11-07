@@ -85,4 +85,23 @@ RSpec.describe Autonomia::Agents::Operate::EventoJob, type: :job do
                                            'tool_execution_error')
     expect(mensagens.where(private: false).count).to eq(1)
   end
+
+  # B1: sem `agente_so_informa`, a marca do turno nascia desligada e o resultado podia sair antes do "estou consultando".
+  it 'B1: o evento que chega antes da fala do turno que desistiu espera ele postar, mesmo sem agente_so_informa' do
+    ligar_consulta_em_segundo_plano
+    expect(Autonomia::Agents::AgenteSoInforma.ligada?(account)).to be(false)
+    run = consulta('{"status":"enviado"}')
+    reply_job = Autonomia::Agents::Operate::ReplyJob.new
+    reply_job.send(:abrir_turno, conversation, 77) # a mensagem do cliente que abriu o turno da consulta
+
+    described_class.new.perform(run.id, 'consulta_concluida')
+
+    expect(mensagens).to be_empty
+    expect(described_class).to have_been_enqueued.with(run.id, 'consulta_concluida', 1, 0, [])
+
+    reply_job.send(:fim_do_turno, conversation, 77, nil) # o turno postou o "estou consultando" e terminou
+    described_class.new.perform(run.id, 'consulta_concluida', 1)
+
+    expect(mensagens.where(private: false).sole.content).to eq('Seu pedido 42 já foi enviado.')
+  end
 end

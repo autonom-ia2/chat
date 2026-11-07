@@ -74,7 +74,7 @@ class Autonomia::Agents::Tools::Bound
     output = if async?
                accept_async(args, delivery)
              else
-               native? ? run_native(args, delivery, operador) : run_http(args, delivery, turno)
+               native? ? run_native(args, delivery, operador) : run_http(args, delivery, turno, call)
              end
     cabendo(output)
   rescue JSON::ParserError
@@ -107,13 +107,15 @@ class Autonomia::Agents::Tools::Bound
   end
 
   # #1430 (desenho D): O PRÉ-DISPARO DA RODADA. Quem executa as chamadas do modelo (`Answerer`, `Specialists::Runner`)
-  # dispara antes TODAS as consultas HTTP em segundo plano da rodada, e só depois espera cada uma: assim elas correm
-  # juntas, na mesma janela do turno. A execução de cada chamada reusa a execução disparada aqui (a mesma chave).
-  # Nunca levanta: argumento que não é JSON ou não converte fica para a execução da chamada recusar.
+  # abre a janela da rodada (`ConsultaNoTurno.nova_rodada`) e dispara antes TODAS as consultas HTTP em segundo plano
+  # dela, e só depois espera cada uma: assim elas correm juntas, na mesma janela. A execução de cada chamada toma o
+  # disparo dela (o `call_id`). Não levanta: argumento que não é JSON ou não converte fica para a execução da chamada
+  # recusar, e a falha de infraestrutura (banco, Redis) fica registrada no disparo (`ConsultaNoTurno#disparar`), que a
+  # execução recusa.
   def disparar(call, turno:)
     return if native? || !::Autonomia::Agents::Tools::ConsultaNoTurno.aplica?(@record, turno)
 
-    consulta(JSON.parse(call['arguments'].presence || '{}'), turno).disparar
+    consulta(JSON.parse(call['arguments'].presence || '{}'), turno, call).disparar(pre_disparo: true)
   rescue JSON::ParserError, ::Autonomia::Agents::Tools::HttpExecutor::ValorRecusado
     nil
   end
@@ -273,25 +275,28 @@ class Autonomia::Agents::Tools::Bound
   # #1430 (desenho D): com a flag `agente_ferramenta_em_segundo_plano` e uma conversa, a chamada sai do turno e o turno
   # espera por ela (`ConsultaNoTurno`). Sem uma ou outra, síncrona, como sempre. O ajudante chega aqui sem `delivery` e
   # com o turno do principal: segue o mesmo desenho, com o turno do principal.
-  def run_http(args, delivery, turno)
+  # A falha HTTP que chega na janela levanta o mesmo `HttpExecutor::Error` do síncrono: a mesma recusa, registrada.
+  def run_http(args, delivery, turno, call = {})
     entrega = turno || delivery
-    return consulta_no_turno(args, entrega) if ::Autonomia::Agents::Tools::ConsultaNoTurno.aplica?(@record, entrega)
+    return consulta_no_turno(args, entrega, call) if ::Autonomia::Agents::Tools::ConsultaNoTurno.aplica?(@record, entrega)
 
     Autonomia::Agents::Tools::HttpExecutor.new(tool: @record, params: args, turno: entrega).call
   rescue Autonomia::Agents::Tools::HttpExecutor::Error => e
     recusa_http(e, delivery)
   end
 
-  # Valor que não converte para o tipo é a mesma recusa do síncrono.
-  def consulta_no_turno(args, entrega)
-    consulta(args, entrega).resultado
+  # Valor que não converte para o tipo é a mesma recusa do síncrono. O erro de infraestrutura no meio da consulta chega
+  # aqui como `HttpExecutor::Error` (`ConsultaNoTurno#resultado`): a recusa nomeada, sem derrubar o turno.
+  def consulta_no_turno(args, entrega, call)
+    consulta(args, entrega, call).resultado
   rescue Autonomia::Agents::Tools::HttpExecutor::ValorRecusado => e
     recusa_http(Autonomia::Agents::Tools::HttpExecutor::Error.new("tool_execution_error: #{e.message}"), entrega)
   end
 
   # Quem fala nesta conversa é o principal do vínculo (a ferramenta pode ser de um ajudante): a execução é dele.
-  def consulta(args, turno)
-    ::Autonomia::Agents::Tools::ConsultaNoTurno.new(tool: @record, agente: turno.agent_inbox&.agent || @agent, turno: turno, args: args)
+  def consulta(args, turno, call)
+    ::Autonomia::Agents::Tools::ConsultaNoTurno.new(tool: @record, agente: turno.agent_inbox&.agent || @agent, turno: turno, args: args,
+                                                    chamada: call.to_h['call_id'])
   end
 
   def recusa_http(erro, delivery)

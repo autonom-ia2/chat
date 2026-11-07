@@ -34,6 +34,13 @@ class Autonomia::Agents::Tools::TrechoHigienizado
     @cortado = cortado
   end
 
+  # SÓ O PASSO 2, para os segredos fortes, e nada mais: sem literais, sem a heurística de token, sem mexer nos espaços e
+  # sem corte. É a resposta 2xx da consulta em segundo plano (#1430): dado do negócio (UUID, PIX, linha digitável, id
+  # em endereço) que chega inteiro, menos o que o cadastro da ferramenta guarda como segredo.
+  def mascarado
+    sem_segredos(@texto)
+  end
+
   def to_s
     texto = @cortado ? sem_ultimo_pedaco(sem_comeco_de_segredo_no_fim(@texto)) : @texto
     limpo = sem_tokens_longos(sem_segredos(texto)).split.join(' ')
