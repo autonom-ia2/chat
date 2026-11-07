@@ -1,6 +1,6 @@
-# O segredo da assinatura do passo "webhook" de uma automação (G13, #2670): ver e trocar. É credencial: só o
-# administrador da conta, nunca por chave de função (regra de delegação, CLAUDE.md). Funções com `automation_manage`
-# montam o passo, mas não leem o segredo.
+# O segredo da assinatura do passo "webhook" de uma automação (G13, #2670): ver e trocar. É um segredo que a plataforma
+# gera: o administrador ou a função com `token_manage` (regra de delegação, #1782; a chave cita o segredo de assinatura
+# de webhook). Funções com `automation_manage` e `integration_manage` montam o passo, mas não leem o segredo.
 #
 # A resposta não fica em cache nem em log (o Rails não registra o corpo da resposta), e o segredo não é gravado em
 # lugar nenhum: é derivado na hora (SegredoDoWebhook). A chave é `secret` de propósito: o Guia corta do que manda ao
@@ -11,7 +11,7 @@ class Api::V1::Accounts::Autonomia::AutomacoesWebhookController < Api::V1::Accou
   wrap_parameters false
 
   before_action :exigir_flag
-  before_action :so_administrador
+  before_action :exigir_chave_de_tokens
   before_action :carregar_automacao
 
   def segredo
@@ -31,8 +31,8 @@ class Api::V1::Accounts::Autonomia::AutomacoesWebhookController < Api::V1::Accou
     head :not_found unless ativo
   end
 
-  def so_administrador
-    head :forbidden unless Current.account_user&.administrator?
+  def exigir_chave_de_tokens
+    head :forbidden unless Current.account_user&.permission_granted?('token_manage')
   end
 
   def carregar_automacao

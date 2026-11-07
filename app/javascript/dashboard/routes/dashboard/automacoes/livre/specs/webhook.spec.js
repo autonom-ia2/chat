@@ -6,6 +6,7 @@ import {
   gravarPronto,
   hostDoEndereco,
   linhasDoCorpo,
+  origemDoValor,
 } from '../webhook';
 
 // G13 (#2670) — o passo "mandar dados para outro sistema" no editor: o
@@ -49,6 +50,27 @@ describe('webhook', () => {
     [semNome, repetido, semDado].forEach(corpo =>
       expect(corpoPronto(corpo)).toBe(false)
     );
+  });
+
+  it('corpo que o Guia montou com texto fixo, lista ou objeto não trava o salvar', () => {
+    const corpo = {
+      plano: 'anual',
+      valor: 100,
+      ativo: true,
+      itens: ['a', 'b'],
+      cnpj: { $valor: 'card.atributos.cnpj' },
+    };
+    expect(Object.values(corpo).map(origemDoValor)).toEqual([
+      'texto',
+      'texto',
+      'texto',
+      'outro',
+      'dado',
+    ]);
+    expect(corpoDasLinhas(linhasDoCorpo(corpo))).toEqual(corpo);
+    expect(corpoPronto(corpo)).toBe(true);
+    expect(corpoPronto({ plano: ' ' })).toBe(false);
+    expect(origemDoValor(null)).toBe(null);
   });
 
   it('cada resposta guardada pede o nome e onde guardar', () => {

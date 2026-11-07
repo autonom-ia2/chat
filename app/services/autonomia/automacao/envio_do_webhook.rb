@@ -20,8 +20,11 @@ class Autonomia::Automacao::EnvioDoWebhook
   LER_EM = 10
   PRAZO_TOTAL = 15
   RESPOSTA_MAXIMA = 64.kilobytes
-  # 0.0.0.0/8 e a faixa compartilhada das operadoras (100.64/10); no IPv6, o "sem endereço" e o NAT64 (64:ff9b::/96).
-  RESERVADOS = %w[0.0.0.0/8 100.64.0.0/10 ::/96 ::/128 64:ff9b::/96].map { |faixa| IPAddr.new(faixa) }.freeze
+  # As mesmas faixas que o SsrfFilter recusa (multicast, reservadas, de teste, Teredo, 6to4...), mais o IPv4 antigo
+  # dentro de IPv6 (::/96) e o NAT64 (64:ff9b::/96). Com SAFE_FETCH_ALLOW_PRIVATE_NETWORK ligado o SsrfFilter sai do
+  # caminho, e esta lista é a barreira.
+  RESERVADOS = (::SsrfFilter::IPV4_BLACKLIST + ::SsrfFilter::IPV6_BLACKLIST +
+                %w[::/96 ::/128 64:ff9b::/96].map { |faixa| IPAddr.new(faixa) }).freeze
   Resposta = Struct.new(:tipo, :codigo, :host, :ms, :corpo, :motivo, keyword_init: true)
 
   # Ao salvar: o endereço é https, tem host, não traz usuário e senha nem aponta para IP interno ou para a plataforma.

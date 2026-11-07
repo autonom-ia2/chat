@@ -30,7 +30,7 @@ RSpec.describe Autonomia::Automacao::PassoDeWebhook, :automacao_motor do
     end
     allow(Resolv).to receive(:getaddresses).and_call_original
     allow(Resolv).to receive(:getaddresses).with('cobranca.exemplo.com').and_return(['93.184.216.34'])
-    allow(Resolv).to receive(:getaddresses).with('app.plataforma.com').and_return(['203.0.113.10'])
+    allow(Resolv).to receive(:getaddresses).with('app.plataforma.com').and_return(['151.101.1.69'])
   end
 
   after { Current.reset }
@@ -183,8 +183,8 @@ RSpec.describe Autonomia::Automacao::PassoDeWebhook, :automacao_motor do
     expect(card.reload.custom_attributes).to include('motivo_da_recusa' => 'ok')
   end
 
-  it 'IPv4 dentro de IPv6, o IP da própria plataforma e o metadata são bloqueados', :aggregate_failures do
-    %w[::ffff:10.0.0.7 203.0.113.10 169.254.169.254 fd00:ec2::254].each do |ip|
+  it 'IPv4 dentro de IPv6, o IP da própria plataforma, o metadata e as faixas reservadas são bloqueados', :aggregate_failures do
+    %w[::ffff:10.0.0.7 151.101.1.69 169.254.169.254 fd00:ec2::254 224.0.0.1 198.18.0.5 2002:a00::1].each do |ip|
       allow(Resolv).to receive(:getaddresses).with('cobranca.exemplo.com').and_return([ip])
       responder(200)
 

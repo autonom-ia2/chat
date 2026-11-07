@@ -1,18 +1,18 @@
 <script setup>
 import { ref } from 'vue';
 import Button from 'dashboard/components-next/button/Button.vue';
-import { useAdmin } from 'dashboard/composables/useAdmin';
+import { usePermissionGranted } from 'dashboard/composables/useCanManage';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 
 // G13 (#2670) — o segredo que o outro sistema usa para conferir que o envio é
-// nosso (cabeçalho X-Automacao-Signature). É credencial: só o administrador vê
-// e troca, e só com a automação salva (o segredo é de cada automação). O valor
-// fica só nesta tela, nunca na receita.
+// nosso (cabeçalho X-Automacao-Signature). Vê e troca o administrador ou a
+// função com `token_manage`, e só com a automação salva (o segredo é de cada
+// automação). O valor fica só nesta tela, nunca na receita.
 const props = defineProps({
   automacaoId: { type: Number, default: null },
 });
 
-const { isAdmin } = useAdmin();
+const podeVer = usePermissionGranted('token_manage');
 const W = 'AUTOMACAO_LIVRE.WEBHOOK.SEGREDO';
 
 const segredo = ref('');
@@ -52,8 +52,8 @@ const trocar = () =>
     </h3>
     <p class="mb-0 text-sm text-n-slate-11">{{ $t(`${W}.DICA`) }}</p>
 
-    <p v-if="!isAdmin" class="mb-0 text-sm text-n-slate-11" data-so-admin>
-      {{ $t(`${W}.SO_ADMIN`) }}
+    <p v-if="!podeVer" class="mb-0 text-sm text-n-slate-11" data-sem-acesso>
+      {{ $t(`${W}.SEM_ACESSO`) }}
     </p>
     <p
       v-else-if="!automacaoId"

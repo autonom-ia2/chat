@@ -3,11 +3,11 @@ import { mount, flushPromises } from '@vue/test-utils';
 import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 import LivreWebhookSegredo from '../components/LivreWebhookSegredo.vue';
 
-// G13 (#2670) — o segredo de conferência: só o administrador vê e troca, com a
-// automação salva, e a troca pede confirmação.
+// G13 (#2670) — o segredo de conferência: o administrador ou a função com
+// token_manage vê e troca, com a automação salva, e a troca pede confirmação.
 const admin = ref(true);
-vi.mock('dashboard/composables/useAdmin', () => ({
-  useAdmin: () => ({ isAdmin: admin }),
+vi.mock('dashboard/composables/useCanManage', () => ({
+  usePermissionGranted: () => admin,
 }));
 vi.mock('dashboard/api/autonomia/automacoes', () => ({
   default: { segredoDoWebhook: vi.fn(), trocarSegredoDoWebhook: vi.fn() },
@@ -25,10 +25,10 @@ describe('LivreWebhookSegredo', () => {
     vi.clearAllMocks();
   });
 
-  it('quem não é administrador só lê o aviso', () => {
+  it('sem a chave de tokens, só lê o aviso', () => {
     admin.value = false;
     const wrapper = montar(9);
-    expect(wrapper.find('[data-so-admin]').exists()).toBe(true);
+    expect(wrapper.find('[data-sem-acesso]').exists()).toBe(true);
     expect(wrapper.find('[data-ver-segredo]').exists()).toBe(false);
   });
 

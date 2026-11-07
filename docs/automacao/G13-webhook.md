@@ -36,7 +36,7 @@ resposta nos passos seguintes.
 
 ## Como o outro sistema confere que somos nós
 
-Cada automação tem um segredo. O administrador vê e troca em
+Cada automação tem um segredo. O administrador, ou a função com `token_manage`, vê e troca em
 `GET|POST /api/v1/accounts/:id/autonomia/automacoes/:automacao_id/segredo_do_webhook` (`trocar_segredo_do_webhook`).
 
 Cabeçalhos de todo envio:
@@ -55,7 +55,8 @@ minutos de diferença.
 
 - Só `https`, sem usuário e senha no endereço, sem seguir redirecionamento.
 - Nada de rede interna: IP privado, loopback, link-local (inclui o metadata 169.254.169.254), faixa das operadoras,
-  NAT64, IPv4 escrito dentro de IPv6 e o próprio servidor da plataforma (o host e os IPs de `FRONTEND_URL` e
+  multicast e as demais faixas reservadas (a mesma lista do SsrfFilter), NAT64, IPv4 escrito dentro de IPv6 e o próprio
+  servidor da plataforma (o host e os IPs de `FRONTEND_URL` e
   `HELPCENTER_URL`) são recusados ao salvar e de novo ao enviar. O nome é resolvido uma vez só, e o SafeFetch conecta
   nesses IPs já conferidos (sem segunda resolução, sem DNS rebinding). Vale mesmo com `SAFE_FETCH_ALLOW_PRIVATE_NETWORK`
   ligado na instalação.
@@ -64,13 +65,15 @@ minutos de diferença.
 - O Guia não lê o segredo: a resposta da API usa a chave `secret`, que o Guia corta antes de mandar ao modelo.
 - O histórico guarda só host, código, duração e as chaves gravadas. Nunca a URL inteira (pode ter token), o corpo, a
   resposta ou o segredo.
-- O segredo não fica gravado: é derivado do `SECRET_KEY_BASE` com o id da automação e a geração (contador em
-  `accounts.internal_attributes`). Trocar sobe a geração. **Trocar o `SECRET_KEY_BASE` troca o segredo de todas as
-  automações**: os sistemas de fora precisam do novo.
-- Ver e trocar o segredo: só o administrador da conta.
-- Limite conhecido: o contador da geração mora num jsonb que outros pontos também gravam (lendo e gravando o hash
-  inteiro). Uma gravação dessas, feita com a conta carregada antes da troca, pode voltar o contador e reativar o segredo
-  anterior. É raro (precisa acontecer no mesmo instante) e some com uma coluna própria, que pede migration.
+- O segredo não fica gravado: é derivado do `SECRET_KEY_BASE` com o id da automação e a geração (contador na própria
+  automação, `autonomia_automacoes.segredo_geracao`). Trocar sobe a geração num UPDATE só. Como o contador não mora num
+  campo que outros pontos regravam inteiro, nenhuma gravação concorrente volta o segredo anterior. **Trocar o
+  `SECRET_KEY_BASE` troca o segredo de todas as automações**: os sistemas de fora precisam do novo.
+- Ver e trocar o segredo: o administrador ou a função com `token_manage` (regra de delegação, #1782: é um dos segredos
+  que a plataforma gera).
+- Limite conhecido: o IP da própria plataforma é comparado com o que o nome de `FRONTEND_URL` e `HELPCENTER_URL`
+  resolve. Se a plataforma ficar atrás de uma CDN (Cloudflare e afins), um endereço de cliente servido pelo mesmo IP da
+  CDN é recusado como `webhook_endereco_interno`. Quem puser a plataforma atrás de CDN precisa rever esta regra.
 
 ## Fora deste PR
 

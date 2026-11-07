@@ -15,6 +15,11 @@ vi.mock('vue-i18n', () => ({
 vi.mock('dashboard/composables/useAdmin', () => ({
   useAdmin: () => ({ isAdmin: { value: true } }),
 }));
+// O segredo do webhook (G13) pede token_manage: aqui quem edita tem.
+vi.mock('dashboard/composables/useCanManage', () => ({
+  useCanManage: () => ({ value: true }),
+  usePermissionGranted: () => ({ value: true }),
+}));
 
 const PainelFalso = defineComponent({
   name: 'SidePanel',

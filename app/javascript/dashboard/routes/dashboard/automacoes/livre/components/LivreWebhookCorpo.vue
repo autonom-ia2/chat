@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
 import { opcoesDosValores } from '../texto';
-import { corpoDasLinhas, linhasDoCorpo } from '../webhook';
+import { corpoDasLinhas, linhasDoCorpo, origemDoValor } from '../webhook';
 
 // G13 (#2670) — o que vai para o outro sistema: uma linha por informação, com
 // o nome que o outro sistema espera e o dado do cliente que vai nela. As linhas
@@ -54,6 +54,26 @@ const trocarValor = (indice, caminho) =>
       i === indice ? { ...linha, valor: { $valor: caminho } } : linha
     )
   );
+const trocarTexto = (indice, texto) =>
+  trocar(
+    linhas.value.map((linha, i) =>
+      i === indice ? { ...linha, valor: texto } : linha
+    )
+  );
+// Trocar a origem zera o valor: dado começa sem escolha, texto começa vazio.
+const trocarOrigem = (indice, origem) =>
+  trocar(
+    linhas.value.map((linha, i) =>
+      i === indice
+        ? { ...linha, valor: origem === 'texto' ? '' : { $valor: '' } }
+        : linha
+    )
+  );
+const ORIGENS = computed(() => [
+  { value: 'dado', label: t(`${W}.CORPO_ORIGEM_DADO`) },
+  { value: 'texto', label: t(`${W}.CORPO_ORIGEM_TEXTO`) },
+]);
+
 const tirar = indice =>
   trocar(linhas.value.filter((_linha, i) => i !== indice));
 const nova = () => trocar([...linhas.value, { nome: '', valor: null }]);
@@ -100,7 +120,40 @@ const CAIXA =
       >
         {{ $t(`${W}.CORPO_NOME_REPETIDO`) }}
       </p>
-      <div :class="ROTULO_DO_ITEM">
+      <p
+        v-if="origemDoValor(linha.valor) === 'outro'"
+        class="mb-0 text-sm text-n-slate-11"
+        data-linha-do-guia
+      >
+        {{ $t(`${W}.CORPO_OUTRO`) }}
+      </p>
+      <div v-else :class="ROTULO_DO_ITEM">
+        <span aria-hidden="true">{{ $t(`${W}.CORPO_ORIGEM`) }}</span>
+        <ChoiceSelect
+          data-origem
+          :model-value="origemDoValor(linha.valor) || 'dado'"
+          :aria-label="$t(`${W}.CORPO_ORIGEM`)"
+          :options="ORIGENS"
+          @update:model-value="origem => trocarOrigem(indice, origem)"
+        />
+      </div>
+      <label
+        v-if="origemDoValor(linha.valor) === 'texto'"
+        :class="ROTULO_DO_ITEM"
+      >
+        {{ $t(`${W}.CORPO_TEXTO`) }}
+        <input
+          data-texto-fixo
+          maxlength="500"
+          :class="CAIXA"
+          :value="String(linha.valor)"
+          @input="evento => trocarTexto(indice, evento.target.value)"
+        />
+      </label>
+      <div
+        v-if="[null, 'dado'].includes(origemDoValor(linha.valor))"
+        :class="ROTULO_DO_ITEM"
+      >
         <span aria-hidden="true">{{ $t(`${W}.CORPO_VALOR`) }}</span>
         <ChoiceSelect
           :model-value="linha.valor?.$valor || ''"

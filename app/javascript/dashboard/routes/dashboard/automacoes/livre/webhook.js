@@ -34,7 +34,25 @@ export const descricaoPronta = descricao =>
 export const linhasDoCorpo = corpo =>
   Object.entries(corpo || {}).map(([nome, valor]) => ({ nome, valor }));
 
-const valorPronto = valor => Boolean(valor?.$valor);
+// De onde vem o valor de uma linha: 'dado' (um dado do cliente, { $valor }),
+// 'texto' (texto, número ou sim/não fixo) ou 'outro' (forma que o Guia monta e
+// a tela ainda não edita: lista, objeto, outro valor calculado). Linha nova
+// (null) ainda não tem origem.
+export const origemDoValor = valor => {
+  if (valor === null || valor === undefined) return null;
+  if (['string', 'number', 'boolean'].includes(typeof valor)) return 'texto';
+  const chaves = typeof valor === 'object' ? Object.keys(valor) : [];
+  return chaves.length === 1 && chaves[0] === '$valor' ? 'dado' : 'outro';
+};
+
+// A forma 'outro' vai do jeito que o Guia montou: o servidor confere ao salvar.
+const valorPronto = valor => {
+  const origem = origemDoValor(valor);
+  if (origem === 'dado') return Boolean(valor.$valor);
+  if (origem === 'texto')
+    return typeof valor !== 'string' || Boolean(valor.trim());
+  return origem === 'outro';
+};
 
 // As linhas de volta em corpo. Linha sem nome, com nome repetido ou sem dado
 // escolhido deixa a marca '' no corpo: o "Salvar" fica preso até a pessoa

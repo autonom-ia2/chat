@@ -1,7 +1,7 @@
 require 'rails_helper'
 
-# G13 (#2670): o segredo da assinatura do passo "webhook" e o que o salvar recusa no passo. O segredo é credencial: só
-# o administrador vê e troca, nunca por chave de função.
+# G13 (#2670): o segredo da assinatura do passo "webhook" e o que o salvar recusa no passo. O segredo é dos que a
+# plataforma gera: o administrador ou a função com `token_manage` vê e troca.
 RSpec.describe 'Automação livre · passo webhook (G13)', type: :request do
   let(:account) { create(:account) }
   let(:admin) { create(:user, account: account, role: :administrator) }
@@ -33,17 +33,33 @@ RSpec.describe 'Automação livre · passo webhook (G13)', type: :request do
       expect(novo).not_to eq(antes)
       expect(Autonomia::Automacao::SegredoDoWebhook.new(automacao.reload).valor).to eq(novo)
       expect(Autonomia::Automacao::SegredoDoWebhook.new(outra).valor).not_to eq(novo)
+      expect(automacao.reload.segredo_geracao).to eq(1)
       expect(account.reload.internal_attributes.to_json).not_to include(novo)
     end
 
-    it 'quem não é administrador não vê nem troca, mesmo com a chave de automações', :aggregate_failures do
-      funcao = create(:custom_role, account: account, permissions: %w[automation_manage integration_manage token_manage])
+    it 'uma gravação da conta lida antes da troca não volta o segredo anterior', :aggregate_failures do
+      conta_lida_antes = Account.find(account.id)
+      novo = Autonomia::Automacao::SegredoDoWebhook.new(automacao).trocar!
+
+      conta_lida_antes.update!(internal_attributes: conta_lida_antes.internal_attributes.merge('outra' => true))
+
+      expect(Autonomia::Automacao::SegredoDoWebhook.new(automacao).valor).to eq(novo)
+    end
+
+    it 'a função com token_manage vê e troca; sem ela, nem com automações e integrações', :aggregate_failures do
+      funcao = create(:custom_role, account: account, permissions: %w[automation_manage integration_manage])
       agente.account_users.find_by(account: account).update!(custom_role: funcao)
 
       get "#{caminho}/segredo_do_webhook", headers: agente.create_new_auth_token, as: :json
       expect(response).to have_http_status(:forbidden)
       post "#{caminho}/trocar_segredo_do_webhook", headers: agente.create_new_auth_token, as: :json
       expect(response).to have_http_status(:forbidden)
+
+      funcao.update!(permissions: %w[token_manage])
+      get "#{caminho}/segredo_do_webhook", headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      post "#{caminho}/trocar_segredo_do_webhook", headers: agente.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
     end
 
     it 'automação de outra conta não existe aqui' do
