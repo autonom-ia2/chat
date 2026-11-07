@@ -849,11 +849,11 @@
   enabled: true
   column: feature_flags_ext_1
 
-# 07/11/2026 (#2667): o Rodrigo liberou para todas as contas 26 flags que eram piloto — crm_ia_nome_provisorio,
-# crm_ia_duvida_vira_sugestao e 24 da feature_flags_ext_2. A lista exata está na migration 20261108760000. As contas
-# existentes foram ligadas pela Orquestração; as novas nascem ligadas pela migration. Quando o texto de uma delas diz
-# "Desligada", "nasce desligada" ou "piloto", vale como histórico até 07/11/2026. customer_base e
-# instagram_assisted_onboarding ficaram de fora.
+# 07/11/2026 (#2667): o Rodrigo liberou para todas as contas 27 flags que ainda não eram de todas —
+# crm_ia_nome_provisorio, crm_ia_duvida_vira_sugestao e 25 da feature_flags_ext_2. A lista exata está na migration
+# 20261108760000. As contas existentes foram ligadas pela Orquestração; as novas nascem ligadas pela migration. Quando o
+# texto de uma delas diz "Desligada", "nasce desligada" ou "piloto", vale como histórico até 07/11/2026. customer_base
+# e instagram_assisted_onboarding ficaram de fora.
 
 # IA de assunto: nome genérico refinado uma vez (#2163). Ligada: o modelo maior diz se o nome que deu ao pedido é
 # genérico por falta de informação ("Nova cotação"); o card guarda essa marca. Quando o detalhe chega no mesmo pedido,
@@ -1189,5 +1189,5 @@
 # desligada; o piloto (1, 16 e 18 na hub2you e 24 na autonomia) pede o OK do Rodrigo.
 - name: anuncios_login_unico
   display_name: Anúncios › login único
-  enabled: false
+  enabled: true
   column: feature_flags_ext_2

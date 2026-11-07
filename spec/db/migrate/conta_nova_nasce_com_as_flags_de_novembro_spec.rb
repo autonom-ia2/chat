@@ -1,7 +1,7 @@
 require 'rails_helper'
 require Rails.root.join('db/migrate/20261108760000_conta_nova_nasce_com_as_flags_de_novembro.rb')
 
-# #2667 — conta nova nasce com as 26 funções liberadas em 07/11/2026 e com a chave autonomia_agents_ao_receber_passagem
+# #2667 — conta nova nasce com as 27 funções liberadas em 07/11/2026 e com a chave autonomia_agents_ao_receber_passagem
 # em internal_attributes (Autonomia::AccountProvisioningDefaults). Só o padrão das contas novas
 # (ACCOUNT_LEVEL_FEATURE_DEFAULTS) muda; as contas existentes não são tocadas. customer_base e
 # instagram_assisted_onboarding ficam de fora e mantêm o padrão que já têm.
@@ -22,7 +22,7 @@ RSpec.describe ContaNovaNasceComAsFlagsDeNovembro do
     ActiveRecord::Migration.verbose = verbose
   end
 
-  # Como está em produção antes da migration: a lista do features.yml gravada com as 26 desligadas.
+  # Como está em produção antes da migration: a lista do features.yml gravada com as 27 desligadas.
   before do
     config.value = Featurable::FEATURE_LIST.map do |feature|
       feature.merge('enabled' => features.exclude?(feature['name']) && feature['enabled'])
@@ -50,18 +50,18 @@ RSpec.describe ContaNovaNasceComAsFlagsDeNovembro do
                        user_full_name: 'Dona', user_password: 'Senha-de-teste-1!', confirmed: true).perform.last.reload
   end
 
-  it 'são 26, únicas, ligadas no features.yml, sem customer_base nem instagram', :aggregate_failures do
-    expect(features.size).to eq(26)
-    expect(features.uniq.size).to eq(26)
+  it 'são 27, únicas, ligadas no features.yml, sem customer_base nem instagram', :aggregate_failures do
+    expect(features.size).to eq(27)
+    expect(features.uniq.size).to eq(27)
     yml = Featurable::FEATURE_LIST.select { |f| features.include?(f['name']) }
-    expect(yml.size).to eq(26)
+    expect(yml.size).to eq(27)
     expect(yml.pluck('enabled')).to all(be(true))
     expect(yml.pluck('column')).to all(be_in(%w[feature_flags_ext_1 feature_flags_ext_2]))
     expect(features & fora).to be_empty
     expect(Featurable::FEATURE_LIST.find { |f| f['name'] == 'customer_base' }['enabled']).to be(false)
   end
 
-  it 'liga as 26 e preserva os outros padrões e campos', :aggregate_failures do
+  it 'liga as 27 e preserva os outros padrões e campos', :aggregate_failures do
     antes = outros(padroes)
     instagram_antes = padrao_de('instagram_assisted_onboarding')
     expect(features.map { |feature| padrao_de(feature) }).to all(be(false))
@@ -103,7 +103,22 @@ RSpec.describe ContaNovaNasceComAsFlagsDeNovembro do
     expect(InstallationConfig.find_by(name: 'ACCOUNT_LEVEL_FEATURE_DEFAULTS')).to be_nil
   end
 
-  it 'conta criada depois nasce com as 26 e a passagem, e a existente não muda', :aggregate_failures do
+  it 'com valor que não é lista falha em vez de terminar sem ligar nada', :aggregate_failures do
+    config.value = nil
+    config.save!
+
+    expect { described_class.new.up }.to raise_error(RuntimeError, /sem as flags ligadas: .*seus_posts/)
+    expect(padroes).to be_nil
+  end
+
+  it 'falha e diz qual ficou desligada quando uma não liga' do
+    allow(FeatureFlagRollout).to receive(:padrao!).and_call_original
+    allow(FeatureFlagRollout).to receive(:padrao!).with('anuncios_login_unico', true)
+
+    expect { described_class.new.up }.to raise_error(RuntimeError, 'ACCOUNT_LEVEL_FEATURE_DEFAULTS sem as flags ligadas: anuncios_login_unico')
+  end
+
+  it 'conta criada depois nasce com as 27 e a passagem, e a existente não muda', :aggregate_failures do
     existente = create(:account)
     existente.update_columns(internal_attributes: {}) # rubocop:disable Rails/SkipsModelValidations
     antes = existente.reload.attributes.slice(*colunas)
@@ -118,7 +133,7 @@ RSpec.describe ContaNovaNasceComAsFlagsDeNovembro do
     expect(nova.internal_attributes[passagem]).to be(true)
   end
 
-  it 'conta criada pelo cadastro nasce com as 26 e a passagem, sem a customer_base', :aggregate_failures do
+  it 'conta criada pelo cadastro nasce com as 27 e a passagem, sem a customer_base', :aggregate_failures do
     expect(features.map { |feature| conta_pelo_cadastro.feature_enabled?(feature) }).to all(be(false))
 
     described_class.new.up
@@ -135,7 +150,7 @@ RSpec.describe ContaNovaNasceComAsFlagsDeNovembro do
     expect(conta.reload.internal_attributes[passagem]).to be(false)
   end
 
-  it 'down volta as 26 para desligado, preserva os outros e não desliga conta nenhuma', :aggregate_failures do
+  it 'down volta as 27 para desligado, preserva os outros e não desliga conta nenhuma', :aggregate_failures do
     antes = outros(padroes)
     described_class.new.up
     conta = create(:account)
