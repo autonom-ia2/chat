@@ -4,6 +4,9 @@
 # - `destino: { avisar: ... }`: o resumo sai pelo passo "avisar" (F4), com as regras dele: só menciona quem vê a
 #   conversa, e a lista vazia pula. Quem avisar é conferido antes da IA: ninguém para avisar, o passo pula sem gastar.
 #   Pede também a flag da F4 (o executor confere).
+#
+# O resumo fica também na execução (ComIa#guardar, #2679): um passo seguinte manda "o mesmo resumo" como `ia.<passo>`,
+# sem outra ida à IA.
 class Autonomia::Automacao::PassoDeResumir
   include ::Autonomia::Automacao::ComIa
 
@@ -56,6 +59,7 @@ class Autonomia::Automacao::PassoDeResumir
   def entregar(aviso, texto, custo)
     return Resultado.new(tipo: :pulado, motivo: 'texto_vazio', dados: { 'ia' => custo }) if texto.empty?
 
+    guardar(texto)
     resumo = frase(:resumo, texto: texto)
     resultado = aviso ? aviso.avisar(resumo) : Resultado.new(tipo: :ok, dados: { 'nota_id' => nota(resumo).id })
     Resultado.new(tipo: resultado.tipo, motivo: resultado.motivo, dados: resultado.dados.merge('ia' => custo))

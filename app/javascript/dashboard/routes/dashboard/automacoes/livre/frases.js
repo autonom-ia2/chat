@@ -265,7 +265,7 @@ const FRASE_DA_IA = {
     }),
   escrever: (passo, t) =>
     t(
-      `${P}.ESCREVER_${passo.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}${
+      `${P}.ESCREVER_${(passo.destino || 'sugestao').toUpperCase()}${
         escrito(passo.instrucao) ? '' : '_SEM_INSTRUCAO'
       }`,
       { instrucao: curto(escrito(passo.instrucao)) }
