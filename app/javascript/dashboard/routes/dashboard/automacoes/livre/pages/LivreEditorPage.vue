@@ -20,6 +20,7 @@ import DialogoDaCasa from 'dashboard/routes/dashboard/settings/funcoesDaEquipe/g
 import {
   carregarCatalogo,
   comPermissoes,
+  comTextosDaIa,
   doAlvoDoGatilho,
   novoPasso,
   useCatalogo,
@@ -79,12 +80,16 @@ const avisoDeLigada = computed(() => {
 });
 
 // O "Alterar" só oferece o valor que o alvo do gatilho alcança (#2499) e que
-// a pessoa pode ler (#2597).
+// a pessoa pode ler (#2597), mais o texto dos passos de IA da receita (#2679).
 const podeLerValor = usePodeLerValor();
 const catalogoDoAlvo = computed(() =>
-  doAlvoDoGatilho(
-    comPermissoes(catalogo.value, podeLerValor.value),
-    receita.value.gatilho?.tipo
+  comTextosDaIa(
+    doAlvoDoGatilho(
+      comPermissoes(catalogo.value, podeLerValor.value),
+      receita.value.gatilho?.tipo
+    ),
+    receita.value.passos,
+    t
   )
 );
 

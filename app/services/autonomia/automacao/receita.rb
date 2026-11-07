@@ -187,16 +187,30 @@ class Autonomia::Automacao::Receita
 
   # Caminho que a automação não sabe ler, ou atributo que a conta não tem. O atributo apagado depois de salvar chega
   # vazio no motor, com o motivo no registro. A resposta (G11) só existe na condição do "esperar até": fora dele não há
-  # o começo da espera, e ela leria sempre vazio.
+  # o começo da espera, e ela leria sempre vazio. O texto da IA (#2679) só vem de um passo que escreve.
   def problemas_do_caminho(id, caminho, no_gatilho: false, na_espera: false)
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
+    return problemas_do_texto_da_ia(id, caminho, no_gatilho) if valores.da_ia?(caminho)
 
     fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
     Array(valores.problema_de_leitura(caminho, conta: @conta, account_user: @account_user)).map { |chave| texto(chave, passo: id, caminho: caminho) }
+  end
+
+  # #2679: `ia.<id>` só lê o texto de um passo que escreve ("escrever", "resumir") desta receita, e nunca no "Só se" do
+  # gatilho: ali nenhum passo rodou, e o valor estaria sempre vazio.
+  def problemas_do_texto_da_ia(id, caminho, no_gatilho)
+    return [texto(:texto_da_ia_no_gatilho, passo: id, caminho: caminho)] if no_gatilho
+    return [] if escreve?(::Autonomia::Automacao::Valores.passo_da_ia(caminho))
+
+    [texto(:texto_da_ia_sem_passo, passo: id, caminho: caminho)]
+  end
+
+  def escreve?(passo_id)
+    ::Autonomia::Automacao::Valores::PASSOS_QUE_ESCREVEM.include?(passos.find { |passo| passo['id'] == passo_id }&.dig('tipo'))
   end
 
   def problemas_da_acao(passo)

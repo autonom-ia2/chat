@@ -51,9 +51,7 @@ const FARIA_DA_IA = {
       lista: (dados.campos || []).map(campo => ondeGrava(campo, t)).join('; '),
     }),
   ia_escrever: (dados, t) =>
-    t(
-      `${F}.IA_ESCREVER_${dados.destino === 'mensagem' ? 'MENSAGEM' : 'SUGESTAO'}`
-    ),
+    t(`${F}.IA_ESCREVER_${(dados.destino || 'sugestao').toUpperCase()}`),
   ia_resumir: (dados, t) =>
     t(`${F}.IA_RESUMIR_${dados.destino === 'avisar' ? 'AVISAR' : 'NOTA'}`),
 };

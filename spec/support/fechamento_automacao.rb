@@ -179,8 +179,13 @@ module FechamentoAutomacao::Lacunas
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
     'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') },
-    # O "escrever" manda pelo modelo aprovado fora da janela, com o texto da IA como variável (#2674; exemplo 3, passo 2).
-    'G28' => -> { campo_do_passo?('escrever', 'modelo') }
+    # O texto da IA vira valor entre passos (`ia.<passo>`, #2679): fora da janela, a "mensagem" o leva no modelo aprovado
+    # (exemplo 3, passo 2); o "mesmo resumo" não vai outra vez à IA (exemplo 10, passo 6).
+    'G28' => -> { valor?('ia.cuidados') },
+    # A IA lê o card (`le: card`, #2679): exemplo 13, passo 5; exemplo 15, passo 9.
+    'G33' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('card') },
+    # A IA lê as notas internas da conversa (`le: notas`, #2679): exemplo 5, passo 1.
+    'G34' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('definitions', 'leituras', 'items', 'enum').include?('notas') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

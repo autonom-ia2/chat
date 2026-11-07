@@ -594,6 +594,8 @@ en:
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'
         caminho_faltando: 'Step %{passo}: the action needs %{campo}.'
         valor_desconhecido: 'Step %{passo}: the automation cannot read %{caminho}.'
+        texto_da_ia_no_gatilho: 'Step %{passo}: %{caminho} is the text of an AI step, and no step has run yet in the trigger "Only if". Use it in a step after that one.'
+        texto_da_ia_sem_passo: 'Step %{passo}: %{caminho} must point to a "Write" or "Summarize" step of this automation.'
         valor_de_venda: 'Step %{passo}: only people who see sales values can read %{caminho}. Ask for the permission or remove this value.'
         corpo: 'Step %{passo}: %{problema}'
         forma_nao_cabe: 'Step %{passo}: the %{campo} field does not take put-together text or a calculated date.'

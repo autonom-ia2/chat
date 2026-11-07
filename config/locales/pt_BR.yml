@@ -1087,6 +1087,8 @@ pt_BR:
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'
         caminho_faltando: 'Passo %{passo}: a ação precisa de %{campo}.'
         valor_desconhecido: 'Passo %{passo}: a automação não sabe ler %{caminho}.'
+        texto_da_ia_no_gatilho: 'Passo %{passo}: %{caminho} é o texto de um passo de IA, e no "Só se" do gatilho nenhum passo rodou ainda. Use esse dado num passo depois dele.'
+        texto_da_ia_sem_passo: 'Passo %{passo}: %{caminho} precisa apontar um passo "Escrever" ou "Resumir" desta automação.'
         valor_de_venda: 'Passo %{passo}: só quem vê os valores de venda pode ler %{caminho}. Peça a permissão ou tire esse valor.'
         corpo: 'Passo %{passo}: %{problema}'
         forma_nao_cabe: 'Passo %{passo}: o campo %{campo} não aceita texto montado nem data calculada.'

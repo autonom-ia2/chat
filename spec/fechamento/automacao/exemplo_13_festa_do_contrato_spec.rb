@@ -61,7 +61,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
   def receitas
     { contrato: receita_do_contrato, convidados: receita_dos_convidados, cardapio: receita_do_cardapio,
       equipe: { gatilho: no_dia(7, 'antes'), passos: [
-        { id: 'resumo', tipo: 'resumir', le: %w[conversa], linhas: 4, destino: { avisar: { pessoas: [cozinha.id, decoracao.id] } } }
+        # A data da festa, os convidados e as alergias estão no card: a IA lê o card (G33, #2679).
+        { id: 'resumo', tipo: 'resumir', le: %w[card conversa], linhas: 4, destino: { avisar: { pessoas: [cozinha.id, decoracao.id] } } }
       ] },
       lembrete: { gatilho: no_dia(1, 'antes'), passos: [mensagem('lembrete', 'festa_lembrete', 'Amanhã é a festa!')] },
       avaliacao: receita_da_avaliacao,
@@ -236,6 +237,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 13: festa do contrato ao depoimento'
     resumo = conversa.messages.where(private: true).find_by('content LIKE ?', '%mention://user/%')
     expect(resumo.content).to include('40 convidados', 'amendoim', "mention://user/#{cozinha.id}/", "mention://user/#{decoracao.id}/")
     expect(chamadas_para('graph.facebook.com')).to be_empty
+    lido = ia_recebeu.select { |corpo| corpo.dig('text', 'format', 'name') == 'automacao_resumir' }.sole['input'].to_json
+    expect(lido).to include('2027-03-20', 'amendoim', '40')
   end
 
   it 'passo 6: 1 dia antes, a família é lembrada pelo modelo aprovado' do

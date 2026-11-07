@@ -11,8 +11,8 @@ require 'rails_helper'
 # cliente, com a foto, vai inteira à IA (G20); o retorno é da recepção (G3); a campanha "Manutenção" é o e-mail pela caixa
 # da clínica (G2). A IA é o dublê. Desenho e lacunas: docs/automacao/F9-fechamento-20-exemplos.md.
 #
-# Passo 2 ("manda pelo modelo aprovado 'Cuidados'"): o "escrever" manda dentro da janela; com ela fechada, para sem gastar.
-# Mandar pelo modelo é a lacuna G28 (#2674), pendente no fim do arquivo.
+# Passo 2 ("manda pelo modelo aprovado 'Cuidados'"): o "escrever" só guarda o texto, e a "mensagem" seguinte o lê
+# (`ia.cuidados`, G28, #2679): dentro da janela ele vai direto; com ela fechada, dentro do modelo aprovado.
 RSpec.describe 'Fechamento #2414 · exemplo 3: pós-procedimento da clínica', :fechamento_automacao, type: :request do
   include ActiveJob::TestHelper
 
@@ -40,6 +40,7 @@ RSpec.describe 'Fechamento #2414 · exemplo 3: pós-procedimento da clínica', :
 
   def modelo(nome, *variaveis) = { nome: nome, idioma: 'pt_BR', variaveis: [[{ '$valor' => 'contato.nome' }], *variaveis] }
   def card_id = { '$valor' => 'card.id' }
+  def cuidados = { '$valor' => 'ia.cuidados' }
   def conversa_id = { '$valor' => 'conversa.id' }
 
   def etiqueta(id, nome)
@@ -59,8 +60,9 @@ RSpec.describe 'Fechamento #2414 · exemplo 3: pós-procedimento da clínica', :
           manutencao: { '$data' => { de: 'hoje', mais: { valor: 25, unidade: 'dias' } } }
         } } } },
       { id: 'dia_seguinte', tipo: 'esperar', duracao: { valor: 1, unidade: 'dias' } },
-      { id: 'cuidados', tipo: 'escrever', le: %w[mensagens_recentes conversa], destino: 'mensagem',
+      { id: 'cuidados', tipo: 'escrever', le: %w[mensagens_recentes conversa], destino: 'guardar',
         instrucao: 'Escreva os cuidados de depois do procedimento que está no campo procedimento da conversa.' },
+      { id: 'manda_cuidados', tipo: 'mensagem', texto: [cuidados], modelo: modelo('pos_cuidados', [cuidados]) },
       { id: 'terceiro_dia', tipo: 'esperar', duracao: { valor: 2, unidade: 'dias' } },
       { id: 'como_esta', tipo: 'mensagem', texto: ['Como você está? Pode mandar uma foto se quiser'], modelo: modelo('pos_como_esta') },
       { id: 'resposta', tipo: 'esperar_ate', condicao: { campo: { '$valor' => 'conversa.cliente_respondeu' }, op: 'igual', valor: true },
@@ -116,7 +118,8 @@ RSpec.describe 'Fechamento #2414 · exemplo 3: pós-procedimento da clínica', :
   end
 
   def modelos_aprovados
-    { 'pos_como_esta' => 'Oi {{1}}, como você está? Pode mandar uma foto se quiser.',
+    { 'pos_cuidados' => 'Oi {{1}}, seus cuidados de hoje: {{2}}',
+      'pos_como_esta' => 'Oi {{1}}, como você está? Pode mandar uma foto se quiser.',
       'pos_manutencao' => 'Oi {{1}}, está na hora da manutenção. Marque aqui: {{2}}' }.map do |nome, texto|
       { 'name' => nome, 'language' => 'pt_BR', 'status' => 'APPROVED', 'category' => 'UTILITY',
         'components' => [{ 'type' => 'BODY', 'text' => texto }] }
@@ -249,18 +252,20 @@ RSpec.describe 'Fechamento #2414 · exemplo 3: pós-procedimento da clínica', :
     varredura_as('2026-11-11 19:00')
 
     expect(textos_enviados).to eq(['Cuidados do botox: não deite nas próximas 4 horas e não massageie o local.'])
-    expect(historico(:atendimento).map(&:first)).to include('cuidados')
+    expect(modelos_enviados).to be_empty
+    expect(historico(:atendimento)).to include(['cuidados', 'ok', nil], ['manda_cuidados', 'ok', nil])
   end
 
-  it 'passo 2: com a janela fechada, o "escrever" para sem gastar, e nada sai à cliente', :aggregate_failures do
+  it 'passo 2: com a janela fechada, os cuidados que a IA escreveu saem dentro do modelo aprovado "Cuidados"', :aggregate_failures do
     card_entra_em_atendida
 
     varredura_as('2026-11-11 19:00')
 
-    expect(pedidos_da_ia('automacao_escrever')).to be_empty
-    expect(whatsapp).to be_empty
-    # A execução para ali (#2573): os passos seguintes não rodam nesta cliente.
-    expect(historico(:atendimento).last).to eq(%w[cuidados falhou fora_da_janela])
+    expect(pedidos_da_ia('automacao_escrever').size).to eq(1)
+    expect(modelos_enviados).to eq(%w[pos_cuidados])
+    parametros = whatsapp.sole.corpo.dig('template', 'components', 0, 'parameters').pluck('text')
+    expect(parametros).to eq(['Luana', 'Cuidados do botox: não deite nas próximas 4 horas e não massageie o local.'])
+    expect(historico(:atendimento)).to include(['cuidados', 'ok', nil], ['manda_cuidados', 'ok', nil])
   end
 
   context 'with o 3º dia (passos 3 a 7)' do
@@ -338,11 +343,5 @@ RSpec.describe 'Fechamento #2414 · exemplo 3: pós-procedimento da clínica', :
       expect(Conversation.where(inbox: caixa_de_email)).to be_empty
       expect(historico(:manutencao).map(&:first)).not_to include('campanha')
     end
-  end
-
-  it 'passo 2, pelo modelo: com a janela fechada, os cuidados saem pelo modelo aprovado "Cuidados"' do
-    abertas = FechamentoAutomacao::Lacunas.abertas(%w[G28])
-    pending 'lacuna G28 (#2674): o "escrever" não manda pelo modelo aprovado; fora da janela, para sem gastar'
-    expect(abertas).to be_empty
   end
 end
