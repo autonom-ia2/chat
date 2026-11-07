@@ -110,7 +110,7 @@ conversa e do contato), os passos esperar, esperar até, se e parar, a ação da
 (etiquetas, atributos, contato, empresa, conversa, atribuição, card alterar e mover, etapa, agente na caixa), mensagem
 ao cliente dentro da janela, aviso à equipe pelo sino e os quatro passos de IA.
 
-**Placar em 06/11 (main `74b6e48766` + #2639): 1 de 20 inteiros (ex. 13).** Lacunas fechadas: G1, G2, G5, G6, G11, G16. Exemplo só conta inteiro e com spec verde; parcial não conta.
+**Placar em 07/11 (main `993b89dc63` + #2641): 2 de 20 inteiros (ex. 10 e 13).** Lacunas fechadas: G1, G2, G3, G4, G5, G6, G11, G16. Exemplo só conta inteiro e com spec verde; parcial não conta.
 
 Com a G4 (#2628), **o exemplo 10 (cliente bravo) roda inteiro**: o passo 8 (card no quadro "Melhorias") roda desde a
 G4; o 2 (tirar da agente de IA), desde a G15. Os outros 19 começam por um gatilho

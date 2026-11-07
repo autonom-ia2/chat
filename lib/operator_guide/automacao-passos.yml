@@ -41,7 +41,8 @@ nativos:
   # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
   retorno: { grupo: EQUIPE }
   # G4: criar card numa etapa, com a flag dos gatilhos de card (F6). `funil`: só para quem pode mexer no funil
-  # (crm_manage_pipelines), como o gatilho de card; quem recusa de verdade é a API, ao salvar e ao ligar.
+  # (RegraDoFunil.chave?: crm_manage_pipelines ou crm_admin), como o gatilho de card; quem recusa de verdade é a API,
+  # ao salvar e ao ligar.
   card: { grupo: FUNIL, requer: automacao_gatilhos, funil: true }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
