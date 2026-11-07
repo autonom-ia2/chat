@@ -178,7 +178,11 @@ module FechamentoAutomacao::Lacunas
     'G25' => -> { acao?('POST crm/cards/:id/close') },
     'G26' => -> { passo?('sla') },
     # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
-    'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') }
+    'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') },
+    # #2680: a receita escolhe a caixa por onde abrir a conversa de quem não tem uma (o lead do formulário, o contato).
+    'G33' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('properties', 'gatilho', 'properties').key?('conversa_nova') },
+    # #2680: a resposta em outra conversa do contato conta, e a mensagem que a automação mandou vira valor.
+    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

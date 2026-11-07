@@ -149,6 +149,8 @@ Cada lacuna tem um código e uma frente dona (distribuição da Automação, 05/
 | G25 | **Fechar card** como ganho/perdido/resolvido com motivo | F6 (ação) | `PATCH crm/cards` aceita `lost_reason`, mas não muda o status; a conferir qual rota ganha/perde | F2 | 4, 6, 12, 18 |
 | G26 | **Aplicar SLA** à conversa | F3 (nativo) | Fora do catálogo do Guia (termo, nota da seção dos exemplos) | F2 | — |
 | G27 | Gatilho **card atualizado / campo mudou** (o valor passou de R$ 50 mil no 15; o card ficou completo no 8) | F6 | A fazer: a lista de gatilhos só tem card criado, etapa, ganho, perdido e reunião | Gatilhos | 8, 15 |
+| G33 | **Mandar mensagem a quem não tem conversa** (o lead do formulário, o contato do aniversário): a caixa por onde abrir | F4 | **Fechada** (#2680): `gatilho.conversa_nova.caixa_id`; a mensagem abre a conversa, e a espera, a IA e a agente usam ela | Motor | 2, 6 |
+| G34 | **Resposta em outra conversa do contato** (a do e-mail) e **a mensagem mandada como valor** (`envio.texto`, `envio.situacao`) | G11 | **Fechada** (#2680): o ramo "se o envio falhou, manda por e-mail o mesmo texto" monta sem a G8 | Motor | 1, 19 |
 
 ### 5.1 A sonda de cada lacuna
 
@@ -168,12 +170,12 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 
 | # | Exemplo | Começa | Passos que já rodam na main | Faltam | Roda hoje |
 |---|---|---|---|---|---|
-| 1 | Renovação do seguro | ⛔ G6 (30 dias antes do vencimento) | mover card ✅, etiqueta ✅, extrair ✅, decidir ✅, avisar ✅, resumir ✅ | G1, G2, G3, G6, G8, G11, G12 | Não |
-| 2 | Lead do anúncio | 🟡 G5 (card criado pelo formulário) | etiqueta ✅, decidir ✅, extrair ✅, mover ✅, resumir/avisar ✅ | G1, G3, G5, G11, G12, G14, G15 | Não |
+| 1 | Renovação do seguro | ⛔ G6 (30 dias antes do vencimento) | mover card ✅, etiqueta ✅, extrair ✅, decidir ✅, avisar ✅, resumir ✅ | G1, G2, G3, G6, G8, G11, G12, G34 | Não |
+| 2 | Lead do anúncio | 🟡 G5 (card criado pelo formulário) | etiqueta ✅, decidir ✅, extrair ✅, mover ✅, resumir/avisar ✅ | G1, G3, G5, G11, G12, G14, G15, G33 | Não |
 | 3 | Pós-procedimento da clínica | 🟡 G5 (entrou em "Atendida") | extrair ✅, escrever ✅, decidir ✅, etiqueta ✅, prioridade ✅, avisar ✅, mover ✅ | G1, G2 (e-mail no lugar da campanha "Manutenção"), G3, G5, G12, G16 (data do card), G20 | Não |
 | 4 | Aluno que começa a faltar | 🟡 G5 (entrou em "Faltou") | se com etiqueta do contato ✅, etiqueta pôr/tirar ✅, escrever ✅, decidir ✅, avisar ✅, esperar 30 dias ✅ | G1, G3, G4, G5, G12, G15, G25 | Não |
 | 5 | Revisão do carro | 🟡 G5 (card ganho) | extrair ✅ (contato), etiqueta ✅, mover ✅ | G1, G3, G5, G6, G12, G16, G19 | Não |
-| 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25 | Não |
+| 6 | Aniversário | ⛔ G6 (data de nascimento do contato) | escrever ✅, etiqueta ✅, decidir ✅, extrair ✅, avisar ✅ | G1, G4, G6, G12, G14, G16, G25, G33 | Não |
 | 7 | Black Friday | ⛔ G7 (quinta 9h) | decidir ✅, extrair ✅ (card), etiqueta ✅, mensagem ✅ (na janela) | G5, G7, G14, G15 | Não |
 | 8 | Funcionário novo no plano | ✅ mensagem do RH (1ª); ⛔ G24 (2ª) | decidir ✅, mensagem ao RH ✅ | G1, G4, G5, G7, G13, G17, G20, G22, G24, G27 | Não |
 | 9 | Prospecção semanal | ⛔ G7 (segunda 8h) | decidir ✅, etiqueta ✅, mover ✅, resumir ✅ | G3, G4, G7, G12, G14, G21 | Não |
@@ -186,7 +188,7 @@ Legenda: ✅ na main · 🟡 em PR · ⛔ lacuna (código). "Começa" é o gatil
 | 16 | Reconquistar | ⛔ G7 (dia 1º, perdidos há 11 meses) | etiqueta ✅, decidir ✅, escrever ✅ | G3, G4, G7, G12, G14, G16, G18 | Não |
 | 17 | Vendedora de férias | ⛔ G9 (troca de responsável) | resumir ✅, mensagem ✅, etiqueta ✅ | G7 (toda manhã, por card com a etiqueta), G9, G11, G15, G16, G23 | Não |
 | 18 | Seleção de candidatos | ✅ mensagem na caixa de vagas | decidir ✅, etiqueta ✅, avisar ✅ | G1, G4, G5, G6, G12, G15, G20, G25 | Não |
-| 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19 | Não |
+| 19 | Cliente que sumiu do WhatsApp | ⛔ G8 (mensagem falhou) | etiqueta ✅, extrair ✅ (telefone), escrever ✅, avisar ✅ | G1, G2, G3, G8, G11, G19, G34 | Não |
 | 20 | Venda fechada no sistema da empresa | 🟡 G5 (card ganho) | extrair ✅, decidir ✅, mover ✅, etiqueta ✅, avisar ✅ | G1, G2 (boas-vindas e "Dicas do mês" por e-mail), G5, G7 (todo mês, por contato com a etiqueta), G11, G12, G13 | Não |
 
 ### 6.1 As lacunas que destravam mais exemplos

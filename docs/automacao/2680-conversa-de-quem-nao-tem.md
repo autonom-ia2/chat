@@ -58,6 +58,11 @@ marca da automação). É o ramo "se o WhatsApp recusar, manda por e-mail o mesm
 No painel do gatilho de card ou de contato, o campo "Caixa para falar com quem ainda não tem conversa" (ChoiceSelect,
 com "Nenhuma"). Trocar para outro gatilho de card ou de contato mantém a caixa; trocar para um de conversa a tira.
 
+## Lacunas
+
+Fecha a G33 (mandar mensagem a quem não tem conversa) e a G34 (resposta em outra conversa e mensagem como valor)
+do placar do F9.
+
 ## Exemplos que avançam
 
 - **2**, passos 2 e 3 (e 5, 6 e 8 quando a conversa existe): o lead recebe a mensagem e a espera lê a resposta.
