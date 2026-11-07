@@ -147,7 +147,9 @@ describe('LivreCampanha', () => {
 
     const [[emitido]] = tela.emitted('update:modelValue');
     expect(emitido).toMatchObject({ etiquetas: [7], sem_etiquetas: [7] });
-    expect(tela.text()).toContain('AUTOMACAO_LIVRE.CAMPANHA.SEM_ETIQUETAS_DICA');
+    expect(tela.text()).toContain(
+      'AUTOMACAO_LIVRE.CAMPANHA.SEM_ETIQUETAS_DICA'
+    );
   });
 
   it('"não receber" deixa as etiquetas excluídas de fora', () => {
