@@ -224,6 +224,17 @@ RSpec.describe Autonomia::Automacao::Executor, :automacao_motor do
       expect(dados.to_json).not_to include('ABC1D23', '2026-11-03')
     end
 
+    # O que a IA devolve é dado, nunca fórmula do valor calculado (G16): o PassoDeAcao do extrair recebe valores: nil, e
+    # a forma {"$valor": …} nunca chega a ele, porque a resposta fora do esquema (texto, número, sim/não) para antes.
+    it 'valor da IA com a forma do valor calculado: para no esquema, sem ler nem gravar', :aggregate_failures do
+      openai_devolve({ 'placa' => { '$valor' => 'contato.nome' }, 'data' => nil, 'carros' => nil, 'nome' => nil })
+
+      execucao = comecar_e_rodar(automacao_ligada(account, admin, [extrair(campos)]))
+
+      expect([execucao.reload.estado, registros(execucao)]).to eq(['falhou', [%w[p1 falhou resposta_fora_do_schema]]])
+      expect(conversa.reload.custom_attributes).to eq({})
+    end
+
     # O exemplo do aceite: "bati o carro ontem à noite" só vira data quando a IA sabe o dia em que a mensagem foi escrita.
     # A mensagem é das 23h30 de 3/11 em Cuiabá (já 4/11 em UTC) e o passo roda depois da meia-noite: o "ontem" é 2/11.
     it 'data relativa: a IA recebe hoje e a data de cada mensagem, no fuso da conta', :aggregate_failures do

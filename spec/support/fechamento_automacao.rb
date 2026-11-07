@@ -128,10 +128,18 @@ module FechamentoAutomacao::Lacunas
   def acao?(acao) = Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
   def valor?(caminho) = Autonomia::Automacao::Valores.caminho_valido?(caminho)
 
-  def atribui_agente_de_ia?
-    acao = 'POST conversations/:conversation_id/assignments'
-    tipos = Array(Autonomia::Guide::Formatos.para(acao)&.dig('campos', 'assignee_type', 'um_de'))
-    acao?(acao) && tipos.include?('Autonomia::Agents::Agent')
+  # G16: o corpo de uma ação aceita valor calculado. O esquema da receita deixa a data calculada no corpo, e o motor a
+  # monta na hora: hoje + 6 meses sai como "AAAA-MM-DD", no fuso da conta.
+  def valor_calculado_no_corpo?
+    data = { '$data' => { 'de' => 'hoje', 'mais' => { 'valor' => 6, 'unidade' => 'meses' } } }
+    corpo = { 'merge' => true, 'custom_attributes' => { 'revisao' => data } }
+    passo = { 'id' => 'p1', 'tipo' => 'acao', 'acao' => 'POST conversations/:id/custom_attributes', 'descricao' => 'Gravar',
+              'caminho' => { 'id' => { '$valor' => 'conversa.id' } }, 'corpo' => corpo }
+    receita = { 'gatilho' => { 'tipo' => 'conversa.resolvida' }, 'passos' => [passo] }
+    conta = Account.new(custom_attributes: { 'timezone' => 'UTC' })
+    montado = Autonomia::Automacao::Corpo.new(corpo, valores: nil, conta: conta).montar
+    Autonomia::Automacao::Receita.esquema_valido?(receita) &&
+      montado.corpo&.dig('custom_attributes', 'revisao') == Time.current.utc.to_date.advance(months: 6).iso8601
   end
 
   SONDAS = {
@@ -139,7 +147,8 @@ module FechamentoAutomacao::Lacunas
     'G1' => -> { campo_do_passo?('mensagem', 'modelo') },
     'G2' => -> { passo?('email') },
     'G3' => -> { passo?('retorno') },
-    'G4' => -> { acao?('POST crm/cards') || acao?('POST crm/cards/from_conversation') },
+    # O "criar card" entrou como passo próprio (#2628), não como a ação POST crm/cards.
+    'G4' => -> { passo?('card') },
     'G5' => -> { gatilho_no?('Crm::Card') },
     'G6' => -> { gatilho_de?(:tempo) },
     'G7' => -> { gatilho_de?(:recorrente) },
@@ -148,18 +157,16 @@ module FechamentoAutomacao::Lacunas
     'G10' => -> { gatilho?('etiqueta.posta', 'conversa.etiqueta_posta', 'contato.etiqueta_posta') },
     'G11' => -> { valor?('conversa.equipe_respondeu') && valor?('conversa.cliente_respondeu') },
     'G12' => lambda {
-      gatilho?('reuniao.marcada') && gatilho?('reuniao.cancelada') &&
+      gatilho?('card.reuniao_marcada') && gatilho?('card.reuniao_cancelada') &&
         %w[card.link_da_agenda conversa.link_da_agenda].any? { |caminho| valor?(caminho) }
     },
     'G13' => -> { passo?('webhook') },
     'G14' => -> { passo?('campanha') },
-    # A Atribuição é o motor único de entrega, inclusive para agente de IA (regra do Rodrigo): fecha quando o passo de
-    # atribuir aceita um agente de IA como destino. "Tirar" é atribuir de volta à pessoa ou ao time, que o passo já
-    # faz. O nome fica com a F7, e o desenho passa pela sessão Automação antes do código. Contrato da sonda: fecha quando
-    # o formato gerado (formatos-das-acoes.json) listar 'Autonomia::Agents::Agent' em `assignee_type.um_de`, o que pede
-    # inclusion no modelo ou validação no controller; se a F7 aceitar o agente por outro caminho, ela ajusta esta sonda.
-    'G15' => -> { atribui_agente_de_ia? },
-    'G16' => nil,
+    # A Atribuição é o motor único de entrega, inclusive para agente de IA (regra do Rodrigo). A F7 fechou por outro
+    # caminho (G15, D1): o passo próprio "ia_assumir", que passa pela Atribuição do CRM, e não `assignee_type` no
+    # atribuir, que a lista agora proíbe. "Tirar" é atribuir de volta à pessoa ou ao time, que o passo já faz.
+    'G15' => -> { passo?('ia_assumir') },
+    'G16' => -> { valor_calculado_no_corpo? },
     'G17' => -> { acao?('POST contacts') },
     'G18' => nil,
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
@@ -169,7 +176,9 @@ module FechamentoAutomacao::Lacunas
     'G23' => nil,
     'G24' => nil,
     'G25' => -> { acao?('POST crm/cards/:id/close') },
-    'G26' => -> { passo?('sla') }
+    'G26' => -> { passo?('sla') },
+    # "Card criado ou atualizado com valor acima de R$ 50 mil" (15) e "card completo" (8, passo 8): só o card criado é a G5.
+    'G27' => -> { gatilho?('card.atualizado', 'card.campo_mudou', 'card.valor_mudou') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

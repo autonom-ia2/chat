@@ -8,8 +8,16 @@
 class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
   AUDITORIA = 'automacao_action'.freeze
 
-  # Quem ligou perdeu a chave de automações no meio da rodada: o executor pausa a automação, não só a execução.
-  SemPermissao = Class.new(Recusada)
+  # Quem ligou perdeu uma chave no meio da rodada: o executor pausa a automação, não só a execução. `motivo` é a chave
+  # em autonomia.automacao.motivos.
+  SemPermissao = Class.new(Recusada) do
+    attr_reader :motivo
+
+    def initialize(motivo)
+      @motivo = motivo
+      super(I18n.t("autonomia.automacao.motivos.#{motivo}"))
+    end
+  end
 
   attr_reader :codigo
 
@@ -18,16 +26,37 @@ class Autonomia::Automacao::AcoesDoMotor < Autonomia::Guide::Acoes
     super(account: execucao.account, user: execucao.automacao.ligada_por, account_user: account_user)
   end
 
+  # A mesma conferência do executar, antes de montar o pedido: a chave que falta pausa a automação mesmo quando o passo
+  # pularia por falta de valor. Relê quem ligou (e a função dele): a chave tirada no meio da rodada vale já no passo
+  # seguinte, não só na próxima execução. Quem saiu da conta no meio da rodada pausa, como no começo dela.
+  def conferir!(acao)
+    @account_user&.reload
+    garantir_permitida!(acao)
+  rescue ActiveRecord::RecordNotFound
+    raise SemPermissao, 'quem_ligou_saiu_da_conta'
+  end
+
   private
 
   # A lista já deixa de fora o que só se faz na tela; a conferência aqui é a rede, caso a lista erre.
-  # Os dados da ação (#2446) não mudam a regra do motor: a lista mais a chave de automações.
+  # Os dados da ação (#2446) não mudam a regra do motor: a lista, a chave de automações e, na ação de funil (crm/), a
+  # chave de funis, a mesma pergunta do salvar, reconferida a cada execução (#2633).
   def garantir_permitida!(acao, _dados = nil)
     raise Recusada, so_na_tela(acao) if SO_NA_TELA.key?(acao.to_s)
     raise Recusada, I18n.t('autonomia.automacao.motivos.acao_fora') unless ::Autonomia::Automacao::AcoesPermitidas.permitida?(acao)
-    raise SemPermissao, I18n.t('autonomia.automacao.motivos.quem_ligou_sem_permissao') unless @account_user&.permission_granted?(
-      ::Autonomia::Automacao::Acesso::PERMISSAO
-    )
+    raise SemPermissao, 'quem_ligou_sem_permissao' unless @account_user&.permission_granted?(::Autonomia::Automacao::Acesso::PERMISSAO)
+    return unless ::Autonomia::Automacao::AcoesPermitidas.de_funil?(acao)
+    raise SemPermissao, 'sem_chave_de_funis' unless ::Autonomia::Automacao::RegraDoFunil.chave?(@account_user)
+  end
+
+  # O `proibe` da lista vale também na hora de rodar, e não só ao salvar (G15): a versão salva antes da regra, ou montada
+  # fora do editor, com um campo proibido (o `assignee_type` que passaria a conversa ao robô sem a Atribuição) não passa.
+  def conferir_corpo!(acao, dados)
+    super.tap do |conferencia|
+      next if ::Autonomia::Automacao::AcoesPermitidas.proibidos(acao, conferencia.valores).empty?
+
+      raise Recusada, I18n.t('autonomia.automacao.motivos.campo_proibido')
+    end
   end
 
   # O que o pedido mudar sai assinado pela automação (Ato, #2568 P7), não só por quem a ligou.

@@ -3,6 +3,7 @@
 // etiqueta entra, porque vai pelo nome; pessoa, time e caixa ficam no "Alterar".
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
+import { fraseDoRetorno } from './retorno';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -333,15 +334,42 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       texto: fraseDoTexto(passo.texto, catalogo, t),
     });
   if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
+  if (passo.tipo === 'retorno')
+    return fraseDoRetorno(passo, t, {
+      quando: fraseDaDuracao(passo.daqui, catalogo, t),
+      titulo: fraseDoTexto(passo.titulo, catalogo, t),
+      mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
+    });
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
 };
 
+const A = 'AUTOMACAO_LIVRE.ALTERAR_PAINEL';
+
+// #2414 G16b — a data calculada em frase curta: "hoje + 6 meses", "Data de
+// nascimento − 1 dia". `rotular` dá o nome do campo de partida (a peça de data
+// usa o nome que a pessoa vê na escolha).
+export const fraseDaData = (
+  data,
+  catalogo,
+  t,
+  rotular = caminho => fraseDoValor(caminho, catalogo, t)
+) => {
+  const { de, mais } = data || {};
+  const inicio = de === 'hoje' ? t(`${A}.HOJE`) : rotular(de?.$valor);
+  if (!mais?.valor) return inicio;
+  const n = Math.abs(mais.valor);
+  return t(`${A}.DATA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
+    de: inicio,
+    n,
+    unidade: t(`AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`, {}, n),
+  });
+};
+
 // #2414 G16 — o valor calculado que o Guia montou num campo da ação, em frase:
 // "Vem da conversa: Nome do contato", "Montado na hora: indicado por [Nome do
 // contato]", "Data calculada na hora: hoje + 6 meses".
-const A = 'AUTOMACAO_LIVRE.ALTERAR_PAINEL';
 export const fraseDoCalculado = (valor, catalogo, t) => {
   if (valor?.$valor)
     return t(`${A}.DA_CONVERSA`, {
@@ -351,14 +379,7 @@ export const fraseDoCalculado = (valor, catalogo, t) => {
     return t(`${A}.CALCULADO_TEXTO`, {
       texto: fraseDoTexto(valor.$texto, catalogo, t),
     });
-  const { de, mais } = valor?.$data || {};
-  const inicio =
-    de === 'hoje' ? t(`${A}.HOJE`) : fraseDoValor(de?.$valor, catalogo, t);
-  if (!mais?.valor) return t(`${A}.DATA_CALCULADA`, { de: inicio });
-  const n = Math.abs(mais.valor);
-  return t(`${A}.DATA_CALCULADA_${mais.valor < 0 ? 'MENOS' : 'MAIS'}`, {
-    de: inicio,
-    n,
-    unidade: t(`AUTOMACAO_LIVRE.UNIDADES.${mais.unidade.toUpperCase()}`, {}, n),
+  return t(`${A}.DATA_CALCULADA`, {
+    de: fraseDaData(valor?.$data, catalogo, t),
   });
 };

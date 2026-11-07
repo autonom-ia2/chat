@@ -31,6 +31,7 @@
       "SE_NENHUM": "If none applies:",
       "NAO_SAIRIA": "Wouldn't go out: automatic messages aren't turned on in this account yet.",
       "FALTOU_VALOR": "Wouldn't go out: the text is missing a detail from this conversation.",
+      "RETORNO_SEM_RESPONSAVEL": "Would not create the follow-up: this conversation has no assignee.",
       "TEXTO_VAZIO": "Wouldn't go out: the text would be empty.",
       "CORTE": "The test stopped here: the automation has too many paths to show.",
       "OPCAO": "{nome} · #{n}",
@@ -47,6 +48,15 @@
         }
       },
       "MODELO_FORA_DA_JANELA": "If the 24-hour window is closed, the template {modelo} is sent (charged by Meta).",
+      "IA_ASSUMIR": "Would hand over to {agente}",
+      "NAO_PASSARIA": {
+        "AGENTE_SUMIU": "Would not hand over: the chosen agent no longer exists.",
+        "FASE2_DESLIGADA": "Would not hand over: AI agents do not receive conversations in this account.",
+        "CONVERSA_RESOLVIDA": "Would not hand over: the conversation is resolved.",
+        "PESSOA_ATRIBUIDA": "Would not hand over: a person has the conversation, and they keep it.",
+        "SEM_VINCULO_NA_CAIXA": "Would not hand over: {agente} does not work in this conversation’s inbox.",
+        "NAO_ATENDE_CLIENTE": "Would not hand over: {agente} is not answering customers right now."
+      },
       "EMAIL": "Would go out from {caixa}",
       "CONTATO_SEM_EMAIL": "Would not go out: the contact has no e-mail.",
       "CONTATO_NAO_RECEBE": "Would not go out: the contact asked not to receive messages.",

@@ -28,6 +28,11 @@ RSpec.describe Crm::MetaAds::Creation::Options do
                                                                          .to_return(status: status, body: body.to_json, headers: json)
   end
 
+  def stub_limit(status:, body:)
+    stub_request(:get, meta_graph_url('178/content_publishing_limit')).with(query: hash_including({}))
+                                                                      .to_return(status: status, body: body.to_json, headers: json)
+  end
+
   before do
     create(:channel_whatsapp, account: account, phone_number: '+5511900002161', validate_provider_config: false, sync_templates: false)
     stub_currency
@@ -45,7 +50,8 @@ RSpec.describe Crm::MetaAds::Creation::Options do
       needs_login: false, pages: [{ id: '110', name: 'Loja Exemplo', instagram: { id: '178', username: 'lojaexemplo' } }],
       whatsapp_numbers: [{ id: '+5511900002161', name: account.inboxes.first.name, phone: '+5511900002161' }],
       images: [{ hash: 'abc', url: 'https://scontent.example/abc.jpg', width: 600, height: 600 }],
-      currency: 'BRL', min_daily: 6, max_daily: 500, kinds: %w[ad post],
+      currency: 'BRL', min_daily: 6, max_daily: 500, kinds: %w[ad post publish],
+      publish: { 'facebook' => false, 'instagram' => false },
       # 01:30 UTC de 28/10 ainda é 27/10 no fuso da conta de anúncios (São Paulo).
       today: '2026-10-27',
       destinations: %w[WHATSAPP INSTAGRAM_DIRECT MESSENGER WEBSITE INSTAGRAM_PROFILE],
@@ -53,6 +59,31 @@ RSpec.describe Crm::MetaAds::Creation::Options do
                                    'WEBSITE' => %w[AUTO INSTAGRAM FACEBOOK], 'INSTAGRAM_PROFILE' => %w[INSTAGRAM] }
     )
     expect(payload[:facebook_login]).to eq(Crm::MetaAds::FacebookLogin.public_payload)
+  end
+
+  it 'criar post: diz em que rede o token publica e quantos posts o Instagram ainda aceita hoje (PR 3, #2653)' do
+    stub_permissions('ads_management', 'pages_manage_ads', 'pages_manage_posts', 'instagram_content_publish')
+    stub_pages([{ id: '110', name: 'Loja Exemplo', instagram_business_account: { id: '178', username: 'lojaexemplo' } }])
+    stub_images
+    stub_limit(status: 200, body: { data: [{ quota_usage: 3, config: { quota_total: 100 } }] })
+
+    payload = described_class.new(account, connection).payload
+
+    expect(payload[:publish]).to eq('facebook' => true, 'instagram' => true)
+    instagram = { id: '178', username: 'lojaexemplo', publish_left: 97 }
+    expect(payload[:pages]).to eq([{ id: '110', name: 'Loja Exemplo', instagram: instagram }])
+  end
+
+  it 'criar post: leitura do limite do Instagram que falha não apaga o Instagram (publish_left nil)' do
+    stub_permissions('ads_management', 'pages_manage_ads', 'instagram_content_publish')
+    stub_pages([{ id: '110', name: 'Loja Exemplo', instagram_business_account: { id: '178', username: 'lojaexemplo' } }])
+    stub_images
+    stub_limit(status: 400, body: meta_graph_error(10))
+
+    payload = described_class.new(account, connection).payload
+
+    expect(payload[:publish]).to eq('facebook' => false, 'instagram' => true)
+    expect(payload.dig(:pages, 0, :instagram)).to eq(id: '178', username: 'lojaexemplo', publish_left: nil)
   end
 
   it 'sem pages_manage_ads: pede para entrar de novo e não lê Páginas nem fotos' do

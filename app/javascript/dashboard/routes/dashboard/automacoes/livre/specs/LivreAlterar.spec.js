@@ -51,7 +51,7 @@ const CATALOGO = {
   passos: [ETIQUETA_ALTERAR, CONVERSA_ETIQUETAS],
 };
 
-const montar = (catalogo = CATALOGO) =>
+const montar = (catalogo = CATALOGO, extras = {}) =>
   mount(LivreAlterar, {
     props: {
       catalogo,
@@ -61,6 +61,7 @@ const montar = (catalogo = CATALOGO) =>
           { value: 'vip', label: 'vip' },
           { value: 'lead', label: 'lead' },
         ],
+        ...extras,
       },
       atributosDaPeca: () => [],
       atributosDo: () => [],
@@ -75,6 +76,61 @@ const salvarDesligado = wrapper =>
   wrapper.find('[data-salvar]').attributes('disabled') !== undefined;
 
 describe('LivreAlterar', () => {
+  // G15 — a agente de IA é escolhida na lista da conta (só id e nome); sem
+  // nenhuma, o painel diz isso em vez de abrir uma escolha vazia.
+  const IA_ASSUMIR = {
+    tipo: 'ia_assumir',
+    grupo: 'EQUIPE',
+    frase: 'IA_ASSUMIR',
+    campos: [
+      {
+        nome: 'agente_id',
+        peca: 'agente_de_ia',
+        obrigatorio: true,
+        rotulo: 'AGENTE_ID',
+      },
+    ],
+  };
+  const COM_IA = { ...CATALOGO, passos: [...CATALOGO.passos, IA_ASSUMIR] };
+  const PASSO_IA = { id: 'g1', tipo: 'ia_assumir', agente_id: null };
+
+  it('espera escolher a agente de IA antes de salvar', async () => {
+    const wrapper = montar(COM_IA, {
+      agenteDeIa: [{ value: 3, label: 'Área Suporte' }],
+    });
+    wrapper.vm.abrir({ tipo: 'passo', valor: PASSO_IA });
+    await flushPromises();
+    expect(wrapper.find('[data-peca="agente_de_ia"]').exists()).toBe(true);
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    wrapper.vm.abrir({ tipo: 'passo', valor: { ...PASSO_IA, agente_id: 3 } });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
+  it('sem agente de IA na conta, diz isso e não salva', async () => {
+    const wrapper = montar(COM_IA, { agenteDeIa: [] });
+    wrapper.vm.abrir({ tipo: 'passo', valor: PASSO_IA });
+    await flushPromises();
+
+    expect(wrapper.find('[data-sem-agente-de-ia]').exists()).toBe(true);
+    expect(salvarDesligado(wrapper)).toBe(true);
+  });
+
+  it('enquanto a lista carrega, não diz que falta agente; se não veio, diz que não carregou', async () => {
+    const carregando = montar(COM_IA, { agenteDeIa: null });
+    carregando.vm.abrir({ tipo: 'passo', valor: PASSO_IA });
+    await flushPromises();
+    expect(carregando.find('[data-sem-agente-de-ia]').exists()).toBe(false);
+    expect(carregando.find('[data-agentes-de-ia-falhou]').exists()).toBe(false);
+
+    const falhou = montar(COM_IA, { agenteDeIa: null, agenteDeIaFalhou: true });
+    falhou.vm.abrir({ tipo: 'passo', valor: PASSO_IA });
+    await flushPromises();
+    expect(falhou.find('[data-agentes-de-ia-falhou]').exists()).toBe(true);
+    expect(falhou.find('[data-sem-agente-de-ia]').exists()).toBe(false);
+  });
+
   it('espera o alvo e o campo obrigatório antes de salvar', async () => {
     const wrapper = montar();
     const passo = {
@@ -98,6 +154,96 @@ describe('LivreAlterar', () => {
 
     await wrapper.find('[data-salvar]').trigger('click');
     expect(wrapper.emitted('salvar')[0][0].valor.caminho).toEqual({ id: 7 });
+  });
+
+  // #2414 G16b: a data calculada pela metade segura o "Salvar".
+  it('não salva com a data calculada pela metade', async () => {
+    const wrapper = montar();
+    const passo = data => ({
+      id: 'p1',
+      tipo: 'acao',
+      acao: 'PATCH labels/:id',
+      descricao: 'x',
+      caminho: { id: 7 },
+      corpo: { title: 'cliente', custom_attributes: { revisao: data } },
+    });
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo({
+        $data: { de: 'hoje', mais: { valor: null, unidade: 'meses' } },
+      }),
+    });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo({
+        $data: { de: 'hoje', mais: { valor: 6, unidade: 'meses' } },
+      }),
+    });
+    await flushPromises();
+    expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
+  // #2414 G16b: o painel fica montado entre um passo e outro; a peça de data
+  // não pode levar o modo de um para o outro.
+  it('cada passo reabre a peça de data com o modo dele', async () => {
+    const contato = {
+      tipo: 'acao',
+      nome: 'contato_alterar',
+      acao: 'PATCH contacts/:id',
+      grupo: 'CONTATO',
+      frase: 'MUDAR_CONTATO',
+      caminho: { id: { $valor: 'contato.id' } },
+      fixos: {},
+      campos: [
+        {
+          nome: 'custom_attributes',
+          peca: 'atributos_do_contato',
+          rotulo: 'X',
+        },
+      ],
+    };
+    const wrapper = mount(LivreAlterar, {
+      props: {
+        catalogo: { ...CATALOGO, passos: [contato] },
+        opcoes: {},
+        atributosDaPeca: () => [
+          {
+            attribute_key: 'revisao',
+            attribute_display_name: 'Revisão',
+            attribute_display_type: 'date',
+          },
+        ],
+        atributosDo: () => [],
+      },
+      global: {
+        stubs: { SidePanel: PainelFalso },
+        mocks: { $t: chave => chave },
+      },
+    });
+    const passo = (id, revisao) => ({
+      id,
+      tipo: 'acao',
+      acao: 'PATCH contacts/:id',
+      descricao: 'x',
+      caminho: { id: { $valor: 'contato.id' } },
+      corpo: { custom_attributes: { revisao } },
+    });
+    const modo = () =>
+      wrapper.find('[data-data-modo] [role="combobox"]').text();
+
+    wrapper.vm.abrir({
+      tipo: 'passo',
+      valor: passo('a', { $data: { de: 'hoje' } }),
+    });
+    await flushPromises();
+    expect(modo()).toBe('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.HOJE');
+
+    wrapper.vm.abrir({ tipo: 'passo', valor: passo('b', '2027-05-04') });
+    await flushPromises();
+    expect(modo()).toBe('AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA.DIA');
   });
 
   // #2496: o "Só se" acompanha o gatilho, e o painel diz o que entra e o que
@@ -194,6 +340,53 @@ describe('LivreAlterar', () => {
       'conversa.cliente_respondeu',
     ]);
     expect(await oferecidos('se')).toEqual(['conversa.status']);
+  });
+
+  // G3 (#2629): o retorno espera a escolha de pessoas e a mensagem escrita.
+  it('o retorno só salva com quem recebe escolhido e a mensagem escrita', async () => {
+    const catalogo = {
+      ...CATALOGO,
+      passos: [
+        {
+          tipo: 'retorno',
+          frase: 'RETORNO',
+          campos: [
+            {
+              nome: 'titulo',
+              peca: 'texto',
+              rotulo: 'TITULO',
+              obrigatorio: true,
+            },
+            { nome: 'para', peca: 'quem_recebe_retorno', rotulo: 'PARA' },
+            { nome: 'envio', peca: 'envio_do_retorno', rotulo: 'ENVIO' },
+          ],
+        },
+      ],
+    };
+    const wrapper = montar(catalogo);
+    const abrir = async extra => {
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: { id: 'r1', tipo: 'retorno', titulo: ['Ligar'], ...extra },
+      });
+      await flushPromises();
+    };
+
+    await abrir({});
+    expect(wrapper.find('[data-peca="quem_recebe_retorno"]').exists()).toBe(
+      true
+    );
+    expect(wrapper.find('[data-peca="envio_do_retorno"]').exists()).toBe(true);
+    expect(salvarDesligado(wrapper)).toBe(false);
+
+    await abrir({ para: { quem: 'pessoas', pessoas: [] } });
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    await abrir({ envio: { mensagem: [] } });
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    await abrir({ envio: { mensagem: ['Oi'] } });
+    expect(salvarDesligado(wrapper)).toBe(false);
   });
 
   it('não salva condição sem o que olhar', async () => {

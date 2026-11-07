@@ -10,6 +10,9 @@
       "CARD_SAIU_DA_ETAPA": "When the card leaves a stage",
       "CARD_GANHO": "When the card is won",
       "CARD_PERDIDO": "When the card is lost",
+      "CARD_REUNIAO_MARCADA": "When a meeting is scheduled",
+      "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled",
+      "CARD_REUNIAO_CANCELADA": "When a meeting is canceled",
       "CARD_PARADO": "When the card is stuck in a stage",
       "CARD_DATA": "Around a card date",
       "CONTATO_DATA": "Around a contact date",
@@ -50,6 +53,7 @@
     "GRUPOS_DO_GATILHO": {
       "CONVERSA": "Conversation and message",
       "CARD": "Pipeline card",
+      "REUNIAO": "Meeting",
       "TEMPO": "Time"
     },
     "GATILHO_COM": {
@@ -58,6 +62,9 @@
       "CARD_SAIU_DA_ETAPA": "When the card leaves {etapa}",
       "CARD_GANHO": "When a card in {funil} is won",
       "CARD_PERDIDO": "When a card in {funil} is lost",
+      "CARD_REUNIAO_MARCADA": "When a meeting is scheduled on a {funil} card",
+      "CARD_REUNIAO_REMARCADA": "When a meeting is rescheduled on a {funil} card",
+      "CARD_REUNIAO_CANCELADA": "When a meeting is canceled on a {funil} card",
       "CARD_PARADO": "When the card is stuck in {etapa} for {dias} days",
       "CARD_DATA": "{dias} days {quando} the card {campo}, from {hora}h",
       "CONTATO_DATA": "{dias} days {quando} the contact {campo}, from {hora}h"

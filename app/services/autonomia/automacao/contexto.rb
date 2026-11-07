@@ -18,10 +18,12 @@ class Autonomia::Automacao::Contexto
 
   attr_reader :alvo
 
-  def self.de(alvo) = new(alvo)
+  # `execucao`: a execução em que o passo roda, quando há uma. Só a reunião do gatilho (G12) lê dela.
+  def self.de(alvo, execucao: nil) = new(alvo, execucao: execucao)
 
-  def initialize(alvo)
+  def initialize(alvo, execucao: nil)
     @alvo = alvo
+    @execucao = execucao
   end
 
   def conversa
@@ -42,6 +44,15 @@ class Autonomia::Automacao::Contexto
     return @alvo.contact if @alvo.is_a?(::Conversation)
 
     @alvo.contact || conversa&.contact if @alvo.is_a?(::Crm::Card)
+  end
+
+  # A reunião do gatilho de reunião (G12): a da atividade que disparou, achada pela marca da execução e sempre presa ao
+  # card e à conta do alvo (parecer do Funções), nunca só pelo id. Num passo que roda dias depois ela é relida: a
+  # reunião remarcada de novo traz o horário novo. Fora do gatilho de reunião, ou sem a atividade, nil.
+  def reuniao
+    return @reuniao if defined?(@reuniao)
+
+    @reuniao = (reuniao_da_atividade if card && @execucao && ::Autonomia::Automacao::Gatilhos.de_reuniao?(@execucao.chave_gatilho))
   end
 
   # "conversa", "card" ou "contato": a base dos caminhos do Valores que o alvo tem sem ponte.
@@ -92,5 +103,14 @@ class Autonomia::Automacao::Contexto
     when ::Contact then ContactPolicy.new(contexto, @alvo).show?
     else false
     end
+  end
+
+  private
+
+  def reuniao_da_atividade
+    atividade_id = ::Autonomia::Automacao::Gatilhos.atividade_da_marca(@execucao.evento)
+    atividade = atividade_id && ::Crm::Activity.find_by(id: atividade_id, account_id: card.account_id, card_id: card.id)
+    reuniao_id = atividade&.payload.to_h['meeting_id']
+    reuniao_id && card.account.crm_meetings.find_by(id: reuniao_id, card_id: card.id)
   end
 end

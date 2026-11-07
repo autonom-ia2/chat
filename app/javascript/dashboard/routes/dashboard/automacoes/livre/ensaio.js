@@ -15,6 +15,7 @@ const AVISO = {
   contato_nao_recebe: 'CONTATO_NAO_RECEBE',
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
+  retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
 };
 
 // #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o
@@ -79,6 +80,16 @@ const linhaDoNo = (no, fraseDe, t, nivel) => {
   if (no.tipo === 'acao' && AVISO_DA_ACAO[no.faria])
     return { ...base, aviso: t(`${E}.${AVISO_DA_ACAO[no.faria]}`) };
   if (AVISO[no.faria]) return { ...base, aviso: t(`${E}.${AVISO[no.faria]}`) };
+  // G15: para quem passaria; se não passaria, o porquê, com o nome da agente.
+  if (no.tipo === 'ia_assumir')
+    return no.faria === 'ia_assumir'
+      ? { ...base, destaque: t(`${E}.IA_ASSUMIR`, { agente: no.dados.agente }) }
+      : {
+          ...base,
+          aviso: t(`${E}.NAO_PASSARIA.${no.faria.toUpperCase()}`, {
+            agente: no.dados?.agente,
+          }),
+        };
   // G2: a linha já com o assunto montado (como o balão da mensagem), por qual
   // caixa sairia e o texto no balão.
   if (no.faria === 'email')

@@ -546,6 +546,50 @@ Impulsionar post (#2339), na mesma flag `meta_ads_criar`. Pedido do Rodrigo em
   - se `ON_POST` com `OUTCOME_ENGAGEMENT` passa sem `promoted_object`;
   - o filtro de perfil e capa num post real.
 
+## Servidor do PR 3 (criar post, #2653)
+
+- `POST meta_ads_connection/post_media`: a foto ou o vídeo sobe uma vez para o
+  nosso armazenamento (`Crm::MetaAds::Creation::PostMedia`), com os mesmos
+  limites e a mesma conferência do arquivo do anúncio. PNG vira JPEG (o
+  Instagram só aceita JPEG; a Página recebe a mesma). Volta um `signed_id` que
+  só vale nesta conta e por um dia; o arquivo é apagado depois.
+- `POST meta_ads_connection/posts`: `{ idempotency_key, page_id, networks,
+  caption, media_id }`. Publica na hora (`Crm::MetaAds::Creation::Publish`):
+  - Página: `POST /{page-id}/photos` (`url`, `message`) ou `/videos`
+    (`file_url`, `description`), com o token da Página. Da foto sai o
+    `post_id`, que o impulsionar usa. Do vídeo a Meta devolve só o vídeo: a
+    tela não oferece impulsionar o vídeo da Página (**a confirmar** na chamada
+    real, junto com o item 10).
+  - Instagram: contêiner (`image_url`, ou `media_type: REELS` com
+    `video_url`), `status_code` e `media_publish`. A requisição não fica
+    esperando: a foto ganha até 4 s para o contêiner ficar `FINISHED`; o vídeo
+    confere uma vez. Não pronto: `processing`, e o "Tentar de novo" segue com o
+    mesmo contêiner. Contêiner que já aparece `PUBLISHED`: `unconfirmed`.
+  - Cada rede publica por conta própria. A resposta traz as que publicaram, as
+    que não (`failed`, com o código em `errors`) e `published_now`. Nenhuma
+    publicou: 422 com o código.
+  - Na dúvida, nunca publica de novo sozinho
+    (`Crm::MetaAds::Creation::PublishState`, por chave e rede, no Redis por um
+    dia): uma tentativa de cada vez (trava de 2 minutos, a outra recebe
+    `in_progress`); a mesma chave devolve o que já publicou; se a chamada que
+    publica saiu e não voltou resposta certa (rede, 5xx, queda do processo), a
+    chave responde `unconfirmed` e a tela pede para conferir na rede antes de
+    publicar de novo ("Conferi e não saiu"), com chave nova. Recusa certa da Meta
+    libera a chave. A mesma chave com outro conteúdo (Página, mídia ou legenda)
+    é `idempotency_conflict`.
+  - Foto até 8 MB (teto do Instagram). JPEG decidido pelos bytes, não pelo tipo
+    que o navegador diz; transparência vai sobre fundo branco.
+  - Cada rede pede a sua permissão no token (`pages_manage_posts`,
+    `instagram_content_publish`); sem ela, `cannot_publish` e nada chama a
+    Meta. As opções de criar trazem `publish: { facebook, instagram }` e, no
+    Instagram de cada Página, `publish_left` (lido em
+    `content_publishing_limit`; `null` quando a leitura falha, e a tela não
+    apaga o Instagram por isso).
+  - A Auditoria registra `meta_ads_post_published` com quem publicou, a Página,
+    os ids e as redes que falharam (nunca o token).
+- Mesma gate do resto: flag `meta_ads_criar`, `meta_ads_manage` (ou
+  administrador) para subir mídia e publicar.
+
 ## Permissões que a Meta precisa ver no vídeo
 
 Cada permissão do pedido aparece em uso no vídeo do App Review, só com o que a

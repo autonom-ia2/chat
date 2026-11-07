@@ -10,11 +10,16 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
+import LivreEtapa from './LivreEtapa.vue';
+import LivreRetornoPara from './LivreRetornoPara.vue';
+import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
+import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
+import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
 import { copiar, filtrosDoGatilho } from '../receita';
 
@@ -134,7 +139,11 @@ const mudarCaminho = (param, novo) => {
   };
 };
 
+// Cada abertura remonta os campos: a peça de data guarda o modo e o número que a
+// pessoa está montando, e um passo não pode herdar os do outro (#2414 G16b).
+const aberturas = ref(0);
 const abrir = item => {
+  aberturas.value += 1;
   alvo.value = item;
   rascunho.value = copiar(item.valor ?? null);
   painel.value?.open();
@@ -199,10 +208,14 @@ const nativoPronto = campo => {
         (partes || []).some(parte => typeof parte !== 'string' || parte.trim())
       )
     );
+  if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
+  if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
     );
+  // G15: a agente de IA escolhida.
+  if (campo.peca === 'agente_de_ia') return Number.isInteger(valor);
   // F7: a pergunta e a instrução escritas; cada caminho e cada dado com nome,
   // descrição e (no extrair) onde gravar; o destino escolhido.
   if (campo.peca === 'instrucao') return Boolean(valor?.trim());
@@ -215,9 +228,13 @@ const nativoPronto = campo => {
       )
     );
   if (campo.peca.startsWith('destino_')) return !vazio(valor);
+  if (campo.peca === 'etapa') return !vazio(valor);
   return true;
 };
+// A data calculada pela metade (sem o campo de partida, sem o número) segura o
+// "Salvar" (#2414 G16b).
 const acaoPronta = () =>
+  !temDataIncompleta(rascunho.value.corpo) &&
   escolhasDoCaminho.value.every(
     escolha => !vazio(rascunho.value.caminho?.[escolha.param])
   ) &&
@@ -380,6 +397,59 @@ defineExpose({ abrir, fechar });
           :opcoes="opcoes"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <LivreEtapa
+          v-else-if="campo.peca === 'etapa'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :grupos="escolhasDoGatilho.etapas || []"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <div
+          v-else-if="campo.peca === 'agente_de_ia'"
+          class="flex flex-col gap-1.5"
+          data-peca="agente_de_ia"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <ChoiceSelect
+            v-if="opcoes.agenteDeIa?.length"
+            :model-value="rascunho[campo.nome] ?? ''"
+            :aria-label="$t(campo.rotulo)"
+            :placeholder="$t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.ESCOLHA')"
+            :options="opcoes.agenteDeIa"
+            @update:model-value="novo => mudarNativo(campo.nome, novo)"
+          />
+          <p
+            v-else-if="opcoes.agenteDeIaFalhou"
+            class="mb-0 text-sm text-n-ruby-11"
+            data-agentes-de-ia-falhou
+          >
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.AGENTES_DE_IA_FALHOU') }}
+          </p>
+          <p
+            v-else-if="opcoes.agenteDeIa"
+            class="mb-0 text-sm text-n-slate-11"
+            data-sem-agente-de-ia
+          >
+            {{ $t('AUTOMACAO_LIVRE.ALTERAR_PAINEL.SEM_AGENTE_DE_IA') }}
+          </p>
+        </div>
+        <LivreRetornoPara
+          v-else-if="campo.peca === 'quem_recebe_retorno'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :opcoes="opcoes"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreRetornoEnvio
+          v-else-if="campo.peca === 'envio_do_retorno'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
         <LivreIaCampo
           v-else-if="ehDeIa"
           :campo="campo"
@@ -410,7 +480,7 @@ defineExpose({ abrir, fechar });
 
       <LivreCampo
         v-for="campo in camposDaAcao"
-        :key="campo.nome"
+        :key="`${aberturas}-${campo.nome}`"
         :campo="campo"
         :model-value="lerCampo(rascunho, entrada, campo.nome)"
         :catalogo="catalogo"

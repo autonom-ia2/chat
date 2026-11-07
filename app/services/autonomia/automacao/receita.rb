@@ -75,9 +75,19 @@ class Autonomia::Automacao::Receita
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
+    return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
+    return problemas_do_proprio_passo(passo) if %w[ia_assumir card].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
+  end
+
+  # Os passos que se conferem sozinhos ao salvar, na própria classe: o "Passar para a agente de IA" (G15) e o "criar
+  # card" (G4), que confere também a pessoa.
+  def problemas_do_proprio_passo(passo)
+    return ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo, @account_user) if passo['tipo'] == 'card'
+
+    ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
   end
 
   # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
@@ -104,6 +114,11 @@ class Autonomia::Automacao::Receita
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
+  end
+
+  # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
+  def problemas_do_retorno(passo)
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) { |c| problemas_do_caminho(passo['id'], c) }
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
@@ -186,7 +201,7 @@ class Autonomia::Automacao::Receita
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
 
-    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera)
+    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
@@ -238,17 +253,11 @@ class Autonomia::Automacao::Receita
     permitidas = ::Autonomia::Automacao::AcoesPermitidas
     exigidos = permitidas.exige(acao).select { |campo| valores[campo].blank? }
     fixos = permitidas.fixos(acao).reject { |campo, valor| valores[campo] == valor }
-    proibidos = permitidas.proibe(acao).select { |campo| mandado?(valores, campo.split('.')) }
+    proibidos = permitidas.proibidos(acao, valores)
 
     exigidos.map { |campo| texto(:exige, passo: id, campo: campo) } +
       fixos.map { |campo, valor| texto(:fixo, passo: id, campo: campo, valor: valor) } +
       proibidos.map { |campo| texto(:proibido, passo: id, campo: campo) }
-  end
-
-  def mandado?(valores, partes)
-    return valores.key?(partes.first) if partes.one?
-
-    valores[partes.first].is_a?(Hash) && mandado?(valores[partes.first], partes.drop(1))
   end
 
   def parametros(acao)

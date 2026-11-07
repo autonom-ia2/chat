@@ -92,6 +92,11 @@ export const novoPasso = (entrada, id, t) => {
   // G2: a caixa de e-mail a escolher, o assunto e o texto a escrever.
   if (entrada.tipo === 'email')
     return { id, tipo: 'email', caixa_id: null, assunto: [], texto: [] };
+  // G3: o retorno nasce para o responsável, daqui a um dia, só como lembrete.
+  if (entrada.tipo === 'retorno')
+    return { id, tipo: 'retorno', titulo: [], daqui: { ...DURACAO_PADRAO } };
+  // G4: a etapa do card a escolher no painel.
+  if (entrada.tipo === 'card') return { id, tipo: 'card', etapa_id: null };
   // F7: os passos de IA nascem com o que a IA lê por padrão; o decidir com dois
   // caminhos e o extrair com um dado, a preencher no painel.
   const LE = ['mensagens_recentes'];
@@ -120,6 +125,9 @@ export const novoPasso = (entrada, id, t) => {
     return { id, tipo: 'escrever', le: LE, instrucao: '', destino: 'sugestao' };
   if (entrada.tipo === 'resumir')
     return { id, tipo: 'resumir', le: LE, linhas: 3, destino: 'nota' };
+  // G15: a agente nasce sem escolha; o "Salvar" do painel espera escolher.
+  if (entrada.tipo === 'ia_assumir')
+    return { id, tipo: 'ia_assumir', agente_id: null };
 
   const caminho = Object.fromEntries(
     Object.entries(entrada.caminho || {})
@@ -162,6 +170,7 @@ export const comPermissoes = (dados, podeLer) => {
   };
 };
 
+// G12: a reunião (`so_nos_gatilhos`) só nos gatilhos de reunião.
 export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   const alvo = dados?.gatilhos?.find(item => item.tipo === tipoDoGatilho)?.alvo;
   const bases = alvo && dados.alvos?.[alvo];
@@ -169,7 +178,9 @@ export const doAlvoDoGatilho = (dados, tipoDoGatilho) => {
   return {
     ...dados,
     valores: dados.valores.filter(
-      item => !item.base || bases.includes(item.base)
+      item =>
+        (!item.base || bases.includes(item.base)) &&
+        (!item.so_nos_gatilhos || item.so_nos_gatilhos.includes(tipoDoGatilho))
     ),
   };
 };

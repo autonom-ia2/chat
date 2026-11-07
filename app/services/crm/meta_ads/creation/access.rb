@@ -3,6 +3,8 @@
 # a pessoa entra com o Facebook antes do primeiro passo.
 class Crm::MetaAds::Creation::Access
   REQUIRED = %w[ads_management pages_manage_ads].freeze
+  # Criar post (PR 3, #2653): cada rede pede a sua.
+  PUBLISH = { 'facebook' => 'pages_manage_posts', 'instagram' => 'instagram_content_publish' }.freeze
 
   def initialize(connection)
     @connection = connection
@@ -19,6 +21,11 @@ class Crm::MetaAds::Creation::Access
   # Mudar orçamento, datas e situação de anúncio que já existe: só `ads_management`.
   def can_change_ads?
     @connection.own_token? && granted.include?('ads_management')
+  end
+
+  # As redes em que o token pode publicar post: { 'facebook' => bool, 'instagram' => bool }.
+  def can_publish
+    PUBLISH.transform_values { |permission| @connection.own_token? && granted.include?(permission) }
   end
 
   private

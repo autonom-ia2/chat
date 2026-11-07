@@ -41,6 +41,7 @@ import MetaAdsCreateDone from './MetaAdsCreateDone.vue';
 import MetaAdsCreateGoal from './MetaAdsCreateGoal.vue';
 import MetaAdsCreateKind from './MetaAdsCreateKind.vue';
 import MetaAdsCreatePost from './MetaAdsCreatePost.vue';
+import MetaAdsCreatePublishFlow from './MetaAdsCreatePublishFlow.vue';
 import MetaAdsCreateReview from './MetaAdsCreateReview.vue';
 
 // Anúncios da Meta (#2198), o Gerenciador simples, sem sair do painel. Anúncio novo, uma pergunta por tela: foto,
@@ -50,9 +51,10 @@ import MetaAdsCreateReview from './MetaAdsCreateReview.vue';
 // quando há mais de um. O resto começa pronto (R$ 20,00 por dia, hoje, sem data para terminar). O anúncio nasce
 // PAUSADO (campanha e grupo ativos, gasto zero); a tela final já traz o "Ativar anúncio", que mostra quanto vai
 // gastar antes de o dinheiro começar a sair. Impulsionar post (#2339): o post (abas Instagram e Facebook) → quem vê →
-// quanto investir → conferir, também pausado.
+// quanto investir → conferir, também pausado. Criar post (#2653): tela própria (MetaAdsCreatePublishFlow), que
+// publica na hora e, para impulsionar, volta para cá com o post já escolhido.
 const props = defineProps({
-  // 'ad' (anúncio novo) ou 'post' (impulsionar): o botão que abriu já escolhe.
+  // 'ad' (anúncio novo), 'post' (impulsionar) ou 'publish' (criar post): o botão que abriu já escolhe.
   kind: { type: String, default: null },
 });
 
@@ -155,12 +157,19 @@ const fixedKind = computed(
   () => props.kind || (kinds.value.length === 1 ? kinds.value[0] : null)
 );
 
-// Página e número só perguntam quando há escolha a fazer.
-const needsWhere = computed(
-  () => pages.value.length > 1 || numbers.value.length > 1
-);
-
 const isPost = computed(() => draft.value.kind === 'post');
+const isPublish = computed(() => draft.value.kind === 'publish');
+// O número do WhatsApp só é pergunta quando o anúncio leva ao WhatsApp (#2645). No post ele ainda pode ser: o botão
+// do WhatsApp só se decide no passo do post, que vem depois.
+const asksNumber = computed(
+  () => isPost.value || draft.value.destination === 'WHATSAPP'
+);
+const asksPage = computed(() => pages.value.length > 1);
+const asksNumberChoice = computed(
+  () => asksNumber.value && numbers.value.length > 1
+);
+// Página e número só perguntam quando há escolha a fazer.
+const needsWhere = computed(() => asksPage.value || asksNumberChoice.value);
 // Anúncio novo (#2564): logo depois do "O que fazer", para onde vai quem toca (conversa, site ou perfil).
 const STEPS = computed(() => [
   'KIND',
@@ -173,11 +182,24 @@ const STEPS = computed(() => [
 ]);
 const current = computed(() => STEPS.value[step.value]);
 // A frase do passo; a da foto no anúncio de perfil diz que ele aparece só no Instagram (#2564).
-const stepHint = computed(() =>
-  current.value === 'CONTENT' && draft.value.destination === 'INSTAGRAM_PROFILE'
-    ? `${KEY}.CONTENT.HINT_PROFILE`
-    : `${KEY}.${current.value}.HINT`
+// No "Onde", o título e a frase dizem só o que o passo pergunta: a Página, o número ou os dois (#2645).
+const whereVariant = computed(() => {
+  if (!asksPage.value) return '_NUMBER';
+  return asksNumberChoice.value ? '' : '_PAGE';
+});
+const stepTitle = computed(() =>
+  current.value === 'WHERE'
+    ? `${KEY}.WHERE.TITLE${whereVariant.value}`
+    : `${KEY}.${current.value}.TITLE`
 );
+const stepHint = computed(() => {
+  if (current.value === 'WHERE')
+    return `${KEY}.WHERE.HINT${whereVariant.value}`;
+  return current.value === 'CONTENT' &&
+    draft.value.destination === 'INSTAGRAM_PROFILE'
+    ? `${KEY}.CONTENT.HINT_PROFILE`
+    : `${KEY}.${current.value}.HINT`;
+});
 const total = computed(() => STEPS.value.length - 1);
 
 const impulsionar = useImpulsionarPost({ draft, numbers });
@@ -295,11 +317,11 @@ const contentMissing = computed(() => {
 const STEP_READY = {
   KIND: () => Boolean(draft.value.kind),
   GOAL: () => Boolean(goal.value),
-  // Com um número só (ou nenhum), ele não é pergunta: já vem escolhido ou o destino não é o WhatsApp.
+  // Com um número só (ou nenhum), ou com destino que não é o WhatsApp, ele não é pergunta.
   WHERE: () =>
     Boolean(
       draft.value.page_id &&
-        (numbers.value.length <= 1 || draft.value.whatsapp_number)
+        (!asksNumberChoice.value || draft.value.whatsapp_number)
     ),
   CONTENT: () => !contentMissing.value,
   // Enquanto lê (ou relê para outra Página), o post marcado ainda pode ser o da leitura anterior.
@@ -316,6 +338,21 @@ const STEP_READY = {
   REVIEW: () => Boolean(draft.value.name.trim()),
 };
 const ready = computed(() => STEP_READY[current.value]());
+// Destino trocado depois do "Onde" (#2645, o "Trocar" do passo da foto): o "Onde" pode entrar ou sair da lista, e o
+// número do passo mudaria de lugar. A pessoa fica no passo em que estava. Se o WhatsApp entrou pedindo um número que
+// ainda não foi escolhido, ela vai ao "Onde": anúncio do WhatsApp nunca chega à conferência sem número.
+watch(
+  STEPS,
+  (list, old) => {
+    const index = list.indexOf(old[step.value]);
+    const where = list.indexOf('WHERE');
+    const missingNumber =
+      !old.includes('WHERE') && where >= 0 && !STEP_READY.WHERE();
+    if (missingNumber && where < index) step.value = where;
+    else if (index >= 0) step.value = index;
+  },
+  { flush: 'sync' }
+);
 
 const blockReason = computed(() => {
   if (current.value === 'CONTENT' && contentMissing.value) {
@@ -389,6 +426,30 @@ const back = () => {
 const chooseKind = kind => {
   draft.value = { ...draft.value, kind };
   if (!blocker.value) step.value = 1;
+};
+
+// Criar post (#2653): voltar da primeira tela dele é voltar à escolha (ou ao painel, quando o tipo veio decidido).
+const leavePublish = () => {
+  if (fixedKind.value) emit('back');
+  else step.value = 0;
+};
+// "Impulsionar este post": segue como o impulsionar, no passo do post, com o que acabou de ser publicado já escolhido.
+const boostPublished = ({
+  page_id: pageId,
+  post_source: source,
+  post_id: id,
+}) => {
+  draft.value = {
+    ...draft.value,
+    kind: 'post',
+    page_id: pageId,
+    post_source: source,
+    post_id: id,
+  };
+  // Post do Instagram com mais de um número: o número vem antes (o botão do WhatsApp precisa dele).
+  const where = STEPS.value.indexOf('WHERE');
+  step.value =
+    where >= 0 && !STEP_READY.WHERE() ? where : STEPS.value.indexOf('POST');
 };
 
 // "Nada foi criado" só quando o servidor garante (`nothing_created`). Sem garantia, pede para conferir na Meta.
@@ -610,7 +671,7 @@ const BLOCKERS = {
     class="flex min-w-0 flex-col gap-5 pb-28 md:pb-0"
   >
     <button
-      v-if="!created"
+      v-if="!created && !(isPublish && step > 0)"
       type="button"
       data-create-back
       :disabled="unconfirmed"
@@ -699,6 +760,16 @@ const BLOCKERS = {
       </p>
     </div>
 
+    <MetaAdsCreatePublishFlow
+      v-else-if="isPublish && step > 0"
+      :pages="pages"
+      :publish="options.publish"
+      @back="leavePublish"
+      @boost="boostPublished"
+      @done="emit('back')"
+      @sign-in="signIn"
+    />
+
     <form
       v-else
       data-create-form
@@ -730,7 +801,7 @@ const BLOCKERS = {
           tabindex="-1"
           class="m-0 text-xl font-semibold text-n-slate-12 focus:outline-none"
         >
-          {{ $t(`${KEY}.${current}.TITLE`) }}
+          {{ $t(stepTitle) }}
         </h2>
         <p class="m-0 max-w-prose text-sm leading-6 text-n-slate-11">
           {{ $t(stepHint) }}
@@ -777,7 +848,7 @@ const BLOCKERS = {
               @update:model-value="draft = { ...draft, page_id: $event }"
             />
           </div>
-          <div v-if="numbers.length > 1" class="flex flex-col gap-2">
+          <div v-if="asksNumberChoice" class="flex flex-col gap-2">
             <span class="text-sm font-medium text-n-slate-12">
               {{ $t(`${KEY}.WHERE.NUMBER`) }}
             </span>

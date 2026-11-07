@@ -161,8 +161,8 @@ class Crm::MetaAds::InstagramPrivateReply
 
   # Reserva de um envio que nunca saiu (Crm::MetaAdsCommentAction#abandoned?): nada foi enviado, pode refazer.
   def release_abandoned!(comment_id)
-    Crm::MetaAdsCommentAction.where(network: 'instagram', comment_id: comment_id.to_s, action: 'private_reply', attempted_at: nil,
-                                    confirmed_at: nil, at: ...Crm::MetaAdsCommentAction::RESERVED_TTL.ago).delete_all
+    Crm::MetaAdsCommentAction.where(account_id: @channel.account_id, network: 'instagram', comment_id: comment_id.to_s, action: 'private_reply',
+                                    attempted_at: nil, confirmed_at: nil, at: ...Crm::MetaAdsCommentAction::RESERVED_TTL.ago).delete_all
   end
 
   def claim!(comment_id, actor, user, ad_id)
@@ -195,12 +195,31 @@ class Crm::MetaAds::InstagramPrivateReply
   # Sem `message_id` a mensagem não é criada: sem source_id, o envio da caixa mandaria o texto de novo.
   def record!(action, comment, text, sent, user)
     conversation = conversation_for(sent['recipient_id'].to_s, comment.dig('from', 'username'))
-    message = Message.find_by(inbox_id: conversation.inbox_id, source_id: sent['message_id']) || conversation.messages.create!(
-      account_id: conversation.account_id, inbox_id: conversation.inbox_id, message_type: :outgoing, status: :sent,
-      content: text, sender: user, source_id: sent['message_id']
-    )
+    eco = Message.find_by(inbox_id: conversation.inbox_id, source_id: sent['message_id'])
+    message = if eco
+                marcar!(eco, action)
+              else
+                conversation.messages.create!(
+                  account_id: conversation.account_id, inbox_id: conversation.inbox_id, message_type: :outgoing, status: :sent,
+                  content: text, sender: user, source_id: sent['message_id'], content_attributes: marca_da_ia(action)
+                )
+              end
     action.update!(conversation: message.conversation)
     { conversation: message.conversation, message: message }
+  end
+
+  # O privado da IA (actor `ai`) é envio automático: leva a marca de PessoaDaEquipe::MARCAS_DE_ENVIO_AUTOMATICO. O da
+  # tela é a pessoa que clicou, sem marca.
+  def marca_da_ia(action)
+    registro = Crm::MetaAds::ComentariosIa::Registro
+    action.actor == registro::ACTOR ? { registro::MARCA => action.id } : {}
+  end
+
+  # O eco do Instagram chegou antes e a mensagem dele é a que fica: a marca da IA entra nela também.
+  def marcar!(message, action)
+    marca = marca_da_ia(action)
+    message.update!(content_attributes: message.content_attributes.merge(marca)) if marca.present?
+    message
   end
 
   # A conversa que a pessoa já tem aberta na caixa, como o recebimento do Direct escolhe; senão, uma nova.
