@@ -162,10 +162,35 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       drenar
 
       expect(filhas(automacao).map(&:alvo)).to contain_exactly(card_perdido, outro_perdido)
-      pulados = Autonomia::Automacao::Registro.find_by!(execucao: mae, motivo: 'filhas_puladas')
-      expect(pulados).to have_attributes(passo: 'outro', resultado: 'pulado', dados: { 'ja_aberta' => 2 })
+      expect(Autonomia::Automacao::Registro.where(execucao: mae, motivo: 'filhas_puladas')).to be_empty
       expect(saidas(conversa)).to contain_exactly('Da outra vez pesou: achou caro. Este ano consigo melhor.',
                                                   'Da outra vez pesou: fechou com outro. Este ano consigo melhor.')
+    end
+
+    it 'o job que cai no meio repete e abre o que faltou, sem duplicar nem contar como pulado', :aggregate_failures do
+      outro_perdido = card_de(paulo, conversa_antiga, title: 'Seguro 2024', status: :lost, lost_reason: 'fechou com outro')
+      automacao = ligada(receita({ de: 'cards_do_contato', situacao: ['lost'] }))
+      create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, sender: paulo, content: 'Oi')
+      drenar_ate_enfileirar_filhas
+      job = enqueued_jobs.find { |item| item[:job] == Autonomia::Automacao::EmOutroRegistroJob }
+      argumentos = ActiveJob::Arguments.deserialize(job[:args])
+      chamadas = 0
+      allow(Autonomia::Automacao::AvancarJob).to receive(:perform_later).and_wrap_original do |original, *args|
+        chamadas += 1
+        raise ActiveRecord::Deadlocked if chamadas == 2
+
+        original.call(*args)
+      end
+
+      expect { Autonomia::Automacao::EmOutroRegistroJob.perform_now(*argumentos) }.to raise_error(ActiveRecord::Deadlocked)
+      Autonomia::Automacao::EmOutroRegistroJob.perform_now(*argumentos)
+      enqueued_jobs.delete(job)
+      drenar
+
+      expect(filhas(automacao).map(&:alvo)).to contain_exactly(card_perdido, outro_perdido)
+      expect(saidas(conversa)).to contain_exactly('Da outra vez pesou: achou caro. Este ano consigo melhor.',
+                                                  'Da outra vez pesou: fechou com outro. Este ano consigo melhor.')
+      expect(Autonomia::Automacao::Registro.where(execucao: execucoes(automacao).first, motivo: 'filhas_puladas')).to be_empty
     end
 
     it 'sem filtro, a mensagem que a filha manda não redispara a automação: a filha leva a cadeia da mãe', :aggregate_failures do
@@ -201,6 +226,56 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
       expect(historico_de(automacao).last).to eq(%w[inicio pulado sem_chave_de_funis])
       expect(filhas(automacao).sole.estado).to eq('parada')
       expect(saidas(conversa)).to be_empty
+    end
+
+    it 'quem ligou não vê a conversa da mãe: a filha não abre, e a mãe diz quantos ficaram de fora', :aggregate_failures do
+      automacao = ligada(receita(perdido_mais_recente))
+
+      create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, sender: paulo, content: 'Oi')
+      drenar_ate_enfileirar_filhas
+      sem_ver(conversa)
+      drenar
+
+      expect(filhas(automacao)).to be_empty
+      pulados = Autonomia::Automacao::Registro.find_by!(execucao: execucoes(automacao).first, motivo: 'filhas_puladas')
+      expect(pulados.dados).to eq('fora_do_alcance' => 1)
+      expect(saidas(conversa)).to be_empty
+    end
+
+    it 'vê o card e a principal, mas perdeu a conversa da mãe depois de a filha abrir: a filha pausa sem agir', :aggregate_failures do
+      automacao = ligada(receita(perdido_mais_recente))
+
+      create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :incoming, sender: paulo, content: 'Oi')
+      drenar_ate_abrir_filha
+      sem_ver(conversa)
+      drenar
+
+      expect(historico_de(automacao).last).to eq(%w[inicio pulado quem_ligou_sem_acesso])
+      expect(filhas(automacao).sole.estado).to eq('parada')
+      expect(saidas(conversa)).to be_empty
+      expect(saidas(conversa_antiga)).to be_empty
+    end
+  end
+
+  # Quem ligou deixa de ver só esta conversa; o card e a conversa principal dele continuam à vista.
+  def sem_ver(escondida)
+    allow(ConversationPolicy).to receive(:new).and_wrap_original do |original, contexto, conversa|
+      politica = original.call(contexto, conversa)
+      allow(politica).to receive(:show?).and_return(false) if conversa == escondida
+      politica
+    end
+  end
+
+  # Roda os jobs até o passo da mãe enfileirar o que abre as filhas, sem rodar esse.
+  def drenar_ate_enfileirar_filhas
+    FechamentoAutomacao::LIMITE_DE_JOBS.times do
+      return if enqueued_jobs.any? { |item| item[:job] == Autonomia::Automacao::EmOutroRegistroJob }
+
+      job = enqueued_jobs.find { |item| FechamentoAutomacao::JOBS.include?(item[:job]) }
+      raise 'o passo não enfileirou as filhas' unless job
+
+      enqueued_jobs.delete(job)
+      job[:job].perform_now(*ActiveJob::Arguments.deserialize(job[:args]))
     end
   end
 

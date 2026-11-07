@@ -113,6 +113,7 @@ describe('LivreRegistro', () => {
     });
 
     expect(wrapper.find('[data-sem-campo]').exists()).toBe(true);
+    expect(wrapper.find('[data-aviso-do-campo]').exists()).toBe(true);
     expect(wrapper.find('[data-campo]').exists()).toBe(false);
   });
 

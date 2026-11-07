@@ -1,11 +1,11 @@
 # Abre as execuções filhas do passo "em outro registro" (G18, #2671): ver FilhasDoPasso. Fica fora da rodada da mãe,
 # para a procura (sem teto de registros) não prender o worker dela.
 #
-# Sem nova tentativa do Sidekiq: repetir abriria de novo só o que o índice único deixa, mas um erro no meio fica no log
-# e as filhas já abertas seguem.
+# Com as novas tentativas do Sidekiq: um erro passageiro no meio da procura não pode deixar registros sem os passos. Repetir
+# é seguro: a filha que a tentativa anterior já abriu é reconhecida pela marca (índice único automacao_id, evento) e não
+# abre de novo, nem conta como pulada.
 class Autonomia::Automacao::EmOutroRegistroJob < ApplicationJob
   queue_as :medium
-  sidekiq_options retry: false
 
   def perform(account_id, mae_id, passo_id, contato_id)
     mae = ::Autonomia::Automacao::Execucao.find_by(id: mae_id, account_id: account_id)

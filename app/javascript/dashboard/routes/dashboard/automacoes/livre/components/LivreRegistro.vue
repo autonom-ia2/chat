@@ -148,6 +148,9 @@ const trocarFunil = valor => trocar({ funil_id: valor, etapa_id: null });
         <p v-else class="mb-0 text-sm text-n-slate-11" data-sem-campo>
           {{ $t(`${O}.SEM_CAMPO`) }}
         </p>
+        <p class="mb-0 text-sm text-n-amber-11" data-aviso-do-campo>
+          {{ $t(`${O}.AVISO_DO_CAMPO`) }}
+        </p>
       </div>
       <div class="flex flex-col gap-1.5">
         <span class="text-sm font-medium text-n-slate-12">

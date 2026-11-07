@@ -35,20 +35,21 @@ class Autonomia::Automacao::Acesso
     return motivo if motivo
     return 'sem_chave_de_funis' if filha_no_card?(alvo, execucao) && !::Autonomia::Automacao::RegraDoFunil.chave?(@account_user)
 
-    'quem_ligou_sem_acesso' unless alcanca?(alvo)
+    'quem_ligou_sem_acesso' unless alcanca?(alvo, execucao)
   end
 
   def filha_no_card?(alvo, execucao) = alvo.is_a?(::Crm::Card) && ::Autonomia::Automacao::EmOutroRegistro.da(execucao).present?
 
-  # O alvo é uma conversa, um card ou um contato (#2499). No card, valem o próprio card e a conversa principal dele, em
-  # que os passos agem: a pergunta vai a cada política, e quem não vê um dos dois pausa a automação em vez de quebrar a
-  # rodada. O contato pergunta à política do contato se pode mudá-lo (update?): o motor age, não só lê.
-  def alcanca?(alvo)
+  # O alvo é uma conversa, um card ou um contato (#2499). No card, valem o próprio card e a conversa em que os passos
+  # agem (a principal dele, ou a da mãe na filha do "em outro registro", G18: Contexto#conversa, a mesma que os passos
+  # usam): a pergunta vai a cada política, e quem não vê um dos dois pausa a automação em vez de quebrar a rodada. O
+  # contato pergunta à política do contato se pode mudá-lo (update?): o motor age, não só lê.
+  def alcanca?(alvo, execucao = nil)
     contexto = { user: @usuario, account: @account, account_user: @account_user }
     return ContactPolicy.new(contexto, alvo).update? if alvo.is_a?(::Contact)
     return ConversationPolicy.new(contexto, alvo).show? unless alvo.is_a?(::Crm::Card)
 
-    conversa = alvo.primary_conversation
+    conversa = ::Autonomia::Automacao::Contexto.de(alvo, execucao: execucao).conversa
     ::Crm::CardPolicy.new(contexto, alvo).show? && (conversa.nil? || ConversationPolicy.new(contexto, conversa).show?)
   end
 

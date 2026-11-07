@@ -8,6 +8,7 @@
       },
       "CAMPO": "Qual campo guarda o contato?",
       "SEM_CAMPO": "Nenhum campo de número aqui pode guardar um contato. Crie um campo de número antes.",
+      "AVISO_DO_CAMPO": "Se este campo é preenchido pelo que o cliente escreve (pela IA, por exemplo), o cliente pode apontar outro contato da conta. Prefira um campo que só a equipe preenche.",
       "USAR": "Fazer onde?",
       "USOS": {
         "CONVERSA": "Na conversa mais recente dele",

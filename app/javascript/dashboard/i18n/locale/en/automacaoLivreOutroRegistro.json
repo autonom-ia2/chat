@@ -8,6 +8,7 @@
       },
       "CAMPO": "Which field holds the contact?",
       "SEM_CAMPO": "No number field here can hold a contact. Create a number field first.",
+      "AVISO_DO_CAMPO": "If this field is filled in from what the customer writes (by AI, for example), the customer could point to another contact in the account. Prefer a field only your team fills in.",
       "USAR": "Where?",
       "USOS": {
         "CONVERSA": "In their most recent conversation",

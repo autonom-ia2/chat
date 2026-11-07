@@ -19,13 +19,13 @@ class Autonomia::Automacao::FilhasDoPasso
     @acesso = ::Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho)
   end
 
-  # A conta por resultado ('abertas', 'fora_do_alcance', 'ja_aberta'). A automação desligada (ou o motor) não abre
-  # nenhuma, e a mãe registra isso.
+  # A conta por resultado ('abertas', 'abertas_antes', 'fora_do_alcance', 'ja_aberta'). A automação desligada (ou o
+  # motor) não abre nenhuma, e a mãe registra isso.
   def abrir
     return pular_tudo unless @mae.automacao.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
 
     contagem = registros.each_with_object(Hash.new(0)) { |registro, conta| conta[abrir_para(registro)] += 1 }
-    anotar_pulados(contagem.except('abertas'))
+    anotar_pulados(contagem.except('abertas', 'abertas_antes'))
     contagem
   end
 
@@ -60,16 +60,34 @@ class Autonomia::Automacao::FilhasDoPasso
   # O próprio alvo da mãe não é "outro registro".
   def card_da_mae = (@mae.alvo_id if @mae.alvo_type == 'Crm::Card')
 
+  # O alcance confere a conversa em que a filha vai agir (a da mãe, no card do mesmo contato): por isso a filha é montada
+  # antes, e só gravada se quem ligou alcança o registro e essa conversa.
+  # O registro que já tem a filha desta mãe (uma tentativa anterior do job, que caiu no meio) não conta como pulado.
   def abrir_para(alvo)
-    return 'fora_do_alcance' unless @acesso.alcanca?(alvo)
-
     marca = Time.current.floor(6)
-    filha = criar(alvo, marca)
-    anotar(filha, alvo)
+    filha = montar(alvo, marca)
+    return retomar(filha.evento) if Execucao.exists?(automacao_id: @mae.automacao_id, evento: filha.evento)
+    return 'fora_do_alcance' unless @acesso.alcanca?(alvo, filha)
+
+    Execucao.transaction do
+      filha.save!
+      anotar(filha, alvo)
+    end
     ::Autonomia::Automacao::AvancarJob.perform_later(filha.id, marca.iso8601(6))
     'abertas'
   rescue ActiveRecord::RecordNotUnique
     'ja_aberta'
+  end
+
+  # A filha que a tentativa anterior gravou e não chegou a pôr na fila ainda está só reservada (due_at = travada_em; a
+  # primeira rodada zera o due_at ao tomar a reserva). Vai para a fila de novo: a tomada atômica do Executor faz a rodada
+  # acontecer uma vez só, mesmo que a primeira tentativa tenha enfileirado.
+  def retomar(evento)
+    filha = Execucao.find_by(automacao_id: @mae.automacao_id, evento: evento)
+    if filha.estado == 'andando' && filha.due_at.present? && filha.due_at == filha.travada_em
+      ::Autonomia::Automacao::AvancarJob.perform_later(filha.id, filha.travada_em.iso8601(6))
+    end
+    'abertas_antes'
   end
 
   def pular_tudo
@@ -87,10 +105,10 @@ class Autonomia::Automacao::FilhasDoPasso
                                              resultado: 'pulado', motivo: motivo, dados: dados)
   end
 
-  def criar(alvo, marca)
-    Execucao.create!(account: @account, automacao: @mae.automacao, versao: @mae.versao, alvo: alvo, chave_gatilho: @mae.chave_gatilho,
-                     estado: 'andando', travada_em: marca, due_at: marca, cadeia: @mae.cadeia, profundidade: @mae.profundidade,
-                     evento: ::Autonomia::Automacao::EmOutroRegistro.marca(@mae, alvo, @passo['id']))
+  def montar(alvo, marca)
+    Execucao.new(account: @account, automacao: @mae.automacao, versao: @mae.versao, alvo: alvo, chave_gatilho: @mae.chave_gatilho,
+                 estado: 'andando', travada_em: marca, due_at: marca, cadeia: @mae.cadeia, profundidade: @mae.profundidade,
+                 evento: ::Autonomia::Automacao::EmOutroRegistro.marca(@mae, alvo, @passo['id']))
   end
 
   # "Registre no histórico qual conversa foi usada" (Automação, 07/11): a da mãe ou a do próprio registro.
