@@ -40,13 +40,13 @@ nativos:
   ia_assumir: { grupo: EQUIPE }
   # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
   retorno: { grupo: EQUIPE }
+  # G18 (#2671): os passos de dentro rodam no contato guardado num campo ou nos outros cards do contato. Os cards pedem a
+  # chave de funis: o painel só os oferece a quem pode mexer no funil, e quem recusa de verdade é a Receita.
+  em_outro_registro: { grupo: CONTROLE }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo e a Issue que os leva para a tela. A receita
 # aceita e o motor roda; a tela só os mostra quando tiver as peças.
-nativos_fora_do_editor:
-  # G18 (#2671): o ramo roda em outro registro, e a tela ainda não tem como montar a ligação nem o ramo dela. A receita
-  # pelo Guia e pela API já aceita, e o motor roda.
-  em_outro_registro: a tela ainda não monta a ligação com o outro registro nem os passos de dentro dela (#2672)
+nativos_fora_do_editor: {}
 
 # Os valores da mensagem que disparou o gatilho (#2496, Valores::MENSAGEM). Só existem no "Só se" do gatilho dela; o
 # editor não os oferece em outro gatilho nem nos passos (a Receita recusa: mensagem_so_no_gatilho). As opções e os

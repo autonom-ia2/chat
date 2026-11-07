@@ -18,13 +18,15 @@ class Autonomia::Automacao::PassoEmOutroRegistro
   end
 
   def executar
+    # A filha nunca abre netas: o salvar já recusa "em outro registro" dentro de outro, e a rodada confere de novo.
+    return Resultado.new(tipo: :pulado, motivo: 'receita_com_problema', dados: {}) if ::Autonomia::Automacao::EmOutroRegistro.da(@execucao)
     return Resultado.new(tipo: :sem_acesso, motivo: 'sem_chave_de_funis', dados: {}) if sem_chave?
 
     # Só um número inteiro de verdade: "12abc" não vira o contato 12.
     contato_id = Integer(ancora.to_s, 10, exception: false).to_i
     return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) unless contato_id.positive?
 
-    ::Autonomia::Automacao::EmOutroRegistroJob.perform_later(@execucao.id, @passo['id'], contato_id)
+    ::Autonomia::Automacao::EmOutroRegistroJob.perform_later(@execucao.account_id, @execucao.id, @passo['id'], contato_id)
     Resultado.new(tipo: :ok, dados: { 'ligacao' => registro['de'], 'contato_id' => contato_id })
   end
 

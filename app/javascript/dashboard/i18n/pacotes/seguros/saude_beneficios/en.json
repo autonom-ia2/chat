@@ -1326,6 +1326,11 @@
     },
     "GATILHO_COM": {
       "CARD_GANHO": "When a plan in {funil} is implemented"
+    },
+    "OUTRO_REGISTRO": {
+      "SITUACOES": {
+        "WON": "With the plan implemented"
+      }
     }
   }
 }

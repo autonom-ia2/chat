@@ -157,10 +157,13 @@ RSpec.describe 'Fechamento #2414 · G18: agir em outro registro', :fechamento_au
 
       cliente_escreve(conversa, 'Quero uma cotação')
       mae = execucoes(automacao).first
-      Autonomia::Automacao::EmOutroRegistroJob.perform_now(mae.id, 'outro', paulo.id)
+      Autonomia::Automacao::EmOutroRegistroJob.perform_now(account.id + 1, mae.id, 'outro', paulo.id)
+      Autonomia::Automacao::EmOutroRegistroJob.perform_now(account.id, mae.id, 'outro', paulo.id)
       drenar
 
       expect(filhas(automacao).map(&:alvo)).to contain_exactly(card_perdido, outro_perdido)
+      pulados = Autonomia::Automacao::Registro.find_by!(execucao: mae, motivo: 'filhas_puladas')
+      expect(pulados).to have_attributes(passo: 'outro', resultado: 'pulado', dados: { 'ja_aberta' => 2 })
       expect(saidas(conversa)).to contain_exactly('Da outra vez pesou: achou caro. Este ano consigo melhor.',
                                                   'Da outra vez pesou: fechou com outro. Este ano consigo melhor.')
     end

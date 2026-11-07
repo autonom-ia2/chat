@@ -92,7 +92,8 @@
       "RESUMIR": "AI summarizes the conversation",
       "IA_ASSUMIR": "Hand over to the AI agent",
       "EMAIL": "Send an e-mail to the customer",
-      "RETORNO": "Create a follow-up for the team"
+      "RETORNO": "Create a follow-up for the team",
+      "EM_OUTRO_REGISTRO": "Do it on the linked contact or cards"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -147,7 +148,9 @@
       "AGENTE_ID": "Which AI agent",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
-      "MODELO": "If the 24-hour window is closed"
+      "MODELO": "If the 24-hour window is closed",
+      "REGISTRO": "Where to run the steps inside",
+      "PASSOS": "Steps inside"
     },
     "OPCOES": {
       "STATUS": {
@@ -304,7 +307,8 @@
       "SENAO": "Otherwise",
       "SE_VENCER": "If time runs out",
       "NENHUM": "None applies",
-      "CAMINHO": "Path {n}"
+      "CAMINHO": "Path {n}",
+      "PASSOS": "On each one"
     },
     "SELETOR": {
       "TITULO": "Choose the next step",

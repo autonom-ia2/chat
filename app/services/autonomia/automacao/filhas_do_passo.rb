@@ -3,8 +3,9 @@
 #
 # Cada filha nasce reservada, como a da Partida, com a cadeia e a profundidade da mãe, e a primeira rodada vai para a
 # fila. O registro que quem ligou não alcança é pulado, como na Partida (D5); o que já tem execução aberta desta
-# automação (ou já teve uma filha deste passo, da mesma mãe) cai no índice único e também é pulado. A primeira linha do
-# histórico da filha diz de que mãe ela veio e, quando há, em que conversa os passos dela agem.
+# automação (ou já teve uma filha deste passo, da mesma mãe) cai no índice único e também é pulado. Os pulados ficam
+# numa linha só no histórico da mãe, com a conta de cada motivo. A primeira linha do histórico da filha diz de que mãe
+# ela veio e, quando há, em que conversa os passos dela agem.
 class Autonomia::Automacao::FilhasDoPasso
   Execucao = ::Autonomia::Automacao::Execucao
   # O filtro da ligação `cards_do_contato` e a coluna do card que ele filtra.
@@ -18,11 +19,14 @@ class Autonomia::Automacao::FilhasDoPasso
     @acesso = ::Autonomia::Automacao::Acesso.new(mae.automacao, chave_gatilho: mae.chave_gatilho)
   end
 
-  # Quantas filhas abriu. A automação desligada (ou o motor) não abre nenhuma.
+  # A conta por resultado ('abertas', 'fora_do_alcance', 'ja_aberta'). A automação desligada (ou o motor) não abre
+  # nenhuma, e a mãe registra isso.
   def abrir
-    return 0 unless @mae.automacao.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
+    return pular_tudo unless @mae.automacao.ativa && ::Autonomia::Automacao::Motor.ligado?(@account)
 
-    registros.count { |registro| abrir_para(registro) }
+    contagem = registros.each_with_object(Hash.new(0)) { |registro, conta| conta[abrir_para(registro)] += 1 }
+    anotar_pulados(contagem.except('abertas'))
+    contagem
   end
 
   private
@@ -57,15 +61,30 @@ class Autonomia::Automacao::FilhasDoPasso
   def card_da_mae = (@mae.alvo_id if @mae.alvo_type == 'Crm::Card')
 
   def abrir_para(alvo)
-    return false unless @acesso.alcanca?(alvo)
+    return 'fora_do_alcance' unless @acesso.alcanca?(alvo)
 
     marca = Time.current.floor(6)
     filha = criar(alvo, marca)
     anotar(filha, alvo)
     ::Autonomia::Automacao::AvancarJob.perform_later(filha.id, marca.iso8601(6))
-    true
+    'abertas'
   rescue ActiveRecord::RecordNotUnique
-    false
+    'ja_aberta'
+  end
+
+  def pular_tudo
+    registrar_na_mae('desligada', {})
+    { 'desligada' => 1 }
+  end
+
+  # Uma linha só na mãe para os registros que ficaram sem os passos, com a conta de cada motivo.
+  def anotar_pulados(pulados)
+    registrar_na_mae('filhas_puladas', pulados) if pulados.any?
+  end
+
+  def registrar_na_mae(motivo, dados)
+    ::Autonomia::Automacao::Registro.create!(account: @account, automacao: @mae.automacao, execucao: @mae, passo: @passo['id'],
+                                             resultado: 'pulado', motivo: motivo, dados: dados)
   end
 
   def criar(alvo, marca)

@@ -4,12 +4,14 @@
 # única da Receita. Quando um ramo acaba, a receita segue no passo depois de quem o abriu, e assim por diante até o fim.
 class Autonomia::Automacao::Roteiro
   # A filha do "em outro registro" (G18, #2671) anda só no ramo do passo que a abriu: começa no primeiro passo dele e
-  # acaba no fim dele, sem seguir os passos da mãe. As outras execuções andam na receita inteira.
+  # acaba no fim dele, sem seguir os passos da mãe. Se o passo não estiver na versão, a filha não anda (nunca a receita
+  # inteira da mãe no registro dela). As outras execuções andam na receita inteira.
   def self.da(execucao)
     receita = execucao.versao.receita
     _mae_id, passo_id = ::Autonomia::Automacao::EmOutroRegistro.da(execucao)
-    passo = passo_id && new(receita).passo(passo_id)
-    passo ? new('passos' => Array(passo['passos'])) : new(receita)
+    return new(receita) unless passo_id
+
+    new('passos' => Array(new(receita).passo(passo_id)&.dig('passos')))
   end
 
   def initialize(receita)

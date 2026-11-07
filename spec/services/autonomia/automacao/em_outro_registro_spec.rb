@@ -30,4 +30,20 @@ RSpec.describe Autonomia::Automacao::EmOutroRegistro do
     expect(roteiro.seguinte('r1')['id']).to eq('r2')
     expect(roteiro.seguinte('r2')).to be_nil
   end
+
+  it 'a filha cujo passo sumiu da versão não anda, em vez de rodar a receita da mãe no registro dela' do
+    versao = instance_double(Autonomia::Automacao::Versao, receita: { 'passos' => [{ 'id' => 'antes', 'tipo' => 'parar' }] })
+    filha = instance_double(Autonomia::Automacao::Execucao, evento: 'em:7:card:42:outro', versao: versao)
+
+    expect(Autonomia::Automacao::Roteiro.da(filha).primeiro).to be_nil
+  end
+
+  it 'a filha nunca abre neta: o passo dentro dela é pulado na rodada, sem procurar nada', :aggregate_failures do
+    filha = instance_double(Autonomia::Automacao::Execucao, evento: 'em:7:card:42:outro')
+    passo = { 'id' => 'neta', 'tipo' => 'em_outro_registro', 'registro' => { 'de' => 'cards_do_contato' }, 'passos' => [] }
+    resultado = Autonomia::Automacao::PassoEmOutroRegistro.new(execucao: filha, passo: passo, valores: nil, acesso: nil).executar
+
+    expect(resultado).to have_attributes(tipo: :pulado, motivo: 'receita_com_problema')
+    expect(Autonomia::Automacao::EmOutroRegistroJob).not_to have_been_enqueued
+  end
 end

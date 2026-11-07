@@ -7,12 +7,12 @@ class Autonomia::Automacao::EmOutroRegistroJob < ApplicationJob
   queue_as :medium
   sidekiq_options retry: false
 
-  def perform(mae_id, passo_id, contato_id)
-    mae = ::Autonomia::Automacao::Execucao.find_by(id: mae_id)
+  def perform(account_id, mae_id, passo_id, contato_id)
+    mae = ::Autonomia::Automacao::Execucao.find_by(id: mae_id, account_id: account_id)
     passo = mae && ::Autonomia::Automacao::Roteiro.new(mae.versao.receita).passo(passo_id)
     return unless passo && ::Autonomia::Automacao::EmOutroRegistro.do_tipo?(passo)
 
-    abertas = ::Autonomia::Automacao::FilhasDoPasso.new(mae, passo, contato_id).abrir
-    Rails.logger.info("[automacao][motor] em_outro_registro execucao=#{mae.id} passo=#{passo_id} filhas=#{abertas}")
+    contagem = ::Autonomia::Automacao::FilhasDoPasso.new(mae, passo, contato_id).abrir
+    Rails.logger.info("[automacao][motor] em_outro_registro execucao=#{mae.id} passo=#{passo_id} #{contagem.to_query}")
   end
 end
