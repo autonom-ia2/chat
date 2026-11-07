@@ -29,7 +29,11 @@
       "TRUE": "yes",
       "FALSE": "no",
       "CLIENTE": "the customer",
-      "EQUIPE": "the team"
+      "EQUIPE": "the team",
+      "SAIU": "sent, not confirmed yet",
+      "ENTREGUE": "delivered",
+      "LIDA": "read",
+      "FALHOU": "failed"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "is",

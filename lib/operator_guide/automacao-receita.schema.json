@@ -20,6 +20,15 @@
         "campo": { "type": "string", "minLength": 1, "maxLength": 255, "description": "Só em card.data e contato.data, obrigatório: a chave do atributo personalizado de tipo data (do card ou do contato)." },
         "quando": { "enum": ["antes", "depois"], "description": "Só em card.data e contato.data, obrigatório: antes (a data ainda vai chegar) ou depois (a data já passou)." },
         "hora": { "type": "integer", "minimum": 0, "maximum": 23, "description": "Só em card.data e contato.data, obrigatória: a hora cheia, no fuso da conta, a partir da qual o dia conta." },
+        "conversa_nova": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["caixa_id"],
+          "properties": {
+            "caixa_id": { "type": "integer", "minimum": 1, "description": "A caixa da conta (WhatsApp, SMS ou API) por onde abrir a conversa." }
+          },
+          "description": "Só nos gatilhos de card e de contato: a caixa por onde o passo mensagem abre a conversa de quem não tem uma (o card sem conversa principal, como o do lead do formulário; o contato). A conversa abre como o \"Nova conversa\" do painel, e a janela, o modelo aprovado e o opt-out valem como sempre: conversa nova no número oficial só sai com modelo. Depois dela, a espera, a IA e a agente usam essa conversa (a do contato nessa caixa, a mais recente não resolvida); no card, ela vira a conversa principal. Quem salva e quem liga precisam poder começar conversa nessa caixa. Sem a caixa, esses passos pulam com sem_conversa."
+        },
         "filtros": {
           "type": "array",
           "items": { "$ref": "#/definitions/condicao" },

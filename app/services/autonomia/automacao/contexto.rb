@@ -4,7 +4,7 @@
 # | alvo     | conversa                             | card | contato           |
 # | conversa | ela                                  | —    | conversa.contact  |
 # | card     | card.primary_conversation (pode faltar) | ele | card.contact, senão o da conversa |
-# | contato  | —                                    | —    | ele               |
+# | contato  | — (a da conversa nova, #2680)        | —    | ele               |
 #
 # Contrato com a F2 (#2498, histórico e ensaio): `rotulo`, `link` e `visivel_para?(usuario)`. O rótulo sai do i18n e do
 # registro na hora, nunca é gravado.
@@ -24,7 +24,17 @@ class Autonomia::Automacao::Contexto
   def conversa
     return @alvo if @alvo.is_a?(::Conversation)
 
-    @alvo.primary_conversation if @alvo.is_a?(::Crm::Card)
+    (@alvo.primary_conversation if @alvo.is_a?(::Crm::Card)) || conversa_nova
+  end
+
+  # Quem não tem conversa (o card sem conversa principal, o contato) usa a que a receita abriu na caixa da conversa nova
+  # (ConversaNova, #2680): a do contato nessa caixa. Sem execução (o ensaio, a partida) não há caixa escolhida. Guarda
+  # só a achada: antes de o passo "mensagem" abrir, a próxima pergunta procura de novo.
+  def conversa_nova
+    return unless @execucao
+
+    conversa_nova = ::Autonomia::Automacao::ConversaNova
+    @conversa_nova ||= conversa_nova.existente(conversa_nova.da_execucao(@execucao), contato)
   end
 
   def card = (@alvo if @alvo.is_a?(::Crm::Card))
@@ -33,7 +43,7 @@ class Autonomia::Automacao::Contexto
     return @alvo if @alvo.is_a?(::Contact)
     return @alvo.contact if @alvo.is_a?(::Conversation)
 
-    @alvo.contact || conversa&.contact if @alvo.is_a?(::Crm::Card)
+    @alvo.contact || @alvo.primary_conversation&.contact if @alvo.is_a?(::Crm::Card)
   end
 
   # A reunião do gatilho de reunião (G12): a da atividade que disparou, achada pela marca da execução e sempre presa ao
@@ -43,6 +53,15 @@ class Autonomia::Automacao::Contexto
     return @reuniao if defined?(@reuniao)
 
     @reuniao = (reuniao_da_atividade if card && @execucao && ::Autonomia::Automacao::Gatilhos.de_reuniao?(@execucao.chave_gatilho))
+  end
+
+  # A última mensagem que esta execução mandou ao cliente (#2680, `envio.*`), pelo `mensagem_id` dos registros dos
+  # passos: o "mensagem", o "escrever" e o "email". A nota do "avisar" também leva o id, mas não é envio ao cliente.
+  def ultimo_envio
+    return unless @execucao
+
+    ids = @execucao.registros.where(resultado: 'ok').where("dados ? 'mensagem_id'").pluck(Arel.sql("dados->>'mensagem_id'"))
+    ::Message.where(account_id: @execucao.account_id, id: ids, private: false, message_type: :outgoing).order(id: :desc).first
   end
 
   # "conversa", "card" ou "contato": a base dos caminhos do Valores que o alvo tem sem ponte.

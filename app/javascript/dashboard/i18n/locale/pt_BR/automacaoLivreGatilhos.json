@@ -29,7 +29,11 @@
       "TRUE": "sim",
       "FALSE": "não",
       "CLIENTE": "o cliente",
-      "EQUIPE": "a equipe"
+      "EQUIPE": "a equipe",
+      "SAIU": "saiu, sem confirmação ainda",
+      "ENTREGUE": "entregue",
+      "LIDA": "lida",
+      "FALHOU": "falhou"
     },
     "OPERADOR_DA_MENSAGEM": {
       "IGUAL": "é",
