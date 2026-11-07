@@ -54,17 +54,22 @@ class Autonomia::Automacao::Valores
 
   # G11: a resposta que chegou durante o "esperar até" (Resposta). Só existe na condição dele, onde há a janela da
   # espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
-  # false: nunca "respondeu", e "diferente de true" não vira resposta.
+  # false: nunca "respondeu", e "diferente de true" não vira resposta. O cliente responde de qualquer conversa dele
+  # (#2680: o e-mail abre outra), então a resposta dele sai do contato, e vale também no alvo contato.
   RESPOSTA = {
-    'conversa.cliente_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.cliente?(conversa, espera) },
-    'conversa.equipe_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.equipe?(conversa, espera) }
+    'conversa.cliente_respondeu' => ->(contexto, espera) { ::Autonomia::Automacao::Resposta.cliente?(contexto.contato, espera) },
+    'conversa.equipe_respondeu' => ->(contexto, espera) { ::Autonomia::Automacao::Resposta.equipe_na?(contexto.conversa, espera) }
   }.freeze
+  RESPOSTA_DO_CONTATO = 'conversa.cliente_respondeu'.freeze
+
+  # A última mensagem que a execução mandou ao cliente (#2680): o texto e a situação (Envio).
+  ENVIO = ::Autonomia::Automacao::Envio::VALORES
 
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
-    'Conversation' => %w[conversa contato],
-    'Crm::Card' => %w[card conversa contato reuniao],
-    'Contact' => %w[contato]
+    'Conversation' => %w[conversa contato envio],
+    'Crm::Card' => %w[card conversa contato reuniao envio],
+    'Contact' => %w[contato envio]
   }.freeze
 
   # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota.
@@ -90,7 +95,8 @@ class Autonomia::Automacao::Valores
     'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
+    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'envio.situacao' => { 'opcoes' => ::Autonomia::Automacao::Envio::SITUACOES.values, 'operadores' => %w[igual diferente] }
   }.freeze
 
   ATRIBUTOS = {
@@ -116,7 +122,7 @@ class Autonomia::Automacao::Valores
 
   class << self
     def caminho_valido?(caminho)
-      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present?
+      [CAMPOS, MENSAGEM, RESPOSTA, AGENDA, ENVIO].any? { |lista| lista.key?(caminho.to_s) } || atributo(caminho).present?
     end
 
     def da_reuniao?(caminho) = caminho.to_s.start_with?('reuniao.')
@@ -144,7 +150,9 @@ class Autonomia::Automacao::Valores
 
     # O alvo (`Conversation`, `Crm::Card`, `Contact`) chega à base do caminho? A mensagem fica com a regra própria dela.
     def no_alvo?(caminho, alvo_type)
-      da_mensagem?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
+      return true if da_mensagem?(caminho) || BASES_DO_ALVO.fetch(alvo_type, []).include?(caminho.to_s.split('.', 2).first)
+
+      caminho.to_s == RESPOSTA_DO_CONTATO && BASES_DO_ALVO.fetch(alvo_type, []).include?('contato')
     end
 
     def fechado(caminho) = FECHADOS[caminho.to_s]
@@ -222,10 +230,12 @@ class Autonomia::Automacao::Valores
     do_objeto(caminho) { |objeto| ATRIBUTOS.fetch(base).call(objeto).to_h[chave] }
   end
 
-  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave)
+  def campo?(chave) = CAMPOS.key?(chave) || AGENDA.key?(chave) || ENVIO.key?(chave)
 
   def do_campo(chave)
-    do_objeto(chave) { |objeto| CAMPOS.key?(chave) ? CAMPOS[chave].call(objeto) : link_da_agenda(objeto, AGENDA[chave].call(objeto)) }
+    return do_objeto(chave) { |objeto| link_da_agenda(objeto, AGENDA[chave].call(objeto)) } if AGENDA.key?(chave)
+
+    do_objeto(chave) { |objeto| (CAMPOS[chave] || ENVIO[chave]).call(objeto) }
   end
 
   def link_da_agenda(objeto, pessoa)
@@ -237,7 +247,7 @@ class Autonomia::Automacao::Valores
   # A página de agendamento em que a reunião do gatilho foi marcada, quando veio de uma.
   def pagina_da_reuniao = @contexto.reuniao&.metadata.to_h['booking_profile_id']
 
-  def resposta(caminho) = !@espera.nil? && do_objeto(caminho) { |conversa| RESPOSTA.fetch(caminho.to_s).call(conversa, @espera) } == true
+  def resposta(caminho) = !@espera.nil? && RESPOSTA.fetch(caminho.to_s).call(@contexto, @espera) == true
 
   # A pessoa só é buscada quando o caminho pede permissão.
   def permitido?(caminho) = !PROTEGIDOS.key?(caminho.to_s) || self.class.pode_ler?(caminho, account_user)
@@ -260,6 +270,7 @@ class Autonomia::Automacao::Valores
     when 'contato' then @contexto.contato
     when 'card' then @contexto.card
     when 'reuniao' then @contexto.reuniao
+    when 'envio' then @contexto.ultimo_envio
     end
   end
 end

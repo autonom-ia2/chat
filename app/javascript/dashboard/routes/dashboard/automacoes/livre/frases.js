@@ -41,6 +41,14 @@ const chaveDaFrase = (entrada, gatilho) => {
     : `AUTOMACAO_LIVRE.GATILHO_COM.${chave}`;
 };
 
+// #2680: a caixa por onde a mensagem abre a conversa de quem não tem uma.
+const comCaixa = (frase, gatilho, t, nomes) => {
+  const caixa = nomes.caixa?.[gatilho.conversa_nova?.caixa_id];
+  return caixa
+    ? t('AUTOMACAO_LIVRE.CONVERSA_NOVA.NA_FRASE', { frase, caixa })
+    : frase;
+};
+
 export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const entrada = catalogo?.gatilhos.find(item => item.tipo === gatilho?.tipo);
   if (!entrada) return t(`${P}.FALTA_GATILHO`);
@@ -54,12 +62,16 @@ export const fraseDoGatilho = (gatilho, catalogo, t, nomes = {}) => {
   const completo = Object.values(escolhidos).every(
     valor => valor !== undefined && valor !== null && valor !== ''
   );
-  if (!parametros.length || !completo) return t(entrada.frase);
+  if (!parametros.length || !completo)
+    return comCaixa(t(entrada.frase), gatilho, t, nomes);
   const frase = t(chaveDaFrase(entrada, gatilho), escolhidos);
   const funil = nomes.funilDaEtapa?.[gatilho.etapa_id];
-  return funil
-    ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil })
-    : frase;
+  return comCaixa(
+    funil ? t('AUTOMACAO_LIVRE.GATILHO_NO_FUNIL', { frase, funil }) : frase,
+    gatilho,
+    t,
+    nomes
+  );
 };
 
 // "Status da conversa", ou "Campo personalizado do contato: placa".

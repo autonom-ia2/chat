@@ -2,7 +2,7 @@
 # equipe responder". `espera` é a janela da espera (Range: do começo até o prazo, ou sem fim na primeira conferência);
 # só conta o que chegou depois do começo e até o prazo.
 #
-# - Cliente: mensagem recebida na conversa.
+# - Cliente: mensagem recebida em qualquer conversa do contato na conta (#2680).
 # - Equipe: a mesma régua da IA que responde (Autonomia::Agents::Operate::PessoaDaEquipe): pessoa da equipe escrevendo
 #   ao cliente, ou o eco do que ela mandou pelo app do celular. Não contam a nota, o robô, o envio automático em nome
 #   de alguém (follow-up, campanha, regra), a mensagem da própria automação nem a que falhou: o cliente não a recebeu.
@@ -21,9 +21,17 @@
 module Autonomia::Automacao::Resposta
   module_function
 
-  def cliente?(conversa, espera)
-    na_janela(conversa.messages.incoming, espera).exists?
+  # Em qualquer conversa do contato na conta (#2680): o e-mail da automação abre uma conversa nova, e a resposta chega
+  # nela. Sem contato, nunca respondeu.
+  def cliente?(contato, espera)
+    return false if contato.nil?
+
+    conversas = ::Conversation.where(account_id: contato.account_id, contact_id: contato.id).select(:id)
+    na_janela(::Message.incoming.where(account_id: contato.account_id, conversation_id: conversas), espera).exists?
   end
+
+  # Sem conversa (o card sem conversa principal, o contato antes da conversa nova), a equipe nunca respondeu.
+  def equipe_na?(conversa, espera) = conversa.present? && equipe?(conversa, espera)
 
   # O SQL já deixa só o que pode ser pessoa ou eco (público, que não falhou, remetente pessoa ou nenhum); a régua decide.
   def equipe?(conversa, espera)

@@ -17,6 +17,7 @@ class Autonomia::AutomacaoListener < BaseListener
   end
 
   def message_created(event) = escuta.mensagem_criada(event.data[:message])
+  def message_updated(event) = escuta.envio_atualizado(event.data[:message], event.data[:previous_changes])
 
   def contact_updated(event)
     contact = event.data[:contact]

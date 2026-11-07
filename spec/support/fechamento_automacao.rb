@@ -189,7 +189,11 @@ module FechamentoAutomacao::Lacunas
     # G31: voltar a esperar e decidir de novo a cada resposta, enquanto a IA diz "ainda conversando".
     'G31' => nil,
     # G32: a reunião marcada como condição do "esperar até", no meio da execução.
-    'G32' => nil
+    'G32' => nil,
+    # #2680: a receita escolhe a caixa por onde abrir a conversa de quem não tem uma (o lead do formulário, o contato).
+    'G33' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('properties', 'gatilho', 'properties').key?('conversa_nova') },
+    # #2680: a resposta em outra conversa do contato conta, e a mensagem que a automação mandou vira valor.
+    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

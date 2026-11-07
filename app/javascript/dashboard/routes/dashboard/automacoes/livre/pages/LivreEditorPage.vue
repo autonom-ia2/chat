@@ -84,7 +84,8 @@ const podeLerValor = usePodeLerValor();
 const catalogoDoAlvo = computed(() =>
   doAlvoDoGatilho(
     comPermissoes(catalogo.value, podeLerValor.value),
-    receita.value.gatilho?.tipo
+    receita.value.gatilho?.tipo,
+    Boolean(receita.value.gatilho?.conversa_nova)
   )
 );
 
@@ -497,7 +498,12 @@ onMounted(() => {
               <LivreConfira
                 :receita="receita"
                 :catalogo="catalogo"
-                :nomes-do-gatilho="escolhasDoGatilho.nomes"
+                :nomes-do-gatilho="{
+                  ...escolhasDoGatilho.nomes,
+                  caixa: Object.fromEntries(
+                    opcoes.caixaDaConversa.map(item => [item.value, item.label])
+                  ),
+                }"
                 :pode-mudar="podeMudar && !ocupado && !conflito"
                 :tudo="tudo"
                 @alterar="chave => mudarUrl({ alterar: chave })"
@@ -585,7 +591,10 @@ onMounted(() => {
               :receita-do-teste="receitaDoSalvar"
               :custos="custos"
               :gatilhos="gatilhos"
-              :escolhas-do-gatilho="escolhasDoGatilho"
+              :escolhas-do-gatilho="{
+                ...escolhasDoGatilho,
+                caixas: opcoes.caixaDaConversa,
+              }"
               @salvar="salvar"
               @tirar="tirar"
               @close="fecharPainel('alterar')"
