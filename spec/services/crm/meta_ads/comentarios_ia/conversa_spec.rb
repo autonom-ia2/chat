@@ -100,13 +100,14 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
 
     it 'abre a conversa no contato da resposta da Meta, com o privado que já saiu' do
       conversation = perform_enqueued_jobs do
-        described_class.no_messenger!(comentario(network: 'facebook', inbox_id: pagina.id), envio, care.message)
+        described_class.no_messenger!(comentario(network: 'facebook', inbox_id: pagina.id), envio, care.message, 42)
       end
 
       expect(conversation.inbox).to eq(pagina)
       expect(conversation.contact_inbox.source_id).to eq('psid-1')
       expect(conversation.contact.name).to eq('carla.mendes')
       expect(conversation.messages.outgoing.sole).to have_attributes(content: care.message, source_id: 'mid-9')
+      expect(conversation.messages.outgoing.sole.content_attributes.to_h).to eq(Crm::MetaAds::ComentariosIa::Registro::MARCA => 42)
       expect(a_request(:post, %r{graph\.facebook\.com/.*/messages})).not_to have_been_made
     end
 
@@ -114,7 +115,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
       contato = create(:contact, account: account)
       create(:contact_inbox, contact: contato, inbox: pagina, source_id: 'psid-1')
 
-      conversation = described_class.no_messenger!(comentario(network: 'facebook', inbox_id: pagina.id), envio, care.message)
+      conversation = described_class.no_messenger!(comentario(network: 'facebook', inbox_id: pagina.id), envio, care.message, 42)
 
       expect(conversation.contact).to eq(contato)
     end
@@ -124,7 +125,7 @@ RSpec.describe Crm::MetaAds::ComentariosIa::Conversa do
       contact_inbox = create(:contact_inbox, contact: contato, inbox: pagina, source_id: 'psid-1')
       aberta = create(:conversation, account: account, inbox: pagina, contact: contato, contact_inbox: contact_inbox, status: :open)
 
-      conversation = described_class.no_messenger!(comentario(network: 'facebook', inbox_id: pagina.id), envio, care.message)
+      conversation = described_class.no_messenger!(comentario(network: 'facebook', inbox_id: pagina.id), envio, care.message, 42)
 
       expect(conversation).to eq(aberta)
       expect(aberta.messages.outgoing.sole.source_id).to eq('mid-9')

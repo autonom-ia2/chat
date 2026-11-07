@@ -381,6 +381,16 @@ RSpec.describe 'Api::V1::Accounts::Autonomia::Automacoes', type: :request do
       expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
     end
 
+    # G3 (#2629): o retorno cria pelo crm/follow_ups e pede a mesma chave.
+    it 'recusa salvar o passo "criar retorno" pela API direta' do
+      retorno = { id: 'r1', tipo: 'retorno', titulo: ['Ligar'], daqui: { valor: 1, unidade: 'dias' } }
+
+      post base, params: { nome: 'x', receita: receita.merge(passos: [retorno]) }, headers: montador.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq(I18n.t('autonomia.automacao.editor.sem_funil'))
+    end
+
     # #2499: o gatilho de card também pede a chave de funis, mesmo sem passo de card.
     it 'recusa salvar gatilho de card pela API direta' do
       account.enable_features!('automacao_gatilhos')

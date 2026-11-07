@@ -4,7 +4,8 @@
 # etapa do CRM, `gatilho` = a marca daquela entrada ou saída). A decisão é única por alvo: duas
 # automações que perguntam a mesma coisa sobre o mesmo alvo pagam UMA pergunta. Na corrida entre duas,
 # o índice único decide e a segunda lê a primeira. Sem nada para ler no que o Decisor declara (só áudio
-# ou imagem, card vazio), não vai ao Jev: a decisão fica `sem_conteudo`, sem seguir.
+# ou imagem, card vazio), não vai ao Jev: a decisão fica `sem_conteudo`, sem seguir. O anúncio de origem do card vai
+# só com a chave de quem salvou o Decisor (#2558, Autonomia::Decisor#ve_o_anuncio?).
 class Autonomia::Decisores::Pergunta
   # `espera`: a automação que vai seguir depois, {regra, indice} ou {etapa, execucao}.
   def initialize(decisor:, conversation: nil, message: nil, card: nil, gatilho: nil, rule: nil, espera: nil) # rubocop:disable Metrics/ParameterLists
@@ -35,7 +36,7 @@ class Autonomia::Decisores::Pergunta
 
   def nova
     estado = Autonomia::Decisores::Estado.new(conversation: @conversation, message: @message, card: @card,
-                                              leituras: @decisor.leituras_efetivas)
+                                              leituras: @decisor.leituras_efetivas, anuncio: @decisor.ve_o_anuncio?)
     return criar!(status: 'sem_conteudo', motivo: 'não há o que ler no que o Decisor lê') if estado.vazio?
     return criar!(status: 'sem_cota', motivo: 'limite mensal de perguntas da conta atingido') if self.class.cota_esgotada?(@decisor.account)
 

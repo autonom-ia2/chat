@@ -8,7 +8,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
   let(:robo) { create(:agent_bot, account: account) }
   let(:inbox) { create(:inbox, account: account) }
   let(:conversa) { create(:conversation, account: account, inbox: inbox) }
-  let(:painel) { described_class.new(account: account, sujeito_type: 'robo', sujeito_id: robo.id) }
+  let(:painel) { described_class.new(account: account, ve_anuncio: true, sujeito_type: 'robo', sujeito_id: robo.id) }
 
   # `lidas`: a rodada `teto` que não leu nada não conta como leitura (Rodada.leram).
   def rodada!(status, corte, pendentes: 0, pendente_desde: nil, lidas: 1)
@@ -228,7 +228,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
       Autonomia::Desempenho::Ficha.create!(base.attributes.except('id', 'created_at', 'updated_at')
                                                .merge('sujeito_type' => 'agente', 'sujeito_id' => agente.id))
     end
-    let(:painel_do_agente) { described_class.new(account: account, sujeito_type: 'agente', sujeito_id: agente.id) }
+    let(:painel_do_agente) { described_class.new(account: account, ve_anuncio: true, sujeito_type: 'agente', sujeito_id: agente.id) }
 
     before do
       Autonomia::Desempenho::Procura.create!(account: account, sujeito_type: 'agente', sujeito_id: agente.id, conversation: conversa, ordem: 1,
@@ -243,7 +243,8 @@ RSpec.describe Autonomia::Desempenho::Painel do
       expect(painel_do_agente.call('7')['meta']['instrucao_mudou']).to be(false)
 
       agente.update!(instruction: 'Responda com o prazo e o preço.')
-      expect(described_class.new(account: account, sujeito_type: 'agente', sujeito_id: agente.id).call('7')['meta']['instrucao_mudou']).to be(true)
+      painel = described_class.new(account: account, ve_anuncio: true, sujeito_type: 'agente', sujeito_id: agente.id)
+      expect(painel.call('7')['meta']['instrucao_mudou']).to be(true)
     end
 
     it 'com a leitura automática desligada não avisa: ninguém lê com a chave' do

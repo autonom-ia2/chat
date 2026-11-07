@@ -389,6 +389,14 @@ describe('catálogo do editor livre', () => {
     });
   });
 
+  it('monta o "Passar para a agente de IA" novo sem agente escolhida', () => {
+    expect(novoPasso({ tipo: 'ia_assumir' }, 'p10', t)).toEqual({
+      id: 'p10',
+      tipo: 'ia_assumir',
+      agente_id: null,
+    });
+  });
+
   it('mostra status pela opção, não pelo valor gravado', () => {
     const condicao = {
       campo: { $valor: 'conversa.status' },

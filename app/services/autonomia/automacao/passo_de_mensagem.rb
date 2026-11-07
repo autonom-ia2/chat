@@ -33,7 +33,7 @@ class Autonomia::Automacao::PassoDeMensagem
     return negado if negado
 
     texto = texto_pronto
-    return Resultado.new(tipo: :pulado, motivo: 'faltou_valor', dados: {}) if texto.nil?
+    return faltou_valor if texto.nil?
 
     mandar(texto)
   end
@@ -59,9 +59,8 @@ class Autonomia::Automacao::PassoDeMensagem
     return pulado('fora_da_janela') unless ::Autonomia::Automacao::ModeloWhatsapp.aplica?(@conversa)
 
     # Os valores do modelo com as permissões de quem ligou (#2597), como no texto.
-    valores = ::Autonomia::Automacao::Valores.new(alvo: @alvo, quem: @execucao.automacao.ligada_por)
     pronto = ::Autonomia::Automacao::ModeloWhatsapp.new(@passo['modelo'], @conversa, valores).preparar
-    return pulado(pronto, janela_fechada: true) if pronto.is_a?(String)
+    return modelo_nao_sai(pronto) if pronto.is_a?(String)
 
     anti_laco = ::Autonomia::Automacao::AntiLaco.new(@execucao.automacao, @conversa)
     return parar_por_robo(anti_laco) if anti_laco.robo_do_outro_lado?
@@ -88,6 +87,15 @@ class Autonomia::Automacao::PassoDeMensagem
   private
 
   def pulado(motivo, **) = self.class.pulado(motivo, **)
+
+  # O modelo que não sai para a execução, como a janela fechada (#2573). Sem o link da agenda (G12), o motivo próprio
+  # e o porquê.
+  def modelo_nao_sai(motivo)
+    por = valores.falta_da_agenda if motivo == 'faltou_valor'
+    return pulado(motivo, janela_fechada: true) unless por
+
+    Resultado.new(tipo: :pulado, motivo: 'faltou_link_da_agenda', dados: { 'por' => por, 'janela' => 'fechada' })
+  end
 
   def janela_aberta?
     ::Conversations::MessageWindowService.new(@conversa, automatic: true).can_reply? || @conversa.whatsapp_api_reply?

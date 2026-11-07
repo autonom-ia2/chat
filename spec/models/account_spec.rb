@@ -307,6 +307,7 @@ RSpec.describe Account do
       # #1479 F3: agentes_enviar_local_e_contato depois dela, 25 (1 << 24 = 16777216), dada pela Orquestração (04/11).
       # #2499 F6: automacao_gatilhos depois dela, 26 (1 << 25 = 33554432), contra a main 45e251027e; Orquestração confirma.
       # #2613: meta_ads_comentarios_privado_facebook depois dela, 27 (1 << 26 = 67108864), dada pela Orquestração (05/11).
+      # #2338: anuncios_login_unico depois dela, 28 (1 << 27 = 134217728), dada pela Orquestração (06/11).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,
@@ -318,7 +319,7 @@ RSpec.describe Account do
         feature_agentes_pedir_localizacao: 262_144, feature_automacao_fundacao: 524_288, feature_automacao_motor: 1_048_576,
         feature_automacao_editor: 2_097_152, feature_automacao_mensagens: 4_194_304, feature_automacao_ia: 8_388_608,
         feature_agentes_enviar_local_e_contato: 16_777_216, feature_automacao_gatilhos: 33_554_432,
-        feature_meta_ads_comentarios_privado_facebook: 67_108_864
+        feature_meta_ads_comentarios_privado_facebook: 67_108_864, feature_anuncios_login_unico: 134_217_728
       )
     end
 

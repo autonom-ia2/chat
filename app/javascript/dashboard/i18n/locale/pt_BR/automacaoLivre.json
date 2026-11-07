@@ -61,7 +61,11 @@
       "CARD_ATRIBUTOS": "Campo personalizado do card",
       "MENSAGEM_TIPO": "Tipo da mensagem",
       "MENSAGEM_PRIVADA": "Mensagem interna",
-      "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa"
+      "MENSAGEM_PRIMEIRA": "Primeira mensagem da conversa",
+      "CARD_LINK_DA_AGENDA": "Link da agenda do responsável pelo card (na hora do passo)",
+      "CONVERSA_LINK_DA_AGENDA": "Link da agenda do responsável pela conversa (na hora do passo)",
+      "REUNIAO_INICIO": "Dia e hora da reunião",
+      "REUNIAO_LINK_DA_REUNIAO": "Link da chamada da reunião"
     },
     "PASSOS": {
       "ESPERAR": "Esperar um tempo",
@@ -87,7 +91,10 @@
       "EXTRAIR": "A IA tira dados da conversa",
       "ESCREVER": "A IA escreve um texto",
       "CARD": "Criar um card no funil",
-      "RESUMIR": "A IA resume a conversa"
+      "RESUMIR": "A IA resume a conversa",
+      "IA_ASSUMIR": "Passar para a agente de IA",
+      "EMAIL": "Mandar e-mail ao cliente",
+      "RETORNO": "Criar um retorno para a equipe"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -127,6 +134,9 @@
       "ATTRIBUTE_VALUES": "Opções da lista",
       "TEXTO": "O que dizer",
       "PARA": "Quem avisar",
+      "TITULO": "O que a equipe vai fazer",
+      "DAQUI": "Daqui a quanto tempo",
+      "ENVIO": "Mensagem ao cliente",
       "LE": "O que a IA lê",
       "PERGUNTA": "O que a IA deve decidir",
       "CAMINHOS": "Caminhos",
@@ -137,6 +147,9 @@
       "DESTINO": "Para onde vai",
       "LINHAS": "Tamanho do resumo (linhas)",
       "ETAPA_ID": "Em qual etapa o card nasce",
+      "AGENTE_ID": "Qual agente de IA",
+      "CAIXA_ID": "Por qual caixa de e-mail",
+      "ASSUNTO": "Assunto",
       "MODELO": "Se a janela de 24 h estiver fechada"
     },
     "OPCOES": {
@@ -286,7 +299,8 @@
       "ESCREVER_SUGESTAO": "A IA escreve uma sugestão para a equipe: “{instrucao}”",
       "ESCREVER_SUGESTAO_SEM_INSTRUCAO": "A IA escreve uma sugestão para a equipe: falta escrever a instrução",
       "RESUMIR_NOTA": "A IA resume a conversa numa nota",
-      "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}"
+      "RESUMIR_AVISAR": "A IA resume a conversa e avisa {quem}",
+      "EMAIL": "Mandar e-mail ao cliente: “{assunto}”"
     },
     "RAMOS": {
       "ENTAO": "Então",
@@ -331,9 +345,28 @@
       "CALCULADO_TEXTO": "Montado na hora: {texto}",
       "HOJE": "hoje",
       "DATA_CALCULADA": "Data calculada na hora: {de}",
-      "DATA_CALCULADA_MAIS": "Data calculada na hora: {de} + {n} {unidade}",
-      "DATA_CALCULADA_MENOS": "Data calculada na hora: {de} − {n} {unidade}",
       "ATRIBUTO_CALCULADO": "{nome}: {valor}",
+      "DATA_MAIS": "{de} + {n} {unidade}",
+      "DATA_MENOS": "{de} − {n} {unidade}",
+      "DATA": {
+        "PERGUNTA": "Que data gravar?",
+        "DIA": "Um dia certo",
+        "HOJE": "Uma data a partir de hoje",
+        "CAMPO": "Uma data a partir de um campo de data",
+        "DIA_ROTULO": "Dia",
+        "QUAL_CAMPO": "A partir de qual campo?",
+        "SEM_CAMPO": "A conta ainda não tem campo de data.",
+        "QUANTO": "Quanto tempo?",
+        "NUMERO": "Quantos",
+        "ZERO": "Use 0 para gravar o mesmo dia",
+        "UNIDADE": "De quê",
+        "SENTIDO": "Depois ou antes",
+        "DEPOIS": "depois",
+        "ANTES": "antes",
+        "GRAVA": "Grava: {valor}",
+        "CAMPO_APAGADO": "Este campo de data foi apagado da conta. Escolha outro: assim, o Salvar tudo não aceita.",
+        "NUMERO_INVALIDO": "Use um número inteiro de 0 a {teto}."
+      },
       "MODELO": {
         "DICA": "No WhatsApp oficial, 24 h depois da última mensagem do cliente, texto livre não sai. Escolha um modelo aprovado na Meta para mandar no lugar; cada envio de modelo é cobrado pela Meta. Com a janela aberta, sai o texto acima.",
         "NENHUM": "Não mandar nada (a automação para nesta conversa)",
@@ -343,7 +376,11 @@
         "MUDOU": "O modelo agora pede {quantas} variáveis. Preencha todas antes de salvar.",
         "SUMIU": "O modelo {nome} não está mais aprovado, de utilidade, nas caixas que você vê. Escolha outro.",
         "VARIAVEL": "Variável {numero} do modelo"
-      }
+      },
+      "SEM_AGENTE_DE_IA": "Nenhuma agente de IA recebe conversas nesta conta ainda. Ponha uma agente numa caixa, em Agentes de IA, para usar este passo.",
+      "AGENTES_DE_IA_FALHOU": "Não deu para carregar as agentes de IA. Recarregue a página para tentar de novo.",
+      "POR_VALOR_EM": "Pôr um dado da conversa em “{campo}”",
+      "SEM_CAIXA_DE_EMAIL": "A conta ainda não tem caixa de e-mail. Crie uma em Caixas de entrada para usar este passo."
     },
     "LIGAR": {
       "BOTAO": "Ligar",

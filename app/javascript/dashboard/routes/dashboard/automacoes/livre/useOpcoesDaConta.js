@@ -1,5 +1,6 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useStore, useMapGetter } from 'dashboard/composables/store';
+import AutomacoesAPI from 'dashboard/api/autonomia/automacoes';
 
 // #2414 F5 — as escolhas da conta que os campos do "Alterar" mostram: pessoas,
 // times, caixas, etiquetas e campos personalizados. Vêm das mesmas stores que o
@@ -22,6 +23,20 @@ export function useOpcoesDaConta() {
   const caixas = useMapGetter('inboxes/getInboxes');
   const etiquetas = useMapGetter('labels/getLabels');
   const atributosDo = useMapGetter('attributes/getAttributesByModel');
+  // G15: as agentes de IA vêm da própria Automação (só id e nome), não da
+  // tela de Agentes, que pede outra permissão. `null` enquanto carrega; se a
+  // lista não vem, o painel diz que não carregou (nunca "a conta não tem").
+  const agentesDeIa = ref(null);
+  const agentesDeIaFalhou = ref(false);
+  const carregarAgentesDeIa = async () => {
+    agentesDeIaFalhou.value = false;
+    try {
+      const { data } = await AutomacoesAPI.agentesDeIa();
+      agentesDeIa.value = data.agentes || [];
+    } catch {
+      agentesDeIaFalhou.value = true;
+    }
+  };
 
   const carregarOpcoes = () => {
     [
@@ -31,12 +46,21 @@ export function useOpcoesDaConta() {
       'labels/get',
       'attributes/get',
     ].forEach(acao => store.dispatch(acao));
+    carregarAgentesDeIa();
   };
 
   const opcoes = computed(() => ({
     pessoa: comNome(agentes.value),
     time: comNome(times.value),
     caixa: comNome(caixas.value),
+    agenteDeIa: agentesDeIa.value && comNome(agentesDeIa.value),
+    agenteDeIaFalhou: agentesDeIaFalhou.value,
+    // G2: só as caixas de e-mail, por onde o passo "email" sai.
+    caixaDeEmail: comNome(
+      (caixas.value || []).filter(
+        caixa => caixa.channel_type === 'Channel::Email'
+      )
+    ),
     etiquetaPorNome: (etiquetas.value || []).map(item => ({
       value: item.title,
       label: item.title,

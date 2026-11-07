@@ -1,7 +1,8 @@
 require 'rails_helper'
 
 # O passo "criar card" (#2414 G4) com quem ligou numa função personalizada: as perguntas da API de cards (criar card,
-# `crm_manage_cards`) e a chave de funis (`crm_manage_pipelines`, decisão do Rodrigo), conferidas a cada execução.
+# `crm_manage_cards`) e a chave de funis (RegraDoFunil.chave?: `crm_manage_pipelines` ou `crm_admin`, decisão do Rodrigo),
+# conferidas a cada execução.
 # Faltou uma, a automação pausa e nenhum card nasce.
 RSpec.describe Autonomia::Automacao::PassoDeCard, :automacao_motor do
   around { |example| with_modified_env(CRM_KANBAN_ENABLED: 'true') { example.run } }
@@ -42,7 +43,7 @@ RSpec.describe Autonomia::Automacao::PassoDeCard, :automacao_motor do
   it 'cria card mas não configura funis: pausa (sem_acesso) e não cria', :aggregate_failures do
     resultado = executar(ligada_por_funcao(base + %w[crm_manage_cards]))
 
-    expect([resultado.tipo, resultado.motivo]).to eq([:sem_acesso, 'quem_ligou_sem_permissao_card'])
+    expect([resultado.tipo, resultado.motivo]).to eq([:sem_acesso, 'sem_chave_de_funis'])
     expect(funil.cards).to be_empty
   end
 
@@ -51,6 +52,10 @@ RSpec.describe Autonomia::Automacao::PassoDeCard, :automacao_motor do
 
     expect([resultado.tipo, resultado.motivo]).to eq([:sem_acesso, 'quem_ligou_sem_permissao_card'])
     expect(funil.cards).to be_empty
+  end
+
+  it 'com crm_admin, que vale pelas duas chaves: cria o card' do
+    expect(executar(ligada_por_funcao(base + %w[crm_admin])).tipo).to eq(:ok)
   end
 
   it 'com as duas chaves: cria o card', :aggregate_failures do

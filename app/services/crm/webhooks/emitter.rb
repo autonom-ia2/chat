@@ -25,6 +25,14 @@ module Crm
         'archive' => Events::Types::CRM_CARD_ARCHIVED
       }.freeze
 
+      # #2499 (G12): the meeting activities feed only the Automação livre. They stay out of EVENT_MAP, so the account
+      # webhooks, Meta and Google syncs never see them; the dispatch happens only when an automation listens.
+      AUTOMACAO_EVENT_MAP = {
+        'meeting_scheduled' => Events::Types::CRM_MEETING_SCHEDULED,
+        'meeting_rescheduled' => Events::Types::CRM_MEETING_RESCHEDULED,
+        'meeting_canceled' => Events::Types::CRM_MEETING_CANCELED
+      }.freeze
+
       # Dispatcher event -> pipeline.metadata['meta_sync']['events'] token consumed by
       # Crm::MetaCapiListener. Only these three lifecycle events feed the Meta CAPI sync.
       META_SYNC_EVENT_TOKENS = {
@@ -47,10 +55,21 @@ module Crm
 
       def perform
         event = EVENT_MAP[@event_type]
-        return if event.blank?
+        return dispatch_for_automacao if event.blank?
         return unless any_account_webhook_subscribed?(event) || meta_sync_subscribed?(event) || google_sync_subscribed?(event) ||
                       automacao_subscribed?(event)
 
+        dispatch(event)
+      end
+
+      private
+
+      def dispatch_for_automacao
+        event = AUTOMACAO_EVENT_MAP[@event_type]
+        dispatch(event) if event.present? && automacao_subscribed?(event)
+      end
+
+      def dispatch(event)
         Rails.configuration.dispatcher.dispatch(
           event,
           Time.zone.now,
@@ -61,8 +80,6 @@ module Crm
           changed_attributes: @changed_attributes
         )
       end
-
-      private
 
       def account
         return @account if defined?(@account)

@@ -61,7 +61,7 @@ class Autonomia::Agents::Tools::Native::InsuranceCapabilities < Autonomia::Agent
       return [] unless agent.agent_type == 'insurance_quote'
 
       cota = ::Autonomia::Insurance::QuoteAgent::Builder.ramos_que_a_ia_cota(agent.account)
-      connection = ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:ready?)
+      connection = ::Autonomia::Insurance::Connection.for_account(agent.account).find(&:usable?)
       return [] if connection.blank?
 
       # Sem repetição: o `enum` repetido não é garantido no modo strict, e schema recusado cala o turno inteiro.
@@ -77,14 +77,14 @@ class Autonomia::Agents::Tools::Native::InsuranceCapabilities < Autonomia::Agent
     def available_for?(agent)
       return false unless Autonomia::Insurance::Config.enabled?(agent.account)
 
-      Autonomia::Insurance::Connection.for_account(agent.account).any?(&:ready?)
+      Autonomia::Insurance::Connection.for_account(agent.account).any?(&:usable?)
     rescue StandardError
       false
     end
   end
 
   def call
-    connection = Autonomia::Insurance::Connection.for_account(account).find(&:ready?)
+    connection = Autonomia::Insurance::Connection.for_account(account).find(&:usable?)
     return 'A corretora ainda não conectou a conta do AGGER.' if connection.blank?
 
     products = self.class.habilitados(connection)

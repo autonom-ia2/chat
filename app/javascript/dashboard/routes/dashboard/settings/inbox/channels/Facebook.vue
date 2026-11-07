@@ -1,7 +1,10 @@
 <script>
 import { useVuelidate } from '@vuelidate/core';
 import { useAlert } from 'dashboard/composables';
-import { useFacebookPageConnect } from 'dashboard/composables/useFacebookPageConnect';
+import {
+  useFacebookPageConnect,
+  FACEBOOK_NOT_CONFIGURED,
+} from 'dashboard/composables/useFacebookPageConnect';
 import { required } from '@vuelidate/validators';
 import LoadingState from 'dashboard/components/widgets/LoadingState.vue';
 import Banner from 'dashboard/components-next/banner/Banner.vue';
@@ -51,6 +54,7 @@ export default {
       emptyStateMessage: this.$t('INBOX_MGMT.DETAILS.LOADING_FB'),
       errorStateMessage: '',
       errorStateDescription: '',
+      canRetry: true,
       hasLoginStarted: false,
     };
   },
@@ -89,7 +93,7 @@ export default {
     // Warm the SDK so the login click opens its popup within the gesture's
     // activation window (see useFacebookPageConnect).
     if (!this.isFacebookConnectionDisabled) {
-      this.preloadSdk();
+      this.preloadSdk().catch(() => {});
     }
   },
 
@@ -98,25 +102,48 @@ export default {
       if (this.isFacebookConnectionDisabled) return;
 
       this.hasLoginStarted = true;
+      this.hasError = false;
       try {
         const result = await this.loginAndFetchPages();
         if (!result) {
-          // Cancelled popup / not authorized — surface a generic auth error.
-          this.hasError = true;
-          this.errorStateMessage = this.$t('INBOX_MGMT.DETAILS.ERROR_FB_AUTH');
-          this.errorStateDescription = '';
+          // Cancelled popup / not authorized.
+          this.showLoginError(
+            this.$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.CANCELLED.TITLE'),
+            this.$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.CANCELLED.HELP')
+          );
           return;
         }
         this.pageList = result.pages;
         this.user_access_token = result.userAccessToken;
       } catch (error) {
-        if (error.name === 'ScriptLoaderError') {
-          useAlert(this.$t('INBOX_MGMT.DETAILS.ERROR_FB_LOADING'));
+        // Any failure leaves the loader for a state that says what to do
+        // (#2319): a toast alone kept "Authenticating..." on screen forever.
+        if (error.name === FACEBOOK_NOT_CONFIGURED) {
+          this.showLoginError(
+            this.$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.NOT_CONFIGURED.TITLE'),
+            this.$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.NOT_CONFIGURED.HELP'),
+            { canRetry: false }
+          );
+        } else if (error.name === 'ScriptLoaderError') {
+          this.showLoginError(
+            this.$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.BLOCKED.TITLE'),
+            this.$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.BLOCKED.HELP')
+          );
         } else {
           Sentry.captureException(error);
-          useAlert(this.$t('INBOX_MGMT.DETAILS.ERROR_FB_AUTH'));
+          this.showLoginError(
+            this.$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.FAILED.TITLE'),
+            this.$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.FAILED.HELP')
+          );
         }
       }
+    },
+
+    showLoginError(title, help, { canRetry = true } = {}) {
+      this.hasError = true;
+      this.canRetry = canRetry;
+      this.errorStateMessage = title;
+      this.errorStateDescription = help;
     },
 
     setPageName(pageId) {
@@ -218,11 +245,22 @@ export default {
       </div>
     </div>
     <div v-else>
-      <div v-if="hasError" class="max-w-lg mx-auto text-center">
+      <div
+        v-if="hasError"
+        data-fb-login-error
+        role="alert"
+        class="flex flex-col items-center max-w-lg gap-3 mx-auto text-center"
+      >
         <h5>{{ errorStateMessage }}</h5>
-        <p
-          v-if="errorStateDescription"
-          v-dompurify-html="errorStateDescription"
+        <p v-if="errorStateDescription" class="text-n-slate-11">
+          {{ errorStateDescription }}
+        </p>
+        <NextButton
+          v-if="canRetry"
+          data-fb-login-retry
+          type="button"
+          :label="$t('INBOX_MGMT.DETAILS.FB_LOGIN_ERROR.RETRY')"
+          @click="startLogin()"
         />
       </div>
       <LoadingState v-else-if="showLoader" :message="emptyStateMessage" />

@@ -9,8 +9,8 @@
 #
 # Age como quem ligou (D1), conferido a cada execução, com as perguntas da API de cards: criar card (CardPolicy#create?,
 # no EE `crm_manage_cards`) e o funil da etapa nas caixas dele (CardGuard#create_allowed?). Por ser passo de funil, pede
-# também configurar funis (Acesso#mexe_no_funil?: `crm_manage_pipelines`, decisão do Rodrigo). Faltou uma, a automação
-# pausa. Ver a conversa (ou mudar o contato) o executor já conferiu no alvo.
+# também a chave de funis, a mesma das ações de funil (RegraDoFunil.chave?, #2633: `crm_manage_pipelines` ou `crm_admin`;
+# sem ela, `sem_chave_de_funis`). Faltou uma, a automação pausa. Ver a conversa (ou mudar o contato) o executor já conferiu no alvo.
 class Autonomia::Automacao::PassoDeCard
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
   ORIGEM = 'livre'.freeze
@@ -49,7 +49,8 @@ class Autonomia::Automacao::PassoDeCard
   def executar
     etapa = @conta.crm_pipeline_stages.find_by(id: @passo['etapa_id'])
     return pulado('etapa_sumiu') if etapa.nil?
-    return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_permissao_card', dados: {}) unless pode_criar?(etapa)
+    return sem_acesso('sem_chave_de_funis') unless ::Autonomia::Automacao::RegraDoFunil.chave?(@acesso.account_user)
+    return sem_acesso('quem_ligou_sem_permissao_card') unless pode_criar?(etapa)
     return pulado('sem_contato') if @contato.nil?
     return pulado('fora_do_funil') if Crm::Relacao.fora_do_funil?(@contato)
 
@@ -78,10 +79,12 @@ class Autonomia::Automacao::PassoDeCard
   end
 
   def pode_criar?(etapa)
-    self.class.cria_card?(@acesso.account_user) && @acesso.mexe_no_funil? &&
+    self.class.cria_card?(@acesso.account_user) &&
       ::Crm::Access::CardGuard.new(user: @acesso.usuario, account: @conta, account_user: @acesso.account_user)
                               .create_allowed?(etapa.pipeline_id, conversation: @conversa)
   end
 
   def pulado(motivo, dados = {}) = Resultado.new(tipo: :pulado, motivo: motivo, dados: dados)
+
+  def sem_acesso(motivo) = Resultado.new(tipo: :sem_acesso, motivo: motivo, dados: {})
 end

@@ -224,10 +224,20 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       end
     end
 
-    it 'passo 2: tira a conversa da agente de IA' do
-      abertas = FechamentoAutomacao::Lacunas.abertas(%w[G15])
-      pending 'lacuna G15: não está provado que a agente de IA (Agentes) deixa a conversa quando ela é atribuída a uma pessoa'
-      expect(abertas).to be_empty
+    # Passo 2 (G15): "tirar ele da mão do robô". Passar a conversa para a Fernanda tira a agente de IA dela: a plataforma
+    # solta o robô quando uma pessoa assume (Conversation#reset_agent_bot_when_assignee_present).
+    context 'with a agente de IA atendendo (passo 2)' do
+      let(:robo) { create(:agent_bot, account: account) }
+      let(:conversa) do
+        create(:conversation, account: account, inbox: inbox, contact: paulo, contact_inbox: contact_inbox, ai_assignee: robo, status: :open)
+      end
+
+      it 'passo 2: tira a conversa da agente de IA', :aggregate_failures do
+        conversa.reload
+        expect(historico_de(automacao).map(&:first)).to include('gerente')
+        expect(conversa.assignee).to eq(fernanda)
+        expect(conversa.ai_assignee).to be_nil
+      end
     end
   end
 

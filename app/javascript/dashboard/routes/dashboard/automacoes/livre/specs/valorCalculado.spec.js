@@ -90,11 +90,11 @@ describe('LivreCampo com valor calculado', () => {
 
     expect(wrapper.find('textarea').exists()).toBe(false);
     expect(wrapper.find('[data-calculado]').text()).toContain(
-      'DATA_CALCULADA_MAIS'
+      'DATA_MAIS(AUTOMACAO_LIVRE.ALTERAR_PAINEL.HOJE,6,'
     );
   });
 
-  it('o atributo de texto aceita dado; o de data calculada aparece em frase', async () => {
+  it('o atributo de texto aceita dado; o de data abre a peça de data', async () => {
     const atributos = [
       {
         attribute_key: 'nota',
@@ -113,7 +113,7 @@ describe('LivreCampo com valor calculado', () => {
       atributos
     );
 
-    expect(wrapper.find('[data-calculado]').text()).toContain('Revisão');
+    expect(wrapper.find('[data-peca="data"]').text()).toContain('Revisão');
     await wrapper.find('textarea').setValue('por [NOME]');
 
     expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([
@@ -134,7 +134,7 @@ describe('fraseDoCalculado', () => {
         t
       )
     ).toBe(
-      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA_CALCULADA_MENOS(AUTOMACAO_LIVRE.ALTERAR_PAINEL.HOJE,1,AUTOMACAO_LIVRE.UNIDADES.MESES#1)'
+      'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA_CALCULADA(AUTOMACAO_LIVRE.ALTERAR_PAINEL.DATA_MENOS(AUTOMACAO_LIVRE.ALTERAR_PAINEL.HOJE,1,AUTOMACAO_LIVRE.UNIDADES.MESES#1))'
     );
     expect(fraseDoCalculado({ $valor: 'contato.nome' }, CATALOGO, t)).toBe(
       'AUTOMACAO_LIVRE.ALTERAR_PAINEL.DA_CONVERSA(NOME)'
