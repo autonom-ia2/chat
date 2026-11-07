@@ -1,6 +1,11 @@
 import { computed, ref } from 'vue';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import {
+  agentesDaAtribuicao,
+  doServidor,
+  paraServidor,
+} from 'dashboard/api/passarPara';
+import {
   ETAPA_DESLIGADA,
   ETAPA_IGUAL,
   ETAPA_PROPRIA,
@@ -51,7 +56,11 @@ const etapaParaServidor = (etapa, regraDoFunil) => {
   if (etapa.modo === ETAPA_DESLIGADA) {
     return { custom: true, ...regraDoFunil, enabled: false };
   }
-  return { custom: true, ...etapa.regra, enabled: true };
+  return {
+    custom: true,
+    ...paraServidor(`etapa-${etapa.id}`, etapa.regra),
+    enabled: true,
+  };
 };
 
 // As caixas do funil e a equipe (quem está nelas) vêm junto do ai_settings (Crm::Ai::SettingsPresenter): quem tem só a
@@ -68,6 +77,8 @@ export function usePassagem() {
   const caixas = ref([]);
   const equipe = ref([]);
   const iaDoFunilLigada = ref(true);
+  // #1593: os agentes de IA das caixas do funil (só com a Fase 2 dos Agentes).
+  const agentesIa = ref([]);
   const regra = ref(regraDoServidor({}));
   const etapas = ref([]);
   const original = ref('');
@@ -89,9 +100,10 @@ export function usePassagem() {
     salvoAgora.value = false;
     copias = [];
     try {
-      const [ajustes, listaDeFunis] = await Promise.all([
+      const [ajustes, listaDeFunis, ia] = await Promise.all([
         CrmKanbanAPI.getAiSettings(funilId),
         CrmKanbanAPI.getPipelines(),
+        agentesDaAtribuicao(funilId),
       ]);
       if (funilId !== pedido) return;
       const dados = ajustes.data.payload || {};
@@ -99,12 +111,16 @@ export function usePassagem() {
       caixas.value = dados.inboxes || [];
       equipe.value = equipeDoServidor(dados.team);
       iaDoFunilLigada.value = dados.enabled !== false;
-      regra.value = regraDoServidor(dados.handoff);
+      agentesIa.value = ia.agentes;
+      regra.value = doServidor('funil', regraDoServidor(dados.handoff));
       etapas.value = (dados.stages || []).map(etapa => ({
         id: etapa.id,
         nome: etapa.name,
         modo: modoDaEtapa(etapa),
-        regra: { ...regraDoServidor(etapa.handoff), enabled: true },
+        regra: {
+          ...doServidor(`etapa-${etapa.id}`, regraDoServidor(etapa.handoff)),
+          enabled: true,
+        },
       }));
       original.value = estado();
     } catch {
@@ -135,7 +151,7 @@ export function usePassagem() {
         ])
       );
       await CrmKanbanAPI.updateAiSettings(funilId, {
-        ai_settings: { handoff: { ...regra.value } },
+        ai_settings: { handoff: paraServidor('funil', regra.value) },
         stage_handoff: stageHandoff,
       });
       original.value = estado();
@@ -176,6 +192,7 @@ export function usePassagem() {
     caixas,
     equipe,
     iaDoFunilLigada,
+    agentesIa,
     regra,
     etapas,
     alterado,

@@ -1,11 +1,12 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { I18nT, useI18n } from 'vue-i18n';
 import PassagemCartao from './PassagemCartao.vue';
 import PassagemAvisoOnline from './PassagemAvisoOnline.vue';
 import {
   ETAPA_DESLIGADA,
   MAX_PROPRIAS_UMA_A_UMA,
+  ehAgente,
   etapasPorModo,
   juntarNomes,
   minutosDe,
@@ -31,6 +32,9 @@ const emit = defineEmits(['abrir', 'ligar', 'corrigir']);
 
 const { t, locale } = useI18n();
 const R = 'CRM_KANBAN.PASSAGEM.RESUMO';
+// #1593: com agentes de IA nas caixas, as frases de "Quem recebe" falam deles também.
+const { agentes } = inject('passagemIa', { agentes: ref([]) });
+const comIa = computed(() => agentes.value.length > 0);
 
 const ligada = computed({
   get: () => props.regra.enabled,
@@ -47,6 +51,10 @@ const olhaOnline = computed(() => props.regra.prefer_online);
 const naHora = computed(() => props.regra.handoff_mode === 'r2_direct');
 const quando = computed(() => props.regra.trigger.trim());
 const pessoa = computed(() => nomeDe(props.pessoas, props.regra.pool_id));
+const chaveDaPessoa = computed(() => {
+  if (!pessoa.value) return `${R}.QUEM_NINGUEM`;
+  return ehAgente(props.regra.pool_id) ? `${R}.QUEM_IA` : `${R}.QUEM_PESSOA`;
+});
 const outra = computed(() =>
   nomeDe(props.pessoas, props.regra.escalation_user_id)
 );
@@ -62,6 +70,9 @@ const minutos = computed(() =>
 
 // A linha de baixo do "Como entregar": o que acontece quando ninguém está online, do jeito que o back-end faz.
 const linhaDoComo = computed(() => {
+  if (props.regra.pool_type === 'user' && ehAgente(props.regra.pool_id)) {
+    return t(`${R}.COMO_IA`, { nome: pessoa.value });
+  }
   if (!naHora.value) {
     return props.regra.escalation_action === 'escalate'
       ? t(`${R}.COMO_CONVITE_PASSA`, {
@@ -176,7 +187,7 @@ const faltaNaEtapa = computed(
     >
       <I18nT
         v-if="regra.pool_type === 'user'"
-        :keypath="pessoa ? `${R}.QUEM_PESSOA` : `${R}.QUEM_NINGUEM`"
+        :keypath="chaveDaPessoa"
         tag="span"
         scope="global"
       >
@@ -188,7 +199,9 @@ const faltaNaEtapa = computed(
         v-else
         :keypath="
           regra.mode === 'direct'
-            ? `${R}.QUEM_EQUIPE_NOME`
+            ? comIa
+              ? `${R}.QUEM_EQUIPE_NOME_IA`
+              : `${R}.QUEM_EQUIPE_NOME`
             : olhaOnline
               ? `${R}.QUEM_EQUIPE`
               : `${R}.QUEM_EQUIPE_ANTIGA`
