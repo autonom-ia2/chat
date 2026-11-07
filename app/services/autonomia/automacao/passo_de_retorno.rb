@@ -128,8 +128,7 @@ class Autonomia::Automacao::PassoDeRetorno
   end
 
   def quando
-    duracao = @passo['daqui']
-    Time.current + duracao['valor'].to_i.public_send(::Autonomia::Automacao::Executor::UNIDADES.fetch(duracao['unidade']))
+    Time.current + ::Autonomia::Automacao::Duracao.de(@passo['daqui'])
   end
 
   # O fuso que a tela grava na conta (#954), o mesmo do extrair e do Guia.

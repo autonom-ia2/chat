@@ -74,11 +74,19 @@ class Autonomia::Automacao::Receita
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
-    return ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo) if passo['tipo'] == 'ia_assumir'
     return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
+    return problemas_do_proprio_passo(passo) if %w[ia_assumir card].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
+  end
+
+  # Os passos que se conferem sozinhos ao salvar, na própria classe: o "Passar para a agente de IA" (G15) e o "criar
+  # card" (G4), que confere também a pessoa.
+  def problemas_do_proprio_passo(passo)
+    return ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo, @account_user) if passo['tipo'] == 'card'
+
+    ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
   end
 
   # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada

@@ -660,6 +660,10 @@
       "frase": "AUTOMACAO_LIVRE.GRUPOS.CONVERSA"
     },
     {
+      "chave": "FUNIL",
+      "frase": "AUTOMACAO_LIVRE.GRUPOS.FUNIL"
+    },
+    {
       "chave": "CONTATO",
       "frase": "AUTOMACAO_LIVRE.GRUPOS.CONTATO"
     },
@@ -936,6 +940,21 @@
           "peca": "destino_resumir",
           "obrigatorio": true,
           "rotulo": "AUTOMACAO_LIVRE.CAMPOS.DESTINO"
+        }
+      ]
+    },
+    {
+      "tipo": "card",
+      "grupo": "FUNIL",
+      "requer": "automacao_gatilhos",
+      "funil": true,
+      "frase": "AUTOMACAO_LIVRE.PASSOS.CARD",
+      "campos": [
+        {
+          "nome": "etapa_id",
+          "peca": "etapa",
+          "obrigatorio": true,
+          "rotulo": "AUTOMACAO_LIVRE.CAMPOS.ETAPA_ID"
         }
       ]
     },
