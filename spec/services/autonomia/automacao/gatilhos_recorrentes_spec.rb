@@ -126,6 +126,21 @@ RSpec.describe 'Automação livre: gatilho recorrente', :automacao_motor do # ru
       expect(execucoes.pluck(:alvo_type, :alvo_id)).to eq([['Crm::Card', perdido.id]])
     end
 
+    # Ex. 17 (vendedora de férias): os cards abertos de uma pessoa; o fechado dela e o aberto de outra ficam de fora.
+    it 'card: aberto e do responsável' do
+      funil, etapa = create_crm_pipeline(account: account, user: admin)
+      vendedora = create(:user, account: account, role: :agent)
+      card = ->(dono, status) { account.crm_cards.create!(pipeline: funil, stage: etapa, title: 'C', currency: 'BRL', owner: dono, status: status) }
+      dela = card.call(vendedora, :open)
+      card.call(vendedora, :won)
+      card.call(admin, :open)
+
+      recorrente(tipo: 'card.recorrente', selecao: { 'situacao' => 'aberto', 'responsavel_id' => vendedora.id })
+      varrer_em(fuso.local(2026, 10, 5, 8, 5))
+
+      expect(execucoes.pluck(:alvo_type, :alvo_id)).to eq([['Crm::Card', dela.id]])
+    end
+
     it 'contato: atributo igual e sem a etiqueta' do
       create(:custom_attribute_definition, account: account, attribute_key: 'plano', attribute_model: 'contact_attribute')
       alvo = create(:contact, account: account, custom_attributes: { 'plano' => 'ouro' })
@@ -330,6 +345,12 @@ RSpec.describe 'Automação livre: gatilho recorrente', :automacao_motor do # ru
       _, etapa_alheia = create_crm_pipeline(account: outra, user: create(:user, account: outra, role: :administrator))
       expect(problemas({ 'etapa_id' => etapa_alheia.id }, tipo: 'card.recorrente'))
         .to eq([I18n.t('autonomia.automacao.receita.etapa_de_fora', id: etapa_alheia.id)])
+    end
+
+    it 'recusa o responsável que não é da conta' do
+      de_fora = create(:user, account: create(:account))
+      expect(problemas({ 'responsavel_id' => de_fora.id }, tipo: 'card.recorrente'))
+        .to eq([I18n.t('autonomia.automacao.receita.responsavel_de_fora')])
     end
 
     it 'recusa "fechado entre" com as pontas trocadas' do
