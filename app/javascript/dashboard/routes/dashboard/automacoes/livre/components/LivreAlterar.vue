@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useMapGetter } from 'dashboard/composables/store';
 import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 import Button from 'dashboard/components-next/button/Button.vue';
 import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.vue';
@@ -10,6 +11,7 @@ import LivreDuracao from './LivreDuracao.vue';
 import LivreTexto from './LivreTexto.vue';
 import LivreModelo from './LivreModelo.vue';
 import LivreDestinatarios from './LivreDestinatarios.vue';
+import LivreCampanha from './LivreCampanha.vue';
 import LivreEtapa from './LivreEtapa.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
@@ -17,6 +19,7 @@ import LivreIaCampo from './LivreIaCampo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
+import { campanhaPronta } from '../campanha';
 import { envioPronto, paraPronto } from '../retorno';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
@@ -177,6 +180,7 @@ const vazio = valor =>
   valor === null ||
   valor === '' ||
   (Array.isArray(valor) && !valor.length);
+const caixasDaConta = useMapGetter('inboxes/getInboxes');
 // O texto e a linha (assunto do e-mail, G2) levam dado da conversa; com os dois
 // no passo, cada "Pôr um dado" diz em qual caixa o dado entra.
 const TEXTOS = ['texto_com_valores', 'linha_com_valores'];
@@ -208,6 +212,9 @@ const nativoPronto = campo => {
         (partes || []).some(parte => typeof parte !== 'string' || parte.trim())
       )
     );
+  // G14: a peça da campanha mostra e confere o passo inteiro.
+  if (campo.peca === 'campanha')
+    return campanhaPronta(rascunho.value, caixasDaConta.value);
   if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
   if (campo.peca === 'destinatarios')
@@ -395,6 +402,12 @@ defineExpose({ abrir, fechar });
           :model-value="rascunho[campo.nome]"
           :opcoes="opcoes"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreCampanha
+          v-else-if="campo.peca === 'campanha' && campo.nome === 'faz'"
+          :model-value="rascunho"
+          :etiquetas="opcoes.etiqueta"
+          @update:model-value="novo => (rascunho = novo)"
         />
         <LivreEtapa
           v-else-if="campo.peca === 'etapa'"

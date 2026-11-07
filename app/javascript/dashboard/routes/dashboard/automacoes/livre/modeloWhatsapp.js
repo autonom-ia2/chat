@@ -23,7 +23,7 @@ export const variaveisDoCorpo = corpo => [
   ),
 ];
 
-const pedeMais = parte => {
+export const pedeMais = parte => {
   const tipo = String(parte.type).toUpperCase();
   if (tipo === 'HEADER')
     return (
@@ -37,7 +37,7 @@ const pedeMais = parte => {
   return false;
 };
 
-const numeradas = nomes =>
+export const numeradas = nomes =>
   [...nomes].sort((a, b) => Number(a) - Number(b)).join() ===
   nomes.map((_, indice) => String(indice + 1)).join();
 
