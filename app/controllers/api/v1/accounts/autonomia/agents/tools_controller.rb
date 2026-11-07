@@ -1,6 +1,9 @@
 class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts::Autonomia::BaseController
-  before_action :ensure_super_admin
+  # #1430: ferramenta não segue o ver/editar de Agentes. Quem a cria escolhe para onde vão os dados das conversas.
+  skip_before_action :check_autonomia_permission
+  before_action :check_tools_permission
   before_action :fetch_agent
+  before_action :refuse_quote_agent, only: :create
   before_action :fetch_tool, only: %i[show update destroy test]
 
   def index
@@ -45,8 +48,18 @@ class Api::V1::Accounts::Autonomia::Agents::ToolsController < Api::V1::Accounts:
 
   private
 
-  def ensure_super_admin
-    raise Pundit::NotAuthorizedError unless Current.user.is_a?(SuperAdmin)
+  # A equipe da plataforma sempre. Com a flag `agente_ferramentas_delegadas` na conta: o administrador e quem tem a chave
+  # `autonomia_tools_manage`, em tudo, inclusive listar (a lista mostra endereços). Sem ela, só a contagem no agente.
+  def check_tools_permission
+    return if Current.user.is_a?(SuperAdmin)
+    raise Pundit::NotAuthorizedError unless Current.account.feature_enabled?('agente_ferramentas_delegadas')
+
+    check_permission_granted!('autonomia_tools_manage')
+  end
+
+  # A Lia (Agente de Cotação) fica com a lista fixa de ferramentas dela nesta fase (#1430).
+  def refuse_quote_agent
+    render_unprocessable(I18n.t('autonomia.agents.ferramenta_na_cotacao')) if @agent.agent_type == 'insurance_quote'
   end
 
   def fetch_agent
