@@ -9,7 +9,8 @@
 module FechamentoAutomacao
   OPENAI = 'https://api.openai.com/v1/responses'.freeze
   # Os jobs que o caminho de produção enfileira entre o evento e a saída.
-  JOBS = [EventDispatcherJob, Autonomia::Automacao::AvancarJob, SendReplyJob].freeze
+  # O EmOutroRegistroJob (G18) abre as execuções filhas do passo "em outro registro".
+  JOBS = [EventDispatcherJob, Autonomia::Automacao::AvancarJob, Autonomia::Automacao::EmOutroRegistroJob, SendReplyJob].freeze
   LIMITE_DE_JOBS = 60
 
   Chamada = Data.define(:metodo, :host, :caminho, :corpo)
@@ -167,7 +168,7 @@ module FechamentoAutomacao::Lacunas
     'G15' => -> { passo?('ia_assumir') },
     'G16' => -> { valor_calculado_no_corpo? },
     'G17' => -> { acao?('POST contacts') },
-    'G18' => nil,
+    'G18' => -> { passo?('em_outro_registro') },
     'G19' => -> { acao?('POST contacts/:contact_id/notes') },
     'G20' => nil,
     'G21' => -> { passo?('prospeccao') },

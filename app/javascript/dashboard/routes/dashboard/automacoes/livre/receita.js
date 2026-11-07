@@ -11,6 +11,8 @@ export const RAMOS = {
   se: ['entao', 'senao'],
   esperar_ate: ['se_vencer'],
   decidir: ['nenhum'],
+  // G18 (#2671): os passos que rodam no outro registro.
+  em_outro_registro: ['passos'],
 };
 
 // Lista raiz: 'raiz'. Lista de um galho: '<id do passo>:<ramo>'.
@@ -102,11 +104,24 @@ export const novoId = passos => {
 
 export const receitaVazia = () => ({ gatilho: null, passos: [] });
 
-// "Se" e "Esperar até" nascem sem condição, e o "Se" sem passo em "Então": o
-// esquema recusa os dois até a pessoa completar pelo próprio Confira.
-const incompleto = passo =>
-  (passo.tipo === 'se' || passo.tipo === 'esperar_ate') &&
-  (!passo.condicao || (passo.tipo === 'se' && !passo.entao?.length));
+// G18: o "em outro registro" diz onde rodar. O contato do campo pede o campo;
+// os cards do contato valem sem filtro.
+export const registroPronto = registro => {
+  if (registro?.de === 'cards_do_contato') return true;
+  return registro?.de === 'contato_do_campo' && Boolean(registro.campo?.$valor);
+};
+
+// "Se" e "Esperar até" nascem sem condição, e o "Se" sem passo em "Então"; o
+// "Em outro registro" (G18), sem passo dentro: o esquema recusa até a pessoa
+// completar pelo próprio Confira.
+const incompleto = passo => {
+  if (passo.tipo === 'em_outro_registro')
+    return !passo.passos?.length || !registroPronto(passo.registro);
+  return (
+    (passo.tipo === 'se' || passo.tipo === 'esperar_ate') &&
+    (!passo.condicao || (passo.tipo === 'se' && !passo.entao?.length))
+  );
+};
 
 // Pronta para salvar: o esquema pede gatilho, pelo menos um passo e cada "Se"
 // e "Esperar até" completos.

@@ -24,10 +24,17 @@ class Autonomia::Automacao::Contexto
   def conversa
     return @alvo if @alvo.is_a?(::Conversation)
 
-    @alvo.primary_conversation if @alvo.is_a?(::Crm::Card)
+    conversa_do_card if @alvo.is_a?(::Crm::Card)
   end
 
   def card = (@alvo if @alvo.is_a?(::Crm::Card))
+
+  # A filha do "em outro registro" (G18) num card do mesmo contato age na conversa da mãe; o resto, na principal do card.
+  def conversa_do_card
+    return @conversa_do_card if defined?(@conversa_do_card)
+
+    @conversa_do_card = ::Autonomia::Automacao::EmOutroRegistro.conversa_da_mae(@execucao, @alvo) || @alvo.primary_conversation
+  end
 
   def contato
     return @alvo if @alvo.is_a?(::Contact)

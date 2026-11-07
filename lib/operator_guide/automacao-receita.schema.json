@@ -119,6 +119,33 @@
       "required": ["mensagem"],
       "properties": { "mensagem": { "$ref": "#/definitions/texto" } }
     },
+    "registro_ligado": {
+      "description": "Onde o passo \"em outro registro\" (G18) age. contato_do_campo: o contato cujo id está num valor do alvo (o card guarda quem indicou); o ramo roda no contato ou na conversa mais recente dele (usar). cards_do_contato: os cards do contato do alvo, menos o próprio alvo, filtrados por funil, etapa e situação; mais_recente fica só com o mais novo. Uma execução própria por registro achado, sem teto.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["de", "campo", "usar"],
+          "properties": {
+            "de": { "const": "contato_do_campo" },
+            "campo": { "$ref": "#/definitions/valor" },
+            "usar": { "enum": ["contato", "conversa"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["de"],
+          "properties": {
+            "de": { "const": "cards_do_contato" },
+            "funil_id": { "type": "integer", "minimum": 1 },
+            "etapa_id": { "type": "integer", "minimum": 1 },
+            "situacao": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["open", "won", "lost"] } },
+            "mais_recente": { "type": "boolean" }
+          }
+        }
+      ]
+    },
     "valor_calculado": {
       "description": "Valor calculado numa folha do corpo da ação (G16), lido na hora da execução. $valor copia um valor do alvo; $texto junta pedaços como o texto da mensagem; $data dá \"AAAA-MM-DD\" a partir de \"hoje\" (no fuso da conta) ou de um atributo do tipo data, mais N dias, semanas, meses ou anos (N negativo volta no tempo; 31/01 + 1 mês = 28/02). Valor lido vazio pula a ação.",
       "oneOf": [
@@ -451,6 +478,18 @@
             "daqui": { "$ref": "#/definitions/duracao" },
             "para": { "$ref": "#/definitions/para_do_retorno" },
             "envio": { "$ref": "#/definitions/envio_do_retorno" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tipo", "registro", "passos"],
+          "description": "Roda os passos de dentro em outro registro ligado ao alvo (G18), numa execução própria por registro. A automação segue sem esperar. Dentro dele não cabe outro \"em outro registro\".",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "em_outro_registro" },
+            "registro": { "$ref": "#/definitions/registro_ligado" },
+            "passos": { "$ref": "#/definitions/passos" }
           }
         }
       ]

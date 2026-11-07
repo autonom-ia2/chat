@@ -1013,6 +1013,7 @@ pt_BR:
         acao_recusada: 'A plataforma recusou esta ação do jeito que ela foi montada.'
         alvo_sumiu: 'A conversa não existe mais.'
         desligada: 'A automação foi desligada.'
+        em_outro_registro: 'Aberta pelo passo "em outro registro": estes passos rodam num registro ligado ao que começou a automação.'
         erro_depois_de_gravar: 'A plataforma deu erro depois de gravar parte da ação. A automação não repete, para não fazer duas vezes; confira e desfaça se precisar.'
         erro_inesperado: 'A automação parou no meio deste passo por um erro inesperado. Ela não repete o passo; confira o que já foi feito.'
         erro_passageiro: 'A plataforma não respondeu; a automação vai tentar de novo.'
@@ -1029,6 +1030,7 @@ pt_BR:
         sem_chave_de_funis: 'Quem ligou a automação não pode mais editar o funil, e este passo mexe no funil. Assuma e religue.'
         gatilho_desligado: 'Os gatilhos de card e de tempo estão desligados nesta conta. A automação não seguiu.'
         ja_aberta: 'O gatilho aconteceu de novo, mas a automação já estava rodando aqui e não começou outra vez.'
+        filhas_puladas: 'Alguns registros ligados ficaram sem estes passos: quem ligou a automação não alcança esses registros, ou a automação já estava rodando neles.'
         receita_com_problema: 'A receita desta versão não roda mais do jeito que foi salva. Corrija e salve de novo antes de ligar.'
         sem_quem_ligou: 'Ninguém ligou esta automação. Assuma e religue.'
         sem_versao: 'Esta automação ainda não tem passos salvos.'
@@ -1078,6 +1080,11 @@ pt_BR:
         inicio_da_reuniao: '%d/%m/%Y às %H:%M'
       receita:
         id_repetido: 'Passo %{passo}: o id já é de outro passo.'
+        em_outro_registro:
+          aninhado: 'Passo %{passo}: "em outro registro" não pode ficar dentro de outro "em outro registro".'
+          sem_chave_de_funis: 'Passo %{passo}: ele lê cards do funil, e você não pode editar funis.'
+          funil_de_fora: 'Passo %{passo}: o funil não é desta conta.'
+          etapa_de_fora: 'Passo %{passo}: a etapa não é desta conta ou não é do funil escolhido.'
         caixa_de_email_invalida: 'Passo %{passo}: a caixa %{id} não é uma caixa de e-mail desta conta.'
         atributo_inexistente: 'Passo %{passo}: a conta não tem o atributo de %{caminho}. Crie o atributo antes ou corrija a chave.'
         acao_fora: 'Passo %{passo}: %{acao} não pode ser passo de automação.'

@@ -278,6 +278,12 @@
     "GATILHO_COM": {
       "CARD_GANHO": "Quando um card de {funil} fecha o seguro",
       "CARD_PERDIDO": "Quando um card de {funil} não fecha"
+    },
+    "OUTRO_REGISTRO": {
+      "SITUACOES": {
+        "WON": "Que fecharam o seguro",
+        "LOST": "Que não fecharam"
+      }
     }
   }
 }

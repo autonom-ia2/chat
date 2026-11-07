@@ -1,0 +1,43 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "OUTRO_REGISTRO": {
+      "ESCOLHA": "Escolha",
+      "LIGACOES": {
+        "CONTATO_DO_CAMPO": "No contato guardado num campo",
+        "CARDS_DO_CONTATO": "Nos outros cards deste contato"
+      },
+      "CAMPO": "Qual campo guarda o contato?",
+      "SEM_CAMPO": "Nenhum campo de número aqui pode guardar um contato. Crie um campo de número antes.",
+      "USAR": "Fazer onde?",
+      "USOS": {
+        "CONVERSA": "Na conversa mais recente dele",
+        "CONTATO": "No cadastro do contato"
+      },
+      "SITUACAO": "Quais cards? Sem marcar nenhum, vale qualquer um.",
+      "SITUACOES": {
+        "OPEN": "Abertos",
+        "WON": "Ganhos",
+        "LOST": "Perdidos"
+      },
+      "FUNIL": "De qual funil?",
+      "QUALQUER_FUNIL": "Qualquer funil",
+      "ETAPA": "Em qual etapa?",
+      "QUALQUER_ETAPA": "Qualquer etapa",
+      "QUANTOS": "Quantos cards?",
+      "TODOS": "Todos os que combinam",
+      "SO_O_MAIS_RECENTE": "Só o mais recente",
+      "EXPLICACAO": {
+        "CONTATO_DO_CAMPO": "Os passos de dentro rodam no contato cujo número está nesse campo. A automação segue sem esperar por eles.",
+        "CARDS_DO_CONTATO": "Os passos de dentro rodam em cada card que combinar, um por vez. O card de agora fica de fora. Mensagem sai na conversa de agora."
+      },
+      "FRASE": {
+        "CONVERSA": "Na conversa de quem está em {campo}",
+        "CONTATO": "No contato que está em {campo}",
+        "CARDS": "Em cada outro card deste contato",
+        "CARD_MAIS_RECENTE": "No card mais recente deste contato",
+        "NO_FUNIL": "no funil escolhido",
+        "SEM_LIGACAO": "Em outro contato ou card: escolha onde"
+      }
+    }
+  }
+}

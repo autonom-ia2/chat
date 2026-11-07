@@ -4,6 +4,10 @@
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
 import { fraseDoRetorno } from './retorno';
+import {
+  TIPO as EM_OUTRO_REGISTRO,
+  fraseDoOutroRegistro,
+} from './outroRegistro';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -312,6 +316,14 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       titulo: fraseDoTexto(passo.titulo, catalogo, t),
       mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
     });
+  if (passo.tipo === EM_OUTRO_REGISTRO) {
+    const campo = passo.registro?.campo?.$valor;
+    return fraseDoOutroRegistro(
+      passo,
+      t,
+      campo && fraseDoValor(campo, catalogo, t)
+    );
+  }
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
