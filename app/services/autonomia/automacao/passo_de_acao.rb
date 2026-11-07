@@ -16,10 +16,14 @@ class Autonomia::Automacao::PassoDeAcao
   # 4xx que passam: tempo esgotado, cedo demais e limite de pedidos.
   PASSAGEIROS = [408, 425, 429].freeze
 
-  # O passo "criar retorno" (G3, #2629) tem objeto próprio, que chega à mesma porta (AcoesDoRetorno).
+  # Os tipos de passo que o Executor entrega aqui (#2414 F3, G3, G18).
+  TIPOS = %w[acao retorno em_outro_registro].freeze
+
+  # O "criar retorno" (G3, #2629) e o "em outro registro" (G18, #2671) têm objeto próprio, com o mesmo resultado; o
+  # retorno chega à mesma porta (AcoesDoRetorno).
   def self.executar(passo:, **)
-    classe = passo['tipo'] == 'retorno' ? ::Autonomia::Automacao::PassoDeRetorno : self
-    classe.new(passo: passo, **).executar
+    classes = { 'retorno' => ::Autonomia::Automacao::PassoDeRetorno, 'em_outro_registro' => ::Autonomia::Automacao::PassoEmOutroRegistro }
+    classes.fetch(passo['tipo'], self).new(passo: passo, **).executar
   end
 
   # `acoes`: a porta que executa. O passo "criar retorno" (G3) passa a dele, liberada só para o retorno.

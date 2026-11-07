@@ -117,7 +117,8 @@ RSpec.describe Autonomia::Automacao::Catalogo do
     fora = declarado['nativos_fora_do_editor'].to_h
 
     expect((declarado['nativos'].keys + fora.keys).sort).to eq(do_esquema.sort)
-    expect(fora.values).to all(include('#2486'))
+    # Cada um com a Issue que o leva para a tela (o primeiro foi a #2486, de mensagem e avisar).
+    expect(fora.values).to all(include('(#'))
   end
 
   # #2496: todo valor da mensagem do gatilho está no editor ou só no Guia, uma vez. O que fica de fora do catálogo

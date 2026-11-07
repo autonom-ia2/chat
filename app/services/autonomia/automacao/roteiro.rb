@@ -3,6 +3,15 @@
 # Os ramos (`entao`, `senao`, `se_vencer` e os caminhos do "decidir") ficam dentro do passo que os abre, pela travessia
 # única da Receita. Quando um ramo acaba, a receita segue no passo depois de quem o abriu, e assim por diante até o fim.
 class Autonomia::Automacao::Roteiro
+  # A filha do "em outro registro" (G18, #2671) anda só no ramo do passo que a abriu: começa no primeiro passo dele e
+  # acaba no fim dele, sem seguir os passos da mãe. As outras execuções andam na receita inteira.
+  def self.da(execucao)
+    receita = execucao.versao.receita
+    _mae_id, passo_id = ::Autonomia::Automacao::EmOutroRegistro.da(execucao)
+    passo = passo_id && new(receita).passo(passo_id)
+    passo ? new('passos' => Array(passo['passos'])) : new(receita)
+  end
+
   def initialize(receita)
     @receita = receita
     @lugares = {}

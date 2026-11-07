@@ -520,6 +520,7 @@ en:
         acao_recusada: 'The platform refused this action as it was set up.'
         alvo_sumiu: 'The conversation no longer exists.'
         desligada: 'The automation was turned off.'
+        em_outro_registro: 'Started by the "in another record" step: these steps run on a record linked to the one the automation started on.'
         erro_depois_de_gravar: 'The platform failed after saving part of the action. The automation does not repeat it, so it is not done twice; check and undo if needed.'
         erro_inesperado: 'The automation stopped in the middle of this step on an unexpected error. It does not repeat the step; check what was already done.'
         erro_passageiro: 'The platform did not respond; the automation will try again.'
@@ -585,6 +586,11 @@ en:
         inicio_da_reuniao: '%m/%d/%Y at %H:%M'
       receita:
         id_repetido: 'Step %{passo}: the id is used by another step.'
+        em_outro_registro:
+          aninhado: 'Step %{passo}: "in another record" cannot go inside another "in another record".'
+          sem_chave_de_funis: 'Step %{passo}: it reads cards from the pipeline, and you cannot edit pipelines.'
+          funil_de_fora: 'Step %{passo}: the pipeline is not from this account.'
+          etapa_de_fora: 'Step %{passo}: the stage is not from this account or not from the chosen pipeline.'
         caixa_de_email_invalida: 'Step %{passo}: inbox %{id} is not an e-mail inbox of this account.'
         atributo_inexistente: 'Step %{passo}: the account has no attribute for %{caminho}. Create it first or fix the key.'
         acao_fora: 'Step %{passo}: %{acao} cannot be an automation step.'

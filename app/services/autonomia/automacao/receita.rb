@@ -12,7 +12,8 @@
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
-  RAMOS = %w[entao senao se_vencer].freeze
+  # `passos`: o ramo do "em outro registro" (G18, #2671), que roda numa execução filha, no registro ligado.
+  RAMOS = %w[entao senao se_vencer passos].freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.
@@ -20,6 +21,8 @@ class Autonomia::Automacao::Receita
   # Onde o extrair pode gravar, além dos atributos do contato e da conversa (`<base>.atributos.<chave>`).
   DESTINOS_FIXOS = %w[contato.nome empresa.nome].freeze
   DESTINOS_DE_ATRIBUTO = %w[contato.atributos conversa.atributos].freeze
+  # Os passos com conferência própria: o "criar retorno" (G3) e o "em outro registro" (G18).
+  PROPRIOS = { 'retorno' => :problemas_do_retorno, 'em_outro_registro' => :problemas_do_outro_registro }.freeze
   # A chave do caminho sai do nome (minúscula, sem acento) e precisa de pelo menos uma letra.
   LETRAS = ('a'..'z')
 
@@ -41,15 +44,18 @@ class Autonomia::Automacao::Receita
   # `account_user`: quem salva ou liga, na conta. Com ele, o valor que pede permissão (Valores::PROTEGIDOS, #2597) só
   # entra se ele pode ler; `nil` explícito (o catálogo, a leitura sem pessoa) não aplica a regra aqui, e a execução
   # continua lendo vazio. Obrigatório, sem padrão: quem monta a Receita diz quem é, e o esquecimento quebra o spec.
-  def initialize(receita, conta:, account_user:)
+  # `alvo`: o tipo do registro em que a receita roda, quando não é o do gatilho: o ramo do "em outro registro" (G18) é
+  # conferido como uma receita própria, no registro ligado (EmOutroRegistro.problemas_ao_salvar).
+  def initialize(receita, conta:, account_user:, alvo: nil)
     @receita = receita
     @conta = conta
     @account_user = account_user
+    @alvo = alvo
   end
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *gatilho_novo, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
+    [*(@alvo ? [] : ids_repetidos), *gatilho_novo, *filtros_do_gatilho, *do_alvo.flat_map { |passo| problemas_do_passo(passo) }]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -58,6 +64,11 @@ class Autonomia::Automacao::Receita
   end
 
   private
+
+  # Os passos que rodam no alvo desta receita: o ramo do "em outro registro" roda no registro ligado e é conferido lá.
+  def do_alvo(lista = @receita['passos']) = Array(lista).flat_map { |passo| [passo, *ramos_do_alvo(passo).flat_map { |ramo| do_alvo(ramo) }] }
+
+  def ramos_do_alvo(passo) = ::Autonomia::Automacao::EmOutroRegistro.do_tipo?(passo) ? [] : self.class.ramos(passo)
 
   def ids_repetidos
     passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
@@ -75,7 +86,7 @@ class Autonomia::Automacao::Receita
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo) if passo['tipo'] == 'ia_assumir'
-    return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
+    return send(PROPRIOS[passo['tipo']], passo) if PROPRIOS.key?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
@@ -110,6 +121,12 @@ class Autonomia::Automacao::Receita
   # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
   def problemas_do_retorno(passo)
     ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) { |c| problemas_do_caminho(passo['id'], c) }
+  end
+
+  def problemas_do_outro_registro(passo)
+    ::Autonomia::Automacao::EmOutroRegistro.problemas_ao_salvar(passo, conta: @conta, account_user: @account_user, dentro: @alvo.present?) do |c|
+      problemas_do_caminho(passo['id'], c)
+    end
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
@@ -208,7 +225,7 @@ class Autonomia::Automacao::Receita
 
   # #2499: `card.*` num gatilho de conversa não tem de onde ler. Gatilho desconhecido o esquema já recusou.
   def no_alvo_do_gatilho?(caminho)
-    alvo = ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
+    alvo = @alvo || ::Autonomia::Automacao::Gatilhos.alvo(@receita.dig('gatilho', 'tipo'))
     alvo.nil? || ::Autonomia::Automacao::Valores.no_alvo?(caminho, alvo)
   end
 
