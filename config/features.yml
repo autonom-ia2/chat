@@ -1191,3 +1191,13 @@
   display_name: Anúncios › login único
   enabled: true
   column: feature_flags_ext_2
+
+# Prospecção nova, "Achar empresas" (#2692): PROTÓTIPO para aprovação do Rodrigo, não vai para PR assim. Ligada: o
+# menu Prospecção abre as telas novas (porta com "O quê?" e "Onde?", lista que se completa ao vivo, folha "O que fazer
+# com as {n}?", Suas buscas e Para chamar). Desligada: as telas de hoje, intactas. Rollback: desligar a flag na conta.
+# Sem migration. Bit PROVISÓRIO: posição 29 (268435456, 1 << 28), a próxima livre da feature_flags_ext_2 pela ordem
+# deste arquivo em 07/11; NÃO está reservada, a Orquestração atribui a posição de verdade. Nasce desligada.
+- name: prospeccao_nova
+  display_name: Prospecção › achar empresas (nova)
+  enabled: true
+  column: feature_flags_ext_2

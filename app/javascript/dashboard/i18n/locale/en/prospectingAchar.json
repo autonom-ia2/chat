@@ -1,0 +1,378 @@
+{
+  "PROSPECTING_ACHAR": {
+    "MENU": {
+      "ACHAR": "Find businesses",
+      "BUSCAS": "Searches"
+    },
+    "COMUM": {
+      "ALTERAR": "Change",
+      "ABRIR": "Open",
+      "ABRIR_ROTULO": "Open {nome}",
+      "FECHAR": "Close",
+      "CANCELAR": "Cancel",
+      "SALVAR": "Save",
+      "VOLTAR": "Back",
+      "TENTAR_DE_NOVO": "Try again",
+      "MAIS": "More",
+      "VER_NO_FUNIL": "See the pipeline",
+      "CHAMAR_WHATSAPP": "Message on WhatsApp",
+      "LIGAR": "Call",
+      "DESFAZER": "Undo",
+      "VOCE": "you",
+      "QUANDO": {
+        "HOJE": "today",
+        "ONTEM": "yesterday",
+        "DIAS": "{n} days ago"
+      },
+      "DEMO_NAO_GRAVA": "Demo: nothing was saved.",
+      "DEMO_WHATSAPP": "Demo: WhatsApp would open here.",
+      "CONFIRMAR": "Confirm",
+      "APAGAR": "Delete",
+      "USAR_ESCOLHA": "Use this choice",
+      "ESCOLHER": "Choose"
+    },
+    "CHANCE": {
+      "PRIMEIRO": "Call first",
+      "BOA": "Good chance",
+      "MEDIA": "Some chance",
+      "POUCA": "Low chance"
+    },
+    "PORTA": {
+      "TITULO": "Which businesses do you want to find?",
+      "O_QUE": {
+        "ROTULO": "What?",
+        "PLACEHOLDER": "E.g. offices"
+      },
+      "ONDE": {
+        "ROTULO": "Where?",
+        "PLACEHOLDER": "Neighborhood or city",
+        "PROCURANDO": "Looking for places…",
+        "NADA": "We could not find this place. Try the city name.",
+        "ESCOLHIDO": "Chosen place",
+        "SEM_GOOGLE": "Business search is not ready on this account yet.",
+        "FALAR_SUPORTE": "Talk to support"
+      },
+      "IDEIAS": {
+        "ROTULO": "Ideas",
+        "RESTAURANTES": "Restaurants",
+        "ESCRITORIOS": "Offices",
+        "ACADEMIAS": "Gyms"
+      },
+      "COMO": {
+        "ROTULO": "How we will search",
+        "TEXTO": "Up to {km} km · up to {n} businesses · {quais}",
+        "MELHORES": "the best for you first",
+        "POUCO": "the ones barely on Google first"
+      },
+      "ULTIMAS": {
+        "TITULO": "Your latest searches",
+        "FATO": "{achadas} found · {noFunil} in the pipeline · {quando}",
+        "VER_TODAS": "See all",
+        "TITULO_EQUIPE": "Latest team searches"
+      },
+      "BOTAO": "Find businesses",
+      "BOTAO_OCUPADO": "Searching…",
+      "FALTA": {
+        "O_QUE": "Write what you want to find.",
+        "ONDE": "Write the neighborhood or city.",
+        "TOCAR": "Pick the right place on the list."
+      },
+      "ERRO": "We could not start the search.",
+      "TESTE": "This account is in test mode. The businesses on the list are examples.",
+      "SO_VER": "You can see your team's searches, but not make new ones."
+    },
+    "COMO_PROCURAR": {
+      "TITULO": "How to search",
+      "ATE_ONDE": {
+        "TITULO": "How far?",
+        "KM_1": "Very close · 1 km",
+        "KM_3": "In the neighborhood · 3 km",
+        "KM_5": "In the area · 5 km",
+        "KM_10": "In the city · 10 km"
+      },
+      "QUANTAS": {
+        "TITULO": "How many?",
+        "N_20": "Up to 20 · faster",
+        "N_40": "Up to 40",
+        "N_60": "Up to 60 · the most"
+      },
+      "MAIS_AJUSTES": "More settings",
+      "SEU": "Created by you",
+      "QUAIS": {
+        "TITULO": "Which businesses",
+        "TODAS": "All in the area"
+      }
+    },
+    "CONFIRA": {
+      "BUSCANDO": "Looking for {oQue} in {lugar}…",
+      "TITULO": "{oQue} · {lugar}",
+      "FATO": "{achadas} found · {vao} going · {fora} left out",
+      "MUDAR_PEDIDO": "Change the search",
+      "PROGRESSO": "Checking the companies: {feitos} of {total}",
+      "PROGRESSO_DICA": "You can leave. Everything will be here when you come back.",
+      "SO_WHATSAPP": "Only with WhatsApp",
+      "PROCURAR_NOME": "Search by name",
+      "GRUPOS": {
+        "BOA": "Good chance ({n})",
+        "MEDIA": "Some chance ({n})",
+        "POUCA": "Low chance ({n})",
+        "FORA": "Left out ({n})",
+        "PRIMEIRO": "Call first"
+      },
+      "TIRAR_ESTAS": "Take these out",
+      "TIROU": "We took out {n} businesses.",
+      "DONO": {
+        "PROCURANDO": "Looking for the owner…",
+        "CONFIRMADO": "Owner: {nome}, {cargo}",
+        "CONFIRMADO_SEM_CARGO": "Owner: {nome}",
+        "POSSIVEL": "May be the owner: {nome}",
+        "NENHUM": "Owner not found"
+      },
+      "WHATS": {
+        "CONFERINDO": "Checking WhatsApp…",
+        "TEM": "Has WhatsApp",
+        "SEM": "No WhatsApp"
+      },
+      "VAI": "Goes",
+      "NAO_VAI": "Stays out",
+      "LEVAR": "Take {nome}",
+      "FORA": {
+        "NO_FUNIL": "Already in the {funil} pipeline",
+        "NO_FUNIL_SEM_NOME": "Already in a pipeline",
+        "NAO_QUER": "Does not want messages",
+        "TIROU": "You took it out in another search",
+        "FECHOU": "Business closed"
+      },
+      "VAZIA": "We found no companies here.",
+      "CORTE_VAZIO": "No business with WhatsApp in this search.",
+      "MOSTRAR_TODAS": "Show all",
+      "NOME_VAZIO": "No business with this name.",
+      "LIMPAR": "Clear",
+      "GOOGLE_PAROU": "We couldn't bring them all now.",
+      "BUSCAR_DE_NOVO": "Search again",
+      "ERRO": "We could not search now.",
+      "ERRO_ABRIR": "We could not open this search.",
+      "TODAS_FORA": "Choose at least one business",
+      "CONTINUAR": "Continue with {n}",
+      "LEITURA": {
+        "TITULO": "Businesses in this search",
+        "VAZIA": "This search did not bring businesses.",
+        "VOLTAR": "Back to your searches"
+      },
+      "VAZIA_LONGE": "Look farther",
+      "FATO_SEM_FORA": "{achadas} found · {vao} going",
+      "BUSCANDO_DICA": "Takes less than 1 minute.",
+      "MANDADA": "Already in the {funil} pipeline",
+      "FATO_CONFERINDO": "{achadas} found",
+      "CONTINUAR_CONFERINDO": "Continue",
+      "DESLIGUE": "Turn off the ones you do not want.",
+      "MAPA": {
+        "VER": "See on map",
+        "ROTULO": "Map of the companies found",
+        "VOLTAR": "Back to the list"
+      }
+    },
+    "GAVETA": {
+      "ROTULO": "Business {nome}",
+      "NO_FUNIL": "In pipeline {funil}, stage {etapa}, with {pessoa}.",
+      "NO_FUNIL_SEM_NOME": "It is in a pipeline.",
+      "POR_QUE": "Why call",
+      "QUEM_DECIDE": "Who to talk to",
+      "SEM_DONO": "We did not find the owner. Ask for whoever decides.",
+      "PROCURAR_DE_NOVO": "Search again",
+      "CONTATO": "Contact",
+      "GOOGLE": "What people say on Google",
+      "GOOGLE_RESUMO": "{nota} stars · {n} reviews",
+      "MAIS_SOBRE": "More about the business",
+      "CNPJ": "CNPJ",
+      "SITUACAO_LINHA": "Status: {situacao}",
+      "SITUACAO_ALERTA": "This business shows as {situacao} in the government registry.",
+      "COPIAR": "Copy",
+      "COPIADO": "Copied.",
+      "MANDAR": "Send to the pipeline",
+      "MANDAR_CURTO": "Send to pipeline",
+      "VAI_PARA": "Goes to the {funil} pipeline, {etapa} stage",
+      "COM_QUEM": "Who keeps it: {pessoa}",
+      "MANDOU": "Done. {nome} is in the {funil} pipeline. It stays with {pessoa}.",
+      "MAIS": {
+        "NAO_SERVE": "Not a fit",
+        "NAO_QUER": "Does not want messages"
+      },
+      "NAO_SERVE": {
+        "TITULO": "Why is this business not a fit?",
+        "FEITO": "Done. It left the list."
+      },
+      "NAO_QUER": {
+        "TITULO": "This business does not want messages?",
+        "TEXTO": "Nobody on your team will message this phone and e-mail, not even by campaign.",
+        "CONFIRMAR": "Confirm",
+        "FEITO": "Done. Nobody will message them."
+      },
+      "ERRO": "We could not open this business.",
+      "PROCURANDO_DE_NOVO": "We're looking for the owner again. They show up here when we find them.",
+      "POSSIVEL": "May be the owner",
+      "NO_FUNIL_SELO": "Already in the pipeline",
+      "OUTRA_PESSOA": "Talk to someone else"
+    },
+    "FOLHA": {
+      "TITULO": "What to do with the {n} companies?",
+      "FUNIL": {
+        "TITULO": "Send to the pipeline",
+        "TEXTO": "Each business enters your sales pipeline."
+      },
+      "LISTA": {
+        "TITULO": "Save to a message list",
+        "TEXTO": "The list is saved in Campaigns for you to write the message."
+      },
+      "PARA_ONDE": "{funil} pipeline, {etapa} stage",
+      "ESCOLHA_FUNIL": "Choose the pipeline",
+      "COM_QUEM": "Who keeps them: {pessoa}",
+      "FORA_LINK": "Why {n} are left out",
+      "FORA_MOTIVOS": {
+        "NO_FUNIL": "{n} is already in the pipeline | {n} are already in the pipeline",
+        "NAO_QUER": "{n} doesn't want messages | {n} don't want messages",
+        "TIROU": "{n} removed in another search | {n} removed in another search",
+        "FECHOU": "{n} business closed | {n} businesses closed",
+        "SEM_CONTATO": "{n} has no mobile or e-mail | {n} have no mobile or e-mail",
+        "VOCE_TIROU": "{n} you removed",
+        "VOCE_MANDOU": "{n} you already sent"
+      },
+      "NOME_LISTA": "{oQue} · {lugar} · {data}",
+      "NOME_LISTA_ROTULO": "Name",
+      "ENTRAM": "{n} of {total} go in",
+      "ONDE_FICA": "It stays in Campaigns.",
+      "MANDAR": "Send {n} to the pipeline",
+      "MANDANDO": "Sending {feitas} of {total}…",
+      "GUARDAR": "Save {n} businesses",
+      "GUARDANDO": "Saving…",
+      "ESCOLHA_O_QUE": "Choose what to do",
+      "NINGUEM": "None of these can receive messages",
+      "ERRO_FUNIL": "Could not send. None went in.",
+      "ERRO_LISTA": "We could not save the list.",
+      "NAO_VAO_LINK": "Why {n} is left out | Why {n} are left out",
+      "TENTAR": "Try again",
+      "VAO": "{n} companies will go",
+      "NAO_ENTRAM_LINK": "Why {n} does not go in | Why {n} do not go in",
+      "DICA_FUNIL": "Choose the pipeline."
+    },
+    "PARA_ONDE_PAINEL": {
+      "TITULO": "Where they go",
+      "FUNIL": "Pipeline",
+      "ETAPA": "Stage"
+    },
+    "COM_QUEM_PAINEL": {
+      "TITULO": "Who keeps the businesses?",
+      "VOCE": "{nome} (you)",
+      "PESSOA": "Person"
+    },
+    "PRONTO": {
+      "VARIAS": "Done. {n} companies went into the {funil} pipeline. They stay with {pessoa}.",
+      "UMA": "Done. {nome} went into the {funil} pipeline. It stays with {pessoa}.",
+      "DETALHE": "In the {etapa} stage.",
+      "JA_ESTAVAM": "{n} were already there and stayed as they were.",
+      "VOLTAR_LISTA": "Back to the list",
+      "LISTA": {
+        "TITULO": "Done. The message list is saved.",
+        "DETALHE": "{nome} · {n} businesses",
+        "ESCREVER": "Create the message"
+      }
+    },
+    "BUSCAS": {
+      "TITULO": "Your searches",
+      "FEITA_POR": "Made by {pessoa}",
+      "VAZIO": "You have not made any search yet.",
+      "VAZIO_SO_VER": "There are no team searches yet.",
+      "VER_FUNIL": "See the pipeline",
+      "ERRO": "We could not open your searches.",
+      "TITULO_EQUIPE": "Team searches",
+      "MAIS": "More options for {nome}",
+      "BUSCAR_DE_NOVO": "Search again",
+      "BAIXAR": "Download spreadsheet",
+      "APAGAR_TITULO": "Delete this search?",
+      "APAGAR_TEXTO": "The companies already in the pipeline stay there.",
+      "APAGADA": "Done. The search was deleted.",
+      "APAGAR": "Delete"
+    },
+    "FILA": {
+      "TITULO": "To call",
+      "ACHAR_MAIS": "Find businesses",
+      "CONTADOR": "{atual} of {total}",
+      "ACHADO_POR": "Found by {pessoa}",
+      "POR_QUE": "Why call",
+      "QUEM_DECIDE": "Who to talk to",
+      "DONO": "Owner: {nome}, {cargo}",
+      "DONO_SEM_CARGO": "Owner: {nome}",
+      "SEM_DONO": "We did not find the owner. Ask for who decides.",
+      "COMO_CHAMAR": "How to reach",
+      "TEL_WHATS": "{telefone} · Has WhatsApp",
+      "TEL_SO": "{telefone} · Calls only",
+      "CONFERINDO": "Checking WhatsApp…",
+      "VER_MAIS": "See more about the business",
+      "NAO_SERVE": "Not a fit",
+      "DEPOIS": "Later",
+      "DESTINO": "Goes to the {funil} pipeline",
+      "MANDAR": "Send to the pipeline",
+      "MANDANDO": "Sending…",
+      "PROXIMA": "Next business",
+      "NAO_SERVE_TITULO": "Why is {nome} not a fit?",
+      "SAIU": "Done. It left the queue.",
+      "DEPOIS_AVISO": "{nome} comes back tomorrow.",
+      "VAZIA": "There are no businesses to call yet.",
+      "ATUALIZAR": "Refresh",
+      "FIM": {
+        "TITULO": "You saw all of today's businesses.",
+        "FORAM": "{n} went into the pipeline. | {n} went into the pipeline.",
+        "VOLTAM": "{n} comes back tomorrow. | {n} come back tomorrow.",
+        "NAO_SERVE": "{n} not a fit. | {n} not a fit."
+      },
+      "POSSIVEL": "May be the owner: {nome}"
+    },
+    "MOTIVOS": {
+      "OUTRO": "Other reason",
+      "ESCREVA": "Write the reason",
+      "NO_INTEREST": "Not interested",
+      "ALREADY_CUSTOMER": "Already a customer",
+      "CLOSED": "Business closed",
+      "WRONG_DATA": "Wrong phone or address"
+    },
+    "MAIS_AJUSTES": {
+      "TITULO": "More settings",
+      "DESENHAR": {
+        "TITULO": "Draw the area",
+        "TEXTO": "Tap the map to mark the corners of the area."
+      },
+      "NOTA": {
+        "TITULO": "Google rating",
+        "QUALQUER": "Any rating",
+        "N3": "3 or more",
+        "N4": "4 or more",
+        "N45": "4.5 or more",
+        "ABAIXO_4": "Below 4"
+      },
+      "AVALIACOES": {
+        "TITULO": "Google reviews",
+        "QUALQUER": "Any amount",
+        "N10": "At least 10",
+        "N20": "At least 20",
+        "N50": "At least 50"
+      },
+      "SITE": "Website",
+      "FOTOS": "Photos",
+      "TANTO_FAZ": "Doesn't matter",
+      "TEM": "Has",
+      "NAO_TEM": "Doesn't have",
+      "HORARIO": {
+        "TITULO": "Opening hours",
+        "ABERTA": "Open now",
+        "MOSTRA": "Shows opening hours on Google"
+      },
+      "PRIMEIRO": {
+        "MELHORES": "The best for you",
+        "POUCO": "The ones that barely show on Google",
+        "POUCO_TEXTO": "For those who sell websites, ads or online presence.",
+        "TITULO": "Who comes first"
+      },
+      "LIMPAR": "Clear settings"
+    }
+  }
+}

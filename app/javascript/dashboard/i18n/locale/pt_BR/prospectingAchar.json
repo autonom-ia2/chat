@@ -1,0 +1,378 @@
+{
+  "PROSPECTING_ACHAR": {
+    "MENU": {
+      "ACHAR": "Achar empresas",
+      "BUSCAS": "Buscas"
+    },
+    "COMUM": {
+      "ALTERAR": "Alterar",
+      "ABRIR": "Abrir",
+      "ABRIR_ROTULO": "Abrir {nome}",
+      "FECHAR": "Fechar",
+      "CANCELAR": "Cancelar",
+      "SALVAR": "Salvar",
+      "VOLTAR": "Voltar",
+      "TENTAR_DE_NOVO": "Tentar de novo",
+      "MAIS": "Mais",
+      "VER_NO_FUNIL": "Ver o funil",
+      "CHAMAR_WHATSAPP": "Chamar no WhatsApp",
+      "LIGAR": "Ligar",
+      "DESFAZER": "Desfazer",
+      "VOCE": "você",
+      "QUANDO": {
+        "HOJE": "hoje",
+        "ONTEM": "ontem",
+        "DIAS": "há {n} dias"
+      },
+      "DEMO_NAO_GRAVA": "Demonstração: nada foi gravado.",
+      "DEMO_WHATSAPP": "Demonstração: aqui abriria o WhatsApp.",
+      "CONFIRMAR": "Confirmar",
+      "APAGAR": "Apagar",
+      "USAR_ESCOLHA": "Usar esta escolha",
+      "ESCOLHER": "Escolher"
+    },
+    "CHANCE": {
+      "PRIMEIRO": "Chame primeiro",
+      "BOA": "Boa chance",
+      "MEDIA": "Chance média",
+      "POUCA": "Pouca chance"
+    },
+    "PORTA": {
+      "TITULO": "Que empresas você quer achar?",
+      "O_QUE": {
+        "ROTULO": "O quê?",
+        "PLACEHOLDER": "Ex.: escritórios"
+      },
+      "ONDE": {
+        "ROTULO": "Onde?",
+        "PLACEHOLDER": "Bairro ou cidade",
+        "PROCURANDO": "Procurando lugares…",
+        "NADA": "Não achamos esse lugar. Tente com o nome da cidade.",
+        "ESCOLHIDO": "Lugar escolhido",
+        "SEM_GOOGLE": "A busca de empresas ainda não está pronta nesta conta.",
+        "FALAR_SUPORTE": "Falar com o suporte"
+      },
+      "IDEIAS": {
+        "ROTULO": "Ideias",
+        "RESTAURANTES": "Restaurantes",
+        "ESCRITORIOS": "Escritórios",
+        "ACADEMIAS": "Academias"
+      },
+      "COMO": {
+        "ROTULO": "Como vamos procurar",
+        "TEXTO": "Até {km} km · até {n} empresas · {quais}",
+        "MELHORES": "as melhores para você primeiro",
+        "POUCO": "as que aparecem pouco no Google primeiro"
+      },
+      "ULTIMAS": {
+        "TITULO": "Suas últimas buscas",
+        "FATO": "{achadas} achadas · {noFunil} no funil · {quando}",
+        "VER_TODAS": "Ver todas",
+        "TITULO_EQUIPE": "Últimas buscas da equipe"
+      },
+      "BOTAO": "Achar empresas",
+      "BOTAO_OCUPADO": "Procurando…",
+      "FALTA": {
+        "O_QUE": "Escreva o que você quer achar.",
+        "ONDE": "Escreva o bairro ou a cidade.",
+        "TOCAR": "Escolha o lugar certo na lista."
+      },
+      "ERRO": "Não deu para começar a busca.",
+      "TESTE": "Esta conta está em teste. As empresas da lista são de exemplo.",
+      "SO_VER": "Você pode ver as buscas da equipe, mas não fazer novas."
+    },
+    "COMO_PROCURAR": {
+      "TITULO": "Como procurar",
+      "ATE_ONDE": {
+        "TITULO": "Até onde?",
+        "KM_1": "Bem perto · 1 km",
+        "KM_3": "No bairro · 3 km",
+        "KM_5": "Na região · 5 km",
+        "KM_10": "Na cidade · 10 km"
+      },
+      "QUANTAS": {
+        "TITULO": "Quantas?",
+        "N_20": "Até 20 · mais rápido",
+        "N_40": "Até 40",
+        "N_60": "Até 60 · o máximo"
+      },
+      "MAIS_AJUSTES": "Mais ajustes",
+      "SEU": "Criado por você",
+      "QUAIS": {
+        "TITULO": "Quais empresas",
+        "TODAS": "Todas da região"
+      }
+    },
+    "CONFIRA": {
+      "BUSCANDO": "Procurando {oQue} em {lugar}…",
+      "TITULO": "{oQue} · {lugar}",
+      "FATO": "{achadas} achadas · {vao} vão · {fora} ficam de fora",
+      "MUDAR_PEDIDO": "Alterar a busca",
+      "PROGRESSO": "Conferindo as empresas: {feitos} de {total}",
+      "PROGRESSO_DICA": "Pode sair. Quando voltar, estará tudo aqui.",
+      "SO_WHATSAPP": "Só com WhatsApp",
+      "PROCURAR_NOME": "Procurar pelo nome",
+      "GRUPOS": {
+        "BOA": "Boa chance ({n})",
+        "MEDIA": "Chance média ({n})",
+        "POUCA": "Pouca chance ({n})",
+        "FORA": "Ficam de fora ({n})",
+        "PRIMEIRO": "Chame primeiro"
+      },
+      "TIRAR_ESTAS": "Tirar estas",
+      "TIROU": "Tiramos {n} empresas.",
+      "DONO": {
+        "PROCURANDO": "Procurando o dono…",
+        "CONFIRMADO": "Dono: {nome}, {cargo}",
+        "CONFIRMADO_SEM_CARGO": "Dono: {nome}",
+        "POSSIVEL": "Pode ser o dono: {nome}",
+        "NENHUM": "Dono não encontrado"
+      },
+      "WHATS": {
+        "CONFERINDO": "Conferindo WhatsApp…",
+        "TEM": "Tem WhatsApp",
+        "SEM": "Sem WhatsApp"
+      },
+      "VAI": "Vai",
+      "NAO_VAI": "Não vai",
+      "LEVAR": "Levar {nome}",
+      "FORA": {
+        "NO_FUNIL": "Já está no funil {funil}",
+        "NO_FUNIL_SEM_NOME": "Já está no funil",
+        "NAO_QUER": "Não quer receber mensagem",
+        "TIROU": "Você tirou em outra busca",
+        "FECHOU": "Empresa fechada"
+      },
+      "VAZIA": "Não achamos nenhuma empresa aqui.",
+      "CORTE_VAZIO": "Nenhuma empresa com WhatsApp nesta busca.",
+      "MOSTRAR_TODAS": "Mostrar todas",
+      "NOME_VAZIO": "Nenhuma empresa com esse nome.",
+      "LIMPAR": "Limpar",
+      "GOOGLE_PAROU": "Não conseguimos trazer todas agora.",
+      "BUSCAR_DE_NOVO": "Buscar de novo",
+      "ERRO": "Não deu para buscar agora.",
+      "ERRO_ABRIR": "Não deu para abrir esta busca.",
+      "TODAS_FORA": "Escolha ao menos uma empresa",
+      "CONTINUAR": "Continuar com {n}",
+      "LEITURA": {
+        "TITULO": "Empresas desta busca",
+        "VAZIA": "Esta busca não trouxe empresas.",
+        "VOLTAR": "Voltar para suas buscas"
+      },
+      "VAZIA_LONGE": "Procurar mais longe",
+      "FATO_SEM_FORA": "{achadas} achadas · {vao} vão",
+      "BUSCANDO_DICA": "Leva menos de 1 minuto.",
+      "MANDADA": "Já está no funil {funil}",
+      "FATO_CONFERINDO": "{achadas} achadas",
+      "CONTINUAR_CONFERINDO": "Continuar",
+      "DESLIGUE": "Desligue as que não quer.",
+      "MAPA": {
+        "VER": "Ver no mapa",
+        "ROTULO": "Mapa das empresas achadas",
+        "VOLTAR": "Voltar para a lista"
+      }
+    },
+    "GAVETA": {
+      "ROTULO": "Empresa {nome}",
+      "NO_FUNIL": "No funil {funil}, etapa {etapa}, com {pessoa}.",
+      "NO_FUNIL_SEM_NOME": "Está num funil.",
+      "POR_QUE": "Por que chamar",
+      "QUEM_DECIDE": "Com quem falar",
+      "SEM_DONO": "Não achamos o dono. Pergunte por quem decide.",
+      "PROCURAR_DE_NOVO": "Buscar de novo",
+      "CONTATO": "Contato",
+      "GOOGLE": "O que dizem no Google",
+      "GOOGLE_RESUMO": "{nota} estrelas · {n} avaliações",
+      "MAIS_SOBRE": "Mais sobre a empresa",
+      "CNPJ": "CNPJ",
+      "SITUACAO_LINHA": "Situação: {situacao}",
+      "SITUACAO_ALERTA": "Esta empresa aparece como {situacao} no cadastro do governo.",
+      "COPIAR": "Copiar",
+      "COPIADO": "Copiado.",
+      "MANDAR": "Mandar para o funil",
+      "MANDAR_CURTO": "Mandar para o funil",
+      "VAI_PARA": "Vai para o funil {funil}, etapa {etapa}",
+      "COM_QUEM": "Com quem fica: {pessoa}",
+      "MANDOU": "Pronto. {nome} está no funil {funil}. Ela fica com {pessoa}.",
+      "MAIS": {
+        "NAO_SERVE": "Não serve",
+        "NAO_QUER": "Não quer receber mensagem"
+      },
+      "NAO_SERVE": {
+        "TITULO": "Por que esta empresa não serve?",
+        "FEITO": "Pronto. Ela saiu da lista."
+      },
+      "NAO_QUER": {
+        "TITULO": "Esta empresa não quer receber mensagem?",
+        "TEXTO": "Ninguém da sua equipe vai mandar mensagem para este telefone e e-mail, nem por campanha.",
+        "CONFIRMAR": "Confirmar",
+        "FEITO": "Pronto. Ninguém vai mandar mensagem para eles."
+      },
+      "ERRO": "Não deu para abrir esta empresa.",
+      "PROCURANDO_DE_NOVO": "Estamos procurando o dono de novo. Ele aparece aqui quando acharmos.",
+      "POSSIVEL": "Pode ser o dono",
+      "NO_FUNIL_SELO": "Já está no funil",
+      "OUTRA_PESSOA": "Falar com outra pessoa"
+    },
+    "FOLHA": {
+      "TITULO": "O que fazer com as {n} empresas?",
+      "FUNIL": {
+        "TITULO": "Mandar para o funil",
+        "TEXTO": "Cada empresa entra no seu funil de vendas."
+      },
+      "LISTA": {
+        "TITULO": "Guardar numa lista para mensagem",
+        "TEXTO": "A lista fica guardada em Campanhas para você escrever a mensagem."
+      },
+      "PARA_ONDE": "Funil {funil}, etapa {etapa}",
+      "ESCOLHA_FUNIL": "Escolha o funil",
+      "COM_QUEM": "Com quem fica: {pessoa}",
+      "FORA_LINK": "Por que {n} ficam de fora",
+      "FORA_MOTIVOS": {
+        "NO_FUNIL": "{n} já está no funil | {n} já estão no funil",
+        "NAO_QUER": "{n} não quer receber mensagem | {n} não querem receber mensagem",
+        "TIROU": "{n} tirada em outra busca | {n} tiradas em outra busca",
+        "FECHOU": "{n} empresa fechada | {n} empresas fechadas",
+        "SEM_CONTATO": "{n} não tem celular nem e-mail | {n} não têm celular nem e-mail",
+        "VOCE_TIROU": "{n} você tirou",
+        "VOCE_MANDOU": "{n} você já mandou"
+      },
+      "NOME_LISTA": "{oQue} · {lugar} · {data}",
+      "NOME_LISTA_ROTULO": "Nome",
+      "ENTRAM": "Entram {n} das {total}",
+      "ONDE_FICA": "Ela fica em Campanhas.",
+      "MANDAR": "Mandar {n} para o funil",
+      "MANDANDO": "Mandando {feitas} de {total}…",
+      "GUARDAR": "Guardar {n} empresas",
+      "GUARDANDO": "Guardando…",
+      "ESCOLHA_O_QUE": "Escolha o que fazer",
+      "NINGUEM": "Nenhuma destas pode receber mensagem",
+      "ERRO_FUNIL": "Não deu para mandar. Nenhuma entrou.",
+      "ERRO_LISTA": "Não deu para guardar a lista.",
+      "NAO_VAO_LINK": "Por que {n} fica de fora | Por que {n} ficam de fora",
+      "TENTAR": "Tentar de novo",
+      "VAO": "Vão {n} empresas",
+      "NAO_ENTRAM_LINK": "Por que {n} não entra | Por que {n} não entram",
+      "DICA_FUNIL": "Escolha o funil."
+    },
+    "PARA_ONDE_PAINEL": {
+      "TITULO": "Para onde vão",
+      "FUNIL": "Funil",
+      "ETAPA": "Etapa"
+    },
+    "COM_QUEM_PAINEL": {
+      "TITULO": "Com quem ficam as empresas?",
+      "VOCE": "{nome} (você)",
+      "PESSOA": "Pessoa"
+    },
+    "PRONTO": {
+      "VARIAS": "Pronto. {n} empresas entraram no funil {funil}. Elas ficam com {pessoa}.",
+      "UMA": "Pronto. {nome} entrou no funil {funil}. Ela fica com {pessoa}.",
+      "DETALHE": "Na etapa {etapa}.",
+      "JA_ESTAVAM": "{n} já estavam lá e ficaram como estavam.",
+      "VOLTAR_LISTA": "Voltar para a lista",
+      "LISTA": {
+        "TITULO": "Pronto. A lista para mensagem está guardada.",
+        "DETALHE": "{nome} · {n} empresas",
+        "ESCREVER": "Criar a mensagem"
+      }
+    },
+    "BUSCAS": {
+      "TITULO": "Suas buscas",
+      "FEITA_POR": "Feita por {pessoa}",
+      "VAZIO": "Você ainda não fez nenhuma busca.",
+      "VAZIO_SO_VER": "Ainda não há buscas da equipe.",
+      "VER_FUNIL": "Ver o funil",
+      "ERRO": "Não deu para abrir suas buscas.",
+      "TITULO_EQUIPE": "Buscas da equipe",
+      "MAIS": "Mais opções de {nome}",
+      "BUSCAR_DE_NOVO": "Buscar de novo",
+      "BAIXAR": "Baixar planilha",
+      "APAGAR_TITULO": "Apagar esta busca?",
+      "APAGAR_TEXTO": "As empresas que já foram para o funil continuam lá.",
+      "APAGADA": "Pronto. A busca foi apagada.",
+      "APAGAR": "Apagar"
+    },
+    "FILA": {
+      "TITULO": "Para chamar",
+      "ACHAR_MAIS": "Achar empresas",
+      "CONTADOR": "{atual} de {total}",
+      "ACHADO_POR": "Achada por {pessoa}",
+      "POR_QUE": "Por que chamar",
+      "QUEM_DECIDE": "Com quem falar",
+      "DONO": "Dono: {nome}, {cargo}",
+      "DONO_SEM_CARGO": "Dono: {nome}",
+      "SEM_DONO": "Não achamos o dono. Pergunte por quem decide.",
+      "COMO_CHAMAR": "Como chamar",
+      "TEL_WHATS": "{telefone} · Tem WhatsApp",
+      "TEL_SO": "{telefone} · Só ligação",
+      "CONFERINDO": "Conferindo o WhatsApp…",
+      "VER_MAIS": "Ver mais sobre a empresa",
+      "NAO_SERVE": "Não serve",
+      "DEPOIS": "Depois",
+      "DESTINO": "Vai para o funil {funil}",
+      "MANDAR": "Mandar para o funil",
+      "MANDANDO": "Mandando…",
+      "PROXIMA": "Próxima empresa",
+      "NAO_SERVE_TITULO": "Por que {nome} não serve?",
+      "SAIU": "Pronto. Ela saiu da fila.",
+      "DEPOIS_AVISO": "{nome} volta amanhã.",
+      "VAZIA": "Ainda não há empresas para chamar.",
+      "ATUALIZAR": "Atualizar",
+      "FIM": {
+        "TITULO": "Você viu todas as empresas de hoje.",
+        "FORAM": "{n} foi para o funil. | {n} foram para o funil.",
+        "VOLTAM": "{n} volta amanhã. | {n} voltam amanhã.",
+        "NAO_SERVE": "{n} não serve. | {n} não servem."
+      },
+      "POSSIVEL": "Pode ser o dono: {nome}"
+    },
+    "MOTIVOS": {
+      "OUTRO": "Outro motivo",
+      "ESCREVA": "Escreva o motivo",
+      "NO_INTEREST": "Sem interesse",
+      "ALREADY_CUSTOMER": "Já é cliente",
+      "CLOSED": "Empresa fechada",
+      "WRONG_DATA": "Telefone ou endereço errado"
+    },
+    "MAIS_AJUSTES": {
+      "TITULO": "Mais ajustes",
+      "DESENHAR": {
+        "TITULO": "Desenhar a área",
+        "TEXTO": "Toque no mapa para marcar os cantos da área."
+      },
+      "NOTA": {
+        "TITULO": "Nota no Google",
+        "QUALQUER": "Qualquer nota",
+        "N3": "3 ou mais",
+        "N4": "4 ou mais",
+        "N45": "4,5 ou mais",
+        "ABAIXO_4": "Abaixo de 4"
+      },
+      "AVALIACOES": {
+        "TITULO": "Avaliações no Google",
+        "QUALQUER": "Qualquer quantidade",
+        "N10": "Ao menos 10",
+        "N20": "Ao menos 20",
+        "N50": "Ao menos 50"
+      },
+      "SITE": "Site",
+      "FOTOS": "Fotos",
+      "TANTO_FAZ": "Tanto faz",
+      "TEM": "Tem",
+      "NAO_TEM": "Não tem",
+      "HORARIO": {
+        "TITULO": "Horário",
+        "ABERTA": "Aberta agora",
+        "MOSTRA": "Mostra horário no Google"
+      },
+      "PRIMEIRO": {
+        "MELHORES": "As melhores para você",
+        "POUCO": "As que aparecem pouco no Google",
+        "POUCO_TEXTO": "Para quem vende site, anúncio ou presença na internet.",
+        "TITULO": "Quem vem primeiro"
+      },
+      "LIMPAR": "Limpar ajustes"
+    }
+  }
+}
