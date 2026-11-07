@@ -200,21 +200,25 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
       expect(execucoes.where(automacao: definicao).pluck(:evento)).to eq(["card.data:#{card.id}:renovacao:2026-11-17"])
     end
 
-    # #2678: a festa, a revisão e a apólice vêm depois da venda. O card ganho dispara; o perdido, o cancelado e o
-    # arquivado não (o cliente foi embora ou o card saiu de cena).
-    it 'card.data: o card ganho também dispara; o perdido, o cancelado e o arquivado não', :aggregate_failures do
+    # #2678: a festa, a revisão e a apólice vêm depois da venda. Dispara o card que deu certo (ganho; resolvido no funil
+    # que não conta como venda; arquivado depois de fechado assim). O perdido, o cancelado e o arquivado sem desfecho não.
+    it 'card.data: o card que deu certo também dispara; o perdido, o cancelado e o arquivado sem desfecho não', :aggregate_failures do
       definicao = de_tempo('card.data', campo: 'renovacao', dias: 7, quando: 'antes', hora: 8)
-      ganho = card.tap { |c| c.update!(status: :won) }
-      fechados = %i[lost cancelled archived].map do |status|
-        # O status direto no banco: fechar como cancelado pede um funil com esse resultado, e aqui só importa o status.
-        account.crm_cards.create!(pipeline: funil, stage: proposta, title: status.to_s, currency: 'BRL')
-               .tap { |fechado| fechado.update_columns(status: status) } # rubocop:disable Rails/SkipsModelValidations
+      # O status direto no banco: fechar como cancelado ou resolvido pede um funil com esse resultado; aqui só importa o status.
+      # A data antes; o status e o desfecho guardado por último, porque o card só deixa ele mesmo escrever o desfecho.
+      com_status = lambda do |status, metadata = {}|
+        account.crm_cards.create!(pipeline: funil, stage: proposta, title: status.to_s, currency: 'BRL',
+                                  custom_attributes: { 'renovacao' => '2026-11-17' })
+               .tap { |alvo| alvo.update_columns(status: status, metadata: metadata) } # rubocop:disable Rails/SkipsModelValidations
       end
-      [ganho, *fechados].each { |alvo| com_data(alvo, 'renovacao', '2026-11-17') }
+      certos = [com_status.call(:won), com_status.call(:resolved), com_status.call(:archived, 'desfecho_arquivado' => 'won')]
+      fora = [com_status.call(:lost), com_status.call(:cancelled), com_status.call(:archived),
+              com_status.call(:archived, 'desfecho_arquivado' => 'lost')]
 
       as_9h_da_conta { varrer_tempo }
 
-      expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([ganho.id])
+      expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to match_array(certos.map(&:id))
+      expect(execucoes.where(alvo_id: fora.map(&:id))).to be_empty
     end
 
     describe 'todo ano (aniversário)' do
@@ -261,6 +265,27 @@ RSpec.describe 'Automação livre: gatilhos de tempo', :automacao_motor do # rub
 
         expect(execucoes.where(automacao: definicao).pluck(:evento))
           .to eq(["contato.data:#{contato.id}:vencimento:2027-02-28", "contato.data:#{contato.id}:vencimento:2028-02-29"])
+      end
+
+      it 'lê o valor antigo com a hora (AAAA-MM-DDT…) e ignora outro formato', :aggregate_failures do
+        definicao = de_tempo('contato.data', campo: 'vencimento', dias: 0, quando: 'antes', hora: 8, repete: 'todo_ano')
+        com_data(contato, 'vencimento', '1990-11-10T03:00:00Z')
+        errado = create(:contact, account: account, custom_attributes: { 'vencimento' => '10/11/1990' })
+
+        as_9h_da_conta { varrer_tempo }
+
+        expect(execucoes.where(automacao: definicao).pluck(:alvo_id)).to eq([contato.id])
+        expect(execucoes.where(alvo_id: errado.id)).to be_empty
+      end
+
+      it 'depois N dias também vale para quem tem 29/02, em ano que não é bissexto' do
+        definicao = de_tempo('contato.data', campo: 'vencimento', dias: 1, quando: 'depois', hora: 8, repete: 'todo_ano',
+                                             ligada: fuso.local(2026, 1, 1, 0, 0))
+        com_data(contato, 'vencimento', '2000-02-29')
+
+        travel_to(fuso.local(2027, 3, 1, 9, 0)) { varrer_tempo }
+
+        expect(execucoes.where(automacao: definicao).pluck(:evento)).to eq(["contato.data:#{contato.id}:vencimento:2027-02-28"])
       end
 
       it 'card.data também repete todo ano, inclusive no card ganho' do

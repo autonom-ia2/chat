@@ -165,7 +165,7 @@ A tela da etapa avisa o que não dispara. Ver a pergunta P5 sobre o upsert.
   - **parado:** `entered_stage_at` entre `agora − dias − janela` e `agora − dias`, na etapa escolhida, com o card aberto. Usa o índice `idx_crm_cards_entered_stage`.
     - O card que chegou ao prazo antes de a automação ser ligada **nunca dispara**: ligar não age no passado (`ligada_em`, ou a hora da versão ativa, o que for mais recente). A tela do gatilho diz isso.
   - **data:** a data-alvo é calculada no Ruby (hoje no fuso da conta ∓ `dias`) e entra no SQL como igualdade: `custom_attributes->>'<campo>' = '<AAAA-MM-DD>'`. Vale para card e contato.
-    - #2678: no card, entram o aberto e o **ganho** (a festa, a revisão e a renovação vêm depois da venda); o perdido, o cancelado e o arquivado ficam de fora.
+    - #2678: no card, entram o aberto e o que **deu certo**: ganho, resolvido (o ganho do funil que não conta como venda) e o arquivado depois de fechado assim (`Crm::Card.com_desfecho`). A festa, a revisão e a renovação vêm depois da venda. O perdido, o cancelado e o arquivado sem desfecho ficam de fora.
     - #2678: com `repete: todo_ano`, compara só mês e dia (`substr(campo, 6, 5)`), com o formato ISO conferido antes. Em ano que não é bissexto, o dia 28/02 também pega quem tem 29/02. A marca leva o dia-alvo com o ano: uma vez por ano.
     - Só se lê data ISO (`AAAA-MM-DD`). O valor em outro formato não casa com a igualdade e é ignorado. A varredura conta quantos alvos da conta têm o campo em formato inválido e põe isso no histórico da automação, sem o valor.
     - "Já passou da `hora`" é conferido antes da consulta. A ocorrência anterior a ligar (ou a salvar a versão ligada) não roda: ligar às 8h um "às 9h" começa pela de hoje às 9h, nunca pela de ontem.
