@@ -1,0 +1,76 @@
+{
+  "IA_DA_CONTA": {
+    "MENU": "Account AI",
+    "ROTULO": "Account AI",
+    "HEROI": {
+      "VAZIO_TITULO": "Choose how your AI will work.",
+      "VAZIO_TEXTO": "Without this, your account's AI stays off. It takes 1 minute.",
+      "OK_TITULO": "Your AI is working.",
+      "OK_LOGIN": "It uses your ChatGPT plan.",
+      "OK_CHAVE": "It uses your OpenAI key.",
+      "OK_OS_DOIS": "We use your ChatGPT first. If it runs out, your key.",
+      "RESERVA": "Your ChatGPT reached its limit. For now, we're using your key.",
+      "PARADA_TITULO": "Your AI stopped.",
+      "PARADA_SEM_CREDITO": "Your key ran out of credit.",
+      "PARADA_LIMITE": "Your ChatGPT reached its usage limit. It comes back on its own.",
+      "PARADA_DESCONECTADO": "Your ChatGPT was disconnected.",
+      "SELO_OK": "Working",
+      "SELO_PARADA": "Stopped",
+      "SELO_VAZIO": "Off",
+      "PARCIAL_TITULO": "Your AI works in part.",
+      "PARCIAL": "Agents only answer with your key. Add your key too.",
+      "SELO_PARCIAL": "In part"
+    },
+    "CHATGPT": {
+      "TITULO": "Your ChatGPT",
+      "TEXTO": "Use the ChatGPT plan you already pay for.",
+      "BOTAO": "Continue with ChatGPT",
+      "AVISO_DADOS": "The conversations the AI handles will go through your ChatGPT account.",
+      "EM_BREVE": "Available soon.",
+      "CONECTADO_COMO": "Connected as {email}",
+      "VER_USO": "Manage usage",
+      "ENTRAR_DE_NOVO": "Sign in again",
+      "DESCONECTAR": "Disconnect"
+    },
+    "CHAVE": {
+      "TITULO": "Your OpenAI key",
+      "TEXTO": "Pay only for what you use, directly to OpenAI.",
+      "BOTAO": "Paste my key",
+      "FINAL": "Key ending in {fim}",
+      "POR_CREDITO": "Add credit",
+      "JA_COLOQUEI": "I added credit",
+      "TROCAR": "Change key",
+      "REMOVER": "Remove"
+    },
+    "SELO": {
+      "FUNCIONANDO": "Working",
+      "LIMITE": "Reached its limit",
+      "DESCONECTADO": "Needs to sign in again",
+      "SEM_CREDITO": "No credit",
+      "RECUSADA": "Key not accepted",
+      "RESERVA": "Waiting its turn"
+    },
+    "GAVETA": {
+      "TITULO": "Paste your OpenAI key",
+      "CAMPO": "Your key",
+      "EXEMPLO": "Starts with sk-",
+      "ONDE": "Where do I get my key?",
+      "PASSO_1": "Sign in to platform.openai.com with your account.",
+      "PASSO_2": "Click “Create new secret key”.",
+      "PASSO_3": "Copy the key and paste it here.",
+      "SALVAR": "Check and save",
+      "CANCELAR": "Cancel",
+      "RECUSADA": "OpenAI didn't accept this key. Check that you copied all of it.",
+      "SEM_CREDITO": "The key is right, but it has no credit. Add credit at OpenAI and try again."
+    },
+    "BOAS_VINDAS": {
+      "TITULO": "You're using your ChatGPT plan",
+      "TEXTO": "Your account's AI now uses your plan. You can see how much you've used in ChatGPT settings.",
+      "ENTENDI": "Got it"
+    },
+    "FAIXA": {
+      "TEXTO": "Your account's AI stopped.",
+      "RESOLVER": "Fix it"
+    }
+  }
+}

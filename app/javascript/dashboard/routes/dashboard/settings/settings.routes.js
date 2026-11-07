@@ -58,6 +58,7 @@ import reports from './reports/reports.routes';
 import teams from './teams/teams.routes';
 import customRoles from './customRoles/customRole.routes';
 import funcoesDaEquipe from './funcoesDaEquipe/funcoesDaEquipe.routes';
+import iaDaConta from './iaDaConta/iaDaConta.routes';
 import profile from './profile/profile.routes';
 import security from './security/security.routes';
 import conversationWorkflow from './conversationWorkflow/conversationWorkflow.routes';
@@ -107,6 +108,7 @@ export default {
     ...teams.routes,
     ...customRoles.routes,
     ...funcoesDaEquipe.routes,
+    ...iaDaConta.routes,
     ...profile.routes,
     ...security.routes,
     ...conversationWorkflow.routes,

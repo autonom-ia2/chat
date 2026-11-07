@@ -1374,6 +1374,12 @@ const menuItems = computed(() => {
           to: accountScopedRoute('canned_list'),
         },
         {
+          name: 'Settings Ia Da Conta',
+          label: t('IA_DA_CONTA.MENU'),
+          icon: 'i-lucide-sparkles',
+          to: accountScopedRoute('settings_ia_da_conta'),
+        },
+        {
           name: 'Settings Integrations',
           label: t('SIDEBAR.INTEGRATIONS'),
           icon: 'i-lucide-blocks',

@@ -1,0 +1,41 @@
+{
+  "pasta": "docs/ia-da-conta/prototipo",
+  "conta": 1,
+  "larguras": [1440, 390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "j1-colar-a-chave",
+      "etapas": [
+        { "nome": "tela-vazia", "url": "/app/accounts/{conta}/settings/ia-da-conta?demo=vazio", "esperar": "[data-heroi]", "pausa": 2500 },
+        { "nome": "janela-da-chave", "passos": [{ "clicar": "[data-colar-chave]" }, { "esperar": "[data-campo-chave]" }, { "clicar": "[data-onde-pego]" }], "pausa": 800 },
+        { "nome": "chave-recusada", "passos": [{ "preencher": ["[data-campo-chave]", "sk-curta"] }, { "clicar": "button:has-text(\"Conferir e salvar\")" }, { "esperar": "[data-erro-chave]" }], "pausa": 500 },
+        { "nome": "chave-salva", "passos": [{ "preencher": ["[data-campo-chave]", "sk-proj-exemplo-0000000000008f2Q"] }, { "clicar": "button:has-text(\"Conferir e salvar\")" }, { "esperar": "[data-trocar-chave]" }], "pausa": 1200 }
+      ]
+    },
+    {
+      "nome": "j2-entrar-com-chatgpt",
+      "etapas": [
+        { "nome": "so-a-chave", "url": "/app/accounts/{conta}/settings/ia-da-conta?demo=so_chave", "esperar": "[data-heroi]", "pausa": 2500 },
+        { "nome": "boas-vindas", "passos": [{ "clicar": "[data-continuar-chatgpt]" }, { "esperar": "button:has-text(\"Entendi\")" }], "pausa": 800 },
+        { "nome": "os-dois-conectados", "passos": [{ "clicar": "button:has-text(\"Entendi\")" }], "pausa": 1200 }
+      ]
+    },
+    {
+      "nome": "j3-quando-algo-acaba",
+      "etapas": [
+        { "nome": "chatgpt-no-limite-chave-assume", "url": "/app/accounts/{conta}/settings/ia-da-conta?demo=reserva", "esperar": "[data-heroi]", "pausa": 2500 },
+        { "nome": "sem-credito", "url": "/app/accounts/{conta}/settings/ia-da-conta?demo=sem_credito", "esperar": "[data-heroi]", "pausa": 2500 },
+        { "nome": "so-chatgpt-no-limite", "url": "/app/accounts/{conta}/settings/ia-da-conta?demo=limite", "esperar": "[data-heroi]", "pausa": 2500 },
+        { "nome": "chatgpt-desconectado", "url": "/app/accounts/{conta}/settings/ia-da-conta?demo=desconectado", "esperar": "[data-heroi]", "pausa": 2500 }
+      ]
+    },
+    {
+      "nome": "j4-so-chatgpt-e-em-breve",
+      "etapas": [
+        { "nome": "so-chatgpt-em-parte", "url": "/app/accounts/{conta}/settings/ia-da-conta?demo=so_login", "esperar": "[data-heroi]", "pausa": 2500 },
+        { "nome": "login-ainda-nao-liberado", "url": "/app/accounts/{conta}/settings/ia-da-conta?demo=em_breve", "esperar": "[data-heroi]", "pausa": 2500 }
+      ]
+    }
+  ]
+}

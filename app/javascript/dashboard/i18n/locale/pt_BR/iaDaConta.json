@@ -1,0 +1,76 @@
+{
+  "IA_DA_CONTA": {
+    "MENU": "IA da conta",
+    "ROTULO": "IA da conta",
+    "HEROI": {
+      "VAZIO_TITULO": "Escolha como sua IA vai funcionar.",
+      "VAZIO_TEXTO": "Sem isso, a IA da sua conta fica desligada. Leva 1 minuto.",
+      "OK_TITULO": "Sua IA está funcionando.",
+      "OK_LOGIN": "Ela usa o plano do seu ChatGPT.",
+      "OK_CHAVE": "Ela usa a sua chave da OpenAI.",
+      "OK_OS_DOIS": "Primeiro usamos seu ChatGPT. Se acabar, sua chave.",
+      "RESERVA": "Seu ChatGPT chegou no limite. Por enquanto, usamos sua chave.",
+      "PARADA_TITULO": "Sua IA parou.",
+      "PARADA_SEM_CREDITO": "O crédito da sua chave acabou.",
+      "PARADA_LIMITE": "Seu ChatGPT chegou no limite de uso. Ele volta sozinho.",
+      "PARADA_DESCONECTADO": "Seu ChatGPT foi desconectado.",
+      "SELO_OK": "Funcionando",
+      "SELO_PARADA": "Parada",
+      "SELO_VAZIO": "Desligada",
+      "PARCIAL_TITULO": "Sua IA funciona em parte.",
+      "PARCIAL": "Os agentes só atendem com a sua chave. Coloque também sua chave.",
+      "SELO_PARCIAL": "Em parte"
+    },
+    "CHATGPT": {
+      "TITULO": "Seu ChatGPT",
+      "TEXTO": "Use o plano do ChatGPT que você já paga.",
+      "BOTAO": "Continuar com ChatGPT",
+      "AVISO_DADOS": "As conversas que a IA atender vão passar pela sua conta do ChatGPT.",
+      "EM_BREVE": "Disponível em breve.",
+      "CONECTADO_COMO": "Conectado como {email}",
+      "VER_USO": "Ver meu uso",
+      "ENTRAR_DE_NOVO": "Entrar de novo",
+      "DESCONECTAR": "Desconectar"
+    },
+    "CHAVE": {
+      "TITULO": "Sua chave da OpenAI",
+      "TEXTO": "Pague só o que usar, direto na OpenAI.",
+      "BOTAO": "Colar minha chave",
+      "FINAL": "Chave que termina em {fim}",
+      "POR_CREDITO": "Pôr crédito",
+      "JA_COLOQUEI": "Já coloquei crédito",
+      "TROCAR": "Trocar chave",
+      "REMOVER": "Remover"
+    },
+    "SELO": {
+      "FUNCIONANDO": "Funcionando",
+      "LIMITE": "Chegou no limite",
+      "DESCONECTADO": "Precisa entrar de novo",
+      "SEM_CREDITO": "Sem crédito",
+      "RECUSADA": "Chave não aceita",
+      "RESERVA": "Esperando a vez"
+    },
+    "GAVETA": {
+      "TITULO": "Colar sua chave da OpenAI",
+      "CAMPO": "Sua chave",
+      "EXEMPLO": "Começa com sk-",
+      "ONDE": "Onde pego minha chave?",
+      "PASSO_1": "Entre em platform.openai.com com a sua conta.",
+      "PASSO_2": "Clique em “Create new secret key”.",
+      "PASSO_3": "Copie a chave e cole aqui.",
+      "SALVAR": "Conferir e salvar",
+      "CANCELAR": "Cancelar",
+      "RECUSADA": "A OpenAI não aceitou essa chave. Confira se você copiou ela inteira.",
+      "SEM_CREDITO": "A chave está certa, mas não tem crédito. Ponha crédito na OpenAI e tente de novo."
+    },
+    "BOAS_VINDAS": {
+      "TITULO": "Você está usando seu plano do ChatGPT",
+      "TEXTO": "A IA da sua conta agora usa o seu plano. Você vê quanto já usou nas configurações do ChatGPT.",
+      "ENTENDI": "Entendi"
+    },
+    "FAIXA": {
+      "TEXTO": "A IA da sua conta parou.",
+      "RESOLVER": "Resolver"
+    }
+  }
+}

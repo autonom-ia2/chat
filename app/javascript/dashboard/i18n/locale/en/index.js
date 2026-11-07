@@ -51,6 +51,7 @@ import inboxMgmt from './inboxMgmt.json';
 import onboardingTrail from './onboardingTrail.json';
 import modelosWhatsapp from './modelosWhatsapp.json';
 import erroDaMeta from './erroDaMeta.json';
+import iaDaConta from './iaDaConta.json';
 import insurance from './insurance.json';
 import integrationApps from './integrationApps.json';
 import integrations from './integrations.json';
@@ -129,6 +130,7 @@ export default {
   ...onboardingTrail,
   ...modelosWhatsapp,
   ...erroDaMeta,
+  ...iaDaConta,
   ...insurance,
   ...integrationApps,
   ...integrations,
