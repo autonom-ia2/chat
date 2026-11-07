@@ -32,6 +32,24 @@ RSpec.describe Channel::FacebookPage do
     end
   end
 
+  describe 'token length (#2683)' do
+    it 'accepts Facebook Login for Business tokens longer than 255 characters' do
+      page = build(:channel_facebook_page, user_access_token: 'E' * 400, page_access_token: 'P' * 300)
+      page.valid?
+
+      expect(page.errors[:user_access_token]).to be_empty
+      expect(page.errors[:page_access_token]).to be_empty
+    end
+
+    it 'still rejects absurdly long tokens' do
+      page = build(:channel_facebook_page, user_access_token: 'E' * 4097)
+
+      page.valid?
+
+      expect(page.errors[:user_access_token]).to be_present
+    end
+  end
+
   it 'has a valid name' do
     expect(channel.name).to eq('Facebook')
   end

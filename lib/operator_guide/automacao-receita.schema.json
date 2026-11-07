@@ -392,6 +392,27 @@
         {
           "type": "object",
           "additionalProperties": false,
+          "required": ["id", "tipo", "faz"],
+          "description": "Campanhas (G14). faz=disparar: monta a campanha de WhatsApp oficial com o modelo aprovado e a manda para quem tem as etiquetas, pela mesma Campanha da tela (quem pediu para não receber fica de fora). Só em gatilho sem alvo (recorrente): num gatilho de conversa, card ou contato, cada execução mandaria a mesma campanha de novo. As variáveis do modelo são texto fixo. faz=nao_receber: marca o contato do alvo como \"não recebe\" mensagens ativas e campanhas, como o botão do contato. Pôr ou tirar alguém de uma campanha é pôr ou tirar a etiqueta do público dela.",
+          "properties": {
+            "id": { "$ref": "#/definitions/id" },
+            "tipo": { "const": "campanha" },
+            "faz": { "enum": ["disparar", "nao_receber"] },
+            "titulo": { "type": "string", "minLength": 1, "maxLength": 255 },
+            "caixa_id": { "type": "integer", "minimum": 1 },
+            "modelo": { "$ref": "#/definitions/modelo_whatsapp" },
+            "etiquetas": { "$ref": "#/definitions/ids" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "faz": { "const": "disparar" } } },
+              "then": { "required": ["titulo", "caixa_id", "modelo", "etiquetas"], "properties": { "etiquetas": { "minItems": 1 } } }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
           "description": "Passa a conversa à agente de IA pela Atribuição do CRM. Pessoa no nome vence: o passo pula.",
           "required": ["id", "tipo", "agente_id"],
           "properties": {
