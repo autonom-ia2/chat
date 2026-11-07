@@ -54,17 +54,20 @@ class Autonomia::Automacao::Valores
 
   # G11: a resposta que chegou durante o "esperar até" (Resposta). Só existe na condição dele, onde há a janela da
   # espera (`espera`); o salvar recusa no resto. Sem a janela, ou sem conversa (card sem conversa principal), lê
-  # false: nunca "respondeu", e "diferente de true" não vira resposta.
+  # false: nunca "respondeu", e "diferente de true" não vira resposta. Lote 4 (#2682): a resposta da pessoa atribuída
+  # e o gatilho que aconteceu de novo durante a espera (base `gatilho`: a execução; no ensaio, sem execução, false).
   RESPOSTA = {
     'conversa.cliente_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.cliente?(conversa, espera) },
-    'conversa.equipe_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.equipe?(conversa, espera) }
+    'conversa.equipe_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.equipe?(conversa, espera) },
+    'conversa.responsavel_respondeu' => ->(conversa, espera) { ::Autonomia::Automacao::Resposta.responsavel?(conversa, espera) },
+    'gatilho.repetiu' => ->(execucao, espera) { ::Autonomia::Automacao::Resposta.repetiu?(execucao, espera) }
   }.freeze
 
   # O que cada alvo alcança, pelas pontes do Contexto.
   BASES_DO_ALVO = {
-    'Conversation' => %w[conversa contato],
-    'Crm::Card' => %w[card conversa contato reuniao],
-    'Contact' => %w[contato]
+    'Conversation' => %w[conversa contato gatilho],
+    'Crm::Card' => %w[card conversa contato reuniao gatilho],
+    'Contact' => %w[contato gatilho]
   }.freeze
 
   # A mensagem que disparou o gatilho, para o filtro separar a do cliente da resposta da equipe e da nota.
@@ -90,7 +93,9 @@ class Autonomia::Automacao::Valores
     'mensagem.primeira' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
     'conversa.iniciada_por' => { 'opcoes' => %w[cliente equipe], 'operadores' => %w[igual diferente] },
     'conversa.cliente_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
-    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
+    'conversa.equipe_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'conversa.responsavel_respondeu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] },
+    'gatilho.repetiu' => { 'opcoes' => [true, false], 'operadores' => %w[igual diferente] }
   }.freeze
 
   ATRIBUTOS = {
@@ -260,6 +265,7 @@ class Autonomia::Automacao::Valores
     when 'contato' then @contexto.contato
     when 'card' then @contexto.card
     when 'reuniao' then @contexto.reuniao
+    when 'gatilho' then @contexto.execucao
     end
   end
 end

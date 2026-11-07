@@ -12,6 +12,9 @@
 # - `acordar`: a conversa (ou o contato dela) mudou. Quem espera num "esperar até" por ela, também o card cuja
 #   conversa principal é ela, é reservado e confere a condição agora, em vez de esperar o prazo. Só o "esperar até":
 #   a ação que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
+# - `card_mudou` (lote 4, #2682): o card mudou (etapa, situação, campo, valor, responsável). Quem espera nele confere
+#   agora: o campo preenchido pelo corretor é visto na hora, não no fim do prazo.
+# - `acordar_execucao` (lote 4): o gatilho da execução aberta aconteceu de novo (Partida); ela confere agora.
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
@@ -99,6 +102,23 @@ module Autonomia::Automacao::Escuta
     end
   rescue StandardError => e
     registrar_erro("não acordou #{registro.class.name}=#{registro&.id}", e)
+  end
+
+  # Roda a cada mudança lida do card: primeiro a consulta pelo índice do alvo; sem execução esperando nele (o caso comum),
+  # para aí, sem ler a conta nem a flag.
+  def card_mudou(card)
+    esperando = ::Autonomia::Automacao::Execucao.where(alvo_type: 'Crm::Card', alvo_id: card.id, estado: 'esperando')
+    return unless esperando.exists? && ::Autonomia::Automacao::Motor.ligado?(card.account)
+
+    esperando.includes(:versao).find_each { |execucao| acordar_execucao(execucao) }
+  rescue StandardError => e
+    registrar_erro("não acordou Crm::Card=#{card&.id}", e)
+  end
+
+  def acordar_execucao(execucao)
+    reservar(execucao) if execucao.estado == 'esperando' && esperando_condicao?(execucao)
+  rescue StandardError => e
+    registrar_erro("não acordou execucao=#{execucao&.id}", e)
   end
 
   # Quem espera pela conversa: a execução dela e a do card cuja conversa principal é ela (G11: a resposta do cliente
