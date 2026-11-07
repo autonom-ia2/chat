@@ -223,7 +223,11 @@ const mudarVariavel = (indice, texto) => {
         </p>
       </div>
 
-      <div v-if="etiquetas.length" class="flex flex-col gap-1.5" data-campanha-sem>
+      <div
+        v-if="etiquetas.length"
+        class="flex flex-col gap-1.5"
+        data-campanha-sem
+      >
         <LivreMarcar
           :rotulo="$t('AUTOMACAO_LIVRE.CAMPOS.SEM_ETIQUETAS')"
           :opcoes="etiquetas"

@@ -139,6 +139,23 @@ describe('LivreCampanha', () => {
     expect(tela.findAllComponents({ name: 'Input' })).toHaveLength(2);
   });
 
+  it('"menos quem tem" grava as etiquetas excluídas, sem tirar as do público', async () => {
+    const tela = montar(PRONTA);
+
+    const [, sem] = tela.findAllComponents({ name: 'LivreMarcar' });
+    sem.vm.$emit('update:modelValue', [7]);
+
+    const [[emitido]] = tela.emitted('update:modelValue');
+    expect(emitido).toMatchObject({ etiquetas: [7], sem_etiquetas: [7] });
+    expect(tela.text()).toContain('AUTOMACAO_LIVRE.CAMPANHA.SEM_ETIQUETAS_DICA');
+  });
+
+  it('"não receber" deixa as etiquetas excluídas de fora', () => {
+    expect(
+      comFaz({ ...PRONTA, sem_etiquetas: [7] }, 'nao_receber')
+    ).not.toHaveProperty('sem_etiquetas');
+  });
+
   it('nenhum <select> nativo', () => {
     expect(montar(PRONTA).find('select').exists()).toBe(false);
   });
