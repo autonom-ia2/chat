@@ -9,12 +9,14 @@ import ChoiceSelect from 'dashboard/components-next/choice-select/ChoiceSelect.v
 // pelo catálogo (`parametros`): a etapa, agrupada pelo funil, ou o funil
 // (vazio = todos). Os de card só chegam aqui com a flag e para quem pode mexer
 // no funil. Os de tempo (PR3a) pedem também os dias, o campo de data do alvo,
-// antes ou depois e a hora.
+// antes ou depois e a hora. #2680: no gatilho de card ou de contato, a caixa por
+// onde a mensagem abre a conversa de quem ainda não tem uma.
 const props = defineProps({
   modelValue: { type: Object, default: null },
   gatilhos: { type: Array, required: true },
   // { funis: [{ value, label }], etapas: [{ label, options }],
-  //   campos: { 'Crm::Card': [{ value, label }], Contact: [...] } }
+  //   campos: { 'Crm::Card': [{ value, label }], Contact: [...] },
+  //   caixas: [{ value, label }] (as que abrem conversa, #2680) }
   escolhas: { type: Object, default: () => ({}) },
 });
 
@@ -22,6 +24,7 @@ const emit = defineEmits(['update:modelValue']);
 
 const { t } = useI18n();
 const idTipo = useId();
+const idCaixa = useId();
 
 const opcao = item => ({ value: item.tipo, label: t(item.frase) });
 const grupos = computed(() => {
@@ -96,11 +99,29 @@ const funis = computed(() => [
   ...(props.escolhas.funis || []),
 ]);
 
+// #2680: só card e contato podem não ter conversa; a do gatilho de conversa
+// já existe.
+const ALVOS_SEM_CONVERSA = ['Crm::Card', 'Contact'];
+const podeNaoTerConversa = tipo =>
+  ALVOS_SEM_CONVERSA.includes(entradaDo(tipo)?.alvo);
+const abreConversa = computed(() => podeNaoTerConversa(props.modelValue?.tipo));
+const caixasDaConversa = computed(() => [
+  { value: '', label: t('AUTOMACAO_LIVRE.CONVERSA_NOVA.NENHUMA') },
+  ...(props.escolhas.caixas || []),
+]);
+
 // Trocar o tipo apaga o que o anterior pedia (etapa, funil), mas mantém os
-// filtros: o painel mostra o que entra e o que sai deles.
+// filtros: o painel mostra o que entra e o que sai deles. A caixa da conversa
+// nova fica enquanto o novo gatilho também pode não ter conversa.
 const trocarTipo = tipo => {
-  const { filtros } = props.modelValue || {};
-  const novo = { tipo, ...padraoDo(tipo) };
+  const { filtros, conversa_nova: conversaNova } = props.modelValue || {};
+  const novo = {
+    tipo,
+    ...padraoDo(tipo),
+    ...(conversaNova && podeNaoTerConversa(tipo)
+      ? { conversa_nova: conversaNova }
+      : {}),
+  };
   emit('update:modelValue', filtros ? { ...novo, filtros } : novo);
 };
 // Sem escolha (o funil vazio), a chave não vai na receita.
@@ -197,6 +218,29 @@ const mudar = (nome, valor) => {
         :options="funis"
         @update:model-value="valor => mudar(parametro.nome, valor)"
       />
+    </div>
+
+    <div
+      v-if="abreConversa"
+      class="flex flex-col gap-1.5"
+      data-parametro="conversa_nova"
+    >
+      <label :for="idCaixa" class="text-sm font-medium text-n-slate-12">
+        {{ $t('AUTOMACAO_LIVRE.CONVERSA_NOVA.CAIXA') }}
+      </label>
+      <ChoiceSelect
+        :model-value="modelValue?.conversa_nova?.caixa_id ?? ''"
+        :trigger-id="idCaixa"
+        :aria-label="$t('AUTOMACAO_LIVRE.CONVERSA_NOVA.CAIXA')"
+        :options="caixasDaConversa"
+        @update:model-value="
+          valor =>
+            mudar('conversa_nova', valor === '' ? null : { caixa_id: valor })
+        "
+      />
+      <p class="mb-0 text-sm text-n-slate-11">
+        {{ $t('AUTOMACAO_LIVRE.CONVERSA_NOVA.AJUDA') }}
+      </p>
     </div>
 
     <p
