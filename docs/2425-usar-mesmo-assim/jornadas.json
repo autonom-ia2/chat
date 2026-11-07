@@ -1,0 +1,19 @@
+{
+  "pasta": "docs/2425-usar-mesmo-assim/prints",
+  "conta": 1,
+  "larguras": [1440, 390],
+  "temas": ["light"],
+  "jornadas": [
+    {
+      "nome": "usar-mesmo-assim",
+      "etapas": [
+        { "nome": "login", "url": "/app/login", "sem_login": true, "esperar": "input[type=\"password\"]" },
+        { "nome": "1-cartao-leitura-ruim", "url": "/app/accounts/{conta}/agents/AGENTE/knowledge", "esperar": "[data-acao=\"ver-lidos\"]", "pausa": 3000 },
+        { "nome": "2-ver-o-que-eu-li", "url": "/app/accounts/{conta}/agents/AGENTE/knowledge", "esperar": "[data-acao=\"ver-lidos\"]",
+          "passos": [{ "clicar": "[data-acao=\"ver-lidos\"]" }], "pausa": 2500 },
+        { "nome": "3-depois-de-usar", "url": "/app/accounts/{conta}/agents/AGENTE/knowledge", "esperar": "[data-acao=\"ver-lidos\"]",
+          "passos": [{ "clicar": "[data-acao=\"ver-lidos\"]" }, { "clicar": "[data-acao=\"usar-mesmo-assim\"]" }], "pausa": 3500 }
+      ]
+    }
+  ]
+}

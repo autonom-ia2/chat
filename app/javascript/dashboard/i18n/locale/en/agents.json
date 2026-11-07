@@ -1609,7 +1609,12 @@
               "TITULO_ARQUIVO": "{nome} could not be read",
               "TEXTO_ARQUIVO": "The reading came out with many errors, like a blurry scanned page. {agente} does not use what is in it.",
               "MANDAR_ARQUIVO": "Send another one",
-              "ESCREVER": "Write what is in it"
+              "ESCREVER": "Write what is in it",
+              "VER_LIDOS": "Is the text right? See what I read",
+              "LIDOS_TITULO": "What I read from {nome}",
+              "LIDOS_TEXTO": "Compare it with the file. If it matches, {agente} starts using this material.",
+              "USAR": "It's right, use it",
+              "VOLTAR": "Back"
             },
             "DUPLICADO": {
               "TITULO": "{nome} and {outro} are the same",

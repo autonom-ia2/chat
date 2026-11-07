@@ -7,6 +7,8 @@
 class Autonomia::Agents::Material::Problemas
   ERRO_DE_VAZIO = 'empty_extraction'.freeze
   REPROVADOS = %w[ocr sem_cabecalho].freeze
+  LIDOS = 5
+  LIDO_MAX_CHARS = 280
 
   def initialize(agent)
     @agent = agent
@@ -47,7 +49,16 @@ class Autonomia::Agents::Material::Problemas
     item = { 'id' => "#{problema}-#{fonte.id}", 'tipo' => problema, 'fontes' => [fonte.id], 'nome' => nome(fonte),
              'foto' => fonte.source_type == Autonomia::Agents::Source::FOTO,
              'amostra' => Array(fonte.metadata.to_h.dig('conferencia', 'amostra')) }
+    item = item.merge('lidos' => lidos(fonte)) if problema == 'ocr'
     aviso ? item.merge('aviso' => true) : item
+  end
+
+  # #2425 (protótipo) — "Ver o que eu li": até LIDOS trechos do texto lido, espalhados pelo material, para a pessoa
+  # comparar com o arquivo antes de "usar mesmo assim".
+  def lidos(fonte)
+    textos = fonte.knowledge_entries.where(status: Autonomia::Agents::KnowledgeEntry.statuses[:ready]).order(:chunk_index).pluck(:content)
+    passo = [textos.size.fdiv(LIDOS), 1].max
+    (0...[LIDOS, textos.size].min).map { |i| textos[(i * passo).floor].to_s.squish.truncate(LIDO_MAX_CHARS) }
   end
 
   # Mesmo texto (resumo exato do texto lido): fica o mais antigo, o outro é o candidato a sair.

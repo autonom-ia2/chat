@@ -32,6 +32,9 @@ const emit = defineEmits([
 const { t, locale } = useI18n();
 
 const escolha = ref(null);
+// #2425 (protótipo) — leitura ruim de um texto que a pessoa vê que está certo: "Ver o que eu li" mostra trechos do que
+// foi lido, e "Está certo, usar" faz o material valer.
+const vendoLidos = ref(false);
 // "Pular por agora" (sempre presente): o cartão pulado sai da fila até a gaveta abrir de novo. Pulado o último, o
 // cartão some; o que precisa da pessoa continua contado no quadro "O que sabe" da página.
 const pulados = ref([]);
@@ -43,6 +46,7 @@ watch(
   () => atual.value?.id,
   () => {
     escolha.value = null;
+    vendoLidos.value = false;
   }
 );
 
@@ -281,6 +285,28 @@ const corrigirResposta = () =>
         />
       </dl>
 
+      <div
+        v-if="atual.tipo === 'ocr' && vendoLidos"
+        data-lidos
+        class="flex flex-col gap-2 p-3 rounded-xl bg-n-solid-1 ring-1 ring-inset ring-n-weak"
+      >
+        <p class="m-0 text-sm font-semibold text-n-slate-12">
+          {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.OCR.LIDOS_TITULO', dados) }}
+        </p>
+        <p class="m-0 text-sm text-n-slate-11">
+          {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.OCR.LIDOS_TEXTO', dados) }}
+        </p>
+        <ol class="flex flex-col gap-2 p-0 m-0 list-none">
+          <li
+            v-for="(lido, i) in atual.lidos"
+            :key="i"
+            class="p-2 text-sm rounded-lg bg-n-alpha-1 text-n-slate-12"
+          >
+            {{ lido }}
+          </li>
+        </ol>
+      </div>
+
       <EscolhaRadio
         v-if="atual.tipo === 'contradicao' && podeGerenciar"
         v-model="escolha"
@@ -289,7 +315,23 @@ const corrigirResposta = () =>
       />
 
       <div v-if="podeGerenciar" data-acoes class="flex flex-wrap gap-2">
-        <template v-if="atual.tipo === 'vazio' || atual.tipo === 'ocr'">
+        <template v-if="atual.tipo === 'ocr' && vendoLidos">
+          <AgenteBotao
+            data-acao="usar-mesmo-assim"
+            :carregando="salvando"
+            @click="resolver('usar')"
+          >
+            {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.OCR.USAR') }}
+          </AgenteBotao>
+          <AgenteBotao
+            data-acao="voltar"
+            variante="contorno"
+            @click="vendoLidos = false"
+          >
+            {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.OCR.VOLTAR') }}
+          </AgenteBotao>
+        </template>
+        <template v-else-if="atual.tipo === 'vazio' || atual.tipo === 'ocr'">
           <AgenteBotao
             data-acao="mandar-outro"
             @click="emit('mandarOutro', fonte)"
@@ -311,6 +353,14 @@ const corrigirResposta = () =>
             @click="emit('corrigir', null)"
           >
             {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.OCR.ESCREVER') }}
+          </AgenteBotao>
+          <AgenteBotao
+            v-if="atual.tipo === 'ocr' && atual.lidos?.length"
+            data-acao="ver-lidos"
+            variante="contorno"
+            @click="vendoLidos = true"
+          >
+            {{ t('AGENTS.JORNADA.PAGINA.MATERIAL.PROBLEMA.OCR.VER_LIDOS') }}
           </AgenteBotao>
         </template>
         <template v-else-if="atual.tipo === 'duplicado'">

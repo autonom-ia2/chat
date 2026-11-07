@@ -1609,7 +1609,12 @@
               "TITULO_ARQUIVO": "Não deu para ler {nome}",
               "TEXTO_ARQUIVO": "A leitura saiu com muitos erros, como numa página escaneada borrada. {agente} não usa o que está nele.",
               "MANDAR_ARQUIVO": "Mandar outro",
-              "ESCREVER": "Escrever o que está nela"
+              "ESCREVER": "Escrever o que está nela",
+              "VER_LIDOS": "O texto está certo? Ver o que eu li",
+              "LIDOS_TITULO": "O que eu li de {nome}",
+              "LIDOS_TEXTO": "Compare com o arquivo. Se estiver igual, {agente} passa a usar este material.",
+              "USAR": "Está certo, usar",
+              "VOLTAR": "Voltar"
             },
             "DUPLICADO": {
               "TITULO": "{nome} e {outro} são iguais",
