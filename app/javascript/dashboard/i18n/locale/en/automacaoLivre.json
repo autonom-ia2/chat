@@ -8,6 +8,7 @@
       "ETIQUETA": "Labels",
       "ATRIBUTO": "Custom fields",
       "EQUIPE": "Team",
+      "OUTRO_SISTEMA": "Other system",
       "CONTROLE": "Time and conditions"
     },
     "OPERADORES": {
@@ -92,7 +93,8 @@
       "RESUMIR": "AI summarizes the conversation",
       "IA_ASSUMIR": "Hand over to the AI agent",
       "EMAIL": "Send an e-mail to the customer",
-      "RETORNO": "Create a follow-up for the team"
+      "RETORNO": "Create a follow-up for the team",
+      "WEBHOOK": "Send data to another system"
     },
     "ESCOLHER": {
       "ETIQUETA": "Which label",
@@ -147,7 +149,12 @@
       "AGENTE_ID": "Which AI agent",
       "CAIXA_ID": "From which e-mail inbox",
       "ASSUNTO": "Subject",
-      "MODELO": "If the 24-hour window is closed"
+      "MODELO": "If the 24-hour window is closed",
+      "DESCRICAO": "What this sending is for",
+      "URL": "Address of the other system",
+      "CORPO": "What to send",
+      "GRAVAR": "What to save from the answer",
+      "SE_RECUSAR": "If the other system refuses"
     },
     "OPCOES": {
       "STATUS": {
@@ -304,7 +311,8 @@
       "SENAO": "Otherwise",
       "SE_VENCER": "If time runs out",
       "NENHUM": "None applies",
-      "CAMINHO": "Path {n}"
+      "CAMINHO": "Path {n}",
+      "SE_RECUSAR": "If the other system refuses"
     },
     "SELETOR": {
       "TITULO": "Choose the next step",

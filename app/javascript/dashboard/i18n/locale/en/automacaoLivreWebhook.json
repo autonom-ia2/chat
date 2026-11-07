@@ -1,0 +1,38 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "WEBHOOK": {
+      "FRASE": "Send to {host}: {descricao}",
+      "FRASE_SEM_DESCRICAO": "Send to {host}",
+      "OUTRO_SISTEMA": "another system",
+      "DESCRICAO_DICA": "A short sentence, so whoever reads the history knows what was sent. E.g.: Send to the billing system.",
+      "URL_DICA": "Ask whoever runs the other system for this address. It starts with https://.",
+      "URL_EXEMPLO": "https://example.com/receive",
+      "URL_INVALIDA": "The address must start with https://.",
+      "CORPO_DICA": "Each line carries one piece of information: the name the other system expects and the customer data that goes in it.",
+      "CORPO_NOME": "Name of the information (as the other system calls it)",
+      "CORPO_NOME_REPETIDO": "There is already a line with this name.",
+      "CORPO_VALOR": "Data that goes",
+      "CORPO_NOVA": "Send one more piece of information",
+      "CORPO_TIRAR": "Remove this line",
+      "GRAVAR_DICA": "If the other system returns a number or a code, keep it in a field to use later. It also works when it refuses: keep the reason to alert the team.",
+      "GRAVAR_SEM_CAMPO": "To keep the answer, first create a custom field on the card, contact or conversation.",
+      "GRAVAR_CHAVE": "Name of the information in the answer",
+      "GRAVAR_DESTINO": "Where to keep it",
+      "GRAVAR_NOVO": "Keep one more piece of information",
+      "GRAVAR_TIRAR": "Remove",
+      "SEGREDO": {
+        "TITULO": "Verification secret",
+        "DICA": "The other system uses this secret to check that the sending really came from this automation. Give it to whoever runs it.",
+        "SO_ADMIN": "Only the account administrator sees and changes the secret.",
+        "SALVAR_ANTES": "Save the automation to see the secret.",
+        "VER": "See the secret",
+        "TROCAR": "Change the secret",
+        "CONFIRMAR": "The current secret stops working right away. The other system needs the new one. Change it?",
+        "TROCAR_SIM": "Yes, change",
+        "CANCELAR": "Cancel",
+        "TROCAR_FALHOU": "We could not confirm the change. The old secret may no longer work: view the secret again.",
+        "FALHOU": "Could not get the secret now. Try again."
+      }
+    }
+  }
+}

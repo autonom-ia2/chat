@@ -12,6 +12,10 @@ vi.mock('vue-i18n', () => ({
   }),
 }));
 
+vi.mock('dashboard/composables/useAdmin', () => ({
+  useAdmin: () => ({ isAdmin: { value: true } }),
+}));
+
 const PainelFalso = defineComponent({
   name: 'SidePanel',
   setup(_, { expose }) {
@@ -387,6 +391,83 @@ describe('LivreAlterar', () => {
 
     await abrir({ envio: { mensagem: ['Oi'] } });
     expect(salvarDesligado(wrapper)).toBe(false);
+  });
+
+  // G13 (#2670): o webhook só salva com a frase, endereço https e cada linha do
+  // corpo e da resposta completa; o segredo aparece no painel.
+  it('o webhook só salva com endereço https e linhas completas', async () => {
+    const catalogo = {
+      ...CATALOGO,
+      valores: [
+        ...CATALOGO.valores,
+        {
+          caminho: 'card.atributos',
+          frase: 'CARD',
+          atributos: 'card_attribute',
+        },
+      ],
+      passos: [
+        {
+          tipo: 'webhook',
+          frase: 'WEBHOOK',
+          campos: [
+            {
+              nome: 'descricao',
+              peca: 'descricao',
+              rotulo: 'D',
+              obrigatorio: true,
+            },
+            {
+              nome: 'url',
+              peca: 'endereco_do_webhook',
+              rotulo: 'U',
+              obrigatorio: true,
+            },
+            { nome: 'corpo', peca: 'corpo_do_webhook', rotulo: 'C' },
+            { nome: 'gravar', peca: 'resposta_do_webhook', rotulo: 'G' },
+            { nome: 'se_recusar', peca: 'passos', rotulo: 'S' },
+          ],
+        },
+      ],
+    };
+    const wrapper = montar(catalogo);
+    const abrir = async extra => {
+      wrapper.vm.abrir({
+        tipo: 'passo',
+        valor: {
+          id: 'w1',
+          tipo: 'webhook',
+          descricao: 'Cobrança',
+          url: 'https://cobranca.exemplo.com/api',
+          corpo: { nome: { $valor: 'conversa.status' } },
+          gravar: [],
+          ...extra,
+        },
+      });
+      await flushPromises();
+    };
+
+    await abrir({});
+    [
+      'descricao',
+      'endereco_do_webhook',
+      'corpo_do_webhook',
+      'resposta_do_webhook',
+      'segredo_do_webhook',
+    ].forEach(peca =>
+      expect(wrapper.find(`[data-peca="${peca}"]`).exists()).toBe(true)
+    );
+    expect(salvarDesligado(wrapper)).toBe(false);
+
+    await abrir({ url: 'http://cobranca.exemplo.com/api' });
+    expect(salvarDesligado(wrapper)).toBe(true);
+    expect(wrapper.find('[data-endereco-invalido]').exists()).toBe(true);
+
+    await abrir({ descricao: ' ' });
+    expect(salvarDesligado(wrapper)).toBe(true);
+
+    await abrir({ gravar: [{ chave: 'numero', destino: '' }] });
+    expect(salvarDesligado(wrapper)).toBe(true);
   });
 
   it('não salva condição sem o que olhar', async () => {

@@ -13,10 +13,19 @@ import LivreDestinatarios from './LivreDestinatarios.vue';
 import LivreRetornoPara from './LivreRetornoPara.vue';
 import LivreRetornoEnvio from './LivreRetornoEnvio.vue';
 import LivreIaCampo from './LivreIaCampo.vue';
+import LivreWebhookCorpo from './LivreWebhookCorpo.vue';
+import LivreWebhookResposta from './LivreWebhookResposta.vue';
+import LivreWebhookSegredo from './LivreWebhookSegredo.vue';
 import LivreIaTestar from './LivreIaTestar.vue';
 import LivreGatilho from './LivreGatilho.vue';
 import { caminhosProntos } from '../ia';
 import { envioPronto, paraPronto } from '../retorno';
+import {
+  corpoPronto,
+  descricaoPronta,
+  enderecoPronto,
+  gravarPronto,
+} from '../webhook';
 import { entradaDoPasso, gravarCampo, lerCampo } from '../catalogo';
 import { temDataIncompleta } from '../texto';
 import { fraseDaCondicao, fraseDoGatilho, fraseDoPasso } from '../frases';
@@ -39,6 +48,8 @@ const props = defineProps({
   // funis, os de card) e as escolhas deles. Sem a lista, todos os do catálogo.
   gatilhos: { type: Array, default: null },
   escolhasDoGatilho: { type: Object, default: () => ({}) },
+  // G13 (#2670): o segredo do "webhook" é da automação salva.
+  automacaoId: { type: Number, default: null },
 });
 
 const emit = defineEmits(['salvar', 'tirar', 'close']);
@@ -209,6 +220,12 @@ const nativoPronto = campo => {
     );
   if (campo.peca === 'quem_recebe_retorno') return paraPronto(valor);
   if (campo.peca === 'envio_do_retorno') return envioPronto(valor);
+  // G13: a frase do histórico, o endereço https, cada linha do corpo com nome e
+  // dado, e cada resposta com onde guardar.
+  if (campo.peca === 'descricao') return descricaoPronta(valor);
+  if (campo.peca === 'endereco_do_webhook') return enderecoPronto(valor);
+  if (campo.peca === 'corpo_do_webhook') return corpoPronto(valor);
+  if (campo.peca === 'resposta_do_webhook') return gravarPronto(valor);
   if (campo.peca === 'destinatarios')
     return Boolean(
       valor?.responsavel || valor?.times?.length || valor?.pessoas?.length
@@ -260,6 +277,9 @@ const podeSalvar = computed(() => {
 });
 
 const fechar = () => painel.value?.close();
+
+const CAIXA =
+  'w-full px-3 py-2 text-[0.9375rem] border rounded-xl min-h-11 border-n-weak bg-n-solid-1 text-n-slate-12 focus-visible:outline focus-visible:outline-2 focus-visible:outline-n-brand';
 
 const receitaParaTestar = computed(() =>
   ehDeIa.value && props.receitaDoTeste && rascunho.value
@@ -440,6 +460,70 @@ defineExpose({ abrir, fechar });
           :atributos-do="atributosDo"
           @update:model-value="novo => mudarNativo(campo.nome, novo)"
         />
+        <label
+          v-else-if="campo.peca === 'descricao'"
+          class="flex flex-col gap-1.5"
+          data-peca="descricao"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <span class="text-sm text-n-slate-11">
+            {{ $t('AUTOMACAO_LIVRE.WEBHOOK.DESCRICAO_DICA') }}
+          </span>
+          <input
+            maxlength="200"
+            :class="CAIXA"
+            :value="rascunho[campo.nome] || ''"
+            @input="evento => mudarNativo(campo.nome, evento.target.value)"
+          />
+        </label>
+        <label
+          v-else-if="campo.peca === 'endereco_do_webhook'"
+          class="flex flex-col gap-1.5"
+          data-peca="endereco_do_webhook"
+        >
+          <span class="text-sm font-medium text-n-slate-12">
+            {{ $t(campo.rotulo) }}
+          </span>
+          <span class="text-sm text-n-slate-11">
+            {{ $t('AUTOMACAO_LIVRE.WEBHOOK.URL_DICA') }}
+          </span>
+          <input
+            type="url"
+            inputmode="url"
+            maxlength="2000"
+            :placeholder="$t('AUTOMACAO_LIVRE.WEBHOOK.URL_EXEMPLO')"
+            :class="CAIXA"
+            :value="rascunho[campo.nome] || ''"
+            @input="
+              evento => mudarNativo(campo.nome, evento.target.value.trim())
+            "
+          />
+          <span
+            v-if="rascunho[campo.nome] && !enderecoPronto(rascunho[campo.nome])"
+            class="text-sm text-n-ruby-11"
+            data-endereco-invalido
+          >
+            {{ $t('AUTOMACAO_LIVRE.WEBHOOK.URL_INVALIDA') }}
+          </span>
+        </label>
+        <LivreWebhookCorpo
+          v-else-if="campo.peca === 'corpo_do_webhook'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
+        <LivreWebhookResposta
+          v-else-if="campo.peca === 'resposta_do_webhook'"
+          :rotulo="$t(campo.rotulo)"
+          :model-value="rascunho[campo.nome]"
+          :catalogo="catalogo"
+          :atributos-do="atributosDo"
+          @update:model-value="novo => mudarNativo(campo.nome, novo)"
+        />
         <LivreIaCampo
           v-else-if="ehDeIa"
           :campo="campo"
@@ -479,6 +563,11 @@ defineExpose({ abrir, fechar });
         :atributos-do="atributosDo"
         :bloqueadas="bloqueadasDe(campo)"
         @update:model-value="novo => mudarCampo(campo.nome, novo)"
+      />
+
+      <LivreWebhookSegredo
+        v-if="entrada?.tipo === 'webhook'"
+        :automacao-id="automacaoId"
       />
 
       <LivreIaTestar

@@ -12,7 +12,7 @@
 # - o gatilho de card só com a flag da F6, e a etapa ou o funil escolhidos nele são da conta (#2499).
 class Autonomia::Automacao::Receita
   ESQUEMA = JSON.parse(Rails.root.join('lib/operator_guide/automacao-receita.schema.json').read).freeze
-  RAMOS = %w[entao senao se_vencer].freeze
+  RAMOS = %w[entao senao se_vencer se_recusar].freeze
   # O "decidir" (F7, #2500) abre um ramo por caminho (`caminhos[].passos`) e o de "nenhum se aplica" (`nenhum`).
   NENHUM = 'nenhum'.freeze
   # Os passos de IA (F7), só com a flag da F7.
@@ -75,7 +75,7 @@ class Autonomia::Automacao::Receita
     return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
     return ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo) if passo['tipo'] == 'ia_assumir'
-    return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
+    return problemas_de_objeto_proprio(passo) if %w[retorno webhook].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
@@ -107,9 +107,12 @@ class Autonomia::Automacao::Receita
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
   end
 
-  # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
-  def problemas_do_retorno(passo)
-    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) { |c| problemas_do_caminho(passo['id'], c) }
+  # "criar retorno" (G3) e "webhook" (G13): a conferência mora no objeto do passo; os caminhos lidos, pela régua daqui.
+  def problemas_de_objeto_proprio(passo)
+    lidos = ->(caminho) { problemas_do_caminho(passo['id'], caminho) }
+    return ::Autonomia::Automacao::PassoDeWebhook.problemas_ao_salvar(@conta, passo, @account_user, &lidos) if passo['tipo'] == 'webhook'
+
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user, &lidos)
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.

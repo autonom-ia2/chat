@@ -560,6 +560,16 @@ en:
         retorno_sem_responsavel: "The follow-up was not created: it was for the owner, and no one owns this yet."
         sem_conversa: "The card has no main conversation. Nothing was sent."
         texto_vazio: "The text came out blank after it was built. The message was not sent."
+        webhook_desligado: 'Sending to another system is off for this account. Nothing was sent.'
+        webhook_so_https: 'The address of the other system must start with https://. Nothing was sent.'
+        webhook_sem_senha_no_endereco: 'The address of the other system cannot carry a user and password. Nothing was sent.'
+        webhook_endereco_interno: 'The address points to an internal network or to this platform, so it was blocked. Nothing was sent.'
+        webhook_sem_resposta: 'The other system did not answer in time or had an error; the automation will try again.'
+        webhook_redirecionou: 'The other system answered with a redirect, which is not followed. Use the final address.'
+        webhook_recusado: 'The other system refused the data.'
+        webhook_sem_permissao: 'Whoever turned this automation on can no longer send data to other systems. The automation was paused.'
+        webhook_gravar_falhou: 'The other system received the data, but saving its answer failed. It was not sent again.'
+        webhook_resposta_grande: 'The other system answered, but the answer was too big to read. Nothing was saved from it.'
         dado_ausente: 'The AI did not find any of the requested data in the conversation. Nothing was saved.'
         ia_chave_recusada: "The AI provider refused the account's key. Check the AI key in the integrations."
         ia_desligada: 'AI steps are off for this account. The AI was not called.'
@@ -622,6 +632,14 @@ en:
         caminho_reservado: "Step %{passo}: the name %{nome} is already the path for when nothing applies. Pick another name."
         caminho_sem_letra: "Step %{passo}: the path name needs at least one letter (%{nome})."
         destino_invalido: "Step %{passo}: %{destino} is not a place where the AI can save."
+        webhook_desligado: "Step %{passo}: sending to another system is off for this account."
+        webhook_so_https: "Step %{passo}: the address of the other system must start with https://."
+        webhook_sem_senha_no_endereco: "Step %{passo}: the address cannot carry a user and password. The signature already proves it is us."
+        webhook_endereco_interno: "Step %{passo}: the address points to an internal network or to this platform."
+        webhook_destino_invalido: "Step %{passo}: the answer can only be saved in a card, contact or conversation attribute (%{destino})."
+        webhook_destino_repetido: "Step %{passo}: two answers are saved in %{destino}."
+        webhook_sem_permissao: "Step %{passo}: only an administrator, or a role allowed to manage integrations, can send data to another system."
+        webhook_chave_invalida: "Step %{passo}: %{chave} does not point to anything in the answer."
         campo_repetido: "Step %{passo}: %{chave} appears twice."
       nota:
         laco: "Automation %{nome} stopped in this conversation: the other side replied in under %{segundos} seconds to %{trocas} automation messages, with no pause and no one from the team in between, like a bot. Check it before letting it continue here."
@@ -630,6 +648,8 @@ en:
         resumo: "Automation summary:\n\n%{texto}"
       ia:
         gravar: 'Save what the AI found in the conversation'
+      webhook:
+        gravar: 'Save what the other system answered'
     automacoes:
       ensaio:
         condicoes_invalidas: 'This automation has a condition the platform does not accept, so it cannot be tested. Fix it in manual mode.'

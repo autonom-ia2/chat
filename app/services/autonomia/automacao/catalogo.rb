@@ -51,7 +51,10 @@ module Autonomia::Automacao::Catalogo
                        # G3 (#2629): o "criar retorno".
                        'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno' }.freeze
   # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar" e a caixa do "email" (G2).
-  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email' }.freeze
+  # G13 (#2670): o endereço, o que vai e o que volta do "webhook".
+  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
+                          'descricao' => 'descricao', 'url' => 'endereco_do_webhook', 'corpo' => 'corpo_do_webhook',
+                          'gravar' => 'resposta_do_webhook' }.freeze
 
   module_function
 
@@ -114,6 +117,7 @@ module Autonomia::Automacao::Catalogo
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
+        'chave' => declarado.dig('nativos', tipo, 'chave'),
         'frase' => chave('PASSOS', tipo), 'campos' => campos_nativos(forma) }.compact
     end
   end

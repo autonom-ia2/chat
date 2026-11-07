@@ -17,7 +17,7 @@
 # `escondidos`: campos que a ação aceita e a tela não mostra, com o motivo no comentário.
 # `so_guia`: ação liberada no motor que o editor não mostra, com o motivo. O Guia continua montando com ela.
 
-grupos: [IA, MENSAGEM, CONVERSA, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, CONTROLE]
+grupos: [IA, MENSAGEM, CONVERSA, CONTATO, ETIQUETA, ATRIBUTO, EQUIPE, OUTRO_SISTEMA, CONTROLE]
 
 nativos:
   esperar: { grupo: CONTROLE }
@@ -40,6 +40,9 @@ nativos:
   ia_assumir: { grupo: EQUIPE }
   # G3 (#2629): o retorno para a equipe. A mensagem ao cliente na hora pede a flag da F4; quem recusa é a Receita.
   retorno: { grupo: EQUIPE }
+  # G13 (#2670): mandar os dados para outro sistema e gravar a resposta. Quem recusa é a Receita (webhook_desligado).
+  # `chave`: a permissão sem a qual o seletor não oferece o passo (mandar dados para fora é integração, #2027).
+  webhook: { grupo: OUTRO_SISTEMA, requer: automacao_gatilhos, chave: integration_manage }
 
 # Passos nativos do esquema que o editor ainda não mostra, com o motivo. A receita aceita e o motor roda; a tela só os
 # mostra quando tiver as peças.

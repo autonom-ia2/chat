@@ -1,0 +1,38 @@
+{
+  "AUTOMACAO_LIVRE": {
+    "WEBHOOK": {
+      "FRASE": "Mandar para {host}: {descricao}",
+      "FRASE_SEM_DESCRICAO": "Mandar para {host}",
+      "OUTRO_SISTEMA": "outro sistema",
+      "DESCRICAO_DICA": "Uma frase curta, para quem ler o histórico saber o que foi mandado. Ex.: Mandar ao sistema de cobrança.",
+      "URL_DICA": "Peça esse endereço a quem cuida do outro sistema. Ele começa com https://.",
+      "URL_EXEMPLO": "https://exemplo.com.br/recebe",
+      "URL_INVALIDA": "O endereço precisa começar com https://.",
+      "CORPO_DICA": "Cada linha leva uma informação: o nome que o outro sistema espera e o dado do cliente que vai nela.",
+      "CORPO_NOME": "Nome da informação (como o outro sistema chama)",
+      "CORPO_NOME_REPETIDO": "Já tem uma linha com esse nome.",
+      "CORPO_VALOR": "Dado que vai",
+      "CORPO_NOVA": "Mandar mais uma informação",
+      "CORPO_TIRAR": "Tirar esta linha",
+      "GRAVAR_DICA": "Se o outro sistema devolver um número ou um código, guarde num campo para usar depois. Também vale quando ele recusa: guarde o motivo para avisar a equipe.",
+      "GRAVAR_SEM_CAMPO": "Para guardar a resposta, crie antes um campo personalizado no card, no contato ou na conversa.",
+      "GRAVAR_CHAVE": "Nome da informação na resposta",
+      "GRAVAR_DESTINO": "Onde guardar",
+      "GRAVAR_NOVO": "Guardar mais uma informação",
+      "GRAVAR_TIRAR": "Tirar",
+      "SEGREDO": {
+        "TITULO": "Segredo de conferência",
+        "DICA": "O outro sistema usa este segredo para conferir que o envio veio mesmo desta automação. Passe para quem cuida dele.",
+        "SO_ADMIN": "Só o administrador da conta vê e troca o segredo.",
+        "SALVAR_ANTES": "Salve a automação para ver o segredo.",
+        "VER": "Ver o segredo",
+        "TROCAR": "Trocar o segredo",
+        "CONFIRMAR": "O segredo atual para de valer na hora. O outro sistema precisa receber o novo. Trocar mesmo?",
+        "TROCAR_SIM": "Sim, trocar",
+        "CANCELAR": "Cancelar",
+        "TROCAR_FALHOU": "Não deu para confirmar a troca. O segredo antigo pode já não valer: veja o segredo de novo.",
+        "FALHOU": "Não deu para buscar o segredo agora. Tente de novo."
+      }
+    }
+  }
+}

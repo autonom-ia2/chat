@@ -70,6 +70,7 @@ class Autonomia::Guide::Acoes
     'POST agent_bots/:id/reset_access_token',
     'POST agent_bots/:id/reset_secret',
     'POST inboxes/:id/reset_secret',
+    'POST autonomia/automacoes/:id/trocar_segredo_do_webhook',
     'POST inboxes/:id/rotate_hmac_token',
     'PUT inboxes/:id/whatsapp_business_management_token',
     'POST contacts/import',

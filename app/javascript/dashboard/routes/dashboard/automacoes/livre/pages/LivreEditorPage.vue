@@ -2,7 +2,10 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
-import { useCanManage } from 'dashboard/composables/useCanManage';
+import {
+  useCanManage,
+  usePermissionGranted,
+} from 'dashboard/composables/useCanManage';
 import { useAccount } from 'dashboard/composables/useAccount';
 import { useMapGetter } from 'dashboard/composables/store';
 import Button from 'dashboard/components-next/button/Button.vue';
@@ -46,6 +49,10 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const podeMudar = useCanManage('automation_manage');
+// G13 (#2670): o passo que manda dados para fora pede a chave de integrações.
+const podeIntegrar = usePermissionGranted('integration_manage');
+const temChave = chave =>
+  chave === 'integration_manage' ? podeIntegrar.value : false;
 const { catalogo } = useCatalogo();
 const { opcoes, atributosDaPeca, atributosDo, carregarOpcoes } =
   useOpcoesDaConta();
@@ -573,6 +580,7 @@ onMounted(() => {
               ref="seletor"
               :catalogo="catalogo"
               :liberado="isCloudFeatureEnabled"
+              :tem-chave="temChave"
               @escolher="escolherPasso"
               @close="fecharPainel('seletor')"
             />
@@ -586,6 +594,7 @@ onMounted(() => {
               :custos="custos"
               :gatilhos="gatilhos"
               :escolhas-do-gatilho="escolhasDoGatilho"
+              :automacao-id="automacao?.id ?? null"
               @salvar="salvar"
               @tirar="tirar"
               @close="fecharPainel('alterar')"

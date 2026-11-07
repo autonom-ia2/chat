@@ -8,6 +8,8 @@ import SidePanel from 'dashboard/components-next/side-panel/SidePanel.vue';
 const props = defineProps({
   catalogo: { type: Object, required: true },
   liberado: { type: Function, required: true },
+  // G13 (#2670): o passo com `chave` (permissão) só entra para quem a tem.
+  temChave: { type: Function, default: () => true },
 });
 
 const emit = defineEmits(['escolher', 'close']);
@@ -21,7 +23,8 @@ const grupos = computed(() =>
       passos: props.catalogo.passos.filter(
         passo =>
           passo.grupo === grupo.chave &&
-          (!passo.requer || props.liberado(passo.requer))
+          (!passo.requer || props.liberado(passo.requer)) &&
+          (!passo.chave || props.temChave(passo.chave))
       ),
     }))
     .filter(grupo => grupo.passos.length)

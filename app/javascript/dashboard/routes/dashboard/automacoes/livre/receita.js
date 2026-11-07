@@ -11,6 +11,8 @@ export const RAMOS = {
   se: ['entao', 'senao'],
   esperar_ate: ['se_vencer'],
   decidir: ['nenhum'],
+  // G13 (#2670): o que fazer quando o outro sistema recusa.
+  webhook: ['se_recusar'],
 };
 
 // Lista raiz: 'raiz'. Lista de um galho: '<id do passo>:<ramo>'.
