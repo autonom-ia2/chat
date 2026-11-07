@@ -91,7 +91,8 @@
       "ESCREVER": "A IA escreve um texto",
       "RESUMIR": "A IA resume a conversa",
       "IA_ASSUMIR": "Passar para a agente de IA",
-      "EMAIL": "Mandar e-mail ao cliente"
+      "EMAIL": "Mandar e-mail ao cliente",
+      "RETORNO": "Criar um retorno para a equipe"
     },
     "ESCOLHER": {
       "ETIQUETA": "Qual etiqueta",
@@ -131,6 +132,9 @@
       "ATTRIBUTE_VALUES": "Opções da lista",
       "TEXTO": "O que dizer",
       "PARA": "Quem avisar",
+      "TITULO": "O que a equipe vai fazer",
+      "DAQUI": "Daqui a quanto tempo",
+      "ENVIO": "Mensagem ao cliente",
       "LE": "O que a IA lê",
       "PERGUNTA": "O que a IA deve decidir",
       "CAMINHOS": "Caminhos",

@@ -15,6 +15,7 @@ const AVISO = {
   contato_nao_recebe: 'CONTATO_NAO_RECEBE',
   email_bloqueado: 'EMAIL_BLOQUEADO',
   caixa_de_email_indisponivel: 'CAIXA_DE_EMAIL_INDISPONIVEL',
+  retorno_sem_responsavel: 'RETORNO_SEM_RESPONSAVEL',
 };
 
 // #2414 G16 — a ação com valor calculado: o que gravaria agora (a data com o

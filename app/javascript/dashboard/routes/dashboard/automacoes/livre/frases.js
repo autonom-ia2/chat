@@ -3,6 +3,7 @@
 // etiqueta entra, porque vai pelo nome; pessoa, time e caixa ficam no "Alterar".
 import { entradaDoPasso, lerCampo } from './catalogo';
 import { comColchetes } from './texto';
+import { fraseDoRetorno } from './retorno';
 
 const P = 'AUTOMACAO_LIVRE.FRASES';
 
@@ -305,6 +306,12 @@ export const fraseDoPasso = (passo, catalogo, t) => {
       texto: fraseDoTexto(passo.texto, catalogo, t),
     });
   if (FRASE_DA_IA[passo.tipo]) return FRASE_DA_IA[passo.tipo](passo, t);
+  if (passo.tipo === 'retorno')
+    return fraseDoRetorno(passo, t, {
+      quando: fraseDaDuracao(passo.daqui, catalogo, t),
+      titulo: fraseDoTexto(passo.titulo, catalogo, t),
+      mensagem: passo.envio && fraseDoTexto(passo.envio.mensagem, catalogo, t),
+    });
   if (passo.tipo !== 'acao') return t(entrada.frase);
   if (ETIQUETAS_DE[entrada.nome]) return fraseDasEtiquetas(passo, entrada, t);
   return [t(entrada.frase), ...resumoDaAcao(passo, entrada, t)].join(' · ');
