@@ -1,0 +1,26 @@
+# Automação livre, passo "campanha" (#2414 G14, #2630). Arquivo próprio para não disputar o en.yml com as outras frentes.
+en:
+  autonomia:
+    automacao:
+      motivos:
+        campanha_so_sem_alvo: 'This automation runs on each conversation, card or contact, so it would send the same campaign again every time. Sending a campaign only works in a recurring automation. Nothing was sent.'
+        quem_ligou_sem_permissao_campanha: 'The person who turned on the automation can no longer send campaigns. Take over and turn it back on.'
+        campanha_sem_caixa: 'The chosen inbox no longer exists or is not an official WhatsApp inbox. The campaign was not created.'
+        campanha_desligada: 'WhatsApp campaigns are off for this account. The campaign was not created.'
+        campanha_sem_etiqueta: 'None of the chosen labels exist anymore. The campaign was not created.'
+        campanha_recusada: 'The platform refused the campaign as it was set up. Nothing was sent.'
+        campanha_modelo_fora_da_caixa: "The chosen inbox doesn't have the chosen template. The campaign was not created."
+        campanha_modelo_nao_aprovado: "The chosen template isn't approved by Meta in this inbox. The campaign was not created."
+        campanha_modelo_de_categoria_fora: 'The chosen template is not a utility or marketing template. The campaign was not created.'
+        campanha_modelo_mudou: "The template asks for different variables than the step's. Choose the template again. The campaign was not created."
+        campanha_variavel_vazia: "A template variable has no text. Write the fixed text of each variable. The campaign was not created."
+        sem_contato: 'There is no contact here to mark.'
+        contato_ja_nao_recebe: 'The contact was already marked as not receiving messages.'
+      receita:
+        campanha_so_sem_alvo: 'Step %{passo}: sending a campaign only works in a recurring automation. In a conversation, card or contact trigger, each run would send the same campaign again.'
+        campanha_variavel_fixa: 'Step %{passo}: the campaign goes to many people at once, so each template variable must be fixed text.'
+        campanha_sem_permissao: 'Step %{passo}: you need permission to send campaigns to use this step.'
+        campanha_desligada: 'Step %{passo}: WhatsApp campaigns are off for this account.'
+        campanha_sem_caixa: 'Step %{passo}: choose an official WhatsApp inbox of this account.'
+        campanha_modelo: 'Step %{passo}: the chosen inbox does not have the template %{nome} approved and ready.'
+        campanha_etiqueta_de_fora: 'Step %{passo}: the label %{id} is not from this account.'
