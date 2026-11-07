@@ -11,9 +11,10 @@
 class Autonomia::Automacao::Contexto
   TIPOS = %w[Conversation Crm::Card Contact].freeze
 
-  attr_reader :alvo
+  attr_reader :alvo, :execucao
 
-  # `execucao`: a execução em que o passo roda, quando há uma. Só a reunião do gatilho (G12) lê dela.
+  # `execucao`: a execução em que o passo roda, quando há uma. A reunião do gatilho (G12) e o "gatilho repetiu" (lote 4)
+  # leem dela.
   def self.de(alvo, execucao: nil) = new(alvo, execucao: execucao)
 
   def initialize(alvo, execucao: nil)

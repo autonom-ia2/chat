@@ -123,12 +123,13 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
       expect(custo).to include('tokens_entrada' => 800, 'tokens_saida' => 120)
     end
 
-    # Passo 6 (G11, a metade "a equipe respondeu"): depois do "acalmar", espera a Fernanda responder por até 30
-    # minutos; sem resposta, avisa a dona com o mesmo resumo. O eco do "acalmar" não conta como resposta da equipe.
+    # Passo 6 (G11 + lote 4, #2682): depois do "acalmar", espera A FERNANDA responder por até 30 minutos (a pessoa
+    # responsável, a quem o passo 2 passou a conversa); sem resposta, avisa a dona com o mesmo resumo. O eco do
+    # "acalmar" e a resposta de outra pessoa da equipe não contam.
     context 'with a espera pela resposta da Fernanda (passo 6)' do
       let(:depois_de_acalmar) do
         [{ id: 'espera_fernanda', tipo: 'esperar_ate',
-           condicao: { campo: { '$valor' => 'conversa.equipe_respondeu' }, op: 'igual', valor: true },
+           condicao: { campo: { '$valor' => 'conversa.responsavel_respondeu' }, op: 'igual', valor: true },
            prazo: { valor: 30, unidade: 'minutos' },
            se_vencer: [{ id: 'resumo_dona', tipo: 'resumir', le: %w[mensagens_recentes], linhas: 3,
                          destino: { avisar: { pessoas: [dona.id] } } }] }]
@@ -159,6 +160,17 @@ RSpec.describe 'Fechamento #2414 · exemplo 10: cliente bravo vai direto para a 
 
         expect(execucao.reload.estado).to eq('concluida')
         expect(historico_de(automacao).map(&:first)).not_to include('resumo_dona')
+        expect(mencoes_para(dona)).to be_empty
+      end
+
+      it 'o Rafael responde no lugar dela: a espera continua, porque o termo espera a Fernanda', :aggregate_failures do
+        passar(10.minutes) do
+          create(:message, conversation: conversa, account: account, inbox: inbox, message_type: :outgoing, sender: rafael,
+                           content: 'Paulo, já estou vendo isso.')
+          rodar_jobs
+        end
+
+        expect(execucao.reload.estado).to eq('esperando')
         expect(mencoes_para(dona)).to be_empty
       end
 
