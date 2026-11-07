@@ -110,6 +110,9 @@
     },
     {
       "file": "automacaoLivreCampanha.json"
+    },
+    {
+      "file": "automacaoLivreRetorno.json"
     }
   ],
   "pacotes": {

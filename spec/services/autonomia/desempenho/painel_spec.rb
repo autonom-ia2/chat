@@ -8,7 +8,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
   let(:inbox) { create(:inbox, account: account) }
   let(:conversa) { create(:conversation, account: account, inbox: inbox) }
   let(:outra_conversa) { create(:conversation, account: account, inbox: inbox) }
-  let(:painel) { described_class.new(account: account, sujeito_type: 'robo', sujeito_id: robo.id) }
+  let(:painel) { described_class.new(account: account, ve_anuncio: true, sujeito_type: 'robo', sujeito_id: robo.id) }
   let(:fuso) { ActiveSupport::TimeZone['America/Sao_Paulo'] }
 
   def mensagem(conversa, tipo, quando, remetente: nil, privada: false)
@@ -28,7 +28,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
   end
 
   it 'devolve nil quando o agente ainda não tem ficha' do
-    expect(described_class.new(account: account, sujeito_type: 'robo', sujeito_id: robo.id + 1).call('30')).to be_nil
+    expect(described_class.new(account: account, ve_anuncio: true, sujeito_type: 'robo', sujeito_id: robo.id + 1).call('30')).to be_nil
   end
 
   it 'monta o contrato v2 do período a partir das procuras, com o número da caixa como conversa' do
@@ -99,7 +99,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
     mensagem(outra_conversa, :incoming, '2026-10-22 11:00:00')
     visiveis = Conversation.where(id: conversa.id)
 
-    resultado = described_class.new(account: account, sujeito_type: 'robo', sujeito_id: robo.id, visiveis: visiveis).call('7')
+    resultado = described_class.new(account: account, ve_anuncio: true, sujeito_type: 'robo', sujeito_id: robo.id, visiveis: visiveis).call('7')
 
     expect(resultado['procuras'].pluck('conversa')).to eq([conversa.display_id, conversa.display_id])
     expect(resultado['meta']['base']['procuras']).to eq(2)
@@ -111,7 +111,8 @@ RSpec.describe Autonomia::Desempenho::Painel do
   end
 
   it 'devolve o painel vazio quando a pessoa não vê nenhuma das conversas lidas' do
-    resultado = described_class.new(account: account, sujeito_type: 'robo', sujeito_id: robo.id, visiveis: Conversation.none).call('7')
+    resultado = described_class.new(account: account, ve_anuncio: true, sujeito_type: 'robo', sujeito_id: robo.id,
+                                    visiveis: Conversation.none).call('7')
 
     expect(resultado).to include('vazio' => true, 'meta' => include('situacao' => 'sem_conversas'))
     expect(resultado.dig('meta', 'visibilidade', 'ocultas')).to eq(3)
@@ -121,7 +122,7 @@ RSpec.describe Autonomia::Desempenho::Painel do
     Autonomia::Desempenho::Ficha.last.update!(referencias: { 'ticket' => { 'com_valor' => 3, 'mediano' => 90.0, 'moeda' => 'BRL' },
                                                              'confianca' => nil, 'exemplos' => {} })
 
-    resultado = described_class.new(account: account, sujeito_type: 'robo', sujeito_id: robo.id, ve_valores: false).call('7')
+    resultado = described_class.new(account: account, ve_anuncio: true, sujeito_type: 'robo', sujeito_id: robo.id, ve_valores: false).call('7')
 
     expect(resultado['ticket']).to be_nil
     expect(resultado['kpis'].find { |kpi| kpi['id'] == 'procuras' }['valor']).to eq(3)

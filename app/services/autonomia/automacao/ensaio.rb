@@ -5,7 +5,8 @@
 # rascunho, já conferida por quem chama).
 #
 # Para cada conversa:
-# - não entraria: no Spam, sem mensagem (no gatilho "mensagem criada") ou fora do "Só se" do gatilho;
+# - não entraria: no Spam, sem mensagem (no gatilho "mensagem criada"), resposta automática de e-mail (a régua da
+#   Escuta) ou fora do "Só se" do gatilho;
 # - entraria: os passos em ordem, do jeito do Roteiro. O "se" vale agora e segue pelo ramo que valer. O "esperar até"
 #   que ainda não vale abre dois caminhos (se chegar a tempo: segue o resto; se o prazo vencer: o ramo e depois o
 #   resto), e o "decidir" da IA abre um caminho por saída, sem escolher. "Parar" acaba o caminho.
@@ -69,6 +70,7 @@ class Autonomia::Automacao::Ensaio
     return base.merge(entraria: false, motivo: motivo, passos: []) if motivo
 
     @contados = 0
+    @conversa = conversa
     valores = ::Autonomia::Automacao::Valores.new(alvo: conversa, mensagem: mensagem, quem: @usuario)
     base.merge(entraria: true, motivo: nil, passos: caminho(@roteiro.primeiro, valores))
   end
@@ -85,6 +87,7 @@ class Autonomia::Automacao::Ensaio
     contexto = ::Autonomia::Automacao::Contexto.de(conversa)
     return 'spam' if contexto.no_spam?
     return 'sem_mensagem' if mensagem_no_gatilho? && mensagem.nil?
+    return 'resposta_automatica' if ::Autonomia::Automacao::Escuta.resposta_automatica?(conversa, @receita.dig('gatilho', 'tipo'), mensagem)
 
     valores = ::Autonomia::Automacao::Valores.new(alvo: contexto, mensagem: mensagem, quem: @usuario)
     filtros = Array(@receita.dig('gatilho', 'filtros'))
@@ -105,23 +108,31 @@ class Autonomia::Automacao::Ensaio
     passos
   end
 
+  # Os passos que montam com os valores desta conversa e seguem para o próximo: o método do ensaio de cada um.
+  EM_LINHA = { 'mensagem' => :texto, 'avisar' => :texto, 'email' => :email, 'acao' => :acao, 'ia_assumir' => :ia_assumir }.freeze
+
   # [o que faria, o próximo passo neste caminho (nil quando acabou aqui)]. Esperar e ação só se mostram; os passos de IA
   # que não abrem caminho só dizem o que fariam; o resto do mapa fechado tem regra própria, e tipo fora dele é
   # "catalogo" (só a frase).
   def ensaiar_passo(passo, valores)
+    em_linha = EM_LINHA[passo['tipo']]
+    return [send(em_linha, passo, valores), @roteiro.seguinte(passo['id'])] if em_linha
+
     case passo['tipo']
-    when 'mensagem', 'avisar' then [texto(passo, valores), @roteiro.seguinte(passo['id'])]
     when 'esperar_ate' then esperar_ate(passo, valores)
     when 'se' then se(passo, valores)
     when 'decidir' then [decidir(passo, valores), nil]
     when 'parar' then [no(passo, 'parar'), nil]
-    when 'acao' then [acao(passo, valores), @roteiro.seguinte(passo['id'])]
-    else [em_frente(passo), @roteiro.seguinte(passo['id'])]
+    else [em_frente(passo, valores), @roteiro.seguinte(passo['id'])]
     end
   end
 
-  def em_frente(passo)
+  # G15: o nome da agente e, se não passaria, o motivo; nunca chama o serviço dos Agentes.
+  def ia_assumir(passo, _valores) = no(passo, *::Autonomia::Automacao::PassoDeIaAssumir.ensaiar(passo, @conversa))
+
+  def em_frente(passo, valores)
     return ia(passo) if IA_SO_DIZ.include?(passo['tipo'])
+    return retorno(passo, valores) if passo['tipo'] == 'retorno'
 
     no(passo, SO_MOSTRA.include?(passo['tipo']) ? passo['tipo'] : 'catalogo')
   end
@@ -140,6 +151,49 @@ class Autonomia::Automacao::Ensaio
 
     # F4b (#2468): o nome do modelo, para a tela dizer o que sai se a janela de 24 h estiver fechada.
     no(passo, passo['tipo'], { texto: pronto, modelo: passo.dig('modelo', 'nome') }.compact)
+  end
+
+  # O e-mail (G2) com o assunto e o texto desta conversa e a caixa por onde sairia, ou o motivo de não sair para o
+  # contato dela (as mesmas perguntas do passo). Não abre conversa nem manda.
+  def email(passo, valores)
+    pronto = texto(passo, valores)
+    return pronto unless pronto[:faria] == 'email'
+
+    caixa = ::Autonomia::Automacao::PassoDeEmail.caixa(@conta, passo['caixa_id'])
+    return no(passo, 'caixa_de_email_indisponivel') if caixa.nil?
+
+    motivo = ::Autonomia::Automacao::PassoDeEmail.motivo_do_contato(@conta, @conversa.contact)
+    return no(passo, motivo) if motivo
+
+    assunto = ::Autonomia::Automacao::Texto.new(passo['assunto'], valores).montar
+    return no(passo, 'faltou_valor') if assunto.nil?
+    return no(passo, 'texto_vazio') if assunto.strip.empty?
+
+    pronto.merge(dados: pronto[:dados].merge(assunto: assunto.squish, caixa: caixa.name))
+  end
+
+  # O retorno (G3): o título montado, ou por que pularia, como o motor. O ensaio só descreve; nada é criado.
+  def retorno(passo, valores)
+    return no(passo, 'mensagens_desligadas') if passo['envio'] && !::Autonomia::Automacao::Motor.mensagens?(@conta)
+
+    motivo = pulo_dos_textos(passo, valores)
+    return no(passo, motivo) if motivo
+    return no(passo, 'retorno_sem_responsavel') if [nil, 'responsavel'].include?(passo.dig('para', 'quem')) &&
+                                                   valores.ler('conversa.responsavel_id').blank?
+
+    no(passo, 'retorno', { texto: ::Autonomia::Automacao::Texto.new(passo['titulo'], valores).montar })
+  end
+
+  # O primeiro pulo do título e da mensagem do retorno, na ordem do motor: valor vazio ou texto só de espaços.
+  def pulo_dos_textos(passo, valores)
+    textos = passo['envio'] ? [passo['titulo'], passo.dig('envio', 'mensagem')] : [passo['titulo']]
+    textos.lazy.map { |partes| pulo_do_texto(::Autonomia::Automacao::Texto.new(partes, valores).montar) }.find(&:itself)
+  end
+
+  def pulo_do_texto(pronto)
+    return 'faltou_valor' if pronto.nil?
+
+    'texto_vazio' if pronto.strip.empty?
   end
 
   # O valor calculado do corpo (G16) com os dados desta conversa e o "hoje" de agora: a data que daria se rodasse

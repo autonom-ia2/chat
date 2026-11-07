@@ -128,6 +128,7 @@ onMounted(() => {
 const ICONE = {
   mensagem: 'i-lucide-message-circle',
   avisar: 'i-lucide-bell',
+  email: 'i-lucide-mail',
   esperar: 'i-lucide-hourglass',
   esperar_ate: 'i-lucide-timer',
   se: 'i-lucide-split',
@@ -137,6 +138,7 @@ const ICONE = {
   resumir: 'i-lucide-sparkles',
   parar: 'i-lucide-octagon',
   acao: 'i-lucide-zap',
+  card: 'i-lucide-kanban',
 };
 </script>
 

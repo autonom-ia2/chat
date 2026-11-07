@@ -1,7 +1,7 @@
 # O catálogo de passos da Automação livre (#2414 F5, ADR-001 2.2): o arquivo que o editor e o Guia leem.
 #
 # Junta três fontes num JSON só (lib/operator_guide/automacao-passos.json):
-# - o esquema da receita: gatilhos, operadores, unidades de tempo e os passos nativos (esperar, se, parar, mensagem, avisar);
+# - o esquema da receita: gatilhos, operadores, unidades de tempo e os passos nativos (esperar, se, parar, mensagem, avisar, email);
 # - o catálogo do Guia (formatos-das-acoes.json): o tipo, as opções e os limites de cada campo das ações liberadas;
 # - automacao-passos.yml: o nome do passo, o grupo, de onde vem cada parâmetro e a peça da tela de cada campo;
 # - automacao-receitas.yml: as receitas prontas da porta da nova (#2498), com a flag que cada uma pede.
@@ -40,14 +40,20 @@ module Autonomia::Automacao::Catalogo
 
   # As peças dos passos nativos: a definição do esquema que cada propriedade usa.
   PECAS_DO_ESQUEMA = { 'duracao' => 'duracao', 'condicao' => 'condicao', 'passos' => 'passos',
-                       'passos_opcionais' => 'passos', 'texto' => 'texto_com_valores',
+                       'passos_opcionais' => 'passos', 'texto' => 'texto_com_valores', 'linha' => 'linha_com_valores',
                        # F7: os passos de IA.
                        'leituras' => 'leituras', 'instrucao' => 'instrucao', 'caminhos' => 'caminhos',
                        'campos_extrair' => 'campos_extrair', 'destino_escrever' => 'destino_escrever',
                        # F4b (#2468): o modelo da Meta do passo "mensagem".
-                       'destino_resumir' => 'destino_resumir', 'modelo_whatsapp' => 'modelo_whatsapp' }.freeze
-  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar".
-  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero' }.freeze
+                       'destino_resumir' => 'destino_resumir', 'modelo_whatsapp' => 'modelo_whatsapp',
+                       # G15: a agente de IA que assume a conversa.
+                       'agente_de_ia' => 'agente_de_ia',
+                       # G3 (#2629): o "criar retorno".
+                       'para_do_retorno' => 'quem_recebe_retorno', 'envio_do_retorno' => 'envio_do_retorno' }.freeze
+  # A propriedade descrita ali mesmo no esquema, sem definição própria: quem recebe o "avisar", a caixa do "email" (G2) e a
+  # etapa do "card" (G4).
+  PECAS_SEM_DEFINICAO = { 'para' => 'destinatarios', 'trocar' => 'sim_nao', 'linhas' => 'numero', 'caixa_id' => 'caixa_de_email',
+                          'etapa_id' => 'etapa' }.freeze
 
   module_function
 
@@ -110,7 +116,8 @@ module Autonomia::Automacao::Catalogo
       next if tipo == 'acao' || declarado['nativos_fora_do_editor'].to_h.key?(tipo)
 
       { 'tipo' => tipo, 'grupo' => declarado.dig('nativos', tipo, 'grupo'), 'requer' => declarado.dig('nativos', tipo, 'requer'),
-        'frase' => chave('PASSOS', tipo), 'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca')) }.compact
+        'funil' => declarado.dig('nativos', tipo, 'funil'), 'frase' => chave('PASSOS', tipo),
+        'campos' => campos_nativos(forma, declarado.dig('nativos', tipo, 'peca')) }.compact
     end
   end
 

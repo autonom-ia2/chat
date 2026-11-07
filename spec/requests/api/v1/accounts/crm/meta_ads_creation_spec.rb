@@ -107,7 +107,7 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
   end
 
   it 'falha ao criar devolve o código e se nada foi criado' do
-    params = { idempotency_key: SecureRandom.uuid, name: 'Bolo', destination: 'INSTAGRAM_PROFILE' }
+    params = { idempotency_key: SecureRandom.uuid, name: 'Bolo', destination: 'CALL' }
 
     post "#{path}/ads", params: params, headers: admin.create_new_auth_token, as: :json
 
@@ -485,6 +485,63 @@ RSpec.describe 'CRM meta_ads_connection creation (#2198)', type: :request do
       expect(order).to eq([ad_id])
       expect(Audited.audit_class.where(auditable: account, action: 'meta_ads_pause_partial').last.audited_changes)
         .to eq('active' => { 'ad' => ad_id, 'adset' => adset_id, 'campaign' => campaign_id })
+    end
+  end
+
+  describe 'criar post (#2653): sobe a mídia uma vez e publica na hora, com a Auditoria' do
+    let(:page_id) { '110000000002161' }
+
+    around { |example| with_modified_env(FRONTEND_URL: 'https://app.example.com') { example.run } }
+
+    before do
+      granted = %w[ads_management pages_manage_ads pages_manage_posts instagram_content_publish]
+      stub_graph('me/permissions', { data: granted.map { |name| { permission: name, status: 'granted' } } })
+      stub_graph('me/accounts', { data: [{ id: page_id, name: 'Loja Exemplo', instagram_business_account: { id: '178', username: 'loja' } }] })
+      stub_graph(page_id, { id: page_id, access_token: 'token-da-pagina-2653' }, fields: 'access_token')
+      stub_graph("#{page_id}/photos", { id: '901', post_id: "#{page_id}_901" }, verb: :post)
+      stub_graph("#{page_id}_901", { permalink_url: 'https://www.facebook.com/x' }, fields: 'permalink_url')
+    end
+
+    def upload_media(user = admin)
+      file = Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/booking_small.jpg'), 'image/jpeg')
+      post "#{path}/post_media", params: { file: file }, headers: user.create_new_auth_token
+      response.parsed_body.dig('media', 'signed_id')
+    end
+
+    it 'publica na Página, grava na Auditoria quem publicou e onde, e a mesma chave não grava de novo' do
+      body = { idempotency_key: 'k-2653', page_id: page_id, networks: ['facebook'], caption: 'Promoção', media_id: upload_media }
+
+      post "#{path}/posts", params: body, headers: admin.create_new_auth_token, as: :json
+      expect(response).to have_http_status(:ok)
+      expect(response.parsed_body['facebook']).to eq('id' => "#{page_id}_901", 'permalink' => 'https://www.facebook.com/x', 'boostable' => true)
+      post "#{path}/posts", params: body, headers: admin.create_new_auth_token, as: :json
+
+      audits = Audited.audit_class.where(auditable: account, action: 'meta_ads_post_published')
+      expect(audits.count).to eq(1)
+      expect(audits.last.user).to eq(admin)
+      expect(audits.last.audited_changes).to eq('page_id' => page_id, 'failed' => [], 'posts' => { 'facebook' => "#{page_id}_901" })
+      expect(audits.last.audited_changes.to_json).not_to include('token-da-pagina')
+    end
+
+    it 'agente comum não sobe mídia nem publica (403), sem chamar a Meta' do
+      post "#{path}/post_media", params: { file: Rack::Test::UploadedFile.new(Rails.root.join('spec/assets/booking_small.jpg'), 'image/jpeg') },
+                                 headers: agent.create_new_auth_token
+      expect(response).to have_http_status(:forbidden)
+      post "#{path}/posts", params: { idempotency_key: 'k', page_id: page_id, networks: ['facebook'] }, headers: agent.create_new_auth_token,
+                            as: :json
+      expect(response).to have_http_status(:forbidden)
+      expect(a_request(:post, /graph\.facebook\.com/)).not_to have_been_made
+    end
+
+    it 'sem a permissão de publicar: 422 cannot_publish, sem publicar' do
+      stub_graph('me/permissions', { data: [{ permission: 'ads_management', status: 'granted' }] })
+
+      post "#{path}/posts", params: { idempotency_key: 'k', page_id: page_id, networks: ['facebook'], media_id: upload_media },
+                            headers: admin.create_new_auth_token, as: :json
+
+      expect(response).to have_http_status(:unprocessable_entity)
+      expect(response.parsed_body['error']).to eq('cannot_publish')
+      expect(a_request(:post, meta_graph_url("#{page_id}/photos"))).not_to have_been_made
     end
   end
 end

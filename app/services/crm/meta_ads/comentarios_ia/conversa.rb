@@ -49,11 +49,13 @@ module Crm::MetaAds::ComentariosIa::Conversa
   end
 
   # O privado que saiu pelo Messenger entra na caixa, no contato da resposta da Meta (o PSID): na conversa que a pessoa
-  # já tem aberta, ou numa nova. Igual ao que o #2196 faz no Instagram.
-  def no_messenger!(comentario, envio, texto)
+  # já tem aberta, ou numa nova. Igual ao que o #2196 faz no Instagram, com a mesma marca de envio automático
+  # (Registro::MARCA, o id da linha `private_reply` da IA).
+  def no_messenger!(comentario, envio, texto, action_id)
     conversation = criar!(comentario, envio.recipient_id, status: :open, reaproveitar: true)
     Message.create!(account_id: conversation.account_id, inbox_id: conversation.inbox_id, conversation: conversation,
-                    message_type: :outgoing, content: texto, source_id: envio.message_id)
+                    message_type: :outgoing, content: texto, source_id: envio.message_id,
+                    content_attributes: { Crm::MetaAds::ComentariosIa::Registro::MARCA => action_id })
     conversation
   end
 

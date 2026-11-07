@@ -3,8 +3,8 @@
 #
 # - Com card, segue a regra de sempre (#1141): o card aberto do funil da etapa; senão o assunto atual. Card ganho ou
 #   perdido não é movido (como no Kanban), nem ganha um card novo: isso é a ação "criar card" (#1197).
-# - Sem card, cria na etapa, como o "criar card" (#1142): trava da conversa e nova conferência dentro dela, para duas
-#   automações juntas não criarem dois. Contato fora do funil (#2084) não vira card.
+# - Sem card, cria na etapa, como o "criar card" (#1142), pelo CardNovo: trava da conversa e nova conferência dentro
+#   dela, para duas automações juntas não criarem dois. Contato fora do funil (#2084) não vira card.
 # - O card criado "entrou na etapa": as automações de entrada dela rodam, como depois de mover.
 class Autonomia::Automacao::CardNaEtapa
   include Events::Types
@@ -45,22 +45,11 @@ class Autonomia::Automacao::CardNaEtapa
     card
   end
 
+  # A criação é a mesma do passo "criar card" (CardNovo); aqui, qualquer card da conversa já conta.
   def criar
     return if Crm::Relacao.fora_do_funil?(@conversation.contact)
 
-    card = nil
-    @conversation.with_lock do
-      next if finder.all(@conversation).exists?
-
-      card = Crm::Cards::Creator.new(
-        account: @account, user: @actor, conversation: @conversation,
-        params: { pipeline_id: @stage.pipeline_id, stage_id: @stage.id }, automacao: @automacao
-      ).perform
-    end
-    return if card.blank?
-
-    Crm::Cards::Broadcaster.broadcast(card, CRM_CARD_CREATED)
-    Crm::StageAutomations::Runner.new(card: card, actor: @actor, from_stage_id: nil, to_stage_id: card.stage_id).perform
-    card
+    Autonomia::Automacao::CardNovo.new(stage: @stage, conversation: @conversation, actor: @actor, automacao: @automacao)
+                                  .criar { finder.all(@conversation).exists? }
   end
 end

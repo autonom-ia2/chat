@@ -556,5 +556,15 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceQuote do
       ready_connection
       expect(described_class.available_for?(agent)).to be(true)
     end
+
+    # chat#2647: Atualizar configuração não tira a cotação da Lia enquanto varre.
+    it 'segue no catalogo durante a varredura de uma conexao ja varrida, e so dela' do
+      conexao = ready_connection
+      conexao.update!(status: 'discovering')
+      expect(described_class.available_for?(agent)).to be(false)
+
+      conexao.update!(last_capability_scan_at: 1.day.ago)
+      expect(described_class.available_for?(agent)).to be(true)
+    end
   end
 end

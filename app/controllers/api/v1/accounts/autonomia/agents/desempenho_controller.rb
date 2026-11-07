@@ -11,7 +11,8 @@
 # `agentes_painel_desempenho` e do módulo de Agentes; desligado, 404.
 #
 # Os números são das caixas que a pessoa vê (ESPEC 6.2; admin vê a conta inteira), e o dinheiro (ticket e ganho em
-# R$) segue `sales_value_view` (Autonomia::Desempenho::Painel e Visibilidade). Sem leitura guardada para o agente, o
+# R$) segue `sales_value_view` (Autonomia::Desempenho::Painel e Visibilidade); o anúncio de origem, `meta_ads_view`
+# (Crm::AnuncioDeOrigem.ve?, #2296). Sem leitura guardada para o agente, o
 # painel vem vazio, com a situação `leitura_desligada` (ou, com a leitura automática ligada para ele, a da rodada:
 # Autonomia::Desempenho::Painel.situacao_sem_procuras).
 class Api::V1::Accounts::Autonomia::Agents::DesempenhoController < Api::V1::Accounts::BaseController
@@ -62,7 +63,7 @@ class Api::V1::Accounts::Autonomia::Agents::DesempenhoController < Api::V1::Acco
     @painel ||= ::Autonomia::Desempenho::Painel.new(
       account: Current.account, sujeito_type: @sujeito.first, sujeito_id: @sujeito.last,
       visiveis: ::Autonomia::ContaDaIa.visiveis(user: Current.user, account: Current.account),
-      ve_valores: ::Crm::ValorDeVenda.ve?(Current.account_user)
+      ve_valores: ::Crm::ValorDeVenda.ve?(Current.account_user), ve_anuncio: ::Crm::AnuncioDeOrigem.ve?(Current.account_user)
     ).call(params[:periodo])
   end
 

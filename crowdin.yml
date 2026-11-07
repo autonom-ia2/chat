@@ -25,6 +25,7 @@ files:
       - /app/javascript/dashboard/i18n/locale/en/automacaoLivreReceitas.json
       - /app/javascript/dashboard/i18n/locale/en/automacaoLivreEnsaio.json
       - /app/javascript/dashboard/i18n/locale/en/automacaoLivreCampanha.json
+      - /app/javascript/dashboard/i18n/locale/en/automacaoLivreRetorno.json
       - /app/javascript/dashboard/i18n/locale/en/modelosWhatsapp.json
       - /app/javascript/dashboard/i18n/locale/en/horarioDoCanal.json
       - /app/javascript/dashboard/i18n/locale/en/novaConversa.json

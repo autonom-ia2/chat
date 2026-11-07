@@ -137,7 +137,8 @@ class Autonomia::Agents::Tools::Native::GuiaClassificar < Autonomia::Agents::Too
            end
     return if alvo.values.first.nil?
 
-    ::Autonomia::Decisores::Estado.new(**alvo, leituras: LEITURAS.fetch(recurso))
+    # O anúncio de origem do card (#2558) só com a chave de quem pede.
+    ::Autonomia::Decisores::Estado.new(**alvo, leituras: LEITURAS.fetch(recurso), anuncio: ::Crm::AnuncioDeOrigem.ve?(@operador.account_user))
   end
 
   def contato_com_conversa(id)

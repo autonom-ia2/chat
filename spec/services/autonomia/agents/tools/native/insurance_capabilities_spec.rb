@@ -37,6 +37,18 @@ RSpec.describe Autonomia::Agents::Tools::Native::InsuranceCapabilities do
       expect(described_class.available_for?(agent)).to be(false)
     end
 
+    it 'segue oferecida enquanto Atualizar configuração varre uma conexão que já tinha sido varrida' do
+      create_connection(status: 'discovering')
+      allow(Autonomia::Insurance::Config).to receive(:enabled?).and_return(true)
+      expect(described_class.available_for?(agent)).to be(true)
+    end
+
+    it 'não é oferecida na primeira varredura, quando ainda não há ramo para dizer' do
+      create_connection(status: 'discovering', scan_at: nil)
+      allow(Autonomia::Insurance::Config).to receive(:enabled?).and_return(true)
+      expect(described_class.available_for?(agent)).to be(false)
+    end
+
     it 'is false when the connection exists but is not ready' do
       create_connection(status: 'auth_required')
       allow(Autonomia::Insurance::Config).to receive(:enabled?).and_return(true)

@@ -199,7 +199,7 @@ class Autonomia::Agents::Tools::Native::InsuranceQuoteProposal < Autonomia::Agen
   end
 
   def connection
-    @connection ||= ::Autonomia::Insurance::Connection.for_account(account).find(&:ready?) ||
+    @connection ||= ::Autonomia::Insurance::Connection.for_account(account).find(&:usable?) ||
                     raise(::Autonomia::Insurance::Connector::Error.new(:config, 'sem conexão pronta'))
   end
 

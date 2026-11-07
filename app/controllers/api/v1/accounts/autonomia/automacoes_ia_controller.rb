@@ -4,6 +4,7 @@
 #
 # - Testar chama a IA e paga: pede `automation_manage` e a flag da F7 (`automacao_ia`). O rascunho passa pela mesma
 #   conferência do salvar (esquema + Receita) antes de qualquer chamada.
+# - As agentes de IA do passo "Passar para a agente de IA" (G15) pedem `automation_manage`, como montar a automação.
 # - Valor em dinheiro (os custos e o custo do teste) só para administrador ou `financial_view`, como o
 #   Crm::AiUsageController#com_valores? (#1969, #2557). Sem ela, os custos voltam vazios e a tela não mostra a linha.
 class Api::V1::Accounts::Autonomia::AutomacoesIaController < Api::V1::Accounts::BaseController
@@ -32,6 +33,11 @@ class Api::V1::Accounts::Autonomia::AutomacoesIaController < Api::V1::Accounts::
   # `com_valores` diz à tela se ela mostra a linha do custo: vazio sem permissão não é "ainda não custou".
   def custos
     render json: { com_valores: com_valores?, custos: com_valores? ? CUSTOS.por_automacao(escopo.ids) : {} }
+  end
+
+  # G15: as agentes de IA que o passo "Passar para a agente de IA" oferece. Só id e nome: nada da configuração delas.
+  def agentes_de_ia
+    render json: { agentes: ::Autonomia::Automacao::PassoDeIaAssumir.opcoes(Current.account) }
   end
 
   def custos_da_automacao

@@ -275,6 +275,41 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
     expect(stubs[:creative].with(&creative_ok)).to have_been_made
   end
 
+  # #2564: Tráfego com visita ao perfil, só no Instagram, e o botão abre o perfil da conta do Instagram da Página.
+  it 'perfil do Instagram: visita ao perfil, só no Instagram' do
+    stub_pages(instagram: { id: '178', username: 'lojaexemplo' })
+    stubs = stub_creation
+    stub_reread
+
+    create!(draft.merge(destination: 'INSTAGRAM_PROFILE', placement: 'INSTAGRAM', whatsapp_number: nil))
+
+    profile = 'https://www.instagram.com/lojaexemplo/'
+    adset_ok = lambda do |req|
+      body = form(req)
+      body['destination_type'] == 'INSTAGRAM_PROFILE' && body['optimization_goal'] == 'PROFILE_VISIT' &&
+        JSON.parse(body['promoted_object']) == { 'page_id' => page_id } &&
+        JSON.parse(body['targeting'])['publisher_platforms'] == ['instagram']
+    end
+    creative_ok = lambda do |req|
+      spec = JSON.parse(form(req)['object_story_spec'])
+      spec['instagram_user_id'] == '178' && spec.dig('link_data', 'link') == profile &&
+        spec.dig('link_data', 'call_to_action') == { 'type' => 'VIEW_INSTAGRAM_PROFILE', 'value' => { 'link' => profile } }
+    end
+    expect(stubs[:campaign].with { |req| form(req)['objective'] == 'OUTCOME_TRAFFIC' && form(req)['special_ad_categories'] == '[]' })
+      .to have_been_made
+    expect(stubs[:adset].with(&adset_ok)).to have_been_made
+    expect(stubs[:creative].with(&creative_ok)).to have_been_made
+  end
+
+  it 'perfil com conta do Instagram sem @ não cria' do
+    stub_pages(instagram: { id: '178' })
+    stubs = stub_creation
+
+    expect { create!(draft.merge(destination: 'INSTAGRAM_PROFILE', placement: 'INSTAGRAM')) }
+      .to raise_error(Crm::MetaAds::Creation::Error) { |e| expect(e.code).to eq('invalid_instagram') }
+    expect(stubs[:campaign]).not_to have_been_made
+  end
+
   it 'categoria especial marca crédito/seguro e trava a idade em 18 a 65' do
     stubs = stub_creation
     stub_reread
@@ -851,7 +886,13 @@ RSpec.describe Crm::MetaAds::Creation::NewAd do
 
   describe 'revalida no servidor, sem chamar a Meta para criar (ponto 5)' do
     {
-      'destino não confirmado' => [{ destination: 'INSTAGRAM_PROFILE' }, 'invalid_destination'],
+      'destino não confirmado' => [{ destination: 'CALL' }, 'invalid_destination'],
+      'perfil fora do Só Instagram' => [{ destination: 'INSTAGRAM_PROFILE', placement: 'AUTO' }, 'invalid_placement'],
+      'perfil com categoria especial' => [{ destination: 'INSTAGRAM_PROFILE', placement: 'INSTAGRAM', special_category: true },
+                                          'special_category_profile'],
+      'carrossel no perfil' => [{ destination: 'INSTAGRAM_PROFILE', placement: 'INSTAGRAM', cards: [{ kind: 'image', hash: 'x' }] },
+                                'invalid_media'],
+      'perfil com Página sem Instagram' => [{ destination: 'INSTAGRAM_PROFILE', placement: 'INSTAGRAM' }, 'invalid_instagram'],
       'lugar não confirmado para o destino' => [{ placement: 'INSTAGRAM' }, 'invalid_placement'],
       'Messenger fora do Automático' => [{ destination: 'MESSENGER', placement: 'FACEBOOK' }, 'invalid_placement'],
       'carrossel no Messenger' => [{ destination: 'MESSENGER', cards: [{ kind: 'image', hash: 'x' }] }, 'invalid_media'],

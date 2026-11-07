@@ -49,7 +49,7 @@ class Autonomia::Automacao::Receita
 
   # Frases para a pessoa (ou o Guia) corrigir. Vazio = pode salvar. Só roda com a receita já no esquema.
   def problemas
-    [*ids_repetidos, *gatilho_de_card, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
+    [*ids_repetidos, *gatilho_novo, *filtros_do_gatilho, *passos.flat_map { |passo| problemas_do_passo(passo) }]
   end
 
   # Todos os passos, inclusive os de dentro dos ramos, na ordem em que aparecem.
@@ -63,18 +63,8 @@ class Autonomia::Automacao::Receita
     passos.pluck('id').tally.select { |_id, vezes| vezes > 1 }.keys.map { |id| texto(:id_repetido, passo: id) }
   end
 
-  # O gatilho de card pede a flag da F6 e o CRM; a etapa e o funil escolhidos precisam ser da conta (o esquema já
-  # conferiu que são números e que "entrou" e "saiu" trazem a etapa).
-  def gatilho_de_card
-    gatilho = @receita['gatilho'].to_h
-    return [] unless ::Autonomia::Automacao::Gatilhos.do_card?(gatilho['tipo'])
-    return [texto(:gatilho_desligado)] unless ::Autonomia::Automacao::Motor.gatilhos?(@conta)
-
-    etapa = gatilho['etapa_id']
-    funil = gatilho['funil_id']
-    [*(texto(:etapa_de_fora, id: etapa) if etapa && !@conta.crm_pipeline_stages.exists?(id: etapa)),
-     *(texto(:funil_de_fora, id: funil) if funil && !@conta.crm_pipelines.exists?(id: funil))]
-  end
+  # O gatilho de card e o de tempo (#2499): a flag, a etapa, o funil e o campo de data são da conta.
+  def gatilho_novo = ::Autonomia::Automacao::ProblemasDoGatilho.new(@receita['gatilho'].to_h, @conta).problemas
 
   def filtros_do_gatilho
     Array(@receita.dig('gatilho', 'filtros')).flat_map { |condicao| problemas_da_condicao('gatilho', condicao, no_gatilho: true) }
@@ -82,24 +72,37 @@ class Autonomia::Automacao::Receita
 
   def problemas_do_passo(passo)
     return problemas_da_condicao(passo['id'], passo['condicao'], na_espera: passo['tipo'] == 'esperar_ate') if passo.key?('condicao')
-    return problemas_da_mensagem(passo) if %w[mensagem avisar].include?(passo['tipo'])
+    return problemas_da_mensagem(passo) if %w[mensagem avisar email].include?(passo['tipo'])
     if passo['tipo'] == 'campanha'
       return ::Autonomia::Automacao::PassoDeCampanha.problemas_ao_salvar(passo, @receita, conta: @conta, account_user: @account_user)
     end
     return problemas_da_ia(passo) if IA.include?(passo['tipo'])
+    return problemas_do_retorno(passo) if passo['tipo'] == 'retorno'
+    return problemas_do_proprio_passo(passo) if %w[ia_assumir card].include?(passo['tipo'])
     return [] unless passo['tipo'] == 'acao'
 
     problemas_da_acao(passo)
   end
 
-  # "mensagem" e "avisar" (F4): só com a flag da F4, os valores do texto (e de cada variável do modelo da Meta, F4b)
-  # lidos da lista fechada, os times e as pessoas do aviso da própria conta, e o modelo pronto na conta.
+  # Os passos que se conferem sozinhos ao salvar, na própria classe: o "Passar para a agente de IA" (G15) e o "criar
+  # card" (G4), que confere também a pessoa.
+  def problemas_do_proprio_passo(passo)
+    return ::Autonomia::Automacao::PassoDeCard.problemas_ao_salvar(@conta, passo, @account_user) if passo['tipo'] == 'card'
+
+    ::Autonomia::Automacao::PassoDeIaAssumir.problemas_ao_salvar(@conta, passo)
+  end
+
+  # "mensagem", "avisar" e "email" (F4, G2): só com a flag da F4, os valores do texto (do assunto do e-mail e de cada
+  # variável do modelo da Meta, F4b) lidos da lista fechada, os times e as pessoas do aviso da própria conta, o modelo
+  # pronto na conta e a caixa do e-mail uma caixa de e-mail da conta.
   def problemas_da_mensagem(passo)
     id = passo['id']
     desligado = ::Autonomia::Automacao::Motor.mensagens?(@conta) ? [] : [texto(:passo_desligado, passo: id)]
-    textos = [passo['texto'], *Array(passo.dig('modelo', 'variaveis'))]
+    textos = [passo['texto'], passo['assunto'], *Array(passo.dig('modelo', 'variaveis'))]
     lidos = textos.flat_map { |partes| ::Autonomia::Automacao::Texto.caminhos(partes) }.flat_map { |caminho| problemas_do_caminho(id, caminho) }
-    desligado + lidos + destinatarios_de_fora(passo) + ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
+    caixa = passo['tipo'] == 'email' ? ::Autonomia::Automacao::PassoDeEmail.problemas_ao_salvar(@conta, passo) : []
+    modelo = ::Autonomia::Automacao::ModeloWhatsapp.problemas_ao_salvar(@conta, id, passo['modelo'])
+    desligado + lidos + destinatarios_de_fora(passo) + modelo + caixa
   end
 
   # Passos de IA (F7): só com a flag da F7; o que fala com gente (escrever ao cliente, resumir avisando) também com a da
@@ -113,6 +116,11 @@ class Autonomia::Automacao::Receita
      *repetidos(id, Array(passo['campos']).pluck('chave'), :campo_repetido),
      *Array(passo['campos']).flat_map { |campo| destino_invalido(id, campo['destino']) },
      *destinatarios_de_fora('id' => id, 'para' => avisar_do_resumir(passo))]
+  end
+
+  # "criar retorno" (G3): a conferência mora no PassoDeRetorno; os caminhos lidos, pela régua daqui.
+  def problemas_do_retorno(passo)
+    ::Autonomia::Automacao::PassoDeRetorno.problemas_ao_salvar(@conta, passo, @receita, @account_user) { |c| problemas_do_caminho(passo['id'], c) }
   end
 
   # O destino do resumir é "nota" (texto) ou { avisar: ... }; o do escrever é sempre texto.
@@ -195,7 +203,7 @@ class Autonomia::Automacao::Receita
     valores = ::Autonomia::Automacao::Valores
     return [texto(:valor_desconhecido, passo: id, caminho: caminho)] unless valores.caminho_valido?(caminho)
 
-    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera)
+    fora = valores.fora_do_lugar(caminho, mensagem: mensagem_no_gatilho?(no_gatilho), na_espera: na_espera, gatilho: @receita.dig('gatilho', 'tipo'))
     return [texto(fora, passo: id, caminho: caminho)] if fora
     return [texto(:valor_fora_do_alvo, passo: id, caminho: caminho)] unless no_alvo_do_gatilho?(caminho)
 
@@ -241,24 +249,16 @@ class Autonomia::Automacao::Receita
     permitidas = ::Autonomia::Automacao::AcoesPermitidas
     exigidos = permitidas.exige(acao).select { |campo| valores[campo].blank? }
     fixos = permitidas.fixos(acao).reject { |campo, valor| valores[campo] == valor }
-    proibidos = permitidas.proibe(acao).select { |campo| mandado?(valores, campo.split('.')) }
+    proibidos = permitidas.proibidos(acao, valores)
 
     exigidos.map { |campo| texto(:exige, passo: id, campo: campo) } +
       fixos.map { |campo, valor| texto(:fixo, passo: id, campo: campo, valor: valor) } +
       proibidos.map { |campo| texto(:proibido, passo: id, campo: campo) }
   end
 
-  def mandado?(valores, partes)
-    return valores.key?(partes.first) if partes.one?
-
-    valores[partes.first].is_a?(Hash) && mandado?(valores[partes.first], partes.drop(1))
-  end
-
   def parametros(acao)
     acao.split(' ', 2).last.split('/').filter_map { |segmento| segmento.delete_prefix(':') if segmento.start_with?(':') }
   end
 
-  def texto(chave, **valores)
-    I18n.t("autonomia.automacao.receita.#{chave}", **valores)
-  end
+  def texto(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 end

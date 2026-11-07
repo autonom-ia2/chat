@@ -5,18 +5,18 @@ Gerado por `bundle exec rails autonomia:guia:formatos` a partir do código (#900
 
 | | Ações |
 |---|---|
-| No catálogo | 704 |
+| No catálogo | 707 |
 | Sem corpo | 204 |
-| Com corpo | 500 |
-| Com corpo e formato completo | 411 (82,2%) |
-| Com corpo e formato incompleto | 89 |
+| Com corpo | 503 |
+| Com corpo e formato completo | 413 (82,1%) |
+| Com corpo e formato incompleto | 90 |
 
 ## Por dentro dos campos
 
 | | Total |
 |---|---|
 | Campos aninhados com vocabulário | 17 de 208 |
-| Leituras cruas tipadas | 215 de 310 |
+| Leituras cruas tipadas | 216 de 312 |
 
 ## Incompletas por motivo
 
@@ -24,7 +24,7 @@ Uma ação pode ter mais de um motivo.
 
 | Motivo | Ações |
 |---|---|
-| leitura crua sem tipo | 75 |
+| leitura crua sem tipo | 76 |
 | aceita qualquer campo | 5 |
 | params inteiro repassado | 9 |
 | lê o corpo cru | 2 |
@@ -88,6 +88,7 @@ Uma ação pode ter mais de um motivo.
 - `POST crm/memoria/cards/:card_id/fatos` — leitura crua sem tipo: chave, item_ref (repassada a ::Crm::Memoria::Correcao.corrigir!), valor (repassada a ::Crm::Memoria::Correcao.corrigir!)
 - `POST crm/meta_ads_connection/ads/:ad_id/facebook_comments/:comment_id/reply` — leitura crua sem tipo: content (repassada a comments.reply!)
 - `POST crm/meta_ads_connection/media` — leitura crua sem tipo: file
+- `POST crm/meta_ads_connection/post_media` — leitura crua sem tipo: file
 - `POST crm/pipelines` — leitura crua sem tipo: goal, outcome_labels
 - `POST ctwa_tracked_links` — leitura crua sem tipo: ctwa_tracked_link
 - `POST data_imports` — params inteiro repassado a DataImportSkipLogFinder.new
@@ -185,6 +186,7 @@ Uma ação pode ter mais de um motivo.
 - `api/v1/accounts/crm/memoria_fatos#create` item_ref — repassada a ::Crm::Memoria::Correcao.corrigir!
 - `api/v1/accounts/crm/memoria_fatos#create` valor — repassada a ::Crm::Memoria::Correcao.corrigir!
 - `api/v1/accounts/crm/meta_ads_creation#media` file — o código não converte nem compara o valor
+- `api/v1/accounts/crm/meta_ads_creation#post_media` file — o código não converte nem compara o valor
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` amount — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
 - `api/v1/accounts/crm/meta_ads_creation#update_budget` end_time — repassada a ::Crm::MetaAds::Creation::Budget.new(@connection).change!
 - `api/v1/accounts/crm/meta_ads_facebook_comments#reply` content — repassada a comments.reply!
@@ -227,8 +229,8 @@ O Guia recusa parâmetro que a leitura não lê. Leitura sem lista conhecida nã
 
 | | Leituras |
 |---|---|
-| No catálogo | 435 |
-| Com parâmetros conhecidos | 384 |
+| No catálogo | 437 |
+| Com parâmetros conhecidos | 386 |
 | Sem parâmetros conhecidos | 51 |
 
 ### Leituras sem parâmetros conhecidos

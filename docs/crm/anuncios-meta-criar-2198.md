@@ -175,10 +175,16 @@ tivesse confirmado.
 
 Verificado na documentação oficial em 26/10/2026.
 
+- **Para onde vai quem toca (#2564).** O anúncio novo começa com a pergunta
+  "Quando a pessoa tocar no anúncio, para onde ela vai?", em três cartões:
+  conversar com você, seu site e seu perfil do Instagram. Só aparece o cartão
+  que tem destino confirmado; o perfil fica apagado, com o motivo, quando a
+  Página não tem conta do Instagram ligada.
 - **Destino, WhatsApp primeiro e marcado.** É decisão de produto: não há dado
-  oficial da Meta sobre qual destino é o mais usado. A troca fica numa linha no
-  topo da tela da foto ("Quem tocar vai para: WhatsApp · Trocar"), sem passo a
-  mais.
+  oficial da Meta sobre qual destino é o mais usado. Dentro de "conversar", a
+  troca do canal fica numa linha no topo da tela da foto ("Quem tocar vai para:
+  WhatsApp · Trocar"); com um destino só (site, perfil), a linha não tem
+  "Trocar".
   - **WhatsApp:** campanha `OUTCOME_ENGAGEMENT`; grupo com
     `destination_type: WHATSAPP`, `optimization_goal: CONVERSATIONS` e
     `promoted_object` com `page_id` (obrigatório) e `whatsapp_phone_number`;
@@ -215,7 +221,22 @@ Verificado na documentação oficial em 26/10/2026.
     só os dois do exemplo oficial. A pessoa digita o endereço como conhece
     ("lojaexemplo.com.br"); a tela completa com `https://` na conferência e no
     envio. O servidor confere o endereço (https e domínio) de novo.
-  - Sem número de WhatsApp, a tela para com "Conectar número" e oferece
+  - **Perfil do Instagram (#2564):** `OUTCOME_TRAFFIC`, destino
+    `INSTAGRAM_PROFILE`, otimização `PROFILE_VISIT`, `promoted_object` com
+    `page_id`, cobrança por impressão; criativo com a conta do Instagram da
+    Página em `instagram_user_id`, `link` para o perfil
+    (`https://www.instagram.com/<usuario>/`) e botão `VIEW_INSTAGRAM_PROFILE`
+    com o mesmo endereço. Só em "Só Instagram" (decisão do Rodrigo, 06/11), sem
+    carrossel. A Meta exige `special_ad_categories` vazio: com "seguro, crédito,
+    empréstimo ou investimento" marcado, a tela explica e leva de volta à
+    pergunta do destino, e o servidor recusa (`special_category_profile`). Sem
+    conta do Instagram (ou sem o @ dela), `invalid_instagram`. A doc avisa que
+    o anúncio tem disponibilidade limitada; vídeo único segue o mesmo
+    `video_data` do site. **A primeira chamada real confirma** (anúncio pausado
+    de teste na conta 18, com OK do Rodrigo).
+    [Fonte](https://developers.facebook.com/documentation/ads-commerce/marketing-api/ad-creative/profile-visit-ads/instagram-profile-visit)
+  - Sem número de WhatsApp, "conversar" escolhe o Direct ou o Messenger quando
+    dá. Se só o WhatsApp sobrar, a tela para com "Conectar número" e oferece
     "Anunciar com outro destino" (o primeiro destino confirmado depois do
     WhatsApp; sem nenhum, só "Conectar número").
 - **O que a pessoa vende:** campo obrigatório no topo ("bolo de pote a R$ 12").
@@ -524,6 +545,50 @@ Impulsionar post (#2339), na mesma flag `meta_ads_criar`. Pedido do Rodrigo em
     lista do Instagram inteira falha;
   - se `ON_POST` com `OUTCOME_ENGAGEMENT` passa sem `promoted_object`;
   - o filtro de perfil e capa num post real.
+
+## Servidor do PR 3 (criar post, #2653)
+
+- `POST meta_ads_connection/post_media`: a foto ou o vídeo sobe uma vez para o
+  nosso armazenamento (`Crm::MetaAds::Creation::PostMedia`), com os mesmos
+  limites e a mesma conferência do arquivo do anúncio. PNG vira JPEG (o
+  Instagram só aceita JPEG; a Página recebe a mesma). Volta um `signed_id` que
+  só vale nesta conta e por um dia; o arquivo é apagado depois.
+- `POST meta_ads_connection/posts`: `{ idempotency_key, page_id, networks,
+  caption, media_id }`. Publica na hora (`Crm::MetaAds::Creation::Publish`):
+  - Página: `POST /{page-id}/photos` (`url`, `message`) ou `/videos`
+    (`file_url`, `description`), com o token da Página. Da foto sai o
+    `post_id`, que o impulsionar usa. Do vídeo a Meta devolve só o vídeo: a
+    tela não oferece impulsionar o vídeo da Página (**a confirmar** na chamada
+    real, junto com o item 10).
+  - Instagram: contêiner (`image_url`, ou `media_type: REELS` com
+    `video_url`), `status_code` e `media_publish`. A requisição não fica
+    esperando: a foto ganha até 4 s para o contêiner ficar `FINISHED`; o vídeo
+    confere uma vez. Não pronto: `processing`, e o "Tentar de novo" segue com o
+    mesmo contêiner. Contêiner que já aparece `PUBLISHED`: `unconfirmed`.
+  - Cada rede publica por conta própria. A resposta traz as que publicaram, as
+    que não (`failed`, com o código em `errors`) e `published_now`. Nenhuma
+    publicou: 422 com o código.
+  - Na dúvida, nunca publica de novo sozinho
+    (`Crm::MetaAds::Creation::PublishState`, por chave e rede, no Redis por um
+    dia): uma tentativa de cada vez (trava de 2 minutos, a outra recebe
+    `in_progress`); a mesma chave devolve o que já publicou; se a chamada que
+    publica saiu e não voltou resposta certa (rede, 5xx, queda do processo), a
+    chave responde `unconfirmed` e a tela pede para conferir na rede antes de
+    publicar de novo ("Conferi e não saiu"), com chave nova. Recusa certa da Meta
+    libera a chave. A mesma chave com outro conteúdo (Página, mídia ou legenda)
+    é `idempotency_conflict`.
+  - Foto até 8 MB (teto do Instagram). JPEG decidido pelos bytes, não pelo tipo
+    que o navegador diz; transparência vai sobre fundo branco.
+  - Cada rede pede a sua permissão no token (`pages_manage_posts`,
+    `instagram_content_publish`); sem ela, `cannot_publish` e nada chama a
+    Meta. As opções de criar trazem `publish: { facebook, instagram }` e, no
+    Instagram de cada Página, `publish_left` (lido em
+    `content_publishing_limit`; `null` quando a leitura falha, e a tela não
+    apaga o Instagram por isso).
+  - A Auditoria registra `meta_ads_post_published` com quem publicou, a Página,
+    os ids e as redes que falharam (nunca o token).
+- Mesma gate do resto: flag `meta_ads_criar`, `meta_ads_manage` (ou
+  administrador) para subir mídia e publicar.
 
 ## Permissões que a Meta precisa ver no vídeo
 
