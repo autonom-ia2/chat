@@ -16,6 +16,7 @@
       "VARIAVEL_DICA": "A campanha vai para muita gente de uma vez: escreva um texto fixo.",
       "ETIQUETAS_DICA": "Recebe quem tiver alguma destas etiquetas na hora do envio. Pôr ou tirar a etiqueta põe ou tira a pessoa da campanha.",
       "SEM_ETIQUETAS": "Esta conta ainda não tem etiquetas.",
+      "SEM_ETIQUETAS_DICA": "Opcional. Quem tiver alguma destas etiquetas não recebe, mesmo tendo uma etiqueta do público. Ex.: todos menos quem já comprou.",
       "FRASE_DISPARAR": "Mandar a campanha de WhatsApp “{titulo}”",
       "FRASE_NAO_RECEBER": "Marcar o contato como “não recebe”"
     }

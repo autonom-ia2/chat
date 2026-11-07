@@ -48,6 +48,7 @@
         }
       },
       "MODELO_FORA_DA_JANELA": "If the 24-hour window is closed, the template {modelo} is sent (charged by Meta).",
+      "MODELO_PROPAGANDA_FORA_DA_JANELA": "If the 24-hour window is closed, the marketing template {modelo} is sent, which costs more on Meta.",
       "IA_ASSUMIR": "Would hand over to {agente}",
       "NAO_PASSARIA": {
         "AGENTE_SUMIU": "Would not hand over: the chosen agent no longer exists.",

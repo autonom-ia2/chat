@@ -222,6 +222,18 @@ const mudarVariavel = (indice, texto) => {
           }}
         </p>
       </div>
+
+      <div v-if="etiquetas.length" class="flex flex-col gap-1.5" data-campanha-sem>
+        <LivreMarcar
+          :rotulo="$t('AUTOMACAO_LIVRE.CAMPOS.SEM_ETIQUETAS')"
+          :opcoes="etiquetas"
+          :model-value="passo.sem_etiquetas || []"
+          @update:model-value="novas => mudar({ sem_etiquetas: novas })"
+        />
+        <p class="mb-0 text-sm text-n-slate-11">
+          {{ $t(`${C}.SEM_ETIQUETAS_DICA`) }}
+        </p>
+      </div>
     </template>
   </div>
 </template>

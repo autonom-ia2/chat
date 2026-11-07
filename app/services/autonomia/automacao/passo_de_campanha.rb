@@ -4,6 +4,8 @@
 #   `account.campaigns.create!` da API de campanhas e a põe na fila do disparo (Campaigns::TriggerOneoffCampaignJob, o
 #   mesmo job do agendador). Quem manda é o Whatsapp::OneoffCampaignService (e o overlay do EE): ele lê o público no
 #   disparo, relê a recusa de cada contato antes de mandar e manda o modelo. Nada sai por um caminho próprio daqui.
+#   `sem_etiquetas` (lote 5, #2681) deixa de fora quem tem uma delas, mesmo com etiqueta do público
+#   (Autonomia::Automacao::CampanhaSemEtiquetas).
 #   Só em gatilho da conta (o recorrente da G7, `conta.recorrente`, alvo = a própria Account): num gatilho de
 #   conversa, card ou contato, cada execução criaria uma campanha
 #   nova para o mesmo público, o mesmo envio N vezes. A Receita recusa ao salvar; a receita que chegar assim mesmo pula
@@ -20,9 +22,9 @@ class Autonomia::Automacao::PassoDeCampanha
   Resultado = ::Autonomia::Automacao::PassoDeAcao::Resultado
   ModeloWhatsapp = ::Autonomia::Automacao::ModeloWhatsapp
   ROTA = ::Crm::BookingV2::Notices::Route
-  # Utilidade e propaganda, aprovados, como a tela de campanhas (decisão do Rodrigo, 06/11: "Sim, com aviso"). O editor
-  # avisa o custo do modelo de propaganda. Vale só aqui: o passo mensagem continua só com utilidade (ModeloWhatsapp).
-  CATEGORIAS = %w[UTILITY MARKETING].freeze
+  # Utilidade e propaganda, aprovados, como a tela de campanhas (decisão do Rodrigo, 06/11: "Sim, com aviso"); as mesmas
+  # do passo mensagem desde o lote 5 (#2681). O editor avisa o custo do modelo de propaganda.
+  CATEGORIAS = ModeloWhatsapp::CATEGORIAS
   CANAL = ModeloWhatsapp::CANAL
   PROVEDOR = 'whatsapp_cloud'.freeze
   FLAG_DA_CAMPANHA = :whatsapp_campaign
@@ -55,7 +57,8 @@ class Autonomia::Automacao::PassoDeCampanha
   def self.problemas_da_campanha(passo, conta)
     id = passo['id']
     caixa = caixa_da_campanha(conta, passo['caixa_id'])
-    etiquetas = Array(passo['etiquetas']) - conta.labels.where(id: passo['etiquetas']).pluck(:id)
+    pedidas = Array(passo['etiquetas']) + Array(passo['sem_etiquetas'])
+    etiquetas = pedidas - conta.labels.where(id: pedidas).pluck(:id)
     modelo = caixa && modelo_pronto(caixa, passo['modelo'])
     [*(frase(:campanha_sem_caixa, passo: id) if caixa.nil?),
      *(frase(:campanha_modelo, passo: id, nome: passo.dig('modelo', 'nome')) if modelo.is_a?(String)),
@@ -145,15 +148,25 @@ class Autonomia::Automacao::PassoDeCampanha
     etiquetas = @conta.labels.where(id: @passo['etiquetas']).pluck(:id)
     return pulado('campanha_sem_etiqueta') if etiquetas.empty?
 
-    campanha = @conta.campaigns.create!(
-      title: @passo['titulo'], inbox: caixa, sender: @quem, scheduled_at: Time.current, template_params: template_params,
-      message: self.class.texto_do_modelo(caixa, template_params), audience: etiquetas.map { |id| { 'type' => 'Label', 'id' => id } }
-    )
+    sem = @conta.labels.where(id: @passo['sem_etiquetas']).pluck(:id)
+    campanha = criar_campanha(caixa, template_params, audiencia(etiquetas, sem))
     ::Campaigns::TriggerOneoffCampaignJob.perform_later(campanha)
-    Resultado.new(tipo: :ok, motivo: nil, dados: { 'campanha_id' => campanha.display_id, 'etiquetas' => etiquetas })
+    Resultado.new(tipo: :ok, motivo: nil, dados: { 'campanha_id' => campanha.display_id, 'etiquetas' => etiquetas, 'sem_etiquetas' => sem })
   rescue ActiveRecord::RecordInvalid => e
     Rails.logger.info("[automacao][campanha] recusada automacao=#{@automacao.id} erro=#{e.record.errors.attribute_names.join(',')}")
     pulado('campanha_recusada')
+  end
+
+  def criar_campanha(caixa, template_params, audiencia)
+    @conta.campaigns.create!(
+      title: @passo['titulo'], inbox: caixa, sender: @quem, scheduled_at: Time.current, template_params: template_params,
+      message: self.class.texto_do_modelo(caixa, template_params), audience: audiencia
+    )
+  end
+
+  # As etiquetas do público e as excluídas (lote 5, #2681: ExcludeLabel, tirado pelo CampanhaSemEtiquetas no envio).
+  def audiencia(etiquetas, sem)
+    etiquetas.map { |id| { 'type' => 'Label', 'id' => id } } + ::Autonomia::Automacao::CampanhaSemEtiquetas.audiencia(sem)
   end
 
   def nao_receber

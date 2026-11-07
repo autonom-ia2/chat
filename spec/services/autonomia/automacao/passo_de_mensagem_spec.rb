@@ -274,7 +274,7 @@ RSpec.describe Autonomia::Automacao::PassoDeMensagem, :automacao_motor do
       {
         'a caixa não tem o modelo' => [{ 'name' => 'outro' }, 'modelo_fora_da_caixa'],
         'o modelo não está aprovado' => [{ 'status' => 'PENDING' }, 'modelo_nao_aprovado'],
-        'o modelo é de propaganda' => [{ 'category' => 'MARKETING' }, 'modelo_de_propaganda'],
+        'o modelo é de autenticação' => [{ 'category' => 'AUTHENTICATION' }, 'modelo_de_categoria_fora'],
         'o modelo pede outras variáveis' => [{ 'components' => [{ 'type' => 'BODY', 'text' => 'Oi {{1}}.' }] }, 'modelo_mudou'],
         'o modelo pede imagem no topo' => [{ 'components' => [{ 'type' => 'HEADER', 'format' => 'IMAGE' },
                                                               { 'type' => 'BODY', 'text' => 'Oi {{1}}, {{2}}.' }] }, 'modelo_mudou']

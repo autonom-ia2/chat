@@ -32,9 +32,10 @@ RSpec.describe Autonomia::Automacao::Valores do
     formas = [[:incoming, false], [:outgoing, false], [:outgoing, true], [:template, false]]
 
     # `mensagem.primeira` e `conversa.iniciada_por` dependem das mensagens gravadas: primeira_mensagem_spec. A resposta
-    # durante a espera (G11): resposta_spec.
+    # durante a espera (G11): resposta_spec. O nome da campanha (#2681) é escrito, sem opções fechadas:
+    # resposta_da_campanha_spec.
     expect(described_class::FECHADOS.keys)
-      .to match_array(described_class::MENSAGEM.keys + described_class::RESPOSTA.keys + ['conversa.iniciada_por'])
+      .to match_array(described_class::MENSAGEM.keys - ['mensagem.campanha'] + described_class::RESPOSTA.keys + ['conversa.iniciada_por'])
     described_class::FECHADOS.slice('mensagem.tipo', 'mensagem.privada').each do |caminho, fechado|
       expect(formas.map { |forma| lido.call(caminho, *forma) }.uniq).to match_array(fechado['opcoes'])
     end
