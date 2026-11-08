@@ -5,6 +5,7 @@
       "CONVERSA_ABERTA": "Quando uma conversa é reaberta",
       "CONVERSA_RESOLVIDA": "Quando uma conversa é resolvida",
       "MENSAGEM_CRIADA": "Quando chega uma mensagem",
+      "MENSAGEM_FALHOU": "Quando uma mensagem não é entregue",
       "CARD_CRIADO": "Quando um card é criado",
       "CARD_ENTROU_NA_ETAPA": "Quando o card entra numa etapa",
       "CARD_SAIU_DA_ETAPA": "Quando o card sai de uma etapa",

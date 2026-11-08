@@ -9,6 +9,10 @@
 #   estar na caixa (ou ser administrador) e poder começar conversa, conferido ao salvar e a cada abertura (Acesso).
 #   A janela, o modelo aprovado e o opt-out são os do passo "mensagem": conversa nova no número oficial só sai com modelo.
 #
+# - `numero_trocado?` (#2700): no WhatsApp e no SMS a conversa fica presa ao número com que nasceu (o `source_id` do
+#   ContactInbox). Depois de o telefone do contato mudar, o passo "mensagem" vai à conversa do número novo na mesma
+#   caixa (`do_numero`, senão `abrir`), e não à do número antigo.
+#
 # Só as caixas em que a plataforma começa conversa pelo telefone do contato (ou pela API).
 module Autonomia::Automacao::ConversaNova
   CANAIS = %w[Channel::Whatsapp Channel::TwilioSms Channel::Sms Channel::Api].freeze
@@ -47,16 +51,39 @@ module Autonomia::Automacao::ConversaNova
 
   # Por que a conversa não abriria para este contato, ou nil. O passo pula com o motivo.
   def motivo_do_contato(caixa, contato)
-    return 'contato_sem_telefone' if PELO_TELEFONE.include?(caixa.channel_type) && contato.phone_number.blank?
+    return 'contato_sem_telefone' if pelo_telefone?(caixa) && contato.phone_number.blank?
 
     'contato_nao_recebe' if ::Contact.opted_out.exists?(id: contato.id)
   end
 
+  # Nos canais do telefone, o ContactInbox é o do número atual (o builder acha ou cria pelo telefone); na API, o que já
+  # houver na caixa.
   def abrir(caixa, contato)
-    contact_inbox = ::ContactInbox.find_by(contact_id: contato.id, inbox_id: caixa.id) ||
+    contact_inbox = (::ContactInbox.find_by(contact_id: contato.id, inbox_id: caixa.id) unless pelo_telefone?(caixa)) ||
                     ::ContactInboxBuilder.new(contact: contato, inbox: caixa, source_id: nil).perform
     ::ConversationBuilder.new(params: ActionController::Parameters.new(status: 'open'), contact_inbox: contact_inbox).perform
   end
+
+  # O número da conversa não é mais o telefone do contato. Compara só os dígitos: o WhatsApp guarda sem o "+", o Twilio
+  # com "whatsapp:".
+  def numero_trocado?(conversa)
+    telefone = conversa.contact&.phone_number
+    return false if telefone.blank? || !pelo_telefone?(conversa.inbox)
+
+    digitos(conversa.contact_inbox&.source_id) != digitos(telefone)
+  end
+
+  # A conversa não resolvida do número atual do contato na caixa, a mais recente; nil se não houver.
+  def do_numero(caixa, contato)
+    numero = digitos(contato.phone_number)
+    ids = ::ContactInbox.where(contact_id: contato.id, inbox_id: caixa.id).filter_map { |item| item.id if digitos(item.source_id) == numero }
+    ::Conversation.where(account_id: caixa.account_id, contact_inbox_id: ids).where.not(status: :resolved)
+                  .order(last_activity_at: :desc, id: :desc).first
+  end
+
+  def pelo_telefone?(caixa) = PELO_TELEFONE.include?(caixa.channel_type)
+
+  def digitos(texto) = texto.to_s.delete('^0-9')
 
   def frase(chave, **valores) = I18n.t("autonomia.automacao.receita.#{chave}", **valores)
 end

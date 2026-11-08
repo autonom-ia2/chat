@@ -27,6 +27,7 @@ module Autonomia::Automacao::Gatilhos
     Entrada.new(tipo: 'conversa.aberta', alvo: 'Conversation', origem: :evento, parametros: []),
     Entrada.new(tipo: 'conversa.resolvida', alvo: 'Conversation', origem: :evento, parametros: []),
     Entrada.new(tipo: 'mensagem.criada', alvo: 'Conversation', origem: :evento, parametros: []),
+    Entrada.new(tipo: 'mensagem.falhou', alvo: 'Conversation', origem: :evento, parametros: []),
     Entrada.new(tipo: 'card.criado', alvo: CARD, origem: :evento, parametros: %w[funil_id]),
     Entrada.new(tipo: 'card.entrou_na_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
     Entrada.new(tipo: 'card.saiu_da_etapa', alvo: CARD, origem: :evento, parametros: %w[etapa_id]),
@@ -54,6 +55,8 @@ module Autonomia::Automacao::Gatilhos
 
   # Os gatilhos de reunião (G12): só neles a receita lê `reuniao.*`, a reunião da atividade que disparou.
   DE_REUNIAO = %w[card.reuniao_marcada card.reuniao_remarcada card.reuniao_cancelada].freeze
+
+  FALHOU = 'mensagem.falhou'.freeze
 
   # O pedaço da marca entre o tipo e o id da atividade (marca_da_atividade).
   ATIVIDADE = 'atividade'.freeze
@@ -106,6 +109,15 @@ module Autonomia::Automacao::Gatilhos
   end
 
   def de_reuniao?(tipo) = DE_REUNIAO.include?(tipo.to_s)
+
+  # A mensagem que falhou (G8, #2637): a própria mensagem é o fato. O canal que repete o aviso de falha não abre outra.
+  def marca_da_falha(mensagem) = "#{FALHOU}:#{mensagem.id}"
+
+  # O id da mensagem numa marca de marca_da_falha; nil em marca de outro formato.
+  def mensagem_da_marca(marca)
+    tipo, id = marca.to_s.split(':', 2)
+    Integer(id, 10, exception: false) if tipo == FALHOU && id
+  end
 
   # O mesmo movimento dispara "saiu" e "entrou": o tipo entra na marca para cada um ter a sua.
   def marca_da_atividade(tipo, activity_id) = "#{tipo}:#{ATIVIDADE}:#{activity_id}"

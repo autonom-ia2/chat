@@ -57,11 +57,13 @@ class Autonomia::Automacao::Contexto
 
   # A última mensagem que esta execução mandou ao cliente (#2680, `envio.*`), pelo `mensagem_id` dos registros dos
   # passos: o "mensagem", o "escrever" e o "email". A nota do "avisar" também leva o id, mas não é envio ao cliente.
+  # No gatilho "mensagem.falhou" (G8), antes do primeiro envio, é a mensagem que falhou: o texto dela vai por outro canal.
   def ultimo_envio
     return unless @execucao
 
     ids = @execucao.registros.where(resultado: 'ok').where("dados ? 'mensagem_id'").pluck(Arel.sql("dados->>'mensagem_id'"))
-    ::Message.where(account_id: @execucao.account_id, id: ids, private: false, message_type: :outgoing).order(id: :desc).first
+    # reorder: a Message ordena por created_at no default_scope, e o order só desempataria.
+    envios.where(id: ids).reorder(id: :desc).first || envio_que_falhou
   end
 
   # "conversa", "card" ou "contato": a base dos caminhos do Valores que o alvo tem sem ponte.
@@ -111,6 +113,15 @@ class Autonomia::Automacao::Contexto
   end
 
   private
+
+  def envios = ::Message.where(account_id: @execucao.account_id, private: false, message_type: :outgoing)
+
+  # A mensagem da marca do gatilho, sempre presa à conversa do alvo e à conta, nunca só pelo id.
+  def envio_que_falhou
+    gatilhos = ::Autonomia::Automacao::Gatilhos
+    id = gatilhos.mensagem_da_marca(@execucao.evento) if @execucao.chave_gatilho == gatilhos::FALHOU
+    id && conversa && envios.find_by(id: id, conversation_id: conversa.id)
+  end
 
   def reuniao_da_atividade
     atividade_id = ::Autonomia::Automacao::Gatilhos.atividade_da_marca(@execucao.evento)

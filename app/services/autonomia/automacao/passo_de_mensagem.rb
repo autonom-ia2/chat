@@ -8,6 +8,8 @@
 # - canal sem resposta (tweet);
 # - alvo sem conversa e sem a caixa da conversa nova na receita (`sem_conversa`); com ela (#2680), o passo abre a
 #   conversa (ConversaNova), e pula sem abrir se o contato não tem telefone (`contato_sem_telefone`) ou não recebe.
+# O telefone do contato mudou depois que a conversa nasceu (#2700)? A mensagem vai à conversa do número novo na mesma
+# caixa, que ela abre se preciso, como a conversa nova; o registro diz `numero_novo`.
 # Para a execução, com o motivo no registro (#2573, Autonomia::Automacao::JanelaFechada):
 # - janela fechada. Vale para todo canal com janela, lida como envio automático (sem a tag de agente humano da Meta,
 #   24 h). A caixa híbrida com o WhatsApp API pronto responde fora da janela, em texto. No número oficial, com a janela
@@ -30,6 +32,7 @@ class Autonomia::Automacao::PassoDeMensagem
 
   def executar
     return abrir_e_mandar if @conversa.nil?
+    return no_numero_novo if ::Autonomia::Automacao::ConversaNova.numero_trocado?(@conversa)
 
     negado = sem_acesso
     return negado if negado
@@ -93,9 +96,8 @@ class Autonomia::Automacao::PassoDeMensagem
   # Quem não tem conversa (#2680): a receita escolheu a caixa (ConversaNova). Abre a conversa e manda, juntos; o que não
   # sai (janela fechada sem modelo, texto vazio, robô) desfaz a conversa, e nada fica vazio na caixa. No card sem
   # conversa principal, a aberta vira a principal dele, e o registro do passo diz isso.
-  def abrir_e_mandar
-    caixa = ::Autonomia::Automacao::ConversaNova.da_execucao(@execucao)
-    contato = ::Autonomia::Automacao::Contexto.de(@alvo).contato
+  def abrir_e_mandar(caixa = ::Autonomia::Automacao::ConversaNova.da_execucao(@execucao),
+                     contato = ::Autonomia::Automacao::Contexto.de(@alvo).contato)
     return sem_conversa if caixa.nil? || contato.nil?
     return Resultado.new(tipo: :sem_acesso, motivo: 'quem_ligou_sem_acesso', dados: {}) unless comeca_conversa?(caixa)
 
@@ -108,10 +110,16 @@ class Autonomia::Automacao::PassoDeMensagem
     na_conversa_nova(caixa, contato, texto)
   end
 
+  # O número novo (#2700): a conversa da mesma caixa, pelo telefone atual do contato.
+  def no_numero_novo
+    @numero_novo = true
+    abrir_e_mandar(@conversa.inbox, @conversa.contact)
+  end
+
   def na_conversa_nova(caixa, contato, texto)
     resultado = nil
     ActiveRecord::Base.transaction do
-      @conversa = ::Autonomia::Automacao::ConversaNova.abrir(caixa, contato)
+      @conversa = conversa_do_numero(caixa, contato) || ::Autonomia::Automacao::ConversaNova.abrir(caixa, contato)
       resultado = mandar(texto)
       raise ActiveRecord::Rollback unless resultado.tipo == :ok
 
@@ -121,9 +129,12 @@ class Autonomia::Automacao::PassoDeMensagem
     resultado
   end
 
+  def conversa_do_numero(caixa, contato) = (::Autonomia::Automacao::ConversaNova.do_numero(caixa, contato) if @numero_novo)
+
   def conversa_aberta
     dados = { 'conversa_aberta' => @conversa.reload.display_id }
-    return dados unless @alvo.is_a?(::Crm::Card) && @alvo.conversation_id.nil?
+    dados['numero_novo'] = true if @numero_novo
+    return dados unless @alvo.is_a?(::Crm::Card) && (@alvo.conversation_id.nil? || @numero_novo)
 
     @alvo.update!(conversation_id: @conversa.id)
     dados.merge('conversa_principal_do_card' => @alvo.id)

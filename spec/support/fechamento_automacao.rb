@@ -193,7 +193,9 @@ module FechamentoAutomacao::Lacunas
     # #2680: a receita escolhe a caixa por onde abrir a conversa de quem não tem uma (o lead do formulário, o contato).
     'G33' => -> { Autonomia::Automacao::Receita::ESQUEMA.dig('properties', 'gatilho', 'properties').key?('conversa_nova') },
     # #2680: a resposta em outra conversa do contato conta, e a mensagem que a automação mandou vira valor.
-    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') }
+    'G34' => -> { valor?('envio.texto') && valor?('envio.situacao') },
+    # #2700: o passo "mensagem" vai ao número novo do contato (ponta a ponta em g8_envio_falhou_spec.rb).
+    'G35' => -> { Autonomia::Automacao::ConversaNova.respond_to?(:numero_trocado?) }
   }.freeze
 
   # O que fazer quando o pendente passa e o RSpec acusa "Expected pending … to fail".

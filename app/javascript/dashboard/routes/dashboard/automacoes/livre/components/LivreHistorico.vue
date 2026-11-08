@@ -316,6 +316,13 @@ onMounted(() => carregar());
                     {{ $t('AUTOMACAO_LIVRE.HISTORICO.CONVERSA_PRINCIPAL') }}
                   </span>
                   <span
+                    v-if="passo.dados.numero_novo"
+                    data-numero-novo
+                    class="text-sm text-n-slate-11"
+                  >
+                    {{ $t('AUTOMACAO_LIVRE.HISTORICO.NUMERO_NOVO') }}
+                  </span>
+                  <span
                     v-if="passo.dados.ia?.custo_usd != null"
                     data-ia
                     class="text-xs text-n-slate-10"

@@ -14,6 +14,7 @@
 #   também quem espera pelo mesmo contato em outra conversa, no card ou no contato (#2680). Só o "esperar até": a ação
 #   que espera uma nova tentativa e o "esperar" de tempo seguem o relógio.
 # - `envio_atualizado`: a mensagem que a automação mandou foi entregue, lida ou falhou (#2680, `envio.situacao`).
+# - a mensagem enviada que falhou, nova ou atualizada, começa o gatilho "mensagem.falhou" (MensagemFalhou, G8).
 #
 # O gate é a flag do motor, lida da conta: conta sem o motor só lê a conta. Com o motor, uma consulta pela conta e pelo
 # tipo do gatilho; não há cache, porque a lista muda a cada automação ligada ou desligada, e uma lista velha ligaria o
@@ -83,6 +84,7 @@ module Autonomia::Automacao::Escuta
     return if mensagem.activity? || !::Autonomia::Automacao::Motor.ligado?(mensagem.account)
 
     comecar(mensagem.conversation, 'mensagem.criada', mensagem: mensagem)
+    ::Autonomia::Automacao::MensagemFalhou.comecar(mensagem) if mensagem.failed?
     acordar(mensagem, [mensagem.conversation_id], contato_id: mensagem.conversation.contact_id)
   rescue StandardError => e
     registrar_erro("não ouviu mensagem=#{mensagem&.id}", e)
@@ -94,6 +96,7 @@ module Autonomia::Automacao::Escuta
   def envio_atualizado(mensagem, mudou)
     return unless mudou.to_h.key?('status')
 
+    ::Autonomia::Automacao::MensagemFalhou.comecar(mensagem) if mensagem.failed?
     execucao = execucao_do_envio(mensagem)
     reservar(execucao) if execucao && esperando_condicao?(execucao)
   rescue StandardError => e
