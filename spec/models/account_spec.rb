@@ -308,8 +308,8 @@ RSpec.describe Account do
       # #2499 F6: automacao_gatilhos depois dela, 26 (1 << 25 = 33554432), contra a main 45e251027e; Orquestração confirma.
       # #2613: meta_ads_comentarios_privado_facebook depois dela, 27 (1 << 26 = 67108864), dada pela Orquestração (05/11).
       # #2338: anuncios_login_unico depois dela, 28 (1 << 27 = 134217728), dada pela Orquestração (06/11).
-      # #2712: prospeccao_nova, 29 (1 << 28 = 268435456). #1431: rag_corte_por_estrutura depois dela, 30
-      # (1 << 29 = 536870912), dada pela Orquestração (08/11); o #1431 leva o bloco da 29 igual ao do #2712.
+      # #2693: prospeccao_nova depois dela, 29 (1 << 28 = 268435456), dada pela Orquestração.
+      # #1431: rag_corte_por_estrutura depois dela, 30 (1 << 29 = 536870912), dada pela Orquestração (08/11).
       expect(described_class.flag_mapping['feature_flags_ext_2']).to eq(
         feature_contato_relacao: 1, feature_crm_numeros_origens: 2, feature_lista_quem_espera: 4,
         feature_agentes_painel_desempenho: 8, feature_meta_ads_organico: 16, feature_leitura_no_celular: 32,

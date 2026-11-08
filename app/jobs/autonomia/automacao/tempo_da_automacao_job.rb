@@ -7,6 +7,9 @@
 #   morrer). Uma varredura mais longa que TRAVA encosta na seguinte: é trabalho em dobro, nunca execução em dobro.
 # A marca única (automacao_id, evento) da execução é a garantia final: o mesmo fato nunca abre duas.
 #
+# O recorrente (#2635, G7) não roda os alvos aqui: enfileira um RecorrenteLoteJob por lote de ids da seleção, para a
+# fila não travar numa seleção grande.
+#
 # Falha num alvo vai para o log (a classe e a linha, nunca a mensagem, que pode trazer dado do cliente) e não para os
 # outros. No fim, o job falha com o primeiro erro, para aparecer no Sidekiq. Sem nova tentativa: a próxima rodada, em
 # 15 minutos, é a nova tentativa (a janela é de 1 dia e a marca não deixa repetir o que já começou).
@@ -49,8 +52,25 @@ class Autonomia::Automacao::TempoDaAutomacaoJob < ApplicationJob
     definicao.ativa && ::Autonomia::Automacao::Gatilhos.de_tempo?(tipo) && ::Autonomia::Automacao::Gatilhos.disponivel?(tipo, definicao.account)
   end
 
-  # O primeiro erro dos alvos, ou nil.
+  # Uma vez por ocorrência: as rodadas seguintes da janela (a cada 15 minutos) não reenfileiram a seleção inteira. O lote
+  # que falhar não é refeito; a marca única da execução segue barrando a dobra.
+  def enfileirar_lotes(busca, definicao)
+    ocorrencia = busca.ocorrencia
+    return unless ocorrencia
+
+    chave = "automacao:recorrente:#{definicao.id}:#{ocorrencia.utc.iso8601}"
+    return unless Redis::Alfred.set(chave, 1, nx: true, ex: ::Autonomia::Automacao::Tempo::JANELA.to_i)
+
+    busca.lotes do |ids, instante|
+      ::Autonomia::Automacao::RecorrenteLoteJob.perform_later(definicao.id, ids, instante.utc.iso8601)
+    end
+    nil
+  end
+
+  # O primeiro erro dos alvos, ou nil. O recorrente só enfileira os lotes: os erros ficam em cada lote.
   def cada_alvo(busca, definicao, tipo)
+    return enfileirar_lotes(busca, definicao) if ::Autonomia::Automacao::Gatilhos.recorrente?(tipo)
+
     primeiro_erro = nil
     busca.cada do |alvo, marca|
       erro = comecar(definicao, alvo, tipo, marca)

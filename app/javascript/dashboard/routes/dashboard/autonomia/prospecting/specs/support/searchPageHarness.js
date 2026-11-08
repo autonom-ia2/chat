@@ -4,7 +4,11 @@ import { mount, flushPromises } from '@vue/test-utils';
 import AutonomiaProspectingAPI from 'dashboard/api/autonomiaProspecting';
 import CrmKanbanAPI from 'dashboard/api/crmKanban';
 import ProspectingSearchPage from '../../pages/ProspectingSearchPage.vue';
-import { TOUR_ALREADY_SEEN, uiSettingsStore } from './uiSettingsStore';
+import {
+  CURRENT_USER_ID,
+  TOUR_ALREADY_SEEN,
+  uiSettingsStore,
+} from './uiSettingsStore';
 
 const HOUR_MS = 60 * 60 * 1000;
 const LOCATION_DEBOUNCE_WAIT_MS = 320;
@@ -84,6 +88,7 @@ export const settingsFixture = (extra = {}) => ({
 
 export const bakerySearch = (extra = {}) => ({
   id: 11,
+  user_id: CURRENT_USER_ID,
   query: 'padaria',
   location: 'Curitiba, PR',
   area_type: 'radius',
@@ -103,6 +108,7 @@ export const bakerySearch = (extra = {}) => ({
 
 export const gymSearch = (extra = {}) => ({
   id: 12,
+  user_id: CURRENT_USER_ID,
   query: 'academia',
   location: 'Londrina, PR',
   area_type: 'viewport',

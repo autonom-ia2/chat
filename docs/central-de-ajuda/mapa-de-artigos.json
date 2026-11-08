@@ -4743,6 +4743,52 @@
      "fontes": [],
      "revisar": false,
      "nota": null
+    },
+    {
+     "id": "16.15",
+     "titulo": "Achar empresas e mandar para o funil de vendas",
+     "para_que_serve": "Achar empresas de um tipo num lugar na Prospecção nova, tirar as que não quer e mandar as outras para o funil de vendas.",
+     "publico": "ambos",
+     "prioridade": "P1",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_prospecting_achar",
+      "autonomia_prospecting_achar_nova"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_achar",
+      "destaque": null
+     },
+     "requer": "prospeccao_nova",
+     "prints": [],
+     "fontes": [
+      "porques: Achar empresas na Prospeccao nova e mandar para o funil"
+     ],
+     "revisar": false,
+     "nota": null
+    },
+    {
+     "id": "16.16",
+     "titulo": "Ver, abrir e apagar as suas buscas de empresas",
+     "para_que_serve": "Reabrir uma busca da Prospecção nova, baixar a planilha dela ou apagá-la, e entender quem vê e apaga cada busca.",
+     "publico": "ambos",
+     "prioridade": "P2",
+     "assuntos": [],
+     "rotas": [
+      "autonomia_prospecting_achar_buscas",
+      "autonomia_prospecting_achar_busca"
+     ],
+     "me_leve_ate_la": {
+      "rota": "autonomia_prospecting_achar_buscas",
+      "destaque": null
+     },
+     "requer": "prospeccao_nova",
+     "prints": [],
+     "fontes": [
+      "porques: Ver, abrir e apagar as suas buscas da Prospeccao nova"
+     ],
+     "revisar": false,
+     "nota": null
     }
    ]
   },

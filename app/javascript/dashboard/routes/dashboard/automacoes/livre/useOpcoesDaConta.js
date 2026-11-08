@@ -13,6 +13,14 @@ const MODELO_DA_PECA = {
 };
 export const modeloDaPeca = peca => MODELO_DA_PECA[peca] || null;
 
+// Os canais da ConversaNova (#2680), os mesmos que o salvar aceita.
+const CANAIS_DA_CONVERSA = [
+  'Channel::Whatsapp',
+  'Channel::TwilioSms',
+  'Channel::Sms',
+  'Channel::Api',
+];
+
 const comNome = (lista, rotulo = 'name') =>
   (lista || []).map(item => ({ value: item.id, label: item[rotulo] }));
 
@@ -55,6 +63,13 @@ export function useOpcoesDaConta() {
     caixa: comNome(caixas.value),
     agenteDeIa: agentesDeIa.value && comNome(agentesDeIa.value),
     agenteDeIaFalhou: agentesDeIaFalhou.value,
+    // #2680: as caixas que começam conversa pelo telefone (ou pela API), por
+    // onde a mensagem abre a conversa de quem ainda não tem uma.
+    caixaDaConversa: comNome(
+      (caixas.value || []).filter(caixa =>
+        CANAIS_DA_CONVERSA.includes(caixa.channel_type)
+      )
+    ),
     // G2: só as caixas de e-mail, por onde o passo "email" sai.
     caixaDeEmail: comNome(
       (caixas.value || []).filter(
@@ -66,6 +81,13 @@ export function useOpcoesDaConta() {
       label: item.title,
     })),
     etiqueta: comNome(etiquetas.value, 'title'),
+    // G7: o campo do contato na seleção do recorrente vai pela chave.
+    atributoDoContato: (atributosDo.value('contact_attribute') || []).map(
+      item => ({
+        value: item.attribute_key,
+        label: item.attribute_display_name,
+      })
+    ),
     atributo: [
       'conversation_attribute',
       'contact_attribute',
