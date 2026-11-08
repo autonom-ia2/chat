@@ -267,7 +267,8 @@
       },
       "AUTONOMIA_TOOLS": {
         "NOME": "Bots connected to other systems",
-        "NA_FRASE": "how the bots connect to other systems"
+        "NA_FRASE": "how the bots connect to other systems",
+        "AVISO": "Whoever has this chooses where conversation data goes. Only the administrator can grant it."
       },
       "DESEMPENHO": {
         "NOME": "Team performance",

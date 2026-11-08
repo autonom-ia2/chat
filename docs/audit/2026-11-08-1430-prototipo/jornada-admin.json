@@ -1,18 +1,19 @@
 {
-  "pasta": "docs/audit/2026-11-08-1430-prototipo/prints/1-admin-entrega-a-chave",
+  "pasta": "docs/audit/2026-11-08-1430-prototipo/prints/1-admin-libera",
   "conta": 1,
   "usuario": "john@acme.inc",
   "larguras": [1440, 390],
   "temas": ["light"],
   "jornadas": [
     {
-      "nome": "admin-entrega-a-chave",
+      "nome": "admin-libera",
       "etapas": [
-        { "nome": "funcoes", "url": "/app/accounts/{conta}/settings/custom-roles/list", "esperar": "text=Supervisão", "pausa": 3000 },
-        { "nome": "abre-supervisao", "passos": [{ "clicar": "text=Supervisão" }], "esperar": "text=Ferramentas dos agentes", "pausa": 2500 },
-        { "nome": "linha-ferramentas", "passos": [{ "clicar": "text=Ferramentas dos agentes" }], "pausa": 2000 },
-        { "nome": "pede-confirmacao", "passos": [{ "clicar": "[data-sensitive-module] >> xpath=ancestor::*[contains(@class,'rounded')][1] >> text=Gerenciar" }], "pausa": 2000 },
-        { "nome": "liberada", "passos": [{ "clicar": "[role=\"dialog\"] button:has-text(\"Liberar\")" }], "pausa": 2000, "pagina_inteira": true }
+        { "nome": "funcoes-da-equipe", "url": "/app/accounts/{conta}/settings/funcoes-da-equipe", "esperar": "button[aria-label=\"Alterar a função Supervisão\"]", "pausa": 3000 },
+        { "nome": "alterar-supervisao", "passos": [{ "clicar": "button[aria-label=\"Alterar a função Supervisão\"]" }], "esperar": "text=Alterar Supervisão", "pausa": 2500 },
+        { "nome": "abre-mais-areas", "passos": [{ "clicar": "button:has-text(\"mais 15 áreas\")" }, { "esperar": "[data-area=\"AUTONOMIA_TOOLS\"]" }], "pausa": 1500 },
+        { "nome": "linha-nova", "passos": [{ "clicar": "[data-area=\"AUTONOMIA_TOOLS\"] [role=\"radio\"]:has-text(\"Não vê\")" }], "pausa": 1500 },
+        { "nome": "escolhe-pode-mexer", "passos": [{ "clicar": "[data-area=\"AUTONOMIA_TOOLS\"] [role=\"radio\"]:has-text(\"Pode mexer\")" }], "pausa": 2000 },
+        { "nome": "confira", "passos": [{ "clicar": "button:has-text(\"Continuar\")" }], "pausa": 2500, "pagina_inteira": true }
       ]
     }
   ]
