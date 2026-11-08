@@ -871,7 +871,7 @@ const BOTAO_DE_BORDA =
             <router-link
               :to="anuncioDoPost"
               data-seus-posts-ver-anuncio
-              class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
+              class="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl px-0 text-sm sm:px-3 font-medium text-n-brand outline-none hover:underline focus-visible:ring-2 focus-visible:ring-n-brand"
             >
               <span class="i-lucide-megaphone size-4" aria-hidden="true" />
               {{ $t('SEUS_POSTS.POST.AD_COMMENTS.OPEN') }}

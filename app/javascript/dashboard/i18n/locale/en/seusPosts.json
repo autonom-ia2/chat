@@ -167,7 +167,7 @@
       },
       "SIDE": {
         "BOOSTED": "Had an ad: only “{name}” is without the ad.",
-        "BOOSTED_INSTAGRAM": "Boosted through the platform: the ad has its own numbers and comments.",
+        "BOOSTED_INSTAGRAM": "Numbers for this post only.",
         "INSTAGRAM": "Times shown, likes and comments are without ads. People who saw it, saves and shares may include ads."
       },
       "AD_COMMENTS": {

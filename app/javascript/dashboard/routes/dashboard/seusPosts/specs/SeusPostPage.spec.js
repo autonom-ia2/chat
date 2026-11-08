@@ -194,7 +194,7 @@ describe('Seus posts: o post (#2305)', () => {
         'Você impulsionou este post pela plataforma'
       );
       expect(wrapper.find('[data-seus-posts-lado]').text()).toBe(
-        'Impulsionado pela plataforma: o anúncio tem números e comentários próprios.'
+        'Números só deste post.'
       );
     });
 
